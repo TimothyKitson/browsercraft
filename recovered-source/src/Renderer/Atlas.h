@@ -40,8 +40,12 @@ public:
     // Advances animated tiles (flowing water, lava).
     void update(float deltaTime);
 
+    // Binds the albedo atlas at `unit`, and the LabPBR normal and specular
+    // atlases at unit+1 and unit+2, matching the samplers chunk.frag declares.
     void bind(unsigned int unit = 0) const;
     unsigned int textureId() const { return m_id; }
+    unsigned int normalTextureId() const { return m_normalId; }
+    unsigned int specularTextureId() const { return m_specularId; }
 
     int tilePixels() const { return m_tilePixels; }
     int loadedFromPack() const { return m_loadedFromPack; }
@@ -62,9 +66,22 @@ private:
     };
 
     unsigned int m_id = 0;
+    unsigned int m_normalId = 0;
+    unsigned int m_specularId = 0;
     int m_tilePixels = FALLBACK_TILE_PIXELS;
     int m_loadedFromPack = 0;
     std::vector<Animation> m_animations;
 
     void uploadTile(int tile, const uint8_t* rgba);
+
+    // Resource pack loading. Tiles come from assets/textures/block as
+    // individual PNGs under their vanilla Minecraft names; a tile taller
+    // than it is wide is an animation strip. Raw bytes rather than a
+    // pixel struct so the painting types stay private to the .cpp.
+    int detectPackTileSize();
+
+    // Fills one atlas from the pack. `suffix` is "" for albedo, "_n" for the
+    // normal map and "_s" for the specular map; tiles the pack omits keep
+    // whatever `atlasRgba` already holds.
+    int loadPackTiles(uint8_t* atlasRgba, int atlasPixels, const char* suffix);
 };

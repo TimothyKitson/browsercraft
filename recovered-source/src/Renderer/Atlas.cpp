@@ -1,4 +1,8 @@
 #include "Atlas.h"
+#include "stb_image.h"
+#include <cstdio>
+#include <string>
+#include <cstring>
 #include "Core/GLFunctions.h"
 #include <vector>
 #include <cstdint>
@@ -649,6 +653,159 @@ namespace
     };
 }
 
+
+namespace
+{
+    // Vanilla Minecraft texture names for each atlas tile. A tile with no name
+    // here keeps whatever the procedural painter produced.
+    const char* packFileForTile(int tile)
+    {
+        switch (tile)
+        {
+            case Tiles::Stone:          return "stone";
+            case Tiles::Dirt:           return "dirt";
+            case Tiles::GrassSide:      return "grass_block_side";
+            case Tiles::GrassTop:       return "grass_block_top";
+            case Tiles::Cobblestone:    return "cobblestone";
+            case Tiles::Planks:         return "oak_planks";
+            case Tiles::Bedrock:        return "bedrock";
+            case Tiles::Water:          return "water_still";
+            case Tiles::Sand:           return "sand";
+            case Tiles::Gravel:         return "gravel";
+            case Tiles::GoldOre:        return "gold_ore";
+            case Tiles::IronOre:        return "iron_ore";
+            case Tiles::CoalOre:        return "coal_ore";
+            case Tiles::DiamondOre:     return "diamond_ore";
+            case Tiles::LogSide:        return "oak_log";
+            case Tiles::LogTop:         return "oak_log_top";
+            case Tiles::Leaves:         return "oak_leaves";
+            case Tiles::Glass:          return "glass";
+            case Tiles::SandstoneSide:  return "sandstone";
+            case Tiles::SandstoneTop:   return "sandstone_top";
+            case Tiles::SnowTile:       return "snow";
+            case Tiles::Ice:            return "ice";
+            case Tiles::CactusSide:     return "cactus_side";
+            case Tiles::CactusTop:      return "cactus_top";
+            case Tiles::Bricks:         return "bricks";
+            case Tiles::Obsidian:       return "obsidian";
+            case Tiles::TallGrass:      return "short_grass";
+            case Tiles::FlowerRed:      return "poppy";
+            case Tiles::FlowerYellow:   return "dandelion";
+            case Tiles::MossyCobble:    return "mossy_cobblestone";
+            case Tiles::Clay:           return "clay";
+            case Tiles::PumpkinSide:    return "pumpkin_side";
+            case Tiles::PumpkinTop:     return "pumpkin_top";
+            case Tiles::Wool:           return "white_wool";
+            case Tiles::Torch:          return "torch";
+            case Tiles::BirchLogSide:   return "birch_log";
+            case Tiles::BirchLogTop:    return "birch_log_top";
+            case Tiles::BirchLeaves:    return "birch_leaves";
+            case Tiles::SnowGrassSide:  return "grass_block_snow";
+            case Tiles::Lava:           return "lava_still";
+            case Tiles::Glowstone:      return "glowstone";
+            default: break;
+        }
+
+        if (tile >= Tiles::CrackFirst && tile < Tiles::CrackFirst + Tiles::CrackStages)
+        {
+            static char buffer[32];
+            std::snprintf(buffer, sizeof(buffer), "destroy_stage_%d", tile - Tiles::CrackFirst);
+            return buffer;
+        }
+
+        return nullptr;
+    }
+
+    std::string packPath(const std::string& name)
+    {
+        return "assets/textures/block/" + name + ".png";
+    }
+
+    // Uploads one RGBA atlas and returns its texture name.
+    unsigned int uploadAtlas(const uint8_t* rgba, int pixels)
+    {
+        unsigned int id = 0;
+        glGenTextures(1, &id);
+        glBindTexture(GL_TEXTURE_2D, id);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, pixels, pixels, 0, GL_RGBA, GL_UNSIGNED_BYTE, rgba);
+        glBindTexture(GL_TEXTURE_2D, 0);
+        return id;
+    }
+}
+
+int Atlas::detectPackTileSize()
+{
+    // Every tile in a pack shares one resolution, so the first readable file
+    // decides the atlas size. Animation strips are square frames stacked
+    // vertically, so the width is the tile size either way.
+    for (int tile = 0; tile < Tiles::TileCount; ++tile)
+    {
+        const char* name = packFileForTile(tile);
+        if (!name) continue;
+
+        int w = 0, h = 0, channels = 0;
+        if (stbi_info(packPath(name).c_str(), &w, &h, &channels) && w > 0)
+            return w;
+    }
+    return 0;
+}
+
+int Atlas::loadPackTiles(uint8_t* atlasRgba, int atlasPixels, const char* suffix)
+{
+    int loaded = 0;
+    const int tilePixels = m_tilePixels;
+    const int frameBytes = tilePixels * tilePixels * 4;
+
+    for (int tile = 0; tile < TILES_PER_ROW * TILES_PER_ROW; ++tile)
+    {
+        const char* name = packFileForTile(tile);
+        if (!name) continue;
+
+        int w = 0, h = 0, channels = 0;
+        uint8_t* data = stbi_load(packPath(std::string(name) + suffix).c_str(), &w, &h, &channels, 4);
+        if (!data) continue;
+
+        if (w != tilePixels || h < tilePixels)
+        {
+            stbi_image_free(data);
+            continue;
+        }
+
+        const int col = tile % TILES_PER_ROW;
+        const int row = tile / TILES_PER_ROW;
+
+        // Copy the first frame into the atlas.
+        for (int y = 0; y < tilePixels; ++y)
+        {
+            uint8_t* dst = atlasRgba + (static_cast<size_t>(row * tilePixels + y) * atlasPixels + col * tilePixels) * 4;
+            std::memcpy(dst, data + static_cast<size_t>(y) * w * 4, static_cast<size_t>(tilePixels) * 4);
+        }
+
+        // Taller than one tile means an animation strip; keep the frames so
+        // update() can cycle them.
+        const int frames = h / tilePixels;
+        if (frames > 1)
+        {
+            Animation animation;
+            animation.tile = tile;
+            animation.frameCount = frames;
+            animation.frameSeconds = 0.1f; // Minecraft's default two ticks
+            animation.frames.resize(static_cast<size_t>(frames) * frameBytes);
+            std::memcpy(animation.frames.data(), data, animation.frames.size());
+            m_animations.push_back(std::move(animation));
+        }
+
+        stbi_image_free(data);
+        ++loaded;
+    }
+
+    return loaded;
+}
+
 Atlas::Atlas()
 {
     std::vector<Color> pixels(SIZE * SIZE, Color{ 0, 0, 0, 0 });
@@ -675,26 +832,73 @@ Atlas::Atlas()
         blit(Tiles::CrackFirst + stage, tile);
     }
 
-    glGenTextures(1, &m_id);
-    glBindTexture(GL_TEXTURE_2D, m_id);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    // Nearest filtering, no mipmaps: crisp blocky pixels and no tile bleed.
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, SIZE, SIZE, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());
-    glBindTexture(GL_TEXTURE_2D, 0);
+    // `pixels` now holds the procedurally painted atlas at FALLBACK_TILE_PIXELS.
+    // A resource pack, if present, overrides individual tiles and may be at a
+    // higher resolution, in which case the whole atlas is rebuilt at that size
+    // and any tile the pack does not supply is point-scaled up from the
+    // painted one. That way a partial pack still produces a complete atlas.
+    m_tilePixels = detectPackTileSize();
+    if (m_tilePixels <= 0) m_tilePixels = FALLBACK_TILE_PIXELS;
+
+    const int atlasPixels = TILES_PER_ROW * m_tilePixels;
+    std::vector<Color> atlas(static_cast<size_t>(atlasPixels) * atlasPixels, Color{ 0, 0, 0, 0 });
+
+    const int scale = m_tilePixels / FALLBACK_TILE_PIXELS;
+    for (int tile = 0; tile < TILES_PER_ROW * TILES_PER_ROW; ++tile)
+    {
+        const int col = tile % TILES_PER_ROW;
+        const int row = tile / TILES_PER_ROW;
+        for (int y = 0; y < m_tilePixels; ++y)
+        {
+            for (int x = 0; x < m_tilePixels; ++x)
+            {
+                const int sx = (scale > 0) ? (x / scale) : 0;
+                const int sy = (scale > 0) ? (y / scale) : 0;
+                const int srcX = col * FALLBACK_TILE_PIXELS + (sx < FALLBACK_TILE_PIXELS ? sx : FALLBACK_TILE_PIXELS - 1);
+                const int srcY = row * FALLBACK_TILE_PIXELS + (sy < FALLBACK_TILE_PIXELS ? sy : FALLBACK_TILE_PIXELS - 1);
+                atlas[static_cast<size_t>(row * m_tilePixels + y) * atlasPixels + (col * m_tilePixels + x)] =
+                    pixels[static_cast<size_t>(srcY) * SIZE + srcX];
+            }
+        }
+    }
+
+    m_loadedFromPack = loadPackTiles(reinterpret_cast<uint8_t*>(atlas.data()), atlasPixels, "");
+    m_id = uploadAtlas(reinterpret_cast<const uint8_t*>(atlas.data()), atlasPixels);
+
+    // LabPBR companions. Defaults stand in for the tiles a pack leaves out --
+    // transparent and emissive blocks usually ship neither -- so the shader
+    // always samples something sane: a flat outward normal, and a surface that
+    // is neither smooth, metallic nor emissive.
+    const size_t texels = static_cast<size_t>(atlasPixels) * atlasPixels;
+
+    std::vector<Color> normalAtlas(texels, Color{ 128, 128, 255, 255 });
+    const int normalCount = loadPackTiles(reinterpret_cast<uint8_t*>(normalAtlas.data()), atlasPixels, "_n");
+    m_normalId = uploadAtlas(reinterpret_cast<const uint8_t*>(normalAtlas.data()), atlasPixels);
+
+    std::vector<Color> specularAtlas(texels, Color{ 0, 0, 0, 0 });
+    const int specularCount = loadPackTiles(reinterpret_cast<uint8_t*>(specularAtlas.data()), atlasPixels, "_s");
+    m_specularId = uploadAtlas(reinterpret_cast<const uint8_t*>(specularAtlas.data()), atlasPixels);
+
+    std::printf("[Atlas] %dpx tiles | %d albedo, %d normal, %d specular from the pack\n",
+                m_tilePixels, m_loadedFromPack, normalCount, specularCount);
 }
 
 Atlas::~Atlas()
 {
     if (m_id) glDeleteTextures(1, &m_id);
+    if (m_normalId) glDeleteTextures(1, &m_normalId);
+    if (m_specularId) glDeleteTextures(1, &m_specularId);
 }
 
 void Atlas::bind(unsigned int unit) const
 {
     glActiveTexture(GL_TEXTURE0 + unit);
     glBindTexture(GL_TEXTURE_2D, m_id);
+    glActiveTexture(GL_TEXTURE0 + unit + 1);
+    glBindTexture(GL_TEXTURE_2D, m_normalId);
+    glActiveTexture(GL_TEXTURE0 + unit + 2);
+    glBindTexture(GL_TEXTURE_2D, m_specularId);
+    glActiveTexture(GL_TEXTURE0 + unit);
 }
 
 // The atlas built above is the procedurally painted fallback, so its tiles are
