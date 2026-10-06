@@ -26,6 +26,11 @@ public:
     static constexpr int TILES_PER_ROW = 16;
     static constexpr int FALLBACK_TILE_PIXELS = 16;
 
+    // Dimensions of the procedurally painted fallback atlas, which is
+    // built at a fixed resolution before any resource pack is applied.
+    static constexpr int TILE_PIXELS = FALLBACK_TILE_PIXELS;
+    static constexpr int SIZE = TILES_PER_ROW * TILE_PIXELS;
+
     Atlas();
     ~Atlas();
 

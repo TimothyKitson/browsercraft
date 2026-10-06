@@ -1,4 +1,6 @@
 #include "GLFunctions.h"
+
+#ifndef __EMSCRIPTEN__
 #include <SDL.h>
 #include <cstdio>
 
@@ -34,6 +36,7 @@ PFNGLDISABLEVERTEXATTRIBARRAYPROC glDisableVertexAttribArray = nullptr;
 PFNGLGETUNIFORMLOCATIONPROC glGetUniformLocation = nullptr;
 PFNGLUNIFORM1IPROC glUniform1i = nullptr;
 PFNGLUNIFORM1FPROC glUniform1f = nullptr;
+PFNGLUNIFORM2FPROC glUniform2f = nullptr;
 PFNGLUNIFORM3FPROC glUniform3f = nullptr;
 PFNGLUNIFORM3FVPROC glUniform3fv = nullptr;
 PFNGLUNIFORM4FPROC glUniform4f = nullptr;
@@ -96,6 +99,7 @@ bool LoadGLFunctions()
     LOAD(glGetUniformLocation);
     LOAD(glUniform1i);
     LOAD(glUniform1f);
+    LOAD(glUniform2f);
     LOAD(glUniform3f);
     LOAD(glUniform3fv);
     LOAD(glUniform4f);
@@ -108,3 +112,5 @@ bool LoadGLFunctions()
 
     return !g_failed;
 }
+
+#endif // __EMSCRIPTEN__

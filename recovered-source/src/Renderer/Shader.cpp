@@ -2,6 +2,7 @@
 #include "Core/GLFunctions.h"
 #include <fstream>
 #include <sstream>
+#include <string>
 #include <stdexcept>
 #include <vector>
 #include <cstdio>
@@ -18,10 +19,42 @@ std::string Shader::readFile(const std::string& path)
     return ss.str();
 }
 
+namespace
+{
+    // The shaders on disk are written against desktop GLSL 3.30. WebGL2 speaks
+    // GLSL ES 3.00, which is the same language apart from the version line and
+    // a required default precision in fragment shaders, so translate on load
+    // rather than keeping two copies of every shader.
+    std::string translateForGLES(const std::string& source, unsigned int type)
+    {
+#ifdef __EMSCRIPTEN__
+        const std::string marker = "#version 330 core";
+        const size_t at = source.find(marker);
+        if (at == std::string::npos) return source;
+
+        std::string out = source;
+        out.replace(at, marker.size(), "#version 300 es");
+
+        if (type == GL_FRAGMENT_SHADER)
+        {
+            const size_t eol = out.find('\n', at);
+            if (eol != std::string::npos)
+                out.insert(eol + 1, "precision highp float;\nprecision highp int;\n");
+        }
+        return out;
+#else
+        (void)type;
+        return source;
+#endif
+    }
+}
+
 unsigned int Shader::compile(const std::string& source, unsigned int type, const std::string& debugName)
 {
+    const std::string translated = translateForGLES(source, type);
+
     unsigned int shader = glCreateShader(type);
-    const char* src = source.c_str();
+    const char* src = translated.c_str();
     glShaderSource(shader, 1, &src, nullptr);
     glCompileShader(shader);
 
@@ -104,4 +137,14 @@ void Shader::setVec3(const std::string& name, const glm::vec3& value)
 void Shader::setMat4(const std::string& name, const glm::mat4& value)
 {
     glUniformMatrix4fv(uniformLocation(name), 1, GL_FALSE, &value[0][0]);
+}
+
+void Shader::setVec2(const std::string& name, const glm::vec2& value)
+{
+    glUniform2f(uniformLocation(name), value.x, value.y);
+}
+
+void Shader::setVec4(const std::string& name, const glm::vec4& value)
+{
+    glUniform4f(uniformLocation(name), value.x, value.y, value.z, value.w);
 }

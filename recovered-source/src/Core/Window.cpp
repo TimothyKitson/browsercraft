@@ -11,10 +11,18 @@ Window::Window(const std::string& title, int width, int height)
         throw std::runtime_error(std::string("SDL_Init failed: ") + SDL_GetError());
     }
 
+#ifdef __EMSCRIPTEN__
+    // WebGL2 is OpenGL ES 3.0. Asking for a desktop core profile here makes
+    // SDL_GL_CreateContext fail with "context attributes are not supported".
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
+#else
     // Request an OpenGL 3.3 core-profile context.
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
+#endif
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
 

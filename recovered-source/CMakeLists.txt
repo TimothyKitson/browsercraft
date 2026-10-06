@@ -25,7 +25,7 @@ FetchContent_MakeAvailable(glm)
 file(GLOB_RECURSE VOXEL_SOURCES CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/src/*.cpp")
 
 add_executable(VoxelEngine ${VOXEL_SOURCES})
-target_include_directories(VoxelEngine PRIVATE "${CMAKE_SOURCE_DIR}/src")
+target_include_directories(VoxelEngine PRIVATE "${CMAKE_SOURCE_DIR}/src" "${CMAKE_SOURCE_DIR}/third_party")
 
 if(NOT EMSCRIPTEN)
     find_package(SDL2 REQUIRED)
@@ -41,9 +41,12 @@ if(EMSCRIPTEN)
 
     set_target_properties(VoxelEngine PROPERTIES OUTPUT_NAME "index" SUFFIX ".html")
 
-    target_compile_options(VoxelEngine PRIVATE -sUSE_SDL=2 -O2)
+    # main() catches std::exception, and the shipped build imports __cxa_throw
+    # and the invoke_* thunks, so exceptions must stay enabled.
+    target_compile_options(VoxelEngine PRIVATE -sUSE_SDL=2 -fexceptions -O2)
     target_link_options(VoxelEngine PRIVATE
         -sUSE_SDL=2
+        -fexceptions
         -sMIN_WEBGL_VERSION=2          # WebGL2 == OpenGL ES 3.0
         -sMAX_WEBGL_VERSION=2
         -sFULL_ES3

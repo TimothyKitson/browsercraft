@@ -1,4 +1,17 @@
 #pragma once
+
+// Under Emscripten the GLES3 headers declare every entry point we use as a
+// real function, resolved by the WebGL2 backend at link time. Declaring the
+// same names as function pointers here would clash with them, so the
+// hand-rolled desktop loader below is compiled only for native builds.
+#ifdef __EMSCRIPTEN__
+
+#include <GLES3/gl3.h>
+#include <GLES2/gl2ext.h>
+
+inline bool LoadGLFunctions() { return true; }
+
+#else
 // A hand-rolled OpenGL function loader.
 //
 // Windows' <GL/gl.h> only declares OpenGL 1.1. Everything newer (shaders,
@@ -151,3 +164,5 @@ extern PFNGLGENERATEMIPMAPPROC glGenerateMipmap;
 #endif
 
 bool LoadGLFunctions();
+
+#endif // __EMSCRIPTEN__

@@ -696,3 +696,48 @@ void Atlas::bind(unsigned int unit) const
     glActiveTexture(GL_TEXTURE0 + unit);
     glBindTexture(GL_TEXTURE_2D, m_id);
 }
+
+// The atlas built above is the procedurally painted fallback, so its tiles are
+// always FALLBACK_TILE_PIXELS square and nothing is animated yet. These three
+// round out the interface Atlas.h declares; they stay correct once a resource
+// pack loader starts filling m_animations and m_tilePixels.
+
+int Atlas::pixelSize()
+{
+    return SIZE;
+}
+
+void Atlas::uploadTile(int tile, const uint8_t* rgba)
+{
+    if (!m_id || !rgba) return;
+
+    const int col = tile % TILES_PER_ROW;
+    const int row = tile / TILES_PER_ROW;
+
+    glBindTexture(GL_TEXTURE_2D, m_id);
+    glTexSubImage2D(GL_TEXTURE_2D, 0,
+                    col * m_tilePixels, row * m_tilePixels,
+                    m_tilePixels, m_tilePixels,
+                    GL_RGBA, GL_UNSIGNED_BYTE, rgba);
+    glBindTexture(GL_TEXTURE_2D, 0);
+}
+
+void Atlas::update(float deltaTime)
+{
+    const int frameBytes = m_tilePixels * m_tilePixels * 4;
+
+    for (Animation& animation : m_animations)
+    {
+        if (animation.frameCount < 2) continue;
+
+        animation.timer += deltaTime;
+        if (animation.timer < animation.frameSeconds) continue;
+
+        animation.timer -= animation.frameSeconds;
+        animation.current = (animation.current + 1) % animation.frameCount;
+
+        const size_t offset = static_cast<size_t>(animation.current) * frameBytes;
+        if (offset + frameBytes <= animation.frames.size())
+            uploadTile(animation.tile, animation.frames.data() + offset);
+    }
+}
