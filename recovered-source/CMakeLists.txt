@@ -1,3 +1,36 @@
+cmake_minimum_required(VERSION 3.16)
+project(VoxelEngine CXX)
+
+# Reconstructed header: the recovered CMakeLists.txt kept only everything from
+# target_link_libraries(glm) onward, so the project setup below was rebuilt from
+# the source tree and the flags the surviving tail depends on.
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Release CACHE STRING "" FORCE)
+endif()
+
+include(FetchContent)
+FetchContent_Declare(
+    glm
+    GIT_REPOSITORY https://github.com/g-truc/glm.git
+    GIT_TAG 1.0.1
+    GIT_SHALLOW TRUE
+)
+FetchContent_MakeAvailable(glm)
+
+file(GLOB_RECURSE VOXEL_SOURCES CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/src/*.cpp")
+
+add_executable(VoxelEngine ${VOXEL_SOURCES})
+target_include_directories(VoxelEngine PRIVATE "${CMAKE_SOURCE_DIR}/src")
+
+if(NOT EMSCRIPTEN)
+    find_package(SDL2 REQUIRED)
+endif()
+
 target_link_libraries(VoxelEngine PRIVATE glm::glm)
 
 if(EMSCRIPTEN)
