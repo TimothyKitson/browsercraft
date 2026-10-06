@@ -1,0 +1,7 @@
+build/
+out/
+world/
+.cache/
+compile_commands.json
+*.log
+*.user
