@@ -44,6 +44,10 @@ namespace Blocks
         Glowstone,
         Lava,
         SnowGrass,
+        Netherrack,
+        SoulSand,
+        EndStone,
+        NetherPortal,
         Count
     };
 }

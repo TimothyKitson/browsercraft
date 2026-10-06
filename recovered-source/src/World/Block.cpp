@@ -45,6 +45,12 @@ namespace
         { "Glowstone",    Glowstone,     Glowstone,      Glowstone,      true,  true,  RenderType::Cube,  15,   0.3f },
         { "Lava",         Lava,          Lava,           Lava,           false, false, RenderType::Liquid,15,  -1.0f },
         { "Snowy Grass",  SnowTile,      Dirt,           SnowGrassSide,  true,  true,  RenderType::Cube,   0,   0.6f },
+        { "Netherrack",   Netherrack,    Netherrack,     Netherrack,     true,  true,  RenderType::Cube,   0,   0.4f },
+        { "Soul Sand",    SoulSand,      SoulSand,       SoulSand,       true,  true,  RenderType::Cube,   0,   0.5f },
+        { "End Stone",    EndStone,      EndStone,       EndStone,       true,  true,  RenderType::Cube,   0,   3.0f },
+        // The portal surface is walked into rather than stood on, so it does
+        // not collide, and it glows enough to light its own frame.
+        { "Nether Portal",NetherPortal,  NetherPortal,   NetherPortal,   false, false, RenderType::Liquid, 11, -1.0f },
     };
 }
 
@@ -91,6 +97,7 @@ const char* blockSoundGroup(BlockId id)
 
         case Blocks::Sand:
         case Blocks::Sandstone:
+        case Blocks::SoulSand:
             return "sand";
 
         case Blocks::Snow:
@@ -108,6 +115,7 @@ const char* blockSoundGroup(BlockId id)
         case Blocks::Air:
         case Blocks::Water:
         case Blocks::Lava:
+        case Blocks::NetherPortal:
             return nullptr;
 
         // Stone, ores, brick, obsidian, glass, ice and anything new default to

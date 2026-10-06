@@ -71,9 +71,12 @@ PRIORITY 1 - CATCH UP TO THE LIVE BUILD
 Until these land, shipping the rebuilt engine is a downgrade for players.
 All four already exist in the live build; this is re-doing them.
 
-[ ] Nether dimension: terrain generation, netherrack, lava seas
-[ ] End dimension: end stone islands, void
-[ ] Portals: obsidian frame detection, lighting, travel, coordinate scaling
+[~] Nether dimension: netherrack and soul sand blocks exist; terrain
+    generation and the dimension switch itself are still to do
+[~] End dimension: end stone block exists; island generation and the
+    dimension switch itself are still to do
+[~] Portals: the portal block exists and glows; frame detection,
+    lighting, travel and coordinate scaling are still to do
 [~] Rebindable controls: keybinds.txt read/write done, every input now
     goes through the keymap. The Controls screen to rebind from is
     still to do, so for now the file is the only way to change them.

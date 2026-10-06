@@ -52,6 +52,10 @@ namespace Tiles
         SnowGrassSide,
         Lava,
         Glowstone,
+        Netherrack,
+        SoulSand,
+        EndStone,
+        NetherPortal,
         TileCount
     };
 

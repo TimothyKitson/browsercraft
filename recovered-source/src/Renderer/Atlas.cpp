@@ -607,8 +607,61 @@ namespace
         TileFn fn;
     };
 
+    void paintNetherrack(Tile& t)
+    {
+        t.fill(Color{ 97, 38, 38 });
+        for (int y = 0; y < Tile::N; ++y)
+            for (int x = 0; x < Tile::N; ++x)
+            {
+                const float n = hash2(x, y, 307);
+                if (n > 0.78f) t.set(x, y, Color{ 126, 52, 52 });
+                else if (n < 0.2f) t.set(x, y, Color{ 72, 26, 28 });
+            }
+    }
+
+    void paintSoulSand(Tile& t)
+    {
+        t.fill(Color{ 82, 62, 51 });
+        for (int y = 0; y < Tile::N; ++y)
+            for (int x = 0; x < Tile::N; ++x)
+                if (hash2(x, y, 311) > 0.72f)
+                    t.set(x, y, Color{ 62, 45, 37 });
+    }
+
+    void paintEndStone(Tile& t)
+    {
+        t.fill(Color{ 221, 223, 165 });
+        for (int y = 0; y < Tile::N; ++y)
+            for (int x = 0; x < Tile::N; ++x)
+            {
+                const float n = hash2(x, y, 313);
+                if (n > 0.8f) t.set(x, y, Color{ 234, 236, 180 });
+                else if (n < 0.18f) t.set(x, y, Color{ 198, 200, 144 });
+            }
+    }
+
+    void paintNetherPortal(Tile& t)
+    {
+        // Swirling violet: a couple of offset sine bands plus noise reads as
+        // movement even though the tile itself does not animate.
+        for (int y = 0; y < Tile::N; ++y)
+            for (int x = 0; x < Tile::N; ++x)
+            {
+                const float fx = static_cast<float>(x) / Tile::N;
+                const float fy = static_cast<float>(y) / Tile::N;
+                const float swirl = std::sin(fx * 9.0f + fy * 5.0f) * 0.5f + 0.5f;
+                const float grain = hash2(x, y, 317);
+                const int level = static_cast<int>(70.0f + swirl * 90.0f + grain * 40.0f);
+                t.set(x, y, Color{ clampByte(level / 2 + 40), clampByte(level / 5), clampByte(level + 60), 190 });
+            }
+    }
+
     const TileEntry TILE_PAINTERS[] = {
         { Tiles::Blank, paintBlank },
+        { Tiles::Netherrack, paintNetherrack },
+        { Tiles::SoulSand, paintSoulSand },
+        { Tiles::EndStone, paintEndStone },
+        { Tiles::NetherPortal, paintNetherPortal },
         { Tiles::Stone, paintStone },
         { Tiles::Dirt, paintDirt },
         { Tiles::GrassSide, paintGrassSide },
@@ -703,6 +756,9 @@ namespace
             case Tiles::SnowGrassSide:  return "grass_block_snow";
             case Tiles::Lava:           return "lava_still";
             case Tiles::Glowstone:      return "glowstone";
+            case Tiles::Netherrack:     return "netherrack";
+            case Tiles::SoulSand:       return "soul_sand";
+            case Tiles::EndStone:       return "end_stone";
             default: break;
         }
 
