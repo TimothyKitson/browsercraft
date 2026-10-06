@@ -69,6 +69,38 @@ walking, so anything with a sharp transient gets fatiguing fast.
 | `click.ogg` | Button and UI click |
 | `pop.ogg` | An item is picked up |
 
+## Mob sounds (new, not in the deployed build yet)
+
+The rebuilt engine in `recovered-source/` adds mobs, and each species asks for
+its sounds under the vanilla Minecraft paths below. These are **not** in the
+live game yet -- they exist in the branch build, and the engine has no audio
+system to play them with until one is written. The slots are listed here so a
+sound pack can be assembled against them now.
+
+Same naming rule as the block sounds: path plus a variant number plus `.ogg`,
+so `mob/sheep/say` with 3 variants means `mob/sheep/say1.ogg` through
+`say3.ogg`. A missing file is skipped rather than breaking anything, so a
+partial pack is fine.
+
+| Mob | Ambient | Hurt | Death | Step |
+|---|---|---|---|---|
+| Sheep | `mob/sheep/say` ×3 | `mob/sheep/say` ×3 | `mob/sheep/say` ×3 | `mob/sheep/step` ×5 |
+| Pig | `mob/pig/say` ×3 | `mob/pig/say` ×3 | `mob/pig/death` ×1 | `mob/pig/step` ×5 |
+| Cow | `mob/cow/say` ×4 | `mob/cow/hurt` ×3 | `mob/cow/hurt` ×3 | `mob/cow/step` ×4 |
+| Chicken | `mob/chicken/say` ×3 | `mob/chicken/hurt` ×3 | `mob/chicken/hurt` ×3 | `mob/chicken/step` ×2 |
+| Zombie | `mob/zombie/say` ×3 | `mob/zombie/hurt` ×2 | `mob/zombie/death` ×1 | `mob/zombie/step` ×5 |
+| Skeleton | `mob/skeleton/say` ×3 | `mob/skeleton/hurt` ×4 | `mob/skeleton/death` ×1 | `mob/skeleton/step` ×4 |
+| Creeper | none | `mob/creeper/say` ×4 | `mob/creeper/death` ×1 | none |
+| Spider | `mob/spider/say` ×4 | `mob/spider/say` ×4 | `mob/spider/death` ×1 | `mob/spider/step` ×4 |
+
+Ambient noises fire on a random 6-18 second timer per mob. Footsteps are driven
+by distance walked rather than time, so they stay in step with the legs at any
+frame rate.
+
+The counts above are what the engine asks for. If your pack has a different
+number of variants for an event, say so and the table in
+`recovered-source/src/Entity/MobType.cpp` can be adjusted to match.
+
 ## A note on sourcing
 
 Whatever you put in here ships to every player on browsercraft.net, so it needs
