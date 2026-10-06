@@ -67,6 +67,7 @@ bool isObtainable(BlockId id)
         case Blocks::Air:
         case Blocks::Water:
         case Blocks::Lava:
+        case Blocks::NetherPortal: // made by lighting a frame, never placed
             return false;
         default:
             return id < Blocks::Count;

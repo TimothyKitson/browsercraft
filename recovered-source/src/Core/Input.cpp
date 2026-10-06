@@ -4,6 +4,8 @@ void Input::beginFrame()
 {
     m_keysPressedThisFrame.clear();
     m_mousePressedThisFrame.clear();
+    m_anyKey = SDL_SCANCODE_UNKNOWN;
+    m_anyMouseButton = 0;
     m_mouseDeltaX = 0.0f;
     m_mouseDeltaY = 0.0f;
     m_wheelDelta = 0;
@@ -12,6 +14,11 @@ void Input::beginFrame()
 
 void Input::processEvent(const SDL_Event& e)
 {
+    if (e.type == SDL_KEYDOWN && e.key.repeat == 0)
+        m_anyKey = e.key.keysym.scancode;
+    else if (e.type == SDL_MOUSEBUTTONDOWN)
+        m_anyMouseButton = e.button.button;
+
     switch (e.type)
     {
         case SDL_QUIT:

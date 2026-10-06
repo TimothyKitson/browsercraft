@@ -69,6 +69,12 @@ private:
     std::string m_savePath;
     glm::vec3 m_spawnPoint{ 0.0f };
 
+    bool m_controlsOpen = false;
+    int m_rebindingAction = -1;   // index into Keybinds::Action, -1 when idle
+
+    void renderControlsScreen();
+    void updateControlsScreen();
+
     bool m_pbrEnabled = true; // LabPBR normal/specular lighting, toggled with P
 
     float m_timeOfDay = 0.3f; // 0 = midnight, 0.5 = noon
@@ -106,7 +112,7 @@ private:
     void renderDebugOverlay();
 
     void setMouseCaptured(bool captured);
-    bool uiHasFocus() const { return m_paused || m_inventoryOpen || m_player.health <= 0; }
+    bool uiHasFocus() const { return m_controlsOpen || m_paused || m_inventoryOpen || m_player.health <= 0; }
 
     glm::vec3 sunDirection() const;
     float daylightFactor() const;

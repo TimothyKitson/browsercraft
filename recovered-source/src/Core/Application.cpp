@@ -131,6 +131,7 @@ void Application::loadLevel()
         m_inventory.add(Blocks::Cobblestone, 64);
         m_inventory.add(Blocks::Torch, 32);
         m_inventory.add(Blocks::Glass, 32);
+        m_inventory.add(Blocks::Obsidian, 14); // enough for one portal frame
         std::printf("Created a new world (seed %u)\n", world().seed());
     }
 
@@ -233,11 +234,24 @@ void Application::handleEvents()
         glViewport(0, 0, m_window.width(), m_window.height());
     }
 
+    if (m_controlsOpen)
+    {
+        updateControlsScreen();
+        return; // the controls screen swallows everything else
+    }
+
     if (m_input.wasKeyPressed(SDL_SCANCODE_ESCAPE))
     {
         if (m_inventoryOpen) m_inventoryOpen = false;
         else m_paused = !m_paused;
         setMouseCaptured(!uiHasFocus());
+    }
+
+    if (m_paused && m_input.wasKeyPressed(SDL_SCANCODE_C))
+    {
+        m_controlsOpen = true;
+        m_rebindingAction = -1;
+        setMouseCaptured(false);
     }
 
     if (m_paused && pressed(Keybinds::Drop)) m_running = false;
@@ -633,7 +647,8 @@ void Application::render()
     if (m_player.health > 0) renderHud();
     if (m_showDebug) renderDebugOverlay();
     if (m_inventoryOpen) renderInventoryScreen();
-    if (m_paused) renderPauseMenu();
+    if (m_controlsOpen) renderControlsScreen();
+    else if (m_paused) renderPauseMenu();
     if (m_player.health <= 0)
     {
         const float w = static_cast<float>(m_window.width());
@@ -913,6 +928,103 @@ void Application::renderInventoryScreen()
                         startY + gridHeight + 14.0f, 1.8f, glm::vec4(0.8f, 0.8f, 0.85f, 1.0f));
 }
 
+
+void Application::updateControlsScreen()
+{
+    // Capturing a rebind: the next key or button pressed becomes the binding,
+    // except Escape, which backs out.
+    if (m_rebindingAction >= 0)
+    {
+        const SDL_Scancode key = m_input.anyKeyPressed();
+        const Uint8 button = m_input.anyMouseButtonPressed();
+
+        if (key == SDL_SCANCODE_ESCAPE)
+        {
+            m_rebindingAction = -1;
+        }
+        else if (key != SDL_SCANCODE_UNKNOWN)
+        {
+            m_keybinds.set(static_cast<Keybinds::Action>(m_rebindingAction), Keybinds::Keyboard, key);
+            m_keybinds.save(m_savePath + "/keybinds.txt");
+            m_rebindingAction = -1;
+        }
+        else if (button != 0)
+        {
+            m_keybinds.set(static_cast<Keybinds::Action>(m_rebindingAction), Keybinds::Mouse, button);
+            m_keybinds.save(m_savePath + "/keybinds.txt");
+            m_rebindingAction = -1;
+        }
+        return;
+    }
+
+    if (m_input.wasKeyPressed(SDL_SCANCODE_ESCAPE))
+    {
+        m_controlsOpen = false;
+        setMouseCaptured(!uiHasFocus());
+        return;
+    }
+
+    if (m_input.wasKeyPressed(SDL_SCANCODE_R))
+    {
+        m_keybinds.resetToDefaults();
+        m_keybinds.save(m_savePath + "/keybinds.txt");
+        return;
+    }
+
+    if (!m_input.wasMouseButtonPressed(SDL_BUTTON_LEFT)) return;
+
+    // Hit-test the rows, laid out the same way renderControlsScreen draws them.
+    const float h = static_cast<float>(m_window.height());
+    const float rowH = std::max(18.0f, h * 0.035f);
+    const float top = h * 0.18f;
+    const float my = static_cast<float>(m_input.mouseY());
+
+    const int row = static_cast<int>((my - top) / rowH);
+    if (row >= 0 && row < Keybinds::Count)
+        m_rebindingAction = row;
+}
+
+void Application::renderControlsScreen()
+{
+    const float w = static_cast<float>(m_window.width());
+    const float h = static_cast<float>(m_window.height());
+
+    m_ui.quad(0, 0, w, h, glm::vec4(0.0f, 0.0f, 0.0f, 0.82f));
+
+    const std::string title = "CONTROLS";
+    m_ui.textWithShadow(title, w * 0.5f - UIRenderer::textWidth(title, 4.0f) * 0.5f, h * 0.07f, 4.0f, TEXT_COLOR);
+
+    const float rowH = std::max(18.0f, h * 0.035f);
+    const float top = h * 0.18f;
+    const float scale = std::max(1.0f, rowH / 14.0f);
+    const float labelX = w * 0.18f;
+    const float valueRight = w * 0.82f;
+
+    for (int i = 0; i < Keybinds::Count; ++i)
+    {
+        const float y = top + i * rowH;
+        const bool capturing = (m_rebindingAction == i);
+
+        const float my = static_cast<float>(m_input.mouseY());
+        const bool hovered = (my >= y && my < y + rowH);
+        if (capturing || hovered)
+            m_ui.quad(labelX - 8.0f, y, valueRight - labelX + 16.0f, rowH - 2.0f,
+                      glm::vec4(1.0f, 1.0f, 1.0f, capturing ? 0.22f : 0.08f));
+
+        const auto action = static_cast<Keybinds::Action>(i);
+        m_ui.textWithShadow(Keybinds::actionLabel(action), labelX, y + 2.0f, scale, TEXT_COLOR);
+
+        const std::string value = capturing ? "PRESS A KEY" : m_keybinds.bindingLabel(action);
+        const glm::vec4 colour = capturing ? glm::vec4(1.0f, 0.85f, 0.3f, 1.0f)
+                                           : glm::vec4(1.0f, 1.0f, 0.6f, 1.0f);
+        m_ui.textWithShadow(value, valueRight - UIRenderer::textWidth(value, scale), y + 2.0f, scale, colour);
+    }
+
+    const std::string hint = "CLICK A ROW TO REBIND   R RESET DEFAULTS   ESC DONE";
+    m_ui.textWithShadow(hint, w * 0.5f - UIRenderer::textWidth(hint, 1.4f) * 0.5f, h * 0.93f, 1.4f,
+                        glm::vec4(0.7f, 0.75f, 0.8f, 1.0f));
+}
+
 void Application::renderPauseMenu()
 {
     const float w = static_cast<float>(m_window.width());
@@ -925,6 +1037,7 @@ void Application::renderPauseMenu()
 
     const char* lines[] = {
         "ESC  RESUME",
+        "C    CONTROLS",
         "Q    SAVE AND QUIT",
         "",
         "WASD MOVE   SPACE JUMP   SHIFT SNEAK   CTRL SPRINT",
@@ -966,7 +1079,11 @@ void Application::renderDebugOverlay()
     std::snprintf(buffer, sizeof(buffer), "CHUNK %d %d", World::floorDiv(bx, Chunk::SX), World::floorDiv(bz, Chunk::SZ));
     line(buffer);
 
-    std::snprintf(buffer, sizeof(buffer), "BIOME %s", biomeName(world().generator().biomeAt(bx, bz)));
+    // Biomes only mean anything in the overworld; elsewhere name the dimension.
+    if (m_dimension == Dimension::Overworld)
+        std::snprintf(buffer, sizeof(buffer), "BIOME %s", biomeName(world().generator().biomeAt(bx, bz)));
+    else
+        std::snprintf(buffer, sizeof(buffer), "DIMENSION: %s", dimensionName(m_dimension));
     line(buffer);
 
     std::snprintf(buffer, sizeof(buffer), "LIGHT SKY %d BLOCK %d",

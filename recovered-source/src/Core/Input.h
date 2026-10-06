@@ -23,6 +23,12 @@ public:
     int mouseY() const { return m_mouseY; }
     int wheelDelta() const { return m_wheelDelta; }
 
+    // Whatever was pressed this frame, whichever key or button it was. The
+    // controls screen needs this to capture a rebind without knowing in
+    // advance what the player will press.
+    SDL_Scancode anyKeyPressed() const { return m_anyKey; }
+    Uint8 anyMouseButtonPressed() const { return m_anyMouseButton; }
+
     bool quitRequested() const { return m_quitRequested; }
     void requestQuit() { m_quitRequested = true; }
 
@@ -42,6 +48,8 @@ private:
     int m_mouseY = 0;
     int m_wheelDelta = 0;
 
+    SDL_Scancode m_anyKey = SDL_SCANCODE_UNKNOWN;
+    Uint8 m_anyMouseButton = 0;
     bool m_quitRequested = false;
     bool m_resized = false;
     int m_newWidth = 0;

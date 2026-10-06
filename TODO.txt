@@ -1,7 +1,7 @@
 BROWSERCRAFT -> MINECRAFT 1.21
 Working to-do list. Updated as things land.
 
-Last updated: 2026-10-06 (keybinds landed)
+Last updated: 2026-10-06 (dimensions, portals and controls landed)
 Tracking: recovered-source/ (the rebuilt engine on branch
           claude/fervent-goodall-ueozok), not the build live on
           browsercraft.net.
@@ -71,15 +71,14 @@ PRIORITY 1 - CATCH UP TO THE LIVE BUILD
 Until these land, shipping the rebuilt engine is a downgrade for players.
 All four already exist in the live build; this is re-doing them.
 
-[~] Nether dimension: netherrack and soul sand blocks exist; terrain
-    generation and the dimension switch itself are still to do
-[~] End dimension: end stone block exists; island generation and the
-    dimension switch itself are still to do
-[~] Portals: the portal block exists and glows; frame detection,
-    lighting, travel and coordinate scaling are still to do
-[~] Rebindable controls: keybinds.txt read/write done, every input now
-    goes through the keymap. The Controls screen to rebind from is
-    still to do, so for now the file is the only way to change them.
+[x] Nether dimension: netherrack caverns, lava sea, soul sand, glowstone
+    ceilings, bedrock shell, its own save folder
+[x] End dimension: central plateau, void ring, outer islands, eroded
+    undersides, its own save folder
+[x] Portals: obsidian frame detection, self-lighting, travel both ways,
+    8:1 coordinate scaling, safe arrival
+[x] Rebindable controls: keybinds.txt, every input through the keymap,
+    and a Controls screen to rebind from (pause -> C)
 [ ] Main menu, singleplayer/multiplayer screens, character select
 [ ] Settings screen: render distance, sound toggle, fancy lighting, name
 
