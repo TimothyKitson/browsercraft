@@ -1,0 +1,190 @@
+BROWSERCRAFT -> MINECRAFT 1.21
+Working to-do list. Updated as things land.
+
+Last updated: 2026-10-06
+Tracking: recovered-source/ (the rebuilt engine on branch
+          claude/fervent-goodall-ueozok), not the build live on
+          browsercraft.net.
+
+Markers:  [x] done and verified   [~] partly done   [ ] not started
+
+
+-------------------------------------------------------------------------
+READ THIS FIRST
+-------------------------------------------------------------------------
+
+Two codebases exist and they are not the same game.
+
+  LIVE      browsercraft.net, built 2026-10-03 or later from source that
+            only exists on C:\Users\TempAdmin\VoxelEngine. Has the Nether,
+            the End, portals and rebindable controls. Nobody has the source
+            in version control.
+
+  REBUILT   recovered-source/ in this repo, reconstructed from a chat
+            transcript. Older. Has mobs, audio, the 32x texture pack and
+            PBR, none of which the live build has. Missing the four
+            features listed above.
+
+Everything below targets REBUILT. The single highest-value thing anyone can
+do is get the real source off that Windows machine, because four items in
+Priority 1 are rewrites of work that already exists.
+
+
+-------------------------------------------------------------------------
+DONE
+-------------------------------------------------------------------------
+
+[x] Engine compiles, links and runs in a browser (177 errors -> 0)
+[x] 32x resource pack loading, 512px atlas, animated water and lava
+[x] LabPBR normal + specular atlases built, bound and fed to the shader
+[x] PBR toggle on P, matching the live build's FANCY LIGHTING
+[x] Mobs: 8 species, physics, collision, step-up, wander/flee/chase AI,
+    light- and time-based spawning, population cap, despawn
+[x] Mob rendering through the chunk shader, lit like the blocks around them
+[x] Positional audio: SDL2 device, stb_vorbis decoding, 24 voices,
+    distance roll-off, equal-power panning
+[x] Sounds wired to mining, placing, footsteps and every mob event
+[x] 135 sound slots packed, all matching the names in the sound pack
+[x] Browser packer tool for dropping a sound pack in without a build step
+
+Already in the engine before any of this (verified, not assumed):
+[x] 35 block types, cube and cross shapes
+[x] Terrain: fbm noise, 7 biomes, caves, ore veins, trees
+[x] Chunks 16x128x16, threaded meshing, frustum culling
+[x] Sky light and block light with propagation
+[x] Day/night cycle
+[x] Water and lava, including swimming physics
+    (Earlier note that swimming was missing was wrong: Player.cpp has
+    isInWater, SWIM_SPEED, SWIM_UP_VELOCITY and WATER_GRAVITY. The string
+    search that suggested otherwise could not see them, since they are
+    constants rather than string literals.)
+[x] Player: walk, sprint, sneak, jump, fly, creative, health, fall damage
+[x] Mining with per-block hardness, crack overlay and drops
+[x] Inventory, 9 hotbar + 27 storage slots
+[x] World saving, chunk persistence
+[x] UI: hotbar, inventory screen, pause menu, F3 debug overlay
+
+
+-------------------------------------------------------------------------
+PRIORITY 1 - CATCH UP TO THE LIVE BUILD
+-------------------------------------------------------------------------
+Until these land, shipping the rebuilt engine is a downgrade for players.
+All four already exist in the live build; this is re-doing them.
+
+[ ] Nether dimension: terrain generation, netherrack, lava seas
+[ ] End dimension: end stone islands, void
+[ ] Portals: obsidian frame detection, lighting, travel, coordinate scaling
+[ ] Rebindable controls: keybinds.txt read/write + the Controls screen
+[ ] Main menu, singleplayer/multiplayer screens, character select
+[ ] Settings screen: render distance, sound toggle, fancy lighting, name
+
+
+-------------------------------------------------------------------------
+PRIORITY 2 - FINISH WHAT IS HALF BUILT
+-------------------------------------------------------------------------
+
+[~] Mobs render - code is written and compiles, never visually confirmed.
+    Software rendering here cannot produce a frame inside the screenshot
+    timeout. Needs checking on a real GPU.
+[ ] Mob textures: they currently wear block textures on box models. Needs
+    a proper mob atlas and per-species UV mapping.
+[ ] Mob combat: player hits mob (EntityManager::pick already does the ray
+    test), mob hits player, knockback, invulnerability frames
+[ ] Mob drops on death
+[ ] Baby mobs and breeding
+[ ] Mob pathfinding around obstacles - current AI walks into walls and
+    re-rolls its heading rather than routing around
+
+
+-------------------------------------------------------------------------
+PRIORITY 3 - CORE SYSTEMS WITH NOTHING IN PLACE
+-------------------------------------------------------------------------
+
+[ ] Crafting: 2x2 and 3x3 grids, recipe matching, crafting table
+    (Inventory is storage only right now, no recipe code at all)
+[ ] Items as distinct from blocks: tools, weapons, food, materials
+[ ] Tool tiers and correct-tool-for-block mining speed
+[ ] Durability
+[ ] Furnace and smelting
+[ ] Chests and block entities with their own inventories
+[ ] Hunger and food
+[ ] Health regeneration
+[ ] XP and enchanting
+[ ] Beds and sleeping through the night
+[ ] Weather: rain, snow, thunder
+[ ] Sound: music, ambient cave noise, weather
+[ ] Redstone
+[ ] Farming: tilled soil, crops, growth ticks, bonemeal
+[ ] Buckets, water and lava placement
+[ ] Doors, fences, stairs, slabs - non-cube block shapes beyond cross
+[ ] Signs and text rendering in world
+[ ] Boats and minecarts
+[ ] Structures: villages, mineshafts, strongholds, temples
+
+
+-------------------------------------------------------------------------
+PRIORITY 4 - 1.21 SPECIFIC CONTENT
+-------------------------------------------------------------------------
+
+[ ] Trial Chambers with spawners and vaults
+[ ] Breeze and wind charges
+[ ] Bogged
+[ ] Mace
+[ ] Crafter block
+[ ] Copper and tuff block families
+[ ] Armadillo and wolf armour
+[ ] The other ~70 mobs 1.21 ships
+[ ] The other ~965 block types 1.21 ships
+[ ] Ender Dragon
+[ ] Wither
+[ ] Warden and the deep dark
+[ ] Villagers and trading
+[ ] Raids and pillagers
+
+
+-------------------------------------------------------------------------
+NOT PLANNED WITHOUT A DECISION
+-------------------------------------------------------------------------
+
+[ ] Multiplayer. The live build has a Multiplayer menu entry but there is
+    no networking code anywhere. This is a very large piece of work on its
+    own: server, protocol, entity sync, chunk streaming.
+[ ] Touch controls. The loading page says they are not built.
+
+
+-------------------------------------------------------------------------
+HONEST SCOPE NOTE
+-------------------------------------------------------------------------
+
+"1.21 Minecraft" is not a finish line this list reaches. Minecraft is about
+fifteen years of work by a full studio. Priorities 1 and 2 are realistic.
+Priority 3 is a long but genuine roadmap, and each item is a real feature
+that makes the game noticeably more complete. Priority 4 is open-ended by
+nature: there are roughly 1000 block types and 80 mobs in 1.21, and adding
+them is content work without end rather than a problem to solve.
+
+A better target to aim at: a solid block sandbox with crafting, combat,
+mobs, the three dimensions and survival progression. That is Priority 1
+through 3, and it would feel like Minecraft to play even though it would
+not match it feature for feature.
+
+
+-------------------------------------------------------------------------
+LICENSING, BECAUSE IT AFFECTS WHAT CAN SHIP
+-------------------------------------------------------------------------
+
+Whatever ends up in assets/ gets distributed to everyone who loads
+browsercraft.net.
+
+  Sounds   The pack supplied is Mojang's own audio: the files carry REAPER
+           export tags from Mojang's pipeline, encoder dates spanning 2005
+           to 2018, and records/ holds the disc music by C418 and Lena
+           Raine. Shipping it is what gets a site taken down. The packer
+           tool is neutral and will pack whatever it is given; what goes in
+           is the owner's call.
+
+  Textures Primes HD Textures 32x, a third-party pack. No licence file was
+           included in the zip. Worth checking its terms before shipping.
+
+  Code     stb_image, stb_image_write and stb_vorbis are public domain.
+           SDL2 is zlib-licensed. glm is MIT.

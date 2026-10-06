@@ -62,6 +62,8 @@ private:
         bool active = false;
     };
 
+    // Full path for one take of a sound, picking a variant at random.
+    std::string resolve(const std::string& name, int variants);
     const Clip* clipFor(const std::string& path);
     void queue(const Clip* clip, float leftGain, float rightGain, float pitch);
 

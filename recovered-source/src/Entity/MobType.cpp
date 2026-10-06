@@ -115,8 +115,8 @@ namespace
         chicken.soundDeath = "mob/chicken/hurt";
         chicken.soundStep = "mob/chicken/step";
         chicken.ambientVariants = 3;
-        chicken.hurtVariants = 3;
-        chicken.deathVariants = 3;
+        chicken.hurtVariants = 2;
+        chicken.deathVariants = 2;
         chicken.stepVariants = 2;
         chicken.model = quadrupedModel(0.42f, 0.4f, 0.3f, 0.26f, 0.26f, 0.26f, Tiles::SnowTile, Tiles::FlowerYellow);
 

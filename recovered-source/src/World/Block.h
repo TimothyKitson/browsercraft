@@ -86,3 +86,6 @@ bool isObtainable(BlockId id);
 // folders under assets/sounds, so a caller builds "dig/" or "step/" plus this.
 // Returns nullptr for blocks that make no sound, such as air.
 const char* blockSoundGroup(BlockId id);
+
+// How many numbered footstep takes a sound family has; they are not uniform.
+int blockStepVariants(const char* group);

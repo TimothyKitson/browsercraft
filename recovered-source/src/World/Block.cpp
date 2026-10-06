@@ -1,4 +1,5 @@
 #include "Block.h"
+#include <string>
 #include "Renderer/AtlasTiles.h"
 
 using namespace Tiles;
@@ -114,4 +115,14 @@ const char* blockSoundGroup(BlockId id)
         default:
             return "stone";
     }
+}
+
+int blockStepVariants(const char* group)
+{
+    // How many numbered footstep files each family actually ships.
+    if (!group) return 0;
+    const std::string name(group);
+    if (name == "grass" || name == "stone" || name == "wood") return 6;
+    if (name == "sand") return 5;
+    return 4; // gravel, snow, cloth
 }

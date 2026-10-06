@@ -126,6 +126,19 @@ void SoundSystem::queue(const Clip* clip, float leftGain, float rightGain, float
     voice.active = true;
 }
 
+
+std::string SoundSystem::resolve(const std::string& name, int variants)
+{
+    // A sound with a single take carries no number -- mob/pig/death.ogg,
+    // random/click.ogg -- while anything with alternatives is numbered from 1.
+    if (variants <= 1)
+        return "assets/sounds/" + name + ".ogg";
+
+    m_rng ^= m_rng << 13; m_rng ^= m_rng >> 17; m_rng ^= m_rng << 5;
+    const int variant = 1 + static_cast<int>(m_rng % static_cast<uint32_t>(variants));
+    return "assets/sounds/" + name + std::to_string(variant) + ".ogg";
+}
+
 void SoundSystem::play(const std::string& name, int variants, const glm::vec3& position,
                        float volume, float pitch)
 {
@@ -150,10 +163,7 @@ void SoundSystem::play(const std::string& name, int variants, const glm::vec3& p
     const float left = gain * std::sqrt(std::max(0.0f, 0.5f * (1.0f - pan)));
     const float right = gain * std::sqrt(std::max(0.0f, 0.5f * (1.0f + pan)));
 
-    m_rng ^= m_rng << 13; m_rng ^= m_rng >> 17; m_rng ^= m_rng << 5;
-    const int variant = 1 + static_cast<int>(m_rng % static_cast<uint32_t>(variants));
-
-    queue(clipFor("assets/sounds/" + name + std::to_string(variant) + ".ogg"), left, right, pitch);
+    queue(clipFor(resolve(name, variants)), left, right, pitch);
 }
 
 void SoundSystem::playGlobal(const std::string& name, int variants, float volume, float pitch)
@@ -162,11 +172,8 @@ void SoundSystem::playGlobal(const std::string& name, int variants, float volume
 
     std::lock_guard<std::mutex> lock(m_mutex);
 
-    m_rng ^= m_rng << 13; m_rng ^= m_rng >> 17; m_rng ^= m_rng << 5;
-    const int variant = 1 + static_cast<int>(m_rng % static_cast<uint32_t>(variants));
-
     const float gain = volume * 0.7071f;
-    queue(clipFor("assets/sounds/" + name + std::to_string(variant) + ".ogg"), gain, gain, pitch);
+    queue(clipFor(resolve(name, variants)), gain, gain, pitch);
 }
 
 void SoundSystem::audioCallback(void* userData, uint8_t* stream, int length)

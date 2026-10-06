@@ -283,7 +283,7 @@ void Application::updateGameplay(float deltaTime)
                                                     static_cast<int>(std::floor(feet.y - 0.2f)),
                                                     static_cast<int>(std::floor(feet.z)));
             if (const char* group = blockSoundGroup(ground))
-                m_sound.play(std::string("step/") + group, 6, feet, 0.22f, 0.9f + 0.2f * (m_elapsedSeconds - std::floor(m_elapsedSeconds)));
+                m_sound.play(std::string("step/") + group, blockStepVariants(group), feet, 0.22f, 0.9f + 0.2f * (m_elapsedSeconds - std::floor(m_elapsedSeconds)));
         }
     }
 
