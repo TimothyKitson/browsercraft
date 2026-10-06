@@ -1,7 +1,7 @@
 BROWSERCRAFT -> MINECRAFT 1.21
 Working to-do list. Updated as things land.
 
-Last updated: 2026-10-06
+Last updated: 2026-10-06 (keybinds landed)
 Tracking: recovered-source/ (the rebuilt engine on branch
           claude/fervent-goodall-ueozok), not the build live on
           browsercraft.net.
@@ -74,7 +74,9 @@ All four already exist in the live build; this is re-doing them.
 [ ] Nether dimension: terrain generation, netherrack, lava seas
 [ ] End dimension: end stone islands, void
 [ ] Portals: obsidian frame detection, lighting, travel, coordinate scaling
-[ ] Rebindable controls: keybinds.txt read/write + the Controls screen
+[~] Rebindable controls: keybinds.txt read/write done, every input now
+    goes through the keymap. The Controls screen to rebind from is
+    still to do, so for now the file is the only way to change them.
 [ ] Main menu, singleplayer/multiplayer screens, character select
 [ ] Settings screen: render distance, sound toggle, fancy lighting, name
 

@@ -58,14 +58,28 @@ Application::Application()
     glCullFace(GL_BACK);
     glFrontFace(GL_CCW);
 
+    m_keybinds.load(m_savePath + "/keybinds.txt");
+
     loadLevel();
     setMouseCaptured(true);
 
     std::printf("\n=== Voxel Game ===\n");
-    std::printf("WASD move | Space jump | Shift sneak | Ctrl sprint\n");
-    std::printf("Left click mine | Right click place | Middle click pick\n");
-    std::printf("1-9 / scroll hotbar | E inventory | F fly | G creative\n");
-    std::printf("F3 debug | [ ] render distance | Esc menu\n\n");
+    std::printf("%s move | %s jump | %s sneak | %s sprint\n",
+                "WASD",
+                m_keybinds.bindingLabel(Keybinds::Jump).c_str(),
+                m_keybinds.bindingLabel(Keybinds::Sneak).c_str(),
+                m_keybinds.bindingLabel(Keybinds::Sprint).c_str());
+    std::printf("%s mine | %s place | %s pick\n",
+                m_keybinds.bindingLabel(Keybinds::Attack).c_str(),
+                m_keybinds.bindingLabel(Keybinds::Use).c_str(),
+                m_keybinds.bindingLabel(Keybinds::Pick).c_str());
+    std::printf("1-9 / scroll hotbar | %s inventory | %s fly | G creative\n",
+                m_keybinds.bindingLabel(Keybinds::Inventory).c_str(),
+                m_keybinds.bindingLabel(Keybinds::Fly).c_str());
+    std::printf("%s debug | %s %s render distance | Esc menu\n\n",
+                m_keybinds.bindingLabel(Keybinds::Debug).c_str(),
+                m_keybinds.bindingLabel(Keybinds::DistanceDown).c_str(),
+                m_keybinds.bindingLabel(Keybinds::DistanceUp).c_str());
 }
 
 Application::~Application()
@@ -221,16 +235,16 @@ void Application::handleEvents()
         setMouseCaptured(!uiHasFocus());
     }
 
-    if (m_paused && m_input.wasKeyPressed(SDL_SCANCODE_Q)) m_running = false;
+    if (m_paused && pressed(Keybinds::Drop)) m_running = false;
 
-    if (m_input.wasKeyPressed(SDL_SCANCODE_E))
+    if (pressed(Keybinds::Inventory))
     {
         m_inventoryOpen = !m_inventoryOpen;
         m_paused = false;
         setMouseCaptured(!uiHasFocus());
     }
 
-    if (m_input.wasKeyPressed(SDL_SCANCODE_F3)) m_showDebug = !m_showDebug;
+    if (pressed(Keybinds::Debug)) m_showDebug = !m_showDebug;
 
     if (m_player.health <= 0 && m_input.wasKeyPressed(SDL_SCANCODE_R))
     {
@@ -238,9 +252,9 @@ void Application::handleEvents()
         setMouseCaptured(true);
     }
 
-    if (m_input.wasKeyPressed(SDL_SCANCODE_LEFTBRACKET))
+    if (pressed(Keybinds::DistanceDown))
         m_world.setRenderDistance(m_world.renderDistance() - 1);
-    if (m_input.wasKeyPressed(SDL_SCANCODE_RIGHTBRACKET))
+    if (pressed(Keybinds::DistanceUp))
         m_world.setRenderDistance(m_world.renderDistance() + 1);
 
     // Clicking inside the inventory screen assigns to the selected hotbar slot.
@@ -258,6 +272,21 @@ void Application::handleEvents()
             }
         }
     }
+}
+
+
+bool Application::held(Keybinds::Action action) const
+{
+    if (m_keybinds.device(action) == Keybinds::Mouse)
+        return m_input.isMouseButtonDown(static_cast<Uint8>(m_keybinds.code(action)));
+    return m_input.isKeyDown(static_cast<SDL_Scancode>(m_keybinds.code(action)));
+}
+
+bool Application::pressed(Keybinds::Action action) const
+{
+    if (m_keybinds.device(action) == Keybinds::Mouse)
+        return m_input.wasMouseButtonPressed(static_cast<Uint8>(m_keybinds.code(action)));
+    return m_input.wasKeyPressed(static_cast<SDL_Scancode>(m_keybinds.code(action)));
 }
 
 void Application::updateGameplay(float deltaTime)
@@ -291,8 +320,8 @@ void Application::updateGameplay(float deltaTime)
     m_camera.addLook(m_input.mouseDeltaX(), m_input.mouseDeltaY(), MOUSE_SENSITIVITY);
 
     // --- mode toggles ---
-    if (m_input.wasKeyPressed(SDL_SCANCODE_F)) m_player.flying = !m_player.flying;
-    if (m_input.wasKeyPressed(SDL_SCANCODE_P)) m_pbrEnabled = !m_pbrEnabled;
+    if (pressed(Keybinds::Fly)) m_player.flying = !m_player.flying;
+    if (pressed(Keybinds::Pbr)) m_pbrEnabled = !m_pbrEnabled;
     if (m_input.wasKeyPressed(SDL_SCANCODE_G))
     {
         m_player.creative = !m_player.creative;
@@ -311,17 +340,17 @@ void Application::updateGameplay(float deltaTime)
     const glm::vec3 flatRight = glm::normalize(glm::vec3(m_camera.right.x, 0.0f, m_camera.right.z));
 
     glm::vec3 wish(0.0f);
-    if (m_input.isKeyDown(SDL_SCANCODE_W)) wish += flatFront;
-    if (m_input.isKeyDown(SDL_SCANCODE_S)) wish -= flatFront;
-    if (m_input.isKeyDown(SDL_SCANCODE_A)) wish -= flatRight;
-    if (m_input.isKeyDown(SDL_SCANCODE_D)) wish += flatRight;
+    if (held(Keybinds::Forward)) wish += flatFront;
+    if (held(Keybinds::Back)) wish -= flatFront;
+    if (held(Keybinds::Left)) wish -= flatRight;
+    if (held(Keybinds::Right)) wish += flatRight;
     if (glm::length(wish) > 0.0001f) wish = glm::normalize(wish);
 
     controls.wishDirection = wish;
-    controls.jump = m_input.wasKeyPressed(SDL_SCANCODE_SPACE);
-    controls.jumpHeld = m_input.isKeyDown(SDL_SCANCODE_SPACE);
-    controls.sprint = m_input.isKeyDown(SDL_SCANCODE_LCTRL) || m_input.isKeyDown(SDL_SCANCODE_RCTRL);
-    controls.sneak = m_input.isKeyDown(SDL_SCANCODE_LSHIFT) || m_input.isKeyDown(SDL_SCANCODE_RSHIFT);
+    controls.jump = pressed(Keybinds::Jump);
+    controls.jumpHeld = held(Keybinds::Jump);
+    controls.sprint = held(Keybinds::Sprint);
+    controls.sneak = held(Keybinds::Sneak);
     controls.descend = controls.sneak;
 
     m_player.update(deltaTime, m_world, controls);

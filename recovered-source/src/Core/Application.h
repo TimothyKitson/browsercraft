@@ -1,6 +1,7 @@
 #pragma once
 #include "Window.h"
 #include "Input.h"
+#include "Keybinds.h"
 #include "Renderer/Shader.h"
 #include "Renderer/Atlas.h"
 #include "Renderer/Camera.h"
@@ -29,6 +30,7 @@ public:
 private:
     Window m_window;
     Input m_input;
+    Keybinds m_keybinds;
     Atlas m_atlas;
     Shader m_chunkShader;
     SkyRenderer m_sky;
@@ -67,6 +69,10 @@ private:
     float m_fps = 0.0f;
     float m_fpsAccumulator = 0.0f;
     int m_framesThisSecond = 0;
+
+    // Input routed through the keymap rather than physical keys.
+    bool held(Keybinds::Action action) const;
+    bool pressed(Keybinds::Action action) const;
 
     void handleEvents();
     void updateGameplay(float deltaTime);
