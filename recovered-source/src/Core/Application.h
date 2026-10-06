@@ -9,6 +9,7 @@
 #include "Renderer/SelectionRenderer.h"
 #include "Renderer/MobRenderer.h"
 #include "Entity/EntityManager.h"
+#include "Audio/SoundSystem.h"
 #include "World/World.h"
 #include "Player/Player.h"
 #include "Player/Inventory.h"
@@ -40,6 +41,8 @@ private:
     Player m_player;
     Inventory m_inventory;
     EntityManager m_entities;
+    SoundSystem m_sound;
+    float m_stepDistance = 0.0f; // metres walked since the last footstep
 
     std::string m_savePath;
     glm::vec3 m_spawnPoint{ 0.0f };

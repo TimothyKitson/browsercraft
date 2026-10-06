@@ -65,3 +65,53 @@ bool isObtainable(BlockId id)
             return id < Blocks::Count;
     }
 }
+
+const char* blockSoundGroup(BlockId id)
+{
+    switch (id)
+    {
+        case Blocks::Grass:
+        case Blocks::SnowGrass:
+        case Blocks::Leaves:
+        case Blocks::BirchLeaves:
+        case Blocks::TallGrass:
+        case Blocks::FlowerRed:
+        case Blocks::FlowerYellow:
+        case Blocks::Cactus:
+        case Blocks::Pumpkin:
+            return "grass";
+
+        case Blocks::Dirt:
+        case Blocks::Clay:
+            return "gravel";
+
+        case Blocks::Gravel:
+            return "gravel";
+
+        case Blocks::Sand:
+        case Blocks::Sandstone:
+            return "sand";
+
+        case Blocks::Snow:
+            return "snow";
+
+        case Blocks::Planks:
+        case Blocks::Log:
+        case Blocks::BirchLog:
+        case Blocks::Torch:
+            return "wood";
+
+        case Blocks::Wool:
+            return "cloth";
+
+        case Blocks::Air:
+        case Blocks::Water:
+        case Blocks::Lava:
+            return nullptr;
+
+        // Stone, ores, brick, obsidian, glass, ice and anything new default to
+        // the stone family, which is the right guess for a mineral block.
+        default:
+            return "stone";
+    }
+}

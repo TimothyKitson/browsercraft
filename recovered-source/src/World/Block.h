@@ -81,3 +81,8 @@ inline uint8_t lightEmission(BlockId id) { return blockInfo(id).lightEmission; }
 
 // Blocks the player can pick up / place. Used by the creative palette.
 bool isObtainable(BlockId id);
+
+// Which footstep/dig sound family a block belongs to. The names match the
+// folders under assets/sounds, so a caller builds "dig/" or "step/" plus this.
+// Returns nullptr for blocks that make no sound, such as air.
+const char* blockSoundGroup(BlockId id);

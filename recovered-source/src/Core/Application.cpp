@@ -265,9 +265,27 @@ void Application::updateGameplay(float deltaTime)
     // --- mobs ---
     m_entities.update(deltaTime, m_world, m_player.position, daylightFactor());
 
-    // Mobs queue their noises here. There is no audio system yet, so drain
-    // and discard them; playing a sound later is a change at this one line.
-    m_entities.drainSounds();
+    // Mobs queue their noises; hand them to the mixer.
+    m_sound.setListener(m_camera.position, m_camera.front, m_camera.right);
+    for (const MobSound& sound : m_entities.drainSounds())
+        m_sound.play(sound.name, sound.variants, sound.position, sound.volume, sound.pitch);
+
+    // Footsteps, driven by distance walked so they keep pace with the legs.
+    if (m_player.onGround && !m_player.flying)
+    {
+        const glm::vec3 motion = m_player.velocity * deltaTime;
+        m_stepDistance += glm::length(glm::vec3(motion.x, 0.0f, motion.z));
+        if (m_stepDistance >= 1.9f)
+        {
+            m_stepDistance = 0.0f;
+            const glm::vec3 feet = m_player.position;
+            const BlockId ground = m_world.getBlock(static_cast<int>(std::floor(feet.x)),
+                                                    static_cast<int>(std::floor(feet.y - 0.2f)),
+                                                    static_cast<int>(std::floor(feet.z)));
+            if (const char* group = blockSoundGroup(ground))
+                m_sound.play(std::string("step/") + group, 6, feet, 0.22f, 0.9f + 0.2f * (m_elapsedSeconds - std::floor(m_elapsedSeconds)));
+        }
+    }
 
     // --- look ---
     m_camera.addLook(m_input.mouseDeltaX(), m_input.mouseDeltaY(), MOUSE_SENSITIVITY);
@@ -351,6 +369,8 @@ void Application::updateMining(float deltaTime)
     if (m_breakProgress >= 1.0f)
     {
         const BlockId drop = blockDrop(id);
+        if (const char* group = blockSoundGroup(id))
+            m_sound.play(std::string("dig/") + group, 4, glm::vec3(hit.block) + 0.5f, 0.75f, 0.85f);
         m_world.setBlock(hit.block.x, hit.block.y, hit.block.z, Blocks::Air);
         if (!m_player.creative && drop != Blocks::Air)
             m_inventory.add(drop, 1);
@@ -397,6 +417,8 @@ void Application::handlePlacement()
         box.max.z > target.z && box.min.z < target.z + 1;
     if (overlapsPlayer && isSolid(stack.id)) return;
 
+    if (const char* group = blockSoundGroup(stack.id))
+        m_sound.play(std::string("dig/") + group, 4, glm::vec3(target) + 0.5f, 0.7f, 0.9f);
     m_world.setBlock(target.x, target.y, target.z, stack.id);
 
     if (!m_player.creative)
