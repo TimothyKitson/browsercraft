@@ -1,5 +1,5 @@
 build/
-build-web/
+build-*/
 out/
 world/
 .cache/

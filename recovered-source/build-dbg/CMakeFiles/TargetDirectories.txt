@@ -1,8 +1,0 @@
-/home/user/browsercraft/recovered-source/build-dbg/CMakeFiles/VoxelEngine.dir
-/home/user/browsercraft/recovered-source/build-dbg/CMakeFiles/edit_cache.dir
-/home/user/browsercraft/recovered-source/build-dbg/CMakeFiles/rebuild_cache.dir
-/home/user/browsercraft/recovered-source/build-dbg/_deps/glm-build/CMakeFiles/edit_cache.dir
-/home/user/browsercraft/recovered-source/build-dbg/_deps/glm-build/CMakeFiles/rebuild_cache.dir
-/home/user/browsercraft/recovered-source/build-dbg/_deps/glm-build/glm/CMakeFiles/glm.dir
-/home/user/browsercraft/recovered-source/build-dbg/_deps/glm-build/glm/CMakeFiles/edit_cache.dir
-/home/user/browsercraft/recovered-source/build-dbg/_deps/glm-build/glm/CMakeFiles/rebuild_cache.dir
