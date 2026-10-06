@@ -54,11 +54,15 @@ void fillSkyColumns(Chunk& chunk)
     }
 }
 
-World::World(uint32_t seed, std::string saveDirectory, int renderDistance)
+World::World(uint32_t seed, std::string saveDirectory, int renderDistance, Dimension dimension)
     : m_seed(seed)
-    , m_saveDirectory(std::move(saveDirectory))
+    // Each dimension keeps its chunks in its own folder, the way Minecraft
+    // splits DIM-1 and DIM1 out from the overworld's region files.
+    , m_saveDirectory(*dimensionFolder(dimension)
+                          ? saveDirectory + "/" + dimensionFolder(dimension)
+                          : std::move(saveDirectory))
     , m_renderDistance(renderDistance)
-    , m_generator(seed)
+    , m_generator(seed, dimension)
     , m_pool(std::max(2u, std::thread::hardware_concurrency() > 2 ? std::thread::hardware_concurrency() - 1 : 2u))
 {
     WorldSave::ensureDirectories(m_saveDirectory);

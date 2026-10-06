@@ -48,7 +48,6 @@ Application::Application()
     , m_sky()
     , m_selection()
     , m_ui()
-    , m_world(0, "world", DEFAULT_RENDER_DISTANCE)
     , m_camera(glm::vec3(0.0f), -90.0f, 0.0f)
     , m_player(glm::vec3(0.0f, 80.0f, 0.0f))
     , m_savePath("world")
@@ -59,6 +58,12 @@ Application::Application()
     glFrontFace(GL_CCW);
 
     m_keybinds.load(m_savePath + "/keybinds.txt");
+
+    // The seed is shared so the three dimensions line up with one another;
+    // each generator branches on its own dimension.
+    for (int i = 0; i < 3; ++i)
+        m_worlds[i] = std::make_unique<World>(0u, m_savePath, DEFAULT_RENDER_DISTANCE,
+                                              static_cast<Dimension>(i));
 
     loadLevel();
     setMouseCaptured(true);
@@ -98,7 +103,7 @@ void Application::loadLevel()
     const bool loaded = WorldSave::loadLevel(m_savePath, state);
 
     int spawnX = 0, spawnY = 80, spawnZ = 0;
-    m_world.generator().findSpawn(spawnX, spawnY, spawnZ);
+    world().generator().findSpawn(spawnX, spawnY, spawnZ);
     m_spawnPoint = glm::vec3(spawnX + 0.5f, static_cast<float>(spawnY), spawnZ + 0.5f);
 
     if (loaded)
@@ -126,7 +131,7 @@ void Application::loadLevel()
         m_inventory.add(Blocks::Cobblestone, 64);
         m_inventory.add(Blocks::Torch, 32);
         m_inventory.add(Blocks::Glass, 32);
-        std::printf("Created a new world (seed %u)\n", m_world.seed());
+        std::printf("Created a new world (seed %u)\n", world().seed());
     }
 
     m_camera.position = m_player.eyePosition();
@@ -135,7 +140,7 @@ void Application::loadLevel()
 void Application::saveLevel()
 {
     LevelState state;
-    state.seed = m_world.seed();
+    state.seed = world().seed();
     state.playerPosition = m_player.position;
     state.yaw = m_camera.yaw;
     state.pitch = m_camera.pitch;
@@ -151,7 +156,7 @@ void Application::saveLevel()
     }
 
     WorldSave::saveLevel(m_savePath, state);
-    m_world.saveAll();
+    world().saveAll();
 }
 
 glm::vec3 Application::sunDirection() const
@@ -200,7 +205,7 @@ void Application::run()
         m_timeOfDay += deltaTime / DAY_LENGTH_SECONDS;
         if (m_timeOfDay >= 1.0f) m_timeOfDay -= 1.0f;
 
-        m_world.update(m_player.position);
+        world().update(m_player.position);
 
         m_autosaveTimer += deltaTime;
         if (m_autosaveTimer >= AUTOSAVE_INTERVAL)
@@ -253,9 +258,9 @@ void Application::handleEvents()
     }
 
     if (pressed(Keybinds::DistanceDown))
-        m_world.setRenderDistance(m_world.renderDistance() - 1);
+        world().setRenderDistance(world().renderDistance() - 1);
     if (pressed(Keybinds::DistanceUp))
-        m_world.setRenderDistance(m_world.renderDistance() + 1);
+        world().setRenderDistance(world().renderDistance() + 1);
 
     // Clicking inside the inventory screen assigns to the selected hotbar slot.
     if (m_inventoryOpen && m_input.wasMouseButtonPressed(SDL_BUTTON_LEFT))
@@ -289,10 +294,167 @@ bool Application::pressed(Keybinds::Action action) const
     return m_input.wasKeyPressed(static_cast<SDL_Scancode>(m_keybinds.code(action)));
 }
 
+
+
+bool Application::tryLightPortal(const glm::ivec3& placed)
+{
+    if (m_dimension == Dimension::End) return false;
+
+    constexpr int INNER_W = 2; // classic frame: 2 wide, 3 tall inside
+    constexpr int INNER_H = 3;
+
+    // Try both upright orientations: the frame runs along X or along Z.
+    const glm::ivec3 axes[2] = { { 1, 0, 0 }, { 0, 0, 1 } };
+
+    for (const glm::ivec3& across : axes)
+    {
+        // The placed block could be any part of the frame, so sweep every
+        // interior origin that could involve it.
+        for (int offA = -(INNER_W + 1); offA <= INNER_W + 1; ++offA)
+        {
+            for (int offY = -(INNER_H + 1); offY <= INNER_H + 1; ++offY)
+            {
+                const glm::ivec3 origin = placed + across * offA + glm::ivec3(0, offY, 0);
+
+                bool frameOk = true;
+
+                // Interior must be clear.
+                for (int a = 0; a < INNER_W && frameOk; ++a)
+                    for (int h = 0; h < INNER_H && frameOk; ++h)
+                    {
+                        const glm::ivec3 cell = origin + across * a + glm::ivec3(0, h, 0);
+                        const BlockId inside = world().getBlock(cell.x, cell.y, cell.z);
+                        if (inside != Blocks::Air) frameOk = false;
+                    }
+
+                // Sides, floor and lintel must all be obsidian.
+                for (int h = 0; h < INNER_H && frameOk; ++h)
+                {
+                    const glm::ivec3 left = origin + across * -1 + glm::ivec3(0, h, 0);
+                    const glm::ivec3 right = origin + across * INNER_W + glm::ivec3(0, h, 0);
+                    if (world().getBlock(left.x, left.y, left.z) != Blocks::Obsidian) frameOk = false;
+                    if (world().getBlock(right.x, right.y, right.z) != Blocks::Obsidian) frameOk = false;
+                }
+                for (int a = 0; a < INNER_W && frameOk; ++a)
+                {
+                    const glm::ivec3 below = origin + across * a + glm::ivec3(0, -1, 0);
+                    const glm::ivec3 above = origin + across * a + glm::ivec3(0, INNER_H, 0);
+                    if (world().getBlock(below.x, below.y, below.z) != Blocks::Obsidian) frameOk = false;
+                    if (world().getBlock(above.x, above.y, above.z) != Blocks::Obsidian) frameOk = false;
+                }
+
+                if (!frameOk) continue;
+
+                for (int a = 0; a < INNER_W; ++a)
+                    for (int h = 0; h < INNER_H; ++h)
+                    {
+                        const glm::ivec3 cell = origin + across * a + glm::ivec3(0, h, 0);
+                        world().setBlock(cell.x, cell.y, cell.z, Blocks::NetherPortal);
+                    }
+
+                m_sound.play("random/glass", 3, glm::vec3(origin) + 0.5f, 0.9f, 0.7f);
+                std::printf("[Portal] lit a portal at %d %d %d\n", origin.x, origin.y, origin.z);
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+void Application::switchDimension(Dimension target)
+{
+    if (target == m_dimension) return;
+
+    // The Nether is eight times smaller horizontally, so a short walk there
+    // covers a long one here. Vertical position carries over unchanged.
+    const float scale = (target == Dimension::Nether && m_dimension == Dimension::Overworld) ? (1.0f / 8.0f)
+                      : (m_dimension == Dimension::Nether && target == Dimension::Overworld) ? 8.0f
+                      : 1.0f;
+
+    glm::vec3 destination = m_player.position;
+    destination.x *= scale;
+    destination.z *= scale;
+
+    m_dimension = target;
+    m_entities.clear(); // mobs do not follow you through
+
+    // Let the destination stream in before looking for ground, otherwise every
+    // arrival lands in ungenerated air.
+    world().update(destination);
+
+    // Drop to the first solid footing under the arrival column, and if there
+    // is none, carve a small pocket rather than dumping the player in a wall.
+    int groundY = -1;
+    const int cx = static_cast<int>(std::floor(destination.x));
+    const int cz = static_cast<int>(std::floor(destination.z));
+    for (int y = std::min(Chunk::SY - 3, 118); y > 2; --y)
+    {
+        if (isSolid(world().getBlock(cx, y, cz)) &&
+            !isSolid(world().getBlock(cx, y + 1, cz)) &&
+            !isSolid(world().getBlock(cx, y + 2, cz)))
+        {
+            groundY = y + 1;
+            break;
+        }
+    }
+
+    if (groundY < 0)
+    {
+        groundY = (target == Dimension::Nether) ? 64 : 62;
+        for (int dx = -1; dx <= 1; ++dx)
+            for (int dz = -1; dz <= 1; ++dz)
+            {
+                world().setBlock(cx + dx, groundY - 1, cz + dz,
+                                 target == Dimension::Nether ? Blocks::Netherrack : Blocks::EndStone);
+                for (int dy = 0; dy < 3; ++dy)
+                    world().setBlock(cx + dx, groundY + dy, cz + dz, Blocks::Air);
+            }
+    }
+
+    destination.y = static_cast<float>(groundY);
+    m_player.position = destination;
+    m_player.velocity = glm::vec3(0.0f);
+    m_camera.position = m_player.eyePosition();
+    m_portalCooldown = 3.0f;
+
+    std::printf("[Portal] now in %s at %.0f %.0f %.0f\n",
+                dimensionName(m_dimension), destination.x, destination.y, destination.z);
+}
+
+void Application::updatePortal(float deltaTime)
+{
+    if (m_portalCooldown > 0.0f)
+    {
+        m_portalCooldown -= deltaTime;
+        return;
+    }
+
+    const glm::vec3 eye = m_player.eyePosition();
+    const bool inPortal = world().getBlock(static_cast<int>(std::floor(eye.x)),
+                                           static_cast<int>(std::floor(eye.y)),
+                                           static_cast<int>(std::floor(eye.z))) == Blocks::NetherPortal;
+
+    if (!inPortal)
+    {
+        m_portalTimer = 0.0f;
+        return;
+    }
+
+    // A moment of standing in it before you go, so brushing past does nothing.
+    m_portalTimer += deltaTime;
+    if (m_portalTimer < 1.2f) return;
+
+    m_portalTimer = 0.0f;
+    switchDimension(m_dimension == Dimension::Overworld ? Dimension::Nether : Dimension::Overworld);
+}
+
 void Application::updateGameplay(float deltaTime)
 {
+    updatePortal(deltaTime);
+
     // --- mobs ---
-    m_entities.update(deltaTime, m_world, m_player.position, daylightFactor());
+    m_entities.update(deltaTime, world(), m_player.position, daylightFactor());
 
     // Mobs queue their noises; hand them to the mixer.
     m_sound.setListener(m_camera.position, m_camera.front, m_camera.right);
@@ -308,7 +470,7 @@ void Application::updateGameplay(float deltaTime)
         {
             m_stepDistance = 0.0f;
             const glm::vec3 feet = m_player.position;
-            const BlockId ground = m_world.getBlock(static_cast<int>(std::floor(feet.x)),
+            const BlockId ground = world().getBlock(static_cast<int>(std::floor(feet.x)),
                                                     static_cast<int>(std::floor(feet.y - 0.2f)),
                                                     static_cast<int>(std::floor(feet.z)));
             if (const char* group = blockSoundGroup(ground))
@@ -353,7 +515,7 @@ void Application::updateGameplay(float deltaTime)
     controls.sneak = held(Keybinds::Sneak);
     controls.descend = controls.sneak;
 
-    m_player.update(deltaTime, m_world, controls);
+    m_player.update(deltaTime, world(), controls);
     m_camera.position = m_player.eyePosition();
 
     // A little extra field of view while sprinting sells the speed.
@@ -369,7 +531,7 @@ void Application::updateGameplay(float deltaTime)
 
 void Application::updateMining(float deltaTime)
 {
-    const RaycastHit hit = m_world.raycast(m_camera.position, m_camera.front, REACH_DISTANCE);
+    const RaycastHit hit = world().raycast(m_camera.position, m_camera.front, REACH_DISTANCE);
 
     if (!hit.hit || !m_input.isMouseButtonDown(SDL_BUTTON_LEFT))
     {
@@ -386,7 +548,7 @@ void Application::updateMining(float deltaTime)
         m_hasTarget = true;
     }
 
-    const BlockId id = m_world.getBlock(hit.block.x, hit.block.y, hit.block.z);
+    const BlockId id = world().getBlock(hit.block.x, hit.block.y, hit.block.z);
     const float hardness = blockInfo(id).hardness;
     if (hardness < 0.0f) return; // bedrock and liquids never break
 
@@ -400,7 +562,7 @@ void Application::updateMining(float deltaTime)
         const BlockId drop = blockDrop(id);
         if (const char* group = blockSoundGroup(id))
             m_sound.play(std::string("dig/") + group, 4, glm::vec3(hit.block) + 0.5f, 0.75f, 0.85f);
-        m_world.setBlock(hit.block.x, hit.block.y, hit.block.z, Blocks::Air);
+        world().setBlock(hit.block.x, hit.block.y, hit.block.z, Blocks::Air);
         if (!m_player.creative && drop != Blocks::Air)
             m_inventory.add(drop, 1);
         m_breakProgress = 0.0f;
@@ -412,10 +574,10 @@ void Application::handlePlacement()
 {
     if (m_input.wasMouseButtonPressed(SDL_BUTTON_MIDDLE))
     {
-        const RaycastHit hit = m_world.raycast(m_camera.position, m_camera.front, REACH_DISTANCE);
+        const RaycastHit hit = world().raycast(m_camera.position, m_camera.front, REACH_DISTANCE);
         if (hit.hit)
         {
-            const BlockId picked = m_world.getBlock(hit.block.x, hit.block.y, hit.block.z);
+            const BlockId picked = world().getBlock(hit.block.x, hit.block.y, hit.block.z);
             if (isObtainable(picked))
             {
                 ItemStack& stack = m_inventory.selected();
@@ -431,11 +593,11 @@ void Application::handlePlacement()
     ItemStack& stack = m_inventory.selected();
     if (stack.empty()) return;
 
-    const RaycastHit hit = m_world.raycast(m_camera.position, m_camera.front, REACH_DISTANCE);
+    const RaycastHit hit = world().raycast(m_camera.position, m_camera.front, REACH_DISTANCE);
     if (!hit.hit) return;
 
     const glm::ivec3 target = hit.previous;
-    const BlockId existing = m_world.getBlock(target.x, target.y, target.z);
+    const BlockId existing = world().getBlock(target.x, target.y, target.z);
     if (existing != Blocks::Air && !isLiquid(existing)) return;
 
     // Don't entomb the player in their own block.
@@ -448,7 +610,9 @@ void Application::handlePlacement()
 
     if (const char* group = blockSoundGroup(stack.id))
         m_sound.play(std::string("dig/") + group, 4, glm::vec3(target) + 0.5f, 0.7f, 0.9f);
-    m_world.setBlock(target.x, target.y, target.z, stack.id);
+    world().setBlock(target.x, target.y, target.z, stack.id);
+
+    if (stack.id == Blocks::Obsidian) tryLightPortal(target);
 
     if (!m_player.creative)
     {
@@ -493,9 +657,9 @@ void Application::renderWorld()
 
     m_sky.render(view, projection, m_camera.position, sun, daylight, m_elapsedSeconds);
 
-    const bool underwater = m_player.isHeadUnderwater(m_world);
+    const bool underwater = m_player.isHeadUnderwater(world());
     const glm::vec3 fogColor = SkyRenderer::horizonColor(daylight, sun);
-    const float viewDistance = static_cast<float>(m_world.renderDistance() * Chunk::SX);
+    const float viewDistance = static_cast<float>(world().renderDistance() * Chunk::SX);
 
     m_chunkShader.bind();
     m_chunkShader.setMat4("uView", view);
@@ -522,9 +686,9 @@ void Application::renderWorld()
     // Opaque terrain first, nearest to farthest is fine thanks to the depth buffer.
     struct VisibleChunk { Chunk* chunk; float distance; };
     std::vector<VisibleChunk> visible;
-    visible.reserve(m_world.chunks().size());
+    visible.reserve(world().chunks().size());
 
-    for (const auto& [pos, chunk] : m_world.chunks())
+    for (const auto& [pos, chunk] : world().chunks())
     {
         if (chunk->opaqueMesh.empty() && chunk->transparentMesh.empty()) continue;
         if (!frustum.intersectsAABB(chunk->aabbMin(), chunk->aabbMax())) continue;
@@ -542,13 +706,13 @@ void Application::renderWorld()
 
     // Mobs are opaque and share the chunk shader, so they go in right after
     // the terrain and before anything that blends.
-    m_mobRenderer.render(m_entities, m_world, m_chunkShader);
+    m_mobRenderer.render(m_entities, world(), m_chunkShader);
 
     // Selection outline + mining cracks sit between the two passes so water
     // still blends over them correctly.
     if (!uiHasFocus())
     {
-        const RaycastHit hit = m_world.raycast(m_camera.position, m_camera.front, REACH_DISTANCE);
+        const RaycastHit hit = world().raycast(m_camera.position, m_camera.front, REACH_DISTANCE);
         if (hit.hit)
         {
             if (m_hasTarget && m_breakProgress > 0.0f && m_targetBlock == hit.block)
@@ -802,16 +966,16 @@ void Application::renderDebugOverlay()
     std::snprintf(buffer, sizeof(buffer), "CHUNK %d %d", World::floorDiv(bx, Chunk::SX), World::floorDiv(bz, Chunk::SZ));
     line(buffer);
 
-    std::snprintf(buffer, sizeof(buffer), "BIOME %s", biomeName(m_world.generator().biomeAt(bx, bz)));
+    std::snprintf(buffer, sizeof(buffer), "BIOME %s", biomeName(world().generator().biomeAt(bx, bz)));
     line(buffer);
 
     std::snprintf(buffer, sizeof(buffer), "LIGHT SKY %d BLOCK %d",
-                  static_cast<int>(m_world.skyLight(bx, by + 1, bz)),
-                  static_cast<int>(m_world.blockLightAt(bx, by + 1, bz)));
+                  static_cast<int>(world().skyLight(bx, by + 1, bz)),
+                  static_cast<int>(world().blockLightAt(bx, by + 1, bz)));
     line(buffer);
 
     std::snprintf(buffer, sizeof(buffer), "CHUNKS %d  JOBS %d  DIST %d",
-                  m_world.loadedChunks(), m_world.pendingJobs(), m_world.renderDistance());
+                  world().loadedChunks(), world().pendingJobs(), world().renderDistance());
     line(buffer);
 
     const int hours = static_cast<int>(m_timeOfDay * 24.0f);

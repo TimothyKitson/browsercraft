@@ -2,6 +2,18 @@
 #include "Chunk.h"
 #include "Noise.h"
 
+// Which world a generator is building. Each has its own terrain shape, and
+// chunks are saved under their own folder so the three never collide.
+enum class Dimension : uint8_t
+{
+    Overworld,
+    Nether,
+    End
+};
+
+const char* dimensionName(Dimension dimension);
+const char* dimensionFolder(Dimension dimension);
+
 enum class Biome : uint8_t
 {
     Ocean,
@@ -23,7 +35,9 @@ class WorldGen
 public:
     static constexpr int SEA_LEVEL = 62;
 
-    explicit WorldGen(uint32_t seed);
+    WorldGen(uint32_t seed, Dimension dimension = Dimension::Overworld);
+
+    Dimension dimension() const { return m_dimension; }
 
     void generate(Chunk& chunk) const;
 
@@ -35,6 +49,7 @@ public:
 
 private:
     uint32_t m_seed;
+    Dimension m_dimension;
     Noise m_height;
     Noise m_hills;
     Noise m_mountains;
@@ -50,6 +65,9 @@ private:
     void carveCaves(Chunk& chunk) const;
     void placeOres(Chunk& chunk) const;
     void decorate(Chunk& chunk) const;
+
+    void generateNether(Chunk& chunk) const;
+    void generateEnd(Chunk& chunk) const;
 
     void buildTree(Chunk& chunk, int worldX, int surfaceY, int worldZ, bool birch) const;
 };

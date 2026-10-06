@@ -28,8 +28,29 @@ const char* biomeName(Biome biome)
     return "Unknown";
 }
 
-WorldGen::WorldGen(uint32_t seed)
+const char* dimensionName(Dimension dimension)
+{
+    switch (dimension)
+    {
+        case Dimension::Nether: return "THE NETHER";
+        case Dimension::End:    return "THE END";
+        default:                return "OVERWORLD";
+    }
+}
+
+const char* dimensionFolder(Dimension dimension)
+{
+    switch (dimension)
+    {
+        case Dimension::Nether: return "DIM-1";
+        case Dimension::End:    return "DIM1";
+        default:                return "";
+    }
+}
+
+WorldGen::WorldGen(uint32_t seed, Dimension dimension)
     : m_seed(seed)
+    , m_dimension(dimension)
     , m_height(seed + 1)
     , m_hills(seed + 2)
     , m_mountains(seed + 3)
@@ -88,10 +109,144 @@ Biome WorldGen::biomeAt(int worldX, int worldZ) const
 
 void WorldGen::generate(Chunk& chunk) const
 {
+    switch (m_dimension)
+    {
+        case Dimension::Nether:
+            generateNether(chunk);
+            return;
+        case Dimension::End:
+            generateEnd(chunk);
+            return;
+        default:
+            break;
+    }
+
     generateColumns(chunk);
     carveCaves(chunk);
     placeOres(chunk);
     decorate(chunk);
+}
+
+// A closed cavern system rather than a landscape: solid netherrack between a
+// bedrock floor and ceiling, hollowed out by 3D noise, with lava filling
+// everything below the sea.
+void WorldGen::generateNether(Chunk& chunk) const
+{
+    constexpr int ROOF = 120;
+    constexpr int LAVA_LEVEL = 31;
+
+    const int baseX = chunk.position().x * Chunk::SX;
+    const int baseZ = chunk.position().z * Chunk::SZ;
+
+    for (int lx = 0; lx < Chunk::SX; ++lx)
+    {
+        for (int lz = 0; lz < Chunk::SZ; ++lz)
+        {
+            const int wx = baseX + lx;
+            const int wz = baseZ + lz;
+
+            for (int y = 0; y < ROOF; ++y)
+            {
+                BlockId block = Blocks::Netherrack;
+
+                if (y <= 1 || y >= ROOF - 2)
+                {
+                    // Ragged bedrock shell top and bottom.
+                    const int fromEdge = (y <= 1) ? y : (ROOF - 1 - y);
+                    if (fromEdge == 0 || hashToFloat(hashCoords(wx, y, wz, m_seed + 71)) < 0.55f)
+                        block = Blocks::Bedrock;
+                }
+                else
+                {
+                    // Two noise fields: one carves the big caverns, the other
+                    // keeps the ceiling from being a flat lid.
+                    const float cavern = m_caves.fbm3D(wx * 0.021f, y * 0.034f, wz * 0.021f, 3);
+                    const float roofFade = static_cast<float>(ROOF - y) / 26.0f;
+                    const float threshold = 0.06f - std::min(0.35f, std::max(0.0f, 1.0f - roofFade) * 0.3f);
+
+                    if (cavern > threshold)
+                        block = (y <= LAVA_LEVEL) ? Blocks::Lava : Blocks::Air;
+                }
+
+                chunk.setBlockRaw(lx, y, lz, block);
+            }
+
+            // Soul sand collects in the low flats, glowstone hangs from the roof.
+            for (int y = LAVA_LEVEL + 1; y < ROOF - 3; ++y)
+            {
+                if (chunk.getBlock(lx, y, lz) != Blocks::Netherrack) continue;
+                if (chunk.getBlock(lx, y + 1, lz) != Blocks::Air) continue;
+
+                if (y < LAVA_LEVEL + 9 &&
+                    hashToFloat(hashCoords(wx, y, wz, m_seed + 72)) < 0.22f)
+                    chunk.setBlockRaw(lx, y, lz, Blocks::SoulSand);
+                break;
+            }
+
+            for (int y = ROOF - 4; y > LAVA_LEVEL; --y)
+            {
+                if (chunk.getBlock(lx, y, lz) != Blocks::Netherrack) continue;
+                if (chunk.getBlock(lx, y - 1, lz) != Blocks::Air) continue;
+
+                if (hashToFloat(hashCoords(wx, y, wz, m_seed + 73)) < 0.035f)
+                    chunk.setBlockRaw(lx, y - 1, lz, Blocks::Glowstone);
+                break;
+            }
+        }
+    }
+}
+
+// Islands of end stone floating in the void: one large central plateau at the
+// origin, and scattered outer islands beyond it.
+void WorldGen::generateEnd(Chunk& chunk) const
+{
+    constexpr int CENTRE_Y = 58;
+    constexpr float MAIN_RADIUS = 76.0f;
+    constexpr float INNER_VOID = 420.0f; // gap before the outer islands begin
+
+    const int baseX = chunk.position().x * Chunk::SX;
+    const int baseZ = chunk.position().z * Chunk::SZ;
+
+    for (int lx = 0; lx < Chunk::SX; ++lx)
+    {
+        for (int lz = 0; lz < Chunk::SZ; ++lz)
+        {
+            const int wx = baseX + lx;
+            const int wz = baseZ + lz;
+            const float distance = std::sqrt(static_cast<float>(wx) * wx + static_cast<float>(wz) * wz);
+
+            // How solid this column wants to be, 0 at the rim and 1 at the core.
+            float density;
+            if (distance < MAIN_RADIUS)
+            {
+                density = 1.0f - (distance / MAIN_RADIUS);
+            }
+            else if (distance > INNER_VOID)
+            {
+                const float islands = m_height.fbm2D(wx * 0.0055f, wz * 0.0055f, 3);
+                density = islands - 0.22f;
+            }
+            else
+            {
+                continue; // the ring of empty space around the main island
+            }
+
+            if (density <= 0.0f) continue;
+
+            const int halfHeight = static_cast<int>(4.0f + density * 22.0f);
+            for (int y = CENTRE_Y - halfHeight; y <= CENTRE_Y + halfHeight / 3; ++y)
+            {
+                if (y < 1 || y >= Chunk::SY) continue;
+
+                // Erode the underside so islands taper rather than ending flat.
+                const float erosion = m_caves.fbm3D(wx * 0.04f, y * 0.06f, wz * 0.04f, 2);
+                const float depth = static_cast<float>(CENTRE_Y - y) / (halfHeight + 1.0f);
+                if (erosion > 0.42f - depth * 0.3f) continue;
+
+                chunk.setBlockRaw(lx, y, lz, Blocks::EndStone);
+            }
+        }
+    }
 }
 
 void WorldGen::generateColumns(Chunk& chunk) const

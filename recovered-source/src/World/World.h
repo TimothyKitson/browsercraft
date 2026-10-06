@@ -38,7 +38,8 @@ struct LightRemovalNode
 class World
 {
 public:
-    World(uint32_t seed, std::string saveDirectory, int renderDistance);
+    World(uint32_t seed, std::string saveDirectory, int renderDistance,
+          Dimension dimension = Dimension::Overworld);
     ~World();
 
     World(const World&) = delete;
@@ -60,6 +61,7 @@ public:
     RaycastHit raycast(const glm::vec3& origin, const glm::vec3& direction, float maxDistance) const;
 
     const WorldGen& generator() const { return m_generator; }
+    Dimension dimension() const { return m_generator.dimension(); }
     uint32_t seed() const { return m_seed; }
 
     void saveAll();

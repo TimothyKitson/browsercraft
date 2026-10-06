@@ -14,6 +14,7 @@
 #include "World/World.h"
 #include "Player/Player.h"
 #include "Player/Inventory.h"
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -38,7 +39,26 @@ private:
     UIRenderer m_ui;
     MobRenderer m_mobRenderer;
 
-    World m_world;
+    // One world per dimension, all kept loaded so stepping through a portal
+    // does not discard the chunks on the far side. m_dimension says which one
+    // the player is standing in; world() is the shorthand for it.
+    std::unique_ptr<World> m_worlds[3];
+    Dimension m_dimension = Dimension::Overworld;
+
+    World& world() { return *m_worlds[static_cast<int>(m_dimension)]; }
+    const World& world() const { return *m_worlds[static_cast<int>(m_dimension)]; }
+
+    // Carries the player through a portal, mapping coordinates on the way.
+    void switchDimension(Dimension target);
+    void updatePortal(float deltaTime);
+
+    // Looks for a completed obsidian frame around a just-placed block and
+    // fills it in. There is no flint and steel yet, so finishing the frame
+    // is what lights it.
+    bool tryLightPortal(const glm::ivec3& placed);
+
+    float m_portalTimer = 0.0f;  // seconds stood inside a portal
+    float m_portalCooldown = 0.0f;
     Camera m_camera;
     Player m_player;
     Inventory m_inventory;
