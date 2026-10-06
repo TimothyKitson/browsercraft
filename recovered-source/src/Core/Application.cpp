@@ -262,11 +262,19 @@ void Application::handleEvents()
 
 void Application::updateGameplay(float deltaTime)
 {
+    // --- mobs ---
+    m_entities.update(deltaTime, m_world, m_player.position, daylightFactor());
+
+    // Mobs queue their noises here. There is no audio system yet, so drain
+    // and discard them; playing a sound later is a change at this one line.
+    m_entities.drainSounds();
+
     // --- look ---
     m_camera.addLook(m_input.mouseDeltaX(), m_input.mouseDeltaY(), MOUSE_SENSITIVITY);
 
     // --- mode toggles ---
     if (m_input.wasKeyPressed(SDL_SCANCODE_F)) m_player.flying = !m_player.flying;
+    if (m_input.wasKeyPressed(SDL_SCANCODE_P)) m_pbrEnabled = !m_pbrEnabled;
     if (m_input.wasKeyPressed(SDL_SCANCODE_G))
     {
         m_player.creative = !m_player.creative;
@@ -447,6 +455,14 @@ void Application::renderWorld()
     m_chunkShader.setFloat("uFogStart", viewDistance * 0.55f);
     m_chunkShader.setFloat("uFogEnd", viewDistance * 0.95f);
     m_chunkShader.setInt("uUnderwater", underwater ? 1 : 0);
+
+    // Atlas::bind puts albedo on unit 0 and the LabPBR normal and specular
+    // atlases on 1 and 2, which is what chunk.frag samples behind uPbrEnabled.
+    m_chunkShader.setInt("uNormalAtlas", 1);
+    m_chunkShader.setInt("uSpecularAtlas", 2);
+    m_chunkShader.setInt("uPbrEnabled", m_pbrEnabled ? 1 : 0);
+    m_chunkShader.setVec3("uSunDirection", sun);
+    m_chunkShader.setVec3("uCameraPos", m_camera.position);
     m_atlas.bind(0);
 
     Frustum frustum;
@@ -472,6 +488,10 @@ void Application::renderWorld()
         m_chunkShader.setVec3("uChunkOffset", entry.chunk->worldOrigin());
         entry.chunk->opaqueMesh.draw(GL_TRIANGLES);
     }
+
+    // Mobs are opaque and share the chunk shader, so they go in right after
+    // the terrain and before anything that blends.
+    m_mobRenderer.render(m_entities, m_world, m_chunkShader);
 
     // Selection outline + mining cracks sit between the two passes so water
     // still blends over them correctly.

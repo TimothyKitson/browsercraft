@@ -7,6 +7,8 @@
 #include "Renderer/UIRenderer.h"
 #include "Renderer/SkyRenderer.h"
 #include "Renderer/SelectionRenderer.h"
+#include "Renderer/MobRenderer.h"
+#include "Entity/EntityManager.h"
 #include "World/World.h"
 #include "Player/Player.h"
 #include "Player/Inventory.h"
@@ -31,14 +33,18 @@ private:
     SkyRenderer m_sky;
     SelectionRenderer m_selection;
     UIRenderer m_ui;
+    MobRenderer m_mobRenderer;
 
     World m_world;
     Camera m_camera;
     Player m_player;
     Inventory m_inventory;
+    EntityManager m_entities;
 
     std::string m_savePath;
     glm::vec3 m_spawnPoint{ 0.0f };
+
+    bool m_pbrEnabled = true; // LabPBR normal/specular lighting, toggled with P
 
     float m_timeOfDay = 0.3f; // 0 = midnight, 0.5 = noon
     float m_elapsedSeconds = 0.0f;
