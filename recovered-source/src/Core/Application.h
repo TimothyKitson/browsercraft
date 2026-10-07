@@ -2,6 +2,7 @@
 #include "Window.h"
 #include "Input.h"
 #include "Keybinds.h"
+#include "Console.h"
 #include "Renderer/Shader.h"
 #include "Renderer/Atlas.h"
 #include "Renderer/Camera.h"
@@ -86,6 +87,18 @@ private:
     // Draws a button and reports whether it was clicked this frame.
     bool menuButton(const std::string& label, float x, float y, float w, float h);
 
+    Console m_console;
+
+    // Runs one console command and returns what to print. A reply starting
+    // with '!' is shown as an error.
+    std::string runCommand(const std::string& command);
+    void renderConsole();
+
+    float m_lastJumpTap = -1.0f; // for the double-tap that toggles flight
+
+    float m_tickScale = 1.0f;   // /tick rate, 1.0 being normal speed
+    bool m_tickFrozen = false;  // /tick freeze
+
     bool m_controlsOpen = false;
     int m_rebindingAction = -1;   // index into Keybinds::Action, -1 when idle
 
@@ -129,7 +142,7 @@ private:
     void renderDebugOverlay();
 
     void setMouseCaptured(bool captured);
-    bool uiHasFocus() const { return m_screen != Screen::Playing || m_controlsOpen || m_paused || m_inventoryOpen || m_player.health <= 0; }
+    bool uiHasFocus() const { return m_console.open() || m_screen != Screen::Playing || m_controlsOpen || m_paused || m_inventoryOpen || m_player.health <= 0; }
 
     glm::vec3 sunDirection() const;
     float daylightFactor() const;

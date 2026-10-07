@@ -145,3 +145,76 @@ float UIRenderer::textWidth(const std::string& value, float scale)
     if (value.empty()) return 0.0f;
     return value.size() * (Font::GLYPH_W + 1) * scale - scale;
 }
+
+
+void UIRenderer::pushQuad(const glm::vec2 corners[4],
+                          float u0, float v0, float u1, float v1, const glm::vec4& color)
+{
+    // corners run top-left, bottom-left, bottom-right, top-right, matching the
+    // uv corners below, so a sheared patch samples the tile without twisting.
+    const float verts[6][4] = {
+        { corners[0].x, corners[0].y, u0, v0 },
+        { corners[1].x, corners[1].y, u0, v1 },
+        { corners[2].x, corners[2].y, u1, v1 },
+        { corners[0].x, corners[0].y, u0, v0 },
+        { corners[2].x, corners[2].y, u1, v1 },
+        { corners[3].x, corners[3].y, u1, v0 },
+    };
+
+    for (const auto& c : verts)
+    {
+        m_vertices.push_back(c[0]);
+        m_vertices.push_back(c[1]);
+        m_vertices.push_back(c[2]);
+        m_vertices.push_back(c[3]);
+        m_vertices.push_back(color.r);
+        m_vertices.push_back(color.g);
+        m_vertices.push_back(color.b);
+        m_vertices.push_back(color.a);
+    }
+}
+
+void UIRenderer::texturedQuad(unsigned int texture, const glm::vec2 corners[4],
+                              float u0, float v0, float u1, float v1, const glm::vec4& color)
+{
+    useTexture(texture);
+    pushQuad(corners, u0, v0, u1, v1, color);
+}
+
+void UIRenderer::blockIcon(unsigned int atlasTexture, const TileUV& top, const TileUV& left,
+                           const TileUV& right, float x, float y, float size)
+{
+    // A 2:1 isometric cube inside the given square. The three faces carry the
+    // same fixed brightnesses the world mesher uses, so an icon reads like the
+    // block does in the world.
+    const float half = size * 0.5f;
+    const float quarter = size * 0.25f;
+    const float cx = x + half;
+
+    const glm::vec2 topQuad[4] = {
+        { cx,        y },
+        { cx - half, y + quarter },
+        { cx,        y + quarter * 2.0f },
+        { cx + half, y + quarter },
+    };
+    texturedQuad(atlasTexture, topQuad, top.u0, top.vTop, top.u1, top.vBottom,
+                 glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+
+    const glm::vec2 leftQuad[4] = {
+        { cx - half, y + quarter },
+        { cx - half, y + quarter + half },
+        { cx,        y + size },
+        { cx,        y + quarter * 2.0f },
+    };
+    texturedQuad(atlasTexture, leftQuad, left.u0, left.vTop, left.u1, left.vBottom,
+                 glm::vec4(0.78f, 0.78f, 0.78f, 1.0f));
+
+    const glm::vec2 rightQuad[4] = {
+        { cx,        y + quarter * 2.0f },
+        { cx,        y + size },
+        { cx + half, y + quarter + half },
+        { cx + half, y + quarter },
+    };
+    texturedQuad(atlasTexture, rightQuad, right.u0, right.vTop, right.u1, right.vBottom,
+                 glm::vec4(0.6f, 0.6f, 0.6f, 1.0f));
+}

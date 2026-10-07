@@ -2,6 +2,7 @@
 #include "Shader.h"
 #include "Mesh.h"
 #include "Font.h"
+#include "Atlas.h"
 #include <string>
 #include <vector>
 #include <glm/glm.hpp>
@@ -21,6 +22,17 @@ public:
     void quad(float x, float y, float w, float h, const glm::vec4& color);
     void texturedQuad(unsigned int texture, float x, float y, float w, float h,
                       float u0, float v0, float u1, float v1, const glm::vec4& color);
+
+    // An arbitrary four-cornered patch, given clockwise from the top-left, so
+    // the UI can draw sheared faces as well as rectangles.
+    void texturedQuad(unsigned int texture, const glm::vec2 corners[4],
+                      float u0, float v0, float u1, float v1, const glm::vec4& color);
+
+    // One block drawn as an isometric cube rather than a flat face, the way
+    // Minecraft's inventory shows them. Tiles come from the block atlas, so no
+    // separate icon art is needed. `size` is the icon's full width.
+    void blockIcon(unsigned int atlasTexture, const TileUV& top, const TileUV& left,
+                   const TileUV& right, float x, float y, float size);
 
     void text(const std::string& value, float x, float y, float scale, const glm::vec4& color);
     void textWithShadow(const std::string& value, float x, float y, float scale, const glm::vec4& color);
@@ -43,5 +55,7 @@ private:
     void useTexture(unsigned int texture);
     void flush();
     void pushQuad(float x, float y, float w, float h,
+                  float u0, float v0, float u1, float v1, const glm::vec4& color);
+    void pushQuad(const glm::vec2 corners[4],
                   float u0, float v0, float u1, float v1, const glm::vec4& color);
 };

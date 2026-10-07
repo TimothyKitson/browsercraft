@@ -1,5 +1,6 @@
 #pragma once
 #include <SDL.h>
+#include <string>
 #include <unordered_map>
 
 // Keyboard + mouse state for one frame.
@@ -31,6 +32,12 @@ public:
     SDL_Scancode anyKeyPressed() const { return m_anyKey; }
     Uint8 anyMouseButtonPressed() const { return m_anyMouseButton; }
 
+    // Characters typed this frame, for the console. Only collected while text
+    // entry is on, so gameplay keys never leak into it.
+    const std::string& typedText() const { return m_typedText; }
+    static void startTextEntry();
+    static void stopTextEntry();
+
     bool quitRequested() const { return m_quitRequested; }
     void requestQuit() { m_quitRequested = true; }
 
@@ -50,6 +57,7 @@ private:
     int m_mouseY = 0;
     int m_wheelDelta = 0;
 
+    std::string m_typedText;
     SDL_Scancode m_anyKey = SDL_SCANCODE_UNKNOWN;
     Uint8 m_anyMouseButton = 0;
     bool m_quitRequested = false;

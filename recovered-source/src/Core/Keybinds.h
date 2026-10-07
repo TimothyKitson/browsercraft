@@ -3,6 +3,10 @@
 
 // Rebindable controls, stored as /world/keybinds.txt.
 //
+// Debug (F3), flying (double-tap jump, creative only) and the menu (~) are
+// deliberately absent: they are fixed, so they neither appear here nor on the
+// Controls screen.
+//
 // The file is one binding per line: "<action> <device> <code>", where device
 // 0 is an SDL scancode and 1 a mouse button. Actions missing from the file
 // keep their default, so a partial or older file still loads, and the file is
@@ -19,8 +23,9 @@ public:
         Forward, Back, Left, Right,
         Jump, Sneak, Sprint,
         Attack, Use, Pick,
-        Drop, Inventory, Fly,
-        Screenshot, Debug, HideHud, Fullscreen,
+        Drop, Inventory,
+        Hotbar1, Hotbar2, Hotbar3, Hotbar4, Hotbar5, Hotbar6, Hotbar7, Hotbar8, Hotbar9,
+        Screenshot, HideHud, Fullscreen,
         Pbr, Mute, DistanceDown, DistanceUp,
         Count
     };

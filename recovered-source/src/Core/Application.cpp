@@ -1,4 +1,7 @@
 #include "Application.h"
+#include <vector>
+#include <cctype>
+#include <sstream>
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
 #endif
@@ -62,6 +65,8 @@ Application::Application()
 
     m_keybinds.load(m_savePath + "/keybinds.txt");
 
+    m_console.setHandler([this](const std::string& command) { return runCommand(command); });
+
     // The seed is shared so the three dimensions line up with one another;
     // each generator branches on its own dimension.
     for (int i = 0; i < 3; ++i)
@@ -85,11 +90,9 @@ Application::Application()
                 m_keybinds.bindingLabel(Keybinds::Attack).c_str(),
                 m_keybinds.bindingLabel(Keybinds::Use).c_str(),
                 m_keybinds.bindingLabel(Keybinds::Pick).c_str());
-    std::printf("1-9 / scroll hotbar | %s inventory | %s fly | G creative\n",
-                m_keybinds.bindingLabel(Keybinds::Inventory).c_str(),
-                m_keybinds.bindingLabel(Keybinds::Fly).c_str());
-    std::printf("%s debug | %s %s render distance | Esc menu\n\n",
-                m_keybinds.bindingLabel(Keybinds::Debug).c_str(),
+    std::printf("1-9 / scroll hotbar | %s inventory | double-tap jump to fly\n",
+                m_keybinds.bindingLabel(Keybinds::Inventory).c_str());
+    std::printf("F3 debug | %s %s render distance | ~ menu | T chat | / command\n\n",
                 m_keybinds.bindingLabel(Keybinds::DistanceDown).c_str(),
                 m_keybinds.bindingLabel(Keybinds::DistanceUp).c_str());
 }
@@ -133,12 +136,8 @@ void Application::loadLevel()
     else
     {
         m_player.position = m_spawnPoint;
-        // A small starter kit so there's something to build with right away.
-        m_inventory.add(Blocks::Planks, 64);
-        m_inventory.add(Blocks::Cobblestone, 64);
-        m_inventory.add(Blocks::Torch, 32);
-        m_inventory.add(Blocks::Glass, 32);
-        m_inventory.add(Blocks::Obsidian, 14); // enough for one portal frame
+        // Every mode starts empty-handed. Creative picks blocks from the
+        // palette, survival mines them, and /give covers the rest.
         std::printf("Created a new world (seed %u)\n", world().seed());
     }
 
@@ -230,6 +229,29 @@ void Application::frame()
         }
 
         handleEvents();
+
+        // The console takes keys before anything else, so typing never also
+        // walks the player around.
+        if (m_console.open())
+        {
+            m_console.handleText(m_input.typedText());
+            const SDL_Scancode key = m_input.anyKeyPressed();
+            if (key != SDL_SCANCODE_UNKNOWN)
+                m_console.handleKey(key, m_input.isKeyDown(SDL_SCANCODE_LCTRL) ||
+                                         m_input.isKeyDown(SDL_SCANCODE_RCTRL));
+        }
+        else if (m_screen == Screen::Playing && !m_paused && !m_inventoryOpen && !m_controlsOpen)
+        {
+            if (m_input.wasKeyPressed(SDL_SCANCODE_T)) m_console.openInput(false);
+            else if (m_input.wasKeyPressed(SDL_SCANCODE_SLASH)) m_console.openInput(true);
+        }
+
+        m_console.update(deltaTime);
+
+        // /tick freeze stops the world without stopping the renderer or input.
+        if (m_tickFrozen) deltaTime = 0.0f;
+        else deltaTime *= m_tickScale;
+
         if (!m_running)
         {
 #ifdef __EMSCRIPTEN__
@@ -238,12 +260,14 @@ void Application::frame()
             return;
         }
 
-        if (m_screen != Screen::Playing && !m_controlsOpen)
-            updateMenu();
-        else if (!uiHasFocus())
-            updateGameplay(deltaTime);
+        if (m_console.open())
+            { /* the console already consumed this frame's input */ }
         else if (m_controlsOpen)
             updateControlsScreen();
+        else if (m_screen != Screen::Playing)
+            updateMenu();
+        else
+            updateGameplay(deltaTime);
 
         m_timeOfDay += deltaTime / DAY_LENGTH_SECONDS;
         if (m_timeOfDay >= 1.0f) m_timeOfDay -= 1.0f;
@@ -276,6 +300,29 @@ void Application::handleEvents()
         glViewport(0, 0, m_window.width(), m_window.height());
     }
 
+    // Flying is a double-tap of jump and only in creative, so it is not a
+    // binding and never appears on the Controls screen.
+    if (pressed(Keybinds::Jump))
+    {
+        if (m_player.creative && m_elapsedSeconds - m_lastJumpTap < 0.3f)
+        {
+            m_player.flying = !m_player.flying;
+            m_lastJumpTap = -1.0f;
+        }
+        else
+        {
+            m_lastJumpTap = m_elapsedSeconds;
+        }
+    }
+
+    // The menu opens on ~, which is fixed.
+    if (m_input.wasKeyPressed(SDL_SCANCODE_GRAVE))
+    {
+        if (m_inventoryOpen) m_inventoryOpen = false;
+        else m_paused = !m_paused;
+        setMouseCaptured(!uiHasFocus());
+    }
+
     if (m_input.wasKeyPressed(SDL_SCANCODE_ESCAPE))
     {
         if (m_inventoryOpen) m_inventoryOpen = false;
@@ -299,7 +346,7 @@ void Application::handleEvents()
         setMouseCaptured(!uiHasFocus());
     }
 
-    if (pressed(Keybinds::Debug)) m_showDebug = !m_showDebug;
+    if (m_input.wasKeyPressed(SDL_SCANCODE_F3)) m_showDebug = !m_showDebug;
 
     if (m_player.health <= 0 && m_input.wasKeyPressed(SDL_SCANCODE_R))
     {
@@ -501,6 +548,11 @@ void Application::updatePortal(float deltaTime)
 
 void Application::updateGameplay(float deltaTime)
 {
+    // Toggles above this line run whenever the game is the active screen, so
+    // an open inventory or pause menu can always be closed again. Below it is
+    // simulation, which pauses while one is up.
+    if (uiHasFocus()) return;
+
     updatePortal(deltaTime);
 
     // --- mobs ---
@@ -532,7 +584,6 @@ void Application::updateGameplay(float deltaTime)
     m_camera.addLook(m_input.mouseDeltaX(), m_input.mouseDeltaY(), MOUSE_SENSITIVITY);
 
     // --- mode toggles ---
-    if (pressed(Keybinds::Fly)) m_player.flying = !m_player.flying;
     if (pressed(Keybinds::Pbr)) m_pbrEnabled = !m_pbrEnabled;
     if (m_input.wasKeyPressed(SDL_SCANCODE_G))
     {
@@ -542,7 +593,7 @@ void Application::updateGameplay(float deltaTime)
 
     // --- hotbar selection ---
     for (int i = 0; i < Inventory::HOTBAR_SLOTS; ++i)
-        if (m_input.wasKeyPressed(static_cast<SDL_Scancode>(SDL_SCANCODE_1 + i)))
+        if (pressed(static_cast<Keybinds::Action>(Keybinds::Hotbar1 + i)))
             m_inventory.setSelectedSlot(i);
     m_inventory.scrollSelection(m_input.wheelDelta());
 
@@ -565,7 +616,22 @@ void Application::updateGameplay(float deltaTime)
     controls.sneak = held(Keybinds::Sneak);
     controls.descend = controls.sneak;
 
-    m_player.update(deltaTime, world(), controls);
+    // Hold the player still until the ground beneath them exists. Without this
+    // a fresh start drops them through ungenerated air and kills them before
+    // the first chunk arrives.
+    const Chunk* standingOn = world().chunkAt(World::floorDiv(static_cast<int>(std::floor(m_player.position.x)), Chunk::SX),
+                                              World::floorDiv(static_cast<int>(std::floor(m_player.position.z)), Chunk::SZ));
+    const bool groundReady = standingOn && standingOn->state.load() >= ChunkState::Generated;
+
+    if (!groundReady)
+    {
+        m_player.velocity = glm::vec3(0.0f);
+        m_camera.position = m_player.eyePosition();
+    }
+    else
+    {
+        m_player.update(deltaTime, world(), controls);
+    }
     m_camera.position = m_player.eyePosition();
 
     // A little extra field of view while sprinting sells the speed.
@@ -682,12 +748,13 @@ void Application::render()
     m_ui.begin(m_window.width(), m_window.height());
     if (m_player.health > 0 && m_screen == Screen::Playing) renderHud();
     if (m_showDebug) renderDebugOverlay();
-    if (m_inventoryOpen) renderInventoryScreen();
+    if (m_screen == Screen::Playing) renderConsole();
+    if (m_inventoryOpen && m_screen == Screen::Playing) renderInventoryScreen();
     if (m_controlsOpen) renderControlsScreen();
     else if (m_screen == Screen::MainMenu) renderMainMenu();
     else if (m_screen == Screen::Singleplayer) renderSingleplayerMenu();
     else if (m_screen == Screen::Settings) renderSettingsMenu();
-    else if (m_paused) renderPauseMenu();
+    else if (m_paused && m_screen == Screen::Playing) renderPauseMenu();
     if (m_player.health <= 0)
     {
         const float w = static_cast<float>(m_window.width());
@@ -839,9 +906,9 @@ void Application::renderHud()
         const ItemStack& stack = m_inventory.slot(i);
         if (stack.empty()) continue;
 
-        const TileUV uv = tileUV(blockInfo(stack.id).tileTop);
-        m_ui.texturedQuad(m_atlas.textureId(), slotX + 5.0f, barY + 5.0f, SLOT_SIZE - 10.0f, SLOT_SIZE - 10.0f,
-                          uv.u0, uv.vTop, uv.u1, uv.vBottom, glm::vec4(1.0f));
+        const BlockInfo& info = blockInfo(stack.id);
+        m_ui.blockIcon(m_atlas.textureId(), tileUV(info.tileTop), tileUV(info.tileSide),
+                       tileUV(info.tileSide), slotX + 5.0f, barY + 5.0f, SLOT_SIZE - 10.0f);
 
         if (!m_player.creative && stack.count > 1)
         {
@@ -944,9 +1011,9 @@ void Application::renderInventoryScreen()
 
         m_ui.quad(slotX, slotY, SLOT_SIZE, SLOT_SIZE, SLOT_COLOR);
 
-        const TileUV uv = tileUV(blockInfo(palette[i]).tileTop);
-        m_ui.texturedQuad(m_atlas.textureId(), slotX + 5.0f, slotY + 5.0f, SLOT_SIZE - 10.0f, SLOT_SIZE - 10.0f,
-                          uv.u0, uv.vTop, uv.u1, uv.vBottom, glm::vec4(1.0f));
+        const BlockInfo& paletteInfo = blockInfo(palette[i]);
+        m_ui.blockIcon(m_atlas.textureId(), tileUV(paletteInfo.tileTop), tileUV(paletteInfo.tileSide),
+                       tileUV(paletteInfo.tileSide), slotX + 5.0f, slotY + 5.0f, SLOT_SIZE - 10.0f);
 
         if (!m_player.creative)
         {
@@ -987,6 +1054,220 @@ bool Application::menuButton(const std::string& label, float x, float y, float w
                         scale, TEXT_COLOR);
 
     return hovered && m_input.wasMouseButtonPressed(SDL_BUTTON_LEFT);
+}
+
+
+namespace
+{
+    // Splits on whitespace.
+    std::vector<std::string> tokenize(const std::string& line)
+    {
+        std::vector<std::string> out;
+        std::istringstream stream(line);
+        std::string word;
+        while (stream >> word) out.push_back(word);
+        return out;
+    }
+
+    std::string lower(std::string value)
+    {
+        for (char& c : value) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+        return value;
+    }
+
+    // Accepts "oak_planks", "Oak Planks" or "planks" for the same block.
+    BlockId blockFromName(const std::string& wanted)
+    {
+        const std::string target = lower(wanted);
+        BlockId partial = Blocks::Air;
+
+        for (int id = 1; id < Blocks::Count; ++id)
+        {
+            std::string name = lower(blockInfo(static_cast<BlockId>(id)).name);
+            for (char& c : name) if (c == ' ') c = '_';
+
+            if (name == target) return static_cast<BlockId>(id);
+            if (partial == Blocks::Air && name.find(target) != std::string::npos)
+                partial = static_cast<BlockId>(id);
+        }
+        return partial;
+    }
+
+    // Parses a coordinate, where "~" means "where the player is" and "~5" means
+    // five past it, the way Minecraft's relative coordinates work.
+    bool parseCoord(const std::string& token, float origin, int& out)
+    {
+        try
+        {
+            if (token == "~") { out = static_cast<int>(std::floor(origin)); return true; }
+            if (!token.empty() && token[0] == '~')
+            {
+                out = static_cast<int>(std::floor(origin)) + std::stoi(token.substr(1));
+                return true;
+            }
+            out = std::stoi(token);
+            return true;
+        }
+        catch (...) { return false; }
+    }
+}
+
+std::string Application::runCommand(const std::string& command)
+{
+    const std::vector<std::string> args = tokenize(command);
+    if (args.empty()) return "";
+
+    const std::string name = lower(args[0]);
+
+    if (name == "help")
+    {
+        return "Commands: gamemode, give, clear, fill, tp, time, tick, seed, help\n"
+               "Not in this build: xp, enchant, difficulty, weather";
+    }
+
+    if (name == "gamemode")
+    {
+        if (args.size() < 2) return "!Usage: /gamemode (survival|creative|adventure|spectator)";
+        const std::string mode = lower(args[1]);
+
+        if (mode == "creative" || mode == "c" || mode == "1")
+        {
+            m_player.creative = true;
+            return "Set game mode to Creative";
+        }
+        if (mode == "survival" || mode == "s" || mode == "0")
+        {
+            m_player.creative = false;
+            m_player.flying = false;
+            return "Set game mode to Survival";
+        }
+        if (mode == "adventure" || mode == "a" || mode == "2")
+            return "!Adventure mode is not implemented";
+        if (mode == "spectator" || mode == "sp" || mode == "3")
+            return "!Spectator mode is not implemented";
+
+        return "!Unknown game mode: " + args[1];
+    }
+
+    if (name == "give")
+    {
+        if (args.size() < 2) return "!Usage: /give <block> [count]";
+        const BlockId id = blockFromName(args[1]);
+        if (id == Blocks::Air) return "!No block called " + args[1];
+        if (!isObtainable(id)) return "!" + std::string(blockInfo(id).name) + " cannot be carried";
+
+        int count = 1;
+        if (args.size() >= 3) { try { count = std::stoi(args[2]); } catch (...) { return "!Count must be a number"; } }
+        count = std::max(1, std::min(640, count));
+
+        const int added = m_inventory.add(id, count);
+        if (added <= 0) return "!No room in the inventory";
+        return "Gave " + std::to_string(added) + " " + blockInfo(id).name + " to you";
+    }
+
+    if (name == "clear")
+    {
+        int cleared = 0;
+        for (int i = 0; i < Inventory::TOTAL_SLOTS; ++i)
+        {
+            if (!m_inventory.slot(i).empty()) cleared += m_inventory.slot(i).count;
+            m_inventory.slot(i).clear();
+        }
+        return "Removed " + std::to_string(cleared) + " items from you";
+    }
+
+    if (name == "tp")
+    {
+        if (args.size() < 4) return "!Usage: /tp <x> <y> <z>";
+        int x = 0, y = 0, z = 0;
+        if (!parseCoord(args[1], m_player.position.x, x) ||
+            !parseCoord(args[2], m_player.position.y, y) ||
+            !parseCoord(args[3], m_player.position.z, z))
+            return "!Coordinates must be numbers, or ~ for your own";
+
+        m_player.position = glm::vec3(x + 0.5f, static_cast<float>(y), z + 0.5f);
+        m_player.velocity = glm::vec3(0.0f);
+        m_camera.position = m_player.eyePosition();
+        return ""; // you can see where you landed
+    }
+
+    if (name == "fill")
+    {
+        if (args.size() < 8) return "!Usage: /fill <x1> <y1> <z1> <x2> <y2> <z2> <block>";
+        int x1, y1, z1, x2, y2, z2;
+        if (!parseCoord(args[1], m_player.position.x, x1) || !parseCoord(args[2], m_player.position.y, y1) ||
+            !parseCoord(args[3], m_player.position.z, z1) || !parseCoord(args[4], m_player.position.x, x2) ||
+            !parseCoord(args[5], m_player.position.y, y2) || !parseCoord(args[6], m_player.position.z, z2))
+            return "!Coordinates must be numbers, or ~ for your own";
+
+        const BlockId id = (lower(args[7]) == "air") ? Blocks::Air : blockFromName(args[7]);
+        if (id == Blocks::Air && lower(args[7]) != "air") return "!No block called " + args[7];
+
+        if (x1 > x2) std::swap(x1, x2);
+        if (y1 > y2) std::swap(y1, y2);
+        if (z1 > z2) std::swap(z1, z2);
+        y1 = std::max(0, y1);
+        y2 = std::min(Chunk::SY - 1, y2);
+
+        const long long volume = static_cast<long long>(x2 - x1 + 1) * (y2 - y1 + 1) * (z2 - z1 + 1);
+        if (volume > 32768) return "!That is " + std::to_string(volume) + " blocks; the limit is 32768";
+        if (volume <= 0) return "!That region is empty";
+
+        for (int x = x1; x <= x2; ++x)
+            for (int y = y1; y <= y2; ++y)
+                for (int z = z1; z <= z2; ++z)
+                    world().setBlock(x, y, z, id);
+
+        return "Filled " + std::to_string(volume) + " blocks";
+    }
+
+    if (name == "time")
+    {
+        if (args.size() < 3 || lower(args[1]) != "set") return "!Usage: /time set (day|noon|night|midnight)";
+        const std::string when = lower(args[2]);
+        if (when == "day") m_timeOfDay = 0.25f;
+        else if (when == "noon") m_timeOfDay = 0.5f;
+        else if (when == "night") m_timeOfDay = 0.75f;
+        else if (when == "midnight") m_timeOfDay = 0.0f;
+        else return "!Unknown time: " + args[2];
+        return ""; // the sky says it
+    }
+
+    if (name == "tick")
+    {
+        if (args.size() < 2) return "!Usage: /tick (query|rate <number>|freeze|unfreeze)";
+        const std::string sub = lower(args[1]);
+
+        if (sub == "query")
+            return m_tickFrozen ? "The game is frozen"
+                                : "The game is running normally";
+        if (sub == "freeze") { m_tickFrozen = true; return "The game is now frozen"; }
+        if (sub == "unfreeze") { m_tickFrozen = false; return "The game is no longer frozen"; }
+        if (sub == "rate")
+        {
+            if (args.size() < 3) return "!Usage: /tick rate <number>";
+            try { m_tickScale = std::max(0.05f, std::min(10.0f, std::stof(args[2]))); }
+            catch (...) { return "!Rate must be a number"; }
+            m_tickFrozen = false;
+            return "Set the rate to " + std::to_string(m_tickScale) + "x";
+        }
+        return "!Unknown option: " + args[1];
+    }
+
+    if (name == "seed") return "Seed: " + std::to_string(world().seed());
+
+    // Parsed and answered honestly rather than accepted and ignored: these all
+    // need a system this build does not have.
+    if (name == "xp" || name == "experience")
+        return "!/xp is not implemented";
+    if (name == "enchant")
+        return "!/enchant is not implemented";
+    if (name == "difficulty")
+        return "!/difficulty is not implemented";
+    if (name == "weather")
+        return "!/weather is not implemented";
+
+    return "!Unknown or incomplete command";
 }
 
 void Application::updateMenu()
@@ -1153,6 +1434,49 @@ void Application::updateControlsScreen()
     const int row = static_cast<int>((my - top) / rowH);
     if (row >= 0 && row < Keybinds::Count)
         m_rebindingAction = row;
+}
+
+
+void Application::renderConsole()
+{
+    const float w = static_cast<float>(m_window.width());
+    const float h = static_cast<float>(m_window.height());
+    const float scale = std::max(1.2f, h / 300.0f);
+    const float lineH = UIRenderer::textHeight(scale) + 4.0f;
+
+    const std::vector<const Console::Line*> lines = m_console.recentLines();
+    const float inputY = h - lineH - 46.0f;
+
+    float y = inputY - lineH * static_cast<float>(lines.size()) - 6.0f;
+    for (const Console::Line* line : lines)
+    {
+        // Messages fade once they are old, but only while the console is shut;
+        // with it open the whole scrollback stays solid so it can be read.
+        float alpha = 1.0f;
+        if (!m_console.open())
+        {
+            const float remaining = Console::LINE_FADE_SECONDS - line->age;
+            alpha = std::max(0.0f, std::min(1.0f, remaining));
+        }
+        if (alpha <= 0.0f) { y += lineH; continue; }
+
+        m_ui.quad(6.0f, y - 2.0f,
+                  UIRenderer::textWidth(line->text, scale) + 10.0f, lineH,
+                  glm::vec4(0.0f, 0.0f, 0.0f, 0.45f * alpha));
+        m_ui.textWithShadow(line->text, 10.0f, y, scale,
+                            line->error ? glm::vec4(1.0f, 0.45f, 0.4f, alpha)
+                                        : glm::vec4(1.0f, 1.0f, 1.0f, alpha));
+        y += lineH;
+    }
+
+    if (!m_console.open()) return;
+
+    m_ui.quad(0.0f, inputY - 4.0f, w, lineH + 6.0f, glm::vec4(0.0f, 0.0f, 0.0f, 0.65f));
+
+    // A block cursor that blinks, so an empty input still looks like a prompt.
+    const bool caret = std::fmod(m_elapsedSeconds, 1.0f) < 0.5f;
+    const std::string shown = m_console.input() + (caret ? "_" : "");
+    m_ui.textWithShadow(shown, 10.0f, inputY, scale, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
 }
 
 void Application::renderControlsScreen()

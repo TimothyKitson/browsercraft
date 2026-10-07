@@ -10,11 +10,15 @@ void Input::beginFrame()
     m_mousePressedThisFrame.clear();
     m_anyKey = SDL_SCANCODE_UNKNOWN;
     m_anyMouseButton = 0;
+    m_typedText.clear();
     m_mouseDeltaX = 0.0f;
     m_mouseDeltaY = 0.0f;
     m_wheelDelta = 0;
     m_resized = false;
 }
+
+void Input::startTextEntry() { SDL_StartTextInput(); }
+void Input::stopTextEntry() { SDL_StopTextInput(); }
 
 void Input::processEvent(const SDL_Event& e)
 {
@@ -49,6 +53,10 @@ void Input::processEvent(const SDL_Event& e)
 
         case SDL_KEYUP:
             m_keysDown[e.key.keysym.scancode] = false;
+            break;
+
+        case SDL_TEXTINPUT:
+            m_typedText += e.text.text;
             break;
 
         case SDL_MOUSEMOTION:
