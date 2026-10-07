@@ -1,7 +1,7 @@
 BROWSERCRAFT -> MINECRAFT 1.21
 Working to-do list. Updated as things land.
 
-Last updated: 2026-10-06 (dimensions, portals and controls landed)
+Last updated: 2026-10-07 (menus landed; priority 1 essentially done)
 Tracking: recovered-source/ (the rebuilt engine on branch
           claude/fervent-goodall-ueozok), not the build live on
           browsercraft.net.
@@ -79,8 +79,12 @@ All four already exist in the live build; this is re-doing them.
     8:1 coordinate scaling, safe arrival
 [x] Rebindable controls: keybinds.txt, every input through the keymap,
     and a Controls screen to rebind from (pause -> C)
-[ ] Main menu, singleplayer/multiplayer screens, character select
-[ ] Settings screen: render distance, sound toggle, fancy lighting, name
+[~] Main menu and singleplayer screen done. Multiplayer and character
+    select are not: there is no networking and no player model to pick
+    from, so both would be menus over nothing.
+[~] Settings screen: render distance, sound and fancy lighting all work
+    and reach Controls. The name field needs a text input widget, which
+    the UI has no notion of yet.
 
 
 -------------------------------------------------------------------------

@@ -200,8 +200,12 @@ void Application::run()
         handleEvents();
         if (!m_running) break;
 
-        if (!uiHasFocus())
+        if (m_screen != Screen::Playing && !m_controlsOpen)
+            updateMenu();
+        else if (!uiHasFocus())
             updateGameplay(deltaTime);
+        else if (m_controlsOpen)
+            updateControlsScreen();
 
         m_timeOfDay += deltaTime / DAY_LENGTH_SECONDS;
         if (m_timeOfDay >= 1.0f) m_timeOfDay -= 1.0f;
@@ -232,12 +236,6 @@ void Application::handleEvents()
     {
         m_window.setSize(m_input.newWidth(), m_input.newHeight());
         glViewport(0, 0, m_window.width(), m_window.height());
-    }
-
-    if (m_controlsOpen)
-    {
-        updateControlsScreen();
-        return; // the controls screen swallows everything else
     }
 
     if (m_input.wasKeyPressed(SDL_SCANCODE_ESCAPE))
@@ -644,10 +642,13 @@ void Application::render()
     renderWorld();
 
     m_ui.begin(m_window.width(), m_window.height());
-    if (m_player.health > 0) renderHud();
+    if (m_player.health > 0 && m_screen == Screen::Playing) renderHud();
     if (m_showDebug) renderDebugOverlay();
     if (m_inventoryOpen) renderInventoryScreen();
     if (m_controlsOpen) renderControlsScreen();
+    else if (m_screen == Screen::MainMenu) renderMainMenu();
+    else if (m_screen == Screen::Singleplayer) renderSingleplayerMenu();
+    else if (m_screen == Screen::Settings) renderSettingsMenu();
     else if (m_paused) renderPauseMenu();
     if (m_player.health <= 0)
     {
@@ -928,6 +929,137 @@ void Application::renderInventoryScreen()
                         startY + gridHeight + 14.0f, 1.8f, glm::vec4(0.8f, 0.8f, 0.85f, 1.0f));
 }
 
+
+
+bool Application::menuButton(const std::string& label, float x, float y, float w, float h)
+{
+    const float mx = static_cast<float>(m_input.mouseX());
+    const float my = static_cast<float>(m_input.mouseY());
+    const bool hovered = (mx >= x && mx < x + w && my >= y && my < y + h);
+
+    m_ui.quad(x, y, w, h, hovered ? glm::vec4(0.62f, 0.66f, 0.74f, 0.95f)
+                                  : glm::vec4(0.42f, 0.44f, 0.49f, 0.92f));
+    m_ui.quad(x, y, w, 2.0f, glm::vec4(1.0f, 1.0f, 1.0f, 0.35f));
+    m_ui.quad(x, y + h - 2.0f, w, 2.0f, glm::vec4(0.0f, 0.0f, 0.0f, 0.35f));
+
+    const float scale = std::max(1.5f, h / 20.0f);
+    m_ui.textWithShadow(label,
+                        x + w * 0.5f - UIRenderer::textWidth(label, scale) * 0.5f,
+                        y + h * 0.5f - UIRenderer::textHeight(scale) * 0.5f,
+                        scale, TEXT_COLOR);
+
+    return hovered && m_input.wasMouseButtonPressed(SDL_BUTTON_LEFT);
+}
+
+void Application::updateMenu()
+{
+    // Escape backs out one level, and out of the game entirely from the top.
+    if (m_input.wasKeyPressed(SDL_SCANCODE_ESCAPE))
+    {
+        if (m_screen == Screen::Singleplayer || m_screen == Screen::Settings)
+            m_screen = Screen::MainMenu;
+    }
+}
+
+void Application::renderMainMenu()
+{
+    const float w = static_cast<float>(m_window.width());
+    const float h = static_cast<float>(m_window.height());
+
+    m_ui.quad(0, 0, w, h, glm::vec4(0.0f, 0.0f, 0.0f, 0.35f));
+
+    const std::string title = "BROWSERCRAFT";
+    m_ui.textWithShadow(title, w * 0.5f - UIRenderer::textWidth(title, 6.0f) * 0.5f, h * 0.12f, 6.0f, TEXT_COLOR);
+
+    const float bw = std::min(430.0f, w * 0.62f);
+    const float bh = std::max(34.0f, h * 0.075f);
+    const float bx = w * 0.5f - bw * 0.5f;
+    float by = h * 0.40f;
+
+    if (menuButton("SINGLEPLAYER", bx, by, bw, bh)) m_screen = Screen::Singleplayer;
+    by += bh * 1.25f;
+    if (menuButton("SETTINGS", bx, by, bw, bh)) m_screen = Screen::Settings;
+    by += bh * 1.25f;
+    if (menuButton("QUIT", bx, by, bw, bh)) m_running = false;
+
+    const std::string version = "BROWSERCRAFT 0.1  -  BROWSERCRAFT.NET";
+    m_ui.textWithShadow(version, 10.0f, h - UIRenderer::textHeight(1.4f) - 8.0f, 1.4f,
+                        glm::vec4(0.85f, 0.88f, 0.92f, 1.0f));
+}
+
+void Application::renderSingleplayerMenu()
+{
+    const float w = static_cast<float>(m_window.width());
+    const float h = static_cast<float>(m_window.height());
+
+    m_ui.quad(0, 0, w, h, glm::vec4(0.0f, 0.0f, 0.0f, 0.35f));
+
+    const std::string title = "SINGLEPLAYER";
+    m_ui.textWithShadow(title, w * 0.5f - UIRenderer::textWidth(title, 4.5f) * 0.5f, h * 0.12f, 4.5f, TEXT_COLOR);
+
+    const float bw = std::min(430.0f, w * 0.62f);
+    const float bh = std::max(34.0f, h * 0.075f);
+    const float bx = w * 0.5f - bw * 0.5f;
+    float by = h * 0.32f;
+
+    if (menuButton("SURVIVAL", bx, by, bw, bh))
+    {
+        m_player.creative = false;
+        m_player.flying = false;
+        m_screen = Screen::Playing;
+        setMouseCaptured(true);
+    }
+    by += bh * 1.25f;
+    if (menuButton("CREATIVE", bx, by, bw, bh))
+    {
+        m_player.creative = true;
+        m_screen = Screen::Playing;
+        setMouseCaptured(true);
+    }
+    by += bh * 1.25f;
+    if (menuButton("BACK", bx, by, bw, bh)) m_screen = Screen::MainMenu;
+}
+
+void Application::renderSettingsMenu()
+{
+    const float w = static_cast<float>(m_window.width());
+    const float h = static_cast<float>(m_window.height());
+
+    m_ui.quad(0, 0, w, h, glm::vec4(0.0f, 0.0f, 0.0f, 0.45f));
+
+    const std::string title = "SETTINGS";
+    m_ui.textWithShadow(title, w * 0.5f - UIRenderer::textWidth(title, 4.5f) * 0.5f, h * 0.10f, 4.5f, TEXT_COLOR);
+
+    const float bw = std::min(430.0f, w * 0.62f);
+    const float bh = std::max(32.0f, h * 0.07f);
+    const float bx = w * 0.5f - bw * 0.5f;
+    float by = h * 0.26f;
+
+    const float stepW = bh;
+    if (menuButton("-", bx - stepW - 6.0f, by, stepW, bh))
+        world().setRenderDistance(std::max(2, world().renderDistance() - 1));
+    if (menuButton("RENDER DISTANCE: " + std::to_string(world().renderDistance()), bx, by, bw, bh)) {}
+    if (menuButton("+", bx + bw + 6.0f, by, stepW, bh))
+        world().setRenderDistance(std::min(24, world().renderDistance() + 1));
+
+    by += bh * 1.25f;
+    if (menuButton(std::string("SOUND: ") + (m_sound.muted() ? "OFF" : "ON"), bx, by, bw, bh))
+        m_sound.setMuted(!m_sound.muted());
+
+    by += bh * 1.25f;
+    if (menuButton(std::string("FANCY LIGHTING: ") + (m_pbrEnabled ? "ON" : "OFF"), bx, by, bw, bh))
+        m_pbrEnabled = !m_pbrEnabled;
+
+    by += bh * 1.25f;
+    if (menuButton("CONTROLS", bx, by, bw, bh))
+    {
+        m_controlsOpen = true;
+        m_rebindingAction = -1;
+    }
+
+    by += bh * 1.25f;
+    if (menuButton("BACK", bx, by, bw, bh)) m_screen = Screen::MainMenu;
+}
 
 void Application::updateControlsScreen()
 {

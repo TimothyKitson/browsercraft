@@ -69,6 +69,19 @@ private:
     std::string m_savePath;
     glm::vec3 m_spawnPoint{ 0.0f };
 
+    // Which screen is in front of the world. The world keeps rendering behind
+    // all of them, so the menus sit over a live scene rather than a backdrop.
+    enum class Screen { MainMenu, Singleplayer, Settings, Playing };
+    Screen m_screen = Screen::MainMenu;
+
+    void updateMenu();
+    void renderMainMenu();
+    void renderSingleplayerMenu();
+    void renderSettingsMenu();
+
+    // Draws a button and reports whether it was clicked this frame.
+    bool menuButton(const std::string& label, float x, float y, float w, float h);
+
     bool m_controlsOpen = false;
     int m_rebindingAction = -1;   // index into Keybinds::Action, -1 when idle
 
@@ -112,7 +125,7 @@ private:
     void renderDebugOverlay();
 
     void setMouseCaptured(bool captured);
-    bool uiHasFocus() const { return m_controlsOpen || m_paused || m_inventoryOpen || m_player.health <= 0; }
+    bool uiHasFocus() const { return m_screen != Screen::Playing || m_controlsOpen || m_paused || m_inventoryOpen || m_player.health <= 0; }
 
     glm::vec3 sunDirection() const;
     float daylightFactor() const;
