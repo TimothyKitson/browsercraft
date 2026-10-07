@@ -772,6 +772,25 @@ namespace
         return nullptr;
     }
 
+    // Grass and foliage ship greyscale in a resource pack and are tinted by
+    // biome colour when drawn. Nothing here knows about biomes, so bake a
+    // temperate tint in at load time; untinted they come out stone grey.
+    bool foliageTint(int tile, float& r, float& g, float& b)
+    {
+        switch (tile)
+        {
+            case Tiles::GrassTop:
+            case Tiles::TallGrass:
+                r = 0.57f; g = 0.74f; b = 0.35f; return true;
+            case Tiles::Leaves:
+                r = 0.42f; g = 0.63f; b = 0.20f; return true;
+            case Tiles::BirchLeaves:
+                r = 0.50f; g = 0.66f; b = 0.29f; return true;
+            default:
+                return false;
+        }
+    }
+
     std::string packPath(const std::string& name)
     {
         return "assets/textures/block/" + name + ".png";
@@ -829,6 +848,19 @@ int Atlas::loadPackTiles(uint8_t* atlasRgba, int atlasPixels, const char* suffix
         {
             stbi_image_free(data);
             continue;
+        }
+
+        // Albedo only: a normal or specular map must not be tinted.
+        float tr = 1.0f, tg = 1.0f, tb = 1.0f;
+        const bool tinted = (*suffix == '\0') && foliageTint(tile, tr, tg, tb);
+        if (tinted)
+        {
+            for (int i = 0; i < w * h; ++i)
+            {
+                data[i * 4 + 0] = static_cast<uint8_t>(data[i * 4 + 0] * tr);
+                data[i * 4 + 1] = static_cast<uint8_t>(data[i * 4 + 1] * tg);
+                data[i * 4 + 2] = static_cast<uint8_t>(data[i * 4 + 2] * tb);
+            }
         }
 
         const int col = tile % TILES_PER_ROW;

@@ -1,4 +1,5 @@
 #include "Application.h"
+#include <fstream>
 #include <vector>
 #include <cctype>
 #include <sstream>
@@ -64,6 +65,8 @@ Application::Application()
     glFrontFace(GL_CCW);
 
     m_keybinds.load(m_savePath + "/keybinds.txt");
+    loadProfile();
+    loadPanoramas();
 
     m_console.setHandler([this](const std::string& command) { return runCommand(command); });
 
@@ -264,6 +267,8 @@ void Application::frame()
             { /* the console already consumed this frame's input */ }
         else if (m_controlsOpen)
             updateControlsScreen();
+        else if (m_screen == Screen::Generating)
+            updateGenerating(deltaTime);
         else if (m_screen != Screen::Playing)
             updateMenu();
         else
@@ -272,7 +277,7 @@ void Application::frame()
         m_timeOfDay += deltaTime / DAY_LENGTH_SECONDS;
         if (m_timeOfDay >= 1.0f) m_timeOfDay -= 1.0f;
 
-        world().update(m_player.position);
+        world().update(m_screen == Screen::Playing ? m_player.position : m_spawnPoint);
 
         m_autosaveTimer += deltaTime;
         if (m_autosaveTimer >= AUTOSAVE_INTERVAL)
@@ -754,6 +759,7 @@ void Application::render()
     else if (m_screen == Screen::MainMenu) renderMainMenu();
     else if (m_screen == Screen::Singleplayer) renderSingleplayerMenu();
     else if (m_screen == Screen::Settings) renderSettingsMenu();
+    else if (m_screen == Screen::Generating) renderGeneratingScreen();
     else if (m_paused && m_screen == Screen::Playing) renderPauseMenu();
     if (m_player.health <= 0)
     {
@@ -771,12 +777,14 @@ void Application::render()
 
 void Application::renderWorld()
 {
-    const glm::mat4 view = m_camera.viewMatrix();
+    const bool menuBackdrop = (m_screen != Screen::Playing);
+    const glm::mat4 view = menuBackdrop ? panoramaView() : m_camera.viewMatrix();
+    const glm::vec3 eye = menuBackdrop ? panoramaEye() : m_camera.position;
     const glm::mat4 projection = m_camera.projectionMatrix(m_window.aspect());
     const float daylight = daylightFactor();
     const glm::vec3 sun = sunDirection();
 
-    m_sky.render(view, projection, m_camera.position, sun, daylight, m_elapsedSeconds);
+    m_sky.render(view, projection, eye, sun, daylight, m_elapsedSeconds);
 
     const bool underwater = m_player.isHeadUnderwater(world());
     const glm::vec3 fogColor = SkyRenderer::horizonColor(daylight, sun);
@@ -798,7 +806,7 @@ void Application::renderWorld()
     m_chunkShader.setInt("uSpecularAtlas", 2);
     m_chunkShader.setInt("uPbrEnabled", m_pbrEnabled ? 1 : 0);
     m_chunkShader.setVec3("uSunDirection", sun);
-    m_chunkShader.setVec3("uCameraPos", m_camera.position);
+    m_chunkShader.setVec3("uCameraPos", eye);
     m_atlas.bind(0);
 
     Frustum frustum;
@@ -815,7 +823,7 @@ void Application::renderWorld()
         if (!frustum.intersectsAABB(chunk->aabbMin(), chunk->aabbMax())) continue;
 
         const glm::vec3 center = chunk->worldOrigin() + glm::vec3(Chunk::SX * 0.5f, Chunk::SY * 0.5f, Chunk::SZ * 0.5f);
-        visible.push_back({ chunk.get(), glm::length(center - m_camera.position) });
+        visible.push_back({ chunk.get(), glm::length(center - eye) });
     }
 
     for (const VisibleChunk& entry : visible)
@@ -1121,7 +1129,7 @@ std::string Application::runCommand(const std::string& command)
 
     if (name == "help")
     {
-        return "Commands: gamemode, give, clear, fill, tp, time, tick, seed, help\n"
+        return "Commands: gamemode, give, clear, fill, tp, time, tick, panorama, seed, help\n"
                "Not in this build: xp, enchant, difficulty, weather";
     }
 
@@ -1254,6 +1262,58 @@ std::string Application::runCommand(const std::string& command)
         return "!Unknown option: " + args[1];
     }
 
+    if (name == "panorama")
+    {
+        if (args.size() >= 2 && lower(args[1]) == "list")
+        {
+            if (m_panoramas.empty()) return "No panoramas saved";
+            std::string out = "Saved panoramas:";
+            for (const Panorama& p : m_panoramas) out += "\n  " + p.name;
+            return out;
+        }
+
+        if (args.size() >= 3 && lower(args[1]) == "delete")
+        {
+            const std::string wanted = lower(args[2]);
+            for (size_t i = 0; i < m_panoramas.size(); ++i)
+            {
+                if (lower(m_panoramas[i].name) != wanted) continue;
+                m_panoramas.erase(m_panoramas.begin() + static_cast<long>(i));
+                if (m_panoramaIndex >= static_cast<int>(m_panoramas.size())) m_panoramaIndex = -1;
+                savePanoramas();
+                return "Removed panorama " + args[2];
+            }
+            return "!No panorama called " + args[2];
+        }
+
+        if (args.size() < 2)
+            return "!Usage: /panorama <name>, /panorama list, /panorama delete <name>";
+
+        // Everything after the command is the name, so it can contain spaces.
+        std::string wanted;
+        for (size_t i = 1; i < args.size(); ++i) wanted += (i > 1 ? " " : "") + args[i];
+
+        Panorama p;
+        p.name = wanted;
+        p.position = m_camera.position;
+        p.yaw = m_camera.yaw;
+        p.pitch = m_camera.pitch;
+
+        for (Panorama& existing : m_panoramas)
+        {
+            if (lower(existing.name) == lower(wanted))
+            {
+                existing = p;
+                savePanoramas();
+                return "Replaced panorama " + wanted;
+            }
+        }
+
+        m_panoramas.push_back(p);
+        savePanoramas();
+        return "Saved panorama " + wanted;
+    }
+
     if (name == "seed") return "Seed: " + std::to_string(world().seed());
 
     // Parsed and answered honestly rather than accepted and ignored: these all
@@ -1268,6 +1328,155 @@ std::string Application::runCommand(const std::string& command)
         return "!/weather is not implemented";
 
     return "!Unknown or incomplete command";
+}
+
+
+glm::vec3 Application::panoramaEye() const
+{
+    if (m_panoramaIndex >= 0 && m_panoramaIndex < static_cast<int>(m_panoramas.size()))
+        return m_panoramas[static_cast<size_t>(m_panoramaIndex)].position;
+
+    // Default: circle slowly around the spawn point, well above the treetops.
+    const float angle = m_elapsedSeconds * 0.06f;
+    const float radius = 26.0f;
+    return m_spawnPoint + glm::vec3(std::cos(angle) * radius, 22.0f, std::sin(angle) * radius);
+}
+
+glm::mat4 Application::panoramaView() const
+{
+    const glm::vec3 eye = panoramaEye();
+
+    if (m_panoramaIndex >= 0 && m_panoramaIndex < static_cast<int>(m_panoramas.size()))
+    {
+        // A saved viewpoint, drifting a few degrees either side of where it was
+        // set so the menu is never completely still.
+        const Panorama& p = m_panoramas[static_cast<size_t>(m_panoramaIndex)];
+        const float yaw = glm::radians(p.yaw + std::sin(m_elapsedSeconds * 0.12f) * 7.0f);
+        const float pitch = glm::radians(p.pitch);
+        const glm::vec3 forward(std::cos(pitch) * std::sin(yaw), std::sin(pitch), std::cos(pitch) * std::cos(yaw));
+        return glm::lookAt(eye, eye + forward, glm::vec3(0.0f, 1.0f, 0.0f));
+    }
+
+    // Aim back at the spawn column and a little below it, so the horizon sits
+    // high in frame and there is landscape behind the buttons.
+    const glm::vec3 target = m_spawnPoint + glm::vec3(0.0f, -6.0f, 0.0f);
+    return glm::lookAt(eye, target, glm::vec3(0.0f, 1.0f, 0.0f));
+}
+
+std::string Application::currentPanoramaName() const
+{
+    if (m_panoramaIndex >= 0 && m_panoramaIndex < static_cast<int>(m_panoramas.size()))
+        return m_panoramas[static_cast<size_t>(m_panoramaIndex)].name;
+    return "DEFAULT";
+}
+
+void Application::loadPanoramas()
+{
+    m_panoramas.clear();
+    std::ifstream file(m_savePath + "/panoramas.txt");
+    if (!file.is_open()) return;
+
+    std::string line;
+    while (std::getline(file, line))
+    {
+        std::istringstream parts(line);
+        Panorama p;
+        if (parts >> p.name >> p.position.x >> p.position.y >> p.position.z >> p.yaw >> p.pitch)
+        {
+            for (char& c : p.name) if (c == '_') c = ' ';
+            m_panoramas.push_back(p);
+        }
+    }
+}
+
+void Application::savePanoramas() const
+{
+    std::ofstream file(m_savePath + "/panoramas.txt", std::ios::trunc);
+    if (!file.is_open()) return;
+
+    for (const Panorama& p : m_panoramas)
+    {
+        // Spaces become underscores so a name survives the round trip.
+        std::string name = p.name;
+        for (char& c : name) if (c == ' ') c = '_';
+        file << name << ' ' << p.position.x << ' ' << p.position.y << ' ' << p.position.z
+             << ' ' << p.yaw << ' ' << p.pitch << '\n';
+    }
+}
+
+void Application::loadProfile()
+{
+    std::ifstream file(m_savePath + "/profile.txt");
+    if (file.is_open() && std::getline(file, m_playerName) && !m_playerName.empty())
+        return;
+
+    // First run: make up a name the way the deployed build does, rather than
+    // leaving it blank.
+    static const char* WORDS[] = { "BLOCK", "CRAFT", "VOXEL", "STONE", "PIXEL", "CAVE" };
+    static const char* TAILS[] = { "DIGGER", "WALKER", "SMITH", "HEAD", "MINER", "BUILDER" };
+    const uint32_t seed = static_cast<uint32_t>(SDL_GetPerformanceCounter());
+    m_playerName = std::string(WORDS[seed % 6]) + TAILS[(seed / 6) % 6] + std::to_string(seed % 90 + 10);
+    saveProfile();
+}
+
+void Application::saveProfile() const
+{
+    std::ofstream file(m_savePath + "/profile.txt", std::ios::trunc);
+    if (file.is_open()) file << m_playerName << "\n";
+}
+
+
+void Application::updateGenerating(float deltaTime)
+{
+    // Wait for the queue to drain, then hold on a little longer so the first
+    // frame of play is settled rather than still popping chunks in.
+    if (!m_generationDone)
+    {
+        if (world().pendingJobs() == 0 && world().loadedChunks() > 0)
+        {
+            m_generationDone = true;
+            m_generationGrace = 2.0f;
+        }
+        return;
+    }
+
+    m_generationGrace -= deltaTime;
+    if (m_generationGrace > 0.0f) return;
+
+    m_screen = Screen::Playing;
+    setMouseCaptured(true);
+}
+
+void Application::renderGeneratingScreen()
+{
+    const float w = static_cast<float>(m_window.width());
+    const float h = static_cast<float>(m_window.height());
+
+    m_ui.quad(0, 0, w, h, glm::vec4(0.04f, 0.05f, 0.07f, 1.0f));
+
+    const std::string title = m_generationDone ? "PREPARING WORLD" : "GENERATING WORLD";
+    m_ui.textWithShadow(title, w * 0.5f - UIRenderer::textWidth(title, 3.4f) * 0.5f, h * 0.42f, 3.4f, TEXT_COLOR);
+
+    // Chunks still queued, against however many were queued at the worst point,
+    // so the bar only ever moves forward.
+    static int worstPending = 1;
+    const int pending = world().pendingJobs();
+    worstPending = std::max(worstPending, pending);
+    const float done = m_generationDone ? 1.0f
+                     : 1.0f - static_cast<float>(pending) / static_cast<float>(std::max(1, worstPending));
+
+    const float barW = std::min(420.0f, w * 0.6f);
+    const float barX = w * 0.5f - barW * 0.5f;
+    const float barY = h * 0.54f;
+    m_ui.quad(barX, barY, barW, 10.0f, glm::vec4(0.14f, 0.16f, 0.2f, 1.0f));
+    m_ui.quad(barX, barY, barW * std::max(0.0f, std::min(1.0f, done)), 10.0f,
+              glm::vec4(0.42f, 0.76f, 0.29f, 1.0f));
+
+    const std::string detail = m_generationDone
+        ? "Settling"
+        : std::to_string(world().loadedChunks() - pending) + " / " + std::to_string(world().loadedChunks()) + " chunks";
+    m_ui.textWithShadow(detail, w * 0.5f - UIRenderer::textWidth(detail, 1.5f) * 0.5f, barY + 22.0f, 1.5f,
+                        glm::vec4(0.7f, 0.75f, 0.8f, 1.0f));
 }
 
 void Application::updateMenu()
@@ -1302,8 +1511,36 @@ void Application::renderMainMenu()
     by += bh * 1.25f;
     if (menuButton("QUIT", bx, by, bw, bh)) m_running = false;
 
+    const float cornerW = std::min(230.0f, w * 0.34f);
+    const float cornerH = std::max(26.0f, h * 0.065f);
+    const float cornerY = h - cornerH - 26.0f;
+
+    // Bottom left: who you are.
+    if (m_editingName)
+    {
+        m_ui.quad(14.0f, cornerY, cornerW, cornerH, glm::vec4(0.16f, 0.18f, 0.22f, 0.96f));
+        const bool caret = std::fmod(m_elapsedSeconds, 1.0f) < 0.5f;
+        const std::string shown = m_nameDraft + (caret ? "_" : "");
+        const float nameScale = std::max(1.4f, cornerH / 22.0f);
+        m_ui.textWithShadow(shown, 24.0f, cornerY + cornerH * 0.5f - UIRenderer::textHeight(nameScale) * 0.5f,
+                            nameScale, glm::vec4(1.0f, 0.95f, 0.6f, 1.0f));
+    }
+    else if (menuButton(m_playerName, 14.0f, cornerY, cornerW, cornerH))
+    {
+        m_editingName = true;
+        m_nameDraft = m_playerName;
+        Input::startTextEntry();
+    }
+
+    // Bottom right: which backdrop, cycling through the saved ones.
+    if (menuButton(currentPanoramaName(), w - cornerW - 14.0f, cornerY, cornerW, cornerH))
+    {
+        ++m_panoramaIndex;
+        if (m_panoramaIndex >= static_cast<int>(m_panoramas.size())) m_panoramaIndex = -1;
+    }
+
     const std::string version = "BROWSERCRAFT 0.1  -  BROWSERCRAFT.NET";
-    m_ui.textWithShadow(version, 10.0f, h - UIRenderer::textHeight(1.4f) - 8.0f, 1.4f,
+    m_ui.textWithShadow(version, 10.0f, h - UIRenderer::textHeight(1.4f) - 6.0f, 1.4f,
                         glm::vec4(0.85f, 0.88f, 0.92f, 1.0f));
 }
 
@@ -1326,15 +1563,17 @@ void Application::renderSingleplayerMenu()
     {
         m_player.creative = false;
         m_player.flying = false;
-        m_screen = Screen::Playing;
-        setMouseCaptured(true);
+        m_screen = Screen::Generating;
+        m_generationDone = false;
+        m_generationGrace = 0.0f;
     }
     by += bh * 1.25f;
     if (menuButton("CREATIVE", bx, by, bw, bh))
     {
         m_player.creative = true;
-        m_screen = Screen::Playing;
-        setMouseCaptured(true);
+        m_screen = Screen::Generating;
+        m_generationDone = false;
+        m_generationGrace = 0.0f;
     }
     by += bh * 1.25f;
     if (menuButton("BACK", bx, by, bw, bh)) m_screen = Screen::MainMenu;
@@ -1375,6 +1614,27 @@ void Application::renderSettingsMenu()
     {
         m_controlsOpen = true;
         m_rebindingAction = -1;
+    }
+
+    by += bh * 1.25f;
+    if (m_editingName)
+    {
+        // The field being typed into, with a caret so an empty name still
+        // reads as an input rather than a blank button.
+        m_ui.quad(bx, by, bw, bh, glm::vec4(0.16f, 0.18f, 0.22f, 0.96f));
+        m_ui.quad(bx, by, bw, 2.0f, glm::vec4(1.0f, 1.0f, 1.0f, 0.3f));
+        const bool caret = std::fmod(m_elapsedSeconds, 1.0f) < 0.5f;
+        const std::string shown = "NAME: " + m_nameDraft + (caret ? "_" : "");
+        const float nameScale = std::max(1.5f, bh / 20.0f);
+        m_ui.textWithShadow(shown, bx + bw * 0.5f - UIRenderer::textWidth(shown, nameScale) * 0.5f,
+                            by + bh * 0.5f - UIRenderer::textHeight(nameScale) * 0.5f,
+                            nameScale, glm::vec4(1.0f, 0.95f, 0.6f, 1.0f));
+    }
+    else if (menuButton("NAME: " + m_playerName, bx, by, bw, bh))
+    {
+        m_editingName = true;
+        m_nameDraft = m_playerName;
+        Input::startTextEntry();
     }
 
     by += bh * 1.25f;

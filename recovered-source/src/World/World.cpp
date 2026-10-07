@@ -13,6 +13,7 @@ namespace
     constexpr int MESH_JOBS_PER_FRAME = 6;
     constexpr int MESH_UPLOADS_PER_FRAME = 6;
     constexpr int LIGHT_NODE_BUDGET = 40000;
+    constexpr double CHUNK_JOB_BUDGET_MS = 6.0; // per frame, single-threaded builds
 
     const int NEIGHBOUR_DX[6] = { 1, -1, 0, 0, 0, 0 };
     const int NEIGHBOUR_DY[6] = { 0, 0, 1, -1, 0, 0 };
@@ -645,6 +646,13 @@ void World::unloadDistantChunks(const glm::vec3& playerPosition)
 
 void World::update(const glm::vec3& playerPosition)
 {
+    // On the web there are no worker threads, so the queued generation and
+    // meshing jobs only make progress if something pumps them. Without this
+    // the queue grows forever and no chunk is ever built. The budget keeps a
+    // frame from stalling; it is a no-op on native builds, where real workers
+    // are already draining the same queue.
+    m_pool.runPending(CHUNK_JOB_BUDGET_MS);
+
     queueGeneration(playerPosition);
     finishGeneratedChunks();
     processLightQueues(LIGHT_NODE_BUDGET);

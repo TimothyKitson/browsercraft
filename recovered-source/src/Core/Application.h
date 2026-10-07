@@ -76,13 +76,20 @@ private:
 
     // Which screen is in front of the world. The world keeps rendering behind
     // all of them, so the menus sit over a live scene rather than a backdrop.
-    enum class Screen { MainMenu, Singleplayer, Settings, Playing };
+    enum class Screen { MainMenu, Singleplayer, Settings, Generating, Playing };
     Screen m_screen = Screen::MainMenu;
 
     void updateMenu();
     void renderMainMenu();
     void renderSingleplayerMenu();
     void renderSettingsMenu();
+    void renderGeneratingScreen();
+    void updateGenerating(float deltaTime);
+
+    // Time left on the deliberate pause after generation finishes, so the
+    // world is not just built but settled before anyone sees it.
+    float m_generationGrace = 0.0f;
+    bool m_generationDone = false;
 
     // Draws a button and reports whether it was clicked this frame.
     bool menuButton(const std::string& label, float x, float y, float w, float h);
@@ -93,6 +100,36 @@ private:
     // with '!' is shown as an error.
     std::string runCommand(const std::string& command);
     void renderConsole();
+
+    // Menu backdrop: a camera that drifts around above the spawn point, so the
+    // menus sit over scenery rather than whatever the player happened to face.
+    glm::mat4 panoramaView() const;
+    glm::vec3 panoramaEye() const;
+
+    // A saved viewpoint for the menu backdrop. Panoramas are camera positions
+    // in the live world rather than captured images, so they stay lit by the
+    // real sky and time of day.
+    struct Panorama
+    {
+        std::string name;
+        glm::vec3 position{ 0.0f };
+        float yaw = 0.0f;
+        float pitch = 0.0f;
+    };
+
+    std::vector<Panorama> m_panoramas;
+    int m_panoramaIndex = -1; // -1 is the default orbit over spawn
+
+    void loadPanoramas();
+    void savePanoramas() const;
+    std::string currentPanoramaName() const;
+
+    std::string m_playerName;
+    bool m_editingName = false;
+    std::string m_nameDraft;
+
+    void loadProfile();
+    void saveProfile() const;
 
     float m_lastJumpTap = -1.0f; // for the double-tap that toggles flight
 
