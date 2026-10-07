@@ -28,6 +28,10 @@ public:
 
     void run();
 
+    // One iteration of the loop. On the web the browser drives this through
+    // emscripten_set_main_loop_arg; natively run() just calls it in a loop.
+    void frame();
+
 private:
     Window m_window;
     Input m_input;

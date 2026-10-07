@@ -1,4 +1,8 @@
 #include "Input.h"
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
+#include <cstdio>
 
 void Input::beginFrame()
 {
@@ -86,3 +90,58 @@ bool Input::isKeyDown(SDL_Scancode key) const { return lookup(m_keysDown, key); 
 bool Input::wasKeyPressed(SDL_Scancode key) const { return lookup(m_keysPressedThisFrame, key); }
 bool Input::isMouseButtonDown(Uint8 button) const { return lookup(m_mouseDown, button); }
 bool Input::wasMouseButtonPressed(Uint8 button) const { return lookup(m_mousePressedThisFrame, button); }
+
+
+#ifdef __EMSCRIPTEN__
+
+// SDL2's Emscripten backend reports an absolute mouse position it builds up
+// from relative motion starting at (0,0), so it is wrong by however far the
+// pointer was from the origin when the first event arrived. The browser knows
+// the real position, so ask it, scaling for any gap between the canvas's CSS
+// size and its drawing buffer.
+namespace
+{
+    void hookBrowserPointer()
+    {
+        static bool hooked = false;
+        if (hooked) return;
+        hooked = true;
+
+        EM_ASM({
+            if (window.__bcPointerHooked) return;
+            window.__bcPointerHooked = 1;
+            window.__bcMouseX = 0;
+            window.__bcMouseY = 0;
+            var read = function (e) {
+                var c = (typeof Module !== 'undefined' && Module.canvas)
+                        ? Module.canvas : document.querySelector('canvas');
+                if (!c) return;
+                var r = c.getBoundingClientRect();
+                if (!r.width || !r.height) return;
+                window.__bcMouseX = (e.clientX - r.left) * (c.width / r.width);
+                window.__bcMouseY = (e.clientY - r.top) * (c.height / r.height);
+            };
+            window.addEventListener('mousemove', read, true);
+            window.addEventListener('mousedown', read, true);
+        });
+    }
+}
+
+int Input::mouseX() const
+{
+    hookBrowserPointer();
+    return EM_ASM_INT({ return window.__bcMouseX | 0; });
+}
+
+int Input::mouseY() const
+{
+    hookBrowserPointer();
+    return EM_ASM_INT({ return window.__bcMouseY | 0; });
+}
+
+#else
+
+int Input::mouseX() const { return m_mouseX; }
+int Input::mouseY() const { return m_mouseY; }
+
+#endif

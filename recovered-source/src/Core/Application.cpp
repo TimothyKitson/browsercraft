@@ -1,4 +1,7 @@
 #include "Application.h"
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
 #include "GLFunctions.h"
 #include "World/WorldSave.h"
 #include <glm/gtc/matrix_transform.hpp>
@@ -66,7 +69,11 @@ Application::Application()
                                               static_cast<Dimension>(i));
 
     loadLevel();
-    setMouseCaptured(true);
+
+    // The game opens on the main menu, so the cursor has to stay free. Relative
+    // mouse mode stops mouseX/mouseY tracking the pointer, which would leave
+    // every menu button unclickable.
+    setMouseCaptured(m_screen == Screen::Playing);
 
     std::printf("\n=== Voxel Game ===\n");
     std::printf("%s move | %s jump | %s sneak | %s sprint\n",
@@ -173,16 +180,41 @@ float Application::daylightFactor() const
     return std::clamp(std::sin(angle) * 2.2f + 0.35f, 0.12f, 1.0f);
 }
 
+namespace
+{
+    Uint64 g_previousTicks = 0;
+
+#ifdef __EMSCRIPTEN__
+    void frameTrampoline(void* arg)
+    {
+        static_cast<Application*>(arg)->frame();
+    }
+#endif
+}
+
 void Application::run()
 {
-    Uint64 previousTicks = SDL_GetPerformanceCounter();
-    const double frequency = static_cast<double>(SDL_GetPerformanceFrequency());
+    g_previousTicks = SDL_GetPerformanceCounter();
 
-    while (m_running)
+#ifdef __EMSCRIPTEN__
+    // A blocking while-loop never returns to the browser, which wedges the
+    // tab: no input, no compositing, "page unresponsive". The browser has to
+    // call us once per frame instead, so hand it the loop body and return.
+    // fps 0 means "use requestAnimationFrame", and the 1 makes this call
+    // unwind the stack rather than fall through to the end of main().
+    emscripten_set_main_loop_arg(frameTrampoline, this, 0, 1);
+#else
+    while (m_running) frame();
+#endif
+}
+
+void Application::frame()
+{
     {
         const Uint64 now = SDL_GetPerformanceCounter();
-        float deltaTime = static_cast<float>((now - previousTicks) / frequency);
-        previousTicks = now;
+        const double frequency = static_cast<double>(SDL_GetPerformanceFrequency());
+        float deltaTime = static_cast<float>((now - g_previousTicks) / frequency);
+        g_previousTicks = now;
         // Clamp so a hitch (or a breakpoint) can't teleport the player
         // through the world on the next physics step.
         deltaTime = std::min(deltaTime, 0.1f);
@@ -198,7 +230,13 @@ void Application::run()
         }
 
         handleEvents();
-        if (!m_running) break;
+        if (!m_running)
+        {
+#ifdef __EMSCRIPTEN__
+            emscripten_cancel_main_loop();
+#endif
+            return;
+        }
 
         if (m_screen != Screen::Playing && !m_controlsOpen)
             updateMenu();
@@ -953,6 +991,7 @@ bool Application::menuButton(const std::string& label, float x, float y, float w
 
 void Application::updateMenu()
 {
+
     // Escape backs out one level, and out of the game entirely from the top.
     if (m_input.wasKeyPressed(SDL_SCANCODE_ESCAPE))
     {

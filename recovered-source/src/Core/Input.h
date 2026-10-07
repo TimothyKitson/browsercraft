@@ -19,8 +19,10 @@ public:
 
     float mouseDeltaX() const { return m_mouseDeltaX; }
     float mouseDeltaY() const { return m_mouseDeltaY; }
-    int mouseX() const { return m_mouseX; }
-    int mouseY() const { return m_mouseY; }
+    // Canvas-relative pointer position. On the web this comes from the DOM
+    // rather than SDL, whose absolute coordinates are unreliable there.
+    int mouseX() const;
+    int mouseY() const;
     int wheelDelta() const { return m_wheelDelta; }
 
     // Whatever was pressed this frame, whichever key or button it was. The
