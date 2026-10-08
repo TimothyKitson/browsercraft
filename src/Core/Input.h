@@ -20,8 +20,10 @@ public:
 
     float mouseDeltaX() const { return m_mouseDeltaX; }
     float mouseDeltaY() const { return m_mouseDeltaY; }
-    int mouseX() const { return m_mouseX; }
-    int mouseY() const { return m_mouseY; }
+    // Defined out of line: the browser build answers these from the DOM
+    // rather than from SDL, whose web backend drifts.
+    int mouseX() const;
+    int mouseY() const;
     int wheelDelta() const { return m_wheelDelta; }
 
     // Text typed this frame, and how many times backspace fired. Key repeat

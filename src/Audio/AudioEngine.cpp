@@ -400,8 +400,10 @@ void AudioEngine::playStep(BlockId block)
 
 void AudioEngine::playPlace(BlockId block)
 {
-    play(Sound::Place, 0.75f);
-    playDig(block, 0.35f);
+    // Minecraft has no separate "place" sound: putting a block down plays
+    // that block's own material sound. Layering a synthesised blip on top
+    // of a real sample made every placement sound doubled.
+    playDig(block, 0.8f);
 }
 
 void AudioEngine::mix(float* output, int frames)

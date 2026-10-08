@@ -55,6 +55,10 @@ void Window::swapBuffers() { SDL_GL_SwapWindow(m_window); }
 void Window::setRelativeMouseMode(bool enabled)
 {
     SDL_SetRelativeMouseMode(enabled ? SDL_TRUE : SDL_FALSE);
+    // Explicit, because leaving relative mode does not reliably bring the
+    // pointer back. Menus, the inventory and every other screen are
+    // mouse-driven and were being used with an invisible cursor.
+    SDL_ShowCursor(enabled ? SDL_DISABLE : SDL_ENABLE);
 }
 
 void Window::toggleFullscreen()

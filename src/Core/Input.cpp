@@ -1,5 +1,37 @@
 #include "Input.h"
 
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+
+namespace
+{
+    // SDL's web backend builds its absolute mouse position by adding up
+    // movement deltas. Pointer lock delivers deltas without position, so
+    // after the first capture the two disagree and menu clicks arrive
+    // tens of pixels from where the cursor is drawn. The DOM already
+    // knows the real answer.
+    void hookBrowserPointer()
+    {
+        static bool hooked = false;
+        if (hooked) return;
+        hooked = true;
+
+        EM_ASM({
+            window.__bcMouseX = 0;
+            window.__bcMouseY = 0;
+            var canvas = document.getElementById('canvas');
+            var target = canvas || window;
+            target.addEventListener('mousemove', function (event) {
+                var rect = canvas ? canvas.getBoundingClientRect()
+                                  : { left: 0, top: 0 };
+                window.__bcMouseX = (event.clientX - rect.left) | 0;
+                window.__bcMouseY = (event.clientY - rect.top) | 0;
+            });
+        });
+    }
+}
+#endif
+
 void Input::beginFrame()
 {
     m_keysPressedThisFrame.clear();
@@ -100,3 +132,11 @@ bool Input::isKeyDown(SDL_Scancode key) const { return lookup(m_keysDown, key); 
 bool Input::wasKeyPressed(SDL_Scancode key) const { return lookup(m_keysPressedThisFrame, key); }
 bool Input::isMouseButtonDown(Uint8 button) const { return lookup(m_mouseDown, button); }
 bool Input::wasMouseButtonPressed(Uint8 button) const { return lookup(m_mousePressedThisFrame, button); }
+
+#ifdef __EMSCRIPTEN__
+int Input::mouseX() const { hookBrowserPointer(); return EM_ASM_INT({ return window.__bcMouseX | 0; }); }
+int Input::mouseY() const { hookBrowserPointer(); return EM_ASM_INT({ return window.__bcMouseY | 0; }); }
+#else
+int Input::mouseX() const { return m_mouseX; }
+int Input::mouseY() const { return m_mouseY; }
+#endif
