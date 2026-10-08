@@ -1,32 +1,87 @@
 #include "MobType.h"
 #include "Game/Items.h"
 #include <algorithm>
+#include <cmath>
 
 namespace
 {
+    constexpr float HALF_PI = 1.5707964f;
+
+    // The splay and droop of a spider's legs, straight out of the vanilla
+    // model.
+    constexpr float LEG_WIDE = 0.7853982f;
+    constexpr float LEG_NARROW = 0.5811946f;
+    constexpr float LEG_TURN = 0.3926991f;
+
     constexpr uint32_t rgb(uint8_t r, uint8_t g, uint8_t b)
     {
         return 0xFF000000u | (static_cast<uint32_t>(b) << 16) |
                (static_cast<uint32_t>(g) << 8) | r;
     }
 
-    MobBox box(Part part, int w, int h, int d, int x, int y, int z)
+    // A box copied out of a vanilla model, in Mojang's own numbers: the
+    // texture offset and size of its addBox, the corner that box starts
+    // at, and the offset its part is posed at.
+    //
+    // Mojang's axes run the other way from ours and their origin sits at
+    // the top of a two-block figure, so (x, y, z) becomes (-x, 24 - y, -z)
+    // and a box's minimum corner becomes its maximum. Doing that here, in
+    // one place, is what lets the rest of the table be transcribed from
+    // the vanilla models without a second thought.
+    MobBox mc(Part part, int u, int v, int w, int h, int d,
+              int bx, int by, int bz, int px, int py, int pz)
     {
-        MobBox b;
-        b.part = part;
-        b.size = glm::ivec3(w, h, d);
-        b.origin = glm::ivec3(x, y, z);
-        return b;
+        MobBox box;
+        box.part = part;
+        box.size = glm::ivec3(w, h, d);
+        box.origin = glm::ivec3(-(bx + px + w), 24 - (by + py + h), -(bz + pz + d));
+        box.pivot = glm::vec3(-px, 24 - py, -pz);
+        box.u = u;
+        box.v = v;
+        return box;
     }
 
-    // Four legs at the corners of a body, with the front pair at +z.
-    void addLegs(std::vector<MobBox>& out, int legW, int legH, int legD,
-                 int spreadX, int frontZ, int backZ)
+    MobBox mirrored(MobBox box)
     {
-        out.push_back(box(Part::LegFrontLeft,  legW, legH, legD, -spreadX - legW, 0, frontZ));
-        out.push_back(box(Part::LegFrontRight, legW, legH, legD,  spreadX,        0, frontZ));
-        out.push_back(box(Part::LegBackLeft,   legW, legH, legD, -spreadX - legW, 0, backZ));
-        out.push_back(box(Part::LegBackRight,  legW, legH, legD,  spreadX,        0, backZ));
+        box.mirror = true;
+        return box;
+    }
+
+    MobBox turned(MobBox box, float pitch, float yaw = 0.0f, float roll = 0.0f)
+    {
+        box.pitch = pitch;
+        box.yaw = yaw;
+        box.roll = roll;
+        return box;
+    }
+
+    MobBox over(MobBox box, float inflate)
+    {
+        box.inflate = inflate;
+        box.layer = 1;
+        return box;
+    }
+
+    // The four corners a quadruped stands on. Mojang gives each leg the
+    // same box and moves it about, so this does too.
+    void addLegs(std::vector<MobBox>& out, int u, int v, int w, int h, int d,
+                 int bx, int by, int bz, int spread, int backZ, int frontZ)
+    {
+        out.push_back(mc(Part::LegBackRight,  u, v, w, h, d, bx, by, bz, -spread, 24 - h, backZ));
+        out.push_back(mc(Part::LegBackLeft,   u, v, w, h, d, bx, by, bz,  spread, 24 - h, backZ));
+        out.push_back(mc(Part::LegFrontRight, u, v, w, h, d, bx, by, bz, -spread, 24 - h, frontZ));
+        out.push_back(mc(Part::LegFrontLeft,  u, v, w, h, d, bx, by, bz,  spread, 24 - h, frontZ));
+    }
+
+    // One of a spider's eight. The right side is drawn on the sheet and
+    // the left mirrors it, and each pair sits at its own angle so the
+    // legs fan out instead of sticking straight through each other.
+    void addSpiderLeg(std::vector<MobBox>& out, Part part, int z, float droop, float turn)
+    {
+        out.push_back(turned(mc(part, 18, 0, 16, 2, 2, -15, -1, -1, -4, 15, z),
+                             0.0f, turn, -droop));
+        out.push_back(turned(mirrored(mc(part, 18, 0, 16, 2, 2, -1, -1, -1, 4, 15, z)),
+                             0.0f, -turn, droop));
     }
 
     std::vector<MobType> buildTable()
@@ -38,10 +93,12 @@ namespace
             t.id = MobId::Sheep;
             t.breedingFood = Items::Wheat;
             t.name = "Sheep";
+            t.texture = "sheep";
+            t.overlay = "sheep_fur";
             t.spawnClass = SpawnClass::Passive;
             t.maxHealth = 8;
             t.width = 0.9f;
-            t.height = 1.25f;
+            t.height = 1.3f;
             t.walkSpeed = 1.8f;
             t.voice = Sound::MobBleat;
             t.drop = Items::RawMutton;
@@ -50,19 +107,37 @@ namespace
             t.secondDropCount = 1;
             t.bodyColour = rgb(228, 228, 222);
             t.headColour = rgb(222, 212, 198);
-            addLegs(t.model, 4, 10, 4, 1, 4, -8);
-            t.model.push_back(box(Part::Body, 10, 10, 16, -5, 10, -8));
-            t.model.push_back(box(Part::Head, 6, 6, 8, -3, 12, 8));
+            t.model.push_back(mc(Part::Head, 0, 0, 6, 6, 8, -3, -4, -6, 0, 6, -8));
+            t.model.push_back(turned(mc(Part::Body, 28, 8, 8, 16, 6, -4, -10, -6, 0, 5, 2), HALF_PI));
+            addLegs(t.model, 0, 16, 4, 12, 4, -2, 0, -2, 3, 7, -5);
+
+            // The wool, which is the whole of what a sheep looks like.
+            // It is a second sheet over the first, sitting just outside
+            // the hide, exactly as Mojang draws it.
+            t.model.push_back(over(mc(Part::Head, 0, 0, 6, 6, 6, -3, -4, -4, 0, 6, -8), 0.6f));
+            t.model.push_back(over(turned(mc(Part::Body, 28, 8, 8, 16, 6, -4, -10, -6, 0, 5, 2),
+                                          HALF_PI), 1.75f));
+            std::vector<MobBox> woolLegs;
+            addLegs(woolLegs, 0, 16, 4, 6, 4, -2, 0, -2, 3, 7, -5);
+            for (MobBox& leg : woolLegs)
+            {
+                // The wool stops at the knee, so its legs are posed from
+                // the hip of the longer ones underneath.
+                leg.origin.y = 6;
+                leg.pivot.y = 12.0f;
+                t.model.push_back(over(leg, 0.5f));
+            }
         }
         {
             MobType& t = table[static_cast<size_t>(MobId::Pig)];
             t.id = MobId::Pig;
             t.breedingFood = Items::Wheat;
             t.name = "Pig";
+            t.texture = "pig";
             t.spawnClass = SpawnClass::Passive;
             t.maxHealth = 10;
             t.width = 0.9f;
-            t.height = 0.875f;
+            t.height = 0.9f;
             t.walkSpeed = 2.0f;
             t.voice = Sound::MobGrunt;
             t.voicePitch = 1.25f;
@@ -70,19 +145,21 @@ namespace
             t.dropCount = 2;
             t.bodyColour = rgb(238, 145, 145);
             t.headColour = rgb(238, 145, 145);
-            addLegs(t.model, 4, 6, 4, 1, 4, -8);
-            t.model.push_back(box(Part::Body, 10, 8, 16, -5, 6, -8));
-            t.model.push_back(box(Part::Head, 8, 8, 8, -4, 4, 8));
+            t.model.push_back(mc(Part::Head, 0, 0, 8, 8, 8, -4, -4, -8, 0, 12, -6));
+            t.model.push_back(mc(Part::Head, 16, 16, 4, 3, 1, -2, 0, -9, 0, 12, -6));
+            t.model.push_back(turned(mc(Part::Body, 28, 8, 10, 16, 8, -5, -10, -7, 0, 11, 2), HALF_PI));
+            addLegs(t.model, 0, 16, 4, 6, 4, -2, 0, -2, 3, 7, -5);
         }
         {
             MobType& t = table[static_cast<size_t>(MobId::Cow)];
             t.id = MobId::Cow;
             t.breedingFood = Items::Wheat;
             t.name = "Cow";
+            t.texture = "cow";
             t.spawnClass = SpawnClass::Passive;
             t.maxHealth = 10;
             t.width = 0.9f;
-            t.height = 1.375f;
+            t.height = 1.4f;
             t.walkSpeed = 1.8f;
             t.voice = Sound::MobGrunt;
             t.voicePitch = 0.7f;
@@ -92,19 +169,23 @@ namespace
             t.secondDropCount = 1;
             t.bodyColour = rgb(74, 54, 42);
             t.headColour = rgb(60, 44, 36);
-            addLegs(t.model, 4, 12, 4, 1, 5, -9);
-            t.model.push_back(box(Part::Body, 12, 10, 18, -6, 12, -9));
-            t.model.push_back(box(Part::Head, 8, 8, 6, -4, 14, 9));
+            t.model.push_back(mc(Part::Head, 0, 0, 8, 8, 6, -4, -4, -6, 0, 4, -8));
+            t.model.push_back(mc(Part::Head, 22, 0, 1, 3, 1, -5, -5, -4, 0, 4, -8));
+            t.model.push_back(mc(Part::Head, 22, 0, 1, 3, 1, 4, -5, -4, 0, 4, -8));
+            t.model.push_back(turned(mc(Part::Body, 18, 4, 12, 18, 10, -6, -10, -7, 0, 5, 2), HALF_PI));
+            t.model.push_back(turned(mc(Part::Body, 52, 0, 4, 6, 1, -2, 2, -8, 0, 5, 2), HALF_PI));
+            addLegs(t.model, 0, 16, 4, 12, 4, -2, 0, -2, 3, 7, -5);
         }
         {
             MobType& t = table[static_cast<size_t>(MobId::Chicken)];
             t.id = MobId::Chicken;
             t.breedingFood = Items::Wheat;
             t.name = "Chicken";
+            t.texture = "chicken";
             t.spawnClass = SpawnClass::Passive;
             t.maxHealth = 4;
             t.width = 0.4f;
-            t.height = 0.75f;
+            t.height = 0.7f;
             t.walkSpeed = 1.5f;
             t.voice = Sound::MobCluck;
             t.drop = Items::RawChicken;
@@ -114,42 +195,51 @@ namespace
             t.bodyColour = rgb(234, 234, 230);
             t.headColour = rgb(234, 234, 230);
             t.eyeColour = rgb(190, 60, 40);
-            t.model.push_back(box(Part::LegBackLeft,  2, 4, 2, -2, 0, -1));
-            t.model.push_back(box(Part::LegBackRight, 2, 4, 2,  0, 0, -1));
-            t.model.push_back(box(Part::Body, 6, 6, 8, -3, 4, -4));
-            t.model.push_back(box(Part::Head, 4, 4, 4, -2, 8, 4));
+            t.model.push_back(mc(Part::Head, 0, 0, 4, 6, 3, -2, -6, -2, 0, 15, -4));
+            t.model.push_back(mc(Part::Head, 14, 0, 4, 2, 2, -2, -4, -4, 0, 15, -4));
+            t.model.push_back(mc(Part::Head, 14, 4, 2, 2, 2, -1, -2, -3, 0, 15, -4));
+            t.model.push_back(turned(mc(Part::Body, 0, 9, 6, 8, 6, -3, -4, -3, 0, 16, 0), HALF_PI));
+            t.model.push_back(mc(Part::LegBackRight, 26, 0, 3, 5, 3, -1, 0, -3, -2, 19, 1));
+            t.model.push_back(mirrored(mc(Part::LegBackLeft, 26, 0, 3, 5, 3, -1, 0, -3, 2, 19, 1)));
+            t.model.push_back(mc(Part::WingRight, 24, 13, 1, 4, 6, 0, 0, -3, -4, 13, 0));
+            t.model.push_back(mirrored(mc(Part::WingLeft, 24, 13, 1, 4, 6, -1, 0, -3, 4, 13, 0)));
         }
         {
             MobType& t = table[static_cast<size_t>(MobId::Zombie)];
             t.id = MobId::Zombie;
             t.name = "Zombie";
+            t.texture = "zombie";
+            // The file is twice as tall as it needs to be and the bottom
+            // half is empty, which is how Mojang ships it.
+            t.sheetHeight = 64;
             t.spawnClass = SpawnClass::Hostile;
             t.maxHealth = 20;
             t.width = 0.6f;
-            t.height = 2.0f;
+            t.height = 1.95f;
             t.walkSpeed = 1.9f;
             t.voice = Sound::MobGroan;
             t.attackDamage = 3;
             t.bodyColour = rgb(58, 92, 132);
             t.headColour = rgb(88, 132, 72);
             t.eyeColour = rgb(24, 32, 24);
-            // A biped: the arms stand in for the front pair of legs, so
+            // A biped: the arms are filed as the front pair of legs, so
             // they swing with the opposite leg the way an animal's do.
-            t.model.push_back(box(Part::LegBackLeft,  4, 12, 4, -4, 0, -2));
-            t.model.push_back(box(Part::LegBackRight, 4, 12, 4,  0, 0, -2));
-            t.model.push_back(box(Part::LegFrontLeft,  4, 12, 4, -8, 12, -2));
-            t.model.push_back(box(Part::LegFrontRight, 4, 12, 4,  4, 12, -2));
-            t.model.push_back(box(Part::Body, 8, 12, 4, -4, 12, -2));
-            t.model.push_back(box(Part::Head, 8, 8, 8, -4, 24, -4));
+            t.model.push_back(mc(Part::Head, 0, 0, 8, 8, 8, -4, -8, -4, 0, 0, 0));
+            t.model.push_back(mc(Part::Body, 16, 16, 8, 12, 4, -4, 0, -2, 0, 0, 0));
+            t.model.push_back(mc(Part::LegFrontRight, 40, 16, 4, 12, 4, -3, -2, -2, -5, 2, 0));
+            t.model.push_back(mirrored(mc(Part::LegFrontLeft, 40, 16, 4, 12, 4, -1, -2, -2, 5, 2, 0)));
+            t.model.push_back(mc(Part::LegBackRight, 0, 16, 4, 12, 4, -2, 0, -2, -2, 12, 0));
+            t.model.push_back(mirrored(mc(Part::LegBackLeft, 0, 16, 4, 12, 4, -2, 0, -2, 2, 12, 0)));
         }
         {
             MobType& t = table[static_cast<size_t>(MobId::Skeleton)];
             t.id = MobId::Skeleton;
             t.name = "Skeleton";
+            t.texture = "skeleton";
             t.spawnClass = SpawnClass::Hostile;
             t.maxHealth = 20;
             t.width = 0.6f;
-            t.height = 2.0f;
+            t.height = 1.99f;
             t.walkSpeed = 2.1f;
             t.voice = Sound::MobRattle;
             t.attackDamage = 2;
@@ -158,21 +248,22 @@ namespace
             t.bodyColour = rgb(200, 200, 196);
             t.headColour = rgb(214, 214, 210);
             t.eyeColour = rgb(20, 20, 20);
-            t.model.push_back(box(Part::LegBackLeft,  2, 12, 2, -3, 0, -1));
-            t.model.push_back(box(Part::LegBackRight, 2, 12, 2,  1, 0, -1));
-            t.model.push_back(box(Part::LegFrontLeft,  2, 12, 2, -6, 12, -1));
-            t.model.push_back(box(Part::LegFrontRight, 2, 12, 2,  4, 12, -1));
-            t.model.push_back(box(Part::Body, 8, 12, 4, -4, 12, -2));
-            t.model.push_back(box(Part::Head, 8, 8, 8, -4, 24, -4));
+            t.model.push_back(mc(Part::Head, 0, 0, 8, 8, 8, -4, -8, -4, 0, 0, 0));
+            t.model.push_back(mc(Part::Body, 16, 16, 8, 12, 4, -4, 0, -2, 0, 0, 0));
+            t.model.push_back(mc(Part::LegFrontRight, 40, 16, 2, 12, 2, -1, -2, -1, -5, 2, 0));
+            t.model.push_back(mirrored(mc(Part::LegFrontLeft, 40, 16, 2, 12, 2, -1, -2, -1, 5, 2, 0)));
+            t.model.push_back(mc(Part::LegBackRight, 0, 16, 2, 12, 2, -1, 0, -1, -2, 12, 0));
+            t.model.push_back(mirrored(mc(Part::LegBackLeft, 0, 16, 2, 12, 2, -1, 0, -1, 2, 12, 0)));
         }
         {
             MobType& t = table[static_cast<size_t>(MobId::Creeper)];
             t.id = MobId::Creeper;
             t.name = "Creeper";
+            t.texture = "creeper";
             t.spawnClass = SpawnClass::Hostile;
             t.maxHealth = 20;
             t.width = 0.6f;
-            t.height = 1.625f;
+            t.height = 1.7f;
             t.walkSpeed = 2.0f;
             t.voice = Sound::MobHiss;
             // It does not blow up yet, so it hits hard and slowly
@@ -184,19 +275,23 @@ namespace
             t.bodyColour = rgb(78, 158, 62);
             t.headColour = rgb(88, 172, 70);
             t.eyeColour = rgb(18, 24, 18);
-            addLegs(t.model, 4, 6, 4, 0, 2, -6);
-            t.model.push_back(box(Part::Body, 8, 12, 4, -4, 6, -2));
-            t.model.push_back(box(Part::Head, 8, 8, 8, -4, 18, -4));
+            t.model.push_back(mc(Part::Head, 0, 0, 8, 8, 8, -4, -8, -4, 0, 6, 0));
+            t.model.push_back(mc(Part::Body, 16, 16, 8, 12, 4, -4, 0, -2, 0, 6, 0));
+            addLegs(t.model, 0, 16, 4, 6, 4, -2, 0, -2, 2, 4, -4);
         }
         {
             MobType& t = table[static_cast<size_t>(MobId::Spider)];
             t.id = MobId::Spider;
             t.name = "Spider";
+            t.texture = "spider";
             t.spawnClass = SpawnClass::Hostile;
             t.maxHealth = 16;
             t.width = 1.4f;
-            t.height = 0.75f;
+            t.height = 0.9f;
             t.walkSpeed = 2.4f;
+            // Eight legs that start out splayed cannot sweep as far as
+            // four that hang straight down.
+            t.limbSwing = 0.3f;
             t.voice = Sound::MobRattle;
             t.voicePitch = 1.4f;
             t.attackDamage = 2;
@@ -207,9 +302,13 @@ namespace
             t.bodyColour = rgb(44, 38, 38);
             t.headColour = rgb(56, 48, 46);
             t.eyeColour = rgb(190, 40, 40);
-            addLegs(t.model, 5, 4, 2, 5, 2, -4);
-            t.model.push_back(box(Part::Body, 10, 8, 14, -5, 4, -7));
-            t.model.push_back(box(Part::Head, 8, 8, 8, -4, 4, 7));
+            t.model.push_back(mc(Part::Head, 32, 4, 8, 8, 8, -4, -4, -8, 0, 15, -3));
+            t.model.push_back(mc(Part::Body, 0, 0, 6, 6, 6, -3, -3, -3, 0, 15, 0));
+            t.model.push_back(mc(Part::Body, 0, 12, 10, 8, 12, -5, -4, -6, 0, 15, 9));
+            addSpiderLeg(t.model, Part::LegBackRight,   2, LEG_WIDE,   LEG_WIDE);
+            addSpiderLeg(t.model, Part::LegBackLeft,    1, LEG_NARROW, LEG_TURN);
+            addSpiderLeg(t.model, Part::LegFrontRight,  0, LEG_NARROW, -LEG_TURN);
+            addSpiderLeg(t.model, Part::LegFrontLeft,  -1, LEG_WIDE,   -LEG_WIDE);
         }
 
         return table;
@@ -225,9 +324,44 @@ const MobType& mobType(MobId id)
 
 int mobTypeCount() { return static_cast<int>(MobId::Count); }
 
+void modelBounds(const MobType& type, float& bottom, float& top)
+{
+    float low = 0.0f, high = 0.0f;
+    bool any = false;
+
+    for (const MobBox& b : type.model)
+    {
+        const glm::vec3 lo = glm::vec3(b.origin) - glm::vec3(b.inflate);
+        const glm::vec3 hi = glm::vec3(b.origin + b.size) + glm::vec3(b.inflate);
+
+        for (int corner = 0; corner < 8; ++corner)
+        {
+            glm::vec3 p((corner & 1) ? hi.x : lo.x,
+                        (corner & 2) ? hi.y : lo.y,
+                        (corner & 4) ? hi.z : lo.z);
+            p -= b.pivot;
+
+            const float cp = std::cos(b.pitch), sp = std::sin(b.pitch);
+            p = glm::vec3(p.x, p.y * cp - p.z * sp, p.y * sp + p.z * cp);
+            const float cy = std::cos(b.yaw), sy = std::sin(b.yaw);
+            p = glm::vec3(p.x * cy + p.z * sy, p.y, -p.x * sy + p.z * cy);
+            const float cr = std::cos(b.roll), sr = std::sin(b.roll);
+            p = glm::vec3(p.x * cr - p.y * sr, p.x * sr + p.y * cr, p.z);
+
+            const float y = p.y + b.pivot.y;
+            low = any ? std::min(low, y) : y;
+            high = any ? std::max(high, y) : y;
+            any = true;
+        }
+    }
+
+    bottom = low / 16.0f;
+    top = high / 16.0f;
+}
+
 float modelTop(const MobType& type)
 {
-    int top = 0;
-    for (const MobBox& b : type.model) top = std::max(top, b.origin.y + b.size.y);
-    return static_cast<float>(top) / 16.0f;
+    float bottom = 0.0f, top = 0.0f;
+    modelBounds(type, bottom, top);
+    return top;
 }

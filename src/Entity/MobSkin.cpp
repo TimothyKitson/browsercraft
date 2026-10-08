@@ -3,6 +3,8 @@
 #include "Core/GLFunctions.h"
 #include "World/Noise.h"
 #include <algorithm>
+#include <cstdio>
+#include <stb_image.h>
 
 namespace
 {
@@ -30,12 +32,13 @@ namespace
     class Canvas
     {
     public:
-        Canvas(std::vector<uint8_t>& pixels, int size) : m_pixels(pixels), m_size(size) {}
+        Canvas(std::vector<uint8_t>& pixels, int w, int h)
+            : m_pixels(pixels), m_width(w), m_height(h) {}
 
         void set(int x, int y, Rgba c)
         {
-            if (x < 0 || y < 0 || x >= m_size || y >= m_size) return;
-            const size_t i = (static_cast<size_t>(y) * m_size + x) * 4;
+            if (x < 0 || y < 0 || x >= m_width || y >= m_height) return;
+            const size_t i = (static_cast<size_t>(y) * m_width + x) * 4;
             m_pixels[i] = c.r; m_pixels[i + 1] = c.g; m_pixels[i + 2] = c.b; m_pixels[i + 3] = c.a;
         }
 
@@ -63,7 +66,7 @@ namespace
 
     private:
         std::vector<uint8_t>& m_pixels;
-        int m_size;
+        int m_width, m_height;
     };
 
     // How wide and tall a box's unwrapped strip is.
@@ -77,86 +80,96 @@ namespace
 MobSkin::~MobSkin()
 {
     if (m_texture) glDeleteTextures(1, &m_texture);
+    if (m_overlayTexture) glDeleteTextures(1, &m_overlayTexture);
 }
 
-// Shelf packing, tallest strip first. Boxes of the same size and part
-// share one patch -- four identical legs cost one, which is what keeps a
-// cow inside a 64-pixel sheet.
-bool MobSkin::pack(std::vector<MobBox>& boxes, int sheet)
+std::string MobSkin::texturePath(const char* name)
 {
-    std::vector<int> order(boxes.size());
-    for (size_t i = 0; i < boxes.size(); ++i) order[i] = static_cast<int>(i);
+    return std::string("assets/skins/mob/") + name + ".png";
+}
 
-    std::sort(order.begin(), order.end(), [&](int a, int b) {
-        int aw = 0, ah = 0, bw = 0, bh = 0;
-        stripSize(boxes[a].size, aw, ah);
-        stripSize(boxes[b].size, bw, bh);
-        if (ah != bh) return ah > bh;
-        return aw > bw;
-    });
-
-    std::vector<bool> placed(boxes.size(), false);
-    int cursorX = 0, cursorY = 0, shelfHeight = 0;
-
-    for (int index : order)
+bool MobSkin::fits(const std::vector<MobBox>& boxes, int sheetWidth, int sheetHeight)
+{
+    for (const MobBox& box : boxes)
     {
-        MobBox& box = boxes[index];
-
-        int twin = -1;
-        for (size_t i = 0; i < boxes.size(); ++i)
-            if (placed[i] && boxes[i].size == box.size && boxes[i].part == box.part)
-            {
-                twin = static_cast<int>(i);
-                break;
-            }
-
-        if (twin >= 0)
-        {
-            box.u = boxes[twin].u;
-            box.v = boxes[twin].v;
-            placed[index] = true;
-            continue;
-        }
-
-        int w = 0, h = 0;
-        stripSize(box.size, w, h);
-        if (w > sheet || h > sheet) return false;
-
-        if (cursorX + w > sheet)
-        {
-            cursorX = 0;
-            cursorY += shelfHeight;
-            shelfHeight = 0;
-        }
-        if (cursorY + h > sheet) return false;
-
-        box.u = cursorX;
-        box.v = cursorY;
-        cursorX += w;
-        shelfHeight = std::max(shelfHeight, h);
-        placed[index] = true;
+        const int w = 2 * (box.size.x + box.size.z);
+        const int h = box.size.y + box.size.z;
+        if (box.u < 0 || box.v < 0) return false;
+        if (box.u + w > sheetWidth || box.v + h > sheetHeight) return false;
     }
-
     return true;
 }
 
 void MobSkin::layout(MobId id)
 {
-    m_boxes = mobType(id).model;
-    pack(m_boxes, SHEET);
+    const MobType& type = mobType(id);
+    m_boxes = type.model;
+    m_width = type.sheetWidth;
+    m_height = type.sheetHeight;
 }
 
 void MobSkin::build(MobId id)
 {
     layout(id);
-    paint(mobType(id));
-    upload();
+
+    const MobType& type = mobType(id);
+
+    if (*type.texture && loadFile(texturePath(type.texture), m_pixels, m_width, m_height))
+    {
+        m_fromFile = true;
+    }
+    else
+    {
+        m_width = type.sheetWidth;
+        m_height = type.sheetHeight;
+        paint(type);
+    }
+
+    m_texture = upload(m_pixels, m_width, m_height, m_texture);
+
+    // The overlay only ever comes from a file. Painting a sheep's wool
+    // would mean painting the same hide twice, so without the art the
+    // overlay boxes simply are not drawn.
+    std::vector<uint8_t> overlay;
+    int ow = 0, oh = 0;
+    if (*type.overlay && loadFile(texturePath(type.overlay), overlay, ow, oh) &&
+        ow == m_width && oh == m_height)
+    {
+        m_overlayTexture = upload(overlay, ow, oh, m_overlayTexture);
+    }
+    else
+    {
+        m_boxes.erase(std::remove_if(m_boxes.begin(), m_boxes.end(),
+                                     [](const MobBox& b) { return b.layer != 0; }),
+                      m_boxes.end());
+    }
+}
+
+bool MobSkin::loadFile(const std::string& path, std::vector<uint8_t>& pixels, int& w, int& h)
+{
+    int channels = 0;
+    unsigned char* data = stbi_load(path.c_str(), &w, &h, &channels, 4);
+    if (!data) return false;
+
+    // Anything that is not a mob sheet would map the boxes onto nonsense,
+    // so it is turned away rather than drawn.
+    if (w != 64 || (h != 32 && h != 64))
+    {
+        std::printf("Mob texture %s ignored: expected 64x32 or 64x64, got %dx%d\n",
+                    path.c_str(), w, h);
+        stbi_image_free(data);
+        return false;
+    }
+
+    pixels.assign(data, data + static_cast<size_t>(w) * h * 4);
+    stbi_image_free(data);
+    return true;
 }
 
 void MobSkin::paint(const MobType& type)
 {
-    m_pixels.assign(static_cast<size_t>(SHEET) * SHEET * 4, 0);
-    Canvas canvas(m_pixels, SHEET);
+    m_pixels.assign(static_cast<size_t>(m_width) * m_height * 4, 0);
+    Canvas canvas(m_pixels, m_width, m_height);
 
     const Rgba body = unpack(type.bodyColour);
     const Rgba head = unpack(type.headColour);
@@ -166,6 +179,8 @@ void MobSkin::paint(const MobType& type)
 
     for (const MobBox& box : m_boxes)
     {
+        if (box.layer != 0) continue;
+
         const bool isHead = box.part == Part::Head;
         const Rgba base = isHead ? head : body;
 
@@ -185,7 +200,10 @@ void MobSkin::paint(const MobType& type)
             canvas.hide(x, y, w, h, shade(base, tone), salt++);
         }
 
-        if (!isHead) continue;
+        // Mojang's layout stacks the snout, horns and wattle on the head
+        // patches, so only the biggest box of a head gets a face painted
+        // on it -- otherwise a pig would have eyes on its nose.
+        if (!isHead || box.size.x < 4 || box.size.y < 4) continue;
 
         // The face. Eyes sit a third of the way down the front patch and
         // a quarter in from each side, which lands them sensibly on
@@ -211,24 +229,21 @@ void MobSkin::paint(const MobType& type)
             canvas.rect(mouthX - 1, eyeY + eyeH + std::max(1, fh / 4), 1, std::max(1, fh / 5), eye);
             canvas.rect(mouthX + 2, eyeY + eyeH + std::max(1, fh / 4), 1, std::max(1, fh / 5), eye);
         }
-
-        // A beak, for the one species that has one.
-        if (type.id == MobId::Chicken)
-            canvas.rect(fx + fw / 2 - 1, eyeY + eyeH, 2, 1, shade(unpack(0xFF28A8E8u), 1.0f));
     }
 }
 
-void MobSkin::upload()
+unsigned int MobSkin::upload(const std::vector<uint8_t>& pixels, int w, int h, unsigned int into)
 {
-    if (!m_texture) glGenTextures(1, &m_texture);
+    if (!into) glGenTextures(1, &into);
 
-    glBindTexture(GL_TEXTURE_2D, m_texture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, SHEET, SHEET, 0, GL_RGBA,
-                 GL_UNSIGNED_BYTE, m_pixels.data());
+    glBindTexture(GL_TEXTURE_2D, into);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA,
+                 GL_UNSIGNED_BYTE, pixels.data());
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glBindTexture(GL_TEXTURE_2D, 0);
+    return into;
 }

@@ -134,6 +134,28 @@ repository contains neither: install a different pack and the old name
 cannot be left behind. With no `CREDIT.txt` nothing is claimed, and
 `build-web.ps1` warns you before it publishes an uncredited pack.
 
+## Mob textures
+
+Mobs are built out of boxes unwrapped onto a sheet at Mojang's own
+texture offsets, so any sheet drawn for the vanilla model drops straight
+in:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\install-mob-textures.ps1 -Zip "C:\path\to\entity.zip"
+```
+
+That copies the nine sheets the eight species need -- sheep (and its
+wool), pig, cow, chicken, zombie, skeleton, creeper, spider -- into
+`assets/skins/mob`. Anything it cannot find keeps the hide the game
+paints for itself, so a half-populated folder is fine. Delete the folder
+to go back to painted hides everywhere.
+
+Like texture packs, these are not part of the project: `assets/skins` is
+gitignored. Unlike texture packs, the ones most people install are the
+vanilla entity textures, which are Mojang's and not yours to put on a
+website. `build-web.ps1` therefore leaves them out of the download unless
+you pass `-MobTextures`, and the published build uses painted hides.
+
 Check each pack's own terms. The engine can prove a credit is shown; it
 cannot tell you whether that is the condition you actually have to meet.
 

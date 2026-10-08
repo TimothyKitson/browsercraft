@@ -23,7 +23,7 @@ public:
     // The geometry for one mob, in world space, with no GL involved --
     // which is what lets --selftest check the models stand on the ground
     // and face the way they are walking.
-    void build(const MobSkin& skin, const Mob& mob, float sky, float blockLight);
+    void build(const MobSkin& skin, const Mob& mob, float sky, float blockLight, int layer = 0);
     const std::vector<float>& vertices() const { return m_vertices; }
 
     // Built on demand and kept; painting one costs well under a

@@ -34,6 +34,16 @@ namespace
                 return 0.0f;
         }
     }
+
+    // Wings beat out from the body rather than back and forth, so a
+    // chicken's pair turn about the way it is facing instead.
+    float flapFor(Part part, float phase, float amount)
+    {
+        const float beat = (std::cos(phase) * 0.5f + 0.5f) * amount;
+        if (part == Part::WingRight) return -beat;
+        if (part == Part::WingLeft) return beat;
+        return 0.0f;
+    }
 }
 
 const MobSkin& MobModel::skinFor(MobId id)
@@ -50,7 +60,7 @@ const MobSkin& MobModel::skinFor(MobId id)
     return *m_skins[index];
 }
 
-void MobModel::build(const MobSkin& skin, const Mob& mob, float sky, float blockLight)
+void MobModel::build(const MobSkin& skin, const Mob& mob, float sky, float blockLight, int layer)
 {
     const MobType& type = mob.type();
 
@@ -61,6 +71,9 @@ void MobModel::build(const MobSkin& skin, const Mob& mob, float sky, float block
     frame.blockLight = blockLight;
     frame.textureWidth = static_cast<float>(skin.width());
     frame.textureHeight = static_cast<float>(skin.height());
+    // A lamb is half a sheep. Shrinking the whole figure here rather than
+    // each box keeps every texture patch the size the sheet says it is.
+    frame.scale = mob.scale();
 
     // A dead one keels over sideways rather than vanishing mid-step.
     const float fade = mob.deathFade();
@@ -78,17 +91,22 @@ void MobModel::build(const MobSkin& skin, const Mob& mob, float sky, float block
 
     for (const MobBox& source : skin.boxes())
     {
+        if (source.layer != layer) continue;
+
         BoxMesh::Box box;
-        box.min = glm::vec3(source.origin) * mob.scale();
-        box.max = glm::vec3(source.origin + source.size) * mob.scale();
+        box.min = glm::vec3(source.origin);
+        box.max = glm::vec3(source.origin + source.size);
+        box.pivot = source.pivot;
         box.u = source.u;
         box.v = source.v;
+        box.mirror = source.mirror;
+        box.inflate = source.inflate;
 
-        // Limbs hinge at their top, where they meet the body.
-        box.pivot = glm::vec3(static_cast<float>(source.origin.x) + source.size.x * 0.5f,
-                              static_cast<float>(source.origin.y + source.size.y),
-                              static_cast<float>(source.origin.z) + source.size.z * 0.5f) * mob.scale();
-        box.pitch = swingFor(source.part, phase, amount);
+        // The rest pose first -- a spider's legs are already splayed
+        // before it takes a step -- and the walk on top of it.
+        box.pitch = source.pitch + swingFor(source.part, phase, amount) * type.limbSwing;
+        box.yaw = source.yaw;
+        box.roll = source.roll + flapFor(source.part, phase, amount);
 
         boxes.push_back(box);
     }
@@ -118,6 +136,13 @@ void MobModel::render(Shader& chunkShader, const World& world, const EntityManag
         const MobSkin& skin = skinFor(id);
         if (!skin.textureId()) continue;
 
+        // A sheep is its hide and then its wool, each off its own sheet,
+        // so a species can take two passes.
+        for (int layer = 0; layer < 2; ++layer)
+        {
+        const unsigned int texture = layer == 0 ? skin.textureId() : skin.overlayTextureId();
+        if (!texture) continue;
+
         std::vector<float> batch;
 
         for (const Mob& mob : entities.mobs())
@@ -143,7 +168,7 @@ void MobModel::render(Shader& chunkShader, const World& world, const EntityManag
             sky *= fade;
             blockLight *= fade;
 
-            build(skin, mob, sky, blockLight);
+            build(skin, mob, sky, blockLight, layer);
             batch.insert(batch.end(), m_vertices.begin(), m_vertices.end());
         }
 
@@ -151,7 +176,8 @@ void MobModel::render(Shader& chunkShader, const World& world, const EntityManag
 
         m_mesh.upload(batch, CHUNK_LAYOUT, true);
         glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, skin.textureId());
+        glBindTexture(GL_TEXTURE_2D, texture);
         m_mesh.draw(GL_TRIANGLES);
+        }
     }
 }

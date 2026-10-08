@@ -9,6 +9,7 @@
 param(
     [string]$Emsdk = "C:\Users\TempAdmin\emsdk",
     [string]$TextureDir = "",   # defaults to assets/textures/block32 when it exists
+    [switch]$MobTextures,       # see below: vanilla entity textures are not yours to publish
     [switch]$Serve,
     [int]$Port = 8080
 )
@@ -53,6 +54,30 @@ if ($TextureDir -ne "" -and (Test-Path -LiteralPath $TextureDir)) {
     }
 } else {
     Write-Output "No texture pack staged - the web build will use procedural textures."
+}
+
+# Mob sheets are a separate decision from block textures. A block pack is
+# usually somebody's own work, passed on under their own terms; the
+# vanilla entity textures most people install here are Mojang's, and
+# putting them on a public site is republishing Mojang's art. So they
+# stay out of the download unless you say otherwise, and the game falls
+# back to the hides it paints for itself.
+$mobDir = Join-Path $root "assets\skins\mob"
+if ($MobTextures -and (Test-Path -LiteralPath $mobDir)) {
+    New-Item -ItemType Directory -Force -Path (Join-Path $stage "skins") | Out-Null
+    Copy-Item -Recurse -LiteralPath $mobDir (Join-Path $stage "skins\mob")
+    $mobBytes = (Get-ChildItem (Join-Path $stage "skins\mob") -File | Measure-Object -Property Length -Sum).Sum
+    Write-Output ("Staging mob textures ({0:N0} KB)" -f ($mobBytes / 1KB))
+    Write-Warning "Publishing mob textures. Make sure they are yours to pass on - the vanilla ones are not."
+
+    $mobCredit = Join-Path $mobDir "CREDIT.txt"
+    if (Test-Path -LiteralPath $mobCredit) {
+        Write-Output ("Mob textures credited: {0}" -f (Get-Content -LiteralPath $mobCredit -TotalCount 1))
+    } else {
+        Write-Warning "No assets/skins/mob/CREDIT.txt - the published mobs will credit nobody."
+    }
+} elseif (Test-Path -LiteralPath $mobDir) {
+    Write-Output "Mob textures left out of the download (pass -MobTextures to include them)."
 }
 
 $stageRoot = (Resolve-Path (Join-Path $root "build-web\stage\assets")).Path.Replace('\','/')

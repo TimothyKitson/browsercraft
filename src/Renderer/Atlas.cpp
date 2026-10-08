@@ -687,12 +687,13 @@ namespace
 
     const char* PACK_DIRECTORY = "assets/textures/block";
     const char* CREDIT_FILE = "assets/textures/CREDIT.txt";
+    const char* MOB_CREDIT_FILE = "assets/skins/mob/CREDIT.txt";
 
-    // First non-blank, non-comment line of the credit file, trimmed and
+    // First non-blank, non-comment line of a credit file, trimmed and
     // capped to something that fits across the bottom of the screen.
-    std::string readPackCredit()
+    std::string readCreditFile(const char* path)
     {
-        std::FILE* file = std::fopen(CREDIT_FILE, "rb");
+        std::FILE* file = std::fopen(path, "rb");
         if (!file) return {};
 
         std::string credit;
@@ -715,6 +716,19 @@ namespace
 
         std::fclose(file);
         return credit;
+    }
+
+    // Blocks and mobs are installed separately and can come from
+    // different people, so both are named -- on one line, because the
+    // title screen has room for one.
+    std::string readPackCredit()
+    {
+        const std::string blocks = readCreditFile(CREDIT_FILE);
+        const std::string mobs = readCreditFile(MOB_CREDIT_FILE);
+
+        if (blocks.empty()) return mobs;
+        if (mobs.empty() || mobs == blocks) return blocks;
+        return blocks + " / " + mobs;
     }
 
     struct Image

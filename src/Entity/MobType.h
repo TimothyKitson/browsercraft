@@ -37,18 +37,40 @@ enum class Part : uint8_t
     LegFrontRight,
     LegBackLeft,
     LegBackRight,
+    WingLeft,
+    WingRight,
     Count
 };
 
 // One box of a mob, in texture pixels measured from its feet, sixteen to
 // the block -- the same units the player model uses, so both go through
 // the same unwrapping.
+//
+// (u, v) is the box's offset on the sheet, and it is Mojang's: these are
+// the numbers out of the vanilla models, so a mob wearing a real texture
+// has every patch land where the artist drew it. Our axes are turned
+// half a circle from theirs -- the model faces +z here and -z there --
+// so a vanilla box at (x, y, z) sits at (-x, 24 - y, -z) below, which is
+// the whole of the translation.
 struct MobBox
 {
     Part part = Part::Body;
     glm::ivec3 size{ 8, 8, 8 };
     glm::ivec3 origin{ 0, 0, 0 };   // the box's minimum corner; +z is forward
-    int u = 0, v = 0;               // filled in when the hide is packed
+    glm::vec3 pivot{ 0.0f };        // what it swings about
+    int u = 0, v = 0;
+
+    // The old 64x32 layout draws one arm and one leg and mirrors them
+    // for the other side. Every mob sheet is that layout, zombies
+    // included -- theirs is a 64x64 file with the bottom half empty.
+    bool mirror = false;
+
+    // A rest pose, for the parts that do not hang straight down: a
+    // spider's legs splay out and drop away from its body.
+    float pitch = 0.0f, yaw = 0.0f, roll = 0.0f;
+
+    float inflate = 0.0f;           // wool sits just outside the hide it covers
+    int layer = 0;                  // 1 draws from the overlay sheet
 };
 
 // Everything that distinguishes one species from another.
@@ -62,6 +84,7 @@ struct MobType
     float width = 0.9f;         // collision box
     float height = 1.3f;
     float walkSpeed = 2.3f;     // blocks per second
+    float limbSwing = 1.0f;     // how far its legs reach at a full run
 
     // Half a heart each. Zero for anything that does not fight back.
     int attackDamage = 0;
@@ -87,6 +110,16 @@ struct MobType
     Sound voice = Sound::MobGrunt;
     float voicePitch = 1.0f;    // shifts every sound this species makes
 
+    // assets/skins/mob/<texture>.png when it is there, and a hide painted
+    // from the colours below when it is not. Mojang's mob textures are
+    // Mojang's, so the repository holds the second of those and never the
+    // first -- tools/install-mob-textures.ps1 puts the first in place on
+    // your own machine.
+    const char* texture = "";
+    const char* overlay = "";       // a second sheet over the top: a sheep's wool
+    int sheetWidth = 64;
+    int sheetHeight = 32;
+
     // Painted, not loaded: a hide is three colours and a face, the same
     // arrangement PlayerSkin uses and for the same reason.
     uint32_t bodyColour = 0xFFFFFFFF;
@@ -99,7 +132,11 @@ struct MobType
 const MobType& mobType(MobId id);
 int mobTypeCount();
 
-// The tallest point of the model, in blocks. The collision box and the
-// drawing have to agree or a mob sinks into the floor, so --selftest
-// checks this against height.
+// The lowest and tallest points of the model, in blocks, with every box
+// put through the rotation the renderer gives it -- a body lying on its
+// side and a spider's legs angled into the ground are both a quarter
+// turn away from the numbers in the table. The drawing and the collision
+// box have to roughly agree or a mob floats or sinks, so --selftest
+// checks these.
+void modelBounds(const MobType& type, float& bottom, float& top);
 float modelTop(const MobType& type);

@@ -16,8 +16,12 @@ namespace
         int downAxis, downSign;     // ...and its +v
     };
 
-    // Corners wound counter-clockwise seen from outside, so back-face
-    // culling hides the inside of each box.
+    // Corners wound counter-clockwise seen from outside *in model space*,
+    // where +x is the figure's right, +y is up and +z is the way it
+    // faces. That triple is left-handed -- a figure's right hand is
+    // forward cross up -- so the winding comes out the other way round
+    // once the box is placed in the world, and the triangles below are
+    // emitted in the order that puts it back.
     //
     // The right/down columns are the whole of Minecraft's box unwrapping.
     // A front face reads right-to-left across the model because you are
@@ -48,6 +52,12 @@ namespace
     {
         const float s = std::sin(a), c = std::cos(a);
         return glm::vec3(p.x * c + p.z * s, p.y, -p.x * s + p.z * c);
+    }
+
+    glm::vec3 rotateZ(const glm::vec3& p, float a)
+    {
+        const float s = std::sin(a), c = std::cos(a);
+        return glm::vec3(p.x * c - p.y * s, p.x * s + p.y * c, p.z);
     }
 
     // The terrain mesher's per-face shading, so anything standing in a
@@ -110,6 +120,7 @@ void BoxMesh::append(std::vector<float>& out, const Box& box, const Frame& frame
         glm::vec3 normal(face.normal[0], face.normal[1], face.normal[2]);
         normal = rotateX(normal, box.pitch);
         if (box.yaw != 0.0f) normal = rotateY(normal, box.yaw);
+        if (box.roll != 0.0f) normal = rotateZ(normal, box.roll);
         if (jointed) normal = rotateX(normal, frame.jointAngle);
         const float shade = shadeFor(right * normal.x + up * normal.y + forward * normal.z);
 
@@ -124,9 +135,10 @@ void BoxMesh::append(std::vector<float>& out, const Box& box, const Frame& frame
 
             local = rotateX(local - box.pivot, box.pitch) + box.pivot;
             if (box.yaw != 0.0f) local = rotateY(local - box.pivot, box.yaw) + box.pivot;
+            if (box.roll != 0.0f) local = rotateZ(local - box.pivot, box.roll) + box.pivot;
             if (jointed) local = rotateX(local - frame.jointPivot, frame.jointAngle) + frame.jointPivot;
 
-            local *= 1.0f / 16.0f;
+            local *= frame.scale / 16.0f;
             corners[k] = frame.feet + right * local.x + up * local.y + forward * local.z;
 
             const bool onRight = face.corner[k][face.rightAxis] == (face.rightSign > 0 ? 1 : 0);
@@ -135,7 +147,7 @@ void BoxMesh::append(std::vector<float>& out, const Box& box, const Frame& frame
             v[k] = onBottom ? v1 : v0;
         }
 
-        const int order[6] = { 0, 1, 2, 0, 2, 3 };
+        const int order[6] = { 0, 2, 1, 0, 3, 2 };
         for (int k : order)
         {
             out.push_back(corners[k].x);

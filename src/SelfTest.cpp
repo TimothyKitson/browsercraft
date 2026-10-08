@@ -497,28 +497,26 @@ namespace
             check(type.walkSpeed > 0.0f, who + " can walk");
             check(!type.model.empty(), who + " has a model");
 
-            // A model that does not match its collision box leaves the
-            // mob either floating or sunk into the floor.
-            check(std::fabs(modelTop(type) - type.height) < 0.07f,
-                  who + " is drawn the height it collides at");
+            float bottom = 0.0f, top = 0.0f;
+            modelBounds(type, bottom, top);
 
-            // Feet on the ground: something has to touch y = 0.
-            int lowest = 1000;
-            for (const MobBox& b : type.model) lowest = std::min(lowest, b.origin.y);
-            check(lowest == 0, who + " stands on the ground");
+            // A model that does not match its collision box leaves the
+            // mob either floating or sunk into the floor. Minecraft's own
+            // heads and horns poke out of their hitboxes, so this asks
+            // only that the drawing and the box are the same animal.
+            check(top >= type.height * 0.6f && top <= type.height + 0.3f,
+                  who + " is drawn about the height it collides at");
+
+            // Feet on the ground, within a pixel. A spider's legs splay
+            // out and end just shy of the floor, which is vanilla too.
+            check(bottom > -0.2f && bottom < 0.05f, who + " stands on the ground");
 
             // Every species must fit its sheet, or its texture coordinates
             // silently wrap onto another limb.
-            std::vector<MobBox> boxes = type.model;
-            check(MobSkin::pack(boxes, MobSkin::SHEET), who + " packs onto one sheet");
-
-            for (const MobBox& b : boxes)
-            {
-                const int w = 2 * (b.size.x + b.size.z);
-                const int h = b.size.y + b.size.z;
-                check(b.u >= 0 && b.v >= 0 && b.u + w <= MobSkin::SHEET && b.v + h <= MobSkin::SHEET,
-                      who + " keeps every patch on the sheet");
-            }
+            check(type.sheetWidth == 64 && (type.sheetHeight == 32 || type.sheetHeight == 64),
+                  who + " has a sheet the shape Minecraft draws on");
+            check(MobSkin::fits(type.model, type.sheetWidth, type.sheetHeight),
+                  who + " keeps every patch on its sheet");
         }
     }
 
@@ -533,6 +531,47 @@ namespace
         check(!EntityManager::canSpawnOn(MobId::Sheep, Blocks::Grass, 2), "and not in the dark");
         check(!EntityManager::canSpawnOn(MobId::Sheep, Blocks::Stone, 14), "nor on bare stone");
         check(!EntityManager::canSpawnOn(MobId::Zombie, Blocks::Air, 0), "nothing spawns in mid-air");
+    }
+
+    void testBoxWinding()
+    {
+        section("entities: box winding");
+
+        // Model space -- right, up, the way it faces -- is left-handed,
+        // so a box wound the obvious way comes out inside-out once it is
+        // placed in the world and the graphics card throws away the
+        // faces you can see instead of the ones you cannot. One figure
+        // on its own still looks right, which is how this went unnoticed
+        // until a sheep needed its wool drawn over its hide.
+        BoxMesh::Box box;
+        box.min = glm::vec3(-4.0f, 0.0f, -4.0f);
+        box.max = glm::vec3(4.0f, 8.0f, 4.0f);
+
+        BoxMesh::Frame frame;
+        frame.feet = glm::vec3(0.0f);
+        frame.bodyYaw = 0.0f;
+
+        std::vector<float> v;
+        BoxMesh::append(v, box, frame);
+
+        const int stride = BoxMesh::FLOATS_PER_VERTEX;
+        const glm::vec3 centre(0.0f, 0.25f, 0.0f);   // the box's middle, in blocks
+
+        bool allOutward = true;
+        for (size_t i = 0; i + 2 * stride < v.size(); i += 3 * stride)
+        {
+            const glm::vec3 a(v[i], v[i + 1], v[i + 2]);
+            const glm::vec3 b(v[i + stride], v[i + stride + 1], v[i + stride + 2]);
+            const glm::vec3 c(v[i + 2 * stride], v[i + 2 * stride + 1], v[i + 2 * stride + 2]);
+
+            // Counter-clockwise seen from outside means the cross product
+            // points away from the middle of the box.
+            const glm::vec3 facing = glm::cross(b - a, c - a);
+            if (glm::dot(facing, (a + b + c) / 3.0f - centre) <= 0.0f) allOutward = false;
+        }
+
+        check(v.size() == 36 * static_cast<size_t>(stride), "a box is twelve triangles");
+        check(allOutward, "every one of them faces out of the box");
     }
 
     void testMobGeometry()
@@ -565,9 +604,29 @@ namespace
         }
 
         check(uvInside, "every corner samples inside the hide");
-        check(std::fabs(lowY - 70.0f) < 0.002f, "the cow's feet are on the ground");
-        check(std::fabs((highY - lowY) - mobType(MobId::Cow).height) < 0.02f,
-              "and it stands its full height");
+
+        // What the table says the model measures has to be what the
+        // renderer actually draws, rotated boxes and all.
+        float bottom = 0.0f, top = 0.0f;
+        modelBounds(mobType(MobId::Cow), bottom, top);
+        check(std::fabs(lowY - (70.0f + bottom)) < 0.002f, "the cow's feet are on the ground");
+        check(std::fabs(highY - (70.0f + top)) < 0.002f,
+              "and it is drawn the height the model claims");
+
+        // Mojang's numbers, turned round to ours: a zombie's head is the
+        // top eight pixels of a two-block figure, and its right arm
+        // hangs off the right-hand side of its chest. If the conversion
+        // in MobType ever drifts, every mob wears its texture crooked.
+        const MobType& zombie = mobType(MobId::Zombie);
+        const MobBox& head = zombie.model[0];
+        check(head.u == 0 && head.v == 0, "the zombie's head reads from the top-left of its sheet");
+        check(head.origin == glm::ivec3(-4, 24, -4) && head.size == glm::ivec3(8, 8, 8),
+              "and sits on top of a two-block figure");
+
+        const MobBox& rightArm = zombie.model[2];
+        check(rightArm.u == 40 && rightArm.v == 16, "its right arm reads from Mojang's arm patch");
+        check(rightArm.origin.x == 4 && !rightArm.mirror, "and hangs on its right, unmirrored");
+        check(zombie.model[3].mirror, "while the left arm is the same patch, mirrored");
     }
 
     void testMobDamage()
@@ -1081,6 +1140,7 @@ int runSelfTest()
     testPlayerAnimation();
     testPlayerModel();
     testPlayerGeometry();
+    testBoxWinding();
     testMobTypes();
     testMobSpawnRules();
     testMobGeometry();

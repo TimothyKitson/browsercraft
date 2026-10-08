@@ -32,6 +32,7 @@ namespace BoxMesh
         glm::vec3 pivot{ 0.0f };
         float pitch = 0.0f;     // radians about the figure's right; swings limbs
         float yaw = 0.0f;       // radians about up, positive turns left
+        float roll = 0.0f;      // radians about the way it faces; splays a spider's legs
         int u = 0, v = 0;
         bool mirror = false;    // the old skin layout holds one arm; the other mirrors it
         float inflate = 0.0f;   // hats and jackets sit just outside what they cover
@@ -51,6 +52,10 @@ namespace BoxMesh
         float blockLight = 0.0f;    // 0..1
         float textureWidth = 64.0f;
         float textureHeight = 64.0f;
+        // Shrinks the whole figure about its feet. A lamb is half a
+        // sheep, and scaling here rather than in the boxes is what keeps
+        // its texture patches the size the sheet says they are.
+        float scale = 1.0f;
         float jointAngle = 0.0f;    // radians, applied to jointed boxes
         glm::vec3 jointPivot{ 0.0f };
     };
