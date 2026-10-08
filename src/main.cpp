@@ -252,6 +252,7 @@ int main(int argc, char** argv)
     const char* dimensionName = nullptr;
     bool hostOnStart = false;
     bool buildTest = false;
+    bool mobTest = false;
     const char* joinAddress = nullptr;
 
     for (int i = 1; i < argc; ++i)
@@ -297,6 +298,10 @@ int main(int argc, char** argv)
         {
             selfTest = true;
         }
+        else if (std::strcmp(argv[i], "--mobtest") == 0)
+        {
+            mobTest = true;
+        }
         else if (std::strcmp(argv[i], "--buildtest") == 0)
         {
             buildTest = true;
@@ -334,6 +339,7 @@ int main(int argc, char** argv)
         if (startupScreen) app.setStartupScreen(startupScreen);
         if (hasSeed) app.setSeedOverride(seed);
         if (buildTest) app.setBuildTest();
+        if (mobTest) app.setMobTest();
         if (panorama)
         {
             unsigned int panoramaSeed = 0;

@@ -267,6 +267,7 @@ void Application::startWorld(GameMode mode, bool freshWorld)
     // Reset everything that belongs to a run.
     m_drops.clear();
     m_particles.clear();
+    m_entities.clear();
     m_animation.clear();
     m_nameplates.clear();
     m_inventory.clear();
@@ -319,6 +320,7 @@ void Application::startJoinedWorld()
 
     m_drops.clear();
     m_particles.clear();
+    m_entities.clear();
     m_animation.clear();
     m_nameplates.clear();
     m_inventory.clear();
@@ -401,6 +403,7 @@ void Application::quitToTitle()
     }
     m_drops.clear();
     m_particles.clear();
+    m_entities.clear();
     m_animation.clear();
     m_nameplates.clear();
     m_perspective = Perspective::FirstPerson;
@@ -742,9 +745,13 @@ bool Application::frame()
             waitForSpawnChunk();
         else if (m_automated)
         {
-            // Let physics settle, but take no input.
+            // Let physics settle, but take no input. The world around
+            // the player still has to run, or an automated screenshot
+            // shows an empty one -- which is how the mob spawner came to
+            // look broken when it was only ever being skipped.
             m_player.update(deltaTime, *m_world, Player::Controls{});
             m_camera.position = m_player.eyePosition();
+            updateMobs(deltaTime);
         }
         else if (playing() && !m_inventoryOpen)
         {
@@ -780,6 +787,51 @@ bool Application::frame()
                     }
             std::printf("[test] stamped %d blocks at %d %d %d\n",
                         placed, base.x, base.y, base.z);
+            std::fflush(stdout);
+        }
+
+        // Dev aid: one of every species, lined up in front of spawn and
+        // facing the player, so a screenshot shows all eight at once
+        // rather than waiting on the spawner to oblige.
+        if (m_mobTest && m_worldReady && !m_mobTestDone)
+        {
+            m_mobTestDone = true;
+
+            // A flat stone stage rather than whatever terrain happens to
+            // be underfoot: spawn can land in a forest, and a model sheet
+            // is no use with a tree in front of it. Deterministic for any
+            // seed, which is the point of a check you repeat.
+            const int baseY = static_cast<int>(std::floor(m_player.position.y));
+            const int centreX = static_cast<int>(std::floor(m_player.position.x));
+            const int centreZ = static_cast<int>(std::floor(m_player.position.z));
+            const int halfWidth = mobTypeCount() + 2;
+
+            for (int x = centreX - halfWidth; x <= centreX + halfWidth; ++x)
+                for (int z = centreZ - 12; z <= centreZ + 4; ++z)
+                {
+                    m_world->setBlock(x, baseY - 1, z, Blocks::Stone);
+                    for (int y = baseY; y < baseY + 8; ++y)
+                        m_world->setBlock(x, y, z, Blocks::Air);
+                }
+
+            const int firstX = centreX - mobTypeCount();
+            int placed = 0;
+            for (int i = 0; i < mobTypeCount(); ++i)
+            {
+                const glm::vec3 feet(firstX + i * 2 + 0.5f, static_cast<float>(baseY),
+                                     centreZ + 0.5f);
+                if (m_entities.spawnAt(static_cast<MobId>(i), feet, *m_world)) ++placed;
+            }
+
+            // Stand back and look north along +z at the row.
+            m_player.position = glm::vec3(centreX + 0.5f, static_cast<float>(baseY),
+                                          centreZ - 10.5f);
+            m_player.velocity = glm::vec3(0.0f);
+            m_camera.position = m_player.eyePosition();
+            m_camera.setOrientation(90.0f, -4.0f);
+
+            std::printf("[test] spawned %d of %d species on a stage at y=%d\n",
+                        placed, mobTypeCount(), baseY);
             std::fflush(stdout);
         }
 
@@ -1332,7 +1384,8 @@ void Application::updateGameplay(float deltaTime)
     const float targetFov = m_player.sprinting ? 78.0f : 70.0f;
     m_camera.fov += (targetFov - m_camera.fov) * std::clamp(8.0f * deltaTime, 0.0f, 1.0f);
 
-    // --- block interaction ---
+    // --- the rest of the world ---
+    updateMobs(deltaTime);
     updateMining(deltaTime);
     handlePlacement();
 }
@@ -1637,6 +1690,7 @@ void Application::renderWorld()
     // the atlas has to go back on the albedo unit afterwards for the
     // mining cracks and the water that follow.
     renderPlayers(view, projection);
+    if (inGame()) m_mobModel.render(m_chunkShader, *m_world, m_entities);
     m_atlas.bind(0, 1, 2);
 
     // Selection outline + mining cracks sit between the two passes so water
@@ -1886,6 +1940,29 @@ void Application::renderPlayers(const glm::mat4& view, const glm::mat4& projecti
         pose.sneaking = m_player.sneaking;
 
         draw(activeSkin(), pose, std::string());
+    }
+}
+
+void Application::updateMobs(float deltaTime)
+{
+    if (!m_world || !m_worldReady) return;
+
+    // A guest watches the host's world but does not get to populate it:
+    // mobs are not synced, so two machines spawning their own would see
+    // different animals in the same field.
+    if (m_net.role() == Net::Role::Guest) return;
+
+    m_entities.update(deltaTime, *m_world, m_player.position, daylightFactor());
+
+    // Distance alone decides how loud a mob is. There is no panning here
+    // yet, and a wrong pan is more distracting than none.
+    for (const MobSound& sound : m_entities.drainSounds())
+    {
+        const float distance = glm::length(sound.position - m_camera.position);
+        if (distance > 32.0f) continue;
+
+        const float falloff = 1.0f - std::clamp(distance / 32.0f, 0.0f, 1.0f);
+        m_audio.play(sound.id, sound.volume * falloff * falloff, sound.pitch);
     }
 }
 
@@ -2745,9 +2822,9 @@ void Application::renderDebugOverlay()
 
     if (!minimal)
     {
-        std::snprintf(buffer, sizeof(buffer), "C: %d  E: %d  D: %d  JOBS: %d",
+        std::snprintf(buffer, sizeof(buffer), "C: %d  E: %d  D: %d  M: %d  JOBS: %d",
                       m_world->loadedChunks(), m_particles.count(),
-                      m_drops.count(), m_world->pendingJobs());
+                      m_drops.count(), m_entities.count(), m_world->pendingJobs());
         left(buffer);
         left("");
     }

@@ -332,6 +332,72 @@ void AudioEngine::buildSounds()
         s.addNoise(0.03f, 3000.0f, 200.0f, 1.0f, false, 150);
         s.finish(0.35f);
     }
+
+    // --- animals and monsters ---
+    //
+    // A voice is a falling tone with a little noise over it: the pitch it
+    // starts at and how fast it slides is most of what separates a sheep
+    // from a cow. Each species also carries its own pitch multiplier, so
+    // the same grunt serves a pig and a cow an octave apart.
+    {
+        Synth s = make(Sound::MobBleat);
+        s.addTone(0.38f, 420.0f, 330.0f, 5.0f, 0.55f, true);
+        s.addTone(0.34f, 630.0f, 500.0f, 7.0f, 0.22f);
+        s.addNoise(0.30f, 1800.0f, 9.0f, 0.18f, false, 211);
+        s.finish(0.70f);
+    }
+    {
+        Synth s = make(Sound::MobGrunt);
+        s.addTone(0.30f, 240.0f, 150.0f, 8.0f, 0.70f, true);
+        s.addNoise(0.26f, 900.0f, 12.0f, 0.22f, false, 212);
+        s.finish(0.75f);
+    }
+    {
+        Synth s = make(Sound::MobCluck);
+        s.addTone(0.10f, 900.0f, 1250.0f, 26.0f, 0.45f);
+        s.addTone(0.13f, 760.0f, 540.0f, 20.0f, 0.38f, false, 0.09f);
+        s.addNoise(0.09f, 2600.0f, 34.0f, 0.20f, true, 213);
+        s.finish(0.65f);
+    }
+    {
+        Synth s = make(Sound::MobGroan);
+        s.addTone(0.60f, 150.0f, 96.0f, 4.0f, 0.70f, true);
+        s.addTone(0.55f, 228.0f, 150.0f, 5.0f, 0.26f);
+        s.addNoise(0.50f, 700.0f, 6.0f, 0.26f, false, 214);
+        s.finish(0.75f);
+    }
+    {
+        // Dry clicks rather than a tone, which is what makes it read as
+        // bone and not as a voice.
+        Synth s = make(Sound::MobRattle);
+        for (int i = 0; i < 5; ++i)
+            s.addTone(0.05f, 1500.0f - i * 90.0f, 900.0f, 70.0f, 0.42f, false, i * 0.055f);
+        s.addNoise(0.28f, 4200.0f, 18.0f, 0.20f, true, 215);
+        s.finish(0.60f);
+    }
+    {
+        Synth s = make(Sound::MobHiss);
+        s.addNoise(0.52f, 5200.0f, 5.5f, 1.0f, true, 216);
+        s.addNoise(0.52f, 1400.0f, 6.5f, 0.30f, false, 217);
+        s.finish(0.70f);
+    }
+    {
+        Synth s = make(Sound::MobHurt);
+        s.addTone(0.18f, 430.0f, 210.0f, 16.0f, 0.65f, true);
+        s.addNoise(0.14f, 2000.0f, 22.0f, 0.34f, false, 218);
+        s.finish(0.75f);
+    }
+    {
+        Synth s = make(Sound::MobDeath);
+        s.addTone(0.55f, 360.0f, 90.0f, 6.0f, 0.70f, true);
+        s.addNoise(0.45f, 1500.0f, 8.0f, 0.30f, false, 219);
+        s.finish(0.80f);
+    }
+    {
+        Synth s = make(Sound::MobStep);
+        s.addNoise(0.07f, 1100.0f, 50.0f, 1.0f, false, 220);
+        s.finish(0.30f);
+    }
 }
 
 void AudioEngine::play(Sound sound, float volume, float pitch)

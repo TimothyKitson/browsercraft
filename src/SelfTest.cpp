@@ -10,6 +10,12 @@
 #include "Entity/PlayerAnimation.h"
 #include "Entity/PlayerModel.h"
 #include "Entity/PlayerSkin.h"
+#include "Entity/BoxMesh.h"
+#include "Entity/Mob.h"
+#include "Entity/MobModel.h"
+#include "Entity/MobSkin.h"
+#include "Entity/MobType.h"
+#include "Entity/EntityManager.h"
 #include <glm/glm.hpp>
 #include <algorithm>
 #include <cmath>
@@ -465,6 +471,138 @@ namespace
         check(walkFront > turnedHigh.z, "one leg has swung out in front");
         check(walkBack < turnedLow.z, "and the other out behind");
     }
+
+    // --- mobs -----------------------------------------------------------
+
+    void testMobTypes()
+    {
+        section("mobs: species");
+
+        check(mobTypeCount() == 8, "eight species");
+
+        for (int i = 0; i < mobTypeCount(); ++i)
+        {
+            const MobId id = static_cast<MobId>(i);
+            const MobType& type = mobType(id);
+            const std::string who = type.name;
+
+            check(type.name && *type.name, "species " + std::to_string(i) + " is named");
+            check(type.maxHealth > 0, who + " can be killed");
+            check(type.width > 0.0f && type.height > 0.0f, who + " has a collision box");
+            check(type.walkSpeed > 0.0f, who + " can walk");
+            check(!type.model.empty(), who + " has a model");
+
+            // A model that does not match its collision box leaves the
+            // mob either floating or sunk into the floor.
+            check(std::fabs(modelTop(type) - type.height) < 0.07f,
+                  who + " is drawn the height it collides at");
+
+            // Feet on the ground: something has to touch y = 0.
+            int lowest = 1000;
+            for (const MobBox& b : type.model) lowest = std::min(lowest, b.origin.y);
+            check(lowest == 0, who + " stands on the ground");
+
+            // Every species must fit its sheet, or its texture coordinates
+            // silently wrap onto another limb.
+            std::vector<MobBox> boxes = type.model;
+            check(MobSkin::pack(boxes, MobSkin::SHEET), who + " packs onto one sheet");
+
+            for (const MobBox& b : boxes)
+            {
+                const int w = 2 * (b.size.x + b.size.z);
+                const int h = b.size.y + b.size.z;
+                check(b.u >= 0 && b.v >= 0 && b.u + w <= MobSkin::SHEET && b.v + h <= MobSkin::SHEET,
+                      who + " keeps every patch on the sheet");
+            }
+        }
+    }
+
+    void testMobSpawnRules()
+    {
+        section("mobs: spawning");
+
+        // Monsters in the dark, animals in the light, and neither in mid-air.
+        check(EntityManager::canSpawnOn(MobId::Zombie, Blocks::Stone, 0), "zombies spawn in the dark");
+        check(!EntityManager::canSpawnOn(MobId::Zombie, Blocks::Stone, 12), "and not in daylight");
+        check(EntityManager::canSpawnOn(MobId::Sheep, Blocks::Grass, 14), "sheep spawn on lit grass");
+        check(!EntityManager::canSpawnOn(MobId::Sheep, Blocks::Grass, 2), "and not in the dark");
+        check(!EntityManager::canSpawnOn(MobId::Sheep, Blocks::Stone, 14), "nor on bare stone");
+        check(!EntityManager::canSpawnOn(MobId::Zombie, Blocks::Air, 0), "nothing spawns in mid-air");
+    }
+
+    void testMobGeometry()
+    {
+        section("mobs: geometry");
+
+        MobSkin skin;
+        skin.layout(MobId::Cow);        // layout only: no GL in a headless run
+        check(!skin.boxes().empty(), "the cow laid out");
+
+        Mob cow(MobId::Cow, glm::vec3(4.0f, 70.0f, -2.0f), 12345u);
+        MobModel model;
+        model.build(skin, cow, 1.0f, 0.0f);
+
+        const std::vector<float>& v = model.vertices();
+        const int stride = BoxMesh::FLOATS_PER_VERTEX;
+        check(!v.empty(), "and built some geometry");
+        check(static_cast<int>(v.size()) ==
+                  static_cast<int>(skin.boxes().size()) * 36 * stride,
+              "six faces of two triangles per box");
+
+        float lowY = 1e9f, highY = -1e9f;
+        bool uvInside = true;
+        for (size_t i = 0; i < v.size(); i += stride)
+        {
+            lowY = std::min(lowY, v[i + 1]);
+            highY = std::max(highY, v[i + 1]);
+            if (v[i + 3] < 0.0f || v[i + 3] > 1.0f || v[i + 4] < 0.0f || v[i + 4] > 1.0f)
+                uvInside = false;
+        }
+
+        check(uvInside, "every corner samples inside the hide");
+        check(std::fabs(lowY - 70.0f) < 0.002f, "the cow's feet are on the ground");
+        check(std::fabs((highY - lowY) - mobType(MobId::Cow).height) < 0.02f,
+              "and it stands its full height");
+    }
+
+    void testMobDamage()
+    {
+        section("mobs: damage");
+
+        Mob pig(MobId::Pig, glm::vec3(0.0f), 7u);
+        const int full = mobType(MobId::Pig).maxHealth;
+        check(pig.health() == full, "a pig starts at full health");
+        check(pig.alive(), "and alive");
+        check(pig.sounds().empty(), "and quiet");
+
+        pig.damage(3, glm::vec3(1.0f, 0.0f, 0.0f));
+        check(pig.health() == full - 3, "a hit takes health off");
+        check(pig.hurtFlash() > 0.0f, "and makes it flash");
+        check(pig.sounds().size() == 1 && pig.sounds()[0].id == Sound::MobHurt,
+              "and makes it squeal");
+        pig.sounds().clear();
+
+        pig.damage(1000, glm::vec3(1.0f, 0.0f, 0.0f));
+        check(pig.health() == 0, "enough damage kills it");
+        check(!pig.alive(), "and it stops being alive");
+        check(pig.sounds().size() == 1 && pig.sounds()[0].id == Sound::MobDeath,
+              "with a death noise, not another squeal");
+        pig.sounds().clear();
+
+        // A corpse lingers a moment before it is dropped, so the death is
+        // visible rather than an instant disappearance.
+        check(!pig.finished(), "a fresh corpse is not finished with");
+        check(pig.deathFade() > 0.0f, "and has not faded yet");
+
+        pig.damage(5, glm::vec3(1.0f, 0.0f, 0.0f));
+        check(pig.sounds().empty(), "hitting a corpse does nothing");
+
+        // Species keep their own voices.
+        check(mobType(MobId::Creeper).voice == Sound::MobHiss, "creepers hiss");
+        check(mobType(MobId::Chicken).voice == Sound::MobCluck, "chickens cluck");
+        check(mobType(MobId::Cow).voicePitch < mobType(MobId::Pig).voicePitch,
+              "a cow is lower than a pig");
+    }
 }
 
 int runSelfTest()
@@ -478,6 +616,10 @@ int runSelfTest()
     testPlayerAnimation();
     testPlayerModel();
     testPlayerGeometry();
+    testMobTypes();
+    testMobSpawnRules();
+    testMobGeometry();
+    testMobDamage();
 
     std::printf("\n%d checks, %d failed\n", g_checks, g_failures);
     return g_failures == 0 ? 0 : 1;

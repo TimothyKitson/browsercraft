@@ -17,6 +17,8 @@
 #include "Entity/Particles.h"
 #include "Entity/PlayerSkin.h"
 #include "Entity/PlayerModel.h"
+#include "Entity/EntityManager.h"
+#include "Entity/MobModel.h"
 #include "Game/GameMode.h"
 #include "Net/Session.h"
 #ifndef __EMSCRIPTEN__
@@ -104,6 +106,9 @@ public:
     // Dev aid: stamp a landmark at spawn, so an automated run has
     // something to check block syncing against.
     void setBuildTest() { m_buildTest = true; }
+    // Dev aid: line one of every species up in front of the spawn point,
+    // so a screenshot shows all eight without waiting for the spawner.
+    void setMobTest() { m_mobTest = true; m_startImmediately = true; }
     // Dev aid: open straight into another dimension.
     void setStartupDimension(Dimension dimension) { m_startupDimension = dimension; }
     // Dev aid: preview a candidate panorama viewpoint.
@@ -157,6 +162,8 @@ private:
     // wire, so each one someone is wearing gets painted here on demand
     // and kept; the key is the variant and the model type together.
     PlayerModel m_playerModel;
+    EntityManager m_entities;
+    MobModel m_mobModel;
     std::map<int, std::unique_ptr<PlayerSkin>> m_remoteSkins;
 
     // Limb state cannot come off the wire -- positions arrive twenty
@@ -253,6 +260,8 @@ private:
     std::string m_joinOnStart;
     bool m_buildTest = false;
     bool m_buildTestDone = false;
+    bool m_mobTest = false;
+    bool m_mobTestDone = false;
     Dimension m_startupDimension = Dimension::Overworld;
     uint32_t m_panoramaSeed = 0;
     glm::vec3 m_panoramaSpot{ 0.0f };
@@ -294,6 +303,8 @@ private:
     // eyes. Called from renderWorld, inside the opaque pass.
     void renderPlayers(const glm::mat4& view, const glm::mat4& projection);
     void renderNameplates();
+    // Steps every mob and plays whatever noise they made.
+    void updateMobs(float deltaTime);
     // Advances every player's walk cycle from the ground they covered.
     void updatePlayerAnimation(float deltaTime);
     void advanceAnimation(Animation& animation, const glm::vec3& position,

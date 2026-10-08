@@ -25,6 +25,11 @@
 #  include <fcntl.h>
 #  include <errno.h>
    using socklen_type = socklen_t;
+   // Winsock's handle type. The select() path below casts to it on both
+   // platforms, so POSIX needs a name for it or this file only compiles
+   // on Windows -- which it did, despite everything else here being
+   // written to be portable.
+   using SOCKET = int;
 #  define SOCK_WOULD_BLOCK (errno == EAGAIN || errno == EWOULDBLOCK)
 #  define SOCK_IN_PROGRESS (errno == EINPROGRESS)
 #endif

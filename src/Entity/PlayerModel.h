@@ -1,5 +1,6 @@
 #pragma once
 #include "Renderer/Mesh.h"
+#include "BoxMesh.h"
 #include <glm/glm.hpp>
 #include <vector>
 
@@ -40,7 +41,8 @@ public:
     static constexpr float HEIGHT = 32.0f * PIXEL;
 
     // The six faces of a box, in the order the renderer walks them.
-    enum Face { Right, Left, Top, Bottom, Front, Back };
+    enum Face { Right = BoxMesh::Right, Left = BoxMesh::Left, Top = BoxMesh::Top,
+                Bottom = BoxMesh::Bottom, Front = BoxMesh::Front, Back = BoxMesh::Back };
 
     // Where one face of a box lands in the skin image, given the box's
     // own top-left corner (u, v) and its size in pixels. This is the
@@ -61,7 +63,7 @@ public:
     //
     // Nine floats a vertex, the layout the chunk shader expects:
     // position, uv, shade, sky light, block light, face.
-    static constexpr int FLOATS_PER_VERTEX = 9;
+    static constexpr int FLOATS_PER_VERTEX = BoxMesh::FLOATS_PER_VERTEX;
     void build(const PlayerSkin& skin, const PlayerPose& pose, float sky, float blockLight);
     const std::vector<float>& vertices() const { return m_vertices; }
 

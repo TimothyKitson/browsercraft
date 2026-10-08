@@ -29,6 +29,15 @@ enum class Sound : uint8_t
     Hurt,
     Pickup,
     Click,
+    MobBleat,
+    MobGrunt,
+    MobCluck,
+    MobGroan,
+    MobRattle,
+    MobHiss,
+    MobHurt,
+    MobDeath,
+    MobStep,
     Count
 };
 
