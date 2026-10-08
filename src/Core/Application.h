@@ -16,6 +16,7 @@
 #include "Entity/DroppedItems.h"
 #include "Entity/Particles.h"
 #include "Entity/PlayerSkin.h"
+#include "Entity/PlayerModel.h"
 #include "Game/GameMode.h"
 #include "Net/Session.h"
 #ifndef __EMSCRIPTEN__
@@ -24,6 +25,7 @@
 #include <string>
 #include <vector>
 #include <memory>
+#include <map>
 
 // Which part of the game is on screen. The world only exists while playing,
 // so the title screen can run before anything has been generated.
@@ -151,6 +153,42 @@ private:
 #ifndef __EMSCRIPTEN__
     Net::LanDiscovery m_discovery;
 #endif
+    // Drawing everybody else. Only the choice of character crosses the
+    // wire, so each one someone is wearing gets painted here on demand
+    // and kept; the key is the variant and the model type together.
+    PlayerModel m_playerModel;
+    std::map<int, std::unique_ptr<PlayerSkin>> m_remoteSkins;
+
+    // Limb state cannot come off the wire -- positions arrive twenty
+    // times a second and the walk cycle runs every frame -- so it is
+    // worked out here from how far each player has moved. Keyed by
+    // player id, with the local player under LOCAL_ANIM.
+    struct Animation
+    {
+        float phase = 0.0f;     // radians around the walk cycle
+        float amount = 0.0f;    // 0 standing, 1 at walking pace
+        float bodyYaw = 0.0f;   // trails the head
+        glm::vec3 lastPosition{ 0.0f };
+        bool started = false;
+    };
+    static constexpr uint32_t LOCAL_ANIM = 0xFFFFFFFFu;
+    std::map<uint32_t, Animation> m_animation;
+
+    // Name tags, gathered while the world is drawn and written out in
+    // the HUD pass: the text has to go on top of everything, but only
+    // the world pass knows where on screen each player ended up.
+    struct Nameplate
+    {
+        std::string name;
+        float x = 0.0f, y = 0.0f;
+        float scale = 1.0f;
+    };
+    std::vector<Nameplate> m_nameplates;
+
+    // Minecraft's F5: your own eyes, behind you, or facing you.
+    enum class Perspective { FirstPerson, ThirdBack, ThirdFront };
+    Perspective m_perspective = Perspective::FirstPerson;
+
     std::string m_addressDraft = "127.0.0.1";
     // A guest may already be standing in a singleplayer world when it
     // joins, so "has the world been rebuilt from the host's seed yet?"
@@ -252,7 +290,22 @@ private:
     void renderSettingsScreen();
     void renderControlsScreen();
     void renderNameEntryScreen();
-    void renderRemotePlayers();
+    // Everyone else, and yourself when the camera is not behind your own
+    // eyes. Called from renderWorld, inside the opaque pass.
+    void renderPlayers(const glm::mat4& view, const glm::mat4& projection);
+    void renderNameplates();
+    // Advances every player's walk cycle from the ground they covered.
+    void updatePlayerAnimation(float deltaTime);
+    void advanceAnimation(Animation& animation, const glm::vec3& position,
+                          float headYaw, float deltaTime);
+    // The painted character someone picked, built the first time it is
+    // asked for.
+    const PlayerSkin& skinFor(const Net::Appearance& look);
+    Net::Appearance localAppearance() const;
+    // Where the camera actually sits this frame. The eye camera stays
+    // put so that mining, placing and the selection outline keep working
+    // from the player's eyes whatever the view is set to.
+    Camera viewCamera() const;
     void renderPauseMenu();
     void renderDeathScreen();
     void renderInventoryScreen();

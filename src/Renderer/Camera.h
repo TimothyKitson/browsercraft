@@ -22,6 +22,10 @@ public:
     Camera(glm::vec3 position, float yawDegrees, float pitchDegrees);
 
     void addLook(float deltaX, float deltaY, float sensitivity);
+    // Point it somewhere outright. yaw and pitch are public, but setting
+    // them leaves front/right/up describing where the camera used to
+    // look, which is a quiet way to get a wrong view matrix.
+    void setOrientation(float yawDegrees, float pitchDegrees);
 
     glm::mat4 viewMatrix() const;
     glm::mat4 projectionMatrix(float aspect) const;

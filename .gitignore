@@ -1,14 +1,17 @@
-build/
-out/
-world/
-.cache/
+# Anchored to the repository root on purpose. An unanchored "world/"
+# matches any directory of that name at any depth, and git turns on
+# core.ignorecase on Windows, so it quietly swallowed src/World/ -- the
+# whole terrain module -- and the repository would not build from a
+# clean clone. Keep the leading slash on anything with a generic name.
+/build/
+/build-web/
+/out/
+/world/
+/.cache/
+/browsercraft-netlify.zip
 compile_commands.json
 *.log
 *.user
-assets/skins/
-assets/sounds/
-browsercraft-netlify.zip
-build-web/
 
 # Resource packs and audio are other people's work. They live on your
 # machine, never in the repository and never in the published build:
@@ -17,4 +20,6 @@ build-web/
 #   assets/skins/     whatever you drop in
 # The engine paints its own fallbacks for all three, which is what
 # browsercraft.net actually ships.
-assets/textures/
+/assets/textures/
+/assets/sounds/
+/assets/skins/

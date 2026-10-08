@@ -51,6 +51,13 @@ void Camera::addLook(float deltaX, float deltaY, float sensitivity)
     updateVectors();
 }
 
+void Camera::setOrientation(float yawDegrees, float pitchDegrees)
+{
+    yaw = yawDegrees;
+    pitch = std::clamp(pitchDegrees, -89.9f, 89.9f);
+    updateVectors();
+}
+
 glm::mat4 Camera::viewMatrix() const
 {
     return glm::lookAt(position, position + front, up);

@@ -15,6 +15,7 @@ enum class Action
     Attack, Use, PickBlock,
     Drop, Inventory,
     Fly,
+    Perspective,
     Screenshot, Debug, HideHud, Fullscreen,
     FancyLighting, Mute,
     RenderDistanceDown, RenderDistanceUp,

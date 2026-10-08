@@ -40,6 +40,13 @@ namespace Net
         float pitch = 0.0f;
         float blend = 1.0f;
         float silence = 0.0f;   // seconds since the last update
+        bool sneaking = false;
+        Appearance look;
+
+        // False until they have told us where they are. Someone who has
+        // joined but not yet moved would otherwise be drawn standing at
+        // the world origin, which reads as a bug rather than as a player.
+        bool positioned = false;
 
         glm::vec3 smoothed() const { return glm::mix(previous, position, glm::clamp(blend, 0.0f, 1.0f)); }
     };
@@ -74,6 +81,14 @@ namespace Net
         bool join(const std::string& address, uint16_t port, const std::string& playerName);
         void leave();
 
+        // Which character the local player is wearing. Set before opening
+        // or joining a world, and again whenever it is changed on the
+        // profile screen; it is read at handshake time.
+        void setLocalAppearance(const Appearance& look) { m_localLook = look; }
+
+        // Posture that cannot be worked out from a position alone.
+        void setLocalSneaking(bool sneaking) { m_localSneaking = sneaking; }
+
         // Pumped once a frame. `world` is null until a guest has built it.
         void update(float deltaTime, World* world, const glm::vec3& localPosition,
                     float yaw, float pitch, float& timeOfDay);
@@ -103,6 +118,8 @@ namespace Net
 
         Handshake m_handshake;
         uint32_t m_localId = 0;
+        Appearance m_localLook;
+        bool m_localSneaking = false;
 
         // Host-side copy of what every guest was told, so a late joiner
         // can be introduced to everyone already here.
@@ -120,6 +137,11 @@ namespace Net
         glm::vec3 m_lastSentPosition{ 0.0f };
         float m_lastSentYaw = 0.0f;
         float m_lastSentPitch = 0.0f;
+        bool m_lastSentSneak = false;
+        // Send the next movement packet whether or not anything moved,
+        // so a player who joins while we stand still still learns where
+        // we are.
+        bool m_forceMove = false;
 
         // Scratch, reused every poll so the frame does no allocation.
         std::vector<Packet> m_incoming;

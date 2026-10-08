@@ -16,7 +16,9 @@ namespace Net
 {
     // Bumped whenever the layout below changes, so an old client meets a
     // new host with a clear error instead of garbled blocks.
-    constexpr uint32_t PROTOCOL_VERSION = 1;
+    //   2: players carry an appearance, and a move says whether they are
+    //      sneaking, so everyone can be drawn rather than inferred.
+    constexpr uint32_t PROTOCOL_VERSION = 2;
     constexpr uint16_t DEFAULT_PORT = 25585;
     constexpr uint16_t DISCOVERY_PORT = 25586;
     constexpr int MAX_PLAYERS = 8;
@@ -39,6 +41,26 @@ namespace Net
         PlayerMove,      // id + position and look
         TimeSync,        // the host's clock wins
         Chat
+    };
+
+    // Which character someone picked, small enough to ride along with the
+    // packets that already announce them.
+    //
+    // Only the choice travels, not the pixels: both ends paint the same
+    // eight characters from the same code, so an index and a model type
+    // are enough to rebuild the skin exactly. A player using their own
+    // PNG is the one case this cannot carry, and they are shown to
+    // everyone else as a painted character picked from their name.
+    struct Appearance
+    {
+        uint8_t variant = 0;
+        bool slim = false;
+    };
+
+    // Bit flags on a movement packet.
+    enum MoveFlags : uint8_t
+    {
+        MoveSneaking = 1 << 0
     };
 
     // --- little-endian byte buffers -------------------------------------

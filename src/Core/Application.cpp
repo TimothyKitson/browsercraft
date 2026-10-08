@@ -1,6 +1,7 @@
 #include "Application.h"
 #include "GLFunctions.h"
 #include "Renderer/Screenshot.h"
+#include "Entity/PlayerAnimation.h"
 #include "World/WorldSave.h"
 #include <glm/gtc/matrix_transform.hpp>
 #include <SDL.h>
@@ -266,6 +267,8 @@ void Application::startWorld(GameMode mode, bool freshWorld)
     // Reset everything that belongs to a run.
     m_drops.clear();
     m_particles.clear();
+    m_animation.clear();
+    m_nameplates.clear();
     m_inventory.clear();
     m_inventory.setSelectedSlot(0);
     m_worldReady = false;
@@ -316,6 +319,8 @@ void Application::startJoinedWorld()
 
     m_drops.clear();
     m_particles.clear();
+    m_animation.clear();
+    m_nameplates.clear();
     m_inventory.clear();
     m_inventory.setSelectedSlot(0);
     m_worldReady = false;
@@ -396,6 +401,9 @@ void Application::quitToTitle()
     }
     m_drops.clear();
     m_particles.clear();
+    m_animation.clear();
+    m_nameplates.clear();
+    m_perspective = Perspective::FirstPerson;
     m_screen = Screen::Title;
     m_inventoryOpen = false;
     m_timeOfDay = TITLE_TIME_OF_DAY;
@@ -697,6 +705,12 @@ bool Application::frame()
     // Pumped before the world so an edit that arrives this frame is in
     // place by the time anything is drawn, and kept running while paused
     // so a host does not freeze everyone else by opening a menu.
+    // Both are refreshed every frame rather than at each of the places
+    // they can change: the profile screen, the title screen and two dev
+    // flags can all start a session, and one missed call would put
+    // somebody on screen wearing the wrong character.
+    m_net.setLocalAppearance(localAppearance());
+    m_net.setLocalSneaking(m_player.sneaking);
     m_net.update(deltaTime, m_world && !m_menuWorld ? m_world.get() : nullptr,
                  m_player.position, m_camera.yaw, m_camera.pitch, m_timeOfDay);
 
@@ -704,6 +718,11 @@ bool Application::frame()
     // replacing whatever was on screen.
     if (m_net.role() == Net::Role::Guest && m_net.handshake().received && !m_joinedWorldBuilt)
         startJoinedWorld();
+
+    // Limbs keep moving while you are in a menu: everyone else is still
+    // playing, and freezing them mid-stride is worse than not drawing
+    // them at all.
+    if (m_world && !m_menuWorld) updatePlayerAnimation(deltaTime);
 
 #ifndef __EMSCRIPTEN__
     if (m_net.role() == Net::Role::Host) m_discovery.announce(deltaTime);
@@ -1136,6 +1155,13 @@ void Application::handleEvents()
     }
     if (m_keys.pressed(m_input, Action::Screenshot)) m_pendingScreenshot = true;
     if (m_keys.pressed(m_input, Action::HideHud)) m_hudHidden = !m_hudHidden;
+    if (m_keys.pressed(m_input, Action::Perspective) && inGame())
+    {
+        // Your eyes, behind you, then facing you, the way F5 goes round.
+        m_perspective = (m_perspective == Perspective::FirstPerson) ? Perspective::ThirdBack
+                      : (m_perspective == Perspective::ThirdBack)   ? Perspective::ThirdFront
+                                                                    : Perspective::FirstPerson;
+    }
     if (m_keys.pressed(m_input, Action::Fullscreen)) m_window.toggleFullscreen();
     if (m_keys.pressed(m_input, Action::FancyLighting)) m_pbrEnabled = !m_pbrEnabled;
     if (m_keys.pressed(m_input, Action::Mute))
@@ -1477,6 +1503,10 @@ void Application::render()
         return;
     }
 
+    // Name tags belong on top of the world but under the menus, and they
+    // stay visible while the game is paused -- the world is still there.
+    if (inGame() && !m_hudHidden) renderNameplates();
+
     switch (m_screen)
     {
         case Screen::Title:        renderTitleScreen(); break;
@@ -1538,15 +1568,21 @@ float Application::dimensionAmbient() const
 
 void Application::renderWorld()
 {
-    const glm::mat4 view = m_camera.viewMatrix();
-    const glm::mat4 projection = m_camera.projectionMatrix(m_window.aspect());
+    // Everything on screen is drawn from here, which in third person is
+    // not where the player's eyes are. m_camera stays on the eyes so
+    // that mining, placing and the selection outline are unaffected by
+    // which view you happen to be in.
+    const Camera camera = viewCamera();
+
+    const glm::mat4 view = camera.viewMatrix();
+    const glm::mat4 projection = camera.projectionMatrix(m_window.aspect());
     const float daylight = daylightFactor();
     const glm::vec3 sun = sunDirection();
 
     // Only the overworld has a sun to draw; the others are a flat
     // backdrop already cleared to the right colour.
     if (hasSky())
-        m_sky.render(view, projection, m_camera.position, sun, daylight, m_elapsedSeconds);
+        m_sky.render(view, projection, camera.position, sun, daylight, m_elapsedSeconds);
 
     const bool underwater = m_player.isHeadUnderwater(*m_world);
     const glm::vec3 fogColor = hasSky() ? SkyRenderer::horizonColor(daylight, sun)
@@ -1566,7 +1602,7 @@ void Application::renderWorld()
     m_chunkShader.setFloat("uFogEnd", viewDistance * 0.95f);
     m_chunkShader.setInt("uUnderwater", underwater ? 1 : 0);
     m_chunkShader.setVec3("uSunDirection", sun);
-    m_chunkShader.setVec3("uCameraPos", m_camera.position);
+    m_chunkShader.setVec3("uCameraPos", camera.position);
     m_chunkShader.setInt("uPbrEnabled", (m_pbrEnabled && m_atlas.hasPbrMaps()) ? 1 : 0);
     m_atlas.bind(0, 1, 2);
 
@@ -1583,7 +1619,7 @@ void Application::renderWorld()
         if (!frustum.intersectsAABB(chunk->aabbMin(), chunk->aabbMax())) continue;
 
         const glm::vec3 center = chunk->worldOrigin() + glm::vec3(Chunk::SX * 0.5f, Chunk::SY * 0.5f, Chunk::SZ * 0.5f);
-        visible.push_back({ chunk.get(), glm::length(center - m_camera.position) });
+        visible.push_back({ chunk.get(), glm::length(center - camera.position) });
     }
 
     for (const VisibleChunk& entry : visible)
@@ -1595,7 +1631,13 @@ void Application::renderWorld()
 
     // Dropped items and particles are opaque, so they join the terrain pass.
     m_drops.render(m_chunkShader, *m_world);
-    m_particles.render(m_chunkShader, *m_world, m_camera.right, m_camera.up);
+    m_particles.render(m_chunkShader, *m_world, camera.right, camera.up);
+
+    // Players are opaque too, but each one brings its own texture, so
+    // the atlas has to go back on the albedo unit afterwards for the
+    // mining cracks and the water that follow.
+    renderPlayers(view, projection);
+    m_atlas.bind(0, 1, 2);
 
     // Selection outline + mining cracks sit between the two passes so water
     // still blends over them correctly.
@@ -1643,6 +1685,223 @@ void Application::renderWorld()
     glEnable(GL_CULL_FACE);
     glDepthMask(GL_TRUE);
     glDisable(GL_BLEND);
+}
+
+// -------------------------------------------------------------- players ---
+
+Camera Application::viewCamera() const
+{
+    if (m_perspective == Perspective::FirstPerson || !m_world || !inGame())
+        return m_camera;
+
+    Camera camera = m_camera;
+
+    // Back out along the line of sight until something solid is in the
+    // way, then stop just short of it. Without this the camera drops
+    // through the wall behind you and you end up looking at the inside
+    // of the world.
+    const glm::vec3 away = (m_perspective == Perspective::ThirdBack) ? -m_camera.front
+                                                                     : m_camera.front;
+    constexpr float WANTED = 4.0f;
+    constexpr float CLEARANCE = 0.25f;
+    float distance = WANTED;
+
+    for (float step = 0.25f; step <= WANTED; step += 0.25f)
+    {
+        const glm::vec3 probe = m_camera.position + away * step;
+        if (!isSolid(m_world->getBlock(static_cast<int>(std::floor(probe.x)),
+                                       static_cast<int>(std::floor(probe.y)),
+                                       static_cast<int>(std::floor(probe.z)))))
+            continue;
+
+        distance = std::max(0.0f, step - CLEARANCE);
+        break;
+    }
+
+    camera.position = m_camera.position + away * distance;
+    if (m_perspective == Perspective::ThirdFront)
+        camera.setOrientation(m_camera.yaw + 180.0f, -m_camera.pitch);
+
+    return camera;
+}
+
+Net::Appearance Application::localAppearance() const
+{
+    Net::Appearance look;
+    look.slim = m_skinStyle == PlayerSkin::Style::Slim;
+
+    // Only the choice travels, never the pixels, so a player wearing
+    // their own PNG has to be shown to everyone else as one of the
+    // painted characters. Picking it from their name at least makes it
+    // the same character every time, and on every machine.
+    if (m_skinVariant == PlayerSkin::CUSTOM_VARIANT)
+    {
+        uint32_t hash = 2166136261u;
+        for (char c : m_playerName)
+        {
+            hash ^= static_cast<uint8_t>(c);
+            hash *= 16777619u;
+        }
+        look.variant = static_cast<uint8_t>(hash % static_cast<uint32_t>(PlayerSkin::variantCount()));
+    }
+    else
+    {
+        look.variant = static_cast<uint8_t>(std::clamp(m_skinVariant, 0, PlayerSkin::variantCount() - 1));
+    }
+
+    return look;
+}
+
+const PlayerSkin& Application::skinFor(const Net::Appearance& look)
+{
+    const int variant = std::clamp(static_cast<int>(look.variant), 0, PlayerSkin::variantCount() - 1);
+    const int key = variant * 2 + (look.slim ? 1 : 0);
+
+    auto it = m_remoteSkins.find(key);
+    if (it == m_remoteSkins.end())
+    {
+        auto skin = std::make_unique<PlayerSkin>();
+        skin->build(look.slim ? PlayerSkin::Style::Slim : PlayerSkin::Style::Classic, variant);
+        it = m_remoteSkins.emplace(key, std::move(skin)).first;
+    }
+
+    return *it->second;
+}
+
+void Application::advanceAnimation(Animation& animation, const glm::vec3& position,
+                                   float headYaw, float deltaTime)
+{
+    if (!animation.started)
+    {
+        animation.lastPosition = position;
+        animation.bodyYaw = headYaw;
+        animation.started = true;
+    }
+
+    // Distance covered on the ground this frame is the only movement
+    // signal there is for someone on the other end of a wire, and it is
+    // the one Minecraft drives the walk cycle from anyway.
+    const glm::vec3 moved = position - animation.lastPosition;
+    animation.lastPosition = position;
+
+    const float distance = glm::length(glm::vec3(moved.x, 0.0f, moved.z));
+    const float speed = deltaTime > 0.0001f ? distance / deltaTime : 0.0f;
+
+    animation.phase += distance * PlayerAnimation::PHASE_PER_BLOCK;
+    animation.amount = PlayerAnimation::approach(animation.amount,
+                                                 PlayerAnimation::swingAmountFor(speed),
+                                                 10.0f, deltaTime);
+    animation.bodyYaw = PlayerAnimation::followHead(animation.bodyYaw, headYaw, deltaTime,
+                                                    speed > 0.1f);
+}
+
+void Application::updatePlayerAnimation(float deltaTime)
+{
+    if (!m_world) return;
+
+    advanceAnimation(m_animation[LOCAL_ANIM], m_player.position, m_camera.yaw, deltaTime);
+
+    for (const auto& entry : m_net.players())
+    {
+        const Net::RemotePlayer& player = entry.second;
+        if (!player.positioned) continue;
+        advanceAnimation(m_animation[entry.first], player.smoothed(), player.yaw, deltaTime);
+    }
+
+    // Anyone who has left stops costing anything.
+    for (auto it = m_animation.begin(); it != m_animation.end();)
+    {
+        if (it->first == LOCAL_ANIM || m_net.players().count(it->first)) ++it;
+        else it = m_animation.erase(it);
+    }
+}
+
+void Application::renderPlayers(const glm::mat4& view, const glm::mat4& projection)
+{
+    m_nameplates.clear();
+    if (!m_world || !inGame()) return;
+
+    const glm::mat4 viewProjection = projection * view;
+    const float screenWidth = static_cast<float>(m_window.width());
+    const float screenHeight = static_cast<float>(m_window.height());
+    const glm::vec3 cameraPosition = viewCamera().position;
+
+    auto draw = [&](const PlayerSkin& skin, const PlayerPose& pose, const std::string& name) {
+        m_playerModel.render(m_chunkShader, *m_world, skin, pose);
+        if (name.empty()) return;
+
+        // The tag floats a little over the top of the head. Project it
+        // here, where the matrices are; it gets written in the HUD pass,
+        // which is the only one drawn on top of the world.
+        const glm::vec3 above = pose.feet + glm::vec3(0.0f, PlayerModel::HEIGHT + 0.4f, 0.0f);
+        const glm::vec4 clip = viewProjection * glm::vec4(above, 1.0f);
+        if (clip.w <= 0.05f) return;
+
+        const glm::vec3 ndc = glm::vec3(clip) / clip.w;
+        if (ndc.x < -1.3f || ndc.x > 1.3f || ndc.y < -1.3f || ndc.y > 1.3f) return;
+
+        const float distance = glm::length(above - cameraPosition);
+        if (distance > 48.0f) return;
+
+        Nameplate plate;
+        plate.name = name;
+        plate.x = (ndc.x * 0.5f + 0.5f) * screenWidth;
+        plate.y = (1.0f - (ndc.y * 0.5f + 0.5f)) * screenHeight;
+        plate.scale = std::clamp(2.2f - distance * 0.03f, 1.2f, 2.2f);
+        m_nameplates.push_back(plate);
+    };
+
+    for (const auto& entry : m_net.players())
+    {
+        const Net::RemotePlayer& player = entry.second;
+        if (!player.positioned) continue;
+
+        const Animation& animation = m_animation[entry.first];
+
+        PlayerPose pose;
+        pose.feet = player.smoothed();
+        pose.headYaw = player.yaw;
+        pose.headPitch = player.pitch;
+        pose.bodyYaw = animation.started ? animation.bodyYaw : player.yaw;
+        pose.limbPhase = animation.phase;
+        pose.limbAmount = animation.amount;
+        pose.sneaking = player.sneaking;
+
+        draw(skinFor(player.look), pose, player.name);
+    }
+
+    // Yourself, once the camera is no longer behind your own eyes. No
+    // name tag: you know who you are, and Minecraft does not draw one.
+    if (m_perspective != Perspective::FirstPerson)
+    {
+        const Animation& animation = m_animation[LOCAL_ANIM];
+
+        PlayerPose pose;
+        pose.feet = m_player.position;
+        pose.headYaw = m_camera.yaw;
+        pose.headPitch = m_camera.pitch;
+        pose.bodyYaw = animation.started ? animation.bodyYaw : m_camera.yaw;
+        pose.limbPhase = animation.phase;
+        pose.limbAmount = animation.amount;
+        pose.sneaking = m_player.sneaking;
+
+        draw(activeSkin(), pose, std::string());
+    }
+}
+
+void Application::renderNameplates()
+{
+    for (const Nameplate& plate : m_nameplates)
+    {
+        const float width = UIRenderer::textWidth(plate.name, plate.scale);
+        const float height = UIRenderer::textHeight(plate.scale);
+        const float x = plate.x - width * 0.5f;
+        const float y = plate.y - height;
+
+        m_ui.quad(x - 4.0f, y - 3.0f, width + 8.0f, height + 6.0f,
+                  glm::vec4(0.0f, 0.0f, 0.0f, 0.35f));
+        m_ui.textWithShadow(plate.name, x, y, plate.scale, TEXT_COLOR);
+    }
 }
 
 // ------------------------------------------------------------------ hud ---

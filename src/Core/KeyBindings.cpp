@@ -35,6 +35,7 @@ namespace
         { Action::Drop,      "DROP ITEM",        "drop",      key(SDL_SCANCODE_Q) },
         { Action::Inventory, "INVENTORY",        "inventory", key(SDL_SCANCODE_E) },
         { Action::Fly,       "TOGGLE FLY",       "fly",       key(SDL_SCANCODE_F) },
+        { Action::Perspective, "TOGGLE PERSPECTIVE", "perspective", key(SDL_SCANCODE_F5) },
         { Action::Screenshot,"SCREENSHOT",       "screenshot",key(SDL_SCANCODE_F2) },
         { Action::Debug,     "DEBUG INFO",       "debug",     key(SDL_SCANCODE_F3) },
         { Action::HideHud,   "HIDE HUD",         "hidehud",   key(SDL_SCANCODE_F1) },

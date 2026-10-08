@@ -48,6 +48,11 @@ public:
     unsigned int textureId() const { return m_texture; }
     Style style() const { return m_style; }
     int armWidth() const { return m_style == Style::Slim ? 3 : 4; }
+    // 64 wide always; 32 tall for the classic layout, 64 for the modern
+    // one, which the 3D model needs in order to know whether there is a
+    // left arm and a second layer in there.
+    int width() const { return m_width; }
+    int height() const { return m_height; }
     // True when the pixels came from a file rather than from code.
     bool fromFile() const { return m_fromFile; }
 

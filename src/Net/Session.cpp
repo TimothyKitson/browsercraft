@@ -106,6 +106,16 @@ void Session::leave()
     m_handshake = Handshake{};
     m_localId = 0;
     m_message.clear();
+
+    // Forget what the last session had already told everyone, so the
+    // first packet of the next one goes out even if nothing has moved
+    // since -- otherwise rejoining from the same spot leaves you
+    // invisible until you take a step.
+    m_lastSentPosition = glm::vec3(0.0f);
+    m_lastSentYaw = 0.0f;
+    m_lastSentPitch = 0.0f;
+    m_lastSentSneak = false;
+    m_forceMove = true;
 }
 
 // ------------------------------------------------------------- update ---
@@ -125,6 +135,8 @@ void Session::update(float deltaTime, World* world, const glm::vec3& localPositi
             Writer hello(MessageId::Hello);
             hello.u32(PROTOCOL_VERSION);
             hello.str(m_localName);
+            hello.u8(m_localLook.variant);
+            hello.u8(m_localLook.slim ? 1 : 0);
             m_transport->send(HOST_PEER, hello.bytes());
             m_status = Status::Loading;
             m_message = "Loading world";
@@ -205,15 +217,25 @@ void Session::sendMovement(float deltaTime, const glm::vec3& position, float yaw
     if (m_moveTimer < MOVE_INTERVAL) return;
     m_moveTimer = 0.0f;
 
-    // Standing still costs nothing.
-    if (glm::length(position - m_lastSentPosition) < MOVE_EPSILON &&
+    // Standing still costs nothing -- but dropping into a sneak while
+    // standing still is still news, because it changes how you are drawn,
+    // and so is somebody new arriving who has never been told where we
+    // are at all.
+    if (!m_forceMove &&
+        glm::length(position - m_lastSentPosition) < MOVE_EPSILON &&
         std::abs(yaw - m_lastSentYaw) < LOOK_EPSILON &&
-        std::abs(pitch - m_lastSentPitch) < LOOK_EPSILON)
+        std::abs(pitch - m_lastSentPitch) < LOOK_EPSILON &&
+        m_localSneaking == m_lastSentSneak)
         return;
+
+    m_forceMove = false;
 
     m_lastSentPosition = position;
     m_lastSentYaw = yaw;
     m_lastSentPitch = pitch;
+    m_lastSentSneak = m_localSneaking;
+
+    const uint8_t flags = m_localSneaking ? static_cast<uint8_t>(MoveSneaking) : uint8_t{ 0 };
 
     if (m_role == Role::Host)
     {
@@ -222,6 +244,7 @@ void Session::sendMovement(float deltaTime, const glm::vec3& position, float yaw
         move.vec3(position);
         move.f32(yaw);
         move.f32(pitch);
+        move.u8(flags);
         m_transport->broadcast(move.bytes());
     }
     else
@@ -230,6 +253,7 @@ void Session::sendMovement(float deltaTime, const glm::vec3& position, float yaw
         move.vec3(position);
         move.f32(yaw);
         move.f32(pitch);
+        move.u8(flags);
         m_transport->send(HOST_PEER, move.bytes());
     }
 }
@@ -378,11 +402,12 @@ void Session::handleAsHost(const Packet& packet, World* world)
     {
         case MessageId::Hello:
         {
+            // The version is read and answered before anything else: an
+            // older client's Hello is shorter than this one, so reading
+            // the rest first would fail and they would hang on a silent
+            // socket instead of being told why they were turned away.
             const uint32_t version = reader.u32();
-            std::string name = reader.str();
-            if (!reader.ok()) return;
-
-            if (version != PROTOCOL_VERSION)
+            if (!reader.ok() || version != PROTOCOL_VERSION)
             {
                 Writer reject(MessageId::Reject);
                 reject.str("That copy of Browsercraft is a different version");
@@ -390,6 +415,12 @@ void Session::handleAsHost(const Packet& packet, World* world)
                 m_transport->disconnect(packet.peer);
                 return;
             }
+
+            std::string name = reader.str();
+            Appearance look;
+            look.variant = reader.u8();
+            look.slim = reader.u8() != 0;
+            if (!reader.ok()) return;
 
             if (name.empty()) name = "PLAYER";
 
@@ -401,25 +432,50 @@ void Session::handleAsHost(const Packet& packet, World* world)
             welcome.f32(m_handshake.timeOfDay);
             welcome.vec3(m_handshake.spawn);
             welcome.str(m_localName);          // the host, so they can label us
+            welcome.u8(m_localLook.variant);
+            welcome.u8(m_localLook.slim ? 1 : 0);
             m_transport->send(packet.peer, welcome.bytes());
 
             // Introduce everyone already here, then everyone to them.
+            // Each introduction carries that player's last known position
+            // too: a player who has been standing still since before this
+            // one arrived sends nothing of their own, and would be
+            // invisible to the newcomer until they next moved.
             for (const auto& entry : m_players)
             {
                 Writer join(MessageId::PlayerJoin);
                 join.u32(entry.first);
                 join.str(entry.second.name);
+                join.u8(entry.second.look.variant);
+                join.u8(entry.second.look.slim ? 1 : 0);
                 m_transport->send(packet.peer, join.bytes());
+
+                if (!entry.second.positioned) continue;
+
+                Writer where(MessageId::PlayerMove);
+                where.u32(entry.first);
+                where.vec3(entry.second.position);
+                where.f32(entry.second.yaw);
+                where.f32(entry.second.pitch);
+                where.u8(entry.second.sneaking ? static_cast<uint8_t>(MoveSneaking)
+                                               : uint8_t{ 0 });
+                m_transport->send(packet.peer, where.bytes());
             }
+
+            // ...and the host is a player too, standing still or not.
+            m_forceMove = true;
 
             Writer announce(MessageId::PlayerJoin);
             announce.u32(packet.peer);
             announce.str(name);
+            announce.u8(look.variant);
+            announce.u8(look.slim ? 1 : 0);
             m_transport->broadcast(announce.bytes(), packet.peer);
 
             RemotePlayer player;
             player.id = packet.peer;
             player.name = name;
+            player.look = look;
             m_players[packet.peer] = player;
 
             std::printf("[net] %s joined as player %u\n", name.c_str(), packet.peer);
@@ -458,23 +514,30 @@ void Session::handleAsHost(const Packet& packet, World* world)
             const glm::vec3 position = reader.vec3();
             const float yaw = reader.f32();
             const float pitch = reader.f32();
+            const uint8_t flags = reader.u8();
             if (!reader.ok()) return;
 
             auto it = m_players.find(packet.peer);
             if (it == m_players.end()) return;
 
-            it->second.previous = it->second.smoothed();
+            // A first position, or one after a long silence, is where
+            // they are rather than somewhere to glide towards.
+            it->second.previous = (!it->second.positioned || it->second.silence > 2.0f)
+                                      ? position : it->second.smoothed();
             it->second.position = position;
             it->second.yaw = yaw;
             it->second.pitch = pitch;
+            it->second.sneaking = (flags & MoveSneaking) != 0;
             it->second.blend = 0.0f;
             it->second.silence = 0.0f;
+            it->second.positioned = true;
 
             Writer move(MessageId::PlayerMove);
             move.u32(packet.peer);
             move.vec3(position);
             move.f32(yaw);
             move.f32(pitch);
+            move.u8(flags);
             m_transport->broadcast(move.bytes(), packet.peer);
             break;
         }
@@ -502,9 +565,11 @@ void Session::handleAsGuest(const Packet& packet, World* world)
             m_handshake.timeOfDay = reader.f32();
             m_handshake.spawn = reader.vec3();
             const std::string hostName = reader.str();
-            if (!reader.ok()) return;
+            Appearance hostLook;
+            hostLook.variant = reader.u8();
+            hostLook.slim = reader.u8() != 0;
 
-            if (version != PROTOCOL_VERSION)
+            if (version != PROTOCOL_VERSION || !reader.ok())
             {
                 m_status = Status::Failed;
                 m_message = "That world is running a different version";
@@ -515,6 +580,7 @@ void Session::handleAsGuest(const Packet& packet, World* world)
             RemotePlayer host;
             host.id = HOST_PEER;
             host.name = hostName.empty() ? "HOST" : hostName;
+            host.look = hostLook;
             host.position = m_handshake.spawn;
             host.previous = m_handshake.spawn;
             m_players[HOST_PEER] = host;
@@ -561,11 +627,15 @@ void Session::handleAsGuest(const Packet& packet, World* world)
         {
             const uint32_t who = reader.u32();
             const std::string name = reader.str();
+            Appearance look;
+            look.variant = reader.u8();
+            look.slim = reader.u8() != 0;
             if (!reader.ok() || who == m_localId) return;
 
             RemotePlayer player;
             player.id = who;
             player.name = name;
+            player.look = look;
             m_players[who] = player;
             break;
         }
@@ -583,16 +653,20 @@ void Session::handleAsGuest(const Packet& packet, World* world)
             const glm::vec3 position = reader.vec3();
             const float yaw = reader.f32();
             const float pitch = reader.f32();
+            const uint8_t flags = reader.u8();
             if (!reader.ok() || who == m_localId) return;
 
             RemotePlayer& player = m_players[who];
             player.id = who;
-            player.previous = (player.silence > 2.0f) ? position : player.smoothed();
+            player.previous = (!player.positioned || player.silence > 2.0f)
+                                  ? position : player.smoothed();
             player.position = position;
             player.yaw = yaw;
             player.pitch = pitch;
+            player.sneaking = (flags & MoveSneaking) != 0;
             player.blend = 0.0f;
             player.silence = 0.0f;
+            player.positioned = true;
             break;
         }
 

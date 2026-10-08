@@ -7,6 +7,12 @@
 #include "Player/Inventory.h"
 #include "Game/Crafting.h"
 #include "Core/KeyBindings.h"
+#include "Entity/PlayerAnimation.h"
+#include "Entity/PlayerModel.h"
+#include "Entity/PlayerSkin.h"
+#include <glm/glm.hpp>
+#include <algorithm>
+#include <cmath>
 #include <cstdio>
 #include <string>
 #include <filesystem>
@@ -256,6 +262,209 @@ namespace
 
         std::filesystem::remove_all(dir, ec);
     }
+
+    // --- how a player model moves --------------------------------------
+
+    void testPlayerAnimation()
+    {
+        section("players: animation");
+
+        using namespace PlayerAnimation;
+
+        auto about = [](float a, float b) { return std::fabs(a - b) < 0.001f; };
+
+        check(about(wrapDegrees(0.0f), 0.0f), "zero stays zero");
+        check(about(wrapDegrees(370.0f), 10.0f), "a lap and a bit folds down");
+        check(about(wrapDegrees(-190.0f), 170.0f), "turning left past half a lap comes back right");
+        check(about(wrapDegrees(540.0f), -180.0f), "one and a half laps lands on the boundary");
+
+        // The arms swing opposite the legs on the same side, which is
+        // what makes a walk read as a walk rather than a shuffle.
+        check(legAngle(0.0f, 1.0f) > 0.0f && armAngle(0.0f, 1.0f) < 0.0f,
+              "the right arm goes back as the right leg comes forward");
+        check(about(legAngle(0.0f, 0.0f), 0.0f), "standing still does not swing");
+        check(std::fabs(legAngle(1.0f, 0.5f)) < std::fabs(legAngle(1.0f, 1.0f)),
+              "walking swings less than running");
+
+        check(about(swingAmountFor(0.0f), 0.0f), "no speed, no swing");
+        check(about(swingAmountFor(WALK_SPEED), 1.0f), "walking pace is a full swing");
+        check(about(swingAmountFor(WALK_SPEED * 3.0f), 1.0f), "sprinting does not swing further");
+
+        // The body comes round to meet the head, but never instantly,
+        // and never leaves the neck twisted further than it can go.
+        const float turned = followHead(0.0f, 90.0f, 1.0f / 60.0f, false);
+        check(turned > 0.0f && turned < 90.0f, "the body trails the head round");
+        check(std::fabs(wrapDegrees(90.0f - turned)) <= MAX_NECK_TWIST + 0.001f,
+              "and never lets the neck twist too far");
+
+        // Standing still and staring over your shoulder: the body should
+        // settle exactly at the limit rather than creep past it.
+        float body = 0.0f;
+        for (int i = 0; i < 600; ++i) body = followHead(body, 120.0f, 1.0f / 60.0f, false);
+        check(std::fabs(wrapDegrees(120.0f - body)) <= MAX_NECK_TWIST + 0.001f,
+              "a long stare settles inside the limit");
+
+        // Crossing the -180/180 seam must not send the body the long way
+        // round: 170 to -170 is twenty degrees, not three hundred and forty.
+        const float across = followHead(170.0f, -170.0f, 1.0f, true);
+        check(std::fabs(wrapDegrees(across - 170.0f)) < 25.0f,
+              "turning across the seam takes the short way");
+
+        check(about(approach(0.0f, 1.0f, 10.0f, 1.0f), 1.0f), "a big step arrives");
+        check(approach(0.0f, 1.0f, 10.0f, 1000.0f) <= 1.0f, "and never overshoots");
+    }
+
+    // --- wrapping a skin round the model -------------------------------
+
+    void testPlayerModel()
+    {
+        section("players: skin layout");
+
+        // The flat paper doll on the profile screen has been looked at;
+        // the 3D model has to agree with it, or a player would be wearing
+        // their own face on the back of their head. PlayerSkin names the
+        // front of each body part, so compare against that.
+        PlayerSkin skin;   // default: classic arms, the 64x32 layout
+
+        struct Part { const char* name; int u, v, w, h, d; int frontX, frontY; };
+        const Part PARTS[] = {
+            { "head",  0, 0, 8, 8, 8,   8, 8 },
+            { "body", 16, 16, 8, 12, 4, 20, 20 },
+            { "arm",  40, 16, 4, 12, 4, 44, 20 },
+            { "leg",   0, 16, 4, 12, 4,  4, 20 },
+        };
+
+        for (const Part& part : PARTS)
+        {
+            int x = 0, y = 0, w = 0, h = 0;
+            PlayerModel::facePatch(PlayerModel::Front, part.u, part.v,
+                                   part.w, part.h, part.d, x, y, w, h);
+            check(x == part.frontX && y == part.frontY,
+                  std::string(part.name) + " front sits where the doll draws it");
+            check(w == part.w && h == part.h, std::string(part.name) + " front is the right size");
+
+            // The six faces have to tile the part's own rectangle of skin
+            // exactly: 2(wh + wd + hd) pixels, no overlap, nothing spilling
+            // past the right-hand edge of the strip.
+            int covered = 0;
+            int right = part.u;
+            for (int face = 0; face < 6; ++face)
+            {
+                PlayerModel::facePatch(face, part.u, part.v, part.w, part.h, part.d, x, y, w, h);
+                covered += w * h;
+                right = std::max(right, x + w);
+                check(x >= part.u && y >= part.v, std::string(part.name) + " face stays in its strip");
+            }
+            check(covered == 2 * (part.w * part.h + part.w * part.d + part.h * part.d),
+                  std::string(part.name) + " faces cover the part exactly once");
+            check(right == part.u + 2 * (part.w + part.d),
+                  std::string(part.name) + " strip is as wide as the part unrolled");
+        }
+
+        // The side faces are as deep as the part and the top is as deep
+        // again, which is what puts the front patch below the top one.
+        int x = 0, y = 0, w = 0, h = 0;
+        PlayerModel::facePatch(PlayerModel::Top, 0, 0, 8, 8, 8, x, y, w, h);
+        check(x == 8 && y == 0 && w == 8 && h == 8, "the top of the head is where the hair is");
+        PlayerModel::facePatch(PlayerModel::Back, 0, 0, 8, 8, 8, x, y, w, h);
+        check(x == 24 && y == 8, "the back of the head is the last patch along");
+
+        // A slim skin narrows the arm and nothing else.
+        check(skin.armWidth() == 4, "classic arms are four wide");
+        PlayerModel::facePatch(PlayerModel::Front, 40, 16, 3, 12, 4, x, y, w, h);
+        check(w == 3 && x == 44, "a slim arm is three wide in the same place");
+    }
+
+    // --- the figure itself ---------------------------------------------
+
+    void testPlayerGeometry()
+    {
+        section("players: geometry");
+
+        PlayerSkin skin;        // no GL: only the measurements are used here
+        PlayerModel model;
+
+        PlayerPose pose;
+        pose.feet = glm::vec3(10.0f, 64.0f, -5.0f);
+        model.build(skin, pose, 1.0f, 0.0f);
+
+        const std::vector<float>& v = model.vertices();
+        const int stride = PlayerModel::FLOATS_PER_VERTEX;
+
+        // Head, body, two arms, two legs and the hat, each six faces of
+        // two triangles.
+        check(static_cast<int>(v.size()) == 7 * 36 * stride, "seven boxes of thirty-six vertices");
+
+        glm::vec3 low(1e9f), high(-1e9f);
+        bool uvInside = true;
+        bool faceMarked = true;
+
+        for (size_t i = 0; i < v.size(); i += stride)
+        {
+            const glm::vec3 p(v[i], v[i + 1], v[i + 2]);
+            low = glm::min(low, p);
+            high = glm::max(high, p);
+            if (v[i + 3] < 0.0f || v[i + 3] > 1.0f || v[i + 4] < 0.0f || v[i + 4] > 1.0f)
+                uvInside = false;
+            // Face 6 is what tells the chunk shader this is not a cube
+            // face with a normal map behind it.
+            if (v[i + 8] != 6.0f) faceMarked = false;
+        }
+
+        check(uvInside, "every corner samples inside the skin");
+        check(faceMarked, "every vertex is marked as needing no normal map");
+
+        auto about = [](float a, float b) { return std::fabs(a - b) < 0.002f; };
+
+        // Feet on the ground, and two blocks tall -- the hat layer sits
+        // half a skin pixel proud of the top of the head.
+        check(about(low.y, pose.feet.y), "the feet are on the ground");
+        check(about(high.y - low.y, PlayerModel::HEIGHT + 0.5f / 16.0f),
+              "the figure is two blocks tall");
+
+        // Facing. Yaw 0 looks down +x, the same convention as the
+        // camera, so the model must be deepest along x and widest along
+        // z: shoulders across, nose forward. Getting this backwards
+        // would put everyone's face on the back of their head.
+        check(about(high.x - pose.feet.x, 4.5f / 16.0f), "the face points the way they are looking");
+        check(about(high.z - pose.feet.z, 8.0f / 16.0f), "and the shoulders go across it");
+
+        // Turn a quarter circle and the two swap over.
+        pose.bodyYaw = 90.0f;
+        pose.headYaw = 90.0f;
+        model.build(skin, pose, 1.0f, 0.0f);
+
+        glm::vec3 turnedLow(1e9f), turnedHigh(-1e9f);
+        for (size_t i = 0; i < model.vertices().size(); i += stride)
+        {
+            const glm::vec3 p(model.vertices()[i], model.vertices()[i + 1], model.vertices()[i + 2]);
+            turnedLow = glm::min(turnedLow, p);
+            turnedHigh = glm::max(turnedHigh, p);
+        }
+        check(about(turnedHigh.z - pose.feet.z, 4.5f / 16.0f), "turning a quarter turn turns the face");
+        check(about(turnedHigh.x - pose.feet.x, 8.0f / 16.0f), "and the shoulders with it");
+
+        // Standing still, the limbs hang straight: the lowest point of
+        // the model is the soles of the feet and nothing swings past them.
+        check(about(turnedLow.y, pose.feet.y), "standing still, nothing swings below the feet");
+
+        // Walking, they do not. Phase zero is the top of the cycle, with
+        // one leg as far forward as it goes and the other as far back.
+        PlayerPose walking = pose;
+        walking.limbAmount = 1.0f;
+        walking.limbPhase = 0.0f;
+        model.build(skin, walking, 1.0f, 0.0f);
+        float walkLow = 1e9f, walkFront = -1e9f, walkBack = 1e9f;
+        for (size_t i = 0; i < model.vertices().size(); i += stride)
+        {
+            walkLow = std::min(walkLow, model.vertices()[i + 1]);
+            walkFront = std::max(walkFront, model.vertices()[i + 2]);
+            walkBack = std::min(walkBack, model.vertices()[i + 2]);
+        }
+        check(walkLow > pose.feet.y, "at full stride the feet have left the ground");
+        check(walkFront > turnedHigh.z, "one leg has swung out in front");
+        check(walkBack < turnedLow.z, "and the other out behind");
+    }
 }
 
 int runSelfTest()
@@ -266,6 +475,9 @@ int runSelfTest()
     testQuickMove();
     testCrafting();
     testKeyBindings();
+    testPlayerAnimation();
+    testPlayerModel();
+    testPlayerGeometry();
 
     std::printf("\n%d checks, %d failed\n", g_checks, g_failures);
     return g_failures == 0 ? 0 : 1;
