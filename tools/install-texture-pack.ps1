@@ -6,8 +6,14 @@
 # LabPBR "_n" (normal) and "_s" (specular) maps the pack ships. Delete the
 # assets/textures/block folder to go back to the built-in procedural
 # textures.
+#
+# Most packs are free to pass on only if whoever made them is credited.
+# -Credit writes assets/textures/CREDIT.txt, which the game shows in the
+# corner of the title screen. The credit lives next to the art rather
+# than in the source, because the repository never contains either.
 param(
     [Parameter(Mandatory = $true)][string]$Zip,
+    [string]$Credit = "",
     [switch]$NoPbr
 )
 
@@ -81,6 +87,19 @@ foreach ($entry in $archive.Entries) {
 }
 
 $archive.Dispose()
+
+# The credit travels with the art, so installing a different pack cannot
+# leave the last one's name on the title screen.
+$creditPath = Join-Path $root "assets\textures\CREDIT.txt"
+if ($Credit -ne "") {
+    Set-Content -LiteralPath $creditPath -Value $Credit -Encoding UTF8
+    Write-Output "Credited as: $Credit"
+} elseif (Test-Path -LiteralPath $creditPath) {
+    Remove-Item -LiteralPath $creditPath
+    Write-Output "No -Credit given, so the old CREDIT.txt was removed."
+} else {
+    Write-Output "No -Credit given. Check whether this pack requires attribution."
+}
 
 # Report the tile resolution so you know what you installed.
 $probe = Join-Path $dest "stone.png"

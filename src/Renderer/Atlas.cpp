@@ -686,6 +686,36 @@ namespace
     // ---------- resource pack loading ----------
 
     const char* PACK_DIRECTORY = "assets/textures/block";
+    const char* CREDIT_FILE = "assets/textures/CREDIT.txt";
+
+    // First non-blank, non-comment line of the credit file, trimmed and
+    // capped to something that fits across the bottom of the screen.
+    std::string readPackCredit()
+    {
+        std::FILE* file = std::fopen(CREDIT_FILE, "rb");
+        if (!file) return {};
+
+        std::string credit;
+        char line[256];
+        while (std::fgets(line, sizeof(line), file))
+        {
+            std::string text(line);
+            while (!text.empty() && (text.back() == '\n' || text.back() == '\r' ||
+                                     text.back() == ' ' || text.back() == '\t'))
+                text.pop_back();
+
+            size_t start = 0;
+            while (start < text.size() && (text[start] == ' ' || text[start] == '\t')) ++start;
+            text = text.substr(start);
+
+            if (text.empty() || text[0] == '#') continue;
+            credit = text.size() > 96 ? text.substr(0, 96) : text;
+            break;
+        }
+
+        std::fclose(file);
+        return credit;
+    }
 
     struct Image
     {
@@ -1340,6 +1370,12 @@ Atlas::Atlas()
             if (!image.valid()) continue;
             blitImage(Tiles::CrackFirst + stage, scaleNearest(image, tilePixels, tilePixels));
         }
+
+        m_packCredit = readPackCredit();
+        if (!m_packCredit.empty())
+            std::printf("Textures: pack credited as \"%s\"\n", m_packCredit.c_str());
+        else
+            std::printf("Textures: no %s, so nothing is credited on the title screen\n", CREDIT_FILE);
 
         std::printf("Textures: loaded %d of %d block textures from %s (%dpx tiles)%s\n",
                     loaded, static_cast<int>(std::size(PACK_TILES)), PACK_DIRECTORY, tilePixels,

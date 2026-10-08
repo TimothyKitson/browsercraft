@@ -107,7 +107,7 @@ The game reads vanilla Minecraft texture names, so most resource packs
 drop straight in:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File tools\install-texture-pack.ps1 -Zip "C:\path\to\pack.zip"
+powershell -ExecutionPolicy Bypass -File tools\install-texture-pack.ps1 -Zip "C:\path\to\pack.zip" -Credit "Someone's Textures 32x"
 build.bat
 ```
 
@@ -119,6 +119,23 @@ capped at 256px per tile; packs above that are box-filtered down.
 Texture packs are *not* part of this project — they stay in
 `assets/textures/`, which is gitignored, so you don't accidentally
 redistribute someone else's art.
+
+### Crediting a pack
+
+Plenty of packs are free to pass on **only** if whoever made them is
+credited. `-Credit` writes `assets/textures/CREDIT.txt`, and the game
+prints its first line in the corner of the title screen, opposite the
+version — which is where Minecraft puts its own copyright notice. The
+web build stages that file alongside the textures, so a published build
+carries the credit with the art.
+
+The credit lives next to the pack rather than in the source, because the
+repository contains neither: install a different pack and the old name
+cannot be left behind. With no `CREDIT.txt` nothing is claimed, and
+`build-web.ps1` warns you before it publishes an uncredited pack.
+
+Check each pack's own terms. The engine can prove a credit is shown; it
+cannot tell you whether that is the condition you actually have to meet.
 
 ## Running in a browser
 

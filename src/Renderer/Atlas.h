@@ -2,6 +2,7 @@
 #include "AtlasTiles.h"
 #include <vector>
 #include <cstdint>
+#include <string>
 
 // UV rectangle of one tile inside the atlas. vTop/vBottom are named rather
 // than v0/v1 because the atlas is stored top-down: the visually-upper edge
@@ -50,6 +51,12 @@ public:
 
     int tilePixels() const { return m_tilePixels; }
     int loadedFromPack() const { return m_loadedFromPack; }
+    // Whoever made the installed pack, read from assets/textures/CREDIT.txt.
+    // Empty when no pack is installed or the pack came with no credit.
+    // Most packs are free to redistribute only if they are credited, and
+    // the repository never contains the pack itself, so it cannot name
+    // one: the credit has to arrive with the art it belongs to.
+    const std::string& packCredit() const { return m_packCredit; }
     // True when the pack supplied LabPBR normal/specular maps.
     bool hasPbrMaps() const { return m_hasPbrMaps; }
 
@@ -73,6 +80,7 @@ private:
     unsigned int m_specularId = 0; // LabPBR _s: smoothness, F0, porosity, emission
     int m_tilePixels = FALLBACK_TILE_PIXELS;
     int m_loadedFromPack = 0;
+    std::string m_packCredit;
     bool m_hasPbrMaps = false;
     // True when the maps came from a Bedrock pack and were converted.
     bool m_bedrockMaps = false;

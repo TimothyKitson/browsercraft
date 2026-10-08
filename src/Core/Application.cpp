@@ -2293,8 +2293,17 @@ void Application::renderTitleScreen()
 #endif
 
     // Version in the corner, where every Minecraft build puts it.
-    m_ui.textWithShadow("BROWSERCRAFT 0.1  -  BROWSERCRAFT.NET", 10.0f,
-                        h - UIRenderer::textHeight(1.7f) - 10.0f, 1.7f, DIM_TEXT);
+    const float footerY = h - UIRenderer::textHeight(1.7f) - 10.0f;
+    m_ui.textWithShadow("BROWSERCRAFT 0.1  -  BROWSERCRAFT.NET", 10.0f, footerY, 1.7f, DIM_TEXT);
+
+    // Whoever made the installed texture pack, opposite the version the
+    // way Minecraft puts its copyright line. Most packs are free to pass
+    // on only if they are credited, and this is the only screen everyone
+    // sees. Nothing is claimed when no pack is installed.
+    const std::string& credit = m_atlas.packCredit();
+    if (!credit.empty())
+        m_ui.textWithShadow(credit, w - UIRenderer::textWidth(credit, 1.7f) - 10.0f,
+                            footerY, 1.7f, DIM_TEXT);
 }
 
 void Application::renderSingleplayerScreen()

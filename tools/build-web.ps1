@@ -40,6 +40,17 @@ if ($TextureDir -ne "" -and (Test-Path -LiteralPath $TextureDir)) {
     Copy-Item -Recurse -LiteralPath $TextureDir (Join-Path $stage "textures\block")
     $bytes = (Get-ChildItem (Join-Path $stage "textures\block") -File | Measure-Object -Property Length -Sum).Sum
     Write-Output ("Staging textures from {0} ({1:N1} MB)" -f $TextureDir, ($bytes / 1MB))
+
+    # The published build is the one that actually redistributes the art,
+    # so the credit has to go with it or the title screen credits nobody.
+    $credit = Join-Path $root "assets\textures\CREDIT.txt"
+    if (Test-Path -LiteralPath $credit) {
+        Copy-Item -LiteralPath $credit (Join-Path $stage "textures\CREDIT.txt")
+        Write-Output ("Crediting: {0}" -f (Get-Content -LiteralPath $credit -TotalCount 1))
+    } else {
+        Write-Warning "No assets/textures/CREDIT.txt - the published build will credit nobody."
+        Write-Warning "Most packs are free to redistribute only if their author is credited."
+    }
 } else {
     Write-Output "No texture pack staged - the web build will use procedural textures."
 }
