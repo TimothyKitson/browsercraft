@@ -36,15 +36,20 @@ namespace
         { { {0,0,0}, {0,1,0}, {1,1,0}, {1,0,0} }, { {0,1}, {0,0}, {1,0}, {1,1} }, 0.86f },
     };
 
-    int tileForFace(const BlockInfo& info, int face)
+    // An item has one sprite and wears it on every face; a block shows
+    // the right face of itself.
+    int tileForFace(StackId id, int face)
     {
+        if (isItem(id)) return atlasTileFor(id);
+
+        const BlockInfo& info = blockInfo(asBlock(id));
         if (face == 2) return info.tileTop;
         if (face == 3) return info.tileBottom;
         return info.tileSide;
     }
 }
 
-void DroppedItems::spawn(const glm::vec3& position, BlockId block, int count)
+void DroppedItems::spawn(const glm::vec3& position, StackId block, int count)
 {
     if (block == Blocks::Air || count <= 0) return;
     if (m_items.size() > 400) return; // safety valve
@@ -67,7 +72,7 @@ void DroppedItems::spawn(const glm::vec3& position, BlockId block, int count)
     m_items.push_back(item);
 }
 
-void DroppedItems::spawnFromBrokenBlock(const glm::ivec3& blockPosition, BlockId drop)
+void DroppedItems::spawnFromBrokenBlock(const glm::ivec3& blockPosition, StackId drop)
 {
     spawn(glm::vec3(blockPosition) + glm::vec3(0.5f), drop, 1);
 }
@@ -188,7 +193,6 @@ void DroppedItems::render(Shader& chunkShader, const World& world)
 
     for (const Item& item : m_items)
     {
-        const BlockInfo& info = blockInfo(item.block);
 
         // Float clear of the ground, then bob and spin. Resting the cube
         // exactly on the surface left it half sunk into the block below.
@@ -209,12 +213,13 @@ void DroppedItems::render(Shader& chunkShader, const World& world)
 
         const float sky = world.skyLight(lx, ly, lz) / 15.0f;
         const float blockLight = std::max<float>(world.blockLightAt(lx, ly, lz),
-                                                 lightEmission(item.block)) / 15.0f;
+                                                 isItem(item.block) ? 0 : lightEmission(asBlock(item.block)))
+                                       / 15.0f;
 
         for (int f = 0; f < 6; ++f)
         {
             const FaceDef& face = FACES[f];
-            const TileUV uv = tileUV(tileForFace(info, f));
+            const TileUV uv = tileUV(tileForFace(item.block, f));
 
             glm::vec3 corners[4];
             float u[4], v[4];

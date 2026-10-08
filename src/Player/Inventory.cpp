@@ -2,7 +2,7 @@
 #include "Game/Crafting.h"
 #include <algorithm>
 
-int Inventory::add(BlockId id, int count)
+int Inventory::add(StackId id, int count)
 {
     if (id == Blocks::Air || count <= 0) return count;
 
@@ -14,7 +14,7 @@ int Inventory::add(BlockId id, int count)
             ItemStack& stack = m_slots[i];
             if (count <= 0) break;
 
-            const bool matching = (!stack.empty() && stack.id == id && stack.count < MAX_STACK);
+            const bool matching = (!stack.empty() && stack.id == id && stack.count < maxStackOf(id));
             const bool emptySlot = stack.empty();
 
             if ((pass == 0 && matching) || (pass == 1 && emptySlot))
@@ -24,7 +24,7 @@ int Inventory::add(BlockId id, int count)
                     stack.id = id;
                     stack.count = 0;
                 }
-                const int space = MAX_STACK - stack.count;
+                const int space = maxStackOf(id) - stack.count;
                 const int moved = std::min(space, count);
                 stack.count += moved;
                 count -= moved;
@@ -60,7 +60,7 @@ void Inventory::scrollSelection(int delta)
     m_selectedSlot = next;
 }
 
-int Inventory::countOf(BlockId id) const
+int Inventory::countOf(StackId id) const
 {
     int total = 0;
     for (int i = 0; i < MAIN_SLOTS; ++i)
@@ -108,7 +108,7 @@ bool Inventory::takeCraftResult()
     {
         m_cursor = result;
     }
-    else if (m_cursor.id == result.id && m_cursor.count + result.count <= MAX_STACK)
+    else if (m_cursor.id == result.id && m_cursor.count + result.count <= maxStackOf(result.id))
     {
         m_cursor.count += result.count;
     }
@@ -126,7 +126,7 @@ bool Inventory::takeCraftResult()
 
 void Inventory::mergeInto(ItemStack& from, ItemStack& into)
 {
-    const int space = MAX_STACK - into.count;
+    const int space = maxStackOf(into.id) - into.count;
     const int moved = (from.count < space) ? from.count : space;
     into.count += moved;
     from.count -= moved;
@@ -137,7 +137,7 @@ int Inventory::findDestination(const ItemStack& stack, int begin, int end) const
 {
     // Topping up a stack you already have beats scattering across empties.
     for (int i = begin; i < end; ++i)
-        if (!m_slots[i].empty() && m_slots[i].id == stack.id && m_slots[i].count < MAX_STACK)
+        if (!m_slots[i].empty() && m_slots[i].id == stack.id && m_slots[i].count < maxStackOf(stack.id))
             return i;
     for (int i = begin; i < end; ++i)
         if (m_slots[i].empty()) return i;
@@ -202,7 +202,7 @@ void Inventory::rightClick(int index)
         return;
     }
 
-    if (target.id == m_cursor.id && target.count < MAX_STACK)
+    if (target.id == m_cursor.id && target.count < maxStackOf(target.id))
     {
         target.count += 1;
         m_cursor.count -= 1;
@@ -267,5 +267,5 @@ void Inventory::takeFromPalette(BlockId id)
 
     if (id == Blocks::Air) return;
     m_cursor.id = id;
-    m_cursor.count = MAX_STACK;
+    m_cursor.count = maxStackOf(m_cursor.id);
 }

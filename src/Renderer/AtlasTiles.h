@@ -59,7 +59,32 @@ namespace Tiles
         TileCount
     };
 
+    // Items share the atlas with the blocks rather than having one of
+    // their own: a hotbar slot draws the same way whichever it holds,
+    // and one atlas is one texture bind. They start well clear of the
+    // blocks so adding a block never renumbers them.
+    constexpr int ItemFirst = 64;
+
+    enum : int
+    {
+        ItemWheatSeeds = ItemFirst,
+        ItemWheat,
+        ItemLeather,
+        ItemRawBeef,
+        ItemRawPork,
+        ItemRawChicken,
+        ItemRawMutton,
+        ItemFeather,
+        ItemBone,
+        ItemString,
+        ItemGunpowder,
+        ItemTileEnd
+    };
+
     // Ten progressively more broken overlay tiles for the mining animation.
     constexpr int CrackFirst = 240;
     constexpr int CrackStages = 10;
+
+    static_assert(static_cast<int>(TileCount) <= ItemFirst, "block tiles ran into the items");
+    static_assert(static_cast<int>(ItemTileEnd) <= CrackFirst, "item tiles ran into the cracks");
 }

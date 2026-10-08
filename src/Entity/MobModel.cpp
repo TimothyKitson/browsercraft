@@ -79,15 +79,15 @@ void MobModel::build(const MobSkin& skin, const Mob& mob, float sky, float block
     for (const MobBox& source : skin.boxes())
     {
         BoxMesh::Box box;
-        box.min = glm::vec3(source.origin);
-        box.max = glm::vec3(source.origin + source.size);
+        box.min = glm::vec3(source.origin) * mob.scale();
+        box.max = glm::vec3(source.origin + source.size) * mob.scale();
         box.u = source.u;
         box.v = source.v;
 
         // Limbs hinge at their top, where they meet the body.
         box.pivot = glm::vec3(static_cast<float>(source.origin.x) + source.size.x * 0.5f,
                               static_cast<float>(source.origin.y + source.size.y),
-                              static_cast<float>(source.origin.z) + source.size.z * 0.5f);
+                              static_cast<float>(source.origin.z) + source.size.z * 0.5f) * mob.scale();
         box.pitch = swingFor(source.part, phase, amount);
 
         boxes.push_back(box);
@@ -129,7 +129,7 @@ void MobModel::render(Shader& chunkShader, const World& world, const EntityManag
             // inside the floor, it comes out almost black.
             const glm::vec3 centre = mob.position();
             int lx = static_cast<int>(std::floor(centre.x));
-            int ly = static_cast<int>(std::floor(centre.y + mob.type().height * 0.5f));
+            int ly = static_cast<int>(std::floor(centre.y + mob.height() * 0.5f));
             int lz = static_cast<int>(std::floor(centre.z));
             for (int step = 0; step < 3 && isOpaque(world.getBlock(lx, ly, lz)); ++step)
                 ++ly;

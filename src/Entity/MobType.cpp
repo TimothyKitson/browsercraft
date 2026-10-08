@@ -1,4 +1,5 @@
 #include "MobType.h"
+#include "Game/Items.h"
 #include <algorithm>
 
 namespace
@@ -35,6 +36,7 @@ namespace
         {
             MobType& t = table[static_cast<size_t>(MobId::Sheep)];
             t.id = MobId::Sheep;
+            t.breedingFood = Items::Wheat;
             t.name = "Sheep";
             t.spawnClass = SpawnClass::Passive;
             t.maxHealth = 8;
@@ -42,8 +44,10 @@ namespace
             t.height = 1.25f;
             t.walkSpeed = 1.8f;
             t.voice = Sound::MobBleat;
-            t.drop = Blocks::Wool;
+            t.drop = Items::RawMutton;
             t.dropCount = 1;
+            t.secondDrop = Blocks::Wool;
+            t.secondDropCount = 1;
             t.bodyColour = rgb(228, 228, 222);
             t.headColour = rgb(222, 212, 198);
             addLegs(t.model, 4, 10, 4, 1, 4, -8);
@@ -53,6 +57,7 @@ namespace
         {
             MobType& t = table[static_cast<size_t>(MobId::Pig)];
             t.id = MobId::Pig;
+            t.breedingFood = Items::Wheat;
             t.name = "Pig";
             t.spawnClass = SpawnClass::Passive;
             t.maxHealth = 10;
@@ -61,6 +66,8 @@ namespace
             t.walkSpeed = 2.0f;
             t.voice = Sound::MobGrunt;
             t.voicePitch = 1.25f;
+            t.drop = Items::RawPorkchop;
+            t.dropCount = 2;
             t.bodyColour = rgb(238, 145, 145);
             t.headColour = rgb(238, 145, 145);
             addLegs(t.model, 4, 6, 4, 1, 4, -8);
@@ -70,6 +77,7 @@ namespace
         {
             MobType& t = table[static_cast<size_t>(MobId::Cow)];
             t.id = MobId::Cow;
+            t.breedingFood = Items::Wheat;
             t.name = "Cow";
             t.spawnClass = SpawnClass::Passive;
             t.maxHealth = 10;
@@ -78,6 +86,10 @@ namespace
             t.walkSpeed = 1.8f;
             t.voice = Sound::MobGrunt;
             t.voicePitch = 0.7f;
+            t.drop = Items::RawBeef;
+            t.dropCount = 2;
+            t.secondDrop = Items::Leather;
+            t.secondDropCount = 1;
             t.bodyColour = rgb(74, 54, 42);
             t.headColour = rgb(60, 44, 36);
             addLegs(t.model, 4, 12, 4, 1, 5, -9);
@@ -87,6 +99,7 @@ namespace
         {
             MobType& t = table[static_cast<size_t>(MobId::Chicken)];
             t.id = MobId::Chicken;
+            t.breedingFood = Items::Wheat;
             t.name = "Chicken";
             t.spawnClass = SpawnClass::Passive;
             t.maxHealth = 4;
@@ -94,6 +107,10 @@ namespace
             t.height = 0.75f;
             t.walkSpeed = 1.5f;
             t.voice = Sound::MobCluck;
+            t.drop = Items::RawChicken;
+            t.dropCount = 1;
+            t.secondDrop = Items::Feather;
+            t.secondDropCount = 1;
             t.bodyColour = rgb(234, 234, 230);
             t.headColour = rgb(234, 234, 230);
             t.eyeColour = rgb(190, 60, 40);
@@ -136,6 +153,8 @@ namespace
             t.walkSpeed = 2.1f;
             t.voice = Sound::MobRattle;
             t.attackDamage = 2;
+            t.drop = Items::Bone;
+            t.dropCount = 2;
             t.bodyColour = rgb(200, 200, 196);
             t.headColour = rgb(214, 214, 210);
             t.eyeColour = rgb(20, 20, 20);
@@ -160,6 +179,8 @@ namespace
             // instead of once and catastrophically.
             t.attackDamage = 6;
             t.attackInterval = 1.6f;
+            t.drop = Items::Gunpowder;
+            t.dropCount = 1;
             t.bodyColour = rgb(78, 158, 62);
             t.headColour = rgb(88, 172, 70);
             t.eyeColour = rgb(18, 24, 18);
@@ -181,6 +202,8 @@ namespace
             t.attackDamage = 2;
             t.attackInterval = 0.8f;
             t.attackReach = 1.3f;
+            t.drop = Items::StringItem;
+            t.dropCount = 2;
             t.bodyColour = rgb(44, 38, 38);
             t.headColour = rgb(56, 48, 46);
             t.eyeColour = rgb(190, 40, 40);

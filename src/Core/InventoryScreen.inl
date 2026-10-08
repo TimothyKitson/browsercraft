@@ -8,7 +8,7 @@ namespace
     // than one tab -- grass belongs with both the building materials and
     // the scenery, and hunting for it in the wrong place is worse than
     // listing it twice.
-    const BlockId TAB_BUILDING[] = {
+    const StackId TAB_BUILDING[] = {
         Blocks::Stone, Blocks::Cobblestone, Blocks::MossyCobblestone, Blocks::Bricks,
         Blocks::Planks, Blocks::Log, Blocks::BirchLog, Blocks::Sandstone,
         Blocks::Sand, Blocks::Gravel, Blocks::Dirt, Blocks::Grass,
@@ -16,20 +16,20 @@ namespace
         Blocks::Wool, Blocks::Snow, Blocks::Ice,
     };
 
-    const BlockId TAB_NATURE[] = {
+    const StackId TAB_NATURE[] = {
         Blocks::Grass, Blocks::SnowGrass, Blocks::Dirt, Blocks::TallGrass,
         Blocks::FlowerRed, Blocks::FlowerYellow, Blocks::Leaves, Blocks::BirchLeaves,
         Blocks::Log, Blocks::BirchLog, Blocks::Cactus, Blocks::Pumpkin,
         Blocks::Sand, Blocks::Snow, Blocks::Ice, Blocks::Clay,
     };
 
-    const BlockId TAB_ORES[] = {
+    const StackId TAB_ORES[] = {
         Blocks::CoalOre, Blocks::IronOre, Blocks::GoldOre, Blocks::DiamondOre,
         Blocks::Stone, Blocks::Cobblestone, Blocks::Gravel, Blocks::Obsidian,
         Blocks::Bedrock,
     };
 
-    const BlockId TAB_MISC[] = {
+    const StackId TAB_MISC[] = {
         Blocks::Torch, Blocks::Glowstone, Blocks::Water, Blocks::Lava,
         Blocks::Ice, Blocks::Glass, Blocks::Wool, Blocks::Pumpkin,
         Blocks::Bedrock,
@@ -38,9 +38,15 @@ namespace
     struct CreativeTab
     {
         const char* name;
-        BlockId icon;
-        const BlockId* items;   // null means "every obtainable block"
+        StackId icon;
+        const StackId* items;   // null means "every obtainable block"
         int count;
+    };
+
+    const StackId TAB_ITEMS[] = {
+        Items::Wheat, Items::WheatSeeds, Items::Leather, Items::RawBeef,
+        Items::RawPorkchop, Items::RawChicken, Items::RawMutton,
+        Items::Feather, Items::Bone, Items::StringItem, Items::Gunpowder,
     };
 
     const CreativeTab CREATIVE_TABS[] = {
@@ -48,6 +54,7 @@ namespace
         { "NATURE",           Blocks::Grass,      TAB_NATURE,   static_cast<int>(std::size(TAB_NATURE)) },
         { "ORES AND STONE",   Blocks::DiamondOre, TAB_ORES,     static_cast<int>(std::size(TAB_ORES)) },
         { "LIGHT AND LIQUID", Blocks::Glowstone,  TAB_MISC,     static_cast<int>(std::size(TAB_MISC)) },
+        { "ITEMS",            Items::Wheat,       TAB_ITEMS,    static_cast<int>(std::size(TAB_ITEMS)) },
         { "EVERYTHING",       Blocks::Cobblestone,nullptr,      0 },
         { "YOUR INVENTORY",   Blocks::Wool,       nullptr,      0 },  // the player's own slots
     };
@@ -64,23 +71,26 @@ namespace
         GuiSprite::ArmorLeggings, GuiSprite::ArmorBoots,
     };
 
-    const std::vector<BlockId>& allBlocks()
+    // Everything you can hold: the obtainable blocks, then the items.
+    const std::vector<StackId>& allStacks()
     {
-        static const std::vector<BlockId> blocks = []() {
-            std::vector<BlockId> list;
+        static const std::vector<StackId> everything = []() {
+            std::vector<StackId> list;
             for (BlockId id = 1; id < Blocks::Count; ++id)
                 if (isObtainable(id)) list.push_back(id);
+            for (StackId id = Items::FIRST; id < Items::Count; ++id)
+                list.push_back(id);
             return list;
         }();
-        return blocks;
+        return everything;
     }
 
-    void tabContents(int tab, const BlockId*& items, int& count)
+    void tabContents(int tab, const StackId*& items, int& count)
     {
         if (tab < 0 || tab >= TAB_COUNT || CREATIVE_TABS[tab].items == nullptr)
         {
-            items = allBlocks().data();
-            count = static_cast<int>(allBlocks().size());
+            items = allStacks().data();
+            count = static_cast<int>(allStacks().size());
             return;
         }
         items = CREATIVE_TABS[tab].items;
@@ -88,7 +98,7 @@ namespace
     }
 }
 
-void Application::drawItem(float x, float y, float size, BlockId id, int count,
+void Application::drawItem(float x, float y, float size, StackId id, int count,
                            const glm::vec4& tint)
 {
     if (id == Blocks::Air) return;
@@ -96,7 +106,7 @@ void Application::drawItem(float x, float y, float size, BlockId id, int count,
     // Minecraft leaves a clear margin around an item in its slot; at
     // 11% the blocks looked wedged in.
     const float inset = size * 0.19f;
-    const TileUV uv = tileUV(blockInfo(id).tileTop);
+    const TileUV uv = tileUV(atlasTileFor(id));
     m_ui.texturedQuad(m_atlas.textureId(), x + inset, y + inset,
                       size - inset * 2.0f, size - inset * 2.0f,
                       uv.u0, uv.vTop, uv.u1, uv.vBottom, tint);
@@ -286,7 +296,7 @@ void Application::renderInventoryScreen()
 
     // ------------------------------------------------------- main grid ---
     const float gridY = panelY + titleHeight + topHeight;
-    const BlockId* paletteItems = nullptr;
+    const StackId* paletteItems = nullptr;
     int paletteCount = 0;
     if (showPalette) tabContents(m_creativeTab, paletteItems, paletteCount);
 

@@ -1,11 +1,12 @@
 #pragma once
 #include "World/Block.h"
+#include "Game/Items.h"
 #include <array>
 #include <vector>
 
 struct ItemStack
 {
-    BlockId id = Blocks::Air;
+    StackId id = Blocks::Air;
     int count = 0;
 
     bool empty() const { return count <= 0 || id == Blocks::Air; }
@@ -39,10 +40,12 @@ public:
     static constexpr int CRAFT_RESULT = CRAFT_FIRST + CRAFT_SLOTS;    // 49
     static constexpr int SLOT_COUNT = CRAFT_RESULT + 1;               // 50
 
+    // The ceiling. What a particular thing actually stacks to comes from
+    // maxStackOf(), since items need not agree with blocks.
     static constexpr int MAX_STACK = 64;
 
     // Returns the number of items that didn't fit.
-    int add(BlockId id, int count);
+    int add(StackId id, int count);
     bool removeOne(int slot);
 
     ItemStack& slot(int index) { return m_slots[index]; }
@@ -55,7 +58,7 @@ public:
     void setSelectedSlot(int index);
     void scrollSelection(int delta);
 
-    int countOf(BlockId id) const;
+    int countOf(StackId id) const;
     void clear();
 
     // --- crafting ---

@@ -1,5 +1,6 @@
 #pragma once
 #include "World/Block.h"
+#include "Game/Items.h"
 #include "Renderer/Mesh.h"
 #include <vector>
 #include <glm/glm.hpp>
@@ -23,8 +24,8 @@ public:
     static constexpr float COLLECT_RADIUS = 0.7f;
     static constexpr float LIFETIME_SECONDS = 300.0f;
 
-    void spawn(const glm::vec3& position, BlockId block, int count = 1);
-    void spawnFromBrokenBlock(const glm::ivec3& blockPosition, BlockId drop);
+    void spawn(const glm::vec3& position, StackId block, int count = 1);
+    void spawnFromBrokenBlock(const glm::ivec3& blockPosition, StackId drop);
 
     void update(float deltaTime, const World& world, const Player& player,
                 Inventory& inventory, AudioEngine& audio);
@@ -41,7 +42,7 @@ private:
     {
         glm::vec3 position{ 0.0f };
         glm::vec3 velocity{ 0.0f };
-        BlockId block = Blocks::Air;
+        StackId block = Blocks::Air;
         int count = 1;
         float age = 0.0f;
         float spin = 0.0f;

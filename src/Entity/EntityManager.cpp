@@ -81,13 +81,13 @@ bool EntityManager::fits(const World& world, const MobType& type, const glm::vec
     return true;
 }
 
-bool EntityManager::spawnAt(MobId type, glm::vec3 feetPosition, const World& world)
+bool EntityManager::spawnAt(MobId type, glm::vec3 feetPosition, const World& world, bool baby)
 {
     if (static_cast<int>(m_mobs.size()) >= MAX_MOBS) return false;
     if (!fits(world, mobType(type), feetPosition)) return false;
 
     m_mobs.emplace_back(type, feetPosition,
-                        m_rng ^ static_cast<uint32_t>(m_mobs.size() * 2654435761u));
+                        m_rng ^ static_cast<uint32_t>(m_mobs.size() * 2654435761u), baby);
     return true;
 }
 
@@ -148,6 +148,8 @@ void EntityManager::update(float deltaTime, const World& world,
         }),
         m_mobs.end());
 
+    pairOffLovers(world);
+
     m_spawnTimer -= deltaTime;
     if (m_spawnTimer <= 0.0f)
     {
@@ -180,6 +182,53 @@ std::vector<MobStrike> EntityManager::drainStrikes()
     return all;
 }
 
+std::vector<glm::vec3> EntityManager::drainBirths()
+{
+    std::vector<glm::vec3> all;
+    all.swap(m_births);
+    return all;
+}
+
+bool EntityManager::feed(const glm::vec3& origin, const glm::vec3& direction,
+                         float maxDistance, StackId food)
+{
+    Mob* target = pick(origin, direction, maxDistance);
+    return target && target->feed(food);
+}
+
+// Two of a kind, both in love, close enough to be standing together.
+void EntityManager::pairOffLovers(const World& world)
+{
+    for (size_t a = 0; a < m_mobs.size(); ++a)
+    {
+        if (!m_mobs[a].inLove() || !m_mobs[a].canBreed()) continue;
+
+        for (size_t b = a + 1; b < m_mobs.size(); ++b)
+        {
+            if (m_mobs[b].typeId() != m_mobs[a].typeId()) continue;
+            if (!m_mobs[b].inLove() || !m_mobs[b].canBreed()) continue;
+
+            const glm::vec3 apart = m_mobs[b].position() - m_mobs[a].position();
+            if (glm::length(apart) > 3.0f) continue;
+
+            const glm::vec3 between = m_mobs[a].position() + apart * 0.5f;
+            m_mobs[a].onBred();
+            m_mobs[b].onBred();
+
+            if (static_cast<int>(m_mobs.size()) < MAX_MOBS &&
+                fits(world, mobType(m_mobs[a].typeId()), between))
+            {
+                m_mobs.emplace_back(m_mobs[a].typeId(), between,
+                                    m_rng ^ static_cast<uint32_t>(m_mobs.size() * 40503u), true);
+                m_births.push_back(between);
+            }
+
+            // Both are spent; neither can pair again this pass.
+            break;
+        }
+    }
+}
+
 std::vector<EntityManager::Death> EntityManager::drainDeaths()
 {
     std::vector<Death> all;
@@ -199,10 +248,10 @@ Mob* EntityManager::pick(const glm::vec3& origin, const glm::vec3& direction, fl
         // Against the mob's own box rather than a sphere around it. A
         // sphere wide enough to cover a zombie's height is a metre wide
         // at the waist, so you could punch one by looking past it.
-        const MobType& type = mob.type();
-        const float half = type.width * 0.5f;
+        // A calf is half the size, and half as easy to hit.
+        const float half = mob.width() * 0.5f;
         const glm::vec3 low = mob.position() - glm::vec3(half, 0.0f, half);
-        const glm::vec3 high = mob.position() + glm::vec3(half, type.height, half);
+        const glm::vec3 high = mob.position() + glm::vec3(half, mob.height(), half);
 
         // Slab test: clip the ray against each pair of parallel faces
         // and see whether anything is left of it.

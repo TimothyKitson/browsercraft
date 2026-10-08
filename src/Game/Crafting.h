@@ -1,12 +1,13 @@
 #pragma once
 #include "World/Block.h"
+#include "Items.h"
 
 struct ItemStack;
 
 // What a crafting grid currently produces.
 struct CraftOutput
 {
-    BlockId id = Blocks::Air;
+    StackId id = Blocks::Air;
     int count = 0;
 
     bool valid() const { return id != Blocks::Air && count > 0; }

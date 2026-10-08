@@ -1,25 +1,25 @@
 #include "Crafting.h"
 #include "Player/Inventory.h"
+#include "Items.h"
 #include <algorithm>
 
 namespace
 {
-    constexpr BlockId _ = Blocks::Air;   // an empty cell, readably
+    constexpr StackId _ = Blocks::Air;   // an empty cell, readably
 
     struct Recipe
     {
         bool shapeless;
         int width, height;        // shaped only
-        BlockId pattern[9];       // shaped: row-major; shapeless: the ingredient list
+        StackId pattern[9];       // shaped: row-major; shapeless: the ingredient list
         int inputCount;           // shapeless only
-        BlockId result;
+        StackId result;
         int resultCount;
     };
 
-    // The recipe book is short because the game has no items yet -- no
-    // sticks, ingots or tools, only blocks -- so most of Minecraft's
-    // recipes have no ingredients to be made from. Everything here is a
-    // real 1.12 recipe; more drop straight in once items exist.
+    // The recipe book is still short: there are items now, but no
+    // sticks, ingots or tools, so most of Minecraft's recipes have no
+    // ingredients to be made from yet.
     const Recipe RECIPES[] = {
         // One log of either wood becomes four planks.
         { true,  0, 0, { Blocks::Log },      1, Blocks::Planks,    4 },
@@ -28,6 +28,13 @@ namespace
         // Four sand in a square becomes one sandstone.
         { false, 2, 2, { Blocks::Sand, Blocks::Sand,
                          Blocks::Sand, Blocks::Sand }, 0, Blocks::Sandstone, 1 },
+
+        // Not a Minecraft recipe. Wheat grows on farmland there, and
+        // this engine has no farmland yet, so three seeds bundle into
+        // one wheat to keep breeding reachable. Delete this row the day
+        // crops are plantable.
+        { true,  0, 0, { Items::WheatSeeds, Items::WheatSeeds, Items::WheatSeeds },
+          3, Items::Wheat, 1 },
     };
 
     // Shrinks the used area of the grid down to its bounding box, so a
@@ -62,7 +69,7 @@ namespace
             for (int x = 0; x < width; ++x)
             {
                 const ItemStack& cell = grid[(y0 + y) * 3 + (x0 + x)];
-                const BlockId wanted = recipe.pattern[y * recipe.width + x];
+                const StackId wanted = recipe.pattern[y * recipe.width + x];
                 if (wanted == _ && !cell.empty()) return false;
                 if (wanted != _ && (cell.empty() || cell.id != wanted)) return false;
             }

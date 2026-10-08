@@ -38,12 +38,26 @@ public:
     };
     std::vector<Death> drainDeaths();
 
-    bool spawnAt(MobId type, glm::vec3 feetPosition, const World& world);
-    void clear() { m_mobs.clear(); m_deaths.clear(); }
+    // Where a calf was just born, for the hearts and the sound.
+    std::vector<glm::vec3> drainBirths();
+
+    // Feeds whatever the ray hits. Returns true when the food was taken,
+    // which is the caller's cue to spend one from the stack.
+    bool feed(const glm::vec3& origin, const glm::vec3& direction, float maxDistance,
+              StackId food);
+
+    bool spawnAt(MobId type, glm::vec3 feetPosition, const World& world, bool baby = false);
+    void clear() { m_mobs.clear(); m_deaths.clear(); m_births.clear(); }
 
     const std::vector<Mob>& mobs() const { return m_mobs; }
     std::vector<Mob>& mobs() { return m_mobs; }
     int count() const { return static_cast<int>(m_mobs.size()); }
+    int youngCount() const
+    {
+        int young = 0;
+        for (const Mob& mob : m_mobs) if (mob.baby()) ++young;
+        return young;
+    }
 
     // Nearest living mob the ray passes through, for melee hits.
     Mob* pick(const glm::vec3& origin, const glm::vec3& direction, float maxDistance);
@@ -59,6 +73,8 @@ private:
 
     std::vector<Mob> m_mobs;
     std::vector<Death> m_deaths;
+    std::vector<glm::vec3> m_births;
+    void pairOffLovers(const World& world);
     float m_spawnTimer = 2.0f;
     uint32_t m_rng = 0x9E3779B9u;
 };

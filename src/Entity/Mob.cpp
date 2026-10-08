@@ -1,6 +1,7 @@
 #include "Mob.h"
 #include "PlayerAnimation.h"
 #include "World/World.h"
+#include "Game/Items.h"
 #include <algorithm>
 #include <cmath>
 
@@ -15,11 +16,12 @@ namespace
     constexpr float DEATH_SECONDS = 0.6f;
 }
 
-Mob::Mob(MobId type, glm::vec3 feetPosition, uint32_t seed)
+Mob::Mob(MobId type, glm::vec3 feetPosition, uint32_t seed, bool baby)
     : m_type(type)
     , m_position(feetPosition)
     , m_rng(seed ? seed : 1u)
 {
+    if (baby) m_babyTimer = BABY_SECONDS;
     const MobType& t = mobType(type);
     m_health = t.maxHealth;
     m_yaw = random01() * 360.0f;
@@ -34,6 +36,32 @@ float Mob::random01()
     m_rng ^= m_rng >> 17;
     m_rng ^= m_rng << 5;
     return static_cast<float>(m_rng & 0xFFFFFF) / static_cast<float>(0x1000000);
+}
+
+bool Mob::feed(StackId food)
+{
+    const MobType& t = type();
+    if (!alive() || t.breedingFood == Blocks::Air || food != t.breedingFood) return false;
+
+    // Feeding a calf hurries it along instead; that is what Minecraft
+    // does, and it stops you breeding something that is still a baby.
+    if (baby())
+    {
+        m_babyTimer = std::max(0.0f, m_babyTimer - BABY_SECONDS * 0.1f);
+        return true;
+    }
+
+    if (m_breedTimer > 0.0f || inLove()) return false;
+
+    m_loveTimer = LOVE_SECONDS;
+    emit(t.voice, 0.7f, 1.15f);
+    return true;
+}
+
+void Mob::onBred()
+{
+    m_loveTimer = 0.0f;
+    m_breedTimer = BREEDING_COOLDOWN;
 }
 
 bool Mob::takeDeathReport()
@@ -61,14 +89,13 @@ void Mob::emit(Sound id, float volume, float pitch)
 
 bool Mob::collidesAt(const World& world, const glm::vec3& feet) const
 {
-    const MobType& t = type();
-    const float half = t.width * 0.5f;
+    const float half = width() * 0.5f;
     constexpr float EPS = 0.0001f;
 
     const int minX = static_cast<int>(std::floor(feet.x - half));
     const int maxX = static_cast<int>(std::floor(feet.x + half - EPS));
     const int minY = static_cast<int>(std::floor(feet.y));
-    const int maxY = static_cast<int>(std::floor(feet.y + t.height - EPS));
+    const int maxY = static_cast<int>(std::floor(feet.y + height() - EPS));
     const int minZ = static_cast<int>(std::floor(feet.z - half));
     const int maxZ = static_cast<int>(std::floor(feet.z + half - EPS));
 
@@ -157,6 +184,9 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
     const MobType& t = type();
 
     if (m_hurtFlash > 0.0f) m_hurtFlash = std::max(0.0f, m_hurtFlash - deltaTime);
+    if (m_loveTimer > 0.0f) m_loveTimer = std::max(0.0f, m_loveTimer - deltaTime);
+    if (m_breedTimer > 0.0f) m_breedTimer = std::max(0.0f, m_breedTimer - deltaTime);
+    if (m_babyTimer > 0.0f) m_babyTimer = std::max(0.0f, m_babyTimer - deltaTime);
 
     if (!alive())
     {
@@ -229,7 +259,7 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
     {
         const glm::vec3 toPlayer = playerPosition - m_position;
         const float flat = glm::length(glm::vec3(toPlayer.x, 0.0f, toPlayer.z));
-        const float reach = t.attackReach + t.width * 0.5f;
+        const float reach = t.attackReach + width() * 0.5f;
         const bool levelWith = std::fabs(toPlayer.y) < std::max(t.height, 1.8f);
 
         if (flat < reach && levelWith)

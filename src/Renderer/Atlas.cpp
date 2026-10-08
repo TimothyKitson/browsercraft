@@ -1014,6 +1014,147 @@ namespace
     const Color BIRCH_TINT{ 128, 167, 85, 255 };
     const Color WATER_TINT{ 63, 118, 228, 255 };
 
+    // --- items -----------------------------------------------------------
+    //
+    // Items are sprites on a transparent tile rather than block faces, so
+    // they are drawn rather than textured: a shape, a darker outline, and
+    // a highlight down one side. At sixteen pixels that is as much as
+    // reads anyway.
+
+    // Rounds off a blob by only keeping pixels inside an ellipse.
+    void paintBlob(Tile& t, int cx, int cy, int rx, int ry, Color fill, Color edge)
+    {
+        for (int y = cy - ry; y <= cy + ry; ++y)
+            for (int x = cx - rx; x <= cx + rx; ++x)
+            {
+                const float dx = static_cast<float>(x - cx) / std::max(1, rx);
+                const float dy = static_cast<float>(y - cy) / std::max(1, ry);
+                const float d = dx * dx + dy * dy;
+                if (d > 1.0f) continue;
+                t.set(x, y, d > 0.55f ? edge : fill);
+            }
+    }
+
+    // One stalk of grain: a stem with grains stepped out either side.
+    void paintStalk(Tile& t, int x, int top, int bottom, Color stem, Color grain)
+    {
+        for (int y = top; y <= bottom; ++y) t.set(x, y, stem);
+        for (int y = top + 1; y < bottom - 1; y += 2)
+        {
+            t.set(x - 1, y, grain);
+            t.set(x + 1, y + 1, grain);
+        }
+    }
+
+    void paintItemWheatSeeds(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        const Color seed{ 142, 176, 74 };
+        const Color dark{ 104, 134, 54 };
+        for (int i = 0; i < 6; ++i)
+        {
+            const int cx = 4 + static_cast<int>(hash2(i, 0, 401) * 8.0f);
+            const int cy = 4 + static_cast<int>(hash2(i, 1, 401) * 8.0f);
+            paintBlob(t, cx, cy, 1, 1, seed, dark);
+        }
+    }
+
+    void paintItemWheat(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        const Color stem{ 150, 128, 48 };
+        const Color grain{ 222, 196, 96 };
+        paintStalk(t, 5, 3, 13, stem, grain);
+        paintStalk(t, 8, 2, 13, stem, grain);
+        paintStalk(t, 11, 4, 13, stem, grain);
+    }
+
+    void paintItemLeather(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        paintBlob(t, 8, 8, 6, 5, Color{ 166, 118, 72 }, Color{ 124, 84, 50 });
+        t.speckle(8, 402);
+    }
+
+    // Raw meat: a pale fatty edge around a red middle, with a bone for
+    // the cuts that have one.
+    void paintMeat(Tile& t, Color flesh, Color fat, bool bone, int salt)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        paintBlob(t, 8, 9, 6, 5, flesh, shade(flesh, -40));
+        for (int x = 3; x <= 13; ++x)
+            if (hash2(x, 0, salt) > 0.45f) t.set(x, 5 + static_cast<int>(hash2(x, 1, salt) * 2.0f), fat);
+        if (bone)
+        {
+            for (int y = 2; y <= 6; ++y) t.set(8, y, Color{ 232, 228, 212 });
+            t.set(7, 2, Color{ 232, 228, 212 });
+            t.set(9, 2, Color{ 232, 228, 212 });
+        }
+        t.speckle(6, salt + 1);
+    }
+
+    void paintItemRawBeef(Tile& t) { paintMeat(t, Color{ 186, 70, 64 }, Color{ 226, 182, 170 }, false, 410); }
+    void paintItemRawPork(Tile& t) { paintMeat(t, Color{ 226, 140, 136 }, Color{ 242, 212, 206 }, false, 420); }
+    void paintItemRawChicken(Tile& t) { paintMeat(t, Color{ 226, 176, 150 }, Color{ 240, 216, 196 }, true, 430); }
+    void paintItemRawMutton(Tile& t) { paintMeat(t, Color{ 198, 96, 86 }, Color{ 232, 196, 184 }, true, 440); }
+
+    void paintItemFeather(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        const Color quill{ 196, 190, 176 };
+        const Color vane{ 240, 240, 236 };
+        for (int i = 0; i < 11; ++i)
+        {
+            const int x = 4 + i;
+            const int y = 12 - i;
+            t.set(x, y, quill);
+            if (i > 1 && i < 9)
+            {
+                t.set(x - 1, y, vane);
+                t.set(x, y + 1, vane);
+                if (i % 2 == 0) t.set(x - 2, y + 1, vane);
+            }
+        }
+    }
+
+    void paintItemBone(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        const Color bone{ 238, 236, 222 };
+        const Color edge{ 198, 194, 178 };
+        for (int i = 3; i <= 12; ++i) { t.set(i, 8, bone); t.set(i, 9, edge); }
+        for (int end = 0; end < 2; ++end)
+        {
+            const int x = end == 0 ? 2 : 13;
+            paintBlob(t, x, 7, 1, 1, bone, edge);
+            paintBlob(t, x, 10, 1, 1, bone, edge);
+        }
+    }
+
+    void paintItemString(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        const Color thread{ 236, 236, 236 };
+        for (int y = 2; y <= 13; ++y)
+        {
+            const int x = 8 + static_cast<int>(std::sin(y * 0.9f) * 3.0f);
+            t.set(x, y, thread);
+            t.set(x + 1, y, shade(thread, -40));
+        }
+    }
+
+    void paintItemGunpowder(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        paintBlob(t, 8, 9, 5, 4, Color{ 108, 108, 108 }, Color{ 72, 72, 72 });
+        for (int i = 0; i < 10; ++i)
+        {
+            const int x = 4 + static_cast<int>(hash2(i, 0, 450) * 9.0f);
+            const int y = 6 + static_cast<int>(hash2(i, 1, 450) * 7.0f);
+            t.set(x, y, Color{ 54, 54, 54 });
+        }
+    }
+
     struct TileEntry
     {
         int index;
@@ -1056,6 +1197,17 @@ namespace
         { Tiles::PumpkinSide, paintPumpkinSide },
         { Tiles::PumpkinTop, paintPumpkinTop },
         { Tiles::Wool, paintWool },
+        { Tiles::ItemWheatSeeds, paintItemWheatSeeds },
+        { Tiles::ItemWheat, paintItemWheat },
+        { Tiles::ItemLeather, paintItemLeather },
+        { Tiles::ItemRawBeef, paintItemRawBeef },
+        { Tiles::ItemRawPork, paintItemRawPork },
+        { Tiles::ItemRawChicken, paintItemRawChicken },
+        { Tiles::ItemRawMutton, paintItemRawMutton },
+        { Tiles::ItemFeather, paintItemFeather },
+        { Tiles::ItemBone, paintItemBone },
+        { Tiles::ItemString, paintItemString },
+        { Tiles::ItemGunpowder, paintItemGunpowder },
         { Tiles::Torch, paintTorch },
         { Tiles::BirchLogSide, paintBirchLogSide },
         { Tiles::BirchLogTop, paintBirchLogTop },

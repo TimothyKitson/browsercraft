@@ -102,7 +102,7 @@ namespace
     const glm::vec4 DIM_TEXT(0.72f, 0.74f, 0.78f, 1.0f);
 
     // What a block turns into when you mine it.
-    BlockId blockDrop(BlockId id)
+    StackId blockDrop(BlockId id)
     {
         switch (id)
         {
@@ -112,6 +112,11 @@ namespace
             case Blocks::Leaves:
             case Blocks::BirchLeaves: return Blocks::Air; // leaves drop nothing
             case Blocks::Ice: return Blocks::Air;
+            // Where wheat comes from, until there is farmland to grow it
+            // on: grass gives up its seeds the way it does in Minecraft,
+            // and three of them make a wheat in the crafting grid. That
+            // second step is the stopgap and goes when farming lands.
+            case Blocks::TallGrass: return Items::WheatSeeds;
             default: return id;
         }
     }
@@ -185,6 +190,61 @@ const PlayerSkin& Application::activeSkin() const
         return m_customSkin;
     const int index = std::clamp(m_skinVariant, 0, static_cast<int>(m_skins.size()) - 1);
     return *m_skins[index];
+}
+
+// The item half of the inventory, which level.dat has no room for.
+// One line per slot: index, id, count.
+void Application::saveHeldItems()
+{
+    std::error_code ec;
+    std::filesystem::create_directories(m_savePath, ec);
+
+    const std::string path = m_savePath + "/items.dat";
+
+    int held = 0;
+    for (int i = 0; i < Inventory::TOTAL_SLOTS; ++i)
+        if (isItem(m_inventory.slot(i).id) && m_inventory.slot(i).count > 0) ++held;
+
+    if (held == 0)
+    {
+        // Nothing to keep, and a stale file would put back what was
+        // spent since.
+        std::filesystem::remove(path, ec);
+        return;
+    }
+
+    std::FILE* file = std::fopen(path.c_str(), "wb");
+    if (!file) return;
+
+    for (int i = 0; i < Inventory::TOTAL_SLOTS; ++i)
+    {
+        const ItemStack& stack = m_inventory.slot(i);
+        if (!isItem(stack.id) || stack.count <= 0) continue;
+        std::fprintf(file, "%d %u %d\n", i, static_cast<unsigned>(stack.id), stack.count);
+    }
+
+    std::fclose(file);
+}
+
+void Application::loadHeldItems()
+{
+    std::FILE* file = std::fopen((m_savePath + "/items.dat").c_str(), "rb");
+    if (!file) return;
+
+    char line[128];
+    while (std::fgets(line, sizeof(line), file))
+    {
+        int slot = 0, count = 0;
+        unsigned id = 0;
+        if (std::sscanf(line, "%d %u %d", &slot, &id, &count) != 3) continue;
+        if (slot < 0 || slot >= Inventory::TOTAL_SLOTS || count <= 0) continue;
+        if (!isItem(static_cast<StackId>(id))) continue;
+
+        m_inventory.slot(slot).id = static_cast<StackId>(id);
+        m_inventory.slot(slot).count = std::min(count, maxStackOf(static_cast<StackId>(id)));
+    }
+
+    std::fclose(file);
 }
 
 void Application::flushSaveStorage()
@@ -489,6 +549,8 @@ void Application::loadLevel()
             m_inventory.slot(static_cast<int>(i)).id = state.inventory[i].first;
             m_inventory.slot(static_cast<int>(i)).count = state.inventory[i].second;
         }
+
+        loadHeldItems();
     }
     else
     {
@@ -521,13 +583,21 @@ void Application::saveLevel()
     state.dead = m_hardcoreDeath;
     state.selectedSlot = m_inventory.selectedSlot();
 
+    // level.dat stores a slot's id in a byte, which is all a block id
+    // ever needs and one short of what an item needs. Rather than let a
+    // wheat come back as a stone, the item slots are written as empty
+    // and listed in a file of their own beside it. This whole dance
+    // disappears the day LevelState's id widens to sixteen bits.
     for (int i = 0; i < Inventory::TOTAL_SLOTS; ++i)
     {
         const ItemStack& stack = m_inventory.slot(i);
-        state.inventory.emplace_back(stack.id, static_cast<uint16_t>(std::max(0, stack.count)));
+        const uint8_t storable = isItem(stack.id) ? uint8_t{ Blocks::Air }
+                                                  : static_cast<uint8_t>(stack.id);
+        state.inventory.emplace_back(storable, static_cast<uint16_t>(std::max(0, stack.count)));
     }
 
     WorldSave::saveLevel(m_savePath, state);
+    saveHeldItems();
     m_world->saveAll();
 
 #ifdef __EMSCRIPTEN__
@@ -833,6 +903,31 @@ bool Application::frame()
             m_player.velocity = glm::vec3(0.0f);
             m_camera.position = m_player.eyePosition();
             m_camera.setOrientation(90.0f, -4.0f);
+
+            // A breeding pair and a calf beside the line-up, plus wheat
+            // in hand, so one screenshot covers the lot.
+            const glm::vec3 pairAt(centreX + 3.5f, static_cast<float>(baseY), centreZ + 2.5f);
+            m_entities.spawnAt(MobId::Cow, pairAt, *m_world);
+            m_entities.spawnAt(MobId::Cow, pairAt + glm::vec3(1.2f, 0.0f, 0.0f), *m_world);
+            m_entities.spawnAt(MobId::Cow, pairAt + glm::vec3(2.6f, 0.0f, 0.0f), *m_world, true);
+
+            // Feed the pair here rather than waiting for a right-click,
+            // so an automated run can show a calf being born.
+            for (Mob& mob : m_entities.mobs())
+                if (mob.typeId() == MobId::Cow && !mob.baby()) mob.feed(Items::Wheat);
+
+            // A few on the ground too: a dropped item is drawn from its
+            // own sprite rather than from block faces, and that is worth
+            // seeing rather than assuming.
+            const glm::vec3 litter(centreX - 2.5f, baseY + 1.0f, centreZ - 4.0f);
+            m_drops.spawn(litter, Items::Wheat, 1);
+            m_drops.spawn(litter + glm::vec3(0.8f, 0.0f, 0.0f), Items::Bone, 1);
+            m_drops.spawn(litter + glm::vec3(1.6f, 0.0f, 0.0f), Items::Leather, 1);
+            m_drops.spawn(litter + glm::vec3(2.4f, 0.0f, 0.0f), Blocks::Cobblestone, 1);
+
+            m_inventory.add(Items::Wheat, 16);
+            m_inventory.add(Items::Leather, 3);
+            m_inventory.add(Items::Bone, 5);
 
             std::printf("[test] spawned %d of %d species on a stage at y=%d\n",
                         placed, mobTypeCount(), baseY);
@@ -1488,7 +1583,7 @@ void Application::updateMining(float deltaTime)
 
     if (m_breakProgress >= 1.0f)
     {
-        const BlockId drop = blockDrop(id);
+        const StackId drop = blockDrop(id);
         m_particles.spawnBlockBreak(hit.block, id);
         m_world->setBlock(hit.block.x, hit.block.y, hit.block.z, Blocks::Air);
         m_net.onLocalBlockChange(hit.block.x, hit.block.y, hit.block.z, Blocks::Air);
@@ -1536,6 +1631,24 @@ void Application::handlePlacement()
     ItemStack& stack = m_inventory.selected();
     if (stack.empty()) return;
 
+    // Feeding comes first: an animal in front of you takes the wheat
+    // rather than the block landing behind it.
+    if (isBreedingFood(stack.id) &&
+        m_entities.feed(m_camera.position, m_camera.front, ATTACK_REACH, stack.id))
+    {
+        if (!m_player.creative())
+        {
+            stack.count -= 1;
+            if (stack.count <= 0) stack.clear();
+        }
+        m_audio.play(Sound::Pickup, 0.5f, 1.4f);
+        return;
+    }
+
+    // Items are not blocks and never become one: a handful of wheat
+    // cannot be set down in the world the way a plank can.
+    if (isItem(stack.id)) return;
+
     const RaycastHit hit = m_world->raycast(m_camera.position, m_camera.front, REACH_DISTANCE);
     if (!hit.hit) return;
 
@@ -1549,11 +1662,12 @@ void Application::handlePlacement()
         box.max.x > target.x && box.min.x < target.x + 1 &&
         box.max.y > target.y && box.min.y < target.y + 1 &&
         box.max.z > target.z && box.min.z < target.z + 1;
-    if (overlapsPlayer && isSolid(stack.id)) return;
+    const BlockId placing = asBlock(stack.id);
+    if (overlapsPlayer && isSolid(placing)) return;
 
-    m_world->setBlock(target.x, target.y, target.z, stack.id);
-    m_net.onLocalBlockChange(target.x, target.y, target.z, stack.id);
-    m_audio.playPlace(stack.id);
+    m_world->setBlock(target.x, target.y, target.z, placing);
+    m_net.onLocalBlockChange(target.x, target.y, target.z, placing);
+    m_audio.playPlace(placing);
 
     if (!m_player.creative())
     {
@@ -2018,11 +2132,16 @@ void Application::updateMobs(float deltaTime)
     for (const EntityManager::Death& death : m_entities.drainDeaths())
     {
         const MobType& type = mobType(death.type);
-        if (type.drop == Blocks::Air || type.dropCount <= 0) continue;
+        const glm::vec3 where = death.position + glm::vec3(0.0f, type.height * 0.5f, 0.0f);
 
-        for (int i = 0; i < type.dropCount; ++i)
-            m_drops.spawn(death.position + glm::vec3(0.0f, type.height * 0.5f, 0.0f),
-                          type.drop, 1);
+        for (int i = 0; i < type.dropCount; ++i) m_drops.spawn(where, type.drop, 1);
+        for (int i = 0; i < type.secondDropCount; ++i) m_drops.spawn(where, type.secondDrop, 1);
+    }
+
+    for (const glm::vec3& born : m_entities.drainBirths())
+    {
+        (void)born;
+        m_audio.play(Sound::Pickup, 0.6f, 1.6f);
     }
 }
 
@@ -2137,7 +2256,7 @@ void Application::renderHud()
         const ItemStack& stack = m_inventory.slot(i);
         if (stack.empty()) continue;
 
-        const TileUV uv = tileUV(blockInfo(stack.id).tileTop);
+        const TileUV uv = tileUV(atlasTileFor(stack.id));
         m_ui.texturedQuad(m_atlas.textureId(), slotX + 5.0f, barY + 5.0f, SLOT_SIZE - 10.0f, SLOT_SIZE - 10.0f,
                           uv.u0, uv.vTop, uv.u1, uv.vBottom, glm::vec4(1.0f));
 
@@ -2155,7 +2274,7 @@ void Application::renderHud()
     const ItemStack& held = m_inventory.selected();
     if (!held.empty())
     {
-        const std::string name = blockInfo(held.id).name;
+        const std::string name = displayName(held.id);
         m_ui.textWithShadow(name, cx - UIRenderer::textWidth(name, 2.2f) * 0.5f, barY - 30.0f, 2.2f, TEXT_COLOR);
     }
 
@@ -2891,9 +3010,10 @@ void Application::renderDebugOverlay()
 
     if (!minimal)
     {
-        std::snprintf(buffer, sizeof(buffer), "C: %d  E: %d  D: %d  M: %d  JOBS: %d",
+        std::snprintf(buffer, sizeof(buffer), "C: %d  E: %d  D: %d  M: %d (%d YOUNG)  JOBS: %d",
                       m_world->loadedChunks(), m_particles.count(),
-                      m_drops.count(), m_entities.count(), m_world->pendingJobs());
+                      m_drops.count(), m_entities.count(), m_entities.youngCount(),
+                      m_world->pendingJobs());
         left(buffer);
         left("");
     }

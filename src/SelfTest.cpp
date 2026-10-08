@@ -6,6 +6,7 @@
 
 #include "Player/Inventory.h"
 #include "Game/Crafting.h"
+#include "Game/Items.h"
 #include "Core/KeyBindings.h"
 #include "Entity/PlayerAnimation.h"
 #include "Entity/PlayerModel.h"
@@ -635,7 +636,8 @@ namespace
         sheep.damage(1000, glm::vec3(0.0f, 0.0f, 1.0f));
         check(sheep.takeDeathReport(), "a dead one reports once");
         check(!sheep.takeDeathReport(), "and only once");
-        check(mobType(MobId::Sheep).drop == Blocks::Wool, "a sheep leaves its wool");
+        check(mobType(MobId::Sheep).drop == Items::RawMutton, "a sheep leaves mutton");
+        check(mobType(MobId::Sheep).secondDrop == Blocks::Wool, "and its wool");
 
         // Knockback pushes away from whatever hit it, and upward.
         Mob pig(MobId::Pig, glm::vec3(0.0f, 64.0f, 0.0f), 5u);
@@ -675,6 +677,182 @@ namespace
         Mob* living = herd.pick(eye, ahead, 20.0f);
         check(living != nullptr && living->position().z == 12.0f,
               "a dead one is skipped for the live one behind it");
+    }
+
+    // --- items ----------------------------------------------------------
+
+    void testItems()
+    {
+        section("items");
+
+        // The whole design rests on the two id ranges never meeting. A
+        // block id is a byte, and the items begin one past the largest
+        // value a byte can hold.
+        check(Items::FIRST == 256, "items start past every possible block id");
+        check(static_cast<int>(Blocks::Count) < Items::FIRST, "and no block reaches them");
+        check(!isItem(Blocks::Air) && !isItem(Blocks::Stone), "blocks are not items");
+        check(isBlockStack(Blocks::Stone), "and blocks read as blocks");
+        check(isItem(Items::Wheat) && isItem(Items::Gunpowder), "items are items");
+        check(!isBlockStack(Items::Wheat), "and items are not blocks");
+        check(!isItem(Items::Count), "nothing past the last item is one");
+
+        // Narrowing an item to a BlockId is exactly the mistake this
+        // range is meant to make impossible to miss.
+        check(static_cast<BlockId>(Items::Wheat) != Items::Wheat,
+              "an item does not survive being squeezed into a block id");
+
+        for (StackId id = Items::FIRST; id < Items::Count; ++id)
+        {
+            const ItemInfo& info = itemInfo(id);
+            const std::string what = info.name;
+            check(info.name && *info.name, "item " + std::to_string(id) + " is named");
+            check(info.maxStack > 0 && info.maxStack <= Inventory::MAX_STACK,
+                  what + " stacks to something sensible");
+            check(info.tile >= Tiles::ItemFirst && info.tile < Tiles::ItemTileEnd,
+                  what + " has a tile of its own");
+        }
+
+        // Every item needs its own sprite, or two of them are the same
+        // picture in the hotbar.
+        for (StackId a = Items::FIRST; a < Items::Count; ++a)
+            for (StackId b = a + 1; b < Items::Count; ++b)
+                check(itemInfo(a).tile != itemInfo(b).tile,
+                      std::string(itemInfo(a).name) + " and " + itemInfo(b).name +
+                          " do not share a sprite");
+
+        // The three lookups that let the inventory stay ignorant of which
+        // it is holding.
+        check(std::string(displayName(Items::Wheat)) == "Wheat", "an item knows its name");
+        check(displayName(Blocks::Stone) != nullptr, "and so does a block");
+        check(atlasTileFor(Items::Bone) == Tiles::ItemBone, "an item draws its sprite");
+        check(atlasTileFor(Blocks::Stone) == blockInfo(Blocks::Stone).tileTop,
+              "a block still draws its top face");
+        check(maxStackOf(Items::Wheat) == 64 && maxStackOf(Blocks::Stone) == 64,
+              "both stack to sixty-four");
+
+        check(isBreedingFood(Items::Wheat), "wheat is what animals want");
+        check(!isBreedingFood(Items::WheatSeeds), "seeds are not");
+        check(!isBreedingFood(Blocks::Grass), "nor is grass");
+    }
+
+    void testItemsInInventory()
+    {
+        section("items: inventory");
+
+        Inventory inventory;
+        check(inventory.add(Items::Wheat, 10) == 0, "wheat goes in");
+        check(inventory.countOf(Items::Wheat) == 10, "and is counted");
+        check(inventory.countOf(Blocks::Stone) == 0, "without becoming stone");
+
+        inventory.add(Items::Wheat, 60);
+        check(inventory.countOf(Items::Wheat) == 70, "a second handful tops up the stack");
+        check(inventory.slot(0).count == Inventory::MAX_STACK, "to sixty-four");
+        check(inventory.slot(1).count == 6, "and spills the rest");
+
+        // An item and a block that happen to be adjacent numbers must not
+        // pool: Items::WheatSeeds is 256 and would be Air at a byte wide.
+        Inventory mixed;
+        mixed.add(Items::WheatSeeds, 5);
+        mixed.add(Blocks::Stone, 5);
+        check(mixed.countOf(Items::WheatSeeds) == 5, "seeds stay seeds");
+        check(mixed.countOf(Blocks::Stone) == 5, "and stone stays stone");
+        check(mixed.slot(0).id != mixed.slot(1).id, "in slots of their own");
+    }
+
+    void testWheatRecipe()
+    {
+        section("items: crafting");
+
+        // Three seeds make a wheat. Not a Minecraft recipe -- a stopgap
+        // until crops can be planted -- but it is what makes breeding
+        // reachable, so it is worth knowing when it breaks.
+        ItemStack grid[9];
+        CraftOutput none = Crafting::match(grid, 2);
+        check(!none.valid(), "an empty grid makes nothing");
+
+        // The grid is addressed as 3x3 even when only its top-left 2x2
+        // is reachable, so the usable cells are 0, 1, 3 and 4.
+        for (int i : { 0, 1, 3 }) { grid[i].id = Items::WheatSeeds; grid[i].count = 1; }
+        const CraftOutput wheat = Crafting::match(grid, 2);
+        check(wheat.valid(), "three seeds make something");
+        check(wheat.id == Items::Wheat && wheat.count == 1, "and it is one wheat");
+
+        // Two is not enough, and the recipe is shapeless so where they
+        // sit must not matter.
+        ItemStack two[9];
+        for (int i : { 0, 1 }) { two[i].id = Items::WheatSeeds; two[i].count = 1; }
+        check(!Crafting::match(two, 2).valid(), "two seeds make nothing");
+
+        ItemStack scattered[9];
+        for (int i : { 1, 3, 4 }) { scattered[i].id = Items::WheatSeeds; scattered[i].count = 1; }
+        check(Crafting::match(scattered, 2).valid(), "and it does not matter where they sit");
+    }
+
+    void testBreeding()
+    {
+        section("items: breeding");
+
+        Mob cow(MobId::Cow, glm::vec3(0.0f, 64.0f, 0.0f), 11u);
+        check(!cow.baby(), "a spawned cow is grown");
+        check(!cow.inLove(), "and not yet interested");
+        check(cow.canBreed(), "but could be");
+
+        check(!cow.feed(Blocks::Grass), "it will not take grass");
+        check(!cow.feed(Items::WheatSeeds), "nor seeds");
+        check(cow.feed(Items::Wheat), "it takes wheat");
+        check(cow.inLove(), "and falls in love");
+        check(!cow.feed(Items::Wheat), "a second helping is refused");
+
+        // Afterwards it has to wait before it can go again, which is what
+        // stops one stack of wheat filling a field.
+        cow.onBred();
+        check(!cow.inLove(), "breeding ends the mood");
+        check(!cow.canBreed(), "and starts a cooldown");
+        check(!cow.feed(Items::Wheat), "so more wheat does nothing yet");
+
+        // A calf is half size, cannot breed, and eats to grow up faster.
+        Mob calf(MobId::Cow, glm::vec3(0.0f, 64.0f, 0.0f), 12u, true);
+        check(calf.baby(), "a calf is a baby");
+        check(!calf.canBreed(), "and far too young for that");
+        check(std::fabs(calf.scale() - Mob::BABY_SCALE) < 0.001f, "it is half size");
+        check(std::fabs(calf.width() - mobType(MobId::Cow).width * Mob::BABY_SCALE) < 0.001f,
+              "with a hitbox to match");
+        check(calf.height() < mobType(MobId::Cow).height, "and cannot be hit as high up");
+        check(calf.feed(Items::Wheat), "it will still eat");
+        check(!calf.inLove(), "but that hurries it along rather than pairing it off");
+
+        // Monsters are not tempted by anything.
+        Mob zombie(MobId::Zombie, glm::vec3(0.0f, 64.0f, 0.0f), 13u);
+        check(mobType(MobId::Zombie).breedingFood == Blocks::Air, "a zombie wants no food");
+        check(!zombie.feed(Items::Wheat), "and refuses wheat");
+    }
+
+    void testMobDrops()
+    {
+        section("items: mob drops");
+
+        struct Expected { MobId who; StackId first; StackId second; };
+        const Expected DROPS[] = {
+            { MobId::Cow,      Items::RawBeef,      Items::Leather },
+            { MobId::Pig,      Items::RawPorkchop,  Blocks::Air },
+            { MobId::Chicken,  Items::RawChicken,   Items::Feather },
+            { MobId::Sheep,    Items::RawMutton,    Blocks::Wool },
+            { MobId::Skeleton, Items::Bone,         Blocks::Air },
+            { MobId::Creeper,  Items::Gunpowder,    Blocks::Air },
+            { MobId::Spider,   Items::StringItem,   Blocks::Air },
+            { MobId::Zombie,   Blocks::Air,         Blocks::Air },
+        };
+
+        for (const Expected& e : DROPS)
+        {
+            const MobType& t = mobType(e.who);
+            const std::string who = t.name;
+            check(t.drop == e.first, who + " drops what it should");
+            check(t.secondDrop == e.second, who + " drops its second thing too");
+            if (t.drop != Blocks::Air) check(t.dropCount > 0, who + " drops at least one");
+            if (t.secondDrop != Blocks::Air)
+                check(t.secondDropCount > 0, who + " drops at least one of the second");
+        }
     }
 
     void testPlayerImmunity()
@@ -726,6 +904,11 @@ int runSelfTest()
     testMobGeometry();
     testMobDamage();
     testMobCombat();
+    testItems();
+    testItemsInInventory();
+    testWheatRecipe();
+    testBreeding();
+    testMobDrops();
     testPlayerImmunity();
 
     std::printf("\n%d checks, %d failed\n", g_checks, g_failures);

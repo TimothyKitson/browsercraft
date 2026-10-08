@@ -31,7 +31,7 @@ struct MobStrike
 class Mob
 {
 public:
-    Mob(MobId type, glm::vec3 feetPosition, uint32_t seed);
+    Mob(MobId type, glm::vec3 feetPosition, uint32_t seed, bool baby = false);
 
     void update(float deltaTime, const World& world, const glm::vec3& playerPosition);
 
@@ -64,6 +64,29 @@ public:
     // behind cannot wait for the removal.
     bool takeDeathReport();
 
+    // --- breeding ---
+    //
+    // A fed animal is "in love" for half a minute. Two of the same kind
+    // in love and standing close enough pair off, and one of them
+    // reports the birth.
+    static constexpr float LOVE_SECONDS = 30.0f;
+    static constexpr float BREEDING_COOLDOWN = 60.0f;
+    static constexpr float BABY_SECONDS = 300.0f;   // five minutes to grow up
+    static constexpr float BABY_SCALE = 0.5f;
+
+    bool baby() const { return m_babyTimer > 0.0f; }
+    bool inLove() const { return m_loveTimer > 0.0f; }
+    bool canBreed() const { return !baby() && m_breedTimer <= 0.0f && alive(); }
+    // Half size while young, which is also what shrinks its hitbox.
+    float scale() const { return baby() ? BABY_SCALE : 1.0f; }
+    float width() const { return type().width * scale(); }
+    float height() const { return type().height * scale(); }
+
+    // Accepts the food and falls in love. False if it is not interested.
+    bool feed(StackId food);
+    // Called on both parents once they have paired off.
+    void onBred();
+
 private:
     float random01();
     void emit(Sound id, float volume, float pitch);
@@ -87,6 +110,9 @@ private:
     float m_stepDistance = 0.0f;
     float m_gait = 0.0f;
     float m_gaitAmount = 0.0f;
+    float m_loveTimer = 0.0f;
+    float m_breedTimer = 0.0f;
+    float m_babyTimer = 0.0f;
     float m_hurtFlash = 0.0f;
     float m_removeTimer = 0.6f;
     bool m_deathReported = false;

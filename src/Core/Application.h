@@ -321,7 +321,7 @@ private:
     void renderPauseMenu();
     void renderDeathScreen();
     void renderInventoryScreen();
-    void drawItem(float x, float y, float size, BlockId id, int count, const glm::vec4& tint);
+    void drawItem(float x, float y, float size, StackId id, int count, const glm::vec4& tint);
     void drawPlayerDoll(const PlayerSkin& skin, float x, float y, float unit);
     // Rebuilds every painted character at the current model type.
     void rebuildSkinLibrary();
@@ -371,6 +371,10 @@ private:
     void deleteSavedWorld();
     void loadLevel();
     void saveLevel();
+    // Items cannot fit in level.dat's byte-wide slot ids, so they
+    // travel in a small file of their own next to it.
+    void saveHeldItems();
+    void loadHeldItems();
 
     // A real world generated behind the menus, with the camera slowly
     // orbiting it -- the same trick as Minecraft's title panorama, except

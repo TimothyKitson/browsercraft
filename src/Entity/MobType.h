@@ -1,5 +1,6 @@
 #pragma once
 #include "Audio/AudioEngine.h"
+#include "Game/Items.h"
 #include <cstdint>
 #include <glm/glm.hpp>
 #include <vector>
@@ -70,8 +71,14 @@ struct MobType
     // What it leaves behind. Most of Minecraft's mob drops are items --
     // leather, bone, string, gunpowder -- and this engine has only
     // blocks so far, so most species drop nothing until it has items.
-    BlockId drop = Blocks::Air;
+    StackId drop = Blocks::Air;
     int dropCount = 0;
+    // A cow gives beef and leather, a sheep mutton and wool.
+    StackId secondDrop = Blocks::Air;
+    int secondDropCount = 0;
+
+    // Animals follow and breed for this; zero means nothing tempts it.
+    StackId breedingFood = Blocks::Air;
 
     // How often an idle noise plays, in seconds, picked randomly in range.
     float ambientMinSeconds = 6.0f;
