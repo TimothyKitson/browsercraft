@@ -38,6 +38,74 @@ float Mob::random01()
     return static_cast<float>(m_rng & 0xFFFFFF) / static_cast<float>(0x1000000);
 }
 
+bool Mob::wantsPath() const
+{
+    // Only something that is hunting asks. A wandering animal steers
+    // round what is in front of it instead, which costs nothing.
+    return alive() && m_chasing && m_repathTimer <= 0.0f;
+}
+
+void Mob::setPath(std::vector<glm::ivec3> path, const glm::ivec3& goal)
+{
+    m_path = std::move(path);
+    m_pathIndex = 0;
+    m_pathGoal = goal;
+    m_repathTimer = REPATH_INTERVAL;
+}
+
+bool Mob::followPath()
+{
+    while (m_pathIndex < m_path.size())
+    {
+        const glm::vec3 waypoint(m_path[m_pathIndex].x + 0.5f,
+                                 static_cast<float>(m_path[m_pathIndex].y),
+                                 m_path[m_pathIndex].z + 0.5f);
+
+        const glm::vec3 toward = waypoint - m_position;
+        const float flat = glm::length(glm::vec3(toward.x, 0.0f, toward.z));
+
+        // Close enough to call it reached, and on to the next.
+        if (flat < 0.55f) { ++m_pathIndex; continue; }
+
+        m_goalYaw = glm::degrees(std::atan2(toward.z, toward.x));
+        m_moving = true;
+        return true;
+    }
+
+    m_path.clear();
+    m_pathIndex = 0;
+    return false;
+}
+
+// Blocked. Rather than re-rolling a heading at random and walking into
+// the same wall again, try turning by steps until something is clear.
+void Mob::steerAroundObstacle(const World& world)
+{
+    const float reach = std::max(0.6f, width());
+
+    for (int turn = 1; turn <= 4; ++turn)
+    {
+        for (int side = 0; side < 2; ++side)
+        {
+            const float candidate = m_yaw + (side == 0 ? 1.0f : -1.0f) * turn * 35.0f;
+            const float radians = glm::radians(candidate);
+            const glm::vec3 ahead = m_position + glm::vec3(std::cos(radians), 0.0f,
+                                                           std::sin(radians)) * reach;
+
+            if (collidesAt(world, ahead)) continue;
+
+            m_goalYaw = PlayerAnimation::wrapDegrees(candidate);
+            m_goalTimer = 1.5f;
+            m_moving = true;
+            return;
+        }
+    }
+
+    // Hemmed in on every side: turn round and hope.
+    m_goalYaw = PlayerAnimation::wrapDegrees(m_yaw + 180.0f);
+    m_goalTimer = 1.0f;
+}
+
 bool Mob::feed(StackId food)
 {
     const MobType& t = type();
@@ -162,8 +230,11 @@ void Mob::chooseNewGoal(const glm::vec3& playerPosition)
         m_goalYaw = glm::degrees(std::atan2(toPlayer.z, toPlayer.x));
         m_moving = true;
         m_goalTimer = 0.5f;
+        m_chasing = true;
         return;
     }
+
+    m_chasing = false;
 
     if (t.spawnClass == SpawnClass::Passive && distance < FLEE_RANGE && distance > 0.001f)
     {
@@ -194,8 +265,13 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
         return;
     }
 
+    if (m_repathTimer > 0.0f) m_repathTimer = std::max(0.0f, m_repathTimer - deltaTime);
+
     m_goalTimer -= deltaTime;
     if (m_goalTimer <= 0.0f) chooseNewGoal(playerPosition);
+
+    // A route, where there is one, overrules the heading just chosen.
+    followPath();
 
     // Turn towards the goal heading the short way round.
     m_yaw = PlayerAnimation::wrapDegrees(
@@ -220,12 +296,19 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
     moveAxis(world, m_velocity.y * deltaTime, 1);
     moveAxis(world, m_velocity.z * deltaTime, 2);
 
-    // Blocked flat against something: pick a new direction next tick.
+    // Blocked flat against something. Turning until the way is clear is
+    // what stops a mob grinding into the same wall for as long as it can
+    // see you; a random new heading only worked by accident.
     if (m_moving && wasOnGround)
     {
         const glm::vec3 moved = m_position - before;
         if (glm::length(glm::vec3(moved.x, 0.0f, moved.z)) < 0.001f)
-            m_goalTimer = 0.0f;
+        {
+            // Give up on a route that is walking us into something.
+            m_path.clear();
+            m_pathIndex = 0;
+            steerAroundObstacle(world);
+        }
     }
 
     // The walk cycle is driven by ground covered, so the legs stay in

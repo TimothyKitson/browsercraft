@@ -1,5 +1,6 @@
 #include "EntityManager.h"
 #include "World/World.h"
+#include "Pathfinder.h"
 #include <algorithm>
 #include <cmath>
 
@@ -13,6 +14,28 @@ namespace
 
     const MobId PASSIVE_SPECIES[] = { MobId::Sheep, MobId::Pig, MobId::Cow, MobId::Chicken };
     const MobId HOSTILE_SPECIES[] = { MobId::Zombie, MobId::Skeleton, MobId::Creeper, MobId::Spider };
+
+    // The world as the pathfinder sees it: can a mob of this height
+    // stand here, with a floor under it and nothing in the way.
+    struct WorldGround : Pathfinding::Ground
+    {
+        const World* world = nullptr;
+        int clearance = 2;
+
+        bool standable(const glm::ivec3& feet) const override
+        {
+            if (feet.y < 1 || feet.y + clearance >= Chunk::SY) return false;
+            if (!isSolid(world->getBlock(feet.x, feet.y - 1, feet.z))) return false;
+
+            for (int i = 0; i < clearance; ++i)
+            {
+                const BlockId at = world->getBlock(feet.x, feet.y + i, feet.z);
+                // Liquids are not a floor and not worth drowning in.
+                if (isSolid(at) || isLiquid(at)) return false;
+            }
+            return true;
+        }
+    };
 
     // Leaves collide, so a plain "topmost solid block" search stops on
     // the canopy and nothing ever spawns in a forest -- which is most of
@@ -149,12 +172,44 @@ void EntityManager::update(float deltaTime, const World& world,
         m_mobs.end());
 
     pairOffLovers(world);
+    routeChasers(world, playerPosition);
 
     m_spawnTimer -= deltaTime;
     if (m_spawnTimer <= 0.0f)
     {
         m_spawnTimer = SPAWN_INTERVAL;
         trySpawnWave(world, playerPosition, daylight);
+    }
+}
+
+void EntityManager::routeChasers(const World& world, const glm::vec3& playerPosition)
+{
+    const glm::ivec3 goal(static_cast<int>(std::floor(playerPosition.x)),
+                          static_cast<int>(std::floor(playerPosition.y)),
+                          static_cast<int>(std::floor(playerPosition.z)));
+
+    WorldGround ground;
+    ground.world = &world;
+
+    int searches = 0;
+    for (Mob& mob : m_mobs)
+    {
+        if (searches >= PATHS_PER_UPDATE) break;
+        if (!mob.wantsPath()) continue;
+
+        // Close enough to walk straight at, and a route would only get
+        // in the way of actually reaching them.
+        const glm::vec3 apart = playerPosition - mob.position();
+        if (glm::length(glm::vec3(apart.x, 0.0f, apart.z)) < 2.0f) continue;
+
+        ground.clearance = std::max(1, static_cast<int>(std::ceil(mob.height())));
+
+        const glm::ivec3 from(static_cast<int>(std::floor(mob.position().x)),
+                              static_cast<int>(std::floor(mob.position().y)),
+                              static_cast<int>(std::floor(mob.position().z)));
+
+        mob.setPath(Pathfinding::find(ground, from, goal), goal);
+        ++searches;
     }
 }
 

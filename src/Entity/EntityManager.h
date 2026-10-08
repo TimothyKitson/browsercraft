@@ -18,6 +18,10 @@ public:
     static constexpr float SPAWN_MIN_DISTANCE = 22.0f;
     static constexpr float SPAWN_MAX_DISTANCE = 44.0f;
     static constexpr float DESPAWN_DISTANCE = 72.0f;
+    // How many mobs may search for a route in one update. A search is
+    // bounded but not free, and nothing looks different if a zombie
+    // takes another tenth of a second to work out where to go.
+    static constexpr int PATHS_PER_UPDATE = 4;
 
     void update(float deltaTime, const World& world, const glm::vec3& playerPosition,
                 float daylight);
@@ -75,6 +79,9 @@ private:
     std::vector<Death> m_deaths;
     std::vector<glm::vec3> m_births;
     void pairOffLovers(const World& world);
+    // Hands routes to the mobs that asked, newest-hungry first and no
+    // more than a handful a pass.
+    void routeChasers(const World& world, const glm::vec3& playerPosition);
     float m_spawnTimer = 2.0f;
     uint32_t m_rng = 0x9E3779B9u;
 };

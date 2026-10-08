@@ -18,12 +18,14 @@
 #include "Entity/MobSkin.h"
 #include "Entity/MobType.h"
 #include "Entity/EntityManager.h"
+#include "Entity/Pathfinder.h"
 #include "Player/Player.h"
 #include <glm/glm.hpp>
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
 #include <string>
+#include <vector>
 #include <filesystem>
 
 namespace
@@ -906,6 +908,135 @@ namespace
               "a harvest always replaces the seed it cost");
     }
 
+    // --- pathfinding ----------------------------------------------------
+
+    // A map drawn as text, one row per line of z. '.' is floor, '#' is
+    // wall. Everything is at y = 0, which is all a flat test needs.
+    struct DrawnGround : Pathfinding::Ground
+    {
+        std::vector<std::string> rows;
+
+        bool standable(const glm::ivec3& feet) const override
+        {
+            if (feet.y != 0) return false;
+            if (feet.z < 0 || feet.z >= static_cast<int>(rows.size())) return false;
+            const std::string& row = rows[static_cast<size_t>(feet.z)];
+            if (feet.x < 0 || feet.x >= static_cast<int>(row.size())) return false;
+            return row[static_cast<size_t>(feet.x)] != '#';
+        }
+    };
+
+    bool walkable(const DrawnGround& map, const std::vector<glm::ivec3>& path,
+                  const glm::ivec3& start)
+    {
+        glm::ivec3 at = start;
+        for (const glm::ivec3& step : path)
+        {
+            if (std::abs(step.x - at.x) > 1 || std::abs(step.z - at.z) > 1) return false;
+            if (!map.standable(step)) return false;
+            at = step;
+        }
+        return true;
+    }
+
+    void testPathfinding()
+    {
+        section("mobs: pathfinding");
+
+        // Open ground: straight there.
+        DrawnGround open;
+        open.rows = { ".......",
+                      ".......",
+                      ".......",
+                      ".......",
+                      "......." };
+
+        const glm::ivec3 start(0, 0, 2);
+        const glm::ivec3 goal(6, 0, 2);
+        std::vector<glm::ivec3> path = Pathfinding::find(open, start, goal);
+        check(!path.empty(), "it finds a way across open ground");
+        check(path.back() == goal, "and arrives");
+        check(walkable(open, path, start), "by steps a creature could take");
+        check(static_cast<int>(path.size()) == 6, "without wandering");
+
+        // A wall with a gap in it: the old AI would walk into this and
+        // re-roll its heading until it happened to miss the wall.
+        DrawnGround wall;
+        wall.rows = { "...#...",
+                      "...#...",
+                      "...#...",
+                      ".......",
+                      "...#..." };
+
+        path = Pathfinding::find(wall, start, goal);
+        check(!path.empty() && path.back() == goal, "it finds the gap in a wall");
+        check(walkable(wall, path, start), "and the route is walkable");
+
+        bool wentThroughGap = false;
+        for (const glm::ivec3& step : path)
+            if (step.x == 3 && step.z == 3) wentThroughGap = true;
+        check(wentThroughGap, "by going round through the gap");
+
+        // Walled in completely: no path, and it must say so rather than
+        // searching the world.
+        DrawnGround sealed;
+        sealed.rows = { ".#.....",
+                        "##.....",
+                        ".......",
+                        ".......",
+                        "......." };
+
+        path = Pathfinding::find(sealed, glm::ivec3(0, 0, 0), goal);
+        check(path.empty() || path.back() != goal, "it does not invent a way out of a sealed room");
+
+        // Hemmed in on every side: the search has nowhere to go at all.
+        DrawnGround box;
+        box.rows = { "###",
+                     "#.#",
+                     "###" };
+        path = Pathfinding::find(box, glm::ivec3(1, 0, 1), glm::ivec3(1, 0, 10));
+        check(path.empty(), "and nothing at all when it is boxed in");
+
+        // Standing on the goal already.
+        check(Pathfinding::find(open, goal, goal).empty(), "no steps are needed to stay put");
+
+        // Diagonals must not cut the corner where two walls meet.
+        DrawnGround corner;
+        corner.rows = { "..#",
+                        "##.",
+                        "..." };
+        path = Pathfinding::find(corner, glm::ivec3(1, 0, 0), glm::ivec3(2, 0, 1));
+        check(walkable(corner, path, glm::ivec3(1, 0, 0)),
+              "it does not squeeze through the corner of a wall");
+
+        // The node budget is a promise: a hopeless search has to stop.
+        DrawnGround wide;
+        wide.rows.assign(40, std::string(40, '.'));
+        Pathfinding::Limits tight;
+        tight.maxNodes = 30;
+        path = Pathfinding::find(wide, glm::ivec3(0, 0, 0), glm::ivec3(39, 0, 39), tight);
+        check(static_cast<int>(path.size()) <= tight.maxNodes,
+              "a capped search returns something no longer than its budget");
+        check(walkable(wide, path, glm::ivec3(0, 0, 0)),
+              "and what it returns is still walkable");
+        check(!path.empty(), "it heads the right way even when it cannot see the end");
+
+        // The mob side of the arrangement: a mob asks for a route, is
+        // handed one, and stops asking until the route is stale.
+        Mob zombie(MobId::Zombie, glm::vec3(0.5f, 64.0f, 0.5f), 7u);
+        check(!zombie.wantsPath(), "a mob with nothing to chase asks for no route");
+        check(!zombie.hasPath(), "and is walking nowhere in particular");
+
+        zombie.setPath({ glm::ivec3(1, 64, 0), glm::ivec3(2, 64, 0) }, glm::ivec3(2, 64, 0));
+        check(zombie.hasPath(), "once handed a route it has one");
+        check(zombie.pathLength() == 2, "of the length it was given");
+        check(zombie.pathGoal() == glm::ivec3(2, 64, 0), "aimed where the search was aimed");
+        check(!zombie.wantsPath(), "and does not ask again straight away");
+
+        zombie.setPath({}, glm::ivec3(2, 64, 0));
+        check(!zombie.hasPath(), "an empty route leaves it walking nowhere");
+    }
+
     void testPlayerImmunity()
     {
         section("player: hurt immunity");
@@ -961,6 +1092,7 @@ int runSelfTest()
     testBreeding();
     testMobDrops();
     testFarming();
+    testPathfinding();
     testPlayerImmunity();
 
     std::printf("\n%d checks, %d failed\n", g_checks, g_failures);

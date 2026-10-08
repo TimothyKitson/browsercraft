@@ -1,5 +1,6 @@
 #pragma once
 #include "MobType.h"
+#include "Pathfinder.h"
 #include <cstdint>
 #include <glm/glm.hpp>
 #include <vector>
@@ -82,6 +83,20 @@ public:
     float width() const { return type().width * scale(); }
     float height() const { return type().height * scale(); }
 
+    // --- pathfinding ---
+    //
+    // A mob does not search for itself. It says it would like a route,
+    // the manager works out how many searches the frame can afford, and
+    // the answer comes back here. That is what keeps forty-eight of them
+    // from each searching the world every frame.
+    static constexpr float REPATH_INTERVAL = 1.0f;
+
+    bool wantsPath() const;
+    glm::ivec3 pathGoal() const { return m_pathGoal; }
+    void setPath(std::vector<glm::ivec3> path, const glm::ivec3& goal);
+    bool hasPath() const { return m_pathIndex < m_path.size(); }
+    int pathLength() const { return static_cast<int>(m_path.size()); }
+
     // Accepts the food and falls in love. False if it is not interested.
     bool feed(StackId food);
     // Called on both parents once they have paired off.
@@ -104,6 +119,17 @@ private:
     float m_goalYaw = 0.0f;
     float m_goalTimer = 0.0f;
     bool m_moving = false;
+
+    std::vector<glm::ivec3> m_path;
+    size_t m_pathIndex = 0;
+    glm::ivec3 m_pathGoal{ 0 };
+    float m_repathTimer = 0.0f;
+    bool m_chasing = false;
+
+    // Steers towards the next waypoint. True while there is one.
+    bool followPath();
+    // A heading that is actually clear, for when the chosen one is not.
+    void steerAroundObstacle(const World& world);
 
     float m_attackTimer = 0.0f;
     float m_ambientTimer = 0.0f;
