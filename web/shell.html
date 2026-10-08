@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Browsercraft - a block sandbox in your browser</title>
+<meta name="description" content="Browsercraft is a free block-building sandbox game that runs entirely in your browser. Explore infinite procedurally generated worlds, mine, and build. No download, no account.">
+<meta name="theme-color" content="#0b0d10">
+<link rel="canonical" href="https://browsercraft.net/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Browsercraft">
+<meta property="og:description" content="A free block-building sandbox game that runs entirely in your browser. No download, no account.">
+<meta property="og:url" content="https://browsercraft.net/">
+<meta name="twitter:card" content="summary_large_image">
+<style>
+  :root {
+    --bg: #0b0d10;
+    --panel: #151920;
+    --text: #e8ecf1;
+    --muted: #9aa5b1;
+    --accent: #6cc24a;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; height: 100%; overflow: hidden;
+    background: var(--bg); color: var(--text);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  #canvas {
+    display: block; width: 100vw; height: 100vh;
+    height: 100dvh;   /* mobile: 100vh excludes the URL bar and overflows */
+    background: #0b0d10; outline: none; border: 0;
+    touch-action: none;
+  }
+  /* Loading / start overlay */
+  #overlay {
+    position: fixed; inset: 0; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 18px;
+    background: radial-gradient(circle at 50% 35%, #1b2330 0%, #0b0d10 70%);
+    z-index: 10; text-align: center; padding: 24px;
+  }
+  #overlay.hidden { display: none; }
+  h1 { margin: 0; font-size: clamp(28px, 6vw, 52px); letter-spacing: 2px; }
+  p { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.7; max-width: 44ch; }
+  #bar {
+    width: min(360px, 80vw); height: 8px; border-radius: 4px;
+    background: #222a35; overflow: hidden;
+  }
+  #fill { height: 100%; width: 0%; background: var(--accent); transition: width .2s ease; }
+  #play {
+    margin-top: 6px; padding: 14px 34px; font: inherit; font-size: 16px; letter-spacing: 1px;
+    color: #0b0d10; background: var(--accent); border: 0; border-radius: 6px;
+    cursor: pointer; display: none;
+  }
+  #play:hover { filter: brightness(1.1); }
+  kbd {
+    background: var(--panel); border: 1px solid #2a323d; border-bottom-width: 2px;
+    border-radius: 4px; padding: 1px 6px; font-size: 12px; color: var(--text);
+  }
+  #status { font-size: 13px; color: var(--muted); min-height: 1.2em; }
+</style>
+</head>
+<body>
+<canvas id="canvas" tabindex="-1" oncontextmenu="event.preventDefault()"></canvas>
+
+<div id="overlay">
+  <h1>BROWSERCRAFT</h1>
+  <p id="status">Loading…</p>
+  <div id="bar"><div id="fill"></div></div>
+  <button id="play">PLAY</button>
+  <p>
+    <kbd>WASD</kbd> move &nbsp; <kbd>Space</kbd> jump &nbsp; <kbd>Shift</kbd> sneak &nbsp; <kbd>Ctrl</kbd> sprint<br>
+    <kbd>Click</kbd> mine &nbsp; <kbd>Right click</kbd> place &nbsp; <kbd>1-9</kbd> hotbar &nbsp; <kbd>E</kbd> inventory<br>
+    <kbd>Q</kbd> drop &nbsp; <kbd>F</kbd> fly &nbsp; <kbd>F3</kbd> debug &nbsp; <kbd>Esc</kbd> release mouse<br>
+    all rebindable in Settings &rarr; Controls
+  </p>
+</div>
+
+<script type="text/javascript">
+  // WebGL2 is not optional -- the renderer is written against ES 3.0.
+  // Without this check the canvas just stays black and the console
+  // fills with context errors, which tells a player nothing.
+  function webgl2Supported() {
+    try {
+      const test = document.createElement('canvas');
+      return !!(window.WebGL2RenderingContext && test.getContext('webgl2'));
+    } catch (e) {
+      return false;
+    }
+  }
+
+  const overlay = document.getElementById('overlay');
+  const statusText = document.getElementById('status');
+  const fill = document.getElementById('fill');
+  const playButton = document.getElementById('play');
+  const canvas = document.getElementById('canvas');
+
+  // The canvas fills the window via CSS; the game reads that size each
+  // frame and sets the backing-store resolution itself, so JS must not
+  // fight it by assigning canvas.width here.
+
+  // Mount the save folder on IndexedDB and pull any existing world in
+  // before main() runs. addRunDependency holds startup until the async
+  // load finishes, so the game never reads an empty filesystem.
+  function mountSaveStorage() {
+    try {
+      FS.mkdir('/world');
+      FS.mount(IDBFS, {}, '/world');
+      Module.addRunDependency('world-load');
+
+      // IndexedDB can be blocked outright (private windows, locked-down
+      // school profiles) and then never call back, which would leave the
+      // game stuck on the loading bar. Start anyway after two seconds.
+      let released = false;
+      const release = function () {
+        if (released) return;
+        released = true;
+        Module.removeRunDependency('world-load');
+      };
+      setTimeout(release, 2000);
+
+      FS.syncfs(true, function (err) {
+        if (err) console.error('Could not load saved world:', err);
+        release();
+      });
+    } catch (e) {
+      console.error('Save storage unavailable, worlds will not persist:', e);
+    }
+  }
+
+  var Module = {
+    canvas: canvas,
+    arguments: [],
+    preRun: [mountSaveStorage],
+    postRun: [],
+    print: function (text) { console.log(text); },
+    printErr: function (text) { console.error(text); },
+    setStatus: function (text) {
+      const match = text.match(/([^(]+)\((\d+(\.\d+)?)\/(\d+)\)/);
+      if (match) {
+        const done = parseFloat(match[2]);
+        const total = parseFloat(match[4]);
+        fill.style.width = (done / total * 100) + '%';
+        statusText.textContent = 'Downloading world data…';
+      } else if (text) {
+        statusText.textContent = text;
+      } else {
+        // Empty status means loading finished.
+        fill.style.width = '100%';
+        statusText.textContent = 'Ready';
+        playButton.style.display = 'inline-block';
+      }
+    },
+    onRuntimeInitialized: function () {
+      fill.style.width = '100%';
+      statusText.textContent = 'Ready';
+      playButton.style.display = 'inline-block';
+    }
+  };
+
+  // Safari only had the prefixed name until recently, and from Chrome
+  // 113 this returns a promise that rejects loudly when the document is
+  // not allowed to take the lock -- inside an iframe, for instance.
+  function grabPointer() {
+    const request = canvas.requestPointerLock || canvas.webkitRequestPointerLock;
+    if (!request) return;
+    try {
+      const result = request.call(canvas);
+      if (result && typeof result.catch === 'function') result.catch(function () {});
+    } catch (e) {
+      /* the game is perfectly playable without it; the mouse just stays free */
+    }
+  }
+
+  playButton.addEventListener('click', function () {
+    overlay.classList.add('hidden');
+    canvas.focus();
+
+    // Browsers start audio suspended until a gesture, and this click is
+    // the only one the game is guaranteed to get.
+    try {
+      const context = Module.SDL2 && Module.SDL2.audioContext;
+      if (context && context.state === 'suspended') context.resume();
+    } catch (e) { /* no audio is better than no game */ }
+
+    grabPointer();
+  });
+
+  // Clicking the canvas after Esc re-captures the mouse.
+  canvas.addEventListener('click', function () {
+    if (!document.pointerLockElement && overlay.classList.contains('hidden')) {
+      grabPointer();
+    }
+  });
+
+  // SDL asks for pointer lock from inside its own glue code, so a
+  // try/catch around our call cannot see that rejection. Embedded in an
+  // iframe the lock is refused and the console fills with it; the game
+  // plays fine either way, so swallow just this one.
+  window.addEventListener('unhandledrejection', function (e) {
+    const text = String((e.reason && e.reason.message) || e.reason || '');
+    if (/pointer lock/i.test(text)) e.preventDefault();
+  });
+
+  // Don't let the browser scroll or quick-find while playing.
+  window.addEventListener('keydown', function (e) {
+    if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' ','/',"'"].includes(e.key)) {
+      if (document.pointerLockElement) e.preventDefault();
+    }
+  }, { passive: false });
+
+  // Say so plainly instead of downloading a megabyte of WebAssembly the
+  // browser cannot run. Checked last so the page is otherwise ready.
+  if (!webgl2Supported()) {
+    statusText.innerHTML =
+      'This browser cannot run Browsercraft.<br>' +
+      'It needs WebGL2 - try Chrome, Edge, Firefox or Safari 15+.';
+    document.getElementById('bar').style.display = 'none';
+    playButton.style.display = 'none';
+    Module.setStatus = function () {};
+    Module.onRuntimeInitialized = function () {};
+  } else if (!window.WebAssembly) {
+    statusText.textContent = 'This browser has no WebAssembly support.';
+    document.getElementById('bar').style.display = 'none';
+  } else if (('ontouchstart' in window) && !matchMedia('(pointer: fine)').matches) {
+    // The game is keyboard and mouse only. Better to warn than to let
+    // someone tap a canvas that will never respond.
+    statusText.innerHTML = 'Ready.<br>A keyboard and mouse are required - ' +
+                           'touch controls are not built yet.';
+  }
+</script>
+{{{ SCRIPT }}}
+</body>
+</html>

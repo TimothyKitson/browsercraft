@@ -1,0 +1,20 @@
+build/
+out/
+world/
+.cache/
+compile_commands.json
+*.log
+*.user
+assets/skins/
+assets/sounds/
+browsercraft-netlify.zip
+build-web/
+
+# Resource packs and audio are other people's work. They live on your
+# machine, never in the repository and never in the published build:
+#   assets/textures/  Prime's HD Textures (supporter download, all rights reserved)
+#   assets/sounds/    Minecraft 1.12 audio (Mojang)
+#   assets/skins/     whatever you drop in
+# The engine paints its own fallbacks for all three, which is what
+# browsercraft.net actually ships.
+assets/textures/
