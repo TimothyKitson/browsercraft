@@ -7,6 +7,7 @@
 #include "Player/Inventory.h"
 #include "Game/Crafting.h"
 #include "Game/Items.h"
+#include "Game/Farming.h"
 #include "Core/KeyBindings.h"
 #include "Entity/PlayerAnimation.h"
 #include "Entity/PlayerModel.h"
@@ -763,29 +764,22 @@ namespace
     {
         section("items: crafting");
 
-        // Three seeds make a wheat. Not a Minecraft recipe -- a stopgap
-        // until crops can be planted -- but it is what makes breeding
-        // reachable, so it is worth knowing when it breaks.
+        // Seeds used to bundle into wheat, as a stand-in for farming.
+        // They must not any more: wheat is grown, and leaving both in
+        // would make a field pointless.
         ItemStack grid[9];
-        CraftOutput none = Crafting::match(grid, 2);
-        check(!none.valid(), "an empty grid makes nothing");
-
-        // The grid is addressed as 3x3 even when only its top-left 2x2
-        // is reachable, so the usable cells are 0, 1, 3 and 4.
         for (int i : { 0, 1, 3 }) { grid[i].id = Items::WheatSeeds; grid[i].count = 1; }
-        const CraftOutput wheat = Crafting::match(grid, 2);
-        check(wheat.valid(), "three seeds make something");
-        check(wheat.id == Items::Wheat && wheat.count == 1, "and it is one wheat");
+        check(!Crafting::match(grid, 2).valid(), "seeds no longer shortcut into wheat");
 
-        // Two is not enough, and the recipe is shapeless so where they
-        // sit must not matter.
-        ItemStack two[9];
-        for (int i : { 0, 1 }) { two[i].id = Items::WheatSeeds; two[i].count = 1; }
-        check(!Crafting::match(two, 2).valid(), "two seeds make nothing");
+        // The real recipes still work.
+        ItemStack logs[9];
+        logs[0].id = Blocks::Log; logs[0].count = 1;
+        const CraftOutput planks = Crafting::match(logs, 2);
+        check(planks.valid() && planks.id == Blocks::Planks && planks.count == 4,
+              "one log still makes four planks");
 
-        ItemStack scattered[9];
-        for (int i : { 1, 3, 4 }) { scattered[i].id = Items::WheatSeeds; scattered[i].count = 1; }
-        check(Crafting::match(scattered, 2).valid(), "and it does not matter where they sit");
+        ItemStack empty[9];
+        check(!Crafting::match(empty, 2).valid(), "an empty grid makes nothing");
     }
 
     void testBreeding()
@@ -855,6 +849,63 @@ namespace
         }
     }
 
+    void testFarming()
+    {
+        section("farming");
+
+        // The crop's whole state is its block id, which is what lets a
+        // field save and load with the chunks it stands in.
+        check(WHEAT_STAGES == 8, "wheat has eight stages");
+        check(wheatAtStage(0) == Blocks::Wheat0, "the first is stage zero");
+        check(wheatAtStage(7) == WHEAT_RIPE, "and the last is ripe");
+        check(isWheat(Blocks::Wheat0) && isWheat(WHEAT_RIPE), "both read as wheat");
+        check(!isWheat(Blocks::Farmland) && !isWheat(Blocks::Grass), "earth does not");
+
+        for (int stage = 0; stage < WHEAT_STAGES; ++stage)
+            check(wheatStage(wheatAtStage(stage)) == stage,
+                  "stage " + std::to_string(stage) + " survives the round trip");
+
+        // Growing past ripe would walk off the end of the ids.
+        check(wheatAtStage(99) == WHEAT_RIPE, "it cannot grow past ripe");
+        check(wheatAtStage(-5) == Blocks::Wheat0, "nor shrink past nothing");
+
+        // A crop is planted, never held: it must not turn up in the
+        // creative palette or drop itself when broken.
+        for (int stage = 0; stage < WHEAT_STAGES; ++stage)
+            check(!isObtainable(wheatAtStage(stage)), "a crop is not a block you can hold");
+        check(isObtainable(Blocks::Farmland), "but tilled earth is");
+
+        check(Farming::isTillable(Blocks::Dirt), "dirt can be tilled");
+        check(Farming::isTillable(Blocks::Grass), "so can grass");
+        check(!Farming::isTillable(Blocks::Stone), "stone cannot");
+        check(!Farming::isTillable(Blocks::Farmland), "and tilling twice does nothing");
+
+        // Pull it up early and you get your seed back; let it ripen and
+        // you get wheat and enough seed to sow again.
+        const Farming::Harvest young = Farming::harvestOf(Blocks::Wheat3, 0);
+        check(young.first == Items::WheatSeeds && young.firstCount == 1,
+              "an unripe crop gives back one seed");
+        check(young.secondCount == 0, "and nothing else");
+
+        bool alwaysResows = true;
+        for (uint32_t roll = 0; roll < 12; ++roll)
+        {
+            const Farming::Harvest ripe = Farming::harvestOf(WHEAT_RIPE, roll);
+            if (ripe.first != Items::Wheat || ripe.firstCount != 1) alwaysResows = false;
+            if (ripe.second != Items::WheatSeeds) alwaysResows = false;
+            if (ripe.secondCount < 1 || ripe.secondCount > 3) alwaysResows = false;
+        }
+        check(alwaysResows, "a ripe one gives a wheat and one to three seeds");
+
+        check(Farming::harvestOf(Blocks::Grass, 0).firstCount == 0,
+              "harvesting something that is not a crop gives nothing");
+
+        // Sowing a whole field has to be worth it: one seed in, one wheat
+        // and at least one seed back out, so a field never runs down.
+        check(Farming::harvestOf(WHEAT_RIPE, 0).secondCount >= 1,
+              "a harvest always replaces the seed it cost");
+    }
+
     void testPlayerImmunity()
     {
         section("player: hurt immunity");
@@ -909,6 +960,7 @@ int runSelfTest()
     testWheatRecipe();
     testBreeding();
     testMobDrops();
+    testFarming();
     testPlayerImmunity();
 
     std::printf("\n%d checks, %d failed\n", g_checks, g_failures);

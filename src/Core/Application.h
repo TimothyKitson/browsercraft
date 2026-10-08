@@ -109,6 +109,9 @@ public:
     // Dev aid: line one of every species up in front of the spawn point,
     // so a screenshot shows all eight without waiting for the spawner.
     void setMobTest() { m_mobTest = true; m_startImmediately = true; }
+    // Dev aid: sow a field of wheat at every stage of growth in front
+    // of the player, so a screenshot shows the whole crop at once.
+    void setFarmTest() { m_farmTest = true; m_startImmediately = true; }
     // Dev aid: open straight into another dimension.
     void setStartupDimension(Dimension dimension) { m_startupDimension = dimension; }
     // Dev aid: preview a candidate panorama viewpoint.
@@ -262,6 +265,8 @@ private:
     bool m_buildTestDone = false;
     bool m_mobTest = false;
     bool m_mobTestDone = false;
+    bool m_farmTest = false;
+    bool m_farmTestDone = false;
     Dimension m_startupDimension = Dimension::Overworld;
     uint32_t m_panoramaSeed = 0;
     glm::vec3 m_panoramaSpot{ 0.0f };
@@ -275,6 +280,8 @@ private:
     float m_breakProgress = 0.0f;
     float m_digSoundTimer = 0.0f;
     float m_attackCooldown = 0.0f;
+    float m_growthTimer = 0.0f;
+    uint32_t m_growthSeed = 0x1F123BB5u;
 
     // Frame statistics
     float m_fps = 0.0f;
@@ -306,6 +313,8 @@ private:
     void renderNameplates();
     // Steps every mob and plays whatever noise they made.
     void updateMobs(float deltaTime);
+    // Mobs and crops together, for both the played and automated paths.
+    void updateWorldAround(float deltaTime);
     // Advances every player's walk cycle from the ground they covered.
     void updatePlayerAnimation(float deltaTime);
     void advanceAnimation(Animation& animation, const glm::vec3& position,
@@ -371,10 +380,6 @@ private:
     void deleteSavedWorld();
     void loadLevel();
     void saveLevel();
-    // Items cannot fit in level.dat's byte-wide slot ids, so they
-    // travel in a small file of their own next to it.
-    void saveHeldItems();
-    void loadHeldItems();
 
     // A real world generated behind the menus, with the camera slowly
     // orbiting it -- the same trick as Minecraft's title panorama, except

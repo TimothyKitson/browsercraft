@@ -56,6 +56,10 @@ namespace Tiles
         SoulSand,
         EndStone,
         NetherPortal,
+        FarmlandTop,
+        FarmlandSide,
+        WheatStage0, WheatStage1, WheatStage2, WheatStage3,
+        WheatStage4, WheatStage5, WheatStage6, WheatStage7,
         TileCount
     };
 

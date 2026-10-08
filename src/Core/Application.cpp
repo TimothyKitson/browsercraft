@@ -2,6 +2,7 @@
 #include "GLFunctions.h"
 #include "Renderer/Screenshot.h"
 #include "Entity/PlayerAnimation.h"
+#include "Game/Farming.h"
 #include "World/WorldSave.h"
 #include <glm/gtc/matrix_transform.hpp>
 #include <SDL.h>
@@ -190,61 +191,6 @@ const PlayerSkin& Application::activeSkin() const
         return m_customSkin;
     const int index = std::clamp(m_skinVariant, 0, static_cast<int>(m_skins.size()) - 1);
     return *m_skins[index];
-}
-
-// The item half of the inventory, which level.dat has no room for.
-// One line per slot: index, id, count.
-void Application::saveHeldItems()
-{
-    std::error_code ec;
-    std::filesystem::create_directories(m_savePath, ec);
-
-    const std::string path = m_savePath + "/items.dat";
-
-    int held = 0;
-    for (int i = 0; i < Inventory::TOTAL_SLOTS; ++i)
-        if (isItem(m_inventory.slot(i).id) && m_inventory.slot(i).count > 0) ++held;
-
-    if (held == 0)
-    {
-        // Nothing to keep, and a stale file would put back what was
-        // spent since.
-        std::filesystem::remove(path, ec);
-        return;
-    }
-
-    std::FILE* file = std::fopen(path.c_str(), "wb");
-    if (!file) return;
-
-    for (int i = 0; i < Inventory::TOTAL_SLOTS; ++i)
-    {
-        const ItemStack& stack = m_inventory.slot(i);
-        if (!isItem(stack.id) || stack.count <= 0) continue;
-        std::fprintf(file, "%d %u %d\n", i, static_cast<unsigned>(stack.id), stack.count);
-    }
-
-    std::fclose(file);
-}
-
-void Application::loadHeldItems()
-{
-    std::FILE* file = std::fopen((m_savePath + "/items.dat").c_str(), "rb");
-    if (!file) return;
-
-    char line[128];
-    while (std::fgets(line, sizeof(line), file))
-    {
-        int slot = 0, count = 0;
-        unsigned id = 0;
-        if (std::sscanf(line, "%d %u %d", &slot, &id, &count) != 3) continue;
-        if (slot < 0 || slot >= Inventory::TOTAL_SLOTS || count <= 0) continue;
-        if (!isItem(static_cast<StackId>(id))) continue;
-
-        m_inventory.slot(slot).id = static_cast<StackId>(id);
-        m_inventory.slot(slot).count = std::min(count, maxStackOf(static_cast<StackId>(id)));
-    }
-
-    std::fclose(file);
 }
 
 void Application::flushSaveStorage()
@@ -549,8 +495,6 @@ void Application::loadLevel()
             m_inventory.slot(static_cast<int>(i)).id = state.inventory[i].first;
             m_inventory.slot(static_cast<int>(i)).count = state.inventory[i].second;
         }
-
-        loadHeldItems();
     }
     else
     {
@@ -583,21 +527,13 @@ void Application::saveLevel()
     state.dead = m_hardcoreDeath;
     state.selectedSlot = m_inventory.selectedSlot();
 
-    // level.dat stores a slot's id in a byte, which is all a block id
-    // ever needs and one short of what an item needs. Rather than let a
-    // wheat come back as a stone, the item slots are written as empty
-    // and listed in a file of their own beside it. This whole dance
-    // disappears the day LevelState's id widens to sixteen bits.
     for (int i = 0; i < Inventory::TOTAL_SLOTS; ++i)
     {
         const ItemStack& stack = m_inventory.slot(i);
-        const uint8_t storable = isItem(stack.id) ? uint8_t{ Blocks::Air }
-                                                  : static_cast<uint8_t>(stack.id);
-        state.inventory.emplace_back(storable, static_cast<uint16_t>(std::max(0, stack.count)));
+        state.inventory.emplace_back(stack.id, static_cast<uint16_t>(std::max(0, stack.count)));
     }
 
     WorldSave::saveLevel(m_savePath, state);
-    saveHeldItems();
     m_world->saveAll();
 
 #ifdef __EMSCRIPTEN__
@@ -825,7 +761,7 @@ bool Application::frame()
             // look broken when it was only ever being skipped.
             m_player.update(deltaTime, *m_world, Player::Controls{});
             m_camera.position = m_player.eyePosition();
-            updateMobs(deltaTime);
+            updateWorldAround(deltaTime);
         }
         else if (playing() && !m_inventoryOpen)
         {
@@ -861,6 +797,52 @@ bool Application::frame()
                     }
             std::printf("[test] stamped %d blocks at %d %d %d\n",
                         placed, base.x, base.y, base.z);
+            std::fflush(stdout);
+        }
+
+        // Dev aid: a field sown at every stage at once, so one shot
+        // shows what the crop looks like all the way through.
+        if (m_farmTest && m_worldReady && !m_farmTestDone)
+        {
+            m_farmTestDone = true;
+
+            const int baseY = static_cast<int>(std::floor(m_player.position.y));
+            const int centreX = static_cast<int>(std::floor(m_player.position.x));
+            const int centreZ = static_cast<int>(std::floor(m_player.position.z));
+
+            // Flat ground to sow, and headroom to see it in.
+            for (int x = centreX - 6; x <= centreX + 6; ++x)
+                for (int z = centreZ - 14; z <= centreZ + 4; ++z)
+                {
+                    m_world->setBlock(x, baseY - 1, z, Blocks::Grass);
+                    for (int y = baseY; y < baseY + 6; ++y)
+                        m_world->setBlock(x, y, z, Blocks::Air);
+                }
+
+            // Eight rows, one per stage, plus a row left as bare tilled
+            // earth so the farmland texture is visible too.
+            int sown = 0;
+            for (int stage = 0; stage < WHEAT_STAGES; ++stage)
+                for (int z = centreZ - 2; z <= centreZ + 2; ++z)
+                {
+                    const glm::ivec3 ground(centreX - 4 + stage, baseY - 1, z);
+                    if (!Farming::plant(*m_world, ground)) continue;
+                    m_world->setBlock(ground.x, ground.y + 1, ground.z, wheatAtStage(stage));
+                    ++sown;
+                }
+
+            m_world->setBlock(centreX + 4, baseY - 1, centreZ, Blocks::Farmland);
+
+            m_inventory.add(Items::WheatSeeds, 32);
+
+            m_player.position = glm::vec3(centreX + 0.5f, static_cast<float>(baseY),
+                                          centreZ - 9.5f);
+            m_player.velocity = glm::vec3(0.0f);
+            m_camera.position = m_player.eyePosition();
+            m_camera.setOrientation(90.0f, -22.0f);
+
+            std::printf("[test] sowed %d crops across %d stages at y=%d\n",
+                        sown, WHEAT_STAGES, baseY);
             std::fflush(stdout);
         }
 
@@ -1484,7 +1466,7 @@ void Application::updateGameplay(float deltaTime)
     m_camera.fov += (targetFov - m_camera.fov) * std::clamp(8.0f * deltaTime, 0.0f, 1.0f);
 
     // --- the rest of the world ---
-    updateMobs(deltaTime);
+    updateWorldAround(deltaTime);
     updateMining(deltaTime);
     handlePlacement();
 }
@@ -1583,14 +1565,30 @@ void Application::updateMining(float deltaTime)
 
     if (m_breakProgress >= 1.0f)
     {
-        const StackId drop = blockDrop(id);
         m_particles.spawnBlockBreak(hit.block, id);
         m_world->setBlock(hit.block.x, hit.block.y, hit.block.z, Blocks::Air);
         m_net.onLocalBlockChange(hit.block.x, hit.block.y, hit.block.z, Blocks::Air);
         m_audio.playDig(id, 0.9f);
+
         // Creative mode mines without producing pickups, like Minecraft.
-        if (!m_player.creative() && drop != Blocks::Air)
-            m_drops.spawnFromBrokenBlock(hit.block, drop);
+        if (!m_player.creative())
+        {
+            if (isWheat(id))
+            {
+                const Farming::Harvest crop = Farming::harvestOf(
+                    id, static_cast<uint32_t>(hit.block.x * 31 + hit.block.z * 17 +
+                                              static_cast<int>(m_elapsedSeconds * 60.0f)));
+                for (int i = 0; i < crop.firstCount; ++i)
+                    m_drops.spawnFromBrokenBlock(hit.block, crop.first);
+                for (int i = 0; i < crop.secondCount; ++i)
+                    m_drops.spawnFromBrokenBlock(hit.block, crop.second);
+            }
+            else
+            {
+                const StackId drop = blockDrop(id);
+                if (drop != Blocks::Air) m_drops.spawnFromBrokenBlock(hit.block, drop);
+            }
+        }
         m_breakProgress = 0.0f;
         m_hasTarget = false;
     }
@@ -1642,6 +1640,26 @@ void Application::handlePlacement()
             if (stack.count <= 0) stack.clear();
         }
         m_audio.play(Sound::Pickup, 0.5f, 1.4f);
+        return;
+    }
+
+    // Sowing. Seeds till the ground they are used on and plant
+    // themselves in one action -- Minecraft wants a hoe first, and there
+    // are no tools yet.
+    if (stack.id == Items::WheatSeeds)
+    {
+        const RaycastHit soil = m_world->raycast(m_camera.position, m_camera.front, REACH_DISTANCE);
+        if (soil.hit && Farming::plant(*m_world, soil.block))
+        {
+            m_net.onLocalBlockChange(soil.block.x, soil.block.y, soil.block.z, Blocks::Farmland);
+            m_net.onLocalBlockChange(soil.block.x, soil.block.y + 1, soil.block.z, Blocks::Wheat0);
+            m_audio.playPlace(Blocks::Farmland);
+            if (!m_player.creative())
+            {
+                stack.count -= 1;
+                if (stack.count <= 0) stack.clear();
+            }
+        }
         return;
     }
 
@@ -2086,6 +2104,27 @@ void Application::renderPlayers(const glm::mat4& view, const glm::mat4& projecti
 
         draw(activeSkin(), pose, std::string());
     }
+}
+
+// Everything that happens around the player whether or not they are
+// pressing anything: mobs living their lives and crops growing. Both
+// gameplay and the automated screenshot path come through here, because
+// putting either one only in updateGameplay is how the mob spawner and
+// then the crops each came to look broken when they were merely never
+// being stepped.
+void Application::updateWorldAround(float deltaTime)
+{
+    if (!m_world || !m_worldReady) return;
+
+    m_growthTimer += deltaTime;
+    if (m_growthTimer >= Farming::TICK_INTERVAL)
+    {
+        m_growthTimer = 0.0f;
+        if (m_net.role() != Net::Role::Guest)
+            Farming::grow(*m_world, m_player.position, m_growthSeed);
+    }
+
+    updateMobs(deltaTime);
 }
 
 void Application::updateMobs(float deltaTime)

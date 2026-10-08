@@ -1014,6 +1014,75 @@ namespace
     const Color BIRCH_TINT{ 128, 167, 85, 255 };
     const Color WATER_TINT{ 63, 118, 228, 255 };
 
+    // --- farming ---------------------------------------------------------
+
+    void paintFarmlandTop(Tile& t)
+    {
+        // Damp, raked earth: dirt darkened and combed into furrows.
+        t.fill(Color{ 94, 66, 42 });
+        t.speckle(9, 311);
+        for (int y = 0; y < Tile::N; ++y)
+            if (y % 4 == 1)
+                for (int x = 0; x < Tile::N; ++x) t.set(x, y, shade(t.get(x, y), -22));
+    }
+
+    void paintFarmlandSide(Tile& t)
+    {
+        // The side is plain dirt until the top two rows, which are the
+        // tilled surface seen edge-on.
+        t.fill(Color{ 122, 86, 54 });
+        t.speckle(10, 312);
+        for (int y = 0; y < 2; ++y)
+            for (int x = 0; x < Tile::N; ++x) t.set(x, y, shade(t.get(x, y), -30));
+    }
+
+    // One stage of wheat: a row of stalks that start short and green and
+    // end tall and golden.
+    void paintWheatStage(Tile& t, int stage)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+
+        const float ripeness = static_cast<float>(stage) / 7.0f;
+        const Color green{ 96, 142, 62 };
+        const Color gold{ 206, 182, 86 };
+        const Color stalk{
+            static_cast<uint8_t>(green.r + (gold.r - green.r) * ripeness),
+            static_cast<uint8_t>(green.g + (gold.g - green.g) * ripeness),
+            static_cast<uint8_t>(green.b + (gold.b - green.b) * ripeness) };
+
+        const int height = 3 + static_cast<int>(ripeness * 11.0f);
+        const int bottom = Tile::N - 1;
+
+        for (int column = 0; column < 4; ++column)
+        {
+            const int x = 2 + column * 4;
+            for (int y = bottom - height; y <= bottom; ++y)
+            {
+                t.set(x, y, stalk);
+                t.set(x + 1, y, shade(stalk, -25));
+            }
+
+            // Ears, once it is far enough along to have any.
+            if (stage < 4) continue;
+            const int ears = stage - 3;
+            for (int e = 0; e < ears; ++e)
+            {
+                const int y = bottom - height + 1 + e * 2;
+                t.set(x - 1, y, shade(stalk, 18));
+                t.set(x + 2, y + 1, shade(stalk, 18));
+            }
+        }
+    }
+
+    void paintWheat0(Tile& t) { paintWheatStage(t, 0); }
+    void paintWheat1(Tile& t) { paintWheatStage(t, 1); }
+    void paintWheat2(Tile& t) { paintWheatStage(t, 2); }
+    void paintWheat3(Tile& t) { paintWheatStage(t, 3); }
+    void paintWheat4(Tile& t) { paintWheatStage(t, 4); }
+    void paintWheat5(Tile& t) { paintWheatStage(t, 5); }
+    void paintWheat6(Tile& t) { paintWheatStage(t, 6); }
+    void paintWheat7(Tile& t) { paintWheatStage(t, 7); }
+
     // --- items -----------------------------------------------------------
     //
     // Items are sprites on a transparent tile rather than block faces, so
@@ -1197,6 +1266,16 @@ namespace
         { Tiles::PumpkinSide, paintPumpkinSide },
         { Tiles::PumpkinTop, paintPumpkinTop },
         { Tiles::Wool, paintWool },
+        { Tiles::FarmlandTop, paintFarmlandTop },
+        { Tiles::FarmlandSide, paintFarmlandSide },
+        { Tiles::WheatStage0, paintWheat0 },
+        { Tiles::WheatStage1, paintWheat1 },
+        { Tiles::WheatStage2, paintWheat2 },
+        { Tiles::WheatStage3, paintWheat3 },
+        { Tiles::WheatStage4, paintWheat4 },
+        { Tiles::WheatStage5, paintWheat5 },
+        { Tiles::WheatStage6, paintWheat6 },
+        { Tiles::WheatStage7, paintWheat7 },
         { Tiles::ItemWheatSeeds, paintItemWheatSeeds },
         { Tiles::ItemWheat, paintItemWheat },
         { Tiles::ItemLeather, paintItemLeather },

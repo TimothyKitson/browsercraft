@@ -28,13 +28,6 @@ namespace
         // Four sand in a square becomes one sandstone.
         { false, 2, 2, { Blocks::Sand, Blocks::Sand,
                          Blocks::Sand, Blocks::Sand }, 0, Blocks::Sandstone, 1 },
-
-        // Not a Minecraft recipe. Wheat grows on farmland there, and
-        // this engine has no farmland yet, so three seeds bundle into
-        // one wheat to keep breeding reachable. Delete this row the day
-        // crops are plantable.
-        { true,  0, 0, { Items::WheatSeeds, Items::WheatSeeds, Items::WheatSeeds },
-          3, Items::Wheat, 1 },
     };
 
     // Shrinks the used area of the grid down to its bounding box, so a
