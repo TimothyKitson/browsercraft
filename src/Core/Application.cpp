@@ -25,6 +25,10 @@ namespace
     constexpr int DEFAULT_RENDER_DISTANCE = 8;
 #endif
     constexpr float REACH_DISTANCE = 5.0f;
+    // Minecraft lets you reach stone further than you can reach a mob.
+    constexpr float ATTACK_REACH = 3.0f;
+    constexpr float ATTACK_INTERVAL = 0.25f;
+    constexpr int PUNCH_DAMAGE = 1;         // a bare fist, until there are tools
     constexpr float DAY_LENGTH_SECONDS = 1200.0f; // 20 minutes, like Minecraft
     constexpr float AUTOSAVE_INTERVAL = 60.0f;
     constexpr float MOUSE_SENSITIVITY = 0.11f;
@@ -1431,6 +1435,33 @@ void Application::updateMining(float deltaTime)
 {
     const RaycastHit hit = m_world->raycast(m_camera.position, m_camera.front, REACH_DISTANCE);
 
+    // A mob standing between you and the block takes the hit instead.
+    // Minecraft's reach is shorter for something living than for stone,
+    // so a mob you cannot quite touch does not stop you mining past it.
+    if (m_attackCooldown > 0.0f) m_attackCooldown = std::max(0.0f, m_attackCooldown - deltaTime);
+
+    if (Mob* target = m_entities.pick(m_camera.position, m_camera.front, ATTACK_REACH))
+    {
+        const float toMob = glm::length(target->position() - m_camera.position);
+        const float toBlock = hit.hit ? glm::length(glm::vec3(hit.block) + glm::vec3(0.5f) - m_camera.position)
+                                      : 1e9f;
+
+        if (toMob <= toBlock)
+        {
+            // One swing per click, not one per frame: mining is a hold,
+            // hitting is not.
+            if (m_keys.pressed(m_input, Action::Attack) && m_attackCooldown <= 0.0f)
+            {
+                target->damage(PUNCH_DAMAGE, target->position() - m_player.position);
+                m_attackCooldown = ATTACK_INTERVAL;
+            }
+
+            m_hasTarget = false;
+            m_breakProgress = 0.0f;
+            return;
+        }
+    }
+
     if (!hit.hit || !m_keys.down(m_input, Action::Attack))
     {
         m_hasTarget = false;
@@ -1963,6 +1994,35 @@ void Application::updateMobs(float deltaTime)
 
         const float falloff = 1.0f - std::clamp(distance / 32.0f, 0.0f, 1.0f);
         m_audio.play(sound.id, sound.volume * falloff * falloff, sound.pitch);
+    }
+
+    // Blows landed on the player. Several mobs can swing in the same
+    // frame; the half second of immunity after the first one is what
+    // decides how many of them actually land.
+    for (const MobStrike& strike : m_entities.drainStrikes())
+    {
+        if (!m_player.damage(strike.damage)) continue;
+
+        m_audio.play(Sound::Hurt, 0.8f);
+
+        const glm::vec3 away = m_player.position - strike.from;
+        const glm::vec3 flat(away.x, 0.0f, away.z);
+        const float length = glm::length(flat);
+        if (length > 0.001f) m_player.velocity += (flat / length) * 6.0f;
+        if (m_player.onGround) m_player.velocity.y = std::max(m_player.velocity.y, 4.0f);
+    }
+
+    // What they leave behind. Most species drop nothing yet, because
+    // what they ought to drop -- leather, bone, string -- are items, and
+    // this engine only has blocks.
+    for (const EntityManager::Death& death : m_entities.drainDeaths())
+    {
+        const MobType& type = mobType(death.type);
+        if (type.drop == Blocks::Air || type.dropCount <= 0) continue;
+
+        for (int i = 0; i < type.dropCount; ++i)
+            m_drops.spawn(death.position + glm::vec3(0.0f, type.height * 0.5f, 0.0f),
+                          type.drop, 1);
     }
 }
 

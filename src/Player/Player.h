@@ -41,7 +41,13 @@ public:
     bool isInWater(const World& world) const;
     bool isHeadUnderwater(const World& world) const;
 
-    void damage(int amount);
+    // Returns true when the blow actually landed. Half a second of
+    // invulnerability follows each one, the way Minecraft does it --
+    // without it a mob standing in your face deals its damage once per
+    // frame and kills you instantly.
+    static constexpr float HURT_IMMUNITY = 0.5f;
+    bool damage(int amount);
+    bool invulnerable() const { return m_hurtCooldown > 0.0f; }
     void heal(int amount);
     void respawn(glm::vec3 feetPosition);
 
@@ -61,6 +67,7 @@ private:
     float m_fallStartY = 0.0f;
     bool m_falling = false;
     float m_regenTimer = 0.0f;
+    float m_hurtCooldown = 0.0f;
 
     AABB aabbAt(const glm::vec3& feetPosition) const;
     bool collides(const World& world, const AABB& box) const;

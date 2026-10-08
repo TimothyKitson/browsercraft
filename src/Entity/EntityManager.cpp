@@ -129,7 +129,14 @@ void EntityManager::update(float deltaTime, const World& world,
                            const glm::vec3& playerPosition, float daylight)
 {
     for (Mob& mob : m_mobs)
+    {
         mob.update(deltaTime, world, playerPosition);
+
+        // Caught here rather than at removal: the corpse lingers, and
+        // whatever it drops belongs where it fell, not where it stopped.
+        if (mob.takeDeathReport())
+            m_deaths.push_back(Death{ mob.typeId(), mob.position() });
+    }
 
     // Drop anything dead-and-done, or far enough off that nobody will
     // miss it.
@@ -161,6 +168,25 @@ std::vector<MobSound> EntityManager::drainSounds()
     return all;
 }
 
+std::vector<MobStrike> EntityManager::drainStrikes()
+{
+    std::vector<MobStrike> all;
+    for (Mob& mob : m_mobs)
+    {
+        if (mob.strikes().empty()) continue;
+        all.insert(all.end(), mob.strikes().begin(), mob.strikes().end());
+        mob.strikes().clear();
+    }
+    return all;
+}
+
+std::vector<EntityManager::Death> EntityManager::drainDeaths()
+{
+    std::vector<Death> all;
+    all.swap(m_deaths);
+    return all;
+}
+
 Mob* EntityManager::pick(const glm::vec3& origin, const glm::vec3& direction, float maxDistance)
 {
     Mob* best = nullptr;
@@ -170,19 +196,43 @@ Mob* EntityManager::pick(const glm::vec3& origin, const glm::vec3& direction, fl
     {
         if (!mob.alive()) continue;
 
+        // Against the mob's own box rather than a sphere around it. A
+        // sphere wide enough to cover a zombie's height is a metre wide
+        // at the waist, so you could punch one by looking past it.
         const MobType& type = mob.type();
-        const glm::vec3 centre = mob.position() + glm::vec3(0.0f, type.height * 0.5f, 0.0f);
-        const glm::vec3 toCentre = centre - origin;
+        const float half = type.width * 0.5f;
+        const glm::vec3 low = mob.position() - glm::vec3(half, 0.0f, half);
+        const glm::vec3 high = mob.position() + glm::vec3(half, type.height, half);
 
-        const float along = glm::dot(toCentre, direction);
-        if (along < 0.0f || along > bestDistance) continue;
+        // Slab test: clip the ray against each pair of parallel faces
+        // and see whether anything is left of it.
+        float enter = 0.0f;
+        float exit = bestDistance;
+        bool missed = false;
 
-        // How far the mob's centre sits off the ray, against its girth.
-        const float offAxis = glm::length(toCentre - direction * along);
-        if (offAxis > std::max(type.width, type.height) * 0.5f) continue;
+        for (int axis = 0; axis < 3 && !missed; ++axis)
+        {
+            if (std::fabs(direction[axis]) < 1e-6f)
+            {
+                // Parallel to this pair of faces: either inside them for
+                // the whole ray, or never.
+                if (origin[axis] < low[axis] || origin[axis] > high[axis]) missed = true;
+                continue;
+            }
+
+            float near = (low[axis] - origin[axis]) / direction[axis];
+            float far = (high[axis] - origin[axis]) / direction[axis];
+            if (near > far) std::swap(near, far);
+
+            enter = std::max(enter, near);
+            exit = std::min(exit, far);
+            if (enter > exit) missed = true;
+        }
+
+        if (missed || enter > bestDistance) continue;
 
         best = &mob;
-        bestDistance = along;
+        bestDistance = enter;
     }
 
     return best;

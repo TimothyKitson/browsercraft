@@ -42,6 +42,8 @@ namespace
             t.height = 1.25f;
             t.walkSpeed = 1.8f;
             t.voice = Sound::MobBleat;
+            t.drop = Blocks::Wool;
+            t.dropCount = 1;
             t.bodyColour = rgb(228, 228, 222);
             t.headColour = rgb(222, 212, 198);
             addLegs(t.model, 4, 10, 4, 1, 4, -8);
@@ -110,6 +112,7 @@ namespace
             t.height = 2.0f;
             t.walkSpeed = 1.9f;
             t.voice = Sound::MobGroan;
+            t.attackDamage = 3;
             t.bodyColour = rgb(58, 92, 132);
             t.headColour = rgb(88, 132, 72);
             t.eyeColour = rgb(24, 32, 24);
@@ -132,6 +135,7 @@ namespace
             t.height = 2.0f;
             t.walkSpeed = 2.1f;
             t.voice = Sound::MobRattle;
+            t.attackDamage = 2;
             t.bodyColour = rgb(200, 200, 196);
             t.headColour = rgb(214, 214, 210);
             t.eyeColour = rgb(20, 20, 20);
@@ -152,6 +156,10 @@ namespace
             t.height = 1.625f;
             t.walkSpeed = 2.0f;
             t.voice = Sound::MobHiss;
+            // It does not blow up yet, so it hits hard and slowly
+            // instead of once and catastrophically.
+            t.attackDamage = 6;
+            t.attackInterval = 1.6f;
             t.bodyColour = rgb(78, 158, 62);
             t.headColour = rgb(88, 172, 70);
             t.eyeColour = rgb(18, 24, 18);
@@ -170,6 +178,9 @@ namespace
             t.walkSpeed = 2.4f;
             t.voice = Sound::MobRattle;
             t.voicePitch = 1.4f;
+            t.attackDamage = 2;
+            t.attackInterval = 0.8f;
+            t.attackReach = 1.3f;
             t.bodyColour = rgb(44, 38, 38);
             t.headColour = rgb(56, 48, 46);
             t.eyeColour = rgb(190, 40, 40);

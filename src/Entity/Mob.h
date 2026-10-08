@@ -17,8 +17,17 @@ struct MobSound
     float pitch = 1.0f;
 };
 
+// A blow a mob has landed on the player this frame. Queued rather than
+// applied, for the same reason the sounds are: a mob knows nothing about
+// the player beyond where they are standing.
+struct MobStrike
+{
+    int damage = 0;
+    glm::vec3 from{ 0.0f };     // the mob's position, for knockback
+};
+
 // A living thing: gravity and box collision against the voxel world, plus
-// enough wits to wander, notice the player, and make noise about it.
+// enough wits to wander, notice the player, fight them, and make noise.
 class Mob
 {
 public:
@@ -48,6 +57,12 @@ public:
     float deathFade() const;
 
     std::vector<MobSound>& sounds() { return m_sounds; }
+    std::vector<MobStrike>& strikes() { return m_strikes; }
+
+    // True exactly once, on the first call after it dies. A corpse
+    // lingers for a moment before it is dropped, so whatever it leaves
+    // behind cannot wait for the removal.
+    bool takeDeathReport();
 
 private:
     float random01();
@@ -67,13 +82,16 @@ private:
     float m_goalTimer = 0.0f;
     bool m_moving = false;
 
+    float m_attackTimer = 0.0f;
     float m_ambientTimer = 0.0f;
     float m_stepDistance = 0.0f;
     float m_gait = 0.0f;
     float m_gaitAmount = 0.0f;
     float m_hurtFlash = 0.0f;
     float m_removeTimer = 0.6f;
+    bool m_deathReported = false;
 
     uint32_t m_rng = 1;
     std::vector<MobSound> m_sounds;
+    std::vector<MobStrike> m_strikes;
 };

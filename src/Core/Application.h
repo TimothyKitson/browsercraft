@@ -274,6 +274,7 @@ private:
     glm::ivec3 m_targetBlock{ 0 };
     float m_breakProgress = 0.0f;
     float m_digSoundTimer = 0.0f;
+    float m_attackCooldown = 0.0f;
 
     // Frame statistics
     float m_fps = 0.0f;

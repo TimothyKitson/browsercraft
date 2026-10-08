@@ -146,11 +146,13 @@ bool Player::isHeadUnderwater(const World& world) const
                                    static_cast<int>(std::floor(eye.z))));
 }
 
-void Player::damage(int amount)
+bool Player::damage(int amount)
 {
-    if (creative() || amount <= 0) return;
+    if (creative() || amount <= 0 || m_hurtCooldown > 0.0f) return false;
     health = std::max(0, health - amount);
     damageFlash = 0.4f;
+    m_hurtCooldown = HURT_IMMUNITY;
+    return true;
 }
 
 void Player::heal(int amount)
@@ -165,11 +167,13 @@ void Player::respawn(glm::vec3 feetPosition)
     health = MAX_HEALTH;
     m_falling = false;
     damageFlash = 0.0f;
+    m_hurtCooldown = 0.0f;
 }
 
 void Player::update(float deltaTime, const World& world, const Controls& controls)
 {
     if (damageFlash > 0.0f) damageFlash = std::max(0.0f, damageFlash - deltaTime);
+    if (m_hurtCooldown > 0.0f) m_hurtCooldown = std::max(0.0f, m_hurtCooldown - deltaTime);
 
     // Slow natural regeneration, so a bad fall isn't permanent.
     if (health > 0 && health < MAX_HEALTH && damageFlash <= 0.0f)

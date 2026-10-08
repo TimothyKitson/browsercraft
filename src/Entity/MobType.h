@@ -62,6 +62,17 @@ struct MobType
     float height = 1.3f;
     float walkSpeed = 2.3f;     // blocks per second
 
+    // Half a heart each. Zero for anything that does not fight back.
+    int attackDamage = 0;
+    float attackReach = 1.1f;   // from edge to edge, on the flat
+    float attackInterval = 1.0f;
+
+    // What it leaves behind. Most of Minecraft's mob drops are items --
+    // leather, bone, string, gunpowder -- and this engine has only
+    // blocks so far, so most species drop nothing until it has items.
+    BlockId drop = Blocks::Air;
+    int dropCount = 0;
+
     // How often an idle noise plays, in seconds, picked randomly in range.
     float ambientMinSeconds = 6.0f;
     float ambientMaxSeconds = 18.0f;

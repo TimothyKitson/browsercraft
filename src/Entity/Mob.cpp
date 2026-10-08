@@ -36,6 +36,13 @@ float Mob::random01()
     return static_cast<float>(m_rng & 0xFFFFFF) / static_cast<float>(0x1000000);
 }
 
+bool Mob::takeDeathReport()
+{
+    if (alive() || m_deathReported) return false;
+    m_deathReported = true;
+    return true;
+}
+
 float Mob::deathFade() const
 {
     if (alive()) return 1.0f;
@@ -210,6 +217,28 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
         {
             m_stepDistance = 0.0f;
             emit(Sound::MobStep, 0.22f, 0.9f + random01() * 0.2f);
+        }
+    }
+
+    // Close enough to swing at. Measured between the two boxes rather
+    // than between their centres, so a spider's bulk counts for as much
+    // as its reach does.
+    if (m_attackTimer > 0.0f) m_attackTimer = std::max(0.0f, m_attackTimer - deltaTime);
+
+    if (t.attackDamage > 0 && m_attackTimer <= 0.0f)
+    {
+        const glm::vec3 toPlayer = playerPosition - m_position;
+        const float flat = glm::length(glm::vec3(toPlayer.x, 0.0f, toPlayer.z));
+        const float reach = t.attackReach + t.width * 0.5f;
+        const bool levelWith = std::fabs(toPlayer.y) < std::max(t.height, 1.8f);
+
+        if (flat < reach && levelWith)
+        {
+            MobStrike strike;
+            strike.damage = t.attackDamage;
+            strike.from = m_position;
+            m_strikes.push_back(strike);
+            m_attackTimer = t.attackInterval;
         }
     }
 

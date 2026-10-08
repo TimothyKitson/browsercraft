@@ -25,8 +25,21 @@ public:
     // Hands over every noise the mobs queued this frame and clears them.
     std::vector<MobSound> drainSounds();
 
+    // Likewise for blows landed on the player.
+    std::vector<MobStrike> drainStrikes();
+
+    // What a mob leaves on the ground, once per death. A corpse lingers
+    // before it is dropped, so this has to fire on the frame it dies
+    // rather than the frame it is removed.
+    struct Death
+    {
+        MobId type = MobId::Sheep;
+        glm::vec3 position{ 0.0f };
+    };
+    std::vector<Death> drainDeaths();
+
     bool spawnAt(MobId type, glm::vec3 feetPosition, const World& world);
-    void clear() { m_mobs.clear(); }
+    void clear() { m_mobs.clear(); m_deaths.clear(); }
 
     const std::vector<Mob>& mobs() const { return m_mobs; }
     std::vector<Mob>& mobs() { return m_mobs; }
@@ -45,6 +58,7 @@ private:
     bool fits(const World& world, const MobType& type, const glm::vec3& feet) const;
 
     std::vector<Mob> m_mobs;
+    std::vector<Death> m_deaths;
     float m_spawnTimer = 2.0f;
     uint32_t m_rng = 0x9E3779B9u;
 };

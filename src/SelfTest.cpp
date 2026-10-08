@@ -16,6 +16,7 @@
 #include "Entity/MobSkin.h"
 #include "Entity/MobType.h"
 #include "Entity/EntityManager.h"
+#include "Player/Player.h"
 #include <glm/glm.hpp>
 #include <algorithm>
 #include <cmath>
@@ -603,6 +604,110 @@ namespace
         check(mobType(MobId::Cow).voicePitch < mobType(MobId::Pig).voicePitch,
               "a cow is lower than a pig");
     }
+
+    // --- combat ---------------------------------------------------------
+
+    void testMobCombat()
+    {
+        section("mobs: combat");
+
+        // Only the things that should fight back do.
+        for (int i = 0; i < mobTypeCount(); ++i)
+        {
+            const MobType& t = mobType(static_cast<MobId>(i));
+            const std::string who = t.name;
+            if (t.spawnClass == SpawnClass::Hostile)
+                check(t.attackDamage > 0, who + " fights back");
+            else
+                check(t.attackDamage == 0, who + " does not attack");
+
+            if (t.attackDamage > 0)
+                check(t.attackInterval > 0.0f, who + " cannot swing infinitely fast");
+            check(t.dropCount == 0 || t.drop != Blocks::Air,
+                  who + " does not drop nothing repeatedly");
+        }
+
+        // A death is reported exactly once, on the frame it happens --
+        // the corpse lingers afterwards, so anything waiting for removal
+        // would drop the loot in the wrong place or not at all.
+        Mob sheep(MobId::Sheep, glm::vec3(3.0f, 64.0f, 3.0f), 99u);
+        check(!sheep.takeDeathReport(), "a living sheep reports no death");
+        sheep.damage(1000, glm::vec3(0.0f, 0.0f, 1.0f));
+        check(sheep.takeDeathReport(), "a dead one reports once");
+        check(!sheep.takeDeathReport(), "and only once");
+        check(mobType(MobId::Sheep).drop == Blocks::Wool, "a sheep leaves its wool");
+
+        // Knockback pushes away from whatever hit it, and upward.
+        Mob pig(MobId::Pig, glm::vec3(0.0f, 64.0f, 0.0f), 5u);
+        const glm::vec3 before = pig.position();
+        pig.damage(1, glm::vec3(1.0f, 0.0f, 0.0f));
+        check(pig.position() == before, "a hit does not teleport anything");
+        check(pig.hurtFlash() > 0.0f, "but it does flash");
+
+        // Who the swing lands on. No world needed: this is a ray against
+        // the mobs' own boxes, and it is the only part of hitting
+        // something that a screenshot cannot show.
+        EntityManager herd;
+        herd.mobs().emplace_back(MobId::Cow, glm::vec3(0.0f, 64.0f, 5.0f), 1u);
+        herd.mobs().emplace_back(MobId::Cow, glm::vec3(0.0f, 64.0f, 12.0f), 2u);
+
+        // Eye height is 1.62 and a cow is 1.375 tall, so looking dead
+        // level really does pass over its back. Aim slightly down, the
+        // way you would at an animal.
+        const glm::vec3 eye(0.0f, 65.6f, 0.0f);
+        const glm::vec3 ahead = glm::normalize(glm::vec3(0.0f, -0.1f, 1.0f));
+
+        check(herd.pick(eye, glm::vec3(0.0f, 0.0f, 1.0f), 20.0f) == nullptr,
+              "looking level goes over a cow's back");
+
+        Mob* nearest = herd.pick(eye, ahead, 20.0f);
+        check(nearest != nullptr, "a cow straight ahead is picked");
+        if (nearest) check(nearest->position().z == 5.0f, "and it is the nearer of the two");
+
+        check(herd.pick(eye, ahead, 3.0f) == nullptr, "one out of reach is not");
+        check(herd.pick(eye, glm::vec3(0.0f, 0.0f, -1.0f), 20.0f) == nullptr,
+              "nor one behind you");
+        check(herd.pick(eye, glm::vec3(1.0f, 0.0f, 0.0f), 20.0f) == nullptr,
+              "nor one off to the side");
+
+        // A corpse is not a target: you cannot keep hitting it.
+        herd.mobs()[0].damage(1000, ahead);
+        Mob* living = herd.pick(eye, ahead, 20.0f);
+        check(living != nullptr && living->position().z == 12.0f,
+              "a dead one is skipped for the live one behind it");
+    }
+
+    void testPlayerImmunity()
+    {
+        section("player: hurt immunity");
+
+        Player player(glm::vec3(0.0f, 64.0f, 0.0f));
+        player.mode = GameMode::Survival;
+        const int full = Player::MAX_HEALTH;
+
+        check(player.damage(3), "the first blow lands");
+        check(player.health == full - 3, "and takes three off");
+        check(player.invulnerable(), "leaving the player briefly immune");
+
+        // Without this a mob standing in your face deals its damage once
+        // a frame and kills you before you can step back.
+        check(!player.damage(3), "a second blow in the same instant does not");
+        check(player.health == full - 3, "so the health is unchanged");
+
+        check(!player.damage(0), "a blow for nothing never lands");
+
+        // Creative players are not hurt at all.
+        Player builder(glm::vec3(0.0f, 64.0f, 0.0f));
+        builder.mode = GameMode::Creative;
+        check(!builder.damage(5), "creative mode shrugs it off");
+        check(builder.health == full, "and keeps its health");
+
+        // Respawning clears the immunity along with everything else.
+        player.respawn(glm::vec3(0.0f, 70.0f, 0.0f));
+        check(player.health == full, "respawning heals");
+        check(!player.invulnerable(), "and does not leave you immune");
+        check(player.damage(2), "so the next blow lands again");
+    }
 }
 
 int runSelfTest()
@@ -620,6 +725,8 @@ int runSelfTest()
     testMobSpawnRules();
     testMobGeometry();
     testMobDamage();
+    testMobCombat();
+    testPlayerImmunity();
 
     std::printf("\n%d checks, %d failed\n", g_checks, g_failures);
     return g_failures == 0 ? 0 : 1;
