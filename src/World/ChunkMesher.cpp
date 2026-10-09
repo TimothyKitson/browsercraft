@@ -59,7 +59,15 @@ namespace
     {
         if (neighbour == Blocks::Air) return true;
         if (isOpaque(neighbour)) return false;
-        if (neighbour == self) return false;  // hide interior faces of water/glass/leaf volumes
+
+        // Leaves are the exception to hiding the inside of a volume. A
+        // canopy meshed as a hollow shell is one layer of cut-out tiles
+        // with nothing behind it, so you see through every gap in it to
+        // the trunk. Drawing every leaf face means the layers behind
+        // cover each other's holes and the tree reads as solid.
+        if (isLeaves(self) && isLeaves(neighbour)) return true;
+
+        if (neighbour == self) return false;  // hide interior faces of water and glass
         if (isCross(neighbour)) return true;
         return true;
     }

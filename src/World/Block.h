@@ -91,6 +91,7 @@ inline bool isOpaque(BlockId id) { return blockInfo(id).opaque; }
 inline bool isSolid(BlockId id) { return blockInfo(id).collides; }
 inline bool isLiquid(BlockId id) { return blockInfo(id).render == RenderType::Liquid; }
 inline bool isCross(BlockId id) { return blockInfo(id).render == RenderType::Cross; }
+inline bool isLeaves(BlockId id) { return id == Blocks::Leaves || id == Blocks::BirchLeaves; }
 inline bool isVisible(BlockId id) { return blockInfo(id).render != RenderType::None; }
 inline uint8_t lightEmission(BlockId id) { return blockInfo(id).lightEmission; }
 
