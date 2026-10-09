@@ -94,7 +94,11 @@ if ($skipped.Count -gt 0) {
 }
 
 if ($Credit) {
-    Set-Content -LiteralPath (Join-Path $dest "CREDIT.txt") -Value $Credit -Encoding UTF8
+    # WriteAllText rather than Set-Content: Windows PowerShell's UTF8
+    # encoding writes a byte-order mark, which the game then showed as
+    # three stray characters in front of the name.
+    [System.IO.File]::WriteAllText((Join-Path $dest "CREDIT.txt"), $Credit,
+                                   (New-Object System.Text.UTF8Encoding($false)))
     Write-Output "Credited to: $Credit"
 }
 

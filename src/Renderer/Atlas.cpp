@@ -721,9 +721,20 @@ namespace
 
         std::string credit;
         char line[256];
+        bool first = true;
         while (std::fgets(line, sizeof(line), file))
         {
             std::string text(line);
+
+            // Windows PowerShell writes UTF-8 with a byte-order mark, and
+            // three stray bytes at the front of the file came out as
+            // mojibake in front of the pack's name on the title screen.
+            if (first && text.size() >= 3 &&
+                static_cast<unsigned char>(text[0]) == 0xEF &&
+                static_cast<unsigned char>(text[1]) == 0xBB &&
+                static_cast<unsigned char>(text[2]) == 0xBF)
+                text.erase(0, 3);
+            first = false;
             while (!text.empty() && (text.back() == '\n' || text.back() == '\r' ||
                                      text.back() == ' ' || text.back() == '\t'))
                 text.pop_back();

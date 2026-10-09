@@ -92,7 +92,11 @@ $archive.Dispose()
 # leave the last one's name on the title screen.
 $creditPath = Join-Path $root "assets\textures\CREDIT.txt"
 if ($Credit -ne "") {
-    Set-Content -LiteralPath $creditPath -Value $Credit -Encoding UTF8
+    # WriteAllText rather than Set-Content: Windows PowerShell's UTF8
+    # encoding writes a byte-order mark, which the game then showed as
+    # three stray characters in front of the name.
+    [System.IO.File]::WriteAllText($creditPath, $Credit,
+                                   (New-Object System.Text.UTF8Encoding($false)))
     Write-Output "Credited as: $Credit"
 } elseif (Test-Path -LiteralPath $creditPath) {
     Remove-Item -LiteralPath $creditPath
