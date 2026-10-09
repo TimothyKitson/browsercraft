@@ -67,6 +67,16 @@ public:
     // maxStackOf(), since items need not agree with blocks.
     static constexpr int MAX_STACK = 64;
 
+    static bool isArmourSlot(int index)
+    {
+        return index >= ARMOR_FIRST && index < ARMOR_FIRST + ARMOR_SLOTS;
+    }
+
+    // Puts a piece of armour on, swapping whatever that slot already
+    // holds onto the cursor. Returns false if it is not armour, or if
+    // the slot it belongs in is somehow out of range.
+    bool wear(ItemStack& from);
+
     // Returns the number of items that didn't fit.
     int add(StackId id, int count);
     bool removeOne(int slot);

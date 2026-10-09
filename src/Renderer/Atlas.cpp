@@ -1568,6 +1568,70 @@ namespace
     void paintItemCookedChicken(Tile& t) { paintItemRawChicken(t); cookTile(t); }
     void paintItemCookedMutton(Tile& t)  { paintItemRawMutton(t); cookTile(t); }
 
+    // ---------- armour ----------
+    //
+    // One painter for all sixteen, the same way the tools are done: the
+    // silhouette of the piece in the tier's material.
+
+    const Color ARMOUR_COLOR[4] = {
+        { 166, 104,  66 },   // leather
+        { 246, 208,  70 },   // gold
+        { 216, 216, 216 },   // iron
+        {  94, 219, 208 },   // diamond
+    };
+
+    const Span HELMET[] = {
+        { 3, 4, 11 }, { 4, 3, 12 }, { 5, 3, 12 }, { 6, 3, 4 }, { 6, 11, 12 },
+        { 7, 3, 4 }, { 7, 11, 12 }, { 8, 3, 4 }, { 8, 11, 12 },
+    };
+    const Span CHESTPLATE[] = {
+        { 3, 3, 5 }, { 3, 10, 12 },
+        { 4, 2, 13 }, { 5, 2, 13 }, { 6, 2, 13 },
+        { 7, 3, 12 }, { 8, 3, 12 }, { 9, 3, 12 }, { 10, 4, 11 }, { 11, 4, 11 },
+    };
+    const Span LEGGINGS[] = {
+        { 3, 3, 12 }, { 4, 3, 12 }, { 5, 3, 12 },
+        { 6, 3, 6 }, { 6, 9, 12 }, { 7, 3, 6 }, { 7, 9, 12 },
+        { 8, 3, 6 }, { 8, 9, 12 }, { 9, 3, 6 }, { 9, 9, 12 },
+        { 10, 4, 6 }, { 10, 9, 11 },
+    };
+    const Span BOOTS[] = {
+        { 6, 3, 6 }, { 6, 9, 12 },
+        { 7, 3, 6 }, { 7, 9, 12 },
+        { 8, 2, 7 }, { 8, 9, 13 },
+        { 9, 2, 7 }, { 9, 9, 13 },
+    };
+
+    const HeadShape ARMOUR_SHAPES[4] = {
+        { HELMET,     static_cast<int>(sizeof(HELMET) / sizeof(Span)) },
+        { CHESTPLATE, static_cast<int>(sizeof(CHESTPLATE) / sizeof(Span)) },
+        { LEGGINGS,   static_cast<int>(sizeof(LEGGINGS) / sizeof(Span)) },
+        { BOOTS,      static_cast<int>(sizeof(BOOTS) / sizeof(Span)) },
+    };
+
+    void paintArmourTile(Tile& t, int piece, int tier)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+
+        const Color body = ARMOUR_COLOR[tier];
+        const Color dark = shade(body, -44);
+        const Color lit = shade(body, 38);
+
+        const HeadShape& shape = ARMOUR_SHAPES[piece];
+        for (int i = 0; i < shape.count; ++i)
+        {
+            const Span& span = shape.spans[i];
+            for (int x = span.x0; x <= span.x1; ++x)
+            {
+                // Lit along the top, shaded down the sides, so the piece
+                // has some shape to it rather than being a flat cut-out.
+                const bool top = (i < 2);
+                const bool edge = (x == span.x0 || x == span.x1);
+                t.set(x, span.y, top ? lit : (edge ? dark : body));
+            }
+        }
+    }
+
     void paintItemStick(Tile& t)
     {
         t.fill(Color{ 0, 0, 0, 0 });
@@ -1954,6 +2018,13 @@ Atlas::Atlas()
         Tile tile;
         paintToolTile(tile, i % 5, i / 5);
         blitPainted(Tiles::ItemToolFirst + i, tile);
+    }
+
+    for (int i = 0; i < 16; ++i)
+    {
+        Tile tile;
+        paintArmourTile(tile, i % 4, i / 4);
+        blitPainted(Tiles::ItemArmourFirst + i, tile);
     }
 
     // Item icons out of the pack, over the painted ones. These are their

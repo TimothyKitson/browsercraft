@@ -379,6 +379,10 @@ private:
     // Spends a point of the held tool's durability, and clears the slot
     // with a snap when there is none left.
     void wearTool(BlockId brokenBlock);
+
+    // Totting up what is worn, and spending it when a blow lands.
+    int armourPoints() const;
+    void wearArmour(int incoming);
     void wearOnSwing(StackId weapon);
     void openBench(const glm::ivec3& block);
 
@@ -398,6 +402,7 @@ private:
     void updateChatInput();
     void runChatLine(const std::string& line);
     void renderHearts(float x, float y);
+    void renderArmour(float x, float y);
     void renderFood(float rightX, float y);
     void renderEatProgress(float cx, float cy);
     void handleEating(float deltaTime);

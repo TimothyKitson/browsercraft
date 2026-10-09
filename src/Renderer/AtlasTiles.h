@@ -104,7 +104,12 @@ namespace Tiles
         ItemToolFirst,
         ItemToolEnd = ItemToolFirst + 25,
 
-        ItemTileEnd
+        // Four pieces in each of four tiers, same ordering as the Items
+        // enum so the painter works it out from the offset.
+        ItemArmourFirst = ItemToolEnd,
+        ItemArmourEnd = ItemArmourFirst + 16,
+
+        ItemTileEnd = ItemArmourEnd
     };
 
     // Ten progressively more broken overlay tiles for the mining animation.

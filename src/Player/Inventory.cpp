@@ -1,4 +1,5 @@
 #include "Inventory.h"
+#include "Game/Armour.h"
 #include "Game/Crafting.h"
 #include <algorithm>
 
@@ -144,6 +145,23 @@ int Inventory::findDestination(const ItemStack& stack, int begin, int end) const
     return -1;
 }
 
+// Right-clicking a piece in your hand puts it on, which is how
+// Minecraft does it and saves dragging it across the panel.
+bool Inventory::wear(ItemStack& from)
+{
+    if (from.empty()) return false;
+
+    const int piece = Armour::slotFor(from.id);
+    if (piece < 0 || piece >= ARMOR_SLOTS) return false;
+
+    ItemStack& worn = m_slots[ARMOR_FIRST + piece];
+
+    // What was there comes off in exchange, so swapping one helmet for
+    // another never destroys the old one.
+    std::swap(worn, from);
+    return true;
+}
+
 void Inventory::leftClick(int index)
 {
     if (index < 0 || index >= SLOT_COUNT) return;
@@ -159,6 +177,12 @@ void Inventory::leftClick(int index)
         if (!target.empty() && target.id == m_cursor.id) mergeInto(target, m_cursor);
         return;
     }
+
+    // Boots go on feet. An armour slot takes its own piece and nothing
+    // else, so the four of them cannot be used as extra pockets.
+    if (isArmourSlot(index) && !m_cursor.empty() &&
+        Armour::slotFor(m_cursor.id) != index - ARMOR_FIRST)
+        return;
 
     if (m_cursor.empty())
     {
@@ -188,6 +212,9 @@ void Inventory::rightClick(int index)
     if (index < 0 || index >= SLOT_COUNT) return;
     if (index == CRAFT_RESULT) { takeCraftResult(); return; }
     if (index == FURNACE_OUTPUT && !m_cursor.empty()) return;
+    if (isArmourSlot(index) && !m_cursor.empty() &&
+        Armour::slotFor(m_cursor.id) != index - ARMOR_FIRST)
+        return;
 
     ItemStack& target = m_slots[index];
 

@@ -72,6 +72,12 @@ public:
     bool sneaking = false;
     GameMode mode = GameMode::Survival;
     int health = MAX_HEALTH;
+
+    // What is being worn, totted up from the armour slots once a frame.
+    // Kept here rather than read from the inventory so that damage() --
+    // the one place a blow is ever applied -- stays the one place the
+    // rules about a blow live, and --selftest can set it directly.
+    int armourPoints = 0;
     int hunger = MAX_HUNGER;
     float saturation = 5.0f;
 
@@ -82,6 +88,10 @@ public:
     // which is held down for many frames and is down just as often when
     // the jump does not happen at all.
     bool jumpedThisUpdate() const { return m_jumped; }
+
+    // Drops the half second of immunity after a blow. Only --selftest
+    // wants this: it lands a run of blows with no clock to wait on.
+    void clearHurtCooldown() { m_hurtCooldown = 0.0f; }
     float damageFlash = 0.0f; // seconds remaining on the red hurt overlay
 
 private:

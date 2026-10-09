@@ -6,6 +6,7 @@
 #include "Game/Farming.h"
 #include "Game/Food.h"
 #include "Game/Tools.h"
+#include "Game/Armour.h"
 #include "World/WorldSave.h"
 #include <glm/gtc/matrix_transform.hpp>
 #include <SDL.h>
@@ -1027,6 +1028,10 @@ bool Application::frame()
 
         if (playing() || m_inventoryOpen) tickFurnaces(deltaTime);
 
+        // What is worn decides what a blow costs, and it can change
+        // between one blow and the next.
+        m_player.armourPoints = armourPoints();
+
         // The big grid belongs to the bench, not to the player, so it
         // shuts as soon as they walk out of reach of it -- or mine it.
         if ((m_benchOpen || m_furnaceOpen || m_chestOpen) && playing())
@@ -1077,13 +1082,15 @@ bool Application::frame()
         if (m_startupScreen == "inventory" || m_startupScreen == "creative" ||
             m_startupScreen == "bench" || m_startupScreen == "tools" ||
             m_startupScreen == "furnace" || m_startupScreen == "furnaceblock" ||
-            m_startupScreen == "chest")
+            m_startupScreen == "chest" || m_startupScreen == "armour" ||
+            m_startupScreen == "armourhud")
         {
             // Dev aid: open the inventory with something in it, so the
             // screenshot shows a real grid rather than 36 empty boxes.
             // "furnaceblock" is the exception: it wants the block in
             // view, not a panel in front of it.
-            const bool showPanel = m_startupScreen != "furnaceblock";
+            const bool showPanel = m_startupScreen != "furnaceblock" &&
+                                  m_startupScreen != "armourhud";
             m_inventoryOpen = showPanel;
             setMouseCaptured(!showPanel);
             m_inventory.add(Blocks::Cobblestone, 64);
@@ -1095,6 +1102,19 @@ bool Application::frame()
             m_inventory.add(Blocks::CraftingTable, 1);
 
             if (m_startupScreen == "creative") m_creativeTab = 5;   // TOOLS
+            if (m_startupScreen == "armour" || m_startupScreen == "armourhud")
+            {
+                m_creativeTab = 6;   // ARMOUR
+                m_inventory.slot(Inventory::ARMOR_FIRST + 0).id = Items::DiamondHelmet;
+                m_inventory.slot(Inventory::ARMOR_FIRST + 0).count = 1;
+                m_inventory.slot(Inventory::ARMOR_FIRST + 1).id = Items::IronChestplate;
+                m_inventory.slot(Inventory::ARMOR_FIRST + 1).count = 1;
+                m_inventory.slot(Inventory::ARMOR_FIRST + 2).id = Items::GoldLeggings;
+                m_inventory.slot(Inventory::ARMOR_FIRST + 2).count = 1;
+                m_inventory.slot(Inventory::ARMOR_FIRST + 3).id = Items::LeatherBoots;
+                m_inventory.slot(Inventory::ARMOR_FIRST + 3).count = 1;
+                m_player.armourPoints = armourPoints();
+            }
 
             if (m_startupScreen == "chest")
             {
@@ -1887,6 +1907,43 @@ void Application::updateMining(float deltaTime)
     }
 }
 
+int Application::armourPoints() const
+{
+    int points = 0;
+    for (int i = 0; i < Inventory::ARMOR_SLOTS; ++i)
+    {
+        const ItemStack& worn = m_inventory.slot(Inventory::ARMOR_FIRST + i);
+        if (!worn.empty()) points += Armour::defencePoints(worn.id);
+    }
+    return points;
+}
+
+// Armour wears where it is struck: every piece takes a share of the blow,
+// and a piece that gives out leaves its slot empty mid-fight, which is
+// exactly how Minecraft lets you know you are in trouble.
+void Application::wearArmour(int incoming)
+{
+    if (m_player.creative() || incoming <= 0) return;
+
+    const int cost = std::max(1, incoming / 4);
+
+    for (int i = 0; i < Inventory::ARMOR_SLOTS; ++i)
+    {
+        ItemStack& worn = m_inventory.slot(Inventory::ARMOR_FIRST + i);
+        if (worn.empty() || !Armour::isArmour(worn.id)) continue;
+
+        const int limit = Armour::maxDurability(worn.id);
+        if (limit <= 0) continue;
+
+        worn.damage += cost;
+        if (worn.damage >= limit)
+        {
+            worn.clear();
+            m_audio.play(Sound::DigWood, 0.7f, 0.5f);
+        }
+    }
+}
+
 // A tool is used up a point at a time, and goes with a snap rather than
 // quietly: Minecraft makes a point of telling you, because losing a
 // pickaxe underground is news.
@@ -1998,6 +2055,17 @@ void Application::handlePlacement()
 
     ItemStack& stack = m_inventory.selected();
     if (stack.empty()) return;
+
+    // A piece of armour held in the hand is put on rather than placed.
+    if (Armour::isArmour(stack.id))
+    {
+        if (m_inventory.wear(stack))
+        {
+            m_player.armourPoints = armourPoints();
+            m_audio.play(Sound::DigWool, 0.7f, 0.9f);
+        }
+        return;
+    }
 
     // Feeding comes first: an animal in front of you takes the wheat
     // rather than the block landing behind it.
@@ -2674,6 +2742,7 @@ void Application::updateMobs(float deltaTime)
     {
         if (!m_player.damage(strike.damage)) continue;
 
+        wearArmour(strike.damage);
         m_audio.play(Sound::Hurt, 0.8f);
 
         const glm::vec3 away = m_player.position - strike.from;
@@ -2750,6 +2819,36 @@ void Application::renderHearts(float x, float y)
             m_ui.texturedQuad(m_gui.texture(halfSprite), heartX, y, HEART_SIZE, HEART_SIZE,
                               0.0f, 0.0f, 1.0f, 1.0f, glm::vec4(1.0f));
         }
+    }
+}
+
+// The armour row, above the hearts, in the same half-and-whole steps the
+// hearts use: twenty points is ten plates, as in Minecraft. Nothing is
+// drawn at all when nothing is worn, so an unarmoured player's HUD looks
+// exactly as it did before there was any armour in the game.
+void Application::renderArmour(float x, float y)
+{
+    const int points = m_player.armourPoints;
+    if (points <= 0) return;
+
+    constexpr int PLATE_COUNT = 10;
+    constexpr float PLATE_SIZE = 20.0f;
+    constexpr float SPACING = 2.0f;
+
+    for (int i = 0; i < PLATE_COUNT; ++i)
+    {
+        const float plateX = x + i * (PLATE_SIZE + SPACING);
+        const int remaining = points - i * 2;
+
+        m_ui.texturedQuad(m_gui.texture(GuiSprite::ArmorEmpty), plateX, y,
+                          PLATE_SIZE, PLATE_SIZE, 0.0f, 0.0f, 1.0f, 1.0f, glm::vec4(1.0f));
+
+        if (remaining >= 2)
+            m_ui.texturedQuad(m_gui.texture(GuiSprite::ArmorFull), plateX, y,
+                              PLATE_SIZE, PLATE_SIZE, 0.0f, 0.0f, 1.0f, 1.0f, glm::vec4(1.0f));
+        else if (remaining == 1)
+            m_ui.texturedQuad(m_gui.texture(GuiSprite::ArmorHalf), plateX, y,
+                              PLATE_SIZE, PLATE_SIZE, 0.0f, 0.0f, 1.0f, 1.0f, glm::vec4(1.0f));
     }
 }
 
@@ -2880,6 +2979,7 @@ void Application::renderHud()
     if (!m_player.creative())
     {
         renderHearts(barX + SLOT_GAP, barY - 32.0f);
+        renderArmour(barX + SLOT_GAP, barY - 54.0f);
         renderFood(barX + barWidth - SLOT_GAP, barY - 32.0f);
         renderEatProgress(cx, cy);
     }

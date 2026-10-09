@@ -1,4 +1,5 @@
 #include "Player.h"
+#include "Game/Armour.h"
 #include "World/World.h"
 #include <algorithm>
 #include <cmath>
@@ -216,6 +217,9 @@ bool Player::isHeadUnderwater(const World& world) const
 bool Player::damage(int amount)
 {
     if (creative() || amount <= 0 || m_hurtCooldown > 0.0f) return false;
+
+    amount = Armour::reduce(amount, armourPoints);
+
     health = std::max(0, health - amount);
     damageFlash = 0.4f;
     m_hurtCooldown = HURT_IMMUNITY;

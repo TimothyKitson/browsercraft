@@ -17,6 +17,7 @@
 #include "World/WorldSave.h"
 #include "Game/Tools.h"
 #include "Game/Smelting.h"
+#include "Game/Armour.h"
 #include "World/Furnaces.h"
 #include "World/Chests.h"
 #include "Entity/MobModel.h"
@@ -1747,6 +1748,153 @@ namespace
         check(!furnaces.has(here), "a cold empty furnace is forgotten");
     }
 
+    void testArmour()
+    {
+        section("armour");
+
+        using namespace Armour;
+
+        check(pieceOf(Items::LeatherHelmet) == Piece::Helmet, "the first piece is a helmet");
+        check(tierOf(Items::LeatherHelmet) == Tier::Leather, "made of leather");
+        check(pieceOf(Items::DiamondBoots) == Piece::Boots, "the last is a pair of boots");
+        check(tierOf(Items::DiamondBoots) == Tier::Diamond, "made of diamond");
+        check(!isArmour(Items::IronSword), "a sword is not armour");
+        check(!isArmour(Blocks::Stone), "nor is a block");
+
+        // Each piece goes in its own slot, and the four of them between
+        // them cover all four slots exactly once.
+        bool covered[4] = { false, false, false, false };
+        for (StackId id = Items::IronHelmet; id <= Items::IronBoots; ++id)
+        {
+            const int slot = slotFor(id);
+            check(slot >= 0 && slot < 4, "every piece has a slot");
+            check(!covered[slot], "and no two share one");
+            covered[slot] = true;
+        }
+        check(covered[0] && covered[1] && covered[2] && covered[3], "all four are covered");
+
+        // Minecraft's own totals: leather seven, gold eleven, iron
+        // fifteen, diamond twenty.
+        const int LEATHER = defencePoints(Items::LeatherHelmet) + defencePoints(Items::LeatherChestplate)
+                          + defencePoints(Items::LeatherLeggings) + defencePoints(Items::LeatherBoots);
+        const int IRON = defencePoints(Items::IronHelmet) + defencePoints(Items::IronChestplate)
+                       + defencePoints(Items::IronLeggings) + defencePoints(Items::IronBoots);
+        const int DIAMOND = defencePoints(Items::DiamondHelmet) + defencePoints(Items::DiamondChestplate)
+                          + defencePoints(Items::DiamondLeggings) + defencePoints(Items::DiamondBoots);
+
+        check(LEATHER == 7, "a suit of leather is seven points");
+        check(IRON == 15, "a suit of iron is fifteen");
+        check(DIAMOND == 20, "a suit of diamond is twenty");
+
+        // A chestplate is always the best piece of its tier, and a
+        // better tier is always worth at least as much.
+        check(defencePoints(Items::IronChestplate) > defencePoints(Items::IronHelmet),
+              "the chestplate is the best piece");
+        check(defencePoints(Items::DiamondChestplate) > defencePoints(Items::IronChestplate),
+              "and diamond beats iron");
+        check(maxDurability(Items::DiamondHelmet) > maxDurability(Items::LeatherHelmet),
+              "and lasts far longer");
+
+        // Four percent off per point, and a blow is never stopped dead.
+        check(reduce(10, 0) == 10, "no armour takes nothing off");
+        check(reduce(10, 20) < reduce(10, 10), "a full suit beats half a one");
+        check(reduce(10, 10) < 10, "and any armour beats none");
+        check(reduce(100, 20) == 20, "twenty points is eighty percent off");
+        check(reduce(1, 20) == 1, "but the smallest blow still lands");
+        check(reduce(10, 40) == reduce(10, 20), "and points past twenty are wasted");
+        check(reduce(0, 10) == 0, "nothing stays nothing");
+
+        // The whole point of it: a player in diamond outlasts one in
+        // nothing by a long way against the same blows.
+        Player bare(glm::vec3(0.0f, 64.0f, 0.0f));
+        Player armoured(glm::vec3(0.0f, 64.0f, 0.0f));
+        armoured.armourPoints = DIAMOND;
+
+        int bareHits = 0, armouredHits = 0;
+        while (bare.health > 0 && bareHits < 100)
+        {
+            bare.clearHurtCooldown();
+            if (bare.damage(5)) ++bareHits;
+        }
+        while (armoured.health > 0 && armouredHits < 100)
+        {
+            armoured.clearHurtCooldown();
+            if (armoured.damage(5)) ++armouredHits;
+        }
+        check(armouredHits > bareHits * 2, "diamond armour more than doubles what you survive");
+    }
+
+    void testArmourRecipes()
+    {
+        section("armour: the recipes");
+
+        struct Shape { int w, h; const char* cells; };
+        const Shape SHAPES[4] = {
+            { 3, 2, "MMMM.M" },        // helmet
+            { 3, 3, "M.MMMMMMM" },     // chestplate
+            { 3, 3, "MMMM.MM.M" },     // leggings
+            { 3, 2, "M.MM.M" },        // boots
+        };
+        const StackId MATERIAL[4] = { Items::Leather, Items::GoldIngot,
+                                      Items::IronIngot, Items::Diamond };
+
+        int made = 0;
+        for (int tier = 0; tier < 4; ++tier)
+            for (int piece = 0; piece < 4; ++piece)
+            {
+                const Shape& shape = SHAPES[piece];
+
+                ItemStack grid[9];
+                for (int y = 0; y < shape.h; ++y)
+                    for (int x = 0; x < shape.w; ++x)
+                    {
+                        if (shape.cells[y * shape.w + x] != 'M') continue;
+                        grid[y * 3 + x].id = MATERIAL[tier];
+                        grid[y * 3 + x].count = 1;
+                    }
+
+                const CraftOutput out = Crafting::match(grid, 3);
+                const StackId wanted = static_cast<StackId>(Items::LeatherHelmet + tier * 4 + piece);
+                if (out.valid() && out.id == wanted && out.count == 1) ++made;
+            }
+
+        check(made == 16, "every piece of armour has a recipe that makes it");
+    }
+
+    void testWearing()
+    {
+        section("armour: putting it on");
+
+        Inventory inventory;
+
+        ItemStack helmet{ Items::IronHelmet, 1, 0 };
+        check(inventory.wear(helmet), "a helmet goes on");
+        check(inventory.slot(Inventory::ARMOR_FIRST).id == Items::IronHelmet,
+              "into the helmet slot");
+        check(helmet.empty(), "and leaves your hand");
+
+        // Swapping one for another hands the old one back rather than
+        // destroying it.
+        ItemStack better{ Items::DiamondHelmet, 1, 0 };
+        check(inventory.wear(better), "a better one goes on over it");
+        check(inventory.slot(Inventory::ARMOR_FIRST).id == Items::DiamondHelmet, "and is worn");
+        check(better.id == Items::IronHelmet, "and the old one comes back to your hand");
+
+        ItemStack sword{ Items::IronSword, 1, 0 };
+        check(!inventory.wear(sword), "a sword cannot be worn");
+
+        // Boots cannot be put in the helmet slot by hand either.
+        Inventory other;
+        other.cursor() = ItemStack{ Items::IronBoots, 1, 0 };
+        other.leftClick(Inventory::ARMOR_FIRST);
+        check(other.slot(Inventory::ARMOR_FIRST).empty(), "boots do not go on your head");
+        check(other.cursor().id == Items::IronBoots, "and stay on the cursor");
+
+        other.leftClick(Inventory::ARMOR_FIRST + 3);
+        check(other.slot(Inventory::ARMOR_FIRST + 3).id == Items::IronBoots,
+              "but go on your feet");
+    }
+
     void testChestStore()
     {
         section("chests");
@@ -1936,6 +2084,9 @@ int runSelfTest()
     testToolRecipes();
     testSmelting();
     testFurnaceStore();
+    testArmour();
+    testArmourRecipes();
+    testWearing();
     testChestStore();
     testLevelRoundTrip();
 

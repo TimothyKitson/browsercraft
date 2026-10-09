@@ -35,6 +35,25 @@ namespace
         { "Iron Ingot",   Tiles::ItemIronIngot,  64 },
         { "Gold Ingot",   Tiles::ItemGoldIngot,  64 },
 
+
+        // Armour is one of a kind too, so it never stacks.
+        { "Leather Helmet",      Tiles::ItemArmourFirst + 0,  1 },
+        { "Leather Chestplate",  Tiles::ItemArmourFirst + 1,  1 },
+        { "Leather Leggings",    Tiles::ItemArmourFirst + 2,  1 },
+        { "Leather Boots",       Tiles::ItemArmourFirst + 3,  1 },
+        { "Golden Helmet",       Tiles::ItemArmourFirst + 4,  1 },
+        { "Golden Chestplate",   Tiles::ItemArmourFirst + 5,  1 },
+        { "Golden Leggings",     Tiles::ItemArmourFirst + 6,  1 },
+        { "Golden Boots",        Tiles::ItemArmourFirst + 7,  1 },
+        { "Iron Helmet",         Tiles::ItemArmourFirst + 8,  1 },
+        { "Iron Chestplate",     Tiles::ItemArmourFirst + 9,  1 },
+        { "Iron Leggings",       Tiles::ItemArmourFirst + 10,  1 },
+        { "Iron Boots",          Tiles::ItemArmourFirst + 11,  1 },
+        { "Diamond Helmet",      Tiles::ItemArmourFirst + 12,  1 },
+        { "Diamond Chestplate",  Tiles::ItemArmourFirst + 13,  1 },
+        { "Diamond Leggings",    Tiles::ItemArmourFirst + 14,  1 },
+        { "Diamond Boots",       Tiles::ItemArmourFirst + 15,  1 },
+
         // A tool is one of a kind, so it never stacks.
         { "Wooden Pickaxe",  Tiles::ItemToolFirst + 0,  1 },
         { "Wooden Axe",      Tiles::ItemToolFirst + 1,  1 },

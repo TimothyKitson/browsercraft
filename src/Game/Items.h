@@ -49,6 +49,14 @@ namespace Items
         IronIngot,
         GoldIngot,
 
+        // Armour, grouped by tier so Armour::pieceOf is arithmetic
+        // rather than a switch with sixteen cases. Keep the four pieces
+        // in this order within every tier.
+        LeatherHelmet, LeatherChestplate, LeatherLeggings, LeatherBoots,
+        GoldHelmet, GoldChestplate, GoldLeggings, GoldBoots,
+        IronHelmet, IronChestplate, IronLeggings, IronBoots,
+        DiamondHelmet, DiamondChestplate, DiamondLeggings, DiamondBoots,
+
         // Tools, grouped by tier so Tools::tierOf is arithmetic rather
         // than a switch with twenty-five cases in it. Keep the five
         // kinds in this order within every tier.

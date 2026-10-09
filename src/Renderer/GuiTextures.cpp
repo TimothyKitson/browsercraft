@@ -89,6 +89,19 @@ namespace
         "..1221..."
     };
 
+    // The little shield that marks a point of armour.
+    const char PLATE[9][10] = {
+        ".1111111.",
+        "113333311",
+        "133333331",
+        "133333331",
+        "133333331",
+        "133333331",
+        ".13333331",
+        "..133331.",
+        "...1331.."
+    };
+
     const char HEART[9][10] = {
         "..11.11..",
         ".1221221.",
@@ -151,6 +164,27 @@ GuiTextures::GuiTextures()
     // No procedural stand-in for these: the HUD falls back to flat panels.
     loadFromFile(GuiSprite::Hotbar, "hotbar.png");
     loadFromFile(GuiSprite::HotbarSelection, "hotbar_selection.png");
+
+    // The armour row above the hearts.
+    struct PlateEntry
+    {
+        GuiSprite sprite;
+        const char* file;
+        bool half;
+        bool empty;
+    };
+
+    const PlateEntry PLATES[] = {
+        { GuiSprite::ArmorFull,  "armor_full.png",  false, false },
+        { GuiSprite::ArmorHalf,  "armor_half.png",  true,  false },
+        { GuiSprite::ArmorEmpty, "armor_empty.png", false, true  },
+    };
+
+    for (const PlateEntry& entry : PLATES)
+    {
+        if (!loadFromFile(entry.sprite, entry.file))
+            createArmorPlate(entry.sprite, entry.half, entry.empty);
+    }
 
     // Armour slot ghosts. Vanilla packs name these files, so a pack that
     // has them wins; otherwise the silhouettes above are drawn.
@@ -249,6 +283,36 @@ void GuiTextures::createDrumstick(GuiSprite sprite, bool half, bool empty)
             pixels[i + 3] = colour.a;
         }
     }
+
+    upload(sprite, pixels.data(), SIZE, SIZE);
+}
+
+void GuiTextures::createArmorPlate(GuiSprite sprite, bool half, bool empty)
+{
+    constexpr int SIZE = 9;
+    std::vector<unsigned char> pixels(SIZE * SIZE * 4, 0);
+
+    struct Colour { unsigned char r, g, b, a; };
+    const Colour outline{ 18, 18, 22, 255 };
+    const Colour face = empty ? Colour{ 58, 58, 62, 200 } : Colour{ 206, 206, 214, 255 };
+
+    for (int y = 0; y < SIZE; ++y)
+        for (int x = 0; x < SIZE; ++x)
+        {
+            const char cell = PLATE[y][x];
+            if (cell == '.') continue;
+
+            // The half plate is the left side of the shield only, the
+            // same way a half heart is.
+            if (half && !empty && x > SIZE / 2) continue;
+
+            const Colour colour = (cell == '1') ? outline : face;
+            const size_t i = (static_cast<size_t>(y) * SIZE + x) * 4;
+            pixels[i] = colour.r;
+            pixels[i + 1] = colour.g;
+            pixels[i + 2] = colour.b;
+            pixels[i + 3] = colour.a;
+        }
 
     upload(sprite, pixels.data(), SIZE, SIZE);
 }

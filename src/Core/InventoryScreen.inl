@@ -53,6 +53,13 @@ namespace
 
     // The twenty-five tools, their materials, and the two benches you
     // need to make any of it.
+    const StackId TAB_ARMOUR[] = {
+        Items::LeatherHelmet, Items::LeatherChestplate, Items::LeatherLeggings, Items::LeatherBoots,
+        Items::GoldHelmet, Items::GoldChestplate, Items::GoldLeggings, Items::GoldBoots,
+        Items::IronHelmet, Items::IronChestplate, Items::IronLeggings, Items::IronBoots,
+        Items::DiamondHelmet, Items::DiamondChestplate, Items::DiamondLeggings, Items::DiamondBoots,
+    };
+
     const StackId TAB_TOOLS[] = {
         Blocks::CraftingTable, Blocks::Furnace, Items::Stick, Items::Coal,
         Items::IronIngot, Items::GoldIngot, Items::Diamond,
@@ -71,6 +78,7 @@ namespace
         { "LIGHT AND LIQUID", Blocks::Glowstone,  TAB_MISC,     static_cast<int>(std::size(TAB_MISC)) },
         { "ITEMS",            Items::Wheat,       TAB_ITEMS,    static_cast<int>(std::size(TAB_ITEMS)) },
         { "TOOLS",            Items::IronPickaxe, TAB_TOOLS,    static_cast<int>(std::size(TAB_TOOLS)) },
+        { "ARMOUR",           Items::DiamondChestplate, TAB_ARMOUR, static_cast<int>(std::size(TAB_ARMOUR)) },
         { "EVERYTHING",       Blocks::Cobblestone,nullptr,      0 },
         { "YOUR INVENTORY",   Blocks::Wool,       nullptr,      0 },  // the player's own slots
     };
