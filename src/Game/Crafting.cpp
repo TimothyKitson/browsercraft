@@ -51,6 +51,17 @@ namespace
                          Blocks::Planks, Blocks::Planks, Blocks::Planks },
           0, Blocks::Chest, 1 },
 
+        // Coal over a stick makes four torches, which is the recipe the
+        // whole early game turns on -- there was no way to light a cave
+        // before it.
+        { false, 1, 2, { Items::Coal,
+                         Items::Stick }, 0, Blocks::Torch, 4 },
+
+        // Four string makes a block of wool, so a bed does not depend on
+        // finding sheep.
+        { false, 2, 2, { Items::StringItem, Items::StringItem,
+                         Items::StringItem, Items::StringItem }, 0, Blocks::Wool, 1 },
+
         // Three wool over three planks makes a bed.
         { false, 3, 2, { Blocks::Wool,   Blocks::Wool,   Blocks::Wool,
                          Blocks::Planks, Blocks::Planks, Blocks::Planks },

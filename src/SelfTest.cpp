@@ -1596,6 +1596,36 @@ namespace
 
         check(made == 25, "every tool in the game has a recipe that makes it");
 
+        // The recipes the early game turns on. A torch you cannot make
+        // is a cave you cannot enter.
+        ItemStack torch[9];
+        torch[0].id = Items::Coal;  torch[0].count = 1;
+        torch[3].id = Items::Stick; torch[3].count = 1;
+        const CraftOutput lit = Crafting::match(torch, 2);
+        check(lit.valid() && lit.id == Blocks::Torch, "coal on a stick makes torches");
+        check(lit.count == 4, "four of them");
+
+        ItemStack wool[9];
+        for (int i : { 0, 1, 3, 4 }) { wool[i].id = Items::StringItem; wool[i].count = 1; }
+        const CraftOutput cloth = Crafting::match(wool, 2);
+        check(cloth.valid() && cloth.id == Blocks::Wool, "four string makes wool");
+
+        ItemStack bed[9];
+        for (int i : { 0, 1, 2 }) { bed[i].id = Blocks::Wool; bed[i].count = 1; }
+        for (int i : { 3, 4, 5 }) { bed[i].id = Blocks::Planks; bed[i].count = 1; }
+        const CraftOutput sleep = Crafting::match(bed, 3);
+        check(sleep.valid() && sleep.id == Blocks::Bed, "wool over planks makes a bed");
+
+        ItemStack box[9];
+        for (int i : { 0, 1, 2, 3, 5, 6, 7, 8 }) { box[i].id = Blocks::Planks; box[i].count = 1; }
+        const CraftOutput chest = Crafting::match(box, 3);
+        check(chest.valid() && chest.id == Blocks::Chest, "eight planks make a chest");
+
+        ItemStack oven[9];
+        for (int i : { 0, 1, 2, 3, 5, 6, 7, 8 }) { oven[i].id = Blocks::Cobblestone; oven[i].count = 1; }
+        const CraftOutput furnace = Crafting::match(oven, 3);
+        check(furnace.valid() && furnace.id == Blocks::Furnace, "eight cobble make a furnace");
+
         // Sticks, and the bench that the three-wide ones need.
         ItemStack sticks[9];
         sticks[0].id = Blocks::Planks; sticks[0].count = 1;
