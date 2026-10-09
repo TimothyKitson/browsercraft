@@ -51,6 +51,17 @@ namespace
                          Blocks::Planks, Blocks::Planks, Blocks::Planks },
           0, Blocks::Chest, 1 },
 
+        // Three sticks and three string make a bow.
+        { false, 3, 3, { _,                Items::Stick,      Items::StringItem,
+                         Items::Stick,     _,                 Items::StringItem,
+                         _,                Items::Stick,      Items::StringItem },
+          0, Items::Bow, 1 },
+
+        // Flint, stick and feather make four arrows.
+        { false, 1, 3, { Items::Flint,
+                         Items::Stick,
+                         Items::Feather }, 0, Items::Arrow, 4 },
+
         // Coal over a stick makes four torches, which is the recipe the
         // whole early game turns on -- there was no way to light a cave
         // before it.

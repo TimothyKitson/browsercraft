@@ -31,6 +31,9 @@ namespace
 
         { "Stick",        Tiles::ItemStick,      64 },
         { "Coal",         Tiles::ItemCoal,       64 },
+        { "Flint",        Tiles::ItemFlint,      64 },
+        { "Bow",          Tiles::ItemBow,         1 },
+        { "Arrow",        Tiles::ItemArrow,      64 },
         { "Diamond",      Tiles::ItemDiamond,    64 },
         { "Iron Ingot",   Tiles::ItemIronIngot,  64 },
         { "Gold Ingot",   Tiles::ItemGoldIngot,  64 },

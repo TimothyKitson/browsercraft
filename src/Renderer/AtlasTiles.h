@@ -99,6 +99,9 @@ namespace Tiles
 
         ItemStick,
         ItemCoal,
+        ItemFlint,
+        ItemBow,
+        ItemArrow,
         ItemDiamond,
         ItemIronIngot,
         ItemGoldIngot,
@@ -114,7 +117,12 @@ namespace Tiles
         ItemArmourFirst = ItemToolEnd,
         ItemArmourEnd = ItemArmourFirst + 16,
 
-        ItemTileEnd = ItemArmourEnd
+        // An arrow in flight, drawn along the tile rather than across
+        // its diagonal: the quad it goes on is long and thin, and the
+        // item icon squashed down to nothing on it.
+        ArrowInFlight = ItemArmourEnd,
+
+        ItemTileEnd = ArrowInFlight + 1
     };
 
     // Ten progressively more broken overlay tiles for the mining animation.

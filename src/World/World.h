@@ -60,6 +60,11 @@ public:
 
     RaycastHit raycast(const glm::vec3& origin, const glm::vec3& direction, float maxDistance) const;
 
+    // Whether nothing solid stands between the two points. A skeleton
+    // asks this before shooting, so it does not loose arrows into the
+    // wall it is standing behind.
+    bool hasLineOfSight(const glm::vec3& from, const glm::vec3& to) const;
+
     const WorldGen& generator() const { return m_generator; }
     Dimension dimension() const { return m_generator.dimension(); }
     uint32_t seed() const { return m_seed; }

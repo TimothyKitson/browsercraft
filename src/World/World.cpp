@@ -747,3 +747,24 @@ RaycastHit World::raycast(const glm::vec3& origin, const glm::vec3& direction, f
 
     return hit;
 }
+
+bool World::hasLineOfSight(const glm::vec3& from, const glm::vec3& to) const
+{
+    const glm::vec3 apart = to - from;
+    const float distance = glm::length(apart);
+    if (distance < 0.001f) return true;
+
+    const glm::vec3 step = apart / distance * 0.4f;
+    const int steps = static_cast<int>(distance / 0.4f);
+
+    glm::vec3 at = from;
+    for (int i = 0; i < steps; ++i)
+    {
+        at += step;
+        if (isSolid(getBlock(static_cast<int>(std::floor(at.x)),
+                             static_cast<int>(std::floor(at.y)),
+                             static_cast<int>(std::floor(at.z)))))
+            return false;
+    }
+    return true;
+}

@@ -27,6 +27,15 @@ struct MobStrike
     glm::vec3 from{ 0.0f };     // the mob's position, for knockback
 };
 
+// A mob loosing an arrow. Collected like the strikes and the sounds,
+// for the same reason: a mob knows nothing about the arrows in flight.
+struct MobShot
+{
+    glm::vec3 from{ 0.0f };     // where it leaves the bow
+    glm::vec3 velocity{ 0.0f };
+    int damage = 0;
+};
+
 // A living thing: gravity and box collision against the voxel world, plus
 // enough wits to wander, notice the player, fight them, and make noise.
 class Mob
@@ -82,6 +91,7 @@ public:
 
     std::vector<MobSound>& sounds() { return m_sounds; }
     std::vector<MobStrike>& strikes() { return m_strikes; }
+    std::vector<MobShot>& shots() { return m_shots; }
 
     // True exactly once, on the first call after it dies. A corpse
     // lingers for a moment before it is dropped, so whatever it leaves
@@ -158,6 +168,7 @@ private:
     float m_attackTimer = 0.0f;
     float m_ambientTimer = 0.0f;
     float m_hurtVoiceTimer = 0.0f;
+    float m_shootTimer = 0.0f;
     float m_stepDistance = 0.0f;
     float m_gait = 0.0f;
     float m_gaitAmount = 0.0f;
@@ -174,4 +185,5 @@ private:
     uint32_t m_rng = 1;
     std::vector<MobSound> m_sounds;
     std::vector<MobStrike> m_strikes;
+    std::vector<MobShot> m_shots;
 };

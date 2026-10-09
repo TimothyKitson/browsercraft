@@ -12,6 +12,7 @@
 #include "World/World.h"
 #include "World/Furnaces.h"
 #include "World/Chests.h"
+#include "Entity/Projectiles.h"
 #include "Player/Player.h"
 #include "Player/Inventory.h"
 #include "Audio/AudioEngine.h"
@@ -226,6 +227,11 @@ private:
     glm::ivec3 m_benchBlock{ 0 };
     bool m_benchOpen = false;
 
+    Projectiles m_arrows;
+    float m_bowDraw = 0.0f;      // seconds the bow has been held
+    bool m_bowDrawing = false;
+    bool m_arrowDemo = false;   // dev aid: keep arrows in the air for a screenshot
+
     Chests m_chests;
     glm::ivec3 m_chestBlock{ 0 };
     bool m_chestOpen = false;
@@ -388,6 +394,11 @@ private:
 
     // The open furnace borrows three inventory slots while its screen is
     // up; these move its contents in and back out again.
+    // The bow: drawn while Use is held, loosed when it is let go.
+    void updateBow(float deltaTime);
+    void updateArrows(float deltaTime);
+    void looseArrow(float drawn);
+
     void sleepInBed(const glm::ivec3& block);
     void openChest(const glm::ivec3& block);
     void stowChest();

@@ -1025,6 +1025,22 @@ bool Application::frame()
         {
             m_drops.update(deltaTime, *m_world, m_player, m_inventory, m_audio);
             m_particles.update(deltaTime, *m_world);
+            updateArrows(deltaTime);
+
+            // Dev aid: a steady stream, so a screenshot taken at any
+            // moment has arrows in the air to look at.
+            if (m_arrowDemo && m_arrows.all().size() < 10)
+            {
+                for (int i = -2; i <= 2; ++i)
+                {
+                    const glm::vec3 heading =
+                        glm::normalize(m_camera.front + glm::vec3(0.0f, 0.12f, 0.0f) +
+                                       m_camera.right * (static_cast<float>(i) * 0.1f));
+                    m_arrows.spawn(m_camera.position + m_camera.front * 1.5f -
+                                       m_camera.up * 0.3f,
+                                   heading * 11.0f, 4, true);
+                }
+            }
         }
 
         if (playing() || m_inventoryOpen) tickFurnaces(deltaTime);
@@ -1084,7 +1100,8 @@ bool Application::frame()
             m_startupScreen == "bench" || m_startupScreen == "tools" ||
             m_startupScreen == "furnace" || m_startupScreen == "furnaceblock" ||
             m_startupScreen == "chest" || m_startupScreen == "armour" ||
-            m_startupScreen == "armourhud" || m_startupScreen == "bed")
+            m_startupScreen == "armourhud" || m_startupScreen == "bed" ||
+            m_startupScreen == "arrows")
         {
             // Dev aid: open the inventory with something in it, so the
             // screenshot shows a real grid rather than 36 empty boxes.
@@ -1092,7 +1109,8 @@ bool Application::frame()
             // view, not a panel in front of it.
             const bool showPanel = m_startupScreen != "furnaceblock" &&
                                   m_startupScreen != "armourhud" &&
-                                  m_startupScreen != "bed";
+                                  m_startupScreen != "bed" &&
+                                  m_startupScreen != "arrows";
             m_inventoryOpen = showPanel;
             setMouseCaptured(!showPanel);
             m_inventory.add(Blocks::Cobblestone, 64);
@@ -1117,6 +1135,8 @@ bool Application::frame()
                 m_inventory.slot(Inventory::ARMOR_FIRST + 3).count = 1;
                 m_player.armourPoints = armourPoints();
             }
+
+            if (m_startupScreen == "arrows") m_arrowDemo = true;
 
             if (m_startupScreen == "bed")
             {
@@ -1863,7 +1883,18 @@ void Application::updateMining(float deltaTime)
             }
             else if (Tools::canHarvest(tool, id))
             {
-                const StackId drop = blockDrop(id);
+                StackId drop = blockDrop(id);
+
+                // Gravel gives up a flint about one time in ten, which
+                // is where arrows come from.
+                if (id == Blocks::Gravel)
+                {
+                    const uint32_t roll = static_cast<uint32_t>(
+                        hit.block.x * 73856093 ^ hit.block.y * 19349663 ^
+                        hit.block.z * 83492791 ^ static_cast<int>(m_elapsedSeconds * 977.0f));
+                    if (roll % 10 == 0) drop = Items::Flint;
+                }
+
                 if (drop != Blocks::Air) m_drops.spawnFromBrokenBlock(hit.block, drop);
             }
 
@@ -2021,6 +2052,116 @@ void Application::sleepInBed(const glm::ivec3& block)
 
     m_chatLog.add("Good morning. Spawn point set.");
     m_audio.play(Sound::DigWool, 0.6f, 0.8f);
+}
+
+// Drawing the bow. Held down it winds up; let go it looses whatever it
+// has wound up, which is what makes a snap shot weaker than a aimed one.
+void Application::updateBow(float deltaTime)
+{
+    const ItemStack& held = m_inventory.selected();
+    const bool holdingBow = inGame() && held.id == Items::Bow;
+    const bool pulling = holdingBow && m_keys.down(m_input, Action::Use);
+
+    if (pulling)
+    {
+        // Nothing to loose means nothing to draw, unless you are
+        // building, where arrows come from nowhere.
+        if (!m_player.creative() && !m_inventory.has(Items::Arrow))
+        {
+            m_bowDrawing = false;
+            m_bowDraw = 0.0f;
+            return;
+        }
+
+        m_bowDrawing = true;
+        m_bowDraw += deltaTime;
+        return;
+    }
+
+    if (!m_bowDrawing) return;
+
+    const float drawn = Arrows::drawFraction(m_bowDraw);
+    m_bowDrawing = false;
+    m_bowDraw = 0.0f;
+
+    if (Arrows::worthLoosing(drawn)) looseArrow(drawn);
+}
+
+void Application::looseArrow(float drawn)
+{
+    if (!m_player.creative() && !m_inventory.take(Items::Arrow)) return;
+
+    const glm::vec3 from = m_camera.position + m_camera.front * 0.4f;
+    m_arrows.spawn(from, m_camera.front * Arrows::speedFor(drawn),
+                   Arrows::damageFor(drawn), true);
+
+    m_heldItem.swing();
+    m_audio.play(Sound::Click, 0.5f, 1.4f);
+}
+
+// Everything an arrow might hit that is not a block. A player's arrow
+// looks for mobs; a skeleton's looks for the player.
+namespace
+{
+    struct ArrowTargets : Projectiles::Targets
+    {
+        EntityManager* entities = nullptr;
+        Player* player = nullptr;
+        int playerHits = 0;
+
+        bool strike(const glm::vec3& point, int damage, bool fromPlayer) override
+        {
+            if (fromPlayer)
+            {
+                for (Mob& mob : entities->mobs())
+                {
+                    if (!mob.alive()) continue;
+
+                    const glm::vec3 feet = mob.position();
+                    const float half = mob.width() * 0.5f;
+                    const glm::vec3 apart = point - feet;
+
+                    if (std::abs(apart.x) > half || std::abs(apart.z) > half) continue;
+                    if (apart.y < 0.0f || apart.y > mob.height()) continue;
+
+                    mob.damage(damage, feet - point);
+                    return true;
+                }
+                return false;
+            }
+
+            // A skeleton's arrow, looking for the player.
+            const glm::vec3 feet = player->position;
+            const glm::vec3 apart = point - feet;
+
+            if (std::abs(apart.x) > 0.4f || std::abs(apart.z) > 0.4f) return false;
+            if (apart.y < 0.0f || apart.y > Player::HEIGHT) return false;
+
+            if (player->damage(damage)) ++playerHits;
+
+            // It stops whether or not the blow landed: an arrow does not
+            // pass through someone just because they are still shaking
+            // off the last one.
+            return true;
+        }
+    };
+}
+
+void Application::updateArrows(float deltaTime)
+{
+    ArrowTargets targets;
+    targets.entities = &m_entities;
+    targets.player = &m_player;
+
+    m_arrows.update(deltaTime, *m_world, targets);
+
+    if (targets.playerHits > 0)
+    {
+        m_audio.play(Sound::Hurt, 0.8f);
+        wearArmour(2);
+    }
+
+    updateBow(deltaTime);
 }
 
 void Application::handleEating(float deltaTime)
@@ -2328,6 +2469,7 @@ void Application::renderWorld()
 
     // Dropped items and particles are opaque, so they join the terrain pass.
     m_drops.render(m_chunkShader, *m_world);
+    m_arrows.render(m_chunkShader, m_camera, m_atlas, *m_world);
     m_particles.render(m_chunkShader, *m_world, camera.right, camera.up);
 
     // Players are opaque too, but each one brings its own texture, so
@@ -2794,6 +2936,10 @@ void Application::updateMobs(float deltaTime)
         if (length > 0.001f) m_player.velocity += (flat / length) * 6.0f;
         if (m_player.onGround) m_player.velocity.y = std::max(m_player.velocity.y, 4.0f);
     }
+
+    // Arrows loosed by anything that carries a bow.
+    for (const MobShot& shot : m_entities.drainShots())
+        m_arrows.spawn(shot.from, shot.velocity, shot.damage, false);
 
     // What they leave behind. Most species drop nothing yet, because
     // what they ought to drop -- leather, bone, string -- are items, and

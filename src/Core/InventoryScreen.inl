@@ -46,7 +46,7 @@ namespace
     const StackId TAB_ITEMS[] = {
         Items::Wheat, Items::WheatSeeds, Items::Leather, Items::RawBeef,
         Items::RawPorkchop, Items::RawChicken, Items::RawMutton,
-        Items::Feather, Items::Bone, Items::StringItem, Items::Gunpowder,
+        Items::Feather, Items::Bone, Items::StringItem, Items::Gunpowder, Items::Flint,
         Items::Bread, Items::Steak, Items::CookedPorkchop, Items::CookedChicken,
         Items::CookedMutton,
     };
@@ -62,7 +62,7 @@ namespace
 
     const StackId TAB_TOOLS[] = {
         Blocks::CraftingTable, Blocks::Furnace, Blocks::Chest, Blocks::Bed,
-        Items::Stick, Items::Coal,
+        Items::Stick, Items::Coal, Items::Bow, Items::Arrow,
         Items::IronIngot, Items::GoldIngot, Items::Diamond,
         Items::WoodPickaxe, Items::WoodAxe, Items::WoodShovel, Items::WoodSword, Items::WoodHoe,
         Items::StonePickaxe, Items::StoneAxe, Items::StoneShovel, Items::StoneSword, Items::StoneHoe,

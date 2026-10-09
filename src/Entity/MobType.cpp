@@ -256,7 +256,12 @@ namespace
             t.height = 1.99f;
             t.walkSpeed = 2.1f;
             t.burnsInSunlight = true;
-            t.attackDamage = 2;
+            // A skeleton shoots rather than swings, which is the whole
+            // difference between meeting one and meeting a zombie.
+            t.arrowDamage = 3;
+            t.arrowRange = 16.0f;
+            t.arrowInterval = 2.0f;
+            t.attackDamage = 0;
             t.drop = Items::Bone;
             t.dropCount = 2;
             t.bodyColour = rgb(200, 200, 196);

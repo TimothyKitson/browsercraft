@@ -21,6 +21,7 @@
 #include "Game/Sleep.h"
 #include "World/Furnaces.h"
 #include "World/Chests.h"
+#include "Entity/Projectiles.h"
 #include "Entity/MobModel.h"
 #include "Entity/MobSkin.h"
 #include "Entity/MobType.h"
@@ -725,13 +726,27 @@ namespace
         {
             const MobType& t = mobType(static_cast<MobId>(i));
             const std::string who = t.name;
+            // A hostile mob has to be able to hurt you somehow -- with
+            // its hands or with a bow. Checking only for hands was what
+            // this said before skeletons could shoot, and it would have
+            // let a mob that does neither through once either existed.
+            const bool fights = t.attackDamage > 0 || t.arrowDamage > 0;
+
             if (t.spawnClass == SpawnClass::Hostile)
-                check(t.attackDamage > 0, who + " fights back");
+                check(fights, who + " fights back somehow");
             else
-                check(t.attackDamage == 0, who + " does not attack");
+                check(!fights, who + " does not attack");
 
             if (t.attackDamage > 0)
                 check(t.attackInterval > 0.0f, who + " cannot swing infinitely fast");
+
+            if (t.arrowDamage > 0)
+            {
+                check(t.arrowInterval > 0.0f, who + " cannot shoot infinitely fast");
+                check(t.arrowRange > 0.0f, who + " shoots some distance");
+                check(t.attackDamage == 0,
+                      who + " either shoots or swings, not both");
+            }
             check(t.dropCount == 0 || t.drop != Blocks::Air,
                   who + " does not drop nothing repeatedly");
         }
@@ -1926,6 +1941,102 @@ namespace
               "but go on your feet");
     }
 
+    void testArrows()
+    {
+        section("bows and arrows");
+
+        // Drawing. A bow barely pulled is worth almost nothing, which is
+        // what stops it being a machine gun.
+        check(Arrows::drawFraction(0.0f) == 0.0f, "an undrawn bow is nothing");
+        check(Arrows::drawFraction(Arrows::DRAW_SECONDS) == 1.0f, "a full draw is one");
+        check(Arrows::drawFraction(99.0f) == 1.0f, "and holding longer adds nothing");
+
+        check(!Arrows::worthLoosing(0.05f), "a twitch looses nothing");
+        check(Arrows::worthLoosing(1.0f), "a full draw does");
+
+        check(Arrows::speedFor(1.0f) > Arrows::speedFor(0.5f), "a fuller draw flies faster");
+        check(Arrows::speedFor(0.0f) >= Arrows::MIN_SPEED, "and never slower than the floor");
+        check(Arrows::speedFor(1.0f) <= Arrows::MAX_SPEED, "nor faster than the ceiling");
+
+        check(Arrows::damageFor(1.0f) > Arrows::damageFor(0.3f), "and hits harder");
+        check(Arrows::damageFor(0.0f) >= 1, "but always for something");
+
+        // Flight. An arrow fired level drops, and one fired up comes
+        // back down -- the sums are the same gravity the player feels.
+        struct NoTargets : Projectiles::Targets
+        {
+            int asked = 0;
+            bool strike(const glm::vec3&, int, bool) override { ++asked; return false; }
+        };
+
+        // Open sky: nothing is solid, so the only thing stopping an
+        // arrow is the arithmetic.
+        struct OpenSky : Projectiles::Blocks
+        {
+            bool solidAt(int, int, int) const override { return false; }
+        };
+        OpenSky world;
+
+        Projectiles arrows;
+        NoTargets nothing;
+
+        const glm::vec3 from(0.5f, 200.0f, 0.5f);   // well clear of any terrain
+        arrows.spawn(from, glm::vec3(20.0f, 0.0f, 0.0f), 4, true);
+        check(arrows.all().size() == 1, "an arrow is in the air");
+
+        for (int i = 0; i < 10; ++i) arrows.update(0.02f, world, nothing);
+
+        check(!arrows.all().empty(), "and still flying");
+        if (!arrows.all().empty())
+        {
+            const Arrow& flying = arrows.all()[0];
+            check(flying.position.x > from.x, "it has gone the way it was pointed");
+            check(flying.position.y < from.y, "and has dropped on the way");
+            check(flying.velocity.y < 0.0f, "and is still falling");
+        }
+        check(nothing.asked > 0, "something was asked about what it might hit");
+
+        // A target that says yes stops it dead.
+        struct Hits : Projectiles::Targets
+        {
+            int struck = 0;
+            int damageSeen = 0;
+            bool fromPlayerSeen = false;
+            bool strike(const glm::vec3&, int damage, bool fromPlayer) override
+            {
+                ++struck;
+                damageSeen = damage;
+                fromPlayerSeen = fromPlayer;
+                return true;
+            }
+        };
+
+        Projectiles one;
+        Hits target;
+        one.spawn(glm::vec3(0.5f, 200.0f, 0.5f), glm::vec3(20.0f, 0.0f, 0.0f), 7, true);
+        one.update(0.02f, world, target);
+
+        check(target.struck == 1, "a target that says yes is struck once");
+        check(target.damageSeen == 7, "for what the arrow was carrying");
+        check(target.fromPlayerSeen, "and knows who loosed it");
+        check(one.all().empty(), "and the arrow is gone");
+
+        // A skeleton's arrow says so, which is what keeps it from
+        // hitting the skeleton that fired it.
+        Projectiles theirs;
+        Hits mine;
+        theirs.spawn(glm::vec3(0.5f, 200.0f, 0.5f), glm::vec3(0.0f, 0.0f, 20.0f), 3, false);
+        theirs.update(0.02f, world, mine);
+        check(!mine.fromPlayerSeen, "a skeleton's arrow is marked as theirs");
+
+        // Arrows that hit nothing do not pile up for ever.
+        Projectiles stale;
+        NoTargets ignored;
+        stale.spawn(glm::vec3(0.5f, 300.0f, 0.5f), glm::vec3(0.0f, 1.0f, 0.0f), 1, true);
+        for (int i = 0; i < 40; ++i) stale.update(1.0f, world, ignored);
+        check(stale.all().empty(), "an arrow that hits nothing is cleared up");
+    }
+
     void testSleep()
     {
         section("beds");
@@ -2158,6 +2269,7 @@ int runSelfTest()
     testArmour();
     testArmourRecipes();
     testWearing();
+    testArrows();
     testSleep();
     testChestStore();
     testLevelRoundTrip();

@@ -45,6 +45,9 @@ namespace Items
 
         Stick,
         Coal,
+        Flint,
+        Bow,
+        Arrow,
         Diamond,
         IronIngot,
         GoldIngot,

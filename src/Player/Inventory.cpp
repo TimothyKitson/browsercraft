@@ -145,6 +145,28 @@ int Inventory::findDestination(const ItemStack& stack, int begin, int end) const
     return -1;
 }
 
+bool Inventory::has(StackId id) const
+{
+    for (int i = 0; i < MAIN_SLOTS; ++i)
+        if (m_slots[i].id == id && m_slots[i].count > 0) return true;
+    return false;
+}
+
+bool Inventory::take(StackId id)
+{
+    // The hotbar first, so what you can see going is what goes.
+    for (int i = 0; i < MAIN_SLOTS; ++i)
+    {
+        ItemStack& slot = m_slots[i];
+        if (slot.id != id || slot.count <= 0) continue;
+
+        slot.count -= 1;
+        if (slot.count <= 0) slot.clear();
+        return true;
+    }
+    return false;
+}
+
 // Right-clicking a piece in your hand puts it on, which is how
 // Minecraft does it and saves dragging it across the panel.
 bool Inventory::wear(ItemStack& from)

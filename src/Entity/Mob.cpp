@@ -408,6 +408,38 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
         }
     }
 
+    // Shooting. A bow wants a clear line and some distance; up close
+    // the arrow is no use and the skeleton backs away instead.
+    if (t.arrowDamage > 0)
+    {
+        if (m_shootTimer > 0.0f) m_shootTimer = std::max(0.0f, m_shootTimer - deltaTime);
+
+        const glm::vec3 eye = m_position + glm::vec3(0.0f, height() * 0.85f, 0.0f);
+        const glm::vec3 aim = playerPosition + glm::vec3(0.0f, 0.9f, 0.0f);
+        const glm::vec3 toPlayer = aim - eye;
+        const float range = glm::length(toPlayer);
+
+        if (m_shootTimer <= 0.0f && range > 2.5f && range < t.arrowRange &&
+            world.hasLineOfSight(eye, aim))
+        {
+            m_shootTimer = t.arrowInterval;
+
+            // Aimed a little high, so the arrow drops onto the target
+            // rather than always falling short.
+            const glm::vec3 flat = glm::normalize(toPlayer);
+            const float lift = std::clamp(range * 0.018f, 0.0f, 0.35f);
+            const glm::vec3 heading = glm::normalize(flat + glm::vec3(0.0f, lift, 0.0f));
+
+            MobShot shot;
+            shot.from = eye + heading * 0.5f;
+            shot.velocity = heading * 28.0f;
+            shot.damage = t.arrowDamage;
+            m_shots.push_back(shot);
+
+            emit(Sound::Click, 0.5f, 1.2f);
+        }
+    }
+
     m_ambientTimer -= deltaTime;
     if (m_ambientTimer <= 0.0f)
     {

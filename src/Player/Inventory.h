@@ -67,6 +67,12 @@ public:
     // maxStackOf(), since items need not agree with blocks.
     static constexpr int MAX_STACK = 64;
 
+    // Whether the player is carrying any of something, and taking one
+    // of it. Used by the bow, which spends arrows from wherever in the
+    // pack they happen to be rather than from the hand.
+    bool has(StackId id) const;
+    bool take(StackId id);
+
     static bool isArmourSlot(int index)
     {
         return index >= ARMOR_FIRST && index < ARMOR_FIRST + ARMOR_SLOTS;

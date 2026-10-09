@@ -1696,6 +1696,96 @@ namespace
         }
     }
 
+    void paintItemFlint(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        const Color stone{ 58, 54, 56 };
+        const Color lit{ 96, 92, 94 };
+
+        // A struck flake: broad at one end, tapering to a point.
+        for (int y = 4; y <= 11; ++y)
+        {
+            const int inset = (y <= 5) ? 4 : (y >= 10 ? 3 : 1);
+            for (int x = 2 + inset; x <= 13 - inset; ++x)
+                t.set(x, y, (x + y) % 5 == 0 ? lit : stone);
+        }
+    }
+
+    void paintItemBow(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        const Color wood{ 142, 100, 54 };
+        const Color woodDark{ 104, 72, 36 };
+        const Color string{ 226, 226, 220 };
+
+        // The stave, bowed from top-right round to bottom-right.
+        const int arc[12][2] = {
+            { 10, 2 }, { 12, 3 }, { 13, 5 }, { 13, 7 }, { 13, 8 }, { 13, 10 },
+            { 12, 12 }, { 10, 13 }, { 8, 13 }, { 6, 12 }, { 5, 10 }, { 5, 5 },
+        };
+        for (const auto& p2 : arc)
+        {
+            t.set(p2[0], p2[1], wood);
+            t.set(p2[0] - 1, p2[1], woodDark);
+        }
+        for (int y = 3; y <= 12; ++y) t.set(4, y, wood);
+
+        // The string, drawn straight across the back of it.
+        for (int y = 3; y <= 13; ++y) t.set(3, y, string);
+        t.set(10, 2, string);
+        t.set(10, 13, string);
+    }
+
+    void paintItemArrow(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        const Color shaft{ 160, 120, 68 };
+        const Color head{ 96, 92, 94 };
+        const Color fletch{ 228, 228, 224 };
+
+        // Point at the top-right, fletching at the bottom-left.
+        for (int i = 4; i <= 11; ++i) t.set(i, 15 - i, shaft);
+
+        t.set(12, 3, head); t.set(13, 2, head); t.set(12, 2, head); t.set(11, 3, head);
+        t.set(13, 3, head); t.set(12, 4, head);
+
+        t.set(3, 12, fletch); t.set(2, 13, fletch); t.set(4, 12, fletch);
+        t.set(3, 13, fletch); t.set(2, 12, fletch); t.set(3, 11, fletch);
+    }
+
+    // The arrow as it flies: pointing right, filling the width, with
+    // the shaft on the middle rows so a long thin quad shows all of it.
+    void paintArrowInFlight(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+
+        const int n = Tile::N;
+        const int mid = n / 2;
+        const Color shaft{ 168, 126, 72 };
+        const Color shaftDark{ 124, 92, 50 };
+        const Color head{ 148, 148, 154 };
+        const Color fletch{ 236, 236, 232 };
+
+        // Shaft down the middle, two rows thick.
+        for (int x = 2; x < n - 3; ++x)
+        {
+            t.set(x, mid - 1, shaft);
+            t.set(x, mid, shaftDark);
+        }
+
+        // The head, a wedge at the right-hand end.
+        for (int i = 0; i < 4; ++i)
+            for (int y = mid - 1 - i; y <= mid + i; ++y)
+                t.set(n - 4 + i - 1, y, head);
+
+        // Fletching at the left, three vanes.
+        for (int i = 0; i < 4; ++i)
+        {
+            t.set(2 + i, mid - 2 - (3 - i) / 2, fletch);
+            t.set(2 + i, mid + 1 + (3 - i) / 2, fletch);
+        }
+    }
+
     void paintItemStick(Tile& t)
     {
         t.fill(Color{ 0, 0, 0, 0 });
@@ -1851,6 +1941,10 @@ namespace
         { Tiles::CraftingSide,  paintCraftingSide },
         { Tiles::ItemStick,     paintItemStick },
         { Tiles::ItemCoal,      paintItemCoal },
+        { Tiles::ItemFlint,     paintItemFlint },
+        { Tiles::ItemBow,       paintItemBow },
+        { Tiles::ItemArrow,     paintItemArrow },
+        { Tiles::ArrowInFlight, paintArrowInFlight },
         { Tiles::ItemDiamond,   paintItemDiamond },
         { Tiles::ItemIronIngot, paintItemIronIngot },
         { Tiles::ItemGoldIngot, paintItemGoldIngot },
@@ -1919,6 +2013,9 @@ namespace
 
         { Tiles::ItemStick,      { "stick", nullptr, nullptr } },
         { Tiles::ItemCoal,       { "coal", nullptr, nullptr } },
+        { Tiles::ItemFlint,      { "flint", nullptr, nullptr } },
+        { Tiles::ItemBow,        { "bow", "bow_standby", nullptr } },
+        { Tiles::ItemArrow,      { "arrow", nullptr, nullptr } },
         { Tiles::ItemDiamond,    { "diamond", nullptr, nullptr } },
         { Tiles::ItemIronIngot,  { "iron_ingot", nullptr, nullptr } },
         { Tiles::ItemGoldIngot,  { "gold_ingot", nullptr, nullptr } },
