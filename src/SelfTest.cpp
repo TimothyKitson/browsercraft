@@ -902,10 +902,13 @@ namespace
               "four planks in a square make a bench");
         check(table.count == 1, "one of them");
 
-        // Three planks in a row is not a square, so it is not a bench.
+        // Three planks in a row is not a square, so it is not a bench --
+        // it makes slabs, which is a different thing in the same shape.
         ItemStack row[9];
         for (int i : { 0, 1, 2 }) { row[i].id = Blocks::Planks; row[i].count = 1; }
-        check(!Crafting::match(row, 3).valid(), "three in a row is not");
+        const CraftOutput notABench = Crafting::match(row, 3);
+        check(!notABench.valid() || notABench.id != Blocks::CraftingTable,
+              "three in a row is not a bench");
 
         // The real recipes still work.
         ItemStack logs[9];
@@ -1610,6 +1613,37 @@ namespace
             }
 
         check(made == 25, "every tool in the game has a recipe that makes it");
+
+        // Slabs: three of a block in a row makes six half ones.
+        struct SlabPair { StackId from, to; };
+        const SlabPair SLABS[4] = {
+            { Blocks::Stone, Blocks::StoneSlab },
+            { Blocks::Cobblestone, Blocks::CobblestoneSlab },
+            { Blocks::Planks, Blocks::PlankSlab },
+            { Blocks::Sandstone, Blocks::SandstoneSlab },
+        };
+        for (const SlabPair& pair : SLABS)
+        {
+            ItemStack row2[9];
+            for (int i : { 0, 1, 2 }) { row2[i].id = pair.from; row2[i].count = 1; }
+            const CraftOutput cut = Crafting::match(row2, 3);
+            check(cut.valid() && cut.id == pair.to, "three in a row makes slabs");
+            check(cut.count == 6, "six of them");
+
+            // A slab stands half as tall, and the block it came from
+            // still stands full height.
+            check(blockHeight(asBlock(pair.to)) == 0.5f, "and a slab is half a block");
+            check(blockHeight(asBlock(pair.from)) == 1.0f, "where the whole one is not");
+            check(isSlab(asBlock(pair.to)), "and knows itself to be one");
+            check(!isSlab(asBlock(pair.from)), "and the whole one does not");
+
+            // You can still stand on one, and it still needs the right
+            // tool if the block it came from did.
+            check(isSolid(asBlock(pair.to)), "a slab holds you up");
+            check(Tools::requiredLevel(asBlock(pair.to)) ==
+                      Tools::requiredLevel(asBlock(pair.from)),
+                  "and wants what its parent wanted");
+        }
 
         // The recipes the early game turns on. A torch you cannot make
         // is a cave you cannot enter.

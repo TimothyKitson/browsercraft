@@ -1101,7 +1101,7 @@ bool Application::frame()
             m_startupScreen == "furnace" || m_startupScreen == "furnaceblock" ||
             m_startupScreen == "chest" || m_startupScreen == "armour" ||
             m_startupScreen == "armourhud" || m_startupScreen == "bed" ||
-            m_startupScreen == "arrows")
+            m_startupScreen == "arrows" || m_startupScreen == "slabs")
         {
             // Dev aid: open the inventory with something in it, so the
             // screenshot shows a real grid rather than 36 empty boxes.
@@ -1110,7 +1110,8 @@ bool Application::frame()
             const bool showPanel = m_startupScreen != "furnaceblock" &&
                                   m_startupScreen != "armourhud" &&
                                   m_startupScreen != "bed" &&
-                                  m_startupScreen != "arrows";
+                                  m_startupScreen != "arrows" &&
+                                  m_startupScreen != "slabs";
             m_inventoryOpen = showPanel;
             setMouseCaptured(!showPanel);
             m_inventory.add(Blocks::Cobblestone, 64);
@@ -1137,6 +1138,30 @@ bool Application::frame()
             }
 
             if (m_startupScreen == "arrows") m_arrowDemo = true;
+
+            if (m_startupScreen == "slabs")
+            {
+                // A short flight of slab steps and a slab floor, so the
+                // shot shows both the shape and the texture.
+                const glm::vec3 ahead = m_player.position + m_camera.front * 4.0f;
+                const int bx = static_cast<int>(std::floor(ahead.x));
+                const int by = static_cast<int>(std::floor(m_player.position.y));
+                const int bz = static_cast<int>(std::floor(ahead.z));
+
+                const BlockId KINDS[4] = { Blocks::StoneSlab, Blocks::CobblestoneSlab,
+                                           Blocks::PlankSlab, Blocks::SandstoneSlab };
+
+                for (int i = 0; i < 4; ++i)
+                    for (int j = 0; j < 3; ++j)
+                        m_world->setBlock(bx - 1 + i, by, bz - 1 + j, KINDS[i]);
+
+                // A step up, half a block at a time.
+                m_world->setBlock(bx, by, bz - 3, Blocks::Cobblestone);
+                m_world->setBlock(bx, by + 1, bz - 3, Blocks::CobblestoneSlab);
+                m_world->setBlock(bx + 1, by, bz - 3, Blocks::Cobblestone);
+                m_world->setBlock(bx + 1, by + 1, bz - 3, Blocks::Cobblestone);
+                m_world->setBlock(bx + 1, by + 2, bz - 3, Blocks::CobblestoneSlab);
+            }
 
             if (m_startupScreen == "bed")
             {

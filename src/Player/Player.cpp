@@ -127,8 +127,17 @@ bool Player::collides(const World& world, const AABB& box) const
     for (int x = minX; x <= maxX; ++x)
         for (int y = minY; y <= maxY; ++y)
             for (int z = minZ; z <= maxZ; ++z)
-                if (isSolid(world.getBlock(x, y, z)))
-                    return true;
+            {
+                const BlockId block = world.getBlock(x, y, z);
+                if (!isSolid(block)) continue;
+
+                // A slab only fills the bottom half of its cell, so the
+                // box clears it if it is entirely above that.
+                const float top = static_cast<float>(y) + blockHeight(block);
+                if (box.min.y >= top - EPS) continue;
+
+                return true;
+            }
 
     return false;
 }

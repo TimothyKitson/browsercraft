@@ -60,6 +60,11 @@ namespace
         if (neighbour == Blocks::Air) return true;
         if (isOpaque(neighbour)) return false;
 
+        // Two slabs side by side each show the face between them: one is
+        // not hidden by the other the way two full blocks would be, and
+        // hiding it would leave a hole through a slab floor.
+        if (isSlab(self) || isSlab(neighbour)) return true;
+
         // Leaves are the exception to hiding the inside of a volume. A
         // canopy meshed as a hollow shell is one layer of cut-out tiles
         // with nothing behind it, so you see through every gap in it to
@@ -107,8 +112,9 @@ namespace
         const BlockInfo& info = blockInfo(id);
         const bool liquid = (info.render == RenderType::Liquid);
 
-        // Liquids sit slightly below a full block unless covered by more liquid.
-        float topY = 1.0f;
+        // Liquids sit slightly below a full block unless covered by more
+        // liquid; a slab stands half as tall as its cell.
+        float topY = blockHeight(id);
         if (liquid && !isLiquid(snap.block(lx, y + 1, lz)))
             topY = 0.875f;
 
@@ -189,6 +195,13 @@ namespace
                 vz[c] = static_cast<float>(lz + cz);
                 vu[c] = (face.uv[c][0] == 0.0f) ? uv.u0 : uv.u1;
                 vv[c] = (face.uv[c][1] == 0.0f) ? uv.vTop : uv.vBottom;
+
+                // A side of something shorter than its cell shows only
+                // the lower part of its texture. Stretching the whole
+                // tile over half the height is what would make a slab
+                // look like a squashed block rather than a cut one.
+                if (face.ny == 0 && topY < 1.0f && face.uv[c][1] == 0.0f)
+                    vv[c] = uv.vBottom + (uv.vTop - uv.vBottom) * topY;
                 vshade[c] = face.shade * aoFactor(occluders);
                 vsky[c] = (skySum / samples) / 15.0f;
                 vblock[c] = (blockSum / samples) / 15.0f;

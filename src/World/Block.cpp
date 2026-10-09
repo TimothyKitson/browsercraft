@@ -59,6 +59,10 @@ namespace
         { "Furnace",      FurnaceTop,    FurnaceTop,     FurnaceLit,     true,  true,  RenderType::Cube,  13,   3.5f },
         { "Chest",        ChestTop,      ChestTop,       ChestFront,     true,  true,  RenderType::Cube,   0,   2.5f },
         { "Bed",          BedTop,        Planks,         BedSide,        true,  true,  RenderType::Cube,   0,   0.2f },
+        { "Stone Slab",   Stone,         Stone,          Stone,          true,  false, RenderType::Slab,   0,   1.5f },
+        { "Cobblestone Slab", Cobblestone, Cobblestone,  Cobblestone,    true,  false, RenderType::Slab,   0,   1.7f },
+        { "Oak Slab",     Planks,        Planks,         Planks,         true,  false, RenderType::Slab,   0,   1.5f },
+        { "Sandstone Slab", SandstoneTop, SandstoneTop,  SandstoneSide,  true,  false, RenderType::Slab,   0,   0.8f },
         { "Farmland",     FarmlandTop,   Dirt,           FarmlandSide,   true,  true,  RenderType::Cube,   0,   0.6f },
         { "Wheat Crop",   WheatStage0,   WheatStage0,    WheatStage0,    false, false, RenderType::Cross,  0,   0.0f },
         { "Wheat Crop",   WheatStage1,   WheatStage1,    WheatStage1,    false, false, RenderType::Cross,  0,   0.0f },
@@ -133,6 +137,7 @@ const char* blockSoundGroup(BlockId id)
         case Blocks::BirchLog:
         case Blocks::CraftingTable:
         case Blocks::Chest:
+        case Blocks::PlankSlab:
         case Blocks::Torch:
             return "wood";
 
@@ -205,6 +210,7 @@ Material blockMaterial(BlockId id)
         case Blocks::Planks:
         case Blocks::CraftingTable:
         case Blocks::Chest:
+        case Blocks::PlankSlab:
             return Material::Wood;
 
         case Blocks::Leaves:

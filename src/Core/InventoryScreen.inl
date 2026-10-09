@@ -14,6 +14,7 @@ namespace
         Blocks::Sand, Blocks::Gravel, Blocks::Dirt, Blocks::Grass,
         Blocks::SnowGrass, Blocks::Clay, Blocks::Obsidian, Blocks::Glass,
         Blocks::Wool, Blocks::Snow, Blocks::Ice,
+        Blocks::StoneSlab, Blocks::CobblestoneSlab, Blocks::PlankSlab, Blocks::SandstoneSlab,
     };
 
     const StackId TAB_NATURE[] = {

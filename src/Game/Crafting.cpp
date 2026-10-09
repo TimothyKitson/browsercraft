@@ -51,6 +51,16 @@ namespace
                          Blocks::Planks, Blocks::Planks, Blocks::Planks },
           0, Blocks::Chest, 1 },
 
+        // Three of a block in a row makes six slabs of it.
+        { false, 3, 1, { Blocks::Stone, Blocks::Stone, Blocks::Stone },
+          0, Blocks::StoneSlab, 6 },
+        { false, 3, 1, { Blocks::Cobblestone, Blocks::Cobblestone, Blocks::Cobblestone },
+          0, Blocks::CobblestoneSlab, 6 },
+        { false, 3, 1, { Blocks::Planks, Blocks::Planks, Blocks::Planks },
+          0, Blocks::PlankSlab, 6 },
+        { false, 3, 1, { Blocks::Sandstone, Blocks::Sandstone, Blocks::Sandstone },
+          0, Blocks::SandstoneSlab, 6 },
+
         // Three sticks and three string make a bow.
         { false, 3, 3, { _,                Items::Stick,      Items::StringItem,
                          Items::Stick,     _,                 Items::StringItem,

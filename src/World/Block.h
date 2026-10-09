@@ -62,6 +62,14 @@ namespace Blocks
         Chest,
         Bed,
 
+        // Half blocks. Each is its own id rather than a flag on the
+        // block it is cut from, for the same reason wheat's growth
+        // stages are ids: there is nowhere to put a flag.
+        StoneSlab,
+        CobblestoneSlab,
+        PlankSlab,
+        SandstoneSlab,
+
         Farmland,
         Wheat0, Wheat1, Wheat2, Wheat3, Wheat4, Wheat5, Wheat6, Wheat7,
 
@@ -74,7 +82,8 @@ enum class RenderType : uint8_t
     None,   // invisible (air)
     Cube,   // standard full block
     Cross,  // two diagonal quads (plants, torch)
-    Liquid  // full block, slightly lowered top surface, drawn in the transparent pass
+    Liquid, // full block, slightly lowered top surface, drawn in the transparent pass
+    Slab    // half a block, sitting on the floor of its own cell
 };
 
 struct BlockInfo
@@ -97,6 +106,12 @@ inline bool isOpaque(BlockId id) { return blockInfo(id).opaque; }
 inline bool isSolid(BlockId id) { return blockInfo(id).collides; }
 inline bool isLiquid(BlockId id) { return blockInfo(id).render == RenderType::Liquid; }
 inline bool isCross(BlockId id) { return blockInfo(id).render == RenderType::Cross; }
+inline bool isSlab(BlockId id) { return blockInfo(id).render == RenderType::Slab; }
+
+// How tall the block actually stands in its own cell. Everything is a
+// full block but the slabs, and the collision and the mesher both read
+// this rather than each keeping their own list.
+inline float blockHeight(BlockId id) { return isSlab(id) ? 0.5f : 1.0f; }
 inline bool isLeaves(BlockId id) { return id == Blocks::Leaves || id == Blocks::BirchLeaves; }
 inline bool isVisible(BlockId id) { return blockInfo(id).render != RenderType::None; }
 inline uint8_t lightEmission(BlockId id) { return blockInfo(id).lightEmission; }
