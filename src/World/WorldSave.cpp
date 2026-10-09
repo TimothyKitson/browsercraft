@@ -123,6 +123,9 @@ void WorldSave::saveLevel(const std::string& saveDirectory, const LevelState& st
     write(out, state.hunger);
     write(out, state.saturation);
     write(out, state.cheats);
+    write(out, state.spawn.x);
+    write(out, state.spawn.y);
+    write(out, state.spawn.z);
 }
 
 bool WorldSave::loadLevel(const std::string& saveDirectory, LevelState& out)
@@ -167,7 +170,17 @@ bool WorldSave::loadLevel(const std::string& saveDirectory, LevelState& out)
         out.saturation = saturation;
 
         bool cheats = out.cheats;
-        if (read(in, cheats)) out.cheats = cheats;
+        if (read(in, cheats))
+        {
+            out.cheats = cheats;
+
+            glm::vec3 spawn{ 0.0f };
+            if (read(in, spawn.x) && read(in, spawn.y) && read(in, spawn.z))
+            {
+                out.spawn = spawn;
+                out.hasSpawn = true;
+            }
+        }
     }
     return true;
 }

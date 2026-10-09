@@ -486,6 +486,11 @@ void Application::loadLevel()
 
     if (loaded)
     {
+        // The spawn the world was actually started at, not the one the
+        // generator would pick today. Without this, loading a world and
+        // then dying dropped you somewhere you had never been.
+        if (state.hasSpawn) m_spawnPoint = state.spawn;
+
         m_player.position = state.playerPosition;
         m_camera.yaw = state.yaw;
         m_camera.pitch = state.pitch;
@@ -537,6 +542,7 @@ void Application::saveLevel()
     state.gameMode = static_cast<uint8_t>(m_gameMode);
     state.dead = m_hardcoreDeath;
     state.selectedSlot = m_inventory.selectedSlot();
+    state.spawn = m_spawnPoint;
 
     for (int i = 0; i < Inventory::TOTAL_SLOTS; ++i)
     {
@@ -1482,7 +1488,7 @@ void Application::updateGameplay(float deltaTime)
     const glm::vec3 positionBefore = m_player.position;
     m_player.update(deltaTime, *m_world, controls);
     m_camera.position = m_player.eyePosition();
-    updateMovementAudio(positionBefore, controls.jumpHeld);
+    updateMovementAudio(positionBefore, m_player.jumpedThisUpdate());
 
     // A little extra field of view while sprinting sells the speed.
     const float targetFov = m_player.sprinting ? 78.0f : 70.0f;
@@ -1504,10 +1510,20 @@ void Application::updateMovementAudio(const glm::vec3& positionBefore, bool jump
                                              static_cast<int>(std::floor(feet.y - 0.2f)),
                                              static_cast<int>(std::floor(feet.z)));
 
-    if (jumped && m_wasOnGround && !m_player.flying)
+    // `jumped` is the player's own report of having left the ground, not
+    // the state of the key: the key is down for as long as it is held,
+    // and a held key over a surface that refuses the jump -- shallow
+    // water, a ceiling a block above your head -- used to re-trigger this
+    // on every single frame.
+    if (jumped && !m_player.flying)
         m_audio.play(Sound::Jump, 0.5f);
 
-    if (m_player.onGround && !m_wasOnGround && !m_player.flying)
+    // Water cancels the fall, so it cancels the thump and the dust with
+    // it. Bobbing about on a shallow bottom crosses this edge over and
+    // over, and each crossing used to land as though from a height.
+    const bool wading = m_player.isInWater(*m_world);
+
+    if (m_player.onGround && !m_wasOnGround && !m_player.flying && !wading)
     {
         m_audio.play(Sound::Land, 0.55f);
         if (ground != Blocks::Air) m_particles.spawnLandingPuff(feet, ground);

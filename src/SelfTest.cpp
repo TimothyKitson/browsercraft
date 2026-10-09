@@ -14,6 +14,7 @@
 #include "Entity/PlayerSkin.h"
 #include "Entity/BoxMesh.h"
 #include "Entity/Mob.h"
+#include "World/WorldSave.h"
 #include "Entity/MobModel.h"
 #include "Entity/MobSkin.h"
 #include "Entity/MobType.h"
@@ -1372,6 +1373,86 @@ namespace
         check(!player.invulnerable(), "and does not leave you immune");
         check(player.damage(2), "so the next blow lands again");
     }
+
+    void testLevelRoundTrip()
+    {
+        section("saving: the level file");
+
+        const std::string dir = "selftest-save";
+        WorldSave::ensureDirectories(dir);
+
+        LevelState wrote;
+        wrote.seed = 12345u;
+        wrote.playerPosition = glm::vec3(10.5f, 70.0f, -4.5f);
+        wrote.timeOfDay = 0.6f;
+        wrote.health = 14;
+        wrote.hunger = 11;
+        wrote.saturation = 2.5f;
+        wrote.cheats = true;
+        wrote.gameMode = 1;
+        wrote.selectedSlot = 5;
+        wrote.spawn = glm::vec3(-8.5f, 66.0f, 32.5f);
+        wrote.inventory.emplace_back(static_cast<uint16_t>(Blocks::Stone), 42);
+
+        WorldSave::saveLevel(dir, wrote);
+
+        LevelState read;
+        check(WorldSave::loadLevel(dir, read), "a level written reads back");
+        check(read.seed == wrote.seed, "with its seed");
+        check(read.playerPosition == wrote.playerPosition, "and where you stood");
+        check(read.health == 14 && read.hunger == 11, "and how you were doing");
+        check(read.cheats, "and whether the commands work");
+
+        // Dying used to put you back at the generator's guess rather than
+        // where the world actually began, because this was written and
+        // never read.
+        check(read.hasSpawn, "the spawn point comes back");
+        check(read.spawn == wrote.spawn, "and is the one that was saved");
+
+        check(read.inventory.size() == 1, "the inventory comes back");
+        check(read.inventory[0].first == Blocks::Stone, "holding what it held");
+        check(read.inventory[0].second == 42, "and as much of it");
+
+        // The test leaves nothing behind in the player's game folder.
+        std::error_code ec;
+        std::filesystem::remove_all(dir, ec);
+    }
+
+    void testMobHurt()
+    {
+        section("mobs: being hurt");
+
+        // A blow from somewhere knocks the mob back and off its feet.
+        Mob struck(MobId::Cow, glm::vec3(0.0f, 64.0f, 0.0f), 1u);
+        struck.damage(1, glm::vec3(1.0f, 0.0f, 0.0f));
+        check(struck.velocity().y > 0.0f, "a blow lifts the mob");
+        check(struck.velocity().x > 0.0f, "and pushes it away from the blow");
+
+        // Fire passes no direction, and lifting the mob for it had the
+        // undead hopping on the spot for as long as the sun was up.
+        Mob burnt(MobId::Zombie, glm::vec3(0.0f, 64.0f, 0.0f), 2u);
+        const float before = burnt.velocity().y;
+        burnt.damage(1, glm::vec3(0.0f));
+        check(burnt.velocity().y == before, "burning does not launch it");
+        check(burnt.velocity().x == 0.0f, "nor shove it sideways");
+
+        // One yelp per blow is right; one per burn tick, from a herd, is
+        // a racket. The voice is rate limited, the death cry is not.
+        Mob noisy(MobId::Pig, glm::vec3(0.0f, 64.0f, 0.0f), 3u);
+        noisy.sounds().clear();
+        noisy.damage(1, glm::vec3(0.0f));
+        check(noisy.sounds().size() == 1, "the first hurt is heard");
+        noisy.sounds().clear();
+        noisy.damage(1, glm::vec3(0.0f));
+        check(noisy.sounds().empty(), "a second hurt straight after is not");
+
+        Mob doomed(MobId::Chicken, glm::vec3(0.0f, 64.0f, 0.0f), 4u);
+        doomed.damage(1, glm::vec3(0.0f));
+        doomed.sounds().clear();
+        doomed.damage(100, glm::vec3(0.0f));
+        check(!doomed.alive(), "a big enough blow kills");
+        check(doomed.sounds().size() == 1, "and dying is always heard");
+    }
 }
 
 int runSelfTest()
@@ -1403,6 +1484,8 @@ int runSelfTest()
     testCrackStages();
     testFood();
     testPlayerImmunity();
+    testMobHurt();
+    testLevelRoundTrip();
 
     std::printf("\n%d checks, %d failed\n", g_checks, g_failures);
     return g_failures == 0 ? 0 : 1;

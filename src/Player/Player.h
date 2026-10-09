@@ -76,11 +76,18 @@ public:
     float saturation = 5.0f;
 
     bool creative() const { return modeIsCreative(mode); }
+
+    // True for the one update in which the player left the ground under
+    // their own power. The audio reads this rather than the jump key,
+    // which is held down for many frames and is down just as often when
+    // the jump does not happen at all.
+    bool jumpedThisUpdate() const { return m_jumped; }
     float damageFlash = 0.0f; // seconds remaining on the red hurt overlay
 
 private:
     float m_fallStartY = 0.0f;
     bool m_falling = false;
+    bool m_jumped = false;
     float m_regenTimer = 0.0f;
     float m_hurtCooldown = 0.0f;
     float m_exhaustion = 0.0f;

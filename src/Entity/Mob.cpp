@@ -303,6 +303,7 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
     const MobType& t = type();
 
     if (m_hurtFlash > 0.0f) m_hurtFlash = std::max(0.0f, m_hurtFlash - deltaTime);
+    if (m_hurtVoiceTimer > 0.0f) m_hurtVoiceTimer = std::max(0.0f, m_hurtVoiceTimer - deltaTime);
     if (m_panicTimer > 0.0f) m_panicTimer = std::max(0.0f, m_panicTimer - deltaTime);
     if (m_loveTimer > 0.0f) m_loveTimer = std::max(0.0f, m_loveTimer - deltaTime);
     if (m_breedTimer > 0.0f) m_breedTimer = std::max(0.0f, m_breedTimer - deltaTime);
@@ -423,15 +424,29 @@ void Mob::damage(int amount, const glm::vec3& fromDirection)
     m_hurtFlash = 0.35f;
 
     // Knocked back and off its feet a little, so a hit reads as a hit.
+    // Only when something actually struck it from somewhere, though:
+    // burning in the sun passes no direction, and lifting the mob for
+    // that had the undead hopping on the spot once a second all dawn.
     const glm::vec3 flat(fromDirection.x, 0.0f, fromDirection.z);
     const float length = glm::length(flat);
-    if (length > 0.001f) m_velocity += (flat / length) * 5.0f;
-    m_velocity.y = std::max(m_velocity.y, 4.2f);
+    if (length > 0.001f)
+    {
+        m_velocity += (flat / length) * 5.0f;
+        m_velocity.y = std::max(m_velocity.y, 4.2f);
+    }
 
     // Being hit is a good reason to stop ambling and react.
     m_goalTimer = 0.0f;
     if (type().spawnClass == SpawnClass::Passive) m_panicTimer = PANIC_SECONDS;
 
-    if (alive()) emit(type().hurtVoice, 0.9f, 0.9f + random01() * 0.2f);
-    else emit(type().deathVoice, 1.0f, 0.9f + random01() * 0.2f);
+    // A mob on fire takes a hit every second for as long as it lasts, and
+    // a yelp for each one is a lot of yelping from a herd at dawn. Dying
+    // is always worth hearing; being hurt is worth hearing now and then.
+    if (!alive())
+        emit(type().deathVoice, 1.0f, 0.9f + random01() * 0.2f);
+    else if (m_hurtVoiceTimer <= 0.0f)
+    {
+        m_hurtVoiceTimer = HURT_VOICE_SECONDS;
+        emit(type().hurtVoice, 0.9f, 0.9f + random01() * 0.2f);
+    }
 }

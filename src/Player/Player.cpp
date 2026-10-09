@@ -238,6 +238,7 @@ void Player::respawn(glm::vec3 feetPosition)
     m_exhaustion = 0.0f;
     m_starveTimer = 0.0f;
     m_falling = false;
+    m_jumped = false;
     damageFlash = 0.0f;
     m_hurtCooldown = 0.0f;
     m_lastPosition = feetPosition;
@@ -245,6 +246,7 @@ void Player::respawn(glm::vec3 feetPosition)
 
 void Player::update(float deltaTime, const World& world, const Controls& controls)
 {
+    m_jumped = false;
     if (damageFlash > 0.0f) damageFlash = std::max(0.0f, damageFlash - deltaTime);
     if (m_hurtCooldown > 0.0f) m_hurtCooldown = std::max(0.0f, m_hurtCooldown - deltaTime);
 
@@ -303,6 +305,7 @@ void Player::update(float deltaTime, const World& world, const Controls& control
         if (controls.jumpHeld && wasOnGround)
         {
             velocity.y = JUMP_VELOCITY;
+            m_jumped = true;
             m_falling = true;
             m_fallStartY = position.y;
             addExhaustion(sprinting ? 0.2f : 0.05f);

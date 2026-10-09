@@ -50,6 +50,7 @@ public:
     float currentSpeed() const;
 
     static constexpr float SUNLIGHT_BURN_INTERVAL = 1.0f;
+    static constexpr float HURT_VOICE_SECONDS = 0.55f;
     static constexpr float SUNLIGHT_DAYLIGHT = 0.5f;
 
     // Whether the sun is on it right now. Pulled out of the update so
@@ -65,6 +66,7 @@ public:
     const MobType& type() const { return mobType(m_type); }
 
     glm::vec3 position() const { return m_position; }
+    glm::vec3 velocity() const { return m_velocity; }
     // Degrees, the same convention as the camera and the player model.
     float yaw() const { return m_yaw; }
     int health() const { return m_health; }
@@ -155,6 +157,7 @@ private:
 
     float m_attackTimer = 0.0f;
     float m_ambientTimer = 0.0f;
+    float m_hurtVoiceTimer = 0.0f;
     float m_stepDistance = 0.0f;
     float m_gait = 0.0f;
     float m_gaitAmount = 0.0f;

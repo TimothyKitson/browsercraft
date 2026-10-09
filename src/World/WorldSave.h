@@ -26,6 +26,11 @@ struct LevelState
     // bits because a slot can hold an item as well as a block, and the
     // items begin past everything a block id can say.
     std::vector<std::pair<uint16_t, uint16_t>> inventory;
+
+    // Where dying puts you back. False on a level written before this was
+    // saved at all, which means fall back to asking the generator.
+    glm::vec3 spawn{ 0.0f };
+    bool hasSpawn = false;
 };
 
 namespace WorldSave

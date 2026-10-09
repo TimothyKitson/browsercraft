@@ -104,6 +104,11 @@ void DroppedItems::update(float deltaTime, const World& world, const Player& pla
 {
     const glm::vec3 feet = player.position;
 
+    // Several drops can land in the same step -- a felled tree leaves a
+    // small pile -- and one pop per stack arriving on one frame is a
+    // burst rather than a sound. One per update, however many arrive.
+    bool popped = false;
+
     for (size_t i = 0; i < m_items.size();)
     {
         Item& item = m_items[i];
@@ -126,7 +131,11 @@ void DroppedItems::update(float deltaTime, const World& world, const Player& pla
             const int leftOver = inventory.add(item.block, item.count);
             if (leftOver < item.count)
             {
-                audio.play(Sound::Pickup, 0.45f, 0.95f + 0.1f * (i % 3));
+                if (!popped)
+                {
+                    popped = true;
+                    audio.play(Sound::Pickup, 0.45f, 0.95f + 0.1f * (i % 3));
+                }
                 item.count = leftOver;
                 collected = leftOver <= 0;
             }
@@ -140,6 +149,15 @@ void DroppedItems::update(float deltaTime, const World& world, const Player& pla
         }
 
         // --- physics ---
+        // A pile that has settled stops being simulated, so mining the
+        // block out from under one used to leave it hanging in the air.
+        // Cheap enough to ask every frame whether the floor is still there.
+        if (item.resting && !blocked(world, item.position - glm::vec3(0.0f, 0.08f, 0.0f)))
+        {
+            item.resting = false;
+            item.velocity.y = 0.0f;
+        }
+
         if (!item.resting)
         {
             item.velocity.y += GRAVITY * deltaTime;
