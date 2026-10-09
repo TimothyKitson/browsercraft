@@ -217,11 +217,26 @@ void Mob::moveAxis(const World& world, float delta, int axis)
     }
 }
 
+float Mob::currentSpeed() const
+{
+    return type().walkSpeed * (panicking() ? PANIC_SPEED : 1.0f);
+}
+
 void Mob::chooseNewGoal(const glm::vec3& playerPosition)
 {
     const MobType& t = type();
     const glm::vec3 toPlayer = playerPosition - m_position;
     const float distance = glm::length(glm::vec3(toPlayer.x, 0.0f, toPlayer.z));
+
+    // Running from whatever just hit it beats anything else it might do.
+    if (panicking() && distance > 0.001f)
+    {
+        m_goalYaw = glm::degrees(std::atan2(-toPlayer.z, -toPlayer.x));
+        m_moving = true;
+        m_goalTimer = 0.4f;
+        m_chasing = false;
+        return;
+    }
 
     // Yaw is degrees about +y with 0 looking down +x, matching the
     // camera, so a heading is atan2(z, x).
@@ -288,6 +303,7 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
     const MobType& t = type();
 
     if (m_hurtFlash > 0.0f) m_hurtFlash = std::max(0.0f, m_hurtFlash - deltaTime);
+    if (m_panicTimer > 0.0f) m_panicTimer = std::max(0.0f, m_panicTimer - deltaTime);
     if (m_loveTimer > 0.0f) m_loveTimer = std::max(0.0f, m_loveTimer - deltaTime);
     if (m_breedTimer > 0.0f) m_breedTimer = std::max(0.0f, m_breedTimer - deltaTime);
     if (m_babyTimer > 0.0f) m_babyTimer = std::max(0.0f, m_babyTimer - deltaTime);
@@ -316,7 +332,7 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
 
     const float radians = glm::radians(m_yaw);
     const glm::vec3 forward(std::cos(radians), 0.0f, std::sin(radians));
-    const glm::vec3 target = m_moving ? forward * t.walkSpeed : glm::vec3(0.0f);
+    const glm::vec3 target = m_moving ? forward * currentSpeed() : glm::vec3(0.0f);
 
     const float blend = std::min(1.0f, 10.0f * deltaTime);
     m_velocity.x += (target.x - m_velocity.x) * blend;
@@ -356,7 +372,7 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
 
     m_gait += travelled * PlayerAnimation::PHASE_PER_BLOCK;
     m_gaitAmount = PlayerAnimation::approach(
-        m_gaitAmount, std::clamp(speed / std::max(0.5f, t.walkSpeed), 0.0f, 1.0f),
+        m_gaitAmount, std::clamp(speed / std::max(0.5f, currentSpeed()), 0.0f, 1.0f),
         10.0f, deltaTime);
 
     if (m_onGround)
@@ -414,6 +430,7 @@ void Mob::damage(int amount, const glm::vec3& fromDirection)
 
     // Being hit is a good reason to stop ambling and react.
     m_goalTimer = 0.0f;
+    if (type().spawnClass == SpawnClass::Passive) m_panicTimer = PANIC_SECONDS;
 
     if (alive()) emit(Sound::MobHurt, 0.9f, 0.9f + random01() * 0.2f);
     else emit(Sound::MobDeath, 1.0f, 0.9f + random01() * 0.2f);

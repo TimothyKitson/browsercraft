@@ -658,29 +658,52 @@ namespace
             }
     }
 
+    // A block breaking is one crack spreading, not ten unrelated ones
+    // shown in turn. Nothing here is seeded on the stage: crack i follows
+    // the same path at every stage and simply reaches further, and stage s
+    // draws cracks 0..s, so each overlay strictly contains the one before.
     void paintCrack(Tile& t, int stage)
     {
         t.fill(Color{ 0, 0, 0, 0 });
-        int lines = 1 + stage;
-        uint8_t alpha = static_cast<uint8_t>(90 + stage * 14);
-        for (int i = 0; i < lines; ++i)
+
+        const uint8_t alpha = static_cast<uint8_t>(110 + stage * 12);
+
+        for (int i = 0; i <= stage; ++i)
         {
-            float angle = hash2(i, stage, 281) * 6.2831853f;
+            const float angle = hash2(i, 0, 281) * 6.2831853f;
             float x = 8.0f, y = 8.0f;
             float dx = std::cos(angle), dy = std::sin(angle);
-            int length = 4 + static_cast<int>(hash2(i, stage, 282) * 6.0f) + stage;
+
+            const int length = 3 + static_cast<int>(hash2(i, 1, 282) * 3.0f) + (stage - i);
             for (int k = 0; k < length; ++k)
             {
                 t.set(static_cast<int>(x), static_cast<int>(y), Color{ 15, 15, 15, alpha });
                 x += dx;
                 y += dy;
-                // Wobble so cracks don't look like clean rays.
-                dx += (hash2(i * 31 + k, stage, 283) - 0.5f) * 0.6f;
-                dy += (hash2(i * 17 + k, stage, 284) - 0.5f) * 0.6f;
-                float len = std::sqrt(dx * dx + dy * dy);
+                dx += (hash2(i * 31 + k, 0, 283) - 0.5f) * 0.6f;
+                dy += (hash2(i * 17 + k, 0, 284) - 0.5f) * 0.6f;
+                const float len = std::sqrt(dx * dx + dy * dy);
                 if (len > 0.001f) { dx /= len; dy /= len; }
             }
         }
+    }
+
+    // The same overlay as a plain buffer, so --selftest can check that
+    // each stage really does contain the one before it.
+    std::vector<uint8_t> crackStagePixels(int stage)
+    {
+        Tile tile;
+        paintCrack(tile, stage);
+
+        std::vector<uint8_t> out(static_cast<size_t>(Tile::N) * Tile::N * 4, 0);
+        for (int y = 0; y < Tile::N; ++y)
+            for (int x = 0; x < Tile::N; ++x)
+            {
+                const Color c = tile.get(x, y);
+                const size_t i = (static_cast<size_t>(y) * Tile::N + x) * 4;
+                out[i] = c.r; out[i + 1] = c.g; out[i + 2] = c.b; out[i + 3] = c.a;
+            }
+        return out;
     }
 
     // ---------- resource pack loading ----------
@@ -1815,6 +1838,16 @@ Atlas::~Atlas()
     if (m_id) glDeleteTextures(1, &m_id);
     if (m_normalId) glDeleteTextures(1, &m_normalId);
     if (m_specularId) glDeleteTextures(1, &m_specularId);
+}
+
+std::vector<uint8_t> Atlas::crackOverlay(int stage)
+{
+    return crackStagePixels(std::clamp(stage, 0, Tiles::CrackStages - 1));
+}
+
+int Atlas::crackOverlaySize()
+{
+    return Atlas::FALLBACK_TILE_PIXELS;
 }
 
 void Atlas::uploadTile(int tile, const uint8_t* rgba)

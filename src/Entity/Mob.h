@@ -41,6 +41,14 @@ public:
     // losing health once a second until it finds shade or dies.
     bool burning() const { return m_burnTimer > 0.0f; }
 
+    // Hurt an animal and it bolts rather than ambles: twice its walking
+    // pace, for long enough to actually get away from you.
+    static constexpr float PANIC_SECONDS = 5.0f;
+    static constexpr float PANIC_SPEED = 2.0f;
+
+    bool panicking() const { return m_panicTimer > 0.0f; }
+    float currentSpeed() const;
+
     static constexpr float SUNLIGHT_BURN_INTERVAL = 1.0f;
     static constexpr float SUNLIGHT_DAYLIGHT = 0.5f;
 
@@ -154,6 +162,7 @@ private:
     float m_breedTimer = 0.0f;
     float m_babyTimer = 0.0f;
     float m_hurtFlash = 0.0f;
+    float m_panicTimer = 0.0f;
     float m_burnTimer = 0.0f;
     float m_burnTick = 0.0f;
     float m_removeTimer = 0.6f;

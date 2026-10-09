@@ -20,6 +20,7 @@
 #include "Entity/EntityManager.h"
 #include "Entity/Pathfinder.h"
 #include "Game/Food.h"
+#include "Renderer/Atlas.h"
 #include "Player/Player.h"
 #include <glm/glm.hpp>
 #include <algorithm>
@@ -1120,6 +1121,45 @@ namespace
         check(!zombie.hasPath(), "an empty route leaves it walking nowhere");
     }
 
+    void testCrackStages()
+    {
+        section("mining: break overlay");
+
+        const int size = Atlas::crackOverlaySize();
+        std::vector<std::vector<uint8_t>> stages;
+        for (int i = 0; i < Tiles::CrackStages; ++i) stages.push_back(Atlas::crackOverlay(i));
+
+        check(static_cast<int>(stages.size()) == Tiles::CrackStages, "ten stages of cracking");
+        check(stages[0].size() == static_cast<size_t>(size) * size * 4, "each one a square tile");
+
+        auto cracked = [&](const std::vector<uint8_t>& tile) {
+            int n = 0;
+            for (size_t i = 3; i < tile.size(); i += 4) if (tile[i] > 0) ++n;
+            return n;
+        };
+
+        check(cracked(stages[0]) > 0, "the first stage marks the block");
+
+        // The whole point: breaking is one crack spreading. Every pixel
+        // cracked at one stage stays cracked at the next, and there are
+        // always more of them, so it reads as damage accumulating rather
+        // than as a flicker-book of unrelated pictures.
+        bool contains = true, grows = true;
+        for (size_t stage = 1; stage < stages.size(); ++stage)
+        {
+            const std::vector<uint8_t>& before = stages[stage - 1];
+            const std::vector<uint8_t>& after = stages[stage];
+            for (size_t i = 3; i < before.size(); i += 4)
+                if (before[i] > 0 && after[i] == 0) contains = false;
+            if (cracked(after) <= cracked(before)) grows = false;
+        }
+
+        check(contains, "no crack ever heals between one stage and the next");
+        check(grows, "and every stage adds more of them");
+        check(cracked(stages.back()) > cracked(stages.front()) * 2,
+              "the last stage is far more broken than the first");
+    }
+
     void testFood()
     {
         section("food and hunger");
@@ -1271,6 +1311,7 @@ int runSelfTest()
     testMobDrops();
     testFarming();
     testPathfinding();
+    testCrackStages();
     testFood();
     testPlayerImmunity();
 

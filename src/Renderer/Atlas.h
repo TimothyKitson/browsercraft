@@ -63,6 +63,13 @@ public:
     // Atlas width/height in pixels; used for the UV half-texel inset.
     static int pixelSize();
 
+    // One stage of the block-breaking overlay as RGBA, square and
+    // crackOverlaySize() on a side. Exposed only so --selftest can check
+    // that the stages build on one another instead of each being its own
+    // picture.
+    static std::vector<uint8_t> crackOverlay(int stage);
+    static int crackOverlaySize();
+
 private:
     // One multi-frame tile (Minecraft stores these as a vertical strip).
     struct Animation

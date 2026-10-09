@@ -11,17 +11,25 @@ class Player;
 class Inventory;
 class AudioEngine;
 
-// Blocks you mine pop out as little tumbling cubes that fall, settle and
-// get sucked towards you when you walk close. This is also the engine's
-// first entity type -- the update/render split here is what mobs would
-// slot into later.
+// Blocks you mine pop out, fall and settle where they land. A block
+// tumbles as a little cube; an item, and anything drawn as crossed
+// quads in the world, stands up as a flat sprite the way Minecraft
+// draws them -- a flower rolled up into a cube reads as a coloured
+// brick rather than a flower.
+//
+// Nothing is dragged towards you: a drop stays where it fell until you
+// walk onto it. The only thing that moves one is another of the same
+// kind landing beside it, which merges the two so a mined seam leaves
+// one pile instead of thirty.
 class DroppedItems
 {
 public:
     static constexpr float SIZE = 0.30f;        // edge length of the dropped cube
+    static constexpr float SPRITE_SIZE = 0.42f; // height of a flat item sprite
     static constexpr float HOVER = 0.16f;       // how far it floats above where it rests
-    static constexpr float PICKUP_RADIUS = 1.9f;
-    static constexpr float COLLECT_RADIUS = 0.7f;
+    static constexpr float COLLECT_RADIUS = 1.0f;
+    static constexpr float PICKUP_DELAY = 2.0f; // before it can be walked back onto
+    static constexpr float MERGE_RADIUS = 0.8f;
     static constexpr float LIFETIME_SECONDS = 300.0f;
 
     void spawn(const glm::vec3& position, StackId block, int count = 1);
@@ -54,4 +62,5 @@ private:
     std::vector<float> m_vertices;
 
     bool blocked(const World& world, const glm::vec3& centre) const;
+    void mergeNearby();
 };

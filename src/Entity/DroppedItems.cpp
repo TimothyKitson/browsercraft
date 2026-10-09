@@ -36,16 +36,20 @@ namespace
         { { {0,0,0}, {0,1,0}, {1,1,0}, {1,0,0} }, { {0,1}, {0,0}, {1,0}, {1,1} }, 0.86f },
     };
 
-    // An item has one sprite and wears it on every face; a block shows
-    // the right face of itself.
+    // A block shows the right face of itself.
     int tileForFace(StackId id, int face)
     {
-        if (isItem(id)) return atlasTileFor(id);
-
         const BlockInfo& info = blockInfo(asBlock(id));
         if (face == 2) return info.tileTop;
         if (face == 3) return info.tileBottom;
         return info.tileSide;
+    }
+
+    // Anything with one sprite rather than six faces: every item, and the
+    // blocks the mesher draws as crossed quads.
+    bool isFlatSprite(StackId id)
+    {
+        return isItem(id) || isCross(asBlock(id));
     }
 }
 
@@ -108,25 +112,17 @@ void DroppedItems::update(float deltaTime, const World& world, const Player& pla
 
         bool collected = false;
 
-        // --- attraction and pickup ---
+        // Walk onto it to pick it up. The delay is what lets you drop
+        // something on purpose without instantly taking it back.
         const float distance = glm::length(playerCentre - item.position);
-        if (item.age > 0.35f && distance < PICKUP_RADIUS)
+        if (item.age > PICKUP_DELAY && distance < COLLECT_RADIUS)
         {
-            if (distance < COLLECT_RADIUS)
+            const int leftOver = inventory.add(item.block, item.count);
+            if (leftOver < item.count)
             {
-                const int leftOver = inventory.add(item.block, item.count);
-                if (leftOver < item.count)
-                {
-                    audio.play(Sound::Pickup, 0.45f, 0.95f + 0.1f * (i % 3));
-                    collected = true;
-                }
-            }
-            else
-            {
-                // Drift towards the player, accelerating as it gets closer.
-                const glm::vec3 pull = glm::normalize(playerCentre - item.position);
-                item.velocity += pull * (9.0f * deltaTime) / std::max(0.4f, distance);
-                item.resting = false;
+                audio.play(Sound::Pickup, 0.45f, 0.95f + 0.1f * (i % 3));
+                item.count = leftOver;
+                collected = leftOver <= 0;
             }
         }
 
@@ -180,6 +176,40 @@ void DroppedItems::update(float deltaTime, const World& world, const Player& pla
 
         ++i;
     }
+
+    mergeNearby();
+}
+
+// Two piles of the same thing within arm's length become one, which is
+// the only way a settled drop ever moves. The older one wins the spot.
+void DroppedItems::mergeNearby()
+{
+    for (size_t a = 0; a < m_items.size(); ++a)
+    {
+        for (size_t b = a + 1; b < m_items.size();)
+        {
+            Item& keep = m_items[a];
+            Item& other = m_items[b];
+
+            const int limit = maxStackOf(keep.block);
+            if (other.block != keep.block || keep.count >= limit ||
+                glm::length(other.position - keep.position) > MERGE_RADIUS)
+            {
+                ++b;
+                continue;
+            }
+
+            const int moved = std::min(other.count, limit - keep.count);
+            keep.count += moved;
+            other.count -= moved;
+            keep.age = std::max(keep.age, other.age);
+
+            if (other.count > 0) { ++b; continue; }
+
+            m_items[b] = m_items.back();
+            m_items.pop_back();
+        }
+    }
 }
 
 void DroppedItems::render(Shader& chunkShader, const World& world)
@@ -188,6 +218,7 @@ void DroppedItems::render(Shader& chunkShader, const World& world)
 
     m_vertices.clear();
     m_vertices.reserve(m_items.size() * 36 * 9);
+
 
     const float half = SIZE * 0.5f;
 
@@ -216,6 +247,44 @@ void DroppedItems::render(Shader& chunkShader, const World& world)
                                                  isItem(item.block) ? 0 : lightEmission(asBlock(item.block)))
                                        / 15.0f;
 
+        auto push = [&](const glm::vec3& p, float tu, float tv, float shade) {
+            m_vertices.push_back(p.x);
+            m_vertices.push_back(p.y);
+            m_vertices.push_back(p.z);
+            m_vertices.push_back(tu);
+            m_vertices.push_back(tv);
+            m_vertices.push_back(shade);
+            m_vertices.push_back(sky);
+            m_vertices.push_back(blockLight);
+            m_vertices.push_back(6.0f); // face 6: skip tangent-space normal mapping
+        };
+
+        if (isFlatSprite(item.block))
+        {
+            // Stood up on its bottom edge and turned on the spot, so it
+            // reads as the thing it is from any angle. Drawn front and
+            // back, because a single quad disappears edge-on and again
+            // whenever the spin brings its back face round.
+            const TileUV uv = tileUV(atlasTileFor(item.block));
+            const float half = SPRITE_SIZE * 0.5f;
+            const glm::vec3 foot = item.position + glm::vec3(0.0f, HOVER * 0.5f + bob, 0.0f);
+            const glm::vec3 across(half * c, 0.0f, half * s);
+            const glm::vec3 up(0.0f, SPRITE_SIZE, 0.0f);
+
+            const glm::vec3 corner[4] = {
+                foot - across, foot + across, foot + across + up, foot - across + up
+            };
+            const float tu[4] = { uv.u0, uv.u1, uv.u1, uv.u0 };
+            const float tv[4] = { uv.vBottom, uv.vBottom, uv.vTop, uv.vTop };
+
+            const int front[6] = { 0, 1, 2, 0, 2, 3 };
+            const int back[6]  = { 0, 2, 1, 0, 3, 2 };
+            for (int k : front) push(corner[k], tu[k], tv[k], 1.0f);
+            for (int k : back)  push(corner[k], tu[k], tv[k], 0.86f);
+
+            continue;
+        }
+
         for (int f = 0; f < 6; ++f)
         {
             const FaceDef& face = FACES[f];
@@ -239,18 +308,7 @@ void DroppedItems::render(Shader& chunkShader, const World& world)
             }
 
             const int order[6] = { 0, 1, 2, 0, 2, 3 };
-            for (int k : order)
-            {
-                m_vertices.push_back(corners[k].x);
-                m_vertices.push_back(corners[k].y);
-                m_vertices.push_back(corners[k].z);
-                m_vertices.push_back(u[k]);
-                m_vertices.push_back(v[k]);
-                m_vertices.push_back(face.shade);
-                m_vertices.push_back(sky);
-                m_vertices.push_back(blockLight);
-                m_vertices.push_back(6.0f); // face 6: skip tangent-space normal mapping
-            }
+            for (int k : order) push(corners[k], u[k], v[k], face.shade);
         }
     }
 
