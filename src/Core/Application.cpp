@@ -1,4 +1,5 @@
 #include "Application.h"
+#include "BuildTag.h"
 #include "GLFunctions.h"
 #include "Renderer/Screenshot.h"
 #include "Entity/PlayerAnimation.h"
@@ -142,7 +143,10 @@ Application::Application(int windowWidth, int windowHeight)
 
     rebuildSkinLibrary();
 
+    // Stamped at compile time, so "did my build actually update?" is
+    // answerable by looking rather than by guessing.
     std::printf("\n=== Browsercraft ===\n");
+    std::printf("Build: %s, compiled %s %s\n", BUILD_TAG, __DATE__, __TIME__);
     std::printf("Controls are rebindable in Settings - Controls.\n\n");
 }
 
