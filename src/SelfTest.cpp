@@ -15,6 +15,7 @@
 #include "Entity/BoxMesh.h"
 #include "Entity/Mob.h"
 #include "World/WorldSave.h"
+#include "Game/Tools.h"
 #include "Entity/MobModel.h"
 #include "Entity/MobSkin.h"
 #include "Entity/MobType.h"
@@ -1388,6 +1389,155 @@ namespace
         check(player.damage(2), "so the next blow lands again");
     }
 
+    void testTools()
+    {
+        section("tools");
+
+        using namespace Tools;
+
+        // Kind and tier are read off the item's position in the enum, so
+        // the whole block of twenty-five has to line up.
+        check(kindOf(Items::WoodPickaxe) == Kind::Pickaxe, "the first tool is a pickaxe");
+        check(tierOf(Items::WoodPickaxe) == Tier::Wood, "made of wood");
+        check(kindOf(Items::DiamondHoe) == Kind::Hoe, "the last is a hoe");
+        check(tierOf(Items::DiamondHoe) == Tier::Diamond, "made of diamond");
+        check(kindOf(Items::IronShovel) == Kind::Shovel, "and an iron shovel is a shovel");
+        check(tierOf(Items::IronShovel) == Tier::Iron, "made of iron");
+
+        check(kindOf(Blocks::Stone) == Kind::None, "a block is not a tool");
+        check(kindOf(Items::Bread) == Kind::None, "nor is a loaf of bread");
+        check(!isTool(Blocks::Air), "nor is an empty hand");
+
+        // Every one of the twenty-five is a real tool with a real tier,
+        // which is what catches an item added in the middle of the run.
+        int tools = 0;
+        for (StackId id = Items::WoodPickaxe; id <= Items::DiamondHoe; ++id)
+        {
+            if (kindOf(id) != Kind::None && tierOf(id) != Tier::None) ++tools;
+            if (maxDurability(tierOf(id)) <= 0) break;
+        }
+        check(tools == 25, "all twenty-five are tools");
+
+        // Harvesting. Stone wants a pickaxe of any sort; diamond ore
+        // wants iron; obsidian wants diamond.
+        check(!canHarvest(Blocks::Air, Blocks::Stone), "bare hands get nothing from stone");
+        check(canHarvest(Items::WoodPickaxe, Blocks::Stone), "a wooden pickaxe does");
+        check(!canHarvest(Items::WoodPickaxe, Blocks::DiamondOre), "but not from diamond ore");
+        check(!canHarvest(Items::StonePickaxe, Blocks::DiamondOre), "nor a stone one");
+        check(canHarvest(Items::IronPickaxe, Blocks::DiamondOre), "an iron one does");
+        check(canHarvest(Items::DiamondPickaxe, Blocks::Obsidian), "and diamond gets obsidian");
+        check(!canHarvest(Items::IronPickaxe, Blocks::Obsidian), "where iron does not");
+
+        // Gold is quick but mines no more than wood can, which is the
+        // whole joke of it.
+        check(harvestLevel(Tier::Gold) == harvestLevel(Tier::Wood), "gold mines what wood mines");
+        check(breakSeconds(Items::GoldPickaxe, Blocks::Stone) <
+                  breakSeconds(Items::DiamondPickaxe, Blocks::Stone),
+              "but faster than diamond");
+        check(maxDurability(Tier::Gold) < maxDurability(Tier::Wood), "and lasts less long");
+
+        // The right tool, and only the right tool, speeds the work up.
+        check(breakSeconds(Items::WoodPickaxe, Blocks::Stone) <
+                  breakSeconds(Blocks::Air, Blocks::Stone),
+              "a pickaxe is quicker through stone than a fist");
+        check(breakSeconds(Items::WoodShovel, Blocks::Stone) ==
+                  breakSeconds(Blocks::Air, Blocks::Stone),
+              "a shovel is no quicker through it at all");
+        check(breakSeconds(Items::WoodShovel, Blocks::Sand) <
+                  breakSeconds(Blocks::Air, Blocks::Sand),
+              "but is through sand");
+        check(breakSeconds(Items::WoodAxe, Blocks::Planks) <
+                  breakSeconds(Items::WoodPickaxe, Blocks::Planks),
+              "and an axe through wood");
+
+        // Dirt needs nothing in particular, so a fist still gets a drop.
+        check(canHarvest(Blocks::Air, Blocks::Dirt), "dirt comes up by hand");
+        check(breakSeconds(Blocks::Air, Blocks::Bedrock) < 0.0f, "bedrock never breaks");
+        check(breakSeconds(Items::DiamondPickaxe, Blocks::Bedrock) < 0.0f, "not even with diamond");
+
+        // A better tier is always at least as quick as a worse one.
+        const StackId ladder[] = { Items::WoodPickaxe, Items::StonePickaxe, Items::IronPickaxe };
+        for (int i = 1; i < 3; ++i)
+            check(breakSeconds(ladder[i], Blocks::Stone) < breakSeconds(ladder[i - 1], Blocks::Stone),
+                  "each tier is quicker than the last through stone");
+
+        // Wear. Breaking a block costs a point; swinging at nothing costs
+        // nothing; and a block that takes no time to break is free.
+        check(wearsOnBlock(Items::IronPickaxe, Blocks::Stone), "stone wears a pickaxe");
+        check(!wearsOnBlock(Items::IronPickaxe, Blocks::Air), "air does not");
+        check(!wearsOnBlock(Items::IronPickaxe, Blocks::TallGrass), "nor does tall grass");
+        check(!wearsOnBlock(Blocks::Cobblestone, Blocks::Stone), "and a block in hand has nothing to wear");
+
+        // Damage. A sword beats an axe beats a pickaxe beats a fist.
+        check(attackDamage(Blocks::Air) == 1, "a fist does one");
+        check(attackDamage(Items::WoodSword) > attackDamage(Blocks::Air), "a sword does more");
+        check(attackDamage(Items::DiamondSword) > attackDamage(Items::WoodSword),
+              "a diamond sword more again");
+        check(attackDamage(Items::IronSword) > attackDamage(Items::IronAxe), "a sword beats its own axe");
+        check(attackDamage(Items::IronAxe) > attackDamage(Items::IronPickaxe), "which beats its pickaxe");
+        check(attackDamage(Items::DiamondHoe) == 1, "and a hoe is no weapon at all");
+    }
+
+    void testToolRecipes()
+    {
+        section("tools: the recipes");
+
+        // Every tool in the game can be made, and comes out as itself.
+        // A missing or malformed recipe shows up here rather than as an
+        // item nobody can reach.
+        struct Shape { int w, h; const char* cells; };
+        const Shape SHAPES[5] = {
+            { 3, 3, "MMM.S..S." },   // pickaxe
+            { 2, 3, "MMMS.S" },      // axe
+            { 1, 3, "MSS" },         // shovel
+            { 1, 3, "MMS" },         // sword
+            { 2, 3, "MM.S.S" },      // hoe
+        };
+        const StackId HEADS[5] = { Blocks::Planks, Blocks::Cobblestone,
+                                   Items::IronIngot, Items::GoldIngot, Items::Diamond };
+
+        int made = 0;
+        for (int tier = 0; tier < 5; ++tier)
+            for (int kind = 0; kind < 5; ++kind)
+            {
+                const Shape& shape = SHAPES[kind];
+
+                ItemStack grid[9];
+                for (int y = 0; y < shape.h; ++y)
+                    for (int x = 0; x < shape.w; ++x)
+                    {
+                        const char cell = shape.cells[y * shape.w + x];
+                        if (cell == '.') continue;
+                        grid[y * 3 + x].id = (cell == 'M') ? HEADS[tier] : Items::Stick;
+                        grid[y * 3 + x].count = 1;
+                    }
+
+                const CraftOutput out = Crafting::match(grid, 3);
+                const StackId wanted = static_cast<StackId>(Items::WoodPickaxe + tier * 5 + kind);
+                if (out.valid() && out.id == wanted && out.count == 1) ++made;
+            }
+
+        check(made == 25, "every tool in the game has a recipe that makes it");
+
+        // Sticks, and the bench that the three-wide ones need.
+        ItemStack sticks[9];
+        sticks[0].id = Blocks::Planks; sticks[0].count = 1;
+        sticks[3].id = Blocks::Planks; sticks[3].count = 1;
+        const CraftOutput stick = Crafting::match(sticks, 2);
+        check(stick.valid() && stick.id == Items::Stick, "two planks stacked make sticks");
+        check(stick.count == 4, "four of them");
+
+        // A pickaxe is three wide, so the player's own grid cannot make
+        // one however the planks are arranged.
+        ItemStack small[9];
+        small[0].id = Blocks::Planks; small[0].count = 1;
+        small[1].id = Blocks::Planks; small[1].count = 1;
+        small[3].id = Items::Stick;   small[3].count = 1;
+        const CraftOutput none = Crafting::match(small, 2);
+        check(!none.valid() || none.id != Items::WoodPickaxe,
+              "a pickaxe cannot be made without a bench");
+    }
+
     void testLevelRoundTrip()
     {
         section("saving: the level file");
@@ -1499,6 +1649,8 @@ int runSelfTest()
     testFood();
     testPlayerImmunity();
     testMobHurt();
+    testTools();
+    testToolRecipes();
     testLevelRoundTrip();
 
     std::printf("\n%d checks, %d failed\n", g_checks, g_failures);

@@ -9,8 +9,13 @@ struct ItemStack
     StackId id = Blocks::Air;
     int count = 0;
 
+    // How worn a tool is, 0 when new. Meaningless on everything else,
+    // which is why it is never compared when stacks are merged -- only
+    // tools carry it, and a tool never stacks.
+    int damage = 0;
+
     bool empty() const { return count <= 0 || id == Blocks::Air; }
-    void clear() { id = Blocks::Air; count = 0; }
+    void clear() { id = Blocks::Air; count = 0; damage = 0; }
 };
 
 // 9 hotbar slots plus 27 storage slots, same shape as Minecraft's, and the

@@ -1,4 +1,4 @@
-# Installs a Minecraft resource pack into assets/textures/block.
+# Installs a Minecraft resource pack into assets/textures.
 #
 #   powershell -ExecutionPolicy Bypass -File tools\install-texture-pack.ps1 -Zip "C:\path\to\pack.zip"
 #
@@ -62,6 +62,38 @@ foreach ($name in $wanted) {
         if ($file -like "*_n.png" -or $file -like "*_s.png") { $pbr++ } else { $copied++ }
     }
 }
+# Item icons. A pack keeps them in textures/item (1.13+) or
+# textures/items (1.12 and earlier). The game paints its own for anything
+# missing, so a pack with no items at all still installs cleanly.
+$itemDest = Join-Path $root "assets\textures\item"
+New-Item -ItemType Directory -Force -Path $itemDest | Out-Null
+
+$wantedItems = @(
+    'wheat_seeds','seeds_wheat','wheat','leather','beef','beef_raw','porkchop','porkchop_raw',
+    'chicken','chicken_raw','mutton','mutton_raw','feather','bone','string','gunpowder','bread',
+    'stick','coal','diamond','iron_ingot','gold_ingot',
+    'wooden_pickaxe','wooden_axe','wooden_shovel','wooden_sword','wooden_hoe',
+    'wood_pickaxe','wood_axe','wood_shovel','wood_sword','wood_hoe',
+    'stone_pickaxe','stone_axe','stone_shovel','stone_sword','stone_hoe',
+    'iron_pickaxe','iron_axe','iron_shovel','iron_sword','iron_hoe',
+    'golden_pickaxe','golden_axe','golden_shovel','golden_sword','golden_hoe',
+    'gold_pickaxe','gold_axe','gold_shovel','gold_sword','gold_hoe',
+    'diamond_pickaxe','diamond_axe','diamond_shovel','diamond_sword','diamond_hoe'
+)
+
+$itemEntries = @{}
+foreach ($e in $archive.Entries) {
+    if ($e.FullName -match 'textures/items?/([^/]+\.png)$') { $itemEntries[$matches[1]] = $e }
+}
+
+$itemsFound = 0
+foreach ($name in $wantedItems) {
+    $file = "$name.png"
+    if (-not $itemEntries.ContainsKey($file)) { continue }
+    [System.IO.Compression.ZipFileExtensions]::ExtractToFile($itemEntries[$file], (Join-Path $itemDest $file), $true)
+    $itemsFound++
+}
+
 # HUD sprites (hearts, hotbar). Missing ones fall back to procedural art.
 $guiDest = Join-Path $root "assets\textures\gui"
 New-Item -ItemType Directory -Force -Path $guiDest | Out-Null
@@ -115,6 +147,7 @@ if (Test-Path -LiteralPath $probe) {
 }
 
 Write-Output "Installed $copied block textures and $pbr PBR maps into assets/textures/block"
+Write-Output "Installed $itemsFound item icons into assets/textures/item"
 Write-Output "Installed $guiFound HUD sprites into assets/textures/gui"
 if ($resolution -gt 0) { Write-Output "Tile resolution: ${resolution}x${resolution}" }
 if ($resolution -ge 128) {

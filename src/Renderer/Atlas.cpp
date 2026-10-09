@@ -759,6 +759,9 @@ namespace
     // ---------- resource pack loading ----------
 
     const char* PACK_DIRECTORY = "assets/textures/block";
+    // Items live in their own folder in a pack, and are plain flat icons
+    // -- no tinting, no animation, no normal maps to go with them.
+    const char* ITEM_PACK_DIRECTORY = "assets/textures/item";
     const char* CREDIT_FILE = "assets/textures/CREDIT.txt";
     const char* MOB_CREDIT_FILE = "assets/skins/mob/CREDIT.txt";
 
@@ -1322,6 +1325,139 @@ namespace
         }
     }
 
+    // ---------- tools ----------
+    //
+    // One painter for all twenty-five: a handle on the diagonal with a
+    // head drawn in the tier's metal. The heads are given as the pixels
+    // they occupy on a 16x16 tile, read off the vanilla shapes, which is
+    // what makes a pickaxe read as a pickaxe at a glance.
+
+    const Color TIER_COLOR[5] = {
+        { 150, 110,  62 },   // wood
+        { 128, 128, 128 },   // stone
+        { 216, 216, 216 },   // iron
+        { 246, 208,  70 },   // gold
+        {  94, 219, 208 },   // diamond
+    };
+
+    // Rows of the head, top to bottom, as "fill from x0 to x1 on row y".
+    struct Span { int y, x0, x1; };
+
+    const Span PICKAXE_HEAD[] = {
+        { 2, 4, 12 }, { 3, 3, 5 }, { 3, 7, 8 }, { 3, 11, 13 },
+        { 4, 2, 3 }, { 4, 13, 14 },
+    };
+    const Span AXE_HEAD[] = {
+        { 2, 6, 10 }, { 3, 5, 11 }, { 4, 5, 11 }, { 5, 6, 10 }, { 6, 7, 9 },
+    };
+    const Span SHOVEL_HEAD[] = {
+        { 2, 8, 11 }, { 3, 8, 11 }, { 4, 8, 11 }, { 5, 9, 10 },
+    };
+    const Span SWORD_HEAD[] = {
+        { 1, 10, 12 }, { 2, 9, 12 }, { 3, 8, 11 }, { 4, 7, 10 },
+        { 5, 6, 9 }, { 6, 5, 8 }, { 7, 5, 7 },
+    };
+    const Span HOE_HEAD[] = {
+        { 2, 7, 12 }, { 3, 7, 9 }, { 3, 11, 12 }, { 4, 7, 8 },
+    };
+
+    struct HeadShape { const Span* spans; int count; };
+
+    const HeadShape TOOL_HEADS[5] = {
+        { PICKAXE_HEAD, static_cast<int>(sizeof(PICKAXE_HEAD) / sizeof(Span)) },
+        { AXE_HEAD,     static_cast<int>(sizeof(AXE_HEAD) / sizeof(Span)) },
+        { SHOVEL_HEAD,  static_cast<int>(sizeof(SHOVEL_HEAD) / sizeof(Span)) },
+        { SWORD_HEAD,   static_cast<int>(sizeof(SWORD_HEAD) / sizeof(Span)) },
+        { HOE_HEAD,     static_cast<int>(sizeof(HOE_HEAD) / sizeof(Span)) },
+    };
+
+    void paintToolTile(Tile& t, int kind, int tier)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+
+        const Color metal = TIER_COLOR[tier];
+        const Color dark = shade(metal, -46);
+        const Color handle{ 139, 104, 60 };
+        const Color handleDark{ 102, 74, 40 };
+
+        // The handle runs corner to corner on every one of them, and a
+        // sword's is short because its blade takes up the diagonal.
+        const int from = (kind == 3) ? 8 : 5;
+        for (int i = from; i <= 13; ++i)
+        {
+            t.set(i, i, handle);
+            if (i < 13) t.set(i + 1, i, handleDark);
+        }
+
+        const HeadShape& head = TOOL_HEADS[kind];
+        for (int i = 0; i < head.count; ++i)
+        {
+            const Span& span = head.spans[i];
+            for (int x = span.x0; x <= span.x1; ++x)
+            {
+                // A sword's blade is drawn along the other diagonal, so
+                // its spans are read as a mirror of everything else.
+                t.set(x, span.y, (x == span.x0 || span.y <= 2) ? metal : dark);
+            }
+        }
+
+        // One highlight, so the head does not read as a flat blob.
+        for (int i = 0; i < head.count && i < 2; ++i)
+            t.set(head.spans[i].x0 + 1, head.spans[i].y, shade(metal, 40));
+    }
+
+    void paintItemStick(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        const Color wood{ 150, 112, 66 };
+        const Color dark{ 110, 80, 44 };
+        for (int i = 3; i <= 12; ++i)
+        {
+            t.set(i, i, wood);
+            t.set(i + 1, i, dark);
+        }
+    }
+
+    // A lump, in whatever the material is. Coal is nearly black, a
+    // diamond is bright, the ingots are bars rather than lumps.
+    void paintLump(Tile& t, Color body)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        const Color edge = shade(body, -50);
+        const Color lit = shade(body, 46);
+
+        for (int y = 4; y <= 11; ++y)
+        {
+            const int inset = (y <= 4 || y >= 11) ? 3 : (y == 5 || y == 10) ? 2 : 1;
+            for (int x = 3 + inset; x <= 12 - inset; ++x)
+                t.set(x, y, (y <= 6) ? lit : body);
+        }
+        for (int x = 6; x <= 9; ++x) { t.set(x, 3, edge); t.set(x, 12, edge); }
+        for (int y = 5; y <= 10; ++y) { t.set(3, y, edge); t.set(12, y, edge); }
+    }
+
+    void paintItemCoal(Tile& t)    { paintLump(t, Color{ 44, 44, 48 }); }
+    void paintItemDiamond(Tile& t) { paintLump(t, Color{ 94, 219, 208 }); }
+
+    void paintIngot(Tile& t, Color body)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        const Color edge = shade(body, -50);
+        const Color lit = shade(body, 40);
+
+        for (int y = 6; y <= 10; ++y)
+        {
+            const int inset = (y == 6 || y == 10) ? 1 : 0;
+            for (int x = 3 + inset; x <= 12 - inset; ++x)
+                t.set(x, y, y <= 7 ? lit : body);
+        }
+        for (int x = 4; x <= 11; ++x) { t.set(x, 5, edge); t.set(x, 11, edge); }
+        for (int y = 6; y <= 10; ++y) { t.set(2, y, edge); t.set(13, y, edge); }
+    }
+
+    void paintItemIronIngot(Tile& t) { paintIngot(t, Color{ 216, 216, 216 }); }
+    void paintItemGoldIngot(Tile& t) { paintIngot(t, Color{ 246, 208, 70 }); }
+
     void paintItemBread(Tile& t)
     {
         t.fill(Color{ 0, 0, 0, 0 });
@@ -1411,6 +1547,11 @@ namespace
         { Tiles::ItemWheat, paintItemWheat },
         { Tiles::CraftingTop,   paintCraftingTop },
         { Tiles::CraftingSide,  paintCraftingSide },
+        { Tiles::ItemStick,     paintItemStick },
+        { Tiles::ItemCoal,      paintItemCoal },
+        { Tiles::ItemDiamond,   paintItemDiamond },
+        { Tiles::ItemIronIngot, paintItemIronIngot },
+        { Tiles::ItemGoldIngot, paintItemGoldIngot },
         { Tiles::ItemLeather, paintItemLeather },
         { Tiles::ItemRawBeef, paintItemRawBeef },
         { Tiles::ItemRawPork, paintItemRawPork },
@@ -1451,6 +1592,60 @@ namespace
         Tinting tint;
         uint8_t maxAlpha;     // 0 = keep the texture's own alpha
         bool animated;        // vertical strip of frames
+    };
+
+    // Item icons a pack can supply. Vanilla names, newest first.
+    struct PackItem
+    {
+        int tile;
+        const char* candidates[3];
+    };
+
+    const PackItem PACK_ITEMS[] = {
+        { Tiles::ItemWheatSeeds, { "wheat_seeds", "seeds_wheat", nullptr } },
+        { Tiles::ItemWheat,      { "wheat", nullptr, nullptr } },
+        { Tiles::ItemLeather,    { "leather", nullptr, nullptr } },
+        { Tiles::ItemRawBeef,    { "beef", "beef_raw", nullptr } },
+        { Tiles::ItemRawPork,    { "porkchop", "porkchop_raw", nullptr } },
+        { Tiles::ItemRawChicken, { "chicken", "chicken_raw", nullptr } },
+        { Tiles::ItemRawMutton,  { "mutton", "mutton_raw", nullptr } },
+        { Tiles::ItemFeather,    { "feather", nullptr, nullptr } },
+        { Tiles::ItemBone,       { "bone", nullptr, nullptr } },
+        { Tiles::ItemString,     { "string", nullptr, nullptr } },
+        { Tiles::ItemGunpowder,  { "gunpowder", nullptr, nullptr } },
+        { Tiles::ItemBread,      { "bread", nullptr, nullptr } },
+
+        { Tiles::ItemStick,      { "stick", nullptr, nullptr } },
+        { Tiles::ItemCoal,       { "coal", nullptr, nullptr } },
+        { Tiles::ItemDiamond,    { "diamond", nullptr, nullptr } },
+        { Tiles::ItemIronIngot,  { "iron_ingot", nullptr, nullptr } },
+        { Tiles::ItemGoldIngot,  { "gold_ingot", nullptr, nullptr } },
+
+        { Tiles::ItemToolFirst +  0, { "wooden_pickaxe", "wood_pickaxe", nullptr } },
+        { Tiles::ItemToolFirst +  1, { "wooden_axe", "wood_axe", nullptr } },
+        { Tiles::ItemToolFirst +  2, { "wooden_shovel", "wood_shovel", nullptr } },
+        { Tiles::ItemToolFirst +  3, { "wooden_sword", "wood_sword", nullptr } },
+        { Tiles::ItemToolFirst +  4, { "wooden_hoe", "wood_hoe", nullptr } },
+        { Tiles::ItemToolFirst +  5, { "stone_pickaxe", nullptr, nullptr } },
+        { Tiles::ItemToolFirst +  6, { "stone_axe", nullptr, nullptr } },
+        { Tiles::ItemToolFirst +  7, { "stone_shovel", nullptr, nullptr } },
+        { Tiles::ItemToolFirst +  8, { "stone_sword", nullptr, nullptr } },
+        { Tiles::ItemToolFirst +  9, { "stone_hoe", nullptr, nullptr } },
+        { Tiles::ItemToolFirst + 10, { "iron_pickaxe", nullptr, nullptr } },
+        { Tiles::ItemToolFirst + 11, { "iron_axe", nullptr, nullptr } },
+        { Tiles::ItemToolFirst + 12, { "iron_shovel", nullptr, nullptr } },
+        { Tiles::ItemToolFirst + 13, { "iron_sword", nullptr, nullptr } },
+        { Tiles::ItemToolFirst + 14, { "iron_hoe", nullptr, nullptr } },
+        { Tiles::ItemToolFirst + 15, { "golden_pickaxe", "gold_pickaxe", nullptr } },
+        { Tiles::ItemToolFirst + 16, { "golden_axe", "gold_axe", nullptr } },
+        { Tiles::ItemToolFirst + 17, { "golden_shovel", "gold_shovel", nullptr } },
+        { Tiles::ItemToolFirst + 18, { "golden_sword", "gold_sword", nullptr } },
+        { Tiles::ItemToolFirst + 19, { "golden_hoe", "gold_hoe", nullptr } },
+        { Tiles::ItemToolFirst + 20, { "diamond_pickaxe", nullptr, nullptr } },
+        { Tiles::ItemToolFirst + 21, { "diamond_axe", nullptr, nullptr } },
+        { Tiles::ItemToolFirst + 22, { "diamond_shovel", nullptr, nullptr } },
+        { Tiles::ItemToolFirst + 23, { "diamond_sword", nullptr, nullptr } },
+        { Tiles::ItemToolFirst + 24, { "diamond_hoe", nullptr, nullptr } },
     };
 
     const PackTile PACK_TILES[] = {
@@ -1578,6 +1773,42 @@ Atlas::Atlas()
         Tile tile;
         paintCrack(tile, stage);
         blitPainted(Tiles::CrackFirst + stage, tile);
+    }
+
+    // The twenty-five tools are one shape in one of five metals, so they
+    // are painted from the offset rather than listed one by one.
+    for (int i = 0; i < 25; ++i)
+    {
+        Tile tile;
+        paintToolTile(tile, i % 5, i / 5);
+        blitPainted(Tiles::ItemToolFirst + i, tile);
+    }
+
+    // Item icons out of the pack, over the painted ones. These are their
+    // own folder and have none of the block machinery about them, so they
+    // are a plain loop rather than another case in the one below. The
+    // pack need not have a block folder for this to be worth doing.
+    {
+        int items = 0;
+        for (const PackItem& entry : PACK_ITEMS)
+        {
+            Image image;
+            for (int i = 0; entry.candidates[i] != nullptr && !image.valid(); ++i)
+                image = loadPNG(std::string(ITEM_PACK_DIRECTORY) + "/" + entry.candidates[i] + ".png");
+
+            // A pack may hold an animated item as a column of frames; the
+            // first one is the icon.
+            if (!image.valid()) continue;
+            if (image.height > image.width && image.width > 0 && image.height % image.width == 0)
+                image = extractFrame(image, 0, image.width);
+
+            blitImage(entry.tile, scaleNearest(image, tilePixels, tilePixels));
+            ++items;
+        }
+
+        if (items > 0)
+            std::printf("Textures: %d of %d item icons from %s\n",
+                        items, static_cast<int>(std::size(PACK_ITEMS)), ITEM_PACK_DIRECTORY);
     }
 
     if (m_loadedFromPack)

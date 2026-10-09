@@ -99,7 +99,7 @@ namespace
 }
 
 void Application::drawItem(float x, float y, float size, StackId id, int count,
-                           const glm::vec4& tint)
+                           const glm::vec4& tint, int damage)
 {
     if (id == Blocks::Air) return;
 
@@ -110,6 +110,22 @@ void Application::drawItem(float x, float y, float size, StackId id, int count,
     m_ui.texturedQuad(m_atlas.textureId(), x + inset, y + inset,
                       size - inset * 2.0f, size - inset * 2.0f,
                       uv.u0, uv.vTop, uv.u1, uv.vBottom, tint);
+
+    // How much of a tool is left, as the bar across the bottom of the
+    // icon: green when it is new, red by the time it is about to go.
+    const int limit = Tools::maxDurability(Tools::tierOf(id));
+    if (limit > 0 && damage > 0)
+    {
+        const float left = std::clamp(1.0f - static_cast<float>(damage) / limit, 0.0f, 1.0f);
+        const float barX = x + size * 0.16f;
+        const float barY = y + size * 0.78f;
+        const float barWidth = size * 0.68f;
+        const float barHeight = std::max(2.0f, size * 0.08f);
+
+        m_ui.quad(barX, barY, barWidth, barHeight, glm::vec4(0.1f, 0.1f, 0.1f, 0.9f));
+        m_ui.quad(barX, barY, barWidth * left, barHeight,
+                  glm::vec4(1.0f - left, left, 0.12f, 1.0f));
+    }
 
     // A single item shows no number, same as Minecraft.
     if (count > 1)
@@ -244,7 +260,7 @@ void Application::renderInventoryScreen()
             }
             else
             {
-                drawItem(x, y, SLOT_SIZE, stack.id, stack.count, glm::vec4(1.0f));
+                drawItem(x, y, SLOT_SIZE, stack.id, stack.count, glm::vec4(1.0f), stack.damage);
             }
 
             m_slotBoxes.push_back({ SlotBox::Kind::Slot, index, x, y, SLOT_SIZE });
@@ -275,7 +291,7 @@ void Application::renderInventoryScreen()
 
                 guiWell(x, y, SLOT_SIZE, SLOT_SIZE);
                 const ItemStack& stack = m_inventory.slot(index);
-                drawItem(x, y, SLOT_SIZE, stack.id, stack.count, glm::vec4(1.0f));
+                drawItem(x, y, SLOT_SIZE, stack.id, stack.count, glm::vec4(1.0f), stack.damage);
                 m_slotBoxes.push_back({ SlotBox::Kind::Slot, index, x, y, SLOT_SIZE });
             }
 
@@ -290,7 +306,7 @@ void Application::renderInventoryScreen()
               GUI_PANEL, GUI_PANEL_LIGHT, GUI_PANEL_DARK, 2.0f);
         guiWell(resultX, arrowY, SLOT_SIZE, SLOT_SIZE);
         const ItemStack& result = m_inventory.slot(Inventory::CRAFT_RESULT);
-        drawItem(resultX, arrowY, SLOT_SIZE, result.id, result.count, glm::vec4(1.0f));
+        drawItem(resultX, arrowY, SLOT_SIZE, result.id, result.count, glm::vec4(1.0f), result.damage);
         m_slotBoxes.push_back({ SlotBox::Kind::Slot, Inventory::CRAFT_RESULT,
                                 resultX, arrowY, SLOT_SIZE });
     }
@@ -322,7 +338,7 @@ void Application::renderInventoryScreen()
                 // Storage runs 9..35, directly above the hotbar.
                 const int index = Inventory::HOTBAR_SLOTS + cell;
                 const ItemStack& stack = m_inventory.slot(index);
-                drawItem(x, y, SLOT_SIZE, stack.id, stack.count, glm::vec4(1.0f));
+                drawItem(x, y, SLOT_SIZE, stack.id, stack.count, glm::vec4(1.0f), stack.damage);
                 m_slotBoxes.push_back({ SlotBox::Kind::Slot, index, x, y, SLOT_SIZE });
             }
         }
@@ -340,7 +356,7 @@ void Application::renderInventoryScreen()
         guiWell(x, hotbarY, SLOT_SIZE, SLOT_SIZE);
 
         const ItemStack& stack = m_inventory.slot(i);
-        drawItem(x, hotbarY, SLOT_SIZE, stack.id, stack.count, glm::vec4(1.0f));
+        drawItem(x, hotbarY, SLOT_SIZE, stack.id, stack.count, glm::vec4(1.0f), stack.damage);
         m_slotBoxes.push_back({ SlotBox::Kind::Slot, i, x, hotbarY, SLOT_SIZE });
     }
 
@@ -350,7 +366,7 @@ void Application::renderInventoryScreen()
     {
         const float x = static_cast<float>(m_input.mouseX()) - SLOT_SIZE * 0.5f;
         const float y = static_cast<float>(m_input.mouseY()) - SLOT_SIZE * 0.5f;
-        drawItem(x, y, SLOT_SIZE, held.id, held.count, glm::vec4(1.0f));
+        drawItem(x, y, SLOT_SIZE, held.id, held.count, glm::vec4(1.0f), held.damage);
     }
 }
 

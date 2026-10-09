@@ -5,6 +5,7 @@
 #include "Entity/PlayerAnimation.h"
 #include "Game/Farming.h"
 #include "Game/Food.h"
+#include "Game/Tools.h"
 #include "World/WorldSave.h"
 #include <glm/gtc/matrix_transform.hpp>
 #include <SDL.h>
@@ -121,6 +122,12 @@ namespace
             // and three of them make a wheat in the crafting grid. That
             // second step is the stopgap and goes when farming lands.
             case Blocks::TallGrass: return Items::WheatSeeds;
+
+            // Ore gives up what is in it. Iron and gold stay as ore --
+            // they want a furnace, and there is not one yet.
+            case Blocks::CoalOre: return Items::Coal;
+            case Blocks::DiamondOre: return Items::Diamond;
+
             default: return id;
         }
     }
@@ -508,6 +515,8 @@ void Application::loadLevel()
         {
             m_inventory.slot(static_cast<int>(i)).id = state.inventory[i].first;
             m_inventory.slot(static_cast<int>(i)).count = state.inventory[i].second;
+            m_inventory.slot(static_cast<int>(i)).damage =
+                i < state.damage.size() ? state.damage[i] : 0;
         }
     }
     else
@@ -549,6 +558,7 @@ void Application::saveLevel()
     {
         const ItemStack& stack = m_inventory.slot(i);
         state.inventory.emplace_back(stack.id, static_cast<uint16_t>(std::max(0, stack.count)));
+        state.damage.push_back(static_cast<uint16_t>(std::clamp(stack.damage, 0, 65535)));
     }
 
     WorldSave::saveLevel(m_savePath, state);
@@ -988,7 +998,7 @@ bool Application::frame()
     if (!m_startupScreen.empty() && (m_worldReady || !m_world))
     {
         if (m_startupScreen == "inventory" || m_startupScreen == "creative" ||
-            m_startupScreen == "bench")
+            m_startupScreen == "bench" || m_startupScreen == "tools")
         {
             // Dev aid: open the inventory with something in it, so the
             // screenshot shows a real grid rather than 36 empty boxes.
@@ -1001,6 +1011,23 @@ bool Application::frame()
             m_inventory.add(Blocks::DiamondOre, 1);
             m_inventory.add(Blocks::Sand, 22);
             m_inventory.add(Blocks::CraftingTable, 1);
+
+            if (m_startupScreen == "tools")
+            {
+                m_inventory.clear();
+                for (StackId id = Items::WoodPickaxe; id <= Items::DiamondHoe; ++id)
+                    m_inventory.add(id, 1);
+                m_inventory.add(Items::Stick, 12);
+                m_inventory.add(Items::Coal, 7);
+                m_inventory.add(Items::Diamond, 3);
+                m_inventory.add(Items::IronIngot, 5);
+                m_inventory.add(Items::GoldIngot, 2);
+
+                // A few part-worn, so the durability bar shows.
+                m_inventory.slot(0).damage = 40;
+                m_inventory.slot(6).damage = 90;
+                m_inventory.slot(12).damage = 180;
+            }
 
             // A screenshot of the bench wants the big grid showing.
             if (m_startupScreen == "bench") m_inventory.setCraftSize(3);
@@ -1601,7 +1628,12 @@ void Application::updateMining(float deltaTime)
             if (m_keys.pressed(m_input, Action::Attack)) m_heldItem.swing();
             if (m_keys.pressed(m_input, Action::Attack) && m_attackCooldown <= 0.0f)
             {
-                target->damage(PUNCH_DAMAGE, target->position() - m_player.position);
+                // A sword hits hardest, an axe nearly as hard, a bare
+                // hand barely at all.
+                const StackId weapon = m_inventory.selected().id;
+                target->damage(Tools::attackDamage(weapon),
+                               target->position() - m_player.position);
+                wearOnSwing(weapon);
                 m_attackCooldown = ATTACK_INTERVAL;
             }
 
@@ -1627,13 +1659,18 @@ void Application::updateMining(float deltaTime)
     }
 
     const BlockId id = m_world->getBlock(hit.block.x, hit.block.y, hit.block.z);
-    const float hardness = blockInfo(id).hardness;
-    if (hardness < 0.0f) return; // bedrock and liquids never break
 
-    if (m_player.creative() || hardness <= 0.0f)
+    // What is in your hand decides how long this takes and whether it
+    // leaves anything behind. An empty hand is Air, which Tools reads as
+    // bare hands.
+    const StackId tool = m_inventory.selected().id;
+    const float seconds = Tools::breakSeconds(tool, id);
+    if (seconds < 0.0f) return; // bedrock and liquids never break
+
+    if (m_player.creative() || seconds <= 0.0f)
         m_breakProgress = 1.0f;
     else
-        m_breakProgress += deltaTime / hardness;
+        m_breakProgress += deltaTime / seconds;
 
     m_heldItem.swing();
 
@@ -1657,11 +1694,15 @@ void Application::updateMining(float deltaTime)
                 for (int i = 0; i < crop.secondCount; ++i)
                     m_drops.spawnFromBrokenBlock(hit.block, crop.second);
             }
-            else
+            else if (Tools::canHarvest(tool, id))
             {
                 const StackId drop = blockDrop(id);
                 if (drop != Blocks::Air) m_drops.spawnFromBrokenBlock(hit.block, drop);
             }
+
+            // Stone gone at with bare hands still breaks; it just leaves
+            // nothing, which is what makes the first pickaxe matter.
+            wearTool(id);
         }
         m_breakProgress = 0.0f;
         m_hasTarget = false;
@@ -1677,6 +1718,47 @@ void Application::updateMining(float deltaTime)
             const glm::vec3 contact = glm::vec3(hit.block) + glm::vec3(0.5f) + glm::vec3(hit.normal) * 0.5f;
             m_particles.spawnBlockHit(contact, hit.normal, id);
         }
+    }
+}
+
+// A tool is used up a point at a time, and goes with a snap rather than
+// quietly: Minecraft makes a point of telling you, because losing a
+// pickaxe underground is news.
+void Application::wearTool(BlockId brokenBlock)
+{
+    if (m_player.creative()) return;
+
+    ItemStack& stack = m_inventory.selected();
+    if (!Tools::wearsOnBlock(stack.id, brokenBlock)) return;
+
+    const int limit = Tools::maxDurability(Tools::tierOf(stack.id));
+    if (limit <= 0) return;
+
+    if (++stack.damage >= limit)
+    {
+        stack.clear();
+        m_audio.play(Sound::DigWood, 0.8f, 0.55f);
+    }
+}
+
+// Hitting something costs a tool twice what breaking a block does,
+// which is Minecraft's rule and what makes a sword a sword rather than
+// just the pointiest thing you happen to have.
+void Application::wearOnSwing(StackId weapon)
+{
+    if (m_player.creative() || !Tools::isTool(weapon)) return;
+
+    ItemStack& stack = m_inventory.selected();
+    if (stack.id != weapon) return;
+
+    const int limit = Tools::maxDurability(Tools::tierOf(weapon));
+    if (limit <= 0) return;
+
+    stack.damage += (Tools::kindOf(weapon) == Tools::Kind::Sword) ? 1 : 2;
+    if (stack.damage >= limit)
+    {
+        stack.clear();
+        m_audio.play(Sound::DigWood, 0.8f, 0.55f);
     }
 }
 

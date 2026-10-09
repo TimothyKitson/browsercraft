@@ -34,6 +34,25 @@ namespace Items
         StringItem,     // "String" alone collides with too much
         Gunpowder,
         Bread,
+
+        // Materials. Coal and diamond come straight out of the ground;
+        // the two ingots want a furnace, which is why nothing smelted
+        // can be crafted yet even though the recipes are here.
+        Stick,
+        Coal,
+        Diamond,
+        IronIngot,
+        GoldIngot,
+
+        // Tools, grouped by tier so Tools::tierOf is arithmetic rather
+        // than a switch with twenty-five cases in it. Keep the five
+        // kinds in this order within every tier.
+        WoodPickaxe, WoodAxe, WoodShovel, WoodSword, WoodHoe,
+        StonePickaxe, StoneAxe, StoneShovel, StoneSword, StoneHoe,
+        IronPickaxe, IronAxe, IronShovel, IronSword, IronHoe,
+        GoldPickaxe, GoldAxe, GoldShovel, GoldSword, GoldHoe,
+        DiamondPickaxe, DiamondAxe, DiamondShovel, DiamondSword, DiamondHoe,
+
         Count
     };
 }

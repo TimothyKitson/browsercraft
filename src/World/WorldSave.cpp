@@ -126,6 +126,10 @@ void WorldSave::saveLevel(const std::string& saveDirectory, const LevelState& st
     write(out, state.spawn.x);
     write(out, state.spawn.y);
     write(out, state.spawn.z);
+
+    uint16_t damageCount = static_cast<uint16_t>(state.damage.size());
+    write(out, damageCount);
+    for (uint16_t worn : state.damage) write(out, worn);
 }
 
 bool WorldSave::loadLevel(const std::string& saveDirectory, LevelState& out)
@@ -179,6 +183,18 @@ bool WorldSave::loadLevel(const std::string& saveDirectory, LevelState& out)
             {
                 out.spawn = spawn;
                 out.hasSpawn = true;
+
+                uint16_t damageCount = 0;
+                if (read(in, damageCount))
+                {
+                    out.damage.clear();
+                    for (uint16_t i = 0; i < damageCount; ++i)
+                    {
+                        uint16_t worn = 0;
+                        if (!read(in, worn)) break;
+                        out.damage.push_back(worn);
+                    }
+                }
             }
         }
     }

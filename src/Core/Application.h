@@ -349,7 +349,8 @@ private:
     void renderPauseMenu();
     void renderDeathScreen();
     void renderInventoryScreen();
-    void drawItem(float x, float y, float size, StackId id, int count, const glm::vec4& tint);
+    void drawItem(float x, float y, float size, StackId id, int count, const glm::vec4& tint,
+                  int damage = 0);
     void drawPlayerDoll(const PlayerSkin& skin, float x, float y, float unit);
     // Rebuilds every painted character at the current model type.
     void rebuildSkinLibrary();
@@ -360,6 +361,11 @@ private:
     // Shutting the inventory, from the key, from Escape, or by walking
     // away from the bench that opened it.
     void closeInventory();
+
+    // Spends a point of the held tool's durability, and clears the slot
+    // with a snap when there is none left.
+    void wearTool(BlockId brokenBlock);
+    void wearOnSwing(StackId weapon);
     void openBench(const glm::ivec3& block);
     void renderDebugOverlay();
     void renderHand();

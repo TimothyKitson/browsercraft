@@ -84,6 +84,19 @@ namespace Tiles
         ItemString,
         ItemGunpowder,
         ItemBread,
+
+        ItemStick,
+        ItemCoal,
+        ItemDiamond,
+        ItemIronIngot,
+        ItemGoldIngot,
+
+        // Five kinds in each of five tiers, in the same order as the
+        // Items enum, so the painter can work out which is which from
+        // the offset instead of being told twenty-five times.
+        ItemToolFirst,
+        ItemToolEnd = ItemToolFirst + 25,
+
         ItemTileEnd
     };
 
