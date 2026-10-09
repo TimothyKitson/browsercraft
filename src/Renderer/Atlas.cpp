@@ -282,6 +282,81 @@ namespace
                 t.set(x, y, handle);
     }
 
+    // The furnace. No block in this engine has a facing, so every side
+    // is the front: a furnace that looked like plain stone from three
+    // sides would be worse than one with four mouths.
+    void paintFurnaceStone(Tile& t)
+    {
+        t.fill(Color{ 116, 116, 116 });
+        for (int y = 0; y < Tile::N; ++y)
+            for (int x = 0; x < Tile::N; ++x)
+            {
+                const float n = hash2(x / 2, y / 2, 61);
+                t.set(x, y, shade(t.get(x, y), n > 0.62f ? 20 : (n < 0.34f ? -22 : 0)));
+            }
+        t.speckle(7, 62);
+    }
+
+    void paintFurnaceTop(Tile& t)
+    {
+        paintFurnaceStone(t);
+
+        // A rim, so the top reads as the top.
+        const Color rim{ 88, 88, 88 };
+        for (int k = 0; k < Tile::N; ++k)
+        {
+            t.set(k, 0, rim); t.set(k, Tile::N - 1, rim);
+            t.set(0, k, rim); t.set(Tile::N - 1, k, rim);
+        }
+    }
+
+    void paintFurnaceFace(Tile& t, bool lit)
+    {
+        paintFurnaceStone(t);
+
+        const int n = Tile::N;
+        const int x0 = n / 8, x1 = n - n / 8 - 1;
+        const int y0 = n / 2 - n / 16, y1 = n - n / 8;
+
+        // The mouth is nearly black so that it reads as an opening from
+        // across a field. Dark grey on grey stone, at the size a block
+        // actually appears on screen, looked like one more patch of the
+        // noise rather than a hole with a fire in it.
+        const Color frame{ 168, 168, 172 };
+        const Color inner{ 54, 54, 58 };
+        const Color mouth = lit ? Color{ 252, 170, 48 } : Color{ 14, 14, 16 };
+        const Color ember = lit ? Color{ 255, 228, 138 } : Color{ 28, 28, 32 };
+
+        for (int y = y0; y <= y1; ++y)
+            for (int x = x0; x <= x1; ++x)
+            {
+                const bool edge = (x == x0 || x == x1 || y == y0 || y == y1);
+                if (edge) { t.set(x, y, frame); continue; }
+
+                const bool rim = (x == x0 + 1 || x == x1 - 1 || y == y0 + 1 || y == y1 - 1);
+                if (rim) { t.set(x, y, inner); continue; }
+
+                t.set(x, y, hash2(x, y, 63) > 0.6f ? ember : mouth);
+            }
+
+        // The vent slots across the top, which is the other half of what
+        // makes a furnace look like a furnace.
+        const Color vent{ 58, 58, 62 };
+        const Color ventLip{ 150, 150, 154 };
+        const int ventTop = n / 6;
+        const int ventBottom = ventTop + std::max(1, n / 10);
+
+        for (int x = x0 + 1; x <= x1 - 1; ++x)
+        {
+            if (((x - x0) / std::max(1, n / 16)) % 2 == 0) continue;
+            for (int y = ventTop; y <= ventBottom; ++y) t.set(x, y, vent);
+            t.set(x, ventBottom + 1, ventLip);
+        }
+    }
+
+    void paintFurnaceFront(Tile& t) { paintFurnaceFace(t, false); }
+    void paintFurnaceLit(Tile& t)   { paintFurnaceFace(t, true); }
+
     void paintBedrock(Tile& t)
     {
         t.fill(Color{ 85, 85, 85 });
@@ -1406,6 +1481,28 @@ namespace
             t.set(head.spans[i].x0 + 1, head.spans[i].y, shade(metal, 40));
     }
 
+    // Cooked meat is the raw cut, browned. Rather than four more hand
+    // drawn icons, the raw painter is run and the result darkened and
+    // warmed, which is what cooking looks like.
+    void cookTile(Tile& t)
+    {
+        for (int y = 0; y < Tile::N; ++y)
+            for (int x = 0; x < Tile::N; ++x)
+            {
+                Color c = t.get(x, y);
+                if (c.a == 0) continue;
+                c.r = static_cast<uint8_t>(std::min(255, c.r * 86 / 100 + 26));
+                c.g = static_cast<uint8_t>(c.g * 62 / 100 + 12);
+                c.b = static_cast<uint8_t>(c.b * 48 / 100);
+                t.set(x, y, c);
+            }
+    }
+
+    void paintItemSteak(Tile& t)         { paintItemRawBeef(t); cookTile(t); }
+    void paintItemCookedPork(Tile& t)    { paintItemRawPork(t); cookTile(t); }
+    void paintItemCookedChicken(Tile& t) { paintItemRawChicken(t); cookTile(t); }
+    void paintItemCookedMutton(Tile& t)  { paintItemRawMutton(t); cookTile(t); }
+
     void paintItemStick(Tile& t)
     {
         t.fill(Color{ 0, 0, 0, 0 });
@@ -1546,6 +1643,13 @@ namespace
         { Tiles::ItemWheatSeeds, paintItemWheatSeeds },
         { Tiles::ItemWheat, paintItemWheat },
         { Tiles::CraftingTop,   paintCraftingTop },
+        { Tiles::FurnaceTop,    paintFurnaceTop },
+        { Tiles::FurnaceFront,  paintFurnaceFront },
+        { Tiles::FurnaceLit,    paintFurnaceLit },
+        { Tiles::ItemSteak,         paintItemSteak },
+        { Tiles::ItemCookedPork,    paintItemCookedPork },
+        { Tiles::ItemCookedChicken, paintItemCookedChicken },
+        { Tiles::ItemCookedMutton,  paintItemCookedMutton },
         { Tiles::CraftingSide,  paintCraftingSide },
         { Tiles::ItemStick,     paintItemStick },
         { Tiles::ItemCoal,      paintItemCoal },

@@ -125,6 +125,7 @@ namespace
 
             // Ore gives up what is in it. Iron and gold stay as ore --
             // they want a furnace, and there is not one yet.
+            case Blocks::FurnaceLit: return Blocks::Furnace;
             case Blocks::CoalOre: return Items::Coal;
             case Blocks::DiamondOre: return Items::Diamond;
 
@@ -499,6 +500,27 @@ void Application::loadLevel()
         // then dying dropped you somewhere you had never been.
         if (state.hasSpawn) m_spawnPoint = state.spawn;
 
+        m_furnaces.clear();
+        for (const LevelState::SavedFurnace& saved : state.furnaces)
+        {
+            Furnaces::State furnace;
+            furnace.input.id = saved.input;
+            furnace.input.count = saved.inputCount;
+            furnace.fuel.id = saved.fuel;
+            furnace.fuel.count = saved.fuelCount;
+            furnace.output.id = saved.output;
+            furnace.output.count = saved.outputCount;
+            furnace.burnLeft = saved.burnLeft;
+            furnace.burnTotal = saved.burnTotal;
+            furnace.cooked = saved.cooked;
+            m_furnaces.put(glm::ivec3(saved.x, saved.y, saved.z), furnace);
+        }
+
+        // Only a change of state swaps the block, so one loaded already
+        // alight would have sat there looking cold until its fire went
+        // out. Put every one right once the chunks are up.
+        m_pendingFurnaceLight = true;
+
         m_player.position = state.playerPosition;
         m_camera.yaw = state.yaw;
         m_camera.pitch = state.pitch;
@@ -559,6 +581,30 @@ void Application::saveLevel()
         const ItemStack& stack = m_inventory.slot(i);
         state.inventory.emplace_back(stack.id, static_cast<uint16_t>(std::max(0, stack.count)));
         state.damage.push_back(static_cast<uint16_t>(std::clamp(stack.damage, 0, 65535)));
+    }
+
+    // The open furnace's slots are the inventory's while the screen is
+    // up, so they go home before the furnaces are written out.
+    stowFurnace();
+
+    for (const auto& entry : m_furnaces.all())
+    {
+        const Furnaces::State& furnace = entry.second;
+
+        LevelState::SavedFurnace saved;
+        saved.x = entry.first[0];
+        saved.y = entry.first[1];
+        saved.z = entry.first[2];
+        saved.input = furnace.input.id;
+        saved.inputCount = static_cast<uint16_t>(std::max(0, furnace.input.count));
+        saved.fuel = furnace.fuel.id;
+        saved.fuelCount = static_cast<uint16_t>(std::max(0, furnace.fuel.count));
+        saved.output = furnace.output.id;
+        saved.outputCount = static_cast<uint16_t>(std::max(0, furnace.output.count));
+        saved.burnLeft = furnace.burnLeft;
+        saved.burnTotal = furnace.burnTotal;
+        saved.cooked = furnace.cooked;
+        state.furnaces.push_back(saved);
     }
 
     WorldSave::saveLevel(m_savePath, state);
@@ -955,14 +1001,19 @@ bool Application::frame()
             m_particles.update(deltaTime, *m_world);
         }
 
+        if (playing() || m_inventoryOpen) tickFurnaces(deltaTime);
+
         // The big grid belongs to the bench, not to the player, so it
         // shuts as soon as they walk out of reach of it -- or mine it.
-        if (m_benchOpen && playing())
+        if ((m_benchOpen || m_furnaceOpen) && playing())
         {
-            const glm::vec3 middle = glm::vec3(m_benchBlock) + glm::vec3(0.5f);
-            const bool stillThere =
-                m_world->getBlock(m_benchBlock.x, m_benchBlock.y, m_benchBlock.z) ==
-                Blocks::CraftingTable;
+            const glm::ivec3 block = m_benchOpen ? m_benchBlock : m_furnaceBlock;
+            const glm::vec3 middle = glm::vec3(block) + glm::vec3(0.5f);
+            const BlockId there = m_world->getBlock(block.x, block.y, block.z);
+
+            const bool stillThere = m_benchOpen
+                ? there == Blocks::CraftingTable
+                : (there == Blocks::Furnace || there == Blocks::FurnaceLit);
 
             if (!stillThere || glm::length(m_player.position - middle) > BENCH_REACH)
             {
@@ -998,12 +1049,16 @@ bool Application::frame()
     if (!m_startupScreen.empty() && (m_worldReady || !m_world))
     {
         if (m_startupScreen == "inventory" || m_startupScreen == "creative" ||
-            m_startupScreen == "bench" || m_startupScreen == "tools")
+            m_startupScreen == "bench" || m_startupScreen == "tools" ||
+            m_startupScreen == "furnace" || m_startupScreen == "furnaceblock")
         {
             // Dev aid: open the inventory with something in it, so the
             // screenshot shows a real grid rather than 36 empty boxes.
-            m_inventoryOpen = true;
-            setMouseCaptured(false);
+            // "furnaceblock" is the exception: it wants the block in
+            // view, not a panel in front of it.
+            const bool showPanel = m_startupScreen != "furnaceblock";
+            m_inventoryOpen = showPanel;
+            setMouseCaptured(!showPanel);
             m_inventory.add(Blocks::Cobblestone, 64);
             m_inventory.add(Blocks::Planks, 37);
             m_inventory.add(Blocks::Torch, 12);
@@ -1011,6 +1066,30 @@ bool Application::frame()
             m_inventory.add(Blocks::DiamondOre, 1);
             m_inventory.add(Blocks::Sand, 22);
             m_inventory.add(Blocks::CraftingTable, 1);
+
+            if (m_startupScreen == "furnace" || m_startupScreen == "furnaceblock")
+            {
+                // A furnace a block away, already working, so the
+                // screenshot shows the fire and the arrow part way.
+                // Two blocks along the way the camera is looking, so it
+                // is in shot rather than behind the player.
+                const glm::vec3 ahead = m_player.position + m_camera.front * 3.0f;
+                const glm::ivec3 where(static_cast<int>(std::floor(ahead.x)),
+                                       static_cast<int>(std::floor(m_player.position.y)),
+                                       static_cast<int>(std::floor(ahead.z)));
+                m_world->setBlock(where.x, where.y, where.z, Blocks::Furnace);
+
+                Furnaces::State& lit = m_furnaces.at(where);
+                lit.input.id = Blocks::IronOre; lit.input.count = 12;
+                lit.fuel.id = Items::Coal; lit.fuel.count = 6;
+                lit.output.id = Items::IronIngot; lit.output.count = 4;
+                lit.burnLeft = 48.0f; lit.burnTotal = 80.0f; lit.cooked = 6.2f;
+                m_pendingFurnaceLight = true;
+
+                // "furnaceblock" places it and leaves the screen shut,
+                // so the block itself can be looked at.
+                if (m_startupScreen == "furnace") openFurnace(where);
+            }
 
             if (m_startupScreen == "tools")
             {
@@ -1700,6 +1779,21 @@ void Application::updateMining(float deltaTime)
                 if (drop != Blocks::Air) m_drops.spawnFromBrokenBlock(hit.block, drop);
             }
 
+            // A furnace gives back whatever was inside it, lit or not,
+            // and whether or not the furnace itself survives the pick.
+            if (id == Blocks::Furnace || id == Blocks::FurnaceLit)
+            {
+                if (m_furnaceOpen && m_furnaceBlock == hit.block) stowFurnace();
+
+                if (m_furnaces.has(hit.block))
+                {
+                    const Furnaces::State& inside = m_furnaces.at(hit.block);
+                    for (const ItemStack* held : { &inside.input, &inside.fuel, &inside.output })
+                        if (!held->empty())
+                            m_drops.spawnFromBrokenBlock(hit.block, held->id, held->count);
+                }
+            }
+
             // Stone gone at with bare hands still breaks; it just leaves
             // nothing, which is what makes the first pickaxe matter.
             wearTool(id);
@@ -1806,12 +1900,21 @@ void Application::handlePlacement()
     if (!m_player.sneaking)
     {
         const RaycastHit bench = m_world->raycast(m_camera.position, m_camera.front, REACH_DISTANCE);
-        if (bench.hit &&
-            m_world->getBlock(bench.block.x, bench.block.y, bench.block.z) == Blocks::CraftingTable)
+        if (bench.hit)
         {
-            openBench(bench.block);
-            m_audio.play(Sound::Click, 0.4f);
-            return;
+            const BlockId used = m_world->getBlock(bench.block.x, bench.block.y, bench.block.z);
+            if (used == Blocks::CraftingTable)
+            {
+                openBench(bench.block);
+                m_audio.play(Sound::Click, 0.4f);
+                return;
+            }
+            if (used == Blocks::Furnace || used == Blocks::FurnaceLit)
+            {
+                openFurnace(bench.block);
+                m_audio.play(Sound::Click, 0.4f);
+                return;
+            }
         }
     }
 

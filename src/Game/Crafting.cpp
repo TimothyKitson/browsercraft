@@ -39,6 +39,12 @@ namespace
         { false, 2, 2, { Blocks::Planks, Blocks::Planks,
                          Blocks::Planks, Blocks::Planks }, 0, Blocks::CraftingTable, 1 },
 
+        // Eight cobblestone round an empty middle make a furnace.
+        { false, 3, 3, { Blocks::Cobblestone, Blocks::Cobblestone, Blocks::Cobblestone,
+                         Blocks::Cobblestone, _,                   Blocks::Cobblestone,
+                         Blocks::Cobblestone, Blocks::Cobblestone, Blocks::Cobblestone },
+          0, Blocks::Furnace, 1 },
+
         // Two planks, one above the other, make four sticks.
         { false, 1, 2, { Blocks::Planks,
                          Blocks::Planks }, 0, Items::Stick, 4 },

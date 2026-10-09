@@ -76,9 +76,9 @@ void DroppedItems::spawn(const glm::vec3& position, StackId block, int count)
     m_items.push_back(item);
 }
 
-void DroppedItems::spawnFromBrokenBlock(const glm::ivec3& blockPosition, StackId drop)
+void DroppedItems::spawnFromBrokenBlock(const glm::ivec3& blockPosition, StackId drop, int count)
 {
-    spawn(glm::vec3(blockPosition) + glm::vec3(0.5f), drop, 1);
+    spawn(glm::vec3(blockPosition) + glm::vec3(0.5f), drop, count);
 }
 
 bool DroppedItems::blocked(const World& world, const glm::vec3& centre) const

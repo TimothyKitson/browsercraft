@@ -43,7 +43,19 @@ public:
     static constexpr int CRAFT_FIRST = TOTAL_SLOTS;                   // 40..48
     static constexpr int CRAFT_SLOTS = 9;
     static constexpr int CRAFT_RESULT = CRAFT_FIRST + CRAFT_SLOTS;    // 49
-    static constexpr int SLOT_COUNT = CRAFT_RESULT + 1;               // 50
+
+    // The open furnace's three slots, borrowed the same way the craft
+    // grid is: what you click on is an inventory slot, so every click
+    // rule below applies to a furnace without knowing one exists. The
+    // contents are copied in when it is opened and back out when it is
+    // shut, and live with the furnace in between.
+    static constexpr int FURNACE_FIRST = CRAFT_RESULT + 1;            // 50..52
+    static constexpr int FURNACE_INPUT = FURNACE_FIRST;
+    static constexpr int FURNACE_FUEL = FURNACE_FIRST + 1;
+    static constexpr int FURNACE_OUTPUT = FURNACE_FIRST + 2;
+    static constexpr int FURNACE_SLOTS = 3;
+
+    static constexpr int SLOT_COUNT = FURNACE_FIRST + FURNACE_SLOTS;  // 53
 
     // The ceiling. What a particular thing actually stacks to comes from
     // maxStackOf(), since items need not agree with blocks.

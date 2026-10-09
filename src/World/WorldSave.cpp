@@ -130,6 +130,17 @@ void WorldSave::saveLevel(const std::string& saveDirectory, const LevelState& st
     uint16_t damageCount = static_cast<uint16_t>(state.damage.size());
     write(out, damageCount);
     for (uint16_t worn : state.damage) write(out, worn);
+
+    uint16_t furnaceCount = static_cast<uint16_t>(state.furnaces.size());
+    write(out, furnaceCount);
+    for (const LevelState::SavedFurnace& f : state.furnaces)
+    {
+        write(out, f.x); write(out, f.y); write(out, f.z);
+        write(out, f.input); write(out, f.inputCount);
+        write(out, f.fuel); write(out, f.fuelCount);
+        write(out, f.output); write(out, f.outputCount);
+        write(out, f.burnLeft); write(out, f.burnTotal); write(out, f.cooked);
+    }
 }
 
 bool WorldSave::loadLevel(const std::string& saveDirectory, LevelState& out)
@@ -193,6 +204,23 @@ bool WorldSave::loadLevel(const std::string& saveDirectory, LevelState& out)
                         uint16_t worn = 0;
                         if (!read(in, worn)) break;
                         out.damage.push_back(worn);
+                    }
+
+                    uint16_t furnaceCount = 0;
+                    if (read(in, furnaceCount))
+                    {
+                        out.furnaces.clear();
+                        for (uint16_t i = 0; i < furnaceCount; ++i)
+                        {
+                            LevelState::SavedFurnace f;
+                            if (!read(in, f.x) || !read(in, f.y) || !read(in, f.z)) break;
+                            if (!read(in, f.input) || !read(in, f.inputCount)) break;
+                            if (!read(in, f.fuel) || !read(in, f.fuelCount)) break;
+                            if (!read(in, f.output) || !read(in, f.outputCount)) break;
+                            if (!read(in, f.burnLeft) || !read(in, f.burnTotal) ||
+                                !read(in, f.cooked)) break;
+                            out.furnaces.push_back(f);
+                        }
                     }
                 }
             }

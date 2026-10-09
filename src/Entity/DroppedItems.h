@@ -33,7 +33,7 @@ public:
     static constexpr float LIFETIME_SECONDS = 300.0f;
 
     void spawn(const glm::vec3& position, StackId block, int count = 1);
-    void spawnFromBrokenBlock(const glm::ivec3& blockPosition, StackId drop);
+    void spawnFromBrokenBlock(const glm::ivec3& blockPosition, StackId drop, int count = 1);
 
     void update(float deltaTime, const World& world, const Player& player,
                 Inventory& inventory, AudioEngine& audio);

@@ -151,6 +151,15 @@ void Inventory::leftClick(int index)
 
     ItemStack& target = m_slots[index];
 
+    // What a furnace has made is yours to take and not a place to put
+    // things: dropping ore into the output would be a way of smelting
+    // nothing at all.
+    if (index == FURNACE_OUTPUT && !m_cursor.empty())
+    {
+        if (!target.empty() && target.id == m_cursor.id) mergeInto(target, m_cursor);
+        return;
+    }
+
     if (m_cursor.empty())
     {
         m_cursor = target;
@@ -178,6 +187,7 @@ void Inventory::rightClick(int index)
 {
     if (index < 0 || index >= SLOT_COUNT) return;
     if (index == CRAFT_RESULT) { takeCraftResult(); return; }
+    if (index == FURNACE_OUTPUT && !m_cursor.empty()) return;
 
     ItemStack& target = m_slots[index];
 

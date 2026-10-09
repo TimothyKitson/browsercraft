@@ -55,6 +55,8 @@ namespace
         // Tilled earth is solid and a shade darker than dirt; the crop
         // standing in it is a cross-shaped plant you can walk through.
         { "Crafting Table", CraftingTop, Planks,     CraftingSide,   true,  true,  RenderType::Cube,   0,   2.5f },
+        { "Furnace",      FurnaceTop,    FurnaceTop,     FurnaceFront,   true,  true,  RenderType::Cube,   0,   3.5f },
+        { "Furnace",      FurnaceTop,    FurnaceTop,     FurnaceLit,     true,  true,  RenderType::Cube,  13,   3.5f },
         { "Farmland",     FarmlandTop,   Dirt,           FarmlandSide,   true,  true,  RenderType::Cube,   0,   0.6f },
         { "Wheat Crop",   WheatStage0,   WheatStage0,    WheatStage0,    false, false, RenderType::Cross,  0,   0.0f },
         { "Wheat Crop",   WheatStage1,   WheatStage1,    WheatStage1,    false, false, RenderType::Cross,  0,   0.0f },
@@ -81,6 +83,7 @@ bool isObtainable(BlockId id)
         case Blocks::Water:
         case Blocks::Lava:
         case Blocks::NetherPortal: // made by lighting a frame, never placed
+        case Blocks::FurnaceLit:   // the burning state of one, not a thing you hold
             return false;
         default:
             // A crop is planted rather than placed, and only the ripe
@@ -170,6 +173,7 @@ Material blockMaterial(BlockId id)
         case Blocks::Wool: return Material::Wool;
         case Blocks::Log: case Blocks::Planks:
         case Blocks::CraftingTable: return Material::Wood;
+        case Blocks::Furnace: case Blocks::FurnaceLit: return Material::Stone;
         case Blocks::Leaves: return Material::Plant;
         default: return Material::Stone;
     }

@@ -57,6 +57,8 @@ namespace Blocks
         // growth value, because a block here is a bare id with nowhere
         // to put metadata; the stage is the id.
         CraftingTable,
+        Furnace,
+        FurnaceLit,
 
         Farmland,
         Wheat0, Wheat1, Wheat2, Wheat3, Wheat4, Wheat5, Wheat6, Wheat7,

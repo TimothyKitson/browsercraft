@@ -38,6 +38,11 @@ namespace Items
         // Materials. Coal and diamond come straight out of the ground;
         // the two ingots want a furnace, which is why nothing smelted
         // can be crafted yet even though the recipes are here.
+        Steak,
+        CookedPorkchop,
+        CookedChicken,
+        CookedMutton,
+
         Stick,
         Coal,
         Diamond,

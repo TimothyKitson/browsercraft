@@ -30,6 +30,19 @@ struct LevelState
     // written before tools existed, which reads back as all new.
     std::vector<uint16_t> damage;
 
+    // Every furnace with something in it: where it is, its three slots
+    // and how far along it is. Appended last, so a level written before
+    // furnaces existed simply has none.
+    struct SavedFurnace
+    {
+        int x = 0, y = 0, z = 0;
+        uint16_t input = 0, inputCount = 0;
+        uint16_t fuel = 0, fuelCount = 0;
+        uint16_t output = 0, outputCount = 0;
+        float burnLeft = 0.0f, burnTotal = 0.0f, cooked = 0.0f;
+    };
+    std::vector<SavedFurnace> furnaces;
+
     // Where dying puts you back. False on a level written before this was
     // saved at all, which means fall back to asking the generator.
     glm::vec3 spawn{ 0.0f };

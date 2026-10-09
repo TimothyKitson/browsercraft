@@ -16,6 +16,8 @@
 #include "Entity/Mob.h"
 #include "World/WorldSave.h"
 #include "Game/Tools.h"
+#include "Game/Smelting.h"
+#include "World/Furnaces.h"
 #include "Entity/MobModel.h"
 #include "Entity/MobSkin.h"
 #include "Entity/MobType.h"
@@ -1538,6 +1540,140 @@ namespace
               "a pickaxe cannot be made without a bench");
     }
 
+    void testSmelting()
+    {
+        section("smelting");
+
+        check(Smelting::resultOf(Blocks::IronOre) == Items::IronIngot, "iron ore smelts to an ingot");
+        check(Smelting::resultOf(Blocks::GoldOre) == Items::GoldIngot, "and gold ore to its own");
+        check(Smelting::resultOf(Blocks::Sand) == Blocks::Glass, "sand to glass");
+        check(Smelting::resultOf(Items::RawBeef) == Items::Steak, "and beef to steak");
+        check(!Smelting::isSmeltable(Blocks::Dirt), "dirt makes nothing");
+        check(!Smelting::isSmeltable(Items::IronIngot), "and an ingot does not smelt twice");
+
+        // Cooking is worth doing: every cut feeds you better for it, and
+        // the cooked one is edible rather than merely obtainable.
+        const StackId RAW[4] = { Items::RawBeef, Items::RawPorkchop,
+                                 Items::RawChicken, Items::RawMutton };
+        for (StackId raw : RAW)
+        {
+            const StackId cooked = Smelting::resultOf(raw);
+            check(Food::isEdible(cooked), "a cooked cut can be eaten");
+            check(Food::valueOf(cooked).hunger > Food::valueOf(raw).hunger,
+                  "and feeds you better than the raw one");
+        }
+
+        check(Smelting::isFuel(Items::Coal), "coal burns");
+        check(Smelting::burnSeconds(Items::Coal) > Smelting::burnSeconds(Blocks::Planks),
+              "longer than planks do");
+        check(!Smelting::isFuel(Blocks::Stone), "stone does not burn");
+        check(!Smelting::isFuel(Items::IronPickaxe), "nor does an iron pickaxe");
+        check(Smelting::isFuel(Items::WoodPickaxe), "though a wooden one is firewood");
+
+        // A furnace with ore and coal in it produces ingots, a tick at a
+        // time, and stops when the ore runs out.
+        ItemStack input, fuel, output;
+        input.id = Blocks::IronOre; input.count = 2;
+        fuel.id = Items::Coal; fuel.count = 1;
+
+        Furnace furnace;
+        furnace.input = &input;
+        furnace.fuel = &fuel;
+        furnace.output = &output;
+
+        furnace.tick(0.1f);
+        check(furnace.lit(), "putting ore and coal in lights it");
+        check(fuel.empty(), "which costs the coal");
+        check(output.empty(), "and produces nothing yet");
+
+        for (int i = 0; i < 101; ++i) furnace.tick(0.1f);
+        check(output.id == Items::IronIngot, "ten seconds later there is an ingot");
+        check(output.count == 1, "one of them");
+        check(input.count == 1, "and one ore left");
+
+        for (int i = 0; i < 101; ++i) furnace.tick(0.1f);
+        check(output.count == 2, "the second ore follows");
+        check(input.empty(), "and the ore is gone");
+
+        // One lump of coal is eighty seconds, so the fire is still in
+        // after twenty seconds of work, with nothing left to do.
+        check(furnace.lit(), "the fire outlives the work");
+
+        // An empty furnace does not eat fuel keeping warm.
+        ItemStack nothing, spare, out2;
+        spare.id = Items::Coal; spare.count = 3;
+
+        Furnace idle;
+        idle.input = &nothing;
+        idle.fuel = &spare;
+        idle.output = &out2;
+        for (int i = 0; i < 50; ++i) idle.tick(0.1f);
+        check(!idle.lit(), "an empty furnace never lights");
+        check(spare.count == 3, "and burns none of its coal");
+
+        // A full output stops it, rather than destroying what it makes.
+        ItemStack ore, coal, full;
+        ore.id = Blocks::GoldOre; ore.count = 4;
+        coal.id = Items::Coal; coal.count = 2;
+        full.id = Items::GoldIngot; full.count = maxStackOf(Items::GoldIngot);
+
+        Furnace blocked;
+        blocked.input = &ore;
+        blocked.fuel = &coal;
+        blocked.output = &full;
+        for (int i = 0; i < 200; ++i) blocked.tick(0.1f);
+        check(full.count == maxStackOf(Items::GoldIngot), "a full output slot loses nothing");
+        check(ore.count == 4, "and the ore stays where it is");
+        check(coal.count == 2, "with the coal unburnt");
+
+        // Smelting something the output cannot hold does nothing either.
+        ItemStack sand, wood, held;
+        sand.id = Blocks::Sand; sand.count = 1;
+        wood.id = Blocks::Planks; wood.count = 1;
+        held.id = Blocks::Dirt; held.count = 1;
+
+        Furnace mismatched;
+        mismatched.input = &sand;
+        mismatched.fuel = &wood;
+        mismatched.output = &held;
+        for (int i = 0; i < 200; ++i) mismatched.tick(0.1f);
+        check(held.id == Blocks::Dirt && held.count == 1, "an output holding something else blocks it");
+        check(sand.count == 1, "and the sand is not smelted");
+    }
+
+    void testFurnaceStore()
+    {
+        section("smelting: the furnaces");
+
+        Furnaces furnaces;
+        const glm::ivec3 here(4, 70, -9);
+
+        check(!furnaces.has(here), "nowhere has a furnace to begin with");
+
+        Furnaces::State& state = furnaces.at(here);
+        state.input.id = Blocks::Sand; state.input.count = 1;
+        state.fuel.id = Items::Coal; state.fuel.count = 1;
+        check(furnaces.has(here), "putting something in one records it");
+
+        // Lighting it is a change the world has to hear about, so the
+        // block can be swapped for its burning twin.
+        const std::vector<glm::ivec3> lit = furnaces.tick(0.1f);
+        check(lit.size() == 1 && lit[0] == here, "lighting one is reported");
+        check(furnaces.at(here).lit(), "and it is alight");
+
+        // Ten seconds of it, then the glass comes out.
+        for (int i = 0; i < 101; ++i) furnaces.tick(0.1f);
+        check(furnaces.at(here).output.id == Blocks::Glass, "the sand became glass");
+
+        // An empty, cold furnace is forgotten rather than kept forever.
+        Furnaces::State& done = furnaces.at(here);
+        done.output.clear();
+        done.burnLeft = 0.0f;
+        done.cooked = 0.0f;
+        furnaces.tick(0.016f);
+        check(!furnaces.has(here), "a cold empty furnace is forgotten");
+    }
+
     void testLevelRoundTrip()
     {
         section("saving: the level file");
@@ -1558,6 +1694,14 @@ namespace
         wrote.spawn = glm::vec3(-8.5f, 66.0f, 32.5f);
         wrote.inventory.emplace_back(static_cast<uint16_t>(Blocks::Stone), 42);
 
+        LevelState::SavedFurnace furnace;
+        furnace.x = 3; furnace.y = 64; furnace.z = -7;
+        furnace.input = Blocks::IronOre; furnace.inputCount = 5;
+        furnace.fuel = Items::Coal; furnace.fuelCount = 2;
+        furnace.output = Items::IronIngot; furnace.outputCount = 9;
+        furnace.burnLeft = 12.0f; furnace.burnTotal = 80.0f; furnace.cooked = 3.5f;
+        wrote.furnaces.push_back(furnace);
+
         WorldSave::saveLevel(dir, wrote);
 
         LevelState read;
@@ -1574,6 +1718,20 @@ namespace
         check(read.spawn == wrote.spawn, "and is the one that was saved");
 
         check(read.inventory.size() == 1, "the inventory comes back");
+
+        // A furnace left burning is still burning when you come back,
+        // and still holds what was in it.
+        check(read.furnaces.size() == 1, "the furnace comes back too");
+        if (read.furnaces.size() == 1)
+        {
+            const LevelState::SavedFurnace& f = read.furnaces[0];
+            check(f.x == 3 && f.y == 64 && f.z == -7, "where it was left");
+            check(f.input == Blocks::IronOre && f.inputCount == 5, "with the ore still in it");
+            check(f.fuel == Items::Coal && f.fuelCount == 2, "and the coal");
+            check(f.output == Items::IronIngot && f.outputCount == 9, "and what it had made");
+            check(f.burnLeft > 11.0f && f.burnLeft < 13.0f, "still alight");
+        }
+
         check(read.inventory[0].first == Blocks::Stone, "holding what it held");
         check(read.inventory[0].second == 42, "and as much of it");
 
@@ -1651,6 +1809,8 @@ int runSelfTest()
     testMobHurt();
     testTools();
     testToolRecipes();
+    testSmelting();
+    testFurnaceStore();
     testLevelRoundTrip();
 
     std::printf("\n%d checks, %d failed\n", g_checks, g_failures);

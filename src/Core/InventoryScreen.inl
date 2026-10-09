@@ -230,7 +230,8 @@ void Application::renderInventoryScreen()
     // Dark text with no shadow: on a light panel a drop shadow just looks
     // like a smudge, and vanilla does not use one here either.
     const char* title = creative ? CREATIVE_TABS[m_creativeTab].name
-                                 : (m_benchOpen ? "CRAFTING" : "INVENTORY");
+                                 : (m_furnaceOpen ? "FURNACE"
+                                                  : (m_benchOpen ? "CRAFTING" : "INVENTORY"));
     m_ui.text(title, panelX + 10.0f, panelY + 10.0f, 2.2f, GUI_TEXT);
 
     // ------------------------------- armour, body preview, crafting ---
@@ -275,6 +276,70 @@ void Application::renderInventoryScreen()
         drawPlayerDoll(activeSkin(), panelX + SLOT_GAP + step + 14.0f,
                        topY + SLOT_GAP * 2.0f, unit);
 
+        // A furnace takes the same corner the crafting grid does: ore on
+        // top, fuel below it, the fire between them and the result off
+        // to the right, which is the shape Minecraft uses.
+        if (m_furnaceOpen)
+        {
+            const Furnaces::State& state = m_furnaces.at(m_furnaceBlock);
+
+            Furnace gauge;
+            gauge.burnLeft = state.burnLeft;
+            gauge.burnTotal = state.burnTotal;
+            gauge.cooked = state.cooked;
+
+            const float resultWidth = step + 34.0f;
+            const float fx = panelX + gridWidth - SLOT_GAP - step - resultWidth;
+            const float fy = topY + SLOT_GAP + step * 0.5f;
+
+            const int SLOTS[3] = { Inventory::FURNACE_INPUT, Inventory::FURNACE_FUEL,
+                                   Inventory::FURNACE_OUTPUT };
+
+            // Input above, fuel below.
+            for (int i = 0; i < 2; ++i)
+            {
+                const float y = fy + i * step * 1.4f;
+                guiWell(fx, y, SLOT_SIZE, SLOT_SIZE);
+                const ItemStack& stack = m_inventory.slot(SLOTS[i]);
+                drawItem(fx, y, SLOT_SIZE, stack.id, stack.count, glm::vec4(1.0f), stack.damage);
+                m_slotBoxes.push_back({ SlotBox::Kind::Slot, SLOTS[i], fx, y, SLOT_SIZE });
+            }
+
+            // The fire between them, burning down as the fuel goes.
+            const float flameSize = SLOT_SIZE * 0.5f;
+            const float flameX = fx + (SLOT_SIZE - flameSize) * 0.5f;
+            const float flameY = fy + step + (step * 0.4f - flameSize) * 0.5f;
+            const float alight = gauge.burnFraction();
+
+            m_ui.quad(flameX, flameY, flameSize, flameSize, glm::vec4(0.0f, 0.0f, 0.0f, 0.25f));
+            if (alight > 0.0f)
+                m_ui.quad(flameX, flameY + flameSize * (1.0f - alight),
+                          flameSize, flameSize * alight,
+                          glm::vec4(1.0f, 0.65f, 0.15f, 1.0f));
+
+            // The arrow, filling as the item cooks.
+            const float arrowX = fx + step + 4.0f;
+            const float arrowY = fy + step * 0.7f;
+            const float arrowWidth = 26.0f;
+            const float arrowHeight = 8.0f;
+
+            m_ui.quad(arrowX, arrowY, arrowWidth, arrowHeight, glm::vec4(0.0f, 0.0f, 0.0f, 0.25f));
+            m_ui.quad(arrowX, arrowY, arrowWidth * gauge.cookFraction(), arrowHeight,
+                      glm::vec4(0.92f, 0.92f, 0.92f, 1.0f));
+
+            const float outX = arrowX + arrowWidth + 8.0f;
+            bevel(outX - 4.0f, arrowY - SLOT_SIZE * 0.5f - 4.0f, SLOT_SIZE + 8.0f, SLOT_SIZE + 8.0f,
+                  GUI_PANEL, GUI_PANEL_LIGHT, GUI_PANEL_DARK, 2.0f);
+            const float outY = arrowY - SLOT_SIZE * 0.5f;
+            guiWell(outX, outY, SLOT_SIZE, SLOT_SIZE);
+            const ItemStack& made = m_inventory.slot(Inventory::FURNACE_OUTPUT);
+            drawItem(outX, outY, SLOT_SIZE, made.id, made.count, glm::vec4(1.0f), made.damage);
+            m_slotBoxes.push_back({ SlotBox::Kind::Slot, Inventory::FURNACE_OUTPUT,
+                                    outX, outY, SLOT_SIZE });
+        }
+        else
+        {
+
         // Crafting, over on the right: a 2x2 grid, an arrow, the result.
         const float craftSize = static_cast<float>(m_inventory.craftSize());
         const float resultWidth = step + 34.0f;
@@ -309,6 +374,7 @@ void Application::renderInventoryScreen()
         drawItem(resultX, arrowY, SLOT_SIZE, result.id, result.count, glm::vec4(1.0f), result.damage);
         m_slotBoxes.push_back({ SlotBox::Kind::Slot, Inventory::CRAFT_RESULT,
                                 resultX, arrowY, SLOT_SIZE });
+        }
     }
 
     // ------------------------------------------------------- main grid ---
@@ -422,6 +488,7 @@ void Application::handleInventoryClick(int mouseX, int mouseY, bool rightButton,
 // dropped at their feet.
 void Application::closeInventory()
 {
+    stowFurnace();
     returnCursorToWorld();
     m_inventoryOpen = false;
     m_benchOpen = false;
@@ -435,6 +502,94 @@ void Application::openBench(const glm::ivec3& block)
     m_inventory.setCraftSize(3);
     m_inventoryOpen = true;
     setMouseCaptured(false);
+}
+
+void Application::openFurnace(const glm::ivec3& block)
+{
+    m_furnaceBlock = block;
+    m_furnaceOpen = true;
+
+    const Furnaces::State& state = m_furnaces.at(block);
+    m_inventory.slot(Inventory::FURNACE_INPUT) = state.input;
+    m_inventory.slot(Inventory::FURNACE_FUEL) = state.fuel;
+    m_inventory.slot(Inventory::FURNACE_OUTPUT) = state.output;
+
+    m_inventoryOpen = true;
+    setMouseCaptured(false);
+}
+
+// Back into the furnace, and out of the slots the screen was using, so
+// the next thing to open does not find yesterday's ore in them.
+void Application::stowFurnace()
+{
+    if (!m_furnaceOpen) return;
+
+    Furnaces::State& state = m_furnaces.at(m_furnaceBlock);
+    state.input = m_inventory.slot(Inventory::FURNACE_INPUT);
+    state.fuel = m_inventory.slot(Inventory::FURNACE_FUEL);
+    state.output = m_inventory.slot(Inventory::FURNACE_OUTPUT);
+
+    for (int i = 0; i < Inventory::FURNACE_SLOTS; ++i)
+        m_inventory.slot(Inventory::FURNACE_FIRST + i).clear();
+
+    m_furnaceOpen = false;
+}
+
+// Every furnace in the world steps forward, open or not -- a furnace you
+// walked away from goes on smelting, which is the point of one. The open
+// one is run from the slots the screen is editing.
+void Application::tickFurnaces(float deltaTime)
+{
+    // Furnaces are read back before the chunks they stand in, so their
+    // blocks cannot be set right until there are blocks to set.
+    if (m_pendingFurnaceLight && m_worldReady)
+    {
+        m_pendingFurnaceLight = false;
+        for (const auto& entry : m_furnaces.all())
+            setFurnaceLit(glm::ivec3(entry.first[0], entry.first[1], entry.first[2]),
+                          entry.second.lit());
+    }
+
+    if (m_furnaceOpen)
+    {
+        Furnaces::State& state = m_furnaces.at(m_furnaceBlock);
+        const bool wasLit = state.lit();
+
+        Furnace running;
+        running.input = &m_inventory.slot(Inventory::FURNACE_INPUT);
+        running.fuel = &m_inventory.slot(Inventory::FURNACE_FUEL);
+        running.output = &m_inventory.slot(Inventory::FURNACE_OUTPUT);
+        running.burnLeft = state.burnLeft;
+        running.burnTotal = state.burnTotal;
+        running.cooked = state.cooked;
+
+        running.tick(deltaTime);
+
+        state.burnLeft = running.burnLeft;
+        state.burnTotal = running.burnTotal;
+        state.cooked = running.cooked;
+
+        if (state.lit() != wasLit) setFurnaceLit(m_furnaceBlock, state.lit());
+    }
+
+    const glm::ivec3* open = m_furnaceOpen ? &m_furnaceBlock : nullptr;
+    for (const glm::ivec3& where : m_furnaces.tick(deltaTime, open))
+        setFurnaceLit(where, m_furnaces.at(where).lit());
+}
+
+// The lit furnace is a separate block id, because a block here has
+// nowhere to keep a flag. Swapping it is what makes the mouth glow and
+// casts light on the floor in front of it.
+void Application::setFurnaceLit(const glm::ivec3& block, bool lit)
+{
+    const BlockId now = m_world->getBlock(block.x, block.y, block.z);
+    if (now != Blocks::Furnace && now != Blocks::FurnaceLit) return;
+
+    const BlockId wanted = lit ? Blocks::FurnaceLit : Blocks::Furnace;
+    if (now == wanted) return;
+
+    m_world->setBlock(block.x, block.y, block.z, wanted);
+    m_net.onLocalBlockChange(block.x, block.y, block.z, wanted);
 }
 
 void Application::returnCursorToWorld()

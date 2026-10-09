@@ -14,6 +14,13 @@ namespace
         { Items::RawPorkchop, { 3, 1.8f } },
         { Items::RawMutton,   { 2, 1.2f } },
         { Items::RawChicken,  { 2, 1.2f } },
+
+        // Cooking roughly doubles what a cut is worth, which is the
+        // whole argument for carrying a furnace about.
+        { Items::Steak,          { 8, 12.8f } },
+        { Items::CookedPorkchop, { 8, 12.8f } },
+        { Items::CookedMutton,   { 6, 9.6f } },
+        { Items::CookedChicken,  { 6, 7.2f } },
     };
 }
 

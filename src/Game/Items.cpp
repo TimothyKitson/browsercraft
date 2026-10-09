@@ -24,6 +24,11 @@ namespace
         { "Gunpowder",    Tiles::ItemGunpowder,  64 },
         { "Bread",        Tiles::ItemBread,      64 },
 
+        { "Steak",          Tiles::ItemSteak,         64 },
+        { "Cooked Porkchop", Tiles::ItemCookedPork,   64 },
+        { "Cooked Chicken", Tiles::ItemCookedChicken, 64 },
+        { "Cooked Mutton",  Tiles::ItemCookedMutton,  64 },
+
         { "Stick",        Tiles::ItemStick,      64 },
         { "Coal",         Tiles::ItemCoal,       64 },
         { "Diamond",      Tiles::ItemDiamond,    64 },

@@ -10,6 +10,7 @@
 #include "Renderer/SelectionRenderer.h"
 #include "Renderer/GuiTextures.h"
 #include "World/World.h"
+#include "World/Furnaces.h"
 #include "Player/Player.h"
 #include "Player/Inventory.h"
 #include "Audio/AudioEngine.h"
@@ -223,6 +224,11 @@ private:
     // does, so the big grid cannot be carried around.
     glm::ivec3 m_benchBlock{ 0 };
     bool m_benchOpen = false;
+
+    Furnaces m_furnaces;
+    glm::ivec3 m_furnaceBlock{ 0 };
+    bool m_furnaceOpen = false;
+    bool m_pendingFurnaceLight = false;
     int m_previousHealth = Player::MAX_HEALTH;
 
     std::string m_savePath = "world";
@@ -367,6 +373,14 @@ private:
     void wearTool(BlockId brokenBlock);
     void wearOnSwing(StackId weapon);
     void openBench(const glm::ivec3& block);
+
+    // The open furnace borrows three inventory slots while its screen is
+    // up; these move its contents in and back out again.
+    void openFurnace(const glm::ivec3& block);
+    void stowFurnace();
+    void tickFurnaces(float deltaTime);
+    void setFurnaceLit(const glm::ivec3& block, bool lit);
+
     void renderDebugOverlay();
     void renderHand();
     void renderChat();
