@@ -90,15 +90,15 @@ foreach ($name in $wanted.Keys) {
     }
 }
 
-if ($temp) { Remove-Item -LiteralPath $temp -Recurse -Force }
-
 Write-Output "Installed $copied of $($wanted.Count) mob textures into assets\skins\mob"
 if ($missing.Count -gt 0) {
     Write-Warning ("Not found, so those species keep their painted hides: " + ($missing -join ", "))
 }
 
 # Player skins, if the pack carries them. Wide and slim are separate
-# files: the arms are four pixels on one and three on the other.
+# files: the arms are four pixels on one and three on the other. This has
+# to happen before the extracted copy is thrown away, or every file it
+# wants is already gone.
 $skinRoot = Split-Path -Parent $dest
 $players = 0
 
@@ -114,8 +114,11 @@ foreach ($build in @("wide", "slim")) {
     $into = Join-Path $skinRoot $build
     New-Item -ItemType Directory -Force -Path $into | Out-Null
     foreach ($skin in $from) {
-        Copy-Item -LiteralPath $skin.FullName -Destination (Join-Path $into $skin.Name) -Force
-        $players++
+        $target = Join-Path $into $skin.Name
+        Copy-Item -LiteralPath $skin.FullName -Destination $target -Force -ErrorAction SilentlyContinue
+        # Counted only once it is actually there, so a failed copy cannot
+        # report itself as an install.
+        if (Test-Path -LiteralPath $target) { $players++ }
     }
 }
 
@@ -124,6 +127,8 @@ if ($players -gt 0) {
 } else {
     Write-Output "No player skins in this pack - the painted characters stay."
 }
+
+if ($temp) { Remove-Item -LiteralPath $temp -Recurse -Force }
 
 if ($Credit) {
     Set-Content -LiteralPath (Join-Path $dest "CREDIT.txt") -Value $Credit -Encoding UTF8
