@@ -54,7 +54,17 @@ if not exist build\build.ninja "!CMAKE!" -S . -B build -G Ninja -DCMAKE_MAKE_PRO
 if errorlevel 1 exit /b 1
 
 "!CMAKE!" --build build %*
-exit /b %errorlevel%
+set "RESULT=!errorlevel!"
+if not "!RESULT!"=="0" exit /b !RESULT!
+
+REM CMake copies assets next to the executable only when the executable
+REM is relinked, so installing a texture, sound or skin pack and building
+REM again -- with no source changed -- left the build folder with the old
+REM assets and nothing to say so. Copy them every time instead; it is a
+REM few megabytes and it removes a whole class of "it did not update".
+if exist assets xcopy "assets" "build\assets" /E /I /Y /Q >nul
+
+exit /b 0
 
 :trygit
 set "GITDIR="
