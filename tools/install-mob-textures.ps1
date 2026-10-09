@@ -8,6 +8,10 @@
 # species need are copied; delete assets/skins/mob to go back to the
 # hides the game paints for itself.
 #
+# Player skins come across too when the pack has them, into
+# assets/skins/wide and assets/skins/slim, which is where the character
+# picker looks before falling back to the characters it paints itself.
+#
 # These are not part of this project. assets/skins is gitignored, and
 # vanilla entity textures are Mojang's -- they are fine on your own
 # machine and are not yours to publish, which is why build-web.ps1 leaves
@@ -91,6 +95,29 @@ if ($temp) { Remove-Item -LiteralPath $temp -Recurse -Force }
 Write-Output "Installed $copied of $($wanted.Count) mob textures into assets\skins\mob"
 if ($missing.Count -gt 0) {
     Write-Warning ("Not found, so those species keep their painted hides: " + ($missing -join ", "))
+}
+
+# Player skins, if the pack carries them. Wide and slim are separate
+# files: the arms are four pixels on one and three on the other.
+$skinRoot = Split-Path -Parent $dest
+$players = 0
+
+foreach ($build in @("wide", "slim")) {
+    $from = $files | Where-Object { $_.FullName -like "*\player\$build\*.png" }
+    if (-not $from) { continue }
+
+    $into = Join-Path $skinRoot $build
+    New-Item -ItemType Directory -Force -Path $into | Out-Null
+    foreach ($skin in $from) {
+        Copy-Item -LiteralPath $skin.FullName -Destination (Join-Path $into $skin.Name) -Force
+        $players++
+    }
+}
+
+if ($players -gt 0) {
+    Write-Output "Installed $players player skins into assets\skins\wide and assets\skins\slim"
+} else {
+    Write-Output "No player skins in this pack - the painted characters stay."
 }
 
 if ($Credit) {

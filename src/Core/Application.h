@@ -17,6 +17,7 @@
 #include "Entity/Particles.h"
 #include "Entity/PlayerSkin.h"
 #include "Entity/PlayerModel.h"
+#include "Entity/HeldItem.h"
 #include "Entity/EntityManager.h"
 #include "Entity/MobModel.h"
 #include "Game/GameMode.h"
@@ -281,6 +282,7 @@ private:
     float m_digSoundTimer = 0.0f;
     float m_attackCooldown = 0.0f;
     float m_eatTimer = 0.0f;
+    HeldItem m_heldItem;
     float m_growthTimer = 0.0f;
     uint32_t m_growthSeed = 0x1F123BB5u;
 
@@ -339,6 +341,7 @@ private:
     void handleInventoryClick(int mouseX, int mouseY, bool rightButton, bool shiftHeld);
     void returnCursorToWorld();
     void renderDebugOverlay();
+    void renderHand();
     void renderHearts(float x, float y);
     void renderFood(float rightX, float y);
     void renderEatProgress(float cx, float cy);

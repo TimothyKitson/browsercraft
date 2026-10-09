@@ -28,46 +28,50 @@ namespace
     struct Palette
     {
         const char* name;
+        // The skin file this character wears when one is installed, under
+        // assets/skins/wide and assets/skins/slim. Minecraft's own default
+        // characters go by these names, so a pack of them drops in.
+        const char* file;
         Rgba skin, hair, shirt, trousers, shoes, eye, mouth;
     };
 
     const Palette PALETTES[] = {
-        { "TEAL",
+        { "TEAL", "steve",
           { 226, 180, 142, 255 }, {  82,  54,  34, 255 }, {  56, 148, 156, 255 },
           {  58,  70, 118, 255 }, {  66,  66,  72, 255 }, {  54,  84, 132, 255 },
           { 150,  94,  84, 255 } },
 
-        { "EMBER",
+        { "EMBER", "alex",
           { 240, 200, 162, 255 }, { 188,  92,  40, 255 }, {  94, 152,  76, 255 },
           { 110,  82,  58, 255 }, {  72,  60,  52, 255 }, {  82, 126,  84, 255 },
           { 158, 104,  92, 255 } },
 
-        { "ASH",
+        { "ASH", "efe",
           { 150, 106,  76, 255 }, {  32,  28,  26, 255 }, {  92,  96, 104, 255 },
           {  48,  50,  56, 255 }, {  34,  34,  38, 255 }, {  70,  52,  40, 255 },
           { 118,  72,  64, 255 } },
 
-        { "ROSE",
+        { "ROSE", "makena",
           { 246, 214, 190, 255 }, { 208, 110, 140, 255 }, { 232, 232, 236, 255 },
           {  96,  54,  70, 255 }, {  60,  52,  56, 255 }, { 120,  70,  96, 255 },
           { 170, 108, 108, 255 } },
 
-        { "PINE",
+        { "PINE", "ari",
           { 198, 148, 108, 255 }, {  58,  42,  30, 255 }, {  48, 104,  72, 255 },
           {  74,  60,  44, 255 }, {  48,  40,  34, 255 }, {  56,  92,  66, 255 },
           { 142,  92,  82, 255 } },
 
-        { "DUSK",
+        { "DUSK", "zuri",
           { 122,  84,  60, 255 }, {  26,  24,  32, 255 }, { 104,  72, 148, 255 },
           {  44,  40,  62, 255 }, {  32,  30,  40, 255 }, {  96,  72, 140, 255 },
           { 112,  70,  64, 255 } },
 
-        { "SAND",
+        { "SAND", "sunny",
           { 236, 198, 156, 255 }, { 206, 178,  96, 255 }, { 190,  72,  64, 255 },
           { 108,  86,  62, 255 }, {  66,  54,  44, 255 }, {  96, 120, 150, 255 },
           { 156, 100,  90, 255 } },
 
-        { "FROST",
+        { "FROST", "noor",
           { 214, 182, 158, 255 }, { 216, 220, 228, 255 }, {  92, 140, 190, 255 },
           {  42,  54,  82, 255 }, {  52,  56,  66, 255 }, { 120, 162, 196, 255 },
           { 148,  98,  92, 255 } },
@@ -138,6 +142,23 @@ bool PlayerSkin::customAvailable()
     return w == 64 && (h == 32 || h == 64);
 }
 
+std::string PlayerSkin::variantPath(Style style, int variant)
+{
+    if (variant < 0 || variant >= PALETTE_COUNT) return {};
+    return std::string("assets/skins/") + (style == Style::Slim ? "slim/" : "wide/") +
+           PALETTES[variant].file + ".png";
+}
+
+bool PlayerSkin::variantAvailable(Style style, int variant)
+{
+    const std::string path = variantPath(style, variant);
+    if (path.empty()) return false;
+
+    int w = 0, h = 0, channels = 0;
+    if (!stbi_info(path.c_str(), &w, &h, &channels)) return false;
+    return w == 64 && (h == 32 || h == 64);
+}
+
 void PlayerSkin::build(Style style, int variant)
 {
     m_style = style;
@@ -148,6 +169,15 @@ void PlayerSkin::build(Style style, int variant)
     // and the modern 64x64 layouts work: the parts a flat doll needs sit
     // at the same coordinates in each.
     if (variant == CUSTOM_VARIANT && loadFile("assets/skins/custom.png"))
+    {
+        upload();
+        return;
+    }
+
+    // Then a real skin installed under that character's name, in the
+    // build of the model being worn. Same arrangement as the blocks and
+    // the mobs: art if it is there, paint if it is not.
+    if (variant != CUSTOM_VARIANT && loadFile(variantPath(style, variant)))
     {
         upload();
         return;

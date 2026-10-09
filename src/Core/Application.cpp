@@ -1476,6 +1476,7 @@ void Application::updateGameplay(float deltaTime)
     updateMining(deltaTime);
     handleEating(deltaTime);
     handlePlacement();
+    m_heldItem.update(deltaTime);
 }
 
 void Application::updateMovementAudio(const glm::vec3& positionBefore, bool jumped)
@@ -1534,6 +1535,7 @@ void Application::updateMining(float deltaTime)
         {
             // One swing per click, not one per frame: mining is a hold,
             // hitting is not.
+            if (m_keys.pressed(m_input, Action::Attack)) m_heldItem.swing();
             if (m_keys.pressed(m_input, Action::Attack) && m_attackCooldown <= 0.0f)
             {
                 target->damage(PUNCH_DAMAGE, target->position() - m_player.position);
@@ -1569,6 +1571,7 @@ void Application::updateMining(float deltaTime)
         m_breakProgress = 1.0f;
     else
         m_breakProgress += deltaTime / hardness;
+        m_heldItem.swing();
 
     if (m_breakProgress >= 1.0f)
     {
@@ -1927,6 +1930,32 @@ void Application::renderWorld()
     glEnable(GL_CULL_FACE);
     glDepthMask(GL_TRUE);
     glDisable(GL_BLEND);
+
+    renderHand();
+}
+
+// Your own arm, last of everything and on a cleared depth buffer, so
+// standing against a wall does not swallow your hand.
+void Application::renderHand()
+{
+    if (!playing() || m_inventoryOpen || m_hudHidden) return;
+    if (m_perspective != Perspective::FirstPerson) return;
+
+    const glm::vec3 eye = m_player.eyePosition();
+    int lx = static_cast<int>(std::floor(eye.x));
+    int ly = static_cast<int>(std::floor(eye.y));
+    int lz = static_cast<int>(std::floor(eye.z));
+    for (int step = 0; step < 3 && isOpaque(m_world->getBlock(lx, ly, lz)); ++step) ++ly;
+
+    const float sky = static_cast<float>(m_world->skyLight(lx, ly, lz)) / 15.0f *
+                      std::max(0.35f, daylightFactor());
+    const float blockLight = static_cast<float>(m_world->blockLightAt(lx, ly, lz)) / 15.0f;
+
+    const ItemStack& held = m_inventory.selected();
+
+    m_heldItem.render(m_chunkShader, m_camera, skinFor(localAppearance()), m_atlas,
+                      held.empty() ? Blocks::Air : held.id,
+                      sky, blockLight, m_player.sneaking);
 }
 
 // -------------------------------------------------------------- players ---

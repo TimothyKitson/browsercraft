@@ -43,6 +43,12 @@ public:
     // True when assets/skins/custom.png exists and is a usable skin.
     static bool customAvailable();
 
+    // Where a named character's skin is looked for, and whether one is
+    // installed. Wide and slim are separate files because the arms are
+    // drawn at different widths.
+    static std::string variantPath(Style style, int variant);
+    static bool variantAvailable(Style style, int variant);
+
     int variant() const { return m_variant; }
 
     unsigned int textureId() const { return m_texture; }
