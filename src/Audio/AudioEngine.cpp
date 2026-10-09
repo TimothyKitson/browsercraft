@@ -277,6 +277,8 @@ void AudioEngine::buildSounds()
     loadMobVoice(Sound::MobSkeletonSay, Sound::MobSkeletonHurt, Sound::MobSkeletonDeath, "skeleton");
     loadMobVoice(Sound::MobCreeperSay, Sound::MobCreeperHurt, Sound::MobCreeperDeath, "creeper");
     loadMobVoice(Sound::MobSpiderSay, Sound::MobSpiderHurt, Sound::MobSpiderDeath, "spider");
+    loadMobVoice(Sound::MobEndermanSay, Sound::MobEndermanHurt, Sound::MobEndermanDeath, "enderman");
+    loadMobVoice(Sound::MobPigmanSay, Sound::MobPigmanHurt, Sound::MobPigmanDeath, "zombie_pigman");
 
     auto make = [&](Sound id) -> Synth {
         auto& clips = m_buffers[static_cast<size_t>(id)];
@@ -504,6 +506,47 @@ void AudioEngine::buildSounds()
         s.addNoise(0.45f, 1500.0f, 8.0f, 0.30f, false, 296);
         s.finish(0.80f);
     }
+    // The Enderman: a low, hollow note with a rasp under it.
+    {
+        Synth s = make(Sound::MobEndermanSay);
+        s.addTone(0.55f, 120.0f, 86.0f, 3.0f, 0.60f, true);
+        s.addNoise(0.40f, 700.0f, 5.0f, 0.22f, false, 601);
+        s.finish(0.80f);
+    }
+    {
+        Synth s = make(Sound::MobEndermanHurt);
+        s.addTone(0.22f, 200.0f, 90.0f, 14.0f, 0.70f, true);
+        s.addNoise(0.18f, 1400.0f, 18.0f, 0.30f, false, 611);
+        s.finish(0.80f);
+    }
+    {
+        Synth s = make(Sound::MobEndermanDeath);
+        s.addTone(0.70f, 150.0f, 50.0f, 4.0f, 0.75f, true);
+        s.addNoise(0.55f, 900.0f, 5.0f, 0.28f, false, 621);
+        s.finish(0.85f);
+    }
+
+    // The pigman: a grunt with a groan in it, halfway between the two
+    // things it is made of.
+    {
+        Synth s = make(Sound::MobPigmanSay);
+        s.addTone(0.34f, 210.0f, 140.0f, 7.0f, 0.66f, true);
+        s.addNoise(0.28f, 820.0f, 10.0f, 0.24f, false, 631);
+        s.finish(0.76f);
+    }
+    {
+        Synth s = make(Sound::MobPigmanHurt);
+        s.addTone(0.20f, 260.0f, 120.0f, 15.0f, 0.70f, true);
+        s.addNoise(0.16f, 1200.0f, 20.0f, 0.32f, false, 641);
+        s.finish(0.80f);
+    }
+    {
+        Synth s = make(Sound::MobPigmanDeath);
+        s.addTone(0.60f, 220.0f, 70.0f, 5.0f, 0.74f, true);
+        s.addNoise(0.48f, 1000.0f, 6.0f, 0.30f, false, 651);
+        s.finish(0.84f);
+    }
+
     {
         Synth s = make(Sound::MobSpiderSay);
         for (int i = 0; i < 6; ++i)

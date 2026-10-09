@@ -2,16 +2,7 @@
 #include "Chunk.h"
 #include "Noise.h"
 
-// Which world a generator is building. Each has its own terrain shape, and
-// chunks are saved under their own folder so the three never collide.
-enum class Dimension : uint8_t
-{
-    Overworld,
-    Nether,
-    End
-};
-
-const char* dimensionName(Dimension dimension);
+#include "Dimension.h"
 const char* dimensionFolder(Dimension dimension);
 
 enum class Biome : uint8_t

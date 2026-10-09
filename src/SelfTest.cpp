@@ -496,7 +496,10 @@ namespace
     {
         section("mobs: species");
 
-        check(mobTypeCount() == 8, "eight species");
+        // Counted rather than named, so adding a species does not fail
+        // a test that was only ever recording how many there were.
+        check(mobTypeCount() == static_cast<int>(MobId::Count), "every species has a type");
+        check(mobTypeCount() >= 8, "and there are at least the original eight");
 
         for (int i = 0; i < mobTypeCount(); ++i)
         {
@@ -763,6 +766,11 @@ namespace
             }
             check(t.dropCount == 0 || t.drop != Blocks::Air,
                   who + " does not drop nothing repeatedly");
+
+            // Nothing from the Nether burns in a sun it never sees, and
+            // nothing from the overworld belongs down there.
+            if (t.dimension == Dimension::Nether)
+                check(!t.burnsInSunlight, who + " has no sun to burn in");
         }
 
         // A death is reported exactly once, on the frame it happens --

@@ -337,6 +337,75 @@ namespace
             addSpiderLeg(t.model, Part::LegFrontRight,  0, LEG_NARROW, -LEG_TURN);
             addSpiderLeg(t.model, Part::LegFrontLeft,  -1, LEG_WIDE,   -LEG_WIDE);
         }
+        {
+            // The Enderman: too tall to meet indoors, and it hits hard.
+            // Minecraft's teleports and only turns on you when looked
+            // at; this one is simply hostile, which is the half of it
+            // that needs no new machinery.
+            MobType& t = table[static_cast<size_t>(MobId::Enderman)];
+            t.id = MobId::Enderman;
+            t.voice = Sound::MobEndermanSay;
+            t.hurtVoice = Sound::MobEndermanHurt;
+            t.deathVoice = Sound::MobEndermanDeath;
+            t.name = "Enderman";
+            t.texture = "enderman";
+            t.sheetHeight = 64;
+            t.spawnClass = SpawnClass::Hostile;
+            t.maxHealth = 40;
+            t.width = 0.6f;
+            t.height = 2.9f;
+            t.walkSpeed = 2.6f;
+            t.attackDamage = 5;
+            t.attackInterval = 1.1f;
+            t.drop = Items::Gunpowder;
+            t.dropCount = 1;
+            t.bodyColour = rgb(18, 18, 22);
+            t.headColour = rgb(24, 24, 28);
+            t.eyeColour = rgb(214, 108, 240);
+            // The same biped as a zombie, stretched: long limbs, small
+            // body, which is what makes the silhouette unmistakable.
+            // Stacked so the feet land on zero: legs from 0 to 30, body
+            // 30 to 42, head 42 to 50. mc() measures down from 24, so
+            // each box's offsets are whatever puts it at that height.
+            t.model.push_back(mc(Part::Head, 0, 0, 8, 8, 8, -4, -26, -4, 0, 0, 0));
+            t.model.push_back(mc(Part::Body, 16, 16, 8, 12, 4, -4, -18, -2, 0, 0, 0));
+            t.model.push_back(mc(Part::LegFrontRight, 40, 16, 2, 30, 2, -5, -6, -1, 0, 0, 0));
+            t.model.push_back(mirrored(mc(Part::LegFrontLeft, 40, 16, 2, 30, 2, 3, -6, -1, 0, 0, 0)));
+            t.model.push_back(mc(Part::LegBackRight, 0, 16, 2, 30, 2, -2, -6, -1, 0, 0, 0));
+            t.model.push_back(mirrored(mc(Part::LegBackLeft, 0, 16, 2, 30, 2, 0, -6, -1, 0, 0, 0)));
+        }
+        {
+            // The Nether's own. It looks like a zombie because it is
+            // one, and it belongs down there rather than in a meadow.
+            MobType& t = table[static_cast<size_t>(MobId::ZombiePigman)];
+            t.id = MobId::ZombiePigman;
+            t.voice = Sound::MobPigmanSay;
+            t.hurtVoice = Sound::MobPigmanHurt;
+            t.deathVoice = Sound::MobPigmanDeath;
+            t.name = "Zombified Piglin";
+            t.texture = "zombie_pigman";
+            t.sheetHeight = 64;
+            t.spawnClass = SpawnClass::Hostile;
+            t.dimension = Dimension::Nether;
+            t.maxHealth = 20;
+            t.width = 0.6f;
+            t.height = 1.95f;
+            t.walkSpeed = 2.0f;
+            // Already dead and already burning; the sun is nothing to it.
+            t.burnsInSunlight = false;
+            t.attackDamage = 4;
+            t.drop = Items::RawPorkchop;
+            t.dropCount = 1;
+            t.bodyColour = rgb(78, 148, 140);
+            t.headColour = rgb(226, 150, 148);
+            t.eyeColour = rgb(24, 32, 24);
+            t.model.push_back(mc(Part::Head, 0, 0, 8, 8, 8, -4, -8, -4, 0, 0, 0));
+            t.model.push_back(mc(Part::Body, 16, 16, 8, 12, 4, -4, 0, -2, 0, 0, 0));
+            t.model.push_back(mc(Part::LegFrontRight, 40, 16, 4, 12, 4, -3, -2, -2, -5, 2, 0));
+            t.model.push_back(mirrored(mc(Part::LegFrontLeft, 40, 16, 4, 12, 4, -1, -2, -2, 5, 2, 0)));
+            t.model.push_back(mc(Part::LegBackRight, 0, 16, 4, 12, 4, -2, 0, -2, -2, 12, 0));
+            t.model.push_back(mirrored(mc(Part::LegBackLeft, 0, 16, 4, 12, 4, -2, 0, -2, 2, 12, 0)));
+        }
 
         return table;
     }

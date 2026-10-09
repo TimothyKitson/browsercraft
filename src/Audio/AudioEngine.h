@@ -53,6 +53,12 @@ enum class Sound : uint8_t
     MobSpiderSay,
     MobSpiderHurt,
     MobSpiderDeath,
+    MobEndermanSay,
+    MobEndermanHurt,
+    MobEndermanDeath,
+    MobPigmanSay,
+    MobPigmanHurt,
+    MobPigmanDeath,
     MobStep,
     Count
 };

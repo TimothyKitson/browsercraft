@@ -1,6 +1,7 @@
 #pragma once
 #include "Audio/AudioEngine.h"
 #include "Game/Items.h"
+#include "World/Dimension.h"
 #include <cstdint>
 #include <glm/glm.hpp>
 #include <vector>
@@ -15,6 +16,8 @@ enum class MobId : uint8_t
     Skeleton,
     Creeper,
     Spider,
+    Enderman,
+    ZombiePigman,
     Count
 };
 
@@ -87,6 +90,10 @@ struct MobType
     float limbSwing = 1.0f;     // how far its legs reach at a full run
 
     // Half a heart each. Zero for anything that does not fight back.
+    // Which world it belongs in. A zombie in the Nether and a pigman in
+    // a meadow are both wrong, and spawning only went by light level.
+    Dimension dimension = Dimension::Overworld;
+
     // A mob that blows up instead of fighting. Zero means it does not.
     float fuseSeconds = 0.0f;
     float blastRadius = 0.0f;

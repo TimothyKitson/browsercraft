@@ -401,6 +401,8 @@ void Application::travelTo(Dimension dimension)
     m_world->saveAll();
 
     m_dimension = dimension;
+    m_entities.setDimension(dimension);
+    m_entities.clear();
     m_worldReady = false;
     m_placeOnSurface = true;
     m_drops.clear();

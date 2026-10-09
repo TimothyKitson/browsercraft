@@ -13,7 +13,12 @@ namespace
     constexpr int PASSIVE_MIN_LIGHT = 9;
 
     const MobId PASSIVE_SPECIES[] = { MobId::Sheep, MobId::Pig, MobId::Cow, MobId::Chicken };
-    const MobId HOSTILE_SPECIES[] = { MobId::Zombie, MobId::Skeleton, MobId::Creeper, MobId::Spider };
+    const MobId HOSTILE_SPECIES[] = { MobId::Zombie, MobId::Skeleton, MobId::Creeper,
+                                      MobId::Spider, MobId::Enderman };
+
+    // The Nether has its own, and nothing else belongs there: a sheep on
+    // netherrack and a piglin in a meadow are both wrong.
+    const MobId NETHER_SPECIES[] = { MobId::ZombiePigman };
 
     // The world as the pathfinder sees it: can a mob of this height
     // stand here, with a floor under it and nothing in the way.
@@ -139,8 +144,23 @@ void EntityManager::trySpawnWave(const World& world, const glm::vec3& playerPosi
         const int block = static_cast<int>(world.blockLightAt(x, y, z));
         const int light = std::max(block, static_cast<int>(sky * daylight));
 
-        const MobId* pool = night ? HOSTILE_SPECIES : PASSIVE_SPECIES;
-        const MobId species = pool[static_cast<int>(random01() * 4.0f) & 3];
+        MobId species;
+        if (m_dimension != Dimension::Overworld)
+        {
+            constexpr int NETHER_COUNT = static_cast<int>(std::size(NETHER_SPECIES));
+            species = NETHER_SPECIES[static_cast<int>(random01() * NETHER_COUNT) % NETHER_COUNT];
+        }
+        else if (night)
+        {
+            constexpr int HOSTILE_COUNT = static_cast<int>(std::size(HOSTILE_SPECIES));
+            species = HOSTILE_SPECIES[static_cast<int>(random01() * HOSTILE_COUNT) % HOSTILE_COUNT];
+        }
+        else
+        {
+            species = PASSIVE_SPECIES[static_cast<int>(random01() * 4.0f) & 3];
+        }
+
+        if (mobType(species).dimension != m_dimension) continue;
         if (!canSpawnOn(species, ground, light)) continue;
 
         const glm::vec3 feet(x + 0.5f, static_cast<float>(y), z + 0.5f);

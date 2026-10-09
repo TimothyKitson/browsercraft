@@ -71,12 +71,17 @@ public:
     // Which species may appear given the light and the block underfoot.
     static bool canSpawnOn(MobId type, BlockId ground, int light);
 
+    // Which world this manager is spawning into. Set when the player
+    // travels, so the Nether gets its own and nothing else.
+    void setDimension(Dimension dimension) { m_dimension = dimension; }
+
 private:
     float random01();
     void trySpawnWave(const World& world, const glm::vec3& playerPosition, float daylight);
     int surfaceBelow(const World& world, int x, int startY, int z) const;
     bool fits(const World& world, const MobType& type, const glm::vec3& feet) const;
 
+    Dimension m_dimension = Dimension::Overworld;
     std::vector<Mob> m_mobs;
     std::vector<Death> m_deaths;
     std::vector<glm::vec3> m_births;

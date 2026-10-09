@@ -4,4 +4,4 @@
 // changes a build actually contains. __DATE__ and __TIME__ beside it say
 // when it was compiled; together they answer "did it update?" without
 // anyone having to remember what they ran.
-#define BUILD_TAG "2026-10-10.7 nether portals"
+#define BUILD_TAG "2026-10-10.8 endermen, piglins, and mobs that stay in their own world"
