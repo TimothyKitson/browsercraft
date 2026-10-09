@@ -27,6 +27,15 @@ struct MobStrike
     glm::vec3 from{ 0.0f };     // the mob's position, for knockback
 };
 
+// A mob going off. Collected like the strikes and the shots, so a mob
+// never has to know what a world or an explosion is.
+struct MobBlast
+{
+    glm::vec3 at{ 0.0f };
+    float radius = 0.0f;
+    int damage = 0;
+};
+
 // A mob loosing an arrow. Collected like the strikes and the sounds,
 // for the same reason: a mob knows nothing about the arrows in flight.
 struct MobShot
@@ -92,6 +101,11 @@ public:
     std::vector<MobSound>& sounds() { return m_sounds; }
     std::vector<MobStrike>& strikes() { return m_strikes; }
     std::vector<MobShot>& shots() { return m_shots; }
+    std::vector<MobBlast>& blasts() { return m_blasts; }
+
+    // 0 while the fuse is unlit, running to 1 as it burns down. The
+    // renderer swells the mob by it, which is the warning you get.
+    float fuse() const;
 
     // True exactly once, on the first call after it dies. A corpse
     // lingers for a moment before it is dropped, so whatever it leaves
@@ -169,6 +183,8 @@ private:
     float m_ambientTimer = 0.0f;
     float m_hurtVoiceTimer = 0.0f;
     float m_shootTimer = 0.0f;
+    float m_fuseTimer = 0.0f;
+    bool m_lit = false;
     float m_stepDistance = 0.0f;
     float m_gait = 0.0f;
     float m_gaitAmount = 0.0f;
@@ -186,4 +202,5 @@ private:
     std::vector<MobSound> m_sounds;
     std::vector<MobStrike> m_strikes;
     std::vector<MobShot> m_shots;
+    std::vector<MobBlast> m_blasts;
 };

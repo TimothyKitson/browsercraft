@@ -32,6 +32,7 @@ public:
     // Likewise for blows landed on the player.
     std::vector<MobStrike> drainStrikes();
     std::vector<MobShot> drainShots();
+    std::vector<MobBlast> drainBlasts();
 
     // What a mob leaves on the ground, once per death. A corpse lingers
     // before it is dropped, so this has to fire on the frame it dies

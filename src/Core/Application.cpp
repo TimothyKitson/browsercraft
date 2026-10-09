@@ -8,6 +8,7 @@
 #include "Game/Tools.h"
 #include "Game/Armour.h"
 #include "Game/Sleep.h"
+#include "Game/Explosion.h"
 #include "World/WorldSave.h"
 #include <glm/gtc/matrix_transform.hpp>
 #include <SDL.h>
@@ -1101,7 +1102,8 @@ bool Application::frame()
             m_startupScreen == "furnace" || m_startupScreen == "furnaceblock" ||
             m_startupScreen == "chest" || m_startupScreen == "armour" ||
             m_startupScreen == "armourhud" || m_startupScreen == "bed" ||
-            m_startupScreen == "arrows" || m_startupScreen == "slabs")
+            m_startupScreen == "arrows" || m_startupScreen == "slabs" ||
+            m_startupScreen == "boom")
         {
             // Dev aid: open the inventory with something in it, so the
             // screenshot shows a real grid rather than 36 empty boxes.
@@ -1111,7 +1113,8 @@ bool Application::frame()
                                   m_startupScreen != "armourhud" &&
                                   m_startupScreen != "bed" &&
                                   m_startupScreen != "arrows" &&
-                                  m_startupScreen != "slabs";
+                                  m_startupScreen != "slabs" &&
+                                  m_startupScreen != "boom";
             m_inventoryOpen = showPanel;
             setMouseCaptured(!showPanel);
             m_inventory.add(Blocks::Cobblestone, 64);
@@ -1138,6 +1141,19 @@ bool Application::frame()
             }
 
             if (m_startupScreen == "arrows") m_arrowDemo = true;
+
+            if (m_startupScreen == "boom")
+            {
+                // Set one off in front of the camera, so the shot shows
+                // the crater rather than the creeper.
+                // Looking down at it, or the crater sits under the HUD.
+                m_camera.pitch = -32.0f;
+                m_camera.addLook(0.0f, 0.0f, 0.0f);
+
+                const glm::vec3 ahead = m_player.position + m_camera.front * 7.0f;
+                applyBlast(glm::vec3(ahead.x, m_player.position.y - 0.5f, ahead.z),
+                           Explosion::CREEPER_RADIUS, Explosion::CREEPER_DAMAGE);
+            }
 
             if (m_startupScreen == "slabs")
             {
@@ -2079,6 +2095,86 @@ void Application::sleepInBed(const glm::ivec3& block)
     m_audio.play(Sound::DigWool, 0.6f, 0.8f);
 }
 
+void Application::applyBlast(const glm::vec3& at, float radius, int damage)
+{
+    m_audio.play(Sound::DigStone, 1.0f, 0.5f);
+    m_particles.spawnBlockBreak(glm::ivec3(glm::floor(at)), Blocks::Gravel);
+
+    // Blocks first, so anything the blast opens up is already gone when
+    // the drops are thrown out into it.
+    const int reach = static_cast<int>(std::ceil(radius));
+    const glm::ivec3 middle = glm::ivec3(glm::floor(at));
+
+    for (int dx = -reach; dx <= reach; ++dx)
+        for (int dy = -reach; dy <= reach; ++dy)
+            for (int dz = -reach; dz <= reach; ++dz)
+            {
+                const glm::ivec3 where = middle + glm::ivec3(dx, dy, dz);
+                const BlockId block = m_world->getBlock(where.x, where.y, where.z);
+
+                const glm::vec3 centre = glm::vec3(where) + glm::vec3(0.5f);
+                const float distance = glm::length(centre - at);
+
+                if (!Explosion::destroys(block, distance, radius)) continue;
+
+                // A chest or a furnace gives up what was in it rather
+                // than taking it with it.
+                if (block == Blocks::Chest && m_chests.has(where))
+                {
+                    for (const ItemStack& held : m_chests.at(where))
+                        if (!held.empty())
+                            m_drops.spawnFromBrokenBlock(where, held.id, held.count);
+                    m_chests.remove(where);
+                }
+                if ((block == Blocks::Furnace || block == Blocks::FurnaceLit) &&
+                    m_furnaces.has(where))
+                {
+                    const Furnaces::State& inside = m_furnaces.at(where);
+                    for (const ItemStack* held : { &inside.input, &inside.fuel, &inside.output })
+                        if (!held->empty())
+                            m_drops.spawnFromBrokenBlock(where, held->id, held->count);
+                    m_furnaces.remove(where);
+                }
+
+                m_world->setBlock(where.x, where.y, where.z, Blocks::Air);
+                m_net.onLocalBlockChange(where.x, where.y, where.z, Blocks::Air);
+
+                // Most of what a blast breaks is destroyed outright;
+                // about a third of it survives to be picked up.
+                const uint32_t roll = static_cast<uint32_t>(
+                    where.x * 73856093 ^ where.y * 19349663 ^ where.z * 83492791);
+                if (roll % 3 == 0)
+                {
+                    const StackId drop = blockDrop(block);
+                    if (drop != Blocks::Air) m_drops.spawnFromBrokenBlock(where, drop);
+                }
+            }
+
+    // Then everything living, the player included.
+    const glm::vec3 chest = m_player.position + glm::vec3(0.0f, Player::HEIGHT * 0.5f, 0.0f);
+    const float toPlayer = glm::length(chest - at);
+    const int onPlayer = Explosion::damageAt(toPlayer, radius, damage);
+
+    if (onPlayer > 0 && m_player.damage(onPlayer))
+    {
+        wearArmour(onPlayer);
+        m_audio.play(Sound::Hurt, 0.9f);
+
+        const glm::vec3 away = chest - at;
+        if (glm::length(away) > 0.001f)
+            m_player.velocity += glm::normalize(away) * 8.0f;
+    }
+
+    for (Mob& mob : m_entities.mobs())
+    {
+        if (!mob.alive()) continue;
+
+        const glm::vec3 body = mob.position() + glm::vec3(0.0f, mob.height() * 0.5f, 0.0f);
+        const int hurt = Explosion::damageAt(glm::length(body - at), radius, damage);
+        if (hurt > 0) mob.damage(hurt, body - at);
+    }
+}
+
 // Drawing the bow. Held down it winds up; let go it looses whatever it
 // has wound up, which is what makes a snap shot weaker than a aimed one.
 void Application::updateBow(float deltaTime)
@@ -2961,6 +3057,10 @@ void Application::updateMobs(float deltaTime)
         if (length > 0.001f) m_player.velocity += (flat / length) * 6.0f;
         if (m_player.onGround) m_player.velocity.y = std::max(m_player.velocity.y, 4.0f);
     }
+
+    // Anything that went off.
+    for (const MobBlast& blast : m_entities.drainBlasts())
+        applyBlast(blast.at, blast.radius, blast.damage);
 
     // Arrows loosed by anything that carries a bow.
     for (const MobShot& shot : m_entities.drainShots())

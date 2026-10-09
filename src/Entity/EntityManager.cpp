@@ -249,6 +249,18 @@ std::vector<MobShot> EntityManager::drainShots()
     return all;
 }
 
+std::vector<MobBlast> EntityManager::drainBlasts()
+{
+    std::vector<MobBlast> all;
+    for (Mob& mob : m_mobs)
+    {
+        if (mob.blasts().empty()) continue;
+        all.insert(all.end(), mob.blasts().begin(), mob.blasts().end());
+        mob.blasts().clear();
+    }
+    return all;
+}
+
 std::vector<glm::vec3> EntityManager::drainBirths()
 {
     std::vector<glm::vec3> all;

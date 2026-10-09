@@ -87,6 +87,11 @@ struct MobType
     float limbSwing = 1.0f;     // how far its legs reach at a full run
 
     // Half a heart each. Zero for anything that does not fight back.
+    // A mob that blows up instead of fighting. Zero means it does not.
+    float fuseSeconds = 0.0f;
+    float blastRadius = 0.0f;
+    int blastDamage = 0;
+
     // A mob that shoots keeps its distance and looses arrows instead of
     // swinging. Zero means it fights with its hands.
     int arrowDamage = 0;

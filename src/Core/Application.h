@@ -399,6 +399,9 @@ private:
     void updateArrows(float deltaTime);
     void looseArrow(float drawn);
 
+    // A creeper going off: what it breaks and what it hurts.
+    void applyBlast(const glm::vec3& at, float radius, int damage);
+
     void sleepInBed(const glm::ivec3& block);
     void openChest(const glm::ivec3& block);
     void stowChest();

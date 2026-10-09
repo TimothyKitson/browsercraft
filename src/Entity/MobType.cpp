@@ -1,4 +1,5 @@
 #include "MobType.h"
+#include "Game/Explosion.h"
 #include "Game/Items.h"
 #include <algorithm>
 #include <cmath>
@@ -287,10 +288,13 @@ namespace
             t.width = 0.6f;
             t.height = 1.7f;
             t.walkSpeed = 2.0f;
-            // It does not blow up yet, so it hits hard and slowly
-            // instead of once and catastrophically.
-            t.attackDamage = 6;
-            t.attackInterval = 1.6f;
+            // It blows up, which is the only thing a creeper does. It
+            // lights its fuse when it gets close and goes off whether or
+            // not you are still there.
+            t.fuseSeconds = 1.5f;
+            t.blastRadius = Explosion::CREEPER_RADIUS;
+            t.blastDamage = Explosion::CREEPER_DAMAGE;
+            t.attackDamage = 0;
             t.drop = Items::Gunpowder;
             t.dropCount = 1;
             t.bodyColour = rgb(78, 158, 62);

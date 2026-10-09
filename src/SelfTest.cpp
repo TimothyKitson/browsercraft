@@ -19,6 +19,7 @@
 #include "Game/Smelting.h"
 #include "Game/Armour.h"
 #include "Game/Sleep.h"
+#include "Game/Explosion.h"
 #include "World/Furnaces.h"
 #include "World/Chests.h"
 #include "Entity/Projectiles.h"
@@ -727,10 +728,10 @@ namespace
             const MobType& t = mobType(static_cast<MobId>(i));
             const std::string who = t.name;
             // A hostile mob has to be able to hurt you somehow -- with
-            // its hands or with a bow. Checking only for hands was what
-            // this said before skeletons could shoot, and it would have
-            // let a mob that does neither through once either existed.
-            const bool fights = t.attackDamage > 0 || t.arrowDamage > 0;
+            // its hands, with a bow, or by going off. Checking only for
+            // hands was what this said before skeletons could shoot, and
+            // it has now caught two mobs whose way of fighting changed.
+            const bool fights = t.attackDamage > 0 || t.arrowDamage > 0 || t.blastDamage > 0;
 
             if (t.spawnClass == SpawnClass::Hostile)
                 check(fights, who + " fights back somehow");
@@ -746,6 +747,18 @@ namespace
                 check(t.arrowRange > 0.0f, who + " shoots some distance");
                 check(t.attackDamage == 0,
                       who + " either shoots or swings, not both");
+            }
+
+            if (t.blastDamage > 0)
+            {
+                check(t.fuseSeconds > 0.0f, who + " takes a moment to go off");
+                check(t.blastRadius > 0.0f, who + " goes off over some distance");
+                check(t.attackDamage == 0, who + " does not also swing");
+
+                // The fuse has to be long enough to run from. A creeper
+                // that went off the instant it touched you would be an
+                // unavoidable loss of health rather than a fright.
+                check(t.fuseSeconds > 0.8f, who + " can be run away from");
             }
             check(t.dropCount == 0 || t.drop != Blocks::Air,
                   who + " does not drop nothing repeatedly");
@@ -1975,6 +1988,55 @@ namespace
               "but go on your feet");
     }
 
+    void testExplosions()
+    {
+        section("explosions");
+
+        const float R = Explosion::CREEPER_RADIUS;
+
+        // Hardest at the middle, nothing at the edge, and falling off
+        // the whole way between.
+        check(Explosion::falloff(0.0f, R) == 1.0f, "the middle takes all of it");
+        check(Explosion::falloff(R, R) == 0.0f, "the edge takes none");
+        check(Explosion::falloff(R + 5.0f, R) == 0.0f, "and past it, none");
+        check(Explosion::falloff(R * 0.5f, R) < 1.0f, "half way takes less than all");
+        check(Explosion::falloff(R * 0.5f, R) > 0.0f, "but more than none");
+        check(Explosion::falloff(1.0f, R) > Explosion::falloff(2.0f, R),
+              "nearer is always worse");
+
+        check(Explosion::damageAt(0.0f, R, 24) == 24, "a blast in the face is the full count");
+        check(Explosion::damageAt(R, R, 24) == 0, "and at the edge, nothing");
+        check(Explosion::damageAt(R * 0.5f, R, 24) < 24, "and between, something less");
+
+        // What it breaks. Bedrock never, obsidian not from a creeper,
+        // and water smothers it rather than being thrown about.
+        check(!Explosion::destroys(Blocks::Bedrock, 0.0f, R), "bedrock survives anything");
+        check(!Explosion::destroys(Blocks::Obsidian, 0.0f, R), "obsidian survives a creeper");
+        check(!Explosion::destroys(Blocks::Water, 0.0f, R), "water smothers it");
+        check(!Explosion::destroys(Blocks::Air, 0.0f, R), "and air is nothing to break");
+
+        check(Explosion::destroys(Blocks::Dirt, 0.0f, R), "dirt at the centre goes");
+        check(Explosion::destroys(Blocks::Stone, 0.0f, R), "and so does stone");
+        check(!Explosion::destroys(Blocks::Stone, R, R), "but not at the edge");
+
+        // Softer blocks survive further out than harder ones, which is
+        // what gives a blast its ragged edge rather than a clean sphere.
+        float dirtReach = 0.0f, stoneReach = 0.0f;
+        for (float d = 0.0f; d < R; d += 0.05f)
+        {
+            if (Explosion::destroys(Blocks::Dirt, d, R)) dirtReach = d;
+            if (Explosion::destroys(Blocks::Stone, d, R)) stoneReach = d;
+        }
+        check(dirtReach > stoneReach, "dirt goes further out than stone");
+
+        // And the creeper's own numbers are survivable in armour but not
+        // without: twenty-four at point blank is more than a player has.
+        check(Explosion::CREEPER_DAMAGE > Player::MAX_HEALTH,
+              "a creeper in your face kills an unarmoured player");
+        check(Armour::reduce(Explosion::CREEPER_DAMAGE, 20) < Player::MAX_HEALTH,
+              "but a suit of diamond sees you through it");
+    }
+
     void testArrows()
     {
         section("bows and arrows");
@@ -2303,6 +2365,7 @@ int runSelfTest()
     testArmour();
     testArmourRecipes();
     testWearing();
+    testExplosions();
     testArrows();
     testSleep();
     testChestStore();

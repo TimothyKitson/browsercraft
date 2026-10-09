@@ -139,6 +139,13 @@ bool Mob::takeDeathReport()
     return true;
 }
 
+float Mob::fuse() const
+{
+    const MobType& t = type();
+    if (!m_lit || t.fuseSeconds <= 0.0f) return 0.0f;
+    return std::clamp(1.0f - m_fuseTimer / t.fuseSeconds, 0.0f, 1.0f);
+}
+
 float Mob::deathFade() const
 {
     if (alive()) return 1.0f;
@@ -405,6 +412,49 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
             strike.from = m_position;
             m_strikes.push_back(strike);
             m_attackTimer = t.attackInterval;
+        }
+    }
+
+    // The fuse. A creeper lights it when it gets close enough and goes
+    // off whether or not you are still there when it finishes -- that is
+    // the whole trick of it, and backing away is the answer rather than
+    // standing and trading blows.
+    if (t.fuseSeconds > 0.0f)
+    {
+        const glm::vec3 toPlayer = playerPosition - m_position;
+        const float flat = glm::length(glm::vec3(toPlayer.x, 0.0f, toPlayer.z));
+        const float lightAt = t.blastRadius * 0.55f;
+
+        if (!m_lit && flat < lightAt && std::fabs(toPlayer.y) < 3.0f)
+        {
+            m_lit = true;
+            m_fuseTimer = t.fuseSeconds;
+            emit(Sound::Click, 0.9f, 0.6f);
+        }
+        else if (m_lit && flat > lightAt * 2.0f)
+        {
+            // Got away. The fuse goes out and can be lit again.
+            m_lit = false;
+            m_fuseTimer = 0.0f;
+        }
+
+        if (m_lit)
+        {
+            m_fuseTimer -= deltaTime;
+            if (m_fuseTimer <= 0.0f)
+            {
+                MobBlast blast;
+                blast.at = m_position + glm::vec3(0.0f, height() * 0.5f, 0.0f);
+                blast.radius = t.blastRadius;
+                blast.damage = t.blastDamage;
+                m_blasts.push_back(blast);
+
+                // It goes with the blast. Nothing left to drop: the
+                // gunpowder went up with it.
+                m_health = 0;
+                m_removeTimer = DEATH_SECONDS;
+                return;
+            }
         }
     }
 
