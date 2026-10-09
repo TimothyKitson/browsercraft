@@ -11,6 +11,20 @@ namespace
         float t = std::clamp((x - edge0) / (edge1 - edge0), 0.0f, 1.0f);
         return t * t * (3.0f - 2.0f * t);
     }
+
+    // fbm2D divides by the sum of its octave amplitudes, so the octaves
+    // average each other out and a four-octave field only ever covers
+    // about a third of [-1, 1]. Every threshold below is written against
+    // the full range, which is why the world came out as a pancake at
+    // sea level with no mountains, no desert and no snow in it.
+    //
+    // tanh rather than a multiply and a clamp: it is smooth the whole way
+    // out, so stretching the field leaves no plateaus where the peaks and
+    // troughs would otherwise have been flattened off.
+    float spread(float v, float strength)
+    {
+        return std::tanh(v * strength);
+    }
 }
 
 const char* biomeName(Biome biome)
@@ -63,12 +77,12 @@ WorldGen::WorldGen(uint32_t seed, Dimension dimension)
 
 float WorldGen::temperatureAt(int x, int z) const
 {
-    return m_temperature.fbm2D(x * 0.0016f + 500.0f, z * 0.0016f - 200.0f, 3);
+    return spread(m_temperature.fbm2D(x * 0.0016f + 500.0f, z * 0.0016f - 200.0f, 3), 3.0f);
 }
 
 float WorldGen::humidityAt(int x, int z) const
 {
-    return m_humidity.fbm2D(x * 0.0019f - 800.0f, z * 0.0019f + 350.0f, 3);
+    return spread(m_humidity.fbm2D(x * 0.0019f - 800.0f, z * 0.0019f + 350.0f, 3), 3.0f);
 }
 
 int WorldGen::surfaceHeight(int worldX, int worldZ) const
@@ -76,18 +90,24 @@ int WorldGen::surfaceHeight(int worldX, int worldZ) const
     const float fx = static_cast<float>(worldX);
     const float fz = static_cast<float>(worldZ);
 
-    // Large-scale shape: decides ocean basins vs. continents.
-    float continent = m_height.fbm2D(fx * 0.0013f, fz * 0.0013f, 4);
+    // Large-scale shape: decides ocean basins vs. continents. Lifted so
+    // that rather more of the world is land than sea, the way an
+    // overworld is -- centred on sea level it came out as half ocean.
+    float continent = spread(m_height.fbm2D(fx * 0.0013f, fz * 0.0013f, 4), 3.0f) + 0.30f;
     // Medium rolling hills.
-    float hills = m_hills.fbm2D(fx * 0.0085f, fz * 0.0085f, 4);
-    // Sharp ridges, only allowed to show up well inland.
+    float hills = spread(m_hills.fbm2D(fx * 0.0085f, fz * 0.0085f, 4), 2.6f);
+    // Sharp ridges, only allowed to show up well inland. ridged2D sits
+    // high across most of its range, so only its upper part is taken:
+    // left whole it raised every inland block by twenty-odd and made one
+    // flat plateau of the continents.
     float ridges = m_mountains.ridged2D(fx * 0.0035f, fz * 0.0035f, 4);
-    float mountainMask = smoothstep(0.15f, 0.55f, continent);
+    ridges = std::max(0.0f, ridges - 0.55f) / 0.45f;
+    float mountainMask = smoothstep(0.10f, 0.70f, continent);
 
     float height = SEA_LEVEL
-                 + continent * 20.0f
-                 + hills * 7.0f
-                 + mountainMask * ridges * 46.0f;
+                 + continent * 22.0f
+                 + hills * 8.0f
+                 + mountainMask * ridges * 52.0f;
 
     return std::clamp(static_cast<int>(height), 1, MAX_HEIGHT - 12);
 }
@@ -99,11 +119,11 @@ Biome WorldGen::biomeAt(int worldX, int worldZ) const
     float humidity = humidityAt(worldX, worldZ);
 
     if (height < SEA_LEVEL - 1) return Biome::Ocean;
-    if (height <= SEA_LEVEL + 1) return Biome::Beach;
-    if (height > SEA_LEVEL + 38) return Biome::Mountains;
-    if (temperature < -0.33f) return Biome::Snowy;
-    if (temperature > 0.28f && humidity < 0.0f) return Biome::Desert;
-    if (humidity > 0.08f) return Biome::Forest;
+    if (height <= SEA_LEVEL) return Biome::Beach;
+    if (height > SEA_LEVEL + 34) return Biome::Mountains;
+    if (temperature < -0.45f) return Biome::Snowy;
+    if (temperature > 0.30f && humidity < -0.05f) return Biome::Desert;
+    if (humidity > 0.05f) return Biome::Forest;
     return Biome::Plains;
 }
 
@@ -571,17 +591,44 @@ void WorldGen::decorate(Chunk& chunk) const
 
 void WorldGen::findSpawn(int& outX, int& outY, int& outZ) const
 {
-    // Spiral outwards from the origin until we find dry land.
+    // Perlin noise is exactly zero at every lattice point, the origin
+    // among them, so the block at 0,0 is the same height in every world
+    // ever generated. Spiralling out from there handed every seed an
+    // identical starting hill, so the search starts somewhere the seed
+    // chooses instead.
+    // Stirred rather than sliced: the top half of a small seed is all
+    // zeroes, so taking the halves straight gave every seed under four
+    // thousand the same starting line of longitude.
+    uint32_t h = m_seed * 0x9E3779B9u;
+    h ^= h >> 16; h *= 0x7FEB352Du;
+    h ^= h >> 15; h *= 0x846CA68Bu;
+    h ^= h >> 16;
+
+    const int startX = static_cast<int>(h % 4096u) - 2048;
+    const int startZ = static_cast<int>((h >> 16) % 4096u) - 2048;
+
+    // Spiral outwards from there until we find dry land.
     for (int radius = 0; radius < 400; radius += 8)
     {
         for (int angleStep = 0; angleStep < 16; ++angleStep)
         {
             float angle = angleStep * 0.3927f; // 2*pi/16
-            int x = static_cast<int>(std::cos(angle) * radius);
-            int z = static_cast<int>(std::sin(angle) * radius);
+            int x = startX + static_cast<int>(std::cos(angle) * radius);
+            int z = startZ + static_cast<int>(std::sin(angle) * radius);
             int height = surfaceHeight(x, z);
             Biome biome = biomeAt(x, z);
-            if (height > SEA_LEVEL + 1 && biome != Biome::Ocean)
+            if (height <= SEA_LEVEL + 1 || biome == Biome::Ocean) continue;
+
+            // One dry block is not a place to start: a sand bar a block
+            // wide passes that test, and the first world it picked put
+            // the player on one in the middle of an ocean. Ask for land
+            // all around as well, out far enough to be somewhere.
+            bool roomToStand = true;
+            for (int dz = -24; dz <= 24 && roomToStand; dz += 12)
+                for (int dx = -24; dx <= 24 && roomToStand; dx += 12)
+                    if (surfaceHeight(x + dx, z + dz) <= SEA_LEVEL) roomToStand = false;
+
+            if (roomToStand)
             {
                 outX = x;
                 outY = height + 2;
@@ -591,7 +638,7 @@ void WorldGen::findSpawn(int& outX, int& outY, int& outZ) const
         }
     }
 
-    outX = 0;
+    outX = startX;
     outY = SEA_LEVEL + 4;
-    outZ = 0;
+    outZ = startZ;
 }
