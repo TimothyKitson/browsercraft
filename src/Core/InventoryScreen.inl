@@ -47,6 +47,21 @@ namespace
         Items::Wheat, Items::WheatSeeds, Items::Leather, Items::RawBeef,
         Items::RawPorkchop, Items::RawChicken, Items::RawMutton,
         Items::Feather, Items::Bone, Items::StringItem, Items::Gunpowder,
+        Items::Bread, Items::Steak, Items::CookedPorkchop, Items::CookedChicken,
+        Items::CookedMutton,
+    };
+
+    // The twenty-five tools, their materials, and the two benches you
+    // need to make any of it.
+    const StackId TAB_TOOLS[] = {
+        Blocks::CraftingTable, Blocks::Furnace, Items::Stick, Items::Coal,
+        Items::IronIngot, Items::GoldIngot, Items::Diamond,
+        Items::WoodPickaxe, Items::WoodAxe, Items::WoodShovel, Items::WoodSword, Items::WoodHoe,
+        Items::StonePickaxe, Items::StoneAxe, Items::StoneShovel, Items::StoneSword, Items::StoneHoe,
+        Items::IronPickaxe, Items::IronAxe, Items::IronShovel, Items::IronSword, Items::IronHoe,
+        Items::GoldPickaxe, Items::GoldAxe, Items::GoldShovel, Items::GoldSword, Items::GoldHoe,
+        Items::DiamondPickaxe, Items::DiamondAxe, Items::DiamondShovel, Items::DiamondSword,
+        Items::DiamondHoe,
     };
 
     const CreativeTab CREATIVE_TABS[] = {
@@ -55,6 +70,7 @@ namespace
         { "ORES AND STONE",   Blocks::DiamondOre, TAB_ORES,     static_cast<int>(std::size(TAB_ORES)) },
         { "LIGHT AND LIQUID", Blocks::Glowstone,  TAB_MISC,     static_cast<int>(std::size(TAB_MISC)) },
         { "ITEMS",            Items::Wheat,       TAB_ITEMS,    static_cast<int>(std::size(TAB_ITEMS)) },
+        { "TOOLS",            Items::IronPickaxe, TAB_TOOLS,    static_cast<int>(std::size(TAB_TOOLS)) },
         { "EVERYTHING",       Blocks::Cobblestone,nullptr,      0 },
         { "YOUR INVENTORY",   Blocks::Wool,       nullptr,      0 },  // the player's own slots
     };
@@ -383,11 +399,19 @@ void Application::renderInventoryScreen()
     int paletteCount = 0;
     if (showPalette) tabContents(m_creativeTab, paletteItems, paletteCount);
 
+    // A tab with more in it than the grid holds scrolls on the wheel.
+    // Without this the tools, and most of EVERYTHING, were simply not
+    // reachable: the grid drew the first forty-five and stopped.
+    const int paletteRows = showPalette
+        ? (paletteCount + PALETTE_COLUMNS - 1) / PALETTE_COLUMNS : 0;
+    const int maxRow = std::max(0, paletteRows - PALETTE_ROWS);
+    m_paletteRow = std::clamp(m_paletteRow, 0, maxRow);
+
     for (int row = 0; row < gridRows; ++row)
     {
         for (int column = 0; column < PALETTE_COLUMNS; ++column)
         {
-            const int cell = row * PALETTE_COLUMNS + column;
+            const int cell = (row + m_paletteRow) * PALETTE_COLUMNS + column;
             const float x = panelX + SLOT_GAP + column * step;
             const float y = gridY + SLOT_GAP + row * step;
 
@@ -401,8 +425,10 @@ void Application::renderInventoryScreen()
             }
             else
             {
-                // Storage runs 9..35, directly above the hotbar.
-                const int index = Inventory::HOTBAR_SLOTS + cell;
+                // Storage runs 9..35, directly above the hotbar. It does
+                // not scroll, so it counts from the row on screen rather
+                // than from the palette's offset into a longer list.
+                const int index = Inventory::HOTBAR_SLOTS + row * PALETTE_COLUMNS + column;
                 const ItemStack& stack = m_inventory.slot(index);
                 drawItem(x, y, SLOT_SIZE, stack.id, stack.count, glm::vec4(1.0f), stack.damage);
                 m_slotBoxes.push_back({ SlotBox::Kind::Slot, index, x, y, SLOT_SIZE });
@@ -463,6 +489,7 @@ void Application::handleInventoryClick(int mouseX, int mouseY, bool rightButton,
     {
         case SlotBox::Kind::Tab:
             m_creativeTab = box->index;
+            m_paletteRow = 0;   // a new tab starts at the top
             m_audio.play(Sound::Click, 0.45f);
             break;
 

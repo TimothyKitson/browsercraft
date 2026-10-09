@@ -1067,6 +1067,7 @@ bool Application::frame()
             m_inventory.add(Blocks::Sand, 22);
             m_inventory.add(Blocks::CraftingTable, 1);
 
+            if (m_startupScreen == "creative") m_creativeTab = 5;   // TOOLS
             if (m_startupScreen == "furnace" || m_startupScreen == "furnaceblock")
             {
                 // A furnace a block away, already working, so the
@@ -1455,6 +1456,12 @@ void Application::handleEvents()
 
     if (!m_world) return;
 
+    // While the creative palette is up the wheel scrolls it rather than
+    // the hotbar, which is the only way to reach a tab longer than the
+    // five rows the grid shows.
+    if (m_inventoryOpen && m_player.creative() && m_input.wheelDelta() != 0)
+        m_paletteRow -= m_input.wheelDelta();
+
     if (m_keys.pressed(m_input, Action::Inventory) && (playing() || m_inventoryOpen))
     {
         if (m_inventoryOpen)
@@ -1600,7 +1607,7 @@ void Application::updateGameplay(float deltaTime)
     for (int i = 0; i < Inventory::HOTBAR_SLOTS; ++i)
         if (m_input.wasKeyPressed(static_cast<SDL_Scancode>(SDL_SCANCODE_1 + i)))
             m_inventory.setSelectedSlot(i);
-    m_inventory.scrollSelection(m_input.wheelDelta());
+    if (!m_inventoryOpen) m_inventory.scrollSelection(m_input.wheelDelta());
 
     // --- movement ---
     Player::Controls controls;

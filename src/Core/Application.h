@@ -229,6 +229,9 @@ private:
     glm::ivec3 m_furnaceBlock{ 0 };
     bool m_furnaceOpen = false;
     bool m_pendingFurnaceLight = false;
+
+    // How far down the creative palette has been scrolled.
+    int m_paletteRow = 0;
     int m_previousHealth = Player::MAX_HEALTH;
 
     std::string m_savePath = "world";
