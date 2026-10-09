@@ -117,6 +117,12 @@ private:
     // Loads "<stem>1.ogg", "<stem>2.ogg", ... until one is missing.
     int loadVariants(Sound id, const char* stem, int maxVariants);
     bool loadSingle(Sound id, const char* file);
+
+    // The shortest gap allowed between two plays of the same sound. A
+    // call site that fires every frame would otherwise stack dozens of
+    // copies of one clip into a single noise.
+    static constexpr float RETRIGGER_SECONDS = 0.06f;
+    std::array<uint32_t, static_cast<size_t>(Sound::Count)> m_lastPlayed{};
     void loadMobVoice(Sound say, Sound hurt, Sound death, const char* folder);
     void mix(float* output, int frames);
     static void callback(void* userData, uint8_t* stream, int lengthBytes);

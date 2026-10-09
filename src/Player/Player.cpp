@@ -298,7 +298,9 @@ void Player::update(float deltaTime, const World& world, const Controls& control
         velocity.y += GRAVITY * deltaTime;
         velocity.y = std::max(velocity.y, TERMINAL_VELOCITY);
 
-        if (controls.jump && wasOnGround)
+        // Held rather than pressed, so holding the key bunny-hops the way
+        // Minecraft does instead of jumping once and stopping.
+        if (controls.jumpHeld && wasOnGround)
         {
             velocity.y = JUMP_VELOCITY;
             m_falling = true;

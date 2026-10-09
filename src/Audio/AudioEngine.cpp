@@ -537,6 +537,14 @@ void AudioEngine::play(Sound sound, float volume, float pitch)
     const size_t index = static_cast<size_t>(sound);
     if (index >= m_buffers.size() || m_buffers[index].empty()) return;
 
+    // Whatever asked for this, it does not get to ask again for another
+    // few hundredths of a second. One clip retriggered every frame is a
+    // buzz, not a sound.
+    const uint32_t now = SDL_GetTicks();
+    const uint32_t gap = static_cast<uint32_t>(RETRIGGER_SECONDS * 1000.0f);
+    if (m_lastPlayed[index] != 0 && now - m_lastPlayed[index] < gap) return;
+    m_lastPlayed[index] = now;
+
     // Pick one of the takes at random, the way Minecraft does.
     static uint32_t rolling = 12345u;
     rolling = rolling * 1664525u + 1013904223u;

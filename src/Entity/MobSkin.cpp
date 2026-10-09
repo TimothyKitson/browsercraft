@@ -69,12 +69,6 @@ namespace
         int m_width, m_height;
     };
 
-    // How wide and tall a box's unwrapped strip is.
-    void stripSize(const glm::ivec3& size, int& w, int& h)
-    {
-        w = 2 * (size.x + size.z);
-        h = size.y + size.z;
-    }
 }
 
 MobSkin::~MobSkin()

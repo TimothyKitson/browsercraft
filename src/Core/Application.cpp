@@ -1478,7 +1478,7 @@ void Application::updateGameplay(float deltaTime)
     const glm::vec3 positionBefore = m_player.position;
     m_player.update(deltaTime, *m_world, controls);
     m_camera.position = m_player.eyePosition();
-    updateMovementAudio(positionBefore, controls.jump);
+    updateMovementAudio(positionBefore, controls.jumpHeld);
 
     // A little extra field of view while sprinting sells the speed.
     const float targetFov = m_player.sprinting ? 78.0f : 70.0f;
@@ -1584,7 +1584,8 @@ void Application::updateMining(float deltaTime)
         m_breakProgress = 1.0f;
     else
         m_breakProgress += deltaTime / hardness;
-        m_heldItem.swing();
+
+    m_heldItem.swing();
 
     if (m_breakProgress >= 1.0f)
     {

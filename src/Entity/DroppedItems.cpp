@@ -102,7 +102,7 @@ bool DroppedItems::blocked(const World& world, const glm::vec3& centre) const
 void DroppedItems::update(float deltaTime, const World& world, const Player& player,
                           Inventory& inventory, AudioEngine& audio)
 {
-    const glm::vec3 playerCentre = player.position + glm::vec3(0.0f, Player::HEIGHT * 0.5f, 0.0f);
+    const glm::vec3 feet = player.position;
 
     for (size_t i = 0; i < m_items.size();)
     {
@@ -112,10 +112,16 @@ void DroppedItems::update(float deltaTime, const World& world, const Player& pla
 
         bool collected = false;
 
-        // Walk onto it to pick it up. The delay is what lets you drop
-        // something on purpose without instantly taking it back.
-        const float distance = glm::length(playerCentre - item.position);
-        if (item.age > PICKUP_DELAY && distance < COLLECT_RADIUS)
+        // Walk onto it to pick it up. Measured as a box around the player
+        // rather than a sphere from their chest: a drop resting on the
+        // ground is most of a block below that, so a sphere meant standing
+        // almost exactly on top of one before it would come to you.
+        const glm::vec3 apart = item.position - feet;
+        const float reach = glm::length(glm::vec2(apart.x, apart.z));
+        const bool within = reach < COLLECT_RADIUS &&
+                            apart.y > -1.0f && apart.y < Player::HEIGHT + 0.5f;
+
+        if (item.age > PICKUP_DELAY && within)
         {
             const int leftOver = inventory.add(item.block, item.count);
             if (leftOver < item.count)
@@ -266,9 +272,9 @@ void DroppedItems::render(Shader& chunkShader, const World& world)
             // back, because a single quad disappears edge-on and again
             // whenever the spin brings its back face round.
             const TileUV uv = tileUV(atlasTileFor(item.block));
-            const float half = SPRITE_SIZE * 0.5f;
+            const float spriteHalf = SPRITE_SIZE * 0.5f;
             const glm::vec3 foot = item.position + glm::vec3(0.0f, HOVER * 0.5f + bob, 0.0f);
-            const glm::vec3 across(half * c, 0.0f, half * s);
+            const glm::vec3 across(spriteHalf * c, 0.0f, spriteHalf * s);
             const glm::vec3 up(0.0f, SPRITE_SIZE, 0.0f);
 
             const glm::vec3 corner[4] = {

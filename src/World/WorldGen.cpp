@@ -281,8 +281,13 @@ void WorldGen::generateColumns(Chunk& chunk) const
                     switch (biome)
                     {
                         case Biome::Ocean:
-                            if (depth == 0) block = (hashToFloat(hashCoords(wx, 0, wz, m_seed + 12)) < 0.3f)
-                                                        ? Blocks::Gravel : Blocks::Sand;
+                            // Patches of gravel among the sand. Drawn from
+                            // smooth noise rather than a per-column coin
+                            // flip, which scattered single blocks of gravel
+                            // through the seabed like static.
+                            if (depth == 0)
+                                block = m_humidity.fbm2D(wx * 0.045f, wz * 0.045f, 2) > 0.22f
+                                            ? Blocks::Gravel : Blocks::Sand;
                             else if (depth <= 3) block = Blocks::Sand;
                             break;
 
