@@ -159,22 +159,62 @@ int blockStepVariants(const char* group)
     return 4; // gravel, snow, cloth
 }
 
+// This began as a table of what a block sounds like, where falling
+// through to stone was harmless -- an unlisted block merely sounded
+// wrong. It now also decides which tool a block gives way to and
+// whether a bare hand gets anything out of it, so the half of the block
+// list that was never written down (birch, gravel, clay, snow, the
+// flowers) has to be here: defaulting those to stone meant punching a
+// birch tree dropped nothing at all.
 Material blockMaterial(BlockId id)
 {
     if (isWheat(id)) return Material::Plant;
 
     switch (id)
     {
-        case Blocks::Dirt: return Material::Dirt;
-        case Blocks::Farmland: return Material::Dirt;
-        case Blocks::Grass: return Material::Grass;
-        case Blocks::Sand: return Material::Sand;
-        case Blocks::Glass: return Material::Glass;
-        case Blocks::Wool: return Material::Wool;
-        case Blocks::Log: case Blocks::Planks:
-        case Blocks::CraftingTable: return Material::Wood;
-        case Blocks::Furnace: case Blocks::FurnaceLit: return Material::Stone;
-        case Blocks::Leaves: return Material::Plant;
-        default: return Material::Stone;
+        case Blocks::Dirt:
+        case Blocks::Farmland:
+        case Blocks::Clay:
+        case Blocks::SoulSand:
+            return Material::Dirt;
+
+        case Blocks::Grass:
+        case Blocks::SnowGrass:
+            return Material::Grass;
+
+        case Blocks::Sand:
+        case Blocks::Gravel:
+            return Material::Sand;
+
+        case Blocks::Glass:
+        case Blocks::Ice:
+            return Material::Glass;
+
+        case Blocks::Wool:
+            return Material::Wool;
+
+        case Blocks::Snow:
+            return Material::Snow;
+
+        case Blocks::Log:
+        case Blocks::BirchLog:
+        case Blocks::Planks:
+        case Blocks::CraftingTable:
+            return Material::Wood;
+
+        case Blocks::Leaves:
+        case Blocks::BirchLeaves:
+        case Blocks::TallGrass:
+        case Blocks::FlowerRed:
+        case Blocks::FlowerYellow:
+        case Blocks::Cactus:
+        case Blocks::Pumpkin:
+        case Blocks::Torch:
+            return Material::Plant;
+
+        // Stone, the ores, the bricks, obsidian, the nether and end
+        // stones, the furnace: everything a pickaxe is for.
+        default:
+            return Material::Stone;
     }
 }

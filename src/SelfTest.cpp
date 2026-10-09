@@ -1480,6 +1480,78 @@ namespace
         check(attackDamage(Items::DiamondHoe) == 1, "and a hoe is no weapon at all");
     }
 
+    void testEveryBlockIsMinable()
+    {
+        section("tools: every block in the game");
+
+        using namespace Tools;
+
+        // The sweep that would have caught birch logs, gravel, clay and
+        // the flowers needing a pickaxe: blockMaterial began life as a
+        // table of what a block sounds like, and falling through to
+        // stone was harmless until it also decided what drops.
+        //
+        // Anything a pickaxe is not for must come up by hand. Rather
+        // than list them, the rule is turned round: a block that needs a
+        // tool has to be one a pickaxe is the tool for.
+        int needTool = 0, byHand = 0;
+
+        for (BlockId id = 1; id < Blocks::Count; ++id)
+        {
+            if (!isObtainable(id)) continue;
+            if (blockInfo(id).hardness < 0.0f) continue;   // never breaks
+
+            if (requiredLevel(id) == 0)
+            {
+                ++byHand;
+                check(canHarvest(Blocks::Air, id), "comes up by hand");
+                continue;
+            }
+
+            ++needTool;
+
+            // Whatever wants a tool wants a pickaxe, and the best
+            // pickaxe in the game must be able to get it.
+            check(blockMaterial(id) == Material::Stone, "only stone wants a tool");
+            check(canHarvest(Items::DiamondPickaxe, id), "and diamond gets all of it");
+            check(!canHarvest(Blocks::Air, id), "where a bare hand gets none");
+
+            // And the right tool is always quicker than the wrong one.
+            check(breakSeconds(Items::DiamondPickaxe, id) < breakSeconds(Blocks::Air, id),
+                  "and is quicker with it");
+        }
+
+        check(byHand > 20, "most of the block list comes up by hand");
+        check(needTool > 8, "and a fair few want a pickaxe");
+
+        // The ones that were actually wrong, named, so a regression says
+        // which block rather than just a count.
+        const BlockId SOFT[] = {
+            Blocks::BirchLog, Blocks::BirchLeaves, Blocks::Gravel, Blocks::Clay,
+            Blocks::Snow, Blocks::SnowGrass, Blocks::TallGrass, Blocks::FlowerRed,
+            Blocks::FlowerYellow, Blocks::Cactus, Blocks::Pumpkin, Blocks::Wool,
+            Blocks::Glass, Blocks::Ice, Blocks::SoulSand, Blocks::CraftingTable,
+        };
+        for (BlockId id : SOFT)
+            check(canHarvest(Blocks::Air, id), "a bare hand gets this one");
+
+        // An axe is for wood of either kind, a shovel for the loose
+        // ground, a pickaxe for stone -- not whichever was listed first.
+        check(breakSeconds(Items::IronAxe, Blocks::BirchLog) <
+                  breakSeconds(Blocks::Air, Blocks::BirchLog),
+              "an axe is quicker through birch too");
+        check(breakSeconds(Items::IronShovel, Blocks::Gravel) <
+                  breakSeconds(Blocks::Air, Blocks::Gravel),
+              "and a shovel through gravel");
+        check(breakSeconds(Items::IronShovel, Blocks::Clay) <
+                  breakSeconds(Blocks::Air, Blocks::Clay),
+              "and through clay");
+        check(breakSeconds(Items::IronPickaxe, Blocks::Furnace) <
+                  breakSeconds(Blocks::Air, Blocks::Furnace),
+              "and a pickaxe through a furnace");
+        check(!canHarvest(Blocks::Air, Blocks::Furnace), "which a bare hand cannot take");
+    }
+
     void testToolRecipes()
     {
         section("tools: the recipes");
@@ -1808,6 +1880,7 @@ int runSelfTest()
     testPlayerImmunity();
     testMobHurt();
     testTools();
+    testEveryBlockIsMinable();
     testToolRecipes();
     testSmelting();
     testFurnaceStore();
