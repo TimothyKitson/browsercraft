@@ -17,8 +17,8 @@ namespace
     // to clear the near plane.
     // Far enough forward that perspective shrinks it to about a quarter
     // of the screen, which is roughly where Minecraft puts it.
-    constexpr float HAND_RIGHT = 0.50f;
-    constexpr float HAND_DOWN = 0.42f;
+    constexpr float HAND_RIGHT = 0.74f;
+    constexpr float HAND_DOWN = 0.46f;
     constexpr float HAND_FORWARD = 1.00f;
 
     // Where the arm's own top end -- the hand -- ends up once it has

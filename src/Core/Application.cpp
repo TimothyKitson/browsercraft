@@ -2409,14 +2409,14 @@ void Application::renderHud()
     if (!held.empty())
     {
         const std::string name = displayName(held.id);
-        m_ui.textWithShadow(name, cx - UIRenderer::textWidth(name, 2.2f) * 0.5f, barY - 30.0f, 2.2f, TEXT_COLOR);
+        m_ui.textWithShadow(name, cx - UIRenderer::textWidth(name, 2.2f) * 0.5f, barY - 58.0f, 2.2f, TEXT_COLOR);
     }
 
     // Hearts are hidden in creative, like Minecraft.
     if (!m_player.creative())
     {
-        renderHearts(barX + SLOT_GAP, barY - 60.0f);
-        renderFood(barX + barWidth - SLOT_GAP, barY - 60.0f);
+        renderHearts(barX + SLOT_GAP, barY - 32.0f);
+        renderFood(barX + barWidth - SLOT_GAP, barY - 32.0f);
         renderEatProgress(cx, cy);
     }
 
