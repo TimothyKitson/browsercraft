@@ -9,6 +9,7 @@
 #include "Game/Armour.h"
 #include "Game/Sleep.h"
 #include "Game/Explosion.h"
+#include "Game/Portal.h"
 #include "World/WorldSave.h"
 #include <glm/gtc/matrix_transform.hpp>
 #include <SDL.h>
@@ -38,6 +39,9 @@ namespace
     constexpr float TNT_FUSE_SECONDS = 4.0f;
     constexpr float TNT_RADIUS = 4.5f;
     constexpr int TNT_DAMAGE = 34;
+    // Long enough that walking across a portal does not take you
+    // through it, short enough not to feel like waiting.
+    constexpr float PORTAL_SECONDS = 1.6f;
     // Minecraft lets you reach stone further than you can reach a mob.
     constexpr float ATTACK_REACH = 3.0f;
     constexpr float ATTACK_INTERVAL = 0.25f;
@@ -1033,6 +1037,7 @@ bool Application::frame()
             m_particles.update(deltaTime, *m_world);
             updateArrows(deltaTime);
             updateFuses(deltaTime);
+            updatePortal(deltaTime);
 
             // Dev aid: a steady stream, so a screenshot taken at any
             // moment has arrows in the air to look at.
@@ -1109,7 +1114,8 @@ bool Application::frame()
             m_startupScreen == "chest" || m_startupScreen == "armour" ||
             m_startupScreen == "armourhud" || m_startupScreen == "bed" ||
             m_startupScreen == "arrows" || m_startupScreen == "slabs" ||
-            m_startupScreen == "boom" || m_startupScreen == "tnt")
+            m_startupScreen == "boom" || m_startupScreen == "tnt" ||
+            m_startupScreen == "portal" || m_startupScreen == "nether")
         {
             // Dev aid: open the inventory with something in it, so the
             // screenshot shows a real grid rather than 36 empty boxes.
@@ -1121,7 +1127,9 @@ bool Application::frame()
                                   m_startupScreen != "arrows" &&
                                   m_startupScreen != "slabs" &&
                                   m_startupScreen != "boom" &&
-                                  m_startupScreen != "tnt";
+                                  m_startupScreen != "tnt" &&
+                                  m_startupScreen != "portal" &&
+                                  m_startupScreen != "nether";
             m_inventoryOpen = showPanel;
             setMouseCaptured(!showPanel);
             m_inventory.add(Blocks::Cobblestone, 64);
@@ -1148,6 +1156,38 @@ bool Application::frame()
             }
 
             if (m_startupScreen == "arrows") m_arrowDemo = true;
+
+            if (m_startupScreen == "portal" || m_startupScreen == "nether")
+            {
+                m_camera.pitch = -6.0f;
+                m_camera.addLook(0.0f, 0.0f, 0.0f);
+
+                const glm::vec3 ahead = m_player.position + m_camera.front * 6.0f;
+                const int bx = static_cast<int>(std::floor(ahead.x));
+                const int by = static_cast<int>(std::floor(m_player.position.y));
+                const int bz = static_cast<int>(std::floor(ahead.z));
+
+                // A frame two across and three high, standing on a
+                // plinth so it is clear of the grass.
+                for (int a = -1; a <= 2; ++a)
+                    for (int b = -1; b <= 3; ++b)
+                    {
+                        const bool edge = (a == -1 || a == 2 || b == -1 || b == 3);
+                        m_world->setBlock(bx + a, by + b, bz,
+                                          edge ? Blocks::Obsidian : Blocks::Air);
+                    }
+
+                const bool lit = lightPortal(glm::ivec3(bx, by, bz));
+                std::printf("[portal] frame lit: %s\n", lit ? "yes" : "no");
+                std::fflush(stdout);
+
+                // "nether" walks through it as well.
+                if (m_startupScreen == "nether" && lit)
+                {
+                    m_player.position = glm::vec3(bx + 0.5f, static_cast<float>(by), bz + 0.5f);
+                    m_camera.position = m_player.eyePosition();
+                }
+            }
 
             if (m_startupScreen == "tnt")
             {
@@ -1743,6 +1783,9 @@ void Application::waitForSpawnChunk()
     m_player.velocity = glm::vec3(0.0f);
     m_camera.position = m_player.eyePosition();
     m_worldReady = true;
+
+    // Only once there are chunks to build it in.
+    buildReturnPortal();
 }
 
 void Application::updateGameplay(float deltaTime)
@@ -2109,6 +2152,152 @@ void Application::wearOnSwing(StackId weapon)
 // A bed does two things: it is where you wake up when you die, and it
 // takes you through to morning. The first works whatever the hour; the
 // second only at night, the same as Minecraft.
+namespace
+{
+    // The world, behind the two questions the portal search asks of it.
+    struct PortalBlocks : Portal::Blocks
+    {
+        const World* world = nullptr;
+
+        // Fully qualified: inside something deriving from
+        // Portal::Blocks, a bare "Blocks" is the base class, not the
+        // namespace the block ids live in.
+        bool isFrame(int x, int y, int z) const override
+        {
+            return world->getBlock(x, y, z) == ::Blocks::Obsidian;
+        }
+        bool isFillable(int x, int y, int z) const override
+        {
+            const BlockId block = world->getBlock(x, y, z);
+            return block == ::Blocks::Air || block == ::Blocks::NetherPortal;
+        }
+    };
+}
+
+bool Application::lightPortal(const glm::ivec3& at)
+{
+    PortalBlocks blocks;
+    blocks.world = m_world.get();
+
+    const Portal::Found found = Portal::findFrame(blocks, at);
+    if (!found.valid) return false;
+
+    for (const glm::ivec3& cell : found.inside)
+    {
+        m_world->setBlock(cell.x, cell.y, cell.z, Blocks::NetherPortal);
+        m_net.onLocalBlockChange(cell.x, cell.y, cell.z, Blocks::NetherPortal);
+    }
+
+    m_audio.play(Sound::DigStone, 0.8f, 1.6f);
+    m_chatLog.add("The portal opens.");
+    return true;
+}
+
+// Standing in one takes you through, after a moment: long enough that
+// walking across a portal does not throw you into the Nether.
+void Application::updatePortal(float deltaTime)
+{
+    const glm::vec3 chest = m_player.position + glm::vec3(0.0f, 1.0f, 0.0f);
+    const BlockId inside = m_world->getBlock(static_cast<int>(std::floor(chest.x)),
+                                             static_cast<int>(std::floor(chest.y)),
+                                             static_cast<int>(std::floor(chest.z)));
+
+    if (inside != Blocks::NetherPortal)
+    {
+        m_portalTimer = 0.0f;
+        return;
+    }
+
+    m_portalTimer += deltaTime;
+    if (m_portalTimer < PORTAL_SECONDS) return;
+
+    m_portalTimer = 0.0f;
+
+    if (m_dimension == Dimension::Overworld)
+    {
+        // Remember the way back before leaving by it.
+        m_portalHome = m_player.position;
+        m_hasPortalHome = true;
+        m_owedReturnPortal = true;
+        travelTo(Dimension::Nether);
+        return;
+    }
+
+    // Going home. A portal is already standing where you left, so
+    // nothing needs building and nothing needs digging out.
+    m_owedReturnPortal = !m_hasPortalHome;
+    travelTo(Dimension::Overworld);
+
+    if (m_hasPortalHome)
+    {
+        m_player.position = m_portalHome + glm::vec3(0.0f, 0.0f, 1.2f);
+        m_player.velocity = glm::vec3(0.0f);
+        m_camera.position = m_player.eyePosition();
+    }
+}
+
+// Somewhere to come back through. Minecraft builds one where you arrive
+// if there is not one already, and without it the Nether is one way.
+void Application::buildReturnPortal()
+{
+    if (!m_owedReturnPortal || !m_worldReady) return;
+    m_owedReturnPortal = false;
+
+    glm::ivec3 feet(static_cast<int>(std::floor(m_player.position.x)),
+                    static_cast<int>(std::floor(m_player.position.y)),
+                    static_cast<int>(std::floor(m_player.position.z)));
+
+    // The Nether is mostly solid rock, so wherever you land is likely
+    // inside it. Look for open air near by first -- arriving in a cave
+    // is better than arriving in a hole of your own making -- and settle
+    // for digging one out only if there is none.
+    auto clearAt = [&](const glm::ivec3& at) {
+        for (int b = 0; b < 3; ++b)
+            if (isSolid(m_world->getBlock(at.x, at.y + b, at.z))) return false;
+        return isSolid(m_world->getBlock(at.x, at.y - 1, at.z));
+    };
+
+    for (int drop = 0; drop < 48; ++drop)
+    {
+        const glm::ivec3 below(feet.x, feet.y - drop, feet.z);
+        if (below.y < 8) break;
+        if (clearAt(below)) { feet = below; break; }
+    }
+
+    // A chamber to stand up in, whether it was already there or not.
+    for (int a = -3; a <= 3; ++a)
+        for (int b = 0; b <= 4; ++b)
+            for (int c = -3; c <= 3; ++c)
+                m_world->setBlock(feet.x + a, feet.y + b, feet.z + c, Blocks::Air);
+
+    // A floor under all of it, so nothing drops into the lava below.
+    for (int a = -3; a <= 3; ++a)
+        for (int c = -3; c <= 3; ++c)
+            m_world->setBlock(feet.x + a, feet.y - 1, feet.z + c, Blocks::Obsidian);
+
+    // And the frame itself, standing in the middle of the chamber.
+    for (int a = -1; a <= 2; ++a)
+        for (int b = -1; b <= 4; ++b)
+        {
+            const bool edge = (a == -1 || a == 2 || b == -1 || b == 4);
+            const BlockId put = edge ? Blocks::Obsidian : Blocks::Air;
+            m_world->setBlock(feet.x + a, feet.y + b, feet.z, put);
+        }
+
+    lightPortal(glm::ivec3(feet.x, feet.y, feet.z));
+
+    m_player.position = glm::vec3(feet.x + 0.5f, static_cast<float>(feet.y), feet.z + 1.5f);
+    m_player.velocity = glm::vec3(0.0f);
+
+    // Looking away from it. You step out of a portal with your back to
+    // it; arriving nose-first against one fills the screen with purple
+    // and leaves you unsure which way you came.
+    m_camera.yaw = 90.0f;
+    m_camera.pitch = 0.0f;
+    m_camera.addLook(0.0f, 0.0f, 0.0f);
+    m_camera.position = m_player.eyePosition();
+}
+
 void Application::sleepInBed(const glm::ivec3& block)
 {
     const glm::vec3 beside = glm::vec3(block) + glm::vec3(0.5f, 1.0f, 0.5f);
@@ -2451,6 +2640,21 @@ void Application::handlePlacement()
 
     ItemStack& stack = m_inventory.selected();
     if (stack.empty()) return;
+
+    // Flint and steel lights a portal, and nothing else yet.
+    if (stack.id == Items::FlintAndSteel)
+    {
+        const RaycastHit spark = m_world->raycast(m_camera.position, m_camera.front, REACH_DISTANCE);
+        if (spark.hit && lightPortal(spark.previous))
+        {
+            if (!m_player.creative())
+            {
+                stack.damage += 1;
+                if (stack.damage >= 64) stack.clear();
+            }
+        }
+        return;
+    }
 
     // A piece of armour held in the hand is put on rather than placed.
     if (Armour::isArmour(stack.id))

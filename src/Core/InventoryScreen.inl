@@ -15,6 +15,7 @@ namespace
         Blocks::SnowGrass, Blocks::Clay, Blocks::Obsidian, Blocks::Glass,
         Blocks::Wool, Blocks::Snow, Blocks::Ice,
         Blocks::StoneSlab, Blocks::CobblestoneSlab, Blocks::PlankSlab, Blocks::SandstoneSlab,
+        Blocks::Tnt,
     };
 
     const StackId TAB_NATURE[] = {
@@ -63,7 +64,7 @@ namespace
 
     const StackId TAB_TOOLS[] = {
         Blocks::CraftingTable, Blocks::Furnace, Blocks::Chest, Blocks::Bed,
-        Items::Stick, Items::Coal, Items::Bow, Items::Arrow,
+        Items::Stick, Items::Coal, Items::Bow, Items::Arrow, Items::FlintAndSteel,
         Items::IronIngot, Items::GoldIngot, Items::Diamond,
         Items::WoodPickaxe, Items::WoodAxe, Items::WoodShovel, Items::WoodSword, Items::WoodHoe,
         Items::StonePickaxe, Items::StoneAxe, Items::StoneShovel, Items::StoneSword, Items::StoneHoe,

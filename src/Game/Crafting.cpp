@@ -67,6 +67,9 @@ namespace
         { false, 3, 1, { Blocks::Sandstone, Blocks::Sandstone, Blocks::Sandstone },
           0, Blocks::SandstoneSlab, 6 },
 
+        // Iron and flint make the thing that lights a portal.
+        { true, 0, 0, { Items::IronIngot, Items::Flint }, 2, Items::FlintAndSteel, 1 },
+
         // Three sticks and three string make a bow.
         { false, 3, 3, { _,                Items::Stick,      Items::StringItem,
                          Items::Stick,     _,                 Items::StringItem,

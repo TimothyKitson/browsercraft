@@ -34,6 +34,7 @@ namespace
         { "Flint",        Tiles::ItemFlint,      64 },
         { "Bow",          Tiles::ItemBow,         1 },
         { "Arrow",        Tiles::ItemArrow,      64 },
+        { "Flint and Steel", Tiles::ItemFlintAndSteel, 1 },
         { "Diamond",      Tiles::ItemDiamond,    64 },
         { "Iron Ingot",   Tiles::ItemIronIngot,  64 },
         { "Gold Ingot",   Tiles::ItemGoldIngot,  64 },

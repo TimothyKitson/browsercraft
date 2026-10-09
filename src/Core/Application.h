@@ -232,6 +232,16 @@ private:
     // reloaded mid-blast simply has the TNT still standing.
     std::vector<std::pair<glm::ivec3, float>> m_fuses;
 
+    // How long the player has been standing in a portal, and whether a
+    // way back needs building where they come out.
+    float m_portalTimer = 0.0f;
+    bool m_owedReturnPortal = false;
+
+    // Where the overworld portal stood, so coming back puts you at the
+    // one you left through rather than digging a new hole at spawn.
+    glm::vec3 m_portalHome{ 0.0f };
+    bool m_hasPortalHome = false;
+
     Projectiles m_arrows;
     float m_bowDraw = 0.0f;      // seconds the bow has been held
     bool m_bowDrawing = false;
@@ -412,6 +422,12 @@ private:
     void updateFuses(float deltaTime);
 
     void sleepInBed(const glm::ivec3& block);
+
+    // Lighting a portal, standing in one, and building the one that
+    // brings you back.
+    bool lightPortal(const glm::ivec3& at);
+    void updatePortal(float deltaTime);
+    void buildReturnPortal();
     void openChest(const glm::ivec3& block);
     void stowChest();
 

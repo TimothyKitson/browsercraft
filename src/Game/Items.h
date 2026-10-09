@@ -48,6 +48,7 @@ namespace Items
         Flint,
         Bow,
         Arrow,
+        FlintAndSteel,
         Diamond,
         IronIngot,
         GoldIngot,

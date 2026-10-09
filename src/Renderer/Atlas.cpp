@@ -1752,6 +1752,30 @@ namespace
         }
     }
 
+    void paintItemFlintAndSteel(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        const Color steel{ 198, 198, 204 };
+        const Color steelDark{ 134, 134, 140 };
+        const Color stone{ 62, 58, 60 };
+        const Color handle{ 140, 100, 56 };
+
+        // The steel: a hooked bar down the left.
+        for (int y = 3; y <= 11; ++y) { t.set(4, y, steel); t.set(5, y, steelDark); }
+        for (int x = 4; x <= 8; ++x) t.set(x, 11, steel);
+        for (int x = 4; x <= 7; ++x) t.set(x, 3, steelDark);
+
+        // The handle it is set into.
+        for (int y = 5; y <= 9; ++y)
+            for (int x = 2; x <= 3; ++x)
+                t.set(x, y, handle);
+
+        // The flint, struck against it.
+        for (int y = 5; y <= 9; ++y)
+            for (int x = 9; x <= 13; ++x)
+                if ((x + y) % 7 != 0) t.set(x, y, stone);
+    }
+
     void paintItemFlint(Tile& t)
     {
         t.fill(Color{ 0, 0, 0, 0 });
@@ -2002,6 +2026,7 @@ namespace
         { Tiles::ItemStick,     paintItemStick },
         { Tiles::ItemCoal,      paintItemCoal },
         { Tiles::ItemFlint,     paintItemFlint },
+        { Tiles::ItemFlintAndSteel, paintItemFlintAndSteel },
         { Tiles::ItemBow,       paintItemBow },
         { Tiles::ItemArrow,     paintItemArrow },
         { Tiles::ArrowInFlight, paintArrowInFlight },
@@ -2074,6 +2099,7 @@ namespace
         { Tiles::ItemStick,      { "stick", nullptr, nullptr } },
         { Tiles::ItemCoal,       { "coal", nullptr, nullptr } },
         { Tiles::ItemFlint,      { "flint", nullptr, nullptr } },
+        { Tiles::ItemFlintAndSteel, { "flint_and_steel", nullptr, nullptr } },
         { Tiles::ItemBow,        { "bow", "bow_standby", nullptr } },
         { Tiles::ItemArrow,      { "arrow", nullptr, nullptr } },
         { Tiles::ItemDiamond,    { "diamond", nullptr, nullptr } },

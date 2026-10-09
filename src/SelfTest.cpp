@@ -20,6 +20,7 @@
 #include "Game/Armour.h"
 #include "Game/Sleep.h"
 #include "Game/Explosion.h"
+#include "Game/Portal.h"
 #include "World/Furnaces.h"
 #include "World/Chests.h"
 #include "Entity/Projectiles.h"
@@ -1995,6 +1996,93 @@ namespace
               "but go on your feet");
     }
 
+    void testPortalFrames()
+    {
+        section("nether portals");
+
+        // A frame built out of nothing: obsidian wherever the test says,
+        // air everywhere else.
+        struct Built : Portal::Blocks
+        {
+            std::vector<glm::ivec3> frame;
+
+            bool isFrame(int x, int y, int z) const override
+            {
+                return std::find(frame.begin(), frame.end(), glm::ivec3(x, y, z)) != frame.end();
+            }
+            bool isFillable(int x, int y, int z) const override
+            {
+                return !isFrame(x, y, z);
+            }
+
+            // The standing frame: a ring with a hole `w` across and `h`
+            // high, with its bottom-left inside corner at the origin.
+            void build(int w, int h, bool alongX)
+            {
+                frame.clear();
+                for (int a = -1; a <= w; ++a)
+                    for (int b = -1; b <= h; ++b)
+                    {
+                        const bool edge = (a == -1 || a == w || b == -1 || b == h);
+                        if (!edge) continue;
+                        frame.push_back(alongX ? glm::ivec3(a, b, 0) : glm::ivec3(0, b, a));
+                    }
+            }
+        };
+
+        // The standard doorway: two across, three high.
+        Built built;
+        built.build(2, 3, true);
+        Portal::Found found = Portal::findFrame(built, glm::ivec3(0, 0, 0));
+        check(found.valid, "a two by three frame lights");
+        check(found.inside.size() == 6, "and six blocks fill it");
+
+        // The same frame the other way round.
+        built.build(2, 3, false);
+        found = Portal::findFrame(built, glm::ivec3(0, 0, 0));
+        check(found.valid, "and so does one facing the other way");
+        check(found.inside.size() == 6, "with the same six blocks");
+
+        // Bigger frames are allowed, as in Minecraft.
+        built.build(4, 5, true);
+        found = Portal::findFrame(built, glm::ivec3(1, 2, 0));
+        check(found.valid, "a larger frame lights from anywhere inside it");
+        check(found.inside.size() == 20, "and fills the whole hole");
+
+        // A hole with a block missing leaks, and nothing catches.
+        built.build(2, 3, true);
+        built.frame.erase(std::remove(built.frame.begin(), built.frame.end(),
+                                      glm::ivec3(0, -1, 0)),
+                          built.frame.end());
+        check(!Portal::findFrame(built, glm::ivec3(0, 0, 0)).valid,
+              "a frame with a gap in it does not light");
+
+        // Too small in either direction.
+        built.build(1, 3, true);
+        check(!Portal::findFrame(built, glm::ivec3(0, 0, 0)).valid,
+              "one block wide is not a doorway");
+
+        built.build(2, 2, true);
+        check(!Portal::findFrame(built, glm::ivec3(0, 0, 0)).valid,
+              "nor is two high");
+
+        // Lighting the frame itself does nothing.
+        built.build(2, 3, true);
+        check(!Portal::findFrame(built, glm::ivec3(-1, -1, 0)).valid,
+              "striking the obsidian itself lights nothing");
+
+        // No frame at all: open air leaks forever and must be refused
+        // rather than filling the sky.
+        struct OpenAir : Portal::Blocks
+        {
+            bool isFrame(int, int, int) const override { return false; }
+            bool isFillable(int, int, int) const override { return true; }
+        };
+        OpenAir sky;
+        check(!Portal::findFrame(sky, glm::ivec3(0, 70, 0)).valid,
+              "open air does not light");
+    }
+
     void testExplosions()
     {
         section("explosions");
@@ -2372,6 +2460,7 @@ int runSelfTest()
     testArmour();
     testArmourRecipes();
     testWearing();
+    testPortalFrames();
     testExplosions();
     testArrows();
     testSleep();

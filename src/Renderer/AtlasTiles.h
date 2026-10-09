@@ -103,6 +103,7 @@ namespace Tiles
         ItemFlint,
         ItemBow,
         ItemArrow,
+        ItemFlintAndSteel,
         ItemDiamond,
         ItemIronIngot,
         ItemGoldIngot,
