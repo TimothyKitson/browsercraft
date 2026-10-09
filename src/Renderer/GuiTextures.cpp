@@ -77,6 +77,18 @@ namespace
         },
     };
 
+    const char DRUMSTICK[9][10] = {
+        "....111..",
+        "..113331.",
+        ".13333331",
+        ".13333331",
+        ".11333331",
+        "..1133311",
+        "...11221.",
+        "..12221..",
+        "..1221..."
+    };
+
     const char HEART[9][10] = {
         "..11.11..",
         ".1221221.",
@@ -114,6 +126,26 @@ GuiTextures::GuiTextures()
     {
         if (!loadFromFile(entry.sprite, entry.file))
             createHeart(entry.sprite, entry.half, entry.empty, entry.hardcore);
+    }
+
+    struct FoodEntry
+    {
+        GuiSprite sprite;
+        const char* file;
+        bool half;
+        bool empty;
+    };
+
+    const FoodEntry FOOD[] = {
+        { GuiSprite::FoodFull,      "food_full.png",  false, false },
+        { GuiSprite::FoodHalf,      "food_half.png",  true,  false },
+        { GuiSprite::FoodContainer, "food_empty.png", false, true  },
+    };
+
+    for (const FoodEntry& entry : FOOD)
+    {
+        if (!loadFromFile(entry.sprite, entry.file))
+            createDrumstick(entry.sprite, entry.half, entry.empty);
     }
 
     // No procedural stand-in for these: the HUD falls back to flat panels.
@@ -181,6 +213,42 @@ void GuiTextures::createArmorIcon(GuiSprite sprite, int piece)
             pixels[index + 2] = colour.b;
             pixels[index + 3] = colour.a;
         }
+
+    upload(sprite, pixels.data(), SIZE, SIZE);
+}
+
+void GuiTextures::createDrumstick(GuiSprite sprite, bool half, bool empty)
+{
+    constexpr int SIZE = 9;
+    std::vector<unsigned char> pixels(SIZE * SIZE * 4, 0);
+
+    struct Colour { unsigned char r, g, b, a; };
+    const Colour outline{ 20, 12, 12, 255 };
+    const Colour meat = empty ? Colour{ 62, 62, 62, 255 } : Colour{ 150, 86, 48, 255 };
+    const Colour highlight = empty ? Colour{ 92, 92, 92, 255 } : Colour{ 196, 128, 72, 255 };
+    const Colour bone = empty ? Colour{ 78, 78, 78, 255 } : Colour{ 228, 220, 196, 255 };
+
+    for (int y = 0; y < SIZE; ++y)
+    {
+        for (int x = 0; x < SIZE; ++x)
+        {
+            const char cell = DRUMSTICK[y][x];
+            if (cell == '.') continue;
+
+            Colour colour = outline;
+            if (cell == '2') colour = bone;
+            else if (cell == '3') colour = meat;
+
+            if (cell == '3' && x + y < 7) colour = highlight;
+            if (half && x > SIZE / 2) continue;
+
+            const size_t i = (static_cast<size_t>(y) * SIZE + x) * 4;
+            pixels[i] = colour.r;
+            pixels[i + 1] = colour.g;
+            pixels[i + 2] = colour.b;
+            pixels[i + 3] = colour.a;
+        }
+    }
 
     upload(sprite, pixels.data(), SIZE, SIZE);
 }

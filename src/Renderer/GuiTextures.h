@@ -11,6 +11,9 @@ enum class GuiSprite : uint8_t
     HeartHardcoreFull,
     HeartHardcoreHalf,
     HeartHardcoreContainer,
+    FoodFull,
+    FoodHalf,
+    FoodContainer,
     Hotbar,
     HotbarSelection,
     // Faint silhouettes shown in an empty armour slot.
@@ -49,6 +52,7 @@ private:
 
     bool loadFromFile(GuiSprite sprite, const char* fileName);
     void createHeart(GuiSprite sprite, bool half, bool empty, bool hardcore);
+    void createDrumstick(GuiSprite sprite, bool half, bool empty);
     void createArmorIcon(GuiSprite sprite, int piece);
     void upload(GuiSprite sprite, const unsigned char* rgba, int width, int height);
 };

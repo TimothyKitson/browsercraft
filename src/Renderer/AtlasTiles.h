@@ -82,6 +82,7 @@ namespace Tiles
         ItemBone,
         ItemString,
         ItemGunpowder,
+        ItemBread,
         ItemTileEnd
     };
 

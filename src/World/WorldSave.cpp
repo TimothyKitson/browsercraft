@@ -114,6 +114,14 @@ void WorldSave::saveLevel(const std::string& saveDirectory, const LevelState& st
         write(out, slot.first);
         write(out, slot.second);
     }
+
+    // Appended after everything else rather than slotted in beside the
+    // health, so that a level written before hunger existed still loads:
+    // the read below simply runs out of file and keeps the defaults.
+    // FORMAT_VERSION is shared with the chunk files, and bumping it to
+    // add two numbers would throw away every saved chunk in the world.
+    write(out, state.hunger);
+    write(out, state.saturation);
 }
 
 bool WorldSave::loadLevel(const std::string& saveDirectory, LevelState& out)
@@ -148,6 +156,14 @@ bool WorldSave::loadLevel(const std::string& saveDirectory, LevelState& out)
         uint16_t count = 0;
         if (!read(in, id) || !read(in, count)) return false;
         out.inventory.emplace_back(id, count);
+    }
+
+    int hunger = out.hunger;
+    float saturation = out.saturation;
+    if (read(in, hunger) && read(in, saturation))
+    {
+        out.hunger = hunger;
+        out.saturation = saturation;
     }
     return true;
 }

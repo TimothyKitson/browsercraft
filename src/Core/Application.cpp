@@ -3,6 +3,7 @@
 #include "Renderer/Screenshot.h"
 #include "Entity/PlayerAnimation.h"
 #include "Game/Farming.h"
+#include "Game/Food.h"
 #include "World/WorldSave.h"
 #include <glm/gtc/matrix_transform.hpp>
 #include <SDL.h>
@@ -486,6 +487,8 @@ void Application::loadLevel()
         m_camera.pitch = state.pitch;
         m_timeOfDay = state.timeOfDay;
         m_player.health = state.health;
+        m_player.hunger = state.hunger;
+        m_player.saturation = state.saturation;
         m_gameMode = static_cast<GameMode>(state.gameMode);
         m_player.mode = m_gameMode;
         m_inventory.setSelectedSlot(state.selectedSlot);
@@ -523,6 +526,8 @@ void Application::saveLevel()
     state.pitch = m_camera.pitch;
     state.timeOfDay = m_timeOfDay;
     state.health = m_player.health;
+    state.hunger = m_player.hunger;
+    state.saturation = m_player.saturation;
     state.gameMode = static_cast<uint8_t>(m_gameMode);
     state.dead = m_hardcoreDeath;
     state.selectedSlot = m_inventory.selectedSlot();
@@ -908,6 +913,7 @@ bool Application::frame()
             m_drops.spawn(litter + glm::vec3(2.4f, 0.0f, 0.0f), Blocks::Cobblestone, 1);
 
             m_inventory.add(Items::Wheat, 16);
+            m_inventory.add(Items::Bread, 3);
             m_inventory.add(Items::Leather, 3);
             m_inventory.add(Items::Bone, 5);
 
@@ -1468,6 +1474,7 @@ void Application::updateGameplay(float deltaTime)
     // --- the rest of the world ---
     updateWorldAround(deltaTime);
     updateMining(deltaTime);
+    handleEating(deltaTime);
     handlePlacement();
 }
 
@@ -1604,6 +1611,24 @@ void Application::updateMining(float deltaTime)
             m_particles.spawnBlockHit(contact, hit.normal, id);
         }
     }
+}
+
+void Application::handleEating(float deltaTime)
+{
+    ItemStack& stack = m_inventory.selected();
+    const bool holding = inGame() && !m_player.creative() && m_keys.down(m_input, Action::Use);
+
+    const Food::Bite bite = Food::chew(holding && !stack.empty(), stack.id,
+                                       m_player.canEat(), m_eatTimer, deltaTime);
+    m_eatTimer = bite.timer;
+    if (!bite.swallowed) return;
+
+    const FoodValue value = Food::valueOf(stack.id);
+    if (!m_player.eat(value.hunger, value.saturation)) return;
+
+    stack.count -= 1;
+    if (stack.count <= 0) stack.clear();
+    m_audio.play(Sound::Pickup, 0.6f, 0.85f);
 }
 
 void Application::handlePlacement()
@@ -2235,6 +2260,47 @@ void Application::renderHearts(float x, float y)
     }
 }
 
+void Application::renderFood(float rightX, float y)
+{
+    constexpr int FOOD_COUNT = 10;
+    constexpr float FOOD_SIZE = 20.0f;
+    constexpr float SPACING = 2.0f;
+
+    for (int i = 0; i < FOOD_COUNT; ++i)
+    {
+        const float foodX = rightX - (i + 1) * FOOD_SIZE - i * SPACING;
+        const int remaining = m_player.hunger - i * 2;
+
+        m_ui.texturedQuad(m_gui.texture(GuiSprite::FoodContainer), foodX, y, FOOD_SIZE, FOOD_SIZE,
+                          0.0f, 0.0f, 1.0f, 1.0f, glm::vec4(1.0f));
+
+        if (remaining >= 2)
+        {
+            m_ui.texturedQuad(m_gui.texture(GuiSprite::FoodFull), foodX, y, FOOD_SIZE, FOOD_SIZE,
+                              0.0f, 0.0f, 1.0f, 1.0f, glm::vec4(1.0f));
+        }
+        else if (remaining == 1)
+        {
+            m_ui.texturedQuad(m_gui.texture(GuiSprite::FoodHalf), foodX, y, FOOD_SIZE, FOOD_SIZE,
+                              0.0f, 0.0f, 1.0f, 1.0f, glm::vec4(1.0f));
+        }
+    }
+}
+
+void Application::renderEatProgress(float cx, float cy)
+{
+    if (m_eatTimer <= 0.0f) return;
+
+    const float fraction = std::min(1.0f, m_eatTimer / Food::EAT_SECONDS);
+    const float width = 120.0f;
+    const float height = 6.0f;
+    const float x = cx - width * 0.5f;
+    const float y = cy + 30.0f;
+
+    m_ui.quad(x - 1.0f, y - 1.0f, width + 2.0f, height + 2.0f, glm::vec4(0.0f, 0.0f, 0.0f, 0.5f));
+    m_ui.quad(x, y, width * fraction, height, glm::vec4(0.85f, 0.7f, 0.35f, 0.95f));
+}
+
 void Application::renderHud()
 {
     const float w = static_cast<float>(m_window.width());
@@ -2319,7 +2385,11 @@ void Application::renderHud()
 
     // Hearts are hidden in creative, like Minecraft.
     if (!m_player.creative())
+    {
         renderHearts(barX + SLOT_GAP, barY - 60.0f);
+        renderFood(barX + barWidth - SLOT_GAP, barY - 60.0f);
+        renderEatProgress(cx, cy);
+    }
 
     // Red flash when hurt.
     if (m_player.damageFlash > 0.0f)

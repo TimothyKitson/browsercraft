@@ -15,6 +15,8 @@ struct LevelState
     float pitch = 0.0f;
     float timeOfDay = 0.25f;
     int health = 20;
+    int hunger = 20;
+    float saturation = 5.0f;
     bool creative = false;
     int selectedSlot = 0;
     uint8_t gameMode = 0;

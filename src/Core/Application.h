@@ -280,6 +280,7 @@ private:
     float m_breakProgress = 0.0f;
     float m_digSoundTimer = 0.0f;
     float m_attackCooldown = 0.0f;
+    float m_eatTimer = 0.0f;
     float m_growthTimer = 0.0f;
     uint32_t m_growthSeed = 0x1F123BB5u;
 
@@ -339,6 +340,9 @@ private:
     void returnCursorToWorld();
     void renderDebugOverlay();
     void renderHearts(float x, float y);
+    void renderFood(float rightX, float y);
+    void renderEatProgress(float cx, float cy);
+    void handleEating(float deltaTime);
 
     // --- simple immediate-mode menu widgets ---
     struct Rect { float x, y, w, h; };

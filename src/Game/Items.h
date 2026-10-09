@@ -33,6 +33,7 @@ namespace Items
         Bone,
         StringItem,     // "String" alone collides with too much
         Gunpowder,
+        Bread,
         Count
     };
 }

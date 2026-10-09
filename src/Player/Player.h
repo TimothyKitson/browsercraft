@@ -51,6 +51,19 @@ public:
     void heal(int amount);
     void respawn(glm::vec3 feetPosition);
 
+    static constexpr int MAX_HUNGER = 20;
+    static constexpr float EXHAUSTION_PER_DRAIN = 4.0f;
+    static constexpr int SPRINT_HUNGER = 7;
+    static constexpr int REGEN_HUNGER = 18;
+
+    void addExhaustion(float amount);
+    bool eat(int hungerPoints, float saturationPoints);
+    bool canEat() const { return hunger < MAX_HUNGER; }
+
+    // Hunger, healing and starvation. Called by update, and separately
+    // by --selftest, which has no world to walk about in.
+    void updateVitals(float deltaTime);
+
     glm::vec3 position{ 0.0f };
     glm::vec3 velocity{ 0.0f };
     bool onGround = false;
@@ -59,6 +72,8 @@ public:
     bool sneaking = false;
     GameMode mode = GameMode::Survival;
     int health = MAX_HEALTH;
+    int hunger = MAX_HUNGER;
+    float saturation = 5.0f;
 
     bool creative() const { return modeIsCreative(mode); }
     float damageFlash = 0.0f; // seconds remaining on the red hurt overlay
@@ -68,10 +83,14 @@ private:
     bool m_falling = false;
     float m_regenTimer = 0.0f;
     float m_hurtCooldown = 0.0f;
+    float m_exhaustion = 0.0f;
+    float m_starveTimer = 0.0f;
+    glm::vec3 m_lastPosition{ 0.0f };
 
     AABB aabbAt(const glm::vec3& feetPosition) const;
     bool collides(const World& world, const AABB& box) const;
     bool supported(const World& world, const glm::vec3& feetPosition) const;
     void moveAxis(const World& world, float delta, int axis, bool preventLedgeFall);
     void applyFallDamage(float landingY);
+    void regenerate(float deltaTime);
 };

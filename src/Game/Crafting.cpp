@@ -25,6 +25,11 @@ namespace
         { true,  0, 0, { Blocks::Log },      1, Blocks::Planks,    4 },
         { true,  0, 0, { Blocks::BirchLog }, 1, Blocks::Planks,    4 },
 
+        // Three wheat becomes a loaf. Minecraft wants them in a row,
+        // which needs a bench this game has not got yet, so it takes
+        // them in any arrangement for the same three wheat.
+        { true,  0, 0, { Items::Wheat, Items::Wheat, Items::Wheat }, 3, Items::Bread, 1 },
+
         // Four sand in a square becomes one sandstone.
         { false, 2, 2, { Blocks::Sand, Blocks::Sand,
                          Blocks::Sand, Blocks::Sand }, 0, Blocks::Sandstone, 1 },

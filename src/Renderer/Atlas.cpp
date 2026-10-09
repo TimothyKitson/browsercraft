@@ -1238,6 +1238,39 @@ namespace
         }
     }
 
+    void paintItemBread(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+
+        const Color crust{ 158, 98, 44 };
+        const Color edge{ 112, 66, 28 };
+        const Color top{ 206, 148, 80 };
+        const Color score{ 128, 76, 34 };
+
+        for (int y = 5; y <= 11; ++y)
+        {
+            const int inset = (y <= 5 || y >= 11) ? 3 : (y == 6 || y == 10) ? 2 : 1;
+            for (int x = 1 + inset; x <= 14 - inset; ++x)
+                t.set(x, y, (y <= 7) ? top : crust);
+        }
+
+        for (int x = 3; x <= 13; ++x)
+        {
+            t.set(x, 4, edge);
+            t.set(x, 12, edge);
+        }
+        for (int y = 5; y <= 11; ++y)
+        {
+            t.set(2, y, edge);
+            t.set(14, y, edge);
+        }
+
+        for (int x = 5; x <= 11; x += 3)
+            for (int y = 5; y <= 7; ++y) t.set(x + (y - 6), y, score);
+
+        t.speckle(5, 470);
+    }
+
     struct TileEntry
     {
         int index;
@@ -1301,6 +1334,7 @@ namespace
         { Tiles::ItemBone, paintItemBone },
         { Tiles::ItemString, paintItemString },
         { Tiles::ItemGunpowder, paintItemGunpowder },
+        { Tiles::ItemBread,     paintItemBread },
         { Tiles::Torch, paintTorch },
         { Tiles::BirchLogSide, paintBirchLogSide },
         { Tiles::BirchLogTop, paintBirchLogTop },

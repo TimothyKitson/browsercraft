@@ -28,8 +28,75 @@ namespace
 }
 
 Player::Player(glm::vec3 feetPosition)
-    : position(feetPosition)
+    : position(feetPosition), m_lastPosition(feetPosition)
 {
+}
+
+void Player::addExhaustion(float amount)
+{
+    if (creative() || amount <= 0.0f) return;
+    m_exhaustion += amount;
+}
+
+bool Player::eat(int hungerPoints, float saturationPoints)
+{
+    if (!canEat()) return false;
+
+    hunger = std::min(MAX_HUNGER, hunger + hungerPoints);
+    saturation = std::min(static_cast<float>(hunger), saturation + saturationPoints);
+    return true;
+}
+
+void Player::updateVitals(float deltaTime)
+{
+    if (creative())
+    {
+        hunger = MAX_HUNGER;
+        saturation = 5.0f;
+        m_exhaustion = 0.0f;
+        m_starveTimer = 0.0f;
+        regenerate(deltaTime);
+        return;
+    }
+
+    while (m_exhaustion >= EXHAUSTION_PER_DRAIN)
+    {
+        m_exhaustion -= EXHAUSTION_PER_DRAIN;
+        if (saturation > 0.0f) saturation = std::max(0.0f, saturation - 1.0f);
+        else hunger = std::max(0, hunger - 1);
+    }
+
+    if (hunger > 0) m_starveTimer = 0.0f;
+    else
+    {
+        m_starveTimer += deltaTime;
+        if (m_starveTimer >= 4.0f)
+        {
+            m_starveTimer = 0.0f;
+            damage(1);
+        }
+    }
+
+    regenerate(deltaTime);
+}
+
+void Player::regenerate(float deltaTime)
+{
+    const bool wellFed = creative() || hunger >= REGEN_HUNGER;
+    if (health > 0 && health < MAX_HEALTH && damageFlash <= 0.0f && wellFed)
+    {
+        m_regenTimer += deltaTime;
+        if (m_regenTimer >= 4.0f)
+        {
+            m_regenTimer = 0.0f;
+            heal(1);
+            addExhaustion(6.0f);
+        }
+    }
+    else
+    {
+        m_regenTimer = 0.0f;
+    }
 }
 
 AABB Player::aabbAt(const glm::vec3& feetPosition) const
@@ -152,6 +219,7 @@ bool Player::damage(int amount)
     health = std::max(0, health - amount);
     damageFlash = 0.4f;
     m_hurtCooldown = HURT_IMMUNITY;
+    m_exhaustion += 0.1f;
     return true;
 }
 
@@ -165,9 +233,14 @@ void Player::respawn(glm::vec3 feetPosition)
     position = feetPosition;
     velocity = glm::vec3(0.0f);
     health = MAX_HEALTH;
+    hunger = MAX_HUNGER;
+    saturation = 5.0f;
+    m_exhaustion = 0.0f;
+    m_starveTimer = 0.0f;
     m_falling = false;
     damageFlash = 0.0f;
     m_hurtCooldown = 0.0f;
+    m_lastPosition = feetPosition;
 }
 
 void Player::update(float deltaTime, const World& world, const Controls& controls)
@@ -175,24 +248,12 @@ void Player::update(float deltaTime, const World& world, const Controls& control
     if (damageFlash > 0.0f) damageFlash = std::max(0.0f, damageFlash - deltaTime);
     if (m_hurtCooldown > 0.0f) m_hurtCooldown = std::max(0.0f, m_hurtCooldown - deltaTime);
 
-    // Slow natural regeneration, so a bad fall isn't permanent.
-    if (health > 0 && health < MAX_HEALTH && damageFlash <= 0.0f)
-    {
-        m_regenTimer += deltaTime;
-        if (m_regenTimer >= 4.0f)
-        {
-            m_regenTimer = 0.0f;
-            heal(1);
-        }
-    }
-    else
-    {
-        m_regenTimer = 0.0f;
-    }
+    updateVitals(deltaTime);
 
     sneaking = controls.sneak && !flying;
     const bool inWater = isInWater(world);
-    sprinting = controls.sprint && !sneaking && glm::length(controls.wishDirection) > 0.1f;
+    sprinting = controls.sprint && !sneaking && glm::length(controls.wishDirection) > 0.1f &&
+                (creative() || hunger > SPRINT_HUNGER);
 
     // --- choose a target horizontal velocity ---
     float targetSpeed;
@@ -242,6 +303,7 @@ void Player::update(float deltaTime, const World& world, const Controls& control
             velocity.y = JUMP_VELOCITY;
             m_falling = true;
             m_fallStartY = position.y;
+            addExhaustion(sprinting ? 0.2f : 0.05f);
         }
 
         // Started descending without jumping (walked off a ledge).
@@ -272,4 +334,13 @@ void Player::update(float deltaTime, const World& world, const Controls& control
     // Falling out of the world shouldn't trap you forever.
     if (position.y < -8.0f && !creative())
         damage(2);
+
+    if (onGround && !flying)
+    {
+        const glm::vec3 moved = position - m_lastPosition;
+        const float distance = glm::length(glm::vec3(moved.x, 0.0f, moved.z));
+        if (distance > 0.0f)
+            addExhaustion(distance * (sprinting ? 0.1f : sneaking ? 0.0f : 0.01f));
+    }
+    m_lastPosition = position;
 }

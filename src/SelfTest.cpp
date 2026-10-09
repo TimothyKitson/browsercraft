@@ -19,6 +19,7 @@
 #include "Entity/MobType.h"
 #include "Entity/EntityManager.h"
 #include "Entity/Pathfinder.h"
+#include "Game/Food.h"
 #include "Player/Player.h"
 #include <glm/glm.hpp>
 #include <algorithm>
@@ -1096,6 +1097,99 @@ namespace
         check(!zombie.hasPath(), "an empty route leaves it walking nowhere");
     }
 
+    void testFood()
+    {
+        section("food and hunger");
+
+        check(Food::isEdible(Items::Bread), "bread is food");
+        check(Food::isEdible(Items::RawBeef), "so is raw beef");
+        check(!Food::isEdible(Items::Bone), "a bone is not");
+        check(!Food::isEdible(Blocks::Stone), "nor is a block of stone");
+        check(Food::valueOf(Items::Bread).hunger > Food::valueOf(Items::RawChicken).hunger,
+              "a loaf fills you more than a raw chicken leg");
+
+        Player player(glm::vec3(0.0f, 64.0f, 0.0f));
+        player.mode = GameMode::Survival;
+        check(player.hunger == Player::MAX_HUNGER, "you start with a full stomach");
+        check(!player.canEat(), "and nothing to gain from eating");
+
+        player.hunger = 10;
+        player.saturation = 0.0f;
+        const FoodValue loaf = Food::valueOf(Items::Bread);
+        check(player.eat(loaf.hunger, loaf.saturation), "a hungry player eats");
+        check(player.hunger == 15, "and the bread fills five of it");
+        check(player.saturation <= static_cast<float>(player.hunger),
+              "saturation never runs past the hunger holding it up");
+
+        player.hunger = Player::MAX_HUNGER;
+        check(!player.eat(loaf.hunger, loaf.saturation), "a full player does not eat");
+
+        // Exhaustion spends saturation first and hunger only once that
+        // is gone, which is what makes a big meal last.
+        Player walker(glm::vec3(0.0f, 64.0f, 0.0f));
+        walker.mode = GameMode::Survival;
+        walker.saturation = 2.0f;
+        walker.addExhaustion(Player::EXHAUSTION_PER_DRAIN);
+        walker.updateVitals(0.0f);
+        check(walker.saturation == 1.0f, "exhaustion eats into saturation first");
+        check(walker.hunger == Player::MAX_HUNGER, "leaving the hunger alone");
+
+        walker.saturation = 0.0f;
+        walker.addExhaustion(Player::EXHAUSTION_PER_DRAIN);
+        walker.updateVitals(0.0f);
+        check(walker.hunger == Player::MAX_HUNGER - 1, "and only then into the hunger");
+
+        // Healing is what a full stomach buys you.
+        Player starving(glm::vec3(0.0f, 64.0f, 0.0f));
+        starving.mode = GameMode::Survival;
+        starving.health = 10;
+        starving.hunger = 4;
+        for (int i = 0; i < 60; ++i) starving.updateVitals(0.2f);
+        check(starving.health <= 10, "an empty stomach does not heal you");
+
+        Player fed(glm::vec3(0.0f, 64.0f, 0.0f));
+        fed.mode = GameMode::Survival;
+        fed.health = 10;
+        fed.hunger = Player::MAX_HUNGER;
+        for (int i = 0; i < 60; ++i) fed.updateVitals(0.2f);
+        check(fed.health > 10, "a full one does");
+
+        // Nothing left to spend means it starts costing health.
+        Player empty(glm::vec3(0.0f, 64.0f, 0.0f));
+        empty.mode = GameMode::Survival;
+        empty.hunger = 0;
+        empty.saturation = 0.0f;
+        const int before = empty.health;
+        for (int i = 0; i < 60; ++i) empty.updateVitals(0.2f);
+        check(empty.health < before, "starving costs you health");
+
+        // Holding the button down for long enough is the whole of
+        // eating, and letting go before then gets you nothing.
+        Food::Bite bite = Food::chew(true, Items::Bread, true, 0.0f, 0.1f);
+        check(bite.chewing && !bite.swallowed, "a bite starts but does not land straight away");
+        check(bite.timer > 0.0f, "and the chew is counted");
+
+        bite = Food::chew(true, Items::Bread, true, Food::EAT_SECONDS - 0.01f, 0.1f);
+        check(bite.swallowed, "held long enough, it lands");
+        check(bite.timer == 0.0f, "and the next one starts from nothing");
+
+        bite = Food::chew(false, Items::Bread, true, 1.5f, 0.1f);
+        check(!bite.chewing && bite.timer == 0.0f, "letting go throws the chew away");
+
+        bite = Food::chew(true, Items::Bone, true, 1.5f, 0.1f);
+        check(!bite.chewing, "a bone is not chewed however long you hold it");
+
+        bite = Food::chew(true, Items::Bread, false, 1.5f, 0.1f);
+        check(!bite.chewing, "and a full player will not start");
+
+        // Creative players never think about any of it.
+        Player builder(glm::vec3(0.0f, 64.0f, 0.0f));
+        builder.mode = GameMode::Creative;
+        builder.addExhaustion(100.0f);
+        builder.updateVitals(0.1f);
+        check(builder.hunger == Player::MAX_HUNGER, "creative mode is never hungry");
+    }
+
     void testPlayerImmunity()
     {
         section("player: hurt immunity");
@@ -1153,6 +1247,7 @@ int runSelfTest()
     testMobDrops();
     testFarming();
     testPathfinding();
+    testFood();
     testPlayerImmunity();
 
     std::printf("\n%d checks, %d failed\n", g_checks, g_failures);

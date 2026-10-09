@@ -22,6 +22,7 @@ namespace
         { "Bone",         Tiles::ItemBone,       64 },
         { "String",       Tiles::ItemString,     64 },
         { "Gunpowder",    Tiles::ItemGunpowder,  64 },
+        { "Bread",        Tiles::ItemBread,      64 },
     };
 
     static_assert(sizeof(ITEMS) / sizeof(ITEMS[0]) ==
