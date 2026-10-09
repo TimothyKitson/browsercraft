@@ -14,6 +14,7 @@ enum class Action
     Jump, Sneak, Sprint,
     Attack, Use, PickBlock,
     Drop, Inventory,
+    Chat, SlashCommand,
     Fly,
     Perspective,
     Screenshot, Debug, HideHud, Fullscreen,

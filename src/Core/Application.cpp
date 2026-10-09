@@ -489,6 +489,7 @@ void Application::loadLevel()
         m_player.health = state.health;
         m_player.hunger = state.hunger;
         m_player.saturation = state.saturation;
+        m_allowCheats = state.cheats;
         m_gameMode = static_cast<GameMode>(state.gameMode);
         m_player.mode = m_gameMode;
         m_inventory.setSelectedSlot(state.selectedSlot);
@@ -528,6 +529,7 @@ void Application::saveLevel()
     state.health = m_player.health;
     state.hunger = m_player.hunger;
     state.saturation = m_player.saturation;
+    state.cheats = m_allowCheats;
     state.gameMode = static_cast<uint8_t>(m_gameMode);
     state.dead = m_hardcoreDeath;
     state.selectedSlot = m_inventory.selectedSlot();
@@ -1072,6 +1074,11 @@ void Application::applyMenuAction()
             m_screen = Screen::NameEntry;
             break;
 
+        case MenuAction::ToggleCheats:
+            m_allowCheats = !m_allowCheats;
+            m_audio.play(Sound::Click, 0.45f);
+            break;
+
         case MenuAction::PickSkin:
             m_skinVariant = m_pendingSkinVariant;
             m_audio.play(Sound::Click, 0.45f);
@@ -1419,6 +1426,12 @@ void Application::waitForSpawnChunk()
 
 void Application::updateGameplay(float deltaTime)
 {
+    // Typing comes first and takes everything: no walking, no looking and
+    // no mining while the chat line is open.
+    updateChatInput();
+    m_chatLog.update(deltaTime);
+    if (m_chatOpen) return;
+
     // --- look ---
     // Moving/resizing the window or regaining focus can deliver one huge
     // bogus mouse delta, which would snap the view straight up. Real mouse
@@ -1764,7 +1777,7 @@ void Application::render()
             // a crosshair and a second hotbar drawn over the panel just
             // looked like a bug.
             if (m_inventoryOpen) renderInventoryScreen();
-            else if (!m_hudHidden) renderHud();
+            else if (!m_hudHidden) { renderHud(); renderChat(); }
             break;
         case Screen::Paused:
             renderHud();
@@ -1932,6 +1945,128 @@ void Application::renderWorld()
     glDisable(GL_BLEND);
 
     renderHand();
+}
+
+void Application::updateChatInput()
+{
+    if (!playing() || m_inventoryOpen) { m_chatOpen = false; return; }
+
+    if (!m_chatOpen)
+    {
+        if (m_keys.pressed(m_input, Action::Chat)) { m_chatOpen = true; m_chatDraft.clear(); }
+        else if (m_keys.pressed(m_input, Action::SlashCommand)) { m_chatOpen = true; m_chatDraft = "/"; }
+        return;
+    }
+
+    if (m_input.wasKeyPressed(SDL_SCANCODE_ESCAPE))
+    {
+        m_chatOpen = false;
+        m_chatDraft.clear();
+        return;
+    }
+
+    if (m_input.wasKeyPressed(SDL_SCANCODE_BACKSPACE) && !m_chatDraft.empty())
+        m_chatDraft.pop_back();
+
+    for (char c : m_input.typedText())
+        if (c >= 32 && m_chatDraft.size() < Chat::MAX_LENGTH) m_chatDraft.push_back(c);
+
+    if (m_input.wasKeyPressed(SDL_SCANCODE_RETURN) || m_input.wasKeyPressed(SDL_SCANCODE_KP_ENTER))
+    {
+        const std::string line = m_chatDraft;
+        m_chatOpen = false;
+        m_chatDraft.clear();
+        runChatLine(line);
+    }
+}
+
+void Application::runChatLine(const std::string& line)
+{
+    const Chat::Command command = Chat::parse(line, m_allowCheats || m_player.creative());
+
+    switch (command.kind)
+    {
+        case Chat::Kind::Nothing:
+            return;
+
+        case Chat::Kind::Say:
+        {
+            const std::string who = m_playerName.empty() ? "YOU" : m_playerName;
+            m_chatLog.add("<" + who + "> " + command.text);
+            return;
+        }
+
+        case Chat::Kind::GameMode:
+            m_gameMode = static_cast<GameMode>(command.mode);
+            m_player.mode = m_gameMode;
+            break;
+
+        case Chat::Kind::TimeSet:
+            m_timeOfDay = command.time;
+            break;
+
+        case Chat::Kind::Teleport:
+            m_player.position = command.position;
+            m_player.velocity = glm::vec3(0.0f);
+            break;
+
+        case Chat::Kind::Give:
+            m_inventory.add(command.item, command.count);
+            break;
+
+        case Chat::Kind::Kill:
+            m_player.health = 0;
+            break;
+
+        case Chat::Kind::Seed:
+            m_chatLog.add(m_world ? "Seed: " + std::to_string(m_world->seed())
+                                  : std::string("No world loaded."));
+            return;
+
+        default:
+            break;
+    }
+
+    m_chatLog.add(command.text);
+}
+
+void Application::renderChat()
+{
+    const float h = static_cast<float>(m_window.height());
+    const float lineHeight = 20.0f;
+    const float left = 12.0f;
+    const float bottom = h - 120.0f;
+
+    const std::vector<Chat::Log::Line>& lines = m_chatLog.lines();
+    const int shown = std::min<int>(Chat::VISIBLE_LINES, static_cast<int>(lines.size()));
+
+    for (int i = 0; i < shown; ++i)
+    {
+        const Chat::Log::Line& line = lines[lines.size() - shown + i];
+
+        // Closed chat shows only what is still recent; opened, it shows
+        // the lot, so you can read back what you missed.
+        if (!m_chatOpen && line.age > Chat::LINE_SECONDS) continue;
+
+        float fade = 1.0f;
+        if (!m_chatOpen && line.age > Chat::LINE_SECONDS - 1.0f)
+            fade = Chat::LINE_SECONDS - line.age;
+
+        const float y = bottom - (shown - i) * lineHeight;
+        m_ui.quad(left - 4.0f, y - 2.0f,
+                  UIRenderer::textWidth(line.text, 1.9f) + 8.0f, lineHeight,
+                  glm::vec4(0.0f, 0.0f, 0.0f, 0.35f * fade));
+        m_ui.textWithShadow(line.text, left, y, 1.9f,
+                            glm::vec4(1.0f, 1.0f, 1.0f, fade));
+    }
+
+    if (!m_chatOpen) return;
+
+    const float y = bottom + 6.0f;
+    m_ui.quad(left - 4.0f, y - 2.0f,
+              static_cast<float>(m_window.width()) - left * 2.0f, lineHeight + 4.0f,
+              glm::vec4(0.0f, 0.0f, 0.0f, 0.55f));
+    m_ui.textWithShadow(m_chatDraft + "_", left, y, 1.9f, TEXT_COLOR);
 }
 
 // Your own arm, last of everything and on a cleared depth buffer, so
@@ -2660,6 +2795,19 @@ void Application::renderSingleplayerScreen()
     }
 
     y += 10.0f;
+
+    // Decided before the world is made, and kept with it. Creative has
+    // the lot anyway, so the toggle only really bites in survival.
+    const std::string cheats = std::string("ALLOW CHEATS: ") + (m_allowCheats ? "ON" : "OFF");
+    if (menuButton({ buttonX, y, buttonWidth, 46.0f }, cheats))
+        m_pendingAction = MenuAction::ToggleCheats;
+    y += 46.0f + 8.0f;
+
+    centredText(m_allowCheats ? "/GAMEMODE /TIME /TP /GIVE /KILL /SEED"
+                              : "CHAT WORKS EITHER WAY; THE COMMANDS DO NOT",
+                y, 1.7f, DIM_TEXT);
+    y += 30.0f;
+
     if (menuButton({ buttonX, y, buttonWidth, 46.0f }, "BACK"))
         m_pendingAction = MenuAction::BackToTitle;
 }

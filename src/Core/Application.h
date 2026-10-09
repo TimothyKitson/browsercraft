@@ -18,6 +18,7 @@
 #include "Entity/PlayerSkin.h"
 #include "Entity/PlayerModel.h"
 #include "Entity/HeldItem.h"
+#include "Game/Chat.h"
 #include "Entity/EntityManager.h"
 #include "Entity/MobModel.h"
 #include "Game/GameMode.h"
@@ -53,6 +54,7 @@ enum class MenuAction
 {
     None,
     GoSingleplayer,
+    ToggleCheats,
     GoMultiplayer,
     GoSettings,
     GoControls,
@@ -283,6 +285,14 @@ private:
     float m_attackCooldown = 0.0f;
     float m_eatTimer = 0.0f;
     HeldItem m_heldItem;
+
+    // Set before a world is made and saved with it, the way Minecraft
+    // does: chat always works, the commands only here.
+    bool m_allowCheats = false;
+
+    Chat::Log m_chatLog;
+    bool m_chatOpen = false;
+    std::string m_chatDraft;
     float m_growthTimer = 0.0f;
     uint32_t m_growthSeed = 0x1F123BB5u;
 
@@ -342,6 +352,9 @@ private:
     void returnCursorToWorld();
     void renderDebugOverlay();
     void renderHand();
+    void renderChat();
+    void updateChatInput();
+    void runChatLine(const std::string& line);
     void renderHearts(float x, float y);
     void renderFood(float rightX, float y);
     void renderEatProgress(float cx, float cy);
@@ -369,7 +382,7 @@ private:
 
     void setMouseCaptured(bool captured);
     bool playing() const { return m_screen == Screen::Playing; }
-    bool uiHasFocus() const { return m_screen != Screen::Playing || m_inventoryOpen; }
+    bool uiHasFocus() const { return m_screen != Screen::Playing || m_inventoryOpen || m_chatOpen; }
 
     glm::vec3 sunDirection() const;
     float daylightFactor() const;

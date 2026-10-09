@@ -34,6 +34,8 @@ namespace
         { Action::PickBlock, "PICK BLOCK",       "pick",      mouse(SDL_BUTTON_MIDDLE) },
         { Action::Drop,      "DROP ITEM",        "drop",      key(SDL_SCANCODE_Q) },
         { Action::Inventory, "INVENTORY",        "inventory", key(SDL_SCANCODE_E) },
+        { Action::Chat,      "OPEN CHAT",        "chat",      key(SDL_SCANCODE_T) },
+        { Action::SlashCommand, "OPEN COMMAND",  "command",   key(SDL_SCANCODE_SLASH) },
         { Action::Fly,       "TOGGLE FLY",       "fly",       key(SDL_SCANCODE_F) },
         { Action::Perspective, "TOGGLE PERSPECTIVE", "perspective", key(SDL_SCANCODE_F5) },
         { Action::Screenshot,"SCREENSHOT",       "screenshot",key(SDL_SCANCODE_F2) },

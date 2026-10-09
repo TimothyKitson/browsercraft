@@ -21,6 +21,7 @@ struct LevelState
     int selectedSlot = 0;
     uint8_t gameMode = 0;
     bool dead = false;   // a hardcore run that has ended
+    bool cheats = false; // whether the commands work in this world
     // One entry per slot: what it holds and how many. The id is sixteen
     // bits because a slot can hold an item as well as a block, and the
     // items begin past everything a block id can say.

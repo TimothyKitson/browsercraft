@@ -122,6 +122,7 @@ void WorldSave::saveLevel(const std::string& saveDirectory, const LevelState& st
     // add two numbers would throw away every saved chunk in the world.
     write(out, state.hunger);
     write(out, state.saturation);
+    write(out, state.cheats);
 }
 
 bool WorldSave::loadLevel(const std::string& saveDirectory, LevelState& out)
@@ -164,6 +165,9 @@ bool WorldSave::loadLevel(const std::string& saveDirectory, LevelState& out)
     {
         out.hunger = hunger;
         out.saturation = saturation;
+
+        bool cheats = out.cheats;
+        if (read(in, cheats)) out.cheats = cheats;
     }
     return true;
 }

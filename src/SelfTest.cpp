@@ -19,6 +19,7 @@
 #include "Entity/MobType.h"
 #include "Entity/EntityManager.h"
 #include "Entity/Pathfinder.h"
+#include "Game/Chat.h"
 #include "Game/Food.h"
 #include "Renderer/Atlas.h"
 #include "Player/Player.h"
@@ -1134,6 +1135,80 @@ namespace
         check(!zombie.hasPath(), "an empty route leaves it walking nowhere");
     }
 
+    void testChatCommands()
+    {
+        section("chat and commands");
+
+        // Ordinary chat is not a command and never needs cheats.
+        check(Chat::parse("hello", false).kind == Chat::Kind::Say, "plain text is chat");
+        check(Chat::parse("hello", false).text == "hello", "and goes out as typed");
+        check(Chat::parse("   ", false).kind == Chat::Kind::Nothing, "a blank line says nothing");
+        check(Chat::parse("  hi  ", false).text == "hi", "surrounding space is trimmed");
+
+        // Help works either way, and says which way it is.
+        check(Chat::parse("/help", false).kind == Chat::Kind::Help, "/help works without cheats");
+        check(Chat::parse("/help", true).kind == Chat::Kind::Help, "and with them");
+        check(Chat::parse("/help", false).text != Chat::parse("/help", true).text,
+              "and tells you which of the two you have");
+
+        // Everything else is refused when the world was made without
+        // cheats -- and refused as Denied, not as Unknown, so the player
+        // is told why rather than being told it does not exist.
+        const char* GATED[] = { "/gamemode creative", "/time set day", "/tp 1 2 3",
+                                "/give stone 4", "/kill", "/seed" };
+        bool allDenied = true, allAllowed = true;
+        for (const char* line : GATED)
+        {
+            if (Chat::parse(line, false).kind != Chat::Kind::Denied) allDenied = false;
+            const Chat::Kind kind = Chat::parse(line, true).kind;
+            if (kind == Chat::Kind::Denied || kind == Chat::Kind::Unknown) allAllowed = false;
+        }
+        check(allDenied, "every command is refused when cheats are off");
+        check(allAllowed, "and every one of them works when they are on");
+
+        check(Chat::parse("/gamemode creative", true).mode == static_cast<int>(GameMode::Creative),
+              "/gamemode creative asks for creative");
+        check(Chat::parse("/gm s", true).mode == static_cast<int>(GameMode::Survival),
+              "and /gm s for survival");
+        check(Chat::parse("/gamemode sideways", true).kind == Chat::Kind::Unknown,
+              "a mode that does not exist is turned away");
+
+        check(Chat::parse("/time set day", true).time == 0.25f, "day is dawn");
+        check(Chat::parse("/time set night", true).time == 0.75f, "night is dusk");
+        check(Chat::parse("/time set", true).kind == Chat::Kind::Unknown, "with no time, nothing");
+
+        const Chat::Command tp = Chat::parse("/tp 10 70 -5", true);
+        check(tp.position == glm::vec3(10.0f, 70.0f, -5.0f), "/tp reads three coordinates");
+        check(Chat::parse("/tp 10 70", true).kind == Chat::Kind::Unknown, "two is not enough");
+        check(Chat::parse("/tp here there everywhere", true).kind == Chat::Kind::Unknown,
+              "and they have to be numbers");
+
+        const Chat::Command give = Chat::parse("/give wheat 12", true);
+        check(give.item == Items::Wheat && give.count == 12, "/give finds an item by name");
+        check(Chat::parse("/give cobblestone", true).item == Blocks::Cobblestone,
+              "and a block by name");
+        check(Chat::parse("/give raw_beef", true).item == Items::RawBeef,
+              "with underscores for the spaces, as Minecraft writes them");
+        check(Chat::parse("/give unobtainium", true).kind == Chat::Kind::Unknown,
+              "something that does not exist is turned away");
+        check(Chat::parse("/give wheat", true).count == 1, "no count means one");
+
+        check(Chat::parse("/nonsense", true).kind == Chat::Kind::Unknown,
+              "an unknown command is unknown even with cheats on");
+        check(!Chat::parse("/nonsense", true).text.empty(), "and says so rather than failing silently");
+
+        // The log keeps only what is worth showing.
+        Chat::Log log;
+        for (int i = 0; i < 200; ++i) log.add("line " + std::to_string(i));
+        check(static_cast<int>(log.lines().size()) <= Chat::VISIBLE_LINES * 4,
+              "the log does not grow without bound");
+        check(log.lines().back().text == "line 199", "and keeps the newest");
+
+        log.clear();
+        log.add("");
+        check(log.lines().empty(), "an empty line is not logged");
+    }
+
     void testCrackStages()
     {
         section("mining: break overlay");
@@ -1324,6 +1399,7 @@ int runSelfTest()
     testMobDrops();
     testFarming();
     testPathfinding();
+    testChatCommands();
     testCrackStages();
     testFood();
     testPlayerImmunity();
