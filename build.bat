@@ -16,16 +16,36 @@ echo.
 echo Could not find git, which CMake needs to fetch SDL2.
 echo.
 echo Install it with:  winget install --id Git.Git -e
-echo then open a new terminal so git is on PATH.
+echo then open a new terminal.
+echo.
+echo If git IS installed somewhere unusual, put its cmd folder on PATH:
+echo   $env:Path += ";C:\path\to\Git\cmd"
 echo.
 exit /b 1
 
 :nocompiler
 
-REM CMake fetches SDL2, glm and stb by cloning them, so git has to be on
-REM PATH before any of the rest of this is worth trying.
+REM CMake fetches SDL2, glm and stb by cloning them, so git has to be
+REM reachable before any of the rest of this is worth trying. Looking only
+REM at PATH gets this wrong: the Windows installer does not always put git
+REM there, and CMake finds it anyway by searching the usual folders. So
+REM the usual folders are searched here too, and only a machine with no
+REM git at all is turned away.
 where git >nul 2>&1
-if errorlevel 1 goto :nogit
+if not errorlevel 1 goto :gotgit
+
+set "GITDIR=%ProgramFiles%\Git\cmd"
+if exist "!GITDIR!\git.exe" goto :addgit
+set "GITDIR=%ProgramFiles(x86)%\Git\cmd"
+if exist "!GITDIR!\git.exe" goto :addgit
+set "GITDIR=%LOCALAPPDATA%\Programs\Git\cmd"
+if exist "!GITDIR!\git.exe" goto :addgit
+goto :nogit
+
+:addgit
+set "PATH=!GITDIR!;!PATH!"
+
+:gotgit
 
 call "!VS!\VC\Auxiliary\Build\vcvars64.bat" >nul 2>&1
 
@@ -49,7 +69,10 @@ echo.
 echo Could not find git, which CMake needs to fetch SDL2.
 echo.
 echo Install it with:  winget install --id Git.Git -e
-echo then open a new terminal so git is on PATH.
+echo then open a new terminal.
+echo.
+echo If git IS installed somewhere unusual, put its cmd folder on PATH:
+echo   $env:Path += ";C:\path\to\Git\cmd"
 echo.
 exit /b 1
 
