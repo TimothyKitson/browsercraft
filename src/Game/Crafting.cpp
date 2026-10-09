@@ -51,6 +51,11 @@ namespace
                          Blocks::Planks, Blocks::Planks, Blocks::Planks },
           0, Blocks::Chest, 1 },
 
+        // Three wool over three planks makes a bed.
+        { false, 3, 2, { Blocks::Wool,   Blocks::Wool,   Blocks::Wool,
+                         Blocks::Planks, Blocks::Planks, Blocks::Planks },
+          0, Blocks::Bed, 1 },
+
         // Two planks, one above the other, make four sticks.
         { false, 1, 2, { Blocks::Planks,
                          Blocks::Planks }, 0, Items::Stick, 4 },

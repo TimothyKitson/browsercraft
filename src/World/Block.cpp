@@ -58,6 +58,7 @@ namespace
         { "Furnace",      FurnaceTop,    FurnaceTop,     FurnaceFront,   true,  true,  RenderType::Cube,   0,   3.5f },
         { "Furnace",      FurnaceTop,    FurnaceTop,     FurnaceLit,     true,  true,  RenderType::Cube,  13,   3.5f },
         { "Chest",        ChestTop,      ChestTop,       ChestFront,     true,  true,  RenderType::Cube,   0,   2.5f },
+        { "Bed",          BedTop,        Planks,         BedSide,        true,  true,  RenderType::Cube,   0,   0.2f },
         { "Farmland",     FarmlandTop,   Dirt,           FarmlandSide,   true,  true,  RenderType::Cube,   0,   0.6f },
         { "Wheat Crop",   WheatStage0,   WheatStage0,    WheatStage0,    false, false, RenderType::Cross,  0,   0.0f },
         { "Wheat Crop",   WheatStage1,   WheatStage1,    WheatStage1,    false, false, RenderType::Cross,  0,   0.0f },
@@ -136,6 +137,7 @@ const char* blockSoundGroup(BlockId id)
             return "wood";
 
         case Blocks::Wool:
+        case Blocks::Bed:
             return "cloth";
 
         case Blocks::Air:

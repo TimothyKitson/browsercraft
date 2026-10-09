@@ -7,6 +7,7 @@
 #include "Game/Food.h"
 #include "Game/Tools.h"
 #include "Game/Armour.h"
+#include "Game/Sleep.h"
 #include "World/WorldSave.h"
 #include <glm/gtc/matrix_transform.hpp>
 #include <SDL.h>
@@ -1083,14 +1084,15 @@ bool Application::frame()
             m_startupScreen == "bench" || m_startupScreen == "tools" ||
             m_startupScreen == "furnace" || m_startupScreen == "furnaceblock" ||
             m_startupScreen == "chest" || m_startupScreen == "armour" ||
-            m_startupScreen == "armourhud")
+            m_startupScreen == "armourhud" || m_startupScreen == "bed")
         {
             // Dev aid: open the inventory with something in it, so the
             // screenshot shows a real grid rather than 36 empty boxes.
             // "furnaceblock" is the exception: it wants the block in
             // view, not a panel in front of it.
             const bool showPanel = m_startupScreen != "furnaceblock" &&
-                                  m_startupScreen != "armourhud";
+                                  m_startupScreen != "armourhud" &&
+                                  m_startupScreen != "bed";
             m_inventoryOpen = showPanel;
             setMouseCaptured(!showPanel);
             m_inventory.add(Blocks::Cobblestone, 64);
@@ -1114,6 +1116,16 @@ bool Application::frame()
                 m_inventory.slot(Inventory::ARMOR_FIRST + 3).id = Items::LeatherBoots;
                 m_inventory.slot(Inventory::ARMOR_FIRST + 3).count = 1;
                 m_player.armourPoints = armourPoints();
+            }
+
+            if (m_startupScreen == "bed")
+            {
+                const glm::vec3 ahead = m_player.position + m_camera.front * 3.0f;
+                const glm::ivec3 where(static_cast<int>(std::floor(ahead.x)),
+                                       static_cast<int>(std::floor(m_player.position.y)),
+                                       static_cast<int>(std::floor(ahead.z)));
+                m_world->setBlock(where.x, where.y + 1, where.z, Blocks::Bed);
+                m_world->setBlock(where.x, where.y + 1, where.z - 1, Blocks::Chest);
             }
 
             if (m_startupScreen == "chest")
@@ -1985,6 +1997,32 @@ void Application::wearOnSwing(StackId weapon)
     }
 }
 
+// A bed does two things: it is where you wake up when you die, and it
+// takes you through to morning. The first works whatever the hour; the
+// second only at night, the same as Minecraft.
+void Application::sleepInBed(const glm::ivec3& block)
+{
+    const glm::vec3 beside = glm::vec3(block) + glm::vec3(0.5f, 1.0f, 0.5f);
+    m_spawnPoint = beside;
+
+    if (!Sleep::isNight(m_timeOfDay))
+    {
+        m_chatLog.add("You can only sleep at night. Spawn point set.");
+        m_audio.play(Sound::Click, 0.4f);
+        return;
+    }
+
+    m_timeOfDay = Sleep::wakeTime();
+
+    // A night's rest. Minecraft heals you slowly through the night; with
+    // no clock running while you sleep, the rest is given at once.
+    if (!m_player.creative() && m_player.health > 0)
+        m_player.heal(Player::MAX_HEALTH / 4);
+
+    m_chatLog.add("Good morning. Spawn point set.");
+    m_audio.play(Sound::DigWool, 0.6f, 0.8f);
+}
+
 void Application::handleEating(float deltaTime)
 {
     ItemStack& stack = m_inventory.selected();
@@ -2048,6 +2086,11 @@ void Application::handlePlacement()
             {
                 openChest(bench.block);
                 m_audio.play(Sound::DigWood, 0.5f, 0.8f);
+                return;
+            }
+            if (used == Blocks::Bed)
+            {
+                sleepInBed(bench.block);
                 return;
             }
         }

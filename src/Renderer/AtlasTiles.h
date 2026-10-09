@@ -63,6 +63,7 @@ namespace Tiles
         CraftingTop, CraftingSide,
         FurnaceFront, FurnaceLit, FurnaceTop,
         ChestFront, ChestSide, ChestTop,
+        BedTop, BedSide,
         TileCount
     };
 
@@ -70,7 +71,11 @@ namespace Tiles
     // their own: a hotbar slot draws the same way whichever it holds,
     // and one atlas is one texture bind. They start well clear of the
     // blocks so adding a block never renumbers them.
-    constexpr int ItemFirst = 64;
+    // Raised from 64 when the blocks grew past it: the bench, the
+    // furnace, the chest and the bed between them put the block tiles
+    // over that line. Nothing stores a tile index, so moving the items
+    // up costs nothing but the static_assert below keeping watch.
+    constexpr int ItemFirst = 96;
 
     enum : int
     {

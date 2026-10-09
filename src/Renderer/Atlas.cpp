@@ -422,6 +422,70 @@ namespace
     void paintChestFront(Tile& t) { paintChestFace(t, true); }
     void paintChestSide(Tile& t)  { paintChestFace(t, false); }
 
+    // The bed. Minecraft's is two blocks long and turned to face the way
+    // you placed it; nothing here has a facing, so this is one block
+    // with the pillow at one end, which still reads as a bed from above.
+    void paintBedTop(Tile& t)
+    {
+        const int n = Tile::N;
+        const Color cloth{ 176, 46, 46 };
+        const Color clothDark{ 138, 32, 32 };
+        const Color pillow{ 232, 232, 236 };
+        const Color pillowShade{ 198, 198, 204 };
+        const Color frame{ 118, 84, 44 };
+
+        t.fill(cloth);
+        for (int y = 0; y < n; ++y)
+            for (int x = 0; x < n; ++x)
+                if (hash2(x, y, 81) > 0.72f) t.set(x, y, clothDark);
+
+        // The pillow across the top quarter.
+        for (int y = 1; y < n / 4 + 1; ++y)
+            for (int x = 2; x < n - 2; ++x)
+                t.set(x, y, hash2(x, y, 82) > 0.7f ? pillowShade : pillow);
+
+        // The blanket's turned-down edge below it.
+        for (int x = 2; x < n - 2; ++x) t.set(x, n / 4 + 1, pillowShade);
+
+        for (int k = 0; k < n; ++k)
+        {
+            t.set(k, 0, frame); t.set(k, n - 1, frame);
+            t.set(0, k, frame); t.set(n - 1, k, frame);
+        }
+    }
+
+    void paintBedSide(Tile& t)
+    {
+        const int n = Tile::N;
+        const Color cloth{ 176, 46, 46 };
+        const Color clothDark{ 138, 32, 32 };
+        const Color wood{ 134, 96, 52 };
+        const Color woodDark{ 98, 70, 36 };
+
+        // Cloth on top, the wooden frame below it. The block is opaque,
+        // so the legs are painted on rather than cut out -- holes in an
+        // opaque block show the inside of the world through them.
+        const int clothDepth = n * 5 / 8;
+
+        for (int y = 0; y < n; ++y)
+            for (int x = 0; x < n; ++x)
+            {
+                const bool upper = y < clothDepth;
+                Color c = upper ? cloth : wood;
+                if (hash2(x, y, 83) > 0.72f) c = upper ? clothDark : woodDark;
+                t.set(x, y, c);
+            }
+
+        // The seam where the mattress meets the frame.
+        for (int x = 0; x < n; ++x) t.set(x, clothDepth, shade(wood, -30));
+
+        // Legs at the corners, dark against the lighter frame between.
+        const Color shadow = shade(woodDark, -26);
+        for (int y = clothDepth + 1; y < n; ++y)
+            for (int x = n / 5; x < n - n / 5; ++x)
+                t.set(x, y, shadow);
+    }
+
     void paintBedrock(Tile& t)
     {
         t.fill(Color{ 85, 85, 85 });
@@ -1773,6 +1837,8 @@ namespace
         { Tiles::ItemWheat, paintItemWheat },
         { Tiles::CraftingTop,   paintCraftingTop },
         { Tiles::FurnaceTop,    paintFurnaceTop },
+        { Tiles::BedTop,        paintBedTop },
+        { Tiles::BedSide,       paintBedSide },
         { Tiles::ChestTop,      paintChestTop },
         { Tiles::ChestFront,    paintChestFront },
         { Tiles::ChestSide,     paintChestSide },

@@ -61,7 +61,8 @@ namespace
     };
 
     const StackId TAB_TOOLS[] = {
-        Blocks::CraftingTable, Blocks::Furnace, Items::Stick, Items::Coal,
+        Blocks::CraftingTable, Blocks::Furnace, Blocks::Chest, Blocks::Bed,
+        Items::Stick, Items::Coal,
         Items::IronIngot, Items::GoldIngot, Items::Diamond,
         Items::WoodPickaxe, Items::WoodAxe, Items::WoodShovel, Items::WoodSword, Items::WoodHoe,
         Items::StonePickaxe, Items::StoneAxe, Items::StoneShovel, Items::StoneSword, Items::StoneHoe,

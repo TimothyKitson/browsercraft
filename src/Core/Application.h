@@ -388,6 +388,7 @@ private:
 
     // The open furnace borrows three inventory slots while its screen is
     // up; these move its contents in and back out again.
+    void sleepInBed(const glm::ivec3& block);
     void openChest(const glm::ivec3& block);
     void stowChest();
 

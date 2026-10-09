@@ -18,6 +18,7 @@
 #include "Game/Tools.h"
 #include "Game/Smelting.h"
 #include "Game/Armour.h"
+#include "Game/Sleep.h"
 #include "World/Furnaces.h"
 #include "World/Chests.h"
 #include "Entity/MobModel.h"
@@ -1895,6 +1896,46 @@ namespace
               "but go on your feet");
     }
 
+    void testSleep()
+    {
+        section("beds");
+
+        // Noon and the afternoon are no time for bed.
+        check(!Sleep::isNight(0.25f), "you cannot sleep at sunrise");
+        check(!Sleep::isNight(0.5f), "nor at noon");
+        check(!Sleep::isNight(0.7f), "nor in the late afternoon");
+
+        // Dusk through midnight and round to dawn is.
+        check(Sleep::isNight(0.75f), "you can sleep at sunset");
+        check(Sleep::isNight(0.9f), "and through the evening");
+        check(Sleep::isNight(0.0f), "and at midnight");
+        check(Sleep::isNight(0.1f), "and in the small hours");
+        check(!Sleep::isNight(0.23f), "but not once it is getting light");
+
+        // The window wraps round midnight rather than stopping at it,
+        // which an unwrapped comparison would get wrong.
+        check(Sleep::isNight(0.99f), "just before midnight is night");
+        check(Sleep::isNight(0.01f), "and just after it still is");
+
+        // Waking puts the clock at morning, which is not itself a time
+        // you could have gone to bed at -- so sleeping twice over is not
+        // possible without a day passing first.
+        check(!Sleep::isNight(Sleep::wakeTime()), "you wake into the day");
+
+        // The whole day, swept, so the window is exactly one stretch
+        // rather than two: counting the edges catches a rule that is
+        // true in two separate places by accident.
+        int openings = 0;
+        bool was = Sleep::isNight(0.0f);
+        for (int i = 1; i <= 1000; ++i)
+        {
+            const bool now = Sleep::isNight(static_cast<float>(i) / 1000.0f);
+            if (now && !was) ++openings;
+            was = now;
+        }
+        check(openings == 1, "the night opens once in a day");
+    }
+
     void testChestStore()
     {
         section("chests");
@@ -2087,6 +2128,7 @@ int runSelfTest()
     testArmour();
     testArmourRecipes();
     testWearing();
+    testSleep();
     testChestStore();
     testLevelRoundTrip();
 
