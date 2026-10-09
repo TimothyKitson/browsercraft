@@ -29,14 +29,30 @@ enum class Sound : uint8_t
     Hurt,
     Pickup,
     Click,
-    MobBleat,
-    MobGrunt,
-    MobCluck,
-    MobGroan,
-    MobRattle,
-    MobHiss,
-    MobHurt,
-    MobDeath,
+    MobSheepSay,
+    MobSheepHurt,
+    MobSheepDeath,
+    MobPigSay,
+    MobPigHurt,
+    MobPigDeath,
+    MobCowSay,
+    MobCowHurt,
+    MobCowDeath,
+    MobChickenSay,
+    MobChickenHurt,
+    MobChickenDeath,
+    MobZombieSay,
+    MobZombieHurt,
+    MobZombieDeath,
+    MobSkeletonSay,
+    MobSkeletonHurt,
+    MobSkeletonDeath,
+    MobCreeperSay,
+    MobCreeperHurt,
+    MobCreeperDeath,
+    MobSpiderSay,
+    MobSpiderHurt,
+    MobSpiderDeath,
     MobStep,
     Count
 };
@@ -101,6 +117,7 @@ private:
     // Loads "<stem>1.ogg", "<stem>2.ogg", ... until one is missing.
     int loadVariants(Sound id, const char* stem, int maxVariants);
     bool loadSingle(Sound id, const char* file);
+    void loadMobVoice(Sound say, Sound hurt, Sound death, const char* folder);
     void mix(float* output, int frames);
     static void callback(void* userData, uint8_t* stream, int lengthBytes);
 };

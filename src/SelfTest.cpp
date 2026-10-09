@@ -667,14 +667,14 @@ namespace
         pig.damage(3, glm::vec3(1.0f, 0.0f, 0.0f));
         check(pig.health() == full - 3, "a hit takes health off");
         check(pig.hurtFlash() > 0.0f, "and makes it flash");
-        check(pig.sounds().size() == 1 && pig.sounds()[0].id == Sound::MobHurt,
+        check(pig.sounds().size() == 1 && pig.sounds()[0].id == Sound::MobPigHurt,
               "and makes it squeal");
         pig.sounds().clear();
 
         pig.damage(1000, glm::vec3(1.0f, 0.0f, 0.0f));
         check(pig.health() == 0, "enough damage kills it");
         check(!pig.alive(), "and it stops being alive");
-        check(pig.sounds().size() == 1 && pig.sounds()[0].id == Sound::MobDeath,
+        check(pig.sounds().size() == 1 && pig.sounds()[0].id == Sound::MobPigDeath,
               "with a death noise, not another squeal");
         pig.sounds().clear();
 
@@ -687,8 +687,21 @@ namespace
         check(pig.sounds().empty(), "hitting a corpse does nothing");
 
         // Species keep their own voices.
-        check(mobType(MobId::Creeper).voice == Sound::MobHiss, "creepers hiss");
-        check(mobType(MobId::Chicken).voice == Sound::MobCluck, "chickens cluck");
+        check(mobType(MobId::Creeper).voice == Sound::MobCreeperSay, "a creeper has its own voice");
+        check(mobType(MobId::Chicken).voice == Sound::MobChickenSay, "and so does a chicken");
+
+        // No two species may share a cry, or a dying sheep sounds like a
+        // dying zombie the moment real audio is installed.
+        bool distinct = true;
+        for (int a = 0; a < mobTypeCount(); ++a)
+            for (int b = a + 1; b < mobTypeCount(); ++b)
+            {
+                const MobType& x = mobType(static_cast<MobId>(a));
+                const MobType& y = mobType(static_cast<MobId>(b));
+                if (x.voice == y.voice || x.hurtVoice == y.hurtVoice ||
+                    x.deathVoice == y.deathVoice) distinct = false;
+            }
+        check(distinct, "every species has its own say, hurt and death");
         check(mobType(MobId::Cow).voicePitch < mobType(MobId::Pig).voicePitch,
               "a cow is lower than a pig");
     }

@@ -91,6 +91,9 @@ namespace
         {
             MobType& t = table[static_cast<size_t>(MobId::Sheep)];
             t.id = MobId::Sheep;
+            t.voice = Sound::MobSheepSay;
+            t.hurtVoice = Sound::MobSheepHurt;
+            t.deathVoice = Sound::MobSheepDeath;
             t.breedingFood = Items::Wheat;
             t.name = "Sheep";
             t.texture = "sheep";
@@ -100,7 +103,6 @@ namespace
             t.width = 0.9f;
             t.height = 1.3f;
             t.walkSpeed = 1.8f;
-            t.voice = Sound::MobBleat;
             t.drop = Items::RawMutton;
             t.dropCount = 1;
             t.secondDrop = Blocks::Wool;
@@ -131,6 +133,9 @@ namespace
         {
             MobType& t = table[static_cast<size_t>(MobId::Pig)];
             t.id = MobId::Pig;
+            t.voice = Sound::MobPigSay;
+            t.hurtVoice = Sound::MobPigHurt;
+            t.deathVoice = Sound::MobPigDeath;
             t.breedingFood = Items::Wheat;
             t.name = "Pig";
             t.texture = "pig";
@@ -139,7 +144,6 @@ namespace
             t.width = 0.9f;
             t.height = 0.9f;
             t.walkSpeed = 2.0f;
-            t.voice = Sound::MobGrunt;
             t.voicePitch = 1.25f;
             t.drop = Items::RawPorkchop;
             t.dropCount = 2;
@@ -153,6 +157,9 @@ namespace
         {
             MobType& t = table[static_cast<size_t>(MobId::Cow)];
             t.id = MobId::Cow;
+            t.voice = Sound::MobCowSay;
+            t.hurtVoice = Sound::MobCowHurt;
+            t.deathVoice = Sound::MobCowDeath;
             t.breedingFood = Items::Wheat;
             t.name = "Cow";
             t.texture = "cow";
@@ -161,7 +168,6 @@ namespace
             t.width = 0.9f;
             t.height = 1.4f;
             t.walkSpeed = 1.8f;
-            t.voice = Sound::MobGrunt;
             t.voicePitch = 0.7f;
             t.drop = Items::RawBeef;
             t.dropCount = 2;
@@ -179,6 +185,9 @@ namespace
         {
             MobType& t = table[static_cast<size_t>(MobId::Chicken)];
             t.id = MobId::Chicken;
+            t.voice = Sound::MobChickenSay;
+            t.hurtVoice = Sound::MobChickenHurt;
+            t.deathVoice = Sound::MobChickenDeath;
             t.breedingFood = Items::Wheat;
             t.name = "Chicken";
             t.texture = "chicken";
@@ -187,7 +196,6 @@ namespace
             t.width = 0.4f;
             t.height = 0.7f;
             t.walkSpeed = 1.5f;
-            t.voice = Sound::MobCluck;
             t.drop = Items::RawChicken;
             t.dropCount = 1;
             t.secondDrop = Items::Feather;
@@ -207,6 +215,9 @@ namespace
         {
             MobType& t = table[static_cast<size_t>(MobId::Zombie)];
             t.id = MobId::Zombie;
+            t.voice = Sound::MobZombieSay;
+            t.hurtVoice = Sound::MobZombieHurt;
+            t.deathVoice = Sound::MobZombieDeath;
             t.name = "Zombie";
             t.texture = "zombie";
             // The file is twice as tall as it needs to be and the bottom
@@ -217,7 +228,6 @@ namespace
             t.width = 0.6f;
             t.height = 1.95f;
             t.walkSpeed = 1.9f;
-            t.voice = Sound::MobGroan;
             t.burnsInSunlight = true;
             t.attackDamage = 3;
             t.bodyColour = rgb(58, 92, 132);
@@ -235,6 +245,9 @@ namespace
         {
             MobType& t = table[static_cast<size_t>(MobId::Skeleton)];
             t.id = MobId::Skeleton;
+            t.voice = Sound::MobSkeletonSay;
+            t.hurtVoice = Sound::MobSkeletonHurt;
+            t.deathVoice = Sound::MobSkeletonDeath;
             t.name = "Skeleton";
             t.texture = "skeleton";
             t.spawnClass = SpawnClass::Hostile;
@@ -242,7 +255,6 @@ namespace
             t.width = 0.6f;
             t.height = 1.99f;
             t.walkSpeed = 2.1f;
-            t.voice = Sound::MobRattle;
             t.burnsInSunlight = true;
             t.attackDamage = 2;
             t.drop = Items::Bone;
@@ -260,6 +272,9 @@ namespace
         {
             MobType& t = table[static_cast<size_t>(MobId::Creeper)];
             t.id = MobId::Creeper;
+            t.voice = Sound::MobCreeperSay;
+            t.hurtVoice = Sound::MobCreeperHurt;
+            t.deathVoice = Sound::MobCreeperDeath;
             t.name = "Creeper";
             t.texture = "creeper";
             t.spawnClass = SpawnClass::Hostile;
@@ -267,7 +282,6 @@ namespace
             t.width = 0.6f;
             t.height = 1.7f;
             t.walkSpeed = 2.0f;
-            t.voice = Sound::MobHiss;
             // It does not blow up yet, so it hits hard and slowly
             // instead of once and catastrophically.
             t.attackDamage = 6;
@@ -284,6 +298,9 @@ namespace
         {
             MobType& t = table[static_cast<size_t>(MobId::Spider)];
             t.id = MobId::Spider;
+            t.voice = Sound::MobSpiderSay;
+            t.hurtVoice = Sound::MobSpiderHurt;
+            t.deathVoice = Sound::MobSpiderDeath;
             t.name = "Spider";
             t.texture = "spider";
             t.spawnClass = SpawnClass::Hostile;
@@ -294,7 +311,6 @@ namespace
             // Eight legs that start out splayed cannot sweep as far as
             // four that hang straight down.
             t.limbSwing = 0.3f;
-            t.voice = Sound::MobRattle;
             t.voicePitch = 1.4f;
             t.attackDamage = 2;
             t.attackInterval = 0.8f;

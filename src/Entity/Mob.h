@@ -12,7 +12,7 @@ class World;
 // without a sound card.
 struct MobSound
 {
-    Sound id = Sound::MobGrunt;
+    Sound id = Sound::MobPigSay;
     glm::vec3 position{ 0.0f };
     float volume = 1.0f;
     float pitch = 1.0f;

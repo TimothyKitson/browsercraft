@@ -111,7 +111,9 @@ struct MobType
     // not, which is why they are the ones you still meet at noon.
     bool burnsInSunlight = false;
 
-    Sound voice = Sound::MobGrunt;
+    Sound voice = Sound::MobPigSay;
+    Sound hurtVoice = Sound::MobPigHurt;
+    Sound deathVoice = Sound::MobPigDeath;
     float voicePitch = 1.0f;    // shifts every sound this species makes
 
     // assets/skins/mob/<texture>.png when it is there, and a hide painted

@@ -219,6 +219,31 @@ bool AudioEngine::loadSingle(Sound id, const char* file)
     return true;
 }
 
+// Minecraft's own layout: mob/<name>/say1.ogg and so on. Death is often
+// a single file rather than a numbered set, so both spellings are tried.
+// Anything with no file keeps the synthesised voice below.
+void AudioEngine::loadMobVoice(Sound say, Sound hurt, Sound death, const char* folder)
+{
+    char stem[128];
+
+    std::snprintf(stem, sizeof(stem), "mob/%s/say", folder);
+    loadVariants(say, stem, 5);
+
+    std::snprintf(stem, sizeof(stem), "mob/%s/hurt", folder);
+    if (loadVariants(hurt, stem, 5) == 0)
+    {
+        std::snprintf(stem, sizeof(stem), "mob/%s/hurt.ogg", folder);
+        loadSingle(hurt, stem);
+    }
+
+    std::snprintf(stem, sizeof(stem), "mob/%s/death", folder);
+    if (loadVariants(death, stem, 5) == 0)
+    {
+        std::snprintf(stem, sizeof(stem), "mob/%s/death.ogg", folder);
+        loadSingle(death, stem);
+    }
+}
+
 void AudioEngine::buildSounds()
 {
     // Real audio first, wherever it has been installed.
@@ -243,6 +268,15 @@ void AudioEngine::buildSounds()
     loadSingle(Sound::Click, "random/click.ogg");
     loadSingle(Sound::Land, "damage/fallsmall.ogg");
     loadVariants(Sound::Hurt, "damage/hit", 3);
+
+    loadMobVoice(Sound::MobSheepSay, Sound::MobSheepHurt, Sound::MobSheepDeath, "sheep");
+    loadMobVoice(Sound::MobPigSay, Sound::MobPigHurt, Sound::MobPigDeath, "pig");
+    loadMobVoice(Sound::MobCowSay, Sound::MobCowHurt, Sound::MobCowDeath, "cow");
+    loadMobVoice(Sound::MobChickenSay, Sound::MobChickenHurt, Sound::MobChickenDeath, "chicken");
+    loadMobVoice(Sound::MobZombieSay, Sound::MobZombieHurt, Sound::MobZombieDeath, "zombie");
+    loadMobVoice(Sound::MobSkeletonSay, Sound::MobSkeletonHurt, Sound::MobSkeletonDeath, "skeleton");
+    loadMobVoice(Sound::MobCreeperSay, Sound::MobCreeperHurt, Sound::MobCreeperDeath, "creeper");
+    loadMobVoice(Sound::MobSpiderSay, Sound::MobSpiderHurt, Sound::MobSpiderDeath, "spider");
 
     auto make = [&](Sound id) -> Synth {
         auto& clips = m_buffers[static_cast<size_t>(id)];
@@ -337,60 +371,156 @@ void AudioEngine::buildSounds()
     //
     // A voice is a falling tone with a little noise over it: the pitch it
     // starts at and how fast it slides is most of what separates a sheep
-    // from a cow. Each species also carries its own pitch multiplier, so
-    // the same grunt serves a pig and a cow an octave apart.
+    // Each species has its own voice, so a sheep and a zombie never share
+    // a cry. Anything a pack supplies wins; the rest is synthesised, and
+    // every species carries a pitch multiplier on top.
     {
-        Synth s = make(Sound::MobBleat);
+        Synth s = make(Sound::MobSheepSay);
         s.addTone(0.38f, 420.0f, 330.0f, 5.0f, 0.55f, true);
         s.addTone(0.34f, 630.0f, 500.0f, 7.0f, 0.22f);
         s.addNoise(0.30f, 1800.0f, 9.0f, 0.18f, false, 211);
         s.finish(0.70f);
     }
     {
-        Synth s = make(Sound::MobGrunt);
+        Synth s = make(Sound::MobSheepHurt);
+        s.addTone(0.18f, 430.0f, 210.0f, 16.0f, 0.65f, true);
+        s.addNoise(0.14f, 2000.0f, 22.0f, 0.34f, false, 251);
+        s.finish(0.75f);
+    }
+    {
+        Synth s = make(Sound::MobSheepDeath);
+        s.addTone(0.55f, 360.0f, 90.0f, 6.0f, 0.70f, true);
+        s.addNoise(0.45f, 1500.0f, 8.0f, 0.30f, false, 291);
+        s.finish(0.80f);
+    }
+    {
+        Synth s = make(Sound::MobPigSay);
         s.addTone(0.30f, 240.0f, 150.0f, 8.0f, 0.70f, true);
         s.addNoise(0.26f, 900.0f, 12.0f, 0.22f, false, 212);
         s.finish(0.75f);
     }
     {
-        Synth s = make(Sound::MobCluck);
+        Synth s = make(Sound::MobPigHurt);
+        s.addTone(0.18f, 430.0f, 210.0f, 16.0f, 0.65f, true);
+        s.addNoise(0.14f, 2000.0f, 22.0f, 0.34f, false, 252);
+        s.finish(0.75f);
+    }
+    {
+        Synth s = make(Sound::MobPigDeath);
+        s.addTone(0.55f, 360.0f, 90.0f, 6.0f, 0.70f, true);
+        s.addNoise(0.45f, 1500.0f, 8.0f, 0.30f, false, 292);
+        s.finish(0.80f);
+    }
+    {
+        Synth s = make(Sound::MobCowSay);
+        s.addTone(0.46f, 190.0f, 120.0f, 5.0f, 0.72f, true);
+        s.addNoise(0.40f, 760.0f, 9.0f, 0.22f, false, 222);
+        s.finish(0.78f);
+    }
+    {
+        Synth s = make(Sound::MobCowHurt);
+        s.addTone(0.18f, 430.0f, 210.0f, 16.0f, 0.65f, true);
+        s.addNoise(0.14f, 2000.0f, 22.0f, 0.34f, false, 262);
+        s.finish(0.75f);
+    }
+    {
+        Synth s = make(Sound::MobCowDeath);
+        s.addTone(0.55f, 360.0f, 90.0f, 6.0f, 0.70f, true);
+        s.addNoise(0.45f, 1500.0f, 8.0f, 0.30f, false, 302);
+        s.finish(0.80f);
+    }
+    {
+        Synth s = make(Sound::MobChickenSay);
         s.addTone(0.10f, 900.0f, 1250.0f, 26.0f, 0.45f);
         s.addTone(0.13f, 760.0f, 540.0f, 20.0f, 0.38f, false, 0.09f);
         s.addNoise(0.09f, 2600.0f, 34.0f, 0.20f, true, 213);
         s.finish(0.65f);
     }
     {
-        Synth s = make(Sound::MobGroan);
+        Synth s = make(Sound::MobChickenHurt);
+        s.addTone(0.18f, 430.0f, 210.0f, 16.0f, 0.65f, true);
+        s.addNoise(0.14f, 2000.0f, 22.0f, 0.34f, false, 253);
+        s.finish(0.75f);
+    }
+    {
+        Synth s = make(Sound::MobChickenDeath);
+        s.addTone(0.55f, 360.0f, 90.0f, 6.0f, 0.70f, true);
+        s.addNoise(0.45f, 1500.0f, 8.0f, 0.30f, false, 293);
+        s.finish(0.80f);
+    }
+    {
+        Synth s = make(Sound::MobZombieSay);
         s.addTone(0.60f, 150.0f, 96.0f, 4.0f, 0.70f, true);
         s.addTone(0.55f, 228.0f, 150.0f, 5.0f, 0.26f);
         s.addNoise(0.50f, 700.0f, 6.0f, 0.26f, false, 214);
         s.finish(0.75f);
     }
     {
-        // Dry clicks rather than a tone, which is what makes it read as
-        // bone and not as a voice.
-        Synth s = make(Sound::MobRattle);
+        Synth s = make(Sound::MobZombieHurt);
+        s.addTone(0.18f, 430.0f, 210.0f, 16.0f, 0.65f, true);
+        s.addNoise(0.14f, 2000.0f, 22.0f, 0.34f, false, 254);
+        s.finish(0.75f);
+    }
+    {
+        Synth s = make(Sound::MobZombieDeath);
+        s.addTone(0.55f, 360.0f, 90.0f, 6.0f, 0.70f, true);
+        s.addNoise(0.45f, 1500.0f, 8.0f, 0.30f, false, 294);
+        s.finish(0.80f);
+    }
+    {
+        Synth s = make(Sound::MobSkeletonSay);
         for (int i = 0; i < 5; ++i)
             s.addTone(0.05f, 1500.0f - i * 90.0f, 900.0f, 70.0f, 0.42f, false, i * 0.055f);
         s.addNoise(0.28f, 4200.0f, 18.0f, 0.20f, true, 215);
         s.finish(0.60f);
     }
     {
-        Synth s = make(Sound::MobHiss);
+        Synth s = make(Sound::MobSkeletonHurt);
+        s.addTone(0.18f, 430.0f, 210.0f, 16.0f, 0.65f, true);
+        s.addNoise(0.14f, 2000.0f, 22.0f, 0.34f, false, 255);
+        s.finish(0.75f);
+    }
+    {
+        Synth s = make(Sound::MobSkeletonDeath);
+        s.addTone(0.55f, 360.0f, 90.0f, 6.0f, 0.70f, true);
+        s.addNoise(0.45f, 1500.0f, 8.0f, 0.30f, false, 295);
+        s.finish(0.80f);
+    }
+    {
+        Synth s = make(Sound::MobCreeperSay);
         s.addNoise(0.52f, 5200.0f, 5.5f, 1.0f, true, 216);
         s.addNoise(0.52f, 1400.0f, 6.5f, 0.30f, false, 217);
         s.finish(0.70f);
     }
     {
-        Synth s = make(Sound::MobHurt);
+        Synth s = make(Sound::MobCreeperHurt);
         s.addTone(0.18f, 430.0f, 210.0f, 16.0f, 0.65f, true);
-        s.addNoise(0.14f, 2000.0f, 22.0f, 0.34f, false, 218);
+        s.addNoise(0.14f, 2000.0f, 22.0f, 0.34f, false, 256);
         s.finish(0.75f);
     }
     {
-        Synth s = make(Sound::MobDeath);
+        Synth s = make(Sound::MobCreeperDeath);
         s.addTone(0.55f, 360.0f, 90.0f, 6.0f, 0.70f, true);
-        s.addNoise(0.45f, 1500.0f, 8.0f, 0.30f, false, 219);
+        s.addNoise(0.45f, 1500.0f, 8.0f, 0.30f, false, 296);
+        s.finish(0.80f);
+    }
+    {
+        Synth s = make(Sound::MobSpiderSay);
+        for (int i = 0; i < 6; ++i)
+            s.addTone(0.04f, 2100.0f - i * 120.0f, 1400.0f, 90.0f, 0.34f, false, i * 0.042f);
+        s.addNoise(0.22f, 5200.0f, 22.0f, 0.18f, true, 225);
+        s.finish(0.55f);
+    }
+    {
+        Synth s = make(Sound::MobSpiderHurt);
+        s.addTone(0.18f, 430.0f, 210.0f, 16.0f, 0.65f, true);
+        s.addNoise(0.14f, 2000.0f, 22.0f, 0.34f, false, 265);
+        s.finish(0.75f);
+    }
+    {
+        Synth s = make(Sound::MobSpiderDeath);
+        s.addTone(0.55f, 360.0f, 90.0f, 6.0f, 0.70f, true);
+        s.addNoise(0.45f, 1500.0f, 8.0f, 0.30f, false, 305);
         s.finish(0.80f);
     }
     {

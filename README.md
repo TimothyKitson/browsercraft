@@ -134,6 +134,32 @@ repository contains neither: install a different pack and the old name
 cannot be left behind. With no `CREDIT.txt` nothing is claimed, and
 `build-web.ps1` warns you before it publishes an uncredited pack.
 
+## Sounds
+
+The engine asks for Minecraft's own sound names, so a pack laid out the
+vanilla way drops straight in:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\install-sound-pack.ps1 -Zip "C:\path\to\sounds.zip"
+```
+
+That copies every Ogg Vorbis clip into `assets/sounds`, keeping the pack's
+folders: `dig/stone1.ogg`, `step/grass1.ogg`, `mob/cow/say1.ogg`,
+`random/pop.ogg` and so on. Each species has its own say, hurt and death,
+and a death may be `death1.ogg` or a single `death.ogg` -- both spellings
+are tried. Anything the pack does not supply keeps the voice the game
+synthesises for itself, so a partial pack still sounds right. Delete
+`assets/sounds` to go back to synthesised audio everywhere.
+
+Files that are not Ogg Vorbis are turned away rather than installed: the
+engine decodes nothing else, and a mislabelled mp3 would otherwise play
+as silence.
+
+Like the textures, these are not part of the project -- `assets/sounds` is
+gitignored. Minecraft's own audio is Mojang's, including the music, and
+`build-web.ps1` leaves the folder out of the published download for that
+reason. What goes on your own machine is another matter.
+
 ## Mob textures
 
 Mobs are built out of boxes unwrapped onto a sheet at Mojang's own

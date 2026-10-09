@@ -432,6 +432,6 @@ void Mob::damage(int amount, const glm::vec3& fromDirection)
     m_goalTimer = 0.0f;
     if (type().spawnClass == SpawnClass::Passive) m_panicTimer = PANIC_SECONDS;
 
-    if (alive()) emit(Sound::MobHurt, 0.9f, 0.9f + random01() * 0.2f);
-    else emit(Sound::MobDeath, 1.0f, 0.9f + random01() * 0.2f);
+    if (alive()) emit(type().hurtVoice, 0.9f, 0.9f + random01() * 0.2f);
+    else emit(type().deathVoice, 1.0f, 0.9f + random01() * 0.2f);
 }
