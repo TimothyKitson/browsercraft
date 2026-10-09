@@ -213,7 +213,8 @@ void Application::renderInventoryScreen()
 
     // Dark text with no shadow: on a light panel a drop shadow just looks
     // like a smudge, and vanilla does not use one here either.
-    const char* title = creative ? CREATIVE_TABS[m_creativeTab].name : "INVENTORY";
+    const char* title = creative ? CREATIVE_TABS[m_creativeTab].name
+                                 : (m_benchOpen ? "CRAFTING" : "INVENTORY");
     m_ui.text(title, panelX + 10.0f, panelY + 10.0f, 2.2f, GUI_TEXT);
 
     // ------------------------------- armour, body preview, crafting ---
@@ -403,6 +404,23 @@ void Application::handleInventoryClick(int mouseX, int mouseY, bool rightButton,
 // Closing the screen must not swallow anything: the cursor stack and the
 // crafting grid both go back to the player, and whatever will not fit is
 // dropped at their feet.
+void Application::closeInventory()
+{
+    returnCursorToWorld();
+    m_inventoryOpen = false;
+    m_benchOpen = false;
+    m_inventory.setCraftSize(2);
+}
+
+void Application::openBench(const glm::ivec3& block)
+{
+    m_benchBlock = block;
+    m_benchOpen = true;
+    m_inventory.setCraftSize(3);
+    m_inventoryOpen = true;
+    setMouseCaptured(false);
+}
+
 void Application::returnCursorToWorld()
 {
     std::vector<ItemStack> spilled;

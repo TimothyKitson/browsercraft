@@ -28,6 +28,7 @@ namespace
     constexpr int DEFAULT_RENDER_DISTANCE = 8;
 #endif
     constexpr float REACH_DISTANCE = 5.0f;
+    constexpr float BENCH_REACH = 6.0f;
     // Minecraft lets you reach stone further than you can reach a mob.
     constexpr float ATTACK_REACH = 3.0f;
     constexpr float ATTACK_INTERVAL = 0.25f;
@@ -944,12 +945,28 @@ bool Application::frame()
             m_particles.update(deltaTime, *m_world);
         }
 
+        // The big grid belongs to the bench, not to the player, so it
+        // shuts as soon as they walk out of reach of it -- or mine it.
+        if (m_benchOpen && playing())
+        {
+            const glm::vec3 middle = glm::vec3(m_benchBlock) + glm::vec3(0.5f);
+            const bool stillThere =
+                m_world->getBlock(m_benchBlock.x, m_benchBlock.y, m_benchBlock.z) ==
+                Blocks::CraftingTable;
+
+            if (!stillThere || glm::length(m_player.position - middle) > BENCH_REACH)
+            {
+                closeInventory();
+                setMouseCaptured(true);
+            }
+        }
+
         // Death handling.
         if (playing() && m_player.health <= 0)
         {
             m_screen = Screen::Dead;
             m_hardcoreDeath = modeIsHardcore(m_gameMode);
-            m_inventoryOpen = false;
+            if (m_inventoryOpen) closeInventory();
             setMouseCaptured(false);
         }
 
@@ -970,7 +987,8 @@ bool Application::frame()
     // Dev aid: once the world is up, jump to the requested menu.
     if (!m_startupScreen.empty() && (m_worldReady || !m_world))
     {
-        if (m_startupScreen == "inventory" || m_startupScreen == "creative")
+        if (m_startupScreen == "inventory" || m_startupScreen == "creative" ||
+            m_startupScreen == "bench")
         {
             // Dev aid: open the inventory with something in it, so the
             // screenshot shows a real grid rather than 36 empty boxes.
@@ -982,6 +1000,10 @@ bool Application::frame()
             m_inventory.add(Blocks::Glowstone, 3);
             m_inventory.add(Blocks::DiamondOre, 1);
             m_inventory.add(Blocks::Sand, 22);
+            m_inventory.add(Blocks::CraftingTable, 1);
+
+            // A screenshot of the bench wants the big grid showing.
+            if (m_startupScreen == "bench") m_inventory.setCraftSize(3);
         }
         else if (m_startupScreen == "pause") m_screen = Screen::Paused;
         else if (m_startupScreen == "dead" || m_startupScreen == "hardcore")
@@ -1267,8 +1289,7 @@ void Application::handleEvents()
     {
         if (m_inventoryOpen)
         {
-            returnCursorToWorld();
-            m_inventoryOpen = false;
+            closeInventory();
             setMouseCaptured(true);
         }
         else if (m_screen == Screen::Playing)
@@ -1330,8 +1351,17 @@ void Application::handleEvents()
 
     if (m_keys.pressed(m_input, Action::Inventory) && (playing() || m_inventoryOpen))
     {
-        if (m_inventoryOpen) returnCursorToWorld();
-        m_inventoryOpen = !m_inventoryOpen;
+        if (m_inventoryOpen)
+        {
+            closeInventory();
+        }
+        else
+        {
+            // The player's own grid is the small one; only a bench opens
+            // the big one.
+            m_inventory.setCraftSize(2);
+            m_inventoryOpen = true;
+        }
         setMouseCaptured(!m_inventoryOpen);
     }
 
@@ -1687,6 +1717,21 @@ void Application::handlePlacement()
     }
 
     if (!m_keys.pressed(m_input, Action::Use)) return;
+
+    // A bench is opened by using it, whatever is in your hand -- unless
+    // you are sneaking, which is how Minecraft lets you place a block
+    // against one rather than open it.
+    if (!m_player.sneaking)
+    {
+        const RaycastHit bench = m_world->raycast(m_camera.position, m_camera.front, REACH_DISTANCE);
+        if (bench.hit &&
+            m_world->getBlock(bench.block.x, bench.block.y, bench.block.z) == Blocks::CraftingTable)
+        {
+            openBench(bench.block);
+            m_audio.play(Sound::Click, 0.4f);
+            return;
+        }
+    }
 
     ItemStack& stack = m_inventory.selected();
     if (stack.empty()) return;

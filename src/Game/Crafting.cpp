@@ -33,6 +33,11 @@ namespace
         // Four sand in a square becomes one sandstone.
         { false, 2, 2, { Blocks::Sand, Blocks::Sand,
                          Blocks::Sand, Blocks::Sand }, 0, Blocks::Sandstone, 1 },
+
+        // Four planks make the bench, which is the only way to reach a
+        // 3x3 grid and so the only way to reach anything three wide.
+        { false, 2, 2, { Blocks::Planks, Blocks::Planks,
+                         Blocks::Planks, Blocks::Planks }, 0, Blocks::CraftingTable, 1 },
     };
 
     // Shrinks the used area of the grid down to its bounding box, so a

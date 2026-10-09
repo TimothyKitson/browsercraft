@@ -4,4 +4,4 @@
 // changes a build actually contains. __DATE__ and __TIME__ beside it say
 // when it was compiled; together they answer "did it update?" without
 // anyone having to remember what they ran.
-#define BUILD_TAG "2026-10-09.3 world gen: real relief, all seven biomes, varied spawn"
+#define BUILD_TAG "2026-10-09.4 solid leaves, crafting bench, 3x3 grid"

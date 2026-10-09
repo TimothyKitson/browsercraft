@@ -217,6 +217,12 @@ private:
     // Footstep pacing and landing detection.
     float m_distanceWalked = 0.0f;
     bool m_wasOnGround = true;
+
+    // The bench the 3x3 grid belongs to, and whether the open inventory
+    // is showing it. Walking away from it shuts the grid, as Minecraft
+    // does, so the big grid cannot be carried around.
+    glm::ivec3 m_benchBlock{ 0 };
+    bool m_benchOpen = false;
     int m_previousHealth = Player::MAX_HEALTH;
 
     std::string m_savePath = "world";
@@ -350,6 +356,11 @@ private:
     const PlayerSkin& activeSkin() const;
     void handleInventoryClick(int mouseX, int mouseY, bool rightButton, bool shiftHeld);
     void returnCursorToWorld();
+
+    // Shutting the inventory, from the key, from Escape, or by walking
+    // away from the bench that opened it.
+    void closeInventory();
+    void openBench(const glm::ivec3& block);
     void renderDebugOverlay();
     void renderHand();
     void renderChat();

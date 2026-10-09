@@ -54,6 +54,7 @@ namespace
 
         // Tilled earth is solid and a shade darker than dirt; the crop
         // standing in it is a cross-shaped plant you can walk through.
+        { "Crafting Table", CraftingTop, Planks,     CraftingSide,   true,  true,  RenderType::Cube,   0,   2.5f },
         { "Farmland",     FarmlandTop,   Dirt,           FarmlandSide,   true,  true,  RenderType::Cube,   0,   0.6f },
         { "Wheat Crop",   WheatStage0,   WheatStage0,    WheatStage0,    false, false, RenderType::Cross,  0,   0.0f },
         { "Wheat Crop",   WheatStage1,   WheatStage1,    WheatStage1,    false, false, RenderType::Cross,  0,   0.0f },
@@ -125,6 +126,7 @@ const char* blockSoundGroup(BlockId id)
         case Blocks::Planks:
         case Blocks::Log:
         case Blocks::BirchLog:
+        case Blocks::CraftingTable:
         case Blocks::Torch:
             return "wood";
 
@@ -166,7 +168,8 @@ Material blockMaterial(BlockId id)
         case Blocks::Sand: return Material::Sand;
         case Blocks::Glass: return Material::Glass;
         case Blocks::Wool: return Material::Wool;
-        case Blocks::Log: case Blocks::Planks: return Material::Wood;
+        case Blocks::Log: case Blocks::Planks:
+        case Blocks::CraftingTable: return Material::Wood;
         case Blocks::Leaves: return Material::Plant;
         default: return Material::Stone;
     }

@@ -872,6 +872,20 @@ namespace
         for (int i : { 0, 1, 3 }) { grid[i].id = Items::WheatSeeds; grid[i].count = 1; }
         check(!Crafting::match(grid, 2).valid(), "seeds no longer shortcut into wheat");
 
+        // Four planks in the player's own 2x2 make the bench, which is
+        // the only way to a 3x3 grid and so to anything three wide.
+        ItemStack bench[9];
+        for (int i : { 0, 1, 3, 4 }) { bench[i].id = Blocks::Planks; bench[i].count = 1; }
+        const CraftOutput table = Crafting::match(bench, 2);
+        check(table.valid() && table.id == Blocks::CraftingTable,
+              "four planks in a square make a bench");
+        check(table.count == 1, "one of them");
+
+        // Three planks in a row is not a square, so it is not a bench.
+        ItemStack row[9];
+        for (int i : { 0, 1, 2 }) { row[i].id = Blocks::Planks; row[i].count = 1; }
+        check(!Crafting::match(row, 3).valid(), "three in a row is not");
+
         // The real recipes still work.
         ItemStack logs[9];
         logs[0].id = Blocks::Log; logs[0].count = 1;

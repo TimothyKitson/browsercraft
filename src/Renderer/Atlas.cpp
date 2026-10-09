@@ -232,6 +232,56 @@ namespace
         t.speckle(6, 44);
     }
 
+    // The bench: planks with a grid of tools scored into the top, and a
+    // row of them hanging on the side, which is how you tell it from a
+    // plain plank block at a glance.
+    void paintCraftingTop(Tile& t)
+    {
+        paintPlanks(t);
+
+        const Color line{ 92, 68, 38 };
+        const int third = Tile::N / 3;
+        for (int i = 1; i < 3; ++i)
+            for (int k = 0; k < Tile::N; ++k)
+            {
+                t.set(i * third, k, line);
+                t.set(k, i * third, line);
+            }
+
+        for (int k = 0; k < Tile::N; ++k)
+        {
+            t.set(0, k, line); t.set(Tile::N - 1, k, line);
+            t.set(k, 0, line); t.set(k, Tile::N - 1, line);
+        }
+    }
+
+    void paintCraftingSide(Tile& t)
+    {
+        paintPlanks(t);
+
+        // A saw and a hammer hung on the side, drawn at whatever size the
+        // tile happens to be so a 16x and a 32x pack both come out right.
+        const Color steel{ 176, 176, 186 };
+        const Color handle{ 104, 72, 40 };
+        const int n = Tile::N;
+
+        for (int y = n / 4; y < n / 2; ++y)
+            for (int x = n / 6; x < n / 2; ++x)
+                if (x - n / 6 >= y - n / 4) t.set(x, y, steel);
+
+        for (int y = n / 2; y < n - n / 5; ++y)
+            for (int x = n / 4; x < n / 4 + std::max(1, n / 12); ++x)
+                t.set(x, y, handle);
+
+        for (int y = n / 2; y < n / 2 + std::max(2, n / 8); ++y)
+            for (int x = n / 2 + n / 12; x < n - n / 6; ++x)
+                t.set(x, y, steel);
+
+        for (int y = n / 2; y < n - n / 5; ++y)
+            for (int x = n / 2 + n / 5; x < n / 2 + n / 5 + std::max(1, n / 12); ++x)
+                t.set(x, y, handle);
+    }
+
     void paintBedrock(Tile& t)
     {
         t.fill(Color{ 85, 85, 85 });
@@ -1359,6 +1409,8 @@ namespace
         { Tiles::WheatStage7, paintWheat7 },
         { Tiles::ItemWheatSeeds, paintItemWheatSeeds },
         { Tiles::ItemWheat, paintItemWheat },
+        { Tiles::CraftingTop,   paintCraftingTop },
+        { Tiles::CraftingSide,  paintCraftingSide },
         { Tiles::ItemLeather, paintItemLeather },
         { Tiles::ItemRawBeef, paintItemRawBeef },
         { Tiles::ItemRawPork, paintItemRawPork },
