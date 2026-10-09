@@ -64,6 +64,7 @@ namespace Tiles
         FurnaceFront, FurnaceLit, FurnaceTop,
         ChestFront, ChestSide, ChestTop,
         BedTop, BedSide,
+        TntTop, TntSide, TntBottom, TntPrimedSide,
         TileCount
     };
 

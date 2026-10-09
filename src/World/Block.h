@@ -65,6 +65,9 @@ namespace Blocks
         // Half blocks. Each is its own id rather than a flag on the
         // block it is cut from, for the same reason wheat's growth
         // stages are ids: there is nowhere to put a flag.
+        Tnt,
+        TntPrimed,
+
         StoneSlab,
         CobblestoneSlab,
         PlankSlab,

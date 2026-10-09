@@ -59,6 +59,8 @@ namespace
         { "Furnace",      FurnaceTop,    FurnaceTop,     FurnaceLit,     true,  true,  RenderType::Cube,  13,   3.5f },
         { "Chest",        ChestTop,      ChestTop,       ChestFront,     true,  true,  RenderType::Cube,   0,   2.5f },
         { "Bed",          BedTop,        Planks,         BedSide,        true,  true,  RenderType::Cube,   0,   0.2f },
+        { "TNT",          TntTop,        TntBottom,      TntSide,        true,  true,  RenderType::Cube,   0,   0.0f },
+        { "TNT",          TntTop,        TntBottom,      TntPrimedSide,  true,  true,  RenderType::Cube,   7,   0.0f },
         { "Stone Slab",   Stone,         Stone,          Stone,          true,  false, RenderType::Slab,   0,   1.5f },
         { "Cobblestone Slab", Cobblestone, Cobblestone,  Cobblestone,    true,  false, RenderType::Slab,   0,   1.7f },
         { "Oak Slab",     Planks,        Planks,         Planks,         true,  false, RenderType::Slab,   0,   1.5f },
@@ -90,6 +92,7 @@ bool isObtainable(BlockId id)
         case Blocks::Lava:
         case Blocks::NetherPortal: // made by lighting a frame, never placed
         case Blocks::FurnaceLit:   // the burning state of one, not a thing you hold
+        case Blocks::TntPrimed:    // likewise: a lit stick is not an item
             return false;
         default:
             // A crop is planted rather than placed, and only the ripe
@@ -143,6 +146,8 @@ const char* blockSoundGroup(BlockId id)
 
         case Blocks::Wool:
         case Blocks::Bed:
+        case Blocks::Tnt:
+        case Blocks::TntPrimed:
             return "cloth";
 
         case Blocks::Air:
@@ -200,6 +205,12 @@ Material blockMaterial(BlockId id)
             return Material::Glass;
 
         case Blocks::Wool:
+        case Blocks::Bed:
+        // TNT is paper and powder. Letting it fall through to stone made
+        // it want a pickaxe, which the all-blocks sweep caught the
+        // moment it was added.
+        case Blocks::Tnt:
+        case Blocks::TntPrimed:
             return Material::Wool;
 
         case Blocks::Snow:

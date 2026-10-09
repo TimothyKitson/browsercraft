@@ -51,6 +51,12 @@ namespace
                          Blocks::Planks, Blocks::Planks, Blocks::Planks },
           0, Blocks::Chest, 1 },
 
+        // Five gunpowder and four sand, crossed, makes TNT.
+        { false, 3, 3, { Items::Gunpowder, Blocks::Sand,     Items::Gunpowder,
+                         Blocks::Sand,     Items::Gunpowder, Blocks::Sand,
+                         Items::Gunpowder, Blocks::Sand,     Items::Gunpowder },
+          0, Blocks::Tnt, 1 },
+
         // Three of a block in a row makes six slabs of it.
         { false, 3, 1, { Blocks::Stone, Blocks::Stone, Blocks::Stone },
           0, Blocks::StoneSlab, 6 },

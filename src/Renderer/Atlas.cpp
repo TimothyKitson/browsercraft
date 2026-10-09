@@ -486,6 +486,62 @@ namespace
                 t.set(x, y, shadow);
     }
 
+    // TNT: a bundle of red sticks with a band round the middle.
+    void paintTntBody(Tile& t, bool primed)
+    {
+        const int n = Tile::N;
+        const Color red = primed ? Color{ 236, 236, 236 } : Color{ 186, 56, 44 };
+        const Color redDark = primed ? Color{ 208, 208, 208 } : Color{ 150, 40, 32 };
+        const Color band{ 232, 232, 226 };
+        const Color bandEdge{ 170, 170, 164 };
+        const Color text{ 40, 40, 44 };
+
+        for (int y = 0; y < n; ++y)
+            for (int x = 0; x < n; ++x)
+                t.set(x, y, (x / std::max(1, n / 8)) % 2 == 0 ? red : redDark);
+
+        // The white band across the middle, with the lettering on it.
+        const int top = n / 2 - n / 8;
+        const int bottom = n / 2 + n / 8;
+        for (int y = top; y <= bottom; ++y)
+            for (int x = 0; x < n; ++x)
+                t.set(x, y, (y == top || y == bottom) ? bandEdge : band);
+
+        // Three dark marks standing in for T N T, scaled to the tile.
+        const int mark = std::max(1, n / 16);
+        for (int i = 0; i < 3; ++i)
+            for (int y = top + 2; y < bottom - 1; ++y)
+                for (int x = 0; x < mark * 2; ++x)
+                    t.set(n / 6 + i * (n / 4) + x, y, text);
+    }
+
+    void paintTntSide(Tile& t)       { paintTntBody(t, false); }
+    void paintTntPrimedSide(Tile& t) { paintTntBody(t, true); }
+
+    void paintTntTop(Tile& t)
+    {
+        const int n = Tile::N;
+        t.fill(Color{ 196, 64, 50 });
+        for (int y = 0; y < n; ++y)
+            for (int x = 0; x < n; ++x)
+                if (hash2(x / 2, y / 2, 91) > 0.6f)
+                    t.set(x, y, shade(t.get(x, y), -22));
+
+        // The fuse, poking out of the middle.
+        const Color fuse{ 226, 214, 180 };
+        for (int i = -1; i <= 1; ++i)
+            for (int j = -1; j <= 1; ++j)
+                t.set(n / 2 + i, n / 2 + j, fuse);
+    }
+
+    void paintTntBottom(Tile& t)
+    {
+        t.fill(Color{ 126, 100, 76 });
+        for (int y = 0; y < Tile::N; ++y)
+            for (int x = 0; x < Tile::N; ++x)
+                if (hash2(x, y, 92) > 0.7f) t.set(x, y, shade(t.get(x, y), -18));
+    }
+
     void paintBedrock(Tile& t)
     {
         t.fill(Color{ 85, 85, 85 });
@@ -1928,6 +1984,10 @@ namespace
         { Tiles::CraftingTop,   paintCraftingTop },
         { Tiles::FurnaceTop,    paintFurnaceTop },
         { Tiles::BedTop,        paintBedTop },
+        { Tiles::TntTop,        paintTntTop },
+        { Tiles::TntSide,       paintTntSide },
+        { Tiles::TntBottom,     paintTntBottom },
+        { Tiles::TntPrimedSide, paintTntPrimedSide },
         { Tiles::BedSide,       paintBedSide },
         { Tiles::ChestTop,      paintChestTop },
         { Tiles::ChestFront,    paintChestFront },

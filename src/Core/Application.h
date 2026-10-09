@@ -227,6 +227,11 @@ private:
     glm::ivec3 m_benchBlock{ 0 };
     bool m_benchOpen = false;
 
+    // Where each lit stick of TNT is and how long it has left. Small
+    // enough and short-lived enough not to be worth saving: a world
+    // reloaded mid-blast simply has the TNT still standing.
+    std::vector<std::pair<glm::ivec3, float>> m_fuses;
+
     Projectiles m_arrows;
     float m_bowDraw = 0.0f;      // seconds the bow has been held
     bool m_bowDrawing = false;
@@ -401,6 +406,10 @@ private:
 
     // A creeper going off: what it breaks and what it hurts.
     void applyBlast(const glm::vec3& at, float radius, int damage);
+
+    // TNT that has been lit, and the fuses still burning.
+    void primeTnt(const glm::ivec3& block);
+    void updateFuses(float deltaTime);
 
     void sleepInBed(const glm::ivec3& block);
     void openChest(const glm::ivec3& block);

@@ -1535,10 +1535,14 @@ namespace
             if (!isObtainable(id)) continue;
             if (blockInfo(id).hardness < 0.0f) continue;   // never breaks
 
+            // Named, so a failure says which block rather than leaving
+            // the whole table to be searched by hand.
+            const std::string who = blockInfo(id).name;
+
             if (requiredLevel(id) == 0)
             {
                 ++byHand;
-                check(canHarvest(Blocks::Air, id), "comes up by hand");
+                check(canHarvest(Blocks::Air, id), who + " comes up by hand");
                 continue;
             }
 
@@ -1546,13 +1550,13 @@ namespace
 
             // Whatever wants a tool wants a pickaxe, and the best
             // pickaxe in the game must be able to get it.
-            check(blockMaterial(id) == Material::Stone, "only stone wants a tool");
-            check(canHarvest(Items::DiamondPickaxe, id), "and diamond gets all of it");
-            check(!canHarvest(Blocks::Air, id), "where a bare hand gets none");
+            check(blockMaterial(id) == Material::Stone, who + ": only stone wants a tool");
+            check(canHarvest(Items::DiamondPickaxe, id), who + ": diamond gets all of it");
+            check(!canHarvest(Blocks::Air, id), who + ": a bare hand gets none");
 
             // And the right tool is always quicker than the wrong one.
             check(breakSeconds(Items::DiamondPickaxe, id) < breakSeconds(Blocks::Air, id),
-                  "and is quicker with it");
+                  who + " is quicker with it");
         }
 
         check(byHand > 20, "most of the block list comes up by hand");
@@ -1565,6 +1569,9 @@ namespace
             Blocks::Snow, Blocks::SnowGrass, Blocks::TallGrass, Blocks::FlowerRed,
             Blocks::FlowerYellow, Blocks::Cactus, Blocks::Pumpkin, Blocks::Wool,
             Blocks::Glass, Blocks::Ice, Blocks::SoulSand, Blocks::CraftingTable,
+            // A bed is cloth and a stick of TNT is paper: neither wants
+            // a pickaxe, and both did until this line was written.
+            Blocks::Bed, Blocks::Tnt,
         };
         for (BlockId id : SOFT)
             check(canHarvest(Blocks::Air, id), "a bare hand gets this one");

@@ -33,6 +33,11 @@ namespace
 #endif
     constexpr float REACH_DISTANCE = 5.0f;
     constexpr float BENCH_REACH = 6.0f;
+    // A stick of TNT burns for four seconds, as in Minecraft, and goes
+    // off harder and wider than a creeper.
+    constexpr float TNT_FUSE_SECONDS = 4.0f;
+    constexpr float TNT_RADIUS = 4.5f;
+    constexpr int TNT_DAMAGE = 34;
     // Minecraft lets you reach stone further than you can reach a mob.
     constexpr float ATTACK_REACH = 3.0f;
     constexpr float ATTACK_INTERVAL = 0.25f;
@@ -1027,6 +1032,7 @@ bool Application::frame()
             m_drops.update(deltaTime, *m_world, m_player, m_inventory, m_audio);
             m_particles.update(deltaTime, *m_world);
             updateArrows(deltaTime);
+            updateFuses(deltaTime);
 
             // Dev aid: a steady stream, so a screenshot taken at any
             // moment has arrows in the air to look at.
@@ -1103,7 +1109,7 @@ bool Application::frame()
             m_startupScreen == "chest" || m_startupScreen == "armour" ||
             m_startupScreen == "armourhud" || m_startupScreen == "bed" ||
             m_startupScreen == "arrows" || m_startupScreen == "slabs" ||
-            m_startupScreen == "boom")
+            m_startupScreen == "boom" || m_startupScreen == "tnt")
         {
             // Dev aid: open the inventory with something in it, so the
             // screenshot shows a real grid rather than 36 empty boxes.
@@ -1114,7 +1120,8 @@ bool Application::frame()
                                   m_startupScreen != "bed" &&
                                   m_startupScreen != "arrows" &&
                                   m_startupScreen != "slabs" &&
-                                  m_startupScreen != "boom";
+                                  m_startupScreen != "boom" &&
+                                  m_startupScreen != "tnt";
             m_inventoryOpen = showPanel;
             setMouseCaptured(!showPanel);
             m_inventory.add(Blocks::Cobblestone, 64);
@@ -1141,6 +1148,25 @@ bool Application::frame()
             }
 
             if (m_startupScreen == "arrows") m_arrowDemo = true;
+
+            if (m_startupScreen == "tnt")
+            {
+                m_camera.pitch = -22.0f;
+                m_camera.addLook(0.0f, 0.0f, 0.0f);
+
+                const glm::vec3 ahead = m_player.position + m_camera.front * 5.0f;
+                const int bx = static_cast<int>(std::floor(ahead.x));
+                const int by = static_cast<int>(std::floor(m_player.position.y));
+                const int bz = static_cast<int>(std::floor(ahead.z));
+
+                for (int i = 0; i < 3; ++i)
+                    for (int k = 0; k < 2; ++k)
+                        m_world->setBlock(bx + i - 1, by + k, bz, Blocks::Tnt);
+
+                // One of them lit, so both states are in the shot.
+                primeTnt(glm::ivec3(bx, by + 1, bz));
+                m_fuses.back().second = 600.0f;   // held, so it stays lit
+            }
 
             if (m_startupScreen == "boom")
             {
@@ -1888,6 +1914,17 @@ void Application::updateMining(float deltaTime)
 
     const BlockId id = m_world->getBlock(hit.block.x, hit.block.y, hit.block.z);
 
+    // A stick of TNT is lit rather than mined: hitting it starts the
+    // fuse, which is how Minecraft does it with flint and steel.
+    if (id == Blocks::Tnt && !m_player.creative())
+    {
+        primeTnt(hit.block);
+        m_heldItem.swing();
+        m_hasTarget = false;
+        m_breakProgress = 0.0f;
+        return;
+    }
+
     // What is in your hand decides how long this takes and whether it
     // leaves anything behind. An empty hand is Air, which Tools reads as
     // bare hands.
@@ -2095,6 +2132,49 @@ void Application::sleepInBed(const glm::ivec3& block)
     m_audio.play(Sound::DigWool, 0.6f, 0.8f);
 }
 
+// Lighting a stick. The block is swapped for its lit twin, which glows
+// and flashes white, and a fuse is written down against it.
+void Application::primeTnt(const glm::ivec3& block)
+{
+    if (m_world->getBlock(block.x, block.y, block.z) != Blocks::Tnt) return;
+
+    m_world->setBlock(block.x, block.y, block.z, Blocks::TntPrimed);
+    m_net.onLocalBlockChange(block.x, block.y, block.z, Blocks::TntPrimed);
+
+    m_fuses.emplace_back(block, TNT_FUSE_SECONDS);
+    m_audio.play(Sound::Click, 0.8f, 0.7f);
+}
+
+void Application::updateFuses(float deltaTime)
+{
+    for (size_t i = 0; i < m_fuses.size();)
+    {
+        const glm::ivec3 where = m_fuses[i].first;
+
+        // Mined, or blown up by something else, before it went off.
+        if (m_world->getBlock(where.x, where.y, where.z) != Blocks::TntPrimed)
+        {
+            m_fuses[i] = m_fuses.back();
+            m_fuses.pop_back();
+            continue;
+        }
+
+        m_fuses[i].second -= deltaTime;
+        if (m_fuses[i].second > 0.0f) { ++i; continue; }
+
+        m_world->setBlock(where.x, where.y, where.z, Blocks::Air);
+        m_net.onLocalBlockChange(where.x, where.y, where.z, Blocks::Air);
+
+        m_fuses[i] = m_fuses.back();
+        m_fuses.pop_back();
+
+        // After it is taken out of the world, so it does not have to
+        // decide whether to destroy itself.
+        applyBlast(glm::vec3(where) + glm::vec3(0.5f),
+                   TNT_RADIUS, TNT_DAMAGE);
+    }
+}
+
 void Application::applyBlast(const glm::vec3& at, float radius, int damage)
 {
     m_audio.play(Sound::DigStone, 1.0f, 0.5f);
@@ -2114,6 +2194,17 @@ void Application::applyBlast(const glm::vec3& at, float radius, int damage)
 
                 const glm::vec3 centre = glm::vec3(where) + glm::vec3(0.5f);
                 const float distance = glm::length(centre - at);
+
+                // A stick caught in a blast is lit rather than broken,
+                // which is what makes a stack of it go up together.
+                if (block == Blocks::Tnt && distance < radius)
+                {
+                    primeTnt(where);
+                    // A short fuse, so a chain goes off in a run rather
+                    // than all at once.
+                    if (!m_fuses.empty()) m_fuses.back().second = 0.3f + distance * 0.1f;
+                    continue;
+                }
 
                 if (!Explosion::destroys(block, distance, radius)) continue;
 
