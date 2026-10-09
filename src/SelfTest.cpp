@@ -521,6 +521,29 @@ namespace
         }
     }
 
+    void testSunlightBurning()
+    {
+        section("mobs: daylight");
+
+        const MobType& zombie = mobType(MobId::Zombie);
+        const MobType& skeleton = mobType(MobId::Skeleton);
+        const MobType& creeper = mobType(MobId::Creeper);
+        const MobType& spider = mobType(MobId::Spider);
+        const MobType& cow = mobType(MobId::Cow);
+
+        check(Mob::burnsNow(zombie, 1.0f, 15, false), "a zombie caught in the open burns");
+        check(Mob::burnsNow(skeleton, 1.0f, 15, false), "and so does a skeleton");
+        check(!Mob::burnsNow(creeper, 1.0f, 15, false), "a creeper does not");
+        check(!Mob::burnsNow(spider, 1.0f, 15, false), "nor a spider");
+        check(!Mob::burnsNow(cow, 1.0f, 15, false), "and certainly not a cow");
+
+        check(!Mob::burnsNow(zombie, 0.0f, 15, false), "nothing burns at night");
+        check(!Mob::burnsNow(zombie, 0.2f, 15, false), "nor at dawn, before the sun is up");
+        check(!Mob::burnsNow(zombie, 1.0f, 14, false), "a roof over its head is enough");
+        check(!Mob::burnsNow(zombie, 1.0f, 0, false), "and a cave certainly is");
+        check(!Mob::burnsNow(zombie, 1.0f, 15, true), "standing in water puts it out");
+    }
+
     void testMobSpawnRules()
     {
         section("mobs: spawning");
@@ -1236,6 +1259,7 @@ int runSelfTest()
     testPlayerGeometry();
     testBoxWinding();
     testMobTypes();
+    testSunlightBurning();
     testMobSpawnRules();
     testMobGeometry();
     testMobDamage();

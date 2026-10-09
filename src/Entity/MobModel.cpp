@@ -163,7 +163,8 @@ void MobModel::render(Shader& chunkShader, const World& world, const EntityManag
             float blockLight = static_cast<float>(world.blockLightAt(lx, ly, lz)) / 15.0f;
 
             // Flash while it is being hit, and dim as it dies.
-            blockLight = std::min(1.0f, blockLight + mob.hurtFlash() * 1.6f);
+            blockLight = std::min(1.0f, blockLight + mob.hurtFlash() * 1.6f +
+                                            (mob.burning() ? 0.9f : 0.0f));
             const float fade = mob.deathFade();
             sky *= fade;
             blockLight *= fade;

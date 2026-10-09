@@ -107,6 +107,10 @@ struct MobType
     float ambientMinSeconds = 6.0f;
     float ambientMaxSeconds = 18.0f;
 
+    // The undead catch fire in open daylight. Spiders and creepers do
+    // not, which is why they are the ones you still meet at noon.
+    bool burnsInSunlight = false;
+
     Sound voice = Sound::MobGrunt;
     float voicePitch = 1.0f;    // shifts every sound this species makes
 

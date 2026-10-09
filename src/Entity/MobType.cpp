@@ -218,6 +218,7 @@ namespace
             t.height = 1.95f;
             t.walkSpeed = 1.9f;
             t.voice = Sound::MobGroan;
+            t.burnsInSunlight = true;
             t.attackDamage = 3;
             t.bodyColour = rgb(58, 92, 132);
             t.headColour = rgb(88, 132, 72);
@@ -242,6 +243,7 @@ namespace
             t.height = 1.99f;
             t.walkSpeed = 2.1f;
             t.voice = Sound::MobRattle;
+            t.burnsInSunlight = true;
             t.attackDamage = 2;
             t.drop = Items::Bone;
             t.dropCount = 2;

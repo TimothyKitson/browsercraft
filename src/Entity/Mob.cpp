@@ -250,7 +250,40 @@ void Mob::chooseNewGoal(const glm::vec3& playerPosition)
     m_goalTimer = 2.0f + random01() * 4.0f;
 }
 
-void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPosition)
+bool Mob::burnsNow(const MobType& type, float daylight, int skyLight, bool inLiquid)
+{
+    if (!type.burnsInSunlight) return false;
+    if (daylight < SUNLIGHT_DAYLIGHT) return false;
+    if (inLiquid) return false;
+    return skyLight >= 15;
+}
+
+void Mob::burnInSunlight(float deltaTime, const World& world, float daylight)
+{
+    const int x = static_cast<int>(std::floor(m_position.x));
+    const int z = static_cast<int>(std::floor(m_position.z));
+    const int head = static_cast<int>(std::floor(m_position.y + height() * 0.9f));
+
+    const bool inLiquid = isLiquid(world.getBlock(x, head, z));
+
+    if (!burnsNow(type(), daylight, world.skyLight(x, head, z), inLiquid))
+    {
+        m_burnTimer = 0.0f;
+        m_burnTick = 0.0f;
+        return;
+    }
+
+    m_burnTimer += deltaTime;
+    m_burnTick += deltaTime;
+    if (m_burnTick >= SUNLIGHT_BURN_INTERVAL)
+    {
+        m_burnTick = 0.0f;
+        damage(1, glm::vec3(0.0f));
+    }
+}
+
+void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPosition,
+                 float daylight)
 {
     const MobType& t = type();
 
@@ -264,6 +297,9 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
         m_removeTimer -= deltaTime;
         return;
     }
+
+    burnInSunlight(deltaTime, world, daylight);
+    if (!alive()) return;
 
     if (m_repathTimer > 0.0f) m_repathTimer = std::max(0.0f, m_repathTimer - deltaTime);
 

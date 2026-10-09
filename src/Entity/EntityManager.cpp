@@ -153,7 +153,7 @@ void EntityManager::update(float deltaTime, const World& world,
 {
     for (Mob& mob : m_mobs)
     {
-        mob.update(deltaTime, world, playerPosition);
+        mob.update(deltaTime, world, playerPosition, daylight);
 
         // Caught here rather than at removal: the corpse lingers, and
         // whatever it drops belongs where it fell, not where it stopped.

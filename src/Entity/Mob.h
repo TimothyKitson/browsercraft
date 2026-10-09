@@ -34,7 +34,20 @@ class Mob
 public:
     Mob(MobId type, glm::vec3 feetPosition, uint32_t seed, bool baby = false);
 
-    void update(float deltaTime, const World& world, const glm::vec3& playerPosition);
+    void update(float deltaTime, const World& world, const glm::vec3& playerPosition,
+                float daylight = 0.0f);
+
+    // Set while the sun is burning it: the renderer tints it, and it is
+    // losing health once a second until it finds shade or dies.
+    bool burning() const { return m_burnTimer > 0.0f; }
+
+    static constexpr float SUNLIGHT_BURN_INTERVAL = 1.0f;
+    static constexpr float SUNLIGHT_DAYLIGHT = 0.5f;
+
+    // Whether the sun is on it right now. Pulled out of the update so
+    // --selftest can ask the question without a world to stand in: a
+    // block of wool overhead or a metre of water is all it takes.
+    static bool burnsNow(const MobType& type, float daylight, int skyLight, bool inLiquid);
 
     void damage(int amount, const glm::vec3& fromDirection);
     bool alive() const { return m_health > 0; }
@@ -127,6 +140,7 @@ private:
     bool m_chasing = false;
 
     // Steers towards the next waypoint. True while there is one.
+    void burnInSunlight(float deltaTime, const World& world, float daylight);
     bool followPath();
     // A heading that is actually clear, for when the chosen one is not.
     void steerAroundObstacle(const World& world);
@@ -140,6 +154,8 @@ private:
     float m_breedTimer = 0.0f;
     float m_babyTimer = 0.0f;
     float m_hurtFlash = 0.0f;
+    float m_burnTimer = 0.0f;
+    float m_burnTick = 0.0f;
     float m_removeTimer = 0.6f;
     bool m_deathReported = false;
 
