@@ -103,7 +103,12 @@ $skinRoot = Split-Path -Parent $dest
 $players = 0
 
 foreach ($build in @("wide", "slim")) {
+    # Under player/ in a full entity pack, or at the root of one that
+    # holds nothing but the player skins.
     $from = $files | Where-Object { $_.FullName -like "*\player\$build\*.png" }
+    if (-not $from) {
+        $from = $files | Where-Object { $_.FullName -like "*\$build\*.png" }
+    }
     if (-not $from) { continue }
 
     $into = Join-Path $skinRoot $build

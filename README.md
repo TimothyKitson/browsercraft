@@ -134,6 +134,21 @@ repository contains neither: install a different pack and the old name
 cannot be left behind. With no `CREDIT.txt` nothing is claimed, and
 `build-web.ps1` warns you before it publishes an uncredited pack.
 
+## HUD sprites
+
+The hearts, the drumsticks and the hotbar are drawn in code until a pack
+supplies them:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\install-gui-pack.ps1 -Zip "C:\path\to\gui.zip"
+```
+
+Modern Minecraft keeps the HUD as one sprite per file under
+`sprites/hud`, while the engine asks for a flat set of names; the
+installer maps between the two, and takes the flat names as well, so a
+pack laid out either way drops in. Anything missing keeps the sprite the
+game draws for itself.
+
 ## Sounds
 
 The engine asks for Minecraft's own sound names, so a pack laid out the
