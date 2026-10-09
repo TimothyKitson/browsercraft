@@ -203,7 +203,11 @@ void Application::renderInventoryScreen()
     const int gridRows = showPalette ? PALETTE_ROWS : 3;
 
     const float titleHeight = 34.0f;
-    const float topHeight = showPalette ? 0.0f : Inventory::ARMOR_SLOTS * step + SLOT_GAP;
+    // The top of the panel holds the armour and the character, or, with
+    // a chest open, the chest's own three rows -- which are one row
+    // shorter, so the panel closes up rather than leaving a gap.
+    const float topRows = m_chestOpen ? 3.0f : static_cast<float>(Inventory::ARMOR_SLOTS);
+    const float topHeight = showPalette ? 0.0f : topRows * step + SLOT_GAP;
     const float gridHeight = gridRows * step + SLOT_GAP;
     const float hotbarHeight = step + SLOT_GAP;
     const float panelHeight = titleHeight + topHeight + gridHeight + 18.0f + hotbarHeight;
@@ -246,12 +250,35 @@ void Application::renderInventoryScreen()
     // Dark text with no shadow: on a light panel a drop shadow just looks
     // like a smudge, and vanilla does not use one here either.
     const char* title = creative ? CREATIVE_TABS[m_creativeTab].name
-                                 : (m_furnaceOpen ? "FURNACE"
-                                                  : (m_benchOpen ? "CRAFTING" : "INVENTORY"));
+                                 : (m_chestOpen ? "CHEST"
+                                   : (m_furnaceOpen ? "FURNACE"
+                                   : (m_benchOpen ? "CRAFTING" : "INVENTORY")));
     m_ui.text(title, panelX + 10.0f, panelY + 10.0f, 2.2f, GUI_TEXT);
 
+    // --------------------------------------------- the open chest ---
+    // A chest is the one container too big for a corner, so it takes the
+    // whole top of the panel: the same nine across as the storage below
+    // it, which is what makes the two read as one tall grid.
+    if (m_chestOpen && !showPalette)
+    {
+        const float topY = panelY + titleHeight;
+
+        for (int row = 0; row < 3; ++row)
+            for (int column = 0; column < PALETTE_COLUMNS; ++column)
+            {
+                const float x = panelX + SLOT_GAP + column * step;
+                const float y = topY + SLOT_GAP + row * step;
+                const int index = Inventory::CHEST_FIRST + row * PALETTE_COLUMNS + column;
+
+                guiWell(x, y, SLOT_SIZE, SLOT_SIZE);
+                const ItemStack& stack = m_inventory.slot(index);
+                drawItem(x, y, SLOT_SIZE, stack.id, stack.count, glm::vec4(1.0f), stack.damage);
+                m_slotBoxes.push_back({ SlotBox::Kind::Slot, index, x, y, SLOT_SIZE });
+            }
+    }
+
     // ------------------------------- armour, body preview, crafting ---
-    if (!showPalette)
+    if (!showPalette && !m_chestOpen)
     {
         const float topY = panelY + titleHeight;
 
@@ -515,6 +542,7 @@ void Application::handleInventoryClick(int mouseX, int mouseY, bool rightButton,
 // dropped at their feet.
 void Application::closeInventory()
 {
+    stowChest();
     stowFurnace();
     returnCursorToWorld();
     m_inventoryOpen = false;
@@ -529,6 +557,36 @@ void Application::openBench(const glm::ivec3& block)
     m_inventory.setCraftSize(3);
     m_inventoryOpen = true;
     setMouseCaptured(false);
+}
+
+void Application::openChest(const glm::ivec3& block)
+{
+    m_chestBlock = block;
+    m_chestOpen = true;
+
+    const Chests::Contents& held = m_chests.at(block);
+    for (int i = 0; i < Inventory::CHEST_SLOTS; ++i)
+        m_inventory.slot(Inventory::CHEST_FIRST + i) = held[i];
+
+    m_inventoryOpen = true;
+    setMouseCaptured(false);
+}
+
+void Application::stowChest()
+{
+    if (!m_chestOpen) return;
+
+    Chests::Contents& held = m_chests.at(m_chestBlock);
+    for (int i = 0; i < Inventory::CHEST_SLOTS; ++i)
+    {
+        held[i] = m_inventory.slot(Inventory::CHEST_FIRST + i);
+        m_inventory.slot(Inventory::CHEST_FIRST + i).clear();
+    }
+
+    // An emptied chest is a plain block again; keeping a row of
+    // twenty-seven nothings for it would bloat every save.
+    m_chests.forgetIfEmpty(m_chestBlock);
+    m_chestOpen = false;
 }
 
 void Application::openFurnace(const glm::ivec3& block)

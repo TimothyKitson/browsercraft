@@ -45,6 +45,12 @@ namespace
                          Blocks::Cobblestone, Blocks::Cobblestone, Blocks::Cobblestone },
           0, Blocks::Furnace, 1 },
 
+        // Eight planks round an empty middle make a chest.
+        { false, 3, 3, { Blocks::Planks, Blocks::Planks, Blocks::Planks,
+                         Blocks::Planks, _,              Blocks::Planks,
+                         Blocks::Planks, Blocks::Planks, Blocks::Planks },
+          0, Blocks::Chest, 1 },
+
         // Two planks, one above the other, make four sticks.
         { false, 1, 2, { Blocks::Planks,
                          Blocks::Planks }, 0, Items::Stick, 4 },

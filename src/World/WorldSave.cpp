@@ -141,6 +141,16 @@ void WorldSave::saveLevel(const std::string& saveDirectory, const LevelState& st
         write(out, f.output); write(out, f.outputCount);
         write(out, f.burnLeft); write(out, f.burnTotal); write(out, f.cooked);
     }
+
+    uint16_t chestCount = static_cast<uint16_t>(state.chests.size());
+    write(out, chestCount);
+    for (const LevelState::SavedChest& c : state.chests)
+    {
+        write(out, c.x); write(out, c.y); write(out, c.z);
+        uint16_t slots = static_cast<uint16_t>(c.slots.size());
+        write(out, slots);
+        for (const auto& slot : c.slots) { write(out, slot.first); write(out, slot.second); }
+    }
 }
 
 bool WorldSave::loadLevel(const std::string& saveDirectory, LevelState& out)
@@ -220,6 +230,30 @@ bool WorldSave::loadLevel(const std::string& saveDirectory, LevelState& out)
                             if (!read(in, f.burnLeft) || !read(in, f.burnTotal) ||
                                 !read(in, f.cooked)) break;
                             out.furnaces.push_back(f);
+                        }
+
+                        uint16_t chestCount = 0;
+                        if (read(in, chestCount))
+                        {
+                            out.chests.clear();
+                            for (uint16_t i = 0; i < chestCount; ++i)
+                            {
+                                LevelState::SavedChest c;
+                                if (!read(in, c.x) || !read(in, c.y) || !read(in, c.z)) break;
+
+                                uint16_t slots = 0;
+                                if (!read(in, slots)) break;
+
+                                bool whole = true;
+                                for (uint16_t k = 0; k < slots; ++k)
+                                {
+                                    uint16_t id = 0, count = 0;
+                                    if (!read(in, id) || !read(in, count)) { whole = false; break; }
+                                    c.slots.emplace_back(id, count);
+                                }
+                                if (!whole) break;
+                                out.chests.push_back(c);
+                            }
                         }
                     }
                 }

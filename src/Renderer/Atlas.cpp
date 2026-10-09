@@ -357,6 +357,71 @@ namespace
     void paintFurnaceFront(Tile& t) { paintFurnaceFace(t, false); }
     void paintFurnaceLit(Tile& t)   { paintFurnaceFace(t, true); }
 
+    // The chest. Like the furnace it has no facing to orient it by, so
+    // the latch goes on every side and it reads as a chest whichever way
+    // you come at it.
+    void paintChestWood(Tile& t)
+    {
+        t.fill(Color{ 150, 110, 58 });
+        for (int y = 0; y < Tile::N; ++y)
+            for (int x = 0; x < Tile::N; ++x)
+            {
+                const float n = hash2(x, y / 3, 71);
+                t.set(x, y, shade(t.get(x, y), n > 0.72f ? -20 : (n < 0.3f ? 14 : 0)));
+            }
+
+        const Color edge{ 96, 68, 34 };
+        for (int k = 0; k < Tile::N; ++k)
+        {
+            t.set(k, 0, edge); t.set(k, Tile::N - 1, edge);
+            t.set(0, k, edge); t.set(Tile::N - 1, k, edge);
+        }
+    }
+
+    void paintChestTop(Tile& t)
+    {
+        paintChestWood(t);
+
+        // The band across the lid.
+        const Color band{ 104, 74, 38 };
+        for (int x = 1; x < Tile::N - 1; ++x)
+            for (int y = Tile::N / 2 - 1; y <= Tile::N / 2; ++y)
+                t.set(x, y, band);
+    }
+
+    void paintChestFace(Tile& t, bool front)
+    {
+        paintChestWood(t);
+
+        const int n = Tile::N;
+        const Color band{ 104, 74, 38 };
+        const Color iron{ 92, 92, 98 };
+        const Color ironLit{ 148, 148, 154 };
+
+        // The seam between lid and body, a third of the way down.
+        const int seam = n / 3;
+        for (int x = 1; x < n - 1; ++x)
+        {
+            t.set(x, seam, band);
+            t.set(x, seam + 1, shade(band, -18));
+        }
+
+        if (!front) return;
+
+        // The latch, straddling the seam.
+        const int x0 = n / 2 - std::max(1, n / 16);
+        const int x1 = n / 2 + std::max(1, n / 16) - 1;
+        for (int y = seam - std::max(1, n / 16); y <= seam + std::max(2, n / 8); ++y)
+            for (int x = x0; x <= x1; ++x)
+                t.set(x, y, (y <= seam) ? ironLit : iron);
+
+        // The keyhole.
+        t.set(n / 2 - 1, seam + std::max(1, n / 12), Color{ 32, 32, 36 });
+    }
+
+    void paintChestFront(Tile& t) { paintChestFace(t, true); }
+    void paintChestSide(Tile& t)  { paintChestFace(t, false); }
+
     void paintBedrock(Tile& t)
     {
         t.fill(Color{ 85, 85, 85 });
@@ -1644,6 +1709,9 @@ namespace
         { Tiles::ItemWheat, paintItemWheat },
         { Tiles::CraftingTop,   paintCraftingTop },
         { Tiles::FurnaceTop,    paintFurnaceTop },
+        { Tiles::ChestTop,      paintChestTop },
+        { Tiles::ChestFront,    paintChestFront },
+        { Tiles::ChestSide,     paintChestSide },
         { Tiles::FurnaceFront,  paintFurnaceFront },
         { Tiles::FurnaceLit,    paintFurnaceLit },
         { Tiles::ItemSteak,         paintItemSteak },

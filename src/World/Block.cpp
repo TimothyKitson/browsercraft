@@ -57,6 +57,7 @@ namespace
         { "Crafting Table", CraftingTop, Planks,     CraftingSide,   true,  true,  RenderType::Cube,   0,   2.5f },
         { "Furnace",      FurnaceTop,    FurnaceTop,     FurnaceFront,   true,  true,  RenderType::Cube,   0,   3.5f },
         { "Furnace",      FurnaceTop,    FurnaceTop,     FurnaceLit,     true,  true,  RenderType::Cube,  13,   3.5f },
+        { "Chest",        ChestTop,      ChestTop,       ChestFront,     true,  true,  RenderType::Cube,   0,   2.5f },
         { "Farmland",     FarmlandTop,   Dirt,           FarmlandSide,   true,  true,  RenderType::Cube,   0,   0.6f },
         { "Wheat Crop",   WheatStage0,   WheatStage0,    WheatStage0,    false, false, RenderType::Cross,  0,   0.0f },
         { "Wheat Crop",   WheatStage1,   WheatStage1,    WheatStage1,    false, false, RenderType::Cross,  0,   0.0f },
@@ -130,6 +131,7 @@ const char* blockSoundGroup(BlockId id)
         case Blocks::Log:
         case Blocks::BirchLog:
         case Blocks::CraftingTable:
+        case Blocks::Chest:
         case Blocks::Torch:
             return "wood";
 
@@ -200,6 +202,7 @@ Material blockMaterial(BlockId id)
         case Blocks::BirchLog:
         case Blocks::Planks:
         case Blocks::CraftingTable:
+        case Blocks::Chest:
             return Material::Wood;
 
         case Blocks::Leaves:

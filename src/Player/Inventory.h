@@ -55,7 +55,13 @@ public:
     static constexpr int FURNACE_OUTPUT = FURNACE_FIRST + 2;
     static constexpr int FURNACE_SLOTS = 3;
 
-    static constexpr int SLOT_COUNT = FURNACE_FIRST + FURNACE_SLOTS;  // 53
+    // The open chest's twenty-seven, borrowed the same way. A chest is
+    // the one container big enough that the screen gives it the whole
+    // top of the panel rather than a corner of it.
+    static constexpr int CHEST_FIRST = FURNACE_FIRST + FURNACE_SLOTS;  // 53..79
+    static constexpr int CHEST_SLOTS = 27;
+
+    static constexpr int SLOT_COUNT = CHEST_FIRST + CHEST_SLOTS;      // 80
 
     // The ceiling. What a particular thing actually stacks to comes from
     // maxStackOf(), since items need not agree with blocks.

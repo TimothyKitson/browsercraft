@@ -521,6 +521,18 @@ void Application::loadLevel()
         // out. Put every one right once the chunks are up.
         m_pendingFurnaceLight = true;
 
+        m_chests.clear();
+        for (const LevelState::SavedChest& saved : state.chests)
+        {
+            Chests::Contents held{};
+            for (size_t i = 0; i < saved.slots.size() && i < Chests::SLOTS; ++i)
+            {
+                held[i].id = saved.slots[i].first;
+                held[i].count = saved.slots[i].second;
+            }
+            m_chests.put(glm::ivec3(saved.x, saved.y, saved.z), held);
+        }
+
         m_player.position = state.playerPosition;
         m_camera.yaw = state.yaw;
         m_camera.pitch = state.pitch;
@@ -583,8 +595,9 @@ void Application::saveLevel()
         state.damage.push_back(static_cast<uint16_t>(std::clamp(stack.damage, 0, 65535)));
     }
 
-    // The open furnace's slots are the inventory's while the screen is
-    // up, so they go home before the furnaces are written out.
+    // An open container's slots are the inventory's while its screen is
+    // up, so they go home before any of it is written out.
+    stowChest();
     stowFurnace();
 
     for (const auto& entry : m_furnaces.all())
@@ -605,6 +618,17 @@ void Application::saveLevel()
         saved.burnTotal = furnace.burnTotal;
         saved.cooked = furnace.cooked;
         state.furnaces.push_back(saved);
+    }
+
+    for (const auto& entry : m_chests.all())
+    {
+        LevelState::SavedChest saved;
+        saved.x = entry.first[0];
+        saved.y = entry.first[1];
+        saved.z = entry.first[2];
+        for (const ItemStack& held : entry.second)
+            saved.slots.emplace_back(held.id, static_cast<uint16_t>(std::max(0, held.count)));
+        state.chests.push_back(saved);
     }
 
     WorldSave::saveLevel(m_savePath, state);
@@ -1005,15 +1029,17 @@ bool Application::frame()
 
         // The big grid belongs to the bench, not to the player, so it
         // shuts as soon as they walk out of reach of it -- or mine it.
-        if ((m_benchOpen || m_furnaceOpen) && playing())
+        if ((m_benchOpen || m_furnaceOpen || m_chestOpen) && playing())
         {
-            const glm::ivec3 block = m_benchOpen ? m_benchBlock : m_furnaceBlock;
+            const glm::ivec3 block = m_benchOpen ? m_benchBlock
+                                   : (m_chestOpen ? m_chestBlock : m_furnaceBlock);
             const glm::vec3 middle = glm::vec3(block) + glm::vec3(0.5f);
             const BlockId there = m_world->getBlock(block.x, block.y, block.z);
 
             const bool stillThere = m_benchOpen
                 ? there == Blocks::CraftingTable
-                : (there == Blocks::Furnace || there == Blocks::FurnaceLit);
+                : (m_chestOpen ? there == Blocks::Chest
+                               : (there == Blocks::Furnace || there == Blocks::FurnaceLit));
 
             if (!stillThere || glm::length(m_player.position - middle) > BENCH_REACH)
             {
@@ -1050,7 +1076,8 @@ bool Application::frame()
     {
         if (m_startupScreen == "inventory" || m_startupScreen == "creative" ||
             m_startupScreen == "bench" || m_startupScreen == "tools" ||
-            m_startupScreen == "furnace" || m_startupScreen == "furnaceblock")
+            m_startupScreen == "furnace" || m_startupScreen == "furnaceblock" ||
+            m_startupScreen == "chest")
         {
             // Dev aid: open the inventory with something in it, so the
             // screenshot shows a real grid rather than 36 empty boxes.
@@ -1068,6 +1095,28 @@ bool Application::frame()
             m_inventory.add(Blocks::CraftingTable, 1);
 
             if (m_startupScreen == "creative") m_creativeTab = 5;   // TOOLS
+
+            if (m_startupScreen == "chest")
+            {
+                const glm::vec3 ahead = m_player.position + m_camera.front * 3.0f;
+                const glm::ivec3 where(static_cast<int>(std::floor(ahead.x)),
+                                       static_cast<int>(std::floor(m_player.position.y)),
+                                       static_cast<int>(std::floor(ahead.z)));
+                m_world->setBlock(where.x, where.y, where.z, Blocks::Chest);
+
+                Chests::Contents& inside = m_chests.at(where);
+                const StackId SAMPLE[] = {
+                    Blocks::Cobblestone, Blocks::Planks, Blocks::Log, Items::Coal,
+                    Items::IronIngot, Items::Diamond, Items::Bread, Items::Steak,
+                    Items::DiamondPickaxe, Items::IronSword, Blocks::Torch, Items::Stick,
+                };
+                for (int i = 0; i < 12; ++i)
+                {
+                    inside[i].id = SAMPLE[i];
+                    inside[i].count = isItem(SAMPLE[i]) && maxStackOf(SAMPLE[i]) == 1 ? 1 : (i + 1) * 3;
+                }
+                openChest(where);
+            }
             if (m_startupScreen == "furnace" || m_startupScreen == "furnaceblock")
             {
                 // A furnace a block away, already working, so the
@@ -1786,6 +1835,22 @@ void Application::updateMining(float deltaTime)
                 if (drop != Blocks::Air) m_drops.spawnFromBrokenBlock(hit.block, drop);
             }
 
+            // A chest gives back everything in it. Twenty-seven stacks
+            // is a lot to drop at once, which is why they come out of
+            // the block rather than the player.
+            if (id == Blocks::Chest)
+            {
+                if (m_chestOpen && m_chestBlock == hit.block) stowChest();
+
+                if (m_chests.has(hit.block))
+                {
+                    for (const ItemStack& held : m_chests.at(hit.block))
+                        if (!held.empty())
+                            m_drops.spawnFromBrokenBlock(hit.block, held.id, held.count);
+                    m_chests.remove(hit.block);
+                }
+            }
+
             // A furnace gives back whatever was inside it, lit or not,
             // and whether or not the furnace itself survives the pick.
             if (id == Blocks::Furnace || id == Blocks::FurnaceLit)
@@ -1920,6 +1985,12 @@ void Application::handlePlacement()
             {
                 openFurnace(bench.block);
                 m_audio.play(Sound::Click, 0.4f);
+                return;
+            }
+            if (used == Blocks::Chest)
+            {
+                openChest(bench.block);
+                m_audio.play(Sound::DigWood, 0.5f, 0.8f);
                 return;
             }
         }

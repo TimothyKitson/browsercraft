@@ -11,6 +11,7 @@
 #include "Renderer/GuiTextures.h"
 #include "World/World.h"
 #include "World/Furnaces.h"
+#include "World/Chests.h"
 #include "Player/Player.h"
 #include "Player/Inventory.h"
 #include "Audio/AudioEngine.h"
@@ -225,6 +226,10 @@ private:
     glm::ivec3 m_benchBlock{ 0 };
     bool m_benchOpen = false;
 
+    Chests m_chests;
+    glm::ivec3 m_chestBlock{ 0 };
+    bool m_chestOpen = false;
+
     Furnaces m_furnaces;
     glm::ivec3 m_furnaceBlock{ 0 };
     bool m_furnaceOpen = false;
@@ -379,6 +384,9 @@ private:
 
     // The open furnace borrows three inventory slots while its screen is
     // up; these move its contents in and back out again.
+    void openChest(const glm::ivec3& block);
+    void stowChest();
+
     void openFurnace(const glm::ivec3& block);
     void stowFurnace();
     void tickFurnaces(float deltaTime);

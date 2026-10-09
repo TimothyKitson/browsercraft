@@ -43,6 +43,15 @@ struct LevelState
     };
     std::vector<SavedFurnace> furnaces;
 
+    // Every chest with something in it. Twenty-seven slots each, written
+    // after the furnaces for the same reason they were written last.
+    struct SavedChest
+    {
+        int x = 0, y = 0, z = 0;
+        std::vector<std::pair<uint16_t, uint16_t>> slots;
+    };
+    std::vector<SavedChest> chests;
+
     // Where dying puts you back. False on a level written before this was
     // saved at all, which means fall back to asking the generator.
     glm::vec3 spawn{ 0.0f };

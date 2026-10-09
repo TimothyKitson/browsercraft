@@ -59,6 +59,7 @@ namespace Blocks
         CraftingTable,
         Furnace,
         FurnaceLit,
+        Chest,
 
         Farmland,
         Wheat0, Wheat1, Wheat2, Wheat3, Wheat4, Wheat5, Wheat6, Wheat7,

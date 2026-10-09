@@ -62,6 +62,7 @@ namespace Tiles
         WheatStage4, WheatStage5, WheatStage6, WheatStage7,
         CraftingTop, CraftingSide,
         FurnaceFront, FurnaceLit, FurnaceTop,
+        ChestFront, ChestSide, ChestTop,
         TileCount
     };
 

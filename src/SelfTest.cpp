@@ -18,6 +18,7 @@
 #include "Game/Tools.h"
 #include "Game/Smelting.h"
 #include "World/Furnaces.h"
+#include "World/Chests.h"
 #include "Entity/MobModel.h"
 #include "Entity/MobSkin.h"
 #include "Entity/MobType.h"
@@ -1746,6 +1747,38 @@ namespace
         check(!furnaces.has(here), "a cold empty furnace is forgotten");
     }
 
+    void testChestStore()
+    {
+        section("chests");
+
+        Chests chests;
+        const glm::ivec3 here(2, 71, 8);
+
+        check(!chests.has(here), "nowhere has a chest to begin with");
+
+        Chests::Contents& held = chests.at(here);
+        held[4].id = Blocks::Cobblestone;
+        held[4].count = 30;
+        check(chests.has(here), "putting something in one records it");
+        check(chests.at(here)[4].count == 30, "and it is still there");
+
+        // Emptying one forgets it, so a save does not carry a row of
+        // twenty-seven nothings for every chest ever placed.
+        chests.forgetIfEmpty(here);
+        check(chests.has(here), "a chest with something in it is kept");
+
+        chests.at(here)[4].clear();
+        chests.forgetIfEmpty(here);
+        check(!chests.has(here), "an emptied one is forgotten");
+
+        // Two chests do not share contents, which is the bug a single
+        // shared buffer would have.
+        const glm::ivec3 a(0, 64, 0), b(1, 64, 0);
+        chests.at(a)[0].id = Blocks::Sand;
+        chests.at(a)[0].count = 1;
+        check(chests.at(b)[0].empty(), "the chest next door is its own");
+    }
+
     void testLevelRoundTrip()
     {
         section("saving: the level file");
@@ -1774,6 +1807,13 @@ namespace
         furnace.burnLeft = 12.0f; furnace.burnTotal = 80.0f; furnace.cooked = 3.5f;
         wrote.furnaces.push_back(furnace);
 
+        LevelState::SavedChest chest;
+        chest.x = -5; chest.y = 68; chest.z = 12;
+        chest.slots.resize(Chests::SLOTS, { 0, 0 });
+        chest.slots[0] = { static_cast<uint16_t>(Blocks::Planks), 64 };
+        chest.slots[26] = { static_cast<uint16_t>(Items::DiamondSword), 1 };
+        wrote.chests.push_back(chest);
+
         WorldSave::saveLevel(dir, wrote);
 
         LevelState read;
@@ -1790,6 +1830,18 @@ namespace
         check(read.spawn == wrote.spawn, "and is the one that was saved");
 
         check(read.inventory.size() == 1, "the inventory comes back");
+
+        check(read.chests.size() == 1, "and the chest");
+        if (read.chests.size() == 1)
+        {
+            const LevelState::SavedChest& c = read.chests[0];
+            check(c.x == -5 && c.y == 68 && c.z == 12, "where it was left");
+            check(c.slots.size() == Chests::SLOTS, "with all its slots");
+            check(c.slots[0].first == Blocks::Planks && c.slots[0].second == 64,
+                  "and what was in the first");
+            check(c.slots[26].first == Items::DiamondSword, "and the last");
+        }
+
 
         // A furnace left burning is still burning when you come back,
         // and still holds what was in it.
@@ -1884,6 +1936,7 @@ int runSelfTest()
     testToolRecipes();
     testSmelting();
     testFurnaceStore();
+    testChestStore();
     testLevelRoundTrip();
 
     std::printf("\n%d checks, %d failed\n", g_checks, g_failures);
