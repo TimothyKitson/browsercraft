@@ -224,6 +224,103 @@ namespace
         }
     }
 
+    // One axis-aligned box inside a cell, with its own tiles and flat
+    // lighting. Stairs are two of these. It is deliberately separate
+    // from emitCubeFaces: that one carries the ambient-occlusion work
+    // for every ordinary block in the world, and a partial box has no
+    // business reaching into it.
+    void emitBox(const MeshSnapshot& snap, int lx, int y, int lz, BlockId id,
+                 const glm::vec3& lo, const glm::vec3& hi, std::vector<float>& out)
+    {
+        const BlockInfo& info = blockInfo(id);
+
+        const float sky = static_cast<float>(snap.skyLight(lx, y, lz)) / 15.0f;
+        const float block = static_cast<float>(snap.blockLight(lx, y, lz)) / 15.0f;
+
+        const glm::vec3 base(static_cast<float>(lx), static_cast<float>(y),
+                             static_cast<float>(lz));
+
+        for (int f = 0; f < 6; ++f)
+        {
+            const FaceDef& face = FACES[f];
+
+            // A face flush with the cell wall is hidden by a solid
+            // neighbour the same way a whole block's would be; a face
+            // inside the cell is always drawn.
+            const bool flush =
+                (face.nx < 0 && lo.x <= 0.0f) || (face.nx > 0 && hi.x >= 1.0f) ||
+                (face.ny < 0 && lo.y <= 0.0f) || (face.ny > 0 && hi.y >= 1.0f) ||
+                (face.nz < 0 && lo.z <= 0.0f) || (face.nz > 0 && hi.z >= 1.0f);
+
+            if (flush && isOpaque(snap.block(lx + face.nx, y + face.ny, lz + face.nz)))
+                continue;
+
+            const TileUV uv = tileUV(tileForFace(info, f));
+
+            float vx[4], vy[4], vz[4], vu[4], vv[4];
+            for (int c = 0; c < 4; ++c)
+            {
+                const int cx = face.corner[c][0];
+                const int cy = face.corner[c][1];
+                const int cz = face.corner[c][2];
+
+                vx[c] = base.x + (cx ? hi.x : lo.x);
+                vy[c] = base.y + (cy ? hi.y : lo.y);
+                vz[c] = base.z + (cz ? hi.z : lo.z);
+
+                // The texture is cut from the part of the tile the box
+                // actually covers, so a half-height side shows half the
+                // texture rather than the whole of it squashed. Which
+                // two axes those are depends on which way the face
+                // looks.
+                float su = 0.0f, sv = 0.0f;
+                if (face.nx != 0)
+                {
+                    su = cz ? hi.z : lo.z;
+                    sv = cy ? hi.y : lo.y;
+                }
+                else if (face.ny != 0)
+                {
+                    su = cx ? hi.x : lo.x;
+                    sv = cz ? hi.z : lo.z;
+                }
+                else
+                {
+                    su = cx ? hi.x : lo.x;
+                    sv = cy ? hi.y : lo.y;
+                }
+
+                vu[c] = uv.u0 + (uv.u1 - uv.u0) * su;
+                vv[c] = uv.vBottom + (uv.vTop - uv.vBottom) * sv;
+            }
+
+            const int order[6] = { 0, 1, 2, 0, 2, 3 };
+            for (int k : order)
+                pushVertex(out, vx[k], vy[k], vz[k], vu[k], vv[k], face.shade, sky, block);
+        }
+    }
+
+    // Stairs: the bottom half of the cell, plus a step on the back half
+    // of the top. "Facing" is the low side -- the way you walk up.
+    void emitStairs(const MeshSnapshot& snap, int lx, int y, int lz,
+                    BlockId id, std::vector<float>& out)
+    {
+        emitBox(snap, lx, y, lz, id, glm::vec3(0.0f), glm::vec3(1.0f, 0.5f, 1.0f), out);
+
+        glm::vec3 lo(0.0f, 0.5f, 0.0f);
+        glm::vec3 hi(1.0f, 1.0f, 1.0f);
+
+        switch (blockFacing(id))
+        {
+            case 0: lo.z = 0.5f; break;   // faces north, step at the south end
+            case 1: hi.x = 0.5f; break;   // faces east, step at the west end
+            case 2: hi.z = 0.5f; break;   // faces south, step at the north end
+            default: lo.x = 0.5f; break;  // faces west, step at the east end
+        }
+
+        emitBox(snap, lx, y, lz, id, lo, hi, out);
+    }
+
     // A ladder: one flat panel hard against the wall it hangs on, drawn
     // from both sides so it does not vanish when you climb past it.
     void emitLadder(const MeshSnapshot& snap, int lx, int y, int lz,
@@ -349,6 +446,10 @@ void buildChunkMesh(const MeshSnapshot& snapshot, MeshResult& out)
                 else if (isLadder(id))
                 {
                     emitLadder(snapshot, lx, y, lz, id, out.opaqueVertices);
+                }
+                else if (isStairs(id))
+                {
+                    emitStairs(snapshot, lx, y, lz, id, out.opaqueVertices);
                 }
                 else
                 {

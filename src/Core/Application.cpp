@@ -1118,7 +1118,8 @@ bool Application::frame()
             m_startupScreen == "arrows" || m_startupScreen == "slabs" ||
             m_startupScreen == "boom" || m_startupScreen == "tnt" ||
             m_startupScreen == "portal" || m_startupScreen == "nether" ||
-            m_startupScreen == "bucket" || m_startupScreen == "ladder")
+            m_startupScreen == "bucket" || m_startupScreen == "ladder" ||
+            m_startupScreen == "stairs")
         {
             // Dev aid: open the inventory with something in it, so the
             // screenshot shows a real grid rather than 36 empty boxes.
@@ -1131,6 +1132,7 @@ bool Application::frame()
                                   m_startupScreen != "slabs" &&
                                   m_startupScreen != "boom" &&
                                   m_startupScreen != "ladder" &&
+                                  m_startupScreen != "stairs" &&
                                   m_startupScreen != "tnt" &&
                                   m_startupScreen != "portal" &&
                                   m_startupScreen != "nether";
@@ -1160,6 +1162,34 @@ bool Application::frame()
             }
 
             if (m_startupScreen == "arrows") m_arrowDemo = true;
+
+            if (m_startupScreen == "stairs")
+            {
+                m_camera.pitch = -14.0f;
+                m_camera.addLook(0.0f, 0.0f, 0.0f);
+
+                const glm::vec3 ahead = m_player.position + m_camera.front * 6.0f;
+                const int bx = static_cast<int>(std::floor(ahead.x));
+                const int by = static_cast<int>(std::floor(m_player.position.y));
+                const int bz = static_cast<int>(std::floor(ahead.z));
+
+                // A flight climbing away from the camera, in each of the
+                // four materials, plus one of each facing at the front.
+                const BlockId KINDS[4] = { Blocks::StoneStairsNorth, Blocks::CobbleStairsNorth,
+                                           Blocks::PlankStairsNorth, Blocks::SandstoneStairsNorth };
+
+                for (int k = 0; k < 4; ++k)
+                    for (int i = 0; i < 4; ++i)
+                    {
+                        for (int fill = 0; fill < i; ++fill)
+                            m_world->setBlock(bx + k - 1, by + fill, bz - i, Blocks::Cobblestone);
+                        m_world->setBlock(bx + k - 1, by + i, bz - i, stairsFacing(KINDS[k], 2));
+                    }
+
+                for (int f = 0; f < 4; ++f)
+                    m_world->setBlock(bx + f - 1, by, bz + 2,
+                                      stairsFacing(Blocks::CobbleStairsNorth, f));
+            }
 
             if (m_startupScreen == "ladder")
             {
@@ -2813,6 +2843,18 @@ void Application::handlePlacement()
         box.max.z > target.z && box.min.z < target.z + 1;
     BlockId placing = asBlock(stack.id);
     if (overlapsPlayer && isSolid(placing)) return;
+
+    // Stairs face the way you are looking, so you walk up them rather
+    // than into them. Minecraft takes the direction from the player,
+    // not the face clicked, and so does this.
+    if (isStairs(placing))
+    {
+        const glm::vec3 look = m_camera.front;
+        const int facing = (std::fabs(look.x) > std::fabs(look.z))
+                               ? (look.x > 0.0f ? 3 : 1)    // walking east, step faces west
+                               : (look.z > 0.0f ? 0 : 2);
+        placing = stairsFacing(placing, facing);
+    }
 
     // A ladder hangs on whichever wall you aimed at, so the id it is
     // placed as is not quite the id in your hand.

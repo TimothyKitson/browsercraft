@@ -16,6 +16,8 @@ namespace
         Blocks::Wool, Blocks::Snow, Blocks::Ice,
         Blocks::StoneSlab, Blocks::CobblestoneSlab, Blocks::PlankSlab, Blocks::SandstoneSlab,
         Blocks::Tnt, Blocks::LadderNorth,
+        Blocks::StoneStairsNorth, Blocks::CobbleStairsNorth,
+        Blocks::PlankStairsNorth, Blocks::SandstoneStairsNorth,
     };
 
     const StackId TAB_NATURE[] = {

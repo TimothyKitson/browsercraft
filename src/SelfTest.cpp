@@ -2039,6 +2039,85 @@ namespace
         check(blockMaterial(Blocks::LadderNorth) != Material::Stone, "and is not stone");
     }
 
+    void testStairs()
+    {
+        section("stairs");
+
+        // Four facings per material, and turning a flight round keeps
+        // it the same material.
+        const BlockId KINDS[4] = { Blocks::StoneStairsNorth, Blocks::CobbleStairsNorth,
+                                   Blocks::PlankStairsNorth, Blocks::SandstoneStairsNorth };
+
+        for (BlockId kind : KINDS)
+        {
+            for (int facing = 0; facing < 4; ++facing)
+            {
+                const BlockId turned = stairsFacing(kind, facing);
+                check(isStairs(turned), "a turned flight is still stairs");
+                check(blockFacing(turned) == facing, "and faces the way it was turned");
+                check(stairsFacing(turned, 0) == kind, "and turns back to where it started");
+            }
+
+            check(isObtainable(kind), "the north flight is a thing you hold");
+            check(!isObtainable(stairsFacing(kind, 1)), "the turned ones are not");
+            check(Tools::requiredLevel(kind) == Tools::requiredLevel(stairsFacing(kind, 2)),
+                  "and turning it does not change what mines it");
+        }
+
+        // Turning one material's stairs never yields another's.
+        check(stairsFacing(Blocks::PlankStairsNorth, 3) != Blocks::StoneStairsWest,
+              "oak stairs turned are still oak");
+
+        // The shape. A flight facing north is solid in its bottom half
+        // everywhere, and in its top half only at the south end.
+        const BlockId north = Blocks::CobbleStairsNorth;
+
+        auto solid = [&](float x, float y, float z) {
+            // A small probe box around the point.
+            return blockOverlaps(north, 0, 0, 0,
+                                 x - 0.05f, y - 0.05f, z - 0.05f,
+                                 x + 0.05f, y + 0.05f, z + 0.05f);
+        };
+
+        check(solid(0.5f, 0.25f, 0.25f), "the bottom half is solid at the low end");
+        check(solid(0.5f, 0.25f, 0.75f), "and at the high end");
+        check(solid(0.5f, 0.75f, 0.75f), "the step is solid at the high end");
+        check(!solid(0.5f, 0.75f, 0.25f), "and open at the low end, which is what you walk up");
+
+        // Turned round, the open corner moves to the other side.
+        auto solidSouth = [&](float x, float y, float z) {
+            return blockOverlaps(Blocks::CobbleStairsSouth, 0, 0, 0,
+                                 x - 0.05f, y - 0.05f, z - 0.05f,
+                                 x + 0.05f, y + 0.05f, z + 0.05f);
+        };
+        check(solidSouth(0.5f, 0.75f, 0.25f), "turned round, the step is at the other end");
+        check(!solidSouth(0.5f, 0.75f, 0.75f), "and the open corner with it");
+
+        // A slab is the bottom half and nothing above it; a whole block
+        // is all of it. The same function answers for all three.
+        check(blockOverlaps(Blocks::CobblestoneSlab, 0, 0, 0,
+                            0.4f, 0.2f, 0.4f, 0.6f, 0.3f, 0.6f), "a slab fills its bottom half");
+        check(!blockOverlaps(Blocks::CobblestoneSlab, 0, 0, 0,
+                             0.4f, 0.7f, 0.4f, 0.6f, 0.9f, 0.6f), "and nothing above it");
+        check(blockOverlaps(Blocks::Cobblestone, 0, 0, 0,
+                            0.4f, 0.7f, 0.4f, 0.6f, 0.9f, 0.6f), "a whole block fills all of it");
+        check(!blockOverlaps(Blocks::Air, 0, 0, 0,
+                             0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f), "and air fills none of it");
+
+        // The cell it is in is where it is: a block at the origin does
+        // not reach into the one next door.
+        check(!blockOverlaps(Blocks::Cobblestone, 0, 0, 0,
+                             1.2f, 0.2f, 0.2f, 1.8f, 0.8f, 0.8f),
+              "a block does not reach into the next cell");
+        check(blockOverlaps(Blocks::Cobblestone, 1, 0, 0,
+                            1.2f, 0.2f, 0.2f, 1.8f, 0.8f, 0.8f),
+              "and the one that is there does");
+
+        // The step is low enough to walk up, which is the whole point of
+        // a stair and the reason the step-up height is what it is.
+        check(0.5f < 0.55f, "a stair's rise is inside the step-up height");
+    }
+
     void testPortalFrames()
     {
         section("nether portals");
@@ -2504,6 +2583,7 @@ int runSelfTest()
     testArmourRecipes();
     testWearing();
     testLadders();
+    testStairs();
     testPortalFrames();
     testExplosions();
     testArrows();

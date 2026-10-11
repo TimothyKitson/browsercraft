@@ -65,6 +65,22 @@ namespace
         { "Ladder",       LadderTile,    LadderTile,     LadderTile,     false, false, RenderType::Ladder, 0,  0.4f },
         { "Ladder",       LadderTile,    LadderTile,     LadderTile,     false, false, RenderType::Ladder, 0,  0.4f },
         { "Ladder",       LadderTile,    LadderTile,     LadderTile,     false, false, RenderType::Ladder, 0,  0.4f },
+        { "Stone Stairs",         Stone,          Stone,           Stone,           true,  false, RenderType::Stairs, 0,   1.5f },
+        { "Stone Stairs",         Stone,          Stone,           Stone,           true,  false, RenderType::Stairs, 0,   1.5f },
+        { "Stone Stairs",         Stone,          Stone,           Stone,           true,  false, RenderType::Stairs, 0,   1.5f },
+        { "Stone Stairs",         Stone,          Stone,           Stone,           true,  false, RenderType::Stairs, 0,   1.5f },
+        { "Cobblestone Stairs",   Cobblestone,    Cobblestone,     Cobblestone,     true,  false, RenderType::Stairs, 0,   1.7f },
+        { "Cobblestone Stairs",   Cobblestone,    Cobblestone,     Cobblestone,     true,  false, RenderType::Stairs, 0,   1.7f },
+        { "Cobblestone Stairs",   Cobblestone,    Cobblestone,     Cobblestone,     true,  false, RenderType::Stairs, 0,   1.7f },
+        { "Cobblestone Stairs",   Cobblestone,    Cobblestone,     Cobblestone,     true,  false, RenderType::Stairs, 0,   1.7f },
+        { "Oak Stairs",           Planks,         Planks,          Planks,          true,  false, RenderType::Stairs, 0,   1.5f },
+        { "Oak Stairs",           Planks,         Planks,          Planks,          true,  false, RenderType::Stairs, 0,   1.5f },
+        { "Oak Stairs",           Planks,         Planks,          Planks,          true,  false, RenderType::Stairs, 0,   1.5f },
+        { "Oak Stairs",           Planks,         Planks,          Planks,          true,  false, RenderType::Stairs, 0,   1.5f },
+        { "Sandstone Stairs",     SandstoneTop,   SandstoneTop,    SandstoneSide,   true,  false, RenderType::Stairs, 0,   0.8f },
+        { "Sandstone Stairs",     SandstoneTop,   SandstoneTop,    SandstoneSide,   true,  false, RenderType::Stairs, 0,   0.8f },
+        { "Sandstone Stairs",     SandstoneTop,   SandstoneTop,    SandstoneSide,   true,  false, RenderType::Stairs, 0,   0.8f },
+        { "Sandstone Stairs",     SandstoneTop,   SandstoneTop,    SandstoneSide,   true,  false, RenderType::Stairs, 0,   0.8f },
         { "Stone Slab",   Stone,         Stone,          Stone,          true,  false, RenderType::Slab,   0,   1.5f },
         { "Cobblestone Slab", Cobblestone, Cobblestone,  Cobblestone,    true,  false, RenderType::Slab,   0,   1.7f },
         { "Oak Slab",     Planks,        Planks,         Planks,         true,  false, RenderType::Slab,   0,   1.5f },
@@ -103,10 +119,16 @@ bool isObtainable(BlockId id)
         case Blocks::LadderSouth:
         case Blocks::LadderWest:
             return false;
+
         default:
             // A crop is planted rather than placed, and only the ripe
             // one would mean anything in a hand anyway.
             if (isWheat(id)) return false;
+
+            // Likewise for stairs: one of each four is the thing you
+            // hold, the rest are it turned round.
+            if (isStairs(id) && blockFacing(id) != 0) return false;
+
             return id < Blocks::Count;
     }
 }
@@ -150,6 +172,10 @@ const char* blockSoundGroup(BlockId id)
         case Blocks::CraftingTable:
         case Blocks::Chest:
         case Blocks::PlankSlab:
+        case Blocks::PlankStairsNorth:
+        case Blocks::PlankStairsEast:
+        case Blocks::PlankStairsSouth:
+        case Blocks::PlankStairsWest:
         case Blocks::LadderNorth:
         case Blocks::LadderEast:
         case Blocks::LadderSouth:
@@ -235,6 +261,10 @@ Material blockMaterial(BlockId id)
         case Blocks::CraftingTable:
         case Blocks::Chest:
         case Blocks::PlankSlab:
+        case Blocks::PlankStairsNorth:
+        case Blocks::PlankStairsEast:
+        case Blocks::PlankStairsSouth:
+        case Blocks::PlankStairsWest:
             return Material::Wood;
 
         case Blocks::LadderNorth:
@@ -256,4 +286,40 @@ Material blockMaterial(BlockId id)
         default:
             return Material::Stone;
     }
+}
+
+bool blockOverlaps(BlockId id, int bx, int by, int bz,
+                   float minX, float minY, float minZ,
+                   float maxX, float maxY, float maxZ)
+{
+    if (!isSolid(id)) return false;
+
+    const float cx = static_cast<float>(bx);
+    const float cy = static_cast<float>(by);
+    const float cz = static_cast<float>(bz);
+
+    auto overlaps = [&](float loX, float loY, float loZ, float hiX, float hiY, float hiZ) {
+        return minX < cx + hiX && maxX > cx + loX &&
+               minY < cy + hiY && maxY > cy + loY &&
+               minZ < cz + hiZ && maxZ > cz + loZ;
+    };
+
+    if (isStairs(id))
+    {
+        // The bottom half of the cell, and a step on the back half of
+        // the top of it.
+        if (overlaps(0.0f, 0.0f, 0.0f, 1.0f, 0.5f, 1.0f)) return true;
+
+        float loX = 0.0f, loZ = 0.0f, hiX = 1.0f, hiZ = 1.0f;
+        switch (blockFacing(id))
+        {
+            case 0: loZ = 0.5f; break;
+            case 1: hiX = 0.5f; break;
+            case 2: hiZ = 0.5f; break;
+            default: loX = 0.5f; break;
+        }
+        return overlaps(loX, 0.5f, loZ, hiX, 1.0f, hiZ);
+    }
+
+    return overlaps(0.0f, 0.0f, 0.0f, 1.0f, blockHeight(id), 1.0f);
 }

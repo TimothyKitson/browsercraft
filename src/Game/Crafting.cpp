@@ -57,6 +57,24 @@ namespace
                          Items::Gunpowder, Blocks::Sand,     Items::Gunpowder },
           0, Blocks::Tnt, 1 },
 
+        // Six of a block in a staircase shape makes four stairs.
+        { false, 3, 3, { Blocks::Stone, _, _,
+                         Blocks::Stone, Blocks::Stone, _,
+                         Blocks::Stone, Blocks::Stone, Blocks::Stone },
+          0, Blocks::StoneStairsNorth, 4 },
+        { false, 3, 3, { Blocks::Cobblestone, _, _,
+                         Blocks::Cobblestone, Blocks::Cobblestone, _,
+                         Blocks::Cobblestone, Blocks::Cobblestone, Blocks::Cobblestone },
+          0, Blocks::CobbleStairsNorth, 4 },
+        { false, 3, 3, { Blocks::Planks, _, _,
+                         Blocks::Planks, Blocks::Planks, _,
+                         Blocks::Planks, Blocks::Planks, Blocks::Planks },
+          0, Blocks::PlankStairsNorth, 4 },
+        { false, 3, 3, { Blocks::Sandstone, _, _,
+                         Blocks::Sandstone, Blocks::Sandstone, _,
+                         Blocks::Sandstone, Blocks::Sandstone, Blocks::Sandstone },
+          0, Blocks::SandstoneStairsNorth, 4 },
+
         // Seven sticks make three ladders.
         { false, 3, 3, { Items::Stick, _,            Items::Stick,
                          Items::Stick, Items::Stick, Items::Stick,

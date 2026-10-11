@@ -138,15 +138,14 @@ bool Player::collides(const World& world, const AABB& box) const
         for (int y = minY; y <= maxY; ++y)
             for (int z = minZ; z <= maxZ; ++z)
             {
-                const BlockId block = world.getBlock(x, y, z);
-                if (!isSolid(block)) continue;
-
-                // A slab only fills the bottom half of its cell, so the
-                // box clears it if it is entirely above that.
-                const float top = static_cast<float>(y) + blockHeight(block);
-                if (box.min.y >= top - EPS) continue;
-
-                return true;
+                // A slab fills half its cell and a stair fills two
+                // corners of one, so the question is whether the solid
+                // part of the block overlaps the box -- not whether the
+                // cell is occupied at all.
+                if (blockOverlaps(world.getBlock(x, y, z), x, y, z,
+                                  box.min.x, box.min.y, box.min.z,
+                                  box.max.x, box.max.y, box.max.z))
+                    return true;
             }
 
     return false;
