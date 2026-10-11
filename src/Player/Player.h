@@ -39,6 +39,10 @@ public:
     AABB aabb() const { return aabbAt(position); }
 
     bool isInWater(const World& world) const;
+
+    // Whether the player is up against a ladder. Climbing is the one
+    // thing that overrides gravity without flying.
+    bool onLadder(const World& world) const;
     bool isHeadUnderwater(const World& world) const;
 
     // Returns true when the blow actually landed. Half a second of

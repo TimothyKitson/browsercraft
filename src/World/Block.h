@@ -68,6 +68,15 @@ namespace Blocks
         Tnt,
         TntPrimed,
 
+        // A ladder faces one of four ways, and each facing is its own
+        // id. A block has nowhere to keep which way it points, so the
+        // id carries it -- the same answer wheat's growth stages use.
+        // Keep the four in this order: north, east, south, west.
+        LadderNorth,
+        LadderEast,
+        LadderSouth,
+        LadderWest,
+
         StoneSlab,
         CobblestoneSlab,
         PlankSlab,
@@ -86,7 +95,8 @@ enum class RenderType : uint8_t
     Cube,   // standard full block
     Cross,  // two diagonal quads (plants, torch)
     Liquid, // full block, slightly lowered top surface, drawn in the transparent pass
-    Slab    // half a block, sitting on the floor of its own cell
+    Slab,   // half a block, sitting on the floor of its own cell
+    Ladder  // a flat panel against one wall of its cell, climbable
 };
 
 struct BlockInfo
@@ -110,6 +120,21 @@ inline bool isSolid(BlockId id) { return blockInfo(id).collides; }
 inline bool isLiquid(BlockId id) { return blockInfo(id).render == RenderType::Liquid; }
 inline bool isCross(BlockId id) { return blockInfo(id).render == RenderType::Cross; }
 inline bool isSlab(BlockId id) { return blockInfo(id).render == RenderType::Slab; }
+inline bool isLadder(BlockId id) { return blockInfo(id).render == RenderType::Ladder; }
+
+// Which way a facing block points: 0 north (-z), 1 east (+x), 2 south
+// (+z), 3 west (-x). Meaningless on anything that does not face.
+inline int blockFacing(BlockId id)
+{
+    if (isLadder(id)) return id - Blocks::LadderNorth;
+    return 0;
+}
+
+// The ladder that hangs on the wall in the given direction.
+inline BlockId ladderFacing(int facing)
+{
+    return static_cast<BlockId>(Blocks::LadderNorth + (facing & 3));
+}
 
 // How tall the block actually stands in its own cell. Everything is a
 // full block but the slabs, and the collision and the mesher both read

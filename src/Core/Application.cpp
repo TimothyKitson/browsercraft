@@ -1118,7 +1118,7 @@ bool Application::frame()
             m_startupScreen == "arrows" || m_startupScreen == "slabs" ||
             m_startupScreen == "boom" || m_startupScreen == "tnt" ||
             m_startupScreen == "portal" || m_startupScreen == "nether" ||
-            m_startupScreen == "bucket")
+            m_startupScreen == "bucket" || m_startupScreen == "ladder")
         {
             // Dev aid: open the inventory with something in it, so the
             // screenshot shows a real grid rather than 36 empty boxes.
@@ -1130,6 +1130,7 @@ bool Application::frame()
                                   m_startupScreen != "arrows" &&
                                   m_startupScreen != "slabs" &&
                                   m_startupScreen != "boom" &&
+                                  m_startupScreen != "ladder" &&
                                   m_startupScreen != "tnt" &&
                                   m_startupScreen != "portal" &&
                                   m_startupScreen != "nether";
@@ -1159,6 +1160,32 @@ bool Application::frame()
             }
 
             if (m_startupScreen == "arrows") m_arrowDemo = true;
+
+            if (m_startupScreen == "ladder")
+            {
+                m_camera.pitch = -8.0f;
+                m_camera.addLook(0.0f, 0.0f, 0.0f);
+
+                const glm::vec3 ahead = m_player.position + m_camera.front * 5.0f;
+                const int bx = static_cast<int>(std::floor(ahead.x));
+                const int by = static_cast<int>(std::floor(m_player.position.y));
+                const int bz = static_cast<int>(std::floor(ahead.z));
+
+                // A wall with a ladder up the near face of it, and a
+                // flight of slab steps beside it for comparison.
+                for (int a = -2; a <= 2; ++a)
+                    for (int b = 0; b <= 5; ++b)
+                        m_world->setBlock(bx + a, by + b, bz, Blocks::Cobblestone);
+
+                for (int b = 0; b <= 5; ++b)
+                    m_world->setBlock(bx, by + b, bz + 1, ladderFacing(0));
+
+                for (int i = 0; i < 4; ++i)
+                {
+                    m_world->setBlock(bx + 2, by + i, bz + 1 + i, Blocks::Cobblestone);
+                    m_world->setBlock(bx + 2, by + i + 1, bz + 1 + i, Blocks::CobblestoneSlab);
+                }
+            }
 
             if (m_startupScreen == "bucket")
             {
@@ -2784,8 +2811,21 @@ void Application::handlePlacement()
         box.max.x > target.x && box.min.x < target.x + 1 &&
         box.max.y > target.y && box.min.y < target.y + 1 &&
         box.max.z > target.z && box.min.z < target.z + 1;
-    const BlockId placing = asBlock(stack.id);
+    BlockId placing = asBlock(stack.id);
     if (overlapsPlayer && isSolid(placing)) return;
+
+    // A ladder hangs on whichever wall you aimed at, so the id it is
+    // placed as is not quite the id in your hand.
+    if (isLadder(placing))
+    {
+        // The normal points out of the face that was clicked, so the
+        // wall is the other way.
+        const glm::ivec3 n = hit.normal;
+        if (n.y != 0) return;   // nothing to hang it on
+
+        const int facing = (n.z > 0) ? 0 : (n.x < 0) ? 1 : (n.z < 0) ? 2 : 3;
+        placing = ladderFacing(facing);
+    }
 
     m_world->setBlock(target.x, target.y, target.z, placing);
     m_net.onLocalBlockChange(target.x, target.y, target.z, placing);

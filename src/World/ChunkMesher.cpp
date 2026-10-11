@@ -224,6 +224,66 @@ namespace
         }
     }
 
+    // A ladder: one flat panel hard against the wall it hangs on, drawn
+    // from both sides so it does not vanish when you climb past it.
+    void emitLadder(const MeshSnapshot& snap, int lx, int y, int lz,
+                    BlockId id, std::vector<float>& out)
+    {
+        const TileUV uv = tileUV(blockInfo(id).tileSide);
+
+        const float sky = static_cast<float>(snap.skyLight(lx, y, lz)) / 15.0f;
+        const float block = static_cast<float>(snap.blockLight(lx, y, lz)) / 15.0f;
+
+        // A hair off the wall, so it does not fight the wall's own face
+        // for the same pixels.
+        constexpr float GAP = 0.03f;
+
+        const float x0 = static_cast<float>(lx);
+        const float y0 = static_cast<float>(y);
+        const float z0 = static_cast<float>(lz);
+
+        glm::vec3 corner[4];
+
+        switch (blockFacing(id))
+        {
+            case 0: // hanging on the wall to the north, facing south
+                corner[0] = { x0,        y0,        z0 + GAP };
+                corner[1] = { x0 + 1.0f, y0,        z0 + GAP };
+                corner[2] = { x0 + 1.0f, y0 + 1.0f, z0 + GAP };
+                corner[3] = { x0,        y0 + 1.0f, z0 + GAP };
+                break;
+            case 1: // on the wall to the east, facing west
+                corner[0] = { x0 + 1.0f - GAP, y0,        z0 };
+                corner[1] = { x0 + 1.0f - GAP, y0,        z0 + 1.0f };
+                corner[2] = { x0 + 1.0f - GAP, y0 + 1.0f, z0 + 1.0f };
+                corner[3] = { x0 + 1.0f - GAP, y0 + 1.0f, z0 };
+                break;
+            case 2: // on the wall to the south, facing north
+                corner[0] = { x0 + 1.0f, y0,        z0 + 1.0f - GAP };
+                corner[1] = { x0,        y0,        z0 + 1.0f - GAP };
+                corner[2] = { x0,        y0 + 1.0f, z0 + 1.0f - GAP };
+                corner[3] = { x0 + 1.0f, y0 + 1.0f, z0 + 1.0f - GAP };
+                break;
+            default: // on the wall to the west, facing east
+                corner[0] = { x0 + GAP, y0,        z0 + 1.0f };
+                corner[1] = { x0 + GAP, y0,        z0 };
+                corner[2] = { x0 + GAP, y0 + 1.0f, z0 };
+                corner[3] = { x0 + GAP, y0 + 1.0f, z0 + 1.0f };
+                break;
+        }
+
+        const float u[4] = { uv.u0, uv.u1, uv.u1, uv.u0 };
+        const float v[4] = { uv.vBottom, uv.vBottom, uv.vTop, uv.vTop };
+
+        const int front[6] = { 0, 1, 2, 0, 2, 3 };
+        const int back[6]  = { 0, 2, 1, 0, 3, 2 };
+
+        for (int k : front)
+            pushVertex(out, corner[k].x, corner[k].y, corner[k].z, u[k], v[k], 1.0f, sky, block);
+        for (int k : back)
+            pushVertex(out, corner[k].x, corner[k].y, corner[k].z, u[k], v[k], 0.86f, sky, block);
+    }
+
     void emitCross(const MeshSnapshot& snap, int lx, int y, int lz,
                    BlockId id, std::vector<float>& out)
     {
@@ -285,6 +345,10 @@ void buildChunkMesh(const MeshSnapshot& snapshot, MeshResult& out)
                 if (isCross(id))
                 {
                     emitCross(snapshot, lx, y, lz, id, out.opaqueVertices);
+                }
+                else if (isLadder(id))
+                {
+                    emitLadder(snapshot, lx, y, lz, id, out.opaqueVertices);
                 }
                 else
                 {

@@ -65,6 +65,7 @@ namespace Tiles
         ChestFront, ChestSide, ChestTop,
         BedTop, BedSide,
         TntTop, TntSide, TntBottom, TntPrimedSide,
+        LadderTile,
         TileCount
     };
 

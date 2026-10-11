@@ -2004,6 +2004,41 @@ namespace
               "but go on your feet");
     }
 
+    void testLadders()
+    {
+        section("ladders");
+
+        // Four facings, each its own id, and the id carries which.
+        for (int facing = 0; facing < 4; ++facing)
+        {
+            const BlockId id = ladderFacing(facing);
+            check(isLadder(id), "every facing is a ladder");
+            check(blockFacing(id) == facing, "and knows which way it points");
+        }
+
+        // Round trips: the id for a facing gives that facing back, and
+        // the four are distinct rather than aliases of one another.
+        check(ladderFacing(0) != ladderFacing(1), "north is not east");
+        check(ladderFacing(2) != ladderFacing(3), "south is not west");
+        check(ladderFacing(4) == ladderFacing(0), "and the fifth wraps round to the first");
+
+        // Only one of them is a thing you hold: the other three are the
+        // same ladder hung on a different wall, and showing all four in
+        // the creative palette would be four copies of one item.
+        check(isObtainable(Blocks::LadderNorth), "a ladder can be held");
+        check(!isObtainable(Blocks::LadderEast), "but not one already on a wall");
+        check(!isObtainable(Blocks::LadderSouth), "nor the next");
+        check(!isObtainable(Blocks::LadderWest), "nor the last");
+
+        // You walk through a ladder rather than into it.
+        check(!isSolid(Blocks::LadderNorth), "a ladder does not block you");
+        check(!isOpaque(Blocks::LadderNorth), "nor hide what is behind it");
+
+        // And it comes up by hand, like the wood it is made of.
+        check(Tools::requiredLevel(Blocks::LadderNorth) == 0, "a ladder needs no tool");
+        check(blockMaterial(Blocks::LadderNorth) != Material::Stone, "and is not stone");
+    }
+
     void testPortalFrames()
     {
         section("nether portals");
@@ -2468,6 +2503,7 @@ int runSelfTest()
     testArmour();
     testArmourRecipes();
     testWearing();
+    testLadders();
     testPortalFrames();
     testExplosions();
     testArrows();

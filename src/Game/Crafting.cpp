@@ -57,6 +57,12 @@ namespace
                          Items::Gunpowder, Blocks::Sand,     Items::Gunpowder },
           0, Blocks::Tnt, 1 },
 
+        // Seven sticks make three ladders.
+        { false, 3, 3, { Items::Stick, _,            Items::Stick,
+                         Items::Stick, Items::Stick, Items::Stick,
+                         Items::Stick, _,            Items::Stick },
+          0, Blocks::LadderNorth, 3 },
+
         // Three of a block in a row makes six slabs of it.
         { false, 3, 1, { Blocks::Stone, Blocks::Stone, Blocks::Stone },
           0, Blocks::StoneSlab, 6 },

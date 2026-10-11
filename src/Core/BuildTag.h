@@ -4,4 +4,4 @@
 // changes a build actually contains. __DATE__ and __TIME__ beside it say
 // when it was compiled; together they answer "did it update?" without
 // anyone having to remember what they ran.
-#define BUILD_TAG "2026-10-11.1 buckets, and walking up half blocks"
+#define BUILD_TAG "2026-10-11.2 ladders, and block facing"

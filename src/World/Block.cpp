@@ -61,6 +61,10 @@ namespace
         { "Bed",          BedTop,        Planks,         BedSide,        true,  true,  RenderType::Cube,   0,   0.2f },
         { "TNT",          TntTop,        TntBottom,      TntSide,        true,  true,  RenderType::Cube,   0,   0.0f },
         { "TNT",          TntTop,        TntBottom,      TntPrimedSide,  true,  true,  RenderType::Cube,   7,   0.0f },
+        { "Ladder",       LadderTile,    LadderTile,     LadderTile,     false, false, RenderType::Ladder, 0,  0.4f },
+        { "Ladder",       LadderTile,    LadderTile,     LadderTile,     false, false, RenderType::Ladder, 0,  0.4f },
+        { "Ladder",       LadderTile,    LadderTile,     LadderTile,     false, false, RenderType::Ladder, 0,  0.4f },
+        { "Ladder",       LadderTile,    LadderTile,     LadderTile,     false, false, RenderType::Ladder, 0,  0.4f },
         { "Stone Slab",   Stone,         Stone,          Stone,          true,  false, RenderType::Slab,   0,   1.5f },
         { "Cobblestone Slab", Cobblestone, Cobblestone,  Cobblestone,    true,  false, RenderType::Slab,   0,   1.7f },
         { "Oak Slab",     Planks,        Planks,         Planks,         true,  false, RenderType::Slab,   0,   1.5f },
@@ -93,6 +97,11 @@ bool isObtainable(BlockId id)
         case Blocks::NetherPortal: // made by lighting a frame, never placed
         case Blocks::FurnaceLit:   // the burning state of one, not a thing you hold
         case Blocks::TntPrimed:    // likewise: a lit stick is not an item
+        // Only one ladder is a thing you hold; the other three are the
+        // same ladder hung on a different wall.
+        case Blocks::LadderEast:
+        case Blocks::LadderSouth:
+        case Blocks::LadderWest:
             return false;
         default:
             // A crop is planted rather than placed, and only the ripe
@@ -141,6 +150,10 @@ const char* blockSoundGroup(BlockId id)
         case Blocks::CraftingTable:
         case Blocks::Chest:
         case Blocks::PlankSlab:
+        case Blocks::LadderNorth:
+        case Blocks::LadderEast:
+        case Blocks::LadderSouth:
+        case Blocks::LadderWest:
         case Blocks::Torch:
             return "wood";
 
@@ -224,6 +237,10 @@ Material blockMaterial(BlockId id)
         case Blocks::PlankSlab:
             return Material::Wood;
 
+        case Blocks::LadderNorth:
+        case Blocks::LadderEast:
+        case Blocks::LadderSouth:
+        case Blocks::LadderWest:
         case Blocks::Leaves:
         case Blocks::BirchLeaves:
         case Blocks::TallGrass:

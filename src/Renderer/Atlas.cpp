@@ -542,6 +542,35 @@ namespace
                 if (hash2(x, y, 92) > 0.7f) t.set(x, y, shade(t.get(x, y), -18));
     }
 
+    // A ladder: two rails and the rungs between them, everything else
+    // left clear so the wall shows through.
+    void paintLadderTile(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+
+        const int n = Tile::N;
+        const Color wood{ 150, 112, 64 };
+        const Color woodDark{ 110, 80, 42 };
+        const int thick = std::max(1, n / 16);
+
+        // The two rails.
+        for (int y = 0; y < n; ++y)
+            for (int k = 0; k < thick; ++k)
+            {
+                t.set(n / 8 + k, y, (y % 4 < 2) ? wood : woodDark);
+                t.set(n - n / 8 - 1 - k, y, (y % 4 < 2) ? wood : woodDark);
+            }
+
+        // Rungs every quarter of the way up.
+        for (int step = 0; step < 4; ++step)
+        {
+            const int y = n / 8 + step * (n / 4);
+            for (int k = 0; k < thick; ++k)
+                for (int x = n / 8; x < n - n / 8; ++x)
+                    t.set(x, y + k, wood);
+        }
+    }
+
     void paintBedrock(Tile& t)
     {
         t.fill(Color{ 85, 85, 85 });
@@ -2046,6 +2075,7 @@ namespace
         { Tiles::CraftingTop,   paintCraftingTop },
         { Tiles::FurnaceTop,    paintFurnaceTop },
         { Tiles::BedTop,        paintBedTop },
+        { Tiles::LadderTile,    paintLadderTile },
         { Tiles::TntTop,        paintTntTop },
         { Tiles::TntSide,       paintTntSide },
         { Tiles::TntBottom,     paintTntBottom },

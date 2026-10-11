@@ -30,6 +30,11 @@ namespace
     // half a block, so a slab or a stair is walked onto and a whole
     // block still wants a jump, which is Minecraft's rule.
     constexpr float STEP_HEIGHT = 0.55f;
+
+    // Climbing. Slower than walking, and the slide is what you do when
+    // you are on a ladder and not pressing anything.
+    constexpr float CLIMB_SPEED = 3.0f;
+    constexpr float CLIMB_SLIDE = 1.2f;
     constexpr float SAFE_FALL_DISTANCE = 3.0f;
 }
 
@@ -233,6 +238,18 @@ void Player::applyFallDamage(float landingY)
         damage(static_cast<int>(std::floor(fallDistance - SAFE_FALL_DISTANCE)));
 }
 
+bool Player::onLadder(const World& world) const
+{
+    // Either of the two blocks the body occupies will do, so you do not
+    // drop off a ladder the moment your head clears the top of it.
+    const int x = static_cast<int>(std::floor(position.x));
+    const int z = static_cast<int>(std::floor(position.z));
+    const int footY = static_cast<int>(std::floor(position.y));
+    const int headY = static_cast<int>(std::floor(position.y + HEIGHT * 0.6f));
+
+    return isLadder(world.getBlock(x, footY, z)) || isLadder(world.getBlock(x, headY, z));
+}
+
 bool Player::isInWater(const World& world) const
 {
     const AABB box = aabb();
@@ -304,6 +321,7 @@ void Player::update(float deltaTime, const World& world, const Controls& control
 
     sneaking = controls.sneak && !flying;
     const bool inWater = isInWater(world);
+    const bool climbing = !flying && !inWater && onLadder(world);
     sprinting = controls.sprint && !sneaking && glm::length(controls.wishDirection) > 0.1f &&
                 (creative() || hunger > SPRINT_HUNGER);
 
@@ -343,6 +361,17 @@ void Player::update(float deltaTime, const World& world, const Controls& control
         if (controls.jumpHeld) velocity.y = SWIM_UP_VELOCITY;
         velocity.y = std::max(velocity.y, WATER_TERMINAL);
         m_falling = false; // water cancels fall damage
+    }
+    else if (climbing)
+    {
+        // A ladder holds you where you are unless you ask to move. Up
+        // on jump, down on sneak, and a slow slide otherwise -- which
+        // is what stops a ladder being a hole you fall down.
+        if (controls.jumpHeld) velocity.y = CLIMB_SPEED;
+        else if (controls.descend || sneaking) velocity.y = -CLIMB_SPEED;
+        else velocity.y = -CLIMB_SLIDE;
+
+        m_falling = false;
     }
     else
     {
