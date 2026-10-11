@@ -52,12 +52,18 @@ namespace
     // towards the middle of the screen. The sign matters: the other way
     // round puts the shoulder in the middle and the hand out at the
     // corner, which is the arm on backwards.
-    constexpr float ARM_LEAN = 0.10f;
+    //
+    // It has to be zero, though, and the tilt below says why: a lean
+    // tips the cut end of the fist sideways, and what should be a
+    // level edge across the knuckles comes out as a slant.
+    constexpr float ARM_LEAN = 0.0f;
 
-    // How far past edge-on to carry the cut end, in radians. Exactly
-    // edge-on projects to a zero-width sliver that can still catch a
-    // pixel; a little past it is safely behind.
-    constexpr float ARM_CAP_MARGIN = 0.16f;
+    // How far past edge-on to carry the cut end, in radians. Zero, now
+    // that the end caps take the fist's patch rather than the sleeve's:
+    // a sliver of fist is the same skin colour as the sides around it,
+    // so there is nothing left to hide from, and carrying the end past
+    // edge-on is what cost the fist its square finish.
+    constexpr float ARM_CAP_MARGIN = 0.0f;
 
     // Scaled with the arm: a block held in a fist this size looked like
     // a pebble at the old figures.
@@ -175,6 +181,13 @@ void HeldItem::appendArm(const glm::mat4& toWorld, const PlayerSkin& skin,
     // The angle for that is not a number to guess at -- it falls out of
     // where the hand is, so it is worked out here and follows the hand
     // if it ever moves.
+    //
+    // Held exactly edge-on, and with no lean, the end of the fist faces
+    // straight ahead: the square cut projects to a level line across the
+    // knuckles, which is the flat end Minecraft shows. Any margin past
+    // edge-on hides the cut behind the arm, and what bounds the top of
+    // the arm instead is one edge of that square -- turned out of true
+    // by the spin below, so the fist tapers off at an angle.
     const float cl = std::cos(ARM_LEAN), sl = std::sin(ARM_LEAN);
 
     const float tilt = std::atan2(cl * -HAND_DOWN - sl * HAND_RIGHT, HAND_FORWARD)
