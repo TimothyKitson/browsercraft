@@ -85,6 +85,7 @@ namespace Blocks
         PlankStairsNorth, PlankStairsEast, PlankStairsSouth, PlankStairsWest,
         SandstoneStairsNorth, SandstoneStairsEast, SandstoneStairsSouth, SandstoneStairsWest,
 
+        OakFence,
         StoneSlab,
         CobblestoneSlab,
         PlankSlab,
@@ -105,7 +106,8 @@ enum class RenderType : uint8_t
     Liquid, // full block, slightly lowered top surface, drawn in the transparent pass
     Slab,   // half a block, sitting on the floor of its own cell
     Ladder, // a flat panel against one wall of its cell, climbable
-    Stairs  // a half block with a step on the back half of its top
+    Stairs, // a half block with a step on the back half of its top
+    Fence   // a post in the middle of its cell, with arms to its neighbours
 };
 
 struct BlockInfo
@@ -131,6 +133,12 @@ inline bool isCross(BlockId id) { return blockInfo(id).render == RenderType::Cro
 inline bool isSlab(BlockId id) { return blockInfo(id).render == RenderType::Slab; }
 inline bool isLadder(BlockId id) { return blockInfo(id).render == RenderType::Ladder; }
 inline bool isStairs(BlockId id) { return blockInfo(id).render == RenderType::Stairs; }
+inline bool isFence(BlockId id) { return blockInfo(id).render == RenderType::Fence; }
+
+// How far above its own cell a block stands. A fence is half a block
+// taller than the cell it sits in, which is what stops you stepping
+// over one; everything else stops at the top of its cell.
+inline float blockOverhang(BlockId id) { return isFence(id) ? 0.5f : 0.0f; }
 
 // Which way a facing block points: 0 north (-z), 1 east (+x), 2 south
 // (+z), 3 west (-x). Meaningless on anything that does not face.

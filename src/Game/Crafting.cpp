@@ -75,6 +75,11 @@ namespace
                          Blocks::Sandstone, Blocks::Sandstone, Blocks::Sandstone },
           0, Blocks::SandstoneStairsNorth, 4 },
 
+        // Four planks and two sticks make three lengths of fence.
+        { false, 3, 2, { Blocks::Planks, Items::Stick, Blocks::Planks,
+                         Blocks::Planks, Items::Stick, Blocks::Planks },
+          0, Blocks::OakFence, 3 },
+
         // Seven sticks make three ladders.
         { false, 3, 3, { Items::Stick, _,            Items::Stick,
                          Items::Stick, Items::Stick, Items::Stick,

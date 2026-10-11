@@ -15,7 +15,7 @@ namespace
         Blocks::SnowGrass, Blocks::Clay, Blocks::Obsidian, Blocks::Glass,
         Blocks::Wool, Blocks::Snow, Blocks::Ice,
         Blocks::StoneSlab, Blocks::CobblestoneSlab, Blocks::PlankSlab, Blocks::SandstoneSlab,
-        Blocks::Tnt, Blocks::LadderNorth,
+        Blocks::Tnt, Blocks::LadderNorth, Blocks::OakFence,
         Blocks::StoneStairsNorth, Blocks::CobbleStairsNorth,
         Blocks::PlankStairsNorth, Blocks::SandstoneStairsNorth,
     };

@@ -321,6 +321,49 @@ namespace
         emitBox(snap, lx, y, lz, id, lo, hi, out);
     }
 
+    // A fence: a post in the middle of the cell, with an arm reaching
+    // towards each neighbour worth joining on to. Two rails per arm,
+    // which is what makes a run of fence read as a fence rather than a
+    // row of posts.
+    void emitFence(const MeshSnapshot& snap, int lx, int y, int lz,
+                   BlockId id, std::vector<float>& out)
+    {
+        constexpr float POST_LO = 0.375f, POST_HI = 0.625f;
+        constexpr float RAIL_LO = 0.4375f, RAIL_HI = 0.5625f;
+
+        emitBox(snap, lx, y, lz, id, glm::vec3(POST_LO, 0.0f, POST_LO),
+                glm::vec3(POST_HI, 1.5f, POST_HI), out);
+
+        // Anything solid is worth joining on to, which is what lets a
+        // fence meet a wall without leaving a gap.
+        auto joins = [&](int dx, int dz) {
+            const BlockId other = snap.block(lx + dx, y, lz + dz);
+            return isFence(other) || isOpaque(other);
+        };
+
+        // The two rails of an arm, at the heights Minecraft puts them.
+        const float railY[2][2] = { { 0.375f, 0.5625f }, { 0.8125f, 1.0f } };
+
+        for (int rail = 0; rail < 2; ++rail)
+        {
+            const float lo = railY[rail][0];
+            const float hi = railY[rail][1];
+
+            if (joins(0, -1))
+                emitBox(snap, lx, y, lz, id, glm::vec3(RAIL_LO, lo, 0.0f),
+                        glm::vec3(RAIL_HI, hi, POST_LO), out);
+            if (joins(0, 1))
+                emitBox(snap, lx, y, lz, id, glm::vec3(RAIL_LO, lo, POST_HI),
+                        glm::vec3(RAIL_HI, hi, 1.0f), out);
+            if (joins(-1, 0))
+                emitBox(snap, lx, y, lz, id, glm::vec3(0.0f, lo, RAIL_LO),
+                        glm::vec3(POST_LO, hi, RAIL_HI), out);
+            if (joins(1, 0))
+                emitBox(snap, lx, y, lz, id, glm::vec3(POST_HI, lo, RAIL_LO),
+                        glm::vec3(1.0f, hi, RAIL_HI), out);
+        }
+    }
+
     // A ladder: one flat panel hard against the wall it hangs on, drawn
     // from both sides so it does not vanish when you climb past it.
     void emitLadder(const MeshSnapshot& snap, int lx, int y, int lz,
@@ -450,6 +493,10 @@ void buildChunkMesh(const MeshSnapshot& snapshot, MeshResult& out)
                 else if (isStairs(id))
                 {
                     emitStairs(snapshot, lx, y, lz, id, out.opaqueVertices);
+                }
+                else if (isFence(id))
+                {
+                    emitFence(snapshot, lx, y, lz, id, out.opaqueVertices);
                 }
                 else
                 {

@@ -1119,7 +1119,7 @@ bool Application::frame()
             m_startupScreen == "boom" || m_startupScreen == "tnt" ||
             m_startupScreen == "portal" || m_startupScreen == "nether" ||
             m_startupScreen == "bucket" || m_startupScreen == "ladder" ||
-            m_startupScreen == "stairs")
+            m_startupScreen == "stairs" || m_startupScreen == "fence")
         {
             // Dev aid: open the inventory with something in it, so the
             // screenshot shows a real grid rather than 36 empty boxes.
@@ -1133,6 +1133,7 @@ bool Application::frame()
                                   m_startupScreen != "boom" &&
                                   m_startupScreen != "ladder" &&
                                   m_startupScreen != "stairs" &&
+                                  m_startupScreen != "fence" &&
                                   m_startupScreen != "tnt" &&
                                   m_startupScreen != "portal" &&
                                   m_startupScreen != "nether";
@@ -1189,6 +1190,23 @@ bool Application::frame()
                 for (int f = 0; f < 4; ++f)
                     m_world->setBlock(bx + f - 1, by, bz + 2,
                                       stairsFacing(Blocks::CobbleStairsNorth, f));
+            }
+
+            if (m_startupScreen == "fence")
+            {
+                m_camera.pitch = -10.0f;
+                m_camera.addLook(0.0f, 0.0f, 0.0f);
+
+                const glm::vec3 ahead = m_player.position + m_camera.front * 5.0f;
+                const int bx = static_cast<int>(std::floor(ahead.x));
+                const int by = static_cast<int>(std::floor(m_player.position.y));
+                const int bz = static_cast<int>(std::floor(ahead.z));
+
+                // A run with a corner in it, and one post on its own, so
+                // the arms and the lack of them are both in shot.
+                for (int a = -3; a <= 2; ++a) m_world->setBlock(bx + a, by, bz, Blocks::OakFence);
+                for (int b = 1; b <= 3; ++b) m_world->setBlock(bx + 2, by, bz - b, Blocks::OakFence);
+                m_world->setBlock(bx + 4, by, bz + 1, Blocks::OakFence);
             }
 
             if (m_startupScreen == "ladder")

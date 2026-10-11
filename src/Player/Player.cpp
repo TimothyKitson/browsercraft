@@ -129,7 +129,9 @@ bool Player::collides(const World& world, const AABB& box) const
     constexpr float EPS = 0.0001f;
     const int minX = static_cast<int>(std::floor(box.min.x));
     const int maxX = static_cast<int>(std::floor(box.max.x - EPS));
-    const int minY = static_cast<int>(std::floor(box.min.y));
+    // One row lower than the box, because a fence stands half a block
+    // proud of its own cell and would otherwise be stepped over.
+    const int minY = static_cast<int>(std::floor(box.min.y)) - 1;
     const int maxY = static_cast<int>(std::floor(box.max.y - EPS));
     const int minZ = static_cast<int>(std::floor(box.min.z));
     const int maxZ = static_cast<int>(std::floor(box.max.z - EPS));
@@ -254,7 +256,9 @@ bool Player::isInWater(const World& world) const
     const AABB box = aabb();
     const int minX = static_cast<int>(std::floor(box.min.x));
     const int maxX = static_cast<int>(std::floor(box.max.x - 0.0001f));
-    const int minY = static_cast<int>(std::floor(box.min.y));
+    // One row lower than the box, because a fence stands half a block
+    // proud of its own cell and would otherwise be stepped over.
+    const int minY = static_cast<int>(std::floor(box.min.y)) - 1;
     const int maxY = static_cast<int>(std::floor(box.max.y - 0.0001f));
     const int minZ = static_cast<int>(std::floor(box.min.z));
     const int maxZ = static_cast<int>(std::floor(box.max.z - 0.0001f));
