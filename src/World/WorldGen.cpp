@@ -425,13 +425,21 @@ void WorldGen::placeOres(Chunk& chunk) const
         uint32_t salt;
     };
 
+    // chancePerCell is rolled for every block in the range, so these
+    // numbers are small on purpose: at three in a hundred, coal was an
+    // eighth of all the stone in the world and diamond was one block in
+    // a hundred of the deep rock. Mining anything was a formality, and
+    // the tool tiers it is supposed to gate meant nothing.
+    //
+    // --oreinfo prints what these actually produce, per thousand stone
+    // blocks, by height. Tune against that rather than by eye.
     const OreSpec ORES[] = {
-        { Blocks::CoalOre,    5, 110, 0.030f, 9, 1001 },
-        { Blocks::IronOre,    5,  64, 0.022f, 7, 1002 },
-        { Blocks::GoldOre,    5,  32, 0.010f, 5, 1003 },
-        { Blocks::DiamondOre, 5,  16, 0.006f, 4, 1004 },
-        { Blocks::Gravel,    10, 100, 0.012f, 12, 1005 },
-        { Blocks::Clay,      40,  66, 0.008f, 8, 1006 },
+        { Blocks::CoalOre,    5, 110, 0.0030f, 12, 1001 },
+        { Blocks::IronOre,    5,  64, 0.0026f,  9, 1002 },
+        { Blocks::GoldOre,    5,  32, 0.00040f, 7, 1003 },
+        { Blocks::DiamondOre, 5,  16, 0.00038f, 6, 1004 },
+        { Blocks::Gravel,    10, 100, 0.0035f, 14, 1005 },
+        { Blocks::Clay,      40,  66, 0.0030f, 10, 1006 },
     };
 
     for (const OreSpec& ore : ORES)

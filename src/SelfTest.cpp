@@ -23,6 +23,7 @@
 #include "Game/Portal.h"
 #include "World/Furnaces.h"
 #include "World/Chests.h"
+#include "World/WorldGen.h"
 #include "Entity/Projectiles.h"
 #include "Entity/MobModel.h"
 #include "Entity/MobSkin.h"
@@ -2039,6 +2040,76 @@ namespace
         check(blockMaterial(Blocks::LadderNorth) != Material::Stone, "and is not stone");
     }
 
+    void testOreRates()
+    {
+        section("ore generation");
+
+        // Four chunks is enough to see the shape without making the
+        // test slow. What matters is not the exact count -- that is what
+        // --oreinfo is for -- but that the ordering and the depth limits
+        // hold, which is what a careless retune would break.
+        const WorldGen generator(4242u);
+
+        long long coal = 0, iron = 0, gold = 0, diamond = 0, stone = 0;
+        int deepestGold = 999, deepestDiamond = 999;
+        int highestGold = -1, highestDiamond = -1;
+
+        for (int cz = 0; cz < 2; ++cz)
+            for (int cx = 0; cx < 2; ++cx)
+            {
+                Chunk chunk(ChunkPos{ cx, cz });
+                generator.generate(chunk);
+
+                for (int y = 0; y < 128 && y < Chunk::SY; ++y)
+                    for (int lz = 0; lz < Chunk::SZ; ++lz)
+                        for (int lx = 0; lx < Chunk::SX; ++lx)
+                        {
+                            switch (chunk.getBlock(lx, y, lz))
+                            {
+                                case Blocks::Stone: ++stone; break;
+                                case Blocks::CoalOre: ++coal; ++stone; break;
+                                case Blocks::IronOre: ++iron; ++stone; break;
+                                case Blocks::GoldOre:
+                                    ++gold; ++stone;
+                                    deepestGold = std::min(deepestGold, y);
+                                    highestGold = std::max(highestGold, y);
+                                    break;
+                                case Blocks::DiamondOre:
+                                    ++diamond; ++stone;
+                                    deepestDiamond = std::min(deepestDiamond, y);
+                                    highestDiamond = std::max(highestDiamond, y);
+                                    break;
+                                default: break;
+                            }
+                        }
+            }
+
+        check(stone > 10000, "there is stone to put ore in");
+        check(coal > 0 && iron > 0, "coal and iron are there to be found");
+        check(diamond > 0, "and so is diamond, somewhere");
+
+        // The ladder the whole tool progression rests on.
+        check(coal > iron, "coal is commoner than iron");
+        check(iron > gold, "iron is commoner than gold");
+        check(gold > diamond, "and gold than diamond");
+
+        // Rare means rare. At one in a hundred, mining was a formality
+        // and the tool tiers gated nothing -- that is what these catch.
+        auto perThousand = [&](long long n) {
+            return 1000.0 * static_cast<double>(n) / static_cast<double>(stone);
+        };
+
+        check(perThousand(coal) < 40.0, "coal is not a tenth of the world");
+        check(perThousand(iron) < 25.0, "nor is iron");
+        check(perThousand(gold) < 6.0, "gold is rare");
+        check(perThousand(diamond) < 3.0, "and diamond rarer still");
+
+        // Depth. Diamond near the surface would skip the whole descent.
+        if (highestDiamond >= 0) check(highestDiamond <= 20, "diamond keeps to the deep rock");
+        if (highestGold >= 0) check(highestGold <= 36, "and gold stays well down");
+        check(deepestDiamond >= 0, "and does not go below the world");
+    }
+
     void testDoors()
     {
         section("doors");
@@ -2651,6 +2722,7 @@ int runSelfTest()
     testArmourRecipes();
     testWearing();
     testLadders();
+    testOreRates();
     testDoors();
     testStairs();
     testPortalFrames();

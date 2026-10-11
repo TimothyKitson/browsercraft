@@ -18,6 +18,88 @@ namespace
     // Measures how clumpy the sea floor is. White noise gives runs of
     // about 1.5 blocks -- the salt-and-pepper look; real patches run ten
     // or more. Cheap way to prove the change did what it claims.
+    // Dev tool: how much of each ore there actually is, and at what
+    // depth. Guessing at ore rates is how a world ends up either paved
+    // with diamond or with none in it, and the numbers here are
+    // comparable with Minecraft's own published ones.
+    int printOreInfo(uint32_t seed)
+    {
+        const WorldGen generator(seed);
+
+        constexpr int BANDS = 8;
+        constexpr int BAND_HEIGHT = 16;
+
+        // One row per ore, one column per sixteen-block band from
+        // bedrock up.
+        struct Ore { const char* name; BlockId id; };
+        const Ore ORES[] = {
+            { "coal",    Blocks::CoalOre },
+            { "iron",    Blocks::IronOre },
+            { "gold",    Blocks::GoldOre },
+            { "diamond", Blocks::DiamondOre },
+        };
+        constexpr int ORE_COUNT = static_cast<int>(sizeof(ORES) / sizeof(ORES[0]));
+
+        long long found[ORE_COUNT][BANDS] = {};
+        long long stoneIn[BANDS] = {};
+        long long total[ORE_COUNT] = {};
+        long long stone = 0;
+
+        constexpr int SPAN = 6;   // chunks either way
+        for (int cz = -SPAN; cz <= SPAN; ++cz)
+            for (int cx = -SPAN; cx <= SPAN; ++cx)
+            {
+                Chunk chunk(ChunkPos{ cx, cz });
+                generator.generate(chunk);
+
+                for (int y = 0; y < BANDS * BAND_HEIGHT && y < Chunk::SY; ++y)
+                {
+                    const int band = y / BAND_HEIGHT;
+                    for (int lz = 0; lz < Chunk::SZ; ++lz)
+                        for (int lx = 0; lx < Chunk::SX; ++lx)
+                        {
+                            const BlockId id = chunk.getBlock(lx, y, lz);
+                            if (id == Blocks::Stone) { ++stoneIn[band]; ++stone; continue; }
+
+                            for (int o = 0; o < ORE_COUNT; ++o)
+                                if (id == ORES[o].id)
+                                {
+                                    ++found[o][band];
+                                    ++total[o];
+                                    ++stoneIn[band];
+                                    ++stone;
+                                }
+                        }
+                }
+            }
+
+        std::printf("seed %u, %d x %d chunks\n", seed, SPAN * 2 + 1, SPAN * 2 + 1);
+        std::printf("stone and ore sampled: %lld blocks\n\n", stone);
+
+        std::printf("%-9s %8s  per 1000 stone, by height\n", "", "total");
+        std::printf("%-9s %8s ", "", "");
+        for (int b = 0; b < BANDS; ++b) std::printf("%5d", b * BAND_HEIGHT);
+        std::printf("\n");
+
+        for (int o = 0; o < ORE_COUNT; ++o)
+        {
+            std::printf("%-9s %8lld ", ORES[o].name, total[o]);
+            for (int b = 0; b < BANDS; ++b)
+            {
+                const double rate = stoneIn[b] > 0
+                    ? 1000.0 * static_cast<double>(found[o][b]) / static_cast<double>(stoneIn[b])
+                    : 0.0;
+                std::printf("%5.1f", rate);
+            }
+            std::printf("\n");
+        }
+
+        std::printf("\nMinecraft, for comparison: coal is far and away the commonest,\n");
+        std::printf("iron next, then gold deep down, and diamond rarest of all and\n");
+        std::printf("only below about y=16.\n");
+        return 0;
+    }
+
     int printSeabedInfo(uint32_t seed)
     {
         const WorldGen generator(seed);
@@ -247,6 +329,7 @@ int main(int argc, char** argv)
     bool worldInfo = false;
     bool selfTest = false;
     bool seabedInfo = false;
+    bool oreInfo = false;
     int scoutSeeds = 0;
     const char* panorama = nullptr;
     const char* dimensionName = nullptr;
@@ -295,6 +378,10 @@ int main(int argc, char** argv)
         {
             seabedInfo = true;
         }
+        else if (std::strcmp(argv[i], "--oreinfo") == 0)
+        {
+            oreInfo = true;
+        }
         else if (std::strcmp(argv[i], "--selftest") == 0)
         {
             selfTest = true;
@@ -335,6 +422,7 @@ int main(int argc, char** argv)
     if (selfTest) return runSelfTest();
     if (worldInfo) return printWorldInfo(hasSeed ? seed : 12345u);
     if (seabedInfo) return printSeabedInfo(hasSeed ? seed : 12345u);
+    if (oreInfo) return printOreInfo(hasSeed ? seed : 12345u);
     if (scoutSeeds > 0) return scoutPanoramaSeeds(scoutSeeds);
 
     try
