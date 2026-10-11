@@ -85,6 +85,17 @@ namespace Blocks
         PlankStairsNorth, PlankStairsEast, PlankStairsSouth, PlankStairsWest,
         SandstoneStairsNorth, SandstoneStairsEast, SandstoneStairsSouth, SandstoneStairsWest,
 
+        // A door is two cells tall, faces one of four ways and is either
+        // shut or standing open: sixteen ids for one door. The order is
+        // fixed and the helpers below are the only things that should
+        // know it.
+        //   bottom shut N E S W, bottom open N E S W,
+        //   top shut N E S W, top open N E S W
+        DoorLowShutNorth, DoorLowShutEast, DoorLowShutSouth, DoorLowShutWest,
+        DoorLowOpenNorth, DoorLowOpenEast, DoorLowOpenSouth, DoorLowOpenWest,
+        DoorHighShutNorth, DoorHighShutEast, DoorHighShutSouth, DoorHighShutWest,
+        DoorHighOpenNorth, DoorHighOpenEast, DoorHighOpenSouth, DoorHighOpenWest,
+
         OakFence,
         StoneSlab,
         CobblestoneSlab,
@@ -107,7 +118,8 @@ enum class RenderType : uint8_t
     Slab,   // half a block, sitting on the floor of its own cell
     Ladder, // a flat panel against one wall of its cell, climbable
     Stairs, // a half block with a step on the back half of its top
-    Fence   // a post in the middle of its cell, with arms to its neighbours
+    Fence,  // a post in the middle of its cell, with arms to its neighbours
+    Door    // a thin panel on one edge of its cell, which swings aside
 };
 
 struct BlockInfo
@@ -134,6 +146,19 @@ inline bool isSlab(BlockId id) { return blockInfo(id).render == RenderType::Slab
 inline bool isLadder(BlockId id) { return blockInfo(id).render == RenderType::Ladder; }
 inline bool isStairs(BlockId id) { return blockInfo(id).render == RenderType::Stairs; }
 inline bool isFence(BlockId id) { return blockInfo(id).render == RenderType::Fence; }
+inline bool isDoor(BlockId id) { return blockInfo(id).render == RenderType::Door; }
+
+// The three things a door id carries, and how to build one back up.
+inline bool doorIsTop(BlockId id) { return id >= Blocks::DoorHighShutNorth; }
+inline bool doorIsOpen(BlockId id)
+{
+    return ((id - Blocks::DoorLowShutNorth) & 4) != 0;
+}
+inline BlockId doorPart(int facing, bool top, bool open)
+{
+    return static_cast<BlockId>(Blocks::DoorLowShutNorth + (top ? 8 : 0) +
+                                (open ? 4 : 0) + (facing & 3));
+}
 
 // How far above its own cell a block stands. A fence is half a block
 // taller than the cell it sits in, which is what stops you stepping
@@ -146,6 +171,7 @@ inline int blockFacing(BlockId id)
 {
     if (isLadder(id)) return id - Blocks::LadderNorth;
     if (isStairs(id)) return (id - Blocks::StoneStairsNorth) & 3;
+    if (isDoor(id)) return (id - Blocks::DoorLowShutNorth) & 3;
     return 0;
 }
 

@@ -75,6 +75,12 @@ namespace
                          Blocks::Sandstone, Blocks::Sandstone, Blocks::Sandstone },
           0, Blocks::SandstoneStairsNorth, 4 },
 
+        // Six planks make three doors.
+        { false, 2, 3, { Blocks::Planks, Blocks::Planks,
+                         Blocks::Planks, Blocks::Planks,
+                         Blocks::Planks, Blocks::Planks },
+          0, Blocks::DoorLowShutNorth, 3 },
+
         // Four planks and two sticks make three lengths of fence.
         { false, 3, 2, { Blocks::Planks, Items::Stick, Blocks::Planks,
                          Blocks::Planks, Items::Stick, Blocks::Planks },

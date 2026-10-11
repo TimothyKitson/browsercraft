@@ -544,6 +544,52 @@ namespace
 
     // A ladder: two rails and the rungs between them, everything else
     // left clear so the wall shows through.
+    // A door, in two halves: planks with a frame round them, a window
+    // in the upper one and a handle on both.
+    void paintDoorHalf(Tile& t, bool upper)
+    {
+        const int n = Tile::N;
+        const Color wood{ 156, 118, 68 };
+        const Color woodDark{ 118, 86, 46 };
+        const Color frame{ 96, 70, 38 };
+        const Color iron{ 188, 188, 194 };
+
+        for (int y = 0; y < n; ++y)
+            for (int x = 0; x < n; ++x)
+                t.set(x, y, ((x / std::max(1, n / 8)) % 2 == 0) ? wood : woodDark);
+
+        // The frame: all round, bar the edge where the two halves meet.
+        for (int k = 0; k < n; ++k)
+        {
+            t.set(0, k, frame);
+            t.set(n - 1, k, frame);
+            if (upper) t.set(k, 0, frame);
+            else t.set(k, n - 1, frame);
+        }
+
+        if (upper)
+        {
+            // A window, with a bar across it.
+            const int lo = n / 4, hi = n - n / 4 - 1;
+            for (int y = lo; y <= hi; ++y)
+                for (int x = lo; x <= hi; ++x)
+                {
+                    const bool edge = (x == lo || x == hi || y == lo || y == hi);
+                    t.set(x, y, edge ? frame : Color{ 150, 196, 226, 220 });
+                }
+            for (int x = lo; x <= hi; ++x) t.set(x, (lo + hi) / 2, frame);
+        }
+
+        // The handle, on the side away from the hinge.
+        const int hy = upper ? n - n / 6 : n / 6;
+        for (int y = hy - 1; y <= hy + 1; ++y)
+            for (int x = n - n / 4; x < n - n / 8; ++x)
+                t.set(x, y, iron);
+    }
+
+    void paintDoorLower(Tile& t) { paintDoorHalf(t, false); }
+    void paintDoorUpper(Tile& t) { paintDoorHalf(t, true); }
+
     void paintLadderTile(Tile& t)
     {
         t.fill(Color{ 0, 0, 0, 0 });
@@ -2076,6 +2122,8 @@ namespace
         { Tiles::FurnaceTop,    paintFurnaceTop },
         { Tiles::BedTop,        paintBedTop },
         { Tiles::LadderTile,    paintLadderTile },
+        { Tiles::DoorLower,     paintDoorLower },
+        { Tiles::DoorUpper,     paintDoorUpper },
         { Tiles::TntTop,        paintTntTop },
         { Tiles::TntSide,       paintTntSide },
         { Tiles::TntBottom,     paintTntBottom },

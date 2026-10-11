@@ -421,6 +421,7 @@ private:
     void primeTnt(const glm::ivec3& block);
     void updateFuses(float deltaTime);
 
+    void swingDoor(const glm::ivec3& block);
     void sleepInBed(const glm::ivec3& block);
 
     // Lighting a portal, standing in one, and building the one that

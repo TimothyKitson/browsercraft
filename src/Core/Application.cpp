@@ -1119,7 +1119,8 @@ bool Application::frame()
             m_startupScreen == "boom" || m_startupScreen == "tnt" ||
             m_startupScreen == "portal" || m_startupScreen == "nether" ||
             m_startupScreen == "bucket" || m_startupScreen == "ladder" ||
-            m_startupScreen == "stairs" || m_startupScreen == "fence")
+            m_startupScreen == "stairs" || m_startupScreen == "fence" ||
+            m_startupScreen == "door")
         {
             // Dev aid: open the inventory with something in it, so the
             // screenshot shows a real grid rather than 36 empty boxes.
@@ -1134,6 +1135,7 @@ bool Application::frame()
                                   m_startupScreen != "ladder" &&
                                   m_startupScreen != "stairs" &&
                                   m_startupScreen != "fence" &&
+                                  m_startupScreen != "door" &&
                                   m_startupScreen != "tnt" &&
                                   m_startupScreen != "portal" &&
                                   m_startupScreen != "nether";
@@ -1190,6 +1192,34 @@ bool Application::frame()
                 for (int f = 0; f < 4; ++f)
                     m_world->setBlock(bx + f - 1, by, bz + 2,
                                       stairsFacing(Blocks::CobbleStairsNorth, f));
+            }
+
+            if (m_startupScreen == "door")
+            {
+                m_camera.pitch = -4.0f;
+                m_camera.addLook(0.0f, 0.0f, 0.0f);
+
+                const glm::vec3 ahead = m_player.position + m_camera.front * 6.0f;
+                const int bx = static_cast<int>(std::floor(ahead.x));
+                const int by = static_cast<int>(std::floor(m_player.position.y));
+                const int bz = static_cast<int>(std::floor(ahead.z));
+
+                // A wall with two doorways in it: one shut, one open.
+                for (int a = -4; a <= 4; ++a)
+                    for (int b = 0; b <= 2; ++b)
+                        m_world->setBlock(bx + a, by + b, bz, Blocks::Planks);
+
+                for (int b = 0; b <= 1; ++b)
+                {
+                    m_world->setBlock(bx - 2, by + b, bz, Blocks::Air);
+                    m_world->setBlock(bx + 2, by + b, bz, Blocks::Air);
+                }
+
+                for (int half = 0; half < 2; ++half)
+                {
+                    m_world->setBlock(bx - 2, by + half, bz, doorPart(2, half == 1, false));
+                    m_world->setBlock(bx + 2, by + half, bz, doorPart(2, half == 1, true));
+                }
             }
 
             if (m_startupScreen == "fence")
@@ -2113,6 +2143,20 @@ void Application::updateMining(float deltaTime)
                 if (drop != Blocks::Air) m_drops.spawnFromBrokenBlock(hit.block, drop);
             }
 
+            // A door is one thing in two cells, so breaking either half
+            // takes the other with it -- otherwise half a door is left
+            // hanging in the air.
+            if (isDoor(id))
+            {
+                const int other = doorIsTop(id) ? -1 : 1;
+                const glm::ivec3 pair(hit.block.x, hit.block.y + other, hit.block.z);
+                if (isDoor(m_world->getBlock(pair.x, pair.y, pair.z)))
+                {
+                    m_world->setBlock(pair.x, pair.y, pair.z, Blocks::Air);
+                    m_net.onLocalBlockChange(pair.x, pair.y, pair.z, Blocks::Air);
+                }
+            }
+
             // A chest gives back everything in it. Twenty-seven stacks
             // is a lot to drop at once, which is why they come out of
             // the block rather than the player.
@@ -2390,6 +2434,31 @@ void Application::buildReturnPortal()
     m_camera.pitch = 0.0f;
     m_camera.addLook(0.0f, 0.0f, 0.0f);
     m_camera.position = m_player.eyePosition();
+}
+
+// Swinging a door. Both halves move together: a door with its top shut
+// and its bottom open is not a door anyone has ever seen.
+void Application::swingDoor(const glm::ivec3& block)
+{
+    const BlockId here = m_world->getBlock(block.x, block.y, block.z);
+    if (!isDoor(here)) return;
+
+    const bool open = !doorIsOpen(here);
+    const int facing = blockFacing(here);
+
+    const int lowY = doorIsTop(here) ? block.y - 1 : block.y;
+
+    for (int half = 0; half < 2; ++half)
+    {
+        const int y = lowY + half;
+        if (!isDoor(m_world->getBlock(block.x, y, block.z))) continue;
+
+        const BlockId put = doorPart(facing, half == 1, open);
+        m_world->setBlock(block.x, y, block.z, put);
+        m_net.onLocalBlockChange(block.x, y, block.z, put);
+    }
+
+    m_audio.play(Sound::DigWood, 0.6f, open ? 1.2f : 0.9f);
 }
 
 void Application::sleepInBed(const glm::ivec3& block)
@@ -2729,6 +2798,11 @@ void Application::handlePlacement()
                 sleepInBed(bench.block);
                 return;
             }
+            if (isDoor(used))
+            {
+                swingDoor(bench.block);
+                return;
+            }
         }
     }
 
@@ -2861,6 +2935,35 @@ void Application::handlePlacement()
         box.max.z > target.z && box.min.z < target.z + 1;
     BlockId placing = asBlock(stack.id);
     if (overlapsPlayer && isSolid(placing)) return;
+
+    // A door is two blocks tall and wants headroom, and it faces the
+    // way you do so it opens away from you.
+    if (isDoor(placing))
+    {
+        const BlockId above = m_world->getBlock(target.x, target.y + 1, target.z);
+        if (above != Blocks::Air && !isLiquid(above)) return;
+
+        const glm::vec3 look = m_camera.front;
+        const int facing = (std::fabs(look.x) > std::fabs(look.z))
+                               ? (look.x > 0.0f ? 3 : 1)
+                               : (look.z > 0.0f ? 0 : 2);
+
+        const BlockId low = doorPart(facing, false, false);
+        const BlockId high = doorPart(facing, true, false);
+
+        m_world->setBlock(target.x, target.y, target.z, low);
+        m_world->setBlock(target.x, target.y + 1, target.z, high);
+        m_net.onLocalBlockChange(target.x, target.y, target.z, low);
+        m_net.onLocalBlockChange(target.x, target.y + 1, target.z, high);
+
+        m_audio.playPlace(low);
+        if (!m_player.creative())
+        {
+            stack.count -= 1;
+            if (stack.count <= 0) stack.clear();
+        }
+        return;
+    }
 
     // Stairs face the way you are looking, so you walk up them rather
     // than into them. Minecraft takes the direction from the player,

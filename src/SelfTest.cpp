@@ -2039,6 +2039,74 @@ namespace
         check(blockMaterial(Blocks::LadderNorth) != Material::Stone, "and is not stone");
     }
 
+    void testDoors()
+    {
+        section("doors");
+
+        // Sixteen ids for one door: two halves, four facings, open or
+        // shut. The helpers are the only thing that should know the
+        // order, so this checks they agree with themselves.
+        for (int facing = 0; facing < 4; ++facing)
+            for (int top = 0; top < 2; ++top)
+                for (int open = 0; open < 2; ++open)
+                {
+                    const BlockId id = doorPart(facing, top != 0, open != 0);
+
+                    check(isDoor(id), "every part is a door");
+                    check(blockFacing(id) == facing, "and faces the way it was built");
+                    check(doorIsTop(id) == (top != 0), "and knows which half it is");
+                    check(doorIsOpen(id) == (open != 0), "and whether it is open");
+                }
+
+        // All sixteen are distinct: an overlap would make two different
+        // doors the same block.
+        std::vector<BlockId> seen;
+        for (int facing = 0; facing < 4; ++facing)
+            for (int top = 0; top < 2; ++top)
+                for (int open = 0; open < 2; ++open)
+                    seen.push_back(doorPart(facing, top != 0, open != 0));
+
+        std::sort(seen.begin(), seen.end());
+        check(std::unique(seen.begin(), seen.end()) == seen.end(),
+              "all sixteen parts are distinct");
+
+        // Only the one you hold is obtainable; a door is placed as two
+        // blocks from a single item.
+        check(isObtainable(Blocks::DoorLowShutNorth), "a door is a thing you hold");
+        check(!isObtainable(doorPart(0, true, false)), "its top half is not");
+        check(!isObtainable(doorPart(1, false, false)), "nor a turned one");
+        check(!isObtainable(doorPart(0, false, true)), "nor an opened one");
+
+        // Swinging moves the panel a quarter turn, so a door that
+        // blocked the way through no longer does.
+        auto blocksMiddle = [](BlockId id) {
+            // A probe where someone walking through would be.
+            return blockOverlaps(id, 0, 0, 0, 0.3f, 0.1f, 0.0f, 0.7f, 0.9f, 0.15f);
+        };
+
+        check(blocksMiddle(doorPart(0, false, false)), "a shut door is in the way");
+        check(!blocksMiddle(doorPart(0, false, true)), "an open one is not");
+
+        // And it is somewhere else rather than nowhere: opening a door
+        // moves it aside, it does not delete it.
+        bool anywhere = false;
+        for (int side = 0; side < 4 && !anywhere; ++side)
+        {
+            const float lo = (side == 1) ? 0.85f : 0.0f;
+            const float hi = (side == 1) ? 1.0f : 0.15f;
+            if (side == 1 || side == 3)
+                anywhere = blockOverlaps(doorPart(0, false, true), 0, 0, 0,
+                                         lo, 0.1f, 0.3f, hi, 0.9f, 0.7f);
+        }
+        check(anywhere, "an open door is still somewhere");
+
+        // Both halves use the same tile set but not the same tile, so a
+        // door does not read as two of the same panel stacked.
+        check(blockInfo(doorPart(0, false, false)).tileSide !=
+                  blockInfo(doorPart(0, true, false)).tileSide,
+              "the two halves are drawn differently");
+    }
+
     void testStairs()
     {
         section("stairs");
@@ -2583,6 +2651,7 @@ int runSelfTest()
     testArmourRecipes();
     testWearing();
     testLadders();
+    testDoors();
     testStairs();
     testPortalFrames();
     testExplosions();

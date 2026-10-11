@@ -66,6 +66,7 @@ namespace Tiles
         BedTop, BedSide,
         TntTop, TntSide, TntBottom, TntPrimedSide,
         LadderTile,
+        DoorLower, DoorUpper,
         TileCount
     };
 

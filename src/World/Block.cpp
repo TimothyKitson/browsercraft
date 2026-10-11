@@ -81,6 +81,22 @@ namespace
         { "Sandstone Stairs",     SandstoneTop,   SandstoneTop,    SandstoneSide,   true,  false, RenderType::Stairs, 0,   0.8f },
         { "Sandstone Stairs",     SandstoneTop,   SandstoneTop,    SandstoneSide,   true,  false, RenderType::Stairs, 0,   0.8f },
         { "Sandstone Stairs",     SandstoneTop,   SandstoneTop,    SandstoneSide,   true,  false, RenderType::Stairs, 0,   0.8f },
+        { "Oak Door",     DoorLower,    DoorLower,     DoorLower,     true,  false, RenderType::Door,   0,   3.0f },
+        { "Oak Door",     DoorLower,    DoorLower,     DoorLower,     true,  false, RenderType::Door,   0,   3.0f },
+        { "Oak Door",     DoorLower,    DoorLower,     DoorLower,     true,  false, RenderType::Door,   0,   3.0f },
+        { "Oak Door",     DoorLower,    DoorLower,     DoorLower,     true,  false, RenderType::Door,   0,   3.0f },
+        { "Oak Door",     DoorLower,    DoorLower,     DoorLower,     true,  false, RenderType::Door,   0,   3.0f },
+        { "Oak Door",     DoorLower,    DoorLower,     DoorLower,     true,  false, RenderType::Door,   0,   3.0f },
+        { "Oak Door",     DoorLower,    DoorLower,     DoorLower,     true,  false, RenderType::Door,   0,   3.0f },
+        { "Oak Door",     DoorLower,    DoorLower,     DoorLower,     true,  false, RenderType::Door,   0,   3.0f },
+        { "Oak Door",     DoorUpper,    DoorUpper,     DoorUpper,     true,  false, RenderType::Door,   0,   3.0f },
+        { "Oak Door",     DoorUpper,    DoorUpper,     DoorUpper,     true,  false, RenderType::Door,   0,   3.0f },
+        { "Oak Door",     DoorUpper,    DoorUpper,     DoorUpper,     true,  false, RenderType::Door,   0,   3.0f },
+        { "Oak Door",     DoorUpper,    DoorUpper,     DoorUpper,     true,  false, RenderType::Door,   0,   3.0f },
+        { "Oak Door",     DoorUpper,    DoorUpper,     DoorUpper,     true,  false, RenderType::Door,   0,   3.0f },
+        { "Oak Door",     DoorUpper,    DoorUpper,     DoorUpper,     true,  false, RenderType::Door,   0,   3.0f },
+        { "Oak Door",     DoorUpper,    DoorUpper,     DoorUpper,     true,  false, RenderType::Door,   0,   3.0f },
+        { "Oak Door",     DoorUpper,    DoorUpper,     DoorUpper,     true,  false, RenderType::Door,   0,   3.0f },
         { "Oak Fence",    Planks,        Planks,         Planks,         true,  false, RenderType::Fence,  0,   1.5f },
         { "Stone Slab",   Stone,         Stone,          Stone,          true,  false, RenderType::Slab,   0,   1.5f },
         { "Cobblestone Slab", Cobblestone, Cobblestone,  Cobblestone,    true,  false, RenderType::Slab,   0,   1.7f },
@@ -130,6 +146,10 @@ bool isObtainable(BlockId id)
             // hold, the rest are it turned round.
             if (isStairs(id) && blockFacing(id) != 0) return false;
 
+            // A door is held as one item and placed as two blocks, so
+            // only the shut lower north half is a thing in your hand.
+            if (isDoor(id) && id != Blocks::DoorLowShutNorth) return false;
+
             return id < Blocks::Count;
     }
 }
@@ -174,6 +194,7 @@ const char* blockSoundGroup(BlockId id)
         case Blocks::Chest:
         case Blocks::PlankSlab:
         case Blocks::OakFence:
+        case Blocks::DoorLowShutNorth:
         case Blocks::PlankStairsNorth:
         case Blocks::PlankStairsEast:
         case Blocks::PlankStairsSouth:
@@ -264,6 +285,7 @@ Material blockMaterial(BlockId id)
         case Blocks::Chest:
         case Blocks::PlankSlab:
         case Blocks::OakFence:
+        case Blocks::DoorLowShutNorth:
         case Blocks::PlankStairsNorth:
         case Blocks::PlankStairsEast:
         case Blocks::PlankStairsSouth:
@@ -306,6 +328,22 @@ bool blockOverlaps(BlockId id, int bx, int by, int bz,
                minY < cy + hiY && maxY > cy + loY &&
                minZ < cz + hiZ && maxZ > cz + loZ;
     };
+
+    if (isDoor(id))
+    {
+        // The same thin slab the mesher draws, so what you see is what
+        // you walk into.
+        constexpr float THICK = 0.1875f;
+        const int resting = doorIsOpen(id) ? ((blockFacing(id) + 1) & 3) : blockFacing(id);
+
+        switch (resting)
+        {
+            case 0: return overlaps(0.0f, 0.0f, 0.0f, 1.0f, 1.0f, THICK);
+            case 1: return overlaps(1.0f - THICK, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f);
+            case 2: return overlaps(0.0f, 0.0f, 1.0f - THICK, 1.0f, 1.0f, 1.0f);
+            default: return overlaps(0.0f, 0.0f, 0.0f, THICK, 1.0f, 1.0f);
+        }
+    }
 
     if (isFence(id))
     {

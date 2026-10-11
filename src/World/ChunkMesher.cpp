@@ -321,6 +321,30 @@ namespace
         emitBox(snap, lx, y, lz, id, lo, hi, out);
     }
 
+    // A door: a thin slab on one edge of its cell. Shut, it lies across
+    // the way you came; open, it has swung a quarter turn to the side.
+    void emitDoor(const MeshSnapshot& snap, int lx, int y, int lz,
+                  BlockId id, std::vector<float>& out)
+    {
+        constexpr float THICK = 0.1875f;
+
+        // Shut, the panel sits on the face it was hung from. Open, it
+        // sits on the face a quarter turn clockwise from it.
+        const int facing = blockFacing(id);
+        const int resting = doorIsOpen(id) ? ((facing + 1) & 3) : facing;
+
+        glm::vec3 lo(0.0f), hi(1.0f);
+        switch (resting)
+        {
+            case 0: hi.z = THICK; break;            // against the north edge
+            case 1: lo.x = 1.0f - THICK; break;     // against the east edge
+            case 2: lo.z = 1.0f - THICK; break;     // against the south edge
+            default: hi.x = THICK; break;           // against the west edge
+        }
+
+        emitBox(snap, lx, y, lz, id, lo, hi, out);
+    }
+
     // A fence: a post in the middle of the cell, with an arm reaching
     // towards each neighbour worth joining on to. Two rails per arm,
     // which is what makes a run of fence read as a fence rather than a
@@ -497,6 +521,10 @@ void buildChunkMesh(const MeshSnapshot& snapshot, MeshResult& out)
                 else if (isFence(id))
                 {
                     emitFence(snapshot, lx, y, lz, id, out.opaqueVertices);
+                }
+                else if (isDoor(id))
+                {
+                    emitDoor(snapshot, lx, y, lz, id, out.opaqueVertices);
                 }
                 else
                 {
