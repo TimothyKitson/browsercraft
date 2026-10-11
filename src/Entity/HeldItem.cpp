@@ -31,7 +31,11 @@ namespace
     constexpr float ARM_HALF_WIDTH = 0.065f;
     constexpr float ARM_HALF_DEPTH = 0.065f;
     constexpr float ARM_LENGTH = 0.46f;
-    constexpr float ARM_LEAN = -0.62f;   // radians, so it comes in from the corner
+    // Radians, leaning the arm so it rises from the bottom-right corner
+    // towards the middle of the screen. The sign matters: the other way
+    // round puts the shoulder in the middle and the hand out at the
+    // corner, which is the arm on backwards.
+    constexpr float ARM_LEAN = 0.62f;
 
     constexpr float BLOCK_SIZE = 0.26f;
     constexpr float SPRITE_SIZE = 0.30f;
@@ -142,6 +146,13 @@ void HeldItem::appendArm(const glm::mat4& toWorld, const PlayerSkin& skin,
         int px = 0, py = 0, pw = 0, ph = 0;
         BoxMesh::facePatch(face, 40, 16, static_cast<int>(w), 12, 4, px, py, pw, ph);
 
+        // The four long faces take their v from where the corner
+        // actually is along the arm, rather than from the cube's own
+        // table: the box has the hand at its top and the skin has the
+        // hand at the bottom of its patch, and reading the table
+        // straight is what put the cuff on the knuckles.
+        const bool longFace = (face != 2 && face != 3);
+
         Quad q;
         q.shade = CUBE_SHADE[face];
         for (int k = 0; k < 4; ++k)
@@ -151,8 +162,14 @@ void HeldItem::appendArm(const glm::mat4& toWorld, const PlayerSkin& skin,
                                 (c[0] ? halfW : -halfW),
                                 (c[1] ? 0.0f : -length),
                                 (c[2] ? halfD : -halfD));
+
+            // c[1] is 1 at the hand end of the box, 0 at the shoulder.
+            const float vEdge = longFace
+                                    ? FirstPersonArm::patchV(c[1] ? 1.0f : 0.0f)
+                                    : CUBE_UV[face][k][1];
+
             q.u[k] = (px + CUBE_UV[face][k][0] * pw) / texW;
-            q.v[k] = (py + CUBE_UV[face][k][1] * ph) / texH;
+            q.v[k] = (py + vEdge * ph) / texH;
         }
         pushQuad(m_vertices, q, sky, blockLight);
     }

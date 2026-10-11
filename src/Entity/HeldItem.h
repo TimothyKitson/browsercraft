@@ -16,6 +16,21 @@ class Atlas;
 // everything else. It is drawn last, after the depth buffer is cleared,
 // which is what stops your own hand being swallowed by the wall you are
 // standing against.
+// Where along its texture patch a point on the first-person arm sits.
+//
+// The arm box is built with the hand at its top and the shoulder below,
+// but a skin draws an arm the other way up: sleeve at the top of the
+// patch, hand at the bottom. Getting this backwards puts the cuff on
+// the knuckles, which is exactly what it did, so the rule is named and
+// tested rather than buried in a UV table.
+//
+// `alongArm` is 0 at the shoulder and 1 at the hand. The result is the
+// fraction down the patch to sample.
+namespace FirstPersonArm
+{
+    inline float patchV(float alongArm) { return alongArm; }
+}
+
 class HeldItem
 {
 public:

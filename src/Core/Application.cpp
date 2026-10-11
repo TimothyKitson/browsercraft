@@ -1120,7 +1120,8 @@ bool Application::frame()
             m_startupScreen == "portal" || m_startupScreen == "nether" ||
             m_startupScreen == "bucket" || m_startupScreen == "ladder" ||
             m_startupScreen == "stairs" || m_startupScreen == "fence" ||
-            m_startupScreen == "door")
+            m_startupScreen == "door" || m_startupScreen == "hand" ||
+            m_startupScreen == "handempty")
         {
             // Dev aid: open the inventory with something in it, so the
             // screenshot shows a real grid rather than 36 empty boxes.
@@ -1136,6 +1137,8 @@ bool Application::frame()
                                   m_startupScreen != "stairs" &&
                                   m_startupScreen != "fence" &&
                                   m_startupScreen != "door" &&
+                                  m_startupScreen != "hand" &&
+                                  m_startupScreen != "handempty" &&
                                   m_startupScreen != "tnt" &&
                                   m_startupScreen != "portal" &&
                                   m_startupScreen != "nether";
@@ -1192,6 +1195,16 @@ bool Application::frame()
                 for (int f = 0; f < 4; ++f)
                     m_world->setBlock(bx + f - 1, by, bz + 2,
                                       stairsFacing(Blocks::CobbleStairsNorth, f));
+            }
+
+            if (m_startupScreen == "hand" || m_startupScreen == "handempty")
+            {
+                m_inventory.clear();
+                if (m_startupScreen == "hand")
+                {
+                    m_inventory.add(Blocks::Cobblestone, 1);
+                    m_inventory.setSelectedSlot(0);
+                }
             }
 
             if (m_startupScreen == "door")

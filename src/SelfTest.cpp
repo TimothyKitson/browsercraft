@@ -25,6 +25,7 @@
 #include "World/Chests.h"
 #include "World/WorldGen.h"
 #include "Entity/Projectiles.h"
+#include "Entity/HeldItem.h"
 #include "Entity/MobModel.h"
 #include "Entity/MobSkin.h"
 #include "Entity/MobType.h"
@@ -2040,6 +2041,34 @@ namespace
         check(blockMaterial(Blocks::LadderNorth) != Material::Stone, "and is not stone");
     }
 
+    void testFirstPersonArm()
+    {
+        section("the hand on screen");
+
+        // The arm box is built with the hand at its top; a skin draws an
+        // arm with the sleeve at the top of its patch and the hand at
+        // the bottom. So the hand end of the box has to take the LOWER
+        // part of the patch. Reading the cube's own uv table straight
+        // did the opposite and put the cuff on the knuckles.
+        const float atShoulder = FirstPersonArm::patchV(0.0f);
+        const float atHand = FirstPersonArm::patchV(1.0f);
+
+        check(atHand > atShoulder,
+              "the hand end of the arm takes the hand end of the skin");
+        check(atShoulder >= 0.0f && atHand <= 1.0f, "and both stay inside the patch");
+
+        // Halfway along the arm is halfway down the patch, so the
+        // forearm does not bunch up at one end.
+        check(std::fabs(FirstPersonArm::patchV(0.5f) - 0.5f) < 0.001f,
+              "and the middle of the arm is the middle of the patch");
+
+        // The Steve skin this is checked against: teal sleeve on the
+        // upper third of the arm patch, bare skin below it. That is the
+        // layout every Minecraft skin uses, and it is the reason the
+        // rule above runs the way it does rather than the other way.
+        check(atHand > 0.5f, "the hand samples the lower half of the patch");
+    }
+
     void testOreRates()
     {
         section("ore generation");
@@ -2722,6 +2751,7 @@ int runSelfTest()
     testArmourRecipes();
     testWearing();
     testLadders();
+    testFirstPersonArm();
     testOreRates();
     testDoors();
     testStairs();
