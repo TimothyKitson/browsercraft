@@ -1752,6 +1752,44 @@ namespace
         }
     }
 
+    // The bucket, and the two things it can be full of. One shape, with
+    // whatever it holds painted into the bowl of it.
+    void paintBucket(Tile& t, bool full, Color contents)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+
+        const Color iron{ 196, 196, 202 };
+        const Color ironDark{ 132, 132, 138 };
+        const Color ironLit{ 232, 232, 238 };
+
+        // The body: a tapering tub.
+        for (int y = 6; y <= 13; ++y)
+        {
+            const int inset = (y - 6) / 4;
+            for (int x = 3 + inset; x <= 12 - inset; ++x)
+            {
+                const bool edge = (x == 3 + inset || x == 12 - inset || y == 13);
+                t.set(x, y, edge ? ironDark : iron);
+            }
+        }
+
+        // What it holds, sitting in the top of the tub.
+        if (full)
+            for (int y = 7; y <= 9; ++y)
+                for (int x = 5; x <= 10; ++x)
+                    t.set(x, y, (x + y) % 4 == 0 ? shade(contents, 30) : contents);
+
+        // The rim and the handle over it.
+        for (int x = 3; x <= 12; ++x) t.set(x, 5, ironLit);
+        for (int x = 5; x <= 10; ++x) t.set(x, 3, ironDark);
+        t.set(4, 4, ironDark);
+        t.set(11, 4, ironDark);
+    }
+
+    void paintItemBucket(Tile& t)      { paintBucket(t, false, Color{}); }
+    void paintItemWaterBucket(Tile& t) { paintBucket(t, true, Color{ 58, 106, 206 }); }
+    void paintItemLavaBucket(Tile& t)  { paintBucket(t, true, Color{ 226, 110, 30 }); }
+
     void paintItemFlintAndSteel(Tile& t)
     {
         t.fill(Color{ 0, 0, 0, 0 });
@@ -2027,6 +2065,9 @@ namespace
         { Tiles::ItemCoal,      paintItemCoal },
         { Tiles::ItemFlint,     paintItemFlint },
         { Tiles::ItemFlintAndSteel, paintItemFlintAndSteel },
+        { Tiles::ItemBucket,      paintItemBucket },
+        { Tiles::ItemWaterBucket, paintItemWaterBucket },
+        { Tiles::ItemLavaBucket,  paintItemLavaBucket },
         { Tiles::ItemBow,       paintItemBow },
         { Tiles::ItemArrow,     paintItemArrow },
         { Tiles::ArrowInFlight, paintArrowInFlight },
@@ -2100,6 +2141,9 @@ namespace
         { Tiles::ItemCoal,       { "coal", nullptr, nullptr } },
         { Tiles::ItemFlint,      { "flint", nullptr, nullptr } },
         { Tiles::ItemFlintAndSteel, { "flint_and_steel", nullptr, nullptr } },
+        { Tiles::ItemBucket,      { "bucket", nullptr, nullptr } },
+        { Tiles::ItemWaterBucket, { "water_bucket", nullptr, nullptr } },
+        { Tiles::ItemLavaBucket,  { "lava_bucket", nullptr, nullptr } },
         { Tiles::ItemBow,        { "bow", "bow_standby", nullptr } },
         { Tiles::ItemArrow,      { "arrow", nullptr, nullptr } },
         { Tiles::ItemDiamond,    { "diamond", nullptr, nullptr } },

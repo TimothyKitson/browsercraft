@@ -58,7 +58,11 @@ public:
     Chunk* chunkAt(int chunkX, int chunkZ) const;
     const std::unordered_map<ChunkPos, std::unique_ptr<Chunk>, ChunkPosHash>& chunks() const { return m_chunks; }
 
-    RaycastHit raycast(const glm::vec3& origin, const glm::vec3& direction, float maxDistance) const;
+    // `throughLiquids` false -- the default -- looks past water and lava
+    // the way mining and placing do. A bucket wants to stop at them, so
+    // it asks for the other behaviour.
+    RaycastHit raycast(const glm::vec3& origin, const glm::vec3& direction, float maxDistance,
+                       bool stopAtLiquids = false) const;
 
     // Whether nothing solid stands between the two points. A skeleton
     // asks this before shooting, so it does not loose arrows into the

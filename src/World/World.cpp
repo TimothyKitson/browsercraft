@@ -669,7 +669,8 @@ void World::saveAll()
     }
 }
 
-RaycastHit World::raycast(const glm::vec3& origin, const glm::vec3& direction, float maxDistance) const
+RaycastHit World::raycast(const glm::vec3& origin, const glm::vec3& direction, float maxDistance,
+                          bool stopAtLiquids) const
 {
     RaycastHit hit;
 
@@ -710,7 +711,7 @@ RaycastHit World::raycast(const glm::vec3& origin, const glm::vec3& direction, f
     while (travelled <= maxDistance)
     {
         const BlockId id = getBlock(voxel.x, voxel.y, voxel.z);
-        if (id != Blocks::Air && !isLiquid(id))
+        if (id != Blocks::Air && (stopAtLiquids || !isLiquid(id)))
         {
             hit.hit = true;
             hit.block = voxel;

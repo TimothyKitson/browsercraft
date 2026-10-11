@@ -1117,7 +1117,8 @@ bool Application::frame()
             m_startupScreen == "armourhud" || m_startupScreen == "bed" ||
             m_startupScreen == "arrows" || m_startupScreen == "slabs" ||
             m_startupScreen == "boom" || m_startupScreen == "tnt" ||
-            m_startupScreen == "portal" || m_startupScreen == "nether")
+            m_startupScreen == "portal" || m_startupScreen == "nether" ||
+            m_startupScreen == "bucket")
         {
             // Dev aid: open the inventory with something in it, so the
             // screenshot shows a real grid rather than 36 empty boxes.
@@ -1158,6 +1159,22 @@ bool Application::frame()
             }
 
             if (m_startupScreen == "arrows") m_arrowDemo = true;
+
+            if (m_startupScreen == "bucket")
+            {
+                m_creativeTab = 4;   // ITEMS
+                m_inventory.clear();
+                m_inventory.add(Items::Bucket, 3);
+                m_inventory.add(Items::WaterBucket, 1);
+                m_inventory.add(Items::LavaBucket, 1);
+                m_inventory.add(Items::FlintAndSteel, 1);
+                m_inventory.add(Items::Bow, 1);
+                m_inventory.add(Items::Arrow, 32);
+                m_inventory.add(Blocks::Tnt, 8);
+                m_inventory.add(Blocks::Chest, 2);
+                m_inventory.add(Blocks::Bed, 1);
+                m_inventory.add(Blocks::StoneSlab, 16);
+            }
 
             if (m_startupScreen == "portal" || m_startupScreen == "nether")
             {
@@ -2643,6 +2660,53 @@ void Application::handlePlacement()
     ItemStack& stack = m_inventory.selected();
     if (stack.empty()) return;
 
+    // Buckets: fill from a liquid you are looking at, or empty into the
+    // space in front of one. The liquids here do not flow, so a bucket
+    // places a single block rather than a spreading source.
+    if (stack.id == Items::Bucket || stack.id == Items::WaterBucket ||
+        stack.id == Items::LavaBucket)
+    {
+        const RaycastHit scoop = m_world->raycast(m_camera.position, m_camera.front,
+                                                  REACH_DISTANCE, true);
+        if (!scoop.hit) return;
+
+        const BlockId looking = m_world->getBlock(scoop.block.x, scoop.block.y, scoop.block.z);
+
+        if (stack.id == Items::Bucket)
+        {
+            if (!isLiquid(looking)) return;
+
+            m_world->setBlock(scoop.block.x, scoop.block.y, scoop.block.z, Blocks::Air);
+            m_net.onLocalBlockChange(scoop.block.x, scoop.block.y, scoop.block.z, Blocks::Air);
+
+            const StackId filled = (looking == Blocks::Lava) ? Items::LavaBucket
+                                                             : Items::WaterBucket;
+            // A stack of empty buckets fills one of them, and the full
+            // one has to go somewhere.
+            stack.count -= 1;
+            if (stack.count <= 0) stack.clear();
+            if (m_inventory.add(filled, 1) > 0) m_drops.spawn(m_player.position, filled, 1);
+
+            m_audio.play(Sound::Pickup, 0.5f, 0.8f);
+            return;
+        }
+
+        // Emptying it. Into the liquid's own cell if that is what is
+        // being looked at, otherwise into the face in front of it.
+        const glm::ivec3 into = isLiquid(looking) ? scoop.block : scoop.previous;
+        const BlockId there = m_world->getBlock(into.x, into.y, into.z);
+        if (there != Blocks::Air && !isLiquid(there)) return;
+
+        const BlockId poured = (stack.id == Items::LavaBucket) ? Blocks::Lava : Blocks::Water;
+        m_world->setBlock(into.x, into.y, into.z, poured);
+        m_net.onLocalBlockChange(into.x, into.y, into.z, poured);
+
+        stack.id = Items::Bucket;
+        stack.count = 1;
+        m_audio.play(Sound::Place, 0.6f, 0.9f);
+        return;
+    }
+
     // Flint and steel lights a portal, and nothing else yet.
     if (stack.id == Items::FlintAndSteel)
     {
@@ -3089,7 +3153,11 @@ void Application::renderHand()
     const ItemStack& held = m_inventory.selected();
 
     m_heldItem.render(m_chunkShader, m_camera, skinFor(localAppearance()), m_atlas,
-                      held.empty() ? Blocks::Air : held.id,
+                      // Both arms of the conditional spelled as the same
+                      // type: Blocks::Air is an unscoped enumerator and
+                      // held.id is a StackId, and mixing them is what
+                      // -Wextra objects to.
+                      held.empty() ? static_cast<StackId>(Blocks::Air) : held.id,
                       sky, blockLight, m_player.sneaking);
 }
 

@@ -25,6 +25,11 @@ namespace
     constexpr float WATER_ACCELERATION = 6.0f;
 
     constexpr float COLLISION_STEP = 0.05f;
+
+    // How high a rise you walk up rather than stop against. Just over
+    // half a block, so a slab or a stair is walked onto and a whole
+    // block still wants a jump, which is Minecraft's rule.
+    constexpr float STEP_HEIGHT = 0.55f;
     constexpr float SAFE_FALL_DISTANCE = 3.0f;
 }
 
@@ -174,6 +179,17 @@ void Player::moveAxis(const World& world, float delta, int axis, bool preventLed
                 onGround = true;
                 m_falling = false;
             }
+
+            // Walking up a low rise rather than stopping dead against
+            // it. Without this a slab is a wall: you have to jump onto
+            // half a block, which is not how any of it is meant to feel.
+            if (axis != 1 && onGround && !flying && !m_falling &&
+                stepUp(world, next))
+            {
+                remaining -= move;
+                continue;
+            }
+
             velocity[axis] = 0.0f;
             return;
         }
@@ -185,6 +201,27 @@ void Player::moveAxis(const World& world, float delta, int axis, bool preventLed
         position = next;
         remaining -= move;
     }
+}
+
+// Tries to lift the player onto whatever is in the way. Takes the step
+// only when there is room at the new height both where they are going
+// and where they stand -- otherwise walking into a wall under a low
+// ceiling would push them up into it.
+bool Player::stepUp(const World& world, const glm::vec3& blocked)
+{
+    for (float lift = COLLISION_STEP; lift <= STEP_HEIGHT; lift += COLLISION_STEP)
+    {
+        const glm::vec3 raised(blocked.x, position.y + lift, blocked.z);
+        if (collides(world, aabbAt(raised))) continue;
+
+        // Room to rise where we are, as well as where we are going.
+        const glm::vec3 here(position.x, position.y + lift, position.z);
+        if (collides(world, aabbAt(here))) return false;
+
+        position = raised;
+        return true;
+    }
+    return false;
 }
 
 void Player::applyFallDamage(float landingY)

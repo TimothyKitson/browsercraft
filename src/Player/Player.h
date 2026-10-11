@@ -106,6 +106,7 @@ private:
 
     AABB aabbAt(const glm::vec3& feetPosition) const;
     bool collides(const World& world, const AABB& box) const;
+    bool stepUp(const World& world, const glm::vec3& blocked);
     bool supported(const World& world, const glm::vec3& feetPosition) const;
     void moveAxis(const World& world, float delta, int axis, bool preventLedgeFall);
     void applyFallDamage(float landingY);
