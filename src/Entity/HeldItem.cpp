@@ -23,7 +23,7 @@ namespace
     // two numbers are what turn "about four fifths across and two
     // thirds down", measured off a Java screenshot, into the offsets
     // below -- rather than nudging them and re-rendering.
-    constexpr float HAND_RIGHT = 0.78f;
+    constexpr float HAND_RIGHT = 0.62f;
     constexpr float HAND_DOWN = 0.50f;
     constexpr float HAND_FORWARD = 1.00f;
 
@@ -39,8 +39,8 @@ namespace
     // bottom corner -- about a tenth of the screen across -- long
     // enough that the shoulder runs off the bottom edge, so only the
     // fist end is ever in shot.
-    constexpr float ARM_HALF_WIDTH = 0.080f;
-    constexpr float ARM_HALF_DEPTH = 0.080f;
+    constexpr float ARM_HALF_WIDTH = 0.100f;
+    constexpr float ARM_HALF_DEPTH = 0.100f;
 
     // An arm's texture patch is four pixels across and twelve tall, so
     // the box has to be three times as long as it is wide or the texels
@@ -52,7 +52,7 @@ namespace
     // towards the middle of the screen. The sign matters: the other way
     // round puts the shoulder in the middle and the hand out at the
     // corner, which is the arm on backwards.
-    constexpr float ARM_LEAN = 0.62f;
+    constexpr float ARM_LEAN = 0.10f;
 
     // How far past edge-on to carry the cut end, in radians. Exactly
     // edge-on projects to a zero-width sliver that can still catch a
@@ -186,7 +186,24 @@ void HeldItem::appendArm(const glm::mat4& toWorld, const PlayerSkin& skin,
     lean[1] = glm::vec4(-sl * ct, cl * ct, -st, 0.0f);
     lean[2] = glm::vec4(-sl * st, cl * st, ct, 0.0f);
     lean[3] = glm::vec4(HAND_LOCAL_X, HAND_LOCAL_Y, HAND_LOCAL_Z, 1.0f);
-    const glm::mat4 arm = toWorld * lean;
+    // Spun about its own length so two of the long faces show at once
+    // and the arm reads as a box seen corner-on rather than as a flat
+    // slab facing you. Measured against the line from the eye to the
+    // hand, like the block's turn, because the hand sits far enough off
+    // to the side that that line and the camera's axis differ. Spinning
+    // about the arm's own axis leaves the end cap pointing where it was,
+    // so the tilt above still hides it.
+    // A further quarter turn on top of the eighth: the cross-section is
+    // square, so it leaves the silhouette alone and only swaps which pair
+    // of faces is which, putting the brighter one on the left where
+    // Minecraft has it rather than on the right.
+    const float spinAngle = std::atan2(HAND_FORWARD, HAND_RIGHT) + 0.7853982f;
+    const float cs = std::cos(spinAngle), ss = std::sin(spinAngle);
+    glm::mat4 spin(1.0f);
+    spin[0] = glm::vec4(cs, 0.0f, ss, 0.0f);
+    spin[2] = glm::vec4(-ss, 0.0f, cs, 0.0f);
+
+    const glm::mat4 arm = toWorld * lean * spin;
 
     const float halfW = ARM_HALF_WIDTH * (w / 4.0f);
     const float halfD = ARM_HALF_DEPTH;
