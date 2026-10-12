@@ -70,6 +70,13 @@ public:
     static std::vector<uint8_t> crackOverlay(int stage);
     static int crackOverlaySize();
 
+    // Whether anything knows how to draw this tile. Exposed only so
+    // --selftest can sweep every block and item and catch one that was
+    // given a tile number nobody ever paints: the atlas leaves those
+    // transparent, and a block with an unpainted tile is invisible in
+    // the world without anything going wrong anywhere else.
+    static bool hasPainter(int tileIndex);
+
 private:
     // One multi-frame tile (Minecraft stores these as a vertical strip).
     struct Animation

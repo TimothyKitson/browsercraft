@@ -97,6 +97,12 @@ public:
     bool muted() const { return m_muted; }
     bool available() const { return m_device != 0; }
 
+    // How many clips a sound has, loaded or synthesised. Exposed only
+    // so --selftest can sweep the whole Sound enum and catch one that
+    // was added without anything to play for it: a silent sound is not
+    // an error anywhere, it just never makes a noise.
+    int clipCount(Sound sound) const;
+
 private:
     static constexpr int SAMPLE_RATE = 44100;
     static constexpr int MAX_VOICES = 24;

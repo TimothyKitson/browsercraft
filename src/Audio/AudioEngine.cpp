@@ -298,6 +298,53 @@ void AudioEngine::buildSounds()
         s.addTone(0.09f, 115.0f, 95.0f, 55.0f, 0.30f);
         s.finish();
     }
+    // Footsteps. These are loaded from assets/sounds when a real set is
+    // installed, and had no synthesised fallback at all -- so the build
+    // that browsercraft.net serves, which has no audio assets, walked
+    // in complete silence. Each is a short noise burst shaped like the
+    // thing underfoot: brighter and sharper on stone, broader on
+    // gravel, muffled on grass and cloth, hollow on wood.
+    {
+        Synth s = make(Sound::StepStone);
+        s.addNoise(0.055f, 2600.0f, 70.0f, 1.0f, false, 101);
+        s.addTone(0.045f, 150.0f, 120.0f, 80.0f, 0.22f);
+        s.finish(0.55f);
+    }
+    {
+        Synth s = make(Sound::StepGravel);
+        s.addNoise(0.075f, 1500.0f, 48.0f, 1.0f, false, 103);
+        s.finish(0.52f);
+    }
+    {
+        Synth s = make(Sound::StepGrass);
+        s.addNoise(0.070f, 1700.0f, 52.0f, 1.0f, true, 107);
+        s.finish(0.42f);
+    }
+    {
+        Synth s = make(Sound::StepWood);
+        s.addNoise(0.060f, 1900.0f, 60.0f, 1.0f, false, 109);
+        // The hollow note under it is what makes a plank floor sound
+        // like boards rather than like stone.
+        s.addTone(0.080f, 320.0f, 210.0f, 36.0f, 0.34f, true);
+        s.finish(0.50f);
+    }
+    {
+        Synth s = make(Sound::StepSand);
+        s.addNoise(0.080f, 3200.0f, 40.0f, 1.0f, true, 113);
+        s.finish(0.40f);
+    }
+    {
+        Synth s = make(Sound::StepCloth);
+        s.addNoise(0.085f, 800.0f, 38.0f, 1.0f, true, 127);
+        s.finish(0.34f);
+    }
+    {
+        Synth s = make(Sound::StepSnow);
+        s.addNoise(0.075f, 2000.0f, 44.0f, 1.0f, true, 131);
+        s.addTone(0.050f, 200.0f, 160.0f, 60.0f, 0.18f);
+        s.finish(0.40f);
+    }
+
     {
         Synth s = make(Sound::DigDirt);
         s.addNoise(0.09f, 900.0f, 50.0f, 1.0f, false, 22);
@@ -595,6 +642,13 @@ void AudioEngine::buildSounds()
         s.addNoise(0.07f, 1100.0f, 50.0f, 1.0f, false, 220);
         s.finish(0.30f);
     }
+}
+
+int AudioEngine::clipCount(Sound sound) const
+{
+    const size_t index = static_cast<size_t>(sound);
+    if (index >= m_buffers.size()) return 0;
+    return static_cast<int>(m_buffers[index].size());
 }
 
 void AudioEngine::play(Sound sound, float volume, float pitch)

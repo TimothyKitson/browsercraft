@@ -3225,3 +3225,22 @@ void Atlas::bind(unsigned int albedoUnit, unsigned int normalUnit, unsigned int 
     glBindTexture(GL_TEXTURE_2D, m_specularId);
     glActiveTexture(GL_TEXTURE0);
 }
+
+bool Atlas::hasPainter(int tileIndex)
+{
+    for (const TileEntry& entry : TILE_PAINTERS)
+        if (entry.index == tileIndex) return true;
+
+    // Three families are painted by a loop rather than by a row each,
+    // because their tiles differ only by which kind and which tier they
+    // are: the twenty-five tools, the sixteen pieces of armour, and the
+    // crack overlays, which are built from one another rather than
+    // drawn at all. None of them is missing for having no row.
+    if (tileIndex >= Tiles::ItemToolFirst && tileIndex < Tiles::ItemToolEnd) return true;
+    if (tileIndex >= Tiles::ItemArmourFirst && tileIndex < Tiles::ItemArmourEnd) return true;
+    if (tileIndex >= Tiles::CrackFirst &&
+        tileIndex < Tiles::CrackFirst + Tiles::CrackStages)
+        return true;
+
+    return false;
+}

@@ -39,6 +39,7 @@
 #include "Game/Chat.h"
 #include "Game/Food.h"
 #include "Renderer/Atlas.h"
+#include "Audio/AudioEngine.h"
 #include "Player/Player.h"
 #include <glm/glm.hpp>
 #include <algorithm>
@@ -3633,6 +3634,115 @@ namespace
         check(mobType(MobId::Enderman).drop == Items::EnderPearl,
               "an enderman drops the pearl the chain begins with");
     }
+
+    // --- nothing missing its picture or its noise -------------------------
+
+    void testEveryBlockHasAPicture()
+    {
+        section("textures: every block has a picture");
+
+        // A block whose tile nobody paints is not an error anywhere: the
+        // atlas leaves it transparent and the block is simply invisible
+        // in the world. So it has to be swept for.
+        std::vector<std::string> unpainted;
+        for (int id = 1; id < Blocks::Count; ++id)   // Air draws nothing
+        {
+            const BlockInfo& info = blockInfo(static_cast<BlockId>(id));
+            if (info.render == RenderType::None) continue;
+
+            const int faces[3] = { info.tileTop, info.tileBottom, info.tileSide };
+            const char* which[3] = { "top", "bottom", "side" };
+            for (int f = 0; f < 3; ++f)
+            {
+                if (Atlas::hasPainter(faces[f])) continue;
+                unpainted.push_back(std::string(info.name) + " (" + which[f] + ")");
+            }
+        }
+
+        for (const std::string& missing : unpainted)
+            check(false, missing + " has no picture");
+        check(unpainted.empty(),
+              "all " + std::to_string(Blocks::Count - 1) + " blocks are drawn");
+
+        section("textures: every item has a picture");
+
+        std::vector<std::string> itemless;
+        for (int id = Items::FIRST; id < Items::Count; ++id)
+        {
+            const StackId item = static_cast<StackId>(id);
+            if (!Atlas::hasPainter(atlasTileFor(item)))
+                itemless.push_back(itemInfo(item).name);
+        }
+        for (const std::string& missing : itemless)
+            check(false, missing + " has no picture");
+        check(itemless.empty(),
+              "all " + std::to_string(Items::Count - Items::FIRST) + " items are drawn");
+
+        // Every item also needs a name to show, and a stack size that
+        // means something.
+        bool named = true;
+        bool stacks = true;
+        for (int id = Items::FIRST; id < Items::Count; ++id)
+        {
+            const ItemInfo& info = itemInfo(static_cast<StackId>(id));
+            if (!info.name || !*info.name) named = false;
+            if (info.maxStack < 1 || info.maxStack > 64) stacks = false;
+        }
+        check(named, "every item has a name");
+        check(stacks, "and stacks to somewhere between one and sixty-four");
+
+        // And every block, or the name shown over the hotbar is blank.
+        bool blockNames = true;
+        for (int id = 1; id < Blocks::Count; ++id)
+        {
+            const BlockInfo& info = blockInfo(static_cast<BlockId>(id));
+            if (!info.name || !*info.name) blockNames = false;
+        }
+        check(blockNames, "every block has a name");
+    }
+
+    void testEverySoundHasANoise()
+    {
+        section("sounds: every sound makes a noise");
+
+        // The synthesised set is what browsercraft.net serves, so a
+        // sound with nothing behind it is silent for everybody who has
+        // not dropped their own audio in.
+        AudioEngine audio;
+
+        std::vector<int> silent;
+        for (int i = 0; i < static_cast<int>(Sound::Count); ++i)
+            if (audio.clipCount(static_cast<Sound>(i)) <= 0) silent.push_back(i);
+
+        for (int i : silent)
+            check(false, "sound " + std::to_string(i) + " has nothing to play");
+        check(silent.empty(),
+              "all " + std::to_string(static_cast<int>(Sound::Count)) +
+                  " sounds have something to play");
+
+        // Every mob's three voices must be real sounds, or a species
+        // added without them falls back to whatever sound zero is.
+        bool voiced = true;
+        for (int i = 0; i < mobTypeCount(); ++i)
+        {
+            const MobType& t = mobType(static_cast<MobId>(i));
+            if (audio.clipCount(t.voice) <= 0) voiced = false;
+            if (audio.clipCount(t.hurtVoice) <= 0) voiced = false;
+            if (audio.clipCount(t.deathVoice) <= 0) voiced = false;
+        }
+        check(voiced, "every mob has a voice, a yelp and a death cry");
+
+        // No two species should share a voice: that is the mark of one
+        // added by copying another and never given its own.
+        std::set<int> voices;
+        bool distinct = true;
+        for (int i = 0; i < mobTypeCount(); ++i)
+        {
+            const int voice = static_cast<int>(mobType(static_cast<MobId>(i)).voice);
+            if (!voices.insert(voice).second) distinct = false;
+        }
+        check(distinct, "and no two species share one");
+    }
 }
 
 int runSelfTest()
@@ -3690,6 +3800,8 @@ int runSelfTest()
     testEnchanting();
     testTrading();
     testEndPortal();
+    testEveryBlockHasAPicture();
+    testEverySoundHasANoise();
 
     std::printf("\n%d checks, %d failed\n", g_checks, g_failures);
     return g_failures == 0 ? 0 : 1;
