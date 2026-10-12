@@ -69,7 +69,8 @@ namespace
 
     const StackId TAB_TOOLS[] = {
         Blocks::CraftingTable, Blocks::Furnace, Blocks::Chest, Blocks::Bed,
-        Blocks::Bookshelf, Blocks::EnchantingTable, Blocks::EndPortalFrame,
+        Blocks::Bookshelf, Blocks::EnchantingTable, Blocks::Anvil,
+        Blocks::EndPortalFrame,
         Items::Stick, Items::Coal, Items::Bow, Items::Arrow, Items::FlintAndSteel,
         Items::Bucket, Items::WaterBucket, Items::LavaBucket,
         Items::IronIngot, Items::GoldIngot, Items::Diamond,
@@ -553,6 +554,56 @@ void Application::renderInventoryScreen()
         }
         else
 
+        // The anvil: two things in, one out, and the price in levels
+        // under them. The left slot is what you are working on and the
+        // right is what you are working into it -- which way round they
+        // go matters, so the arrow between them is not decoration.
+        if (m_anvilOpen)
+        {
+            const float ax = panelX + gridWidth * 0.30f;
+            const float ay = topY + SLOT_GAP + step * 0.5f;
+
+            const int slots[3] = { Inventory::ANVIL_LEFT, Inventory::ANVIL_RIGHT,
+                                   Inventory::ANVIL_RESULT };
+            const float xs[3] = { ax, ax + step * 1.35f, ax + step * 2.9f };
+
+            for (int i = 0; i < 3; ++i)
+            {
+                guiWell(xs[i], ay, SLOT_SIZE, SLOT_SIZE);
+                const ItemStack& stack = m_inventory.slot(slots[i]);
+                drawItem(xs[i], ay, SLOT_SIZE, stack.id, stack.count,
+                         glm::vec4(1.0f), stack.damage);
+
+                // The result is taken, never filled, so it gets its own
+                // click rather than the ordinary slot one.
+                m_slotBoxes.push_back({ i == 2 ? SlotBox::Kind::AnvilTake
+                                              : SlotBox::Kind::Slot,
+                                        slots[i], xs[i], ay, SLOT_SIZE });
+            }
+
+            m_ui.text("+", ax + step * 1.02f, ay + SLOT_SIZE * 0.26f, 2.0f, TEXT_DIM);
+            m_ui.text("->", ax + step * 2.33f, ay + SLOT_SIZE * 0.30f, 1.8f, TEXT_DIM);
+
+            const Anvil::Result made = anvilResult();
+            const int level = Experience::levelFor(m_player.experience);
+            const float priceY = ay + SLOT_SIZE + 14.0f;
+
+            if (made.tooExpensive)
+            {
+                m_ui.text("Too expensive", ax, priceY, 1.6f,
+                          glm::vec4(0.80f, 0.30f, 0.30f, 1.0f));
+            }
+            else if (made.valid)
+            {
+                const bool affordable = m_player.creative() || level >= made.levelCost;
+                const std::string price = "Cost: " + std::to_string(made.levelCost);
+                m_ui.text(price, ax, priceY, 1.6f,
+                          affordable ? glm::vec4(0.49f, 0.98f, 0.24f, 1.0f)
+                                     : glm::vec4(0.55f, 0.30f, 0.30f, 1.0f));
+            }
+        }
+        else
+
         // A furnace takes the same corner the crafting grid does: ore on
         // top, fuel below it, the fire between them and the result off
         // to the right, which is the shape Minecraft uses.
@@ -767,6 +818,10 @@ void Application::handleInventoryClick(int mouseX, int mouseY, bool rightButton,
             acceptTrade(box->index);
             break;
 
+        case SlotBox::Kind::AnvilTake:
+            takeAnvilResult();
+            break;
+
         case SlotBox::Kind::Slot:
             if (shiftHeld) m_inventory.quickMove(box->index);
             else if (rightButton) m_inventory.rightClick(box->index);
@@ -774,6 +829,7 @@ void Application::handleInventoryClick(int mouseX, int mouseY, bool rightButton,
             // Any click can change what the grid adds up to, and working
             // out which ones can is not worth the bug it would cause.
             m_inventory.refreshCraftResult();
+            refreshAnvilResult();
             m_audio.play(Sound::Click, 0.35f);
             break;
     }
@@ -787,6 +843,7 @@ void Application::closeInventory()
     stowChest();
     stowFurnace();
     stowEnchantingTable();
+    stowAnvil();
     m_tradeOpen = false;
     returnCursorToWorld();
     m_inventoryOpen = false;
@@ -881,6 +938,112 @@ void Application::stowEnchantingTable()
     }
 
     m_enchantOpen = false;
+}
+
+void Application::openAnvil(const glm::ivec3& block)
+{
+    m_anvilBlock = block;
+    m_anvilOpen = true;
+    refreshAnvilResult();
+
+    m_inventoryOpen = true;
+    setMouseCaptured(false);
+}
+
+// Both inputs go back to the player. The result is only ever a preview
+// of what they would make, so it is thrown away rather than returned --
+// handing it over as well would mint a free item on every close.
+void Application::stowAnvil()
+{
+    if (!m_anvilOpen) return;
+
+    for (int slot : { Inventory::ANVIL_LEFT, Inventory::ANVIL_RIGHT })
+    {
+        ItemStack& stack = m_inventory.slot(slot);
+        if (stack.empty()) continue;
+
+        const int leftOver = m_inventory.addStack(stack);
+        if (leftOver > 0)
+            m_drops.spawnStack(m_player.position + glm::vec3(0.0f, 0.6f, 0.0f), stack);
+        stack.clear();
+    }
+
+    m_inventory.slot(Inventory::ANVIL_RESULT).clear();
+    m_anvilOpen = false;
+}
+
+Anvil::Result Application::anvilResult() const
+{
+    if (!m_anvilOpen) return Anvil::Result{};
+
+    const ItemStack& left = m_inventory.slot(Inventory::ANVIL_LEFT);
+    const ItemStack& right = m_inventory.slot(Inventory::ANVIL_RIGHT);
+
+    return Anvil::combine({ left.id, left.count, left.damage, left.enchantments },
+                          { right.id, right.count, right.damage, right.enchantments });
+}
+
+void Application::refreshAnvilResult()
+{
+    if (!m_anvilOpen) return;
+
+    ItemStack& preview = m_inventory.slot(Inventory::ANVIL_RESULT);
+    const Anvil::Result made = anvilResult();
+
+    if (!made.valid)
+    {
+        preview.clear();
+        return;
+    }
+
+    preview.id = made.id;
+    preview.count = 1;
+    preview.damage = made.damage;
+    preview.enchantments = made.enchantments;
+}
+
+// Taking it is what spends the levels and the inputs. Until then the
+// result slot is a price tag, and the player can change their mind.
+void Application::takeAnvilResult()
+{
+    if (!m_anvilOpen) return;
+    if (!m_inventory.cursor().empty()) return;   // hands full
+
+    const Anvil::Result made = anvilResult();
+    if (!made.valid) return;
+
+    const int level = Experience::levelFor(m_player.experience);
+    if (!m_player.creative() && level < made.levelCost) return;
+
+    ItemStack taken;
+    taken.id = made.id;
+    taken.count = 1;
+    taken.damage = made.damage;
+    taken.enchantments = made.enchantments;
+    m_inventory.cursor() = taken;
+
+    // The left-hand item is always consumed whole; the right-hand one
+    // only by as many as the work actually took.
+    m_inventory.slot(Inventory::ANVIL_LEFT).clear();
+
+    ItemStack& right = m_inventory.slot(Inventory::ANVIL_RIGHT);
+    right.count -= made.used;
+    if (right.count <= 0) right.clear();
+
+    if (!m_player.creative())
+    {
+        // Spent the way the enchanting table spends them: whole levels
+        // off, with the fraction carried across, since a level is not
+        // worth the same number of points either side of the move.
+        const float along = Experience::progress(m_player.experience);
+        const int after = std::max(0, level - made.levelCost);
+        m_player.experience =
+            Experience::totalForLevel(after) +
+            static_cast<int>(along * static_cast<float>(Experience::toNextLevel(after)));
+    }
+
+    m_audio.play(Sound::Click, 0.5f);
+    refreshAnvilResult();
 }
 
 void Application::buyEnchantment(int row)

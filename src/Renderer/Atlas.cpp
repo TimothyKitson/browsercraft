@@ -2153,6 +2153,53 @@ namespace
 
     // The enchanting table's top: an open book on dark stone, which is
     // the whole of what you see of it from standing height.
+    // The anvil, seen from above: the flat face you work on, with the
+    // horn standing proud at one end.
+    void paintAnvilTop(Tile& t)
+    {
+        const int n = Tile::N;
+        const Color iron{ 74, 74, 78 };
+        const Color ironDark{ 54, 54, 58 };
+        const Color ironLight{ 104, 104, 110 };
+
+        for (int y = 0; y < n; ++y)
+            for (int x = 0; x < n; ++x)
+                t.set(x, y, ((x * 7 + y * 3) % 13 == 0) ? ironDark : iron);
+
+        // The working face, a lighter rectangle inset from the edges.
+        const int inset = n / 8;
+        for (int y = inset; y < n - inset; ++y)
+            for (int x = inset * 2; x < n - inset * 2; ++x)
+                t.set(x, y, ironLight);
+
+        // Hammered dents along it.
+        for (int x = inset * 2 + 1; x < n - inset * 2; x += 3)
+            t.set(x, n / 2, ironDark);
+    }
+
+    // Its side: the wide top, the waist pinched in, the foot spread out.
+    void paintAnvilSide(Tile& t)
+    {
+        const int n = Tile::N;
+        const Color iron{ 68, 68, 72 };
+        const Color ironDark{ 44, 44, 48 };
+        const Color ironLight{ 98, 98, 104 };
+        const Color gap{ 30, 30, 34 };
+
+        for (int y = 0; y < n; ++y)
+            for (int x = 0; x < n; ++x)
+            {
+                // Rows near the middle are the waist, and narrower.
+                const bool waist = (y > n / 3) && (y < (n * 2) / 3);
+                const int margin = waist ? n / 4 : 0;
+                if (x < margin || x >= n - margin) t.set(x, y, gap);
+                else t.set(x, y, ((x * 5 + y * 7) % 11 == 0) ? ironDark : iron);
+            }
+
+        // A highlight along the top edge, where the light catches it.
+        for (int x = 0; x < n; ++x) t.set(x, 0, ironLight);
+    }
+
     void paintEnchantTableTop(Tile& t)
     {
         const int n = Tile::N;
@@ -2614,6 +2661,8 @@ namespace
         { Tiles::ExperienceOrb, paintExperienceOrb },
         { Tiles::SugarCane,     paintSugarCane },
         { Tiles::BookshelfSide, paintBookshelfSide },
+        { Tiles::AnvilTop,         paintAnvilTop },
+        { Tiles::AnvilSide,        paintAnvilSide },
         { Tiles::EnchantTableTop,  paintEnchantTableTop },
         { Tiles::EnchantTableSide, paintEnchantTableSide },
         { Tiles::EmeraldOre,    paintEmeraldOre },
@@ -2776,6 +2825,8 @@ namespace
         // pack -- and it shows, because the block next to it is not.
         { Tiles::EmeraldOre,    { "emerald_ore", nullptr },                            Tinting::None,    0,   false },
         { Tiles::BookshelfSide, { "bookshelf", nullptr },                              Tinting::None,    0,   false },
+        { Tiles::AnvilTop,         { "anvil_top", nullptr },                           Tinting::None,    0,   false },
+        { Tiles::AnvilSide,        { "anvil", nullptr },                               Tinting::None,    0,   false },
         { Tiles::EnchantTableTop,  { "enchanting_table_top", nullptr },                Tinting::None,    0,   false },
         { Tiles::EnchantTableSide, { "enchanting_table_side", nullptr },               Tinting::None,    0,   false },
         { Tiles::EndFrameTop,   { "end_portal_frame_top", nullptr },                   Tinting::None,    0,   false },

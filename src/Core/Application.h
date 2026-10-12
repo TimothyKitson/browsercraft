@@ -19,6 +19,7 @@
 #include "Entity/DroppedItems.h"
 #include "Entity/ExperienceOrbs.h"
 #include "Entity/Rain.h"
+#include "Game/Anvil.h"
 #include "Game/Weather.h"
 #include "Game/Trading.h"
 #include "Entity/Particles.h"
@@ -301,6 +302,8 @@ private:
     Trading::Profession m_tradeWith = Trading::Profession::Farmer;
 
     bool m_enchantOpen = false;
+    bool m_anvilOpen = false;
+    glm::ivec3 m_anvilBlock{ 0 };
     glm::ivec3 m_enchantBlock{ 0 };
     int m_enchantShelves = 0;
     uint32_t m_enchantRoll = 0;
@@ -506,6 +509,18 @@ private:
     void openEnchantingTable(const glm::ivec3& block);
     void stowEnchantingTable();
 
+    void openAnvil(const glm::ivec3& block);
+    void stowAnvil();
+    // Works out what the two inputs would make and puts it in the
+    // result slot. Cheap, and run after any click, for the same reason
+    // the craft grid is: deciding which clicks could matter is harder
+    // than doing it every time.
+    // What the two inputs currently make, for the screen and for the
+    // click that takes it. Const, so drawing cannot change anything.
+    Anvil::Result anvilResult() const;
+    void refreshAnvilResult();
+    void takeAnvilResult();
+
     // Copies whatever an open container is holding back to where it
     // belongs, without shutting it. Saving used to call the stow
     // functions for this, which also close the thing -- so an autosave
@@ -605,7 +620,7 @@ private:
     // copies of the same geometry, and only one of them ever got fixed.
     struct SlotBox
     {
-        enum class Kind { Slot, Palette, Tab, Enchant, Trade };
+        enum class Kind { Slot, Palette, Tab, Enchant, Trade, AnvilTake };
         Kind kind = Kind::Slot;
         int index = 0;        // inventory slot, block id, or tab number
         float x = 0.0f, y = 0.0f, size = 0.0f;

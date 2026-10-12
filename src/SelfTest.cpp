@@ -22,6 +22,7 @@
 #include "Game/Explosion.h"
 #include "Game/Experience.h"
 #include "Game/Cane.h"
+#include "Game/Anvil.h"
 #include "Game/Enchanting.h"
 #include "Game/Trading.h"
 #include "Game/EndPortal.h"
@@ -992,6 +993,201 @@ namespace
         Mob zombie(MobId::Zombie, glm::vec3(0.0f, 64.0f, 0.0f), 13u);
         check(mobType(MobId::Zombie).breedingFood == Blocks::Air, "a zombie wants no food");
         check(!zombie.feed(Items::Wheat), "and refuses wheat");
+    }
+
+    void testAnvil()
+    {
+        section("the anvil: mending and moving enchantments");
+
+        using Anvil::Input;
+        using Enchanting::Kind;
+
+        // What mends what.
+        check(Anvil::repairMaterial(Items::IronPickaxe) == Items::IronIngot,
+              "iron tools take iron");
+        check(Anvil::repairMaterial(Items::WoodPickaxe) == Blocks::Planks,
+              "wooden ones take planks");
+        check(Anvil::repairMaterial(Items::StonePickaxe) == Blocks::Cobblestone,
+              "stone ones take cobblestone");
+        check(Anvil::repairMaterial(Items::DiamondSword) == Items::Diamond,
+              "diamond gear takes diamonds");
+        check(Anvil::repairMaterial(Items::LeatherBoots) == Items::Leather,
+              "leather armour takes leather");
+        check(Anvil::repairMaterial(Items::IronChestplate) == Items::IronIngot,
+              "iron armour takes iron");
+        check(Anvil::repairMaterial(Blocks::Cobblestone) == Blocks::Air,
+              "a block takes nothing: it does not wear out");
+
+        check(Anvil::wearsOut(Items::IronPickaxe), "a pickaxe wears out");
+        check(Anvil::wearsOut(Items::IronChestplate), "so does armour");
+        check(!Anvil::wearsOut(Blocks::Cobblestone), "cobblestone does not");
+        check(!Anvil::wearsOut(Items::Stick), "nor does a stick");
+
+        const int pickMax = Anvil::maxDurability(Items::IronPickaxe);
+        check(pickMax > 0, "an iron pickaxe has a life to spend");
+        const int step = std::max(1, (pickMax * Anvil::REPAIR_PERCENT + 99) / 100);
+
+        // --- mending with raw material ---------------------------------
+        {
+            Input worn{ Items::IronPickaxe, 1, pickMax - 1, 0 };   // nearly dead
+            Input iron{ Items::IronIngot, 64, 0, 0 };
+            const Anvil::Result r = Anvil::combine(worn, iron);
+            check(r.valid, "an ingot mends a worn pickaxe");
+            check(r.id == Items::IronPickaxe, "and what comes out is still a pickaxe");
+            check(r.damage == 0, "and with a stack to hand it comes out whole");
+            check(r.levelCost == r.used, "one level an ingot");
+            check(r.used > 0 && r.used <= 4,
+                  "four ingots is the most a whole repair ever takes");
+        }
+        {
+            // One ingot and no more: a quarter of its life back.
+            Input worn{ Items::IronPickaxe, 1, pickMax - 1, 0 };
+            Input one{ Items::IronIngot, 1, 0, 0 };
+            const Anvil::Result r = Anvil::combine(worn, one);
+            check(r.valid && r.used == 1, "one ingot is spent when one is all there is");
+            check(r.damage == (pickMax - 1) - step, "mending a quarter of its life");
+            check(r.damage > 0, "and leaving the rest of the wear behind");
+        }
+        {
+            // Barely scratched: it should spend one ingot, not the stack.
+            Input nicked{ Items::IronPickaxe, 1, 1, 0 };
+            Input iron{ Items::IronIngot, 64, 0, 0 };
+            const Anvil::Result r = Anvil::combine(nicked, iron);
+            check(r.valid && r.used == 1, "a scratch costs one ingot, not the stack");
+            check(r.damage == 0, "and it comes out whole");
+        }
+        {
+            Input whole{ Items::IronPickaxe, 1, 0, 0 };
+            Input iron{ Items::IronIngot, 64, 0, 0 };
+            check(!Anvil::combine(whole, iron).valid,
+                  "a pickaxe with nothing wrong with it is refused");
+        }
+        {
+            Input worn{ Items::IronPickaxe, 1, pickMax - 1, 0 };
+            Input gold{ Items::GoldIngot, 64, 0, 0 };
+            check(!Anvil::combine(worn, gold).valid, "the wrong metal is refused");
+        }
+
+        // --- books ------------------------------------------------------
+        {
+            Input pick{ Items::IronPickaxe, 1, 0, 0 };
+            Input book{ Items::Book, 1,  0,
+                        Enchanting::withLevel(0u, Kind::Efficiency, 3) };
+            const Anvil::Result r = Anvil::combine(pick, book);
+            check(r.valid, "a book of efficiency goes onto a pickaxe");
+            check(Enchanting::levelOf(r.enchantments, Kind::Efficiency) == 3,
+                  "at the level the book carried");
+            check(r.levelCost == 3, "costing a level a level");
+            check(r.used == 1, "and the book is spent");
+        }
+        {
+            // Power belongs on a bow and nowhere else.
+            Input pick{ Items::IronPickaxe, 1, 0, 0 };
+            Input book{ Items::Book, 1, 0, Enchanting::withLevel(0u, Kind::Power, 2) };
+            check(!Anvil::combine(pick, book).valid,
+                  "a book of power does nothing to a pickaxe");
+        }
+        {
+            // Two of a level make the next one up.
+            Input pick{ Items::IronPickaxe, 1, 0,
+                        Enchanting::withLevel(0u, Kind::Efficiency, 2) };
+            Input book{ Items::Book, 1, 0,
+                        Enchanting::withLevel(0u, Kind::Efficiency, 2) };
+            const Anvil::Result r = Anvil::combine(pick, book);
+            check(r.valid, "two of the same level combine");
+            check(Enchanting::levelOf(r.enchantments, Kind::Efficiency) == 3,
+                  "into the next one up");
+        }
+        {
+            // A weaker book is absorbed and gains nothing.
+            Input pick{ Items::IronPickaxe, 1, 0,
+                        Enchanting::withLevel(0u, Kind::Efficiency, 4) };
+            Input book{ Items::Book, 1, 0,
+                        Enchanting::withLevel(0u, Kind::Efficiency, 2) };
+            check(!Anvil::combine(pick, book).valid,
+                  "a weaker book adds nothing and is refused");
+        }
+        {
+            // The ceiling holds.
+            const int top = Enchanting::maxLevel(Kind::Efficiency);
+            Input pick{ Items::IronPickaxe, 1, 0,
+                        Enchanting::withLevel(0u, Kind::Efficiency, top) };
+            Input book{ Items::Book, 1, 0,
+                        Enchanting::withLevel(0u, Kind::Efficiency, top) };
+            check(!Anvil::combine(pick, book).valid,
+                  "two at the ceiling make nothing higher");
+        }
+        {
+            // Fortune and silk touch will not share an item.
+            Input pick{ Items::IronPickaxe, 1, 0,
+                        Enchanting::withLevel(0u, Kind::SilkTouch, 1) };
+            Input book{ Items::Book, 1, 0,
+                        Enchanting::withLevel(0u, Kind::Fortune, 2) };
+            const Anvil::Result r = Anvil::combine(pick, book);
+            check(!r.valid, "fortune will not go onto a silk touch pickaxe");
+        }
+        {
+            // Two different kinds both land.
+            Input pick{ Items::IronPickaxe, 1, 0,
+                        Enchanting::withLevel(0u, Kind::Efficiency, 2) };
+            Enchanting::Set two = Enchanting::withLevel(0u, Kind::Unbreaking, 2);
+            two = Enchanting::withLevel(two, Kind::Fortune, 1);
+            Input book{ Items::Book, 1, 0, two };
+            const Anvil::Result r = Anvil::combine(pick, book);
+            check(r.valid, "a book of two enchantments lands");
+            check(Enchanting::levelOf(r.enchantments, Kind::Efficiency) == 2,
+                  "what was there stays");
+            check(Enchanting::levelOf(r.enchantments, Kind::Unbreaking) == 2 &&
+                  Enchanting::levelOf(r.enchantments, Kind::Fortune) == 1,
+                  "and both of the new ones arrive");
+        }
+
+        // --- joining two of the same item -------------------------------
+        {
+            Input a{ Items::IronPickaxe, 1, pickMax * 3 / 4, 0 };
+            Input b{ Items::IronPickaxe, 1, pickMax * 3 / 4, 0 };
+            const Anvil::Result r = Anvil::combine(a, b);
+            check(r.valid, "two worn pickaxes make one better one");
+            check(r.damage < a.damage, "with less wear than either had");
+            check(r.used == 1, "spending the second one");
+        }
+        {
+            Input a{ Items::IronPickaxe, 1, 0, 0 };
+            Input b{ Items::IronSword, 1, 0, 0 };
+            check(!Anvil::combine(a, b).valid, "a sword does not mend a pickaxe");
+        }
+        {
+            Input a{ Blocks::Cobblestone, 64, 0, 0 };
+            Input b{ Blocks::Cobblestone, 64, 0, 0 };
+            check(!Anvil::combine(a, b).valid, "and cobblestone is not anvil work");
+        }
+        {
+            Input nothing{};
+            Input pick{ Items::IronPickaxe, 1, 10, 0 };
+            check(!Anvil::combine(nothing, pick).valid, "an empty left slot makes nothing");
+            check(!Anvil::combine(pick, nothing).valid, "nor an empty right one");
+        }
+
+        // --- the ceiling on price ---------------------------------------
+        {
+            // Stack enough levels onto one item to pass forty.
+            Enchanting::Set rich = 0;
+            for (int k = 0; k < static_cast<int>(Kind::Count); ++k)
+            {
+                const Kind kind = static_cast<Kind>(k);
+                if (!Enchanting::appliesTo(kind, Items::DiamondSword)) continue;
+                if (kind == Kind::Fortune) continue;   // fights silk touch
+                rich = Enchanting::withLevel(rich, kind, Enchanting::maxLevel(kind));
+            }
+            Input sword{ Items::DiamondSword, 1, 0, 0 };
+            Input book{ Items::Book, 1, 0, rich };
+            const Anvil::Result r = Anvil::combine(sword, book);
+            // Either it fits under the ceiling or it is refused for price,
+            // but it must never come out valid at or above it.
+            check(!(r.valid && r.levelCost >= Anvil::TOO_EXPENSIVE),
+                  "nothing valid ever costs forty levels or more");
+            if (r.tooExpensive) check(!r.valid, "and too expensive means no result");
+        }
     }
 
     void testEndermanStare()
@@ -4304,6 +4500,7 @@ int runSelfTest()
     testBreeding();
     testMobDrops();
     testEndermanStare();
+    testAnvil();
     testFarming();
     testPathfinding();
     testChatCommands();

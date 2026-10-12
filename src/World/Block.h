@@ -121,6 +121,9 @@ namespace Blocks
         EndPortalFrameFilled,
         EndPortal,
 
+        // Mending and moving enchantments. Appended, like the rest.
+        Anvil,
+
         Count
     };
 }

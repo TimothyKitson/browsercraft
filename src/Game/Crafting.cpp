@@ -44,6 +44,14 @@ namespace
                          Blocks::EndStone,  Blocks::EndStone,  Blocks::EndStone },
           0, Blocks::EndPortalFrame, 4 },
 
+        // Seven iron: a slab across the top, a stem, and a foot.
+        // Minecraft spends three iron blocks on the top row, but there
+        // is no iron block here to spend, so it is ingots all the way.
+        { false, 3, 3, { Items::IronIngot,  Items::IronIngot,  Items::IronIngot,
+                         _,                 Items::IronIngot,  _,
+                         Items::IronIngot,  Items::IronIngot,  Items::IronIngot },
+          0, Blocks::Anvil, 1 },
+
         // Four obsidian, two diamond and a book. The book is why the
         // whole cane chain above has to exist.
         { false, 3, 3, { _,                 Items::Book,       _,

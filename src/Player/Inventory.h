@@ -78,7 +78,17 @@ public:
     // second slot for a result the way the furnace has one.
     static constexpr int ENCHANT_SLOT = CHEST_FIRST + CHEST_SLOTS;     // 80
 
-    static constexpr int SLOT_COUNT = ENCHANT_SLOT + 1;               // 81
+    // The anvil's two inputs and what they would make. The result is a
+    // slot of its own rather than a changed left-hand item, because the
+    // player has to see the price before paying it -- and because the
+    // inputs are only spent once the result is actually taken.
+    static constexpr int ANVIL_FIRST = ENCHANT_SLOT + 1;              // 81..83
+    static constexpr int ANVIL_LEFT = ANVIL_FIRST;
+    static constexpr int ANVIL_RIGHT = ANVIL_FIRST + 1;
+    static constexpr int ANVIL_RESULT = ANVIL_FIRST + 2;
+    static constexpr int ANVIL_SLOTS = 3;
+
+    static constexpr int SLOT_COUNT = ANVIL_FIRST + ANVIL_SLOTS;      // 84
 
     // The ceiling. What a particular thing actually stacks to comes from
     // maxStackOf(), since items need not agree with blocks.

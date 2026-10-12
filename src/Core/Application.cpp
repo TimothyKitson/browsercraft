@@ -648,7 +648,11 @@ void Application::loadLevel()
     }
     else
     {
-        m_player.position = m_spawnPoint;
+        // The spawn point is a place in the overworld. Starting straight
+        // in another dimension has already put the player where that one
+        // begins, and taking the spawn point here instead dropped them
+        // into the End's void at the overworld's coordinates.
+        if (m_dimension == Dimension::Overworld) m_player.position = m_spawnPoint;
         m_placeOnSurface = true;
         m_timeOfDay = 0.3f;
         // You start with nothing, in both modes: survival is meant to
@@ -1269,11 +1273,13 @@ bool Application::frame()
             }
         }
 
-        if ((m_benchOpen || m_furnaceOpen || m_chestOpen || m_enchantOpen) && playing())
+        if ((m_benchOpen || m_furnaceOpen || m_chestOpen || m_enchantOpen ||
+             m_anvilOpen) && playing())
         {
             const glm::ivec3 block = m_benchOpen    ? m_benchBlock
                                    : m_chestOpen    ? m_chestBlock
                                    : m_enchantOpen  ? m_enchantBlock
+                                   : m_anvilOpen    ? m_anvilBlock
                                                     : m_furnaceBlock;
             const glm::vec3 middle = glm::vec3(block) + glm::vec3(0.5f);
             const BlockId there = m_world->getBlock(block.x, block.y, block.z);
@@ -1282,6 +1288,7 @@ bool Application::frame()
                 m_benchOpen   ? there == Blocks::CraftingTable
               : m_chestOpen   ? there == Blocks::Chest
               : m_enchantOpen ? there == Blocks::EnchantingTable
+              : m_anvilOpen   ? there == Blocks::Anvil
                               : (there == Blocks::Furnace || there == Blocks::FurnaceLit);
 
             if (!stillThere || glm::length(m_player.position - middle) > BENCH_REACH)
@@ -1341,7 +1348,8 @@ bool Application::frame()
             m_startupScreen == "enchantblock" || m_startupScreen == "villager" ||
             m_startupScreen == "trade" || m_startupScreen == "endportal" ||
             m_startupScreen == "rain" || m_startupScreen == "storm" ||
-            m_startupScreen == "pbr")
+            m_startupScreen == "pbr" || m_startupScreen == "anvil" ||
+            m_startupScreen == "anvilblock")
         {
             // Dev aid: open the inventory with something in it, so the
             // screenshot shows a real grid rather than 36 empty boxes.
@@ -1368,6 +1376,7 @@ bool Application::frame()
                                   m_startupScreen != "storm" &&
                                   m_startupScreen != "tnt" &&
                                   m_startupScreen != "pbr" &&
+                                  m_startupScreen != "anvilblock" &&
                                   m_startupScreen != "portal" &&
                                   m_startupScreen != "nether";
             m_inventoryOpen = showPanel;
@@ -1545,6 +1554,60 @@ bool Application::frame()
                     slot.count = 1;
                     openEnchantingTable(glm::ivec3(bx, by, bz));
                 }
+            }
+
+            if (m_startupScreen == "anvil" || m_startupScreen == "anvilblock")
+            {
+                m_camera.setOrientation(0.0f, -14.0f);
+                m_camera.addLook(0.0f, 0.0f, 0.0f);
+
+                const int px = static_cast<int>(std::floor(m_player.position.x));
+                const int py = static_cast<int>(std::floor(m_player.position.y));
+                const int pz = static_cast<int>(std::floor(m_player.position.z));
+
+                // A clearing, or the grass swallows a block as low as an
+                // anvil and the bank behind buries everything else.
+                for (int ax = 0; ax <= 12; ++ax)
+                    for (int az = -7; az <= 7; ++az)
+                    {
+                        for (int ay = 0; ay <= 5; ++ay)
+                            m_world->setBlock(px + ax, py + ay, pz + az, Blocks::Air);
+                        m_world->setBlock(px + ax, py - 1, pz + az, Blocks::Planks);
+                    }
+
+                m_world->setBlock(px + 3, py, pz, Blocks::Anvil);
+
+                // The three that every scene here carries, set wide
+                // enough apart to clear the open panel between them.
+                m_world->setBlock(px + 8, py, pz - 4, Blocks::Bookshelf);
+                m_world->setBlock(px + 8, py, pz,     Blocks::DiamondOre);
+                m_world->setBlock(px + 8, py, pz + 4, Blocks::EndPortalFrame);
+
+                m_player.experience = Experience::totalForLevel(30);
+
+                // A worn, enchanted pickaxe on the left and a book of
+                // unbreaking on the right: the pairing the anvil exists
+                // for, and the one with a price worth showing.
+                ItemStack& left = m_inventory.slot(Inventory::ANVIL_LEFT);
+                left.id = Items::DiamondPickaxe;
+                left.count = 1;
+                left.damage = Anvil::maxDurability(Items::DiamondPickaxe) * 3 / 4;
+                left.enchantments = Enchanting::withLevel(0u, Enchanting::Kind::Efficiency, 3);
+
+                ItemStack& right = m_inventory.slot(Inventory::ANVIL_RIGHT);
+                right.id = Items::Book;
+                right.count = 1;
+                right.enchantments =
+                    Enchanting::withLevel(0u, Enchanting::Kind::Unbreaking, 3);
+
+                m_inventory.add(Items::IronIngot, 12);
+                m_inventory.add(Blocks::Anvil, 1);
+
+                // "anvilblock" shows the block in the world instead, the
+                // way "furnaceblock" does: a panel in front of it is no
+                // use for seeing what it looks like.
+                if (m_startupScreen == "anvil") openAnvil(glm::ivec3(px + 3, py, pz));
+                else { m_inventoryOpen = false; setMouseCaptured(false); }
             }
 
             if (m_startupScreen == "pbr")
@@ -3419,6 +3482,12 @@ void Application::handlePlacement()
             if (used == Blocks::EnchantingTable)
             {
                 openEnchantingTable(bench.block);
+                m_audio.play(Sound::Click, 0.4f);
+                return;
+            }
+            if (used == Blocks::Anvil)
+            {
+                openAnvil(bench.block);
                 m_audio.play(Sound::Click, 0.4f);
                 return;
             }
