@@ -30,6 +30,20 @@ namespace
         // them in any arrangement for the same three wheat.
         { true,  0, 0, { Items::Wheat, Items::Wheat, Items::Wheat }, 3, Items::Bread, 1 },
 
+        // An eye of ender. Minecraft wants blaze powder with the
+        // pearl, and there are no blazes here to get it from, so it
+        // takes gunpowder instead -- also a thing you have to go and
+        // fight something for.
+        { true,  0, 0, { Items::EnderPearl, Items::Gunpowder }, 2, Items::EyeOfEnder, 1 },
+
+        // The frames. In Minecraft these are only found in
+        // strongholds, and there are none; without a recipe the End is
+        // somewhere you can only reach from the command line.
+        { false, 3, 3, { Blocks::EndStone,  Blocks::EndStone,  Blocks::EndStone,
+                         Blocks::EndStone,  Items::EnderPearl, Blocks::EndStone,
+                         Blocks::EndStone,  Blocks::EndStone,  Blocks::EndStone },
+          0, Blocks::EndPortalFrame, 4 },
+
         // Four obsidian, two diamond and a book. The book is why the
         // whole cane chain above has to exist.
         { false, 3, 3, { _,                 Items::Book,       _,

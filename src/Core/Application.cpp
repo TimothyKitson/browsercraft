@@ -10,6 +10,7 @@
 #include "Game/Experience.h"
 #include "Game/Cane.h"
 #include "Game/Enchanting.h"
+#include "Game/EndPortal.h"
 #include "Game/Sleep.h"
 #include "Game/Explosion.h"
 #include "Game/Portal.h"
@@ -197,6 +198,16 @@ namespace
         }
     };
 
+    // And for the ring of frames round an end portal.
+    struct WorldEndFrames : EndPortal::Blocks
+    {
+        const World* world = nullptr;
+        BlockId at(int x, int y, int z) const override
+        {
+            return world->getBlock(x, y, z);
+        }
+    };
+
     // The same, for counting the shelves round an enchanting table.
     struct WorldEnchantRoom : Enchanting::Surroundings
     {
@@ -356,6 +367,14 @@ void Application::startWorld(GameMode mode, bool freshWorld)
     m_player.flying = modeIsCreative(m_gameMode);
 
     m_dimension = m_startupDimension;
+
+    // The spawner has to be told as well. travelTo does it, but
+    // starting straight in a dimension does not go through travelTo,
+    // and the spawner left on the overworld there picked overworld
+    // species: animals wanting grass underfoot, which neither
+    // netherrack nor end stone is, so nothing spawned at all.
+    m_entities.setDimension(m_dimension);
+
     m_world = std::make_unique<World>(seed, m_savePath, DEFAULT_RENDER_DISTANCE, m_dimension);
     if (m_dimension != Dimension::Overworld)
     {
@@ -1230,7 +1249,7 @@ bool Application::frame()
             m_startupScreen == "handempty" || m_startupScreen == "xp" ||
             m_startupScreen == "shelf" || m_startupScreen == "enchant" ||
             m_startupScreen == "enchantblock" || m_startupScreen == "villager" ||
-            m_startupScreen == "trade")
+            m_startupScreen == "trade" || m_startupScreen == "endportal")
         {
             // Dev aid: open the inventory with something in it, so the
             // screenshot shows a real grid rather than 36 empty boxes.
@@ -1252,6 +1271,7 @@ bool Application::frame()
                                   m_startupScreen != "shelf" &&
                                   m_startupScreen != "enchantblock" &&
                                   m_startupScreen != "villager" &&
+                                  m_startupScreen != "endportal" &&
                                   m_startupScreen != "tnt" &&
                                   m_startupScreen != "portal" &&
                                   m_startupScreen != "nether";
@@ -1308,6 +1328,35 @@ bool Application::frame()
                 for (int f = 0; f < 4; ++f)
                     m_world->setBlock(bx + f - 1, by, bz + 2,
                                       stairsFacing(Blocks::CobbleStairsNorth, f));
+            }
+
+            if (m_startupScreen == "endportal")
+            {
+                m_camera.pitch = -28.0f;
+                m_camera.addLook(0.0f, 0.0f, 0.0f);
+
+                const glm::vec3 ahead = m_player.position + m_camera.front * 7.0f;
+                const int bx = static_cast<int>(std::floor(ahead.x));
+                const int by = static_cast<int>(std::floor(m_player.position.y)) - 1;
+                const int bz = static_cast<int>(std::floor(ahead.z));
+
+                // A floor to stand the ring on, then eleven of the
+                // twelve frames: the last is left empty so the shot
+                // shows a ring that has not lit, and the eye in hand is
+                // what would light it.
+                for (int dx = -4; dx <= 4; ++dx)
+                    for (int dz = -4; dz <= 4; ++dz)
+                        m_world->setBlock(bx + dx, by, bz + dz, Blocks::EndStone);
+
+                int offsets[EndPortal::FRAME_COUNT][2];
+                EndPortal::frameOffsets(offsets);
+                for (int i = 0; i < EndPortal::FRAME_COUNT; ++i)
+                    m_world->setBlock(bx + offsets[i][0], by + 1, bz + offsets[i][1],
+                                      (i == 0) ? Blocks::EndPortalFrame
+                                               : Blocks::EndPortalFrameFilled);
+
+                m_inventory.add(Items::EyeOfEnder, 4);
+                m_inventory.add(Items::EnderPearl, 8);
             }
 
             if (m_startupScreen == "villager" || m_startupScreen == "trade")
@@ -2505,6 +2554,34 @@ void Application::updateMining(float deltaTime)
     }
 }
 
+void Application::lightEndPortalAround(const glm::ivec3& frame)
+{
+    WorldEndFrames around;
+    around.world = m_world.get();
+
+    int centreX = 0;
+    int centreZ = 0;
+    if (!EndPortal::findRingAround(around, frame.x, frame.y, frame.z, centreX, centreZ))
+        return;
+
+    // The three-by-three inside the ring, at the frames' own level.
+    const int half = EndPortal::INTERIOR / 2;
+    for (int dx = -half; dx <= half; ++dx)
+    {
+        for (int dz = -half; dz <= half; ++dz)
+        {
+            const int x = centreX + dx;
+            const int z = centreZ + dz;
+            if (m_world->getBlock(x, frame.y, z) == Blocks::EndPortal) continue;
+
+            m_world->setBlock(x, frame.y, z, Blocks::EndPortal);
+            m_net.onLocalBlockChange(x, frame.y, z, Blocks::EndPortal);
+        }
+    }
+
+    m_audio.play(Sound::Click, 0.9f, 0.5f);
+}
+
 uint32_t Application::armourProtection() const
 {
     int best = 0;
@@ -2659,6 +2736,34 @@ void Application::updatePortal(float deltaTime)
     const BlockId inside = m_world->getBlock(static_cast<int>(std::floor(chest.x)),
                                              static_cast<int>(std::floor(chest.y)),
                                              static_cast<int>(std::floor(chest.z)));
+
+    // The end portal is the other kind, and it drops you through at
+    // once rather than after a wait: Minecraft's does the same, and
+    // there is no stepping back out of one by accident the way there is
+    // with a nether portal you built across a doorway.
+    if (inside == Blocks::EndPortal)
+    {
+        m_portalTimer = 0.0f;
+
+        if (m_dimension != Dimension::End)
+        {
+            m_endHome = m_player.position;
+            m_hasEndHome = true;
+            travelTo(Dimension::End);
+            return;
+        }
+
+        travelTo(Dimension::Overworld);
+        if (m_hasEndHome)
+        {
+            // Back where you left, and a step clear of the portal, or
+            // you land in it and are sent straight back.
+            m_player.position = m_endHome + glm::vec3(0.0f, 0.0f, 2.5f);
+            m_player.velocity = glm::vec3(0.0f);
+            m_camera.position = m_player.eyePosition();
+        }
+        return;
+    }
 
     if (inside != Blocks::NetherPortal)
     {
@@ -3133,6 +3238,29 @@ void Application::handlePlacement()
                 m_audio.play(Sound::DigWood, 0.5f, 0.8f);
                 return;
             }
+            // An eye set into a frame. Done by using it, like a door,
+            // rather than by placing a block: the eye goes into the
+            // frame that is already there.
+            if (used == Blocks::EndPortalFrame &&
+                m_inventory.selected().id == Items::EyeOfEnder)
+            {
+                m_world->setBlock(bench.block.x, bench.block.y, bench.block.z,
+                                  Blocks::EndPortalFrameFilled);
+                m_net.onLocalBlockChange(bench.block.x, bench.block.y, bench.block.z,
+                                         Blocks::EndPortalFrameFilled);
+                m_audio.play(Sound::Click, 0.6f, 1.5f);
+
+                if (!m_player.creative())
+                {
+                    ItemStack& held = m_inventory.selected();
+                    held.count -= 1;
+                    if (held.count <= 0) held.clear();
+                }
+
+                lightEndPortalAround(bench.block);
+                return;
+            }
+
             if (used == Blocks::EnchantingTable)
             {
                 openEnchantingTable(bench.block);
@@ -3430,7 +3558,7 @@ glm::vec3 Application::dimensionBackdrop() const
     switch (m_dimension)
     {
         case Dimension::Nether: return glm::vec3(0.30f, 0.09f, 0.07f);
-        case Dimension::End:    return glm::vec3(0.06f, 0.04f, 0.09f);
+        case Dimension::End:    return glm::vec3(0.10f, 0.07f, 0.15f);
         default:                return glm::vec3(0.5f, 0.72f, 0.95f);
     }
 }
@@ -3440,7 +3568,10 @@ float Application::dimensionAmbient() const
     switch (m_dimension)
     {
         case Dimension::Nether: return 0.38f;   // gloomy, not blind
-        case Dimension::End:    return 0.18f;
+        // Dim, but not so dim that end stone reads as black. There is
+        // no sun there and nothing but the island glows, so this is the
+        // whole of what lights the place.
+        case Dimension::End:    return 0.34f;
         default:                return 0.07f;
     }
 }

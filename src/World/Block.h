@@ -114,6 +114,13 @@ namespace Blocks
         EnchantingTable,
         EmeraldOre,
 
+        // The way to the End. The frame is two ids rather than one with
+        // a flag, for the same reason the doors are sixteen: a block
+        // here has nowhere to keep whether an eye has been set in it.
+        EndPortalFrame,
+        EndPortalFrameFilled,
+        EndPortal,
+
         Count
     };
 }

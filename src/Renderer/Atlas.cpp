@@ -2271,6 +2271,129 @@ namespace
         }
     }
 
+    // The end portal frame: pale end stone with a dark socket cut in
+    // the top of it, empty until an eye is set in it.
+    void paintEndFrameTop(Tile& t)
+    {
+        paintEndStone(t);
+        const int n = Tile::N;
+        const Color socket{ 48, 44, 60 };
+        const Color rim{ 92, 96, 86 };
+
+        for (int y = n / 4; y < (n * 3) / 4; ++y)
+            for (int x = n / 4; x < (n * 3) / 4; ++x)
+                t.set(x, y, socket);
+
+        for (int i = n / 4; i < (n * 3) / 4; ++i)
+        {
+            t.set(i, n / 4, rim);
+            t.set(n / 4, i, rim);
+        }
+    }
+
+    // The same with the eye in it: a green pupil that reads as lit.
+    void paintEndFrameEye(Tile& t)
+    {
+        paintEndFrameTop(t);
+        const int n = Tile::N;
+        const Color eye{ 62, 172, 128 };
+        const Color eyePale{ 142, 230, 190 };
+
+        const float mid = (n - 1) * 0.5f;
+        const float radius = n * 0.22f;
+        for (int y = 0; y < n; ++y)
+            for (int x = 0; x < n; ++x)
+            {
+                const float dx = x - mid;
+                const float dy = y - mid;
+                if (dx * dx + dy * dy > radius * radius) continue;
+                t.set(x, y, (dx + dy < -radius * 0.4f) ? eyePale : eye);
+            }
+    }
+
+    void paintEndFrameSide(Tile& t)
+    {
+        paintEndStone(t);
+        const int n = Tile::N;
+        const Color band{ 108, 112, 100 };
+        for (int x = 0; x < n; ++x)
+        {
+            t.set(x, 0, band);
+            t.set(x, 1, band);
+        }
+    }
+
+    // The portal itself: near black with scattered lights in it, which
+    // is as close as a flat tile gets to Minecraft's starfield.
+    void paintEndPortalTile(Tile& t)
+    {
+        const int n = Tile::N;
+        t.fill(Color{ 10, 8, 20 });
+
+        for (int y = 0; y < n; ++y)
+        {
+            for (int x = 0; x < n; ++x)
+            {
+                // A fixed scatter rather than a random one: the tile is
+                // drawn once and seen a thousand times, so it wants to
+                // look deliberate.
+                const int h = (x * 73 + y * 151 + x * y * 17) % 97;
+                if (h < 4)
+                    t.set(x, y, Color{ 196, 226, 236 });
+                else if (h < 11)
+                    t.set(x, y, Color{ 86, 120, 150 });
+                else if (h < 22)
+                    t.set(x, y, Color{ 30, 34, 62 });
+            }
+        }
+    }
+
+    void paintItemEnderPearl(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        const int n = Tile::N;
+        const float mid = (n - 1) * 0.5f;
+        const float radius = n * 0.36f;
+
+        for (int y = 0; y < n; ++y)
+            for (int x = 0; x < n; ++x)
+            {
+                const float dx = (x - mid) / radius;
+                const float dy = (y - mid) / radius;
+                const float d = std::sqrt(dx * dx + dy * dy);
+                if (d > 1.0f) continue;
+
+                const float lit = std::clamp(1.0f - (dx * 0.5f + dy * 0.5f) - d * 0.3f,
+                                             0.0f, 1.0f);
+                Color c;
+                c.r = static_cast<unsigned char>(18 + 70 * lit);
+                c.g = static_cast<unsigned char>(70 + 130 * lit);
+                c.b = static_cast<unsigned char>(72 + 110 * lit);
+                c.a = 255;
+                t.set(x, y, c);
+            }
+    }
+
+    void paintItemEyeOfEnder(Tile& t)
+    {
+        paintItemEnderPearl(t);
+        const int n = Tile::N;
+        const float mid = (n - 1) * 0.5f;
+        const float radius = n * 0.17f;
+        const Color pupil{ 220, 240, 200 };
+        const Color ring{ 120, 200, 150 };
+
+        for (int y = 0; y < n; ++y)
+            for (int x = 0; x < n; ++x)
+            {
+                const float dx = x - mid;
+                const float dy = y - mid;
+                const float d2 = dx * dx + dy * dy;
+                if (d2 > radius * radius * 2.4f) continue;
+                t.set(x, y, (d2 <= radius * radius) ? pupil : ring);
+            }
+    }
+
     void paintItemStick(Tile& t)
     {
         t.fill(Color{ 0, 0, 0, 0 });
@@ -2448,6 +2571,12 @@ namespace
         { Tiles::EnchantTableSide, paintEnchantTableSide },
         { Tiles::EmeraldOre,    paintEmeraldOre },
         { Tiles::ItemEmerald,   paintItemEmerald },
+        { Tiles::EndFrameTop,   paintEndFrameTop },
+        { Tiles::EndFrameEye,   paintEndFrameEye },
+        { Tiles::EndFrameSide,  paintEndFrameSide },
+        { Tiles::EndPortalTile, paintEndPortalTile },
+        { Tiles::ItemEnderPearl, paintItemEnderPearl },
+        { Tiles::ItemEyeOfEnder, paintItemEyeOfEnder },
         { Tiles::ItemPaper,     paintItemPaper },
         { Tiles::ItemBook,      paintItemBook },
         { Tiles::ItemDiamond,   paintItemDiamond },

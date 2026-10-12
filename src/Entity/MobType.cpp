@@ -366,7 +366,10 @@ namespace
             t.walkSpeed = 2.6f;
             t.attackDamage = 5;
             t.attackInterval = 1.1f;
-            t.drop = Items::Gunpowder;
+            // An ender pearl, which is what one is actually for.
+            // Gunpowder was a stand-in from before there was a pearl,
+            // and it is the creeper that drops gunpowder.
+            t.drop = Items::EnderPearl;
             t.dropCount = 1;
             t.bodyColour = rgb(18, 18, 22);
             t.headColour = rgb(24, 24, 28);

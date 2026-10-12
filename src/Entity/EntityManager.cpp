@@ -20,6 +20,11 @@ namespace
     // netherrack and a piglin in a meadow are both wrong.
     const MobId NETHER_SPECIES[] = { MobId::ZombiePigman };
 
+    // The End has endermen and nothing else, which is also true of
+    // Minecraft's. The enderman is the one species in two lists: it
+    // belongs to the End and wanders the overworld at night.
+    const MobId END_SPECIES[] = { MobId::Enderman };
+
     // The world as the pathfinder sees it: can a mob of this height
     // stand here, with a floor under it and nothing in the way.
     struct WorldGround : Pathfinding::Ground
@@ -145,7 +150,12 @@ void EntityManager::trySpawnWave(const World& world, const glm::vec3& playerPosi
         const int light = std::max(block, static_cast<int>(sky * daylight));
 
         MobId species;
-        if (m_dimension != Dimension::Overworld)
+        if (m_dimension == Dimension::End)
+        {
+            constexpr int END_COUNT = static_cast<int>(std::size(END_SPECIES));
+            species = END_SPECIES[static_cast<int>(random01() * END_COUNT) % END_COUNT];
+        }
+        else if (m_dimension != Dimension::Overworld)
         {
             constexpr int NETHER_COUNT = static_cast<int>(std::size(NETHER_SPECIES));
             species = NETHER_SPECIES[static_cast<int>(random01() * NETHER_COUNT) % NETHER_COUNT];
@@ -166,7 +176,14 @@ void EntityManager::trySpawnWave(const World& world, const glm::vec3& playerPosi
                           : PASSIVE_SPECIES[static_cast<int>(random01() * 4.0f) & 3];
         }
 
-        if (mobType(species).dimension != m_dimension) continue;
+        // The list for this dimension is what says who belongs here.
+        // The type's own dimension is only a backstop for the
+        // overworld, and asking it everywhere is what left the End
+        // empty: the End drew from the Nether's list, and every one of
+        // those was then thrown out for being a Nether mob.
+        if (m_dimension == Dimension::Overworld &&
+            mobType(species).dimension != Dimension::Overworld)
+            continue;
         if (!canSpawnOn(species, ground, light)) continue;
 
         const glm::vec3 feet(x + 0.5f, static_cast<float>(y), z + 0.5f);

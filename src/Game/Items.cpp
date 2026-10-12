@@ -90,6 +90,8 @@ namespace
         { "Paper",           Tiles::ItemPaper,          64 },
         { "Book",            Tiles::ItemBook,           64 },
         { "Emerald",         Tiles::ItemEmerald,        64 },
+        { "Ender Pearl",     Tiles::ItemEnderPearl,     16 },
+        { "Eye of Ender",    Tiles::ItemEyeOfEnder,     64 },
     };
 
     static_assert(sizeof(ITEMS) / sizeof(ITEMS[0]) ==

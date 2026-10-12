@@ -24,6 +24,7 @@
 #include "Game/Cane.h"
 #include "Game/Enchanting.h"
 #include "Game/Trading.h"
+#include "Game/EndPortal.h"
 #include "Game/Portal.h"
 #include "World/Furnaces.h"
 #include "World/Chests.h"
@@ -45,6 +46,7 @@
 #include <cstdio>
 #include <string>
 #include <vector>
+#include <set>
 #include <array>
 #include <map>
 #include <filesystem>
@@ -3502,6 +3504,135 @@ namespace
             if (Trading::professionFor(seed) != Trading::professionFor(1u)) differ = true;
         check(differ, "and villagers born differently can follow different ones");
     }
+
+    // --- the way to the End ----------------------------------------------
+
+    struct FakeFrames : EndPortal::Blocks
+    {
+        std::map<std::array<int, 3>, BlockId> cells;
+        void set(int x, int y, int z, BlockId id) { cells[{ x, y, z }] = id; }
+        BlockId at(int x, int y, int z) const override
+        {
+            const auto it = cells.find({ x, y, z });
+            return (it == cells.end()) ? ::Blocks::Air : it->second;
+        }
+
+        // Lays a complete ring of eyed frames round a centre.
+        void layRing(int cx, int y, int cz)
+        {
+            int offsets[EndPortal::FRAME_COUNT][2];
+            EndPortal::frameOffsets(offsets);
+            for (const auto& o : offsets)
+                set(cx + o[0], y, cz + o[1], ::Blocks::EndPortalFrameFilled);
+        }
+    };
+
+    void testEndPortal()
+    {
+        section("the end portal: the shape of the ring");
+
+        int offsets[EndPortal::FRAME_COUNT][2];
+        EndPortal::frameOffsets(offsets);
+
+        // Twelve distinct cells, none of them a corner and none inside.
+        std::set<std::pair<int, int>> seen;
+        bool noCorners = true;
+        bool allOutside = true;
+        for (const auto& o : offsets)
+        {
+            seen.insert({ o[0], o[1] });
+            if (std::abs(o[0]) == 2 && std::abs(o[1]) == 2) noCorners = false;
+            if (std::abs(o[0]) < 2 && std::abs(o[1]) < 2) allOutside = false;
+        }
+        check(seen.size() == EndPortal::FRAME_COUNT, "twelve frames, all different");
+        check(noCorners, "and none of them a corner");
+        check(allOutside, "and none of them inside the ring");
+
+        section("the end portal: opening it");
+
+        FakeFrames whole;
+        whole.layRing(0, 64, 0);
+        check(EndPortal::ringComplete(whole, 0, 64, 0), "a full ring is complete");
+
+        // One frame short, in every one of the twelve places.
+        bool everyGapCaught = true;
+        for (const auto& o : offsets)
+        {
+            FakeFrames gapped;
+            gapped.layRing(0, 64, 0);
+            gapped.set(o[0], 64, o[1], ::Blocks::Air);
+            if (EndPortal::ringComplete(gapped, 0, 64, 0)) everyGapCaught = false;
+        }
+        check(everyGapCaught, "a gap anywhere in the twelve leaves it shut");
+
+        // A frame with no eye in it is not enough either.
+        bool everyEmptyCaught = true;
+        for (const auto& o : offsets)
+        {
+            FakeFrames unlit;
+            unlit.layRing(0, 64, 0);
+            unlit.set(o[0], 64, o[1], ::Blocks::EndPortalFrame);
+            if (EndPortal::ringComplete(unlit, 0, 64, 0)) everyEmptyCaught = false;
+        }
+        check(everyEmptyCaught, "an eyeless frame anywhere leaves it shut");
+
+        // The ring must be found from any of its own twelve frames,
+        // which is what happens when the last eye goes in -- and it
+        // could be the last eye in any of the twelve.
+        bool foundFromEvery = true;
+        for (const auto& o : offsets)
+        {
+            int cx = 999, cz = 999;
+            if (!EndPortal::findRingAround(whole, o[0], 64, o[1], cx, cz) ||
+                cx != 0 || cz != 0)
+                foundFromEvery = false;
+        }
+        check(foundFromEvery, "and is found from whichever frame was filled last");
+
+        // Nothing at all nearby finds nothing.
+        FakeFrames bare;
+        int cx = 0, cz = 0;
+        check(!EndPortal::findRingAround(bare, 0, 64, 0, cx, cz),
+              "an empty field opens no portal");
+
+        // A ring one level down must not be lit by a frame up here.
+        FakeFrames below;
+        below.layRing(0, 63, 0);
+        check(!EndPortal::ringComplete(below, 0, 64, 0),
+              "a ring on another level is a different ring");
+
+        // Two rings side by side: filling one must not open the other.
+        FakeFrames twice;
+        twice.layRing(0, 64, 0);
+        twice.layRing(40, 64, 0);
+        int ax = 999, az = 999;
+        check(EndPortal::findRingAround(twice, 2, 64, 0, ax, az) && ax == 0 && az == 0,
+              "with two rings, a frame finds the one it belongs to");
+
+        section("the end portal: the way in");
+
+        // The whole chain has to be craftable, or the End stays
+        // somewhere you can only reach from the command line.
+        ItemStack eye[9];
+        eye[0].id = Items::EnderPearl; eye[0].count = 1;
+        eye[1].id = Items::Gunpowder;  eye[1].count = 1;
+        const CraftOutput made = Crafting::match(eye, 2);
+        check(made.valid() && made.id == Items::EyeOfEnder,
+              "a pearl and gunpowder make an eye of ender");
+
+        ItemStack frame[9];
+        for (int i = 0; i < 9; ++i) { frame[i].id = Blocks::EndStone; frame[i].count = 1; }
+        frame[4].id = Items::EnderPearl;
+        const CraftOutput frames = Crafting::match(frame, 3);
+        check(frames.valid() && frames.id == Blocks::EndPortalFrame,
+              "end stone round a pearl makes frames");
+        check(frames.count == 4, "four at a time, so a ring takes three castings");
+
+        // An enderman has to actually give you the pearl, or none of
+        // the above can be started.
+        check(mobType(MobId::Enderman).drop == Items::EnderPearl,
+              "an enderman drops the pearl the chain begins with");
+    }
 }
 
 int runSelfTest()
@@ -3558,6 +3689,7 @@ int runSelfTest()
     testSugarCane();
     testEnchanting();
     testTrading();
+    testEndPortal();
 
     std::printf("\n%d checks, %d failed\n", g_checks, g_failures);
     return g_failures == 0 ? 0 : 1;

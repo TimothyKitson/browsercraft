@@ -36,13 +36,15 @@ uint8_t lightAttenuation(BlockId id)
     }
 }
 
-void fillSkyColumns(Chunk& chunk)
+// `top` is what the column starts with at the world ceiling: full in
+// the overworld, nothing in a dimension with no sun over it.
+void fillSkyColumns(Chunk& chunk, uint8_t top)
 {
     for (int x = 0; x < Chunk::SX; ++x)
     {
         for (int z = 0; z < Chunk::SZ; ++z)
         {
-            uint8_t level = 15;
+            uint8_t level = top;
             for (int y = Chunk::SY - 1; y >= 0; --y)
             {
                 const uint8_t attenuation = lightAttenuation(chunk.getBlock(x, y, z));
@@ -210,7 +212,12 @@ void World::relightColumn(int worldX, int worldZ)
     const int lx = floorMod(worldX, Chunk::SX);
     const int lz = floorMod(worldZ, Chunk::SZ);
 
-    uint8_t level = 15;
+    // Only the overworld has a sun. The Nether got away with starting
+    // at full light because its roof swallows it before it reaches
+    // anything, but the End has no roof, so every island there was lit
+    // as brightly as a meadow at noon -- which, besides looking wrong,
+    // meant no hostile mob could ever spawn in the whole dimension.
+    uint8_t level = (m_generator.dimension() == Dimension::Overworld) ? 15 : 0;
     for (int y = Chunk::SY - 1; y >= 0; --y)
     {
         const uint8_t attenuation = lightAttenuation(chunk->getBlock(lx, y, lz));
@@ -518,7 +525,8 @@ void World::queueGeneration(const glm::vec3& playerPosition)
             else
                 m_generator.generate(*raw);
 
-            fillSkyColumns(*raw);
+            fillSkyColumns(*raw, (m_generator.dimension() == Dimension::Overworld)
+                                     ? static_cast<uint8_t>(15) : static_cast<uint8_t>(0));
             raw->state.store(ChunkState::Generated);
             m_activeJobs.fetch_sub(1);
         });

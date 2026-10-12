@@ -78,6 +78,8 @@ namespace Items
         Paper,
         Book,
         Emerald,
+        EnderPearl,
+        EyeOfEnder,
 
         Count
     };

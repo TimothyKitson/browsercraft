@@ -274,6 +274,12 @@ private:
     // with rather than by a pointer: mobs live in a vector that moves
     // when it grows, and one can wander off or be killed while its
     // screen is open.
+    // Where you stood when you stepped into the end portal, so
+    // stepping back out of one in the End puts you back there rather
+    // than at the world spawn.
+    glm::vec3 m_endHome{ 0.0f };
+    bool m_hasEndHome = false;
+
     bool m_tradeOpen = false;
     uint32_t m_tradeSeed = 0;
     Trading::Profession m_tradeWith = Trading::Profession::Farmer;
@@ -467,6 +473,10 @@ private:
     void stowChest();
 
     void openFurnace(const glm::ivec3& block);
+    // Looks for a completed ring of eyed frames round a frame that was
+    // just filled, and opens the portal inside it if there is one.
+    void lightEndPortalAround(const glm::ivec3& frame);
+
     void openTrading(const Mob& villager);
     void acceptTrade(int row);
     const Mob* tradingVillager() const;

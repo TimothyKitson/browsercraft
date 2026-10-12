@@ -115,6 +115,9 @@ namespace
         { "Bookshelf",    Planks,        Planks,         BookshelfSide,  true,  true,  RenderType::Cube,   0,   1.5f },
         { "Enchanting Table", EnchantTableTop, Obsidian,   EnchantTableSide, true, false, RenderType::Slab, 7,   5.0f },
         { "Emerald Ore",  EmeraldOre,    EmeraldOre,     EmeraldOre,     true,  true,  RenderType::Cube,   0,   3.0f },
+        { "End Portal Frame", EndFrameTop, EndStone,      EndFrameSide,   true,  false, RenderType::Slab,   1,  -1.0f },
+        { "End Portal Frame", EndFrameEye, EndStone,      EndFrameSide,   true,  false, RenderType::Slab,   6,  -1.0f },
+        { "End Portal",   EndPortalTile, EndPortalTile,  EndPortalTile,  false, false, RenderType::Cube,  11,  -1.0f },
     };
 }
 
