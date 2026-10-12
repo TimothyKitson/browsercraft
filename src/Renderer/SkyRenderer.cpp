@@ -16,20 +16,31 @@ SkyRenderer::SkyRenderer()
     m_mesh.upload(vertices, { 2 });
 }
 
-glm::vec3 SkyRenderer::horizonColor(float dayFactor, const glm::vec3& sunDirection)
+glm::vec3 SkyRenderer::horizonColor(float dayFactor, const glm::vec3& sunDirection,
+                                    float overcast)
 {
     const glm::vec3 dayHorizon(0.70f, 0.84f, 0.98f);
     const glm::vec3 nightHorizon(0.06f, 0.08f, 0.17f);
     glm::vec3 color = glm::mix(nightHorizon, dayHorizon, dayFactor);
 
-    // Warm the horizon while the sun is near it.
-    const float sunset = std::clamp(1.0f - std::fabs(sunDirection.y) * 4.0f, 0.0f, 1.0f) * dayFactor;
+    // The same grey the shader mixes towards, so the distance fog goes
+    // on matching the horizon when it rains. The two are kept in step
+    // by hand: a fog that stayed blue under a grey sky would draw a
+    // line across the world at the render distance.
+    const glm::vec3 wetHorizon = glm::mix(glm::vec3(0.13f, 0.14f, 0.16f),
+                                          glm::vec3(0.62f, 0.64f, 0.67f), dayFactor);
+    color = glm::mix(color, wetHorizon, std::clamp(overcast, 0.0f, 1.0f));
+
+    // Warm the horizon while the sun is near it, which cloud puts a
+    // stop to.
+    const float sunset = std::clamp(1.0f - std::fabs(sunDirection.y) * 4.0f, 0.0f, 1.0f) *
+                         dayFactor * (1.0f - std::clamp(overcast, 0.0f, 1.0f));
     return glm::mix(color, glm::vec3(0.96f, 0.56f, 0.28f), sunset * 0.75f);
 }
 
 void SkyRenderer::render(const glm::mat4& view, const glm::mat4& projection,
                          const glm::vec3& cameraPosition, const glm::vec3& sunDirection,
-                         float dayFactor, float timeSeconds)
+                         float dayFactor, float timeSeconds, float overcast)
 {
     // Strip the translation: only the view direction matters for the sky.
     glm::mat4 rotationOnlyView = view;
@@ -48,6 +59,7 @@ void SkyRenderer::render(const glm::mat4& view, const glm::mat4& projection,
     m_shader.setVec3("uCameraPos", cameraPosition);
     m_shader.setFloat("uDayFactor", dayFactor);
     m_shader.setFloat("uTime", timeSeconds);
+    m_shader.setFloat("uOvercast", std::clamp(overcast, 0.0f, 1.0f));
     m_mesh.draw(GL_TRIANGLES);
 
     glDepthMask(GL_TRUE);

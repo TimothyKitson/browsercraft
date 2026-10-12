@@ -2394,6 +2394,53 @@ namespace
             }
     }
 
+    // A raindrop, drawn down the whole height of its tile: the quad it
+    // goes on is long and thin, and a drop shaped like a drop would be
+    // stretched into a smear on it.
+    void paintRainDrop(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+
+        const int n = Tile::N;
+        const int mid = n / 2;
+
+        for (int y = 0; y < n; ++y)
+        {
+            // Brightest in the middle of its fall and thinner at both
+            // ends, so a column of them does not read as a row of bars.
+            const float along = static_cast<float>(y) / static_cast<float>(n - 1);
+            const float taper = 1.0f - std::fabs(along - 0.5f) * 1.6f;
+            if (taper <= 0.0f) continue;
+
+            const unsigned char alpha = static_cast<unsigned char>(90 + 150 * taper);
+            Color c{ 190, 214, 240, alpha };
+            t.set(mid, y, c);
+            t.set(mid - 1, y, Color{ 160, 186, 220, static_cast<unsigned char>(alpha * 2 / 3) });
+        }
+    }
+
+    void paintSnowFlake(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+
+        const int n = Tile::N;
+        const float mid = (n - 1) * 0.5f;
+        const float radius = n * 0.3f;
+
+        for (int y = 0; y < n; ++y)
+            for (int x = 0; x < n; ++x)
+            {
+                const float dx = x - mid;
+                const float dy = y - mid;
+                const float d = std::sqrt(dx * dx + dy * dy);
+                if (d > radius) continue;
+
+                const float edge = 1.0f - d / radius;
+                t.set(x, y, Color{ 248, 250, 255,
+                                   static_cast<unsigned char>(120 + 135 * edge) });
+            }
+    }
+
     void paintItemStick(Tile& t)
     {
         t.fill(Color{ 0, 0, 0, 0 });
@@ -2575,6 +2622,8 @@ namespace
         { Tiles::EndFrameEye,   paintEndFrameEye },
         { Tiles::EndFrameSide,  paintEndFrameSide },
         { Tiles::EndPortalTile, paintEndPortalTile },
+        { Tiles::RainDrop,      paintRainDrop },
+        { Tiles::SnowFlake,     paintSnowFlake },
         { Tiles::ItemEnderPearl, paintItemEnderPearl },
         { Tiles::ItemEyeOfEnder, paintItemEyeOfEnder },
         { Tiles::ItemPaper,     paintItemPaper },
@@ -2658,6 +2707,14 @@ namespace
         { Tiles::ItemIronIngot,  { "iron_ingot", nullptr, nullptr } },
         { Tiles::ItemGoldIngot,  { "gold_ingot", nullptr, nullptr } },
 
+        { Tiles::ItemPaper,      { "paper", nullptr, nullptr } },
+        { Tiles::ItemBook,       { "book", nullptr, nullptr } },
+        { Tiles::ItemEmerald,    { "emerald", nullptr, nullptr } },
+        { Tiles::ItemEnderPearl, { "ender_pearl", nullptr, nullptr } },
+        // Vanilla has always called the eye "ender_eye", not
+        // "eye_of_ender", whatever the item is called in the game.
+        { Tiles::ItemEyeOfEnder, { "ender_eye", nullptr, nullptr } },
+
         { Tiles::ItemToolFirst +  0, { "wooden_pickaxe", "wood_pickaxe", nullptr } },
         { Tiles::ItemToolFirst +  1, { "wooden_axe", "wood_axe", nullptr } },
         { Tiles::ItemToolFirst +  2, { "wooden_shovel", "wood_shovel", nullptr } },
@@ -2712,6 +2769,22 @@ namespace
         { Tiles::CactusTop,     { "cactus_top", nullptr },                             Tinting::None,    0,   false },
         { Tiles::Bricks,        { "bricks", "brick", nullptr },                        Tinting::None,    0,   false },
         { Tiles::Obsidian,      { "obsidian", nullptr },                               Tinting::None,    0,   false },
+
+        // Everything added since the pack table was last gone over.
+        // A tile with no row here is drawn procedurally however good a
+        // pack is installed, which is not wrong but is a waste of the
+        // pack -- and it shows, because the block next to it is not.
+        { Tiles::EmeraldOre,    { "emerald_ore", nullptr },                            Tinting::None,    0,   false },
+        { Tiles::BookshelfSide, { "bookshelf", nullptr },                              Tinting::None,    0,   false },
+        { Tiles::EnchantTableTop,  { "enchanting_table_top", nullptr },                Tinting::None,    0,   false },
+        { Tiles::EnchantTableSide, { "enchanting_table_side", nullptr },               Tinting::None,    0,   false },
+        { Tiles::EndFrameTop,   { "end_portal_frame_top", nullptr },                   Tinting::None,    0,   false },
+        { Tiles::EndFrameEye,   { "end_portal_frame_eye", nullptr },                   Tinting::None,    0,   false },
+        { Tiles::EndFrameSide,  { "end_portal_frame_side", nullptr },                  Tinting::None,    0,   false },
+
+        // Cane is a crossed-quad plant, so it keeps whatever alpha the
+        // pack gives it the way the flowers and the grass do.
+        { Tiles::SugarCane,     { "sugar_cane", nullptr },                             Tinting::Grass,   0,   false },
         { Tiles::TallGrass,     { "short_grass", "grass", "tallgrass", nullptr },      Tinting::Grass,   0,   false },
         { Tiles::FlowerRed,     { "poppy", "flower_rose", nullptr },                   Tinting::None,    0,   false },
         { Tiles::FlowerYellow,  { "dandelion", "flower_dandelion", nullptr },          Tinting::None,    0,   false },

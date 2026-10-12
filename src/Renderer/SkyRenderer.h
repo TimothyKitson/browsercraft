@@ -11,12 +11,14 @@ class SkyRenderer
 public:
     SkyRenderer();
 
+    // `overcast` is 0 under a clear sky and 1 in full rain.
     void render(const glm::mat4& view, const glm::mat4& projection,
                 const glm::vec3& cameraPosition, const glm::vec3& sunDirection,
-                float dayFactor, float timeSeconds);
+                float dayFactor, float timeSeconds, float overcast = 0.0f);
 
     // Shared with the chunk shader so distance fog matches the horizon.
-    static glm::vec3 horizonColor(float dayFactor, const glm::vec3& sunDirection);
+    static glm::vec3 horizonColor(float dayFactor, const glm::vec3& sunDirection,
+                                  float overcast = 0.0f);
 
 private:
     Shader m_shader;

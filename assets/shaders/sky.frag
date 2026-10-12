@@ -7,6 +7,7 @@ uniform vec3 uSunDirection;
 uniform vec3 uCameraPos;
 uniform float uDayFactor; // 0 = midnight, 1 = noon
 uniform float uTime;      // seconds, for cloud drift
+uniform float uOvercast;  // 0 = clear, 1 = full rain
 
 out vec4 FragColor;
 
@@ -60,14 +61,26 @@ void main()
     vec3 zenith = mix(nightZenith, dayZenith, uDayFactor);
     vec3 horizon = mix(nightHorizon, dayHorizon, uDayFactor);
 
+    // Rain takes the blue out of the sky. This is most of what makes
+    // weather read as weather: the world dimming on its own just looks
+    // like dusk coming early.
+    vec3 wetZenith = mix(vec3(0.10, 0.11, 0.13), vec3(0.42, 0.44, 0.48), uDayFactor);
+    vec3 wetHorizon = mix(vec3(0.13, 0.14, 0.16), vec3(0.62, 0.64, 0.67), uDayFactor);
+    zenith = mix(zenith, wetZenith, uOvercast);
+    horizon = mix(horizon, wetHorizon, uOvercast);
+
     // Warm the horizon while the sun sits near it.
-    float sunset = clamp(1.0 - abs(uSunDirection.y) * 4.0, 0.0, 1.0) * uDayFactor;
+    // No red sunsets through cloud, either.
+    float sunset = clamp(1.0 - abs(uSunDirection.y) * 4.0, 0.0, 1.0) * uDayFactor
+                 * (1.0 - uOvercast);
     horizon = mix(horizon, vec3(0.96, 0.56, 0.28), sunset * 0.75);
 
     vec3 color = mix(horizon, zenith, pow(height, 0.6));
 
     // Stars, fading in as the sun goes down.
-    float nightAmount = clamp(1.0 - uDayFactor * 1.6, 0.0, 1.0);
+    // Cloud hides the stars, the sun and the moon alike.
+    float clearSky = 1.0 - uOvercast;
+    float nightAmount = clamp(1.0 - uDayFactor * 1.6, 0.0, 1.0) * clearSky;
     if (nightAmount > 0.01 && dir.y > -0.05)
     {
         vec2 starGrid = floor(dir.xz / max(abs(dir.y) + 0.12, 0.12) * 110.0);
@@ -79,8 +92,8 @@ void main()
 
     // Sun and moon discs.
     float sunDot = dot(dir, uSunDirection);
-    color += vec3(1.0, 0.95, 0.82) * pow(max(sunDot, 0.0), 3000.0) * 12.0;
-    color += vec3(1.0, 0.82, 0.55) * pow(max(sunDot, 0.0), 80.0) * 0.22 * uDayFactor;
+    color += vec3(1.0, 0.95, 0.82) * pow(max(sunDot, 0.0), 3000.0) * 12.0 * clearSky;
+    color += vec3(1.0, 0.82, 0.55) * pow(max(sunDot, 0.0), 80.0) * 0.22 * uDayFactor * clearSky;
 
     float moonDot = dot(dir, -uSunDirection);
     color += vec3(0.88, 0.90, 1.0) * pow(max(moonDot, 0.0), 4000.0) * 9.0 * nightAmount;
@@ -94,12 +107,18 @@ void main()
         {
             vec2 cloudPos = (uCameraPos.xz + dir.xz * t) * 0.0016 + vec2(uTime * 0.004, uTime * 0.0015);
             float density = cloudNoise(cloudPos);
-            float coverage = smoothstep(0.52, 0.78, density);
+            // Thicker and lower-contrast as the rain comes in, until
+            // the layer is solid overhead.
+            float coverage = smoothstep(mix(0.52, 0.10, uOvercast),
+                                        mix(0.78, 0.30, uOvercast), density);
             // Fade clouds out towards the horizon so the plane edge is hidden.
             coverage *= smoothstep(0.015, 0.22, dir.y);
             vec3 cloudColor = mix(vec3(0.58, 0.62, 0.72), vec3(1.0, 0.99, 0.96), uDayFactor);
             cloudColor = mix(cloudColor, vec3(1.0, 0.76, 0.55), sunset * 0.6);
-            color = mix(color, cloudColor, coverage * 0.85);
+            cloudColor = mix(cloudColor,
+                             mix(vec3(0.09, 0.10, 0.12), vec3(0.40, 0.42, 0.46), uDayFactor),
+                             uOvercast);
+            color = mix(color, cloudColor, coverage * mix(0.85, 1.0, uOvercast));
         }
     }
 

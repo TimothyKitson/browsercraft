@@ -346,6 +346,7 @@ void Application::startWorld(GameMode mode, bool freshWorld)
     // Reset everything that belongs to a run.
     m_drops.clear();
     m_orbs.clear();
+    m_rain.clear();
     m_particles.clear();
     m_entities.clear();
     m_animation.clear();
@@ -410,6 +411,7 @@ void Application::startJoinedWorld()
 
     m_drops.clear();
     m_orbs.clear();
+    m_rain.clear();
     m_particles.clear();
     m_entities.clear();
     m_animation.clear();
@@ -469,6 +471,7 @@ void Application::travelTo(Dimension dimension)
     m_placeOnSurface = true;
     m_drops.clear();
     m_orbs.clear();
+    m_rain.clear();
     m_particles.clear();
 
     m_world = std::make_unique<World>(m_world->seed(), m_savePath,
@@ -504,6 +507,7 @@ void Application::quitToTitle()
     }
     m_drops.clear();
     m_orbs.clear();
+    m_rain.clear();
     m_particles.clear();
     m_entities.clear();
     m_animation.clear();
@@ -780,10 +784,66 @@ glm::vec3 Application::sunDirection() const
     return glm::normalize(glm::vec3(std::cos(angle), std::sin(angle), 0.22f));
 }
 
+// Runs the weather, and whatever the player can see and hear of it.
+void Application::updateWeather(float deltaTime)
+{
+    // Only the overworld. The Nether has a roof rather than a sky, and
+    // the End has no weather in Minecraft either -- and rain there
+    // would fall out of a void onto islands with nothing above them.
+    if (m_dimension != Dimension::Overworld)
+    {
+        m_weather = Weather::State{};
+        m_rain.clear();
+        return;
+    }
+
+    if (Weather::step(m_weather, deltaTime, m_weatherSeed))
+    {
+        // The flash is already in the sky by the time this returns; the
+        // thunder is what the player hears a moment later. Playing them
+        // together is wrong, and far enough apart is the one detail
+        // that makes a storm feel like it has distance in it.
+        m_audio.play(Sound::Thunder, 0.85f, 0.85f + (m_weatherSeed % 32u) * 0.01f);
+    }
+
+    // Snow rather than rain where it is cold enough, which is the one
+    // thing about the weather that depends on where you are standing.
+    const Biome biome = m_world->generator().biomeAt(
+        static_cast<int>(std::floor(m_player.position.x)),
+        static_cast<int>(std::floor(m_player.position.z)));
+    m_snowing = (biome == Biome::Snowy);
+
+    m_rain.update(deltaTime, m_player.position, m_weather.depth, m_snowing);
+
+    if (m_weather.depth <= 0.05f)
+    {
+        m_rainSoundTimer = 0.0f;
+        return;
+    }
+
+    // There is no looping voice in this engine, so the hiss is started
+    // again a little before the clip would run out.
+    m_rainSoundTimer -= deltaTime;
+    if (m_rainSoundTimer > 0.0f) return;
+
+    m_rainSoundTimer = 2.2f;
+    m_audio.play(Sound::Rain, 0.30f * m_weather.depth, 1.0f);
+}
+
 float Application::daylightFactor() const
 {
     const float angle = m_timeOfDay * 6.2831853f - 1.5707963f;
-    return std::clamp(std::sin(angle) * 2.2f + 0.35f, 0.12f, 1.0f);
+    const float sun = std::clamp(std::sin(angle) * 2.2f + 0.35f, 0.12f, 1.0f);
+
+    // Weather dims the sun here rather than in each of the half-dozen
+    // places that ask how bright it is. That is the whole reason it is
+    // done here: the sky, the fog, the world's own lighting and the
+    // rule about where monsters may appear all read this one number, so
+    // a storm at noon lets the things that only come out at night come
+    // out -- which is Minecraft's rule, and falls out rather than
+    // having to be written down anywhere.
+    const float weathered = sun * Weather::lightScale(m_weather);
+    return std::clamp(weathered + Weather::flashBoost(m_weather), 0.0f, 1.0f);
 }
 
 // ----------------------------------------------------------------- loop ---
@@ -1177,6 +1237,8 @@ bool Application::frame()
 
         if (playing() || m_inventoryOpen) tickFurnaces(deltaTime);
 
+        updateWeather(deltaTime);
+
         // Air. The head being under is the whole of what it needs to
         // know, so the rule itself has no idea there is a world.
         if (playing())
@@ -1277,7 +1339,8 @@ bool Application::frame()
             m_startupScreen == "handempty" || m_startupScreen == "xp" ||
             m_startupScreen == "shelf" || m_startupScreen == "enchant" ||
             m_startupScreen == "enchantblock" || m_startupScreen == "villager" ||
-            m_startupScreen == "trade" || m_startupScreen == "endportal")
+            m_startupScreen == "trade" || m_startupScreen == "endportal" ||
+            m_startupScreen == "rain" || m_startupScreen == "storm")
         {
             // Dev aid: open the inventory with something in it, so the
             // screenshot shows a real grid rather than 36 empty boxes.
@@ -1300,6 +1363,8 @@ bool Application::frame()
                                   m_startupScreen != "enchantblock" &&
                                   m_startupScreen != "villager" &&
                                   m_startupScreen != "endportal" &&
+                                  m_startupScreen != "rain" &&
+                                  m_startupScreen != "storm" &&
                                   m_startupScreen != "tnt" &&
                                   m_startupScreen != "portal" &&
                                   m_startupScreen != "nether";
@@ -1367,6 +1432,17 @@ bool Application::frame()
                 for (int f = 0; f < 4; ++f)
                     m_world->setBlock(bx + f - 1, by, bz + 2,
                                       stairsFacing(Blocks::CobbleStairsNorth, f));
+            }
+
+            if (m_startupScreen == "rain" || m_startupScreen == "storm")
+            {
+                Weather::begin(m_weather,
+                               m_startupScreen == "storm" ? Weather::Kind::Storm
+                                                          : Weather::Kind::Rain,
+                               m_weatherSeed);
+                // Already fallen rather than just beginning, so the
+                // shot shows weather rather than a sky turning.
+                m_weather.depth = 1.0f;
             }
 
             if (m_startupScreen == "endportal")
@@ -1932,7 +2008,9 @@ void Application::applyMenuAction()
             deleteSavedWorld();
             m_drops.clear();
             m_orbs.clear();
+    m_rain.clear();
     m_orbs.clear();
+    m_rain.clear();
             m_particles.clear();
             m_hardcoreDeath = false;
             m_screen = Screen::Title;
@@ -3631,10 +3709,12 @@ void Application::renderWorld()
     // Only the overworld has a sun to draw; the others are a flat
     // backdrop already cleared to the right colour.
     if (hasSky())
-        m_sky.render(view, projection, camera.position, sun, daylight, m_elapsedSeconds);
+        m_sky.render(view, projection, camera.position, sun, daylight, m_elapsedSeconds,
+                     m_weather.depth);
 
     const bool underwater = m_player.isHeadUnderwater(*m_world);
-    const glm::vec3 fogColor = hasSky() ? SkyRenderer::horizonColor(daylight, sun)
+    const glm::vec3 fogColor = hasSky() ? SkyRenderer::horizonColor(daylight, sun,
+                                                                    m_weather.depth)
                                         : dimensionBackdrop();
     const float viewDistance = static_cast<float>(m_world->renderDistance() * Chunk::SX);
 
@@ -3681,6 +3761,7 @@ void Application::renderWorld()
     // Dropped items and particles are opaque, so they join the terrain pass.
     m_drops.render(m_chunkShader, *m_world);
     m_orbs.render(m_chunkShader, *m_world);
+    m_rain.render(m_chunkShader, *m_world, m_camera.right, m_camera.up);
     m_arrows.render(m_chunkShader, m_camera, m_atlas, *m_world);
     m_particles.render(m_chunkShader, *m_world, camera.right, camera.up);
 

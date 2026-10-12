@@ -62,6 +62,8 @@ enum class Sound : uint8_t
     MobVillagerSay,
     MobVillagerHurt,
     MobVillagerDeath,
+    Rain,
+    Thunder,
     MobStep,
     Count
 };

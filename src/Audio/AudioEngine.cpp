@@ -280,6 +280,8 @@ void AudioEngine::buildSounds()
     loadMobVoice(Sound::MobEndermanSay, Sound::MobEndermanHurt, Sound::MobEndermanDeath, "enderman");
     loadMobVoice(Sound::MobPigmanSay, Sound::MobPigmanHurt, Sound::MobPigmanDeath, "zombie_pigman");
     loadMobVoice(Sound::MobVillagerSay, Sound::MobVillagerHurt, Sound::MobVillagerDeath, "villager");
+    loadVariants(Sound::Rain, "weather/rain", 1);
+    loadVariants(Sound::Thunder, "weather/thunder", 1);
 
     auto make = [&](Sound id) -> Synth {
         auto& clips = m_buffers[static_cast<size_t>(id)];
@@ -572,6 +574,25 @@ void AudioEngine::buildSounds()
         s.addTone(0.70f, 150.0f, 50.0f, 4.0f, 0.75f, true);
         s.addNoise(0.55f, 900.0f, 5.0f, 0.28f, false, 621);
         s.finish(0.85f);
+    }
+
+    // Rain: a long hiss, played over and over while it falls. There is
+    // no looping voice in this engine, so the clip is long enough that
+    // the joins between repeats are not obvious.
+    {
+        Synth s = make(Sound::Rain);
+        s.addNoise(2.40f, 4200.0f, 0.0f, 0.55f, true, 701);
+        s.addNoise(2.40f, 1500.0f, 0.0f, 0.22f, true, 703);
+        s.finish(0.40f);
+    }
+
+    // Thunder: a crack with a long roll after it.
+    {
+        Synth s = make(Sound::Thunder);
+        s.addNoise(0.22f, 2600.0f, 14.0f, 1.00f, false, 711);
+        s.addNoise(2.60f, 260.0f, 1.6f, 0.80f, true, 713);
+        s.addTone(1.80f, 56.0f, 30.0f, 1.4f, 0.60f, true);
+        s.finish(0.95f);
     }
 
     // The villager: the famous two-note "hrmm", which is a hum that

@@ -18,6 +18,8 @@
 #include "Audio/AudioEngine.h"
 #include "Entity/DroppedItems.h"
 #include "Entity/ExperienceOrbs.h"
+#include "Entity/Rain.h"
+#include "Game/Weather.h"
 #include "Game/Trading.h"
 #include "Entity/Particles.h"
 #include "Entity/PlayerSkin.h"
@@ -154,6 +156,20 @@ private:
     Inventory m_inventory;
     DroppedItems m_drops;
     ExperienceOrbs m_orbs;
+
+    // The weather, and what you see of it. Only the overworld has any:
+    // there is no sky over the Nether to rain out of, and the End has
+    // no weather in Minecraft either.
+    Weather::State m_weather;
+    uint32_t m_weatherSeed = 1u;
+    Rain m_rain;
+    float m_rainSoundTimer = 0.0f;
+
+    // True where the player is standing: rain turns to snow in the cold
+    // biomes, the same as it does in Minecraft.
+    bool m_snowing = false;
+
+    void updateWeather(float deltaTime);
 
     // What the open furnace's output slot held last frame. Smelting is
     // paid for when the item leaves the slot, as in Minecraft, and

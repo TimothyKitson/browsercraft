@@ -76,6 +76,8 @@ namespace Tiles
         EndFrameEye,
         EndFrameSide,
         EndPortalTile,
+        RainDrop,
+        SnowFlake,
 
         TileCount
     };

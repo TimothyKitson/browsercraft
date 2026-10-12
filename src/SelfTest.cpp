@@ -25,6 +25,7 @@
 #include "Game/Enchanting.h"
 #include "Game/Trading.h"
 #include "Game/EndPortal.h"
+#include "Game/Weather.h"
 #include "Game/Portal.h"
 #include "World/Furnaces.h"
 #include "World/Chests.h"
@@ -4062,6 +4063,156 @@ namespace
             check(read.chestDimensions[1] == 1, "and the second in the Nether");
         }
     }
+
+    // --- weather ---------------------------------------------------------
+
+    void testWeather()
+    {
+        section("weather: it turns, and keeps turning");
+
+        // A week of weather, a tenth of a second at a time. Nothing in
+        // here is random enough to need a long run; what it is checking
+        // is that the two countdowns cannot deadlock -- a spell that
+        // ends without starting another leaves the sky stuck for ever,
+        // and nothing else in the game would notice.
+        Weather::State state;
+        uint32_t seed = 4242u;
+
+        int wet = 0;
+        int dry = 0;
+        int storms = 0;
+        int flashes = 0;
+
+        // A second at a time for a week of game time. The fade is
+        // checked separately at a tenth of a second; what this run is
+        // for is the two countdowns, and they are measured in minutes.
+        constexpr float STEP = 1.0f;
+        constexpr int STEPS = 7 * 24 * 60 * 60;
+
+        Weather::Kind was = state.kind;
+        int changes = 0;
+
+        for (int i = 0; i < STEPS; ++i)
+        {
+            if (Weather::step(state, STEP, seed)) ++flashes;
+            if (state.kind != was) { ++changes; was = state.kind; }
+
+            if (state.raining()) ++wet; else ++dry;
+            if (state.storming()) ++storms;
+        }
+
+        // Spells average something under an hour and a half, so a week
+        // should see dozens of turns. The point is that it never stops:
+        // a spell that ends without starting another leaves the sky
+        // stuck for good, and nothing else in the game would notice.
+        check(changes > 40, "the weather turns over and over (" +
+                               std::to_string(changes) + " times in a week)");
+        check(wet > 0, "it rains");
+        check(dry > 0, "and it stops raining");
+        check(storms > 0, "and some of it is thunder");
+        check(flashes > 0, "which has lightning in it (" +
+                               std::to_string(flashes) + " flashes)");
+
+        // Clear weather is the common case, as it is in Minecraft: a
+        // world that is wet more often than dry would be wrong however
+        // well each spell behaved.
+        check(dry > wet, "and it is dry more often than wet");
+
+        section("weather: the sky follows it");
+
+        // Darkness has to arrive with the cloud rather than the instant
+        // the clock turns over.
+        Weather::State turning;
+        uint32_t turnSeed = 7u;
+        Weather::begin(turning, Weather::Kind::Rain, turnSeed);
+
+        check(turning.depth == 0.0f, "the sky is still clear the moment it starts");
+        check(Weather::lightScale(turning) == 1.0f, "so nothing is dimmed yet");
+
+        for (int i = 0; i < 100; ++i) Weather::step(turning, 0.1f, turnSeed);
+        check(turning.depth > 0.9f, "ten seconds later the cloud is in");
+        check(Weather::lightScale(turning) < 0.9f, "and the day is dimmer for it");
+
+        // And it has to lift again when the rain stops.
+        Weather::State clearing = turning;
+        uint32_t clearSeed = 9u;
+        Weather::begin(clearing, Weather::Kind::Clear, clearSeed);
+        for (int i = 0; i < 100; ++i) Weather::step(clearing, 0.1f, clearSeed);
+        check(clearing.depth < 0.05f, "and lifts again when it stops");
+        check(Weather::lightScale(clearing) > 0.98f, "giving the day back");
+
+        // A storm is darker than plain rain, which is what lets things
+        // spawn under one at noon.
+        Weather::State rain;
+        Weather::State storm;
+        uint32_t a = 1u, b = 2u;
+        Weather::begin(rain, Weather::Kind::Rain, a);
+        Weather::begin(storm, Weather::Kind::Storm, b);
+        for (int i = 0; i < 100; ++i)
+        {
+            Weather::step(rain, 0.1f, a);
+            Weather::step(storm, 0.1f, b);
+        }
+        check(Weather::lightScale(storm) < Weather::lightScale(rain),
+              "a storm is darker than rain");
+
+        section("weather: lightning");
+
+        // No lightning out of a clear sky, and none out of plain rain.
+        Weather::State fine;
+        uint32_t fineSeed = 11u;
+        Weather::begin(fine, Weather::Kind::Clear, fineSeed);
+        bool flashedWhenClear = false;
+        for (int i = 0; i < 20000; ++i)
+            if (Weather::step(fine, 0.01f, fineSeed) && !fine.storming())
+                flashedWhenClear = true;
+        check(!flashedWhenClear, "a clear sky has no lightning in it");
+
+        Weather::State drizzle;
+        uint32_t drizzleSeed = 13u;
+        Weather::begin(drizzle, Weather::Kind::Rain, drizzleSeed);
+        bool flashedInRain = false;
+        for (int i = 0; i < 2000; ++i)
+        {
+            // Held as plain rain: the spell is long, so this never
+            // rolls over into something else.
+            drizzle.kind = Weather::Kind::Rain;
+            if (Weather::step(drizzle, 0.05f, drizzleSeed)) flashedInRain = true;
+        }
+        check(!flashedInRain, "and neither has plain rain");
+
+        // A flash is brief and bright, and fades rather than switching
+        // off.
+        Weather::State lit;
+        uint32_t litSeed = 17u;
+        Weather::begin(lit, Weather::Kind::Storm, litSeed);
+        for (int i = 0; i < 100; ++i) Weather::step(lit, 0.1f, litSeed);   // let it arrive
+
+        int guard = 0;
+        while (!lit.flashing() && guard++ < 100000)
+        {
+            lit.kind = Weather::Kind::Storm;
+            Weather::step(lit, 0.01f, litSeed);
+        }
+        check(lit.flashing(), "a storm flashes sooner or later");
+
+        const float atStart = Weather::flashBoost(lit);
+        check(atStart > 0.0f, "which lights the sky");
+        Weather::step(lit, Weather::FLASH_SECONDS * 0.5f, litSeed);
+        const float halfway = Weather::flashBoost(lit);
+        check(halfway < atStart, "and fades through it");
+        Weather::step(lit, Weather::FLASH_SECONDS, litSeed);
+        check(Weather::flashBoost(lit) == 0.0f, "and is gone");
+
+        // Nothing moves on a zero-length step, which is what a paused
+        // game hands it.
+        Weather::State still;
+        uint32_t stillSeed = 19u;
+        Weather::begin(still, Weather::Kind::Storm, stillSeed);
+        const float before = still.secondsLeft;
+        check(!Weather::step(still, 0.0f, stillSeed), "a step of no time does nothing");
+        check(still.secondsLeft == before, "and moves no clock");
+    }
 }
 
 int runSelfTest()
@@ -4119,6 +4270,7 @@ int runSelfTest()
     testEnchanting();
     testTrading();
     testEndPortal();
+    testWeather();
     testEveryBlockHasAPicture();
     testEverySoundHasANoise();
     testDrowning();
