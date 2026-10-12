@@ -23,6 +23,7 @@
 #include "Game/Experience.h"
 #include "Game/Cane.h"
 #include "Game/Anvil.h"
+#include "Game/Effects.h"
 #include "Game/Enchanting.h"
 #include "Game/Trading.h"
 #include "Game/EndPortal.h"
@@ -993,6 +994,277 @@ namespace
         Mob zombie(MobId::Zombie, glm::vec3(0.0f, 64.0f, 0.0f), 13u);
         check(mobType(MobId::Zombie).breedingFood == Blocks::Air, "a zombie wants no food");
         check(!zombie.feed(Items::Wheat), "and refuses wheat");
+    }
+
+    void testEffects()
+    {
+        section("status effects: the clock and what it does");
+
+        using Effects::Kind;
+
+        Effects::Set set;
+        check(!set.any(), "a fresh player carries nothing");
+        check(!set.has(Kind::Speed), "and no speed");
+        check(set.amplifier(Kind::Speed) == -1,
+              "an absent effect reads as -1, not as the weakest there is");
+
+        Effects::give(set, Kind::Speed, 0, 10.0f);
+        check(set.has(Kind::Speed) && set.any(), "a drink gives it");
+        check(set.amplifier(Kind::Speed) == 0, "at the level it was poured");
+        check(set.secondsLeft(Kind::Speed) == 10.0f, "for as long as it said");
+
+        // Weaker and shorter: ignored outright.
+        Effects::give(set, Kind::Speed, 0, 4.0f);
+        check(set.secondsLeft(Kind::Speed) == 10.0f, "a shorter one of the same strength is ignored");
+        Effects::give(set, Kind::Speed, 0, 25.0f);
+        check(set.secondsLeft(Kind::Speed) == 25.0f, "a longer one of the same strength extends it");
+
+        Effects::give(set, Kind::Speed, 1, 5.0f);
+        check(set.amplifier(Kind::Speed) == 1, "a stronger one takes over");
+        check(set.secondsLeft(Kind::Speed) == 5.0f, "even when it is shorter");
+        Effects::give(set, Kind::Speed, 0, 600.0f);
+        check(set.amplifier(Kind::Speed) == 1,
+              "and a long weak one does not cut the strong one short");
+        check(set.secondsLeft(Kind::Speed) == 5.0f, "nor extend it");
+
+        Effects::remove(set, Kind::Speed);
+        check(!set.has(Kind::Speed), "it can be taken away");
+        Effects::give(set, Kind::Poison, 0, 3.0f);
+        Effects::clear(set);
+        check(!set.any(), "and all of it at once");
+
+        // Zero and negative times give nothing at all.
+        Effects::give(set, Kind::Speed, 0, 0.0f);
+        check(!set.has(Kind::Speed), "a drink of no length does nothing");
+
+        // --- the clock ---------------------------------------------------
+        {
+            Effects::Set s2;
+            Effects::give(s2, Kind::Strength, 0, 1.0f);
+            Effects::step(s2, 0.4f);
+            check(s2.has(Kind::Strength), "it survives a step shorter than itself");
+            Effects::step(s2, 0.7f);
+            check(!s2.has(Kind::Strength), "and runs out when the time is up");
+        }
+
+        // Regeneration pulses rather than trickling.
+        {
+            Effects::Set s2;
+            Effects::give(s2, Kind::Regeneration, 0, 100.0f);
+            const Effects::Tick first = Effects::step(s2, Effects::REGEN_INTERVAL - 0.01f);
+            check(first.healPulses == 0, "regeneration pays nothing before its interval");
+            const Effects::Tick second = Effects::step(s2, 0.02f);
+            check(second.healPulses == 1, "and one heart when the interval comes round");
+        }
+        {
+            // Ten seconds of regeneration I is four pulses.
+            Effects::Set s2;
+            Effects::give(s2, Kind::Regeneration, 0, 100.0f);
+            int total = 0;
+            for (int i = 0; i < 101; ++i) total += Effects::step(s2, 0.1f).healPulses;
+            check(total == 4, "ten seconds of regeneration I heals four");
+        }
+        {
+            // The amplifier halves the wait, so twice as many.
+            Effects::Set s2;
+            Effects::give(s2, Kind::Regeneration, 1, 100.0f);
+            int total = 0;
+            for (int i = 0; i < 101; ++i) total += Effects::step(s2, 0.1f).healPulses;
+            check(total == 8, "and regeneration II heals eight");
+        }
+        {
+            Effects::Set s2;
+            Effects::give(s2, Kind::Poison, 0, 100.0f);
+            int total = 0;
+            for (int i = 0; i < 101; ++i) total += Effects::step(s2, 0.1f).poisonPulses;
+            check(total == 8, "ten seconds of poison I lands eight");
+        }
+        {
+            // A frame longer than the effect has left must not pay out
+            // pulses the player never lived through.
+            Effects::Set s2;
+            Effects::give(s2, Kind::Poison, 0, 1.0f);
+            const Effects::Tick tick = Effects::step(s2, 60.0f);
+            check(tick.poisonPulses == 0,
+                  "a long frame pays only for the time the effect had left");
+            check(!s2.has(Kind::Poison), "and the effect is gone after it");
+        }
+        {
+            // Both at once, each on its own clock.
+            Effects::Set s2;
+            Effects::give(s2, Kind::Regeneration, 0, 100.0f);
+            Effects::give(s2, Kind::Poison, 0, 100.0f);
+            int healed = 0, poisoned = 0;
+            for (int i = 0; i < 101; ++i)
+            {
+                const Effects::Tick tick = Effects::step(s2, 0.1f);
+                healed += tick.healPulses;
+                poisoned += tick.poisonPulses;
+            }
+            check(healed == 4 && poisoned == 8, "two effects keep separate clocks");
+        }
+
+        // --- what they do -------------------------------------------------
+        {
+            Effects::Set s2;
+            check(Effects::speedMultiplier(s2) == 1.0f, "no effects, no change to speed");
+            check(Effects::attackBonus(s2) == 0, "nor to a blow");
+            check(Effects::jumpMultiplier(s2) == 1.0f, "nor to a jump");
+            check(!Effects::fireImmune(s2) && !Effects::breathesWater(s2),
+                  "and nothing is survivable that was not");
+            check(Effects::nightVisionFloor(s2) == 0.0f, "and the dark stays dark");
+
+            Effects::give(s2, Kind::Speed, 0, 10.0f);
+            check(Effects::speedMultiplier(s2) > 1.0f, "speed makes you faster");
+            const float speedOne = Effects::speedMultiplier(s2);
+            Effects::give(s2, Kind::Speed, 1, 10.0f);
+            check(Effects::speedMultiplier(s2) > speedOne, "and speed II more so");
+
+            Effects::give(s2, Kind::Slowness, 0, 10.0f);
+            check(Effects::speedMultiplier(s2) < speedOne * 1.5f,
+                  "slowness pulls back against it");
+
+            Effects::give(s2, Kind::Strength, 0, 10.0f);
+            check(Effects::attackBonus(s2) == 3, "strength I adds three to a blow");
+            Effects::give(s2, Kind::Weakness, 0, 10.0f);
+            check(Effects::attackBonus(s2) == -1,
+                  "and weakness can take it below nothing, for the caller to floor");
+
+            Effects::give(s2, Kind::JumpBoost, 0, 10.0f);
+            check(Effects::jumpMultiplier(s2) > 1.0f, "jump boost jumps higher");
+
+            Effects::give(s2, Kind::FireResistance, 0, 10.0f);
+            check(Effects::fireImmune(s2), "fire resistance keeps the fire off");
+            Effects::give(s2, Kind::WaterBreathing, 0, 10.0f);
+            check(Effects::breathesWater(s2), "water breathing keeps the water out");
+            Effects::give(s2, Kind::NightVision, 0, 10.0f);
+            check(Effects::nightVisionFloor(s2) > 0.5f, "and night vision lifts the dark");
+        }
+
+        // Every kind has a name and a side.
+        int harmful = 0;
+        for (int i = 0; i < Effects::KIND_COUNT; ++i)
+        {
+            const Kind kind = static_cast<Kind>(i);
+            check(Effects::name(kind)[0] != '\0',
+                  std::string("effect ") + std::to_string(i) + " has a name");
+            if (Effects::isHarmful(kind)) ++harmful;
+        }
+        check(harmful == 3, "three of them are ones you would rather not have");
+    }
+
+    void testEffectsOnThePlayer()
+    {
+        section("status effects: what they do to the player");
+
+        using Effects::Kind;
+
+        // Regeneration heals, and stops at full.
+        {
+            Player p(glm::vec3(0.0f, 70.0f, 0.0f));
+            p.health = 10;
+            Effects::give(p.effects, Kind::Regeneration, 0, 100.0f);
+            for (int i = 0; i < 101; ++i) p.updateEffects(0.1f);
+            check(p.health == 14, "regeneration heals a heart a pulse");
+
+            p.health = Player::MAX_HEALTH;
+            for (int i = 0; i < 101; ++i) p.updateEffects(0.1f);
+            check(p.health == Player::MAX_HEALTH, "and cannot take you over full");
+        }
+
+        // Poison never kills: Minecraft leaves you on half a heart.
+        {
+            Player p(glm::vec3(0.0f, 70.0f, 0.0f));
+            p.health = 4;
+            Effects::give(p.effects, Kind::Poison, 0, 600.0f);
+            for (int i = 0; i < 1200; ++i) p.updateEffects(0.1f);
+            check(p.health == 1, "poison takes you to one and no further");
+            check(p.health > 0, "so it is never the thing that kills you");
+        }
+
+        // Creative takes no poison at all.
+        {
+            Player p(glm::vec3(0.0f, 70.0f, 0.0f));
+            p.mode = GameMode::Creative;
+            p.health = Player::MAX_HEALTH;
+            Effects::give(p.effects, Kind::Poison, 0, 100.0f);
+            for (int i = 0; i < 101; ++i) p.updateEffects(0.1f);
+            check(p.health == Player::MAX_HEALTH, "creative shrugs off poison");
+        }
+
+        // A dead player's effects stop.
+        {
+            Player p(glm::vec3(0.0f, 70.0f, 0.0f));
+            p.health = 0;
+            Effects::give(p.effects, Kind::Regeneration, 0, 100.0f);
+            p.updateEffects(0.1f);
+            check(!p.effects.any(), "dying clears what was running");
+        }
+
+        // Water breathing: the lungs never empty.
+        {
+            // Ten seconds under, which is inside the fifteen the lungs
+            // hold: any longer and the player drowns, and dying puts the
+            // air back, so the check would be reading a corpse.
+            Player p(glm::vec3(0.0f, 70.0f, 0.0f));
+            for (int i = 0; i < 100; ++i) p.breathe(0.1f, true);
+            check(p.air < Player::MAX_AIR_SECONDS * 0.5f,
+                  "a long dive empties the lungs");
+            check(p.health == Player::MAX_HEALTH, "without drowning them yet");
+
+            Player q(glm::vec3(0.0f, 70.0f, 0.0f));
+            Effects::give(q.effects, Kind::WaterBreathing, 0, 600.0f);
+            bool drowned = false;
+            for (int i = 0; i < 300; ++i) drowned |= q.breathe(0.1f, true);
+            check(q.air == Player::MAX_AIR_SECONDS, "water breathing keeps them full");
+            check(!drowned, "and nothing ever lands");
+        }
+
+        // Lava burns, and fire resistance takes all of it.
+        {
+            Player p(glm::vec3(0.0f, 70.0f, 0.0f));
+            p.health = Player::MAX_HEALTH;
+            const bool first = p.burn(0.1f, true);
+            check(first, "stepping into lava hurts at once");
+            check(p.health == Player::MAX_HEALTH - Player::LAVA_DAMAGE,
+                  "for four, which is two hearts");
+
+            // Out of the lava, nothing more.
+            const int held = p.health;
+            for (int i = 0; i < 50; ++i) p.burn(0.1f, false);
+            check(p.health == held, "and stops the moment you are out of it");
+        }
+        {
+            Player p(glm::vec3(0.0f, 70.0f, 0.0f));
+            p.health = Player::MAX_HEALTH;
+            Effects::give(p.effects, Kind::FireResistance, 0, 600.0f);
+            for (int i = 0; i < 200; ++i)
+            {
+                p.clearHurtCooldown();
+                p.burn(0.1f, true);
+            }
+            check(p.health == Player::MAX_HEALTH,
+                  "fire resistance swims lava without a scratch");
+        }
+        {
+            Player p(glm::vec3(0.0f, 70.0f, 0.0f));
+            p.mode = GameMode::Creative;
+            p.health = Player::MAX_HEALTH;
+            for (int i = 0; i < 50; ++i) p.burn(0.1f, true);
+            check(p.health == Player::MAX_HEALTH, "creative does not burn either");
+        }
+
+        // Lava kills a survival player who stays in it.
+        {
+            Player p(glm::vec3(0.0f, 70.0f, 0.0f));
+            p.health = Player::MAX_HEALTH;
+            for (int i = 0; i < 200 && p.health > 0; ++i)
+            {
+                p.clearHurtCooldown();
+                p.burn(0.1f, true);
+            }
+            check(p.health <= 0, "and standing in it is fatal");
+        }
     }
 
     void testAnvil()
@@ -2944,6 +3216,12 @@ namespace
         wrote.experience = 1211;
         wrote.experienceOwedHundredths = 45;
         wrote.air = 6.25f;
+        wrote.effectAmplifiers.assign(Effects::KIND_COUNT, 0);
+        wrote.effectSeconds.assign(Effects::KIND_COUNT, 0.0f);
+        wrote.effectAmplifiers[static_cast<int>(Effects::Kind::Speed)] = 1;
+        wrote.effectSeconds[static_cast<int>(Effects::Kind::Speed)] = 42.5f;
+        wrote.effectAmplifiers[static_cast<int>(Effects::Kind::Poison)] = 0;
+        wrote.effectSeconds[static_cast<int>(Effects::Kind::Poison)] = 7.0f;
         wrote.inventory.emplace_back(static_cast<uint16_t>(Blocks::Stone), 42);
         wrote.inventory.emplace_back(static_cast<uint16_t>(Items::DiamondPickaxe), 1);
         wrote.damage.push_back(0);
@@ -2974,6 +3252,17 @@ namespace
         check(WorldSave::loadLevel(dir, read), "a level written reads back");
         check(read.seed == wrote.seed, "with its seed");
         check(read.playerPosition == wrote.playerPosition, "and where you stood");
+
+        check(read.effectAmplifiers.size() == static_cast<size_t>(Effects::KIND_COUNT),
+              "effects come back, one slot a kind");
+        check(read.effectSeconds[static_cast<int>(Effects::Kind::Speed)] == 42.5f,
+              "with the time each had left");
+        check(read.effectAmplifiers[static_cast<int>(Effects::Kind::Speed)] == 1,
+              "and how strong it was");
+        check(read.effectSeconds[static_cast<int>(Effects::Kind::Poison)] == 7.0f,
+              "for every kind that was running");
+        check(read.effectSeconds[static_cast<int>(Effects::Kind::Strength)] == 0.0f,
+              "and nothing for the ones that were not");
 
         // Everything appended since the format was first written. Each
         // of these went in at the end precisely so an older file still
@@ -4501,6 +4790,8 @@ int runSelfTest()
     testMobDrops();
     testEndermanStare();
     testAnvil();
+    testEffects();
+    testEffectsOnThePlayer();
     testFarming();
     testPathfinding();
     testChatCommands();

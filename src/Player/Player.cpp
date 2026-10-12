@@ -274,12 +274,57 @@ bool Player::isInWater(const World& world) const
     return false;
 }
 
+// Water only. Lava used to count here, which meant a fall into it
+// drowned the player rather than burning them -- and left fire
+// resistance, whose whole point is swimming the stuff, with nothing to
+// protect against.
 bool Player::isHeadUnderwater(const World& world) const
 {
     const glm::vec3 eye = eyePosition();
-    return isLiquid(world.getBlock(static_cast<int>(std::floor(eye.x)),
-                                   static_cast<int>(std::floor(eye.y)),
-                                   static_cast<int>(std::floor(eye.z))));
+    return world.getBlock(static_cast<int>(std::floor(eye.x)),
+                          static_cast<int>(std::floor(eye.y)),
+                          static_cast<int>(std::floor(eye.z))) == Blocks::Water;
+}
+
+bool Player::isInLava(const World& world) const
+{
+    const AABB box = aabb();
+    const int minX = static_cast<int>(std::floor(box.min.x));
+    const int maxX = static_cast<int>(std::floor(box.max.x - 0.0001f));
+    const int minY = static_cast<int>(std::floor(box.min.y));
+    const int maxY = static_cast<int>(std::floor(box.max.y - 0.0001f));
+    const int minZ = static_cast<int>(std::floor(box.min.z));
+    const int maxZ = static_cast<int>(std::floor(box.max.z - 0.0001f));
+
+    for (int x = minX; x <= maxX; ++x)
+        for (int y = minY; y <= maxY; ++y)
+            for (int z = minZ; z <= maxZ; ++z)
+                if (world.getBlock(x, y, z) == Blocks::Lava)
+                    return true;
+
+    return false;
+}
+
+bool Player::burn(float deltaTime, bool inLava)
+{
+    if (!inLava || creative() || health <= 0 || Effects::fireImmune(effects))
+    {
+        m_burnTimer = 0.0f;
+        return false;
+    }
+
+    // The first blow lands at once rather than half a second in, so
+    // stepping into lava hurts immediately the way it should.
+    const bool first = (m_burnTimer == 0.0f);
+    m_burnTimer += deltaTime;
+
+    if (first || m_burnTimer >= LAVA_INTERVAL)
+    {
+        if (!first) m_burnTimer -= LAVA_INTERVAL;
+        return damage(LAVA_DAMAGE);
+    }
+
+    return false;
 }
 
 bool Player::damage(int amount)
@@ -309,6 +354,25 @@ void Player::heal(int amount)
 // blow: Minecraft drowns you once a second regardless, and routing it
 // through damage() would have the immunity swallow most of it and leave
 // you able to sit on the bottom indefinitely.
+// Poison is the one blow that never kills: Minecraft leaves you on half
+// a heart and lets you walk it off, so this floors at one rather than
+// going through damage().
+bool Player::updateEffects(float deltaTime)
+{
+    if (health <= 0) { Effects::clear(effects); return false; }
+
+    const Effects::Tick tick = Effects::step(effects, deltaTime);
+    if (tick.healPulses == 0 && tick.poisonPulses == 0) return false;
+
+    const int before = health;
+
+    if (tick.healPulses > 0) heal(tick.healPulses);
+    if (tick.poisonPulses > 0 && !creative())
+        health = std::max(1, health - tick.poisonPulses);
+
+    return health != before;
+}
+
 bool Player::breathe(float deltaTime, bool headUnderwater)
 {
     if (creative() || health <= 0)
@@ -318,7 +382,9 @@ bool Player::breathe(float deltaTime, bool headUnderwater)
         return false;
     }
 
-    if (!headUnderwater)
+    // Water breathing fills the lungs as fast under as over, so a dive
+    // never starts the drowning clock at all.
+    if (!headUnderwater || Effects::breathesWater(effects))
     {
         air = std::min(MAX_AIR_SECONDS, air + deltaTime * AIR_REFILL_RATE);
         m_drownTimer = 0.0f;
@@ -385,6 +451,10 @@ void Player::update(float deltaTime, const World& world, const Controls& control
     else if (sprinting) targetSpeed = SPRINT_SPEED;
     else targetSpeed = WALK_SPEED;
 
+    // Speed and slowness scale whatever the mode settled on, so they
+    // read the same walking, sprinting or swimming.
+    targetSpeed *= Effects::speedMultiplier(effects);
+
     const glm::vec3 targetVelocity = controls.wishDirection * targetSpeed;
 
     float acceleration;
@@ -435,7 +505,7 @@ void Player::update(float deltaTime, const World& world, const Controls& control
         // Minecraft does instead of jumping once and stopping.
         if (controls.jumpHeld && wasOnGround)
         {
-            velocity.y = JUMP_VELOCITY;
+            velocity.y = JUMP_VELOCITY * Effects::jumpMultiplier(effects);
             m_jumped = true;
             m_falling = true;
             m_fallStartY = position.y;

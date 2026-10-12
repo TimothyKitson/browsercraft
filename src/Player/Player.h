@@ -1,4 +1,5 @@
 #pragma once
+#include "Game/Effects.h"
 #include "Game/GameMode.h"
 #include <glm/glm.hpp>
 
@@ -40,6 +41,19 @@ public:
 
     bool isInWater(const World& world) const;
 
+    // Lava burns rather than drowns. It reads as a liquid everywhere
+    // else -- it slows you down and you sink in it -- but what it does
+    // to the player is its own thing.
+    bool isInLava(const World& world) const;
+
+    // Four a go, twice a second, which is Minecraft's. Fire resistance
+    // takes all of it: swimming lava is the whole point of the drink.
+    static constexpr int LAVA_DAMAGE = 4;
+    static constexpr float LAVA_INTERVAL = 0.5f;
+
+    // Returns true on the step a burn lands.
+    bool burn(float deltaTime, bool inLava);
+
     // Whether the player is up against a ladder. Climbing is the one
     // thing that overrides gravity without flying.
     bool onLadder(const World& world) const;
@@ -70,6 +84,16 @@ public:
     static constexpr float DROWN_INTERVAL = 1.0f;
 
     float air = MAX_AIR_SECONDS;
+
+    // What is running on the player right now. Kept here beside the
+    // health and the hunger because it changes all three, and because
+    // --selftest can set it directly and watch what happens.
+    Effects::Set effects;
+
+    // Runs the effect clocks and applies what they pay out. Separate
+    // from updateVitals so a test can step the effects without also
+    // running hunger down. Returns true if a pulse changed the health.
+    bool updateEffects(float deltaTime);
 
     // Takes whether the head is under, rather than a World, so the rule
     // can be run through a whole dive in --selftest without one.
@@ -146,6 +170,7 @@ private:
     float m_exhaustion = 0.0f;
     float m_starveTimer = 0.0f;
     float m_drownTimer = 0.0f;
+    float m_burnTimer = 0.0f;
     glm::vec3 m_lastPosition{ 0.0f };
 
     AABB aabbAt(const glm::vec3& feetPosition) const;

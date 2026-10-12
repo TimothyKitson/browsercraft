@@ -167,8 +167,25 @@ void WorldSave::saveLevel(const std::string& saveDirectory, const LevelState& st
     // shifted by two bytes.
     write(out, state.air);
 
-    for (uint8_t dimension : state.chestDimensions) write(out, dimension);
-    for (uint8_t dimension : state.furnaceDimensions) write(out, dimension);
+    // One byte per container, counted off the container lists rather
+    // than off these -- the reader counts them that way, so a caller
+    // that left them short would leave every later field reading the
+    // wrong bytes. Nothing after an implicitly-sized field is safe
+    // unless the writer and the reader agree on the size exactly.
+    for (size_t i = 0; i < state.chests.size(); ++i)
+        write(out, i < state.chestDimensions.size()
+                       ? state.chestDimensions[i] : static_cast<uint8_t>(0));
+    for (size_t i = 0; i < state.furnaces.size(); ++i)
+        write(out, i < state.furnaceDimensions.size()
+                       ? state.furnaceDimensions[i] : static_cast<uint8_t>(0));
+
+    // Last of all, for the same reason as the air above.
+    write(out, static_cast<uint16_t>(state.effectAmplifiers.size()));
+    for (size_t i = 0; i < state.effectAmplifiers.size(); ++i)
+    {
+        write(out, state.effectAmplifiers[i]);
+        write(out, i < state.effectSeconds.size() ? state.effectSeconds[i] : 0.0f);
+    }
 }
 
 bool WorldSave::loadLevel(const std::string& saveDirectory, LevelState& out)
@@ -312,6 +329,20 @@ bool WorldSave::loadLevel(const std::string& saveDirectory, LevelState& out)
                                         uint8_t dimension = 0;
                                         if (!read(in, dimension)) break;
                                         out.furnaceDimensions[i] = dimension;
+                                    }
+
+                                    uint16_t effectCount = 0;
+                                    if (read(in, effectCount))
+                                    {
+                                        for (uint16_t i = 0; i < effectCount; ++i)
+                                        {
+                                            int32_t amplifier = 0;
+                                            float seconds = 0.0f;
+                                            if (!read(in, amplifier)) break;
+                                            if (!read(in, seconds)) break;
+                                            out.effectAmplifiers.push_back(amplifier);
+                                            out.effectSeconds.push_back(seconds);
+                                        }
                                     }
                                 }
                             }

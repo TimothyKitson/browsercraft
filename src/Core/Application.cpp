@@ -630,6 +630,15 @@ void Application::loadLevel()
         m_player.experience = state.experience;
         m_player.experienceOwedHundredths = state.experienceOwedHundredths;
         m_player.air = state.air;
+
+        Effects::clear(m_player.effects);
+        for (size_t i = 0; i < state.effectAmplifiers.size() &&
+                           i < static_cast<size_t>(Effects::KIND_COUNT); ++i)
+        {
+            if (state.effectSeconds[i] <= 0.0f) continue;
+            Effects::give(m_player.effects, static_cast<Effects::Kind>(i),
+                          state.effectAmplifiers[i], state.effectSeconds[i]);
+        }
         m_player.saturation = state.saturation;
         m_allowCheats = state.cheats;
         m_gameMode = static_cast<GameMode>(state.gameMode);
@@ -681,6 +690,15 @@ void Application::saveLevel()
     state.experience = m_player.experience;
     state.experienceOwedHundredths = m_player.experienceOwedHundredths;
     state.air = m_player.air;
+
+    state.effectAmplifiers.clear();
+    state.effectSeconds.clear();
+    for (int i = 0; i < Effects::KIND_COUNT; ++i)
+    {
+        const Effects::Kind kind = static_cast<Effects::Kind>(i);
+        state.effectAmplifiers.push_back(m_player.effects.slots[i].amplifier);
+        state.effectSeconds.push_back(m_player.effects.secondsLeft(kind));
+    }
     state.saturation = m_player.saturation;
     state.cheats = m_allowCheats;
     state.gameMode = static_cast<uint8_t>(m_gameMode);
@@ -847,7 +865,11 @@ float Application::daylightFactor() const
     // out -- which is Minecraft's rule, and falls out rather than
     // having to be written down anywhere.
     const float weathered = sun * Weather::lightScale(m_weather);
-    return std::clamp(weathered + Weather::flashBoost(m_weather), 0.0f, 1.0f);
+    const float lit = std::clamp(weathered + Weather::flashBoost(m_weather), 0.0f, 1.0f);
+
+    // Night vision does not make the world brighter so much as refuse to
+    // let it get dark, which is why it is a floor rather than a boost.
+    return std::max(lit, Effects::nightVisionFloor(m_player.effects));
 }
 
 // ----------------------------------------------------------------- loop ---
@@ -1250,6 +1272,15 @@ bool Application::frame()
             const bool under = m_player.isHeadUnderwater(*m_world);
             if (m_player.breathe(deltaTime, under))
                 m_audio.play(Sound::Hurt, 0.7f, 0.9f);
+
+            if (m_player.burn(deltaTime, m_player.isInLava(*m_world)))
+                m_audio.play(Sound::Hurt, 0.9f, 0.8f);
+
+            // Regeneration and poison pay out here, where the hurt
+            // noise is to hand.
+            const int before = m_player.health;
+            if (m_player.updateEffects(deltaTime) && m_player.health < before)
+                m_audio.play(Sound::Hurt, 0.5f, 1.2f);
         }
 
         // What is worn decides what a blow costs, and it can change
@@ -2553,10 +2584,14 @@ void Application::updateMining(float deltaTime)
                 // A sword hits hardest, an axe nearly as hard, a bare
                 // hand barely at all.
                 const StackId weapon = m_inventory.selected().id;
-                target->damage(Tools::attackDamage(weapon) +
-                                   Enchanting::sharpnessBonus(
-                                       m_inventory.selected().enchantments),
-                               target->position() - m_player.position);
+                // Strength adds and weakness takes away, and the two
+                // together can go below nothing, so the total is
+                // floored here rather than inside the effect.
+                const int blow = std::max(0,
+                    Tools::attackDamage(weapon) +
+                        Enchanting::sharpnessBonus(m_inventory.selected().enchantments) +
+                        Effects::attackBonus(m_player.effects));
+                target->damage(blow, target->position() - m_player.position);
                 wearOnSwing(weapon);
                 m_attackCooldown = ATTACK_INTERVAL;
             }

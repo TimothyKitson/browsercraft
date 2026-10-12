@@ -24,6 +24,13 @@ struct LevelState
     int experience = 0;
     int experienceOwedHundredths = 0;
 
+    // What was running on the player: one amplifier and one time left
+    // per effect kind, in Effects::Kind order. Written at the very end,
+    // after the container dimensions, so an older file simply runs out
+    // and the player comes back with nothing on them.
+    std::vector<int32_t> effectAmplifiers;
+    std::vector<float> effectSeconds;
+
     // Which world each chest and furnace stands in, in the same order
     // as the lists above. Written at the very end of the file, so a
     // level saved before containers knew about dimensions reads back
