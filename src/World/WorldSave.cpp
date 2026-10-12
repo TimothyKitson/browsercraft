@@ -158,6 +158,14 @@ void WorldSave::saveLevel(const std::string& saveDirectory, const LevelState& st
     uint16_t enchantCount = static_cast<uint16_t>(state.enchantments.size());
     write(out, enchantCount);
     for (uint32_t set : state.enchantments) write(out, set);
+
+    // Appended last, after the enchantments, because that is the whole
+    // trick this format relies on: a reader that runs out of file keeps
+    // its defaults. Slotted in before them instead, a level written by
+    // the build before this one would have had its enchantment count
+    // read as the air supply and every enchantment on every item in it
+    // shifted by two bytes.
+    write(out, state.air);
 }
 
 bool WorldSave::loadLevel(const std::string& saveDirectory, LevelState& out)
@@ -279,6 +287,9 @@ bool WorldSave::loadLevel(const std::string& saveDirectory, LevelState& out)
                                         if (!read(in, set)) break;
                                         out.enchantments.push_back(set);
                                     }
+
+                                    float air = out.air;
+                                    if (read(in, air)) out.air = air;
                                 }
                             }
                         }

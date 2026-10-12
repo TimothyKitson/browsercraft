@@ -610,6 +610,7 @@ void Application::loadLevel()
         m_player.hunger = state.hunger;
         m_player.experience = state.experience;
         m_player.experienceOwedHundredths = state.experienceOwedHundredths;
+        m_player.air = state.air;
         m_player.saturation = state.saturation;
         m_allowCheats = state.cheats;
         m_gameMode = static_cast<GameMode>(state.gameMode);
@@ -656,6 +657,7 @@ void Application::saveLevel()
     state.hunger = m_player.hunger;
     state.experience = m_player.experience;
     state.experienceOwedHundredths = m_player.experienceOwedHundredths;
+    state.air = m_player.air;
     state.saturation = m_player.saturation;
     state.cheats = m_allowCheats;
     state.gameMode = static_cast<uint8_t>(m_gameMode);
@@ -1157,6 +1159,15 @@ bool Application::frame()
         }
 
         if (playing() || m_inventoryOpen) tickFurnaces(deltaTime);
+
+        // Air. The head being under is the whole of what it needs to
+        // know, so the rule itself has no idea there is a world.
+        if (playing())
+        {
+            const bool under = m_player.isHeadUnderwater(*m_world);
+            if (m_player.breathe(deltaTime, under))
+                m_audio.play(Sound::Hurt, 0.7f, 0.9f);
+        }
 
         // What is worn decides what a blow costs, and it can change
         // between one blow and the next.
@@ -4291,6 +4302,34 @@ void Application::renderExperience(float x, float y, float width)
     m_ui.text(text, textX, textY, scale, glm::vec4(0.49f, 0.98f, 0.24f, 1.0f));
 }
 
+// The bubbles, over on the right above the hunger. Drawn only while
+// you are short of air, exactly as Minecraft does it, so a HUD on dry
+// land looks the way it did before there was any drowning in the game.
+void Application::renderAir(float rightX, float y)
+{
+    if (m_player.air >= Player::MAX_AIR_SECONDS) return;
+
+    constexpr int BUBBLE_COUNT = 10;
+    constexpr float BUBBLE_SIZE = 18.0f;
+    constexpr float SPACING = 2.0f;
+
+    const float share = m_player.air / Player::MAX_AIR_SECONDS;
+    const float showing = share * BUBBLE_COUNT;
+
+    for (int i = 0; i < BUBBLE_COUNT; ++i)
+    {
+        // Filled from the left, so the row empties towards the middle
+        // of the screen the way the hunger beside it does.
+        if (static_cast<float>(i) >= showing) continue;
+
+        const float bubbleX = rightX - (i + 1) * BUBBLE_SIZE - i * SPACING;
+        m_ui.quad(bubbleX + 3.0f, y + 3.0f, BUBBLE_SIZE - 6.0f, BUBBLE_SIZE - 6.0f,
+                  glm::vec4(0.0f, 0.0f, 0.0f, 0.45f));
+        m_ui.quad(bubbleX + 4.0f, y + 4.0f, BUBBLE_SIZE - 8.0f, BUBBLE_SIZE - 8.0f,
+                  glm::vec4(0.78f, 0.90f, 1.0f, 0.95f));
+    }
+}
+
 void Application::renderEatProgress(float cx, float cy)
 {
     if (m_eatTimer <= 0.0f) return;
@@ -4398,6 +4437,7 @@ void Application::renderHud()
         renderHearts(barX + SLOT_GAP, barY - 52.0f);
         renderArmour(barX + SLOT_GAP, barY - 74.0f);
         renderFood(barX + barWidth - SLOT_GAP, barY - 52.0f);
+        renderAir(barX + barWidth - SLOT_GAP, barY - 74.0f);
         renderEatProgress(cx, cy);
     }
 

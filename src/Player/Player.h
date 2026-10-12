@@ -60,6 +60,22 @@ public:
     static constexpr int SPRINT_HUNGER = 7;
     static constexpr int REGEN_HUNGER = 18;
 
+    // Air, and running out of it. Fifteen seconds' worth, as in
+    // Minecraft, then two points -- one heart -- a second until you
+    // surface or die. It refills far faster than it empties, so a dive
+    // costs you the dive and not the next one as well.
+    static constexpr float MAX_AIR_SECONDS = 15.0f;
+    static constexpr float AIR_REFILL_RATE = 5.0f;   // times as fast as it empties
+    static constexpr int DROWN_DAMAGE = 2;
+    static constexpr float DROWN_INTERVAL = 1.0f;
+
+    float air = MAX_AIR_SECONDS;
+
+    // Takes whether the head is under, rather than a World, so the rule
+    // can be run through a whole dive in --selftest without one.
+    // Returns true on the step a lungful runs out and a blow lands.
+    bool breathe(float deltaTime, bool headUnderwater);
+
     void addExhaustion(float amount);
     bool eat(int hungerPoints, float saturationPoints);
     bool canEat() const { return hunger < MAX_HUNGER; }
@@ -129,6 +145,7 @@ private:
     float m_hurtCooldown = 0.0f;
     float m_exhaustion = 0.0f;
     float m_starveTimer = 0.0f;
+    float m_drownTimer = 0.0f;
     glm::vec3 m_lastPosition{ 0.0f };
 
     AABB aabbAt(const glm::vec3& feetPosition) const;

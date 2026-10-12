@@ -17,6 +17,7 @@ struct LevelState
     int health = 20;
     int hunger = 20;
     float saturation = 5.0f;
+    float air = 15.0f;
     // Experience, and the fraction of a point the furnace still owes.
     // Appended at the very end of the file, so a level written before
     // experience existed reads back as a fresh start at level nought.

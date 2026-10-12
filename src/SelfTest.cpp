@@ -3743,6 +3743,76 @@ namespace
         }
         check(distinct, "and no two species share one");
     }
+
+    void testDrowning()
+    {
+        section("drowning");
+
+        Player diver(glm::vec3(0.0f, 64.0f, 0.0f));
+        check(diver.air == Player::MAX_AIR_SECONDS, "you start with a full lungful");
+
+        // Fourteen seconds under and nothing has happened yet.
+        bool hurtEarly = false;
+        for (int i = 0; i < 140; ++i)
+            if (diver.breathe(0.1f, true)) hurtEarly = true;
+        check(!hurtEarly, "fourteen seconds under costs nothing");
+        check(diver.health == Player::MAX_HEALTH, "and you are untouched");
+        check(diver.air > 0.0f && diver.air < 2.0f, "but the air is nearly gone");
+
+        // Past fifteen, it starts.
+        int blows = 0;
+        for (int i = 0; i < 100; ++i)
+            if (diver.breathe(0.1f, true)) ++blows;
+        check(diver.air == 0.0f, "the air runs out");
+        check(blows > 0, "and then it starts to hurt");
+        check(diver.health < Player::MAX_HEALTH, "which costs health");
+
+        // Once a second, not once a frame: the whole point of the
+        // timer. Ten seconds of drowning is about ten blows, not a
+        // hundred, and certainly not one per step.
+        Player counter(glm::vec3(0.0f, 64.0f, 0.0f));
+        counter.air = 0.0f;
+        int landed = 0;
+        for (int i = 0; i < 100; ++i)   // ten seconds at a tenth each
+            if (counter.breathe(0.1f, true)) ++landed;
+        check(landed >= 9 && landed <= 11,
+              "ten seconds drowning lands " + std::to_string(landed) + " blows, about one a second");
+
+        // Drowning must not be swallowed by the mercy that follows an
+        // ordinary blow, or you could sit on the bottom for ever.
+        Player sitting(glm::vec3(0.0f, 64.0f, 0.0f));
+        sitting.air = 0.0f;
+        for (int i = 0; i < 300 && sitting.health > 0; ++i)
+            sitting.breathe(0.1f, true);
+        check(sitting.health <= 0, "stay under long enough and it kills you");
+
+        // Surfacing refills, and faster than it emptied.
+        Player surfacing(glm::vec3(0.0f, 64.0f, 0.0f));
+        surfacing.air = 0.0f;
+        for (int i = 0; i < 40; ++i) surfacing.breathe(0.1f, false);
+        check(surfacing.air == Player::MAX_AIR_SECONDS,
+              "four seconds up refills fifteen seconds of air");
+
+        bool hurtAbove = false;
+        for (int i = 0; i < 200; ++i)
+            if (surfacing.breathe(0.1f, false)) hurtAbove = true;
+        check(!hurtAbove, "and standing in the air never drowns you");
+
+        // Creative does not drown.
+        Player builder(glm::vec3(0.0f, 64.0f, 0.0f));
+        builder.mode = GameMode::Creative;
+        bool hurtInCreative = false;
+        for (int i = 0; i < 400; ++i)
+            if (builder.breathe(0.1f, true)) hurtInCreative = true;
+        check(!hurtInCreative, "creative does not drown");
+        check(builder.air == Player::MAX_AIR_SECONDS, "and never loses air");
+
+        // Dying and coming back gives you your breath back.
+        Player drowned(glm::vec3(0.0f, 64.0f, 0.0f));
+        drowned.air = 0.0f;
+        drowned.respawn(glm::vec3(0.0f, 64.0f, 0.0f));
+        check(drowned.air == Player::MAX_AIR_SECONDS, "respawning restores your air");
+    }
 }
 
 int runSelfTest()
@@ -3802,6 +3872,7 @@ int runSelfTest()
     testEndPortal();
     testEveryBlockHasAPicture();
     testEverySoundHasANoise();
+    testDrowning();
 
     std::printf("\n%d checks, %d failed\n", g_checks, g_failures);
     return g_failures == 0 ? 0 : 1;

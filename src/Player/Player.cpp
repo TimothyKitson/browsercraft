@@ -305,6 +305,42 @@ void Player::heal(int amount)
     health = std::min(MAX_HEALTH, health + amount);
 }
 
+// Drowning ignores the half-second of mercy that follows an ordinary
+// blow: Minecraft drowns you once a second regardless, and routing it
+// through damage() would have the immunity swallow most of it and leave
+// you able to sit on the bottom indefinitely.
+bool Player::breathe(float deltaTime, bool headUnderwater)
+{
+    if (creative() || health <= 0)
+    {
+        air = MAX_AIR_SECONDS;
+        m_drownTimer = 0.0f;
+        return false;
+    }
+
+    if (!headUnderwater)
+    {
+        air = std::min(MAX_AIR_SECONDS, air + deltaTime * AIR_REFILL_RATE);
+        m_drownTimer = 0.0f;
+        return false;
+    }
+
+    if (air > 0.0f)
+    {
+        air = std::max(0.0f, air - deltaTime);
+        m_drownTimer = 0.0f;
+        return false;
+    }
+
+    m_drownTimer += deltaTime;
+    if (m_drownTimer < DROWN_INTERVAL) return false;
+
+    m_drownTimer -= DROWN_INTERVAL;
+    health = std::max(0, health - DROWN_DAMAGE);
+    damageFlash = 0.4f;
+    return true;
+}
+
 void Player::respawn(glm::vec3 feetPosition)
 {
     position = feetPosition;
@@ -316,6 +352,8 @@ void Player::respawn(glm::vec3 feetPosition)
     // spawned by whoever handles the death, before this is called.
     experience = 0;
     experienceOwedHundredths = 0;
+    air = MAX_AIR_SECONDS;
+    m_drownTimer = 0.0f;
     m_exhaustion = 0.0f;
     m_starveTimer = 0.0f;
     m_falling = false;

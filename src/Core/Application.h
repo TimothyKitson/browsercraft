@@ -504,6 +504,7 @@ private:
     void renderArmour(float x, float y);
     void renderFood(float rightX, float y);
     void renderExperience(float x, float y, float width);
+    void renderAir(float rightX, float y);
     void renderEatProgress(float cx, float cy);
     void handleEating(float deltaTime);
 
