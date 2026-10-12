@@ -92,6 +92,7 @@ namespace
         {
             MobType& t = table[static_cast<size_t>(MobId::Sheep)];
             t.id = MobId::Sheep;
+            t.experience = 2;
             t.voice = Sound::MobSheepSay;
             t.hurtVoice = Sound::MobSheepHurt;
             t.deathVoice = Sound::MobSheepDeath;
@@ -134,6 +135,7 @@ namespace
         {
             MobType& t = table[static_cast<size_t>(MobId::Pig)];
             t.id = MobId::Pig;
+            t.experience = 2;
             t.voice = Sound::MobPigSay;
             t.hurtVoice = Sound::MobPigHurt;
             t.deathVoice = Sound::MobPigDeath;
@@ -158,6 +160,7 @@ namespace
         {
             MobType& t = table[static_cast<size_t>(MobId::Cow)];
             t.id = MobId::Cow;
+            t.experience = 2;
             t.voice = Sound::MobCowSay;
             t.hurtVoice = Sound::MobCowHurt;
             t.deathVoice = Sound::MobCowDeath;
@@ -186,6 +189,7 @@ namespace
         {
             MobType& t = table[static_cast<size_t>(MobId::Chicken)];
             t.id = MobId::Chicken;
+            t.experience = 2;
             t.voice = Sound::MobChickenSay;
             t.hurtVoice = Sound::MobChickenHurt;
             t.deathVoice = Sound::MobChickenDeath;
@@ -216,6 +220,7 @@ namespace
         {
             MobType& t = table[static_cast<size_t>(MobId::Zombie)];
             t.id = MobId::Zombie;
+            t.experience = 5;
             t.voice = Sound::MobZombieSay;
             t.hurtVoice = Sound::MobZombieHurt;
             t.deathVoice = Sound::MobZombieDeath;
@@ -246,6 +251,7 @@ namespace
         {
             MobType& t = table[static_cast<size_t>(MobId::Skeleton)];
             t.id = MobId::Skeleton;
+            t.experience = 5;
             t.voice = Sound::MobSkeletonSay;
             t.hurtVoice = Sound::MobSkeletonHurt;
             t.deathVoice = Sound::MobSkeletonDeath;
@@ -278,6 +284,7 @@ namespace
         {
             MobType& t = table[static_cast<size_t>(MobId::Creeper)];
             t.id = MobId::Creeper;
+            t.experience = 5;
             t.voice = Sound::MobCreeperSay;
             t.hurtVoice = Sound::MobCreeperHurt;
             t.deathVoice = Sound::MobCreeperDeath;
@@ -307,6 +314,7 @@ namespace
         {
             MobType& t = table[static_cast<size_t>(MobId::Spider)];
             t.id = MobId::Spider;
+            t.experience = 5;
             t.voice = Sound::MobSpiderSay;
             t.hurtVoice = Sound::MobSpiderHurt;
             t.deathVoice = Sound::MobSpiderDeath;
@@ -344,6 +352,7 @@ namespace
             // that needs no new machinery.
             MobType& t = table[static_cast<size_t>(MobId::Enderman)];
             t.id = MobId::Enderman;
+            t.experience = 5;
             t.voice = Sound::MobEndermanSay;
             t.hurtVoice = Sound::MobEndermanHurt;
             t.deathVoice = Sound::MobEndermanDeath;
@@ -379,6 +388,7 @@ namespace
             // one, and it belongs down there rather than in a meadow.
             MobType& t = table[static_cast<size_t>(MobId::ZombiePigman)];
             t.id = MobId::ZombiePigman;
+            t.experience = 5;
             t.voice = Sound::MobPigmanSay;
             t.hurtVoice = Sound::MobPigmanHurt;
             t.deathVoice = Sound::MobPigmanDeath;

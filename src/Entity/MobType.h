@@ -118,6 +118,11 @@ struct MobType
     StackId secondDrop = Blocks::Air;
     int secondDropCount = 0;
 
+    // What killing one is worth. Minecraft pays far more for the things
+    // that fight back than for livestock, which is most of the reason
+    // to go looking for a fight at all.
+    int experience = 0;
+
     // Animals follow and breed for this; zero means nothing tempts it.
     StackId breedingFood = Blocks::Air;
 

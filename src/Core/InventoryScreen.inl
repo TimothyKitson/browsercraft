@@ -669,6 +669,19 @@ void Application::tickFurnaces(float deltaTime)
         state.cooked = running.cooked;
 
         if (state.lit() != wasLit) setFurnaceLit(m_furnaceBlock, state.lit());
+
+        // Experience for what has been taken out since last frame.
+        const ItemStack& made = m_inventory.slot(Inventory::FURNACE_OUTPUT);
+        const int left = (!made.empty() && made.id == m_furnaceOutputId) ? made.count : 0;
+        if (m_furnaceOutputId != Blocks::Air && left < m_furnaceOutputCount)
+        {
+            const int taken = m_furnaceOutputCount - left;
+            if (m_player.addExperienceHundredths(
+                    taken * Experience::smeltingHundredths(m_furnaceOutputId)))
+                m_audio.play(Sound::Pickup, 0.7f, 0.55f);
+        }
+        m_furnaceOutputId = made.empty() ? Blocks::Air : made.id;
+        m_furnaceOutputCount = made.empty() ? 0 : made.count;
     }
 
     const glm::ivec3* open = m_furnaceOpen ? &m_furnaceBlock : nullptr;

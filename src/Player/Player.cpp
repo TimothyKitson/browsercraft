@@ -1,4 +1,5 @@
 #include "Player.h"
+#include "Game/Experience.h"
 #include "Game/Armour.h"
 #include "World/World.h"
 #include <algorithm>
@@ -305,6 +306,10 @@ void Player::respawn(glm::vec3 feetPosition)
     health = MAX_HEALTH;
     hunger = MAX_HUNGER;
     saturation = 5.0f;
+    // Everything you had earned, gone. What the corpse leaves behind is
+    // spawned by whoever handles the death, before this is called.
+    experience = 0;
+    experienceOwedHundredths = 0;
     m_exhaustion = 0.0f;
     m_starveTimer = 0.0f;
     m_falling = false;
@@ -430,4 +435,22 @@ void Player::update(float deltaTime, const World& world, const Controls& control
             addExhaustion(distance * (sprinting ? 0.1f : sneaking ? 0.0f : 0.01f));
     }
     m_lastPosition = position;
+}
+
+bool Player::addExperience(int amount)
+{
+    if (amount <= 0) return false;
+    const int before = Experience::levelFor(experience);
+    experience += amount;
+    return Experience::levelFor(experience) > before;
+}
+
+bool Player::addExperienceHundredths(int hundredths)
+{
+    if (hundredths <= 0) return false;
+    experienceOwedHundredths += hundredths;
+    const int whole = experienceOwedHundredths / 100;
+    if (whole <= 0) return false;
+    experienceOwedHundredths -= whole * 100;
+    return addExperience(whole);
 }

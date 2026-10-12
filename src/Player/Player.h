@@ -85,6 +85,23 @@ public:
     int hunger = MAX_HUNGER;
     float saturation = 5.0f;
 
+    // Experience, as one running total rather than a level and a bar:
+    // the level and the bar are both functions of it, so keeping the
+    // three in step is a job that cannot be got wrong if there is only
+    // one of them. Experience.h turns it into either.
+    //
+    // Smelting pays out in fractions of a point, so what the furnace
+    // owes is kept here in hundredths until it crosses a whole one.
+    int experience = 0;
+    int experienceOwedHundredths = 0;
+
+    // Awards experience, and returns true if that crossed into a new
+    // level, which is what the level-up chime hangs off.
+    bool addExperience(int amount);
+
+    // Pays in hundredths of a point, holding back the remainder.
+    bool addExperienceHundredths(int hundredths);
+
     bool creative() const { return modeIsCreative(mode); }
 
     // True for the one update in which the player left the ground under

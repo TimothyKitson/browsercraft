@@ -129,7 +129,11 @@ namespace Tiles
         // item icon squashed down to nothing on it.
         ArrowInFlight = ItemArmourEnd,
 
-        ItemTileEnd = ArrowInFlight + 1
+        // An experience orb. Not an item -- it never sits in a slot --
+        // but it is a sprite drawn in the world, so it lives with them.
+        ExperienceOrb = ArrowInFlight + 1,
+
+        ItemTileEnd = ExperienceOrb + 1
     };
 
     // Ten progressively more broken overlay tiles for the mining animation.

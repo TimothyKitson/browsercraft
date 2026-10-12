@@ -17,6 +17,7 @@
 #include "Player/Inventory.h"
 #include "Audio/AudioEngine.h"
 #include "Entity/DroppedItems.h"
+#include "Entity/ExperienceOrbs.h"
 #include "Entity/Particles.h"
 #include "Entity/PlayerSkin.h"
 #include "Entity/PlayerModel.h"
@@ -151,6 +152,14 @@ private:
     Player m_player;
     Inventory m_inventory;
     DroppedItems m_drops;
+    ExperienceOrbs m_orbs;
+
+    // What the open furnace's output slot held last frame. Smelting is
+    // paid for when the item leaves the slot, as in Minecraft, and
+    // watching the count fall catches every route out of it -- click,
+    // shift-click or drag -- without each needing its own hook.
+    StackId m_furnaceOutputId = Blocks::Air;
+    int m_furnaceOutputCount = 0;
     Particles m_particles;
     // One texture per character in the picker. Painting eight 64x32
     // skins costs well under a millisecond, so the whole library is kept
@@ -445,6 +454,7 @@ private:
     void renderHearts(float x, float y);
     void renderArmour(float x, float y);
     void renderFood(float rightX, float y);
+    void renderExperience(float x, float y, float width);
     void renderEatProgress(float cx, float cy);
     void handleEating(float deltaTime);
 

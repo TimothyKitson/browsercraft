@@ -7,6 +7,7 @@
 #include "Game/Food.h"
 #include "Game/Tools.h"
 #include "Game/Armour.h"
+#include "Game/Experience.h"
 #include "Game/Sleep.h"
 #include "Game/Explosion.h"
 #include "Game/Portal.h"
@@ -302,6 +303,7 @@ void Application::startWorld(GameMode mode, bool freshWorld)
 
     // Reset everything that belongs to a run.
     m_drops.clear();
+    m_orbs.clear();
     m_particles.clear();
     m_entities.clear();
     m_animation.clear();
@@ -355,6 +357,7 @@ void Application::startJoinedWorld()
     m_joinedWorldBuilt = true;
 
     m_drops.clear();
+    m_orbs.clear();
     m_particles.clear();
     m_entities.clear();
     m_animation.clear();
@@ -406,6 +409,7 @@ void Application::travelTo(Dimension dimension)
     m_worldReady = false;
     m_placeOnSurface = true;
     m_drops.clear();
+    m_orbs.clear();
     m_particles.clear();
 
     m_world = std::make_unique<World>(m_world->seed(), m_savePath,
@@ -440,6 +444,7 @@ void Application::quitToTitle()
         m_world.reset();
     }
     m_drops.clear();
+    m_orbs.clear();
     m_particles.clear();
     m_entities.clear();
     m_animation.clear();
@@ -553,6 +558,8 @@ void Application::loadLevel()
         m_timeOfDay = state.timeOfDay;
         m_player.health = state.health;
         m_player.hunger = state.hunger;
+        m_player.experience = state.experience;
+        m_player.experienceOwedHundredths = state.experienceOwedHundredths;
         m_player.saturation = state.saturation;
         m_allowCheats = state.cheats;
         m_gameMode = static_cast<GameMode>(state.gameMode);
@@ -595,6 +602,8 @@ void Application::saveLevel()
     state.timeOfDay = m_timeOfDay;
     state.health = m_player.health;
     state.hunger = m_player.hunger;
+    state.experience = m_player.experience;
+    state.experienceOwedHundredths = m_player.experienceOwedHundredths;
     state.saturation = m_player.saturation;
     state.cheats = m_allowCheats;
     state.gameMode = static_cast<uint8_t>(m_gameMode);
@@ -1036,6 +1045,15 @@ bool Application::frame()
         if (playing())
         {
             m_drops.update(deltaTime, *m_world, m_player, m_inventory, m_audio);
+
+            // Orbs report what they were worth rather than touching the
+            // player, so the one place experience is ever added stays
+            // the one place the level-up chime is decided.
+            if (const int gained = m_orbs.update(deltaTime, *m_world, m_player, m_audio))
+            {
+                if (m_player.addExperience(gained))
+                    m_audio.play(Sound::Pickup, 0.7f, 0.55f);
+            }
             m_particles.update(deltaTime, *m_world);
             updateArrows(deltaTime);
             updateFuses(deltaTime);
@@ -1087,6 +1105,14 @@ bool Application::frame()
         // Death handling.
         if (playing() && m_player.health <= 0)
         {
+            // Minecraft lets you drop what amounts to seven levels'
+            // worth and keeps the rest, so dying deep into the curve
+            // costs far more than dying early. respawn() clears the
+            // total, so this has to happen first.
+            const int dropped = std::min(7 * Experience::levelFor(m_player.experience), 100);
+            if (dropped > 0)
+                m_orbs.spawnValue(m_player.position + glm::vec3(0.0f, 0.6f, 0.0f), dropped);
+
             m_screen = Screen::Dead;
             m_hardcoreDeath = modeIsHardcore(m_gameMode);
             if (m_inventoryOpen) closeInventory();
@@ -1121,7 +1147,7 @@ bool Application::frame()
             m_startupScreen == "bucket" || m_startupScreen == "ladder" ||
             m_startupScreen == "stairs" || m_startupScreen == "fence" ||
             m_startupScreen == "door" || m_startupScreen == "hand" ||
-            m_startupScreen == "handempty")
+            m_startupScreen == "handempty" || m_startupScreen == "xp")
         {
             // Dev aid: open the inventory with something in it, so the
             // screenshot shows a real grid rather than 36 empty boxes.
@@ -1139,6 +1165,7 @@ bool Application::frame()
                                   m_startupScreen != "door" &&
                                   m_startupScreen != "hand" &&
                                   m_startupScreen != "handempty" &&
+                                  m_startupScreen != "xp" &&
                                   m_startupScreen != "tnt" &&
                                   m_startupScreen != "portal" &&
                                   m_startupScreen != "nether";
@@ -1195,6 +1222,24 @@ bool Application::frame()
                 for (int f = 0; f < 4; ++f)
                     m_world->setBlock(bx + f - 1, by, bz + 2,
                                       stairsFacing(Blocks::CobbleStairsNorth, f));
+            }
+
+            if (m_startupScreen == "xp")
+            {
+                // Enough for a two-figure level, so the bar's numerals
+                // and its fill are both on show, plus a scatter of orbs
+                // out of reach of the player so they are not swept up
+                // before the shot is taken.
+                m_player.experience = Experience::totalForLevel(27) +
+                                      Experience::toNextLevel(27) / 3;
+                for (int i = 0; i < 9; ++i)
+                {
+                    const glm::vec3 where = m_player.position +
+                                            m_camera.front * (7.0f + i * 0.7f) +
+                                            m_camera.right * (static_cast<float>(i % 3) - 1.0f) * 1.1f +
+                                            glm::vec3(0.0f, 1.0f, 0.0f);
+                    m_orbs.spawnOne(where, Experience::ORB_VALUES[10 - i]);
+                }
             }
 
             if (m_startupScreen == "hand" || m_startupScreen == "handempty")
@@ -1624,6 +1669,8 @@ void Application::applyMenuAction()
             m_world.reset();
             deleteSavedWorld();
             m_drops.clear();
+            m_orbs.clear();
+    m_orbs.clear();
             m_particles.clear();
             m_hardcoreDeath = false;
             m_screen = Screen::Title;
@@ -2154,6 +2201,21 @@ void Application::updateMining(float deltaTime)
                 }
 
                 if (drop != Blocks::Air) m_drops.spawnFromBrokenBlock(hit.block, drop);
+
+                // Ore you can use straight away pays out at the seam.
+                // The ores you have to smelt pay at the furnace instead,
+                // so iron and gold give nothing here -- otherwise they
+                // would be paid for twice.
+                const Experience::Range worth = Experience::forMining(id);
+                if (worth.any())
+                {
+                    const uint32_t roll = static_cast<uint32_t>(
+                        hit.block.x * 19349663 ^ hit.block.y * 83492791 ^
+                        hit.block.z * 73856093 ^ static_cast<int>(m_elapsedSeconds * 613.0f));
+                    const int span = worth.high - worth.low + 1;
+                    m_orbs.spawnValue(glm::vec3(hit.block) + glm::vec3(0.5f),
+                                      worth.low + static_cast<int>(roll % static_cast<uint32_t>(span)));
+                }
             }
 
             // A door is one thing in two cells, so breaking either half
@@ -3167,6 +3229,7 @@ void Application::renderWorld()
 
     // Dropped items and particles are opaque, so they join the terrain pass.
     m_drops.render(m_chunkShader, *m_world);
+    m_orbs.render(m_chunkShader, *m_world);
     m_arrows.render(m_chunkShader, m_camera, m_atlas, *m_world);
     m_particles.render(m_chunkShader, *m_world, camera.right, camera.up);
 
@@ -3657,6 +3720,12 @@ void Application::updateMobs(float deltaTime)
 
         for (int i = 0; i < type.dropCount; ++i) m_drops.spawn(where, type.drop, 1);
         for (int i = 0; i < type.secondDropCount; ++i) m_drops.spawn(where, type.secondDrop, 1);
+
+        // A baby is worth nothing, the way it is in Minecraft -- else
+        // penning animals and killing the lambs is the best experience
+        // in the game.
+        if (type.experience > 0 && !death.baby)
+            m_orbs.spawnValue(where, type.experience);
     }
 
     for (const glm::vec3& born : m_entities.drainBirths())
@@ -3774,6 +3843,42 @@ void Application::renderFood(float rightX, float y)
     }
 }
 
+// The experience bar, across the top of the hotbar, with the level
+// standing on it. Drawn as plain quads rather than a sprite: the bar is
+// a flat green fill in Minecraft too, and a texture for it would be one
+// more thing a resource pack has to supply before the HUD looks right.
+void Application::renderExperience(float x, float y, float width)
+{
+    const int level = Experience::levelFor(m_player.experience);
+    const float fraction = std::clamp(Experience::progress(m_player.experience), 0.0f, 1.0f);
+
+    constexpr float HEIGHT = 10.0f;
+
+    m_ui.quad(x - 1.0f, y - 1.0f, width + 2.0f, HEIGHT + 2.0f,
+              glm::vec4(0.0f, 0.0f, 0.0f, 0.65f));
+    m_ui.quad(x, y, width, HEIGHT, glm::vec4(0.16f, 0.16f, 0.16f, 0.9f));
+    if (fraction > 0.0f)
+        m_ui.quad(x, y, width * fraction, HEIGHT, glm::vec4(0.47f, 0.84f, 0.15f, 1.0f));
+
+    // Level nought is not drawn at all, so an untouched HUD looks the
+    // way it did before there was any experience in the game.
+    if (level <= 0) return;
+
+    const std::string text = std::to_string(level);
+    const float scale = 2.2f;
+    const float textX = x + width * 0.5f - UIRenderer::textWidth(text, scale) * 0.5f;
+    const float textY = y - UIRenderer::textHeight(scale) * 0.5f + HEIGHT * 0.5f;
+
+    // Outlined in black on all four sides, the way Minecraft does it:
+    // bright green on a bright green bar is unreadable at a glance.
+    const glm::vec4 outline(0.0f, 0.0f, 0.0f, 1.0f);
+    for (int dx = -1; dx <= 1; ++dx)
+        for (int dy = -1; dy <= 1; ++dy)
+            if (dx || dy)
+                m_ui.text(text, textX + dx * 2.0f, textY + dy * 2.0f, scale, outline);
+    m_ui.text(text, textX, textY, scale, glm::vec4(0.49f, 0.98f, 0.24f, 1.0f));
+}
+
 void Application::renderEatProgress(float cx, float cy)
 {
     if (m_eatTimer <= 0.0f) return;
@@ -3867,15 +3972,20 @@ void Application::renderHud()
     if (!held.empty())
     {
         const std::string name = displayName(held.id);
-        m_ui.textWithShadow(name, cx - UIRenderer::textWidth(name, 2.2f) * 0.5f, barY - 58.0f, 2.2f, TEXT_COLOR);
+        // Clear of the armour row, which is the highest thing on the
+        // left: the name is centred, and at 2.2 it is wide enough to
+        // reach the hearts if it sits any lower.
+        m_ui.textWithShadow(name, cx - UIRenderer::textWidth(name, 2.2f) * 0.5f, barY - 98.0f, 2.2f, TEXT_COLOR);
     }
 
     // Hearts are hidden in creative, like Minecraft.
     if (!m_player.creative())
     {
-        renderHearts(barX + SLOT_GAP, barY - 32.0f);
-        renderArmour(barX + SLOT_GAP, barY - 54.0f);
-        renderFood(barX + barWidth - SLOT_GAP, barY - 32.0f);
+        renderExperience(barX + SLOT_GAP, barY - 24.0f,
+                         barWidth - SLOT_GAP * 2.0f);
+        renderHearts(barX + SLOT_GAP, barY - 52.0f);
+        renderArmour(barX + SLOT_GAP, barY - 74.0f);
+        renderFood(barX + barWidth - SLOT_GAP, barY - 52.0f);
         renderEatProgress(cx, cy);
     }
 

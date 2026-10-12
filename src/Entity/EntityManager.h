@@ -41,6 +41,9 @@ public:
     {
         MobId type = MobId::Sheep;
         glm::vec3 position{ 0.0f };
+        // Recorded here rather than looked up later: by the time the
+        // death is drained the mob it belonged to may already be gone.
+        bool baby = false;
     };
     std::vector<Death> drainDeaths();
 

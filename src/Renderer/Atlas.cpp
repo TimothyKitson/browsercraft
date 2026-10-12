@@ -1979,6 +1979,50 @@ namespace
         }
     }
 
+    // An experience orb: a round green mote, pale at the top left where
+    // the light falls and deepening to the far edge, with a white
+    // highlight. Drawn as a disc rather than Minecraft's dithered blob,
+    // because at this tile size dithering turns to mush.
+    void paintExperienceOrb(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+
+        const int n = Tile::N;
+        const float mid = (n - 1) * 0.5f;
+        const float radius = n * 0.46f;
+
+        for (int y = 0; y < n; ++y)
+        {
+            for (int x = 0; x < n; ++x)
+            {
+                const float dx = (x - mid) / radius;
+                const float dy = (y - mid) / radius;
+                const float d = std::sqrt(dx * dx + dy * dy);
+                if (d > 1.0f) continue;
+
+                // Lit from the top left, the same corner everything
+                // else in the atlas is lit from.
+                const float lit = std::clamp(1.0f - (dx * 0.45f + dy * 0.45f) - d * 0.35f,
+                                             0.0f, 1.0f);
+
+                Color c;
+                c.r = static_cast<unsigned char>(120 + 125 * lit);
+                c.g = static_cast<unsigned char>(190 + 65 * lit);
+                c.b = static_cast<unsigned char>(40 + 70 * lit);
+                c.a = 255;
+                t.set(x, y, c);
+            }
+        }
+
+        // A hard white glint, so it reads as something that shines
+        // rather than a flat green pip.
+        const int gx = static_cast<int>(mid - radius * 0.38f);
+        const int gy = static_cast<int>(mid - radius * 0.38f);
+        t.set(gx, gy, Color{ 255, 255, 230 });
+        t.set(gx + 1, gy, Color{ 240, 255, 200 });
+        t.set(gx, gy + 1, Color{ 240, 255, 200 });
+    }
+
     void paintItemStick(Tile& t)
     {
         t.fill(Color{ 0, 0, 0, 0 });
@@ -2149,6 +2193,7 @@ namespace
         { Tiles::ItemBow,       paintItemBow },
         { Tiles::ItemArrow,     paintItemArrow },
         { Tiles::ArrowInFlight, paintArrowInFlight },
+        { Tiles::ExperienceOrb, paintExperienceOrb },
         { Tiles::ItemDiamond,   paintItemDiamond },
         { Tiles::ItemIronIngot, paintItemIronIngot },
         { Tiles::ItemGoldIngot, paintItemGoldIngot },

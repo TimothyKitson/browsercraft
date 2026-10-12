@@ -20,6 +20,7 @@
 #include "Game/Armour.h"
 #include "Game/Sleep.h"
 #include "Game/Explosion.h"
+#include "Game/Experience.h"
 #include "Game/Portal.h"
 #include "World/Furnaces.h"
 #include "World/Chests.h"
@@ -2710,6 +2711,159 @@ namespace
         check(!doomed.alive(), "a big enough blow kills");
         check(doomed.sounds().size() == 1, "and dying is always heard");
     }
+
+    // --- experience ----------------------------------------------------
+
+    void testExperience()
+    {
+        section("experience: the level curve");
+
+        check(Experience::toNextLevel(0) == 7, "level 0 costs 7");
+        check(Experience::toNextLevel(15) == 37, "level 15 costs 37");
+        check(Experience::toNextLevel(16) == 42, "level 16 costs 42, the second bracket");
+        check(Experience::toNextLevel(30) == 112, "level 30 costs 112");
+        check(Experience::toNextLevel(31) == 121, "level 31 costs 121, the third bracket");
+
+        // Totals Minecraft is known to use, which is what pins the
+        // constants: a bracket written with the wrong offset still
+        // climbs smoothly and is only caught by a number like these.
+        check(Experience::totalForLevel(16) == 352, "level 16 at 352");
+        check(Experience::totalForLevel(17) == 394, "level 17 at 394");
+        check(Experience::totalForLevel(30) == 1395, "level 30 at 1395");
+        check(Experience::totalForLevel(31) == 1507, "level 31 at 1507");
+        check(Experience::totalForLevel(32) == 1628, "level 32 at 1628");
+
+        // The closed form has to agree with adding the costs up one at a
+        // time, across both joins. This is the check that catches a
+        // bracket which is internally consistent but bolted on at the
+        // wrong height.
+        int running = 0;
+        bool matched = true;
+        for (int level = 0; level < 200; ++level)
+        {
+            if (Experience::totalForLevel(level) != running) matched = false;
+            running += Experience::toNextLevel(level);
+        }
+        check(matched, "closed form matches the running total for 200 levels");
+
+        bool climbing = true;
+        for (int level = 1; level < 200; ++level)
+            if (Experience::toNextLevel(level) < Experience::toNextLevel(level - 1))
+                climbing = false;
+        check(climbing, "each level costs at least as much as the last");
+
+        section("experience: totals back to levels");
+
+        bool roundTrip = true;
+        bool justUnder = true;
+        for (int level = 0; level < 200; ++level)
+        {
+            if (Experience::levelFor(Experience::totalForLevel(level)) != level)
+                roundTrip = false;
+            if (level > 0 &&
+                Experience::levelFor(Experience::totalForLevel(level) - 1) != level - 1)
+                justUnder = false;
+        }
+        check(roundTrip, "every total reads back as its own level");
+        check(justUnder, "one point short of a level is the level below");
+
+        check(Experience::levelFor(0) == 0, "nothing earned is level 0");
+        check(Experience::levelFor(-5) == 0, "a negative total is level 0");
+
+        check(Experience::progress(Experience::totalForLevel(5)) == 0.0f,
+              "the bar is empty at a level boundary");
+        bool inRange = true;
+        for (int total = 0; total < 3000; ++total)
+        {
+            const float p = Experience::progress(total);
+            if (p < 0.0f || p >= 1.0f) inRange = false;
+        }
+        check(inRange, "the bar stays between empty and full for 3000 points");
+
+        section("experience: orbs");
+
+        check(Experience::orbValue(1) == 1, "one point is one orb of one");
+        check(Experience::orbValue(6) == 3, "six splits off a three");
+        check(Experience::orbValue(2477) == 2477, "the largest orb");
+        check(Experience::orbValue(0) == 0, "nothing makes no orb");
+
+        bool exact = true;
+        bool legal = true;
+        bool bounded = true;
+        for (int worth = 1; worth <= 4000; ++worth)
+        {
+            const std::vector<int> orbs = Experience::splitIntoOrbs(worth);
+            int sum = 0;
+            for (int one : orbs)
+            {
+                sum += one;
+                bool known = false;
+                for (int value : Experience::ORB_VALUES)
+                    if (one == value) known = true;
+                if (!known) legal = false;
+            }
+            if (sum != worth) exact = false;
+            if (orbs.size() > 16) bounded = false;
+        }
+        check(exact, "orbs add back up to the award, for every award to 4000");
+        check(legal, "every orb is one of the sizes orbs come in");
+        check(bounded, "no award scatters into more than sixteen orbs");
+        check(Experience::splitIntoOrbs(0).empty(), "nothing drops no orbs");
+        check(Experience::splitIntoOrbs(-3).empty(), "a negative award drops no orbs");
+
+        section("experience: what pays out");
+
+        // Ore you can use pays at the seam; ore you must smelt pays at
+        // the furnace. Paying at both would be paying twice.
+        check(Experience::forMining(Blocks::CoalOre).any(), "coal pays when mined");
+        check(Experience::forMining(Blocks::DiamondOre).any(), "diamond pays when mined");
+        check(!Experience::forMining(Blocks::IronOre).any(), "iron does not pay when mined");
+        check(!Experience::forMining(Blocks::GoldOre).any(), "gold does not pay when mined");
+        check(!Experience::forMining(Blocks::Stone).any(), "stone pays nothing");
+        check(Experience::smeltingHundredths(Items::IronIngot) > 0, "iron pays at the furnace");
+        check(Experience::smeltingHundredths(Items::GoldIngot) > 0, "gold pays at the furnace");
+        check(Experience::smeltingHundredths(Blocks::Dirt) == 0, "dirt pays nothing");
+
+        bool ranges = true;
+        for (int id = 0; id < 256; ++id)
+        {
+            const Experience::Range r = Experience::forMining(static_cast<StackId>(id));
+            if (r.low > r.high || r.low < 0) ranges = false;
+        }
+        check(ranges, "every mining range is the right way round");
+
+        section("experience: the player's running total");
+
+        Player player(glm::vec3(0.0f));
+        check(player.experience == 0, "a new player has none");
+        check(!player.addExperience(0), "nothing awarded is not a level");
+        check(player.experience == 0, "and adds nothing");
+
+        check(player.addExperience(7), "seven points is the first level");
+        check(Experience::levelFor(player.experience) == 1, "and reads as level 1");
+        check(!player.addExperience(1), "one more is not another level");
+
+        // The furnace pays fractions, which must not round away: ten
+        // iron ingots at seven tenths of a point each is seven points.
+        Player smelter(glm::vec3(0.0f));
+        for (int i = 0; i < 10; ++i) smelter.addExperienceHundredths(70);
+        check(smelter.experience == 7, "ten ingots at 0.7 pay exactly 7");
+        check(smelter.experienceOwedHundredths == 0, "with nothing left owing");
+
+        Player part(glm::vec3(0.0f));
+        check(!part.addExperienceHundredths(35), "a third of a point is no point yet");
+        check(part.experience == 0, "and is not paid early");
+        part.addExperienceHundredths(35);
+        part.addExperienceHundredths(35);
+        check(part.experience == 1, "three of them cross a whole point");
+
+        Player died(glm::vec3(0.0f));
+        died.addExperience(500);
+        died.addExperienceHundredths(50);
+        died.respawn(glm::vec3(0.0f));
+        check(died.experience == 0, "dying costs everything earned");
+        check(died.experienceOwedHundredths == 0, "and everything owed");
+    }
 }
 
 int runSelfTest()
@@ -2761,6 +2915,7 @@ int runSelfTest()
     testSleep();
     testChestStore();
     testLevelRoundTrip();
+    testExperience();
 
     std::printf("\n%d checks, %d failed\n", g_checks, g_failures);
     return g_failures == 0 ? 0 : 1;

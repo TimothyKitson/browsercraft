@@ -151,6 +151,9 @@ void WorldSave::saveLevel(const std::string& saveDirectory, const LevelState& st
         write(out, slots);
         for (const auto& slot : c.slots) { write(out, slot.first); write(out, slot.second); }
     }
+
+    write(out, state.experience);
+    write(out, state.experienceOwedHundredths);
 }
 
 bool WorldSave::loadLevel(const std::string& saveDirectory, LevelState& out)
@@ -253,6 +256,14 @@ bool WorldSave::loadLevel(const std::string& saveDirectory, LevelState& out)
                                 }
                                 if (!whole) break;
                                 out.chests.push_back(c);
+                            }
+
+                            int experience = out.experience;
+                            int owed = out.experienceOwedHundredths;
+                            if (read(in, experience) && read(in, owed))
+                            {
+                                out.experience = experience;
+                                out.experienceOwedHundredths = owed;
                             }
                         }
                     }

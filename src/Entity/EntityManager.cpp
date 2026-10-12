@@ -178,7 +178,7 @@ void EntityManager::update(float deltaTime, const World& world,
         // Caught here rather than at removal: the corpse lingers, and
         // whatever it drops belongs where it fell, not where it stopped.
         if (mob.takeDeathReport())
-            m_deaths.push_back(Death{ mob.typeId(), mob.position() });
+            m_deaths.push_back(Death{ mob.typeId(), mob.position(), mob.baby() });
     }
 
     // Drop anything dead-and-done, or far enough off that nobody will
