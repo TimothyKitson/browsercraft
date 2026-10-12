@@ -2135,9 +2135,10 @@ namespace
         // hold, which is what a careless retune would break.
         const WorldGen generator(4242u);
 
-        long long coal = 0, iron = 0, gold = 0, diamond = 0, stone = 0;
+        long long coal = 0, iron = 0, gold = 0, diamond = 0, emerald = 0, stone = 0;
         int deepestGold = 999, deepestDiamond = 999;
         int highestGold = -1, highestDiamond = -1;
+        int highestEmerald = -1;
 
         for (int cz = 0; cz < 2; ++cz)
             for (int cx = 0; cx < 2; ++cx)
@@ -2164,6 +2165,10 @@ namespace
                                     deepestDiamond = std::min(deepestDiamond, y);
                                     highestDiamond = std::max(highestDiamond, y);
                                     break;
+                                case Blocks::EmeraldOre:
+                                    ++emerald; ++stone;
+                                    highestEmerald = std::max(highestEmerald, y);
+                                    break;
                                 default: break;
                             }
                         }
@@ -2172,6 +2177,16 @@ namespace
         check(stone > 10000, "there is stone to put ore in");
         check(coal > 0 && iron > 0, "coal and iron are there to be found");
         check(diamond > 0, "and so is diamond, somewhere");
+
+        // Emerald is the rarest thing in the ground. Four chunks is a
+        // small sample and it comes in ones rather than seams, so the
+        // check is that it never outnumbers diamond rather than that
+        // any turned up at all.
+        check(emerald <= diamond,
+              "emerald is rarer than diamond (" + std::to_string(emerald) + " to " +
+                  std::to_string(diamond) + ")");
+        check(highestEmerald < 48,
+              "and stays deep, like the rest of what is worth digging for");
 
         // The ladder the whole tool progression rests on.
         check(coal > iron, "coal is commoner than iron");
@@ -2664,7 +2679,17 @@ namespace
         wrote.gameMode = 1;
         wrote.selectedSlot = 5;
         wrote.spawn = glm::vec3(-8.5f, 66.0f, 32.5f);
+        wrote.experience = 1211;
+        wrote.experienceOwedHundredths = 45;
+        wrote.air = 6.25f;
         wrote.inventory.emplace_back(static_cast<uint16_t>(Blocks::Stone), 42);
+        wrote.inventory.emplace_back(static_cast<uint16_t>(Items::DiamondPickaxe), 1);
+        wrote.damage.push_back(0);
+        wrote.damage.push_back(137);
+        wrote.enchantments.push_back(0u);
+        wrote.enchantments.push_back(
+            Enchanting::withLevel(Enchanting::withLevel(0u, Enchanting::Kind::Efficiency, 5),
+                                  Enchanting::Kind::Unbreaking, 3));
 
         LevelState::SavedFurnace furnace;
         furnace.x = 3; furnace.y = 64; furnace.z = -7;
@@ -2687,6 +2712,26 @@ namespace
         check(WorldSave::loadLevel(dir, read), "a level written reads back");
         check(read.seed == wrote.seed, "with its seed");
         check(read.playerPosition == wrote.playerPosition, "and where you stood");
+
+        // Everything appended since the format was first written. Each
+        // of these went in at the end precisely so an older file still
+        // loads, and each is read back in the order it was written --
+        // one of them out of place and every field after it is garbage.
+        check(read.experience == wrote.experience, "and the experience earned");
+        check(read.experienceOwedHundredths == wrote.experienceOwedHundredths,
+              "and what the furnace still owed");
+        check(read.air == wrote.air, "and how much air was left");
+        check(read.damage.size() == wrote.damage.size(), "the wear on every slot");
+        check(read.damage.size() > 1 && read.damage[1] == 137, "with the right amount on it");
+        check(read.enchantments.size() == wrote.enchantments.size(),
+              "and the enchantments on every slot");
+        if (read.enchantments.size() > 1)
+        {
+            check(Enchanting::levelOf(read.enchantments[1], Enchanting::Kind::Efficiency) == 5,
+                  "efficiency five survives the round trip");
+            check(Enchanting::levelOf(read.enchantments[1], Enchanting::Kind::Unbreaking) == 3,
+                  "and unbreaking three alongside it");
+        }
         check(read.health == 14 && read.hunger == 11, "and how you were doing");
         check(read.cheats, "and whether the commands work");
 
@@ -2696,7 +2741,10 @@ namespace
         check(read.hasSpawn, "the spawn point comes back");
         check(read.spawn == wrote.spawn, "and is the one that was saved");
 
-        check(read.inventory.size() == 1, "the inventory comes back");
+        check(read.inventory.size() == wrote.inventory.size(), "the inventory comes back");
+        check(read.inventory.size() > 1 &&
+                  read.inventory[1].first == static_cast<uint16_t>(Items::DiamondPickaxe),
+              "with the pickaxe in the slot it was saved in");
 
         check(read.chests.size() == 1, "and the chest");
         if (read.chests.size() == 1)

@@ -37,6 +37,7 @@ namespace
             { "iron",    Blocks::IronOre },
             { "gold",    Blocks::GoldOre },
             { "diamond", Blocks::DiamondOre },
+            { "emerald", Blocks::EmeraldOre },
         };
         constexpr int ORE_COUNT = static_cast<int>(sizeof(ORES) / sizeof(ORES[0]));
 
