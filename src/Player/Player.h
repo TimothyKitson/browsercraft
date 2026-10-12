@@ -82,6 +82,12 @@ public:
     // the one place a blow is ever applied -- stays the one place the
     // rules about a blow live, and --selftest can set it directly.
     int armourPoints = 0;
+
+    // The best protection across the suit, totted up once a frame
+    // beside the points, and for the same reason: damage() is the one
+    // place a blow is applied, so it is the one place the rules about
+    // a blow should live.
+    uint32_t protection = 0;
     int hunger = MAX_HUNGER;
     float saturation = 5.0f;
 

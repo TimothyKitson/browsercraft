@@ -2151,6 +2151,67 @@ namespace
             t.set(x, (top + bottom) / 2, band);
     }
 
+    // The enchanting table's top: an open book on dark stone, which is
+    // the whole of what you see of it from standing height.
+    void paintEnchantTableTop(Tile& t)
+    {
+        const int n = Tile::N;
+        const Color stone{ 46, 38, 52 };
+        const Color stoneDark{ 34, 28, 40 };
+        const Color cover{ 150, 40, 40 };
+        const Color pages{ 236, 232, 214 };
+        const Color pagesDim{ 206, 200, 180 };
+
+        for (int y = 0; y < n; ++y)
+            for (int x = 0; x < n; ++x)
+                t.set(x, y, ((x * 3 + y * 5) % 11 == 0) ? stoneDark : stone);
+
+        // The book, open, lying across the middle.
+        const int top = n / 4;
+        const int bottom = (n * 3) / 4;
+        const int left = n / 6;
+        const int right = (n * 5) / 6;
+        const int spine = n / 2;
+
+        for (int y = top; y < bottom; ++y)
+            for (int x = left; x < right; ++x)
+                t.set(x, y, (x < spine) ? pages : pagesDim);
+
+        // The covers showing round the edges of the leaves.
+        for (int x = left; x < right; ++x)
+        {
+            t.set(x, top, cover);
+            t.set(x, bottom - 1, cover);
+        }
+        for (int y = top; y < bottom; ++y)
+        {
+            t.set(left, y, cover);
+            t.set(right - 1, y, cover);
+            t.set(spine, y, cover);
+        }
+    }
+
+    // Its side: obsidian below, a band of the same dark stone above.
+    void paintEnchantTableSide(Tile& t)
+    {
+        const int n = Tile::N;
+        const Color stone{ 46, 38, 52 };
+        const Color stoneDark{ 34, 28, 40 };
+        const Color rim{ 86, 70, 96 };
+
+        for (int y = 0; y < n; ++y)
+            for (int x = 0; x < n; ++x)
+                t.set(x, y, ((x * 5 + y * 3) % 9 == 0) ? stoneDark : stone);
+
+        // A lit rim along the top edge, so the slab reads as a table
+        // with a surface rather than a block cut in half.
+        for (int x = 0; x < n; ++x)
+        {
+            t.set(x, 0, rim);
+            t.set(x, 1, rim);
+        }
+    }
+
     void paintItemStick(Tile& t)
     {
         t.fill(Color{ 0, 0, 0, 0 });
@@ -2324,6 +2385,8 @@ namespace
         { Tiles::ExperienceOrb, paintExperienceOrb },
         { Tiles::SugarCane,     paintSugarCane },
         { Tiles::BookshelfSide, paintBookshelfSide },
+        { Tiles::EnchantTableTop,  paintEnchantTableTop },
+        { Tiles::EnchantTableSide, paintEnchantTableSide },
         { Tiles::ItemPaper,     paintItemPaper },
         { Tiles::ItemBook,      paintItemBook },
         { Tiles::ItemDiamond,   paintItemDiamond },

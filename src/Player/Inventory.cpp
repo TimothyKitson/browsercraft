@@ -3,6 +3,28 @@
 #include "Game/Crafting.h"
 #include <algorithm>
 
+int Inventory::addStack(const ItemStack& stack)
+{
+    if (stack.empty()) return 0;
+
+    // Anything carrying wear or enchantments is a thing that does not
+    // stack, so it wants a slot of its own rather than topping up one
+    // that is already there: merging would quietly throw away whichever
+    // of the two sets of enchantments lost.
+    if (stack.damage != 0 || stack.enchantments != 0 || maxStackOf(stack.id) == 1)
+    {
+        for (int i = 0; i < MAIN_SLOTS; ++i)
+        {
+            if (!m_slots[i].empty()) continue;
+            m_slots[i] = stack;
+            return 0;
+        }
+        return stack.count;
+    }
+
+    return add(stack.id, stack.count);
+}
+
 int Inventory::add(StackId id, int count)
 {
     if (id == Blocks::Air || count <= 0) return count;

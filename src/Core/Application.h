@@ -263,6 +263,16 @@ private:
     Furnaces m_furnaces;
     glm::ivec3 m_furnaceBlock{ 0 };
     bool m_furnaceOpen = false;
+
+    // The open enchanting table. The shelf count and the roll are taken
+    // once when it is opened and held until it shuts, so the three
+    // offers stand still while you look at them rather than flickering
+    // every frame -- and so walking a shelf into place while the screen
+    // is open does not change the price under your hand.
+    bool m_enchantOpen = false;
+    glm::ivec3 m_enchantBlock{ 0 };
+    int m_enchantShelves = 0;
+    uint32_t m_enchantRoll = 0;
     bool m_pendingFurnaceLight = false;
 
     // How far down the creative palette has been scrolled.
@@ -412,6 +422,12 @@ private:
 
     // Totting up what is worn, and spending it when a blow lands.
     int armourPoints() const;
+
+    // The strongest protection anywhere in the suit. Minecraft adds the
+    // four pieces together; this takes the best of them, which keeps a
+    // single enchanted helmet from being worth a whole suit and still
+    // rewards enchanting the rest.
+    uint32_t armourProtection() const;
     void wearArmour(int incoming);
     void wearOnSwing(StackId weapon);
     void openBench(const glm::ivec3& block);
@@ -442,6 +458,16 @@ private:
     void stowChest();
 
     void openFurnace(const glm::ivec3& block);
+    void openEnchantingTable(const glm::ivec3& block);
+    void stowEnchantingTable();
+
+    // Copies whatever an open container is holding back to where it
+    // belongs, without shutting it. Saving used to call the stow
+    // functions for this, which also close the thing -- so an autosave
+    // while you had a chest open put its contents away and left you
+    // staring at your own pockets.
+    void syncOpenContainers();
+    void buyEnchantment(int row);
     void stowFurnace();
     void tickFurnaces(float deltaTime);
     void setFurnaceLit(const glm::ivec3& block, bool lit);
@@ -533,7 +559,7 @@ private:
     // copies of the same geometry, and only one of them ever got fixed.
     struct SlotBox
     {
-        enum class Kind { Slot, Palette, Tab };
+        enum class Kind { Slot, Palette, Tab, Enchant };
         Kind kind = Kind::Slot;
         int index = 0;        // inventory slot, block id, or tab number
         float x = 0.0f, y = 0.0f, size = 0.0f;

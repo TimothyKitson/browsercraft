@@ -22,6 +22,7 @@
 #include "Game/Explosion.h"
 #include "Game/Experience.h"
 #include "Game/Cane.h"
+#include "Game/Enchanting.h"
 #include "Game/Portal.h"
 #include "World/Furnaces.h"
 #include "World/Chests.h"
@@ -3058,6 +3059,293 @@ namespace
         check(!Crafting::match(paper, 2).valid(), "paper needs a bench");
         check(!Crafting::match(shelf, 2).valid(), "a bookshelf needs a bench");
     }
+
+    // --- enchanting ------------------------------------------------------
+
+    struct FakeRoom : Enchanting::Surroundings
+    {
+        std::map<std::array<int, 3>, BlockId> cells;
+        void set(int x, int y, int z, BlockId id) { cells[{ x, y, z }] = id; }
+        BlockId at(int x, int y, int z) const override
+        {
+            const auto it = cells.find({ x, y, z });
+            return (it == cells.end()) ? ::Blocks::Air : it->second;
+        }
+    };
+
+    void testEnchanting()
+    {
+        using Enchanting::Kind;
+
+        section("enchanting: packing a set into one word");
+
+        // Every kind has to survive a round trip at every level it
+        // allows, or an item saved with one comes back with another.
+        bool roundTrip = true;
+        bool capped = true;
+        for (int k = 0; k < static_cast<int>(Kind::Count); ++k)
+        {
+            const Kind kind = static_cast<Kind>(k);
+            for (int level = 0; level <= Enchanting::maxLevel(kind); ++level)
+            {
+                const Enchanting::Set set = Enchanting::withLevel(0u, kind, level);
+                if (Enchanting::levelOf(set, kind) != level) roundTrip = false;
+            }
+            // Past its maximum it is held at the maximum, never wrapped
+            // round to something small by the three bits it lives in.
+            const Enchanting::Set over = Enchanting::withLevel(0u, kind, 99);
+            if (Enchanting::levelOf(over, kind) != Enchanting::maxLevel(kind)) capped = false;
+        }
+        check(roundTrip, "every kind reads back at every level it allows");
+        check(capped, "and is held at its maximum rather than wrapping");
+
+        // The kinds must not tread on each other's bits: all of them at
+        // once, and each still reads back its own level.
+        Enchanting::Set everything = 0u;
+        for (int k = 0; k < static_cast<int>(Kind::Count); ++k)
+            everything = Enchanting::withLevel(everything, static_cast<Kind>(k),
+                                               Enchanting::maxLevel(static_cast<Kind>(k)));
+        bool independent = true;
+        for (int k = 0; k < static_cast<int>(Kind::Count); ++k)
+        {
+            const Kind kind = static_cast<Kind>(k);
+            if (Enchanting::levelOf(everything, kind) != Enchanting::maxLevel(kind))
+                independent = false;
+        }
+        check(independent, "all of them at once, and none has trodden on another's bits");
+        check(Enchanting::listOf(everything).size() == static_cast<size_t>(Kind::Count),
+              "and all of them are listed");
+
+        // Setting one back to nothing leaves the rest alone.
+        const Enchanting::Set fewer = Enchanting::withLevel(everything, Kind::Fortune, 0);
+        check(!Enchanting::has(fewer, Kind::Fortune), "one can be taken off");
+        check(Enchanting::levelOf(fewer, Kind::Efficiency) ==
+                  Enchanting::maxLevel(Kind::Efficiency),
+              "without disturbing its neighbour");
+
+        check(!Enchanting::any(0u), "nothing enchanted is an empty set");
+
+        section("enchanting: what goes on what");
+
+        check(Enchanting::appliesTo(Kind::Efficiency, Items::DiamondPickaxe),
+              "efficiency goes on a pickaxe");
+        check(!Enchanting::appliesTo(Kind::Efficiency, Items::DiamondSword),
+              "but not on a sword");
+        check(Enchanting::appliesTo(Kind::Sharpness, Items::DiamondSword),
+              "sharpness goes on a sword");
+        check(!Enchanting::appliesTo(Kind::Sharpness, Items::DiamondHelmet),
+              "but not on a helmet");
+        check(Enchanting::appliesTo(Kind::Protection, Items::DiamondHelmet),
+              "protection goes on armour");
+        check(Enchanting::appliesTo(Kind::Power, Items::Bow), "power goes on a bow");
+        check(!Enchanting::appliesTo(Kind::Power, Items::DiamondSword),
+              "and nowhere else");
+        check(Enchanting::appliesTo(Kind::Unbreaking, Items::DiamondSword) &&
+                  Enchanting::appliesTo(Kind::Unbreaking, Items::DiamondHelmet) &&
+                  Enchanting::appliesTo(Kind::Unbreaking, Items::Bow),
+              "unbreaking goes on anything that wears out");
+        check(!Enchanting::appliesTo(Kind::Unbreaking, Blocks::Stone),
+              "but not on a block");
+
+        check(Enchanting::conflicts(Kind::Fortune, Kind::SilkTouch),
+              "fortune and silk touch cannot share an item");
+        check(Enchanting::conflicts(Kind::SilkTouch, Kind::Fortune),
+              "whichever way round they are asked");
+        check(!Enchanting::conflicts(Kind::Efficiency, Kind::Unbreaking),
+              "efficiency and unbreaking sit together happily");
+        check(!Enchanting::conflicts(Kind::Fortune, Kind::Fortune),
+              "and nothing conflicts with itself");
+
+        section("enchanting: how enchantable the metal is");
+
+        // Minecraft's own ranking, which is not the one anyone expects:
+        // gold takes the best by a distance and stone is the worst.
+        check(Enchanting::enchantability(Items::GoldPickaxe) >
+                  Enchanting::enchantability(Items::DiamondPickaxe),
+              "gold takes better enchantments than diamond");
+        check(Enchanting::enchantability(Items::StonePickaxe) <
+                  Enchanting::enchantability(Items::WoodPickaxe),
+              "and stone is worse than wood");
+        check(Enchanting::enchantability(Items::GoldHelmet) >
+                  Enchanting::enchantability(Items::IronHelmet),
+              "gold armour likewise");
+        check(Enchanting::enchantability(Blocks::Stone) == 0,
+              "a block takes none at all");
+
+        section("enchanting: counting the shelves");
+
+        // A table alone in a field.
+        FakeRoom bare;
+        check(Enchanting::shelvesAround(bare, 0, 64, 0) == 0, "a bare table has no shelves");
+
+        // One shelf two cells away, with the gap clear.
+        FakeRoom one;
+        one.set(2, 64, 0, ::Blocks::Bookshelf);
+        check(Enchanting::shelvesAround(one, 0, 64, 0) == 1, "one shelf two cells out counts");
+
+        // The same shelf with something standing in the gap.
+        FakeRoom blocked;
+        blocked.set(2, 64, 0, ::Blocks::Bookshelf);
+        blocked.set(1, 64, 0, ::Blocks::Stone);
+        check(Enchanting::shelvesAround(blocked, 0, 64, 0) == 0,
+              "a shelf behind a wall counts for nothing");
+
+        // Pushed right up against the table it is not on the ring at
+        // all, which is the rule people trip over.
+        FakeRoom touching;
+        touching.set(1, 64, 0, ::Blocks::Bookshelf);
+        check(Enchanting::shelvesAround(touching, 0, 64, 0) == 0,
+              "a shelf against the table is too close to count");
+
+        // A full wall of them, capped at fifteen.
+        FakeRoom library;
+        for (int dy = 0; dy <= 1; ++dy)
+            for (int dx = -2; dx <= 2; ++dx)
+                for (int dz = -2; dz <= 2; ++dz)
+                    if (std::max(std::abs(dx), std::abs(dz)) == 2)
+                        library.set(dx, 64 + dy, dz, ::Blocks::Bookshelf);
+        check(Enchanting::shelvesAround(library, 0, 64, 0) == Enchanting::MAX_SHELVES,
+              "a full library counts fifteen and no more");
+
+        section("enchanting: what the table offers");
+
+        // More shelves must never make the offers worse. Checked across
+        // many rolls, because one roll proves nothing about a formula
+        // with a random term in it.
+        bool climbs = true;
+        for (uint32_t roll = 0; roll < 200; ++roll)
+        {
+            const int poor = Enchanting::costForRow(2, 0, roll);
+            const int rich = Enchanting::costForRow(2, Enchanting::MAX_SHELVES, roll);
+            if (rich < poor) climbs = false;
+        }
+        check(climbs, "a full library never offers less than a bare table");
+
+        // The three rows run cheapest at the top to dearest at the
+        // bottom, whatever the roll.
+        bool ordered = true;
+        bool positive = true;
+        for (uint32_t roll = 0; roll < 200; ++roll)
+        {
+            const int a = Enchanting::costForRow(0, 8, roll);
+            const int b = Enchanting::costForRow(1, 8, roll);
+            const int c = Enchanting::costForRow(2, 8, roll);
+            if (!(a <= b && b <= c)) ordered = false;
+            if (a <= 0) positive = false;
+        }
+        check(ordered, "the three rows run cheap to dear, top to bottom");
+        check(positive, "and the cheapest still costs something");
+
+        // Whatever it offers for a thing must be something that can go
+        // on that thing. An offer of sharpness on a shovel would be
+        // bought and then do nothing at all.
+        bool sensible = true;
+        bool levelled = true;
+        const StackId SUBJECTS[] = { Items::DiamondPickaxe, Items::IronSword, Items::Bow,
+                                     Items::GoldHelmet, Items::WoodShovel, Items::StoneAxe };
+        for (StackId item : SUBJECTS)
+        {
+            for (uint32_t roll = 0; roll < 150; ++roll)
+            {
+                for (int row = 0; row < 3; ++row)
+                {
+                    const Enchanting::Offer offer =
+                        Enchanting::offerFor(row, 10, item, roll);
+                    if (!offer.valid()) continue;
+                    if (!Enchanting::appliesTo(offer.kind, item)) sensible = false;
+                    if (offer.level < 1 || offer.level > Enchanting::maxLevel(offer.kind))
+                        levelled = false;
+                }
+            }
+        }
+        check(sensible, "every offer is something that can go on the item offered for");
+        check(levelled, "and at a level that enchantment allows");
+
+        // Nothing is offered for a thing that cannot be enchanted.
+        bool nothingForBlocks = true;
+        for (int row = 0; row < 3; ++row)
+            for (uint32_t roll = 0; roll < 50; ++roll)
+                if (Enchanting::offerFor(row, 10, Blocks::Stone, roll).valid())
+                    nothingForBlocks = false;
+        check(nothingForBlocks, "a block is offered nothing");
+
+        section("enchanting: what they do");
+
+        check(Enchanting::digSpeedMultiplier(0u) == 1.0f, "an unenchanted tool digs at its own pace");
+        const Enchanting::Set eff1 = Enchanting::withLevel(0u, Kind::Efficiency, 1);
+        const Enchanting::Set eff5 = Enchanting::withLevel(0u, Kind::Efficiency, 5);
+        check(Enchanting::digSpeedMultiplier(eff1) > 1.0f, "efficiency digs faster");
+        check(Enchanting::digSpeedMultiplier(eff5) >
+                  Enchanting::digSpeedMultiplier(eff1),
+              "and faster still at five");
+
+        // Unbreaking skips wear rather than adding durability, so over
+        // many uses a level-three tool should take roughly a quarter of
+        // the hits. Counted rather than assumed.
+        const Enchanting::Set unb3 = Enchanting::withLevel(0u, Kind::Unbreaking, 3);
+        int plainWear = 0, enchantedWear = 0;
+        for (uint32_t i = 0; i < 4000; ++i)
+        {
+            if (Enchanting::wearsThisTime(0u, i)) ++plainWear;
+            if (Enchanting::wearsThisTime(unb3, i)) ++enchantedWear;
+        }
+        check(plainWear == 4000, "an unenchanted tool wears every single time");
+        check(enchantedWear > 700 && enchantedWear < 1300,
+              "unbreaking three wears about a quarter as often, " +
+                  std::to_string(enchantedWear) + " in 4000");
+
+        // Fortune never gives less than one, or mining would sometimes
+        // destroy the ore outright.
+        const Enchanting::Set fort3 = Enchanting::withLevel(0u, Kind::Fortune, 3);
+        bool neverNothing = true;
+        int total = 0;
+        for (uint32_t i = 0; i < 2000; ++i)
+        {
+            const int got = Enchanting::fortuneDrops(fort3, i);
+            if (got < 1) neverNothing = false;
+            total += got;
+        }
+        check(neverNothing, "fortune never turns a seam into nothing");
+        check(total > 2000, "and gives more than mining it bare would");
+        check(Enchanting::fortuneDrops(0u, 7u) == 1, "without it a seam gives one");
+
+        check(Enchanting::sharpnessBonus(0u) == 0, "a plain sword gets no bonus");
+        check(Enchanting::sharpnessBonus(Enchanting::withLevel(0u, Kind::Sharpness, 5)) >
+                  Enchanting::sharpnessBonus(Enchanting::withLevel(0u, Kind::Sharpness, 1)),
+              "sharpness five hits harder than sharpness one");
+
+        // Protection takes a slice off, but never all of it: a blow
+        // always lands for at least one.
+        const Enchanting::Set prot4 = Enchanting::withLevel(0u, Kind::Protection, 4);
+        check(Enchanting::protectionReduced(0u, 10) == 10, "without it a blow lands whole");
+        check(Enchanting::protectionReduced(prot4, 10) < 10, "with it, less gets through");
+        bool alwaysHurts = true;
+        for (int blow = 1; blow <= 40; ++blow)
+            if (Enchanting::protectionReduced(prot4, blow) < 1) alwaysHurts = false;
+        check(alwaysHurts, "and no amount of it makes you proof");
+
+        section("enchanting: an enchanted item in a slot");
+
+        // An enchanted tool handed back must keep what was put on it.
+        Inventory pack;
+        ItemStack sword;
+        sword.id = Items::DiamondSword;
+        sword.count = 1;
+        sword.damage = 12;
+        sword.enchantments = Enchanting::withLevel(0u, Kind::Sharpness, 4);
+
+        check(pack.addStack(sword) == 0, "an enchanted sword fits in an empty pack");
+        check(pack.slot(0).id == Items::DiamondSword, "and is there");
+        check(pack.slot(0).damage == 12, "with its wear");
+        check(Enchanting::levelOf(pack.slot(0).enchantments, Kind::Sharpness) == 4,
+              "and its enchantment");
+
+        // Clearing a slot clears the enchantments with it, or the next
+        // thing in that slot inherits them.
+        ItemStack used = pack.slot(0);
+        used.clear();
+        check(used.enchantments == 0u, "clearing a slot takes the enchantments with it");
+    }
 }
 
 int runSelfTest()
@@ -3112,6 +3400,7 @@ int runSelfTest()
     testLevelRoundTrip();
     testExperience();
     testSugarCane();
+    testEnchanting();
 
     std::printf("\n%d checks, %d failed\n", g_checks, g_failures);
     return g_failures == 0 ? 0 : 1;

@@ -69,6 +69,8 @@ namespace Tiles
         DoorLower, DoorUpper,
         SugarCane,
         BookshelfSide,
+        EnchantTableTop,
+        EnchantTableSide,
 
         TileCount
     };

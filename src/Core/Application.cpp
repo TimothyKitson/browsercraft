@@ -9,6 +9,7 @@
 #include "Game/Armour.h"
 #include "Game/Experience.h"
 #include "Game/Cane.h"
+#include "Game/Enchanting.h"
 #include "Game/Sleep.h"
 #include "Game/Explosion.h"
 #include "Game/Portal.h"
@@ -118,6 +119,10 @@ namespace
     const glm::vec4 SLOT_COLOR(0.28f, 0.28f, 0.32f, 0.85f);
     const glm::vec4 SELECTED_COLOR(1.0f, 1.0f, 1.0f, 0.95f);
     const glm::vec4 TEXT_COLOR(0.96f, 0.96f, 0.96f, 1.0f);
+
+    // For the things on a panel that are information rather than
+    // choices: an offer you cannot afford, a count of shelves.
+    const glm::vec4 TEXT_DIM(0.62f, 0.62f, 0.62f, 1.0f);
     const glm::vec4 DIM_TEXT(0.72f, 0.74f, 0.78f, 1.0f);
 
     // What a block turns into when you mine it.
@@ -183,6 +188,16 @@ namespace
     // Reads the real world for the cane rules, which take only the
     // handful of lookups they need rather than a whole World.
     struct WorldCaneBlocks : Cane::Blocks
+    {
+        const World* world = nullptr;
+        BlockId at(int x, int y, int z) const override
+        {
+            return world->getBlock(x, y, z);
+        }
+    };
+
+    // The same, for counting the shelves round an enchanting table.
+    struct WorldEnchantRoom : Enchanting::Surroundings
     {
         const World* world = nullptr;
         BlockId at(int x, int y, int z) const override
@@ -587,6 +602,8 @@ void Application::loadLevel()
             m_inventory.slot(static_cast<int>(i)).count = state.inventory[i].second;
             m_inventory.slot(static_cast<int>(i)).damage =
                 i < state.damage.size() ? state.damage[i] : 0;
+            m_inventory.slot(static_cast<int>(i)).enchantments =
+                i < state.enchantments.size() ? state.enchantments[i] : 0u;
         }
     }
     else
@@ -631,12 +648,41 @@ void Application::saveLevel()
         const ItemStack& stack = m_inventory.slot(i);
         state.inventory.emplace_back(stack.id, static_cast<uint16_t>(std::max(0, stack.count)));
         state.damage.push_back(static_cast<uint16_t>(std::clamp(stack.damage, 0, 65535)));
+        state.enchantments.push_back(stack.enchantments);
     }
 
     // An open container's slots are the inventory's while its screen is
-    // up, so they go home before any of it is written out.
-    stowChest();
-    stowFurnace();
+    // up, so what they hold is copied back before any of it is written
+    // out -- copied, not stowed: stowing also shuts the screen, and an
+    // autosave is no reason to close the chest somebody is using.
+    syncOpenContainers();
+
+    // The crafting grid and the enchanting table's slot belong to the
+    // screen rather than to the player, so they are past the end of
+    // what the loop above writes. Closing the screen hands their
+    // contents back -- but quitting saves without closing, and that
+    // used to lose whatever was sitting in them. They are tucked into
+    // empty slots of the snapshot instead, which leaves the screen the
+    // player is looking at exactly as it was.
+    auto stash = [&](int slot) {
+        const ItemStack& held = m_inventory.slot(slot);
+        if (held.empty()) return;
+
+        for (auto& entry : state.inventory)
+        {
+            const size_t index = static_cast<size_t>(&entry - state.inventory.data());
+            if (entry.second != 0) continue;
+
+            entry.first = held.id;
+            entry.second = static_cast<uint16_t>(std::max(0, held.count));
+            state.damage[index] = static_cast<uint16_t>(std::clamp(held.damage, 0, 65535));
+            state.enchantments[index] = held.enchantments;
+            return;
+        }
+    };
+
+    stash(Inventory::ENCHANT_SLOT);
+    for (int i = 0; i < Inventory::CRAFT_SLOTS; ++i) stash(Inventory::CRAFT_FIRST + i);
 
     for (const auto& entry : m_furnaces.all())
     {
@@ -1095,20 +1141,24 @@ bool Application::frame()
         // What is worn decides what a blow costs, and it can change
         // between one blow and the next.
         m_player.armourPoints = armourPoints();
+        m_player.protection = armourProtection();
 
         // The big grid belongs to the bench, not to the player, so it
         // shuts as soon as they walk out of reach of it -- or mine it.
-        if ((m_benchOpen || m_furnaceOpen || m_chestOpen) && playing())
+        if ((m_benchOpen || m_furnaceOpen || m_chestOpen || m_enchantOpen) && playing())
         {
-            const glm::ivec3 block = m_benchOpen ? m_benchBlock
-                                   : (m_chestOpen ? m_chestBlock : m_furnaceBlock);
+            const glm::ivec3 block = m_benchOpen    ? m_benchBlock
+                                   : m_chestOpen    ? m_chestBlock
+                                   : m_enchantOpen  ? m_enchantBlock
+                                                    : m_furnaceBlock;
             const glm::vec3 middle = glm::vec3(block) + glm::vec3(0.5f);
             const BlockId there = m_world->getBlock(block.x, block.y, block.z);
 
-            const bool stillThere = m_benchOpen
-                ? there == Blocks::CraftingTable
-                : (m_chestOpen ? there == Blocks::Chest
-                               : (there == Blocks::Furnace || there == Blocks::FurnaceLit));
+            const bool stillThere =
+                m_benchOpen   ? there == Blocks::CraftingTable
+              : m_chestOpen   ? there == Blocks::Chest
+              : m_enchantOpen ? there == Blocks::EnchantingTable
+                              : (there == Blocks::Furnace || there == Blocks::FurnaceLit);
 
             if (!stillThere || glm::length(m_player.position - middle) > BENCH_REACH)
             {
@@ -1163,7 +1213,8 @@ bool Application::frame()
             m_startupScreen == "stairs" || m_startupScreen == "fence" ||
             m_startupScreen == "door" || m_startupScreen == "hand" ||
             m_startupScreen == "handempty" || m_startupScreen == "xp" ||
-            m_startupScreen == "shelf")
+            m_startupScreen == "shelf" || m_startupScreen == "enchant" ||
+            m_startupScreen == "enchantblock")
         {
             // Dev aid: open the inventory with something in it, so the
             // screenshot shows a real grid rather than 36 empty boxes.
@@ -1183,6 +1234,7 @@ bool Application::frame()
                                   m_startupScreen != "handempty" &&
                                   m_startupScreen != "xp" &&
                                   m_startupScreen != "shelf" &&
+                                  m_startupScreen != "enchantblock" &&
                                   m_startupScreen != "tnt" &&
                                   m_startupScreen != "portal" &&
                                   m_startupScreen != "nether";
@@ -1239,6 +1291,46 @@ bool Application::frame()
                 for (int f = 0; f < 4; ++f)
                     m_world->setBlock(bx + f - 1, by, bz + 2,
                                       stairsFacing(Blocks::CobbleStairsNorth, f));
+            }
+
+            if (m_startupScreen == "enchant" || m_startupScreen == "enchantblock")
+            {
+                m_camera.pitch = -14.0f;
+                m_camera.addLook(0.0f, 0.0f, 0.0f);
+
+                // Close enough to stay in reach: walk out of range and
+                // the screen shuts itself, which is what happened the
+                // first time this was put six blocks away.
+                const glm::vec3 ahead = m_player.position + m_camera.front * 3.0f;
+                const int bx = static_cast<int>(std::floor(ahead.x));
+                const int by = static_cast<int>(std::floor(m_player.position.y));
+                const int bz = static_cast<int>(std::floor(ahead.z));
+                const int toward = (m_camera.front.z < 0.0f) ? 2 : -2;
+
+                m_world->setBlock(bx, by, bz, Blocks::EnchantingTable);
+
+                // A ring of shelves two cells out, with the gap left
+                // clear, which is the arrangement that actually counts.
+                // The row nearest the camera is left out so the table
+                // itself can be seen rather than a wall of books.
+                for (int dy = 0; dy <= 1; ++dy)
+                    for (int dx = -2; dx <= 2; ++dx)
+                        for (int dz = -2; dz <= 2; ++dz)
+                        {
+                            if (std::max(std::abs(dx), std::abs(dz)) != 2) continue;
+                            if (dz == toward) continue;
+                            m_world->setBlock(bx + dx, by + dy, bz + dz, Blocks::Bookshelf);
+                        }
+
+                m_player.experience = Experience::totalForLevel(30);
+
+                if (m_startupScreen == "enchant")
+                {
+                    ItemStack& slot = m_inventory.slot(Inventory::ENCHANT_SLOT);
+                    slot.id = Items::DiamondPickaxe;
+                    slot.count = 1;
+                    openEnchantingTable(glm::ivec3(bx, by, bz));
+                }
             }
 
             if (m_startupScreen == "shelf")
@@ -2146,7 +2238,9 @@ void Application::updateMining(float deltaTime)
                 // A sword hits hardest, an axe nearly as hard, a bare
                 // hand barely at all.
                 const StackId weapon = m_inventory.selected().id;
-                target->damage(Tools::attackDamage(weapon),
+                target->damage(Tools::attackDamage(weapon) +
+                                   Enchanting::sharpnessBonus(
+                                       m_inventory.selected().enchantments),
                                target->position() - m_player.position);
                 wearOnSwing(weapon);
                 m_attackCooldown = ATTACK_INTERVAL;
@@ -2190,7 +2284,13 @@ void Application::updateMining(float deltaTime)
     // leaves anything behind. An empty hand is Air, which Tools reads as
     // bare hands.
     const StackId tool = m_inventory.selected().id;
-    const float seconds = Tools::breakSeconds(tool, id);
+    float seconds = Tools::breakSeconds(tool, id);
+
+    // Efficiency, if the tool has any. Applied to the time rather than
+    // folded into breakSeconds, which stays a pure function of a tool
+    // and a block and knows nothing about what has been put on it.
+    if (seconds > 0.0f)
+        seconds /= Enchanting::digSpeedMultiplier(m_inventory.selected().enchantments);
     if (seconds < 0.0f) return; // bedrock and liquids never break
 
     if (m_player.creative() || seconds <= 0.0f)
@@ -2236,14 +2336,35 @@ void Application::updateMining(float deltaTime)
                     if (roll % 10 == 0) drop = Items::Flint;
                 }
 
-                if (drop != Blocks::Air) m_drops.spawnFromBrokenBlock(hit.block, drop);
+                // Silk touch hands back the block itself rather than
+                // what it breaks into, which is the whole point of it:
+                // a seam comes home as ore, and glass as glass.
+                const Enchanting::Set onTool = m_inventory.selected().enchantments;
+                const bool silk = Enchanting::has(onTool, Enchanting::Kind::SilkTouch);
+                if (silk && drop != Blocks::Air) drop = id;
+
+                int dropped = 1;
+
+                // Fortune multiplies a seam, but only where the block
+                // breaks into something other than itself: multiplying
+                // stone would be a way of making stone out of nothing.
+                if (!silk && drop != id && drop != Blocks::Air)
+                {
+                    const uint32_t roll = static_cast<uint32_t>(
+                        hit.block.x * 83492791 ^ hit.block.y * 73856093 ^
+                        hit.block.z * 19349663 ^ static_cast<int>(m_elapsedSeconds * 389.0f));
+                    dropped = Enchanting::fortuneDrops(onTool, roll);
+                }
+
+                if (drop != Blocks::Air)
+                    m_drops.spawnFromBrokenBlock(hit.block, drop, dropped);
 
                 // Ore you can use straight away pays out at the seam.
                 // The ores you have to smelt pay at the furnace instead,
                 // so iron and gold give nothing here -- otherwise they
                 // would be paid for twice.
                 const Experience::Range worth = Experience::forMining(id);
-                if (worth.any())
+                if (worth.any() && !silk)
                 {
                     const uint32_t roll = static_cast<uint32_t>(
                         hit.block.x * 19349663 ^ hit.block.y * 83492791 ^
@@ -2336,6 +2457,19 @@ void Application::updateMining(float deltaTime)
     }
 }
 
+uint32_t Application::armourProtection() const
+{
+    int best = 0;
+    for (int i = 0; i < Inventory::ARMOR_SLOTS; ++i)
+    {
+        const ItemStack& worn = m_inventory.slot(Inventory::ARMOR_FIRST + i);
+        if (worn.empty()) continue;
+        best = std::max(best,
+                        Enchanting::levelOf(worn.enchantments, Enchanting::Kind::Protection));
+    }
+    return Enchanting::withLevel(0u, Enchanting::Kind::Protection, best);
+}
+
 int Application::armourPoints() const
 {
     int points = 0;
@@ -2364,6 +2498,11 @@ void Application::wearArmour(int incoming)
         const int limit = Armour::maxDurability(worn.id);
         if (limit <= 0) continue;
 
+        const uint32_t roll = static_cast<uint32_t>(worn.damage * 2654435761u) ^
+                              static_cast<uint32_t>(m_elapsedSeconds * 977.0f) ^
+                              static_cast<uint32_t>(i * 7919);
+        if (!Enchanting::wearsThisTime(worn.enchantments, roll)) continue;
+
         worn.damage += cost;
         if (worn.damage >= limit)
         {
@@ -2385,6 +2524,12 @@ void Application::wearTool(BlockId brokenBlock)
 
     const int limit = Tools::maxDurability(Tools::tierOf(stack.id));
     if (limit <= 0) return;
+
+    // Unbreaking does not make the tool tougher, it skips the wear:
+    // at level n a point lands about one time in n+1.
+    const uint32_t roll = static_cast<uint32_t>(stack.damage * 2654435761u) ^
+                          static_cast<uint32_t>(m_elapsedSeconds * 1013.0f);
+    if (!Enchanting::wearsThisTime(stack.enchantments, roll)) return;
 
     if (++stack.damage >= limit)
     {
@@ -2784,7 +2929,10 @@ void Application::looseArrow(float drawn)
 
     const glm::vec3 from = m_camera.position + m_camera.front * 0.4f;
     m_arrows.spawn(from, m_camera.front * Arrows::speedFor(drawn),
-                   Arrows::damageFor(drawn), true);
+                   Arrows::damageFor(drawn) +
+                       Enchanting::powerBonus(m_inventory.selected().enchantments,
+                                              Arrows::damageFor(drawn)),
+                   true);
 
     m_heldItem.swing();
     m_audio.play(Sound::Click, 0.5f, 1.4f);
@@ -2918,6 +3066,12 @@ void Application::handlePlacement()
             {
                 openChest(bench.block);
                 m_audio.play(Sound::DigWood, 0.5f, 0.8f);
+                return;
+            }
+            if (used == Blocks::EnchantingTable)
+            {
+                openEnchantingTable(bench.block);
+                m_audio.play(Sound::Click, 0.4f);
                 return;
             }
             if (used == Blocks::Bed)

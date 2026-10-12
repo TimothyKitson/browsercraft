@@ -111,6 +111,7 @@ namespace Blocks
         // world into something else.
         SugarCane,
         Bookshelf,
+        EnchantingTable,
 
         Count
     };

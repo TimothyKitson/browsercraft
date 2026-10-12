@@ -333,6 +333,75 @@ void Application::renderInventoryScreen()
         drawPlayerDoll(activeSkin(), panelX + SLOT_GAP + step + 14.0f,
                        topY + SLOT_GAP * 2.0f, unit);
 
+        // The enchanting table: the item on the left, three offers down
+        // the right. Each row shows what it costs in levels and, once
+        // you could afford it, what it would put on the item -- which
+        // is the one place this is kinder than Minecraft, where the
+        // rows are written in a rune alphabet nobody can read.
+        if (m_enchantOpen)
+        {
+            // Over on the right, clear of the player doll and the
+            // armour slots down the left-hand side: the first attempt
+            // put the item being enchanted straight on top of them.
+            const float ex = panelX + gridWidth * 0.42f;
+            const float ey = topY + SLOT_GAP + step * 0.5f;
+
+            guiWell(ex, ey, SLOT_SIZE, SLOT_SIZE);
+            const ItemStack& subject = m_inventory.slot(Inventory::ENCHANT_SLOT);
+            drawItem(ex, ey, SLOT_SIZE, subject.id, subject.count, glm::vec4(1.0f),
+                     subject.damage);
+            m_slotBoxes.push_back({ SlotBox::Kind::Slot, Inventory::ENCHANT_SLOT,
+                                    ex, ey, SLOT_SIZE });
+
+            const float rowX = ex + step + 24.0f;
+            const float rowWidth = gridWidth - (rowX - panelX) - SLOT_GAP * 2.0f;
+            const float rowHeight = 30.0f;
+            const int level = Experience::levelFor(m_player.experience);
+
+            for (int row = 0; row < 3; ++row)
+            {
+                const float ry = ey + row * (rowHeight + 6.0f);
+                const Enchanting::Offer offer =
+                    Enchanting::offerFor(row, m_enchantShelves, subject.id, m_enchantRoll);
+
+                // Affordable in creative whatever the price, as in
+                // Minecraft.
+                const bool affordable = offer.valid() &&
+                                        (m_player.creative() || level >= offer.cost);
+
+                guiWell(rowX, ry, rowWidth, rowHeight);
+                if (offer.valid())
+                    m_slotBoxes.push_back({ SlotBox::Kind::Enchant, row, rowX, ry, rowHeight });
+
+                if (!offer.valid())
+                {
+                    m_ui.text("-", rowX + 10.0f, ry + 8.0f, 1.8f, TEXT_DIM);
+                    continue;
+                }
+
+                // The price in the green the experience bar uses, dimmed
+                // when it is out of reach.
+                const glm::vec4 priceColour = affordable
+                                                  ? glm::vec4(0.49f, 0.98f, 0.24f, 1.0f)
+                                                  : glm::vec4(0.55f, 0.30f, 0.30f, 1.0f);
+                const std::string price = std::to_string(offer.cost);
+                m_ui.text(price, rowX + 8.0f, ry + 8.0f, 2.0f, priceColour);
+
+                std::string what = Enchanting::name(offer.kind);
+                what += " ";
+                what += std::to_string(offer.level);
+                m_ui.text(what, rowX + 42.0f, ry + 9.0f, 1.6f,
+                          affordable ? TEXT_COLOR : TEXT_DIM);
+            }
+
+            // Under the offers rather than beside the item: to the left
+            // of the slot it ran straight across the player doll.
+            const std::string shelves = std::to_string(m_enchantShelves) + " shelves";
+            m_ui.text(shelves, rowX + 2.0f, ey + 3.0f * (rowHeight + 6.0f) + 4.0f,
+                      1.5f, TEXT_DIM);
+        }
+        else
+
         // A furnace takes the same corner the crafting grid does: ore on
         // top, fuel below it, the fire between them and the result off
         // to the right, which is the shape Minecraft uses.
@@ -539,6 +608,10 @@ void Application::handleInventoryClick(int mouseX, int mouseY, bool rightButton,
             m_audio.play(Sound::Click, 0.4f);
             break;
 
+        case SlotBox::Kind::Enchant:
+            buyEnchantment(box->index);
+            break;
+
         case SlotBox::Kind::Slot:
             if (shiftHeld) m_inventory.quickMove(box->index);
             else if (rightButton) m_inventory.rightClick(box->index);
@@ -558,10 +631,95 @@ void Application::closeInventory()
 {
     stowChest();
     stowFurnace();
+    stowEnchantingTable();
     returnCursorToWorld();
     m_inventoryOpen = false;
     m_benchOpen = false;
     m_inventory.setCraftSize(2);
+}
+
+void Application::openEnchantingTable(const glm::ivec3& block)
+{
+    m_enchantBlock = block;
+    m_enchantOpen = true;
+
+    WorldEnchantRoom room;
+    room.world = m_world.get();
+    m_enchantShelves = Enchanting::shelvesAround(room, block.x, block.y, block.z);
+
+    // One roll, held for as long as the screen is open, so the offers
+    // stand still while you decide. Seeded from where the table is and
+    // what you have earned, so two tables do not offer the same thing
+    // and a table does not offer the same thing for ever.
+    m_enchantRoll = static_cast<uint32_t>(block.x * 73856093 ^ block.y * 19349663 ^
+                                          block.z * 83492791) ^
+                    static_cast<uint32_t>(m_player.experience * 2654435761u);
+
+    m_inventoryOpen = true;
+    setMouseCaptured(false);
+}
+
+// Whatever was being enchanted goes back to the player, and the slot is
+// emptied so the next thing to open does not find it there.
+void Application::stowEnchantingTable()
+{
+    if (!m_enchantOpen) return;
+
+    ItemStack& subject = m_inventory.slot(Inventory::ENCHANT_SLOT);
+    if (!subject.empty())
+    {
+        // Back into the pack if it fits, and onto the floor if it does
+        // not: an item left here would simply vanish.
+        const int leftOver = m_inventory.addStack(subject);
+        if (leftOver > 0)
+            m_drops.spawn(m_player.position + glm::vec3(0.0f, 0.6f, 0.0f),
+                          subject.id, leftOver);
+        subject.clear();
+    }
+
+    m_enchantOpen = false;
+}
+
+void Application::buyEnchantment(int row)
+{
+    if (!m_enchantOpen) return;
+
+    ItemStack& subject = m_inventory.slot(Inventory::ENCHANT_SLOT);
+    if (subject.empty()) return;
+
+    const Enchanting::Offer offer =
+        Enchanting::offerFor(row, m_enchantShelves, subject.id, m_enchantRoll);
+    if (!offer.valid()) return;
+
+    const int level = Experience::levelFor(m_player.experience);
+    if (!m_player.creative() && level < offer.cost) return;
+
+    // Already on it, and no better: nothing to sell.
+    if (Enchanting::levelOf(subject.enchantments, offer.kind) >= offer.level) return;
+
+    // Nothing that contradicts what it already carries.
+    for (const auto& already : Enchanting::listOf(subject.enchantments))
+        if (Enchanting::conflicts(already.first, offer.kind)) return;
+
+    subject.enchantments = Enchanting::withLevel(subject.enchantments, offer.kind, offer.level);
+
+    if (!m_player.creative())
+    {
+        // The levels are spent, not merely required. Minecraft takes
+        // whole levels and leaves the bar where it stood, so the
+        // fraction is carried across rather than rounded away -- the
+        // cost of a level is not the same either side of the move.
+        const float along = Experience::progress(m_player.experience);
+        const int after = std::max(0, level - offer.cost);
+        m_player.experience =
+            Experience::totalForLevel(after) +
+            static_cast<int>(along * static_cast<float>(Experience::toNextLevel(after)));
+        m_player.experienceOwedHundredths = 0;
+    }
+
+    // A fresh roll, so the next three offers are not the same three.
+    m_enchantRoll = Enchanting::nextRoll(m_enchantRoll);
+    m_audio.play(Sound::Pickup, 0.7f, 0.7f);
 }
 
 void Application::openBench(const glm::ivec3& block)
@@ -601,6 +759,31 @@ void Application::stowChest()
     // twenty-seven nothings for it would bloat every save.
     m_chests.forgetIfEmpty(m_chestBlock);
     m_chestOpen = false;
+}
+
+// Write-through, so a save can see what an open container holds
+// without the player losing the screen they are working in.
+void Application::syncOpenContainers()
+{
+    if (m_chestOpen)
+    {
+        Chests::Contents& held = m_chests.at(m_chestBlock);
+        for (int i = 0; i < Inventory::CHEST_SLOTS; ++i)
+            held[i] = m_inventory.slot(Inventory::CHEST_FIRST + i);
+    }
+
+    if (m_furnaceOpen)
+    {
+        Furnaces::State& state = m_furnaces.at(m_furnaceBlock);
+        state.input = m_inventory.slot(Inventory::FURNACE_INPUT);
+        state.fuel = m_inventory.slot(Inventory::FURNACE_FUEL);
+        state.output = m_inventory.slot(Inventory::FURNACE_OUTPUT);
+    }
+
+    // The enchanting table has nowhere of its own to keep anything, so
+    // what is in it is not saved at all. Closing the screen hands it
+    // back; a save taken with the screen open simply does not see it,
+    // the same as the crafting grid beside it.
 }
 
 void Application::openFurnace(const glm::ivec3& block)

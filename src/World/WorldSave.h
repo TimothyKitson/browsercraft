@@ -22,6 +22,10 @@ struct LevelState
     // experience existed reads back as a fresh start at level nought.
     int experience = 0;
     int experienceOwedHundredths = 0;
+    // One packed word per slot, in the same order as the inventory
+    // above. Empty on a level written before enchanting existed, which
+    // reads back as nothing enchanted.
+    std::vector<uint32_t> enchantments;
     bool creative = false;
     int selectedSlot = 0;
     uint8_t gameMode = 0;

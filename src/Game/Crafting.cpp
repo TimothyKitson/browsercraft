@@ -30,6 +30,13 @@ namespace
         // them in any arrangement for the same three wheat.
         { true,  0, 0, { Items::Wheat, Items::Wheat, Items::Wheat }, 3, Items::Bread, 1 },
 
+        // Four obsidian, two diamond and a book. The book is why the
+        // whole cane chain above has to exist.
+        { false, 3, 3, { _,                 Items::Book,       _,
+                         Items::Diamond,    Blocks::Obsidian,  Items::Diamond,
+                         Blocks::Obsidian,  Blocks::Obsidian,  Blocks::Obsidian },
+          0, Blocks::EnchantingTable, 1 },
+
         // Three cane in a row makes three paper, three paper and a
         // hide makes a book, and six planks round three books makes a
         // shelf. All three want a bench: every one of them is three

@@ -1,5 +1,6 @@
 #include "Player.h"
 #include "Game/Experience.h"
+#include "Game/Enchanting.h"
 #include "Game/Armour.h"
 #include "World/World.h"
 #include <algorithm>
@@ -286,6 +287,11 @@ bool Player::damage(int amount)
     if (creative() || amount <= 0 || m_hurtCooldown > 0.0f) return false;
 
     amount = Armour::reduce(amount, armourPoints);
+
+    // Protection takes its slice after the armour has taken its own,
+    // which is the order Minecraft applies them in and the reason a
+    // protected leather suit is worth more than its points suggest.
+    amount = Enchanting::protectionReduced(protection, amount);
 
     health = std::max(0, health - amount);
     damageFlash = 0.4f;

@@ -1,4 +1,5 @@
 #pragma once
+#include <cstdint>
 #include "World/Block.h"
 #include "Game/Items.h"
 #include <array>
@@ -14,8 +15,19 @@ struct ItemStack
     // tools carry it, and a tool never stacks.
     int damage = 0;
 
+    // Every enchantment on it, packed into one word, three bits a kind
+    // -- see Game/Enchanting.h. One number rather than a list, so a
+    // slot, a saved level and a dropped stack all carry it the same way
+    // the wear beside it is carried.
+    //
+    // Like the wear, it is never compared when stacks are merged: only
+    // things that do not stack can be enchanted, so two stacks that
+    // could merge both have none, and an enchanted sword absorbing a
+    // plain one is not a case that can arise.
+    uint32_t enchantments = 0;
+
     bool empty() const { return count <= 0 || id == Blocks::Air; }
-    void clear() { id = Blocks::Air; count = 0; damage = 0; }
+    void clear() { id = Blocks::Air; count = 0; damage = 0; enchantments = 0; }
 };
 
 // 9 hotbar slots plus 27 storage slots, same shape as Minecraft's, and the
@@ -61,7 +73,12 @@ public:
     static constexpr int CHEST_FIRST = FURNACE_FIRST + FURNACE_SLOTS;  // 53..79
     static constexpr int CHEST_SLOTS = 27;
 
-    static constexpr int SLOT_COUNT = CHEST_FIRST + CHEST_SLOTS;      // 80
+    // The enchanting table's one slot, borrowed the same way. What
+    // comes back out is the same item with more on it, so there is no
+    // second slot for a result the way the furnace has one.
+    static constexpr int ENCHANT_SLOT = CHEST_FIRST + CHEST_SLOTS;     // 80
+
+    static constexpr int SLOT_COUNT = ENCHANT_SLOT + 1;               // 81
 
     // The ceiling. What a particular thing actually stacks to comes from
     // maxStackOf(), since items need not agree with blocks.
@@ -85,6 +102,12 @@ public:
 
     // Returns the number of items that didn't fit.
     int add(StackId id, int count);
+
+    // The same, but keeping a stack's wear and its enchantments. Used
+    // where a whole item is handed back rather than a count of them --
+    // closing the enchanting table on something, for one. Plain add()
+    // would hand back a brand new unenchanted copy.
+    int addStack(const ItemStack& stack);
     bool removeOne(int slot);
 
     ItemStack& slot(int index) { return m_slots[index]; }

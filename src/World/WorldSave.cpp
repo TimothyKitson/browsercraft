@@ -154,6 +154,10 @@ void WorldSave::saveLevel(const std::string& saveDirectory, const LevelState& st
 
     write(out, state.experience);
     write(out, state.experienceOwedHundredths);
+
+    uint16_t enchantCount = static_cast<uint16_t>(state.enchantments.size());
+    write(out, enchantCount);
+    for (uint32_t set : state.enchantments) write(out, set);
 }
 
 bool WorldSave::loadLevel(const std::string& saveDirectory, LevelState& out)
@@ -264,6 +268,18 @@ bool WorldSave::loadLevel(const std::string& saveDirectory, LevelState& out)
                             {
                                 out.experience = experience;
                                 out.experienceOwedHundredths = owed;
+
+                                uint16_t enchantCount = 0;
+                                if (read(in, enchantCount))
+                                {
+                                    out.enchantments.clear();
+                                    for (uint16_t i = 0; i < enchantCount; ++i)
+                                    {
+                                        uint32_t set = 0;
+                                        if (!read(in, set)) break;
+                                        out.enchantments.push_back(set);
+                                    }
+                                }
                             }
                         }
                     }
