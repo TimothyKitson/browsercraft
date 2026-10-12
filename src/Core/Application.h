@@ -587,6 +587,16 @@ private:
         Kind kind = Kind::Slot;
         int index = 0;        // inventory slot, block id, or tab number
         float x = 0.0f, y = 0.0f, size = 0.0f;
+
+        // Most things on the panel are square, so `size` is both their
+        // width and their height. A row is not: an offer at the
+        // enchanting table or a villager's deal is five or six times as
+        // wide as it is tall, and hit-testing it as a square left all
+        // but the left-hand end of it dead to the mouse. Zero means
+        // square, which is what every slot and palette entry is.
+        float width = 0.0f;
+
+        float hitWidth() const { return width > 0.0f ? width : size; }
     };
     std::vector<SlotBox> m_slotBoxes;
     int m_creativeTab = 0;

@@ -3813,6 +3813,125 @@ namespace
         drowned.respawn(glm::vec3(0.0f, 64.0f, 0.0f));
         check(drowned.air == Player::MAX_AIR_SECONDS, "respawning restores your air");
     }
+
+    void testQuickMoveKeepsMetadata()
+    {
+        section("inventory: shift-clicking keeps what an item carries");
+
+        // A tool carries wear, and now enchantments too. Both have to
+        // survive being shift-clicked out of a container: mergeInto
+        // moves only the count, so a destination slot that starts empty
+        // gets the id and the count and nothing else -- which repaired
+        // the tool and stripped it on the way.
+        Inventory pack;
+        ItemStack& inChest = pack.slot(Inventory::CHEST_FIRST);
+        inChest.id = Items::DiamondPickaxe;
+        inChest.count = 1;
+        inChest.damage = 431;
+        inChest.enchantments =
+            Enchanting::withLevel(0u, Enchanting::Kind::Efficiency, 4);
+
+        pack.quickMove(Inventory::CHEST_FIRST);
+
+        check(pack.slot(Inventory::CHEST_FIRST).empty(), "it leaves the chest");
+
+        int found = -1;
+        for (int i = 0; i < Inventory::MAIN_SLOTS; ++i)
+            if (pack.slot(i).id == Items::DiamondPickaxe) found = i;
+        check(found >= 0, "and arrives in the pack");
+
+        if (found >= 0)
+        {
+            check(pack.slot(found).damage == 431,
+                  "with its wear, rather than repaired on the way");
+            check(Enchanting::levelOf(pack.slot(found).enchantments,
+                                      Enchanting::Kind::Efficiency) == 4,
+                  "and with its enchantments still on it");
+        }
+
+        // The same out of an armour slot, which is the other place a
+        // worn thing sits.
+        Inventory worn;
+        ItemStack& helmet = worn.slot(Inventory::ARMOR_FIRST);
+        helmet.id = Items::DiamondHelmet;
+        helmet.count = 1;
+        helmet.damage = 77;
+        helmet.enchantments =
+            Enchanting::withLevel(0u, Enchanting::Kind::Protection, 3);
+
+        worn.quickMove(Inventory::ARMOR_FIRST);
+
+        int helmetAt = -1;
+        for (int i = 0; i < Inventory::MAIN_SLOTS; ++i)
+            if (worn.slot(i).id == Items::DiamondHelmet) helmetAt = i;
+        check(helmetAt >= 0, "a helmet comes off into the pack");
+        if (helmetAt >= 0)
+        {
+            check(worn.slot(helmetAt).damage == 77, "keeping its wear");
+            check(Enchanting::levelOf(worn.slot(helmetAt).enchantments,
+                                      Enchanting::Kind::Protection) == 3,
+                  "and its protection");
+        }
+
+        // A plain stack still moves the ordinary way.
+        Inventory plain;
+        plain.slot(Inventory::CHEST_FIRST).id = Blocks::Stone;
+        plain.slot(Inventory::CHEST_FIRST).count = 64;
+        plain.quickMove(Inventory::CHEST_FIRST);
+        check(plain.countOf(Blocks::Stone) == 64, "and a plain stack still moves whole");
+
+        section("inventory: the crafting grid gives back what it was given");
+
+        // Closing the screen empties the grid back into the pack. It
+        // used to put back only an id and a count, so a tool left in a
+        // recipe came out repaired and stripped.
+        Inventory grid;
+        ItemStack& inGrid = grid.slot(Inventory::CRAFT_FIRST);
+        inGrid.id = Items::IronSword;
+        inGrid.count = 1;
+        inGrid.damage = 61;
+        inGrid.enchantments = Enchanting::withLevel(0u, Enchanting::Kind::Sharpness, 2);
+
+        std::vector<ItemStack> spilled;
+        grid.clearCraftGrid(spilled);
+
+        int swordAt = -1;
+        for (int i = 0; i < Inventory::MAIN_SLOTS; ++i)
+            if (grid.slot(i).id == Items::IronSword) swordAt = i;
+        check(swordAt >= 0, "a sword left in the grid comes back");
+        if (swordAt >= 0)
+        {
+            check(grid.slot(swordAt).damage == 61, "with its wear");
+            check(Enchanting::levelOf(grid.slot(swordAt).enchantments,
+                                      Enchanting::Kind::Sharpness) == 2,
+                  "and its sharpness");
+        }
+
+        section("inventory: a stack put in whole comes out whole");
+
+        // addStack is what every one of those paths now goes through.
+        Inventory direct;
+        ItemStack axe;
+        axe.id = Items::DiamondAxe;
+        axe.count = 1;
+        axe.damage = 9;
+        axe.enchantments = Enchanting::withLevel(0u, Enchanting::Kind::Unbreaking, 3);
+        check(direct.addStack(axe) == 0, "an enchanted axe fits");
+        check(direct.slot(0).damage == 9, "with its wear");
+        check(Enchanting::levelOf(direct.slot(0).enchantments,
+                                  Enchanting::Kind::Unbreaking) == 3,
+              "and its unbreaking");
+
+        // A full pack hands the whole thing back rather than swallowing
+        // it, which is what the caller needs in order to drop it.
+        Inventory full;
+        for (int i = 0; i < Inventory::MAIN_SLOTS; ++i)
+        {
+            full.slot(i).id = Blocks::Stone;
+            full.slot(i).count = 64;
+        }
+        check(full.addStack(axe) == axe.count, "a full pack gives it straight back");
+    }
 }
 
 int runSelfTest()
@@ -3873,6 +3992,7 @@ int runSelfTest()
     testEveryBlockHasAPicture();
     testEverySoundHasANoise();
     testDrowning();
+    testQuickMoveKeepsMetadata();
 
     std::printf("\n%d checks, %d failed\n", g_checks, g_failures);
     return g_failures == 0 ? 0 : 1;

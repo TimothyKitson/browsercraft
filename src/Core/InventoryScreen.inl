@@ -385,12 +385,16 @@ void Application::renderInventoryScreen()
                 guiWell(cx, ry, cell, cell);
                 drawItem(cx, ry, cell, offer.give, offer.giveCount, tint);
 
-                // The whole row is the button, so a deal can be struck
-                // by clicking anywhere along it rather than only on the
+                // The whole row is the button, out to the far edge of
+                // what it gives you, so a deal can be struck by
+                // clicking anywhere along it rather than only on the
                 // one slot that happens to be the price.
                 if (canPay)
+                {
+                    const float rowWidth = (cx + cell) - tx;
                     m_slotBoxes.push_back({ SlotBox::Kind::Trade, static_cast<int>(row),
-                                            tx, ry, cell });
+                                            tx, ry, cell, rowWidth });
+                }
             }
         }
         else
@@ -433,7 +437,8 @@ void Application::renderInventoryScreen()
 
                 guiWell(rowX, ry, rowWidth, rowHeight);
                 if (offer.valid())
-                    m_slotBoxes.push_back({ SlotBox::Kind::Enchant, row, rowX, ry, rowHeight });
+                    m_slotBoxes.push_back({ SlotBox::Kind::Enchant, row, rowX, ry,
+                                            rowHeight, rowWidth });
 
                 if (!offer.valid())
                 {
@@ -640,7 +645,7 @@ const Application::SlotBox* Application::slotBoxAt(int mouseX, int mouseY) const
     const float y = static_cast<float>(mouseY);
 
     for (const SlotBox& box : m_slotBoxes)
-        if (x >= box.x && x < box.x + box.size && y >= box.y && y < box.y + box.size)
+        if (x >= box.x && x < box.x + box.hitWidth() && y >= box.y && y < box.y + box.size)
             return &box;
 
     return nullptr;
@@ -787,8 +792,7 @@ void Application::stowEnchantingTable()
         // not: an item left here would simply vanish.
         const int leftOver = m_inventory.addStack(subject);
         if (leftOver > 0)
-            m_drops.spawn(m_player.position + glm::vec3(0.0f, 0.6f, 0.0f),
-                          subject.id, leftOver);
+            m_drops.spawnStack(m_player.position + glm::vec3(0.0f, 0.6f, 0.0f), subject);
         subject.clear();
     }
 
@@ -1010,8 +1014,19 @@ void Application::returnCursorToWorld()
     ItemStack& held = m_inventory.cursor();
     if (!held.empty())
     {
-        if (m_player.creative()) held.clear();
-        else spilled.push_back(ItemStack{ held.id, m_inventory.add(held.id, held.count) });
+        if (m_player.creative())
+        {
+            held.clear();
+        }
+        else
+        {
+            // The whole stack through, so a tool on the cursor keeps
+            // its wear and its enchantments: putting back only the id
+            // and a count handed back a brand new one.
+            ItemStack leftOver = held;
+            leftOver.count = m_inventory.addStack(held);
+            if (leftOver.count > 0) spilled.push_back(leftOver);
+        }
         held.clear();
     }
 
@@ -1019,5 +1034,5 @@ void Application::returnCursorToWorld()
 
     for (const ItemStack& stack : spilled)
         if (!stack.empty())
-            m_drops.spawn(m_player.eyePosition() + m_camera.front * 0.8f, stack.id, stack.count);
+            m_drops.spawnStack(m_player.eyePosition() + m_camera.front * 0.8f, stack);
 }

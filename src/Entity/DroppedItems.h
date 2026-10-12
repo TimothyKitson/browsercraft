@@ -1,6 +1,7 @@
 #pragma once
 #include "World/Block.h"
 #include "Game/Items.h"
+#include "Player/Inventory.h"
 #include "Renderer/Mesh.h"
 #include <vector>
 #include <glm/glm.hpp>
@@ -33,6 +34,11 @@ public:
     static constexpr float LIFETIME_SECONDS = 300.0f;
 
     void spawn(const glm::vec3& position, StackId block, int count = 1);
+
+    // The same, for a whole stack: a dropped tool carries its wear and
+    // its enchantments, and spawn() above would hand back a brand new
+    // unenchanted one when you walked over it.
+    void spawnStack(const glm::vec3& position, const ItemStack& stack);
     void spawnFromBrokenBlock(const glm::ivec3& blockPosition, StackId drop, int count = 1);
 
     void update(float deltaTime, const World& world, const Player& player,
@@ -52,6 +58,8 @@ private:
         glm::vec3 velocity{ 0.0f };
         StackId block = Blocks::Air;
         int count = 1;
+        int damage = 0;
+        uint32_t enchantments = 0;
         float age = 0.0f;
         float spin = 0.0f;
         bool resting = false;

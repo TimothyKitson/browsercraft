@@ -113,8 +113,12 @@ void Inventory::clearCraftGrid(std::vector<ItemStack>& spilled)
         ItemStack& cell = m_slots[CRAFT_FIRST + i];
         if (cell.empty()) continue;
 
-        const int leftOver = add(cell.id, cell.count);
-        if (leftOver > 0) spilled.push_back(ItemStack{ cell.id, leftOver });
+        // addStack rather than add, so a tool left in the grid comes
+        // back worn and enchanted as it went in. Nothing that stacks
+        // notices the difference.
+        ItemStack leftOver = cell;
+        leftOver.count = addStack(cell);
+        if (leftOver.count > 0) spilled.push_back(leftOver);
         cell.clear();
     }
     m_slots[CRAFT_RESULT].clear();
@@ -329,7 +333,12 @@ void Inventory::quickMove(int index)
         ItemStack& into = m_slots[destination];
         if (into.empty())
         {
-            into.id = source.id;
+            // The whole stack, not just its id: mergeInto below moves
+            // the count and nothing else, so setting only the id left
+            // the wear and the enchantments behind. Shift-clicking a
+            // worn tool out of a chest repaired it, and shift-clicking
+            // an enchanted one stripped it.
+            into = source;
             into.count = 0;
         }
         mergeInto(source, into);

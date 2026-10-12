@@ -76,6 +76,17 @@ void DroppedItems::spawn(const glm::vec3& position, StackId block, int count)
     m_items.push_back(item);
 }
 
+void DroppedItems::spawnStack(const glm::vec3& position, const ItemStack& stack)
+{
+    if (stack.empty()) return;
+
+    spawn(position, stack.id, stack.count);
+    if (m_items.empty()) return;
+
+    m_items.back().damage = stack.damage;
+    m_items.back().enchantments = stack.enchantments;
+}
+
 void DroppedItems::spawnFromBrokenBlock(const glm::ivec3& blockPosition, StackId drop, int count)
 {
     spawn(glm::vec3(blockPosition) + glm::vec3(0.5f), drop, count);
@@ -128,7 +139,12 @@ void DroppedItems::update(float deltaTime, const World& world, const Player& pla
 
         if (item.age > PICKUP_DELAY && within)
         {
-            const int leftOver = inventory.add(item.block, item.count);
+            ItemStack picking;
+            picking.id = item.block;
+            picking.count = item.count;
+            picking.damage = item.damage;
+            picking.enchantments = item.enchantments;
+            const int leftOver = inventory.addStack(picking);
             if (leftOver < item.count)
             {
                 if (!popped)
@@ -216,7 +232,13 @@ void DroppedItems::mergeNearby()
             Item& other = m_items[b];
 
             const int limit = maxStackOf(keep.block);
-            if (other.block != keep.block || keep.count >= limit ||
+            // Two tools are never the same tool: one is worn and
+            // enchanted one way and the other another, and merging them
+            // would quietly throw one set away. They never stack to
+            // more than one anyway, but say so rather than rely on it.
+            const bool carriesSomething = keep.damage != 0 || keep.enchantments != 0 ||
+                                          other.damage != 0 || other.enchantments != 0;
+            if (other.block != keep.block || keep.count >= limit || carriesSomething ||
                 glm::length(other.position - keep.position) > MERGE_RADIUS)
             {
                 ++b;
