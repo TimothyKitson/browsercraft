@@ -20,6 +20,7 @@
 #include "Entity/ExperienceOrbs.h"
 #include "Entity/Rain.h"
 #include "Game/Anvil.h"
+#include "Game/Brewing.h"
 #include "Game/Weather.h"
 #include "Game/Trading.h"
 #include "Entity/Particles.h"
@@ -302,6 +303,10 @@ private:
     Trading::Profession m_tradeWith = Trading::Profession::Farmer;
 
     bool m_enchantOpen = false;
+    float m_drinkTimer = 0.0f;
+    bool m_brewOpen = false;
+    glm::ivec3 m_brewBlock{ 0 };
+    float m_brewProgress = 0.0f;
     bool m_anvilOpen = false;
     glm::ivec3 m_anvilBlock{ 0 };
     glm::ivec3 m_enchantBlock{ 0 };
@@ -509,6 +514,14 @@ private:
     void openEnchantingTable(const glm::ivec3& block);
     void stowEnchantingTable();
 
+    void openBrewingStand(const glm::ivec3& block);
+    void stowBrewingStand();
+    // Runs only while the screen is open. A stand with nobody watching
+    // it keeps nothing, which is the one way this differs from
+    // Minecraft's -- the stand has nowhere to store a half-done brew
+    // until it is a saved container in its own right.
+    void tickBrewing(float deltaTime);
+
     void openAnvil(const glm::ivec3& block);
     void stowAnvil();
     // Works out what the two inputs would make and puts it in the
@@ -544,6 +557,7 @@ private:
     void renderAir(float rightX, float y);
     void renderEatProgress(float cx, float cy);
     void handleEating(float deltaTime);
+    void handleDrinking(float deltaTime);
 
     // --- simple immediate-mode menu widgets ---
     struct Rect { float x, y, w, h; };

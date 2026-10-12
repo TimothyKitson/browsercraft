@@ -24,6 +24,7 @@
 #include "Game/Cane.h"
 #include "Game/Anvil.h"
 #include "Game/Effects.h"
+#include "Game/Brewing.h"
 #include "Game/Enchanting.h"
 #include "Game/Trading.h"
 #include "Game/EndPortal.h"
@@ -994,6 +995,91 @@ namespace
         Mob zombie(MobId::Zombie, glm::vec3(0.0f, 64.0f, 0.0f), 13u);
         check(mobType(MobId::Zombie).breedingFood == Blocks::Air, "a zombie wants no food");
         check(!zombie.feed(Items::Wheat), "and refuses wheat");
+    }
+
+    void testBrewing()
+    {
+        section("brewing: what a stand makes of a bottle");
+
+        using Brewing::Potion;
+
+        // Water takes nether wart and nothing else.
+        check(Brewing::brew(Potion::Water, Items::NetherWart) == Potion::Awkward,
+              "water and nether wart make the awkward base");
+        check(Brewing::brew(Potion::Water, Items::Sugar) == Potion::Count,
+              "sugar in water makes nothing");
+        check(Brewing::brew(Potion::Water, Items::BlazePowder) == Potion::Count,
+              "nor does blaze powder");
+        check(Brewing::brew(Potion::Water, Blocks::Cobblestone) == Potion::Count,
+              "nor a handful of cobblestone");
+
+        // The base takes the three that do something.
+        check(Brewing::brew(Potion::Awkward, Items::Sugar) == Potion::Speed,
+              "sugar makes swiftness");
+        check(Brewing::brew(Potion::Awkward, Items::BlazePowder) == Potion::Strength,
+              "blaze powder makes strength");
+        check(Brewing::brew(Potion::Awkward, Items::GlowstoneDust) == Potion::NightVision,
+              "glowstone dust makes night vision");
+        check(Brewing::brew(Potion::Awkward, Items::NetherWart) == Potion::Count,
+              "and a second wart does nothing to it");
+
+        // A finished potion is finished.
+        for (Potion done : { Potion::Speed, Potion::Strength, Potion::NightVision })
+            for (StackId with : { Items::Sugar, Items::BlazePowder,
+                                  Items::GlowstoneDust, Items::NetherWart })
+                check(Brewing::brew(done, with) == Potion::Count,
+                      "a finished potion takes nothing further");
+
+        check(Brewing::isIngredient(Items::Sugar), "sugar is an ingredient");
+        check(Brewing::isIngredient(Items::NetherWart), "so is wart");
+        check(!Brewing::isIngredient(Items::Potion), "a potion is not");
+        check(!Brewing::isIngredient(Blocks::Stone), "nor is a block of stone");
+
+        // Damage encoding: a potion rides in the stack's damage field.
+        for (int i = 0; i < static_cast<int>(Potion::Count); ++i)
+        {
+            const Potion potion = static_cast<Potion>(i);
+            check(Brewing::fromDamage(Brewing::toDamage(potion)) == potion,
+                  std::string("potion ") + std::to_string(i) + " survives the damage field");
+            check(Brewing::name(potion)[0] != '\0', "and has a name");
+        }
+        check(Brewing::fromDamage(-1) == Potion::Water, "a damage below the table reads as water");
+        check(Brewing::fromDamage(9999) == Potion::Water, "and so does one above it");
+
+        // What drinking them does.
+        Effects::Kind kind;
+        int amplifier = 0;
+        float seconds = 0.0f;
+        check(!Brewing::effectOf(Potion::Water, kind, amplifier, seconds),
+              "water leaves nothing behind");
+        check(!Brewing::effectOf(Potion::Awkward, kind, amplifier, seconds),
+              "nor does the base: it is a stage, not a drink");
+
+        check(Brewing::effectOf(Potion::Speed, kind, amplifier, seconds) &&
+              kind == Effects::Kind::Speed && seconds > 0.0f,
+              "swiftness leaves speed, for a while");
+        check(Brewing::effectOf(Potion::Strength, kind, amplifier, seconds) &&
+              kind == Effects::Kind::Strength,
+              "strength leaves strength");
+        check(Brewing::effectOf(Potion::NightVision, kind, amplifier, seconds) &&
+              kind == Effects::Kind::NightVision,
+              "and night vision leaves night vision");
+
+        // Drinking one actually moves the player.
+        {
+            Player p(glm::vec3(0.0f, 70.0f, 0.0f));
+            check(Effects::speedMultiplier(p.effects) == 1.0f, "unhurried to begin with");
+
+            Brewing::effectOf(Potion::Speed, kind, amplifier, seconds);
+            Effects::give(p.effects, kind, amplifier, seconds);
+            check(Effects::speedMultiplier(p.effects) > 1.0f, "and quicker once drunk");
+
+            // Three minutes is what it says on the bottle.
+            for (int i = 0; i < 1790; ++i) p.updateEffects(0.1f);
+            check(p.effects.has(Effects::Kind::Speed), "still going after three minutes less a moment");
+            for (int i = 0; i < 40; ++i) p.updateEffects(0.1f);
+            check(!p.effects.has(Effects::Kind::Speed), "and worn off just after");
+        }
     }
 
     void testEffects()
@@ -4790,6 +4876,7 @@ int runSelfTest()
     testMobDrops();
     testEndermanStare();
     testAnvil();
+    testBrewing();
     testEffects();
     testEffectsOnThePlayer();
     testFarming();

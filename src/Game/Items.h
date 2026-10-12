@@ -81,6 +81,17 @@ namespace Items
         EnderPearl,
         EyeOfEnder,
 
+        // Brewing. The potion is one id for every drink there is: which
+        // one it holds rides in the stack's damage field, the way wear
+        // does on a tool, so adding a potion costs no item id and a
+        // saved one comes back without the format changing.
+        GlassBottle,
+        Potion,
+        NetherWart,
+        Sugar,
+        BlazePowder,
+        GlowstoneDust,
+
         Count
     };
 }

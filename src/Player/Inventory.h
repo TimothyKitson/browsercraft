@@ -88,7 +88,15 @@ public:
     static constexpr int ANVIL_RESULT = ANVIL_FIRST + 2;
     static constexpr int ANVIL_SLOTS = 3;
 
-    static constexpr int SLOT_COUNT = ANVIL_FIRST + ANVIL_SLOTS;      // 84
+    // The brewing stand: one ingredient over three bottles, the shape
+    // Minecraft uses. Borrowed the same way as the rest.
+    static constexpr int BREW_FIRST = ANVIL_FIRST + ANVIL_SLOTS;      // 84..87
+    static constexpr int BREW_INGREDIENT = BREW_FIRST;
+    static constexpr int BREW_BOTTLE_FIRST = BREW_FIRST + 1;
+    static constexpr int BREW_BOTTLES = 3;
+    static constexpr int BREW_SLOTS = 1 + BREW_BOTTLES;
+
+    static constexpr int SLOT_COUNT = BREW_FIRST + BREW_SLOTS;        // 88
 
     // The ceiling. What a particular thing actually stacks to comes from
     // maxStackOf(), since items need not agree with blocks.

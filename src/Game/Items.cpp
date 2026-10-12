@@ -92,6 +92,14 @@ namespace
         { "Emerald",         Tiles::ItemEmerald,        64 },
         { "Ender Pearl",     Tiles::ItemEnderPearl,     16 },
         { "Eye of Ender",    Tiles::ItemEyeOfEnder,     64 },
+        { "Glass Bottle",    Tiles::ItemGlassBottle,    64 },
+        // A potion stacks to one: two of them are rarely the same
+        // drink, and the stack has only one damage field to say which.
+        { "Potion",          Tiles::ItemPotion,          1 },
+        { "Nether Wart",     Tiles::ItemNetherWart,     64 },
+        { "Sugar",           Tiles::ItemSugar,          64 },
+        { "Blaze Powder",    Tiles::ItemBlazePowder,    64 },
+        { "Glowstone Dust",  Tiles::ItemGlowstoneDust,  64 },
     };
 
     static_assert(sizeof(ITEMS) / sizeof(ITEMS[0]) ==

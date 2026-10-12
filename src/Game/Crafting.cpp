@@ -44,6 +44,19 @@ namespace
                          Blocks::EndStone,  Blocks::EndStone,  Blocks::EndStone },
           0, Blocks::EndPortalFrame, 4 },
 
+        // Brewing's glassware and the sweetener. One cane makes one
+        // sugar; three glass makes three bottles.
+        { true,  0, 0, { Blocks::SugarCane },
+          1, Items::Sugar, 1 },
+        { false, 3, 2, { Blocks::Glass,     _,                 Blocks::Glass,
+                         _,                 Blocks::Glass,     _ },
+          0, Items::GlassBottle, 3 },
+
+        // The stand: a blaze powder sat on three cobblestone.
+        { false, 3, 2, { _,                 Items::BlazePowder, _,
+                         Blocks::Cobblestone, Blocks::Cobblestone, Blocks::Cobblestone },
+          0, Blocks::BrewingStand, 1 },
+
         // Seven iron: a slab across the top, a stem, and a foot.
         // Minecraft spends three iron blocks on the top row, but there
         // is no iron block here to spend, so it is ingots all the way.

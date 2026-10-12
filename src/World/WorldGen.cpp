@@ -199,7 +199,15 @@ void WorldGen::generateNether(Chunk& chunk) const
 
                 if (y < LAVA_LEVEL + 9 &&
                     hashToFloat(hashCoords(wx, y, wz, m_seed + 72)) < 0.22f)
+                {
                     chunk.setBlockRaw(lx, y, lz, Blocks::SoulSand);
+
+                    // Wart grows on it, here and there. This is the
+                    // only place it comes from, so the flats are worth
+                    // walking once brewing matters to you.
+                    if (hashToFloat(hashCoords(wx, y, wz, m_seed + 74)) < 0.10f)
+                        chunk.setBlockRaw(lx, y + 1, lz, Blocks::NetherWart);
+                }
                 break;
             }
 

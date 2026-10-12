@@ -149,6 +149,8 @@ namespace
             case Blocks::CoalOre: return Items::Coal;
             case Blocks::DiamondOre: return Items::Diamond;
             case Blocks::EmeraldOre: return Items::Emerald;
+            case Blocks::Glowstone: return Items::GlowstoneDust;
+            case Blocks::NetherWart: return Items::NetherWart;
 
             default: return id;
         }
@@ -1305,12 +1307,13 @@ bool Application::frame()
         }
 
         if ((m_benchOpen || m_furnaceOpen || m_chestOpen || m_enchantOpen ||
-             m_anvilOpen) && playing())
+             m_anvilOpen || m_brewOpen) && playing())
         {
             const glm::ivec3 block = m_benchOpen    ? m_benchBlock
                                    : m_chestOpen    ? m_chestBlock
                                    : m_enchantOpen  ? m_enchantBlock
                                    : m_anvilOpen    ? m_anvilBlock
+                                   : m_brewOpen     ? m_brewBlock
                                                     : m_furnaceBlock;
             const glm::vec3 middle = glm::vec3(block) + glm::vec3(0.5f);
             const BlockId there = m_world->getBlock(block.x, block.y, block.z);
@@ -1320,6 +1323,7 @@ bool Application::frame()
               : m_chestOpen   ? there == Blocks::Chest
               : m_enchantOpen ? there == Blocks::EnchantingTable
               : m_anvilOpen   ? there == Blocks::Anvil
+              : m_brewOpen    ? there == Blocks::BrewingStand
                               : (there == Blocks::Furnace || there == Blocks::FurnaceLit);
 
             if (!stillThere || glm::length(m_player.position - middle) > BENCH_REACH)
@@ -1380,7 +1384,7 @@ bool Application::frame()
             m_startupScreen == "trade" || m_startupScreen == "endportal" ||
             m_startupScreen == "rain" || m_startupScreen == "storm" ||
             m_startupScreen == "pbr" || m_startupScreen == "anvil" ||
-            m_startupScreen == "anvilblock")
+            m_startupScreen == "anvilblock" || m_startupScreen == "brew")
         {
             // Dev aid: open the inventory with something in it, so the
             // screenshot shows a real grid rather than 36 empty boxes.
@@ -1585,6 +1589,57 @@ bool Application::frame()
                     slot.count = 1;
                     openEnchantingTable(glm::ivec3(bx, by, bz));
                 }
+            }
+
+            if (m_startupScreen == "brew")
+            {
+                m_camera.setOrientation(0.0f, -14.0f);
+                m_camera.addLook(0.0f, 0.0f, 0.0f);
+
+                const int px = static_cast<int>(std::floor(m_player.position.x));
+                const int py = static_cast<int>(std::floor(m_player.position.y));
+                const int pz = static_cast<int>(std::floor(m_player.position.z));
+
+                for (int ax = 0; ax <= 12; ++ax)
+                    for (int az = -7; az <= 7; ++az)
+                    {
+                        for (int ay = 0; ay <= 5; ++ay)
+                            m_world->setBlock(px + ax, py + ay, pz + az, Blocks::Air);
+                        m_world->setBlock(px + ax, py - 1, pz + az, Blocks::Planks);
+                    }
+
+                m_world->setBlock(px + 3, py, pz, Blocks::BrewingStand);
+                // A second one out where the panel does not cover it,
+                // since the one being used is behind the screen.
+                m_world->setBlock(px + 5, py, pz - 3, Blocks::BrewingStand);
+
+                // The three that every scene here carries.
+                m_world->setBlock(px + 8, py, pz - 4, Blocks::Bookshelf);
+                m_world->setBlock(px + 8, py, pz,     Blocks::DiamondOre);
+                m_world->setBlock(px + 8, py, pz + 4, Blocks::EndPortalFrame);
+
+                // Sugar on top of three water bottles: the moment just
+                // before three potions of swiftness.
+                ItemStack& dust = m_inventory.slot(Inventory::BREW_INGREDIENT);
+                dust.id = Items::Sugar;
+                dust.count = 5;
+
+                for (int i = 0; i < Inventory::BREW_BOTTLES; ++i)
+                {
+                    ItemStack& bottle = m_inventory.slot(Inventory::BREW_BOTTLE_FIRST + i);
+                    bottle.id = Items::Potion;
+                    bottle.count = 1;
+                    bottle.damage = Brewing::toDamage(Brewing::Potion::Awkward);
+                }
+
+                m_inventory.add(Items::NetherWart, 7);
+                m_inventory.add(Items::GlassBottle, 3);
+                m_inventory.add(Items::BlazePowder, 4);
+                m_inventory.add(Items::GlowstoneDust, 6);
+                m_inventory.add(Blocks::BrewingStand, 1);
+
+                openBrewingStand(glm::ivec3(px + 3, py, pz));
+                m_brewProgress = Brewing::BREW_SECONDS * 0.45f;
             }
 
             if (m_startupScreen == "anvil" || m_startupScreen == "anvilblock")
@@ -2508,6 +2563,8 @@ void Application::updateGameplay(float deltaTime)
     updateWorldAround(deltaTime);
     updateMining(deltaTime);
     handleEating(deltaTime);
+    handleDrinking(deltaTime);
+    tickBrewing(deltaTime);
     handlePlacement();
     m_heldItem.update(deltaTime);
 }
@@ -3427,6 +3484,42 @@ void Application::handleEating(float deltaTime)
     m_audio.play(Sound::Pickup, 0.6f, 0.85f);
 }
 
+// Drinking is eating with a different payload, but it does not go
+// through Food: a potion fills nothing, and a full player must still be
+// able to drink one.
+void Application::handleDrinking(float deltaTime)
+{
+    ItemStack& stack = m_inventory.selected();
+    const bool holding = inGame() && m_keys.down(m_input, Action::Use) &&
+                         stack.id == Items::Potion && !stack.empty();
+
+    if (!holding)
+    {
+        m_drinkTimer = 0.0f;
+        return;
+    }
+
+    m_drinkTimer += deltaTime;
+    if (m_drinkTimer < Food::EAT_SECONDS) return;
+    m_drinkTimer = 0.0f;
+
+    const Brewing::Potion potion = Brewing::fromDamage(stack.damage);
+
+    Effects::Kind kind;
+    int amplifier = 0;
+    float seconds = 0.0f;
+    if (Brewing::effectOf(potion, kind, amplifier, seconds))
+        Effects::give(m_player.effects, kind, amplifier, seconds);
+
+    // The glass comes back whatever was in it, water included.
+    stack.count -= 1;
+    if (stack.count <= 0) stack.clear();
+    if (m_inventory.add(Items::GlassBottle, 1) > 0)
+        m_drops.spawn(m_player.position, Items::GlassBottle, 1);
+
+    m_audio.play(Sound::Pickup, 0.6f, 1.25f);
+}
+
 void Application::handlePlacement()
 {
     if (m_keys.pressed(m_input, Action::PickBlock))
@@ -3526,6 +3619,12 @@ void Application::handlePlacement()
                 m_audio.play(Sound::Click, 0.4f);
                 return;
             }
+            if (used == Blocks::BrewingStand)
+            {
+                openBrewingStand(bench.block);
+                m_audio.play(Sound::Click, 0.4f);
+                return;
+            }
             if (used == Blocks::Bed)
             {
                 sleepInBed(bench.block);
@@ -3541,6 +3640,31 @@ void Application::handlePlacement()
 
     ItemStack& stack = m_inventory.selected();
     if (stack.empty()) return;
+
+    // A glass bottle fills from water without taking the block, which
+    // is the one way a bottle differs from a bucket -- otherwise every
+    // potion would cost a pond.
+    if (stack.id == Items::GlassBottle)
+    {
+        const RaycastHit scoop = m_world->raycast(m_camera.position, m_camera.front,
+                                                  REACH_DISTANCE, true);
+        if (!scoop.hit) return;
+        if (m_world->getBlock(scoop.block.x, scoop.block.y, scoop.block.z) != Blocks::Water)
+            return;
+
+        ItemStack filled;
+        filled.id = Items::Potion;
+        filled.count = 1;
+        filled.damage = Brewing::toDamage(Brewing::Potion::Water);
+
+        stack.count -= 1;
+        if (stack.count <= 0) stack.clear();
+        if (m_inventory.addStack(filled) > 0)
+            m_drops.spawnStack(m_player.position, filled);
+
+        m_audio.play(Sound::Pickup, 0.5f, 1.1f);
+        return;
+    }
 
     // Buckets: fill from a liquid you are looking at, or empty into the
     // space in front of one. The liquids here do not flow, so a bucket

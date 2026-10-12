@@ -2155,6 +2155,48 @@ namespace
     // the whole of what you see of it from standing height.
     // The anvil, seen from above: the flat face you work on, with the
     // horn standing proud at one end.
+    void paintNetherWartTile(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        const int n = Tile::N;
+        const Color wart{ 150, 30, 44 };
+        const Color wartDark{ 96, 18, 28 };
+
+        // A low clump: wider at the bottom, ragged at the top.
+        for (int y = n / 2; y < n; ++y)
+        {
+            const int inset = (y < (n * 5) / 8) ? n / 3 : n / 5;
+            for (int x = inset; x < n - inset; ++x)
+                t.set(x, y, ((x * 5 + y * 7) % 9 < 4) ? wartDark : wart);
+        }
+    }
+
+    void paintBrewingStandTile(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        const int n = Tile::N;
+        const Color iron{ 128, 128, 134 };
+        const Color ironDark{ 80, 80, 86 };
+        const Color flame{ 236, 150, 48 };
+
+        // A post with a wide foot and three bottles hanging off it.
+        for (int y = n / 5; y < n; ++y)
+            t.set(n / 2, y, iron);
+        for (int x = n / 4; x < n - n / 4; ++x)
+            t.set(x, n - 1, ironDark);
+        for (int x = n / 3; x < n - n / 3; ++x)
+            t.set(x, n - 2, iron);
+
+        for (int y = (n * 2) / 3; y < n - 2; ++y)
+        {
+            t.set(n / 4, y, iron);
+            t.set(n - 1 - n / 4, y, iron);
+        }
+        t.set(n / 2, n / 5, flame);
+        t.set(n / 2 - 1, n / 5 + 1, flame);
+        t.set(n / 2 + 1, n / 5 + 1, flame);
+    }
+
     void paintAnvilTop(Tile& t)
     {
         const int n = Tile::N;
@@ -2291,6 +2333,87 @@ namespace
                                                      : ((dx + dy >= 3) ? gemDark : gem));
                 }
         }
+    }
+
+    // A bottle: narrow neck, round body. The potion is the same shape
+    // with the body filled in, so the two are painted by one function
+    // and differ only in what goes inside.
+    void paintBottle(Tile& t, Color inside, bool filled)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        const int n = Tile::N;
+        const Color glass{ 190, 206, 214 };
+        const Color glassDark{ 128, 146, 156 };
+        const Color cork{ 150, 112, 68 };
+
+        const int neckLeft = (n * 7) / 16;
+        const int neckRight = (n * 9) / 16;
+        const int shoulder = (n * 6) / 16;
+
+        for (int y = n / 8; y < shoulder; ++y)
+            for (int x = neckLeft; x < neckRight; ++x)
+                t.set(x, y, glass);
+
+        for (int x = neckLeft - 1; x <= neckRight; ++x)
+            t.set(x, n / 8, cork);
+
+        const float mid = (n - 1) * 0.5f;
+        for (int y = shoulder; y < n - n / 10; ++y)
+        {
+            const float dy = (y - shoulder) / static_cast<float>(n - shoulder);
+            const int half = static_cast<int>((n * 0.16f) + dy * (n * 0.18f));
+            for (int x = static_cast<int>(mid) - half; x <= static_cast<int>(mid) + half; ++x)
+            {
+                if (x < 0 || x >= n) continue;
+                const bool edge = (x <= static_cast<int>(mid) - half + 1) ||
+                                  (x >= static_cast<int>(mid) + half - 1);
+                if (filled && !edge) t.set(x, y, inside);
+                else t.set(x, y, edge ? glassDark : glass);
+            }
+        }
+    }
+
+    void paintItemGlassBottle(Tile& t) { paintBottle(t, Color{ 0, 0, 0, 0 }, false); }
+    void paintItemPotion(Tile& t) { paintBottle(t, Color{ 220, 60, 80 }, true); }
+
+    // A scatter of grains, for the three powders. Each gets its own
+    // colour and the same shape, which is what they look like anyway.
+    void paintPowder(Tile& t, Color bright, Color dark)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        const int n = Tile::N;
+        const float mid = (n - 1) * 0.5f;
+        for (int y = 0; y < n; ++y)
+            for (int x = 0; x < n; ++x)
+            {
+                const float dx = (x - mid) / (n * 0.34f);
+                const float dy = (y - mid * 1.15f) / (n * 0.26f);
+                if (dx * dx + dy * dy > 1.0f) continue;
+                t.set(x, y, ((x * 5 + y * 3) % 7 < 3) ? bright : dark);
+            }
+    }
+
+    void paintItemSugar(Tile& t) { paintPowder(t, Color{ 246, 246, 250 }, Color{ 202, 206, 214 }); }
+    void paintItemBlazePowder(Tile& t) { paintPowder(t, Color{ 252, 196, 70 }, Color{ 204, 110, 26 }); }
+    void paintItemGlowstoneDust(Tile& t) { paintPowder(t, Color{ 248, 226, 150 }, Color{ 198, 160, 84 }); }
+
+    // Nether wart: a dark red knot of a thing.
+    void paintItemNetherWart(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        const int n = Tile::N;
+        const Color wart{ 150, 30, 44 };
+        const Color wartDark{ 96, 18, 28 };
+        const float mid = (n - 1) * 0.5f;
+        for (int y = 0; y < n; ++y)
+            for (int x = 0; x < n; ++x)
+            {
+                const float dx = (x - mid) / (n * 0.33f);
+                const float dy = (y - mid) / (n * 0.33f);
+                const float d = dx * dx + dy * dy;
+                if (d > 1.0f) continue;
+                t.set(x, y, ((x * 7 + y * 5) % 9 < 4) ? wartDark : wart);
+            }
     }
 
     void paintItemEmerald(Tile& t)
@@ -2662,11 +2785,19 @@ namespace
         { Tiles::SugarCane,     paintSugarCane },
         { Tiles::BookshelfSide, paintBookshelfSide },
         { Tiles::AnvilTop,         paintAnvilTop },
+        { Tiles::NetherWartTile,   paintNetherWartTile },
+        { Tiles::BrewingStandTile, paintBrewingStandTile },
         { Tiles::AnvilSide,        paintAnvilSide },
         { Tiles::EnchantTableTop,  paintEnchantTableTop },
         { Tiles::EnchantTableSide, paintEnchantTableSide },
         { Tiles::EmeraldOre,    paintEmeraldOre },
         { Tiles::ItemEmerald,   paintItemEmerald },
+        { Tiles::ItemGlassBottle,   paintItemGlassBottle },
+        { Tiles::ItemPotion,        paintItemPotion },
+        { Tiles::ItemNetherWart,    paintItemNetherWart },
+        { Tiles::ItemSugar,         paintItemSugar },
+        { Tiles::ItemBlazePowder,   paintItemBlazePowder },
+        { Tiles::ItemGlowstoneDust, paintItemGlowstoneDust },
         { Tiles::EndFrameTop,   paintEndFrameTop },
         { Tiles::EndFrameEye,   paintEndFrameEye },
         { Tiles::EndFrameSide,  paintEndFrameSide },
@@ -2763,6 +2894,12 @@ namespace
         // Vanilla has always called the eye "ender_eye", not
         // "eye_of_ender", whatever the item is called in the game.
         { Tiles::ItemEyeOfEnder, { "ender_eye", nullptr, nullptr } },
+        { Tiles::ItemGlassBottle,   { "glass_bottle", nullptr, nullptr } },
+        { Tiles::ItemPotion,        { "potion", "potion_bottle_drinkable", nullptr } },
+        { Tiles::ItemNetherWart,    { "nether_wart", nullptr, nullptr } },
+        { Tiles::ItemSugar,         { "sugar", nullptr, nullptr } },
+        { Tiles::ItemBlazePowder,   { "blaze_powder", nullptr, nullptr } },
+        { Tiles::ItemGlowstoneDust, { "glowstone_dust", nullptr, nullptr } },
 
         { Tiles::ItemToolFirst +  0, { "wooden_pickaxe", "wood_pickaxe", nullptr } },
         { Tiles::ItemToolFirst +  1, { "wooden_axe", "wood_axe", nullptr } },
@@ -2826,6 +2963,8 @@ namespace
         { Tiles::EmeraldOre,    { "emerald_ore", nullptr },                            Tinting::None,    0,   false },
         { Tiles::BookshelfSide, { "bookshelf", nullptr },                              Tinting::None,    0,   false },
         { Tiles::AnvilTop,         { "anvil_top", nullptr },                           Tinting::None,    0,   false },
+        { Tiles::NetherWartTile,   { "nether_wart_stage2", "nether_wart", nullptr },  Tinting::None,    0,   false },
+        { Tiles::BrewingStandTile, { "brewing_stand", nullptr },                       Tinting::None,    0,   false },
         { Tiles::AnvilSide,        { "anvil", nullptr },                               Tinting::None,    0,   false },
         { Tiles::EnchantTableTop,  { "enchanting_table_top", nullptr },                Tinting::None,    0,   false },
         { Tiles::EnchantTableSide, { "enchanting_table_side", nullptr },               Tinting::None,    0,   false },

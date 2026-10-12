@@ -119,6 +119,8 @@ namespace
         { "End Portal Frame", EndFrameEye, EndStone,      EndFrameSide,   true,  false, RenderType::Slab,   6,  -1.0f },
         { "End Portal",   EndPortalTile, EndPortalTile,  EndPortalTile,  false, false, RenderType::Cube,  11,  -1.0f },
         { "Anvil",        AnvilTop,      AnvilTop,       AnvilSide,      true,  false, RenderType::Slab,   0,   5.0f },
+        { "Nether Wart",  NetherWartTile, NetherWartTile, NetherWartTile, false, false, RenderType::Cross,  0,   0.0f },
+        { "Brewing Stand", BrewingStandTile, BrewingStandTile, BrewingStandTile, false, false, RenderType::Cross, 1, 0.5f },
     };
 }
 
@@ -178,6 +180,7 @@ const char* blockSoundGroup(BlockId id)
         case Blocks::Cactus:
         case Blocks::Pumpkin:
         case Blocks::SugarCane:
+        case Blocks::NetherWart:
             return "grass";
 
         case Blocks::Farmland:
@@ -318,6 +321,8 @@ Material blockMaterial(BlockId id)
         case Blocks::Pumpkin:
         case Blocks::SugarCane:
         case Blocks::Torch:
+        case Blocks::NetherWart:
+        case Blocks::BrewingStand:
             return Material::Plant;
 
         // Stone, the ores, the bricks, obsidian, the nether and end

@@ -124,6 +124,11 @@ namespace Blocks
         // Mending and moving enchantments. Appended, like the rest.
         Anvil,
 
+        // Brewing. The wart grows on soul sand in the Nether, which is
+        // the only reason to go looking in the flats down there.
+        NetherWart,
+        BrewingStand,
+
         Count
     };
 }

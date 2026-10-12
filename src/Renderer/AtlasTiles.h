@@ -78,6 +78,8 @@ namespace Tiles
         EndPortalTile,
         AnvilTop,
         AnvilSide,
+        NetherWartTile,
+        BrewingStandTile,
         RainDrop,
         SnowFlake,
 
@@ -151,8 +153,14 @@ namespace Tiles
         ItemEmerald,
         ItemEnderPearl,
         ItemEyeOfEnder,
+        ItemGlassBottle,
+        ItemPotion,
+        ItemNetherWart,
+        ItemSugar,
+        ItemBlazePowder,
+        ItemGlowstoneDust,
 
-        ItemTileEnd = ItemEyeOfEnder + 1
+        ItemTileEnd = ItemGlowstoneDust + 1
     };
 
     // Ten progressively more broken overlay tiles for the mining animation.

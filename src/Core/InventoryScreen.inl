@@ -554,6 +554,54 @@ void Application::renderInventoryScreen()
         }
         else
 
+        // The brewing stand: the ingredient on top, three bottles under
+        // it, and a bar showing how far along it is.
+        if (m_brewOpen)
+        {
+            const float bx = panelX + gridWidth * 0.34f;
+            const float by = topY + SLOT_GAP;
+
+            guiWell(bx + step, by, SLOT_SIZE, SLOT_SIZE);
+            {
+                const ItemStack& stack = m_inventory.slot(Inventory::BREW_INGREDIENT);
+                drawItem(bx + step, by, SLOT_SIZE, stack.id, stack.count,
+                         glm::vec4(1.0f), stack.damage);
+                m_slotBoxes.push_back({ SlotBox::Kind::Slot, Inventory::BREW_INGREDIENT,
+                                        bx + step, by, SLOT_SIZE });
+            }
+
+            const float bottleY = by + step * 1.6f;
+            for (int i = 0; i < Inventory::BREW_BOTTLES; ++i)
+            {
+                const float sx = bx + step * static_cast<float>(i);
+                guiWell(sx, bottleY, SLOT_SIZE, SLOT_SIZE);
+                const int slot = Inventory::BREW_BOTTLE_FIRST + i;
+                const ItemStack& stack = m_inventory.slot(slot);
+                drawItem(sx, bottleY, SLOT_SIZE, stack.id, stack.count,
+                         glm::vec4(1.0f), stack.damage);
+                m_slotBoxes.push_back({ SlotBox::Kind::Slot, slot, sx, bottleY, SLOT_SIZE });
+            }
+
+            // The bar runs down between the ingredient and the bottles,
+            // which is where the bubbles go in Minecraft.
+            const float barX = bx + step + SLOT_SIZE * 0.42f;
+            const float barTop = by + SLOT_SIZE + 4.0f;
+            const float barHeight = bottleY - barTop - 4.0f;
+            const float along = std::min(1.0f, m_brewProgress / Brewing::BREW_SECONDS);
+            guiWell(barX, barTop, 6.0f, barHeight);
+            if (along > 0.0f)
+                m_ui.quad(barX, barTop + barHeight * (1.0f - along), 6.0f, barHeight * along,
+                          glm::vec4(0.62f, 0.38f, 0.86f, 1.0f));
+
+            // What the bottle under the cursor actually holds, since
+            // every potion is the same item id with a different number.
+            const ItemStack& first = m_inventory.slot(Inventory::BREW_BOTTLE_FIRST);
+            if (first.id == Items::Potion)
+                m_ui.text(Brewing::name(Brewing::fromDamage(first.damage)),
+                          bx, bottleY + SLOT_SIZE + 6.0f, 1.4f, TEXT_DIM);
+        }
+        else
+
         // The anvil: two things in, one out, and the price in levels
         // under them. The left slot is what you are working on and the
         // right is what you are working into it -- which way round they
@@ -844,6 +892,7 @@ void Application::closeInventory()
     stowFurnace();
     stowEnchantingTable();
     stowAnvil();
+    stowBrewingStand();
     m_tradeOpen = false;
     returnCursorToWorld();
     m_inventoryOpen = false;
@@ -938,6 +987,85 @@ void Application::stowEnchantingTable()
     }
 
     m_enchantOpen = false;
+}
+
+void Application::openBrewingStand(const glm::ivec3& block)
+{
+    m_brewBlock = block;
+    m_brewOpen = true;
+    m_brewProgress = 0.0f;
+
+    m_inventoryOpen = true;
+    setMouseCaptured(false);
+}
+
+void Application::stowBrewingStand()
+{
+    if (!m_brewOpen) return;
+
+    for (int i = 0; i < Inventory::BREW_SLOTS; ++i)
+    {
+        ItemStack& stack = m_inventory.slot(Inventory::BREW_FIRST + i);
+        if (stack.empty()) continue;
+
+        const int leftOver = m_inventory.addStack(stack);
+        if (leftOver > 0)
+            m_drops.spawnStack(m_player.position + glm::vec3(0.0f, 0.6f, 0.0f), stack);
+        stack.clear();
+    }
+
+    m_brewOpen = false;
+    m_brewProgress = 0.0f;
+}
+
+void Application::tickBrewing(float deltaTime)
+{
+    if (!m_brewOpen) { m_brewProgress = 0.0f; return; }
+
+    const ItemStack& ingredient = m_inventory.slot(Inventory::BREW_INGREDIENT);
+    if (ingredient.empty() || !Brewing::isIngredient(ingredient.id))
+    {
+        m_brewProgress = 0.0f;
+        return;
+    }
+
+    // Only bottles this ingredient would actually change count. A stand
+    // with three finished potions in it and a spoon of sugar on top has
+    // nothing left to do.
+    int brewable = 0;
+    for (int i = 0; i < Inventory::BREW_BOTTLES; ++i)
+    {
+        const ItemStack& bottle = m_inventory.slot(Inventory::BREW_BOTTLE_FIRST + i);
+        if (bottle.id != Items::Potion) continue;
+        if (Brewing::brew(Brewing::fromDamage(bottle.damage), ingredient.id) !=
+            Brewing::Potion::Count)
+            ++brewable;
+    }
+
+    if (brewable == 0) { m_brewProgress = 0.0f; return; }
+
+    m_brewProgress += deltaTime;
+    if (m_brewProgress < Brewing::BREW_SECONDS) return;
+
+    // One ingredient does every bottle at once, as Minecraft's does.
+    for (int i = 0; i < Inventory::BREW_BOTTLES; ++i)
+    {
+        ItemStack& bottle = m_inventory.slot(Inventory::BREW_BOTTLE_FIRST + i);
+        if (bottle.id != Items::Potion) continue;
+
+        const Brewing::Potion made =
+            Brewing::brew(Brewing::fromDamage(bottle.damage), ingredient.id);
+        if (made == Brewing::Potion::Count) continue;
+
+        bottle.damage = Brewing::toDamage(made);
+    }
+
+    ItemStack& spend = m_inventory.slot(Inventory::BREW_INGREDIENT);
+    spend.count -= 1;
+    if (spend.count <= 0) spend.clear();
+
+    m_brewProgress = 0.0f;
+    m_audio.play(Sound::Click, 0.5f, 1.4f);
 }
 
 void Application::openAnvil(const glm::ivec3& block)
