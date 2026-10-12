@@ -2042,6 +2042,53 @@ namespace
         check(blockMaterial(Blocks::LadderNorth) != Material::Stone, "and is not stone");
     }
 
+    void testHandSwing()
+    {
+        section("the hand swinging");
+
+        HeldItem hand;
+        check(!hand.swinging(), "a hand at rest is not swinging");
+
+        hand.swing();
+        check(hand.swinging(), "and is once it has been swung");
+
+        // It runs for SWING_SECONDS and then stops.
+        hand.update(HeldItem::SWING_SECONDS * 0.5f);
+        check(hand.swinging(), "still going halfway through");
+        hand.update(HeldItem::SWING_SECONDS * 0.6f);
+        check(!hand.swinging(), "and done once its time is up");
+
+        // Mining holds the button down. Asking first is what lets one
+        // swing finish before the next starts; calling swing() every
+        // frame instead reset the timer before it could run down, and
+        // the arm sat near the start of its arc looking still.
+        constexpr float FRAME = 1.0f / 60.0f;
+        const int frames = 300;
+
+        HeldItem asking;
+        int started = 0;
+        for (int i = 0; i < frames; ++i)
+        {
+            if (!asking.swinging()) { asking.swing(); ++started; }
+            asking.update(FRAME);
+        }
+
+        // Five seconds of mining at a quarter second a swing is twenty.
+        check(started >= 18 && started <= 22,
+              "mining swings over and over, " + std::to_string(started) + " times in five seconds");
+
+        HeldItem everyFrame;
+        int restarts = 0;
+        for (int i = 0; i < frames; ++i)
+        {
+            everyFrame.swing();
+            everyFrame.update(FRAME);
+            if (!everyFrame.swinging()) ++restarts;
+        }
+        check(restarts == 0,
+              "swinging every frame never lets one finish, which was the bug");
+    }
+
     void testFirstPersonArm()
     {
         section("the hand on screen");
@@ -2906,6 +2953,7 @@ int runSelfTest()
     testWearing();
     testLadders();
     testFirstPersonArm();
+    testHandSwing();
     testOreRates();
     testDoors();
     testStairs();

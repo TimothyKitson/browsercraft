@@ -38,6 +38,13 @@ public:
 
     // Started when you swing at something, whether or not you hit it.
     void swing() { m_swing = SWING_SECONDS; }
+
+    // Whether one is still running. Mining asks before starting
+    // another: calling swing() every frame, as it used to, reset the
+    // timer before it could run down and pinned the arm near the start
+    // of its arc, so holding the button showed a hand held still rather
+    // than one swinging over and over.
+    bool swinging() const { return m_swing > 0.0f; }
     void update(float deltaTime);
 
     // `stack` is what the hotbar has selected; Blocks::Air draws a bare

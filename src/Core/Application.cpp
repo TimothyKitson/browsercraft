@@ -2164,7 +2164,9 @@ void Application::updateMining(float deltaTime)
     else
         m_breakProgress += deltaTime / seconds;
 
-    m_heldItem.swing();
+    // One swing after another for as long as you keep mining, rather
+    // than one restarted every frame.
+    if (!m_heldItem.swinging()) m_heldItem.swing();
 
     if (m_breakProgress >= 1.0f)
     {
