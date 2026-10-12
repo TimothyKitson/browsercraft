@@ -1330,6 +1330,17 @@ bool Application::frame()
 
             if (m_startupScreen == "arrows") m_arrowDemo = true;
 
+            // The armour HUD shot doubles as the one that shows every
+            // row at once: hearts, armour, hunger, bubbles and the
+            // experience bar, which is the only way to see whether the
+            // left-hand and right-hand columns have grown into each
+            // other.
+            if (m_startupScreen == "armourhud")
+            {
+                m_player.air = Player::MAX_AIR_SECONDS * 0.45f;
+                m_player.experience = Experience::totalForLevel(14) + 3;
+            }
+
             if (m_startupScreen == "stairs")
             {
                 m_camera.pitch = -14.0f;
