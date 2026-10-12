@@ -133,6 +133,25 @@ void UIRenderer::texturedQuad(unsigned int texture, float x, float y, float w, f
     pushQuad(x, y, w, h, u0, v0, u1, v1, color);
 }
 
+void UIRenderer::texturedShape(unsigned int texture, const glm::vec2 corner[4],
+                               const glm::vec2 uv[4], const glm::vec4& color)
+{
+    useTexture(texture);
+
+    const int order[6] = { 0, 1, 2, 0, 2, 3 };
+    for (int k : order)
+    {
+        m_vertices.push_back(corner[k].x);
+        m_vertices.push_back(corner[k].y);
+        m_vertices.push_back(uv[k].x);
+        m_vertices.push_back(uv[k].y);
+        m_vertices.push_back(color.r);
+        m_vertices.push_back(color.g);
+        m_vertices.push_back(color.b);
+        m_vertices.push_back(color.a);
+    }
+}
+
 void UIRenderer::text(const std::string& value, float x, float y, float scale, const glm::vec4& color)
 {
     useTexture(m_font.textureId());

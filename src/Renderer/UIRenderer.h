@@ -22,6 +22,14 @@ public:
     void texturedQuad(unsigned int texture, float x, float y, float w, float h,
                       float u0, float v0, float u1, float v1, const glm::vec4& color);
 
+    // Four corners given outright, rather than a rectangle. Everything
+    // else on the HUD is axis-aligned; a block drawn as a cube is three
+    // parallelograms, and none of them is.
+    //
+    // Corners run round the shape, and uv[i] belongs to corner[i].
+    void texturedShape(unsigned int texture, const glm::vec2 corner[4],
+                       const glm::vec2 uv[4], const glm::vec4& color);
+
     void text(const std::string& value, float x, float y, float scale, const glm::vec4& color);
     void textWithShadow(const std::string& value, float x, float y, float scale, const glm::vec4& color);
     // Same, but tilted about the middle of the line. Minecraft's splash

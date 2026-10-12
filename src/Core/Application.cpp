@@ -4432,9 +4432,13 @@ void Application::renderHud()
         const ItemStack& stack = m_inventory.slot(i);
         if (stack.empty()) continue;
 
-        const TileUV uv = tileUV(atlasTileFor(stack.id));
-        m_ui.texturedQuad(m_atlas.textureId(), slotX + 5.0f, barY + 5.0f, SLOT_SIZE - 10.0f, SLOT_SIZE - 10.0f,
-                          uv.u0, uv.vTop, uv.u1, uv.vBottom, glm::vec4(1.0f));
+        // Through drawItem, the same as every slot on the inventory
+        // panel, so a block in the hotbar is the cube it is there and
+        // not a flat square of its own top texture. Drawing its own
+        // quad here is what left the hotbar behind when the panel
+        // learned to draw blocks as blocks -- and it also means the
+        // wear on a tool now shows in the hand, where it matters most.
+        drawItem(slotX, barY, SLOT_SIZE, stack.id, stack.count, glm::vec4(1.0f), stack.damage);
 
         if (!m_player.creative() && stack.count > 1)
         {

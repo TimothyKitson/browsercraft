@@ -418,6 +418,12 @@ private:
     void renderPauseMenu();
     void renderDeathScreen();
     void renderInventoryScreen();
+    // A block drawn as a cube seen from the corner, the way Minecraft
+    // draws one in a slot. Returns false for anything that is not a
+    // block with six faces -- an item, a flower, a liquid -- which the
+    // caller then draws flat as before.
+    bool drawBlockIcon(float x, float y, float size, StackId id, const glm::vec4& tint);
+
     void drawItem(float x, float y, float size, StackId id, int count, const glm::vec4& tint,
                   int damage = 0);
     void drawPlayerDoll(const PlayerSkin& skin, float x, float y, float unit);

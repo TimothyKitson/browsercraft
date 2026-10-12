@@ -132,6 +132,82 @@ namespace
     }
 }
 
+// A cube seen from above and to one side: the top face as a rhombus,
+// and two of the four sides below it. It is the same two-to-one
+// isometric Minecraft uses, which is why a block in a slot there looks
+// like a block rather than like a square of its own top texture.
+//
+// Laid out so the whole thing fits a square of `size` on a side. With
+// `a` for the half-width, the rhombus is `a` wide and `a` tall between
+// its top and bottom corners, and the sides hang `a` below it, which
+// comes to `2a` -- the full square -- in all.
+bool Application::drawBlockIcon(float x, float y, float size, StackId id,
+                                const glm::vec4& tint)
+{
+    if (isItem(id)) return false;
+
+    const BlockId block = asBlock(id);
+    const BlockInfo& info = blockInfo(block);
+
+    // Only things that really are a box. A flower is two crossed quads
+    // and a liquid has no edges; both read better flat, and Minecraft
+    // draws them flat too.
+    if (info.render != RenderType::Cube && info.render != RenderType::Slab) return false;
+
+    const float a = size * 0.5f;
+    const float tall = blockHeight(block);     // a slab stands half as high
+    const float sides = a * tall;
+
+    // Bottom-aligned, so a slab sits in the bottom of the slot with the
+    // space above it rather than floating in the middle.
+    const float top = y + (size - (a + sides));
+    const float cx = x + a;
+
+    const glm::vec2 A(cx, top);                  // the rhombus, clockwise
+    const glm::vec2 B(cx + a, top + a * 0.5f);
+    const glm::vec2 C(cx, top + a);
+    const glm::vec2 D(cx - a, top + a * 0.5f);
+    const glm::vec2 Bb(B.x, B.y + sides);        // and the two corners below
+    const glm::vec2 Cb(C.x, C.y + sides);
+    const glm::vec2 Db(D.x, D.y + sides);
+
+    const TileUV topUV = tileUV(info.tileTop);
+    const TileUV sideUV = tileUV(info.tileSide);
+
+    const glm::vec2 square[4] = { { 0.0f, 0.0f }, { 1.0f, 0.0f }, { 1.0f, 1.0f }, { 0.0f, 1.0f } };
+
+    auto faceUV = [&](const TileUV& t, glm::vec2 out[4]) {
+        for (int i = 0; i < 4; ++i)
+            out[i] = glm::vec2(square[i].x == 0.0f ? t.u0 : t.u1,
+                               square[i].y == 0.0f ? t.vTop : t.vBottom);
+    };
+
+    // The three faces are shaded apart, or the cube reads as a flat
+    // hexagon of one colour. These are the same ratios the world uses
+    // for a top, a north face and an east face.
+    auto shaded = [&](float amount) {
+        return glm::vec4(tint.r * amount, tint.g * amount, tint.b * amount, tint.a);
+    };
+
+    glm::vec2 uv[4];
+
+    const glm::vec2 topFace[4] = { A, B, C, D };
+    faceUV(topUV, uv);
+    m_ui.texturedShape(m_atlas.textureId(), topFace, uv, shaded(1.0f));
+
+    // Left, then right. Drawn after the top so a seam between them is
+    // covered by the face in front rather than showing through.
+    const glm::vec2 leftFace[4] = { D, C, Cb, Db };
+    faceUV(sideUV, uv);
+    m_ui.texturedShape(m_atlas.textureId(), leftFace, uv, shaded(0.78f));
+
+    const glm::vec2 rightFace[4] = { C, B, Bb, Cb };
+    faceUV(sideUV, uv);
+    m_ui.texturedShape(m_atlas.textureId(), rightFace, uv, shaded(0.60f));
+
+    return true;
+}
+
 void Application::drawItem(float x, float y, float size, StackId id, int count,
                            const glm::vec4& tint, int damage)
 {
@@ -140,10 +216,14 @@ void Application::drawItem(float x, float y, float size, StackId id, int count,
     // Minecraft leaves a clear margin around an item in its slot; at
     // 11% the blocks looked wedged in.
     const float inset = size * 0.19f;
-    const TileUV uv = tileUV(atlasTileFor(id));
-    m_ui.texturedQuad(m_atlas.textureId(), x + inset, y + inset,
-                      size - inset * 2.0f, size - inset * 2.0f,
-                      uv.u0, uv.vTop, uv.u1, uv.vBottom, tint);
+
+    if (!drawBlockIcon(x + inset, y + inset, size - inset * 2.0f, id, tint))
+    {
+        const TileUV uv = tileUV(atlasTileFor(id));
+        m_ui.texturedQuad(m_atlas.textureId(), x + inset, y + inset,
+                          size - inset * 2.0f, size - inset * 2.0f,
+                          uv.u0, uv.vTop, uv.u1, uv.vBottom, tint);
+    }
 
     // How much of a tool is left, as the bar across the bottom of the
     // icon: green when it is new, red by the time it is about to go.
