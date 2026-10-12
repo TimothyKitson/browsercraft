@@ -3980,6 +3980,88 @@ namespace
         }
         check(full.addStack(axe) == axe.count, "a full pack gives it straight back");
     }
+
+    void testContainersPerDimension()
+    {
+        section("chests and furnaces belong to a dimension");
+
+        // A chest in the Nether at the same x, y and z as one in the
+        // overworld is a different chest. Keyed on position alone they
+        // shared their contents, so a chest built at matching
+        // coordinates in the Nether opened holding the overworld's
+        // loot -- and emptying it emptied the one back home.
+        const glm::ivec3 spot(100, 64, 100);
+
+        Chests chests;
+        chests.setDimension(0);
+        chests.at(spot)[0] = ItemStack{ Items::Diamond, 7 };
+        check(chests.has(spot), "a chest in the overworld is on record");
+
+        chests.setDimension(1);
+        check(!chests.has(spot), "and the same spot in the Nether is empty");
+
+        chests.at(spot)[0] = ItemStack{ Blocks::Netherrack, 3 };
+        check(chests.at(spot)[0].id == Blocks::Netherrack, "which can hold its own things");
+
+        chests.setDimension(0);
+        check(chests.at(spot)[0].id == Items::Diamond, "while the overworld keeps its diamonds");
+        check(chests.at(spot)[0].count == 7, "all seven of them");
+
+        // Breaking one must not reach through to the other.
+        chests.remove(spot);
+        check(!chests.has(spot), "breaking the overworld chest forgets it");
+        chests.setDimension(1);
+        check(chests.has(spot), "and leaves the Nether one standing");
+
+        // Two chests at the same spot are two records, not one.
+        check(chests.all().size() == 1, "one left of the two");
+
+        section("furnaces likewise");
+
+        Furnaces furnaces;
+        furnaces.setDimension(0);
+        furnaces.at(spot).burnLeft = 12.0f;
+
+        furnaces.setDimension(1);
+        check(!furnaces.has(spot), "a furnace is its own in each world");
+        furnaces.at(spot).burnLeft = 3.0f;
+
+        furnaces.setDimension(0);
+        check(furnaces.at(spot).burnLeft == 12.0f, "and keeps burning its own fuel");
+        check(furnaces.all().size() == 2, "both are on record");
+
+        section("saving: containers come back to the world they were in");
+
+        const std::string dir = "selftest-dimsave";
+        WorldSave::ensureDirectories(dir);
+
+        LevelState wrote;
+        wrote.seed = 7u;
+
+        LevelState::SavedChest home;
+        home.x = 100; home.y = 64; home.z = 100;
+        home.slots.resize(Chests::SLOTS, { 0, 0 });
+        home.slots[0] = { static_cast<uint16_t>(Items::Diamond), 7 };
+        wrote.chests.push_back(home);
+        wrote.chestDimensions.push_back(0);
+
+        LevelState::SavedChest below = home;
+        below.slots[0] = { static_cast<uint16_t>(Blocks::Netherrack), 3 };
+        wrote.chests.push_back(below);
+        wrote.chestDimensions.push_back(1);
+
+        WorldSave::saveLevel(dir, wrote);
+
+        LevelState read;
+        check(WorldSave::loadLevel(dir, read), "a level with two such chests reads back");
+        check(read.chests.size() == 2, "both of them");
+        check(read.chestDimensions.size() == 2, "each with the world it was in");
+        if (read.chestDimensions.size() == 2)
+        {
+            check(read.chestDimensions[0] == 0, "the first in the overworld");
+            check(read.chestDimensions[1] == 1, "and the second in the Nether");
+        }
+    }
 }
 
 int runSelfTest()
@@ -4041,6 +4123,7 @@ int runSelfTest()
     testEverySoundHasANoise();
     testDrowning();
     testQuickMoveKeepsMetadata();
+    testContainersPerDimension();
 
     std::printf("\n%d checks, %d failed\n", g_checks, g_failures);
     return g_failures == 0 ? 0 : 1;

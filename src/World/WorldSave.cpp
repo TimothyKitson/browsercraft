@@ -166,6 +166,9 @@ void WorldSave::saveLevel(const std::string& saveDirectory, const LevelState& st
     // read as the air supply and every enchantment on every item in it
     // shifted by two bytes.
     write(out, state.air);
+
+    for (uint8_t dimension : state.chestDimensions) write(out, dimension);
+    for (uint8_t dimension : state.furnaceDimensions) write(out, dimension);
 }
 
 bool WorldSave::loadLevel(const std::string& saveDirectory, LevelState& out)
@@ -290,6 +293,26 @@ bool WorldSave::loadLevel(const std::string& saveDirectory, LevelState& out)
 
                                     float air = out.air;
                                     if (read(in, air)) out.air = air;
+
+                                    // One byte per chest and per
+                                    // furnace, in the order they were
+                                    // written. An older file simply
+                                    // runs out here and every container
+                                    // stays in the overworld.
+                                    out.chestDimensions.assign(out.chests.size(), 0);
+                                    out.furnaceDimensions.assign(out.furnaces.size(), 0);
+                                    for (size_t i = 0; i < out.chests.size(); ++i)
+                                    {
+                                        uint8_t dimension = 0;
+                                        if (!read(in, dimension)) break;
+                                        out.chestDimensions[i] = dimension;
+                                    }
+                                    for (size_t i = 0; i < out.furnaces.size(); ++i)
+                                    {
+                                        uint8_t dimension = 0;
+                                        if (!read(in, dimension)) break;
+                                        out.furnaceDimensions[i] = dimension;
+                                    }
                                 }
                             }
                         }

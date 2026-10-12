@@ -31,6 +31,13 @@ public:
         }
     };
 
+    // The dimension is part of the key, not just the coordinates. It
+    // has to be: a chest in the Nether at the same x, y and z as one in
+    // the overworld is a different chest, and keyed on position alone
+    // the two shared their contents -- so a chest built at matching
+    // coordinates in the Nether opened holding the overworld's loot.
+    void setDimension(int dimension) { m_dimension = dimension; }
+
     // The furnace at `block`, made if it is not there yet.
     State& at(const glm::ivec3& block);
 
@@ -49,14 +56,16 @@ public:
     std::vector<glm::ivec3> tick(float deltaTime, const glm::ivec3* except = nullptr);
 
     // For saving. The order is stable, which keeps the file diffable.
-    const std::map<std::array<int, 3>, State>& all() const { return m_furnaces; }
+    const std::map<std::array<int, 4>, State>& all() const { return m_furnaces; }
     void put(const glm::ivec3& block, const State& state);
+    void putIn(int dimension, const glm::ivec3& block, const State& state);
 
 private:
-    static std::array<int, 3> key(const glm::ivec3& block)
+    std::array<int, 4> key(const glm::ivec3& block) const
     {
-        return { block.x, block.y, block.z };
+        return { m_dimension, block.x, block.y, block.z };
     }
 
-    std::map<std::array<int, 3>, State> m_furnaces;
+    int m_dimension = 0;
+    std::map<std::array<int, 4>, State> m_furnaces;
 };

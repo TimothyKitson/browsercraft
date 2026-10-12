@@ -374,6 +374,8 @@ void Application::startWorld(GameMode mode, bool freshWorld)
     // species: animals wanting grass underfoot, which neither
     // netherrack nor end stone is, so nothing spawned at all.
     m_entities.setDimension(m_dimension);
+    m_chests.setDimension(static_cast<int>(m_dimension));
+    m_furnaces.setDimension(static_cast<int>(m_dimension));
 
     m_world = std::make_unique<World>(seed, m_savePath, DEFAULT_RENDER_DISTANCE, m_dimension);
     if (m_dimension != Dimension::Overworld)
@@ -455,6 +457,13 @@ void Application::travelTo(Dimension dimension)
 
     m_dimension = dimension;
     m_entities.setDimension(dimension);
+
+    // The containers are keyed by dimension as well as position, so
+    // they are told too rather than cleared: a chest left behind in the
+    // overworld still holds what was in it when you come back.
+    m_chests.setDimension(static_cast<int>(dimension));
+    m_furnaces.setDimension(static_cast<int>(dimension));
+
     m_entities.clear();
     m_worldReady = false;
     m_placeOnSurface = true;
@@ -582,7 +591,10 @@ void Application::loadLevel()
             furnace.burnLeft = saved.burnLeft;
             furnace.burnTotal = saved.burnTotal;
             furnace.cooked = saved.cooked;
-            m_furnaces.put(glm::ivec3(saved.x, saved.y, saved.z), furnace);
+            const size_t which = static_cast<size_t>(&saved - state.furnaces.data());
+            const int where = which < state.furnaceDimensions.size()
+                                  ? state.furnaceDimensions[which] : 0;
+            m_furnaces.putIn(where, glm::ivec3(saved.x, saved.y, saved.z), furnace);
         }
 
         // Only a change of state swaps the block, so one loaded already
@@ -599,7 +611,10 @@ void Application::loadLevel()
                 held[i].id = saved.slots[i].first;
                 held[i].count = saved.slots[i].second;
             }
-            m_chests.put(glm::ivec3(saved.x, saved.y, saved.z), held);
+            const size_t which = static_cast<size_t>(&saved - state.chests.data());
+            const int where = which < state.chestDimensions.size()
+                                  ? state.chestDimensions[which] : 0;
+            m_chests.putIn(where, glm::ivec3(saved.x, saved.y, saved.z), held);
         }
 
         m_player.position = state.playerPosition;
@@ -711,9 +726,10 @@ void Application::saveLevel()
         const Furnaces::State& furnace = entry.second;
 
         LevelState::SavedFurnace saved;
-        saved.x = entry.first[0];
-        saved.y = entry.first[1];
-        saved.z = entry.first[2];
+        saved.x = entry.first[1];
+        saved.y = entry.first[2];
+        saved.z = entry.first[3];
+        state.furnaceDimensions.push_back(static_cast<uint8_t>(entry.first[0]));
         saved.input = furnace.input.id;
         saved.inputCount = static_cast<uint16_t>(std::max(0, furnace.input.count));
         saved.fuel = furnace.fuel.id;
@@ -729,9 +745,10 @@ void Application::saveLevel()
     for (const auto& entry : m_chests.all())
     {
         LevelState::SavedChest saved;
-        saved.x = entry.first[0];
-        saved.y = entry.first[1];
-        saved.z = entry.first[2];
+        saved.x = entry.first[1];
+        saved.y = entry.first[2];
+        saved.z = entry.first[3];
+        state.chestDimensions.push_back(static_cast<uint8_t>(entry.first[0]));
         for (const ItemStack& held : entry.second)
             saved.slots.emplace_back(held.id, static_cast<uint16_t>(std::max(0, held.count)));
         state.chests.push_back(saved);

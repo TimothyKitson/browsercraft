@@ -23,6 +23,13 @@ struct LevelState
     // experience existed reads back as a fresh start at level nought.
     int experience = 0;
     int experienceOwedHundredths = 0;
+
+    // Which world each chest and furnace stands in, in the same order
+    // as the lists above. Written at the very end of the file, so a
+    // level saved before containers knew about dimensions reads back
+    // with all of them in the overworld -- which is what they were.
+    std::vector<uint8_t> chestDimensions;
+    std::vector<uint8_t> furnaceDimensions;
     // One packed word per slot, in the same order as the inventory
     // above. Empty on a level written before enchanting existed, which
     // reads back as nothing enchanted.

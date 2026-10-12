@@ -951,8 +951,13 @@ void Application::tickFurnaces(float deltaTime)
     {
         m_pendingFurnaceLight = false;
         for (const auto& entry : m_furnaces.all())
-            setFurnaceLit(glm::ivec3(entry.first[0], entry.first[1], entry.first[2]),
+        {
+            // all() spans every dimension, since the level file holds
+            // them all; only the one being stood in has blocks to set.
+            if (entry.first[0] != static_cast<int>(m_dimension)) continue;
+            setFurnaceLit(glm::ivec3(entry.first[1], entry.first[2], entry.first[3]),
                           entry.second.lit());
+        }
     }
 
     if (m_furnaceOpen)

@@ -21,10 +21,15 @@ void Furnaces::put(const glm::ivec3& block, const State& state)
     m_furnaces[key(block)] = state;
 }
 
+void Furnaces::putIn(int dimension, const glm::ivec3& block, const State& state)
+{
+    m_furnaces[{ dimension, block.x, block.y, block.z }] = state;
+}
+
 std::vector<glm::ivec3> Furnaces::tick(float deltaTime, const glm::ivec3* except)
 {
     std::vector<glm::ivec3> changed;
-    const std::array<int, 3> skip = except ? key(*except) : std::array<int, 3>{ 0, 0, 0 };
+    const std::array<int, 4> skip = except ? key(*except) : std::array<int, 4>{ 0, 0, 0, 0 };
 
     for (auto it = m_furnaces.begin(); it != m_furnaces.end();)
     {
@@ -47,7 +52,10 @@ std::vector<glm::ivec3> Furnaces::tick(float deltaTime, const glm::ivec3* except
         state.burnTotal = furnace.burnTotal;
         state.cooked = furnace.cooked;
 
-        const glm::ivec3 where(it->first[0], it->first[1], it->first[2]);
+        // The key leads with the dimension now, so the coordinates
+        // start at one. Read from zero this reported (dimension, x, y),
+        // and the caller swapped the wrong block for the lit one.
+        const glm::ivec3 where(it->first[1], it->first[2], it->first[3]);
         if (state.lit() != wasLit) changed.push_back(where);
 
         // A cold, empty furnace is just a block again, and keeping a row
