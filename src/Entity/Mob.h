@@ -47,6 +47,27 @@ struct MobShot
 
 // A living thing: gravity and box collision against the voxel world, plus
 // enough wits to wander, notice the player, fight them, and make noise.
+// Whether the player is looking at a mob's head, which is what turns a
+// neutral one hostile. Kept out of Mob so it can be checked on its own,
+// with nothing but numbers.
+namespace Stare
+{
+    // The crosshair has to land inside this much of the head's centre.
+    // An enderman's head is half a block wide; a little under that is
+    // forgiving enough to aim at and still tight enough that walking
+    // past one with it in the corner of your eye leaves it alone.
+    constexpr float HEAD_RADIUS = 0.32f;
+    constexpr float RANGE = 64.0f;
+
+    // True when the look ray passes through the head. The test is where
+    // the ray goes, not how near the mob is to the middle of the screen:
+    // an angular test would provoke at sixty blocks what it ignored at
+    // two, since the same angle covers a wider circle further out.
+    bool atHead(const glm::vec3& eye, const glm::vec3& look,
+                const glm::vec3& feet, float height,
+                float range = RANGE, float headRadius = HEAD_RADIUS);
+}
+
 class Mob
 {
 public:
@@ -88,6 +109,16 @@ public:
     // the same for the life of the mob -- a villager's profession, for
     // one, which would otherwise change as it wandered about.
     uint32_t birthSeed() const { return m_birthSeed; }
+
+    // A neutral mob that has been given a reason. Once set it stays
+    // set: Minecraft's enderman does not forgive, and a mob that
+    // cooled off mid-fight would be worse than one that never warmed.
+    bool provoked() const { return m_provoked; }
+    void provoke() { m_provoked = true; }
+
+    // Whether it would attack the player on sight as things stand --
+    // true for anything hostile, and for a neutral one once provoked.
+    bool hostileNow() const;
     const MobType& type() const { return mobType(m_type); }
 
     glm::vec3 position() const { return m_position; }
@@ -207,6 +238,7 @@ private:
 
     uint32_t m_rng = 1;
     uint32_t m_birthSeed = 1;
+    bool m_provoked = false;
     std::vector<MobSound> m_sounds;
     std::vector<MobStrike> m_strikes;
     std::vector<MobShot> m_shots;

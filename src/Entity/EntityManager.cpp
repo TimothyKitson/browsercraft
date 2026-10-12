@@ -256,6 +256,23 @@ void EntityManager::routeChasers(const World& world, const glm::vec3& playerPosi
     }
 }
 
+void EntityManager::noticeStares(const World& world, const glm::vec3& eye, const glm::vec3& look)
+{
+    for (Mob& mob : m_mobs)
+    {
+        if (!mob.alive() || mob.provoked() || !mob.type().neutral) continue;
+        if (!Stare::atHead(eye, look, mob.position(), mob.type().height)) continue;
+
+        // A wall in the way means you are not looking at it, whatever
+        // the ray says.
+        const glm::vec3 head = mob.position() +
+                               glm::vec3(0.0f, mob.type().height - Stare::HEAD_RADIUS, 0.0f);
+        if (!world.hasLineOfSight(eye, head)) continue;
+
+        mob.provoke();
+    }
+}
+
 std::vector<MobSound> EntityManager::drainSounds()
 {
     std::vector<MobSound> all;

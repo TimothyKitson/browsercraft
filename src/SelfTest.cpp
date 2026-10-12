@@ -994,6 +994,71 @@ namespace
         check(!zombie.feed(Items::Wheat), "and refuses wheat");
     }
 
+    void testEndermanStare()
+    {
+        section("mobs: the enderman waits to be provoked");
+
+        const MobType& ender = mobType(MobId::Enderman);
+        check(ender.neutral, "the enderman is neutral");
+        check(ender.spawnClass == SpawnClass::Hostile,
+              "and still carries a hostile's health and reach");
+
+        for (MobId other : { MobId::Zombie, MobId::Skeleton, MobId::Creeper, MobId::Spider })
+            check(!mobType(other).neutral, std::string(mobType(other).name) + " is not neutral");
+
+        Mob calm(MobId::Enderman, glm::vec3(0.0f), 1u);
+        check(!calm.provoked(), "it starts unprovoked");
+        check(!calm.hostileNow(), "and will not come after the player");
+
+        Mob hit(MobId::Enderman, glm::vec3(0.0f), 1u);
+        hit.damage(1, glm::vec3(1.0f, 0.0f, 0.0f));
+        check(hit.provoked(), "hitting it provokes it");
+        check(hit.hostileNow(), "and then it comes after the player");
+
+        // The sun passes no direction, and a mob burning in daylight has
+        // nobody to go after.
+        Mob burnt(MobId::Enderman, glm::vec3(0.0f), 1u);
+        burnt.damage(1, glm::vec3(0.0f));
+        check(!burnt.provoked(), "burning in the sun does not provoke it");
+
+        Mob zombie(MobId::Zombie, glm::vec3(0.0f), 1u);
+        check(zombie.hostileNow(), "a zombie needs no provoking");
+
+        // Staring. The enderman stands at the origin, 2.9 tall, so its
+        // head is just under 2.9 up.
+        const float tall = ender.height;
+        const glm::vec3 feet(0.0f, 0.0f, 0.0f);
+        const glm::vec3 head(0.0f, tall - Stare::HEAD_RADIUS, 0.0f);
+
+        const glm::vec3 eye(0.0f, 1.62f, -10.0f);
+        check(Stare::atHead(eye, glm::normalize(head - eye), feet, tall),
+              "looking straight at the head provokes it");
+        check(!Stare::atHead(eye, glm::normalize(feet - eye), feet, tall),
+              "looking at its feet does not");
+        check(!Stare::atHead(eye, glm::vec3(0.0f, 0.0f, -1.0f), feet, tall),
+              "looking the other way does not");
+
+        // The crosshair has to be on the head at any range, so the same
+        // small angle that hits at ten blocks misses at sixty.
+        const glm::vec3 near(0.0f, 1.62f, -4.0f);
+        const glm::vec3 far(0.0f, 1.62f, -50.0f);
+        const glm::vec3 offBy(0.9f, 0.0f, 0.0f);
+        check(!Stare::atHead(near, glm::normalize(head + offBy - near), feet, tall),
+              "a head's width off to the side misses up close");
+        check(!Stare::atHead(far, glm::normalize(head + offBy - far), feet, tall),
+              "and misses at range too");
+        check(Stare::atHead(far, glm::normalize(head - far), feet, tall),
+              "dead on still counts at fifty blocks");
+
+        // Past its range it does not care.
+        const glm::vec3 miles(0.0f, 1.62f, -200.0f);
+        check(!Stare::atHead(miles, glm::normalize(head - miles), feet, tall),
+              "beyond sixty-four blocks it does not notice");
+
+        check(!Stare::atHead(eye, glm::vec3(0.0f), feet, tall),
+              "a zero look direction provokes nothing");
+    }
+
     void testMobDrops()
     {
         section("items: mob drops");
@@ -4238,6 +4303,7 @@ int runSelfTest()
     testWheatRecipe();
     testBreeding();
     testMobDrops();
+    testEndermanStare();
     testFarming();
     testPathfinding();
     testChatCommands();

@@ -4243,6 +4243,7 @@ void Application::updateMobs(float deltaTime)
     if (m_net.role() == Net::Role::Guest) return;
 
     m_entities.update(deltaTime, *m_world, m_player.position, daylightFactor());
+    m_entities.noticeStares(*m_world, m_camera.position, m_camera.front);
 
     // Distance alone decides how loud a mob is. There is no panning here
     // yet, and a wrong pan is more distracting than none.

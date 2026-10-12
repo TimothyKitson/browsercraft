@@ -26,6 +26,12 @@ public:
     void update(float deltaTime, const World& world, const glm::vec3& playerPosition,
                 float daylight);
 
+    // Turns neutral mobs hostile when the player is looking at them.
+    // Separate from update because it is the only thing out here that
+    // needs to know where the camera is pointing, and threading that
+    // through the whole mob update to serve one mob is not worth it.
+    void noticeStares(const World& world, const glm::vec3& eye, const glm::vec3& look);
+
     // Hands over every noise the mobs queued this frame and clears them.
     std::vector<MobSound> drainSounds();
 

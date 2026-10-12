@@ -348,8 +348,10 @@ namespace
         {
             // The Enderman: too tall to meet indoors, and it hits hard.
             // Minecraft's teleports and only turns on you when looked
-            // at; this one is simply hostile, which is the half of it
-            // that needs no new machinery.
+            // at. The teleporting is still missing; the looking is not,
+            // and it is the half that matters -- an End full of things
+            // that attack on sight killed the player within seconds of
+            // arriving.
             MobType& t = table[static_cast<size_t>(MobId::Enderman)];
             t.id = MobId::Enderman;
             t.experience = 5;
@@ -360,6 +362,7 @@ namespace
             t.texture = "enderman";
             t.sheetHeight = 64;
             t.spawnClass = SpawnClass::Hostile;
+            t.neutral = true;
             t.maxHealth = 40;
             t.width = 0.6f;
             t.height = 2.9f;

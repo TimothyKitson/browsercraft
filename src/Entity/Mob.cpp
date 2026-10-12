@@ -248,7 +248,7 @@ void Mob::chooseNewGoal(const glm::vec3& playerPosition)
 
     // Yaw is degrees about +y with 0 looking down +x, matching the
     // camera, so a heading is atan2(z, x).
-    if (t.spawnClass == SpawnClass::Hostile && distance < NOTICE_RANGE && distance > 0.001f)
+    if (hostileNow() && distance < NOTICE_RANGE && distance > 0.001f)
     {
         m_goalYaw = glm::degrees(std::atan2(toPlayer.z, toPlayer.x));
         m_moving = true;
@@ -499,9 +499,40 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
     }
 }
 
+bool Stare::atHead(const glm::vec3& eye, const glm::vec3& look,
+                  const glm::vec3& feet, float height,
+                  float range, float headRadius)
+{
+    const float lookLength = glm::length(look);
+    if (lookLength < 0.001f) return false;
+    const glm::vec3 dir = look / lookLength;
+
+    const glm::vec3 head = feet + glm::vec3(0.0f, height - headRadius, 0.0f);
+    const glm::vec3 toHead = head - eye;
+
+    const float along = glm::dot(toHead, dir);
+    if (along <= 0.0f || along > range) return false;
+
+    return glm::length(toHead - dir * along) <= headRadius;
+}
+
+bool Mob::hostileNow() const
+{
+    const MobType& t = mobType(m_type);
+    if (t.spawnClass != SpawnClass::Hostile) return false;
+    return !t.neutral || m_provoked;
+}
+
 void Mob::damage(int amount, const glm::vec3& fromDirection)
 {
     if (amount <= 0 || !alive()) return;
+
+    // Hitting one is a reason, whatever it was doing before. Burning in
+    // the sun is not, but that passes no direction and no attacker, and
+    // a neutral mob that stands in daylight is not being attacked by
+    // anyone it could go after.
+    if (glm::length(glm::vec3(fromDirection.x, 0.0f, fromDirection.z)) > 0.001f)
+        m_provoked = true;
 
     m_health = std::max(0, m_health - amount);
     m_hurtFlash = 0.35f;

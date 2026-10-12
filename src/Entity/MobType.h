@@ -131,6 +131,13 @@ struct MobType
     float ambientMinSeconds = 6.0f;
     float ambientMaxSeconds = 18.0f;
 
+    // A neutral mob is hostile only once it has been provoked: it
+    // carries a hostile's health, reach and damage, and none of them
+    // matter until you hit it or stare at it. Minecraft's enderman is
+    // the one that works this way, and without it the End is a room
+    // full of things that kill you the moment you arrive.
+    bool neutral = false;
+
     // The undead catch fire in open daylight. Spiders and creepers do
     // not, which is why they are the ones you still meet at noon.
     bool burnsInSunlight = false;
