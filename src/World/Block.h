@@ -105,6 +105,13 @@ namespace Blocks
         Farmland,
         Wheat0, Wheat1, Wheat2, Wheat3, Wheat4, Wheat5, Wheat6, Wheat7,
 
+        // Sugar cane, and what it is eventually for. Appended at the
+        // end: a block's id is what a saved chunk stores, so inserting
+        // one anywhere else would turn every stone in every existing
+        // world into something else.
+        SugarCane,
+        Bookshelf,
+
         Count
     };
 }

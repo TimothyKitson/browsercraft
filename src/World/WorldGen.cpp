@@ -583,6 +583,30 @@ void WorldGen::decorate(Chunk& chunk) const
                 continue;
             }
 
+            // Sugar cane grows at the waterline, and only where it
+            // can reach the water: one of the four neighbouring
+            // columns has to stand below sea level. Checked through
+            // surfaceHeight rather than by reading blocks, because the
+            // neighbour may be in a chunk that does not exist yet.
+            if (ground == Blocks::Sand || ground == Blocks::Grass || ground == Blocks::Dirt)
+            {
+                const bool besideWater =
+                    surfaceHeight(wx - 1, wz) < SEA_LEVEL ||
+                    surfaceHeight(wx + 1, wz) < SEA_LEVEL ||
+                    surfaceHeight(wx, wz - 1) < SEA_LEVEL ||
+                    surfaceHeight(wx, wz + 1) < SEA_LEVEL;
+
+                if (besideWater && surface <= SEA_LEVEL + 1 &&
+                    hashToFloat(hashCoords(wx, 5, wz, m_seed + 991)) < 0.26f)
+                {
+                    const int canes = 1 + static_cast<int>(
+                        hashToFloat(hashCoords(wx, 6, wz, m_seed + 992)) * 3.0f);
+                    for (int i = 0; i < canes && above + i < Chunk::SY; ++i)
+                        chunk.setBlockRaw(lx, above + i, lz, Blocks::SugarCane);
+                    continue;
+                }
+            }
+
             if (ground != Blocks::Grass && ground != Blocks::SnowGrass) continue;
 
             if (roll < 0.14f)

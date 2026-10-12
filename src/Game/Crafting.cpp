@@ -30,6 +30,19 @@ namespace
         // them in any arrangement for the same three wheat.
         { true,  0, 0, { Items::Wheat, Items::Wheat, Items::Wheat }, 3, Items::Bread, 1 },
 
+        // Three cane in a row makes three paper, three paper and a
+        // hide makes a book, and six planks round three books makes a
+        // shelf. All three want a bench: every one of them is three
+        // wide, which the two-by-two grid cannot reach.
+        { false, 3, 1, { Blocks::SugarCane, Blocks::SugarCane, Blocks::SugarCane },
+          0, Items::Paper, 3 },
+        { true,  0, 0, { Items::Paper, Items::Paper, Items::Paper, Items::Leather },
+          4, Items::Book, 1 },
+        { false, 3, 3, { Blocks::Planks, Blocks::Planks, Blocks::Planks,
+                         Items::Book,    Items::Book,    Items::Book,
+                         Blocks::Planks, Blocks::Planks, Blocks::Planks },
+          0, Blocks::Bookshelf, 1 },
+
         // Four sand in a square becomes one sandstone.
         { false, 2, 2, { Blocks::Sand, Blocks::Sand,
                          Blocks::Sand, Blocks::Sand }, 0, Blocks::Sandstone, 1 },

@@ -2023,6 +2023,134 @@ namespace
         t.set(gx, gy + 1, Color{ 240, 255, 200 });
     }
 
+    // Sugar cane: three tall reeds, pale green, each drifting sideways
+    // as it climbs so a stand of it does not read as a picket fence.
+    void paintSugarCane(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+
+        const int n = Tile::N;
+        const Color stem{ 142, 198, 118 };
+        const Color stemDark{ 110, 166, 92 };
+        const Color stemPale{ 170, 216, 146 };
+
+        const int roots[3] = { n / 5, n / 2, (n * 4) / 5 };
+        const int lean[3] = { -2, 0, 2 };
+
+        for (int r = 0; r < 3; ++r)
+        {
+            for (int y = 0; y < n; ++y)
+            {
+                const int x = roots[r] + (lean[r] * (n - 1 - y)) / n;
+                if (x < 0 || x >= n - 1) continue;
+                t.set(x, y, (r == 1) ? stemPale : stem);
+                t.set(x + 1, y, stemDark);
+            }
+        }
+    }
+
+    // A bookshelf's side: planks above and below, with two rows of
+    // spines between them in assorted colours and widths so it does not
+    // read as striped wallpaper.
+    void paintBookshelfSide(Tile& t)
+    {
+        const int n = Tile::N;
+        const Color plank{ 160, 128, 80 };
+        const Color plankDark{ 136, 106, 64 };
+        const Color shadow{ 60, 44, 28 };
+
+        for (int y = 0; y < n; ++y)
+            for (int x = 0; x < n; ++x)
+                t.set(x, y, ((x + y) % 7 == 0) ? plankDark : plank);
+
+        const Color spines[5] = {
+            { 170, 60, 52 }, { 70, 100, 160 }, { 190, 160, 70 },
+            { 80, 140, 80 }, { 150, 90, 150 },
+        };
+
+        const int shelfTop[2] = { n / 6, (n * 4) / 7 };
+        const int shelfHeight = n / 3;
+
+        for (int shelf = 0; shelf < 2; ++shelf)
+        {
+            const int top = shelfTop[shelf];
+            const int end = (top + shelfHeight < n) ? top + shelfHeight : n;
+
+            for (int y = top; y < end; ++y)
+                for (int x = 1; x < n - 1; ++x)
+                    t.set(x, y, shadow);
+
+            int x = 1;
+            int pick = shelf * 3;
+            while (x < n - 1)
+            {
+                const int width = 1 + ((pick * 7 + shelf) % 2);
+                // Every other spine stands a pixel shorter, which is
+                // what stops the row looking like a solid band.
+                const int spineTop = top + ((pick % 2 == 0) ? 0 : 1);
+                for (int y = spineTop; y < end; ++y)
+                    for (int k = 0; k < width && x + k < n - 1; ++k)
+                        t.set(x + k, y, spines[pick % 5]);
+                x += width + 1;
+                ++pick;
+            }
+        }
+    }
+
+    void paintItemPaper(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        const int n = Tile::N;
+        const Color sheet{ 238, 238, 230 };
+        const Color edge{ 198, 198, 190 };
+
+        const int lo = n / 5;
+        const int hi = (n * 4) / 5;
+
+        for (int y = lo; y < hi; ++y)
+            for (int x = lo; x < hi; ++x)
+                t.set(x, y, sheet);
+
+        // A ragged bottom edge and a shaded right one, so it reads as a
+        // sheet rather than a white square.
+        for (int x = lo; x < hi; ++x)
+            t.set(x, hi - 1 - (x % 2), edge);
+        for (int y = lo; y < hi; ++y)
+            t.set(hi - 1, y, edge);
+    }
+
+    void paintItemBook(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        const int n = Tile::N;
+        const Color cover{ 150, 60, 52 };
+        const Color coverDark{ 112, 42, 38 };
+        const Color pages{ 238, 236, 220 };
+        const Color band{ 196, 170, 90 };
+
+        const int left = n / 5;
+        const int right = (n * 4) / 5;
+        const int top = n / 6;
+        const int bottom = (n * 5) / 6;
+
+        for (int y = top; y < bottom; ++y)
+            for (int x = left; x < right; ++x)
+                t.set(x, y, cover);
+
+        // The page block, set in from the spine on the left.
+        for (int y = top + 1; y < bottom - 1; ++y)
+            for (int x = left + 3; x < right - 1; ++x)
+                t.set(x, y, pages);
+
+        for (int y = top; y < bottom; ++y)
+        {
+            t.set(left, y, coverDark);
+            t.set(left + 1, y, cover);
+        }
+        for (int x = left; x < right; ++x)
+            t.set(x, (top + bottom) / 2, band);
+    }
+
     void paintItemStick(Tile& t)
     {
         t.fill(Color{ 0, 0, 0, 0 });
@@ -2194,6 +2322,10 @@ namespace
         { Tiles::ItemArrow,     paintItemArrow },
         { Tiles::ArrowInFlight, paintArrowInFlight },
         { Tiles::ExperienceOrb, paintExperienceOrb },
+        { Tiles::SugarCane,     paintSugarCane },
+        { Tiles::BookshelfSide, paintBookshelfSide },
+        { Tiles::ItemPaper,     paintItemPaper },
+        { Tiles::ItemBook,      paintItemBook },
         { Tiles::ItemDiamond,   paintItemDiamond },
         { Tiles::ItemIronIngot, paintItemIronIngot },
         { Tiles::ItemGoldIngot, paintItemGoldIngot },

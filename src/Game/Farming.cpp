@@ -1,4 +1,5 @@
 #include "Farming.h"
+#include "Cane.h"
 #include "World/World.h"
 #include <cmath>
 
@@ -16,6 +17,21 @@ namespace
 bool Farming::isTillable(BlockId id)
 {
     return id == Blocks::Dirt || id == Blocks::Grass || id == Blocks::SnowGrass;
+}
+
+// The cane rules take the smallest interface that answers them rather
+// than a World, so --selftest can run them on a made-up waterside. This
+// is the one that reads the real world.
+namespace
+{
+    struct WorldCane : Cane::Blocks
+    {
+        const World* world = nullptr;
+        BlockId at(int x, int y, int z) const override
+        {
+            return world->getBlock(x, y, z);
+        }
+    };
 }
 
 Farming::Harvest Farming::harvestOf(BlockId crop, uint32_t roll)
@@ -80,6 +96,19 @@ void Farming::grow(World& world, const glm::vec3& around, uint32_t& seed)
         if (y < 1) continue;
 
         const glm::ivec3 at(x, y, z);
+
+        // Cane is ticked by the same pass rather than one of its own:
+        // it grows where people are for the same reason wheat does, and
+        // a second sampling pass would cost the same again for nothing.
+        if (world.getBlock(x, y, z) == Blocks::SugarCane)
+        {
+            WorldCane around;
+            around.world = &world;
+            if (Cane::canGrowAt(around, x, y, z))
+                world.setBlock(x, y + 1, z, Blocks::SugarCane);
+            continue;
+        }
+
         if (!canGrowAt(world, at)) continue;
 
         world.setBlock(x, y, z, wheatAtStage(wheatStage(world.getBlock(x, y, z)) + 1));

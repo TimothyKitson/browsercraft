@@ -111,6 +111,8 @@ namespace
         { "Wheat Crop",   WheatStage5,   WheatStage5,    WheatStage5,    false, false, RenderType::Cross,  0,   0.0f },
         { "Wheat Crop",   WheatStage6,   WheatStage6,    WheatStage6,    false, false, RenderType::Cross,  0,   0.0f },
         { "Wheat Crop",   WheatStage7,   WheatStage7,    WheatStage7,    false, false, RenderType::Cross,  0,   0.0f },
+        { "Sugar Cane",   SugarCane,     SugarCane,      SugarCane,      false, false, RenderType::Cross,  0,   0.0f },
+        { "Bookshelf",    Planks,        Planks,         BookshelfSide,  true,  true,  RenderType::Cube,   0,   1.5f },
     };
 }
 
@@ -167,6 +169,7 @@ const char* blockSoundGroup(BlockId id)
         case Blocks::FlowerYellow:
         case Blocks::Cactus:
         case Blocks::Pumpkin:
+        case Blocks::SugarCane:
             return "grass";
 
         case Blocks::Farmland:
@@ -203,6 +206,7 @@ const char* blockSoundGroup(BlockId id)
         case Blocks::LadderEast:
         case Blocks::LadderSouth:
         case Blocks::LadderWest:
+        case Blocks::Bookshelf:
         case Blocks::Torch:
             return "wood";
 
@@ -290,6 +294,7 @@ Material blockMaterial(BlockId id)
         case Blocks::PlankStairsEast:
         case Blocks::PlankStairsSouth:
         case Blocks::PlankStairsWest:
+        case Blocks::Bookshelf:
             return Material::Wood;
 
         case Blocks::LadderNorth:
@@ -303,6 +308,7 @@ Material blockMaterial(BlockId id)
         case Blocks::FlowerYellow:
         case Blocks::Cactus:
         case Blocks::Pumpkin:
+        case Blocks::SugarCane:
         case Blocks::Torch:
             return Material::Plant;
 

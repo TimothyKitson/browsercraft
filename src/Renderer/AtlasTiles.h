@@ -67,6 +67,9 @@ namespace Tiles
         TntTop, TntSide, TntBottom, TntPrimedSide,
         LadderTile,
         DoorLower, DoorUpper,
+        SugarCane,
+        BookshelfSide,
+
         TileCount
     };
 
@@ -132,8 +135,10 @@ namespace Tiles
         // An experience orb. Not an item -- it never sits in a slot --
         // but it is a sprite drawn in the world, so it lives with them.
         ExperienceOrb = ArrowInFlight + 1,
+        ItemPaper = ExperienceOrb + 1,
+        ItemBook,
 
-        ItemTileEnd = ExperienceOrb + 1
+        ItemTileEnd = ItemBook + 1
     };
 
     // Ten progressively more broken overlay tiles for the mining animation.

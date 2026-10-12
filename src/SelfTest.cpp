@@ -21,6 +21,7 @@
 #include "Game/Sleep.h"
 #include "Game/Explosion.h"
 #include "Game/Experience.h"
+#include "Game/Cane.h"
 #include "Game/Portal.h"
 #include "World/Furnaces.h"
 #include "World/Chests.h"
@@ -42,6 +43,8 @@
 #include <cstdio>
 #include <string>
 #include <vector>
+#include <array>
+#include <map>
 #include <filesystem>
 
 namespace
@@ -2911,6 +2914,150 @@ namespace
         check(died.experience == 0, "dying costs everything earned");
         check(died.experienceOwedHundredths == 0, "and everything owed");
     }
+
+    // --- sugar cane ------------------------------------------------------
+
+    // A patch of world held in a map, so the cane rules can be asked
+    // about a waterside that does not exist.
+    struct FakeGround : Cane::Blocks
+    {
+        std::map<std::array<int, 3>, BlockId> cells;
+
+        void set(int x, int y, int z, BlockId id) { cells[{ x, y, z }] = id; }
+        BlockId at(int x, int y, int z) const override
+        {
+            // ::Blocks, not Blocks: inside something deriving from
+            // Cane::Blocks the bare name finds the base class.
+            const auto it = cells.find({ x, y, z });
+            return (it == cells.end()) ? ::Blocks::Air : it->second;
+        }
+    };
+
+    void testSugarCane()
+    {
+        section("sugar cane: where it stands");
+
+        // Sand at the water's edge: cane belongs on it.
+        FakeGround shore;
+        shore.set(0, 63, 0, Blocks::Sand);
+        shore.set(1, 63, 0, Blocks::Water);
+
+        check(Cane::groundIsWatered(shore, 0, 63, 0), "sand beside water is watered ground");
+        check(Cane::canStandAt(shore, 0, 64, 0), "cane stands on it");
+
+        // The same sand with no water anywhere near it will not do.
+        FakeGround dry;
+        dry.set(0, 63, 0, Blocks::Sand);
+        check(!Cane::groundIsWatered(dry, 0, 63, 0), "dry sand is not watered ground");
+        check(!Cane::canStandAt(dry, 0, 64, 0), "and cane will not stand on it");
+
+        // Water has to be level with the ground, not with the cane:
+        // a pool one block up does not count.
+        FakeGround highWater;
+        highWater.set(0, 63, 0, Blocks::Sand);
+        highWater.set(1, 64, 0, Blocks::Water);
+        check(!Cane::canStandAt(highWater, 0, 64, 0),
+              "water level with the cane rather than the ground does not count");
+
+        // All four sides work, not just the one that happened to be
+        // written first.
+        const int dx[4] = { -1, 1, 0, 0 };
+        const int dz[4] = { 0, 0, -1, 1 };
+        bool everySide = true;
+        for (int i = 0; i < 4; ++i)
+        {
+            FakeGround side;
+            side.set(0, 63, 0, Blocks::Sand);
+            side.set(dx[i], 63, dz[i], Blocks::Water);
+            if (!Cane::canStandAt(side, 0, 64, 0)) everySide = false;
+        }
+        check(everySide, "water on any of the four sides will do");
+
+        // Dirt and grass work, stone does not.
+        for (BlockId ground : { Blocks::Sand, Blocks::Dirt, Blocks::Grass })
+        {
+            FakeGround g;
+            g.set(0, 63, 0, ground);
+            g.set(1, 63, 0, Blocks::Water);
+            check(Cane::canStandAt(g, 0, 64, 0),
+                  std::string("cane stands on ") + blockInfo(ground).name);
+        }
+        FakeGround stone;
+        stone.set(0, 63, 0, Blocks::Stone);
+        stone.set(1, 63, 0, Blocks::Water);
+        check(!Cane::canStandAt(stone, 0, 64, 0), "but not on stone, however wet");
+
+        section("sugar cane: how tall");
+
+        // One on the shore, then two more on top of it.
+        FakeGround stack;
+        stack.set(0, 63, 0, Blocks::Sand);
+        stack.set(1, 63, 0, Blocks::Water);
+        stack.set(0, 64, 0, Blocks::SugarCane);
+
+        check(Cane::stackHeight(stack, 0, 64, 0) == 1, "one cane is one tall");
+        check(Cane::canGrowAt(stack, 0, 64, 0), "and has room to grow");
+        check(Cane::canStandAt(stack, 0, 65, 0), "a second may stand on it");
+
+        stack.set(0, 65, 0, Blocks::SugarCane);
+        check(Cane::stackHeight(stack, 0, 65, 0) == 2, "two cane is two tall");
+        check(Cane::canGrowAt(stack, 0, 65, 0), "and still has room");
+        check(!Cane::canGrowAt(stack, 0, 64, 0),
+              "the one underneath does not grow: there is cane in the way");
+
+        stack.set(0, 66, 0, Blocks::SugarCane);
+        check(Cane::stackHeight(stack, 0, 66, 0) == 3, "three cane is three tall");
+        check(!Cane::canGrowAt(stack, 0, 66, 0), "three is as tall as it goes");
+        check(!Cane::canStandAt(stack, 0, 67, 0), "and a fourth may not be placed on it");
+
+        check(Cane::stackHeight(stack, 0, 70, 0) == 0, "empty air is no cane at all");
+
+        // Nothing here grows: it is not cane in the first place.
+        FakeGround notCane;
+        notCane.set(0, 63, 0, Blocks::Sand);
+        notCane.set(1, 63, 0, Blocks::Water);
+        notCane.set(0, 64, 0, Blocks::TallGrass);
+        check(!Cane::canGrowAt(notCane, 0, 64, 0), "grass is not cane and does not grow into it");
+
+        section("sugar cane: what it is for");
+
+        // The chain has to work end to end, or cane is scenery: three
+        // cane make paper, paper and a hide make a book, books and
+        // planks make a shelf.
+        ItemStack paper[9];
+        for (int i : { 0, 1, 2 }) { paper[i].id = Blocks::SugarCane; paper[i].count = 1; }
+        const CraftOutput sheets = Crafting::match(paper, 3);
+        check(sheets.valid() && sheets.id == Items::Paper, "three cane in a row make paper");
+        check(sheets.count == 3, "three of them, as in Minecraft");
+
+        // Two cane is not enough.
+        ItemStack two[9];
+        for (int i : { 0, 1 }) { two[i].id = Blocks::SugarCane; two[i].count = 1; }
+        check(!Crafting::match(two, 3).valid(), "two cane make nothing");
+
+        ItemStack book[9];
+        for (int i : { 0, 1, 2 }) { book[i].id = Items::Paper; book[i].count = 1; }
+        book[3].id = Items::Leather; book[3].count = 1;
+        const CraftOutput bound = Crafting::match(book, 3);
+        check(bound.valid() && bound.id == Items::Book, "three paper and a hide make a book");
+
+        // Paper alone does not: the hide is what binds it.
+        ItemStack loose[9];
+        for (int i : { 0, 1, 2 }) { loose[i].id = Items::Paper; loose[i].count = 1; }
+        check(!Crafting::match(loose, 3).valid(), "three paper alone make nothing");
+
+        ItemStack shelf[9];
+        for (int i : { 0, 1, 2, 6, 7, 8 }) { shelf[i].id = Blocks::Planks; shelf[i].count = 1; }
+        for (int i : { 3, 4, 5 }) { shelf[i].id = Items::Book; shelf[i].count = 1; }
+        const CraftOutput made = Crafting::match(shelf, 3);
+        check(made.valid() && made.id == Blocks::Bookshelf,
+              "six planks round three books make a bookshelf");
+
+        // None of the three fit a 2x2: every one of them is three wide,
+        // so all of them want a bench.
+        check(!Crafting::match(paper, 2).valid(), "paper needs a bench");
+        check(!Crafting::match(shelf, 2).valid(), "a bookshelf needs a bench");
+    }
 }
 
 int runSelfTest()
@@ -2964,6 +3111,7 @@ int runSelfTest()
     testChestStore();
     testLevelRoundTrip();
     testExperience();
+    testSugarCane();
 
     std::printf("\n%d checks, %d failed\n", g_checks, g_failures);
     return g_failures == 0 ? 0 : 1;

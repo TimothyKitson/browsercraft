@@ -73,6 +73,11 @@ namespace Items
         GoldPickaxe, GoldAxe, GoldShovel, GoldSword, GoldHoe,
         DiamondPickaxe, DiamondAxe, DiamondShovel, DiamondSword, DiamondHoe,
 
+        // Sugar cane is a block, so it is not here; what it is made
+        // into is.
+        Paper,
+        Book,
+
         Count
     };
 }

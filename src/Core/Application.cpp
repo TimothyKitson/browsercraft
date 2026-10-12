@@ -8,6 +8,7 @@
 #include "Game/Tools.h"
 #include "Game/Armour.h"
 #include "Game/Experience.h"
+#include "Game/Cane.h"
 #include "Game/Sleep.h"
 #include "Game/Explosion.h"
 #include "Game/Portal.h"
@@ -175,6 +176,20 @@ Application::Application(int windowWidth, int windowHeight)
 Application::~Application()
 {
     if (m_world) saveLevel();
+}
+
+namespace
+{
+    // Reads the real world for the cane rules, which take only the
+    // handful of lookups they need rather than a whole World.
+    struct WorldCaneBlocks : Cane::Blocks
+    {
+        const World* world = nullptr;
+        BlockId at(int x, int y, int z) const override
+        {
+            return world->getBlock(x, y, z);
+        }
+    };
 }
 
 void Application::setMouseCaptured(bool captured)
@@ -1147,7 +1162,8 @@ bool Application::frame()
             m_startupScreen == "bucket" || m_startupScreen == "ladder" ||
             m_startupScreen == "stairs" || m_startupScreen == "fence" ||
             m_startupScreen == "door" || m_startupScreen == "hand" ||
-            m_startupScreen == "handempty" || m_startupScreen == "xp")
+            m_startupScreen == "handempty" || m_startupScreen == "xp" ||
+            m_startupScreen == "shelf")
         {
             // Dev aid: open the inventory with something in it, so the
             // screenshot shows a real grid rather than 36 empty boxes.
@@ -1166,6 +1182,7 @@ bool Application::frame()
                                   m_startupScreen != "hand" &&
                                   m_startupScreen != "handempty" &&
                                   m_startupScreen != "xp" &&
+                                  m_startupScreen != "shelf" &&
                                   m_startupScreen != "tnt" &&
                                   m_startupScreen != "portal" &&
                                   m_startupScreen != "nether";
@@ -1222,6 +1239,23 @@ bool Application::frame()
                 for (int f = 0; f < 4; ++f)
                     m_world->setBlock(bx + f - 1, by, bz + 2,
                                       stairsFacing(Blocks::CobbleStairsNorth, f));
+            }
+
+            if (m_startupScreen == "shelf")
+            {
+                m_camera.pitch = -6.0f;
+                m_camera.addLook(0.0f, 0.0f, 0.0f);
+                const glm::vec3 ahead = m_player.position + m_camera.front * 5.0f;
+                const int bx = static_cast<int>(std::floor(ahead.x));
+                const int by = static_cast<int>(std::floor(m_player.position.y));
+                const int bz = static_cast<int>(std::floor(ahead.z));
+                for (int a = -2; a <= 2; ++a)
+                    for (int b = 0; b <= 2; ++b)
+                        m_world->setBlock(bx + a, by + b, bz, Blocks::Bookshelf);
+                m_inventory.add(Blocks::SugarCane, 9);
+                m_inventory.add(Items::Paper, 6);
+                m_inventory.add(Items::Book, 3);
+                m_inventory.add(Blocks::Bookshelf, 4);
             }
 
             if (m_startupScreen == "xp")
@@ -2220,6 +2254,22 @@ void Application::updateMining(float deltaTime)
                 }
             }
 
+            // Cane is a stack, and breaking one out of the middle
+            // drops everything resting on it: without this the upper
+            // canes hang in mid-air with nothing beneath them.
+            if (id == Blocks::SugarCane)
+            {
+                for (int up = 1; up < Cane::MAX_HEIGHT; ++up)
+                {
+                    const glm::ivec3 over(hit.block.x, hit.block.y + up, hit.block.z);
+                    if (m_world->getBlock(over.x, over.y, over.z) != Blocks::SugarCane) break;
+                    m_world->setBlock(over.x, over.y, over.z, Blocks::Air);
+                    m_net.onLocalBlockChange(over.x, over.y, over.z, Blocks::Air);
+                    if (!m_player.creative())
+                        m_drops.spawnFromBrokenBlock(over, Blocks::SugarCane);
+                }
+            }
+
             // A door is one thing in two cells, so breaking either half
             // takes the other with it -- otherwise half a door is left
             // hanging in the air.
@@ -3012,6 +3062,16 @@ void Application::handlePlacement()
         box.max.z > target.z && box.min.z < target.z + 1;
     BlockId placing = asBlock(stack.id);
     if (overlapsPlayer && isSolid(placing)) return;
+
+    // Cane only stands at the water's edge, or on cane already there.
+    // Without this it could be planted down a mineshaft, which is the
+    // one thing everybody tries first.
+    if (placing == Blocks::SugarCane)
+    {
+        WorldCaneBlocks around;
+        around.world = m_world.get();
+        if (!Cane::canStandAt(around, target.x, target.y, target.z)) return;
+    }
 
     // A door is two blocks tall and wants headroom, and it faces the
     // way you do so it opens away from you.
