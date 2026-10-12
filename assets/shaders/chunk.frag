@@ -55,6 +55,7 @@ void main()
                                 vNormal * tangentZ);
 
         float materialAO = normalSample.b;
+        float height = normalSample.a;
         float smoothness = specularSample.r;
         float reflectance = specularSample.g;
         // Alpha 255 means "not emissive"; 0-254 maps to 0..1.
@@ -65,10 +66,20 @@ void main()
         float incidence = max(dot(normal, uSunDirection), 0.0);
         float direct = incidence * sunReach;
 
-        // Relight the surface: the normal map adds shape the baked
-        // per-face shading can't express.
-        float relief = mix(0.80, 1.22, direct);
-        color = albedo * brightness * vShade * relief * mix(1.0, materialAO, 0.75);
+        // Shape, measured as the texel's departure from the flat face so
+        // the baked per-face shading is not counted twice. Wrapped rather
+        // than clamped, because a face the sun never reaches is still the
+        // shape the normal map says it is.
+        float bumpLit = dot(normal, uSunDirection) * 0.5 + 0.5;
+        float flatLit = dot(vNormal, uSunDirection) * 0.5 + 0.5;
+        float shape = (bumpLit - flatLit) * mix(0.60, 1.20, sunReach);
+
+        // The pack's height map darkens the crevices. This one owes
+        // nothing to the sun, so it survives shade, night and caves.
+        float cavity = mix(0.70, 1.0, smoothstep(0.55, 1.0, height));
+
+        float relief = mix(0.90, 1.12, direct) * clamp(1.0 + shape, 0.40, 1.80);
+        color = albedo * brightness * vShade * relief * cavity * mix(1.0, materialAO, 0.75);
 
         // Blinn-Phong highlight, sharpened by the pack's smoothness map.
         vec3 viewDir = normalize(uCameraPos - vWorldPos);

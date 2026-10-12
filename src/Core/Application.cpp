@@ -1340,7 +1340,8 @@ bool Application::frame()
             m_startupScreen == "shelf" || m_startupScreen == "enchant" ||
             m_startupScreen == "enchantblock" || m_startupScreen == "villager" ||
             m_startupScreen == "trade" || m_startupScreen == "endportal" ||
-            m_startupScreen == "rain" || m_startupScreen == "storm")
+            m_startupScreen == "rain" || m_startupScreen == "storm" ||
+            m_startupScreen == "pbr")
         {
             // Dev aid: open the inventory with something in it, so the
             // screenshot shows a real grid rather than 36 empty boxes.
@@ -1366,6 +1367,7 @@ bool Application::frame()
                                   m_startupScreen != "rain" &&
                                   m_startupScreen != "storm" &&
                                   m_startupScreen != "tnt" &&
+                                  m_startupScreen != "pbr" &&
                                   m_startupScreen != "portal" &&
                                   m_startupScreen != "nether";
             m_inventoryOpen = showPanel;
@@ -1543,6 +1545,42 @@ bool Application::frame()
                     slot.count = 1;
                     openEnchantingTable(glm::ivec3(bx, by, bz));
                 }
+            }
+
+            if (m_startupScreen == "pbr")
+            {
+                // A flat run of materials with the sun low enough to rake
+                // across them. Normal mapping shows up at a grazing angle
+                // and almost nowhere else, so judging it off a wall seen
+                // face-on says nothing either way.
+                m_timeOfDay = 0.36f;
+                m_camera.setOrientation(0.0f, -20.0f);
+                m_camera.addLook(0.0f, 0.0f, 0.0f);
+
+                const int px = static_cast<int>(std::floor(m_player.position.x));
+                const int py = static_cast<int>(std::floor(m_player.position.y));
+                const int pz = static_cast<int>(std::floor(m_player.position.z));
+
+                const int strip[6] = { Blocks::Cobblestone, Blocks::Stone, Blocks::Bricks,
+                                       Blocks::Planks, Blocks::Gravel, Blocks::Sandstone };
+
+                for (int ax = 0; ax <= 20; ++ax)
+                    for (int az = -10; az <= 10; ++az)
+                    {
+                        for (int ay = 0; ay <= 8; ++ay)
+                            m_world->setBlock(px + ax, py + ay, pz + az, Blocks::Air);
+                        m_world->setBlock(px + ax, py - 1, pz + az, strip[((az + 12) / 4) % 6]);
+                    }
+
+                for (int ay = 0; ay <= 5; ++ay)
+                    for (int az = -10; az <= 10; ++az)
+                        m_world->setBlock(px + 21, py + ay, pz + az, strip[((az + 12) / 4) % 6]);
+
+                // The three the eye judges this by: shelf planks for
+                // relief, diamond for the specular, frame for both.
+                m_world->setBlock(px + 5, py, pz - 3, Blocks::Bookshelf);
+                m_world->setBlock(px + 5, py, pz,     Blocks::DiamondOre);
+                m_world->setBlock(px + 5, py, pz + 3, Blocks::EndPortalFrame);
             }
 
             if (m_startupScreen == "shelf")
