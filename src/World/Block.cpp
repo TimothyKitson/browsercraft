@@ -135,7 +135,9 @@ bool isObtainable(BlockId id)
         case Blocks::Water:
         case Blocks::Lava:
         case Blocks::NetherPortal: // made by lighting a frame, never placed
+        case Blocks::EndPortal:    // the same: it appears when a ring is finished
         case Blocks::FurnaceLit:   // the burning state of one, not a thing you hold
+        case Blocks::EndPortalFrameFilled: // a frame with an eye already in it
         case Blocks::TntPrimed:    // likewise: a lit stick is not an item
         // Only one ladder is a thing you hold; the other three are the
         // same ladder hung on a different wall.

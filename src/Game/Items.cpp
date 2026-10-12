@@ -114,9 +114,20 @@ const char* displayName(StackId id)
 
 int atlasTileFor(StackId id)
 {
+    // An item has one sprite and that is all it has.
+    if (isItem(id)) return itemInfo(id).tile;
+
+    const BlockId block = asBlock(id);
+
     // A block is shown by its top face, which is what the inventory has
-    // always drawn; an item has one sprite and that is all it has.
-    return isItem(id) ? itemInfo(id).tile : blockInfo(asBlock(id)).tileTop;
+    // always drawn -- except where the top is not what the block looks
+    // like. A bookshelf is planks on top, exactly as in Minecraft, so
+    // by its top face it is indistinguishable from the planks block
+    // sitting next to it in the menu. Its side is the whole of what
+    // makes it a bookshelf.
+    if (block == Blocks::Bookshelf) return blockInfo(block).tileSide;
+
+    return blockInfo(block).tileTop;
 }
 
 int maxStackOf(StackId id)

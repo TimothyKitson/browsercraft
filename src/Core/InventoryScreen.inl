@@ -25,10 +25,12 @@ namespace
         Blocks::FlowerRed, Blocks::FlowerYellow, Blocks::Leaves, Blocks::BirchLeaves,
         Blocks::Log, Blocks::BirchLog, Blocks::Cactus, Blocks::Pumpkin,
         Blocks::Sand, Blocks::Snow, Blocks::Ice, Blocks::Clay,
+        Blocks::SugarCane,
     };
 
     const StackId TAB_ORES[] = {
         Blocks::CoalOre, Blocks::IronOre, Blocks::GoldOre, Blocks::DiamondOre,
+        Blocks::EmeraldOre,
         Blocks::Stone, Blocks::Cobblestone, Blocks::Gravel, Blocks::Obsidian,
         Blocks::Bedrock,
     };
@@ -53,6 +55,7 @@ namespace
         Items::Feather, Items::Bone, Items::StringItem, Items::Gunpowder, Items::Flint,
         Items::Bread, Items::Steak, Items::CookedPorkchop, Items::CookedChicken,
         Items::CookedMutton,
+        Items::Paper, Items::Book, Items::Emerald, Items::EnderPearl, Items::EyeOfEnder,
     };
 
     // The twenty-five tools, their materials, and the two benches you
@@ -66,6 +69,7 @@ namespace
 
     const StackId TAB_TOOLS[] = {
         Blocks::CraftingTable, Blocks::Furnace, Blocks::Chest, Blocks::Bed,
+        Blocks::Bookshelf, Blocks::EnchantingTable, Blocks::EndPortalFrame,
         Items::Stick, Items::Coal, Items::Bow, Items::Arrow, Items::FlintAndSteel,
         Items::Bucket, Items::WaterBucket, Items::LavaBucket,
         Items::IronIngot, Items::GoldIngot, Items::Diamond,
