@@ -88,6 +88,7 @@ int Tools::requiredLevel(BlockId block)
     {
         case Blocks::Obsidian:   return 4;
         case Blocks::DiamondOre: return 3;
+        case Blocks::EmeraldOre: return 3;
         case Blocks::GoldOre:
         case Blocks::IronOre:    return 2;
         default: break;

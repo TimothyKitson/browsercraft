@@ -2212,6 +2212,65 @@ namespace
         }
     }
 
+    // Emerald ore: green crystal in grey stone, the same shape of
+    // speckle the other ores use so a wall of mixed ore reads as one
+    // family of blocks.
+    void paintEmeraldOre(Tile& t)
+    {
+        paintStone(t);
+
+        const int n = Tile::N;
+        const Color gem{ 52, 200, 100 };
+        const Color gemPale{ 120, 236, 160 };
+        const Color gemDark{ 28, 140, 70 };
+
+        // Three lumps, placed by hand rather than scattered: a random
+        // sprinkle at this size reads as noise rather than as ore.
+        const int spots[3][2] = { { n / 5, n / 4 }, { (n * 3) / 5, n / 2 },
+                                  { n / 3, (n * 3) / 4 } };
+
+        for (const auto& spot : spots)
+        {
+            const int sx = spot[0];
+            const int sy = spot[1];
+            for (int dy = 0; dy < 3; ++dy)
+                for (int dx = 0; dx < 3; ++dx)
+                {
+                    if (dx == 2 && dy == 2) continue;
+                    const int x = sx + dx;
+                    const int y = sy + dy;
+                    if (x >= n || y >= n) continue;
+                    t.set(x, y, (dx == 0 && dy == 0) ? gemPale
+                                                     : ((dx + dy >= 3) ? gemDark : gem));
+                }
+        }
+    }
+
+    void paintItemEmerald(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        const int n = Tile::N;
+        const Color gem{ 52, 200, 100 };
+        const Color gemPale{ 140, 244, 176 };
+        const Color gemDark{ 26, 132, 66 };
+
+        // A cut stone: a tall hexagon with a lit top-left facet.
+        const float mid = (n - 1) * 0.5f;
+        for (int y = 0; y < n; ++y)
+        {
+            for (int x = 0; x < n; ++x)
+            {
+                const float dx = (x - mid) / (n * 0.30f);
+                const float dy = (y - mid) / (n * 0.42f);
+                if (std::fabs(dx) + std::fabs(dy) > 1.0f) continue;
+
+                const bool lit = (dx + dy) < -0.35f;
+                const bool shade = (dx + dy) > 0.45f;
+                t.set(x, y, lit ? gemPale : (shade ? gemDark : gem));
+            }
+        }
+    }
+
     void paintItemStick(Tile& t)
     {
         t.fill(Color{ 0, 0, 0, 0 });
@@ -2387,6 +2446,8 @@ namespace
         { Tiles::BookshelfSide, paintBookshelfSide },
         { Tiles::EnchantTableTop,  paintEnchantTableTop },
         { Tiles::EnchantTableSide, paintEnchantTableSide },
+        { Tiles::EmeraldOre,    paintEmeraldOre },
+        { Tiles::ItemEmerald,   paintItemEmerald },
         { Tiles::ItemPaper,     paintItemPaper },
         { Tiles::ItemBook,      paintItemBook },
         { Tiles::ItemDiamond,   paintItemDiamond },

@@ -59,6 +59,9 @@ enum class Sound : uint8_t
     MobPigmanSay,
     MobPigmanHurt,
     MobPigmanDeath,
+    MobVillagerSay,
+    MobVillagerHurt,
+    MobVillagerDeath,
     MobStep,
     Count
 };

@@ -18,6 +18,7 @@
 #include "Audio/AudioEngine.h"
 #include "Entity/DroppedItems.h"
 #include "Entity/ExperienceOrbs.h"
+#include "Game/Trading.h"
 #include "Entity/Particles.h"
 #include "Entity/PlayerSkin.h"
 #include "Entity/PlayerModel.h"
@@ -269,6 +270,14 @@ private:
     // offers stand still while you look at them rather than flickering
     // every frame -- and so walking a shelf into place while the screen
     // is open does not change the price under your hand.
+    // The villager being traded with, held by the seed it was born
+    // with rather than by a pointer: mobs live in a vector that moves
+    // when it grows, and one can wander off or be killed while its
+    // screen is open.
+    bool m_tradeOpen = false;
+    uint32_t m_tradeSeed = 0;
+    Trading::Profession m_tradeWith = Trading::Profession::Farmer;
+
     bool m_enchantOpen = false;
     glm::ivec3 m_enchantBlock{ 0 };
     int m_enchantShelves = 0;
@@ -458,6 +467,10 @@ private:
     void stowChest();
 
     void openFurnace(const glm::ivec3& block);
+    void openTrading(const Mob& villager);
+    void acceptTrade(int row);
+    const Mob* tradingVillager() const;
+
     void openEnchantingTable(const glm::ivec3& block);
     void stowEnchantingTable();
 
@@ -559,7 +572,7 @@ private:
     // copies of the same geometry, and only one of them ever got fixed.
     struct SlotBox
     {
-        enum class Kind { Slot, Palette, Tab, Enchant };
+        enum class Kind { Slot, Palette, Tab, Enchant, Trade };
         Kind kind = Kind::Slot;
         int index = 0;        // inventory slot, block id, or tab number
         float x = 0.0f, y = 0.0f, size = 0.0f;

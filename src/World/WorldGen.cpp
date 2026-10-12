@@ -438,6 +438,11 @@ void WorldGen::placeOres(Chunk& chunk) const
         { Blocks::IronOre,    5,  64, 0.0026f,  9, 1002 },
         { Blocks::GoldOre,    5,  32, 0.00040f, 7, 1003 },
         { Blocks::DiamondOre, 5,  16, 0.00038f, 6, 1004 },
+        // The rarest thing in the ground, and the only one that comes
+        // in ones rather than seams -- a vein size of 1, as in
+        // Minecraft, which is what makes finding one worth saying out
+        // loud. Tuned against --oreinfo like the rest.
+        { Blocks::EmeraldOre, 5,  32, 0.00011f, 1, 1007 },
         { Blocks::Gravel,    10, 100, 0.0035f, 14, 1005 },
         { Blocks::Clay,      40,  66, 0.0030f, 10, 1006 },
     };

@@ -157,7 +157,13 @@ void EntityManager::trySpawnWave(const World& world, const glm::vec3& playerPosi
         }
         else
         {
-            species = PASSIVE_SPECIES[static_cast<int>(random01() * 4.0f) & 3];
+            // One daylight spawn in twelve is a villager. They belong
+            // in villages, and there are none to put them in yet, so
+            // they wander the countryside instead -- rare enough that
+            // meeting one is an event rather than livestock.
+            species = (random01() < 0.08f)
+                          ? MobId::Villager
+                          : PASSIVE_SPECIES[static_cast<int>(random01() * 4.0f) & 3];
         }
 
         if (mobType(species).dimension != m_dimension) continue;

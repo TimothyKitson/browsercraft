@@ -417,6 +417,49 @@ namespace
             t.model.push_back(mirrored(mc(Part::LegBackLeft, 0, 16, 4, 12, 4, -2, 0, -2, 2, 12, 0)));
         }
 
+        {
+            MobType& t = table[static_cast<size_t>(MobId::Villager)];
+            t.id = MobId::Villager;
+            // Killing one is worth nothing. Minecraft gives no
+            // experience for a villager, and it should not: the whole
+            // point of one is that it is worth more alive.
+            t.experience = 0;
+            t.voice = Sound::MobVillagerSay;
+            t.hurtVoice = Sound::MobVillagerHurt;
+            t.deathVoice = Sound::MobVillagerDeath;
+            t.name = "Villager";
+            t.texture = "villager";
+            t.sheetHeight = 64;
+            t.spawnClass = SpawnClass::Passive;
+            t.maxHealth = 20;
+            t.width = 0.6f;
+            t.height = 1.95f;
+            t.walkSpeed = 1.4f;
+            t.bodyColour = rgb(98, 70, 54);
+            t.headColour = rgb(188, 146, 118);
+            t.eyeColour = rgb(40, 50, 70);
+
+            // The head is two pixels taller than a human's, and the
+            // nose is its own box hung off the front of it. The nose is
+            // filed as part of the head so it turns with it rather than
+            // staying put while the face looks away.
+            t.model.push_back(mc(Part::Head, 0, 0, 8, 10, 8, -4, -10, -4, 0, 0, 0));
+            t.model.push_back(mc(Part::Head, 24, 0, 2, 4, 2, -1, -5, -6, 0, 0, 0));
+
+            // The robe, which is what makes the shape read as a
+            // villager rather than as a tall zombie: a body six deep
+            // instead of four, and skirted below the waist.
+            t.model.push_back(mc(Part::Body, 16, 20, 8, 12, 6, -4, 0, -3, 0, 0, 0));
+            t.model.push_back(mc(Part::Body, 0, 38, 8, 6, 6, -4, 12, -3, 0, 0, 0));
+
+            // Arms filed as the front pair of legs, the way every other
+            // biped here is, so they swing against the back pair.
+            t.model.push_back(mc(Part::LegFrontRight, 44, 22, 4, 8, 4, -3, -2, -2, -5, 2, 0));
+            t.model.push_back(mirrored(mc(Part::LegFrontLeft, 44, 22, 4, 8, 4, -1, -2, -2, 5, 2, 0)));
+            t.model.push_back(mc(Part::LegBackRight, 0, 22, 4, 12, 4, -2, 0, -2, -2, 12, 0));
+            t.model.push_back(mirrored(mc(Part::LegBackLeft, 0, 22, 4, 12, 4, -2, 0, -2, 2, 12, 0)));
+        }
+
         return table;
     }
 }

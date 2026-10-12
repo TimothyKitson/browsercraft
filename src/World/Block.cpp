@@ -114,6 +114,7 @@ namespace
         { "Sugar Cane",   SugarCane,     SugarCane,      SugarCane,      false, false, RenderType::Cross,  0,   0.0f },
         { "Bookshelf",    Planks,        Planks,         BookshelfSide,  true,  true,  RenderType::Cube,   0,   1.5f },
         { "Enchanting Table", EnchantTableTop, Obsidian,   EnchantTableSide, true, false, RenderType::Slab, 7,   5.0f },
+        { "Emerald Ore",  EmeraldOre,    EmeraldOre,     EmeraldOre,     true,  true,  RenderType::Cube,   0,   3.0f },
     };
 }
 

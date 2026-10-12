@@ -89,6 +89,7 @@ namespace
         { "Diamond Hoe",     Tiles::ItemToolFirst + 24,  1 },
         { "Paper",           Tiles::ItemPaper,          64 },
         { "Book",            Tiles::ItemBook,           64 },
+        { "Emerald",         Tiles::ItemEmerald,        64 },
     };
 
     static_assert(sizeof(ITEMS) / sizeof(ITEMS[0]) ==

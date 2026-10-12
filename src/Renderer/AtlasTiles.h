@@ -71,6 +71,7 @@ namespace Tiles
         BookshelfSide,
         EnchantTableTop,
         EnchantTableSide,
+        EmeraldOre,
 
         TileCount
     };
@@ -139,8 +140,9 @@ namespace Tiles
         ExperienceOrb = ArrowInFlight + 1,
         ItemPaper = ExperienceOrb + 1,
         ItemBook,
+        ItemEmerald,
 
-        ItemTileEnd = ItemBook + 1
+        ItemTileEnd = ItemEmerald + 1
     };
 
     // Ten progressively more broken overlay tiles for the mining animation.

@@ -20,6 +20,7 @@ Mob::Mob(MobId type, glm::vec3 feetPosition, uint32_t seed, bool baby)
     : m_type(type)
     , m_position(feetPosition)
     , m_rng(seed ? seed : 1u)
+    , m_birthSeed(seed ? seed : 1u)
 {
     if (baby) m_babyTimer = BABY_SECONDS;
     const MobType& t = mobType(type);

@@ -147,6 +147,7 @@ namespace
             case Blocks::FurnaceLit: return Blocks::Furnace;
             case Blocks::CoalOre: return Items::Coal;
             case Blocks::DiamondOre: return Items::Diamond;
+            case Blocks::EmeraldOre: return Items::Emerald;
 
             default: return id;
         }
@@ -1145,6 +1146,20 @@ bool Application::frame()
 
         // The big grid belongs to the bench, not to the player, so it
         // shuts as soon as they walk out of reach of it -- or mine it.
+        // Trading ends if the villager wanders off, is killed, or you
+        // walk away from it -- the same rule the bench follows, with a
+        // mob in place of a block.
+        if (m_tradeOpen && playing())
+        {
+            const Mob* villager = tradingVillager();
+            if (!villager ||
+                glm::length(m_player.position - villager->position()) > BENCH_REACH)
+            {
+                closeInventory();
+                setMouseCaptured(true);
+            }
+        }
+
         if ((m_benchOpen || m_furnaceOpen || m_chestOpen || m_enchantOpen) && playing())
         {
             const glm::ivec3 block = m_benchOpen    ? m_benchBlock
@@ -1214,7 +1229,8 @@ bool Application::frame()
             m_startupScreen == "door" || m_startupScreen == "hand" ||
             m_startupScreen == "handempty" || m_startupScreen == "xp" ||
             m_startupScreen == "shelf" || m_startupScreen == "enchant" ||
-            m_startupScreen == "enchantblock")
+            m_startupScreen == "enchantblock" || m_startupScreen == "villager" ||
+            m_startupScreen == "trade")
         {
             // Dev aid: open the inventory with something in it, so the
             // screenshot shows a real grid rather than 36 empty boxes.
@@ -1235,6 +1251,7 @@ bool Application::frame()
                                   m_startupScreen != "xp" &&
                                   m_startupScreen != "shelf" &&
                                   m_startupScreen != "enchantblock" &&
+                                  m_startupScreen != "villager" &&
                                   m_startupScreen != "tnt" &&
                                   m_startupScreen != "portal" &&
                                   m_startupScreen != "nether";
@@ -1291,6 +1308,37 @@ bool Application::frame()
                 for (int f = 0; f < 4; ++f)
                     m_world->setBlock(bx + f - 1, by, bz + 2,
                                       stairsFacing(Blocks::CobbleStairsNorth, f));
+            }
+
+            if (m_startupScreen == "villager" || m_startupScreen == "trade")
+            {
+                m_camera.pitch = -4.0f;
+                m_camera.addLook(0.0f, 0.0f, 0.0f);
+
+                // One of each profession, in a row, so the model and
+                // all four trade lists can be seen in one shot.
+                for (int i = 0; i < 4; ++i)
+                {
+                    const glm::vec3 where = m_player.position + m_camera.front * 2.5f +
+                                            m_camera.right * (static_cast<float>(i) - 1.5f) * 1.6f;
+                    m_entities.spawnAt(MobId::Villager, where, *m_world);
+                }
+
+                m_inventory.add(Items::Emerald, 32);
+                m_inventory.add(Items::Wheat, 40);
+                m_inventory.add(Items::Diamond, 4);
+
+                // The first mob in the list need not be one of these:
+                // the world has already spawned its own animals by now.
+                if (m_startupScreen == "trade")
+                {
+                    for (const Mob& mob : m_entities.mobs())
+                    {
+                        if (mob.typeId() != MobId::Villager) continue;
+                        openTrading(mob);
+                        break;
+                    }
+                }
             }
 
             if (m_startupScreen == "enchant" || m_startupScreen == "enchantblock")
@@ -3044,6 +3092,23 @@ void Application::handlePlacement()
     // A bench is opened by using it, whatever is in your hand -- unless
     // you are sneaking, which is how Minecraft lets you place a block
     // against one rather than open it.
+    // A villager is traded with by using it, the same as a bench is
+    // opened by using it. Checked before the block ray, so standing one
+    // in front of a chest does not open the chest through it.
+    if (!m_player.sneaking)
+    {
+        if (const Mob* villager = m_entities.pick(m_camera.position, m_camera.front,
+                                                  REACH_DISTANCE))
+        {
+            if (villager->typeId() == MobId::Villager && villager->alive())
+            {
+                openTrading(*villager);
+                m_audio.play(Sound::MobVillagerSay, 0.6f);
+                return;
+            }
+        }
+    }
+
     if (!m_player.sneaking)
     {
         const RaycastHit bench = m_world->raycast(m_camera.position, m_camera.front, REACH_DISTANCE);

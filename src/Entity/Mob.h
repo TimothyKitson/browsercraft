@@ -81,6 +81,13 @@ public:
     bool finished() const { return m_removeTimer <= 0.0f && !alive(); }
 
     MobId typeId() const { return m_type; }
+
+    // The seed it was born with, untouched. m_rng below is the same
+    // number to begin with but is stirred every time anything is asked
+    // of it, so it is no use for deciding something that has to stay
+    // the same for the life of the mob -- a villager's profession, for
+    // one, which would otherwise change as it wandered about.
+    uint32_t birthSeed() const { return m_birthSeed; }
     const MobType& type() const { return mobType(m_type); }
 
     glm::vec3 position() const { return m_position; }
@@ -199,6 +206,7 @@ private:
     bool m_deathReported = false;
 
     uint32_t m_rng = 1;
+    uint32_t m_birthSeed = 1;
     std::vector<MobSound> m_sounds;
     std::vector<MobStrike> m_strikes;
     std::vector<MobShot> m_shots;

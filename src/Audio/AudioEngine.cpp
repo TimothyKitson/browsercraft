@@ -279,6 +279,7 @@ void AudioEngine::buildSounds()
     loadMobVoice(Sound::MobSpiderSay, Sound::MobSpiderHurt, Sound::MobSpiderDeath, "spider");
     loadMobVoice(Sound::MobEndermanSay, Sound::MobEndermanHurt, Sound::MobEndermanDeath, "enderman");
     loadMobVoice(Sound::MobPigmanSay, Sound::MobPigmanHurt, Sound::MobPigmanDeath, "zombie_pigman");
+    loadMobVoice(Sound::MobVillagerSay, Sound::MobVillagerHurt, Sound::MobVillagerDeath, "villager");
 
     auto make = [&](Sound id) -> Synth {
         auto& clips = m_buffers[static_cast<size_t>(id)];
@@ -524,6 +525,29 @@ void AudioEngine::buildSounds()
         s.addTone(0.70f, 150.0f, 50.0f, 4.0f, 0.75f, true);
         s.addNoise(0.55f, 900.0f, 5.0f, 0.28f, false, 621);
         s.finish(0.85f);
+    }
+
+    // The villager: the famous two-note "hrmm", which is a hum that
+    // steps down rather than sliding, so the two notes are separate
+    // tones instead of one tone bent in the middle.
+    {
+        Synth s = make(Sound::MobVillagerSay);
+        s.addTone(0.18f, 300.0f, 300.0f, 9.0f, 0.55f, true);
+        s.addTone(0.22f, 215.0f, 205.0f, 7.0f, 0.60f, true);
+        s.addNoise(0.10f, 700.0f, 14.0f, 0.10f, false, 661);
+        s.finish(0.72f);
+    }
+    {
+        Synth s = make(Sound::MobVillagerHurt);
+        s.addTone(0.16f, 380.0f, 190.0f, 16.0f, 0.62f, true);
+        s.addNoise(0.12f, 1100.0f, 22.0f, 0.22f, false, 663);
+        s.finish(0.78f);
+    }
+    {
+        Synth s = make(Sound::MobVillagerDeath);
+        s.addTone(0.52f, 330.0f, 90.0f, 5.0f, 0.68f, true);
+        s.addNoise(0.26f, 900.0f, 9.0f, 0.24f, false, 665);
+        s.finish(0.82f);
     }
 
     // The pigman: a grunt with a groan in it, halfway between the two

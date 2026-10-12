@@ -18,6 +18,7 @@ enum class MobId : uint8_t
     Spider,
     Enderman,
     ZombiePigman,
+    Villager,
     Count
 };
 

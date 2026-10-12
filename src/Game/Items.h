@@ -77,6 +77,7 @@ namespace Items
         // into is.
         Paper,
         Book,
+        Emerald,
 
         Count
     };

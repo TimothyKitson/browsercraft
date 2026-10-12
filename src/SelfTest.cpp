@@ -23,6 +23,7 @@
 #include "Game/Experience.h"
 #include "Game/Cane.h"
 #include "Game/Enchanting.h"
+#include "Game/Trading.h"
 #include "Game/Portal.h"
 #include "World/Furnaces.h"
 #include "World/Chests.h"
@@ -3346,6 +3347,161 @@ namespace
         used.clear();
         check(used.enchantments == 0u, "clearing a slot takes the enchantments with it");
     }
+
+    // --- villagers and trading -------------------------------------------
+
+    void testTrading()
+    {
+        using Trading::Profession;
+
+        section("trading: professions");
+
+        // A villager's trade comes from the seed it was born with, so
+        // the same villager is always the same trade.
+        bool stable = true;
+        for (uint32_t seed = 1; seed < 500; ++seed)
+            if (Trading::professionFor(seed) != Trading::professionFor(seed))
+                stable = false;
+        check(stable, "a seed always gives the same profession");
+
+        // All four have to come up. Consecutive seeds taken straight
+        // would hand them out in a repeating cycle, so this is really a
+        // check that the seed is stirred.
+        int seen[static_cast<int>(Profession::Count)] = { 0 };
+        for (uint32_t seed = 1; seed < 2000; ++seed)
+            ++seen[static_cast<int>(Trading::professionFor(seed))];
+
+        bool allAppear = true;
+        bool evenish = true;
+        for (int i = 0; i < static_cast<int>(Profession::Count); ++i)
+        {
+            if (seen[i] == 0) allAppear = false;
+            // Roughly a quarter each. Wide bounds: this is checking the
+            // seed is stirred at all, not that it is a good generator.
+            if (seen[i] < 300 || seen[i] > 700) evenish = false;
+        }
+        check(allAppear, "every profession turns up");
+        check(evenish, "and they come up at roughly the same rate");
+
+        bool named = true;
+        for (int i = 0; i < static_cast<int>(Profession::Count); ++i)
+        {
+            const char* n = Trading::name(static_cast<Profession>(i));
+            if (!n || !*n) named = false;
+        }
+        check(named, "every profession has a name to show");
+
+        section("trading: the offers");
+
+        // Every offer of every profession has to be a deal that can
+        // actually be struck: real items on both sides, and counts that
+        // are not zero or absurd.
+        bool sound = true;
+        bool sane = true;
+        bool stacks = true;
+        int totalOffers = 0;
+        for (int i = 0; i < static_cast<int>(Profession::Count); ++i)
+        {
+            const std::vector<Trading::Offer> offers =
+                Trading::offersFor(static_cast<Profession>(i));
+            if (offers.empty()) sound = false;
+            totalOffers += static_cast<int>(offers.size());
+
+            for (const Trading::Offer& offer : offers)
+            {
+                if (!offer.valid()) sound = false;
+
+                // Nothing may ask for more than a stack of something,
+                // since there would be no way to carry the price.
+                if (offer.wantCount > maxStackOf(offer.want)) stacks = false;
+                if (offer.also != Blocks::Air && offer.alsoCount > maxStackOf(offer.also))
+                    stacks = false;
+                if (offer.giveCount > maxStackOf(offer.give)) stacks = false;
+
+                // A trade that gives back what it took is not a trade.
+                if (offer.want == offer.give) sane = false;
+            }
+        }
+        check(sound, "every offer is a deal that can be struck");
+        check(sane, "and none of them swaps a thing for itself");
+        check(stacks, "and no price is more than a stack");
+        check(totalOffers >= 12, "there are " + std::to_string(totalOffers) + " offers in all");
+
+        // Emeralds are the currency: every profession must have some
+        // way of earning them, or the half of its list that spends them
+        // is unreachable.
+        bool earns = true;
+        for (int i = 0; i < static_cast<int>(Profession::Count); ++i)
+        {
+            bool sells = false;
+            for (const Trading::Offer& offer :
+                 Trading::offersFor(static_cast<Profession>(i)))
+                if (offer.give == Items::Emerald) sells = true;
+            if (!sells) earns = false;
+        }
+        check(earns, "every profession buys something for emeralds");
+
+        bool spends = true;
+        for (int i = 0; i < static_cast<int>(Profession::Count); ++i)
+        {
+            bool buys = false;
+            for (const Trading::Offer& offer :
+                 Trading::offersFor(static_cast<Profession>(i)))
+                if (offer.want == Items::Emerald) buys = true;
+            if (!buys) spends = false;
+        }
+        check(spends, "and every profession sells something for them");
+
+        section("trading: what you can afford");
+
+        const Trading::Offer deal{ Items::Wheat, 18, Blocks::Air, 0, Items::Emerald, 1 };
+        check(!Trading::affordable(deal, 17, 0), "seventeen wheat is not enough");
+        check(Trading::affordable(deal, 18, 0), "eighteen is");
+        check(Trading::affordable(deal, 64, 0), "and more than enough is too");
+
+        // A deal with a second ingredient wants both.
+        const Trading::Offer pair{ Items::Emerald, 18, Items::Diamond, 1,
+                                   Items::DiamondPickaxe, 1 };
+        check(!Trading::affordable(pair, 18, 0), "emeralds alone will not buy it");
+        check(!Trading::affordable(pair, 17, 1), "nor will the diamond alone");
+        check(Trading::affordable(pair, 18, 1), "both together will");
+
+        const Trading::Offer nonsense;
+        check(!Trading::affordable(nonsense, 64, 64),
+              "an empty offer cannot be afforded at any price");
+
+        section("trading: the villager itself");
+
+        const MobType& villager = mobType(MobId::Villager);
+        check(villager.spawnClass == SpawnClass::Passive, "a villager does not fight");
+        check(villager.attackDamage == 0, "and deals no damage");
+        check(villager.experience == 0,
+              "and is worth nothing dead, which is the point of one");
+        check(!villager.model.empty(), "it has a model");
+        check(villager.maxHealth > 0, "and some health");
+
+        // The seed a villager is born with is kept apart from the one
+        // it draws headings from, which is the whole reason it exists:
+        // the drawing one is stirred on every call, so a profession
+        // read off it would change as the villager wandered about.
+        // Building one picks a heading and an idle timer already, so if
+        // the two were the same number this would catch it.
+        Mob one(MobId::Villager, glm::vec3(0.0f, 64.0f, 0.0f), 12345u);
+        Mob two(MobId::Villager, glm::vec3(8.0f, 64.0f, 8.0f), 12345u);
+        check(one.birthSeed() == 12345u, "a villager keeps the seed it was born with");
+        check(one.birthSeed() == two.birthSeed(),
+              "two born alike agree on it");
+        check(Trading::professionFor(one.birthSeed()) ==
+                  Trading::professionFor(two.birthSeed()),
+              "and so follow the same trade");
+
+        // Different seeds must be able to give different trades, or
+        // every villager in the world is a farmer.
+        bool differ = false;
+        for (uint32_t seed = 1; seed < 40 && !differ; ++seed)
+            if (Trading::professionFor(seed) != Trading::professionFor(1u)) differ = true;
+        check(differ, "and villagers born differently can follow different ones");
+    }
 }
 
 int runSelfTest()
@@ -3401,6 +3557,7 @@ int runSelfTest()
     testExperience();
     testSugarCane();
     testEnchanting();
+    testTrading();
 
     std::printf("\n%d checks, %d failed\n", g_checks, g_failures);
     return g_failures == 0 ? 0 : 1;

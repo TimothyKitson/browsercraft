@@ -333,6 +333,68 @@ void Application::renderInventoryScreen()
         drawPlayerDoll(activeSkin(), panelX + SLOT_GAP + step + 14.0f,
                        topY + SLOT_GAP * 2.0f, unit);
 
+        // Trading: the villager's deals, one to a row. Each shows what
+        // it wants on the left and what it gives on the right, drawn as
+        // the items themselves rather than named, because the names are
+        // long and the panel is not wide.
+        if (m_tradeOpen)
+        {
+            const std::vector<Trading::Offer> offers = Trading::offersFor(m_tradeWith);
+
+            const float tx = panelX + gridWidth * 0.36f;
+            const float ty = topY + SLOT_GAP;
+
+            // Four rows have to fit beside the player doll, and at full
+            // slot size the last one ran down into the storage grid, so
+            // the trade slots are drawn a little smaller than the rest.
+            const float cell = SLOT_SIZE * 0.78f;
+            const float rowHeight = cell + 3.0f;
+
+            m_ui.text(Trading::name(m_tradeWith), tx, ty, 1.6f, TEXT_COLOR);
+
+            for (size_t row = 0; row < offers.size(); ++row)
+            {
+                const Trading::Offer& offer = offers[row];
+                const float ry = ty + 18.0f + static_cast<float>(row) * rowHeight;
+
+                const int haveWant = m_inventory.countOf(offer.want);
+                const int haveAlso = (offer.also == Blocks::Air)
+                                         ? 0 : m_inventory.countOf(offer.also);
+                const bool canPay = m_player.creative() ||
+                                    Trading::affordable(offer, haveWant, haveAlso);
+
+                const glm::vec4 tint = canPay ? glm::vec4(1.0f)
+                                              : glm::vec4(1.0f, 1.0f, 1.0f, 0.4f);
+
+                float cx = tx;
+                guiWell(cx, ry, cell, cell);
+                drawItem(cx, ry, cell, offer.want, offer.wantCount, tint);
+                cx += cell + 3.0f;
+
+                if (offer.also != Blocks::Air)
+                {
+                    guiWell(cx, ry, cell, cell);
+                    drawItem(cx, ry, cell, offer.also, offer.alsoCount, tint);
+                }
+                cx += cell + 3.0f;
+
+                m_ui.text("->", cx, ry + cell * 0.28f, 1.6f,
+                          canPay ? TEXT_COLOR : TEXT_DIM);
+                cx += 22.0f;
+
+                guiWell(cx, ry, cell, cell);
+                drawItem(cx, ry, cell, offer.give, offer.giveCount, tint);
+
+                // The whole row is the button, so a deal can be struck
+                // by clicking anywhere along it rather than only on the
+                // one slot that happens to be the price.
+                if (canPay)
+                    m_slotBoxes.push_back({ SlotBox::Kind::Trade, static_cast<int>(row),
+                                            tx, ry, cell });
+            }
+        }
+        else
+
         // The enchanting table: the item on the left, three offers down
         // the right. Each row shows what it costs in levels and, once
         // you could afford it, what it would put on the item -- which
@@ -612,6 +674,10 @@ void Application::handleInventoryClick(int mouseX, int mouseY, bool rightButton,
             buyEnchantment(box->index);
             break;
 
+        case SlotBox::Kind::Trade:
+            acceptTrade(box->index);
+            break;
+
         case SlotBox::Kind::Slot:
             if (shiftHeld) m_inventory.quickMove(box->index);
             else if (rightButton) m_inventory.rightClick(box->index);
@@ -632,10 +698,59 @@ void Application::closeInventory()
     stowChest();
     stowFurnace();
     stowEnchantingTable();
+    m_tradeOpen = false;
     returnCursorToWorld();
     m_inventoryOpen = false;
     m_benchOpen = false;
     m_inventory.setCraftSize(2);
+}
+
+const Mob* Application::tradingVillager() const
+{
+    if (!m_tradeOpen) return nullptr;
+    for (const Mob& mob : m_entities.mobs())
+        if (mob.typeId() == MobId::Villager && mob.alive() && mob.birthSeed() == m_tradeSeed)
+            return &mob;
+    return nullptr;
+}
+
+void Application::openTrading(const Mob& villager)
+{
+    m_tradeOpen = true;
+    m_tradeSeed = villager.birthSeed();
+    m_tradeWith = Trading::professionFor(villager.birthSeed());
+    m_inventoryOpen = true;
+    setMouseCaptured(false);
+}
+
+void Application::acceptTrade(int row)
+{
+    if (!m_tradeOpen) return;
+
+    const std::vector<Trading::Offer> offers = Trading::offersFor(m_tradeWith);
+    if (row < 0 || row >= static_cast<int>(offers.size())) return;
+
+    const Trading::Offer& offer = offers[static_cast<size_t>(row)];
+
+    const int haveWant = m_inventory.countOf(offer.want);
+    const int haveAlso = (offer.also == Blocks::Air) ? 0 : m_inventory.countOf(offer.also);
+    if (!m_player.creative() && !Trading::affordable(offer, haveWant, haveAlso)) return;
+
+    // Taken before it is given. The other way round, a trade that
+    // filled the last free slot would be paid for out of a pack that no
+    // longer had room for what it was paying with.
+    if (!m_player.creative())
+    {
+        for (int i = 0; i < offer.wantCount; ++i) m_inventory.take(offer.want);
+        for (int i = 0; i < offer.alsoCount; ++i) m_inventory.take(offer.also);
+    }
+
+    const int leftOver = m_inventory.add(offer.give, offer.giveCount);
+    if (leftOver > 0)
+        m_drops.spawn(m_player.position + glm::vec3(0.0f, 0.6f, 0.0f),
+                      offer.give, leftOver);
+
+    m_audio.play(Sound::MobVillagerSay, 0.7f, 1.3f);
 }
 
 void Application::openEnchantingTable(const glm::ivec3& block)

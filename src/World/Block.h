@@ -112,6 +112,7 @@ namespace Blocks
         SugarCane,
         Bookshelf,
         EnchantingTable,
+        EmeraldOre,
 
         Count
     };
