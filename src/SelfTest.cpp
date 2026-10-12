@@ -25,6 +25,7 @@
 #include "Game/Anvil.h"
 #include "Game/Effects.h"
 #include "Game/Brewing.h"
+#include "World/Village.h"
 #include "Game/Enchanting.h"
 #include "Game/Trading.h"
 #include "Game/EndPortal.h"
@@ -995,6 +996,134 @@ namespace
         Mob zombie(MobId::Zombie, glm::vec3(0.0f, 64.0f, 0.0f), 13u);
         check(mobType(MobId::Zombie).breedingFood == Blocks::Air, "a zombie wants no food");
         check(!zombie.feed(Items::Wheat), "and refuses wheat");
+    }
+
+    void testVillages()
+    {
+        section("villages: where they stand and what is in them");
+
+        check(Village::regionOf(0) == 0, "the origin is in square zero");
+        check(Village::regionOf(Village::REGION - 1) == 0, "and so is the block before the next");
+        check(Village::regionOf(Village::REGION) == 1, "which starts square one");
+        check(Village::regionOf(-1) == -1, "one west of the origin is square minus one");
+        check(Village::regionOf(-Village::REGION) == -1, "and so is the far side of it");
+        check(Village::regionOf(-Village::REGION - 1) == -2,
+              "squares either side of the origin are the same width as the rest");
+
+        const uint32_t seed = 4242u;
+
+        // The same square always answers the same way, whoever asks.
+        for (int rz = -3; rz <= 3; ++rz)
+            for (int rx = -3; rx <= 3; ++rx)
+            {
+                const Village::Site a = Village::siteFor(rx, rz, seed);
+                const Village::Site b = Village::siteFor(rx, rz, seed);
+                check(a.exists == b.exists && a.x == b.x && a.z == b.z,
+                      "a square gives the same village every time it is asked");
+            }
+
+        // A site sits far enough inside its own square that no two can
+        // ever meet, which is the whole reason for the squares.
+        int found = 0;
+        std::vector<Village::Site> sites;
+        for (int rz = -4; rz <= 4; ++rz)
+            for (int rx = -4; rx <= 4; ++rx)
+            {
+                const Village::Site site = Village::siteFor(rx, rz, seed);
+                if (!site.exists) continue;
+                ++found;
+                sites.push_back(site);
+
+                const int lowX = rx * Village::REGION + Village::MAX_RADIUS;
+                const int highX = (rx + 1) * Village::REGION - Village::MAX_RADIUS;
+                check(site.x >= lowX && site.x <= highX, "a village stays inside its own square");
+                const int lowZ = rz * Village::REGION + Village::MAX_RADIUS;
+                const int highZ = (rz + 1) * Village::REGION - Village::MAX_RADIUS;
+                check(site.z >= lowZ && site.z <= highZ, "on both axes");
+            }
+        check(found > 10, "a stretch of world that size holds a good few villages");
+
+        for (size_t i = 0; i < sites.size(); ++i)
+            for (size_t j = i + 1; j < sites.size(); ++j)
+            {
+                const int gapX = std::abs(sites[i].x - sites[j].x);
+                const int gapZ = std::abs(sites[i].z - sites[j].z);
+                check(gapX > Village::MAX_RADIUS * 2 || gapZ > Village::MAX_RADIUS * 2,
+                      "and no two villages ever reach each other");
+            }
+
+        // --- the layout ---------------------------------------------
+        Village::Site site;
+        site.exists = true;
+        site.x = 1000;
+        site.z = -2000;
+
+        const std::vector<Village::Building> plan = Village::plan(site, seed);
+        check(!plan.empty(), "a village has something in it");
+
+        int wells = 0, houses = 0;
+        for (const Village::Building& b : plan)
+        {
+            if (b.kind == Village::Kind::Well) ++wells;
+            if (b.kind == Village::Kind::House) ++houses;
+
+            check(b.width > 0 && b.depth > 0, "everything in it takes up room");
+
+            // Nothing reaches past what a chunk was told to look for,
+            // or a building would be cut in half at a chunk border.
+            check(b.x >= site.x - Village::MAX_RADIUS, "nothing stands west of the village");
+            check(b.x + b.width - 1 <= site.x + Village::MAX_RADIUS, "nor east of it");
+            check(b.z >= site.z - Village::MAX_RADIUS, "nor north");
+            check(b.z + b.depth - 1 <= site.z + Village::MAX_RADIUS, "nor south");
+        }
+        check(wells == 1, "exactly one well, in the middle");
+        check(houses > 0, "and houses around it");
+
+        // The well is centred on the site.
+        for (const Village::Building& b : plan)
+            if (b.kind == Village::Kind::Well)
+            {
+                check(b.x + b.width / 2 == site.x && b.z + b.depth / 2 == site.z,
+                      "the well is what the village is arranged around");
+            }
+
+        // Nothing overlaps anything else: two buildings sharing ground
+        // would leave one half-built inside the other.
+        for (size_t i = 0; i < plan.size(); ++i)
+            for (size_t j = i + 1; j < plan.size(); ++j)
+            {
+                const Village::Building& a = plan[i];
+                const Village::Building& b = plan[j];
+                const bool apart = a.x + a.width <= b.x || b.x + b.width <= a.x ||
+                                   a.z + a.depth <= b.z || b.z + b.depth <= a.z;
+                check(apart, "no two buildings stand on the same ground");
+            }
+
+        // Every door looks towards the middle, so it opens onto a path
+        // rather than into the back of the next house.
+        for (const Village::Building& b : plan)
+        {
+            if (b.kind != Village::Kind::House) continue;
+            const int cx = b.x + b.width / 2;
+            const int cz = b.z + b.depth / 2;
+
+            const bool right = (b.facing == 0 && cz > site.z) ||
+                               (b.facing == 2 && cz < site.z) ||
+                               (b.facing == 1 && cx < site.x) ||
+                               (b.facing == 3 && cx > site.x);
+            check(right, "every door looks towards the well");
+        }
+
+        // reaches() has to agree with where the buildings actually are,
+        // or a chunk would skip a village that does reach into it.
+        for (const Village::Building& b : plan)
+            check(Village::reaches(site, b.x, b.z, b.x + b.width - 1, b.z + b.depth - 1),
+                  "a village reaches every box it has a building in");
+
+        Village::Site nowhere;
+        check(Village::plan(nowhere, seed).empty(), "a square with no village plans nothing");
+        check(!Village::reaches(nowhere, -10000, -10000, 10000, 10000),
+              "and reaches nowhere at all");
     }
 
     void testBrewing()
@@ -4876,6 +5005,7 @@ int runSelfTest()
     testMobDrops();
     testEndermanStare();
     testAnvil();
+    testVillages();
     testBrewing();
     testEffects();
     testEffectsOnThePlayer();

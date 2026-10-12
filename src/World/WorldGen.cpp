@@ -145,6 +145,7 @@ void WorldGen::generate(Chunk& chunk) const
     carveCaves(chunk);
     placeOres(chunk);
     decorate(chunk);
+    buildVillages(chunk);
 }
 
 // A closed cavern system rather than a landscape: solid netherrack between a
@@ -532,6 +533,284 @@ void WorldGen::buildTree(Chunk& chunk, int worldX, int surfaceY, int worldZ, boo
         if (Chunk::inBounds(lx, y, lz))
             chunk.setBlockRaw(lx, y, lz, logBlock);
     }
+}
+
+namespace
+{
+    // Writes a world-space block, ignoring anything outside this chunk.
+    // Every village stamp goes through this: a chunk only ever writes
+    // its own cells, and the parts that fall elsewhere are written by
+    // the chunk they belong to when its turn comes.
+    void put(Chunk& chunk, int worldX, int y, int worldZ, BlockId block)
+    {
+        const int lx = worldX - chunk.position().x * Chunk::SX;
+        const int lz = worldZ - chunk.position().z * Chunk::SZ;
+        if (Chunk::inBounds(lx, y, lz)) chunk.setBlockRaw(lx, y, lz, block);
+    }
+}
+
+bool WorldGen::villageFits(const Village::Site& site) const
+{
+    if (!site.exists) return false;
+
+    // Anywhere people could live. Mountains are out because a village
+    // there would be half cliff, and so are the ocean and the beach.
+    // Plains and desert alone left four villages in five with nowhere
+    // to stand: this world is mostly forest.
+    const Biome biome = biomeAt(site.x, site.z);
+    if (biome != Biome::Plains && biome != Biome::Desert &&
+        biome != Biome::Forest && biome != Biome::Snowy)
+        return false;
+
+    // Sample the whole footprint, not just the middle: a village laid
+    // across a slope ends up with some houses buried and some on
+    // stilts, and the middle alone cannot tell you that.
+    int lowest = Chunk::SY;
+    int highest = 0;
+    for (int dz = -Village::MAX_RADIUS; dz <= Village::MAX_RADIUS; dz += 7)
+        for (int dx = -Village::MAX_RADIUS; dx <= Village::MAX_RADIUS; dx += 7)
+        {
+            const int here = surfaceHeight(site.x + dx, site.z + dz);
+            lowest = std::min(lowest, here);
+            highest = std::max(highest, here);
+        }
+
+    if (lowest <= SEA_LEVEL + 1) return false;   // one foot in the sea
+
+    // Each building levels its own patch, so the village only has to
+    // avoid genuine hillsides rather than find a billiard table.
+    return (highest - lowest) <= 12;
+}
+
+void WorldGen::stampBuilding(Chunk& chunk, const Village::Building& building) const
+{
+    // Each building finds its own level, from the ground under its own
+    // middle. Levelling the whole village to one height instead meant
+    // nothing could be built on anything but a billiard table -- and
+    // this is just as safe across chunk borders, because the height is
+    // still a pure function of where the building is.
+    const int ground = surfaceHeight(building.x + building.width / 2,
+                                     building.z + building.depth / 2);
+
+    const int x0 = building.x;
+    const int z0 = building.z;
+    const int x1 = x0 + building.width - 1;
+    const int z1 = z0 + building.depth - 1;
+
+    if (building.kind == Village::Kind::Lamp)
+    {
+        for (int y = ground + 1; y <= ground + 3; ++y)
+            put(chunk, x0, y, z0, Blocks::Log);
+        put(chunk, x0, ground + 4, z0, Blocks::Torch);
+        return;
+    }
+
+    if (building.kind == Village::Kind::Well)
+    {
+        // A cobblestone apron with a lined pit of water in the middle,
+        // four posts and a roof over it.
+        for (int x = x0; x <= x1; ++x)
+            for (int z = z0; z <= z1; ++z)
+            {
+                put(chunk, x, ground, z, Blocks::Cobblestone);
+                for (int y = ground + 1; y <= ground + 5; ++y)
+                    put(chunk, x, y, z, Blocks::Air);
+            }
+
+        const int midX = x0 + 2;
+        const int midZ = z0 + 2;
+        put(chunk, midX, ground, midZ, Blocks::Water);
+        put(chunk, midX, ground - 1, midZ, Blocks::Water);
+
+        for (int x = midX - 1; x <= midX + 1; ++x)
+            for (int z = midZ - 1; z <= midZ + 1; ++z)
+            {
+                if (x == midX && z == midZ) continue;
+                put(chunk, x, ground + 1, z, Blocks::Cobblestone);
+            }
+
+        for (int y = ground + 2; y <= ground + 3; ++y)
+        {
+            put(chunk, midX - 1, y, midZ - 1, Blocks::OakFence);
+            put(chunk, midX + 1, y, midZ - 1, Blocks::OakFence);
+            put(chunk, midX - 1, y, midZ + 1, Blocks::OakFence);
+            put(chunk, midX + 1, y, midZ + 1, Blocks::OakFence);
+        }
+
+        for (int x = midX - 1; x <= midX + 1; ++x)
+            for (int z = midZ - 1; z <= midZ + 1; ++z)
+                put(chunk, x, ground + 4, z, Blocks::Planks);
+        return;
+    }
+
+    // --- a house ---------------------------------------------------
+
+    // Level the ground under it and clear the air above, so a house on
+    // a slight rise is neither buried nor standing on nothing.
+    for (int x = x0; x <= x1; ++x)
+        for (int z = z0; z <= z1; ++z)
+        {
+            for (int y = ground - 3; y <= ground; ++y)
+                put(chunk, x, y, z, (y == ground) ? Blocks::Planks : Blocks::Dirt);
+            for (int y = ground + 1; y <= ground + 6; ++y)
+                put(chunk, x, y, z, Blocks::Air);
+        }
+
+    // Walls, with logs at the corners the way a village house is built.
+    for (int y = ground + 1; y <= ground + 3; ++y)
+        for (int x = x0; x <= x1; ++x)
+            for (int z = z0; z <= z1; ++z)
+            {
+                const bool edgeX = (x == x0 || x == x1);
+                const bool edgeZ = (z == z0 || z == z1);
+                if (!edgeX && !edgeZ) continue;
+
+                BlockId block = (edgeX && edgeZ) ? Blocks::Log : Blocks::Planks;
+
+                // A window in the middle of each wall, at head height.
+                if (y == ground + 2 && !(edgeX && edgeZ))
+                {
+                    const bool midOfX = (x == (x0 + x1) / 2);
+                    const bool midOfZ = (z == (z0 + z1) / 2);
+                    if ((edgeZ && midOfX) || (edgeX && midOfZ)) block = Blocks::Glass;
+                }
+
+                put(chunk, x, y, z, block);
+            }
+
+    // The doorway, in the middle of whichever wall faces the village.
+    int doorX = (x0 + x1) / 2;
+    int doorZ = (z0 + z1) / 2;
+    switch (building.facing)
+    {
+        case 0: doorZ = z0; break;   // looking north
+        case 1: doorX = x1; break;
+        case 2: doorZ = z1; break;
+        default: doorX = x0; break;
+    }
+
+    put(chunk, doorX, ground + 1, doorZ, doorPart(building.facing, false, false));
+    put(chunk, doorX, ground + 2, doorZ, doorPart(building.facing, true, false));
+    put(chunk, doorX, ground + 3, doorZ, Blocks::Planks);
+
+    // A roof one block proud of the walls all round.
+    for (int x = x0 - 1; x <= x1 + 1; ++x)
+        for (int z = z0 - 1; z <= z1 + 1; ++z)
+            put(chunk, x, ground + 4, z, Blocks::Planks);
+
+    // Something to see by, stood on the floor in a corner out of the
+    // doorway's path.
+    put(chunk, x0 + 1, ground + 1, z0 + 1, Blocks::Torch);
+}
+
+WorldGen::VillageTally WorldGen::surveyVillages(int fromX, int fromZ, int squares) const
+{
+    VillageTally tally;
+
+    const int centreX = Village::regionOf(fromX);
+    const int centreZ = Village::regionOf(fromZ);
+
+    for (int rz = centreZ - squares; rz <= centreZ + squares; ++rz)
+        for (int rx = centreX - squares; rx <= centreX + squares; ++rx)
+        {
+            const Village::Site site = Village::siteFor(rx, rz, m_seed);
+            if (!site.exists) continue;
+            ++tally.sites;
+
+            const Biome biome = biomeAt(site.x, site.z);
+            if (biome != Biome::Plains && biome != Biome::Desert &&
+                biome != Biome::Forest && biome != Biome::Snowy)
+            { ++tally.wrongBiome; continue; }
+
+            int lowest = Chunk::SY;
+            int highest = 0;
+            for (int dz = -Village::MAX_RADIUS; dz <= Village::MAX_RADIUS; dz += 7)
+                for (int dx = -Village::MAX_RADIUS; dx <= Village::MAX_RADIUS; dx += 7)
+                {
+                    const int here = surfaceHeight(site.x + dx, site.z + dz);
+                    lowest = std::min(lowest, here);
+                    highest = std::max(highest, here);
+                }
+
+            if (lowest <= SEA_LEVEL + 1) { ++tally.tooWet; continue; }
+            if (highest - lowest > 12) { ++tally.tooSteep; continue; }
+            ++tally.built;
+        }
+
+    return tally;
+}
+
+Village::Site WorldGen::nearestVillage(int fromX, int fromZ, int squares) const
+{
+    Village::Site best;
+    long long bestDistance = 0;
+
+    const int centreX = Village::regionOf(fromX);
+    const int centreZ = Village::regionOf(fromZ);
+
+    for (int rz = centreZ - squares; rz <= centreZ + squares; ++rz)
+        for (int rx = centreX - squares; rx <= centreX + squares; ++rx)
+        {
+            const Village::Site site = Village::siteFor(rx, rz, m_seed);
+            if (!villageFits(site)) continue;
+
+            const long long dx = site.x - fromX;
+            const long long dz = site.z - fromZ;
+            const long long distance = dx * dx + dz * dz;
+
+            if (!best.exists || distance < bestDistance)
+            {
+                best = site;
+                bestDistance = distance;
+            }
+        }
+
+    return best;
+}
+
+void WorldGen::buildVillages(Chunk& chunk) const
+{
+    const int baseX = chunk.position().x * Chunk::SX;
+    const int baseZ = chunk.position().z * Chunk::SZ;
+    const int maxX = baseX + Chunk::SX - 1;
+    const int maxZ = baseZ + Chunk::SZ - 1;
+
+    // Every square whose village could reach in here. The roof hangs a
+    // block past the walls, so the search is widened by one.
+    const int reach = Village::MAX_RADIUS + 1;
+    const int firstX = Village::regionOf(baseX - reach);
+    const int lastX = Village::regionOf(maxX + reach);
+    const int firstZ = Village::regionOf(baseZ - reach);
+    const int lastZ = Village::regionOf(maxZ + reach);
+
+    for (int rz = firstZ; rz <= lastZ; ++rz)
+        for (int rx = firstX; rx <= lastX; ++rx)
+        {
+            const Village::Site site = Village::siteFor(rx, rz, m_seed);
+            if (!Village::reaches(site, baseX - 1, baseZ - 1, maxX + 1, maxZ + 1)) continue;
+            if (!villageFits(site)) continue;
+
+            // Clear the site first. decorate() has already scattered
+            // trees over it without knowing a village was coming, and
+            // a house with an oak growing through the roof is not a
+            // house. Only this chunk's share of the footprint, since
+            // the rest is some other chunk's to clear.
+            const int clearX0 = std::max(baseX, site.x - Village::MAX_RADIUS);
+            const int clearX1 = std::min(maxX, site.x + Village::MAX_RADIUS);
+            const int clearZ0 = std::max(baseZ, site.z - Village::MAX_RADIUS);
+            const int clearZ1 = std::min(maxZ, site.z + Village::MAX_RADIUS);
+
+            for (int x = clearX0; x <= clearX1; ++x)
+                for (int z = clearZ0; z <= clearZ1; ++z)
+                {
+                    const int top = surfaceHeight(x, z);
+                    for (int y = top + 1; y <= top + 9; ++y)
+                        put(chunk, x, y, z, Blocks::Air);
+                }
+
+            for (const Village::Building& building : Village::plan(site, m_seed))
+                stampBuilding(chunk, building);
+        }
 }
 
 void WorldGen::decorate(Chunk& chunk) const

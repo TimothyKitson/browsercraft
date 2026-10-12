@@ -1,5 +1,6 @@
 #include "EntityManager.h"
 #include "World/World.h"
+#include "World/Village.h"
 #include "Pathfinder.h"
 #include <algorithm>
 #include <cmath>
@@ -167,13 +168,36 @@ void EntityManager::trySpawnWave(const World& world, const glm::vec3& playerPosi
         }
         else
         {
-            // One daylight spawn in twelve is a villager. They belong
-            // in villages, and there are none to put them in yet, so
-            // they wander the countryside instead -- rare enough that
-            // meeting one is an event rather than livestock.
-            species = (random01() < 0.08f)
-                          ? MobId::Villager
-                          : PASSIVE_SPECIES[static_cast<int>(random01() * 4.0f) & 3];
+            // Inside a village, villagers are most of what spawns:
+            // that is the whole point of the place. The cheap test
+            // comes first -- which square this is, and whether its
+            // village reaches here -- and only a spot that passes it
+            // pays for the survey that says whether the village was
+            // actually built.
+            bool inVillage = false;
+            if (m_dimension == Dimension::Overworld)
+            {
+                const Village::Site site = Village::siteFor(Village::regionOf(x),
+                                                            Village::regionOf(z),
+                                                            world.seed());
+                if (Village::reaches(site, x, z, x, z))
+                    inVillage = world.generator().nearestVillage(x, z, 0).exists;
+            }
+
+            if (inVillage)
+            {
+                species = (random01() < 0.75f)
+                              ? MobId::Villager
+                              : PASSIVE_SPECIES[static_cast<int>(random01() * 4.0f) & 3];
+            }
+            else
+            {
+                // Out in the country they are rare enough that meeting
+                // one is an event rather than livestock.
+                species = (random01() < 0.02f)
+                              ? MobId::Villager
+                              : PASSIVE_SPECIES[static_cast<int>(random01() * 4.0f) & 3];
+            }
         }
 
         // The list for this dimension is what says who belongs here.

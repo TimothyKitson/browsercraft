@@ -1,0 +1,69 @@
+#pragma once
+#include <cstdint>
+#include <vector>
+
+// Where a village stands and what is in it.
+//
+// The layout is a pure function of the seed and the place, and nothing
+// here touches a chunk. That matters more than usual: a village is
+// wider than a chunk, so every chunk it reaches into works out the
+// whole plan for itself and stamps only the part that lands in it. Two
+// chunks that disagreed by one block would leave a seam through
+// somebody's wall.
+//
+// It also means --selftest can lay out every village in a world and
+// check none of them overlap without generating any terrain.
+namespace Village
+{
+    // The world is cut into squares with at most one village to a
+    // square, which is what stops two of them growing into each other.
+    // A village reaches no further than MAX_RADIUS from its middle, so
+    // a chunk need only look at the squares within that.
+    constexpr int REGION = 352;
+    constexpr int PLOT = 11;         // one building's share of the ground
+    constexpr int GRID = 5;          // plots across, centred on the middle
+    constexpr int MAX_RADIUS = (PLOT * GRID) / 2 + 2;
+
+    static_assert(GRID % 2 == 1, "the village needs a middle plot for its well");
+
+    struct Site
+    {
+        bool exists = false;
+        int x = 0;
+        int z = 0;
+    };
+
+    // Whether this square has a village, and where its middle is. The
+    // answer depends on nothing but the seed and the square, so every
+    // chunk gets the same one.
+    Site siteFor(int regionX, int regionZ, uint32_t seed);
+
+    // Which square a world position falls in. Separate because the
+    // division has to round towards negative infinity, and the plain
+    // one does not.
+    int regionOf(int world);
+
+    enum class Kind : uint8_t
+    {
+        House,
+        Well,
+        Lamp,
+    };
+
+    struct Building
+    {
+        Kind kind = Kind::House;
+        int x = 0, z = 0;        // north-west corner, in world blocks
+        int width = 0, depth = 0;
+        // 0 north, 1 east, 2 south, 3 west -- which way the door looks,
+        // which is always towards the middle of the village.
+        int facing = 0;
+    };
+
+    // Everything in the village, in world coordinates. Empty when the
+    // site does not exist.
+    std::vector<Building> plan(const Site& site, uint32_t seed);
+
+    // Whether any part of the village reaches into the given box.
+    bool reaches(const Site& site, int minX, int minZ, int maxX, int maxZ);
+}

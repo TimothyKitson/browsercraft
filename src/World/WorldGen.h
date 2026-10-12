@@ -1,6 +1,7 @@
 #pragma once
 #include "Chunk.h"
 #include "Noise.h"
+#include "Village.h"
 
 #include "Dimension.h"
 const char* dimensionFolder(Dimension dimension);
@@ -40,6 +41,25 @@ public:
     int surfaceHeight(int worldX, int worldZ) const;
     Biome biomeAt(int worldX, int worldZ) const;
 
+    // The nearest village to a place, searching outwards a few squares.
+    // Public because a dev screen and a command both want to find one,
+    // and because walking to the nearest village is exactly the thing
+    // a player will ask for first.
+    Village::Site nearestVillage(int fromX, int fromZ, int squares = 3) const;
+
+    // Why a site was turned down, for --villageinfo. Counting the
+    // reasons is the only way to tell "the land is too steep" from
+    // "there are no sites at all".
+    struct VillageTally
+    {
+        int sites = 0;
+        int wrongBiome = 0;
+        int tooWet = 0;
+        int tooSteep = 0;
+        int built = 0;
+    };
+    VillageTally surveyVillages(int fromX, int fromZ, int squares) const;
+
     // Picks a reasonable, dry spawn point near the origin.
     void findSpawn(int& outX, int& outY, int& outZ) const;
 
@@ -58,6 +78,15 @@ private:
     float humidityAt(int x, int z) const;
 
     void generateColumns(Chunk& chunk) const;
+
+    // Villages. Each is wider than a chunk, so every chunk it reaches
+    // into lays out the whole thing and stamps only its own part --
+    // which works because the layout depends on nothing but the seed.
+    void buildVillages(Chunk& chunk) const;
+    // Whether the ground where this village would stand could carry
+    // it. Decided from the site alone, so every chunk agrees.
+    bool villageFits(const Village::Site& site) const;
+    void stampBuilding(Chunk& chunk, const Village::Building& building) const;
     void carveCaves(Chunk& chunk) const;
     void placeOres(Chunk& chunk) const;
     void decorate(Chunk& chunk) const;

@@ -1384,7 +1384,8 @@ bool Application::frame()
             m_startupScreen == "trade" || m_startupScreen == "endportal" ||
             m_startupScreen == "rain" || m_startupScreen == "storm" ||
             m_startupScreen == "pbr" || m_startupScreen == "anvil" ||
-            m_startupScreen == "anvilblock" || m_startupScreen == "brew")
+            m_startupScreen == "anvilblock" || m_startupScreen == "brew" ||
+            m_startupScreen == "village")
         {
             // Dev aid: open the inventory with something in it, so the
             // screenshot shows a real grid rather than 36 empty boxes.
@@ -1412,6 +1413,7 @@ bool Application::frame()
                                   m_startupScreen != "tnt" &&
                                   m_startupScreen != "pbr" &&
                                   m_startupScreen != "anvilblock" &&
+                                  m_startupScreen != "village" &&
                                   m_startupScreen != "portal" &&
                                   m_startupScreen != "nether";
             m_inventoryOpen = showPanel;
@@ -1588,6 +1590,45 @@ bool Application::frame()
                     slot.id = Items::DiamondPickaxe;
                     slot.count = 1;
                     openEnchantingTable(glm::ivec3(bx, by, bz));
+                }
+            }
+
+            if (m_startupScreen == "village")
+            {
+                // Walk to the nearest one rather than building a fake
+                // village here: what is worth looking at is whether the
+                // generator puts a real one together properly.
+                const Village::Site site =
+                    m_world->generator().nearestVillage(
+                        static_cast<int>(m_player.position.x),
+                        static_cast<int>(m_player.position.z), 4);
+
+                if (site.exists)
+                {
+                    // Above the ground there, not at whatever height
+                    // spawn happened to be: the surface search looks
+                    // down from where the player already is, and from
+                    // the old height it landed them in a cave.
+                    // Back and well up, or the first tree between here
+                    // and the village fills the whole screen.
+                    const int standX = site.x;
+                    const int standZ = site.z + 46;
+                    const int top = m_world->generator().surfaceHeight(standX, standZ);
+                    m_player.position = glm::vec3(static_cast<float>(standX) + 0.5f,
+                                                  static_cast<float>(top + 16),
+                                                  static_cast<float>(standZ) + 0.5f);
+                    m_player.velocity = glm::vec3(0.0f);
+                    m_player.flying = true;
+                    m_placeOnSurface = false;
+                    m_camera.setOrientation(-90.0f, -22.0f);
+                    m_camera.addLook(0.0f, 0.0f, 0.0f);
+                    std::printf("Village at %d, %d\n", site.x, site.z);
+                    std::fflush(stdout);
+                }
+                else
+                {
+                    std::printf("No village within four squares\n");
+                    std::fflush(stdout);
                 }
             }
 

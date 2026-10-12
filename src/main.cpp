@@ -22,6 +22,39 @@ namespace
     // depth. Guessing at ore rates is how a world ends up either paved
     // with diamond or with none in it, and the numbers here are
     // comparable with Minecraft's own published ones.
+    int printVillageInfo(uint32_t seed)
+    {
+        const WorldGen generator(seed);
+
+        int spawnX = 0, spawnY = 0, spawnZ = 0;
+        generator.findSpawn(spawnX, spawnY, spawnZ);
+
+        const WorldGen::VillageTally tally = generator.surveyVillages(spawnX, spawnZ, 4);
+
+        std::printf("Villages near spawn (%d, %d), nine squares a side:\n", spawnX, spawnZ);
+        std::printf("  sites drawn   %d\n", tally.sites);
+        std::printf("  wrong biome   %d\n", tally.wrongBiome);
+        std::printf("  in the sea    %d\n", tally.tooWet);
+        std::printf("  too steep     %d\n", tally.tooSteep);
+        std::printf("  built         %d\n", tally.built);
+
+        const Village::Site nearest = generator.nearestVillage(spawnX, spawnZ, 4);
+        if (nearest.exists)
+        {
+            const int dx = nearest.x - spawnX;
+            const int dz = nearest.z - spawnZ;
+            std::printf("  nearest       %d, %d (%d blocks away)\n", nearest.x, nearest.z,
+                        static_cast<int>(std::sqrt(static_cast<double>(dx) * dx +
+                                                   static_cast<double>(dz) * dz)));
+        }
+        else
+        {
+            std::printf("  nearest       none\n");
+        }
+
+        return 0;
+    }
+
     int printOreInfo(uint32_t seed)
     {
         const WorldGen generator(seed);
@@ -331,6 +364,7 @@ int main(int argc, char** argv)
     bool selfTest = false;
     bool seabedInfo = false;
     bool oreInfo = false;
+    bool villageInfo = false;
     int scoutSeeds = 0;
     const char* panorama = nullptr;
     const char* dimensionName = nullptr;
@@ -383,6 +417,10 @@ int main(int argc, char** argv)
         {
             oreInfo = true;
         }
+        else if (std::strcmp(argv[i], "--villageinfo") == 0)
+        {
+            villageInfo = true;
+        }
         else if (std::strcmp(argv[i], "--selftest") == 0)
         {
             selfTest = true;
@@ -424,6 +462,7 @@ int main(int argc, char** argv)
     if (worldInfo) return printWorldInfo(hasSeed ? seed : 12345u);
     if (seabedInfo) return printSeabedInfo(hasSeed ? seed : 12345u);
     if (oreInfo) return printOreInfo(hasSeed ? seed : 12345u);
+    if (villageInfo) return printVillageInfo(hasSeed ? seed : 12345u);
     if (scoutSeeds > 0) return scoutPanoramaSeeds(scoutSeeds);
 
     try
