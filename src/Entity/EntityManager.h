@@ -61,6 +61,11 @@ public:
     bool feed(const glm::vec3& origin, const glm::vec3& direction, float maxDistance,
               StackId food);
 
+    // Offers the food to whatever is in front, and tames it if that is
+    // what the food does to it. True when it took.
+    bool tame(const glm::vec3& origin, const glm::vec3& direction, float maxDistance,
+              StackId food);
+
     bool spawnAt(MobId type, glm::vec3 feetPosition, const World& world, bool baby = false);
     void clear() { m_mobs.clear(); m_deaths.clear(); m_births.clear(); }
 

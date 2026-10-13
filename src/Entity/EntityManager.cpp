@@ -15,6 +15,10 @@ namespace
     constexpr int PASSIVE_MIN_LIGHT = 9;
 
     const MobId PASSIVE_SPECIES[] = { MobId::Sheep, MobId::Pig, MobId::Cow, MobId::Chicken };
+
+    // Wolves keep to the trees, which is where Minecraft puts them and
+    // what stops a pack turning up in the middle of a field.
+    const MobId FOREST_SPECIES[] = { MobId::Wolf };
     const MobId HOSTILE_SPECIES[] = { MobId::Zombie, MobId::Skeleton, MobId::Creeper,
                                       MobId::Spider, MobId::Enderman };
 
@@ -216,9 +220,22 @@ void EntityManager::trySpawnWave(const World& world, const glm::vec3& playerPosi
             {
                 // Out in the country they are rare enough that meeting
                 // one is an event rather than livestock.
-                species = (random01() < 0.02f)
-                              ? MobId::Villager
-                              : PASSIVE_SPECIES[static_cast<int>(random01() * 4.0f) & 3];
+                const Biome here = world.generator().biomeAt(x, z);
+                const bool woods = (here == Biome::Forest);
+
+                if (woods && random01() < 0.22f)
+                {
+                    constexpr int FOREST_COUNT =
+                        static_cast<int>(std::size(FOREST_SPECIES));
+                    species = FOREST_SPECIES[static_cast<int>(random01() * FOREST_COUNT)
+                                             % FOREST_COUNT];
+                }
+                else
+                {
+                    species = (random01() < 0.02f)
+                                  ? MobId::Villager
+                                  : PASSIVE_SPECIES[static_cast<int>(random01() * 4.0f) & 3];
+                }
             }
         }
 
@@ -400,6 +417,13 @@ bool EntityManager::feed(const glm::vec3& origin, const glm::vec3& direction,
 {
     Mob* target = pick(origin, direction, maxDistance);
     return target && target->feed(food);
+}
+
+bool EntityManager::tame(const glm::vec3& origin, const glm::vec3& direction,
+                         float maxDistance, StackId food)
+{
+    Mob* target = pick(origin, direction, maxDistance);
+    return target && target->tameWith(food);
 }
 
 // Villagers pair off on their own: nobody hands one a carrot. What

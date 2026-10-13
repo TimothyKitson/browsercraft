@@ -107,6 +107,24 @@ void Mob::steerAroundObstacle(const World& world)
     m_goalTimer = 1.0f;
 }
 
+StackId Mob::tamingFood(MobId type)
+{
+    return (type == MobId::Wolf) ? static_cast<StackId>(Items::Bone)
+                                 : static_cast<StackId>(Blocks::Air);
+}
+
+bool Mob::tameWith(StackId food)
+{
+    const StackId wants = tamingFood(m_type);
+    if (wants == Blocks::Air || food != wants) return false;
+    if (!alive() || m_tamed) return false;
+
+    m_tamed = true;
+    m_panicTimer = 0.0f;   // it has no reason to run from you now
+    emit(type().voice, 0.8f, 1.3f);
+    return true;
+}
+
 bool Mob::feed(StackId food)
 {
     const MobType& t = type();
@@ -278,11 +296,23 @@ void Mob::chooseNewGoal(const glm::vec3& playerPosition)
 
     m_chasing = false;
 
-    if (t.spawnClass == SpawnClass::Passive && distance < FLEE_RANGE && distance > 0.001f)
+    if (!m_tamed && t.spawnClass == SpawnClass::Passive &&
+        distance < FLEE_RANGE && distance > 0.001f)
     {
         m_goalYaw = glm::degrees(std::atan2(-toPlayer.z, -toPlayer.x));
         m_moving = true;
         m_goalTimer = 1.0f + random01();
+        return;
+    }
+
+    // A tamed one keeps up. This comes before fleeing, or a wolf you
+    // had just tamed would still run from you, and before the idle
+    // wander, which is what would otherwise lose it behind you.
+    if (m_tamed && distance > 3.0f && distance < 64.0f)
+    {
+        m_goalYaw = glm::degrees(std::atan2(toPlayer.z, toPlayer.x));
+        m_moving = distance > 2.5f;
+        m_goalTimer = 0.5f;
         return;
     }
 

@@ -185,6 +185,19 @@ public:
     // Accepts the food and falls in love. False if it is not interested.
     bool feed(StackId food);
 
+    // Tamed, and what it takes. A wolf given a bone follows whoever
+    // gave it; nothing else in the game is tameable yet, so the item
+    // is asked for by type rather than kept on one.
+    static StackId tamingFood(MobId type);
+    bool tamed() const { return m_tamed; }
+    // Returns true when this actually tamed it, which is the caller's
+    // cue to spend the bone.
+    bool tameWith(StackId food);
+
+    // How near a tamed one tries to stay to whoever it follows, and how
+    // far it will let them get before coming after them.
+    static constexpr float HEEL_RANGE = 10.0f;
+
     // A villager's trade. Set from the building it was born or spawned
     // in, so the smith lives in the smithy. -1 means nobody told it,
     // and the caller falls back to drawing one from the birth seed --
@@ -267,6 +280,7 @@ private:
     float m_homeRadius = 0.0f;
     int m_profession = -1;
     bool m_asleep = false;
+    bool m_tamed = false;
     float m_loveTimer = 0.0f;
     float m_breedTimer = 0.0f;
     float m_babyTimer = 0.0f;

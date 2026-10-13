@@ -19,6 +19,7 @@ enum class MobId : uint8_t
     Enderman,
     ZombiePigman,
     Villager,
+    Wolf,
     Count
 };
 

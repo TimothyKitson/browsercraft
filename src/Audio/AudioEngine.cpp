@@ -280,6 +280,7 @@ void AudioEngine::buildSounds()
     loadMobVoice(Sound::MobEndermanSay, Sound::MobEndermanHurt, Sound::MobEndermanDeath, "enderman");
     loadMobVoice(Sound::MobPigmanSay, Sound::MobPigmanHurt, Sound::MobPigmanDeath, "zombie_pigman");
     loadMobVoice(Sound::MobVillagerSay, Sound::MobVillagerHurt, Sound::MobVillagerDeath, "villager");
+    loadMobVoice(Sound::MobWolfSay, Sound::MobWolfHurt, Sound::MobWolfDeath, "wolf");
     loadVariants(Sound::Rain, "weather/rain", 1);
     loadVariants(Sound::Thunder, "weather/thunder", 1);
 
@@ -616,6 +617,28 @@ void AudioEngine::buildSounds()
         s.addTone(0.52f, 330.0f, 90.0f, 5.0f, 0.68f, true);
         s.addNoise(0.26f, 900.0f, 9.0f, 0.24f, false, 665);
         s.finish(0.82f);
+    }
+
+    // The wolf: a short bark, which is a burst of noise with a tone
+    // under it rather than a tone with noise on top -- a dog's voice is
+    // mostly air.
+    {
+        Synth s = make(Sound::MobWolfSay);
+        s.addNoise(0.09f, 1500.0f, 30.0f, 0.55f, false, 701);
+        s.addTone(0.11f, 420.0f, 260.0f, 20.0f, 0.45f, true);
+        s.finish(0.70f);
+    }
+    {
+        Synth s = make(Sound::MobWolfHurt);
+        s.addTone(0.20f, 700.0f, 300.0f, 13.0f, 0.60f, true);
+        s.addNoise(0.12f, 1800.0f, 24.0f, 0.26f, false, 703);
+        s.finish(0.76f);
+    }
+    {
+        Synth s = make(Sound::MobWolfDeath);
+        s.addTone(0.46f, 600.0f, 130.0f, 6.0f, 0.64f, true);
+        s.addNoise(0.22f, 1200.0f, 10.0f, 0.22f, false, 705);
+        s.finish(0.80f);
     }
 
     // The pigman: a grunt with a groan in it, halfway between the two

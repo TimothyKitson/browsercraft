@@ -1390,7 +1390,8 @@ bool Application::frame()
             m_startupScreen == "rain" || m_startupScreen == "storm" ||
             m_startupScreen == "pbr" || m_startupScreen == "anvil" ||
             m_startupScreen == "anvilblock" || m_startupScreen == "brew" ||
-            m_startupScreen == "village" || m_startupScreen == "shield")
+            m_startupScreen == "village" || m_startupScreen == "shield" ||
+            m_startupScreen == "wolf")
         {
             // Dev aid: open the inventory with something in it, so the
             // screenshot shows a real grid rather than 36 empty boxes.
@@ -1420,6 +1421,7 @@ bool Application::frame()
                                   m_startupScreen != "anvilblock" &&
                                   m_startupScreen != "village" &&
                                   m_startupScreen != "shield" &&
+                                  m_startupScreen != "wolf" &&
                                   m_startupScreen != "portal" &&
                                   m_startupScreen != "nether";
             m_inventoryOpen = showPanel;
@@ -1597,6 +1599,38 @@ bool Application::frame()
                     slot.count = 1;
                     openEnchantingTable(glm::ivec3(bx, by, bz));
                 }
+            }
+
+            if (m_startupScreen == "wolf")
+            {
+                m_camera.setOrientation(0.0f, -12.0f);
+                m_camera.addLook(0.0f, 0.0f, 0.0f);
+
+                const int px = static_cast<int>(std::floor(m_player.position.x));
+                const int py = static_cast<int>(std::floor(m_player.position.y));
+                const int pz = static_cast<int>(std::floor(m_player.position.z));
+
+                for (int ax = 0; ax <= 10; ++ax)
+                    for (int az = -6; az <= 6; ++az)
+                    {
+                        for (int ay = 0; ay <= 4; ++ay)
+                            m_world->setBlock(px + ax, py + ay, pz + az, Blocks::Air);
+                        m_world->setBlock(px + ax, py - 1, pz + az, Blocks::Grass);
+                    }
+
+                for (int i = 0; i < 3; ++i)
+                {
+                    const glm::vec3 where(static_cast<float>(px + 5) + 0.5f,
+                                          static_cast<float>(py),
+                                          static_cast<float>(pz + (i - 1) * 3) + 0.5f);
+                    m_entities.spawnAt(MobId::Wolf, where, *m_world);
+                }
+
+                m_inventory.add(Items::Bone, 6);
+
+                m_world->setBlock(px + 9, py, pz - 4, Blocks::Bookshelf);
+                m_world->setBlock(px + 9, py, pz,     Blocks::DiamondOre);
+                m_world->setBlock(px + 9, py, pz + 4, Blocks::EndPortalFrame);
             }
 
             if (m_startupScreen == "shield")
@@ -3849,6 +3883,20 @@ void Application::handlePlacement()
             m_player.armourPoints = armourPoints();
             m_audio.play(Sound::DigWool, 0.7f, 0.9f);
         }
+        return;
+    }
+
+    // A bone offered to a wolf tames it, which comes before feeding
+    // for the same reason feeding comes before placing: what is in
+    // front of you takes it.
+    if (m_entities.tame(m_camera.position, m_camera.front, ATTACK_REACH, stack.id))
+    {
+        if (!m_player.creative())
+        {
+            stack.count -= 1;
+            if (stack.count <= 0) stack.clear();
+        }
+        m_audio.play(Sound::Pickup, 0.6f, 1.5f);
         return;
     }
 

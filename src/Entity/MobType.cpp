@@ -465,6 +465,36 @@ namespace
             t.model.push_back(mc(Part::LegBackRight, 0, 22, 4, 12, 4, -2, 0, -2, -2, 12, 0));
             t.model.push_back(mirrored(mc(Part::LegBackLeft, 0, 22, 4, 12, 4, -2, 0, -2, 2, 12, 0)));
         }
+        {
+            // The wolf: wild until it is given a bone, and then it
+            // follows you about. Neutral rather than hostile, so a
+            // pack met in a forest is a thing to walk past rather than
+            // a thing to run from -- until one of them is hit.
+            MobType& t = table[static_cast<size_t>(MobId::Wolf)];
+            t.id = MobId::Wolf;
+            t.experience = 1;
+            t.voice = Sound::MobWolfSay;
+            t.hurtVoice = Sound::MobWolfHurt;
+            t.deathVoice = Sound::MobWolfDeath;
+            t.name = "Wolf";
+            t.texture = "wolf";
+            t.spawnClass = SpawnClass::Passive;
+            t.maxHealth = 8;
+            t.width = 0.6f;
+            t.height = 0.85f;
+            t.walkSpeed = 3.6f;      // it keeps up with you, which is the point
+            t.voicePitch = 1.0f;
+            t.bodyColour = rgb(214, 210, 203);
+            t.headColour = rgb(226, 223, 216);
+
+            // Head, snout, body, tail, four legs. A wolf is a small
+            // long box on short legs with a big square head.
+            t.model.push_back(mc(Part::Head, 0, 0, 6, 6, 4, -3, -3, -4, 0, 13, -7));
+            t.model.push_back(mc(Part::Head, 0, 10, 3, 3, 4, -1, 0, -7, 0, 13, -7));
+            t.model.push_back(turned(mc(Part::Body, 18, 14, 6, 9, 6, -3, -5, -4, 0, 12, 1), HALF_PI));
+            t.model.push_back(mc(Part::Body, 9, 18, 2, 8, 2, -1, 0, 0, 0, 12, 8));
+            addLegs(t.model, 0, 18, 2, 8, 2, -1, 0, -1, 2, 7, -4);
+        }
 
         return table;
     }

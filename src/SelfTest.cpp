@@ -1825,6 +1825,53 @@ namespace
         }
     }
 
+    void testWolves()
+    {
+        section("the wolf: wild until it is given a bone");
+
+        const MobType& wolf = mobType(MobId::Wolf);
+        check(wolf.spawnClass == SpawnClass::Passive,
+              "a wolf is passive: a pack in a forest is to walk past, not run from");
+        check(wolf.maxHealth > 0 && wolf.width > 0.0f && wolf.height > 0.0f,
+              "and is a real animal with a size and a life");
+        check(!wolf.model.empty(), "and something to draw");
+        check(wolf.walkSpeed > mobType(MobId::Cow).walkSpeed,
+              "it keeps up with you, which a cow does not");
+
+        check(Mob::tamingFood(MobId::Wolf) == Items::Bone, "a bone is what tames one");
+        for (MobId other : { MobId::Cow, MobId::Pig, MobId::Sheep, MobId::Villager,
+                             MobId::Zombie })
+            check(Mob::tamingFood(other) == Blocks::Air,
+                  std::string(mobType(other).name) + " cannot be tamed");
+
+        {
+            Mob pup(MobId::Wolf, glm::vec3(0.0f, 70.0f, 0.0f), 11u);
+            check(!pup.tamed(), "a wolf starts wild");
+            check(!pup.tameWith(Items::Wheat), "wheat does nothing to it");
+            check(!pup.tamed(), "and leaves it wild");
+
+            check(pup.tameWith(Items::Bone), "a bone tames it");
+            check(pup.tamed(), "and it stays tamed");
+            check(!pup.tameWith(Items::Bone),
+                  "a second bone does nothing, so one is not spent for no reason");
+        }
+        {
+            // Nothing else takes the bone, so offering one to a cow
+            // does not quietly swallow it.
+            Mob cow(MobId::Cow, glm::vec3(0.0f, 70.0f, 0.0f), 12u);
+            check(!cow.tameWith(Items::Bone), "a cow does not take a bone");
+            check(!cow.tamed(), "and is not tamed by one");
+        }
+        {
+            Mob dead(MobId::Wolf, glm::vec3(0.0f, 70.0f, 0.0f), 13u);
+            dead.damage(1000, glm::vec3(0.0f));
+            check(!dead.tameWith(Items::Bone), "a dead wolf takes nothing");
+        }
+
+        // It drops nothing: a wolf is a companion, not livestock.
+        check(wolf.drop == Blocks::Air, "a wolf is not something you butcher");
+    }
+
     void testShield()
     {
         section("the shield: what it stops");
@@ -5416,6 +5463,7 @@ int runSelfTest()
     testEndermanStare();
     testAnvil();
     testShield();
+    testWolves();
     testVillages();
     testVillageLoot();
     testVillageLife();
