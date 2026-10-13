@@ -3499,6 +3499,11 @@ namespace
 {
     struct ArrowTargets : Projectiles::Targets
     {
+        // Where the player is looking, for the shield. The player
+        // itself does not carry this: the camera does.
+        glm::vec3 facing{ 0.0f };
+        int shotsBlocked = 0;
+
         EntityManager* entities = nullptr;
         Player* player = nullptr;
         int playerHits = 0;
@@ -3531,6 +3536,15 @@ namespace
             if (std::abs(apart.x) > 0.4f || std::abs(apart.z) > 0.4f) return false;
             if (apart.y < 0.0f || apart.y > Player::HEIGHT) return false;
 
+            // A raised shield stops an arrow the same way it stops a
+            // blow, and from the same arc. Letting arrows through was
+            // the shield's one honest gap.
+            if (player->blocking && Shield::covers(facing, feet, point))
+            {
+                ++shotsBlocked;
+                return true;
+            }
+
             if (player->damage(damage)) ++playerHits;
 
             // It stops whether or not the blow landed: an arrow does not
@@ -3546,6 +3560,7 @@ void Application::updateArrows(float deltaTime)
     ArrowTargets targets;
     targets.entities = &m_entities;
     targets.player = &m_player;
+    targets.facing = m_camera.front;
 
     m_arrows.update(deltaTime, *m_world, targets);
 
@@ -3553,6 +3568,12 @@ void Application::updateArrows(float deltaTime)
     {
         m_audio.play(Sound::Hurt, 0.8f);
         wearArmour(2);
+    }
+
+    if (targets.shotsBlocked > 0)
+    {
+        m_audio.play(Sound::Click, 0.7f, 0.7f);
+        wearShield(Shield::WEAR_PER_BLOCK * targets.shotsBlocked);
     }
 
     updateBow(deltaTime);
