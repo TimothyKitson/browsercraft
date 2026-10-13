@@ -58,7 +58,8 @@ namespace
         // what the generator put down rather than what the plan asked
         // for. Chunks are generated here outright rather than waiting
         // on a running game to stream them in.
-        std::printf("\nThe village at %d, %d:\n", nearest.x, nearest.z);
+        std::printf("\nThe village at %d, %d (%s):\n", nearest.x, nearest.z,
+                    biomeName(generator.biomeAt(nearest.x, nearest.z)));
 
         const int fromChunkX = (nearest.x - Village::MAX_RADIUS - 1) / Chunk::SX - 1;
         const int toChunkX = (nearest.x + Village::MAX_RADIUS + 1) / Chunk::SX + 1;

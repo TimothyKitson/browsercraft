@@ -1127,6 +1127,86 @@ namespace
               "and reaches nowhere at all");
     }
 
+    void testVillageLife()
+    {
+        section("villages: beds, trades and pairing off");
+
+        const uint32_t seed = 4242u;
+
+        Village::Site site;
+        site.exists = true;
+        site.x = 500;
+        site.z = 500;
+
+        // One bed to a house, which is what a village counts.
+        const std::vector<Village::Building> plan = Village::plan(site, seed);
+        int houses = 0;
+        for (const Village::Building& b : plan)
+            if (Village::isHouse(b.kind)) ++houses;
+
+        check(Village::bedCount(site, seed) == houses, "a village has one bed to a house");
+        check(Village::bedCount(site, seed) > 0, "and at least one of them");
+
+        Village::Site nowhere;
+        check(Village::bedCount(nowhere, seed) == 0, "a village that is not there has none");
+
+        // A villager keeps the trade it was handed, and falls back to
+        // the one its seed draws when nobody handed it one.
+        {
+            Mob villager(MobId::Villager, glm::vec3(0.0f), 777u);
+            check(villager.professionSlot() < 0, "a villager starts with no trade of its own");
+
+            villager.setProfessionSlot(static_cast<int>(Trading::Profession::Toolsmith));
+            check(villager.professionSlot() == static_cast<int>(Trading::Profession::Toolsmith),
+                  "and keeps the one it is given");
+        }
+
+        // Willing without being fed, which is how villagers pair off.
+        {
+            Mob villager(MobId::Villager, glm::vec3(0.0f), 1u);
+            check(!villager.inLove(), "a villager is not willing to begin with");
+            villager.makeWilling();
+            check(villager.inLove(), "and is once the village has room");
+
+            villager.onBred();
+            check(!villager.inLove(), "pairing off spends it");
+
+            villager.makeWilling();
+            check(!villager.inLove(),
+                  "and the cooldown after holds, or one pair would fill a village");
+        }
+        {
+            // A baby is nobody's parent.
+            Mob calf(MobId::Villager, glm::vec3(0.0f), 2u, true);
+            calf.makeWilling();
+            check(!calf.inLove(), "a child does not pair off");
+        }
+        {
+            Mob dead(MobId::Villager, glm::vec3(0.0f), 3u);
+            dead.damage(1000, glm::vec3(0.0f));
+            dead.makeWilling();
+            check(!dead.inLove(), "nor does a dead one");
+        }
+
+        // Asleep at night, awake by day, and awake whatever the hour
+        // once something has hit it.
+        {
+            Mob villager(MobId::Villager, glm::vec3(0.0f, 70.0f, 0.0f), 4u);
+            check(!villager.asleep(), "a villager starts awake");
+
+            check(!Mob::sleepsAt(MobId::Villager, 1.0f, false), "awake in broad daylight");
+            check(!Mob::sleepsAt(MobId::Villager, Mob::SLEEP_BELOW, false),
+                  "and still awake at the edge of the light");
+            check(Mob::sleepsAt(MobId::Villager, 0.0f, false), "asleep once the light goes");
+            check(!Mob::sleepsAt(MobId::Villager, 0.0f, true),
+                  "but awake whatever the hour once something has hit it");
+
+            for (MobId other : { MobId::Cow, MobId::Pig, MobId::Zombie, MobId::Skeleton })
+                check(!Mob::sleepsAt(other, 0.0f, false),
+                      std::string(mobType(other).name) + " does not sleep");
+        }
+    }
+
     void testVillageLoot()
     {
         section("villages: the trades and what is in their chests");
@@ -5180,6 +5260,7 @@ int runSelfTest()
     testAnvil();
     testVillages();
     testVillageLoot();
+    testVillageLife();
     testBrewing();
     testEffects();
     testEffectsOnThePlayer();

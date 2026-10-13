@@ -1,6 +1,7 @@
 #include "EntityManager.h"
 #include "World/World.h"
 #include "World/Village.h"
+#include "Game/Trading.h"
 #include "Pathfinder.h"
 #include <algorithm>
 #include <cmath>
@@ -125,6 +126,24 @@ bool EntityManager::spawnAt(MobId type, glm::vec3 feetPosition, const World& wor
     return true;
 }
 
+namespace
+{
+    // What trade a building's villager keeps. Butchers and ordinary
+    // households have no trade of their own in the four Minecraft gives
+    // us here, so they take the two that deal in what they would have:
+    // food, and what a household makes.
+    Trading::Profession tradeOf(Village::Kind kind)
+    {
+        switch (kind)
+        {
+            case Village::Kind::Blacksmith: return Trading::Profession::Toolsmith;
+            case Village::Kind::Library:    return Trading::Profession::Librarian;
+            case Village::Kind::Butcher:    return Trading::Profession::Farmer;
+            default:                        return Trading::Profession::Fletcher;
+        }
+    }
+}
+
 void EntityManager::trySpawnWave(const World& world, const glm::vec3& playerPosition, float daylight)
 {
     if (static_cast<int>(m_mobs.size()) >= MAX_MOBS) return;
@@ -149,6 +168,10 @@ void EntityManager::trySpawnWave(const World& world, const glm::vec3& playerPosi
         const int sky = static_cast<int>(world.skyLight(x, y, z));
         const int block = static_cast<int>(world.blockLightAt(x, y, z));
         const int light = std::max(block, static_cast<int>(sky * daylight));
+
+        // The village this spot belongs to, if any. Declared out here
+        // because the spawn below needs it to hand a villager its trade.
+        Village::Site home;
 
         MobId species;
         if (m_dimension == Dimension::End)
@@ -177,10 +200,9 @@ void EntityManager::trySpawnWave(const World& world, const glm::vec3& playerPosi
             bool inVillage = false;
             if (m_dimension == Dimension::Overworld)
             {
-                const Village::Site site = Village::siteFor(Village::regionOf(x),
-                                                            Village::regionOf(z),
-                                                            world.seed());
-                if (Village::reaches(site, x, z, x, z))
+                home = Village::siteFor(Village::regionOf(x), Village::regionOf(z),
+                                        world.seed());
+                if (Village::reaches(home, x, z, x, z))
                     inVillage = world.generator().nearestVillage(x, z, 0).exists;
             }
 
@@ -211,7 +233,20 @@ void EntityManager::trySpawnWave(const World& world, const glm::vec3& playerPosi
         if (!canSpawnOn(species, ground, light)) continue;
 
         const glm::vec3 feet(x + 0.5f, static_cast<float>(y), z + 0.5f);
-        if (spawnAt(species, feet, world)) return; // one per wave keeps it gradual
+        if (!spawnAt(species, feet, world)) continue;
+
+        // A villager standing in a building takes that building's
+        // trade, so the smith is the one who lives in the smithy. One
+        // met out in the country has no building to take it from and
+        // keeps the one its birth seed draws.
+        if (species == MobId::Villager && home.exists)
+        {
+            Village::Building where;
+            if (Village::buildingAt(home, world.seed(), x, z, where))
+                m_mobs.back().setProfessionSlot(static_cast<int>(tradeOf(where.kind)));
+        }
+
+        return;   // one per wave keeps it gradual
     }
 }
 
@@ -238,6 +273,7 @@ void EntityManager::update(float deltaTime, const World& world,
         }),
         m_mobs.end());
 
+    courtVillagers(world, deltaTime);
     pairOffLovers(world);
     routeChasers(world, playerPosition);
 
@@ -357,6 +393,82 @@ bool EntityManager::feed(const glm::vec3& origin, const glm::vec3& direction,
 {
     Mob* target = pick(origin, direction, maxDistance);
     return target && target->feed(food);
+}
+
+// Villagers pair off on their own: nobody hands one a carrot. What
+// decides whether they do is whether the village has a spare bed, the
+// way Minecraft counts it -- so a village grows to fill its houses and
+// then stops.
+void EntityManager::courtVillagers(const World& world, float deltaTime)
+{
+    if (m_dimension != Dimension::Overworld) return;
+
+    m_courtTimer -= deltaTime;
+    if (m_courtTimer > 0.0f) return;
+    m_courtTimer = COURT_INTERVAL;
+
+    // Group what is loaded by the village it stands in. A villager out
+    // in the country belongs to no village and does not pair off.
+    struct Home { Village::Site site; int villagers = 0; };
+    std::vector<Home> homes;
+
+    for (const Mob& mob : m_mobs)
+    {
+        if (mob.typeId() != MobId::Villager || !mob.alive()) continue;
+
+        const int x = static_cast<int>(std::floor(mob.position().x));
+        const int z = static_cast<int>(std::floor(mob.position().z));
+
+        const Village::Site site = Village::siteFor(Village::regionOf(x), Village::regionOf(z),
+                                                    world.seed());
+        if (!Village::reaches(site, x, z, x, z)) continue;
+
+        // The box reaching here is not the same as a village having
+        // been built here: plenty of sites are turned down for the
+        // biome or the slope, and villagers standing in one of those
+        // are standing in open country with no beds to count.
+        if (!world.generator().nearestVillage(x, z, 0).exists) continue;
+
+        Home* found = nullptr;
+        for (Home& home : homes)
+            if (home.site.x == site.x && home.site.z == site.z) found = &home;
+
+        if (!found)
+        {
+            homes.push_back(Home{ site, 0 });
+            found = &homes.back();
+        }
+
+        // Children count, and count once: they will want the bed they
+        // were born for. Adding them to both tallies made the village
+        // stop a child short of full.
+        ++found->villagers;
+    }
+
+    for (const Home& home : homes)
+    {
+        const int beds = Village::bedCount(home.site, world.seed());
+        if (home.villagers >= beds) continue;   // nowhere to put another
+
+        // Two grown villagers in the same village, both free, become
+        // willing. pairOffLovers does the rest, and only if they are
+        // actually standing together.
+        int made = 0;
+        for (Mob& mob : m_mobs)
+        {
+            if (made >= 2) break;
+            if (mob.typeId() != MobId::Villager || !mob.alive()) continue;
+            if (mob.baby() || mob.inLove() || !mob.canBreed()) continue;
+            if (mob.asleep()) continue;   // not in the middle of the night
+
+            const int x = static_cast<int>(std::floor(mob.position().x));
+            const int z = static_cast<int>(std::floor(mob.position().z));
+            if (!Village::reaches(home.site, x, z, x, z)) continue;
+
+            mob.makeWilling();
+            ++made;
+        }
+    }
 }
 
 // Two of a kind, both in love, close enough to be standing together.

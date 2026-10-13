@@ -127,6 +127,12 @@ bool Mob::feed(StackId food)
     return true;
 }
 
+void Mob::makeWilling()
+{
+    if (m_breedTimer > 0.0f || inLove() || baby() || !alive()) return;
+    m_loveTimer = LOVE_SECONDS;
+}
+
 void Mob::onBred()
 {
     m_loveTimer = 0.0f;
@@ -328,8 +334,22 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
 
     if (m_repathTimer > 0.0f) m_repathTimer = std::max(0.0f, m_repathTimer - deltaTime);
 
+    // Villagers turn in when the light goes. Asleep they stand where
+    // they are rather than walking to a bed -- the bed is what the
+    // village counts, not what they lie on -- but a village standing
+    // still at night is what makes it read as asleep.
+    // Anything that has just been hurt is awake, whatever the hour: a
+    // villager that stood still while a zombie ate it would be worse
+    // than one that never slept.
+    m_asleep = sleepsAt(m_type, daylight, m_panicTimer > 0.0f);
+    if (m_asleep)
+    {
+        m_moving = false;
+        m_path.clear();
+    }
+
     m_goalTimer -= deltaTime;
-    if (m_goalTimer <= 0.0f) chooseNewGoal(playerPosition);
+    if (!m_asleep && m_goalTimer <= 0.0f) chooseNewGoal(playerPosition);
 
     // A route, where there is one, overrules the heading just chosen.
     followPath();

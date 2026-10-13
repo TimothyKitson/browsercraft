@@ -867,11 +867,16 @@ float Application::daylightFactor() const
     // out -- which is Minecraft's rule, and falls out rather than
     // having to be written down anywhere.
     const float weathered = sun * Weather::lightScale(m_weather);
-    const float lit = std::clamp(weathered + Weather::flashBoost(m_weather), 0.0f, 1.0f);
+    return std::clamp(weathered + Weather::flashBoost(m_weather), 0.0f, 1.0f);
+}
 
-    // Night vision does not make the world brighter so much as refuse to
-    // let it get dark, which is why it is a floor rather than a boost.
-    return std::max(lit, Effects::nightVisionFloor(m_player.effects));
+// What the world is lit by as far as the eye is concerned, which is not
+// the same number. Night vision belongs here and nowhere else: folded
+// into daylightFactor it also told the mobs it was daytime, so a drink
+// of it set every zombie on fire and kept the villagers out of bed.
+float Application::viewDaylight() const
+{
+    return std::max(daylightFactor(), Effects::nightVisionFloor(m_player.effects));
 }
 
 // ----------------------------------------------------------------- loop ---
@@ -3977,7 +3982,7 @@ void Application::renderMenuBackdrop(float)
     Camera backdrop(glm::vec3(0.0f, 90.0f, 0.0f), m_titleSpin, -6.0f);
     const glm::mat4 view = backdrop.viewMatrix();
     const glm::mat4 projection = backdrop.projectionMatrix(m_window.aspect());
-    m_sky.render(view, projection, backdrop.position, sunDirection(), daylightFactor(), m_elapsedSeconds);
+    m_sky.render(view, projection, backdrop.position, sunDirection(), viewDaylight(), m_elapsedSeconds);
 }
 
 glm::vec3 Application::dimensionBackdrop() const
@@ -4013,7 +4018,7 @@ void Application::renderWorld()
 
     const glm::mat4 view = camera.viewMatrix();
     const glm::mat4 projection = camera.projectionMatrix(m_window.aspect());
-    const float daylight = daylightFactor();
+    const float daylight = viewDaylight();
     const glm::vec3 sun = sunDirection();
 
     // Only the overworld has a sun to draw; the others are a flat
@@ -4268,7 +4273,7 @@ void Application::renderHand()
     for (int step = 0; step < 3 && isOpaque(m_world->getBlock(lx, ly, lz)); ++step) ++ly;
 
     const float sky = static_cast<float>(m_world->skyLight(lx, ly, lz)) / 15.0f *
-                      std::max(0.35f, daylightFactor());
+                      std::max(0.35f, viewDaylight());
     const float blockLight = static_cast<float>(m_world->blockLightAt(lx, ly, lz)) / 15.0f;
 
     const ItemStack& held = m_inventory.selected();

@@ -549,6 +549,56 @@ namespace
     }
 }
 
+WorldGen::Palette WorldGen::paletteFor(Biome biome) const
+{
+    Palette palette;
+
+    switch (biome)
+    {
+        case Biome::Desert:
+            // Sand country builds in sand, and roofs flat: there is
+            // nothing to shed, and the flat top is shade.
+            palette.style = RoofStyle::Flat;
+            palette.wall = Blocks::Sandstone;
+            palette.footing = Blocks::Sandstone;
+            palette.corner = Blocks::Sandstone;
+            palette.floor = Blocks::Sandstone;
+            palette.roof = Blocks::Sandstone;
+            palette.roofStairs = Blocks::SandstoneStairsNorth;
+            palette.post = Blocks::Sandstone;
+            break;
+
+        case Biome::Snowy:
+            // Pale birch walls with dark corners. Cobblestone roofs
+            // over cobblestone courses made the houses read as one
+            // grey mass with the snow behind them.
+            palette.wall = Blocks::BirchLog;
+            palette.footing = Blocks::Cobblestone;
+            palette.corner = Blocks::Log;
+            palette.floor = Blocks::Planks;
+            palette.roof = Blocks::Planks;
+            palette.roofStairs = Blocks::PlankStairsNorth;
+            palette.post = Blocks::BirchLog;
+            break;
+
+        case Biome::Forest:
+            // Timber country: logs for the walls, not just the corners.
+            palette.wall = Blocks::Log;
+            palette.footing = Blocks::Cobblestone;
+            palette.corner = Blocks::Log;
+            palette.floor = Blocks::Planks;
+            palette.roof = Blocks::Planks;
+            palette.roofStairs = Blocks::PlankStairsNorth;
+            palette.post = Blocks::Log;
+            break;
+
+        default:
+            break;   // the plains build the way the first ones did
+    }
+
+    return palette;
+}
+
 bool WorldGen::villageFits(const Village::Site& site) const
 {
     if (!site.exists) return false;
@@ -582,7 +632,8 @@ bool WorldGen::villageFits(const Village::Site& site) const
     return (highest - lowest) <= 12;
 }
 
-void WorldGen::stampBuilding(Chunk& chunk, const Village::Building& building) const
+void WorldGen::stampBuilding(Chunk& chunk, const Village::Building& building,
+                             const Palette& palette) const
 {
     // Each building finds its own level, from the ground under its own
     // middle. Levelling the whole village to one height instead meant
@@ -600,7 +651,7 @@ void WorldGen::stampBuilding(Chunk& chunk, const Village::Building& building) co
     if (building.kind == Village::Kind::Lamp)
     {
         for (int y = ground + 1; y <= ground + 3; ++y)
-            put(chunk, x0, y, z0, Blocks::Log);
+            put(chunk, x0, y, z0, palette.post);
         put(chunk, x0, ground + 4, z0, Blocks::Torch);
         return;
     }
@@ -612,7 +663,7 @@ void WorldGen::stampBuilding(Chunk& chunk, const Village::Building& building) co
         for (int x = x0; x <= x1; ++x)
             for (int z = z0; z <= z1; ++z)
             {
-                put(chunk, x, ground, z, Blocks::Cobblestone);
+                put(chunk, x, ground, z, palette.footing);
                 for (int y = ground + 1; y <= ground + 5; ++y)
                     put(chunk, x, y, z, Blocks::Air);
             }
@@ -626,27 +677,29 @@ void WorldGen::stampBuilding(Chunk& chunk, const Village::Building& building) co
             for (int z = midZ - 1; z <= midZ + 1; ++z)
             {
                 if (x == midX && z == midZ) continue;
-                put(chunk, x, ground + 1, z, Blocks::Cobblestone);
+                put(chunk, x, ground + 1, z, palette.footing);
             }
 
         for (int y = ground + 2; y <= ground + 3; ++y)
         {
-            put(chunk, midX - 1, y, midZ - 1, Blocks::OakFence);
-            put(chunk, midX + 1, y, midZ - 1, Blocks::OakFence);
-            put(chunk, midX - 1, y, midZ + 1, Blocks::OakFence);
-            put(chunk, midX + 1, y, midZ + 1, Blocks::OakFence);
+            put(chunk, midX - 1, y, midZ - 1, palette.post);
+            put(chunk, midX + 1, y, midZ - 1, palette.post);
+            put(chunk, midX - 1, y, midZ + 1, palette.post);
+            put(chunk, midX + 1, y, midZ + 1, palette.post);
         }
 
         for (int x = midX - 1; x <= midX + 1; ++x)
             for (int z = midZ - 1; z <= midZ + 1; ++z)
-                put(chunk, x, ground + 4, z, Blocks::Planks);
+                put(chunk, x, ground + 4, z, palette.roof);
         return;
     }
 
     // --- a house ---------------------------------------------------
 
-    constexpr int WALL_HEIGHT = 4;        // floor to eaves
-    const int eaves = ground + WALL_HEIGHT;
+    // Four courses to a storey, so a two-storey house stands twice as
+    // tall and its windows come in two rows.
+    const int wallHeight = 4 * std::max(1, building.storeys);
+    const int eaves = ground + wallHeight;
     const int roofBase = eaves + 1;
 
     // Level the ground under it and clear the air above, so a house on
@@ -655,8 +708,8 @@ void WorldGen::stampBuilding(Chunk& chunk, const Village::Building& building) co
         for (int z = z0; z <= z1; ++z)
         {
             for (int y = ground - 3; y <= ground; ++y)
-                put(chunk, x, y, z, (y == ground) ? Blocks::Planks : Blocks::Dirt);
-            for (int y = ground + 1; y <= roofBase + 6; ++y)
+                put(chunk, x, y, z, (y == ground) ? palette.floor : Blocks::Dirt);
+            for (int y = ground + 1; y <= roofBase + 12; ++y)
                 put(chunk, x, y, z, Blocks::Air);
         }
 
@@ -671,12 +724,16 @@ void WorldGen::stampBuilding(Chunk& chunk, const Village::Building& building) co
                 const bool edgeZ = (z == z0 || z == z1);
                 if (!edgeX && !edgeZ) continue;
 
-                BlockId block = Blocks::Planks;
-                if (edgeX && edgeZ) block = Blocks::Log;
-                else if (y == ground + 1) block = Blocks::Cobblestone;
+                BlockId block = palette.wall;
+                if (edgeX && edgeZ) block = palette.corner;
+                else if (y == ground + 1) block = palette.footing;
+                // A band at each floor line, which is what reads as a
+                // storey from outside.
+                else if (((y - ground) % 4) == 1) block = palette.footing;
 
-                // A window in the middle of each wall, at head height.
-                if (y == ground + 3 && !(edgeX && edgeZ))
+                // A window in the middle of each wall, at head height
+                // on every storey.
+                if (((y - ground) % 4) == 3 && !(edgeX && edgeZ))
                 {
                     const bool midOfX = (x == (x0 + x1) / 2);
                     const bool midOfZ = (z == (z0 + z1) / 2);
@@ -696,68 +753,91 @@ void WorldGen::stampBuilding(Chunk& chunk, const Village::Building& building) co
     const int rx0 = x0 - 1, rx1 = x1 + 1;
     const int rz0 = z0 - 1, rz1 = z1 + 1;
 
-    const bool ridgeAlongX = (rz1 - rz0) <= (rx1 - rx0);
-
-    const int lowEave = ridgeAlongX ? rz0 : rx0;
-    const int highEave = ridgeAlongX ? rz1 : rx1;
-    const int acrossFrom = ridgeAlongX ? rx0 : rz0;
-    const int acrossTo = ridgeAlongX ? rx1 : rz1;
-
-    const int span = highEave - lowEave + 1;
-    const int steps = span / 2;
-
-    // Which way each slope's stairs look: towards its own eave.
-    const BlockId lowStair = ridgeAlongX ? Blocks::PlankStairsNorth : Blocks::PlankStairsWest;
-    const BlockId highStair = ridgeAlongX ? Blocks::PlankStairsSouth : Blocks::PlankStairsEast;
-
-    for (int i = 0; i < steps; ++i)
+    if (palette.style == RoofStyle::Flat)
     {
-        const int y = roofBase + i;
-        for (int across = acrossFrom; across <= acrossTo; ++across)
+        // A flat lid with a parapet standing a block proud of it, which
+        // is what a desert village looks like and the one case where a
+        // flat roof is right rather than lazy.
+        for (int x = rx0; x <= rx1; ++x)
+            for (int z = rz0; z <= rz1; ++z)
+                put(chunk, x, roofBase, z, palette.roof);
+
+        for (int x = rx0; x <= rx1; ++x)
         {
-            if (ridgeAlongX)
-            {
-                put(chunk, across, y, lowEave + i, lowStair);
-                put(chunk, across, y, highEave - i, highStair);
-            }
-            else
-            {
-                put(chunk, lowEave + i, y, across, lowStair);
-                put(chunk, highEave - i, y, across, highStair);
-            }
+            put(chunk, x, roofBase + 1, rz0, palette.wall);
+            put(chunk, x, roofBase + 1, rz1, palette.wall);
+        }
+        for (int z = rz0; z <= rz1; ++z)
+        {
+            put(chunk, rx0, roofBase + 1, z, palette.wall);
+            put(chunk, rx1, roofBase + 1, z, palette.wall);
         }
     }
-
-    // An odd span leaves one row in the middle with no pair: that is
-    // the ridge, and it is a solid block rather than a stair.
-    if (span % 2 == 1)
+    else
     {
-        const int y = roofBase + steps;
-        for (int across = acrossFrom; across <= acrossTo; ++across)
-        {
-            if (ridgeAlongX) put(chunk, across, y, lowEave + steps, Blocks::Planks);
-            else             put(chunk, lowEave + steps, y, across, Blocks::Planks);
-        }
-    }
+        const bool ridgeAlongX = (rz1 - rz0) <= (rx1 - rx0);
 
-    // The gable ends: the triangle between the wall top and the slope.
-    // Without it you can see straight into the roof from either end.
-    for (int along = (ridgeAlongX ? z0 : x0); along <= (ridgeAlongX ? z1 : x1); ++along)
-    {
-        const int fromEave = std::min(along - lowEave, highEave - along);
-        const int top = roofBase + std::min(fromEave, steps);
+        const int lowEave = ridgeAlongX ? rz0 : rx0;
+        const int highEave = ridgeAlongX ? rz1 : rx1;
+        const int acrossFrom = ridgeAlongX ? rx0 : rz0;
+        const int acrossTo = ridgeAlongX ? rx1 : rz1;
 
-        for (int y = eaves + 1; y < top; ++y)
+        const int span = highEave - lowEave + 1;
+        const int steps = span / 2;
+
+        const BlockId lowStair = static_cast<BlockId>(palette.roofStairs + (ridgeAlongX ? 0 : 3));
+        const BlockId highStair = static_cast<BlockId>(palette.roofStairs + (ridgeAlongX ? 2 : 1));
+
+        for (int i = 0; i < steps; ++i)
         {
-            if (ridgeAlongX)
+            const int y = roofBase + i;
+            for (int across = acrossFrom; across <= acrossTo; ++across)
             {
-                put(chunk, x0, y, along, Blocks::Planks);
-                put(chunk, x1, y, along, Blocks::Planks);
+                if (ridgeAlongX)
+                {
+                    put(chunk, across, y, lowEave + i, lowStair);
+                    put(chunk, across, y, highEave - i, highStair);
+                }
+                else
+                {
+                    put(chunk, lowEave + i, y, across, lowStair);
+                    put(chunk, highEave - i, y, across, highStair);
+                }
             }
-            else
+        }
+
+        // An odd span leaves one row in the middle with no pair: that is
+        // the ridge, and it is a solid block rather than a stair.
+        if (span % 2 == 1)
+        {
+            const int y = roofBase + steps;
+            for (int across = acrossFrom; across <= acrossTo; ++across)
             {
-                put(chunk, along, y, z0, Blocks::Planks);
-                put(chunk, along, y, z1, Blocks::Planks);
+                if (ridgeAlongX) put(chunk, across, y, lowEave + steps, palette.roof);
+                else             put(chunk, lowEave + steps, y, across, palette.roof);
+            }
+        }
+
+        // The gable ends: the triangle between the wall top and the
+        // slope. Without it you can see straight into the roof from
+        // either end.
+        for (int along = (ridgeAlongX ? z0 : x0); along <= (ridgeAlongX ? z1 : x1); ++along)
+        {
+            const int fromEave = std::min(along - lowEave, highEave - along);
+            const int top = roofBase + std::min(fromEave, steps);
+
+            for (int y = eaves + 1; y < top; ++y)
+            {
+                if (ridgeAlongX)
+                {
+                    put(chunk, x0, y, along, palette.wall);
+                    put(chunk, x1, y, along, palette.wall);
+                }
+                else
+                {
+                    put(chunk, along, y, z0, palette.wall);
+                    put(chunk, along, y, z1, palette.wall);
+                }
             }
         }
     }
@@ -779,14 +859,15 @@ void WorldGen::stampBuilding(Chunk& chunk, const Village::Building& building) co
 
     // --- what is inside ----------------------------------------------
 
-    stampInterior(chunk, building, ground, x0, z0, x1, z1, doorX, doorZ);
+    stampInterior(chunk, building, ground, x0, z0, x1, z1, doorX, doorZ, palette);
 }
 
 // The furniture. Each trade gets the blocks it works with and a chest,
 // and the chest is what --villageinfo and the loot table hang off: the
 // kind of the building it stands in decides what is in it.
 void WorldGen::stampInterior(Chunk& chunk, const Village::Building& building, int ground,
-                             int x0, int z0, int x1, int z1, int doorX, int doorZ) const
+                             int x0, int z0, int x1, int z1, int doorX, int doorZ,
+                             const Palette& palette) const
 {
     // Corners, in a fixed order, skipping any that the door opens onto.
     const int cornerX[4] = { x0 + 1, x1 - 1, x0 + 1, x1 - 1 };
@@ -813,6 +894,12 @@ void WorldGen::stampInterior(Chunk& chunk, const Village::Building& building, in
     // ends up in it.
     nextCorner(cx, cz);
     put(chunk, cx, ground + 1, cz, Blocks::Torch);
+
+    // Then a bed. Every house has one, because a village counts its
+    // beds: that is what decides how many people can live in it and
+    // whether there is room for another.
+    nextCorner(cx, cz);
+    put(chunk, cx, ground + 1, cz, Blocks::Bed);
 
     switch (building.kind)
     {
@@ -970,8 +1057,13 @@ void WorldGen::buildVillages(Chunk& chunk) const
                         put(chunk, x, y, z, Blocks::Air);
                 }
 
+            // One palette for the whole village, from the biome at its
+            // middle: a village with half its houses in sandstone and
+            // half in oak would read as two villages that collided.
+            const Palette palette = paletteFor(biomeAt(site.x, site.z));
+
             for (const Village::Building& building : Village::plan(site, m_seed))
-                stampBuilding(chunk, building);
+                stampBuilding(chunk, building, palette);
         }
 }
 

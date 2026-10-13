@@ -913,7 +913,13 @@ void Application::openTrading(const Mob& villager)
 {
     m_tradeOpen = true;
     m_tradeSeed = villager.birthSeed();
-    m_tradeWith = Trading::professionFor(villager.birthSeed());
+    // A villager that lives in a village keeps that building's trade.
+    // One met out in the country has no building to take it from, so it
+    // falls back to the one its birth seed draws -- which is what every
+    // villager did before there were villages.
+    m_tradeWith = (villager.professionSlot() >= 0)
+                      ? static_cast<Trading::Profession>(villager.professionSlot())
+                      : Trading::professionFor(villager.birthSeed());
     m_inventoryOpen = true;
     setMouseCaptured(false);
 }

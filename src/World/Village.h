@@ -73,11 +73,19 @@ namespace Village
         // 0 north, 1 east, 2 south, 3 west -- which way the door looks,
         // which is always towards the middle of the village.
         int facing = 0;
+
+        // One or two. A village of identical boxes reads as a housing
+        // estate; Minecraft's have small, medium and large among them.
+        int storeys = 1;
     };
 
     // Everything in the village, in world coordinates. Empty when the
     // site does not exist.
     std::vector<Building> plan(const Site& site, uint32_t seed);
+
+    // How many beds the village has, which is how many people can
+    // live in it: one to a house. Breeding counts against this.
+    int bedCount(const Site& site, uint32_t seed);
 
     // Which building, if any, stands on this block. Used to work out
     // what a chest found in a village should hold, without storing

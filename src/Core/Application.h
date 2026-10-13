@@ -589,6 +589,9 @@ private:
 
     glm::vec3 sunDirection() const;
     float daylightFactor() const;
+    // The same, plus whatever night vision is doing. For drawing
+    // only: the mobs must never see it.
+    float viewDaylight() const;
 
     // The Nether and the End have no sun, so they get a flat backdrop
     // and a raised light floor instead of a sky and a day cycle.

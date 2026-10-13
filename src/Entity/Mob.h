@@ -184,6 +184,31 @@ public:
 
     // Accepts the food and falls in love. False if it is not interested.
     bool feed(StackId food);
+
+    // A villager's trade. Set from the building it was born or spawned
+    // in, so the smith lives in the smithy. -1 means nobody told it,
+    // and the caller falls back to drawing one from the birth seed --
+    // which is what a villager met out in the country still does.
+    int professionSlot() const { return m_profession; }
+    void setProfessionSlot(int trade) { m_profession = trade; }
+
+    // Villagers turn in at night. Asleep they stand still, which is
+    // most of what makes a village read as asleep rather than as a
+    // field of people milling about in the dark.
+    bool asleep() const { return m_asleep; }
+
+    // Whether this kind of mob would be asleep in this light. Pure, so
+    // the rule can be checked without a world to walk about in.
+    // Anything just startled is awake whatever the hour.
+    static constexpr float SLEEP_BELOW = 0.25f;
+    static bool sleepsAt(MobId type, float daylight, bool startled)
+    {
+        return type == MobId::Villager && daylight < SLEEP_BELOW && !startled;
+    }
+
+    // Puts one in love without feeding it, which is how villagers pair
+    // off: nobody hands a villager a carrot.
+    void makeWilling();
     // Called on both parents once they have paired off.
     void onBred();
 
@@ -226,6 +251,8 @@ private:
     float m_stepDistance = 0.0f;
     float m_gait = 0.0f;
     float m_gaitAmount = 0.0f;
+    int m_profession = -1;
+    bool m_asleep = false;
     float m_loveTimer = 0.0f;
     float m_breedTimer = 0.0f;
     float m_babyTimer = 0.0f;

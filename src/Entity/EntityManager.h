@@ -95,6 +95,13 @@ private:
     std::vector<Death> m_deaths;
     std::vector<glm::vec3> m_births;
     void pairOffLovers(const World& world);
+
+    // Villagers pair off on their own, counted against the village's
+    // beds. Run on a timer rather than every frame: it walks every mob
+    // twice and nothing about it needs to be that fresh.
+    static constexpr float COURT_INTERVAL = 12.0f;
+    float m_courtTimer = COURT_INTERVAL;
+    void courtVillagers(const World& world, float deltaTime);
     // Hands routes to the mobs that asked, newest-hungry first and no
     // more than a handful a pass.
     void routeChasers(const World& world, const glm::vec3& playerPosition);

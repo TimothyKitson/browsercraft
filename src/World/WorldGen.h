@@ -86,9 +86,41 @@ private:
     // Whether the ground where this village would stand could carry
     // it. Decided from the site alone, so every chunk agrees.
     bool villageFits(const Village::Site& site) const;
-    void stampBuilding(Chunk& chunk, const Village::Building& building) const;
+    // What a village is built out of, which is decided by where it
+    // stands. A desert village in oak planks looks imported.
+    // Minecraft's desert villages have flat roofs with a parapet, and
+    // its taiga and snowy ones pitch theirs more steeply than the
+    // plains do. A sandstone gable looked like an oak house painted
+    // yellow.
+    //
+    // A steeper pitch was tried for the snow and taken out again: two
+    // blocks of rise a step put ten blocks of roof over a four-block
+    // wall and the houses read as stone mounds. The claim that snow
+    // country pitches steeper came from the weaker sources anyway.
+    // Snow differs by what it is built of instead.
+    enum class RoofStyle { Gable, Flat };
+
+    struct Palette
+    {
+        RoofStyle style = RoofStyle::Gable;
+        BlockId wall = Blocks::Planks;
+        BlockId footing = Blocks::Cobblestone;
+        BlockId corner = Blocks::Log;
+        BlockId floor = Blocks::Planks;
+        BlockId roof = Blocks::Planks;      // the ridge row
+        // Stairs come in fours, north first, so the facing is added to
+        // this rather than looked up.
+        BlockId roofStairs = Blocks::PlankStairsNorth;
+        BlockId post = Blocks::Log;         // lamp posts and well frames
+    };
+
+    Palette paletteFor(Biome biome) const;
+
+    void stampBuilding(Chunk& chunk, const Village::Building& building,
+                       const Palette& palette) const;
     void stampInterior(Chunk& chunk, const Village::Building& building, int ground,
-                       int x0, int z0, int x1, int z1, int doorX, int doorZ) const;
+                       int x0, int z0, int x1, int z1, int doorX, int doorZ,
+                       const Palette& palette) const;
     void carveCaves(Chunk& chunk) const;
     void placeOres(Chunk& chunk) const;
     void decorate(Chunk& chunk) const;

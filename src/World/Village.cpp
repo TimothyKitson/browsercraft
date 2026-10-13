@@ -91,11 +91,29 @@ std::vector<Village::Building> Village::plan(const Site& site, uint32_t seed)
             // Houses are inset inside their plot, so the gap between
             // two of them is always at least the inset twice over.
             // That gap is the village's paths: nothing has to lay them.
+            // A handful of footprints rather than one. Nothing wider
+            // than nine, so two in neighbouring plots still have a gap
+            // between them for the path.
+            struct Shape { int width, depth, storeys; };
+            static const Shape SHAPES[] = {
+                { 5, 5, 1 },   // a cottage
+                { 7, 5, 1 },
+                { 7, 7, 1 },
+                { 9, 6, 1 },   // wide
+                { 6, 9, 1 },   // deep
+                { 7, 6, 2 },   // two storeys
+                { 9, 7, 2 },   // the big one
+            };
+            constexpr int SHAPE_COUNT = static_cast<int>(sizeof(SHAPES) / sizeof(SHAPES[0]));
+
+            const Shape& shape = SHAPES[hashCoords(site.x + gx, 11, site.z + gz,
+                                                   seed + 55012) % SHAPE_COUNT];
+
             Building house;
             house.kind = Kind::Home;
-            house.width = 7;
-            house.depth = (hashToFloat(hashCoords(site.x + gx, 11, site.z + gz,
-                                                  seed + 55012)) < 0.5f) ? 7 : 6;
+            house.width = shape.width;
+            house.depth = shape.depth;
+            house.storeys = shape.storeys;
 
             const int plotX = site.x + gx * PLOT - PLOT / 2;
             const int plotZ = site.z + gz * PLOT - PLOT / 2;
@@ -166,6 +184,14 @@ const char* Village::name(Kind kind)
         case Kind::Lamp:       return "Lamp";
     }
     return "";
+}
+
+int Village::bedCount(const Site& site, uint32_t seed)
+{
+    int beds = 0;
+    for (const Building& building : plan(site, seed))
+        if (isHouse(building.kind)) ++beds;
+    return beds;
 }
 
 bool Village::buildingAt(const Site& site, uint32_t seed, int x, int z, Building& out)
