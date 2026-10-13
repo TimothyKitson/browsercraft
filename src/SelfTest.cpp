@@ -1825,6 +1825,72 @@ namespace
         }
     }
 
+    void testRiding()
+    {
+        section("the horse, and getting on it");
+
+        const MobType& horse = mobType(MobId::Horse);
+        check(horse.rideable, "a horse can be ridden");
+        check(horse.saddleHeight > 0.0f, "and a rider sits above its feet, not in them");
+        check(horse.saddleHeight <= horse.height,
+              "though not above its head");
+        check(horse.walkSpeed > 5.0f, "it is faster than you are on foot, which is the point");
+        check(horse.spawnClass == SpawnClass::Passive, "and it is not out to get you");
+
+        // Only the horse. Riding a creeper would be a different game.
+        int rideable = 0;
+        for (int i = 0; i < static_cast<int>(MobId::Count); ++i)
+            if (mobType(static_cast<MobId>(i)).rideable) ++rideable;
+        check(rideable == 1, "and it is the only thing you can get on");
+
+        check(Mob::tamingFood(MobId::Horse) == Items::Wheat, "wheat tames one");
+
+        {
+            Mob mount(MobId::Horse, glm::vec3(10.0f, 70.0f, -4.0f), 21u);
+            check(!mount.ridden(), "a horse starts unridden");
+
+            // The saddle is above the feet by exactly what the type says.
+            const glm::vec3 seat = mount.saddle();
+            check(std::fabs(seat.y - (mount.position().y + horse.saddleHeight)) < 0.0001f,
+                  "the saddle sits where the type says it does");
+            check(seat.x == mount.position().x && seat.z == mount.position().z,
+                  "and directly over it");
+
+            mount.setRidden(true);
+            check(mount.ridden(), "and can be got on");
+            mount.setRidden(false);
+            check(!mount.ridden(), "and off again");
+        }
+
+        // Steering points it where it is told, and only moves it when
+        // asked: a horse that walked off on its own with a rider up
+        // would be a horse nobody could steer.
+        {
+            Mob mount(MobId::Horse, glm::vec3(0.0f, 70.0f, 0.0f), 22u);
+            mount.setRidden(true);
+
+            mount.steer(90.0f, false, false);
+            check(mount.ridden(), "still ridden after steering");
+
+            // Steering a loose horse is harmless: it simply has a goal
+            // it did not pick, and chooses another on its next pass.
+            Mob loose(MobId::Horse, glm::vec3(0.0f, 70.0f, 0.0f), 23u);
+            loose.steer(180.0f, true, true);
+            check(!loose.ridden(), "steering does not put anybody on it");
+        }
+
+        // Getting off clears what it was told to do, or it would keep
+        // walking the way the rider last pointed it.
+        {
+            Mob mount(MobId::Horse, glm::vec3(0.0f, 70.0f, 0.0f), 24u);
+            mount.setRidden(true);
+            mount.steer(45.0f, true, true);
+            mount.setRidden(false);
+            check(!mount.ridden(), "getting off ends the ride");
+            check(!mount.hunting(), "and leaves it with nothing it was told to chase");
+        }
+    }
+
     void testWolves()
     {
         section("the wolf: wild until it is given a bone");
@@ -5499,6 +5565,7 @@ int runSelfTest()
     testAnvil();
     testShield();
     testWolves();
+    testRiding();
     testVillages();
     testVillageLoot();
     testVillageLife();

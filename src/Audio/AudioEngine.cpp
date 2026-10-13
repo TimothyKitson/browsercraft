@@ -281,6 +281,7 @@ void AudioEngine::buildSounds()
     loadMobVoice(Sound::MobPigmanSay, Sound::MobPigmanHurt, Sound::MobPigmanDeath, "zombie_pigman");
     loadMobVoice(Sound::MobVillagerSay, Sound::MobVillagerHurt, Sound::MobVillagerDeath, "villager");
     loadMobVoice(Sound::MobWolfSay, Sound::MobWolfHurt, Sound::MobWolfDeath, "wolf");
+    loadMobVoice(Sound::MobHorseSay, Sound::MobHorseHurt, Sound::MobHorseDeath, "horse");
     loadVariants(Sound::Rain, "weather/rain", 1);
     loadVariants(Sound::Thunder, "weather/thunder", 1);
 
@@ -639,6 +640,28 @@ void AudioEngine::buildSounds()
         s.addTone(0.46f, 600.0f, 130.0f, 6.0f, 0.64f, true);
         s.addNoise(0.22f, 1200.0f, 10.0f, 0.22f, false, 705);
         s.finish(0.80f);
+    }
+
+    // The horse: a whinny, which is a tone that wavers rather than
+    // slides -- the waver is the whole character of the sound.
+    {
+        Synth s = make(Sound::MobHorseSay);
+        s.addTone(0.42f, 390.0f, 300.0f, 4.0f, 0.55f, true);
+        s.addTone(0.30f, 520.0f, 430.0f, 6.0f, 0.34f, true);
+        s.addNoise(0.16f, 900.0f, 11.0f, 0.16f, false, 711);
+        s.finish(0.72f);
+    }
+    {
+        Synth s = make(Sound::MobHorseHurt);
+        s.addTone(0.22f, 520.0f, 240.0f, 12.0f, 0.62f, true);
+        s.addNoise(0.14f, 1300.0f, 20.0f, 0.24f, false, 713);
+        s.finish(0.78f);
+    }
+    {
+        Synth s = make(Sound::MobHorseDeath);
+        s.addTone(0.58f, 440.0f, 105.0f, 5.0f, 0.66f, true);
+        s.addNoise(0.28f, 1000.0f, 8.0f, 0.22f, false, 715);
+        s.finish(0.82f);
     }
 
     // The pigman: a grunt with a groan in it, halfway between the two

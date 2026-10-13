@@ -20,6 +20,7 @@ enum class MobId : uint8_t
     ZombiePigman,
     Villager,
     Wolf,
+    Horse,
     Count
 };
 
@@ -138,6 +139,12 @@ struct MobType
     // the one that works this way, and without it the End is a room
     // full of things that kill you the moment you arrive.
     bool neutral = false;
+
+    // Something you can get on the back of. The saddle height is where
+    // the rider sits above its feet, which is what the camera is put
+    // at: a rider's eyes are not the mob's eyes.
+    bool rideable = false;
+    float saddleHeight = 1.0f;
 
     // The undead catch fire in open daylight. Spiders and creepers do
     // not, which is why they are the ones you still meet at noon.

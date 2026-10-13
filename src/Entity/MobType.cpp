@@ -495,6 +495,41 @@ namespace
             t.model.push_back(mc(Part::Body, 9, 18, 2, 8, 2, -1, 0, 0, 0, 12, 8));
             addLegs(t.model, 0, 18, 2, 8, 2, -1, 0, -1, 2, 7, -4);
         }
+        {
+            // The horse: tamed with wheat, and then something to get on
+            // the back of. Taller than anything else that walks, which
+            // is most of why riding one feels different from walking.
+            MobType& t = table[static_cast<size_t>(MobId::Horse)];
+            t.id = MobId::Horse;
+            t.experience = 3;
+            t.voice = Sound::MobHorseSay;
+            t.hurtVoice = Sound::MobHorseHurt;
+            t.deathVoice = Sound::MobHorseDeath;
+            t.breedingFood = Items::Wheat;
+            t.name = "Horse";
+            t.texture = "horse";
+            t.spawnClass = SpawnClass::Passive;
+            t.maxHealth = 22;
+            t.width = 1.3f;
+            t.height = 1.6f;
+            t.walkSpeed = 6.4f;      // faster than you can run, which is the point
+            t.voicePitch = 0.9f;
+            t.rideable = true;
+            t.saddleHeight = 1.5f;
+            t.bodyColour = rgb(141, 103, 69);
+            t.headColour = rgb(152, 114, 78);
+
+            // A long body on tall legs, with the head carried out in
+            // front and up, which is what reads as a horse rather than
+            // as a very large cow.
+            t.sheetHeight = 64;   // it does not fit on half a sheet
+
+            t.model.push_back(mc(Part::Head, 0, 0, 6, 9, 7, -3, -7, -7, 0, 2, -10));
+            t.model.push_back(mc(Part::Head, 26, 0, 4, 4, 4, -2, -2, -10, 0, 2, -10));
+            t.model.push_back(turned(mc(Part::Body, 20, 20, 10, 22, 10, -5, -11, -8, 0, 3, 2), HALF_PI));
+            t.model.push_back(mc(Part::Body, 44, 0, 2, 12, 2, -1, -1, 0, 0, 3, 10));
+            addLegs(t.model, 0, 36, 4, 14, 4, -2, 0, -2, 4, 9, -8);
+        }
 
         return table;
     }

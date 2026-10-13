@@ -109,8 +109,36 @@ void Mob::steerAroundObstacle(const World& world)
 
 StackId Mob::tamingFood(MobId type)
 {
-    return (type == MobId::Wolf) ? static_cast<StackId>(Items::Bone)
-                                 : static_cast<StackId>(Blocks::Air);
+    switch (type)
+    {
+        case MobId::Wolf:  return Items::Bone;
+        // Minecraft tames a horse by being thrown off it until it gives
+        // in. Wheat is the same bargain with fewer broken bones, and it
+        // is what the horse already wants.
+        case MobId::Horse: return Items::Wheat;
+        default:           return Blocks::Air;
+    }
+}
+
+void Mob::setRidden(bool on)
+{
+    m_ridden = on;
+    if (!on)
+    {
+        m_steerForward = false;
+        m_steerJump = false;
+    }
+    // Whatever it was doing before, it is not doing it now.
+    m_path.clear();
+    m_pathIndex = 0;
+    m_huntTimer = 0.0f;
+}
+
+void Mob::steer(float yawDegrees, bool forward, bool jump)
+{
+    m_goalYaw = yawDegrees;
+    m_steerForward = forward;
+    m_steerJump = jump;
 }
 
 void Mob::huntTowards(const glm::vec3& at)
@@ -338,10 +366,11 @@ void Mob::chooseNewGoal(const glm::vec3& playerPosition)
     // back to its owner between every bite.
     if (hunting()) return;
 
-    // A tamed one keeps up. This comes before fleeing, or a wolf you
-    // had just tamed would still run from you, and before the idle
-    // wander, which is what would otherwise lose it behind you.
-    if (m_tamed && distance > 3.0f && distance < 64.0f)
+    // A tamed one keeps up -- but only one you walk beside. A horse
+    // follows nobody: you leave it where you got off it, and finding
+    // it there again is the whole arrangement. One that trailed after
+    // you on foot would never be anywhere you left it.
+    if (m_tamed && !t.rideable && distance > 3.0f && distance < 64.0f)
     {
         m_goalYaw = glm::degrees(std::atan2(toPlayer.z, toPlayer.x));
         m_moving = distance > 2.5f;
@@ -438,11 +467,24 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
         m_path.clear();
     }
 
-    m_goalTimer -= deltaTime;
-    if (!m_asleep && m_goalTimer <= 0.0f) chooseNewGoal(playerPosition);
+    if (m_ridden)
+    {
+        // Ridden: it goes where it is pointed and nowhere else. No
+        // goal of its own, and no route -- a mob that kept pathing
+        // while being ridden fought the reins.
+        m_moving = m_steerForward;
 
-    // A route, where there is one, overrules the heading just chosen.
-    followPath();
+        if (m_steerJump && m_onGround) m_velocity.y = RIDDEN_JUMP;
+        m_steerJump = false;
+    }
+    else
+    {
+        m_goalTimer -= deltaTime;
+        if (!m_asleep && m_goalTimer <= 0.0f) chooseNewGoal(playerPosition);
+
+        // A route, where there is one, overrules the heading just chosen.
+        followPath();
+    }
 
     // Turn towards the goal heading the short way round.
     m_yaw = PlayerAnimation::wrapDegrees(

@@ -479,6 +479,10 @@ private:
     // Costs the held shield a point for stopping a blow, and breaks
     // it when it runs out.
     void wearShield(int points);
+
+    // What is being ridden, and getting off it.
+    Mob* riddenMob();
+    void dismount();
     void wearOnSwing(StackId weapon);
     void openBench(const glm::ivec3& block);
 

@@ -1391,7 +1391,7 @@ bool Application::frame()
             m_startupScreen == "pbr" || m_startupScreen == "anvil" ||
             m_startupScreen == "anvilblock" || m_startupScreen == "brew" ||
             m_startupScreen == "village" || m_startupScreen == "shield" ||
-            m_startupScreen == "wolf")
+            m_startupScreen == "wolf" || m_startupScreen == "horse")
         {
             // Dev aid: open the inventory with something in it, so the
             // screenshot shows a real grid rather than 36 empty boxes.
@@ -1422,6 +1422,7 @@ bool Application::frame()
                                   m_startupScreen != "village" &&
                                   m_startupScreen != "shield" &&
                                   m_startupScreen != "wolf" &&
+                                  m_startupScreen != "horse" &&
                                   m_startupScreen != "portal" &&
                                   m_startupScreen != "nether";
             m_inventoryOpen = showPanel;
@@ -1599,6 +1600,42 @@ bool Application::frame()
                     slot.count = 1;
                     openEnchantingTable(glm::ivec3(bx, by, bz));
                 }
+            }
+
+            if (m_startupScreen == "horse")
+            {
+                m_camera.setOrientation(0.0f, -6.0f);
+                m_camera.addLook(0.0f, 0.0f, 0.0f);
+
+                const int px = static_cast<int>(std::floor(m_player.position.x));
+                const int py = static_cast<int>(std::floor(m_player.position.y));
+                const int pz = static_cast<int>(std::floor(m_player.position.z));
+
+                for (int ax = 0; ax <= 12; ++ax)
+                    for (int az = -7; az <= 7; ++az)
+                    {
+                        for (int ay = 0; ay <= 5; ++ay)
+                            m_world->setBlock(px + ax, py + ay, pz + az, Blocks::Air);
+                        m_world->setBlock(px + ax, py - 1, pz + az, Blocks::Grass);
+                    }
+
+                // Three of them, spread out. One horse wanders out of
+                // frame before a screenshot can be taken: at six and a
+                // half a second it crosses the whole clearing in two.
+                for (int i = 0; i < 3; ++i)
+                {
+                    const glm::vec3 where(static_cast<float>(px + 5) + 0.5f,
+                                          static_cast<float>(py),
+                                          static_cast<float>(pz + (i - 1) * 3) + 0.5f);
+                    if (m_entities.spawnAt(MobId::Horse, where, *m_world))
+                        m_entities.mobs().back().tameWith(Items::Wheat);
+                }
+
+                m_inventory.add(Items::Wheat, 6);
+
+                m_world->setBlock(px + 10, py, pz - 5, Blocks::Bookshelf);
+                m_world->setBlock(px + 10, py, pz,     Blocks::DiamondOre);
+                m_world->setBlock(px + 10, py, pz + 5, Blocks::EndPortalFrame);
             }
 
             if (m_startupScreen == "wolf")
@@ -2653,7 +2690,30 @@ void Application::updateGameplay(float deltaTime)
     controls.descend = controls.sneak;
 
     const glm::vec3 positionBefore = m_player.position;
-    m_player.update(deltaTime, *m_world, controls);
+
+    // On horseback the mount does the walking and the rider goes where
+    // it goes. The player's own physics are skipped outright rather
+    // than fought: running both meant the two disagreed about where
+    // the ground was and the rider juddered.
+    if (Mob* mount = riddenMob())
+    {
+        mount->steer(m_camera.yaw,
+                     m_keys.down(m_input, Action::Forward),
+                     m_keys.down(m_input, Action::Jump));
+
+        m_player.position = mount->saddle();
+        m_player.velocity = glm::vec3(0.0f);
+        m_player.onGround = true;
+
+        // Sneak gets you off, which is what Minecraft uses and the one
+        // key that is not already steering something.
+        if (m_keys.pressed(m_input, Action::Sneak)) dismount();
+    }
+    else
+    {
+        m_player.update(deltaTime, *m_world, controls);
+    }
+
     m_camera.position = m_player.eyePosition();
     updateMovementAudio(positionBefore, m_player.jumpedThisUpdate());
 
@@ -3026,6 +3086,34 @@ int Application::armourPoints() const
 // Armour wears where it is struck: every piece takes a share of the blow,
 // and a piece that gives out leaves its slot empty mid-fight, which is
 // exactly how Minecraft lets you know you are in trouble.
+// Whatever is being ridden, if anything. Found by asking rather than
+// remembered: the mobs live in a vector that moves as it grows, so a
+// pointer or an index kept between frames would go stale. Only one can
+// be ridden, since there is only one rider.
+Mob* Application::riddenMob()
+{
+    for (Mob& mob : m_entities.mobs())
+        if (mob.ridden() && mob.alive()) return &mob;
+    return nullptr;
+}
+
+void Application::dismount()
+{
+    Mob* mount = riddenMob();
+    if (!mount) return;
+
+    mount->setRidden(false);
+
+    // Put down beside it rather than inside it, or the rider would be
+    // standing in the horse and get pushed out at speed.
+    const float radians = glm::radians(m_camera.yaw + 90.0f);
+    m_player.position = mount->position() +
+                        glm::vec3(std::cos(radians) * 1.2f, 0.0f, std::sin(radians) * 1.2f);
+    m_player.velocity = glm::vec3(0.0f);
+
+    m_audio.play(Sound::Click, 0.4f, 0.8f);
+}
+
 void Application::wearShield(int points)
 {
     if (m_player.creative() || points <= 0) return;
@@ -3883,6 +3971,16 @@ void Application::handlePlacement()
             m_player.armourPoints = armourPoints();
             m_audio.play(Sound::DigWool, 0.7f, 0.9f);
         }
+        return;
+    }
+
+    // Getting on something comes before all of it: a tamed horse in
+    // front of you is to be ridden, not fed.
+    if (Mob* ride = m_entities.rideable(m_camera.position, m_camera.front, ATTACK_REACH))
+    {
+        ride->setRidden(true);
+        m_player.velocity = glm::vec3(0.0f);
+        m_audio.play(Sound::Click, 0.5f, 0.9f);
         return;
     }
 

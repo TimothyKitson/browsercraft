@@ -16,6 +16,10 @@ namespace
 
     const MobId PASSIVE_SPECIES[] = { MobId::Sheep, MobId::Pig, MobId::Cow, MobId::Chicken };
 
+    // Horses keep to open country, which is where Minecraft puts them
+    // and where there is room to ride one.
+    const MobId PLAINS_SPECIES[] = { MobId::Horse };
+
     // Wolves keep to the trees, which is where Minecraft puts them and
     // what stops a pack turning up in the middle of a field.
     const MobId FOREST_SPECIES[] = { MobId::Wolf };
@@ -230,6 +234,13 @@ void EntityManager::trySpawnWave(const World& world, const glm::vec3& playerPosi
                     species = FOREST_SPECIES[static_cast<int>(random01() * FOREST_COUNT)
                                              % FOREST_COUNT];
                 }
+                else if (here == Biome::Plains && random01() < 0.14f)
+                {
+                    constexpr int PLAINS_COUNT =
+                        static_cast<int>(std::size(PLAINS_SPECIES));
+                    species = PLAINS_SPECIES[static_cast<int>(random01() * PLAINS_COUNT)
+                                             % PLAINS_COUNT];
+                }
                 else
                 {
                     species = (random01() < 0.02f)
@@ -425,6 +436,15 @@ bool EntityManager::tame(const glm::vec3& origin, const glm::vec3& direction,
 {
     Mob* target = pick(origin, direction, maxDistance);
     return target && target->tameWith(food);
+}
+
+Mob* EntityManager::rideable(const glm::vec3& origin, const glm::vec3& direction,
+                             float maxDistance)
+{
+    Mob* target = pick(origin, direction, maxDistance);
+    if (!target || !target->alive()) return nullptr;
+    if (!target->type().rideable || !target->tamed() || target->baby()) return nullptr;
+    return target;
 }
 
 // A tamed wolf goes for whatever hostile is nearest. The wolf cannot

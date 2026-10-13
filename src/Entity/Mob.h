@@ -198,6 +198,24 @@ public:
     // far it will let them get before coming after them.
     static constexpr float HEEL_RANGE = 10.0f;
 
+    // How hard a ridden mob jumps when the rider asks.
+    static constexpr float RIDDEN_JUMP = 8.0f;
+
+    // --- being ridden ---
+    //
+    // A ridden mob stops deciding where to go and does what the rider
+    // asks. Steering is handed in rather than read, because the mob
+    // has no idea a player exists and should not learn.
+    bool ridden() const { return m_ridden; }
+    void setRidden(bool on);
+    void steer(float yawDegrees, bool forward, bool jump);
+
+    // Where a rider sits, which is not where the mob stands.
+    glm::vec3 saddle() const
+    {
+        return m_position + glm::vec3(0.0f, type().saddleHeight, 0.0f);
+    }
+
     // A tamed one set on something. The heading is handed in rather
     // than worked out here, because the mob cannot see the other mobs
     // -- only whoever keeps them all can.
@@ -295,6 +313,9 @@ private:
     int m_profession = -1;
     bool m_asleep = false;
     bool m_tamed = false;
+    bool m_ridden = false;
+    bool m_steerForward = false;
+    bool m_steerJump = false;
     float m_huntTimer = 0.0f;
     float m_biteTimer = 0.0f;
     float m_loveTimer = 0.0f;

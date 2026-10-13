@@ -66,6 +66,10 @@ public:
     bool tame(const glm::vec3& origin, const glm::vec3& direction, float maxDistance,
               StackId food);
 
+    // Whatever tamed, rideable thing is in front of you, if any. Null
+    // when what is there cannot be ridden or has not been tamed.
+    Mob* rideable(const glm::vec3& origin, const glm::vec3& direction, float maxDistance);
+
     bool spawnAt(MobId type, glm::vec3 feetPosition, const World& world, bool baby = false);
     void clear() { m_mobs.clear(); m_deaths.clear(); m_births.clear(); }
 
