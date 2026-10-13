@@ -26,6 +26,7 @@
 #include "Game/Effects.h"
 #include "Game/Brewing.h"
 #include "World/Village.h"
+#include "Game/VillageLoot.h"
 #include "Game/Enchanting.h"
 #include "Game/Trading.h"
 #include "Game/EndPortal.h"
@@ -1065,7 +1066,7 @@ namespace
         for (const Village::Building& b : plan)
         {
             if (b.kind == Village::Kind::Well) ++wells;
-            if (b.kind == Village::Kind::House) ++houses;
+            if (Village::isHouse(b.kind)) ++houses;
 
             check(b.width > 0 && b.depth > 0, "everything in it takes up room");
 
@@ -1103,7 +1104,7 @@ namespace
         // rather than into the back of the next house.
         for (const Village::Building& b : plan)
         {
-            if (b.kind != Village::Kind::House) continue;
+            if (!Village::isHouse(b.kind)) continue;
             const int cx = b.x + b.width / 2;
             const int cz = b.z + b.depth / 2;
 
@@ -1124,6 +1125,178 @@ namespace
         check(Village::plan(nowhere, seed).empty(), "a square with no village plans nothing");
         check(!Village::reaches(nowhere, -10000, -10000, 10000, 10000),
               "and reaches nowhere at all");
+    }
+
+    void testVillageLoot()
+    {
+        section("villages: the trades and what is in their chests");
+
+        const uint32_t seed = 4242u;
+
+        Village::Site site;
+        site.exists = true;
+        site.x = 1000;
+        site.z = -2000;
+
+        // Across a spread of villages: at most one smith and one
+        // library each, and never the same plot for both.
+        int withSmith = 0, withLibrary = 0, villages = 0;
+        for (int rz = -6; rz <= 6; ++rz)
+            for (int rx = -6; rx <= 6; ++rx)
+            {
+                const Village::Site each = Village::siteFor(rx, rz, seed);
+                if (!each.exists) continue;
+                ++villages;
+
+                int smiths = 0, libraries = 0;
+                for (const Village::Building& b : Village::plan(each, seed))
+                {
+                    if (b.kind == Village::Kind::Blacksmith) ++smiths;
+                    if (b.kind == Village::Kind::Library) ++libraries;
+                }
+                check(smiths <= 1, "a village has at most one smith");
+                check(libraries <= 1, "and at most one library");
+                if (smiths) ++withSmith;
+                if (libraries) ++withLibrary;
+            }
+
+        check(villages > 20, "a good few villages to look at");
+        check(withSmith > 0 && withSmith < villages,
+              "some villages have a smith and some do not");
+        check(withLibrary > 0 && withLibrary < villages,
+              "and the same for libraries");
+
+        // The plan is still the plan: nothing overlaps now the trades
+        // have been handed out.
+        const std::vector<Village::Building> plan = Village::plan(site, seed);
+        for (size_t i = 0; i < plan.size(); ++i)
+            for (size_t j = i + 1; j < plan.size(); ++j)
+            {
+                const Village::Building& a = plan[i];
+                const Village::Building& b = plan[j];
+                const bool apart = a.x + a.width <= b.x || b.x + b.width <= a.x ||
+                                   a.z + a.depth <= b.z || b.z + b.depth <= a.z;
+                check(apart, "no two buildings stand on the same ground");
+            }
+
+        for (const Village::Building& b : plan)
+            check(Village::name(b.kind)[0] != '\0', "every kind of building has a name");
+
+        // buildingAt has to agree with the plan, or a chest would be
+        // filled from the wrong trade's table.
+        for (const Village::Building& b : plan)
+        {
+            Village::Building found;
+            check(Village::buildingAt(site, seed, b.x, b.z, found),
+                  "a block inside a building finds it");
+            check(found.kind == b.kind && found.x == b.x && found.z == b.z,
+                  "and finds the right one");
+        }
+        {
+            Village::Building found;
+            check(!Village::buildingAt(site, seed, site.x + 100000, site.z, found),
+                  "and a block far outside finds nothing");
+        }
+
+        // --- the loot ------------------------------------------------
+        for (Village::Kind kind : { Village::Kind::Home, Village::Kind::Blacksmith,
+                                    Village::Kind::Library, Village::Kind::Butcher })
+        {
+            const std::string who = Village::name(kind);
+
+            int lowest = 99, highest = 0;
+            bool everyStackReal = true;
+            bool everyCountReal = true;
+            bool everDuplicated = false;
+
+            for (int i = 0; i < 400; ++i)
+            {
+                const std::vector<VillageLoot::Stack> loot =
+                    VillageLoot::rollFor(kind, 100 + i * 7, 70, -300 - i * 3, seed);
+
+                lowest = std::min(lowest, static_cast<int>(loot.size()));
+                highest = std::max(highest, static_cast<int>(loot.size()));
+
+                for (size_t a = 0; a < loot.size(); ++a)
+                {
+                    if (loot[a].id == Blocks::Air) everyStackReal = false;
+                    if (loot[a].count <= 0) everyCountReal = false;
+                    if (loot[a].count > maxStackOf(loot[a].id)) everyCountReal = false;
+
+                    // The shuffle exists so one chest never holds the
+                    // same thing twice.
+                    for (size_t b = a + 1; b < loot.size(); ++b)
+                        if (loot[a].id == loot[b].id) everDuplicated = true;
+                }
+            }
+
+            check(everyStackReal, who + ": every stack is a real item");
+            check(everyCountReal, who + ": and a count that fits in a slot");
+            check(!everDuplicated, who + ": and nothing turns up twice in one chest");
+            check(lowest >= VillageLoot::MIN_STACKS, who + ": never emptier than the floor");
+            check(highest <= VillageLoot::MAX_STACKS, who + ": nor fuller than the ceiling");
+            check(highest > lowest, who + ": and how much varies from chest to chest");
+        }
+
+        // The same chest always holds the same thing, however often it
+        // is asked: that is what lets this go unsaved until it is
+        // disturbed.
+        for (int i = 0; i < 20; ++i)
+        {
+            const std::vector<VillageLoot::Stack> a =
+                VillageLoot::rollFor(Village::Kind::Blacksmith, 40 + i, 71, 9, seed);
+            const std::vector<VillageLoot::Stack> b =
+                VillageLoot::rollFor(Village::Kind::Blacksmith, 40 + i, 71, 9, seed);
+            check(a.size() == b.size(), "a chest rolls the same every time");
+            for (size_t k = 0; k < a.size(); ++k)
+                check(a[k].id == b[k].id && a[k].count == b[k].count,
+                      "down to the last item");
+        }
+
+        // Two chests side by side are not the same chest.
+        {
+            const std::vector<VillageLoot::Stack> a =
+                VillageLoot::rollFor(Village::Kind::Home, 10, 70, 10, seed);
+            const std::vector<VillageLoot::Stack> b =
+                VillageLoot::rollFor(Village::Kind::Home, 11, 70, 10, seed);
+            bool same = a.size() == b.size();
+            for (size_t k = 0; same && k < a.size(); ++k)
+                same = (a[k].id == b[k].id && a[k].count == b[k].count);
+            check(!same, "two chests in a row hold different things");
+        }
+
+        // A well has no chest, so it has no table either.
+        check(VillageLoot::rollFor(Village::Kind::Well, 0, 70, 0, seed).empty(),
+              "a well holds nothing");
+        check(VillageLoot::rollFor(Village::Kind::Lamp, 0, 70, 0, seed).empty(),
+              "and neither does a lamp post");
+
+        // Each trade keeps its own stock: a library has no iron in it.
+        bool smithHasMetal = false, libraryHasPaper = false, butcherHasMeat = false;
+        bool libraryHasIron = false;
+        for (int i = 0; i < 300; ++i)
+        {
+            for (const VillageLoot::Stack& stack :
+                 VillageLoot::rollFor(Village::Kind::Blacksmith, i, 70, i * 3, seed))
+                if (stack.id == Items::IronIngot || stack.id == Items::Diamond)
+                    smithHasMetal = true;
+
+            for (const VillageLoot::Stack& stack :
+                 VillageLoot::rollFor(Village::Kind::Library, i, 70, i * 3, seed))
+            {
+                if (stack.id == Items::Paper || stack.id == Items::Book) libraryHasPaper = true;
+                if (stack.id == Items::IronIngot) libraryHasIron = true;
+            }
+
+            for (const VillageLoot::Stack& stack :
+                 VillageLoot::rollFor(Village::Kind::Butcher, i, 70, i * 3, seed))
+                if (stack.id == Items::RawBeef || stack.id == Items::Steak)
+                    butcherHasMeat = true;
+        }
+        check(smithHasMetal, "a smith keeps metal");
+        check(libraryHasPaper, "a library keeps paper and books");
+        check(butcherHasMeat, "a butcher keeps meat");
+        check(!libraryHasIron, "and a library keeps no iron: each trade has its own stock");
     }
 
     void testBrewing()
@@ -5006,6 +5179,7 @@ int runSelfTest()
     testEndermanStare();
     testAnvil();
     testVillages();
+    testVillageLoot();
     testBrewing();
     testEffects();
     testEffectsOnThePlayer();

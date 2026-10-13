@@ -1,5 +1,6 @@
 #include "Core/Application.h"
 #include "World/WorldGen.h"
+#include "Game/VillageLoot.h"
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -50,6 +51,60 @@ namespace
         else
         {
             std::printf("  nearest       none\n");
+            return 0;
+        }
+
+        // Build the nearest village for real and walk it, so this says
+        // what the generator put down rather than what the plan asked
+        // for. Chunks are generated here outright rather than waiting
+        // on a running game to stream them in.
+        std::printf("\nThe village at %d, %d:\n", nearest.x, nearest.z);
+
+        const int fromChunkX = (nearest.x - Village::MAX_RADIUS - 1) / Chunk::SX - 1;
+        const int toChunkX = (nearest.x + Village::MAX_RADIUS + 1) / Chunk::SX + 1;
+        const int fromChunkZ = (nearest.z - Village::MAX_RADIUS - 1) / Chunk::SZ - 1;
+        const int toChunkZ = (nearest.z + Village::MAX_RADIUS + 1) / Chunk::SZ + 1;
+
+        std::map<std::pair<int, int>, BlockId> chests;
+        for (int cz = fromChunkZ; cz <= toChunkZ; ++cz)
+            for (int cx = fromChunkX; cx <= toChunkX; ++cx)
+            {
+                Chunk chunk(ChunkPos{ cx, cz });
+                generator.generate(chunk);
+
+                for (int lx = 0; lx < Chunk::SX; ++lx)
+                    for (int lz = 0; lz < Chunk::SZ; ++lz)
+                        for (int y = 0; y < Chunk::SY; ++y)
+                            if (chunk.getBlock(lx, y, lz) == Blocks::Chest)
+                                chests[{ cx * Chunk::SX + lx, cz * Chunk::SZ + lz }] =
+                                    static_cast<BlockId>(y);
+            }
+
+        for (const Village::Building& building : Village::plan(nearest, seed))
+        {
+            if (!Village::isHouse(building.kind)) continue;
+
+            bool said = false;
+            for (const auto& entry : chests)
+            {
+                const int x = entry.first.first;
+                const int z = entry.first.second;
+                if (x < building.x || x >= building.x + building.width) continue;
+                if (z < building.z || z >= building.z + building.depth) continue;
+
+                const int y = static_cast<int>(entry.second);
+                std::printf("  %-11s chest at %d,%d,%d:", Village::name(building.kind), x, y, z);
+                for (const VillageLoot::Stack& stack :
+                     VillageLoot::rollFor(building.kind, x, y, z, seed))
+                    std::printf(" %dx%s", stack.count, displayName(stack.id));
+                std::printf("\n");
+                said = true;
+                break;
+            }
+
+            if (!said)
+                std::printf("  %-11s at %d,%d has NO CHEST\n", Village::name(building.kind),
+                            building.x, building.z);
         }
 
         return 0;

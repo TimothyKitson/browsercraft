@@ -1622,6 +1622,9 @@ bool Application::frame()
                     m_placeOnSurface = false;
                     m_camera.setOrientation(-90.0f, -22.0f);
                     m_camera.addLook(0.0f, 0.0f, 0.0f);
+                    // What is actually in it is --villageinfo's job:
+                    // it generates the chunks outright instead of
+                    // waiting on a running game to stream them in.
                     std::printf("Village at %d, %d\n", site.x, site.z);
                     std::fflush(stdout);
                 }

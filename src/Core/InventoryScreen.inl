@@ -1230,12 +1230,66 @@ void Application::openChest(const glm::ivec3& block)
     m_chestBlock = block;
     m_chestOpen = true;
 
+    fillVillageChest(block);
+
     const Chests::Contents& held = m_chests.at(block);
     for (int i = 0; i < Inventory::CHEST_SLOTS; ++i)
         m_inventory.slot(Inventory::CHEST_FIRST + i) = held[i];
 
     m_inventoryOpen = true;
     setMouseCaptured(false);
+}
+
+// A chest found standing in a village building has never been opened
+// before, so there is nothing in the table for it. What it holds is
+// rolled from where it stands -- the same every time anyone finds it,
+// and nothing is written to the save until the player takes something.
+void Application::fillVillageChest(const glm::ivec3& block)
+{
+    if (!m_world) return;
+    if (m_dimension != Dimension::Overworld) return;
+
+    // Already known, so it has been opened before -- or the player
+    // built it. Either way it is not ours to fill.
+    if (m_chests.has(block)) return;
+
+    const Village::Site site = Village::siteFor(Village::regionOf(block.x),
+                                                Village::regionOf(block.z),
+                                                m_world->seed());
+    if (!Village::reaches(site, block.x, block.z, block.x, block.z)) return;
+
+    // The cheap tests passed; now it is worth asking whether the
+    // village was actually built here.
+    if (!m_world->generator().nearestVillage(block.x, block.z, 0).exists) return;
+
+    Village::Building building;
+    if (!Village::buildingAt(site, m_world->seed(), block.x, block.z, building)) return;
+    if (!Village::isHouse(building.kind)) return;
+
+    const std::vector<VillageLoot::Stack> loot =
+        VillageLoot::rollFor(building.kind, block.x, block.y, block.z, m_world->seed());
+    if (loot.empty()) return;
+
+    Chests::Contents filled{};
+
+    // Spread through the chest rather than packed into the first few
+    // slots, which is how a found chest looks in Minecraft.
+    for (size_t i = 0; i < loot.size() && i < static_cast<size_t>(Chests::SLOTS); ++i)
+    {
+        const uint32_t where = hashCoords(block.x + static_cast<int>(i), block.y, block.z,
+                                          m_world->seed() + 61100);
+        int slot = static_cast<int>(where % static_cast<uint32_t>(Chests::SLOTS));
+
+        // Walk on to the next free one, so two draws landing on the
+        // same slot do not lose one of the stacks.
+        for (int step = 0; step < Chests::SLOTS && !filled[slot].empty(); ++step)
+            slot = (slot + 1) % Chests::SLOTS;
+
+        filled[slot].id = loot[i].id;
+        filled[slot].count = loot[i].count;
+    }
+
+    m_chests.put(block, filled);
 }
 
 void Application::stowChest()

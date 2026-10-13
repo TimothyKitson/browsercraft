@@ -645,6 +645,10 @@ void WorldGen::stampBuilding(Chunk& chunk, const Village::Building& building) co
 
     // --- a house ---------------------------------------------------
 
+    constexpr int WALL_HEIGHT = 4;        // floor to eaves
+    const int eaves = ground + WALL_HEIGHT;
+    const int roofBase = eaves + 1;
+
     // Level the ground under it and clear the air above, so a house on
     // a slight rise is neither buried nor standing on nothing.
     for (int x = x0; x <= x1; ++x)
@@ -652,12 +656,14 @@ void WorldGen::stampBuilding(Chunk& chunk, const Village::Building& building) co
         {
             for (int y = ground - 3; y <= ground; ++y)
                 put(chunk, x, y, z, (y == ground) ? Blocks::Planks : Blocks::Dirt);
-            for (int y = ground + 1; y <= ground + 6; ++y)
+            for (int y = ground + 1; y <= roofBase + 6; ++y)
                 put(chunk, x, y, z, Blocks::Air);
         }
 
-    // Walls, with logs at the corners the way a village house is built.
-    for (int y = ground + 1; y <= ground + 3; ++y)
+    // Walls: a cobblestone course at the bottom, logs at the corners,
+    // planks between. The stone footing is most of what stops a house
+    // reading as a shed.
+    for (int y = ground + 1; y <= eaves; ++y)
         for (int x = x0; x <= x1; ++x)
             for (int z = z0; z <= z1; ++z)
             {
@@ -665,10 +671,12 @@ void WorldGen::stampBuilding(Chunk& chunk, const Village::Building& building) co
                 const bool edgeZ = (z == z0 || z == z1);
                 if (!edgeX && !edgeZ) continue;
 
-                BlockId block = (edgeX && edgeZ) ? Blocks::Log : Blocks::Planks;
+                BlockId block = Blocks::Planks;
+                if (edgeX && edgeZ) block = Blocks::Log;
+                else if (y == ground + 1) block = Blocks::Cobblestone;
 
                 // A window in the middle of each wall, at head height.
-                if (y == ground + 2 && !(edgeX && edgeZ))
+                if (y == ground + 3 && !(edgeX && edgeZ))
                 {
                     const bool midOfX = (x == (x0 + x1) / 2);
                     const bool midOfZ = (z == (z0 + z1) / 2);
@@ -678,7 +686,84 @@ void WorldGen::stampBuilding(Chunk& chunk, const Village::Building& building) co
                 put(chunk, x, y, z, block);
             }
 
-    // The doorway, in the middle of whichever wall faces the village.
+    // --- the roof ---------------------------------------------------
+    //
+    // A gable of stairs rather than the flat plank lid this used to
+    // have, which read as a table rather than a house. The slope runs
+    // across the shorter side, and the stairs face their own eave --
+    // "facing" is the low side, the way you walk up.
+
+    const int rx0 = x0 - 1, rx1 = x1 + 1;
+    const int rz0 = z0 - 1, rz1 = z1 + 1;
+
+    const bool ridgeAlongX = (rz1 - rz0) <= (rx1 - rx0);
+
+    const int lowEave = ridgeAlongX ? rz0 : rx0;
+    const int highEave = ridgeAlongX ? rz1 : rx1;
+    const int acrossFrom = ridgeAlongX ? rx0 : rz0;
+    const int acrossTo = ridgeAlongX ? rx1 : rz1;
+
+    const int span = highEave - lowEave + 1;
+    const int steps = span / 2;
+
+    // Which way each slope's stairs look: towards its own eave.
+    const BlockId lowStair = ridgeAlongX ? Blocks::PlankStairsNorth : Blocks::PlankStairsWest;
+    const BlockId highStair = ridgeAlongX ? Blocks::PlankStairsSouth : Blocks::PlankStairsEast;
+
+    for (int i = 0; i < steps; ++i)
+    {
+        const int y = roofBase + i;
+        for (int across = acrossFrom; across <= acrossTo; ++across)
+        {
+            if (ridgeAlongX)
+            {
+                put(chunk, across, y, lowEave + i, lowStair);
+                put(chunk, across, y, highEave - i, highStair);
+            }
+            else
+            {
+                put(chunk, lowEave + i, y, across, lowStair);
+                put(chunk, highEave - i, y, across, highStair);
+            }
+        }
+    }
+
+    // An odd span leaves one row in the middle with no pair: that is
+    // the ridge, and it is a solid block rather than a stair.
+    if (span % 2 == 1)
+    {
+        const int y = roofBase + steps;
+        for (int across = acrossFrom; across <= acrossTo; ++across)
+        {
+            if (ridgeAlongX) put(chunk, across, y, lowEave + steps, Blocks::Planks);
+            else             put(chunk, lowEave + steps, y, across, Blocks::Planks);
+        }
+    }
+
+    // The gable ends: the triangle between the wall top and the slope.
+    // Without it you can see straight into the roof from either end.
+    for (int along = (ridgeAlongX ? z0 : x0); along <= (ridgeAlongX ? z1 : x1); ++along)
+    {
+        const int fromEave = std::min(along - lowEave, highEave - along);
+        const int top = roofBase + std::min(fromEave, steps);
+
+        for (int y = eaves + 1; y < top; ++y)
+        {
+            if (ridgeAlongX)
+            {
+                put(chunk, x0, y, along, Blocks::Planks);
+                put(chunk, x1, y, along, Blocks::Planks);
+            }
+            else
+            {
+                put(chunk, along, y, z0, Blocks::Planks);
+                put(chunk, along, y, z1, Blocks::Planks);
+            }
+        }
+    }
+
+    // --- the doorway -------------------------------------------------
+
     int doorX = (x0 + x1) / 2;
     int doorZ = (z0 + z1) / 2;
     switch (building.facing)
@@ -691,16 +776,93 @@ void WorldGen::stampBuilding(Chunk& chunk, const Village::Building& building) co
 
     put(chunk, doorX, ground + 1, doorZ, doorPart(building.facing, false, false));
     put(chunk, doorX, ground + 2, doorZ, doorPart(building.facing, true, false));
-    put(chunk, doorX, ground + 3, doorZ, Blocks::Planks);
 
-    // A roof one block proud of the walls all round.
-    for (int x = x0 - 1; x <= x1 + 1; ++x)
-        for (int z = z0 - 1; z <= z1 + 1; ++z)
-            put(chunk, x, ground + 4, z, Blocks::Planks);
+    // --- what is inside ----------------------------------------------
 
-    // Something to see by, stood on the floor in a corner out of the
-    // doorway's path.
-    put(chunk, x0 + 1, ground + 1, z0 + 1, Blocks::Torch);
+    stampInterior(chunk, building, ground, x0, z0, x1, z1, doorX, doorZ);
+}
+
+// The furniture. Each trade gets the blocks it works with and a chest,
+// and the chest is what --villageinfo and the loot table hang off: the
+// kind of the building it stands in decides what is in it.
+void WorldGen::stampInterior(Chunk& chunk, const Village::Building& building, int ground,
+                             int x0, int z0, int x1, int z1, int doorX, int doorZ) const
+{
+    // Corners, in a fixed order, skipping any that the door opens onto.
+    const int cornerX[4] = { x0 + 1, x1 - 1, x0 + 1, x1 - 1 };
+    const int cornerZ[4] = { z0 + 1, z0 + 1, z1 - 1, z1 - 1 };
+
+    auto free = [&](int i)
+    {
+        return !(std::abs(cornerX[i] - doorX) <= 1 && std::abs(cornerZ[i] - doorZ) <= 1);
+    };
+
+    int slot = 0;
+    auto nextCorner = [&](int& outX, int& outZ)
+    {
+        while (slot < 4 && !free(slot)) ++slot;
+        if (slot >= 4) { outX = x0 + 1; outZ = z0 + 1; return; }
+        outX = cornerX[slot];
+        outZ = cornerZ[slot];
+        ++slot;
+    };
+
+    int cx = 0, cz = 0;
+
+    // Light first, in a corner, so every house has some whatever else
+    // ends up in it.
+    nextCorner(cx, cz);
+    put(chunk, cx, ground + 1, cz, Blocks::Torch);
+
+    switch (building.kind)
+    {
+        case Village::Kind::Blacksmith:
+        {
+            nextCorner(cx, cz);
+            put(chunk, cx, ground + 1, cz, Blocks::Furnace);
+            nextCorner(cx, cz);
+            put(chunk, cx, ground + 1, cz, Blocks::Anvil);
+            nextCorner(cx, cz);
+            put(chunk, cx, ground + 1, cz, Blocks::Chest);
+            break;
+        }
+
+        case Village::Kind::Library:
+        {
+            // Shelves down both long walls, with the table in the middle
+            // where the shelves can reach it.
+            for (int x = x0 + 1; x <= x1 - 1; ++x)
+            {
+                if (x == doorX) continue;
+                put(chunk, x, ground + 1, z0 + 1, Blocks::Bookshelf);
+                put(chunk, x, ground + 1, z1 - 1, Blocks::Bookshelf);
+            }
+
+            put(chunk, (x0 + x1) / 2, ground + 1, (z0 + z1) / 2, Blocks::EnchantingTable);
+
+            nextCorner(cx, cz);
+            put(chunk, cx, ground + 1, cz, Blocks::Chest);
+            break;
+        }
+
+        case Village::Kind::Butcher:
+        {
+            nextCorner(cx, cz);
+            put(chunk, cx, ground + 1, cz, Blocks::Furnace);
+            nextCorner(cx, cz);
+            put(chunk, cx, ground + 1, cz, Blocks::Chest);
+            break;
+        }
+
+        default:
+        {
+            nextCorner(cx, cz);
+            put(chunk, cx, ground + 1, cz, Blocks::CraftingTable);
+            nextCorner(cx, cz);
+            put(chunk, cx, ground + 1, cz, Blocks::Chest);
+            break;
+        }
+    }
 }
 
 WorldGen::VillageTally WorldGen::surveyVillages(int fromX, int fromZ, int squares) const

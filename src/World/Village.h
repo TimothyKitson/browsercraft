@@ -45,14 +45,29 @@ namespace Village
 
     enum class Kind : uint8_t
     {
-        House,
+        // Houses, which differ inside and in what their chest holds.
+        // A village has at most one smith and one library; the rest
+        // are homes and butchers.
+        Home,
+        Blacksmith,
+        Library,
+        Butcher,
+
         Well,
         Lamp,
     };
 
+    inline bool isHouse(Kind kind)
+    {
+        return kind == Kind::Home || kind == Kind::Blacksmith ||
+               kind == Kind::Library || kind == Kind::Butcher;
+    }
+
+    const char* name(Kind kind);
+
     struct Building
     {
-        Kind kind = Kind::House;
+        Kind kind = Kind::Home;
         int x = 0, z = 0;        // north-west corner, in world blocks
         int width = 0, depth = 0;
         // 0 north, 1 east, 2 south, 3 west -- which way the door looks,
@@ -63,6 +78,11 @@ namespace Village
     // Everything in the village, in world coordinates. Empty when the
     // site does not exist.
     std::vector<Building> plan(const Site& site, uint32_t seed);
+
+    // Which building, if any, stands on this block. Used to work out
+    // what a chest found in a village should hold, without storing
+    // anything: the answer is the same every time it is asked.
+    bool buildingAt(const Site& site, uint32_t seed, int x, int z, Building& out);
 
     // Whether any part of the village reaches into the given box.
     bool reaches(const Site& site, int minX, int minZ, int maxX, int maxZ);

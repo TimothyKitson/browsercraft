@@ -21,6 +21,7 @@
 #include "Entity/Rain.h"
 #include "Game/Anvil.h"
 #include "Game/Brewing.h"
+#include "Game/VillageLoot.h"
 #include "Game/Weather.h"
 #include "Game/Trading.h"
 #include "Entity/Particles.h"
@@ -501,6 +502,9 @@ private:
     void buildReturnPortal();
     void openChest(const glm::ivec3& block);
     void stowChest();
+    // Fills a chest standing in a village building the first time it
+    // is opened. Does nothing to one the player built.
+    void fillVillageChest(const glm::ivec3& block);
 
     void openFurnace(const glm::ivec3& block);
     // Looks for a completed ring of eyed frames round a frame that was

@@ -92,7 +92,7 @@ std::vector<Village::Building> Village::plan(const Site& site, uint32_t seed)
             // two of them is always at least the inset twice over.
             // That gap is the village's paths: nothing has to lay them.
             Building house;
-            house.kind = Kind::House;
+            house.kind = Kind::Home;
             house.width = 7;
             house.depth = (hashToFloat(hashCoords(site.x + gx, 11, site.z + gz,
                                                   seed + 55012)) < 0.5f) ? 7 : 6;
@@ -111,5 +111,71 @@ std::vector<Village::Building> Village::plan(const Site& site, uint32_t seed)
         }
     }
 
+    // One smith and one library at most, picked from the houses that
+    // were laid out rather than from a fixed plot -- a village whose
+    // smithy was always in the north-west corner would read as a
+    // stamped copy the second time you found one.
+    std::vector<size_t> houses;
+    for (size_t i = 0; i < out.size(); ++i)
+        if (isHouse(out[i].kind)) houses.push_back(i);
+
+    size_t smith = out.size();
+    if (houses.size() >= 2 &&
+        hashToFloat(hashCoords(site.x, 21, site.z, seed + 55020)) < 0.70f)
+    {
+        smith = houses[hashCoords(site.x, 22, site.z, seed + 55021) % houses.size()];
+        out[smith].kind = Kind::Blacksmith;
+    }
+
+    if (houses.size() >= 3 &&
+        hashToFloat(hashCoords(site.x, 23, site.z, seed + 55022)) < 0.60f)
+    {
+        // Walked forward from a drawn spot until it lands on a house
+        // that is still a home, so the library never takes the smithy's
+        // plot and the choice stays spread across the village.
+        const size_t from = hashCoords(site.x, 24, site.z, seed + 55023) % houses.size();
+        for (size_t step = 0; step < houses.size(); ++step)
+        {
+            const size_t candidate = houses[(from + step) % houses.size()];
+            if (candidate == smith) continue;
+            out[candidate].kind = Kind::Library;
+            break;
+        }
+    }
+
+    // A butcher here and there among what is left.
+    for (size_t index : houses)
+    {
+        if (out[index].kind != Kind::Home) continue;
+        if (hashToFloat(hashCoords(out[index].x, 25, out[index].z, seed + 55024)) < 0.25f)
+            out[index].kind = Kind::Butcher;
+    }
+
     return out;
+}
+
+const char* Village::name(Kind kind)
+{
+    switch (kind)
+    {
+        case Kind::Home:       return "House";
+        case Kind::Blacksmith: return "Blacksmith";
+        case Kind::Library:    return "Library";
+        case Kind::Butcher:    return "Butcher";
+        case Kind::Well:       return "Well";
+        case Kind::Lamp:       return "Lamp";
+    }
+    return "";
+}
+
+bool Village::buildingAt(const Site& site, uint32_t seed, int x, int z, Building& out)
+{
+    for (const Building& building : plan(site, seed))
+    {
+        if (x < building.x || x >= building.x + building.width) continue;
+        if (z < building.z || z >= building.z + building.depth) continue;
+        out = building;
+        return true;
+    }
+    return false;
 }

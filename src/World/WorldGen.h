@@ -87,6 +87,8 @@ private:
     // it. Decided from the site alone, so every chunk agrees.
     bool villageFits(const Village::Site& site) const;
     void stampBuilding(Chunk& chunk, const Village::Building& building) const;
+    void stampInterior(Chunk& chunk, const Village::Building& building, int ground,
+                       int x0, int z0, int x1, int z1, int doorX, int doorZ) const;
     void carveCaves(Chunk& chunk) const;
     void placeOres(Chunk& chunk) const;
     void decorate(Chunk& chunk) const;
