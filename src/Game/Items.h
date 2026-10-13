@@ -92,6 +92,9 @@ namespace Items
         BlazePowder,
         GlowstoneDust,
 
+        // Held up against what is coming at you.
+        Shield,
+
         Count
     };
 }

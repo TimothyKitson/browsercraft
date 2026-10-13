@@ -1390,7 +1390,7 @@ bool Application::frame()
             m_startupScreen == "rain" || m_startupScreen == "storm" ||
             m_startupScreen == "pbr" || m_startupScreen == "anvil" ||
             m_startupScreen == "anvilblock" || m_startupScreen == "brew" ||
-            m_startupScreen == "village")
+            m_startupScreen == "village" || m_startupScreen == "shield")
         {
             // Dev aid: open the inventory with something in it, so the
             // screenshot shows a real grid rather than 36 empty boxes.
@@ -1419,6 +1419,7 @@ bool Application::frame()
                                   m_startupScreen != "pbr" &&
                                   m_startupScreen != "anvilblock" &&
                                   m_startupScreen != "village" &&
+                                  m_startupScreen != "shield" &&
                                   m_startupScreen != "portal" &&
                                   m_startupScreen != "nether";
             m_inventoryOpen = showPanel;
@@ -1596,6 +1597,24 @@ bool Application::frame()
                     slot.count = 1;
                     openEnchantingTable(glm::ivec3(bx, by, bz));
                 }
+            }
+
+            if (m_startupScreen == "shield")
+            {
+                m_inventory.slot(0).id = Items::Shield;
+                m_inventory.slot(0).count = 1;
+                m_inventory.setSelectedSlot(0);
+                m_player.blocking = true;
+
+                m_inventory.add(Items::IronIngot, 4);
+                m_inventory.add(Blocks::Planks, 12);
+
+                const int px = static_cast<int>(std::floor(m_player.position.x));
+                const int py = static_cast<int>(std::floor(m_player.position.y));
+                const int pz = static_cast<int>(std::floor(m_player.position.z));
+                m_world->setBlock(px + 5, py, pz - 2, Blocks::Bookshelf);
+                m_world->setBlock(px + 5, py, pz,     Blocks::DiamondOre);
+                m_world->setBlock(px + 5, py, pz + 2, Blocks::EndPortalFrame);
             }
 
             if (m_startupScreen == "village")
@@ -2611,6 +2630,11 @@ void Application::updateGameplay(float deltaTime)
     // --- the rest of the world ---
     updateWorldAround(deltaTime);
     updateMining(deltaTime);
+    // A shield goes up while Use is held, which is the same button
+    // that places and eats -- so holding one takes that button over.
+    m_player.blocking = inGame() && m_keys.down(m_input, Action::Use) &&
+                        m_inventory.selected().id == Items::Shield;
+
     handleEating(deltaTime);
     handleDrinking(deltaTime);
     tickBrewing(deltaTime);
@@ -2968,6 +2992,25 @@ int Application::armourPoints() const
 // Armour wears where it is struck: every piece takes a share of the blow,
 // and a piece that gives out leaves its slot empty mid-fight, which is
 // exactly how Minecraft lets you know you are in trouble.
+void Application::wearShield(int points)
+{
+    if (m_player.creative() || points <= 0) return;
+
+    ItemStack& held = m_inventory.selected();
+    if (held.id != Items::Shield) return;
+
+    const uint32_t roll = static_cast<uint32_t>(held.damage * 2654435761u) ^
+                          static_cast<uint32_t>(m_elapsedSeconds * 977.0f);
+    if (!Enchanting::wearsThisTime(held.enchantments, roll)) return;
+
+    held.damage += points;
+    if (held.damage >= Shield::MAX_DURABILITY)
+    {
+        held.clear();
+        m_audio.play(Sound::Click, 0.8f, 0.5f);
+    }
+}
+
 void Application::wearArmour(int incoming)
 {
     if (m_player.creative() || incoming <= 0) return;
@@ -4289,7 +4332,7 @@ void Application::renderHand()
                       // held.id is a StackId, and mixing them is what
                       // -Wextra objects to.
                       held.empty() ? static_cast<StackId>(Blocks::Air) : held.id,
-                      sky, blockLight, m_player.sneaking);
+                      sky, blockLight, m_player.sneaking, m_player.blocking);
 }
 
 // -------------------------------------------------------------- players ---
@@ -4543,6 +4586,23 @@ void Application::updateMobs(float deltaTime)
     // decides how many of them actually land.
     for (const MobStrike& strike : m_entities.drainStrikes())
     {
+        // A raised shield stops a blow outright, but only one that
+        // comes at the front of it. Turning to meet what is hitting you
+        // is the whole of using one.
+        if (m_player.blocking &&
+            Shield::covers(m_camera.front, m_player.position, strike.from))
+        {
+            wearShield(Shield::WEAR_PER_BLOCK);
+            m_audio.play(Sound::Click, 0.7f, 0.7f);
+
+            // Shoved back, but unhurt.
+            const glm::vec3 off = m_player.position - strike.from;
+            const glm::vec3 level(off.x, 0.0f, off.z);
+            const float span = glm::length(level);
+            if (span > 0.001f) m_player.velocity += (level / span) * 2.5f;
+            continue;
+        }
+
         if (!m_player.damage(strike.damage)) continue;
 
         wearArmour(strike.damage);

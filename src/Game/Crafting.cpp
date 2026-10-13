@@ -44,6 +44,12 @@ namespace
                          Blocks::EndStone,  Blocks::EndStone,  Blocks::EndStone },
           0, Blocks::EndPortalFrame, 4 },
 
+        // A shield: planks round an iron boss.
+        { false, 3, 3, { Blocks::Planks,    Items::IronIngot,  Blocks::Planks,
+                         Blocks::Planks,    Blocks::Planks,    Blocks::Planks,
+                         _,                 Blocks::Planks,    _ },
+          0, Items::Shield, 1 },
+
         // Brewing's glassware and the sweetener. One cane makes one
         // sugar; three glass makes three bottles.
         { true,  0, 0, { Blocks::SugarCane },

@@ -161,8 +161,9 @@ namespace Tiles
         ItemSugar,
         ItemBlazePowder,
         ItemGlowstoneDust,
+        ItemShield,
 
-        ItemTileEnd = ItemGlowstoneDust + 1
+        ItemTileEnd = ItemShield + 1
     };
 
     // Ten progressively more broken overlay tiles for the mining animation.

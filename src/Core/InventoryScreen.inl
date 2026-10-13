@@ -71,7 +71,7 @@ namespace
         Blocks::CraftingTable, Blocks::Furnace, Blocks::Chest, Blocks::Bed,
         Blocks::Bookshelf, Blocks::EnchantingTable, Blocks::Anvil,
         Blocks::EndPortalFrame,
-        Items::Stick, Items::Coal, Items::Bow, Items::Arrow, Items::FlintAndSteel,
+        Items::Stick, Items::Coal, Items::Bow, Items::Arrow, Items::Shield, Items::FlintAndSteel,
         Items::Bucket, Items::WaterBucket, Items::LavaBucket,
         Items::IronIngot, Items::GoldIngot, Items::Diamond,
         Items::WoodPickaxe, Items::WoodAxe, Items::WoodShovel, Items::WoodSword, Items::WoodHoe,

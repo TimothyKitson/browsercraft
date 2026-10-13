@@ -52,7 +52,7 @@ public:
     // so your hand darkens with the room you are in.
     void render(Shader& chunkShader, const Camera& camera, const PlayerSkin& skin,
                 const Atlas& atlas, StackId stack, float sky, float blockLight,
-                bool sneaking);
+                bool sneaking, bool blocking = false);
 
 private:
     Mesh m_mesh;

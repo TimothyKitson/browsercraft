@@ -1,5 +1,6 @@
 #include "Anvil.h"
 #include "Armour.h"
+#include "Shield.h"
 #include "Tools.h"
 #include <algorithm>
 
@@ -66,6 +67,9 @@ namespace
 
 StackId Anvil::repairMaterial(StackId item)
 {
+    // The boss is iron, so iron is what mends it.
+    if (item == Items::Shield) return Items::IronIngot;
+
     switch (Tools::tierOf(item))
     {
         case Tools::Tier::Wood:    return Blocks::Planks;
@@ -90,6 +94,7 @@ StackId Anvil::repairMaterial(StackId item)
 
 int Anvil::maxDurability(StackId item)
 {
+    if (item == Items::Shield) return Shield::MAX_DURABILITY;
     if (Tools::isTool(item)) return Tools::maxDurability(Tools::tierOf(item));
     if (Armour::tierOf(item) != Armour::Tier::None) return Armour::maxDurability(item);
     return 0;

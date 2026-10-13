@@ -111,6 +111,10 @@ public:
     glm::vec3 position{ 0.0f };
     glm::vec3 velocity{ 0.0f };
     bool onGround = false;
+    // Holding a shield up. Set from what is in hand and whether Use is
+    // down; read by the movement, which slows, and by whoever applies
+    // a blow, which is where it actually stops anything.
+    bool blocking = false;
     bool flying = false;
     bool sprinting = false;
     bool sneaking = false;

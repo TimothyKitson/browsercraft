@@ -2,6 +2,7 @@
 #include "Game/Experience.h"
 #include "Game/Enchanting.h"
 #include "Game/Armour.h"
+#include "Game/Shield.h"
 #include "World/World.h"
 #include <algorithm>
 #include <cmath>
@@ -454,6 +455,10 @@ void Player::update(float deltaTime, const World& world, const Controls& control
     // Speed and slowness scale whatever the mode settled on, so they
     // read the same walking, sprinting or swimming.
     targetSpeed *= Effects::speedMultiplier(effects);
+
+    // A raised shield slows you to a walk. Without that cost it would
+    // simply be worn at all times.
+    if (blocking && !flying) targetSpeed *= Shield::RAISED_SPEED;
 
     const glm::vec3 targetVelocity = controls.wishDirection * targetSpeed;
 

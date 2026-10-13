@@ -21,6 +21,7 @@
 #include "Entity/Rain.h"
 #include "Game/Anvil.h"
 #include "Game/Brewing.h"
+#include "Game/Shield.h"
 #include "Game/VillageLoot.h"
 #include "Game/Weather.h"
 #include "Game/Trading.h"
@@ -475,6 +476,9 @@ private:
     // rewards enchanting the rest.
     uint32_t armourProtection() const;
     void wearArmour(int incoming);
+    // Costs the held shield a point for stopping a blow, and breaks
+    // it when it runs out.
+    void wearShield(int points);
     void wearOnSwing(StackId weapon);
     void openBench(const glm::ivec3& block);
 

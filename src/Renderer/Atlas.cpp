@@ -2396,6 +2396,35 @@ namespace
         }
     }
 
+    // A shield: a plank face banded with iron, narrowing to a point.
+    void paintItemShield(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        const int n = Tile::N;
+        const Color wood{ 142, 106, 64 };
+        const Color woodDark{ 110, 80, 46 };
+        const Color iron{ 176, 176, 182 };
+
+        const float mid = (n - 1) * 0.5f;
+        for (int y = n / 8; y < n - n / 8; ++y)
+        {
+            // Square at the top, tapering to a point at the bottom.
+            const float down = (y - n / 8) / static_cast<float>(n - n / 4);
+            const int half = static_cast<int>((n * 0.34f) * (1.0f - down * down * 0.85f));
+
+            for (int x = static_cast<int>(mid) - half; x <= static_cast<int>(mid) + half; ++x)
+            {
+                if (x < 0 || x >= n) continue;
+                t.set(x, y, ((x + y) % 5 == 0) ? woodDark : wood);
+            }
+        }
+
+        // The boss, and a band across the middle.
+        for (int y = n / 2 - 1; y <= n / 2 + 1; ++y)
+            for (int x = n / 3; x < n - n / 3; ++x)
+                if (t.get(x, y).a > 0) t.set(x, y, iron);
+    }
+
     void paintItemGlassBottle(Tile& t) { paintBottle(t, Color{ 0, 0, 0, 0 }, false); }
     void paintItemPotion(Tile& t) { paintBottle(t, Color{ 220, 60, 80 }, true); }
 
@@ -2817,6 +2846,7 @@ namespace
         { Tiles::EnchantTableSide, paintEnchantTableSide },
         { Tiles::EmeraldOre,    paintEmeraldOre },
         { Tiles::ItemEmerald,   paintItemEmerald },
+        { Tiles::ItemShield,        paintItemShield },
         { Tiles::ItemGlassBottle,   paintItemGlassBottle },
         { Tiles::ItemPotion,        paintItemPotion },
         { Tiles::ItemNetherWart,    paintItemNetherWart },

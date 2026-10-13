@@ -23,6 +23,7 @@
 #include "Game/Experience.h"
 #include "Game/Cane.h"
 #include "Game/Anvil.h"
+#include "Game/Shield.h"
 #include "Game/Effects.h"
 #include "Game/Brewing.h"
 #include "World/Village.h"
@@ -1822,6 +1823,73 @@ namespace
             }
             check(p.health <= 0, "and standing in it is fatal");
         }
+    }
+
+    void testShield()
+    {
+        section("the shield: what it stops");
+
+        const glm::vec3 me(0.0f, 70.0f, 0.0f);
+        const glm::vec3 north(0.0f, 0.0f, -1.0f);
+
+        // Straight ahead is covered; behind is not.
+        check(Shield::covers(north, me, me + glm::vec3(0.0f, 0.0f, -5.0f)),
+              "a blow from straight ahead lands on the shield");
+        check(!Shield::covers(north, me, me + glm::vec3(0.0f, 0.0f, 5.0f)),
+              "one from behind does not");
+        check(!Shield::covers(north, me, me + glm::vec3(5.0f, 0.0f, 0.0f)),
+              "nor one from straight to the side");
+
+        // Off to one side but still in front.
+        check(Shield::covers(north, me, me + glm::vec3(2.0f, 0.0f, -5.0f)),
+              "a blow a little off the front still lands on it");
+        check(Shield::covers(north, me, me + glm::vec3(-2.0f, 0.0f, -5.0f)),
+              "on either side of the front");
+
+        // Height is not distance: something above you is still ahead.
+        check(Shield::covers(north, me, me + glm::vec3(0.0f, 9.0f, -4.0f)),
+              "something standing over you is still in front of you");
+        check(!Shield::covers(north, me, me + glm::vec3(0.0f, 9.0f, 4.0f)),
+              "and standing over you from behind is still behind");
+
+        // Degenerate inputs decide nothing rather than crashing.
+        check(!Shield::covers(glm::vec3(0.0f), me, me + glm::vec3(0.0f, 0.0f, -5.0f)),
+              "looking nowhere covers nothing");
+        check(!Shield::covers(north, me, me), "and a blow from where you stand covers nothing");
+
+        // Turning to meet it is the whole of using one.
+        {
+            const glm::vec3 from = me + glm::vec3(5.0f, 0.0f, 0.0f);
+            check(!Shield::covers(north, me, from), "caught side-on, it does not cover");
+            check(Shield::covers(glm::vec3(1.0f, 0.0f, 0.0f), me, from),
+                  "and covers once you have turned to face it");
+        }
+
+        // What gets through.
+        check(Shield::damageThrough(7, true) == 0, "a blow that is blocked does nothing");
+        check(Shield::damageThrough(7, false) == 7, "and one that is not comes through whole");
+        check(Shield::damageThrough(0, false) == 0, "nothing stays nothing");
+
+        // It wears out, and iron mends it.
+        check(Anvil::maxDurability(Items::Shield) == Shield::MAX_DURABILITY,
+              "a shield has a life to spend");
+        check(Anvil::wearsOut(Items::Shield), "so the anvil knows it wears out");
+        check(Anvil::repairMaterial(Items::Shield) == Items::IronIngot,
+              "and that iron is what mends it");
+        check(Shield::WEAR_PER_BLOCK > 0, "every blow it stops costs it something");
+
+        // Holding one up slows you down, or it would be worn always.
+        check(Shield::RAISED_SPEED > 0.0f && Shield::RAISED_SPEED < 1.0f,
+              "a raised shield slows you, but does not root you");
+        {
+            Player walking(glm::vec3(0.0f, 70.0f, 0.0f));
+            check(!walking.blocking, "and nobody starts with one up");
+        }
+
+        // One stacks to a single slot: two of them are rarely the same
+        // shield, and a stack has one damage field between them.
+        check(maxStackOf(Items::Shield) == 1, "a shield does not stack");
+        check(displayName(Items::Shield)[0] != '\0', "and has a name");
     }
 
     void testAnvil()
@@ -5347,6 +5415,7 @@ int runSelfTest()
     testMobDrops();
     testEndermanStare();
     testAnvil();
+    testShield();
     testVillages();
     testVillageLoot();
     testVillageLife();

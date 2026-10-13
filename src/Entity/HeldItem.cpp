@@ -322,15 +322,25 @@ void HeldItem::appendSprite(const glm::mat4& toWorld, StackId stack, float sky, 
 
 void HeldItem::render(Shader& chunkShader, const Camera& camera, const PlayerSkin& skin,
                       const Atlas& atlas, StackId stack, float sky, float blockLight,
-                      bool sneaking)
+                      bool sneaking, bool blocking)
 {
     const float swing = swingAngle();
 
     // The hand drops and swings back as you strike, and sits lower when
     // you are sneaking, the same as the camera does.
-    const float down = HAND_DOWN + swing * 0.22f + (sneaking ? 0.08f : 0.0f);
-    const float forward = HAND_FORWARD - swing * 0.14f;
-    const float across = HAND_RIGHT - swing * 0.05f;
+    float down = HAND_DOWN + swing * 0.22f + (sneaking ? 0.08f : 0.0f);
+    float forward = HAND_FORWARD - swing * 0.14f;
+    float across = HAND_RIGHT - swing * 0.05f;
+
+    // A raised shield comes up and in, across the front of you. Held at
+    // the hip where everything else is held, it read as a plank being
+    // carried rather than as cover.
+    if (blocking)
+    {
+        down -= 0.26f;
+        across -= 0.26f;
+        forward -= 0.18f;
+    }
 
     const glm::vec3 origin = camera.position + camera.front * forward +
                              camera.right * across - camera.up * down;
