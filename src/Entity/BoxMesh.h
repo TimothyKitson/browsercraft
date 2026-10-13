@@ -56,6 +56,12 @@ namespace BoxMesh
         // sheep, and scaling here rather than in the boxes is what keeps
         // its texture patches the size the sheet says they are.
         float scale = 1.0f;
+
+        // The whole model turned about its own vertical axis before it
+        // is placed in the world. Mojang builds a cart lying along x and
+        // turns it a quarter at render time; every mob here is built
+        // along z, which is what this reconciles.
+        float modelYaw = 0.0f;
         float jointAngle = 0.0f;    // radians, applied to jointed boxes
         glm::vec3 jointPivot{ 0.0f };
     };

@@ -97,6 +97,8 @@ namespace Items
 
         // Set down on water and got into.
         Boat,
+        // Set down on a rail and got into.
+        Minecart,
 
         Count
     };

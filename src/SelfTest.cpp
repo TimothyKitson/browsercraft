@@ -2026,6 +2026,241 @@ namespace
         }
     }
 
+    void testHeightStretch()
+    {
+        section("pbr: the height map a pack actually ships");
+
+        auto tile = [](std::initializer_list<uint8_t> alphas) {
+            std::vector<uint8_t> rgba;
+            for (uint8_t a : alphas)
+            {
+                rgba.push_back(10); rgba.push_back(20); rgba.push_back(30); rgba.push_back(a);
+            }
+            return rgba;
+        };
+        auto alphaOf = [](const std::vector<uint8_t>& rgba) {
+            std::vector<uint8_t> out;
+            for (size_t i = 3; i < rgba.size(); i += 4) out.push_back(rgba[i]);
+            return out;
+        };
+
+        // The real shape of the problem: Prime's bricks run 233 to 255,
+        // which parallax and the crevice shading both read as a flat
+        // wall. Stretched, the same tile uses the whole range.
+        {
+            std::vector<uint8_t> bricks = tile({ 233, 244, 255, 240, 233, 255 });
+            Atlas::stretchHeightRange(bricks);
+            const std::vector<uint8_t> a = alphaOf(bricks);
+            check(a[0] == 0, "the lowest point of a shallow tile goes to the floor");
+            check(a[2] == 255, "and the highest to the ceiling");
+            check(a[1] > a[3] && a[3] > a[0], "and the order of everything between is kept");
+        }
+
+        // Sand is flat and must stay flat. Amplifying nothing gives
+        // noise, which would be worse than leaving it alone.
+        {
+            std::vector<uint8_t> sand = tile({ 255, 255, 255, 255 });
+            Atlas::stretchHeightRange(sand);
+            const std::vector<uint8_t> a = alphaOf(sand);
+            check(a[0] == 255 && a[3] == 255, "a tile with no relief is left alone");
+        }
+
+        // And so is one that barely varies: that is a pack saying flat,
+        // not a pack being subtle.
+        {
+            std::vector<uint8_t> nearly = tile({ 250, 252, 253, 251 });
+            Atlas::stretchHeightRange(nearly);
+            const std::vector<uint8_t> a = alphaOf(nearly);
+            check(a[0] == 250 && a[2] == 253, "and so is one that barely varies");
+        }
+
+        // The colour channels are the normal, and must not be touched.
+        {
+            std::vector<uint8_t> any = tile({ 100, 200, 150 });
+            Atlas::stretchHeightRange(any);
+            check(any[0] == 10 && any[1] == 20 && any[2] == 30,
+                  "stretching the height leaves the normal alone");
+        }
+
+        // Already full-range is a no-op, so running it twice is safe.
+        {
+            std::vector<uint8_t> full = tile({ 0, 128, 255 });
+            Atlas::stretchHeightRange(full);
+            std::vector<uint8_t> twice = full;
+            Atlas::stretchHeightRange(twice);
+            check(full == twice, "a tile already using the whole range does not move");
+        }
+
+        // Order is never inverted, whatever the range: a crevice must
+        // not come out as a ridge.
+        {
+            std::vector<uint8_t> ramp = tile({ 190, 200, 210, 220, 230, 240, 250 });
+            Atlas::stretchHeightRange(ramp);
+            const std::vector<uint8_t> a = alphaOf(ramp);
+            bool rising = true;
+            for (size_t i = 1; i < a.size(); ++i) if (a[i] <= a[i - 1]) rising = false;
+            check(rising, "a rising slope comes out rising");
+            check(a.front() == 0 && a.back() == 255, "and spans the full range");
+        }
+    }
+
+    void testRails()
+    {
+        section("rails, and what runs on them");
+
+        // Every shape is a rail, and only the plain one is a thing you
+        // hold: the other five are it bent to meet its neighbours.
+        for (BlockId id : { Blocks::RailNorthSouth, Blocks::RailEastWest,
+                            Blocks::RailNorthEast, Blocks::RailSouthEast,
+                            Blocks::RailSouthWest, Blocks::RailNorthWest })
+        {
+            check(isRail(id), std::string(blockInfo(id).name) + " is a rail");
+            check(!isSolid(id), "and you walk over it, not into it");
+            check(!isOpaque(id), "and it casts no shadow");
+            check(Tools::canHarvest(Blocks::Air, id),
+                  "and bare hands can pick it up");
+
+            // Every rail joins exactly two ways, or a cart reaching it
+            // would have nowhere to go.
+            int ends = 0;
+            for (int d = 0; d < 4; ++d) if (railLinks(id, d)) ++ends;
+            check(ends == 2, "and it runs between exactly two of its sides");
+        }
+
+        check(isObtainable(Blocks::RailNorthSouth), "a rail is a thing you hold");
+        for (BlockId id : { Blocks::RailEastWest, Blocks::RailNorthEast,
+                            Blocks::RailSouthEast, Blocks::RailSouthWest,
+                            Blocks::RailNorthWest })
+            check(!isObtainable(id), "but its other shapes are not");
+
+        // Shaping. A straight run beats a corner wherever both would
+        // do, which is what stops a line kinking when a spur is laid
+        // alongside it.
+        check(railShapeFor(false, false, false, false) == Blocks::RailNorthSouth,
+              "a rail on its own lies north to south");
+        check(railShapeFor(true, false, true, false) == Blocks::RailNorthSouth,
+              "one between two others in a line stays straight");
+        check(railShapeFor(false, true, false, true) == Blocks::RailEastWest,
+              "and so does one lying the other way");
+        check(railShapeFor(true, true, true, true) == Blocks::RailNorthSouth,
+              "a crossroads picks a straight rather than a corner");
+        check(railShapeFor(false, true, false, false) == Blocks::RailEastWest,
+              "one neighbour east makes an east-west rail");
+
+        check(railShapeFor(true, true, false, false) == Blocks::RailNorthEast,
+              "north and east make the north-east bend");
+        check(railShapeFor(false, true, true, false) == Blocks::RailSouthEast,
+              "south and east the south-east one");
+        check(railShapeFor(false, false, true, true) == Blocks::RailSouthWest,
+              "south and west the south-west one");
+        check(railShapeFor(true, false, false, true) == Blocks::RailNorthWest,
+              "and north and west the last");
+
+        // Every corner joins the two sides its name claims.
+        check(railLinks(Blocks::RailNorthEast, 0) && railLinks(Blocks::RailNorthEast, 1),
+              "the north-east bend joins north to east");
+        check(railLinks(Blocks::RailSouthWest, 2) && railLinks(Blocks::RailSouthWest, 3),
+              "and the south-west one south to west");
+
+        // The shaping must be reversible: whatever shape a set of
+        // neighbours produces must join up with exactly those sides.
+        for (int mask = 0; mask < 16; ++mask)
+        {
+            const bool n = (mask & 1) != 0, e = (mask & 2) != 0;
+            const bool s = (mask & 4) != 0, w = (mask & 8) != 0;
+            const BlockId shaped = railShapeFor(n, e, s, w);
+
+            int joined = 0;
+            for (int d = 0; d < 4; ++d) if (railLinks(shaped, d)) ++joined;
+            check(joined == 2, "every shaping gives a rail with two ends");
+
+            // Where exactly two neighbours sit, the rail must reach
+            // both of them -- otherwise a laid track has a gap in it.
+            const int count = (n ? 1 : 0) + (e ? 1 : 0) + (s ? 1 : 0) + (w ? 1 : 0);
+            if (count != 2) continue;
+            const bool reaches = (!n || railLinks(shaped, 0)) && (!e || railLinks(shaped, 1)) &&
+                                 (!s || railLinks(shaped, 2)) && (!w || railLinks(shaped, 3));
+            check(reaches, "and a rail with two neighbours reaches both");
+        }
+
+        // The cart.
+        const MobType& cart = mobType(MobId::Minecart);
+        check(cart.ridesRails, "a minecart runs on rails");
+        check(cart.inanimate && cart.rideable, "and is got into, not tamed");
+        check(!cart.floats, "and it is no boat");
+        check(cart.drop == Items::Minecart, "break one and you get it back");
+        check(cart.walkSpeed > mobType(MobId::Boat).walkSpeed,
+              "and it is quicker than a boat, which is the point of track");
+
+        // Guidance. A cart is put on the middle of its rail across the
+        // travel, and sent out the end it is already pointed at.
+        {
+            const glm::ivec3 cell(4, 70, -9);
+            glm::vec3 snapped(0.0f);
+            float yaw = 0.0f;
+
+            // Heading east down a north-south rail: it must leave by
+            // one of the two ends the rail actually has, not east.
+            check(Mob::railGuide(Blocks::RailNorthSouth, cell,
+                                 glm::vec3(4.8f, 70.1f, -8.2f), 0.0f, snapped, yaw),
+                  "a cart on a rail is guided by it");
+            check(yaw == Mob::railYaw(0) || yaw == Mob::railYaw(2),
+                  "and off a north-south rail it leaves north or south");
+            check(std::fabs(snapped.x - 4.5f) < 0.0001f,
+                  "and is pulled to the middle of the track across its travel");
+            check(std::fabs(snapped.y - (70.0f + Mob::RAIL_LIFT)) < 0.0001f,
+                  "and sits on the rail's own surface");
+
+            // Pointed south, it goes south; turned round, it goes back.
+            Mob::railGuide(Blocks::RailNorthSouth, cell, glm::vec3(4.5f, 70.1f, -8.5f),
+                           90.0f, snapped, yaw);
+            check(yaw == Mob::railYaw(2), "pointed south it carries on south");
+            Mob::railGuide(Blocks::RailNorthSouth, cell, glm::vec3(4.5f, 70.1f, -8.5f),
+                           -90.0f, snapped, yaw);
+            check(yaw == Mob::railYaw(0), "and turned round it goes back north");
+
+            // A bend sends it out the other way than it came in.
+            Mob::railGuide(Blocks::RailSouthEast, cell, glm::vec3(4.5f, 70.1f, -8.5f),
+                           -90.0f, snapped, yaw);
+            check(yaw == Mob::railYaw(1) || yaw == Mob::railYaw(2),
+                  "a bend sends a cart out one of its own two ends");
+
+            // Anything that is not a rail guides nothing.
+            check(!Mob::railGuide(Blocks::Stone, cell, glm::vec3(4.5f, 70.1f, -8.5f),
+                                  0.0f, snapped, yaw),
+                  "and a stone block is not a rail");
+        }
+
+        // Every rail shape must guide, from any heading, to one of its
+        // own ends. A shape that sent a cart off the track would derail
+        // it into the scenery.
+        for (BlockId id : { Blocks::RailNorthSouth, Blocks::RailEastWest,
+                            Blocks::RailNorthEast, Blocks::RailSouthEast,
+                            Blocks::RailSouthWest, Blocks::RailNorthWest })
+        {
+            bool always = true;
+            for (int degrees = -180; degrees < 180; degrees += 15)
+            {
+                glm::vec3 snapped(0.0f);
+                float yaw = 0.0f;
+                if (!Mob::railGuide(id, glm::ivec3(0, 64, 0), glm::vec3(0.5f, 64.1f, 0.5f),
+                                    static_cast<float>(degrees), snapped, yaw))
+                {
+                    always = false;
+                    break;
+                }
+
+                bool onTrack = false;
+                for (int d = 0; d < 4; ++d)
+                    if (railLinks(id, d) && std::fabs(yaw - Mob::railYaw(d)) < 0.001f)
+                        onTrack = true;
+                if (!onTrack) always = false;
+            }
+            check(always, std::string("a cart never leaves a ") + blockInfo(id).name +
+                              " anywhere but its own two ends");
+        }
+    }
+
     void testWolves()
     {
         section("the wolf: wild until it is given a bone");
@@ -5703,6 +5938,8 @@ int runSelfTest()
     testWolves();
     testRiding();
     testBoats();
+    testRails();
+    testHeightStretch();
     testVillages();
     testVillageLoot();
     testVillageLife();

@@ -1093,6 +1093,10 @@ namespace
 
     // ---------- resource pack loading ----------
 
+    // How much of the height scale a tile has to use before it counts
+    // as having any relief at all. Eight of 255 is about three percent.
+    const int HEIGHT_MIN_SPAN = 8;
+
     const char* PACK_DIRECTORY = "assets/textures/block";
     // Items live in their own folder in a pack, and are plain flat icons
     // -- no tinting, no animation, no normal maps to go with them.
@@ -1202,6 +1206,7 @@ namespace
 
     // ---------- Bedrock "texture set" PBR ----------
     //
+
     // Java packs ship LabPBR: "<name>_n" packs the normal plus AO and a
     // height map, "<name>_s" packs smoothness, F0, porosity and emission.
     // Bedrock RTX / Vibrant Visuals packs (Prizma Visuals and friends)
@@ -2156,6 +2161,112 @@ namespace
     // The anvil, seen from above: the flat face you work on, with the
     // horn standing proud at one end.
     // Trodden earth: dirt, rubbed pale and smooth on top.
+    // A rail: two iron strips on wooden sleepers, running top to bottom
+    // of the tile so the mesher can turn it a quarter and get the other
+    // straight for nothing.
+    void paintRail(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        const int n = Tile::N;
+        const Color iron{ 164, 164, 170 };
+        const Color ironDark{ 118, 118, 126 };
+        const Color sleeper{ 104, 78, 48 };
+        const Color sleeperDark{ 82, 60, 36 };
+
+        // Sleepers across, every four sixteenths.
+        const int step = std::max(2, n / 4);
+        const int thick = std::max(1, n / 16);
+        for (int y = step / 2; y < n; y += step)
+            for (int j = 0; j < thick * 2; ++j)
+                for (int x = n / 8; x < n - n / 8; ++x)
+                    t.set(x, y + j, ((x + y) % 7 == 0) ? sleeperDark : sleeper);
+
+        // Two rails down it.
+        for (int side = 0; side < 2; ++side)
+        {
+            const int x0 = side == 0 ? n / 4 : n - n / 4 - thick;
+            for (int y = 0; y < n; ++y)
+                for (int i = 0; i < thick; ++i)
+                    t.set(x0 + i, y, (i == 0) ? iron : ironDark);
+        }
+    }
+
+    // The same, bent through a right angle: in along the top edge and
+    // out along the right one.
+    void paintRailCorner(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        const int n = Tile::N;
+        const Color iron{ 164, 164, 170 };
+        const Color ironDark{ 118, 118, 126 };
+        const Color sleeper{ 104, 78, 48 };
+
+        const int thick = std::max(1, n / 16);
+
+        // Two arcs about the far corner, one inside the other.
+        for (int side = 0; side < 2; ++side)
+        {
+            const float radius = (side == 0 ? 0.25f : 0.75f) * n;
+            for (int step = 0; step <= n * 2; ++step)
+            {
+                const float angle = (step / static_cast<float>(n * 2)) * 1.5707963f;
+                const int x = static_cast<int>(n - radius * std::cos(angle));
+                const int y = static_cast<int>(n - radius * std::sin(angle));
+                for (int i = 0; i < thick; ++i)
+                    for (int j = 0; j < thick; ++j)
+                        t.set(x + i, y + j, (i == 0) ? iron : ironDark);
+            }
+        }
+
+        // Sleepers fanned between them.
+        for (int step = 0; step <= 6; ++step)
+        {
+            const float angle = (step / 6.0f) * 1.5707963f;
+            for (float radius = 0.3f * n; radius < 0.72f * n; radius += 0.5f)
+            {
+                const int x = static_cast<int>(n - radius * std::cos(angle));
+                const int y = static_cast<int>(n - radius * std::sin(angle));
+                if (t.get(x, y).a == 0) t.set(x, y, sleeper);
+            }
+        }
+    }
+
+    // A minecart seen from the side and a little above: an open iron
+    // tub on two wheels.
+    void paintItemMinecart(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        const int n = Tile::N;
+        const Color iron{ 142, 146, 154 };
+        const Color ironDark{ 98, 102, 110 };
+        const Color inside{ 70, 74, 80 };
+        const Color wheel{ 60, 60, 66 };
+
+        const int left = n / 8;
+        const int right = n - n / 8;
+        const int top = n / 3;
+        const int floorY = n - n / 4;
+
+        for (int y = top; y < floorY; ++y)
+            for (int x = left; x < right; ++x)
+            {
+                const bool wall = x < left + n / 8 || x >= right - n / 8 || y >= floorY - n / 8;
+                const bool lip = y < top + n / 12;
+                t.set(x, y, lip ? iron : (wall ? ironDark : inside));
+            }
+
+        // Two wheels under it, just proud of the tub.
+        for (int side = 0; side < 2; ++side)
+        {
+            const int cx = side == 0 ? left + n / 5 : right - n / 5;
+            const int cy = floorY + n / 12;
+            const int r = std::max(1, n / 10);
+            for (int dy = -r; dy <= r; ++dy)
+                for (int dx = -r; dx <= r; ++dx)
+                    if (dx * dx + dy * dy <= r * r) t.set(cx + dx, cy + dy, wheel);
+        }
+    }
+
     void paintDirtPathTop(Tile& t)
     {
         const int n = Tile::N;
@@ -2868,6 +2979,8 @@ namespace
         { Tiles::SugarCane,     paintSugarCane },
         { Tiles::BookshelfSide, paintBookshelfSide },
         { Tiles::AnvilTop,         paintAnvilTop },
+        { Tiles::RailTile,         paintRail },
+        { Tiles::RailCorner,       paintRailCorner },
         { Tiles::DirtPathTop,      paintDirtPathTop },
         { Tiles::DirtPathSide,     paintDirtPathSide },
         { Tiles::NetherWartTile,   paintNetherWartTile },
@@ -2884,6 +2997,7 @@ namespace
         { Tiles::ItemSugar,         paintItemSugar },
         { Tiles::ItemBlazePowder,   paintItemBlazePowder },
         { Tiles::ItemBoat,          paintItemBoat },
+        { Tiles::ItemMinecart,      paintItemMinecart },
         { Tiles::ItemGlowstoneDust, paintItemGlowstoneDust },
         { Tiles::EndFrameTop,   paintEndFrameTop },
         { Tiles::EndFrameEye,   paintEndFrameEye },
@@ -3053,6 +3167,8 @@ namespace
         { Tiles::AnvilTop,         { "anvil_top", nullptr },                           Tinting::None,    0,   false },
         { Tiles::NetherWartTile,   { "nether_wart_stage2", "nether_wart", nullptr },  Tinting::None,    0,   false },
         { Tiles::BrewingStandTile, { "brewing_stand", nullptr },                       Tinting::None,    0,   false },
+        { Tiles::RailTile,         { "rail", "rail_normal", nullptr },               Tinting::None,    0,   false },
+        { Tiles::RailCorner,       { "rail_corner", "rail_normal_turned", nullptr }, Tinting::None,    0,   false },
         { Tiles::DirtPathTop,      { "dirt_path_top", "grass_path_top", nullptr },    Tinting::None,    0,   false },
         { Tiles::DirtPathSide,     { "dirt_path_side", "grass_path_side", nullptr },  Tinting::None,    0,   false },
         { Tiles::AnvilSide,        { "anvil", nullptr },                               Tinting::None,    0,   false },
@@ -3292,7 +3408,9 @@ Atlas::Atlas()
                 {
                     const Image source = (frameCount > 1) ? extractFrame(normalMap, 0, normalMap.height / frameCount)
                                                           : normalMap;
-                    blitInto(normalPixels, entry.tile, scaleNearest(source, tilePixels, tilePixels));
+                    Image tile = scaleNearest(source, tilePixels, tilePixels);
+                    Atlas::stretchHeightRange(tile.rgba);
+                    blitInto(normalPixels, entry.tile, tile);
                     m_hasPbrMaps = true;
                 }
 
@@ -3339,7 +3457,9 @@ Atlas::Atlas()
 
                 if (normalMap.valid())
                 {
-                    blitInto(normalPixels, entry.tile, scaleNearest(normalMap, tilePixels, tilePixels));
+                    Image tile = scaleNearest(normalMap, tilePixels, tilePixels);
+                    Atlas::stretchHeightRange(tile.rgba);
+                    blitInto(normalPixels, entry.tile, tile);
                     m_hasPbrMaps = true;
                     m_bedrockMaps = true;
                 }
@@ -3539,6 +3659,24 @@ std::vector<uint8_t> Atlas::crackOverlay(int stage)
 int Atlas::crackOverlaySize()
 {
     return Atlas::FALLBACK_TILE_PIXELS;
+}
+
+void Atlas::stretchHeightRange(std::vector<uint8_t>& rgba)
+{
+    uint8_t low = 255, high = 0;
+    for (size_t i = 3; i < rgba.size(); i += 4)
+    {
+        low = std::min(low, rgba[i]);
+        high = std::max(high, rgba[i]);
+    }
+
+    // Under this the pack is saying the surface is flat, not that it
+    // drew something very subtle.
+    const int span = static_cast<int>(high) - static_cast<int>(low);
+    if (span < HEIGHT_MIN_SPAN) return;
+
+    for (size_t i = 3; i < rgba.size(); i += 4)
+        rgba[i] = static_cast<uint8_t>(((static_cast<int>(rgba[i]) - low) * 255) / span);
 }
 
 void Atlas::uploadTile(int tile, const uint8_t* rgba)

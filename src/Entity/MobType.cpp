@@ -29,14 +29,21 @@ namespace
     // and a box's minimum corner becomes its maximum. Doing that here, in
     // one place, is what lets the rest of the table be transcribed from
     // the vanilla models without a second thought.
+    // Mojang measures a model downwards from a plane the renderer puts
+    // somewhere above the entity's feet, and for a mob that plane is at
+    // twenty-four sixteenths. A cart is not a mob and is drawn from a
+    // lower one, so the base is a parameter rather than a constant.
+    constexpr int MOB_BASE = 24;
+    constexpr int CART_BASE = 5;
+
     MobBox mc(Part part, int u, int v, int w, int h, int d,
-              int bx, int by, int bz, int px, int py, int pz)
+              int bx, int by, int bz, int px, int py, int pz, int base = MOB_BASE)
     {
         MobBox box;
         box.part = part;
         box.size = glm::ivec3(w, h, d);
-        box.origin = glm::ivec3(-(bx + px + w), 24 - (by + py + h), -(bz + pz + d));
-        box.pivot = glm::vec3(-px, 24 - py, -pz);
+        box.origin = glm::ivec3(-(bx + px + w), base - (by + py + h), -(bz + pz + d));
+        box.pivot = glm::vec3(-px, base - py, -pz);
         box.u = u;
         box.v = v;
         return box;
@@ -566,6 +573,45 @@ namespace
             t.model.push_back(mc(Part::Body,  0, 38,  2, 4, 16, -8, 0, -8, 0, 18, 0));
             t.model.push_back(mc(Part::Body, 36, 18, 12, 4,  2, -6, 0,  6, 0, 18, 0));
             t.model.push_back(mc(Part::Body, 36, 24, 12, 4,  2, -6, 0, -8, 0, 18, 0));
+        }
+        {
+            // The minecart, on Mojang's own layout: a floor with four
+            // walls, every wall off the same patch of the sheet. It is
+            // drawn from a lower plane than a mob is, which is what the
+            // cart base is for.
+            MobType& t = table[static_cast<size_t>(MobId::Minecart)];
+            t.id = MobId::Minecart;
+            t.experience = 0;
+            t.voice = Sound::DigStone;
+            t.hurtVoice = Sound::DigStone;
+            t.deathVoice = Sound::DigStone;
+            t.name = "Minecart";
+            t.texture = "minecart";
+            t.spawnClass = SpawnClass::Passive;
+            t.maxHealth = 4;
+            t.width = 0.98f;
+            t.height = 0.7f;
+            t.walkSpeed = 8.0f;
+            t.rideable = true;
+            t.saddleHeight = 0.3f;
+            t.inanimate = true;
+            t.ridesRails = true;
+            t.modelYaw = HALF_PI;
+            t.drop = Items::Minecart;
+            t.dropCount = 1;
+            t.bodyColour = rgb(120, 124, 132);
+            t.headColour = rgb(120, 124, 132);
+
+            t.model.push_back(turned(mc(Part::Body, 0, 10, 20, 16, 2,
+                                        -10, -8, -1, 0, 4, 0, CART_BASE), HALF_PI));
+            t.model.push_back(turned(mc(Part::Body, 0, 0, 16, 8, 2,
+                                        -8, -9, -1, -9, 4, 0, CART_BASE), 0.0f, HALF_PI * 3.0f));
+            t.model.push_back(turned(mc(Part::Body, 0, 0, 16, 8, 2,
+                                        -8, -9, -1, 9, 4, 0, CART_BASE), 0.0f, HALF_PI));
+            t.model.push_back(turned(mc(Part::Body, 0, 0, 16, 8, 2,
+                                        -8, -9, -1, 0, 4, -7, CART_BASE), 0.0f, HALF_PI * 2.0f));
+            t.model.push_back(mc(Part::Body, 0, 0, 16, 8, 2,
+                                 -8, -9, -1, 0, 4, 7, CART_BASE));
         }
 
         return table;

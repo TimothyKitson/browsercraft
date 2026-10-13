@@ -134,6 +134,17 @@ namespace Blocks
         // of buildings dropped on a field.
         DirtPath,
 
+        // Rails. Flat on the floor, and shaped by what they touch:
+        // two straights and four corners, each its own id for the same
+        // reason the doors are sixteen -- a block here has nowhere to
+        // keep a shape of its own. Appended, like the rest.
+        RailNorthSouth,
+        RailEastWest,
+        RailNorthEast,
+        RailSouthEast,
+        RailSouthWest,
+        RailNorthWest,
+
         Count
     };
 }
@@ -148,7 +159,8 @@ enum class RenderType : uint8_t
     Ladder, // a flat panel against one wall of its cell, climbable
     Stairs, // a half block with a step on the back half of its top
     Fence,  // a post in the middle of its cell, with arms to its neighbours
-    Door    // a thin panel on one edge of its cell, which swings aside
+    Door,   // a thin panel on one edge of its cell, which swings aside
+    Rail    // a flat panel on the floor of its cell, which carts run on
 };
 
 struct BlockInfo
@@ -176,6 +188,47 @@ inline bool isLadder(BlockId id) { return blockInfo(id).render == RenderType::La
 inline bool isStairs(BlockId id) { return blockInfo(id).render == RenderType::Stairs; }
 inline bool isFence(BlockId id) { return blockInfo(id).render == RenderType::Fence; }
 inline bool isDoor(BlockId id) { return blockInfo(id).render == RenderType::Door; }
+inline bool isRail(BlockId id) { return blockInfo(id).render == RenderType::Rail; }
+inline bool isRailCorner(BlockId id)
+{
+    return id >= Blocks::RailNorthEast && id <= Blocks::RailNorthWest;
+}
+
+// Which two ways a rail runs. 0 north (-z), 1 east (+x), 2 south (+z),
+// 3 west (-x) -- the same compass the ladders and stairs use.
+inline bool railLinks(BlockId rail, int facing)
+{
+    switch (rail)
+    {
+        case Blocks::RailNorthSouth: return facing == 0 || facing == 2;
+        case Blocks::RailEastWest:   return facing == 1 || facing == 3;
+        case Blocks::RailNorthEast:  return facing == 0 || facing == 1;
+        case Blocks::RailSouthEast:  return facing == 2 || facing == 1;
+        case Blocks::RailSouthWest:  return facing == 2 || facing == 3;
+        case Blocks::RailNorthWest:  return facing == 0 || facing == 3;
+        default: return false;
+    }
+}
+
+// The shape a rail takes given what it has to join up with. A straight
+// run wins over a corner where both are possible, which is what stops a
+// long line kinking every time a spur is laid beside it.
+inline BlockId railShapeFor(bool north, bool east, bool south, bool west)
+{
+    if (north && south) return Blocks::RailNorthSouth;
+    if (east && west)   return Blocks::RailEastWest;
+
+    if (north && east) return Blocks::RailNorthEast;
+    if (south && east) return Blocks::RailSouthEast;
+    if (south && west) return Blocks::RailSouthWest;
+    if (north && west) return Blocks::RailNorthWest;
+
+    if (east || west) return Blocks::RailEastWest;
+
+    // Nothing to join, or one neighbour north or south: lie along z,
+    // which is what a single rail laid on its own looks like.
+    return Blocks::RailNorthSouth;
+}
 
 // The three things a door id carries, and how to build one back up.
 inline bool doorIsTop(BlockId id) { return id >= Blocks::DoorHighShutNorth; }

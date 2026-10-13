@@ -482,6 +482,7 @@ private:
 
     // What is being ridden, and getting off it.
     Mob* riddenMob();
+    void reshapeRailsAround(const glm::ivec3& at);
     void dismount();
     void wearOnSwing(StackId weapon);
     void openBench(const glm::ivec3& block);

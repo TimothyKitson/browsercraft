@@ -82,6 +82,8 @@ namespace Tiles
         BrewingStandTile,
         DirtPathTop,
         DirtPathSide,
+        RailTile,
+        RailCorner,
         RainDrop,
         SnowFlake,
 
@@ -163,8 +165,9 @@ namespace Tiles
         ItemGlowstoneDust,
         ItemShield,
         ItemBoat,
+        ItemMinecart,
 
-        ItemTileEnd = ItemBoat + 1
+        ItemTileEnd = ItemMinecart + 1
     };
 
     // Ten progressively more broken overlay tiles for the mining animation.

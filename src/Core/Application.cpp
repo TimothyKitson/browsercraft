@@ -1392,7 +1392,7 @@ bool Application::frame()
             m_startupScreen == "anvilblock" || m_startupScreen == "brew" ||
             m_startupScreen == "village" || m_startupScreen == "shield" ||
             m_startupScreen == "wolf" || m_startupScreen == "horse" ||
-            m_startupScreen == "boat")
+            m_startupScreen == "boat" || m_startupScreen == "rails")
         {
             // Dev aid: open the inventory with something in it, so the
             // screenshot shows a real grid rather than 36 empty boxes.
@@ -1425,6 +1425,7 @@ bool Application::frame()
                                   m_startupScreen != "wolf" &&
                                   m_startupScreen != "horse" &&
                                   m_startupScreen != "boat" &&
+                                  m_startupScreen != "rails" &&
                                   m_startupScreen != "portal" &&
                                   m_startupScreen != "nether";
             m_inventoryOpen = showPanel;
@@ -1688,6 +1689,71 @@ bool Application::frame()
                 m_world->setBlock(px + 15, py, pz - 5, Blocks::Bookshelf);
                 m_world->setBlock(px + 15, py, pz,     Blocks::DiamondOre);
                 m_world->setBlock(px + 15, py, pz + 5, Blocks::EndPortalFrame);
+            }
+
+            if (m_startupScreen == "rails")
+            {
+                m_camera.setOrientation(0.0f, -34.0f);
+                m_camera.addLook(0.0f, 0.0f, 0.0f);
+
+                const int px = static_cast<int>(std::floor(m_player.position.x));
+                const int py = static_cast<int>(std::floor(m_player.position.y));
+                const int pz = static_cast<int>(std::floor(m_player.position.z));
+
+                for (int ax = -2; ax <= 18; ++ax)
+                    for (int az = -10; az <= 10; ++az)
+                    {
+                        for (int ay = 0; ay <= 6; ++ay)
+                            m_world->setBlock(px + ax, py + ay, pz + az, Blocks::Air);
+                        m_world->setBlock(px + ax, py - 1, pz + az, Blocks::Grass);
+                    }
+
+                // A closed loop, laid one rail at a time so the shaping
+                // has to do its own work: every corner here is one the
+                // game worked out, not one placed as a corner.
+                const int x0 = px + 4, x1 = px + 10;
+                const int z0 = pz - 3, z1 = pz + 3;
+                for (int x = x0; x <= x1; ++x)
+                {
+                    m_world->setBlock(x, py, z0, Blocks::RailNorthSouth);
+                    reshapeRailsAround(glm::ivec3(x, py, z0));
+                    m_world->setBlock(x, py, z1, Blocks::RailNorthSouth);
+                    reshapeRailsAround(glm::ivec3(x, py, z1));
+                }
+                for (int z = z0; z <= z1; ++z)
+                {
+                    m_world->setBlock(x0, py, z, Blocks::RailNorthSouth);
+                    reshapeRailsAround(glm::ivec3(x0, py, z));
+                    m_world->setBlock(x1, py, z, Blocks::RailNorthSouth);
+                    reshapeRailsAround(glm::ivec3(x1, py, z));
+                }
+
+                m_entities.spawnAt(MobId::Minecart,
+                                   glm::vec3(x0 + 2.5f, py + Mob::RAIL_LIFT, z1 + 0.5f),
+                                   *m_world);
+                m_entities.spawnAt(MobId::Minecart,
+                                   glm::vec3(x0 + 0.5f, py + Mob::RAIL_LIFT, pz + 0.5f),
+                                   *m_world);
+
+                m_inventory.add(Items::Minecart, 1);
+                m_inventory.add(Blocks::RailNorthSouth, 16);
+
+                m_world->setBlock(px + 14, py, pz - 5, Blocks::Bookshelf);
+                m_world->setBlock(px + 14, py, pz,     Blocks::DiamondOre);
+                m_world->setBlock(px + 14, py, pz + 5, Blocks::EndPortalFrame);
+
+                // Looking straight down at the loop, which is the only
+                // view that says which way every rail is turned. On a
+                // pad of its own: raised without one, the first version
+                // of this shot fell twelve blocks and died.
+                m_player.position = glm::vec3(px + 0.5f, static_cast<float>(py),
+                                              pz + 0.5f);
+                m_player.velocity = glm::vec3(0.0f);
+
+                // The saved world these screens open carries whatever
+                // health it was last left on, and a shot of the death
+                // overlay is not a shot of the track.
+                m_player.health = Player::MAX_HEALTH;
             }
 
             if (m_startupScreen == "wolf")
@@ -3017,6 +3083,23 @@ void Application::updateMining(float deltaTime)
                 }
             }
 
+            // Rails. Breaking the block under one takes the rail with
+            // it, and breaking a rail leaves its neighbours to find a
+            // shape that no longer reaches across the gap.
+            {
+                const glm::ivec3 over(hit.block.x, hit.block.y + 1, hit.block.z);
+                if (isRail(m_world->getBlock(over.x, over.y, over.z)))
+                {
+                    const BlockId loose = m_world->getBlock(over.x, over.y, over.z);
+                    m_world->setBlock(over.x, over.y, over.z, Blocks::Air);
+                    m_net.onLocalBlockChange(over.x, over.y, over.z, Blocks::Air);
+                    if (!m_player.creative())
+                        m_drops.spawnFromBrokenBlock(over, loose);
+                    reshapeRailsAround(over);
+                }
+            }
+            if (isRail(id)) reshapeRailsAround(hit.block);
+
             // A door is one thing in two cells, so breaking either half
             // takes the other with it -- otherwise half a door is left
             // hanging in the air.
@@ -3147,6 +3230,37 @@ Mob* Application::riddenMob()
     for (Mob& mob : m_entities.mobs())
         if (mob.ridden() && mob.alive()) return &mob;
     return nullptr;
+}
+
+// Rails join up with whatever is beside them. Called on the cell that
+// changed and its four neighbours, since laying one rail bends the one
+// it was laid against as well as itself.
+void Application::reshapeRailsAround(const glm::ivec3& at)
+{
+    const glm::ivec3 around[5] = {
+        at,
+        { at.x, at.y, at.z - 1 },
+        { at.x + 1, at.y, at.z },
+        { at.x, at.y, at.z + 1 },
+        { at.x - 1, at.y, at.z },
+    };
+
+    for (const glm::ivec3& cell : around)
+    {
+        const BlockId here = m_world->getBlock(cell.x, cell.y, cell.z);
+        if (!isRail(here)) continue;
+
+        const BlockId want = railShapeFor(
+            isRail(m_world->getBlock(cell.x, cell.y, cell.z - 1)),
+            isRail(m_world->getBlock(cell.x + 1, cell.y, cell.z)),
+            isRail(m_world->getBlock(cell.x, cell.y, cell.z + 1)),
+            isRail(m_world->getBlock(cell.x - 1, cell.y, cell.z)));
+
+        if (want == here) continue;
+
+        m_world->setBlock(cell.x, cell.y, cell.z, want);
+        m_net.onLocalBlockChange(cell.x, cell.y, cell.z, want);
+    }
 }
 
 void Application::dismount()
@@ -4064,6 +4178,32 @@ void Application::handlePlacement()
         return;
     }
 
+    // A minecart only goes down on a rail, which is the one place it
+    // is any use.
+    if (stack.id == Items::Minecart)
+    {
+        const RaycastHit track = m_world->raycast(m_camera.position, m_camera.front,
+                                                  REACH_DISTANCE);
+        if (!track.hit) return;
+
+        glm::ivec3 cell = track.block;
+        if (!isRail(m_world->getBlock(cell.x, cell.y, cell.z))) cell = track.previous;
+        if (!isRail(m_world->getBlock(cell.x, cell.y, cell.z))) return;
+
+        const glm::vec3 where(cell.x + 0.5f,
+                              static_cast<float>(cell.y) + Mob::RAIL_LIFT,
+                              cell.z + 0.5f);
+        if (!m_entities.spawnAt(MobId::Minecart, where, *m_world)) return;
+
+        if (!m_player.creative())
+        {
+            stack.count -= 1;
+            if (stack.count <= 0) stack.clear();
+        }
+        m_audio.play(Sound::Place, 0.7f, 0.8f);
+        return;
+    }
+
     // A bone offered to a wolf tames it, which comes before feeding
     // for the same reason feeding comes before placing: what is in
     // front of you takes it.
@@ -4196,9 +4336,18 @@ void Application::handlePlacement()
         placing = ladderFacing(facing);
     }
 
+    // A rail is nailed to the floor, and bends to meet whatever is
+    // already beside it. Which of the six shapes it lands as is worked
+    // out after it is down, along with its neighbours.
+    if (isRail(placing) &&
+        !isSolid(m_world->getBlock(target.x, target.y - 1, target.z)))
+        return;
+
     m_world->setBlock(target.x, target.y, target.z, placing);
     m_net.onLocalBlockChange(target.x, target.y, target.z, placing);
     m_audio.playPlace(placing);
+
+    if (isRail(placing)) reshapeRailsAround(target);
 
     if (!m_player.creative())
     {

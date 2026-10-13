@@ -102,6 +102,7 @@ namespace
         { "Glowstone Dust",  Tiles::ItemGlowstoneDust,  64 },
         { "Shield",          Tiles::ItemShield,          1 },
         { "Boat",            Tiles::ItemBoat,            1 },
+        { "Minecart",        Tiles::ItemMinecart,        1 },
     };
 
     static_assert(sizeof(ITEMS) / sizeof(ITEMS[0]) ==

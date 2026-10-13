@@ -74,6 +74,7 @@ void MobModel::build(const MobSkin& skin, const Mob& mob, float sky, float block
     // A lamb is half a sheep. Shrinking the whole figure here rather than
     // each box keeps every texture patch the size the sheet says it is.
     frame.scale = mob.scale();
+    frame.modelYaw = type.modelYaw;
 
     // A dead one keels over sideways rather than vanishing mid-step.
     const float fade = mob.deathFade();

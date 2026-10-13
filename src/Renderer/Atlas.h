@@ -80,6 +80,13 @@ public:
     // the world without anything going wrong anywhere else.
     static bool hasPainter(int tileIndex);
 
+    // Stretches a tile's LabPBR height channel (the normal map's alpha)
+    // to use the full range it was drawn in. Packs put height in a
+    // narrow band near the top, which parallax and the crevice shading
+    // both read as a flat surface. A tile with no variation is left
+    // alone: sand really is flat.
+    static void stretchHeightRange(std::vector<uint8_t>& rgba);
+
 private:
     // One multi-frame tile (Minecraft stores these as a vertical strip).
     struct Animation

@@ -216,6 +216,25 @@ public:
     static float verticalStep(float velocityY, float positionY, float waterline,
                               bool afloat, float deltaTime);
 
+    // How high a rail's own surface stands in its cell, which is where
+    // a cart's wheels sit. The mesher draws the panel at the same
+    // height, so the two agree by sharing the number.
+    static constexpr float RAIL_LIFT = 0.0625f;
+
+    // Where the track puts a cart and which way it sends it. The cart
+    // leaves by whichever of the rail's two ends it is already pointed
+    // at, and is held on the middle of the track across its travel --
+    // which is what keeps it on the rails rather than merely near them.
+    // False when the block is not a rail, or is a rail with fewer than
+    // two ends, which cannot happen but would be a hole if it did.
+    static bool railGuide(BlockId rail, const glm::ivec3& cell, const glm::vec3& position,
+                          float yawDegrees, glm::vec3& snapped, float& exitYaw);
+
+    // Which way each of the four compass points faces, and the heading
+    // that travels along it.
+    static glm::vec3 railDirection(int facing);
+    static float railYaw(int facing);
+
     // --- being ridden ---
     //
     // A ridden mob stops deciding where to go and does what the rider

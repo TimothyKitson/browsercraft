@@ -120,6 +120,7 @@ void BoxMesh::append(std::vector<float>& out, const Box& box, const Frame& frame
         glm::vec3 normal(face.normal[0], face.normal[1], face.normal[2]);
         normal = rotateX(normal, box.pitch);
         if (box.yaw != 0.0f) normal = rotateY(normal, box.yaw);
+        if (frame.modelYaw != 0.0f) normal = rotateY(normal, frame.modelYaw);
         if (box.roll != 0.0f) normal = rotateZ(normal, box.roll);
         if (jointed) normal = rotateX(normal, frame.jointAngle);
         const float shade = shadeFor(right * normal.x + up * normal.y + forward * normal.z);
@@ -137,6 +138,8 @@ void BoxMesh::append(std::vector<float>& out, const Box& box, const Frame& frame
             if (box.yaw != 0.0f) local = rotateY(local - box.pivot, box.yaw) + box.pivot;
             if (box.roll != 0.0f) local = rotateZ(local - box.pivot, box.roll) + box.pivot;
             if (jointed) local = rotateX(local - frame.jointPivot, frame.jointAngle) + frame.jointPivot;
+
+            if (frame.modelYaw != 0.0f) local = rotateY(local, frame.modelYaw);
 
             local *= frame.scale / 16.0f;
             corners[k] = frame.feet + right * local.x + up * local.y + forward * local.z;

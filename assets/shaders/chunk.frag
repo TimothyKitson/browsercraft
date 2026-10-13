@@ -170,18 +170,23 @@ void main()
         float direct = incidence * sunReach;
 
         // Shape, measured as the texel's departure from the flat face so
-        // the baked per-face shading is not counted twice. Wrapped rather
-        // than clamped, because a face the sun never reaches is still the
-        // shape the normal map says it is.
-        float bumpLit = dot(normal, uSunDirection) * 0.5 + 0.5;
-        float flatLit = dot(faceNormal, uSunDirection) * 0.5 + 0.5;
-        float shape = (bumpLit - flatLit) * mix(0.60, 1.20, sunReach);
+        // the baked per-face shading is not counted twice. The halved
+        // form this used -- dot * 0.5 + 0.5 on both sides -- threw away
+        // half of an already small number, and a wall with a perfectly
+        // good normal map came out looking painted on. The difference
+        // of the two dots is taken whole, which is the actual Lambert
+        // term the bump earns over the flat face.
+        float bumpLit = dot(normal, uSunDirection);
+        float flatLit = dot(faceNormal, uSunDirection);
+        float shape = (bumpLit - flatLit) * mix(0.85, 1.45, sunReach);
 
         // The pack's height map darkens the crevices. This one owes
         // nothing to the sun, so it survives shade, night and caves.
-        float cavity = mix(0.70, 1.0, smoothstep(0.55, 1.0, height));
+        // Read across the whole range rather than only the top half:
+        // the atlas has already stretched each tile to fill it.
+        float cavity = mix(0.60, 1.05, height);
 
-        float relief = mix(0.90, 1.12, direct) * clamp(1.0 + shape, 0.40, 1.80);
+        float relief = mix(0.90, 1.12, direct) * clamp(1.0 + shape, 0.35, 1.90);
         color = albedo * brightness * vShade * relief * cavity * mix(1.0, materialAO, 0.75);
 
         // Blinn-Phong highlight, sharpened by the pack's smoothness map.

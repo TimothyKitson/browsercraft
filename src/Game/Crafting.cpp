@@ -55,6 +55,18 @@ namespace
                          Blocks::Planks,    Blocks::Planks,    Blocks::Planks },
           0, Items::Boat, 1 },
 
+        // A minecart: five iron round an open top, the same shape the
+        // boat is made in.
+        { false, 3, 2, { Items::IronIngot,  _,                 Items::IronIngot,
+                         Items::IronIngot,  Items::IronIngot,  Items::IronIngot },
+          0, Items::Minecart, 1 },
+
+        // Rails: six iron down the sides with a stick between them.
+        { false, 3, 3, { Items::IronIngot,  _,                 Items::IronIngot,
+                         Items::IronIngot,  Items::Stick,      Items::IronIngot,
+                         Items::IronIngot,  _,                 Items::IronIngot },
+          0, Blocks::RailNorthSouth, 16 },
+
         // Brewing's glassware and the sweetener. One cane makes one
         // sugar; three glass makes three bottles.
         { true,  0, 0, { Blocks::SugarCane },

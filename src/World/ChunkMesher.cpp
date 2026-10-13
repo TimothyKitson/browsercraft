@@ -448,6 +448,56 @@ namespace
             pushVertex(out, corner[k].x, corner[k].y, corner[k].z, u[k], v[k], 0.86f, sky, block);
     }
 
+    // A rail: one flat panel just off the floor, turned so the strips
+    // run the way the shape says. Drawn from above only -- there is
+    // nothing to see from under a sleeper.
+    void emitRail(const MeshSnapshot& snap, int lx, int y, int lz,
+                  BlockId id, std::vector<float>& out)
+    {
+        const TileUV uv = tileUV(blockInfo(id).tileSide);
+
+        const float sky = static_cast<float>(snap.skyLight(lx, y, lz)) / 15.0f;
+        const float block = static_cast<float>(snap.blockLight(lx, y, lz)) / 15.0f;
+
+        // Clear of the floor it lies on, or the two fight for the same
+        // pixels and the rail flickers in and out as you walk.
+        constexpr float LIFT = 0.0625f;
+
+        const float x0 = static_cast<float>(lx);
+        const float y0 = static_cast<float>(y) + LIFT;
+        const float z0 = static_cast<float>(lz);
+
+        const glm::vec3 corner[4] = {
+            { x0,        y0, z0        },
+            { x0 + 1.0f, y0, z0        },
+            { x0 + 1.0f, y0, z0 + 1.0f },
+            { x0,        y0, z0 + 1.0f },
+        };
+
+        // The tile is painted running north to south, and the corner
+        // one bent from its north edge round to its east. Every other
+        // shape is one of those two turned a quarter at a time.
+        int turn = 0;
+        switch (id)
+        {
+            case Blocks::RailEastWest:  turn = 1; break;
+            case Blocks::RailSouthEast: turn = 1; break;
+            case Blocks::RailSouthWest: turn = 2; break;
+            case Blocks::RailNorthWest: turn = 3; break;
+            default: break;
+        }
+
+        const float u[4] = { uv.u0, uv.u1, uv.u1, uv.u0 };
+        const float v[4] = { uv.vTop, uv.vTop, uv.vBottom, uv.vBottom };
+
+        const int top[6] = { 0, 2, 1, 0, 3, 2 };
+        for (int k : top)
+        {
+            const int t = (k + turn) & 3;
+            pushVertex(out, corner[k].x, corner[k].y, corner[k].z, u[t], v[t], 1.0f, sky, block);
+        }
+    }
+
     void emitCross(const MeshSnapshot& snap, int lx, int y, int lz,
                    BlockId id, std::vector<float>& out)
     {
@@ -513,6 +563,10 @@ void buildChunkMesh(const MeshSnapshot& snapshot, MeshResult& out)
                 else if (isLadder(id))
                 {
                     emitLadder(snapshot, lx, y, lz, id, out.opaqueVertices);
+                }
+                else if (isRail(id))
+                {
+                    emitRail(snapshot, lx, y, lz, id, out.opaqueVertices);
                 }
                 else if (isStairs(id))
                 {

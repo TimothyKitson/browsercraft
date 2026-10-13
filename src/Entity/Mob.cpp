@@ -119,6 +119,66 @@ float Mob::verticalStep(float velocityY, float positionY, float waterline,
     return std::max(velocityY + GRAVITY * deltaTime, TERMINAL_VELOCITY);
 }
 
+glm::vec3 Mob::railDirection(int facing)
+{
+    switch (facing & 3)
+    {
+        case 0:  return glm::vec3(0.0f, 0.0f, -1.0f);   // north
+        case 1:  return glm::vec3(1.0f, 0.0f, 0.0f);    // east
+        case 2:  return glm::vec3(0.0f, 0.0f, 1.0f);    // south
+        default: return glm::vec3(-1.0f, 0.0f, 0.0f);   // west
+    }
+}
+
+float Mob::railYaw(int facing)
+{
+    switch (facing & 3)
+    {
+        case 0:  return -90.0f;
+        case 1:  return 0.0f;
+        case 2:  return 90.0f;
+        default: return 180.0f;
+    }
+}
+
+bool Mob::railGuide(BlockId rail, const glm::ivec3& cell, const glm::vec3& position,
+                    float yawDegrees, glm::vec3& snapped, float& exitYaw)
+{
+    if (!isRail(rail)) return false;
+
+    int ends[2] = { 0, 0 };
+    int found = 0;
+    for (int d = 0; d < 4 && found < 2; ++d)
+        if (railLinks(rail, d)) ends[found++] = d;
+    if (found < 2) return false;
+
+    const float radians = glm::radians(yawDegrees);
+    const glm::vec3 heading(std::cos(radians), 0.0f, std::sin(radians));
+
+    // Out by whichever end it is already pointed at. A cart reversed
+    // into a bend leaves the way it came, which is what a cart does.
+    int best = ends[0];
+    float bestDot = -2.0f;
+    for (int i = 0; i < 2; ++i)
+    {
+        const float dot = glm::dot(railDirection(ends[i]), heading);
+        if (dot > bestDot) { bestDot = dot; best = ends[i]; }
+    }
+
+    exitYaw = railYaw(best);
+
+    // Held on the track: whatever of its position lies across the rail
+    // is pulled back to the middle of the cell, and what lies along it
+    // is left alone so the cart can actually travel.
+    const glm::vec3 along = railDirection(best);
+    snapped = position;
+    if (std::fabs(along.x) > 0.5f) snapped.z = static_cast<float>(cell.z) + 0.5f;
+    else                           snapped.x = static_cast<float>(cell.x) + 0.5f;
+    snapped.y = static_cast<float>(cell.y) + RAIL_LIFT;
+
+    return true;
+}
+
 void Mob::steerAroundObstacle(const World& world)
 {
     const float reach = std::max(0.6f, width());
@@ -533,6 +593,36 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
         followPath();
     }
 
+    // On rails the track does the steering: the rider only chooses
+    // whether the cart rolls, never where it goes.
+    bool onRail = false;
+    if (t.ridesRails)
+    {
+        const int cx = static_cast<int>(std::floor(m_position.x));
+        const int cz = static_cast<int>(std::floor(m_position.z));
+
+        // The cell the wheels are in, and failing that the one under
+        // it: a cart sits a sixteenth proud of its rail, so which of
+        // the two it rounds into depends on where in the step it is.
+        int cy = static_cast<int>(std::floor(m_position.y + 0.1f));
+        BlockId rail = world.getBlock(cx, cy, cz);
+        if (!isRail(rail)) { --cy; rail = world.getBlock(cx, cy, cz); }
+
+        glm::vec3 snapped(0.0f);
+        float exitYaw = m_yaw;
+        if (railGuide(rail, glm::ivec3(cx, cy, cz), m_position, m_yaw, snapped, exitYaw))
+        {
+            m_position = snapped;
+            m_velocity.y = 0.0f;
+
+            // Set rather than turned towards: a cart takes a bend at
+            // the bend, not over the second after it.
+            m_goalYaw = exitYaw;
+            m_yaw = exitYaw;
+            onRail = true;
+        }
+    }
+
     // Turn towards the goal heading the short way round.
     m_yaw = PlayerAnimation::wrapDegrees(
         m_yaw + PlayerAnimation::wrapDegrees(m_goalYaw - m_yaw) *
@@ -551,7 +641,8 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
     // for ever. Out of the water gravity has it like anything else, and
     // that is the only branch that applies the fall.
     const bool afloat = t.floats && floatTowardsSurface(world, deltaTime);
-    if (!afloat)
+    if (onRail) m_velocity.y = 0.0f;
+    else if (!afloat)
         m_velocity.y = verticalStep(m_velocity.y, m_position.y, 0.0f, false, deltaTime);
 
     const bool wasOnGround = m_onGround;
@@ -562,9 +653,10 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
     moveAxis(world, m_velocity.y * deltaTime, 1);
     moveAxis(world, m_velocity.z * deltaTime, 2);
 
-    // Water is not a floor, so moveAxis never reports standing on it.
-    // Something riding on top of it is as settled as it is going to get.
-    if (afloat) m_onGround = true;
+    // Neither water nor a rail is a floor, so moveAxis never reports
+    // standing on either. Something riding on one is as settled as it
+    // is going to get.
+    if (afloat || onRail) m_onGround = true;
 
     // Blocked flat against something. Turning until the way is clear is
     // what stops a mob grinding into the same wall for as long as it can

@@ -22,6 +22,7 @@ enum class MobId : uint8_t
     Wolf,
     Horse,
     Boat,
+    Minecart,
     Count
 };
 
@@ -153,6 +154,9 @@ struct MobType
     bool inanimate = false;
     // Rides on top of water rather than sinking through it.
     bool floats = false;
+    // Runs on rails, and only on rails: steered by the track rather
+    // than by whoever is sitting in it.
+    bool ridesRails = false;
 
     // The undead catch fire in open daylight. Spiders and creepers do
     // not, which is why they are the ones you still meet at noon.
@@ -175,6 +179,11 @@ struct MobType
     // rather than a flat colour. A boat is planks, so it wears the same
     // planks the world is built from and matches it exactly -- and at
     // the pack's own resolution, not sixteen pixels to the block.
+    // The whole model turned about its own axis. A cart is laid out
+    // along x the way Mojang draws it and turned a quarter here, the
+    // same as its own renderer does.
+    float modelYaw = 0.0f;
+
     const char* blockTexture = "";
     // What older packs call the same block, the way the atlas carries an
     // alias for every tile. Without it a pack from before the rename

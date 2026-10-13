@@ -122,6 +122,12 @@ namespace
         { "Nether Wart",  NetherWartTile, NetherWartTile, NetherWartTile, false, false, RenderType::Cross,  0,   0.0f },
         { "Brewing Stand", BrewingStandTile, BrewingStandTile, BrewingStandTile, false, false, RenderType::Cross, 1, 0.5f },
         { "Dirt Path",    DirtPathTop,   Dirt,           DirtPathSide,   true,  true,  RenderType::Cube,   0,   0.6f },
+        { "Rail",         RailTile,      RailTile,       RailTile,       false, false, RenderType::Rail,   0,   0.7f },
+        { "Rail",         RailTile,      RailTile,       RailTile,       false, false, RenderType::Rail,   0,   0.7f },
+        { "Rail",         RailCorner,    RailCorner,     RailCorner,     false, false, RenderType::Rail,   0,   0.7f },
+        { "Rail",         RailCorner,    RailCorner,     RailCorner,     false, false, RenderType::Rail,   0,   0.7f },
+        { "Rail",         RailCorner,    RailCorner,     RailCorner,     false, false, RenderType::Rail,   0,   0.7f },
+        { "Rail",         RailCorner,    RailCorner,     RailCorner,     false, false, RenderType::Rail,   0,   0.7f },
     };
 }
 
@@ -148,6 +154,15 @@ bool isObtainable(BlockId id)
         case Blocks::LadderEast:
         case Blocks::LadderSouth:
         case Blocks::LadderWest:
+            return false;
+
+        // The same for the rails: you hold one rail, and which of the
+        // six shapes it lands as is decided by what it touches.
+        case Blocks::RailEastWest:
+        case Blocks::RailNorthEast:
+        case Blocks::RailSouthEast:
+        case Blocks::RailSouthWest:
+        case Blocks::RailNorthWest:
             return false;
 
         default:
@@ -284,6 +299,15 @@ Material blockMaterial(BlockId id)
         case Blocks::Ice:
             return Material::Glass;
 
+        // Iron on wooden sleepers. Wool here means no tool is needed,
+        // which is the rule that matters: a rail you could not pick up
+        // by hand would be a rail you laid once and never moved.
+        case Blocks::RailNorthSouth:
+        case Blocks::RailEastWest:
+        case Blocks::RailNorthEast:
+        case Blocks::RailSouthEast:
+        case Blocks::RailSouthWest:
+        case Blocks::RailNorthWest:
         case Blocks::Wool:
         case Blocks::Bed:
         // TNT is paper and powder. Letting it fall through to stone made
