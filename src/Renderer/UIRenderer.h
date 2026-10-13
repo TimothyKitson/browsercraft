@@ -27,8 +27,17 @@ public:
     // parallelograms, and none of them is.
     //
     // Corners run round the shape, and uv[i] belongs to corner[i].
+    // `light` is where the light comes from, in the face's own tangent
+    // space. Left at zero the shape is drawn flat, which is what every
+    // panel, slot and glyph wants; a block icon's faces pass one, and
+    // the normal map then gives them the same relief the world has.
+    // The pack's normal atlas, for the block icons. Zero draws them
+    // flat, which is what happens when no pack is installed.
+    void setNormalAtlas(unsigned int texture) { m_normalAtlas = texture; }
+
     void texturedShape(unsigned int texture, const glm::vec2 corner[4],
-                       const glm::vec2 uv[4], const glm::vec4& color);
+                       const glm::vec2 uv[4], const glm::vec4& color,
+                       const glm::vec3& light = glm::vec3(0.0f));
 
     void text(const std::string& value, float x, float y, float scale, const glm::vec4& color);
     void textWithShadow(const std::string& value, float x, float y, float scale, const glm::vec4& color);
@@ -49,6 +58,7 @@ private:
     Mesh m_mesh;
     Font m_font;
     unsigned int m_white = 0;
+    unsigned int m_normalAtlas = 0;
     unsigned int m_currentTexture = 0;
     std::vector<float> m_vertices;
     int m_width = 1;

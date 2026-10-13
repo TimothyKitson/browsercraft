@@ -74,6 +74,13 @@ namespace
     // which neither a skin nor an item sprite has maps for.
     constexpr float NO_NORMAL_MAP = 6.0f;
 
+    // The held block does have maps, but its faces are turned by the
+    // arm, so the world-space frames the shader keeps for the six cube
+    // faces are no use to it. Seven tells the shader to work the frame
+    // out from the triangle itself, which holds whichever way it is
+    // pointing.
+    constexpr float DERIVED_BASIS = 7.0f;
+
     struct Quad
     {
         glm::vec3 corner[4];
@@ -81,7 +88,8 @@ namespace
         float shade;
     };
 
-    void pushQuad(std::vector<float>& out, const Quad& q, float sky, float blockLight)
+    void pushQuad(std::vector<float>& out, const Quad& q, float sky, float blockLight,
+                  float face = NO_NORMAL_MAP)
     {
         // Reversed, for the same reason BoxMesh reverses its own: these
         // corners are given counter-clockwise seen from outside in the
@@ -102,7 +110,7 @@ namespace
             out.push_back(q.shade);
             out.push_back(sky);
             out.push_back(blockLight);
-            out.push_back(NO_NORMAL_MAP);
+            out.push_back(face);
         }
     }
 
@@ -284,7 +292,7 @@ void HeldItem::appendBlock(const glm::mat4& toWorld, StackId stack, float sky, f
             q.u[k] = (CUBE_UV[face][k][0] == 0.0f) ? uv.u0 : uv.u1;
             q.v[k] = (CUBE_UV[face][k][1] == 0.0f) ? uv.vTop : uv.vBottom;
         }
-        pushQuad(m_vertices, q, sky, blockLight);
+        pushQuad(m_vertices, q, sky, blockLight, DERIVED_BASIS);
     }
 }
 

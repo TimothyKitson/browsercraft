@@ -10,7 +10,11 @@
 
 namespace
 {
-    const std::vector<int> UI_LAYOUT = { 2, 2, 4 }; // position, uv, colour
+    // Position, uv, colour, and the direction the light comes from in
+    // the face's own tangent space. Zero on everything but a block
+    // icon's three faces, which is what turns the normal mapping off
+    // for ordinary panels and text.
+    const std::vector<int> UI_LAYOUT = { 2, 2, 4, 3 };
 }
 
 UIRenderer::UIRenderer()
@@ -50,6 +54,7 @@ void UIRenderer::begin(int screenWidth, int screenHeight)
                      glm::ortho(0.0f, static_cast<float>(m_width),
                                 static_cast<float>(m_height), 0.0f));
     m_shader.setInt("uTexture", 0);
+    m_shader.setInt("uNormalAtlas", 1);
 }
 
 void UIRenderer::end()
@@ -75,6 +80,16 @@ void UIRenderer::flush()
 
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, m_currentTexture);
+
+    // The normal atlas rides along for the block icons. Nothing else on
+    // the HUD reads it: a vertex with no light direction skips it.
+    m_shader.setInt("uIconNormals", m_normalAtlas != 0 ? 1 : 0);
+    if (m_normalAtlas != 0)
+    {
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, m_normalAtlas);
+        glActiveTexture(GL_TEXTURE0);
+    }
 
     m_mesh.upload(m_vertices, UI_LAYOUT, true);
     m_mesh.draw(GL_TRIANGLES);
@@ -117,6 +132,9 @@ void UIRenderer::pushQuad(float x, float y, float w, float h,
         m_vertices.push_back(color.g);
         m_vertices.push_back(color.b);
         m_vertices.push_back(color.a);
+        m_vertices.push_back(0.0f);
+        m_vertices.push_back(0.0f);
+        m_vertices.push_back(0.0f);
     }
 }
 
@@ -134,7 +152,8 @@ void UIRenderer::texturedQuad(unsigned int texture, float x, float y, float w, f
 }
 
 void UIRenderer::texturedShape(unsigned int texture, const glm::vec2 corner[4],
-                               const glm::vec2 uv[4], const glm::vec4& color)
+                               const glm::vec2 uv[4], const glm::vec4& color,
+                               const glm::vec3& light)
 {
     useTexture(texture);
 
@@ -149,6 +168,9 @@ void UIRenderer::texturedShape(unsigned int texture, const glm::vec2 corner[4],
         m_vertices.push_back(color.g);
         m_vertices.push_back(color.b);
         m_vertices.push_back(color.a);
+        m_vertices.push_back(light.x);
+        m_vertices.push_back(light.y);
+        m_vertices.push_back(light.z);
     }
 }
 

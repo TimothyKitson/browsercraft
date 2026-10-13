@@ -190,21 +190,45 @@ bool Application::drawBlockIcon(float x, float y, float size, StackId id,
         return glm::vec4(tint.r * amount, tint.g * amount, tint.b * amount, tint.a);
     };
 
+    // Where the light comes from, worked into each face's own tangent
+    // space so the shader can read the pack's normal map against it.
+    // The icon is drawn as if seen from above, in front and to one
+    // side, so the light is put up there too.
+    const glm::vec3 sun = glm::normalize(glm::vec3(0.35f, 1.0f, 0.45f));
+
+    auto tangentLight = [&](const glm::vec3& tangent, const glm::vec3& bitangent,
+                            const glm::vec3& normal) {
+        return glm::vec3(glm::dot(sun, tangent), glm::dot(sun, bitangent),
+                         glm::dot(sun, normal));
+    };
+
+    // The same three frames the world uses: the icon's top face is the
+    // block's +Y, its left is +Z and its right is +X.
+    const glm::vec3 topLight = tangentLight(glm::vec3(1.0f, 0.0f, 0.0f),
+                                            glm::vec3(0.0f, 0.0f, -1.0f),
+                                            glm::vec3(0.0f, 1.0f, 0.0f));
+    const glm::vec3 leftLight = tangentLight(glm::vec3(1.0f, 0.0f, 0.0f),
+                                             glm::vec3(0.0f, 1.0f, 0.0f),
+                                             glm::vec3(0.0f, 0.0f, 1.0f));
+    const glm::vec3 rightLight = tangentLight(glm::vec3(0.0f, 0.0f, 1.0f),
+                                              glm::vec3(0.0f, 1.0f, 0.0f),
+                                              glm::vec3(1.0f, 0.0f, 0.0f));
+
     glm::vec2 uv[4];
 
     const glm::vec2 topFace[4] = { A, B, C, D };
     faceUV(topUV, uv);
-    m_ui.texturedShape(m_atlas.textureId(), topFace, uv, shaded(1.0f));
+    m_ui.texturedShape(m_atlas.textureId(), topFace, uv, shaded(1.0f), topLight);
 
     // Left, then right. Drawn after the top so a seam between them is
     // covered by the face in front rather than showing through.
     const glm::vec2 leftFace[4] = { D, C, Cb, Db };
     faceUV(sideUV, uv);
-    m_ui.texturedShape(m_atlas.textureId(), leftFace, uv, shaded(0.78f));
+    m_ui.texturedShape(m_atlas.textureId(), leftFace, uv, shaded(0.78f), leftLight);
 
     const glm::vec2 rightFace[4] = { C, B, Bb, Cb };
     faceUV(sideUV, uv);
-    m_ui.texturedShape(m_atlas.textureId(), rightFace, uv, shaded(0.60f));
+    m_ui.texturedShape(m_atlas.textureId(), rightFace, uv, shaded(0.60f), rightLight);
 
     return true;
 }

@@ -48,6 +48,9 @@ public:
     // Binds albedo, normal and specular atlases to three texture units.
     void bind(unsigned int albedoUnit = 0, unsigned int normalUnit = 1, unsigned int specularUnit = 2) const;
     unsigned int textureId() const { return m_id; }
+    // For the HUD, which lights its block icons off the same maps the
+    // world does so a block in the hotbar matches the one underfoot.
+    unsigned int normalTextureId() const { return m_normalId; }
 
     int tilePixels() const { return m_tilePixels; }
     int loadedFromPack() const { return m_loadedFromPack; }

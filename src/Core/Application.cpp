@@ -3930,6 +3930,11 @@ void Application::render()
     if (m_world) renderWorld();
     else renderMenuBackdrop(0.0f);
 
+    // The HUD lights its block icons off the pack's own normal maps,
+    // so a cobblestone in the hotbar is the cobblestone underfoot and
+    // not a flat sticker of it. Zero when no pack is installed, which
+    // draws them the way they always were.
+    m_ui.setNormalAtlas((m_pbrEnabled && m_atlas.hasPbrMaps()) ? m_atlas.normalTextureId() : 0);
     m_ui.begin(m_window.width(), m_window.height());
 
     if (m_world && !m_worldReady)
