@@ -55,6 +55,9 @@ namespace Village
 
         Well,
         Lamp,
+        // A fenced field of wheat with a water channel down it. Not a
+        // house: nobody lives in it, so it has no bed and no chest.
+        Farm,
     };
 
     inline bool isHouse(Kind kind)

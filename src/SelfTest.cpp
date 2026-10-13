@@ -1188,6 +1188,61 @@ namespace
             check(!dead.inLove(), "nor does a dead one");
         }
 
+        // Every village grows something, and a field is not a house:
+        // nobody lives in it, so it has no bed.
+        {
+            int farms = 0, withFarms = 0, villages = 0;
+            for (int rz = -5; rz <= 5; ++rz)
+                for (int rx = -5; rx <= 5; ++rx)
+                {
+                    const Village::Site each = Village::siteFor(rx, rz, seed);
+                    if (!each.exists) continue;
+                    ++villages;
+
+                    int here = 0;
+                    for (const Village::Building& b : Village::plan(each, seed))
+                        if (b.kind == Village::Kind::Farm) ++here;
+
+                    farms += here;
+                    if (here) ++withFarms;
+                }
+
+            check(farms > 0, "villages grow something");
+            check(withFarms < villages, "though not every one of them does");
+            check(!Village::isHouse(Village::Kind::Farm), "a field is not a house");
+            check(VillageLoot::rollFor(Village::Kind::Farm, 0, 70, 0, seed).empty(),
+                  "and has no chest to fill");
+        }
+
+        // Villagers belong to their village and turn back at the edge.
+        {
+            const glm::vec3 middle(100.0f, 70.0f, -40.0f);
+            const float radius = static_cast<float>(Village::MAX_RADIUS);
+
+            Mob villager(MobId::Villager, middle, 9u);
+            check(!villager.hasHome(), "a villager starts belonging nowhere");
+            check(!Mob::wouldTurnBack(middle, middle, 0.0f),
+                  "and one with nowhere to belong never turns back");
+
+            villager.setHome(middle, radius);
+            check(villager.hasHome(), "and belongs once it is given somewhere");
+
+            check(!Mob::wouldTurnBack(middle, middle, radius),
+                  "standing in the middle, it carries on");
+            check(!Mob::wouldTurnBack(middle + glm::vec3(radius - 2.0f, 0.0f, 0.0f),
+                                      middle, radius),
+                  "and inside the edge too");
+            check(Mob::wouldTurnBack(middle + glm::vec3(radius + 5.0f, 0.0f, 0.0f),
+                                     middle, radius),
+                  "but turns back once past it");
+            check(Mob::wouldTurnBack(middle + glm::vec3(0.0f, 0.0f, radius + 5.0f),
+                                     middle, radius),
+                  "on either axis");
+            check(!Mob::wouldTurnBack(middle + glm::vec3(0.0f, 400.0f, 0.0f),
+                                      middle, radius),
+                  "and height is not distance: straight up is still home");
+        }
+
         // Asleep at night, awake by day, and awake whatever the hour
         // once something has hit it.
         {

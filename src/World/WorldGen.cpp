@@ -656,6 +656,58 @@ void WorldGen::stampBuilding(Chunk& chunk, const Village::Building& building,
         return;
     }
 
+    if (building.kind == Village::Kind::Farm)
+    {
+        // A fenced field with a channel down the middle of it. The
+        // channel is what keeps the soil wet, and in Minecraft it is
+        // also the thing that makes a village field read as a field
+        // rather than a patch of dirt.
+        const int midZ = (z0 + z1) / 2;
+
+        for (int x = x0; x <= x1; ++x)
+            for (int z = z0; z <= z1; ++z)
+            {
+                for (int y = ground + 1; y <= ground + 6; ++y)
+                    put(chunk, x, y, z, Blocks::Air);
+
+                const bool rim = (x == x0 || x == x1 || z == z0 || z == z1);
+                if (rim)
+                {
+                    // The fence stands on solid ground, not on soil:
+                    // farmland under a post looks like a mistake.
+                    put(chunk, x, ground, z, Blocks::Dirt);
+                    put(chunk, x, ground + 1, z, Blocks::OakFence);
+                    continue;
+                }
+
+                if (z == midZ)
+                {
+                    put(chunk, x, ground, z, Blocks::Water);
+                    continue;
+                }
+
+                put(chunk, x, ground, z, Blocks::Farmland);
+
+                // Mixed growth, so a field looks worked rather than
+                // planted all on one morning.
+                const int stage = static_cast<int>(
+                    hashCoords(x, 31, z, m_seed + 55040) % 8u);
+                put(chunk, x, ground + 1, z, wheatAtStage(stage));
+            }
+
+        // A gap in the fence to get in by, on the side facing the well.
+        const int gateX = (x0 + x1) / 2;
+        const int gateZ = (z0 + z1) / 2;
+        switch (building.facing)
+        {
+            case 0:  put(chunk, gateX, ground + 1, z0, Blocks::Air); break;
+            case 1:  put(chunk, x1, ground + 1, gateZ, Blocks::Air); break;
+            case 2:  put(chunk, gateX, ground + 1, z1, Blocks::Air); break;
+            default: put(chunk, x0, ground + 1, gateZ, Blocks::Air); break;
+        }
+        return;
+    }
+
     if (building.kind == Village::Kind::Well)
     {
         // A cobblestone apron with a lined pit of water in the middle,

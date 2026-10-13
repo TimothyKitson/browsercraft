@@ -74,9 +74,29 @@ std::vector<Village::Building> Village::plan(const Site& site, uint32_t seed)
             const uint32_t roll = hashCoords(site.x + gx, 7, site.z + gz, seed + 55010);
             if (hashToFloat(roll) >= HOUSE_CHANCE)
             {
-                // An empty plot gets a lamp at its corner often enough
-                // that the paths between houses are lit.
-                if (hashToFloat(hashCoords(site.x + gx, 9, site.z + gz, seed + 55011)) < 0.35f)
+                // A plot with no house on it is either a field or a
+                // lit corner of the path. A village of nothing but
+                // houses has nobody growing anything.
+                const float spare = hashToFloat(hashCoords(site.x + gx, 9, site.z + gz,
+                                                           seed + 55011));
+
+                if (spare < 0.40f)
+                {
+                    Building farm;
+                    farm.kind = Kind::Farm;
+                    farm.width = 9;
+                    farm.depth = 7;
+                    farm.x = site.x + gx * PLOT - PLOT / 2 + (PLOT - farm.width) / 2;
+                    farm.z = site.z + gz * PLOT - PLOT / 2 + (PLOT - farm.depth) / 2;
+
+                    // The gate faces the well, the same way a door does,
+                    // so it opens onto a path rather than a hedge.
+                    if (std::abs(gx) >= std::abs(gz)) farm.facing = (gx > 0) ? 3 : 1;
+                    else                              farm.facing = (gz > 0) ? 0 : 2;
+
+                    out.push_back(farm);
+                }
+                else if (spare < 0.65f)
                 {
                     Building lamp;
                     lamp.kind = Kind::Lamp;
@@ -182,6 +202,7 @@ const char* Village::name(Kind kind)
         case Kind::Butcher:    return "Butcher";
         case Kind::Well:       return "Well";
         case Kind::Lamp:       return "Lamp";
+        case Kind::Farm:       return "Farm";
     }
     return "";
 }

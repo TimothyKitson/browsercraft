@@ -209,6 +209,18 @@ public:
     // Puts one in love without feeding it, which is how villagers pair
     // off: nobody hands a villager a carrot.
     void makeWilling();
+
+    // Where it belongs, and how far it will stray from there. A
+    // villager given one turns back when it reaches the edge, so a
+    // village is still a village an hour later rather than a set of
+    // empty houses with everyone over the next hill.
+    void setHome(const glm::vec3& where, float radius);
+    bool hasHome() const { return m_homeRadius > 0.0f; }
+    glm::vec3 home() const { return m_home; }
+
+    // Whether something standing here would be turning back. Pure, so
+    // the rule can be checked without a world.
+    static bool wouldTurnBack(const glm::vec3& at, const glm::vec3& home, float radius);
     // Called on both parents once they have paired off.
     void onBred();
 
@@ -251,6 +263,8 @@ private:
     float m_stepDistance = 0.0f;
     float m_gait = 0.0f;
     float m_gaitAmount = 0.0f;
+    glm::vec3 m_home{ 0.0f };
+    float m_homeRadius = 0.0f;
     int m_profession = -1;
     bool m_asleep = false;
     float m_loveTimer = 0.0f;

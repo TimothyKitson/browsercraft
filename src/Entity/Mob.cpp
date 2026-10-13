@@ -127,6 +127,19 @@ bool Mob::feed(StackId food)
     return true;
 }
 
+void Mob::setHome(const glm::vec3& where, float radius)
+{
+    m_home = where;
+    m_homeRadius = std::max(0.0f, radius);
+}
+
+bool Mob::wouldTurnBack(const glm::vec3& at, const glm::vec3& home, float radius)
+{
+    if (radius <= 0.0f) return false;
+    const glm::vec3 away = home - at;
+    return glm::length(glm::vec2(away.x, away.z)) > radius;
+}
+
 void Mob::makeWilling()
 {
     if (m_breedTimer > 0.0f || inLove() || baby() || !alive()) return;
@@ -270,6 +283,18 @@ void Mob::chooseNewGoal(const glm::vec3& playerPosition)
         m_goalYaw = glm::degrees(std::atan2(-toPlayer.z, -toPlayer.x));
         m_moving = true;
         m_goalTimer = 1.0f + random01();
+        return;
+    }
+
+    // Strayed too far from where it belongs: head back. This comes
+    // before the idle wander, which is what used to walk villagers out
+    // of their village a step at a time and never bring them home.
+    if (wouldTurnBack(m_position, m_home, m_homeRadius))
+    {
+        const glm::vec3 back = m_home - m_position;
+        m_goalYaw = glm::degrees(std::atan2(back.z, back.x));
+        m_moving = true;
+        m_goalTimer = 1.5f + random01() * 2.0f;
         return;
     }
 

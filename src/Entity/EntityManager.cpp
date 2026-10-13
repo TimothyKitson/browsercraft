@@ -232,8 +232,8 @@ void EntityManager::trySpawnWave(const World& world, const glm::vec3& playerPosi
             continue;
         if (!canSpawnOn(species, ground, light)) continue;
 
-        const glm::vec3 feet(x + 0.5f, static_cast<float>(y), z + 0.5f);
-        if (!spawnAt(species, feet, world)) continue;
+        const glm::vec3 mobFeet(x + 0.5f, static_cast<float>(y), z + 0.5f);
+        if (!spawnAt(species, mobFeet, world)) continue;
 
         // A villager standing in a building takes that building's
         // trade, so the smith is the one who lives in the smithy. One
@@ -244,6 +244,13 @@ void EntityManager::trySpawnWave(const World& world, const glm::vec3& playerPosi
             Village::Building where;
             if (Village::buildingAt(home, world.seed(), x, z, where))
                 m_mobs.back().setProfessionSlot(static_cast<int>(tradeOf(where.kind)));
+
+            // And it belongs to the village, not to the countryside.
+            // Without this they wandered off a step at a time and the
+            // houses stood empty by morning.
+            m_mobs.back().setHome(glm::vec3(static_cast<float>(home.x), mobFeet.y,
+                                            static_cast<float>(home.z)),
+                                  static_cast<float>(Village::MAX_RADIUS));
         }
 
         return;   // one per wave keeps it gradual
@@ -493,8 +500,25 @@ void EntityManager::pairOffLovers(const World& world)
             if (static_cast<int>(m_mobs.size()) < MAX_MOBS &&
                 fits(world, mobType(m_mobs[a].typeId()), between))
             {
+                // Read before the push: emplace_back can move the
+                // whole vector, and the parent reference would be
+                // pointing at freed memory by the time it is asked.
+                const bool inherits = m_mobs[a].hasHome();
+                const glm::vec3 parentHome = m_mobs[a].home();
+                const int parentTrade = m_mobs[a].professionSlot();
+
                 m_mobs.emplace_back(m_mobs[a].typeId(), between,
                                     m_rng ^ static_cast<uint32_t>(m_mobs.size() * 40503u), true);
+
+                // A child belongs where its parents do, and takes up
+                // the family trade. Born without either it would walk
+                // out of the village as soon as it could.
+                if (inherits)
+                {
+                    m_mobs.back().setHome(parentHome, static_cast<float>(Village::MAX_RADIUS));
+                    if (parentTrade >= 0) m_mobs.back().setProfessionSlot(parentTrade);
+                }
+
                 m_births.push_back(between);
             }
 
