@@ -198,6 +198,20 @@ public:
     // far it will let them get before coming after them.
     static constexpr float HEEL_RANGE = 10.0f;
 
+    // A tamed one set on something. The heading is handed in rather
+    // than worked out here, because the mob cannot see the other mobs
+    // -- only whoever keeps them all can.
+    void huntTowards(const glm::vec3& at);
+    bool hunting() const { return m_huntTimer > 0.0f; }
+
+    // How hard a wolf bites and how often. Returns true on the frame a
+    // bite actually lands, which is the caller's cue to apply it.
+    static constexpr int BITE_DAMAGE = 4;
+    static constexpr float BITE_INTERVAL = 1.0f;
+    static constexpr float HUNT_RANGE = 14.0f;
+    static constexpr float BITE_REACH = 1.8f;
+    bool tryBite(float deltaTime);
+
     // A villager's trade. Set from the building it was born or spawned
     // in, so the smith lives in the smithy. -1 means nobody told it,
     // and the caller falls back to drawing one from the birth seed --
@@ -281,6 +295,8 @@ private:
     int m_profession = -1;
     bool m_asleep = false;
     bool m_tamed = false;
+    float m_huntTimer = 0.0f;
+    float m_biteTimer = 0.0f;
     float m_loveTimer = 0.0f;
     float m_breedTimer = 0.0f;
     float m_babyTimer = 0.0f;

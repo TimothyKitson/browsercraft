@@ -113,6 +113,34 @@ StackId Mob::tamingFood(MobId type)
                                  : static_cast<StackId>(Blocks::Air);
 }
 
+void Mob::huntTowards(const glm::vec3& at)
+{
+    const glm::vec3 toward = at - m_position;
+    const float away = glm::length(glm::vec2(toward.x, toward.z));
+    if (away < 0.001f) return;
+
+    m_goalYaw = glm::degrees(std::atan2(toward.z, toward.x));
+    m_moving = away > BITE_REACH * 0.6f;
+    m_goalTimer = 0.4f;
+
+    // Held briefly, so the wolf keeps going at it between the passes
+    // that pick its quarry rather than stopping to wander in between.
+    m_huntTimer = 1.0f;
+}
+
+bool Mob::tryBite(float deltaTime)
+{
+    if (m_biteTimer > 0.0f)
+    {
+        m_biteTimer = std::max(0.0f, m_biteTimer - deltaTime);
+        return false;
+    }
+
+    m_biteTimer = BITE_INTERVAL;
+    emit(type().voice, 0.8f, 1.1f);
+    return true;
+}
+
 bool Mob::tameWith(StackId food)
 {
     const StackId wants = tamingFood(m_type);
@@ -305,6 +333,11 @@ void Mob::chooseNewGoal(const glm::vec3& playerPosition)
         return;
     }
 
+    // Set on something: whoever keeps the mobs has pointed it at a
+    // quarry, and that beats heeling. Without this the wolf would turn
+    // back to its owner between every bite.
+    if (hunting()) return;
+
     // A tamed one keeps up. This comes before fleeing, or a wolf you
     // had just tamed would still run from you, and before the idle
     // wander, which is what would otherwise lose it behind you.
@@ -376,6 +409,8 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
     if (m_panicTimer > 0.0f) m_panicTimer = std::max(0.0f, m_panicTimer - deltaTime);
     if (m_loveTimer > 0.0f) m_loveTimer = std::max(0.0f, m_loveTimer - deltaTime);
     if (m_breedTimer > 0.0f) m_breedTimer = std::max(0.0f, m_breedTimer - deltaTime);
+    if (m_huntTimer > 0.0f) m_huntTimer = std::max(0.0f, m_huntTimer - deltaTime);
+    if (m_biteTimer > 0.0f) m_biteTimer = std::max(0.0f, m_biteTimer - deltaTime);
     if (m_babyTimer > 0.0f) m_babyTimer = std::max(0.0f, m_babyTimer - deltaTime);
 
     if (!alive())

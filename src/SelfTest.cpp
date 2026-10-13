@@ -1870,6 +1870,41 @@ namespace
 
         // It drops nothing: a wolf is a companion, not livestock.
         check(wolf.drop == Blocks::Air, "a wolf is not something you butcher");
+
+        // Set on something, it goes at it rather than heeling.
+        {
+            Mob dog(MobId::Wolf, glm::vec3(0.0f, 70.0f, 0.0f), 14u);
+            dog.tameWith(Items::Bone);
+            check(!dog.hunting(), "a tamed wolf is not hunting to begin with");
+
+            dog.huntTowards(glm::vec3(10.0f, 70.0f, 0.0f));
+            check(dog.hunting(), "and is once it is set on something");
+
+            // Pointed at where it already stands, there is nothing to
+            // go at and nothing to divide by.
+            Mob still(MobId::Wolf, glm::vec3(5.0f, 70.0f, 5.0f), 15u);
+            still.tameWith(Items::Bone);
+            still.huntTowards(glm::vec3(5.0f, 70.0f, 5.0f));
+            check(!still.hunting(), "being set on its own feet sets it on nothing");
+        }
+
+        // It bites on a clock, not every frame it is in reach.
+        {
+            Mob dog(MobId::Wolf, glm::vec3(0.0f, 70.0f, 0.0f), 16u);
+            dog.tameWith(Items::Bone);
+
+            check(dog.tryBite(0.0f), "the first bite lands at once");
+            check(!dog.tryBite(0.0f), "and the next does not");
+
+            int bites = 0;
+            for (int i = 0; i < 100; ++i) if (dog.tryBite(0.1f)) ++bites;
+            check(bites >= 9 && bites <= 11,
+                  "ten seconds is about ten bites, not a hundred");
+        }
+
+        check(Mob::BITE_DAMAGE > 0, "a bite is worth something");
+        check(Mob::BITE_REACH < Mob::HUNT_RANGE,
+              "it has to reach what it is going at before it can bite it");
     }
 
     void testShield()

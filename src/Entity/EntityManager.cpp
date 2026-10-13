@@ -297,6 +297,7 @@ void EntityManager::update(float deltaTime, const World& world,
         }),
         m_mobs.end());
 
+    setWolvesOnHostiles(deltaTime);
     courtVillagers(world, deltaTime);
     pairOffLovers(world);
     routeChasers(world, playerPosition);
@@ -424,6 +425,46 @@ bool EntityManager::tame(const glm::vec3& origin, const glm::vec3& direction,
 {
     Mob* target = pick(origin, direction, maxDistance);
     return target && target->tameWith(food);
+}
+
+// A tamed wolf goes for whatever hostile is nearest. The wolf cannot
+// see the other mobs -- only this can -- so the quarry is picked here
+// and handed to it as a heading.
+void EntityManager::setWolvesOnHostiles(float deltaTime)
+{
+    for (size_t i = 0; i < m_mobs.size(); ++i)
+    {
+        if (m_mobs[i].typeId() != MobId::Wolf) continue;
+        if (!m_mobs[i].tamed() || !m_mobs[i].alive() || m_mobs[i].baby()) continue;
+
+        const glm::vec3 from = m_mobs[i].position();
+
+        size_t quarry = m_mobs.size();
+        float nearest = Mob::HUNT_RANGE;
+
+        for (size_t j = 0; j < m_mobs.size(); ++j)
+        {
+            if (j == i || !m_mobs[j].alive()) continue;
+            if (mobType(m_mobs[j].typeId()).spawnClass != SpawnClass::Hostile) continue;
+
+            const glm::vec3 apart = m_mobs[j].position() - from;
+            const float away = glm::length(glm::vec3(apart.x, 0.0f, apart.z));
+            if (away >= nearest) continue;
+
+            nearest = away;
+            quarry = j;
+        }
+
+        if (quarry >= m_mobs.size()) continue;
+
+        m_mobs[i].huntTowards(m_mobs[quarry].position());
+
+        if (nearest <= Mob::BITE_REACH && m_mobs[i].tryBite(deltaTime))
+        {
+            const glm::vec3 away = m_mobs[quarry].position() - from;
+            m_mobs[quarry].damage(Mob::BITE_DAMAGE, away);
+        }
+    }
 }
 
 // Villagers pair off on their own: nobody hands one a carrot. What

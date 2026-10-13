@@ -107,6 +107,10 @@ private:
     static constexpr float COURT_INTERVAL = 12.0f;
     float m_courtTimer = COURT_INTERVAL;
     void courtVillagers(const World& world, float deltaTime);
+
+    // Points every tamed wolf at the nearest hostile and lets it
+    // bite when it gets there.
+    void setWolvesOnHostiles(float deltaTime);
     // Hands routes to the mobs that asked, newest-hungry first and no
     // more than a handful a pass.
     void routeChasers(const World& world, const glm::vec3& playerPosition);
