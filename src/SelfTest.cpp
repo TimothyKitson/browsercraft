@@ -1062,10 +1062,9 @@ namespace
         const std::vector<Village::Building> plan = Village::plan(site, seed);
         check(!plan.empty(), "a village has something in it");
 
-        int wells = 0, houses = 0;
+        int houses = 0;
         for (const Village::Building& b : plan)
         {
-            if (b.kind == Village::Kind::Well) ++wells;
             if (Village::isHouse(b.kind)) ++houses;
 
             check(b.width > 0 && b.depth > 0, "everything in it takes up room");
@@ -1077,16 +1076,44 @@ namespace
             check(b.z >= site.z - Village::MAX_RADIUS, "nor north");
             check(b.z + b.depth - 1 <= site.z + Village::MAX_RADIUS, "nor south");
         }
-        check(wells == 1, "exactly one well, in the middle");
-        check(houses > 0, "and houses around it");
+        check(houses > 0, "houses in it");
 
-        // The well is centred on the site.
+        // The middle plot is left open: the paved square the paths put
+        // there is the middle of the village, and the well that used to
+        // stand on it read as a shed in the way.
         for (const Village::Building& b : plan)
-            if (b.kind == Village::Kind::Well)
+        {
+            const bool coversMiddle = site.x >= b.x && site.x < b.x + b.width &&
+                                      site.z >= b.z && site.z < b.z + b.depth;
+            check(!coversMiddle, "nothing is built on the middle of the village");
+        }
+
+        // Every frontage stands the same step back from its street,
+        // which is what makes a row of different-sized houses line up.
+        for (const Village::Building& b : plan)
+        {
+            if (!Village::isHouse(b.kind)) continue;
+
+            const int awayX = b.x + b.width / 2 - site.x;
+            const int awayZ = b.z + b.depth / 2 - site.z;
+            const int plotX = (awayX >= 0 ? (awayX + Village::PLOT / 2) / Village::PLOT
+                                          : -((-awayX + Village::PLOT / 2) / Village::PLOT));
+            const int plotZ = (awayZ >= 0 ? (awayZ + Village::PLOT / 2) / Village::PLOT
+                                          : -((-awayZ + Village::PLOT / 2) / Village::PLOT));
+
+            const int edgeX = site.x + plotX * Village::PLOT - Village::PLOT / 2;
+            const int edgeZ = site.z + plotZ * Village::PLOT - Village::PLOT / 2;
+
+            int gap = -1;
+            switch (b.facing)
             {
-                check(b.x + b.width / 2 == site.x && b.z + b.depth / 2 == site.z,
-                      "the well is what the village is arranged around");
+                case 0:  gap = b.z - edgeZ; break;
+                case 1:  gap = (edgeX + Village::PLOT - 1) - (b.x + b.width - 1); break;
+                case 2:  gap = (edgeZ + Village::PLOT - 1) - (b.z + b.depth - 1); break;
+                default: gap = b.x - edgeX; break;
             }
+            check(gap == 1, "every frontage is the same step back from its street");
+        }
 
         // Nothing overlaps anything else: two buildings sharing ground
         // would leave one half-built inside the other.
@@ -1410,10 +1437,8 @@ namespace
         }
 
         // A well has no chest, so it has no table either.
-        check(VillageLoot::rollFor(Village::Kind::Well, 0, 70, 0, seed).empty(),
-              "a well holds nothing");
         check(VillageLoot::rollFor(Village::Kind::Lamp, 0, 70, 0, seed).empty(),
-              "and neither does a lamp post");
+              "a lamp post holds nothing");
 
         // Each trade keeps its own stock: a library has no iron in it.
         bool smithHasMetal = false, libraryHasPaper = false, butcherHasMeat = false;

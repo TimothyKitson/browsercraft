@@ -47,6 +47,37 @@ bool Village::reaches(const Site& site, int minX, int minZ, int maxX, int maxZ)
            site.z + MAX_RADIUS >= minZ && site.z - MAX_RADIUS <= maxZ;
 }
 
+namespace
+{
+    // Puts a building in its plot so that the side its door is on sits
+    // a fixed step back from the street, and leaves the other axis
+    // centred. Centring both ways instead left every frontage at a
+    // different distance from the path, and a street of houses none of
+    // which lined up read as scattered however tidy the grid was.
+    void placeInPlot(const Village::Site& site, int gx, int gz, Village::Building& building)
+    {
+        using namespace Village;
+
+        const int plotX = site.x + gx * PLOT - PLOT / 2;
+        const int plotZ = site.z + gz * PLOT - PLOT / 2;
+        const int plotEndX = plotX + PLOT - 1;
+        const int plotEndZ = plotZ + PLOT - 1;
+
+        constexpr int SETBACK = 1;   // between the frontage and the plot edge
+
+        building.x = plotX + (PLOT - building.width) / 2;
+        building.z = plotZ + (PLOT - building.depth) / 2;
+
+        switch (building.facing)
+        {
+            case 0:  building.z = plotZ + SETBACK; break;                        // front north
+            case 1:  building.x = plotEndX - SETBACK - (building.width - 1); break;
+            case 2:  building.z = plotEndZ - SETBACK - (building.depth - 1); break;
+            default: building.x = plotX + SETBACK; break;
+        }
+    }
+}
+
 std::vector<Village::Building> Village::plan(const Site& site, uint32_t seed)
 {
     std::vector<Building> out;
@@ -58,18 +89,11 @@ std::vector<Village::Building> Village::plan(const Site& site, uint32_t seed)
     {
         for (int gx = -half; gx <= half; ++gx)
         {
-            // The middle plot is the well, which is what the rest of
-            // the village is arranged around.
-            if (gx == 0 && gz == 0)
-            {
-                Building well;
-                well.kind = Kind::Well;
-                well.width = well.depth = 5;
-                well.x = site.x - 2;
-                well.z = site.z - 2;
-                out.push_back(well);
-                continue;
-            }
+            // The middle plot is left open. It used to hold a well,
+            // which read as a shed in the middle of the square; the
+            // paved square the paths lay there says "middle of the
+            // village" better than a building did.
+            if (gx == 0 && gz == 0) continue;
 
             const uint32_t roll = hashCoords(site.x + gx, 7, site.z + gz, seed + 55010);
             if (hashToFloat(roll) >= HOUSE_CHANCE)
@@ -86,14 +110,11 @@ std::vector<Village::Building> Village::plan(const Site& site, uint32_t seed)
                     farm.kind = Kind::Farm;
                     farm.width = 9;
                     farm.depth = 7;
-                    farm.x = site.x + gx * PLOT - PLOT / 2 + (PLOT - farm.width) / 2;
-                    farm.z = site.z + gz * PLOT - PLOT / 2 + (PLOT - farm.depth) / 2;
 
-                    // The gate faces the well, the same way a door does,
-                    // so it opens onto a path rather than a hedge.
                     if (std::abs(gx) >= std::abs(gz)) farm.facing = (gx > 0) ? 3 : 1;
                     else                              farm.facing = (gz > 0) ? 0 : 2;
 
+                    placeInPlot(site, gx, gz, farm);
                     out.push_back(farm);
                 }
                 else if (spare < 0.65f)
@@ -135,16 +156,12 @@ std::vector<Village::Building> Village::plan(const Site& site, uint32_t seed)
             house.depth = shape.depth;
             house.storeys = shape.storeys;
 
-            const int plotX = site.x + gx * PLOT - PLOT / 2;
-            const int plotZ = site.z + gz * PLOT - PLOT / 2;
-            house.x = plotX + (PLOT - house.width) / 2;
-            house.z = plotZ + (PLOT - house.depth) / 2;
-
             // The door looks towards the middle, along whichever axis
             // the house is further out on, so every door faces a path.
             if (std::abs(gx) >= std::abs(gz)) house.facing = (gx > 0) ? 3 : 1;
             else                              house.facing = (gz > 0) ? 0 : 2;
 
+            placeInPlot(site, gx, gz, house);
             out.push_back(house);
         }
     }
@@ -200,7 +217,6 @@ const char* Village::name(Kind kind)
         case Kind::Blacksmith: return "Blacksmith";
         case Kind::Library:    return "Library";
         case Kind::Butcher:    return "Butcher";
-        case Kind::Well:       return "Well";
         case Kind::Lamp:       return "Lamp";
         case Kind::Farm:       return "Farm";
     }

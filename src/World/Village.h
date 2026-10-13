@@ -24,7 +24,7 @@ namespace Village
     constexpr int GRID = 5;          // plots across, centred on the middle
     constexpr int MAX_RADIUS = (PLOT * GRID) / 2 + 2;
 
-    static_assert(GRID % 2 == 1, "the village needs a middle plot for its well");
+    static_assert(GRID % 2 == 1, "the village needs a middle plot to centre on");
 
     struct Site
     {
@@ -53,7 +53,6 @@ namespace Village
         Library,
         Butcher,
 
-        Well,
         Lamp,
         // A fenced field of wheat with a water channel down it. Not a
         // house: nobody lives in it, so it has no bed and no chest.

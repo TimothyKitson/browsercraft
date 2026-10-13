@@ -673,11 +673,11 @@ void WorldGen::stampBuilding(Chunk& chunk, const Village::Building& building,
                 const bool rim = (x == x0 || x == x1 || z == z0 || z == z1);
                 if (rim)
                 {
-                    // A log kerb round the bed, the way Minecraft's
-                    // fields are edged, with the fence standing on it.
-                    // Bare dirt read as a hole dug round the crop.
-                    put(chunk, x, ground, z, palette.post);
-                    put(chunk, x, ground + 1, z, Blocks::OakFence);
+                    // An oak log frame round the bed and nothing above
+                    // it, which is how Minecraft edges a field. The
+                    // fence that used to stand on it walled the crop
+                    // off from the village it belongs to.
+                    put(chunk, x, ground, z, Blocks::Log);
                     continue;
                 }
 
@@ -696,54 +696,6 @@ void WorldGen::stampBuilding(Chunk& chunk, const Village::Building& building,
                 put(chunk, x, ground + 1, z, wheatAtStage(stage));
             }
 
-        // A gap in the fence to get in by, on the side facing the well.
-        const int gateX = (x0 + x1) / 2;
-        const int gateZ = (z0 + z1) / 2;
-        switch (building.facing)
-        {
-            case 0:  put(chunk, gateX, ground + 1, z0, Blocks::Air); break;
-            case 1:  put(chunk, x1, ground + 1, gateZ, Blocks::Air); break;
-            case 2:  put(chunk, gateX, ground + 1, z1, Blocks::Air); break;
-            default: put(chunk, x0, ground + 1, gateZ, Blocks::Air); break;
-        }
-        return;
-    }
-
-    if (building.kind == Village::Kind::Well)
-    {
-        // A cobblestone apron with a lined pit of water in the middle,
-        // four posts and a roof over it.
-        for (int x = x0; x <= x1; ++x)
-            for (int z = z0; z <= z1; ++z)
-            {
-                put(chunk, x, ground, z, palette.footing);
-                for (int y = ground + 1; y <= ground + 5; ++y)
-                    put(chunk, x, y, z, Blocks::Air);
-            }
-
-        const int midX = x0 + 2;
-        const int midZ = z0 + 2;
-        put(chunk, midX, ground, midZ, Blocks::Water);
-        put(chunk, midX, ground - 1, midZ, Blocks::Water);
-
-        for (int x = midX - 1; x <= midX + 1; ++x)
-            for (int z = midZ - 1; z <= midZ + 1; ++z)
-            {
-                if (x == midX && z == midZ) continue;
-                put(chunk, x, ground + 1, z, palette.footing);
-            }
-
-        for (int y = ground + 2; y <= ground + 3; ++y)
-        {
-            put(chunk, midX - 1, y, midZ - 1, palette.post);
-            put(chunk, midX + 1, y, midZ - 1, palette.post);
-            put(chunk, midX - 1, y, midZ + 1, palette.post);
-            put(chunk, midX + 1, y, midZ + 1, palette.post);
-        }
-
-        for (int x = midX - 1; x <= midX + 1; ++x)
-            for (int z = midZ - 1; z <= midZ + 1; ++z)
-                put(chunk, x, ground + 4, z, palette.roof);
         return;
     }
 
