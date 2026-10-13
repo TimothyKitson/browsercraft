@@ -1214,6 +1214,15 @@ namespace
                   "and has no chest to fill");
         }
 
+        // The path is ordinary ground: it digs like dirt, and a village
+        // that laid it over water or a stone outcrop would read as a
+        // bug rather than a road.
+        {
+            check(blockInfo(Blocks::DirtPath).collides, "a path is something to stand on");
+            check(blockInfo(Blocks::DirtPath).hardness > 0.0f, "and can be dug up");
+            check(Tools::requiredLevel(Blocks::DirtPath) == 0, "by hand, like the dirt it is");
+        }
+
         // Villagers belong to their village and turn back at the edge.
         {
             const glm::vec3 middle(100.0f, 70.0f, -40.0f);

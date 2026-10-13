@@ -129,6 +129,11 @@ namespace Blocks
         NetherWart,
         BrewingStand,
 
+        // Trodden earth. What a village lays between its houses, and
+        // the thing that makes one read as a place rather than a set
+        // of buildings dropped on a field.
+        DirtPath,
+
         Count
     };
 }

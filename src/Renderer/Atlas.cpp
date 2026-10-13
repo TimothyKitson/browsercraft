@@ -2155,6 +2155,29 @@ namespace
     // the whole of what you see of it from standing height.
     // The anvil, seen from above: the flat face you work on, with the
     // horn standing proud at one end.
+    // Trodden earth: dirt, rubbed pale and smooth on top.
+    void paintDirtPathTop(Tile& t)
+    {
+        const int n = Tile::N;
+        const Color worn{ 150, 125, 88 };
+        const Color wornDark{ 128, 105, 72 };
+        for (int y = 0; y < n; ++y)
+            for (int x = 0; x < n; ++x)
+                t.set(x, y, ((x * 5 + y * 3) % 9 < 4) ? wornDark : worn);
+    }
+
+    void paintDirtPathSide(Tile& t)
+    {
+        paintDirt(t);
+        const int n = Tile::N;
+        const Color worn{ 150, 125, 88 };
+        for (int x = 0; x < n; ++x)
+        {
+            t.set(x, 0, worn);
+            if ((x & 1) == 0) t.set(x, 1, worn);
+        }
+    }
+
     void paintNetherWartTile(Tile& t)
     {
         t.fill(Color{ 0, 0, 0, 0 });
@@ -2785,6 +2808,8 @@ namespace
         { Tiles::SugarCane,     paintSugarCane },
         { Tiles::BookshelfSide, paintBookshelfSide },
         { Tiles::AnvilTop,         paintAnvilTop },
+        { Tiles::DirtPathTop,      paintDirtPathTop },
+        { Tiles::DirtPathSide,     paintDirtPathSide },
         { Tiles::NetherWartTile,   paintNetherWartTile },
         { Tiles::BrewingStandTile, paintBrewingStandTile },
         { Tiles::AnvilSide,        paintAnvilSide },
@@ -2965,6 +2990,8 @@ namespace
         { Tiles::AnvilTop,         { "anvil_top", nullptr },                           Tinting::None,    0,   false },
         { Tiles::NetherWartTile,   { "nether_wart_stage2", "nether_wart", nullptr },  Tinting::None,    0,   false },
         { Tiles::BrewingStandTile, { "brewing_stand", nullptr },                       Tinting::None,    0,   false },
+        { Tiles::DirtPathTop,      { "dirt_path_top", "grass_path_top", nullptr },    Tinting::None,    0,   false },
+        { Tiles::DirtPathSide,     { "dirt_path_side", "grass_path_side", nullptr },  Tinting::None,    0,   false },
         { Tiles::AnvilSide,        { "anvil", nullptr },                               Tinting::None,    0,   false },
         { Tiles::EnchantTableTop,  { "enchanting_table_top", nullptr },                Tinting::None,    0,   false },
         { Tiles::EnchantTableSide, { "enchanting_table_side", nullptr },               Tinting::None,    0,   false },

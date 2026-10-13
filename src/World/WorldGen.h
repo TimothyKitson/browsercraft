@@ -83,6 +83,8 @@ private:
     // into lays out the whole thing and stamps only its own part --
     // which works because the layout depends on nothing but the seed.
     void buildVillages(Chunk& chunk) const;
+    void layPaths(Chunk& chunk, const Village::Site& site,
+                  int fromX, int fromZ, int toX, int toZ) const;
     // Whether the ground where this village would stand could carry
     // it. Decided from the site alone, so every chunk agrees.
     bool villageFits(const Village::Site& site) const;

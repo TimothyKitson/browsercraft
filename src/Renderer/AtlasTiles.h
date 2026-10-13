@@ -80,6 +80,8 @@ namespace Tiles
         AnvilSide,
         NetherWartTile,
         BrewingStandTile,
+        DirtPathTop,
+        DirtPathSide,
         RainDrop,
         SnowFlake,
 

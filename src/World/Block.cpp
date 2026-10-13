@@ -121,6 +121,7 @@ namespace
         { "Anvil",        AnvilTop,      AnvilTop,       AnvilSide,      true,  false, RenderType::Slab,   0,   5.0f },
         { "Nether Wart",  NetherWartTile, NetherWartTile, NetherWartTile, false, false, RenderType::Cross,  0,   0.0f },
         { "Brewing Stand", BrewingStandTile, BrewingStandTile, BrewingStandTile, false, false, RenderType::Cross, 1, 0.5f },
+        { "Dirt Path",    DirtPathTop,   Dirt,           DirtPathSide,   true,  true,  RenderType::Cube,   0,   0.6f },
     };
 }
 
@@ -181,6 +182,7 @@ const char* blockSoundGroup(BlockId id)
         case Blocks::Pumpkin:
         case Blocks::SugarCane:
         case Blocks::NetherWart:
+        case Blocks::DirtPath:
             return "grass";
 
         case Blocks::Farmland:
@@ -265,6 +267,7 @@ Material blockMaterial(BlockId id)
     {
         case Blocks::Dirt:
         case Blocks::Farmland:
+        case Blocks::DirtPath:
         case Blocks::Clay:
         case Blocks::SoulSand:
             return Material::Dirt;

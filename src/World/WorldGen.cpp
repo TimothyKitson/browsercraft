@@ -673,9 +673,10 @@ void WorldGen::stampBuilding(Chunk& chunk, const Village::Building& building,
                 const bool rim = (x == x0 || x == x1 || z == z0 || z == z1);
                 if (rim)
                 {
-                    // The fence stands on solid ground, not on soil:
-                    // farmland under a post looks like a mistake.
-                    put(chunk, x, ground, z, Blocks::Dirt);
+                    // A log kerb round the bed, the way Minecraft's
+                    // fields are edged, with the fence standing on it.
+                    // Bare dirt read as a hole dug round the crop.
+                    put(chunk, x, ground, z, palette.post);
                     put(chunk, x, ground + 1, z, Blocks::OakFence);
                     continue;
                 }
@@ -1069,6 +1070,92 @@ Village::Site WorldGen::nearestVillage(int fromX, int fromZ, int squares) const
     return best;
 }
 
+// The paths. They run along the gaps between plots, which is where the
+// houses already leave room, so a village reads as streets with
+// buildings on them rather than buildings on a field. Laid before the
+// buildings, so anything that stands on a path simply covers it.
+void WorldGen::layPaths(Chunk& chunk, const Village::Site& site,
+                        int fromX, int fromZ, int toX, int toZ) const
+{
+    const int half = Village::GRID / 2;
+    const int reach = Village::PLOT * half + Village::PLOT / 2;
+
+    auto lay = [&](int x, int z)
+    {
+        if (x < fromX || x > toX || z < fromZ || z > toZ) return;
+
+        const int top = surfaceHeight(x, z);
+
+        const int lx = x - chunk.position().x * Chunk::SX;
+        const int lz = z - chunk.position().z * Chunk::SZ;
+        if (!Chunk::inBounds(lx, top, lz)) return;
+
+        // Only over ground somebody would walk on. A path laid across
+        // water or a stone outcrop read as a bug rather than a road.
+        const BlockId here = chunk.getBlock(lx, top, lz);
+        if (here != Blocks::Grass && here != Blocks::Dirt &&
+            here != Blocks::Sand && here != Blocks::SnowGrass)
+            return;
+
+        put(chunk, x, top, z, Blocks::DirtPath);
+        put(chunk, x, top + 1, z, Blocks::Air);
+    };
+
+    // One line down each boundary between plot columns, and one across
+    // each boundary between plot rows. Two blocks wide, which is what
+    // reads as a street rather than a line somebody scratched.
+    for (int g = -half; g <= half; ++g)
+    {
+        const int lineX = site.x + g * Village::PLOT + Village::PLOT / 2;
+        const int lineZ = site.z + g * Village::PLOT + Village::PLOT / 2;
+
+        for (int along = -reach; along <= reach; ++along)
+        {
+            lay(lineX, site.z + along);
+            lay(lineX - 1, site.z + along);
+
+            lay(site.x + along, lineZ);
+            lay(site.x + along, lineZ - 1);
+        }
+    }
+
+    // And a square round the well, so the middle of the village is a
+    // place rather than a crossing.
+    for (int dx = -4; dx <= 4; ++dx)
+        for (int dz = -4; dz <= 4; ++dz)
+            lay(site.x + dx, site.z + dz);
+
+    // A spur from every door out to the street. Without it the doors
+    // open onto grass and the paths read as laid around the village
+    // rather than through it.
+    for (const Village::Building& building : Village::plan(site, m_seed))
+    {
+        if (!Village::isHouse(building.kind) && building.kind != Village::Kind::Farm)
+            continue;
+
+        const int bx0 = building.x;
+        const int bz0 = building.z;
+        const int bx1 = bx0 + building.width - 1;
+        const int bz1 = bz0 + building.depth - 1;
+
+        int doorX = (bx0 + bx1) / 2;
+        int doorZ = (bz0 + bz1) / 2;
+        int stepX = 0, stepZ = 0;
+
+        switch (building.facing)
+        {
+            case 0:  doorZ = bz0; stepZ = -1; break;   // the door looks north
+            case 1:  doorX = bx1; stepX = 1;  break;
+            case 2:  doorZ = bz1; stepZ = 1;  break;
+            default: doorX = bx0; stepX = -1; break;
+        }
+
+        // Far enough to reach the street in the gap, and no further.
+        for (int out = 1; out <= Village::PLOT / 2 + 1; ++out)
+            lay(doorX + stepX * out, doorZ + stepZ * out);
+    }
+}
+
 void WorldGen::buildVillages(Chunk& chunk) const
 {
     const int baseX = chunk.position().x * Chunk::SX;
@@ -1113,6 +1200,8 @@ void WorldGen::buildVillages(Chunk& chunk) const
             // middle: a village with half its houses in sandstone and
             // half in oak would read as two villages that collided.
             const Palette palette = paletteFor(biomeAt(site.x, site.z));
+
+            layPaths(chunk, site, clearX0, clearZ0, clearX1, clearZ1);
 
             for (const Village::Building& building : Village::plan(site, m_seed))
                 stampBuilding(chunk, building, palette);
