@@ -21,6 +21,7 @@ enum class MobId : uint8_t
     Villager,
     Wolf,
     Horse,
+    Boat,
     Count
 };
 
@@ -146,6 +147,13 @@ struct MobType
     bool rideable = false;
     float saddleHeight = 1.0f;
 
+    // Not alive. A boat has no wits to wander with, makes no noise of
+    // its own and is worth nothing to kill -- it is a mob only because
+    // being a mob is what gets a thing drawn, moved and sat on here.
+    bool inanimate = false;
+    // Rides on top of water rather than sinking through it.
+    bool floats = false;
+
     // The undead catch fire in open daylight. Spiders and creepers do
     // not, which is why they are the ones you still meet at noon.
     bool burnsInSunlight = false;
@@ -162,6 +170,16 @@ struct MobType
     // your own machine.
     const char* texture = "";
     const char* overlay = "";       // a second sheet over the top: a sheep's wool
+
+    // A block texture out of the resource pack to clothe the model in,
+    // rather than a flat colour. A boat is planks, so it wears the same
+    // planks the world is built from and matches it exactly -- and at
+    // the pack's own resolution, not sixteen pixels to the block.
+    const char* blockTexture = "";
+    // What older packs call the same block, the way the atlas carries an
+    // alias for every tile. Without it a pack from before the rename
+    // would texture the world's planks and leave the boat flat.
+    const char* blockTextureAlt = "";
     int sheetWidth = 64;
     int sheetHeight = 32;
 

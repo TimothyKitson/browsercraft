@@ -530,6 +530,43 @@ namespace
             t.model.push_back(mc(Part::Body, 44, 0, 2, 12, 2, -1, -1, 0, 0, 3, 10));
             addLegs(t.model, 0, 36, 4, 14, 4, -2, 0, -2, 4, 9, -8);
         }
+        {
+            // The boat. It is a mob because being a mob is what gets a
+            // thing drawn, carried along and sat on here; it has no
+            // wits, no voice of its own and nothing to kill it for.
+            MobType& t = table[static_cast<size_t>(MobId::Boat)];
+            t.id = MobId::Boat;
+            t.experience = 0;
+            t.voice = Sound::DigWood;
+            t.hurtVoice = Sound::DigWood;
+            t.deathVoice = Sound::DigWood;
+            t.name = "Boat";
+            t.texture = "boat";
+            t.blockTexture = "oak_planks";
+            t.blockTextureAlt = "planks_oak";
+            t.sheetHeight = 64;
+            t.spawnClass = SpawnClass::Passive;
+            t.maxHealth = 4;
+            t.width = 1.0f;
+            t.height = 0.55f;
+            t.walkSpeed = 5.2f;
+            t.rideable = true;
+            t.saddleHeight = 0.35f;
+            t.inanimate = true;
+            t.floats = true;
+            t.drop = Items::Boat;
+            t.dropCount = 1;
+            t.bodyColour = rgb(142, 106, 64);
+            t.headColour = rgb(142, 106, 64);
+
+            // A hull: a floor with four walls stood on it. Four boxes
+            // rather than one hollowed one, because a box here is solid.
+            t.model.push_back(mc(Part::Body,  0,  0, 16, 2, 16, -8, 0, -8, 0, 22, 0));
+            t.model.push_back(mc(Part::Body,  0, 18,  2, 4, 16,  6, 0, -8, 0, 18, 0));
+            t.model.push_back(mc(Part::Body,  0, 38,  2, 4, 16, -8, 0, -8, 0, 18, 0));
+            t.model.push_back(mc(Part::Body, 36, 18, 12, 4,  2, -6, 0,  6, 0, 18, 0));
+            t.model.push_back(mc(Part::Body, 36, 24, 12, 4,  2, -6, 0, -8, 0, 18, 0));
+        }
 
         return table;
     }

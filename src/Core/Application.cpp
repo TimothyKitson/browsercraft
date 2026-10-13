@@ -1391,7 +1391,8 @@ bool Application::frame()
             m_startupScreen == "pbr" || m_startupScreen == "anvil" ||
             m_startupScreen == "anvilblock" || m_startupScreen == "brew" ||
             m_startupScreen == "village" || m_startupScreen == "shield" ||
-            m_startupScreen == "wolf" || m_startupScreen == "horse")
+            m_startupScreen == "wolf" || m_startupScreen == "horse" ||
+            m_startupScreen == "boat")
         {
             // Dev aid: open the inventory with something in it, so the
             // screenshot shows a real grid rather than 36 empty boxes.
@@ -1423,6 +1424,7 @@ bool Application::frame()
                                   m_startupScreen != "shield" &&
                                   m_startupScreen != "wolf" &&
                                   m_startupScreen != "horse" &&
+                                  m_startupScreen != "boat" &&
                                   m_startupScreen != "portal" &&
                                   m_startupScreen != "nether";
             m_inventoryOpen = showPanel;
@@ -1636,6 +1638,56 @@ bool Application::frame()
                 m_world->setBlock(px + 10, py, pz - 5, Blocks::Bookshelf);
                 m_world->setBlock(px + 10, py, pz,     Blocks::DiamondOre);
                 m_world->setBlock(px + 10, py, pz + 5, Blocks::EndPortalFrame);
+            }
+
+            if (m_startupScreen == "boat")
+            {
+                m_camera.setOrientation(0.0f, -22.0f);
+                m_camera.addLook(0.0f, 0.0f, 0.0f);
+
+                const int px = static_cast<int>(std::floor(m_player.position.x));
+                const int py = static_cast<int>(std::floor(m_player.position.y));
+                const int pz = static_cast<int>(std::floor(m_player.position.z));
+
+                // A pond two deep, cut into flat ground with a sand rim,
+                // so the hulls have somewhere to sit and the waterline
+                // is visible against something.
+                for (int ax = -2; ax <= 16; ++ax)
+                    for (int az = -9; az <= 9; ++az)
+                    {
+                        for (int ay = 0; ay <= 6; ++ay)
+                            m_world->setBlock(px + ax, py + ay, pz + az, Blocks::Air);
+
+                        const bool pond = ax >= 3 && ax <= 13 && az >= -6 && az <= 6;
+                        m_world->setBlock(px + ax, py - 1, pz + az,
+                                          pond ? Blocks::Water : Blocks::Grass);
+                        m_world->setBlock(px + ax, py - 2, pz + az,
+                                          pond ? Blocks::Water : Blocks::Dirt);
+                        m_world->setBlock(px + ax, py - 3, pz + az, Blocks::Sand);
+                    }
+
+                for (int i = 0; i < 3; ++i)
+                {
+                    const glm::vec3 where(static_cast<float>(px + 4 + i * 3) + 0.5f,
+                                          static_cast<float>(py) - 0.2f,
+                                          static_cast<float>(pz + (i - 1) * 2) + 0.5f);
+                    m_entities.spawnAt(MobId::Boat, where, *m_world);
+                }
+
+                // One on the bank as well, so the shot shows a hull
+                // that no water is tinting.
+                m_entities.spawnAt(MobId::Boat,
+                                   glm::vec3(static_cast<float>(px + 5) + 0.5f,
+                                             static_cast<float>(py),
+                                             static_cast<float>(pz - 8) + 0.5f),
+                                   *m_world);
+
+                m_inventory.add(Items::Boat, 1);
+                m_inventory.add(Blocks::Planks, 5);
+
+                m_world->setBlock(px + 15, py, pz - 5, Blocks::Bookshelf);
+                m_world->setBlock(px + 15, py, pz,     Blocks::DiamondOre);
+                m_world->setBlock(px + 15, py, pz + 5, Blocks::EndPortalFrame);
             }
 
             if (m_startupScreen == "wolf")
@@ -3981,6 +4033,34 @@ void Application::handlePlacement()
         ride->setRidden(true);
         m_player.velocity = glm::vec3(0.0f);
         m_audio.play(Sound::Click, 0.5f, 0.9f);
+        return;
+    }
+
+    // A boat is set down on the water in front of you, or on the
+    // ground if that is what you are looking at -- the same as vanilla,
+    // where a boat on land is simply a slow boat.
+    if (stack.id == Items::Boat)
+    {
+        const RaycastHit shore = m_world->raycast(m_camera.position, m_camera.front,
+                                                  REACH_DISTANCE, true);
+        if (!shore.hit) return;
+
+        const BlockId looking = m_world->getBlock(shore.block.x, shore.block.y, shore.block.z);
+        const glm::ivec3 cell = isLiquid(looking) ? shore.block : shore.previous;
+
+        // Sat on top of the water rather than in it, so it starts the
+        // right way up and settles down to the waterline.
+        const float lift = isLiquid(looking) ? 0.85f : 0.05f;
+        const glm::vec3 where(cell.x + 0.5f, cell.y + lift, cell.z + 0.5f);
+
+        if (!m_entities.spawnAt(MobId::Boat, where, *m_world)) return;
+
+        if (!m_player.creative())
+        {
+            stack.count -= 1;
+            if (stack.count <= 0) stack.clear();
+        }
+        m_audio.play(Sound::Place, 0.7f, 0.9f);
         return;
     }
 

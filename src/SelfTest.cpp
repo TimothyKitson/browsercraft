@@ -724,16 +724,19 @@ namespace
 
         // No two species may share a cry, or a dying sheep sounds like a
         // dying zombie the moment real audio is installed.
+        // Only the living. A boat creaks when it breaks and is silent
+        // otherwise -- it has no say of its own to share with anything.
         bool distinct = true;
         for (int a = 0; a < mobTypeCount(); ++a)
             for (int b = a + 1; b < mobTypeCount(); ++b)
             {
                 const MobType& x = mobType(static_cast<MobId>(a));
                 const MobType& y = mobType(static_cast<MobId>(b));
+                if (x.inanimate || y.inanimate) continue;
                 if (x.voice == y.voice || x.hurtVoice == y.hurtVoice ||
                     x.deathVoice == y.deathVoice) distinct = false;
             }
-        check(distinct, "every species has its own say, hurt and death");
+        check(distinct, "every living species has its own say, hurt and death");
         check(mobType(MobId::Cow).voicePitch < mobType(MobId::Pig).voicePitch,
               "a cow is lower than a pig");
     }
@@ -1837,11 +1840,15 @@ namespace
         check(horse.walkSpeed > 5.0f, "it is faster than you are on foot, which is the point");
         check(horse.spawnClass == SpawnClass::Passive, "and it is not out to get you");
 
-        // Only the horse. Riding a creeper would be a different game.
+        // Only the horse, among the living. Riding a creeper would be
+        // a different game.
         int rideable = 0;
         for (int i = 0; i < static_cast<int>(MobId::Count); ++i)
-            if (mobType(static_cast<MobId>(i)).rideable) ++rideable;
-        check(rideable == 1, "and it is the only thing you can get on");
+        {
+            const MobType& t = mobType(static_cast<MobId>(i));
+            if (t.rideable && !t.inanimate) ++rideable;
+        }
+        check(rideable == 1, "and it is the only animal you can get on");
 
         check(Mob::tamingFood(MobId::Horse) == Items::Wheat, "wheat tames one");
 
@@ -1888,6 +1895,134 @@ namespace
             mount.setRidden(false);
             check(!mount.ridden(), "getting off ends the ride");
             check(!mount.hunting(), "and leaves it with nothing it was told to chase");
+        }
+    }
+
+    void testBoats()
+    {
+        section("the boat");
+
+        const MobType& boat = mobType(MobId::Boat);
+        check(boat.rideable, "a boat can be got into");
+        check(boat.inanimate, "but it is not alive");
+        check(boat.floats, "and it floats");
+        check(boat.drop == Items::Boat && boat.dropCount == 1,
+              "break one and you get it back");
+        check(boat.saddleHeight > 0.0f && boat.saddleHeight <= boat.height,
+              "you sit in it, not under it and not on its mast");
+        check(boat.experience == 0, "and killing it teaches you nothing");
+
+        // Nothing inanimate may spawn on its own: a lake full of boats
+        // nobody built would be the giveaway.
+        for (int i = 0; i < mobTypeCount(); ++i)
+        {
+            const MobType& t = mobType(static_cast<MobId>(i));
+            if (!t.inanimate) continue;
+            check(t.breedingFood == Blocks::Air,
+                  std::string(t.name) + " cannot be bred");
+            check(t.attackDamage == 0, std::string(t.name) + " cannot hurt you");
+        }
+
+        // Who may get in what. A boat belongs to whoever finds it; a
+        // horse has to be tamed and grown first.
+        check(Mob::canBeRidden(boat, false, false), "anyone can get into a boat");
+        check(!Mob::canBeRidden(boat, false, true), "though not a half-built one");
+        check(Mob::canBeRidden(mobType(MobId::Horse), true, false),
+              "a tamed horse can be ridden");
+        check(!Mob::canBeRidden(mobType(MobId::Horse), false, false),
+              "a wild one cannot");
+        check(!Mob::canBeRidden(mobType(MobId::Horse), true, true),
+              "and neither can a foal");
+        for (MobId other : { MobId::Cow, MobId::Pig, MobId::Creeper, MobId::Villager })
+            check(!Mob::canBeRidden(mobType(other), true, false),
+                  std::string(mobType(other).name) + " is not transport");
+
+        // A boat is planks, so it wears the pack's planks rather than a
+        // colour picked to look like them: put one next to a plank wall
+        // and the grain is the same grain.
+        check(*boat.blockTexture != '\0', "a hull is clad in a block texture");
+        check(std::string(boat.blockTexture) == "oak_planks",
+              "the same planks the world is built from");
+        check(*boat.blockTextureAlt != '\0',
+              "and it knows what an older pack calls them");
+        check(!*mobType(MobId::Cow).blockTexture,
+              "while an animal is not clad in anything");
+
+        check(maxStackOf(Items::Boat) == 1, "boats do not stack, the same as vanilla");
+        check(std::string(displayName(Items::Boat)) == "Boat", "and it is called one");
+
+        // Five planks, open at the top. The shape matters: a full three
+        // by two would be something else.
+        {
+            ItemStack hull[9];
+            for (int i : { 0, 2, 3, 4, 5 }) { hull[i].id = Blocks::Planks; hull[i].count = 1; }
+            const CraftOutput made = Crafting::match(hull, 3);
+            check(made.valid() && made.id == Items::Boat && made.count == 1,
+                  "five planks round an open top make a boat");
+
+            // Filled in, it is six planks and not a boat.
+            ItemStack solid[9];
+            for (int i : { 0, 1, 2, 3, 4, 5 }) { solid[i].id = Blocks::Planks; solid[i].count = 1; }
+            const CraftOutput notABoat = Crafting::match(solid, 3);
+            check(!notABoat.valid() || notABoat.id != Items::Boat,
+                  "but a solid block of six is not one");
+        }
+
+        // Buoyancy. Dropped in deep, it comes up; held under, it rises;
+        // and left alone it settles at the waterline rather than
+        // bobbing there for ever.
+        const float waterline = 64.0f;
+
+        check(Mob::verticalStep(0.0f, 62.0f, waterline, true, 0.05f) > 0.0f,
+              "a hull under the surface is pushed up");
+        check(Mob::verticalStep(0.0f, 66.0f, waterline, true, 0.05f) < 0.0f,
+              "and one above it is pulled down");
+        check(Mob::verticalStep(0.0f, 62.0f, waterline, false, 0.05f) < 0.0f,
+              "while anything that does not float just falls");
+
+        // Where it comes to rest, which is the whole point: the first
+        // try added the spring on top of gravity and settled a block
+        // under the surface, where the water drew over the hull and it
+        // read as a blue smudge rather than a boat.
+        {
+            float y = 60.0f, vy = 0.0f;
+            for (int step = 0; step < 400; ++step)
+            {
+                vy = Mob::verticalStep(vy, y, waterline, true, 0.02f);
+                y += vy * 0.02f;
+            }
+            check(std::fabs(y - waterline) < 0.05f,
+                  "and one dropped four blocks under settles at the waterline, "
+                  "not below it");
+            check(std::fabs(vy) < 0.05f, "and stops moving once it is there");
+        }
+
+        // The damping has to actually damp. A spring this stiff with no
+        // drag would throw the boat into the sky.
+        {
+            float y = 60.0f, vy = 0.0f, highest = y;
+            for (int step = 0; step < 400; ++step)
+            {
+                vy = Mob::verticalStep(vy, y, waterline, true, 0.02f);
+                y += vy * 0.02f;
+                highest = std::max(highest, y);
+            }
+            check(highest < waterline + 1.0f, "and never breaches on the way up");
+        }
+
+        // Settling must not depend on the frame rate: a boat that rode
+        // high at 60fps and sank at 20 would be the same bug wearing a
+        // different hat.
+        for (float dt : { 0.008f, 0.016f, 0.033f, 0.05f })
+        {
+            float y = 61.0f, vy = 0.0f;
+            for (int step = 0; step < static_cast<int>(12.0f / dt); ++step)
+            {
+                vy = Mob::verticalStep(vy, y, waterline, true, dt);
+                y += vy * dt;
+            }
+            check(std::fabs(y - waterline) < 0.05f,
+                  "it settles at the waterline at " + std::to_string(dt) + "s a frame");
         }
     }
 
@@ -5110,10 +5245,11 @@ namespace
         bool distinct = true;
         for (int i = 0; i < mobTypeCount(); ++i)
         {
-            const int voice = static_cast<int>(mobType(static_cast<MobId>(i)).voice);
-            if (!voices.insert(voice).second) distinct = false;
+            const MobType& t = mobType(static_cast<MobId>(i));
+            if (t.inanimate) continue;
+            if (!voices.insert(static_cast<int>(t.voice)).second) distinct = false;
         }
-        check(distinct, "and no two species share one");
+        check(distinct, "and no two living species share one");
     }
 
     void testDrowning()
@@ -5566,6 +5702,7 @@ int runSelfTest()
     testShield();
     testWolves();
     testRiding();
+    testBoats();
     testVillages();
     testVillageLoot();
     testVillageLife();

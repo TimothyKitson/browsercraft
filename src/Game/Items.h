@@ -95,6 +95,9 @@ namespace Items
         // Held up against what is coming at you.
         Shield,
 
+        // Set down on water and got into.
+        Boat,
+
         Count
     };
 }

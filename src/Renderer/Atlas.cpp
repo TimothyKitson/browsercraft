@@ -2446,6 +2446,37 @@ namespace
     }
 
     void paintItemSugar(Tile& t) { paintPowder(t, Color{ 246, 246, 250 }, Color{ 202, 206, 214 }); }
+    // A boat seen from above and a little to one side: a hull with a
+    // bench across it, which is what the item looks like in the hand.
+    void paintItemBoat(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        const int n = Tile::N;
+        const Color wood{ 142, 106, 64 };
+        const Color rim{ 110, 80, 46 };
+        const Color inside{ 92, 68, 40 };
+
+        const float mid = (n - 1) * 0.5f;
+        const int top = n / 4;
+        const int bottom = n - n / 6;
+
+        for (int y = top; y < bottom; ++y)
+        {
+            // Square across the stern and drawn in to a point at the bow.
+            const float along = (y - top) / static_cast<float>(bottom - top);
+            const int half = static_cast<int>((n * 0.40f) * (1.0f - along * along * 0.75f));
+
+            for (int x = static_cast<int>(mid) - half; x <= static_cast<int>(mid) + half; ++x)
+            {
+                if (x < 0 || x >= n) continue;
+                const bool edge = x <= static_cast<int>(mid) - half + n / 16 ||
+                                  x >= static_cast<int>(mid) + half - n / 16 ||
+                                  y < top + n / 16 || y >= bottom - n / 16;
+                t.set(x, y, edge ? rim : (along > 0.3f && along < 0.5f ? wood : inside));
+            }
+        }
+    }
+
     void paintItemBlazePowder(Tile& t) { paintPowder(t, Color{ 252, 196, 70 }, Color{ 204, 110, 26 }); }
     void paintItemGlowstoneDust(Tile& t) { paintPowder(t, Color{ 248, 226, 150 }, Color{ 198, 160, 84 }); }
 
@@ -2852,6 +2883,7 @@ namespace
         { Tiles::ItemNetherWart,    paintItemNetherWart },
         { Tiles::ItemSugar,         paintItemSugar },
         { Tiles::ItemBlazePowder,   paintItemBlazePowder },
+        { Tiles::ItemBoat,          paintItemBoat },
         { Tiles::ItemGlowstoneDust, paintItemGlowstoneDust },
         { Tiles::EndFrameTop,   paintEndFrameTop },
         { Tiles::EndFrameEye,   paintEndFrameEye },
@@ -2954,6 +2986,7 @@ namespace
         { Tiles::ItemNetherWart,    { "nether_wart", nullptr, nullptr } },
         { Tiles::ItemSugar,         { "sugar", nullptr, nullptr } },
         { Tiles::ItemBlazePowder,   { "blaze_powder", nullptr, nullptr } },
+        { Tiles::ItemBoat,          { "oak_boat", nullptr, nullptr } },
         { Tiles::ItemGlowstoneDust, { "glowstone_dust", nullptr, nullptr } },
 
         { Tiles::ItemToolFirst +  0, { "wooden_pickaxe", "wood_pickaxe", nullptr } },

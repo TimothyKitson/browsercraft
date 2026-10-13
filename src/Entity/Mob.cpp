@@ -80,6 +80,45 @@ bool Mob::followPath()
 
 // Blocked. Rather than re-rolling a heading at random and walking into
 // the same wall again, try turning by steps until something is clear.
+// Held at the waterline. Pulled towards the surface in proportion to how
+// far off it is and damped on the way, which settles rather than bobbing;
+// returns whether there was any water under it to float on at all.
+bool Mob::floatTowardsSurface(const World& world, float deltaTime)
+{
+    const int x = static_cast<int>(std::floor(m_position.x));
+    const int z = static_cast<int>(std::floor(m_position.z));
+    const int feet = static_cast<int>(std::floor(m_position.y + 0.05f));
+
+    if (world.getBlock(x, feet, z) != Blocks::Water) return false;
+
+    // The top of the water it is sitting in, so a hull dropped into a
+    // deep lake rises to the surface instead of resting on the bed.
+    int surface = feet;
+    while (surface < feet + FLOAT_RISE && world.getBlock(x, surface + 1, z) == Blocks::Water)
+        ++surface;
+
+    const float waterline = static_cast<float>(surface + 1) - FLOAT_DRAFT;
+
+    m_velocity.y = verticalStep(m_velocity.y, m_position.y, waterline, true, deltaTime);
+    return true;
+}
+
+float Mob::verticalStep(float velocityY, float positionY, float waterline,
+                        bool afloat, float deltaTime)
+{
+    // Afloat, the water holds it up and gravity has no part in it. The
+    // first try added the spring on top of the fall, which settles
+    // wherever the two cancel -- a whole block under, as it turned out,
+    // with the hull showing through the surface as a blue smudge.
+    if (afloat)
+    {
+        velocityY += (waterline - positionY) * FLOAT_PULL * deltaTime;
+        return velocityY * std::max(0.0f, 1.0f - FLOAT_DAMPING * deltaTime);
+    }
+
+    return std::max(velocityY + GRAVITY * deltaTime, TERMINAL_VELOCITY);
+}
+
 void Mob::steerAroundObstacle(const World& world)
 {
     const float reach = std::max(0.6f, width());
@@ -474,8 +513,16 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
         // while being ridden fought the reins.
         m_moving = m_steerForward;
 
-        if (m_steerJump && m_onGround) m_velocity.y = RIDDEN_JUMP;
+        // A boat has no legs to push off with, so it does not jump.
+        if (m_steerJump && m_onGround && !t.inanimate) m_velocity.y = RIDDEN_JUMP;
         m_steerJump = false;
+    }
+    else if (t.inanimate)
+    {
+        // Left alone it stays where it was put. Nothing to want, so
+        // nothing to walk towards.
+        m_moving = false;
+        m_path.clear();
     }
     else
     {
@@ -499,7 +546,13 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
     m_velocity.x += (target.x - m_velocity.x) * blend;
     m_velocity.z += (target.z - m_velocity.z) * blend;
 
-    m_velocity.y = std::max(m_velocity.y + GRAVITY * deltaTime, TERMINAL_VELOCITY);
+    // What floats is held at the waterline rather than swum: pulled
+    // towards the surface and damped, so it settles instead of bobbing
+    // for ever. Out of the water gravity has it like anything else, and
+    // that is the only branch that applies the fall.
+    const bool afloat = t.floats && floatTowardsSurface(world, deltaTime);
+    if (!afloat)
+        m_velocity.y = verticalStep(m_velocity.y, m_position.y, 0.0f, false, deltaTime);
 
     const bool wasOnGround = m_onGround;
     m_onGround = false;
@@ -508,6 +561,10 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
     moveAxis(world, m_velocity.x * deltaTime, 0);
     moveAxis(world, m_velocity.y * deltaTime, 1);
     moveAxis(world, m_velocity.z * deltaTime, 2);
+
+    // Water is not a floor, so moveAxis never reports standing on it.
+    // Something riding on top of it is as settled as it is going to get.
+    if (afloat) m_onGround = true;
 
     // Blocked flat against something. Turning until the way is clear is
     // what stops a mob grinding into the same wall for as long as it can
@@ -536,7 +593,7 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
         m_gaitAmount, std::clamp(speed / std::max(0.5f, currentSpeed()), 0.0f, 1.0f),
         10.0f, deltaTime);
 
-    if (m_onGround)
+    if (m_onGround && !t.inanimate)
     {
         m_stepDistance += travelled;
         if (m_stepDistance >= STEP_SOUND_DISTANCE)
@@ -644,7 +701,7 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
     }
 
     m_ambientTimer -= deltaTime;
-    if (m_ambientTimer <= 0.0f)
+    if (m_ambientTimer <= 0.0f && !t.inanimate)
     {
         m_ambientTimer = t.ambientMinSeconds + random01() * (t.ambientMaxSeconds - t.ambientMinSeconds);
         emit(t.voice, 0.8f, 0.9f + random01() * 0.2f);

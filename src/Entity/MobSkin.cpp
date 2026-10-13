@@ -29,6 +29,36 @@ namespace
                      scaleChannel(c.b, factor), c.a };
     }
 
+    // A pack texture, sampled with wrap so a face wider than one tile
+    // repeats the grain instead of running off the edge.
+    struct Source
+    {
+        std::vector<uint8_t> pixels;
+        int width = 0;
+        int height = 0;
+
+        Rgba at(int x, int y) const
+        {
+            const int sx = ((x % width) + width) % width;
+            const int sy = ((y % height) + height) % height;
+            const size_t i = (static_cast<size_t>(sy) * width + sx) * 4;
+            return Rgba{ pixels[i], pixels[i + 1], pixels[i + 2], pixels[i + 3] };
+        }
+    };
+
+    bool loadBlockTexture(const char* name, Source& out)
+    {
+        const std::string path = std::string("assets/textures/block/") + name + ".png";
+
+        int channels = 0;
+        unsigned char* data = stbi_load(path.c_str(), &out.width, &out.height, &channels, 4);
+        if (!data) return false;
+
+        out.pixels.assign(data, data + static_cast<size_t>(out.width) * out.height * 4);
+        stbi_image_free(data);
+        return out.width > 0 && out.height > 0;
+    }
+
     class Canvas
     {
     public:
@@ -111,15 +141,22 @@ void MobSkin::build(MobId id)
     if (*type.texture && loadFile(texturePath(type.texture), m_pixels, m_width, m_height))
     {
         m_fromFile = true;
+        m_pixelWidth = m_width;
+        m_pixelHeight = m_height;
     }
     else
     {
         m_width = type.sheetWidth;
         m_height = type.sheetHeight;
-        paint(type);
+        m_pixelWidth = m_width;
+        m_pixelHeight = m_height;
+
+        // A thing built out of a block wears that block's texture out of
+        // the pack. Only if the pack is there: without it, the painting.
+        if (!clad(type)) paint(type);
     }
 
-    m_texture = upload(m_pixels, m_width, m_height, m_texture);
+    m_texture = upload(m_pixels, m_pixelWidth, m_pixelHeight, m_texture);
 
     // The overlay only ever comes from a file. Painting a sheep's wool
     // would mean painting the same hide twice, so without the art the
@@ -160,8 +197,63 @@ bool MobSkin::loadFile(const std::string& path, std::vector<uint8_t>& pixels, in
     return true;
 }
 
+bool MobSkin::clad(const MobType& type)
+{
+    if (!*type.blockTexture) return false;
+
+    Source source;
+    if (!loadBlockTexture(type.blockTexture, source) &&
+        !(*type.blockTextureAlt && loadBlockTexture(type.blockTextureAlt, source)))
+        return false;
+
+    // One block is sixteen model units, so this many picture pixels to
+    // the unit. A sixteen-pixel texture gives one and an HD pack more,
+    // which is how the hull ends up finer than the sheet it is laid out
+    // on without a single texture coordinate changing.
+    const int scale = std::max(1, std::min(8, source.width / 16));
+
+    m_pixelWidth = m_width * scale;
+    m_pixelHeight = m_height * scale;
+    m_pixels.assign(static_cast<size_t>(m_pixelWidth) * m_pixelHeight * 4, 0);
+
+    for (const MobBox& box : m_boxes)
+    {
+        if (box.layer != 0) continue;
+
+        for (int face = 0; face < 6; ++face)
+        {
+            int x = 0, y = 0, w = 0, h = 0;
+            BoxMesh::facePatch(face, box.u, box.v, box.size.x, box.size.y, box.size.z, x, y, w, h);
+
+            // The same top-lit, bottom-shadowed treatment the flat
+            // painting gets, so a hull still reads as a solid thing
+            // before any world lighting touches it.
+            float tone = 1.0f;
+            if (face == BoxMesh::Top) tone = 1.08f;
+            else if (face == BoxMesh::Bottom) tone = 0.78f;
+            else if (face == BoxMesh::Left || face == BoxMesh::Right) tone = 0.90f;
+
+            for (int j = 0; j < h * scale; ++j)
+                for (int i = 0; i < w * scale; ++i)
+                {
+                    const Rgba c = shade(source.at(i, j), tone);
+                    const int px = x * scale + i;
+                    const int py = y * scale + j;
+                    if (px < 0 || py < 0 || px >= m_pixelWidth || py >= m_pixelHeight) continue;
+                    const size_t at = (static_cast<size_t>(py) * m_pixelWidth + px) * 4;
+                    m_pixels[at] = c.r; m_pixels[at + 1] = c.g;
+                    m_pixels[at + 2] = c.b; m_pixels[at + 3] = c.a;
+                }
+        }
+    }
+
+    return true;
+}
+
 void MobSkin::paint(const MobType& type)
 {
+    m_pixelWidth = m_width;
+    m_pixelHeight = m_height;
     m_pixels.assign(static_cast<size_t>(m_width) * m_height * 4, 0);
     Canvas canvas(m_pixels, m_width, m_height);
 

@@ -118,7 +118,13 @@ bool EntityManager::fits(const World& world, const MobType& type, const glm::vec
             for (int z = minZ; z <= maxZ; ++z)
             {
                 const BlockId here = world.getBlock(x, y, z);
-                if (isSolid(here) || isLiquid(here)) return false;
+                if (isSolid(here)) return false;
+
+                // Water is somewhere to stand for a thing that floats:
+                // refusing it put boats everywhere but the pond. Lava
+                // still turns everything away.
+                if (isLiquid(here) && !(type.floats && here == Blocks::Water))
+                    return false;
             }
 
     return true;
@@ -443,7 +449,8 @@ Mob* EntityManager::rideable(const glm::vec3& origin, const glm::vec3& direction
 {
     Mob* target = pick(origin, direction, maxDistance);
     if (!target || !target->alive()) return nullptr;
-    if (!target->type().rideable || !target->tamed() || target->baby()) return nullptr;
+    if (!Mob::canBeRidden(target->type(), target->tamed(), target->baby()))
+        return nullptr;
     return target;
 }
 

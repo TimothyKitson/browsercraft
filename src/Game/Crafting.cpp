@@ -50,6 +50,11 @@ namespace
                          _,                 Blocks::Planks,    _ },
           0, Items::Shield, 1 },
 
+        // A boat: planks round three sides, open at the top.
+        { false, 3, 2, { Blocks::Planks,    _,                 Blocks::Planks,
+                         Blocks::Planks,    Blocks::Planks,    Blocks::Planks },
+          0, Items::Boat, 1 },
+
         // Brewing's glassware and the sweetener. One cane makes one
         // sugar; three glass makes three bottles.
         { true,  0, 0, { Blocks::SugarCane },

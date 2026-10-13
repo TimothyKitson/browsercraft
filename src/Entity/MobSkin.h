@@ -53,13 +53,22 @@ public:
 private:
     unsigned int m_texture = 0;
     unsigned int m_overlayTexture = 0;
+    // The sheet in model units, which is what the texture coordinates
+    // are measured in. The picture itself may be several pixels to the
+    // unit -- a pack's planks are thirty-two to the block -- and GL
+    // normalises either way, so the two sizes need not agree.
     int m_width = 64;
     int m_height = 32;
+    int m_pixelWidth = 64;
+    int m_pixelHeight = 32;
     bool m_fromFile = false;
     std::vector<MobBox> m_boxes;
     std::vector<uint8_t> m_pixels;
 
     bool loadFile(const std::string& path, std::vector<uint8_t>& pixels, int& w, int& h);
     void paint(const MobType& type);
+    // Clothes every face in a block texture out of the pack. False when
+    // the pack is not installed, which leaves the flat painting.
+    bool clad(const MobType& type);
     unsigned int upload(const std::vector<uint8_t>& pixels, int w, int h, unsigned int into);
 };

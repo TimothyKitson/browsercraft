@@ -201,11 +201,34 @@ public:
     // How hard a ridden mob jumps when the rider asks.
     static constexpr float RIDDEN_JUMP = 8.0f;
 
+    // How a hull sits in the water: how deep it rides, how hard the
+    // surface pulls it back, how fast that pull is bled off, and how far
+    // up it will look for the top of the water it is in.
+    static constexpr float FLOAT_DRAFT = 0.02f;
+    static constexpr float FLOAT_PULL = 24.0f;
+    static constexpr float FLOAT_DAMPING = 7.0f;
+    static constexpr int FLOAT_RISE = 8;
+
+    // One step of the vertical rule, whichever applies: the spring
+    // towards the waterline for something afloat, the fall for
+    // everything else. One function and not two, because the bug worth
+    // keeping out is applying both at once.
+    static float verticalStep(float velocityY, float positionY, float waterline,
+                              bool afloat, float deltaTime);
+
     // --- being ridden ---
     //
     // A ridden mob stops deciding where to go and does what the rider
     // asks. Steering is handed in rather than read, because the mob
     // has no idea a player exists and should not learn.
+    // Who may be got on. A horse has to be tamed and grown first; a
+    // boat belongs to whoever finds it, and nothing else is transport.
+    static bool canBeRidden(const MobType& type, bool tamed, bool baby)
+    {
+        if (!type.rideable || baby) return false;
+        return type.inanimate || tamed;
+    }
+
     bool ridden() const { return m_ridden; }
     void setRidden(bool on);
     void steer(float yawDegrees, bool forward, bool jump);
@@ -297,6 +320,8 @@ private:
     void burnInSunlight(float deltaTime, const World& world, float daylight);
     bool followPath();
     // A heading that is actually clear, for when the chosen one is not.
+
+    bool floatTowardsSurface(const World& world, float deltaTime);
     void steerAroundObstacle(const World& world);
 
     float m_attackTimer = 0.0f;
