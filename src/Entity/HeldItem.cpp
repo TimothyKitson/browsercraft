@@ -375,18 +375,38 @@ void HeldItem::appendShieldBox(const glm::mat4& toWorld, int u, int v,
             q.u[k] = (CUBE_UV[face][k][0] == 0.0f) ? u0 : u1;
             q.v[k] = (CUBE_UV[face][k][1] == 0.0f) ? v0 : v1;
         }
-        pushQuad(m_vertices, q, sky, blockLight, DERIVED_BASIS);
+
+        // No maps, the same as the arm and the item sprites. The shield
+        // has a sheet of its own and nothing in the block atlas, so
+        // asking the shader for a derived tangent basis set it marching
+        // the parallax through the normal atlas at the shield's own
+        // texture coordinates -- which dragged the UVs wherever that
+        // data happened to lead and smeared the plank face into a
+        // mottled smudge with a dark ring in the middle of it.
+        pushQuad(m_vertices, q, sky, blockLight, NO_NORMAL_MAP);
     }
 }
 
 void HeldItem::appendShield(const glm::mat4& toWorld, float sky, float blockLight)
 {
     // Mojang's own two boxes, read off shield_base_nopattern.png: a
-    // plate of 12x22x1 at (0,0) and the handle behind it, 2x6x6 at
-    // (26,0).
-    appendShieldBox(toWorld, 0, 0, 12.0f, 22.0f, 1.0f,
-                    0.0f, 0.0f, 0.0f, sky, blockLight);
+    // plate of 12x22x1 at (0,0) and a handle of 2x6x6 at (26,0).
+    //
+    // Built around the handle rather than around the plate, because the
+    // handle is the part the hand holds: put at the fist, the whole
+    // thing hangs off it the way a carried shield does. Centring the
+    // plate instead left the shield floating in mid-air beside the arm
+    // with nothing holding it.
     appendShieldBox(toWorld, 26, 0, 2.0f, 6.0f, 6.0f,
+                    0.0f, 0.0f, 0.0f, sky, blockLight);
+
+    // The plate stands on the near side of the grip. Mojang puts it the
+    // other way -- in Minecraft you see the back of your own shield --
+    // but Minecraft carries it in the off hand at the far side of the
+    // screen, where nothing is in the way. Here there is one arm and
+    // the shield shares it, so the face is what gets shown and the grip
+    // hides behind it.
+    appendShieldBox(toWorld, 0, 0, 12.0f, 22.0f, 1.0f,
                     0.0f, 0.0f, -3.5f * SHIELD_SCALE, sky, blockLight);
 }
 
@@ -485,18 +505,17 @@ void HeldItem::render(Shader& chunkShader, const Camera& camera, const PlayerSki
     // tile, and it is a panel rather than a card.
     if (stack == Items::Shield && shieldTexture() != 0)
     {
-        // Seated in the fist rather than floating over it: the shield's
-        // own origin is its middle, so without this it straddles the
-        // hand and half of it stands above the knuckles.
+        // In the fist, which is where a thing you are holding goes. The
+        // grip is the model's own origin, so this puts the hand on the
+        // handle and lets the plate hang off it.
         glm::mat4 panel = held;
-        panel[3] = glm::vec4(place(toWorld, HAND_LOCAL_X - 0.26f,
-                                   HAND_LOCAL_Y - 0.02f,
-                                   HAND_LOCAL_Z + 0.06f), 1.0f);
+        panel[3] = glm::vec4(place(toWorld, HAND_LOCAL_X - 0.11f,
+                                   HAND_LOCAL_Y + 0.09f,
+                                   HAND_LOCAL_Z - 0.05f), 1.0f);
 
-        // Across you when raised, carried edge-on at the hip when not:
-        // the whole point of a modelled shield over a card is that it
-        // has an edge to show.
-        const float turn = blocking ? 0.15f : 0.70f;
+        // Squared up to the front when raised, and turned to show its
+        // face when it is only being carried.
+        const float turn = blocking ? 0.0f : 0.55f;
         const glm::vec3 r(camera.right * std::cos(turn) + camera.front * std::sin(turn));
         const glm::vec3 f(-camera.right * std::sin(turn) + camera.front * std::cos(turn));
         panel[0] = glm::vec4(r, 0.0f);
