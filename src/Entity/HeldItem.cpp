@@ -78,7 +78,11 @@ namespace
     // the hand it is scaled down to about the size of the card it
     // replaces, or a 22-pixel plank fills a third of the screen.
     constexpr float SHIELD_SHEET = 64.0f;
-    constexpr float SHIELD_SCALE = 0.015f;
+    // Mojang draws the shield at 1.25 of an item's usual size. A held
+    // block here is BLOCK_SIZE across for its sixteen units, so the
+    // same quarter-again works out at this much per unit -- rather than
+    // a number picked by eye, which is what the last three were.
+    constexpr float SHIELD_SCALE = BLOCK_SIZE / 16.0f * 1.25f;
     const char* SHIELD_TEXTURE = "assets/skins/shield.png";
 
     // Face 6 tells the chunk shader to skip tangent-space normal mapping,
@@ -400,14 +404,15 @@ void HeldItem::appendShield(const glm::mat4& toWorld, float sky, float blockLigh
     appendShieldBox(toWorld, 26, 0, 2.0f, 6.0f, 6.0f,
                     0.0f, 0.0f, 0.0f, sky, blockLight);
 
-    // The plate stands on the near side of the grip. Mojang puts it the
-    // other way -- in Minecraft you see the back of your own shield --
-    // but Minecraft carries it in the off hand at the far side of the
-    // screen, where nothing is in the way. Here there is one arm and
-    // the shield shares it, so the face is what gets shown and the grip
-    // hides behind it.
+    // The plate stands off the far side of the grip in the model's own
+    // space. The pose below turns the whole thing about, which is what
+    // Mojang's rotation of [0,180,_] means, so this ends up nearest the
+    // eye with its front towards you -- the studded side. Drawn without
+    // that turn you get the plain back of the shield, which is what the
+    // first version showed and what made it look wrong against a
+    // screenshot of the real thing.
     appendShieldBox(toWorld, 0, 0, 12.0f, 22.0f, 1.0f,
-                    0.0f, 0.0f, -3.5f * SHIELD_SCALE, sky, blockLight);
+                    0.0f, 0.0f, 3.5f * SHIELD_SCALE, sky, blockLight);
 }
 
 void HeldItem::appendSprite(const glm::mat4& toWorld, StackId stack, float sky, float blockLight)
@@ -505,21 +510,39 @@ void HeldItem::render(Shader& chunkShader, const Camera& camera, const PlayerSki
     // tile, and it is a panel rather than a card.
     if (stack == Items::Shield && shieldTexture() != 0)
     {
-        // In the fist, which is where a thing you are holding goes. The
-        // grip is the model's own origin, so this puts the hand on the
-        // handle and lets the plate hang off it.
+        // Mojang's own first-person pose, out of shield.json: well out
+        // to the left, well forward of the hand, a quarter again life
+        // size, and square to the eye rather than angled -- you look at
+        // the face of your own shield, which is how you can see the
+        // banner on one. Carried it leans five degrees; raised it
+        // straightens up, rises a little and comes closer.
+        //
+        //   firstperson_righthand  rotation [0,180,5]  translation [-10,2,-10]
+        //   shield_blocking        rotation [0,180,0]  translation [-10,2.5,-11]
+        //
+        // Those translations are sixteenths of a block, so ten of them
+        // is five eighths -- far further out and further forward than
+        // the guesses this replaces.
         glm::mat4 panel = held;
-        panel[3] = glm::vec4(place(toWorld, HAND_LOCAL_X - 0.11f,
-                                   HAND_LOCAL_Y + 0.09f,
-                                   HAND_LOCAL_Z - 0.05f), 1.0f);
+        // The translations above are in sixteenths of the model's own
+        // space, so they scale with it rather than being blocks.
+        const float unit = SHIELD_SCALE;
+        panel[3] = glm::vec4(place(toWorld,
+                                   HAND_LOCAL_X - 10.0f * unit,
+                                   HAND_LOCAL_Y + (blocking ? 2.5f : 2.0f) * unit,
+                                   HAND_LOCAL_Z - (blocking ? 11.0f : 10.0f) * unit), 1.0f);
 
-        // Squared up to the front when raised, and turned to show its
-        // face when it is only being carried.
-        const float turn = blocking ? 0.0f : 0.55f;
-        const glm::vec3 r(camera.right * std::cos(turn) + camera.front * std::sin(turn));
-        const glm::vec3 f(-camera.right * std::sin(turn) + camera.front * std::cos(turn));
-        panel[0] = glm::vec4(r, 0.0f);
-        panel[2] = glm::vec4(f, 0.0f);
+        const float roll = blocking ? 0.0f : 0.0873f;   // five degrees
+        const float cr = std::cos(roll), sr = std::sin(roll);
+        const glm::vec3 right = camera.right * cr + camera.up * sr;
+        const glm::vec3 up = -camera.right * sr + camera.up * cr;
+
+        // Turned about its own vertical axis, which negates right and
+        // forward. This is the half-turn in Mojang's [0,180,5]: without
+        // it you are looking at the back of your own shield.
+        panel[0] = glm::vec4(-right, 0.0f);
+        panel[1] = glm::vec4(up, 0.0f);
+        panel[2] = glm::vec4(-camera.front, 0.0f);
 
         m_vertices.clear();
         appendShield(panel, sky, blockLight);

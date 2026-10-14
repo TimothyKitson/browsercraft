@@ -1391,6 +1391,7 @@ bool Application::frame()
             m_startupScreen == "pbr" || m_startupScreen == "anvil" ||
             m_startupScreen == "anvilblock" || m_startupScreen == "brew" ||
             m_startupScreen == "village" || m_startupScreen == "shield" ||
+            m_startupScreen == "shieldup" ||
             m_startupScreen == "wolf" || m_startupScreen == "horse" ||
             m_startupScreen == "boat" || m_startupScreen == "rails" ||
             m_startupScreen == "mobs" || m_startupScreen == "golem")
@@ -1423,6 +1424,7 @@ bool Application::frame()
                                   m_startupScreen != "anvilblock" &&
                                   m_startupScreen != "village" &&
                                   m_startupScreen != "shield" &&
+                                  m_startupScreen != "shieldup" &&
                                   m_startupScreen != "wolf" &&
                                   m_startupScreen != "horse" &&
                                   m_startupScreen != "boat" &&
@@ -1908,7 +1910,7 @@ bool Application::frame()
                 m_world->setBlock(px + 9, py, pz + 4, Blocks::EndPortalFrame);
             }
 
-            if (m_startupScreen == "shield")
+            if (m_startupScreen == "shield" || m_startupScreen == "shieldup")
             {
                 m_inventory.slot(0).id = Items::Shield;
                 m_inventory.slot(0).count = 1;
@@ -2964,8 +2966,9 @@ void Application::updateGameplay(float deltaTime)
     updateMining(deltaTime);
     // A shield goes up while Use is held, which is the same button
     // that places and eats -- so holding one takes that button over.
-    m_player.blocking = inGame() && m_keys.down(m_input, Action::Use) &&
-                        m_inventory.selected().id == Items::Shield;
+    m_player.blocking = inGame() && m_inventory.selected().id == Items::Shield &&
+                        (m_keys.down(m_input, Action::Use) ||
+                         m_startupScreen == "shieldup");
 
     handleEating(deltaTime);
     handleDrinking(deltaTime);
