@@ -447,6 +447,17 @@ bool EntityManager::tame(const glm::vec3& origin, const glm::vec3& direction,
     return target && target->tameWith(food);
 }
 
+Mob* EntityManager::toggleSit(const glm::vec3& origin, const glm::vec3& direction,
+                              float maxDistance)
+{
+    Mob* target = pick(origin, direction, maxDistance);
+    if (!target || !target->alive()) return nullptr;
+    if (!Mob::canSit(target->typeId(), target->tamed())) return nullptr;
+
+    target->toggleSit();
+    return target;
+}
+
 Mob* EntityManager::rideable(const glm::vec3& origin, const glm::vec3& direction,
                              float maxDistance)
 {
@@ -472,6 +483,10 @@ void EntityManager::setWolvesOnHostiles(float deltaTime)
         if (kind != MobId::Wolf && !golem) continue;
         if (!m_mobs[i].alive() || m_mobs[i].baby()) continue;
         if (!golem && !m_mobs[i].tamed()) continue;
+
+        // A wolf that has been told to stay does exactly that, which is
+        // the whole reason for telling it.
+        if (m_mobs[i].sitting()) continue;
 
         const glm::vec3 from = m_mobs[i].position();
 

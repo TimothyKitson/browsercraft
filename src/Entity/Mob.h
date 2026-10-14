@@ -193,6 +193,14 @@ public:
     // is asked for by type rather than kept on one.
     static StackId tamingFood(MobId type);
     bool tamed() const { return m_tamed; }
+
+    // A tamed animal told to stay. It keeps its place until it is told
+    // otherwise, which is what makes a wolf a guard rather than a
+    // shadow that follows you into every cave.
+    bool sitting() const { return m_sitting; }
+    void toggleSit() { if (m_tamed) m_sitting = !m_sitting; }
+    // Only a tamed animal of a kind that sits at all.
+    static bool canSit(MobId type, bool tamed);
     // Returns true when this actually tamed it, which is the caller's
     // cue to spend the bone.
     bool tameWith(StackId food);
@@ -368,6 +376,7 @@ private:
     int m_profession = -1;
     bool m_asleep = false;
     bool m_tamed = false;
+    bool m_sitting = false;
     bool m_ridden = false;
     bool m_steerForward = false;
     bool m_steerJump = false;

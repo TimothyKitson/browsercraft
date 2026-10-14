@@ -2375,6 +2375,32 @@ namespace
               "it keeps up with you, which a cow does not");
 
         check(Mob::tamingFood(MobId::Wolf) == Items::Bone, "a bone is what tames one");
+
+        // Sitting. Only something tamed takes an order, and a horse is
+        // ridden rather than told.
+        check(Mob::canSit(MobId::Wolf, true), "a tamed wolf can be told to sit");
+        check(!Mob::canSit(MobId::Wolf, false), "a wild one cannot");
+        check(!Mob::canSit(MobId::Horse, true), "and a horse is ridden, not told");
+        for (MobId other : { MobId::Cow, MobId::Pig, MobId::Villager, MobId::Zombie,
+                             MobId::IronGolem })
+            check(!Mob::canSit(other, true),
+                  std::string(mobType(other).name) + " takes no orders");
+
+        {
+            Mob pet(MobId::Wolf, glm::vec3(0.0f, 70.0f, 0.0f), 31u);
+            check(!pet.sitting(), "a wolf starts on its feet");
+
+            // Untamed, the order does nothing at all: a wild wolf is
+            // not yours to tell.
+            pet.toggleSit();
+            check(!pet.sitting(), "and an untamed one ignores being told");
+
+            pet.tameWith(Items::Bone);
+            pet.toggleSit();
+            check(pet.sitting(), "a tamed one sits when it is told");
+            pet.toggleSit();
+            check(!pet.sitting(), "and gets up when it is told again");
+        }
         for (MobId other : { MobId::Cow, MobId::Pig, MobId::Sheep, MobId::Villager,
                              MobId::Zombie })
             check(Mob::tamingFood(other) == Blocks::Air,

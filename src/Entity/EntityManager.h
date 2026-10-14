@@ -68,6 +68,10 @@ public:
 
     // Whatever tamed, rideable thing is in front of you, if any. Null
     // when what is there cannot be ridden or has not been tamed.
+    // Tells a tamed animal in front of you to sit, or to get up again.
+    // Null when there is nothing there that takes orders.
+    Mob* toggleSit(const glm::vec3& origin, const glm::vec3& direction, float maxDistance);
+
     Mob* rideable(const glm::vec3& origin, const glm::vec3& direction, float maxDistance);
 
     bool spawnAt(MobId type, glm::vec3 feetPosition, const World& world, bool baby = false);

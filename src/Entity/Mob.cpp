@@ -583,10 +583,10 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
         if (m_steerJump && m_onGround && !t.inanimate) m_velocity.y = RIDDEN_JUMP;
         m_steerJump = false;
     }
-    else if (t.inanimate)
+    else if (t.inanimate || m_sitting)
     {
-        // Left alone it stays where it was put. Nothing to want, so
-        // nothing to walk towards.
+        // Left alone it stays where it was put. A boat has nothing to
+        // want; a sitting wolf has been told.
         m_moving = false;
         m_path.clear();
     }
@@ -839,6 +839,14 @@ bool Stare::atHead(const glm::vec3& eye, const glm::vec3& look,
     if (along <= 0.0f || along > range) return false;
 
     return glm::length(toHead - dir * along) <= headRadius;
+}
+
+bool Mob::canSit(MobId type, bool tamed)
+{
+    // Only something that can be tamed at all, and only once it has
+    // been: a horse is tamed and will not sit, it is ridden instead.
+    if (!tamed || tamingFood(type) == Blocks::Air) return false;
+    return !mobType(type).rideable;
 }
 
 bool Mob::hostileNow(const MobType& t, bool provoked)

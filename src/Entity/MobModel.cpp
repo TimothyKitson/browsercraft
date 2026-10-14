@@ -12,6 +12,10 @@ namespace
 {
     const std::vector<int> CHUNK_LAYOUT = { 3, 2, 1, 1, 1, 1 };
 
+    // How far a sitting animal drops, in blocks. A wolf is 0.85 tall,
+    // so a fifth of that reads as sitting without burying its paws.
+    constexpr float SIT_DROP = 0.17f;
+
     // How far a limb swings at a full run, in radians. Less than the
     // player's: four short legs covering the same ground do not need to
     // reach as far as two long ones.
@@ -75,6 +79,12 @@ void MobModel::build(const MobSkin& skin, const Mob& mob, float sky, float block
     // each box keeps every texture patch the size the sheet says it is.
     frame.scale = mob.scale();
     frame.modelYaw = type.modelYaw;
+
+    // Sitting drops the whole animal onto its haunches. Lowering the
+    // figure rather than re-posing each leg keeps every texture patch
+    // the size the sheet says it is, which is the same reason a lamb is
+    // scaled rather than rebuilt.
+    if (mob.sitting()) frame.feet.y -= SIT_DROP * mob.scale();
 
     // A dead one keels over sideways rather than vanishing mid-step.
     const float fade = mob.deathFade();

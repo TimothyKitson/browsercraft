@@ -4260,6 +4260,15 @@ void Application::handlePlacement()
         return;
     }
 
+    // A tamed wolf in front of you is being told to sit or to get up,
+    // whatever is in your hand. This comes before feeding, or offering
+    // one a bone would only ever feed it.
+    if (Mob* told = m_entities.toggleSit(m_camera.position, m_camera.front, ATTACK_REACH))
+    {
+        m_audio.play(Sound::Click, 0.4f, told->sitting() ? 0.8f : 1.2f);
+        return;
+    }
+
     // Getting on something comes before all of it: a tamed horse in
     // front of you is to be ridden, not fed.
     if (Mob* ride = m_entities.rideable(m_camera.position, m_camera.front, ATTACK_REACH))
