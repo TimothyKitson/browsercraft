@@ -35,6 +35,7 @@ namespace
     // lower one, so the base is a parameter rather than a constant.
     constexpr int MOB_BASE = 24;
     constexpr int CART_BASE = 5;
+    constexpr int BOAT_BASE = 6;
 
     MobBox mc(Part part, int u, int v, int w, int h, int d,
               int bx, int by, int bz, int px, int py, int pz, int base = MOB_BASE)
@@ -538,9 +539,12 @@ namespace
             addLegs(t.model, 0, 36, 4, 14, 4, -2, 0, -2, 4, 9, -8);
         }
         {
-            // The boat. It is a mob because being a mob is what gets a
-            // thing drawn, carried along and sat on here; it has no
-            // wits, no voice of its own and nothing to kill it for.
+            // The boat, on Mojang's own layout. Every patch below was
+            // read off oak.png rather than recalled: a hull of 28x16x3
+            // at (0,0), two ends of 18x6x2 at (0,19) and (0,27), two
+            // sides of 28x6x2 at (0,35) and (0,43). It is a mob because
+            // being a mob is what gets a thing drawn, carried along and
+            // sat on here; it has no wits and no voice of its own.
             MobType& t = table[static_cast<size_t>(MobId::Boat)];
             t.id = MobId::Boat;
             t.experience = 0;
@@ -549,30 +553,40 @@ namespace
             t.deathVoice = Sound::DigWood;
             t.name = "Boat";
             t.texture = "boat";
+            t.sheetWidth = 128;
+            t.sheetHeight = 64;
+            // Without a sheet it wears the pack's own planks instead of
+            // a colour picked to look like them.
             t.blockTexture = "oak_planks";
             t.blockTextureAlt = "planks_oak";
-            t.sheetHeight = 64;
             t.spawnClass = SpawnClass::Passive;
             t.maxHealth = 4;
-            t.width = 1.0f;
+            t.width = 1.4f;
             t.height = 0.55f;
             t.walkSpeed = 5.2f;
             t.rideable = true;
             t.saddleHeight = 0.35f;
             t.inanimate = true;
             t.floats = true;
+            t.modelYaw = HALF_PI;
             t.drop = Items::Boat;
             t.dropCount = 1;
             t.bodyColour = rgb(142, 106, 64);
             t.headColour = rgb(142, 106, 64);
 
-            // A hull: a floor with four walls stood on it. Four boxes
-            // rather than one hollowed one, because a box here is solid.
-            t.model.push_back(mc(Part::Body,  0,  0, 16, 2, 16, -8, 0, -8, 0, 22, 0));
-            t.model.push_back(mc(Part::Body,  0, 18,  2, 4, 16,  6, 0, -8, 0, 18, 0));
-            t.model.push_back(mc(Part::Body,  0, 38,  2, 4, 16, -8, 0, -8, 0, 18, 0));
-            t.model.push_back(mc(Part::Body, 36, 18, 12, 4,  2, -6, 0,  6, 0, 18, 0));
-            t.model.push_back(mc(Part::Body, 36, 24, 12, 4,  2, -6, 0, -8, 0, 18, 0));
+            t.model.push_back(turned(mc(Part::Body, 0, 0, 28, 16, 3,
+                                        -14, -9, -3, 0, 3, 1, BOAT_BASE), HALF_PI));
+            t.model.push_back(turned(mc(Part::Body, 0, 19, 18, 6, 2,
+                                        -9, -7, -1, -14, 4, 0, BOAT_BASE),
+                                     0.0f, HALF_PI * 3.0f));
+            t.model.push_back(turned(mc(Part::Body, 0, 27, 18, 6, 2,
+                                        -9, -7, -1, 14, 4, 0, BOAT_BASE),
+                                     0.0f, HALF_PI));
+            t.model.push_back(turned(mc(Part::Body, 0, 35, 28, 6, 2,
+                                        -14, -7, -1, 0, 4, -8, BOAT_BASE),
+                                     0.0f, HALF_PI * 2.0f));
+            t.model.push_back(mc(Part::Body, 0, 43, 28, 6, 2,
+                                 -14, -7, -1, 0, 4, 8, BOAT_BASE));
         }
         {
             // The minecart, on Mojang's own layout: a floor with four

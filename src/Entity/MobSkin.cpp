@@ -193,9 +193,12 @@ bool MobSkin::loadFile(const std::string& path, std::vector<uint8_t>& pixels, in
 
     // Anything that is not a mob sheet would map the boxes onto nonsense,
     // so it is turned away rather than drawn.
-    if (w != 64 || (h != 32 && h != 64))
+    // A boat is laid out on a sheet twice as wide as an animal's.
+    const bool animalSheet = (w == 64 && (h == 32 || h == 64));
+    const bool wideSheet = (w == 128 && h == 64);
+    if (!animalSheet && !wideSheet)
     {
-        std::printf("Mob texture %s ignored: expected 64x32 or 64x64, got %dx%d\n",
+        std::printf("Mob texture %s ignored: expected 64x32, 64x64 or 128x64, got %dx%d\n",
                     path.c_str(), w, h);
         stbi_image_free(data);
         return false;

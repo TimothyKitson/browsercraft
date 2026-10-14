@@ -547,7 +547,8 @@ namespace
 
             // Every species must fit its sheet, or its texture coordinates
             // silently wrap onto another limb.
-            check(type.sheetWidth == 64 && (type.sheetHeight == 32 || type.sheetHeight == 64),
+            check((type.sheetWidth == 64 && (type.sheetHeight == 32 || type.sheetHeight == 64)) ||
+                      (type.sheetWidth == 128 && type.sheetHeight == 64),
                   who + " has a sheet the shape Minecraft draws on");
             check(MobSkin::fits(type.model, type.sheetWidth, type.sheetHeight),
                   who + " keeps every patch on its sheet");
