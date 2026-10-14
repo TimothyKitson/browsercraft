@@ -124,6 +124,7 @@ private:
                        int x0, int z0, int x1, int z1, int doorX, int doorZ,
                        const Palette& palette) const;
     void carveCaves(Chunk& chunk) const;
+    void layDeepslate(Chunk& chunk) const;
     void placeOres(Chunk& chunk) const;
     void decorate(Chunk& chunk) const;
 

@@ -84,6 +84,13 @@ namespace Tiles
         DirtPathSide,
         RailTile,
         RailCorner,
+        Granite,
+        Diorite,
+        Andesite,
+        Deepslate,
+        DeepslateTop,
+        Tuff,
+        Calcite,
         RainDrop,
         SnowFlake,
 
@@ -96,9 +103,23 @@ namespace Tiles
     // blocks so adding a block never renumbers them.
     // Raised from 64 when the blocks grew past it: the bench, the
     // furnace, the chest and the bed between them put the block tiles
-    // over that line. Nothing stores a tile index, so moving the items
+    // over that line. Raised again from 96 when the stone stopped being
+    // one grey block. Nothing stores a tile index, so moving the items
     // up costs nothing but the static_assert below keeping watch.
-    constexpr int ItemFirst = 96;
+    //
+    // The atlas is sixteen tiles square, so there are 256 in all. As of
+    // the stone family that is 99 blocks, 85 items and 10 cracks: 194
+    // used and 62 spare, but the spare was all stranded between the
+    // items and the cracks where no block could reach it. The line sits
+    // at 144 now, which leaves both sides room -- about forty more
+    // blocks and a dozen more items.
+    //
+    // Growing past 256 means a bigger grid, and a bigger grid costs
+    // texture memory in proportion: at the top tile size three
+    // 4096-square textures are already most of a gigabyte with their
+    // mipmaps. The next step is to drop MAX_TILE_PIXELS, not to widen
+    // the grid and hope.
+    constexpr int ItemFirst = 144;
 
     enum : int
     {

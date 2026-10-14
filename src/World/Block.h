@@ -145,6 +145,18 @@ namespace Blocks
         RailSouthWest,
         RailNorthWest,
 
+        // The stone the ground is actually made of. Vanilla stopped
+        // being one grey block a long time ago: granite, diorite and
+        // andesite come in blobs through the upper rock, deepslate
+        // takes over below zero with tuff seaming through it, and
+        // calcite turns up in pockets. Appended, like the rest.
+        Granite,
+        Diorite,
+        Andesite,
+        Deepslate,
+        Tuff,
+        Calcite,
+
         Count
     };
 }
@@ -189,6 +201,20 @@ inline bool isStairs(BlockId id) { return blockInfo(id).render == RenderType::St
 inline bool isFence(BlockId id) { return blockInfo(id).render == RenderType::Fence; }
 inline bool isDoor(BlockId id) { return blockInfo(id).render == RenderType::Door; }
 inline bool isRail(BlockId id) { return blockInfo(id).render == RenderType::Rail; }
+
+// The stones that count as "the ground" -- what ores replace and what
+// caves are cut through. Stone alone was the test everywhere before
+// there was more than one kind, which would have left every seam in the
+// deep rock hanging in a pocket of its own.
+inline bool isStoneFamily(BlockId id)
+{
+    return id == Blocks::Stone || id == Blocks::Granite || id == Blocks::Diorite ||
+           id == Blocks::Andesite || id == Blocks::Deepslate || id == Blocks::Tuff ||
+           id == Blocks::Calcite;
+}
+
+// Where deepslate takes over from stone.
+constexpr int DEEPSLATE_TOP = 18;
 inline bool isRailCorner(BlockId id)
 {
     return id >= Blocks::RailNorthEast && id <= Blocks::RailNorthWest;

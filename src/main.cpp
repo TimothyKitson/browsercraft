@@ -127,6 +127,16 @@ namespace
             { "gold",    Blocks::GoldOre },
             { "diamond", Blocks::DiamondOre },
             { "emerald", Blocks::EmeraldOre },
+            // Not ores, but counted the same way and for the same
+            // reason: these are what the rock is made of, and the only
+            // way to tell whether there is enough of them to see is to
+            // count them.
+            { "granite",   Blocks::Granite },
+            { "diorite",   Blocks::Diorite },
+            { "andesite",  Blocks::Andesite },
+            { "deepslate", Blocks::Deepslate },
+            { "tuff",      Blocks::Tuff },
+            { "calcite",   Blocks::Calcite },
         };
         constexpr int ORE_COUNT = static_cast<int>(sizeof(ORES) / sizeof(ORES[0]));
 
@@ -149,15 +159,15 @@ namespace
                         for (int lx = 0; lx < Chunk::SX; ++lx)
                         {
                             const BlockId id = chunk.getBlock(lx, y, lz);
-                            if (id == Blocks::Stone) { ++stoneIn[band]; ++stone; continue; }
+                            if (isStoneFamily(id)) { ++stoneIn[band]; ++stone; }
+                            if (id == Blocks::Stone) continue;
 
                             for (int o = 0; o < ORE_COUNT; ++o)
                                 if (id == ORES[o].id)
                                 {
                                     ++found[o][band];
                                     ++total[o];
-                                    ++stoneIn[band];
-                                    ++stone;
+                                    if (!isStoneFamily(id)) { ++stoneIn[band]; ++stone; }
                                 }
                         }
                 }

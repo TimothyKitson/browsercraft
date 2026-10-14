@@ -124,6 +124,59 @@ namespace
 
     void paintBlank(Tile& t) { t.fill(Color{ 0, 0, 0, 0 }); }
 
+    // The stone family. All the same rock with a different cast and a
+    // different coarseness, which is what they are: granite is pink and
+    // blotchy, diorite near-white, andesite grey-green and fine,
+    // deepslate dark and streaky, tuff dull and pitted, calcite almost
+    // chalk.
+    void paintRock(Tile& t, Color base, int speckleAmount, uint32_t salt,
+                   int blotches, int blotchRadius, int blotchShade)
+    {
+        t.fill(base);
+        t.speckle(speckleAmount, salt);
+        for (int i = 0; i < blotches; ++i)
+        {
+            const int cx = static_cast<int>(hash2(i, 0, salt) * Tile::N);
+            const int cy = static_cast<int>(hash2(i, 1, salt) * Tile::N);
+            const int rr = blotchRadius * blotchRadius;
+            for (int y = cy - blotchRadius; y <= cy + blotchRadius; ++y)
+                for (int x = cx - blotchRadius; x <= cx + blotchRadius; ++x)
+                    if ((x - cx) * (x - cx) + (y - cy) * (y - cy) <= rr)
+                        t.set(x, y, shade(t.get(x, y), blotchShade));
+        }
+    }
+
+    void paintGranite(Tile& t)  { paintRock(t, Color{ 154, 108,  92 }, 15, 211, 6, 3, -16); }
+    void paintDiorite(Tile& t)  { paintRock(t, Color{ 207, 207, 209 }, 17, 223, 7, 3, -22); }
+    void paintAndesite(Tile& t) { paintRock(t, Color{ 136, 139, 136 }, 11, 227, 4, 2, -12); }
+    void paintTuff(Tile& t)     { paintRock(t, Color{ 108, 109, 101 }, 14, 233, 8, 2, -14); }
+    void paintCalcite(Tile& t)  { paintRock(t, Color{ 223, 223, 218 },  8, 239, 3, 2,  -9); }
+
+    // Deepslate is streaked rather than blotched: the dark rock below
+    // zero reads as layered, which is what tells you how deep you are.
+    void paintDeepslate(Tile& t)
+    {
+        t.fill(Color{ 80, 80, 84 });
+        t.speckle(12, 241);
+        const int n = Tile::N;
+        for (int y = 0; y < n; ++y)
+        {
+            const int band = (y * 5) / n;
+            const int step = (band % 2 == 0) ? -7 : 5;
+            for (int x = 0; x < n; ++x)
+                if ((x + band * 3) % 7 < 4) t.set(x, y, shade(t.get(x, y), step));
+        }
+    }
+
+    void paintDeepslateTop(Tile& t)
+    {
+        paintDeepslate(t);
+        const int n = Tile::N;
+        for (int x = 0; x < n; ++x)
+            for (int y = 0; y < n; ++y)
+                if ((x * 3 + y * 5) % 11 < 3) t.set(x, y, shade(t.get(x, y), 6));
+    }
+
     void paintStone(Tile& t)
     {
         t.fill(Color{ 126, 126, 126 });
@@ -2979,6 +3032,13 @@ namespace
         { Tiles::SugarCane,     paintSugarCane },
         { Tiles::BookshelfSide, paintBookshelfSide },
         { Tiles::AnvilTop,         paintAnvilTop },
+        { Tiles::Granite,          paintGranite },
+        { Tiles::Diorite,          paintDiorite },
+        { Tiles::Andesite,         paintAndesite },
+        { Tiles::Deepslate,        paintDeepslate },
+        { Tiles::DeepslateTop,     paintDeepslateTop },
+        { Tiles::Tuff,             paintTuff },
+        { Tiles::Calcite,          paintCalcite },
         { Tiles::RailTile,         paintRail },
         { Tiles::RailCorner,       paintRailCorner },
         { Tiles::DirtPathTop,      paintDirtPathTop },
@@ -3167,6 +3227,13 @@ namespace
         { Tiles::AnvilTop,         { "anvil_top", nullptr },                           Tinting::None,    0,   false },
         { Tiles::NetherWartTile,   { "nether_wart_stage2", "nether_wart", nullptr },  Tinting::None,    0,   false },
         { Tiles::BrewingStandTile, { "brewing_stand", nullptr },                       Tinting::None,    0,   false },
+        { Tiles::Granite,          { "granite", nullptr, nullptr },                  Tinting::None,    0,   false },
+        { Tiles::Diorite,          { "diorite", nullptr, nullptr },                  Tinting::None,    0,   false },
+        { Tiles::Andesite,         { "andesite", nullptr, nullptr },                 Tinting::None,    0,   false },
+        { Tiles::Deepslate,        { "deepslate", nullptr, nullptr },                Tinting::None,    0,   false },
+        { Tiles::DeepslateTop,     { "deepslate_top", "deepslate", nullptr },        Tinting::None,    0,   false },
+        { Tiles::Tuff,             { "tuff", nullptr, nullptr },                     Tinting::None,    0,   false },
+        { Tiles::Calcite,          { "calcite", nullptr, nullptr },                  Tinting::None,    0,   false },
         { Tiles::RailTile,         { "rail", "rail_normal", nullptr },               Tinting::None,    0,   false },
         { Tiles::RailCorner,       { "rail_corner", "rail_normal_turned", nullptr }, Tinting::None,    0,   false },
         { Tiles::DirtPathTop,      { "dirt_path_top", "grass_path_top", nullptr },    Tinting::None,    0,   false },

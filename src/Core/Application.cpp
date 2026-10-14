@@ -1394,7 +1394,8 @@ bool Application::frame()
             m_startupScreen == "shieldup" ||
             m_startupScreen == "wolf" || m_startupScreen == "horse" ||
             m_startupScreen == "boat" || m_startupScreen == "rails" ||
-            m_startupScreen == "mobs" || m_startupScreen == "golem")
+            m_startupScreen == "mobs" || m_startupScreen == "golem" ||
+            m_startupScreen == "rock")
         {
             // Dev aid: open the inventory with something in it, so the
             // screenshot shows a real grid rather than 36 empty boxes.
@@ -1431,6 +1432,7 @@ bool Application::frame()
                                   m_startupScreen != "rails" &&
                                   m_startupScreen != "mobs" &&
                                   m_startupScreen != "golem" &&
+                                  m_startupScreen != "rock" &&
                                   m_startupScreen != "portal" &&
                                   m_startupScreen != "nether";
             m_inventoryOpen = showPanel;
@@ -1874,6 +1876,45 @@ bool Application::frame()
                 m_world->setBlock(px + 10, py, pz - 1, Blocks::DiamondOre);
                 m_world->setBlock(px + 10, py, pz + 5, Blocks::EndPortalFrame);
 
+                m_player.mode = GameMode::Creative;
+                m_player.health = Player::MAX_HEALTH;
+            }
+
+            if (m_startupScreen == "rock")
+            {
+                m_camera.setOrientation(0.0f, 0.0f);
+                m_camera.addLook(0.0f, 0.0f, 0.0f);
+
+                const int px = static_cast<int>(std::floor(m_player.position.x));
+                const int pz = static_cast<int>(std::floor(m_player.position.z));
+
+                // A gallery cut down the rock, so the whole column from
+                // the upper stone to the deepslate is in one shot.
+                const int floorY = 4;
+                for (int ax = 0; ax <= 3; ++ax)
+                    for (int az = -3; az <= 3; ++az)
+                        for (int ay = floorY; ay <= floorY + 40; ++ay)
+                            m_world->setBlock(px + ax, ay, pz + az, Blocks::Air);
+
+                for (int ax = 0; ax <= 3; ++ax)
+                    for (int az = -3; az <= 3; ++az)
+                        m_world->setBlock(px + ax, floorY - 1, pz + az, Blocks::Glowstone);
+
+                for (int ay = floorY; ay <= floorY + 36; ay += 6)
+                    for (int az = -3; az <= 3; ++az)
+                        m_world->setBlock(px + 4, ay, pz + az, Blocks::Glowstone);
+
+                // Stood on a ledge part way up, so the shot takes in the
+                // upper rock rather than the bottom of the shaft: left
+                // in mid-air the player simply falls to the floor.
+                const int ledge = floorY + 26;
+                for (int az = -1; az <= 1; ++az)
+                    m_world->setBlock(px + 1, ledge - 1, pz + az, Blocks::Glass);
+
+                m_player.position = glm::vec3(px + 1.5f, static_cast<float>(ledge),
+                                              pz + 0.5f);
+                m_player.velocity = glm::vec3(0.0f);
+                m_camera.position = m_player.eyePosition();
                 m_player.mode = GameMode::Creative;
                 m_player.health = Player::MAX_HEALTH;
             }

@@ -143,6 +143,7 @@ void WorldGen::generate(Chunk& chunk) const
 
     generateColumns(chunk);
     carveCaves(chunk);
+    layDeepslate(chunk);
     placeOres(chunk);
     decorate(chunk);
     buildVillages(chunk);
@@ -420,6 +421,41 @@ void WorldGen::carveCaves(Chunk& chunk) const
     }
 }
 
+// Everything below the deepslate line turns to deepslate, with a ragged
+// edge so the change of rock is not a flat ceiling across the world, and
+// tuff and calcite seaming through it. Done before the ores so a seam
+// found down there sits in deepslate rather than in a pocket of stone.
+void WorldGen::layDeepslate(Chunk& chunk) const
+{
+    const int baseX = chunk.position().x * Chunk::SX;
+    const int baseZ = chunk.position().z * Chunk::SZ;
+
+    for (int lx = 0; lx < Chunk::SX; ++lx)
+        for (int lz = 0; lz < Chunk::SZ; ++lz)
+        {
+            const int wx = baseX + lx;
+            const int wz = baseZ + lz;
+
+            // A few blocks of wobble either way, so the boundary reads
+            // as a change of rock rather than as a line someone drew.
+            const int wobble =
+                static_cast<int>(hashToFloat(hashCoords(wx, 0, wz, m_seed + 4411)) * 7.0f) - 3;
+            const int top = DEEPSLATE_TOP + wobble;
+
+            for (int y = 1; y <= top && y < Chunk::SY; ++y)
+            {
+                if (chunk.getBlock(lx, y, lz) != Blocks::Stone) continue;
+
+                BlockId rock = Blocks::Deepslate;
+                const float roll = hashToFloat(hashCoords(wx, y, wz, m_seed + 4412));
+                if (roll < 0.055f)      rock = Blocks::Tuff;
+                else if (roll < 0.068f) rock = Blocks::Calcite;
+
+                chunk.setBlockRaw(lx, y, lz, rock);
+            }
+        }
+}
+
 void WorldGen::placeOres(Chunk& chunk) const
 {
     const int baseX = chunk.position().x * Chunk::SX;
@@ -452,6 +488,13 @@ void WorldGen::placeOres(Chunk& chunk) const
         // Minecraft, which is what makes finding one worth saying out
         // loud. Tuned against --oreinfo like the rest.
         { Blocks::EmeraldOre, 5,  32, 0.00011f, 1, 1007 },
+        // The upper rock is not one grey block. These are deliberately
+        // fatter and commoner than any seam: they are scenery, not a
+        // find, and at a vein of thirty they read as the blotches
+        // vanilla cuts through its stone rather than as lumps.
+        { Blocks::Granite,   DEEPSLATE_TOP, 110, 0.0016f, 30, 1008 },
+        { Blocks::Diorite,   DEEPSLATE_TOP, 110, 0.0016f, 30, 1009 },
+        { Blocks::Andesite,  DEEPSLATE_TOP, 110, 0.0016f, 30, 1010 },
         { Blocks::Gravel,    10, 100, 0.0035f, 14, 1005 },
         { Blocks::Clay,      40,  66, 0.0030f, 10, 1006 },
     };
@@ -478,7 +521,7 @@ void WorldGen::placeOres(Chunk& chunk) const
                         int dy = static_cast<int>(hashToFloat(h >> 8) * 3.0f) - 1;
                         int dz = static_cast<int>(hashToFloat(h >> 16) * 3.0f) - 1;
                         int px = lx + dx, py = y + dy, pz = lz + dz;
-                        if (chunk.getBlock(px, py, pz) == Blocks::Stone)
+                        if (isStoneFamily(chunk.getBlock(px, py, pz)))
                             chunk.setBlockRaw(px, py, pz, ore.block);
                     }
                 }

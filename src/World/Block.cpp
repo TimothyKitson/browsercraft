@@ -128,6 +128,12 @@ namespace
         { "Rail",         RailCorner,    RailCorner,     RailCorner,     false, false, RenderType::Rail,   0,   0.7f },
         { "Rail",         RailCorner,    RailCorner,     RailCorner,     false, false, RenderType::Rail,   0,   0.7f },
         { "Rail",         RailCorner,    RailCorner,     RailCorner,     false, false, RenderType::Rail,   0,   0.7f },
+        { "Granite",      Granite,       Granite,        Granite,        true,  true,  RenderType::Cube,   0,   1.5f },
+        { "Diorite",      Diorite,       Diorite,        Diorite,        true,  true,  RenderType::Cube,   0,   1.5f },
+        { "Andesite",     Andesite,      Andesite,       Andesite,       true,  true,  RenderType::Cube,   0,   1.5f },
+        { "Deepslate",    DeepslateTop,  DeepslateTop,   Deepslate,      true,  true,  RenderType::Cube,   0,   3.0f },
+        { "Tuff",         Tuff,          Tuff,           Tuff,           true,  true,  RenderType::Cube,   0,   1.5f },
+        { "Calcite",      Calcite,       Calcite,        Calcite,        true,  true,  RenderType::Cube,   0,   0.75f },
     };
 }
 
