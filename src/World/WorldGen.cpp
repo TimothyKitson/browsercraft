@@ -530,24 +530,51 @@ void WorldGen::placeOres(Chunk& chunk) const
     }
 }
 
-void WorldGen::buildTree(Chunk& chunk, int worldX, int surfaceY, int worldZ, bool birch) const
+void WorldGen::buildTree(Chunk& chunk, int worldX, int surfaceY, int worldZ, TreeKind kind) const
 {
     const int baseX = chunk.position().x * Chunk::SX;
     const int baseZ = chunk.position().z * Chunk::SZ;
 
-    const BlockId logBlock = birch ? Blocks::BirchLog : Blocks::Log;
-    const BlockId leafBlock = birch ? Blocks::BirchLeaves : Blocks::Leaves;
+    BlockId logBlock = Blocks::Log;
+    BlockId leafBlock = Blocks::Leaves;
+    int extraHeight = 0;
+    int canopyRadius = 2;
+
+    switch (kind)
+    {
+        case TreeKind::Birch:
+            logBlock = Blocks::BirchLog;  leafBlock = Blocks::BirchLeaves;
+            extraHeight = 1;
+            break;
+        case TreeKind::Spruce:
+            logBlock = Blocks::SpruceLog; leafBlock = Blocks::SpruceLeaves;
+            // Tall and narrow, which is what a conifer is.
+            extraHeight = 3;
+            canopyRadius = 1;
+            break;
+        case TreeKind::DarkOak:
+            logBlock = Blocks::DarkOakLog; leafBlock = Blocks::DarkOakLeaves;
+            // Short and broad, so a dark oak wood has a closed canopy.
+            extraHeight = -1;
+            canopyRadius = 3;
+            break;
+        case TreeKind::Oak:
+            break;
+    }
 
     uint32_t h = hashCoords(worldX, 0, worldZ, m_seed + 5150);
-    const int trunkHeight = 4 + static_cast<int>(hashToFloat(h) * 3.0f) + (birch ? 1 : 0);
+    const int trunkHeight = 4 + static_cast<int>(hashToFloat(h) * 3.0f) + extraHeight;
     const int topY = surfaceY + trunkHeight;
 
-    // Canopy first so the trunk overwrites any leaves in its column.
-    for (int dy = -2; dy <= 1; ++dy)
+    // Canopy first so the trunk overwrites any leaves in its column. A
+    // conifer carries its needles further down the trunk than a
+    // broadleaf carries its leaves, which is the whole silhouette.
+    const int canopyDrop = (kind == TreeKind::Spruce) ? 5 : 2;
+    for (int dy = -canopyDrop; dy <= 1; ++dy)
     {
         int y = topY + dy;
         if (y < 0 || y >= Chunk::SY) continue;
-        int radius = (dy >= 1) ? 1 : 2;
+        int radius = (dy >= 1) ? std::max(1, canopyRadius - 1) : canopyRadius;
 
         for (int dx = -radius; dx <= radius; ++dx)
         {
@@ -1233,8 +1260,23 @@ void WorldGen::decorate(Chunk& chunk) const
             const int surface = surfaceHeight(wx, wz);
             if (surface <= SEA_LEVEL) continue; // no trees in water
 
-            bool birch = hashToFloat(hashCoords(wx, 8, wz, m_seed + 4243)) < 0.35f;
-            buildTree(chunk, wx, surface, wz, birch);
+            // Which tree grows here is the biome's business. Spruce in
+            // the cold and on the heights, dark oak in the thick of the
+            // forest, oak and birch everywhere else.
+            const Biome here = biomeAt(wx, wz);
+            const float roll = hashToFloat(hashCoords(wx, 8, wz, m_seed + 4243));
+
+            TreeKind kind = TreeKind::Oak;
+            if (here == Biome::Snowy || here == Biome::Mountains)
+                kind = (roll < 0.80f) ? TreeKind::Spruce : TreeKind::Oak;
+            else if (here == Biome::Forest)
+                kind = (roll < 0.30f) ? TreeKind::DarkOak
+                     : (roll < 0.55f) ? TreeKind::Birch
+                                      : TreeKind::Oak;
+            else
+                kind = (roll < 0.35f) ? TreeKind::Birch : TreeKind::Oak;
+
+            buildTree(chunk, wx, surface, wz, kind);
         }
     }
 

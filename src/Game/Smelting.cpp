@@ -30,17 +30,22 @@ StackId Smelting::resultOf(StackId input)
 
 float Smelting::burnSeconds(StackId fuel)
 {
+    // Asked of the whole family rather than of two named blocks: with
+    // more than one kind of tree in the world, spruce would not have
+    // burned.
+    if (isBlockStack(fuel))
+    {
+        const BlockId block = asBlock(fuel);
+        if (isLog(block) || isPlanks(block)) return 15.0f;
+        if (isLeaves(block)) return 5.0f;
+    }
+
     switch (fuel)
     {
         case Items::Coal:        return 80.0f;   // eight items
         case Blocks::CoalOre:    return 80.0f;
         case Items::Stick:       return 5.0f;
-        case Blocks::Planks:     return 15.0f;
-        case Blocks::Log:
-        case Blocks::BirchLog:   return 15.0f;
         case Blocks::CraftingTable: return 15.0f;
-        case Blocks::Leaves:
-        case Blocks::BirchLeaves: return 5.0f;
 
         // A wooden tool is firewood once it is of no further use.
         case Items::WoodPickaxe:

@@ -21,9 +21,13 @@ namespace
     // sticks, ingots or tools, so most of Minecraft's recipes have no
     // ingredients to be made from yet.
     const Recipe RECIPES[] = {
-        // One log of either wood becomes four planks.
-        { true,  0, 0, { Blocks::Log },      1, Blocks::Planks,    4 },
-        { true,  0, 0, { Blocks::BirchLog }, 1, Blocks::Planks,    4 },
+        // One log becomes four planks of its own wood. Birch has no
+        // plank of its own yet, so it gives oak -- planksFromLog() says
+        // so in one place rather than this table saying it four times.
+        { true,  0, 0, { Blocks::Log },        1, Blocks::Planks,        4 },
+        { true,  0, 0, { Blocks::BirchLog },   1, Blocks::Planks,        4 },
+        { true,  0, 0, { Blocks::SpruceLog },  1, Blocks::SprucePlanks,  4 },
+        { true,  0, 0, { Blocks::DarkOakLog }, 1, Blocks::DarkOakPlanks, 4 },
 
         // Three wheat becomes a loaf. Minecraft wants them in a row,
         // which needs a bench this game has not got yet, so it takes
@@ -303,6 +307,18 @@ namespace
         return true;
     }
 
+    // Whether what is in the cell will do for what the recipe asked
+    // for. Exact, except that any plank stands in for any other: in
+    // Minecraft a spruce bench is a bench. Written once here rather
+    // than by listing every wood in all thirty-odd recipes that take
+    // planks, which is how a new wood ends up unable to make anything.
+    bool satisfies(StackId wanted, StackId have)
+    {
+        if (have == wanted) return true;
+        if (!isBlockStack(wanted) || !isBlockStack(have)) return false;
+        return isPlanks(asBlock(wanted)) && isPlanks(asBlock(have));
+    }
+
     bool matchesShaped(const Recipe& recipe, const ItemStack* grid, int size)
     {
         int x0 = 0, y0 = 0, width = 0, height = 0;
@@ -315,7 +331,7 @@ namespace
                 const ItemStack& cell = grid[(y0 + y) * 3 + (x0 + x)];
                 const StackId wanted = recipe.pattern[y * recipe.width + x];
                 if (wanted == _ && !cell.empty()) return false;
-                if (wanted != _ && (cell.empty() || cell.id != wanted)) return false;
+                if (wanted != _ && (cell.empty() || !satisfies(wanted, cell.id))) return false;
             }
 
         return true;
@@ -334,7 +350,7 @@ namespace
                 {
                     const int cell = y * 3 + x;
                     if (used[cell]) continue;
-                    if (grid[cell].empty() || grid[cell].id != recipe.pattern[i]) continue;
+                    if (grid[cell].empty() || !satisfies(recipe.pattern[i], grid[cell].id)) continue;
                     used[cell] = true;
                     found = true;
                 }

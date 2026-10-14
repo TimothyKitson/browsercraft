@@ -62,7 +62,7 @@ namespace
     // the overworld. Nothing stands on a treetop.
     bool standable(BlockId id)
     {
-        return isSolid(id) && id != Blocks::Leaves && id != Blocks::BirchLeaves;
+        return isSolid(id) && !isLeaves(id);
     }
 }
 

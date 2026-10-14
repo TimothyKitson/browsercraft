@@ -265,25 +265,28 @@ namespace
                     t.set(x, y, mixColor(t.get(x, y), Color{ 78, 120, 56 }, 0.55f));
     }
 
-    void paintPlanks(Tile& t)
+    void paintPlanksIn(Tile& t, Color wood, uint32_t salt)
     {
         for (int y = 0; y < Tile::N; ++y)
         {
             int row = y / 4;
-            int rowTint = static_cast<int>((hash2(row, 0, 41) - 0.5f) * 26.0f);
-            Color wood = shade(Color{ 162, 130, 78 }, rowTint);
+            int rowTint = static_cast<int>((hash2(row, 0, salt) - 0.5f) * 26.0f);
+            Color plank = shade(wood, rowTint);
             for (int x = 0; x < Tile::N; ++x)
             {
-                Color c = wood;
-                if (hash2(x, row * 7, 42) > 0.80f) c = shade(c, -22); // grain
+                Color c = plank;
+                if (hash2(x, row * 7, salt + 1) > 0.80f) c = shade(c, -22); // grain
                 if (y % 4 == 3) c = shade(c, -40);                     // plank seam
-                int joint = static_cast<int>(hash2(row, 1, 43) * Tile::N);
+                int joint = static_cast<int>(hash2(row, 1, salt + 2) * Tile::N);
                 if (x == joint) c = shade(c, -40);                     // end joint
                 t.set(x, y, c);
             }
         }
         t.speckle(6, 44);
     }
+
+    // Oak, which is what everything that just says "planks" means.
+    void paintPlanks(Tile& t) { paintPlanksIn(t, Color{ 162, 130, 78 }, 41); }
 
     // The bench: planks with a grid of tools scored into the top, and a
     // row of them hanging on the side, which is how you tell it from a
@@ -815,16 +818,16 @@ namespace
     void paintCoalOre(Tile& t) { paintOre(t, Color{ 38, 38, 38 }, 113); }
     void paintDiamondOre(Tile& t) { paintOre(t, Color{ 96, 231, 226 }, 114); }
 
-    void paintLogSide(Tile& t)
+    void paintLogSideIn(Tile& t, Color bark, uint32_t salt)
     {
         for (int x = 0; x < Tile::N; ++x)
         {
-            int tint = static_cast<int>((hash2(x, 0, 121) - 0.5f) * 36.0f);
-            Color bark = shade(Color{ 104, 78, 47 }, tint);
+            int tint = static_cast<int>((hash2(x, 0, salt) - 0.5f) * 36.0f);
+            Color grain = shade(bark, tint);
             for (int y = 0; y < Tile::N; ++y)
             {
-                Color c = bark;
-                if (hash2(x, y / 3, 122) > 0.82f) c = shade(c, -24);
+                Color c = grain;
+                if (hash2(x, y / 3, salt + 1) > 0.82f) c = shade(c, -24);
                 t.set(x, y, c);
             }
         }
@@ -844,6 +847,15 @@ namespace
                 t.set(x, y, shade(c, delta));
             }
     }
+
+    void paintLogSide(Tile& t) { paintLogSideIn(t, Color{ 104, 78, 47 }, 121); }
+
+    // Spruce is a darker, redder wood under near-black bark; dark oak
+    // is darker still, which is the whole of what makes it dark oak.
+    void paintSprucePlanks(Tile& t)  { paintPlanksIn(t, Color{ 114,  84,  48 }, 51); }
+    void paintSpruceLogSide(Tile& t) { paintLogSideIn(t, Color{  58,  39,  22 }, 131); }
+    void paintDarkOakPlanks(Tile& t)  { paintPlanksIn(t, Color{  79,  53,  28 }, 61); }
+    void paintDarkOakLogSide(Tile& t) { paintLogSideIn(t, Color{  52,  37,  22 }, 141); }
 
     void paintLogTop(Tile& t) { paintRings(t, Color{ 167, 136, 84 }, Color{ 146, 115, 67 }, Color{ 104, 78, 47 }, 131); }
     void paintBirchLogTop(Tile& t) { paintRings(t, Color{ 216, 202, 166 }, Color{ 196, 180, 145 }, Color{ 221, 221, 212 }, 132); }
@@ -878,6 +890,12 @@ namespace
     }
 
     void paintLeaves(Tile& t) { paintLeavesBase(t, Color{ 60, 118, 42 }, 151); }
+    void paintSpruceLeaves(Tile& t) { paintLeavesBase(t, Color{ 44, 82, 56 }, 153); }
+    void paintDarkOakLeaves(Tile& t) { paintLeavesBase(t, Color{ 42, 90, 34 }, 155); }
+    void paintSpruceLogTop(Tile& t)
+    { paintRings(t, Color{ 124, 94, 56 }, Color{ 104, 76, 44 }, Color{ 64, 44, 26 }, 133); }
+    void paintDarkOakLogTop(Tile& t)
+    { paintRings(t, Color{ 104, 76, 44 }, Color{ 86, 62, 34 }, Color{ 54, 38, 22 }, 143); }
     void paintBirchLeaves(Tile& t) { paintLeavesBase(t, Color{ 108, 152, 70 }, 152); }
 
     void paintGlass(Tile& t)
@@ -2957,6 +2975,14 @@ namespace
         { Tiles::GrassTop, paintGrassTop },
         { Tiles::Cobblestone, paintCobble },
         { Tiles::Planks, paintPlanks },
+        { Tiles::SpruceLogTop,     paintSpruceLogTop },
+        { Tiles::SpruceLogSide,    paintSpruceLogSide },
+        { Tiles::SpruceLeaves,     paintSpruceLeaves },
+        { Tiles::SprucePlanks,     paintSprucePlanks },
+        { Tiles::DarkOakLogTop,    paintDarkOakLogTop },
+        { Tiles::DarkOakLogSide,   paintDarkOakLogSide },
+        { Tiles::DarkOakLeaves,    paintDarkOakLeaves },
+        { Tiles::DarkOakPlanks,    paintDarkOakPlanks },
         { Tiles::Bedrock, paintBedrock },
         { Tiles::Water, paintWater },
         { Tiles::Sand, paintSand },
@@ -3197,6 +3223,14 @@ namespace
         { Tiles::GrassTop,      { "grass_block_top", "grass_top", nullptr },           Tinting::Grass,   0,   false },
         { Tiles::Cobblestone,   { "cobblestone", nullptr },                            Tinting::None,    0,   false },
         { Tiles::Planks,        { "oak_planks", "planks_oak", nullptr },               Tinting::None,    0,   false },
+        { Tiles::SpruceLogTop,  { "spruce_log_top", "log_spruce_top", nullptr },       Tinting::None,    0,   false },
+        { Tiles::SpruceLogSide, { "spruce_log", "log_spruce", nullptr },               Tinting::None,    0,   false },
+        { Tiles::SpruceLeaves,  { "spruce_leaves", "leaves_spruce", nullptr },         Tinting::None,    0,   false },
+        { Tiles::SprucePlanks,  { "spruce_planks", "planks_spruce", nullptr },         Tinting::None,    0,   false },
+        { Tiles::DarkOakLogTop, { "dark_oak_log_top", "log_big_oak_top", nullptr },    Tinting::None,    0,   false },
+        { Tiles::DarkOakLogSide,{ "dark_oak_log", "log_big_oak", nullptr },            Tinting::None,    0,   false },
+        { Tiles::DarkOakLeaves, { "dark_oak_leaves", "leaves_big_oak", nullptr },      Tinting::Foliage, 0,   false },
+        { Tiles::DarkOakPlanks, { "dark_oak_planks", "planks_big_oak", nullptr },      Tinting::None,    0,   false },
         { Tiles::Bedrock,       { "bedrock", nullptr },                                Tinting::None,    0,   false },
         { Tiles::Water,         { "water_still", nullptr },                            Tinting::Water, 200,   true  },
         { Tiles::Sand,          { "sand", nullptr },                                   Tinting::None,    0,   false },

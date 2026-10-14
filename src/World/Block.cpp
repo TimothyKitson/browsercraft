@@ -134,6 +134,12 @@ namespace
         { "Deepslate",    DeepslateTop,  DeepslateTop,   Deepslate,      true,  true,  RenderType::Cube,   0,   3.0f },
         { "Tuff",         Tuff,          Tuff,           Tuff,           true,  true,  RenderType::Cube,   0,   1.5f },
         { "Calcite",      Calcite,       Calcite,        Calcite,        true,  true,  RenderType::Cube,   0,   0.75f },
+        { "Spruce Log",   SpruceLogTop,  SpruceLogTop,   SpruceLogSide,  true,  true,  RenderType::Cube,   0,   2.0f },
+        { "Spruce Leaves",SpruceLeaves,  SpruceLeaves,   SpruceLeaves,   true,  false, RenderType::Cube,   0,   0.2f },
+        { "Spruce Planks",SprucePlanks,  SprucePlanks,   SprucePlanks,   true,  true,  RenderType::Cube,   0,   1.5f },
+        { "Dark Oak Log", DarkOakLogTop, DarkOakLogTop,  DarkOakLogSide, true,  true,  RenderType::Cube,   0,   2.0f },
+        { "Dark Oak Leaves",DarkOakLeaves,DarkOakLeaves, DarkOakLeaves,  true,  false, RenderType::Cube,   0,   0.2f },
+        { "Dark Oak Planks",DarkOakPlanks,DarkOakPlanks, DarkOakPlanks,  true,  true,  RenderType::Cube,   0,   1.5f },
     };
 }
 
@@ -190,12 +196,15 @@ bool isObtainable(BlockId id)
 
 const char* blockSoundGroup(BlockId id)
 {
+    // By family, so a wood added later sounds like wood rather than
+    // like whatever the default happens to be.
+    if (isLeaves(id)) return "grass";
+    if (isLog(id) || isPlanks(id)) return "wood";
+
     switch (id)
     {
         case Blocks::Grass:
         case Blocks::SnowGrass:
-        case Blocks::Leaves:
-        case Blocks::BirchLeaves:
         case Blocks::TallGrass:
         case Blocks::FlowerRed:
         case Blocks::FlowerYellow:
@@ -205,6 +214,8 @@ const char* blockSoundGroup(BlockId id)
         case Blocks::NetherWart:
         case Blocks::DirtPath:
             return "grass";
+
+        // Leaves rustle whichever tree they came off.
 
         case Blocks::Farmland:
             return "gravel";
@@ -284,6 +295,14 @@ Material blockMaterial(BlockId id)
 {
     if (isWheat(id)) return Material::Plant;
 
+    // Asked of the family, so a wood added later is wood and its leaves
+    // are leaves without anyone having to remember this function. Named
+    // one by one, the first two new trees both fell through to stone and
+    // wanted a pickaxe -- which is what the block table's own test
+    // caught, and the third time it has caught exactly that.
+    if (isLog(id) || isPlanks(id)) return Material::Wood;
+    if (isLeaves(id)) return Material::Plant;
+
     switch (id)
     {
         case Blocks::Dirt:
@@ -345,8 +364,6 @@ Material blockMaterial(BlockId id)
         case Blocks::LadderEast:
         case Blocks::LadderSouth:
         case Blocks::LadderWest:
-        case Blocks::Leaves:
-        case Blocks::BirchLeaves:
         case Blocks::TallGrass:
         case Blocks::FlowerRed:
         case Blocks::FlowerYellow:

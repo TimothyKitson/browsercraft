@@ -23,14 +23,12 @@ namespace
 uint8_t lightAttenuation(BlockId id)
 {
     if (isOpaque(id)) return 15;
+    if (isLeaves(id)) return 2;
     switch (id)
     {
         case Blocks::Water:
         case Blocks::Ice:
             return 1;
-        case Blocks::Leaves:
-        case Blocks::BirchLeaves:
-            return 2;
         default:
             return 0;
     }

@@ -129,13 +129,13 @@ namespace
     // What a block turns into when you mine it.
     StackId blockDrop(BlockId id)
     {
+        if (isLeaves(id)) return Blocks::Air;   // leaves drop nothing
+
         switch (id)
         {
             case Blocks::Grass:
             case Blocks::SnowGrass: return Blocks::Dirt;
             case Blocks::Stone: return Blocks::Cobblestone;
-            case Blocks::Leaves:
-            case Blocks::BirchLeaves: return Blocks::Air; // leaves drop nothing
             case Blocks::Ice: return Blocks::Air;
             // Where wheat comes from, until there is farmland to grow it
             // on: grass gives up its seeds the way it does in Minecraft,

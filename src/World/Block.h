@@ -157,6 +157,17 @@ namespace Blocks
         Tuff,
         Calcite,
 
+        // Two more woods. Spruce for the cold and the heights, dark oak
+        // for the thick of the forest -- which is where vanilla puts
+        // them, and what stops every tree in the world being the same
+        // tree. Appended, like the rest.
+        SpruceLog,
+        SpruceLeaves,
+        SprucePlanks,
+        DarkOakLog,
+        DarkOakLeaves,
+        DarkOakPlanks,
+
         Count
     };
 }
@@ -211,6 +222,33 @@ inline bool isStoneFamily(BlockId id)
     return id == Blocks::Stone || id == Blocks::Granite || id == Blocks::Diorite ||
            id == Blocks::Andesite || id == Blocks::Deepslate || id == Blocks::Tuff ||
            id == Blocks::Calcite;
+}
+
+// Every plank, whichever tree it came off. Anything that asks "is this
+// a plank" has to ask this rather than naming Blocks::Planks, or a
+// spruce house is not a house.
+inline bool isPlanks(BlockId id)
+{
+    return id == Blocks::Planks || id == Blocks::SprucePlanks ||
+           id == Blocks::DarkOakPlanks;
+}
+
+inline bool isLog(BlockId id)
+{
+    return id == Blocks::Log || id == Blocks::BirchLog ||
+           id == Blocks::SpruceLog || id == Blocks::DarkOakLog;
+}
+
+// The planks a log breaks down into.
+inline BlockId planksFromLog(BlockId log)
+{
+    switch (log)
+    {
+        case Blocks::BirchLog:   return Blocks::Planks;   // birch has no plank of its own yet
+        case Blocks::SpruceLog:  return Blocks::SprucePlanks;
+        case Blocks::DarkOakLog: return Blocks::DarkOakPlanks;
+        default:                 return Blocks::Planks;
+    }
 }
 
 // Where deepslate takes over from stone.
@@ -313,7 +351,11 @@ inline float blockHeight(BlockId id) { return isSlab(id) ? 0.5f : 1.0f; }
 bool blockOverlaps(BlockId id, int bx, int by, int bz,
                    float minX, float minY, float minZ,
                    float maxX, float maxY, float maxZ);
-inline bool isLeaves(BlockId id) { return id == Blocks::Leaves || id == Blocks::BirchLeaves; }
+inline bool isLeaves(BlockId id)
+{
+    return id == Blocks::Leaves || id == Blocks::BirchLeaves ||
+           id == Blocks::SpruceLeaves || id == Blocks::DarkOakLeaves;
+}
 inline bool isVisible(BlockId id) { return blockInfo(id).render != RenderType::None; }
 inline uint8_t lightEmission(BlockId id) { return blockInfo(id).lightEmission; }
 

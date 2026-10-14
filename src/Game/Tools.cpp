@@ -34,10 +34,10 @@ namespace
     {
         if (isWheat(block)) return Tools::Kind::None;
 
+        if (isLeaves(block)) return Tools::Kind::Sword;
+
         switch (block)
         {
-            case Blocks::Leaves:
-            case Blocks::BirchLeaves:
             case Blocks::TallGrass:
             case Blocks::FlowerRed:
             case Blocks::FlowerYellow:

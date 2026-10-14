@@ -2319,6 +2319,80 @@ namespace
         }
     }
 
+    void testWoods()
+    {
+        section("more than one kind of tree");
+
+        const BlockId LOGS[] = { Blocks::Log, Blocks::BirchLog,
+                                 Blocks::SpruceLog, Blocks::DarkOakLog };
+        const BlockId LEAVES[] = { Blocks::Leaves, Blocks::BirchLeaves,
+                                   Blocks::SpruceLeaves, Blocks::DarkOakLeaves };
+        const BlockId PLANKS[] = { Blocks::Planks, Blocks::SprucePlanks,
+                                   Blocks::DarkOakPlanks };
+
+        // Every family test has to agree with itself, or a wood is a
+        // log to one part of the game and stone to another -- which is
+        // exactly what happened to the first two: they fell through to
+        // Material::Stone and wanted a pickaxe.
+        for (BlockId log : LOGS)
+        {
+            check(isLog(log), std::string(blockInfo(log).name) + " is a log");
+            check(blockMaterial(log) == Material::Wood, "and it is made of wood");
+            check(Smelting::burnSeconds(log) > 0.0f, "and it burns");
+            check(std::string(blockSoundGroup(log)) == "wood", "and it sounds like wood");
+        }
+        for (BlockId leaf : LEAVES)
+        {
+            check(isLeaves(leaf), std::string(blockInfo(leaf).name) + " is leaves");
+            check(blockMaterial(leaf) == Material::Plant, "and comes apart like a plant");
+            check(Tools::canHarvest(Blocks::Air, leaf), "and bare hands get it");
+            check(!isOpaque(leaf), "and light gets through it");
+        }
+        for (BlockId plank : PLANKS)
+        {
+            check(isPlanks(plank), std::string(blockInfo(plank).name) + " is planks");
+            check(blockMaterial(plank) == Material::Wood, "and made of wood");
+        }
+
+        // A log gives up the planks of its own wood.
+        for (BlockId log : LOGS)
+        {
+            ItemStack grid[9];
+            grid[0].id = log; grid[0].count = 1;
+            const CraftOutput out = Crafting::match(grid, 2);
+            check(out.valid() && out.count == 4,
+                  std::string(blockInfo(log).name) + " makes four planks");
+            check(isBlockStack(out.id) && isPlanks(asBlock(out.id)),
+                  "and what it makes is planks");
+            check(out.id == planksFromLog(log), "of its own wood");
+        }
+
+        // And any plank will do wherever a recipe asks for planks: a
+        // spruce bench is a bench. Without this a new wood can be cut
+        // and stacked and used for nothing at all.
+        for (BlockId plank : PLANKS)
+        {
+            ItemStack bench[9];
+            for (int i : { 0, 1, 3, 4 }) { bench[i].id = plank; bench[i].count = 1; }
+            const CraftOutput out = Crafting::match(bench, 2);
+            check(out.valid() && out.id == Blocks::CraftingTable,
+                  std::string(blockInfo(plank).name) + " makes a bench like any other");
+        }
+
+        // Mixed woods too, which is what a player's grid actually looks
+        // like after chopping two kinds of tree.
+        {
+            ItemStack mixed[9];
+            mixed[0].id = Blocks::Planks;         mixed[0].count = 1;
+            mixed[1].id = Blocks::SprucePlanks;   mixed[1].count = 1;
+            mixed[3].id = Blocks::DarkOakPlanks;  mixed[3].count = 1;
+            mixed[4].id = Blocks::Planks;         mixed[4].count = 1;
+            const CraftOutput out = Crafting::match(mixed, 2);
+            check(out.valid() && out.id == Blocks::CraftingTable,
+                  "and four different planks still make one bench");
+        }
+    }
+
     void testIronGolem()
     {
         section("the iron golem");
@@ -6062,6 +6136,7 @@ int runSelfTest()
     testAnvil();
     testShield();
     testWolves();
+    testWoods();
     testIronGolem();
     testRiding();
     testBoats();

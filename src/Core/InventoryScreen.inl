@@ -10,7 +10,10 @@ namespace
     // listing it twice.
     const StackId TAB_BUILDING[] = {
         Blocks::Stone, Blocks::Cobblestone, Blocks::MossyCobblestone, Blocks::Bricks,
-        Blocks::Planks, Blocks::Log, Blocks::BirchLog, Blocks::Sandstone,
+        Blocks::Planks, Blocks::SprucePlanks, Blocks::DarkOakPlanks,
+        Blocks::SpruceLog, Blocks::DarkOakLog, Blocks::SpruceLeaves, Blocks::DarkOakLeaves,
+        Blocks::Granite, Blocks::Diorite, Blocks::Andesite, Blocks::Deepslate,
+        Blocks::Tuff, Blocks::Calcite, Blocks::Log, Blocks::BirchLog, Blocks::Sandstone,
         Blocks::Sand, Blocks::Gravel, Blocks::Dirt, Blocks::Grass,
         Blocks::SnowGrass, Blocks::Clay, Blocks::Obsidian, Blocks::Glass,
         Blocks::Wool, Blocks::Snow, Blocks::Ice,
