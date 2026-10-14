@@ -23,6 +23,7 @@ enum class MobId : uint8_t
     Horse,
     Boat,
     Minecart,
+    IronGolem,
     Count
 };
 

@@ -119,6 +119,12 @@ float Mob::verticalStep(float velocityY, float positionY, float waterline,
     return std::max(velocityY + GRAVITY * deltaTime, TERMINAL_VELOCITY);
 }
 
+float Mob::railSpeedStep(float speed, bool pushing, float maxSpeed, float deltaTime)
+{
+    speed += (pushing ? RAIL_PUSH : -RAIL_DRAG) * deltaTime;
+    return std::clamp(speed, 0.0f, maxSpeed);
+}
+
 glm::vec3 Mob::railDirection(int facing)
 {
     switch (facing & 3)
@@ -620,6 +626,12 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
             m_goalYaw = exitYaw;
             m_yaw = exitYaw;
             onRail = true;
+
+            // Rolling is the cart's own business: the rider decides
+            // whether to push, and the track decides where that goes.
+            m_railSpeed = railSpeedStep(m_railSpeed, m_ridden && m_steerForward,
+                                        currentSpeed(), deltaTime);
+            m_moving = m_railSpeed > 0.01f;
         }
     }
 
@@ -635,6 +647,18 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
     const float blend = std::min(1.0f, 10.0f * deltaTime);
     m_velocity.x += (target.x - m_velocity.x) * blend;
     m_velocity.z += (target.z - m_velocity.z) * blend;
+
+    // A cart is not eased towards a speed, it simply has one: the rail
+    // carries it and nothing else is pushing it sideways.
+    if (onRail)
+    {
+        m_velocity.x = forward.x * m_railSpeed;
+        m_velocity.z = forward.z * m_railSpeed;
+    }
+    else if (t.ridesRails)
+    {
+        m_railSpeed = 0.0f;   // off the track it keeps nothing
+    }
 
     // What floats is held at the waterline rather than swum: pulled
     // towards the surface and damped, so it settles instead of bobbing
@@ -817,11 +841,22 @@ bool Stare::atHead(const glm::vec3& eye, const glm::vec3& look,
     return glm::length(toHead - dir * along) <= headRadius;
 }
 
+bool Mob::hostileNow(const MobType& t, bool provoked)
+{
+    // Anything with no way of hurting you is never hostile, whatever
+    // is done to it: a cow that has been hit is a frightened cow.
+    // Everything else is, unless it is neutral and has been left alone.
+    //
+    // This used to ask whether the species spawned as a monster, which
+    // was the same question right up until the golem: it spawns in
+    // daylight as part of its village and would never have fought back.
+    if (t.attackDamage <= 0 && t.arrowDamage <= 0 && t.blastDamage <= 0) return false;
+    return !t.neutral || provoked;
+}
+
 bool Mob::hostileNow() const
 {
-    const MobType& t = mobType(m_type);
-    if (t.spawnClass != SpawnClass::Hostile) return false;
-    return !t.neutral || m_provoked;
+    return hostileNow(mobType(m_type), m_provoked);
 }
 
 void Mob::damage(int amount, const glm::vec3& fromDirection)

@@ -281,6 +281,8 @@ void AudioEngine::buildSounds()
     loadMobVoice(Sound::MobPigmanSay, Sound::MobPigmanHurt, Sound::MobPigmanDeath, "zombie_pigman");
     loadMobVoice(Sound::MobVillagerSay, Sound::MobVillagerHurt, Sound::MobVillagerDeath, "villager");
     loadMobVoice(Sound::MobWolfSay, Sound::MobWolfHurt, Sound::MobWolfDeath, "wolf");
+    loadMobVoice(Sound::MobGolemSay, Sound::MobGolemHurt, Sound::MobGolemDeath,
+                 "mob/irongolem");
     loadMobVoice(Sound::MobHorseSay, Sound::MobHorseHurt, Sound::MobHorseDeath, "horse");
     loadVariants(Sound::Rain, "weather/rain", 1);
     loadVariants(Sound::Thunder, "weather/thunder", 1);
@@ -640,6 +642,28 @@ void AudioEngine::buildSounds()
         s.addTone(0.46f, 600.0f, 130.0f, 6.0f, 0.64f, true);
         s.addNoise(0.22f, 1200.0f, 10.0f, 0.22f, false, 705);
         s.finish(0.80f);
+    }
+
+    // The iron golem: not a voice at all. A ton of iron moving is a
+    // low grinding scrape, so it is built the other way up from an
+    // animal -- noise low down with barely any tone in it.
+    {
+        Synth s = make(Sound::MobGolemSay);
+        s.addNoise(0.34f, 260.0f, 9.0f, 0.40f, false, 811);
+        s.addTone(0.26f, 90.0f, 70.0f, 7.0f, 0.30f, true);
+        s.finish(0.72f);
+    }
+    {
+        Synth s = make(Sound::MobGolemHurt);
+        s.addNoise(0.22f, 420.0f, 16.0f, 0.46f, false, 813);
+        s.addTone(0.18f, 150.0f, 110.0f, 12.0f, 0.34f, true);
+        s.finish(0.78f);
+    }
+    {
+        Synth s = make(Sound::MobGolemDeath);
+        s.addNoise(0.60f, 300.0f, 5.0f, 0.44f, false, 815);
+        s.addTone(0.52f, 120.0f, 60.0f, 4.0f, 0.38f, true);
+        s.finish(0.84f);
     }
 
     // The horse: a whinny, which is a tone that wavers rather than

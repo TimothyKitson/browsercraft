@@ -46,6 +46,7 @@ $wanted = [ordered]@{
     "villager.png"  = @("villager/villager.png", "villager.png")
     "minecart.png"  = @("minecart.png", "minecart/minecart.png")
     "boat.png"      = @("boat/oak.png", "boat/boat.png", "oak_boat.png")
+    "iron_golem.png" = @("iron_golem/iron_golem.png", "iron_golem.png", "villager/iron_golem.png")
 }
 
 New-Item -ItemType Directory -Force -Path $dest | Out-Null

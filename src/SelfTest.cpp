@@ -548,7 +548,8 @@ namespace
             // Every species must fit its sheet, or its texture coordinates
             // silently wrap onto another limb.
             check((type.sheetWidth == 64 && (type.sheetHeight == 32 || type.sheetHeight == 64)) ||
-                      (type.sheetWidth == 128 && type.sheetHeight == 64),
+                      (type.sheetWidth == 128 &&
+                       (type.sheetHeight == 64 || type.sheetHeight == 128)),
                   who + " has a sheet the shape Minecraft draws on");
             check(MobSkin::fits(type.model, type.sheetWidth, type.sheetHeight),
                   who + " keeps every patch on its sheet");
@@ -759,10 +760,35 @@ namespace
             // it has now caught two mobs whose way of fighting changed.
             const bool fights = t.attackDamage > 0 || t.arrowDamage > 0 || t.blastDamage > 0;
 
+            // A hostile mob must be able to fight. A passive one must
+            // not, unless it is neutral -- a golem belongs to its
+            // village and spawns in daylight like any other resident,
+            // but it finishes fights it did not start.
             if (t.spawnClass == SpawnClass::Hostile)
                 check(fights, who + " fights back somehow");
+            else if (t.neutral)
+                check(fights, who + " is neutral, so it had better be able to fight");
             else
                 check(!fights, who + " does not attack");
+
+            // Whatever its class, anything neutral must hold its hand
+            // until it is given a reason -- and anything that cannot
+            // fight is never hostile however badly it is treated.
+            if (t.neutral)
+            {
+                check(!Mob::hostileNow(t, false),
+                      who + " leaves you alone until you start something");
+                check(Mob::hostileNow(t, true), "and comes for you once you have");
+            }
+            else if (!fights)
+            {
+                check(!Mob::hostileNow(t, true),
+                      who + " cannot turn on you, because it has nothing to turn with");
+            }
+            else
+            {
+                check(Mob::hostileNow(t, false), who + " needs no reason");
+            }
 
             if (t.attackDamage > 0)
                 check(t.attackInterval > 0.0f, who + " cannot swing infinitely fast");
@@ -2232,6 +2258,37 @@ namespace
                   "and a stone block is not a rail");
         }
 
+        // Momentum. A cart that only moved while the key was held
+        // would be a wheelbarrow.
+        {
+            const float top = cart.walkSpeed;
+
+            float speed = 0.0f;
+            for (int step = 0; step < 300; ++step)
+                speed = Mob::railSpeedStep(speed, true, top, 0.02f);
+            check(std::fabs(speed - top) < 0.0001f, "pushing gets a cart up to its top speed");
+            speed = Mob::railSpeedStep(speed, true, top, 0.02f);
+            check(speed <= top + 0.0001f, "and no further");
+
+            // Coasting: it keeps going for a good while, then stops
+            // dead rather than creeping backwards.
+            float coasted = 0.0f;
+            int steps = 0;
+            while (speed > 0.0f && steps < 10000)
+            {
+                speed = Mob::railSpeedStep(speed, false, top, 0.02f);
+                coasted += speed * 0.02f;
+                ++steps;
+            }
+            check(speed == 0.0f, "and let go, it comes to a stop");
+            check(coasted > 8.0f, "after coasting " + std::to_string(static_cast<int>(coasted)) +
+                                      " blocks, which is worth building track for");
+
+            for (int step = 0; step < 50; ++step)
+                speed = Mob::railSpeedStep(speed, false, top, 0.02f);
+            check(speed == 0.0f, "and a stopped cart stays stopped rather than reversing");
+        }
+
         // Every rail shape must guide, from any heading, to one of its
         // own ends. A shape that sent a cart off the track would derail
         // it into the scenery.
@@ -2260,6 +2317,48 @@ namespace
             check(always, std::string("a cart never leaves a ") + blockInfo(id).name +
                               " anywhere but its own two ends");
         }
+    }
+
+    void testIronGolem()
+    {
+        section("the iron golem");
+
+        const MobType& golem = mobType(MobId::IronGolem);
+        check(golem.spawnClass == SpawnClass::Passive,
+              "a golem is not a monster: it spawns in its village in daylight");
+        check(golem.neutral, "but it is neutral, so it fights once provoked");
+        check(golem.attackDamage > mobType(MobId::Zombie).attackDamage,
+              "and it hits harder than a zombie, which is the point of one");
+        check(golem.maxHealth > mobType(MobId::Villager).maxHealth * 4,
+              "it takes an enormous amount of killing");
+        check(golem.height > 2.0f, "and it is taller than you are");
+        check(golem.walkSpeed < mobType(MobId::Villager).walkSpeed + 0.5f,
+              "it is slow, which is what you can do about one");
+        check(golem.experience == 0, "and killing it teaches you nothing");
+
+        // What it leaves behind. Iron, which is the whole reason anyone
+        // builds one, and the poppy it was holding.
+        check(golem.drop == Items::IronIngot && golem.dropCount >= 3,
+              "it drops the iron it was made of");
+        check(golem.secondDrop == Blocks::FlowerRed,
+              "and the poppy");
+
+        // Provocation. It must not come for you unasked, or a village
+        // would be somewhere you could not walk into.
+        check(!Mob::hostileNow(golem, false), "it ignores you until you hit it");
+        check(Mob::hostileNow(golem, true), "and then it does not");
+
+        // It must not burn at noon, which anything passive avoids but
+        // is worth saying out loud for the one mob built to stand in a
+        // village square all day.
+        check(!Mob::burnsNow(golem, 1.0f, 15, false),
+              "and it stands in the sun all day without catching light");
+
+        // Its sheet is the big one, and every patch has to land on it.
+        check(golem.sheetWidth == 128 && golem.sheetHeight == 128,
+              "it is drawn on a sheet of its own size");
+        check(MobSkin::fits(golem.model, golem.sheetWidth, golem.sheetHeight),
+              "and every patch of it lands on that sheet");
     }
 
     void testWolves()
@@ -5937,6 +6036,7 @@ int runSelfTest()
     testAnvil();
     testShield();
     testWolves();
+    testIronGolem();
     testRiding();
     testBoats();
     testRails();

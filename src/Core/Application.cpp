@@ -1393,7 +1393,7 @@ bool Application::frame()
             m_startupScreen == "village" || m_startupScreen == "shield" ||
             m_startupScreen == "wolf" || m_startupScreen == "horse" ||
             m_startupScreen == "boat" || m_startupScreen == "rails" ||
-            m_startupScreen == "mobs")
+            m_startupScreen == "mobs" || m_startupScreen == "golem")
         {
             // Dev aid: open the inventory with something in it, so the
             // screenshot shows a real grid rather than 36 empty boxes.
@@ -1428,6 +1428,7 @@ bool Application::frame()
                                   m_startupScreen != "boat" &&
                                   m_startupScreen != "rails" &&
                                   m_startupScreen != "mobs" &&
+                                  m_startupScreen != "golem" &&
                                   m_startupScreen != "portal" &&
                                   m_startupScreen != "nether";
             m_inventoryOpen = showPanel;
@@ -1834,6 +1835,43 @@ bool Application::frame()
                 // Creative, so a shot of ten mobs is not spoiled by one
                 // of them being a creeper. Three screens in a row came
                 // back as the death overlay before this went in.
+                m_player.mode = GameMode::Creative;
+                m_player.health = Player::MAX_HEALTH;
+            }
+
+            if (m_startupScreen == "golem")
+            {
+                m_camera.setOrientation(0.0f, -4.0f);
+                m_camera.addLook(0.0f, 0.0f, 0.0f);
+
+                const int px = static_cast<int>(std::floor(m_player.position.x));
+                const int py = static_cast<int>(std::floor(m_player.position.y));
+                const int pz = static_cast<int>(std::floor(m_player.position.z));
+
+                for (int ax = 0; ax <= 11; ++ax)
+                    for (int az = -6; az <= 6; ++az)
+                    {
+                        for (int ay = 0; ay <= 6; ++ay)
+                            m_world->setBlock(px + ax, py + ay, pz + az, Blocks::Air);
+                        m_world->setBlock(px + ax, py - 1, pz + az, Blocks::Grass);
+                    }
+
+                // A golem, a villager to stand it next to for scale,
+                // and a zombie for it to object to.
+                m_entities.spawnAt(MobId::IronGolem,
+                                   glm::vec3(px + 8.5f, static_cast<float>(py), pz + 0.5f),
+                                   *m_world);
+                m_entities.spawnAt(MobId::Villager,
+                                   glm::vec3(px + 8.5f, static_cast<float>(py), pz + 3.5f),
+                                   *m_world);
+                m_entities.spawnAt(MobId::Zombie,
+                                   glm::vec3(px + 8.5f, static_cast<float>(py), pz - 3.5f),
+                                   *m_world);
+
+                m_world->setBlock(px + 10, py, pz - 5, Blocks::Bookshelf);
+                m_world->setBlock(px + 10, py, pz - 1, Blocks::DiamondOre);
+                m_world->setBlock(px + 10, py, pz + 5, Blocks::EndPortalFrame);
+
                 m_player.mode = GameMode::Creative;
                 m_player.health = Player::MAX_HEALTH;
             }
@@ -5048,7 +5086,8 @@ void Application::updateMobs(float deltaTime)
     // The lineup screen is for looking at hides, and a wolf crosses a
     // twelve-block clearing in two seconds. Frozen, every one of them
     // is still there when the shutter goes.
-    const float mobTime = (m_startupScreen == "mobs") ? 0.0f : deltaTime;
+    const float mobTime =
+        (m_startupScreen == "mobs" || m_startupScreen == "golem") ? 0.0f : deltaTime;
     m_entities.update(mobTime, *m_world, m_player.position, daylightFactor());
     m_entities.noticeStares(*m_world, m_camera.position, m_camera.front);
 

@@ -195,7 +195,7 @@ bool MobSkin::loadFile(const std::string& path, std::vector<uint8_t>& pixels, in
     // so it is turned away rather than drawn.
     // A boat is laid out on a sheet twice as wide as an animal's.
     const bool animalSheet = (w == 64 && (h == 32 || h == 64));
-    const bool wideSheet = (w == 128 && h == 64);
+    const bool wideSheet = (w == 128 && (h == 64 || h == 128));
     if (!animalSheet && !wideSheet)
     {
         std::printf("Mob texture %s ignored: expected 64x32, 64x64 or 128x64, got %dx%d\n",

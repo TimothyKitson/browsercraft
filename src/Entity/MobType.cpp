@@ -627,6 +627,59 @@ namespace
             t.model.push_back(mc(Part::Body, 0, 0, 16, 8, 2,
                                  -8, -9, -1, 0, 4, 7, CART_BASE));
         }
+        {
+            // The iron golem, on Mojang's own layout, read off its own
+            // sheet: a head of 8x10x6 at (0,0) with a nose at (24,0), a
+            // body of 18x12x11 at (0,40) with a skirt of 9x5x6 at
+            // (0,70), two arms of 4x30x6 and two legs of 6x16x5.
+            //
+            // It is the village's own answer to what comes out at
+            // night: slow, enormously tough, and worth nothing to kill.
+            MobType& t = table[static_cast<size_t>(MobId::IronGolem)];
+            t.id = MobId::IronGolem;
+            t.experience = 0;
+            t.voice = Sound::MobGolemSay;
+            t.hurtVoice = Sound::MobGolemHurt;
+            t.deathVoice = Sound::MobGolemDeath;
+            t.name = "Iron Golem";
+            t.texture = "iron_golem";
+            t.sheetWidth = 128;
+            t.sheetHeight = 128;
+            t.spawnClass = SpawnClass::Passive;
+            t.maxHealth = 100;
+            t.width = 1.4f;
+            t.height = 2.7f;
+            t.walkSpeed = 1.5f;
+            t.voicePitch = 0.6f;
+            t.limbSwing = 0.6f;
+
+            // It hits like a falling anvil, but only once it has been
+            // given a reason: a golem that started fights would be a
+            // village nobody could walk into.
+            t.neutral = true;
+            t.attackDamage = 11;
+            t.attackReach = 1.4f;
+
+            t.drop = Items::IronIngot;
+            t.dropCount = 4;
+            t.secondDrop = Blocks::FlowerRed;
+            t.secondDropCount = 1;
+
+            t.bodyColour = rgb(198, 198, 190);
+            t.headColour = rgb(206, 206, 198);
+
+            t.model.push_back(mc(Part::Head, 0, 0, 8, 10, 6, -4, -12, -6, 0, -7, -2));
+            t.model.push_back(mc(Part::Head, 24, 0, 2, 4, 2, -1, -5, -8, 0, -7, -2));
+
+            t.model.push_back(mc(Part::Body, 0, 40, 18, 12, 11, -9, -2, -6, 0, -7, 0));
+            t.model.push_back(mc(Part::Body, 0, 70, 9, 5, 6, -4, 10, -3, 0, -7, 0));
+
+            t.model.push_back(mc(Part::LegFrontRight, 60, 21, 4, 30, 6, -13, -2, -3, 0, -7, 0));
+            t.model.push_back(mc(Part::LegFrontLeft, 60, 58, 4, 30, 6, 9, -2, -3, 0, -7, 0));
+
+            t.model.push_back(mc(Part::LegBackRight, 37, 0, 6, 16, 5, -3, -3, -3, -4, 11, 0));
+            t.model.push_back(mc(Part::LegBackLeft, 60, 0, 6, 16, 5, -3, -3, -3, 5, 11, 0));
+        }
 
         return table;
     }

@@ -222,9 +222,12 @@ void EntityManager::trySpawnWave(const World& world, const glm::vec3& playerPosi
 
             if (inVillage)
             {
-                species = (random01() < 0.75f)
-                              ? MobId::Villager
-                              : PASSIVE_SPECIES[static_cast<int>(random01() * 4.0f) & 3];
+                // Mostly villagers, with the occasional golem on patrol
+                // and some livestock between the houses.
+                const float roll = random01();
+                species = roll < 0.70f  ? MobId::Villager
+                        : roll < 0.78f  ? MobId::IronGolem
+                                        : PASSIVE_SPECIES[static_cast<int>(random01() * 4.0f) & 3];
             }
             else
             {
@@ -461,8 +464,14 @@ void EntityManager::setWolvesOnHostiles(float deltaTime)
 {
     for (size_t i = 0; i < m_mobs.size(); ++i)
     {
-        if (m_mobs[i].typeId() != MobId::Wolf) continue;
-        if (!m_mobs[i].tamed() || !m_mobs[i].alive() || m_mobs[i].baby()) continue;
+        // A tamed wolf hunts for whoever tamed it. A golem hunts
+        // because that is the whole of what a golem is for, and needs
+        // nobody's permission.
+        const MobId kind = m_mobs[i].typeId();
+        const bool golem = kind == MobId::IronGolem;
+        if (kind != MobId::Wolf && !golem) continue;
+        if (!m_mobs[i].alive() || m_mobs[i].baby()) continue;
+        if (!golem && !m_mobs[i].tamed()) continue;
 
         const glm::vec3 from = m_mobs[i].position();
 
@@ -486,10 +495,16 @@ void EntityManager::setWolvesOnHostiles(float deltaTime)
 
         m_mobs[i].huntTowards(m_mobs[quarry].position());
 
-        if (nearest <= Mob::BITE_REACH && m_mobs[i].tryBite(deltaTime))
+        // A golem hits with what its own type says it hits with, and
+        // reaches further: it is twice the height of a wolf.
+        const MobType& t = mobType(kind);
+        const float reach = golem ? t.attackReach + t.width * 0.5f : Mob::BITE_REACH;
+        const int damage = golem ? t.attackDamage : Mob::BITE_DAMAGE;
+
+        if (nearest <= reach && m_mobs[i].tryBite(deltaTime))
         {
             const glm::vec3 away = m_mobs[quarry].position() - from;
-            m_mobs[quarry].damage(Mob::BITE_DAMAGE, away);
+            m_mobs[quarry].damage(damage, away);
         }
     }
 }

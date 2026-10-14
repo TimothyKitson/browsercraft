@@ -119,6 +119,9 @@ public:
     // Whether it would attack the player on sight as things stand --
     // true for anything hostile, and for a neutral one once provoked.
     bool hostileNow() const;
+    // The same rule on its own: a neutral mob waits to be provoked,
+    // anything else does not wait at all.
+    static bool hostileNow(const MobType& type, bool provoked);
     const MobType& type() const { return mobType(m_type); }
 
     glm::vec3 position() const { return m_position; }
@@ -232,6 +235,14 @@ public:
 
     // Which way each of the four compass points faces, and the heading
     // that travels along it.
+    // A cart keeps what it has been given. Pushed, it gains speed up
+    // to its own limit; left alone it coasts and slowly gives it back.
+    // Held at zero rather than allowed to go negative, or a stopped
+    // cart would set off backwards.
+    static constexpr float RAIL_PUSH = 7.0f;
+    static constexpr float RAIL_DRAG = 1.1f;
+    static float railSpeedStep(float speed, bool pushing, float maxSpeed, float deltaTime);
+
     static glm::vec3 railDirection(int facing);
     static float railYaw(int facing);
 
@@ -360,6 +371,7 @@ private:
     bool m_ridden = false;
     bool m_steerForward = false;
     bool m_steerJump = false;
+    float m_railSpeed = 0.0f;
     float m_huntTimer = 0.0f;
     float m_biteTimer = 0.0f;
     float m_loveTimer = 0.0f;
