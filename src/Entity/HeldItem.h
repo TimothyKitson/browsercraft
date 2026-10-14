@@ -64,4 +64,17 @@ private:
                    float sky, float blockLight);
     void appendBlock(const glm::mat4& toWorld, StackId stack, float sky, float blockLight);
     void appendSprite(const glm::mat4& toWorld, StackId stack, float sky, float blockLight);
+
+    // The shield, which is the one held thing that is not a block and
+    // not a flat card: a plank panel with a handle behind it, off its
+    // own sheet. Drawn as a panel because a shield seen edge-on while
+    // you block should have an edge.
+    void appendShield(const glm::mat4& toWorld, float sky, float blockLight);
+    void appendShieldBox(const glm::mat4& toWorld, int u, int v,
+                         float w, float h, float d,
+                         float ox, float oy, float oz, float sky, float blockLight);
+    unsigned int shieldTexture();
+
+    unsigned int m_shieldTexture = 0;
+    bool m_shieldLookedFor = false;
 };

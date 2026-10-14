@@ -24,6 +24,7 @@ param(
 
 $root = Split-Path -Parent $PSScriptRoot
 $dest = Join-Path $root "assets\skins\mob"
+$skinRoot = Join-Path $root "assets\skins"
 
 if (-not $Zip -and -not $Folder) {
     Write-Error "Pass -Zip <entity textures zip> or -Folder <textures\entity directory>"
@@ -47,6 +48,12 @@ $wanted = [ordered]@{
     "minecart.png"  = @("minecart.png", "minecart/minecart.png")
     "boat.png"      = @("boat/oak.png", "boat/boat.png", "oak_boat.png")
     "iron_golem.png" = @("iron_golem/iron_golem.png", "iron_golem.png", "villager/iron_golem.png")
+}
+
+# The shield is held, not worn by anything, so it sits beside the mob
+# sheets rather than among them.
+$wantedLoose = [ordered]@{
+    "shield.png" = @("shield_base_nopattern.png", "shield_base.png", "shield/base.png")
 }
 
 New-Item -ItemType Directory -Force -Path $dest | Out-Null
@@ -79,6 +86,18 @@ $files = Get-ChildItem -LiteralPath $source -Recurse -Filter *.png -File
 $copied = 0
 $missing = @()
 
+foreach ($name in $wantedLoose.Keys) {
+    foreach ($candidate in $wantedLoose[$name]) {
+        $tail = $candidate.Replace('/', '\\')
+        $found = $files | Where-Object { $_.FullName -like "*\\$tail" } | Select-Object -First 1
+        if ($found) {
+            Copy-Item -LiteralPath $found.FullName -Destination (Join-Path $skinRoot $name) -Force
+            $copied++
+            break
+        }
+    }
+}
+
 foreach ($name in $wanted.Keys) {
     $found = $null
     foreach ($candidate in $wanted[$name]) {
@@ -105,7 +124,6 @@ if ($missing.Count -gt 0) {
 # files: the arms are four pixels on one and three on the other. This has
 # to happen before the extracted copy is thrown away, or every file it
 # wants is already gone.
-$skinRoot = Split-Path -Parent $dest
 $players = 0
 
 foreach ($build in @("wide", "slim")) {

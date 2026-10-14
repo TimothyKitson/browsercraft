@@ -7,6 +7,9 @@
 #include "Core/GLFunctions.h"
 #include <algorithm>
 #include <cmath>
+#include <cstdio>
+#include <string>
+#include <stb_image.h>
 
 namespace
 {
@@ -69,6 +72,14 @@ namespace
     // a pebble at the old figures.
     constexpr float BLOCK_SIZE = 0.23f;
     constexpr float SPRITE_SIZE = 0.30f;
+
+    // The shield's own sheet is 64x64 and its model is measured in the
+    // same sixteenths-of-a-block as everything Mojang draws. Held in
+    // the hand it is scaled down to about the size of the card it
+    // replaces, or a 22-pixel plank fills a third of the screen.
+    constexpr float SHIELD_SHEET = 64.0f;
+    constexpr float SHIELD_SCALE = 0.015f;
+    const char* SHIELD_TEXTURE = "assets/skins/shield.png";
 
     // Face 6 tells the chunk shader to skip tangent-space normal mapping,
     // which neither a skin nor an item sprite has maps for.
@@ -296,6 +307,89 @@ void HeldItem::appendBlock(const glm::mat4& toWorld, StackId stack, float sky, f
     }
 }
 
+unsigned int HeldItem::shieldTexture()
+{
+    // Looked for once. Without the sheet the shield falls back to its
+    // item card, which is what a copy of the game with no art installed
+    // has always drawn.
+    if (m_shieldLookedFor) return m_shieldTexture;
+    m_shieldLookedFor = true;
+
+    int w = 0, h = 0, channels = 0;
+    unsigned char* data = stbi_load(SHIELD_TEXTURE, &w, &h, &channels, 4);
+    if (!data) return 0;
+
+    if (w != 64 || h != 64)
+    {
+        std::printf("Shield texture ignored: expected 64x64, got %dx%d\n", w, h);
+        stbi_image_free(data);
+        return 0;
+    }
+
+    glGenTextures(1, &m_shieldTexture);
+    glBindTexture(GL_TEXTURE_2D, m_shieldTexture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    stbi_image_free(data);
+    std::printf("Shield: loaded %s (%dx%d)\n", SHIELD_TEXTURE, w, h);
+    return m_shieldTexture;
+}
+
+// One box of the shield, unwrapped at Mojang's own offsets: the six
+// faces of a box sit in the sheet exactly where BoxMesh says they do,
+// so the panel and the mobs read their art the same way.
+void HeldItem::appendShieldBox(const glm::mat4& toWorld, int u, int v,
+                               float w, float h, float d,
+                               float ox, float oy, float oz,
+                               float sky, float blockLight)
+{
+    const float hw = w * 0.5f * SHIELD_SCALE;
+    const float hh = h * 0.5f * SHIELD_SCALE;
+    const float hd = d * 0.5f * SHIELD_SCALE;
+
+    for (int face = 0; face < 6; ++face)
+    {
+        int px = 0, py = 0, pw = 0, ph = 0;
+        BoxMesh::facePatch(face, u, v, static_cast<int>(w), static_cast<int>(h),
+                           static_cast<int>(d), px, py, pw, ph);
+
+        const float u0 = px / SHIELD_SHEET;
+        const float u1 = (px + pw) / SHIELD_SHEET;
+        const float v0 = py / SHIELD_SHEET;
+        const float v1 = (py + ph) / SHIELD_SHEET;
+
+        Quad q;
+        q.shade = CUBE_SHADE[face];
+        for (int k = 0; k < 4; ++k)
+        {
+            const int* c = CUBE_FACE[face][k];
+            q.corner[k] = place(toWorld,
+                                ox + (c[0] ? hw : -hw),
+                                oy + (c[1] ? hh : -hh),
+                                oz + (c[2] ? hd : -hd));
+            q.u[k] = (CUBE_UV[face][k][0] == 0.0f) ? u0 : u1;
+            q.v[k] = (CUBE_UV[face][k][1] == 0.0f) ? v0 : v1;
+        }
+        pushQuad(m_vertices, q, sky, blockLight, DERIVED_BASIS);
+    }
+}
+
+void HeldItem::appendShield(const glm::mat4& toWorld, float sky, float blockLight)
+{
+    // Mojang's own two boxes, read off shield_base_nopattern.png: a
+    // plate of 12x22x1 at (0,0) and the handle behind it, 2x6x6 at
+    // (26,0).
+    appendShieldBox(toWorld, 0, 0, 12.0f, 22.0f, 1.0f,
+                    0.0f, 0.0f, 0.0f, sky, blockLight);
+    appendShieldBox(toWorld, 26, 0, 2.0f, 6.0f, 6.0f,
+                    0.0f, 0.0f, -3.5f * SHIELD_SCALE, sky, blockLight);
+}
+
 void HeldItem::appendSprite(const glm::mat4& toWorld, StackId stack, float sky, float blockLight)
 {
     const TileUV uv = tileUV(atlasTileFor(stack));
@@ -386,6 +480,38 @@ void HeldItem::render(Shader& chunkShader, const Camera& camera, const PlayerSki
     // the hand rather than inside it.
     held[3] = glm::vec4(place(toWorld, HAND_LOCAL_X, HAND_LOCAL_Y + 0.05f,
                               HAND_LOCAL_Z + 0.02f), 1.0f);
+
+    // The shield is its own pass: it has a sheet rather than an atlas
+    // tile, and it is a panel rather than a card.
+    if (stack == Items::Shield && shieldTexture() != 0)
+    {
+        // Seated in the fist rather than floating over it: the shield's
+        // own origin is its middle, so without this it straddles the
+        // hand and half of it stands above the knuckles.
+        glm::mat4 panel = held;
+        panel[3] = glm::vec4(place(toWorld, HAND_LOCAL_X - 0.26f,
+                                   HAND_LOCAL_Y - 0.02f,
+                                   HAND_LOCAL_Z + 0.06f), 1.0f);
+
+        // Across you when raised, carried edge-on at the hip when not:
+        // the whole point of a modelled shield over a card is that it
+        // has an edge to show.
+        const float turn = blocking ? 0.15f : 0.70f;
+        const glm::vec3 r(camera.right * std::cos(turn) + camera.front * std::sin(turn));
+        const glm::vec3 f(-camera.right * std::sin(turn) + camera.front * std::cos(turn));
+        panel[0] = glm::vec4(r, 0.0f);
+        panel[2] = glm::vec4(f, 0.0f);
+
+        m_vertices.clear();
+        appendShield(panel, sky, blockLight);
+        m_mesh.upload(m_vertices, CHUNK_LAYOUT, true);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, shieldTexture());
+        m_mesh.draw(GL_TRIANGLES);
+
+        atlas.bind(0, 1, 2);
+        return;
+    }
 
     if (drawsFlat(stack))
     {
