@@ -78,11 +78,21 @@ namespace
     // the hand it is scaled down to about the size of the card it
     // replaces, or a 22-pixel plank fills a third of the screen.
     constexpr float SHIELD_SHEET = 64.0f;
-    // Mojang draws the shield at 1.25 of an item's usual size. A held
-    // block here is BLOCK_SIZE across for its sixteen units, so the
-    // same quarter-again works out at this much per unit -- rather than
-    // a number picked by eye, which is what the last three were.
-    constexpr float SHIELD_SCALE = BLOCK_SIZE / 16.0f * 1.25f;
+    // How big a model unit is, for the shield alone.
+    //
+    // Mojang's shield.json asks for 1.25 of an item's usual size, but
+    // that 1.25 is against Minecraft's own first-person item, which is
+    // drawn a good deal larger than a held block is here -- so taking
+    // the quarter-again against BLOCK_SIZE, which is what this used to
+    // do, came out far too small.
+    //
+    // Measured off a vanilla screenshot instead: there the shield fills
+    // half the screen's width and half its height AND is cut off by two
+    // edges, so for a plate twelve units wide by twenty-two tall the
+    // whole thing stands about one and a half screens high. You only
+    // ever see its top corner. This is the per-unit size that puts
+    // twelve units across about half the view.
+    constexpr float SHIELD_SCALE = 0.032f;
     const char* SHIELD_TEXTURE = "assets/skins/shield.png";
 
     // Face 6 tells the chunk shader to skip tangent-space normal mapping,
@@ -524,13 +534,17 @@ void HeldItem::render(Shader& chunkShader, const Camera& camera, const PlayerSki
         // is five eighths -- far further out and further forward than
         // the guesses this replaces.
         glm::mat4 panel = held;
-        // The translations above are in sixteenths of the model's own
-        // space, so they scale with it rather than being blocks.
-        const float unit = SHIELD_SCALE;
+        // Mojang's translations are sixteenths of the model's own space,
+        // but they are measured from Minecraft's hand, which sits in a
+        // different place from this one -- so scaling them with the
+        // model walked the shield across the screen as it grew. These
+        // are blocks, placed to sit where the vanilla shot puts it: the
+        // inner edge near the middle of the view and the body filling
+        // the corner the hand is in.
         panel[3] = glm::vec4(place(toWorld,
-                                   HAND_LOCAL_X - 10.0f * unit,
-                                   HAND_LOCAL_Y + (blocking ? 2.5f : 2.0f) * unit,
-                                   HAND_LOCAL_Z - (blocking ? 11.0f : 10.0f) * unit), 1.0f);
+                                   HAND_LOCAL_X - 0.17f,
+                                   HAND_LOCAL_Y - (blocking ? 0.25f : 0.30f),
+                                   HAND_LOCAL_Z - (blocking ? 0.21f : 0.18f)), 1.0f);
 
         const float roll = blocking ? 0.0f : 0.0873f;   // five degrees
         const float cr = std::cos(roll), sr = std::sin(roll);
