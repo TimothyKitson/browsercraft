@@ -1392,7 +1392,8 @@ bool Application::frame()
             m_startupScreen == "anvilblock" || m_startupScreen == "brew" ||
             m_startupScreen == "village" || m_startupScreen == "shield" ||
             m_startupScreen == "wolf" || m_startupScreen == "horse" ||
-            m_startupScreen == "boat" || m_startupScreen == "rails")
+            m_startupScreen == "boat" || m_startupScreen == "rails" ||
+            m_startupScreen == "mobs")
         {
             // Dev aid: open the inventory with something in it, so the
             // screenshot shows a real grid rather than 36 empty boxes.
@@ -1426,6 +1427,7 @@ bool Application::frame()
                                   m_startupScreen != "horse" &&
                                   m_startupScreen != "boat" &&
                                   m_startupScreen != "rails" &&
+                                  m_startupScreen != "mobs" &&
                                   m_startupScreen != "portal" &&
                                   m_startupScreen != "nether";
             m_inventoryOpen = showPanel;
@@ -1753,6 +1755,86 @@ bool Application::frame()
                 // The saved world these screens open carries whatever
                 // health it was last left on, and a shot of the death
                 // overlay is not a shot of the track.
+                m_player.health = Player::MAX_HEALTH;
+            }
+
+            if (m_startupScreen == "mobs")
+            {
+                m_camera.setOrientation(0.0f, -6.0f);
+                m_camera.addLook(0.0f, 0.0f, 0.0f);
+
+                const int px = static_cast<int>(std::floor(m_player.position.x));
+                const int pz = static_cast<int>(std::floor(m_player.position.z));
+
+                // The floor goes at the real surface of the player's own
+                // column, not at the rounded-down spawn height: a spawn
+                // that sits a block into the ground carved the arena
+                // below the grass and left the camera in a trench.
+                int py = static_cast<int>(std::floor(m_player.position.y));
+                for (int probe = py + 8; probe >= py - 8; --probe)
+                    if (isSolid(m_world->getBlock(px, probe, pz))) { py = probe + 1; break; }
+
+                // Kept inside the chunks that are already generated when
+                // a dev screen runs. A wider arena had its far half
+                // written into chunks that did not exist yet, and
+                // worldgen put the hillside back over the top of it.
+                for (int ax = -2; ax <= 11; ++ax)
+                    for (int az = -7; az <= 7; ++az)
+                    {
+                        for (int ay = 0; ay <= 10; ++ay)
+                            m_world->setBlock(px + ax, py + ay, pz + az, Blocks::Air);
+                        m_world->setBlock(px + ax, py - 1, pz + az, Blocks::Grass);
+                    }
+
+                // One of everything, in a row across the view.
+                const MobId LINEUP[] = {
+                    MobId::Wolf, MobId::Horse, MobId::Villager, MobId::Cow,
+                    MobId::Pig, MobId::Sheep, MobId::Chicken,
+                    MobId::Creeper, MobId::Zombie, MobId::Skeleton,
+                };
+                // Two ranks of five, so ten of them fit the arena.
+                int slot = 0;
+                for (MobId id : LINEUP)
+                {
+                    const float x = static_cast<float>(px + (slot < 5 ? 5 : 8)) + 0.5f;
+                    const float z = static_cast<float>(pz - 4 + (slot % 5) * 2) + 0.5f;
+                    m_entities.spawnAt(id, glm::vec3(x, static_cast<float>(py), z), *m_world);
+                    ++slot;
+                }
+
+                // The cart on its rail and the boat on its water, since
+                // neither sits anywhere else.
+                for (int az = 5; az <= 7; ++az)
+                {
+                    m_world->setBlock(px + 5, py, pz + az, Blocks::RailNorthSouth);
+                    reshapeRailsAround(glm::ivec3(px + 5, py, pz + az));
+                }
+                m_entities.spawnAt(MobId::Minecart,
+                                   glm::vec3(px + 5.5f, py + Mob::RAIL_LIFT, pz + 6.5f),
+                                   *m_world);
+
+                for (int ax = 7; ax <= 9; ++ax)
+                    for (int az = 5; az <= 7; ++az)
+                        m_world->setBlock(px + ax, py - 1, pz + az, Blocks::Water);
+                m_entities.spawnAt(MobId::Boat,
+                                   glm::vec3(px + 8.5f, py - 0.02f, pz + 6.5f),
+                                   *m_world);
+
+                m_world->setBlock(px + 10, py, pz - 5, Blocks::Bookshelf);
+                m_world->setBlock(px + 10, py, pz - 3, Blocks::DiamondOre);
+                m_world->setBlock(px + 10, py, pz - 1, Blocks::EndPortalFrame);
+
+                // The player is left exactly where the world put them.
+                // Moving them re-based the arena on the next run, and
+                // three runs dug the camera eleven blocks into a hill.
+                m_player.position.y = static_cast<float>(py);
+                m_player.velocity = glm::vec3(0.0f);
+                m_camera.position = m_player.eyePosition();
+
+                // Creative, so a shot of ten mobs is not spoiled by one
+                // of them being a creeper. Three screens in a row came
+                // back as the death overlay before this went in.
+                m_player.mode = GameMode::Creative;
                 m_player.health = Player::MAX_HEALTH;
             }
 
@@ -4963,7 +5045,11 @@ void Application::updateMobs(float deltaTime)
     // different animals in the same field.
     if (m_net.role() == Net::Role::Guest) return;
 
-    m_entities.update(deltaTime, *m_world, m_player.position, daylightFactor());
+    // The lineup screen is for looking at hides, and a wolf crosses a
+    // twelve-block clearing in two seconds. Frozen, every one of them
+    // is still there when the shutter goes.
+    const float mobTime = (m_startupScreen == "mobs") ? 0.0f : deltaTime;
+    m_entities.update(mobTime, *m_world, m_player.position, daylightFactor());
     m_entities.noticeStares(*m_world, m_camera.position, m_camera.front);
 
     // Distance alone decides how loud a mob is. There is no panning here

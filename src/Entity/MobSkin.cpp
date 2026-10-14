@@ -153,8 +153,17 @@ void MobSkin::build(MobId id)
 
         // A thing built out of a block wears that block's texture out of
         // the pack. Only if the pack is there: without it, the painting.
-        if (!clad(type)) paint(type);
+        m_clad = clad(type);
+        if (!m_clad) paint(type);
     }
+
+    // Said out loud, because "are the real textures actually being used"
+    // is otherwise a question you can only answer by squinting at a
+    // screenshot.
+    std::printf("Mob %-10s %s\n", type.name,
+                m_fromFile ? "installed sheet"
+                           : (m_clad ? "clad in a pack block texture"
+                                     : "painted in code (no sheet installed)"));
 
     m_texture = upload(m_pixels, m_pixelWidth, m_pixelHeight, m_texture);
 

@@ -39,6 +39,9 @@ public:
     int height() const { return m_height; }
     // True when the pixels came from a file rather than from code.
     bool fromFile() const { return m_fromFile; }
+    // True when the hide came out of a pack's block texture rather than
+    // being painted. False for anything wearing its own sheet.
+    bool clad() const { return m_clad; }
 
     const std::vector<MobBox>& boxes() const { return m_boxes; }
 
@@ -62,6 +65,7 @@ private:
     int m_pixelWidth = 64;
     int m_pixelHeight = 32;
     bool m_fromFile = false;
+    bool m_clad = false;
     std::vector<MobBox> m_boxes;
     std::vector<uint8_t> m_pixels;
 
