@@ -178,15 +178,29 @@ void main()
         // term the bump earns over the flat face.
         float bumpLit = dot(normal, uSunDirection);
         float flatLit = dot(faceNormal, uSunDirection);
-        float shape = (bumpLit - flatLit) * mix(0.85, 1.45, sunReach);
+        // Gained down from 1.45. Taking the Lambert difference whole
+        // was the fix for a wall that looked painted on, but on a
+        // texture whose normals run to half a unit -- cobblestone, and
+        // the stone bricks -- it swung neighbouring texels through
+        // three times the brightness and the stone came out as a
+        // jumble rather than as stonework. Readable relief, not noise.
+        float shape = (bumpLit - flatLit) * mix(0.42, 0.72, sunReach);
 
         // The pack's height map darkens the crevices. This one owes
         // nothing to the sun, so it survives shade, night and caves.
         // Read across the whole range rather than only the top half:
         // the atlas has already stretched each tile to fill it.
-        float cavity = mix(0.60, 1.05, height);
+        // Narrowed to match: with each tile's height now stretched to
+        // the full range, the old span darkened a crevice by two fifths
+        // on its own, and that landed on top of the shape term.
+        float cavity = mix(0.80, 1.04, height);
 
-        float relief = mix(0.90, 1.12, direct) * clamp(1.0 + shape, 0.35, 1.90);
+        // The clamp is the backstop rather than the shape of the
+        // effect: anything reaching it is a texel the normal map has
+        // turned nearly away from the sun, and a five-fold swing
+        // between one cobble and the next is not what that should look
+        // like.
+        float relief = mix(0.90, 1.12, direct) * clamp(1.0 + shape, 0.66, 1.34);
         color = albedo * brightness * vShade * relief * cavity * mix(1.0, materialAO, 0.75);
 
         // Blinn-Phong highlight, sharpened by the pack's smoothness map.
