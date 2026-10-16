@@ -141,6 +141,12 @@ namespace
         { "Dark Oak Leaves",DarkOakLeaves,DarkOakLeaves, DarkOakLeaves,  true,  false, RenderType::Cube,   0,   0.2f },
         { "Dark Oak Planks",DarkOakPlanks,DarkOakPlanks, DarkOakPlanks,  true,  true,  RenderType::Cube,   0,   1.5f },
         { "Nether Bricks",NetherBricks,  NetherBricks,   NetherBricks,   true,  true,  RenderType::Cube,   0,   2.0f },
+        { "Jungle Log",   JungleLogTop,  JungleLogTop,   JungleLogSide,  true,  true,  RenderType::Cube,   0,   2.0f },
+        { "Jungle Leaves",JungleLeaves,  JungleLeaves,   JungleLeaves,   true,  false, RenderType::Cube,   0,   0.2f },
+        { "Jungle Planks",JunglePlanks,  JunglePlanks,   JunglePlanks,   true,  true,  RenderType::Cube,   0,   1.5f },
+        { "Acacia Log",   AcaciaLogTop,  AcaciaLogTop,   AcaciaLogSide,  true,  true,  RenderType::Cube,   0,   2.0f },
+        { "Acacia Leaves",AcaciaLeaves,  AcaciaLeaves,   AcaciaLeaves,   true,  false, RenderType::Cube,   0,   0.2f },
+        { "Acacia Planks",AcaciaPlanks,  AcaciaPlanks,   AcaciaPlanks,   true,  true,  RenderType::Cube,   0,   1.5f },
     };
 }
 

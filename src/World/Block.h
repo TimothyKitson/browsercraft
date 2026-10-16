@@ -172,6 +172,16 @@ namespace Blocks
         // can build with that is not red.
         NetherBricks,
 
+        // The jungle's wood, and the savanna's. Jungle is the darkest
+        // red of the six; acacia is the orange one nothing else looks
+        // anything like.
+        JungleLog,
+        JungleLeaves,
+        JunglePlanks,
+        AcaciaLog,
+        AcaciaLeaves,
+        AcaciaPlanks,
+
         Count
     };
 }
@@ -234,13 +244,15 @@ inline bool isStoneFamily(BlockId id)
 inline bool isPlanks(BlockId id)
 {
     return id == Blocks::Planks || id == Blocks::SprucePlanks ||
-           id == Blocks::DarkOakPlanks;
+           id == Blocks::DarkOakPlanks || id == Blocks::JunglePlanks ||
+           id == Blocks::AcaciaPlanks;
 }
 
 inline bool isLog(BlockId id)
 {
     return id == Blocks::Log || id == Blocks::BirchLog ||
-           id == Blocks::SpruceLog || id == Blocks::DarkOakLog;
+           id == Blocks::SpruceLog || id == Blocks::DarkOakLog ||
+           id == Blocks::JungleLog || id == Blocks::AcaciaLog;
 }
 
 // The planks a log breaks down into.
@@ -251,6 +263,8 @@ inline BlockId planksFromLog(BlockId log)
         case Blocks::BirchLog:   return Blocks::Planks;   // birch has no plank of its own yet
         case Blocks::SpruceLog:  return Blocks::SprucePlanks;
         case Blocks::DarkOakLog: return Blocks::DarkOakPlanks;
+        case Blocks::JungleLog:  return Blocks::JunglePlanks;
+        case Blocks::AcaciaLog:  return Blocks::AcaciaPlanks;
         default:                 return Blocks::Planks;
     }
 }
@@ -358,7 +372,8 @@ bool blockOverlaps(BlockId id, int bx, int by, int bz,
 inline bool isLeaves(BlockId id)
 {
     return id == Blocks::Leaves || id == Blocks::BirchLeaves ||
-           id == Blocks::SpruceLeaves || id == Blocks::DarkOakLeaves;
+           id == Blocks::SpruceLeaves || id == Blocks::DarkOakLeaves ||
+           id == Blocks::JungleLeaves || id == Blocks::AcaciaLeaves;
 }
 inline bool isVisible(BlockId id) { return blockInfo(id).render != RenderType::None; }
 inline uint8_t lightEmission(BlockId id) { return blockInfo(id).lightEmission; }

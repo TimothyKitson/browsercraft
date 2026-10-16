@@ -367,6 +367,16 @@ private:
     // reading the name at update time, which is what this used to do,
     // froze nothing at all and every mob walked into the camera.
     bool m_freezeMobs = false;
+
+    // The biome screens cannot cut their clearing the moment they
+    // arrive: the chunks around where they teleported to have not
+    // streamed in yet, and setBlock into a chunk that does not exist
+    // does nothing. So the clearing waits until the world says it is
+    // ready, which is the same gate the screenshot itself waits on.
+    bool m_pendingArena = false;
+    int m_arenaX = 0, m_arenaZ = 0;
+    float m_arenaDelay = 0.0f;
+    void buildBiomeArena(int standX, int standZ);
     uint32_t m_seedOverride = 0;
     bool m_hasSeedOverride = false;
     bool m_hostOnStart = false;

@@ -857,6 +857,13 @@ namespace
     void paintDarkOakPlanks(Tile& t)  { paintPlanksIn(t, Color{  79,  53,  28 }, 61); }
     void paintDarkOakLogSide(Tile& t) { paintLogSideIn(t, Color{  52,  37,  22 }, 141); }
 
+    // Jungle is the darkest red wood of the six; acacia is the orange
+    // one nothing else looks anything like.
+    void paintJunglePlanks(Tile& t)  { paintPlanksIn(t, Color{ 150, 110,  78 }, 71); }
+    void paintJungleLogSide(Tile& t) { paintLogSideIn(t, Color{  86,  68,  38 }, 151); }
+    void paintAcaciaPlanks(Tile& t)  { paintPlanksIn(t, Color{ 173,  93,  50 }, 81); }
+    void paintAcaciaLogSide(Tile& t) { paintLogSideIn(t, Color{  87,  79,  70 }, 161); }
+
     void paintLogTop(Tile& t) { paintRings(t, Color{ 167, 136, 84 }, Color{ 146, 115, 67 }, Color{ 104, 78, 47 }, 131); }
     void paintBirchLogTop(Tile& t) { paintRings(t, Color{ 216, 202, 166 }, Color{ 196, 180, 145 }, Color{ 221, 221, 212 }, 132); }
 
@@ -897,6 +904,12 @@ namespace
     void paintDarkOakLogTop(Tile& t)
     { paintRings(t, Color{ 104, 76, 44 }, Color{ 86, 62, 34 }, Color{ 54, 38, 22 }, 143); }
     void paintBirchLeaves(Tile& t) { paintLeavesBase(t, Color{ 108, 152, 70 }, 152); }
+    void paintJungleLeaves(Tile& t) { paintLeavesBase(t, Color{ 48, 118, 28 }, 157); }
+    void paintAcaciaLeaves(Tile& t) { paintLeavesBase(t, Color{ 104, 144, 48 }, 159); }
+    void paintJungleLogTop(Tile& t)
+    { paintRings(t, Color{ 170, 128, 90 }, Color{ 150, 110, 78 }, Color{ 86, 68, 38 }, 153); }
+    void paintAcaciaLogTop(Tile& t)
+    { paintRings(t, Color{ 186, 102, 54 }, Color{ 166,  88, 44 }, Color{ 87, 79, 70 }, 163); }
 
     void paintGlass(Tile& t)
     {
@@ -3065,6 +3078,14 @@ namespace
         { Tiles::DarkOakLogSide,   paintDarkOakLogSide },
         { Tiles::DarkOakLeaves,    paintDarkOakLeaves },
         { Tiles::DarkOakPlanks,    paintDarkOakPlanks },
+        { Tiles::JungleLogTop,     paintJungleLogTop },
+        { Tiles::JungleLogSide,    paintJungleLogSide },
+        { Tiles::JungleLeaves,     paintJungleLeaves },
+        { Tiles::JunglePlanks,     paintJunglePlanks },
+        { Tiles::AcaciaLogTop,     paintAcaciaLogTop },
+        { Tiles::AcaciaLogSide,    paintAcaciaLogSide },
+        { Tiles::AcaciaLeaves,     paintAcaciaLeaves },
+        { Tiles::AcaciaPlanks,     paintAcaciaPlanks },
         { Tiles::Bedrock, paintBedrock },
         { Tiles::Water, paintWater },
         { Tiles::Sand, paintSand },
@@ -3342,6 +3363,14 @@ namespace
         { Tiles::Bricks,        { "bricks", "brick", nullptr },                        Tinting::None,    0,   false },
         { Tiles::Obsidian,      { "obsidian", nullptr },                               Tinting::None,    0,   false },
         { Tiles::NetherBricks,  { "nether_bricks", "nether_brick", nullptr },          Tinting::None,    0,   false },
+        { Tiles::JungleLogTop,  { "jungle_log_top", "log_jungle_top", nullptr },       Tinting::None,    0,   false },
+        { Tiles::JungleLogSide, { "jungle_log", "log_jungle", nullptr },               Tinting::None,    0,   false },
+        { Tiles::JungleLeaves,  { "jungle_leaves", "leaves_jungle", nullptr },         Tinting::Foliage, 0,   false },
+        { Tiles::JunglePlanks,  { "jungle_planks", "planks_jungle", nullptr },         Tinting::None,    0,   false },
+        { Tiles::AcaciaLogTop,  { "acacia_log_top", "log_acacia_top", nullptr },       Tinting::None,    0,   false },
+        { Tiles::AcaciaLogSide, { "acacia_log", "log_acacia", nullptr },               Tinting::None,    0,   false },
+        { Tiles::AcaciaLeaves,  { "acacia_leaves", "leaves_acacia", nullptr },         Tinting::Foliage, 0,   false },
+        { Tiles::AcaciaPlanks,  { "acacia_planks", "planks_acacia", nullptr },         Tinting::None,    0,   false },
 
         // Everything added since the pack table was last gone over.
         // A tile with no row here is drawn procedurally however good a

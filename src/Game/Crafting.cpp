@@ -28,17 +28,18 @@ namespace
         { true,  0, 0, { Blocks::BirchLog },   1, Blocks::Planks,        4 },
         { true,  0, 0, { Blocks::SpruceLog },  1, Blocks::SprucePlanks,  4 },
         { true,  0, 0, { Blocks::DarkOakLog }, 1, Blocks::DarkOakPlanks, 4 },
+        { true,  0, 0, { Blocks::JungleLog },  1, Blocks::JunglePlanks,  4 },
+        { true,  0, 0, { Blocks::AcaciaLog },  1, Blocks::AcaciaPlanks,  4 },
 
         // Three wheat becomes a loaf. Minecraft wants them in a row,
         // which needs a bench this game has not got yet, so it takes
         // them in any arrangement for the same three wheat.
         { true,  0, 0, { Items::Wheat, Items::Wheat, Items::Wheat }, 3, Items::Bread, 1 },
 
-        // An eye of ender. Minecraft wants blaze powder with the
-        // pearl, and there are no blazes here to get it from, so it
-        // takes gunpowder instead -- also a thing you have to go and
-        // fight something for.
-        { true,  0, 0, { Items::EnderPearl, Items::Gunpowder }, 2, Items::EyeOfEnder, 1 },
+        // An eye of ender: a pearl and the powder off a blaze's rod,
+        // which is Minecraft's. It used to take gunpowder, because
+        // there was no blaze to get the powder from.
+        { true,  0, 0, { Items::EnderPearl, Items::BlazePowder }, 2, Items::EyeOfEnder, 1 },
 
         // The frames. In Minecraft these are only found in
         // strongholds, and there are none; without a recipe the End is

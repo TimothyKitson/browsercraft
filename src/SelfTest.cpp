@@ -4154,6 +4154,104 @@ namespace
         check(atHand > 0.5f, "the hand samples the lower half of the patch");
     }
 
+    void testBiomes()
+    {
+        section("biomes: every one of them is somewhere");
+
+        const WorldGen generator(4242u);
+
+        // A coarse sweep over a few thousand blocks each way. A biome
+        // that exists in the enum and nowhere in the world is the bug
+        // worth catching: the jungle's first rule took the whole hot
+        // end and the savanna never appeared at all.
+        int seen[16] = { 0 };
+        for (int z = -4000; z <= 4000; z += 97)
+            for (int x = -4000; x <= 4000; x += 97)
+                ++seen[static_cast<int>(generator.biomeAt(x, z)) & 15];
+
+        const Biome every[] = { Biome::Ocean, Biome::Beach, Biome::Plains, Biome::Forest,
+                                Biome::Desert, Biome::Mountains, Biome::Snowy,
+                                Biome::Jungle, Biome::Savanna };
+        for (Biome biome : every)
+            check(seen[static_cast<int>(biome)] > 0,
+                  std::string(biomeName(biome)) + " is somewhere in the world");
+
+        // Named, too. A biome with no name reads as an empty line on
+        // the debug screen.
+        for (Biome biome : every)
+            check(biomeName(biome)[0] != '\0',
+                  std::string("and has a name on the debug screen"));
+
+        // The woods. Six trees, six planks, and a log of each kind that
+        // breaks down into its own plank rather than into oak.
+        const BlockId logs[] = { Blocks::Log, Blocks::BirchLog, Blocks::SpruceLog,
+                                 Blocks::DarkOakLog, Blocks::JungleLog, Blocks::AcaciaLog };
+        for (BlockId log : logs)
+        {
+            check(isLog(log), std::string(blockInfo(log).name) + " counts as a log");
+            check(blockMaterial(log) == Material::Wood,
+                  std::string(blockInfo(log).name) + " is cut with an axe");
+
+            const BlockId planks = planksFromLog(log);
+            check(isPlanks(planks),
+                  std::string(blockInfo(log).name) + " breaks down into planks");
+
+            ItemStack grid[9];
+            grid[0].id = log;
+            grid[0].count = 1;
+            const CraftOutput made = Crafting::match(grid, 2);
+            check(made.valid() && made.id == planks && made.count == 4,
+                  std::string("and four of them at the bench"));
+        }
+
+        const BlockId leaves[] = { Blocks::Leaves, Blocks::BirchLeaves, Blocks::SpruceLeaves,
+                                   Blocks::DarkOakLeaves, Blocks::JungleLeaves,
+                                   Blocks::AcaciaLeaves };
+        for (BlockId leaf : leaves)
+        {
+            check(isLeaves(leaf), std::string(blockInfo(leaf).name) + " counts as leaves");
+            check(blockMaterial(leaf) == Material::Plant,
+                  std::string(blockInfo(leaf).name) + " tears rather than chops");
+        }
+
+        // The jungle and the savanna actually grow their own trees, and
+        // the one is far thicker than the other.
+        auto woodIn = [&](int cx, int cz, BlockId log) {
+            Chunk chunk(ChunkPos{ cx, cz });
+            generator.generate(chunk);
+            int count = 0;
+            for (int y = 0; y < Chunk::SY; ++y)
+                for (int lz = 0; lz < Chunk::SZ; ++lz)
+                    for (int lx = 0; lx < Chunk::SX; ++lx)
+                        if (chunk.getBlock(lx, y, lz) == log) ++count;
+            return count;
+        };
+
+        int jungleChunks = 0, savannaChunks = 0, jungleWood = 0, acaciaWood = 0;
+        for (int cz = -24; cz <= 24 && (jungleChunks < 3 || savannaChunks < 3); ++cz)
+            for (int cx = -24; cx <= 24 && (jungleChunks < 3 || savannaChunks < 3); ++cx)
+            {
+                const Biome here = generator.biomeAt(cx * Chunk::SX + 8, cz * Chunk::SZ + 8);
+                if (here == Biome::Jungle && jungleChunks < 3)
+                {
+                    ++jungleChunks;
+                    jungleWood += woodIn(cx, cz, Blocks::JungleLog);
+                }
+                else if (here == Biome::Savanna && savannaChunks < 3)
+                {
+                    ++savannaChunks;
+                    acaciaWood += woodIn(cx, cz, Blocks::AcaciaLog);
+                }
+            }
+
+        check(jungleChunks == 3 && savannaChunks == 3,
+              "there is a jungle and a savanna within a few hundred chunks");
+        check(jungleWood > 0, "the jungle grows jungle trees");
+        check(acaciaWood > 0, "and the savanna grows acacias");
+        check(jungleWood > acaciaWood,
+              "with the jungle far the thicker of the two");
+    }
+
     void testOreRates()
     {
         section("ore generation");
@@ -5709,11 +5807,20 @@ namespace
         // The whole chain has to be craftable, or the End stays
         // somewhere you can only reach from the command line.
         ItemStack eye[9];
-        eye[0].id = Items::EnderPearl; eye[0].count = 1;
-        eye[1].id = Items::Gunpowder;  eye[1].count = 1;
+        eye[0].id = Items::EnderPearl;  eye[0].count = 1;
+        eye[1].id = Items::BlazePowder; eye[1].count = 1;
         const CraftOutput made = Crafting::match(eye, 2);
         check(made.valid() && made.id == Items::EyeOfEnder,
-              "a pearl and gunpowder make an eye of ender");
+              "a pearl and blaze powder make an eye of ender");
+
+        // It took gunpowder while there was no blaze to get the powder
+        // off. There is one now, so the stand-in is gone.
+        ItemStack old[9];
+        old[0].id = Items::EnderPearl; old[0].count = 1;
+        old[1].id = Items::Gunpowder;  old[1].count = 1;
+        const CraftOutput notAnEye = Crafting::match(old, 2);
+        check(!notAnEye.valid() || notAnEye.id != Items::EyeOfEnder,
+              "and gunpowder no longer stands in for it");
 
         ItemStack frame[9];
         for (int i = 0; i < 9; ++i) { frame[i].id = Blocks::EndStone; frame[i].count = 1; }
@@ -6319,6 +6426,7 @@ int runSelfTest()
     testLadders();
     testFirstPersonArm();
     testHandSwing();
+    testBiomes();
     testOreRates();
     testDoors();
     testStairs();

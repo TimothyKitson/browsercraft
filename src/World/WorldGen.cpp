@@ -38,6 +38,8 @@ const char* biomeName(Biome biome)
         case Biome::Desert: return "Desert";
         case Biome::Mountains: return "Mountains";
         case Biome::Snowy: return "Snowy";
+        case Biome::Jungle: return "Jungle";
+        case Biome::Savanna: return "Savanna";
     }
     return "Unknown";
 }
@@ -122,7 +124,17 @@ Biome WorldGen::biomeAt(int worldX, int worldZ) const
     if (height <= SEA_LEVEL) return Biome::Beach;
     if (height > SEA_LEVEL + 34) return Biome::Mountains;
     if (temperature < -0.45f) return Biome::Snowy;
-    if (temperature > 0.30f && humidity < -0.05f) return Biome::Desert;
+
+    // Everything hot, sorted by how wet it is: rainforest, then the dry
+    // grassland, then sand. The desert test used to take the whole of
+    // the hot end and the rest came out as forest.
+    if (temperature > 0.30f)
+    {
+        if (humidity > 0.22f) return Biome::Jungle;
+        if (humidity < -0.05f) return Biome::Desert;
+        return Biome::Savanna;
+    }
+
     if (humidity > 0.05f) return Biome::Forest;
     return Biome::Plains;
 }
@@ -353,6 +365,8 @@ void WorldGen::generateColumns(Chunk& chunk) const
 
                         case Biome::Plains:
                         case Biome::Forest:
+                        case Biome::Jungle:
+                        case Biome::Savanna:
                         default:
                             if (depth == 0) block = (surface < SEA_LEVEL) ? Blocks::Dirt : Blocks::Grass;
                             else if (depth <= 3) block = Blocks::Dirt;
@@ -558,6 +572,20 @@ void WorldGen::buildTree(Chunk& chunk, int worldX, int surfaceY, int worldZ, Tre
             extraHeight = -1;
             canopyRadius = 3;
             break;
+        case TreeKind::Jungle:
+            logBlock = Blocks::JungleLog; leafBlock = Blocks::JungleLeaves;
+            // The tallest thing that grows: a jungle is a roof you walk
+            // about underneath.
+            extraHeight = 6;
+            canopyRadius = 3;
+            break;
+        case TreeKind::Acacia:
+            logBlock = Blocks::AcaciaLog; leafBlock = Blocks::AcaciaLeaves;
+            // Bare trunk and then a flat plate of leaves on top, which
+            // is the one tree you can name from its silhouette alone.
+            extraHeight = 2;
+            canopyRadius = 3;
+            break;
         case TreeKind::Oak:
             break;
     }
@@ -566,15 +594,41 @@ void WorldGen::buildTree(Chunk& chunk, int worldX, int surfaceY, int worldZ, Tre
     const int trunkHeight = 4 + static_cast<int>(hashToFloat(h) * 3.0f) + extraHeight;
     const int topY = surfaceY + trunkHeight;
 
+    // An acacia leans: the trunk goes up straight and then steps two
+    // blocks to one side, and the plate of leaves sits over where it
+    // ended up rather than over its roots. Without the lean a flat
+    // canopy on a straight trunk is a mushroom.
+    int leanX = 0, leanZ = 0;
+    if (kind == TreeKind::Acacia)
+    {
+        const int way = static_cast<int>(
+            hashToFloat(hashCoords(worldX, 1, worldZ, m_seed + 5151)) * 4.0f) & 3;
+        if (way == 0) leanX = 1;
+        else if (way == 1) leanX = -1;
+        else if (way == 2) leanZ = 1;
+        else leanZ = -1;
+    }
+    const int crownX = worldX + leanX * 2;
+    const int crownZ = worldZ + leanZ * 2;
+
     // Canopy first so the trunk overwrites any leaves in its column. A
     // conifer carries its needles further down the trunk than a
     // broadleaf carries its leaves, which is the whole silhouette.
-    const int canopyDrop = (kind == TreeKind::Spruce) ? 5 : 2;
+    // An acacia carries its leaves in a plate two blocks deep; a
+    // conifer carries them most of the way down the trunk.
+    const int canopyDrop = (kind == TreeKind::Spruce)  ? 5
+                         : (kind == TreeKind::Acacia) ? 1
+                                                      : 2;
     for (int dy = -canopyDrop; dy <= 1; ++dy)
     {
         int y = topY + dy;
         if (y < 0 || y >= Chunk::SY) continue;
-        int radius = (dy >= 1) ? std::max(1, canopyRadius - 1) : canopyRadius;
+
+        // Flat on top and flat underneath: an acacia's plate does not
+        // taper the way a broadleaf's crown does.
+        int radius = (kind == TreeKind::Acacia)
+                         ? canopyRadius
+                         : ((dy >= 1) ? std::max(1, canopyRadius - 1) : canopyRadius);
 
         for (int dx = -radius; dx <= radius; ++dx)
         {
@@ -583,11 +637,11 @@ void WorldGen::buildTree(Chunk& chunk, int worldX, int surfaceY, int worldZ, Tre
                 if (std::abs(dx) == radius && std::abs(dz) == radius)
                 {
                     // Round the corners off, with a little randomness.
-                    if (hashToFloat(hashCoords(worldX + dx, y, worldZ + dz, m_seed + 61)) < 0.6f)
+                    if (hashToFloat(hashCoords(crownX + dx, y, crownZ + dz, m_seed + 61)) < 0.6f)
                         continue;
                 }
-                int lx = worldX + dx - baseX;
-                int lz = worldZ + dz - baseZ;
+                int lx = crownX + dx - baseX;
+                int lz = crownZ + dz - baseZ;
                 if (!Chunk::inBounds(lx, y, lz)) continue;
                 if (chunk.getBlock(lx, y, lz) == Blocks::Air)
                     chunk.setBlockRaw(lx, y, lz, leafBlock);
@@ -598,8 +652,12 @@ void WorldGen::buildTree(Chunk& chunk, int worldX, int surfaceY, int worldZ, Tre
     for (int i = 0; i < trunkHeight; ++i)
     {
         int y = surfaceY + 1 + i;
-        int lx = worldX - baseX;
-        int lz = worldZ - baseZ;
+
+        // The last two blocks of an acacia's trunk walk out to meet its
+        // crown; everything else goes straight up.
+        const int step = (trunkHeight - i <= 2) ? (trunkHeight - i == 2 ? 1 : 2) : 0;
+        int lx = worldX + leanX * step - baseX;
+        int lz = worldZ + leanZ * step - baseZ;
         if (Chunk::inBounds(lx, y, lz))
             chunk.setBlockRaw(lx, y, lz, logBlock);
     }
@@ -651,6 +709,27 @@ WorldGen::Palette WorldGen::paletteFor(Biome biome) const
             palette.post = Blocks::BirchLog;
             break;
 
+        case Biome::Savanna:
+            // Acacia, which is the one wood nobody mistakes for another.
+            palette.wall = Blocks::AcaciaLog;
+            palette.footing = Blocks::Cobblestone;
+            palette.corner = Blocks::AcaciaLog;
+            palette.floor = Blocks::AcaciaPlanks;
+            palette.roof = Blocks::AcaciaPlanks;
+            palette.roofStairs = Blocks::PlankStairsNorth;
+            palette.post = Blocks::AcaciaLog;
+            break;
+
+        case Biome::Jungle:
+            palette.wall = Blocks::JungleLog;
+            palette.footing = Blocks::Cobblestone;
+            palette.corner = Blocks::JungleLog;
+            palette.floor = Blocks::JunglePlanks;
+            palette.roof = Blocks::JunglePlanks;
+            palette.roofStairs = Blocks::PlankStairsNorth;
+            palette.post = Blocks::JungleLog;
+            break;
+
         case Biome::Forest:
             // Timber country: logs for the walls, not just the corners.
             palette.wall = Blocks::Log;
@@ -679,7 +758,8 @@ bool WorldGen::villageFits(const Village::Site& site) const
     // to stand: this world is mostly forest.
     const Biome biome = biomeAt(site.x, site.z);
     if (biome != Biome::Plains && biome != Biome::Desert &&
-        biome != Biome::Forest && biome != Biome::Snowy)
+        biome != Biome::Forest && biome != Biome::Snowy &&
+        biome != Biome::Savanna)
         return false;
 
     // Sample the whole footprint, not just the middle: a village laid
@@ -1043,7 +1123,8 @@ WorldGen::VillageTally WorldGen::surveyVillages(int fromX, int fromZ, int square
 
             const Biome biome = biomeAt(site.x, site.z);
             if (biome != Biome::Plains && biome != Biome::Desert &&
-                biome != Biome::Forest && biome != Biome::Snowy)
+                biome != Biome::Forest && biome != Biome::Snowy &&
+                biome != Biome::Savanna)
             { ++tally.wrongBiome; continue; }
 
             int lowest = Chunk::SY;
@@ -1251,6 +1332,11 @@ void WorldGen::decorate(Chunk& chunk) const
                 case Biome::Plains: treeChance = 0.004f; break;
                 case Biome::Snowy: treeChance = 0.018f; break;
                 case Biome::Mountains: treeChance = 0.006f; break;
+                // Thicker than anywhere else, and a savanna is nearly
+                // bare: the two read as what they are from the density
+                // of the trees before you are close enough to see one.
+                case Biome::Jungle: treeChance = 0.085f; break;
+                case Biome::Savanna: treeChance = 0.010f; break;
                 default: break;
             }
             if (treeChance <= 0.0f) continue;
@@ -1267,7 +1353,11 @@ void WorldGen::decorate(Chunk& chunk) const
             const float roll = hashToFloat(hashCoords(wx, 8, wz, m_seed + 4243));
 
             TreeKind kind = TreeKind::Oak;
-            if (here == Biome::Snowy || here == Biome::Mountains)
+            if (here == Biome::Jungle)
+                kind = (roll < 0.85f) ? TreeKind::Jungle : TreeKind::Oak;
+            else if (here == Biome::Savanna)
+                kind = TreeKind::Acacia;
+            else if (here == Biome::Snowy || here == Biome::Mountains)
                 kind = (roll < 0.80f) ? TreeKind::Spruce : TreeKind::Oak;
             else if (here == Biome::Forest)
                 kind = (roll < 0.30f) ? TreeKind::DarkOak

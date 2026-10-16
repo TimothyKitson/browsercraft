@@ -1402,6 +1402,7 @@ bool Application::frame()
             m_startupScreen == "boat" || m_startupScreen == "rails" ||
             m_startupScreen == "mobs" || m_startupScreen == "golem" ||
             m_startupScreen == "nethermobs" ||
+            m_startupScreen == "jungle" || m_startupScreen == "savanna" ||
             m_startupScreen == "rock")
         {
             // Dev aid: open the inventory with something in it, so the
@@ -1440,6 +1441,8 @@ bool Application::frame()
                                   m_startupScreen != "mobs" &&
                                   m_startupScreen != "golem" &&
                                   m_startupScreen != "nethermobs" &&
+                                  m_startupScreen != "jungle" &&
+                                  m_startupScreen != "savanna" &&
                                   m_startupScreen != "rock" &&
                                   m_startupScreen != "portal" &&
                                   m_startupScreen != "nether";
@@ -2061,6 +2064,81 @@ bool Application::frame()
                 }
             }
 
+            // Walk to the nearest jungle or savanna, the same way the
+            // village screen walks to a real village: what is worth
+            // looking at is what the generator actually makes, not an
+            // arena with six trees planted in it.
+            if (m_startupScreen == "jungle" || m_startupScreen == "savanna")
+            {
+                const Biome wanted = m_startupScreen == "jungle" ? Biome::Jungle
+                                                                 : Biome::Savanna;
+                const int fromX = static_cast<int>(m_player.position.x);
+                const int fromZ = static_cast<int>(m_player.position.z);
+
+                bool found = false;
+                int standX = fromX, standZ = fromZ;
+
+                // Outward in rings, so the first hit is the nearest one
+                // and the shot is of somewhere you could have walked to.
+                for (int ring = 0; ring <= 160 && !found; ++ring)
+                    for (int step = -ring; step <= ring && !found; ++step)
+                        for (int side = 0; side < 4 && !found; ++side)
+                        {
+                            const int dx = (side == 0) ? step : (side == 1) ? step
+                                         : (side == 2) ? -ring : ring;
+                            const int dz = (side == 0) ? -ring : (side == 1) ? ring : step;
+                            const int x = fromX + dx * 16;
+                            const int z = fromZ + dz * 16;
+                            // The middle of one, not its edge. The first
+                            // try took the first matching column and put
+                            // the camera in a forest with one jungle
+                            // block under its feet.
+                            const WorldGen& gen = m_world->generator();
+                            if (gen.biomeAt(x, z) != wanted) continue;
+                            if (gen.biomeAt(x - 24, z) != wanted) continue;
+                            if (gen.biomeAt(x + 24, z) != wanted) continue;
+                            if (gen.biomeAt(x, z - 24) != wanted) continue;
+                            if (gen.biomeAt(x, z + 24) != wanted) continue;
+                            standX = x;
+                            standZ = z;
+                            found = true;
+                        }
+
+                if (found)
+                {
+                    // On the ground, not above it: from over the top a
+                    // jungle is a green carpet, and the trees are the
+                    // whole point of the shot.
+                    const int top = m_world->generator().surfaceHeight(standX, standZ);
+                    m_player.position = glm::vec3(static_cast<float>(standX) + 0.5f,
+                                                  static_cast<float>(top + 1),
+                                                  static_cast<float>(standZ) + 0.5f);
+                    m_player.velocity = glm::vec3(0.0f);
+                    m_player.flying = true;
+                    m_placeOnSurface = false;
+                    m_camera.setOrientation(0.0f, 6.0f);
+                    m_camera.addLook(0.0f, 0.0f, 0.0f);
+
+                    // The clearing itself waits: nothing round here
+                    // has streamed in yet, and a setBlock into a chunk
+                    // that does not exist is dropped on the floor.
+                    m_pendingArena = true;
+                    m_arenaX = standX;
+                    m_arenaZ = standZ;
+
+                    std::printf("%s at %d, %d\n", biomeName(wanted), standX, standZ);
+                    std::fflush(stdout);
+                }
+                else
+                {
+                    std::printf("No %s within a hundred and sixty chunks\n", biomeName(wanted));
+                    std::fflush(stdout);
+                }
+
+                m_player.mode = GameMode::Creative;
+                m_player.health = Player::MAX_HEALTH;
+            }
+
             if (m_startupScreen == "brew")
             {
                 m_camera.setOrientation(0.0f, -14.0f);
@@ -2505,6 +2583,16 @@ bool Application::frame()
             m_screen = Screen::Dead;
         }
         m_startupScreen.clear();
+    }
+
+    if (m_pendingArena && m_worldReady && m_world)
+    {
+        m_arenaDelay += deltaTime;
+        if (m_arenaDelay > 1.5f)
+        {
+            buildBiomeArena(m_arenaX, m_arenaZ);
+            m_pendingArena = false;
+        }
     }
 
     // Screenshots must be read back before the buffer swap, while the
@@ -5475,6 +5563,38 @@ void Application::renderEatProgress(float cx, float cy)
 
     m_ui.quad(x - 1.0f, y - 1.0f, width + 2.0f, height + 2.0f, glm::vec4(0.0f, 0.0f, 0.0f, 0.5f));
     m_ui.quad(x, y, width * fraction, height, glm::vec4(0.85f, 0.7f, 0.35f, 0.95f));
+}
+
+// A pocket cut out of the trees with the three blocks every screenshot
+// carries standing in it, and torches, because under a closed jungle
+// canopy the light is nothing at all -- true of a jungle, and useless
+// in a photograph.
+void Application::buildBiomeArena(int standX, int standZ)
+{
+    const WorldGen& gen = m_world->generator();
+
+    for (int ax = -1; ax <= 11; ++ax)
+        for (int az = -4; az <= 4; ++az)
+        {
+            const int groundY = gen.surfaceHeight(standX + ax, standZ + az);
+            for (int ay = 1; ay <= 7; ++ay)
+                m_world->setBlock(standX + ax, groundY + ay, standZ + az, Blocks::Air);
+        }
+
+    // On the ground each one stands on, not at the height the camera
+    // happens to be: the floor rolls, and the first set hung in the air.
+    auto stand = [&](int ax, int az, BlockId block) {
+        const int groundY = gen.surfaceHeight(standX + ax, standZ + az);
+        m_world->setBlock(standX + ax, groundY + 1, standZ + az, block);
+    };
+
+    for (int ax : { 1, 10 })
+        for (int az : { -4, 4 })
+            stand(ax, az, Blocks::Torch);
+
+    stand(7, -2, Blocks::Bookshelf);
+    stand(7, 0, Blocks::DiamondOre);
+    stand(7, 2, Blocks::EndPortalFrame);
 }
 
 void Application::renderHud()
