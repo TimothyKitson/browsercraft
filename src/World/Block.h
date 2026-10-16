@@ -168,6 +168,10 @@ namespace Blocks
         DarkOakLeaves,
         DarkOakPlanks,
 
+        // What a fortress is built of, and the one thing down there you
+        // can build with that is not red.
+        NetherBricks,
+
         Count
     };
 }

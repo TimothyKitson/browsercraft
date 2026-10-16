@@ -284,6 +284,11 @@ void AudioEngine::buildSounds()
     loadMobVoice(Sound::MobGolemSay, Sound::MobGolemHurt, Sound::MobGolemDeath,
                  "mob/irongolem");
     loadMobVoice(Sound::MobHorseSay, Sound::MobHorseHurt, Sound::MobHorseDeath, "horse");
+    loadMobVoice(Sound::MobBlazeSay, Sound::MobBlazeHurt, Sound::MobBlazeDeath, "blaze");
+    loadMobVoice(Sound::MobWitherSkeletonSay, Sound::MobWitherSkeletonHurt,
+                 Sound::MobWitherSkeletonDeath, "mob/wither_skeleton");
+    loadMobVoice(Sound::MobMagmaCubeSay, Sound::MobMagmaCubeHurt,
+                 Sound::MobMagmaCubeDeath, "slime");
     loadVariants(Sound::Rain, "weather/rain", 1);
     loadVariants(Sound::Thunder, "weather/thunder", 1);
 
@@ -421,6 +426,13 @@ void AudioEngine::buildSounds()
         Synth s = make(Sound::Click);
         s.addNoise(0.03f, 3000.0f, 200.0f, 1.0f, false, 150);
         s.finish(0.35f);
+    }
+    {
+        // Fire: a crackle, which is noise with no tone under it at all.
+        Synth s = make(Sound::Fire);
+        s.addNoise(0.28f, 1900.0f, 9.0f, 0.60f, true, 151);
+        s.addNoise(0.28f, 420.0f, 7.0f, 0.34f, false, 152);
+        s.finish(0.52f);
     }
 
     // --- animals and monsters ---
@@ -686,6 +698,69 @@ void AudioEngine::buildSounds()
         s.addTone(0.58f, 440.0f, 105.0f, 5.0f, 0.66f, true);
         s.addNoise(0.28f, 1000.0f, 8.0f, 0.22f, false, 715);
         s.finish(0.82f);
+    }
+
+    // The blaze: not a voice but a furnace. Breathing noise with a
+    // crackle over the top of it and no tone to speak of, which is what
+    // tells you one is in the room before you can see it.
+    {
+        Synth s = make(Sound::MobBlazeSay);
+        s.addNoise(0.52f, 1100.0f, 3.0f, 0.34f, true, 821);
+        s.addNoise(0.52f, 240.0f, 2.0f, 0.30f, false, 822);
+        s.finish(0.62f);
+    }
+    {
+        Synth s = make(Sound::MobBlazeHurt);
+        s.addNoise(0.22f, 2600.0f, 14.0f, 0.46f, true, 823);
+        s.addTone(0.16f, 680.0f, 300.0f, 14.0f, 0.20f, false);
+        s.finish(0.74f);
+    }
+    {
+        Synth s = make(Sound::MobBlazeDeath);
+        s.addNoise(0.64f, 1800.0f, 5.0f, 0.44f, true, 825);
+        s.addNoise(0.64f, 300.0f, 4.0f, 0.34f, false, 826);
+        s.finish(0.80f);
+    }
+
+    // The wither skeleton: a skeleton's rattle, deeper and slower. The
+    // pitch shift on the species does most of the work; what is left is
+    // making it drier than the one up top.
+    {
+        Synth s = make(Sound::MobWitherSkeletonSay);
+        s.addNoise(0.26f, 1500.0f, 11.0f, 0.38f, true, 831);
+        s.addTone(0.20f, 180.0f, 120.0f, 9.0f, 0.22f, true);
+        s.finish(0.70f);
+    }
+    {
+        Synth s = make(Sound::MobWitherSkeletonHurt);
+        s.addNoise(0.18f, 2200.0f, 18.0f, 0.44f, true, 833);
+        s.addTone(0.14f, 260.0f, 140.0f, 16.0f, 0.24f, true);
+        s.finish(0.76f);
+    }
+    {
+        Synth s = make(Sound::MobWitherSkeletonDeath);
+        s.addNoise(0.52f, 1700.0f, 6.0f, 0.42f, true, 835);
+        s.addTone(0.40f, 200.0f, 90.0f, 5.0f, 0.26f, true);
+        s.finish(0.80f);
+    }
+
+    // The magma cube: a wet slap. Low noise that dies almost at once,
+    // which is the whole of a slime landing.
+    {
+        Synth s = make(Sound::MobMagmaCubeSay);
+        s.addNoise(0.18f, 520.0f, 22.0f, 0.42f, false, 841);
+        s.finish(0.68f);
+    }
+    {
+        Synth s = make(Sound::MobMagmaCubeHurt);
+        s.addNoise(0.14f, 760.0f, 30.0f, 0.46f, false, 843);
+        s.finish(0.74f);
+    }
+    {
+        Synth s = make(Sound::MobMagmaCubeDeath);
+        s.addNoise(0.34f, 420.0f, 12.0f, 0.44f, false, 845);
+        s.addNoise(0.34f, 1400.0f, 9.0f, 0.18f, true, 846);
+        s.finish(0.78f);
     }
 
     // The pigman: a grunt with a groan in it, halfway between the two

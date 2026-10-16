@@ -103,6 +103,9 @@ namespace
         { "Shield",          Tiles::ItemShield,          1 },
         { "Boat",            Tiles::ItemBoat,            1 },
         { "Minecart",        Tiles::ItemMinecart,        1 },
+        { "Blaze Rod",       Tiles::ItemBlazeRod,       64 },
+        { "Nether Brick",    Tiles::ItemNetherBrick,    64 },
+        { "Magma Cream",     Tiles::ItemMagmaCream,     64 },
     };
 
     static_assert(sizeof(ITEMS) / sizeof(ITEMS[0]) ==

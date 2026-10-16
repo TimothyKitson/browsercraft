@@ -28,7 +28,8 @@ namespace
 
     // The Nether has its own, and nothing else belongs there: a sheep on
     // netherrack and a piglin in a meadow are both wrong.
-    const MobId NETHER_SPECIES[] = { MobId::ZombiePigman };
+    const MobId NETHER_SPECIES[] = { MobId::ZombiePigman, MobId::WitherSkeleton,
+                                     MobId::MagmaCube, MobId::Blaze };
 
     // The End has endermen and nothing else, which is also true of
     // Minecraft's. The enderman is the one species in two lists: it

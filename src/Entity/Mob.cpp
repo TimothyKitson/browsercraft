@@ -103,20 +103,43 @@ bool Mob::floatTowardsSurface(const World& world, float deltaTime)
     return true;
 }
 
-float Mob::verticalStep(float velocityY, float positionY, float waterline,
-                        bool afloat, float deltaTime)
+float Mob::verticalStep(float velocityY, float positionY, float target,
+                        bool held, float pull, float damping, float deltaTime)
 {
-    // Afloat, the water holds it up and gravity has no part in it. The
-    // first try added the spring on top of the fall, which settles
-    // wherever the two cancel -- a whole block under, as it turned out,
-    // with the hull showing through the surface as a blue smudge.
-    if (afloat)
+    // Held at a height -- the waterline for a hull, the air for a blaze
+    // -- gravity has no part in it. The first try added the spring on
+    // top of the fall, which settles wherever the two cancel: a whole
+    // block under, as it turned out, with the hull showing through the
+    // surface as a blue smudge.
+    if (held)
     {
-        velocityY += (waterline - positionY) * FLOAT_PULL * deltaTime;
-        return velocityY * std::max(0.0f, 1.0f - FLOAT_DAMPING * deltaTime);
+        velocityY += (target - positionY) * pull * deltaTime;
+        return velocityY * std::max(0.0f, 1.0f - damping * deltaTime);
     }
 
     return std::max(velocityY + GRAVITY * deltaTime, TERMINAL_VELOCITY);
+}
+
+// Held in the air above whatever it is over. The same spring as the
+// waterline and for the same reason: there is a height it wants and
+// nothing else decides where it sits. Returns false over a bottomless
+// drop, which is the one case where it should simply fall.
+bool Mob::hoverAboveGround(const World& world, float deltaTime)
+{
+    const int x = static_cast<int>(std::floor(m_position.x));
+    const int z = static_cast<int>(std::floor(m_position.z));
+    const int feet = static_cast<int>(std::floor(m_position.y));
+
+    int ground = feet;
+    while (ground > feet - HOVER_DROP && !isSolid(world.getBlock(x, ground - 1, z)))
+        --ground;
+
+    if (!isSolid(world.getBlock(x, ground - 1, z))) return false;
+
+    const float wanted = static_cast<float>(ground) + type().hoverHeight;
+    m_velocity.y = verticalStep(m_velocity.y, m_position.y, wanted, true,
+                                HOVER_PULL, HOVER_DAMPING, deltaTime);
+    return true;
 }
 
 float Mob::railSpeedStep(float speed, bool pushing, float maxSpeed, float deltaTime)
@@ -665,8 +688,10 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
     // for ever. Out of the water gravity has it like anything else, and
     // that is the only branch that applies the fall.
     const bool afloat = t.floats && floatTowardsSurface(world, deltaTime);
+    const bool hovering = !afloat && t.hoverHeight > 0.0f &&
+                          hoverAboveGround(world, deltaTime);
     if (onRail) m_velocity.y = 0.0f;
-    else if (!afloat)
+    else if (!afloat && !hovering)
         m_velocity.y = verticalStep(m_velocity.y, m_position.y, 0.0f, false, deltaTime);
 
     const bool wasOnGround = m_onGround;
@@ -680,7 +705,7 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
     // Neither water nor a rail is a floor, so moveAxis never reports
     // standing on either. Something riding on one is as settled as it
     // is going to get.
-    if (afloat || onRail) m_onGround = true;
+    if (afloat || onRail || hovering) m_onGround = true;
 
     // Blocked flat against something. Turning until the way is clear is
     // what stops a mob grinding into the same wall for as long as it can
@@ -801,18 +826,21 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
             m_shootTimer = t.arrowInterval;
 
             // Aimed a little high, so the arrow drops onto the target
-            // rather than always falling short.
+            // rather than always falling short. A fire charge does not
+            // drop, so it is aimed straight at what it is thrown at.
             const glm::vec3 flat = glm::normalize(toPlayer);
-            const float lift = std::clamp(range * 0.018f, 0.0f, 0.35f);
+            const float lift = t.shootsFire ? 0.0f
+                                            : std::clamp(range * 0.018f, 0.0f, 0.35f);
             const glm::vec3 heading = glm::normalize(flat + glm::vec3(0.0f, lift, 0.0f));
 
             MobShot shot;
             shot.from = eye + heading * 0.5f;
-            shot.velocity = heading * 28.0f;
+            shot.velocity = heading * (t.shootsFire ? 16.0f : 28.0f);
             shot.damage = t.arrowDamage;
+            shot.fiery = t.shootsFire;
             m_shots.push_back(shot);
 
-            emit(Sound::Click, 0.5f, 1.2f);
+            emit(t.shootsFire ? Sound::Fire : Sound::Click, 0.5f, 1.2f);
         }
     }
 

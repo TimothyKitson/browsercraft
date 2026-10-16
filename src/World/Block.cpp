@@ -140,6 +140,7 @@ namespace
         { "Dark Oak Log", DarkOakLogTop, DarkOakLogTop,  DarkOakLogSide, true,  true,  RenderType::Cube,   0,   2.0f },
         { "Dark Oak Leaves",DarkOakLeaves,DarkOakLeaves, DarkOakLeaves,  true,  false, RenderType::Cube,   0,   0.2f },
         { "Dark Oak Planks",DarkOakPlanks,DarkOakPlanks, DarkOakPlanks,  true,  true,  RenderType::Cube,   0,   1.5f },
+        { "Nether Bricks",NetherBricks,  NetherBricks,   NetherBricks,   true,  true,  RenderType::Cube,   0,   2.0f },
     };
 }
 

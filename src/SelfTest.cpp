@@ -543,7 +543,15 @@ namespace
 
             // Feet on the ground, within a pixel. A spider's legs splay
             // out and end just shy of the floor, which is vanilla too.
-            check(bottom > -0.2f && bottom < 0.05f, who + " stands on the ground");
+            //
+            // Nothing that hovers has feet to put there. Vanilla draws
+            // a blaze floating inside its own box, so what is asked of
+            // one instead is that it stays inside the box it floats in.
+            if (type.hoverHeight > 0.0f)
+                check(bottom >= 0.0f && bottom < type.height * 0.5f,
+                      who + " hangs inside its own box");
+            else
+                check(bottom > -0.2f && bottom < 0.05f, who + " stands on the ground");
 
             // Every species must fit its sheet, or its texture coordinates
             // silently wrap onto another limb.
@@ -2050,6 +2058,150 @@ namespace
             }
             check(std::fabs(y - waterline) < 0.05f,
                   "it settles at the waterline at " + std::to_string(dt) + "s a frame");
+        }
+    }
+
+    void testNether()
+    {
+        section("the Nether: what lives there and what it drops");
+
+        // Everything that belongs down there is in the spawn list, and
+        // nothing that belongs up here is. A zombie in the Nether was
+        // the bug that put dimensions on the table in the first place.
+        for (int i = 0; i < mobTypeCount(); ++i)
+        {
+            const MobType& t = mobType(static_cast<MobId>(i));
+            if (t.dimension != Dimension::Nether) continue;
+            check(t.spawnClass == SpawnClass::Hostile || t.neutral,
+                  std::string(t.name) + " is not something you meet in the Nether and pet");
+            check(t.fireproof, std::string(t.name) + " is not hurt by the fire it lives in");
+        }
+
+        const MobType& blaze = mobType(MobId::Blaze);
+        check(blaze.hoverHeight > 0.0f, "a blaze hovers rather than walks");
+        check(blaze.shootsFire && blaze.arrowDamage > 0, "and throws fire rather than swinging");
+        check(blaze.drop == Items::BlazeRod && blaze.dropCount > 0, "and leaves a rod behind");
+
+        // Twelve rods and a head, all reading two patches: the head's
+        // at the top-left and the one rod patch at (0, 16).
+        check(blaze.model.size() == 13, "a blaze is a head and twelve rods");
+        int rodBoxes = 0;
+        for (const MobBox& b : blaze.model)
+            if (b.u == 0 && b.v == 16) ++rodBoxes;
+        check(rodBoxes == 12, "and every rod reads the one patch Mojang drew");
+
+        // The scaled species. The figure and the box scale together, or
+        // a wither skeleton is drawn through its own hitbox.
+        const MobType& wither = mobType(MobId::WitherSkeleton);
+        const MobType& skeleton = mobType(MobId::Skeleton);
+        check(wither.modelScale > 1.0f, "a wither skeleton is the bigger skeleton");
+        check(wither.model.size() == skeleton.model.size(),
+              "built from the same boxes as the one up top");
+        for (size_t i = 0; i < wither.model.size(); ++i)
+            check(wither.model[i].u == skeleton.model[i].u &&
+                      wither.model[i].v == skeleton.model[i].v,
+                  "and reading the same patches");
+        check(wither.attackDamage > skeleton.arrowDamage,
+              "it hits harder up close than the other one does at range");
+
+        {
+            Mob one(MobId::WitherSkeleton, glm::vec3(0.0f), 3u);
+            check(std::fabs(one.height() - wither.height * wither.modelScale) < 0.001f,
+                  "and its hitbox is scaled with it");
+            check(std::fabs(one.width() - wither.width * wither.modelScale) < 0.001f,
+                  "in both directions");
+        }
+
+        // Brewing's supply line, end to end: a rod off a blaze grinds
+        // into powder, the powder makes strength, and the cream off a
+        // magma cube is the only way to walk through fire.
+        {
+            ItemStack rod[9];
+            rod[0].id = Items::BlazeRod;
+            rod[0].count = 1;
+            const CraftOutput powder = Crafting::match(rod, 2);
+            check(powder.valid() && powder.id == Items::BlazePowder,
+                  "a blaze rod grinds down into powder");
+            check(powder.count == 2, "two of it, the way Minecraft pays");
+        }
+        check(Brewing::brew(Brewing::Potion::Awkward, Items::MagmaCream) ==
+                  Brewing::Potion::FireResistance,
+              "magma cream makes fire resistance");
+        check(mobType(MobId::MagmaCube).drop == Items::MagmaCream,
+              "which is what a magma cube is carrying");
+
+        // The stand-in is gone: netherrack used to cook down into blaze
+        // powder because there was no blaze to take it off.
+        check(Smelting::resultOf(Blocks::Netherrack) == Items::NetherBrick,
+              "netherrack fires into a nether brick");
+        check(Smelting::resultOf(Blocks::Netherrack) != Items::BlazePowder,
+              "and not into the powder it stood in for");
+        {
+            ItemStack four[9];
+            for (int i : { 0, 1, 3, 4 }) { four[i].id = Items::NetherBrick; four[i].count = 1; }
+            const CraftOutput block = Crafting::match(four, 3);
+            check(block.valid() && block.id == Blocks::NetherBricks,
+                  "and four of those make the block a fortress is built of");
+        }
+
+        // Fire itself. A charge leaves the player burning after it has
+        // gone, the burn is not the blow, and water is the answer.
+        {
+            Player player(glm::vec3(0.0f, 64.0f, 0.0f));
+            player.mode = GameMode::Survival;
+            player.health = Player::MAX_HEALTH;
+            player.ignite(5.0f);
+            check(player.onFire(), "a charge leaves the player alight");
+
+            // The half-second of immunity after a blow is bled off in
+            // Player::update, which wants a world; a burn lands once a
+            // second, which is twice that, so clearing it each step is
+            // what the real game does to it by the time fire comes back
+            // round.
+            int hits = 0;
+            for (int step = 0; step < 300; ++step)
+            {
+                player.clearHurtCooldown();
+                if (player.burn(0.05f, false)) ++hits;
+            }
+
+            check(hits >= 4 && hits <= 6, "which costs about a heart a second while it lasts");
+            check(!player.onFire(), "and goes out on its own");
+
+            player.health = Player::MAX_HEALTH;
+            player.ignite(5.0f);
+            player.douse();
+            check(!player.onFire(), "water puts it out at once");
+
+            // Lava is both: it cooks you while you are in it and leaves
+            // you burning when you climb out.
+            player.health = Player::MAX_HEALTH;
+            player.burn(0.05f, true);
+            check(player.onFire(), "climbing out of lava you are still alight");
+        }
+
+        {
+            Player safe(glm::vec3(0.0f, 64.0f, 0.0f));
+            safe.mode = GameMode::Survival;
+            safe.health = Player::MAX_HEALTH;
+            Effects::give(safe.effects, Effects::Kind::FireResistance, 0, 30.0f);
+            safe.ignite(5.0f);
+            check(!safe.onFire(), "fire resistance means it never catches at all");
+        }
+
+        // A hovering thing settles at its own height above the floor
+        // and stays there, which is the same spring the waterline uses.
+        {
+            const float wanted = 64.0f + blaze.hoverHeight;
+            float y = 64.0f, vy = 0.0f;
+            for (int step = 0; step < 600; ++step)
+            {
+                vy = Mob::verticalStep(vy, y, wanted, true,
+                                       Mob::HOVER_PULL, Mob::HOVER_DAMPING, 0.02f);
+                y += vy * 0.02f;
+            }
+            check(std::fabs(y - wanted) < 0.05f, "a blaze settles at its hovering height");
+            check(std::fabs(vy) < 0.05f, "and hangs there");
         }
     }
 
@@ -6142,6 +6294,7 @@ int runSelfTest()
     testBoats();
     testRails();
     testHeightStretch();
+    testNether();
     testVillages();
     testVillageLoot();
     testVillageLife();

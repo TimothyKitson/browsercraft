@@ -54,6 +54,18 @@ public:
     // Returns true on the step a burn lands.
     bool burn(float deltaTime, bool inLava);
 
+    // Set alight for a while: a blaze's charge, or climbing out of lava
+    // still burning. One damage a second until it goes out, which is
+    // Minecraft's -- fire out of lava is a nuisance, lava is a death.
+    static constexpr int FIRE_DAMAGE = 1;
+    static constexpr float FIRE_INTERVAL = 1.0f;
+    static constexpr float LAVA_FIRE_SECONDS = 7.0f;
+
+    void ignite(float seconds);
+    void douse() { m_fireSeconds = 0.0f; m_fireTimer = 0.0f; }
+    bool onFire() const { return m_fireSeconds > 0.0f; }
+    float fireSeconds() const { return m_fireSeconds; }
+
     // Whether the player is up against a ladder. Climbing is the one
     // thing that overrides gravity without flying.
     bool onLadder(const World& world) const;
@@ -175,6 +187,8 @@ private:
     float m_starveTimer = 0.0f;
     float m_drownTimer = 0.0f;
     float m_burnTimer = 0.0f;
+    float m_fireSeconds = 0.0f;
+    float m_fireTimer = 0.0f;
     glm::vec3 m_lastPosition{ 0.0f };
 
     AABB aabbAt(const glm::vec3& feetPosition) const;

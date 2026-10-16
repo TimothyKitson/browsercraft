@@ -50,6 +50,11 @@ struct Arrow
     // Set once it has buried itself in a block: it stops moving and
     // hangs about for a while so you can see where it went.
     bool stuck = false;
+
+    // A blaze's fire charge rather than an arrow: it flies flat, it
+    // bursts against whatever it hits instead of sticking, and what it
+    // hits catches fire.
+    bool fiery = false;
 };
 
 class Projectiles
@@ -67,6 +72,15 @@ public:
         // `point` is where the arrow is now; `fromPlayer` says who shot
         // it, so an arrow never hits whoever loosed it.
         virtual bool strike(const glm::vec3& point, int damage, bool fromPlayer) = 0;
+
+        // The same, for something that also sets what it hits alight.
+        // Defaulted, so anything that only cares about arrows -- which
+        // is most of what shoots at a target -- needs the one above.
+        virtual bool strike(const glm::vec3& point, int damage, bool fromPlayer, bool fiery)
+        {
+            (void)fiery;
+            return strike(point, damage, fromPlayer);
+        }
     };
 
     // What the arrow flies through. Only one question is ever asked of
@@ -78,7 +92,8 @@ public:
         virtual bool solidAt(int x, int y, int z) const = 0;
     };
 
-    void spawn(const glm::vec3& from, const glm::vec3& velocity, int damage, bool fromPlayer);
+    void spawn(const glm::vec3& from, const glm::vec3& velocity, int damage, bool fromPlayer,
+               bool fiery = false);
 
     // Moves every arrow. A block stops one dead; anything living is
     // asked about through `targets`.

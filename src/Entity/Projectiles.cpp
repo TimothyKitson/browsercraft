@@ -32,13 +32,14 @@ int Arrows::damageFor(float drawnFraction)
 }
 
 void Projectiles::spawn(const glm::vec3& from, const glm::vec3& velocity,
-                        int damage, bool fromPlayer)
+                        int damage, bool fromPlayer, bool fiery)
 {
     Arrow arrow;
     arrow.position = from;
     arrow.velocity = velocity;
     arrow.damage = damage;
     arrow.fromPlayer = fromPlayer;
+    arrow.fiery = fiery;
     m_arrows.push_back(arrow);
 }
 
@@ -78,7 +79,9 @@ void Projectiles::update(float deltaTime, const Blocks& blocks, Targets& targets
 
         if (arrow.stuck) { ++i; continue; }
 
-        arrow.velocity.y += Arrows::GRAVITY * deltaTime;
+        // A fire charge flies flat: it is thrown, not loosed, and it
+        // burns out long before it would have dropped.
+        if (!arrow.fiery) arrow.velocity.y += Arrows::GRAVITY * deltaTime;
 
         // Stepped along its path rather than moved in one go: a fast
         // arrow covers most of a block per frame, and a single test
@@ -97,7 +100,7 @@ void Projectiles::update(float deltaTime, const Blocks& blocks, Targets& targets
             // Anything living in the way. Whoever owns the arrows
             // answers this, and an arrow never hits the one who loosed
             // it -- that is what the flag is for.
-            if (targets.strike(next, arrow.damage, arrow.fromPlayer))
+            if (targets.strike(next, arrow.damage, arrow.fromPlayer, arrow.fiery))
             {
                 done = true;
                 break;
@@ -107,6 +110,10 @@ void Projectiles::update(float deltaTime, const Blocks& blocks, Targets& targets
                                static_cast<int>(std::floor(next.y)),
                                static_cast<int>(std::floor(next.z))))
             {
+                // A charge bursts rather than sticking: nothing is left
+                // in the wall to look at.
+                if (arrow.fiery) { done = true; break; }
+
                 arrow.stuck = true;
                 arrow.velocity = glm::vec3(0.0f);
                 // Backed off the face it struck so it is not buried.
@@ -149,7 +156,8 @@ void Projectiles::render(Shader& shader, const Camera& camera, const Atlas& atla
 
     m_vertices.clear();
 
-    const TileUV uv = tileUV(Tiles::ArrowInFlight);
+    const TileUV arrowUV = tileUV(Tiles::ArrowInFlight);
+    const TileUV fireUV = tileUV(Tiles::FireCharge);
     constexpr float LENGTH = 0.62f;
     constexpr float WIDTH = 0.16f;
 
@@ -170,7 +178,14 @@ void Projectiles::render(Shader& shader, const Camera& camera, const Atlas& atla
         const int by = static_cast<int>(std::floor(arrow.position.y));
         const int bz = static_cast<int>(std::floor(arrow.position.z));
         const float sky = world.skyLight(bx, by, bz) / 15.0f;
-        const float blockLight = world.blockLightAt(bx, by, bz) / 15.0f;
+        // A charge is its own light: drawn at the Nether's gloom it
+        // would be a dull smudge, and the one thing it has to do is be
+        // seen coming.
+        const float blockLight = arrow.fiery ? 1.0f
+                                             : world.blockLightAt(bx, by, bz) / 15.0f;
+        const TileUV uv = arrow.fiery ? fireUV : arrowUV;
+        const float length = arrow.fiery ? 0.34f : LENGTH;
+        const float width = arrow.fiery ? 0.34f : WIDTH;
 
         auto push = [&](const glm::vec3& p, float tu, float tv, float shade) {
             m_vertices.push_back(p.x);
@@ -184,12 +199,12 @@ void Projectiles::render(Shader& shader, const Camera& camera, const Atlas& atla
             m_vertices.push_back(6.0f);   // face 6: no tangent-space normal mapping
         };
 
-        const glm::vec3 head = arrow.position + along * (LENGTH * 0.5f);
-        const glm::vec3 tail = arrow.position - along * (LENGTH * 0.5f);
+        const glm::vec3 head = arrow.position + along * (length * 0.5f);
+        const glm::vec3 tail = arrow.position - along * (length * 0.5f);
 
         for (int plane = 0; plane < 2; ++plane)
         {
-            const glm::vec3 across = (plane == 0 ? side : up) * (WIDTH * 0.5f);
+            const glm::vec3 across = (plane == 0 ? side : up) * (width * 0.5f);
 
             const glm::vec3 corner[4] = {
                 tail - across, head - across, head + across, tail + across

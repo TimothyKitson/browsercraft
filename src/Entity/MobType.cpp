@@ -409,6 +409,9 @@ namespace
             t.name = "Zombified Piglin";
             t.texture = "zombie_pigman";
             t.sheetHeight = 64;
+            // Fire is nothing to it: it has stood in lava its whole
+            // existence.
+            t.fireproof = true;
             t.spawnClass = SpawnClass::Hostile;
             t.dimension = Dimension::Nether;
             t.maxHealth = 20;
@@ -679,6 +682,137 @@ namespace
 
             t.model.push_back(mc(Part::LegBackRight, 37, 0, 6, 16, 5, -3, -3, -3, -4, 11, 0));
             t.model.push_back(mc(Part::LegBackLeft, 60, 0, 6, 16, 5, -3, -3, -3, 5, 11, 0));
+        }
+
+        {
+            // The blaze, on Mojang's layout: a head of 8x8x8 at (0,0)
+            // and twelve rods of 2x8x2, all reading the one patch at
+            // (0,16). The rods sit in three rings -- nine pixels out
+            // near the head, seven below that, five at the bottom --
+            // which is what gives it a wide top and a narrow waist.
+            //
+            // It hangs in the air rather than standing. Vanilla draws
+            // the model floating inside its own box and that is why it
+            // has no feet to put on the floor.
+            MobType& t = table[static_cast<size_t>(MobId::Blaze)];
+            t.id = MobId::Blaze;
+            t.experience = 10;
+            t.voice = Sound::MobBlazeSay;
+            t.hurtVoice = Sound::MobBlazeHurt;
+            t.deathVoice = Sound::MobBlazeDeath;
+            t.name = "Blaze";
+            t.texture = "blaze";
+            t.dimension = Dimension::Nether;
+            t.spawnClass = SpawnClass::Hostile;
+            t.maxHealth = 20;
+            t.width = 0.6f;
+            t.height = 1.8f;
+            t.walkSpeed = 1.6f;
+            t.hoverHeight = 1.2f;
+            t.fireproof = true;
+
+            // Three charges at a time in Minecraft, which comes out as
+            // one every few seconds on average; it is the range that
+            // makes it dangerous, not the rate.
+            t.shootsFire = true;
+            t.arrowDamage = 5;
+            t.arrowRange = 18.0f;
+            t.arrowInterval = 3.0f;
+
+            t.drop = Items::BlazeRod;
+            t.dropCount = 1;
+
+            t.bodyColour = rgb(246, 180, 44);
+            t.headColour = rgb(255, 198, 54);
+            t.eyeColour = 0xFFFFF4C0;
+
+            t.model.push_back(mc(Part::Head, 0, 0, 8, 8, 8, -4, -4, -4, 0, 0, 0));
+
+            const int ringX[12] = { 9, 5, -4, -9,  5, -1, -7, -6,  4, 0, -4, -5 };
+            const int ringZ[12] = { 0, 8,  8,  1,  5,  7,  2, -4,  2, 5,  3, -2 };
+            const int ringY[12] = { -2, -2, -2, -2,  2, 2, 2, 2,  11, 11, 11, 11 };
+            for (int i = 0; i < 12; ++i)
+                t.model.push_back(mc(Part::Body, 0, 16, 2, 8, 2, 0, 0, 0,
+                                     ringX[i], ringY[i], ringZ[i]));
+        }
+        {
+            // The wither skeleton is the skeleton's own model at 1.2,
+            // which is Mojang's: same boxes, same patches, a fifth
+            // bigger. Scaling the figure rather than the boxes is what
+            // keeps every texture patch the size the sheet says.
+            MobType& t = table[static_cast<size_t>(MobId::WitherSkeleton)];
+            t.id = MobId::WitherSkeleton;
+            t.experience = 5;
+            t.voice = Sound::MobWitherSkeletonSay;
+            t.hurtVoice = Sound::MobWitherSkeletonHurt;
+            t.deathVoice = Sound::MobWitherSkeletonDeath;
+            t.name = "Wither Skeleton";
+            t.texture = "wither_skeleton";
+            t.dimension = Dimension::Nether;
+            t.spawnClass = SpawnClass::Hostile;
+            t.maxHealth = 20;
+            t.width = 0.6f;
+            t.height = 1.99f;
+            t.modelScale = 1.2f;
+            t.walkSpeed = 2.1f;
+            t.voicePitch = 0.8f;
+            t.fireproof = true;
+
+            // It swings a sword instead of shooting, which is the whole
+            // difference in a fight: there is no keeping away from it.
+            t.attackDamage = 8;
+            t.attackReach = 1.3f;
+
+            t.drop = Items::Coal;
+            t.dropCount = 1;
+            t.secondDrop = Items::Bone;
+            t.secondDropCount = 2;
+
+            t.bodyColour = rgb(52, 56, 52);
+            t.headColour = rgb(58, 62, 58);
+
+            t.model.push_back(mc(Part::Head, 0, 0, 8, 8, 8, -4, -8, -4, 0, 0, 0));
+            t.model.push_back(mc(Part::Body, 16, 16, 8, 12, 4, -4, 0, -2, 0, 0, 0));
+            t.model.push_back(mc(Part::LegFrontRight, 40, 16, 2, 12, 2, -1, -2, -1, -5, 2, 0));
+            t.model.push_back(mirrored(mc(Part::LegFrontLeft, 40, 16, 2, 12, 2, -1, -2, -1, 5, 2, 0)));
+            t.model.push_back(mc(Part::LegBackRight, 0, 16, 2, 12, 2, -1, 0, -1, -2, 12, 0));
+            t.model.push_back(mirrored(mc(Part::LegBackLeft, 0, 16, 2, 12, 2, -1, 0, -1, 2, 12, 0)));
+        }
+        {
+            // The magma cube: one box, which is what a slime is. Mojang
+            // draws it as eight stacked slices that come apart when it
+            // jumps, and they all read the same strip of the sheet --
+            // so a single cube over that strip comes out the same
+            // creature standing still.
+            MobType& t = table[static_cast<size_t>(MobId::MagmaCube)];
+            t.id = MobId::MagmaCube;
+            t.experience = 4;
+            t.voice = Sound::MobMagmaCubeSay;
+            t.hurtVoice = Sound::MobMagmaCubeHurt;
+            t.deathVoice = Sound::MobMagmaCubeDeath;
+            t.name = "Magma Cube";
+            t.texture = "magmacube";
+            t.dimension = Dimension::Nether;
+            t.spawnClass = SpawnClass::Hostile;
+            t.maxHealth = 16;
+            t.width = 0.52f;
+            t.height = 0.52f;
+            t.modelScale = 2.0f;
+            t.walkSpeed = 2.6f;
+            t.limbSwing = 0.0f;
+            t.voicePitch = 0.9f;
+            t.fireproof = true;
+
+            t.attackDamage = 4;
+            t.attackReach = 1.0f;
+
+            t.drop = Items::MagmaCream;
+            t.dropCount = 1;
+
+            t.bodyColour = rgb(52, 24, 16);
+            t.headColour = rgb(52, 24, 16);
+
+            t.model.push_back(mc(Part::Body, 0, 0, 8, 8, 8, -4, 16, -4, 0, 0, 0));
         }
 
         return table;

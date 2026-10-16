@@ -99,6 +99,7 @@ namespace Tiles
         DarkOakLogSide,
         DarkOakLeaves,
         DarkOakPlanks,
+        NetherBricks,
         RainDrop,
         SnowFlake,
 
@@ -178,9 +179,12 @@ namespace Tiles
         // item icon squashed down to nothing on it.
         ArrowInFlight = ItemArmourEnd,
 
+        // A blaze's fire charge in flight, on the same long thin quad.
+        FireCharge = ArrowInFlight + 1,
+
         // An experience orb. Not an item -- it never sits in a slot --
         // but it is a sprite drawn in the world, so it lives with them.
-        ExperienceOrb = ArrowInFlight + 1,
+        ExperienceOrb = FireCharge + 1,
         ItemPaper = ExperienceOrb + 1,
         ItemBook,
         ItemEmerald,
@@ -195,8 +199,11 @@ namespace Tiles
         ItemShield,
         ItemBoat,
         ItemMinecart,
+        ItemBlazeRod,
+        ItemNetherBrick,
+        ItemMagmaCream,
 
-        ItemTileEnd = ItemMinecart + 1
+        ItemTileEnd = ItemMagmaCream + 1
     };
 
     // Ten progressively more broken overlay tiles for the mining animation.

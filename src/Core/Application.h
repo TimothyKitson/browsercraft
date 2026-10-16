@@ -361,6 +361,12 @@ private:
     bool m_startImmediately = false;
     GameMode m_startupMode = GameMode::Survival;
     std::string m_startupScreen;
+
+    // A lineup screen holds its mobs still. The screen name itself is
+    // cleared once the world is set up, so the decision is kept here:
+    // reading the name at update time, which is what this used to do,
+    // froze nothing at all and every mob walked into the camera.
+    bool m_freezeMobs = false;
     uint32_t m_seedOverride = 0;
     bool m_hasSeedOverride = false;
     bool m_hostOnStart = false;

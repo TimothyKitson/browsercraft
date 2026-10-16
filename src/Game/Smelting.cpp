@@ -12,10 +12,11 @@ StackId Smelting::resultOf(StackId input)
         case Blocks::Cobblestone: return Blocks::Stone;
         case Blocks::Clay:      return Blocks::Bricks;
 
-        // Netherrack cooks down into fire powder. Minecraft gets this
-        // off a blaze; there are none here yet, and the Nether's own
-        // burning stone is the nearest thing that makes sense.
-        case Blocks::Netherrack: return Items::BlazePowder;
+        // Netherrack fired is a nether brick, which is Minecraft's.
+        // It used to give blaze powder here, standing in for a blaze
+        // there was no way to meet; now there is one, and the powder
+        // comes off its rods where it should.
+        case Blocks::Netherrack: return Items::NetherBrick;
 
         // Meat. Cooked food is worth more than raw, which is the whole
         // reason to carry a furnace about.

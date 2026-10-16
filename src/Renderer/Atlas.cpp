@@ -999,6 +999,25 @@ namespace
         }
     }
 
+    void paintNetherBricks(Tile& t)
+    {
+        t.fill(Color{ 22, 11, 14 });
+        for (int row = 0; row < 4; ++row)
+        {
+            const int offset = (row % 2) * 4;
+            for (int y = 0; y < 3; ++y)
+                for (int x = 0; x < Tile::N; ++x)
+                {
+                    const int bx = (x + offset) % Tile::N;
+                    if ((bx % 8) == 7) continue;
+                    const int brick = (x + offset) / 8 + row * 3;
+                    const int delta = static_cast<int>((hash2(brick, row, 231) - 0.5f) * 20.0f);
+                    t.set(x, row * 4 + y, shade(Color{ 48, 24, 28 }, delta));
+                }
+        }
+        t.speckle(6, 232);
+    }
+
     void paintObsidian(Tile& t)
     {
         t.fill(Color{ 21, 16, 30 });
@@ -2024,6 +2043,27 @@ namespace
 
     // The arrow as it flies: pointing right, filling the width, with
     // the shaft on the middle rows so a long thin quad shows all of it.
+    void paintFireCharge(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        const int mid = Tile::N / 2;
+        for (int y = 0; y < Tile::N; ++y)
+            for (int x = 0; x < Tile::N; ++x)
+            {
+                const float dx = (x - (mid - 1)) / 6.0f;
+                const float dy = (y - (mid - 1)) / 5.0f;
+                const float d = std::sqrt(dx * dx + dy * dy);
+                if (d > 1.0f) continue;
+
+                // White at the heart, orange at the edge, with the
+                // outermost ring left ragged so it reads as flame
+                // rather than as a ball.
+                if (d > 0.72f && hash2(x, y, 241) > 0.55f) continue;
+                t.set(x, y, mixColor(Color{ 255, 248, 208 }, Color{ 226, 88, 16 },
+                                     std::min(1.0f, d * 1.15f)));
+            }
+    }
+
     void paintArrowInFlight(Tile& t)
     {
         t.fill(Color{ 0, 0, 0, 0 });
@@ -2876,6 +2916,48 @@ namespace
             }
     }
 
+    void paintItemBlazeRod(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        const Color core{ 252, 206, 48 };
+        const Color edge{ 196, 126, 16 };
+        for (int i = 3; i <= 12; ++i)
+        {
+            t.set(i, i, core);
+            t.set(i + 1, i, core);
+            t.set(i + 2, i, edge);
+        }
+        for (int i = 3; i <= 12; i += 3)
+            t.set(i + 1, i, Color{ 255, 248, 176 });
+    }
+
+    void paintItemNetherBrick(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 6; y <= 10; ++y)
+            for (int x = 3; x <= 12; ++x)
+            {
+                const int delta = static_cast<int>((hash2(x, y, 233) - 0.5f) * 22.0f);
+                t.set(x, y, shade(Color{ 60, 30, 36 }, delta));
+            }
+        for (int x = 3; x <= 12; ++x) t.set(x, 6, shade(Color{ 60, 30, 36 }, 30));
+    }
+
+    void paintItemMagmaCream(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        const float radius = 5.0f;
+        for (int y = 0; y < Tile::N; ++y)
+            for (int x = 0; x < Tile::N; ++x)
+            {
+                const float dx = x - 7.5f, dy = y - 8.0f;
+                const float d = std::sqrt(dx * dx + dy * dy);
+                if (d > radius) continue;
+                t.set(x, y, mixColor(Color{ 255, 170, 40 }, Color{ 74, 36, 22 },
+                                     std::min(1.0f, d / radius)));
+            }
+    }
+
     void paintItemStick(Tile& t)
     {
         t.fill(Color{ 0, 0, 0, 0 });
@@ -3002,6 +3084,7 @@ namespace
         { Tiles::CactusSide, paintCactusSide },
         { Tiles::CactusTop, paintCactusTop },
         { Tiles::Bricks, paintBricks },
+        { Tiles::NetherBricks, paintNetherBricks },
         { Tiles::Obsidian, paintObsidian },
         { Tiles::TallGrass, paintTallGrass },
         { Tiles::FlowerRed, paintFlowerRed },
@@ -3054,6 +3137,7 @@ namespace
         { Tiles::ItemBow,       paintItemBow },
         { Tiles::ItemArrow,     paintItemArrow },
         { Tiles::ArrowInFlight, paintArrowInFlight },
+        { Tiles::FireCharge, paintFireCharge },
         { Tiles::ExperienceOrb, paintExperienceOrb },
         { Tiles::SugarCane,     paintSugarCane },
         { Tiles::BookshelfSide, paintBookshelfSide },
@@ -3084,6 +3168,9 @@ namespace
         { Tiles::ItemBlazePowder,   paintItemBlazePowder },
         { Tiles::ItemBoat,          paintItemBoat },
         { Tiles::ItemMinecart,      paintItemMinecart },
+        { Tiles::ItemBlazeRod,      paintItemBlazeRod },
+        { Tiles::ItemNetherBrick,   paintItemNetherBrick },
+        { Tiles::ItemMagmaCream,    paintItemMagmaCream },
         { Tiles::ItemGlowstoneDust, paintItemGlowstoneDust },
         { Tiles::EndFrameTop,   paintEndFrameTop },
         { Tiles::EndFrameEye,   paintEndFrameEye },
@@ -3214,6 +3301,9 @@ namespace
         { Tiles::ItemToolFirst + 22, { "diamond_shovel", nullptr, nullptr } },
         { Tiles::ItemToolFirst + 23, { "diamond_sword", nullptr, nullptr } },
         { Tiles::ItemToolFirst + 24, { "diamond_hoe", nullptr, nullptr } },
+        { Tiles::ItemBlazeRod,   { "blaze_rod", nullptr, nullptr } },
+        { Tiles::ItemNetherBrick, { "nether_brick", nullptr, nullptr } },
+        { Tiles::ItemMagmaCream, { "magma_cream", nullptr, nullptr } },
     };
 
     const PackTile PACK_TILES[] = {
@@ -3251,6 +3341,7 @@ namespace
         { Tiles::CactusTop,     { "cactus_top", nullptr },                             Tinting::None,    0,   false },
         { Tiles::Bricks,        { "bricks", "brick", nullptr },                        Tinting::None,    0,   false },
         { Tiles::Obsidian,      { "obsidian", nullptr },                               Tinting::None,    0,   false },
+        { Tiles::NetherBricks,  { "nether_bricks", "nether_brick", nullptr },          Tinting::None,    0,   false },
 
         // Everything added since the pack table was last gone over.
         // A tile with no row here is drawn procedurally however good a

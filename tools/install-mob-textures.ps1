@@ -48,6 +48,16 @@ $wanted = [ordered]@{
     "minecart.png"  = @("minecart.png", "minecart/minecart.png")
     "boat.png"      = @("boat/oak.png", "boat/boat.png", "oak_boat.png")
     "iron_golem.png" = @("iron_golem/iron_golem.png", "iron_golem.png", "villager/iron_golem.png")
+    "enderman.png"  = @("enderman/enderman.png", "enderman.png")
+    "blaze.png"     = @("blaze.png", "blaze/blaze.png")
+    "wither_skeleton.png" = @("skeleton/wither_skeleton.png", "wither_skeleton.png")
+    "magmacube.png" = @("slime/magmacube.png", "magmacube.png", "slime/magma_cube.png")
+    # 1.21 has no zombie pigman: it became the zombified piglin, which is
+    # a piglin and not a zombie. Its body, arms and legs are the same
+    # biped patches, so the sheet reads correctly on this engine's model;
+    # what is lost is the nose and ears, which it does not draw.
+    "zombie_pigman.png" = @("zombie_pigman.png", "zombie/zombie_pigman.png",
+                            "piglin/zombified_piglin.png")
 }
 
 # The shield is held, not worn by anything, so it sits beside the mob

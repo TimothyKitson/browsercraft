@@ -23,6 +23,7 @@ namespace Brewing
         Speed,
         Strength,
         NightVision,
+        FireResistance,
         Count
     };
 

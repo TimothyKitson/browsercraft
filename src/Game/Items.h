@@ -100,6 +100,19 @@ namespace Items
         // Set down on a rail and got into.
         Minecart,
 
+        // What a blaze is carrying. Ground down, it is what every
+        // brewing stand and every potion in the game starts from.
+        BlazeRod,
+
+        // Netherrack, fired. Four of them make the block a fortress is
+        // built of, which is the only thing to build with down there
+        // that is not the ground itself.
+        NetherBrick,
+
+        // What a magma cube leaves. Brewed, it is the only way to walk
+        // through fire, which is what makes the Nether survivable.
+        MagmaCream,
+
         Count
     };
 }

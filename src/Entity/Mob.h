@@ -43,6 +43,7 @@ struct MobShot
     glm::vec3 from{ 0.0f };     // where it leaves the bow
     glm::vec3 velocity{ 0.0f };
     int damage = 0;
+    bool fiery = false;         // a blaze's charge rather than an arrow
 };
 
 // A living thing: gravity and box collision against the voxel world, plus
@@ -167,7 +168,7 @@ public:
     bool inLove() const { return m_loveTimer > 0.0f; }
     bool canBreed() const { return !baby() && m_breedTimer <= 0.0f && alive(); }
     // Half size while young, which is also what shrinks its hitbox.
-    float scale() const { return baby() ? BABY_SCALE : 1.0f; }
+    float scale() const { return (baby() ? BABY_SCALE : 1.0f) * type().modelScale; }
     float width() const { return type().width * scale(); }
     float height() const { return type().height * scale(); }
 
@@ -220,12 +221,27 @@ public:
     static constexpr float FLOAT_DAMPING = 7.0f;
     static constexpr int FLOAT_RISE = 8;
 
+    // How hard the air holds a hovering mob at its own height, and how
+    // fast that pull is bled off. The same spring as the waterline,
+    // because it is the same problem: a height to settle at.
+    static constexpr float HOVER_PULL = 9.0f;
+    static constexpr float HOVER_DAMPING = 4.0f;
+    static constexpr int HOVER_DROP = 24;
+
     // One step of the vertical rule, whichever applies: the spring
     // towards the waterline for something afloat, the fall for
     // everything else. One function and not two, because the bug worth
     // keeping out is applying both at once.
+    static float verticalStep(float velocityY, float positionY, float target,
+                              bool held, float pull, float damping, float deltaTime);
+
+    // The two the water uses, so the old call reads the same.
     static float verticalStep(float velocityY, float positionY, float waterline,
-                              bool afloat, float deltaTime);
+                              bool afloat, float deltaTime)
+    {
+        return verticalStep(velocityY, positionY, waterline, afloat,
+                            FLOAT_PULL, FLOAT_DAMPING, deltaTime);
+    }
 
     // How high a rail's own surface stands in its cell, which is where
     // a cart's wheels sit. The mesher draws the panel at the same
@@ -360,6 +376,7 @@ private:
     // A heading that is actually clear, for when the chosen one is not.
 
     bool floatTowardsSurface(const World& world, float deltaTime);
+    bool hoverAboveGround(const World& world, float deltaTime);
     void steerAroundObstacle(const World& world);
 
     float m_attackTimer = 0.0f;

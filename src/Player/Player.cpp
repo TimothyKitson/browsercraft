@@ -306,11 +306,44 @@ bool Player::isInLava(const World& world) const
     return false;
 }
 
+void Player::ignite(float seconds)
+{
+    if (creative() || health <= 0 || Effects::fireImmune(effects)) return;
+    m_fireSeconds = std::max(m_fireSeconds, seconds);
+}
+
 bool Player::burn(float deltaTime, bool inLava)
 {
-    if (!inLava || creative() || health <= 0 || Effects::fireImmune(effects))
+    if (creative() || health <= 0 || Effects::fireImmune(effects))
     {
         m_burnTimer = 0.0f;
+        m_fireSeconds = 0.0f;
+        m_fireTimer = 0.0f;
+        return false;
+    }
+
+    // Lava sets you alight as well as cooking you, so climbing out of
+    // it is not the end of it.
+    if (inLava) m_fireSeconds = LAVA_FIRE_SECONDS;
+
+    if (!inLava)
+    {
+        if (m_fireSeconds <= 0.0f)
+        {
+            m_burnTimer = 0.0f;
+            m_fireTimer = 0.0f;
+            return false;
+        }
+
+        // Standing in water puts it out, which is the whole reason to
+        // run for the nearest lake.
+        m_fireSeconds -= deltaTime;
+        m_fireTimer += deltaTime;
+        if (m_fireTimer >= FIRE_INTERVAL)
+        {
+            m_fireTimer -= FIRE_INTERVAL;
+            return damage(FIRE_DAMAGE);
+        }
         return false;
     }
 

@@ -24,6 +24,9 @@ enum class MobId : uint8_t
     Boat,
     Minecart,
     IronGolem,
+    Blaze,
+    WitherSkeleton,
+    MagmaCube,
     Count
 };
 
@@ -162,6 +165,27 @@ struct MobType
     // The undead catch fire in open daylight. Spiders and creepers do
     // not, which is why they are the ones you still meet at noon.
     bool burnsInSunlight = false;
+
+    // Born in the Nether. Lava, fire and a blaze's own charges are
+    // nothing to it, and it is the reason a magma cube can sit in a
+    // lava lake and wait.
+    bool fireproof = false;
+
+    // Hangs in the air this far above whatever is under it, instead of
+    // walking. A blaze has no legs to stand on and vanilla draws it
+    // floating inside its own box, so the model's feet are allowed off
+    // the floor for anything with this set.
+    float hoverHeight = 0.0f;
+
+    // What it shoots. An arrow drops and sticks; a fire charge flies
+    // flat and sets what it hits alight.
+    bool shootsFire = false;
+
+    // The whole figure, scaled. Mojang renders several mobs off a
+    // shared model at a different size -- a wither skeleton is a
+    // skeleton at 1.2 -- and this is both the drawing and the hitbox,
+    // so width and height below are the model's own and get multiplied.
+    float modelScale = 1.0f;
 
     Sound voice = Sound::MobPigSay;
     Sound hurtVoice = Sound::MobPigHurt;

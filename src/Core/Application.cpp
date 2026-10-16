@@ -1280,8 +1280,14 @@ bool Application::frame()
             if (m_player.breathe(deltaTime, under))
                 m_audio.play(Sound::Hurt, 0.7f, 0.9f);
 
+            // Water puts it out, which is the whole reason to run for
+            // the nearest lake with a blaze behind you.
+            if (m_player.isInWater(*m_world)) m_player.douse();
+
+            const bool wasAlight = m_player.onFire();
             if (m_player.burn(deltaTime, m_player.isInLava(*m_world)))
                 m_audio.play(Sound::Hurt, 0.9f, 0.8f);
+            if (m_player.onFire() && !wasAlight) m_audio.play(Sound::Fire, 0.7f);
 
             // Regeneration and poison pay out here, where the hurt
             // noise is to hand.
@@ -1395,6 +1401,7 @@ bool Application::frame()
             m_startupScreen == "wolf" || m_startupScreen == "horse" ||
             m_startupScreen == "boat" || m_startupScreen == "rails" ||
             m_startupScreen == "mobs" || m_startupScreen == "golem" ||
+            m_startupScreen == "nethermobs" ||
             m_startupScreen == "rock")
         {
             // Dev aid: open the inventory with something in it, so the
@@ -1432,6 +1439,7 @@ bool Application::frame()
                                   m_startupScreen != "rails" &&
                                   m_startupScreen != "mobs" &&
                                   m_startupScreen != "golem" &&
+                                  m_startupScreen != "nethermobs" &&
                                   m_startupScreen != "rock" &&
                                   m_startupScreen != "portal" &&
                                   m_startupScreen != "nether";
@@ -1763,6 +1771,9 @@ bool Application::frame()
                 m_player.health = Player::MAX_HEALTH;
             }
 
+            m_freezeMobs = m_startupScreen == "mobs" || m_startupScreen == "golem" ||
+                           m_startupScreen == "nethermobs";
+
             if (m_startupScreen == "mobs")
             {
                 m_camera.setOrientation(0.0f, -6.0f);
@@ -1875,6 +1886,45 @@ bool Application::frame()
                 m_world->setBlock(px + 10, py, pz - 5, Blocks::Bookshelf);
                 m_world->setBlock(px + 10, py, pz - 1, Blocks::DiamondOre);
                 m_world->setBlock(px + 10, py, pz + 5, Blocks::EndPortalFrame);
+
+                m_player.mode = GameMode::Creative;
+                m_player.health = Player::MAX_HEALTH;
+            }
+
+            if (m_startupScreen == "nethermobs")
+            {
+                m_camera.setOrientation(0.0f, -4.0f);
+                m_camera.addLook(0.0f, 0.0f, 0.0f);
+
+                const int px = static_cast<int>(std::floor(m_player.position.x));
+                const int py = static_cast<int>(std::floor(m_player.position.y));
+                const int pz = static_cast<int>(std::floor(m_player.position.z));
+
+                // A fortress floor, which is what you would be standing
+                // on if you were meeting these three at once.
+                for (int ax = 0; ax <= 13; ++ax)
+                    for (int az = -7; az <= 7; ++az)
+                    {
+                        for (int ay = 0; ay <= 7; ++ay)
+                            m_world->setBlock(px + ax, py + ay, pz + az, Blocks::Air);
+                        m_world->setBlock(px + ax, py - 1, pz + az, Blocks::NetherBricks);
+                    }
+
+                m_entities.spawnAt(MobId::Blaze,
+                                   glm::vec3(px + 8.5f, static_cast<float>(py), pz - 3.5f),
+                                   *m_world);
+                m_entities.spawnAt(MobId::WitherSkeleton,
+                                   glm::vec3(px + 8.5f, static_cast<float>(py), pz + 0.5f),
+                                   *m_world);
+                m_entities.spawnAt(MobId::MagmaCube,
+                                   glm::vec3(px + 8.5f, static_cast<float>(py), pz + 4.0f),
+                                   *m_world);
+
+                // Off to one side rather than behind them: the first
+                // shot had a bookshelf showing between a blaze's rods.
+                m_world->setBlock(px + 4, py, pz - 6, Blocks::Bookshelf);
+                m_world->setBlock(px + 6, py, pz - 6, Blocks::DiamondOre);
+                m_world->setBlock(px + 8, py, pz - 6, Blocks::EndPortalFrame);
 
                 m_player.mode = GameMode::Creative;
                 m_player.health = Player::MAX_HEALTH;
@@ -3960,6 +4010,20 @@ namespace
         Player* player = nullptr;
         int playerHits = 0;
 
+        // How long a blaze's charge leaves whatever it hits burning.
+        static constexpr float FIRE_SECONDS = 5.0f;
+
+        // Set for the one strike that a charge is making, so the hit
+        // itself stays the plain three-argument rule everything else
+        // implements.
+        bool burning = false;
+
+        bool strike(const glm::vec3& point, int damage, bool fromPlayer, bool fiery) override
+        {
+            burning = fiery;
+            return strike(point, damage, fromPlayer);
+        }
+
         bool strike(const glm::vec3& point, int damage, bool fromPlayer) override
         {
             if (fromPlayer)
@@ -3998,6 +4062,11 @@ namespace
             }
 
             if (player->damage(damage)) ++playerHits;
+
+            // A charge sets them alight whether or not the blow itself
+            // landed: the burn is not the hit, and the hurt cooldown
+            // has nothing to say about it.
+            if (burning) player->ignite(FIRE_SECONDS);
 
             // It stops whether or not the blow landed: an arrow does not
             // pass through someone just because they are still shaking
@@ -5139,8 +5208,7 @@ void Application::updateMobs(float deltaTime)
     // The lineup screen is for looking at hides, and a wolf crosses a
     // twelve-block clearing in two seconds. Frozen, every one of them
     // is still there when the shutter goes.
-    const float mobTime =
-        (m_startupScreen == "mobs" || m_startupScreen == "golem") ? 0.0f : deltaTime;
+    const float mobTime = m_freezeMobs ? 0.0f : deltaTime;
     m_entities.update(mobTime, *m_world, m_player.position, daylightFactor());
     m_entities.noticeStares(*m_world, m_camera.position, m_camera.front);
 
@@ -5193,9 +5261,10 @@ void Application::updateMobs(float deltaTime)
     for (const MobBlast& blast : m_entities.drainBlasts())
         applyBlast(blast.at, blast.radius, blast.damage);
 
-    // Arrows loosed by anything that carries a bow.
+    // Arrows loosed by anything that carries a bow, and the charges
+    // thrown by anything that does not.
     for (const MobShot& shot : m_entities.drainShots())
-        m_arrows.spawn(shot.from, shot.velocity, shot.damage, false);
+        m_arrows.spawn(shot.from, shot.velocity, shot.damage, false, shot.fiery);
 
     // What they leave behind. Most species drop nothing yet, because
     // what they ought to drop -- leather, bone, string -- are items, and
@@ -5412,6 +5481,25 @@ void Application::renderHud()
 {
     const float w = static_cast<float>(m_window.width());
     const float h = static_cast<float>(m_window.height());
+
+    // Alight. Minecraft draws flames licking up the bottom of the
+    // screen and it is the only cue you get, so it is drawn before
+    // everything else on the HUD and out of the way of the hotbar.
+    if (m_player.onFire())
+    {
+        const TileUV uv = tileUV(Tiles::FireCharge);
+        const float flame = h * 0.16f;
+        const int across = std::max(3, static_cast<int>(w / flame) + 1);
+        for (int i = 0; i < across; ++i)
+        {
+            // Each one on its own clock, so the row flickers rather
+            // than pulsing as one sheet.
+            const float beat = 0.72f + 0.28f * std::sin(m_elapsedSeconds * 7.0f + i * 1.7f);
+            m_ui.texturedQuad(m_atlas.textureId(), i * flame, h - flame * beat,
+                              flame, flame * beat, uv.u0, uv.vTop, uv.u1, uv.vBottom,
+                              glm::vec4(1.0f, 1.0f, 1.0f, 0.86f));
+        }
+    }
 
     // Crosshair, with a dark backing so it stays readable on bright terrain.
     const float cx = w * 0.5f;

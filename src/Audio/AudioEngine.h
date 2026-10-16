@@ -71,8 +71,20 @@ enum class Sound : uint8_t
     MobGolemSay,
     MobGolemHurt,
     MobGolemDeath,
+    MobBlazeSay,
+    MobBlazeHurt,
+    MobBlazeDeath,
+    MobWitherSkeletonSay,
+    MobWitherSkeletonHurt,
+    MobWitherSkeletonDeath,
+    MobMagmaCubeSay,
+    MobMagmaCubeHurt,
+    MobMagmaCubeDeath,
     Rain,
     Thunder,
+
+    // Fire: a blaze loosing a charge, and the player alight.
+    Fire,
     MobStep,
     Count
 };

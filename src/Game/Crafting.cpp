@@ -79,6 +79,18 @@ namespace
                          _,                 Blocks::Glass,     _ },
           0, Items::GlassBottle, 3 },
 
+        // A rod ground down. Two powders a rod, which is Minecraft's,
+        // and it is the whole supply: every potion in the game is
+        // downstream of something a blaze was carrying.
+        { true,  0, 0, { Items::BlazeRod },
+          1, Items::BlazePowder, 2 },
+
+        // Four nether bricks, which is the only thing to build with
+        // down there that is not the ground itself.
+        { false, 2, 2, { Items::NetherBrick, Items::NetherBrick,
+                         Items::NetherBrick, Items::NetherBrick },
+          0, Blocks::NetherBricks, 1 },
+
         // The stand: a blaze powder sat on three cobblestone.
         { false, 3, 2, { _,                 Items::BlazePowder, _,
                          Blocks::Cobblestone, Blocks::Cobblestone, Blocks::Cobblestone },
