@@ -117,6 +117,16 @@ namespace Items
         // that carries power along the floor.
         Redstone,
 
+        // What a breeze is made of, and what it leaves. The rod makes
+        // the mace; the charges are what it was throwing at you.
+        BreezeRod,
+        WindCharge,
+
+        // 1.21's weapon. It hits for what it is worth standing still
+        // and for a great deal more at the end of a fall, which is the
+        // whole of how it is meant to be used.
+        Mace,
+
         Count
     };
 }

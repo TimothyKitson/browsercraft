@@ -815,6 +815,64 @@ namespace
             t.model.push_back(mc(Part::Body, 0, 0, 8, 8, 8, -4, 16, -4, 0, 0, 0));
         }
 
+        {
+            // The breeze, off its own sheet: a head of 8x8x8 at (0,0)
+            // and two rods of 2x8x2 at (0,16), which is the whole of
+            // what the file has room for -- it is a 32x32 sheet, the
+            // smallest in the game.
+            //
+            // Vanilla draws a body of moving air between the head and
+            // the legs from a second sheet. There is no second sheet
+            // here, so there is a gap where the wind would be, which
+            // is closer to right than filling it in with something
+            // solid would be.
+            MobType& t = table[static_cast<size_t>(MobId::Breeze)];
+            t.id = MobId::Breeze;
+            t.experience = 10;
+            t.voice = Sound::MobBreezeSay;
+            t.hurtVoice = Sound::MobBreezeHurt;
+            t.deathVoice = Sound::MobBreezeDeath;
+            t.name = "Breeze";
+            t.texture = "breeze";
+            t.sheetWidth = 32;
+            t.sheetHeight = 32;
+            t.spawnClass = SpawnClass::Hostile;
+            t.maxHealth = 30;
+            t.width = 0.6f;
+            t.height = 1.77f;
+            t.walkSpeed = 3.2f;
+            t.limbSwing = 0.4f;
+
+            // It never comes to you: it keeps its distance and throws
+            // wind charges, and the charges do almost no damage. What
+            // they do is move you, which is how it kills you.
+            t.shootsWind = true;
+            t.arrowDamage = 1;
+            t.arrowRange = 20.0f;
+            t.arrowInterval = 2.4f;
+
+            t.drop = Items::BreezeRod;
+            t.dropCount = 1;
+            t.secondDrop = Items::WindCharge;
+            t.secondDropCount = 2;
+
+            t.bodyColour = rgb(166, 206, 222);
+            t.headColour = rgb(196, 228, 240);
+            t.eyeColour = 0xFF20C0E0;
+
+            t.model.push_back(mc(Part::Head, 0, 0, 8, 8, 8, -4, -4, -4, 0, 0, 0));
+
+            // Four rods in two pairs, one above the other and turned a
+            // quarter between them, so the body is a column rather than
+            // two legs with a hole where the wind should be. The first
+            // one had the head floating a block clear of its own feet
+            // and read as two separate things.
+            t.model.push_back(mc(Part::LegFrontRight, 0, 16, 2, 8, 2, 0, 0, 0, 1, 16, 0));
+            t.model.push_back(mc(Part::LegFrontLeft, 0, 16, 2, 8, 2, 0, 0, 0, -3, 16, 0));
+            t.model.push_back(mc(Part::LegBackRight, 0, 16, 2, 8, 2, 0, 0, 0, -1, 8, 1));
+            t.model.push_back(mc(Part::LegBackLeft, 0, 16, 2, 8, 2, 0, 0, 0, -1, 8, -3));
+        }
+
         return table;
     }
 }

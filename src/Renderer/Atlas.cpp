@@ -2213,6 +2213,25 @@ namespace
             }
     }
 
+    // A wind charge is a ring of moving air, so it is drawn as one:
+    // pale, open in the middle, and nothing like the fire charge it
+    // shares a quad with.
+    void paintWindCharge(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        const float mid = Tile::N / 2.0f - 0.5f;
+        for (int y = 0; y < Tile::N; ++y)
+            for (int x = 0; x < Tile::N; ++x)
+            {
+                const float dx = x - mid, dy = y - mid;
+                const float d = std::sqrt(dx * dx + dy * dy);
+                if (d > 6.5f || d < 2.6f) continue;
+                if (hash2(x, y, 271) > 0.78f) continue;
+                t.set(x, y, mixColor(Color{ 236, 248, 255 }, Color{ 150, 196, 214 },
+                                     std::min(1.0f, (d - 2.6f) / 3.9f)));
+            }
+    }
+
     void paintArrowInFlight(Tile& t)
     {
         t.fill(Color{ 0, 0, 0, 0 });
@@ -3080,6 +3099,51 @@ namespace
             t.set(i + 1, i, Color{ 255, 248, 176 });
     }
 
+    void paintItemBreezeRod(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int i = 3; i <= 12; ++i)
+        {
+            t.set(i, i, Color{ 206, 230, 238 });
+            t.set(i + 1, i, Color{ 142, 176, 192 });
+            t.set(i + 2, i, Color{ 96, 126, 146 });
+        }
+    }
+
+    void paintItemWindCharge(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        const float mid = Tile::N / 2.0f - 0.5f;
+        for (int y = 0; y < Tile::N; ++y)
+            for (int x = 0; x < Tile::N; ++x)
+            {
+                const float dx = x - mid, dy = y - mid;
+                const float d = std::sqrt(dx * dx + dy * dy);
+                if (d > 5.6f || d < 2.2f) continue;
+                t.set(x, y, mixColor(Color{ 240, 250, 255 }, Color{ 128, 178, 200 },
+                                     std::min(1.0f, (d - 2.2f) / 3.4f)));
+            }
+    }
+
+    void paintItemMace(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+
+        // A haft up the diagonal with a heavy head on the end of it.
+        for (int i = 2; i <= 9; ++i)
+        {
+            t.set(i, 15 - i, Color{ 108, 80, 46 });
+            t.set(i + 1, 15 - i, Color{ 78, 56, 32 });
+        }
+        for (int y = 2; y <= 6; ++y)
+            for (int x = 9; x <= 13; ++x)
+            {
+                const int d = (x - 11) * (x - 11) + (y - 4) * (y - 4);
+                if (d > 6) continue;
+                t.set(x, y, shade(Color{ 92, 88, 96 }, d <= 1 ? 40 : 0));
+            }
+    }
+
     void paintItemRedstone(Tile& t)
     {
         t.fill(Color{ 0, 0, 0, 0 });
@@ -3319,6 +3383,7 @@ namespace
         { Tiles::ItemArrow,     paintItemArrow },
         { Tiles::ArrowInFlight, paintArrowInFlight },
         { Tiles::FireCharge, paintFireCharge },
+        { Tiles::WindCharge, paintWindCharge },
         { Tiles::ExperienceOrb, paintExperienceOrb },
         { Tiles::SugarCane,     paintSugarCane },
         { Tiles::BookshelfSide, paintBookshelfSide },
@@ -3352,6 +3417,9 @@ namespace
         { Tiles::ItemBlazeRod,      paintItemBlazeRod },
         { Tiles::ItemNetherBrick,   paintItemNetherBrick },
         { Tiles::ItemRedstone,      paintItemRedstone },
+        { Tiles::ItemBreezeRod,     paintItemBreezeRod },
+        { Tiles::ItemWindCharge,    paintItemWindCharge },
+        { Tiles::ItemMace,          paintItemMace },
         { Tiles::ItemMagmaCream,    paintItemMagmaCream },
         { Tiles::ItemGlowstoneDust, paintItemGlowstoneDust },
         { Tiles::EndFrameTop,   paintEndFrameTop },
@@ -3489,6 +3557,9 @@ namespace
         { Tiles::ItemNetherBrick, { "nether_brick", nullptr, nullptr } },
         { Tiles::ItemMagmaCream, { "magma_cream", nullptr, nullptr } },
         { Tiles::ItemRedstone,   { "redstone", nullptr, nullptr } },
+        { Tiles::ItemBreezeRod,  { "breeze_rod", nullptr, nullptr } },
+        { Tiles::ItemWindCharge, { "wind_charge", nullptr, nullptr } },
+        { Tiles::ItemMace,       { "mace", nullptr, nullptr } },
     };
 
     const PackTile PACK_TILES[] = {

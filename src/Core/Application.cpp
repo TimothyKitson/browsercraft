@@ -1841,10 +1841,15 @@ bool Application::frame()
                     }
 
                 // One of everything, in a row across the view.
+                // Midday, whatever the saved world was left on: half
+                // these shots came back at dusk with the lineup in
+                // silhouette.
+                m_timeOfDay = 0.5f;
+
                 const MobId LINEUP[] = {
-                    MobId::Wolf, MobId::Horse, MobId::Villager, MobId::Cow,
+                    MobId::Wolf, MobId::Horse, MobId::Villager, MobId::Breeze,
                     MobId::Pig, MobId::Sheep, MobId::Chicken,
-                    MobId::Creeper, MobId::Zombie, MobId::Skeleton,
+                    MobId::Creeper, MobId::Cow, MobId::Skeleton,
                 };
                 // Two ranks of five, so ten of them fit the arena.
                 int slot = 0;
@@ -3325,11 +3330,29 @@ void Application::updateMining(float deltaTime)
                 // Strength adds and weakness takes away, and the two
                 // together can go below nothing, so the total is
                 // floored here rather than inside the effect.
+                // A mace is paid for the fall that lands it. Landing
+                // the blow also takes the fall over: in Minecraft a
+                // smash costs you nothing on the way down, which is
+                // the only reason anyone jumps off anything with one.
+                const float fallen = m_player.fallenSoFar();
+                const int smash = (Tools::kindOf(weapon) == Tools::Kind::Mace)
+                                      ? Tools::maceSmashBonus(fallen)
+                                      : 0;
+
                 const int blow = std::max(0,
                     Tools::attackDamage(weapon) +
                         Enchanting::sharpnessBonus(m_inventory.selected().enchantments) +
-                        Effects::attackBonus(m_player.effects));
+                        Effects::attackBonus(m_player.effects) + smash);
                 target->damage(blow, target->position() - m_player.position);
+
+                if (smash > 0)
+                {
+                    m_player.clearFall();
+                    m_player.velocity.y = std::max(m_player.velocity.y, 0.0f);
+                    m_audio.play(Sound::Land, 0.9f, 0.7f);
+                    m_particles.spawnBlockBreak(
+                        glm::ivec3(glm::floor(target->position())), Blocks::Stone);
+                }
                 wearOnSwing(weapon);
                 m_attackCooldown = ATTACK_INTERVAL;
             }
@@ -4250,11 +4273,44 @@ namespace
         // implements.
         bool burning = false;
 
-        bool strike(const glm::vec3& point, int damage, bool fromPlayer, bool fiery) override
+        bool strike(const glm::vec3& point, int damage, bool fromPlayer,
+                    Arrows::Kind kind) override
         {
-            burning = fiery;
+            burning = kind == Arrows::Kind::Fire;
             return strike(point, damage, fromPlayer);
         }
+
+        // A wind charge does its work here. The shove is round where it
+        // went off, not on whatever stopped it: one thrown at your own
+        // feet throws you into the air, and that is most of what
+        // anybody uses one for.
+        void burst(const glm::vec3& at, Arrows::Kind kind, bool fromPlayer) override
+        {
+            (void)fromPlayer;
+            if (kind != Arrows::Kind::Wind) return;
+
+            bursts.push_back(at);
+
+            const glm::vec3 push = Arrows::windImpulse(at, player->position);
+            if (glm::length(push) > 0.0f)
+            {
+                player->velocity += push;
+
+                // Thrown clear by the wind, you land as if you had
+                // stepped off from here: the fall that follows is the
+                // charge's doing, not yours.
+                player->clearFall();
+            }
+
+            for (Mob& mob : entities->mobs())
+            {
+                if (!mob.alive()) continue;
+                const glm::vec3 shove = Arrows::windImpulse(at, mob.position());
+                if (glm::length(shove) > 0.0f) mob.shove(shove);
+            }
+        }
+
+        std::vector<glm::vec3> bursts;
 
         bool strike(const glm::vec3& point, int damage, bool fromPlayer) override
         {
@@ -4742,6 +4798,23 @@ void Application::handlePlacement()
                 stack.count -= 1;
                 if (stack.count <= 0) stack.clear();
             }
+        }
+        return;
+    }
+
+    // A wind charge is thrown rather than placed, which is the only
+    // thing in the game you use by aiming it at nothing.
+    if (stack.id == Items::WindCharge)
+    {
+        const glm::vec3 heading = glm::normalize(m_camera.front);
+        m_arrows.spawn(m_player.eyePosition() + heading * 0.6f, heading * 18.0f,
+                       1, true, Arrows::Kind::Wind);
+        m_audio.play(Sound::Click, 0.6f, 1.7f);
+
+        if (!m_player.creative())
+        {
+            stack.count -= 1;
+            if (stack.count <= 0) stack.clear();
         }
         return;
     }
@@ -5529,7 +5602,7 @@ void Application::updateMobs(float deltaTime)
     // Arrows loosed by anything that carries a bow, and the charges
     // thrown by anything that does not.
     for (const MobShot& shot : m_entities.drainShots())
-        m_arrows.spawn(shot.from, shot.velocity, shot.damage, false, shot.fiery);
+        m_arrows.spawn(shot.from, shot.velocity, shot.damage, false, shot.kind);
 
     // What they leave behind. Most species drop nothing yet, because
     // what they ought to drop -- leather, bone, string -- are items, and

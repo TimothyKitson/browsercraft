@@ -32,15 +32,34 @@ int Arrows::damageFor(float drawnFraction)
 }
 
 void Projectiles::spawn(const glm::vec3& from, const glm::vec3& velocity,
-                        int damage, bool fromPlayer, bool fiery)
+                        int damage, bool fromPlayer, Arrows::Kind kind)
 {
     Arrow arrow;
     arrow.position = from;
     arrow.velocity = velocity;
     arrow.damage = damage;
     arrow.fromPlayer = fromPlayer;
-    arrow.fiery = fiery;
+    arrow.kind = kind;
     m_arrows.push_back(arrow);
+}
+
+// The shove, falling off to nothing at the edge of the burst and never
+// pushing straight down: a charge under your own feet is meant to throw
+// you into the air, which is most of what anybody uses one for.
+glm::vec3 Arrows::windImpulse(const glm::vec3& burst, const glm::vec3& target)
+{
+    glm::vec3 away = target - burst;
+    const float distance = glm::length(away);
+    if (distance > WIND_RADIUS) return glm::vec3(0.0f);
+
+    if (distance < 0.001f) away = glm::vec3(0.0f, 1.0f, 0.0f);
+    else away /= distance;
+
+    away.y = std::max(away.y, 0.35f);
+    away = glm::normalize(away);
+
+    const float strength = WIND_PUSH * (1.0f - distance / WIND_RADIUS);
+    return away * strength;
 }
 
 namespace
@@ -79,9 +98,9 @@ void Projectiles::update(float deltaTime, const Blocks& blocks, Targets& targets
 
         if (arrow.stuck) { ++i; continue; }
 
-        // A fire charge flies flat: it is thrown, not loosed, and it
-        // burns out long before it would have dropped.
-        if (!arrow.fiery) arrow.velocity.y += Arrows::GRAVITY * deltaTime;
+        // A charge flies flat: it is thrown, not loosed, and it is
+        // spent long before it would have dropped.
+        if (!arrow.flies()) arrow.velocity.y += Arrows::GRAVITY * deltaTime;
 
         // Stepped along its path rather than moved in one go: a fast
         // arrow covers most of a block per frame, and a single test
@@ -100,8 +119,9 @@ void Projectiles::update(float deltaTime, const Blocks& blocks, Targets& targets
             // Anything living in the way. Whoever owns the arrows
             // answers this, and an arrow never hits the one who loosed
             // it -- that is what the flag is for.
-            if (targets.strike(next, arrow.damage, arrow.fromPlayer, arrow.fiery))
+            if (targets.strike(next, arrow.damage, arrow.fromPlayer, arrow.kind))
             {
+                if (arrow.flies()) targets.burst(next, arrow.kind, arrow.fromPlayer);
                 done = true;
                 break;
             }
@@ -112,7 +132,12 @@ void Projectiles::update(float deltaTime, const Blocks& blocks, Targets& targets
             {
                 // A charge bursts rather than sticking: nothing is left
                 // in the wall to look at.
-                if (arrow.fiery) { done = true; break; }
+                if (arrow.flies())
+                {
+                    targets.burst(next - slice * 0.5f, arrow.kind, arrow.fromPlayer);
+                    done = true;
+                    break;
+                }
 
                 arrow.stuck = true;
                 arrow.velocity = glm::vec3(0.0f);
@@ -158,6 +183,7 @@ void Projectiles::render(Shader& shader, const Camera& camera, const Atlas& atla
 
     const TileUV arrowUV = tileUV(Tiles::ArrowInFlight);
     const TileUV fireUV = tileUV(Tiles::FireCharge);
+    const TileUV windUV = tileUV(Tiles::WindCharge);
     constexpr float LENGTH = 0.62f;
     constexpr float WIDTH = 0.16f;
 
@@ -181,11 +207,14 @@ void Projectiles::render(Shader& shader, const Camera& camera, const Atlas& atla
         // A charge is its own light: drawn at the Nether's gloom it
         // would be a dull smudge, and the one thing it has to do is be
         // seen coming.
-        const float blockLight = arrow.fiery ? 1.0f
-                                             : world.blockLightAt(bx, by, bz) / 15.0f;
-        const TileUV uv = arrow.fiery ? fireUV : arrowUV;
-        const float length = arrow.fiery ? 0.34f : LENGTH;
-        const float width = arrow.fiery ? 0.34f : WIDTH;
+        const bool charge = arrow.flies();
+        const float blockLight = charge ? 1.0f
+                                        : world.blockLightAt(bx, by, bz) / 15.0f;
+        const TileUV uv = (arrow.kind == Arrows::Kind::Fire) ? fireUV
+                        : (arrow.kind == Arrows::Kind::Wind) ? windUV
+                                                             : arrowUV;
+        const float length = charge ? 0.34f : LENGTH;
+        const float width = charge ? 0.34f : WIDTH;
 
         auto push = [&](const glm::vec3& p, float tu, float tv, float shade) {
             m_vertices.push_back(p.x);

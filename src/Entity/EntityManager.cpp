@@ -24,7 +24,7 @@ namespace
     // what stops a pack turning up in the middle of a field.
     const MobId FOREST_SPECIES[] = { MobId::Wolf };
     const MobId HOSTILE_SPECIES[] = { MobId::Zombie, MobId::Skeleton, MobId::Creeper,
-                                      MobId::Spider, MobId::Enderman };
+                                      MobId::Spider, MobId::Enderman, MobId::Breeze };
 
     // The Nether has its own, and nothing else belongs there: a sheep on
     // netherrack and a piglin in a meadow are both wrong.

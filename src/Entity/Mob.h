@@ -1,5 +1,6 @@
 #pragma once
 #include "MobType.h"
+#include "Projectiles.h"
 #include "Pathfinder.h"
 #include <cstdint>
 #include <glm/glm.hpp>
@@ -43,7 +44,7 @@ struct MobShot
     glm::vec3 from{ 0.0f };     // where it leaves the bow
     glm::vec3 velocity{ 0.0f };
     int damage = 0;
-    bool fiery = false;         // a blaze's charge rather than an arrow
+    Arrows::Kind kind = Arrows::Kind::Shaft;   // a charge rather than an arrow
 };
 
 // A living thing: gravity and box collision against the voxel world, plus
@@ -168,6 +169,9 @@ public:
     bool inLove() const { return m_loveTimer > 0.0f; }
     bool canBreed() const { return !baby() && m_breedTimer <= 0.0f && alive(); }
     // Half size while young, which is also what shrinks its hitbox.
+    // Shoved by something that is not a blow: a wind charge's burst.
+    void shove(const glm::vec3& push) { m_velocity += push; m_onGround = false; }
+
     float scale() const { return (baby() ? BABY_SCALE : 1.0f) * type().modelScale; }
     float width() const { return type().width * scale(); }
     float height() const { return type().height * scale(); }

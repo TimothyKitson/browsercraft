@@ -80,6 +80,9 @@ enum class Sound : uint8_t
     MobMagmaCubeSay,
     MobMagmaCubeHurt,
     MobMagmaCubeDeath,
+    MobBreezeSay,
+    MobBreezeHurt,
+    MobBreezeDeath,
     Rain,
     Thunder,
 

@@ -829,18 +829,22 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
             // rather than always falling short. A fire charge does not
             // drop, so it is aimed straight at what it is thrown at.
             const glm::vec3 flat = glm::normalize(toPlayer);
-            const float lift = t.shootsFire ? 0.0f
-                                            : std::clamp(range * 0.018f, 0.0f, 0.35f);
+            const bool charge = t.shootsFire || t.shootsWind;
+            const float lift = charge ? 0.0f
+                                      : std::clamp(range * 0.018f, 0.0f, 0.35f);
             const glm::vec3 heading = glm::normalize(flat + glm::vec3(0.0f, lift, 0.0f));
 
             MobShot shot;
             shot.from = eye + heading * 0.5f;
-            shot.velocity = heading * (t.shootsFire ? 16.0f : 28.0f);
+            shot.velocity = heading * (charge ? 16.0f : 28.0f);
             shot.damage = t.arrowDamage;
-            shot.fiery = t.shootsFire;
+            shot.kind = t.shootsFire ? Arrows::Kind::Fire
+                      : t.shootsWind ? Arrows::Kind::Wind
+                                     : Arrows::Kind::Shaft;
             m_shots.push_back(shot);
 
-            emit(t.shootsFire ? Sound::Fire : Sound::Click, 0.5f, 1.2f);
+            emit(t.shootsFire ? Sound::Fire : Sound::Click, 0.5f,
+                 t.shootsWind ? 1.6f : 1.2f);
         }
     }
 

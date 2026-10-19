@@ -92,6 +92,16 @@ namespace
                          Items::NetherBrick, Items::NetherBrick },
           0, Blocks::NetherBricks, 1 },
 
+        // 1.21's two. A rod makes four charges, which is Minecraft's;
+        // the mace wants a heavy core with its rod and there are no
+        // vaults here to find one in, so it takes an iron ingot
+        // instead -- the one other thing in the game that is nothing
+        // but weight.
+        { true,  0, 0, { Items::BreezeRod },
+          1, Items::WindCharge, 4 },
+        { true,  0, 0, { Items::BreezeRod, Items::IronIngot },
+          2, Items::Mace, 1 },
+
         // Redstone. A torch is dust on a stick, a lever is a stick on
         // a cobble, a button is one stone, a lamp is glowstone wrapped
         // in dust, and nine dust packs into a block -- all Minecraft's,

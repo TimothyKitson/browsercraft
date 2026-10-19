@@ -289,6 +289,8 @@ void AudioEngine::buildSounds()
                  Sound::MobWitherSkeletonDeath, "mob/wither_skeleton");
     loadMobVoice(Sound::MobMagmaCubeSay, Sound::MobMagmaCubeHurt,
                  Sound::MobMagmaCubeDeath, "slime");
+    loadMobVoice(Sound::MobBreezeSay, Sound::MobBreezeHurt,
+                 Sound::MobBreezeDeath, "breeze");
     loadVariants(Sound::Rain, "weather/rain", 1);
     loadVariants(Sound::Thunder, "weather/thunder", 1);
 
@@ -761,6 +763,26 @@ void AudioEngine::buildSounds()
         s.addNoise(0.34f, 420.0f, 12.0f, 0.44f, false, 845);
         s.addNoise(0.34f, 1400.0f, 9.0f, 0.18f, true, 846);
         s.finish(0.78f);
+    }
+
+    // The breeze: wind, which is noise with no tone under it and a
+    // long slow swell rather than a hit.
+    {
+        Synth s = make(Sound::MobBreezeSay);
+        s.addNoise(0.60f, 2400.0f, 2.5f, 0.30f, true, 851);
+        s.addNoise(0.60f, 700.0f, 2.0f, 0.22f, true, 852);
+        s.finish(0.56f);
+    }
+    {
+        Synth s = make(Sound::MobBreezeHurt);
+        s.addNoise(0.20f, 3200.0f, 15.0f, 0.42f, true, 853);
+        s.finish(0.70f);
+    }
+    {
+        Synth s = make(Sound::MobBreezeDeath);
+        s.addNoise(0.70f, 2000.0f, 4.0f, 0.40f, true, 855);
+        s.addNoise(0.70f, 520.0f, 3.0f, 0.24f, true, 856);
+        s.finish(0.76f);
     }
 
     // The pigman: a grunt with a groan in it, halfway between the two

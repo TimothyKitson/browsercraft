@@ -11,7 +11,7 @@
 // what the timer should count to.
 namespace Tools
 {
-    enum class Kind { None, Pickaxe, Axe, Shovel, Sword, Hoe };
+    enum class Kind { None, Pickaxe, Axe, Shovel, Sword, Hoe, Mace };
 
     // In Minecraft's order, which is also the order of their harvest
     // levels apart from gold -- gold is fast and fragile and mines no
@@ -47,4 +47,10 @@ namespace Tools
     // The damage a mob takes from being hit with it. A sword hits
     // hardest, an axe nearly as hard, a bare hand barely at all.
     int attackDamage(StackId tool);
+
+    // What a mace adds for the fall that lands the blow. Minecraft pays
+    // four a block for the first three, two a block for the next five,
+    // and one a block after that -- so a drop from any height is worth
+    // taking, and the first few blocks are worth the most.
+    int maceSmashBonus(float fallenBlocks);
 }

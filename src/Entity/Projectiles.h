@@ -16,6 +16,19 @@ class Camera;
 // reachable from --selftest without a world to shoot across.
 namespace Arrows
 {
+    // What is in the air. An arrow drops and sticks; a blaze's charge
+    // flies flat and sets what it hits alight; a wind charge flies flat
+    // and bursts, shoving everything near it.
+    enum class Kind : uint8_t { Shaft, Fire, Wind };
+
+    // How far a wind charge's burst reaches, and how hard it pushes at
+    // the middle of it. Pure arithmetic over two points, so --selftest
+    // can check the shove without anything to shove.
+    constexpr float WIND_RADIUS = 3.5f;
+    constexpr float WIND_PUSH = 14.0f;
+
+    glm::vec3 windImpulse(const glm::vec3& burst, const glm::vec3& target);
+
     // How fast a fully drawn bow sends one, in blocks per second. A bow
     // drawn for less sends it slower and it drops sooner.
     constexpr float MAX_SPEED = 42.0f;
@@ -51,10 +64,12 @@ struct Arrow
     // hangs about for a while so you can see where it went.
     bool stuck = false;
 
-    // A blaze's fire charge rather than an arrow: it flies flat, it
-    // bursts against whatever it hits instead of sticking, and what it
-    // hits catches fire.
-    bool fiery = false;
+    // A blaze's fire charge, or a wind charge, rather than an arrow:
+    // both fly flat and burst against whatever they hit instead of
+    // sticking.
+    Arrows::Kind kind = Arrows::Kind::Shaft;
+
+    bool flies() const { return kind != Arrows::Kind::Shaft; }
 };
 
 class Projectiles
@@ -73,13 +88,23 @@ public:
         // it, so an arrow never hits whoever loosed it.
         virtual bool strike(const glm::vec3& point, int damage, bool fromPlayer) = 0;
 
-        // The same, for something that also sets what it hits alight.
-        // Defaulted, so anything that only cares about arrows -- which
-        // is most of what shoots at a target -- needs the one above.
-        virtual bool strike(const glm::vec3& point, int damage, bool fromPlayer, bool fiery)
+        // The same, for something that is not a plain arrow. Defaulted,
+        // so anything that only cares about arrows -- which is most of
+        // what shoots at a target -- needs the one above.
+        virtual bool strike(const glm::vec3& point, int damage, bool fromPlayer,
+                            Arrows::Kind kind)
         {
-            (void)fiery;
+            (void)kind;
             return strike(point, damage, fromPlayer);
+        }
+
+        // Where a charge went off, whether or not it hit anything. A
+        // wind charge does most of its work here rather than on impact:
+        // what it is for is the shove, and the shove is round the
+        // burst, not on whatever stopped it.
+        virtual void burst(const glm::vec3& at, Arrows::Kind kind, bool fromPlayer)
+        {
+            (void)at; (void)kind; (void)fromPlayer;
         }
     };
 
@@ -93,7 +118,7 @@ public:
     };
 
     void spawn(const glm::vec3& from, const glm::vec3& velocity, int damage, bool fromPlayer,
-               bool fiery = false);
+               Arrows::Kind kind = Arrows::Kind::Shaft);
 
     // Moves every arrow. A block stops one dead; anything living is
     // asked about through `targets`.

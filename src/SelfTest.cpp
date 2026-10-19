@@ -557,7 +557,9 @@ namespace
 
             // Every species must fit its sheet, or its texture coordinates
             // silently wrap onto another limb.
-            check((type.sheetWidth == 64 && (type.sheetHeight == 32 || type.sheetHeight == 64)) ||
+            check((type.sheetWidth == 32 && type.sheetHeight == 32) ||
+                      (type.sheetWidth == 64 &&
+                       (type.sheetHeight == 32 || type.sheetHeight == 64)) ||
                       (type.sheetWidth == 128 &&
                        (type.sheetHeight == 64 || type.sheetHeight == 128)),
                   who + " has a sheet the shape Minecraft draws on");
@@ -4156,6 +4158,88 @@ namespace
         check(atHand > 0.5f, "the hand samples the lower half of the patch");
     }
 
+    void testTrickyTrials()
+    {
+        section("1.21: the mace, the wind charge and the breeze");
+
+        // The smash curve, which is Minecraft's: four a block for the
+        // first three, two a block for the next five, one after that.
+        check(Tools::maceSmashBonus(0.0f) == 0, "a mace swung standing still is just a club");
+        check(Tools::maceSmashBonus(1.0f) == 4, "one block of fall is worth four");
+        check(Tools::maceSmashBonus(3.0f) == 12, "three blocks is twelve");
+        check(Tools::maceSmashBonus(8.0f) == 22, "eight blocks is twenty-two");
+        check(Tools::maceSmashBonus(18.0f) == 32, "and after that it is a point a block");
+
+        // It never pays less for falling further.
+        int last = -1;
+        for (float f = 0.0f; f <= 40.0f; f += 0.5f)
+        {
+            const int here = Tools::maceSmashBonus(f);
+            check(here >= last, "the smash never pays less for falling further");
+            last = here;
+        }
+
+        check(Tools::kindOf(Items::Mace) == Tools::Kind::Mace, "a mace is its own kind of thing");
+        check(Tools::attackDamage(Items::Mace) >= Tools::attackDamage(Items::IronSword),
+              "and hits at least as hard as an iron sword before the fall is counted");
+        check(!Tools::canHarvest(Items::Mace, Blocks::Stone), "it is no use against stone");
+        check(Tools::maxDurability(Tools::tierOf(Items::Mace)) > 0, "and it wears out like a tool");
+
+        // The shove: hardest at the middle, nothing at all past the
+        // edge, and never straight down.
+        {
+            const glm::vec3 burst(0.0f, 0.0f, 0.0f);
+            const glm::vec3 near = Arrows::windImpulse(burst, glm::vec3(0.5f, 0.0f, 0.0f));
+            const glm::vec3 far = Arrows::windImpulse(burst, glm::vec3(3.0f, 0.0f, 0.0f));
+            const glm::vec3 outside = Arrows::windImpulse(burst, glm::vec3(9.0f, 0.0f, 0.0f));
+
+            check(glm::length(near) > glm::length(far), "a wind charge shoves hardest up close");
+            check(glm::length(outside) == 0.0f, "and not at all beyond its reach");
+            check(near.x > 0.0f, "it pushes away from where it went off");
+
+            // Under your own feet it throws you up, which is the whole
+            // point of one.
+            const glm::vec3 underfoot = Arrows::windImpulse(glm::vec3(0.0f, -0.5f, 0.0f),
+                                                            glm::vec3(0.0f, 0.0f, 0.0f));
+            check(underfoot.y > 0.0f, "one at your feet throws you into the air");
+
+            const glm::vec3 above = Arrows::windImpulse(glm::vec3(0.0f, 2.0f, 0.0f),
+                                                        glm::vec3(0.0f, 0.0f, 0.0f));
+            check(above.y > 0.0f, "and one over your head never drives you into the floor");
+        }
+
+        // The breeze itself.
+        const MobType& breeze = mobType(MobId::Breeze);
+        check(breeze.shootsWind, "a breeze throws wind charges");
+        check(!breeze.shootsFire, "and nothing else");
+        check(breeze.arrowDamage <= 2, "they hurt almost not at all");
+        check(breeze.arrowRange > 12.0f, "which is why it keeps its distance");
+        check(breeze.drop == Items::BreezeRod, "it leaves a rod");
+        check(breeze.secondDrop == Items::WindCharge, "and some of what it was throwing");
+        check(breeze.sheetWidth == 32 && breeze.sheetHeight == 32,
+              "off the smallest sheet in the game");
+        check(MobSkin::fits(breeze.model, breeze.sheetWidth, breeze.sheetHeight),
+              "and every patch of it lands on that sheet");
+
+        // The chain: a breeze gives a rod, a rod gives charges or a
+        // mace. Without it the mace is a thing you can never hold.
+        {
+            ItemStack rod[9];
+            rod[0].id = Items::BreezeRod;
+            rod[0].count = 1;
+            const CraftOutput charges = Crafting::match(rod, 2);
+            check(charges.valid() && charges.id == Items::WindCharge && charges.count == 4,
+                  "a breeze rod makes four wind charges");
+
+            ItemStack mace[9];
+            mace[0].id = Items::BreezeRod;  mace[0].count = 1;
+            mace[1].id = Items::IronIngot;  mace[1].count = 1;
+            const CraftOutput made = Crafting::match(mace, 2);
+            check(made.valid() && made.id == Items::Mace, "and a rod with iron makes the mace");
+            check(itemInfo(Items::Mace).maxStack == 1, "which does not stack");
+        }
+    }
+
     void testRedstone()
     {
         section("redstone: power, and how far it goes");
@@ -6636,6 +6720,7 @@ int runSelfTest()
     testLadders();
     testFirstPersonArm();
     testHandSwing();
+    testTrickyTrials();
     testRedstone();
     testBiomes();
     testOreRates();

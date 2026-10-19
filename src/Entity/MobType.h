@@ -27,6 +27,7 @@ enum class MobId : uint8_t
     Blaze,
     WitherSkeleton,
     MagmaCube,
+    Breeze,
     Count
 };
 
@@ -178,8 +179,10 @@ struct MobType
     float hoverHeight = 0.0f;
 
     // What it shoots. An arrow drops and sticks; a fire charge flies
-    // flat and sets what it hits alight.
+    // flat and sets what it hits alight; a wind charge flies flat and
+    // bursts, shoving whatever is near it.
     bool shootsFire = false;
+    bool shootsWind = false;
 
     // The whole figure, scaled. Mojang renders several mobs off a
     // shared model at a different size -- a wither skeleton is a

@@ -1,4 +1,5 @@
 #pragma once
+#include <algorithm>
 #include "Game/Effects.h"
 #include "Game/GameMode.h"
 #include <glm/glm.hpp>
@@ -176,6 +177,19 @@ public:
     // wants this: it lands a run of blows with no clock to wait on.
     void clearHurtCooldown() { m_hurtCooldown = 0.0f; }
     float damageFlash = 0.0f; // seconds remaining on the red hurt overlay
+
+    // Start the fall again from here. A wind charge that throws you
+    // clear has taken the fall over, and what it cost before the shove
+    // is not yours to pay on landing.
+    void clearFall() { m_fallStartY = position.y; }
+
+    // How far this fall has gone so far, which is what a mace is paid
+    // on. Zero on the ground: a mace swung standing still is just a
+    // heavy club.
+    float fallenSoFar() const
+    {
+        return m_falling ? std::max(0.0f, m_fallStartY - position.y) : 0.0f;
+    }
 
 private:
     float m_fallStartY = 0.0f;

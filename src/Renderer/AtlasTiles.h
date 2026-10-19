@@ -199,12 +199,14 @@ namespace Tiles
         // item icon squashed down to nothing on it.
         ArrowInFlight = ItemArmourEnd,
 
-        // A blaze's fire charge in flight, on the same long thin quad.
+        // A blaze's fire charge in flight, on the same long thin quad,
+        // and a wind charge beside it.
         FireCharge = ArrowInFlight + 1,
+        WindCharge = FireCharge + 1,
 
         // An experience orb. Not an item -- it never sits in a slot --
         // but it is a sprite drawn in the world, so it lives with them.
-        ExperienceOrb = FireCharge + 1,
+        ExperienceOrb = WindCharge + 1,
         ItemPaper = ExperienceOrb + 1,
         ItemBook,
         ItemEmerald,
@@ -223,8 +225,11 @@ namespace Tiles
         ItemNetherBrick,
         ItemMagmaCream,
         ItemRedstone,
+        ItemBreezeRod,
+        ItemWindCharge,
+        ItemMace,
 
-        ItemTileEnd = ItemRedstone + 1
+        ItemTileEnd = ItemMace + 1
     };
 
     // Ten progressively more broken overlay tiles for the mining animation.

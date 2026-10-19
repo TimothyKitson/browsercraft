@@ -60,6 +60,10 @@ namespace
 
 Tools::Kind Tools::kindOf(StackId id)
 {
+    // The mace is not one of the five that come in tiers, so it is
+    // named here rather than worked out from where it sits.
+    if (id == Items::Mace) return Kind::Mace;
+
     if (!inToolRange(id)) return Kind::None;
     const int offset = (id - Items::WoodPickaxe) % KINDS_PER_TIER;
     return static_cast<Kind>(offset + 1);
@@ -67,6 +71,11 @@ Tools::Kind Tools::kindOf(StackId id)
 
 Tools::Tier Tools::tierOf(StackId id)
 {
+    // Iron's, for how long it lasts. It mines nothing whatever its
+    // tier: canHarvest asks for the right kind first, and no block in
+    // the game is got at with a mace.
+    if (id == Items::Mace) return Tier::Iron;
+
     if (!inToolRange(id)) return Tier::None;
     const int step = (id - Items::WoodPickaxe) / KINDS_PER_TIER;
     return static_cast<Tier>(step + 1);
@@ -137,6 +146,17 @@ bool Tools::wearsOnBlock(StackId tool, BlockId block)
     return blockInfo(block).hardness > 0.0f;
 }
 
+int Tools::maceSmashBonus(float fallenBlocks)
+{
+    if (fallenBlocks <= 0.0f) return 0;
+
+    const float first = std::min(fallenBlocks, 3.0f);
+    const float second = std::clamp(fallenBlocks - 3.0f, 0.0f, 5.0f);
+    const float rest = std::max(0.0f, fallenBlocks - 8.0f);
+
+    return static_cast<int>(first * 4.0f + second * 2.0f + rest);
+}
+
 int Tools::attackDamage(StackId tool)
 {
     const Tier tier = tierOf(tool);
@@ -149,6 +169,7 @@ int Tools::attackDamage(StackId tool)
         case Kind::Pickaxe: return std::max(1, sword - 2);
         case Kind::Shovel:  return std::max(1, sword - 3);
         case Kind::Hoe:     return 1;
+        case Kind::Mace:    return 7;
         default:            return 1;
     }
 }
