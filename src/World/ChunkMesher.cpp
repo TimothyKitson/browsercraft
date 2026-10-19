@@ -564,7 +564,7 @@ void buildChunkMesh(const MeshSnapshot& snapshot, MeshResult& out)
                 {
                     emitLadder(snapshot, lx, y, lz, id, out.opaqueVertices);
                 }
-                else if (isRail(id))
+                else if (isRail(id) || isFlat(id))
                 {
                     emitRail(snapshot, lx, y, lz, id, out.opaqueVertices);
                 }

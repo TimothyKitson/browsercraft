@@ -92,6 +92,29 @@ namespace
                          Items::NetherBrick, Items::NetherBrick },
           0, Blocks::NetherBricks, 1 },
 
+        // Redstone. A torch is dust on a stick, a lever is a stick on
+        // a cobble, a button is one stone, a lamp is glowstone wrapped
+        // in dust, and nine dust packs into a block -- all Minecraft's,
+        // except that the lever takes the cobble beside the stick
+        // rather than under it, which this grid cannot tell apart.
+        { false, 1, 2, { Items::Redstone,
+                         Items::Stick },
+          0, Blocks::RedstoneTorch, 1 },
+        { true,  0, 0, { Items::Stick, Blocks::Cobblestone },
+          2, Blocks::LeverOff, 1 },
+        { true,  0, 0, { Blocks::Stone },
+          1, Blocks::ButtonOff, 1 },
+        { false, 3, 3, { _,                 Items::Redstone,   _,
+                         Items::Redstone,   Blocks::Glowstone, Items::Redstone,
+                         _,                 Items::Redstone,   _ },
+          0, Blocks::RedstoneLamp, 1 },
+        { false, 3, 3, { Items::Redstone,   Items::Redstone,   Items::Redstone,
+                         Items::Redstone,   Items::Redstone,   Items::Redstone,
+                         Items::Redstone,   Items::Redstone,   Items::Redstone },
+          0, Blocks::RedstoneBlock, 1 },
+        { true,  0, 0, { Blocks::RedstoneBlock },
+          1, Items::Redstone, 9 },
+
         // The stand: a blaze powder sat on three cobblestone.
         { false, 3, 2, { _,                 Items::BlazePowder, _,
                          Blocks::Cobblestone, Blocks::Cobblestone, Blocks::Cobblestone },

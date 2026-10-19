@@ -147,6 +147,18 @@ namespace
         { "Acacia Log",   AcaciaLogTop,  AcaciaLogTop,   AcaciaLogSide,  true,  true,  RenderType::Cube,   0,   2.0f },
         { "Acacia Leaves",AcaciaLeaves,  AcaciaLeaves,   AcaciaLeaves,   true,  false, RenderType::Cube,   0,   0.2f },
         { "Acacia Planks",AcaciaPlanks,  AcaciaPlanks,   AcaciaPlanks,   true,  true,  RenderType::Cube,   0,   1.5f },
+        { "Redstone Ore", RedstoneOre,   RedstoneOre,    RedstoneOre,    true,  true,  RenderType::Cube,   0,   3.0f },
+        { "Redstone",     RedstoneDust,  RedstoneDust,   RedstoneDust,   false, false, RenderType::Flat,   0,   0.0f },
+        { "Redstone",     RedstoneDustLit,RedstoneDustLit,RedstoneDustLit,false,false, RenderType::Flat,   0,   0.0f },
+        { "Redstone Torch",RedstoneTorch,RedstoneTorch,  RedstoneTorch,  false, false, RenderType::Cross,  7,   0.0f },
+        { "Redstone Torch",RedstoneTorchOff,RedstoneTorchOff,RedstoneTorchOff,false,false,RenderType::Cross,0, 0.0f },
+        { "Lever",        LeverTile,     LeverTile,      LeverTile,      false, false, RenderType::Cross,  0,   0.5f },
+        { "Lever",        LeverOnTile,   LeverOnTile,    LeverOnTile,    false, false, RenderType::Cross,  0,   0.5f },
+        { "Button",       ButtonTile,    ButtonTile,     ButtonTile,     false, false, RenderType::Cross,  0,   0.5f },
+        { "Button",       ButtonOnTile,  ButtonOnTile,   ButtonOnTile,   false, false, RenderType::Cross,  0,   0.5f },
+        { "Redstone Lamp",RedstoneLamp,  RedstoneLamp,   RedstoneLamp,   true,  true,  RenderType::Cube,   0,   0.3f },
+        { "Redstone Lamp",RedstoneLampLit,RedstoneLampLit,RedstoneLampLit,true, true,  RenderType::Cube,  15,   0.3f },
+        { "Block of Redstone",RedstoneBlockTile,RedstoneBlockTile,RedstoneBlockTile,true,true,RenderType::Cube,0,5.0f },
     };
 }
 
@@ -260,6 +272,10 @@ const char* blockSoundGroup(BlockId id)
         case Blocks::LadderWest:
         case Blocks::Bookshelf:
         case Blocks::Torch:
+        case Blocks::RedstoneTorch:
+        case Blocks::RedstoneTorchOff:
+        case Blocks::LeverOff:
+        case Blocks::LeverOn:
             return "wood";
 
         case Blocks::Wool:
@@ -380,6 +396,16 @@ Material blockMaterial(BlockId id)
         case Blocks::Torch:
         case Blocks::NetherWart:
         case Blocks::BrewingStand:
+        // Dust and the switches come up with a hand: a wire painted on
+        // the floor is not something you take a pickaxe to.
+        case Blocks::RedstoneDust:
+        case Blocks::RedstoneDustLit:
+        case Blocks::RedstoneTorch:
+        case Blocks::RedstoneTorchOff:
+        case Blocks::LeverOff:
+        case Blocks::LeverOn:
+        case Blocks::ButtonOff:
+        case Blocks::ButtonOn:
             return Material::Plant;
 
         // Stone, the ores, the bricks, obsidian, the nether and end

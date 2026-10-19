@@ -502,6 +502,10 @@ void WorldGen::placeOres(Chunk& chunk) const
         // Minecraft, which is what makes finding one worth saying out
         // loud. Tuned against --oreinfo like the rest.
         { Blocks::EmeraldOre, 5,  32, 0.00011f, 1, 1007 },
+        // Commoner than iron and deeper: in Minecraft redstone is the
+        // one seam you find more of than you can use, and the whole
+        // point of it is that there is plenty.
+        { Blocks::RedstoneOre, 5,  16, 0.0030f,  8, 1011 },
         // The upper rock is not one grey block. These are deliberately
         // fatter and commoner than any seam: they are scenery, not a
         // find, and at a vein of thirty they read as the blotches

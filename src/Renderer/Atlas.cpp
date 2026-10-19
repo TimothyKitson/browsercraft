@@ -1031,6 +1031,140 @@ namespace
         t.speckle(6, 232);
     }
 
+    // Redstone. The ore is stone with dull red specks; the dust is a
+    // line painted on the floor, dark until something powers it; the
+    // lamp goes from a dead grey-brown to the colour of a lit filament.
+    void paintRedstoneOre(Tile& t)
+    {
+        paintStone(t);
+        for (int i = 0; i < 16; ++i)
+        {
+            const int x = static_cast<int>(hash2(i, 0, 251) * (Tile::N - 1));
+            const int y = static_cast<int>(hash2(i, 1, 251) * (Tile::N - 1));
+            for (int dy = 0; dy <= 1; ++dy)
+                for (int dx = 0; dx <= 1; ++dx)
+                    t.set(x + dx, y + dy, Color{ 172, 26, 18 });
+        }
+    }
+
+    // A cross rather than a line. Minecraft draws dust from three
+    // sprites -- a dot and two lines -- and picks between them by what
+    // the cell is joined to; this engine's dust is one block with no
+    // idea of its neighbours, and a cross is the shape that reads as a
+    // run whichever way the run goes.
+    void paintDustIn(Tile& t, Color core, Color edge)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        const int mid = Tile::N / 2;
+        for (int i = 0; i < Tile::N; ++i)
+        {
+            t.set(i, mid - 1, edge);
+            t.set(i, mid, core);
+            t.set(mid - 1, i, edge);
+            t.set(mid, i, core);
+        }
+        t.set(mid, mid, core);
+        t.set(mid - 1, mid - 1, core);
+    }
+
+    void paintRedstoneDust(Tile& t)    { paintDustIn(t, Color{ 124, 16, 10 }, Color{ 82, 10, 6 }); }
+    void paintRedstoneDustLit(Tile& t) { paintDustIn(t, Color{ 252, 56, 32 }, Color{ 188, 28, 16 }); }
+
+    void paintTorchIn(Tile& t, Color head)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        const int mid = Tile::N / 2;
+        for (int y = 6; y < Tile::N; ++y)
+        {
+            t.set(mid - 1, y, Color{ 110, 82, 48 });
+            t.set(mid, y, Color{ 150, 112, 66 });
+        }
+        for (int y = 3; y <= 5; ++y)
+            for (int x = mid - 1; x <= mid; ++x)
+                t.set(x, y, head);
+    }
+
+    void paintRedstoneTorch(Tile& t)    { paintTorchIn(t, Color{ 255, 70, 40 }); }
+    void paintRedstoneTorchOff(Tile& t) { paintTorchIn(t, Color{ 108, 34, 26 }); }
+
+    void paintLeverIn(Tile& t, bool thrown)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        // The cobble base it is screwed to, and the handle, which lies
+        // one way or the other depending on which way it is thrown.
+        for (int y = 11; y < Tile::N; ++y)
+            for (int x = 5; x <= 10; ++x)
+                t.set(x, y, shade(Color{ 122, 122, 122 },
+                                  static_cast<int>((hash2(x, y, 253) - 0.5f) * 30.0f)));
+
+        for (int i = 0; i < 7; ++i)
+        {
+            const int x = thrown ? 11 - i : 4 + i;
+            t.set(x, 10 - i, Color{ 124, 92, 54 });
+            t.set(x + 1, 10 - i, Color{ 92, 66, 38 });
+        }
+    }
+
+    void paintLever(Tile& t)   { paintLeverIn(t, false); }
+    void paintLeverOn(Tile& t) { paintLeverIn(t, true); }
+
+    void paintButtonIn(Tile& t, bool pressed)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        const int top = pressed ? 8 : 7;
+
+        // A shadow under it and along its sides, because a grey button
+        // on a grey cobble is a button nobody can see -- the first one
+        // vanished into the block it was screwed to, and the second
+        // was a black diamond the size of a dinner plate.
+        for (int y = top; y <= 12; ++y)
+        {
+            t.set(4, y, Color{ 58, 58, 60 });
+            t.set(11, y, Color{ 58, 58, 60 });
+        }
+        for (int x = 4; x <= 11; ++x) t.set(x, 12, Color{ 58, 58, 60 });
+
+        for (int y = top; y <= 11; ++y)
+            for (int x = 5; x <= 10; ++x)
+                t.set(x, y, shade(Color{ 158, 158, 160 },
+                                  (y == top ? 34 : 0) +
+                                  static_cast<int>((hash2(x, y, 254) - 0.5f) * 24.0f)));
+    }
+
+    void paintButton(Tile& t)   { paintButtonIn(t, false); }
+    void paintButtonOn(Tile& t) { paintButtonIn(t, true); }
+
+    void paintRedstoneLampIn(Tile& t, Color base, Color stud)
+    {
+        t.fill(base);
+        t.speckle(8, 255);
+        for (int y = 2; y < Tile::N; y += 5)
+            for (int x = 2; x < Tile::N; x += 5)
+            {
+                t.set(x, y, stud);
+                t.set(x + 1, y, stud);
+                t.set(x, y + 1, stud);
+                t.set(x + 1, y + 1, stud);
+            }
+    }
+
+    void paintRedstoneLamp(Tile& t)
+    { paintRedstoneLampIn(t, Color{ 96, 62, 36 }, Color{ 64, 40, 22 }); }
+    void paintRedstoneLampLit(Tile& t)
+    { paintRedstoneLampIn(t, Color{ 226, 166, 86 }, Color{ 255, 214, 136 }); }
+
+    void paintRedstoneBlock(Tile& t)
+    {
+        t.fill(Color{ 172, 26, 18 });
+        t.speckle(14, 256);
+        for (int i = 0; i < 20; ++i)
+        {
+            const int x = static_cast<int>(hash2(i, 0, 257) * Tile::N);
+            const int y = static_cast<int>(hash2(i, 1, 257) * Tile::N);
+            t.set(x, y, Color{ 212, 48, 34 });
+        }
+    }
+
     void paintObsidian(Tile& t)
     {
         t.fill(Color{ 21, 16, 30 });
@@ -1557,6 +1691,8 @@ namespace
     const Color FOLIAGE_TINT{ 119, 171, 47, 255 };
     const Color BIRCH_TINT{ 128, 167, 85, 255 };
     const Color WATER_TINT{ 63, 118, 228, 255 };
+    const Color REDSTONE_OFF_TINT{ 118, 16, 10, 255 };
+    const Color REDSTONE_ON_TINT{ 252, 58, 34, 255 };
 
     // --- farming ---------------------------------------------------------
 
@@ -2944,6 +3080,18 @@ namespace
             t.set(i + 1, i, Color{ 255, 248, 176 });
     }
 
+    void paintItemRedstone(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int i = 0; i < 24; ++i)
+        {
+            const int x = 3 + static_cast<int>(hash2(i, 0, 261) * 10.0f);
+            const int y = 3 + static_cast<int>(hash2(i, 1, 261) * 10.0f);
+            t.set(x, y, shade(Color{ 196, 30, 20 },
+                              static_cast<int>((hash2(i, 2, 261) - 0.5f) * 70.0f)));
+        }
+    }
+
     void paintItemNetherBrick(Tile& t)
     {
         t.fill(Color{ 0, 0, 0, 0 });
@@ -3106,6 +3254,18 @@ namespace
         { Tiles::CactusTop, paintCactusTop },
         { Tiles::Bricks, paintBricks },
         { Tiles::NetherBricks, paintNetherBricks },
+        { Tiles::RedstoneOre, paintRedstoneOre },
+        { Tiles::RedstoneDust, paintRedstoneDust },
+        { Tiles::RedstoneDustLit, paintRedstoneDustLit },
+        { Tiles::RedstoneTorch, paintRedstoneTorch },
+        { Tiles::RedstoneTorchOff, paintRedstoneTorchOff },
+        { Tiles::LeverTile, paintLever },
+        { Tiles::LeverOnTile, paintLeverOn },
+        { Tiles::ButtonTile, paintButton },
+        { Tiles::ButtonOnTile, paintButtonOn },
+        { Tiles::RedstoneLamp, paintRedstoneLamp },
+        { Tiles::RedstoneLampLit, paintRedstoneLampLit },
+        { Tiles::RedstoneBlockTile, paintRedstoneBlock },
         { Tiles::Obsidian, paintObsidian },
         { Tiles::TallGrass, paintTallGrass },
         { Tiles::FlowerRed, paintFlowerRed },
@@ -3191,6 +3351,7 @@ namespace
         { Tiles::ItemMinecart,      paintItemMinecart },
         { Tiles::ItemBlazeRod,      paintItemBlazeRod },
         { Tiles::ItemNetherBrick,   paintItemNetherBrick },
+        { Tiles::ItemRedstone,      paintItemRedstone },
         { Tiles::ItemMagmaCream,    paintItemMagmaCream },
         { Tiles::ItemGlowstoneDust, paintItemGlowstoneDust },
         { Tiles::EndFrameTop,   paintEndFrameTop },
@@ -3235,7 +3396,9 @@ namespace
         Grass,   // greyscale art multiplied by the biome grass colour
         Foliage,
         Birch,
-        Water
+        Water,
+        RedstoneOff,
+        RedstoneOn
     };
 
     struct PackTile
@@ -3325,6 +3488,7 @@ namespace
         { Tiles::ItemBlazeRod,   { "blaze_rod", nullptr, nullptr } },
         { Tiles::ItemNetherBrick, { "nether_brick", nullptr, nullptr } },
         { Tiles::ItemMagmaCream, { "magma_cream", nullptr, nullptr } },
+        { Tiles::ItemRedstone,   { "redstone", nullptr, nullptr } },
     };
 
     const PackTile PACK_TILES[] = {
@@ -3371,6 +3535,18 @@ namespace
         { Tiles::AcaciaLogSide, { "acacia_log", "log_acacia", nullptr },               Tinting::None,    0,   false },
         { Tiles::AcaciaLeaves,  { "acacia_leaves", "leaves_acacia", nullptr },         Tinting::Foliage, 0,   false },
         { Tiles::AcaciaPlanks,  { "acacia_planks", "planks_acacia", nullptr },         Tinting::None,    0,   false },
+        { Tiles::RedstoneOre,   { "redstone_ore", nullptr },                           Tinting::None,    0,   false },
+        // Dust is painted here rather than taken from a pack. A pack
+        // ships three sprites -- a dot and two lines -- and Minecraft
+        // picks between them by what each cell is joined to; this
+        // engine's dust is one block that knows nothing of its
+        // neighbours, so a pack's straight line comes out as a row of
+        // dashes lying across the run.
+        { Tiles::RedstoneTorch, { "redstone_torch", nullptr },                         Tinting::None,    0,   false },
+        { Tiles::RedstoneTorchOff, { "redstone_torch_off", nullptr },                  Tinting::None,    0,   false },
+        { Tiles::RedstoneLamp,  { "redstone_lamp", nullptr },                          Tinting::None,    0,   false },
+        { Tiles::RedstoneLampLit, { "redstone_lamp_on", nullptr },                     Tinting::None,    0,   false },
+        { Tiles::RedstoneBlockTile, { "redstone_block", nullptr },                     Tinting::None,    0,   false },
 
         // Everything added since the pack table was last gone over.
         // A tile with no row here is drawn procedurally however good a
@@ -3431,6 +3607,8 @@ namespace
             case Tinting::Foliage: tintImage(image, FOLIAGE_TINT); break;
             case Tinting::Birch:   tintImage(image, BIRCH_TINT); break;
             case Tinting::Water:   tintImage(image, WATER_TINT); break;
+            case Tinting::RedstoneOff: tintImage(image, REDSTONE_OFF_TINT); break;
+            case Tinting::RedstoneOn:  tintImage(image, REDSTONE_ON_TINT); break;
             default: break;
         }
     }

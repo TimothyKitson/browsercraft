@@ -6,6 +6,7 @@
 
 #include "Player/Inventory.h"
 #include "Game/Crafting.h"
+#include "Game/Redstone.h"
 #include "Game/Items.h"
 #include "Game/Farming.h"
 #include "Core/KeyBindings.h"
@@ -57,6 +58,7 @@
 #include <set>
 #include <array>
 #include <map>
+#include <tuple>
 #include <filesystem>
 
 namespace
@@ -4154,6 +4156,214 @@ namespace
         check(atHand > 0.5f, "the hand samples the lower half of the patch");
     }
 
+    void testRedstone()
+    {
+        section("redstone: power, and how far it goes");
+
+        // A patch of world in a map, so a circuit can be laid out and
+        // switched on with no chunks, no renderer and no window.
+        struct Bench : Redstone::Cells
+        {
+            std::map<std::tuple<int, int, int>, BlockId> cells;
+
+            BlockId at(int x, int y, int z) const override
+            {
+                auto it = cells.find({ x, y, z });
+                return it == cells.end() ? Blocks::Air : it->second;
+            }
+            void set(int x, int y, int z, BlockId block) override
+            {
+                cells[{ x, y, z }] = block;
+            }
+        };
+
+        // What a run of dust with a lever at one end and a lamp at the
+        // other does, for a run of whatever length.
+        auto runOf = [](int length, BlockId source) {
+            Bench bench;
+            for (int x = 0; x < length; ++x) bench.set(x, 0, 0, Blocks::RedstoneDust);
+            bench.set(-1, 0, 0, source);
+            bench.set(length, 0, 0, Blocks::RedstoneLamp);
+            Redstone::update(bench, 0, 0, 0);
+            return bench;
+        };
+
+        {
+            Bench lit = runOf(4, Blocks::LeverOn);
+            for (int x = 0; x < 4; ++x)
+                check(lit.at(x, 0, 0) == Blocks::RedstoneDustLit,
+                      "a thrown lever lights the whole run");
+            check(lit.at(4, 0, 0) == Blocks::RedstoneLampLit, "and the lamp at the end of it");
+        }
+
+        {
+            Bench dark = runOf(4, Blocks::LeverOff);
+            for (int x = 0; x < 4; ++x)
+                check(dark.at(x, 0, 0) == Blocks::RedstoneDust, "a lever off leaves it dark");
+            check(dark.at(4, 0, 0) == Blocks::RedstoneLamp, "and the lamp with it");
+        }
+
+        // Switching one off again has to put the line out. Relighting
+        // from the sources rather than from the change is what makes
+        // this work at all: the first rule only ever spread power and
+        // had no way of taking it back.
+        {
+            Bench bench = runOf(6, Blocks::LeverOn);
+            check(bench.at(5, 0, 0) == Blocks::RedstoneDustLit, "the far end lights");
+
+            bench.set(-1, 0, 0, Blocks::LeverOff);
+            Redstone::update(bench, -1, 0, 0);
+            for (int x = 0; x < 6; ++x)
+                check(bench.at(x, 0, 0) == Blocks::RedstoneDust,
+                      "and goes out again when the lever is thrown back");
+            check(bench.at(6, 0, 0) == Blocks::RedstoneLamp, "taking the lamp with it");
+        }
+
+        // Fifteen blocks and no further, which is Minecraft's.
+        {
+            Bench bench;
+            for (int x = 0; x < 20; ++x) bench.set(x, 0, 0, Blocks::RedstoneDust);
+            bench.set(-1, 0, 0, Blocks::RedstoneBlock);
+            Redstone::update(bench, 0, 0, 0);
+
+            check(bench.at(Redstone::MAX_RUN - 1, 0, 0) == Blocks::RedstoneDustLit,
+                  "dust carries fifteen blocks");
+            check(bench.at(Redstone::MAX_RUN, 0, 0) == Blocks::RedstoneDust,
+                  "and not a sixteenth");
+        }
+
+        // A gap stops it. Nothing jumps across a missing block.
+        {
+            Bench bench;
+            for (int x = 0; x < 8; ++x)
+                if (x != 3) bench.set(x, 0, 0, Blocks::RedstoneDust);
+            bench.set(-1, 0, 0, Blocks::RedstoneTorch);
+            Redstone::update(bench, 0, 0, 0);
+
+            check(bench.at(2, 0, 0) == Blocks::RedstoneDustLit, "a torch lights what it reaches");
+            check(bench.at(4, 0, 0) == Blocks::RedstoneDust, "and a gap stops it dead");
+        }
+
+        // Every source, and nothing else.
+        check(Redstone::isSource(Blocks::RedstoneTorch), "a torch gives power out");
+        check(Redstone::isSource(Blocks::RedstoneBlock), "so does a block of redstone");
+        check(Redstone::isSource(Blocks::LeverOn), "and a lever thrown on");
+        check(Redstone::isSource(Blocks::ButtonOn), "and a button held down");
+        check(!Redstone::isSource(Blocks::LeverOff), "a lever off does not");
+        check(!Redstone::isSource(Blocks::ButtonOff), "nor a button nobody is pressing");
+        check(!Redstone::isSource(Blocks::RedstoneTorchOff), "nor a torch that is out");
+        check(!Redstone::isSource(Blocks::RedstoneDustLit), "dust carries power, it does not make it");
+
+        // A lever stays where it is put and a button comes back up.
+        check(Redstone::toggled(Blocks::LeverOff) == Blocks::LeverOn, "a lever throws on");
+        check(Redstone::toggled(Blocks::LeverOn) == Blocks::LeverOff, "and back off");
+        check(Redstone::toggled(Blocks::ButtonOff) == Blocks::ButtonOn, "a button presses in");
+        check(Redstone::toggled(Blocks::ButtonOn) == Blocks::ButtonOff, "and lets go");
+
+        // A door swings as one thing. Powering either half opens both,
+        // which is the whole of what makes a redstone door a door.
+        {
+            Bench bench;
+            bench.set(0, 0, 0, doorPart(0, false, false));
+            bench.set(0, 1, 0, doorPart(0, true, false));
+            bench.set(0, 0, 0 + 1, Blocks::RedstoneDust);
+            bench.set(-1, 0, 1, Blocks::LeverOn);
+            Redstone::update(bench, 0, 0, 0);
+
+            check(doorIsOpen(bench.at(0, 0, 0)), "power opens the bottom of a door");
+            check(doorIsOpen(bench.at(0, 1, 0)), "and the top with it");
+            check(blockFacing(bench.at(0, 0, 0)) == 0, "without turning it round");
+
+            bench.set(-1, 0, 1, Blocks::LeverOff);
+            Redstone::update(bench, -1, 0, 1);
+            check(!doorIsOpen(bench.at(0, 0, 0)) && !doorIsOpen(bench.at(0, 1, 0)),
+                  "and it shuts again when the power goes");
+        }
+
+        // A lever on a block, which is how anyone actually builds one:
+        // the switch never touches the dust, the block it stands on
+        // does. Getting this wrong made the first circuit I laid out
+        // look right and do nothing.
+        {
+            Bench bench;
+            bench.set(0, 0, 0, Blocks::Cobblestone);
+            bench.set(0, 1, 0, Blocks::LeverOn);
+            for (int x = 1; x <= 5; ++x) bench.set(x, 0, 0, Blocks::RedstoneDust);
+            bench.set(6, 0, 0, Blocks::RedstoneLamp);
+            Redstone::update(bench, 0, 0, 0);
+
+            check(bench.at(1, 0, 0) == Blocks::RedstoneDustLit,
+                  "a lever standing on a block lights the dust beside it");
+            check(bench.at(5, 0, 0) == Blocks::RedstoneDustLit, "all the way along");
+            check(bench.at(6, 0, 0) == Blocks::RedstoneLampLit, "and the lamp at the end");
+
+            bench.set(0, 1, 0, Blocks::LeverOff);
+            Redstone::update(bench, 0, 1, 0);
+            check(bench.at(1, 0, 0) == Blocks::RedstoneDust &&
+                      bench.at(6, 0, 0) == Blocks::RedstoneLamp,
+                  "and switching it off puts the whole line out");
+        }
+
+        // The block has to be carrying it, not merely be near it. A
+        // plain cobble next to a line does not make a second source.
+        {
+            Bench bench;
+            bench.set(0, 0, 0, Blocks::Cobblestone);
+            bench.set(1, 0, 0, Blocks::RedstoneDust);
+            Redstone::update(bench, 0, 0, 0);
+            check(bench.at(1, 0, 0) == Blocks::RedstoneDust,
+                  "a bare block beside dust powers nothing");
+            check(!Redstone::carries(bench, 0, 0, 0), "and carries nothing itself");
+        }
+
+        // Dust is drawn flat like a rail and must never be taken for
+        // one: laid beside a track it would bend into the line.
+        check(isFlat(Blocks::RedstoneDust) && isFlat(Blocks::RedstoneDustLit),
+              "dust lies flat on the floor");
+        check(!isRail(Blocks::RedstoneDust) && !isRail(Blocks::RedstoneDustLit),
+              "and is not a rail");
+        check(!railLinks(Blocks::RedstoneDust, 0) && !railLinks(Blocks::RedstoneDust, 1),
+              "so nothing joins onto it");
+
+        // What the lamp is for: it is the only block here that lights
+        // the room, and only when it is on.
+        check(lightEmission(Blocks::RedstoneLampLit) > 0, "a lit lamp gives light");
+        check(lightEmission(Blocks::RedstoneLamp) == 0, "and an unlit one gives none");
+        check(lightEmission(Blocks::RedstoneTorch) > 0, "a redstone torch glows a little");
+
+        // The recipes, end to end: a seam gives dust, dust packs into a
+        // block and comes back out again.
+        check(Smelting::resultOf(Blocks::RedstoneOre) == Blocks::Air,
+              "redstone ore is not something you smelt");
+
+        {
+            ItemStack nine[9];
+            for (int i = 0; i < 9; ++i) { nine[i].id = Items::Redstone; nine[i].count = 1; }
+            const CraftOutput packed = Crafting::match(nine, 3);
+            check(packed.valid() && packed.id == Blocks::RedstoneBlock,
+                  "nine dust pack into a block");
+
+            ItemStack back[9];
+            back[0].id = Blocks::RedstoneBlock;
+            back[0].count = 1;
+            const CraftOutput loose = Crafting::match(back, 2);
+            check(loose.valid() && loose.id == Items::Redstone && loose.count == 9,
+                  "and the block gives all nine back");
+        }
+
+        {
+            ItemStack lamp[9];
+            lamp[1].id = Items::Redstone;  lamp[1].count = 1;
+            lamp[3].id = Items::Redstone;  lamp[3].count = 1;
+            lamp[4].id = Blocks::Glowstone; lamp[4].count = 1;
+            lamp[5].id = Items::Redstone;  lamp[5].count = 1;
+            lamp[7].id = Items::Redstone;  lamp[7].count = 1;
+            const CraftOutput made = Crafting::match(lamp, 3);
+            check(made.valid() && made.id == Blocks::RedstoneLamp,
+                  "glowstone wrapped in dust makes a lamp");
+        }
+    }
+
     void testBiomes()
     {
         section("biomes: every one of them is somewhere");
@@ -6426,6 +6636,7 @@ int runSelfTest()
     testLadders();
     testFirstPersonArm();
     testHandSwing();
+    testRedstone();
     testBiomes();
     testOreRates();
     testDoors();

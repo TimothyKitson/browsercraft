@@ -499,6 +499,19 @@ private:
     // What is being ridden, and getting off it.
     Mob* riddenMob();
     void reshapeRailsAround(const glm::ivec3& at);
+
+    // Re-runs the power rule around a cell and tells the network about
+    // whatever it changed. Every place, break and switch goes through
+    // this, which is the only way a lamp twelve blocks away knows.
+    void settleRedstone(const glm::ivec3& at);
+
+    // How long a button stays down, which is Minecraft's second.
+    static constexpr float BUTTON_SECONDS = 1.0f;
+
+    // Buttons let go on their own. One at a time is enough: nothing in
+    // this game can press two.
+    glm::ivec3 m_buttonAt{ 0, 0, 0 };
+    float m_buttonTimer = 0.0f;
     void dismount();
     void wearOnSwing(StackId weapon);
     void openBench(const glm::ivec3& block);

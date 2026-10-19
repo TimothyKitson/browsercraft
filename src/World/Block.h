@@ -182,6 +182,24 @@ namespace Blocks
         AcaciaLeaves,
         AcaciaPlanks,
 
+        // Redstone. Dust carries power along the floor, a torch and a
+        // block give it out for nothing, a lever and a button ask for
+        // it, and a lamp and a door answer. Every one of them is two
+        // ids rather than a block with a bit set, which is how the
+        // doors already work here.
+        RedstoneOre,
+        RedstoneDust,
+        RedstoneDustLit,
+        RedstoneTorch,
+        RedstoneTorchOff,
+        LeverOff,
+        LeverOn,
+        ButtonOff,
+        ButtonOn,
+        RedstoneLamp,
+        RedstoneLampLit,
+        RedstoneBlock,
+
         Count
     };
 }
@@ -197,7 +215,8 @@ enum class RenderType : uint8_t
     Stairs, // a half block with a step on the back half of its top
     Fence,  // a post in the middle of its cell, with arms to its neighbours
     Door,   // a thin panel on one edge of its cell, which swings aside
-    Rail    // a flat panel on the floor of its cell, which carts run on
+    Rail,   // a flat panel on the floor of its cell, which carts run on
+    Flat    // the same panel, for anything that is not a rail
 };
 
 struct BlockInfo
@@ -226,6 +245,11 @@ inline bool isStairs(BlockId id) { return blockInfo(id).render == RenderType::St
 inline bool isFence(BlockId id) { return blockInfo(id).render == RenderType::Fence; }
 inline bool isDoor(BlockId id) { return blockInfo(id).render == RenderType::Door; }
 inline bool isRail(BlockId id) { return blockInfo(id).render == RenderType::Rail; }
+
+// Painted on the floor but not a track. Dust is drawn exactly as a rail
+// is and must not be treated as one, or laying it beside a line bends
+// it into the track and a cart runs onto it.
+inline bool isFlat(BlockId id) { return blockInfo(id).render == RenderType::Flat; }
 
 // The stones that count as "the ground" -- what ores replace and what
 // caves are cut through. Stone alone was the test everywhere before

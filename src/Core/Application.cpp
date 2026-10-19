@@ -11,6 +11,7 @@
 #include "Game/Cane.h"
 #include "Game/Enchanting.h"
 #include "Game/EndPortal.h"
+#include "Game/Redstone.h"
 #include "Game/Sleep.h"
 #include "Game/Explosion.h"
 #include "Game/Portal.h"
@@ -151,6 +152,16 @@ namespace
             case Blocks::EmeraldOre: return Items::Emerald;
             case Blocks::Glowstone: return Items::GlowstoneDust;
             case Blocks::NetherWart: return Items::NetherWart;
+            case Blocks::RedstoneOre: return Items::Redstone;
+
+            // Whatever state a thing was in when you broke it, what
+            // comes up is the thing itself.
+            case Blocks::RedstoneDust:
+            case Blocks::RedstoneDustLit: return Items::Redstone;
+            case Blocks::RedstoneTorchOff: return Blocks::RedstoneTorch;
+            case Blocks::LeverOn: return Blocks::LeverOff;
+            case Blocks::ButtonOn: return Blocks::ButtonOff;
+            case Blocks::RedstoneLampLit: return Blocks::RedstoneLamp;
 
             default: return id;
         }
@@ -1270,6 +1281,28 @@ bool Application::frame()
 
         if (playing() || m_inventoryOpen) tickFurnaces(deltaTime);
 
+        // A pressed button lets go on its own, and everything it was
+        // powering goes out with it.
+        if (m_buttonTimer > 0.0f)
+        {
+            m_buttonTimer -= deltaTime;
+            if (m_buttonTimer <= 0.0f)
+            {
+                m_buttonTimer = 0.0f;
+                if (m_world &&
+                    m_world->getBlock(m_buttonAt.x, m_buttonAt.y, m_buttonAt.z) ==
+                        Blocks::ButtonOn)
+                {
+                    m_world->setBlock(m_buttonAt.x, m_buttonAt.y, m_buttonAt.z,
+                                      Blocks::ButtonOff);
+                    m_net.onLocalBlockChange(m_buttonAt.x, m_buttonAt.y, m_buttonAt.z,
+                                             Blocks::ButtonOff);
+                    settleRedstone(m_buttonAt);
+                    m_audio.play(Sound::Click, 0.5f, 0.8f);
+                }
+            }
+        }
+
         updateWeather(deltaTime);
 
         // Air. The head being under is the whole of what it needs to
@@ -1403,6 +1436,7 @@ bool Application::frame()
             m_startupScreen == "mobs" || m_startupScreen == "golem" ||
             m_startupScreen == "nethermobs" ||
             m_startupScreen == "jungle" || m_startupScreen == "savanna" ||
+            m_startupScreen == "redstone" ||
             m_startupScreen == "rock")
         {
             // Dev aid: open the inventory with something in it, so the
@@ -1443,6 +1477,7 @@ bool Application::frame()
                                   m_startupScreen != "nethermobs" &&
                                   m_startupScreen != "jungle" &&
                                   m_startupScreen != "savanna" &&
+                                  m_startupScreen != "redstone" &&
                                   m_startupScreen != "rock" &&
                                   m_startupScreen != "portal" &&
                                   m_startupScreen != "nether";
@@ -1928,6 +1963,65 @@ bool Application::frame()
                 m_world->setBlock(px + 4, py, pz - 6, Blocks::Bookshelf);
                 m_world->setBlock(px + 6, py, pz - 6, Blocks::DiamondOre);
                 m_world->setBlock(px + 8, py, pz - 6, Blocks::EndPortalFrame);
+
+                m_player.mode = GameMode::Creative;
+                m_player.health = Player::MAX_HEALTH;
+            }
+
+            if (m_startupScreen == "redstone")
+            {
+                const int px = static_cast<int>(std::floor(m_player.position.x));
+                const int py = static_cast<int>(std::floor(m_player.position.y));
+                const int pz = static_cast<int>(std::floor(m_player.position.z));
+
+                // Wide enough to take the camera with it: the first
+                // one cleared only the far side and put the lens inside
+                // an acacia.
+                for (int ax = -6; ax <= 15; ++ax)
+                    for (int az = -8; az <= 10; ++az)
+                    {
+                        for (int ay = 0; ay <= 12; ++ay)
+                            m_world->setBlock(px + ax, py + ay, pz + az, Blocks::Air);
+                        m_world->setBlock(px + ax, py - 1, pz + az, Blocks::Stone);
+                    }
+
+                // A lever on a block, a run of dust, and a lamp at the
+                // end of it: the whole of what redstone does here.
+                m_world->setBlock(px + 2, py, pz - 2, Blocks::Cobblestone);
+                m_world->setBlock(px + 2, py + 1, pz - 2, Blocks::LeverOn);
+                for (int ax = 3; ax <= 8; ++ax)
+                    m_world->setBlock(px + ax, py, pz - 2, Blocks::RedstoneDust);
+                m_world->setBlock(px + 9, py, pz - 2, Blocks::RedstoneLampLit);
+
+                // And the same again with the switch left alone, so the
+                // shot carries both states of every block in it.
+                m_world->setBlock(px + 2, py, pz + 2, Blocks::Cobblestone);
+                m_world->setBlock(px + 2, py + 1, pz + 2, Blocks::ButtonOff);
+                for (int ax = 3; ax <= 8; ++ax)
+                    m_world->setBlock(px + ax, py, pz + 2, Blocks::RedstoneDust);
+                m_world->setBlock(px + 9, py, pz + 2, Blocks::RedstoneLamp);
+
+                m_world->setBlock(px + 11, py, pz - 2, Blocks::RedstoneBlock);
+                m_world->setBlock(px + 11, py, pz, Blocks::RedstoneTorch);
+                m_world->setBlock(px + 11, py, pz + 2, Blocks::RedstoneOre);
+
+                m_world->setBlock(px + 4, py, pz + 6, Blocks::Bookshelf);
+                m_world->setBlock(px + 7, py, pz + 6, Blocks::DiamondOre);
+                m_world->setBlock(px + 10, py, pz + 6, Blocks::EndPortalFrame);
+
+                // Run the power rule over both lines, which is what the
+                // game does whenever anything is placed.
+                settleRedstone(glm::ivec3(px + 5, py, pz - 2));
+                settleRedstone(glm::ivec3(px + 5, py, pz + 2));
+
+                // Up and back, looking down the two runs.
+                m_player.position = glm::vec3(static_cast<float>(px) - 2.5f,
+                                              static_cast<float>(py) + 4,
+                                              static_cast<float>(pz) + 0.5f);
+                m_player.velocity = glm::vec3(0.0f);
+                m_player.flying = true;
+                m_camera.setOrientation(0.0f, -28.0f);
+                m_camera.addLook(0.0f, 0.0f, 0.0f);
 
                 m_player.mode = GameMode::Creative;
                 m_player.health = Player::MAX_HEALTH;
@@ -3451,6 +3545,30 @@ void Application::updateMining(float deltaTime)
             // nothing, which is what makes the first pickaxe matter.
             wearTool(id);
         }
+
+        // Dust, a torch and the switches all sit on whatever is under
+        // them. Pull that out and they come up too, the same way a rail
+        // does -- in creative as well, where nothing drops but the
+        // thing still cannot be left hanging in the air.
+        {
+            const glm::ivec3 over(hit.block.x, hit.block.y + 1, hit.block.z);
+            const BlockId above = m_world->getBlock(over.x, over.y, over.z);
+            if (Redstone::isWire(above) || above == Blocks::RedstoneTorch ||
+                above == Blocks::RedstoneTorchOff || above == Blocks::LeverOff ||
+                above == Blocks::LeverOn || above == Blocks::ButtonOff ||
+                above == Blocks::ButtonOn)
+            {
+                m_world->setBlock(over.x, over.y, over.z, Blocks::Air);
+                m_net.onLocalBlockChange(over.x, over.y, over.z, Blocks::Air);
+                if (!m_player.creative())
+                    m_drops.spawnFromBrokenBlock(over, blockDrop(above));
+            }
+        }
+
+        // Whatever that was, the power around it has to be worked out
+        // again: a broken wire puts out everything downstream of it.
+        settleRedstone(hit.block);
+
         m_breakProgress = 0.0f;
         m_hasTarget = false;
     }
@@ -3537,6 +3655,32 @@ Mob* Application::riddenMob()
 // Rails join up with whatever is beside them. Called on the cell that
 // changed and its four neighbours, since laying one rail bends the one
 // it was laid against as well as itself.
+namespace
+{
+    // The world, behind the two questions the power rule asks of it.
+    struct WorldCells : Redstone::Cells
+    {
+        World* world = nullptr;
+        Net::Session* net = nullptr;
+
+        BlockId at(int x, int y, int z) const override { return world->getBlock(x, y, z); }
+
+        void set(int x, int y, int z, BlockId block) override
+        {
+            world->setBlock(x, y, z, block);
+            if (net) net->onLocalBlockChange(x, y, z, block);
+        }
+    };
+}
+
+void Application::settleRedstone(const glm::ivec3& at)
+{
+    WorldCells cells;
+    cells.world = m_world.get();
+    cells.net = &m_net;
+    Redstone::update(cells, at.x, at.y, at.z);
+}
+
 void Application::reshapeRailsAround(const glm::ivec3& at)
 {
     const glm::ivec3 around[5] = {
@@ -4357,6 +4501,26 @@ void Application::handlePlacement()
                 swingDoor(bench.block);
                 return;
             }
+
+            // A lever stays where you put it; a button lets go on its
+            // own a second later, which is the whole difference
+            // between the two.
+            if (used == Blocks::LeverOff || used == Blocks::LeverOn ||
+                used == Blocks::ButtonOff)
+            {
+                const BlockId now = Redstone::toggled(used);
+                m_world->setBlock(bench.block.x, bench.block.y, bench.block.z, now);
+                m_net.onLocalBlockChange(bench.block.x, bench.block.y, bench.block.z, now);
+                settleRedstone(bench.block);
+                m_audio.play(Sound::Click, 0.6f, now == Blocks::LeverOff ? 0.8f : 1.3f);
+
+                if (now == Blocks::ButtonOn)
+                {
+                    m_buttonAt = bench.block;
+                    m_buttonTimer = BUTTON_SECONDS;
+                }
+                return;
+            }
         }
     }
 
@@ -4583,8 +4747,12 @@ void Application::handlePlacement()
     }
 
     // Items are not blocks and never become one: a handful of wheat
-    // cannot be set down in the world the way a plank can.
-    if (isItem(stack.id)) return;
+    // cannot be set down in the world the way a plank can. Dust is the
+    // exception -- it is an item in the hand and a wire on the floor,
+    // the same way a door is.
+    BlockId fromItem = Blocks::Air;
+    if (stack.id == Items::Redstone) fromItem = Blocks::RedstoneDust;
+    if (isItem(stack.id) && fromItem == Blocks::Air) return;
 
     const RaycastHit hit = m_world->raycast(m_camera.position, m_camera.front, REACH_DISTANCE);
     if (!hit.hit) return;
@@ -4599,7 +4767,7 @@ void Application::handlePlacement()
         box.max.x > target.x && box.min.x < target.x + 1 &&
         box.max.y > target.y && box.min.y < target.y + 1 &&
         box.max.z > target.z && box.min.z < target.z + 1;
-    BlockId placing = asBlock(stack.id);
+    BlockId placing = (fromItem != Blocks::Air) ? fromItem : asBlock(stack.id);
     if (overlapsPlayer && isSolid(placing)) return;
 
     // Cane only stands at the water's edge, or on cane already there.
@@ -4673,11 +4841,20 @@ void Application::handlePlacement()
         !isSolid(m_world->getBlock(target.x, target.y - 1, target.z)))
         return;
 
+    // So is dust, and so are the switches and the torches: all of them
+    // want something under them to sit on.
+    if ((isFlat(placing) || Redstone::isSource(placing) ||
+         placing == Blocks::RedstoneTorch || placing == Blocks::LeverOff ||
+         placing == Blocks::ButtonOff) &&
+        !isSolid(m_world->getBlock(target.x, target.y - 1, target.z)))
+        return;
+
     m_world->setBlock(target.x, target.y, target.z, placing);
     m_net.onLocalBlockChange(target.x, target.y, target.z, placing);
     m_audio.playPlace(placing);
 
     if (isRail(placing)) reshapeRailsAround(target);
+    settleRedstone(target);
 
     if (!m_player.creative())
     {

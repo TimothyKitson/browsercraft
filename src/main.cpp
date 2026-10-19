@@ -127,6 +127,7 @@ namespace
             { "gold",    Blocks::GoldOre },
             { "diamond", Blocks::DiamondOre },
             { "emerald", Blocks::EmeraldOre },
+            { "redstone", Blocks::RedstoneOre },
             // Not ores, but counted the same way and for the same
             // reason: these are what the rock is made of, and the only
             // way to tell whether there is enough of them to see is to

@@ -108,6 +108,18 @@ namespace Tiles
         AcaciaLogSide,
         AcaciaLeaves,
         AcaciaPlanks,
+        RedstoneOre,
+        RedstoneDust,
+        RedstoneDustLit,
+        RedstoneTorch,
+        RedstoneTorchOff,
+        LeverTile,
+        LeverOnTile,
+        ButtonTile,
+        ButtonOnTile,
+        RedstoneLamp,
+        RedstoneLampLit,
+        RedstoneBlockTile,
         RainDrop,
         SnowFlake,
 
@@ -210,8 +222,9 @@ namespace Tiles
         ItemBlazeRod,
         ItemNetherBrick,
         ItemMagmaCream,
+        ItemRedstone,
 
-        ItemTileEnd = ItemMagmaCream + 1
+        ItemTileEnd = ItemRedstone + 1
     };
 
     // Ten progressively more broken overlay tiles for the mining animation.

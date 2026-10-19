@@ -113,6 +113,10 @@ namespace Items
         // through fire, which is what makes the Nether survivable.
         MagmaCream,
 
+        // Redstone dust, in the hand. Put down it becomes the block
+        // that carries power along the floor.
+        Redstone,
+
         Count
     };
 }
