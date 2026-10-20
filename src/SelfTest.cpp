@@ -8,6 +8,7 @@
 #include "Game/Crafting.h"
 #include "Game/Redstone.h"
 #include "Game/Piston.h"
+#include "Game/Copper.h"
 #include "Game/Trial.h"
 #include "World/TrialChamber.h"
 #include "Game/Items.h"
@@ -4161,6 +4162,146 @@ namespace
         check(atHand > 0.5f, "the hand samples the lower half of the patch");
     }
 
+    void testCopper()
+    {
+        section("copper: the one block that changes on its own");
+
+        // The four ages, in order and ending.
+        check(Copper::next(Blocks::CopperBlock) == Blocks::ExposedCopper,
+              "new copper goes patchy first");
+        check(Copper::next(Blocks::ExposedCopper) == Blocks::WeatheredCopper,
+              "then the green starts");
+        check(Copper::next(Blocks::WeatheredCopper) == Blocks::OxidizedCopper,
+              "then it takes over");
+        check(Copper::next(Blocks::OxidizedCopper) == Blocks::OxidizedCopper,
+              "and there it stops");
+
+        check(Copper::ages(Blocks::CopperBlock), "the new block has somewhere to go");
+        check(!Copper::ages(Blocks::OxidizedCopper), "the oxidised one has not");
+        check(!Copper::ages(Blocks::Stone), "and stone is not copper at all");
+        check(!Copper::ages(Blocks::CopperOre), "nor is the ore it came out of");
+
+        // A wall left standing gets all the way there, and takes a
+        // while about it. A step that happened every tick would turn
+        // a build green while you were still laying it.
+        {
+            BlockId block = Blocks::CopperBlock;
+            int steps = 0;
+            for (int tick = 1; tick <= 4000 && Copper::ages(block); ++tick)
+                if (Copper::ticks(10, 70, -4, 4242u, tick))
+                {
+                    block = Copper::next(block);
+                    ++steps;
+                }
+
+            check(block == Blocks::OxidizedCopper, "a wall left alone ends up green");
+            check(steps == 3, "by way of both stages in between");
+        }
+
+        {
+            // How long that took, in rolls. At one roll every eight
+            // seconds and a chance of about one in twelve, a stage is
+            // a couple of minutes and the whole way is most of an
+            // hour -- long enough to be weather rather than a timer.
+            int rolls = 0;
+            for (int tick = 1; tick <= 4000; ++tick)
+                if (Copper::ticks(10, 70, -4, 4242u, tick)) ++rolls;
+
+            const float share = rolls / 4000.0f;
+            check(share > Copper::AGE_CHANCE * 0.5f && share < Copper::AGE_CHANCE * 1.6f,
+                  "the roll comes up about as often as it claims to");
+        }
+
+        // Two blocks side by side must not weather in lockstep, or a
+        // wall changes colour all at once like a traffic light.
+        {
+            int together = 0, apart = 0;
+            for (int tick = 1; tick <= 2000; ++tick)
+            {
+                const bool left = Copper::ticks(0, 64, 0, 4242u, tick);
+                const bool right = Copper::ticks(1, 64, 0, 4242u, tick);
+                if (left && right) ++together;
+                if (left != right) ++apart;
+            }
+            check(apart > together, "neighbouring blocks weather at their own pace");
+        }
+
+        // The chain out of the ground.
+        check(Smelting::resultOf(Blocks::CopperOre) == Items::CopperIngot,
+              "copper ore smelts into an ingot");
+        check(Smelting::resultOf(Items::RawCopper) == Items::CopperIngot,
+              "and so does the raw copper it drops");
+
+        {
+            ItemStack nine[9];
+            for (int i = 0; i < 9; ++i) { nine[i].id = Items::CopperIngot; nine[i].count = 1; }
+            const CraftOutput packed = Crafting::match(nine, 3);
+            check(packed.valid() && packed.id == Blocks::CopperBlock,
+                  "nine ingots make a block");
+
+            ItemStack back[9];
+            back[0].id = Blocks::CopperBlock;
+            back[0].count = 1;
+            const CraftOutput loose = Crafting::match(back, 2);
+            check(loose.valid() && loose.id == Items::CopperIngot && loose.count == 9,
+                  "and the block gives all nine back");
+        }
+
+        // The bulb: lit and unlit are the same block to everything but
+        // the light it gives and the pulse that flips it.
+        check(isCopperBulb(Blocks::CopperBulb) && isCopperBulb(Blocks::CopperBulbLit),
+              "both bulbs are bulbs");
+        check(lightEmission(Blocks::CopperBulbLit) == 15, "a lit bulb is as bright as it gets");
+        check(lightEmission(Blocks::CopperBulb) == 0, "and an unlit one gives nothing");
+        check(!Copper::ages(Blocks::CopperBulb), "a bulb does not weather");
+
+        {
+            ItemStack bulb[9];
+            bulb[1].id = Items::CopperIngot; bulb[1].count = 1;
+            bulb[3].id = Items::CopperIngot; bulb[3].count = 1;
+            bulb[4].id = Items::BlazeRod;    bulb[4].count = 1;
+            bulb[5].id = Items::CopperIngot; bulb[5].count = 1;
+            bulb[7].id = Items::Redstone;    bulb[7].count = 1;
+            const CraftOutput made = Crafting::match(bulb, 3);
+            check(made.valid() && made.id == Blocks::CopperBulb, "a bulb can be made");
+        }
+
+        // There is copper in the ground to find, and it is up where
+        // Minecraft keeps it rather than down with the diamond.
+        {
+            const WorldGen generator(4242u);
+            long long copper = 0, stone = 0;
+            int lowest = 999, highest = -1;
+
+            for (int cz = 0; cz < 2; ++cz)
+                for (int cx = 0; cx < 2; ++cx)
+                {
+                    Chunk chunk(ChunkPos{ cx, cz });
+                    generator.generate(chunk);
+
+                    for (int y = 0; y < 128 && y < Chunk::SY; ++y)
+                        for (int lz = 0; lz < Chunk::SZ; ++lz)
+                            for (int lx = 0; lx < Chunk::SX; ++lx)
+                            {
+                                const BlockId block = chunk.getBlock(lx, y, lz);
+                                if (block == Blocks::CopperOre)
+                                {
+                                    ++copper;
+                                    lowest = std::min(lowest, y);
+                                    highest = std::max(highest, y);
+                                }
+                                else if (isStoneFamily(block)) ++stone;
+                            }
+                }
+
+            check(copper > 0, "there is copper in the ground");
+            check(lowest >= 40, "none of it is down with the diamond");
+            check(highest <= 110, "and none of it is in the clouds");
+            check(copper * 1000 / std::max<long long>(stone, 1) < 40,
+                  "and it is a seam rather than the rock itself");
+        }
+    }
+
     void testPistons()
     {
         section("pistons: what moves and what does not");
@@ -7175,6 +7316,7 @@ int runSelfTest()
     testLadders();
     testFirstPersonArm();
     testHandSwing();
+    testCopper();
     testPistons();
     testTrialChambers();
     testTrickyTrials();

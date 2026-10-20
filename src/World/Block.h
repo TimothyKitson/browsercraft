@@ -231,6 +231,21 @@ namespace Blocks
         Crafter,
         CrafterLit,
 
+        // Copper. The seam, the block it makes, and the three stages
+        // that block goes through standing in the open air -- which is
+        // the only thing in this world that changes on its own once it
+        // has been put down.
+        CopperOre,
+        CopperBlock,
+        ExposedCopper,
+        WeatheredCopper,
+        OxidizedCopper,
+
+        // 1.21's lamp: it flips every time something gives it a pulse
+        // rather than following the power, so one button is a switch.
+        CopperBulb,
+        CopperBulbLit,
+
         Count
     };
 }
@@ -336,6 +351,17 @@ inline bool isTrialSpawner(BlockId id)
 {
     return id == Blocks::TrialSpawner || id == Blocks::TrialSpawnerActive ||
            id == Blocks::TrialSpawnerSpent;
+}
+
+// Copper in any of its four stages, which is the set that weathers.
+inline bool isCopper(BlockId id)
+{
+    return id >= Blocks::CopperBlock && id <= Blocks::OxidizedCopper;
+}
+
+inline bool isCopperBulb(BlockId id)
+{
+    return id == Blocks::CopperBulb || id == Blocks::CopperBulbLit;
 }
 
 inline bool isCrafter(BlockId id)

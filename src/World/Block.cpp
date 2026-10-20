@@ -191,6 +191,13 @@ namespace
         { "Sticky Piston Head",PistonTop, PistonTop,  PistonArm,      true,  true,  RenderType::Cube,   0,   0.5f, StickyPistonFace },
         { "Crafter",      CrafterTop,    CrafterSide,    CrafterSide,    true,  true,  RenderType::Cube,   0,   2.5f },
         { "Crafter",      CrafterTopLit, CrafterSide,    CrafterSide,    true,  true,  RenderType::Cube,   6,   2.5f },
+        { "Copper Ore",   CopperOre,     CopperOre,      CopperOre,      true,  true,  RenderType::Cube,   0,   3.0f },
+        { "Block of Copper",CopperBlock, CopperBlock,    CopperBlock,    true,  true,  RenderType::Cube,   0,   3.0f },
+        { "Exposed Copper",ExposedCopper,ExposedCopper,  ExposedCopper,  true,  true,  RenderType::Cube,   0,   3.0f },
+        { "Weathered Copper",WeatheredCopper,WeatheredCopper,WeatheredCopper,true,true,RenderType::Cube,   0,   3.0f },
+        { "Oxidized Copper",OxidizedCopper,OxidizedCopper,OxidizedCopper,true,  true,  RenderType::Cube,   0,   3.0f },
+        { "Copper Bulb",  CopperBulbTile,CopperBulbTile, CopperBulbTile, true,  true,  RenderType::Cube,   0,   3.0f },
+        { "Copper Bulb",  CopperBulbLitTile,CopperBulbLitTile,CopperBulbLitTile,true,true,RenderType::Cube,15,3.0f },
     };
 }
 

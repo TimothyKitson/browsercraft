@@ -131,6 +131,10 @@ namespace Items
         // the only thing that opens a vault.
         TrialKey,
 
+        // Copper, out of the ground and out of the furnace.
+        RawCopper,
+        CopperIngot,
+
         Count
     };
 }

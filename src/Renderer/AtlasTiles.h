@@ -1,7 +1,7 @@
 #pragma once
 
-// Tile indices into the block atlas. The atlas is a 16x16 grid of 16x16
-// pixel tiles (256x256 total). Tile 0 is the top-left, indices increase
+// Tile indices into the block atlas. The atlas is a 20x20 grid of tiles,
+// four hundred in all. Tile 0 is the top-left, indices increase
 // left-to-right then down.
 //
 // Atlas.cpp generates a texture for each of these procedurally -- the game
@@ -137,6 +137,13 @@ namespace Tiles
         CrafterTop,
         CrafterTopLit,
         CrafterSide,
+        CopperOre,
+        CopperBlock,
+        ExposedCopper,
+        WeatheredCopper,
+        OxidizedCopper,
+        CopperBulbTile,
+        CopperBulbLitTile,
         RainDrop,
         SnowFlake,
 
@@ -153,19 +160,16 @@ namespace Tiles
     // one grey block. Nothing stores a tile index, so moving the items
     // up costs nothing but the static_assert below keeping watch.
     //
-    // The atlas is sixteen tiles square, so there are 256 in all. As of
-    // the stone family that is 99 blocks, 85 items and 10 cracks: 194
-    // used and 62 spare, but the spare was all stranded between the
-    // items and the cracks where no block could reach it. The line sits
-    // at 144 now, which leaves both sides room -- about forty more
-    // blocks and a dozen more items.
+    // The atlas is twenty tiles square, so there are 400 in all. It was
+    // sixteen and 256 until the blocks filled it: 145 block tiles
+    // against a line at 144, with copper still to come.
     //
-    // Growing past 256 means a bigger grid, and a bigger grid costs
-    // texture memory in proportion: at the top tile size three
-    // 4096-square textures are already most of a gigabyte with their
-    // mipmaps. The next step is to drop MAX_TILE_PIXELS, not to widen
-    // the grid and hope.
-    constexpr int ItemFirst = 146;
+    // A bigger grid costs texture memory in proportion, so the ceiling
+    // on tile size came down with it -- twenty across at 128 pixels is
+    // less VRAM than sixteen across at 256 was. Widening the grid
+    // without lowering that ceiling is what the old note here warned
+    // against, and it was right.
+    constexpr int ItemFirst = 200;
 
     enum : int
     {
@@ -246,12 +250,14 @@ namespace Tiles
         ItemWindCharge,
         ItemMace,
         ItemTrialKey,
+        ItemRawCopper,
+        ItemCopperIngot,
 
-        ItemTileEnd = ItemTrialKey + 1
+        ItemTileEnd = ItemCopperIngot + 1
     };
 
     // Ten progressively more broken overlay tiles for the mining animation.
-    constexpr int CrackFirst = 246;
+    constexpr int CrackFirst = 390;
     constexpr int CrackStages = 10;
 
     static_assert(static_cast<int>(TileCount) <= ItemFirst, "block tiles ran into the items");

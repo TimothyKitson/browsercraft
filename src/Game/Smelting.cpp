@@ -8,6 +8,8 @@ StackId Smelting::resultOf(StackId input)
     {
         case Blocks::IronOre:   return Items::IronIngot;
         case Blocks::GoldOre:   return Items::GoldIngot;
+        case Blocks::CopperOre: return Items::CopperIngot;
+        case Items::RawCopper:  return Items::CopperIngot;
         case Blocks::Sand:      return Blocks::Glass;
         case Blocks::Cobblestone: return Blocks::Stone;
         case Blocks::Clay:      return Blocks::Bricks;

@@ -1326,6 +1326,68 @@ namespace
         }
     }
 
+    // Copper, through its four ages: the new metal, a patchy brown as
+    // the shine goes, a green creeping over it, and the green all the
+    // way. Each stage is the last one with more of the next colour
+    // blotched across it, which is what weathering looks like.
+    void paintCopperIn(Tile& t, Color metal, Color patch, float coverage, uint32_t salt)
+    {
+        t.fill(metal);
+        t.speckle(10, salt);
+        for (int y = 0; y < Tile::N; ++y)
+            for (int x = 0; x < Tile::N; ++x)
+            {
+                const float n = hash2(x / 2, y / 2, salt + 1) * 0.6f +
+                                hash2(x, y, salt + 2) * 0.4f;
+                if (n < coverage)
+                    t.set(x, y, shade(patch, static_cast<int>((hash2(x, y, salt + 3) - 0.5f) * 26.0f)));
+            }
+    }
+
+    void paintCopperBlock(Tile& t)
+    { paintCopperIn(t, Color{ 192, 107, 73 }, Color{ 210, 126, 88 }, 0.22f, 301); }
+    void paintExposedCopper(Tile& t)
+    { paintCopperIn(t, Color{ 161, 124, 100 }, Color{ 136, 150, 118 }, 0.34f, 305); }
+    void paintWeatheredCopper(Tile& t)
+    { paintCopperIn(t, Color{ 108, 155, 118 }, Color{ 134, 126, 104 }, 0.40f, 309); }
+    void paintOxidizedCopper(Tile& t)
+    { paintCopperIn(t, Color{ 82, 162, 132 }, Color{ 104, 176, 146 }, 0.34f, 313); }
+
+    void paintCopperOre(Tile& t)
+    {
+        paintStone(t);
+        for (int i = 0; i < 14; ++i)
+        {
+            const int x = static_cast<int>(hash2(i, 0, 317) * (Tile::N - 2));
+            const int y = static_cast<int>(hash2(i, 1, 317) * (Tile::N - 2));
+            for (int dy = 0; dy <= 1; ++dy)
+                for (int dx = 0; dx <= 1; ++dx)
+                    t.set(x + dx, y + dy, Color{ 192, 107, 73 });
+        }
+    }
+
+    void paintCopperBulbIn(Tile& t, Color core, Color frame)
+    {
+        t.fill(frame);
+        t.speckle(8, 321);
+        // A window in each face with the filament behind it.
+        for (int y = 3; y <= 12; ++y)
+            for (int x = 3; x <= 12; ++x)
+                t.set(x, y, shade(core, static_cast<int>((hash2(x, y, 322) - 0.5f) * 24.0f)));
+        for (int i = 3; i <= 12; ++i)
+        {
+            t.set(i, 3, frame);
+            t.set(i, 12, frame);
+            t.set(3, i, frame);
+            t.set(12, i, frame);
+        }
+    }
+
+    void paintCopperBulb(Tile& t)
+    { paintCopperBulbIn(t, Color{ 92, 74, 58 }, Color{ 176, 104, 72 }); }
+    void paintCopperBulbLit(Tile& t)
+    { paintCopperBulbIn(t, Color{ 255, 226, 150 }, Color{ 198, 122, 82 }); }
+
     void paintObsidian(Tile& t)
     {
         t.fill(Color{ 21, 16, 30 });
@@ -3286,6 +3348,15 @@ namespace
             }
     }
 
+    void paintItemCopperIngot(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        const Color body{ 196, 114, 78 };
+        for (int y = 6; y <= 10; ++y)
+            for (int x = 3 + (y - 6) / 2; x <= 12 - (y - 6) / 2; ++x)
+                t.set(x, y, shade(body, y == 6 ? 34 : (y == 10 ? -30 : 0)));
+    }
+
     void paintItemTrialKey(Tile& t)
     {
         t.fill(Color{ 0, 0, 0, 0 });
@@ -3396,6 +3467,8 @@ namespace
         for (int x = 6; x <= 9; ++x) { t.set(x, 3, edge); t.set(x, 12, edge); }
         for (int y = 5; y <= 10; ++y) { t.set(3, y, edge); t.set(12, y, edge); }
     }
+
+    void paintItemRawCopper(Tile& t) { paintLump(t, Color{ 186, 112, 76 }); }
 
     void paintItemCoal(Tile& t)    { paintLump(t, Color{ 44, 44, 48 }); }
     void paintItemDiamond(Tile& t) { paintLump(t, Color{ 94, 219, 208 }); }
@@ -3531,6 +3604,13 @@ namespace
         { Tiles::CrafterTop, paintCrafterTop },
         { Tiles::CrafterTopLit, paintCrafterTopLit },
         { Tiles::CrafterSide, paintCrafterSide },
+        { Tiles::CopperOre, paintCopperOre },
+        { Tiles::CopperBlock, paintCopperBlock },
+        { Tiles::ExposedCopper, paintExposedCopper },
+        { Tiles::WeatheredCopper, paintWeatheredCopper },
+        { Tiles::OxidizedCopper, paintOxidizedCopper },
+        { Tiles::CopperBulbTile, paintCopperBulb },
+        { Tiles::CopperBulbLitTile, paintCopperBulbLit },
         { Tiles::Obsidian, paintObsidian },
         { Tiles::TallGrass, paintTallGrass },
         { Tiles::FlowerRed, paintFlowerRed },
@@ -3622,6 +3702,8 @@ namespace
         { Tiles::ItemWindCharge,    paintItemWindCharge },
         { Tiles::ItemMace,          paintItemMace },
         { Tiles::ItemTrialKey,      paintItemTrialKey },
+        { Tiles::ItemRawCopper,     paintItemRawCopper },
+        { Tiles::ItemCopperIngot,   paintItemCopperIngot },
         { Tiles::ItemMagmaCream,    paintItemMagmaCream },
         { Tiles::ItemGlowstoneDust, paintItemGlowstoneDust },
         { Tiles::EndFrameTop,   paintEndFrameTop },
@@ -3763,6 +3845,8 @@ namespace
         { Tiles::ItemWindCharge, { "wind_charge", nullptr, nullptr } },
         { Tiles::ItemMace,       { "mace", nullptr, nullptr } },
         { Tiles::ItemTrialKey,   { "trial_key", nullptr, nullptr } },
+        { Tiles::ItemRawCopper,  { "raw_copper", nullptr, nullptr } },
+        { Tiles::ItemCopperIngot, { "copper_ingot", nullptr, nullptr } },
     };
 
     const PackTile PACK_TILES[] = {
@@ -3838,6 +3922,13 @@ namespace
         { Tiles::CrafterTop,    { "crafter_top", nullptr },                            Tinting::None,    0,   false },
         { Tiles::CrafterTopLit, { "crafter_top_crafting", nullptr },                   Tinting::None,    0,   false },
         { Tiles::CrafterSide,   { "crafter_west", "crafter_south", nullptr },          Tinting::None,    0,   false },
+        { Tiles::CopperOre,     { "copper_ore", nullptr },                             Tinting::None,    0,   false },
+        { Tiles::CopperBlock,   { "copper_block", nullptr },                           Tinting::None,    0,   false },
+        { Tiles::ExposedCopper, { "exposed_copper", nullptr },                         Tinting::None,    0,   false },
+        { Tiles::WeatheredCopper, { "weathered_copper", nullptr },                     Tinting::None,    0,   false },
+        { Tiles::OxidizedCopper, { "oxidized_copper", nullptr },                       Tinting::None,    0,   false },
+        { Tiles::CopperBulbTile, { "copper_bulb", nullptr },                           Tinting::None,    0,   false },
+        { Tiles::CopperBulbLitTile, { "copper_bulb_lit", nullptr },                    Tinting::None,    0,   false },
 
         // Everything added since the pack table was last gone over.
         // A tile with no row here is drawn procedurally however good a

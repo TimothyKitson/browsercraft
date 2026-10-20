@@ -24,16 +24,23 @@ TileUV tileUV(int tileIndex);
 class Atlas
 {
 public:
-    static constexpr int TILES_PER_ROW = 16;
+    // Twenty across, so four hundred tiles. Sixteen was 256 and the
+    // blocks had filled it: the copper that comes next needed five
+    // tiles and there was one left.
+    static constexpr int TILES_PER_ROW = 20;
     static constexpr int FALLBACK_TILE_PIXELS = 16;
     // Highest per-tile resolution we'll build an atlas at. Higher-resolution
-    // packs are box-filtered down to this. 256 means three 4096x4096
-    // textures (albedo + normal + specular), roughly 270 MB of VRAM with
-    // mipmaps; drop to 64 or 128 on a weaker GPU.
+    // packs are box-filtered down to this.
+    //
+    // Twenty tiles across at 128 is three 2560-square textures, about
+    // 105 MB of VRAM with mipmaps -- less than the sixteen-across grid
+    // cost at 256, which was nearer 270. The grid grew and the ceiling
+    // came down, so the memory went down with it. A pack finer than
+    // 128 is reduced to it; the two in use here are 16 and 32.
 #ifdef __EMSCRIPTEN__
     static constexpr int MAX_TILE_PIXELS = 64; // keep the web download small
 #else
-    static constexpr int MAX_TILE_PIXELS = 256;
+    static constexpr int MAX_TILE_PIXELS = 128;
 #endif
 
     Atlas();

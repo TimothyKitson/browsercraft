@@ -1,4 +1,6 @@
 #pragma once
+#include <array>
+#include <set>
 #include "Window.h"
 #include "Input.h"
 #include "KeyBindings.h"
@@ -529,6 +531,18 @@ private:
     float m_trialScan = 0.0f;
 
     void tickTrialSpawners(float deltaTime);
+
+    // Which copper bulbs are sitting in a live signal. A bulb flips on
+    // the edge of a pulse rather than following the power, so it has to
+    // remember whether it has already answered this one; the block id
+    // is already spent saying whether it is lit.
+    std::set<std::array<int, 3>> m_bulbLive;
+
+    // Copper goes green on its own. Nothing else in the world does, so
+    // this is the only clock the blocks themselves keep.
+    void tickCopper(float deltaTime);
+    float m_copperTimer = 0.0f;
+    int m_copperTick = 0;
     void openVault(const glm::ivec3& block);
 
     // How long a button stays down, which is Minecraft's second.

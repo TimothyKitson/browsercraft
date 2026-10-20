@@ -102,6 +102,20 @@ namespace
         { true,  0, 0, { Items::BreezeRod, Items::IronIngot },
           2, Items::Mace, 1 },
 
+        // Copper: nine ingots into a block and back out again, and the
+        // bulb, which is Minecraft's -- copper round a blaze rod with
+        // redstone behind it.
+        { false, 3, 3, { Items::CopperIngot, Items::CopperIngot, Items::CopperIngot,
+                         Items::CopperIngot, Items::CopperIngot, Items::CopperIngot,
+                         Items::CopperIngot, Items::CopperIngot, Items::CopperIngot },
+          0, Blocks::CopperBlock, 1 },
+        { true,  0, 0, { Blocks::CopperBlock },
+          1, Items::CopperIngot, 9 },
+        { false, 3, 3, { _,                  Items::CopperIngot, _,
+                         Items::CopperIngot, Items::BlazeRod,    Items::CopperIngot,
+                         _,                  Items::Redstone,    _ },
+          0, Blocks::CopperBulb, 1 },
+
         // The crafter: a bench that works on its own. Minecraft wants a
         // dropper with the iron and the redstone, and there are none
         // here, so it takes a piston -- the one other thing in the game

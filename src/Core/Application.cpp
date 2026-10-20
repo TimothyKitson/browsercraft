@@ -15,6 +15,7 @@
 #include "Game/Trial.h"
 #include "Game/Piston.h"
 #include "Game/Crafting.h"
+#include "Game/Copper.h"
 #include "Game/Sleep.h"
 #include "Game/Explosion.h"
 #include "Game/Portal.h"
@@ -156,6 +157,8 @@ namespace
             case Blocks::Glowstone: return Items::GlowstoneDust;
             case Blocks::NetherWart: return Items::NetherWart;
             case Blocks::RedstoneOre: return Items::Redstone;
+            case Blocks::CopperOre: return Items::RawCopper;
+            case Blocks::CopperBulbLit: return Blocks::CopperBulb;
 
             // Whatever state a thing was in when you broke it, what
             // comes up is the thing itself.
@@ -1292,6 +1295,7 @@ bool Application::frame()
         if (playing() || m_inventoryOpen) tickFurnaces(deltaTime);
 
         if (playing()) tickTrialSpawners(deltaTime);
+        if (playing()) tickCopper(deltaTime);
 
         // A pressed button lets go on its own, and everything it was
         // powering goes out with it.
@@ -2099,6 +2103,18 @@ bool Application::frame()
                         loaded[i].id = Blocks::Planks;
                         loaded[i].count = 8;
                     }
+                }
+
+                // Copper, all four of its ages in a row with the ore
+                // it came out of and a bulb at either end.
+                {
+                    const BlockId COPPER[] = { Blocks::CopperOre, Blocks::CopperBlock,
+                                               Blocks::ExposedCopper, Blocks::WeatheredCopper,
+                                               Blocks::OxidizedCopper, Blocks::CopperBulb,
+                                               Blocks::CopperBulbLit };
+                    int step = 0;
+                    for (BlockId block : COPPER)
+                        m_world->setBlock(px + 2 + step++ * 2, py, pz - 6, block);
                 }
 
                 m_world->setBlock(px + 4, py, pz + 6, Blocks::Bookshelf);
@@ -3865,6 +3881,36 @@ bool Application::fireCrafter(const glm::ivec3& block)
     return true;
 }
 
+// Everything copper within sight of the player gets a roll every few
+// seconds. Only what is loaded ages, which is Minecraft's rule too: a
+// wall you walked away from is the colour you left it.
+void Application::tickCopper(float deltaTime)
+{
+    if (!m_world) return;
+
+    m_copperTimer -= deltaTime;
+    if (m_copperTimer > 0.0f) return;
+    m_copperTimer = Copper::AGE_INTERVAL;
+    ++m_copperTick;
+
+    const glm::ivec3 middle(glm::floor(m_player.position));
+    constexpr int REACH = 24;
+
+    for (int dx = -REACH; dx <= REACH; ++dx)
+        for (int dy = -REACH; dy <= REACH; ++dy)
+            for (int dz = -REACH; dz <= REACH; ++dz)
+            {
+                const int x = middle.x + dx, y = middle.y + dy, z = middle.z + dz;
+                const BlockId here = m_world->getBlock(x, y, z);
+                if (!Copper::ages(here)) continue;
+                if (!Copper::ticks(x, y, z, m_world->seed(), m_copperTick)) continue;
+
+                const BlockId older = Copper::next(here);
+                m_world->setBlock(x, y, z, older);
+                m_net.onLocalBlockChange(x, y, z, older);
+            }
+}
+
 // A trial spawner wakes when you come near, sends its wave, and pays a
 // key once the wave is down. Which spawners are awake is kept here
 // rather than in the world: the block id says waiting, fighting or
@@ -4021,6 +4067,32 @@ void Application::settleRedstone(const glm::ivec3& at)
             {
                 const int x = at.x + dx, y = at.y + dy, z = at.z + dz;
                 const BlockId here = cells.at(x, y, z);
+
+                // A copper bulb flips rather than follows: one pulse
+                // turns it on and the next turns it off, so a button
+                // works as a switch. Which is why it needs to know
+                // whether it has already answered this pulse, and why
+                // the answer lives in the cell above -- there is
+                // nowhere else to put a bit.
+                if (isCopperBulb(here))
+                {
+                    const std::array<int, 3> cell = { x, y, z };
+                    const bool live = Redstone::poweredAt(cells, x, y, z);
+                    const bool wasLive = m_bulbLive.count(cell) > 0;
+                    if (live == wasLive) continue;
+
+                    if (live)
+                    {
+                        m_bulbLive.insert(cell);
+                        cells.set(x, y, z, here == Blocks::CopperBulb ? Blocks::CopperBulbLit
+                                                                     : Blocks::CopperBulb);
+                    }
+                    else
+                    {
+                        m_bulbLive.erase(cell);
+                    }
+                    continue;
+                }
 
                 // A crafter fires on the edge rather than while the
                 // power is on: the block id is the only state it has,
