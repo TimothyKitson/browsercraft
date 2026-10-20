@@ -7,6 +7,7 @@
 #include "Player/Inventory.h"
 #include "Game/Crafting.h"
 #include "Game/Redstone.h"
+#include "Game/Piston.h"
 #include "Game/Trial.h"
 #include "World/TrialChamber.h"
 #include "Game/Items.h"
@@ -4160,6 +4161,177 @@ namespace
         check(atHand > 0.5f, "the hand samples the lower half of the patch");
     }
 
+    void testPistons()
+    {
+        section("pistons: what moves and what does not");
+
+        struct Bench : Redstone::Cells
+        {
+            std::map<std::tuple<int, int, int>, BlockId> cells;
+            BlockId at(int x, int y, int z) const override
+            {
+                auto it = cells.find({ x, y, z });
+                return it == cells.end() ? Blocks::Air : it->second;
+            }
+            void set(int x, int y, int z, BlockId block) override { cells[{ x, y, z }] = block; }
+        };
+
+        // East is +x, which is the one direction worth spelling out: a
+        // piston pointing the wrong way would still pass every test
+        // that only counted blocks.
+        {
+            Bench bench;
+            bench.set(0, 0, 0, Blocks::PistonEast);
+            bench.set(1, 0, 0, Blocks::Cobblestone);
+
+            check(Piston::lineLength(bench, 0, 0, 0, 1) == 1, "one block in front is a line of one");
+            check(Piston::extend(bench, 0, 0, 0), "and it goes");
+            check(bench.at(0, 0, 0) == Blocks::PistonOutEast, "the body is marked out");
+            check(bench.at(1, 0, 0) == Blocks::PistonHeadEast, "its head is in front of it");
+            check(bench.at(2, 0, 0) == Blocks::Cobblestone, "and the block has moved one along");
+
+            check(Piston::retract(bench, 0, 0, 0), "it comes back");
+            check(bench.at(0, 0, 0) == Blocks::PistonEast, "the body is in again");
+            check(bench.at(1, 0, 0) == Blocks::Air, "the head is gone");
+            check(bench.at(2, 0, 0) == Blocks::Cobblestone,
+                  "and a plain piston leaves the block where it pushed it");
+        }
+
+        // Sticky brings it back.
+        {
+            Bench bench;
+            bench.set(0, 0, 0, Blocks::StickyPistonEast);
+            bench.set(1, 0, 0, Blocks::Cobblestone);
+            Piston::extend(bench, 0, 0, 0);
+            Piston::retract(bench, 0, 0, 0);
+
+            check(bench.at(1, 0, 0) == Blocks::Cobblestone, "a sticky piston pulls it back");
+            check(bench.at(2, 0, 0) == Blocks::Air, "and leaves nothing behind it");
+        }
+
+        // A line of twelve goes; thirteen does not. Minecraft's limit,
+        // and the reason it exists: without it a piston at the edge of
+        // the world would push a column to the horizon.
+        for (int length : { 1, 6, Piston::MAX_PUSH })
+        {
+            Bench bench;
+            bench.set(0, 0, 0, Blocks::PistonEast);
+            for (int i = 1; i <= length; ++i) bench.set(i, 0, 0, Blocks::Cobblestone);
+
+            check(Piston::lineLength(bench, 0, 0, 0, 1) == length,
+                  "a line of " + std::to_string(length) + " is measured right");
+            check(Piston::extend(bench, 0, 0, 0),
+                  "and a line of " + std::to_string(length) + " moves");
+            check(bench.at(length + 1, 0, 0) == Blocks::Cobblestone,
+                  "with the far end one further along");
+        }
+
+        {
+            Bench bench;
+            bench.set(0, 0, 0, Blocks::PistonEast);
+            for (int i = 1; i <= Piston::MAX_PUSH + 1; ++i)
+                bench.set(i, 0, 0, Blocks::Cobblestone);
+
+            check(Piston::lineLength(bench, 0, 0, 0, 1) < 0, "thirteen is too many");
+            check(!Piston::extend(bench, 0, 0, 0), "so the piston does not move");
+            check(bench.at(0, 0, 0) == Blocks::PistonEast, "and nothing about it changed");
+            check(bench.at(1, 0, 0) == Blocks::Cobblestone, "nor about what it was pushing");
+        }
+
+        // Bedrock stops it dead, and so does a chest -- what is inside
+        // a chest lives outside the block, and moving one without its
+        // contents would lose them.
+        for (BlockId stubborn : { Blocks::Bedrock, Blocks::Chest, Blocks::Vault,
+                                  Blocks::TrialSpawner })
+        {
+            Bench bench;
+            bench.set(0, 0, 0, Blocks::PistonEast);
+            bench.set(1, 0, 0, Blocks::Cobblestone);
+            bench.set(2, 0, 0, stubborn);
+
+            check(!Piston::movable(stubborn),
+                  std::string(blockInfo(stubborn).name) + " does not get pushed");
+            check(!Piston::extend(bench, 0, 0, 0), "so the piston behind it stays put");
+            check(bench.at(1, 0, 0) == Blocks::Cobblestone, "and nothing in the line moves");
+        }
+
+        // Air and water are not in the way at all.
+        check(Piston::replaceable(Blocks::Air), "air is not in the way");
+        check(Piston::replaceable(Blocks::Water), "nor is water");
+        check(!Piston::replaceable(Blocks::Stone), "stone is");
+
+        // Pushing into nothing: a piston with clear air in front still
+        // puts its head out.
+        {
+            Bench bench;
+            bench.set(0, 0, 0, Blocks::PistonWest);
+            check(Piston::lineLength(bench, 0, 0, 0, 3) == 0, "nothing in front is a line of none");
+            check(Piston::extend(bench, 0, 0, 0), "and the head still comes out");
+            check(bench.at(-1, 0, 0) == Blocks::PistonHeadWest, "to the west of it");
+        }
+
+        // Every facing, so none of the four is wired up backwards.
+        for (int facing = 0; facing < 4; ++facing)
+        {
+            int dx = 0, dz = 0;
+            Piston::step(facing, dx, dz);
+
+            Bench bench;
+            bench.set(0, 0, 0, pistonBody(facing, false, false));
+            bench.set(dx, 0, dz, Blocks::Cobblestone);
+
+            check(Piston::extend(bench, 0, 0, 0),
+                  "a piston facing " + std::to_string(facing) + " pushes");
+            check(bench.at(dx, 0, dz) == pistonHead(facing, false),
+                  "its head goes where it points");
+            check(bench.at(dx * 2, 0, dz * 2) == Blocks::Cobblestone,
+                  "and the block goes one further the same way");
+        }
+
+        // A piston mid-push is two blocks pretending to be one, so
+        // nothing shoves either half of one.
+        check(!Piston::movable(Blocks::PistonOutNorth), "a piston with its head out will not budge");
+        check(!Piston::movable(Blocks::PistonHeadNorth), "nor its head");
+        check(Piston::movable(Blocks::PistonNorth), "one sitting idle can be pushed like anything else");
+
+        // What the id says about it.
+        for (int facing = 0; facing < 4; ++facing)
+            for (bool sticky : { false, true })
+            {
+                const BlockId idle = pistonBody(facing, sticky, false);
+                const BlockId out = pistonBody(facing, sticky, true);
+                const BlockId head = pistonHead(facing, sticky);
+
+                check(pistonFacing(idle) == facing && pistonFacing(out) == facing &&
+                          pistonFacing(head) == facing,
+                      "every part of a piston points the same way");
+                check(pistonSticky(idle) == sticky && pistonSticky(head) == sticky,
+                      "and knows whether it is sticky");
+                check(pistonOut(out) && !pistonOut(idle), "and whether its head is out");
+                check(blockInfo(head).tileFront >= 0, "the head has a face of its own");
+            }
+
+        // Crafted, or there is no way to hold one.
+        {
+            ItemStack grid[9];
+            const StackId want[9] = {
+                Blocks::Planks,      Blocks::Planks,   Blocks::Planks,
+                Blocks::Cobblestone, Items::IronIngot, Blocks::Cobblestone,
+                Blocks::Cobblestone, Items::Redstone,  Blocks::Cobblestone };
+            for (int i = 0; i < 9; ++i) { grid[i].id = want[i]; grid[i].count = 1; }
+
+            const CraftOutput made = Crafting::match(grid, 3);
+            check(made.valid() && made.id == Blocks::PistonNorth, "a piston can be made");
+
+            ItemStack sticky[9];
+            sticky[0].id = Blocks::PistonNorth; sticky[0].count = 1;
+            sticky[1].id = Items::MagmaCream;   sticky[1].count = 1;
+            const CraftOutput stuck = Crafting::match(sticky, 2);
+            check(stuck.valid() && stuck.id == Blocks::StickyPistonNorth,
+                  "and made sticky with what a magma cube leaves");
+        }
+    }
+
     void testTrialChambers()
     {
         section("trial chambers: where they are and what is in them");
@@ -6968,6 +7140,7 @@ int runSelfTest()
     testLadders();
     testFirstPersonArm();
     testHandSwing();
+    testPistons();
     testTrialChambers();
     testTrickyTrials();
     testRedstone();

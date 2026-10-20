@@ -211,6 +211,20 @@ namespace Blocks
         Vault,
         VaultOpen,
 
+        // Pistons. Four facings each, because everything that faces in
+        // this game faces along the compass -- a ladder, a door, a set
+        // of stairs -- and a piston that could also point up and down
+        // would be six more ids of the same thing. Three states to a
+        // facing: the body waiting, the body with its head out, and
+        // the head itself, which is its own block in the cell in
+        // front. Sticky is the same set again.
+        PistonNorth, PistonEast, PistonSouth, PistonWest,
+        PistonOutNorth, PistonOutEast, PistonOutSouth, PistonOutWest,
+        PistonHeadNorth, PistonHeadEast, PistonHeadSouth, PistonHeadWest,
+        StickyPistonNorth, StickyPistonEast, StickyPistonSouth, StickyPistonWest,
+        StickyPistonOutNorth, StickyPistonOutEast, StickyPistonOutSouth, StickyPistonOutWest,
+        StickyPistonHeadNorth, StickyPistonHeadEast, StickyPistonHeadSouth, StickyPistonHeadWest,
+
         Count
     };
 }
@@ -241,6 +255,12 @@ struct BlockInfo
     RenderType render;
     uint8_t lightEmission; // 0-15
     float hardness;        // seconds to mine; negative = unbreakable
+
+    // The face it points at, for anything that points. Last in the
+    // struct and defaulted, so the hundred and fifty rows that face
+    // nothing are untouched: -1 means "the side texture", which is
+    // what all of them want.
+    int tileFront = -1;
 };
 
 const BlockInfo& blockInfo(BlockId id);
@@ -256,6 +276,53 @@ inline bool isStairs(BlockId id) { return blockInfo(id).render == RenderType::St
 inline bool isFence(BlockId id) { return blockInfo(id).render == RenderType::Fence; }
 inline bool isDoor(BlockId id) { return blockInfo(id).render == RenderType::Door; }
 inline bool isRail(BlockId id) { return blockInfo(id).render == RenderType::Rail; }
+
+// Pistons. Everything about one is read off its id: which way it
+// points, whether it is sticky, and whether its head is out.
+inline bool isPistonBody(BlockId id)
+{
+    return (id >= Blocks::PistonNorth && id <= Blocks::PistonOutWest) ||
+           (id >= Blocks::StickyPistonNorth && id <= Blocks::StickyPistonOutWest);
+}
+
+inline bool isPistonHead(BlockId id)
+{
+    return (id >= Blocks::PistonHeadNorth && id <= Blocks::PistonHeadWest) ||
+           (id >= Blocks::StickyPistonHeadNorth && id <= Blocks::StickyPistonHeadWest);
+}
+
+inline bool isPiston(BlockId id) { return isPistonBody(id) || isPistonHead(id); }
+
+inline bool pistonSticky(BlockId id)
+{
+    return id >= Blocks::StickyPistonNorth;
+}
+
+inline bool pistonOut(BlockId id)
+{
+    return (id >= Blocks::PistonOutNorth && id <= Blocks::PistonOutWest) ||
+           (id >= Blocks::StickyPistonOutNorth && id <= Blocks::StickyPistonOutWest);
+}
+
+inline int pistonFacing(BlockId id)
+{
+    return (id - Blocks::PistonNorth) & 3;
+}
+
+// The three parts of a piston, built back up from what it is.
+inline BlockId pistonBody(int facing, bool sticky, bool out)
+{
+    const BlockId first = sticky ? (out ? Blocks::StickyPistonOutNorth
+                                        : Blocks::StickyPistonNorth)
+                                 : (out ? Blocks::PistonOutNorth : Blocks::PistonNorth);
+    return static_cast<BlockId>(first + (facing & 3));
+}
+
+inline BlockId pistonHead(int facing, bool sticky)
+{
+    const BlockId first = sticky ? Blocks::StickyPistonHeadNorth : Blocks::PistonHeadNorth;
+    return static_cast<BlockId>(first + (facing & 3));
+}
 
 // A trial spawner in any of its three states: waiting, with its wave
 // out, or finished with.
@@ -384,6 +451,7 @@ inline int blockFacing(BlockId id)
     if (isLadder(id)) return id - Blocks::LadderNorth;
     if (isStairs(id)) return (id - Blocks::StoneStairsNorth) & 3;
     if (isDoor(id)) return (id - Blocks::DoorLowShutNorth) & 3;
+    if (isPiston(id)) return pistonFacing(id);
     return 0;
 }
 

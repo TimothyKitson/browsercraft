@@ -1241,6 +1241,65 @@ namespace
         t.speckle(9, 287);
     }
 
+    // A piston reads by its faces: planks and iron down the sides, a
+    // pale face where the head comes out, a slime-green one if it is
+    // sticky, and a ring on the back where the body sits once it has
+    // pushed.
+    void paintPistonSide(Tile& t)
+    {
+        paintPlanksIn(t, Color{ 148, 118, 72 }, 91);
+        for (int i = 0; i < Tile::N; ++i)
+        {
+            t.set(i, 0, Color{ 122, 122, 126 });
+            t.set(i, Tile::N - 1, Color{ 102, 102, 106 });
+        }
+    }
+
+    void paintPistonTop(Tile& t)
+    {
+        t.fill(Color{ 118, 118, 122 });
+        t.speckle(8, 92);
+        for (int i = 0; i < Tile::N; ++i)
+        {
+            t.set(i, 0, Color{ 142, 142, 146 });
+            t.set(0, i, Color{ 142, 142, 146 });
+        }
+    }
+
+    void paintPistonFaceIn(Tile& t, Color pad)
+    {
+        t.fill(Color{ 128, 108, 72 });
+        t.speckle(7, 93);
+        // The plate, inset, with a crack across the middle of it.
+        for (int y = 2; y <= 13; ++y)
+            for (int x = 2; x <= 13; ++x)
+                t.set(x, y, shade(pad, static_cast<int>((hash2(x, y, 94) - 0.5f) * 22.0f)));
+        for (int x = 2; x <= 13; ++x) t.set(x, 7, shade(pad, -40));
+    }
+
+    void paintPistonFace(Tile& t)       { paintPistonFaceIn(t, Color{ 166, 162, 150 }); }
+    void paintStickyPistonFace(Tile& t) { paintPistonFaceIn(t, Color{ 138, 186, 110 }); }
+
+    void paintPistonBack(Tile& t)
+    {
+        t.fill(Color{ 112, 112, 116 });
+        t.speckle(9, 95);
+        for (int y = 5; y <= 10; ++y)
+            for (int x = 5; x <= 10; ++x)
+                t.set(x, y, Color{ 84, 84, 88 });
+    }
+
+    void paintPistonArm(Tile& t)
+    {
+        t.fill(Color{ 128, 108, 72 });
+        t.speckle(6, 96);
+        // The shaft down the middle of the arm.
+        for (int y = 0; y < Tile::N; ++y)
+            for (int x = 6; x <= 9; ++x)
+                t.set(x, y, shade(Color{ 150, 150, 154 },
+                                  static_cast<int>((hash2(x, y, 97) - 0.5f) * 20.0f)));
+    }
+
     void paintObsidian(Tile& t)
     {
         t.fill(Color{ 21, 16, 30 });
@@ -3437,6 +3496,12 @@ namespace
         { Tiles::VaultTop, paintVaultTop },
         { Tiles::VaultSide, paintVaultSide },
         { Tiles::VaultSideOpen, paintVaultSideOpen },
+        { Tiles::PistonTop, paintPistonTop },
+        { Tiles::PistonSide, paintPistonSide },
+        { Tiles::PistonFace, paintPistonFace },
+        { Tiles::StickyPistonFace, paintStickyPistonFace },
+        { Tiles::PistonBack, paintPistonBack },
+        { Tiles::PistonArm, paintPistonArm },
         { Tiles::Obsidian, paintObsidian },
         { Tiles::TallGrass, paintTallGrass },
         { Tiles::FlowerRed, paintFlowerRed },
@@ -3735,6 +3800,12 @@ namespace
         { Tiles::VaultTop,      { "vault_top", nullptr },                              Tinting::None,    0,   false },
         { Tiles::VaultSide,     { "vault_front_off", nullptr },                        Tinting::None,    0,   false },
         { Tiles::VaultSideOpen, { "vault_front_on", nullptr },                         Tinting::None,    0,   false },
+        { Tiles::PistonTop,     { "piston_side", nullptr },                            Tinting::None,    0,   false },
+        { Tiles::PistonSide,    { "piston_side", nullptr },                            Tinting::None,    0,   false },
+        { Tiles::PistonFace,    { "piston_top", "piston_top_normal", nullptr },         Tinting::None,    0,   false },
+        { Tiles::StickyPistonFace, { "piston_top_sticky", nullptr },                   Tinting::None,    0,   false },
+        { Tiles::PistonBack,    { "piston_bottom", nullptr },                          Tinting::None,    0,   false },
+        { Tiles::PistonArm,     { "piston_inner", nullptr },                           Tinting::None,    0,   false },
 
         // Everything added since the pack table was last gone over.
         // A tile with no row here is drawn procedurally however good a

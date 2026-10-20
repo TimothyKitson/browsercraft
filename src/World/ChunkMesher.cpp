@@ -106,6 +106,20 @@ namespace
         return info.tileSide;
     }
 
+    // The same, for a block that points: the one side it points at
+    // gets its own texture. Which side that is comes off the face's
+    // own normal rather than a table, so it cannot drift out of step
+    // with the mesher's face order.
+    int tileForFace(const BlockInfo& info, int faceIndex, BlockId id)
+    {
+        if (info.tileFront < 0) return tileForFace(info, faceIndex);
+        if (faceIndex == 2 || faceIndex == 3) return tileForFace(info, faceIndex);
+
+        const FaceDef& face = FACES[faceIndex];
+        const int facing = (face.nz < 0) ? 0 : (face.nx > 0) ? 1 : (face.nz > 0) ? 2 : 3;
+        return (facing == blockFacing(id)) ? info.tileFront : info.tileSide;
+    }
+
     void emitCubeFaces(const MeshSnapshot& snap, int lx, int y, int lz,
                        BlockId id, std::vector<float>& out)
     {
@@ -127,7 +141,7 @@ namespace
 
             if (!faceVisible(id, snap.block(nx, ny, nz))) continue;
 
-            const TileUV uv = tileUV(tileForFace(info, f));
+            const TileUV uv = tileUV(tileForFace(info, f, id));
             const float baseSky = static_cast<float>(snap.skyLight(nx, ny, nz)) / 15.0f;
             const float baseBlock = static_cast<float>(snap.blockLight(nx, ny, nz)) / 15.0f;
 

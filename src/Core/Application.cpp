@@ -13,6 +13,7 @@
 #include "Game/EndPortal.h"
 #include "Game/Redstone.h"
 #include "Game/Trial.h"
+#include "Game/Piston.h"
 #include "Game/Sleep.h"
 #include "Game/Explosion.h"
 #include "Game/Portal.h"
@@ -164,8 +165,15 @@ namespace
             case Blocks::ButtonOn: return Blocks::ButtonOff;
             case Blocks::RedstoneLampLit: return Blocks::RedstoneLamp;
 
-            default: return id;
+            default: break;
         }
+
+        // Whichever way it was pointing and whether or not its head was
+        // out, what comes up is a piston.
+        if (isPiston(id))
+            return pistonSticky(id) ? Blocks::StickyPistonNorth : Blocks::PistonNorth;
+
+        return id;
     }
 }
 
@@ -2028,8 +2036,13 @@ bool Application::frame()
             if (m_startupScreen == "redstone")
             {
                 const int px = static_cast<int>(std::floor(m_player.position.x));
-                const int py = static_cast<int>(std::floor(m_player.position.y));
                 const int pz = static_cast<int>(std::floor(m_player.position.z));
+
+                // On the surface, whatever height the saved world left
+                // the player at. Another dev screen had teleported them
+                // into a trial chamber, and this one laid its circuit
+                // out down there in the dark.
+                const int py = m_world->generator().surfaceHeight(px, pz) + 1;
 
                 // Wide enough to take the camera with it: the first
                 // one cleared only the far side and put the lens inside
@@ -2062,6 +2075,17 @@ bool Application::frame()
                 m_world->setBlock(px + 11, py, pz, Blocks::RedstoneTorch);
                 m_world->setBlock(px + 11, py, pz + 2, Blocks::RedstoneOre);
 
+                // A piston with a block in front of it and a block of
+                // redstone behind: it is extended by the time the shot
+                // is taken, because the power rule runs below.
+                m_world->setBlock(px + 2, py, pz + 5, Blocks::RedstoneBlock);
+                m_world->setBlock(px + 3, py, pz + 5, Blocks::PistonEast);
+                m_world->setBlock(px + 5, py, pz + 5, Blocks::Cobblestone);
+
+                // And one left alone, so both states are in the shot.
+                m_world->setBlock(px + 8, py, pz + 5, Blocks::StickyPistonEast);
+                m_world->setBlock(px + 9, py, pz + 5, Blocks::Planks);
+
                 m_world->setBlock(px + 4, py, pz + 6, Blocks::Bookshelf);
                 m_world->setBlock(px + 7, py, pz + 6, Blocks::DiamondOre);
                 m_world->setBlock(px + 10, py, pz + 6, Blocks::EndPortalFrame);
@@ -2070,11 +2094,13 @@ bool Application::frame()
                 // game does whenever anything is placed.
                 settleRedstone(glm::ivec3(px + 5, py, pz - 2));
                 settleRedstone(glm::ivec3(px + 5, py, pz + 2));
+                settleRedstone(glm::ivec3(px + 4, py, pz + 5));
 
                 // Up and back, looking down the two runs.
                 m_player.position = glm::vec3(static_cast<float>(px) - 2.5f,
                                               static_cast<float>(py) + 4,
                                               static_cast<float>(pz) + 0.5f);
+                m_placeOnSurface = false;
                 m_player.velocity = glm::vec3(0.0f);
                 m_player.flying = true;
                 m_camera.setOrientation(0.0f, -28.0f);
@@ -3573,6 +3599,27 @@ void Application::updateMining(float deltaTime)
             }
             if (isRail(id)) reshapeRailsAround(hit.block);
 
+            // A piston with its head out is two blocks pretending to
+            // be one, so breaking either takes the other with it.
+            if (isPiston(id))
+            {
+                int dx = 0, dz = 0;
+                Piston::step(blockFacing(id), dx, dz);
+                const glm::ivec3 other = isPistonHead(id)
+                                             ? glm::ivec3(hit.block.x - dx, hit.block.y,
+                                                          hit.block.z - dz)
+                                             : glm::ivec3(hit.block.x + dx, hit.block.y,
+                                                          hit.block.z + dz);
+                const BlockId paired = m_world->getBlock(other.x, other.y, other.z);
+                if (isPiston(paired))
+                {
+                    m_world->setBlock(other.x, other.y, other.z, Blocks::Air);
+                    m_net.onLocalBlockChange(other.x, other.y, other.z, Blocks::Air);
+                    if (!m_player.creative() && isPistonBody(paired))
+                        m_drops.spawnFromBrokenBlock(other, blockDrop(paired));
+                }
+            }
+
             // A door is one thing in two cells, so breaking either half
             // takes the other with it -- otherwise half a door is left
             // hanging in the air.
@@ -3895,6 +3942,27 @@ void Application::settleRedstone(const glm::ivec3& at)
     cells.world = m_world.get();
     cells.net = &m_net;
     Redstone::update(cells, at.x, at.y, at.z);
+
+    // Pistons answer to the same power the lamps do, and they answer
+    // after it: the rule has to have finished lighting the wires
+    // before anything asks what a wire is doing.
+    bool moved = false;
+    for (int dx = -Redstone::REACH; dx <= Redstone::REACH; ++dx)
+        for (int dy = -Redstone::REACH; dy <= Redstone::REACH; ++dy)
+            for (int dz = -Redstone::REACH; dz <= Redstone::REACH; ++dz)
+            {
+                const int x = at.x + dx, y = at.y + dy, z = at.z + dz;
+                const BlockId here = cells.at(x, y, z);
+                if (!isPistonBody(here)) continue;
+
+                const bool powered = Redstone::poweredAt(cells, x, y, z);
+                if (powered == pistonOut(here)) continue;
+
+                moved = powered ? Piston::extend(cells, x, y, z)
+                                : Piston::retract(cells, x, y, z);
+            }
+
+    if (moved) m_audio.play(Sound::DigStone, 0.5f, 1.6f);
 }
 
 void Application::reshapeRailsAround(const glm::ivec3& at)
@@ -5079,6 +5147,17 @@ void Application::handlePlacement()
             if (stack.count <= 0) stack.clear();
         }
         return;
+    }
+
+    // A piston points away from you, so it pushes what you are looking
+    // at rather than back at your own feet.
+    if (isPistonBody(placing))
+    {
+        const glm::vec3 look = m_camera.front;
+        const int facing = (std::fabs(look.x) > std::fabs(look.z))
+                               ? (look.x > 0.0f ? 1 : 3)
+                               : (look.z > 0.0f ? 2 : 0);
+        placing = pistonBody(facing, pistonSticky(placing), false);
     }
 
     // Stairs face the way you are looking, so you walk up them rather

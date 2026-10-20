@@ -128,6 +128,12 @@ namespace Tiles
         VaultTop,
         VaultSide,
         VaultSideOpen,
+        PistonTop,
+        PistonSide,
+        PistonFace,
+        StickyPistonFace,
+        PistonBack,
+        PistonArm,
         RainDrop,
         SnowFlake,
 

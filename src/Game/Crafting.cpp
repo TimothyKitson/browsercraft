@@ -102,6 +102,18 @@ namespace
         { true,  0, 0, { Items::BreezeRod, Items::IronIngot },
           2, Items::Mace, 1 },
 
+        // A piston: planks over cobble with an iron plate and the dust
+        // that drives it, which is Minecraft's. Sticky wants a
+        // slimeball and there are no slimes here, so it takes the
+        // magma cream off a magma cube -- the one other thing in the
+        // game that is sticky at all.
+        { false, 3, 3, { Blocks::Planks,      Blocks::Planks,    Blocks::Planks,
+                         Blocks::Cobblestone, Items::IronIngot,  Blocks::Cobblestone,
+                         Blocks::Cobblestone, Items::Redstone,   Blocks::Cobblestone },
+          0, Blocks::PistonNorth, 1 },
+        { true,  0, 0, { Blocks::PistonNorth, Items::MagmaCream },
+          2, Blocks::StickyPistonNorth, 1 },
+
         // Redstone. A torch is dust on a stick, a lever is a stick on
         // a cobble, a button is one stone, a lamp is glowstone wrapped
         // in dust, and nine dust packs into a block -- all Minecraft's,
