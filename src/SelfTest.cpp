@@ -7,6 +7,8 @@
 #include "Player/Inventory.h"
 #include "Game/Crafting.h"
 #include "Game/Redstone.h"
+#include "Game/Trial.h"
+#include "World/TrialChamber.h"
 #include "Game/Items.h"
 #include "Game/Farming.h"
 #include "Core/KeyBindings.h"
@@ -4158,6 +4160,252 @@ namespace
         check(atHand > 0.5f, "the hand samples the lower half of the patch");
     }
 
+    void testTrialChambers()
+    {
+        section("trial chambers: where they are and what is in them");
+
+        constexpr uint32_t SEED = 4242u;
+
+        // Deterministic, which is the whole point of planning a
+        // structure rather than storing one: every chunk the chamber
+        // reaches into works the same plan out for itself.
+        for (int rx = -3; rx <= 3; ++rx)
+            for (int rz = -3; rz <= 3; ++rz)
+            {
+                const TrialChamber::Site a = TrialChamber::siteFor(rx, rz, SEED);
+                const TrialChamber::Site b = TrialChamber::siteFor(rx, rz, SEED);
+                check(a.exists == b.exists && a.x == b.x && a.z == b.z && a.y == b.y,
+                      "a chamber is in the same place every time it is asked for");
+            }
+
+        // Negative coordinates round the right way. Plain division
+        // rounds towards zero, which would make the squares either side
+        // of the origin twice as wide and put two chambers in one.
+        check(TrialChamber::regionOf(0) == 0, "the origin is in square zero");
+        check(TrialChamber::regionOf(TrialChamber::REGION) == 1, "and one square along is one");
+        check(TrialChamber::regionOf(-1) == -1, "a block west of it is in square minus one");
+        check(TrialChamber::regionOf(-TrialChamber::REGION) == -1,
+              "and so is the far side of that square");
+
+        // No two chambers can meet. They are cut out of the rock, so
+        // two overlapping ones would hollow each other's walls away.
+        std::vector<TrialChamber::Site> sites;
+        for (int rx = -6; rx <= 6; ++rx)
+            for (int rz = -6; rz <= 6; ++rz)
+            {
+                const TrialChamber::Site site = TrialChamber::siteFor(rx, rz, SEED);
+                if (site.exists) sites.push_back(site);
+            }
+
+        check(!sites.empty(), "there are chambers in the world at all");
+
+        bool anyOverlap = false;
+        for (size_t a = 0; a < sites.size(); ++a)
+            for (size_t b = a + 1; b < sites.size(); ++b)
+            {
+                const int reach = TrialChamber::MAX_RADIUS * 2;
+                if (std::abs(sites[a].x - sites[b].x) <= reach &&
+                    std::abs(sites[a].z - sites[b].z) <= reach)
+                    anyOverlap = true;
+            }
+        check(!anyOverlap, "and no two of them reach into each other");
+
+        // Deep enough to be underground anywhere, which is what makes a
+        // chamber something you go down to.
+        for (const TrialChamber::Site& site : sites)
+            check(site.y >= TrialChamber::FLOOR_MIN && site.y <= TrialChamber::FLOOR_MAX,
+                  "every chamber is under the rock rather than on it");
+
+        // The plan itself.
+        const TrialChamber::Site site = sites.front();
+        const std::vector<TrialChamber::Room> rooms = TrialChamber::plan(site, SEED);
+
+        check(static_cast<int>(rooms.size()) == TrialChamber::GRID * TrialChamber::GRID,
+              "a chamber is a full grid of rooms");
+        check(TrialChamber::spawnerCount(site, SEED) > 0,
+              "with something to fight in it");
+        check(TrialChamber::vaultCount(site, SEED) > 0,
+              "and somewhere for the keys to be spent");
+
+        int entrances = 0;
+        for (const TrialChamber::Room& room : rooms)
+            if (room.kind == TrialChamber::Kind::Entrance) ++entrances;
+        check(entrances == 1, "and exactly one way in");
+
+        // Rooms must not overlap each other either, or the stamp would
+        // line one room's wall through the middle of the next.
+        bool roomsOverlap = false;
+        for (size_t a = 0; a < rooms.size(); ++a)
+            for (size_t b = a + 1; b < rooms.size(); ++b)
+            {
+                const TrialChamber::Room& p = rooms[a];
+                const TrialChamber::Room& q = rooms[b];
+                if (p.x < q.x + q.width && q.x < p.x + p.width &&
+                    p.z < q.z + q.depth && q.z < p.z + p.depth)
+                    roomsOverlap = true;
+            }
+        check(!roomsOverlap, "no two rooms stand in the same place");
+
+        // roomAt agrees with the plan, which is what the stamp relies on.
+        for (const TrialChamber::Room& room : rooms)
+        {
+            TrialChamber::Room found;
+            const bool hit = TrialChamber::roomAt(site, SEED, room.x + room.width / 2,
+                                                  room.z + room.depth / 2, found);
+            check(hit && found.kind == room.kind,
+                  std::string("the middle of a ") + TrialChamber::name(room.kind) +
+                      " is in that room");
+        }
+
+        TrialChamber::Room outside;
+        check(!TrialChamber::roomAt(site, SEED, site.x + 400, site.z, outside),
+              "and a block well clear of it is in no room at all");
+
+        section("trial chambers: the fight and the reward");
+
+        // The breeze belongs to the chambers. Anything else in a wave
+        // is something you could have met on the surface; the breeze
+        // is the one thing you cannot.
+        bool sendsBreeze = false;
+        for (int i = 0; i < 400; ++i)
+            if (Trial::speciesFor(site.x + i, site.y, site.z, SEED, i % Trial::WAVE_SIZE) ==
+                MobId::Breeze)
+                sendsBreeze = true;
+        check(sendsBreeze, "a trial spawner is where breezes come from");
+
+        for (int i = 0; i < 200; ++i)
+        {
+            const MobId sent = Trial::speciesFor(site.x + i, site.y, site.z, SEED, 0);
+            check(mobType(sent).spawnClass == SpawnClass::Hostile,
+                  "and everything it sends is something that fights");
+        }
+
+        // The same spawner always sends the same thing.
+        for (int i = 0; i < Trial::WAVE_SIZE; ++i)
+            check(Trial::speciesFor(site.x, site.y, site.z, SEED, i) ==
+                      Trial::speciesFor(site.x, site.y, site.z, SEED, i),
+                  "a spawner sends the same wave every time");
+
+        // A vault always pays something, and pays the same thing twice.
+        for (int i = 0; i < 120; ++i)
+        {
+            const std::vector<Trial::Stack> loot =
+                Trial::vaultLoot(site.x + i * 3, site.y, site.z - i, SEED);
+            check(!loot.empty(), "a vault is never empty");
+
+            int total = 0;
+            for (const Trial::Stack& stack : loot)
+            {
+                check(stack.count > 0, "and never holds nothing of something");
+                total += stack.count;
+            }
+            check(total > 0, "there is something in it to take");
+        }
+
+        {
+            const std::vector<Trial::Stack> once = Trial::vaultLoot(site.x, site.y, site.z, SEED);
+            const std::vector<Trial::Stack> again = Trial::vaultLoot(site.x, site.y, site.z, SEED);
+            check(once.size() == again.size(), "a vault holds the same thing every time");
+            for (size_t i = 0; i < once.size(); ++i)
+                check(once[i].id == again[i].id && once[i].count == again[i].count,
+                      "down to the last item");
+        }
+
+        // And it is actually built. Planning one is half the job: the
+        // stamp has to put it in the chunks, and a chamber that exists
+        // only in the plan is a chamber nobody can walk into.
+        {
+            const WorldGen generator(SEED);
+            const TrialChamber::Site built = generator.nearestChamber(0, 0, 4);
+            check(built.exists, "there is a chamber within a few squares of the origin");
+
+            int brick = 0, spawners = 0, vaults = 0, chests = 0, ladders = 0, air = 0;
+            const int chunkX = (built.x >= 0 ? built.x : built.x - Chunk::SX + 1) / Chunk::SX;
+            const int chunkZ = (built.z >= 0 ? built.z : built.z - Chunk::SZ + 1) / Chunk::SZ;
+
+            for (int cz = chunkZ - 1; cz <= chunkZ + 1; ++cz)
+                for (int cx = chunkX - 1; cx <= chunkX + 1; ++cx)
+                {
+                    Chunk chunk(ChunkPos{ cx, cz });
+                    generator.generate(chunk);
+
+                    for (int y = built.y - 2; y <= built.y + TrialChamber::HEADROOM + 1; ++y)
+                        for (int lz = 0; lz < Chunk::SZ; ++lz)
+                            for (int lx = 0; lx < Chunk::SX; ++lx)
+                            {
+                                if (y < 0 || y >= Chunk::SY) continue;
+                                switch (chunk.getBlock(lx, y, lz))
+                                {
+                                    case Blocks::TuffBricks: ++brick; break;
+                                    case Blocks::TrialSpawner: ++spawners; break;
+                                    case Blocks::Vault: ++vaults; break;
+                                    case Blocks::Chest: ++chests; break;
+                                    case Blocks::LadderNorth: ++ladders; break;
+                                    case Blocks::Air: ++air; break;
+                                    default: break;
+                                }
+                            }
+                }
+
+            check(brick > 200, "the chamber is lined with tuff brick");
+            check(air > 200, "and hollow inside");
+            check(spawners > 0, "with spawners in it");
+            check(vaults > 0, "and vaults");
+            (void)chests;
+
+            // The way in, where there is one. A chamber under the sea
+            // is sealed rather than opening a ladder out of the sea
+            // bed, so which of the two this one is depends on what is
+            // over it.
+            const int over = generator.surfaceHeight(built.x, built.z);
+            if (over > WorldGen::SEA_LEVEL)
+                check(ladders > 0, "a chamber under land has a ladder up to the surface");
+            else
+                check(ladders == 0, "and one under the sea is sealed instead");
+
+            // Whichever of the two that one was, check the other kind
+            // as well: the nearest chamber to the origin is in an
+            // ocean on this seed, and testing only that one would have
+            // left the ladder itself unchecked.
+            bool checkedLand = over > WorldGen::SEA_LEVEL;
+            for (int rx = -4; rx <= 4 && !checkedLand; ++rx)
+                for (int rz = -4; rz <= 4 && !checkedLand; ++rz)
+                {
+                    const TrialChamber::Site dry = TrialChamber::siteFor(rx, rz, SEED);
+                    if (!dry.exists) continue;
+                    if (generator.surfaceHeight(dry.x, dry.z) <= WorldGen::SEA_LEVEL) continue;
+
+                    const int cx = (dry.x >= 0 ? dry.x : dry.x - Chunk::SX + 1) / Chunk::SX;
+                    const int cz = (dry.z >= 0 ? dry.z : dry.z - Chunk::SZ + 1) / Chunk::SZ;
+                    Chunk chunk(ChunkPos{ cx, cz });
+                    generator.generate(chunk);
+
+                    int rungs = 0;
+                    for (int y = dry.y + 1; y < Chunk::SY; ++y)
+                        for (int lz = 0; lz < Chunk::SZ; ++lz)
+                            for (int lx = 0; lx < Chunk::SX; ++lx)
+                                if (chunk.getBlock(lx, y, lz) == Blocks::LadderNorth) ++rungs;
+
+                    check(rungs > 0, "a chamber under dry land is reachable from the top");
+                    checkedLand = true;
+                }
+            check(checkedLand, "and there is a chamber under dry land to check");
+        }
+
+        // The spawner's three states, and what tells them apart.
+        check(isTrialSpawner(Blocks::TrialSpawner), "a spawner waiting is a spawner");
+        check(isTrialSpawner(Blocks::TrialSpawnerActive), "so is one with its wave out");
+        check(isTrialSpawner(Blocks::TrialSpawnerSpent), "and one that is finished with");
+        check(!isTrialSpawner(Blocks::Vault), "a vault is not one");
+        check(lightEmission(Blocks::TrialSpawnerActive) >
+                  lightEmission(Blocks::TrialSpawnerSpent),
+              "a spawner with its wave out is lit and a spent one is dark");
+        check(isVault(Blocks::Vault) && isVault(Blocks::VaultOpen), "both vaults are vaults");
+        check(blockInfo(Blocks::Vault).hardness < 0.0f, "and a vault cannot be mined open");
+        check(blockInfo(Blocks::TrialSpawner).hardness < 0.0f,
+              "nor a spawner taken home");
+    }
+
     void testTrickyTrials()
     {
         section("1.21: the mace, the wind charge and the breeze");
@@ -6720,6 +6968,7 @@ int runSelfTest()
     testLadders();
     testFirstPersonArm();
     testHandSwing();
+    testTrialChambers();
     testTrickyTrials();
     testRedstone();
     testBiomes();

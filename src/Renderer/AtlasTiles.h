@@ -120,6 +120,14 @@ namespace Tiles
         RedstoneLamp,
         RedstoneLampLit,
         RedstoneBlockTile,
+        TuffBricks,
+        TrialSpawnerTop,
+        TrialSpawnerTopLit,
+        TrialSpawnerSide,
+        TrialSpawnerSideLit,
+        VaultTop,
+        VaultSide,
+        VaultSideOpen,
         RainDrop,
         SnowFlake,
 
@@ -228,8 +236,9 @@ namespace Tiles
         ItemBreezeRod,
         ItemWindCharge,
         ItemMace,
+        ItemTrialKey,
 
-        ItemTileEnd = ItemMace + 1
+        ItemTileEnd = ItemTrialKey + 1
     };
 
     // Ten progressively more broken overlay tiles for the mining animation.

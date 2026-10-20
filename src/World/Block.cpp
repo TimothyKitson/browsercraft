@@ -159,6 +159,12 @@ namespace
         { "Redstone Lamp",RedstoneLamp,  RedstoneLamp,   RedstoneLamp,   true,  true,  RenderType::Cube,   0,   0.3f },
         { "Redstone Lamp",RedstoneLampLit,RedstoneLampLit,RedstoneLampLit,true, true,  RenderType::Cube,  15,   0.3f },
         { "Block of Redstone",RedstoneBlockTile,RedstoneBlockTile,RedstoneBlockTile,true,true,RenderType::Cube,0,5.0f },
+        { "Tuff Bricks",  TuffBricks,    TuffBricks,     TuffBricks,     true,  true,  RenderType::Cube,   0,   1.5f },
+        { "Trial Spawner",TrialSpawnerTop,TrialSpawnerTop,TrialSpawnerSide,true, true,  RenderType::Cube,   3,  -1.0f },
+        { "Trial Spawner",TrialSpawnerTopLit,TrialSpawnerTop,TrialSpawnerSideLit,true,true,RenderType::Cube,8,-1.0f },
+        { "Trial Spawner",TrialSpawnerTop,TrialSpawnerTop,TrialSpawnerSide,true, true,  RenderType::Cube,   0,  -1.0f },
+        { "Vault",        VaultTop,      VaultTop,       VaultSide,      true,  true,  RenderType::Cube,   4,  -1.0f },
+        { "Vault",        VaultTop,      VaultTop,       VaultSideOpen,  true,  true,  RenderType::Cube,   8,  -1.0f },
     };
 }
 

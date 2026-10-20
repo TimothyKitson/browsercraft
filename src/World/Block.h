@@ -200,6 +200,17 @@ namespace Blocks
         RedstoneLampLit,
         RedstoneBlock,
 
+        // A trial chamber: the brick it is built of, the spawner that
+        // fills it and the vault the spawner's key opens. The spawner
+        // and the vault each carry their state in their id, the way
+        // everything else here does.
+        TuffBricks,
+        TrialSpawner,
+        TrialSpawnerActive,
+        TrialSpawnerSpent,
+        Vault,
+        VaultOpen,
+
         Count
     };
 }
@@ -245,6 +256,19 @@ inline bool isStairs(BlockId id) { return blockInfo(id).render == RenderType::St
 inline bool isFence(BlockId id) { return blockInfo(id).render == RenderType::Fence; }
 inline bool isDoor(BlockId id) { return blockInfo(id).render == RenderType::Door; }
 inline bool isRail(BlockId id) { return blockInfo(id).render == RenderType::Rail; }
+
+// A trial spawner in any of its three states: waiting, with its wave
+// out, or finished with.
+inline bool isTrialSpawner(BlockId id)
+{
+    return id == Blocks::TrialSpawner || id == Blocks::TrialSpawnerActive ||
+           id == Blocks::TrialSpawnerSpent;
+}
+
+inline bool isVault(BlockId id)
+{
+    return id == Blocks::Vault || id == Blocks::VaultOpen;
+}
 
 // Painted on the floor but not a track. Dust is drawn exactly as a rail
 // is and must not be treated as one, or laying it beside a line bends

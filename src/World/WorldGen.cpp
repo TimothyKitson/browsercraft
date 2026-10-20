@@ -159,6 +159,7 @@ void WorldGen::generate(Chunk& chunk) const
     placeOres(chunk);
     decorate(chunk);
     buildVillages(chunk);
+    buildTrialChambers(chunk);
 }
 
 // A closed cavern system rather than a landscape: solid netherrack between a
@@ -1261,6 +1262,150 @@ void WorldGen::layPaths(Chunk& chunk, const Village::Site& site,
         for (int out = 1; out <= Village::PLOT / 2 + 1; ++out)
             lay(doorX + stepX * out, doorZ + stepZ * out);
     }
+}
+
+// A chamber is cut into the rock rather than built on it: the rooms are
+// hollowed out of whatever is already there and lined with tuff brick,
+// so one under a mountain and one under a plain are the same chamber.
+void WorldGen::buildTrialChambers(Chunk& chunk) const
+{
+    const int baseX = chunk.position().x * Chunk::SX;
+    const int baseZ = chunk.position().z * Chunk::SZ;
+    const int maxX = baseX + Chunk::SX - 1;
+    const int maxZ = baseZ + Chunk::SZ - 1;
+
+    const int reach = TrialChamber::MAX_RADIUS + 1;
+    const int firstX = TrialChamber::regionOf(baseX - reach);
+    const int lastX = TrialChamber::regionOf(maxX + reach);
+    const int firstZ = TrialChamber::regionOf(baseZ - reach);
+    const int lastZ = TrialChamber::regionOf(maxZ + reach);
+
+    for (int rz = firstZ; rz <= lastZ; ++rz)
+        for (int rx = firstX; rx <= lastX; ++rx)
+        {
+            const TrialChamber::Site site = TrialChamber::siteFor(rx, rz, m_seed);
+            if (!TrialChamber::reaches(site, baseX - 1, baseZ - 1, maxX + 1, maxZ + 1))
+                continue;
+
+            for (const TrialChamber::Room& room : TrialChamber::plan(site, m_seed))
+                stampChamberRoom(chunk, site, room);
+
+            // The way down. A chamber nobody can find is a chamber that
+            // may as well not be there, so the middle room carries a
+            // shaft to the surface with a ladder up one wall.
+            const int shaftX = site.x;
+            const int shaftZ = site.z;
+            const int lx = shaftX - baseX;
+            const int lz = shaftZ - baseZ;
+            if (!Chunk::inBounds(lx, 0, lz)) continue;
+
+            // Under the sea the shaft would open into the water and
+            // flood nothing in particular, since nothing here flows --
+            // but a ladder coming out of the sea bed is still wrong. A
+            // chamber under water is simply sealed, and found the way
+            // anything else underground is found.
+            const int top = surfaceHeight(shaftX, shaftZ);
+            if (top <= SEA_LEVEL) continue;
+
+            // The shaft is one block across, so the rock around it is
+            // the wall the ladder hangs on.
+            for (int y = site.y + 1; y <= top && y < Chunk::SY; ++y)
+                chunk.setBlockRaw(lx, y, lz, Blocks::LadderNorth);
+        }
+}
+
+void WorldGen::stampChamberRoom(Chunk& chunk, const TrialChamber::Site& site,
+                                const TrialChamber::Room& room) const
+{
+    using namespace TrialChamber;
+
+    const int floor = site.y - 1;
+    const int ceiling = site.y + HEADROOM;
+
+    // Lined, then hollowed. Cutting the room first and lining it after
+    // would leave the lining inside the room.
+    for (int x = room.x - 1; x <= room.x + room.width; ++x)
+        for (int z = room.z - 1; z <= room.z + room.depth; ++z)
+            for (int y = floor; y <= ceiling; ++y)
+                put(chunk, x, y, z, Blocks::TuffBricks);
+
+    for (int x = room.x; x < room.x + room.width; ++x)
+        for (int z = room.z; z < room.z + room.depth; ++z)
+            for (int y = site.y; y < ceiling; ++y)
+                put(chunk, x, y, z, Blocks::Air);
+
+    // A doorway through every wall that has a room on the other side.
+    // Cutting all four would open the outermost rooms into solid rock.
+    constexpr int HALF = GRID / 2;
+    const int midX = room.x + room.width / 2;
+    const int midZ = room.z + room.depth / 2;
+
+    auto doorway = [&](int x, int z, bool alongX) {
+        for (int step = -1; step <= 1; ++step)
+            for (int y = site.y; y <= site.y + 2; ++y)
+                put(chunk, alongX ? x : x + step, y, alongX ? z + step : z, Blocks::Air);
+    };
+
+    if (room.gx > -HALF) doorway(room.x - 1, midZ, true);
+    if (room.gx < HALF)  doorway(room.x + room.width, midZ, true);
+    if (room.gz > -HALF) doorway(midX, room.z - 1, false);
+    if (room.gz < HALF)  doorway(midX, room.z + room.depth, false);
+
+    // Light, so a chamber is somewhere you can see what is coming.
+    for (int cx = 0; cx < 2; ++cx)
+        for (int cz = 0; cz < 2; ++cz)
+            put(chunk, room.x + (cx ? room.width - 1 : 0), site.y + HEADROOM - 1,
+                room.z + (cz ? room.depth - 1 : 0), Blocks::Glowstone);
+
+    switch (room.kind)
+    {
+        case Kind::Spawner:
+            put(chunk, midX, site.y, midZ, Blocks::TrialSpawner);
+            break;
+
+        case Kind::Vault:
+            // Against the north wall, which is the furthest thing from
+            // the way in however you came.
+            put(chunk, midX - 1, site.y, room.z, Blocks::Vault);
+            put(chunk, midX + 1, site.y, room.z, Blocks::Vault);
+            break;
+
+        case Kind::Supply:
+            put(chunk, midX, site.y, midZ, Blocks::Chest);
+            break;
+
+        case Kind::Entrance:
+        case Kind::Empty:
+            break;
+    }
+}
+
+TrialChamber::Site WorldGen::nearestChamber(int fromX, int fromZ, int squares) const
+{
+    TrialChamber::Site best;
+    long long bestDistance = 0;
+
+    const int centreX = TrialChamber::regionOf(fromX);
+    const int centreZ = TrialChamber::regionOf(fromZ);
+
+    for (int rz = centreZ - squares; rz <= centreZ + squares; ++rz)
+        for (int rx = centreX - squares; rx <= centreX + squares; ++rx)
+        {
+            const TrialChamber::Site site = TrialChamber::siteFor(rx, rz, m_seed);
+            if (!site.exists) continue;
+
+            const long long dx = site.x - fromX;
+            const long long dz = site.z - fromZ;
+            const long long distance = dx * dx + dz * dz;
+
+            if (!best.exists || distance < bestDistance)
+            {
+                best = site;
+                bestDistance = distance;
+            }
+        }
+
+    return best;
 }
 
 void WorldGen::buildVillages(Chunk& chunk) const

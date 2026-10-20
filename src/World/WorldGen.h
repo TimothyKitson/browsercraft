@@ -2,6 +2,7 @@
 #include "Chunk.h"
 #include "Noise.h"
 #include "Village.h"
+#include "TrialChamber.h"
 
 #include "Dimension.h"
 const char* dimensionFolder(Dimension dimension);
@@ -57,6 +58,10 @@ public:
     // a player will ask for first.
     Village::Site nearestVillage(int fromX, int fromZ, int squares = 3) const;
 
+    // The nearest trial chamber, the same way. Squares are bigger and
+    // chambers rarer, so the default search is wider.
+    TrialChamber::Site nearestChamber(int fromX, int fromZ, int squares = 3) const;
+
     // Why a site was turned down, for --villageinfo. Counting the
     // reasons is the only way to tell "the land is too steep" from
     // "there are no sites at all".
@@ -93,6 +98,9 @@ private:
     // into lays out the whole thing and stamps only its own part --
     // which works because the layout depends on nothing but the seed.
     void buildVillages(Chunk& chunk) const;
+    void buildTrialChambers(Chunk& chunk) const;
+    void stampChamberRoom(Chunk& chunk, const TrialChamber::Site& site,
+                          const TrialChamber::Room& room) const;
     void layPaths(Chunk& chunk, const Village::Site& site,
                   int fromX, int fromZ, int toX, int toZ) const;
     // Whether the ground where this village would stand could carry

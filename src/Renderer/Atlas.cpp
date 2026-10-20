@@ -1165,6 +1165,82 @@ namespace
         }
     }
 
+    // The trial chamber's stone, and the two things in it. The spawner
+    // is a dark cage with a glow inside that comes up when its wave is
+    // out; the vault is a locked face with a keyhole that opens.
+    void paintTuffBricks(Tile& t)
+    {
+        t.fill(Color{ 92, 94, 88 });
+        for (int row = 0; row < 4; ++row)
+        {
+            const int offset = (row % 2) * 4;
+            for (int y = 0; y < 3; ++y)
+                for (int x = 0; x < Tile::N; ++x)
+                {
+                    const int bx = (x + offset) % Tile::N;
+                    if ((bx % 8) == 7) continue;
+                    const int brick = (x + offset) / 8 + row * 3;
+                    const int delta = static_cast<int>((hash2(brick, row, 281) - 0.5f) * 26.0f);
+                    t.set(x, row * 4 + y, shade(Color{ 116, 116, 108 }, delta));
+                }
+        }
+        t.speckle(7, 282);
+    }
+
+    void paintSpawnerIn(Tile& t, Color bars, Color inside)
+    {
+        t.fill(inside);
+        for (int i = 0; i < Tile::N; ++i)
+        {
+            t.set(i, 0, bars);
+            t.set(i, Tile::N - 1, bars);
+            t.set(0, i, bars);
+            t.set(Tile::N - 1, i, bars);
+        }
+        // A cage, drawn as a grid rather than as a texture: it is the
+        // one block you are meant to read from across a room.
+        for (int i = 0; i < Tile::N; i += 3)
+            for (int k = 0; k < Tile::N; ++k)
+            {
+                t.set(i, k, bars);
+                t.set(k, i, bars);
+            }
+    }
+
+    void paintTrialSpawnerSide(Tile& t)
+    { paintSpawnerIn(t, Color{ 46, 50, 54 }, Color{ 26, 30, 34 }); }
+    void paintTrialSpawnerSideLit(Tile& t)
+    { paintSpawnerIn(t, Color{ 56, 62, 66 }, Color{ 196, 108, 32 }); }
+    void paintTrialSpawnerTop(Tile& t)
+    { paintSpawnerIn(t, Color{ 52, 56, 60 }, Color{ 32, 36, 40 }); }
+    void paintTrialSpawnerTopLit(Tile& t)
+    { paintSpawnerIn(t, Color{ 62, 68, 72 }, Color{ 230, 148, 44 }); }
+
+    void paintVaultIn(Tile& t, Color face, Color keyhole)
+    {
+        t.fill(Color{ 54, 58, 62 });
+        t.speckle(8, 285);
+        for (int y = 2; y <= 13; ++y)
+            for (int x = 2; x <= 13; ++x)
+                t.set(x, y, shade(face, static_cast<int>((hash2(x, y, 286) - 0.5f) * 20.0f)));
+
+        // The keyhole, which is the whole of what tells the two apart.
+        for (int y = 6; y <= 10; ++y)
+            for (int x = 6; x <= 9; ++x)
+            {
+                const int d = (x - 7) * (x - 7) + (y - 7) * (y - 7);
+                if (d <= 4) t.set(x, y, keyhole);
+            }
+    }
+
+    void paintVaultSide(Tile& t)     { paintVaultIn(t, Color{ 72, 78, 82 }, Color{ 18, 20, 22 }); }
+    void paintVaultSideOpen(Tile& t) { paintVaultIn(t, Color{ 86, 94, 98 }, Color{ 248, 206, 92 }); }
+    void paintVaultTop(Tile& t)
+    {
+        t.fill(Color{ 66, 70, 74 });
+        t.speckle(9, 287);
+    }
+
     void paintObsidian(Tile& t)
     {
         t.fill(Color{ 21, 16, 30 });
@@ -3125,6 +3201,29 @@ namespace
             }
     }
 
+    void paintItemTrialKey(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        const Color gold{ 236, 194, 88 };
+        const Color dark{ 168, 128, 44 };
+
+        // A ring at the top and a shaft with two teeth, which is what
+        // a key is from across a room.
+        for (int y = 2; y <= 6; ++y)
+            for (int x = 5; x <= 9; ++x)
+            {
+                const int d = (x - 7) * (x - 7) + (y - 4) * (y - 4);
+                if (d <= 4 && d >= 1) t.set(x, y, gold);
+            }
+        for (int y = 7; y <= 13; ++y)
+        {
+            t.set(7, y, gold);
+            t.set(8, y, dark);
+        }
+        t.set(9, 11, gold);
+        t.set(9, 13, gold);
+    }
+
     void paintItemMace(Tile& t)
     {
         t.fill(Color{ 0, 0, 0, 0 });
@@ -3330,6 +3429,14 @@ namespace
         { Tiles::RedstoneLamp, paintRedstoneLamp },
         { Tiles::RedstoneLampLit, paintRedstoneLampLit },
         { Tiles::RedstoneBlockTile, paintRedstoneBlock },
+        { Tiles::TuffBricks, paintTuffBricks },
+        { Tiles::TrialSpawnerTop, paintTrialSpawnerTop },
+        { Tiles::TrialSpawnerTopLit, paintTrialSpawnerTopLit },
+        { Tiles::TrialSpawnerSide, paintTrialSpawnerSide },
+        { Tiles::TrialSpawnerSideLit, paintTrialSpawnerSideLit },
+        { Tiles::VaultTop, paintVaultTop },
+        { Tiles::VaultSide, paintVaultSide },
+        { Tiles::VaultSideOpen, paintVaultSideOpen },
         { Tiles::Obsidian, paintObsidian },
         { Tiles::TallGrass, paintTallGrass },
         { Tiles::FlowerRed, paintFlowerRed },
@@ -3420,6 +3527,7 @@ namespace
         { Tiles::ItemBreezeRod,     paintItemBreezeRod },
         { Tiles::ItemWindCharge,    paintItemWindCharge },
         { Tiles::ItemMace,          paintItemMace },
+        { Tiles::ItemTrialKey,      paintItemTrialKey },
         { Tiles::ItemMagmaCream,    paintItemMagmaCream },
         { Tiles::ItemGlowstoneDust, paintItemGlowstoneDust },
         { Tiles::EndFrameTop,   paintEndFrameTop },
@@ -3560,6 +3668,7 @@ namespace
         { Tiles::ItemBreezeRod,  { "breeze_rod", nullptr, nullptr } },
         { Tiles::ItemWindCharge, { "wind_charge", nullptr, nullptr } },
         { Tiles::ItemMace,       { "mace", nullptr, nullptr } },
+        { Tiles::ItemTrialKey,   { "trial_key", nullptr, nullptr } },
     };
 
     const PackTile PACK_TILES[] = {
@@ -3618,6 +3727,14 @@ namespace
         { Tiles::RedstoneLamp,  { "redstone_lamp", nullptr },                          Tinting::None,    0,   false },
         { Tiles::RedstoneLampLit, { "redstone_lamp_on", nullptr },                     Tinting::None,    0,   false },
         { Tiles::RedstoneBlockTile, { "redstone_block", nullptr },                     Tinting::None,    0,   false },
+        { Tiles::TuffBricks,    { "tuff_bricks", nullptr },                            Tinting::None,    0,   false },
+        { Tiles::TrialSpawnerTop, { "trial_spawner_top_inactive", nullptr },           Tinting::None,    0,   false },
+        { Tiles::TrialSpawnerTopLit, { "trial_spawner_top_active", nullptr },          Tinting::None,    0,   false },
+        { Tiles::TrialSpawnerSide, { "trial_spawner_side_inactive", nullptr },         Tinting::None,    0,   false },
+        { Tiles::TrialSpawnerSideLit, { "trial_spawner_side_active", nullptr },        Tinting::None,    0,   false },
+        { Tiles::VaultTop,      { "vault_top", nullptr },                              Tinting::None,    0,   false },
+        { Tiles::VaultSide,     { "vault_front_off", nullptr },                        Tinting::None,    0,   false },
+        { Tiles::VaultSideOpen, { "vault_front_on", nullptr },                         Tinting::None,    0,   false },
 
         // Everything added since the pack table was last gone over.
         // A tile with no row here is drawn procedurally however good a

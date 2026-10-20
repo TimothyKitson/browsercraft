@@ -12,6 +12,7 @@
 #include "Game/Enchanting.h"
 #include "Game/EndPortal.h"
 #include "Game/Redstone.h"
+#include "Game/Trial.h"
 #include "Game/Sleep.h"
 #include "Game/Explosion.h"
 #include "Game/Portal.h"
@@ -1281,6 +1282,8 @@ bool Application::frame()
 
         if (playing() || m_inventoryOpen) tickFurnaces(deltaTime);
 
+        if (playing()) tickTrialSpawners(deltaTime);
+
         // A pressed button lets go on its own, and everything it was
         // powering goes out with it.
         if (m_buttonTimer > 0.0f)
@@ -1436,7 +1439,7 @@ bool Application::frame()
             m_startupScreen == "mobs" || m_startupScreen == "golem" ||
             m_startupScreen == "nethermobs" ||
             m_startupScreen == "jungle" || m_startupScreen == "savanna" ||
-            m_startupScreen == "redstone" ||
+            m_startupScreen == "redstone" || m_startupScreen == "chamber" ||
             m_startupScreen == "rock")
         {
             // Dev aid: open the inventory with something in it, so the
@@ -1478,6 +1481,7 @@ bool Application::frame()
                                   m_startupScreen != "jungle" &&
                                   m_startupScreen != "savanna" &&
                                   m_startupScreen != "redstone" &&
+                                  m_startupScreen != "chamber" &&
                                   m_startupScreen != "rock" &&
                                   m_startupScreen != "portal" &&
                                   m_startupScreen != "nether";
@@ -1973,6 +1977,54 @@ bool Application::frame()
                 m_player.health = Player::MAX_HEALTH;
             }
 
+            // Down into the nearest trial chamber, the same way the
+            // village screen walks to a real village: what is worth
+            // looking at is what the generator actually cut.
+            if (m_startupScreen == "chamber")
+            {
+                const TrialChamber::Site site = m_world->generator().nearestChamber(
+                    static_cast<int>(m_player.position.x),
+                    static_cast<int>(m_player.position.z), 4);
+
+                if (site.exists)
+                {
+                    // In the entrance room, under the shaft, looking
+                    // along the row towards a spawner.
+                    m_player.position = glm::vec3(static_cast<float>(site.x) + 0.5f,
+                                                  static_cast<float>(site.y),
+                                                  static_cast<float>(site.z) + 3.5f);
+                    m_player.velocity = glm::vec3(0.0f);
+                    m_player.flying = true;
+                    m_placeOnSurface = false;
+                    m_camera.setOrientation(-90.0f, -4.0f);
+                    m_camera.addLook(0.0f, 0.0f, 0.0f);
+
+                    std::printf("Trial chamber at %d, %d, floor %d\n", site.x, site.z, site.y);
+                    std::fflush(stdout);
+
+                    m_inventory.add(Items::TrialKey, 3);
+                    m_inventory.add(Items::Mace, 1);
+                    m_inventory.add(Items::WindCharge, 16);
+
+                    // Nothing round the teleport has streamed in yet,
+                    // so the props wait for the same world-ready gate
+                    // the screenshot does.
+                    m_pendingArena = true;
+                    m_arenaKind = ArenaKind::ChamberProps;
+                    m_arenaX = site.x;
+                    m_arenaY = site.y;
+                    m_arenaZ = site.z;
+                }
+                else
+                {
+                    std::printf("No trial chamber within four squares\n");
+                    std::fflush(stdout);
+                }
+
+                m_player.mode = GameMode::Creative;
+                m_player.health = Player::MAX_HEALTH;
+            }
+
             if (m_startupScreen == "redstone")
             {
                 const int px = static_cast<int>(std::floor(m_player.position.x));
@@ -2222,6 +2274,7 @@ bool Application::frame()
                     // has streamed in yet, and a setBlock into a chunk
                     // that does not exist is dropped on the floor.
                     m_pendingArena = true;
+                    m_arenaKind = ArenaKind::BiomePocket;
                     m_arenaX = standX;
                     m_arenaZ = standZ;
 
@@ -2689,7 +2742,8 @@ bool Application::frame()
         m_arenaDelay += deltaTime;
         if (m_arenaDelay > 1.5f)
         {
-            buildBiomeArena(m_arenaX, m_arenaZ);
+            if (m_arenaKind == ArenaKind::BiomePocket) buildBiomeArena(m_arenaX, m_arenaZ);
+            else dressChamberRoom(m_arenaX, m_arenaY, m_arenaZ);
             m_pendingArena = false;
         }
     }
@@ -3696,6 +3750,145 @@ namespace
     };
 }
 
+// A trial spawner wakes when you come near, sends its wave, and pays a
+// key once the wave is down. Which spawners are awake is kept here
+// rather than in the world: the block id says waiting, fighting or
+// finished, and a fight only needs a timer while it is actually on.
+void Application::tickTrialSpawners(float deltaTime)
+{
+    if (!m_world) return;
+
+    // Looking for spawners every frame would mean sweeping the blocks
+    // round the player sixty times a second for something that changes
+    // about twice a minute.
+    m_trialScan -= deltaTime;
+    if (m_trialScan <= 0.0f)
+    {
+        m_trialScan = 0.5f;
+
+        const glm::ivec3 middle(glm::floor(m_player.position));
+        const int reach = static_cast<int>(Trial::WAKE_RANGE);
+
+        for (int dx = -reach; dx <= reach; ++dx)
+            for (int dy = -4; dy <= 4; ++dy)
+                for (int dz = -reach; dz <= reach; ++dz)
+                {
+                    const glm::ivec3 at(middle.x + dx, middle.y + dy, middle.z + dz);
+                    if (m_world->getBlock(at.x, at.y, at.z) != Blocks::TrialSpawner) continue;
+
+                    const float away = glm::length(glm::vec3(at) + glm::vec3(0.5f) -
+                                                   m_player.position);
+                    if (away > Trial::WAKE_RANGE) continue;
+
+                    // Out they come, in a ring round the spawner so
+                    // none of them starts inside the wall.
+                    int sent = 0;
+                    for (int i = 0; i < Trial::WAVE_SIZE; ++i)
+                    {
+                        const float angle = (i / static_cast<float>(Trial::WAVE_SIZE)) *
+                                            6.2831853f;
+                        const glm::vec3 feet(at.x + 0.5f + std::cos(angle) * 2.0f,
+                                             static_cast<float>(at.y),
+                                             at.z + 0.5f + std::sin(angle) * 2.0f);
+                        const MobId species =
+                            Trial::speciesFor(at.x, at.y, at.z, m_world->seed(), i);
+                        if (m_entities.spawnAt(species, feet, *m_world)) ++sent;
+                    }
+
+                    if (sent == 0) continue;
+
+                    m_world->setBlock(at.x, at.y, at.z, Blocks::TrialSpawnerActive);
+                    m_net.onLocalBlockChange(at.x, at.y, at.z, Blocks::TrialSpawnerActive);
+                    m_trials.push_back(ActiveTrial{ at, 0.0f });
+
+                    m_audio.play(Sound::MobZombieSay, 0.7f, 0.6f);
+                    m_chatLog.add("A trial spawner wakes.");
+                }
+    }
+
+    // Anything still fighting. A spawner pays up when nothing hostile
+    // is left near it, and not before it has had a moment to put its
+    // wave into the world.
+    for (size_t i = 0; i < m_trials.size();)
+    {
+        ActiveTrial& trial = m_trials[i];
+        trial.since += deltaTime;
+
+        const glm::vec3 middle = glm::vec3(trial.at) + glm::vec3(0.5f);
+
+        // Somebody broke it, or the world was reloaded under it.
+        if (m_world->getBlock(trial.at.x, trial.at.y, trial.at.z) !=
+            Blocks::TrialSpawnerActive)
+        {
+            m_trials[i] = m_trials.back();
+            m_trials.pop_back();
+            continue;
+        }
+
+        if (trial.since < Trial::SETTLE_SECONDS) { ++i; continue; }
+
+        // You have to be there when it finishes. Without this, walking
+        // away until the wave despawned and strolling back was a key
+        // for nothing.
+        if (glm::length(m_player.position - middle) > Trial::WAVE_RANGE) { ++i; continue; }
+
+        bool anyLeft = false;
+        for (const Mob& mob : m_entities.mobs())
+        {
+            if (!mob.alive()) continue;
+            if (mob.type().spawnClass != SpawnClass::Hostile) continue;
+            if (glm::length(mob.position() - middle) > Trial::WAVE_RANGE) continue;
+            anyLeft = true;
+            break;
+        }
+
+        if (anyLeft) { ++i; continue; }
+
+        m_world->setBlock(trial.at.x, trial.at.y, trial.at.z, Blocks::TrialSpawnerSpent);
+        m_net.onLocalBlockChange(trial.at.x, trial.at.y, trial.at.z,
+                                 Blocks::TrialSpawnerSpent);
+
+        for (int k = 0; k < Trial::KEYS_PER_SPAWNER; ++k)
+            m_drops.spawn(middle + glm::vec3(0.0f, 1.0f, 0.0f), Items::TrialKey, 1);
+
+        m_audio.play(Sound::Pickup, 0.8f, 1.4f);
+        m_chatLog.add("The spawner gives up its key.");
+
+        m_trials[i] = m_trials.back();
+        m_trials.pop_back();
+    }
+}
+
+// A vault takes one key and gives up what is behind it. Once.
+void Application::openVault(const glm::ivec3& block)
+{
+    if (m_world->getBlock(block.x, block.y, block.z) != Blocks::Vault)
+    {
+        m_chatLog.add("This vault has already been opened.");
+        m_audio.play(Sound::Click, 0.4f, 0.7f);
+        return;
+    }
+
+    if (!m_inventory.take(Items::TrialKey))
+    {
+        m_chatLog.add("You need a trial key.");
+        m_audio.play(Sound::Click, 0.4f, 0.7f);
+        return;
+    }
+
+    m_world->setBlock(block.x, block.y, block.z, Blocks::VaultOpen);
+    m_net.onLocalBlockChange(block.x, block.y, block.z, Blocks::VaultOpen);
+
+    const glm::vec3 out = glm::vec3(block) + glm::vec3(0.5f, 1.2f, 0.5f);
+    for (const Trial::Stack& stack : Trial::vaultLoot(block.x, block.y, block.z,
+                                                      m_world->seed()))
+        for (int i = 0; i < stack.count; ++i)
+            m_drops.spawn(out, stack.id, 1);
+
+    m_audio.play(Sound::Pickup, 0.9f, 0.8f);
+    m_chatLog.add("The vault opens.");
+}
+
 void Application::settleRedstone(const glm::ivec3& at)
 {
     WorldCells cells;
@@ -4555,6 +4748,12 @@ void Application::handlePlacement()
             if (isDoor(used))
             {
                 swingDoor(bench.block);
+                return;
+            }
+
+            if (isVault(used))
+            {
+                openVault(bench.block);
                 return;
             }
 
@@ -5845,6 +6044,15 @@ void Application::buildBiomeArena(int standX, int standZ)
     stand(7, -2, Blocks::Bookshelf);
     stand(7, 0, Blocks::DiamondOre);
     stand(7, 2, Blocks::EndPortalFrame);
+}
+
+// The three blocks every screenshot carries, stood against the far wall
+// of the entrance room.
+void Application::dressChamberRoom(int atX, int atY, int atZ)
+{
+    m_world->setBlock(atX - 3, atY, atZ - 3, Blocks::Bookshelf);
+    m_world->setBlock(atX - 1, atY, atZ - 3, Blocks::DiamondOre);
+    m_world->setBlock(atX + 2, atY, atZ - 3, Blocks::EndPortalFrame);
 }
 
 void Application::renderHud()

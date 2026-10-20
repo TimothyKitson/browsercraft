@@ -110,6 +110,7 @@ namespace
         { "Breeze Rod",      Tiles::ItemBreezeRod,      64 },
         { "Wind Charge",     Tiles::ItemWindCharge,     64 },
         { "Mace",            Tiles::ItemMace,            1 },
+        { "Trial Key",       Tiles::ItemTrialKey,       64 },
     };
 
     static_assert(sizeof(ITEMS) / sizeof(ITEMS[0]) ==

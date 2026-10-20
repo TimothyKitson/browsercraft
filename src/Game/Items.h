@@ -127,6 +127,10 @@ namespace Items
         // whole of how it is meant to be used.
         Mace,
 
+        // What a trial spawner pays out when its waves are done, and
+        // the only thing that opens a vault.
+        TrialKey,
+
         Count
     };
 }
