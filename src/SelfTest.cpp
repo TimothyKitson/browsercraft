@@ -4311,6 +4311,41 @@ namespace
                 check(blockInfo(head).tileFront >= 0, "the head has a face of its own");
             }
 
+        // The crafter is a bench that answers to a pulse, so what it
+        // makes is whatever the bench would make of the same grid.
+        // Checked here rather than against a world: the block is a
+        // trigger, and the recipe underneath it is the one every other
+        // bench in the game uses.
+        {
+            ItemStack grid[9];
+            for (int i : { 0, 1, 3, 4 }) { grid[i].id = Blocks::Planks; grid[i].count = 1; }
+            const CraftOutput made = Crafting::match(grid, 3);
+            check(made.valid() && made.id == Blocks::CraftingTable,
+                  "a crafter loaded with four planks would make a bench");
+
+            Crafting::consume(grid, 3);
+            for (int i : { 0, 1, 3, 4 })
+                check(grid[i].empty(), "and spends one of each when it fires");
+
+            check(!Crafting::match(grid, 3).valid(), "an empty crafter makes nothing");
+        }
+
+        check(isCrafter(Blocks::Crafter) && isCrafter(Blocks::CrafterLit),
+              "both crafters are crafters");
+        check(lightEmission(Blocks::CrafterLit) > lightEmission(Blocks::Crafter),
+              "and the one that has just fired shows it");
+
+        {
+            ItemStack bench[9];
+            const StackId wanted[9] = {
+                Items::IronIngot, Items::IronIngot,     Items::IronIngot,
+                Items::IronIngot, Blocks::CraftingTable, Items::IronIngot,
+                Items::Redstone,  Blocks::PistonNorth,   Items::Redstone };
+            for (int i = 0; i < 9; ++i) { bench[i].id = wanted[i]; bench[i].count = 1; }
+            const CraftOutput out = Crafting::match(bench, 3);
+            check(out.valid() && out.id == Blocks::Crafter, "and a crafter can be made at all");
+        }
+
         // Crafted, or there is no way to hold one.
         {
             ItemStack grid[9];

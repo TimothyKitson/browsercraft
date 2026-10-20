@@ -189,6 +189,8 @@ namespace
         { "Sticky Piston Head",PistonTop, PistonTop,  PistonArm,      true,  true,  RenderType::Cube,   0,   0.5f, StickyPistonFace },
         { "Sticky Piston Head",PistonTop, PistonTop,  PistonArm,      true,  true,  RenderType::Cube,   0,   0.5f, StickyPistonFace },
         { "Sticky Piston Head",PistonTop, PistonTop,  PistonArm,      true,  true,  RenderType::Cube,   0,   0.5f, StickyPistonFace },
+        { "Crafter",      CrafterTop,    CrafterSide,    CrafterSide,    true,  true,  RenderType::Cube,   0,   2.5f },
+        { "Crafter",      CrafterTopLit, CrafterSide,    CrafterSide,    true,  true,  RenderType::Cube,   6,   2.5f },
     };
 }
 

@@ -333,7 +333,9 @@ void Application::renderInventoryScreen()
     // The top of the panel holds the armour and the character, or, with
     // a chest open, the chest's own three rows -- which are one row
     // shorter, so the panel closes up rather than leaving a gap.
-    const float topRows = m_chestOpen ? 3.0f : static_cast<float>(Inventory::ARMOR_SLOTS);
+    const float topRows = (m_chestOpen || m_crafterOpen)
+                              ? 3.0f
+                              : static_cast<float>(Inventory::ARMOR_SLOTS);
     const float topHeight = showPalette ? 0.0f : topRows * step + SLOT_GAP;
     const float gridHeight = gridRows * step + SLOT_GAP;
     const float hotbarHeight = step + SLOT_GAP;
@@ -378,8 +380,9 @@ void Application::renderInventoryScreen()
     // like a smudge, and vanilla does not use one here either.
     const char* title = creative ? CREATIVE_TABS[m_creativeTab].name
                                  : (m_chestOpen ? "CHEST"
+                                   : (m_crafterOpen ? "CRAFTER"
                                    : (m_furnaceOpen ? "FURNACE"
-                                   : (m_benchOpen ? "CRAFTING" : "INVENTORY")));
+                                   : (m_benchOpen ? "CRAFTING" : "INVENTORY"))));
     m_ui.text(title, panelX + 10.0f, panelY + 10.0f, 2.2f, GUI_TEXT);
 
     // --------------------------------------------- the open chest ---
@@ -404,8 +407,34 @@ void Application::renderInventoryScreen()
             }
     }
 
+    // ------------------------------------------ the open crafter ---
+    // Three by three at the top left, which is the shape of what it
+    // makes. There is no result slot: a crafter is worked by a pulse
+    // rather than by hand, and a slot that only ever looked back at
+    // you would be a lie.
+    if (m_crafterOpen && !showPalette)
+    {
+        const float topY = panelY + titleHeight;
+
+        for (int row = 0; row < 3; ++row)
+            for (int column = 0; column < 3; ++column)
+            {
+                const float x = panelX + SLOT_GAP + column * step;
+                const float y = topY + SLOT_GAP + row * step;
+                const int index = Inventory::CHEST_FIRST + row * 3 + column;
+
+                guiWell(x, y, SLOT_SIZE, SLOT_SIZE);
+                const ItemStack& stack = m_inventory.slot(index);
+                drawItem(x, y, SLOT_SIZE, stack.id, stack.count, glm::vec4(1.0f), stack.damage);
+                m_slotBoxes.push_back({ SlotBox::Kind::Slot, index, x, y, SLOT_SIZE });
+            }
+
+        m_ui.text("POWER IT TO CRAFT", panelX + SLOT_GAP + 4.0f * step,
+                  topY + SLOT_GAP + step, 1.6f, GUI_TEXT);
+    }
+
     // ------------------------------- armour, body preview, crafting ---
-    if (!showPalette && !m_chestOpen)
+    if (!showPalette && !m_chestOpen && !m_crafterOpen)
     {
         const float topY = panelY + titleHeight;
 
@@ -917,6 +946,7 @@ void Application::handleInventoryClick(int mouseX, int mouseY, bool rightButton,
 void Application::closeInventory()
 {
     stowChest();
+    stowCrafter();
     stowFurnace();
     stowEnchantingTable();
     stowAnvil();
@@ -1326,6 +1356,37 @@ void Application::fillVillageChest(const glm::ivec3& block)
     m_chests.put(block, filled);
 }
 
+// A crafter is opened the same way a chest is, and for the same
+// reason: the panel works on the inventory's own slots, so what the
+// block holds is copied in while it is open and copied back after.
+void Application::openCrafter(const glm::ivec3& block)
+{
+    m_crafterBlock = block;
+    m_crafterOpen = true;
+
+    const Chests::Contents& held = m_chests.at(block);
+    for (int i = 0; i < CRAFTER_SLOTS; ++i)
+        m_inventory.slot(Inventory::CHEST_FIRST + i) = held[i];
+
+    m_inventoryOpen = true;
+    setMouseCaptured(false);
+}
+
+void Application::stowCrafter()
+{
+    if (!m_crafterOpen) return;
+
+    Chests::Contents& held = m_chests.at(m_crafterBlock);
+    for (int i = 0; i < CRAFTER_SLOTS; ++i)
+    {
+        held[i] = m_inventory.slot(Inventory::CHEST_FIRST + i);
+        m_inventory.slot(Inventory::CHEST_FIRST + i).clear();
+    }
+
+    m_chests.forgetIfEmpty(m_crafterBlock);
+    m_crafterOpen = false;
+}
+
 void Application::stowChest()
 {
     if (!m_chestOpen) return;
@@ -1351,6 +1412,13 @@ void Application::syncOpenContainers()
     {
         Chests::Contents& held = m_chests.at(m_chestBlock);
         for (int i = 0; i < Inventory::CHEST_SLOTS; ++i)
+            held[i] = m_inventory.slot(Inventory::CHEST_FIRST + i);
+    }
+
+    if (m_crafterOpen)
+    {
+        Chests::Contents& held = m_chests.at(m_crafterBlock);
+        for (int i = 0; i < CRAFTER_SLOTS; ++i)
             held[i] = m_inventory.slot(Inventory::CHEST_FIRST + i);
     }
 

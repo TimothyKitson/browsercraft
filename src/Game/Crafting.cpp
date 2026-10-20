@@ -102,6 +102,15 @@ namespace
         { true,  0, 0, { Items::BreezeRod, Items::IronIngot },
           2, Items::Mace, 1 },
 
+        // The crafter: a bench that works on its own. Minecraft wants a
+        // dropper with the iron and the redstone, and there are none
+        // here, so it takes a piston -- the one other thing in the game
+        // whose whole job is moving something along when it is told to.
+        { false, 3, 3, { Items::IronIngot, Items::IronIngot,     Items::IronIngot,
+                         Items::IronIngot, Blocks::CraftingTable, Items::IronIngot,
+                         Items::Redstone,  Blocks::PistonNorth,   Items::Redstone },
+          0, Blocks::Crafter, 1 },
+
         // A piston: planks over cobble with an iron plate and the dust
         // that drives it, which is Minecraft's. Sticky wants a
         // slimeball and there are no slimes here, so it takes the

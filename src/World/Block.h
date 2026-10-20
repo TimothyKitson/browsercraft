@@ -225,6 +225,12 @@ namespace Blocks
         StickyPistonOutNorth, StickyPistonOutEast, StickyPistonOutSouth, StickyPistonOutWest,
         StickyPistonHeadNorth, StickyPistonHeadEast, StickyPistonHeadSouth, StickyPistonHeadWest,
 
+        // The crafter: a bench that works on its own when something
+        // tells it to. Two ids, the way everything powered here is:
+        // waiting, and just fired.
+        Crafter,
+        CrafterLit,
+
         Count
     };
 }
@@ -330,6 +336,11 @@ inline bool isTrialSpawner(BlockId id)
 {
     return id == Blocks::TrialSpawner || id == Blocks::TrialSpawnerActive ||
            id == Blocks::TrialSpawnerSpent;
+}
+
+inline bool isCrafter(BlockId id)
+{
+    return id == Blocks::Crafter || id == Blocks::CrafterLit;
 }
 
 inline bool isVault(BlockId id)

@@ -1300,6 +1300,32 @@ namespace
                                   static_cast<int>((hash2(x, y, 97) - 0.5f) * 20.0f)));
     }
 
+    // The crafter: a bench with a grid cut into its top, lit when it
+    // has just fired.
+    void paintCrafterTopIn(Tile& t, Color hole)
+    {
+        t.fill(Color{ 104, 88, 64 });
+        t.speckle(8, 98);
+        for (int gy = 0; gy < 3; ++gy)
+            for (int gx = 0; gx < 3; ++gx)
+                for (int y = 0; y < 3; ++y)
+                    for (int x = 0; x < 3; ++x)
+                        t.set(3 + gx * 5 + x, 3 + gy * 5 + y, hole);
+    }
+
+    void paintCrafterTop(Tile& t)    { paintCrafterTopIn(t, Color{ 44, 38, 30 }); }
+    void paintCrafterTopLit(Tile& t) { paintCrafterTopIn(t, Color{ 236, 158, 60 }); }
+
+    void paintCrafterSide(Tile& t)
+    {
+        paintPlanksIn(t, Color{ 118, 96, 66 }, 99);
+        for (int i = 0; i < Tile::N; ++i)
+        {
+            t.set(0, i, Color{ 88, 88, 92 });
+            t.set(Tile::N - 1, i, Color{ 88, 88, 92 });
+        }
+    }
+
     void paintObsidian(Tile& t)
     {
         t.fill(Color{ 21, 16, 30 });
@@ -3502,6 +3528,9 @@ namespace
         { Tiles::StickyPistonFace, paintStickyPistonFace },
         { Tiles::PistonBack, paintPistonBack },
         { Tiles::PistonArm, paintPistonArm },
+        { Tiles::CrafterTop, paintCrafterTop },
+        { Tiles::CrafterTopLit, paintCrafterTopLit },
+        { Tiles::CrafterSide, paintCrafterSide },
         { Tiles::Obsidian, paintObsidian },
         { Tiles::TallGrass, paintTallGrass },
         { Tiles::FlowerRed, paintFlowerRed },
@@ -3806,6 +3835,9 @@ namespace
         { Tiles::StickyPistonFace, { "piston_top_sticky", nullptr },                   Tinting::None,    0,   false },
         { Tiles::PistonBack,    { "piston_bottom", nullptr },                          Tinting::None,    0,   false },
         { Tiles::PistonArm,     { "piston_inner", nullptr },                           Tinting::None,    0,   false },
+        { Tiles::CrafterTop,    { "crafter_top", nullptr },                            Tinting::None,    0,   false },
+        { Tiles::CrafterTopLit, { "crafter_top_crafting", nullptr },                   Tinting::None,    0,   false },
+        { Tiles::CrafterSide,   { "crafter_west", "crafter_south", nullptr },          Tinting::None,    0,   false },
 
         // Everything added since the pack table was last gone over.
         // A tile with no row here is drawn procedurally however good a

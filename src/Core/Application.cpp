@@ -14,6 +14,7 @@
 #include "Game/Redstone.h"
 #include "Game/Trial.h"
 #include "Game/Piston.h"
+#include "Game/Crafting.h"
 #include "Game/Sleep.h"
 #include "Game/Explosion.h"
 #include "Game/Portal.h"
@@ -2086,6 +2087,20 @@ bool Application::frame()
                 m_world->setBlock(px + 8, py, pz + 5, Blocks::StickyPistonEast);
                 m_world->setBlock(px + 9, py, pz + 5, Blocks::Planks);
 
+                // A crafter with a lever of its own, loaded with four
+                // planks: throw it and a bench comes out of the top.
+                m_world->setBlock(px + 2, py, pz + 8, Blocks::Cobblestone);
+                m_world->setBlock(px + 2, py + 1, pz + 8, Blocks::LeverOn);
+                m_world->setBlock(px + 3, py, pz + 8, Blocks::Crafter);
+                {
+                    Chests::Contents& loaded = m_chests.at(glm::ivec3(px + 3, py, pz + 8));
+                    for (int i : { 0, 1, 3, 4 })
+                    {
+                        loaded[i].id = Blocks::Planks;
+                        loaded[i].count = 8;
+                    }
+                }
+
                 m_world->setBlock(px + 4, py, pz + 6, Blocks::Bookshelf);
                 m_world->setBlock(px + 7, py, pz + 6, Blocks::DiamondOre);
                 m_world->setBlock(px + 10, py, pz + 6, Blocks::EndPortalFrame);
@@ -2095,6 +2110,7 @@ bool Application::frame()
                 settleRedstone(glm::ivec3(px + 5, py, pz - 2));
                 settleRedstone(glm::ivec3(px + 5, py, pz + 2));
                 settleRedstone(glm::ivec3(px + 4, py, pz + 5));
+                settleRedstone(glm::ivec3(px + 3, py, pz + 8));
 
                 // Up and back, looking down the two runs.
                 m_player.position = glm::vec3(static_cast<float>(px) - 2.5f,
@@ -3634,6 +3650,25 @@ void Application::updateMining(float deltaTime)
                 }
             }
 
+            // A crafter gives back what was in its grid, the same way
+            // a chest does.
+            if (isCrafter(id))
+            {
+                if (m_crafterOpen && m_crafterBlock == hit.block) stowCrafter();
+
+                if (m_chests.has(hit.block))
+                {
+                    Chests::Contents& held = m_chests.at(hit.block);
+                    for (int slot = 0; slot < CRAFTER_SLOTS; ++slot)
+                    {
+                        for (int n = 0; n < held[slot].count; ++n)
+                            m_drops.spawnFromBrokenBlock(hit.block, held[slot].id);
+                        held[slot].clear();
+                    }
+                    m_chests.remove(hit.block);
+                }
+            }
+
             // A chest gives back everything in it. Twenty-seven stacks
             // is a lot to drop at once, which is why they come out of
             // the block rather than the player.
@@ -3797,6 +3832,39 @@ namespace
     };
 }
 
+// One pulse, one craft. The grid is read straight out of the table the
+// chests use, and what it makes goes out on top of the block rather
+// than into whatever is next to it: nothing here has a facing to put it
+// through.
+bool Application::fireCrafter(const glm::ivec3& block)
+{
+    if (!m_chests.has(block)) return false;
+
+    Chests::Contents& held = m_chests.at(block);
+
+    ItemStack grid[9];
+    for (int i = 0; i < CRAFTER_SLOTS; ++i) grid[i] = held[i];
+
+    const CraftOutput made = Crafting::match(grid, 3);
+    if (!made.valid()) return false;
+
+    Crafting::consume(grid, 3);
+    for (int i = 0; i < CRAFTER_SLOTS; ++i) held[i] = grid[i];
+
+    // Open in front of the player, the contents have to go back into
+    // the slots they are looking at as well.
+    if (m_crafterOpen && m_crafterBlock == block)
+        for (int i = 0; i < CRAFTER_SLOTS; ++i)
+            m_inventory.slot(Inventory::CHEST_FIRST + i) = held[i];
+
+    const glm::vec3 out = glm::vec3(block) + glm::vec3(0.5f, 1.2f, 0.5f);
+    for (int i = 0; i < made.count; ++i) m_drops.spawn(out, made.id, 1);
+
+    m_chests.forgetIfEmpty(block);
+    m_audio.play(Sound::Click, 0.7f, 1.5f);
+    return true;
+}
+
 // A trial spawner wakes when you come near, sends its wave, and pays a
 // key once the wave is down. Which spawners are awake is kept here
 // rather than in the world: the block id says waiting, fighting or
@@ -3953,6 +4021,21 @@ void Application::settleRedstone(const glm::ivec3& at)
             {
                 const int x = at.x + dx, y = at.y + dy, z = at.z + dz;
                 const BlockId here = cells.at(x, y, z);
+
+                // A crafter fires on the edge rather than while the
+                // power is on: the block id is the only state it has,
+                // and without the two ids a lit line would have it
+                // crafting sixty times a second.
+                if (isCrafter(here))
+                {
+                    const bool live = Redstone::poweredAt(cells, x, y, z);
+                    if (live == (here == Blocks::CrafterLit)) continue;
+
+                    if (live) fireCrafter(glm::ivec3(x, y, z));
+                    cells.set(x, y, z, live ? Blocks::CrafterLit : Blocks::Crafter);
+                    continue;
+                }
+
                 if (!isPistonBody(here)) continue;
 
                 const bool powered = Redstone::poweredAt(cells, x, y, z);
@@ -4822,6 +4905,13 @@ void Application::handlePlacement()
             if (isVault(used))
             {
                 openVault(bench.block);
+                return;
+            }
+
+            if (isCrafter(used))
+            {
+                openCrafter(bench.block);
+                m_audio.play(Sound::Click, 0.4f);
                 return;
             }
 

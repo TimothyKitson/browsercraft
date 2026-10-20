@@ -281,6 +281,15 @@ private:
     glm::ivec3 m_chestBlock{ 0 };
     bool m_chestOpen = false;
 
+    // Three by three, which is the whole of what a crafter is.
+    static constexpr int CRAFTER_SLOTS = 9;
+
+    // A crafter keeps what is in it in the same table a chest does: it
+    // is a nine-slot chest with a trigger, and giving it a table of its
+    // own would mean a second thing to save, load and forget about.
+    glm::ivec3 m_crafterBlock{ 0 };
+    bool m_crafterOpen = false;
+
     Furnaces m_furnaces;
     glm::ivec3 m_furnaceBlock{ 0 };
     bool m_furnaceOpen = false;
@@ -557,6 +566,12 @@ private:
     void buildReturnPortal();
     void openChest(const glm::ivec3& block);
     void stowChest();
+    void openCrafter(const glm::ivec3& block);
+    void stowCrafter();
+
+    // What a crafter does when something tells it to: makes one of
+    // whatever its grid spells and puts it out on top.
+    bool fireCrafter(const glm::ivec3& block);
     // Fills a chest standing in a village building the first time it
     // is opened. Does nothing to one the player built.
     void fillVillageChest(const glm::ivec3& block);

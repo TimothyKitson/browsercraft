@@ -134,6 +134,9 @@ namespace Tiles
         StickyPistonFace,
         PistonBack,
         PistonArm,
+        CrafterTop,
+        CrafterTopLit,
+        CrafterSide,
         RainDrop,
         SnowFlake,
 
@@ -162,7 +165,7 @@ namespace Tiles
     // 4096-square textures are already most of a gigabyte with their
     // mipmaps. The next step is to drop MAX_TILE_PIXELS, not to widen
     // the grid and hope.
-    constexpr int ItemFirst = 144;
+    constexpr int ItemFirst = 146;
 
     enum : int
     {
@@ -248,7 +251,7 @@ namespace Tiles
     };
 
     // Ten progressively more broken overlay tiles for the mining animation.
-    constexpr int CrackFirst = 240;
+    constexpr int CrackFirst = 246;
     constexpr int CrackStages = 10;
 
     static_assert(static_cast<int>(TileCount) <= ItemFirst, "block tiles ran into the items");
