@@ -89,6 +89,13 @@ void Projectiles::update(float deltaTime, const Blocks& blocks, Targets& targets
         Arrow& arrow = m_arrows[i];
         arrow.age += deltaTime;
 
+        if (arrow.kind == Arrows::Kind::Eye && arrow.age > Arrows::EYE_LIFETIME)
+        {
+            m_arrows[i] = m_arrows.back();
+            m_arrows.pop_back();
+            continue;
+        }
+
         if (arrow.age > Arrows::LIFETIME)
         {
             m_arrows[i] = m_arrows.back();
@@ -126,7 +133,8 @@ void Projectiles::update(float deltaTime, const Blocks& blocks, Targets& targets
                 break;
             }
 
-            if (blocks.solidAt(static_cast<int>(std::floor(next.x)),
+            if (!arrow.ghost() &&
+                blocks.solidAt(static_cast<int>(std::floor(next.x)),
                                static_cast<int>(std::floor(next.y)),
                                static_cast<int>(std::floor(next.z))))
             {
@@ -184,6 +192,7 @@ void Projectiles::render(Shader& shader, const Camera& camera, const Atlas& atla
     const TileUV arrowUV = tileUV(Tiles::ArrowInFlight);
     const TileUV fireUV = tileUV(Tiles::FireCharge);
     const TileUV windUV = tileUV(Tiles::WindCharge);
+    const TileUV eyeUV = tileUV(Tiles::ItemEyeOfEnder);
     constexpr float LENGTH = 0.62f;
     constexpr float WIDTH = 0.16f;
 
@@ -212,6 +221,7 @@ void Projectiles::render(Shader& shader, const Camera& camera, const Atlas& atla
                                         : world.blockLightAt(bx, by, bz) / 15.0f;
         const TileUV uv = (arrow.kind == Arrows::Kind::Fire) ? fireUV
                         : (arrow.kind == Arrows::Kind::Wind) ? windUV
+                        : (arrow.kind == Arrows::Kind::Eye)  ? eyeUV
                                                              : arrowUV;
         const float length = charge ? 0.34f : LENGTH;
         const float width = charge ? 0.34f : WIDTH;

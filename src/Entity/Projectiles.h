@@ -19,7 +19,12 @@ namespace Arrows
     // What is in the air. An arrow drops and sticks; a blaze's charge
     // flies flat and sets what it hits alight; a wind charge flies flat
     // and bursts, shoving everything near it.
-    enum class Kind : uint8_t { Shaft, Fire, Wind };
+    enum class Kind : uint8_t { Shaft, Fire, Wind,
+                                // An eye of ender, thrown to be
+                                // followed: it goes where the
+                                // stronghold is, through anything in
+                                // the way, and burns out.
+                                Eye };
 
     // How far a wind charge's burst reaches, and how hard it pushes at
     // the middle of it. Pure arithmetic over two points, so --selftest
@@ -39,6 +44,12 @@ namespace Arrows
     // Arrows that hit nothing are cleared up rather than left to fall
     // for ever.
     constexpr float LIFETIME = 30.0f;
+
+    // An eye shows you the way for a few seconds and is gone. Long
+    // enough to take a bearing off, short enough that you throw
+    // another rather than following this one for ever.
+    constexpr float EYE_LIFETIME = 3.5f;
+    constexpr float EYE_SPEED = 9.0f;
 
     // 0..1 for how long the bow has been held. A bow barely drawn is
     // worth almost nothing, which is what stops it being a machine gun.
@@ -70,6 +81,10 @@ struct Arrow
     Arrows::Kind kind = Arrows::Kind::Shaft;
 
     bool flies() const { return kind != Arrows::Kind::Shaft; }
+
+    // Through the ground rather than into it, and hitting nothing on
+    // the way: an eye is a signpost, not a weapon.
+    bool ghost() const { return kind == Arrows::Kind::Eye; }
 };
 
 class Projectiles

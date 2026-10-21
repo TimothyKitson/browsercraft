@@ -4,39 +4,29 @@
 
 namespace
 {
-    // One in so many squares has a village. Sparse enough that finding
-    // one is worth something, close enough that walking turns one up.
-    constexpr float VILLAGE_CHANCE = 0.62f;
     constexpr float HOUSE_CHANCE = 0.55f;
 }
 
 int Village::regionOf(int world)
 {
-    // Rounds towards negative infinity: plain division rounds towards
-    // zero, which would make the squares either side of the origin
-    // twice as wide as the rest and put two villages in one of them.
-    return (world >= 0) ? (world / REGION) : -(((-world) + REGION - 1) / REGION);
+    const int chunk = (world >= 0) ? (world / Structures::CHUNK)
+                                   : -(((-world) + Structures::CHUNK - 1) / Structures::CHUNK);
+    return Structures::squareOf(chunk, Structures::VILLAGE.spacing);
 }
 
 Village::Site Village::siteFor(int regionX, int regionZ, uint32_t seed)
 {
+    // One to a square, in the middle of whichever chunk the grid
+    // picked. Whether the ground there suits a village is settled
+    // elsewhere, which is Minecraft's order too: it chooses the place
+    // first and asks about the land after.
+    const Structures::Spot spot =
+        Structures::inSquare(Structures::VILLAGE, regionX, regionZ, seed);
+
     Site site;
-    if (hashToFloat(hashCoords(regionX, 101, regionZ, seed + 55001)) >= VILLAGE_CHANCE)
-        return site;
-
-    // Somewhere inside the square, but never so near an edge that the
-    // village could spill into the next one and meet its neighbour.
-    // The margin is MAX_RADIUS and a little: two sites pushed as close
-    // as the squares allow would otherwise sit exactly 2 * MAX_RADIUS
-    // apart, and their roofs overhang a block past that.
-    constexpr int MARGIN = MAX_RADIUS + 2;
-    const int room = REGION - MARGIN * 2;
-    const float alongX = hashToFloat(hashCoords(regionX, 102, regionZ, seed + 55002));
-    const float alongZ = hashToFloat(hashCoords(regionX, 103, regionZ, seed + 55003));
-
     site.exists = true;
-    site.x = regionX * REGION + MARGIN + static_cast<int>(alongX * static_cast<float>(room));
-    site.z = regionZ * REGION + MARGIN + static_cast<int>(alongZ * static_cast<float>(room));
+    site.x = spot.chunkX * Structures::CHUNK + Structures::CHUNK / 2;
+    site.z = spot.chunkZ * Structures::CHUNK + Structures::CHUNK / 2;
     return site;
 }
 

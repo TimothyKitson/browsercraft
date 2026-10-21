@@ -2,36 +2,24 @@
 #include "Noise.h"
 #include <algorithm>
 
-namespace
-{
-    // Rarer than a village: one square in three has one, and a square
-    // is bigger. A chamber is meant to be a trip rather than a thing
-    // you stumble into on the way somewhere else.
-    constexpr float CHAMBER_CHANCE = 0.34f;
-}
-
 int TrialChamber::regionOf(int world)
 {
-    return (world >= 0) ? (world / REGION) : -(((-world) + REGION - 1) / REGION);
+    const int chunk = (world >= 0) ? (world / Structures::CHUNK)
+                                   : -(((-world) + Structures::CHUNK - 1) / Structures::CHUNK);
+    return Structures::squareOf(chunk, Structures::TRIAL_CHAMBER.spacing);
 }
 
 TrialChamber::Site TrialChamber::siteFor(int regionX, int regionZ, uint32_t seed)
 {
-    Site site;
-    if (hashToFloat(hashCoords(regionX, 211, regionZ, seed + 77001)) >= CHAMBER_CHANCE)
-        return site;
+    const Structures::Spot spot =
+        Structures::inSquare(Structures::TRIAL_CHAMBER, regionX, regionZ, seed);
 
-    // Never near an edge, so two chambers in neighbouring squares
-    // cannot grow into each other.
-    constexpr int MARGIN = MAX_RADIUS + 2;
-    const int room = REGION - MARGIN * 2;
-    const float alongX = hashToFloat(hashCoords(regionX, 212, regionZ, seed + 77002));
-    const float alongZ = hashToFloat(hashCoords(regionX, 213, regionZ, seed + 77003));
     const float deep = hashToFloat(hashCoords(regionX, 214, regionZ, seed + 77004));
 
+    Site site;
     site.exists = true;
-    site.x = regionX * REGION + MARGIN + static_cast<int>(alongX * static_cast<float>(room));
-    site.z = regionZ * REGION + MARGIN + static_cast<int>(alongZ * static_cast<float>(room));
+    site.x = spot.chunkX * Structures::CHUNK + Structures::CHUNK / 2;
+    site.z = spot.chunkZ * Structures::CHUNK + Structures::CHUNK / 2;
     site.y = FLOOR_MIN + static_cast<int>(deep * static_cast<float>(FLOOR_MAX - FLOOR_MIN));
     return site;
 }

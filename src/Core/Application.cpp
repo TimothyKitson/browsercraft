@@ -19,6 +19,7 @@
 #include "Game/Sleep.h"
 #include "Game/Explosion.h"
 #include "Game/Portal.h"
+#include "World/Stronghold.h"
 #include "World/WorldSave.h"
 #include <glm/gtc/matrix_transform.hpp>
 #include <SDL.h>
@@ -1454,7 +1455,7 @@ bool Application::frame()
             m_startupScreen == "jungle" || m_startupScreen == "savanna" ||
             m_startupScreen == "redstone" || m_startupScreen == "chamber" ||
             m_startupScreen == "cave" || m_startupScreen == "dripstone" ||
-            m_startupScreen == "vault" ||
+            m_startupScreen == "vault" || m_startupScreen == "stronghold" ||
             m_startupScreen == "rock")
         {
             // Dev aid: open the inventory with something in it, so the
@@ -1498,6 +1499,7 @@ bool Application::frame()
                                   m_startupScreen != "redstone" &&
                                   m_startupScreen != "chamber" &&
                                   m_startupScreen != "vault" &&
+                                  m_startupScreen != "stronghold" &&
                                   m_startupScreen != "cave" &&
                                   m_startupScreen != "dripstone" &&
                                   m_startupScreen != "rock" &&
@@ -2060,6 +2062,43 @@ bool Application::frame()
                 else
                 {
                     std::printf("No cave of that sort within forty chunks\n");
+                    std::fflush(stdout);
+                }
+
+                m_player.mode = GameMode::Creative;
+                m_player.health = Player::MAX_HEALTH;
+            }
+
+            // Into the portal room of the nearest stronghold, which
+            // is the one room in the world worth a picture.
+            if (m_startupScreen == "stronghold")
+            {
+                const Stronghold::Site hold = m_world->generator().nearestStronghold(
+                    static_cast<int>(m_player.position.x),
+                    static_cast<int>(m_player.position.z));
+
+                if (hold.exists)
+                {
+                    m_player.position = glm::vec3(static_cast<float>(hold.x) + 0.5f,
+                                                  static_cast<float>(hold.y),
+                                                  static_cast<float>(hold.z) + 4.5f);
+                    m_player.velocity = glm::vec3(0.0f);
+                    m_player.flying = true;
+                    m_placeOnSurface = false;
+                    m_camera.setOrientation(-90.0f, -14.0f);
+                    m_camera.addLook(0.0f, 0.0f, 0.0f);
+
+                    m_pendingArena = true;
+                    m_arenaKind = ArenaKind::ChamberProps;
+                    m_arenaX = hold.x;
+                    m_arenaY = hold.y;
+                    m_arenaZ = hold.z;
+
+                    m_inventory.add(Items::EyeOfEnder, 12);
+
+                    std::printf("Stronghold at %d, %d, floor %d, %d eyes already set\n",
+                                hold.x, hold.z, hold.y,
+                                Stronghold::eyesAlreadySet(hold, m_world->seed()));
                     std::fflush(stdout);
                 }
 
@@ -5328,6 +5367,52 @@ void Application::handlePlacement()
                 stack.count -= 1;
                 if (stack.count <= 0) stack.clear();
             }
+        }
+        return;
+    }
+
+    // An eye thrown rather than set: it goes towards the nearest
+    // stronghold, through whatever is in the way, and burns out. That
+    // is the whole of how a stronghold is found, here and there.
+    if (stack.id == Items::EyeOfEnder)
+    {
+        const Stronghold::Site hold =
+            m_world->generator().nearestStronghold(static_cast<int>(m_player.position.x),
+                                                   static_cast<int>(m_player.position.z));
+
+        glm::vec3 heading = glm::vec3(0.0f, 1.0f, 0.0f);
+        if (hold.exists)
+        {
+            const glm::vec3 away(static_cast<float>(hold.x) + 0.5f - m_player.position.x,
+                                 0.0f,
+                                 static_cast<float>(hold.z) + 0.5f - m_player.position.z);
+            const float range = glm::length(away);
+            if (range > 1.0f)
+            {
+                heading = glm::normalize(away + glm::vec3(0.0f, 0.55f, 0.0f));
+
+                char line[96];
+                std::snprintf(line, sizeof(line), "The eye flies off. %d blocks.",
+                              static_cast<int>(range));
+                m_chatLog.add(line);
+            }
+            else
+            {
+                m_chatLog.add("The eye hangs in the air. You are standing on it.");
+            }
+        }
+
+        m_arrows.spawn(m_player.eyePosition() + heading * 0.6f,
+                       heading * Arrows::EYE_SPEED, 0, true, Arrows::Kind::Eye);
+        m_audio.play(Sound::MobEndermanSay, 0.5f, 1.6f);
+
+        // Minecraft loses one throw in five. Losing none would make
+        // the walk free; losing all of them would make it a tax.
+        if (!m_player.creative() &&
+            (static_cast<int>(m_elapsedSeconds * 977.0f) % 5) == 0)
+        {
+            stack.count -= 1;
+            if (stack.count <= 0) stack.clear();
         }
         return;
     }

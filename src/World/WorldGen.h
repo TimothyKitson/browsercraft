@@ -3,6 +3,7 @@
 #include "Noise.h"
 #include "Village.h"
 #include "TrialChamber.h"
+#include "Stronghold.h"
 
 #include "Dimension.h"
 const char* dimensionFolder(Dimension dimension);
@@ -69,6 +70,11 @@ public:
     // chambers rarer, so the default search is wider.
     TrialChamber::Site nearestChamber(int fromX, int fromZ, int squares = 3) const;
 
+    // The stronghold nearest a place. There is always one: they sit on
+    // rings round the origin so an eye of ender always has something
+    // to point at.
+    Stronghold::Site nearestStronghold(int fromX, int fromZ) const;
+
     // Why a site was turned down, for --villageinfo. Counting the
     // reasons is the only way to tell "the land is too steep" from
     // "there are no sites at all".
@@ -106,6 +112,9 @@ private:
     // which works because the layout depends on nothing but the seed.
     void buildVillages(Chunk& chunk) const;
     void buildTrialChambers(Chunk& chunk) const;
+    void buildStrongholds(Chunk& chunk) const;
+    void stampStrongholdRoom(Chunk& chunk, const Stronghold::Site& site,
+                             const Stronghold::Room& room) const;
     void stampChamberRoom(Chunk& chunk, const TrialChamber::Site& site,
                           const TrialChamber::Room& room) const;
     void layPaths(Chunk& chunk, const Village::Site& site,

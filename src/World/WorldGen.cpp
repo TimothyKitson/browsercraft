@@ -1,4 +1,5 @@
 #include "WorldGen.h"
+#include "Game/EndPortal.h"
 #include <algorithm>
 #include <cmath>
 
@@ -161,6 +162,7 @@ void WorldGen::generate(Chunk& chunk) const
     decorate(chunk);
     buildVillages(chunk);
     buildTrialChambers(chunk);
+    buildStrongholds(chunk);
 }
 
 // A closed cavern system rather than a landscape: solid netherrack between a
@@ -1489,6 +1491,131 @@ TrialChamber::Site WorldGen::nearestChamber(int fromX, int fromZ, int squares) c
         }
 
     return best;
+}
+
+Stronghold::Site WorldGen::nearestStronghold(int fromX, int fromZ) const
+{
+    return Stronghold::nearest(fromX, fromZ, m_seed);
+}
+
+// The one structure the game is built round finding. Cut into the rock
+// like a trial chamber, with a ring of end portal frames in the middle
+// room over a pool of lava -- some of the eyes already set, the rest
+// yours to find.
+void WorldGen::buildStrongholds(Chunk& chunk) const
+{
+    const int baseX = chunk.position().x * Chunk::SX;
+    const int baseZ = chunk.position().z * Chunk::SZ;
+    const int maxX = baseX + Chunk::SX - 1;
+    const int maxZ = baseZ + Chunk::SZ - 1;
+
+    const Stronghold::Site site =
+        Stronghold::touching(baseX - 1, baseZ - 1, maxX + 1, maxZ + 1, m_seed);
+    if (!site.exists) return;
+
+    for (const Stronghold::Room& room : Stronghold::plan(site, m_seed))
+        stampStrongholdRoom(chunk, site, room);
+
+    // A shaft up, the same as a chamber's: a stronghold nobody can
+    // find is the End nobody can reach.
+    const int lx = site.x - baseX;
+    const int lz = site.z - baseZ;
+    if (!Chunk::inBounds(lx, 0, lz)) return;
+
+    const int top = surfaceHeight(site.x, site.z);
+    if (top <= SEA_LEVEL) return;
+
+    // Clear of the portal itself, so the shaft does not come down
+    // through the middle of the ring.
+    const int shaftX = site.x + 3;
+    const int sx = shaftX - baseX;
+    if (!Chunk::inBounds(sx, 0, lz)) return;
+
+    const int shaftTop = surfaceHeight(shaftX, site.z);
+    if (shaftTop <= SEA_LEVEL) return;
+
+    for (int y = site.y + 1; y <= shaftTop && y < Chunk::SY; ++y)
+        chunk.setBlockRaw(sx, y, lz, Blocks::LadderNorth);
+}
+
+void WorldGen::stampStrongholdRoom(Chunk& chunk, const Stronghold::Site& site,
+                                   const Stronghold::Room& room) const
+{
+    using namespace Stronghold;
+
+    const int floor = site.y - 1;
+    const int ceiling = site.y + HEADROOM;
+
+    for (int x = room.x - 1; x <= room.x + room.width; ++x)
+        for (int z = room.z - 1; z <= room.z + room.depth; ++z)
+            for (int y = floor; y <= ceiling; ++y)
+                put(chunk, x, y, z, Blocks::Cobblestone);
+
+    for (int x = room.x; x < room.x + room.width; ++x)
+        for (int z = room.z; z < room.z + room.depth; ++z)
+            for (int y = site.y; y < ceiling; ++y)
+                put(chunk, x, y, z, Blocks::Air);
+
+    constexpr int HALF = GRID / 2;
+    const int midX = room.x + room.width / 2;
+    const int midZ = room.z + room.depth / 2;
+
+    auto doorway = [&](int x, int z, bool alongX) {
+        for (int step = -1; step <= 1; ++step)
+            for (int y = site.y; y <= site.y + 2; ++y)
+                put(chunk, alongX ? x : x + step, y, alongX ? z + step : z, Blocks::Air);
+    };
+
+    if (room.gx > -HALF) doorway(room.x - 1, midZ, true);
+    if (room.gx < HALF)  doorway(room.x + room.width, midZ, true);
+    if (room.gz > -HALF) doorway(midX, room.z - 1, false);
+    if (room.gz < HALF)  doorway(midX, room.z + room.depth, false);
+
+    for (int cx = 0; cx < 2; ++cx)
+        for (int cz = 0; cz < 2; ++cz)
+            put(chunk, room.x + (cx ? room.width - 1 : 0), site.y + HEADROOM - 1,
+                room.z + (cz ? room.depth - 1 : 0), Blocks::Torch);
+
+    switch (room.kind)
+    {
+        case Kind::Portal:
+        {
+            // Lava under the ring, which is Minecraft's, and the
+            // twelve frames round the three by three above it.
+            for (int dx = -2; dx <= 2; ++dx)
+                for (int dz = -2; dz <= 2; ++dz)
+                    put(chunk, midX + dx, site.y - 1, midZ + dz, Blocks::Lava);
+
+            int offsets[EndPortal::FRAME_COUNT][2];
+            EndPortal::frameOffsets(offsets);
+
+            for (int i = 0; i < EndPortal::FRAME_COUNT; ++i)
+            {
+                const BlockId frame = Stronghold::eyeInFrame(site, m_seed, i)
+                                          ? Blocks::EndPortalFrameFilled
+                                          : Blocks::EndPortalFrame;
+                put(chunk, midX + offsets[i][0], site.y, midZ + offsets[i][1], frame);
+            }
+            break;
+        }
+
+        case Kind::Library:
+            for (int dx = -2; dx <= 2; ++dx)
+                for (int dy = 0; dy < 2; ++dy)
+                {
+                    put(chunk, midX + dx, site.y + dy, room.z, Blocks::Bookshelf);
+                    put(chunk, midX + dx, site.y + dy, room.z + room.depth - 1,
+                        Blocks::Bookshelf);
+                }
+            break;
+
+        case Kind::Store:
+            put(chunk, midX, site.y, midZ, Blocks::Chest);
+            break;
+
+        case Kind::Hall:
+            break;
+    }
 }
 
 void WorldGen::buildVillages(Chunk& chunk) const

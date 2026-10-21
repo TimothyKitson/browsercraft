@@ -11,6 +11,8 @@
 #include "Game/Copper.h"
 #include "Game/Trial.h"
 #include "World/TrialChamber.h"
+#include "World/Structures.h"
+#include "World/Stronghold.h"
 #include "Game/Items.h"
 #include "Game/Farming.h"
 #include "Core/KeyBindings.h"
@@ -1070,8 +1072,14 @@ namespace
                       "a square gives the same village every time it is asked");
             }
 
-        // A site sits far enough inside its own square that no two can
-        // ever meet, which is the whole reason for the squares.
+        // Minecraft's rule, which is not the one this used to use: a
+        // village lands anywhere in the first (spacing - separation)
+        // chunks of its square, and the separation left over at the far
+        // end is what guarantees the gap. Checking it sat in the middle
+        // of its square was checking a scheme of our own.
+        const int window = (Structures::VILLAGE.spacing - Structures::VILLAGE.separation) *
+                           Structures::CHUNK;
+
         int found = 0;
         std::vector<Village::Site> sites;
         for (int rz = -4; rz <= 4; ++rz)
@@ -1082,22 +1090,26 @@ namespace
                 ++found;
                 sites.push_back(site);
 
-                const int lowX = rx * Village::REGION + Village::MAX_RADIUS;
-                const int highX = (rx + 1) * Village::REGION - Village::MAX_RADIUS;
-                check(site.x >= lowX && site.x <= highX, "a village stays inside its own square");
-                const int lowZ = rz * Village::REGION + Village::MAX_RADIUS;
-                const int highZ = (rz + 1) * Village::REGION - Village::MAX_RADIUS;
-                check(site.z >= lowZ && site.z <= highZ, "on both axes");
+                const int lowX = rx * Village::REGION;
+                check(site.x >= lowX && site.x < lowX + window,
+                      "a village lands in its square's placement window");
+                const int lowZ = rz * Village::REGION;
+                check(site.z >= lowZ && site.z < lowZ + window, "on both axes");
             }
         check(found > 10, "a stretch of world that size holds a good few villages");
 
+        // And the guarantee that window buys: no two can be closer than
+        // the separation, however the dice fall.
+        const int apart = Structures::VILLAGE.separation * Structures::CHUNK;
         for (size_t i = 0; i < sites.size(); ++i)
             for (size_t j = i + 1; j < sites.size(); ++j)
             {
                 const int gapX = std::abs(sites[i].x - sites[j].x);
                 const int gapZ = std::abs(sites[i].z - sites[j].z);
+                check(gapX >= apart || gapZ >= apart,
+                      "and no two villages are closer than the separation allows");
                 check(gapX > Village::MAX_RADIUS * 2 || gapZ > Village::MAX_RADIUS * 2,
-                      "and no two villages ever reach each other");
+                      "so none of them ever reaches another");
             }
 
         // --- the layout ---------------------------------------------
@@ -4162,6 +4174,210 @@ namespace
         // layout every Minecraft skin uses, and it is the reason the
         // rule above runs the way it does rather than the other way.
         check(atHand > 0.5f, "the hand samples the lower half of the patch");
+    }
+
+    void testStructurePlacement()
+    {
+        section("structures: Minecraft's own placement rules");
+
+        constexpr uint32_t SEED = 4242u;
+
+        // The grid rule, checked on every kind this game places by it.
+        // Two guarantees: one to a square, and never closer than the
+        // separation. That second one is what the separation is for,
+        // and nothing else in the scheme enforces it.
+        const Structures::Grid GRIDS[] = {
+            Structures::VILLAGE, Structures::TRIAL_CHAMBER, Structures::DESERT_PYRAMID,
+            Structures::OCEAN_MONUMENT, Structures::NETHER_FORTRESS,
+            Structures::RUINED_PORTAL, Structures::SHIPWRECK,
+        };
+
+        for (const Structures::Grid& grid : GRIDS)
+        {
+            check(grid.separation < grid.spacing,
+                  "a structure's separation leaves room inside its spacing");
+
+            std::vector<Structures::Spot> spots;
+            for (int sz = -6; sz <= 6; ++sz)
+                for (int sx = -6; sx <= 6; ++sx)
+                {
+                    const Structures::Spot spot = Structures::inSquare(grid, sx, sz, SEED);
+                    check(spot.exists, "every square on the grid has one");
+
+                    const int lowX = sx * grid.spacing;
+                    const int lowZ = sz * grid.spacing;
+                    check(spot.chunkX >= lowX &&
+                              spot.chunkX < lowX + grid.spacing - grid.separation,
+                          "and it lands in that square's placement window");
+                    check(spot.chunkZ >= lowZ &&
+                              spot.chunkZ < lowZ + grid.spacing - grid.separation,
+                          "on both axes");
+
+                    spots.push_back(spot);
+                }
+
+            int tooClose = 0;
+            for (size_t i = 0; i < spots.size(); ++i)
+                for (size_t j = i + 1; j < spots.size(); ++j)
+                {
+                    const int gapX = std::abs(spots[i].chunkX - spots[j].chunkX);
+                    const int gapZ = std::abs(spots[i].chunkZ - spots[j].chunkZ);
+                    if (gapX < grid.separation && gapZ < grid.separation) ++tooClose;
+                }
+            check(tooClose == 0, "and no two of them are closer than the separation");
+        }
+
+        // Two kinds of structure must not land on top of each other
+        // every time, which is what the salt is for.
+        {
+            int sameChunk = 0;
+            for (int sz = -8; sz <= 8; ++sz)
+                for (int sx = -8; sx <= 8; ++sx)
+                {
+                    const Structures::Spot a =
+                        Structures::inSquare(Structures::DESERT_PYRAMID, sx, sz, SEED);
+                    const Structures::Spot b =
+                        Structures::inSquare(Structures::JUNGLE_TEMPLE, sx, sz, SEED);
+                    if (a.chunkX == b.chunkX && a.chunkZ == b.chunkZ) ++sameChunk;
+                }
+            check(sameChunk == 0, "two kinds with different salts never share a chunk");
+        }
+
+        // Negative coordinates round the right way, or the squares
+        // either side of the origin are twice as wide as the rest.
+        check(Structures::squareOf(0, 32) == 0, "the origin is in square zero");
+        check(Structures::squareOf(31, 32) == 0, "and so is the far end of that square");
+        check(Structures::squareOf(32, 32) == 1, "the next chunk starts square one");
+        check(Structures::squareOf(-1, 32) == -1, "a chunk west of the origin is square -1");
+        check(Structures::squareOf(-32, 32) == -1, "and so is the far end of that one");
+        check(Structures::squareOf(-33, 32) == -2, "with -2 beginning after it");
+
+        // The spread rule: a flat chance per chunk, the same answer
+        // every time, and roughly the rate it claims.
+        {
+            int hits = 0;
+            for (int cz = 0; cz < 100; ++cz)
+                for (int cx = 0; cx < 100; ++cx)
+                    if (Structures::spreadAt(cx, cz, SEED, 1234u, 0.01f)) ++hits;
+
+            check(hits > 40 && hits < 170, "a one-in-a-hundred spread comes up about that often");
+            check(Structures::spreadAt(5, 7, SEED, 1234u, 0.01f) ==
+                      Structures::spreadAt(5, 7, SEED, 1234u, 0.01f),
+                  "and gives the same answer every time it is asked");
+        }
+
+        section("structures: the strongholds, which are the exception");
+
+        // There are always some. Everything else in the world may or
+        // may not be nearby; an eye of ender has to have something to
+        // point at from anywhere at all.
+        check(Structures::strongholdCount() > 0, "a world always has strongholds in it");
+
+        std::vector<Stronghold::Site> holds;
+        for (int i = 0; i < Structures::strongholdCount(); ++i)
+        {
+            const Stronghold::Site site = Stronghold::byIndex(i, SEED);
+            check(site.exists, "every one of them exists");
+            check(site.y >= Stronghold::FLOOR_MIN && site.y <= Stronghold::FLOOR_MAX,
+                  "and is underground");
+            holds.push_back(site);
+        }
+
+        // None of them on top of spawn, and none on top of another.
+        for (const Stronghold::Site& site : holds)
+        {
+            const double away = std::sqrt(static_cast<double>(site.x) * site.x +
+                                          static_cast<double>(site.z) * site.z);
+            check(away > 800.0, "none of them is on top of spawn");
+        }
+
+        for (size_t i = 0; i < holds.size(); ++i)
+            for (size_t j = i + 1; j < holds.size(); ++j)
+            {
+                const int gapX = std::abs(holds[i].x - holds[j].x);
+                const int gapZ = std::abs(holds[i].z - holds[j].z);
+                check(gapX > Stronghold::MAX_RADIUS * 2 || gapZ > Stronghold::MAX_RADIUS * 2,
+                      "and no two of them are built into each other");
+            }
+
+        // The nearest one really is the nearest.
+        for (int i = 0; i < 40; ++i)
+        {
+            const int fromX = (i - 20) * 320;
+            const int fromZ = (i * 97 % 41 - 20) * 280;
+
+            const Stronghold::Site near = Stronghold::nearest(fromX, fromZ, SEED);
+            check(near.exists, "there is always one to find");
+
+            const long long best = (long long)(near.x - fromX) * (near.x - fromX) +
+                                   (long long)(near.z - fromZ) * (near.z - fromZ);
+            for (const Stronghold::Site& other : holds)
+            {
+                const long long distance = (long long)(other.x - fromX) * (other.x - fromX) +
+                                           (long long)(other.z - fromZ) * (other.z - fromZ);
+                check(distance >= best, "and nothing else is nearer than the one it names");
+            }
+        }
+
+        // The layout: one portal room, and a ring of twelve in it.
+        {
+            const Stronghold::Site site = holds.front();
+            const std::vector<Stronghold::Room> rooms = Stronghold::plan(site, SEED);
+            check(static_cast<int>(rooms.size()) == Stronghold::GRID * Stronghold::GRID,
+                  "a stronghold is a full grid of rooms");
+
+            int portals = 0;
+            for (const Stronghold::Room& room : rooms)
+                if (room.kind == Stronghold::Kind::Portal) ++portals;
+            check(portals == 1, "with exactly one portal room in it");
+
+            const int eyes = Stronghold::eyesAlreadySet(site, SEED);
+            check(eyes >= 0 && eyes < EndPortal::FRAME_COUNT,
+                  "some of the eyes are set and never all of them");
+            check(Stronghold::eyeInFrame(site, SEED, 0) ==
+                      Stronghold::eyeInFrame(site, SEED, 0),
+                  "and which ones is the same every time it is asked");
+        }
+
+        // And it is built. The portal room has to hold twelve frames,
+        // or the End is somewhere you can only reach by crafting.
+        {
+            const WorldGen generator(SEED);
+            const Stronghold::Site site = generator.nearestStronghold(0, 0);
+
+            int frames = 0, filled = 0, lava = 0, shelves = 0;
+            const int chunkX = (site.x >= 0 ? site.x : site.x - Chunk::SX + 1) / Chunk::SX;
+            const int chunkZ = (site.z >= 0 ? site.z : site.z - Chunk::SZ + 1) / Chunk::SZ;
+
+            for (int cz = chunkZ - 2; cz <= chunkZ + 2; ++cz)
+                for (int cx = chunkX - 2; cx <= chunkX + 2; ++cx)
+                {
+                    Chunk chunk(ChunkPos{ cx, cz });
+                    generator.generate(chunk);
+
+                    for (int y = site.y - 2; y <= site.y + Stronghold::HEADROOM; ++y)
+                        for (int lz = 0; lz < Chunk::SZ; ++lz)
+                            for (int lx = 0; lx < Chunk::SX; ++lx)
+                            {
+                                if (y < 0 || y >= Chunk::SY) continue;
+                                switch (chunk.getBlock(lx, y, lz))
+                                {
+                                    case Blocks::EndPortalFrame: ++frames; break;
+                                    case Blocks::EndPortalFrameFilled: ++filled; break;
+                                    case Blocks::Lava: ++lava; break;
+                                    case Blocks::Bookshelf: ++shelves; break;
+                                    default: break;
+                                }
+                            }
+                }
+
+            check(frames + filled == EndPortal::FRAME_COUNT,
+                  "the portal room holds the twelve frames and no more");
+            check(filled < EndPortal::FRAME_COUNT,
+                  "and never arrives finished, or there would be nothing to do");
+            check(lava > 0, "with lava under the ring, which is Minecraft's");
+            check(shelves > 0, "and a library somewhere in it");
+        }
     }
 
     void testCaves()
@@ -7549,6 +7765,7 @@ int runSelfTest()
     testLadders();
     testFirstPersonArm();
     testHandSwing();
+    testStructurePlacement();
     testCaves();
     testCopper();
     testPistons();

@@ -1,4 +1,5 @@
 #pragma once
+#include "Structures.h"
 #include <cstdint>
 #include <vector>
 
@@ -15,11 +16,11 @@
 // check none of them overlap without generating any terrain.
 namespace Village
 {
-    // The world is cut into squares with at most one village to a
-    // square, which is what stops two of them growing into each other.
-    // A village reaches no further than MAX_RADIUS from its middle, so
-    // a chunk need only look at the squares within that.
-    constexpr int REGION = 352;
+    // Placed on Minecraft's own grid: thirty-four chunks to a square
+    // with eight chunks of separation, which is what its village
+    // structure set says. REGION is that in blocks, for the code here
+    // that still thinks in them.
+    constexpr int REGION = Structures::VILLAGE.spacing * Structures::CHUNK;
     constexpr int PLOT = 11;         // one building's share of the ground
     constexpr int GRID = 5;          // plots across, centred on the middle
     constexpr int MAX_RADIUS = (PLOT * GRID) / 2 + 2;

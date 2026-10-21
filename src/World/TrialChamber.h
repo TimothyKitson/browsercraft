@@ -1,4 +1,5 @@
 #pragma once
+#include "Structures.h"
 #include <cstdint>
 #include <vector>
 
@@ -15,9 +16,10 @@
 // check none of them overlap without generating any terrain.
 namespace TrialChamber
 {
-    // One chamber to a square, bigger than the village square: a
-    // chamber is rarer than a village and worth going looking for.
-    constexpr int REGION = 576;
+    // Minecraft's own grid for them: thirty-four chunks to a square
+    // with twelve of separation, so a chamber is as far from the next
+    // one as it is there. REGION is that in blocks.
+    constexpr int REGION = Structures::TRIAL_CHAMBER.spacing * Structures::CHUNK;
 
     constexpr int ROOM = 11;     // a room and the wall round it
     constexpr int GRID = 3;      // rooms across, centred on the middle
