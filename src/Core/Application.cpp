@@ -1453,6 +1453,7 @@ bool Application::frame()
             m_startupScreen == "nethermobs" ||
             m_startupScreen == "jungle" || m_startupScreen == "savanna" ||
             m_startupScreen == "redstone" || m_startupScreen == "chamber" ||
+            m_startupScreen == "cave" || m_startupScreen == "dripstone" ||
             m_startupScreen == "rock")
         {
             // Dev aid: open the inventory with something in it, so the
@@ -1495,6 +1496,8 @@ bool Application::frame()
                                   m_startupScreen != "savanna" &&
                                   m_startupScreen != "redstone" &&
                                   m_startupScreen != "chamber" &&
+                                  m_startupScreen != "cave" &&
+                                  m_startupScreen != "dripstone" &&
                                   m_startupScreen != "rock" &&
                                   m_startupScreen != "portal" &&
                                   m_startupScreen != "nether";
@@ -1985,6 +1988,78 @@ bool Application::frame()
                 m_world->setBlock(px + 4, py, pz - 6, Blocks::Bookshelf);
                 m_world->setBlock(px + 6, py, pz - 6, Blocks::DiamondOre);
                 m_world->setBlock(px + 8, py, pz - 6, Blocks::EndPortalFrame);
+
+                m_player.mode = GameMode::Creative;
+                m_player.health = Player::MAX_HEALTH;
+            }
+
+            // Into the nearest cave of the sort asked for. The cave
+            // has to be found in a chunk the world has not loaded yet,
+            // so the generator is run on a chunk of its own to look --
+            // the same thing --oreinfo does to count ore.
+            if (m_startupScreen == "cave" || m_startupScreen == "dripstone")
+            {
+                const WorldGen::CaveKind wanted = m_startupScreen == "cave"
+                                                      ? WorldGen::CaveKind::Lush
+                                                      : WorldGen::CaveKind::Dripstone;
+                const WorldGen& gen = m_world->generator();
+
+                bool found = false;
+                glm::ivec3 stand(0);
+
+                for (int radius = 0; radius <= 40 && !found; ++radius)
+                    for (int cz = -radius; cz <= radius && !found; ++cz)
+                        for (int cx = -radius; cx <= radius && !found; ++cx)
+                        {
+                            if (std::max(std::abs(cx), std::abs(cz)) != radius) continue;
+                            if (gen.caveKindAt(cx * Chunk::SX + 8, cz * Chunk::SZ + 8) != wanted)
+                                continue;
+
+                            Chunk probe(ChunkPos{ cx, cz });
+                            gen.generate(probe);
+
+                            // A pocket with room to stand in and a
+                            // floor under it, rather than the first
+                            // air it happens to find.
+                            for (int y = 12; y < 54 && !found; ++y)
+                                for (int lz = 2; lz < Chunk::SZ - 2 && !found; ++lz)
+                                    for (int lx = 2; lx < Chunk::SX - 2 && !found; ++lx)
+                                    {
+                                        if (probe.getBlock(lx, y, lz) != Blocks::Air) continue;
+                                        if (probe.getBlock(lx, y + 1, lz) != Blocks::Air) continue;
+                                        if (!isSolid(probe.getBlock(lx, y - 1, lz))) continue;
+
+                                        stand = glm::ivec3(cx * Chunk::SX + lx, y,
+                                                           cz * Chunk::SZ + lz);
+                                        found = true;
+                                    }
+                        }
+
+                if (found)
+                {
+                    m_player.position = glm::vec3(stand) + glm::vec3(0.5f, 0.0f, 0.5f);
+                    m_player.velocity = glm::vec3(0.0f);
+                    m_player.flying = true;
+                    m_placeOnSurface = false;
+                    m_camera.setOrientation(0.0f, -6.0f);
+                    m_camera.addLook(0.0f, 0.0f, 0.0f);
+
+                    m_pendingArena = true;
+                    m_arenaKind = ArenaKind::CaveProps;
+                    m_arenaX = stand.x;
+                    m_arenaY = stand.y;
+                    m_arenaZ = stand.z;
+
+                    std::printf("%s cave at %d, %d, %d\n",
+                                wanted == WorldGen::CaveKind::Lush ? "Lush" : "Dripstone",
+                                stand.x, stand.y, stand.z);
+                    std::fflush(stdout);
+                }
+                else
+                {
+                    std::printf("No cave of that sort within forty chunks\n");
+                    std::fflush(stdout);
+                }
 
                 m_player.mode = GameMode::Creative;
                 m_player.health = Player::MAX_HEALTH;
@@ -2801,6 +2876,8 @@ bool Application::frame()
         if (m_arenaDelay > 1.5f)
         {
             if (m_arenaKind == ArenaKind::BiomePocket) buildBiomeArena(m_arenaX, m_arenaZ);
+            else if (m_arenaKind == ArenaKind::CaveProps)
+                lightCave(m_arenaX, m_arenaY, m_arenaZ);
             else dressChamberRoom(m_arenaX, m_arenaY, m_arenaZ);
             m_pendingArena = false;
         }
@@ -6294,6 +6371,49 @@ void Application::dressChamberRoom(int atX, int atY, int atZ)
     m_world->setBlock(atX - 3, atY, atZ - 3, Blocks::Bookshelf);
     m_world->setBlock(atX - 1, atY, atZ - 3, Blocks::DiamondOre);
     m_world->setBlock(atX + 2, atY, atZ - 3, Blocks::EndPortalFrame);
+}
+
+// A cave is dark, which is true of a cave and useless in a photograph.
+// Glowstone in the walls rather than torches on the floor: a torch
+// lights what it is standing on and nothing else in a space this shape.
+void Application::lightCave(int atX, int atY, int atZ)
+{
+    // A little room to stand in as well: the pocket the search finds
+    // is two blocks tall, and a camera in a two-block slot sees a wall.
+    for (int dx = -2; dx <= 12; ++dx)
+        for (int dy = 0; dy <= 3; ++dy)
+            for (int dz = -4; dz <= 4; ++dz)
+            {
+                const BlockId here = m_world->getBlock(atX + dx, atY + dy, atZ + dz);
+                if (isSolid(here) && here != Blocks::Bedrock && !isLiquid(here))
+                    m_world->setBlock(atX + dx, atY + dy, atZ + dz, Blocks::Air);
+            }
+
+    for (int dx = -9; dx <= 12; ++dx)
+        for (int dy = -3; dy <= 5; ++dy)
+            for (int dz = -9; dz <= 9; ++dz)
+            {
+                if ((dx + 90) % 5 || (dz + 90) % 5 || dy % 3) continue;
+                const int x = atX + dx, y = atY + dy, z = atZ + dz;
+                if (m_world->getBlock(x, y, z) != Blocks::Air) continue;
+                m_world->setBlock(x, y, z, Blocks::Glowstone);
+            }
+
+    // The three blocks every shot carries, on the floor in front.
+    for (int step = 0; step < 3; ++step)
+    {
+        const BlockId block = step == 0 ? Blocks::Bookshelf
+                            : step == 1 ? Blocks::DiamondOre
+                                        : Blocks::EndPortalFrame;
+        const int x = atX + 4 + step * 3;
+        for (int y = atY + 2; y >= atY - 2; --y)
+            if (isSolid(m_world->getBlock(x, y - 1, atZ)) &&
+                m_world->getBlock(x, y, atZ) == Blocks::Air)
+            {
+                m_world->setBlock(x, y, atZ, block);
+                break;
+            }
+    }
 }
 
 void Application::renderHud()

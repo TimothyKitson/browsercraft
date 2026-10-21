@@ -144,6 +144,11 @@ namespace Tiles
         OxidizedCopper,
         CopperBulbTile,
         CopperBulbLitTile,
+        DripstoneBlock,
+        DripstoneSpike,
+        MossTile,
+        AzaleaLeavesTile,
+        GlowBerriesTile,
         RainDrop,
         SnowFlake,
 
@@ -252,8 +257,9 @@ namespace Tiles
         ItemTrialKey,
         ItemRawCopper,
         ItemCopperIngot,
+        ItemGlowBerries,
 
-        ItemTileEnd = ItemCopperIngot + 1
+        ItemTileEnd = ItemGlowBerries + 1
     };
 
     // Ten progressively more broken overlay tiles for the mining animation.

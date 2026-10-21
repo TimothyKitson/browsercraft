@@ -198,6 +198,12 @@ namespace
         { "Oxidized Copper",OxidizedCopper,OxidizedCopper,OxidizedCopper,true,  true,  RenderType::Cube,   0,   3.0f },
         { "Copper Bulb",  CopperBulbTile,CopperBulbTile, CopperBulbTile, true,  true,  RenderType::Cube,   0,   3.0f },
         { "Copper Bulb",  CopperBulbLitTile,CopperBulbLitTile,CopperBulbLitTile,true,true,RenderType::Cube,15,3.0f },
+        { "Dripstone Block",DripstoneBlock,DripstoneBlock, DripstoneBlock, true,  true,  RenderType::Cube,   0,   1.5f },
+        { "Pointed Dripstone",DripstoneSpike,DripstoneSpike,DripstoneSpike,false,false, RenderType::Cross,  0,   0.5f },
+        { "Pointed Dripstone",DripstoneSpike,DripstoneSpike,DripstoneSpike,false,false, RenderType::Cross,  0,   0.5f },
+        { "Moss Block",   MossTile,      MossTile,       MossTile,       true,  true,  RenderType::Cube,   0,   0.1f },
+        { "Azalea Leaves",AzaleaLeavesTile,AzaleaLeavesTile,AzaleaLeavesTile,true,false,RenderType::Cube,   0,   0.2f },
+        { "Glow Berries", GlowBerriesTile,GlowBerriesTile,GlowBerriesTile,false, false, RenderType::Cross, 14,   0.0f },
     };
 }
 
@@ -435,6 +441,10 @@ Material blockMaterial(BlockId id)
         case Blocks::Torch:
         case Blocks::NetherWart:
         case Blocks::BrewingStand:
+        case Blocks::Moss:
+        case Blocks::GlowBerries:
+        case Blocks::DripstoneDown:
+        case Blocks::DripstoneUp:
         // Dust and the switches come up with a hand: a wire painted on
         // the floor is not something you take a pickaxe to.
         case Blocks::RedstoneDust:

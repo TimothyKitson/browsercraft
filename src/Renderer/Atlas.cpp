@@ -1388,6 +1388,82 @@ namespace
     void paintCopperBulbLit(Tile& t)
     { paintCopperBulbIn(t, Color{ 255, 226, 150 }, Color{ 198, 122, 82 }); }
 
+    // The two sorts of cave: one that drips and one that grows.
+    void paintDripstoneBlock(Tile& t)
+    {
+        t.fill(Color{ 134, 107, 92 });
+        t.speckle(12, 331);
+        for (int i = 0; i < 20; ++i)
+        {
+            const int x = static_cast<int>(hash2(i, 0, 332) * Tile::N);
+            const int y = static_cast<int>(hash2(i, 1, 332) * Tile::N);
+            t.set(x, y, shade(Color{ 134, 107, 92 }, -28));
+        }
+    }
+
+    void paintDripstoneSpike(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        // A cone, point down, which is what one looks like from the
+        // side -- and the cross it is drawn on shows two of them.
+        for (int y = 0; y < Tile::N; ++y)
+        {
+            const int half = (Tile::N - y) / 4;
+            for (int x = 7 - half; x <= 8 + half; ++x)
+            {
+                if (x < 0 || x >= Tile::N) continue;
+                t.set(x, y, shade(Color{ 146, 116, 99 },
+                                  static_cast<int>((hash2(x, y, 333) - 0.5f) * 30.0f)));
+            }
+        }
+    }
+
+    void paintMoss(Tile& t)
+    {
+        t.fill(Color{ 88, 110, 54 });
+        t.speckle(16, 334);
+        for (int i = 0; i < 26; ++i)
+        {
+            const int x = static_cast<int>(hash2(i, 0, 335) * Tile::N);
+            const int y = static_cast<int>(hash2(i, 1, 335) * Tile::N);
+            t.set(x, y, shade(Color{ 70, 94, 44 }, 0));
+        }
+    }
+
+    void paintAzaleaLeaves(Tile& t)
+    {
+        paintLeavesBase(t, Color{ 86, 118, 52 }, 336);
+        // The flowers, which are the whole of why anybody looks twice
+        // at an azalea.
+        for (int i = 0; i < 9; ++i)
+        {
+            const int x = 1 + static_cast<int>(hash2(i, 0, 337) * 13.0f);
+            const int y = 1 + static_cast<int>(hash2(i, 1, 337) * 13.0f);
+            t.set(x, y, Color{ 222, 160, 206 });
+            t.set(x + 1, y, Color{ 196, 128, 180 });
+            t.set(x, y + 1, Color{ 196, 128, 180 });
+        }
+    }
+
+    void paintGlowBerries(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        // A vine down the middle with the berries hung off it.
+        for (int y = 0; y < Tile::N; ++y)
+        {
+            t.set(7, y, Color{ 86, 104, 50 });
+            t.set(8, y, Color{ 68, 86, 40 });
+        }
+        for (int i = 0; i < 5; ++i)
+        {
+            const int y = 2 + i * 3;
+            const int x = (i % 2) ? 9 : 5;
+            for (int dy = 0; dy <= 1; ++dy)
+                for (int dx = 0; dx <= 1; ++dx)
+                    t.set(x + dx, y + dy, Color{ 255, 196, 86 });
+        }
+    }
+
     void paintObsidian(Tile& t)
     {
         t.fill(Color{ 21, 16, 30 });
@@ -3357,6 +3433,19 @@ namespace
                 t.set(x, y, shade(body, y == 6 ? 34 : (y == 10 ? -30 : 0)));
     }
 
+    void paintItemGlowBerries(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int i = 0; i < 7; ++i)
+        {
+            const int cx = 4 + static_cast<int>(hash2(i, 0, 338) * 8.0f);
+            const int cy = 4 + static_cast<int>(hash2(i, 1, 338) * 8.0f);
+            for (int dy = 0; dy <= 1; ++dy)
+                for (int dx = 0; dx <= 1; ++dx)
+                    t.set(cx + dx, cy + dy, Color{ 255, 190, 80 });
+        }
+    }
+
     void paintItemTrialKey(Tile& t)
     {
         t.fill(Color{ 0, 0, 0, 0 });
@@ -3611,6 +3700,11 @@ namespace
         { Tiles::OxidizedCopper, paintOxidizedCopper },
         { Tiles::CopperBulbTile, paintCopperBulb },
         { Tiles::CopperBulbLitTile, paintCopperBulbLit },
+        { Tiles::DripstoneBlock, paintDripstoneBlock },
+        { Tiles::DripstoneSpike, paintDripstoneSpike },
+        { Tiles::MossTile, paintMoss },
+        { Tiles::AzaleaLeavesTile, paintAzaleaLeaves },
+        { Tiles::GlowBerriesTile, paintGlowBerries },
         { Tiles::Obsidian, paintObsidian },
         { Tiles::TallGrass, paintTallGrass },
         { Tiles::FlowerRed, paintFlowerRed },
@@ -3704,6 +3798,7 @@ namespace
         { Tiles::ItemTrialKey,      paintItemTrialKey },
         { Tiles::ItemRawCopper,     paintItemRawCopper },
         { Tiles::ItemCopperIngot,   paintItemCopperIngot },
+        { Tiles::ItemGlowBerries,   paintItemGlowBerries },
         { Tiles::ItemMagmaCream,    paintItemMagmaCream },
         { Tiles::ItemGlowstoneDust, paintItemGlowstoneDust },
         { Tiles::EndFrameTop,   paintEndFrameTop },
@@ -3847,6 +3942,7 @@ namespace
         { Tiles::ItemTrialKey,   { "trial_key", nullptr, nullptr } },
         { Tiles::ItemRawCopper,  { "raw_copper", nullptr, nullptr } },
         { Tiles::ItemCopperIngot, { "copper_ingot", nullptr, nullptr } },
+        { Tiles::ItemGlowBerries, { "glow_berries", nullptr, nullptr } },
     };
 
     const PackTile PACK_TILES[] = {
@@ -3929,6 +4025,14 @@ namespace
         { Tiles::OxidizedCopper, { "oxidized_copper", nullptr },                       Tinting::None,    0,   false },
         { Tiles::CopperBulbTile, { "copper_bulb", nullptr },                           Tinting::None,    0,   false },
         { Tiles::CopperBulbLitTile, { "copper_bulb_lit", nullptr },                    Tinting::None,    0,   false },
+        { Tiles::DripstoneBlock, { "dripstone_block", nullptr },                       Tinting::None,    0,   false },
+        { Tiles::DripstoneSpike, { "pointed_dripstone_down_tip", "pointed_dripstone_down_base", nullptr },
+                                                                                       Tinting::None,    0,   false },
+        { Tiles::MossTile,      { "moss_block", nullptr },                             Tinting::None,    0,   false },
+        { Tiles::AzaleaLeavesTile, { "flowering_azalea_leaves", "azalea_leaves", nullptr },
+                                                                                       Tinting::None,    0,   false },
+        { Tiles::GlowBerriesTile, { "cave_vines_plant_lit", "cave_vines_lit", nullptr },
+                                                                                       Tinting::None,    0,   false },
 
         // Everything added since the pack table was last gone over.
         // A tile with no row here is drawn procedurally however good a

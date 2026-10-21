@@ -21,6 +21,11 @@ namespace
         { Items::CookedPorkchop, { 8, 12.8f } },
         { Items::CookedMutton,   { 6, 9.6f } },
         { Items::CookedChicken,  { 6, 7.2f } },
+
+        // Barely worth eating, which is Minecraft's: they are what you
+        // find when you have nothing, and they light the cave on the
+        // way to something better.
+        { Items::GlowBerries,    { 2, 0.4f } },
     };
 }
 

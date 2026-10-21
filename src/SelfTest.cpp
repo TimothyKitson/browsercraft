@@ -4162,6 +4162,115 @@ namespace
         check(atHand > 0.5f, "the hand samples the lower half of the patch");
     }
 
+    void testCaves()
+    {
+        section("caves: the two sorts that are not just grey");
+
+        const WorldGen generator(4242u);
+
+        // Every kind is somewhere, and a kind holds for a stretch
+        // rather than flickering block to block -- a cave that changed
+        // character every twenty blocks would read as noise.
+        int seen[3] = { 0 };
+        for (int z = -3000; z <= 3000; z += 61)
+            for (int x = -3000; x <= 3000; x += 61)
+                ++seen[static_cast<int>(generator.caveKindAt(x, z))];
+
+        check(seen[0] > 0, "most caves are plain rock");
+        check(seen[1] > 0, "some of them drip");
+        check(seen[2] > 0, "and some of them grow");
+        check(seen[0] > seen[1] && seen[0] > seen[2],
+              "with the plain ones commonest, so the others are a find");
+
+        {
+            // Walk a line and count how often the kind changes. A run
+            // should be long: this is the difference between a cave
+            // that is somewhere and a cave that is static.
+            int changes = 0;
+            WorldGen::CaveKind last = generator.caveKindAt(-2000, 140);
+            for (int x = -2000; x <= 2000; x += 4)
+            {
+                const WorldGen::CaveKind here = generator.caveKindAt(x, 140);
+                if (here != last) ++changes;
+                last = here;
+            }
+            check(changes > 0, "the kind does change as you walk");
+            check(changes < 60, "but not every few blocks");
+        }
+
+        // It is the same answer every time, or two chunks would dress
+        // the same cave differently and leave a seam down it.
+        for (int i = 0; i < 50; ++i)
+            check(generator.caveKindAt(i * 37, i * -19) ==
+                      generator.caveKindAt(i * 37, i * -19),
+                  "a place is the same sort of cave every time it is asked");
+
+        // And it is actually built. Generating enough chunks to find
+        // both kinds would be slow, so this walks out until it finds a
+        // chunk over each and checks only those.
+        auto censusOf = [&](WorldGen::CaveKind wanted, int& dripstone, int& spikes,
+                            int& moss, int& berries) {
+            dripstone = spikes = moss = berries = 0;
+
+            for (int radius = 0; radius <= 40; ++radius)
+                for (int cz = -radius; cz <= radius; ++cz)
+                    for (int cx = -radius; cx <= radius; ++cx)
+                    {
+                        if (std::max(std::abs(cx), std::abs(cz)) != radius) continue;
+                        if (generator.caveKindAt(cx * Chunk::SX + 8, cz * Chunk::SZ + 8) != wanted)
+                            continue;
+
+                        Chunk chunk(ChunkPos{ cx, cz });
+                        generator.generate(chunk);
+
+                        for (int y = 0; y < 80 && y < Chunk::SY; ++y)
+                            for (int lz = 0; lz < Chunk::SZ; ++lz)
+                                for (int lx = 0; lx < Chunk::SX; ++lx)
+                                    switch (chunk.getBlock(lx, y, lz))
+                                    {
+                                        case Blocks::DripstoneBlock: ++dripstone; break;
+                                        case Blocks::DripstoneUp:
+                                        case Blocks::DripstoneDown: ++spikes; break;
+                                        case Blocks::Moss: ++moss; break;
+                                        case Blocks::GlowBerries: ++berries; break;
+                                        default: break;
+                                    }
+
+                        if (dripstone + spikes + moss + berries > 0) return true;
+                    }
+            return false;
+        };
+
+        {
+            int dripstone = 0, spikes = 0, moss = 0, berries = 0;
+            check(censusOf(WorldGen::CaveKind::Dripstone, dripstone, spikes, moss, berries),
+                  "a dripstone cave turns up within a few hundred chunks");
+            check(dripstone > 0, "and it is cut through dripstone");
+            check(spikes > 0, "with spikes hanging and standing in it");
+            check(moss == 0 && berries == 0, "and nothing growing in it");
+        }
+
+        {
+            int dripstone = 0, spikes = 0, moss = 0, berries = 0;
+            check(censusOf(WorldGen::CaveKind::Lush, dripstone, spikes, moss, berries),
+                  "and so does a lush one");
+            check(moss > 0, "with moss underfoot");
+            check(dripstone == 0 && spikes == 0, "and no dripstone in it");
+        }
+
+        // Glow berries are the only light down there nobody carried in.
+        check(lightEmission(Blocks::GlowBerries) > 0, "glow berries light the cave they grow in");
+        check(Food::isEdible(Items::GlowBerries), "and can be eaten");
+        check(Food::valueOf(Items::GlowBerries).hunger < Food::valueOf(Items::Bread).hunger,
+              "though they are worth less than a loaf");
+
+        check(isLeaves(Blocks::AzaleaLeaves), "azalea counts as leaves");
+        check(blockMaterial(Blocks::AzaleaLeaves) == Material::Plant, "and tears like them");
+        check(blockMaterial(Blocks::Moss) == Material::Plant, "moss comes up with a hand");
+        check(blockMaterial(Blocks::DripstoneBlock) == Material::Stone,
+              "and dripstone wants a pickaxe");
+    }
+
     void testCopper()
     {
         section("copper: the one block that changes on its own");
@@ -7316,6 +7425,7 @@ int runSelfTest()
     testLadders();
     testFirstPersonArm();
     testHandSwing();
+    testCaves();
     testCopper();
     testPistons();
     testTrialChambers();

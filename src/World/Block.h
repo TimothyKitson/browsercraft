@@ -246,6 +246,16 @@ namespace Blocks
         CopperBulb,
         CopperBulbLit,
 
+        // What a cave is made of where it is not just grey. Dripstone
+        // hangs and stands; moss, azalea and the berries that light
+        // themselves are the other sort of cave.
+        DripstoneBlock,
+        DripstoneDown,
+        DripstoneUp,
+        Moss,
+        AzaleaLeaves,
+        GlowBerries,
+
         Count
     };
 }
@@ -357,6 +367,11 @@ inline bool isTrialSpawner(BlockId id)
 inline bool isCopper(BlockId id)
 {
     return id >= Blocks::CopperBlock && id <= Blocks::OxidizedCopper;
+}
+
+inline bool isPointedDripstone(BlockId id)
+{
+    return id == Blocks::DripstoneDown || id == Blocks::DripstoneUp;
 }
 
 inline bool isCopperBulb(BlockId id)
@@ -526,7 +541,8 @@ inline bool isLeaves(BlockId id)
 {
     return id == Blocks::Leaves || id == Blocks::BirchLeaves ||
            id == Blocks::SpruceLeaves || id == Blocks::DarkOakLeaves ||
-           id == Blocks::JungleLeaves || id == Blocks::AcaciaLeaves;
+           id == Blocks::JungleLeaves || id == Blocks::AcaciaLeaves ||
+           id == Blocks::AzaleaLeaves;
 }
 inline bool isVisible(BlockId id) { return blockInfo(id).render != RenderType::None; }
 inline uint8_t lightEmission(BlockId id) { return blockInfo(id).lightEmission; }

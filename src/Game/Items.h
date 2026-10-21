@@ -135,6 +135,9 @@ namespace Items
         RawCopper,
         CopperIngot,
 
+        // The one thing you can eat that grows underground.
+        GlowBerries,
+
         Count
     };
 }

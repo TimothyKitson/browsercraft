@@ -36,6 +36,13 @@ const char* biomeName(Biome biome);
 class WorldGen
 {
 public:
+    // Which sort of cave a column stands over. The whole of a cave's
+    // character in one value, read off low-frequency noise so a cave
+    // keeps the same character for a few hundred blocks rather than
+    // changing every chunk.
+    enum class CaveKind : uint8_t { Plain, Dripstone, Lush };
+    CaveKind caveKindAt(int worldX, int worldZ) const;
+
     static constexpr int SEA_LEVEL = 62;
     // The lava sea the Nether is built around, and the height the End's
     // central plateau is centred on. Public because spawning somewhere
@@ -143,6 +150,11 @@ private:
                        const Palette& palette) const;
     void carveCaves(Chunk& chunk) const;
     void layDeepslate(Chunk& chunk) const;
+
+    // What a cave is made of where it is not just grey. Run after the
+    // ores, so a seam cut through by a cave is dressed rather than
+    // dressed over.
+    void dressCaves(Chunk& chunk) const;
     void placeOres(Chunk& chunk) const;
     void decorate(Chunk& chunk) const;
 

@@ -157,6 +157,7 @@ void WorldGen::generate(Chunk& chunk) const
     carveCaves(chunk);
     layDeepslate(chunk);
     placeOres(chunk);
+    dressCaves(chunk);
     decorate(chunk);
     buildVillages(chunk);
     buildTrialChambers(chunk);
@@ -434,6 +435,82 @@ void WorldGen::carveCaves(Chunk& chunk) const
             }
         }
     }
+}
+
+WorldGen::CaveKind WorldGen::caveKindAt(int worldX, int worldZ) const
+{
+    // Low enough in frequency that a cave is one sort of cave for a
+    // few hundred blocks: a tunnel that changed character every twenty
+    // would read as noise rather than as somewhere.
+    const float field = m_humidity.fbm2D(worldX * 0.0032f + 410.0f,
+                                         worldZ * 0.0032f - 260.0f, 2);
+
+    if (field > 0.26f) return CaveKind::Lush;
+    if (field < -0.26f) return CaveKind::Dripstone;
+    return CaveKind::Plain;
+}
+
+// A cave with something in it. Caves were a grey tube with ores in the
+// walls; these are the two sorts Minecraft hollows out of the same
+// rock, picked by where you are rather than by what the tunnel looks
+// like, so one goes on being itself however far you follow it.
+void WorldGen::dressCaves(Chunk& chunk) const
+{
+    const int baseX = chunk.position().x * Chunk::SX;
+    const int baseZ = chunk.position().z * Chunk::SZ;
+
+    for (int lx = 0; lx < Chunk::SX; ++lx)
+        for (int lz = 0; lz < Chunk::SZ; ++lz)
+        {
+            const int wx = baseX + lx;
+            const int wz = baseZ + lz;
+
+            const CaveKind kind = caveKindAt(wx, wz);
+            if (kind == CaveKind::Plain) continue;
+
+            const int top = std::min(surfaceHeight(wx, wz) - 3, Chunk::SY - 2);
+
+            for (int y = 5; y <= top; ++y)
+            {
+                if (chunk.getBlock(lx, y, lz) != Blocks::Air) continue;
+
+                const BlockId under = chunk.getBlock(lx, y - 1, lz);
+                const BlockId over = chunk.getBlock(lx, y + 1, lz);
+                const bool floor = isSolid(under) && !isLiquid(under);
+                const bool roof = isSolid(over) && !isLiquid(over);
+                if (!floor && !roof) continue;
+
+                const float roll = hashToFloat(hashCoords(wx, y, wz, m_seed + 7700));
+
+                if (kind == CaveKind::Dripstone)
+                {
+                    // The rock itself turns to dripstone around the
+                    // cave, and spikes hang and stand in it.
+                    if (floor && roll < 0.42f)
+                        chunk.setBlockRaw(lx, y - 1, lz, Blocks::DripstoneBlock);
+                    if (roof && roll > 0.58f)
+                        chunk.setBlockRaw(lx, y + 1, lz, Blocks::DripstoneBlock);
+
+                    if (roof && roll > 0.86f)
+                        chunk.setBlockRaw(lx, y, lz, Blocks::DripstoneDown);
+                    else if (floor && roll < 0.12f)
+                        chunk.setBlockRaw(lx, y, lz, Blocks::DripstoneUp);
+                }
+                else
+                {
+                    // Moss underfoot, azalea overhead, and the berries
+                    // that are the only light down here that nobody
+                    // had to carry in.
+                    if (floor && roll < 0.55f)
+                        chunk.setBlockRaw(lx, y - 1, lz, Blocks::Moss);
+                    if (roof && roll > 0.62f)
+                        chunk.setBlockRaw(lx, y + 1, lz, Blocks::AzaleaLeaves);
+
+                    if (roof && roll > 0.90f)
+                        chunk.setBlockRaw(lx, y, lz, Blocks::GlowBerries);
+                }
+            }
+        }
 }
 
 // Everything below the deepslate line turns to deepslate, with a ragged

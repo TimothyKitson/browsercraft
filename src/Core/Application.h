@@ -384,13 +384,14 @@ private:
     // streamed in yet, and setBlock into a chunk that does not exist
     // does nothing. So the clearing waits until the world says it is
     // ready, which is the same gate the screenshot itself waits on.
-    enum class ArenaKind { BiomePocket, ChamberProps };
+    enum class ArenaKind { BiomePocket, ChamberProps, CaveProps };
     bool m_pendingArena = false;
     ArenaKind m_arenaKind = ArenaKind::BiomePocket;
     int m_arenaX = 0, m_arenaY = 0, m_arenaZ = 0;
     float m_arenaDelay = 0.0f;
     void buildBiomeArena(int standX, int standZ);
     void dressChamberRoom(int atX, int atY, int atZ);
+    void lightCave(int atX, int atY, int atZ);
     uint32_t m_seedOverride = 0;
     bool m_hasSeedOverride = false;
     bool m_hostOnStart = false;
