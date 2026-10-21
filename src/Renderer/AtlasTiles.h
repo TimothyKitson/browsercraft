@@ -151,6 +151,7 @@ namespace Tiles
         GlowBerriesTile,
         OminousVaultSide,
         OminousVaultSideOpen,
+        SpawnerTile,
         RainDrop,
         SnowFlake,
 

@@ -20,6 +20,7 @@
 #include "Game/Explosion.h"
 #include "Game/Portal.h"
 #include "World/Stronghold.h"
+#include "World/Structures.h"
 #include "World/WorldSave.h"
 #include <glm/gtc/matrix_transform.hpp>
 #include <SDL.h>
@@ -1297,6 +1298,7 @@ bool Application::frame()
 
         if (playing()) tickTrialSpawners(deltaTime);
         if (playing()) tickCopper(deltaTime);
+        if (playing()) tickMonsterCages(deltaTime);
 
         // A pressed button lets go on its own, and everything it was
         // powering goes out with it.
@@ -1455,6 +1457,7 @@ bool Application::frame()
             m_startupScreen == "jungle" || m_startupScreen == "savanna" ||
             m_startupScreen == "redstone" || m_startupScreen == "chamber" ||
             m_startupScreen == "cave" || m_startupScreen == "dripstone" ||
+            m_startupScreen == "mineshaft" ||
             m_startupScreen == "vault" || m_startupScreen == "stronghold" ||
             m_startupScreen == "rock")
         {
@@ -1502,6 +1505,7 @@ bool Application::frame()
                                   m_startupScreen != "stronghold" &&
                                   m_startupScreen != "cave" &&
                                   m_startupScreen != "dripstone" &&
+                                  m_startupScreen != "mineshaft" &&
                                   m_startupScreen != "rock" &&
                                   m_startupScreen != "portal" &&
                                   m_startupScreen != "nether";
@@ -1992,6 +1996,72 @@ bool Application::frame()
                 m_world->setBlock(px + 4, py, pz - 6, Blocks::Bookshelf);
                 m_world->setBlock(px + 6, py, pz - 6, Blocks::DiamondOre);
                 m_world->setBlock(px + 8, py, pz - 6, Blocks::EndPortalFrame);
+
+                m_player.mode = GameMode::Creative;
+                m_player.health = Player::MAX_HEALTH;
+            }
+
+            // Down a mineshaft. Found the way the caves are: a chunk
+            // of its own is generated to look, because the one the
+            // player is standing in is not the one with the shaft.
+            if (m_startupScreen == "mineshaft")
+            {
+                const WorldGen& gen = m_world->generator();
+                bool found = false;
+                glm::ivec3 stand(0);
+
+                for (int radius = 0; radius <= 30 && !found; ++radius)
+                    for (int cz = -radius; cz <= radius && !found; ++cz)
+                        for (int cx = -radius; cx <= radius && !found; ++cx)
+                        {
+                            if (std::max(std::abs(cx), std::abs(cz)) != radius) continue;
+                            if (!Structures::spreadAt(cx, cz, m_world->seed(), 445731u, 0.012f))
+                                continue;
+
+                            Chunk probe(ChunkPos{ cx, cz });
+                            gen.generate(probe);
+
+                            for (int y = WorldGen::MINESHAFT_MIN;
+                                 y <= WorldGen::MINESHAFT_MAX + 2 && !found; ++y)
+                                for (int lz = 0; lz < Chunk::SZ && !found; ++lz)
+                                    for (int lx = 0; lx < Chunk::SX && !found; ++lx)
+                                    {
+                                        if (probe.getBlock(lx, y - 1, lz) != Blocks::Planks)
+                                            continue;
+                                        if (probe.getBlock(lx, y, lz) == Blocks::OakFence)
+                                            continue;
+                                        if (probe.getBlock(lx, y + 1, lz) != Blocks::Air)
+                                            continue;
+
+                                        stand = glm::ivec3(cx * Chunk::SX + lx, y,
+                                                           cz * Chunk::SZ + lz);
+                                        found = true;
+                                    }
+                        }
+
+                if (found)
+                {
+                    m_player.position = glm::vec3(stand) + glm::vec3(0.5f, 0.0f, 0.5f);
+                    m_player.velocity = glm::vec3(0.0f);
+                    m_player.flying = true;
+                    m_placeOnSurface = false;
+                    m_camera.setOrientation(0.0f, 0.0f);
+                    m_camera.addLook(0.0f, 0.0f, 0.0f);
+
+                    m_pendingArena = true;
+                    m_arenaKind = ArenaKind::CaveProps;
+                    m_arenaX = stand.x;
+                    m_arenaY = stand.y;
+                    m_arenaZ = stand.z;
+
+                    std::printf("Mineshaft at %d, %d, %d\n", stand.x, stand.y, stand.z);
+                    std::fflush(stdout);
+                }
+                else
+                {
+                    std::printf("No mineshaft within thirty chunks\n");
+                    std::fflush(stdout);
+                }
 
                 m_player.mode = GameMode::Creative;
                 m_player.health = Player::MAX_HEALTH;
@@ -4002,6 +4072,51 @@ bool Application::fireCrafter(const glm::ivec3& block)
     m_chests.forgetIfEmpty(block);
     m_audio.play(Sound::Click, 0.7f, 1.5f);
     return true;
+}
+
+// A monster cage goes on sending its own kind out while you are near
+// it, up to a few at a time. It is the oldest trap in the game and the
+// reason a mineshaft is not just free rails.
+void Application::tickMonsterCages(float deltaTime)
+{
+    if (!m_world) return;
+
+    m_cageTimer -= deltaTime;
+    if (m_cageTimer > 0.0f) return;
+    m_cageTimer = CAGE_INTERVAL;
+
+    const MobId species = cageSpecies(m_dimension);
+    const glm::ivec3 middle(glm::floor(m_player.position));
+    const int reach = static_cast<int>(CAGE_RANGE);
+
+    for (int dx = -reach; dx <= reach; ++dx)
+        for (int dy = -5; dy <= 5; ++dy)
+            for (int dz = -reach; dz <= reach; ++dz)
+            {
+                const glm::ivec3 at(middle.x + dx, middle.y + dy, middle.z + dz);
+                if (!isMonsterSpawner(m_world->getBlock(at.x, at.y, at.z))) continue;
+
+                const glm::vec3 centre = glm::vec3(at) + glm::vec3(0.5f);
+                if (glm::length(centre - m_player.position) > CAGE_RANGE) continue;
+
+                // Not more than a few of its own out at once.
+                int already = 0;
+                for (const Mob& mob : m_entities.mobs())
+                    if (mob.alive() && mob.typeId() == species &&
+                        glm::length(mob.position() - centre) < CAGE_RANGE * 1.5f)
+                        ++already;
+                if (already >= CAGE_LIMIT) continue;
+
+                // Beside it rather than inside it.
+                for (int tryX = -2; tryX <= 2; ++tryX)
+                    for (int tryZ = -2; tryZ <= 2; ++tryZ)
+                    {
+                        if (tryX == 0 && tryZ == 0) continue;
+                        const glm::vec3 feet(at.x + tryX + 0.5f, static_cast<float>(at.y),
+                                             at.z + tryZ + 0.5f);
+                        if (m_entities.spawnAt(species, feet, *m_world)) return;
+                    }
+            }
 }
 
 // Everything copper within sight of the player gets a roll every few

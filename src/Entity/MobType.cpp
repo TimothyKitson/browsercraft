@@ -877,6 +877,16 @@ namespace
     }
 }
 
+MobId cageSpecies(Dimension where)
+{
+    switch (where)
+    {
+        case Dimension::Nether: return MobId::Blaze;
+        case Dimension::End:    return MobId::Enderman;
+        default:                return MobId::Spider;
+    }
+}
+
 const MobType& mobType(MobId id)
 {
     static const std::vector<MobType> table = buildTable();

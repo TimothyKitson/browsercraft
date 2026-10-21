@@ -261,6 +261,14 @@ namespace Blocks
         OminousVault,
         OminousVaultOpen,
 
+        // A monster spawner: the cage in a fortress or a mineshaft
+        // that keeps sending the same thing out while you are near it.
+        // What it sends is decided by where it is rather than by
+        // anything stored in it -- a cage in the Nether makes blazes,
+        // one in the rock makes spiders -- because a block here is an
+        // id and nothing else.
+        MonsterSpawner,
+
         Count
     };
 }
@@ -359,6 +367,8 @@ inline BlockId pistonHead(int facing, bool sticky)
     const BlockId first = sticky ? Blocks::StickyPistonHeadNorth : Blocks::PistonHeadNorth;
     return static_cast<BlockId>(first + (facing & 3));
 }
+
+inline bool isMonsterSpawner(BlockId id) { return id == Blocks::MonsterSpawner; }
 
 // A trial spawner in any of its three states: waiting, with its wave
 // out, or finished with.

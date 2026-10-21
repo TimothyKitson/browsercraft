@@ -146,6 +146,7 @@ void WorldGen::generate(Chunk& chunk) const
     {
         case Dimension::Nether:
             generateNether(chunk);
+            buildNetherFortresses(chunk);
             return;
         case Dimension::End:
             generateEnd(chunk);
@@ -163,6 +164,7 @@ void WorldGen::generate(Chunk& chunk) const
     buildVillages(chunk);
     buildTrialChambers(chunk);
     buildStrongholds(chunk);
+    buildMineshafts(chunk);
 }
 
 // A closed cavern system rather than a landscape: solid netherrack between a
@@ -1491,6 +1493,169 @@ TrialChamber::Site WorldGen::nearestChamber(int fromX, int fromZ, int squares) c
         }
 
     return best;
+}
+
+// Mineshafts go down by the spread rule rather than the grid: a flat
+// chance for each chunk with nothing keeping two apart, which is why
+// two of them sometimes run into each other. It is also where the
+// first rails anybody sees come from.
+void WorldGen::buildMineshafts(Chunk& chunk) const
+{
+    constexpr float CHANCE = 0.012f;
+    constexpr uint32_t SALT = 445731u;
+
+    const int chunkX = chunk.position().x;
+    const int chunkZ = chunk.position().z;
+
+    // A corridor runs past the end of its own chunk, so a chunk has to
+    // ask its neighbours as well as itself.
+    for (int dz = -2; dz <= 2; ++dz)
+        for (int dx = -2; dx <= 2; ++dx)
+        {
+            const int cx = chunkX + dx;
+            const int cz = chunkZ + dz;
+            if (!Structures::spreadAt(cx, cz, m_seed, SALT, CHANCE)) continue;
+
+            const int baseX = cx * Chunk::SX;
+            const int baseZ = cz * Chunk::SZ;
+
+            const int y = MINESHAFT_MIN +
+                static_cast<int>(hashToFloat(hashCoords(cx, 23, cz, m_seed + SALT)) *
+                                 static_cast<float>(MINESHAFT_MAX - MINESHAFT_MIN));
+
+            const bool alongX = hashToFloat(hashCoords(cx, 24, cz, m_seed + SALT)) < 0.5f;
+            const int length = Chunk::SX * 2;
+
+            for (int step = 0; step < length; ++step)
+            {
+                const int x = alongX ? baseX + step : baseX + Chunk::SX / 2;
+                const int z = alongX ? baseZ + Chunk::SZ / 2 : baseZ + step;
+
+                for (int across = -1; across <= 1; ++across)
+                {
+                    const int ax = alongX ? x : x + across;
+                    const int az = alongX ? z + across : z;
+
+                    for (int up = 0; up <= 2; ++up) put(chunk, ax, y + up, az, Blocks::Air);
+
+                    // Something underfoot, so a corridor cut through a
+                    // cave is still a corridor.
+                    put(chunk, ax, y - 1, az, Blocks::Planks);
+                }
+
+                // Supports every few blocks, which is what a mineshaft
+                // looks like from down the corridor.
+                if ((step % 5) == 0)
+                    for (int side = -1; side <= 1; side += 2)
+                        for (int up = 0; up <= 2; ++up)
+                            put(chunk, alongX ? x : x + side, y + up,
+                                alongX ? z + side : z,
+                                (up == 2) ? Blocks::Planks : Blocks::OakFence);
+
+                put(chunk, x, y, z, alongX ? Blocks::RailEastWest : Blocks::RailNorthSouth);
+            }
+
+            // A chest at the end of one shaft in three, and a cage in
+            // one in three -- which is the dungeon a mineshaft turns
+            // into when you are not paying attention.
+            if (hashToFloat(hashCoords(cx, 25, cz, m_seed + SALT)) < 0.34f)
+                put(chunk, alongX ? baseX + length - 2 : baseX + Chunk::SX / 2, y,
+                    alongX ? baseZ + Chunk::SZ / 2 : baseZ + length - 2, Blocks::Chest);
+
+            if (hashToFloat(hashCoords(cx, 26, cz, m_seed + SALT)) < 0.34f)
+                put(chunk, baseX + Chunk::SX / 2 + 2, y, baseZ + Chunk::SZ / 2 + 2,
+                    Blocks::MonsterSpawner);
+        }
+}
+
+// A fortress: two walkways crossing over the lava with a keep where
+// they meet, all of it nether brick, and a blaze cage in the keep --
+// which is where blazes come from and the only reason to go.
+void WorldGen::buildNetherFortresses(Chunk& chunk) const
+{
+    const int baseX = chunk.position().x * Chunk::SX;
+    const int baseZ = chunk.position().z * Chunk::SZ;
+
+    constexpr int ARM = 34;      // how far a walkway runs from the middle
+    constexpr int WIDTH = 2;     // half the walkway's width
+    constexpr int KEEP = 7;      // half the keep
+
+    const int chunkX = chunk.position().x;
+    const int chunkZ = chunk.position().z;
+
+    // Every square whose fortress could reach into this chunk.
+    const int reachChunks = (ARM + KEEP) / Chunk::SX + 1;
+    for (int sz = Structures::squareOf(chunkZ - reachChunks,
+                                       Structures::NETHER_FORTRESS.spacing);
+         sz <= Structures::squareOf(chunkZ + reachChunks,
+                                    Structures::NETHER_FORTRESS.spacing); ++sz)
+        for (int sx = Structures::squareOf(chunkX - reachChunks,
+                                           Structures::NETHER_FORTRESS.spacing);
+             sx <= Structures::squareOf(chunkX + reachChunks,
+                                        Structures::NETHER_FORTRESS.spacing); ++sx)
+        {
+            const Structures::Spot spot =
+                Structures::inSquare(Structures::NETHER_FORTRESS, sx, sz, m_seed);
+
+            const int midX = spot.chunkX * Structures::CHUNK + Structures::CHUNK / 2;
+            const int midZ = spot.chunkZ * Structures::CHUNK + Structures::CHUNK / 2;
+            const int floor = FORTRESS_FLOOR;
+
+            auto walkway = [&](int x, int z) {
+                // Deck, and a rail of brick either side of it so you
+                // can see where the edge is before you find it.
+                put(chunk, x, floor, z, Blocks::NetherBricks);
+                put(chunk, x, floor + 1, z, Blocks::Air);
+                put(chunk, x, floor + 2, z, Blocks::Air);
+            };
+
+            for (int along = -ARM; along <= ARM; ++along)
+                for (int across = -WIDTH; across <= WIDTH; ++across)
+                {
+                    walkway(midX + along, midZ + across);
+                    walkway(midX + across, midZ + along);
+
+                    if (std::abs(across) == WIDTH)
+                    {
+                        put(chunk, midX + along, floor + 1, midZ + across,
+                            Blocks::NetherBricks);
+                        put(chunk, midX + across, floor + 1, midZ + along,
+                            Blocks::NetherBricks);
+                    }
+                }
+
+            // The keep: a walled room where the two cross, roofed, with
+            // the cage in the middle of it.
+            for (int dx = -KEEP; dx <= KEEP; ++dx)
+                for (int dz = -KEEP; dz <= KEEP; ++dz)
+                {
+                    const bool wall = std::abs(dx) == KEEP || std::abs(dz) == KEEP;
+                    for (int dy = 0; dy <= 5; ++dy)
+                    {
+                        const bool roof = (dy == 5);
+                        const bool solid = wall || roof || dy == 0;
+                        const bool doorway = wall && std::abs(dx) <= 1 && dy >= 1 && dy <= 2;
+                        const bool doorwayZ = wall && std::abs(dz) <= 1 && dy >= 1 && dy <= 2;
+
+                        put(chunk, midX + dx, floor + dy, midZ + dz,
+                            (solid && !(doorway || doorwayZ)) ? Blocks::NetherBricks
+                                                              : Blocks::Air);
+                    }
+                }
+
+            put(chunk, midX, floor + 1, midZ, Blocks::MonsterSpawner);
+
+            // Nether wart on soul sand in the corners, which is what a
+            // fortress is really worth: brewing starts here.
+            for (int cx = -1; cx <= 1; cx += 2)
+                for (int cz = -1; cz <= 1; cz += 2)
+                {
+                    const int wx = midX + cx * (KEEP - 2);
+                    const int wz = midZ + cz * (KEEP - 2);
+                    put(chunk, wx, floor, wz, Blocks::SoulSand);
+                    put(chunk, wx, floor + 1, wz, Blocks::NetherWart);
+                }
+        }
 }
 
 Stronghold::Site WorldGen::nearestStronghold(int fromX, int fromZ) const

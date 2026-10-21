@@ -206,6 +206,7 @@ namespace
         { "Glow Berries", GlowBerriesTile,GlowBerriesTile,GlowBerriesTile,false, false, RenderType::Cross, 14,   0.0f },
         { "Ominous Vault",VaultTop,      VaultTop,       OminousVaultSide,true, true,  RenderType::Cube,   6,  -1.0f },
         { "Ominous Vault",VaultTop,      VaultTop,       OminousVaultSideOpen,true,true,RenderType::Cube,  10,  -1.0f },
+        { "Monster Spawner",SpawnerTile, SpawnerTile,    SpawnerTile,    true,  false, RenderType::Cube,   1,   5.0f },
     };
 }
 

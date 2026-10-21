@@ -4176,6 +4176,103 @@ namespace
         check(atHand > 0.5f, "the hand samples the lower half of the patch");
     }
 
+    void testFortressAndMineshaft()
+    {
+        section("the fortress and the mineshaft");
+
+        constexpr uint32_t SEED = 4242u;
+
+        // What a cage sends is decided by where it stands, because a
+        // block here is an id with nowhere to write anything down.
+        check(cageSpecies(Dimension::Nether) == MobId::Blaze,
+              "a cage in a fortress makes blazes");
+        check(cageSpecies(Dimension::Overworld) == MobId::Spider,
+              "and one in the rock makes spiders");
+        for (Dimension where : { Dimension::Overworld, Dimension::Nether, Dimension::End })
+            check(mobType(cageSpecies(where)).spawnClass == SpawnClass::Hostile,
+                  "and whatever it makes is something that fights");
+
+        check(isMonsterSpawner(Blocks::MonsterSpawner), "a cage is a cage");
+        check(!isMonsterSpawner(Blocks::TrialSpawner), "and a trial spawner is not one");
+        check(!isOpaque(Blocks::MonsterSpawner), "you can see into it");
+        check(CAGE_LIMIT > 0 && CAGE_LIMIT < 12, "it keeps a few out at once, not a swarm");
+
+        // The fortress. Nether chunks, so the overworld generator will
+        // not do: this is the one structure in the other dimension.
+        {
+            const WorldGen nether(SEED, Dimension::Nether);
+            const Structures::Spot spot =
+                Structures::inSquare(Structures::NETHER_FORTRESS, 0, 0, SEED);
+
+            int brick = 0, cages = 0, wart = 0, soul = 0;
+            for (int cz = spot.chunkZ - 1; cz <= spot.chunkZ + 1; ++cz)
+                for (int cx = spot.chunkX - 1; cx <= spot.chunkX + 1; ++cx)
+                {
+                    Chunk chunk(ChunkPos{ cx, cz });
+                    nether.generate(chunk);
+
+                    for (int y = WorldGen::FORTRESS_FLOOR - 1;
+                         y <= WorldGen::FORTRESS_FLOOR + 6 && y < Chunk::SY; ++y)
+                        for (int lz = 0; lz < Chunk::SZ; ++lz)
+                            for (int lx = 0; lx < Chunk::SX; ++lx)
+                                switch (chunk.getBlock(lx, y, lz))
+                                {
+                                    case Blocks::NetherBricks: ++brick; break;
+                                    case Blocks::MonsterSpawner: ++cages; break;
+                                    case Blocks::NetherWart: ++wart; break;
+                                    case Blocks::SoulSand: ++soul; break;
+                                    default: break;
+                                }
+                }
+
+            check(brick > 300, "a fortress is a lot of nether brick");
+            check(cages == 1, "with one cage in the keep");
+            check(wart == 4 && soul == 4, "and wart growing in the corners of it");
+            check(WorldGen::FORTRESS_FLOOR > WorldGen::NETHER_LAVA_LEVEL,
+                  "and the whole of it stands clear of the lava");
+        }
+
+        // The mineshaft, which goes down by the spread rule. Finding
+        // one means walking until the dice say so rather than going to
+        // the middle of a square.
+        {
+            const WorldGen generator(SEED);
+
+            bool found = false;
+            int planks = 0, rails = 0, fence = 0;
+
+            for (int radius = 0; radius <= 30 && !found; ++radius)
+                for (int cz = -radius; cz <= radius && !found; ++cz)
+                    for (int cx = -radius; cx <= radius && !found; ++cx)
+                    {
+                        if (std::max(std::abs(cx), std::abs(cz)) != radius) continue;
+                        if (!Structures::spreadAt(cx, cz, SEED, 445731u, 0.012f)) continue;
+
+                        Chunk chunk(ChunkPos{ cx, cz });
+                        generator.generate(chunk);
+
+                        for (int y = WorldGen::MINESHAFT_MIN - 2;
+                             y <= WorldGen::MINESHAFT_MAX + 3 && y < Chunk::SY; ++y)
+                            for (int lz = 0; lz < Chunk::SZ; ++lz)
+                                for (int lx = 0; lx < Chunk::SX; ++lx)
+                                    switch (chunk.getBlock(lx, y, lz))
+                                    {
+                                        case Blocks::Planks: ++planks; break;
+                                        case Blocks::RailEastWest:
+                                        case Blocks::RailNorthSouth: ++rails; break;
+                                        case Blocks::OakFence: ++fence; break;
+                                        default: break;
+                                    }
+
+                        found = planks > 0;
+                    }
+
+            check(found, "there is a mineshaft within thirty chunks of the origin");
+            check(rails > 0, "with rails down it");
+            check(fence > 0, "and supports holding the roof up");
+        }
+    }
+
     void testStructurePlacement()
     {
         section("structures: Minecraft's own placement rules");
@@ -7766,6 +7863,7 @@ int runSelfTest()
     testFirstPersonArm();
     testHandSwing();
     testStructurePlacement();
+    testFortressAndMineshaft();
     testCaves();
     testCopper();
     testPistons();

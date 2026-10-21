@@ -1470,6 +1470,24 @@ namespace
     void paintOminousVaultSide(Tile& t)     { paintVaultIn(t, Color{ 60, 66, 84 }, Color{ 14, 16, 24 }); }
     void paintOminousVaultSideOpen(Tile& t) { paintVaultIn(t, Color{ 74, 82, 104 }, Color{ 142, 212, 248 }); }
 
+    // A spawner is a cage you can see into, which is the whole of how
+    // you know to break it before whatever is inside gets out.
+    void paintSpawner(Tile& t)
+    {
+        t.fill(Color{ 26, 30, 32, 215 });
+        for (int i = 0; i < Tile::N; ++i)
+            for (int k = 0; k < Tile::N; ++k)
+                if ((i % 4) == 0 || (k % 4) == 0)
+                    t.set(i, k, Color{ 72, 80, 84 });
+        for (int i = 0; i < Tile::N; ++i)
+        {
+            t.set(i, 0, Color{ 86, 94, 98 });
+            t.set(i, Tile::N - 1, Color{ 86, 94, 98 });
+            t.set(0, i, Color{ 86, 94, 98 });
+            t.set(Tile::N - 1, i, Color{ 86, 94, 98 });
+        }
+    }
+
     void paintObsidian(Tile& t)
     {
         t.fill(Color{ 21, 16, 30 });
@@ -3750,6 +3768,7 @@ namespace
         { Tiles::GlowBerriesTile, paintGlowBerries },
         { Tiles::OminousVaultSide, paintOminousVaultSide },
         { Tiles::OminousVaultSideOpen, paintOminousVaultSideOpen },
+        { Tiles::SpawnerTile, paintSpawner },
         { Tiles::Obsidian, paintObsidian },
         { Tiles::TallGrass, paintTallGrass },
         { Tiles::FlowerRed, paintFlowerRed },
@@ -4060,6 +4079,7 @@ namespace
         { Tiles::VaultSideOpen, { "vault_front_on", nullptr },                         Tinting::None,    0,   false },
         { Tiles::OminousVaultSide, { "vault_front_off_ominous", nullptr },             Tinting::None,    0,   false },
         { Tiles::OminousVaultSideOpen, { "vault_front_on_ominous", nullptr },          Tinting::None,    0,   false },
+        { Tiles::SpawnerTile,   { "spawner", "mob_spawner", nullptr },                 Tinting::None,    0,   false },
         { Tiles::PistonTop,     { "piston_side", nullptr },                            Tinting::None,    0,   false },
         { Tiles::PistonSide,    { "piston_side", nullptr },                            Tinting::None,    0,   false },
         { Tiles::PistonFace,    { "piston_top", "piston_top_normal", nullptr },         Tinting::None,    0,   false },

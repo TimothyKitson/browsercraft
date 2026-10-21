@@ -229,6 +229,19 @@ struct MobType
     std::vector<MobBox> model;
 };
 
+// What a monster cage sends out. A block here is an id and nothing
+// else -- there is nowhere in it to write down which mob it keeps --
+// so the dimension it stands in decides: a cage in a fortress makes
+// blazes, one in the rock makes spiders.
+MobId cageSpecies(Dimension where);
+
+// How many of its own kind a cage will have out at once, and how long
+// it waits between them. A cage that never stopped would empty the
+// mob cap into one corridor.
+constexpr int CAGE_LIMIT = 4;
+constexpr float CAGE_INTERVAL = 6.0f;
+constexpr float CAGE_RANGE = 12.0f;
+
 const MobType& mobType(MobId id);
 int mobTypeCount();
 

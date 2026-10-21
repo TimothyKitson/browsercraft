@@ -536,6 +536,11 @@ private:
 
     void tickTrialSpawners(float deltaTime);
 
+    // The plain cages, which keep sending the same thing out for as
+    // long as you stand near them.
+    void tickMonsterCages(float deltaTime);
+    float m_cageTimer = 0.0f;
+
     // Which copper bulbs are sitting in a live signal. A bulb flips on
     // the edge of a pulse rather than following the power, so it has to
     // remember whether it has already answered this one; the block id

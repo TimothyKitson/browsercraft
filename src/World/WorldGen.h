@@ -49,6 +49,13 @@ public:
     // central plateau is centred on. Public because spawning somewhere
     // survivable in either dimension has to know where the ground is.
     static constexpr int NETHER_LAVA_LEVEL = 31;
+
+
+    // How high a fortress's walkways run above the lava, and how far
+    // down a mineshaft's corridors are.
+    static constexpr int FORTRESS_FLOOR = NETHER_LAVA_LEVEL + 12;
+    static constexpr int MINESHAFT_MIN = 14;
+    static constexpr int MINESHAFT_MAX = 44;
     static constexpr int END_ISLAND_LEVEL = 58;
 
     WorldGen(uint32_t seed, Dimension dimension = Dimension::Overworld);
@@ -113,6 +120,15 @@ private:
     void buildVillages(Chunk& chunk) const;
     void buildTrialChambers(Chunk& chunk) const;
     void buildStrongholds(Chunk& chunk) const;
+
+    // The Nether's own structure: a bridge and a keep of nether brick
+    // over the lava, with a blaze cage in it.
+    void buildNetherFortresses(Chunk& chunk) const;
+
+    // And the overworld's oldest one: corridors of plank and fence
+    // with rails down them, placed by the spread rule rather than the
+    // grid -- two mineshafts are allowed to meet, and do.
+    void buildMineshafts(Chunk& chunk) const;
     void stampStrongholdRoom(Chunk& chunk, const Stronghold::Site& site,
                              const Stronghold::Room& room) const;
     void stampChamberRoom(Chunk& chunk, const TrialChamber::Site& site,
