@@ -1464,6 +1464,12 @@ namespace
         }
     }
 
+    // The ominous vault: the same lock in a colder metal, with the
+    // keyhole glowing a different colour. It has to read as a vault
+    // and as not the same vault.
+    void paintOminousVaultSide(Tile& t)     { paintVaultIn(t, Color{ 60, 66, 84 }, Color{ 14, 16, 24 }); }
+    void paintOminousVaultSideOpen(Tile& t) { paintVaultIn(t, Color{ 74, 82, 104 }, Color{ 142, 212, 248 }); }
+
     void paintObsidian(Tile& t)
     {
         t.fill(Color{ 21, 16, 30 });
@@ -3446,6 +3452,43 @@ namespace
         }
     }
 
+    void paintItemOminousBottle(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        // A bottle, the same shape as the potions, with something
+        // darker in it.
+        for (int y = 5; y <= 13; ++y)
+        {
+            const int half = (y < 7) ? 2 : 4;
+            for (int x = 8 - half; x <= 7 + half; ++x)
+                t.set(x, y, mixColor(Color{ 48, 40, 78 }, Color{ 110, 96, 168 },
+                                     (y - 5) / 8.0f));
+        }
+        for (int y = 2; y <= 4; ++y)
+            for (int x = 6; x <= 9; ++x)
+                t.set(x, y, Color{ 196, 190, 214 });
+    }
+
+    void paintItemOminousKey(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        const Color cold{ 158, 206, 240 };
+        const Color dark{ 92, 130, 176 };
+        for (int y = 2; y <= 6; ++y)
+            for (int x = 5; x <= 9; ++x)
+            {
+                const int d = (x - 7) * (x - 7) + (y - 4) * (y - 4);
+                if (d <= 4 && d >= 1) t.set(x, y, cold);
+            }
+        for (int y = 7; y <= 13; ++y)
+        {
+            t.set(7, y, cold);
+            t.set(8, y, dark);
+        }
+        t.set(9, 11, cold);
+        t.set(9, 13, cold);
+    }
+
     void paintItemTrialKey(Tile& t)
     {
         t.fill(Color{ 0, 0, 0, 0 });
@@ -3705,6 +3748,8 @@ namespace
         { Tiles::MossTile, paintMoss },
         { Tiles::AzaleaLeavesTile, paintAzaleaLeaves },
         { Tiles::GlowBerriesTile, paintGlowBerries },
+        { Tiles::OminousVaultSide, paintOminousVaultSide },
+        { Tiles::OminousVaultSideOpen, paintOminousVaultSideOpen },
         { Tiles::Obsidian, paintObsidian },
         { Tiles::TallGrass, paintTallGrass },
         { Tiles::FlowerRed, paintFlowerRed },
@@ -3799,6 +3844,8 @@ namespace
         { Tiles::ItemRawCopper,     paintItemRawCopper },
         { Tiles::ItemCopperIngot,   paintItemCopperIngot },
         { Tiles::ItemGlowBerries,   paintItemGlowBerries },
+        { Tiles::ItemOminousBottle, paintItemOminousBottle },
+        { Tiles::ItemOminousKey,    paintItemOminousKey },
         { Tiles::ItemMagmaCream,    paintItemMagmaCream },
         { Tiles::ItemGlowstoneDust, paintItemGlowstoneDust },
         { Tiles::EndFrameTop,   paintEndFrameTop },
@@ -3943,6 +3990,8 @@ namespace
         { Tiles::ItemRawCopper,  { "raw_copper", nullptr, nullptr } },
         { Tiles::ItemCopperIngot, { "copper_ingot", nullptr, nullptr } },
         { Tiles::ItemGlowBerries, { "glow_berries", nullptr, nullptr } },
+        { Tiles::ItemOminousBottle, { "ominous_bottle", nullptr, nullptr } },
+        { Tiles::ItemOminousKey, { "ominous_trial_key", nullptr, nullptr } },
     };
 
     const PackTile PACK_TILES[] = {
@@ -4009,6 +4058,8 @@ namespace
         { Tiles::VaultTop,      { "vault_top", nullptr },                              Tinting::None,    0,   false },
         { Tiles::VaultSide,     { "vault_front_off", nullptr },                        Tinting::None,    0,   false },
         { Tiles::VaultSideOpen, { "vault_front_on", nullptr },                         Tinting::None,    0,   false },
+        { Tiles::OminousVaultSide, { "vault_front_off_ominous", nullptr },             Tinting::None,    0,   false },
+        { Tiles::OminousVaultSideOpen, { "vault_front_on_ominous", nullptr },          Tinting::None,    0,   false },
         { Tiles::PistonTop,     { "piston_side", nullptr },                            Tinting::None,    0,   false },
         { Tiles::PistonSide,    { "piston_side", nullptr },                            Tinting::None,    0,   false },
         { Tiles::PistonFace,    { "piston_top", "piston_top_normal", nullptr },         Tinting::None,    0,   false },

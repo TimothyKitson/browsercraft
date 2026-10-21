@@ -256,6 +256,11 @@ namespace Blocks
         AzaleaLeaves,
         GlowBerries,
 
+        // The vaults an ominous key opens, which hold the best of what
+        // there is to find.
+        OminousVault,
+        OminousVaultOpen,
+
         Count
     };
 }
@@ -386,7 +391,13 @@ inline bool isCrafter(BlockId id)
 
 inline bool isVault(BlockId id)
 {
-    return id == Blocks::Vault || id == Blocks::VaultOpen;
+    return id == Blocks::Vault || id == Blocks::VaultOpen ||
+           id == Blocks::OminousVault || id == Blocks::OminousVaultOpen;
+}
+
+inline bool isOminousVault(BlockId id)
+{
+    return id == Blocks::OminousVault || id == Blocks::OminousVaultOpen;
 }
 
 // Painted on the floor but not a track. Dust is drawn exactly as a rail

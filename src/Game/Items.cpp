@@ -114,6 +114,8 @@ namespace
         { "Raw Copper",      Tiles::ItemRawCopper,      64 },
         { "Copper Ingot",    Tiles::ItemCopperIngot,    64 },
         { "Glow Berries",    Tiles::ItemGlowBerries,    64 },
+        { "Ominous Bottle",  Tiles::ItemOminousBottle,   1 },
+        { "Ominous Trial Key", Tiles::ItemOminousKey,    64 },
     };
 
     static_assert(sizeof(ITEMS) / sizeof(ITEMS[0]) ==

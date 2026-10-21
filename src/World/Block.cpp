@@ -204,6 +204,8 @@ namespace
         { "Moss Block",   MossTile,      MossTile,       MossTile,       true,  true,  RenderType::Cube,   0,   0.1f },
         { "Azalea Leaves",AzaleaLeavesTile,AzaleaLeavesTile,AzaleaLeavesTile,true,false,RenderType::Cube,   0,   0.2f },
         { "Glow Berries", GlowBerriesTile,GlowBerriesTile,GlowBerriesTile,false, false, RenderType::Cross, 14,   0.0f },
+        { "Ominous Vault",VaultTop,      VaultTop,       OminousVaultSide,true, true,  RenderType::Cube,   6,  -1.0f },
+        { "Ominous Vault",VaultTop,      VaultTop,       OminousVaultSideOpen,true,true,RenderType::Cube,  10,  -1.0f },
     };
 }
 

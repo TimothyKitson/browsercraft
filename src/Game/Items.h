@@ -138,6 +138,13 @@ namespace Items
         // The one thing you can eat that grows underground.
         GlowBerries,
 
+        // The hard way round a trial chamber. The bottle is what a
+        // vault pays you for doing it the easy way; drinking it turns
+        // the next chamber ominous, and an ominous spawner pays the
+        // key that opens the vaults worth opening.
+        OminousBottle,
+        OminousTrialKey,
+
         Count
     };
 }

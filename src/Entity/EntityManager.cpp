@@ -23,8 +23,11 @@ namespace
     // Wolves keep to the trees, which is where Minecraft puts them and
     // what stops a pack turning up in the middle of a field.
     const MobId FOREST_SPECIES[] = { MobId::Wolf };
+    // No breeze. It comes out of a trial spawner and nowhere else,
+    // which is Minecraft's -- it was in this list only while there
+    // were no chambers for it to come out of.
     const MobId HOSTILE_SPECIES[] = { MobId::Zombie, MobId::Skeleton, MobId::Creeper,
-                                      MobId::Spider, MobId::Enderman, MobId::Breeze };
+                                      MobId::Spider, MobId::Enderman };
 
     // The Nether has its own, and nothing else belongs there: a sheep on
     // netherrack and a piglin in a meadow are both wrong.
@@ -102,6 +105,17 @@ int EntityManager::surfaceBelow(const World& world, int x, int startY, int z) co
     }
 
     return -1;
+}
+
+int EntityManager::nightSpeciesCount()
+{
+    return static_cast<int>(std::size(HOSTILE_SPECIES));
+}
+
+MobId EntityManager::nightSpecies(int index)
+{
+    const int count = nightSpeciesCount();
+    return HOSTILE_SPECIES[((index % count) + count) % count];
 }
 
 bool EntityManager::fits(const World& world, const MobType& type, const glm::vec3& feet) const

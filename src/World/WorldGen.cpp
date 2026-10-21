@@ -1445,9 +1445,12 @@ void WorldGen::stampChamberRoom(Chunk& chunk, const TrialChamber::Site& site,
 
         case Kind::Vault:
             // Against the north wall, which is the furthest thing from
-            // the way in however you came.
-            put(chunk, midX - 1, site.y, room.z, Blocks::Vault);
-            put(chunk, midX + 1, site.y, room.z, Blocks::Vault);
+            // the way in however you came. The ominous one stands
+            // between the two plain ones: you can see what you are
+            // missing from the first time you walk in.
+            put(chunk, midX - 2, site.y, room.z, Blocks::Vault);
+            put(chunk, midX, site.y, room.z, Blocks::OminousVault);
+            put(chunk, midX + 2, site.y, room.z, Blocks::Vault);
             break;
 
         case Kind::Supply:

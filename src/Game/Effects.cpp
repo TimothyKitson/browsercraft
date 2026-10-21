@@ -20,6 +20,7 @@ const char* Effects::name(Kind kind)
         case Kind::WaterBreathing: return "Water Breathing";
         case Kind::NightVision:    return "Night Vision";
         case Kind::JumpBoost:      return "Jump Boost";
+        case Kind::BadOmen:        return "Bad Omen";
         case Kind::Count:          break;
     }
     return "";
@@ -27,7 +28,11 @@ const char* Effects::name(Kind kind)
 
 bool Effects::isHarmful(Kind kind)
 {
-    return kind == Kind::Slowness || kind == Kind::Weakness || kind == Kind::Poison;
+    // Bad omen does nothing to the body at all. It counts as harmful
+    // because of what it is for and because the UI should paint it the
+    // colour of trouble.
+    return kind == Kind::Slowness || kind == Kind::Weakness ||
+           kind == Kind::Poison || kind == Kind::BadOmen;
 }
 
 bool Effects::Set::has(Kind kind) const

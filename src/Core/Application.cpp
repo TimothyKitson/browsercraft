@@ -1454,6 +1454,7 @@ bool Application::frame()
             m_startupScreen == "jungle" || m_startupScreen == "savanna" ||
             m_startupScreen == "redstone" || m_startupScreen == "chamber" ||
             m_startupScreen == "cave" || m_startupScreen == "dripstone" ||
+            m_startupScreen == "vault" ||
             m_startupScreen == "rock")
         {
             // Dev aid: open the inventory with something in it, so the
@@ -1496,6 +1497,7 @@ bool Application::frame()
                                   m_startupScreen != "savanna" &&
                                   m_startupScreen != "redstone" &&
                                   m_startupScreen != "chamber" &&
+                                  m_startupScreen != "vault" &&
                                   m_startupScreen != "cave" &&
                                   m_startupScreen != "dripstone" &&
                                   m_startupScreen != "rock" &&
@@ -2068,8 +2070,11 @@ bool Application::frame()
             // Down into the nearest trial chamber, the same way the
             // village screen walks to a real village: what is worth
             // looking at is what the generator actually cut.
-            if (m_startupScreen == "chamber")
+            if (m_startupScreen == "chamber" || m_startupScreen == "vault")
             {
+                // The vaults are in the corner rooms, so that screen
+                // stands a room along in each direction from the way in.
+                const int room = (m_startupScreen == "vault") ? TrialChamber::ROOM : 0;
                 const TrialChamber::Site site = m_world->generator().nearestChamber(
                     static_cast<int>(m_player.position.x),
                     static_cast<int>(m_player.position.z), 4);
@@ -2078,9 +2083,9 @@ bool Application::frame()
                 {
                     // In the entrance room, under the shaft, looking
                     // along the row towards a spawner.
-                    m_player.position = glm::vec3(static_cast<float>(site.x) + 0.5f,
+                    m_player.position = glm::vec3(static_cast<float>(site.x - room) + 0.5f,
                                                   static_cast<float>(site.y),
-                                                  static_cast<float>(site.z) + 3.5f);
+                                                  static_cast<float>(site.z - room) + 3.5f);
                     m_player.velocity = glm::vec3(0.0f);
                     m_player.flying = true;
                     m_placeOnSurface = false;
@@ -2091,6 +2096,8 @@ bool Application::frame()
                     std::fflush(stdout);
 
                     m_inventory.add(Items::TrialKey, 3);
+                    m_inventory.add(Items::OminousTrialKey, 2);
+                    m_inventory.add(Items::OminousBottle, 1);
                     m_inventory.add(Items::Mace, 1);
                     m_inventory.add(Items::WindCharge, 16);
 
@@ -2099,9 +2106,9 @@ bool Application::frame()
                     // the screenshot does.
                     m_pendingArena = true;
                     m_arenaKind = ArenaKind::ChamberProps;
-                    m_arenaX = site.x;
+                    m_arenaX = site.x - room;
                     m_arenaY = site.y;
-                    m_arenaZ = site.z;
+                    m_arenaZ = site.z - room;
                 }
                 else
                 {
@@ -4018,12 +4025,17 @@ void Application::tickTrialSpawners(float deltaTime)
                                                    m_player.position);
                     if (away > Trial::WAKE_RANGE) continue;
 
+                    // An omen on the player makes this one ominous:
+                    // more of them, and a key worth more at the end.
+                    const bool ominous = m_player.effects.has(Effects::Kind::BadOmen);
+                    const int wave = Trial::waveSize(ominous);
+
                     // Out they come, in a ring round the spawner so
                     // none of them starts inside the wall.
                     int sent = 0;
-                    for (int i = 0; i < Trial::WAVE_SIZE; ++i)
+                    for (int i = 0; i < wave; ++i)
                     {
-                        const float angle = (i / static_cast<float>(Trial::WAVE_SIZE)) *
+                        const float angle = (i / static_cast<float>(wave)) *
                                             6.2831853f;
                         const glm::vec3 feet(at.x + 0.5f + std::cos(angle) * 2.0f,
                                              static_cast<float>(at.y),
@@ -4037,10 +4049,11 @@ void Application::tickTrialSpawners(float deltaTime)
 
                     m_world->setBlock(at.x, at.y, at.z, Blocks::TrialSpawnerActive);
                     m_net.onLocalBlockChange(at.x, at.y, at.z, Blocks::TrialSpawnerActive);
-                    m_trials.push_back(ActiveTrial{ at, 0.0f });
+                    m_trials.push_back(ActiveTrial{ at, 0.0f, ominous });
 
-                    m_audio.play(Sound::MobZombieSay, 0.7f, 0.6f);
-                    m_chatLog.add("A trial spawner wakes.");
+                    m_audio.play(Sound::MobZombieSay, 0.7f, ominous ? 0.45f : 0.6f);
+                    m_chatLog.add(ominous ? "An ominous trial spawner wakes."
+                                          : "A trial spawner wakes.");
                 }
     }
 
@@ -4087,10 +4100,12 @@ void Application::tickTrialSpawners(float deltaTime)
                                  Blocks::TrialSpawnerSpent);
 
         for (int k = 0; k < Trial::KEYS_PER_SPAWNER; ++k)
-            m_drops.spawn(middle + glm::vec3(0.0f, 1.0f, 0.0f), Items::TrialKey, 1);
+            m_drops.spawn(middle + glm::vec3(0.0f, 1.0f, 0.0f),
+                          Trial::keyFor(trial.ominous), 1);
 
-        m_audio.play(Sound::Pickup, 0.8f, 1.4f);
-        m_chatLog.add("The spawner gives up its key.");
+        m_audio.play(Sound::Pickup, 0.8f, trial.ominous ? 1.1f : 1.4f);
+        m_chatLog.add(trial.ominous ? "The spawner gives up an ominous key."
+                                    : "The spawner gives up its key.");
 
         m_trials[i] = m_trials.back();
         m_trials.pop_back();
@@ -4100,26 +4115,35 @@ void Application::tickTrialSpawners(float deltaTime)
 // A vault takes one key and gives up what is behind it. Once.
 void Application::openVault(const glm::ivec3& block)
 {
-    if (m_world->getBlock(block.x, block.y, block.z) != Blocks::Vault)
+    const BlockId here = m_world->getBlock(block.x, block.y, block.z);
+    const bool ominous = isOminousVault(here);
+
+    if (here != Blocks::Vault && here != Blocks::OminousVault)
     {
         m_chatLog.add("This vault has already been opened.");
         m_audio.play(Sound::Click, 0.4f, 0.7f);
         return;
     }
 
-    if (!m_inventory.take(Items::TrialKey))
+    // The two keys are not interchangeable, which is the whole of what
+    // makes the ominous half of a chamber worth the trouble.
+    if (!m_inventory.take(Trial::keyFor(ominous)))
     {
-        m_chatLog.add("You need a trial key.");
+        m_chatLog.add(ominous ? "You need an ominous trial key."
+                              : "You need a trial key.");
         m_audio.play(Sound::Click, 0.4f, 0.7f);
         return;
     }
 
-    m_world->setBlock(block.x, block.y, block.z, Blocks::VaultOpen);
-    m_net.onLocalBlockChange(block.x, block.y, block.z, Blocks::VaultOpen);
+    const BlockId opened = ominous ? Blocks::OminousVaultOpen : Blocks::VaultOpen;
+    m_world->setBlock(block.x, block.y, block.z, opened);
+    m_net.onLocalBlockChange(block.x, block.y, block.z, opened);
 
     const glm::vec3 out = glm::vec3(block) + glm::vec3(0.5f, 1.2f, 0.5f);
-    for (const Trial::Stack& stack : Trial::vaultLoot(block.x, block.y, block.z,
-                                                      m_world->seed()))
+    const std::vector<Trial::Stack> loot =
+        ominous ? Trial::ominousVaultLoot(block.x, block.y, block.z, m_world->seed())
+                : Trial::vaultLoot(block.x, block.y, block.z, m_world->seed());
+    for (const Trial::Stack& stack : loot)
         for (int i = 0; i < stack.count; ++i)
             m_drops.spawn(out, stack.id, 1);
 
@@ -5308,6 +5332,22 @@ void Application::handlePlacement()
         return;
     }
 
+    // The ominous bottle is drunk where you stand. It does nothing to
+    // you that you can feel; what it changes is the next chamber.
+    if (stack.id == Items::OminousBottle)
+    {
+        Effects::give(m_player.effects, Effects::Kind::BadOmen, 0, Trial::OMEN_SECONDS);
+        m_chatLog.add("Bad omen. The next spawner will know.");
+        m_audio.play(Sound::MobEndermanSay, 0.6f, 0.6f);
+
+        if (!m_player.creative())
+        {
+            stack.count -= 1;
+            if (stack.count <= 0) stack.clear();
+        }
+        return;
+    }
+
     // A wind charge is thrown rather than placed, which is the only
     // thing in the game you use by aiming it at nothing.
     if (stack.id == Items::WindCharge)
@@ -6368,9 +6408,12 @@ void Application::buildBiomeArena(int standX, int standZ)
 // of the entrance room.
 void Application::dressChamberRoom(int atX, int atY, int atZ)
 {
-    m_world->setBlock(atX - 3, atY, atZ - 3, Blocks::Bookshelf);
-    m_world->setBlock(atX - 1, atY, atZ - 3, Blocks::DiamondOre);
-    m_world->setBlock(atX + 2, atY, atZ - 3, Blocks::EndPortalFrame);
+    // Near the camera rather than against the far wall: in a vault
+    // room the far wall is the vaults, and the props stood in front of
+    // them.
+    m_world->setBlock(atX - 3, atY, atZ + 1, Blocks::Bookshelf);
+    m_world->setBlock(atX - 1, atY, atZ + 1, Blocks::DiamondOre);
+    m_world->setBlock(atX + 2, atY, atZ + 1, Blocks::EndPortalFrame);
 }
 
 // A cave is dark, which is true of a cave and useless in a photograph.

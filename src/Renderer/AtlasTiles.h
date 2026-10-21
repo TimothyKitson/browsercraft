@@ -149,6 +149,8 @@ namespace Tiles
         MossTile,
         AzaleaLeavesTile,
         GlowBerriesTile,
+        OminousVaultSide,
+        OminousVaultSideOpen,
         RainDrop,
         SnowFlake,
 
@@ -258,8 +260,10 @@ namespace Tiles
         ItemRawCopper,
         ItemCopperIngot,
         ItemGlowBerries,
+        ItemOminousBottle,
+        ItemOminousKey,
 
-        ItemTileEnd = ItemGlowBerries + 1
+        ItemTileEnd = ItemOminousKey + 1
     };
 
     // Ten progressively more broken overlay tiles for the mining animation.

@@ -27,6 +27,13 @@ namespace Effects
         WaterBreathing,
         NightVision,
         JumpBoost,
+
+        // Not an effect so much as a flag you carry: it does nothing
+        // to you at all, and everything to what a trial chamber does
+        // to you. Drunk from an ominous bottle, it is the game's own
+        // hard mode.
+        BadOmen,
+
         Count
     };
 

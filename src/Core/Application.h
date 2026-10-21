@@ -527,6 +527,9 @@ private:
     {
         glm::ivec3 at{ 0, 0, 0 };
         float since = 0.0f;
+        // Decided when the spawner woke, not when it pays out: the
+        // omen that made it ominous will have run out by then.
+        bool ominous = false;
     };
     std::vector<ActiveTrial> m_trials;
     float m_trialScan = 0.0f;

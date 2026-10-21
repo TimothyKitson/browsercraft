@@ -1754,7 +1754,9 @@ namespace
                   std::string("effect ") + std::to_string(i) + " has a name");
             if (Effects::isHarmful(kind)) ++harmful;
         }
-        check(harmful == 3, "three of them are ones you would rather not have");
+        check(harmful == 4, "four of them are ones you would rather not have");
+        check(Effects::isHarmful(Kind::BadOmen),
+              "bad omen among them, though it is the only one that does nothing to you");
     }
 
     void testEffectsOnThePlayer()
@@ -4730,6 +4732,16 @@ namespace
                 sendsBreeze = true;
         check(sendsBreeze, "a trial spawner is where breezes come from");
 
+        // And the only place. It was in the night spawns while there
+        // was nowhere else to meet one; there is now.
+        {
+            bool nightly = false;
+            for (int i = 0; i < EntityManager::nightSpeciesCount(); ++i)
+                if (EntityManager::nightSpecies(i) == MobId::Breeze) nightly = true;
+            check(!nightly, "and not something you meet on the surface at night");
+            check(EntityManager::nightSpeciesCount() > 0, "though the night still sends plenty");
+        }
+
         for (int i = 0; i < 200; ++i)
         {
             const MobId sent = Trial::speciesFor(site.x + i, site.y, site.z, SEED, 0);
@@ -4847,6 +4859,118 @@ namespace
                     checkedLand = true;
                 }
             check(checkedLand, "and there is a chamber under dry land to check");
+        }
+
+        section("trial chambers: the ominous half");
+
+        // The whole loop, in order: a plain vault can pay a bottle,
+        // the bottle makes the next spawner ominous, an ominous
+        // spawner pays an ominous key, and that key opens the vaults
+        // that hold what is only in there.
+        {
+            bool anyBottle = false;
+            for (int i = 0; i < 400 && !anyBottle; ++i)
+                for (const Trial::Stack& stack :
+                     Trial::vaultLoot(site.x + i * 5, site.y, site.z - i * 3, SEED))
+                    if (stack.id == Items::OminousBottle) anyBottle = true;
+
+            check(anyBottle, "a plain vault can pay an ominous bottle");
+        }
+
+        check(Trial::waveSize(true) > Trial::waveSize(false),
+              "an ominous spawner sends more than a plain one");
+        check(Trial::keyFor(true) == Items::OminousTrialKey, "and pays an ominous key");
+        check(Trial::keyFor(false) == Items::TrialKey, "where a plain one pays a plain key");
+        check(Trial::keyFor(true) != Trial::keyFor(false),
+              "and the two are not the same key, which is the whole point of it");
+
+        // An ominous vault is worth the trouble: more of everything a
+        // plain one has, and one thing that is only ever in there.
+        {
+            int richer = 0, poorer = 0;
+            bool sawExtra = false;
+
+            for (int i = 0; i < 200; ++i)
+            {
+                const int x = site.x + i * 7, z = site.z - i * 11;
+                int plain = 0, ominous = 0;
+
+                for (const Trial::Stack& stack : Trial::vaultLoot(x, site.y, z, SEED))
+                    plain += stack.count;
+                for (const Trial::Stack& stack : Trial::ominousVaultLoot(x, site.y, z, SEED))
+                {
+                    ominous += stack.count;
+                    if (stack.id == Items::Mace || stack.id == Items::BreezeRod ||
+                        stack.id == Items::EnderPearl)
+                        sawExtra = true;
+                }
+
+                if (ominous > plain) ++richer;
+                else ++poorer;
+            }
+
+            check(richer > poorer * 4, "an ominous vault pays better than a plain one");
+            check(sawExtra, "and holds things a plain one never does");
+        }
+
+        {
+            const std::vector<Trial::Stack> once =
+                Trial::ominousVaultLoot(site.x, site.y, site.z, SEED);
+            const std::vector<Trial::Stack> again =
+                Trial::ominousVaultLoot(site.x, site.y, site.z, SEED);
+            check(once.size() == again.size(),
+                  "an ominous vault holds the same thing every time, like any other");
+            check(!once.empty(), "and is never empty");
+        }
+
+        // The blocks themselves.
+        check(isVault(Blocks::OminousVault) && isVault(Blocks::OminousVaultOpen),
+              "an ominous vault is a vault");
+        check(isOminousVault(Blocks::OminousVault), "and knows which sort it is");
+        check(!isOminousVault(Blocks::Vault), "where a plain one does too");
+        check(blockInfo(Blocks::OminousVault).hardness < 0.0f,
+              "and neither can be mined open");
+
+        // Bad omen does nothing to the body. That is deliberate: it is
+        // a flag you carry rather than a thing you feel, and if it
+        // slowed you down the hard mode would be hard twice over.
+        {
+            Effects::Set set;
+            Effects::give(set, Effects::Kind::BadOmen, 0, Trial::OMEN_SECONDS);
+            check(set.has(Effects::Kind::BadOmen), "an omen is carried");
+            check(Effects::speedMultiplier(set) == 1.0f, "and does not slow you down");
+            check(Effects::attackBonus(set) == 0, "nor weaken what you hit with");
+        }
+
+        // One ominous vault to a vault room, with the plain ones
+        // either side of it.
+        {
+            const WorldGen generator(SEED);
+            const TrialChamber::Site built = generator.nearestChamber(0, 0, 4);
+
+            int plain = 0, ominous = 0;
+            const int chunkX = (built.x >= 0 ? built.x : built.x - Chunk::SX + 1) / Chunk::SX;
+            const int chunkZ = (built.z >= 0 ? built.z : built.z - Chunk::SZ + 1) / Chunk::SZ;
+
+            for (int cz = chunkZ - 1; cz <= chunkZ + 1; ++cz)
+                for (int cx = chunkX - 1; cx <= chunkX + 1; ++cx)
+                {
+                    Chunk chunk(ChunkPos{ cx, cz });
+                    generator.generate(chunk);
+
+                    for (int y = built.y - 1; y <= built.y + TrialChamber::HEADROOM; ++y)
+                        for (int lz = 0; lz < Chunk::SZ; ++lz)
+                            for (int lx = 0; lx < Chunk::SX; ++lx)
+                            {
+                                if (y < 0 || y >= Chunk::SY) continue;
+                                const BlockId block = chunk.getBlock(lx, y, lz);
+                                if (block == Blocks::Vault) ++plain;
+                                if (block == Blocks::OminousVault) ++ominous;
+                            }
+                }
+
+            check(ominous > 0, "a chamber has ominous vaults in it");
+            check(plain > ominous, "and more plain ones than ominous");
         }
 
         // The spawner's three states, and what tells them apart.

@@ -14,6 +14,12 @@ class World;
 class EntityManager
 {
 public:
+    // What the night sends. Exposed so --selftest can ask what can
+    // turn up without waiting for dark -- which is how the breeze
+    // being in this list went unnoticed until there were chambers.
+    static int nightSpeciesCount();
+    static MobId nightSpecies(int index);
+
     static constexpr int MAX_MOBS = 48;
     static constexpr float SPAWN_MIN_DISTANCE = 22.0f;
     static constexpr float SPAWN_MAX_DISTANCE = 44.0f;
