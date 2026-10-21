@@ -4176,6 +4176,92 @@ namespace
         check(atHand > 0.5f, "the hand samples the lower half of the patch");
     }
 
+    void testLandmarks()
+    {
+        section("the surface landmarks");
+
+        constexpr uint32_t SEED = 4242u;
+        const WorldGen generator(SEED);
+
+        // Each one has a name, a grid and land it belongs on. A kind
+        // that suited nothing would be a kind that never appears.
+        for (int k = 0; k < static_cast<int>(WorldGen::Landmark::Count); ++k)
+        {
+            const WorldGen::Landmark kind = static_cast<WorldGen::Landmark>(k);
+            check(WorldGen::landmarkName(kind)[0] != '\0', "every landmark has a name");
+
+            const Structures::Grid& grid = WorldGen::landmarkGrid(kind);
+            check(grid.spacing > grid.separation, "and a grid with room in it");
+
+            int suits = 0;
+            for (Biome biome : { Biome::Ocean, Biome::Beach, Biome::Plains, Biome::Forest,
+                                 Biome::Desert, Biome::Mountains, Biome::Snowy,
+                                 Biome::Jungle, Biome::Savanna })
+                if (WorldGen::landmarkSuits(kind, biome)) ++suits;
+            check(suits > 0, "and somewhere it belongs");
+        }
+
+        // The ones that are about a biome are only in that biome. A
+        // pyramid in a snowfield is the sort of thing you notice.
+        check(WorldGen::landmarkSuits(WorldGen::Landmark::DesertPyramid, Biome::Desert),
+              "a pyramid belongs in the desert");
+        check(!WorldGen::landmarkSuits(WorldGen::Landmark::DesertPyramid, Biome::Snowy),
+              "and nowhere near a snowfield");
+        check(WorldGen::landmarkSuits(WorldGen::Landmark::Igloo, Biome::Snowy),
+              "an igloo belongs in the snow");
+        check(!WorldGen::landmarkSuits(WorldGen::Landmark::Igloo, Biome::Desert),
+              "and not in the sand");
+        check(WorldGen::landmarkSuits(WorldGen::Landmark::JungleTemple, Biome::Jungle),
+              "a temple belongs in the jungle");
+        check(!WorldGen::landmarkSuits(WorldGen::Landmark::RuinedPortal, Biome::Ocean),
+              "and nothing stands on the sea");
+
+        // And they are built. Each kind is looked for where its own
+        // grid says it should be, and the chunks there generated.
+        struct Wanted { WorldGen::Landmark kind; BlockId block; const char* says; };
+        const Wanted WANTED[] = {
+            { WorldGen::Landmark::DesertPyramid,   Blocks::Sandstone,
+              "a desert pyramid is built of sandstone" },
+            { WorldGen::Landmark::JungleTemple,    Blocks::Cobblestone,
+              "a jungle temple of cobblestone" },
+            { WorldGen::Landmark::Igloo,           Blocks::Snow,
+              "an igloo of snow" },
+            { WorldGen::Landmark::RuinedPortal,    Blocks::Obsidian,
+              "a ruined portal of obsidian" },
+            { WorldGen::Landmark::PillagerOutpost, Blocks::DarkOakPlanks,
+              "and an outpost of dark oak" },
+        };
+
+        for (const Wanted& wanted : WANTED)
+        {
+            const Structures::Spot spot = generator.nearestLandmark(wanted.kind, 0, 0, 6);
+            check(spot.exists,
+                  std::string(WorldGen::landmarkName(wanted.kind)) +
+                      ": there is one within a few squares of the origin");
+            if (!spot.exists) continue;
+
+            int material = 0, chests = 0;
+            for (int cz = spot.chunkZ - 1; cz <= spot.chunkZ + 1; ++cz)
+                for (int cx = spot.chunkX - 1; cx <= spot.chunkX + 1; ++cx)
+                {
+                    Chunk chunk(ChunkPos{ cx, cz });
+                    generator.generate(chunk);
+
+                    for (int y = 0; y < Chunk::SY; ++y)
+                        for (int lz = 0; lz < Chunk::SZ; ++lz)
+                            for (int lx = 0; lx < Chunk::SX; ++lx)
+                            {
+                                const BlockId block = chunk.getBlock(lx, y, lz);
+                                if (block == wanted.block) ++material;
+                                if (block == Blocks::Chest) ++chests;
+                            }
+                }
+
+            check(material > 8, wanted.says);
+            check(chests > 0, "with something in it worth the walk");
+        }
+    }
+
     void testFortressAndMineshaft()
     {
         section("the fortress and the mineshaft");
@@ -7864,6 +7950,7 @@ int runSelfTest()
     testHandSwing();
     testStructurePlacement();
     testFortressAndMineshaft();
+    testLandmarks();
     testCaves();
     testCopper();
     testPistons();

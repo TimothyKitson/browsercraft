@@ -1457,7 +1457,9 @@ bool Application::frame()
             m_startupScreen == "jungle" || m_startupScreen == "savanna" ||
             m_startupScreen == "redstone" || m_startupScreen == "chamber" ||
             m_startupScreen == "cave" || m_startupScreen == "dripstone" ||
-            m_startupScreen == "mineshaft" ||
+            m_startupScreen == "mineshaft" || m_startupScreen == "pyramid" ||
+            m_startupScreen == "temple" || m_startupScreen == "igloo" ||
+            m_startupScreen == "portalruin" || m_startupScreen == "outpost" ||
             m_startupScreen == "vault" || m_startupScreen == "stronghold" ||
             m_startupScreen == "rock")
         {
@@ -1506,6 +1508,11 @@ bool Application::frame()
                                   m_startupScreen != "cave" &&
                                   m_startupScreen != "dripstone" &&
                                   m_startupScreen != "mineshaft" &&
+                                  m_startupScreen != "pyramid" &&
+                                  m_startupScreen != "temple" &&
+                                  m_startupScreen != "igloo" &&
+                                  m_startupScreen != "portalruin" &&
+                                  m_startupScreen != "outpost" &&
                                   m_startupScreen != "rock" &&
                                   m_startupScreen != "portal" &&
                                   m_startupScreen != "nether";
@@ -1996,6 +2003,55 @@ bool Application::frame()
                 m_world->setBlock(px + 4, py, pz - 6, Blocks::Bookshelf);
                 m_world->setBlock(px + 6, py, pz - 6, Blocks::DiamondOre);
                 m_world->setBlock(px + 8, py, pz - 6, Blocks::EndPortalFrame);
+
+                m_player.mode = GameMode::Creative;
+                m_player.health = Player::MAX_HEALTH;
+            }
+
+            // Out to whichever landmark was asked for, the same way
+            // the village screen walks to a village.
+            if (m_startupScreen == "pyramid" || m_startupScreen == "temple" ||
+                m_startupScreen == "igloo" || m_startupScreen == "portalruin" ||
+                m_startupScreen == "outpost")
+            {
+                const WorldGen::Landmark kind =
+                    m_startupScreen == "pyramid"    ? WorldGen::Landmark::DesertPyramid
+                  : m_startupScreen == "temple"     ? WorldGen::Landmark::JungleTemple
+                  : m_startupScreen == "igloo"      ? WorldGen::Landmark::Igloo
+                  : m_startupScreen == "portalruin" ? WorldGen::Landmark::RuinedPortal
+                                                    : WorldGen::Landmark::PillagerOutpost;
+
+                const Structures::Spot spot = m_world->generator().nearestLandmark(
+                    kind, static_cast<int>(m_player.position.x),
+                    static_cast<int>(m_player.position.z), 8);
+
+                // Midday, whatever hour the saved world was left on: a
+                // pyramid at dusk is a grey lump.
+                m_timeOfDay = 0.5f;
+
+                if (spot.exists)
+                {
+                    const int midX = spot.chunkX * Structures::CHUNK + Structures::CHUNK / 2;
+                    const int midZ = spot.chunkZ * Structures::CHUNK + Structures::CHUNK / 2;
+                    const int top = m_world->generator().surfaceHeight(midX, midZ);
+
+                    m_player.position = glm::vec3(static_cast<float>(midX) + 0.5f,
+                                                  static_cast<float>(top + 6),
+                                                  static_cast<float>(midZ) + 22.5f);
+                    m_player.velocity = glm::vec3(0.0f);
+                    m_player.flying = true;
+                    m_placeOnSurface = false;
+                    m_camera.setOrientation(-90.0f, -12.0f);
+                    m_camera.addLook(0.0f, 0.0f, 0.0f);
+
+                    std::printf("%s at %d, %d\n", WorldGen::landmarkName(kind), midX, midZ);
+                    std::fflush(stdout);
+                }
+                else
+                {
+                    std::printf("No %s within eight squares\n", WorldGen::landmarkName(kind));
+                    std::fflush(stdout);
+                }
 
                 m_player.mode = GameMode::Creative;
                 m_player.health = Player::MAX_HEALTH;

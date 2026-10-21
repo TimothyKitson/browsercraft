@@ -4,6 +4,7 @@
 #include "Village.h"
 #include "TrialChamber.h"
 #include "Stronghold.h"
+#include "Structures.h"
 
 #include "Dimension.h"
 const char* dimensionFolder(Dimension dimension);
@@ -41,6 +42,31 @@ public:
     // character in one value, read off low-frequency noise so a cave
     // keeps the same character for a few hundred blocks rather than
     // changing every chunk.
+    // The small things Minecraft scatters across the surface: one
+    // building, one biome, one chest. They share a stamp because they
+    // are the same shape of problem -- a box of a particular material
+    // put down where the land suits it.
+    enum class Landmark : uint8_t
+    {
+        DesertPyramid,
+        JungleTemple,
+        Igloo,
+        RuinedPortal,
+        PillagerOutpost,
+        Count
+    };
+
+    static const char* landmarkName(Landmark kind);
+
+    // Which grid it goes down on, and whether this biome will have it.
+    static const Structures::Grid& landmarkGrid(Landmark kind);
+    static bool landmarkSuits(Landmark kind, Biome biome);
+
+    // The nearest one of a kind, for the screens that go and look at
+    // them. Empty when there is none within the squares searched.
+    Structures::Spot nearestLandmark(Landmark kind, int blockX, int blockZ,
+                                     int squares = 4) const;
+
     enum class CaveKind : uint8_t { Plain, Dripstone, Lush };
     CaveKind caveKindAt(int worldX, int worldZ) const;
 
@@ -129,6 +155,8 @@ private:
     // with rails down them, placed by the spread rule rather than the
     // grid -- two mineshafts are allowed to meet, and do.
     void buildMineshafts(Chunk& chunk) const;
+    void buildLandmarks(Chunk& chunk) const;
+    void stampLandmark(Chunk& chunk, Landmark kind, int midX, int midZ) const;
     void stampStrongholdRoom(Chunk& chunk, const Stronghold::Site& site,
                              const Stronghold::Room& room) const;
     void stampChamberRoom(Chunk& chunk, const TrialChamber::Site& site,

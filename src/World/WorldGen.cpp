@@ -165,6 +165,7 @@ void WorldGen::generate(Chunk& chunk) const
     buildTrialChambers(chunk);
     buildStrongholds(chunk);
     buildMineshafts(chunk);
+    buildLandmarks(chunk);
 }
 
 // A closed cavern system rather than a landscape: solid netherrack between a
@@ -1493,6 +1494,283 @@ TrialChamber::Site WorldGen::nearestChamber(int fromX, int fromZ, int squares) c
         }
 
     return best;
+}
+
+const char* WorldGen::landmarkName(Landmark kind)
+{
+    switch (kind)
+    {
+        case Landmark::DesertPyramid:   return "Desert pyramid";
+        case Landmark::JungleTemple:    return "Jungle temple";
+        case Landmark::Igloo:           return "Igloo";
+        case Landmark::RuinedPortal:    return "Ruined portal";
+        case Landmark::PillagerOutpost: return "Pillager outpost";
+        case Landmark::Count:           break;
+    }
+    return "";
+}
+
+const Structures::Grid& WorldGen::landmarkGrid(Landmark kind)
+{
+    switch (kind)
+    {
+        case Landmark::JungleTemple:    return Structures::JUNGLE_TEMPLE;
+        case Landmark::Igloo:           return Structures::IGLOO;
+        case Landmark::RuinedPortal:    return Structures::RUINED_PORTAL;
+        case Landmark::PillagerOutpost: return Structures::PILLAGER_POST;
+        default:                        return Structures::DESERT_PYRAMID;
+    }
+}
+
+// Which land each one belongs on. Minecraft decides this after it has
+// chosen the place rather than before, which is why a desert with no
+// pyramid in it is a desert that drew one somewhere there was no sand.
+bool WorldGen::landmarkSuits(Landmark kind, Biome biome)
+{
+    switch (kind)
+    {
+        case Landmark::DesertPyramid:   return biome == Biome::Desert;
+        case Landmark::JungleTemple:    return biome == Biome::Jungle;
+        case Landmark::Igloo:           return biome == Biome::Snowy;
+        case Landmark::PillagerOutpost:
+            return biome == Biome::Plains || biome == Biome::Savanna ||
+                   biome == Biome::Desert;
+        case Landmark::RuinedPortal:
+            // Anywhere with ground to stand on, which is the point of
+            // it: a ruined portal is the one you find before you know
+            // what you are looking at.
+            return biome != Biome::Ocean;
+        case Landmark::Count: break;
+    }
+    return false;
+}
+
+Structures::Spot WorldGen::nearestLandmark(Landmark kind, int blockX, int blockZ,
+                                           int squares) const
+{
+    const Structures::Grid& grid = landmarkGrid(kind);
+    const int chunkX = (blockX >= 0) ? blockX / Structures::CHUNK
+                                     : -(((-blockX) + Structures::CHUNK - 1) / Structures::CHUNK);
+    const int chunkZ = (blockZ >= 0) ? blockZ / Structures::CHUNK
+                                     : -(((-blockZ) + Structures::CHUNK - 1) / Structures::CHUNK);
+
+    const int centreX = Structures::squareOf(chunkX, grid.spacing);
+    const int centreZ = Structures::squareOf(chunkZ, grid.spacing);
+
+    Structures::Spot best;
+    long long bestDistance = 0;
+
+    for (int sz = centreZ - squares; sz <= centreZ + squares; ++sz)
+        for (int sx = centreX - squares; sx <= centreX + squares; ++sx)
+        {
+            const Structures::Spot spot = Structures::inSquare(grid, sx, sz, m_seed);
+            const int midX = spot.chunkX * Structures::CHUNK + Structures::CHUNK / 2;
+            const int midZ = spot.chunkZ * Structures::CHUNK + Structures::CHUNK / 2;
+            if (!landmarkSuits(kind, biomeAt(midX, midZ))) continue;
+
+            const long long dx = static_cast<long long>(midX) - blockX;
+            const long long dz = static_cast<long long>(midZ) - blockZ;
+            const long long distance = dx * dx + dz * dz;
+
+            if (!best.exists || distance < bestDistance)
+            {
+                best = spot;
+                bestDistance = distance;
+            }
+        }
+
+    return best;
+}
+
+void WorldGen::buildLandmarks(Chunk& chunk) const
+{
+    const int chunkX = chunk.position().x;
+    const int chunkZ = chunk.position().z;
+
+    // None of them reaches more than a chunk or so past its middle.
+    constexpr int REACH_CHUNKS = 2;
+
+    for (int k = 0; k < static_cast<int>(Landmark::Count); ++k)
+    {
+        const Landmark kind = static_cast<Landmark>(k);
+        const Structures::Grid& grid = landmarkGrid(kind);
+
+        const int firstX = Structures::squareOf(chunkX - REACH_CHUNKS, grid.spacing);
+        const int lastX = Structures::squareOf(chunkX + REACH_CHUNKS, grid.spacing);
+        const int firstZ = Structures::squareOf(chunkZ - REACH_CHUNKS, grid.spacing);
+        const int lastZ = Structures::squareOf(chunkZ + REACH_CHUNKS, grid.spacing);
+
+        for (int sz = firstZ; sz <= lastZ; ++sz)
+            for (int sx = firstX; sx <= lastX; ++sx)
+            {
+                const Structures::Spot spot = Structures::inSquare(grid, sx, sz, m_seed);
+                const int midX = spot.chunkX * Structures::CHUNK + Structures::CHUNK / 2;
+                const int midZ = spot.chunkZ * Structures::CHUNK + Structures::CHUNK / 2;
+
+                if (std::abs(spot.chunkX - chunkX) > REACH_CHUNKS) continue;
+                if (std::abs(spot.chunkZ - chunkZ) > REACH_CHUNKS) continue;
+                if (!landmarkSuits(kind, biomeAt(midX, midZ))) continue;
+
+                stampLandmark(chunk, kind, midX, midZ);
+            }
+    }
+}
+
+void WorldGen::stampLandmark(Chunk& chunk, Landmark kind, int midX, int midZ) const
+{
+    const int ground = surfaceHeight(midX, midZ);
+    if (ground <= SEA_LEVEL) return;
+
+    switch (kind)
+    {
+        case Landmark::DesertPyramid:
+        {
+            // Stepped sandstone, and a room cut into the ground under
+            // it with the chests in it -- which is where everybody
+            // digs, and why everybody knows the floor is a trap.
+            constexpr int HALF = 9;
+            for (int step = 0; step <= HALF; ++step)
+            {
+                const int radius = HALF - step;
+                const int y = ground + step;
+                for (int dx = -radius; dx <= radius; ++dx)
+                    for (int dz = -radius; dz <= radius; ++dz)
+                        put(chunk, midX + dx, y, midZ + dz, Blocks::Sandstone);
+            }
+
+            for (int dx = -3; dx <= 3; ++dx)
+                for (int dz = -3; dz <= 3; ++dz)
+                    for (int dy = 1; dy <= 4; ++dy)
+                    {
+                        const bool shell = std::abs(dx) == 3 || std::abs(dz) == 3 || dy == 1;
+                        put(chunk, midX + dx, ground - dy, midZ + dz,
+                            shell ? Blocks::Sandstone : Blocks::Air);
+                    }
+
+            put(chunk, midX - 2, ground - 2, midZ - 2, Blocks::Chest);
+            put(chunk, midX + 2, ground - 2, midZ + 2, Blocks::Chest);
+            // The thing under the floor. Everybody finds it once.
+            put(chunk, midX, ground - 4, midZ, Blocks::Tnt);
+            break;
+        }
+
+        case Landmark::JungleTemple:
+        {
+            constexpr int HALF = 5;
+            for (int dx = -HALF; dx <= HALF; ++dx)
+                for (int dz = -HALF; dz <= HALF; ++dz)
+                    for (int dy = 0; dy <= 6; ++dy)
+                    {
+                        const bool shell = std::abs(dx) == HALF || std::abs(dz) == HALF ||
+                                           dy == 0 || dy == 6;
+                        const bool door = std::abs(dx) <= 1 && dz == -HALF &&
+                                          dy >= 1 && dy <= 2;
+                        put(chunk, midX + dx, ground + dy, midZ + dz,
+                            (shell && !door) ? Blocks::Cobblestone : Blocks::Air);
+                    }
+
+            put(chunk, midX, ground + 1, midZ + 3, Blocks::Chest);
+            put(chunk, midX - 3, ground + 1, midZ + 3, Blocks::Chest);
+            // Levers on the wall, because a jungle temple is a puzzle
+            // even when the puzzle is only a story.
+            put(chunk, midX + 2, ground + 2, midZ + HALF - 1, Blocks::LeverOff);
+            put(chunk, midX + 3, ground + 2, midZ + HALF - 1, Blocks::LeverOff);
+            break;
+        }
+
+        case Landmark::Igloo:
+        {
+            constexpr int R = 4;
+            for (int dx = -R; dx <= R; ++dx)
+                for (int dy = 0; dy <= R; ++dy)
+                    for (int dz = -R; dz <= R; ++dz)
+                    {
+                        const float d = std::sqrt(static_cast<float>(dx * dx + dy * dy + dz * dz));
+                        if (d > R + 0.5f) continue;
+
+                        const bool shell = d > R - 0.8f;
+                        const bool door = dz == -R + 1 && std::abs(dx) <= 1 && dy <= 1;
+                        put(chunk, midX + dx, ground + dy, midZ + dz,
+                            (shell && !door) ? Blocks::Snow : Blocks::Air);
+                    }
+
+            put(chunk, midX + 1, ground, midZ + 1, Blocks::Bed);
+            put(chunk, midX - 2, ground, midZ + 2, Blocks::Chest);
+            put(chunk, midX - 2, ground, midZ, Blocks::Furnace);
+            break;
+        }
+
+        case Landmark::RuinedPortal:
+        {
+            // A frame with pieces missing, standing in a scatter of
+            // netherrack. The gaps are the whole character of it: you
+            // know what it is and you know it does not work.
+            for (int dx = -2; dx <= 2; ++dx)
+                for (int dy = 0; dy <= 4; ++dy)
+                {
+                    const bool frame = std::abs(dx) == 2 || dy == 0 || dy == 4;
+                    if (!frame) continue;
+                    if (hashToFloat(hashCoords(midX + dx, dy, midZ, m_seed + 9100)) < 0.3f)
+                        continue;
+                    put(chunk, midX + dx, ground + dy, midZ, Blocks::Obsidian);
+                }
+
+            for (int dx = -4; dx <= 4; ++dx)
+                for (int dz = -4; dz <= 4; ++dz)
+                {
+                    if (hashToFloat(hashCoords(midX + dx, 1, midZ + dz, m_seed + 9101)) > 0.35f)
+                        continue;
+                    const int y = surfaceHeight(midX + dx, midZ + dz);
+                    put(chunk, midX + dx, y, midZ + dz, Blocks::Netherrack);
+                }
+
+            put(chunk, midX + 3, ground, midZ + 1, Blocks::Chest);
+            break;
+        }
+
+        case Landmark::PillagerOutpost:
+        {
+            // A tower of dark oak with a roof and a way up inside it.
+            constexpr int HALF = 3;
+            constexpr int TALL = 11;
+
+            for (int dy = 0; dy <= TALL; ++dy)
+            {
+                // The top storey hangs a block out past the tower,
+                // which is the shape anybody recognises one by. A
+                // plain box of planks read as a slab.
+                const int half = (dy >= TALL - 4) ? HALF + 1 : HALF;
+
+                for (int dx = -half; dx <= half; ++dx)
+                    for (int dz = -half; dz <= half; ++dz)
+                    {
+                        const bool wall = std::abs(dx) == half || std::abs(dz) == half;
+                        const bool floor = dy == 0 || dy == TALL || dy == TALL - 4;
+                        const bool door = wall && dz == -half && std::abs(dx) <= 1 &&
+                                          dy >= 1 && dy <= 2;
+
+                        // Slots to watch from, and to be shot through.
+                        const bool window = wall && dy >= TALL - 3 && dy <= TALL - 2 &&
+                                            ((std::abs(dx) % 2) == 0) &&
+                                            ((std::abs(dz) % 2) == 0);
+
+                        put(chunk, midX + dx, ground + dy, midZ + dz,
+                            ((wall || floor) && !door && !window) ? Blocks::DarkOakPlanks
+                                                                  : Blocks::Air);
+                    }
+            }
+
+            // The ladder up, and the chest at the top of it.
+            for (int dy = 1; dy < TALL; ++dy)
+                put(chunk, midX + HALF - 1, ground + dy, midZ + HALF - 1, Blocks::LadderNorth);
+
+            put(chunk, midX, ground + TALL - 3, midZ, Blocks::Chest);
+            break;
+        }
+
+        case Landmark::Count:
+            break;
+    }
 }
 
 // Mineshafts go down by the spread rule rather than the grid: a flat
