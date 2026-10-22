@@ -28,6 +28,8 @@ enum class MobId : uint8_t
     WitherSkeleton,
     MagmaCube,
     Breeze,
+    Guardian,
+    Warden,
     Count
 };
 
@@ -234,6 +236,10 @@ struct MobType
 // so the dimension it stands in decides: a cage in a fortress makes
 // blazes, one in the rock makes spiders.
 MobId cageSpecies(Dimension where);
+
+// What lives in a monument and what lives in an ancient city. Neither
+// spawns the way everything else does -- they belong to one structure
+// each and are put there by it.
 
 // How many of its own kind a cage will have out at once, and how long
 // it waits between them. A cage that never stopped would empty the

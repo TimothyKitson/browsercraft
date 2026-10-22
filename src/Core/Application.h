@@ -542,6 +542,13 @@ private:
     void tickMonsterCages(float deltaTime);
     float m_cageTimer = 0.0f;
 
+    // The two that belong to a structure rather than to the dark. A
+    // monument keeps guardians and an ancient city keeps a warden;
+    // neither spawns the way everything else does, because neither is
+    // allowed anywhere else.
+    float m_lairTimer = 0.0f;
+    void tickStructureLairs(float deltaTime);
+
     // Which copper bulbs are sitting in a live signal. A bulb flips on
     // the edge of a pulse rather than following the power, so it has to
     // remember whether it has already answered this one; the block id

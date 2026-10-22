@@ -291,6 +291,10 @@ void AudioEngine::buildSounds()
                  Sound::MobMagmaCubeDeath, "slime");
     loadMobVoice(Sound::MobBreezeSay, Sound::MobBreezeHurt,
                  Sound::MobBreezeDeath, "breeze");
+    loadMobVoice(Sound::MobGuardianSay, Sound::MobGuardianHurt,
+                 Sound::MobGuardianDeath, "mob/guardian");
+    loadMobVoice(Sound::MobWardenSay, Sound::MobWardenHurt,
+                 Sound::MobWardenDeath, "mob/warden");
     loadVariants(Sound::Rain, "weather/rain", 1);
     loadVariants(Sound::Thunder, "weather/thunder", 1);
 
@@ -763,6 +767,50 @@ void AudioEngine::buildSounds()
         s.addNoise(0.34f, 420.0f, 12.0f, 0.44f, false, 845);
         s.addNoise(0.34f, 1400.0f, 9.0f, 0.18f, true, 846);
         s.finish(0.78f);
+    }
+
+    // The guardian: the groan of something that lives underwater,
+    // which is a low tone bent downwards with water noise over it.
+    {
+        Synth s = make(Sound::MobGuardianSay);
+        s.addTone(0.70f, 160.0f, 78.0f, 2.2f, 0.62f, true);
+        s.addNoise(0.70f, 520.0f, 2.4f, 0.16f, true, 861);
+        s.finish(0.62f);
+    }
+    {
+        Synth s = make(Sound::MobGuardianHurt);
+        s.addTone(0.26f, 240.0f, 110.0f, 12.0f, 0.70f, true);
+        s.addNoise(0.22f, 900.0f, 16.0f, 0.22f, false, 862);
+        s.finish(0.74f);
+    }
+    {
+        Synth s = make(Sound::MobGuardianDeath);
+        s.addTone(0.90f, 150.0f, 52.0f, 3.0f, 0.60f, true);
+        s.addNoise(0.90f, 420.0f, 3.2f, 0.20f, true, 863);
+        s.finish(0.70f);
+    }
+
+    // The warden: the lowest thing in the game. Almost no top end at
+    // all -- a heartbeat rather than a voice, which is what it is.
+    {
+        Synth s = make(Sound::MobWardenSay);
+        s.addTone(1.20f, 62.0f, 44.0f, 1.4f, 0.80f, true);
+        s.addTone(1.20f, 31.0f, 22.0f, 1.2f, 0.50f, true);
+        s.addNoise(0.40f, 180.0f, 5.0f, 0.12f, true, 871);
+        s.finish(0.86f);
+    }
+    {
+        Synth s = make(Sound::MobWardenHurt);
+        s.addTone(0.40f, 96.0f, 50.0f, 9.0f, 0.82f, true);
+        s.addNoise(0.34f, 400.0f, 11.0f, 0.26f, false, 872);
+        s.finish(0.84f);
+    }
+    {
+        Synth s = make(Sound::MobWardenDeath);
+        s.addTone(1.50f, 70.0f, 26.0f, 1.8f, 0.80f, true);
+        s.addTone(1.50f, 35.0f, 14.0f, 1.6f, 0.52f, true);
+        s.addNoise(0.80f, 260.0f, 3.0f, 0.18f, true, 873);
+        s.finish(0.88f);
     }
 
     // The breeze: wind, which is noise with no tone under it and a

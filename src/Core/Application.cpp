@@ -1299,6 +1299,7 @@ bool Application::frame()
         if (playing()) tickTrialSpawners(deltaTime);
         if (playing()) tickCopper(deltaTime);
         if (playing()) tickMonsterCages(deltaTime);
+        if (playing()) tickStructureLairs(deltaTime);
 
         // A pressed button lets go on its own, and everything it was
         // powering goes out with it.
@@ -1453,7 +1454,7 @@ bool Application::frame()
             m_startupScreen == "wolf" || m_startupScreen == "horse" ||
             m_startupScreen == "boat" || m_startupScreen == "rails" ||
             m_startupScreen == "mobs" || m_startupScreen == "golem" ||
-            m_startupScreen == "nethermobs" ||
+            m_startupScreen == "nethermobs" || m_startupScreen == "lairmobs" ||
             m_startupScreen == "jungle" || m_startupScreen == "savanna" ||
             m_startupScreen == "redstone" || m_startupScreen == "chamber" ||
             m_startupScreen == "cave" || m_startupScreen == "dripstone" ||
@@ -1503,6 +1504,7 @@ bool Application::frame()
                                   m_startupScreen != "mobs" &&
                                   m_startupScreen != "golem" &&
                                   m_startupScreen != "nethermobs" &&
+                                  m_startupScreen != "lairmobs" &&
                                   m_startupScreen != "jungle" &&
                                   m_startupScreen != "savanna" &&
                                   m_startupScreen != "redstone" &&
@@ -1856,7 +1858,8 @@ bool Application::frame()
             }
 
             m_freezeMobs = m_startupScreen == "mobs" || m_startupScreen == "golem" ||
-                           m_startupScreen == "nethermobs";
+                           m_startupScreen == "nethermobs" ||
+                           m_startupScreen == "lairmobs";
 
             if (m_startupScreen == "mobs")
             {
@@ -1975,6 +1978,51 @@ bool Application::frame()
                 m_world->setBlock(px + 10, py, pz - 5, Blocks::Bookshelf);
                 m_world->setBlock(px + 10, py, pz - 1, Blocks::DiamondOre);
                 m_world->setBlock(px + 10, py, pz + 5, Blocks::EndPortalFrame);
+
+                m_player.mode = GameMode::Creative;
+                m_player.health = Player::MAX_HEALTH;
+            }
+
+            // The two that belong to a structure: a guardian off a
+            // monument and the warden out of a city. Lined up on a
+            // floor of each one's own material, because a warden on
+            // grass is not what a warden looks like.
+            if (m_startupScreen == "lairmobs")
+            {
+                // Up on the surface at midday, whatever the saved
+                // world was left on. The first shot of this ran where
+                // the last screen had left the player -- inside an
+                // ancient city, at light zero -- and came back black.
+                m_player.position = glm::vec3(
+                    m_player.position.x,
+                    static_cast<float>(m_world->generator().surfaceHeight(
+                        static_cast<int>(m_player.position.x),
+                        static_cast<int>(m_player.position.z)) + 1),
+                    m_player.position.z);
+                m_timeOfDay = 0.5f;
+
+                m_camera.setOrientation(0.0f, -2.0f);
+                m_camera.addLook(0.0f, 0.0f, 0.0f);
+
+                const int px = static_cast<int>(std::floor(m_player.position.x));
+                const int py = static_cast<int>(std::floor(m_player.position.y));
+                const int pz = static_cast<int>(std::floor(m_player.position.z));
+
+                for (int ax = 0; ax <= 15; ++ax)
+                    for (int az = -8; az <= 8; ++az)
+                    {
+                        for (int ay = 0; ay <= 8; ++ay)
+                            m_world->setBlock(px + ax, py + ay, pz + az, Blocks::Air);
+                        m_world->setBlock(px + ax, py - 1, pz + az,
+                                          (az < 0) ? Blocks::Prismarine : Blocks::Sculk);
+                    }
+
+                m_entities.spawnAt(MobId::Guardian,
+                                   glm::vec3(px + 5.5f, static_cast<float>(py), pz - 2.5f),
+                                   *m_world);
+                m_entities.spawnAt(MobId::Warden,
+                                   glm::vec3(px + 5.5f, static_cast<float>(py), pz + 2.5f),
+                                   *m_world);
 
                 m_player.mode = GameMode::Creative;
                 m_player.health = Player::MAX_HEALTH;
@@ -4430,6 +4478,105 @@ void Application::tickMonsterCages(float deltaTime)
                         if (m_entities.spawnAt(species, feet, *m_world)) return;
                     }
             }
+}
+
+// Guardians and the warden.
+//
+// Neither of these spawns the way everything else does. A guardian
+// belongs to a monument and a warden to an ancient city, and letting
+// either turn up anywhere else would make both meaningless -- a
+// warden wandering a meadow is not a warden, it is a bad night.
+//
+// So the test is where the player is standing rather than what the
+// light level is: inside the footprint of one of those two
+// structures, and nowhere else.
+void Application::tickStructureLairs(float deltaTime)
+{
+    if (!m_world) return;
+    if (m_dimension != Dimension::Overworld) return;
+
+    constexpr float INTERVAL = 4.0f;
+    constexpr int GUARDIAN_LIMIT = 6;
+
+    m_lairTimer -= deltaTime;
+    if (m_lairTimer > 0.0f) return;
+    m_lairTimer = INTERVAL;
+
+    const WorldGen& gen = m_world->generator();
+    const int px = static_cast<int>(m_player.position.x);
+    const int py = static_cast<int>(m_player.position.y);
+    const int pz = static_cast<int>(m_player.position.z);
+
+    // The city first, because its test is the cheaper of the two: it
+    // is the only thing down at that depth.
+    if (py >= WorldGen::CITY_FLOOR &&
+        py <= WorldGen::CITY_FLOOR + WorldGen::CITY_TALL)
+    {
+        const Structures::Spot spot = gen.nearestAncientCity(px, pz, 1);
+        if (spot.exists)
+        {
+            const int midX = spot.chunkX * Structures::CHUNK + Structures::CHUNK / 2;
+            const int midZ = spot.chunkZ * Structures::CHUNK + Structures::CHUNK / 2;
+            const int dx = px - midX;
+            const int dz = pz - midZ;
+
+            if (dx * dx + dz * dz < WorldGen::CITY_HALF * WorldGen::CITY_HALF)
+            {
+                // One. A city with two wardens in it is a city nobody
+                // ever walks out of.
+                int already = 0;
+                for (const Mob& mob : m_entities.mobs())
+                    if (mob.alive() && mob.typeId() == MobId::Warden) ++already;
+
+                if (already == 0)
+                    for (int ring = 6; ring <= 14 && already == 0; ring += 4)
+                        for (int step = 0; step < 8; ++step)
+                        {
+                            const float angle = step * 0.785398f;
+                            const glm::vec3 feet(
+                                midX + std::cos(angle) * ring + 0.5f,
+                                static_cast<float>(WorldGen::CITY_FLOOR + 1),
+                                midZ + std::sin(angle) * ring + 0.5f);
+                            if (m_entities.spawnAt(MobId::Warden, feet, *m_world)) return;
+                        }
+            }
+        }
+    }
+
+    // And the monument, which wants water over it as well as a
+    // footprint: a guardian on the roof is a fish on a roof.
+    const Structures::Spot spot = gen.nearestMonument(px, pz, 1);
+    if (!spot.exists) return;
+
+    const int midX = spot.chunkX * Structures::CHUNK + Structures::CHUNK / 2;
+    const int midZ = spot.chunkZ * Structures::CHUNK + Structures::CHUNK / 2;
+    const int dx = px - midX;
+    const int dz = pz - midZ;
+    const int half = WorldGen::MONUMENT_HALF + 8;
+    if (dx * dx + dz * dz > half * half) return;
+
+    int already = 0;
+    for (const Mob& mob : m_entities.mobs())
+        if (mob.alive() && mob.typeId() == MobId::Guardian) ++already;
+    if (already >= GUARDIAN_LIMIT) return;
+
+    const int floorY = gen.surfaceHeight(midX, midZ);
+
+    for (int tries = 0; tries < 24; ++tries)
+    {
+        const float angle = tries * 0.785398f;
+        const float reach = 4.0f + (tries % 3) * 5.0f;
+        const glm::vec3 feet(midX + std::cos(angle) * reach + 0.5f,
+                             static_cast<float>(floorY + 2 + (tries % 5)),
+                             midZ + std::sin(angle) * reach + 0.5f);
+
+        // In the water, which is where it lives.
+        if (m_world->getBlock(static_cast<int>(feet.x), static_cast<int>(feet.y),
+                              static_cast<int>(feet.z)) != Blocks::Water)
+            continue;
+
+        if (m_entities.spawnAt(MobId::Guardian, feet, *m_world)) return;
+    }
 }
 
 // Everything copper within sight of the player gets a roll every few

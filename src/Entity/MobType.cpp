@@ -873,6 +873,107 @@ namespace
             t.model.push_back(mc(Part::LegBackLeft, 0, 16, 2, 8, 2, 0, 0, 0, -1, 8, -3));
         }
 
+        {
+            // The thing in the monument. A cube with one eye and a
+            // tail, which hovers rather than walks: it has no legs to
+            // walk on, and a guardian sitting on the floor of the sea
+            // reads as a dropped block.
+            MobType& t = table[static_cast<size_t>(MobId::Guardian)];
+            t.id = MobId::Guardian;
+            t.experience = 10;
+            t.voice = Sound::MobGuardianSay;
+            t.hurtVoice = Sound::MobGuardianHurt;
+            t.deathVoice = Sound::MobGuardianDeath;
+            t.name = "Guardian";
+            t.texture = "guardian";
+            t.sheetWidth = 64;
+            t.sheetHeight = 64;
+            t.spawnClass = SpawnClass::Hostile;
+            t.maxHealth = 30;
+            t.width = 0.85f;
+            t.height = 0.85f;
+            t.walkSpeed = 2.4f;
+            t.limbSwing = 0.0f;
+            t.hoverHeight = 1.4f;
+
+            // The laser. It is not a projectile in Minecraft either --
+            // it is a beam that takes a few seconds to charge and then
+            // hits whatever it was pointed at -- but the slow interval
+            // and the long reach are what make it feel like one.
+            t.shootsFire = true;
+            t.arrowDamage = 6;
+            t.arrowRange = 15.0f;
+            t.arrowInterval = 3.0f;
+
+            t.drop = Blocks::Prismarine;
+            t.dropCount = 1;
+
+            t.bodyColour = rgb(92, 148, 140);
+            t.headColour = rgb(106, 170, 158);
+            t.eyeColour = 0xFFE8D070;
+
+            // One body cube and the eye on the front of it, then the
+            // tail behind. The eye is a Head so it tracks the player,
+            // which is the whole of a guardian's menace.
+            t.model.push_back(mc(Part::Body, 0, 0, 12, 12, 12, -6, -6, -6, 0, 15, 0));
+            t.model.push_back(mc(Part::Head, 0, 24, 4, 4, 1, -2, -2, 0, 0, 15, -6));
+            t.model.push_back(mc(Part::LegBackLeft, 40, 0, 2, 2, 6, -1, -1, 0, 0, 15, 6));
+            t.model.push_back(mc(Part::LegBackRight, 40, 8, 2, 2, 5, -1, -1, 0, 0, 15, 12));
+
+            // The spikes, which are what makes it dangerous to hit.
+            t.model.push_back(mc(Part::WingLeft, 0, 16, 2, 8, 2, -1, 0, -1, -7, 15, 0));
+            t.model.push_back(mc(Part::WingRight, 0, 16, 2, 8, 2, -1, 0, -1, 7, 15, 0));
+        }
+
+        {
+            // The warden. Blind, enormous, and the only thing in the
+            // game you are meant to run from rather than fight.
+            MobType& t = table[static_cast<size_t>(MobId::Warden)];
+            t.id = MobId::Warden;
+            t.experience = 30;
+            t.voice = Sound::MobWardenSay;
+            t.hurtVoice = Sound::MobWardenHurt;
+            t.deathVoice = Sound::MobWardenDeath;
+            t.name = "Warden";
+            t.texture = "warden";
+            // Minecraft draws a warden on 64x64. These boxes are not
+            // Minecraft's layout, and at 64 the arms ran off the edge
+            // of the sheet -- which the model test caught.
+            t.sheetWidth = 128;
+            t.sheetHeight = 128;
+            t.spawnClass = SpawnClass::Hostile;
+
+            // Minecraft's has 500 health and hits for 30. Those are its
+            // numbers, and they are the point of it: a warden is not a
+            // fight you win, it is a fight you leave.
+            t.maxHealth = 500;
+            t.attackDamage = 30;
+            t.width = 0.9f;
+            t.height = 2.9f;
+            t.walkSpeed = 2.0f;
+            t.limbSwing = 0.5f;
+
+            t.drop = Items::Emerald;
+            t.dropCount = 1;
+
+            t.bodyColour = rgb(14, 54, 58);
+            t.headColour = rgb(18, 64, 68);
+            t.eyeColour = 0xFF20D8D0;
+
+            // Stacked legs, body, head, with the arms hanging from
+            // the shoulder down past the hip. The first version had
+            // the arms standing up over the head, because the box
+            // offsets were read the wrong way round: origin.y here is
+            // the bottom of a box in pixels off the floor, not its
+            // top.
+            t.model.push_back(mc(Part::LegBackRight, 64, 40, 6, 16, 6, -3, 0, -3, -4, 8, 0));
+            t.model.push_back(mirrored(mc(Part::LegBackLeft, 64, 40, 6, 16, 6, -3, 0, -3, 4, 8, 0)));
+            t.model.push_back(mc(Part::Body, 0, 32, 14, 21, 10, -7, 0, -5, 0, -13, 0));
+            t.model.push_back(mc(Part::WingRight, 64, 0, 8, 26, 8, -4, 0, -4, -11, -13, 0));
+            t.model.push_back(mirrored(mc(Part::WingLeft, 64, 0, 8, 26, 8, -4, 0, -4, 11, -13, 0)));
+            t.model.push_back(mc(Part::Head, 0, 0, 16, 14, 10, -8, 0, -5, 0, -27, 0));
+        }
+
         return table;
     }
 }
