@@ -1460,6 +1460,7 @@ bool Application::frame()
             m_startupScreen == "mineshaft" || m_startupScreen == "pyramid" ||
             m_startupScreen == "temple" || m_startupScreen == "igloo" ||
             m_startupScreen == "portalruin" || m_startupScreen == "outpost" ||
+            m_startupScreen == "mansion" || m_startupScreen == "well" ||
             m_startupScreen == "shipwreck" || m_startupScreen == "monument" ||
             m_startupScreen == "seabed" || m_startupScreen == "reef" ||
             m_startupScreen == "vault" || m_startupScreen == "stronghold" ||
@@ -1515,6 +1516,8 @@ bool Application::frame()
                                   m_startupScreen != "igloo" &&
                                   m_startupScreen != "portalruin" &&
                                   m_startupScreen != "outpost" &&
+                                  m_startupScreen != "mansion" &&
+                                  m_startupScreen != "well" &&
                                   m_startupScreen != "shipwreck" &&
                                   m_startupScreen != "monument" &&
                                   m_startupScreen != "seabed" &&
@@ -2018,18 +2021,23 @@ bool Application::frame()
             // the village screen walks to a village.
             if (m_startupScreen == "pyramid" || m_startupScreen == "temple" ||
                 m_startupScreen == "igloo" || m_startupScreen == "portalruin" ||
-                m_startupScreen == "outpost")
+                m_startupScreen == "outpost" || m_startupScreen == "mansion")
             {
                 const WorldGen::Landmark kind =
                     m_startupScreen == "pyramid"    ? WorldGen::Landmark::DesertPyramid
                   : m_startupScreen == "temple"     ? WorldGen::Landmark::JungleTemple
                   : m_startupScreen == "igloo"      ? WorldGen::Landmark::Igloo
                   : m_startupScreen == "portalruin" ? WorldGen::Landmark::RuinedPortal
+                  : m_startupScreen == "mansion"    ? WorldGen::Landmark::WoodlandMansion
                                                     : WorldGen::Landmark::PillagerOutpost;
 
+                // A mansion grid is eighty chunks across, so the
+                // search has to be wider for one than for anything
+                // else: that distance is the point of it.
                 const Structures::Spot spot = m_world->generator().nearestLandmark(
                     kind, static_cast<int>(m_player.position.x),
-                    static_cast<int>(m_player.position.z), 8);
+                    static_cast<int>(m_player.position.z),
+                    kind == WorldGen::Landmark::WoodlandMansion ? 3 : 8);
 
                 // Midday, whatever hour the saved world was left on: a
                 // pyramid at dusk is a grey lump.
@@ -2041,9 +2049,10 @@ bool Application::frame()
                     const int midZ = spot.chunkZ * Structures::CHUNK + Structures::CHUNK / 2;
                     const int top = m_world->generator().surfaceHeight(midX, midZ);
 
+                    const bool big = kind == WorldGen::Landmark::WoodlandMansion;
                     m_player.position = glm::vec3(static_cast<float>(midX) + 0.5f,
-                                                  static_cast<float>(top + 6),
-                                                  static_cast<float>(midZ) + 22.5f);
+                                                  static_cast<float>(top + (big ? 12 : 6)),
+                                                  static_cast<float>(midZ) + (big ? 38.5f : 22.5f));
                     m_player.velocity = glm::vec3(0.0f);
                     m_player.flying = true;
                     m_placeOnSurface = false;
@@ -2056,6 +2065,65 @@ bool Application::frame()
                 else
                 {
                     std::printf("No %s within eight squares\n", WorldGen::landmarkName(kind));
+                    std::fflush(stdout);
+                }
+
+                m_player.mode = GameMode::Creative;
+                m_player.health = Player::MAX_HEALTH;
+            }
+
+            // Out to a desert well. There is no grid to ask: it is
+            // one chunk of desert in a thousand, so the only way to
+            // find one is to look, chunk by chunk.
+            if (m_startupScreen == "well")
+            {
+                const WorldGen& gen = m_world->generator();
+                bool found = false;
+                int standX = 0, standZ = 0, ground = 0;
+
+                for (int ring = 0; ring <= 220 && !found; ++ring)
+                    for (int cz = -ring; cz <= ring && !found; ++cz)
+                        for (int cx = -ring; cx <= ring && !found; ++cx)
+                        {
+                            if (ring > 0 && std::abs(cx) != ring && std::abs(cz) != ring)
+                                continue;
+                            if (!Structures::spreadAt(cx, cz, m_world->seed(),
+                                                      Structures::DESERT_WELL_SALT,
+                                                      Structures::DESERT_WELL_CHANCE))
+                                continue;
+
+                            const int midX = cx * Chunk::SX + Chunk::SX / 2;
+                            const int midZ = cz * Chunk::SZ + Chunk::SZ / 2;
+                            if (gen.biomeAt(midX, midZ) != Biome::Desert) continue;
+
+                            const int top = gen.surfaceHeight(midX, midZ);
+                            if (top <= WorldGen::SEA_LEVEL) continue;
+
+                            standX = midX;
+                            standZ = midZ;
+                            ground = top;
+                            found = true;
+                        }
+
+                m_timeOfDay = 0.5f;
+
+                if (found)
+                {
+                    m_player.position = glm::vec3(static_cast<float>(standX) + 0.5f,
+                                                  static_cast<float>(ground + 4),
+                                                  static_cast<float>(standZ) + 11.5f);
+                    m_player.velocity = glm::vec3(0.0f);
+                    m_player.flying = true;
+                    m_placeOnSurface = false;
+                    m_camera.setOrientation(-90.0f, -10.0f);
+                    m_camera.addLook(0.0f, 0.0f, 0.0f);
+
+                    std::printf("Desert well at %d, %d\n", standX, standZ);
+                    std::fflush(stdout);
+                }
+                else
+                {
+                    std::printf("No desert well found\n");
                     std::fflush(stdout);
                 }
 

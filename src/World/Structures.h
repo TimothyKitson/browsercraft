@@ -49,6 +49,7 @@ namespace Structures
     constexpr Grid SHIPWRECK      { 24, 4, 165745295u };
     constexpr Grid NETHER_FORTRESS{ 27, 4, 30084232u };
     constexpr Grid ANCIENT_CITY   { 24, 8, 20083232u };
+    constexpr Grid WOODLAND_MANSION{ 80, 20, 10387319u };
 
     // A chunk a structure of this kind stands in, if its square has one.
     struct Spot
@@ -79,6 +80,12 @@ namespace Structures
     // beaches have two and most have none.
     constexpr uint32_t BURIED_TREASURE_SALT = 10387320u;
     constexpr float    BURIED_TREASURE_CHANCE = 0.01f;
+
+    // A desert well is not a structure in Minecraft at all -- it is a
+    // decorator, one in a thousand chunks of desert, which is why you
+    // can cross three deserts without seeing one. Same rule here.
+    constexpr uint32_t DESERT_WELL_SALT = 10387321u;
+    constexpr float    DESERT_WELL_CHANCE = 0.001f;
 
     // The other rule: a flat chance for each chunk on its own.
     bool spreadAt(int chunkX, int chunkZ, uint32_t seed, uint32_t salt, float chance);

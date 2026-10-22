@@ -53,6 +53,7 @@ public:
         Igloo,
         RuinedPortal,
         PillagerOutpost,
+        WoodlandMansion,
         Count
     };
 
@@ -75,6 +76,7 @@ public:
         Igloo,
         RuinedPortal,
         PillagerOutpost,
+        WoodlandMansion,
         Shipwreck,
         BuriedTreasure,
         Monument,
@@ -143,6 +145,10 @@ public:
     // The outpost's height, which the chest table needs as well as the
     // stamp: the chest is three down from the top of the tower.
     static constexpr int OUTPOST_TALL = 11;
+
+    // The mansion's half-width. It is the widest thing that stands on
+    // land here, so it is what sets the reach the landmark pass needs.
+    static constexpr int MANSION_HALF = 11;
 
     // The mineshaft spread, shared by the stamp and by the lookup that
     // decides what is in the chest at the end of a corridor.
@@ -235,6 +241,7 @@ private:
     void buildLandmarks(Chunk& chunk) const;
     void stampLandmark(Chunk& chunk, Landmark kind, int midX, int midZ) const;
     void dressSeabed(Chunk& chunk) const;
+    void buildDesertWells(Chunk& chunk) const;
     void buildOceanStructures(Chunk& chunk) const;
     void stampShipwreck(Chunk& chunk, int midX, int midZ) const;
     void stampMonument(Chunk& chunk, int midX, int midZ) const;

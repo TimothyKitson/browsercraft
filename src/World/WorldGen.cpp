@@ -166,6 +166,7 @@ void WorldGen::generate(Chunk& chunk) const
     buildStrongholds(chunk);
     buildMineshafts(chunk);
     buildLandmarks(chunk);
+    buildDesertWells(chunk);
     dressSeabed(chunk);
     buildOceanStructures(chunk);
 }
@@ -1519,6 +1520,7 @@ const char* WorldGen::landmarkName(Landmark kind)
         case Landmark::Igloo:           return "Igloo";
         case Landmark::RuinedPortal:    return "Ruined portal";
         case Landmark::PillagerOutpost: return "Pillager outpost";
+        case Landmark::WoodlandMansion: return "Woodland mansion";
         case Landmark::Count:           break;
     }
     return "";
@@ -1532,6 +1534,7 @@ const Structures::Grid& WorldGen::landmarkGrid(Landmark kind)
         case Landmark::Igloo:           return Structures::IGLOO;
         case Landmark::RuinedPortal:    return Structures::RUINED_PORTAL;
         case Landmark::PillagerOutpost: return Structures::PILLAGER_POST;
+        case Landmark::WoodlandMansion: return Structures::WOODLAND_MANSION;
         default:                        return Structures::DESERT_PYRAMID;
     }
 }
@@ -1549,6 +1552,12 @@ bool WorldGen::landmarkSuits(Landmark kind, Biome biome)
         case Landmark::PillagerOutpost:
             return biome == Biome::Plains || biome == Biome::Savanna ||
                    biome == Biome::Desert;
+        case Landmark::WoodlandMansion:
+            // Minecraft puts these in a dark forest, which is a biome
+            // this world does not have. The ordinary forest is the
+            // nearest thing to it, and the grid is Minecraft's own --
+            // 80 apart, which is why finding one is a journey.
+            return biome == Biome::Forest;
         case Landmark::RuinedPortal:
             // Anywhere with ground to stand on, which is the point of
             // it: a ruined portal is the one you find before you know
@@ -1651,6 +1660,10 @@ int WorldGen::landmarkChests(Landmark kind, ChestSpot out[2])
         case Landmark::PillagerOutpost:
             out[0] = {  0,  OUTPOST_TALL - 3,  0 };
             return 1;
+        case Landmark::WoodlandMansion:
+            out[0] = { -4,  1,  4 };
+            out[1] = {  4,  7, -4 };
+            return 2;
         case Landmark::Count:
             break;
     }
@@ -1807,9 +1820,146 @@ void WorldGen::stampLandmark(Chunk& chunk, Landmark kind, int midX, int midZ) co
             break;
         }
 
+        case Landmark::WoodlandMansion:
+        {
+            // The big one. Minecraft's is enormous and randomly laid
+            // out room by room; this is a manor of the same materials
+            // and the same shape -- dark oak frame, cobblestone infill,
+            // three floors and a roof -- rather than that generator
+            // rebuilt from memory.
+            constexpr int HALF = MANSION_HALF;
+            constexpr int STOREY = 5;
+            constexpr int STOREYS = 3;
+            constexpr int TALL = STOREY * STOREYS;
+
+            for (int dy = 0; dy <= TALL + 3; ++dy)
+            {
+                // The roof is a pyramid on top of the box, which is
+                // most of what you recognise a mansion by from across
+                // a forest.
+                const bool roofing = dy > TALL;
+                const int half = roofing ? HALF - (dy - TALL) : HALF;
+                if (half < 1) continue;
+
+                for (int dx = -half; dx <= half; ++dx)
+                    for (int dz = -half; dz <= half; ++dz)
+                    {
+                        const int wx = midX + dx;
+                        const int wz = midZ + dz;
+                        const int y = ground + dy;
+
+                        if (roofing)
+                        {
+                            const bool edge = std::abs(dx) == half || std::abs(dz) == half;
+                            put(chunk, wx, y, wz, edge ? Blocks::DarkOakPlanks : Blocks::Air);
+                            continue;
+                        }
+
+                        const bool outer = std::abs(dx) == half || std::abs(dz) == half;
+                        const bool floor = (dy % STOREY) == 0;
+
+                        // The inner walls that make it rooms rather
+                        // than one hall, with doorways through them.
+                        const bool spine = (dx == 0 || dz == 0) && !floor;
+                        const bool doorway = spine && (dy % STOREY) <= 2 &&
+                                             (std::abs(dx) + std::abs(dz)) % 7 < 3;
+
+                        BlockId block = Blocks::Air;
+
+                        if (outer)
+                        {
+                            // Dark oak at the corners and every fourth
+                            // course, cobblestone between: the timbered
+                            // look is what makes it a mansion and not a
+                            // warehouse.
+                            const bool corner = std::abs(dx) == half && std::abs(dz) == half;
+                            const bool post = (std::abs(dx) % 4) == 0 || (std::abs(dz) % 4) == 0;
+                            const bool window = !corner && !post &&
+                                                (dy % STOREY) >= 2 && (dy % STOREY) <= 3;
+                            const bool door = dz == -half && std::abs(dx) <= 1 &&
+                                              dy >= 1 && dy <= 2;
+
+                            if (door) block = Blocks::Air;
+                            else if (window) block = Blocks::Glass;
+                            else if (corner || post || floor) block = Blocks::DarkOakLog;
+                            else block = Blocks::Cobblestone;
+                        }
+                        else if (floor)
+                        {
+                            block = Blocks::DarkOakPlanks;
+                        }
+                        else if (spine && !doorway)
+                        {
+                            block = Blocks::DarkOakPlanks;
+                        }
+
+                        put(chunk, wx, y, wz, block);
+                    }
+            }
+
+            // A way between the floors, and a lamp on each landing so
+            // the inside is not pitch dark.
+            for (int dy = 1; dy < TALL; ++dy)
+                put(chunk, midX + HALF - 1, ground + dy, midZ + HALF - 1,
+                    Blocks::LadderNorth);
+
+            for (int storey = 0; storey < STOREYS; ++storey)
+            {
+                const int y = ground + storey * STOREY + 2;
+                put(chunk, midX + HALF - 2, y, midZ + HALF - 2, Blocks::Torch);
+                put(chunk, midX - HALF + 2, y, midZ - HALF + 2, Blocks::Torch);
+            }
+
+            putChests(chunk, Landmark::WoodlandMansion, midX, ground, midZ);
+            break;
+        }
+
         case Landmark::Count:
             break;
     }
+}
+
+// The desert well, which is not a structure in Minecraft at all: it is
+// a decorator, one chunk of desert in a thousand. That rarity is the
+// whole character of the thing -- you can cross three deserts without
+// seeing one, and the one you do see is a landmark because of it.
+void WorldGen::buildDesertWells(Chunk& chunk) const
+{
+    const int chunkX = chunk.position().x;
+    const int chunkZ = chunk.position().z;
+
+    if (!Structures::spreadAt(chunkX, chunkZ, m_seed,
+                              Structures::DESERT_WELL_SALT,
+                              Structures::DESERT_WELL_CHANCE))
+        return;
+
+    const int midX = chunkX * Chunk::SX + Chunk::SX / 2;
+    const int midZ = chunkZ * Chunk::SZ + Chunk::SZ / 2;
+
+    if (biomeAt(midX, midZ) != Biome::Desert) return;
+
+    const int ground = surfaceHeight(midX, midZ);
+    if (ground <= SEA_LEVEL) return;
+
+    // A sandstone slab with water in the middle of it, four pillars at
+    // the corners and a roof across the top.
+    for (int dx = -2; dx <= 2; ++dx)
+        for (int dz = -2; dz <= 2; ++dz)
+            put(chunk, midX + dx, ground, midZ + dz, Blocks::Sandstone);
+
+    put(chunk, midX, ground, midZ, Blocks::Water);
+
+    for (int dy = 1; dy <= 3; ++dy)
+    {
+        put(chunk, midX - 1, ground + dy, midZ - 1, Blocks::Sandstone);
+        put(chunk, midX + 1, ground + dy, midZ - 1, Blocks::Sandstone);
+        put(chunk, midX - 1, ground + dy, midZ + 1, Blocks::Sandstone);
+        put(chunk, midX + 1, ground + dy, midZ + 1, Blocks::Sandstone);
+    }
+
+    for (int dx = -1; dx <= 1; ++dx)
+        for (int dz = -1; dz <= 1; ++dz)
+            put(chunk, midX + dx, ground + 4, midZ + dz, Blocks::Sandstone);
 }
 
 // Mineshafts go down by the spread rule rather than the grid: a flat
@@ -2684,6 +2834,7 @@ WorldGen::Hoard WorldGen::hoardAt(int x, int y, int z) const
                     case Landmark::Igloo:           return Hoard::Igloo;
                     case Landmark::RuinedPortal:    return Hoard::RuinedPortal;
                     case Landmark::PillagerOutpost: return Hoard::PillagerOutpost;
+                    case Landmark::WoodlandMansion: return Hoard::WoodlandMansion;
                     case Landmark::Count:           break;
                 }
             }

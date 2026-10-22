@@ -67,6 +67,19 @@ namespace
         { Items::Emerald,     1, 2 },
     };
 
+    // A mansion is somebody's house, and a rich one: it is the
+    // longest walk to any structure in the game, so it pays like it.
+    const Entry MANSION[] = {
+        { Items::Diamond,     1, 3 },
+        { Items::Emerald,     2, 6 },
+        { Items::GoldIngot,   1, 5 },
+        { Items::IronIngot,   2, 6 },
+        { Blocks::DarkOakPlanks, 2, 8 },
+        { Items::Book,        1, 3 },
+        { Items::Bread,       1, 4 },
+        { Items::DiamondHoe,  1, 1 },
+    };
+
     // Somebody's voyage, and what they never got to spend.
     const Entry SHIPWRECK[] = {
         { Items::Emerald,     1, 4 },
@@ -157,6 +170,8 @@ namespace
                 return { RUIN, static_cast<int>(std::size(RUIN)) };
             case WorldGen::Hoard::PillagerOutpost:
                 return { OUTPOST, static_cast<int>(std::size(OUTPOST)) };
+            case WorldGen::Hoard::WoodlandMansion:
+                return { MANSION, static_cast<int>(std::size(MANSION)) };
             case WorldGen::Hoard::Shipwreck:
                 return { SHIPWRECK, static_cast<int>(std::size(SHIPWRECK)) };
             case WorldGen::Hoard::BuriedTreasure:
@@ -187,6 +202,7 @@ StructureLoot::Stack StructureLoot::centrepiece(WorldGen::Hoard hoard,
         case WorldGen::Hoard::Igloo:           out.id = Items::Bread;     out.count = 2; break;
         case WorldGen::Hoard::RuinedPortal:    out.id = Items::GoldIngot; out.count = 4; break;
         case WorldGen::Hoard::PillagerOutpost: out.id = Items::Arrow;     out.count = 8; break;
+        case WorldGen::Hoard::WoodlandMansion: out.id = Items::Emerald;   out.count = 4; break;
         case WorldGen::Hoard::Shipwreck:       out.id = Items::Emerald;   out.count = 2; break;
         case WorldGen::Hoard::BuriedTreasure:  out.id = Items::Diamond;   out.count = 2; break;
         case WorldGen::Hoard::Monument:        out.id = Items::GoldIngot; out.count = 8; break;

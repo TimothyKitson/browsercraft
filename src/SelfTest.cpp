@@ -4231,11 +4231,19 @@ namespace
               "a ruined portal of obsidian" },
             { WorldGen::Landmark::PillagerOutpost, Blocks::DarkOakPlanks,
               "and an outpost of dark oak" },
+            { WorldGen::Landmark::WoodlandMansion, Blocks::DarkOakLog,
+              "and a mansion timbered in it" },
         };
 
         for (const Wanted& wanted : WANTED)
         {
-            const Structures::Spot spot = generator.nearestLandmark(wanted.kind, 0, 0, 6);
+            // A mansion grid is eighty chunks across, so a search wide
+            // enough for the rest finds nothing: that distance is the
+            // whole character of the thing.
+            const int squares =
+                wanted.kind == WorldGen::Landmark::WoodlandMansion ? 2 : 6;
+            const Structures::Spot spot =
+                generator.nearestLandmark(wanted.kind, 0, 0, squares);
             check(spot.exists,
                   std::string(WorldGen::landmarkName(wanted.kind)) +
                       ": there is one within a few squares of the origin");
@@ -4595,6 +4603,69 @@ namespace
         check(isCoralBlock(Blocks::HornCoralBlock) && isCoralBlock(Blocks::TubeCoralBlock),
               "all five colours of coral are coral");
         check(!isCoralBlock(Blocks::Prismarine), "and prismarine is not");
+    }
+
+    void testDesertWell()
+    {
+        section("the desert well");
+
+        constexpr uint32_t SEED = 4242u;
+        const WorldGen generator(SEED);
+
+        // Not a structure in Minecraft at all: a decorator, one chunk
+        // of desert in a thousand. The rarity is what is being tested,
+        // because it is the whole character of the thing.
+        check(Structures::DESERT_WELL_CHANCE < 0.005f,
+              "a desert well is rare enough to be a landmark when you find one");
+
+        int hits = 0;
+        constexpr int LOOKED = 60000;
+        for (int i = 0; i < LOOKED; ++i)
+            if (Structures::spreadAt(i % 400, i / 400, SEED,
+                                     Structures::DESERT_WELL_SALT,
+                                     Structures::DESERT_WELL_CHANCE))
+                ++hits;
+
+        const float rate = static_cast<float>(hits) / static_cast<float>(LOOKED);
+        check(rate > Structures::DESERT_WELL_CHANCE * 0.3f &&
+              rate < Structures::DESERT_WELL_CHANCE * 3.0f,
+              "and it turns up about as often as it is meant to");
+
+        // And one gets built, with water in it. A well without water
+        // is a pile of sandstone.
+        bool found = false;
+        for (int ring = 0; ring <= 90 && !found; ++ring)
+            for (int cz = -ring; cz <= ring && !found; ++cz)
+                for (int cx = -ring; cx <= ring && !found; ++cx)
+                {
+                    if (ring > 0 && std::abs(cx) != ring && std::abs(cz) != ring) continue;
+                    if (!Structures::spreadAt(cx, cz, SEED,
+                                              Structures::DESERT_WELL_SALT,
+                                              Structures::DESERT_WELL_CHANCE))
+                        continue;
+
+                    const int midX = cx * Chunk::SX + Chunk::SX / 2;
+                    const int midZ = cz * Chunk::SZ + Chunk::SZ / 2;
+                    if (generator.biomeAt(midX, midZ) != Biome::Desert) continue;
+                    if (generator.surfaceHeight(midX, midZ) <= WorldGen::SEA_LEVEL) continue;
+
+                    Chunk chunk(ChunkPos{ cx, cz });
+                    generator.generate(chunk);
+
+                    const int ground = generator.surfaceHeight(midX, midZ);
+                    const int lx = Chunk::SX / 2;
+                    const int lz = Chunk::SZ / 2;
+
+                    check(chunk.getBlock(lx, ground, lz) == Blocks::Water,
+                          "a desert well has water in the middle of it");
+                    check(chunk.getBlock(lx, ground + 4, lz) == Blocks::Sandstone,
+                          "and a roof over the top of it");
+                    check(chunk.getBlock(lx - 1, ground + 2, lz - 1) == Blocks::Sandstone,
+                          "standing on four pillars");
+                    found = true;
+                }
+
+        check(found, "there is a desert well somewhere in the deserts near the origin");
     }
 
     void testFortressAndMineshaft()
@@ -8289,6 +8360,7 @@ int runSelfTest()
     testOceanStructures();
     testStructureLoot();
     testSeabed();
+    testDesertWell();
     testCaves();
     testCopper();
     testPistons();
