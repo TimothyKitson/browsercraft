@@ -4668,6 +4668,89 @@ namespace
         check(found, "there is a desert well somewhere in the deserts near the origin");
     }
 
+    void testAncientCity()
+    {
+        section("the ancient city");
+
+        constexpr uint32_t SEED = 4242u;
+        const WorldGen generator(SEED);
+
+        check(Structures::ANCIENT_CITY.spacing == 24 &&
+              Structures::ANCIENT_CITY.separation == 8,
+              "an ancient city grid is 24 and 8, as Minecraft's is");
+
+        const Structures::Spot spot = generator.nearestAncientCity(0, 0, 6);
+        check(spot.exists, "there is one within a few squares of the origin");
+        if (!spot.exists) return;
+
+        const int midX = spot.chunkX * Structures::CHUNK + Structures::CHUNK / 2;
+        const int midZ = spot.chunkZ * Structures::CHUNK + Structures::CHUNK / 2;
+
+        int sculk = 0, bricks = 0, sensors = 0, shriekers = 0, catalysts = 0;
+        int lanterns = 0, frame = 0, chests = 0, aboveTheOres = 0;
+
+        for (int cz = spot.chunkZ - 2; cz <= spot.chunkZ + 2; ++cz)
+            for (int cx = spot.chunkX - 2; cx <= spot.chunkX + 2; ++cx)
+            {
+                Chunk chunk(ChunkPos{ cx, cz });
+                generator.generate(chunk);
+
+                for (int y = 0; y < Chunk::SY; ++y)
+                    for (int lx = 0; lx < Chunk::SX; ++lx)
+                        for (int lz = 0; lz < Chunk::SZ; ++lz)
+                        {
+                            const BlockId block = chunk.getBlock(lx, y, lz);
+                            if (block == Blocks::Chest &&
+                                y == WorldGen::CITY_FLOOR + 1) ++chests;
+                            if (!isDeepDark(block)) continue;
+
+                            // The whole city lives below the ores. A
+                            // block of it up at the surface would mean
+                            // the floor height had got away.
+                            if (y > WorldGen::CITY_FLOOR + WorldGen::CITY_TALL)
+                                ++aboveTheOres;
+
+                            switch (block)
+                            {
+                                case Blocks::Sculk:          ++sculk; break;
+                                case Blocks::SculkShrieker:  ++shriekers; break;
+                                case Blocks::SculkCatalyst:  ++catalysts; break;
+                                case Blocks::SoulLantern:    ++lanterns; break;
+                                case Blocks::ReinforcedDeepslate: ++frame; break;
+                                default:
+                                    if (isSculkSensor(block)) ++sensors; else ++bricks;
+                                    break;
+                            }
+                        }
+            }
+
+        check(bricks > 400, "an ancient city is a great deal of deepslate");
+        check(sculk > 200, "with sculk grown over the floor of it");
+        check(sensors > 0, "something listening");
+        check(shriekers > 0, "and something to tell");
+        check(catalysts > 0, "and the thing that spread it all");
+        check(lanterns > 0, "lit well enough to see it by");
+        check(frame >= 12, "and the frame in the middle that goes nowhere");
+        check(chests == 2, "two chests, which is what the walk down is for");
+        check(aboveTheOres == 0, "and none of it anywhere near the surface");
+
+        // The chests know what they belong to.
+        check(generator.hoardAt(midX - 6, WorldGen::CITY_FLOOR + 1, midZ + 6) ==
+                  WorldGen::Hoard::AncientCity,
+              "a city chest knows what it belongs to");
+        check(generator.hoardAt(midX, WorldGen::CITY_FLOOR + 1, midZ) ==
+                  WorldGen::Hoard::None,
+              "while the floor beside it belongs to nothing");
+
+        // And the city's blocks are its own: nothing else in the world
+        // is built of them, which is what makes isDeepDark a usable
+        // test for "am I in one".
+        check(isDeepDark(Blocks::Sculk) && isDeepDark(Blocks::ReinforcedDeepslate),
+              "the deep dark's blocks are the deep dark's");
+        check(!isDeepDark(Blocks::Deepslate),
+              "and plain deepslate, which is everywhere, is not one of them");
+    }
+
     void testFortressAndMineshaft()
     {
         section("the fortress and the mineshaft");
@@ -8361,6 +8444,7 @@ int runSelfTest()
     testStructureLoot();
     testSeabed();
     testDesertWell();
+    testAncientCity();
     testCaves();
     testCopper();
     testPistons();

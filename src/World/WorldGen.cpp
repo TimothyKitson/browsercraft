@@ -167,6 +167,7 @@ void WorldGen::generate(Chunk& chunk) const
     buildMineshafts(chunk);
     buildLandmarks(chunk);
     buildDesertWells(chunk);
+    buildAncientCities(chunk);
     dressSeabed(chunk);
     buildOceanStructures(chunk);
 }
@@ -2919,6 +2920,18 @@ WorldGen::Hoard WorldGen::hoardAt(int x, int y, int z) const
             if (chestX == x && chestZ == z) return Hoard::Mineshaft;
         }
 
+    // An ancient city's two, either side of the frame in the middle.
+    {
+        const Structures::Spot spot = nearestAncientCity(x, z, 1);
+        if (spot.exists && y == CITY_FLOOR + 1)
+        {
+            const int midX = spot.chunkX * Structures::CHUNK + Structures::CHUNK / 2;
+            const int midZ = spot.chunkZ * Structures::CHUNK + Structures::CHUNK / 2;
+            if ((x == midX - 6 && z == midZ + 6) || (x == midX + 6 && z == midZ - 6))
+                return Hoard::AncientCity;
+        }
+    }
+
     // A stronghold's store room.
     {
         const Stronghold::Site site = Stronghold::touching(x, z, x, z, m_seed);
@@ -3049,4 +3062,164 @@ void WorldGen::dressSeabed(Chunk& chunk) const
             if (roll < 0.26f)
                 put(chunk, wx, floorY + 1, wz, Blocks::Seagrass);
         }
+}
+
+// ---------------------------------------------------------------------
+// The ancient city.
+//
+// The one thing here that lives below the ores: Minecraft puts it at
+// the bottom of the deep dark, and this world's floor is y=0, so it
+// sits just above the bedrock. On Minecraft's own grid, 24 apart with
+// 8 between.
+//
+// Not Minecraft's layout, which is assembled room by room from a set
+// of pieces this engine has no equivalent of. What it is instead is
+// the thing anybody recognises one by: a sunken floor of deepslate
+// tiles, pillars holding up nothing, sculk grown over all of it, and
+// the frame of reinforced deepslate in the middle that goes nowhere.
+// ---------------------------------------------------------------------
+
+Structures::Spot WorldGen::nearestAncientCity(int blockX, int blockZ, int squares) const
+{
+    return Structures::nearest(Structures::ANCIENT_CITY, blockX, blockZ, m_seed, squares);
+}
+
+void WorldGen::buildAncientCities(Chunk& chunk) const
+{
+    const int chunkX = chunk.position().x;
+    const int chunkZ = chunk.position().z;
+
+    // A city is forty blocks across, so it reaches two chunks past the
+    // one it is centred in.
+    constexpr int REACH_CHUNKS = 2;
+    const Structures::Grid& grid = Structures::ANCIENT_CITY;
+
+    const int firstX = Structures::squareOf(chunkX - REACH_CHUNKS, grid.spacing);
+    const int lastX = Structures::squareOf(chunkX + REACH_CHUNKS, grid.spacing);
+    const int firstZ = Structures::squareOf(chunkZ - REACH_CHUNKS, grid.spacing);
+    const int lastZ = Structures::squareOf(chunkZ + REACH_CHUNKS, grid.spacing);
+
+    for (int sz = firstZ; sz <= lastZ; ++sz)
+        for (int sx = firstX; sx <= lastX; ++sx)
+        {
+            const Structures::Spot spot = Structures::inSquare(grid, sx, sz, m_seed);
+            if (std::abs(spot.chunkX - chunkX) > REACH_CHUNKS) continue;
+            if (std::abs(spot.chunkZ - chunkZ) > REACH_CHUNKS) continue;
+
+            stampAncientCity(chunk,
+                             spot.chunkX * Structures::CHUNK + Structures::CHUNK / 2,
+                             spot.chunkZ * Structures::CHUNK + Structures::CHUNK / 2);
+        }
+}
+
+void WorldGen::stampAncientCity(Chunk& chunk, int midX, int midZ) const
+{
+    constexpr int HALF = CITY_HALF;
+    constexpr int TALL = CITY_TALL;
+    const int floorY = CITY_FLOOR;
+
+    for (int dx = -HALF; dx <= HALF; ++dx)
+        for (int dz = -HALF; dz <= HALF; ++dz)
+        {
+            const int wx = midX + dx;
+            const int wz = midZ + dz;
+            const int far = std::max(std::abs(dx), std::abs(dz));
+
+            // Round rather than square: a city is a bowl cut out of
+            // the rock, and the corners of a square one read as a
+            // building rather than as a place.
+            const float reach = std::sqrt(static_cast<float>(dx * dx + dz * dz));
+            if (reach > HALF + 0.5f) continue;
+
+            for (int dy = 0; dy <= TALL; ++dy)
+            {
+                const int y = floorY + dy;
+
+                if (dy == 0)
+                {
+                    // The floor. Deepslate tiles with sculk grown
+                    // through it, heavier towards the middle: the
+                    // sculk is what has taken the place over.
+                    const float sculkiness = 1.0f - reach / static_cast<float>(HALF);
+                    const bool grown =
+                        hashToFloat(hashCoords(wx, y, wz, m_seed + 8801)) <
+                            0.25f + sculkiness * 0.5f;
+                    put(chunk, wx, y, wz, grown ? Blocks::Sculk : Blocks::DeepslateTiles);
+                    continue;
+                }
+
+                // Everything above the floor is hollowed out, which is
+                // the whole point: a city you cannot walk through is a
+                // seam of deepslate.
+                BlockId block = Blocks::Air;
+
+                // The pillars, on a grid of eight, holding up nothing.
+                const bool pillar = ((dx + HALF) % 8) == 0 && ((dz + HALF) % 8) == 0 &&
+                                    far < HALF - 2;
+                if (pillar && dy <= TALL - 2)
+                    block = (dy % 4 == 3) ? Blocks::DeepslateTiles : Blocks::DeepslateBricks;
+
+                // A lantern hung on each pillar. Minecraft lights a
+                // city this way, and it is also the only reason the
+                // place is visible at all: lit from the ceiling alone
+                // it is a black screen with a hum.
+                const bool beside = (((dx + HALF) % 8) == 1 && ((dz + HALF) % 8) == 0) ||
+                                    (((dx + HALF) % 8) == 0 && ((dz + HALF) % 8) == 1);
+                if (beside && far < HALF - 2 && (dy == 4 || dy == 9))
+                    block = Blocks::SoulLantern;
+
+                // The wall round the bowl, so it is a room rather than
+                // a disc of floor in open rock.
+                if (reach > HALF - 1.5f) block = Blocks::DeepslateBricks;
+
+                // And a ceiling over the whole of it.
+                if (dy == TALL) block = Blocks::DeepslateBricks;
+
+                put(chunk, wx, y, wz, block);
+            }
+        }
+
+    // What grows on the floor, and what listens. A sensor every so
+    // often, a shrieker beside some of them, and a catalyst where the
+    // sculk is thickest.
+    for (int dx = -HALF + 2; dx <= HALF - 2; ++dx)
+        for (int dz = -HALF + 2; dz <= HALF - 2; ++dz)
+        {
+            const int wx = midX + dx;
+            const int wz = midZ + dz;
+            const float reach = std::sqrt(static_cast<float>(dx * dx + dz * dz));
+            if (reach > HALF - 2.5f) continue;
+
+            const float roll = hashToFloat(hashCoords(wx, 3, wz, m_seed + 8802));
+
+            if (roll < 0.012f)
+                put(chunk, wx, floorY + 1, wz, Blocks::SculkSensor);
+            else if (roll < 0.020f)
+                put(chunk, wx, floorY + 1, wz, Blocks::SculkShrieker);
+            else if (roll < 0.024f)
+                put(chunk, wx, floorY + 1, wz, Blocks::SculkCatalyst);
+        }
+
+    // The frame in the middle. Reinforced deepslate, in the shape of a
+    // portal, with nothing in it -- which is the thing everybody
+    // remembers about an ancient city.
+    for (int dx = -2; dx <= 2; ++dx)
+        for (int dy = 0; dy <= 5; ++dy)
+        {
+            if (std::abs(dx) != 2 && dy != 0 && dy != 5) continue;
+            put(chunk, midX + dx, floorY + 1 + dy, midZ, Blocks::ReinforcedDeepslate);
+        }
+
+    // Lit, just enough to see it by. An ancient city in the dark is a
+    // black screen with a hum.
+    for (int dx = -HALF + 4; dx <= HALF - 4; dx += 8)
+        for (int dz = -HALF + 4; dz <= HALF - 4; dz += 8)
+        {
+            if (dx * dx + dz * dz > (HALF - 4) * (HALF - 4)) continue;
+            put(chunk, midX + dx, floorY + TALL - 1, midZ + dz, Blocks::SoulLantern);
+        }
+
+    // And the chests it is worth the walk down for.
+    put(chunk, midX - 6, floorY + 1, midZ + 6, Blocks::Chest);
+    put(chunk, midX + 6, floorY + 1, midZ - 6, Blocks::Chest);
 }

@@ -1461,6 +1461,7 @@ bool Application::frame()
             m_startupScreen == "temple" || m_startupScreen == "igloo" ||
             m_startupScreen == "portalruin" || m_startupScreen == "outpost" ||
             m_startupScreen == "mansion" || m_startupScreen == "well" ||
+            m_startupScreen == "city" ||
             m_startupScreen == "shipwreck" || m_startupScreen == "monument" ||
             m_startupScreen == "seabed" || m_startupScreen == "reef" ||
             m_startupScreen == "vault" || m_startupScreen == "stronghold" ||
@@ -1517,6 +1518,7 @@ bool Application::frame()
                                   m_startupScreen != "portalruin" &&
                                   m_startupScreen != "outpost" &&
                                   m_startupScreen != "mansion" &&
+                                  m_startupScreen != "city" &&
                                   m_startupScreen != "well" &&
                                   m_startupScreen != "shipwreck" &&
                                   m_startupScreen != "monument" &&
@@ -2065,6 +2067,43 @@ bool Application::frame()
                 else
                 {
                     std::printf("No %s within eight squares\n", WorldGen::landmarkName(kind));
+                    std::fflush(stdout);
+                }
+
+                m_player.mode = GameMode::Creative;
+                m_player.health = Player::MAX_HEALTH;
+            }
+
+            // Down to an ancient city, which is the one place here
+            // that lives below the ores.
+            if (m_startupScreen == "city")
+            {
+                const WorldGen& gen = m_world->generator();
+                const Structures::Spot spot = gen.nearestAncientCity(
+                    static_cast<int>(m_player.position.x),
+                    static_cast<int>(m_player.position.z), 6);
+
+                if (spot.exists)
+                {
+                    const int midX = spot.chunkX * Structures::CHUNK + Structures::CHUNK / 2;
+                    const int midZ = spot.chunkZ * Structures::CHUNK + Structures::CHUNK / 2;
+
+                    m_player.position = glm::vec3(static_cast<float>(midX) + 0.5f,
+                                                  static_cast<float>(WorldGen::CITY_FLOOR + 5),
+                                                  static_cast<float>(midZ) + 17.5f);
+                    m_player.velocity = glm::vec3(0.0f);
+                    m_player.flying = true;
+                    m_placeOnSurface = false;
+                    m_camera.setOrientation(-90.0f, -4.0f);
+                    m_camera.addLook(0.0f, 0.0f, 0.0f);
+
+                    std::printf("Ancient city at %d, %d (floor %d)\n",
+                                midX, midZ, WorldGen::CITY_FLOOR);
+                    std::fflush(stdout);
+                }
+                else
+                {
+                    std::printf("No ancient city found\n");
                     std::fflush(stdout);
                 }
 

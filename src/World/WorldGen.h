@@ -82,6 +82,7 @@ public:
         Monument,
         Mineshaft,
         Stronghold,
+        AncientCity,
         TrialChamber,
     };
 
@@ -149,6 +150,17 @@ public:
     // The mansion's half-width. It is the widest thing that stands on
     // land here, so it is what sets the reach the landmark pass needs.
     static constexpr int MANSION_HALF = 11;
+
+    // The ancient city, which is the one thing here that lives below
+    // the ores. Minecraft puts it at the bottom of the deep dark; this
+    // world's floor is y=0, so it sits just above the bedrock.
+    static constexpr int CITY_FLOOR = 8;
+    static constexpr int CITY_HALF = 20;
+    static constexpr int CITY_TALL = 14;
+
+    // Where the nearest one is, which is what the debug screen reports
+    // and what the tests walk to.
+    Structures::Spot nearestAncientCity(int blockX, int blockZ, int squares = 4) const;
 
     // The mineshaft spread, shared by the stamp and by the lookup that
     // decides what is in the chest at the end of a corridor.
@@ -242,6 +254,8 @@ private:
     void stampLandmark(Chunk& chunk, Landmark kind, int midX, int midZ) const;
     void dressSeabed(Chunk& chunk) const;
     void buildDesertWells(Chunk& chunk) const;
+    void buildAncientCities(Chunk& chunk) const;
+    void stampAncientCity(Chunk& chunk, int midX, int midZ) const;
     void buildOceanStructures(Chunk& chunk) const;
     void stampShipwreck(Chunk& chunk, int midX, int midZ) const;
     void stampMonument(Chunk& chunk, int midX, int midZ) const;

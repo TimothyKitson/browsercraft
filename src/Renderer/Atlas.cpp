@@ -1374,6 +1374,172 @@ namespace
     void paintFireCoral(Tile& t)   { paintCoralFanIn(t, Color{ 192,  44,  52 }, 397); }
     void paintHornCoral(Tile& t)   { paintCoralFanIn(t, Color{ 232, 216,  96 }, 399); }
 
+    // The deep dark. Sculk is near-black with a blue-green glow in
+    // it, which is the only colour down there and so the only thing
+    // that makes the place read as somewhere rather than as a cave
+    // with the lights off.
+    void paintSculk(Tile& t)
+    {
+        t.fill(Color{ 14, 20, 26 });
+        for (int y = 0; y < Tile::N; ++y)
+            for (int x = 0; x < Tile::N; ++x)
+            {
+                const float blob = hash2(x / 2, y / 2, 401);
+                if (blob > 0.86f) t.set(x, y, Color{ 22, 92, 92 });
+                else if (blob > 0.74f) t.set(x, y, Color{ 18, 56, 60 });
+                else if (blob < 0.18f) t.set(x, y, Color{ 8, 12, 16 });
+            }
+        t.speckle(4, 402);
+    }
+
+    void paintDeepslateBricks(Tile& t)
+    {
+        t.fill(Color{ 54, 54, 58 });
+        for (int row = 0; row < 4; ++row)
+        {
+            const int offset = (row % 2) * 4;
+            for (int y = 0; y < 3; ++y)
+                for (int x = 0; x < Tile::N; ++x)
+                {
+                    const int bx = (x + offset) % Tile::N;
+                    if ((bx % 8) == 7) continue;
+                    const int brick = (x + offset) / 8 + row * 3;
+                    const int delta = static_cast<int>((hash2(brick, row, 405) - 0.5f) * 22.0f);
+                    t.set(x, row * 4 + y, shade(Color{ 70, 70, 76 }, delta));
+                }
+        }
+        t.speckle(5, 406);
+    }
+
+    void paintDeepslateTiles(Tile& t)
+    {
+        t.fill(Color{ 46, 46, 50 });
+        // Four square tiles rather than courses of bricks, which is
+        // what tells the two apart at a glance.
+        for (int ty = 0; ty < 2; ++ty)
+            for (int tx = 0; tx < 2; ++tx)
+            {
+                const int delta = static_cast<int>((hash2(tx, ty, 407) - 0.5f) * 20.0f);
+                for (int y = 1; y < 7; ++y)
+                    for (int x = 1; x < 7; ++x)
+                        t.set(tx * 8 + x, ty * 8 + y, shade(Color{ 62, 62, 68 }, delta));
+            }
+        t.speckle(5, 408);
+    }
+
+    // The two that listen, and the one that spreads. Each is sculk
+    // with something on top of it, so each is the sculk tile with its
+    // own mark drawn over.
+    void paintSculkMark(Tile& t, Color mark, Color glow, int salt)
+    {
+        paintSculk(t);
+        for (int i = 0; i < 9; ++i)
+        {
+            const int x = 3 + static_cast<int>(hash2(i, 0, salt) * 10.0f);
+            const int y = 3 + static_cast<int>(hash2(i, 1, salt) * 10.0f);
+            t.set(x, y, mark);
+            t.set(x + 1, y, glow);
+            t.set(x, y + 1, glow);
+        }
+    }
+
+    void paintSculkSensorTop(Tile& t)
+    {
+        paintSculkMark(t, Color{ 28, 110, 110 }, Color{ 20, 78, 84 }, 411);
+        // The three tendrils, which is the thing you recognise a
+        // sensor by from above.
+        for (int arm = 0; arm < 3; ++arm)
+            for (int k = 0; k < 6; ++k)
+                t.set(8 + static_cast<int>(std::cos(arm * 2.1f) * k),
+                      8 + static_cast<int>(std::sin(arm * 2.1f) * k),
+                      Color{ 46, 150, 148 });
+    }
+
+    void paintSculkSensorTopLit(Tile& t)
+    {
+        paintSculkSensorTop(t);
+        for (int arm = 0; arm < 3; ++arm)
+            for (int k = 0; k < 6; ++k)
+                t.set(8 + static_cast<int>(std::cos(arm * 2.1f) * k),
+                      8 + static_cast<int>(std::sin(arm * 2.1f) * k),
+                      Color{ 120, 230, 220 });
+    }
+
+    void paintSculkSensorSide(Tile& t) { paintSculkMark(t, Color{ 26, 96, 100 }, Color{ 18, 66, 70 }, 413); }
+
+    void paintSculkShriekerTop(Tile& t)
+    {
+        paintSculk(t);
+        // A ring with a hole in the middle: the thing that screams.
+        for (int y = 0; y < Tile::N; ++y)
+            for (int x = 0; x < Tile::N; ++x)
+            {
+                const float dx = x - 7.5f;
+                const float dy = y - 7.5f;
+                const float d = std::sqrt(dx * dx + dy * dy);
+                if (d < 2.4f) t.set(x, y, Color{ 6, 10, 12 });
+                else if (d < 4.6f) t.set(x, y, Color{ 196, 186, 150 });
+                else if (d < 5.6f) t.set(x, y, Color{ 132, 124, 96 });
+            }
+    }
+
+    void paintSculkShriekerSide(Tile& t) { paintSculkMark(t, Color{ 150, 142, 112 }, Color{ 96, 90, 70 }, 415); }
+
+    void paintSculkCatalystTop(Tile& t)
+    {
+        paintSculk(t);
+        // The bone-white core, which is the one bright thing in an
+        // ancient city.
+        for (int y = 4; y < 12; ++y)
+            for (int x = 4; x < 12; ++x)
+                t.set(x, y, shade(Color{ 206, 204, 190 },
+                                  static_cast<int>((hash2(x, y, 417) - 0.5f) * 30.0f)));
+    }
+
+    void paintSculkCatalystSide(Tile& t)
+    {
+        paintSculk(t);
+        for (int y = 0; y < 5; ++y)
+            for (int x = 0; x < Tile::N; ++x)
+                if (hash2(x, y, 419) > 0.35f)
+                    t.set(x, y, Color{ 188, 186, 172 });
+    }
+
+    void paintSoulLantern(Tile& t)
+    {
+        t.fill(Color{ 58, 56, 52 });
+        // The soul fire inside it, which is the cold blue the Nether
+        // and the deep dark share.
+        for (int y = 3; y < 13; ++y)
+            for (int x = 4; x < 12; ++x)
+                t.set(x, y, (hash2(x, y, 421) > 0.4f) ? Color{ 68, 216, 222 }
+                                                      : Color{ 36, 150, 170 });
+        for (int x = 0; x < Tile::N; ++x)
+        {
+            t.set(x, 0, Color{ 44, 42, 40 });
+            t.set(x, Tile::N - 1, Color{ 44, 42, 40 });
+        }
+    }
+
+    void paintReinforcedDeepslateTop(Tile& t)
+    {
+        t.fill(Color{ 50, 52, 50 });
+        for (int y = 0; y < Tile::N; ++y)
+            for (int x = 0; x < Tile::N; ++x)
+                if (((x / 4) + (y / 4)) % 2 == 0)
+                    t.set(x, y, Color{ 64, 68, 60 });
+        t.speckle(6, 423);
+    }
+
+    void paintReinforcedDeepslateSide(Tile& t)
+    {
+        t.fill(Color{ 46, 48, 46 });
+        for (int y = 2; y < Tile::N; y += 5)
+            for (int x = 0; x < Tile::N; ++x)
+                t.set(x, y, Color{ 92, 96, 84 });
+        t.speckle(6, 424);
+    }
+
     void paintSpawnerIn(Tile& t, Color bars, Color inside)
     {
         t.fill(inside);
@@ -3976,6 +4142,19 @@ namespace
         { Tiles::BubbleCoralTile, paintBubbleCoral },
         { Tiles::FireCoralTile, paintFireCoral },
         { Tiles::HornCoralTile, paintHornCoral },
+        { Tiles::DeepslateBricksTile, paintDeepslateBricks },
+        { Tiles::DeepslateTilesTile, paintDeepslateTiles },
+        { Tiles::SculkTile, paintSculk },
+        { Tiles::SculkSensorTop, paintSculkSensorTop },
+        { Tiles::SculkSensorTopLit, paintSculkSensorTopLit },
+        { Tiles::SculkSensorSide, paintSculkSensorSide },
+        { Tiles::SculkShriekerTop, paintSculkShriekerTop },
+        { Tiles::SculkShriekerSide, paintSculkShriekerSide },
+        { Tiles::SculkCatalystTop, paintSculkCatalystTop },
+        { Tiles::SculkCatalystSide, paintSculkCatalystSide },
+        { Tiles::SoulLanternTile, paintSoulLantern },
+        { Tiles::ReinforcedDeepslateTop, paintReinforcedDeepslateTop },
+        { Tiles::ReinforcedDeepslateSide, paintReinforcedDeepslateSide },
         { Tiles::Obsidian, paintObsidian },
         { Tiles::TallGrass, paintTallGrass },
         { Tiles::FlowerRed, paintFlowerRed },
@@ -4307,6 +4486,19 @@ namespace
         { Tiles::BubbleCoralTile, { "bubble_coral", nullptr },                         Tinting::None,    0,   false },
         { Tiles::FireCoralTile, { "fire_coral", nullptr },                             Tinting::None,    0,   false },
         { Tiles::HornCoralTile, { "horn_coral", nullptr },                             Tinting::None,    0,   false },
+        { Tiles::DeepslateBricksTile, { "deepslate_bricks", nullptr },                 Tinting::None,    0,   false },
+        { Tiles::DeepslateTilesTile, { "deepslate_tiles", nullptr },                   Tinting::None,    0,   false },
+        { Tiles::SculkTile,     { "sculk", nullptr },                                  Tinting::None,    0,   false },
+        { Tiles::SculkSensorTop, { "sculk_sensor_top", nullptr },                      Tinting::None,    0,   false },
+        { Tiles::SculkSensorTopLit, { "sculk_sensor_top_active", "sculk_sensor_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::SculkSensorSide, { "sculk_sensor_side", nullptr },                    Tinting::None,    0,   false },
+        { Tiles::SculkShriekerTop, { "sculk_shrieker_top", nullptr },                  Tinting::None,    0,   false },
+        { Tiles::SculkShriekerSide, { "sculk_shrieker_side", nullptr },                Tinting::None,    0,   false },
+        { Tiles::SculkCatalystTop, { "sculk_catalyst_top", nullptr },                  Tinting::None,    0,   false },
+        { Tiles::SculkCatalystSide, { "sculk_catalyst_side", nullptr },                Tinting::None,    0,   false },
+        { Tiles::SoulLanternTile, { "soul_lantern", nullptr },                         Tinting::None,    0,   false },
+        { Tiles::ReinforcedDeepslateTop, { "reinforced_deepslate_top", nullptr },      Tinting::None,    0,   false },
+        { Tiles::ReinforcedDeepslateSide, { "reinforced_deepslate_side", nullptr },    Tinting::None,    0,   false },
         { Tiles::PistonTop,     { "piston_side", nullptr },                            Tinting::None,    0,   false },
         { Tiles::PistonSide,    { "piston_side", nullptr },                            Tinting::None,    0,   false },
         { Tiles::PistonFace,    { "piston_top", "piston_top_normal", nullptr },         Tinting::None,    0,   false },

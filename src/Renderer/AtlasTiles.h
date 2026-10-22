@@ -175,6 +175,20 @@ namespace Tiles
         FireCoralTile,
         HornCoralTile,
 
+        DeepslateBricksTile,
+        DeepslateTilesTile,
+        SculkTile,
+        SculkSensorTop,
+        SculkSensorTopLit,
+        SculkSensorSide,
+        SculkShriekerTop,
+        SculkShriekerSide,
+        SculkCatalystTop,
+        SculkCatalystSide,
+        SoulLanternTile,
+        ReinforcedDeepslateTop,
+        ReinforcedDeepslateSide,
+
         RainDrop,
         SnowFlake,
 

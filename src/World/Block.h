@@ -297,6 +297,19 @@ namespace Blocks
         FireCoral,
         HornCoral,
 
+        // The deep dark, and the city in it. Sculk is what has grown
+        // over everything down there; the sensor and the shrieker are
+        // what it listens with.
+        DeepslateBricks,
+        DeepslateTiles,
+        Sculk,
+        SculkSensor,
+        SculkSensorLit,
+        SculkShrieker,
+        SculkCatalyst,
+        SoulLantern,
+        ReinforcedDeepslate,
+
         Count
     };
 }
@@ -408,6 +421,21 @@ inline bool isWaterPlant(BlockId id)
     return id == Blocks::Kelp || id == Blocks::KelpTop ||
            id == Blocks::Seagrass || id == Blocks::SeaPickle ||
            (id >= Blocks::TubeCoral && id <= Blocks::HornCoral);
+}
+
+// Whether this is one of the deep dark's blocks. The city is built of
+// them and nothing else is, so this is also the test for "is this part
+// of an ancient city".
+inline bool isDeepDark(BlockId id)
+{
+    return id >= Blocks::DeepslateBricks && id <= Blocks::ReinforcedDeepslate;
+}
+
+// The two that listen. A sensor lights when something moves near it;
+// a shrieker is what the sensor tells.
+inline bool isSculkSensor(BlockId id)
+{
+    return id == Blocks::SculkSensor || id == Blocks::SculkSensorLit;
 }
 
 // A reef's solid blocks, which is what a coral clump is mostly made of.

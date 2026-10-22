@@ -139,6 +139,21 @@ namespace
         { Items::IronPickaxe, 1, 1 },
     };
 
+    // The deepest chest in the world, and the one with the longest
+    // walk home from it. Minecraft puts its best enchanted books down
+    // there; there is no enchanted book here, so it is the diamonds
+    // and the echo of one.
+    const Entry CITY[] = {
+        { Items::Diamond,     2, 5 },
+        { Items::Emerald,     2, 8 },
+        { Items::Book,        1, 4 },
+        { Items::DiamondHoe,  1, 1 },
+        { Blocks::Sculk,      2, 8 },
+        { Items::EnderPearl,  1, 3 },
+        { Items::GoldIngot,   2, 6 },
+        { Items::Potion,      1, 2 },
+    };
+
     // A supply room, which is exactly what it sounds like: what you
     // want in your hands before the next spawner starts.
     const Entry SUPPLY[] = {
@@ -182,6 +197,8 @@ namespace
                 return { MINESHAFT, static_cast<int>(std::size(MINESHAFT)) };
             case WorldGen::Hoard::Stronghold:
                 return { STRONGHOLD, static_cast<int>(std::size(STRONGHOLD)) };
+            case WorldGen::Hoard::AncientCity:
+                return { CITY, static_cast<int>(std::size(CITY)) };
             case WorldGen::Hoard::TrialChamber:
                 return { SUPPLY, static_cast<int>(std::size(SUPPLY)) };
             case WorldGen::Hoard::None:
@@ -208,6 +225,7 @@ StructureLoot::Stack StructureLoot::centrepiece(WorldGen::Hoard hoard,
         case WorldGen::Hoard::Monument:        out.id = Items::GoldIngot; out.count = 8; break;
         case WorldGen::Hoard::Mineshaft:       out.id = Blocks::RailEastWest; out.count = 6; break;
         case WorldGen::Hoard::Stronghold:      out.id = Items::Book;      out.count = 2; break;
+        case WorldGen::Hoard::AncientCity:     out.id = Items::Diamond;   out.count = 3; break;
         case WorldGen::Hoard::TrialChamber:    out.id = Items::Arrow;     out.count = 8; break;
         case WorldGen::Hoard::None:            return out;
     }

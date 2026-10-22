@@ -227,6 +227,15 @@ namespace
         { "Bubble Coral", BubbleCoralTile,BubbleCoralTile,BubbleCoralTile,false,false, RenderType::Cross,  0,   0.0f },
         { "Fire Coral",   FireCoralTile, FireCoralTile,  FireCoralTile,  false, false, RenderType::Cross,  0,   0.0f },
         { "Horn Coral",   HornCoralTile, HornCoralTile,  HornCoralTile,  false, false, RenderType::Cross,  0,   0.0f },
+        { "Deepslate Bricks",DeepslateBricksTile,DeepslateBricksTile,DeepslateBricksTile,true,true,RenderType::Cube,0,3.5f },
+        { "Deepslate Tiles",DeepslateTilesTile,DeepslateTilesTile,DeepslateTilesTile,true,true,RenderType::Cube,0,3.5f },
+        { "Sculk",        SculkTile,     SculkTile,      SculkTile,      true,  true,  RenderType::Cube,   0,   0.2f },
+        { "Sculk Sensor", SculkSensorTop,SculkTile,      SculkSensorSide,true,  true,  RenderType::Cube,   1,   1.5f },
+        { "Sculk Sensor", SculkSensorTopLit,SculkTile,   SculkSensorSide,true,  true,  RenderType::Cube,   6,   1.5f },
+        { "Sculk Shrieker",SculkShriekerTop,SculkTile,   SculkShriekerSide,true,true,  RenderType::Cube,   2,   3.0f },
+        { "Sculk Catalyst",SculkCatalystTop,SculkTile,   SculkCatalystSide,true,true,  RenderType::Cube,   6,   3.0f },
+        { "Soul Lantern", SoulLanternTile,SoulLanternTile,SoulLanternTile,true, true,  RenderType::Cube,  10,   0.3f },
+        { "Reinforced Deepslate",ReinforcedDeepslateTop,ReinforcedDeepslateTop,ReinforcedDeepslateSide,true,true,RenderType::Cube,0,-1.0f },
     };
 }
 
