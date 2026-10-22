@@ -73,6 +73,13 @@ namespace Structures
     // The nearest one to a place, searching out this many squares.
     Spot nearest(const Grid& grid, int blockX, int blockZ, uint32_t seed, int squares = 3);
 
+    // Buried treasure is the one chest in the game you need a map to
+    // find, and Minecraft places it by the spread rule rather than the
+    // grid: a flat one-in-a-hundred for each chunk, which is why some
+    // beaches have two and most have none.
+    constexpr uint32_t BURIED_TREASURE_SALT = 10387320u;
+    constexpr float    BURIED_TREASURE_CHANCE = 0.01f;
+
     // The other rule: a flat chance for each chunk on its own.
     bool spreadAt(int chunkX, int chunkZ, uint32_t seed, uint32_t salt, float chance);
 

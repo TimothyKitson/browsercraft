@@ -9,6 +9,31 @@
 
 namespace
 {
+    // Whether there is water next to this cell, which is how a block
+    // that grows in the sea tells itself apart from the same block
+    // stood on dry land by somebody in creative.
+    bool besideWater(const World& world, int x, int y, int z)
+    {
+        return world.getBlock(x + 1, y, z) == Blocks::Water ||
+               world.getBlock(x - 1, y, z) == Blocks::Water ||
+               world.getBlock(x, y, z + 1) == Blocks::Water ||
+               world.getBlock(x, y, z - 1) == Blocks::Water ||
+               world.getBlock(x, y + 1, z) == Blocks::Water;
+    }
+
+    // Water, lava, or something standing in water: all of them hold
+    // the player up and all of them slow them down.
+    bool swimmableAt(const World& world, int x, int y, int z)
+    {
+        const BlockId block = world.getBlock(x, y, z);
+        if (isLiquid(block)) return true;
+        return isWaterPlant(block) && besideWater(world, x, y, z);
+    }
+}
+
+
+namespace
+{
     constexpr float WALK_SPEED = 4.3f;
     constexpr float SPRINT_SPEED = 5.9f;
     constexpr float SNEAK_SPEED = 1.4f;
@@ -269,7 +294,7 @@ bool Player::isInWater(const World& world) const
     for (int x = minX; x <= maxX; ++x)
         for (int y = minY; y <= maxY; ++y)
             for (int z = minZ; z <= maxZ; ++z)
-                if (isLiquid(world.getBlock(x, y, z)))
+                if (swimmableAt(world, x, y, z))
                     return true;
 
     return false;
@@ -282,9 +307,18 @@ bool Player::isInWater(const World& world) const
 bool Player::isHeadUnderwater(const World& world) const
 {
     const glm::vec3 eye = eyePosition();
-    return world.getBlock(static_cast<int>(std::floor(eye.x)),
-                          static_cast<int>(std::floor(eye.y)),
-                          static_cast<int>(std::floor(eye.z))) == Blocks::Water;
+    const int x = static_cast<int>(std::floor(eye.x));
+    const int y = static_cast<int>(std::floor(eye.y));
+    const int z = static_cast<int>(std::floor(eye.z));
+
+    const BlockId here = world.getBlock(x, y, z);
+    if (here == Blocks::Water) return true;
+
+    // A blade of seagrass stands in the water rather than beside it,
+    // so swimming through one is still swimming. Without this, a kelp
+    // forest reads as a row of air pockets: the overlay drops out for
+    // a frame every time the eye crosses a frond.
+    return isWaterPlant(here) && besideWater(world, x, y, z);
 }
 
 bool Player::isInLava(const World& world) const

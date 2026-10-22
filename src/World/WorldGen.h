@@ -56,6 +56,35 @@ public:
         Count
     };
 
+    // Where a landmark keeps its chests, as offsets from the middle of
+    // it -- dy from the ground under it. One table rather than two
+    // copies of the same arithmetic: the stamp reads it to put the
+    // chests down and the loot reads it to recognise one later.
+    struct ChestSpot { int dx, dy, dz; };
+    static int landmarkChests(Landmark kind, ChestSpot out[2]);
+
+    // What kind of thing a chest found standing in the world belongs
+    // to. Worked out from where it is rather than stored, like
+    // everything else here, so a chest holds the same thing however
+    // many times the chunk round it is thrown away and remade.
+    enum class Hoard : uint8_t
+    {
+        None,
+        DesertPyramid,
+        JungleTemple,
+        Igloo,
+        RuinedPortal,
+        PillagerOutpost,
+        Shipwreck,
+        BuriedTreasure,
+        Monument,
+        Mineshaft,
+        Stronghold,
+        TrialChamber,
+    };
+
+    Hoard hoardAt(int x, int y, int z) const;
+
     static const char* landmarkName(Landmark kind);
 
     // Which grid it goes down on, and whether this biome will have it.
@@ -64,6 +93,21 @@ public:
 
     // The nearest one of a kind, for the screens that go and look at
     // them. Empty when there is none within the squares searched.
+    // Where the nearest shipwreck and monument are, which is what the
+    // debug screen reports and what the tests walk to.
+    Structures::Spot nearestShipwreck(int blockX, int blockZ, int squares = 4) const;
+
+    // Whether a ship could have come to rest here: on the sea floor,
+    // or run aground on a beach. Anything further inland is a ship in
+    // a field, which is a different game.
+    bool shipwreckFits(int midX, int midZ) const;
+    Structures::Spot nearestMonument(int blockX, int blockZ, int squares = 4) const;
+
+    // Whether the sea floor here is deep enough and flat enough for a
+    // monument to stand on, which is the only thing keeping one out of
+    // a puddle.
+    bool monumentFits(int midX, int midZ) const;
+
     Structures::Spot nearestLandmark(Landmark kind, int blockX, int blockZ,
                                      int squares = 4) const;
 
@@ -71,6 +115,39 @@ public:
     CaveKind caveKindAt(int worldX, int worldZ) const;
 
     static constexpr int SEA_LEVEL = 62;
+
+    // A monument is the one building here wide enough that where it
+    // will fit is a real question: it needs this much water over the
+    // whole of its footprint before it is allowed to stand.
+    //
+    // Minecraft's is 58 blocks tall and its oceans are deep enough for
+    // that. These are not: the deepest sea floor anywhere in this
+    // world is nineteen blocks down, measured rather than guessed. So
+    // the monument is built to the water it has -- as tall as will fit
+    // under the surface, between these two -- instead of to
+    // Minecraft's dimensions, which would leave a prismarine roof
+    // standing proud of the waves.
+    static constexpr int MONUMENT_HALF = 11;
+    static constexpr int MONUMENT_DEPTH = 12;
+    static constexpr int MONUMENT_MIN_TALL = 8;
+    static constexpr int MONUMENT_MAX_TALL = 14;
+
+    // How tall the one at this place comes out.
+    int monumentHeight(int midX, int midZ) const;
+
+    // Coral only grows in warm water, which is what keeps a reef out
+    // of the sea off a snowfield.
+    static constexpr float CORAL_WARMTH = 0.18f;
+    bool reefWater(int worldX, int worldZ) const;
+
+    // The outpost's height, which the chest table needs as well as the
+    // stamp: the chest is three down from the top of the tower.
+    static constexpr int OUTPOST_TALL = 11;
+
+    // The mineshaft spread, shared by the stamp and by the lookup that
+    // decides what is in the chest at the end of a corridor.
+    static constexpr float MINESHAFT_CHANCE = 0.012f;
+    static constexpr uint32_t MINESHAFT_SALT = 445731u;
     // The lava sea the Nether is built around, and the height the End's
     // central plateau is centred on. Public because spawning somewhere
     // survivable in either dimension has to know where the ground is.
@@ -157,6 +234,11 @@ private:
     void buildMineshafts(Chunk& chunk) const;
     void buildLandmarks(Chunk& chunk) const;
     void stampLandmark(Chunk& chunk, Landmark kind, int midX, int midZ) const;
+    void dressSeabed(Chunk& chunk) const;
+    void buildOceanStructures(Chunk& chunk) const;
+    void stampShipwreck(Chunk& chunk, int midX, int midZ) const;
+    void stampMonument(Chunk& chunk, int midX, int midZ) const;
+    void stampBuriedTreasure(Chunk& chunk, int chunkX, int chunkZ) const;
     void stampStrongholdRoom(Chunk& chunk, const Stronghold::Site& site,
                              const Stronghold::Room& room) const;
     void stampChamberRoom(Chunk& chunk, const TrialChamber::Site& site,

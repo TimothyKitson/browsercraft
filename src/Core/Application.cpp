@@ -1460,6 +1460,8 @@ bool Application::frame()
             m_startupScreen == "mineshaft" || m_startupScreen == "pyramid" ||
             m_startupScreen == "temple" || m_startupScreen == "igloo" ||
             m_startupScreen == "portalruin" || m_startupScreen == "outpost" ||
+            m_startupScreen == "shipwreck" || m_startupScreen == "monument" ||
+            m_startupScreen == "seabed" || m_startupScreen == "reef" ||
             m_startupScreen == "vault" || m_startupScreen == "stronghold" ||
             m_startupScreen == "rock")
         {
@@ -1513,6 +1515,10 @@ bool Application::frame()
                                   m_startupScreen != "igloo" &&
                                   m_startupScreen != "portalruin" &&
                                   m_startupScreen != "outpost" &&
+                                  m_startupScreen != "shipwreck" &&
+                                  m_startupScreen != "monument" &&
+                                  m_startupScreen != "seabed" &&
+                                  m_startupScreen != "reef" &&
                                   m_startupScreen != "rock" &&
                                   m_startupScreen != "portal" &&
                                   m_startupScreen != "nether";
@@ -2050,6 +2056,150 @@ bool Application::frame()
                 else
                 {
                     std::printf("No %s within eight squares\n", WorldGen::landmarkName(kind));
+                    std::fflush(stdout);
+                }
+
+                m_player.mode = GameMode::Creative;
+                m_player.health = Player::MAX_HEALTH;
+            }
+
+            // Down onto the sea floor, to look at what grows on it.
+            // "reef" wants warm water, which is the only place coral
+            // is; "seabed" takes the first deep water it finds.
+            if (m_startupScreen == "seabed" || m_startupScreen == "reef")
+            {
+                const WorldGen& gen = m_world->generator();
+                const bool reef = m_startupScreen == "reef";
+
+                bool found = false;
+                int standX = 0, standZ = 0, floorY = 0;
+
+                // Walking out chunk by chunk, so the first hit is the
+                // nearest one. The reef screen generates each candidate
+                // chunk and looks in it for actual coral rather than
+                // trusting warm deep water to have some: coral is one
+                // cell in twenty even where it is allowed, so "warm
+                // and deep" lands you in a kelp forest nine times out
+                // of ten.
+                for (int ring = 0; ring <= 40 && !found; ++ring)
+                    for (int cz = -ring; cz <= ring && !found; ++cz)
+                        for (int cx = -ring; cx <= ring && !found; ++cx)
+                        {
+                            if (ring > 0 && std::abs(cx) != ring && std::abs(cz) != ring)
+                                continue;
+
+                            const int originX = cx * Chunk::SX;
+                            const int originZ = cz * Chunk::SZ;
+
+                            if (!reef)
+                            {
+                                const int top = gen.surfaceHeight(originX + 8, originZ + 8);
+                                if (WorldGen::SEA_LEVEL - top < 7) continue;
+                                standX = originX + 8;
+                                standZ = originZ + 8;
+                                floorY = top;
+                                found = true;
+                                continue;
+                            }
+
+                            if (!gen.reefWater(originX + 8, originZ + 8)) continue;
+
+                            Chunk probe(ChunkPos{ cx, cz });
+                            gen.generate(probe);
+
+                            for (int y = 20; y < WorldGen::SEA_LEVEL && !found; ++y)
+                                for (int lx = 0; lx < Chunk::SX && !found; ++lx)
+                                    for (int lz = 0; lz < Chunk::SZ && !found; ++lz)
+                                    {
+                                        if (!isCoralBlock(probe.getBlock(lx, y, lz))) continue;
+                                        standX = originX + lx;
+                                        standZ = originZ + lz;
+                                        floorY = y - 1;
+                                        found = true;
+                                    }
+                        }
+
+                m_timeOfDay = 0.5f;
+
+                if (found)
+                {
+                    m_player.position = glm::vec3(static_cast<float>(standX) + 0.5f,
+                                                  static_cast<float>(floorY + 3),
+                                                  static_cast<float>(standZ) + (reef ? 5.5f : 7.5f));
+                    m_player.velocity = glm::vec3(0.0f);
+                    m_player.flying = true;
+                    m_placeOnSurface = false;
+                    m_camera.setOrientation(-90.0f, -12.0f);
+                    m_camera.addLook(0.0f, 0.0f, 0.0f);
+
+                    std::printf("%s at %d, %d (floor %d, %d deep)\n",
+                                reef ? "Reef" : "Seabed", standX, standZ, floorY,
+                                WorldGen::SEA_LEVEL - floorY);
+                    std::fflush(stdout);
+                }
+                else
+                {
+                    std::printf("No %s found\n", reef ? "warm shallow water" : "deep water");
+                    std::fflush(stdout);
+                }
+
+                m_player.mode = GameMode::Creative;
+                m_player.health = Player::MAX_HEALTH;
+            }
+
+            // Out to sea. The monument is the one that has to search:
+            // most squares of its grid are dry land, so the first spot
+            // the grid offers is usually not one it can stand on.
+            if (m_startupScreen == "shipwreck" || m_startupScreen == "monument")
+            {
+                const WorldGen& gen = m_world->generator();
+                const bool wreck = m_startupScreen == "shipwreck";
+
+                const int fromX = static_cast<int>(m_player.position.x);
+                const int fromZ = static_cast<int>(m_player.position.z);
+
+                Structures::Spot spot;
+                if (wreck)
+                {
+                    spot = gen.nearestShipwreck(fromX, fromZ, 16);
+                }
+                else
+                {
+                    spot = gen.nearestMonument(fromX, fromZ, 16);
+                }
+
+                m_timeOfDay = 0.5f;
+
+                if (spot.exists)
+                {
+                    const int midX = spot.chunkX * Structures::CHUNK + Structures::CHUNK / 2;
+                    const int midZ = spot.chunkZ * Structures::CHUNK + Structures::CHUNK / 2;
+                    const int floorY = gen.surfaceHeight(midX, midZ);
+
+                    // Under the water looking at it, not above it: from
+                    // the surface a monument is a dark patch. Close in,
+                    // too -- the water fogs anything further off than
+                    // about fifteen blocks down to a silhouette.
+                    const int eye = wreck ? floorY + 4
+                                          : floorY + gen.monumentHeight(midX, midZ) / 2;
+                    const float back = wreck ? 13.5f : 16.5f;
+
+                    m_player.position = glm::vec3(static_cast<float>(midX) + 0.5f,
+                                                  static_cast<float>(eye),
+                                                  static_cast<float>(midZ) + back);
+                    m_player.velocity = glm::vec3(0.0f);
+                    m_player.flying = true;
+                    m_placeOnSurface = false;
+                    m_camera.setOrientation(-90.0f, wreck ? -6.0f : 4.0f);
+                    m_camera.addLook(0.0f, 0.0f, 0.0f);
+
+                    std::printf("%s at %d, %d (floor %d)\n",
+                                wreck ? "Shipwreck" : "Monument", midX, midZ, floorY);
+                    std::fflush(stdout);
+                }
+                else
+                {
+                    std::printf("No %s found\n", wreck ? "shipwreck" : "monument");
                     std::fflush(stdout);
                 }
 

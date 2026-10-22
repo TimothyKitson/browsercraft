@@ -1304,10 +1304,33 @@ void Application::openChest(const glm::ivec3& block)
     setMouseCaptured(false);
 }
 
-// A chest found standing in a village building has never been opened
-// before, so there is nothing in the table for it. What it holds is
-// rolled from where it stands -- the same every time anyone finds it,
-// and nothing is written to the save until the player takes something.
+// Whether this chest is one of a village's, and what is in it if so.
+std::vector<VillageLoot::Stack> Application::villageChestLoot(const glm::ivec3& block) const
+{
+    const Village::Site site = Village::siteFor(Village::regionOf(block.x),
+                                                Village::regionOf(block.z),
+                                                m_world->seed());
+    if (!Village::reaches(site, block.x, block.z, block.x, block.z)) return {};
+
+    // The cheap tests passed; now it is worth asking whether the
+    // village was actually built here.
+    if (!m_world->generator().nearestVillage(block.x, block.z, 0).exists) return {};
+
+    Village::Building building;
+    if (!Village::buildingAt(site, m_world->seed(), block.x, block.z, building)) return {};
+    if (!Village::isHouse(building.kind)) return {};
+
+    return VillageLoot::rollFor(building.kind, block.x, block.y, block.z, m_world->seed());
+}
+
+// A chest the generator put down has never been opened before, so
+// there is nothing in the table for it. What it holds is rolled from
+// where it stands -- the same every time anyone finds it, and nothing
+// is written to the save until the player takes something.
+//
+// Two places it can have come from: a village building, which is the
+// cheapest to recognise and so is asked first, or one of the
+// structures scattered about the world.
 void Application::fillVillageChest(const glm::ivec3& block)
 {
     if (!m_world) return;
@@ -1317,21 +1340,15 @@ void Application::fillVillageChest(const glm::ivec3& block)
     // built it. Either way it is not ours to fill.
     if (m_chests.has(block)) return;
 
-    const Village::Site site = Village::siteFor(Village::regionOf(block.x),
-                                                Village::regionOf(block.z),
-                                                m_world->seed());
-    if (!Village::reaches(site, block.x, block.z, block.x, block.z)) return;
+    std::vector<VillageLoot::Stack> loot = villageChestLoot(block);
 
-    // The cheap tests passed; now it is worth asking whether the
-    // village was actually built here.
-    if (!m_world->generator().nearestVillage(block.x, block.z, 0).exists) return;
+    if (loot.empty())
+    {
+        const WorldGen::Hoard hoard =
+            m_world->generator().hoardAt(block.x, block.y, block.z);
+        loot = StructureLoot::rollFor(hoard, block.x, block.y, block.z, m_world->seed());
+    }
 
-    Village::Building building;
-    if (!Village::buildingAt(site, m_world->seed(), block.x, block.z, building)) return;
-    if (!Village::isHouse(building.kind)) return;
-
-    const std::vector<VillageLoot::Stack> loot =
-        VillageLoot::rollFor(building.kind, block.x, block.y, block.z, m_world->seed());
     if (loot.empty()) return;
 
     Chests::Contents filled{};

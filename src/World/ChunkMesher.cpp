@@ -73,6 +73,13 @@ namespace
         if (isLeaves(self) && isLeaves(neighbour)) return true;
 
         if (neighbour == self) return false;  // hide interior faces of water and glass
+
+        // The sea does not draw a face against what grows in it. Kelp
+        // and seagrass stand in the water rather than beside it, and
+        // without this every blade gets a glassy box round it where
+        // the water surfaces meet it.
+        if (isLiquid(self) && isWaterPlant(neighbour)) return false;
+
         if (isCross(neighbour)) return true;
         return true;
     }

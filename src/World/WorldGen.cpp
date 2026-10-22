@@ -166,6 +166,8 @@ void WorldGen::generate(Chunk& chunk) const
     buildStrongholds(chunk);
     buildMineshafts(chunk);
     buildLandmarks(chunk);
+    dressSeabed(chunk);
+    buildOceanStructures(chunk);
 }
 
 // A closed cavern system rather than a landscape: solid netherrack between a
@@ -764,6 +766,18 @@ namespace
         const int lx = worldX - chunk.position().x * Chunk::SX;
         const int lz = worldZ - chunk.position().z * Chunk::SZ;
         if (Chunk::inBounds(lx, y, lz)) chunk.setBlockRaw(lx, y, lz, block);
+    }
+
+    // Every chest in a landmark goes down through here, off the one
+    // table that also says where to look for them again.
+    void putChests(Chunk& chunk, WorldGen::Landmark kind,
+                   int midX, int ground, int midZ)
+    {
+        WorldGen::ChestSpot spots[2];
+        const int many = WorldGen::landmarkChests(kind, spots);
+        for (int i = 0; i < many; ++i)
+            put(chunk, midX + spots[i].dx, ground + spots[i].dy, midZ + spots[i].dz,
+                Blocks::Chest);
     }
 }
 
@@ -1616,6 +1630,33 @@ void WorldGen::buildLandmarks(Chunk& chunk) const
     }
 }
 
+int WorldGen::landmarkChests(Landmark kind, ChestSpot out[2])
+{
+    switch (kind)
+    {
+        case Landmark::DesertPyramid:
+            out[0] = { -2, -2, -2 };
+            out[1] = {  2, -2,  2 };
+            return 2;
+        case Landmark::JungleTemple:
+            out[0] = {  0,  1,  3 };
+            out[1] = { -3,  1,  3 };
+            return 2;
+        case Landmark::Igloo:
+            out[0] = { -2,  0,  2 };
+            return 1;
+        case Landmark::RuinedPortal:
+            out[0] = {  3,  0,  1 };
+            return 1;
+        case Landmark::PillagerOutpost:
+            out[0] = {  0,  OUTPOST_TALL - 3,  0 };
+            return 1;
+        case Landmark::Count:
+            break;
+    }
+    return 0;
+}
+
 void WorldGen::stampLandmark(Chunk& chunk, Landmark kind, int midX, int midZ) const
 {
     const int ground = surfaceHeight(midX, midZ);
@@ -1647,8 +1688,7 @@ void WorldGen::stampLandmark(Chunk& chunk, Landmark kind, int midX, int midZ) co
                             shell ? Blocks::Sandstone : Blocks::Air);
                     }
 
-            put(chunk, midX - 2, ground - 2, midZ - 2, Blocks::Chest);
-            put(chunk, midX + 2, ground - 2, midZ + 2, Blocks::Chest);
+            putChests(chunk, Landmark::DesertPyramid, midX, ground, midZ);
             // The thing under the floor. Everybody finds it once.
             put(chunk, midX, ground - 4, midZ, Blocks::Tnt);
             break;
@@ -1669,8 +1709,7 @@ void WorldGen::stampLandmark(Chunk& chunk, Landmark kind, int midX, int midZ) co
                             (shell && !door) ? Blocks::Cobblestone : Blocks::Air);
                     }
 
-            put(chunk, midX, ground + 1, midZ + 3, Blocks::Chest);
-            put(chunk, midX - 3, ground + 1, midZ + 3, Blocks::Chest);
+            putChests(chunk, Landmark::JungleTemple, midX, ground, midZ);
             // Levers on the wall, because a jungle temple is a puzzle
             // even when the puzzle is only a story.
             put(chunk, midX + 2, ground + 2, midZ + HALF - 1, Blocks::LeverOff);
@@ -1695,7 +1734,7 @@ void WorldGen::stampLandmark(Chunk& chunk, Landmark kind, int midX, int midZ) co
                     }
 
             put(chunk, midX + 1, ground, midZ + 1, Blocks::Bed);
-            put(chunk, midX - 2, ground, midZ + 2, Blocks::Chest);
+            putChests(chunk, Landmark::Igloo, midX, ground, midZ);
             put(chunk, midX - 2, ground, midZ, Blocks::Furnace);
             break;
         }
@@ -1724,7 +1763,7 @@ void WorldGen::stampLandmark(Chunk& chunk, Landmark kind, int midX, int midZ) co
                     put(chunk, midX + dx, y, midZ + dz, Blocks::Netherrack);
                 }
 
-            put(chunk, midX + 3, ground, midZ + 1, Blocks::Chest);
+            putChests(chunk, Landmark::RuinedPortal, midX, ground, midZ);
             break;
         }
 
@@ -1732,7 +1771,7 @@ void WorldGen::stampLandmark(Chunk& chunk, Landmark kind, int midX, int midZ) co
         {
             // A tower of dark oak with a roof and a way up inside it.
             constexpr int HALF = 3;
-            constexpr int TALL = 11;
+            constexpr int TALL = OUTPOST_TALL;
 
             for (int dy = 0; dy <= TALL; ++dy)
             {
@@ -1764,7 +1803,7 @@ void WorldGen::stampLandmark(Chunk& chunk, Landmark kind, int midX, int midZ) co
             for (int dy = 1; dy < TALL; ++dy)
                 put(chunk, midX + HALF - 1, ground + dy, midZ + HALF - 1, Blocks::LadderNorth);
 
-            put(chunk, midX, ground + TALL - 3, midZ, Blocks::Chest);
+            putChests(chunk, Landmark::PillagerOutpost, midX, ground, midZ);
             break;
         }
 
@@ -1779,8 +1818,8 @@ void WorldGen::stampLandmark(Chunk& chunk, Landmark kind, int midX, int midZ) co
 // first rails anybody sees come from.
 void WorldGen::buildMineshafts(Chunk& chunk) const
 {
-    constexpr float CHANCE = 0.012f;
-    constexpr uint32_t SALT = 445731u;
+    constexpr float CHANCE = MINESHAFT_CHANCE;
+    constexpr uint32_t SALT = MINESHAFT_SALT;
 
     const int chunkX = chunk.position().x;
     const int chunkZ = chunk.position().z;
@@ -2289,4 +2328,574 @@ void WorldGen::findSpawn(int& outX, int& outY, int& outZ) const
     outX = startX;
     outY = SEA_LEVEL + 4;
     outZ = startZ;
+}
+
+// ---------------------------------------------------------------------
+// The sea.
+//
+// Three things live out there, and Minecraft places each by a different
+// rule: the shipwreck and the monument by their own grids, and buried
+// treasure by the spread -- a flat one-in-a-hundred per chunk, which is
+// why a map is the only sensible way to find one.
+// ---------------------------------------------------------------------
+
+namespace
+{
+    // Walking the grid's squares outwards from a place, skipping the
+    // ones the structure cannot use.
+    //
+    // The other grids do not need this: a pyramid takes whatever land
+    // its square offers. The two sea ones do, because most squares of
+    // a monument or shipwreck grid are dry, and "the nearest spot the
+    // grid offers" is almost never one with water in it. Asking for a
+    // wider search without this returns the same unusable spot again.
+    template <typename Fits>
+    Structures::Spot nearestUsable(const Structures::Grid& grid, int blockX, int blockZ,
+                                   uint32_t seed, int squares, Fits fits)
+    {
+        const int hereX = Structures::squareOf(
+            Structures::squareOf(blockX, Structures::CHUNK), grid.spacing);
+        const int hereZ = Structures::squareOf(
+            Structures::squareOf(blockZ, Structures::CHUNK), grid.spacing);
+
+        Structures::Spot best;
+        long long bestDistance = 0;
+
+        for (int sz = hereZ - squares; sz <= hereZ + squares; ++sz)
+            for (int sx = hereX - squares; sx <= hereX + squares; ++sx)
+            {
+                const Structures::Spot spot = Structures::inSquare(grid, sx, sz, seed);
+                const int midX = spot.chunkX * Structures::CHUNK + Structures::CHUNK / 2;
+                const int midZ = spot.chunkZ * Structures::CHUNK + Structures::CHUNK / 2;
+                if (!fits(midX, midZ)) continue;
+
+                const long long dx = midX - blockX;
+                const long long dz = midZ - blockZ;
+                const long long distance = dx * dx + dz * dz;
+                if (!best.exists || distance < bestDistance)
+                {
+                    best = spot;
+                    bestDistance = distance;
+                }
+            }
+
+        return best;
+    }
+}
+
+Structures::Spot WorldGen::nearestShipwreck(int blockX, int blockZ, int squares) const
+{
+    return nearestUsable(Structures::SHIPWRECK, blockX, blockZ, m_seed, squares,
+                         [this](int x, int z) { return shipwreckFits(x, z); });
+}
+
+Structures::Spot WorldGen::nearestMonument(int blockX, int blockZ, int squares) const
+{
+    return nearestUsable(Structures::OCEAN_MONUMENT, blockX, blockZ, m_seed, squares,
+                         [this](int x, int z) { return monumentFits(x, z); });
+}
+
+bool WorldGen::shipwreckFits(int midX, int midZ) const
+{
+    const int floorY = surfaceHeight(midX, midZ);
+    return floorY <= SEA_LEVEL + 1 && floorY >= 24;
+}
+
+bool WorldGen::monumentFits(int midX, int midZ) const
+{
+    // Deep enough to be covered, and no hill poking up through the
+    // middle of it. Probing the corners rather than every column: a
+    // monument is checked for every chunk around it, and surfaceHeight
+    // is noise rather than a lookup.
+    constexpr int HALF = MONUMENT_HALF;
+    for (int dz = -HALF; dz <= HALF; dz += HALF)
+        for (int dx = -HALF; dx <= HALF; dx += HALF)
+        {
+            const int floorY = surfaceHeight(midX + dx, midZ + dz);
+            if (floorY > SEA_LEVEL - MONUMENT_DEPTH) return false;
+        }
+    return true;
+}
+
+int WorldGen::monumentHeight(int midX, int midZ) const
+{
+    // As tall as the water over it allows, so the roof finishes a
+    // block under the surface rather than standing out of it.
+    const int base = surfaceHeight(midX, midZ) + 1;
+    const int room = SEA_LEVEL - base - 1;
+    return std::clamp(room, MONUMENT_MIN_TALL, MONUMENT_MAX_TALL);
+}
+
+void WorldGen::buildOceanStructures(Chunk& chunk) const
+{
+    const int chunkX = chunk.position().x;
+    const int chunkZ = chunk.position().z;
+
+    // The monument is the wide one, so it is the reach that matters.
+    constexpr int REACH_CHUNKS = 2;
+
+    // Buried treasure is a single block inside its own chunk, so it
+    // needs no reach at all. Asking the twenty-four chunks round it as
+    // well was twenty-five times the work for the same one block.
+    stampBuriedTreasure(chunk, chunkX, chunkZ);
+
+    const Structures::Grid* grids[2] = { &Structures::SHIPWRECK,
+                                         &Structures::OCEAN_MONUMENT };
+
+    for (int which = 0; which < 2; ++which)
+    {
+        const Structures::Grid& grid = *grids[which];
+
+        const int firstX = Structures::squareOf(chunkX - REACH_CHUNKS, grid.spacing);
+        const int lastX = Structures::squareOf(chunkX + REACH_CHUNKS, grid.spacing);
+        const int firstZ = Structures::squareOf(chunkZ - REACH_CHUNKS, grid.spacing);
+        const int lastZ = Structures::squareOf(chunkZ + REACH_CHUNKS, grid.spacing);
+
+        for (int sz = firstZ; sz <= lastZ; ++sz)
+            for (int sx = firstX; sx <= lastX; ++sx)
+            {
+                const Structures::Spot spot = Structures::inSquare(grid, sx, sz, m_seed);
+                if (std::abs(spot.chunkX - chunkX) > REACH_CHUNKS) continue;
+                if (std::abs(spot.chunkZ - chunkZ) > REACH_CHUNKS) continue;
+
+                const int midX = spot.chunkX * Structures::CHUNK + Structures::CHUNK / 2;
+                const int midZ = spot.chunkZ * Structures::CHUNK + Structures::CHUNK / 2;
+
+                if (which == 0) stampShipwreck(chunk, midX, midZ);
+                else if (monumentFits(midX, midZ)) stampMonument(chunk, midX, midZ);
+            }
+    }
+}
+
+void WorldGen::stampBuriedTreasure(Chunk& chunk, int chunkX, int chunkZ) const
+{
+    if (!Structures::spreadAt(chunkX, chunkZ, m_seed,
+                              Structures::BURIED_TREASURE_SALT,
+                              Structures::BURIED_TREASURE_CHANCE))
+        return;
+
+    // Minecraft buries it at the ninth block of the chunk rather than
+    // in the middle, and a map drawn for one points at that corner.
+    const int x = chunkX * Structures::CHUNK + 9;
+    const int z = chunkZ * Structures::CHUNK + 9;
+
+    const Biome biome = biomeAt(x, z);
+    if (biome != Biome::Beach && biome != Biome::Ocean) return;
+
+    const int floorY = surfaceHeight(x, z);
+    if (floorY < 20) return;
+
+    // Under the sand, not on it: the whole point is that nothing shows
+    // on the surface.
+    const int y = floorY - 2;
+    put(chunk, x, y, z, Blocks::Chest);
+}
+
+void WorldGen::stampShipwreck(Chunk& chunk, int midX, int midZ) const
+{
+    const int floorY = surfaceHeight(midX, midZ);
+
+    // Sunk, or run aground on a beach. Anything further inland is a
+    // ship in a field, which is a different game.
+    if (floorY > SEA_LEVEL + 1) return;
+    if (floorY < 24) return;
+
+    // Which way she lies. A fleet all pointing north looks placed.
+    const bool alongX = hashToFloat(hashCoords(midX, 7, midZ, m_seed + 5501)) < 0.5f;
+
+    constexpr int LENGTH = 21;  // bow to stern
+    constexpr int BEAM = 7;     // across
+    constexpr int DEPTH = 5;    // keel to gunwale
+
+    const int halfLong = LENGTH / 2;
+    const int halfWide = BEAM / 2;
+    const int keel = floorY + 1;
+
+    const bool sunk = floorY < SEA_LEVEL - 1;
+
+    for (int along = -halfLong; along <= halfLong; ++along)
+    {
+        // The hull narrows towards both ends, so she has a bow and a
+        // stern rather than being a crate.
+        const float taper = 1.0f - static_cast<float>(std::abs(along)) /
+                                   static_cast<float>(halfLong + 1);
+        const int wide = std::max(1, static_cast<int>(halfWide * (0.35f + 0.65f * taper)));
+
+        for (int across = -wide; across <= wide; ++across)
+            for (int dy = 0; dy < DEPTH; ++dy)
+            {
+                const int wx = alongX ? midX + along : midX + across;
+                const int wz = alongX ? midZ + across : midZ + along;
+                const int y = keel + dy;
+
+                const bool hull = std::abs(across) == wide || dy == 0 ||
+                                  std::abs(along) == halfLong;
+                // The deck, with a hatch amidships so she is not sealed.
+                const bool deck = dy == DEPTH - 1 && std::abs(along) > 2;
+                const bool broken = hull && dy >= DEPTH - 2 &&
+                                    hashToFloat(hashCoords(wx, y, wz, m_seed + 5503)) < 0.22f;
+
+                BlockId block = Blocks::Air;
+                if ((hull || deck) && !broken) block = Blocks::Planks;
+                else if (sunk && y <= SEA_LEVEL) block = Blocks::Water;
+
+                put(chunk, wx, y, wz, block);
+            }
+    }
+
+    // The mast, and the two chests she went down with. A shipwreck
+    // without a chest in it is scenery.
+    for (int dy = 0; dy < 7; ++dy)
+    {
+        const int y = keel + DEPTH + dy;
+        if (sunk && y > SEA_LEVEL) break;
+        put(chunk, midX, y, midZ, Blocks::Log);
+    }
+
+    const int holdY = keel + 1;
+    for (int i = 0; i < 2; ++i)
+    {
+        const int along = (i == 0) ? -halfLong + 3 : halfLong - 3;
+        const int wx = alongX ? midX + along : midX;
+        const int wz = alongX ? midZ : midZ + along;
+        put(chunk, wx, holdY, wz, Blocks::Chest);
+    }
+}
+
+void WorldGen::stampMonument(Chunk& chunk, int midX, int midZ) const
+{
+    constexpr int HALF = MONUMENT_HALF;
+
+    const int floorY = surfaceHeight(midX, midZ);
+    const int base = floorY + 1;
+    const int TALL = monumentHeight(midX, midZ);
+
+    for (int dz = -HALF; dz <= HALF; ++dz)
+        for (int dx = -HALF; dx <= HALF; ++dx)
+        {
+            const int wx = midX + dx;
+            const int wz = midZ + dz;
+            const int far = std::max(std::abs(dx), std::abs(dz));
+
+            for (int dy = 0; dy <= TALL; ++dy)
+            {
+                const int y = base + dy;
+
+                // The roof steps in twice, which is the silhouette that
+                // makes a monument recognisable from a long way off.
+                const int roofAt = (far <= HALF - 8) ? TALL
+                                 : (far <= HALF - 4) ? TALL - TALL / 4
+                                                     : TALL - TALL / 2;
+                if (dy > roofAt) continue;
+
+                const bool outerWall = far == HALF;
+                const bool roof = dy == roofAt;
+                const bool floorSlab = dy == 0;
+
+                // The inner walls: one ring of rooms round a hall.
+                const bool innerWall = (far == HALF - 4 || far == HALF - 8) &&
+                                       dy <= roofAt &&
+                                       !(((std::abs(dx) <= 1) && std::abs(dz) >= std::abs(dx)) ||
+                                         ((std::abs(dz) <= 1) && std::abs(dx) >= std::abs(dz)));
+
+                BlockId block = Blocks::Air;
+
+                if (floorSlab)
+                {
+                    block = ((dx + dz) & 1) ? Blocks::Prismarine : Blocks::PrismarineBricks;
+                }
+                else if (outerWall || innerWall || roof)
+                {
+                    // Dark prismarine up the corners and along the
+                    // course at eye height; a lantern every eighth
+                    // block, which is what lights the place.
+                    const bool corner = std::abs(dx) == far && std::abs(dz) == far;
+                    const bool lantern = outerWall && !corner && dy == roofAt - 2 &&
+                                         (((dx + dz) % 8) == 0);
+
+                    if (lantern) block = Blocks::SeaLantern;
+                    else if (corner || dy == roofAt - 4) block = Blocks::DarkPrismarine;
+                    else if (roof) block = Blocks::Prismarine;
+                    else block = Blocks::PrismarineBricks;
+                }
+                else if (y <= SEA_LEVEL)
+                {
+                    // Flooded, as it should be: a monument full of air
+                    // would be a bunker.
+                    block = Blocks::Water;
+                }
+
+                put(chunk, wx, y, wz, block);
+            }
+        }
+
+    // The treasure room in the middle: dark prismarine round it, a
+    // sponge in the corner, and the chest Minecraft keeps gold in.
+    for (int dz = -2; dz <= 2; ++dz)
+        for (int dx = -2; dx <= 2; ++dx)
+            for (int dy = 1; dy <= 4; ++dy)
+            {
+                const bool shell = std::abs(dx) == 2 || std::abs(dz) == 2 || dy == 4;
+                put(chunk, midX + dx, base + dy, midZ + dz,
+                    shell ? Blocks::DarkPrismarine
+                          : ((base + dy <= SEA_LEVEL) ? Blocks::Water : Blocks::Air));
+            }
+
+    put(chunk, midX, base + 1, midZ, Blocks::Chest);
+    put(chunk, midX + 1, base + 1, midZ + 1, Blocks::WetSponge);
+    put(chunk, midX - 1, base + 1, midZ - 1, Blocks::SeaLantern);
+}
+
+// ---------------------------------------------------------------------
+// What a chest found in the world belongs to.
+//
+// Nothing records where the chests went: a chunk is generated, meshed
+// and thrown away many times over in a session, and a table of every
+// chest in a world would have to survive all of that. So this asks the
+// same question the generator asked -- which structures reach this
+// place, and does one of them keep a chest exactly here.
+// ---------------------------------------------------------------------
+WorldGen::Hoard WorldGen::hoardAt(int x, int y, int z) const
+{
+    // The landmarks, each off the one chest table its stamp uses.
+    for (int k = 0; k < static_cast<int>(Landmark::Count); ++k)
+    {
+        const Landmark kind = static_cast<Landmark>(k);
+        const Structures::Spot spot = nearestLandmark(kind, x, z, 1);
+        if (!spot.exists) continue;
+
+        const int midX = spot.chunkX * Structures::CHUNK + Structures::CHUNK / 2;
+        const int midZ = spot.chunkZ * Structures::CHUNK + Structures::CHUNK / 2;
+        if (!landmarkSuits(kind, biomeAt(midX, midZ))) continue;
+
+        const int ground = surfaceHeight(midX, midZ);
+        if (ground <= SEA_LEVEL) continue;
+
+        ChestSpot spots[2];
+        const int many = landmarkChests(kind, spots);
+        for (int i = 0; i < many; ++i)
+            if (midX + spots[i].dx == x && ground + spots[i].dy == y &&
+                midZ + spots[i].dz == z)
+            {
+                switch (kind)
+                {
+                    case Landmark::DesertPyramid:   return Hoard::DesertPyramid;
+                    case Landmark::JungleTemple:    return Hoard::JungleTemple;
+                    case Landmark::Igloo:           return Hoard::Igloo;
+                    case Landmark::RuinedPortal:    return Hoard::RuinedPortal;
+                    case Landmark::PillagerOutpost: return Hoard::PillagerOutpost;
+                    case Landmark::Count:           break;
+                }
+            }
+    }
+
+    // Buried treasure, which is at the ninth block of its own chunk and
+    // so needs no search at all.
+    {
+        const int chunkX = Structures::squareOf(x, Structures::CHUNK);
+        const int chunkZ = Structures::squareOf(z, Structures::CHUNK);
+        if (x == chunkX * Structures::CHUNK + 9 && z == chunkZ * Structures::CHUNK + 9 &&
+            Structures::spreadAt(chunkX, chunkZ, m_seed,
+                                 Structures::BURIED_TREASURE_SALT,
+                                 Structures::BURIED_TREASURE_CHANCE) &&
+            y == surfaceHeight(x, z) - 2)
+            return Hoard::BuriedTreasure;
+    }
+
+    // The shipwreck's two, which depend on which way she lies.
+    {
+        const Structures::Spot spot = nearestShipwreck(x, z, 1);
+        if (spot.exists)
+        {
+            const int midX = spot.chunkX * Structures::CHUNK + Structures::CHUNK / 2;
+            const int midZ = spot.chunkZ * Structures::CHUNK + Structures::CHUNK / 2;
+            const int floorY = surfaceHeight(midX, midZ);
+
+            if (floorY <= SEA_LEVEL + 1 && floorY >= 24 && y == floorY + 2)
+            {
+                const bool alongX =
+                    hashToFloat(hashCoords(midX, 7, midZ, m_seed + 5501)) < 0.5f;
+                constexpr int HALF_LONG = 21 / 2;
+
+                for (int i = 0; i < 2; ++i)
+                {
+                    const int along = (i == 0) ? -HALF_LONG + 3 : HALF_LONG - 3;
+                    const int wx = alongX ? midX + along : midX;
+                    const int wz = alongX ? midZ : midZ + along;
+                    if (wx == x && wz == z) return Hoard::Shipwreck;
+                }
+            }
+        }
+    }
+
+    // The monument's one, in the room in the middle.
+    {
+        const Structures::Spot spot = nearestMonument(x, z, 1);
+        if (spot.exists)
+        {
+            const int midX = spot.chunkX * Structures::CHUNK + Structures::CHUNK / 2;
+            const int midZ = spot.chunkZ * Structures::CHUNK + Structures::CHUNK / 2;
+            if (midX == x && midZ == z && y == surfaceHeight(midX, midZ) + 2)
+                return Hoard::Monument;
+        }
+    }
+
+    // A mineshaft's chest, which sits at the far end of its corridor.
+    // Same spread, same salt, same roll as the stamp: the numbers live
+    // in MINESHAFT_SALT so the two cannot drift apart.
+    for (int dz = -2; dz <= 2; ++dz)
+        for (int dx = -2; dx <= 2; ++dx)
+        {
+            const int cx = Structures::squareOf(x, Structures::CHUNK) + dx;
+            const int cz = Structures::squareOf(z, Structures::CHUNK) + dz;
+            if (!Structures::spreadAt(cx, cz, m_seed, MINESHAFT_SALT, MINESHAFT_CHANCE))
+                continue;
+
+            const int baseX = cx * Chunk::SX;
+            const int baseZ = cz * Chunk::SZ;
+            const int shaftY = MINESHAFT_MIN +
+                static_cast<int>(hashToFloat(hashCoords(cx, 23, cz, m_seed + MINESHAFT_SALT)) *
+                                 static_cast<float>(MINESHAFT_MAX - MINESHAFT_MIN));
+            if (y != shaftY) continue;
+            if (hashToFloat(hashCoords(cx, 25, cz, m_seed + MINESHAFT_SALT)) >= 0.34f)
+                continue;
+
+            const bool alongX =
+                hashToFloat(hashCoords(cx, 24, cz, m_seed + MINESHAFT_SALT)) < 0.5f;
+            const int length = Chunk::SX * 2;
+            const int chestX = alongX ? baseX + length - 2 : baseX + Chunk::SX / 2;
+            const int chestZ = alongX ? baseZ + Chunk::SZ / 2 : baseZ + length - 2;
+            if (chestX == x && chestZ == z) return Hoard::Mineshaft;
+        }
+
+    // A stronghold's store room.
+    {
+        const Stronghold::Site site = Stronghold::touching(x, z, x, z, m_seed);
+        if (site.exists && y == site.y)
+            for (const Stronghold::Room& room : Stronghold::plan(site, m_seed))
+                if (room.kind == Stronghold::Kind::Store &&
+                    x == room.x + room.width / 2 && z == room.z + room.depth / 2)
+                    return Hoard::Stronghold;
+    }
+
+    // A trial chamber's supply room.
+    {
+        const TrialChamber::Site site =
+            TrialChamber::siteFor(TrialChamber::regionOf(x), TrialChamber::regionOf(z), m_seed);
+        TrialChamber::Room room;
+        if (site.exists && y == site.y && TrialChamber::roomAt(site, m_seed, x, z, room) &&
+            room.kind == TrialChamber::Kind::Supply &&
+            x == room.x + room.width / 2 && z == room.z + room.depth / 2)
+            return Hoard::TrialChamber;
+    }
+
+    return Hoard::None;
+}
+
+bool WorldGen::reefWater(int worldX, int worldZ) const
+{
+    return temperatureAt(worldX, worldZ) > CORAL_WARMTH;
+}
+
+// What grows on the sea floor.
+//
+// Every column of every chunk passes through here, land included, so
+// the first test is the cheap one: anything at or above the sea is out
+// before a single hash is drawn. On a land chunk this is one compare
+// per column and nothing else.
+void WorldGen::dressSeabed(Chunk& chunk) const
+{
+    const int baseX = chunk.position().x * Chunk::SX;
+    const int baseZ = chunk.position().z * Chunk::SZ;
+
+    for (int lx = 0; lx < Chunk::SX; ++lx)
+        for (int lz = 0; lz < Chunk::SZ; ++lz)
+        {
+            const int wx = baseX + lx;
+            const int wz = baseZ + lz;
+            const int floorY = surfaceHeight(wx, wz);
+
+            // Dry land, or a puddle too shallow for anything to stand
+            // up in. This is the test that keeps the cost off the
+            // three quarters of the world that is not sea.
+            const int depth = SEA_LEVEL - floorY;
+            if (depth < 2) continue;
+
+            const BlockId ground = chunk.getBlock(lx, floorY, lz);
+            if (ground != Blocks::Sand && ground != Blocks::Gravel &&
+                ground != Blocks::Dirt && ground != Blocks::Stone)
+                continue;
+
+            // Nothing grows where something is already standing: a
+            // monument floor does not sprout seagrass.
+            if (chunk.getBlock(lx, floorY + 1, lz) != Blocks::Water) continue;
+
+            const float roll = hashToFloat(hashCoords(wx, 1, wz, m_seed + 7701));
+
+            // Kelp, which is the one you see from the surface: a stem
+            // most of the way up with a frond on the end of it.
+            if (depth >= 5 && roll < 0.055f)
+            {
+                const float reach =
+                    0.45f + hashToFloat(hashCoords(wx, 2, wz, m_seed + 7702)) * 0.45f;
+                const int tall = std::max(2, static_cast<int>((depth - 1) * reach));
+
+                for (int k = 0; k < tall; ++k)
+                    put(chunk, wx, floorY + 1 + k, wz,
+                        (k == tall - 1) ? Blocks::KelpTop : Blocks::Kelp);
+                continue;
+            }
+
+            // A reef, in the warm water only. The roll that decides
+            // whether there is coral here is drawn off a two-block
+            // cell rather than off the block, so a reef comes out as
+            // blobs: a per-block roll gives a field of lone pillars
+            // each a different colour, which is not what a reef looks
+            // like. Costs nothing -- it is the same hash with the low
+            // bit of the position thrown away.
+            const int cellX = wx & ~1;
+            const int cellZ = wz & ~1;
+            const bool reefCell =
+                depth >= 3 && reefWater(wx, wz) &&
+                hashToFloat(hashCoords(cellX, 6, cellZ, m_seed + 7706)) < 0.05f;
+
+            if (reefCell && roll < 0.85f)
+            {
+                static const BlockId CORALS[5] = {
+                    Blocks::TubeCoralBlock, Blocks::BrainCoralBlock,
+                    Blocks::BubbleCoralBlock, Blocks::FireCoralBlock,
+                    Blocks::HornCoralBlock,
+                };
+                static const BlockId FANS[5] = {
+                    Blocks::TubeCoral, Blocks::BrainCoral,
+                    Blocks::BubbleCoral, Blocks::FireCoral, Blocks::HornCoral,
+                };
+
+                const int which = static_cast<int>(
+                    hashCoords(cellX, 3, cellZ, m_seed + 7703) % 5u);
+
+                // A lump standing on the floor rather than set into
+                // it. Laid flush with the seabed, a coral block shows
+                // nothing but its top face and reads as a coloured
+                // square painted on the sand.
+                const int lump = 1 + static_cast<int>(
+                    hashToFloat(hashCoords(cellX, 5, cellZ, m_seed + 7705)) * 1.99f);
+                const int room = std::min(lump, depth - 2);
+                if (room < 1) continue;
+
+                for (int k = 0; k < room; ++k)
+                    put(chunk, wx, floorY + 1 + k, wz, CORALS[which]);
+
+                const float crown = hashToFloat(hashCoords(wx, 4, wz, m_seed + 7704));
+                if (crown < 0.55f)
+                    put(chunk, wx, floorY + 1 + room, wz, FANS[which]);
+                else if (crown < 0.68f)
+                    put(chunk, wx, floorY + 1 + room, wz, Blocks::SeaPickle);
+                continue;
+            }
+
+            // And seagrass, which is most of what is down there.
+            if (roll < 0.26f)
+                put(chunk, wx, floorY + 1, wz, Blocks::Seagrass);
+        }
 }

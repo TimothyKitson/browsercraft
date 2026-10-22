@@ -1187,6 +1187,193 @@ namespace
         t.speckle(7, 282);
     }
 
+    // The sea's stone. Prismarine is not a flat colour in Minecraft --
+    // it shifts between a green and a blue across the face, and that
+    // drift is most of what makes a monument wall read as prismarine
+    // rather than as green concrete.
+    void paintPrismarineIn(Tile& t, Color low, Color high, int grain)
+    {
+        for (int y = 0; y < Tile::N; ++y)
+            for (int x = 0; x < Tile::N; ++x)
+            {
+                const float drift = (hash2(x / 2, y / 2, 341) + hash2(x, y, 347)) * 0.5f;
+                t.set(x, y, Color{
+                    static_cast<uint8_t>(low.r + (high.r - low.r) * drift),
+                    static_cast<uint8_t>(low.g + (high.g - low.g) * drift),
+                    static_cast<uint8_t>(low.b + (high.b - low.b) * drift) });
+            }
+        t.speckle(grain, 342);
+    }
+
+    void paintPrismarine(Tile& t)
+    {
+        paintPrismarineIn(t, Color{ 86, 146, 136 }, Color{ 110, 183, 166 }, 6);
+    }
+
+    void paintPrismarineBricks(Tile& t)
+    {
+        paintPrismarineIn(t, Color{ 92, 160, 148 }, Color{ 118, 190, 174 }, 4);
+        // Four courses of bricks cut into it, offset row by row.
+        for (int row = 0; row < 4; ++row)
+            for (int x = 0; x < Tile::N; ++x)
+            {
+                const int offset = (row % 2) * 4;
+                t.set(x, row * 4, shade(Color{ 70, 128, 118 }, 0));
+                if (((x + offset) % 8) == 7)
+                    for (int y = 0; y < 4; ++y)
+                        t.set(x, row * 4 + y, shade(Color{ 70, 128, 118 }, 0));
+            }
+    }
+
+    void paintDarkPrismarine(Tile& t)
+    {
+        paintPrismarineIn(t, Color{ 39, 67, 57 }, Color{ 56, 90, 78 }, 5);
+    }
+
+    void paintSeaLantern(Tile& t)
+    {
+        t.fill(Color{ 172, 199, 190 });
+        // The cells in it, which are the bright part: a lantern that
+        // was one even glow looked like a block of white wool.
+        for (int y = 0; y < Tile::N; ++y)
+            for (int x = 0; x < Tile::N; ++x)
+            {
+                const float cell = hash2(x / 4, y / 4, 351);
+                if (cell > 0.55f) t.set(x, y, Color{ 226, 244, 235 });
+                else if (cell < 0.22f) t.set(x, y, Color{ 134, 166, 158 });
+            }
+        t.speckle(5, 352);
+    }
+
+    void paintSponge(Tile& t)
+    {
+        t.fill(Color{ 195, 192, 74 });
+        for (int y = 0; y < Tile::N; ++y)
+            for (int x = 0; x < Tile::N; ++x)
+                if (hash2(x, y, 361) > 0.74f)
+                    t.set(x, y, Color{ 148, 146, 48 });
+        t.speckle(7, 362);
+    }
+
+    void paintWetSponge(Tile& t)
+    {
+        t.fill(Color{ 134, 139, 56 });
+        for (int y = 0; y < Tile::N; ++y)
+            for (int x = 0; x < Tile::N; ++x)
+                if (hash2(x, y, 361) > 0.74f)
+                    t.set(x, y, Color{ 98, 104, 36 });
+        t.speckle(7, 363);
+    }
+
+    // What grows in the water. Kelp is a ribbon rather than a blade --
+    // it is the one plant in the game that is wider at the top than
+    // the bottom, and drawn as grass it reads as pondweed.
+    void paintKelpIn(Tile& t, bool crown)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int frond = 0; frond < 3; ++frond)
+        {
+            const int x = 4 + frond * 4;
+            const int wide = crown ? 2 : 1;
+            for (int y = 0; y < Tile::N; ++y)
+            {
+                const int sway = static_cast<int>(std::sin(y * 0.45f + frond) * 1.6f);
+                for (int w = -wide; w <= wide; ++w)
+                {
+                    if (!crown && std::abs(w) == wide && ((y + frond) % 3) == 0) continue;
+                    t.set(x + sway + w, y,
+                          shade(Color{ 44, 108, 46 },
+                                static_cast<int>((hash2(x + w, y, 371) - 0.5f) * 30.0f)));
+                }
+            }
+        }
+    }
+
+    void paintKelp(Tile& t)    { paintKelpIn(t, false); }
+    void paintKelpTop(Tile& t) { paintKelpIn(t, true); }
+
+    void paintSeagrass(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int blade = 0; blade < 6; ++blade)
+        {
+            const int x = 2 + static_cast<int>(hash2(blade, 0, 373) * 12.0f);
+            const int tall = 4 + static_cast<int>(hash2(blade, 1, 373) * 6.0f);
+            for (int k = 0; k < tall; ++k)
+            {
+                const int bend = static_cast<int>(k * 0.22f *
+                                                  (hash2(blade, 3, 373) > 0.5f ? 1 : -1));
+                t.set(x + bend, Tile::N - 1 - k,
+                      shade(Color{ 54, 124, 58 },
+                            static_cast<int>((hash2(blade, 2, 373) - 0.5f) * 36.0f)));
+            }
+        }
+    }
+
+    void paintSeaPickle(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int pickle = 0; pickle < 3; ++pickle)
+        {
+            const int x = 4 + pickle * 4;
+            const int tall = 4 + static_cast<int>(hash2(pickle, 0, 375) * 3.0f);
+            for (int k = 0; k < tall; ++k)
+                for (int w = -1; w <= 1; ++w)
+                    t.set(x + w, Tile::N - 1 - k,
+                          (k == tall - 1) ? Color{ 182, 196, 92 } : Color{ 106, 126, 54 });
+        }
+    }
+
+    // A reef's solid blocks: five colours, which is what makes a warm
+    // ocean floor read as a reef rather than as one dyed boulder.
+    void paintCoralBlockIn(Tile& t, Color body, int salt)
+    {
+        t.fill(body);
+        for (int y = 0; y < Tile::N; ++y)
+            for (int x = 0; x < Tile::N; ++x)
+            {
+                const float lump = hash2(x / 2, y / 2, salt);
+                if (lump > 0.72f) t.set(x, y, shade(body, 26));
+                else if (lump < 0.26f) t.set(x, y, shade(body, -30));
+            }
+        t.speckle(5, salt + 1);
+    }
+
+    // And the fans that grow off them, in the same five colours.
+    void paintCoralFanIn(Tile& t, Color body, int salt)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int arm = 0; arm < 5; ++arm)
+        {
+            const int root = 5 + static_cast<int>(hash2(arm, 0, salt) * 7.0f);
+            const int tall = 6 + static_cast<int>(hash2(arm, 1, salt) * 7.0f);
+            const int lean = (arm % 2) ? 1 : -1;
+            for (int k = 0; k < tall; ++k)
+            {
+                const int x = root + static_cast<int>(k * 0.35f) * lean;
+                t.set(x, Tile::N - 1 - k, body);
+                // The branches, which is what makes it a fan.
+                if (k > 2 && (k % 3) == 0)
+                {
+                    t.set(x - 1, Tile::N - 1 - k, shade(body, -18));
+                    t.set(x + 1, Tile::N - 1 - k, shade(body, -18));
+                }
+            }
+        }
+    }
+
+    void paintTubeCoralBlock(Tile& t)   { paintCoralBlockIn(t, Color{  49,  87, 206 }, 381); }
+    void paintBrainCoralBlock(Tile& t)  { paintCoralBlockIn(t, Color{ 207,  91, 155 }, 383); }
+    void paintBubbleCoralBlock(Tile& t) { paintCoralBlockIn(t, Color{ 165,  26, 163 }, 385); }
+    void paintFireCoralBlock(Tile& t)   { paintCoralBlockIn(t, Color{ 166,  33,  42 }, 387); }
+    void paintHornCoralBlock(Tile& t)   { paintCoralBlockIn(t, Color{ 216, 199,  78 }, 389); }
+
+    void paintTubeCoral(Tile& t)   { paintCoralFanIn(t, Color{  58, 104, 224 }, 391); }
+    void paintBrainCoral(Tile& t)  { paintCoralFanIn(t, Color{ 220, 110, 170 }, 393); }
+    void paintBubbleCoral(Tile& t) { paintCoralFanIn(t, Color{ 186,  40, 184 }, 395); }
+    void paintFireCoral(Tile& t)   { paintCoralFanIn(t, Color{ 192,  44,  52 }, 397); }
+    void paintHornCoral(Tile& t)   { paintCoralFanIn(t, Color{ 232, 216,  96 }, 399); }
+
     void paintSpawnerIn(Tile& t, Color bars, Color inside)
     {
         t.fill(inside);
@@ -3769,6 +3956,26 @@ namespace
         { Tiles::OminousVaultSide, paintOminousVaultSide },
         { Tiles::OminousVaultSideOpen, paintOminousVaultSideOpen },
         { Tiles::SpawnerTile, paintSpawner },
+        { Tiles::PrismarineTile, paintPrismarine },
+        { Tiles::PrismarineBricksTile, paintPrismarineBricks },
+        { Tiles::DarkPrismarineTile, paintDarkPrismarine },
+        { Tiles::SeaLanternTile, paintSeaLantern },
+        { Tiles::SpongeTile, paintSponge },
+        { Tiles::WetSpongeTile, paintWetSponge },
+        { Tiles::KelpTile, paintKelp },
+        { Tiles::KelpTopTile, paintKelpTop },
+        { Tiles::SeagrassTile, paintSeagrass },
+        { Tiles::SeaPickleTile, paintSeaPickle },
+        { Tiles::TubeCoralBlockTile, paintTubeCoralBlock },
+        { Tiles::BrainCoralBlockTile, paintBrainCoralBlock },
+        { Tiles::BubbleCoralBlockTile, paintBubbleCoralBlock },
+        { Tiles::FireCoralBlockTile, paintFireCoralBlock },
+        { Tiles::HornCoralBlockTile, paintHornCoralBlock },
+        { Tiles::TubeCoralTile, paintTubeCoral },
+        { Tiles::BrainCoralTile, paintBrainCoral },
+        { Tiles::BubbleCoralTile, paintBubbleCoral },
+        { Tiles::FireCoralTile, paintFireCoral },
+        { Tiles::HornCoralTile, paintHornCoral },
         { Tiles::Obsidian, paintObsidian },
         { Tiles::TallGrass, paintTallGrass },
         { Tiles::FlowerRed, paintFlowerRed },
@@ -4080,6 +4287,26 @@ namespace
         { Tiles::OminousVaultSide, { "vault_front_off_ominous", nullptr },             Tinting::None,    0,   false },
         { Tiles::OminousVaultSideOpen, { "vault_front_on_ominous", nullptr },          Tinting::None,    0,   false },
         { Tiles::SpawnerTile,   { "spawner", "mob_spawner", nullptr },                 Tinting::None,    0,   false },
+        { Tiles::PrismarineTile, { "prismarine", nullptr },                            Tinting::None,    0,   false },
+        { Tiles::PrismarineBricksTile, { "prismarine_bricks", nullptr },               Tinting::None,    0,   false },
+        { Tiles::DarkPrismarineTile, { "dark_prismarine", nullptr },                   Tinting::None,    0,   false },
+        { Tiles::SeaLanternTile, { "sea_lantern", nullptr },                           Tinting::None,    0,   false },
+        { Tiles::SpongeTile,    { "sponge", nullptr },                                 Tinting::None,    0,   false },
+        { Tiles::WetSpongeTile, { "wet_sponge", nullptr },                             Tinting::None,    0,   false },
+        { Tiles::KelpTile,      { "kelp_plant", nullptr },                             Tinting::None,    0,   false },
+        { Tiles::KelpTopTile,   { "kelp", nullptr },                                   Tinting::None,    0,   false },
+        { Tiles::SeagrassTile,  { "seagrass", "short_grass", nullptr },                Tinting::None,    0,   false },
+        { Tiles::SeaPickleTile, { "sea_pickle", nullptr },                             Tinting::None,    0,   false },
+        { Tiles::TubeCoralBlockTile, { "tube_coral_block", nullptr },                  Tinting::None,    0,   false },
+        { Tiles::BrainCoralBlockTile, { "brain_coral_block", nullptr },                Tinting::None,    0,   false },
+        { Tiles::BubbleCoralBlockTile, { "bubble_coral_block", nullptr },              Tinting::None,    0,   false },
+        { Tiles::FireCoralBlockTile, { "fire_coral_block", nullptr },                  Tinting::None,    0,   false },
+        { Tiles::HornCoralBlockTile, { "horn_coral_block", nullptr },                  Tinting::None,    0,   false },
+        { Tiles::TubeCoralTile, { "tube_coral", nullptr },                             Tinting::None,    0,   false },
+        { Tiles::BrainCoralTile, { "brain_coral", nullptr },                           Tinting::None,    0,   false },
+        { Tiles::BubbleCoralTile, { "bubble_coral", nullptr },                         Tinting::None,    0,   false },
+        { Tiles::FireCoralTile, { "fire_coral", nullptr },                             Tinting::None,    0,   false },
+        { Tiles::HornCoralTile, { "horn_coral", nullptr },                             Tinting::None,    0,   false },
         { Tiles::PistonTop,     { "piston_side", nullptr },                            Tinting::None,    0,   false },
         { Tiles::PistonSide,    { "piston_side", nullptr },                            Tinting::None,    0,   false },
         { Tiles::PistonFace,    { "piston_top", "piston_top_normal", nullptr },         Tinting::None,    0,   false },

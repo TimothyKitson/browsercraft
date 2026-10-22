@@ -269,6 +269,34 @@ namespace Blocks
         // id and nothing else.
         MonsterSpawner,
 
+        // The sea: the three prismarines and the lantern a monument is
+        // built out of, and the sponge in the room behind the elder.
+        Prismarine,
+        PrismarineBricks,
+        DarkPrismarine,
+        SeaLantern,
+        Sponge,
+        WetSponge,
+
+        // What grows in the water. Kelp stands in a column with a
+        // frond on top of it; seagrass is one blade on the floor; the
+        // corals are five colours of reef, each a solid block and a
+        // fan that grows off it.
+        Kelp,
+        KelpTop,
+        Seagrass,
+        SeaPickle,
+        TubeCoralBlock,
+        BrainCoralBlock,
+        BubbleCoralBlock,
+        FireCoralBlock,
+        HornCoralBlock,
+        TubeCoral,
+        BrainCoral,
+        BubbleCoral,
+        FireCoral,
+        HornCoral,
+
         Count
     };
 }
@@ -369,6 +397,24 @@ inline BlockId pistonHead(int facing, bool sticky)
 }
 
 inline bool isMonsterSpawner(BlockId id) { return id == Blocks::MonsterSpawner; }
+
+// Whether this is something that grows in the water rather than in the
+// air. The mesher needs it so the sea does not draw a face against
+// every blade of seagrass in it, which would put a glassy box round
+// each one; the player needs it so swimming through kelp does not read
+// as coming up for air.
+inline bool isWaterPlant(BlockId id)
+{
+    return id == Blocks::Kelp || id == Blocks::KelpTop ||
+           id == Blocks::Seagrass || id == Blocks::SeaPickle ||
+           (id >= Blocks::TubeCoral && id <= Blocks::HornCoral);
+}
+
+// A reef's solid blocks, which is what a coral clump is mostly made of.
+inline bool isCoralBlock(BlockId id)
+{
+    return id >= Blocks::TubeCoralBlock && id <= Blocks::HornCoralBlock;
+}
 
 // A trial spawner in any of its three states: waiting, with its wave
 // out, or finished with.

@@ -25,6 +25,7 @@
 #include "Game/Brewing.h"
 #include "Game/Shield.h"
 #include "Game/VillageLoot.h"
+#include "Game/StructureLoot.h"
 #include "Game/Weather.h"
 #include "Game/Trading.h"
 #include "Entity/Particles.h"
@@ -588,6 +589,7 @@ private:
     void updatePortal(float deltaTime);
     void buildReturnPortal();
     void openChest(const glm::ivec3& block);
+    std::vector<VillageLoot::Stack> villageChestLoot(const glm::ivec3& block) const;
     void stowChest();
     void openCrafter(const glm::ivec3& block);
     void stowCrafter();

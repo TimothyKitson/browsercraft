@@ -35,6 +35,7 @@
 #include "Game/Brewing.h"
 #include "World/Village.h"
 #include "Game/VillageLoot.h"
+#include "Game/StructureLoot.h"
 #include "Game/Enchanting.h"
 #include "Game/Trading.h"
 #include "Game/EndPortal.h"
@@ -4262,6 +4263,340 @@ namespace
         }
     }
 
+    void testOceanStructures()
+    {
+        section("the sea");
+
+        constexpr uint32_t SEED = 4242u;
+        const WorldGen generator(SEED);
+
+        // The grids are Minecraft's, which is the whole point of them.
+        check(Structures::SHIPWRECK.spacing == 24 && Structures::SHIPWRECK.separation == 4,
+              "a shipwreck grid is 24 and 4, as Minecraft's is");
+        check(Structures::OCEAN_MONUMENT.spacing == 32 &&
+              Structures::OCEAN_MONUMENT.separation == 5,
+              "and a monument grid 32 and 5");
+        check(Structures::BURIED_TREASURE_CHANCE > 0.0f &&
+              Structures::BURIED_TREASURE_CHANCE < 0.05f,
+              "buried treasure is rare enough to need a map");
+
+        // A monument needs deep water over the whole of its footprint,
+        // which is the only thing keeping one out of a puddle.
+        {
+            const Structures::Spot spot = generator.nearestMonument(0, 0, 12);
+            check(spot.exists, "there is a monument somewhere out there");
+
+            if (spot.exists)
+            {
+                const int midX = spot.chunkX * Structures::CHUNK + Structures::CHUNK / 2;
+                const int midZ = spot.chunkZ * Structures::CHUNK + Structures::CHUNK / 2;
+                check(generator.monumentFits(midX, midZ),
+                      "and the one that was offered has water over it");
+
+                // Every corner of it is under the sea, not just the
+                // middle: a monument half out of the water would be
+                // the thing you notice first about this world.
+                for (int dz = -WorldGen::MONUMENT_HALF; dz <= WorldGen::MONUMENT_HALF;
+                     dz += WorldGen::MONUMENT_HALF)
+                    for (int dx = -WorldGen::MONUMENT_HALF; dx <= WorldGen::MONUMENT_HALF;
+                         dx += WorldGen::MONUMENT_HALF)
+                        check(generator.surfaceHeight(midX + dx, midZ + dz) <=
+                                  WorldGen::SEA_LEVEL - WorldGen::MONUMENT_DEPTH,
+                              "every corner of it stands in deep water");
+
+                // And it finishes under the surface. A prismarine roof
+                // standing proud of the waves is what you get if the
+                // height is Minecraft's rather than this ocean's.
+                const int tall = generator.monumentHeight(midX, midZ);
+                check(generator.surfaceHeight(midX, midZ) + 1 + tall < WorldGen::SEA_LEVEL,
+                      "and its roof finishes below the water, not above it");
+
+                int prismarine = 0, lanterns = 0, chests = 0, dark = 0;
+                for (int cz = spot.chunkZ - 1; cz <= spot.chunkZ + 1; ++cz)
+                    for (int cx = spot.chunkX - 1; cx <= spot.chunkX + 1; ++cx)
+                    {
+                        Chunk chunk(ChunkPos{ cx, cz });
+                        generator.generate(chunk);
+
+                        for (int y = 0; y < Chunk::SY; ++y)
+                            for (int lz = 0; lz < Chunk::SZ; ++lz)
+                                for (int lx = 0; lx < Chunk::SX; ++lx)
+                                    switch (chunk.getBlock(lx, y, lz))
+                                    {
+                                        case Blocks::Prismarine:
+                                        case Blocks::PrismarineBricks: ++prismarine; break;
+                                        case Blocks::DarkPrismarine:   ++dark; break;
+                                        case Blocks::SeaLantern:       ++lanterns; break;
+                                        case Blocks::Chest:            ++chests; break;
+                                        default: break;
+                                    }
+                    }
+
+                check(prismarine > 150, "a monument is a great deal of prismarine");
+                check(dark > 0, "with the dark sort up its corners");
+                check(lanterns > 0, "and a lantern or two lighting it");
+                check(chests > 0, "and the room in the middle is not empty");
+            }
+        }
+
+        // A shipwreck lies on the sea floor or run aground on a beach,
+        // never in a field.
+        {
+            const Structures::Spot spot = generator.nearestShipwreck(0, 0, 14);
+            const bool found = spot.exists;
+            if (spot.exists)
+            {
+                const int midX = spot.chunkX * Structures::CHUNK + Structures::CHUNK / 2;
+                const int midZ = spot.chunkZ * Structures::CHUNK + Structures::CHUNK / 2;
+                check(generator.surfaceHeight(midX, midZ) <= WorldGen::SEA_LEVEL + 1,
+                      "a shipwreck is never left standing in a field");
+
+                int planks = 0, chests = 0;
+                for (int cz = spot.chunkZ - 1; cz <= spot.chunkZ + 1; ++cz)
+                    for (int cx = spot.chunkX - 1; cx <= spot.chunkX + 1; ++cx)
+                    {
+                        Chunk chunk(ChunkPos{ cx, cz });
+                        generator.generate(chunk);
+
+                        for (int y = 0; y < Chunk::SY; ++y)
+                            for (int lz = 0; lz < Chunk::SZ; ++lz)
+                                for (int lx = 0; lx < Chunk::SX; ++lx)
+                                {
+                                    const BlockId block = chunk.getBlock(lx, y, lz);
+                                    if (block == Blocks::Planks) ++planks;
+                                    if (block == Blocks::Chest) ++chests;
+                                }
+                    }
+
+                check(planks > 40, "a shipwreck is a hull's worth of planks");
+                check(chests > 0, "with what she went down carrying still in her");
+            }
+            check(found, "there is a shipwreck in the water somewhere near the origin");
+        }
+
+        // Buried treasure goes down by the spread rather than the grid,
+        // so what matters is the density rather than any one chunk.
+        {
+            int hits = 0;
+            constexpr int LOOKED = 4000;
+            for (int i = 0; i < LOOKED; ++i)
+                if (Structures::spreadAt(i % 200, i / 200, SEED,
+                                         Structures::BURIED_TREASURE_SALT,
+                                         Structures::BURIED_TREASURE_CHANCE))
+                    ++hits;
+
+            const float rate = static_cast<float>(hits) / static_cast<float>(LOOKED);
+            check(rate > Structures::BURIED_TREASURE_CHANCE * 0.4f &&
+                  rate < Structures::BURIED_TREASURE_CHANCE * 2.2f,
+                  "buried treasure turns up about as often as it is meant to");
+        }
+    }
+
+    // Every chest the generator puts down is worth opening. They were
+    // all empty when the landmarks went in, which is not something a
+    // screenshot shows you.
+    void testStructureLoot()
+    {
+        section("what is in a found chest");
+
+        constexpr uint32_t SEED = 4242u;
+
+        const WorldGen::Hoard EVERY[] = {
+            WorldGen::Hoard::DesertPyramid,  WorldGen::Hoard::JungleTemple,
+            WorldGen::Hoard::Igloo,          WorldGen::Hoard::RuinedPortal,
+            WorldGen::Hoard::PillagerOutpost, WorldGen::Hoard::Shipwreck,
+            WorldGen::Hoard::BuriedTreasure, WorldGen::Hoard::Monument,
+            WorldGen::Hoard::Mineshaft,      WorldGen::Hoard::Stronghold,
+            WorldGen::Hoard::TrialChamber,
+        };
+
+        check(StructureLoot::rollFor(WorldGen::Hoard::None, 0, 64, 0, SEED).empty(),
+              "a chest the player built holds nothing but what they put in it");
+
+        for (WorldGen::Hoard hoard : EVERY)
+        {
+            int lowest = 999, highest = 0;
+            bool signatureEverywhere = true;
+
+            for (int i = 0; i < 60; ++i)
+            {
+                const int x = 300 + i * 13;
+                const int z = -700 - i * 7;
+                const std::vector<StructureLoot::Stack> loot =
+                    StructureLoot::rollFor(hoard, x, 48, z, SEED);
+
+                check(!loot.empty(), "every kind of found chest holds something");
+                if (loot.empty()) continue;
+
+                lowest = std::min(lowest, static_cast<int>(loot.size()));
+                highest = std::max(highest, static_cast<int>(loot.size()));
+
+                const StructureLoot::Stack signature =
+                    StructureLoot::centrepiece(hoard, x, 48, z, SEED);
+
+                bool has = false;
+                for (const StructureLoot::Stack& stack : loot)
+                {
+                    check(stack.count > 0, "and no empty stacks in it");
+                    check(stack.count <= maxStackOf(stack.id),
+                          "nor a stack bigger than the item allows");
+                    if (stack.id == signature.id) has = true;
+                }
+                if (!has) signatureEverywhere = false;
+
+                // Rolled from the position, so finding it twice finds
+                // the same thing twice.
+                const std::vector<StructureLoot::Stack> again =
+                    StructureLoot::rollFor(hoard, x, 48, z, SEED);
+                check(again.size() == loot.size(),
+                      "and the same chest holds the same thing every time");
+            }
+
+            check(signatureEverywhere,
+                  "the thing this kind of place is known for is always in it");
+            check(highest > lowest,
+                  "but no two of them are the same, or it is a vending machine");
+        }
+
+        // The lookup that says which structure a chest belongs to. Walk
+        // to a landmark, find its chest, and ask.
+        const WorldGen generator(SEED);
+        struct Pair { WorldGen::Landmark kind; WorldGen::Hoard hoard; };
+        const Pair PAIRS[] = {
+            { WorldGen::Landmark::DesertPyramid,   WorldGen::Hoard::DesertPyramid },
+            { WorldGen::Landmark::JungleTemple,    WorldGen::Hoard::JungleTemple },
+            { WorldGen::Landmark::Igloo,           WorldGen::Hoard::Igloo },
+            { WorldGen::Landmark::RuinedPortal,    WorldGen::Hoard::RuinedPortal },
+            { WorldGen::Landmark::PillagerOutpost, WorldGen::Hoard::PillagerOutpost },
+        };
+
+        for (const Pair& pair : PAIRS)
+        {
+            const Structures::Spot spot = generator.nearestLandmark(pair.kind, 0, 0, 6);
+            if (!spot.exists) continue;
+
+            const int midX = spot.chunkX * Structures::CHUNK + Structures::CHUNK / 2;
+            const int midZ = spot.chunkZ * Structures::CHUNK + Structures::CHUNK / 2;
+            const int ground = generator.surfaceHeight(midX, midZ);
+
+            WorldGen::ChestSpot spots[2];
+            const int many = WorldGen::landmarkChests(pair.kind, spots);
+            check(many > 0, "every landmark keeps a chest somewhere");
+
+            for (int i = 0; i < many; ++i)
+            {
+                const WorldGen::Hoard found =
+                    generator.hoardAt(midX + spots[i].dx, ground + spots[i].dy,
+                                      midZ + spots[i].dz);
+                check(found == pair.hoard,
+                      std::string(WorldGen::landmarkName(pair.kind)) +
+                          ": its chest knows what it belongs to");
+            }
+
+            // And a block of air off to one side belongs to nothing,
+            // or every chest in the world would be a pyramid's.
+            check(generator.hoardAt(midX + 40, ground, midZ + 40) == WorldGen::Hoard::None,
+                  "while the ground beside it belongs to nothing");
+        }
+    }
+
+    void testSeabed()
+    {
+        section("what grows on the sea floor");
+
+        constexpr uint32_t SEED = 4242u;
+        const WorldGen generator(SEED);
+
+        int kelp = 0, kelpTops = 0, seagrass = 0, coral = 0, fans = 0, pickles = 0;
+        int seaFloors = 0, landColumns = 0, plantsOnLand = 0;
+
+        for (int cz = -4; cz <= 4; ++cz)
+            for (int cx = -4; cx <= 4; ++cx)
+            {
+                Chunk chunk(ChunkPos{ cx, cz });
+                generator.generate(chunk);
+
+                for (int lx = 0; lx < Chunk::SX; ++lx)
+                    for (int lz = 0; lz < Chunk::SZ; ++lz)
+                    {
+                        const int wx = cx * Chunk::SX + lx;
+                        const int wz = cz * Chunk::SZ + lz;
+                        const bool wet =
+                            generator.surfaceHeight(wx, wz) < WorldGen::SEA_LEVEL - 1;
+                        if (wet) ++seaFloors; else ++landColumns;
+
+                        for (int y = 0; y < Chunk::SY; ++y)
+                        {
+                            const BlockId block = chunk.getBlock(lx, y, lz);
+                            if (!isWaterPlant(block) && !isCoralBlock(block)) continue;
+
+                            // Nothing that grows in the sea is allowed
+                            // to turn up on a hillside.
+                            if (!wet) ++plantsOnLand;
+
+                            switch (block)
+                            {
+                                case Blocks::Kelp:      ++kelp; break;
+                                case Blocks::KelpTop:   ++kelpTops; break;
+                                case Blocks::Seagrass:  ++seagrass; break;
+                                case Blocks::SeaPickle: ++pickles; break;
+                                default:
+                                    if (isCoralBlock(block)) ++coral; else ++fans;
+                                    break;
+                            }
+                        }
+                    }
+            }
+
+        check(seaFloors > 0, "there is sea in the chunks round the origin");
+        check(landColumns > 0, "and land as well, or this proves nothing");
+
+        check(seagrass > 0, "seagrass grows on the sea floor");
+        check(kelp > 0, "kelp grows on the sea floor");
+        check(kelpTops > 0, "and every stem of it ends in a frond");
+        check(kelpTops <= kelp, "with more stem than frond, not the other way round");
+
+        check(plantsOnLand == 0, "and none of it grows on dry land");
+
+        // Coral is the warm-water one, so it is rarer than the rest.
+        // Counting it rather than requiring it: the chunks round one
+        // origin may hold no warm water at all.
+        check(coral >= 0 && fans >= 0 && pickles >= 0, "coral is counted where it grows");
+
+        // A reef only ever stands in warm water. This is the test that
+        // would catch coral turning up in the sea off a snowfield.
+        for (int cz = -4; cz <= 4; ++cz)
+            for (int cx = -4; cx <= 4; ++cx)
+            {
+                Chunk chunk(ChunkPos{ cx, cz });
+                generator.generate(chunk);
+
+                for (int lx = 0; lx < Chunk::SX; ++lx)
+                    for (int lz = 0; lz < Chunk::SZ; ++lz)
+                        for (int y = 0; y < Chunk::SY; ++y)
+                            if (isCoralBlock(chunk.getBlock(lx, y, lz)))
+                            {
+                                check(generator.reefWater(cx * Chunk::SX + lx,
+                                                          cz * Chunk::SZ + lz),
+                                      "coral only ever stands in warm water");
+                                lx = Chunk::SX; lz = Chunk::SZ; y = Chunk::SY;
+                            }
+            }
+
+        // The mesher rule that keeps a glassy box from forming round
+        // every blade: the sea draws no face against what grows in it.
+        check(isWaterPlant(Blocks::Kelp), "kelp counts as something growing in water");
+        check(isWaterPlant(Blocks::Seagrass), "and so does seagrass");
+        check(isWaterPlant(Blocks::TubeCoral), "and a coral fan");
+        check(!isWaterPlant(Blocks::TubeCoralBlock),
+              "but a coral block is solid, not a thing standing in the water");
+        check(!isWaterPlant(Blocks::TallGrass),
+              "and what grows on land does not count");
+        check(isCoralBlock(Blocks::HornCoralBlock) && isCoralBlock(Blocks::TubeCoralBlock),
+              "all five colours of coral are coral");
+        check(!isCoralBlock(Blocks::Prismarine), "and prismarine is not");
+    }
+
     void testFortressAndMineshaft()
     {
         section("the fortress and the mineshaft");
@@ -7951,6 +8286,9 @@ int runSelfTest()
     testStructurePlacement();
     testFortressAndMineshaft();
     testLandmarks();
+    testOceanStructures();
+    testStructureLoot();
+    testSeabed();
     testCaves();
     testCopper();
     testPistons();

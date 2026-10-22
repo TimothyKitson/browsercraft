@@ -207,6 +207,26 @@ namespace
         { "Ominous Vault",VaultTop,      VaultTop,       OminousVaultSide,true, true,  RenderType::Cube,   6,  -1.0f },
         { "Ominous Vault",VaultTop,      VaultTop,       OminousVaultSideOpen,true,true,RenderType::Cube,  10,  -1.0f },
         { "Monster Spawner",SpawnerTile, SpawnerTile,    SpawnerTile,    true,  false, RenderType::Cube,   1,   5.0f },
+        { "Prismarine",   PrismarineTile,PrismarineTile, PrismarineTile, true,  true,  RenderType::Cube,   0,   1.5f },
+        { "Prismarine Bricks",PrismarineBricksTile,PrismarineBricksTile,PrismarineBricksTile,true,true,RenderType::Cube,0,1.5f },
+        { "Dark Prismarine",DarkPrismarineTile,DarkPrismarineTile,DarkPrismarineTile,true,true,RenderType::Cube,0,1.5f },
+        { "Sea Lantern",  SeaLanternTile,SeaLanternTile, SeaLanternTile, true,  true,  RenderType::Cube,  15,   0.3f },
+        { "Sponge",       SpongeTile,    SpongeTile,     SpongeTile,     true,  true,  RenderType::Cube,   0,   0.6f },
+        { "Wet Sponge",   WetSpongeTile, WetSpongeTile,  WetSpongeTile,  true,  true,  RenderType::Cube,   0,   0.6f },
+        { "Kelp",         KelpTile,      KelpTile,       KelpTile,       false, false, RenderType::Cross,  0,   0.0f },
+        { "Kelp",         KelpTopTile,   KelpTopTile,    KelpTopTile,    false, false, RenderType::Cross,  0,   0.0f },
+        { "Seagrass",     SeagrassTile,  SeagrassTile,   SeagrassTile,   false, false, RenderType::Cross,  0,   0.0f },
+        { "Sea Pickle",   SeaPickleTile, SeaPickleTile,  SeaPickleTile,  false, false, RenderType::Cross,  6,   0.0f },
+        { "Tube Coral Block",TubeCoralBlockTile,TubeCoralBlockTile,TubeCoralBlockTile,true,true,RenderType::Cube,0,1.5f },
+        { "Brain Coral Block",BrainCoralBlockTile,BrainCoralBlockTile,BrainCoralBlockTile,true,true,RenderType::Cube,0,1.5f },
+        { "Bubble Coral Block",BubbleCoralBlockTile,BubbleCoralBlockTile,BubbleCoralBlockTile,true,true,RenderType::Cube,0,1.5f },
+        { "Fire Coral Block",FireCoralBlockTile,FireCoralBlockTile,FireCoralBlockTile,true,true,RenderType::Cube,0,1.5f },
+        { "Horn Coral Block",HornCoralBlockTile,HornCoralBlockTile,HornCoralBlockTile,true,true,RenderType::Cube,0,1.5f },
+        { "Tube Coral",   TubeCoralTile, TubeCoralTile,  TubeCoralTile,  false, false, RenderType::Cross,  0,   0.0f },
+        { "Brain Coral",  BrainCoralTile,BrainCoralTile, BrainCoralTile, false, false, RenderType::Cross,  0,   0.0f },
+        { "Bubble Coral", BubbleCoralTile,BubbleCoralTile,BubbleCoralTile,false,false, RenderType::Cross,  0,   0.0f },
+        { "Fire Coral",   FireCoralTile, FireCoralTile,  FireCoralTile,  false, false, RenderType::Cross,  0,   0.0f },
+        { "Horn Coral",   HornCoralTile, HornCoralTile,  HornCoralTile,  false, false, RenderType::Cross,  0,   0.0f },
     };
 }
 
@@ -373,6 +393,12 @@ Material blockMaterial(BlockId id)
     // caught, and the third time it has caught exactly that.
     if (isLog(id) || isPlanks(id)) return Material::Wood;
     if (isLeaves(id)) return Material::Plant;
+
+    // What grows in the sea is a plant, like what grows on land. Asked
+    // of the family for the same reason the woods are: left to fall
+    // through, every blade of seagrass came out as stone and wanted a
+    // pickaxe. The block table's own test caught it, again.
+    if (isWaterPlant(id)) return Material::Plant;
 
     switch (id)
     {
