@@ -1540,6 +1540,158 @@ namespace
         t.speckle(6, 424);
     }
 
+    // The End's city. Purpur is a pale violet with a coarse grain in
+    // it, which is the only colour out there that is not end stone.
+    void paintPurpurIn(Tile& t, Color body, int salt)
+    {
+        t.fill(body);
+        for (int y = 0; y < Tile::N; ++y)
+            for (int x = 0; x < Tile::N; ++x)
+            {
+                const float grain = hash2(x, y, salt);
+                if (grain > 0.80f) t.set(x, y, shade(body, 22));
+                else if (grain < 0.24f) t.set(x, y, shade(body, -24));
+            }
+        t.speckle(5, salt + 1);
+    }
+
+    void paintPurpur(Tile& t) { paintPurpurIn(t, Color{ 169, 125, 169 }, 431); }
+
+    void paintPurpurPillarTop(Tile& t)
+    {
+        paintPurpurIn(t, Color{ 176, 134, 176 }, 433);
+        // A ring, so the top of a pillar is not the side of one.
+        for (int y = 0; y < Tile::N; ++y)
+            for (int x = 0; x < Tile::N; ++x)
+            {
+                const float dx = x - 7.5f, dy = y - 7.5f;
+                const float d = std::sqrt(dx * dx + dy * dy);
+                if (d > 4.6f && d < 6.2f) t.set(x, y, Color{ 134, 96, 134 });
+            }
+    }
+
+    void paintPurpurPillarSide(Tile& t)
+    {
+        paintPurpurIn(t, Color{ 172, 128, 172 }, 435);
+        for (int x = 0; x < Tile::N; ++x)
+        {
+            t.set(x, 0, Color{ 132, 94, 132 });
+            t.set(x, 1, Color{ 148, 108, 148 });
+            t.set(x, Tile::N - 2, Color{ 148, 108, 148 });
+            t.set(x, Tile::N - 1, Color{ 132, 94, 132 });
+        }
+    }
+
+    void paintEndBricks(Tile& t)
+    {
+        t.fill(Color{ 206, 212, 154 });
+        // Small bricks, four courses, which is what tells them from
+        // plain end stone across a room.
+        for (int row = 0; row < 4; ++row)
+        {
+            const int offset = (row % 2) * 4;
+            for (int x = 0; x < Tile::N; ++x)
+            {
+                t.set(x, row * 4, Color{ 170, 176, 118 });
+                if (((x + offset) % 8) == 7)
+                    for (int y = 0; y < 4; ++y)
+                        t.set(x, row * 4 + y, Color{ 170, 176, 118 });
+            }
+        }
+        t.speckle(6, 437);
+    }
+
+    void paintChorusPlant(Tile& t)
+    {
+        t.fill(Color{ 94, 60, 94 });
+        for (int y = 0; y < Tile::N; ++y)
+            for (int x = 0; x < Tile::N; ++x)
+                if (hash2(x, y, 439) > 0.70f) t.set(x, y, Color{ 122, 82, 122 });
+        t.speckle(6, 440);
+    }
+
+    void paintChorusFlower(Tile& t)
+    {
+        t.fill(Color{ 198, 190, 198 });
+        for (int y = 5; y < 11; ++y)
+            for (int x = 5; x < 11; ++x)
+                t.set(x, y, Color{ 120, 94, 120 });
+        t.speckle(6, 441);
+    }
+
+    // The Nether's bastion. Blackstone is darker than netherrack and
+    // has no red in it, which is the whole of how you tell a bastion
+    // from the rock it stands in.
+    void paintBlackstone(Tile& t)
+    {
+        t.fill(Color{ 36, 32, 38 });
+        for (int y = 0; y < Tile::N; ++y)
+            for (int x = 0; x < Tile::N; ++x)
+            {
+                const float grain = hash2(x, y, 443);
+                if (grain > 0.82f) t.set(x, y, Color{ 56, 50, 58 });
+                else if (grain < 0.20f) t.set(x, y, Color{ 22, 20, 24 });
+            }
+        t.speckle(5, 444);
+    }
+
+    void paintPolishedBlackstone(Tile& t)
+    {
+        t.fill(Color{ 44, 40, 46 });
+        for (int row = 0; row < 4; ++row)
+        {
+            const int offset = (row % 2) * 4;
+            for (int x = 0; x < Tile::N; ++x)
+            {
+                t.set(x, row * 4, Color{ 26, 24, 28 });
+                if (((x + offset) % 8) == 7)
+                    for (int y = 0; y < 4; ++y)
+                        t.set(x, row * 4 + y, Color{ 26, 24, 28 });
+            }
+        }
+        t.speckle(4, 445);
+    }
+
+    void paintGildedBlackstone(Tile& t)
+    {
+        paintBlackstone(t);
+        // The gold in it, in flecks rather than a seam: a bastion's
+        // gold is what you chip out of the walls.
+        for (int i = 0; i < 14; ++i)
+        {
+            const int x = static_cast<int>(hash2(i, 0, 447) * Tile::N);
+            const int y = static_cast<int>(hash2(i, 1, 447) * Tile::N);
+            t.set(x, y, Color{ 226, 186, 72 });
+            if (x + 1 < Tile::N) t.set(x + 1, y, Color{ 180, 144, 56 });
+        }
+    }
+
+    void paintBasaltTop(Tile& t)
+    {
+        t.fill(Color{ 80, 78, 84 });
+        for (int y = 0; y < Tile::N; ++y)
+            for (int x = 0; x < Tile::N; ++x)
+            {
+                const float d = hash2(x / 3, y / 3, 449);
+                if (d > 0.72f) t.set(x, y, Color{ 98, 96, 102 });
+                else if (d < 0.26f) t.set(x, y, Color{ 60, 58, 64 });
+            }
+        t.speckle(5, 450);
+    }
+
+    void paintBasaltSide(Tile& t)
+    {
+        t.fill(Color{ 66, 64, 70 });
+        // Columns, because basalt comes in them.
+        for (int x = 0; x < Tile::N; ++x)
+        {
+            const int delta = static_cast<int>((hash2(x / 2, 0, 451) - 0.5f) * 30.0f);
+            for (int y = 0; y < Tile::N; ++y)
+                t.set(x, y, shade(Color{ 72, 70, 78 }, delta));
+        }
+        t.speckle(5, 452);
+    }
+
     void paintSpawnerIn(Tile& t, Color bars, Color inside)
     {
         t.fill(inside);
@@ -4155,6 +4307,17 @@ namespace
         { Tiles::SoulLanternTile, paintSoulLantern },
         { Tiles::ReinforcedDeepslateTop, paintReinforcedDeepslateTop },
         { Tiles::ReinforcedDeepslateSide, paintReinforcedDeepslateSide },
+        { Tiles::PurpurTile, paintPurpur },
+        { Tiles::PurpurPillarTop, paintPurpurPillarTop },
+        { Tiles::PurpurPillarSide, paintPurpurPillarSide },
+        { Tiles::EndBricksTile, paintEndBricks },
+        { Tiles::ChorusPlantTile, paintChorusPlant },
+        { Tiles::ChorusFlowerTile, paintChorusFlower },
+        { Tiles::BlackstoneTile, paintBlackstone },
+        { Tiles::PolishedBlackstoneTile, paintPolishedBlackstone },
+        { Tiles::GildedBlackstoneTile, paintGildedBlackstone },
+        { Tiles::BasaltTop, paintBasaltTop },
+        { Tiles::BasaltSide, paintBasaltSide },
         { Tiles::Obsidian, paintObsidian },
         { Tiles::TallGrass, paintTallGrass },
         { Tiles::FlowerRed, paintFlowerRed },
@@ -4499,6 +4662,17 @@ namespace
         { Tiles::SoulLanternTile, { "soul_lantern", nullptr },                         Tinting::None,    0,   false },
         { Tiles::ReinforcedDeepslateTop, { "reinforced_deepslate_top", nullptr },      Tinting::None,    0,   false },
         { Tiles::ReinforcedDeepslateSide, { "reinforced_deepslate_side", nullptr },    Tinting::None,    0,   false },
+        { Tiles::PurpurTile,    { "purpur_block", nullptr },                           Tinting::None,    0,   false },
+        { Tiles::PurpurPillarTop, { "purpur_pillar_top", nullptr },                    Tinting::None,    0,   false },
+        { Tiles::PurpurPillarSide, { "purpur_pillar", nullptr },                       Tinting::None,    0,   false },
+        { Tiles::EndBricksTile, { "end_stone_bricks", nullptr },                       Tinting::None,    0,   false },
+        { Tiles::ChorusPlantTile, { "chorus_plant", nullptr },                         Tinting::None,    0,   false },
+        { Tiles::ChorusFlowerTile, { "chorus_flower", nullptr },                       Tinting::None,    0,   false },
+        { Tiles::BlackstoneTile, { "blackstone", nullptr },                            Tinting::None,    0,   false },
+        { Tiles::PolishedBlackstoneTile, { "polished_blackstone_bricks", nullptr },    Tinting::None,    0,   false },
+        { Tiles::GildedBlackstoneTile, { "gilded_blackstone", nullptr },               Tinting::None,    0,   false },
+        { Tiles::BasaltTop,     { "basalt_top", nullptr },                             Tinting::None,    0,   false },
+        { Tiles::BasaltSide,    { "basalt_side", nullptr },                            Tinting::None,    0,   false },
         { Tiles::PistonTop,     { "piston_side", nullptr },                            Tinting::None,    0,   false },
         { Tiles::PistonSide,    { "piston_side", nullptr },                            Tinting::None,    0,   false },
         { Tiles::PistonFace,    { "piston_top", "piston_top_normal", nullptr },         Tinting::None,    0,   false },

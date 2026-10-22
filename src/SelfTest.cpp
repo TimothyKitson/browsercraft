@@ -4751,6 +4751,112 @@ namespace
               "and plain deepslate, which is everywhere, is not one of them");
     }
 
+    void testOtherDimensionStructures()
+    {
+        section("the End's city and the Nether's bastion");
+
+        constexpr uint32_t SEED = 4242u;
+
+        check(Structures::END_CITY.spacing > Structures::END_CITY.separation,
+              "an End city grid has room in it");
+        check(Structures::BASTION.spacing == Structures::NETHER_FORTRESS.spacing &&
+              Structures::BASTION.salt == Structures::NETHER_FORTRESS.salt,
+              "a bastion shares the fortress's grid, as Minecraft's does");
+
+        // The two are told apart by a coin flip on the square, and the
+        // flip has to be the same in the search and in the stamp. It
+        // was not, the first time: the search walked to a square the
+        // stamp had decided was a fortress and found nothing there.
+        {
+            const WorldGen nether(SEED, Dimension::Nether);
+            const Structures::Spot spot = nether.nearestBastion(0, 0, 6);
+            check(spot.exists, "there is a bastion within a few squares of the origin");
+
+            if (spot.exists)
+            {
+                const int midX = spot.chunkX * Structures::CHUNK + Structures::CHUNK / 2;
+                const int midZ = spot.chunkZ * Structures::CHUNK + Structures::CHUNK / 2;
+
+                int blackstone = 0, gilded = 0, chests = 0;
+                for (int cz = spot.chunkZ - 2; cz <= spot.chunkZ + 2; ++cz)
+                    for (int cx = spot.chunkX - 2; cx <= spot.chunkX + 2; ++cx)
+                    {
+                        Chunk chunk(ChunkPos{ cx, cz });
+                        nether.generate(chunk);
+
+                        for (int y = 0; y < Chunk::SY; ++y)
+                            for (int lx = 0; lx < Chunk::SX; ++lx)
+                                for (int lz = 0; lz < Chunk::SZ; ++lz)
+                                {
+                                    const BlockId block = chunk.getBlock(lx, y, lz);
+                                    if (block == Blocks::GildedBlackstone) ++gilded;
+                                    else if (isBastionBlock(block)) ++blackstone;
+                                    if (block == Blocks::Chest) ++chests;
+                                }
+                    }
+
+                check(blackstone > 500, "a bastion is a great deal of blackstone");
+                check(gilded > 0, "with the gold in it that is the reason to go");
+                check(chests >= 2, "and chests worth the trip");
+
+                check(nether.hoardAt(midX - 4, WorldGen::NETHER_LAVA_LEVEL + 7, midZ + 4) ==
+                          WorldGen::Hoard::Bastion,
+                      "a bastion chest knows what it belongs to");
+            }
+        }
+
+        // The End city, which needs an island under it -- most of the
+        // End is open void, so the grid alone is not enough.
+        {
+            const WorldGen end(SEED, Dimension::End);
+            const Structures::Spot spot = end.nearestEndCity(0, 0, 40);
+            check(spot.exists, "there is an End city out on the islands");
+
+            if (spot.exists)
+            {
+                const int midX = spot.chunkX * Structures::CHUNK + Structures::CHUNK / 2;
+                const int midZ = spot.chunkZ * Structures::CHUNK + Structures::CHUNK / 2;
+
+                check(end.endGroundAt(midX, midZ) >= 0,
+                      "and it has an island under it rather than void");
+
+                const long long away = static_cast<long long>(midX) * midX +
+                                       static_cast<long long>(midZ) * midZ;
+                check(away >= 460LL * 460LL,
+                      "out past the main island, where Minecraft puts them too");
+
+                int purpur = 0, chorus = 0, chests = 0;
+                for (int cz = spot.chunkZ - 1; cz <= spot.chunkZ + 1; ++cz)
+                    for (int cx = spot.chunkX - 1; cx <= spot.chunkX + 1; ++cx)
+                    {
+                        Chunk chunk(ChunkPos{ cx, cz });
+                        end.generate(chunk);
+
+                        for (int y = 0; y < Chunk::SY; ++y)
+                            for (int lx = 0; lx < Chunk::SX; ++lx)
+                                for (int lz = 0; lz < Chunk::SZ; ++lz)
+                                {
+                                    const BlockId block = chunk.getBlock(lx, y, lz);
+                                    if (block == Blocks::ChorusPlant ||
+                                        block == Blocks::ChorusFlower) ++chorus;
+                                    else if (isEndCityBlock(block)) ++purpur;
+                                    if (block == Blocks::Chest) ++chests;
+                                }
+                    }
+
+                check(purpur > 200, "an End city is a tower's worth of purpur");
+                check(chorus > 0, "with a chorus plant standing beside it");
+                check(chests > 0, "and what you came out here for");
+            }
+        }
+
+        // Each family belongs to its own structure and nothing else.
+        check(isEndCityBlock(Blocks::PurpurBlock) && !isEndCityBlock(Blocks::EndStone),
+              "purpur is the city's, plain end stone is the island's");
+        check(isBastionBlock(Blocks::Blackstone) && !isBastionBlock(Blocks::NetherBricks),
+              "blackstone is the bastion's, nether brick is the fortress's");
+    }
+
     void testFortressAndMineshaft()
     {
         section("the fortress and the mineshaft");
@@ -8445,6 +8551,7 @@ int runSelfTest()
     testSeabed();
     testDesertWell();
     testAncientCity();
+    testOtherDimensionStructures();
     testCaves();
     testCopper();
     testPistons();

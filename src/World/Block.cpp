@@ -236,6 +236,15 @@ namespace
         { "Sculk Catalyst",SculkCatalystTop,SculkTile,   SculkCatalystSide,true,true,  RenderType::Cube,   6,   3.0f },
         { "Soul Lantern", SoulLanternTile,SoulLanternTile,SoulLanternTile,true, true,  RenderType::Cube,  10,   0.3f },
         { "Reinforced Deepslate",ReinforcedDeepslateTop,ReinforcedDeepslateTop,ReinforcedDeepslateSide,true,true,RenderType::Cube,0,-1.0f },
+        { "Purpur Block", PurpurTile,    PurpurTile,     PurpurTile,     true,  true,  RenderType::Cube,   0,   1.5f },
+        { "Purpur Pillar",PurpurPillarTop,PurpurPillarTop,PurpurPillarSide,true,true,  RenderType::Cube,   0,   1.5f },
+        { "End Stone Bricks",EndBricksTile,EndBricksTile,EndBricksTile,  true,  true,  RenderType::Cube,   0,   3.0f },
+        { "Chorus Plant", ChorusPlantTile,ChorusPlantTile,ChorusPlantTile,true, true,  RenderType::Cube,   0,   0.4f },
+        { "Chorus Flower",ChorusFlowerTile,ChorusFlowerTile,ChorusFlowerTile,true,true, RenderType::Cube,  0,   0.4f },
+        { "Blackstone",   BlackstoneTile,BlackstoneTile, BlackstoneTile, true,  true,  RenderType::Cube,   0,   1.5f },
+        { "Polished Blackstone Bricks",PolishedBlackstoneTile,PolishedBlackstoneTile,PolishedBlackstoneTile,true,true,RenderType::Cube,0,2.0f },
+        { "Gilded Blackstone",GildedBlackstoneTile,GildedBlackstoneTile,GildedBlackstoneTile,true,true,RenderType::Cube,0,1.5f },
+        { "Basalt",       BasaltTop,     BasaltTop,      BasaltSide,     true,  true,  RenderType::Cube,   0,   1.25f },
     };
 }
 

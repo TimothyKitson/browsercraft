@@ -189,6 +189,18 @@ namespace Tiles
         ReinforcedDeepslateTop,
         ReinforcedDeepslateSide,
 
+        PurpurTile,
+        PurpurPillarTop,
+        PurpurPillarSide,
+        EndBricksTile,
+        ChorusPlantTile,
+        ChorusFlowerTile,
+        BlackstoneTile,
+        PolishedBlackstoneTile,
+        GildedBlackstoneTile,
+        BasaltTop,
+        BasaltSide,
+
         RainDrop,
         SnowFlake,
 
@@ -214,7 +226,13 @@ namespace Tiles
     // less VRAM than sixteen across at 256 was. Widening the grid
     // without lowering that ceiling is what the old note here warned
     // against, and it was right.
-    constexpr int ItemFirst = 200;
+    // Raised from 200 when the End's city and the Nether's bastion
+    // took the block tiles past it. This costs nothing: the atlas is
+    // still twenty tiles square, and the items were using 63 of the
+    // 190 slots between them and the cracks. Moving the line is free;
+    // widening the grid would have cost texture memory on a machine
+    // that has none to spare.
+    constexpr int ItemFirst = 240;
 
     enum : int
     {

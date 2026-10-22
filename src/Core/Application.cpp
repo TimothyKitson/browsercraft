@@ -1462,7 +1462,8 @@ bool Application::frame()
             m_startupScreen == "temple" || m_startupScreen == "igloo" ||
             m_startupScreen == "portalruin" || m_startupScreen == "outpost" ||
             m_startupScreen == "mansion" || m_startupScreen == "well" ||
-            m_startupScreen == "city" ||
+            m_startupScreen == "city" || m_startupScreen == "bastion" ||
+            m_startupScreen == "endcity" ||
             m_startupScreen == "shipwreck" || m_startupScreen == "monument" ||
             m_startupScreen == "seabed" || m_startupScreen == "reef" ||
             m_startupScreen == "vault" || m_startupScreen == "stronghold" ||
@@ -1521,6 +1522,8 @@ bool Application::frame()
                                   m_startupScreen != "outpost" &&
                                   m_startupScreen != "mansion" &&
                                   m_startupScreen != "city" &&
+                                  m_startupScreen != "bastion" &&
+                                  m_startupScreen != "endcity" &&
                                   m_startupScreen != "well" &&
                                   m_startupScreen != "shipwreck" &&
                                   m_startupScreen != "monument" &&
@@ -2116,6 +2119,65 @@ bool Application::frame()
                 {
                     std::printf("No %s within eight squares\n", WorldGen::landmarkName(kind));
                     std::fflush(stdout);
+                }
+
+                m_player.mode = GameMode::Creative;
+                m_player.health = Player::MAX_HEALTH;
+            }
+
+            // The End's city and the Nether's bastion. Both want the
+            // dimension they live in, which --dim sets at startup.
+            if (m_startupScreen == "endcity" || m_startupScreen == "bastion")
+            {
+                const WorldGen& gen = m_world->generator();
+                const bool end = m_startupScreen == "endcity";
+
+                if ((end && m_dimension != Dimension::End) ||
+                    (!end && m_dimension != Dimension::Nether))
+                {
+                    std::printf("Run this with --dim %s\n", end ? "end" : "nether");
+                    std::fflush(stdout);
+                }
+                else
+                {
+                    const int px = static_cast<int>(m_player.position.x);
+                    const int pz = static_cast<int>(m_player.position.z);
+
+                    const Structures::Spot spot = end ? gen.nearestEndCity(px, pz, 40)
+                                                      : gen.nearestBastion(px, pz, 4);
+
+                    if (spot.exists)
+                    {
+                        const int midX =
+                            spot.chunkX * Structures::CHUNK + Structures::CHUNK / 2;
+                        const int midZ =
+                            spot.chunkZ * Structures::CHUNK + Structures::CHUNK / 2;
+                        // Outside and above for the bastion: from
+                        // inside the ramparts all you see is the far
+                        // wall, and the shape is the whole point of a
+                        // fortification.
+                        const int base = end ? gen.endGroundAt(midX, midZ) + 14
+                                             : WorldGen::NETHER_LAVA_LEVEL + 30;
+                        const float back = end ? 30.5f : 40.5f;
+
+                        m_player.position = glm::vec3(static_cast<float>(midX) + 0.5f,
+                                                      static_cast<float>(base),
+                                                      static_cast<float>(midZ) + back);
+                        m_player.velocity = glm::vec3(0.0f);
+                        m_player.flying = true;
+                        m_placeOnSurface = false;
+                        m_camera.setOrientation(-90.0f, end ? -8.0f : -22.0f);
+                        m_camera.addLook(0.0f, 0.0f, 0.0f);
+
+                        std::printf("%s at %d, %d\n", end ? "End city" : "Bastion",
+                                    midX, midZ);
+                        std::fflush(stdout);
+                    }
+                    else
+                    {
+                        std::printf("No %s found\n", end ? "End city" : "bastion");
+                        std::fflush(stdout);
+                    }
                 }
 
                 m_player.mode = GameMode::Creative;

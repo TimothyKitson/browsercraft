@@ -83,6 +83,8 @@ public:
         Mineshaft,
         Stronghold,
         AncientCity,
+        EndCity,
+        Bastion,
         TrialChamber,
     };
 
@@ -161,6 +163,19 @@ public:
     // Where the nearest one is, which is what the debug screen reports
     // and what the tests walk to.
     Structures::Spot nearestAncientCity(int blockX, int blockZ, int squares = 4) const;
+
+    // The End's city and the Nether's bastion. Both have to ask about
+    // the ground as they go -- an End city needs an island under it
+    // and most of the End is void -- so both search past the squares
+    // they cannot use, the way the two sea ones do.
+    Structures::Spot nearestEndCity(int blockX, int blockZ, int squares = 6) const;
+    Structures::Spot nearestBastion(int blockX, int blockZ, int squares = 4) const;
+
+    // The top of the End island under a place, or -1 for open void.
+    int endGroundAt(int worldX, int worldZ) const;
+
+    static constexpr int END_CITY_TALL = 26;
+    static constexpr int BASTION_HALF = 13;
 
     // The mineshaft spread, shared by the stamp and by the lookup that
     // decides what is in the chest at the end of a corridor.
@@ -255,6 +270,11 @@ private:
     void dressSeabed(Chunk& chunk) const;
     void buildDesertWells(Chunk& chunk) const;
     void buildAncientCities(Chunk& chunk) const;
+    void buildEndCities(Chunk& chunk) const;
+    void stampEndCity(Chunk& chunk, int midX, int midZ, int ground) const;
+    void buildBastions(Chunk& chunk) const;
+    bool bastionWins(int chunkX, int chunkZ) const;
+    void stampBastion(Chunk& chunk, int midX, int midZ) const;
     void stampAncientCity(Chunk& chunk, int midX, int midZ) const;
     void buildOceanStructures(Chunk& chunk) const;
     void stampShipwreck(Chunk& chunk, int midX, int midZ) const;

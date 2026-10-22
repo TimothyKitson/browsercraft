@@ -50,6 +50,8 @@ namespace Structures
     constexpr Grid NETHER_FORTRESS{ 27, 4, 30084232u };
     constexpr Grid ANCIENT_CITY   { 24, 8, 20083232u };
     constexpr Grid WOODLAND_MANSION{ 80, 20, 10387319u };
+    constexpr Grid END_CITY       { 20, 11, 10387313u };
+    constexpr Grid BASTION        { 27, 4, 30084232u };
 
     // A chunk a structure of this kind stands in, if its square has one.
     struct Spot

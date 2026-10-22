@@ -154,6 +154,31 @@ namespace
         { Items::Potion,      1, 2 },
     };
 
+    // The End's city. Minecraft keeps elytra and enchanted diamond
+    // armour out there; there are no elytra here, so it is the armour
+    // and the purpur.
+    const Entry ENDCITY[] = {
+        { Items::DiamondChestplate, 1, 1 },
+        { Items::DiamondHelmet, 1, 1 },
+        { Items::Diamond,     2, 5 },
+        { Items::Emerald,     2, 7 },
+        { Blocks::PurpurBlock, 2, 8 },
+        { Items::EnderPearl,  2, 5 },
+        { Items::GoldIngot,   2, 6 },
+    };
+
+    // A bastion, which is gold and nothing but: it is the one place
+    // in the Nether worth raiding and the only reason to go.
+    const Entry BASTION[] = {
+        { Items::GoldIngot,   4, 12 },
+        { Blocks::GildedBlackstone, 1, 4 },
+        { Items::GoldSword,   1, 1 },
+        { Items::GoldChestplate, 1, 1 },
+        { Items::Diamond,     1, 2 },
+        { Items::MagmaCream,  1, 3 },
+        { Blocks::Blackstone, 2, 8 },
+    };
+
     // A supply room, which is exactly what it sounds like: what you
     // want in your hands before the next spawner starts.
     const Entry SUPPLY[] = {
@@ -197,6 +222,10 @@ namespace
                 return { MINESHAFT, static_cast<int>(std::size(MINESHAFT)) };
             case WorldGen::Hoard::Stronghold:
                 return { STRONGHOLD, static_cast<int>(std::size(STRONGHOLD)) };
+            case WorldGen::Hoard::EndCity:
+                return { ENDCITY, static_cast<int>(std::size(ENDCITY)) };
+            case WorldGen::Hoard::Bastion:
+                return { BASTION, static_cast<int>(std::size(BASTION)) };
             case WorldGen::Hoard::AncientCity:
                 return { CITY, static_cast<int>(std::size(CITY)) };
             case WorldGen::Hoard::TrialChamber:
@@ -225,6 +254,8 @@ StructureLoot::Stack StructureLoot::centrepiece(WorldGen::Hoard hoard,
         case WorldGen::Hoard::Monument:        out.id = Items::GoldIngot; out.count = 8; break;
         case WorldGen::Hoard::Mineshaft:       out.id = Blocks::RailEastWest; out.count = 6; break;
         case WorldGen::Hoard::Stronghold:      out.id = Items::Book;      out.count = 2; break;
+        case WorldGen::Hoard::EndCity:         out.id = Items::Diamond;   out.count = 3; break;
+        case WorldGen::Hoard::Bastion:         out.id = Items::GoldIngot; out.count = 8; break;
         case WorldGen::Hoard::AncientCity:     out.id = Items::Diamond;   out.count = 3; break;
         case WorldGen::Hoard::TrialChamber:    out.id = Items::Arrow;     out.count = 8; break;
         case WorldGen::Hoard::None:            return out;

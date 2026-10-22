@@ -310,6 +310,19 @@ namespace Blocks
         SoulLantern,
         ReinforcedDeepslate,
 
+        // The End's city: purpur, and the end stone cut into bricks.
+        PurpurBlock,
+        PurpurPillar,
+        EndStoneBricks,
+        ChorusPlant,
+        ChorusFlower,
+
+        // The Nether's bastion: blackstone, and the gold in it.
+        Blackstone,
+        PolishedBlackstoneBricks,
+        GildedBlackstone,
+        Basalt,
+
         Count
     };
 }
@@ -429,6 +442,19 @@ inline bool isWaterPlant(BlockId id)
 inline bool isDeepDark(BlockId id)
 {
     return id >= Blocks::DeepslateBricks && id <= Blocks::ReinforcedDeepslate;
+}
+
+// Whether this is one of the End city's blocks, or one of a bastion's.
+// Each structure is built of its own family and nothing else is, which
+// is what makes these usable as "am I standing in one".
+inline bool isEndCityBlock(BlockId id)
+{
+    return id >= Blocks::PurpurBlock && id <= Blocks::ChorusFlower;
+}
+
+inline bool isBastionBlock(BlockId id)
+{
+    return id >= Blocks::Blackstone && id <= Blocks::Basalt;
 }
 
 // The two that listen. A sensor lights when something moves near it;
