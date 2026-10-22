@@ -96,6 +96,11 @@ public:
     static const Structures::Grid& landmarkGrid(Landmark kind);
     static bool landmarkSuits(Landmark kind, Biome biome);
 
+    // Whether one can actually stand at a place: the right land under
+    // it and out of the sea. The search and the stamp both read this,
+    // so they cannot disagree about where a structure is.
+    bool landmarkStands(Landmark kind, int midX, int midZ) const;
+
     // The nearest one of a kind, for the screens that go and look at
     // them. Empty when there is none within the squares searched.
     // Where the nearest shipwreck and monument are, which is what the
@@ -175,6 +180,17 @@ public:
     int endGroundAt(int worldX, int worldZ) const;
 
     static constexpr int END_CITY_TALL = 26;
+
+    // How far out the outer islands start. A city inside this is on
+    // the island you arrive on, where Minecraft puts none either.
+    static constexpr long long END_CITY_VOID = 460;
+
+    bool endCityStands(int midX, int midZ) const;
+
+    // Which of a bastion and a fortress a square drew. Public because
+    // the test has to be able to ask: it was being asked in two places
+    // with two different answers.
+    bool bastionWins(int chunkX, int chunkZ) const;
     static constexpr int BASTION_HALF = 13;
 
     // The mineshaft spread, shared by the stamp and by the lookup that
@@ -273,7 +289,7 @@ private:
     void buildEndCities(Chunk& chunk) const;
     void stampEndCity(Chunk& chunk, int midX, int midZ, int ground) const;
     void buildBastions(Chunk& chunk) const;
-    bool bastionWins(int chunkX, int chunkZ) const;
+
     void stampBastion(Chunk& chunk, int midX, int midZ) const;
     void stampAncientCity(Chunk& chunk, int midX, int midZ) const;
     void buildOceanStructures(Chunk& chunk) const;

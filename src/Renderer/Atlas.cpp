@@ -1692,6 +1692,56 @@ namespace
         t.speckle(5, 452);
     }
 
+    // The swamp. A lily pad is drawn flat on the water, so it is the
+    // one tile here that is only ever seen from above.
+    void paintLilyPad(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 0; y < Tile::N; ++y)
+            for (int x = 0; x < Tile::N; ++x)
+            {
+                const float dx = x - 7.5f, dy = y - 7.5f;
+                const float d = std::sqrt(dx * dx + dy * dy);
+                if (d > 7.2f) continue;
+                // The notch cut out of one side, which is the shape.
+                if (dx > 0.0f && std::abs(dy) < 1.6f) continue;
+                t.set(x, y, shade(Color{ 42, 108, 44 },
+                                  static_cast<int>((hash2(x, y, 461) - 0.5f) * 26.0f)));
+            }
+    }
+
+    void paintVine(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int strand = 0; strand < 5; ++strand)
+        {
+            const int x = 1 + static_cast<int>(hash2(strand, 0, 463) * 13.0f);
+            const int tall = 8 + static_cast<int>(hash2(strand, 1, 463) * 8.0f);
+            for (int y = 0; y < tall; ++y)
+            {
+                const int drift = static_cast<int>(std::sin(y * 0.4f + strand) * 1.4f);
+                t.set(x + drift, y,
+                      shade(Color{ 48, 92, 40 },
+                            static_cast<int>((hash2(strand, y, 464) - 0.5f) * 34.0f)));
+                if ((y % 4) == 0 && x + drift + 1 < Tile::N)
+                    t.set(x + drift + 1, y, Color{ 38, 76, 32 });
+            }
+        }
+    }
+
+    void paintMud(Tile& t)
+    {
+        t.fill(Color{ 60, 50, 46 });
+        for (int y = 0; y < Tile::N; ++y)
+            for (int x = 0; x < Tile::N; ++x)
+            {
+                const float wet = hash2(x, y, 465);
+                if (wet > 0.80f) t.set(x, y, Color{ 78, 66, 60 });
+                else if (wet < 0.22f) t.set(x, y, Color{ 44, 36, 34 });
+            }
+        t.speckle(6, 466);
+    }
+
     void paintSpawnerIn(Tile& t, Color bars, Color inside)
     {
         t.fill(inside);
@@ -4318,6 +4368,9 @@ namespace
         { Tiles::GildedBlackstoneTile, paintGildedBlackstone },
         { Tiles::BasaltTop, paintBasaltTop },
         { Tiles::BasaltSide, paintBasaltSide },
+        { Tiles::LilyPadTile, paintLilyPad },
+        { Tiles::VineTile, paintVine },
+        { Tiles::MudTile, paintMud },
         { Tiles::Obsidian, paintObsidian },
         { Tiles::TallGrass, paintTallGrass },
         { Tiles::FlowerRed, paintFlowerRed },
@@ -4673,6 +4726,9 @@ namespace
         { Tiles::GildedBlackstoneTile, { "gilded_blackstone", nullptr },               Tinting::None,    0,   false },
         { Tiles::BasaltTop,     { "basalt_top", nullptr },                             Tinting::None,    0,   false },
         { Tiles::BasaltSide,    { "basalt_side", nullptr },                            Tinting::None,    0,   false },
+        { Tiles::LilyPadTile,   { "lily_pad", nullptr },                               Tinting::Foliage, 0,   false },
+        { Tiles::VineTile,      { "vine", nullptr },                                   Tinting::Foliage, 0,   false },
+        { Tiles::MudTile,       { "mud", nullptr },                                    Tinting::None,    0,   false },
         { Tiles::PistonTop,     { "piston_side", nullptr },                            Tinting::None,    0,   false },
         { Tiles::PistonSide,    { "piston_side", nullptr },                            Tinting::None,    0,   false },
         { Tiles::PistonFace,    { "piston_top", "piston_top_normal", nullptr },         Tinting::None,    0,   false },
@@ -5283,4 +5339,59 @@ bool Atlas::hasPainter(int tileIndex)
         return true;
 
     return false;
+}
+
+
+// ---------------------------------------------------------------------
+// Which tiles the pack does not cover.
+//
+// Walks the same two tables the loader walks and asks only whether a
+// file is there, so it needs no GL and no window. A name with a typo
+// in it is otherwise invisible: the tile comes out painted and nothing
+// says so.
+// ---------------------------------------------------------------------
+int packTileCount()
+{
+    return static_cast<int>(std::size(PACK_TILES)) + static_cast<int>(std::size(PACK_ITEMS));
+}
+
+std::vector<PackGap> packGaps()
+{
+    std::vector<PackGap> gaps;
+
+    for (const PackTile& entry : PACK_TILES)
+    {
+        PackGap gap;
+        bool found = false;
+        for (int i = 0; i < 4 && entry.candidates[i]; ++i)
+        {
+            gap.tried.push_back(entry.candidates[i]);
+            if (fileExists(std::string(PACK_DIRECTORY) + "/" + entry.candidates[i] + ".png"))
+                found = true;
+        }
+        if (!found && !gap.tried.empty())
+        {
+            gap.what = "block tile " + std::to_string(entry.tile);
+            gaps.push_back(gap);
+        }
+    }
+
+    for (const PackItem& entry : PACK_ITEMS)
+    {
+        PackGap gap;
+        bool found = false;
+        for (int i = 0; i < 3 && entry.candidates[i]; ++i)
+        {
+            gap.tried.push_back(entry.candidates[i]);
+            if (fileExists(std::string(ITEM_PACK_DIRECTORY) + "/" + entry.candidates[i] + ".png"))
+                found = true;
+        }
+        if (!found && !gap.tried.empty())
+        {
+            gap.what = "item tile " + std::to_string(entry.tile);
+            gaps.push_back(gap);
+        }
+    }
+
+    return gaps;
 }

@@ -201,6 +201,10 @@ namespace Tiles
         BasaltTop,
         BasaltSide,
 
+        LilyPadTile,
+        VineTile,
+        MudTile,
+
         RainDrop,
         SnowFlake,
 

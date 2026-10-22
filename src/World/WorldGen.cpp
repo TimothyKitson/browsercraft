@@ -1571,6 +1571,20 @@ bool WorldGen::landmarkSuits(Landmark kind, Biome biome)
     return false;
 }
 
+// Whether a landmark of this kind can actually stand here.
+//
+// This has to be the one test both the search and the stamp use. When
+// they were two tests they disagreed: --structureinfo walked to the
+// nearest ruined portal on two seeds out of four and found nothing
+// there, because the search only asked about the biome and the stamp
+// also refused to build below the sea. A search that points at a place
+// nothing was built is worse than no search.
+bool WorldGen::landmarkStands(Landmark kind, int midX, int midZ) const
+{
+    if (!landmarkSuits(kind, biomeAt(midX, midZ))) return false;
+    return surfaceHeight(midX, midZ) > SEA_LEVEL;
+}
+
 Structures::Spot WorldGen::nearestLandmark(Landmark kind, int blockX, int blockZ,
                                            int squares) const
 {
@@ -1592,7 +1606,7 @@ Structures::Spot WorldGen::nearestLandmark(Landmark kind, int blockX, int blockZ
             const Structures::Spot spot = Structures::inSquare(grid, sx, sz, m_seed);
             const int midX = spot.chunkX * Structures::CHUNK + Structures::CHUNK / 2;
             const int midZ = spot.chunkZ * Structures::CHUNK + Structures::CHUNK / 2;
-            if (!landmarkSuits(kind, biomeAt(midX, midZ))) continue;
+            if (!landmarkStands(kind, midX, midZ)) continue;
 
             const long long dx = static_cast<long long>(midX) - blockX;
             const long long dz = static_cast<long long>(midZ) - blockZ;
@@ -1635,7 +1649,7 @@ void WorldGen::buildLandmarks(Chunk& chunk) const
 
                 if (std::abs(spot.chunkX - chunkX) > REACH_CHUNKS) continue;
                 if (std::abs(spot.chunkZ - chunkZ) > REACH_CHUNKS) continue;
-                if (!landmarkSuits(kind, biomeAt(midX, midZ))) continue;
+                if (!landmarkStands(kind, midX, midZ)) continue;
 
                 stampLandmark(chunk, kind, midX, midZ);
             }
@@ -2819,10 +2833,9 @@ WorldGen::Hoard WorldGen::hoardAt(int x, int y, int z) const
 
         const int midX = spot.chunkX * Structures::CHUNK + Structures::CHUNK / 2;
         const int midZ = spot.chunkZ * Structures::CHUNK + Structures::CHUNK / 2;
-        if (!landmarkSuits(kind, biomeAt(midX, midZ))) continue;
+        if (!landmarkStands(kind, midX, midZ)) continue;
 
         const int ground = surfaceHeight(midX, midZ);
-        if (ground <= SEA_LEVEL) continue;
 
         ChestSpot spots[2];
         const int many = landmarkChests(kind, spots);
@@ -3280,19 +3293,28 @@ int WorldGen::endGroundAt(int worldX, int worldZ) const
     return -1;
 }
 
+// The same thing again: the search has to refuse every place the stamp
+// refuses. The main-island rule lived only in the stamp, so on one seed
+// in four the search pointed at a city on the island you arrive on,
+// where none is built.
+bool WorldGen::endCityStands(int midX, int midZ) const
+{
+    // Only on the outer islands. The main island is where you arrive
+    // and where the dragon is; Minecraft puts no city on it either.
+    const long long away = static_cast<long long>(midX) * midX +
+                           static_cast<long long>(midZ) * midZ;
+    if (away < END_CITY_VOID * END_CITY_VOID) return false;
+
+    // An island wide enough to stand a city on, not a spur of one.
+    if (endGroundAt(midX, midZ) < 0) return false;
+    return endGroundAt(midX + 8, midZ) >= 0 && endGroundAt(midX - 8, midZ) >= 0 &&
+           endGroundAt(midX, midZ + 8) >= 0 && endGroundAt(midX, midZ - 8) >= 0;
+}
+
 Structures::Spot WorldGen::nearestEndCity(int blockX, int blockZ, int squares) const
 {
     return nearestUsable(Structures::END_CITY, blockX, blockZ, m_seed, squares,
-                         [this](int x, int z)
-                         {
-                             // An island wide enough to stand a city
-                             // on, not a spur of one.
-                             if (endGroundAt(x, z) < 0) return false;
-                             return endGroundAt(x + 8, z) >= 0 &&
-                                    endGroundAt(x - 8, z) >= 0 &&
-                                    endGroundAt(x, z + 8) >= 0 &&
-                                    endGroundAt(x, z - 8) >= 0;
-                         });
+                         [this](int x, int z) { return endCityStands(x, z); });
 }
 
 void WorldGen::buildEndCities(Chunk& chunk) const
@@ -3318,17 +3340,9 @@ void WorldGen::buildEndCities(Chunk& chunk) const
             const int midX = spot.chunkX * Structures::CHUNK + Structures::CHUNK / 2;
             const int midZ = spot.chunkZ * Structures::CHUNK + Structures::CHUNK / 2;
 
-            // Only on the outer islands. The main island is where you
-            // arrive and where the dragon is; Minecraft puts no city
-            // on it either.
-            const long long away = static_cast<long long>(midX) * midX +
-                                   static_cast<long long>(midZ) * midZ;
-            if (away < 460LL * 460LL) continue;
+            if (!endCityStands(midX, midZ)) continue;
 
-            const int ground = endGroundAt(midX, midZ);
-            if (ground < 0) continue;
-
-            stampEndCity(chunk, midX, midZ, ground);
+            stampEndCity(chunk, midX, midZ, endGroundAt(midX, midZ));
         }
 }
 

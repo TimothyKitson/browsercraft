@@ -1,6 +1,8 @@
 #include "Core/Application.h"
 #include "World/WorldGen.h"
 #include "Game/VillageLoot.h"
+#include "Renderer/Atlas.h"
+#include "World/Structures.h"
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -200,6 +202,159 @@ namespace
         std::printf("iron next, then gold deep down, and diamond rarest of all and\n");
         std::printf("only below about y=16.\n");
         return 0;
+    }
+
+
+    // Which tiles the resource pack does not cover.
+    //
+    // A pack name with a typo in it is otherwise invisible: the tile
+    // quietly comes out painted, and the only way to notice is to
+    // recognise a hand-drawn block in a screenshot full of real ones.
+    int printPackCheck()
+    {
+        const std::vector<PackGap> gaps = packGaps();
+        const int total = packTileCount();
+
+        std::printf("%d tiles want a texture from the pack.\n", total);
+
+        if (gaps.empty())
+        {
+            std::printf("Every one of them resolves to a file. Nothing falls back.\n");
+            return 0;
+        }
+
+        std::printf("\n%zu fall back to a painted tile:\n", gaps.size());
+        for (const PackGap& gap : gaps)
+        {
+            std::printf("  %-18s tried", gap.what.c_str());
+            for (const std::string& name : gap.tried) std::printf(" %s.png", name.c_str());
+            std::printf("\n");
+        }
+        std::printf("\nEither the pack does not have them or the name here is wrong.\n");
+        return 1;
+    }
+
+    // Every structure in the game, where the nearest one is, and
+    // whether it actually built. One place to look rather than a dev
+    // screen each.
+    int printStructureInfo(uint32_t seed)
+    {
+        const WorldGen over(seed);
+        const WorldGen nether(seed, Dimension::Nether);
+        const WorldGen end(seed, Dimension::End);
+
+        std::printf("Structures for seed %u\n\n", seed);
+        std::printf("  %-20s %-7s %14s  %s\n", "what", "grid", "nearest", "built");
+        std::printf("  %-20s %-7s %14s  %s\n", "----", "----", "-------", "-----");
+
+        int missing = 0;
+
+        // Counts the blocks a structure is made of in the chunks round
+        // a spot, which is the only honest way to say it was built:
+        // the grid saying where one goes is not the same as one being
+        // there.
+        auto builtAt = [](const WorldGen& gen, int chunkX, int chunkZ, int reach,
+                          bool (*belongs)(BlockId)) -> int
+        {
+            int found = 0;
+            for (int cz = chunkZ - reach; cz <= chunkZ + reach; ++cz)
+                for (int cx = chunkX - reach; cx <= chunkX + reach; ++cx)
+                {
+                    Chunk chunk(ChunkPos{ cx, cz });
+                    gen.generate(chunk);
+                    for (int y = 0; y < Chunk::SY; ++y)
+                        for (int lx = 0; lx < Chunk::SX; ++lx)
+                            for (int lz = 0; lz < Chunk::SZ; ++lz)
+                                if (belongs(chunk.getBlock(lx, y, lz))) ++found;
+                }
+            return found;
+        };
+
+        auto report = [&](const char* what, const Structures::Grid& grid,
+                          const Structures::Spot& spot, int blocks)
+        {
+            char gridText[16];
+            std::snprintf(gridText, sizeof(gridText), "%d/%d", grid.spacing, grid.separation);
+
+            if (!spot.exists)
+            {
+                std::printf("  %-20s %-7s %14s  %s\n", what, gridText, "-", "NOT FOUND");
+                ++missing;
+                return;
+            }
+
+            char where[32];
+            std::snprintf(where, sizeof(where), "%d, %d",
+                          spot.chunkX * Structures::CHUNK, spot.chunkZ * Structures::CHUNK);
+            std::printf("  %-20s %-7s %14s  %s (%d blocks)\n", what, gridText, where,
+                        blocks > 8 ? "yes" : "NO BLOCKS", blocks);
+            if (blocks <= 8) ++missing;
+        };
+
+        // The overworld's landmarks, each off its own grid.
+        for (int k = 0; k < static_cast<int>(WorldGen::Landmark::Count); ++k)
+        {
+            const WorldGen::Landmark kind = static_cast<WorldGen::Landmark>(k);
+            const int squares =
+                kind == WorldGen::Landmark::WoodlandMansion ? 2 : 6;
+            const Structures::Spot spot = over.nearestLandmark(kind, 0, 0, squares);
+
+            int blocks = 0;
+            if (spot.exists)
+            {
+                const int midX = spot.chunkX * Structures::CHUNK + 8;
+                const int midZ = spot.chunkZ * Structures::CHUNK + 8;
+                if (WorldGen::landmarkSuits(kind, over.biomeAt(midX, midZ)))
+                    blocks = builtAt(over, spot.chunkX, spot.chunkZ, 1,
+                                     [](BlockId b) { return b == Blocks::Chest; });
+            }
+            report(WorldGen::landmarkName(kind), WorldGen::landmarkGrid(kind), spot, blocks * 9);
+        }
+
+        // The sea.
+        {
+            const Structures::Spot wreck = over.nearestShipwreck(0, 0, 14);
+            report("Shipwreck", Structures::SHIPWRECK, wreck,
+                   wreck.exists ? builtAt(over, wreck.chunkX, wreck.chunkZ, 1,
+                                          [](BlockId b) { return b == Blocks::Planks; }) : 0);
+
+            const Structures::Spot mon = over.nearestMonument(0, 0, 14);
+            report("Ocean monument", Structures::OCEAN_MONUMENT, mon,
+                   mon.exists ? builtAt(over, mon.chunkX, mon.chunkZ, 1,
+                                        [](BlockId b) { return b == Blocks::Prismarine ||
+                                                               b == Blocks::PrismarineBricks; }) : 0);
+        }
+
+        // The deep.
+        {
+            const Structures::Spot city = over.nearestAncientCity(0, 0, 6);
+            report("Ancient city", Structures::ANCIENT_CITY, city,
+                   city.exists ? builtAt(over, city.chunkX, city.chunkZ, 1, isDeepDark) : 0);
+        }
+
+        // The other two dimensions.
+        {
+            const Structures::Spot bast = nether.nearestBastion(0, 0, 6);
+            report("Bastion", Structures::BASTION, bast,
+                   bast.exists ? builtAt(nether, bast.chunkX, bast.chunkZ, 1, isBastionBlock) : 0);
+
+            const Structures::Spot city = end.nearestEndCity(0, 0, 40);
+            report("End city", Structures::END_CITY, city,
+                   city.exists ? builtAt(end, city.chunkX, city.chunkZ, 1, isEndCityBlock) : 0);
+        }
+
+        // Strongholds are the exception: rings rather than a grid.
+        {
+            int sx = 0, sz = 0;
+            Structures::nearestStronghold(0, 0, seed, sx, sz);
+            std::printf("  %-20s %-7s %10d, %d  %s\n", "Stronghold", "rings", sx, sz,
+                        "yes (always, by rings)");
+        }
+
+        std::printf("\n%s\n", missing == 0
+                    ? "Every structure is where its grid says and built out of what it should be."
+                    : "Some structures did not build -- see the lines above.");
+        return missing == 0 ? 0 : 1;
     }
 
     int printSeabedInfo(uint32_t seed)
@@ -431,6 +586,8 @@ int main(int argc, char** argv)
     bool worldInfo = false;
     bool selfTest = false;
     bool seabedInfo = false;
+    bool packCheck = false;
+    bool structureInfo = false;
     bool oreInfo = false;
     bool villageInfo = false;
     int scoutSeeds = 0;
@@ -481,6 +638,14 @@ int main(int argc, char** argv)
         {
             seabedInfo = true;
         }
+        else if (std::strcmp(argv[i], "--packcheck") == 0)
+        {
+            packCheck = true;
+        }
+        else if (std::strcmp(argv[i], "--structureinfo") == 0)
+        {
+            structureInfo = true;
+        }
         else if (std::strcmp(argv[i], "--oreinfo") == 0)
         {
             oreInfo = true;
@@ -529,6 +694,8 @@ int main(int argc, char** argv)
     if (selfTest) return runSelfTest();
     if (worldInfo) return printWorldInfo(hasSeed ? seed : 12345u);
     if (seabedInfo) return printSeabedInfo(hasSeed ? seed : 12345u);
+    if (packCheck) return printPackCheck();
+    if (structureInfo) return printStructureInfo(hasSeed ? seed : 12345u);
     if (oreInfo) return printOreInfo(hasSeed ? seed : 12345u);
     if (villageInfo) return printVillageInfo(hasSeed ? seed : 12345u);
     if (scoutSeeds > 0) return scoutPanoramaSeeds(scoutSeeds);

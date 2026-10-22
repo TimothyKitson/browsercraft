@@ -323,6 +323,11 @@ namespace Blocks
         GildedBlackstone,
         Basalt,
 
+        // The swamp: what floats on it and what hangs over it.
+        LilyPad,
+        Vine,
+        Mud,
+
         Count
     };
 }

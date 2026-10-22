@@ -245,6 +245,9 @@ namespace
         { "Polished Blackstone Bricks",PolishedBlackstoneTile,PolishedBlackstoneTile,PolishedBlackstoneTile,true,true,RenderType::Cube,0,2.0f },
         { "Gilded Blackstone",GildedBlackstoneTile,GildedBlackstoneTile,GildedBlackstoneTile,true,true,RenderType::Cube,0,1.5f },
         { "Basalt",       BasaltTop,     BasaltTop,      BasaltSide,     true,  true,  RenderType::Cube,   0,   1.25f },
+        { "Lily Pad",     LilyPadTile,   LilyPadTile,    LilyPadTile,    false, false, RenderType::Flat,   0,   0.0f },
+        { "Vines",        VineTile,      VineTile,       VineTile,       false, false, RenderType::Cross,  0,   0.2f },
+        { "Mud",          MudTile,       MudTile,        MudTile,        true,  true,  RenderType::Cube,   0,   0.5f },
     };
 }
 
@@ -417,6 +420,7 @@ Material blockMaterial(BlockId id)
     // through, every blade of seagrass came out as stone and wanted a
     // pickaxe. The block table's own test caught it, again.
     if (isWaterPlant(id)) return Material::Plant;
+    if (id == Blocks::LilyPad || id == Blocks::Vine) return Material::Plant;
 
     switch (id)
     {

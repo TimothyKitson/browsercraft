@@ -15,6 +15,22 @@ struct TileUV
 // Pure function -- safe to call from mesher worker threads.
 TileUV tileUV(int tileIndex);
 
+// Which tiles a pack does not supply, so they fall back to a painted
+// one. Pure filesystem work -- no GL, no window -- so --packcheck can
+// ask it without starting the game.
+//
+// This exists because a pack name with a typo in it is invisible: the
+// tile just quietly comes out painted, and the only way to notice is
+// to recognise a hand-drawn block in a screenshot full of real ones.
+struct PackGap
+{
+    std::string what;              // the tile or item, by name
+    std::vector<std::string> tried;
+};
+
+std::vector<PackGap> packGaps();
+int packTileCount();
+
 // The block texture atlas: a 16x16 grid of square tiles.
 //
 // Tiles come from a resource pack in assets/textures/block (vanilla

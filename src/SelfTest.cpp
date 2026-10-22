@@ -4857,6 +4857,97 @@ namespace
               "blackstone is the bastion's, nether brick is the fortress's");
     }
 
+    // The invariant that --structureinfo found broken on two seeds out
+    // of four: if the search says a structure is here, it is here.
+    //
+    // This is the bug class that keeps coming back. The search and the
+    // stamp each decide whether a place suits a structure, and when
+    // those are two separate tests they drift apart -- the bastion's
+    // coin flip, the ruined portal below the sea, the End city on the
+    // main island were all the same mistake. A search that points at a
+    // place nothing was built is worse than no search at all.
+    void testSearchAgreesWithStamp()
+    {
+        section("where the search points, something stands");
+
+        for (uint32_t seed : { 1u, 4242u, 99999u })
+        {
+            const WorldGen over(seed);
+            const std::string which = "seed " + std::to_string(seed);
+
+            for (int k = 0; k < static_cast<int>(WorldGen::Landmark::Count); ++k)
+            {
+                const WorldGen::Landmark kind = static_cast<WorldGen::Landmark>(k);
+                const int squares =
+                    kind == WorldGen::Landmark::WoodlandMansion ? 2 : 6;
+
+                const Structures::Spot spot = over.nearestLandmark(kind, 0, 0, squares);
+                if (!spot.exists) continue;
+
+                const int midX = spot.chunkX * Structures::CHUNK + Structures::CHUNK / 2;
+                const int midZ = spot.chunkZ * Structures::CHUNK + Structures::CHUNK / 2;
+                const std::string who =
+                    which + ", " + WorldGen::landmarkName(kind);
+
+                // The search's own test must hold at the place it
+                // points, and the stamp must agree to build there.
+                check(over.landmarkStands(kind, midX, midZ),
+                      who + ": the place it points at suits it");
+                check(over.surfaceHeight(midX, midZ) > WorldGen::SEA_LEVEL,
+                      who + ": and is out of the sea");
+
+                // And something is actually there.
+                int chests = 0;
+                for (int cz = spot.chunkZ - 1; cz <= spot.chunkZ + 1; ++cz)
+                    for (int cx = spot.chunkX - 1; cx <= spot.chunkX + 1; ++cx)
+                    {
+                        Chunk chunk(ChunkPos{ cx, cz });
+                        over.generate(chunk);
+                        for (int y = 0; y < Chunk::SY; ++y)
+                            for (int lx = 0; lx < Chunk::SX; ++lx)
+                                for (int lz = 0; lz < Chunk::SZ; ++lz)
+                                    if (chunk.getBlock(lx, y, lz) == Blocks::Chest) ++chests;
+                    }
+
+                check(chests > 0, who + ": and it was built there");
+            }
+        }
+
+        // The End city's main-island rule has to live in the search as
+        // well as the stamp, or on some seeds it points at a city on
+        // the island you arrive on, where none is built.
+        for (uint32_t seed : { 4242u, 99999u })
+        {
+            const WorldGen end(seed, Dimension::End);
+            const Structures::Spot spot = end.nearestEndCity(0, 0, 40);
+            if (!spot.exists) continue;
+
+            const int midX = spot.chunkX * Structures::CHUNK + Structures::CHUNK / 2;
+            const int midZ = spot.chunkZ * Structures::CHUNK + Structures::CHUNK / 2;
+
+            check(end.endCityStands(midX, midZ),
+                  "seed " + std::to_string(seed) +
+                      ": the End city search points somewhere one stands");
+
+            const long long away = static_cast<long long>(midX) * midX +
+                                   static_cast<long long>(midZ) * midZ;
+            check(away >= WorldGen::END_CITY_VOID * WorldGen::END_CITY_VOID,
+                  "and out past the island you arrive on");
+        }
+
+        // Same for the bastion, whose coin flip was in two places.
+        for (uint32_t seed : { 4242u, 99999u })
+        {
+            const WorldGen nether(seed, Dimension::Nether);
+            const Structures::Spot spot = nether.nearestBastion(0, 0, 6);
+            if (!spot.exists) continue;
+
+            check(nether.bastionWins(spot.chunkX, spot.chunkZ),
+                  "seed " + std::to_string(seed) +
+                      ": the bastion search points at a square that drew a bastion");
+        }
+    }
+
     void testFortressAndMineshaft()
     {
         section("the fortress and the mineshaft");
@@ -8552,6 +8643,7 @@ int runSelfTest()
     testDesertWell();
     testAncientCity();
     testOtherDimensionStructures();
+    testSearchAgreesWithStamp();
     testCaves();
     testCopper();
     testPistons();
