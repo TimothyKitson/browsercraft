@@ -11,7 +11,7 @@
 // what the timer should count to.
 namespace Tools
 {
-    enum class Kind { None, Pickaxe, Axe, Shovel, Sword, Hoe, Mace };
+    enum class Kind { None, Pickaxe, Axe, Shovel, Sword, Hoe, Mace, Trident };
 
     // In Minecraft's order, which is also the order of their harvest
     // levels apart from gold -- gold is fast and fragile and mines no

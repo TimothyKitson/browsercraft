@@ -629,6 +629,8 @@ namespace
                 byHand = "laid by a chicken every few minutes";
             else if (i == static_cast<int>(Items::MilkBucket))
                 byHand = "a bucket used on a cow";
+            else if (i == static_cast<int>(Items::Trident))
+                byHand = "carried by a drowned about one time in eight";
 
             if (byHand)
             {
@@ -649,6 +651,7 @@ namespace
         // got by doing rather than by a table is not a dead recipe.
         haveItem.insert(static_cast<int>(Items::Egg));
         haveItem.insert(static_cast<int>(Items::MilkBucket));
+        haveItem.insert(static_cast<int>(Items::Trident));
         haveItem.insert(static_cast<int>(Items::WaterBucket));
         haveItem.insert(static_cast<int>(Items::LavaBucket));
 

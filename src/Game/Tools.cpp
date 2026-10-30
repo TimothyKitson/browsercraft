@@ -63,6 +63,7 @@ Tools::Kind Tools::kindOf(StackId id)
     // The mace is not one of the five that come in tiers, so it is
     // named here rather than worked out from where it sits.
     if (id == Items::Mace) return Kind::Mace;
+    if (id == Items::Trident) return Kind::Trident;
 
     if (!inToolRange(id)) return Kind::None;
     const int offset = (id - Items::WoodPickaxe) % KINDS_PER_TIER;
@@ -170,6 +171,10 @@ int Tools::attackDamage(StackId tool)
         case Kind::Shovel:  return std::max(1, sword - 3);
         case Kind::Hoe:     return 1;
         case Kind::Mace:    return 7;
+        // Minecraft's, and the hardest swing in the game short of a
+        // mace coming down off a fall. Thrown there, held here: the
+        // projectiles in this engine cannot drop what threw them.
+        case Kind::Trident: return 9;
         default:            return 1;
     }
 }

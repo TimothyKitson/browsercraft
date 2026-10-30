@@ -196,6 +196,10 @@ public:
 
     static constexpr int END_CITY_TALL = 26;
 
+    // Half the tower's footprint. The top storey hangs one block out
+    // past this, so anything asking "am I at the city" wants one more.
+    static constexpr int END_CITY_HALF = 5;
+
     // How far out the outer islands start. A city inside this is on
     // the island you arrive on, where Minecraft puts none either.
     static constexpr long long END_CITY_VOID = 460;

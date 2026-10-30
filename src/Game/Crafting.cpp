@@ -260,6 +260,11 @@ namespace
                          Blocks::Air,    Items::Stick,   Blocks::Air },
           0, Items::Sign, 3 },
 
+        // Two shells round a chest, which is Minecraft's.
+        { false, 1, 3, { Items::ShulkerShell,
+                         Blocks::Chest,
+                         Items::ShulkerShell }, 0, Blocks::ShulkerBox, 1 },
+
         // Sticks round a hide, which is Minecraft's. A frame is the
         // other way to label a room: a sign says what is in the chest
         // and a frame shows it.

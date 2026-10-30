@@ -363,6 +363,8 @@ namespace
         { "Item Frame",   ItemFrameTile, ItemFrameTile,  ItemFrameTile,  false, false, RenderType::Ladder, 0,   0.3f },
         { "Item Frame",   ItemFrameTile, ItemFrameTile,  ItemFrameTile,  false, false, RenderType::Ladder, 0,   0.3f },
         { "Item Frame",   ItemFrameTile, ItemFrameTile,  ItemFrameTile,  false, false, RenderType::Ladder, 0,   0.3f },
+
+        { "Shulker Box",  ShulkerBoxTile,ShulkerBoxTile, ShulkerBoxTile, true,  true,  RenderType::Cube,   0,   2.0f },
     };
 }
 

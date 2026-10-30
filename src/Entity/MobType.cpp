@@ -257,6 +257,87 @@ namespace
             t.model.push_back(mirrored(mc(Part::LegBackLeft, 0, 16, 4, 12, 4, -2, 0, -2, 2, 12, 0)));
         }
         {
+            // A shell bolted to a wall. It does not walk, it does not
+            // chase, and it shoots at whatever comes into the room --
+            // which is what makes an End city a place you clear rather
+            // than a place you walk through.
+            MobType& t = table[static_cast<size_t>(MobId::Shulker)];
+            t.id = MobId::Shulker;
+            t.experience = 5;
+            t.voice = Sound::MobShulkerSay;
+            t.hurtVoice = Sound::MobShulkerHurt;
+            t.deathVoice = Sound::MobShulkerDeath;
+            t.name = "Shulker";
+            t.texture = "shulker";
+            t.sheetWidth = 64;
+            t.sheetHeight = 64;
+            t.dimension = Dimension::End;
+            t.spawnClass = SpawnClass::Hostile;
+            t.maxHealth = 30;
+            t.width = 0.9f;
+            t.height = 0.9f;
+            t.walkSpeed = 0.0f;
+            t.stationary = true;
+            t.limbSwing = 0.0f;
+
+            // Its bullet. Slow, and it comes at you across a room
+            // rather than down a corridor.
+            t.shootsFire = true;
+            t.arrowDamage = 4;
+            t.arrowRange = 16.0f;
+            t.arrowInterval = 2.4f;
+
+            t.drop = Items::ShulkerShell;
+            t.dropCount = 1;
+
+            t.bodyColour = rgb(150, 110, 150);
+            t.headColour = rgb(214, 190, 214);
+            t.eyeColour = rgb(60, 40, 64);
+
+            // A box with a lid on it. The lid is filed as the head so
+            // it turns towards whatever the thing is looking at.
+            t.width = 1.0f;
+            t.height = 1.0f;
+            t.model.push_back(mc(Part::Body, 0, 28, 16, 8, 16, -8, 16, -8, 0, 0, 0));
+            t.model.push_back(mc(Part::Head, 0, 0, 16, 8, 16, -8, -8, -8, 0, 16, 0));
+        }
+        {
+            // A zombie that went into the water and did not come out.
+            // Everything about it is the zombie's but the colour and
+            // what it is carrying.
+            MobType& t = table[static_cast<size_t>(MobId::Drowned)];
+            t.id = MobId::Drowned;
+            t.experience = 5;
+            t.voice = Sound::MobDrownedSay;
+            t.hurtVoice = Sound::MobDrownedHurt;
+            t.deathVoice = Sound::MobDrownedDeath;
+            t.name = "Drowned";
+            t.texture = "drowned";
+            t.sheetHeight = 64;
+            t.spawnClass = SpawnClass::Hostile;
+            t.maxHealth = 20;
+            t.width = 0.6f;
+            t.height = 1.95f;
+            t.walkSpeed = 1.7f;
+            t.attackDamage = 3;
+
+            // It does not burn: it is standing in water, and a mob
+            // that caught fire in the sea would be the one thing in
+            // the game nobody could take seriously.
+            t.burnsInSunlight = false;
+
+            t.bodyColour = rgb(44, 96, 104);
+            t.headColour = rgb(62, 128, 118);
+            t.eyeColour = rgb(140, 200, 190);
+
+            t.model.push_back(mc(Part::Head, 0, 0, 8, 8, 8, -4, -8, -4, 0, 0, 0));
+            t.model.push_back(mc(Part::Body, 16, 16, 8, 12, 4, -4, 0, -2, 0, 0, 0));
+            t.model.push_back(mc(Part::LegFrontRight, 40, 16, 4, 12, 4, -3, -2, -2, -5, 2, 0));
+            t.model.push_back(mirrored(mc(Part::LegFrontLeft, 40, 16, 4, 12, 4, -1, -2, -2, 5, 2, 0)));
+            t.model.push_back(mc(Part::LegBackRight, 0, 16, 4, 12, 4, -2, 0, -2, -2, 12, 0));
+            t.model.push_back(mirrored(mc(Part::LegBackLeft, 0, 16, 4, 12, 4, -2, 0, -2, 2, 12, 0)));
+        }
+        {
             MobType& t = table[static_cast<size_t>(MobId::Skeleton)];
             t.id = MobId::Skeleton;
             t.experience = 5;

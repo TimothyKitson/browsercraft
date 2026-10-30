@@ -254,6 +254,7 @@ namespace Tiles
         ScaffoldTop, ScaffoldSide, ScaffoldBottom,
         SignTile,
         ItemFrameTile,
+        ShulkerBoxTile,
 
         RainDrop,
         SnowFlake,
@@ -396,8 +397,11 @@ namespace Tiles
         ItemCocoaBeans,
         ItemSign,
         ItemItemFrame,
+        ItemElytra,
+        ItemShulkerShell,
+        ItemTrident,
 
-        ItemTileEnd = ItemItemFrame + 1
+        ItemTileEnd = ItemTrident + 1
     };
 
     // Ten progressively more broken overlay tiles for the mining animation.

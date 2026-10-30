@@ -142,6 +142,9 @@ namespace
         { "Cocoa Beans",     Tiles::ItemCocoaBeans,    64 },
         { "Sign",            Tiles::ItemSign,          16 },
         { "Item Frame",      Tiles::ItemItemFrame,     64 },
+        { "Elytra",          Tiles::ItemElytra,         1 },
+        { "Shulker Shell",   Tiles::ItemShulkerShell,  64 },
+        { "Trident",         Tiles::ItemTrident,        1 },
         { "Nether Star",     Tiles::ItemNetherStar,     1 },
     };
 

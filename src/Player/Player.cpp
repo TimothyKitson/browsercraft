@@ -1,4 +1,5 @@
 #include "Player.h"
+#include "Game/Glide.h"
 #include "Game/Experience.h"
 #include "Game/Enchanting.h"
 #include "Game/Armour.h"
@@ -532,6 +533,21 @@ void Player::update(float deltaTime, const World& world, const Controls& control
     sprinting = controls.sprint && !sneaking && glm::length(controls.wishDirection) > 0.1f &&
                 (creative() || hunger > SPRINT_HUNGER);
 
+    // Wings. The rules and the flying are both Glide's, so a descent
+    // can be flown in a test without a world to fly it over.
+    {
+        Glide::Conditions wings;
+        wings.wearingElytra = controls.wearingElytra;
+        wings.onGround = onGround;
+        wings.inWater = inWater;
+        wings.climbing = climbing;
+        wings.flying = flying;
+        wings.jumpPressed = controls.jump;
+        wings.alreadyGliding = gliding;
+        wings.velocityY = velocity.y;
+        gliding = Glide::holds(wings);
+    }
+
     // --- choose a target horizontal velocity ---
     float targetSpeed;
     if (flying) targetSpeed = controls.sprint ? FLY_SPRINT_SPEED : FLY_SPEED;
@@ -556,12 +572,32 @@ void Player::update(float deltaTime, const World& world, const Controls& control
     else if (onGround) acceleration = GROUND_ACCELERATION;
     else acceleration = AIR_ACCELERATION;
 
-    const float blend = std::clamp(acceleration * deltaTime, 0.0f, 1.0f);
-    velocity.x += (targetVelocity.x - velocity.x) * blend;
-    velocity.z += (targetVelocity.z - velocity.z) * blend;
+    // A glide steers itself off where you are looking; the walking
+    // keys do nothing to it. Done before the blend below so the
+    // ordinary air control does not fight it.
+    if (gliding)
+    {
+        velocity = Glide::step(velocity, controls.look, deltaTime);
+
+        // A glide is not a fall. Landing out of one hurts only as far
+        // as you drop after it ends.
+        m_falling = false;
+        m_fallStartY = position.y;
+    }
+    else
+    {
+        const float blend = std::clamp(acceleration * deltaTime, 0.0f, 1.0f);
+        velocity.x += (targetVelocity.x - velocity.x) * blend;
+        velocity.z += (targetVelocity.z - velocity.z) * blend;
+    }
 
     // --- vertical motion ---
-    if (flying)
+    if (gliding)
+    {
+        // Already done above: a glide owns its own vertical motion.
+        onGround = false;
+    }
+    else if (flying)
     {
         float verticalTarget = 0.0f;
         if (controls.jumpHeld) verticalTarget += targetSpeed;

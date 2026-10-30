@@ -29,6 +29,11 @@ namespace
 
 Armour::Piece Armour::pieceOf(StackId id)
 {
+    // The elytra is worn where a chestplate goes and is not one: it
+    // stops nothing, it is not made of anything, and it is the only
+    // thing in the armour slots that is not armour.
+    if (id == Items::Elytra) return Piece::Chestplate;
+
     if (!inArmourRange(id)) return Piece::None;
     const int offset = (id - Items::LeatherHelmet) % PIECES_PER_TIER;
     return static_cast<Piece>(offset + 1);
@@ -58,6 +63,10 @@ int Armour::defencePoints(StackId id)
 
 int Armour::maxDurability(StackId id)
 {
+    // Minecraft's: four hundred and thirty-two seconds of flight, and
+    // it wears while gliding rather than while being hit.
+    if (id == Items::Elytra) return 432;
+
     if (!inArmourRange(id)) return 0;
     const int tier = static_cast<int>(tierOf(id)) - 1;
     const int piece = static_cast<int>(pieceOf(id)) - 1;

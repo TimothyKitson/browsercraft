@@ -27,6 +27,7 @@
 #include "Game/Tools.h"
 #include "Game/Smelting.h"
 #include "Game/Composting.h"
+#include "Game/Glide.h"
 #include "World/Signs.h"
 #include "World/Frames.h"
 #include "World/WallFacing.h"
@@ -543,7 +544,12 @@ namespace
             check(type.name && *type.name, "species " + std::to_string(i) + " is named");
             check(type.maxHealth > 0, who + " can be killed");
             check(type.width > 0.0f && type.height > 0.0f, who + " has a collision box");
-            check(type.walkSpeed > 0.0f, who + " can walk");
+            // Everything walks but the one thing that is bolted down.
+            if (type.stationary)
+                check(type.walkSpeed == 0.0f,
+                      who + " is bolted where it stands, so it has no walk speed");
+            else
+                check(type.walkSpeed > 0.0f, who + " can walk");
             check(!type.model.empty(), who + " has a model");
 
             float bottom = 0.0f, top = 0.0f;
@@ -3686,6 +3692,139 @@ namespace
         check(Mob::EGG_SECONDS > 0.0f, "a chicken lays on a clock");
     }
 
+    // --- the End's leftovers --------------------------------------------
+
+    // The wings, the shulker, the drowned and what it carries.
+    void testTheEndAndTheSea()
+    {
+        section("the elytra");
+
+        // What turns a glide on and off. Everything here is a way of
+        // being in the air with a working pair of wings on.
+        Glide::Conditions wings;
+        wings.wearingElytra = true;
+        wings.jumpPressed = true;
+        check(Glide::holds(wings), "jumping in the air with wings on starts a glide");
+
+        wings.onGround = true;
+        check(!Glide::holds(wings), "the ground ends one");
+        wings.onGround = false;
+        wings.inWater = true;
+        check(!Glide::holds(wings), "so does water");
+        wings.inWater = false;
+        wings.climbing = true;
+        check(!Glide::holds(wings), "and a ladder");
+        wings.climbing = false;
+        wings.flying = true;
+        check(!Glide::holds(wings), "and creative flight, which is already flying");
+        wings.flying = false;
+
+        wings.wearingElytra = false;
+        wings.alreadyGliding = true;
+        check(!Glide::holds(wings), "taking the wings off drops you out of one");
+        wings.wearingElytra = true;
+        check(Glide::holds(wings), "and a glide once started needs no more jumping");
+
+        // Jumping off the ground must not turn the hop into a flight.
+        wings.alreadyGliding = false;
+        wings.velocityY = 6.0f;
+        check(!Glide::holds(wings), "a glide does not start on the way up");
+
+        // Flying it. Level, a glide loses height slowly and keeps its
+        // speed; diving trades height for speed; climbing trades back.
+        const glm::vec3 level(0.0f, 0.0f, -1.0f);
+        const glm::vec3 dive = glm::normalize(glm::vec3(0.0f, -0.8f, -0.6f));
+        const glm::vec3 climb = glm::normalize(glm::vec3(0.0f, 0.8f, -0.6f));
+
+        auto speedOf = [](const glm::vec3& v) {
+            return glm::length(glm::vec2(v.x, v.z));
+        };
+
+        glm::vec3 flat(0.0f, 0.0f, -10.0f);
+        for (int i = 0; i < 20; ++i) flat = Glide::step(flat, level, 0.05f);
+        check(flat.y < 0.0f, "a level glide still loses height");
+        check(flat.y >= Glide::TERMINAL, "but never faster than it may");
+
+        glm::vec3 diving(0.0f, 0.0f, -10.0f);
+        for (int i = 0; i < 20; ++i) diving = Glide::step(diving, dive, 0.05f);
+        check(speedOf(diving) > 10.0f, "a dive builds speed");
+        check(diving.y < flat.y, "and loses height faster than a level glide");
+
+        glm::vec3 climbing(0.0f, 0.0f, -20.0f);
+        const float before = speedOf(climbing);
+        for (int i = 0; i < 20; ++i) climbing = Glide::step(climbing, climb, 0.05f);
+        check(speedOf(climbing) < before, "a climb spends the speed it was carrying");
+        check(climbing.y > flat.y, "and buys height with it");
+
+        // Neither end runs away: a glide cannot stall to nothing and
+        // cannot build speed for ever.
+        glm::vec3 fast(0.0f, 0.0f, -10.0f);
+        for (int i = 0; i < 2000; ++i) fast = Glide::step(fast, dive, 0.05f);
+        check(speedOf(fast) <= Glide::MAX_SPEED + 0.01f, "a dive has a top speed");
+
+        glm::vec3 slow(0.0f, 0.0f, -10.0f);
+        for (int i = 0; i < 2000; ++i) slow = Glide::step(slow, climb, 0.05f);
+        check(speedOf(slow) >= Glide::MIN_SPEED - 0.01f, "and a climb cannot stall it");
+
+        // Looking somewhere is going somewhere: a glide steers itself.
+        glm::vec3 turning(0.0f, 0.0f, -10.0f);
+        for (int i = 0; i < 40; ++i)
+            turning = Glide::step(turning, glm::vec3(1.0f, 0.0f, 0.0f), 0.05f);
+        check(turning.x > 0.0f, "turning the head turns the glide");
+        check(std::fabs(turning.z) < 0.01f, "all the way round");
+
+        // The wings go where a chestplate goes and are not armour.
+        check(Armour::pieceOf(Items::Elytra) == Armour::Piece::Chestplate,
+              "the wings are worn where a chestplate is");
+        check(Armour::defencePoints(Items::Elytra) == 0, "and stop nothing");
+        check(Armour::maxDurability(Items::Elytra) > 0, "but they wear out");
+        check(Armour::slotFor(Items::Elytra) ==
+                  Armour::slotFor(Items::DiamondChestplate),
+              "and they share the chestplate's slot");
+
+        // They come out of an End city, which is the only reason to
+        // cross the End to find one.
+        bool found = false;
+        for (int n = 0; n < 40 && !found; ++n)
+            for (const StructureLoot::Stack& stack : StructureLoot::rollFor(
+                     WorldGen::Hoard::EndCity, n * 7, 50, n * 11, 4242u))
+                if (stack.id == Items::Elytra) found = true;
+        check(found, "and an End city is where they are");
+
+        section("the shulker and the drowned");
+
+        const MobType& shulker = mobType(MobId::Shulker);
+        check(shulker.stationary, "a shulker is bolted where it stands");
+        check(shulker.walkSpeed == 0.0f, "so it has no walk speed");
+        check(shulker.dimension == Dimension::End, "it belongs to the End");
+        check(shulker.arrowDamage > 0, "and it fights at a distance");
+        check(shulker.attackDamage == 0, "rather than with its hands");
+        check(shulker.drop == Items::ShulkerShell, "it leaves a shell");
+
+        const MobType& drowned = mobType(MobId::Drowned);
+        check(drowned.dimension == Dimension::Overworld, "a drowned belongs here");
+        check(drowned.attackDamage > 0, "and fights with its hands");
+        check(!drowned.burnsInSunlight,
+              "it does not burn: it is standing in the sea");
+        check(drowned.walkSpeed > 0.0f, "and it walks, unlike the shulker");
+
+        // The trident is the hardest swing in the game short of a
+        // mace at the end of a fall.
+        check(Tools::attackDamage(Items::Trident) >
+                  Tools::attackDamage(Items::DiamondSword),
+              "a trident hits harder than a diamond sword");
+        check(Tools::kindOf(Items::Trident) == Tools::Kind::Trident,
+              "and it is its own kind of weapon");
+
+        // Two shells round a chest, and the box is a box.
+        check(isContainerBlock(Blocks::ShulkerBox), "a shulker box holds things");
+        check(isObtainable(Blocks::ShulkerBox), "and is a block you can hold");
+        const std::vector<StackId> made = Crafting::everyOutput();
+        check(std::find(made.begin(), made.end(),
+                        static_cast<StackId>(Blocks::ShulkerBox)) != made.end(),
+              "and the shells make one");
+    }
+
     // --- pathfinding ----------------------------------------------------
 
     // A map drawn as text, one row per line of z. '.' is floor, '#' is
@@ -5788,6 +5927,10 @@ namespace
                 case MobId::MagmaCube: case MobId::Blaze:
                 case MobId::Breeze:
                 case MobId::Guardian: case MobId::Warden: case MobId::Witch:
+                // The shulker belongs to an End city and the drowned
+                // to the sea, and both are put down by hand where
+                // they belong rather than by the night spawner.
+                case MobId::Shulker: case MobId::Drowned:
                 case MobId::EnderDragon:
                 case MobId::Wither:
                     meetable = true;
@@ -10341,6 +10484,7 @@ int runSelfTest()
     testWorkstations();
     testMelonAndBamboo();
     testMadeThings();
+    testTheEndAndTheSea();
     testPathfinding();
     testChatCommands();
     testCrackStages();

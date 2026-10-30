@@ -98,6 +98,12 @@ enum class Sound : uint8_t
     MobBreezeSay,
     MobBreezeHurt,
     MobBreezeDeath,
+    MobShulkerSay,
+    MobShulkerHurt,
+    MobShulkerDeath,
+    MobDrownedSay,
+    MobDrownedHurt,
+    MobDrownedDeath,
     Rain,
     Thunder,
 

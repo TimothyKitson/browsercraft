@@ -464,6 +464,11 @@ namespace Blocks
         // same as a sign's words.
         FrameNorth, FrameEast, FrameSouth, FrameWest,
 
+        // Two shells round a chest. Minecraft's keeps what is in it
+        // when you pick it up; this one spills it like any other box,
+        // because a stack here has nowhere to carry a chest inside it.
+        ShulkerBox,
+
         Count
     };
 }
@@ -645,7 +650,7 @@ inline bool isDeepDark(BlockId id)
 // reason to build one.
 inline bool isContainerBlock(BlockId id)
 {
-    return id == Blocks::Chest || id == Blocks::Barrel;
+    return id == Blocks::Chest || id == Blocks::Barrel || id == Blocks::ShulkerBox;
 }
 
 inline bool isGeode(BlockId id)

@@ -31,6 +31,11 @@ public:
         bool sprint = false;
         bool sneak = false;
         bool descend = false;            // flying only
+
+        // Where the camera is pointing, for the one thing that cares:
+        // a glide goes where you look rather than where you walk.
+        glm::vec3 look{ 0.0f, 0.0f, -1.0f };
+        bool wearingElytra = false;
     };
 
     explicit Player(glm::vec3 feetPosition);
@@ -133,6 +138,11 @@ public:
     // a blow, which is where it actually stops anything.
     bool blocking = false;
     bool flying = false;
+
+    // In the air on a pair of wings. Minecraft's glide, cut to what a
+    // player can feel: you fall slowly, you go where you are looking,
+    // and pointing the nose down trades height for speed.
+    bool gliding = false;
     bool sprinting = false;
     bool sneaking = false;
     GameMode mode = GameMode::Survival;

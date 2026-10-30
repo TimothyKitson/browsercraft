@@ -207,6 +207,20 @@ namespace Items
         // is in the chest under it.
         ItemFrame,
 
+        // Worn where a chestplate goes and stops nothing. What it does
+        // is turn a fall into a flight, which is the only thing in the
+        // game that changes how you get anywhere.
+        Elytra,
+
+        // Off a shulker. Two of them round a chest make a box that
+        // can be carried.
+        ShulkerShell,
+
+        // Off a drowned, now and then. The hardest swing in the game
+        // short of a mace at the end of a fall. Minecraft throws it
+        // as well; nothing here can throw a thing and get it back.
+        Trident,
+
         // What a wither leaves. One of them makes a beacon, which is
         // the only thing in the game it is for.
         NetherStar,

@@ -2818,6 +2818,92 @@ namespace
             }
     }
 
+    void paintItemElytra(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        // Two folded wings, pale and veined, which is what Minecraft's
+        // look like in a slot.
+        for (int y = 2; y < 14; ++y)
+        {
+            const int wide = 1 + (y - 2) / 3;
+            for (int o = 0; o <= wide; ++o)
+            {
+                const Color shade = (o == wide) ? Color{ 128, 118, 128 }
+                                                : Color{ 196, 186, 196 };
+                t.set(6 - o, y, shade);
+                t.set(9 + o, y, shade);
+            }
+        }
+        for (int y = 3; y < 13; y += 3)
+        {
+            t.set(5, y, Color{ 104, 96, 108 });
+            t.set(10, y, Color{ 104, 96, 108 });
+        }
+        for (int y = 2; y < 14; ++y)
+        {
+            t.set(7, y, Color{ 92, 86, 96 });
+            t.set(8, y, Color{ 92, 86, 96 });
+        }
+    }
+
+    void paintShulkerBox(Tile& t)
+    {
+        t.fill(Color{ 148, 112, 158 });
+        // The lid, and the seam round the middle where it opens.
+        for (int y = 0; y < 6; ++y)
+            for (int x = 0; x < Tile::N; ++x)
+                t.set(x, y, Color{ 186, 152, 196 });
+        for (int x = 0; x < Tile::N; ++x)
+        {
+            t.set(x, 6, Color{ 96, 68, 108 });
+            t.set(x, 7, Color{ 118, 88, 130 });
+        }
+        for (int k = 0; k < Tile::N; ++k)
+        {
+            t.set(0, k, Color{ 108, 78, 118 });
+            t.set(Tile::N - 1, k, Color{ 108, 78, 118 });
+        }
+        t.speckle(5, 645);
+    }
+
+    void paintItemShulkerShell(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        // A domed shell, pale purple, with the ridges across it.
+        for (int y = 4; y < 14; ++y)
+            for (int x = 3; x < 13; ++x)
+            {
+                const float dx = (x - 7.5f) / 4.6f;
+                const float dy = (y - 13.0f) / 9.0f;
+                if (dx * dx + dy * dy > 1.0f) continue;
+                t.set(x, y, (dx + dy < -0.5f) ? Color{ 226, 206, 230 }
+                                              : Color{ 184, 156, 196 });
+            }
+        for (int y = 6; y < 14; y += 3)
+            for (int x = 4; x < 12; ++x)
+                if (t.get(x, y).a > 0) t.set(x, y, Color{ 142, 112, 156 });
+        t.speckle(4, 641);
+    }
+
+    void paintItemTrident(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        // A shaft up the diagonal with three prongs at the top of it.
+        for (int i = 0; i < 12; ++i)
+            t.set(3 + i, 13 - i, Color{ 86, 118, 120 });
+        for (int i = 0; i < 12; ++i)
+            t.set(4 + i, 13 - i, Color{ 58, 86, 92 });
+
+        const int tipX = 12, tipY = 3;
+        for (int k = 0; k < 4; ++k)
+        {
+            t.set(tipX - 3 + k, tipY + 3 - k, Color{ 162, 200, 200 });
+            t.set(tipX, tipY - 1 + k, Color{ 162, 200, 200 });
+            t.set(tipX + 2, tipY + 1 + k, Color{ 162, 200, 200 });
+        }
+        for (int x = tipX - 3; x <= tipX + 2; ++x) t.set(x, tipY + 4, Color{ 110, 150, 152 });
+    }
+
     void paintItemSign(Tile& t)
     {
         t.fill(Color{ 0, 0, 0, 0 });
@@ -5733,6 +5819,10 @@ namespace
         { Tiles::ItemSign, paintItemSign },
         { Tiles::ItemFrameTile, paintItemFrameBorder },
         { Tiles::ItemItemFrame, paintItemFrameBorder },
+        { Tiles::ItemElytra, paintItemElytra },
+        { Tiles::ShulkerBoxTile, paintShulkerBox },
+        { Tiles::ItemShulkerShell, paintItemShulkerShell },
+        { Tiles::ItemTrident, paintItemTrident },
         { Tiles::ItemBowl, paintItemBowl },
         { Tiles::ItemBeetroot, paintItemBeetroot },
         { Tiles::ItemBeetrootSeeds, paintItemBeetrootSeeds },
@@ -6023,6 +6113,9 @@ namespace
         { Tiles::ItemCocoaBeans, { "cocoa_beans", nullptr, nullptr } },
         { Tiles::ItemSign, { "oak_sign", nullptr, nullptr } },
         { Tiles::ItemItemFrame, { "item_frame", nullptr, nullptr } },
+        { Tiles::ItemElytra, { "elytra", nullptr, nullptr } },
+        { Tiles::ItemShulkerShell, { "shulker_shell", nullptr, nullptr } },
+        { Tiles::ItemTrident, { "trident", nullptr, nullptr } },
     };
 
     const PackTile PACK_TILES[] = {
@@ -6263,6 +6356,7 @@ namespace
         // planks are what it is made of, and the words go over it.
         { Tiles::SignTile,      { "oak_planks", "planks_oak", nullptr },               Tinting::None,    0,   false },
         { Tiles::ItemFrameTile, { "item_frame", nullptr },                             Tinting::None,    0,   false },
+        { Tiles::ShulkerBoxTile,{ "shulker_box", nullptr },                            Tinting::None,    0,   false },
         { Tiles::PistonTop,     { "piston_side", nullptr },                            Tinting::None,    0,   false },
         { Tiles::PistonSide,    { "piston_side", nullptr },                            Tinting::None,    0,   false },
         { Tiles::PistonFace,    { "piston_top", "piston_top_normal", nullptr },         Tinting::None,    0,   false },

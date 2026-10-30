@@ -33,6 +33,15 @@ enum class MobId : uint8_t
     Witch,
     EnderDragon,
     Wither,
+
+    // A box with a shell on it, bolted to an End city and shooting at
+    // whatever comes near. The only mob in the game that never moves.
+    Shulker,
+
+    // A zombie that drowned, and the one thing in the sea that fights
+    // back outside a monument.
+    Drowned,
+
     Count
 };
 
@@ -102,6 +111,13 @@ struct MobType
     float width = 0.9f;         // collision box
     float height = 1.3f;
     float walkSpeed = 2.3f;     // blocks per second
+
+    // Bolted where it stands. A shulker is the only one: it does not
+    // walk, it does not chase, and asking it to is the difference
+    // between a turret and a monster. Named rather than inferred from
+    // a zero walk speed, so a species that is simply missing one is
+    // still caught.
+    bool stationary = false;
     float limbSwing = 1.0f;     // how far its legs reach at a full run
 
     // Half a heart each. Zero for anything that does not fight back.

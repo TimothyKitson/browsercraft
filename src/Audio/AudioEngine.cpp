@@ -301,6 +301,10 @@ void AudioEngine::buildSounds()
                  Sound::MobWitherDeath, "mob/wither");
     loadMobVoice(Sound::MobWardenSay, Sound::MobWardenHurt,
                  Sound::MobWardenDeath, "mob/warden");
+    loadMobVoice(Sound::MobShulkerSay, Sound::MobShulkerHurt,
+                 Sound::MobShulkerDeath, "mob/shulker");
+    loadMobVoice(Sound::MobDrownedSay, Sound::MobDrownedHurt,
+                 Sound::MobDrownedDeath, "mob/drowned");
     loadVariants(Sound::Rain, "weather/rain", 1);
     loadVariants(Sound::Thunder, "weather/thunder", 1);
 
@@ -889,6 +893,48 @@ void AudioEngine::buildSounds()
         s.addTone(1.50f, 35.0f, 14.0f, 1.6f, 0.52f, true);
         s.addNoise(0.80f, 260.0f, 3.0f, 0.18f, true, 873);
         s.finish(0.88f);
+    }
+
+    // The shulker: a shell opening and shutting. Mostly a hard knock
+    // with a short ring after it, which is a box rather than a voice.
+    {
+        Synth s = make(Sound::MobShulkerSay);
+        s.addNoise(0.14f, 1800.0f, 22.0f, 0.34f, false, 881);
+        s.addTone(0.30f, 420.0f, 300.0f, 7.0f, 0.42f, true);
+        s.finish(0.58f);
+    }
+    {
+        Synth s = make(Sound::MobShulkerHurt);
+        s.addNoise(0.18f, 2600.0f, 18.0f, 0.40f, false, 882);
+        s.addTone(0.22f, 620.0f, 280.0f, 12.0f, 0.44f, true);
+        s.finish(0.62f);
+    }
+    {
+        Synth s = make(Sound::MobShulkerDeath);
+        s.addNoise(0.40f, 1400.0f, 6.0f, 0.36f, true, 883);
+        s.addTone(0.50f, 340.0f, 120.0f, 4.0f, 0.46f, true);
+        s.finish(0.66f);
+    }
+
+    // The drowned: the zombie's groan with the water over it, which
+    // is the same shape bent lower and run through a dull filter.
+    {
+        Synth s = make(Sound::MobDrownedSay);
+        s.addTone(0.60f, 128.0f, 86.0f, 2.6f, 0.56f, true);
+        s.addNoise(0.60f, 380.0f, 2.8f, 0.22f, true, 891);
+        s.finish(0.58f);
+    }
+    {
+        Synth s = make(Sound::MobDrownedHurt);
+        s.addTone(0.28f, 190.0f, 96.0f, 11.0f, 0.64f, true);
+        s.addNoise(0.26f, 640.0f, 13.0f, 0.26f, false, 892);
+        s.finish(0.66f);
+    }
+    {
+        Synth s = make(Sound::MobDrownedDeath);
+        s.addTone(0.85f, 140.0f, 50.0f, 3.2f, 0.58f, true);
+        s.addNoise(0.85f, 320.0f, 3.4f, 0.24f, true, 893);
+        s.finish(0.64f);
     }
 
     // The breeze: wind, which is noise with no tone under it and a

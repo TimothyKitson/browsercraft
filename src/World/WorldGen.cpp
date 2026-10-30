@@ -3610,7 +3610,7 @@ void WorldGen::buildEndCities(Chunk& chunk) const
 
 void WorldGen::stampEndCity(Chunk& chunk, int midX, int midZ, int ground) const
 {
-    constexpr int HALF = 5;
+    constexpr int HALF = END_CITY_HALF;
     constexpr int TALL = END_CITY_TALL;
     constexpr int STOREY = 7;
 

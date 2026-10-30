@@ -129,7 +129,11 @@ public:
     void setBuildTest() { m_buildTest = true; }
     // Dev aid: line one of every species up in front of the spawn point,
     // so a screenshot shows all eight without waiting for the spawner.
-    void setMobTest() { m_mobTest = true; m_startImmediately = true; }
+    // The line-up is for looking at hides, so nothing in it moves:
+    // frozen, every one of them is still there when the shutter goes,
+    // and the shulker -- which shoots from sixteen blocks -- does not
+    // kill the photographer before the shot is taken.
+    void setMobTest() { m_mobTest = true; m_startImmediately = true; m_freezeMobs = true; }
     // Dev aid: sow a field of wheat at every stage of growth in front
     // of the player, so a screenshot shows the whole crop at once.
     void setFarmTest() { m_farmTest = true; m_startImmediately = true; }
@@ -238,6 +242,10 @@ private:
         float scale = 1.0f;
     };
     std::vector<Nameplate> m_nameplates;
+
+    // Seconds of flight a pair of wings has done since the last point
+    // of wear was taken off them.
+    float m_elytraWear = 0.0f;
 
     Signs m_signs;
     Frames m_frames;

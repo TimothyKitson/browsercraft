@@ -1305,31 +1305,40 @@ bool Application::frame()
             const int baseY = static_cast<int>(std::floor(m_player.position.y));
             const int centreX = static_cast<int>(std::floor(m_player.position.x));
             const int centreZ = static_cast<int>(std::floor(m_player.position.z));
-            const int halfWidth = mobTypeCount() + 2;
+            // Two rows rather than one. At one, the line grew wider
+            // than the camera could see the moment the species count
+            // passed twenty -- the ends of it were simply off the
+            // sides of every shot, which is how two mobs can be added
+            // and neither of them ever looked at.
+            const int perRow = (mobTypeCount() + 1) / 2;
+            const int halfWidth = perRow + 3;
 
             for (int x = centreX - halfWidth; x <= centreX + halfWidth; ++x)
-                for (int z = centreZ - 12; z <= centreZ + 4; ++z)
+                for (int z = centreZ - 22; z <= centreZ + 6; ++z)
                 {
                     m_world->setBlock(x, baseY - 1, z, Blocks::Stone);
                     for (int y = baseY; y < baseY + 8; ++y)
                         m_world->setBlock(x, y, z, Blocks::Air);
                 }
 
-            const int firstX = centreX - mobTypeCount();
+            const int firstX = centreX - perRow;
             int placed = 0;
             for (int i = 0; i < mobTypeCount(); ++i)
             {
-                const glm::vec3 feet(firstX + i * 2 + 0.5f, static_cast<float>(baseY),
-                                     centreZ + 0.5f);
+                const int column = i % perRow;
+                const int row = i / perRow;
+                const glm::vec3 feet(firstX + column * 2 + 0.5f,
+                                     static_cast<float>(baseY),
+                                     centreZ + 0.5f - static_cast<float>(row) * 4.0f);
                 if (m_entities.spawnAt(static_cast<MobId>(i), feet, *m_world)) ++placed;
             }
 
-            // Stand back and look north along +z at the row.
+            // Stand back and look north along +z at both rows.
             m_player.position = glm::vec3(centreX + 0.5f, static_cast<float>(baseY),
-                                          centreZ - 10.5f);
+                                          centreZ - 20.5f);
             m_player.velocity = glm::vec3(0.0f);
             m_camera.position = m_player.eyePosition();
-            m_camera.setOrientation(90.0f, -4.0f);
+            m_camera.setOrientation(90.0f, -3.0f);
 
             // A breeding pair and a calf beside the line-up, plus wheat
             // in hand, so one screenshot covers the lot.
@@ -4301,7 +4310,19 @@ void Application::updateGameplay(float deltaTime)
     controls.sprint = m_keys.down(m_input, Action::Sprint);
     controls.sneak = m_keys.down(m_input, Action::Sneak);
     controls.descend = controls.sneak;
+    controls.look = m_camera.front;
 
+    // The wings go where a chestplate goes, so this is the chest slot
+    // holding one rather than a slot of its own.
+    {
+        const ItemStack& chest =
+            m_inventory.slot(Inventory::ARMOR_FIRST +
+                             Armour::slotFor(Items::Elytra));
+        controls.wearingElytra = !chest.empty() && chest.id == Items::Elytra &&
+                                 chest.damage < Armour::maxDurability(Items::Elytra);
+    }
+
+    const bool wasGliding = m_player.gliding;
     const glm::vec3 positionBefore = m_player.position;
 
     // On horseback the mount does the walking and the rider goes where
@@ -4330,8 +4351,40 @@ void Application::updateGameplay(float deltaTime)
     m_camera.position = m_player.eyePosition();
     updateMovementAudio(positionBefore, m_player.jumpedThisUpdate());
 
+    // Wings wear while they are flying, a second at a time, and stop
+    // working when they are done. Minecraft's rate, and the only wear
+    // in the game that is not caused by a blow or a swing.
+    if (m_player.gliding && !m_player.creative())
+    {
+        m_elytraWear += deltaTime;
+        if (m_elytraWear >= 1.0f)
+        {
+            const int seconds = static_cast<int>(m_elytraWear);
+            m_elytraWear -= static_cast<float>(seconds);
+
+            ItemStack& chest =
+                m_inventory.slot(Inventory::ARMOR_FIRST +
+                                 Armour::slotFor(Items::Elytra));
+            if (!chest.empty() && chest.id == Items::Elytra)
+            {
+                chest.damage = std::min(chest.damage + seconds,
+                                        Armour::maxDurability(Items::Elytra));
+                if (chest.damage >= Armour::maxDurability(Items::Elytra))
+                    m_chatLog.add("The wings give out.");
+            }
+        }
+    }
+    else
+    {
+        m_elytraWear = 0.0f;
+    }
+
+    if (m_player.gliding != wasGliding)
+        m_audio.play(m_player.gliding ? Sound::Jump : Sound::Land, 0.5f,
+                     m_player.gliding ? 1.4f : 1.0f);
+
     // A little extra field of view while sprinting sells the speed.
-    const float targetFov = m_player.sprinting ? 78.0f : 70.0f;
+    const float targetFov = (m_player.sprinting || m_player.gliding) ? 78.0f : 70.0f;
     m_camera.fov += (targetFov - m_camera.fov) * std::clamp(8.0f * deltaTime, 0.0f, 1.0f);
 
     // --- the rest of the world ---
@@ -5357,10 +5410,12 @@ void Application::openExitPortal()
 void Application::tickStructureLairs(float deltaTime)
 {
     if (!m_world) return;
-    if (m_dimension != Dimension::Overworld) return;
+    if (m_dimension == Dimension::Nether) return;
 
     constexpr float INTERVAL = 4.0f;
     constexpr int GUARDIAN_LIMIT = 6;
+    constexpr int SHULKER_LIMIT = 8;
+    constexpr int DROWNED_LIMIT = 5;
 
     m_lairTimer -= deltaTime;
     if (m_lairTimer > 0.0f) return;
@@ -5370,6 +5425,52 @@ void Application::tickStructureLairs(float deltaTime)
     const int px = static_cast<int>(m_player.position.x);
     const int py = static_cast<int>(m_player.position.y);
     const int pz = static_cast<int>(m_player.position.z);
+
+    // The End's own lair: the city, and the shulkers bolted to it.
+    // Nowhere else in the End has them, which is what makes a city
+    // somewhere you clear rather than somewhere you walk through.
+    if (m_dimension == Dimension::End)
+    {
+        const Structures::Spot spot = gen.nearestEndCity(px, pz, 1);
+        if (!spot.exists) return;
+
+        const int midX = spot.chunkX * Structures::CHUNK + Structures::CHUNK / 2;
+        const int midZ = spot.chunkZ * Structures::CHUNK + Structures::CHUNK / 2;
+        const int dx = px - midX;
+        const int dz = pz - midZ;
+        // The tower plus a little, so standing at the door counts.
+        const int half = WorldGen::END_CITY_HALF + 4;
+        if (dx * dx + dz * dz > half * half) return;
+
+        const int ground = gen.endGroundAt(midX, midZ);
+        if (ground < 0) return;
+
+        int already = 0;
+        for (const Mob& mob : m_entities.mobs())
+            if (mob.alive() && mob.typeId() == MobId::Shulker) ++already;
+        if (already >= SHULKER_LIMIT) return;
+
+        for (int tries = 0; tries < 24; ++tries)
+        {
+            const float angle = tries * 0.785398f;
+            const float reach = 1.0f + (tries % 3) * 2.0f;
+            const int x = midX + static_cast<int>(std::cos(angle) * reach);
+            const int z = midZ + static_cast<int>(std::sin(angle) * reach);
+
+            // Standing on the city rather than on the island: a
+            // shulker on the End stone outside is a turret in a field.
+            for (int y = ground + WorldGen::END_CITY_TALL; y > ground; --y)
+            {
+                if (!isSolid(m_world->getBlock(x, y, z))) continue;
+                if (m_world->getBlock(x, y + 1, z) != Blocks::Air) break;
+
+                const glm::vec3 feet(x + 0.5f, static_cast<float>(y + 1), z + 0.5f);
+                if (m_entities.spawnAt(MobId::Shulker, feet, *m_world)) return;
+                break;
+            }
+        }
+        return;
+    }
 
     // The city first, because its test is the cheaper of the two: it
     // is the only thing down at that depth.
@@ -5434,6 +5535,41 @@ void Application::tickStructureLairs(float deltaTime)
                                          midZ + 0.5f);
                     if (m_entities.spawnAt(MobId::Witch, feet, *m_world)) return;
                 }
+            }
+        }
+    }
+
+    // The drowned, who belong to the sea rather than to a structure.
+    // In the water near the player and out of the light, which is
+    // Minecraft's rule and the only thing that makes an open ocean
+    // somewhere to be careful.
+    {
+        int already = 0;
+        for (const Mob& mob : m_entities.mobs())
+            if (mob.alive() && mob.typeId() == MobId::Drowned) ++already;
+
+        if (already < DROWNED_LIMIT)
+        {
+            for (int tries = 0; tries < 16; ++tries)
+            {
+                const float angle = tries * 0.3927f;
+                const float reach = 14.0f + (tries % 4) * 6.0f;
+                const int x = px + static_cast<int>(std::cos(angle) * reach);
+                const int z = pz + static_cast<int>(std::sin(angle) * reach);
+
+                // Standing on the sea floor with water over its head.
+                const int floorY = gen.surfaceHeight(x, z);
+                if (floorY >= WorldGen::SEA_LEVEL - 2) continue;
+
+                const glm::vec3 feet(x + 0.5f, static_cast<float>(floorY + 1), z + 0.5f);
+                if (m_world->getBlock(x, floorY + 1, z) != Blocks::Water) continue;
+                if (m_world->getBlock(x, floorY + 2, z) != Blocks::Water) continue;
+
+                // Deep enough that the sun does not reach, so a
+                // shallow bay stays somewhere you can swim.
+                if (m_world->skyLight(x, floorY + 1, z) > 8) continue;
+
+                if (m_entities.spawnAt(MobId::Drowned, feet, *m_world)) return;
             }
         }
     }
@@ -8229,6 +8365,18 @@ void Application::updateMobs(float deltaTime)
 
         for (int i = 0; i < type.dropCount; ++i) m_drops.spawn(where, type.drop, 1);
         for (int i = 0; i < type.secondDropCount; ++i) m_drops.spawn(where, type.secondDrop, 1);
+
+        // A drowned carries a trident about one time in eight, which
+        // is roughly Minecraft's rate. A chance like this cannot be a
+        // drop slot: those always pay.
+        if (death.type == MobId::Drowned)
+        {
+            const uint32_t roll = static_cast<uint32_t>(
+                static_cast<int>(where.x) * 73856093 ^
+                static_cast<int>(where.z) * 19349663 ^
+                static_cast<int>(m_elapsedSeconds * 311.0f));
+            if (roll % 8 == 0) m_drops.spawn(where, Items::Trident, 1);
+        }
 
         // A baby is worth nothing, the way it is in Minecraft -- else
         // penning animals and killing the lambs is the best experience

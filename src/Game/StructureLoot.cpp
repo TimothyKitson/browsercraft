@@ -268,7 +268,11 @@ StructureLoot::Stack StructureLoot::centrepiece(WorldGen::Hoard hoard,
         case WorldGen::Hoard::Mineshaft:       out.id = Blocks::RailEastWest; out.count = 6; break;
         case WorldGen::Hoard::Stronghold:      out.id = Items::Book;      out.count = 2; break;
         case WorldGen::Hoard::SwampHut:        out.id = Items::GlassBottle; out.count = 3; break;
-        case WorldGen::Hoard::EndCity:         out.id = Items::Diamond;   out.count = 3; break;
+        // Minecraft hangs the wings in a frame aboard the ship moored
+        // beside an End city. There is no ship here, so they are the
+        // thing the city's chest is guarding -- and the one reason
+        // anybody crosses the End to find one.
+        case WorldGen::Hoard::EndCity:         out.id = Items::Elytra;    out.count = 1; break;
         case WorldGen::Hoard::Bastion:         out.id = Items::GoldIngot; out.count = 8; break;
         case WorldGen::Hoard::AncientCity:     out.id = Items::Diamond;   out.count = 3; break;
         case WorldGen::Hoard::TrialChamber:    out.id = Items::Arrow;     out.count = 8; break;
