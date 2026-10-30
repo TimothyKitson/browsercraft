@@ -154,6 +154,17 @@ namespace
         { Items::Potion,      1, 2 },
     };
 
+    // A witch's hut. What she brews with, and what she has brewed.
+    const Entry HUT[] = {
+        { Items::GlassBottle, 2, 5 },
+        { Items::Sugar,       1, 4 },
+        { Items::Redstone,    1, 4 },
+        { Items::GlowstoneDust, 1, 3 },
+        { Items::NetherWart,  1, 2 },
+        { Items::Potion,      1, 2 },
+        { Items::StringItem,  1, 4 },
+    };
+
     // The End's city. Minecraft keeps elytra and enchanted diamond
     // armour out there; there are no elytra here, so it is the armour
     // and the purpur.
@@ -222,6 +233,8 @@ namespace
                 return { MINESHAFT, static_cast<int>(std::size(MINESHAFT)) };
             case WorldGen::Hoard::Stronghold:
                 return { STRONGHOLD, static_cast<int>(std::size(STRONGHOLD)) };
+            case WorldGen::Hoard::SwampHut:
+                return { HUT, static_cast<int>(std::size(HUT)) };
             case WorldGen::Hoard::EndCity:
                 return { ENDCITY, static_cast<int>(std::size(ENDCITY)) };
             case WorldGen::Hoard::Bastion:
@@ -254,6 +267,7 @@ StructureLoot::Stack StructureLoot::centrepiece(WorldGen::Hoard hoard,
         case WorldGen::Hoard::Monument:        out.id = Items::GoldIngot; out.count = 8; break;
         case WorldGen::Hoard::Mineshaft:       out.id = Blocks::RailEastWest; out.count = 6; break;
         case WorldGen::Hoard::Stronghold:      out.id = Items::Book;      out.count = 2; break;
+        case WorldGen::Hoard::SwampHut:        out.id = Items::GlassBottle; out.count = 3; break;
         case WorldGen::Hoard::EndCity:         out.id = Items::Diamond;   out.count = 3; break;
         case WorldGen::Hoard::Bastion:         out.id = Items::GoldIngot; out.count = 8; break;
         case WorldGen::Hoard::AncientCity:     out.id = Items::Diamond;   out.count = 3; break;

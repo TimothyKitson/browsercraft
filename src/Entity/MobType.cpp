@@ -974,6 +974,56 @@ namespace
             t.model.push_back(mc(Part::Head, 0, 0, 16, 14, 10, -8, 0, -5, 0, -27, 0));
         }
 
+        {
+            // The witch. Villager-shaped, because that is what she is
+            // under the hat, with the hat and the nose on top of it.
+            MobType& t = table[static_cast<size_t>(MobId::Witch)];
+            t.id = MobId::Witch;
+            t.experience = 5;
+            t.voice = Sound::MobWitchSay;
+            t.hurtVoice = Sound::MobWitchHurt;
+            t.deathVoice = Sound::MobWitchDeath;
+            t.name = "Witch";
+            t.texture = "witch";
+            t.sheetWidth = 64;
+            t.sheetHeight = 128;
+            t.spawnClass = SpawnClass::Hostile;
+            t.maxHealth = 26;
+            t.width = 0.6f;
+            t.height = 1.95f;
+            t.walkSpeed = 2.4f;
+            t.limbSwing = 0.5f;
+
+            // She throws rather than closes, which is the whole of how
+            // a witch fights: splash potions from a distance.
+            t.arrowDamage = 3;
+            t.arrowRange = 12.0f;
+            t.arrowInterval = 2.6f;
+
+            t.drop = Items::GlassBottle;
+            t.dropCount = 1;
+            t.secondDrop = Items::Sugar;
+            t.secondDropCount = 1;
+
+            t.bodyColour = rgb(60, 48, 80);
+            t.headColour = rgb(142, 118, 96);
+            t.eyeColour = 0xFF203040;
+
+            t.model.push_back(mc(Part::LegBackRight, 0, 22, 4, 12, 4, -2, 0, -2, -2, 12, 0));
+            t.model.push_back(mirrored(mc(Part::LegBackLeft, 0, 22, 4, 12, 4, -2, 0, -2, 2, 12, 0)));
+            t.model.push_back(mc(Part::Body, 16, 20, 8, 12, 6, -4, 0, -3, 0, 0, 0));
+            t.model.push_back(mc(Part::LegFrontRight, 44, 22, 4, 12, 4, -3, -2, -2, -5, 2, 0));
+            t.model.push_back(mirrored(mc(Part::LegFrontLeft, 44, 22, 4, 12, 4, -1, -2, -2, 5, 2, 0)));
+            t.model.push_back(mc(Part::Head, 0, 0, 8, 10, 8, -4, -10, -4, 0, 0, 0));
+            // The nose, which is the one thing everybody draws a witch
+            // by, and the brim and point of the hat over it.
+            t.model.push_back(mc(Part::WingRight, 24, 0, 2, 4, 2, -1, -6, -6, 0, 0, 0));
+            // One pixel lower than it looks like it wants to be: the
+            // brim at -12 put the model's top at exactly the height
+            // the model test allows, which is no margin at all.
+            t.model.push_back(mc(Part::WingLeft, 0, 64, 10, 2, 10, -5, -11, -5, 0, 0, 0));
+        }
+
         return table;
     }
 }

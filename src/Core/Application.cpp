@@ -1462,6 +1462,7 @@ bool Application::frame()
             m_startupScreen == "temple" || m_startupScreen == "igloo" ||
             m_startupScreen == "portalruin" || m_startupScreen == "outpost" ||
             m_startupScreen == "mansion" || m_startupScreen == "well" ||
+            m_startupScreen == "hut" || m_startupScreen == "swamp" ||
             m_startupScreen == "city" || m_startupScreen == "bastion" ||
             m_startupScreen == "endcity" ||
             m_startupScreen == "shipwreck" || m_startupScreen == "monument" ||
@@ -1521,6 +1522,8 @@ bool Application::frame()
                                   m_startupScreen != "portalruin" &&
                                   m_startupScreen != "outpost" &&
                                   m_startupScreen != "mansion" &&
+                                  m_startupScreen != "hut" &&
+                                  m_startupScreen != "swamp" &&
                                   m_startupScreen != "city" &&
                                   m_startupScreen != "bastion" &&
                                   m_startupScreen != "endcity" &&
@@ -2074,7 +2077,8 @@ bool Application::frame()
             // the village screen walks to a village.
             if (m_startupScreen == "pyramid" || m_startupScreen == "temple" ||
                 m_startupScreen == "igloo" || m_startupScreen == "portalruin" ||
-                m_startupScreen == "outpost" || m_startupScreen == "mansion")
+                m_startupScreen == "outpost" || m_startupScreen == "mansion" ||
+                m_startupScreen == "hut")
             {
                 const WorldGen::Landmark kind =
                     m_startupScreen == "pyramid"    ? WorldGen::Landmark::DesertPyramid
@@ -2082,6 +2086,7 @@ bool Application::frame()
                   : m_startupScreen == "igloo"      ? WorldGen::Landmark::Igloo
                   : m_startupScreen == "portalruin" ? WorldGen::Landmark::RuinedPortal
                   : m_startupScreen == "mansion"    ? WorldGen::Landmark::WoodlandMansion
+                  : m_startupScreen == "hut"        ? WorldGen::Landmark::SwampHut
                                                     : WorldGen::Landmark::PillagerOutpost;
 
                 // A mansion grid is eighty chunks across, so the
@@ -2103,13 +2108,18 @@ bool Application::frame()
                     const int top = m_world->generator().surfaceHeight(midX, midZ);
 
                     const bool big = kind == WorldGen::Landmark::WoodlandMansion;
-                    m_player.position = glm::vec3(static_cast<float>(midX) + 0.5f,
-                                                  static_cast<float>(top + (big ? 12 : 6)),
-                                                  static_cast<float>(midZ) + (big ? 38.5f : 22.5f));
+                    // The hut stands on stilts and sits in trees, so
+                    // it wants a higher eye than the rest: the first
+                    // shot of one was taken through a canopy.
+                    const bool stilted = kind == WorldGen::Landmark::SwampHut;
+                    m_player.position = glm::vec3(
+                        static_cast<float>(midX) + 0.5f,
+                        static_cast<float>(top + (big ? 12 : stilted ? 11 : 6)),
+                        static_cast<float>(midZ) + (big ? 38.5f : stilted ? 15.5f : 22.5f));
                     m_player.velocity = glm::vec3(0.0f);
                     m_player.flying = true;
                     m_placeOnSurface = false;
-                    m_camera.setOrientation(-90.0f, -12.0f);
+                    m_camera.setOrientation(-90.0f, stilted ? -18.0f : -12.0f);
                     m_camera.addLook(0.0f, 0.0f, 0.0f);
 
                     std::printf("%s at %d, %d\n", WorldGen::landmarkName(kind), midX, midZ);
@@ -2214,6 +2224,78 @@ bool Application::frame()
                 else
                 {
                     std::printf("No ancient city found\n");
+                    std::fflush(stdout);
+                }
+
+                m_player.mode = GameMode::Creative;
+                m_player.health = Player::MAX_HEALTH;
+            }
+
+            // Out to a swamp, to look at the water and what stands in
+            // it. Walks chunk by chunk rather than asking a grid: a
+            // swamp is a biome, not a structure.
+            if (m_startupScreen == "swamp")
+            {
+                const WorldGen& gen = m_world->generator();
+                bool found = false;
+                int standX = 0, standZ = 0, ground = 0;
+
+                for (int ring = 0; ring <= 200 && !found; ++ring)
+                    for (int cz = -ring; cz <= ring && !found; ++cz)
+                        for (int cx = -ring; cx <= ring && !found; ++cx)
+                        {
+                            if (ring > 0 && std::abs(cx) != ring && std::abs(cz) != ring)
+                                continue;
+
+                            const int midX = cx * Chunk::SX + Chunk::SX / 2;
+                            const int midZ = cz * Chunk::SZ + Chunk::SZ / 2;
+                            if (gen.biomeAt(midX, midZ) != Biome::Swamp) continue;
+
+                            // The middle of one rather than its edge,
+                            // and somewhere with water actually
+                            // standing in it: a dry corner of a swamp
+                            // photographs as a forest.
+                            bool allSwamp = true;
+                            int wet = 0;
+                            for (int d = -16; d <= 16 && allSwamp; d += 8)
+                            {
+                                if (gen.biomeAt(midX + d, midZ) != Biome::Swamp ||
+                                    gen.biomeAt(midX, midZ + d) != Biome::Swamp)
+                                    allSwamp = false;
+                                if (gen.surfaceHeight(midX + d, midZ) < WorldGen::SEA_LEVEL) ++wet;
+                                if (gen.surfaceHeight(midX, midZ + d) < WorldGen::SEA_LEVEL) ++wet;
+                            }
+                            if (!allSwamp || wet < 4) continue;
+
+                            standX = midX;
+                            standZ = midZ;
+                            ground = gen.surfaceHeight(midX, midZ);
+                            found = true;
+                        }
+
+                m_timeOfDay = 0.5f;
+
+                if (found)
+                {
+                    // Above the canopy rather than inside it: the
+                    // first shot of this was taken from among the
+                    // leaves and came back as a green wall.
+                    m_player.position = glm::vec3(static_cast<float>(standX) + 0.5f,
+                                                  static_cast<float>(
+                                                      std::max(ground, WorldGen::SEA_LEVEL) + 14),
+                                                  static_cast<float>(standZ) + 30.5f);
+                    m_player.velocity = glm::vec3(0.0f);
+                    m_player.flying = true;
+                    m_placeOnSurface = false;
+                    m_camera.setOrientation(-90.0f, -16.0f);
+                    m_camera.addLook(0.0f, 0.0f, 0.0f);
+
+                    std::printf("Swamp at %d, %d (ground %d)\n", standX, standZ, ground);
+                    std::fflush(stdout);
+                }
+                else
+                {
+                    std::printf("No swamp found\n");
                     std::fflush(stdout);
                 }
 
@@ -4601,6 +4683,37 @@ void Application::tickStructureLairs(float deltaTime)
                                 midZ + std::sin(angle) * ring + 0.5f);
                             if (m_entities.spawnAt(MobId::Warden, feet, *m_world)) return;
                         }
+            }
+        }
+    }
+
+    // The witch, who belongs to her hut and nowhere else. One of
+    // her: a swamp with four witches in it is not a swamp hut, it is
+    // an ambush.
+    {
+        const Structures::Spot spot =
+            gen.nearestLandmark(WorldGen::Landmark::SwampHut, px, pz, 1);
+        if (spot.exists)
+        {
+            const int midX = spot.chunkX * Structures::CHUNK + Structures::CHUNK / 2;
+            const int midZ = spot.chunkZ * Structures::CHUNK + Structures::CHUNK / 2;
+            const int dx = px - midX;
+            const int dz = pz - midZ;
+
+            if (dx * dx + dz * dz < 20 * 20)
+            {
+                int already = 0;
+                for (const Mob& mob : m_entities.mobs())
+                    if (mob.alive() && mob.typeId() == MobId::Witch) ++already;
+
+                if (already == 0)
+                {
+                    const int ground = gen.surfaceHeight(midX, midZ);
+                    const int floorY = std::max(ground, WorldGen::SEA_LEVEL) + 4;
+                    const glm::vec3 feet(midX + 0.5f, static_cast<float>(floorY + 1),
+                                         midZ + 0.5f);
+                    if (m_entities.spawnAt(MobId::Witch, feet, *m_world)) return;
+                }
             }
         }
     }

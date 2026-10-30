@@ -30,6 +30,7 @@ enum class MobId : uint8_t
     Breeze,
     Guardian,
     Warden,
+    Witch,
     Count
 };
 

@@ -293,6 +293,8 @@ void AudioEngine::buildSounds()
                  Sound::MobBreezeDeath, "breeze");
     loadMobVoice(Sound::MobGuardianSay, Sound::MobGuardianHurt,
                  Sound::MobGuardianDeath, "mob/guardian");
+    loadMobVoice(Sound::MobWitchSay, Sound::MobWitchHurt,
+                 Sound::MobWitchDeath, "mob/witch");
     loadMobVoice(Sound::MobWardenSay, Sound::MobWardenHurt,
                  Sound::MobWardenDeath, "mob/warden");
     loadVariants(Sound::Rain, "weather/rain", 1);
@@ -766,6 +768,28 @@ void AudioEngine::buildSounds()
         Synth s = make(Sound::MobMagmaCubeDeath);
         s.addNoise(0.34f, 420.0f, 12.0f, 0.44f, false, 845);
         s.addNoise(0.34f, 1400.0f, 9.0f, 0.18f, true, 846);
+        s.finish(0.78f);
+    }
+
+    // The witch: a cackle, which is a tone that jumps rather than
+    // slides -- the one voice in the game that goes up at the end.
+    {
+        Synth s = make(Sound::MobWitchSay);
+        s.addTone(0.46f, 290.0f, 420.0f, 9.0f, 0.60f, true);
+        s.addTone(0.46f, 360.0f, 560.0f, 7.0f, 0.34f, true);
+        s.addNoise(0.30f, 1400.0f, 12.0f, 0.14f, false, 881);
+        s.finish(0.70f);
+    }
+    {
+        Synth s = make(Sound::MobWitchHurt);
+        s.addTone(0.22f, 420.0f, 200.0f, 16.0f, 0.70f, true);
+        s.addNoise(0.18f, 1700.0f, 20.0f, 0.26f, false, 882);
+        s.finish(0.76f);
+    }
+    {
+        Synth s = make(Sound::MobWitchDeath);
+        s.addTone(0.80f, 380.0f, 120.0f, 3.4f, 0.66f, true);
+        s.addNoise(0.60f, 1100.0f, 4.0f, 0.20f, true, 883);
         s.finish(0.78f);
     }
 

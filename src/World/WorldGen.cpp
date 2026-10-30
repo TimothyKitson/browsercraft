@@ -41,6 +41,7 @@ const char* biomeName(Biome biome)
         case Biome::Snowy: return "Snowy";
         case Biome::Jungle: return "Jungle";
         case Biome::Savanna: return "Savanna";
+        case Biome::Swamp:   return "Swamp";
     }
     return "Unknown";
 }
@@ -120,6 +121,17 @@ Biome WorldGen::biomeAt(int worldX, int worldZ) const
     int height = surfaceHeight(worldX, worldZ);
     float temperature = temperatureAt(worldX, worldZ);
     float humidity = humidityAt(worldX, worldZ);
+
+    // The swamp is tested before the water is, which is the only way
+    // it can work: a swamp has to own both sides of the waterline.
+    // Tested after it, Ocean and Beach take everything at or below sea
+    // level and a swamp is left as the one row of columns a block
+    // above -- dry land with trees on it, which photographs as an
+    // ordinary forest. The depth floor is what keeps swamps out of the
+    // middle of the sea: only the shallows are allowed to go swampy.
+    if (height >= SEA_LEVEL - 4 && height <= SEA_LEVEL + 2 &&
+        temperature > -0.10f && humidity > 0.14f)
+        return Biome::Swamp;
 
     if (height < SEA_LEVEL - 1) return Biome::Ocean;
     if (height <= SEA_LEVEL) return Biome::Beach;
@@ -374,6 +386,17 @@ void WorldGen::generateColumns(Chunk& chunk) const
                             {
                                 block = Blocks::Dirt;
                             }
+                            break;
+
+                        case Biome::Swamp:
+                            // Mud where the water stands over it,
+                            // grass on the tussocks that are clear of
+                            // it. A swamp that was grass all through
+                            // read as a flooded meadow.
+                            if (depth == 0)
+                                block = (surface <= SEA_LEVEL) ? Blocks::Mud : Blocks::Grass;
+                            else if (depth <= 2) block = Blocks::Mud;
+                            else if (depth <= 4) block = Blocks::Dirt;
                             break;
 
                         case Biome::Plains:
@@ -815,6 +838,17 @@ WorldGen::Palette WorldGen::paletteFor(Biome biome) const
             palette.roof = Blocks::Planks;
             palette.roofStairs = Blocks::PlankStairsNorth;
             palette.post = Blocks::BirchLog;
+            break;
+
+        case Biome::Swamp:
+            // Spruce, dark and damp-looking, which is what a building
+            // standing in water wants to be made of.
+            palette.wall = Blocks::SprucePlanks;
+            palette.footing = Blocks::MossyCobblestone;
+            palette.corner = Blocks::SpruceLog;
+            palette.floor = Blocks::SprucePlanks;
+            palette.roof = Blocks::SprucePlanks;
+            palette.post = Blocks::SpruceLog;
             break;
 
         case Biome::Savanna:
@@ -1524,6 +1558,7 @@ const char* WorldGen::landmarkName(Landmark kind)
         case Landmark::RuinedPortal:    return "Ruined portal";
         case Landmark::PillagerOutpost: return "Pillager outpost";
         case Landmark::WoodlandMansion: return "Woodland mansion";
+        case Landmark::SwampHut:        return "Swamp hut";
         case Landmark::Count:           break;
     }
     return "";
@@ -1538,6 +1573,7 @@ const Structures::Grid& WorldGen::landmarkGrid(Landmark kind)
         case Landmark::RuinedPortal:    return Structures::RUINED_PORTAL;
         case Landmark::PillagerOutpost: return Structures::PILLAGER_POST;
         case Landmark::WoodlandMansion: return Structures::WOODLAND_MANSION;
+        case Landmark::SwampHut:        return Structures::SWAMP_HUT;
         default:                        return Structures::DESERT_PYRAMID;
     }
 }
@@ -1555,6 +1591,8 @@ bool WorldGen::landmarkSuits(Landmark kind, Biome biome)
         case Landmark::PillagerOutpost:
             return biome == Biome::Plains || biome == Biome::Savanna ||
                    biome == Biome::Desert;
+        case Landmark::SwampHut:
+            return biome == Biome::Swamp;
         case Landmark::WoodlandMansion:
             // Minecraft puts these in a dark forest, which is a biome
             // this world does not have. The ordinary forest is the
@@ -1681,6 +1719,9 @@ int WorldGen::landmarkChests(Landmark kind, ChestSpot out[2])
             out[0] = { -4,  1,  4 };
             out[1] = {  4,  7, -4 };
             return 2;
+        case Landmark::SwampHut:
+            out[0] = {  1,  5,  1 };
+            return 1;
         case Landmark::Count:
             break;
     }
@@ -1931,9 +1972,65 @@ void WorldGen::stampLandmark(Chunk& chunk, Landmark kind, int midX, int midZ) co
             break;
         }
 
+        case Landmark::SwampHut:
+            stampSwampHut(chunk, midX, midZ, ground);
+            break;
+
         case Landmark::Count:
             break;
     }
+}
+
+// The witch's hut: a spruce shack up on stilts over the water, with an
+// open porch on one side. Minecraft's has a cauldron and a crafting
+// table in it; there is no cauldron here, so the brewing stand stands
+// in for it -- which is what a witch would be using it for anyway.
+void WorldGen::stampSwampHut(Chunk& chunk, int midX, int midZ, int ground) const
+{
+    constexpr int HALF = 3;
+    constexpr int STILTS = 4;      // how far the floor stands clear
+    constexpr int WALL = 4;
+
+    // The floor sits above the water rather than on the mud, which is
+    // the whole look of the thing.
+    const int floorY = std::max(ground, SEA_LEVEL) + STILTS;
+
+    // The legs it stands on, down into whatever is below -- water or
+    // mud, both of which a stilt has to reach through.
+    for (int dx = -HALF; dx <= HALF; dx += HALF * 2)
+        for (int dz = -HALF; dz <= HALF; dz += HALF * 2)
+            for (int y = floorY - 1; y > ground - 2; --y)
+                put(chunk, midX + dx, y, midZ + dz, Blocks::SpruceLog);
+
+    for (int dx = -HALF; dx <= HALF; ++dx)
+        for (int dz = -HALF; dz <= HALF; ++dz)
+        {
+            put(chunk, midX + dx, floorY, midZ + dz, Blocks::SprucePlanks);
+
+            for (int dy = 1; dy <= WALL; ++dy)
+            {
+                const bool wall = std::abs(dx) == HALF || std::abs(dz) == HALF;
+                const bool roof = dy == WALL;
+
+                // The porch: one side left open, which is how you get
+                // in and what makes it read as a hut rather than a box.
+                const bool porch = dz == HALF && std::abs(dx) <= 1 && dy < WALL;
+                const bool corner = std::abs(dx) == HALF && std::abs(dz) == HALF;
+
+                BlockId block = Blocks::Air;
+                if (roof) block = Blocks::SprucePlanks;
+                else if (porch) block = Blocks::Air;
+                else if (corner) block = Blocks::SpruceLog;
+                else if (wall) block = Blocks::SprucePlanks;
+
+                put(chunk, midX + dx, floorY + dy, midZ + dz, block);
+            }
+        }
+
+    // What is inside: the stand she brews at, a table, and the chest.
+    put(chunk, midX - 1, floorY + 1, midZ - 1, Blocks::BrewingStand);
+    put(chunk, midX - 1, floorY + 1, midZ + 1, Blocks::CraftingTable);
+    putChests(chunk, Landmark::SwampHut, midX, floorY - STILTS, midZ);
 }
 
 // The desert well, which is not a structure in Minecraft at all: it is
@@ -2319,6 +2416,49 @@ void WorldGen::buildVillages(Chunk& chunk) const
         }
 }
 
+// Vines down the outside of a canopy. Hung off the tree after it is
+// built rather than built into it, so every wood keeps the shape it
+// already had and only a swamp gets these.
+void WorldGen::hangVines(Chunk& chunk, int worldX, int ground, int worldZ) const
+{
+    // Three, to match the margin the tree loop uses. A vine hung
+    // further out than the loop reaches would appear on one side of a
+    // chunk border and not the other.
+    constexpr int CANOPY = 3;
+    constexpr int LONGEST = 5;
+
+    for (int dx = -CANOPY; dx <= CANOPY; ++dx)
+        for (int dz = -CANOPY; dz <= CANOPY; ++dz)
+        {
+            if (std::abs(dx) + std::abs(dz) < 2) continue;   // the trunk
+
+            const int wx = worldX + dx;
+            const int wz = worldZ + dz;
+
+            // One column in ten, not one in four. At 0.28 a single
+            // tree hung twenty-odd curtains and the swamp came out as
+            // a solid green wall you could not see through.
+            if (hashToFloat(hashCoords(wx, 11, wz, m_seed + 7801)) > 0.10f) continue;
+
+            // Find the leaves to hang from, which is the only block a
+            // vine can start under.
+            for (int y = ground + 9; y > ground + 2; --y)
+            {
+                if (!isLeaves(chunk.getBlock(wx - chunk.position().x * Chunk::SX,
+                                             y,
+                                             wz - chunk.position().z * Chunk::SZ)))
+                    continue;
+
+                const int drop = 2 + static_cast<int>(
+                    hashToFloat(hashCoords(wx, 12, wz, m_seed + 7802)) * (LONGEST - 1));
+
+                for (int k = 1; k <= drop; ++k)
+                    put(chunk, wx, y - k, wz, Blocks::Vine);
+                break;
+            }
+        }
+}
+
 void WorldGen::decorate(Chunk& chunk) const
 {
     const int baseX = chunk.position().x * Chunk::SX;
@@ -2345,6 +2485,9 @@ void WorldGen::decorate(Chunk& chunk) const
                 // of the trees before you are close enough to see one.
                 case Biome::Jungle: treeChance = 0.085f; break;
                 case Biome::Savanna: treeChance = 0.010f; break;
+                // Scattered rather than thick, which is what makes a
+                // swamp read as open water with trees standing in it.
+                case Biome::Swamp: treeChance = 0.020f; break;
                 default: break;
             }
             if (treeChance <= 0.0f) continue;
@@ -2375,6 +2518,12 @@ void WorldGen::decorate(Chunk& chunk) const
                 kind = (roll < 0.35f) ? TreeKind::Birch : TreeKind::Oak;
 
             buildTree(chunk, wx, surface, wz, kind);
+
+            // Vines off the canopy, which is most of what makes a
+            // swamp look like one from the ground. Hung after the
+            // tree rather than built into buildTree, so every wood
+            // keeps the shape it had.
+            if (here == Biome::Swamp) hangVines(chunk, wx, surface, wz);
         }
     }
 
@@ -2851,6 +3000,7 @@ WorldGen::Hoard WorldGen::hoardAt(int x, int y, int z) const
                     case Landmark::RuinedPortal:    return Hoard::RuinedPortal;
                     case Landmark::PillagerOutpost: return Hoard::PillagerOutpost;
                     case Landmark::WoodlandMansion: return Hoard::WoodlandMansion;
+                    case Landmark::SwampHut:        return Hoard::SwampHut;
                     case Landmark::Count:           break;
                 }
             }
@@ -3020,10 +3170,23 @@ void WorldGen::dressSeabed(Chunk& chunk) const
             const int wz = baseZ + lz;
             const int floorY = surfaceHeight(wx, wz);
 
+            const int depth = SEA_LEVEL - floorY;
+
+            // Lily pads float on the shallows of a swamp, which is the
+            // one place in this world where water stands two blocks
+            // deep over mud rather than running out to sea. Done here
+            // because this loop has already paid for the column.
+            if (depth >= 1 && depth <= 3 && biomeAt(wx, wz) == Biome::Swamp &&
+                chunk.getBlock(lx, SEA_LEVEL, lz) == Blocks::Water &&
+                hashToFloat(hashCoords(wx, 9, wz, m_seed + 7803)) < 0.09f)
+            {
+                put(chunk, wx, SEA_LEVEL + 1, wz, Blocks::LilyPad);
+                continue;
+            }
+
             // Dry land, or a puddle too shallow for anything to stand
             // up in. This is the test that keeps the cost off the
             // three quarters of the world that is not sea.
-            const int depth = SEA_LEVEL - floorY;
             if (depth < 2) continue;
 
             const BlockId ground = chunk.getBlock(lx, floorY, lz);

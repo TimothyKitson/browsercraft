@@ -27,7 +27,11 @@ enum class Biome : uint8_t
     // Hot and wet, and hot and dry but not desert: the two that used to
     // come out as forest and plains wherever the sun was strongest.
     Jungle,
-    Savanna
+    Savanna,
+
+    // Low, warm and wet: the flats just above the sea where the water
+    // stands in the hollows rather than draining off them.
+    Swamp
 };
 
 const char* biomeName(Biome biome);
@@ -54,6 +58,7 @@ public:
         RuinedPortal,
         PillagerOutpost,
         WoodlandMansion,
+        SwampHut,
         Count
     };
 
@@ -83,6 +88,7 @@ public:
         Mineshaft,
         Stronghold,
         AncientCity,
+        SwampHut,
         EndCity,
         Bastion,
         TrialChamber,
@@ -283,6 +289,8 @@ private:
     void buildMineshafts(Chunk& chunk) const;
     void buildLandmarks(Chunk& chunk) const;
     void stampLandmark(Chunk& chunk, Landmark kind, int midX, int midZ) const;
+    void stampSwampHut(Chunk& chunk, int midX, int midZ, int ground) const;
+    void hangVines(Chunk& chunk, int worldX, int ground, int worldZ) const;
     void dressSeabed(Chunk& chunk) const;
     void buildDesertWells(Chunk& chunk) const;
     void buildAncientCities(Chunk& chunk) const;

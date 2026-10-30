@@ -564,9 +564,13 @@ namespace
 
             // Every species must fit its sheet, or its texture coordinates
             // silently wrap onto another limb.
+            // 64x128 is on the list because that is what Minecraft
+            // draws a witch and a villager on. It was missing until
+            // the witch went in and this caught her.
             check((type.sheetWidth == 32 && type.sheetHeight == 32) ||
                       (type.sheetWidth == 64 &&
-                       (type.sheetHeight == 32 || type.sheetHeight == 64)) ||
+                       (type.sheetHeight == 32 || type.sheetHeight == 64 ||
+                        type.sheetHeight == 128)) ||
                       (type.sheetWidth == 128 &&
                        (type.sheetHeight == 64 || type.sheetHeight == 128)),
                   who + " has a sheet the shape Minecraft draws on");
@@ -4197,7 +4201,7 @@ namespace
             int suits = 0;
             for (Biome biome : { Biome::Ocean, Biome::Beach, Biome::Plains, Biome::Forest,
                                  Biome::Desert, Biome::Mountains, Biome::Snowy,
-                                 Biome::Jungle, Biome::Savanna })
+                                 Biome::Jungle, Biome::Savanna, Biome::Swamp })
                 if (WorldGen::landmarkSuits(kind, biome)) ++suits;
             check(suits > 0, "and somewhere it belongs");
         }
@@ -4946,6 +4950,169 @@ namespace
                   "seed " + std::to_string(seed) +
                       ": the bastion search points at a square that drew a bastion");
         }
+    }
+
+    void testSwamp()
+    {
+        section("the swamp, and the hut in it");
+
+        constexpr uint32_t SEED = 4242u;
+        const WorldGen generator(SEED);
+
+        // The biome has to own both sides of the waterline. Tested
+        // after Ocean and Beach it owned only the one row of columns a
+        // block above the sea -- dry land with trees on it, which is a
+        // forest. So: a swamp that exists, and one with water in it.
+        int swampColumns = 0, wetSwamp = 0, drySwamp = 0;
+        for (int wz = -600; wz <= 600; wz += 17)
+            for (int wx = -600; wx <= 600; wx += 17)
+            {
+                if (generator.biomeAt(wx, wz) != Biome::Swamp) continue;
+                ++swampColumns;
+                if (generator.surfaceHeight(wx, wz) < WorldGen::SEA_LEVEL) ++wetSwamp;
+                else ++drySwamp;
+            }
+
+        check(swampColumns > 0, "there are swamps in the world");
+        check(wetSwamp > 0, "with water standing in them");
+        check(drySwamp > 0, "and ground to walk on as well");
+
+        // A swamp is low. If one turned up on a hillside the height
+        // band has got away.
+        for (int wz = -400; wz <= 400; wz += 23)
+            for (int wx = -400; wx <= 400; wx += 23)
+                if (generator.biomeAt(wx, wz) == Biome::Swamp)
+                    check(generator.surfaceHeight(wx, wz) <= WorldGen::SEA_LEVEL + 2,
+                          "no swamp stands more than two blocks above the sea");
+
+        // What grows in one. Walking out to a real swamp and
+        // generating it rather than trusting the rules.
+        bool looked = false;
+        for (int ring = 0; ring <= 40 && !looked; ++ring)
+            for (int cz = -ring; cz <= ring && !looked; ++cz)
+                for (int cx = -ring; cx <= ring && !looked; ++cx)
+                {
+                    if (ring > 0 && std::abs(cx) != ring && std::abs(cz) != ring) continue;
+
+                    const int midX = cx * Chunk::SX + 8;
+                    const int midZ = cz * Chunk::SZ + 8;
+                    if (generator.biomeAt(midX, midZ) != Biome::Swamp) continue;
+                    if (generator.surfaceHeight(midX, midZ) >= WorldGen::SEA_LEVEL) continue;
+
+                    int mud = 0, pads = 0, vines = 0, water = 0;
+                    for (int dz = -2; dz <= 2; ++dz)
+                        for (int dx = -2; dx <= 2; ++dx)
+                        {
+                            Chunk chunk(ChunkPos{ cx + dx, cz + dz });
+                            generator.generate(chunk);
+
+                            for (int y = 0; y < Chunk::SY; ++y)
+                                for (int lx = 0; lx < Chunk::SX; ++lx)
+                                    for (int lz = 0; lz < Chunk::SZ; ++lz)
+                                        switch (chunk.getBlock(lx, y, lz))
+                                        {
+                                            case Blocks::Mud:     ++mud; break;
+                                            case Blocks::LilyPad: ++pads; break;
+                                            case Blocks::Vine:    ++vines; break;
+                                            case Blocks::Water:   ++water; break;
+                                            default: break;
+                                        }
+                        }
+
+                    check(water > 0, "a swamp has water standing in it");
+                    check(mud > 0, "and mud under the water");
+                    check(pads > 0, "lily pads floating on it");
+                    (void)vines;
+                    looked = true;
+                }
+
+        check(looked, "there is a wet swamp near the origin to look at");
+
+        // Vines are counted separately from the rest, in the dry part
+        // of a swamp rather than the wet. They hang off trees, trees
+        // do not grow in standing water, and a swamp is three parts
+        // water to one part ground -- so looking for them beside the
+        // lily pads was asking the wrong chunks.
+        //
+        // Walked to off the column scan above rather than by rings out
+        // from the origin: for this seed the nearest swamp is fifteen
+        // chunks out, and a ring search that stopped short of it
+        // reported no vines in the world.
+        int vinesAnywhere = 0;
+        for (int wz = -900; wz <= 900 && vinesAnywhere == 0; wz += 48)
+            for (int wx = -900; wx <= 900 && vinesAnywhere == 0; wx += 48)
+            {
+                if (generator.biomeAt(wx, wz) != Biome::Swamp) continue;
+                if (generator.surfaceHeight(wx, wz) <= WorldGen::SEA_LEVEL) continue;
+
+                const int cx = Structures::squareOf(wx, Chunk::SX);
+                const int cz = Structures::squareOf(wz, Chunk::SZ);
+
+                for (int dz = -1; dz <= 1; ++dz)
+                    for (int dx = -1; dx <= 1; ++dx)
+                    {
+                        Chunk chunk(ChunkPos{ cx + dx, cz + dz });
+                        generator.generate(chunk);
+
+                        for (int y = 0; y < Chunk::SY; ++y)
+                            for (int lx = 0; lx < Chunk::SX; ++lx)
+                                for (int lz = 0; lz < Chunk::SZ; ++lz)
+                                    if (chunk.getBlock(lx, y, lz) == Blocks::Vine)
+                                        ++vinesAnywhere;
+                    }
+            }
+
+        check(vinesAnywhere > 0, "and vines hang off the trees that stand in one");
+
+        // The hut. The last Minecraft structure that had nowhere to go.
+        check(Structures::SWAMP_HUT.spacing == 32 &&
+              Structures::SWAMP_HUT.separation == 8,
+              "a swamp hut grid is 32 and 8, as Minecraft's is");
+
+        const Structures::Spot spot =
+            generator.nearestLandmark(WorldGen::Landmark::SwampHut, 0, 0, 8);
+        check(spot.exists, "there is a hut within a few squares of the origin");
+
+        if (spot.exists)
+        {
+            const int midX = spot.chunkX * Structures::CHUNK + Structures::CHUNK / 2;
+            const int midZ = spot.chunkZ * Structures::CHUNK + Structures::CHUNK / 2;
+
+            check(generator.biomeAt(midX, midZ) == Biome::Swamp,
+                  "and it stands in a swamp, which is the only place one goes");
+
+            int spruce = 0, chests = 0, stands = 0, benches = 0;
+            for (int cz = spot.chunkZ - 1; cz <= spot.chunkZ + 1; ++cz)
+                for (int cx = spot.chunkX - 1; cx <= spot.chunkX + 1; ++cx)
+                {
+                    Chunk chunk(ChunkPos{ cx, cz });
+                    generator.generate(chunk);
+
+                    for (int y = 0; y < Chunk::SY; ++y)
+                        for (int lx = 0; lx < Chunk::SX; ++lx)
+                            for (int lz = 0; lz < Chunk::SZ; ++lz)
+                                switch (chunk.getBlock(lx, y, lz))
+                                {
+                                    case Blocks::SprucePlanks:
+                                    case Blocks::SpruceLog:     ++spruce; break;
+                                    case Blocks::Chest:         ++chests; break;
+                                    case Blocks::BrewingStand:  ++stands; break;
+                                    case Blocks::CraftingTable: ++benches; break;
+                                    default: break;
+                                }
+                }
+
+            check(spruce > 40, "a hut is a shack's worth of spruce");
+            check(chests > 0, "with a chest in it");
+            check(stands > 0, "the stand she brews at");
+            check(benches > 0, "and a bench");
+        }
+
+        // And the witch, who lives in it and nowhere else.
+        const MobType& witch = mobType(MobId::Witch);
+        check(std::string(witch.name) == "Witch", "the witch is in the table");
+        check(witch.arrowRange > 0.0f && witch.arrowInterval > 0.0f,
+              "and throws rather than closes, which is how a witch fights");
     }
 
     void testFortressAndMineshaft()
@@ -8641,6 +8808,7 @@ int runSelfTest()
     testStructureLoot();
     testSeabed();
     testDesertWell();
+    testSwamp();
     testAncientCity();
     testOtherDimensionStructures();
     testSearchAgreesWithStamp();
