@@ -2967,6 +2967,72 @@ namespace
         }
     }
 
+    // Carrots and potatoes. Both are leaf above and root below, so
+    // they share a painter: what changes is the colour of the crown
+    // and whether the root shows at the end.
+    void paintRootCropStage(Tile& t, int stage, Color leaf, Color root)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+
+        const float grown = static_cast<float>(stage) / 7.0f;
+        const int tall = 3 + static_cast<int>(grown * 9.0f);
+        const int bottom = Tile::N - 1;
+
+        for (int column = 0; column < 4; ++column)
+        {
+            const int x = 2 + column * 4;
+            for (int y = bottom - tall; y <= bottom; ++y)
+            {
+                t.set(x, y, leaf);
+                t.set(x + 1, y, shade(leaf, -28));
+            }
+
+            // Leaves spreading as it comes on.
+            const int spread = static_cast<int>(grown * 2.0f);
+            for (int w = 1; w <= spread; ++w)
+            {
+                t.set(x - w, bottom - tall + w, shade(leaf, 14));
+                t.set(x + 1 + w, bottom - tall + w, shade(leaf, -14));
+            }
+
+            // And the root showing at the bottom once it is ripe,
+            // which is how you know it is worth pulling.
+            if (stage < 6) continue;
+            for (int y = bottom - 2; y <= bottom; ++y)
+            {
+                t.set(x, y, root);
+                t.set(x + 1, y, shade(root, -20));
+            }
+        }
+    }
+
+    void paintCarrotStage(Tile& t, int stage)
+    {
+        paintRootCropStage(t, stage, Color{ 74, 134, 54 }, Color{ 226, 132, 38 });
+    }
+
+    void paintPotatoStage(Tile& t, int stage)
+    {
+        paintRootCropStage(t, stage, Color{ 88, 140, 64 }, Color{ 198, 168, 102 });
+    }
+
+    void paintCarrot0(Tile& t) { paintCarrotStage(t, 0); }
+    void paintCarrot1(Tile& t) { paintCarrotStage(t, 1); }
+    void paintCarrot2(Tile& t) { paintCarrotStage(t, 2); }
+    void paintCarrot3(Tile& t) { paintCarrotStage(t, 3); }
+    void paintCarrot4(Tile& t) { paintCarrotStage(t, 4); }
+    void paintCarrot5(Tile& t) { paintCarrotStage(t, 5); }
+    void paintCarrot6(Tile& t) { paintCarrotStage(t, 6); }
+    void paintCarrot7(Tile& t) { paintCarrotStage(t, 7); }
+    void paintPotato0(Tile& t) { paintPotatoStage(t, 0); }
+    void paintPotato1(Tile& t) { paintPotatoStage(t, 1); }
+    void paintPotato2(Tile& t) { paintPotatoStage(t, 2); }
+    void paintPotato3(Tile& t) { paintPotatoStage(t, 3); }
+    void paintPotato4(Tile& t) { paintPotatoStage(t, 4); }
+    void paintPotato5(Tile& t) { paintPotatoStage(t, 5); }
+    void paintPotato6(Tile& t) { paintPotatoStage(t, 6); }
+    void paintPotato7(Tile& t) { paintPotatoStage(t, 7); }
+
     void paintWheat0(Tile& t) { paintWheatStage(t, 0); }
     void paintWheat1(Tile& t) { paintWheatStage(t, 1); }
     void paintWheat2(Tile& t) { paintWheatStage(t, 2); }
@@ -4377,8 +4443,6 @@ namespace
                 t.set(x, y, Color{ 196, 190, 214 });
     }
 
-    // The star a wither leaves. A four-pointed white burst, which is
-    // the one item in the game that is not a thing but a trophy.
     void paintItemApple(Tile& t)
     {
         t.fill(Color{ 0, 0, 0, 0 });
@@ -4414,6 +4478,70 @@ namespace
                                         : Color{ 222, 222, 210 });
         }
         t.speckle(6, 521);
+    }
+
+    // The star a wither leaves. A four-pointed white burst, which is
+    // the one item in the game that is not a thing but a trophy.
+    // A carrot: the root laid along the tile's diagonal with its
+    // leaves at the top. Both crops are the seed and the food at
+    // once, so these two icons are what you plant as well as eat.
+    void paintItemCarrot(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int i = 0; i < 11; ++i)
+        {
+            const int x = 3 + i;
+            const int y = 13 - i;
+            const int wide = (10 - i) / 3;
+            for (int o = -wide; o <= wide; ++o)
+            {
+                const int px = x + o;
+                const int py = y + o;
+                if (px < 0 || px >= Tile::N || py < 0 || py >= Tile::N) continue;
+                t.set(px, py, (o < 0) ? Color{ 246, 160, 60 }
+                                      : Color{ 198, 106, 24 });
+            }
+        }
+        for (int i = 0; i < 4; ++i)
+        {
+            t.set(12 - i, 3 + i / 2, Color{ 72, 148, 56 });
+            t.set(13 - i / 2, 2 + i, Color{ 96, 176, 72 });
+        }
+    }
+
+    // The common body of both potatoes: a lumpy oval with eyes in it.
+    void paintPotatoBody(Tile& t, Color light, Color dark, Color eye)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 3; y < 14; ++y)
+            for (int x = 2; x < 14; ++x)
+            {
+                const float dx = (x - 7.5f) / 5.6f;
+                const float dy = (y - 8.5f) / 5.2f;
+                if (dx * dx + dy * dy > 1.0f) continue;
+                t.set(x, y, (dx + dy < -0.4f) ? light : dark);
+            }
+        t.set(5, 7, eye);
+        t.set(9, 6, eye);
+        t.set(7, 11, eye);
+        t.set(11, 9, eye);
+    }
+
+    void paintItemPotato(Tile& t)
+    {
+        paintPotatoBody(t, Color{ 214, 174, 112 }, Color{ 174, 134, 76 },
+                        Color{ 126, 94, 50 });
+        t.speckle(5, 733);
+    }
+
+    // Out of the furnace: darker, with the skin split along its back.
+    void paintItemBakedPotato(Tile& t)
+    {
+        paintPotatoBody(t, Color{ 198, 140, 70 }, Color{ 150, 96, 40 },
+                        Color{ 104, 62, 26 });
+        for (int i = 0; i < 6; ++i)
+            t.set(5 + i, 9 - i / 2, Color{ 246, 218, 150 });
+        t.speckle(5, 734);
     }
 
     void paintItemNetherStar(Tile& t)
@@ -4799,6 +4927,22 @@ namespace
         { Tiles::Wool, paintWool },
         { Tiles::FarmlandTop, paintFarmlandTop },
         { Tiles::FarmlandSide, paintFarmlandSide },
+        { Tiles::CarrotStage0, paintCarrot0 },
+        { Tiles::CarrotStage1, paintCarrot1 },
+        { Tiles::CarrotStage2, paintCarrot2 },
+        { Tiles::CarrotStage3, paintCarrot3 },
+        { Tiles::CarrotStage4, paintCarrot4 },
+        { Tiles::CarrotStage5, paintCarrot5 },
+        { Tiles::CarrotStage6, paintCarrot6 },
+        { Tiles::CarrotStage7, paintCarrot7 },
+        { Tiles::PotatoStage0, paintPotato0 },
+        { Tiles::PotatoStage1, paintPotato1 },
+        { Tiles::PotatoStage2, paintPotato2 },
+        { Tiles::PotatoStage3, paintPotato3 },
+        { Tiles::PotatoStage4, paintPotato4 },
+        { Tiles::PotatoStage5, paintPotato5 },
+        { Tiles::PotatoStage6, paintPotato6 },
+        { Tiles::PotatoStage7, paintPotato7 },
         { Tiles::WheatStage0, paintWheat0 },
         { Tiles::WheatStage1, paintWheat1 },
         { Tiles::WheatStage2, paintWheat2 },
@@ -4887,6 +5031,9 @@ namespace
         { Tiles::ItemNetherStar,    paintItemNetherStar },
         { Tiles::ItemApple,         paintItemApple },
         { Tiles::ItemBoneMeal,      paintItemBoneMeal },
+        { Tiles::ItemCarrot,        paintItemCarrot },
+        { Tiles::ItemPotato,        paintItemPotato },
+        { Tiles::ItemBakedPotato,   paintItemBakedPotato },
         { Tiles::ItemMagmaCream,    paintItemMagmaCream },
         { Tiles::ItemGlowstoneDust, paintItemGlowstoneDust },
         { Tiles::EndFrameTop,   paintEndFrameTop },
@@ -5036,6 +5183,9 @@ namespace
         { Tiles::ItemNetherStar, { "nether_star", nullptr, nullptr } },
         { Tiles::ItemApple, { "apple", nullptr, nullptr } },
         { Tiles::ItemBoneMeal, { "bone_meal", nullptr, nullptr } },
+        { Tiles::ItemCarrot, { "carrot", nullptr, nullptr } },
+        { Tiles::ItemPotato, { "potato", nullptr, nullptr } },
+        { Tiles::ItemBakedPotato, { "baked_potato", nullptr, nullptr } },
     };
 
     const PackTile PACK_TILES[] = {
@@ -5170,6 +5320,35 @@ namespace
         { Tiles::BuddingTile,   { "budding_amethyst", nullptr },                       Tinting::None,    0,   false },
         { Tiles::ClusterTile,   { "amethyst_cluster", nullptr },                       Tinting::None,    0,   false },
         { Tiles::SmoothBasaltTile, { "smooth_basalt", nullptr },                       Tinting::None,    0,   false },
+        // The crops. Minecraft draws carrots and potatoes in four
+        // stages and spreads them over eight block states, which is
+        // the mapping below; wheat gets one texture per stage. All
+        // three were painted-only until now, which is why a field
+        // looked hand-drawn next to the ground it stood in.
+        { Tiles::WheatStage0, { "wheat_stage0", nullptr },                          Tinting::None,    0,   false },
+        { Tiles::WheatStage1, { "wheat_stage1", nullptr },                          Tinting::None,    0,   false },
+        { Tiles::WheatStage2, { "wheat_stage2", nullptr },                          Tinting::None,    0,   false },
+        { Tiles::WheatStage3, { "wheat_stage3", nullptr },                          Tinting::None,    0,   false },
+        { Tiles::WheatStage4, { "wheat_stage4", nullptr },                          Tinting::None,    0,   false },
+        { Tiles::WheatStage5, { "wheat_stage5", nullptr },                          Tinting::None,    0,   false },
+        { Tiles::WheatStage6, { "wheat_stage6", nullptr },                          Tinting::None,    0,   false },
+        { Tiles::WheatStage7, { "wheat_stage7", nullptr },                          Tinting::None,    0,   false },
+        { Tiles::CarrotStage0, { "carrots_stage0", nullptr },                      Tinting::None,    0,   false },
+        { Tiles::CarrotStage1, { "carrots_stage0", nullptr },                      Tinting::None,    0,   false },
+        { Tiles::CarrotStage2, { "carrots_stage1", nullptr },                      Tinting::None,    0,   false },
+        { Tiles::CarrotStage3, { "carrots_stage1", nullptr },                      Tinting::None,    0,   false },
+        { Tiles::CarrotStage4, { "carrots_stage2", nullptr },                      Tinting::None,    0,   false },
+        { Tiles::CarrotStage5, { "carrots_stage2", nullptr },                      Tinting::None,    0,   false },
+        { Tiles::CarrotStage6, { "carrots_stage2", nullptr },                      Tinting::None,    0,   false },
+        { Tiles::CarrotStage7, { "carrots_stage3", nullptr },                      Tinting::None,    0,   false },
+        { Tiles::PotatoStage0, { "potatoes_stage0", nullptr },                     Tinting::None,    0,   false },
+        { Tiles::PotatoStage1, { "potatoes_stage0", nullptr },                     Tinting::None,    0,   false },
+        { Tiles::PotatoStage2, { "potatoes_stage1", nullptr },                     Tinting::None,    0,   false },
+        { Tiles::PotatoStage3, { "potatoes_stage1", nullptr },                     Tinting::None,    0,   false },
+        { Tiles::PotatoStage4, { "potatoes_stage2", nullptr },                     Tinting::None,    0,   false },
+        { Tiles::PotatoStage5, { "potatoes_stage2", nullptr },                     Tinting::None,    0,   false },
+        { Tiles::PotatoStage6, { "potatoes_stage2", nullptr },                     Tinting::None,    0,   false },
+        { Tiles::PotatoStage7, { "potatoes_stage3", nullptr },                     Tinting::None,    0,   false },
         { Tiles::LanternTile,   { "lantern", nullptr },                                Tinting::None,    0,   false },
         { Tiles::BarrelTop,     { "barrel_top", nullptr },                             Tinting::None,    0,   false },
         { Tiles::BarrelSide,    { "barrel_side", nullptr },                            Tinting::None,    0,   false },

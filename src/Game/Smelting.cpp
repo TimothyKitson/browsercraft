@@ -33,6 +33,10 @@ StackId Smelting::resultOf(StackId input)
         case Items::RawChicken: return Items::CookedChicken;
         case Items::RawMutton:  return Items::CookedMutton;
 
+        // The one crop worth cooking. Raw it is barely food; baked it
+        // is worth as much as bread.
+        case Items::Potato:     return Items::BakedPotato;
+
         default: return Blocks::Air;
     }
 }

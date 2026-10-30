@@ -6,6 +6,7 @@
 #include "Game/Smelting.h"
 #include "Game/StructureLoot.h"
 #include "Game/Trial.h"
+#include "Game/Farming.h"
 #include "Entity/MobType.h"
 #include <set>
 #include <algorithm>
@@ -546,6 +547,18 @@ namespace
             {
                 const StackId drop = blockDrop(static_cast<BlockId>(b));
                 if (drop != Blocks::Air) haveItem.insert(drop);
+
+                // A crop does not drop what it is; it drops what it
+                // grew. blockDrop cannot say that, so ask the thing
+                // that decides it.
+                if (isCrop(static_cast<BlockId>(b)))
+                    for (uint32_t roll = 0; roll < 4; ++roll)
+                    {
+                        const Farming::Harvest cut =
+                            Farming::harvestOf(static_cast<BlockId>(b), roll);
+                        if (cut.firstCount > 0) haveItem.insert(cut.first);
+                        if (cut.secondCount > 0) haveItem.insert(cut.second);
+                    }
             }
 
         // What a mob leaves.

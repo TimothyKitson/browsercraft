@@ -40,10 +40,17 @@ int packTileCount();
 class Atlas
 {
 public:
-    // Twenty across, so four hundred tiles. Sixteen was 256 and the
-    // blocks had filled it: the copper that comes next needed five
-    // tiles and there was one left.
-    static constexpr int TILES_PER_ROW = 20;
+    // Twenty-four across, so five hundred and seventy-six tiles.
+    // Sixteen was 256 and the blocks filled it; twenty was 400 and the
+    // crops filled that.
+    //
+    // This time the grid grew and the atlas got smaller. Twenty-four
+    // tiles at 96 pixels is 2304 square, against twenty at 128 which
+    // was 2560 -- about a fifth less texture memory for nearly half as
+    // many tiles again. Nothing is lost by it: the packs in use are 16
+    // and 32 pixels a tile, so 96 was already far more room than any
+    // of their art needs.
+    static constexpr int TILES_PER_ROW = 24;
     static constexpr int FALLBACK_TILE_PIXELS = 16;
     // Highest per-tile resolution we'll build an atlas at. Higher-resolution
     // packs are box-filtered down to this.
@@ -56,7 +63,7 @@ public:
 #ifdef __EMSCRIPTEN__
     static constexpr int MAX_TILE_PIXELS = 64; // keep the web download small
 #else
-    static constexpr int MAX_TILE_PIXELS = 128;
+    static constexpr int MAX_TILE_PIXELS = 96;
 #endif
 
     Atlas();

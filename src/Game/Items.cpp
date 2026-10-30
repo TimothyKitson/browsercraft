@@ -126,6 +126,9 @@ namespace
         { "Ominous Trial Key", Tiles::ItemOminousKey,    64 },
         { "Apple",           Tiles::ItemApple,         64 },
         { "Bone Meal",       Tiles::ItemBoneMeal,      64 },
+        { "Carrot",          Tiles::ItemCarrot,        64 },
+        { "Potato",          Tiles::ItemPotato,        64 },
+        { "Baked Potato",    Tiles::ItemBakedPotato,   64 },
         { "Nether Star",     Tiles::ItemNetherStar,     1 },
     };
 

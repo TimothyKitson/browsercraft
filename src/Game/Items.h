@@ -160,6 +160,13 @@ namespace Items
         // difference between a field and a wait.
         BoneMeal,
 
+        // The two other crops. A carrot and a potato are both the
+        // seed and the food, which is Minecraft's and saves two item
+        // ids: you plant the thing you eat.
+        Carrot,
+        Potato,
+        BakedPotato,
+
         // What a wither leaves. One of them makes a beacon, which is
         // the only thing in the game it is for.
         NetherStar,

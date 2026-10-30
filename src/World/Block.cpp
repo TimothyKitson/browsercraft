@@ -271,6 +271,22 @@ namespace
         { "Lantern",      LanternTile,   LanternTile,    LanternTile,    true,  true,  RenderType::Cube,  15,   0.3f },
         { "Barrel",       BarrelTop,     BarrelTop,      BarrelSide,     true,  true,  RenderType::Cube,   0,   2.5f },
         { "Campfire",     CampfireTop,   CampfireLog,    CampfireLog,    true,  false, RenderType::Cube,  15,   2.0f },
+        { "Carrot Crop",  CarrotStage0,  CarrotStage0,   CarrotStage0,   false, false, RenderType::Cross,  0,   0.0f },
+        { "Carrot Crop",  CarrotStage1,  CarrotStage1,   CarrotStage1,   false, false, RenderType::Cross,  0,   0.0f },
+        { "Carrot Crop",  CarrotStage2,  CarrotStage2,   CarrotStage2,   false, false, RenderType::Cross,  0,   0.0f },
+        { "Carrot Crop",  CarrotStage3,  CarrotStage3,   CarrotStage3,   false, false, RenderType::Cross,  0,   0.0f },
+        { "Carrot Crop",  CarrotStage4,  CarrotStage4,   CarrotStage4,   false, false, RenderType::Cross,  0,   0.0f },
+        { "Carrot Crop",  CarrotStage5,  CarrotStage5,   CarrotStage5,   false, false, RenderType::Cross,  0,   0.0f },
+        { "Carrot Crop",  CarrotStage6,  CarrotStage6,   CarrotStage6,   false, false, RenderType::Cross,  0,   0.0f },
+        { "Carrot Crop",  CarrotStage7,  CarrotStage7,   CarrotStage7,   false, false, RenderType::Cross,  0,   0.0f },
+        { "Potato Crop",  PotatoStage0,  PotatoStage0,   PotatoStage0,   false, false, RenderType::Cross,  0,   0.0f },
+        { "Potato Crop",  PotatoStage1,  PotatoStage1,   PotatoStage1,   false, false, RenderType::Cross,  0,   0.0f },
+        { "Potato Crop",  PotatoStage2,  PotatoStage2,   PotatoStage2,   false, false, RenderType::Cross,  0,   0.0f },
+        { "Potato Crop",  PotatoStage3,  PotatoStage3,   PotatoStage3,   false, false, RenderType::Cross,  0,   0.0f },
+        { "Potato Crop",  PotatoStage4,  PotatoStage4,   PotatoStage4,   false, false, RenderType::Cross,  0,   0.0f },
+        { "Potato Crop",  PotatoStage5,  PotatoStage5,   PotatoStage5,   false, false, RenderType::Cross,  0,   0.0f },
+        { "Potato Crop",  PotatoStage6,  PotatoStage6,   PotatoStage6,   false, false, RenderType::Cross,  0,   0.0f },
+        { "Potato Crop",  PotatoStage7,  PotatoStage7,   PotatoStage7,   false, false, RenderType::Cross,  0,   0.0f },
     };
 }
 
@@ -311,7 +327,7 @@ bool isObtainable(BlockId id)
         default:
             // A crop is planted rather than placed, and only the ripe
             // one would mean anything in a hand anyway.
-            if (isWheat(id)) return false;
+            if (isCrop(id)) return false;
 
             // Likewise for stairs: one of each four is the thing you
             // hold, the rest are it turned round.
@@ -428,7 +444,7 @@ int blockStepVariants(const char* group)
 // birch tree dropped nothing at all.
 Material blockMaterial(BlockId id)
 {
-    if (isWheat(id)) return Material::Plant;
+    if (isCrop(id)) return Material::Plant;
 
     // Asked of the family, so a wood added later is wood and its leaves
     // are leaves without anyone having to remember this function. Named

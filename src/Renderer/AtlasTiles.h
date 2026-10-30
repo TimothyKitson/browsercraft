@@ -229,6 +229,10 @@ namespace Tiles
         BarrelSide,
         CampfireTop,
         CampfireLog,
+        CarrotStage0, CarrotStage1, CarrotStage2, CarrotStage3,
+        CarrotStage4, CarrotStage5, CarrotStage6, CarrotStage7,
+        PotatoStage0, PotatoStage1, PotatoStage2, PotatoStage3,
+        PotatoStage4, PotatoStage5, PotatoStage6, PotatoStage7,
 
         RainDrop,
         SnowFlake,
@@ -261,7 +265,12 @@ namespace Tiles
     // 190 slots between them and the cracks. Moving the line is free;
     // widening the grid would have cost texture memory on a machine
     // that has none to spare.
-    constexpr int ItemFirst = 240;
+    // Raised from 240 when the crops took the block tiles past it --
+    // sixteen stages between carrots and potatoes. The grid went from
+    // 400 tiles to 576 at the same time, so this is not the items
+    // being squeezed: blocks get 400 and items get 160, where before
+    // they had 240 and 150.
+    constexpr int ItemFirst = 400;
 
     enum : int
     {
@@ -350,12 +359,15 @@ namespace Tiles
         ItemNetherStar,
         ItemApple,
         ItemBoneMeal,
+        ItemCarrot,
+        ItemPotato,
+        ItemBakedPotato,
 
-        ItemTileEnd = ItemBoneMeal + 1
+        ItemTileEnd = ItemBakedPotato + 1
     };
 
     // Ten progressively more broken overlay tiles for the mining animation.
-    constexpr int CrackFirst = 390;
+    constexpr int CrackFirst = 560;
     constexpr int CrackStages = 10;
 
     static_assert(static_cast<int>(TileCount) <= ItemFirst, "block tiles ran into the items");

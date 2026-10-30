@@ -3152,6 +3152,124 @@ namespace
               "a harvest always replaces the seed it cost");
     }
 
+    // --- the other two crops --------------------------------------------
+
+    // Carrots and potatoes work the way wheat does -- eight ids, one
+    // per stage -- but they are their own seed, so a ripe one pays
+    // several of itself rather than a crop and a seed.
+    void testRootCrops()
+    {
+        section("carrots and potatoes");
+
+        const BlockId FIRST[] = { Blocks::Wheat0, Blocks::Carrot0, Blocks::Potato0 };
+        const char* NAMES[] = { "wheat", "carrot", "potato" };
+
+        for (int c = 0; c < 3; ++c)
+        {
+            const std::string what = NAMES[c];
+
+            for (int stage = 0; stage < WHEAT_STAGES; ++stage)
+            {
+                const BlockId at = cropAtStage(FIRST[c], stage);
+
+                check(at == static_cast<BlockId>(FIRST[c] + stage),
+                      what + " stage " + std::to_string(stage) + " is its own id");
+                check(isCrop(at), what + " reads as a crop");
+                check(cropStage(at) == stage, "and knows which stage it is at");
+
+                // Exactly one of the three predicates may claim it, or
+                // a carrot would harvest as wheat.
+                const int claims = (isWheat(at) ? 1 : 0) + (isCarrot(at) ? 1 : 0) +
+                                   (isPotato(at) ? 1 : 0);
+                check(claims == 1, "and only one crop claims it");
+
+                check(!isObtainable(at), "a crop is planted, never held");
+                check(blockMaterial(at) == Material::Plant, "and comes apart like a plant");
+                check(Tools::canHarvest(Blocks::Air, at), "bare hands are enough");
+                check(!blockInfo(at).collides, "and you walk through it");
+                check(isCropRipe(at) == (stage == WHEAT_STAGES - 1),
+                      "only the last stage is ripe");
+            }
+
+            // Growing past ripe would walk off the end of the ids and
+            // into whatever block comes next.
+            check(cropAtStage(FIRST[c], 99) == cropAtStage(FIRST[c], 7),
+                  what + " cannot grow past ripe");
+            check(cropAtStage(FIRST[c], -5) == FIRST[c], "nor shrink past nothing");
+        }
+
+        check(!isCrop(Blocks::Farmland) && !isCrop(Blocks::Grass),
+              "earth is not a crop");
+        check(!isCropRipe(Blocks::Grass), "and cannot be ripe");
+
+        // What you plant. For the roots the seed and the food are one
+        // item, which is Minecraft's and is why a carrot is worth
+        // picking up.
+        check(Farming::cropFromSeed(Items::WheatSeeds) == Blocks::Wheat0,
+              "seeds sow wheat");
+        check(Farming::cropFromSeed(Items::Carrot) == Blocks::Carrot0,
+              "a carrot sows a carrot");
+        check(Farming::cropFromSeed(Items::Potato) == Blocks::Potato0,
+              "a potato sows a potato");
+        check(Farming::cropFromSeed(Items::BakedPotato) == Blocks::Air,
+              "a baked one does not: it has been cooked");
+        check(Farming::cropFromSeed(Items::Bread) == Blocks::Air,
+              "and bread sows nothing");
+
+        // Pulled up early, a root gives back exactly what it cost.
+        for (int c = 1; c < 3; ++c)
+        {
+            const StackId seed = (c == 1) ? Items::Carrot : Items::Potato;
+            const Farming::Harvest young = Farming::harvestOf(
+                cropAtStage(FIRST[c], 2), 0);
+            check(young.first == seed && young.firstCount == 1,
+                  std::string("an unripe ") + NAMES[c] + " gives back one");
+            check(young.secondCount == 0, "and nothing else");
+
+            bool alwaysPays = true;
+            for (uint32_t roll = 0; roll < 16; ++roll)
+            {
+                const Farming::Harvest ripe = Farming::harvestOf(
+                    cropAtStage(FIRST[c], 7), roll);
+                if (ripe.first != seed) alwaysPays = false;
+                if (ripe.firstCount < 2 || ripe.firstCount > 5) alwaysPays = false;
+                if (ripe.secondCount != 0) alwaysPays = false;
+            }
+            check(alwaysPays, std::string("a ripe ") + NAMES[c] + " pays two to five of itself");
+        }
+
+        // Eating. A raw potato is the worst food in the game and a
+        // baked one is worth as much as bread, which is the whole
+        // reason the furnace is worth walking back to.
+        check(Food::isEdible(Items::Carrot), "a carrot is food");
+        check(Food::isEdible(Items::Potato), "so is a raw potato");
+        check(Food::isEdible(Items::BakedPotato), "and a baked one");
+        check(Food::valueOf(Items::BakedPotato).hunger >
+                  Food::valueOf(Items::Potato).hunger,
+              "baking a potato is worth doing");
+        check(Smelting::resultOf(Items::Potato) == Items::BakedPotato,
+              "the furnace is what bakes it");
+        check(Smelting::resultOf(Items::Carrot) == Blocks::Air,
+              "a carrot does not cook");
+        check(Smelting::resultOf(Items::BakedPotato) == Blocks::Air,
+              "and a baked potato does not bake twice");
+
+        // The three items are easy to mix up in the table that names
+        // them, and getting that wrong once called a nether star an
+        // apple. Each must have its own name and its own icon.
+        const StackId TRIO[] = { Items::Carrot, Items::Potato, Items::BakedPotato };
+        const char* WANTED[] = { "Carrot", "Potato", "Baked Potato" };
+        for (int i = 0; i < 3; ++i)
+        {
+            check(std::string(itemInfo(TRIO[i]).name) == WANTED[i],
+                  std::string("the item table calls it a ") + WANTED[i]);
+            for (int j = i + 1; j < 3; ++j)
+                check(itemInfo(TRIO[i]).tile != itemInfo(TRIO[j]).tile,
+                      std::string(WANTED[i]) + " and " + WANTED[j] +
+                          " do not share an icon");
+        }
+    }
+
     // --- pathfinding ----------------------------------------------------
 
     // A map drawn as text, one row per line of z. '.' is floor, '#' is
@@ -9605,6 +9723,7 @@ int runSelfTest()
     testEffects();
     testEffectsOnThePlayer();
     testFarming();
+    testRootCrops();
     testPathfinding();
     testChatCommands();
     testCrackStages();

@@ -63,6 +63,11 @@ namespace
         { Items::Apple,         1, 3 },
         { Items::WheatSeeds,    1, 6 },
         { Items::Wheat,         1, 4 },
+        // What is growing in the field outside. A village farmer's
+        // chest holds these in Minecraft too, and here they are also
+        // the first carrot anyone gets who has not found a field.
+        { Items::Carrot,        1, 4 },
+        { Items::Potato,        1, 4 },
         { Items::Stick,         1, 6 },
         { Blocks::Planks,       2, 8 },
         { Blocks::Torch,        1, 6 },

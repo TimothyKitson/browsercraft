@@ -31,6 +31,13 @@ namespace
         // is what you eat on the way somewhere, which is the whole
         // reason it falls out of trees.
         { Items::Apple,          { 4, 2.4f } },
+
+        // The two other crops. A raw potato is the worst food in the
+        // game and a baked one is among the best, which is the whole
+        // reason the furnace is worth walking back to.
+        { Items::Carrot,         { 3, 3.6f } },
+        { Items::Potato,         { 1, 0.6f } },
+        { Items::BakedPotato,    { 5, 6.0f } },
     };
 }
 

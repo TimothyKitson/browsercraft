@@ -1111,21 +1111,28 @@ bool Application::frame()
                         m_world->setBlock(x, y, z, Blocks::Air);
                 }
 
-            // Eight rows, one per stage, plus a row left as bare tilled
-            // earth so the farmland texture is visible too.
+            // Three rows, one per crop, eight columns each for the
+            // eight stages, plus a square left as bare tilled earth so
+            // the farmland texture is visible too.
+            const BlockId CROPS[] = { Blocks::Wheat0, Blocks::Carrot0, Blocks::Potato0 };
             int sown = 0;
-            for (int stage = 0; stage < WHEAT_STAGES; ++stage)
-                for (int z = centreZ - 2; z <= centreZ + 2; ++z)
+            for (int row = 0; row < 3; ++row)
+                for (int stage = 0; stage < WHEAT_STAGES; ++stage)
                 {
-                    const glm::ivec3 ground(centreX - 4 + stage, baseY - 1, z);
-                    if (!Farming::plant(*m_world, ground)) continue;
-                    m_world->setBlock(ground.x, ground.y + 1, ground.z, wheatAtStage(stage));
+                    const glm::ivec3 ground(centreX - 4 + stage, baseY - 1,
+                                            centreZ - 2 + row * 2);
+                    if (!Farming::plant(*m_world, ground, CROPS[row])) continue;
+                    m_world->setBlock(ground.x, ground.y + 1, ground.z,
+                                      cropAtStage(CROPS[row], stage));
                     ++sown;
                 }
 
             m_world->setBlock(centreX + 4, baseY - 1, centreZ, Blocks::Farmland);
 
             m_inventory.add(Items::WheatSeeds, 32);
+            m_inventory.add(Items::Carrot, 32);
+            m_inventory.add(Items::Potato, 32);
+            m_inventory.add(Items::BoneMeal, 32);
 
             m_player.position = glm::vec3(centreX + 0.5f, static_cast<float>(baseY),
                                           centreZ - 9.5f);
@@ -4358,7 +4365,7 @@ void Application::updateMining(float deltaTime)
         // Creative mode mines without producing pickups, like Minecraft.
         if (!m_player.creative())
         {
-            if (isWheat(id))
+            if (isCrop(id))
             {
                 const Farming::Harvest crop = Farming::harvestOf(
                     id, static_cast<uint32_t>(hit.block.x * 31 + hit.block.z * 17 +
@@ -6720,10 +6727,10 @@ void Application::handlePlacement()
     {
         const RaycastHit crop = m_world->raycast(m_camera.position, m_camera.front,
                                                  REACH_DISTANCE);
-        if (crop.hit && isWheat(m_world->getBlock(crop.block.x, crop.block.y, crop.block.z)))
+        if (crop.hit && isCrop(m_world->getBlock(crop.block.x, crop.block.y, crop.block.z)))
         {
             const BlockId was = m_world->getBlock(crop.block.x, crop.block.y, crop.block.z);
-            const int stage = wheatStage(was);
+            const int stage = cropStage(was);
 
             if (stage < 7)
             {
@@ -6734,11 +6741,10 @@ void Application::handlePlacement()
                     crop.block.z * 83492791 ^
                     static_cast<int>(m_elapsedSeconds * 977.0f));
                 const int grown = std::min(7, stage + 2 + static_cast<int>(roll % 2));
+                const BlockId now = cropAtStage(was, grown);
 
-                m_world->setBlock(crop.block.x, crop.block.y, crop.block.z,
-                                  static_cast<BlockId>(Blocks::Wheat0 + grown));
-                m_net.onLocalBlockChange(crop.block.x, crop.block.y, crop.block.z,
-                                         static_cast<BlockId>(Blocks::Wheat0 + grown));
+                m_world->setBlock(crop.block.x, crop.block.y, crop.block.z, now);
+                m_net.onLocalBlockChange(crop.block.x, crop.block.y, crop.block.z, now);
                 m_particles.spawnBlockBreak(crop.block, Blocks::TallGrass);
                 m_audio.play(Sound::Place, 0.5f, 1.5f);
 
@@ -6754,14 +6760,16 @@ void Application::handlePlacement()
 
     // Sowing. Seeds till the ground they are used on and plant
     // themselves in one action -- Minecraft wants a hoe first, and there
-    // are no tools yet.
-    if (stack.id == Items::WheatSeeds)
+    // are no tools yet. A carrot and a potato sow themselves the same
+    // way, since for those two the seed and the food are one item.
+    if (Farming::cropFromSeed(stack.id) != Blocks::Air)
     {
+        const BlockId sowing = Farming::cropFromSeed(stack.id);
         const RaycastHit soil = m_world->raycast(m_camera.position, m_camera.front, REACH_DISTANCE);
-        if (soil.hit && Farming::plant(*m_world, soil.block))
+        if (soil.hit && Farming::plant(*m_world, soil.block, sowing))
         {
             m_net.onLocalBlockChange(soil.block.x, soil.block.y, soil.block.z, Blocks::Farmland);
-            m_net.onLocalBlockChange(soil.block.x, soil.block.y + 1, soil.block.z, Blocks::Wheat0);
+            m_net.onLocalBlockChange(soil.block.x, soil.block.y + 1, soil.block.z, sowing);
             m_audio.playPlace(Blocks::Farmland);
             if (!m_player.creative())
             {

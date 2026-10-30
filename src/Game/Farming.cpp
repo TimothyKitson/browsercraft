@@ -37,25 +37,53 @@ namespace
 Farming::Harvest Farming::harvestOf(BlockId crop, uint32_t roll)
 {
     Harvest out;
-    if (!isWheat(crop)) return out;
+    if (!isCrop(crop)) return out;
 
-    if (crop != WHEAT_RIPE)
+    // What this crop is sown from. For the roots it is the food
+    // itself, which is why pulling one up early costs nothing.
+    const StackId seed = isWheat(crop)  ? Items::WheatSeeds
+                       : isCarrot(crop) ? Items::Carrot
+                                        : Items::Potato;
+
+    if (!isCropRipe(crop))
     {
         // Pulled up early: you get your seed back and nothing else.
-        out.first = Items::WheatSeeds;
+        out.first = seed;
         out.firstCount = 1;
         return out;
     }
 
-    out.first = Items::Wheat;
-    out.firstCount = 1;
-    out.second = Items::WheatSeeds;
-    out.secondCount = 1 + static_cast<int>(roll % 3u);   // one to three
+    if (isWheat(crop))
+    {
+        out.first = Items::Wheat;
+        out.firstCount = 1;
+        out.second = Items::WheatSeeds;
+        out.secondCount = 1 + static_cast<int>(roll % 3u);   // one to three
+        return out;
+    }
+
+    // A root is its own seed, so a ripe one pays several of the same
+    // thing: two to five, which is Minecraft's and is what makes a
+    // field grow from one carrot.
+    out.first = seed;
+    out.firstCount = 2 + static_cast<int>(roll % 4u);
     return out;
 }
 
-bool Farming::plant(World& world, const glm::ivec3& ground)
+BlockId Farming::cropFromSeed(StackId held)
 {
+    switch (held)
+    {
+        case Items::WheatSeeds: return Blocks::Wheat0;
+        case Items::Carrot:     return Blocks::Carrot0;
+        case Items::Potato:     return Blocks::Potato0;
+        default:                return Blocks::Air;
+    }
+}
+
+bool Farming::plant(World& world, const glm::ivec3& ground, BlockId crop)
+{
+    if (!isCrop(crop)) return false;
     if (!isTillable(world.getBlock(ground.x, ground.y, ground.z))) return false;
 
     const glm::ivec3 above(ground.x, ground.y + 1, ground.z);
@@ -63,16 +91,16 @@ bool Farming::plant(World& world, const glm::ivec3& ground)
     if (there != Blocks::Air && there != Blocks::TallGrass) return false;
 
     world.setBlock(ground.x, ground.y, ground.z, Blocks::Farmland);
-    world.setBlock(above.x, above.y, above.z, Blocks::Wheat0);
+    world.setBlock(above.x, above.y, above.z, cropAtStage(crop, 0));
     return true;
 }
 
 bool Farming::canGrowAt(const World& world, const glm::ivec3& at)
 {
     const BlockId crop = world.getBlock(at.x, at.y, at.z);
-    if (!isWheat(crop) || crop == WHEAT_RIPE) return false;
+    if (!isCrop(crop) || isCropRipe(crop)) return false;
 
-    // Wheat needs tilled earth under it and daylight or a torch on it.
+    // A crop needs tilled earth under it and daylight or a torch on it.
     if (world.getBlock(at.x, at.y - 1, at.z) != Blocks::Farmland) return false;
 
     const int light = std::max<int>(world.skyLight(at.x, at.y, at.z),
@@ -111,6 +139,7 @@ void Farming::grow(World& world, const glm::vec3& around, uint32_t& seed)
 
         if (!canGrowAt(world, at)) continue;
 
-        world.setBlock(x, y, z, wheatAtStage(wheatStage(world.getBlock(x, y, z)) + 1));
+        const BlockId crop = world.getBlock(x, y, z);
+        world.setBlock(x, y, z, cropAtStage(crop, cropStage(crop) + 1));
     }
 }

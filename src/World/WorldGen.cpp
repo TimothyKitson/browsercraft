@@ -987,7 +987,15 @@ void WorldGen::stampBuilding(Chunk& chunk, const Village::Building& building,
                 // planted all on one morning.
                 const int stage = static_cast<int>(
                     hashCoords(x, 31, z, m_seed + 55040) % 8u);
-                put(chunk, x, ground + 1, z, wheatAtStage(stage));
+
+                // One crop per bed rather than per column, so each half
+                // of a field reads as a planted thing. Minecraft sows a
+                // village farm the same way: a bed at a time.
+                static const BlockId CROPS[] = { Blocks::Wheat0, Blocks::Carrot0,
+                                                 Blocks::Potato0 };
+                const BlockId crop = CROPS[hashCoords(x0, (z < midZ) ? 0 : 1, z0,
+                                                      m_seed + 55041) % 3u];
+                put(chunk, x, ground + 1, z, cropAtStage(crop, stage));
             }
 
         return;

@@ -6,7 +6,7 @@
 
 class World;
 
-// Tilling, planting, growing and harvesting wheat.
+// Tilling, planting, growing and harvesting the three crops.
 //
 // Crops keep their whole state in the block id -- eight ids, one per
 // stage -- so a field saves and loads for free with the chunks it stands
@@ -45,9 +45,13 @@ namespace Farming
     };
     Harvest harvestOf(BlockId crop, uint32_t roll);
 
+    // What a held item sows, or Air if it sows nothing. A carrot and a
+    // potato are both the seed and the food, which is Minecraft's.
+    BlockId cropFromSeed(StackId held);
+
     // Turns the block into farmland and plants on top of it. False when
     // the ground is wrong or there is no room above it.
-    bool plant(World& world, const glm::ivec3& ground);
+    bool plant(World& world, const glm::ivec3& ground, BlockId crop = Blocks::Wheat0);
 
     // Advances a scatter of crops near the player. `seed` is stirred
     // each call so the same columns are not picked every time.

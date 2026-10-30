@@ -385,6 +385,13 @@ namespace Blocks
         Barrel,
         Campfire,
 
+        // Two more crops, so a field is a field rather than a wheat
+        // demonstration. Eight stages each, the same as the wheat:
+        // a crop keeps its whole state in its block id, so a field
+        // saves and loads with the chunk it stands in.
+        Carrot0, Carrot1, Carrot2, Carrot3, Carrot4, Carrot5, Carrot6, Carrot7,
+        Potato0, Potato1, Potato2, Potato3, Potato4, Potato5, Potato6, Potato7,
+
         Count
     };
 }
@@ -790,4 +797,41 @@ constexpr int WHEAT_STAGES = 8;
 constexpr BlockId WHEAT_RIPE = Blocks::Wheat7;
 inline bool isWheat(BlockId id) { return id >= Blocks::Wheat0 && id <= Blocks::Wheat7; }
 inline int wheatStage(BlockId id) { return isWheat(id) ? id - Blocks::Wheat0 : 0; }
+
+inline bool isCarrot(BlockId id) { return id >= Blocks::Carrot0 && id <= Blocks::Carrot7; }
+inline bool isPotato(BlockId id) { return id >= Blocks::Potato0 && id <= Blocks::Potato7; }
+
+// Any of the three. Everything that treats a crop as a crop -- growing
+// it, harvesting it, bone meal, what it drops -- asks this rather than
+// naming them one by one, so a fourth costs one line here and nothing
+// anywhere else.
+inline bool isCrop(BlockId id)
+{
+    return isWheat(id) || isCarrot(id) || isPotato(id);
+}
+
+// Which of the eight stages a crop is at, whichever crop it is.
+inline int cropStage(BlockId id)
+{
+    if (isWheat(id)) return id - Blocks::Wheat0;
+    if (isCarrot(id)) return id - Blocks::Carrot0;
+    if (isPotato(id)) return id - Blocks::Potato0;
+    return 0;
+}
+
+// The same crop at a given stage.
+inline BlockId cropAtStage(BlockId id, int stage)
+{
+    if (stage < 0) stage = 0;
+    if (stage > 7) stage = 7;
+    if (isWheat(id)) return static_cast<BlockId>(Blocks::Wheat0 + stage);
+    if (isCarrot(id)) return static_cast<BlockId>(Blocks::Carrot0 + stage);
+    if (isPotato(id)) return static_cast<BlockId>(Blocks::Potato0 + stage);
+    return id;
+}
+// Grown as far as it goes, whichever crop it is.
+inline bool isCropRipe(BlockId id)
+{
+    return isCrop(id) && cropStage(id) == WHEAT_STAGES - 1;
+}
 inline BlockId wheatAtStage(int stage) { return static_cast<BlockId>(Blocks::Wheat0 + (stage < 0 ? 0 : (stage > WHEAT_STAGES - 1 ? WHEAT_STAGES - 1 : stage))); }

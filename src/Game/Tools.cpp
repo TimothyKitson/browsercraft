@@ -32,7 +32,7 @@ namespace
     // apart as readily however you go at it.
     Tools::Kind toolFor(BlockId block)
     {
-        if (isWheat(block)) return Tools::Kind::None;
+        if (isCrop(block)) return Tools::Kind::None;
 
         if (isLeaves(block)) return Tools::Kind::Sword;
 
