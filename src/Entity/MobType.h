@@ -139,6 +139,7 @@ enum class Part : uint8_t
 {
     Body,
     Head,
+    Lid,
     LegFrontLeft,
     LegFrontRight,
     LegBackLeft,
@@ -386,6 +387,35 @@ constexpr float CAGE_RANGE = 12.0f;
 
 const MobType& mobType(MobId id);
 int mobTypeCount();
+
+// The shulker, which is the one mob in the game that is a block rather
+// than an animal. It is bolted to the grid, it never turns, and the
+// only thing about it that moves is the lid.
+namespace Shulker
+{
+    // How long it takes the lid to go from shut to open, and the point
+    // past which it counts as open: a shut shulker does not shoot.
+    constexpr float PEEK_RATE = 1.6f;
+    constexpr float PEEK_OPEN = 0.85f;
+
+    // Where it sits: the middle of the block it was put down in, so a
+    // row of them lines up with the wall rather than scattering.
+    glm::vec3 onGrid(glm::vec3 feet);
+
+    // One step of the lid towards open or shut.
+    float peekTowards(float peek, bool wantsOpen, float deltaTime);
+
+    // Mojang's own lid curve. Java poses it as
+    //     lid.y = 16 + sin((0.5 + peek) * PI) * 8
+    // measured downwards from the feet, so what the lid rises by is
+    // eight pixels less that, which is nothing at all shut and a whole
+    // block open.
+    float lidLift(float peek);
+
+    // And the twist it takes on the way, which is a quarter of an
+    // eighth of a turn at its widest and nothing at either end.
+    float lidTwist(float peek);
+}
 
 // The lowest and tallest points of the model, in blocks, with every box
 // put through the rotation the renderer gives it -- a body lying on its

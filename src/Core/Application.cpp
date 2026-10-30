@@ -1789,6 +1789,7 @@ bool Application::frame()
             m_startupScreen == "wolf" || m_startupScreen == "horse" ||
             m_startupScreen == "boat" || m_startupScreen == "rails" ||
             m_startupScreen == "mobs" || m_startupScreen == "golem" ||
+            m_startupScreen == "shulker" ||
             m_startupScreen == "nethermobs" || m_startupScreen == "lairmobs" ||
             m_startupScreen == "jungle" || m_startupScreen == "savanna" ||
             m_startupScreen == "redstone" || m_startupScreen == "chamber" ||
@@ -1843,6 +1844,7 @@ bool Application::frame()
                                   m_startupScreen != "rails" &&
                                   m_startupScreen != "mobs" &&
                                   m_startupScreen != "golem" &&
+                                  m_startupScreen != "shulker" &&
                                   m_startupScreen != "nethermobs" &&
                                   m_startupScreen != "lairmobs" &&
                                   m_startupScreen != "jungle" &&
@@ -2289,6 +2291,46 @@ bool Application::frame()
                 // Creative, so a shot of ten mobs is not spoiled by one
                 // of them being a creeper. Three screens in a row came
                 // back as the death overlay before this went in.
+                m_player.mode = GameMode::Creative;
+                m_player.health = Player::MAX_HEALTH;
+            }
+
+            if (m_startupScreen == "shulker")
+            {
+                m_camera.setOrientation(0.0f, -4.0f);
+                m_camera.addLook(0.0f, 0.0f, 0.0f);
+
+                const int px = static_cast<int>(std::floor(m_player.position.x));
+                const int py = static_cast<int>(std::floor(m_player.position.y));
+                const int pz = static_cast<int>(std::floor(m_player.position.z));
+
+                for (int ax = 0; ax <= 28; ++ax)
+                    for (int az = -6; az <= 6; ++az)
+                    {
+                        for (int ay = 0; ay <= 8; ++ay)
+                            m_world->setBlock(px + ax, py + ay, pz + az, Blocks::Air);
+                        m_world->setBlock(px + ax, py - 1, pz + az, Blocks::Stone);
+                    }
+
+                // Two of them, put down deliberately off the grid so
+                // the shot shows them snapped onto it. The near one is
+                // inside the range it shoots at and opens; the far one
+                // is outside it and stays a box, which is the whole of
+                // the difference.
+                m_entities.spawnAt(MobId::Shulker,
+                                   glm::vec3(px + 6.2f, static_cast<float>(py), pz + 0.8f),
+                                   *m_world);
+                m_entities.spawnAt(MobId::Shulker,
+                                   glm::vec3(px + 7.9f, static_cast<float>(py), pz - 2.3f),
+                                   *m_world);
+                m_entities.spawnAt(MobId::Shulker,
+                                   glm::vec3(px + 23.1f, static_cast<float>(py), pz + 0.4f),
+                                   *m_world);
+
+                m_world->setBlock(px + 10, py, pz - 5, Blocks::Bookshelf);
+                m_world->setBlock(px + 10, py, pz - 1, Blocks::DiamondOre);
+                m_world->setBlock(px + 10, py, pz + 5, Blocks::EndPortalFrame);
+
                 m_player.mode = GameMode::Creative;
                 m_player.health = Player::MAX_HEALTH;
             }

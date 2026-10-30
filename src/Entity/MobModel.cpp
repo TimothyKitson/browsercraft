@@ -97,6 +97,15 @@ void MobModel::build(const MobSkin& skin, const Mob& mob, float sky, float block
     const float phase = mob.gait();
     const float amount = mob.gaitAmount();
 
+    // A shulker's lid, which is the one part in the game that moves by
+    // sliding rather than swinging. Mojang gives an open one a slow bob
+    // where it sits; the clock is the mob's own age, since a thing that
+    // never walks has no stride to hang an animation off.
+    const float peek = mob.peek();
+    const float lidLift = Shulker::lidLift(peek) -
+                          (peek > 0.5f ? std::sin(mob.age() * 2.0f) * 0.7f : 0.0f);
+    const float lidTwist = Shulker::lidTwist(peek);
+
     std::vector<BoxMesh::Box> boxes;
     boxes.reserve(skin.boxes().size());
 
@@ -118,6 +127,13 @@ void MobModel::build(const MobSkin& skin, const Mob& mob, float sky, float block
         box.pitch = source.pitch + swingFor(source.part, phase, amount) * type.limbSwing;
         box.yaw = source.yaw;
         box.roll = source.roll + flapFor(source.part, phase, amount);
+
+        if (source.part == Part::Lid)
+        {
+            box.min.y += lidLift;
+            box.max.y += lidLift;
+            box.yaw += lidTwist;
+        }
 
         boxes.push_back(box);
     }

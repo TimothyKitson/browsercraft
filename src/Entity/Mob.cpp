@@ -26,6 +26,15 @@ Mob::Mob(MobId type, glm::vec3 feetPosition, uint32_t seed, bool baby)
     const MobType& t = mobType(type);
     m_health = t.maxHealth;
     m_yaw = random01() * 360.0f;
+
+    // A shulker is a block that happens to be alive. It goes in the
+    // middle of the one it was put in and it faces the way every other
+    // block does, which is to say it does not face at all.
+    if (t.stationary)
+    {
+        m_position = Shulker::onGrid(m_position);
+        m_yaw = 0.0f;
+    }
     m_goalYaw = m_yaw;
     m_ambientTimer = t.ambientMinSeconds + random01() * (t.ambientMaxSeconds - t.ambientMinSeconds);
 }
@@ -581,6 +590,17 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
     if (m_huntTimer > 0.0f) m_huntTimer = std::max(0.0f, m_huntTimer - deltaTime);
     if (m_biteTimer > 0.0f) m_biteTimer = std::max(0.0f, m_biteTimer - deltaTime);
     if (m_babyTimer > 0.0f) m_babyTimer = std::max(0.0f, m_babyTimer - deltaTime);
+    m_age += deltaTime;
+
+    // The lid. It opens when there is something to shoot at and shuts
+    // again when there is not, and a shut shulker is a block: it does
+    // not fire, and there is nothing of it showing to hit.
+    if (t.stationary && alive())
+    {
+        const glm::vec3 toPlayer = playerPosition - m_position;
+        m_peek = Shulker::peekTowards(m_peek, glm::length(toPlayer) < t.arrowRange,
+                                      deltaTime);
+    }
 
     // A grown chicken lays an egg every few minutes. The clock runs
     // whether anybody is watching or not, which is why a flock left
@@ -631,10 +651,10 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
         if (m_steerJump && m_onGround && !t.inanimate) m_velocity.y = RIDDEN_JUMP;
         m_steerJump = false;
     }
-    else if (t.inanimate || m_sitting)
+    else if (t.inanimate || t.stationary || m_sitting)
     {
         // Left alone it stays where it was put. A boat has nothing to
-        // want; a sitting wolf has been told.
+        // want; a sitting wolf has been told; a shulker is bolted on.
         m_moving = false;
         m_path.clear();
     }
@@ -683,10 +703,24 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
         }
     }
 
-    // Turn towards the goal heading the short way round.
-    m_yaw = PlayerAnimation::wrapDegrees(
-        m_yaw + PlayerAnimation::wrapDegrees(m_goalYaw - m_yaw) *
-                    std::min(1.0f, 6.0f * deltaTime));
+    // Turn towards the goal heading the short way round. A shulker
+    // never does: it is fixed to the block the way a chest is, and one
+    // that swivelled to watch you would read as a creature.
+    if (t.stationary)
+    {
+        m_goalYaw = m_yaw;
+        m_velocity.x = 0.0f;
+        m_velocity.z = 0.0f;
+        const glm::vec3 grid = Shulker::onGrid(m_position);
+        m_position.x = grid.x;
+        m_position.z = grid.z;
+    }
+    else
+    {
+        m_yaw = PlayerAnimation::wrapDegrees(
+            m_yaw + PlayerAnimation::wrapDegrees(m_goalYaw - m_yaw) *
+                        std::min(1.0f, 6.0f * deltaTime));
+    }
 
     const float radians = glm::radians(m_yaw);
     const glm::vec3 forward(std::cos(radians), 0.0f, std::sin(radians));
@@ -836,7 +870,9 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
 
     // Shooting. A bow wants a clear line and some distance; up close
     // the arrow is no use and the skeleton backs away instead.
-    if (t.arrowDamage > 0)
+    // A shulker shoots out of an open lid and no other way, so the
+    // bullet waits on the animation rather than the other way round.
+    if (t.arrowDamage > 0 && (!t.stationary || m_peek >= Shulker::PEEK_OPEN))
     {
         if (m_shootTimer > 0.0f) m_shootTimer = std::max(0.0f, m_shootTimer - deltaTime);
 
@@ -945,7 +981,7 @@ void Mob::damage(int amount, const glm::vec3& fromDirection)
     // that had the undead hopping on the spot once a second all dawn.
     const glm::vec3 flat(fromDirection.x, 0.0f, fromDirection.z);
     const float length = glm::length(flat);
-    if (length > 0.001f)
+    if (length > 0.001f && !type().stationary)
     {
         m_velocity += (flat / length) * 5.0f;
         m_velocity.y = std::max(m_velocity.y, 4.2f);

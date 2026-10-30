@@ -146,6 +146,14 @@ public:
     // 1 while alive, falling to 0 as a dead one keels over.
     float deathFade() const;
 
+    // How far the shulker's lid is open, 0 shut and 1 wide. Nothing
+    // else in the game has one, so it rests at 0 everywhere else.
+    float peek() const { return m_peek; }
+
+    // How long it has been alive, for the one animation that is a
+    // clock rather than a stride: an open lid bobs where it stands.
+    float age() const { return m_age; }
+
     std::vector<MobSound>& sounds() { return m_sounds; }
     std::vector<MobStrike>& strikes() { return m_strikes; }
     std::vector<MobShot>& shots() { return m_shots; }
@@ -428,6 +436,8 @@ private:
     bool m_deathReported = false;
     float m_eggTimer = EGG_SECONDS;
     bool m_eggReady = false;
+    float m_peek = 0.0f;
+    float m_age = 0.0f;
 
     uint32_t m_rng = 1;
     uint32_t m_birthSeed = 1;

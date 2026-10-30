@@ -306,10 +306,10 @@ namespace
             t.headColour = rgb(214, 190, 214);
             t.eyeColour = rgb(60, 40, 64);
 
-            // A box with a lid on it. The lid is filed as the head so
-            // it turns towards whatever the thing is looking at.
-
-            t.model.push_back(mc(Part::Body, 0, 0, 16, 12, 16, -8, -16, -8, 0, 24, 0));
+            // A box with a lid on it. The lid is its own part: it is
+            // the one thing on a shulker that moves, and it moves by
+            // rising off the base rather than by swinging.
+            t.model.push_back(mc(Part::Lid, 0, 0, 16, 12, 16, -8, -16, -8, 0, 24, 0));
             t.model.push_back(mc(Part::Body, 0, 28, 16, 8, 16, -8, -8, -8, 0, 24, 0));
             t.model.push_back(mc(Part::Head, 0, 52, 6, 6, 6, -3, 0, -3, 0, 12, 0));
 
@@ -3507,4 +3507,37 @@ float modelTop(const MobType& type)
     float bottom = 0.0f, top = 0.0f;
     modelBounds(type, bottom, top);
     return top;
+}
+
+namespace Shulker
+{
+    glm::vec3 onGrid(glm::vec3 feet)
+    {
+        feet.x = std::floor(feet.x) + 0.5f;
+        feet.y = std::floor(feet.y + 0.0001f);
+        feet.z = std::floor(feet.z) + 0.5f;
+        return feet;
+    }
+
+    float peekTowards(float peek, bool wantsOpen, float deltaTime)
+    {
+        const float want = wantsOpen ? 1.0f : 0.0f;
+        const float step = PEEK_RATE * std::max(0.0f, deltaTime);
+        return std::clamp(peek + std::clamp(want - peek, -step, step), 0.0f, 1.0f);
+    }
+
+    float lidLift(float peek)
+    {
+        const float turn = (0.5f + std::clamp(peek, 0.0f, 1.0f)) * 2.0f * HALF_PI;
+        return 8.0f - std::sin(turn) * 8.0f;
+    }
+
+    float lidTwist(float peek)
+    {
+        if (peek <= 0.3f) return 0.0f;
+        const float turn = (0.5f + std::clamp(peek, 0.0f, 1.0f)) * 2.0f * HALF_PI;
+        const float swing = -1.0f + std::sin(turn);
+        const float fourth = swing * swing * swing * swing;
+        return fourth * 2.0f * HALF_PI * 0.125f;
+    }
 }

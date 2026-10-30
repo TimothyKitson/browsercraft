@@ -11509,6 +11509,113 @@ namespace
               "and it is its own light, so the ring can be seen from the island");
     }
 
+    void testTheShulker()
+    {
+        section("the shulker: a block that is alive");
+
+        const MobType& shell = mobType(MobId::Shulker);
+
+        check(shell.stationary, "a shulker is bolted where it stands");
+        check(shell.walkSpeed == 0.0f, "it has no walking pace");
+        check(shell.limbSwing == 0.0f, "and nothing on it swings");
+        check(shell.arrowDamage > 0, "it fights by shooting");
+        check(shell.attackDamage == 0, "and never by swinging, having no reach");
+
+        // One in the whole game. Anything else that turned up bolted
+        // down would be a species somebody forgot to give legs to.
+        int bolted = 0;
+        for (int i = 0; i < mobTypeCount(); ++i)
+            if (mobType(static_cast<MobId>(i)).stationary) ++bolted;
+        check(bolted == 1, "and it is the only one of its kind in the game");
+
+        // The lid is its own part, so the renderer can lift it. Filed
+        // as a head it turned to watch you, which is the one thing a
+        // shulker does not do.
+        int lids = 0, elsewhere = 0;
+        for (int i = 0; i < mobTypeCount(); ++i)
+            for (const MobBox& box : mobType(static_cast<MobId>(i)).model)
+                if (box.part == Part::Lid)
+                {
+                    if (static_cast<MobId>(i) == MobId::Shulker) ++lids;
+                    else ++elsewhere;
+                }
+        check(lids == 1, "the shulker has one lid");
+        check(elsewhere == 0, "and nothing else in the game has one at all");
+
+        section("the shulker: on the grid");
+
+        // Wherever it is put down it ends up in the middle of the
+        // block, so a row of them along a wall lines up.
+        const glm::vec3 centred = Shulker::onGrid(glm::vec3(3.7f, 64.2f, -2.1f));
+        check(centred.x == 3.5f, "it sits in the middle of its block across");
+        check(centred.z == -2.5f, "and in the middle the other way");
+        check(centred.y == 64.0f, "with its feet on the floor of it");
+        check(Shulker::onGrid(centred) == centred, "and putting it down again moves nothing");
+
+        // The same, through the mob itself.
+        Mob sat(MobId::Shulker, glm::vec3(10.8f, 70.0f, 4.3f), 7u);
+        check(sat.position() == glm::vec3(10.5f, 70.0f, 4.5f), "a shulker spawns on the grid");
+        check(sat.yaw() == 0.0f, "facing the way every block faces");
+        check(sat.peek() == 0.0f, "and shut");
+
+        // Hitting it does not shove it off. Everything else in the
+        // game is knocked back, which for a shulker would walk it off
+        // its block one blow at a time.
+        sat.damage(1, glm::vec3(1.0f, 0.0f, 0.0f));
+        check(sat.position() == glm::vec3(10.5f, 70.0f, 4.5f), "a blow does not shift it");
+        check(sat.velocity().x == 0.0f && sat.velocity().z == 0.0f,
+              "and does not knock it back");
+        check(sat.hurtFlash() > 0.0f, "though it felt it");
+
+        section("the shulker: the lid");
+
+        // Opening and shutting, at a pace you can watch.
+        float peek = 0.0f;
+        for (int step = 0; step < 60; ++step) peek = Shulker::peekTowards(peek, true, 1.0f / 60.0f);
+        check(peek == 1.0f, "a second of asking opens it the whole way");
+        peek = Shulker::peekTowards(peek, true, 1.0f);
+        check(peek == 1.0f, "and it opens no further than open");
+
+        for (int step = 0; step < 60; ++step) peek = Shulker::peekTowards(peek, false, 1.0f / 60.0f);
+        check(peek == 0.0f, "leaving it alone shuts it again");
+        peek = Shulker::peekTowards(peek, false, 1.0f);
+        check(peek == 0.0f, "and it shuts no further than shut");
+
+        check(Shulker::peekTowards(0.0f, true, 1.0f / 60.0f) < 0.1f,
+              "one frame does not fling it open");
+
+        // Mojang's curve: shut it sits flush, open it has risen a
+        // whole block, and it never goes backwards on the way.
+        check(std::fabs(Shulker::lidLift(0.0f)) < 0.001f, "a shut lid sits flush on the base");
+        check(std::fabs(Shulker::lidLift(1.0f) - 16.0f) < 0.001f,
+              "an open one has risen a whole block");
+
+        float lastLift = -1.0f;
+        for (int step = 0; step <= 20; ++step)
+        {
+            const float lift = Shulker::lidLift(step / 20.0f);
+            check(lift >= lastLift - 0.001f, "the lid never drops on its way open");
+            lastLift = lift;
+        }
+
+        // The lid clears the base as it goes, which is what makes the
+        // head inside it visible. The base is eight pixels tall and
+        // the lid starts four up it.
+        check(4.0f + Shulker::lidLift(1.0f) > 8.0f, "an open lid is clear of the base");
+        check(4.0f + Shulker::lidLift(0.0f) < 8.0f, "a shut one is down over it");
+
+        // And the twist, which is Mojang's own: nothing at all until
+        // the lid is properly moving, and a whole number of turns by
+        // the time it is open, so it lands square.
+        check(Shulker::lidTwist(0.0f) == 0.0f, "a shut lid is not turned");
+        check(Shulker::lidTwist(0.2f) == 0.0f, "nor one barely cracked");
+        check(Shulker::lidTwist(0.5f) > 0.0f, "halfway open it is turning");
+
+        const float turns = Shulker::lidTwist(1.0f) / (2.0f * 3.14159265f);
+        check(std::fabs(turns - std::round(turns)) < 0.001f,
+              "and an open one has come round to square again");
+    }
+
     void testDyes()
     {
         section("dye: the sixteen colours");
@@ -11870,6 +11977,7 @@ int runSelfTest()
     testNightVariants();
     testGolemsAndTheLast();
     testTheEnd();
+    testTheShulker();
 
     std::printf("\n%d checks, %d failed\n", g_checks, g_failures);
     return g_failures == 0 ? 0 : 1;
