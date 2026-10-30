@@ -71,28 +71,28 @@ namespace
     // The yellow line next to the logo. All written for this game --
     // Minecraft's own splashes are Mojang's.
     const char* SPLASHES[] = {
-        "NO INSTALL REQUIRED!",
-        "RUNS ON SCHOOL LAPTOPS!",
-        "BUILT FROM SCRATCH!",
-        "NOW WITH TREES!",
-        "ZERO MEGABYTES OF JAVA!",
-        "PRESS F3!",
-        "BLOCKS ALL THE WAY DOWN!",
-        "OPEN IT TO LAN!",
-        "ALSO TRY MINING!",
-        "SIXTY FOUR BY THIRTY TWO!",
-        "MADE OF TRIANGLES, SECRETLY",
-        "IT IS A WEBSITE!",
+        "No install required!",
+        "Runs on school laptops!",
+        "Built from scratch!",
+        "Now with trees!",
+        "Zero megabytes of java!",
+        "Press F3!",
+        "Blocks all the way down!",
+        "Open it to LAN!",
+        "Also try mining!",
+        "Sixty four by thirty two!",
+        "Made of Triangles, Secretly",
+        "It is a website!",
     };
 
     // Eaglercraft fills the username in for you rather than opening on an
     // empty field you cannot submit. Same idea.
     std::string randomPlayerName(uint32_t seed)
     {
-        static const char* FIRST[] = { "BLOCK", "CUBE", "PIXEL", "STONE",
-                                       "EMBER", "FROST", "MOSS", "CLAY" };
-        static const char* SECOND[] = { "FAN", "HEAD", "WORKS", "PUNK",
-                                        "SMITH", "WALKER", "DIGGER", "MAKER" };
+        static const char* FIRST[] = { "Block", "Cube", "Pixel", "Stone",
+                                       "Ember", "Frost", "Moss", "Clay" };
+        static const char* SECOND[] = { "Fan", "Head", "Works", "Punk",
+                                        "Smith", "Walker", "Digger", "Maker" };
         char buffer[32];
         std::snprintf(buffer, sizeof(buffer), "%s%s%02u",
                       FIRST[seed % std::size(FIRST)],
@@ -104,6 +104,27 @@ namespace
     // Hotbar / inventory geometry, in pixels before UI scaling.
     constexpr float SLOT_SIZE = 46.0f;
     constexpr float SLOT_GAP = 4.0f;
+
+    // The HUD, in Minecraft's own interface pixels. Every one of these
+    // is a number out of the vanilla client rather than a guess: the
+    // hotbar sprite really is 182 by 22, a slot really is 20 apart from
+    // the next, and an item really is drawn 16 square inside it. Taking
+    // them verbatim is what makes a screenshot line up with a vanilla
+    // one laid over the top of it.
+    constexpr float HOTBAR_WIDTH = 182.0f;
+    constexpr float HOTBAR_HEIGHT = 22.0f;
+    constexpr float SLOT_PITCH = 20.0f;
+    constexpr float ITEM_SIZE = 16.0f;
+    constexpr float SELECTION_WIDTH = 24.0f;
+    constexpr float SELECTION_HEIGHT = 23.0f;
+
+    // A heart, a plate of armour, a drumstick and a bubble are all nine
+    // square, and they sit eight apart so each overlaps the last.
+    constexpr float ICON_SIZE = 9.0f;
+    constexpr float HEART_PITCH = 8.0f;
+
+    // Half the length of one arm of the crosshair.
+    constexpr float CROSSHAIR_ARM = 4.5f;
 
     const glm::vec4 PANEL_COLOR(0.09f, 0.09f, 0.11f, 0.82f);
 
@@ -1041,17 +1062,17 @@ void Application::run()
 #ifndef __EMSCRIPTEN__
     if (m_hostOnStart && m_world)
     {
-        const std::string host = m_playerName.empty() ? "HOST" : m_playerName;
+        const std::string host = m_playerName.empty() ? "Host" : m_playerName;
         if (m_net.openToLan(host, m_world->seed(), static_cast<uint8_t>(m_gameMode),
                             m_timeOfDay, m_spawnPoint))
-            m_discovery.startAnnouncing(host + "'S WORLD", m_net.port());
+            m_discovery.startAnnouncing(host + "'s World", m_net.port());
         std::printf("[net] %s\n", m_net.message().c_str());
         std::fflush(stdout);
     }
     else if (!m_joinOnStart.empty())
     {
         m_net.join(m_joinOnStart, Net::DEFAULT_PORT,
-                   m_playerName.empty() ? "GUEST" : m_playerName);
+                   m_playerName.empty() ? "Guest" : m_playerName);
         std::printf("[net] %s\n", m_net.message().c_str());
         std::fflush(stdout);
     }
@@ -1343,7 +1364,7 @@ bool Application::frame()
 
             const glm::ivec3 board(centreX, baseY + 1, wallZ - 1);
             m_world->setBlock(board.x, board.y, board.z, Blocks::SignSouth);
-            m_signs.at(board) = Signs::Text{ "THIS WAY", "TO THE", "WORKSTATIONS", "" };
+            m_signs.at(board) = Signs::Text{ "This Way", "To The", "Workstations", "" };
 
             // And a pair of frames either side of it, one holding a
             // block and one an item: the two are drawn differently.
@@ -4102,11 +4123,11 @@ void Application::applyMenuAction()
 #ifndef __EMSCRIPTEN__
         case MenuAction::OpenToLan:
         {
-            const std::string host = m_playerName.empty() ? "SOMEONE" : m_playerName;
+            const std::string host = m_playerName.empty() ? "Someone" : m_playerName;
             if (m_net.openToLan(host, m_world ? m_world->seed() : 0,
                                 static_cast<uint8_t>(m_gameMode), m_timeOfDay, m_spawnPoint))
             {
-                m_discovery.startAnnouncing(host + "'S WORLD", m_net.port());
+                m_discovery.startAnnouncing(host + "'s World", m_net.port());
                 m_audio.play(Sound::Click, 0.6f);
             }
             break;
@@ -4120,7 +4141,7 @@ void Application::applyMenuAction()
         case MenuAction::JoinTyped:
             m_joinedWorldBuilt = false;
             m_net.join(m_addressDraft, Net::DEFAULT_PORT,
-                       m_playerName.empty() ? "PLAYER" : m_playerName);
+                       m_playerName.empty() ? "Player" : m_playerName);
             break;
 
         case MenuAction::JoinDiscovered:
@@ -4129,7 +4150,7 @@ void Application::applyMenuAction()
             m_joinedWorldBuilt = false;
             if (m_joinChoice >= 0 && m_joinChoice < static_cast<int>(games.size()))
                 m_net.join(games[m_joinChoice].address, games[m_joinChoice].port,
-                           m_playerName.empty() ? "PLAYER" : m_playerName);
+                           m_playerName.empty() ? "Player" : m_playerName);
             m_joinChoice = -1;
             break;
         }
@@ -8456,7 +8477,7 @@ void Application::render()
         const float w = static_cast<float>(m_window.width());
         const float h = static_cast<float>(m_window.height());
         m_ui.quad(0, 0, w, h, glm::vec4(0.04f, 0.05f, 0.07f, 0.92f));
-        centredText("GENERATING WORLD", h * 0.45f, 4.0f, TEXT_COLOR);
+        centredText("Generating World", h * 0.45f, 4.0f, TEXT_COLOR);
         m_ui.end();
         return;
     }
@@ -8701,7 +8722,7 @@ void Application::runChatLine(const std::string& line)
 
         case Chat::Kind::Say:
         {
-            const std::string who = m_playerName.empty() ? "YOU" : m_playerName;
+            const std::string who = m_playerName.empty() ? "You" : m_playerName;
             m_chatLog.add("<" + who + "> " + command.text);
             return;
         }
@@ -8742,10 +8763,14 @@ void Application::runChatLine(const std::string& line)
 
 void Application::renderChat()
 {
-    const float h = static_cast<float>(m_window.height());
-    const float lineHeight = 20.0f;
-    const float left = 12.0f;
-    const float bottom = h - 120.0f;
+    // Minecraft's chat: nine interface pixels to a line, two in from
+    // the left edge, sitting just above the hotbar and the bars.
+    m_ui.setScale(static_cast<float>(guiScale()));
+
+    const float h = m_ui.canvasHeight();
+    const float lineHeight = 9.0f;
+    const float left = 2.0f;
+    const float bottom = h - 40.0f;
 
     const std::vector<Chat::Log::Line>& lines = m_chatLog.lines();
     const int shown = std::min<int>(Chat::VISIBLE_LINES, static_cast<int>(lines.size()));
@@ -8763,24 +8788,24 @@ void Application::renderChat()
             fade = Chat::LINE_SECONDS - line.age;
 
         const float y = bottom - (shown - i) * lineHeight;
-        m_ui.quad(left - 4.0f, y - 2.0f,
-                  UIRenderer::textWidth(line.text, 1.9f) + 8.0f, lineHeight,
+        m_ui.quad(left - 2.0f, y - 1.0f,
+                  UIRenderer::textWidth(line.text, 1.0f) + 4.0f, lineHeight,
                   glm::vec4(0.0f, 0.0f, 0.0f, 0.35f * fade));
-        m_ui.textWithShadow(line.text, left, y, 1.9f,
+        m_ui.textWithShadow(line.text, left, y, 1.0f,
                             glm::vec4(1.0f, 1.0f, 1.0f, fade));
     }
 
-    if (!m_chatOpen) return;
+    if (m_chatOpen)
+    {
+        const float y = bottom + 3.0f;
+        m_ui.quad(left - 2.0f, y - 1.0f, m_ui.canvasWidth() - left * 2.0f, lineHeight + 2.0f,
+                  glm::vec4(0.0f, 0.0f, 0.0f, 0.55f));
+        m_ui.textWithShadow(m_chatDraft + "_", left, y, 1.0f, TEXT_COLOR);
+    }
 
-    const float y = bottom + 6.0f;
-    m_ui.quad(left - 4.0f, y - 2.0f,
-              static_cast<float>(m_window.width()) - left * 2.0f, lineHeight + 4.0f,
-              glm::vec4(0.0f, 0.0f, 0.0f, 0.55f));
-    m_ui.textWithShadow(m_chatDraft + "_", left, y, 1.9f, TEXT_COLOR);
+    m_ui.setScale(1.0f);
 }
 
-// Your own arm, last of everything and on a cleared depth buffer, so
-// standing against a wall does not swallow your hand.
 void Application::renderHand()
 {
     if (!playing() || m_inventoryOpen || m_hudHidden) return;
@@ -9436,7 +9461,7 @@ void Application::renderSignEditor()
                             scale, TEXT_COLOR);
     }
 
-    const char* help = "ENTER FOR THE NEXT LINE, ESC WHEN IT READS RIGHT";
+    const char* help = "Enter for the next line, ESC when it reads right";
     m_ui.textWithShadow(help, (w - UIRenderer::textWidth(help, 1.5f)) * 0.5f,
                         top + boardHeight + 16.0f, 1.5f, TEXT_COLOR);
     m_ui.end();
@@ -9459,11 +9484,14 @@ void Application::renderNameplates()
 
 // ------------------------------------------------------------------ hud ---
 
+// The three rows on the left and the two on the right, at Minecraft's
+// own sizes: a heart is nine interface pixels square and they sit eight
+// apart, so each one overlaps the last by a pixel. That overlap is why
+// ten of them come to eighty-one across and line up with the hotbar
+// under them rather than running past its end.
 void Application::renderHearts(float x, float y)
 {
     constexpr int HEART_COUNT = 10;
-    constexpr float HEART_SIZE = 20.0f;
-    constexpr float SPACING = 2.0f;
 
     const bool hardcore = modeIsHardcore(m_gameMode);
     const GuiSprite fullSprite = hardcore ? GuiSprite::HeartHardcoreFull : GuiSprite::HeartFull;
@@ -9472,22 +9500,34 @@ void Application::renderHearts(float x, float y)
 
     for (int i = 0; i < HEART_COUNT; ++i)
     {
-        const float heartX = x + i * (HEART_SIZE + SPACING);
+        const float heartX = x + i * HEART_PITCH;
+
         // Two health points per heart: 20 health == 10 full hearts.
         const int remaining = m_player.health - i * 2;
 
+        // On the last two hearts the row shakes, which is Minecraft's
+        // own warning and the only one it gives you. Stirred off the
+        // clock rather than kept as state: it is a twitch, and a
+        // twitch nothing else in the game reads is not worth a field.
+        float heartY = y;
+        if (m_player.health <= 4)
+        {
+            const uint32_t tick = static_cast<uint32_t>(m_elapsedSeconds * 20.0f);
+            heartY += static_cast<float>(((tick * 2654435761u) >> (i + 8)) & 1u);
+        }
+
         // The empty container always sits underneath, like Minecraft.
-        m_ui.texturedQuad(m_gui.texture(emptySprite), heartX, y, HEART_SIZE, HEART_SIZE,
+        m_ui.texturedQuad(m_gui.texture(emptySprite), heartX, heartY, ICON_SIZE, ICON_SIZE,
                           0.0f, 0.0f, 1.0f, 1.0f, glm::vec4(1.0f));
 
         if (remaining >= 2)
         {
-            m_ui.texturedQuad(m_gui.texture(fullSprite), heartX, y, HEART_SIZE, HEART_SIZE,
+            m_ui.texturedQuad(m_gui.texture(fullSprite), heartX, heartY, ICON_SIZE, ICON_SIZE,
                               0.0f, 0.0f, 1.0f, 1.0f, glm::vec4(1.0f));
         }
         else if (remaining == 1)
         {
-            m_ui.texturedQuad(m_gui.texture(halfSprite), heartX, y, HEART_SIZE, HEART_SIZE,
+            m_ui.texturedQuad(m_gui.texture(halfSprite), heartX, heartY, ICON_SIZE, ICON_SIZE,
                               0.0f, 0.0f, 1.0f, 1.0f, glm::vec4(1.0f));
         }
     }
@@ -9503,78 +9543,73 @@ void Application::renderArmour(float x, float y)
     if (points <= 0) return;
 
     constexpr int PLATE_COUNT = 10;
-    constexpr float PLATE_SIZE = 20.0f;
-    constexpr float SPACING = 2.0f;
 
     for (int i = 0; i < PLATE_COUNT; ++i)
     {
-        const float plateX = x + i * (PLATE_SIZE + SPACING);
+        const float plateX = x + i * HEART_PITCH;
         const int remaining = points - i * 2;
 
         m_ui.texturedQuad(m_gui.texture(GuiSprite::ArmorEmpty), plateX, y,
-                          PLATE_SIZE, PLATE_SIZE, 0.0f, 0.0f, 1.0f, 1.0f, glm::vec4(1.0f));
+                          ICON_SIZE, ICON_SIZE, 0.0f, 0.0f, 1.0f, 1.0f, glm::vec4(1.0f));
 
         if (remaining >= 2)
             m_ui.texturedQuad(m_gui.texture(GuiSprite::ArmorFull), plateX, y,
-                              PLATE_SIZE, PLATE_SIZE, 0.0f, 0.0f, 1.0f, 1.0f, glm::vec4(1.0f));
+                              ICON_SIZE, ICON_SIZE, 0.0f, 0.0f, 1.0f, 1.0f, glm::vec4(1.0f));
         else if (remaining == 1)
             m_ui.texturedQuad(m_gui.texture(GuiSprite::ArmorHalf), plateX, y,
-                              PLATE_SIZE, PLATE_SIZE, 0.0f, 0.0f, 1.0f, 1.0f, glm::vec4(1.0f));
+                              ICON_SIZE, ICON_SIZE, 0.0f, 0.0f, 1.0f, 1.0f, glm::vec4(1.0f));
     }
 }
 
 void Application::renderFood(float rightX, float y)
 {
     constexpr int FOOD_COUNT = 10;
-    constexpr float FOOD_SIZE = 20.0f;
-    constexpr float SPACING = 2.0f;
 
     for (int i = 0; i < FOOD_COUNT; ++i)
     {
-        const float foodX = rightX - (i + 1) * FOOD_SIZE - i * SPACING;
+        // Minecraft fills the right-hand rows from the outside in, so
+        // the first drumstick is the one nearest the edge.
+        const float foodX = rightX - ICON_SIZE - i * HEART_PITCH;
         const int remaining = m_player.hunger - i * 2;
 
-        m_ui.texturedQuad(m_gui.texture(GuiSprite::FoodContainer), foodX, y, FOOD_SIZE, FOOD_SIZE,
+        m_ui.texturedQuad(m_gui.texture(GuiSprite::FoodContainer), foodX, y, ICON_SIZE, ICON_SIZE,
                           0.0f, 0.0f, 1.0f, 1.0f, glm::vec4(1.0f));
 
         if (remaining >= 2)
         {
-            m_ui.texturedQuad(m_gui.texture(GuiSprite::FoodFull), foodX, y, FOOD_SIZE, FOOD_SIZE,
+            m_ui.texturedQuad(m_gui.texture(GuiSprite::FoodFull), foodX, y, ICON_SIZE, ICON_SIZE,
                               0.0f, 0.0f, 1.0f, 1.0f, glm::vec4(1.0f));
         }
         else if (remaining == 1)
         {
-            m_ui.texturedQuad(m_gui.texture(GuiSprite::FoodHalf), foodX, y, FOOD_SIZE, FOOD_SIZE,
+            m_ui.texturedQuad(m_gui.texture(GuiSprite::FoodHalf), foodX, y, ICON_SIZE, ICON_SIZE,
                               0.0f, 0.0f, 1.0f, 1.0f, glm::vec4(1.0f));
         }
     }
 }
 
-// The experience bar, across the top of the hotbar, with the level
-// standing on it. Drawn as plain quads rather than a sprite: the bar is
-// a flat green fill in Minecraft too, and a texture for it would be one
-// more thing a resource pack has to supply before the HUD looks right.
 void Application::renderExperience(float x, float y, float width)
 {
     const int level = Experience::levelFor(m_player.experience);
     const float fraction = std::clamp(Experience::progress(m_player.experience), 0.0f, 1.0f);
 
-    constexpr float HEIGHT = 10.0f;
+    // Minecraft's bar is five interface pixels tall and the same
+    // hundred and eighty-two across as the hotbar it sits on.
+    constexpr float HEIGHT = 5.0f;
 
-    m_ui.quad(x - 1.0f, y - 1.0f, width + 2.0f, HEIGHT + 2.0f,
-              glm::vec4(0.0f, 0.0f, 0.0f, 0.65f));
-    m_ui.quad(x, y, width, HEIGHT, glm::vec4(0.16f, 0.16f, 0.16f, 0.9f));
+    m_ui.quad(x, y, width, HEIGHT, glm::vec4(0.0f, 0.0f, 0.0f, 0.85f));
+    m_ui.quad(x, y + 1.0f, width - 1.0f, HEIGHT - 2.0f, glm::vec4(0.16f, 0.16f, 0.16f, 1.0f));
     if (fraction > 0.0f)
-        m_ui.quad(x, y, width * fraction, HEIGHT, glm::vec4(0.47f, 0.84f, 0.15f, 1.0f));
+        m_ui.quad(x, y + 1.0f, (width - 1.0f) * fraction, HEIGHT - 2.0f,
+                  glm::vec4(0.49f, 0.98f, 0.24f, 1.0f));
 
     // Level nought is not drawn at all, so an untouched HUD looks the
     // way it did before there was any experience in the game.
     if (level <= 0) return;
 
     const std::string text = std::to_string(level);
-    const float scale = 2.2f;
-    const float textX = x + width * 0.5f - UIRenderer::textWidth(text, scale) * 0.5f;
-    const float textY = y - UIRenderer::textHeight(scale) * 0.5f + HEIGHT * 0.5f;
+    const float textX = x + width * 0.5f - UIRenderer::textWidth(text, 1.0f) * 0.5f;
+    const float textY = y - 6.0f;
 
     // Outlined in black on all four sides, the way Minecraft does it:
     // bright green on a bright green bar is unreadable at a glance.
@@ -9582,8 +9617,8 @@ void Application::renderExperience(float x, float y, float width)
     for (int dx = -1; dx <= 1; ++dx)
         for (int dy = -1; dy <= 1; ++dy)
             if (dx || dy)
-                m_ui.text(text, textX + dx * 2.0f, textY + dy * 2.0f, scale, outline);
-    m_ui.text(text, textX, textY, scale, glm::vec4(0.49f, 0.98f, 0.24f, 1.0f));
+                m_ui.text(text, textX + dx, textY + dy, 1.0f, outline);
+    m_ui.text(text, textX, textY, 1.0f, glm::vec4(0.49f, 0.98f, 0.24f, 1.0f));
 }
 
 // The bubbles, over on the right above the hunger. Drawn only while
@@ -9594,8 +9629,6 @@ void Application::renderAir(float rightX, float y)
     if (m_player.air >= Player::MAX_AIR_SECONDS) return;
 
     constexpr int BUBBLE_COUNT = 10;
-    constexpr float BUBBLE_SIZE = 18.0f;
-    constexpr float SPACING = 2.0f;
 
     const float share = m_player.air / Player::MAX_AIR_SECONDS;
     const float showing = share * BUBBLE_COUNT;
@@ -9606,10 +9639,10 @@ void Application::renderAir(float rightX, float y)
         // of the screen the way the hunger beside it does.
         if (static_cast<float>(i) >= showing) continue;
 
-        const float bubbleX = rightX - (i + 1) * BUBBLE_SIZE - i * SPACING;
-        m_ui.quad(bubbleX + 3.0f, y + 3.0f, BUBBLE_SIZE - 6.0f, BUBBLE_SIZE - 6.0f,
+        const float bubbleX = rightX - ICON_SIZE - i * HEART_PITCH;
+        m_ui.quad(bubbleX + 1.0f, y + 1.0f, ICON_SIZE - 2.0f, ICON_SIZE - 2.0f,
                   glm::vec4(0.0f, 0.0f, 0.0f, 0.45f));
-        m_ui.quad(bubbleX + 4.0f, y + 4.0f, BUBBLE_SIZE - 8.0f, BUBBLE_SIZE - 8.0f,
+        m_ui.quad(bubbleX + 2.0f, y + 2.0f, ICON_SIZE - 4.0f, ICON_SIZE - 4.0f,
                   glm::vec4(0.78f, 0.90f, 1.0f, 0.95f));
     }
 }
@@ -9619,10 +9652,10 @@ void Application::renderEatProgress(float cx, float cy)
     if (m_eatTimer <= 0.0f) return;
 
     const float fraction = std::min(1.0f, m_eatTimer / Food::EAT_SECONDS);
-    const float width = 120.0f;
-    const float height = 6.0f;
+    const float width = 48.0f;
+    const float height = 3.0f;
     const float x = cx - width * 0.5f;
-    const float y = cy + 30.0f;
+    const float y = cy + 12.0f;
 
     m_ui.quad(x - 1.0f, y - 1.0f, width + 2.0f, height + 2.0f, glm::vec4(0.0f, 0.0f, 0.0f, 0.5f));
     m_ui.quad(x, y, width * fraction, height, glm::vec4(0.85f, 0.7f, 0.35f, 0.95f));
@@ -9715,10 +9748,21 @@ void Application::lightCave(int atX, int atY, int atZ)
     }
 }
 
+int Application::guiScale() const
+{
+    return Gui::scaleFor(m_window.width(), m_window.height(), m_guiScaleSetting);
+}
+
 void Application::renderHud()
 {
-    const float w = static_cast<float>(m_window.width());
-    const float h = static_cast<float>(m_window.height());
+    // Everything from here on is in Minecraft's own interface pixels
+    // rather than the screen's: a hotbar is a hundred and eighty-two of
+    // them wide whatever the window is doing, and the scale decides how
+    // many screen pixels one of them comes to.
+    m_ui.setScale(static_cast<float>(guiScale()));
+
+    const float w = m_ui.canvasWidth();
+    const float h = m_ui.canvasHeight();
 
     // Alight. Minecraft draws flames licking up the bottom of the
     // screen and it is the only cue you get, so it is drawn before
@@ -9739,55 +9783,66 @@ void Application::renderHud()
         }
     }
 
-    // Crosshair, with a dark backing so it stays readable on bright terrain.
     const float cx = w * 0.5f;
     const float cy = h * 0.5f;
-    const glm::vec4 crosshairEdge(0.0f, 0.0f, 0.0f, 0.45f);
-    const glm::vec4 crosshair(1.0f, 1.0f, 1.0f, 0.85f);
-    m_ui.quad(cx - 10.0f, cy - 2.0f, 20.0f, 4.0f, crosshairEdge);
-    m_ui.quad(cx - 2.0f, cy - 10.0f, 4.0f, 20.0f, crosshairEdge);
-    m_ui.quad(cx - 9.0f, cy - 1.0f, 18.0f, 2.0f, crosshair);
-    m_ui.quad(cx - 1.0f, cy - 9.0f, 2.0f, 18.0f, crosshair);
 
-    // Hotbar
-    const float barWidth = Inventory::HOTBAR_SLOTS * SLOT_SIZE + (Inventory::HOTBAR_SLOTS + 1) * SLOT_GAP;
-    const float barX = cx - barWidth * 0.5f;
-    const float barY = h - SLOT_SIZE - SLOT_GAP * 3.0f;
+    // The crosshair. Minecraft draws it by inverting whatever is behind
+    // it rather than painting over it, which is why it is legible on
+    // snow and on coal alike without an outline.
+    {
+        m_ui.setInvert(true);
+        const glm::vec4 white(1.0f);
+        m_ui.quad(cx - CROSSHAIR_ARM, cy - 0.5f, CROSSHAIR_ARM * 2.0f, 1.0f, white);
+        m_ui.quad(cx - 0.5f, cy - CROSSHAIR_ARM, 1.0f, CROSSHAIR_ARM, white);
+        m_ui.quad(cx - 0.5f, cy + 0.5f, 1.0f, CROSSHAIR_ARM - 0.5f, white);
+        m_ui.setInvert(false);
+    }
+
+    // The hotbar, at Minecraft's own measurements: a hundred and
+    // eighty-two across and twenty-two tall, hard against the bottom
+    // of the screen, with the slots twenty apart and the selection
+    // sitting a pixel outside the one it is on.
+    const float barX = cx - HOTBAR_WIDTH * 0.5f;
+    const float barY = h - HOTBAR_HEIGHT;
 
     if (m_gui.fromPack(GuiSprite::Hotbar))
     {
-        m_ui.texturedQuad(m_gui.texture(GuiSprite::Hotbar), barX, barY - SLOT_GAP,
-                          barWidth, SLOT_SIZE + SLOT_GAP * 2.0f, 0.0f, 0.0f, 1.0f, 1.0f, glm::vec4(1.0f));
+        m_ui.texturedQuad(m_gui.texture(GuiSprite::Hotbar), barX, barY,
+                          HOTBAR_WIDTH, HOTBAR_HEIGHT, 0.0f, 0.0f, 1.0f, 1.0f, glm::vec4(1.0f));
     }
     else
     {
-        guiPanel(barX, barY - SLOT_GAP, barWidth, SLOT_SIZE + SLOT_GAP * 2.0f);
+        guiPanel(barX, barY, HOTBAR_WIDTH, HOTBAR_HEIGHT);
     }
 
     for (int i = 0; i < Inventory::HOTBAR_SLOTS; ++i)
     {
-        const float slotX = barX + SLOT_GAP + i * (SLOT_SIZE + SLOT_GAP);
+        const float slotX = barX + 3.0f + i * SLOT_PITCH;
+        const float slotY = barY + 3.0f;
         const bool selected = (i == m_inventory.selectedSlot());
 
         if (!m_gui.fromPack(GuiSprite::Hotbar))
-            guiWell(slotX, barY, SLOT_SIZE, SLOT_SIZE);
+            guiWell(slotX - 1.0f, slotY - 1.0f, ITEM_SIZE + 2.0f, ITEM_SIZE + 2.0f);
 
         if (selected)
         {
             if (m_gui.fromPack(GuiSprite::HotbarSelection))
             {
-                const float pad = 5.0f;
+                // Twenty-four by twenty-three, a pixel out and a pixel
+                // up from the slot it marks: Mojang's own sprite and
+                // Mojang's own offsets.
                 m_ui.texturedQuad(m_gui.texture(GuiSprite::HotbarSelection),
-                                  slotX - pad, barY - pad, SLOT_SIZE + pad * 2, SLOT_SIZE + pad * 2,
+                                  barX - 1.0f + i * SLOT_PITCH, barY - 1.0f,
+                                  SELECTION_WIDTH, SELECTION_HEIGHT,
                                   0.0f, 0.0f, 1.0f, 1.0f, glm::vec4(1.0f));
             }
             else
             {
-                const float t = 3.0f;
-                m_ui.quad(slotX - t, barY - t, SLOT_SIZE + t * 2, t, SELECTED_COLOR);
-                m_ui.quad(slotX - t, barY + SLOT_SIZE, SLOT_SIZE + t * 2, t, SELECTED_COLOR);
-                m_ui.quad(slotX - t, barY, t, SLOT_SIZE, SELECTED_COLOR);
-                m_ui.quad(slotX + SLOT_SIZE, barY, t, SLOT_SIZE, SELECTED_COLOR);
+                const float t = 1.0f;
+                m_ui.quad(slotX - 2.0f, slotY - 2.0f, ITEM_SIZE + 4.0f, t, SELECTED_COLOR);
+                m_ui.quad(slotX - 2.0f, slotY + ITEM_SIZE + 1.0f, ITEM_SIZE + 4.0f, t, SELECTED_COLOR);
+                m_ui.quad(slotX - 2.0f, slotY - 1.0f, t, ITEM_SIZE + 2.0f, SELECTED_COLOR);
+                m_ui.quad(slotX + ITEM_SIZE + 1.0f, slotY - 1.0f, t, ITEM_SIZE + 2.0f, SELECTED_COLOR);
             }
         }
 
@@ -9796,43 +9851,41 @@ void Application::renderHud()
 
         // Through drawItem, the same as every slot on the inventory
         // panel, so a block in the hotbar is the cube it is there and
-        // not a flat square of its own top texture. Drawing its own
-        // quad here is what left the hotbar behind when the panel
-        // learned to draw blocks as blocks -- and it also means the
-        // wear on a tool now shows in the hand, where it matters most.
-        drawItem(slotX, barY, SLOT_SIZE, stack.id, stack.count, glm::vec4(1.0f), stack.damage);
+        // not a flat square of its own top texture.
+        drawItem(slotX, slotY, ITEM_SIZE, stack.id, stack.count, glm::vec4(1.0f), stack.damage);
 
         if (!m_player.creative() && stack.count > 1)
         {
             const std::string count = std::to_string(stack.count);
             m_ui.textWithShadow(count,
-                                slotX + SLOT_SIZE - UIRenderer::textWidth(count, 2.0f) - 4.0f,
-                                barY + SLOT_SIZE - UIRenderer::textHeight(2.0f) - 3.0f,
-                                2.0f, TEXT_COLOR);
+                                slotX + ITEM_SIZE + 1.0f - UIRenderer::textWidth(count, 1.0f),
+                                slotY + ITEM_SIZE - 7.0f,
+                                1.0f, TEXT_COLOR);
         }
-    }
-
-    // Name of the held block, above the hotbar.
-    const ItemStack& held = m_inventory.selected();
-    if (!held.empty())
-    {
-        const std::string name = displayName(held.id);
-        // Clear of the armour row, which is the highest thing on the
-        // left: the name is centred, and at 2.2 it is wide enough to
-        // reach the hearts if it sits any lower.
-        m_ui.textWithShadow(name, cx - UIRenderer::textWidth(name, 2.2f) * 0.5f, barY - 98.0f, 2.2f, TEXT_COLOR);
     }
 
     // Hearts are hidden in creative, like Minecraft.
     if (!m_player.creative())
     {
-        renderExperience(barX + SLOT_GAP, barY - 24.0f,
-                         barWidth - SLOT_GAP * 2.0f);
-        renderHearts(barX + SLOT_GAP, barY - 52.0f);
-        renderArmour(barX + SLOT_GAP, barY - 74.0f);
-        renderFood(barX + barWidth - SLOT_GAP, barY - 52.0f);
-        renderAir(barX + barWidth - SLOT_GAP, barY - 74.0f);
+        // Minecraft's rows, counted up from the bottom of the screen:
+        // the experience bar at twenty-nine, the hearts and the hunger
+        // at thirty-nine, the armour and the bubbles at forty-nine.
+        renderExperience(barX, h - 29.0f, HOTBAR_WIDTH);
+        renderHearts(barX, h - 39.0f);
+        renderArmour(barX, h - 49.0f);
+        renderFood(barX + HOTBAR_WIDTH, h - 39.0f);
+        renderAir(barX + HOTBAR_WIDTH, h - 49.0f);
         renderEatProgress(cx, cy);
+    }
+
+    // Name of the held block, above the hotbar, where Minecraft puts
+    // it: clear of the experience bar and centred on the screen.
+    const ItemStack& held = m_inventory.selected();
+    if (!held.empty())
+    {
+        const std::string name = displayName(held.id);
+        m_ui.textWithShadow(name, cx - UIRenderer::textWidth(name, 1.0f) * 0.5f,
+                            h - 59.0f, 1.0f, TEXT_COLOR);
     }
 
     // Red flash when hurt.
@@ -9841,9 +9894,11 @@ void Application::renderHud()
 
     const glm::vec4 modeColour = modeIsHardcore(m_gameMode) ? glm::vec4(1.0f, 0.55f, 0.5f, 0.95f)
                                                             : glm::vec4(0.7f, 0.9f, 1.0f, 0.9f);
-    m_ui.textWithShadow(gameModeName(m_gameMode), 12.0f, h - 24.0f, 2.0f, modeColour);
+    m_ui.textWithShadow(gameModeName(m_gameMode), 4.0f, h - 11.0f, 1.0f, modeColour);
     if (!m_playerName.empty())
-        m_ui.textWithShadow(m_playerName, 12.0f, h - 46.0f, 2.2f, TEXT_COLOR);
+        m_ui.textWithShadow(m_playerName, 4.0f, h - 21.0f, 1.0f, TEXT_COLOR);
+
+    m_ui.setScale(1.0f);
 }
 
 // ---------------------------------------------------------------- menus ---
@@ -9949,7 +10004,7 @@ void Application::renderTitleScreen()
 
     // Scale the wordmark to the window so it never runs off the edge on a
     // narrow display.
-    const std::string title = "BROWSERCRAFT";
+    const std::string title = "Browsercraft";
     const float titleScale = std::min(7.0f, (w * 0.78f) / UIRenderer::textWidth(title, 1.0f));
     const float titleY = h * 0.13f;
     centredText(title, titleY, titleScale, TEXT_COLOR);
@@ -9986,17 +10041,17 @@ void Application::renderTitleScreen()
     const float buttonHeight = 52.0f;
     float y = h * 0.42f;
 
-    if (menuButton({ buttonX, y, buttonWidth, buttonHeight }, "SINGLEPLAYER"))
+    if (menuButton({ buttonX, y, buttonWidth, buttonHeight }, "Singleplayer"))
         m_pendingAction = MenuAction::GoSingleplayer;
     y += buttonHeight + 14.0f;
 
-    if (menuButton({ buttonX, y, buttonWidth, buttonHeight }, "MULTIPLAYER"))
+    if (menuButton({ buttonX, y, buttonWidth, buttonHeight }, "Multiplayer"))
         m_pendingAction = MenuAction::GoMultiplayer;
     y += buttonHeight + 14.0f;
 
     // Settings and the profile share a row, as they do in Eaglercraft.
     const float halfWidth = buttonWidth * 0.5f - 6.0f;
-    if (menuButton({ buttonX, y, halfWidth, buttonHeight }, "SETTINGS"))
+    if (menuButton({ buttonX, y, halfWidth, buttonHeight }, "Settings"))
         m_pendingAction = MenuAction::GoSettings;
 
     const Rect profileButton{ buttonX + halfWidth + 12.0f, y, halfWidth, buttonHeight };
@@ -10011,7 +10066,7 @@ void Application::renderTitleScreen()
         const float dollWidth = (skin.armWidth() * 2.0f + 8.0f) * unit;
         drawPlayerDoll(skin, profileButton.x + 10.0f, profileButton.y + 6.0f, unit);
 
-        const std::string label = m_playerName.empty() ? "PROFILE" : m_playerName;
+        const std::string label = m_playerName.empty() ? "Profile" : m_playerName;
         const float scale = 1.9f;
         m_ui.textWithShadow(label, profileButton.x + dollWidth + 18.0f,
                             profileButton.y + buttonHeight * 0.5f - UIRenderer::textHeight(scale) * 0.5f,
@@ -10020,13 +10075,13 @@ void Application::renderTitleScreen()
     y += buttonHeight + 14.0f;
 
 #ifndef __EMSCRIPTEN__
-    if (menuButton({ buttonX, y, buttonWidth, buttonHeight }, "QUIT"))
+    if (menuButton({ buttonX, y, buttonWidth, buttonHeight }, "Quit"))
         m_pendingAction = MenuAction::QuitGame;
 #endif
 
     // Version in the corner, where every Minecraft build puts it.
     const float footerY = h - UIRenderer::textHeight(1.7f) - 10.0f;
-    m_ui.textWithShadow("BROWSERCRAFT 0.1  -  BROWSERCRAFT.NET", 10.0f, footerY, 1.7f, DIM_TEXT);
+    m_ui.textWithShadow("Browsercraft 0.1  -  Browsercraft.net", 10.0f, footerY, 1.7f, DIM_TEXT);
 
     // Whoever made the installed texture pack, opposite the version the
     // way Minecraft puts its copyright line. Most packs are free to pass
@@ -10044,7 +10099,7 @@ void Application::renderSingleplayerScreen()
     const float h = static_cast<float>(m_window.height());
 
     m_ui.quad(0, 0, w, h, glm::vec4(0.0f, 0.0f, 0.0f, 0.45f));
-    centredText("SINGLEPLAYER", h * 0.13f, 4.4f, TEXT_COLOR);
+    centredText("Singleplayer", h * 0.13f, 4.4f, TEXT_COLOR);
 
     const float buttonWidth = std::min(520.0f, w * 0.72f);
     const float buttonX = w * 0.5f - buttonWidth * 0.5f;
@@ -10055,16 +10110,16 @@ void Application::renderSingleplayerScreen()
     // rather than a separate button on the home screen.
     if (saveExists())
     {
-        if (menuButton({ buttonX, y, buttonWidth, buttonHeight }, "YOUR SAVED WORLD"))
+        if (menuButton({ buttonX, y, buttonWidth, buttonHeight }, "Your Saved World"))
             m_pendingAction = MenuAction::ResumeSaved;
         y += buttonHeight + 22.0f;
     }
 
     struct ModeEntry { const char* label; MenuAction action; };
     const ModeEntry MODES[] = {
-        { "SURVIVAL", MenuAction::NewSurvival },
-        { "CREATIVE", MenuAction::NewCreative },
-        { "HARDCORE", MenuAction::NewHardcore },
+        { "Survival", MenuAction::NewSurvival },
+        { "Creative", MenuAction::NewCreative },
+        { "Hardcore", MenuAction::NewHardcore },
     };
 
     for (const ModeEntry& mode : MODES)
@@ -10078,17 +10133,17 @@ void Application::renderSingleplayerScreen()
 
     // Decided before the world is made, and kept with it. Creative has
     // the lot anyway, so the toggle only really bites in survival.
-    const std::string cheats = std::string("ALLOW CHEATS: ") + (m_allowCheats ? "ON" : "OFF");
+    const std::string cheats = std::string("Allow Cheats: ") + (m_allowCheats ? "ON" : "Off");
     if (menuButton({ buttonX, y, buttonWidth, 46.0f }, cheats))
         m_pendingAction = MenuAction::ToggleCheats;
     y += 46.0f + 8.0f;
 
-    centredText(m_allowCheats ? "/GAMEMODE /TIME /TP /GIVE /KILL /SEED"
-                              : "CHAT WORKS EITHER WAY; THE COMMANDS DO NOT",
+    centredText(m_allowCheats ? "/gamemode /time /tp /give /kill /seed"
+                              : "Chat works either way; the commands do not",
                 y, 1.7f, DIM_TEXT);
     y += 30.0f;
 
-    if (menuButton({ buttonX, y, buttonWidth, 46.0f }, "BACK"))
+    if (menuButton({ buttonX, y, buttonWidth, 46.0f }, "Back"))
         m_pendingAction = MenuAction::BackToTitle;
 }
 
@@ -10098,28 +10153,28 @@ void Application::renderMultiplayerScreen()
     const float h = static_cast<float>(m_window.height());
 
     m_ui.quad(0, 0, w, h, glm::vec4(0.0f, 0.0f, 0.0f, 0.45f));
-    centredText("MULTIPLAYER", h * 0.10f, 4.4f, TEXT_COLOR);
+    centredText("Multiplayer", h * 0.10f, 4.4f, TEXT_COLOR);
 
     const float panelWidth = std::min(560.0f, w * 0.78f);
     const float panelX = w * 0.5f - panelWidth * 0.5f;
     float y = h * 0.22f;
 
 #ifdef __EMSCRIPTEN__
-    centredText("THE BROWSER BUILD CANNOT OPEN SOCKETS YET.", y, 1.9f, DIM_TEXT);
-    centredText("PLAY ON A LAN FROM THE DESKTOP BUILD FOR NOW.", y + 26.0f, 1.9f, DIM_TEXT);
+    centredText("The browser build cannot open sockets yet.", y, 1.9f, DIM_TEXT);
+    centredText("Play on a LAN from the desktop build for now.", y + 26.0f, 1.9f, DIM_TEXT);
     y += 80.0f;
 #else
     // Worlds shouting on the local network. Nothing to type in the
     // common case: open a world on one machine, see it on the other.
     const std::vector<Net::LanDiscovery::Game>& games = m_discovery.games();
 
-    m_ui.textWithShadow("WORLDS ON THIS NETWORK", panelX, y, 1.9f, DIM_TEXT);
+    m_ui.textWithShadow("Worlds on this Network", panelX, y, 1.9f, DIM_TEXT);
     y += 28.0f;
 
     if (games.empty())
     {
         bevel(panelX, y, panelWidth, 46.0f, BUTTON_FACE_OFF, BUTTON_LIGHT, BUTTON_DARK, 2.0f);
-        m_ui.textWithShadow("SEARCHING...", panelX + 14.0f, y + 16.0f, 1.9f, DIM_TEXT);
+        m_ui.textWithShadow("Searching...", panelX + 14.0f, y + 16.0f, 1.9f, DIM_TEXT);
         y += 58.0f;
     }
     else
@@ -10138,7 +10193,7 @@ void Application::renderMultiplayerScreen()
     }
 
     y += 10.0f;
-    m_ui.textWithShadow("OR TYPE AN ADDRESS", panelX, y, 1.9f, DIM_TEXT);
+    m_ui.textWithShadow("Or Type an Address", panelX, y, 1.9f, DIM_TEXT);
     y += 28.0f;
 
     const float joinWidth = 130.0f;
@@ -10149,7 +10204,7 @@ void Application::renderMultiplayerScreen()
     const bool caretOn = ((SDL_GetTicks() / 500u) % 2u) == 0u;
     m_ui.textWithShadow(m_addressDraft + (caretOn ? "_" : " "),
                         panelX + 12.0f, y + 15.0f, 2.0f, TEXT_COLOR);
-    if (menuButton({ panelX + fieldWidth + 10.0f, y, joinWidth, 46.0f }, "JOIN",
+    if (menuButton({ panelX + fieldWidth + 10.0f, y, joinWidth, 46.0f }, "Join",
                    m_addressDraft.size() >= 7))
         m_pendingAction = MenuAction::JoinTyped;
     y += 62.0f;
@@ -10164,7 +10219,7 @@ void Application::renderMultiplayerScreen()
         y += 34.0f;
     }
 
-    if (menuButton({ panelX, y + 10.0f, panelWidth, 50.0f }, "BACK"))
+    if (menuButton({ panelX, y + 10.0f, panelWidth, 50.0f }, "Back"))
         m_pendingAction = MenuAction::BackToTitle;
 }
 
@@ -10174,7 +10229,7 @@ void Application::renderSettingsScreen()
     const float h = static_cast<float>(m_window.height());
 
     m_ui.quad(0, 0, w, h, glm::vec4(0.0f, 0.0f, 0.0f, 0.45f));
-    centredText("SETTINGS", h * 0.13f, 4.4f, TEXT_COLOR);
+    centredText("Settings", h * 0.13f, 4.4f, TEXT_COLOR);
 
     const float buttonWidth = std::min(520.0f, w * 0.72f);
     const float buttonX = w * 0.5f - buttonWidth * 0.5f;
@@ -10185,7 +10240,7 @@ void Application::renderSettingsScreen()
     const float sideWidth = 60.0f;
     const int distance = m_world ? m_world->renderDistance() : 8;
     char label[64];
-    std::snprintf(label, sizeof(label), "RENDER DISTANCE: %d", distance);
+    std::snprintf(label, sizeof(label), "Render Distance: %d", distance);
 
     if (menuButton({ buttonX, y, sideWidth, buttonHeight }, "-"))
         m_pendingAction = MenuAction::RenderDistanceDown;
@@ -10200,26 +10255,26 @@ void Application::renderSettingsScreen()
     y += buttonHeight + 14.0f;
 
     if (menuButton({ buttonX, y, buttonWidth, buttonHeight },
-                   m_audio.muted() ? "SOUND: OFF" : "SOUND: ON"))
+                   m_audio.muted() ? "Sound: Off" : "Sound: On"))
         m_pendingAction = MenuAction::ToggleSound;
     y += buttonHeight + 14.0f;
 
     if (menuButton({ buttonX, y, buttonWidth, buttonHeight },
-                   m_pbrEnabled ? "FANCY LIGHTING: ON" : "FANCY LIGHTING: OFF",
+                   m_pbrEnabled ? "Fancy Lighting: On" : "Fancy Lighting: Off",
                    m_atlas.hasPbrMaps()))
         m_pendingAction = MenuAction::TogglePbr;
     y += buttonHeight + 14.0f;
 
-    if (menuButton({ buttonX, y, buttonWidth, buttonHeight }, "CONTROLS"))
+    if (menuButton({ buttonX, y, buttonWidth, buttonHeight }, "Controls"))
         m_pendingAction = MenuAction::GoControls;
     y += buttonHeight + 14.0f;
 
     if (menuButton({ buttonX, y, buttonWidth, buttonHeight },
-                   m_playerName.empty() ? "SET NAME" : ("NAME: " + m_playerName)))
+                   m_playerName.empty() ? "Set Name" : ("Name: " + m_playerName)))
         m_pendingAction = MenuAction::GoNameEntry;
     y += buttonHeight + 24.0f;
 
-    if (menuButton({ buttonX, y, buttonWidth, 46.0f }, "BACK"))
+    if (menuButton({ buttonX, y, buttonWidth, 46.0f }, "Back"))
         m_pendingAction = MenuAction::BackToTitle;
 }
 
@@ -10229,7 +10284,7 @@ void Application::renderControlsScreen()
     const float h = static_cast<float>(m_window.height());
 
     m_ui.quad(0, 0, w, h, glm::vec4(0.0f, 0.0f, 0.0f, 0.62f));
-    centredText("CONTROLS", h * 0.05f, 3.6f, TEXT_COLOR);
+    centredText("Controls", h * 0.05f, 3.6f, TEXT_COLOR);
 
     const int rowCount = static_cast<int>(Action::Count);
     const int rows = (rowCount + 1) / 2;
@@ -10294,10 +10349,10 @@ void Application::renderControlsScreen()
 
     const float buttonWidth = std::min(260.0f, w * 0.3f);
     if (menuButton({ w * 0.5f - buttonWidth - 6.0f, footerY + 24.0f, buttonWidth, 44.0f },
-                   "RESET DEFAULTS"))
+                   "Reset Defaults"))
         m_pendingAction = MenuAction::ResetBindings;
 
-    if (menuButton({ w * 0.5f + 6.0f, footerY + 24.0f, buttonWidth, 44.0f }, "DONE"))
+    if (menuButton({ w * 0.5f + 6.0f, footerY + 24.0f, buttonWidth, 44.0f }, "Done"))
         m_pendingAction = MenuAction::GoSettings;
 }
 
@@ -10309,7 +10364,7 @@ void Application::renderNameEntryScreen()
     m_ui.quad(0, 0, w, h, glm::vec4(0.0f, 0.0f, 0.0f, 0.62f));
 
     const bool returning = !m_playerName.empty();
-    centredText(returning ? "EDIT PROFILE" : "WELCOME TO BROWSERCRAFT",
+    centredText(returning ? "Edit Profile" : "Welcome to Browsercraft",
                 h * 0.05f, 3.4f, TEXT_COLOR);
 
     // The panel is laid out at a comfortable size and then shrunk to fit
@@ -10366,7 +10421,7 @@ void Application::renderNameEntryScreen()
     const float textScale = 1.8f * ui;
     float y = panelY + pad;
 
-    m_ui.text("USERNAME", rightX, y, textScale, GUI_TEXT);
+    m_ui.text("Username", rightX, y, textScale, GUI_TEXT);
     y += label + 6.0f * ui;
 
     roundedQuad(rightX - 3.0f, y - 3.0f, rightWidth + 6.0f, fieldHeight + 6.0f,
@@ -10386,12 +10441,12 @@ void Application::renderNameEntryScreen()
 
     // Classic or slim, exactly the choice Eaglercraft offers.
     if (menuButton({ rightX, y, rightWidth, modelHeight },
-                   m_skinStyle == PlayerSkin::Style::Slim ? "MODEL: SLIM (3PX ARMS)"
-                                                          : "MODEL: CLASSIC (4PX ARMS)"))
+                   m_skinStyle == PlayerSkin::Style::Slim ? "Model: Slim (3px arms)"
+                                                          : "Model: Classic (4px arms)"))
         m_pendingAction = MenuAction::ToggleSkinStyle;
     y += modelHeight + 12.0f * ui;
 
-    m_ui.text("CHARACTER", rightX, y, textScale, GUI_TEXT);
+    m_ui.text("Character", rightX, y, textScale, GUI_TEXT);
     y += label + 4.0f * ui;
 
     // The library: every painted character, plus your own PNG if there
@@ -10434,10 +10489,10 @@ void Application::renderNameEntryScreen()
                                      : (w * 0.5f - buttonWidth * 0.5f);
 
     if (menuButton({ confirmX, buttonY, buttonWidth, 48.0f },
-                   returning ? "SAVE" : "PLAY", valid))
+                   returning ? "Save" : "Play", valid))
         m_pendingAction = MenuAction::ConfirmName;
 
-    if (returning && menuButton({ w * 0.5f + 6.0f, buttonY, buttonWidth, 48.0f }, "CANCEL"))
+    if (returning && menuButton({ w * 0.5f + 6.0f, buttonY, buttonWidth, 48.0f }, "Cancel"))
     {
         m_nameDraft = m_playerName;
         m_pendingAction = MenuAction::GoSettings;
@@ -10452,7 +10507,7 @@ void Application::renderPauseMenu()
 
     m_ui.quad(0, 0, w, h, glm::vec4(0.0f, 0.0f, 0.0f, 0.62f));
 
-    centredText("GAME PAUSED", h * 0.12f, 5.0f, TEXT_COLOR);
+    centredText("Game Paused", h * 0.12f, 5.0f, TEXT_COLOR);
     centredText(gameModeName(m_gameMode), h * 0.12f + 54.0f, 2.0f, DIM_TEXT);
 
     const float buttonWidth = std::min(440.0f, w * 0.64f);
@@ -10460,17 +10515,17 @@ void Application::renderPauseMenu()
     const float buttonHeight = 50.0f;
     float y = h * 0.30f;
 
-    if (menuButton({ buttonX, y, buttonWidth, buttonHeight }, "BACK TO GAME"))
+    if (menuButton({ buttonX, y, buttonWidth, buttonHeight }, "Back to Game"))
         m_pendingAction = MenuAction::Resume;
     y += buttonHeight + 12.0f;
 
     if (menuButton({ buttonX, y, buttonWidth, buttonHeight },
-                   m_pbrEnabled ? "PBR SHADING: ON" : "PBR SHADING: OFF"))
+                   m_pbrEnabled ? "PBR Shading: On" : "PBR Shading: Off"))
         m_pendingAction = MenuAction::TogglePbr;
     y += buttonHeight + 12.0f;
 
     if (menuButton({ buttonX, y, buttonWidth, buttonHeight },
-                   m_audio.muted() ? "SOUND: OFF" : "SOUND: ON"))
+                   m_audio.muted() ? "Sound: Off" : "Sound: On"))
         m_pendingAction = MenuAction::ToggleSound;
     y += buttonHeight + 12.0f;
 
@@ -10480,23 +10535,23 @@ void Application::renderPauseMenu()
     if (m_net.role() == Net::Role::Host)
     {
         char label[80];
-        std::snprintf(label, sizeof(label), "CLOSE TO LAN  -  %d PLAYING", m_net.playerCount());
+        std::snprintf(label, sizeof(label), "Close to LAN  -  %d playing", m_net.playerCount());
         if (menuButton({ buttonX, y, buttonWidth, buttonHeight }, label))
             m_pendingAction = MenuAction::CloseToLan;
     }
     else if (m_net.role() == Net::Role::Guest)
     {
-        if (menuButton({ buttonX, y, buttonWidth, buttonHeight }, "LEAVE THIS WORLD"))
+        if (menuButton({ buttonX, y, buttonWidth, buttonHeight }, "Leave this World"))
             m_pendingAction = MenuAction::QuitToTitle;
     }
-    else if (menuButton({ buttonX, y, buttonWidth, buttonHeight }, "OPEN TO LAN"))
+    else if (menuButton({ buttonX, y, buttonWidth, buttonHeight }, "Open to LAN"))
     {
         m_pendingAction = MenuAction::OpenToLan;
     }
     y += buttonHeight + 12.0f;
 #endif
 
-    if (menuButton({ buttonX, y, buttonWidth, buttonHeight }, "SAVE AND QUIT TO TITLE"))
+    if (menuButton({ buttonX, y, buttonWidth, buttonHeight }, "Save and Quit to Title"))
         m_pendingAction = MenuAction::QuitToTitle;
     y += buttonHeight + 20.0f;
 
@@ -10512,7 +10567,7 @@ void Application::renderDeathScreen()
     m_ui.quad(0, 0, w, h, hardcore ? glm::vec4(0.28f, 0.0f, 0.0f, 0.70f)
                                    : glm::vec4(0.40f, 0.0f, 0.0f, 0.50f));
 
-    centredText(hardcore ? "GAME OVER" : "YOU DIED", h * 0.26f, 6.5f,
+    centredText(hardcore ? "Game Over" : "You Died", h * 0.26f, 6.5f,
                 glm::vec4(1.0f, 0.82f, 0.82f, 1.0f));
 
     const float buttonWidth = std::min(440.0f, w * 0.64f);
@@ -10522,16 +10577,16 @@ void Application::renderDeathScreen()
 
     if (!hardcore)
     {
-        if (menuButton({ buttonX, y, buttonWidth, buttonHeight }, "RESPAWN"))
+        if (menuButton({ buttonX, y, buttonWidth, buttonHeight }, "Respawn"))
             m_pendingAction = MenuAction::Respawn;
         y += buttonHeight + 14.0f;
 
-        if (menuButton({ buttonX, y, buttonWidth, buttonHeight }, "QUIT TO TITLE"))
+        if (menuButton({ buttonX, y, buttonWidth, buttonHeight }, "Quit to Title"))
             m_pendingAction = MenuAction::QuitToTitle;
     }
     else
     {
-        if (menuButton({ buttonX, y, buttonWidth, buttonHeight }, "DELETE WORLD AND CONTINUE"))
+        if (menuButton({ buttonX, y, buttonWidth, buttonHeight }, "Delete World and Continue"))
             m_pendingAction = MenuAction::DeleteWorld;
     }
 }
@@ -10548,21 +10603,27 @@ void Application::renderDebugOverlay()
     const int bx = static_cast<int>(std::floor(p.x));
     const int by = static_cast<int>(std::floor(p.y));
     const int bz = static_cast<int>(std::floor(p.z));
-    const float w = static_cast<float>(m_window.width());
+
+    // The same interface pixels the rest of the HUD is laid out in, so
+    // the debug text is the size of every other line of text on the
+    // screen. Minecraft starts it two in from the corner and steps it
+    // nine down a line.
+    m_ui.setScale(static_cast<float>(guiScale()));
+    const float w = m_ui.canvasWidth();
 
     char buffer[256];
-    const float scale = 2.0f;
-    const float lineStep = UIRenderer::textHeight(scale) + 6.0f;
+    const float scale = 1.0f;
+    const float lineStep = 9.0f;
 
-    float leftY = 10.0f;
+    float leftY = 2.0f;
     auto left = [&](const char* text) {
-        m_ui.textWithShadow(text, 10.0f, leftY, scale, TEXT_COLOR);
+        m_ui.textWithShadow(text, 2.0f, leftY, scale, TEXT_COLOR);
         leftY += lineStep;
     };
 
-    float rightY = 10.0f;
+    float rightY = 2.0f;
     auto right = [&](const char* text) {
-        m_ui.textWithShadow(text, w - UIRenderer::textWidth(text, scale) - 10.0f,
+        m_ui.textWithShadow(text, w - UIRenderer::textWidth(text, scale) - 2.0f,
                             rightY, scale, TEXT_COLOR);
         rightY += lineStep;
     };
@@ -10571,12 +10632,12 @@ void Application::renderDebugOverlay()
     const bool minimal = (m_debugDetail == DebugDetail::Minimal);
 
     // ----------------------------------------------------------- left ---
-    std::snprintf(buffer, sizeof(buffer), "BROWSERCRAFT 0.1 (%.0f FPS)", m_fps);
+    std::snprintf(buffer, sizeof(buffer), "Browsercraft 0.1 (%.0f FPS)", m_fps);
     left(buffer);
 
     if (!minimal)
     {
-        std::snprintf(buffer, sizeof(buffer), "C: %d  E: %d  D: %d  M: %d (%d YOUNG)  JOBS: %d",
+        std::snprintf(buffer, sizeof(buffer), "C: %d  E: %d  D: %d  M: %d (%d Young)  Jobs: %d",
                       m_world->loadedChunks(), m_particles.count(),
                       m_drops.count(), m_entities.count(), m_entities.youngCount(),
                       m_world->pendingJobs());
@@ -10587,42 +10648,42 @@ void Application::renderDebugOverlay()
     std::snprintf(buffer, sizeof(buffer), "XYZ: %.3f / %.5f / %.3f", p.x, p.y, p.z);
     left(buffer);
 
-    std::snprintf(buffer, sizeof(buffer), "BLOCK: %d %d %d", bx, by, bz);
+    std::snprintf(buffer, sizeof(buffer), "Block: %d %d %d", bx, by, bz);
     left(buffer);
 
     if (!minimal)
     {
-        std::snprintf(buffer, sizeof(buffer), "CHUNK: %d %d %d IN %d %d",
+        std::snprintf(buffer, sizeof(buffer), "Chunk: %d %d %d in %d %d",
                       World::floorMod(bx, Chunk::SX), by, World::floorMod(bz, Chunk::SZ),
                       World::floorDiv(bx, Chunk::SX), World::floorDiv(bz, Chunk::SZ));
         left(buffer);
 
         // Which way you are looking, named the way Minecraft names it.
         const glm::vec3 f = m_camera.front;
-        const char* facing = "NORTH";
-        const char* towards = "TOWARDS NEGATIVE Z";
+        const char* facing = "North";
+        const char* towards = "Towards Negative Z";
         if (std::abs(f.x) > std::abs(f.z))
         {
-            facing = (f.x > 0.0f) ? "EAST" : "WEST";
-            towards = (f.x > 0.0f) ? "TOWARDS POSITIVE X" : "TOWARDS NEGATIVE X";
+            facing = (f.x > 0.0f) ? "East" : "West";
+            towards = (f.x > 0.0f) ? "Towards Positive X" : "Towards Negative X";
         }
         else if (f.z > 0.0f)
         {
-            facing = "SOUTH";
-            towards = "TOWARDS POSITIVE Z";
+            facing = "South";
+            towards = "Towards Positive Z";
         }
-        std::snprintf(buffer, sizeof(buffer), "FACING: %s (%s) (%.1f / %.1f)",
+        std::snprintf(buffer, sizeof(buffer), "Facing: %s (%s) (%.1f / %.1f)",
                       facing, towards, m_camera.yaw, m_camera.pitch);
         left(buffer);
 
         if (hasSky())
-            std::snprintf(buffer, sizeof(buffer), "BIOME: %s",
+            std::snprintf(buffer, sizeof(buffer), "Biome: %s",
                           biomeName(m_world->generator().biomeAt(bx, bz)));
         else
-            std::snprintf(buffer, sizeof(buffer), "DIMENSION: %s", dimensionName(m_dimension));
+            std::snprintf(buffer, sizeof(buffer), "Dimension: %s", dimensionName(m_dimension));
         left(buffer);
 
-        std::snprintf(buffer, sizeof(buffer), "LIGHT: %d (%d SKY, %d BLOCK)",
+        std::snprintf(buffer, sizeof(buffer), "Light: %d (%d Sky, %d Block)",
                       std::max<int>(m_world->skyLight(bx, by + 1, bz),
                                     m_world->blockLightAt(bx, by + 1, bz)),
                       static_cast<int>(m_world->skyLight(bx, by + 1, bz)),
@@ -10631,13 +10692,13 @@ void Application::renderDebugOverlay()
 
         const int hours = static_cast<int>(m_timeOfDay * 24.0f);
         const int minutes = static_cast<int>((m_timeOfDay * 24.0f - hours) * 60.0f);
-        std::snprintf(buffer, sizeof(buffer), "TIME: %02d:%02d  DAYLIGHT: %.2f",
+        std::snprintf(buffer, sizeof(buffer), "Time: %02d:%02d  Daylight: %.2f",
                       hours, minutes, daylightFactor());
         left(buffer);
 
-        std::snprintf(buffer, sizeof(buffer), "MODE: %s%s", gameModeName(m_gameMode),
-                      m_player.flying ? " FLYING"
-                                      : (m_player.onGround ? " GROUNDED" : " AIRBORNE"));
+        std::snprintf(buffer, sizeof(buffer), "Mode: %s%s", gameModeName(m_gameMode),
+                      m_player.flying ? " Flying"
+                                      : (m_player.onGround ? " Grounded" : " Airborne"));
         left(buffer);
     }
 
@@ -10655,32 +10716,33 @@ void Application::renderDebugOverlay()
             return std::string(text ? text : "unknown");
         }();
 
-        std::snprintf(buffer, sizeof(buffer), "DISPLAY: %dx%d", m_window.width(), m_window.height());
+        std::snprintf(buffer, sizeof(buffer), "Display: %dx%d", m_window.width(), m_window.height());
         right(buffer);
         right(api.c_str());
         right(gpu.c_str());
         right("");
 
-        std::snprintf(buffer, sizeof(buffer), "SEED: %u", m_world->seed());
+        std::snprintf(buffer, sizeof(buffer), "Seed: %u", m_world->seed());
         right(buffer);
-        std::snprintf(buffer, sizeof(buffer), "RENDER DISTANCE: %d", m_world->renderDistance());
+        std::snprintf(buffer, sizeof(buffer), "Render Distance: %d", m_world->renderDistance());
         right(buffer);
-        std::snprintf(buffer, sizeof(buffer), "ATLAS: %dpx TILES%s", m_atlas.tilePixels(),
+        std::snprintf(buffer, sizeof(buffer), "Atlas: %dpx Tiles%s", m_atlas.tilePixels(),
                       m_atlas.hasPbrMaps() ? " +PBR" : "");
         right(buffer);
 
         // Chunk storage, which is where nearly all the memory goes.
         const double megabytes = m_world->loadedChunks() *
                                  (Chunk::BLOCK_COUNT * (sizeof(BlockId) + 1)) / (1024.0 * 1024.0);
-        std::snprintf(buffer, sizeof(buffer), "CHUNK MEMORY: %.1f MB", megabytes);
+        std::snprintf(buffer, sizeof(buffer), "Chunk Memory: %.1f MB", megabytes);
         right(buffer);
     }
 
     // The footer names the key, because a view you cannot get back from
     // is worse than no view at all.
-    const char* detailName = minimal ? "MINIMAL" : (detailed ? "FULL" : "DEFAULT");
+    const char* detailName = minimal ? "Minimal" : (detailed ? "Full" : "Default");
     std::snprintf(buffer, sizeof(buffer), "F3 + F6: %s", detailName);
-    m_ui.textWithShadow(buffer, w - UIRenderer::textWidth(buffer, 1.7f) - 10.0f,
-                        static_cast<float>(m_window.height()) - lineStep - 8.0f,
-                        1.7f, DIM_TEXT);
+    m_ui.textWithShadow(buffer, w - UIRenderer::textWidth(buffer, scale) - 2.0f,
+                        m_ui.canvasHeight() - lineStep - 2.0f, scale, DIM_TEXT);
+
+    m_ui.setScale(1.0f);
 }

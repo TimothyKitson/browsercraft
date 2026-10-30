@@ -809,6 +809,15 @@ private:
     void roundedQuad(float x, float y, float w, float h, const glm::vec4& colour, float cut = 4.0f);
     void bevel(float x, float y, float w, float h, const glm::vec4& face,
                const glm::vec4& light, const glm::vec4& dark, float edge = 2.0f);
+    // How many screen pixels one interface pixel is drawn as, by
+    // Minecraft's rule: the largest whole number that still leaves a
+    // canvas of at least 320 by 240 to lay the interface out on.
+    int guiScale() const;
+
+    // 0 is automatic, which is Minecraft's default and takes the
+    // largest scale the window will hold; 1 to 4 pin it.
+    int m_guiScaleSetting = 0;
+
     void guiPanel(float x, float y, float w, float h);
     void guiWell(float x, float y, float w, float h);
     void centredText(const std::string& text, float y, float scale, const glm::vec4& colour);

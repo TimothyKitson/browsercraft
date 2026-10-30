@@ -12,11 +12,11 @@ inline const char* gameModeName(GameMode mode)
 {
     switch (mode)
     {
-        case GameMode::Survival: return "SURVIVAL";
-        case GameMode::Creative: return "CREATIVE";
-        case GameMode::Hardcore: return "HARDCORE";
+        case GameMode::Survival: return "Survival";
+        case GameMode::Creative: return "Creative";
+        case GameMode::Hardcore: return "Hardcore";
     }
-    return "UNKNOWN";
+    return "Unknown";
 }
 
 // Creative players fly, mine instantly and never take damage.

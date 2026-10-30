@@ -6,9 +6,34 @@
 #include <vector>
 #include <glm/glm.hpp>
 
+// How big the interface is drawn, Minecraft's way.
+//
+// Minecraft does not lay its interface out in screen pixels. It lays it
+// out on a small canvas -- never less than 320 by 240 of them -- and
+// then blows that canvas up by a whole number, so the art stays sharp
+// and the panels keep the same share of the screen whatever the window
+// is doing. Everything in the game is written in those canvas pixels:
+// a slot is eighteen of them, a heart nine, the hotbar a hundred and
+// eighty-two.
+//
+// A pure function of the window, so --selftest can check the rule at
+// every size without a window to look at.
+namespace Gui
+{
+    constexpr int MIN_WIDTH = 320;
+    constexpr int MIN_HEIGHT = 240;
+
+    // `preferred` is the setting: 1, 2, 3, 4, and 0 for automatic,
+    // which takes the largest that fits. The answer is never below 1,
+    // however small the window is.
+    int scaleFor(int windowWidth, int windowHeight, int preferred = 0);
+}
+
 // Immediate-mode 2D renderer for the HUD: coloured quads, atlas tiles and
 // bitmap text, all batched and flushed whenever the texture changes.
-// Coordinates are in pixels with (0,0) at the top-left.
+//
+// Coordinates are in interface pixels with (0,0) at the top-left, and
+// setScale decides how many screen pixels one of those is.
 class UIRenderer
 {
 public:
@@ -17,6 +42,22 @@ public:
 
     void begin(int screenWidth, int screenHeight);
     void end();
+
+    // How many screen pixels one interface pixel is. Everything drawn
+    // after this is multiplied by it.
+    void setScale(float scale) { m_scale = scale > 0.0f ? scale : 1.0f; }
+    float scale() const { return m_scale; }
+
+    // The canvas, in interface pixels: what the width and height of the
+    // window come to once the scale is taken off them.
+    float canvasWidth() const { return static_cast<float>(m_width) / m_scale; }
+    float canvasHeight() const { return static_cast<float>(m_height) / m_scale; }
+
+    // Draw by inverting what is already there rather than painting
+    // over it. Minecraft's crosshair is the only thing in the game
+    // drawn this way, and it is why it stays legible on snow and on
+    // coal without an outline round it.
+    void setInvert(bool on);
 
     void quad(float x, float y, float w, float h, const glm::vec4& color);
     void texturedQuad(unsigned int texture, float x, float y, float w, float h,
@@ -64,6 +105,8 @@ private:
     int m_width = 1;
     int m_height = 1;
 
+    float m_scale = 1.0f;
+    bool m_invert = false;
     float m_rotation = 0.0f;
     float m_pivotX = 0.0f;
     float m_pivotY = 0.0f;

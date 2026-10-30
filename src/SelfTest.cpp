@@ -62,6 +62,7 @@
 #include "Game/Food.h"
 #include "Game/Golems.h"
 #include "Renderer/Atlas.h"
+#include "Renderer/UIRenderer.h"
 #include "Audio/AudioEngine.h"
 #include "Player/Player.h"
 #include <glm/glm.hpp>
@@ -11509,6 +11510,52 @@ namespace
               "and it is its own light, so the ring can be seen from the island");
     }
 
+    void testInterfaceScale()
+    {
+        section("the interface: how big it is drawn");
+
+        // Minecraft's rule: step the scale up while the canvas it
+        // leaves still holds 320 by 240, which is the smallest an
+        // interface is ever laid out on.
+        check(Gui::scaleFor(1280, 720) == 3, "a 1280 by 720 window draws at three");
+        check(Gui::scaleFor(1920, 1080) == 4, "a 1920 by 1080 one at four");
+        check(Gui::scaleFor(3840, 2160) == 9, "and a 4K one at nine");
+        check(Gui::scaleFor(854, 480) == 2, "the smallest window Minecraft allows draws at two");
+        check(Gui::scaleFor(640, 480) == 2, "480 tall is exactly two rows of 240");
+        check(Gui::scaleFor(320, 240) == 1, "and a canvas-sized window at one");
+
+        // Never nought, however small the window gets: a scale of
+        // nought would divide the whole interface by zero.
+        check(Gui::scaleFor(1, 1) == 1, "a window of nothing still draws at one");
+        check(Gui::scaleFor(0, 0) == 1, "and so does a window of no size at all");
+
+        // The setting pins it. Minecraft's own menu offers 1 to 4 and
+        // an automatic setting, which is nought here.
+        check(Gui::scaleFor(3840, 2160, 2) == 2, "the setting pins the scale down");
+        check(Gui::scaleFor(3840, 2160, 0) == 9, "and nought means take what fits");
+        check(Gui::scaleFor(640, 480, 4) == 2,
+              "but a window too small for the setting still gets what fits");
+
+        // The canvas never falls below the minimum, which is the whole
+        // point of the rule: a panel 176 across has to fit on it.
+        for (int width = 320; width <= 4096; width += 37)
+            for (int height = 240; height <= 2304; height += 53)
+            {
+                const int scale = Gui::scaleFor(width, height);
+                check(width / scale >= Gui::MIN_WIDTH && height / scale >= Gui::MIN_HEIGHT,
+                      "the canvas is never smaller than an interface needs");
+            }
+
+        // And a bigger window never draws the interface smaller.
+        int last = 1;
+        for (int width = 320; width <= 4096; width += 64)
+        {
+            const int scale = Gui::scaleFor(width, width * 3 / 4);
+            check(scale >= last, "a wider window never shrinks the interface");
+            last = scale;
+        }
+    }
+
     void testTheShulker()
     {
         section("the shulker: a block that is alive");
@@ -11978,6 +12025,7 @@ int runSelfTest()
     testGolemsAndTheLast();
     testTheEnd();
     testTheShulker();
+    testInterfaceScale();
 
     std::printf("\n%d checks, %d failed\n", g_checks, g_failures);
     return g_failures == 0 ? 0 : 1;

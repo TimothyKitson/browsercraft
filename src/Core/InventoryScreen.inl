@@ -87,15 +87,15 @@ namespace
     };
 
     const CreativeTab CREATIVE_TABS[] = {
-        { "BUILDING BLOCKS",  Blocks::Bricks,     TAB_BUILDING, static_cast<int>(std::size(TAB_BUILDING)) },
-        { "NATURE",           Blocks::Grass,      TAB_NATURE,   static_cast<int>(std::size(TAB_NATURE)) },
-        { "ORES AND STONE",   Blocks::DiamondOre, TAB_ORES,     static_cast<int>(std::size(TAB_ORES)) },
-        { "LIGHT AND LIQUID", Blocks::Glowstone,  TAB_MISC,     static_cast<int>(std::size(TAB_MISC)) },
-        { "ITEMS",            Items::Wheat,       TAB_ITEMS,    static_cast<int>(std::size(TAB_ITEMS)) },
-        { "TOOLS",            Items::IronPickaxe, TAB_TOOLS,    static_cast<int>(std::size(TAB_TOOLS)) },
-        { "ARMOUR",           Items::DiamondChestplate, TAB_ARMOUR, static_cast<int>(std::size(TAB_ARMOUR)) },
-        { "EVERYTHING",       Blocks::Cobblestone,nullptr,      0 },
-        { "YOUR INVENTORY",   Blocks::Wool,       nullptr,      0 },  // the player's own slots
+        { "Building Blocks",  Blocks::Bricks,     TAB_BUILDING, static_cast<int>(std::size(TAB_BUILDING)) },
+        { "Nature",           Blocks::Grass,      TAB_NATURE,   static_cast<int>(std::size(TAB_NATURE)) },
+        { "Ores and Stone",   Blocks::DiamondOre, TAB_ORES,     static_cast<int>(std::size(TAB_ORES)) },
+        { "Light and Liquid", Blocks::Glowstone,  TAB_MISC,     static_cast<int>(std::size(TAB_MISC)) },
+        { "Items",            Items::Wheat,       TAB_ITEMS,    static_cast<int>(std::size(TAB_ITEMS)) },
+        { "Tools",            Items::IronPickaxe, TAB_TOOLS,    static_cast<int>(std::size(TAB_TOOLS)) },
+        { "Armour",           Items::DiamondChestplate, TAB_ARMOUR, static_cast<int>(std::size(TAB_ARMOUR)) },
+        { "Everything",       Blocks::Cobblestone,nullptr,      0 },
+        { "Your Inventory",   Blocks::Wool,       nullptr,      0 },  // the player's own slots
     };
 
     constexpr int TAB_COUNT = static_cast<int>(std::size(CREATIVE_TABS));
@@ -379,10 +379,10 @@ void Application::renderInventoryScreen()
     // Dark text with no shadow: on a light panel a drop shadow just looks
     // like a smudge, and vanilla does not use one here either.
     const char* title = creative ? CREATIVE_TABS[m_creativeTab].name
-                                 : (m_chestOpen ? "CHEST"
-                                   : (m_crafterOpen ? "CRAFTER"
-                                   : (m_furnaceOpen ? "FURNACE"
-                                   : (m_benchOpen ? "CRAFTING" : "INVENTORY"))));
+                                 : (m_chestOpen ? "Chest"
+                                   : (m_crafterOpen ? "Crafter"
+                                   : (m_furnaceOpen ? "Furnace"
+                                   : (m_benchOpen ? "Crafting" : "Inventory"))));
     m_ui.text(title, panelX + 10.0f, panelY + 10.0f, 2.2f, GUI_TEXT);
 
     // --------------------------------------------- the open chest ---
@@ -429,7 +429,7 @@ void Application::renderInventoryScreen()
                 m_slotBoxes.push_back({ SlotBox::Kind::Slot, index, x, y, SLOT_SIZE });
             }
 
-        m_ui.text("POWER IT TO CRAFT", panelX + SLOT_GAP + 4.0f * step,
+        m_ui.text("Power it to Craft", panelX + SLOT_GAP + 4.0f * step,
                   topY + SLOT_GAP + step, 1.6f, GUI_TEXT);
     }
 

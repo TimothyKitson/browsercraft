@@ -17,6 +17,22 @@ namespace
     const std::vector<int> UI_LAYOUT = { 2, 2, 4, 3 };
 }
 
+int Gui::scaleFor(int windowWidth, int windowHeight, int preferred)
+{
+    // Minecraft's own loop: step the scale up while the canvas it
+    // leaves is still big enough to hold an interface, and stop at
+    // whatever the setting asks for. Automatic is "as far as it goes".
+    const int ceiling = preferred > 0 ? preferred : 1000;
+
+    int scale = 1;
+    while (scale < ceiling &&
+           windowWidth / (scale + 1) >= MIN_WIDTH &&
+           windowHeight / (scale + 1) >= MIN_HEIGHT)
+        ++scale;
+
+    return scale;
+}
+
 UIRenderer::UIRenderer()
     : m_shader("assets/shaders/ui.vert", "assets/shaders/ui.frag")
 {
@@ -39,6 +55,8 @@ void UIRenderer::begin(int screenWidth, int screenHeight)
 {
     m_width = screenWidth > 0 ? screenWidth : 1;
     m_height = screenHeight > 0 ? screenHeight : 1;
+    m_scale = 1.0f;
+    m_invert = false;
     m_vertices.clear();
     m_currentTexture = 0;
 
@@ -57,9 +75,19 @@ void UIRenderer::begin(int screenWidth, int screenHeight)
     m_shader.setInt("uNormalAtlas", 1);
 }
 
+void UIRenderer::setInvert(bool on)
+{
+    if (on == m_invert) return;
+    flush();
+    m_invert = on;
+    if (on) glBlendFunc(GL_ONE_MINUS_DST_COLOR, GL_ONE_MINUS_SRC_COLOR);
+    else    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+}
+
 void UIRenderer::end()
 {
     flush();
+    setInvert(false);
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_CULL_FACE);
     glDisable(GL_BLEND);
@@ -124,8 +152,8 @@ void UIRenderer::pushQuad(float x, float y, float w, float h,
 
     for (const auto& c : corners)
     {
-        m_vertices.push_back(c[0]);
-        m_vertices.push_back(c[1]);
+        m_vertices.push_back(c[0] * m_scale);
+        m_vertices.push_back(c[1] * m_scale);
         m_vertices.push_back(c[2]);
         m_vertices.push_back(c[3]);
         m_vertices.push_back(color.r);
@@ -160,8 +188,8 @@ void UIRenderer::texturedShape(unsigned int texture, const glm::vec2 corner[4],
     const int order[6] = { 0, 1, 2, 0, 2, 3 };
     for (int k : order)
     {
-        m_vertices.push_back(corner[k].x);
-        m_vertices.push_back(corner[k].y);
+        m_vertices.push_back(corner[k].x * m_scale);
+        m_vertices.push_back(corner[k].y * m_scale);
         m_vertices.push_back(uv[k].x);
         m_vertices.push_back(uv[k].y);
         m_vertices.push_back(color.r);
@@ -178,18 +206,20 @@ void UIRenderer::text(const std::string& value, float x, float y, float scale, c
 {
     useTexture(m_font.textureId());
 
+    // Each glyph is drawn its own width and the next one starts one
+    // clear column later, which is what makes the text proportional
+    // rather than a grid: "ill" is narrow and "WWW" is wide.
     float cursor = x;
     for (char c : value)
     {
-        if (c == ' ')
+        if (c != ' ')
         {
-            cursor += (Font::GLYPH_W + 1) * scale;
-            continue;
+            float u0, v0, u1, v1;
+            Font::glyphUV(c, u0, v0, u1, v1);
+            pushQuad(cursor, y, Font::widthOf(c) * scale, Font::GLYPH_H * scale,
+                     u0, v0, u1, v1, color);
         }
-        float u0, v0, u1, v1;
-        Font::glyphUV(c, u0, v0, u1, v1);
-        pushQuad(cursor, y, Font::GLYPH_W * scale, Font::GLYPH_H * scale, u0, v0, u1, v1, color);
-        cursor += (Font::GLYPH_W + 1) * scale;
+        cursor += Font::advanceOf(c) * scale;
     }
 }
 
@@ -219,5 +249,11 @@ void UIRenderer::textWithShadowRotated(const std::string& value, float x, float 
 float UIRenderer::textWidth(const std::string& value, float scale)
 {
     if (value.empty()) return 0.0f;
-    return value.size() * (Font::GLYPH_W + 1) * scale - scale;
+
+    float width = 0.0f;
+    for (char c : value) width += Font::advanceOf(c) * scale;
+
+    // The trailing clear column after the last glyph is not part of
+    // the text: counted in, every centred line sits half a pixel left.
+    return width - scale;
 }

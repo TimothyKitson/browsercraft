@@ -23,3 +23,7 @@ compile_commands.json
 /assets/textures/
 /assets/sounds/
 /assets/skins/
+
+# Screenshots are made by the game and belong on the machine that made
+# them, not in the repository.
+/screenshots/

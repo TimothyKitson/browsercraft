@@ -380,6 +380,142 @@ namespace
     // Walks to each structure by name rather than sweeping and hoping
     // to land on one. A blind sweep reported prismarine missing from a
     // world whose nearest monument was 160 chunks away.
+    // Dev aid: every species and everything the game knows about it, in
+    // one table. Written for reading rather than for parsing: the point
+    // is to be able to run an eye down a column and see the one mob
+    // that was given no drop, or no voice, or nowhere to live.
+    int printMobInfo()
+    {
+        auto nameOf = [](StackId id) -> const char*
+        {
+            if (id == Blocks::Air) return "-";
+            const char* named = displayName(id);
+            return named && *named ? named : "?";
+        };
+
+        auto whereItLives = [](MobId id)
+        {
+            std::string where;
+            auto note = [&where](const char* what)
+            {
+                if (!where.empty()) where += ",";
+                where += what;
+            };
+
+            for (int k = 0; k < EntityManager::nightSpeciesCount(); ++k)
+                if (EntityManager::nightSpecies(k) == id) { note("night"); break; }
+            for (int k = 0; k < EntityManager::netherSpeciesCount(); ++k)
+                if (EntityManager::netherSpecies(k) == id) { note("nether"); break; }
+            for (int k = 0; k < EntityManager::endSpeciesCount(); ++k)
+                if (EntityManager::endSpecies(k) == id) { note("end"); break; }
+            for (int k = 0; k < EntityManager::caveSpeciesCount(); ++k)
+                if (EntityManager::caveSpecies(k) == id) { note("cave"); break; }
+            for (int k = 0; k < EntityManager::seaSpeciesCount(); ++k)
+                if (EntityManager::seaSpecies(k) == id) { note("sea"); break; }
+
+            for (int b = 0; b <= static_cast<int>(Biome::Swamp); ++b)
+            {
+                const Biome where2 = static_cast<Biome>(b);
+                bool found = false;
+                for (int roll = 0; roll < 64 && !found; ++roll)
+                {
+                    const float r = roll / 64.0f;
+                    if (EntityManager::biomeSpecies(where2, r) == id) found = true;
+                    if (EntityManager::biomeNight(where2, r) == id) found = true;
+                }
+                if (found) { note("biome"); break; }
+            }
+
+            if (where.empty()) where = "put by hand";
+            return where;
+        };
+
+        // The box is printed as the game uses it: what the table holds
+        // is the model's own size, and the scale is what turns that
+        // into Minecraft's hitbox.
+        std::printf("%-16s %-9s %-8s %4s %5s %5s %6s %6s %5s %-22s %s\n",
+                    "SPECIES", "WORLD", "CLASS", "HP", "W", "H", "SPEED", "MELEE",
+                    "SHOT", "DROPS", "WHERE");
+
+        for (int i = 0; i < mobTypeCount(); ++i)
+        {
+            const MobId id = static_cast<MobId>(i);
+            const MobType& t = mobType(id);
+
+            std::string drops = nameOf(t.drop);
+            if (t.secondDrop != Blocks::Air)
+            {
+                drops += "+";
+                drops += nameOf(t.secondDrop);
+            }
+
+            const char* world = t.dimension == Dimension::Nether ? "nether"
+                              : t.dimension == Dimension::End    ? "end"
+                                                                 : "overworld";
+
+            std::printf("%-16s %-9s %-8s %4d %5.2f %5.2f %6.1f %6d %5d %-22s %s\n",
+                        t.name, world,
+                        t.spawnClass == SpawnClass::Hostile ? "hostile" : "passive",
+                        t.maxHealth, t.width * t.modelScale, t.height * t.modelScale,
+                        t.walkSpeed,
+                        t.attackDamage, t.arrowDamage, drops.c_str(),
+                        whereItLives(id).c_str());
+        }
+
+        std::printf("\n%-16s %s\n", "SPECIES", "HOW IT BEHAVES");
+        for (int i = 0; i < mobTypeCount(); ++i)
+        {
+            const MobId id = static_cast<MobId>(i);
+            const MobType& t = mobType(id);
+
+            std::string how;
+            auto note = [&how](const std::string& what)
+            {
+                if (!how.empty()) how += " ";
+                how += what;
+            };
+
+            if (t.neutral) note("neutral");
+            if (t.boss) note("boss");
+            if (t.inanimate) note("inanimate");
+            if (t.stationary) note("bolted-down");
+            if (t.aquatic) note("swims");
+            if (t.floats) note("floats");
+            if (t.lavaWalker) note("walks-lava");
+            if (t.hoverHeight > 0.0f) note("flies");
+            if (t.ridesRails) note("rails");
+            if (t.rideable) note("rideable");
+            if (t.burnsInSunlight) note("burns-at-dawn");
+            if (t.fireproof) note("fireproof");
+            if (t.fuseSeconds > 0.0f) note("explodes");
+            if (t.shootsFire) note("shoots-fire");
+            if (t.shootsWind) note("shoots-wind");
+            if (t.throwsPotions) note("throws-potions");
+            if (t.breedingFood != Blocks::Air)
+                note(std::string("breeds-on-") + nameOf(t.breedingFood));
+            if (Mob::tamingFood(id) != Blocks::Air)
+                note(std::string("tamed-by-") + nameOf(Mob::tamingFood(id)));
+            if (t.experience > 0) note("xp" + std::to_string(t.experience));
+            if (how.empty()) how = "walks about";
+
+            std::printf("%-16s %s\n", t.name, how.c_str());
+        }
+
+        std::printf("\n%-16s %-14s %4s %4s %5s %s\n",
+                    "SPECIES", "SHEET", "W", "H", "BOXES", "SCALE");
+        for (int i = 0; i < mobTypeCount(); ++i)
+        {
+            const MobType& t = mobType(static_cast<MobId>(i));
+            std::printf("%-16s %-14s %4d %4d %5d %.3f\n",
+                        t.name, *t.texture ? t.texture : "(painted)",
+                        t.sheetWidth, t.sheetHeight,
+                        static_cast<int>(t.model.size()), t.modelScale);
+        }
+
+        std::printf("\n%d species in all.\n", mobTypeCount());
+        return 0;
+    }
+
     int printBlockAudit(uint32_t seed)
     {
         std::set<int> reachable;
@@ -1188,6 +1324,7 @@ int main(int argc, char** argv)
     bool swimTest = false;
     const char* startAt = nullptr;
     bool blockAudit = false;
+    bool mobInfo = false;
     bool structureInfo = false;
     bool oreInfo = false;
     bool villageInfo = false;
@@ -1243,6 +1380,10 @@ int main(int argc, char** argv)
         else if (std::strcmp(argv[i], "--seabedinfo") == 0)
         {
             seabedInfo = true;
+        }
+        else if (std::strcmp(argv[i], "--mobinfo") == 0)
+        {
+            mobInfo = true;
         }
         else if (std::strcmp(argv[i], "--blockaudit") == 0)
         {
@@ -1318,6 +1459,7 @@ int main(int argc, char** argv)
     if (costCheck) return printCostCheck(hasSeed ? seed : 12345u);
     if (seabedInfo) return printSeabedInfo(hasSeed ? seed : 12345u);
     if (packCheck) return printPackCheck();
+    if (mobInfo) return printMobInfo();
     if (blockAudit) return printBlockAudit(hasSeed ? seed : 12345u);
     if (structureInfo) return printStructureInfo(hasSeed ? seed : 12345u);
     if (oreInfo) return printOreInfo(hasSeed ? seed : 12345u);
