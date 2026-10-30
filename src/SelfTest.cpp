@@ -5134,6 +5134,41 @@ namespace
         check(Smelting::resultOf(Blocks::Clay) == Blocks::Bricks,
               "and clay still fires into bricks");
 
+        // The glow berries are the one the item side of the audit
+        // caught. Food.cpp had listed them as edible and this file had
+        // checked that they were -- but mining the vine gave you the
+        // block, so the one food that grows underground could be
+        // picked up and never eaten.
+        check(blockDrop(Blocks::GlowBerries) == Items::GlowBerries,
+              "glow berries come off the vine as something you can eat");
+        check(Food::isEdible(blockDrop(Blocks::GlowBerries)),
+              "and what comes off is edible, which is the whole point of them");
+
+        // The general rule behind it: anything edible has to have a
+        // way of reaching a hand. A food nobody can hold is a food
+        // nobody can eat.
+        for (int i = static_cast<int>(Items::FIRST); i < static_cast<int>(Items::Count); ++i)
+        {
+            const StackId id = static_cast<StackId>(i);
+            if (!Food::isEdible(id)) continue;
+
+            bool obtainable = false;
+            for (int b = 0; b < static_cast<int>(Blocks::Count) && !obtainable; ++b)
+                if (blockDrop(static_cast<BlockId>(b)) == id) obtainable = true;
+            for (int m = 0; m < mobTypeCount() && !obtainable; ++m)
+            {
+                const MobType& type = mobType(static_cast<MobId>(m));
+                if (type.drop == id || type.secondDrop == id) obtainable = true;
+            }
+            for (StackId made : Crafting::everyOutput())
+                if (made == id) obtainable = true;
+            for (int k = 0; k < static_cast<int>(Items::Count) && !obtainable; ++k)
+                if (Smelting::resultOf(static_cast<StackId>(k)) == id) obtainable = true;
+
+            check(obtainable,
+                  std::string(displayName(id)) + " can be got hold of, not just eaten");
+        }
+
         // Every mob has to be meetable. A species in the table that
         // is in no spawn list is a model nobody ever sees.
         for (int i = 0; i < mobTypeCount(); ++i)

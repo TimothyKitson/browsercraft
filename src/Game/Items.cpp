@@ -163,3 +163,65 @@ bool isBreedingFood(StackId id)
 {
     return id == Items::Wheat;
 }
+
+// What a block turns into when you mine it.
+//
+// Lived in Application's anonymous namespace, where the only thing
+// that could ask was the mining code. It is part of what a block is,
+// and the audit has to be able to ask it too: an item whose only
+// route into the game is "mine this block" is reachable, and nothing
+// outside Application could tell.
+StackId blockDrop(BlockId id)
+{
+    if (isLeaves(id)) return Blocks::Air;   // leaves drop nothing
+
+    switch (id)
+    {
+        case Blocks::Grass:
+        case Blocks::SnowGrass: return Blocks::Dirt;
+        case Blocks::Stone: return Blocks::Cobblestone;
+        case Blocks::Ice: return Blocks::Air;
+        // Where wheat comes from, until there is farmland to grow it
+        // on: grass gives up its seeds the way it does in Minecraft,
+        // and three of them make a wheat in the crafting grid. That
+        // second step is the stopgap and goes when farming lands.
+        case Blocks::TallGrass: return Items::WheatSeeds;
+
+        // Ore gives up what is in it. Iron and gold stay as ore --
+        // they want a furnace, and there is not one yet.
+        case Blocks::FurnaceLit: return Blocks::Furnace;
+        case Blocks::CoalOre: return Items::Coal;
+        case Blocks::DiamondOre: return Items::Diamond;
+        case Blocks::EmeraldOre: return Items::Emerald;
+        case Blocks::Glowstone: return Items::GlowstoneDust;
+        case Blocks::NetherWart: return Items::NetherWart;
+        case Blocks::RedstoneOre: return Items::Redstone;
+
+        // The berries come off the vine as something you can eat. They
+        // used to come off as the block, which meant the one food that
+        // grows underground could be picked up and never eaten. The
+        // item audit found it; Food.cpp had listed it as edible all
+        // along and the self-test had checked that it was.
+        case Blocks::GlowBerries: return Items::GlowBerries;
+        case Blocks::CopperOre: return Items::RawCopper;
+        case Blocks::CopperBulbLit: return Blocks::CopperBulb;
+
+        // Whatever state a thing was in when you broke it, what
+        // comes up is the thing itself.
+        case Blocks::RedstoneDust:
+        case Blocks::RedstoneDustLit: return Items::Redstone;
+        case Blocks::RedstoneTorchOff: return Blocks::RedstoneTorch;
+        case Blocks::LeverOn: return Blocks::LeverOff;
+        case Blocks::ButtonOn: return Blocks::ButtonOff;
+        case Blocks::RedstoneLampLit: return Blocks::RedstoneLamp;
+
+        default: break;
+    }
+
+    // Whichever way it was pointing and whether or not its head was
+    // out, what comes up is a piston.
+    if (isPiston(id))
+        return pistonSticky(id) ? Blocks::StickyPistonNorth : Blocks::PistonNorth;
+
+    return id;
+}

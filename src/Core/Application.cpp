@@ -133,54 +133,6 @@ namespace
     const glm::vec4 TEXT_DIM(0.62f, 0.62f, 0.62f, 1.0f);
     const glm::vec4 DIM_TEXT(0.72f, 0.74f, 0.78f, 1.0f);
 
-    // What a block turns into when you mine it.
-    StackId blockDrop(BlockId id)
-    {
-        if (isLeaves(id)) return Blocks::Air;   // leaves drop nothing
-
-        switch (id)
-        {
-            case Blocks::Grass:
-            case Blocks::SnowGrass: return Blocks::Dirt;
-            case Blocks::Stone: return Blocks::Cobblestone;
-            case Blocks::Ice: return Blocks::Air;
-            // Where wheat comes from, until there is farmland to grow it
-            // on: grass gives up its seeds the way it does in Minecraft,
-            // and three of them make a wheat in the crafting grid. That
-            // second step is the stopgap and goes when farming lands.
-            case Blocks::TallGrass: return Items::WheatSeeds;
-
-            // Ore gives up what is in it. Iron and gold stay as ore --
-            // they want a furnace, and there is not one yet.
-            case Blocks::FurnaceLit: return Blocks::Furnace;
-            case Blocks::CoalOre: return Items::Coal;
-            case Blocks::DiamondOre: return Items::Diamond;
-            case Blocks::EmeraldOre: return Items::Emerald;
-            case Blocks::Glowstone: return Items::GlowstoneDust;
-            case Blocks::NetherWart: return Items::NetherWart;
-            case Blocks::RedstoneOre: return Items::Redstone;
-            case Blocks::CopperOre: return Items::RawCopper;
-            case Blocks::CopperBulbLit: return Blocks::CopperBulb;
-
-            // Whatever state a thing was in when you broke it, what
-            // comes up is the thing itself.
-            case Blocks::RedstoneDust:
-            case Blocks::RedstoneDustLit: return Items::Redstone;
-            case Blocks::RedstoneTorchOff: return Blocks::RedstoneTorch;
-            case Blocks::LeverOn: return Blocks::LeverOff;
-            case Blocks::ButtonOn: return Blocks::ButtonOff;
-            case Blocks::RedstoneLampLit: return Blocks::RedstoneLamp;
-
-            default: break;
-        }
-
-        // Whichever way it was pointing and whether or not its head was
-        // out, what comes up is a piston.
-        if (isPiston(id))
-            return pistonSticky(id) ? Blocks::StickyPistonNorth : Blocks::PistonNorth;
-
-        return id;
-    }
 }
 
 Application::Application(int windowWidth, int windowHeight)

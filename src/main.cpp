@@ -4,6 +4,8 @@
 #include "Renderer/Atlas.h"
 #include "Game/Crafting.h"
 #include "Game/Smelting.h"
+#include "Game/StructureLoot.h"
+#include "Game/Trial.h"
 #include "Entity/MobType.h"
 #include <set>
 #include <algorithm>
@@ -533,10 +535,100 @@ namespace
             ++unexplained;
         }
 
-        std::printf("\n%s\n", unexplained == 0
-                    ? "Every block in the game can be reached."
-                    : "Some blocks exist that nobody can ever get -- see above.");
-        return unexplained == 0 ? 0 : 1;
+        // ------------------------------------------------------------
+        // The same question for items.
+        // ------------------------------------------------------------
+        std::set<int> haveItem;
+
+        // What falls out of a block you can get.
+        for (int b = 0; b < static_cast<int>(Blocks::Count); ++b)
+            if (reachable.count(b))
+            {
+                const StackId drop = blockDrop(static_cast<BlockId>(b));
+                if (drop != Blocks::Air) haveItem.insert(drop);
+            }
+
+        // What a mob leaves.
+        for (int m = 0; m < mobTypeCount(); ++m)
+        {
+            const MobType& type = mobType(static_cast<MobId>(m));
+            if (type.drop != Blocks::Air) haveItem.insert(type.drop);
+            if (type.secondDrop != Blocks::Air) haveItem.insert(type.secondDrop);
+        }
+
+        // What a recipe or a furnace makes.
+        for (StackId id : Crafting::everyOutput()) haveItem.insert(id);
+        for (int i = 0; i < static_cast<int>(Items::Count); ++i)
+        {
+            const StackId fired = Smelting::resultOf(static_cast<StackId>(i));
+            if (fired != Blocks::Air) haveItem.insert(fired);
+        }
+        for (int b = 0; b < static_cast<int>(Blocks::Count); ++b)
+        {
+            const StackId fired = Smelting::resultOf(static_cast<StackId>(b));
+            if (fired != Blocks::Air) haveItem.insert(fired);
+        }
+
+        // What is in a chest somewhere in the world.
+        for (int h = 0; h <= static_cast<int>(WorldGen::Hoard::TrialChamber); ++h)
+            for (int n = 0; n < 40; ++n)
+                for (const StructureLoot::Stack& stack : StructureLoot::rollFor(
+                         static_cast<WorldGen::Hoard>(h), n * 7, 50, n * 11, seed))
+                    haveItem.insert(stack.id);
+
+        for (Village::Kind kind : { Village::Kind::Home, Village::Kind::Blacksmith,
+                                    Village::Kind::Library, Village::Kind::Butcher })
+            for (int n = 0; n < 40; ++n)
+                for (const VillageLoot::Stack& stack :
+                         VillageLoot::rollFor(kind, n * 5, 70, n * 3, seed))
+                    haveItem.insert(stack.id);
+
+        // And what a vault pays out.
+        for (int n = 0; n < 40; ++n)
+        {
+            for (const Trial::Stack& stack : Trial::vaultLoot(n * 3, 40, n * 5, seed))
+                haveItem.insert(stack.id);
+            for (const Trial::Stack& stack : Trial::ominousVaultLoot(n * 3, 40, n * 5, seed))
+                haveItem.insert(stack.id);
+        }
+
+        std::printf("\n  %-26s %s\n", "item not in any table", "where it comes from");
+        std::printf("  %-26s %s\n", "---------------------", "--------------------");
+
+        int lostItems = 0;
+        for (int i = static_cast<int>(Items::FIRST); i < static_cast<int>(Items::Count); ++i)
+        {
+            if (haveItem.count(i)) continue;
+
+            // Some things are made by doing rather than by a table,
+            // and a table is all this can read. Each one is named
+            // here with what you do to get it.
+            const char* byHand = nullptr;
+            if (i == static_cast<int>(Items::Potion))
+                byHand = "brewed at a stand";
+            else if (i == static_cast<int>(Items::WaterBucket) ||
+                     i == static_cast<int>(Items::LavaBucket))
+                byHand = "a bucket dipped in it";
+            else if (i == static_cast<int>(Items::TrialKey) ||
+                     i == static_cast<int>(Items::OminousTrialKey))
+                byHand = "paid out by a spawner that has finished its waves";
+
+            if (byHand)
+            {
+                std::printf("  %-26s %s\n", displayName(static_cast<StackId>(i)), byHand);
+                continue;
+            }
+
+            std::printf("  %-26s *** NOTHING MAKES THIS ***\n",
+                        displayName(static_cast<StackId>(i)));
+            ++lostItems;
+        }
+        if (lostItems == 0) std::printf("  (none)\n");
+
+        std::printf("\n%s\n", (unexplained == 0 && lostItems == 0)
+                    ? "Every block and every item in the game can be reached."
+                    : "Some things exist that nobody can ever get -- see above.");
+        return (unexplained == 0 && lostItems == 0) ? 0 : 1;
     }
 
     int printSeabedInfo(uint32_t seed)

@@ -164,6 +164,14 @@ inline BlockId asBlock(StackId id) { return static_cast<BlockId>(id); }
 
 const ItemInfo& itemInfo(StackId id);
 
+// What a block turns into when you mine it. Air means it drops
+// nothing; anything else is what lands on the floor.
+//
+// Declared here rather than beside the rest of what a block is,
+// because a drop can be an item and Block.h cannot see StackId --
+// Items.h is the one that includes Block.h, not the other way round.
+StackId blockDrop(BlockId id);
+
 // These three work on blocks and items alike, which is what lets the
 // inventory, the hotbar and the dropped-item renderer stay unaware of
 // which they are holding.
