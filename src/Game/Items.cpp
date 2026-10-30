@@ -176,6 +176,7 @@ namespace
         { "Netherite Chestplate", Tiles::ItemNetheriteFirst + 6, 1 },
         { "Netherite Leggings",   Tiles::ItemNetheriteFirst + 7, 1 },
         { "Netherite Boots",      Tiles::ItemNetheriteFirst + 8, 1 },
+        { "Totem of Undying",     Tiles::ItemTotem,              1 },
     };
 
     static_assert(sizeof(ITEMS) / sizeof(ITEMS[0]) ==

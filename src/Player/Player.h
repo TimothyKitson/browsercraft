@@ -159,6 +159,12 @@ public:
     // place a blow is applied, so it is the one place the rules about
     // a blow should live.
     uint32_t protection = 0;
+
+    // Whether a totem of undying is in hand, totted up once a frame
+    // beside the armour and for the same reason: damage() is the one
+    // place a blow lands, so it is the one place that can know the
+    // blow was fatal and spend the totem instead.
+    bool holdingTotem = false;
     int hunger = MAX_HUNGER;
     float saturation = 5.0f;
 
@@ -190,6 +196,11 @@ public:
     // Drops the half second of immunity after a blow. Only --selftest
     // wants this: it lands a run of blows with no clock to wait on.
     void clearHurtCooldown() { m_hurtCooldown = 0.0f; }
+
+    // True once, after a blow that a totem turned aside. Whoever asks
+    // owns taking the totem out of the inventory and making a noise
+    // about it; damage() only knows that it was spent.
+    bool takeTotemSpent() { const bool spent = m_totemSpent; m_totemSpent = false; return spent; }
     float damageFlash = 0.0f; // seconds remaining on the red hurt overlay
 
     // Start the fall again from here. A wind charge that throws you
@@ -211,6 +222,7 @@ private:
     bool m_jumped = false;
     float m_regenTimer = 0.0f;
     float m_hurtCooldown = 0.0f;
+    bool m_totemSpent = false;
     float m_exhaustion = 0.0f;
     float m_starveTimer = 0.0f;
     float m_drownTimer = 0.0f;

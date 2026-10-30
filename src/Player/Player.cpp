@@ -429,6 +429,21 @@ bool Player::damage(int amount)
     amount = Enchanting::protectionReduced(protection, amount);
 
     health = std::max(0, health - amount);
+
+    // The totem: the one second chance in the game. Minecraft leaves
+    // you on a single heart with regeneration running and the totem
+    // gone, and that is the whole of it -- it cannot be saved for
+    // later, because it only works in the hand.
+    if (health <= 0 && holdingTotem)
+    {
+        health = 1;
+        holdingTotem = false;
+        m_totemSpent = true;
+        Effects::clear(effects);
+        Effects::give(effects, Effects::Kind::Regeneration, 1, 40.0f);
+        Effects::give(effects, Effects::Kind::FireResistance, 0, 40.0f);
+    }
+
     damageFlash = 0.4f;
     m_hurtCooldown = HURT_IMMUNITY;
     m_exhaustion += 0.1f;

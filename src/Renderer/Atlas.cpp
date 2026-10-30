@@ -3147,6 +3147,43 @@ namespace
         for (int x = tipX - 3; x <= tipX + 2; ++x) t.set(x, tipY + 4, Color{ 110, 150, 152 });
     }
 
+    void paintItemTotem(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+
+        const Color gold{ 214, 176, 72 };
+        const Color deep{ 168, 130, 44 };
+        const Color jade{ 86, 160, 118 };
+        const Color dark{ 62, 46, 20 };
+
+        // A carved figure: a round head over a narrow body with its
+        // arms folded out, which is the whole of what a totem reads as
+        // at sixteen pixels.
+        for (int y = 2; y < 7; ++y)
+            for (int x = 5; x < 11; ++x)
+                t.set(x, y, (x < 7 || y < 3) ? deep : gold);
+
+        for (int x = 4; x < 12; ++x) t.set(x, 7, deep);
+
+        for (int y = 8; y < 14; ++y)
+            for (int x = 6; x < 10; ++x)
+                t.set(x, y, (x < 7) ? deep : gold);
+
+        for (int y = 8; y < 11; ++y)
+        {
+            t.set(4, y, deep);
+            t.set(5, y, gold);
+            t.set(10, y, gold);
+            t.set(11, y, deep);
+        }
+
+        // The green eyes everybody knows it by.
+        t.set(6, 4, jade);
+        t.set(9, 4, jade);
+        t.set(7, 5, dark);
+        t.set(8, 5, dark);
+    }
+
     void paintItemSign(Tile& t)
     {
         t.fill(Color{ 0, 0, 0, 0 });
@@ -6084,6 +6121,7 @@ namespace
         { Tiles::ItemNetheriteIngot, paintItemNetheriteIngot },
         { Tiles::ItemShulkerShell, paintItemShulkerShell },
         { Tiles::ItemTrident, paintItemTrident },
+        { Tiles::ItemTotem, paintItemTotem },
         { Tiles::ItemBowl, paintItemBowl },
         { Tiles::ItemBeetroot, paintItemBeetroot },
         { Tiles::ItemBeetrootSeeds, paintItemBeetrootSeeds },
@@ -6407,6 +6445,7 @@ namespace
         { Tiles::ItemNetheriteFirst + 8, { "netherite_boots", nullptr, nullptr } },
         { Tiles::ItemShulkerShell, { "shulker_shell", nullptr, nullptr } },
         { Tiles::ItemTrident, { "trident", nullptr, nullptr } },
+        { Tiles::ItemTotem, { "totem_of_undying", "totem", nullptr } },
     };
 
     const PackTile PACK_TILES[] = {

@@ -141,6 +141,20 @@ public:
     // Dev aid: a tank of water with the three things that live in one
     // put into it, which is the only way to see whether they can be.
     void setSwimTest() { m_swimTest = true; m_startImmediately = true; }
+    // Dev aid: start at the nearest structure of a named kind rather
+    // than at the spawn the generator would pick. A structure can be
+    // a thousand blocks from spawn, and walking there is not a check
+    // anybody runs twice.
+    void setStartAt(const std::string& landmark)
+    {
+        m_startAt = landmark;
+        m_startImmediately = true;
+        // In creative, because the point of standing at an outpost is
+        // to look at it. The first survival run of this ended in a
+        // death screen before the shutter, which did at least prove
+        // the pillagers were awake.
+        m_startupMode = GameMode::Creative;
+    }
     // Dev aid: open straight into another dimension.
     void setStartupDimension(Dimension dimension) { m_startupDimension = dimension; }
     // Dev aid: preview a candidate panorama viewpoint.
@@ -427,6 +441,7 @@ private:
     bool m_mobTestDone = false;
     bool m_swimTest = false;
     bool m_swimTestDone = false;
+    std::string m_startAt;
     bool m_farmTest = false;
     bool m_farmTestDone = false;
     bool m_shopTest = false;

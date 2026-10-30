@@ -561,6 +561,68 @@ void Application::loadLevel()
     m_world->generator().findSpawn(spawnX, spawnY, spawnZ);
     m_spawnPoint = glm::vec3(spawnX + 0.5f, static_cast<float>(spawnY), spawnZ + 0.5f);
 
+    // --startat: begin at a named structure instead. Everything about
+    // a structure -- what is built, what lives in it, what is in its
+    // chests -- is otherwise a thousand-block walk away from any check.
+    if (!m_startAt.empty())
+    {
+        const WorldGen& gen = m_world->generator();
+        bool found = false;
+        int atX = spawnX, atZ = spawnZ;
+
+        for (int kind = 0; kind < static_cast<int>(WorldGen::Landmark::Count) && !found; ++kind)
+        {
+            const auto landmark = static_cast<WorldGen::Landmark>(kind);
+            std::string name = WorldGen::landmarkName(landmark);
+            for (char& c : name) c = static_cast<char>(std::tolower(c));
+            if (name.find(m_startAt) == std::string::npos) continue;
+
+            const Structures::Spot spot = gen.nearestLandmark(landmark, spawnX, spawnZ, 12);
+            if (!spot.exists) continue;
+
+            atX = spot.chunkX * Structures::CHUNK + Structures::CHUNK / 2;
+            atZ = spot.chunkZ * Structures::CHUNK + Structures::CHUNK / 2;
+            found = true;
+        }
+
+        if (!found && m_startAt.find("monument") != std::string::npos)
+        {
+            const Structures::Spot spot = gen.nearestMonument(spawnX, spawnZ, 12);
+            if (spot.exists)
+            {
+                atX = spot.chunkX * Structures::CHUNK + Structures::CHUNK / 2;
+                atZ = spot.chunkZ * Structures::CHUNK + Structures::CHUNK / 2;
+                found = true;
+            }
+        }
+
+        if (!found && m_startAt.find("village") != std::string::npos)
+        {
+            const Village::Site site = gen.nearestVillage(spawnX, spawnZ, 12);
+            if (site.exists) { atX = site.x; atZ = site.z; found = true; }
+        }
+
+        if (found)
+        {
+            // A few blocks to the south of it, looking at it, rather
+            // than inside a wall.
+            // South of it and well up, looking back at it and down:
+            // the first try stood on the ground in a forest and spent
+            // its shot on a wall of leaves.
+            const int standZ = atZ - 34;
+            const int standY = std::max(gen.surfaceHeight(atX, standZ) + 3,
+                                        gen.surfaceHeight(atX, atZ) + 10);
+            m_spawnPoint = glm::vec3(atX + 0.5f, static_cast<float>(standY), standZ + 0.5f);
+            m_camera.setOrientation(90.0f, -9.0f);
+            std::printf("[test] starting at %s: %d, %d\n", m_startAt.c_str(), atX, atZ);
+        }
+        else
+        {
+            std::printf("[test] no %s found anywhere near spawn\n", m_startAt.c_str());
+        }
+        std::fflush(stdout);
+    }
+
     if (loaded)
     {
         // The spawn the world was actually started at, not the one the
@@ -674,7 +736,10 @@ void Application::loadLevel()
         // begins, and taking the spawn point here instead dropped them
         // into the End's void at the overworld's coordinates.
         if (m_dimension == Dimension::Overworld) m_player.position = m_spawnPoint;
-        m_placeOnSurface = true;
+        // --startat picked a height on purpose: above the trees, which
+        // is the only way to see a building in a forest. Dropping it
+        // to the ground is what a fresh world otherwise does.
+        m_placeOnSurface = m_startAt.empty();
         m_timeOfDay = 0.3f;
         // You start with nothing, in both modes: survival is meant to
         // begin by punching a tree, and creative has the whole palette
@@ -1574,6 +1639,17 @@ bool Application::frame()
         // between one blow and the next.
         m_player.armourPoints = armourPoints();
         m_player.protection = armourProtection();
+        m_player.holdingTotem = m_inventory.selected().id == Items::TotemOfUndying;
+
+        // And if one was spent, it goes: a totem works once, in the
+        // hand, and leaves nothing behind.
+        if (m_player.takeTotemSpent())
+        {
+            ItemStack& held = m_inventory.selected();
+            if (--held.count <= 0) held.clear();
+            m_audio.play(Sound::Pickup, 0.9f, 0.6f);
+            m_chatLog.add("The totem gives itself up.");
+        }
 
         // The big grid belongs to the bench, not to the player, so it
         // shuts as soon as they walk out of reach of it -- or mine it.
@@ -5535,6 +5611,8 @@ void Application::tickStructureLairs(float deltaTime)
     constexpr int GUARDIAN_LIMIT = 6;
     constexpr int SHULKER_LIMIT = 8;
     constexpr int DROWNED_LIMIT = 5;
+    constexpr int PILLAGER_LIMIT = 6;
+    constexpr int VINDICATOR_LIMIT = 5;
 
     m_lairTimer -= deltaTime;
     if (m_lairTimer > 0.0f) return;
@@ -5653,6 +5731,143 @@ void Application::tickStructureLairs(float deltaTime)
                     const glm::vec3 feet(midX + 0.5f, static_cast<float>(floorY + 1),
                                          midZ + 0.5f);
                     if (m_entities.spawnAt(MobId::Witch, feet, *m_world)) return;
+                }
+            }
+        }
+    }
+
+    // The outpost, and the pillagers it was built for. It stood empty
+    // from the day it was built: a watchtower with nobody watching
+    // from it is scenery.
+    {
+        const Structures::Spot spot =
+            gen.nearestLandmark(WorldGen::Landmark::PillagerOutpost, px, pz, 1);
+        if (spot.exists)
+        {
+            const int midX = spot.chunkX * Structures::CHUNK + Structures::CHUNK / 2;
+            const int midZ = spot.chunkZ * Structures::CHUNK + Structures::CHUNK / 2;
+            const int dx = px - midX;
+            const int dz = pz - midZ;
+
+            if (dx * dx + dz * dz < 44 * 44)
+            {
+                int already = 0;
+                for (const Mob& mob : m_entities.mobs())
+                    if (mob.alive() && mob.typeId() == MobId::Pillager) ++already;
+
+                if (already < PILLAGER_LIMIT)
+                {
+                    const int ground = gen.surfaceHeight(midX, midZ);
+
+                    // Three in the top room, where the slots are, and
+                    // three in the yard. Minecraft puts them both
+                    // inside and out, and the ones you meet first are
+                    // always the ones on the ground.
+                    struct Post { int dx, dy, dz; bool onTower; };
+                    const Post POSTS[] = {
+                        {  2, WorldGen::OUTPOST_TALL - 3, -2, true },
+                        { -2, WorldGen::OUTPOST_TALL - 3,  2, true },
+                        {  2, WorldGen::OUTPOST_TALL - 3,  2, true },
+                        {  7, 0,  1, false },
+                        { -7, 0,  4, false },
+                        {  3, 0, -7, false },
+                    };
+
+                    for (const Post& post : POSTS)
+                    {
+                        const int x = midX + post.dx;
+                        const int z = midZ + post.dz;
+                        const int floorY = post.onTower
+                                               ? ground + post.dy
+                                               : gen.surfaceHeight(x, z) + 1;
+                        const glm::vec3 feet(x + 0.5f, static_cast<float>(floorY), z + 0.5f);
+                        if (m_entities.spawnAt(MobId::Pillager, feet, *m_world)) return;
+                    }
+                }
+            }
+        }
+    }
+
+    // The mansion, and the three things it was built for. A vindicator
+    // on every floor, one evoker at the top of it holding the only
+    // totem in the game, and a ravager in the garden.
+    {
+        const Structures::Spot spot =
+            gen.nearestLandmark(WorldGen::Landmark::WoodlandMansion, px, pz, 1);
+        if (spot.exists)
+        {
+            const int midX = spot.chunkX * Structures::CHUNK + Structures::CHUNK / 2;
+            const int midZ = spot.chunkZ * Structures::CHUNK + Structures::CHUNK / 2;
+            const int dx = px - midX;
+            const int dz = pz - midZ;
+            const int reach = WorldGen::MANSION_HALF + 32;
+
+            if (dx * dx + dz * dz < reach * reach)
+            {
+                int vindicators = 0, evokers = 0, ravagers = 0;
+                for (const Mob& mob : m_entities.mobs())
+                {
+                    if (!mob.alive()) continue;
+                    if (mob.typeId() == MobId::Vindicator) ++vindicators;
+                    if (mob.typeId() == MobId::Evoker) ++evokers;
+                    if (mob.typeId() == MobId::Ravager) ++ravagers;
+                }
+
+                const int ground = gen.surfaceHeight(midX, midZ);
+                constexpr int STOREY = 5;
+
+                // The rooms, as offsets from the middle: one in each
+                // quarter, away from the spine walls that divide them.
+                const glm::ivec2 ROOMS[] = {
+                    {  5,  5 }, { -5,  5 }, {  5, -5 }, { -5, -5 },
+                    {  8,  3 }, { -8, -3 },
+                };
+
+                // The evoker first, and only at the top: the thing
+                // worth coming for should be the last thing you meet.
+                if (evokers == 0)
+                {
+                    for (const glm::ivec2& room : ROOMS)
+                    {
+                        const glm::vec3 feet(midX + room.x + 0.5f,
+                                             static_cast<float>(ground + STOREY * 2 + 1),
+                                             midZ + room.y + 0.5f);
+                        if (m_entities.spawnAt(MobId::Evoker, feet, *m_world)) return;
+                    }
+                }
+
+                if (vindicators < VINDICATOR_LIMIT)
+                {
+                    for (int storey = 0; storey < 3; ++storey)
+                        for (const glm::ivec2& room : ROOMS)
+                        {
+                            const glm::vec3 feet(midX + room.x + 0.5f,
+                                                 static_cast<float>(ground + storey * STOREY + 1),
+                                                 midZ + room.y + 0.5f);
+                            if (m_entities.spawnAt(MobId::Vindicator, feet, *m_world)) return;
+                        }
+                }
+
+                // The ravager stays outside: it is two blocks across
+                // and would not fit through its own front door.
+                if (ravagers == 0)
+                {
+                    // Two blocks across and over two tall, so it wants
+                    // a clear yard rather than a gap between trees.
+                    // One ring of eight tries found nowhere to stand
+                    // at a mansion on a wooded slope.
+                    for (int ring = 0; ring < 3; ++ring)
+                        for (int tries = 0; tries < 12; ++tries)
+                        {
+                            const float angle = tries * 0.5236f;
+                            const float reachOut = WorldGen::MANSION_HALF + 3.0f + ring * 5.0f;
+                            const int x = midX + static_cast<int>(std::cos(angle) * reachOut);
+                            const int z = midZ + static_cast<int>(std::sin(angle) * reachOut);
+                            const glm::vec3 feet(x + 0.5f,
+                                                 static_cast<float>(gen.surfaceHeight(x, z) + 1),
+                                                 z + 0.5f);
+                            if (m_entities.spawnAt(MobId::Ravager, feet, *m_world)) return;
+                        }
                 }
             }
         }

@@ -427,8 +427,9 @@ namespace Tiles
         ItemGhastTear = ItemNetheriteEnd,
         ItemShulkerShell,
         ItemTrident,
+        ItemTotem,
 
-        ItemTileEnd = ItemTrident + 1
+        ItemTileEnd = ItemTotem + 1
     };
 
     // Ten progressively more broken overlay tiles for the mining animation.

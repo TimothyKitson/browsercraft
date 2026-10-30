@@ -6154,6 +6154,10 @@ namespace
                 case MobId::Frog:
                 // And the squid, which belongs to open water.
                 case MobId::Squid:
+                // The illagers belong to the two buildings that were
+                // built for them: the outpost and the mansion.
+                case MobId::Pillager: case MobId::Vindicator:
+                case MobId::Evoker:   case MobId::Ravager:
                 case MobId::EnderDragon:
                 case MobId::Wither:
                     meetable = true;
@@ -10661,6 +10665,120 @@ namespace
         check(still.secondsLeft == before, "and moves no clock");
     }
 
+    void testIllagers()
+    {
+        section("the illagers");
+
+        const MobType& pillager = mobType(MobId::Pillager);
+        const MobType& vindicator = mobType(MobId::Vindicator);
+        const MobType& evoker = mobType(MobId::Evoker);
+        const MobType& ravager = mobType(MobId::Ravager);
+
+        // Three ways of fighting, one each. If two of them fought the
+        // same way there would be no reason to have both.
+        check(pillager.arrowDamage > 0 && pillager.attackDamage == 0,
+              "a pillager shoots and does not swing");
+        check(pillager.arrowInterval > mobType(MobId::Skeleton).arrowInterval,
+              "and reloads slower than a bow, which is what a crossbow is");
+        check(vindicator.attackDamage > 0 && vindicator.arrowDamage == 0,
+              "a vindicator swings and does not shoot");
+        check(vindicator.attackDamage > mobType(MobId::Zombie).attackDamage,
+              "and hits harder than a zombie, because of the axe");
+        check(evoker.throwsPotions, "an evoker throws its magic rather than closing");
+        check(evoker.arrowDamage > 0 && evoker.attackDamage == 0,
+              "and keeps its distance");
+
+        // All three are hostile, all three are the villager's size,
+        // and none of them burns in the sun -- an illager out in the
+        // open at noon is the whole point of an outpost.
+        for (const MobType* who : { &pillager, &vindicator, &evoker })
+        {
+            const std::string name = who->name;
+            check(who->spawnClass == SpawnClass::Hostile, name + " is hostile");
+            check(!who->burnsInSunlight, name + " does not burn in daylight");
+            check(!who->neutral, name + " needs no provoking");
+            check(who->height == mobType(MobId::Villager).height,
+                  name + " stands as tall as the villager it used to be");
+        }
+
+        // The ravager is the big one: more health than anything short
+        // of a boss, and the hardest hand in the Overworld.
+        check(ravager.maxHealth > 4 * vindicator.maxHealth, "a ravager takes a lot of killing");
+        check(ravager.attackDamage > vindicator.attackDamage, "and hits harder than an axe");
+        check(ravager.width > 1.5f, "it is too wide for its own front door");
+        check(!ravager.boss, "but it is not a boss");
+        check(ravager.walkSpeed < vindicator.walkSpeed, "and it is slower than the men with it");
+
+        section("the totem of undying");
+
+        // Only an evoker has one, and nothing makes one. That is the
+        // whole reason a mansion is worth the walk.
+        check(evoker.drop == Items::TotemOfUndying, "an evoker leaves a totem");
+        bool elsewhere = false;
+        for (int i = 0; i < mobTypeCount(); ++i)
+        {
+            const MobId id = static_cast<MobId>(i);
+            if (id == MobId::Evoker) continue;
+            const MobType& type = mobType(id);
+            if (type.drop == Items::TotemOfUndying ||
+                type.secondDrop == Items::TotemOfUndying) elsewhere = true;
+        }
+        check(!elsewhere, "and nothing else in the game does");
+
+        const std::vector<StackId> made = Crafting::everyOutput();
+        check(std::find(made.begin(), made.end(), StackId{ Items::TotemOfUndying }) == made.end(),
+              "nor can one be made");
+        check(itemInfo(Items::TotemOfUndying).maxStack == 1, "and they do not stack");
+
+        // The blow that would kill you is turned aside, once.
+        {
+            Player saved(glm::vec3(0.0f, 70.0f, 0.0f));
+            saved.health = 4;
+            saved.holdingTotem = true;
+            check(saved.damage(20), "the blow still lands");
+            check(saved.health == 1, "and leaves you on half a heart");
+            check(saved.takeTotemSpent(), "the totem was spent");
+            check(!saved.takeTotemSpent(), "and only reports itself once");
+            check(!saved.holdingTotem, "it is not still in your hand");
+            check(saved.effects.has(Effects::Kind::Regeneration),
+                  "regeneration carries you out of the room");
+        }
+
+        // Without one, the same blow kills.
+        {
+            Player bare(glm::vec3(0.0f, 70.0f, 0.0f));
+            bare.health = 4;
+            check(bare.damage(20), "the blow lands");
+            check(bare.health == 0, "and that is that");
+            check(!bare.takeTotemSpent(), "nothing was spent");
+        }
+
+        // It saves you from a fatal blow, not from every blow: a hit
+        // you would have walked away from costs nothing.
+        {
+            Player grazed(glm::vec3(0.0f, 70.0f, 0.0f));
+            grazed.health = 20;
+            grazed.holdingTotem = true;
+            grazed.damage(4);
+            check(grazed.health == 16, "a survivable blow is just a blow");
+            check(!grazed.takeTotemSpent(), "and the totem stays in your hand");
+            check(grazed.holdingTotem, "still holding it");
+        }
+
+        // And it works once. The second fatal blow of the same fight
+        // is the one that kills.
+        {
+            Player twice(glm::vec3(0.0f, 70.0f, 0.0f));
+            twice.health = 6;
+            twice.holdingTotem = true;
+            twice.damage(20);
+            check(twice.health == 1, "the first one is survived");
+            twice.clearHurtCooldown();
+            twice.damage(20);
+            check(twice.health == 0, "the second one is not");
+        }
+    }
+
     void testDyes()
     {
         section("dye: the sixteen colours");
@@ -11014,6 +11132,7 @@ int runSelfTest()
     testQuickMoveKeepsMetadata();
     testContainersPerDimension();
     testDyes();
+    testIllagers();
 
     std::printf("\n%d checks, %d failed\n", g_checks, g_failures);
     return g_failures == 0 ? 0 : 1;

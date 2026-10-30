@@ -54,6 +54,13 @@ enum class MobId : uint8_t
     // light behind, which is the only way to a froglight.
     Frog,
 
+    // The illagers: villagers who left. They are what the outpost and
+    // the mansion were built for, and both stood empty without them.
+    Pillager,
+    Vindicator,
+    Evoker,
+    Ravager,
+
     Count
 };
 

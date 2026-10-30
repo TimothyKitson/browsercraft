@@ -1392,6 +1392,204 @@ namespace
             t.model.push_back(mc(Part::Body, 70, 36, 6, 3, 3, -3, 13, -2, 0, 0, 0));
         }
 
+        {
+            // The pillager: the one that shoots. A crossbow keeps it
+            // across the yard from you, which is what makes an outpost
+            // a place you approach rather than walk into.
+            MobType& t = table[static_cast<size_t>(MobId::Pillager)];
+            t.id = MobId::Pillager;
+            t.experience = 5;
+            t.voice = Sound::MobPillagerSay;
+            t.hurtVoice = Sound::MobPillagerHurt;
+            t.deathVoice = Sound::MobPillagerDeath;
+            t.name = "Pillager";
+            t.texture = "pillager";
+            t.sheetHeight = 64;
+            t.spawnClass = SpawnClass::Hostile;
+            t.maxHealth = 24;
+            t.width = 0.6f;
+            t.height = 1.95f;
+            t.walkSpeed = 2.2f;
+            t.limbSwing = 0.5f;
+
+            // A crossbow hits harder than a bow and reloads slower,
+            // which is the whole difference between the two.
+            t.arrowDamage = 5;
+            t.arrowRange = 16.0f;
+            t.arrowInterval = 2.8f;
+
+            t.drop = Items::Arrow;
+            t.dropCount = 2;
+            t.secondDrop = Items::Emerald;
+            t.secondDropCount = 1;
+
+            t.bodyColour = rgb(72, 76, 80);
+            t.headColour = rgb(150, 156, 152);
+            t.eyeColour = rgb(60, 70, 86);
+
+            // The villager's own frame, which is what Mojang draws an
+            // illager on too: the same robe and the same long head,
+            // and only the colours say which one you are looking at.
+            t.model.push_back(mc(Part::Head, 0, 0, 8, 10, 8, -4, -10, -4, 0, 0, 0));
+            t.model.push_back(mc(Part::Head, 24, 0, 2, 4, 2, -1, -5, -6, 0, 0, 0));
+            t.model.push_back(mc(Part::Body, 16, 20, 8, 12, 6, -4, 0, -3, 0, 0, 0));
+            t.model.push_back(mc(Part::Body, 0, 38, 8, 6, 6, -4, 12, -3, 0, 0, 0));
+            t.model.push_back(mc(Part::LegFrontRight, 44, 22, 4, 8, 4, -3, -2, -2, -5, 2, 0));
+            t.model.push_back(mirrored(mc(Part::LegFrontLeft, 44, 22, 4, 8, 4, -1, -2, -2, 5, 2, 0)));
+            t.model.push_back(mc(Part::LegBackRight, 0, 22, 4, 12, 4, -2, 0, -2, -2, 12, 0));
+            t.model.push_back(mirrored(mc(Part::LegBackLeft, 0, 22, 4, 12, 4, -2, 0, -2, 2, 12, 0)));
+        }
+
+        {
+            // The vindicator: the one that closes. It carries an axe
+            // and it is the reason a mansion corridor is frightening
+            // rather than merely dark.
+            MobType& t = table[static_cast<size_t>(MobId::Vindicator)];
+            t.id = MobId::Vindicator;
+            t.experience = 5;
+            t.voice = Sound::MobVindicatorSay;
+            t.hurtVoice = Sound::MobVindicatorHurt;
+            t.deathVoice = Sound::MobVindicatorDeath;
+            t.name = "Vindicator";
+            t.texture = "vindicator";
+            t.sheetHeight = 64;
+            t.spawnClass = SpawnClass::Hostile;
+            t.maxHealth = 24;
+            t.width = 0.6f;
+            t.height = 1.95f;
+            t.walkSpeed = 2.6f;
+            t.limbSwing = 0.6f;
+
+            // The hardest hand in the game short of a ravager: an axe
+            // in Minecraft's hands does thirteen, and that is a death
+            // in two swings to anybody in iron.
+            t.attackDamage = 7;
+            t.attackInterval = 1.1f;
+
+            t.drop = Items::Emerald;
+            t.dropCount = 1;
+            t.secondDrop = Items::IronAxe;
+            t.secondDropCount = 1;
+
+            t.bodyColour = rgb(60, 80, 78);
+            t.headColour = rgb(150, 156, 152);
+            t.eyeColour = rgb(60, 70, 86);
+
+            // The villager's own frame, which is what Mojang draws an
+            // illager on too: the same robe and the same long head,
+            // and only the colours say which one you are looking at.
+            t.model.push_back(mc(Part::Head, 0, 0, 8, 10, 8, -4, -10, -4, 0, 0, 0));
+            t.model.push_back(mc(Part::Head, 24, 0, 2, 4, 2, -1, -5, -6, 0, 0, 0));
+            t.model.push_back(mc(Part::Body, 16, 20, 8, 12, 6, -4, 0, -3, 0, 0, 0));
+            t.model.push_back(mc(Part::Body, 0, 38, 8, 6, 6, -4, 12, -3, 0, 0, 0));
+            t.model.push_back(mc(Part::LegFrontRight, 44, 22, 4, 8, 4, -3, -2, -2, -5, 2, 0));
+            t.model.push_back(mirrored(mc(Part::LegFrontLeft, 44, 22, 4, 8, 4, -1, -2, -2, 5, 2, 0)));
+            t.model.push_back(mc(Part::LegBackRight, 0, 22, 4, 12, 4, -2, 0, -2, -2, 12, 0));
+            t.model.push_back(mirrored(mc(Part::LegBackLeft, 0, 22, 4, 12, 4, -2, 0, -2, 2, 12, 0)));
+        }
+
+        {
+            // The evoker: what a mansion is actually for. It is the
+            // only thing in the game that leaves a totem, and a totem
+            // is the only second chance there is.
+            MobType& t = table[static_cast<size_t>(MobId::Evoker)];
+            t.id = MobId::Evoker;
+            t.experience = 10;
+            t.voice = Sound::MobEvokerSay;
+            t.hurtVoice = Sound::MobEvokerHurt;
+            t.deathVoice = Sound::MobEvokerDeath;
+            t.name = "Evoker";
+            t.texture = "evoker";
+            t.sheetHeight = 64;
+            t.spawnClass = SpawnClass::Hostile;
+            t.maxHealth = 24;
+            t.width = 0.6f;
+            t.height = 1.95f;
+            t.walkSpeed = 1.8f;
+            t.limbSwing = 0.4f;
+
+            // It keeps its distance and throws its magic rather than
+            // closing: fangs out of the floor are a thing this engine
+            // has no room for, and a thrown spell carries the same
+            // idea -- stay back, and something lands on you anyway.
+            t.throwsPotions = true;
+            t.arrowDamage = 4;
+            t.arrowRange = 14.0f;
+            t.arrowInterval = 3.0f;
+
+            t.drop = Items::TotemOfUndying;
+            t.dropCount = 1;
+            t.secondDrop = Items::Emerald;
+            t.secondDropCount = 2;
+
+            t.bodyColour = rgb(226, 226, 220);
+            t.headColour = rgb(150, 156, 152);
+            t.eyeColour = rgb(60, 70, 86);
+
+            // The villager's own frame, which is what Mojang draws an
+            // illager on too: the same robe and the same long head,
+            // and only the colours say which one you are looking at.
+            t.model.push_back(mc(Part::Head, 0, 0, 8, 10, 8, -4, -10, -4, 0, 0, 0));
+            t.model.push_back(mc(Part::Head, 24, 0, 2, 4, 2, -1, -5, -6, 0, 0, 0));
+            t.model.push_back(mc(Part::Body, 16, 20, 8, 12, 6, -4, 0, -3, 0, 0, 0));
+            t.model.push_back(mc(Part::Body, 0, 38, 8, 6, 6, -4, 12, -3, 0, 0, 0));
+            t.model.push_back(mc(Part::LegFrontRight, 44, 22, 4, 8, 4, -3, -2, -2, -5, 2, 0));
+            t.model.push_back(mirrored(mc(Part::LegFrontLeft, 44, 22, 4, 8, 4, -1, -2, -2, 5, 2, 0)));
+            t.model.push_back(mc(Part::LegBackRight, 0, 22, 4, 12, 4, -2, 0, -2, -2, 12, 0));
+            t.model.push_back(mirrored(mc(Part::LegBackLeft, 0, 22, 4, 12, 4, -2, 0, -2, 2, 12, 0)));
+        }
+
+        {
+            // The ravager: the thing the illagers bring with them. It
+            // is slow, it is enormous, and nothing else in the
+            // Overworld hits as hard.
+            MobType& t = table[static_cast<size_t>(MobId::Ravager)];
+            t.id = MobId::Ravager;
+            t.experience = 20;
+            t.voice = Sound::MobRavagerSay;
+            t.hurtVoice = Sound::MobRavagerHurt;
+            t.deathVoice = Sound::MobRavagerDeath;
+            t.name = "Ravager";
+            t.texture = "ravager";
+            t.sheetWidth = 128;
+            t.sheetHeight = 128;
+            t.spawnClass = SpawnClass::Hostile;
+            t.maxHealth = 100;
+            t.width = 1.95f;
+            t.height = 2.2f;
+            t.walkSpeed = 2.0f;
+            t.limbSwing = 0.5f;
+
+            t.attackDamage = 12;
+            t.attackReach = 1.6f;
+            t.attackInterval = 1.6f;
+
+            // Minecraft gives up a saddle, which this engine has no
+            // use for: nothing here needs one to be ridden. Hide and
+            // the emeralds it was carrying instead.
+            t.drop = Items::Leather;
+            t.dropCount = 3;
+            t.secondDrop = Items::Emerald;
+            t.secondDropCount = 2;
+
+            t.bodyColour = rgb(76, 72, 66);
+            t.headColour = rgb(92, 86, 78);
+            t.eyeColour = rgb(200, 60, 40);
+
+            // A barrel on four legs with a head slung off the front of
+            // it, horns included. Thirty-five pixels tall at the back,
+            // which is the two and a bit blocks it collides at.
+            t.model.push_back(mc(Part::Body, 0, 55, 20, 16, 32, -10, -9, -16, 0, 0, 0));
+            t.model.push_back(mc(Part::Head, 0, 0, 16, 20, 16, -8, -13, -22, 0, 0, 0));
+            t.model.push_back(mc(Part::Head, 68, 0, 8, 8, 4, -4, -5, -26, 0, 0, 0));
+            t.model.push_back(mc(Part::Head, 104, 0, 2, 5, 2, -7, -15, -18, 0, 0, 0));
+            t.model.push_back(mirrored(mc(Part::Head, 104, 0, 2, 5, 2, 5, -15, -18, 0, 0, 0)));
+            t.model.push_back(mc(Part::LegFrontRight, 96, 40, 8, 17, 8, -4, 0, -4, -6, 7, -11));
+            t.model.push_back(mirrored(mc(Part::LegFrontLeft, 96, 40, 8, 17, 8, -4, 0, -4, 6, 7, -11)));
+            t.model.push_back(mc(Part::LegBackRight, 96, 40, 8, 17, 8, -4, 0, -4, -6, 7, 11));
+            t.model.push_back(mirrored(mc(Part::LegBackLeft, 96, 40, 8, 17, 8, -4, 0, -4, 6, 7, 11)));
+        }
+
         return table;
     }
 }

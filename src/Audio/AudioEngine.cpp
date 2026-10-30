@@ -311,6 +311,14 @@ void AudioEngine::buildSounds()
                  Sound::MobGhastDeath, "mob/ghast");
     loadMobVoice(Sound::MobSquidSay, Sound::MobSquidHurt,
                  Sound::MobSquidDeath, "mob/squid");
+    loadMobVoice(Sound::MobPillagerSay, Sound::MobPillagerHurt,
+                 Sound::MobPillagerDeath, "mob/pillager");
+    loadMobVoice(Sound::MobVindicatorSay, Sound::MobVindicatorHurt,
+                 Sound::MobVindicatorDeath, "mob/vindicator");
+    loadMobVoice(Sound::MobEvokerSay, Sound::MobEvokerHurt,
+                 Sound::MobEvokerDeath, "mob/evoker");
+    loadMobVoice(Sound::MobRavagerSay, Sound::MobRavagerHurt,
+                 Sound::MobRavagerDeath, "mob/ravager");
     loadVariants(Sound::Rain, "weather/rain", 1);
     loadVariants(Sound::Thunder, "weather/thunder", 1);
 
@@ -983,6 +991,87 @@ void AudioEngine::buildSounds()
         s.addNoise(0.40f, 560.0f, 6.0f, 0.28f, true, 923);
         s.addTone(0.36f, 150.0f, 80.0f, 6.0f, 0.26f, true);
         s.finish(0.52f);
+    }
+
+    // The illagers. All three are a villager's grunt gone wrong: the
+    // same shape of noise, lower and flatter, with nothing friendly
+    // left in it. They have to differ from each other as well as from
+    // the villager, so the pillager barks, the vindicator growls and
+    // the evoker hums on two notes at once.
+    {
+        Synth s = make(Sound::MobPillagerSay);
+        s.addTone(0.22f, 150.0f, 112.0f, 9.0f, 0.34f, true);
+        s.addNoise(0.12f, 900.0f, 20.0f, 0.12f, true, 931);
+        s.finish(0.52f);
+    }
+    {
+        Synth s = make(Sound::MobPillagerHurt);
+        s.addTone(0.20f, 230.0f, 130.0f, 14.0f, 0.36f, true);
+        s.addNoise(0.14f, 1300.0f, 22.0f, 0.16f, true, 932);
+        s.finish(0.58f);
+    }
+    {
+        Synth s = make(Sound::MobPillagerDeath);
+        s.addTone(0.46f, 180.0f, 72.0f, 5.0f, 0.36f, true);
+        s.addNoise(0.26f, 700.0f, 9.0f, 0.14f, true, 933);
+        s.finish(0.60f);
+    }
+    {
+        Synth s = make(Sound::MobVindicatorSay);
+        s.addTone(0.30f, 104.0f, 86.0f, 6.0f, 0.38f, true);
+        s.addNoise(0.22f, 420.0f, 11.0f, 0.18f, false, 934);
+        s.finish(0.54f);
+    }
+    {
+        Synth s = make(Sound::MobVindicatorHurt);
+        s.addTone(0.22f, 190.0f, 96.0f, 13.0f, 0.38f, true);
+        s.addNoise(0.16f, 820.0f, 18.0f, 0.18f, false, 935);
+        s.finish(0.60f);
+    }
+    {
+        Synth s = make(Sound::MobVindicatorDeath);
+        s.addTone(0.52f, 140.0f, 56.0f, 4.5f, 0.38f, true);
+        s.addNoise(0.30f, 500.0f, 8.0f, 0.16f, false, 936);
+        s.finish(0.62f);
+    }
+    {
+        Synth s = make(Sound::MobEvokerSay);
+        s.addTone(0.38f, 196.0f, 188.0f, 5.0f, 0.26f, false);
+        s.addTone(0.38f, 262.0f, 248.0f, 5.0f, 0.20f, false);
+        s.finish(0.50f);
+    }
+    {
+        Synth s = make(Sound::MobEvokerHurt);
+        s.addTone(0.24f, 300.0f, 150.0f, 12.0f, 0.30f, false);
+        s.addTone(0.24f, 404.0f, 200.0f, 12.0f, 0.18f, false);
+        s.finish(0.58f);
+    }
+    {
+        Synth s = make(Sound::MobEvokerDeath);
+        s.addTone(0.60f, 220.0f, 70.0f, 4.0f, 0.30f, false);
+        s.addTone(0.60f, 296.0f, 94.0f, 4.0f, 0.20f, false);
+        s.finish(0.60f);
+    }
+
+    // The ravager: a lorry with teeth. Everything about it is low, and
+    // the roar is long enough that you hear it before you see it.
+    {
+        Synth s = make(Sound::MobRavagerSay);
+        s.addTone(0.66f, 74.0f, 58.0f, 2.6f, 0.44f, true);
+        s.addNoise(0.52f, 330.0f, 4.0f, 0.24f, false, 937);
+        s.finish(0.70f);
+    }
+    {
+        Synth s = make(Sound::MobRavagerHurt);
+        s.addTone(0.34f, 128.0f, 64.0f, 9.0f, 0.44f, true);
+        s.addNoise(0.26f, 540.0f, 12.0f, 0.24f, false, 938);
+        s.finish(0.72f);
+    }
+    {
+        Synth s = make(Sound::MobRavagerDeath);
+        s.addTone(0.86f, 96.0f, 38.0f, 2.2f, 0.44f, true);
+        s.addNoise(0.60f, 300.0f, 3.2f, 0.22f, false, 939);
+        s.finish(0.74f);
     }
 
     // The ghast: a long wail that falls away. Mostly tone, almost no

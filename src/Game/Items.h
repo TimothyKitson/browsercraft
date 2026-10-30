@@ -258,6 +258,11 @@ namespace Items
         NetheritePickaxe, NetheriteAxe, NetheriteShovel, NetheriteSword, NetheriteHoe,
         NetheriteHelmet, NetheriteChestplate, NetheriteLeggings, NetheriteBoots,
 
+        // Off an evoker. Held when the blow that would kill you lands,
+        // it spends itself instead: Minecraft's one second chance, and
+        // the only reason to go into a mansion at all.
+        TotemOfUndying,
+
         Count
     };
 }
