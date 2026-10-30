@@ -1250,8 +1250,8 @@ bool Application::frame()
             const BlockId SPOILS[] = {
                 Blocks::OchreFroglight, Blocks::VerdantFroglight,
                 Blocks::PearlescentFroglight, Blocks::ShulkerBox,
-                Blocks::Ice, Blocks::Beacon, Blocks::WitherSkull,
-                Blocks::Scaffolding,
+                Blocks::Ice, Blocks::AncientDebris, Blocks::NetheriteBlock,
+                Blocks::Beacon,
             };
 
             for (int i = 0; i < wide; ++i)
@@ -3763,6 +3763,15 @@ bool Application::frame()
                 m_inventory.clear();
                 for (StackId id = Items::WoodPickaxe; id <= Items::DiamondHoe; ++id)
                     m_inventory.add(id, 1);
+
+                // And the ninth metal, which sits at the end of the
+                // item list rather than after the diamond ones.
+                for (StackId id = Items::NetheritePickaxe; id <= Items::NetheriteBoots; ++id)
+                    m_inventory.add(id, 1);
+                m_inventory.add(Items::NetheriteScrap, 12);
+                m_inventory.add(Items::NetheriteIngot, 4);
+                m_inventory.add(Blocks::AncientDebris, 8);
+                m_inventory.add(Blocks::NetheriteBlock, 4);
                 m_inventory.add(Items::Stick, 12);
                 m_inventory.add(Items::Coal, 7);
                 m_inventory.add(Items::Diamond, 3);
@@ -4968,7 +4977,15 @@ bool Application::fireCrafter(const glm::ivec3& block)
             m_inventory.slot(Inventory::CHEST_FIRST + i) = held[i];
 
     const glm::vec3 out = glm::vec3(block) + glm::vec3(0.5f, 1.2f, 0.5f);
-    for (int i = 0; i < made.count; ++i) m_drops.spawn(out, made.id, 1);
+    for (int i = 0; i < made.count; ++i)
+    {
+        ItemStack one;
+        one.id = made.id;
+        one.count = 1;
+        one.damage = made.damage;
+        one.enchantments = made.enchantments;
+        m_drops.spawnStack(out, one);
+    }
 
     m_chests.forgetIfEmpty(block);
     m_audio.play(Sound::Click, 0.7f, 1.5f);

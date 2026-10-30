@@ -206,6 +206,13 @@ public:
     // sea beside a snowfield rather than somewhere else entirely.
     static constexpr float SNOW_TEMPERATURE = -0.45f;
 
+    // Where ancient debris hides, and how thinly. Minecraft puts it
+    // between eight and twenty-two and never lets it touch air; the
+    // band here is the same shape against this Nether's lava level.
+    static constexpr int ANCIENT_DEBRIS_LOW = 8;
+    static constexpr int ANCIENT_DEBRIS_HIGH = 22;
+    static constexpr float ANCIENT_DEBRIS_CHANCE = 0.0016f;
+
     static constexpr int END_CITY_TALL = 26;
 
     // Half the tower's footprint. The top storey hangs one block out

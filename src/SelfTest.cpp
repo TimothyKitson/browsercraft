@@ -3816,6 +3816,140 @@ namespace
         check(Tools::kindOf(Items::Trident) == Tools::Kind::Trident,
               "and it is its own kind of weapon");
 
+        section("netherite");
+
+        // The dig. Debris is a diamond-pickaxe block, like obsidian,
+        // and the only thing it smelts into is worth having.
+        check(Tools::requiredLevel(Blocks::AncientDebris) ==
+                  Tools::requiredLevel(Blocks::Obsidian),
+              "ancient debris wants what obsidian wants");
+        check(!Tools::canHarvest(Items::IronPickaxe, Blocks::AncientDebris),
+              "so iron is not enough");
+        check(Tools::canHarvest(Items::DiamondPickaxe, Blocks::AncientDebris),
+              "and diamond is");
+        check(Smelting::resultOf(Blocks::AncientDebris) == Items::NetheriteScrap,
+              "fired, it is scrap");
+        check(Smelting::suits(Smelting::Kind::BlastFurnace, Blocks::AncientDebris),
+              "and a blast furnace will take it, being metal");
+
+        // The nine tools and pieces are at the end of the item list
+        // rather than after the diamond ones, so every piece of the
+        // arithmetic that finds a tier has to be asked by hand.
+        const StackId NETHER_TOOLS[] = {
+            Items::NetheritePickaxe, Items::NetheriteAxe, Items::NetheriteShovel,
+            Items::NetheriteSword, Items::NetheriteHoe,
+        };
+        const Tools::Kind WANTED_KIND[] = {
+            Tools::Kind::Pickaxe, Tools::Kind::Axe, Tools::Kind::Shovel,
+            Tools::Kind::Sword, Tools::Kind::Hoe,
+        };
+        for (int i = 0; i < 5; ++i)
+        {
+            const StackId tool = NETHER_TOOLS[i];
+            check(Tools::isTool(tool), "a netherite tool is a tool");
+            check(Tools::kindOf(tool) == WANTED_KIND[i], "and knows which kind it is");
+            check(Tools::tierOf(tool) == Tools::Tier::Netherite,
+                  "and which tier it is");
+        }
+        check(Tools::maxDurability(Tools::Tier::Netherite) >
+                  Tools::maxDurability(Tools::Tier::Diamond),
+              "netherite outlasts diamond");
+        check(Tools::harvestLevel(Tools::Tier::Netherite) >=
+                  Tools::harvestLevel(Tools::Tier::Diamond),
+              "and gets at everything diamond does");
+        check(Tools::attackDamage(Items::NetheriteSword) >
+                  Tools::attackDamage(Items::DiamondSword),
+              "and hits harder");
+
+        const StackId NETHER_ARMOUR[] = {
+            Items::NetheriteHelmet, Items::NetheriteChestplate,
+            Items::NetheriteLeggings, Items::NetheriteBoots,
+        };
+        const Armour::Piece WANTED_PIECE[] = {
+            Armour::Piece::Helmet, Armour::Piece::Chestplate,
+            Armour::Piece::Leggings, Armour::Piece::Boots,
+        };
+        for (int i = 0; i < 4; ++i)
+        {
+            const StackId piece = NETHER_ARMOUR[i];
+            check(Armour::isArmour(piece), "a netherite piece is armour");
+            check(Armour::pieceOf(piece) == WANTED_PIECE[i], "and knows where it goes");
+            check(Armour::tierOf(piece) == Armour::Tier::Netherite,
+                  "and which tier it is");
+            check(Armour::slotFor(piece) ==
+                      Armour::slotFor(static_cast<StackId>(Items::DiamondHelmet + i)),
+                  "and shares the diamond piece's slot");
+            check(Armour::maxDurability(piece) >
+                      Armour::maxDurability(static_cast<StackId>(Items::DiamondHelmet + i)),
+                  "and outlasts it");
+        }
+
+        int netheritePoints = 0, diamondPoints = 0;
+        for (int i = 0; i < 4; ++i)
+        {
+            netheritePoints += Armour::defencePoints(NETHER_ARMOUR[i]);
+            diamondPoints += Armour::defencePoints(
+                static_cast<StackId>(Items::DiamondHelmet + i));
+        }
+        check(netheritePoints == diamondPoints,
+              "a netherite suit stops what a diamond one stops -- it only lasts longer");
+
+        // The upgrade. Nine pairings, and every one has to keep what
+        // was on the tool: an upgrade that threw the enchantments away
+        // would be a way of ruining a good pickaxe.
+        for (StackId id = Items::DiamondPickaxe; id <= Items::DiamondHoe; ++id)
+            check(Tools::kindOf(Tools::upgradeOf(id)) == Tools::kindOf(id),
+                  "a diamond tool upgrades into the same kind of tool");
+        for (StackId id = Items::DiamondHelmet; id <= Items::DiamondBoots; ++id)
+            check(Armour::pieceOf(Tools::upgradeOf(id)) == Armour::pieceOf(id),
+                  "and a piece of armour into the same piece");
+        check(Tools::upgradeOf(Items::IronPickaxe) == Blocks::Air,
+              "iron does not upgrade: it is diamond or nothing");
+        check(Tools::upgradeOf(Items::Bread) == Blocks::Air, "and neither does bread");
+
+        {
+            ItemStack grid[9];
+            grid[0].id = Items::DiamondPickaxe;
+            grid[0].count = 1;
+            grid[0].damage = 200;
+            grid[0].enchantments =
+                Enchanting::withLevel(0, Enchanting::Kind::Efficiency, 4);
+            grid[4].id = Items::NetheriteIngot;
+            grid[4].count = 1;
+
+            const CraftOutput made = Crafting::match(grid, 3);
+            check(made.valid(), "a diamond pickaxe and an ingot make something");
+            check(made.id == Items::NetheritePickaxe, "and what they make is the pickaxe");
+            check(made.count == 1, "one of it");
+            check(made.enchantments == grid[0].enchantments,
+                  "with the enchantment still on it");
+            check(made.damage > 0, "and still worn");
+            check(made.damage < Tools::maxDurability(Tools::Tier::Netherite),
+                  "but not worn out");
+
+            // The wear carries as a fraction: a tool an eighth gone
+            // comes out an eighth gone, not nearly new.
+            const double wasFraction = 200.0 /
+                Tools::maxDurability(Tools::Tier::Diamond);
+            const double nowFraction = static_cast<double>(made.damage) /
+                Tools::maxDurability(Tools::Tier::Netherite);
+            check(std::fabs(wasFraction - nowFraction) < 0.02,
+                  "and as worn as it was, not as worn as the number says");
+        }
+
+        {
+            // Two ingots, or anything else in the grid, is not an
+            // upgrade: it has to be the tool and the one ingot.
+            ItemStack grid[9];
+            grid[0].id = Items::DiamondSword; grid[0].count = 1;
+            grid[1].id = Items::NetheriteIngot; grid[1].count = 2;
+            check(!Crafting::match(grid, 3).valid(), "two ingots is not an upgrade");
+
+            grid[1].count = 1;
+            grid[2].id = Blocks::Stone; grid[2].count = 1;
+            check(!Crafting::match(grid, 3).valid(), "nor is one with a rock beside it");
+        }
+
         section("the ghast");
 
         const MobType& ghast = mobType(MobId::Ghast);

@@ -366,6 +366,8 @@ namespace
 
         { "Shulker Box",  ShulkerBoxTile,ShulkerBoxTile, ShulkerBoxTile, true,  true,  RenderType::Cube,   0,   2.0f },
 
+        { "Ancient Debris", AncientDebrisTop, AncientDebrisTop, AncientDebrisSide, true, true, RenderType::Cube, 0, 30.0f },
+        { "Block of Netherite", NetheriteBlockTile, NetheriteBlockTile, NetheriteBlockTile, true, true, RenderType::Cube, 0, 50.0f },
         { "Ochre Froglight", OchreFroglightTop, OchreFroglightTop, OchreFroglightSide, true, true, RenderType::Cube, 15, 0.3f },
         { "Verdant Froglight", VerdantFroglightTop, VerdantFroglightTop, VerdantFroglightSide, true, true, RenderType::Cube, 15, 0.3f },
         { "Pearlescent Froglight", PearlescentFroglightTop, PearlescentFroglightTop, PearlescentFroglightSide, true, true, RenderType::Cube, 15, 0.3f },

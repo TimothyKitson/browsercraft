@@ -2874,6 +2874,52 @@ namespace
     void paintPearlSide(Tile& t)
     { paintFroglight(t, Color{ 244, 210, 236 }, Color{ 186, 150, 182 }, 656, false); }
 
+    // Ancient debris: dark and shot through with a lighter metal,
+    // which is how you tell it from the netherrack round it at the
+    // bottom of a cave with a torch in your hand.
+    void paintAncientDebris(Tile& t, bool top)
+    {
+        t.fill(Color{ 68, 48, 46 });
+        for (int y = 0; y < Tile::N; ++y)
+            for (int x = 0; x < Tile::N; ++x)
+            {
+                const float n = hash2(x / 2, y / 2, top ? 661 : 662);
+                t.set(x, y, shade(t.get(x, y), n > 0.6f ? 18 : (n < 0.35f ? -16 : 0)));
+            }
+
+        // The veins. Brighter on the top face, because that is the
+        // one a player is looking down at when they find it.
+        const Color vein = top ? Color{ 156, 118, 96 } : Color{ 124, 92, 76 };
+        for (int i = 0; i < 10; ++i)
+        {
+            const int x = static_cast<int>(hash2(i, 3, 663) * Tile::N);
+            const int y = static_cast<int>(hash2(i, 7, 664) * Tile::N);
+            for (int k = 0; k < 3; ++k)
+            {
+                const int px = (x + k) % Tile::N;
+                const int py = (y + (k % 2)) % Tile::N;
+                t.set(px, py, vein);
+            }
+        }
+        t.speckle(5, top ? 665 : 666);
+    }
+
+    void paintAncientDebrisTop(Tile& t)  { paintAncientDebris(t, true); }
+    void paintAncientDebrisSide(Tile& t) { paintAncientDebris(t, false); }
+
+    void paintNetheriteBlock(Tile& t)
+    {
+        t.fill(Color{ 70, 62, 70 });
+        for (int y = 0; y < Tile::N; ++y)
+            for (int x = 0; x < Tile::N; ++x)
+            {
+                const float n = hash2(x, y, 667);
+                if (n > 0.86f) t.set(x, y, Color{ 108, 96, 108 });
+                else if (n < 0.14f) t.set(x, y, Color{ 46, 40, 46 });
+            }
+        t.speckle(5, 668);
+    }
+
     void paintShulkerBox(Tile& t)
     {
         t.fill(Color{ 148, 112, 158 });
@@ -2892,6 +2938,34 @@ namespace
             t.set(Tile::N - 1, k, Color{ 108, 78, 118 });
         }
         t.speckle(5, 645);
+    }
+
+    void paintItemNetheriteScrap(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        // A ragged lump, not a bar: the scrap is what comes out of
+        // the furnace before anybody has made anything of it.
+        for (int y = 4; y < 13; ++y)
+            for (int x = 3; x < 13; ++x)
+            {
+                if (hash2(x, y, 671) < 0.22f) continue;
+                t.set(x, y, (x + y < 13) ? Color{ 128, 104, 88 }
+                                         : Color{ 86, 68, 60 });
+            }
+        t.speckle(5, 672);
+    }
+
+    void paintItemNetheriteIngot(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        // A bar, cut square, the way every ingot in the game is.
+        for (int y = 6; y < 12; ++y)
+        {
+            const int inset = (y < 7 || y > 10) ? 1 : 0;
+            for (int x = 2 + inset; x < 14 - inset; ++x)
+                t.set(x, y, (y < 8) ? Color{ 104, 94, 104 } : Color{ 66, 58, 66 });
+        }
+        t.speckle(4, 673);
     }
 
     void paintItemGhastTear(Tile& t)
@@ -4079,12 +4153,13 @@ namespace
     // they occupy on a 16x16 tile, read off the vanilla shapes, which is
     // what makes a pickaxe read as a pickaxe at a glance.
 
-    const Color TIER_COLOR[5] = {
+    const Color TIER_COLOR[6] = {
         { 150, 110,  62 },   // wood
         { 128, 128, 128 },   // stone
         { 216, 216, 216 },   // iron
         { 246, 208,  70 },   // gold
         {  94, 219, 208 },   // diamond
+        {  70,  62,  70 },   // netherite: nearly black, with a purple in it
     };
 
     // Rows of the head, top to bottom, as "fill from x0 to x1 on row y".
@@ -4180,11 +4255,12 @@ namespace
     // One painter for all sixteen, the same way the tools are done: the
     // silhouette of the piece in the tier's material.
 
-    const Color ARMOUR_COLOR[4] = {
+    const Color ARMOUR_COLOR[5] = {
         { 166, 104,  66 },   // leather
         { 246, 208,  70 },   // gold
         { 216, 216, 216 },   // iron
         {  94, 219, 208 },   // diamond
+        {  70,  62,  70 },   // netherite
     };
 
     const Span HELMET[] = {
@@ -5869,6 +5945,9 @@ namespace
         { Tiles::ItemItemFrame, paintItemFrameBorder },
         { Tiles::ItemElytra, paintItemElytra },
         { Tiles::ShulkerBoxTile, paintShulkerBox },
+        { Tiles::AncientDebrisTop, paintAncientDebrisTop },
+        { Tiles::AncientDebrisSide, paintAncientDebrisSide },
+        { Tiles::NetheriteBlockTile, paintNetheriteBlock },
         { Tiles::OchreFroglightTop, paintOchreTop },
         { Tiles::OchreFroglightSide, paintOchreSide },
         { Tiles::VerdantFroglightTop, paintVerdantTop },
@@ -5876,6 +5955,8 @@ namespace
         { Tiles::PearlescentFroglightTop, paintPearlTop },
         { Tiles::PearlescentFroglightSide, paintPearlSide },
         { Tiles::ItemGhastTear, paintItemGhastTear },
+        { Tiles::ItemNetheriteScrap, paintItemNetheriteScrap },
+        { Tiles::ItemNetheriteIngot, paintItemNetheriteIngot },
         { Tiles::ItemShulkerShell, paintItemShulkerShell },
         { Tiles::ItemTrident, paintItemTrident },
         { Tiles::ItemBowl, paintItemBowl },
@@ -6170,6 +6251,17 @@ namespace
         { Tiles::ItemItemFrame, { "item_frame", nullptr, nullptr } },
         { Tiles::ItemElytra, { "elytra", nullptr, nullptr } },
         { Tiles::ItemGhastTear, { "ghast_tear", nullptr, nullptr } },
+        { Tiles::ItemNetheriteScrap, { "netherite_scrap", nullptr, nullptr } },
+        { Tiles::ItemNetheriteIngot, { "netherite_ingot", nullptr, nullptr } },
+        { Tiles::ItemNetheriteFirst + 0, { "netherite_pickaxe", nullptr, nullptr } },
+        { Tiles::ItemNetheriteFirst + 1, { "netherite_axe", nullptr, nullptr } },
+        { Tiles::ItemNetheriteFirst + 2, { "netherite_shovel", nullptr, nullptr } },
+        { Tiles::ItemNetheriteFirst + 3, { "netherite_sword", nullptr, nullptr } },
+        { Tiles::ItemNetheriteFirst + 4, { "netherite_hoe", nullptr, nullptr } },
+        { Tiles::ItemNetheriteFirst + 5, { "netherite_helmet", nullptr, nullptr } },
+        { Tiles::ItemNetheriteFirst + 6, { "netherite_chestplate", nullptr, nullptr } },
+        { Tiles::ItemNetheriteFirst + 7, { "netherite_leggings", nullptr, nullptr } },
+        { Tiles::ItemNetheriteFirst + 8, { "netherite_boots", nullptr, nullptr } },
         { Tiles::ItemShulkerShell, { "shulker_shell", nullptr, nullptr } },
         { Tiles::ItemTrident, { "trident", nullptr, nullptr } },
     };
@@ -6413,6 +6505,9 @@ namespace
         { Tiles::SignTile,      { "oak_planks", "planks_oak", nullptr },               Tinting::None,    0,   false },
         { Tiles::ItemFrameTile, { "item_frame", nullptr },                             Tinting::None,    0,   false },
         { Tiles::ShulkerBoxTile,{ "shulker_box", nullptr },                            Tinting::None,    0,   false },
+        { Tiles::AncientDebrisTop,  { "ancient_debris_top", nullptr },                 Tinting::None,    0,   false },
+        { Tiles::AncientDebrisSide, { "ancient_debris_side", nullptr },                Tinting::None,    0,   false },
+        { Tiles::NetheriteBlockTile,{ "netherite_block", nullptr },                    Tinting::None,    0,   false },
         { Tiles::OchreFroglightTop,  { "ochre_froglight_top", nullptr },               Tinting::None,    0,   false },
         { Tiles::OchreFroglightSide, { "ochre_froglight_side", nullptr },              Tinting::None,    0,   false },
         { Tiles::VerdantFroglightTop,  { "verdant_froglight_top", nullptr },           Tinting::None,    0,   false },
@@ -6590,6 +6685,23 @@ Atlas::Atlas()
         Tile tile;
         paintArmourTile(tile, i % 4, i / 4);
         blitPainted(Tiles::ItemArmourFirst + i, tile);
+    }
+
+    // The ninth metal. Netherite's tools and armour sit at the end of
+    // the item list rather than after the diamond ones, so they are
+    // painted here rather than falling out of the two loops above --
+    // five tools then four pieces, in that order.
+    for (int i = 0; i < 5; ++i)
+    {
+        Tile tile;
+        paintToolTile(tile, i, 5);
+        blitPainted(Tiles::ItemNetheriteFirst + i, tile);
+    }
+    for (int i = 0; i < 4; ++i)
+    {
+        Tile tile;
+        paintArmourTile(tile, i, 4);
+        blitPainted(Tiles::ItemNetheriteFirst + 5 + i, tile);
     }
 
     // Item icons out of the pack, over the painted ones. These are their
@@ -7023,6 +7135,8 @@ bool Atlas::hasPainter(int tileIndex)
     // crack overlays, which are built from one another rather than
     // drawn at all. None of them is missing for having no row.
     if (tileIndex >= Tiles::ItemToolFirst && tileIndex < Tiles::ItemToolEnd) return true;
+    if (tileIndex >= Tiles::ItemNetheriteFirst && tileIndex < Tiles::ItemNetheriteEnd)
+        return true;
     if (tileIndex >= Tiles::ItemArmourFirst && tileIndex < Tiles::ItemArmourEnd) return true;
     if (tileIndex >= Tiles::CrackFirst &&
         tileIndex < Tiles::CrackFirst + Tiles::CrackStages)

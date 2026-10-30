@@ -104,6 +104,13 @@ void Inventory::refreshCraftResult()
     const CraftOutput output = Crafting::match(&m_slots[CRAFT_FIRST], m_craftSize);
     m_slots[CRAFT_RESULT].id = output.id;
     m_slots[CRAFT_RESULT].count = output.count;
+
+    // Almost every recipe makes something brand new; the netherite
+    // upgrade hands back the tool you put in, wear and enchantments
+    // and all, and dropping those here would make upgrading a way of
+    // throwing enchantments away.
+    m_slots[CRAFT_RESULT].damage = output.damage;
+    m_slots[CRAFT_RESULT].enchantments = output.enchantments;
 }
 
 void Inventory::clearCraftGrid(std::vector<ItemStack>& spilled)

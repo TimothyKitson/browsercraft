@@ -469,6 +469,12 @@ namespace Blocks
         // because a stack here has nowhere to carry a chest inside it.
         ShulkerBox,
 
+        // Buried in the deep Nether, and the block nine ingots make.
+        // The one ore in the game that does not burn and the one a
+        // blast cannot destroy.
+        AncientDebris,
+        NetheriteBlock,
+
         // What a frog leaves when it eats a magma cube. Three of them,
         // by the climate the frog grew up in, and the brightest light
         // in the game that is not on fire.

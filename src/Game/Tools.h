@@ -16,7 +16,16 @@ namespace Tools
     // In Minecraft's order, which is also the order of their harvest
     // levels apart from gold -- gold is fast and fragile and mines no
     // more than wood can.
-    enum class Tier { None, Wood, Stone, Iron, Gold, Diamond };
+    enum class Tier { None, Wood, Stone, Iron, Gold, Diamond, Netherite };
+
+    // The nine netherite tools and pieces live at the end of the item
+    // list rather than after the diamond ones, so that adding them did
+    // not renumber half the game and empty every saved world. Nothing
+    // outside here and Armour has to know that.
+    inline bool isNetheriteTool(StackId id)
+    {
+        return id >= Items::NetheritePickaxe && id <= Items::NetheriteHoe;
+    }
 
     Kind kindOf(StackId id);
     Tier tierOf(StackId id);
@@ -43,6 +52,12 @@ namespace Tools
     // Whether using the tool on this block should cost it a point of
     // durability: breaking any block does, but swinging at air does not.
     bool wearsOnBlock(StackId tool, BlockId block);
+
+    // What a diamond tool or piece of armour becomes when it is
+    // upgraded, or Air if it is not something that upgrades. The
+    // wear and the enchantments on it carry across, which is the
+    // whole point of upgrading rather than making a new one.
+    StackId upgradeOf(StackId diamond);
 
     // The damage a mob takes from being hit with it. A sword hits
     // hardest, an axe nearly as hard, a bare hand barely at all.

@@ -261,6 +261,37 @@ void WorldGen::generateNether(Chunk& chunk) const
                     chunk.setBlockRaw(lx, y - 1, lz, Blocks::Glowstone);
                 break;
             }
+
+            // Ancient debris, buried in the rock below the lava and
+            // never touching open air. Minecraft hides it the same
+            // way: the only way to find it is to dig, which is why
+            // netherite is the one thing in the game that is still
+            // worth going looking for once everything else is done.
+            for (int y = ANCIENT_DEBRIS_LOW; y <= ANCIENT_DEBRIS_HIGH; ++y)
+            {
+                if (chunk.getBlock(lx, y, lz) != Blocks::Netherrack) continue;
+                if (hashToFloat(hashCoords(wx, y, wz, m_seed + 7701)) >=
+                    ANCIENT_DEBRIS_CHANCE)
+                    continue;
+
+                // Walled in on every side, or it would be lying on
+                // the floor of a cavern for anybody walking past.
+                bool buried = true;
+                static const int DX[] = { 1, -1, 0, 0, 0, 0 };
+                static const int DY[] = { 0, 0, 1, -1, 0, 0 };
+                static const int DZ[] = { 0, 0, 0, 0, 1, -1 };
+                for (int k = 0; k < 6 && buried; ++k)
+                {
+                    const int nx = lx + DX[k], ny = y + DY[k], nz = lz + DZ[k];
+                    if (nx < 0 || nx >= Chunk::SX || nz < 0 || nz >= Chunk::SZ) continue;
+                    if (ny < 0 || ny >= Chunk::SY) continue;
+                    const BlockId beside = chunk.getBlock(nx, ny, nz);
+                    if (beside == Blocks::Air || isLiquid(beside)) buried = false;
+                }
+                if (!buried) continue;
+
+                chunk.setBlockRaw(lx, y, lz, Blocks::AncientDebris);
+            }
         }
     }
 }

@@ -1,6 +1,8 @@
 #include "Crafting.h"
 #include "Player/Inventory.h"
 #include "Items.h"
+#include "Tools.h"
+#include "Armour.h"
 #include <algorithm>
 
 namespace
@@ -259,6 +261,21 @@ namespace
                          Blocks::Planks, Blocks::Planks, Blocks::Planks,
                          Blocks::Air,    Items::Stick,   Blocks::Air },
           0, Items::Sign, 3 },
+
+        // Four scrap and four gold make an ingot, which is
+        // Minecraft's and is why netherite costs a trip rather than a
+        // dig. Nine of those make the block, and the block gives them
+        // back, like every other metal.
+        { false, 3, 3, { Items::NetheriteScrap, Items::NetheriteScrap, Items::NetheriteScrap,
+                         Items::NetheriteScrap, Items::GoldIngot,      Items::GoldIngot,
+                         Items::GoldIngot,      Items::GoldIngot,      Blocks::Air },
+          0, Items::NetheriteIngot, 1 },
+
+        { false, 3, 3, { Items::NetheriteIngot, Items::NetheriteIngot, Items::NetheriteIngot,
+                         Items::NetheriteIngot, Items::NetheriteIngot, Items::NetheriteIngot,
+                         Items::NetheriteIngot, Items::NetheriteIngot, Items::NetheriteIngot },
+          0, Blocks::NetheriteBlock, 1 },
+        { true, 0, 0, { Blocks::NetheriteBlock }, 1, Items::NetheriteIngot, 9 },
 
         // Cobblestone and a vine. Minecraft's recipe, and the only
         // way to mossy cobble that does not involve finding a village
@@ -658,6 +675,53 @@ namespace
 
 namespace Crafting
 {
+    // A diamond tool or piece of armour and a netherite ingot, in any
+    // arrangement. Minecraft wants a smithing table; this is the same
+    // trade at a bench, and the thing that matters is kept: what
+    // comes out is the tool you had, not a new one.
+    CraftOutput matchUpgrade(const ItemStack* grid, int size)
+    {
+        const ItemStack* diamond = nullptr;
+        int ingots = 0;
+        int others = 0;
+
+        for (int y = 0; y < size; ++y)
+            for (int x = 0; x < size; ++x)
+            {
+                const ItemStack& cell = grid[y * 3 + x];
+                if (cell.empty()) continue;
+
+                if (cell.id == Items::NetheriteIngot) { ingots += cell.count; continue; }
+                if (!diamond && Tools::upgradeOf(cell.id) != Blocks::Air &&
+                    cell.count == 1)
+                { diamond = &cell; continue; }
+                ++others;
+            }
+
+        if (!diamond || ingots != 1 || others > 0) return CraftOutput{};
+
+        CraftOutput out;
+        out.id = Tools::upgradeOf(diamond->id);
+        out.count = 1;
+
+        // The wear carries across as a fraction, not a number: a
+        // diamond pickaxe half gone comes out a netherite one half
+        // gone, rather than one that is nearly new because netherite
+        // lasts longer.
+        const int wasMax = (Tools::kindOf(diamond->id) != Tools::Kind::None)
+                               ? Tools::maxDurability(Tools::tierOf(diamond->id))
+                               : Armour::maxDurability(diamond->id);
+        const int nowMax = (Tools::kindOf(out.id) != Tools::Kind::None)
+                               ? Tools::maxDurability(Tools::tierOf(out.id))
+                               : Armour::maxDurability(out.id);
+        out.damage = (wasMax > 0)
+                         ? static_cast<int>(static_cast<long long>(diamond->damage) *
+                                            nowMax / wasMax)
+                         : 0;
+        out.enchantments = diamond->enchantments;
+        return out;
+    }
+
     CraftOutput match(const ItemStack* grid, int size)
     {
         for (const Recipe& recipe : RECIPES)
@@ -666,7 +730,7 @@ namespace Crafting
                                               : matchesShaped(recipe, grid, size);
             if (hit) return CraftOutput{ recipe.result, recipe.resultCount };
         }
-        return CraftOutput{};
+        return matchUpgrade(grid, size);
     }
 
     void consume(ItemStack* grid, int size)
@@ -702,14 +766,28 @@ namespace Crafting
 std::vector<StackId> Crafting::everyOutput()
 {
     std::vector<StackId> out;
-    out.reserve(std::size(RECIPES));
+    out.reserve(std::size(RECIPES) + 9);
     for (const Recipe& recipe : RECIPES) out.push_back(recipe.result);
+
+    // And the nine the upgrade makes. It is a recipe the table cannot
+    // hold -- it takes whichever diamond thing you give it -- but it
+    // is still a recipe, and an audit that could not see it called
+    // every netherite tool in the game unmakeable.
+    for (StackId id = Items::DiamondPickaxe; id <= Items::DiamondHoe; ++id)
+        out.push_back(Tools::upgradeOf(id));
+    for (StackId id = Items::DiamondHelmet; id <= Items::DiamondBoots; ++id)
+        out.push_back(Tools::upgradeOf(id));
+
     return out;
 }
 
 std::vector<StackId> Crafting::everyIngredient()
 {
     std::vector<StackId> out;
+
+    // What the upgrade asks for, which is likewise not in the table.
+    out.push_back(Items::NetheriteIngot);
+
     for (const Recipe& recipe : RECIPES)
     {
         const int many = recipe.shapeless ? recipe.inputCount : 9;

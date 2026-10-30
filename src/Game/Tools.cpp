@@ -7,7 +7,8 @@ namespace
 
     bool inToolRange(StackId id)
     {
-        return id >= Items::WoodPickaxe && id <= Items::DiamondHoe;
+        return (id >= Items::WoodPickaxe && id <= Items::DiamondHoe) ||
+               Tools::isNetheriteTool(id);
     }
 
     // Mining speed, durability and harvest level, in tier order.
@@ -26,6 +27,10 @@ namespace
         { 6.0f,   250,    3, 6 },   // Iron
         { 12.0f,   32,    1, 4 },   // Gold: quick and fragile, mines no more than wood
         { 8.0f,  1561,    4, 7 },   // Diamond
+        // Netherite: barely faster than diamond and far harder to
+        // break, which is Minecraft's. The reason to want it is that
+        // it outlasts everything, not that it digs quicker.
+        { 9.0f,  2031,    5, 8 },   // Netherite
     };
 
     // Which tool a block gives way to. A block not listed here comes
@@ -65,6 +70,12 @@ Tools::Kind Tools::kindOf(StackId id)
     if (id == Items::Mace) return Kind::Mace;
     if (id == Items::Trident) return Kind::Trident;
 
+    // The nine netherite items are at the end of the list rather than
+    // after the diamond ones, so the offset has to be taken from
+    // their own start. Five tools, in the same order as the rest.
+    if (isNetheriteTool(id))
+        return static_cast<Kind>((id - Items::NetheritePickaxe) + 1);
+
     if (!inToolRange(id)) return Kind::None;
     const int offset = (id - Items::WoodPickaxe) % KINDS_PER_TIER;
     return static_cast<Kind>(offset + 1);
@@ -76,6 +87,8 @@ Tools::Tier Tools::tierOf(StackId id)
     // tier: canHarvest asks for the right kind first, and no block in
     // the game is got at with a mace.
     if (id == Items::Mace) return Tier::Iron;
+
+    if (isNetheriteTool(id)) return Tier::Netherite;
 
     if (!inToolRange(id)) return Tier::None;
     const int step = (id - Items::WoodPickaxe) / KINDS_PER_TIER;
@@ -97,6 +110,12 @@ int Tools::requiredLevel(BlockId block)
     switch (block)
     {
         case Blocks::Obsidian:   return 4;
+
+        // Diamond, like obsidian. Minecraft's rule, and what makes
+        // ancient debris a thing you go back for rather than a thing
+        // you trip over on the way down.
+        case Blocks::AncientDebris: return 4;
+        case Blocks::NetheriteBlock: return 4;
         case Blocks::DiamondOre: return 3;
         case Blocks::EmeraldOre: return 3;
         case Blocks::GoldOre:
@@ -156,6 +175,21 @@ int Tools::maceSmashBonus(float fallenBlocks)
     const float rest = std::max(0.0f, fallenBlocks - 8.0f);
 
     return static_cast<int>(first * 4.0f + second * 2.0f + rest);
+}
+
+StackId Tools::upgradeOf(StackId diamond)
+{
+    // The five tools, in the order they sit in both lists.
+    if (diamond >= Items::DiamondPickaxe && diamond <= Items::DiamondHoe)
+        return static_cast<StackId>(Items::NetheritePickaxe +
+                                    (diamond - Items::DiamondPickaxe));
+
+    // And the four pieces of armour, likewise.
+    if (diamond >= Items::DiamondHelmet && diamond <= Items::DiamondBoots)
+        return static_cast<StackId>(Items::NetheriteHelmet +
+                                    (diamond - Items::DiamondHelmet));
+
+    return Blocks::Air;
 }
 
 int Tools::attackDamage(StackId tool)

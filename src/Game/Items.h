@@ -225,9 +225,24 @@ namespace Items
         // as well; nothing here can throw a thing and get it back.
         Trident,
 
+        // Netherite, and the tier above diamond it makes.
+        //
+        // The nine tools and pieces are at the end of the list rather
+        // than beside the diamond ones they follow, because an item's
+        // number is what a saved inventory holds: slotting them in
+        // where they belong would have renumbered half the game and
+        // emptied every world anybody had. The arithmetic that finds
+        // a tier reads them specially instead, which is one `if` a
+        // side against breaking every save there is.
+        NetheriteScrap,
+        NetheriteIngot,
+
         // What a wither leaves. One of them makes a beacon, which is
         // the only thing in the game it is for.
         NetherStar,
+
+        NetheritePickaxe, NetheriteAxe, NetheriteShovel, NetheriteSword, NetheriteHoe,
+        NetheriteHelmet, NetheriteChestplate, NetheriteLeggings, NetheriteBoots,
 
         Count
     };

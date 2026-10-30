@@ -27,6 +27,10 @@ StackId Smelting::resultOf(StackId input)
         // comes off its rods where it should.
         case Blocks::Netherrack: return Items::NetherBrick;
 
+        // Ancient debris fired is scrap, which is the only thing it
+        // is for and the only thing that makes it worth the dig.
+        case Blocks::AncientDebris: return Items::NetheriteScrap;
+
         // Meat. Cooked food is worth more than raw, which is the whole
         // reason to carry a furnace about.
         case Items::RawBeef:    return Items::Steak;
@@ -92,7 +96,8 @@ bool Smelting::suits(Kind kind, StackId input)
         // with a metal in it, and the raw metal itself.
         case Kind::BlastFurnace:
             return input == Blocks::IronOre || input == Blocks::GoldOre ||
-                   input == Blocks::CopperOre || input == Items::RawCopper;
+                   input == Blocks::CopperOre || input == Items::RawCopper ||
+                   input == Blocks::AncientDebris;
     }
     return false;
 }

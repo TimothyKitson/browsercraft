@@ -255,6 +255,7 @@ namespace Tiles
         SignTile,
         ItemFrameTile,
         ShulkerBoxTile,
+        AncientDebrisTop, AncientDebrisSide, NetheriteBlockTile,
         OchreFroglightTop, OchreFroglightSide,
         VerdantFroglightTop, VerdantFroglightSide,
         PearlescentFroglightTop, PearlescentFroglightSide,
@@ -401,7 +402,16 @@ namespace Tiles
         ItemSign,
         ItemItemFrame,
         ItemElytra,
-        ItemGhastTear,
+        ItemNetheriteScrap,
+        ItemNetheriteIngot,
+
+        // Five tools then four pieces of armour, in the same order as
+        // the Items enum, so the painter works out which is which
+        // from the offset instead of being told nine times.
+        ItemNetheriteFirst,
+        ItemNetheriteEnd = ItemNetheriteFirst + 9,
+
+        ItemGhastTear = ItemNetheriteEnd,
         ItemShulkerShell,
         ItemTrident,
 

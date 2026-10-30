@@ -146,7 +146,18 @@ namespace
         { "Ghast Tear",      Tiles::ItemGhastTear,     64 },
         { "Shulker Shell",   Tiles::ItemShulkerShell,  64 },
         { "Trident",         Tiles::ItemTrident,        1 },
+        { "Netherite Scrap", Tiles::ItemNetheriteScrap, 64 },
+        { "Netherite Ingot", Tiles::ItemNetheriteIngot, 64 },
         { "Nether Star",     Tiles::ItemNetherStar,     1 },
+        { "Netherite Pickaxe",  Tiles::ItemNetheriteFirst + 0, 1 },
+        { "Netherite Axe",      Tiles::ItemNetheriteFirst + 1, 1 },
+        { "Netherite Shovel",   Tiles::ItemNetheriteFirst + 2, 1 },
+        { "Netherite Sword",    Tiles::ItemNetheriteFirst + 3, 1 },
+        { "Netherite Hoe",      Tiles::ItemNetheriteFirst + 4, 1 },
+        { "Netherite Helmet",     Tiles::ItemNetheriteFirst + 5, 1 },
+        { "Netherite Chestplate", Tiles::ItemNetheriteFirst + 6, 1 },
+        { "Netherite Leggings",   Tiles::ItemNetheriteFirst + 7, 1 },
+        { "Netherite Boots",      Tiles::ItemNetheriteFirst + 8, 1 },
     };
 
     static_assert(sizeof(ITEMS) / sizeof(ITEMS[0]) ==

@@ -2,6 +2,7 @@
 #include "World/Block.h"
 #include "Items.h"
 #include <vector>
+#include <cstdint>
 
 struct ItemStack;
 
@@ -10,6 +11,14 @@ struct CraftOutput
 {
     StackId id = Blocks::Air;
     int count = 0;
+
+    // What the result carries out of the grid. Almost every recipe
+    // makes something brand new and leaves both of these at zero; the
+    // netherite upgrade is the exception, and the exception is the
+    // whole reason upgrading is worth doing rather than making a new
+    // tool: the wear and the enchantments come with it.
+    int damage = 0;
+    uint32_t enchantments = 0;
 
     bool valid() const { return id != Blocks::Air && count > 0; }
 };
