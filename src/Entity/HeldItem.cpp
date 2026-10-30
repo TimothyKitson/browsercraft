@@ -15,25 +15,43 @@ namespace
 {
     const std::vector<int> CHUNK_LAYOUT = { 3, 2, 1, 1, 1, 1 };
 
-    // Where the hand sits in front of the camera, in blocks: out to the
-    // right, down out of the way of the crosshair, and far enough forward
-    // to clear the near plane.
-    // Far enough forward that perspective shrinks it to about a quarter
-    // of the screen, which is roughly where Minecraft puts it.
-    // Where the hand sits, as a fraction of the screen. The camera is
-    // 70 degrees vertical, so at HAND_FORWARD the visible half-height is
-    // tan(35) = 0.700 and the half-width is that times the aspect. Those
-    // two numbers are what turn "about four fifths across and two
-    // thirds down", measured off a Java screenshot, into the offsets
-    // below -- rather than nudging them and re-rendering.
-    constexpr float HAND_RIGHT = 0.62f;
-    constexpr float HAND_DOWN = 0.50f;
-    constexpr float HAND_FORWARD = 1.00f;
+    // Where the hand goes, in the camera's own frame, and it is
+    // Minecraft's: the vanilla client translates to
+    //
+    //     (0.7, -0.65, -0.9) * 0.8    with something held
+    //     (0.8, -0.75, -0.9) * 0.8    with an empty hand
+    //
+    // which is what the three pairs below come to. Its forward axis is
+    // -z and ours is +z, so the depth changes sign and nothing else
+    // does.
+    constexpr float ITEM_RIGHT = 0.7f * 0.8f;
+    constexpr float ITEM_DOWN = 0.65f * 0.8f;
+    constexpr float ITEM_FORWARD = 0.9f * 0.8f;
+
+    // The empty hand is not simply the pose above with nothing in it.
+    // Mojang puts the arm through a stack of its own after it --
+    //
+    //     translate(-1, 3.6, 3.5)  rotateZ(120)  rotateX(200)
+    //     rotateY(-135)  translate(5.6, 0, 0)
+    //
+    // -- and then draws the biped's right arm, a 4x12x4 box pinned at
+    // (-5, 2, 0), at a sixteenth scale. Walking the fist end of that
+    // box through the whole chain puts it at (0.74, -0.48, -1.14) in
+    // the camera's frame, which is where these three come from: a
+    // fist about three quarters of the way across the screen and four
+    // fifths of the way down it, which is exactly where Minecraft's
+    // is. The arm below is built out from that point, so what matters
+    // is that the point is right rather than that the chain is
+    // replayed in full.
+    constexpr float HAND_RIGHT = 0.7355f;
+    constexpr float HAND_DOWN = 0.4800f;
+    constexpr float HAND_FORWARD = 1.1379f;
+
+    // How far the hand drops while something new is being raised.
+    constexpr float EQUIP_DROP = 0.6f;
 
     // The arm's own origin is its fist, so the offsets above place the
-    // fist directly and there is nothing further to nudge. Anything
-    // held hangs off this, not off the camera, or it floats in the
-    // middle of the screen on its own.
+    // fist directly and there is nothing further to nudge.
     constexpr float HAND_LOCAL_X = 0.0f;
     constexpr float HAND_LOCAL_Y = 0.0f;
     constexpr float HAND_LOCAL_Z = 0.0f;
@@ -48,30 +66,36 @@ namespace
     // An arm's texture patch is four pixels across and twelve tall, so
     // the box has to be three times as long as it is wide or the texels
     // come out taller than they are wide and the whole thing reads as
-    // stretched. At 0.46 they were eighteen per cent off.
+    // stretched.
     constexpr float ARM_TEXEL_RATIO = 3.0f;   // 12 tall / 4 wide
     constexpr float ARM_LENGTH = ARM_HALF_WIDTH * 2.0f * ARM_TEXEL_RATIO;
+
     // Radians, leaning the arm so it rises from the bottom-right corner
-    // towards the middle of the screen. The sign matters: the other way
-    // round puts the shoulder in the middle and the hand out at the
-    // corner, which is the arm on backwards.
-    //
-    // It has to be zero, though, and the tilt below says why: a lean
-    // tips the cut end of the fist sideways, and what should be a
-    // level edge across the knuckles comes out as a slant.
+    // towards the middle of the screen. It has to be zero: a lean tips
+    // the cut end of the fist sideways, and what should be a level edge
+    // across the knuckles comes out as a slant.
     constexpr float ARM_LEAN = 0.0f;
 
     // How far past edge-on to carry the cut end, in radians. Zero, now
-    // that the end caps take the fist's patch rather than the sleeve's:
-    // a sliver of fist is the same skin colour as the sides around it,
-    // so there is nothing left to hide from, and carrying the end past
-    // edge-on is what cost the fist its square finish.
+    // that the end caps take the fist's patch rather than the sleeve's.
     constexpr float ARM_CAP_MARGIN = 0.0f;
 
-    // Scaled with the arm: a block held in a fist this size looked like
-    // a pebble at the old figures.
-    constexpr float BLOCK_SIZE = 0.23f;
-    constexpr float SPRITE_SIZE = 0.30f;
+    // Minecraft scales a held block to four tenths of a block and
+    // draws it about its own middle, so it is 0.4 across however the
+    // hand is turned. A flat item is that and then half as much again,
+    // which is Mojang's 1.5 in renderItem.
+    constexpr float BLOCK_SIZE = 0.4f;
+    constexpr float ITEM_SCALE = 0.4f;
+    constexpr float SPRITE_SCALE = ITEM_SCALE * 1.5f;
+
+    // And a flat item is a slab a sixteenth of a block thick rather
+    // than a card with no edge, which is what you see when you turn one
+    // side-on.
+    constexpr float SPRITE_DEPTH = 1.0f / 16.0f;
+
+    constexpr float PI = 3.14159265f;
+
+    float degrees(float d) { return d * PI / 180.0f; }
 
     // The shield's own sheet is 64x64 and its model is measured in the
     // same sixteenths-of-a-block as everything Mojang draws. Held in
@@ -178,9 +202,94 @@ namespace
     }
 }
 
-void HeldItem::update(float deltaTime)
+void HeldItem::update(float deltaTime, StackId held)
 {
     if (m_swing > 0.0f) m_swing = std::max(0.0f, m_swing - deltaTime);
+
+    // Swapping what you are carrying drops the hand out of shot and
+    // raises the new thing in its place, which is Minecraft's only
+    // cue that the swap happened. What is drawn changes at the bottom
+    // of the dip, so you never see one item turn into another.
+    const float want = (held == m_shown) ? 1.0f : 0.0f;
+    const float step = EQUIP_RATE * deltaTime;
+    m_equip = std::clamp(m_equip + std::clamp(want - m_equip, -step, step), 0.0f, 1.0f);
+    if (m_equip < 0.1f) m_shown = held;
+}
+
+float HeldItem::swingProgress() const
+{
+    if (m_swing <= 0.0f) return 0.0f;
+    return 1.0f - (m_swing / SWING_SECONDS);
+}
+
+// Minecraft's own first-person pose. Every number here is out of the
+// vanilla client's ItemRenderer:
+//
+//   translate(-sin(sqrt(p)*PI) * 0.4, sin(sqrt(p)*PI*2) * 0.2, -sin(p*PI) * 0.2)
+//   translate(0.56, -0.52 - (1 - equipped) * 0.6, -0.72)
+//   rotateY(45)
+//   rotateY(-sin(p*p*PI) * 20), rotateZ(-sin(sqrt(p)*PI) * 20),
+//   rotateX(-sin(sqrt(p)*PI) * 80)
+//
+// Its camera looks down -z and ours looks down +z, so every depth and
+// every angle changes sign on the way across and nothing else does.
+glm::mat4 HeldItem::pose(const glm::mat4& camera, bool item, bool sneaking,
+                         bool blocking) const
+{
+    const float p = swingProgress();
+    const float arc = std::sin(std::sqrt(p) * PI);        // out and back
+    const float lift = std::sin(std::sqrt(p) * PI * 2.0f); // up, then down
+    const float punch = std::sin(p * PI);                  // forward
+
+    float right = (item ? ITEM_RIGHT : HAND_RIGHT) - arc * (item ? 0.4f : 0.3f);
+    float down = (item ? ITEM_DOWN : HAND_DOWN) + (1.0f - m_equip) * EQUIP_DROP
+                 - lift * (item ? 0.2f : 0.4f);
+    float forward = (item ? ITEM_FORWARD : HAND_FORWARD) + punch * (item ? 0.2f : 0.4f);
+
+    // Sneaking drops the whole hand with the camera, and a raised
+    // shield comes up and in across the front of you.
+    if (sneaking) down += 0.08f;
+    if (blocking) { down -= 0.26f; right -= 0.26f; forward -= 0.18f; }
+
+    const glm::vec3 origin = glm::vec3(camera[3]) +
+                             glm::vec3(camera[0]) * right +
+                             glm::vec3(camera[1]) * -down +
+                             glm::vec3(camera[2]) * forward;
+
+    // The turn. Forty-five degrees about the upright to begin with, so
+    // a block is seen corner-on, and then the three the swing adds.
+    // Crossing between Minecraft's frame and ours flips the forward
+    // axis, which negates a turn about the upright and a turn about
+    // the sideways one -- both of them mix z -- and leaves a turn in
+    // the plane of the screen alone, because that one mixes x and y
+    // and neither of those changed. Getting the last of those three
+    // wrong is what held a pickaxe out past the corner of the screen.
+    const float yaw = degrees(-45.0f + (item ? std::sin(p * p * PI) * 20.0f
+                                             : -arc * 70.0f));
+    const float roll = degrees(item ? -arc * 20.0f : -std::sin(p * p * PI) * 20.0f);
+    const float pitch = degrees(item ? arc * 80.0f : 0.0f);
+
+    const float cy = std::cos(yaw), sy = std::sin(yaw);
+    const float cr = std::cos(roll), sr = std::sin(roll);
+    const float cp = std::cos(pitch), sp = std::sin(pitch);
+
+    glm::mat3 turn(1.0f);
+    {
+        const glm::mat3 Ry(cy, 0.0f, -sy,  0.0f, 1.0f, 0.0f,  sy, 0.0f, cy);
+        const glm::mat3 Rz(cr, sr, 0.0f,  -sr, cr, 0.0f,  0.0f, 0.0f, 1.0f);
+        const glm::mat3 Rx(1.0f, 0.0f, 0.0f,  0.0f, cp, sp,  0.0f, -sp, cp);
+        turn = Ry * Rz * Rx;
+    }
+
+    const glm::mat3 basis{ glm::vec3(camera[0]), glm::vec3(camera[1]), glm::vec3(camera[2]) };
+    const glm::mat3 axes = basis * turn;
+
+    glm::mat4 out(1.0f);
+    out[0] = glm::vec4(axes[0], 0.0f);
+    out[1] = glm::vec4(axes[1], 0.0f);
+    out[2] = glm::vec4(axes[2], 0.0f);
+    out[3] = glm::vec4(origin, 1.0f);
+    return out;
 }
 
 // Up and back on the way out, down and forward on the way in, which is
@@ -425,17 +534,54 @@ void HeldItem::appendShield(const glm::mat4& toWorld, float sky, float blockLigh
                     0.0f, 0.0f, 3.5f * SHIELD_SCALE, sky, blockLight);
 }
 
+// A flat item in the hand. Minecraft does not hang the sprite square
+// in front of you: out of its ItemRenderer, after the pose above it
+//
+//   translate(0, -0.3, 0); scale(1.5); rotateY(50); rotateZ(335);
+//   translate(-0.9375, -0.0625, 0)
+//
+// and then draws the sprite as a unit square a sixteenth of a block
+// thick, which is why a pickaxe held in Minecraft has an edge you can
+// see when you turn.
 void HeldItem::appendSprite(const glm::mat4& toWorld, StackId stack, float sky, float blockLight)
 {
     const TileUV uv = tileUV(atlasTileFor(stack));
-    const float half = SPRITE_SIZE * 0.5f;
 
+    const float yaw = degrees(-50.0f);       // our forward axis is the other way
+    const float roll = degrees(335.0f);      // but a turn in the screen's plane is not
+    const float cy = std::cos(yaw), sy = std::sin(yaw);
+    const float cr = std::cos(roll), sr = std::sin(roll);
+
+    const glm::mat3 Ry(cy, 0.0f, -sy,  0.0f, 1.0f, 0.0f,  sy, 0.0f, cy);
+    const glm::mat3 Rz(cr, sr, 0.0f,  -sr, cr, 0.0f,  0.0f, 0.0f, 1.0f);
+    const glm::mat3 turn = Ry * Rz;
+
+    const glm::mat3 basis{ glm::vec3(toWorld[0]), glm::vec3(toWorld[1]), glm::vec3(toWorld[2]) };
+    const glm::mat3 axes = basis * turn;
+
+    // The 0.3 drop happens before the turn and inside Minecraft's own
+    // 0.4 scale, so it is that much of a block and not a third of one;
+    // the last translation comes after the turn, in the card's own
+    // frame, and is what puts the handle of a tool in the fist rather
+    // than its middle.
+    const glm::vec3 origin = glm::vec3(toWorld[3]) + glm::vec3(toWorld[1]) * (-0.3f * ITEM_SCALE);
+
+    glm::mat4 card(1.0f);
+    card[0] = glm::vec4(axes[0] * SPRITE_SCALE, 0.0f);
+    card[1] = glm::vec4(axes[1] * SPRITE_SCALE, 0.0f);
+    card[2] = glm::vec4(axes[2] * SPRITE_SCALE, 0.0f);
+    card[3] = glm::vec4(origin + axes[0] * (-0.9375f * SPRITE_SCALE) +
+                            axes[1] * (-0.0625f * SPRITE_SCALE), 1.0f);
+
+    const float d = SPRITE_DEPTH;
+
+    // The two faces, back to back a sixteenth apart.
     Quad front;
     front.shade = 1.0f;
-    front.corner[0] = place(toWorld, -half, -half, 0.0f);
-    front.corner[1] = place(toWorld, half, -half, 0.0f);
-    front.corner[2] = place(toWorld, half, half, 0.0f);
-    front.corner[3] = place(toWorld, -half, half, 0.0f);
+    front.corner[0] = place(card, 0.0f, 0.0f, 0.0f);
+    front.corner[1] = place(card, 1.0f, 0.0f, 0.0f);
+    front.corner[2] = place(card, 1.0f, 1.0f, 0.0f);
+    front.corner[3] = place(card, 0.0f, 1.0f, 0.0f);
     const float tu[4] = { uv.u0, uv.u1, uv.u1, uv.u0 };
     const float tv[4] = { uv.vBottom, uv.vBottom, uv.vTop, uv.vTop };
     for (int k = 0; k < 4; ++k) { front.u[k] = tu[k]; front.v[k] = tv[k]; }
@@ -443,46 +589,62 @@ void HeldItem::appendSprite(const glm::mat4& toWorld, StackId stack, float sky, 
 
     Quad back = front;
     back.shade = 0.86f;
+    for (int k = 0; k < 4; ++k)
+        back.corner[k] = place(card,
+                               (k == 1 || k == 2) ? 1.0f : 0.0f,
+                               (k >= 2) ? 1.0f : 0.0f,
+                               d);
     std::swap(back.corner[1], back.corner[3]);
     std::swap(back.u[1], back.u[3]);
     std::swap(back.v[1], back.v[3]);
     pushQuad(m_vertices, back, sky, blockLight);
+
+    // And the four edges between them, each taking the strip of sprite
+    // it runs along, so the slab reads as solid from the side rather
+    // than as two cards with daylight between them.
+    struct Edge { float x0, y0, x1, y1; float u0, v0, u1, v1; float shade; };
+    const Edge edges[4] = {
+        { 0.0f, 1.0f, 1.0f, 1.0f, uv.u0, uv.vTop,    uv.u1, uv.vTop,    1.00f },
+        { 0.0f, 0.0f, 1.0f, 0.0f, uv.u0, uv.vBottom, uv.u1, uv.vBottom, 0.50f },
+        { 0.0f, 0.0f, 0.0f, 1.0f, uv.u0, uv.vBottom, uv.u0, uv.vTop,    0.72f },
+        { 1.0f, 0.0f, 1.0f, 1.0f, uv.u1, uv.vBottom, uv.u1, uv.vTop,    0.72f },
+    };
+
+    for (const Edge& e : edges)
+    {
+        Quad q;
+        q.shade = e.shade;
+        q.corner[0] = place(card, e.x0, e.y0, 0.0f);
+        q.corner[1] = place(card, e.x1, e.y1, 0.0f);
+        q.corner[2] = place(card, e.x1, e.y1, d);
+        q.corner[3] = place(card, e.x0, e.y0, d);
+        q.u[0] = e.u0; q.v[0] = e.v0;
+        q.u[1] = e.u1; q.v[1] = e.v1;
+        q.u[2] = e.u1; q.v[2] = e.v1;
+        q.u[3] = e.u0; q.v[3] = e.v0;
+        pushQuad(m_vertices, q, sky, blockLight);
+    }
 }
 
 void HeldItem::render(Shader& chunkShader, const Camera& camera, const PlayerSkin& skin,
                       const Atlas& atlas, StackId stack, float sky, float blockLight,
                       bool sneaking, bool blocking)
 {
-    const float swing = swingAngle();
+    // Camera axes as a basis, so the pose is written in the obvious
+    // local coordinates: +x right, +y up, +z forwards.
+    glm::mat4 eye(1.0f);
+    eye[0] = glm::vec4(camera.right, 0.0f);
+    eye[1] = glm::vec4(camera.up, 0.0f);
+    eye[2] = glm::vec4(camera.front, 0.0f);
+    eye[3] = glm::vec4(camera.position, 1.0f);
 
-    // The hand drops and swings back as you strike, and sits lower when
-    // you are sneaking, the same as the camera does.
-    float down = HAND_DOWN + swing * 0.22f + (sneaking ? 0.08f : 0.0f);
-    float forward = HAND_FORWARD - swing * 0.14f;
-    float across = HAND_RIGHT - swing * 0.05f;
-
-    // A raised shield comes up and in, across the front of you. Held at
-    // the hip where everything else is held, it read as a plank being
-    // carried rather than as cover.
-    if (blocking)
-    {
-        down -= 0.26f;
-        across -= 0.26f;
-        forward -= 0.18f;
-    }
-
-    const glm::vec3 origin = camera.position + camera.front * forward +
-                             camera.right * across - camera.up * down;
-
-    // Camera axes as a basis, so everything below is written in the
-    // obvious local coordinates: +x right, +y up, +z forwards.
-    glm::mat4 toWorld(1.0f);
-    toWorld[0] = glm::vec4(camera.right, 0.0f);
-    toWorld[1] = glm::vec4(camera.up, 0.0f);
-    toWorld[2] = glm::vec4(camera.front, 0.0f);
-    toWorld[3] = glm::vec4(origin, 1.0f);
-
-    const bool empty = stack == Blocks::Air;
+    // What is drawn is what has finished being raised rather than what
+    // the hotbar says: halfway through a swap the old one is still on
+    // its way down, and swapping the drawing at the top of the dip is
+    // what would make one item turn into another in mid-air.
+    const StackId showing = (m_shown == Blocks::Air && stack != Blocks::Air && m_equip >= 1.0f)
+                                ? stack : m_shown;
+    const bool empty = showing == Blocks::Air;
 
     // The hand is skin-textured and anything it holds comes off the atlas,
     // so they are two passes. Depth is cleared once, before either.
@@ -493,7 +655,7 @@ void HeldItem::render(Shader& chunkShader, const Camera& camera, const PlayerSki
     if (skin.textureId())
     {
         m_vertices.clear();
-        appendArm(toWorld, skin, sky, blockLight);
+        appendArm(pose(eye, false, sneaking, blocking), skin, sky, blockLight);
         m_mesh.upload(m_vertices, CHUNK_LAYOUT, true);
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, skin.textureId());
@@ -508,17 +670,11 @@ void HeldItem::render(Shader& chunkShader, const Camera& camera, const PlayerSki
 
     m_vertices.clear();
 
-    // Held things sit at the end of the arm, turned a little so a block
-    // is seen corner-on rather than as a flat face.
-    glm::mat4 held = toWorld;
-    // Just beyond the fist, and a little above it, so the block sits in
-    // the hand rather than inside it.
-    held[3] = glm::vec4(place(toWorld, HAND_LOCAL_X, HAND_LOCAL_Y + 0.05f,
-                              HAND_LOCAL_Z + 0.02f), 1.0f);
+    const glm::mat4 held = pose(eye, true, sneaking, blocking);
 
     // The shield is its own pass: it has a sheet rather than an atlas
     // tile, and it is a panel rather than a card.
-    if (stack == Items::Shield && shieldTexture() != 0)
+    if (showing == Items::Shield && shieldTexture() != 0)
     {
         // Mojang's own first-person pose, out of shield.json: well out
         // to the left, well forward of the hand, a quarter again life
@@ -529,22 +685,20 @@ void HeldItem::render(Shader& chunkShader, const Camera& camera, const PlayerSki
         //
         //   firstperson_righthand  rotation [0,180,5]  translation [-10,2,-10]
         //   shield_blocking        rotation [0,180,0]  translation [-10,2.5,-11]
-        //
-        // Those translations are sixteenths of a block, so ten of them
-        // is five eighths -- far further out and further forward than
-        // the guesses this replaces.
+        // Placed against the camera rather than hung off the hand: a
+        // shield is far bigger than the fist holding it, and the two
+        // numbers that matter are where its face sits on the screen
+        // and how square to you it is. Carried, the near edge is out
+        // at the bottom right; raised, it comes across in front of
+        // you and most of the view is shield.
         glm::mat4 panel = held;
-        // Mojang's translations are sixteenths of the model's own space,
-        // but they are measured from Minecraft's hand, which sits in a
-        // different place from this one -- so scaling them with the
-        // model walked the shield across the screen as it grew. These
-        // are blocks, placed to sit where the vanilla shot puts it: the
-        // inner edge near the middle of the view and the body filling
-        // the corner the hand is in.
-        panel[3] = glm::vec4(place(toWorld,
-                                   HAND_LOCAL_X - 0.17f,
-                                   HAND_LOCAL_Y - (blocking ? 0.25f : 0.30f),
-                                   HAND_LOCAL_Z - (blocking ? 0.21f : 0.18f)), 1.0f);
+        const float outward = blocking ? 0.19f : 0.45f;
+        const float downward = blocking ? 0.49f : 0.80f;
+        const float along = blocking ? 0.61f : 0.82f;
+        panel[3] = glm::vec4(camera.position +
+                                 camera.right * outward +
+                                 camera.up * -downward +
+                                 camera.front * along, 1.0f);
 
         const float roll = blocking ? 0.0f : 0.0873f;   // five degrees
         const float cr = std::cos(roll), sr = std::sin(roll);
@@ -569,27 +723,8 @@ void HeldItem::render(Shader& chunkShader, const Camera& camera, const PlayerSki
         return;
     }
 
-    if (drawsFlat(stack))
-    {
-        appendSprite(held, stack, sky, blockLight);
-    }
-    else
-    {
-        // Turned so the two visible sides come out the same width, which
-        // is what makes a block read as corner-on rather than as a flat
-        // square facing you. The angle is measured against the line from
-        // the eye to the block, not against the camera's forward axis:
-        // the hand sits nearly forty degrees off to the side, far enough
-        // out that the two differ, and turning it the obvious
-        // forty-five degrees from forward lands it face-on instead.
-        const float a = std::atan2(forward + HAND_LOCAL_Z + 0.02f,
-                                   across + HAND_LOCAL_X) - 0.7853982f;
-        const glm::vec3 r(camera.right * std::cos(a) + camera.front * std::sin(a));
-        const glm::vec3 f(-camera.right * std::sin(a) + camera.front * std::cos(a));
-        held[0] = glm::vec4(r, 0.0f);
-        held[2] = glm::vec4(f, 0.0f);
-        appendBlock(held, stack, sky, blockLight);
-    }
+    if (drawsFlat(showing)) appendSprite(held, showing, sky, blockLight);
+    else                    appendBlock(held, showing, sky, blockLight);
 
     atlas.bind(0, 1, 2);
     m_mesh.upload(m_vertices, CHUNK_LAYOUT, true);

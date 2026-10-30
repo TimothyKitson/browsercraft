@@ -34,7 +34,13 @@ namespace FirstPersonArm
 class HeldItem
 {
 public:
-    static constexpr float SWING_SECONDS = 0.25f;
+    // Six ticks, which is what Minecraft gives a swing.
+    static constexpr float SWING_SECONDS = 0.30f;
+
+    // How fast something new is raised into the hand. Minecraft moves
+    // it four tenths of the way each tick, twenty ticks a second, and
+    // swaps what is drawn once it is nearly all the way down.
+    static constexpr float EQUIP_RATE = 8.0f;
 
     // Started when you swing at something, whether or not you hit it.
     void swing() { m_swing = SWING_SECONDS; }
@@ -45,7 +51,32 @@ public:
     // of its arc, so holding the button showed a hand held still rather
     // than one swinging over and over.
     bool swinging() const { return m_swing > 0.0f; }
-    void update(float deltaTime);
+
+    // `held` is what the hotbar has selected. Passed in so the hand can
+    // dip and come back up when it changes, which is Minecraft's only
+    // cue that you have swapped what you are carrying.
+    void update(float deltaTime, StackId held = Blocks::Air);
+
+    // 0 at rest, 1 at the far end of the swing. Minecraft hangs every
+    // part of the first-person pose off this one number.
+    float swingProgress() const;
+
+    // 0 while something new is being raised, 1 once it is up.
+    float equipProgress() const { return m_equip; }
+
+    // Minecraft's own first-person pose, in the camera's own frame:
+    // where the hand goes, how far it is turned, and what the swing
+    // does to both. `item` picks the pose for something held over the
+    // pose for an empty hand -- Minecraft has two, and they differ.
+    // Public so --selftest can walk a swing through it without a
+    // window: an identity camera makes the answer camera-space.
+    glm::mat4 pose(const glm::mat4& camera, bool item, bool sneaking = false,
+                   bool blocking = false) const;
+
+    // Only --selftest sets these directly, to stand the hand at a
+    // chosen point in a swing or a swap rather than waiting one out.
+    void setSwingForTest(float secondsLeft) { m_swing = secondsLeft; }
+    void setEquipForTest(float raised) { m_equip = raised; }
 
     // `stack` is what the hotbar has selected; Blocks::Air draws a bare
     // hand. Sky and block light come from where the player is standing,
@@ -58,6 +89,8 @@ private:
     Mesh m_mesh;
     std::vector<float> m_vertices;
     float m_swing = 0.0f;
+    float m_equip = 1.0f;
+    StackId m_shown = Blocks::Air;
 
     float swingAngle() const;
     void appendArm(const glm::mat4& toWorld, const PlayerSkin& skin,

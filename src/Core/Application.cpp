@@ -1798,7 +1798,8 @@ bool Application::frame()
             m_startupScreen == "bucket" || m_startupScreen == "ladder" ||
             m_startupScreen == "stairs" || m_startupScreen == "fence" ||
             m_startupScreen == "door" || m_startupScreen == "hand" ||
-            m_startupScreen == "handempty" || m_startupScreen == "xp" ||
+            m_startupScreen == "handempty" || m_startupScreen == "handitem" ||
+            m_startupScreen == "xp" ||
             m_startupScreen == "shelf" || m_startupScreen == "enchant" ||
             m_startupScreen == "enchantblock" || m_startupScreen == "villager" ||
             m_startupScreen == "trade" || m_startupScreen == "endportal" ||
@@ -1846,6 +1847,7 @@ bool Application::frame()
                                   m_startupScreen != "door" &&
                                   m_startupScreen != "hand" &&
                                   m_startupScreen != "handempty" &&
+                                  m_startupScreen != "handitem" &&
                                   m_startupScreen != "xp" &&
                                   m_startupScreen != "shelf" &&
                                   m_startupScreen != "enchantblock" &&
@@ -3785,12 +3787,21 @@ bool Application::frame()
                 }
             }
 
-            if (m_startupScreen == "hand" || m_startupScreen == "handempty")
+            if (m_startupScreen == "hand" || m_startupScreen == "handempty" ||
+                m_startupScreen == "handitem")
             {
                 m_inventory.clear();
                 if (m_startupScreen == "hand")
                 {
                     m_inventory.add(Blocks::Cobblestone, 1);
+                    m_inventory.setSelectedSlot(0);
+                }
+                // A flat item rather than a block: the two are posed
+                // quite differently in the hand, and only one of them
+                // was ever in a shot.
+                if (m_startupScreen == "handitem")
+                {
+                    m_inventory.add(Items::DiamondPickaxe, 1);
                     m_inventory.setSelectedSlot(0);
                 }
             }
@@ -4688,7 +4699,11 @@ void Application::updateGameplay(float deltaTime)
     handleDrinking(deltaTime);
     tickBrewing(deltaTime);
     handlePlacement();
-    m_heldItem.update(deltaTime);
+    {
+        const ItemStack& inHand = m_inventory.selected();
+        m_heldItem.update(deltaTime,
+                          inHand.empty() ? static_cast<StackId>(Blocks::Air) : inHand.id);
+    }
 }
 
 void Application::updateMovementAudio(const glm::vec3& positionBefore, bool jumped)
@@ -9852,16 +9867,10 @@ void Application::renderHud()
         // Through drawItem, the same as every slot on the inventory
         // panel, so a block in the hotbar is the cube it is there and
         // not a flat square of its own top texture.
-        drawItem(slotX, slotY, ITEM_SIZE, stack.id, stack.count, glm::vec4(1.0f), stack.damage);
-
-        if (!m_player.creative() && stack.count > 1)
-        {
-            const std::string count = std::to_string(stack.count);
-            m_ui.textWithShadow(count,
-                                slotX + ITEM_SIZE + 1.0f - UIRenderer::textWidth(count, 1.0f),
-                                slotY + ITEM_SIZE - 7.0f,
-                                1.0f, TEXT_COLOR);
-        }
+        // drawItem draws the count itself, in the slot's own corner.
+        drawItem(slotX, slotY, ITEM_SIZE,
+                 stack.id, m_player.creative() ? 0 : stack.count,
+                 glm::vec4(1.0f), stack.damage);
     }
 
     // Hearts are hidden in creative, like Minecraft.

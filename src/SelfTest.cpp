@@ -63,6 +63,7 @@
 #include "Game/Golems.h"
 #include "Renderer/Atlas.h"
 #include "Renderer/UIRenderer.h"
+#include "Entity/HeldItem.h"
 #include "Audio/AudioEngine.h"
 #include "Player/Player.h"
 #include <glm/glm.hpp>
@@ -5060,8 +5061,12 @@ namespace
             asking.update(FRAME);
         }
 
-        // Five seconds of mining at a quarter second a swing is twenty.
-        check(started >= 18 && started <= 22,
+        // Five seconds of mining at six ticks a swing, which is
+        // Minecraft's, comes to about sixteen of them. Counted off
+        // the constant rather than written down, so lengthening a
+        // swing does not read as a broken one.
+        const int expected = static_cast<int>(5.0f / HeldItem::SWING_SECONDS);
+        check(started >= expected - 2 && started <= expected + 2,
               "mining swings over and over, " + std::to_string(started) + " times in five seconds");
 
         HeldItem everyFrame;
@@ -11510,6 +11515,72 @@ namespace
               "and it is its own light, so the ring can be seen from the island");
     }
 
+    void testTheHand()
+    {
+        section("the hand: where Minecraft puts it");
+
+        // An identity camera, so what comes back is camera space:
+        // +x right, +y up, +z forwards.
+        const glm::mat4 eye(1.0f);
+        HeldItem hand;
+
+        const glm::vec3 item = glm::vec3(hand.pose(eye, true)[3]);
+        check(std::fabs(item.x - 0.56f) < 0.001f,
+              "something held sits 0.56 out to the right, which is Mojang's 0.7 by 0.8");
+        check(std::fabs(item.y + 0.52f) < 0.001f, "and 0.52 down");
+        check(std::fabs(item.z - 0.72f) < 0.001f, "and 0.72 forward");
+
+        const glm::vec3 fist = glm::vec3(hand.pose(eye, false)[3]);
+        check(fist.x > item.x, "an empty hand sits further out than a full one");
+        check(fist.y > item.y, "and higher");
+        check(fist.z > item.z, "and further forward, which is where its fist lands");
+
+        // The axes stay a proper frame however it is turned, or the
+        // thing in it would be sheared.
+        for (int step = 0; step <= 10; ++step)
+        {
+            hand.setSwingForTest(HeldItem::SWING_SECONDS * (1.0f - step / 10.0f));
+            const glm::mat4 m = hand.pose(eye, true);
+            for (int axis = 0; axis < 3; ++axis)
+                check(std::fabs(glm::length(glm::vec3(m[axis])) - 1.0f) < 0.001f,
+                      "the hand's axes stay unit length through a swing");
+            check(std::fabs(glm::dot(glm::vec3(m[0]), glm::vec3(m[1]))) < 0.001f,
+                  "and square to each other");
+        }
+
+        section("the hand: the swing and the swap");
+
+        // Halfway through a swing the hand has gone left, up and
+        // forward, which is Minecraft's arc: it pulls back across you
+        // and punches out, rather than simply dropping.
+        hand.setSwingForTest(0.0f);
+        const glm::vec3 rest = glm::vec3(hand.pose(eye, true)[3]);
+        hand.setSwingForTest(HeldItem::SWING_SECONDS * 0.5f);
+        const glm::vec3 mid = glm::vec3(hand.pose(eye, true)[3]);
+        check(mid.x < rest.x, "mid-swing the hand comes in towards the middle");
+        check(mid.z > rest.z, "and out away from you");
+
+        hand.setSwingForTest(0.0f);
+
+        // And swapping what you carry drops it out of shot and brings
+        // it back, which is the only cue Minecraft gives you.
+        hand.setEquipForTest(0.0f);
+        const glm::vec3 raising = glm::vec3(hand.pose(eye, true)[3]);
+        check(std::fabs(raising.y - (rest.y - 0.6f)) < 0.001f,
+              "something being raised starts a whole 0.6 lower");
+        hand.setEquipForTest(1.0f);
+        check(glm::length(glm::vec3(hand.pose(eye, true)[3]) - rest) < 0.001f,
+              "and ends exactly where it rests");
+
+        // The swap takes about an eighth of a second, which is
+        // Minecraft's four tenths of the way per tick.
+        hand.setEquipForTest(0.0f);
+        float raised = 0.0f;
+        for (int tick = 0; tick < 3; ++tick)
+            raised = std::min(1.0f, raised + HeldItem::EQUIP_RATE * 0.05f);
+        check(raised >= 1.0f, "three ticks is enough to raise it");
+    }
+
     void testInterfaceScale()
     {
         section("the interface: how big it is drawn");
@@ -12026,6 +12097,7 @@ int runSelfTest()
     testTheEnd();
     testTheShulker();
     testInterfaceScale();
+    testTheHand();
 
     std::printf("\n%d checks, %d failed\n", g_checks, g_failures);
     return g_failures == 0 ? 0 : 1;

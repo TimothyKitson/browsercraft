@@ -273,11 +273,16 @@ void Application::drawItem(float x, float y, float size, StackId id, int count,
     // A single item shows no number, same as Minecraft.
     if (count > 1)
     {
+        // Minecraft draws the count in the bottom-right of a 16-pixel
+        // slot at the ordinary text size, so the scale follows the
+        // slot rather than being a number of its own: a hotbar slot
+        // and an inventory slot then carry the same stack the same
+        // way round.
         const std::string text = std::to_string(count);
-        const float scale = 1.8f;
+        const float scale = size / 16.0f;
         m_ui.textWithShadow(text,
-                            x + size - UIRenderer::textWidth(text, scale) - 4.0f,
-                            y + size - UIRenderer::textHeight(scale) - 3.0f,
+                            x + size + scale - UIRenderer::textWidth(text, scale),
+                            y + size - UIRenderer::textHeight(scale) + scale,
                             scale, TEXT_COLOR);
     }
 }
