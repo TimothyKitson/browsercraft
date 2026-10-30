@@ -1239,18 +1239,28 @@ bool Application::frame()
             // to be underfoot: spawn can land in a jungle, and a row
             // of blocks is no use behind a wall of leaves.
             for (int x = centreX - wide; x <= centreX + wide; ++x)
-                for (int z = centreZ - 12; z <= centreZ + 4; ++z)
+                for (int z = centreZ - 15; z <= centreZ + 4; ++z)
                 {
                     m_world->setBlock(x, baseY - 1, z, Blocks::Stone);
                     for (int y = baseY; y < baseY + 10; ++y)
                         m_world->setBlock(x, y, z, Blocks::Air);
                 }
 
+            // And a third row of what a mob leaves or a shell makes.
+            const BlockId SPOILS[] = {
+                Blocks::OchreFroglight, Blocks::VerdantFroglight,
+                Blocks::PearlescentFroglight, Blocks::ShulkerBox,
+                Blocks::Ice, Blocks::Beacon, Blocks::WitherSkull,
+                Blocks::Scaffolding,
+            };
+
             for (int i = 0; i < wide; ++i)
             {
                 m_world->setBlock(centreX - wide / 2 + i, baseY, centreZ, ROW[i]);
                 m_world->setBlock(centreX - wide / 2 + i, baseY, centreZ - 3,
                                   PLANTS[i]);
+                m_world->setBlock(centreX - wide / 2 + i, baseY, centreZ - 6,
+                                  SPOILS[i]);
             }
 
             // The crop needs its tilled earth, or it is a sprite
@@ -1280,10 +1290,10 @@ bool Application::frame()
             }
 
             m_player.position = glm::vec3(centreX + 0.5f, static_cast<float>(baseY),
-                                          centreZ - 9.5f);
+                                          centreZ - 12.5f);
             m_player.velocity = glm::vec3(0.0f);
             m_camera.position = m_player.eyePosition();
-            m_camera.setOrientation(90.0f, -10.0f);
+            m_camera.setOrientation(90.0f, -9.0f);
             m_pendingFurnaceLight = true;
 
             std::printf("[test] stood %d workstations and %d plants at y=%d\n",
@@ -5574,6 +5584,96 @@ void Application::tickStructureLairs(float deltaTime)
         }
     }
 
+    // Frogs, by the water. A swamp is where Minecraft puts them and
+    // where they look like they belong; the rest of the waterside
+    // gets a few as well, because a pond with nothing in it is a
+    // puddle.
+    {
+        constexpr int FROG_LIMIT = 6;
+
+        int already = 0;
+        for (const Mob& mob : m_entities.mobs())
+            if (mob.alive() && mob.typeId() == MobId::Frog) ++already;
+
+        if (already < FROG_LIMIT)
+        {
+            for (int tries = 0; tries < 16; ++tries)
+            {
+                const float angle = tries * 0.3927f;
+                const float reach = 8.0f + (tries % 4) * 5.0f;
+                const int x = px + static_cast<int>(std::cos(angle) * reach);
+                const int z = pz + static_cast<int>(std::sin(angle) * reach);
+
+                // Standing on dry land with water within a block or
+                // two of it, which is a bank rather than a field.
+                const int ground = gen.surfaceHeight(x, z);
+                if (ground <= WorldGen::SEA_LEVEL - 1) continue;
+                if (ground > WorldGen::SEA_LEVEL + 2) continue;
+
+                const bool besideWater =
+                    gen.surfaceHeight(x - 2, z) < WorldGen::SEA_LEVEL ||
+                    gen.surfaceHeight(x + 2, z) < WorldGen::SEA_LEVEL ||
+                    gen.surfaceHeight(x, z - 2) < WorldGen::SEA_LEVEL ||
+                    gen.surfaceHeight(x, z + 2) < WorldGen::SEA_LEVEL;
+                if (!besideWater) continue;
+
+                const glm::vec3 feet(x + 0.5f, static_cast<float>(ground + 1), z + 0.5f);
+                if (m_entities.spawnAt(MobId::Frog, feet, *m_world)) return;
+            }
+        }
+    }
+
+    // What comes through an open portal. Minecraft sends piglins; this
+    // sends magma cubes, because a frog with nothing to eat is a frog
+    // with nothing to do -- and a froglight nobody can ever have.
+    //
+    // Sampled near the player the way the rain and the crops are: a
+    // sweep for the one portal anybody builds would cost hundreds of
+    // thousands of lookups a second.
+    {
+        constexpr int CUBE_LIMIT = 3;
+
+        int already = 0;
+        for (const Mob& mob : m_entities.mobs())
+            if (mob.alive() && mob.typeId() == MobId::MagmaCube) ++already;
+
+        if (already < CUBE_LIMIT)
+        {
+            for (int tries = 0; tries < 40; ++tries)
+            {
+                m_growthSeed ^= m_growthSeed << 13;
+                m_growthSeed ^= m_growthSeed >> 17;
+                m_growthSeed ^= m_growthSeed << 5;
+
+                const int x = px + static_cast<int>(m_growthSeed % 24u) - 12;
+                const int z = pz + static_cast<int>((m_growthSeed >> 8) % 24u) - 12;
+                const int y = py + static_cast<int>((m_growthSeed >> 16) % 9u) - 4;
+                if (y < 1 || y + 2 >= Chunk::SY) continue;
+
+                if (m_world->getBlock(x, y, z) != Blocks::NetherPortal) continue;
+
+                // Out of the frame rather than inside it: a mob in the
+                // portal would be sent straight back through.
+                for (int dx = -1; dx <= 1; ++dx)
+                    for (int dz = -1; dz <= 1; ++dz)
+                    {
+                        if (dx == 0 && dz == 0) continue;
+                        if (m_world->getBlock(x + dx, y, z + dz) != Blocks::Air) continue;
+                        if (m_world->getBlock(x + dx, y + 1, z + dz) != Blocks::Air) continue;
+                        if (!isSolid(m_world->getBlock(x + dx, y - 1, z + dz))) continue;
+
+                        const glm::vec3 feet(x + dx + 0.5f, static_cast<float>(y),
+                                             z + dz + 0.5f);
+                        if (m_entities.spawnAt(MobId::MagmaCube, feet, *m_world))
+                        {
+                            m_audio.play(Sound::MobMagmaCubeSay, 0.7f, 0.9f);
+                            return;
+                        }
+                    }
+            }
+        }
+    }
+
     // And the monument, which wants water over it as well as a
     // footprint: a guardian on the roof is a fish on a roof.
     const Structures::Spot spot = gen.nearestMonument(px, pz, 1);
@@ -8397,6 +8497,18 @@ void Application::updateMobs(float deltaTime)
     {
         m_drops.spawn(nest + glm::vec3(0.0f, 0.3f, 0.0f), Items::Egg, 1);
         m_audio.play(Sound::MobChickenSay, 0.5f, 1.3f);
+    }
+
+    // And a frog that has eaten a magma cube leaves a light. Which of
+    // the three depends on the ground it is standing on, which is
+    // Minecraft's rule read off the biome rather than off the frog.
+    for (const glm::vec3& meal : m_entities.drainFrogMeals())
+    {
+        const BlockId light = froglightFor(
+            m_world->generator().biomeAt(static_cast<int>(std::floor(meal.x)),
+                                         static_cast<int>(std::floor(meal.z))));
+        m_drops.spawn(meal + glm::vec3(0.0f, 0.3f, 0.0f), light, 1);
+        m_audio.play(Sound::MobFrogSay, 0.7f, 0.8f);
     }
 }
 

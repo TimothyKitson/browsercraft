@@ -1,5 +1,6 @@
 #include "Core/Application.h"
 #include "World/WorldGen.h"
+#include "World/TrialChamber.h"
 #include "Game/VillageLoot.h"
 #include "Renderer/Atlas.h"
 #include "Game/Crafting.h"
@@ -441,6 +442,66 @@ namespace
         const Structures::Spot endCity = end.nearestEndCity(0, 0, 40);
         if (endCity.exists) sweep(end, endCity.chunkX, endCity.chunkZ, 2);
 
+        // A trial chamber, which is where the tuff bricks, the
+        // spawners and the vaults are. Left out, the audit called all
+        // four of those unreachable -- a sampling accident, like the
+        // village was.
+        {
+            const TrialChamber::Site chamber = over.nearestChamber(0, 0, 8);
+            if (chamber.exists)
+                sweep(over, chamber.x / Structures::CHUNK,
+                      chamber.z / Structures::CHUNK, 3);
+        }
+
+        // Somewhere the sea freezes. Walked to on its own rather than
+        // left to the biome sweep below: the temperature runs on a
+        // noise six hundred blocks across, so the odds of the first
+        // snowy chunk a walk finds happening to sit on a coast are
+        // poor -- and ice is only ever on a coast.
+        for (int ring = 0; ring < 400; ++ring)
+        {
+            bool found = false;
+            for (int step = 0; step < 16 && !found; ++step)
+            {
+                const float angle = step * 0.3927f;
+                const int cx = static_cast<int>(std::cos(angle) * ring);
+                const int cz = static_cast<int>(std::sin(angle) * ring);
+                const int wx = cx * Chunk::SX + 8;
+                const int wz = cz * Chunk::SZ + 8;
+                if (!over.freezesAt(wx, wz)) continue;
+                if (over.surfaceHeight(wx, wz) >= WorldGen::SEA_LEVEL) continue;
+                sweep(over, cx, cz, 1);
+                found = true;
+            }
+            if (found) break;
+        }
+
+        // And one chunk of every biome, walked out to the same way.
+        // Ice only ever appears where it is cold, and a seed whose
+        // nearest snow is a hundred chunks off would otherwise have
+        // the audit report the game is missing it.
+        for (int k = 0; k <= static_cast<int>(Biome::Swamp); ++k)
+        {
+            const Biome wanted = static_cast<Biome>(k);
+
+            // Four places in each, not one. A biome is not uniform:
+            // ice only forms where cold water reaches the surface,
+            // and the first snowy chunk a walk finds is as likely to
+            // be the middle of a snowfield as the edge of a lake.
+            int found = 0;
+            for (int ring = 0; ring < 260 && found < 4; ++ring)
+                for (int step = 0; step < 8 && found < 4; ++step)
+                {
+                    const float angle = step * 0.785398f;
+                    const int cx = static_cast<int>(std::cos(angle) * ring);
+                    const int cz = static_cast<int>(std::sin(angle) * ring);
+                    if (over.biomeAt(cx * Chunk::SX + 8, cz * Chunk::SZ + 8) != wanted)
+                        continue;
+                    sweep(over, cx, cz, 2);
+                    ++found;
+                }
+        }
+
         {
             int sx = 0, sz = 0;
             Structures::nearestStronghold(0, 0, seed, sx, sz);
@@ -470,21 +531,41 @@ namespace
             if (fort.exists) sweep(nether, fort.chunkX, fort.chunkZ, 2);
         }
 
+        // What a mob leaves on the ground. A wither skeleton's skull
+        // is a block, and the only route to one is killing the thing
+        // that is wearing it -- which nothing above can see.
+        for (int m = 0; m < mobTypeCount(); ++m)
+        {
+            const MobType& type = mobType(static_cast<MobId>(m));
+            if (isBlockStack(type.drop)) reachable.insert(type.drop);
+            if (isBlockStack(type.secondDrop)) reachable.insert(type.secondDrop);
+        }
+
         const int generated = static_cast<int>(reachable.size());
 
         // What the recipe book makes, and what a furnace makes of
         // what it makes. Smelting matters as much as crafting here:
         // bricks and dry sponge have no other route into the game.
         int crafted = 0;
-        std::vector<StackId> made = Crafting::everyOutput();
+
+        // Held in one vector and searched in that one vector.
+        // Written as std::find(everyOutput().begin(), everyOutput().end(), id)
+        // this built two separate vectors and compared an iterator
+        // into the first against an iterator into the second, which
+        // is undefined and in practice matched nearly every block
+        // there is. The whole block half of this audit reported
+        // "(none)" for months because of it, which is worse than
+        // having no audit at all: it said the thing was checked.
+        const std::vector<StackId> outputs = Crafting::everyOutput();
+
+        std::vector<StackId> made = outputs;
         for (int b = 0; b < static_cast<int>(Blocks::Count); ++b)
             made.push_back(static_cast<StackId>(b));
 
         for (StackId id : made)
         {
             if (isBlockStack(id) && !reachable.count(id) &&
-                std::find(Crafting::everyOutput().begin(), Crafting::everyOutput().end(), id) !=
-                    Crafting::everyOutput().end())
+                std::find(outputs.begin(), outputs.end(), id) != outputs.end())
             { reachable.insert(id); ++crafted; }
 
             const StackId fired = Smelting::resultOf(id);
@@ -511,8 +592,33 @@ namespace
 
             const char* why = nullptr;
             if (isDoor(id))                       why = "the other half, or the open state";
-            else if (isLadder(id) || isStairs(id) || isRail(id))
+            else if (isLadder(id) || isStairs(id) || isRail(id) ||
+                     isSign(id) || isFrame(id))
                                                   why = "another facing of a crafted block";
+
+            // A crop is sown, not set down, and the eight ids it
+            // spans are the eight stages of it growing.
+            else if (isCrop(id))                  why = "a crop, sown rather than placed";
+            else if (isCocoa(id))                 why = "a pod on a jungle trunk";
+
+            // The ones that keep what they are holding in their id.
+            else if (isComposter(id))             why = "a composter with something rotting in it";
+            else if (isCauldron(id))              why = "a cauldron with water in it";
+            else if (isCake(id))                  why = "a cake set down and eaten from";
+            else if (id == Blocks::LecternBook)   why = "a lectern with a book on it";
+            else if (id == Blocks::CandleLit)     why = "a candle somebody has lit";
+            else if (id == Blocks::SmokerLit || id == Blocks::BlastFurnaceLit)
+                                                  why = "a furnace that is burning";
+            else if (id == Blocks::NoteBlockLit || id == Blocks::ObserverLit)
+                                                  why = "the powered state of a block";
+
+            // Held as an item and laid down as a block.
+            else if (id == Blocks::RedstoneDust)  why = "dust, which is an item in the hand";
+            else if (id == Blocks::MelonStem0)    why = "sown from a melon seed";
+
+            // The one block in the game a mob makes rather than the
+            // world or the bench.
+            else if (isFroglight(id))             why = "left by a frog that ate a magma cube";
             else if (isPiston(id) || isPistonHead(id))
                                                   why = "a piston mid-stroke";
             else if (id == Blocks::FurnaceLit)    why = "a furnace that is burning";

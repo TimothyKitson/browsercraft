@@ -305,6 +305,8 @@ void AudioEngine::buildSounds()
                  Sound::MobShulkerDeath, "mob/shulker");
     loadMobVoice(Sound::MobDrownedSay, Sound::MobDrownedHurt,
                  Sound::MobDrownedDeath, "mob/drowned");
+    loadMobVoice(Sound::MobFrogSay, Sound::MobFrogHurt,
+                 Sound::MobFrogDeath, "mob/frog");
     loadVariants(Sound::Rain, "weather/rain", 1);
     loadVariants(Sound::Thunder, "weather/thunder", 1);
 
@@ -935,6 +937,27 @@ void AudioEngine::buildSounds()
         s.addTone(0.85f, 140.0f, 50.0f, 3.2f, 0.58f, true);
         s.addNoise(0.85f, 320.0f, 3.4f, 0.24f, true, 893);
         s.finish(0.64f);
+    }
+
+    // The frog: a croak, which is a short low tone with a rasp over
+    // it and nothing else at all.
+    {
+        Synth s = make(Sound::MobFrogSay);
+        s.addTone(0.22f, 210.0f, 150.0f, 9.0f, 0.60f, true);
+        s.addNoise(0.22f, 900.0f, 11.0f, 0.22f, true, 901);
+        s.finish(0.54f);
+    }
+    {
+        Synth s = make(Sound::MobFrogHurt);
+        s.addTone(0.16f, 380.0f, 190.0f, 16.0f, 0.62f, true);
+        s.addNoise(0.14f, 1400.0f, 18.0f, 0.24f, false, 902);
+        s.finish(0.58f);
+    }
+    {
+        Synth s = make(Sound::MobFrogDeath);
+        s.addTone(0.34f, 260.0f, 110.0f, 6.0f, 0.58f, true);
+        s.addNoise(0.34f, 700.0f, 7.0f, 0.22f, true, 903);
+        s.finish(0.58f);
     }
 
     // The breeze: wind, which is noise with no tone under it and a

@@ -469,6 +469,13 @@ namespace Blocks
         // because a stack here has nowhere to carry a chest inside it.
         ShulkerBox,
 
+        // What a frog leaves when it eats a magma cube. Three of them,
+        // by the climate the frog grew up in, and the brightest light
+        // in the game that is not on fire.
+        OchreFroglight,
+        VerdantFroglight,
+        PearlescentFroglight,
+
         Count
     };
 }
@@ -651,6 +658,11 @@ inline bool isDeepDark(BlockId id)
 inline bool isContainerBlock(BlockId id)
 {
     return id == Blocks::Chest || id == Blocks::Barrel || id == Blocks::ShulkerBox;
+}
+
+inline bool isFroglight(BlockId id)
+{
+    return id >= Blocks::OchreFroglight && id <= Blocks::PearlescentFroglight;
 }
 
 inline bool isGeode(BlockId id)

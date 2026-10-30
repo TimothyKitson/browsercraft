@@ -324,6 +324,31 @@ void EntityManager::update(float deltaTime, const World& world,
         if (mob.takeEggReport()) m_laidEggs.push_back(mob.position());
     }
 
+    // A frog eats a magma cube it can reach. This is the whole reason
+    // the frog is in the game, and the only way to a froglight.
+    //
+    // Walked here rather than inside the loop above: eating one kills
+    // it, and killing a mob while the list is being stepped is how a
+    // reference goes stale. There are never many frogs, and the inner
+    // walk stops at the first cube close enough.
+    constexpr float FROG_REACH = 1.6f;
+    for (Mob& frog : m_mobs)
+    {
+        if (frog.typeId() != MobId::Frog || !frog.alive() || frog.baby()) continue;
+
+        for (Mob& cube : m_mobs)
+        {
+            if (cube.typeId() != MobId::MagmaCube || !cube.alive()) continue;
+
+            const glm::vec3 away = cube.position() - frog.position();
+            if (glm::dot(away, away) > FROG_REACH * FROG_REACH) continue;
+
+            cube.damage(cube.health(), glm::vec3(0.0f));
+            m_frogMeals.push_back(cube.position());
+            break;
+        }
+    }
+
     // Drop anything dead-and-done, or far enough off that nobody will
     // miss it.
     m_mobs.erase(
@@ -678,6 +703,13 @@ std::vector<glm::vec3> EntityManager::drainLaidEggs()
 {
     std::vector<glm::vec3> all;
     all.swap(m_laidEggs);
+    return all;
+}
+
+std::vector<glm::vec3> EntityManager::drainFrogMeals()
+{
+    std::vector<glm::vec3> all;
+    all.swap(m_frogMeals);
     return all;
 }
 

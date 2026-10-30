@@ -3816,6 +3816,45 @@ namespace
         check(Tools::kindOf(Items::Trident) == Tools::Kind::Trident,
               "and it is its own kind of weapon");
 
+        section("frogs and froglights");
+
+        const MobType& frog = mobType(MobId::Frog);
+        check(frog.spawnClass == SpawnClass::Passive, "a frog does nobody any harm");
+        check(frog.attackDamage == 0, "and does not fight");
+        check(frog.breedingFood == Items::MagmaCream,
+              "it follows the thing its dinner is made of");
+        check(frog.walkSpeed > 0.0f, "and it hops about");
+
+        // Three lights by the climate, which is Minecraft's rule read
+        // off the ground the frog is standing on.
+        check(froglightFor(Biome::Jungle) == Blocks::PearlescentFroglight,
+              "a frog in the heat leaves the pearl one");
+        check(froglightFor(Biome::Desert) == Blocks::PearlescentFroglight,
+              "and so does one in the sand");
+        check(froglightFor(Biome::Snowy) == Blocks::VerdantFroglight,
+              "a frog in the cold leaves the green one");
+        check(froglightFor(Biome::Swamp) == Blocks::OchreFroglight,
+              "and everywhere in between leaves the ochre one");
+        check(froglightFor(Biome::Plains) == Blocks::OchreFroglight,
+              "which is the common one, as it should be");
+
+        for (int k = 0; k <= static_cast<int>(Biome::Swamp); ++k)
+            check(isFroglight(froglightFor(static_cast<Biome>(k))),
+                  "every climate leaves a froglight of some colour");
+
+        const BlockId LIGHTS[] = { Blocks::OchreFroglight, Blocks::VerdantFroglight,
+                                   Blocks::PearlescentFroglight };
+        for (BlockId light : LIGHTS)
+        {
+            check(isFroglight(light), std::string(blockInfo(light).name) + " is a froglight");
+            check(blockInfo(light).lightEmission == 15,
+                  "and the brightest light there is");
+            check(isObtainable(light), "and a block you can hold");
+            check(blockDrop(light) == light, "which gives back itself");
+        }
+        check(!isFroglight(Blocks::Glowstone), "glowstone is not one");
+        check(!isFroglight(Blocks::Stone), "nor is stone");
+
         // Two shells round a chest, and the box is a box.
         check(isContainerBlock(Blocks::ShulkerBox), "a shulker box holds things");
         check(isObtainable(Blocks::ShulkerBox), "and is a block you can hold");
@@ -5931,6 +5970,9 @@ namespace
                 // to the sea, and both are put down by hand where
                 // they belong rather than by the night spawner.
                 case MobId::Shulker: case MobId::Drowned:
+                // The frog belongs to the waterside, and is put down
+                // there by hand rather than by the night spawner.
+                case MobId::Frog:
                 case MobId::EnderDragon:
                 case MobId::Wither:
                     meetable = true;

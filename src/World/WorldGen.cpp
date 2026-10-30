@@ -136,7 +136,7 @@ Biome WorldGen::biomeAt(int worldX, int worldZ) const
     if (height < SEA_LEVEL - 1) return Biome::Ocean;
     if (height <= SEA_LEVEL) return Biome::Beach;
     if (height > SEA_LEVEL + 34) return Biome::Mountains;
-    if (temperature < -0.45f) return Biome::Snowy;
+    if (temperature < SNOW_TEMPERATURE) return Biome::Snowy;
 
     // Everything hot, sorted by how wet it is: rainforest, then the dry
     // grassland, then sand. The desert test used to take the whole of
@@ -415,10 +415,22 @@ void WorldGen::generateColumns(Chunk& chunk) const
                 chunk.setBlockRaw(lx, y, lz, block);
             }
 
-            // Fill oceans/lakes up to sea level.
+            // Fill oceans/lakes up to sea level, and freeze the top
+            // of the cold ones.
+            //
+            // Asked of the temperature rather than the biome, because
+            // the biome can never be the answer: a column at or below
+            // sea level comes out as Ocean or Beach long before the
+            // cold test is reached, so "snowy and at sea level" is a
+            // condition no column in any world has ever met. Ice had a
+            // texture, a name, a place in the creative palette and no
+            // way at all of appearing in a world -- which is exactly
+            // what the block audit is for, and what it said the moment
+            // it was repaired.
+            const bool cold = freezesAt(wx, wz);
             for (int y = surface + 1; y <= SEA_LEVEL; ++y)
             {
-                bool freezes = (biome == Biome::Snowy) && (y == SEA_LEVEL);
+                const bool freezes = cold && (y == SEA_LEVEL);
                 chunk.setBlockRaw(lx, y, lz, freezes ? Blocks::Ice : Blocks::Water);
             }
         }
@@ -1273,6 +1285,27 @@ void WorldGen::stampInterior(Chunk& chunk, const Village::Building& building, in
             put(chunk, cx, ground + 1, cz, Blocks::Composter0);
             break;
         }
+    }
+}
+
+BlockId froglightFor(Biome biome)
+{
+    switch (biome)
+    {
+        // The hot places. Minecraft's warm frog is the pearlescent
+        // one, which is the rarest of the three for exactly this
+        // reason: there is nowhere warm with water in it.
+        case Biome::Desert:
+        case Biome::Jungle:
+        case Biome::Savanna:
+            return Blocks::PearlescentFroglight;
+
+        case Biome::Snowy:
+        case Biome::Mountains:
+            return Blocks::VerdantFroglight;
+
+        default:
+            return Blocks::OchreFroglight;
     }
 }
 
@@ -2657,6 +2690,11 @@ void WorldGen::decorate(Chunk& chunk) const
 // that plants them and by the spawn finder that has to keep out of
 // their way: the two read the same dice, so a spawn chosen clear of a
 // tree stays clear once the chunk is built.
+bool WorldGen::freezesAt(int worldX, int worldZ) const
+{
+    return temperatureAt(worldX, worldZ) < SNOW_TEMPERATURE;
+}
+
 bool WorldGen::treeStandsAt(int wx, int wz) const
 {
     float treeChance = 0.0f;

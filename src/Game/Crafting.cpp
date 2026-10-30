@@ -260,6 +260,13 @@ namespace
                          Blocks::Air,    Items::Stick,   Blocks::Air },
           0, Items::Sign, 3 },
 
+        // Cobblestone and a vine. Minecraft's recipe, and the only
+        // way to mossy cobble that does not involve finding a village
+        // built in a swamp -- which is where the one in this world
+        // was, and the block audit said so.
+        { true, 0, 0, { Blocks::Cobblestone, Blocks::Vine }, 2,
+          Blocks::MossyCobblestone, 1 },
+
         // Two shells round a chest, which is Minecraft's.
         { false, 1, 3, { Items::ShulkerShell,
                          Blocks::Chest,

@@ -36,6 +36,12 @@ enum class Biome : uint8_t
 
 const char* biomeName(Biome biome);
 
+// Which froglight a frog that grew up here leaves behind. Minecraft
+// decides it by the climate the tadpole grew up in: warm gives the
+// pearl, cold gives the green, and everywhere in between gives the
+// ochre one.
+BlockId froglightFor(Biome biome);
+
 // Terrain generation. Every method is const and uses only the seeded noise
 // tables, so worker threads can generate different chunks in parallel from
 // a single shared instance.
@@ -194,6 +200,12 @@ public:
     // The top of the End island under a place, or -1 for open void.
     int endGroundAt(int worldX, int worldZ) const;
 
+    // How cold a place has to be for snow to lie on it and for the
+    // water in it to freeze. One number, read by the biome test and
+    // by the fill that lays the ice, so a frozen sea is always the
+    // sea beside a snowfield rather than somewhere else entirely.
+    static constexpr float SNOW_TEMPERATURE = -0.45f;
+
     static constexpr int END_CITY_TALL = 26;
 
     // Half the tower's footprint. The top storey hangs one block out
@@ -284,6 +296,13 @@ public:
     // finder and --selftest can ask the same question the decorator
     // asks, rather than each keeping its own copy of the dice.
     bool treeStandsAt(int wx, int wz) const;
+
+    // Whether the water at a place freezes over. Asked by the fill
+    // that lays the ice and by the audit that walks out looking for
+    // some: one source of truth, so a walk that finds nowhere cold
+    // means there is nowhere cold rather than that the walk and the
+    // generator disagreed about what cold means.
+    bool freezesAt(int worldX, int worldZ) const;
 
 private:
     uint32_t m_seed;

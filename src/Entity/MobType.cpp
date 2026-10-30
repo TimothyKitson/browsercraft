@@ -338,6 +338,45 @@ namespace
             t.model.push_back(mirrored(mc(Part::LegBackLeft, 0, 16, 4, 12, 4, -2, 0, -2, 2, 12, 0)));
         }
         {
+            // The frog. It does nothing to anybody and is only in the
+            // game for one reason: it eats a magma cube, and a
+            // froglight is what is left.
+            MobType& t = table[static_cast<size_t>(MobId::Frog)];
+            t.id = MobId::Frog;
+            t.experience = 1;
+            t.voice = Sound::MobFrogSay;
+            t.hurtVoice = Sound::MobFrogHurt;
+            t.deathVoice = Sound::MobFrogDeath;
+            t.name = "Frog";
+            t.texture = "frog";
+            t.sheetWidth = 64;
+            t.sheetHeight = 64;
+            t.spawnClass = SpawnClass::Passive;
+            t.maxHealth = 10;
+            t.width = 0.5f;
+            t.height = 0.5f;
+            t.walkSpeed = 1.6f;
+            t.limbSwing = 0.6f;
+
+            // Magma cream, which is what a magma cube leaves. A frog
+            // following the thing its dinner is made of is as close
+            // as this gets to Minecraft leading one on a slimeball.
+            t.breedingFood = Items::MagmaCream;
+
+            t.bodyColour = rgb(140, 170, 92);
+            t.headColour = rgb(164, 196, 108);
+            t.eyeColour = rgb(226, 150, 60);
+
+            // A body with a head on the front of it and four stubby
+            // legs: eight pixels tall in all, which is half a block.
+            t.model.push_back(mc(Part::Body, 0, 0, 8, 4, 8, -4, 18, -4, 0, 0, 0));
+            t.model.push_back(mc(Part::Head, 0, 14, 6, 3, 4, -3, 17, 2, 0, 0, 0));
+            t.model.push_back(mc(Part::LegFrontRight, 0, 24, 2, 2, 2, 2, 22, 2, 0, 0, 0));
+            t.model.push_back(mirrored(mc(Part::LegFrontLeft, 0, 24, 2, 2, 2, -4, 22, 2, 0, 0, 0)));
+            t.model.push_back(mc(Part::LegBackRight, 0, 24, 2, 2, 2, 2, 22, -4, 0, 0, 0));
+            t.model.push_back(mirrored(mc(Part::LegBackLeft, 0, 24, 2, 2, 2, -4, 22, -4, 0, 0, 0)));
+        }
+        {
             MobType& t = table[static_cast<size_t>(MobId::Skeleton)];
             t.id = MobId::Skeleton;
             t.experience = 5;

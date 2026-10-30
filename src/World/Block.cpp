@@ -365,6 +365,10 @@ namespace
         { "Item Frame",   ItemFrameTile, ItemFrameTile,  ItemFrameTile,  false, false, RenderType::Ladder, 0,   0.3f },
 
         { "Shulker Box",  ShulkerBoxTile,ShulkerBoxTile, ShulkerBoxTile, true,  true,  RenderType::Cube,   0,   2.0f },
+
+        { "Ochre Froglight", OchreFroglightTop, OchreFroglightTop, OchreFroglightSide, true, true, RenderType::Cube, 15, 0.3f },
+        { "Verdant Froglight", VerdantFroglightTop, VerdantFroglightTop, VerdantFroglightSide, true, true, RenderType::Cube, 15, 0.3f },
+        { "Pearlescent Froglight", PearlescentFroglightTop, PearlescentFroglightTop, PearlescentFroglightSide, true, true, RenderType::Cube, 15, 0.3f },
     };
 }
 

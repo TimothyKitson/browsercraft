@@ -255,6 +255,9 @@ namespace Tiles
         SignTile,
         ItemFrameTile,
         ShulkerBoxTile,
+        OchreFroglightTop, OchreFroglightSide,
+        VerdantFroglightTop, VerdantFroglightSide,
+        PearlescentFroglightTop, PearlescentFroglightSide,
 
         RainDrop,
         SnowFlake,

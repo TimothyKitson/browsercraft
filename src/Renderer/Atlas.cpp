@@ -2846,6 +2846,34 @@ namespace
         }
     }
 
+    // A froglight. Minecraft's three are the same block in three
+    // colours, with the glow running in bands down it.
+    void paintFroglight(Tile& t, Color glow, Color rind, int salt, bool top)
+    {
+        t.fill(rind);
+        for (int y = 0; y < Tile::N; ++y)
+            for (int x = 0; x < Tile::N; ++x)
+            {
+                const bool lit = top ? (((x / 3) + (y / 3)) % 2) == 0
+                                     : ((x / 3) % 2) == 0;
+                if (lit) t.set(x, y, glow);
+            }
+        t.speckle(6, salt);
+    }
+
+    void paintOchreTop(Tile& t)
+    { paintFroglight(t, Color{ 248, 210, 110 }, Color{ 188, 150, 70 }, 651, true); }
+    void paintOchreSide(Tile& t)
+    { paintFroglight(t, Color{ 248, 210, 110 }, Color{ 188, 150, 70 }, 652, false); }
+    void paintVerdantTop(Tile& t)
+    { paintFroglight(t, Color{ 190, 238, 150 }, Color{ 118, 170, 96 }, 653, true); }
+    void paintVerdantSide(Tile& t)
+    { paintFroglight(t, Color{ 190, 238, 150 }, Color{ 118, 170, 96 }, 654, false); }
+    void paintPearlTop(Tile& t)
+    { paintFroglight(t, Color{ 244, 210, 236 }, Color{ 186, 150, 182 }, 655, true); }
+    void paintPearlSide(Tile& t)
+    { paintFroglight(t, Color{ 244, 210, 236 }, Color{ 186, 150, 182 }, 656, false); }
+
     void paintShulkerBox(Tile& t)
     {
         t.fill(Color{ 148, 112, 158 });
@@ -5821,6 +5849,12 @@ namespace
         { Tiles::ItemItemFrame, paintItemFrameBorder },
         { Tiles::ItemElytra, paintItemElytra },
         { Tiles::ShulkerBoxTile, paintShulkerBox },
+        { Tiles::OchreFroglightTop, paintOchreTop },
+        { Tiles::OchreFroglightSide, paintOchreSide },
+        { Tiles::VerdantFroglightTop, paintVerdantTop },
+        { Tiles::VerdantFroglightSide, paintVerdantSide },
+        { Tiles::PearlescentFroglightTop, paintPearlTop },
+        { Tiles::PearlescentFroglightSide, paintPearlSide },
         { Tiles::ItemShulkerShell, paintItemShulkerShell },
         { Tiles::ItemTrident, paintItemTrident },
         { Tiles::ItemBowl, paintItemBowl },
@@ -6357,6 +6391,12 @@ namespace
         { Tiles::SignTile,      { "oak_planks", "planks_oak", nullptr },               Tinting::None,    0,   false },
         { Tiles::ItemFrameTile, { "item_frame", nullptr },                             Tinting::None,    0,   false },
         { Tiles::ShulkerBoxTile,{ "shulker_box", nullptr },                            Tinting::None,    0,   false },
+        { Tiles::OchreFroglightTop,  { "ochre_froglight_top", nullptr },               Tinting::None,    0,   false },
+        { Tiles::OchreFroglightSide, { "ochre_froglight_side", nullptr },              Tinting::None,    0,   false },
+        { Tiles::VerdantFroglightTop,  { "verdant_froglight_top", nullptr },           Tinting::None,    0,   false },
+        { Tiles::VerdantFroglightSide, { "verdant_froglight_side", nullptr },          Tinting::None,    0,   false },
+        { Tiles::PearlescentFroglightTop,  { "pearlescent_froglight_top", nullptr },   Tinting::None,    0,   false },
+        { Tiles::PearlescentFroglightSide, { "pearlescent_froglight_side", nullptr },  Tinting::None,    0,   false },
         { Tiles::PistonTop,     { "piston_side", nullptr },                            Tinting::None,    0,   false },
         { Tiles::PistonSide,    { "piston_side", nullptr },                            Tinting::None,    0,   false },
         { Tiles::PistonFace,    { "piston_top", "piston_top_normal", nullptr },         Tinting::None,    0,   false },
