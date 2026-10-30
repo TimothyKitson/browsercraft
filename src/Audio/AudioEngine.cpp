@@ -309,6 +309,8 @@ void AudioEngine::buildSounds()
                  Sound::MobFrogDeath, "mob/frog");
     loadMobVoice(Sound::MobGhastSay, Sound::MobGhastHurt,
                  Sound::MobGhastDeath, "mob/ghast");
+    loadMobVoice(Sound::MobSquidSay, Sound::MobSquidHurt,
+                 Sound::MobSquidDeath, "mob/squid");
     loadVariants(Sound::Rain, "weather/rain", 1);
     loadVariants(Sound::Thunder, "weather/thunder", 1);
 
@@ -960,6 +962,27 @@ void AudioEngine::buildSounds()
         s.addTone(0.34f, 260.0f, 110.0f, 6.0f, 0.58f, true);
         s.addNoise(0.34f, 700.0f, 7.0f, 0.22f, true, 903);
         s.finish(0.58f);
+    }
+
+    // The squid: a wet knock, almost all noise and gone at once.
+    // There is not much of a voice to give a thing with no mouth.
+    {
+        Synth s = make(Sound::MobSquidSay);
+        s.addNoise(0.18f, 700.0f, 14.0f, 0.26f, true, 921);
+        s.addTone(0.16f, 170.0f, 120.0f, 14.0f, 0.26f, true);
+        s.finish(0.46f);
+    }
+    {
+        Synth s = make(Sound::MobSquidHurt);
+        s.addNoise(0.16f, 1100.0f, 18.0f, 0.30f, false, 922);
+        s.addTone(0.14f, 240.0f, 150.0f, 18.0f, 0.28f, true);
+        s.finish(0.50f);
+    }
+    {
+        Synth s = make(Sound::MobSquidDeath);
+        s.addNoise(0.40f, 560.0f, 6.0f, 0.28f, true, 923);
+        s.addTone(0.36f, 150.0f, 80.0f, 6.0f, 0.26f, true);
+        s.finish(0.52f);
     }
 
     // The ghast: a long wail that falls away. Mostly tone, almost no

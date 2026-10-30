@@ -1239,7 +1239,7 @@ bool Application::frame()
             // to be underfoot: spawn can land in a jungle, and a row
             // of blocks is no use behind a wall of leaves.
             for (int x = centreX - wide; x <= centreX + wide; ++x)
-                for (int z = centreZ - 15; z <= centreZ + 4; ++z)
+                for (int z = centreZ - 22; z <= centreZ + 4; ++z)
                 {
                     m_world->setBlock(x, baseY - 1, z, Blocks::Stone);
                     for (int y = baseY; y < baseY + 10; ++y)
@@ -1289,15 +1289,107 @@ bool Application::frame()
                 m_frames.at(frame) = ItemStack{ SHOWN[i], 1 };
             }
 
-            m_player.position = glm::vec3(centreX + 0.5f, static_cast<float>(baseY),
-                                          centreZ - 12.5f);
+            // And the sixteen colours, in Minecraft's own order, in
+            // two rows of eight. They are the one thing here that is
+            // only worth looking at: a number says nothing about
+            // whether a colour came out right.
+            for (int colour = 0; colour < DYE_COLOURS; ++colour)
+            {
+                const int row = colour / 8;
+                const int column = colour % 8;
+                m_world->setBlock(centreX - wide / 2 + column, baseY,
+                                  centreZ - 9 - row * 3, woolOfColour(colour));
+            }
+
+            // High enough up to see over five rows at once, on a perch
+            // of its own so the player is not standing in mid-air.
+            const int perchZ = centreZ - 19;
+            for (int y = baseY; y <= baseY + 3; ++y)
+                m_world->setBlock(centreX, y, perchZ, Blocks::Stone);
+
+            m_player.position = glm::vec3(centreX + 0.5f, static_cast<float>(baseY + 4),
+                                          perchZ + 0.5f);
             m_player.velocity = glm::vec3(0.0f);
             m_camera.position = m_player.eyePosition();
-            m_camera.setOrientation(90.0f, -9.0f);
+            m_camera.setOrientation(90.0f, -22.0f);
             m_pendingFurnaceLight = true;
 
-            std::printf("[test] stood %d workstations and %d plants at y=%d\n",
-                        wide, wide, baseY);
+            std::printf("[test] stood %d workstations, %d plants and %d wools at y=%d\n",
+                        wide, wide, DYE_COLOURS, baseY);
+            std::fflush(stdout);
+        }
+
+        // Dev aid: a stone tank full of water, with the three things
+        // that live in water put into it. Nothing else shows whether
+        // they can be: the sea is a long way from any spawn, and the
+        // spawn would refuse them in silence rather than complain.
+        if (m_swimTest && m_worldReady && !m_swimTestDone)
+        {
+            m_swimTestDone = true;
+
+            const int baseY = static_cast<int>(std::floor(m_player.position.y));
+            const int centreX = static_cast<int>(std::floor(m_player.position.x));
+            const int centreZ = static_cast<int>(std::floor(m_player.position.z));
+
+            const int tankTop = baseY - 1;
+            const int tankFloor = baseY - 7;
+
+            // A flat stone apron, so the tank is not half way up a hill.
+            for (int x = centreX - 11; x <= centreX + 11; ++x)
+                for (int z = centreZ - 11; z <= centreZ + 19; ++z)
+                {
+                    m_world->setBlock(x, baseY - 1, z, Blocks::Stone);
+                    for (int y = baseY; y < baseY + 10; ++y)
+                        m_world->setBlock(x, y, z, Blocks::Air);
+                }
+
+            // The tank itself: a stone shell, water inside, its surface
+            // level with the apron it is sunk into. Looked at from
+            // outside, water is a lid rather than a window -- so the
+            // camera goes in with them.
+            for (int x = centreX - 9; x <= centreX + 9; ++x)
+                for (int z = centreZ - 7; z <= centreZ + 17; ++z)
+                    for (int y = tankFloor; y <= tankTop; ++y)
+                    {
+                        const bool shell = x == centreX - 9 || x == centreX + 9 ||
+                                           z == centreZ - 7 || z == centreZ + 17 ||
+                                           y == tankFloor;
+                        m_world->setBlock(x, y, z, shell ? Blocks::Stone : Blocks::Water);
+                    }
+
+            // Lamps in the floor. Deep water swallows daylight, and a
+            // silhouette proves nothing about a model.
+            for (int x = centreX - 6; x <= centreX + 6; x += 3)
+                for (int z = centreZ - 3; z <= centreZ + 15; z += 3)
+                    m_world->setBlock(x, tankFloor, z, Blocks::Glowstone);
+
+            struct Swimmer { MobId id; float x; float y; float z; };
+            const Swimmer SWIMMERS[] = {
+                { MobId::Squid,    centreX + 0.5f, tankFloor + 3.0f, centreZ + 1.5f },
+                { MobId::Squid,    centreX - 2.5f, tankFloor + 4.0f, centreZ + 3.5f },
+                { MobId::Drowned,  centreX - 3.5f, tankFloor + 1.0f, centreZ + 1.5f },
+                { MobId::Guardian, centreX + 3.5f, tankFloor + 3.0f, centreZ + 2.5f },
+            };
+
+            int swimming = 0;
+            for (const Swimmer& who : SWIMMERS)
+                if (m_entities.spawnAt(who.id, glm::vec3(who.x, who.y, who.z), *m_world))
+                    ++swimming;
+
+            m_player.position = glm::vec3(centreX + 0.5f,
+                                          static_cast<float>(tankFloor + 1),
+                                          centreZ - 2.5f);
+            m_player.velocity = glm::vec3(0.0f);
+            m_camera.position = m_player.eyePosition();
+            m_camera.setOrientation(90.0f, 10.0f);
+            m_freezeMobs = true;
+
+            // The photographer is in the water with them, and a lungful
+            // only lasts so long.
+            m_player.mode = GameMode::Creative;
+
+            std::printf("[test] %d of %d swimmers took to the water\n",
+                        swimming, static_cast<int>(std::size(SWIMMERS)));
             std::fflush(stdout);
         }
 
@@ -5687,6 +5779,41 @@ void Application::tickStructureLairs(float deltaTime)
                             return;
                         }
                     }
+            }
+        }
+    }
+
+    // Squid, in open water. They do nothing to anybody; what they
+    // are for is that an ocean with nothing alive in it reads as a
+    // texture rather than a place -- and they are the only black in
+    // the game.
+    {
+        constexpr int SQUID_LIMIT = 6;
+
+        int already = 0;
+        for (const Mob& mob : m_entities.mobs())
+            if (mob.alive() && mob.typeId() == MobId::Squid) ++already;
+
+        if (already < SQUID_LIMIT)
+        {
+            for (int tries = 0; tries < 16; ++tries)
+            {
+                const float angle = tries * 0.3927f;
+                const float reach = 10.0f + (tries % 4) * 6.0f;
+                const int x = px + static_cast<int>(std::cos(angle) * reach);
+                const int z = pz + static_cast<int>(std::sin(angle) * reach);
+
+                const int floorY = gen.surfaceHeight(x, z);
+                if (floorY >= WorldGen::SEA_LEVEL - 3) continue;
+
+                // Well off the bottom, where a squid actually swims.
+                const int y = floorY + 2 + (tries % 3);
+                if (y >= WorldGen::SEA_LEVEL) continue;
+                if (m_world->getBlock(x, y, z) != Blocks::Water) continue;
+                if (m_world->getBlock(x, y + 1, z) != Blocks::Water) continue;
+
+                const glm::vec3 feet(x + 0.5f, static_cast<float>(y), z + 0.5f);
+                if (m_entities.spawnAt(MobId::Squid, feet, *m_world)) return;
             }
         }
     }

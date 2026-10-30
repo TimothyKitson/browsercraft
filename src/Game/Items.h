@@ -225,6 +225,20 @@ namespace Items
         // as well; nothing here can throw a thing and get it back.
         Trident,
 
+        // The sixteen dyes, in Minecraft's order. White is nought and
+        // black is fifteen, and the wool a dye makes shares its
+        // number -- which is what lets one recipe cover all sixteen
+        // rather than sixteen recipes covering one each.
+        DyeWhite, DyeOrange, DyeMagenta, DyeLightBlue, DyeYellow, DyeLime,
+        DyePink, DyeGray, DyeLightGray, DyeCyan, DyePurple, DyeBlue,
+        DyeBrown, DyeGreen, DyeRed, DyeBlack,
+
+        // Out of the ground, and the only blue there is.
+        LapisLazuli,
+
+        // Out of a squid, and the only black there is.
+        InkSac,
+
         // Netherite, and the tier above diamond it makes.
         //
         // The nine tools and pieces are at the end of the list rather
@@ -277,6 +291,21 @@ StackId blockDrop(BlockId id);
 const char* displayName(StackId id);
 int atlasTileFor(StackId id);
 int maxStackOf(StackId id);
+
+// A dye, and which of the sixteen colours it is. The dyes are
+// contiguous and in the same order as the wools, so this is
+// arithmetic rather than a table.
+inline bool isDye(StackId id)
+{
+    return id >= Items::DyeWhite && id <= Items::DyeBlack;
+}
+inline int dyeColour(StackId id) { return isDye(id) ? id - Items::DyeWhite : 0; }
+inline StackId dyeOfColour(int colour)
+{
+    if (colour < 0) colour = 0;
+    if (colour > 15) colour = 15;
+    return static_cast<StackId>(Items::DyeWhite + colour);
+}
 
 // Whether an animal will follow and breed for it.
 bool isBreedingFood(StackId id);

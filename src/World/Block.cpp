@@ -366,6 +366,24 @@ namespace
 
         { "Shulker Box",  ShulkerBoxTile,ShulkerBoxTile, ShulkerBoxTile, true,  true,  RenderType::Cube,   0,   2.0f },
 
+        { "Orange Wool",      WoolFirst +  0, WoolFirst +  0, WoolFirst +  0, true, true, RenderType::Cube, 0, 0.8f },
+        { "Magenta Wool",     WoolFirst +  1, WoolFirst +  1, WoolFirst +  1, true, true, RenderType::Cube, 0, 0.8f },
+        { "Light Blue Wool",  WoolFirst +  2, WoolFirst +  2, WoolFirst +  2, true, true, RenderType::Cube, 0, 0.8f },
+        { "Yellow Wool",      WoolFirst +  3, WoolFirst +  3, WoolFirst +  3, true, true, RenderType::Cube, 0, 0.8f },
+        { "Lime Wool",        WoolFirst +  4, WoolFirst +  4, WoolFirst +  4, true, true, RenderType::Cube, 0, 0.8f },
+        { "Pink Wool",        WoolFirst +  5, WoolFirst +  5, WoolFirst +  5, true, true, RenderType::Cube, 0, 0.8f },
+        { "Gray Wool",        WoolFirst +  6, WoolFirst +  6, WoolFirst +  6, true, true, RenderType::Cube, 0, 0.8f },
+        { "Light Gray Wool",  WoolFirst +  7, WoolFirst +  7, WoolFirst +  7, true, true, RenderType::Cube, 0, 0.8f },
+        { "Cyan Wool",        WoolFirst +  8, WoolFirst +  8, WoolFirst +  8, true, true, RenderType::Cube, 0, 0.8f },
+        { "Purple Wool",      WoolFirst +  9, WoolFirst +  9, WoolFirst +  9, true, true, RenderType::Cube, 0, 0.8f },
+        { "Blue Wool",        WoolFirst + 10, WoolFirst + 10, WoolFirst + 10, true, true, RenderType::Cube, 0, 0.8f },
+        { "Brown Wool",       WoolFirst + 11, WoolFirst + 11, WoolFirst + 11, true, true, RenderType::Cube, 0, 0.8f },
+        { "Green Wool",       WoolFirst + 12, WoolFirst + 12, WoolFirst + 12, true, true, RenderType::Cube, 0, 0.8f },
+        { "Red Wool",         WoolFirst + 13, WoolFirst + 13, WoolFirst + 13, true, true, RenderType::Cube, 0, 0.8f },
+        { "Black Wool",       WoolFirst + 14, WoolFirst + 14, WoolFirst + 14, true, true, RenderType::Cube, 0, 0.8f },
+
+        { "Lapis Ore",    LapisOreTile,  LapisOreTile,   LapisOreTile,   true,  true,  RenderType::Cube,   0,   3.0f },
+        { "Block of Lapis", LapisBlockTile, LapisBlockTile, LapisBlockTile, true, true, RenderType::Cube,  0,   3.0f },
         { "Ancient Debris", AncientDebrisTop, AncientDebrisTop, AncientDebrisSide, true, true, RenderType::Cube, 0, 30.0f },
         { "Block of Netherite", NetheriteBlockTile, NetheriteBlockTile, NetheriteBlockTile, true, true, RenderType::Cube, 0, 50.0f },
         { "Ochre Froglight", OchreFroglightTop, OchreFroglightTop, OchreFroglightSide, true, true, RenderType::Cube, 15, 0.3f },
@@ -459,6 +477,7 @@ const char* blockSoundGroup(BlockId id)
     // like whatever the default happens to be.
     if (isLeaves(id)) return "grass";
     if (isLog(id) || isPlanks(id)) return "wood";
+    if (isWool(id)) return "cloth";
     if (isComposter(id) || isLectern(id)) return "wood";
     if (id == Blocks::Bamboo || id == Blocks::Scaffolding) return "wood";
     if (isSign(id) || isFrame(id)) return "wood";
@@ -589,6 +608,7 @@ Material blockMaterial(BlockId id)
 
     // The workstations, whichever state they are in. A composter and a
     // lectern are boxes of planks; the rest are stone and iron.
+    if (isWool(id)) return Material::Wool;
     if (isComposter(id) || isLectern(id)) return Material::Wood;
     if (id == Blocks::Melon) return Material::Plant;
     if (id == Blocks::Bamboo) return Material::Wood;

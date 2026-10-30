@@ -319,6 +319,7 @@ namespace
             t.width = 0.6f;
             t.height = 1.95f;
             t.walkSpeed = 1.7f;
+            t.aquatic = true;
             t.attackDamage = 3;
 
             // It does not burn: it is standing in water, and a mob
@@ -375,6 +376,48 @@ namespace
             t.model.push_back(mirrored(mc(Part::LegFrontLeft, 0, 24, 2, 2, 2, -4, 22, 2, 0, 0, 0)));
             t.model.push_back(mc(Part::LegBackRight, 0, 24, 2, 2, 2, 2, 22, -4, 0, 0, 0));
             t.model.push_back(mirrored(mc(Part::LegBackLeft, 0, 24, 2, 2, 2, -4, 22, -4, 0, 0, 0)));
+        }
+        {
+            // The squid. It swims about and does nothing at all, which
+            // is the point: an ocean with nothing alive in it reads as
+            // a texture rather than a place.
+            MobType& t = table[static_cast<size_t>(MobId::Squid)];
+            t.id = MobId::Squid;
+            t.experience = 1;
+            t.voice = Sound::MobSquidSay;
+            t.hurtVoice = Sound::MobSquidHurt;
+            t.deathVoice = Sound::MobSquidDeath;
+            t.name = "Squid";
+            t.texture = "squid";
+            t.sheetWidth = 64;
+            t.sheetHeight = 32;
+            t.spawnClass = SpawnClass::Passive;
+            t.maxHealth = 10;
+            t.width = 0.8f;
+            t.height = 0.8f;
+            t.walkSpeed = 1.2f;
+            t.limbSwing = 0.4f;
+            t.aquatic = true;
+
+            // It swims rather than bobs: held off the sea bed the way
+            // a guardian is, not held at the waterline the way a boat
+            // is. A squid lying on the surface is a dead squid.
+            t.hoverHeight = 1.6f;
+
+            t.drop = Items::InkSac;
+            t.dropCount = 1;
+
+            t.bodyColour = rgb(44, 70, 92);
+            t.headColour = rgb(58, 88, 112);
+            t.eyeColour = rgb(22, 30, 40);
+
+            // A bell with four arms under it, which is the whole of
+            // what a squid looks like from any angle.
+            t.model.push_back(mc(Part::Body, 0, 0, 8, 6, 8, -4, 11, -4, 0, 0, 0));
+            t.model.push_back(mc(Part::LegFrontRight, 0, 16, 2, 7, 2, -1, 0, -1, 3, 17, 3));
+            t.model.push_back(mirrored(mc(Part::LegFrontLeft, 0, 16, 2, 7, 2, -1, 0, -1, -3, 17, 3)));
+            t.model.push_back(mc(Part::LegBackRight, 0, 16, 2, 7, 2, -1, 0, -1, 3, 17, -3));
+            t.model.push_back(mirrored(mc(Part::LegBackLeft, 0, 16, 2, 7, 2, -1, 0, -1, -3, 17, -3)));
         }
         {
             // The ghast. It hangs in the air, it is enormous, and it
@@ -1075,6 +1118,7 @@ namespace
             t.width = 0.85f;
             t.height = 0.85f;
             t.walkSpeed = 2.4f;
+            t.aquatic = true;
             t.limbSwing = 0.0f;
             t.hoverHeight = 1.4f;
 

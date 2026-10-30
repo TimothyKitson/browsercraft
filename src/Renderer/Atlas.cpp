@@ -2920,6 +2920,79 @@ namespace
         t.speckle(5, 668);
     }
 
+    // The sixteen wools, and the fifteen that are not white. One
+    // painter over a colour table, because a wool is a flat colour
+    // with a weave in it and the colour is the only difference.
+    const Color WOOL_COLOUR[16] = {
+        { 233, 236, 236 },   // White
+        { 240, 118,  19 },   // Orange
+        { 199,  78, 189 },   // Magenta
+        {  58, 179, 218 },   // Light Blue
+        { 254, 216,  61 },   // Yellow
+        { 128, 199,  31 },   // Lime
+        { 243, 139, 170 },   // Pink
+        {  71,  79,  82 },   // Gray
+        { 157, 157, 151 },   // Light Gray
+        {  21, 137, 145 },   // Cyan
+        { 137,  50, 184 },   // Purple
+        {  60,  68, 170 },   // Blue
+        { 131,  84,  50 },   // Brown
+        {  94, 124,  22 },   // Green
+        { 176,  46,  38 },   // Red
+        {  29,  29,  33 },   // Black
+    };
+
+    // Defined further down beside the other item icons.
+    void paintDyeTile(Tile& t, Color colour, int salt);
+
+    void paintWoolIn(Tile& t, Color base, int salt)
+    {
+        t.fill(base);
+        for (int y = 0; y < Tile::N; ++y)
+            for (int x = 0; x < Tile::N; ++x)
+            {
+                const float n = hash2(x, y, salt);
+                if (n > 0.80f) t.set(x, y, shade(base, 16));
+                else if (n < 0.20f) t.set(x, y, shade(base, -16));
+            }
+        // The weave: a thread every few pixels either way, which is
+        // what keeps a flat colour from reading as plastic.
+        for (int k = 2; k < Tile::N; k += 4)
+            for (int i = 0; i < Tile::N; ++i)
+            {
+                t.set(i, k, shade(t.get(i, k), -10));
+                t.set(k, i, shade(t.get(k, i), -10));
+            }
+    }
+
+    void paintLapisOre(Tile& t)
+    {
+        paintStone(t);
+        for (int i = 0; i < 7; ++i)
+        {
+            const int x = static_cast<int>(hash2(i, 1, 681) * (Tile::N - 3));
+            const int y = static_cast<int>(hash2(i, 2, 682) * (Tile::N - 3));
+            for (int dy = 0; dy < 3; ++dy)
+                for (int dx = 0; dx < 3; ++dx)
+                    if ((dx + dy) % 3 != 2)
+                        t.set(x + dx, y + dy, (dx == 0) ? Color{ 70, 96, 190 }
+                                                        : Color{ 44, 68, 160 });
+        }
+    }
+
+    void paintLapisBlock(Tile& t)
+    {
+        t.fill(Color{ 46, 72, 166 });
+        for (int y = 0; y < Tile::N; ++y)
+            for (int x = 0; x < Tile::N; ++x)
+            {
+                const float n = hash2(x, y, 683);
+                if (n > 0.78f) t.set(x, y, Color{ 76, 104, 200 });
+                else if (n < 0.22f) t.set(x, y, Color{ 32, 54, 132 });
+            }
+        t.speckle(5, 684);
+    }
+
     void paintShulkerBox(Tile& t)
     {
         t.fill(Color{ 148, 112, 158 });
@@ -2938,6 +3011,54 @@ namespace
             t.set(Tile::N - 1, k, Color{ 108, 78, 118 });
         }
         t.speckle(5, 645);
+    }
+
+    // A dye: a little heap of powder in whatever colour it is.
+    void paintDyeTile(Tile& t, Color colour, int salt)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 7; y < 14; ++y)
+        {
+            const int wide = 1 + (y - 7);
+            for (int x = 8 - wide; x <= 7 + wide; ++x)
+            {
+                if (x < 0 || x >= Tile::N) continue;
+                t.set(x, y, (y < 9) ? shade(colour, 22) : colour);
+            }
+        }
+        for (int i = 0; i < 4; ++i)
+            t.set(5 + i * 2, 6, shade(colour, 14));
+        t.speckle(5, salt);
+    }
+
+    void paintItemLapis(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int i = 0; i < 6; ++i)
+        {
+            const int x = 3 + (i % 3) * 3;
+            const int y = 5 + (i / 3) * 4;
+            for (int dy = 0; dy < 3; ++dy)
+                for (int dx = 0; dx < 3; ++dx)
+                    if ((dx + dy) % 3 != 2)
+                        t.set(x + dx, y + dy, (dx == 0) ? Color{ 74, 104, 200 }
+                                                        : Color{ 44, 70, 164 });
+        }
+    }
+
+    void paintItemInkSac(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 4; y < 14; ++y)
+            for (int x = 3; x < 13; ++x)
+            {
+                const float dx = (x - 7.5f) / 4.6f;
+                const float dy = (y - 9.0f) / 5.0f;
+                if (dx * dx + dy * dy > 1.0f) continue;
+                t.set(x, y, (dx + dy < -0.4f) ? Color{ 56, 52, 60 }
+                                              : Color{ 28, 26, 32 });
+            }
+        t.speckle(4, 686);
     }
 
     void paintItemNetheriteScrap(Tile& t)
@@ -5955,6 +6076,10 @@ namespace
         { Tiles::PearlescentFroglightTop, paintPearlTop },
         { Tiles::PearlescentFroglightSide, paintPearlSide },
         { Tiles::ItemGhastTear, paintItemGhastTear },
+        { Tiles::LapisOreTile, paintLapisOre },
+        { Tiles::LapisBlockTile, paintLapisBlock },
+        { Tiles::ItemLapis, paintItemLapis },
+        { Tiles::ItemInkSac, paintItemInkSac },
         { Tiles::ItemNetheriteScrap, paintItemNetheriteScrap },
         { Tiles::ItemNetheriteIngot, paintItemNetheriteIngot },
         { Tiles::ItemShulkerShell, paintItemShulkerShell },
@@ -6251,6 +6376,24 @@ namespace
         { Tiles::ItemItemFrame, { "item_frame", nullptr, nullptr } },
         { Tiles::ItemElytra, { "elytra", nullptr, nullptr } },
         { Tiles::ItemGhastTear, { "ghast_tear", nullptr, nullptr } },
+        { Tiles::ItemDyeFirst +  0, { "white_dye", nullptr, nullptr } },
+        { Tiles::ItemDyeFirst +  1, { "orange_dye", nullptr, nullptr } },
+        { Tiles::ItemDyeFirst +  2, { "magenta_dye", nullptr, nullptr } },
+        { Tiles::ItemDyeFirst +  3, { "light_blue_dye", nullptr, nullptr } },
+        { Tiles::ItemDyeFirst +  4, { "yellow_dye", nullptr, nullptr } },
+        { Tiles::ItemDyeFirst +  5, { "lime_dye", nullptr, nullptr } },
+        { Tiles::ItemDyeFirst +  6, { "pink_dye", nullptr, nullptr } },
+        { Tiles::ItemDyeFirst +  7, { "gray_dye", nullptr, nullptr } },
+        { Tiles::ItemDyeFirst +  8, { "light_gray_dye", nullptr, nullptr } },
+        { Tiles::ItemDyeFirst +  9, { "cyan_dye", nullptr, nullptr } },
+        { Tiles::ItemDyeFirst + 10, { "purple_dye", nullptr, nullptr } },
+        { Tiles::ItemDyeFirst + 11, { "blue_dye", nullptr, nullptr } },
+        { Tiles::ItemDyeFirst + 12, { "brown_dye", nullptr, nullptr } },
+        { Tiles::ItemDyeFirst + 13, { "green_dye", nullptr, nullptr } },
+        { Tiles::ItemDyeFirst + 14, { "red_dye", nullptr, nullptr } },
+        { Tiles::ItemDyeFirst + 15, { "black_dye", nullptr, nullptr } },
+        { Tiles::ItemLapis, { "lapis_lazuli", nullptr, nullptr } },
+        { Tiles::ItemInkSac, { "ink_sac", nullptr, nullptr } },
         { Tiles::ItemNetheriteScrap, { "netherite_scrap", nullptr, nullptr } },
         { Tiles::ItemNetheriteIngot, { "netherite_ingot", nullptr, nullptr } },
         { Tiles::ItemNetheriteFirst + 0, { "netherite_pickaxe", nullptr, nullptr } },
@@ -6505,6 +6648,23 @@ namespace
         { Tiles::SignTile,      { "oak_planks", "planks_oak", nullptr },               Tinting::None,    0,   false },
         { Tiles::ItemFrameTile, { "item_frame", nullptr },                             Tinting::None,    0,   false },
         { Tiles::ShulkerBoxTile,{ "shulker_box", nullptr },                            Tinting::None,    0,   false },
+        { Tiles::WoolFirst +  0, { "orange_wool", nullptr },                       Tinting::None,    0,   false },
+        { Tiles::WoolFirst +  1, { "magenta_wool", nullptr },                      Tinting::None,    0,   false },
+        { Tiles::WoolFirst +  2, { "light_blue_wool", nullptr },                   Tinting::None,    0,   false },
+        { Tiles::WoolFirst +  3, { "yellow_wool", nullptr },                       Tinting::None,    0,   false },
+        { Tiles::WoolFirst +  4, { "lime_wool", nullptr },                         Tinting::None,    0,   false },
+        { Tiles::WoolFirst +  5, { "pink_wool", nullptr },                         Tinting::None,    0,   false },
+        { Tiles::WoolFirst +  6, { "gray_wool", nullptr },                         Tinting::None,    0,   false },
+        { Tiles::WoolFirst +  7, { "light_gray_wool", nullptr },                   Tinting::None,    0,   false },
+        { Tiles::WoolFirst +  8, { "cyan_wool", nullptr },                         Tinting::None,    0,   false },
+        { Tiles::WoolFirst +  9, { "purple_wool", nullptr },                       Tinting::None,    0,   false },
+        { Tiles::WoolFirst + 10, { "blue_wool", nullptr },                         Tinting::None,    0,   false },
+        { Tiles::WoolFirst + 11, { "brown_wool", nullptr },                        Tinting::None,    0,   false },
+        { Tiles::WoolFirst + 12, { "green_wool", nullptr },                        Tinting::None,    0,   false },
+        { Tiles::WoolFirst + 13, { "red_wool", nullptr },                          Tinting::None,    0,   false },
+        { Tiles::WoolFirst + 14, { "black_wool", nullptr },                        Tinting::None,    0,   false },
+        { Tiles::LapisOreTile,  { "lapis_ore", nullptr },                              Tinting::None,    0,   false },
+        { Tiles::LapisBlockTile,{ "lapis_block", nullptr },                            Tinting::None,    0,   false },
         { Tiles::AncientDebrisTop,  { "ancient_debris_top", nullptr },                 Tinting::None,    0,   false },
         { Tiles::AncientDebrisSide, { "ancient_debris_side", nullptr },                Tinting::None,    0,   false },
         { Tiles::NetheriteBlockTile,{ "netherite_block", nullptr },                    Tinting::None,    0,   false },
@@ -6696,6 +6856,21 @@ Atlas::Atlas()
         Tile tile;
         paintToolTile(tile, i, 5);
         blitPainted(Tiles::ItemNetheriteFirst + i, tile);
+    }
+
+    // The fifteen coloured wools, and the sixteen dyes. One shape
+    // each over a colour table rather than thirty-one painters.
+    for (int i = 0; i < 15; ++i)
+    {
+        Tile tile;
+        paintWoolIn(tile, WOOL_COLOUR[i + 1], 690 + i);
+        blitPainted(Tiles::WoolFirst + i, tile);
+    }
+    for (int i = 0; i < 16; ++i)
+    {
+        Tile tile;
+        paintDyeTile(tile, WOOL_COLOUR[i], 710 + i);
+        blitPainted(Tiles::ItemDyeFirst + i, tile);
     }
     for (int i = 0; i < 4; ++i)
     {
@@ -7137,6 +7312,11 @@ bool Atlas::hasPainter(int tileIndex)
     if (tileIndex >= Tiles::ItemToolFirst && tileIndex < Tiles::ItemToolEnd) return true;
     if (tileIndex >= Tiles::ItemNetheriteFirst && tileIndex < Tiles::ItemNetheriteEnd)
         return true;
+
+    // And the two families that differ only by colour: the fifteen
+    // coloured wools and the sixteen dyes.
+    if (tileIndex >= Tiles::WoolFirst && tileIndex < Tiles::WoolEnd) return true;
+    if (tileIndex >= Tiles::ItemDyeFirst && tileIndex < Tiles::ItemDyeEnd) return true;
     if (tileIndex >= Tiles::ItemArmourFirst && tileIndex < Tiles::ItemArmourEnd) return true;
     if (tileIndex >= Tiles::CrackFirst &&
         tileIndex < Tiles::CrackFirst + Tiles::CrackStages)

@@ -138,6 +138,9 @@ public:
     // of the player, so a screenshot shows the whole crop at once.
     void setFarmTest() { m_farmTest = true; m_startImmediately = true; }
     void setShopTest() { m_shopTest = true; m_startImmediately = true; }
+    // Dev aid: a tank of water with the three things that live in one
+    // put into it, which is the only way to see whether they can be.
+    void setSwimTest() { m_swimTest = true; m_startImmediately = true; }
     // Dev aid: open straight into another dimension.
     void setStartupDimension(Dimension dimension) { m_startupDimension = dimension; }
     // Dev aid: preview a candidate panorama viewpoint.
@@ -422,6 +425,8 @@ private:
     bool m_buildTestDone = false;
     bool m_mobTest = false;
     bool m_mobTestDone = false;
+    bool m_swimTest = false;
+    bool m_swimTestDone = false;
     bool m_farmTest = false;
     bool m_farmTestDone = false;
     bool m_shopTest = false;

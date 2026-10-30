@@ -663,6 +663,10 @@ void WorldGen::placeOres(Chunk& chunk) const
         // one seam you find more of than you can use, and the whole
         // point of it is that there is plenty.
         { Blocks::RedstoneOre, 5,  16, 0.0030f,  8, 1011 },
+        // Lapis, which is the only blue in the game. Minecraft puts
+        // it in a narrow band and in small seams, which is why it is
+        // the one ore nobody has a chest full of.
+        { Blocks::LapisOre,   5,  30, 0.00085f, 6, 1013 },
         // Copper sits high and comes in fat seams: in Minecraft it is
         // the one ore you find more of than you know what to do with.
         { Blocks::CopperOre,  40, 110, 0.0024f, 16, 1012 },

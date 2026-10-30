@@ -140,6 +140,22 @@ MobId EntityManager::endSpecies(int index)
     return END_SPECIES[((index % count) + count) % count];
 }
 
+bool EntityManager::roomFor(const MobType& type, BlockId block)
+{
+    if (isSolid(block)) return false;
+
+    // Water is somewhere to stand for a thing that floats on it or
+    // lives in it: refusing it put boats everywhere but the pond, and
+    // kept the guardian out of its own monument and the drowned out of
+    // the sea -- both were spawned into water that the spawn then read
+    // as rock, so neither was ever once seen. Lava turns everything
+    // away.
+    if (isLiquid(block) && !((type.floats || type.aquatic) && block == Blocks::Water))
+        return false;
+
+    return true;
+}
+
 bool EntityManager::fits(const World& world, const MobType& type, const glm::vec3& feet) const
 {
     const float half = type.width * 0.5f;
@@ -153,16 +169,7 @@ bool EntityManager::fits(const World& world, const MobType& type, const glm::vec
     for (int x = minX; x <= maxX; ++x)
         for (int y = minY; y <= maxY; ++y)
             for (int z = minZ; z <= maxZ; ++z)
-            {
-                const BlockId here = world.getBlock(x, y, z);
-                if (isSolid(here)) return false;
-
-                // Water is somewhere to stand for a thing that floats:
-                // refusing it put boats everywhere but the pond. Lava
-                // still turns everything away.
-                if (isLiquid(here) && !(type.floats && here == Blocks::Water))
-                    return false;
-            }
+                if (!roomFor(type, world.getBlock(x, y, z))) return false;
 
     return true;
 }

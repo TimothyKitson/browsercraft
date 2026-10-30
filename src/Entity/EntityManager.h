@@ -123,6 +123,12 @@ public:
     // Which species may appear given the light and the block underfoot.
     static bool canSpawnOn(MobId type, BlockId ground, int light);
 
+    // Whether a mob can be where this block is. One rule in one place,
+    // so a test can ask exactly what the spawn asks: water is a wall
+    // to almost everything, and is not a wall to the three things that
+    // live in it.
+    static bool roomFor(const MobType& type, BlockId block);
+
     // Which world this manager is spawning into. Set when the player
     // travels, so the Nether gets its own and nothing else.
     void setDimension(Dimension dimension) { m_dimension = dimension; }

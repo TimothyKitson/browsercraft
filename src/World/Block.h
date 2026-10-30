@@ -469,6 +469,19 @@ namespace Blocks
         // because a stack here has nowhere to carry a chest inside it.
         ShulkerBox,
 
+        // The other fifteen wools. White is Blocks::Wool, which is
+        // where it has always been: an id is what a saved chunk holds,
+        // so the sixteen cannot be one tidy run without emptying every
+        // world anybody has built. isWool knows both halves.
+        WoolOrange, WoolMagenta, WoolLightBlue, WoolYellow, WoolLime,
+        WoolPink, WoolGray, WoolLightGray, WoolCyan, WoolPurple,
+        WoolBlue, WoolBrown, WoolGreen, WoolRed, WoolBlack,
+
+        // The one ore that is not a metal or a gem: lapis, which is
+        // where blue comes from and the only blue in the game.
+        LapisOre,
+        LapisBlock,
+
         // Buried in the deep Nether, and the block nine ingots make.
         // The one ore in the game that does not burn and the one a
         // blast cannot destroy.
@@ -664,6 +677,32 @@ inline bool isDeepDark(BlockId id)
 inline bool isContainerBlock(BlockId id)
 {
     return id == Blocks::Chest || id == Blocks::Barrel || id == Blocks::ShulkerBox;
+}
+
+// Wool, in any of its sixteen colours. White is where it always was
+// and the other fifteen are at the end of the list, so this asks two
+// questions rather than one.
+inline bool isWool(BlockId id)
+{
+    return id == Blocks::Wool ||
+           (id >= Blocks::WoolOrange && id <= Blocks::WoolBlack);
+}
+
+// Minecraft's sixteen, in Minecraft's order: white is nought and
+// black is fifteen. The dyes are in the same order, so a dye and the
+// wool it makes share a number.
+constexpr int DYE_COLOURS = 16;
+inline int woolColour(BlockId id)
+{
+    if (id == Blocks::Wool) return 0;
+    if (id < Blocks::WoolOrange || id > Blocks::WoolBlack) return 0;
+    return (id - Blocks::WoolOrange) + 1;
+}
+inline BlockId woolOfColour(int colour)
+{
+    if (colour <= 0) return Blocks::Wool;
+    if (colour >= DYE_COLOURS) colour = DYE_COLOURS - 1;
+    return static_cast<BlockId>(Blocks::WoolOrange + colour - 1);
 }
 
 inline bool isFroglight(BlockId id)

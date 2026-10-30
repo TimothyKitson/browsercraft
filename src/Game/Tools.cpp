@@ -120,6 +120,7 @@ int Tools::requiredLevel(BlockId block)
         case Blocks::EmeraldOre: return 3;
         case Blocks::GoldOre:
         case Blocks::IronOre:    return 2;
+        case Blocks::LapisOre:   return 2;   // stone, like iron
         default: break;
     }
 

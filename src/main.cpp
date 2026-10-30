@@ -1184,6 +1184,7 @@ int main(int argc, char** argv)
     bool seabedInfo = false;
     bool costCheck = false;
     bool packCheck = false;
+    bool swimTest = false;
     bool blockAudit = false;
     bool structureInfo = false;
     bool oreInfo = false;
@@ -1273,6 +1274,10 @@ int main(int argc, char** argv)
         {
             shopTest = true;
         }
+        else if (std::strcmp(argv[i], "--swimtest") == 0)
+        {
+            swimTest = true;
+        }
         else if (std::strcmp(argv[i], "--mobtest") == 0)
         {
             mobTest = true;
@@ -1323,6 +1328,7 @@ int main(int argc, char** argv)
         if (mobTest) app.setMobTest();
         if (farmTest) app.setFarmTest();
         if (shopTest) app.setShopTest();
+    if (swimTest) app.setSwimTest();
         if (panorama)
         {
             unsigned int panoramaSeed = 0;

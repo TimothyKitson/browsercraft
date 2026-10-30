@@ -146,6 +146,24 @@ namespace
         { "Ghast Tear",      Tiles::ItemGhastTear,     64 },
         { "Shulker Shell",   Tiles::ItemShulkerShell,  64 },
         { "Trident",         Tiles::ItemTrident,        1 },
+        { "White Dye",       Tiles::ItemDyeFirst +  0, 64 },
+        { "Orange Dye",      Tiles::ItemDyeFirst +  1, 64 },
+        { "Magenta Dye",     Tiles::ItemDyeFirst +  2, 64 },
+        { "Light Blue Dye",  Tiles::ItemDyeFirst +  3, 64 },
+        { "Yellow Dye",      Tiles::ItemDyeFirst +  4, 64 },
+        { "Lime Dye",        Tiles::ItemDyeFirst +  5, 64 },
+        { "Pink Dye",        Tiles::ItemDyeFirst +  6, 64 },
+        { "Gray Dye",        Tiles::ItemDyeFirst +  7, 64 },
+        { "Light Gray Dye",  Tiles::ItemDyeFirst +  8, 64 },
+        { "Cyan Dye",        Tiles::ItemDyeFirst +  9, 64 },
+        { "Purple Dye",      Tiles::ItemDyeFirst + 10, 64 },
+        { "Blue Dye",        Tiles::ItemDyeFirst + 11, 64 },
+        { "Brown Dye",       Tiles::ItemDyeFirst + 12, 64 },
+        { "Green Dye",       Tiles::ItemDyeFirst + 13, 64 },
+        { "Red Dye",         Tiles::ItemDyeFirst + 14, 64 },
+        { "Black Dye",       Tiles::ItemDyeFirst + 15, 64 },
+        { "Lapis Lazuli",    Tiles::ItemLapis,         64 },
+        { "Ink Sac",         Tiles::ItemInkSac,        64 },
         { "Netherite Scrap", Tiles::ItemNetheriteScrap, 64 },
         { "Netherite Ingot", Tiles::ItemNetheriteIngot, 64 },
         { "Nether Star",     Tiles::ItemNetherStar,     1 },
@@ -266,6 +284,7 @@ StackId blockDrop(BlockId id)
         case Blocks::Glowstone: return Items::GlowstoneDust;
         case Blocks::NetherWart: return Items::NetherWart;
         case Blocks::RedstoneOre: return Items::Redstone;
+        case Blocks::LapisOre: return Items::LapisLazuli;
 
         // The berries come off the vine as something you can eat. They
         // used to come off as the block, which meant the one food that

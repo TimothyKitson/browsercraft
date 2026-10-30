@@ -42,6 +42,10 @@ enum class MobId : uint8_t
     // back outside a monument.
     Drowned,
 
+    // What the sea is missing. It does nothing to anybody and is the
+    // only black in the game.
+    Squid,
+
     // The thing everyone remembers about the Nether: huge, slow, and
     // it shoots fire from across the room.
     Ghast,
@@ -188,6 +192,12 @@ struct MobType
     bool inanimate = false;
     // Rides on top of water rather than sinking through it.
     bool floats = false;
+    // Lives in the water rather than on top of it: water is not a wall
+    // to be spawned outside of, which is what it is to everything else.
+    // Without this a guardian could not be put in its own monument and
+    // a drowned could not be put in the sea -- the spawn refused the
+    // only square either of them belongs in, so neither was ever seen.
+    bool aquatic = false;
     // Runs on rails, and only on rails: steered by the track rather
     // than by whoever is sitting in it.
     bool ridesRails = false;

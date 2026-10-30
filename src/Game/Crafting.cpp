@@ -277,6 +277,41 @@ namespace
           0, Blocks::NetheriteBlock, 1 },
         { true, 0, 0, { Blocks::NetheriteBlock }, 1, Items::NetheriteIngot, 9 },
 
+        // --- the sixteen colours ---------------------------------
+        //
+        // Where each dye comes from. Minecraft's sources, with the
+        // two it has no flower for here taken from the ore and the
+        // squid instead -- which is also Minecraft's, just the other
+        // half of it.
+        { true, 0, 0, { Items::BoneMeal },    1, Items::DyeWhite,  1 },
+        { true, 0, 0, { Blocks::FlowerYellow }, 1, Items::DyeYellow, 1 },
+        { true, 0, 0, { Blocks::FlowerRed },  1, Items::DyeRed,    1 },
+        { true, 0, 0, { Items::LapisLazuli }, 1, Items::DyeBlue,   1 },
+        { true, 0, 0, { Items::InkSac },      1, Items::DyeBlack,  1 },
+        { true, 0, 0, { Items::CocoaBeans },  1, Items::DyeBrown,  1 },
+
+        // And the ones that are made by mixing, which is the whole of
+        // why there are sixteen rather than six.
+        { true, 0, 0, { Items::DyeRed, Items::DyeYellow },  2, Items::DyeOrange,    2 },
+        { true, 0, 0, { Items::DyeRed, Items::DyeBlue },    2, Items::DyePurple,    2 },
+        { true, 0, 0, { Items::DyeRed, Items::DyeWhite },   2, Items::DyePink,      2 },
+        { true, 0, 0, { Items::DyeBlue, Items::DyeGreen },  2, Items::DyeCyan,      2 },
+        { true, 0, 0, { Items::DyeBlue, Items::DyeWhite },  2, Items::DyeLightBlue, 2 },
+        { true, 0, 0, { Items::DyeGreen, Items::DyeWhite }, 2, Items::DyeLime,      2 },
+        { true, 0, 0, { Items::DyeBlack, Items::DyeWhite }, 2, Items::DyeGray,      2 },
+        { true, 0, 0, { Items::DyeGray, Items::DyeWhite },  2, Items::DyeLightGray, 2 },
+        { true, 0, 0, { Items::DyePurple, Items::DyePink }, 2, Items::DyeMagenta,   2 },
+
+        // Green is the odd one: it is a cactus out of a furnace
+        // rather than anything mixed, which is Minecraft's.
+
+        // Nine lapis to a block and back, like every other mineral.
+        { false, 3, 3, { Items::LapisLazuli, Items::LapisLazuli, Items::LapisLazuli,
+                         Items::LapisLazuli, Items::LapisLazuli, Items::LapisLazuli,
+                         Items::LapisLazuli, Items::LapisLazuli, Items::LapisLazuli },
+          0, Blocks::LapisBlock, 1 },
+        { true, 0, 0, { Blocks::LapisBlock }, 1, Items::LapisLazuli, 9 },
+
         // Cobblestone and a vine. Minecraft's recipe, and the only
         // way to mossy cobble that does not involve finding a village
         // built in a swamp -- which is where the one in this world
@@ -722,6 +757,36 @@ namespace Crafting
         return out;
     }
 
+    // Wool and a dye make wool of that colour. One rule rather than
+    // sixteen recipes, because the dyes and the wools are numbered in
+    // the same order: a dye's colour is the wool it makes.
+    CraftOutput matchDyeing(const ItemStack* grid, int size)
+    {
+        int wools = 0;
+        int dyes = 0;
+        int colour = 0;
+        int others = 0;
+
+        for (int y = 0; y < size; ++y)
+            for (int x = 0; x < size; ++x)
+            {
+                const ItemStack& cell = grid[y * 3 + x];
+                if (cell.empty()) continue;
+
+                if (isBlockStack(cell.id) && isWool(asBlock(cell.id)))
+                { wools += cell.count; continue; }
+                if (isDye(cell.id)) { ++dyes; colour = dyeColour(cell.id); continue; }
+                ++others;
+            }
+
+        if (wools < 1 || wools > 8 || dyes != 1 || others > 0) return CraftOutput{};
+
+        CraftOutput out;
+        out.id = woolOfColour(colour);
+        out.count = wools;
+        return out;
+    }
+
     CraftOutput match(const ItemStack* grid, int size)
     {
         for (const Recipe& recipe : RECIPES)
@@ -730,6 +795,9 @@ namespace Crafting
                                               : matchesShaped(recipe, grid, size);
             if (hit) return CraftOutput{ recipe.result, recipe.resultCount };
         }
+        const CraftOutput dyed = matchDyeing(grid, size);
+        if (dyed.valid()) return dyed;
+
         return matchUpgrade(grid, size);
     }
 
@@ -769,6 +837,12 @@ std::vector<StackId> Crafting::everyOutput()
     out.reserve(std::size(RECIPES) + 9);
     for (const Recipe& recipe : RECIPES) out.push_back(recipe.result);
 
+    // The sixteen wools a dye makes, which is likewise a rule rather
+    // than a table: an audit that could not see it called fifteen of
+    // the colours unmakeable.
+    for (int colour = 0; colour < DYE_COLOURS; ++colour)
+        out.push_back(woolOfColour(colour));
+
     // And the nine the upgrade makes. It is a recipe the table cannot
     // hold -- it takes whichever diamond thing you give it -- but it
     // is still a recipe, and an audit that could not see it called
@@ -785,8 +859,12 @@ std::vector<StackId> Crafting::everyIngredient()
 {
     std::vector<StackId> out;
 
-    // What the upgrade asks for, which is likewise not in the table.
+    // What the upgrade asks for, which is likewise not in the table,
+    // and what dyeing asks for.
     out.push_back(Items::NetheriteIngot);
+    for (int colour = 0; colour < DYE_COLOURS; ++colour)
+        out.push_back(dyeOfColour(colour));
+    out.push_back(Blocks::Wool);
 
     for (const Recipe& recipe : RECIPES)
     {

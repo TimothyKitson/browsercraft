@@ -15,6 +15,10 @@ StackId Smelting::resultOf(StackId input)
         case Blocks::Cobblestone: return Blocks::Stone;
         case Blocks::Clay:      return Blocks::Bricks;
 
+        // A cactus fired is green, which is Minecraft's and the only
+        // dye in the game that comes out of a furnace.
+        case Blocks::Cactus:    return Items::DyeGreen;
+
         // A wet sponge dried out, which is Minecraft's recipe and the
         // only way to get a dry one. Without it the sponge in a
         // monument was the one block in the game nobody could ever

@@ -6152,6 +6152,8 @@ namespace
                 // The frog belongs to the waterside, and is put down
                 // there by hand rather than by the night spawner.
                 case MobId::Frog:
+                // And the squid, which belongs to open water.
+                case MobId::Squid:
                 case MobId::EnderDragon:
                 case MobId::Wither:
                     meetable = true;
@@ -10658,6 +10660,247 @@ namespace
         check(!Weather::step(still, 0.0f, stillSeed), "a step of no time does nothing");
         check(still.secondsLeft == before, "and moves no clock");
     }
+
+    void testDyes()
+    {
+        section("dye: the sixteen colours");
+
+        // White is the wool that was in the game before any of this,
+        // so colour nought has to be that block and not a new one --
+        // every world ever saved has white wool in it under the old
+        // number.
+        check(woolOfColour(0) == Blocks::Wool, "white is the wool that was always here");
+
+        for (int colour = 0; colour < DYE_COLOURS; ++colour)
+        {
+            const BlockId wool = woolOfColour(colour);
+            const StackId dye = dyeOfColour(colour);
+            const std::string which = std::to_string(colour);
+
+            check(isWool(wool), "colour " + which + " is a wool");
+            check(woolColour(wool) == colour, "and reads back as its own colour");
+            check(isDye(dye), "colour " + which + " has a dye");
+            check(dyeColour(dye) == colour, "and that dye reads back the same");
+            check(blockDrop(wool) == wool, "wool " + which + " picks up as itself");
+            check(isObtainable(wool), "and is a block you can hold");
+            check(*displayName(dye), "dye " + which + " is named");
+            check(*blockInfo(wool).name, "and so is the wool");
+        }
+
+        // Sixteen distinct wools and sixteen distinct dyes. A slip in
+        // the arithmetic would land two colours on one block and the
+        // test above would not notice.
+        {
+            std::set<BlockId> wools;
+            std::set<StackId> dyes;
+            for (int colour = 0; colour < DYE_COLOURS; ++colour)
+            {
+                wools.insert(woolOfColour(colour));
+                dyes.insert(dyeOfColour(colour));
+            }
+            check(static_cast<int>(wools.size()) == DYE_COLOURS, "sixteen different wools");
+            check(static_cast<int>(dyes.size()) == DYE_COLOURS, "and sixteen different dyes");
+        }
+
+        check(!isWool(Blocks::Planks), "a plank is not a wool");
+        check(!isWool(Blocks::Stone), "nor is stone");
+        check(!isDye(Items::Stick), "a stick is not a dye");
+        check(woolOfColour(99) == Blocks::WoolBlack, "a colour cannot run off the end");
+
+        section("dye: dyeing wool");
+
+        // One wool and one dye, in any two cells, makes that colour.
+        for (int colour = 0; colour < DYE_COLOURS; ++colour)
+        {
+            Inventory bench;
+            bench.setCraftSize(3);
+            bench.slot(Inventory::CRAFT_FIRST + 4) = ItemStack{ Blocks::Wool, 1 };
+            bench.slot(Inventory::CRAFT_FIRST + 8) = ItemStack{ dyeOfColour(colour), 1 };
+            bench.refreshCraftResult();
+
+            const ItemStack& made = bench.slot(Inventory::CRAFT_RESULT);
+            check(made.id == woolOfColour(colour),
+                  "dye " + std::to_string(colour) + " makes its own wool");
+            check(made.count == 1, "one wool in, one wool out");
+        }
+
+        // Eight at a time, which is what a 3x3 grid holds beside the dye.
+        {
+            Inventory bench;
+            bench.setCraftSize(3);
+            for (int cell = 0; cell < 8; ++cell)
+                bench.slot(Inventory::CRAFT_FIRST + cell) = ItemStack{ Blocks::Wool, 1 };
+            bench.slot(Inventory::CRAFT_FIRST + 8) = ItemStack{ Items::DyeRed, 1 };
+            bench.refreshCraftResult();
+            check(bench.slot(Inventory::CRAFT_RESULT).id == Blocks::WoolRed,
+                  "eight wools dye red");
+            check(bench.slot(Inventory::CRAFT_RESULT).count == 8, "all eight of them");
+        }
+
+        // Nine will not: Minecraft stops at eight because the dye needs
+        // a cell of its own.
+        {
+            Inventory bench;
+            bench.setCraftSize(3);
+            bench.slot(Inventory::CRAFT_FIRST + 0) = ItemStack{ Blocks::Wool, 9 };
+            bench.slot(Inventory::CRAFT_FIRST + 8) = ItemStack{ Items::DyeRed, 1 };
+            bench.refreshCraftResult();
+            check(bench.slot(Inventory::CRAFT_RESULT).empty(), "nine wools are too many");
+        }
+
+        // Already-coloured wool dyes over, which is how a mistake is
+        // undone.
+        {
+            Inventory bench;
+            bench.setCraftSize(3);
+            bench.slot(Inventory::CRAFT_FIRST + 0) = ItemStack{ Blocks::WoolGreen, 1 };
+            bench.slot(Inventory::CRAFT_FIRST + 1) = ItemStack{ Items::DyeWhite, 1 };
+            bench.refreshCraftResult();
+            check(bench.slot(Inventory::CRAFT_RESULT).id == Blocks::Wool,
+                  "green wool dyes back to white");
+        }
+
+        // Two dyes and a wool is not a recipe, and nor is a wool, a dye
+        // and something else in the grid.
+        {
+            Inventory bench;
+            bench.setCraftSize(3);
+            bench.slot(Inventory::CRAFT_FIRST + 0) = ItemStack{ Blocks::Wool, 1 };
+            bench.slot(Inventory::CRAFT_FIRST + 1) = ItemStack{ Items::DyeRed, 1 };
+            bench.slot(Inventory::CRAFT_FIRST + 2) = ItemStack{ Items::DyeBlue, 1 };
+            bench.refreshCraftResult();
+            check(bench.slot(Inventory::CRAFT_RESULT).empty(), "two dyes dye nothing");
+
+            bench.slot(Inventory::CRAFT_FIRST + 2) = ItemStack{ Items::Stick, 1 };
+            bench.refreshCraftResult();
+            check(bench.slot(Inventory::CRAFT_RESULT).empty(), "and a stick spoils it");
+        }
+
+        section("dye: where the colours come from");
+
+        // The six that are found rather than mixed.
+        struct Source { StackId from; StackId dye; const char* what; };
+        const Source SOURCES[] = {
+            { Items::BoneMeal,       Items::DyeWhite,  "bone meal makes white" },
+            { Blocks::FlowerYellow,  Items::DyeYellow, "a dandelion makes yellow" },
+            { Blocks::FlowerRed,     Items::DyeRed,    "a poppy makes red" },
+            { Items::LapisLazuli,    Items::DyeBlue,   "lapis makes blue" },
+            { Items::InkSac,         Items::DyeBlack,  "an ink sac makes black" },
+            { Items::CocoaBeans,     Items::DyeBrown,  "cocoa makes brown" },
+        };
+        for (const Source& source : SOURCES)
+        {
+            Inventory bench;
+            bench.slot(Inventory::CRAFT_FIRST) = ItemStack{ source.from, 1 };
+            bench.refreshCraftResult();
+            check(bench.slot(Inventory::CRAFT_RESULT).id == source.dye, source.what);
+        }
+
+        // Green is smelted out of a cactus rather than crafted, which
+        // is Minecraft's own odd one out.
+        check(Smelting::resultOf(Blocks::Cactus) == Items::DyeGreen,
+              "a cactus smelts into green");
+
+        // And the nine that are mixed. Two in, two out, so mixing is
+        // never a loss.
+        struct Mix { StackId a; StackId b; StackId made; const char* what; };
+        const Mix MIXES[] = {
+            { Items::DyeRed,    Items::DyeYellow, Items::DyeOrange,    "red and yellow make orange" },
+            { Items::DyeRed,    Items::DyeBlue,   Items::DyePurple,    "red and blue make purple" },
+            { Items::DyeRed,    Items::DyeWhite,  Items::DyePink,      "red and white make pink" },
+            { Items::DyeBlue,   Items::DyeGreen,  Items::DyeCyan,      "blue and green make cyan" },
+            { Items::DyeBlue,   Items::DyeWhite,  Items::DyeLightBlue, "blue and white make light blue" },
+            { Items::DyeGreen,  Items::DyeWhite,  Items::DyeLime,      "green and white make lime" },
+            { Items::DyeBlack,  Items::DyeWhite,  Items::DyeGray,      "black and white make grey" },
+            { Items::DyeGray,   Items::DyeWhite,  Items::DyeLightGray, "grey and white make light grey" },
+            { Items::DyePurple, Items::DyePink,   Items::DyeMagenta,   "purple and pink make magenta" },
+        };
+        for (const Mix& mix : MIXES)
+        {
+            Inventory bench;
+            bench.slot(Inventory::CRAFT_FIRST + 0) = ItemStack{ mix.a, 1 };
+            bench.slot(Inventory::CRAFT_FIRST + 1) = ItemStack{ mix.b, 1 };
+            bench.refreshCraftResult();
+            check(bench.slot(Inventory::CRAFT_RESULT).id == mix.made, mix.what);
+            check(bench.slot(Inventory::CRAFT_RESULT).count == 2, "and makes two of it");
+        }
+
+        // Every colour has to be reachable, or a wool nobody can make
+        // is a wool that is not in the game. Six are found and nine are
+        // mixed; green comes out of a furnace.
+        for (int colour = 0; colour < DYE_COLOURS; ++colour)
+        {
+            const StackId dye = dyeOfColour(colour);
+            bool made = dye == Items::DyeGreen;
+            for (const Source& source : SOURCES) if (source.dye == dye) made = true;
+            for (const Mix& mix : MIXES) if (mix.made == dye) made = true;
+            check(made, "colour " + std::to_string(colour) + " can be got hold of");
+        }
+
+        section("dye: lapis");
+
+        check(blockDrop(Blocks::LapisOre) == Items::LapisLazuli, "the seam gives up lapis");
+        check(Tools::requiredLevel(Blocks::LapisOre) == 2, "and wants a stone pickaxe");
+        check(!Tools::canHarvest(Items::WoodPickaxe, Blocks::LapisOre),
+              "wood gets nothing out of it");
+        check(Tools::canHarvest(Items::StonePickaxe, Blocks::LapisOre), "stone does");
+
+        {
+            Inventory bench;
+            bench.setCraftSize(3);
+            for (int cell = 0; cell < 9; ++cell)
+                bench.slot(Inventory::CRAFT_FIRST + cell) = ItemStack{ Items::LapisLazuli, 1 };
+            bench.refreshCraftResult();
+            check(bench.slot(Inventory::CRAFT_RESULT).id == Blocks::LapisBlock,
+                  "nine lapis make a block");
+        }
+        {
+            Inventory bench;
+            bench.slot(Inventory::CRAFT_FIRST) = ItemStack{ Blocks::LapisBlock, 1 };
+            bench.refreshCraftResult();
+            check(bench.slot(Inventory::CRAFT_RESULT).id == Items::LapisLazuli,
+                  "and the block gives the nine back");
+            check(bench.slot(Inventory::CRAFT_RESULT).count == 9, "all nine of them");
+        }
+
+        section("dye: the squid");
+
+        const MobType& squid = mobType(MobId::Squid);
+        check(squid.drop == Items::InkSac, "a squid is where an ink sac comes from");
+        check(squid.spawnClass == SpawnClass::Passive, "it attacks nobody");
+        check(squid.aquatic, "water is where it lives");
+        check(squid.hoverHeight > 0.0f, "and it swims rather than lying on the surface");
+
+        // The same flag the guardian and the drowned were missing. A
+        // mob that lives in water and is not marked for it cannot be
+        // put anywhere it belongs: the spawn reads every water square
+        // as a wall and quietly refuses, which is why the monument had
+        // no guardians in it and the sea had no drowned.
+        check(mobType(MobId::Guardian).aquatic, "a guardian lives in water too");
+        check(mobType(MobId::Drowned).aquatic, "and so does a drowned");
+        check(!mobType(MobId::Zombie).aquatic, "a zombie does not");
+
+        // And the rule the spawn actually asks, rather than the flag
+        // behind it. This is the check that was missing: the flag was
+        // right and the question was never put.
+        const MobId INHABITANTS[] = { MobId::Squid, MobId::Guardian, MobId::Drowned };
+        for (MobId id : INHABITANTS)
+        {
+            const MobType& type = mobType(id);
+            const std::string who = type.name;
+            check(EntityManager::roomFor(type, Blocks::Water),
+                  std::string(who) + " can be put in water");
+            check(EntityManager::roomFor(type, Blocks::Air),
+                  who + " can be put in air");
+            check(!EntityManager::roomFor(type, Blocks::Lava), who + " cannot be put in lava");
+            check(!EntityManager::roomFor(type, Blocks::Stone), who + " cannot be put in rock");
+        }
+
+        check(!EntityManager::roomFor(mobType(MobId::Zombie), Blocks::Water),
+              "a zombie cannot be put in water");
+        check(EntityManager::roomFor(mobType(MobId::Boat), Blocks::Water),
+              "a boat can: it sits on top of it");
+    }
 }
 
 int runSelfTest()
@@ -10770,6 +11013,7 @@ int runSelfTest()
     testDrowning();
     testQuickMoveKeepsMetadata();
     testContainersPerDimension();
+    testDyes();
 
     std::printf("\n%d checks, %d failed\n", g_checks, g_failures);
     return g_failures == 0 ? 0 : 1;

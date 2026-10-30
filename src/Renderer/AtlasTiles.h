@@ -255,6 +255,12 @@ namespace Tiles
         SignTile,
         ItemFrameTile,
         ShulkerBoxTile,
+        // Fifteen more wools; white is the Wool tile up above, where
+        // it has always been.
+        WoolFirst,
+        WoolEnd = WoolFirst + 15,
+
+        LapisOreTile = WoolEnd, LapisBlockTile,
         AncientDebrisTop, AncientDebrisSide, NetheriteBlockTile,
         OchreFroglightTop, OchreFroglightSide,
         VerdantFroglightTop, VerdantFroglightSide,
@@ -402,6 +408,13 @@ namespace Tiles
         ItemSign,
         ItemItemFrame,
         ItemElytra,
+        // Sixteen dyes, in Minecraft's order, so a dye's offset is the
+        // colour it makes.
+        ItemDyeFirst,
+        ItemDyeEnd = ItemDyeFirst + 16,
+
+        ItemLapis = ItemDyeEnd,
+        ItemInkSac,
         ItemNetheriteScrap,
         ItemNetheriteIngot,
 
