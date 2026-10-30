@@ -209,6 +209,20 @@ namespace
           0, Blocks::CoalBlock, 1 },
         { true, 0, 0, { Blocks::CoalBlock }, 1, Items::Coal, 9 },
 
+        // A note block: planks round redstone. An observer: cobble
+        // and redstone round a lump of quartz -- there is no quartz
+        // here, so a diamond stands in as the one thing precious
+        // enough to make it feel earned.
+        { false, 3, 3, { Blocks::Planks, Blocks::Planks,  Blocks::Planks,
+                         Blocks::Planks, Items::Redstone, Blocks::Planks,
+                         Blocks::Planks, Blocks::Planks,  Blocks::Planks },
+          0, Blocks::NoteBlock, 1 },
+
+        { false, 3, 3, { Blocks::Cobblestone, Blocks::Cobblestone, Blocks::Cobblestone,
+                         Items::Redstone,     Items::Redstone,     Items::Diamond,
+                         Blocks::Cobblestone, Blocks::Cobblestone, Blocks::Cobblestone },
+          0, Blocks::Observer, 1 },
+
         // The beacon: glass over the star, obsidian under it. The one
         // recipe in the game you can only make once you have killed
         // something, which is the whole point of a nether star.

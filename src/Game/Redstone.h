@@ -18,6 +18,14 @@ namespace Redstone
     // How far dust carries before it runs out, which is Minecraft's.
     constexpr int MAX_RUN = 15;
 
+    // How long an observer's flash lasts. Minecraft's is two ticks;
+    // this is a tenth of a second, which is the same in feel. It
+    // lives here rather than with the code that counts it down,
+    // because it is part of the rule rather than part of the game
+    // loop -- and because the test has to be able to say that an
+    // observer's flash does in fact end.
+    constexpr float OBSERVER_PULSE = 0.1f;
+
     // How far either side of a change is reconsidered. A signal cannot
     // reach further than its run plus the block that sent it, so this is
     // the whole of what a change can possibly affect.

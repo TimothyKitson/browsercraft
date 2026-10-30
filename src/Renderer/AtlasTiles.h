@@ -212,6 +212,10 @@ namespace Tiles
         DiamondBlockTile,
         EmeraldBlockTile,
         CoalBlockTile,
+        NoteBlockTile,
+        ObserverTop,
+        ObserverTopLit,
+        ObserverSide,
 
         RainDrop,
         SnowFlake,

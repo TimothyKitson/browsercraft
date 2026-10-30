@@ -257,6 +257,10 @@ namespace
         { "Block of Diamond",DiamondBlockTile,DiamondBlockTile,DiamondBlockTile,true,true,RenderType::Cube,0,5.0f },
         { "Block of Emerald",EmeraldBlockTile,EmeraldBlockTile,EmeraldBlockTile,true,true,RenderType::Cube,0,5.0f },
         { "Block of Coal", CoalBlockTile, CoalBlockTile,  CoalBlockTile,  true,  true,  RenderType::Cube,   0,   5.0f },
+        { "Note Block",   NoteBlockTile, NoteBlockTile,  NoteBlockTile,  true,  true,  RenderType::Cube,   0,   0.8f },
+        { "Note Block",   NoteBlockTile, NoteBlockTile,  NoteBlockTile,  true,  true,  RenderType::Cube,   0,   0.8f },
+        { "Observer",     ObserverTop,   ObserverTop,    ObserverSide,   true,  true,  RenderType::Cube,   0,   3.0f },
+        { "Observer",     ObserverTopLit,ObserverTopLit, ObserverSide,   true,  true,  RenderType::Cube,   0,   3.0f },
     };
 }
 

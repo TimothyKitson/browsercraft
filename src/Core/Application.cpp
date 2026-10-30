@@ -1254,6 +1254,7 @@ bool Application::frame()
         if (playing()) tickStructureLairs(deltaTime);
         if (playing()) tickDragonFight(deltaTime);
         if (playing()) tickBeacons(deltaTime);
+        if (playing()) tickObservers(deltaTime);
 
         // A pressed button lets go on its own, and everything it was
         // powering goes out with it.
@@ -4489,6 +4490,11 @@ void Application::updateMining(float deltaTime)
         // again: a broken wire puts out everything downstream of it.
         settleRedstone(hit.block);
 
+        // And anything watching that cell has seen a change. Breaking
+        // counts as much as placing: an observer that only noticed
+        // one of the two would be half a component.
+        wakeObservers(hit.block);
+
         m_breakProgress = 0.0f;
         m_hasTarget = false;
     }
@@ -4774,6 +4780,52 @@ void Application::raiseWitherForShot(int atX, int atY, int atZ)
         m_world->setBlock(atX + i, atY + 3, atZ, Blocks::WitherSkull);
 
     tryRaiseWither(glm::ivec3(atX, atY + 3, atZ));
+}
+
+// An observer watches the block in front of it and sends a flash when
+// that block changes.
+//
+// "In front of" is the block above here, because everything in this
+// game sits on top of something rather than on the side of it -- the
+// same simplification Redstone::carries makes.
+void Application::wakeObservers(const glm::ivec3& around)
+{
+    if (!m_world) return;
+
+    // Anything that could be watching the cell that just changed.
+    static const glm::ivec3 BESIDE[6] = {
+        {  1, 0, 0 }, { -1, 0, 0 }, { 0,  1, 0 },
+        { 0, -1, 0 }, { 0, 0,  1 }, { 0, 0, -1 },
+    };
+
+    for (const glm::ivec3& step : BESIDE)
+    {
+        const glm::ivec3 at = around + step;
+        if (m_world->getBlock(at.x, at.y, at.z) != Blocks::Observer) continue;
+
+        m_world->setBlock(at.x, at.y, at.z, Blocks::ObserverLit);
+        m_observerPulse[{ at.x, at.y, at.z }] = Redstone::OBSERVER_PULSE;
+        settleRedstone(at);
+    }
+}
+
+// And turns it off again. A flash that never ended would be a lever.
+void Application::tickObservers(float deltaTime)
+{
+    if (!m_world || m_observerPulse.empty()) return;
+
+    for (auto it = m_observerPulse.begin(); it != m_observerPulse.end(); )
+    {
+        it->second -= deltaTime;
+        if (it->second > 0.0f) { ++it; continue; }
+
+        const glm::ivec3 at(it->first[0], it->first[1], it->first[2]);
+        it = m_observerPulse.erase(it);
+
+        if (m_world->getBlock(at.x, at.y, at.z) != Blocks::ObserverLit) continue;
+        m_world->setBlock(at.x, at.y, at.z, Blocks::Observer);
+        settleRedstone(at);
+    }
 }
 
 // What the beacons near the player are worth.
@@ -5265,6 +5317,35 @@ void Application::settleRedstone(const glm::ivec3& at)
                 // whether it has already answered this pulse, and why
                 // the answer lives in the cell above -- there is
                 // nowhere else to put a bit.
+                // A note block makes its noise on the edge, not for
+                // as long as it is powered: a drum that droned while
+                // a lever was on would be unbearable. Which note it
+                // plays comes off where it stands, so a row of them
+                // is a row of different notes rather than one note
+                // repeated.
+                if (isNoteBlock(here))
+                {
+                    const std::array<int, 3> cell = { x, y, z };
+                    const bool live = Redstone::poweredAt(cells, x, y, z);
+                    const bool wasLive = m_noteLive.count(cell) > 0;
+
+                    if (live && !wasLive)
+                    {
+                        m_noteLive.insert(cell);
+
+                        // Two octaves off the position, which is how a
+                        // note block ends up tuned by where you put it.
+                        const int step = ((x * 7 + z * 3 + y * 5) % 25 + 25) % 25;
+                        m_audio.play(Sound::Click, 0.8f,
+                                     std::pow(2.0f, (step - 12) / 12.0f));
+                    }
+                    else if (!live && wasLive)
+                    {
+                        m_noteLive.erase(cell);
+                    }
+                    continue;
+                }
+
                 if (isCopperBulb(here))
                 {
                     const std::array<int, 3> cell = { x, y, z };
@@ -6656,6 +6737,9 @@ void Application::handlePlacement()
 
     if (placing == Blocks::Beacon)
         m_beacons.insert({ target.x, target.y, target.z });
+
+    // Anything watching this cell has just seen something happen.
+    wakeObservers(target);
 
     if (!m_player.creative())
     {

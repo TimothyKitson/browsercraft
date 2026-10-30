@@ -1826,6 +1826,60 @@ namespace
     void paintEmeraldBlock(Tile& t) { paintStorageBlock(t, Color{  66, 200,  96 }, 487); }
     void paintCoalBlock(Tile& t)    { paintStorageBlock(t, Color{  24,  24,  26 }, 489); }
 
+    // A note block is a drum: planks with a dark skin stretched over
+    // the face and studs round it.
+    void paintNoteBlock(Tile& t)
+    {
+        t.fill(Color{ 104, 74, 48 });
+        for (int y = 0; y < Tile::N; ++y)
+            for (int x = 0; x < Tile::N; ++x)
+            {
+                const float edge = std::min(std::min(x, Tile::N - 1 - x),
+                                            std::min(y, Tile::N - 1 - y));
+                if (edge >= 3.0f) t.set(x, y, Color{ 62, 42, 30 });
+            }
+        for (int i = 2; i < Tile::N; i += 4)
+        {
+            t.set(i, 1, Color{ 176, 148, 96 });
+            t.set(i, Tile::N - 2, Color{ 176, 148, 96 });
+            t.set(1, i, Color{ 176, 148, 96 });
+            t.set(Tile::N - 2, i, Color{ 176, 148, 96 });
+        }
+        t.speckle(5, 491);
+    }
+
+    // An observer: a face with two eyes, and a lamp on it when it has
+    // just seen something.
+    void paintObserverTopIn(Tile& t, Color eye)
+    {
+        t.fill(Color{ 58, 58, 60 });
+        for (int y = 0; y < Tile::N; ++y)
+            for (int x = 0; x < Tile::N; ++x)
+                if (hash2(x, y, 493) > 0.82f) t.set(x, y, Color{ 76, 76, 78 });
+
+        for (int y = 6; y < 10; ++y)
+            for (int x = 3; x < 6; ++x)
+            {
+                t.set(x, y, eye);
+                t.set(x + 7, y, eye);
+            }
+        t.speckle(4, 494);
+    }
+
+    void paintObserverTop(Tile& t)    { paintObserverTopIn(t, Color{ 150, 150, 154 }); }
+    void paintObserverTopLit(Tile& t) { paintObserverTopIn(t, Color{ 236, 64, 48 }); }
+
+    void paintObserverSide(Tile& t)
+    {
+        t.fill(Color{ 50, 50, 52 });
+        for (int x = 0; x < Tile::N; ++x)
+        {
+            t.set(x, 5, Color{ 96, 96, 100 });
+            t.set(x, 10, Color{ 96, 96, 100 });
+        }
+        t.speckle(5, 495);
+    }
+
     void paintSpawnerIn(Tile& t, Color bars, Color inside)
     {
         t.fill(inside);
@@ -4483,6 +4537,10 @@ namespace
         { Tiles::DiamondBlockTile, paintDiamondBlock },
         { Tiles::EmeraldBlockTile, paintEmeraldBlock },
         { Tiles::CoalBlockTile, paintCoalBlock },
+        { Tiles::NoteBlockTile, paintNoteBlock },
+        { Tiles::ObserverTop, paintObserverTop },
+        { Tiles::ObserverTopLit, paintObserverTopLit },
+        { Tiles::ObserverSide, paintObserverSide },
         { Tiles::Obsidian, paintObsidian },
         { Tiles::TallGrass, paintTallGrass },
         { Tiles::FlowerRed, paintFlowerRed },
@@ -4849,6 +4907,10 @@ namespace
         { Tiles::DiamondBlockTile, { "diamond_block", nullptr },                       Tinting::None,    0,   false },
         { Tiles::EmeraldBlockTile, { "emerald_block", nullptr },                       Tinting::None,    0,   false },
         { Tiles::CoalBlockTile, { "coal_block", nullptr },                             Tinting::None,    0,   false },
+        { Tiles::NoteBlockTile, { "note_block", nullptr },                             Tinting::None,    0,   false },
+        { Tiles::ObserverTop,   { "observer_front", nullptr },                         Tinting::None,    0,   false },
+        { Tiles::ObserverTopLit, { "observer_front", nullptr },                        Tinting::None,    0,   false },
+        { Tiles::ObserverSide,  { "observer_side", nullptr },                          Tinting::None,    0,   false },
         { Tiles::PistonTop,     { "piston_side", nullptr },                            Tinting::None,    0,   false },
         { Tiles::PistonSide,    { "piston_side", nullptr },                            Tinting::None,    0,   false },
         { Tiles::PistonFace,    { "piston_top", "piston_top_normal", nullptr },         Tinting::None,    0,   false },

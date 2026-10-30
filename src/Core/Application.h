@@ -569,6 +569,18 @@ private:
     // placed it -- so watching place and break is exact, not a
     // guess.
     std::set<std::array<int, 3>> m_beacons;
+
+    // Which note blocks are already sounding. A note block strikes on
+    // the edge of a signal rather than while one is held: nothing can
+    // store that in the block, so it is kept here.
+    std::set<std::array<int, 3>> m_noteLive;
+
+    // Observers that are mid-pulse, and how long each has left. An
+    // observer sends a flash rather than a level, so something has to
+    // turn it off again -- and a block has nowhere to count down in.
+    std::map<std::array<int, 3>, float> m_observerPulse;
+    void wakeObservers(const glm::ivec3& around);
+    void tickObservers(float deltaTime);
     void openExitPortal();
     void tryRaiseWither(const glm::ivec3& skull);
     float m_dragonTimer = 0.0f;

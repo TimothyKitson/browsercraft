@@ -346,6 +346,14 @@ namespace Blocks
         EmeraldBlock,
         CoalBlock,
 
+        // The two redstone parts that need nothing but a signal: one
+        // that makes a noise when it gets one, and one that sends one
+        // when what it is watching changes.
+        NoteBlock,
+        NoteBlockLit,
+        Observer,
+        ObserverLit,
+
         Count
     };
 }
@@ -465,6 +473,16 @@ inline bool isWaterPlant(BlockId id)
 inline bool isDeepDark(BlockId id)
 {
     return id >= Blocks::DeepslateBricks && id <= Blocks::ReinforcedDeepslate;
+}
+
+inline bool isNoteBlock(BlockId id)
+{
+    return id == Blocks::NoteBlock || id == Blocks::NoteBlockLit;
+}
+
+inline bool isObserver(BlockId id)
+{
+    return id == Blocks::Observer || id == Blocks::ObserverLit;
 }
 
 // What a beacon will stand on. Minecraft's pyramid takes iron, gold,

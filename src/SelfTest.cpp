@@ -5541,6 +5541,77 @@ namespace
         }
     }
 
+    void testRedstoneParts()
+    {
+        section("redstone: the note block and the observer");
+
+        // A note block answers to power like a lamp does.
+        check(Redstone::isSink(Blocks::NoteBlock), "a note block answers to power");
+        check(Redstone::lit(Blocks::NoteBlock) == Blocks::NoteBlockLit,
+              "and has a struck state");
+        check(Redstone::unlit(Blocks::NoteBlockLit) == Blocks::NoteBlock,
+              "which it comes back out of");
+
+        // An observer is a source while it is flashing, and nothing
+        // when it is not. That is the whole of what makes it useful:
+        // it turns a change into a signal.
+        check(Redstone::isSource(Blocks::ObserverLit),
+              "an observer mid-flash gives power out");
+        check(!Redstone::isSource(Blocks::Observer),
+              "and an observer at rest gives none");
+        check(Redstone::lit(Blocks::Observer) == Blocks::ObserverLit &&
+              Redstone::unlit(Blocks::ObserverLit) == Blocks::Observer,
+              "the two states are each other's opposite");
+
+        // A flash that never ended would be a lever.
+        check(Redstone::OBSERVER_PULSE > 0.0f && Redstone::OBSERVER_PULSE < 1.0f,
+              "an observer's flash is brief, and it does end");
+
+        // And it drives a circuit. Laid out in a plain array: an
+        // observer, a run of dust, and a lamp at the end of it.
+        {
+            struct Bench : Redstone::Cells
+            {
+                std::map<std::array<int,3>, BlockId> blocks;
+                BlockId at(int x, int y, int z) const override
+                {
+                    const auto it = blocks.find({ x, y, z });
+                    return it == blocks.end() ? Blocks::Air : it->second;
+                }
+                void set(int x, int y, int z, BlockId b) override
+                {
+                    blocks[{ x, y, z }] = b;
+                }
+            } bench;
+
+            for (int x = 0; x < 8; ++x)
+            {
+                bench.blocks[{ x, 0, 0 }] = Blocks::Stone;
+                bench.blocks[{ x, 1, 0 }] = Blocks::RedstoneDust;
+            }
+            bench.blocks[{ 8, 0, 0 }] = Blocks::Stone;
+            bench.blocks[{ 8, 1, 0 }] = Blocks::RedstoneLamp;
+
+            // At rest the lamp is dark.
+            bench.blocks[{ -1, 1, 0 }] = Blocks::Observer;
+            Redstone::update(bench, 0, 1, 0);
+            check(bench.at(8, 1, 0) == Blocks::RedstoneLamp,
+                  "an observer at rest lights nothing");
+
+            // Flashing, it lights the whole run.
+            bench.blocks[{ -1, 1, 0 }] = Blocks::ObserverLit;
+            Redstone::update(bench, 0, 1, 0);
+            check(bench.at(8, 1, 0) == Blocks::RedstoneLampLit,
+                  "and an observer flashing lights a lamp eight blocks away");
+
+            // And a note block on the same run is struck too.
+            bench.blocks[{ 4, 1, 0 }] = Blocks::NoteBlock;
+            Redstone::update(bench, 4, 1, 0);
+            check(bench.at(4, 1, 0) == Blocks::NoteBlockLit,
+                  "a note block on a live wire is struck");
+        }
+    }
+
     void testFortressAndMineshaft()
     {
         section("the fortress and the mineshaft");
@@ -9240,6 +9311,7 @@ int runSelfTest()
     testDragonFight();
     testWither();
     testBeacon();
+    testRedstoneParts();
     testAncientCity();
     testOtherDimensionStructures();
     testSearchAgreesWithStamp();

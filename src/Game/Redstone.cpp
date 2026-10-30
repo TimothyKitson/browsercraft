@@ -25,6 +25,10 @@ namespace Redstone
 {
     bool isSource(BlockId id)
     {
+        // An observer that has just seen something is a source for
+        // as long as its pulse lasts, which is what makes it useful:
+        // it turns a change into a signal.
+        if (id == Blocks::ObserverLit) return true;
         return id == Blocks::RedstoneTorch || id == Blocks::RedstoneBlock ||
                id == Blocks::LeverOn || id == Blocks::ButtonOn;
     }
@@ -36,13 +40,16 @@ namespace Redstone
 
     bool isSink(BlockId id)
     {
-        return id == Blocks::RedstoneLamp || id == Blocks::RedstoneLampLit || isDoor(id);
+        return id == Blocks::RedstoneLamp || id == Blocks::RedstoneLampLit ||
+               isNoteBlock(id) || isDoor(id);
     }
 
     BlockId lit(BlockId id)
     {
         if (id == Blocks::RedstoneDust) return Blocks::RedstoneDustLit;
         if (id == Blocks::RedstoneLamp) return Blocks::RedstoneLampLit;
+        if (id == Blocks::NoteBlock) return Blocks::NoteBlockLit;
+        if (id == Blocks::Observer) return Blocks::ObserverLit;
         if (isDoor(id) && !doorIsOpen(id))
             return doorPart(blockFacing(id), doorIsTop(id), true);
         return id;
@@ -50,6 +57,8 @@ namespace Redstone
 
     BlockId unlit(BlockId id)
     {
+        if (id == Blocks::NoteBlockLit) return Blocks::NoteBlock;
+        if (id == Blocks::ObserverLit) return Blocks::Observer;
         if (id == Blocks::RedstoneDustLit) return Blocks::RedstoneDust;
         if (id == Blocks::RedstoneLampLit) return Blocks::RedstoneLamp;
         if (isDoor(id) && doorIsOpen(id))
