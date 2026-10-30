@@ -1590,6 +1590,178 @@ namespace
             t.model.push_back(mirrored(mc(Part::LegBackLeft, 96, 40, 8, 17, 8, -4, 0, -4, 6, 7, 11)));
         }
 
+        {
+            // The slime. Minecraft's is a cube with a face in it, and
+            // so is this: there is nothing else to a slime.
+            MobType& t = table[static_cast<size_t>(MobId::Slime)];
+            t.id = MobId::Slime;
+            t.experience = 4;
+            t.voice = Sound::MobSlimeSay;
+            t.hurtVoice = Sound::MobSlimeHurt;
+            t.deathVoice = Sound::MobSlimeDeath;
+            t.name = "Slime";
+            t.texture = "slime";
+            t.spawnClass = SpawnClass::Hostile;
+            t.maxHealth = 16;
+            t.width = 1.04f;
+            t.height = 1.04f;
+            t.walkSpeed = 1.4f;
+            t.limbSwing = 0.0f;
+            t.attackDamage = 4;
+            t.attackInterval = 1.0f;
+
+            // Nothing: a big slime splits into small ones, and it is
+            // the small ones that leave the slimeballs. Killing the
+            // big one and getting nothing is the point of the split.
+            t.bodyColour = rgb(104, 182, 90);
+            t.headColour = rgb(124, 198, 108);
+            t.eyeColour = rgb(40, 60, 36);
+
+            t.model.push_back(mc(Part::Body, 0, 0, 16, 16, 16, -8, 8, -8, 0, 0, 0));
+        }
+
+        {
+            // What a slime splits into, and where the slimeballs come
+            // from. Half the size and a quarter of the trouble.
+            MobType& t = table[static_cast<size_t>(MobId::SlimeSmall)];
+            t.id = MobId::SlimeSmall;
+            t.experience = 1;
+            t.voice = Sound::MobSlimeSmallSay;
+            t.hurtVoice = Sound::MobSlimeSmallHurt;
+            t.deathVoice = Sound::MobSlimeSmallDeath;
+            t.name = "Small Slime";
+            t.texture = "slime";
+            t.spawnClass = SpawnClass::Hostile;
+            t.maxHealth = 4;
+            t.width = 0.52f;
+            t.height = 0.52f;
+            t.walkSpeed = 1.8f;
+            t.limbSwing = 0.0f;
+            t.voicePitch = 1.5f;
+            t.attackDamage = 2;
+            t.attackInterval = 0.9f;
+
+            t.drop = Items::Slimeball;
+            t.dropCount = 1;
+
+            t.bodyColour = rgb(104, 182, 90);
+            t.headColour = rgb(124, 198, 108);
+            t.eyeColour = rgb(40, 60, 36);
+
+            t.model.push_back(mc(Part::Body, 0, 0, 8, 8, 8, -4, 16, -4, 0, 0, 0));
+        }
+
+        {
+            // The bat. It does nothing, it is worth nothing, and a cave
+            // without one is a cave nothing lives in.
+            MobType& t = table[static_cast<size_t>(MobId::Bat)];
+            t.id = MobId::Bat;
+            t.experience = 0;
+            t.voice = Sound::MobBatSay;
+            t.hurtVoice = Sound::MobBatHurt;
+            t.deathVoice = Sound::MobBatDeath;
+            t.name = "Bat";
+            t.texture = "bat";
+            t.spawnClass = SpawnClass::Passive;
+            t.maxHealth = 6;
+            t.width = 0.5f;
+            t.height = 0.9f;
+            t.walkSpeed = 2.0f;
+            t.limbSwing = 0.0f;
+            t.voicePitch = 1.3f;
+
+            // It flies: held off whatever is under it rather than
+            // walking on it, the way a blaze is.
+            t.hoverHeight = 2.4f;
+
+            t.ambientMinSeconds = 10.0f;
+            t.ambientMaxSeconds = 30.0f;
+
+            t.bodyColour = rgb(68, 54, 44);
+            t.headColour = rgb(84, 66, 52);
+            t.eyeColour = rgb(190, 60, 50);
+
+            t.model.push_back(mc(Part::Head, 0, 0, 4, 4, 4, -2, 8, -2, 0, 0, 0));
+            t.model.push_back(mc(Part::Body, 0, 10, 4, 6, 4, -2, 12, -2, 0, 0, 0));
+            t.model.push_back(mc(Part::WingRight, 20, 0, 10, 8, 1, -12, 11, -1, 0, 0, 0));
+            t.model.push_back(mirrored(mc(Part::WingLeft, 20, 0, 10, 8, 1, 2, 11, -1, 0, 0, 0)));
+        }
+
+        {
+            // The cave spider: a spider at half the size with poison in
+            // it. The mineshafts have been empty since they were dug.
+            MobType& t = table[static_cast<size_t>(MobId::CaveSpider)];
+            t.id = MobId::CaveSpider;
+            t.experience = 5;
+            t.voice = Sound::MobCaveSpiderSay;
+            t.hurtVoice = Sound::MobCaveSpiderHurt;
+            t.deathVoice = Sound::MobCaveSpiderDeath;
+            t.name = "Cave Spider";
+            t.texture = "cave_spider";
+            t.spawnClass = SpawnClass::Hostile;
+            t.maxHealth = 12;
+            t.width = 1.4f;
+            t.height = 0.9f;
+            // Half again smaller than a spider, which is what lets one
+            // through a gap you thought was safe.
+            t.modelScale = 0.55f;
+            t.walkSpeed = 2.8f;
+            t.limbSwing = 0.3f;
+            t.voicePitch = 1.7f;
+            t.attackDamage = 2;
+            t.attackInterval = 0.8f;
+            t.attackReach = 1.0f;
+
+            t.drop = Items::StringItem;
+            t.dropCount = 2;
+
+            t.bodyColour = rgb(22, 60, 72);
+            t.headColour = rgb(30, 74, 88);
+            t.eyeColour = rgb(200, 60, 50);
+
+            t.model.push_back(mc(Part::Head, 32, 4, 8, 8, 8, -4, -4, -8, 0, 15, -3));
+            t.model.push_back(mc(Part::Body, 0, 0, 6, 6, 6, -3, -3, -3, 0, 15, 0));
+            t.model.push_back(mc(Part::Body, 0, 12, 10, 8, 12, -5, -4, -6, 0, 15, 9));
+            addSpiderLeg(t.model, Part::LegBackRight,   2, LEG_WIDE,   LEG_WIDE);
+            addSpiderLeg(t.model, Part::LegBackLeft,    1, LEG_NARROW, LEG_TURN);
+            addSpiderLeg(t.model, Part::LegFrontRight,  0, LEG_NARROW, -LEG_TURN);
+            addSpiderLeg(t.model, Part::LegFrontLeft,  -1, LEG_WIDE,   -LEG_WIDE);
+        }
+
+        {
+            // The silverfish: the small thing in the walls of a
+            // stronghold. It is barely worth killing and it is the
+            // reason the walls of a stronghold are frightening.
+            MobType& t = table[static_cast<size_t>(MobId::Silverfish)];
+            t.id = MobId::Silverfish;
+            t.experience = 5;
+            t.voice = Sound::MobSilverfishSay;
+            t.hurtVoice = Sound::MobSilverfishHurt;
+            t.deathVoice = Sound::MobSilverfishDeath;
+            t.name = "Silverfish";
+            t.texture = "silverfish";
+            t.spawnClass = SpawnClass::Hostile;
+            t.maxHealth = 8;
+            t.width = 0.4f;
+            t.height = 0.3f;
+            t.walkSpeed = 2.6f;
+            t.limbSwing = 0.2f;
+            t.voicePitch = 1.6f;
+            t.attackDamage = 1;
+            t.attackInterval = 0.7f;
+            t.attackReach = 0.8f;
+
+            t.bodyColour = rgb(112, 112, 116);
+            t.headColour = rgb(140, 140, 146);
+            t.eyeColour = rgb(40, 40, 44);
+
+            // Three segments on the floor, the middle one tallest, so
+            // it reads as a thing rather than as a brick.
+            t.model.push_back(mc(Part::Body, 0, 0, 5, 4, 4, -2, 20, -2, 0, 0, 0));
+            t.model.push_back(mc(Part::Head, 0, 10, 3, 3, 3, -1, 21, -5, 0, 0, 0));
+            t.model.push_back(mc(Part::Body, 0, 18, 4, 3, 4, -2, 21, 2, 0, 0, 0));
+        }
+
         return table;
     }
 }

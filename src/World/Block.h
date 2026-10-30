@@ -495,6 +495,10 @@ namespace Blocks
         VerdantFroglight,
         PearlescentFroglight,
 
+        // Nine slimeballs. It breaks a fall outright, which is the
+        // only thing in the game that does.
+        SlimeBlock,
+
         Count
     };
 }

@@ -389,6 +389,9 @@ namespace
         { "Ochre Froglight", OchreFroglightTop, OchreFroglightTop, OchreFroglightSide, true, true, RenderType::Cube, 15, 0.3f },
         { "Verdant Froglight", VerdantFroglightTop, VerdantFroglightTop, VerdantFroglightSide, true, true, RenderType::Cube, 15, 0.3f },
         { "Pearlescent Froglight", PearlescentFroglightTop, PearlescentFroglightTop, PearlescentFroglightSide, true, true, RenderType::Cube, 15, 0.3f },
+        // Not opaque: Minecraft's is see-through, and the light that
+        // gets through it is half the reason anybody builds with one.
+        { "Slime Block", SlimeBlockTile, SlimeBlockTile, SlimeBlockTile, true, false, RenderType::Cube, 0, 0.0f },
     };
 }
 
@@ -616,6 +619,10 @@ Material blockMaterial(BlockId id)
     if (isCake(id)) return Material::Wool;      // soft, and no tool helps
     if (id == Blocks::Candle || id == Blocks::CandleLit) return Material::Wool;
     if (id == Blocks::Scaffolding) return Material::Wood;
+    // A slime block comes apart in your hands; a pickaxe is no help
+    // and asking for one would have made the softest block in the game
+    // want the hardest tool. The block table's test caught that too.
+    if (id == Blocks::SlimeBlock) return Material::Wool;
     if (isSign(id) || isFrame(id)) return Material::Wood;
     if (isCauldron(id)) return Material::Stone;
     if (isFurnaceBlock(id)) return Material::Stone;

@@ -61,6 +61,15 @@ enum class MobId : uint8_t
     Evoker,
     Ravager,
 
+    // The cave crowd. Underground was empty: the spawner only ever
+    // looked down from the sky, so it never found a cave floor, and
+    // every monster in the game was a monster you met outdoors.
+    Slime,
+    SlimeSmall,
+    Bat,
+    CaveSpider,
+    Silverfish,
+
     Count
 };
 

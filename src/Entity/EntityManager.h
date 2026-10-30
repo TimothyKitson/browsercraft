@@ -123,6 +123,13 @@ public:
     // Which species may appear given the light and the block underfoot.
     static bool canSpawnOn(MobId type, BlockId ground, int light);
 
+    // What the underground has in it. Asked of the game rather than
+    // copied into a test, which is the lesson the ghast taught: a
+    // species added to a list and not to the copy of it reads as a
+    // species nobody can meet.
+    static int caveSpeciesCount();
+    static MobId caveSpecies(int index);
+
     // Whether a mob can be where this block is. One rule in one place,
     // so a test can ask exactly what the spawn asks: water is a wall
     // to almost everything, and is not a wall to the three things that

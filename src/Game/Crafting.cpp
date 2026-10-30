@@ -312,6 +312,19 @@ namespace
           0, Blocks::LapisBlock, 1 },
         { true, 0, 0, { Blocks::LapisBlock }, 1, Items::LapisLazuli, 9 },
 
+        // Slime. Nine balls to a block and back, Minecraft's own
+        // sticky piston rather than the magma-cream stand-in it had
+        // while there were no slimes, and the cream itself.
+        { false, 3, 3, { Items::Slimeball, Items::Slimeball, Items::Slimeball,
+                         Items::Slimeball, Items::Slimeball, Items::Slimeball,
+                         Items::Slimeball, Items::Slimeball, Items::Slimeball },
+          0, Blocks::SlimeBlock, 1 },
+        { true, 0, 0, { Blocks::SlimeBlock }, 1, Items::Slimeball, 9 },
+        { true, 0, 0, { Blocks::PistonNorth, Items::Slimeball },
+          2, Blocks::StickyPistonNorth, 1 },
+        { true, 0, 0, { Items::Slimeball, Items::BlazePowder },
+          2, Items::MagmaCream, 1 },
+
         // Cobblestone and a vine. Minecraft's recipe, and the only
         // way to mossy cobble that does not involve finding a village
         // built in a swamp -- which is where the one in this world

@@ -34,6 +34,19 @@ namespace
     const MobId NETHER_SPECIES[] = { MobId::ZombiePigman, MobId::WitherSkeleton,
                                      MobId::MagmaCube, MobId::Blaze, MobId::Ghast };
 
+    // Underground, which until now had nothing at all: the spawner
+    // only ever looked down from the sky, so the first standable
+    // block it found was always the surface and no cave floor was
+    // ever offered a mob. Every monster in the game was one you met
+    // outdoors, and the whole underworld was a safe place to walk.
+    const MobId CAVE_SPECIES[] = { MobId::Zombie, MobId::Skeleton, MobId::Creeper,
+                                   MobId::Spider, MobId::CaveSpider, MobId::Silverfish,
+                                   MobId::Slime, MobId::Bat };
+
+    // How far down a slime will go to, as Minecraft has it: they keep
+    // to the bottom of the world rather than the first cave you find.
+    constexpr int SLIME_CEILING = 40;
+
     // The End has endermen and nothing else, which is also true of
     // Minecraft's. The enderman is the one species in two lists: it
     // belongs to the End and wanders the overworld at night.
@@ -116,6 +129,17 @@ MobId EntityManager::nightSpecies(int index)
 {
     const int count = nightSpeciesCount();
     return HOSTILE_SPECIES[((index % count) + count) % count];
+}
+
+int EntityManager::caveSpeciesCount()
+{
+    return static_cast<int>(std::size(CAVE_SPECIES));
+}
+
+MobId EntityManager::caveSpecies(int index)
+{
+    const int count = caveSpeciesCount();
+    return CAVE_SPECIES[((index % count) + count) % count];
 }
 
 int EntityManager::netherSpeciesCount()
@@ -209,6 +233,13 @@ void EntityManager::trySpawnWave(const World& world, const glm::vec3& playerPosi
     // Monsters come out when the sun is down; animals keep to the daylight.
     const bool night = daylight < 0.35f;
 
+    // Whether this whole wave goes looking underground. Decided once
+    // for the wave rather than per attempt: a wave stops at its first
+    // success, and the first attempt on the surface nearly always
+    // succeeds, so alternating attempts meant the cave branch was
+    // reached perhaps once an hour and the caves stayed empty.
+    const bool digging = m_dimension == Dimension::Overworld && random01() < 0.55f;
+
     for (int attempt = 0; attempt < ATTEMPTS_PER_WAVE; ++attempt)
     {
         const float angle = random01() * 6.2831853f;
@@ -217,8 +248,23 @@ void EntityManager::trySpawnWave(const World& world, const glm::vec3& playerPosi
         const int x = static_cast<int>(std::floor(playerPosition.x + std::sin(angle) * distance));
         const int z = static_cast<int>(std::floor(playerPosition.z + std::cos(angle) * distance));
 
-        const int y = surfaceBelow(world, x, WORLD_TOP, z);
-        if (y < 0) continue;
+        // Half the attempts look for a cave floor rather than the
+        // ground: start the search from a random depth below the
+        // surface, and the first standable block under that is a cave
+        // floor by construction.
+        const int surface = surfaceBelow(world, x, WORLD_TOP, z);
+        if (surface < 0) continue;
+
+        const bool underground = digging && surface > 20;
+
+        int y = surface;
+        if (underground)
+        {
+            const int from = 6 + static_cast<int>(random01() *
+                                                  static_cast<float>(surface - 14));
+            y = surfaceBelow(world, x, from, z);
+            if (y < 0 || y >= surface - 3) continue;   // that was the surface again
+        }
 
         const BlockId ground = world.getBlock(x, y - 1, z);
         if (ground == Blocks::Air) continue;   // chunk not generated yet
@@ -241,6 +287,15 @@ void EntityManager::trySpawnWave(const World& world, const glm::vec3& playerPosi
         {
             constexpr int NETHER_COUNT = static_cast<int>(std::size(NETHER_SPECIES));
             species = NETHER_SPECIES[static_cast<int>(random01() * NETHER_COUNT) % NETHER_COUNT];
+        }
+        else if (underground)
+        {
+            constexpr int CAVE_COUNT = static_cast<int>(std::size(CAVE_SPECIES));
+            species = CAVE_SPECIES[static_cast<int>(random01() * CAVE_COUNT) % CAVE_COUNT];
+
+            // A slime keeps to the bottom of the world. Anywhere above
+            // that, the roll goes to whatever else was on the list.
+            if (species == MobId::Slime && y > SLIME_CEILING) species = MobId::Zombie;
         }
         else if (night)
         {
@@ -311,7 +366,11 @@ void EntityManager::trySpawnWave(const World& world, const glm::vec3& playerPosi
         if (m_dimension == Dimension::Overworld &&
             mobType(species).dimension != Dimension::Overworld)
             continue;
-        if (!canSpawnOn(species, ground, light)) continue;
+        // A bat is the one passive thing that belongs in the dark, so
+        // the daylight-and-grass rule that keeps animals out of caves
+        // is the wrong question to ask about one.
+        if (species != MobId::Bat && !canSpawnOn(species, ground, light)) continue;
+        if (species == MobId::Bat && (!isSolid(ground) || light > HOSTILE_MAX_LIGHT)) continue;
 
         const glm::vec3 mobFeet(x + 0.5f, static_cast<float>(y), z + 0.5f);
         if (!spawnAt(species, mobFeet, world)) continue;

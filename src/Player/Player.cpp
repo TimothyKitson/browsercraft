@@ -210,7 +210,7 @@ void Player::moveAxis(const World& world, float delta, int axis, bool preventLed
         {
             if (axis == 1 && move < 0.0f)
             {
-                if (m_falling) applyFallDamage(position.y);
+                if (m_falling) applyFallDamage(world, position.y);
                 onGround = true;
                 m_falling = false;
             }
@@ -259,13 +259,20 @@ bool Player::stepUp(const World& world, const glm::vec3& blocked)
     return false;
 }
 
-void Player::applyFallDamage(float landingY)
+void Player::applyFallDamage(const World& world, float landingY)
 {
     if (creative() || flying) return;
 
     const float fallDistance = m_fallStartY - landingY;
-    if (fallDistance > SAFE_FALL_DISTANCE)
-        damage(static_cast<int>(std::floor(fallDistance - SAFE_FALL_DISTANCE)));
+    if (fallDistance <= SAFE_FALL_DISTANCE) return;
+
+    // What was landed on can cancel the whole of it.
+    const int x = static_cast<int>(std::floor(position.x));
+    const int y = static_cast<int>(std::floor(landingY - 0.1f));
+    const int z = static_cast<int>(std::floor(position.z));
+    if (breaksFall(world.getBlock(x, y, z))) return;
+
+    damage(static_cast<int>(std::floor(fallDistance - SAFE_FALL_DISTANCE)));
 }
 
 bool Player::onLadder(const World& world) const

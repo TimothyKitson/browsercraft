@@ -2920,6 +2920,40 @@ namespace
         t.speckle(5, 668);
     }
 
+    void paintSlimeBlock(Tile& t)
+    {
+        // A pale green jelly with a darker cube suspended in it, which
+        // is how Minecraft draws one: the inner square is what stops a
+        // wall of them reading as flat green.
+        t.fill(Color{ 118, 190, 102, 190 });
+        for (int y = 3; y < Tile::N - 3; ++y)
+            for (int x = 3; x < Tile::N - 3; ++x)
+                t.set(x, y, Color{ 86, 152, 74, 220 });
+        for (int y = 5; y < Tile::N - 5; ++y)
+            for (int x = 5; x < Tile::N - 5; ++x)
+                t.set(x, y, Color{ 108, 178, 94, 190 });
+        t.speckle(4, 701);
+    }
+
+    void paintItemSlimeball(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+
+        // A blob: a circle with the bottom flattened where it has sat
+        // down, and a highlight up at the top left.
+        for (int y = 3; y < Tile::N - 2; ++y)
+            for (int x = 2; x < Tile::N - 2; ++x)
+            {
+                const float dx = (x - 7.5f) / 6.0f;
+                const float dy = (y - 8.5f) / 5.4f;
+                if (dx * dx + dy * dy > 1.0f) continue;
+                t.set(x, y, (dy > 0.45f) ? Color{ 74, 130, 64 } : Color{ 108, 176, 92 });
+            }
+        t.set(5, 6, Color{ 170, 220, 150 });
+        t.set(6, 6, Color{ 170, 220, 150 });
+        t.set(5, 7, Color{ 150, 204, 132 });
+    }
+
     // The sixteen wools, and the fifteen that are not white. One
     // painter over a colour table, because a wool is a flat colour
     // with a weave in it and the colour is the only difference.
@@ -6106,6 +6140,7 @@ namespace
         { Tiles::AncientDebrisTop, paintAncientDebrisTop },
         { Tiles::AncientDebrisSide, paintAncientDebrisSide },
         { Tiles::NetheriteBlockTile, paintNetheriteBlock },
+        { Tiles::SlimeBlockTile, paintSlimeBlock },
         { Tiles::OchreFroglightTop, paintOchreTop },
         { Tiles::OchreFroglightSide, paintOchreSide },
         { Tiles::VerdantFroglightTop, paintVerdantTop },
@@ -6122,6 +6157,7 @@ namespace
         { Tiles::ItemShulkerShell, paintItemShulkerShell },
         { Tiles::ItemTrident, paintItemTrident },
         { Tiles::ItemTotem, paintItemTotem },
+        { Tiles::ItemSlimeball, paintItemSlimeball },
         { Tiles::ItemBowl, paintItemBowl },
         { Tiles::ItemBeetroot, paintItemBeetroot },
         { Tiles::ItemBeetrootSeeds, paintItemBeetrootSeeds },
@@ -6446,6 +6482,7 @@ namespace
         { Tiles::ItemShulkerShell, { "shulker_shell", nullptr, nullptr } },
         { Tiles::ItemTrident, { "trident", nullptr, nullptr } },
         { Tiles::ItemTotem, { "totem_of_undying", "totem", nullptr } },
+        { Tiles::ItemSlimeball, { "slime_ball", "slimeball", nullptr } },
     };
 
     const PackTile PACK_TILES[] = {
@@ -6707,6 +6744,7 @@ namespace
         { Tiles::AncientDebrisTop,  { "ancient_debris_top", nullptr },                 Tinting::None,    0,   false },
         { Tiles::AncientDebrisSide, { "ancient_debris_side", nullptr },                Tinting::None,    0,   false },
         { Tiles::NetheriteBlockTile,{ "netherite_block", nullptr },                    Tinting::None,    0,   false },
+        { Tiles::SlimeBlockTile,   { "slime_block", nullptr },                         Tinting::None,    0,   false },
         { Tiles::OchreFroglightTop,  { "ochre_froglight_top", nullptr },               Tinting::None,    0,   false },
         { Tiles::OchreFroglightSide, { "ochre_froglight_side", nullptr },              Tinting::None,    0,   false },
         { Tiles::VerdantFroglightTop,  { "verdant_froglight_top", nullptr },           Tinting::None,    0,   false },

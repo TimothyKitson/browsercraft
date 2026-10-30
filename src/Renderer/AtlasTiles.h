@@ -265,6 +265,7 @@ namespace Tiles
         OchreFroglightTop, OchreFroglightSide,
         VerdantFroglightTop, VerdantFroglightSide,
         PearlescentFroglightTop, PearlescentFroglightSide,
+        SlimeBlockTile,
 
         RainDrop,
         SnowFlake,
@@ -428,8 +429,9 @@ namespace Tiles
         ItemShulkerShell,
         ItemTrident,
         ItemTotem,
+        ItemSlimeball,
 
-        ItemTileEnd = ItemTotem + 1
+        ItemTileEnd = ItemSlimeball + 1
     };
 
     // Ten progressively more broken overlay tiles for the mining animation.

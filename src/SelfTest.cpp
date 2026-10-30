@@ -6129,6 +6129,8 @@ namespace
                 if (EntityManager::netherSpecies(k) == id) meetable = true;
             for (int k = 0; k < EntityManager::endSpeciesCount(); ++k)
                 if (EntityManager::endSpecies(k) == id) meetable = true;
+            for (int k = 0; k < EntityManager::caveSpeciesCount(); ++k)
+                if (EntityManager::caveSpecies(k) == id) meetable = true;
 
             // What a cage sends out.
             for (Dimension where : { Dimension::Overworld, Dimension::Nether, Dimension::End })
@@ -6154,6 +6156,9 @@ namespace
                 case MobId::Frog:
                 // And the squid, which belongs to open water.
                 case MobId::Squid:
+                // A small slime is never spawned: it is what a big
+                // one leaves behind when it is killed.
+                case MobId::SlimeSmall:
                 // The illagers belong to the two buildings that were
                 // built for them: the outpost and the mansion.
                 case MobId::Pillager: case MobId::Vindicator:
@@ -10779,6 +10784,136 @@ namespace
         }
     }
 
+    void testCaveCrowd()
+    {
+        section("underground: who lives down there");
+
+        // The list the spawner actually reads, not a copy of it.
+        bool hasSlime = false, hasBat = false, hasCaveSpider = false;
+        bool hasSilverfish = false, hasZombie = false;
+        for (int k = 0; k < EntityManager::caveSpeciesCount(); ++k)
+        {
+            const MobId id = EntityManager::caveSpecies(k);
+            if (id == MobId::Slime) hasSlime = true;
+            if (id == MobId::Bat) hasBat = true;
+            if (id == MobId::CaveSpider) hasCaveSpider = true;
+            if (id == MobId::Silverfish) hasSilverfish = true;
+            if (id == MobId::Zombie) hasZombie = true;
+        }
+        check(hasSlime, "a slime lives underground");
+        check(hasBat, "and a bat");
+        check(hasCaveSpider, "and a cave spider");
+        check(hasSilverfish, "and a silverfish");
+        check(hasZombie, "and the things that come out at night, which also live down there");
+
+        // Nothing that belongs to the surface or to another world is
+        // on it: a horse in a cave is as wrong as a sheep in one.
+        for (int k = 0; k < EntityManager::caveSpeciesCount(); ++k)
+        {
+            const MobType& type = mobType(EntityManager::caveSpecies(k));
+            check(type.dimension == Dimension::Overworld,
+                  std::string(type.name) + " belongs to this world");
+            check(!type.boss, std::string(type.name) + " is not a boss");
+        }
+
+        section("the slime");
+
+        const MobType& slime = mobType(MobId::Slime);
+        const MobType& small = mobType(MobId::SlimeSmall);
+
+        // The big one leaves nothing. That is what makes killing it
+        // worth doing twice: the slimeballs are on the halves.
+        check(slime.drop == Blocks::Air && slime.dropCount == 0,
+              "a big slime leaves nothing behind");
+        check(small.drop == Items::Slimeball, "a small one leaves a slimeball");
+        check(slime.height > small.height * 1.8f, "and it really is half the size");
+        check(slime.maxHealth > small.maxHealth, "and harder to kill");
+        check(slime.attackDamage > small.attackDamage, "and hits harder");
+        check(small.walkSpeed > slime.walkSpeed, "but the small one is quicker");
+
+        // Nothing else drops a slimeball, so a slime is the only way
+        // to a sticky piston.
+        int sources = 0;
+        for (int i = 0; i < mobTypeCount(); ++i)
+        {
+            const MobType& type = mobType(static_cast<MobId>(i));
+            if (type.drop == Items::Slimeball || type.secondDrop == Items::Slimeball) ++sources;
+        }
+        check(sources == 1, "and it is the only thing in the game that leaves one");
+
+        section("what a slimeball is for");
+
+        {
+            Inventory bench;
+            bench.setCraftSize(3);
+            for (int cell = 0; cell < 9; ++cell)
+                bench.slot(Inventory::CRAFT_FIRST + cell) = ItemStack{ Items::Slimeball, 1 };
+            bench.refreshCraftResult();
+            check(bench.slot(Inventory::CRAFT_RESULT).id == Blocks::SlimeBlock,
+                  "nine slimeballs make a block");
+        }
+        {
+            Inventory bench;
+            bench.slot(Inventory::CRAFT_FIRST) = ItemStack{ Blocks::SlimeBlock, 1 };
+            bench.refreshCraftResult();
+            check(bench.slot(Inventory::CRAFT_RESULT).id == Items::Slimeball,
+                  "and the block gives the nine back");
+            check(bench.slot(Inventory::CRAFT_RESULT).count == 9, "all nine");
+        }
+        {
+            Inventory bench;
+            bench.slot(Inventory::CRAFT_FIRST + 0) = ItemStack{ Blocks::PistonNorth, 1 };
+            bench.slot(Inventory::CRAFT_FIRST + 1) = ItemStack{ Items::Slimeball, 1 };
+            bench.refreshCraftResult();
+            check(bench.slot(Inventory::CRAFT_RESULT).id == Blocks::StickyPistonNorth,
+                  "a slimeball makes a piston sticky, which is Minecraft's own recipe");
+        }
+        {
+            Inventory bench;
+            bench.slot(Inventory::CRAFT_FIRST + 0) = ItemStack{ Items::Slimeball, 1 };
+            bench.slot(Inventory::CRAFT_FIRST + 1) = ItemStack{ Items::BlazePowder, 1 };
+            bench.refreshCraftResult();
+            check(bench.slot(Inventory::CRAFT_RESULT).id == Items::MagmaCream,
+                  "and with blaze powder it is magma cream");
+        }
+
+        section("the slime block");
+
+        check(blockDrop(Blocks::SlimeBlock) == Blocks::SlimeBlock, "it picks up as itself");
+        check(Tools::requiredLevel(Blocks::SlimeBlock) == 0, "it comes apart in your hands");
+        check(!blockInfo(Blocks::SlimeBlock).opaque, "light gets through it");
+        check(blockInfo(Blocks::SlimeBlock).collides, "but you cannot walk through it");
+
+        // The one thing in the game that takes a fall for you.
+        check(Player::breaksFall(Blocks::SlimeBlock), "a slime block breaks a fall");
+        check(!Player::breaksFall(Blocks::Stone), "stone does not");
+        check(!Player::breaksFall(Blocks::Wool), "nor does wool, however soft it looks");
+        check(!Player::breaksFall(Blocks::Air), "and nor does nothing at all");
+
+        section("the bat, the cave spider and the silverfish");
+
+        const MobType& bat = mobType(MobId::Bat);
+        check(bat.spawnClass == SpawnClass::Passive, "a bat attacks nobody");
+        check(bat.attackDamage == 0, "it has nothing to attack with");
+        check(bat.experience == 0, "and killing one is worth nothing");
+        check(bat.hoverHeight > 0.0f, "it flies rather than walks");
+        check(bat.drop == Blocks::Air, "and leaves nothing");
+
+        const MobType& caveSpider = mobType(MobId::CaveSpider);
+        const MobType& spider = mobType(MobId::Spider);
+        check(caveSpider.modelScale < 1.0f, "a cave spider is smaller than a spider");
+        check(caveSpider.width * caveSpider.modelScale < spider.width * spider.modelScale,
+              "narrow enough for a gap a spider could not take");
+        check(caveSpider.walkSpeed > spider.walkSpeed, "and quicker");
+        check(caveSpider.maxHealth < spider.maxHealth, "and easier to kill");
+        check(caveSpider.drop == Items::StringItem, "it leaves string, like its cousin");
+
+        const MobType& silverfish = mobType(MobId::Silverfish);
+        check(silverfish.height < 0.5f, "a silverfish is barely there");
+        check(silverfish.attackDamage > 0, "but it bites");
+        check(silverfish.drop == Blocks::Air, "and leaves nothing worth having");
+    }
+
     void testDyes()
     {
         section("dye: the sixteen colours");
@@ -11133,6 +11268,7 @@ int runSelfTest()
     testContainersPerDimension();
     testDyes();
     testIllagers();
+    testCaveCrowd();
 
     std::printf("\n%d checks, %d failed\n", g_checks, g_failures);
     return g_failures == 0 ? 0 : 1;

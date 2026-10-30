@@ -319,6 +319,16 @@ void AudioEngine::buildSounds()
                  Sound::MobEvokerDeath, "mob/evoker");
     loadMobVoice(Sound::MobRavagerSay, Sound::MobRavagerHurt,
                  Sound::MobRavagerDeath, "mob/ravager");
+    loadMobVoice(Sound::MobSlimeSay, Sound::MobSlimeHurt,
+                 Sound::MobSlimeDeath, "mob/slime");
+    loadMobVoice(Sound::MobSlimeSmallSay, Sound::MobSlimeSmallHurt,
+                 Sound::MobSlimeSmallDeath, "mob/slime_small");
+    loadMobVoice(Sound::MobBatSay, Sound::MobBatHurt,
+                 Sound::MobBatDeath, "mob/bat");
+    loadMobVoice(Sound::MobCaveSpiderSay, Sound::MobCaveSpiderHurt,
+                 Sound::MobCaveSpiderDeath, "mob/cave_spider");
+    loadMobVoice(Sound::MobSilverfishSay, Sound::MobSilverfishHurt,
+                 Sound::MobSilverfishDeath, "mob/silverfish");
     loadVariants(Sound::Rain, "weather/rain", 1);
     loadVariants(Sound::Thunder, "weather/thunder", 1);
 
@@ -1072,6 +1082,107 @@ void AudioEngine::buildSounds()
         s.addTone(0.86f, 96.0f, 38.0f, 2.2f, 0.44f, true);
         s.addNoise(0.60f, 300.0f, 3.2f, 0.22f, false, 939);
         s.finish(0.74f);
+    }
+
+    // The slime: a wet slap, and nothing else. The small one is the
+    // same noise shorter and higher, which is what it is.
+    {
+        Synth s = make(Sound::MobSlimeSay);
+        s.addNoise(0.26f, 420.0f, 11.0f, 0.34f, false, 941);
+        s.addTone(0.20f, 120.0f, 64.0f, 10.0f, 0.22f, false);
+        s.finish(0.56f);
+    }
+    {
+        Synth s = make(Sound::MobSlimeHurt);
+        s.addNoise(0.20f, 620.0f, 16.0f, 0.34f, false, 942);
+        s.addTone(0.16f, 190.0f, 90.0f, 15.0f, 0.22f, false);
+        s.finish(0.60f);
+    }
+    {
+        Synth s = make(Sound::MobSlimeDeath);
+        s.addNoise(0.44f, 340.0f, 6.0f, 0.34f, false, 943);
+        s.addTone(0.36f, 110.0f, 44.0f, 6.0f, 0.22f, false);
+        s.finish(0.62f);
+    }
+    {
+        Synth s = make(Sound::MobSlimeSmallSay);
+        s.addNoise(0.16f, 760.0f, 18.0f, 0.30f, false, 944);
+        s.addTone(0.12f, 210.0f, 120.0f, 17.0f, 0.20f, false);
+        s.finish(0.50f);
+    }
+    {
+        Synth s = make(Sound::MobSlimeSmallHurt);
+        s.addNoise(0.13f, 1000.0f, 24.0f, 0.30f, false, 945);
+        s.addTone(0.11f, 320.0f, 170.0f, 22.0f, 0.20f, false);
+        s.finish(0.54f);
+    }
+    {
+        Synth s = make(Sound::MobSlimeSmallDeath);
+        s.addNoise(0.28f, 600.0f, 9.0f, 0.30f, false, 946);
+        s.addTone(0.22f, 200.0f, 80.0f, 9.0f, 0.20f, false);
+        s.finish(0.56f);
+    }
+
+    // The bat: a thin squeak, high enough to be felt rather than heard,
+    // and the flutter after it.
+    {
+        Synth s = make(Sound::MobBatSay);
+        s.addTone(0.12f, 2200.0f, 1700.0f, 22.0f, 0.22f, false);
+        s.addNoise(0.10f, 3000.0f, 26.0f, 0.08f, true, 947);
+        s.finish(0.42f);
+    }
+    {
+        Synth s = make(Sound::MobBatHurt);
+        s.addTone(0.14f, 2800.0f, 1200.0f, 24.0f, 0.24f, false);
+        s.addNoise(0.10f, 3400.0f, 28.0f, 0.10f, true, 948);
+        s.finish(0.48f);
+    }
+    {
+        Synth s = make(Sound::MobBatDeath);
+        s.addTone(0.26f, 2400.0f, 700.0f, 11.0f, 0.24f, false);
+        s.addNoise(0.18f, 2600.0f, 14.0f, 0.10f, true, 949);
+        s.finish(0.50f);
+    }
+
+    // The cave spider: a spider's hiss, thinner and faster, because
+    // everything about one is a spider at three quarters the size.
+    {
+        Synth s = make(Sound::MobCaveSpiderSay);
+        s.addNoise(0.20f, 2400.0f, 13.0f, 0.30f, true, 950);
+        s.addTone(0.16f, 440.0f, 320.0f, 13.0f, 0.12f, false);
+        s.finish(0.48f);
+    }
+    {
+        Synth s = make(Sound::MobCaveSpiderHurt);
+        s.addNoise(0.16f, 3000.0f, 19.0f, 0.32f, true, 951);
+        s.addTone(0.13f, 620.0f, 380.0f, 19.0f, 0.14f, false);
+        s.finish(0.54f);
+    }
+    {
+        Synth s = make(Sound::MobCaveSpiderDeath);
+        s.addNoise(0.36f, 2000.0f, 7.0f, 0.32f, true, 952);
+        s.addTone(0.28f, 400.0f, 180.0f, 7.0f, 0.14f, false);
+        s.finish(0.56f);
+    }
+
+    // The silverfish: a dry skitter. There is nothing of a voice in it
+    // at all, which is the point -- you hear the stone move.
+    {
+        Synth s = make(Sound::MobSilverfishSay);
+        s.addNoise(0.14f, 4200.0f, 24.0f, 0.26f, true, 953);
+        s.finish(0.42f);
+    }
+    {
+        Synth s = make(Sound::MobSilverfishHurt);
+        s.addNoise(0.12f, 5000.0f, 30.0f, 0.28f, true, 954);
+        s.addTone(0.10f, 900.0f, 500.0f, 28.0f, 0.10f, false);
+        s.finish(0.48f);
+    }
+    {
+        Synth s = make(Sound::MobSilverfishDeath);
+        s.addNoise(0.28f, 3400.0f, 10.0f, 0.28f, true, 955);
+        s.addTone(0.20f, 700.0f, 260.0f, 10.0f, 0.10f, false);
+        s.finish(0.50f);
     }
 
     // The ghast: a long wail that falls away. Mostly tone, almost no

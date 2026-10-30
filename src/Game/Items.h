@@ -263,6 +263,10 @@ namespace Items
         // the only reason to go into a mansion at all.
         TotemOfUndying,
 
+        // Off a slime. Nine make a block, one makes a piston sticky,
+        // and with blaze powder it is magma cream.
+        Slimeball,
+
         Count
     };
 }

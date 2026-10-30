@@ -1304,7 +1304,7 @@ bool Application::frame()
             // to be underfoot: spawn can land in a jungle, and a row
             // of blocks is no use behind a wall of leaves.
             for (int x = centreX - wide; x <= centreX + wide; ++x)
-                for (int z = centreZ - 22; z <= centreZ + 4; ++z)
+                for (int z = centreZ - 25; z <= centreZ + 4; ++z)
                 {
                     m_world->setBlock(x, baseY - 1, z, Blocks::Stone);
                     for (int y = baseY; y < baseY + 10; ++y)
@@ -1366,17 +1366,26 @@ bool Application::frame()
                                   centreZ - 9 - row * 3, woolOfColour(colour));
             }
 
-            // High enough up to see over five rows at once, on a perch
+            // And what the new mobs leave behind.
+            const BlockId LEAVINGS[] = {
+                Blocks::SlimeBlock, Blocks::Bookshelf, Blocks::EnchantingTable,
+                Blocks::Glowstone, Blocks::SeaLantern, Blocks::Obsidian,
+                Blocks::Sponge, Blocks::WetSponge,
+            };
+            for (int i = 0; i < wide; ++i)
+                m_world->setBlock(centreX - wide / 2 + i, baseY, centreZ - 15, LEAVINGS[i]);
+
+            // High enough up to see over six rows at once, on a perch
             // of its own so the player is not standing in mid-air.
-            const int perchZ = centreZ - 19;
-            for (int y = baseY; y <= baseY + 3; ++y)
+            const int perchZ = centreZ - 22;
+            for (int y = baseY; y <= baseY + 5; ++y)
                 m_world->setBlock(centreX, y, perchZ, Blocks::Stone);
 
-            m_player.position = glm::vec3(centreX + 0.5f, static_cast<float>(baseY + 4),
+            m_player.position = glm::vec3(centreX + 0.5f, static_cast<float>(baseY + 6),
                                           perchZ + 0.5f);
             m_player.velocity = glm::vec3(0.0f);
             m_camera.position = m_player.eyePosition();
-            m_camera.setOrientation(90.0f, -22.0f);
+            m_camera.setOrientation(90.0f, -24.0f);
             m_pendingFurnaceLight = true;
 
             std::printf("[test] stood %d workstations, %d plants and %d wools at y=%d\n",
@@ -8824,6 +8833,20 @@ void Application::updateMobs(float deltaTime)
 
         for (int i = 0; i < type.dropCount; ++i) m_drops.spawn(where, type.drop, 1);
         for (int i = 0; i < type.secondDropCount; ++i) m_drops.spawn(where, type.secondDrop, 1);
+
+        // A slime comes apart rather than dying: two small ones where
+        // the big one stood. That is the whole of what a slime is, and
+        // it is why the big one leaves nothing itself -- the
+        // slimeballs are on the halves.
+        if (death.type == MobId::Slime && m_world)
+        {
+            for (int half = 0; half < 2; ++half)
+            {
+                const float side = half == 0 ? -0.6f : 0.6f;
+                const glm::vec3 feet = death.position + glm::vec3(side, 0.0f, side);
+                m_entities.spawnAt(MobId::SlimeSmall, feet, *m_world);
+            }
+        }
 
         // A drowned carries a trident about one time in eight, which
         // is roughly Minecraft's rate. A chance like this cannot be a

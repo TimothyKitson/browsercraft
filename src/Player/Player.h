@@ -2,6 +2,7 @@
 #include <algorithm>
 #include "Game/Effects.h"
 #include "Game/GameMode.h"
+#include "World/Block.h"
 #include <glm/glm.hpp>
 
 class World;
@@ -197,6 +198,12 @@ public:
     // wants this: it lands a run of blows with no clock to wait on.
     void clearHurtCooldown() { m_hurtCooldown = 0.0f; }
 
+    // What a fall lands on can cancel it outright. Minecraft gives
+    // that to the slime block alone, and it is the only thing in the
+    // game that makes a drop from any height survivable. A pure
+    // function of the block so --selftest can ask it without a world.
+    static bool breaksFall(BlockId under) { return under == Blocks::SlimeBlock; }
+
     // True once, after a blow that a totem turned aside. Whoever asks
     // owns taking the totem out of the inventory and making a noise
     // about it; damage() only knows that it was spent.
@@ -236,6 +243,6 @@ private:
     bool stepUp(const World& world, const glm::vec3& blocked);
     bool supported(const World& world, const glm::vec3& feetPosition) const;
     void moveAxis(const World& world, float delta, int axis, bool preventLedgeFall);
-    void applyFallDamage(float landingY);
+    void applyFallDamage(const World& world, float landingY);
     void regenerate(float deltaTime);
 };
