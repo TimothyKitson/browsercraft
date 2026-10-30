@@ -453,6 +453,17 @@ namespace Blocks
         // outside of something you are building.
         Scaffolding,
 
+        // A board on a wall with words on it. Four facings, the same
+        // four a ladder has and hung the same way: what it says lives
+        // in a table beside the level, because a block id has nowhere
+        // to put a sentence.
+        SignNorth, SignEast, SignSouth, SignWest,
+
+        // A frame on a wall holding one thing, hung the same four
+        // ways. What is in it lives in a table beside the level, the
+        // same as a sign's words.
+        FrameNorth, FrameEast, FrameSouth, FrameWest,
+
         Count
     };
 }
@@ -499,7 +510,50 @@ inline bool isSolid(BlockId id) { return blockInfo(id).collides; }
 inline bool isLiquid(BlockId id) { return blockInfo(id).render == RenderType::Liquid; }
 inline bool isCross(BlockId id) { return blockInfo(id).render == RenderType::Cross; }
 inline bool isSlab(BlockId id) { return blockInfo(id).render == RenderType::Slab; }
-inline bool isLadder(BlockId id) { return blockInfo(id).render == RenderType::Ladder; }
+// Anything drawn as a flat panel against one wall of its cell: the
+// ladders, the signs and the item frames. The mesher asks this; the
+// rest of the game wants to know which of the three it is.
+inline bool isWallPanel(BlockId id)
+{
+    return blockInfo(id).render == RenderType::Ladder;
+}
+
+// A ladder, and only a ladder. This used to ask the render type, and
+// the moment a sign was drawn as a panel too every sign in the world
+// became something to climb -- and asked the ladder arithmetic which
+// way it faced, which put every one of them on the same wall.
+inline bool isLadder(BlockId id)
+{
+    return id >= Blocks::LadderNorth && id <= Blocks::LadderWest;
+}
+
+// A sign, and which way it faces. The facings are in the ladder's
+// order, so the same arithmetic places both.
+inline bool isSign(BlockId id)
+{
+    return id >= Blocks::SignNorth && id <= Blocks::SignWest;
+}
+inline int signFacing(BlockId id) { return isSign(id) ? id - Blocks::SignNorth : 0; }
+inline BlockId signFacingAs(int facing)
+{
+    if (facing < 0) facing = 0;
+    if (facing > 3) facing = 3;
+    return static_cast<BlockId>(Blocks::SignNorth + facing);
+}
+
+// An item frame, and which way it faces. The same four as a sign, off
+// the same arithmetic.
+inline bool isFrame(BlockId id)
+{
+    return id >= Blocks::FrameNorth && id <= Blocks::FrameWest;
+}
+inline int frameFacing(BlockId id) { return isFrame(id) ? id - Blocks::FrameNorth : 0; }
+inline BlockId frameFacingAs(int facing)
+{
+    if (facing < 0) facing = 0;
+    if (facing > 3) facing = 3;
+    return static_cast<BlockId>(Blocks::FrameNorth + facing);
+}
 
 // What you can go up the outside of. A ladder, and scaffolding, which
 // is the only reason to build scaffolding.
@@ -801,6 +855,8 @@ inline float blockOverhang(BlockId id) { return isFence(id) ? 0.5f : 0.0f; }
 inline int blockFacing(BlockId id)
 {
     if (isLadder(id)) return id - Blocks::LadderNorth;
+    if (isSign(id)) return signFacing(id);
+    if (isFrame(id)) return frameFacing(id);
     if (isStairs(id)) return (id - Blocks::StoneStairsNorth) & 3;
     if (isDoor(id)) return (id - Blocks::DoorLowShutNorth) & 3;
     if (isPiston(id)) return pistonFacing(id);

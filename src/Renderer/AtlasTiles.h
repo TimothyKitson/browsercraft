@@ -252,6 +252,8 @@ namespace Tiles
         CakeTop, CakeSide, CakeBottom, CakeInner,
         CandleTile, CandleLitTile,
         ScaffoldTop, ScaffoldSide, ScaffoldBottom,
+        SignTile,
+        ItemFrameTile,
 
         RainDrop,
         SnowFlake,
@@ -392,8 +394,10 @@ namespace Tiles
         ItemCake,
         ItemCookie,
         ItemCocoaBeans,
+        ItemSign,
+        ItemItemFrame,
 
-        ItemTileEnd = ItemCocoaBeans + 1
+        ItemTileEnd = ItemItemFrame + 1
     };
 
     // Ten progressively more broken overlay tiles for the mining animation.

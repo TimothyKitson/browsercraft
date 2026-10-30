@@ -253,6 +253,21 @@ namespace
 
         { true, 0, 0, { Items::MelonSlice }, 1, Items::MelonSeeds, 1 },
 
+        // Six planks and a stick make three signs, which is
+        // Minecraft's and the cheapest way to label anything.
+        { false, 3, 3, { Blocks::Planks, Blocks::Planks, Blocks::Planks,
+                         Blocks::Planks, Blocks::Planks, Blocks::Planks,
+                         Blocks::Air,    Items::Stick,   Blocks::Air },
+          0, Items::Sign, 3 },
+
+        // Sticks round a hide, which is Minecraft's. A frame is the
+        // other way to label a room: a sign says what is in the chest
+        // and a frame shows it.
+        { false, 3, 3, { Items::Stick,   Items::Stick,   Items::Stick,
+                         Items::Stick,   Items::Leather, Items::Stick,
+                         Items::Stick,   Items::Stick,   Items::Stick },
+          0, Items::ItemFrame, 1 },
+
         // A cake: milk along the top, an egg between two sugars, and
         // wheat under it. Minecraft's, buckets and all -- and the
         // buckets come back, which is handled where the grid is

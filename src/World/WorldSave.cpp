@@ -36,6 +36,26 @@ namespace
         in.read(reinterpret_cast<char*>(&value), sizeof(T));
         return static_cast<bool>(in);
     }
+
+    // A line of text, length first. Short on purpose: a sign's line
+    // is fifteen characters, and a length that cannot be trusted is
+    // the easiest way to turn a truncated file into a hang.
+    void writeLine(std::ofstream& out, const std::string& text)
+    {
+        const uint8_t length = static_cast<uint8_t>(
+            text.size() > 255 ? 255 : text.size());
+        write(out, length);
+        if (length > 0) out.write(text.data(), length);
+    }
+
+    bool readLine(std::ifstream& in, std::string& text)
+    {
+        uint8_t length = 0;
+        if (!read(in, length)) return false;
+        text.assign(length, '\0');
+        if (length > 0) in.read(text.data(), length);
+        return static_cast<bool>(in);
+    }
 }
 
 void WorldSave::ensureDirectories(const std::string& saveDirectory)
@@ -196,6 +216,32 @@ void WorldSave::saveLevel(const std::string& saveDirectory, const LevelState& st
     for (size_t i = 0; i < state.furnaces.size(); ++i)
         write(out, i < state.furnaceKinds.size()
                        ? state.furnaceKinds[i] : static_cast<uint8_t>(0));
+
+    // Last of all: what every sign says. Counted explicitly rather
+    // than off another list, because nothing else in the file knows
+    // how many signs there are.
+    write(out, static_cast<uint16_t>(state.signs.size()));
+    for (const LevelState::SavedSign& sign : state.signs)
+    {
+        write(out, sign.x);
+        write(out, sign.y);
+        write(out, sign.z);
+        write(out, sign.dimension);
+        for (const std::string& line : sign.lines) writeLine(out, line);
+    }
+
+    write(out, static_cast<uint16_t>(state.frames.size()));
+    for (const LevelState::SavedFrame& frame : state.frames)
+    {
+        write(out, frame.x);
+        write(out, frame.y);
+        write(out, frame.z);
+        write(out, frame.dimension);
+        write(out, frame.item);
+        write(out, frame.count);
+        write(out, frame.damage);
+        write(out, frame.enchantments);
+    }
 }
 
 bool WorldSave::loadLevel(const std::string& saveDirectory, LevelState& out)
@@ -360,11 +406,56 @@ bool WorldSave::loadLevel(const std::string& saveDirectory, LevelState& out)
                                         // out here and keeps the zero,
                                         // which means a furnace.
                                         out.furnaceKinds.assign(out.furnaces.size(), 0);
+                                        bool kindsWhole = true;
                                         for (size_t i = 0; i < out.furnaces.size(); ++i)
                                         {
                                             uint8_t kind = 0;
-                                            if (!read(in, kind)) break;
+                                            if (!read(in, kind)) { kindsWhole = false; break; }
                                             out.furnaceKinds[i] = kind;
+                                        }
+
+                                        // The signs, if this file is
+                                        // new enough to have any. A
+                                        // short read anywhere above
+                                        // means there is nothing here
+                                        // to find.
+                                        uint16_t signCount = 0;
+                                        bool signsWhole = kindsWhole && read(in, signCount);
+                                        if (signsWhole)
+                                        {
+                                            for (uint16_t i = 0; i < signCount; ++i)
+                                            {
+                                                LevelState::SavedSign sign;
+                                                if (!read(in, sign.x)) { signsWhole = false; break; }
+                                                if (!read(in, sign.y)) { signsWhole = false; break; }
+                                                if (!read(in, sign.z)) { signsWhole = false; break; }
+                                                if (!read(in, sign.dimension)) { signsWhole = false; break; }
+
+                                                bool whole = true;
+                                                for (std::string& line : sign.lines)
+                                                    if (!readLine(in, line)) { whole = false; break; }
+                                                if (!whole) { signsWhole = false; break; }
+
+                                                out.signs.push_back(sign);
+                                            }
+                                        }
+
+                                        uint16_t frameCount = 0;
+                                        if (signsWhole && read(in, frameCount))
+                                        {
+                                            for (uint16_t i = 0; i < frameCount; ++i)
+                                            {
+                                                LevelState::SavedFrame frame;
+                                                if (!read(in, frame.x)) break;
+                                                if (!read(in, frame.y)) break;
+                                                if (!read(in, frame.z)) break;
+                                                if (!read(in, frame.dimension)) break;
+                                                if (!read(in, frame.item)) break;
+                                                if (!read(in, frame.count)) break;
+                                                if (!read(in, frame.damage)) break;
+                                                if (!read(in, frame.enchantments)) break;
+                                                out.frames.push_back(frame);
+                                            }
                                         }
                                     }
                                 }

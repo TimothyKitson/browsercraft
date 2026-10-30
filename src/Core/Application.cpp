@@ -11,6 +11,7 @@
 #include "Game/Cane.h"
 #include "Game/Enchanting.h"
 #include "Game/Composting.h"
+#include "World/WallFacing.h"
 #include "Game/EndPortal.h"
 #include "Game/Redstone.h"
 #include "Game/Trial.h"
@@ -357,6 +358,8 @@ void Application::startWorld(GameMode mode, bool freshWorld)
     // netherrack nor end stone is, so nothing spawned at all.
     m_entities.setDimension(m_dimension);
     m_chests.setDimension(static_cast<int>(m_dimension));
+    m_signs.setDimension(static_cast<int>(m_dimension));
+    m_frames.setDimension(static_cast<int>(m_dimension));
     m_furnaces.setDimension(static_cast<int>(m_dimension));
 
     m_world = std::make_unique<World>(seed, m_savePath, DEFAULT_RENDER_DISTANCE, m_dimension);
@@ -445,6 +448,8 @@ void Application::travelTo(Dimension dimension)
     // they are told too rather than cleared: a chest left behind in the
     // overworld still holds what was in it when you come back.
     m_chests.setDimension(static_cast<int>(dimension));
+    m_signs.setDimension(static_cast<int>(dimension));
+    m_frames.setDimension(static_cast<int>(dimension));
     m_furnaces.setDimension(static_cast<int>(dimension));
 
     m_entities.clear();
@@ -605,6 +610,29 @@ void Application::loadLevel()
             m_chests.putIn(where, glm::ivec3(saved.x, saved.y, saved.z), held);
         }
 
+        m_signs.clear();
+        for (const LevelState::SavedSign& saved : state.signs)
+        {
+            Signs::Text text;
+            for (size_t i = 0; i < text.size() && i < saved.lines.size(); ++i)
+                text[i] = saved.lines[i];
+            m_signs.putIn(saved.dimension,
+                          glm::ivec3(saved.x, saved.y, saved.z), text);
+        }
+
+        m_frames.clear();
+        for (const LevelState::SavedFrame& saved : state.frames)
+        {
+            ItemStack held;
+            held.id = saved.item;
+            held.count = saved.count;
+            held.damage = saved.damage;
+            held.enchantments = saved.enchantments;
+            if (held.empty()) continue;
+            m_frames.putIn(saved.dimension,
+                           glm::ivec3(saved.x, saved.y, saved.z), held);
+        }
+
         m_player.position = state.playerPosition;
         m_camera.yaw = state.yaw;
         m_camera.pitch = state.pitch;
@@ -763,6 +791,38 @@ void Application::saveLevel()
         for (const ItemStack& held : entry.second)
             saved.slots.emplace_back(held.id, static_cast<uint16_t>(std::max(0, held.count)));
         state.chests.push_back(saved);
+    }
+
+    // The one being written on goes in as it stands: a save taken
+    // with the board open should not lose the words already typed.
+    if (m_signOpen && !Signs::blank(m_signDraft)) m_signs.at(m_signAt) = m_signDraft;
+
+    for (const auto& entry : m_signs.all())
+    {
+        LevelState::SavedSign saved;
+        saved.x = entry.first[1];
+        saved.y = entry.first[2];
+        saved.z = entry.first[3];
+        saved.dimension = static_cast<uint8_t>(entry.first[0]);
+        for (size_t i = 0; i < saved.lines.size() && i < entry.second.size(); ++i)
+            saved.lines[i] = entry.second[i];
+        state.signs.push_back(saved);
+    }
+
+    for (const auto& entry : m_frames.all())
+    {
+        if (entry.second.empty()) continue;
+
+        LevelState::SavedFrame saved;
+        saved.x = entry.first[1];
+        saved.y = entry.first[2];
+        saved.z = entry.first[3];
+        saved.dimension = static_cast<uint8_t>(entry.first[0]);
+        saved.item = entry.second.id;
+        saved.count = static_cast<uint16_t>(std::max(0, entry.second.count));
+        saved.damage = static_cast<uint16_t>(std::max(0, entry.second.damage));
+        saved.enchantments = entry.second.enchantments;
+        state.frames.push_back(saved);
     }
 
     WorldSave::saveLevel(m_savePath, state);
@@ -1197,6 +1257,27 @@ bool Application::frame()
             // standing on stone.
             m_world->setBlock(centreX - wide / 2 + wide - 1, baseY - 1, centreZ - 3,
                               Blocks::Farmland);
+
+            // A wall at the back with a sign hung on it, already
+            // written on: a board with nothing on it proves nothing.
+            const int wallZ = centreZ + 2;
+            for (int x = centreX - wide; x <= centreX + wide; ++x)
+                for (int y = baseY; y < baseY + 3; ++y)
+                    m_world->setBlock(x, y, wallZ, Blocks::Stone);
+
+            const glm::ivec3 board(centreX, baseY + 1, wallZ - 1);
+            m_world->setBlock(board.x, board.y, board.z, Blocks::SignSouth);
+            m_signs.at(board) = Signs::Text{ "THIS WAY", "TO THE", "WORKSTATIONS", "" };
+
+            // And a pair of frames either side of it, one holding a
+            // block and one an item: the two are drawn differently.
+            const BlockId SHOWN[] = { Blocks::DiamondBlock, Items::DiamondPickaxe };
+            for (int i = 0; i < 2; ++i)
+            {
+                const glm::ivec3 frame(centreX - 3 + i * 6, baseY + 1, wallZ - 1);
+                m_world->setBlock(frame.x, frame.y, frame.z, Blocks::FrameSouth);
+                m_frames.at(frame) = ItemStack{ SHOWN[i], 1 };
+            }
 
             m_player.position = glm::vec3(centreX + 0.5f, static_cast<float>(baseY),
                                           centreZ - 9.5f);
@@ -4173,6 +4254,11 @@ void Application::updateGameplay(float deltaTime)
     m_chatLog.update(deltaTime);
     if (m_chatOpen) return;
 
+    // Writing on a sign takes everything the same way, and for the
+    // same reason: W is a letter while a board is open.
+    updateSignInput();
+    if (m_signOpen) return;
+
     // --- look ---
     // Moving/resizing the window or regaining focus can deliver one huge
     // bogus mouse delta, which would snap the view straight up. Real mouse
@@ -4615,6 +4701,22 @@ void Application::updateMining(float deltaTime)
 
             // A furnace gives back whatever was inside it, lit or not,
             // and whether or not the furnace itself survives the pick.
+            // What a sign said goes with the sign. Left behind, the
+            // next board hung in that spot would come up already
+            // written on -- which is exactly what happened to the
+            // chests before they were keyed by dimension.
+            if (isSign(id)) m_signs.remove(hit.block);
+
+            // And what a frame held falls out of it.
+            if (isFrame(id))
+            {
+                if (const ItemStack* inside = m_frames.find(hit.block))
+                    if (!inside->empty())
+                        m_drops.spawnFromBrokenBlock(hit.block, inside->id,
+                                                     inside->count);
+                m_frames.remove(hit.block);
+            }
+
             // A ripe pod gives three beans and an unripe one gives
             // one, which blockDrop cannot say: it answers with one
             // thing and no count.
@@ -6831,6 +6933,16 @@ void Application::handlePlacement()
             // whether it wanted it; a no falls through to placing the
             // block, so a composter you have nothing for is still
             // something to build against.
+            if (isFrame(used) && useFrame(bench.block, used)) return;
+
+            // A sign already hung is written on again by using it.
+            if (isSign(used))
+            {
+                openSign(bench.block);
+                m_audio.play(Sound::Click, 0.4f);
+                return;
+            }
+
             if (isCake(used) && useCake(bench.block, used)) return;
             if ((used == Blocks::Candle || used == Blocks::CandleLit) &&
                 useCandle(bench.block, used)) return;
@@ -7236,6 +7348,10 @@ void Application::handlePlacement()
     // A cake is carried as an item and set down as a block, and from
     // then on it is eaten where it stands rather than picked up.
     if (stack.id == Items::Cake) fromItem = Blocks::Cake0;
+    // A sign is held as one item and hung four ways, the same as a
+    // ladder: which of the four it lands as is worked out below.
+    if (stack.id == Items::Sign) fromItem = Blocks::SignNorth;
+    if (stack.id == Items::ItemFrame) fromItem = Blocks::FrameNorth;
     if (isItem(stack.id) && fromItem == Blocks::Air) return;
 
     const RaycastHit hit = m_world->raycast(m_camera.position, m_camera.front, REACH_DISTANCE);
@@ -7329,6 +7445,25 @@ void Application::handlePlacement()
         placing = ladderFacing(facing);
     }
 
+    // A sign hangs the same way, off the same arithmetic.
+    if (isSign(placing))
+    {
+        const glm::ivec3 n = hit.normal;
+        if (n.y != 0) return;   // nothing to hang it on
+
+        const int facing = (n.z > 0) ? 0 : (n.x < 0) ? 1 : (n.z < 0) ? 2 : 3;
+        placing = signFacingAs(facing);
+    }
+
+    if (isFrame(placing))
+    {
+        const glm::ivec3 n = hit.normal;
+        if (n.y != 0) return;
+
+        const int facing = (n.z > 0) ? 0 : (n.x < 0) ? 1 : (n.z < 0) ? 2 : 3;
+        placing = frameFacingAs(facing);
+    }
+
     // A rail is nailed to the floor, and bends to meet whatever is
     // already beside it. Which of the six shapes it lands as is worked
     // out after it is down, along with its neighbours.
@@ -7356,6 +7491,10 @@ void Application::handlePlacement()
 
     if (placing == Blocks::Beacon)
         m_beacons.insert({ target.x, target.y, target.z });
+
+    // A sign is hung and then written on, which is the only order
+    // that makes sense: an empty board is not what anybody wanted.
+    if (isSign(placing)) openSign(target);
 
     if (placing == Blocks::Hopper)
         m_hoppers.insert({ target.x, target.y, target.z });
@@ -7403,6 +7542,7 @@ void Application::render()
     // Name tags belong on top of the world but under the menus, and they
     // stay visible while the game is paused -- the world is still there.
     if (inGame() && !m_hudHidden) renderNameplates();
+    if (inGame() && m_signOpen) renderSignEditor();
 
     switch (m_screen)
     {
@@ -7884,6 +8024,9 @@ void Application::renderPlayers(const glm::mat4& view, const glm::mat4& projecti
     const float screenHeight = static_cast<float>(m_window.height());
     const glm::vec3 cameraPosition = viewCamera().position;
 
+    collectSignPlates(viewProjection, screenWidth, screenHeight);
+    pinFramedItems();
+
     auto draw = [&](const PlayerSkin& skin, const PlayerPose& pose, const std::string& name) {
         m_playerModel.render(m_chunkShader, *m_world, skin, pose);
         if (name.empty()) return;
@@ -8107,6 +8250,236 @@ void Application::updateMobs(float deltaTime)
         m_drops.spawn(nest + glm::vec3(0.0f, 0.3f, 0.0f), Items::Egg, 1);
         m_audio.play(Sound::MobChickenSay, 0.5f, 1.3f);
     }
+}
+
+// --- item frames ------------------------------------------------------
+
+// A frame takes one thing and gives it back. Minecraft turns what is
+// in it as well; there is nothing here that could show the turn, so
+// it does not.
+bool Application::useFrame(const glm::ivec3& at, BlockId block)
+{
+    (void)block;
+    ItemStack& holding = m_inventory.selected();
+    ItemStack& inside = m_frames.at(at);
+
+    if (inside.empty())
+    {
+        if (holding.empty()) { m_frames.remove(at); return false; }
+
+        inside = holding;
+        inside.count = 1;
+
+        if (!m_player.creative())
+        {
+            holding.count -= 1;
+            if (holding.count <= 0) holding.clear();
+        }
+        m_audio.play(Sound::Click, 0.5f, 1.2f);
+        return true;
+    }
+
+    // Taking it back: into the hand if there is room, onto the floor
+    // if there is not. Dropping it is better than losing it.
+    ItemStack back = inside;
+    m_frames.remove(at);
+    if (m_inventory.addStack(back) > 0) m_drops.spawnStack(m_player.position, back);
+
+    m_audio.play(Sound::Click, 0.5f, 0.8f);
+    return true;
+}
+
+// Every frame near enough to see, handed to the one pass that draws
+// an item standing in the world.
+void Application::pinFramedItems()
+{
+    m_drops.clearPinned();
+    if (!m_world) return;
+
+    constexpr float VISIBLE = 32.0f;
+
+    for (const Frames::Near& frame : m_frames.near(m_camera.position, VISIBLE))
+    {
+        const BlockId block = m_world->getBlock(frame.block.x, frame.block.y,
+                                                frame.block.z);
+        if (!isFrame(block)) continue;
+
+        DroppedItems::Pinned shown;
+        shown.position = glm::vec3(frame.block) + glm::vec3(0.5f);
+        shown.facing = frameFacing(block);
+        shown.item = frame.held.id;
+        m_drops.pin(shown);
+    }
+}
+
+// --- signs ------------------------------------------------------------
+
+void Application::openSign(const glm::ivec3& at)
+{
+    m_signAt = at;
+    m_signLine = 0;
+    m_signOpen = true;
+
+    if (const Signs::Text* already = m_signs.find(at)) m_signDraft = *already;
+    else m_signDraft = Signs::Text{};
+
+    setMouseCaptured(false);
+}
+
+void Application::closeSign()
+{
+    if (!m_signOpen) return;
+    m_signOpen = false;
+
+    // A board with nothing on it needs no row. Keeping one for every
+    // sign ever hung would grow the level file without bound.
+    if (Signs::blank(m_signDraft)) m_signs.remove(m_signAt);
+    else m_signs.at(m_signAt) = m_signDraft;
+
+    m_signDraft = Signs::Text{};
+    if (!m_inventoryOpen) setMouseCaptured(true);
+}
+
+void Application::updateSignInput()
+{
+    if (!m_signOpen) return;
+
+    // The sign going away under you -- blown up, mined by somebody
+    // else -- closes the editor rather than writing on nothing.
+    if (!isSign(m_world->getBlock(m_signAt.x, m_signAt.y, m_signAt.z)))
+    {
+        m_signOpen = false;
+        m_signDraft = Signs::Text{};
+        if (!m_inventoryOpen) setMouseCaptured(true);
+        return;
+    }
+
+    if (m_input.wasKeyPressed(SDL_SCANCODE_ESCAPE)) { closeSign(); return; }
+
+    std::string& line = m_signDraft[static_cast<size_t>(m_signLine)];
+
+    if (m_input.wasKeyPressed(SDL_SCANCODE_BACKSPACE))
+    {
+        if (!line.empty()) line.pop_back();
+        else if (m_signLine > 0) --m_signLine;
+    }
+
+    for (char c : m_input.typedText())
+        if (c >= 32 && line.size() < Signs::MAX_LINE) line.push_back(c);
+
+    if (m_input.wasKeyPressed(SDL_SCANCODE_RETURN) ||
+        m_input.wasKeyPressed(SDL_SCANCODE_KP_ENTER) ||
+        m_input.wasKeyPressed(SDL_SCANCODE_TAB))
+    {
+        if (m_signLine + 1 >= Signs::LINES) closeSign();
+        else ++m_signLine;
+    }
+}
+
+// What a sign says, drawn where it stands. The text is projected the
+// way a nameplate is rather than built into the chunk mesh: a sign
+// changes when somebody writes on it, and remeshing a chunk for a
+// word is more than a word is worth.
+void Application::collectSignPlates(const glm::mat4& viewProjection,
+                                    float screenWidth, float screenHeight)
+{
+    constexpr float READABLE = 14.0f;
+
+    for (const Signs::Near& sign : m_signs.near(m_camera.position, READABLE))
+    {
+        const BlockId block = m_world->getBlock(sign.block.x, sign.block.y, sign.block.z);
+        if (!isSign(block)) continue;
+
+        // Stand the words just off the face the board is on, so they
+        // read as written on it rather than floating in the block.
+        static const glm::vec3 OUT[] = {
+            {  0.0f, 0.0f,  0.42f }, { -0.42f, 0.0f, 0.0f },
+            {  0.0f, 0.0f, -0.42f }, {  0.42f, 0.0f, 0.0f },
+        };
+        const glm::vec3 middle = glm::vec3(sign.block) + glm::vec3(0.5f) +
+                                 OUT[signFacing(block)];
+
+        // Behind the board is the wall it is nailed to, so a sign is
+        // only read from the side it faces.
+        if (glm::dot(m_camera.position - middle, OUT[signFacing(block)]) <= 0.0f)
+            continue;
+
+        const float distance = glm::length(middle - m_camera.position);
+        const float scale = std::clamp(2.0f - distance * 0.06f, 0.9f, 1.6f);
+
+        // Projected once and stacked in pixels, not in world units. A
+        // world-space offset shrinks with distance while the letters
+        // do not, so the four lines ran into one another the moment
+        // you stepped back from the board.
+        const glm::vec4 clip = viewProjection * glm::vec4(middle, 1.0f);
+        if (clip.w <= 0.05f) continue;
+
+        const glm::vec3 ndc = glm::vec3(clip) / clip.w;
+        if (ndc.x < -1.2f || ndc.x > 1.2f || ndc.y < -1.2f || ndc.y > 1.2f) continue;
+
+        const float step = UIRenderer::textHeight(scale) + 4.0f;
+        const float x = (ndc.x * 0.5f + 0.5f) * screenWidth;
+        const float y = (1.0f - (ndc.y * 0.5f + 0.5f)) * screenHeight;
+
+        // Centred on the board: four lines sit two above the middle
+        // and two below, which is where the words are on the board.
+        int written = 0;
+        for (const std::string& line : *sign.text)
+            if (!line.empty()) ++written;
+        if (written == 0) continue;
+
+        int drawn = 0;
+        for (int i = 0; i < Signs::LINES; ++i)
+        {
+            if ((*sign.text)[static_cast<size_t>(i)].empty()) continue;
+
+            Nameplate plate;
+            plate.name = (*sign.text)[static_cast<size_t>(i)];
+            plate.x = x;
+            plate.y = y + (static_cast<float>(drawn) -
+                           static_cast<float>(written - 1) * 0.5f) * step;
+            plate.scale = scale;
+            m_nameplates.push_back(plate);
+            ++drawn;
+        }
+    }
+}
+
+// The board being written on, over the middle of the screen. Four
+// short lines and a caret on the one in hand.
+void Application::renderSignEditor()
+{
+    const float w = static_cast<float>(m_window.width());
+    const float h = static_cast<float>(m_window.height());
+
+    const float scale = 3.0f;
+    const float lineHeight = UIRenderer::textHeight(scale) + 8.0f;
+    const float boardHeight = lineHeight * Signs::LINES + 24.0f;
+    const float boardWidth = 420.0f;
+    const float left = (w - boardWidth) * 0.5f;
+    const float top = h * 0.32f;
+
+    m_ui.begin(m_window.width(), m_window.height());
+    m_ui.quad(left - 6.0f, top - 6.0f, boardWidth + 12.0f, boardHeight + 12.0f,
+              glm::vec4(0.0f, 0.0f, 0.0f, 0.65f));
+    m_ui.quad(left, top, boardWidth, boardHeight,
+              glm::vec4(0.42f, 0.33f, 0.21f, 0.95f));
+
+    for (int i = 0; i < Signs::LINES; ++i)
+    {
+        std::string line = m_signDraft[static_cast<size_t>(i)];
+        if (i == m_signLine) line += "_";
+
+        const float width = UIRenderer::textWidth(line, scale);
+        m_ui.textWithShadow(line, left + (boardWidth - width) * 0.5f,
+                            top + 12.0f + static_cast<float>(i) * lineHeight,
+                            scale, TEXT_COLOR);
+    }
+
+    const char* help = "ENTER FOR THE NEXT LINE, ESC WHEN IT READS RIGHT";
+    m_ui.textWithShadow(help, (w - UIRenderer::textWidth(help, 1.5f)) * 0.5f,
+                        top + boardHeight + 16.0f, 1.5f, TEXT_COLOR);
+    m_ui.end();
 }
 
 void Application::renderNameplates()

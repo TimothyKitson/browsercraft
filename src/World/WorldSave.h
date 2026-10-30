@@ -1,4 +1,5 @@
 #pragma once
+#include <array>
 #include "Chunk.h"
 #include <string>
 #include <vector>
@@ -42,6 +43,33 @@ struct LevelState
     // from before the smoker existed runs out here and reads back as
     // all furnaces, which is what it held.
     std::vector<uint8_t> furnaceKinds;
+
+    // Every sign with something written on it: where it stands, which
+    // world it stands in, and its four lines. Written after the
+    // furnace kinds for the same reason they were written after the
+    // dimensions -- a level from before signs existed runs out of
+    // file here and reads back with none.
+    struct SavedSign
+    {
+        int x = 0, y = 0, z = 0;
+        uint8_t dimension = 0;
+        std::array<std::string, 4> lines;
+    };
+    std::vector<SavedSign> signs;
+
+    // Every item frame holding something: where it hangs, which world
+    // it hangs in, and the one stack in it. Written after the signs,
+    // for the same reason they were written after everything else.
+    struct SavedFrame
+    {
+        int x = 0, y = 0, z = 0;
+        uint8_t dimension = 0;
+        uint16_t item = 0;
+        uint16_t count = 0;
+        uint16_t damage = 0;
+        uint32_t enchantments = 0;
+    };
+    std::vector<SavedFrame> frames;
     // One packed word per slot, in the same order as the inventory
     // above. Empty on a level written before enchanting existed, which
     // reads back as nothing enchanted.

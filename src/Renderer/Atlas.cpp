@@ -2784,6 +2784,54 @@ namespace
         }
     }
 
+    // A plank board. Minecraft draws its signs from an entity sheet
+    // rather than a block texture, so there is nothing in a pack to
+    // read: this is what a sign is made of, and the words go over it.
+    void paintSignBoard(Tile& t)
+    {
+        t.fill(Color{ 166, 134, 86 });
+        for (int y = 0; y < Tile::N; ++y)
+            for (int x = 0; x < Tile::N; ++x)
+                if ((y % 5) == 1) t.set(x, y, Color{ 142, 112, 70 });
+        for (int k = 0; k < Tile::N; ++k)
+        {
+            t.set(k, 0, Color{ 118, 92, 56 }); t.set(k, Tile::N - 1, Color{ 118, 92, 56 });
+            t.set(0, k, Color{ 118, 92, 56 }); t.set(Tile::N - 1, k, Color{ 118, 92, 56 });
+        }
+        t.speckle(5, 631);
+    }
+
+    // The frame: a wooden border with nothing in the middle, so what
+    // is in it shows through.
+    void paintItemFrameBorder(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 0; y < Tile::N; ++y)
+            for (int x = 0; x < Tile::N; ++x)
+            {
+                const int edge = std::min(std::min(x, Tile::N - 1 - x),
+                                          std::min(y, Tile::N - 1 - y));
+                if (edge >= 3) continue;
+                t.set(x, y, (edge == 0) ? Color{ 108, 84, 52 }
+                          : (edge == 1) ? Color{ 186, 154, 102 }
+                                        : Color{ 146, 116, 72 });
+            }
+    }
+
+    void paintItemSign(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 2; y < 10; ++y)
+            for (int x = 2; x < 14; ++x)
+                t.set(x, y, (y < 4) ? Color{ 182, 148, 98 } : Color{ 160, 128, 82 });
+        for (int y = 5; y < 8; ++y)
+            for (int x = 4; x < 12; ++x)
+                if ((y % 2) == 1) t.set(x, y, Color{ 120, 94, 58 });
+        for (int y = 10; y < Tile::N - 1; ++y)
+            for (int x = 7; x < 9; ++x) t.set(x, y, Color{ 128, 100, 62 });
+        t.speckle(4, 632);
+    }
+
     void paintSpawnerIn(Tile& t, Color bars, Color inside)
     {
         t.fill(inside);
@@ -5681,6 +5729,10 @@ namespace
         { Tiles::ItemCake, paintItemCake },
         { Tiles::ItemCookie, paintItemCookie },
         { Tiles::ItemCocoaBeans, paintItemCocoaBeans },
+        { Tiles::SignTile, paintSignBoard },
+        { Tiles::ItemSign, paintItemSign },
+        { Tiles::ItemFrameTile, paintItemFrameBorder },
+        { Tiles::ItemItemFrame, paintItemFrameBorder },
         { Tiles::ItemBowl, paintItemBowl },
         { Tiles::ItemBeetroot, paintItemBeetroot },
         { Tiles::ItemBeetrootSeeds, paintItemBeetrootSeeds },
@@ -5969,6 +6021,8 @@ namespace
         { Tiles::ItemCake, { "cake", nullptr, nullptr } },
         { Tiles::ItemCookie, { "cookie", nullptr, nullptr } },
         { Tiles::ItemCocoaBeans, { "cocoa_beans", nullptr, nullptr } },
+        { Tiles::ItemSign, { "oak_sign", nullptr, nullptr } },
+        { Tiles::ItemItemFrame, { "item_frame", nullptr, nullptr } },
     };
 
     const PackTile PACK_TILES[] = {
@@ -6204,6 +6258,11 @@ namespace
         { Tiles::ScaffoldTop,   { "scaffolding_top", nullptr },                        Tinting::None,    0,   false },
         { Tiles::ScaffoldSide,  { "scaffolding_side", nullptr },                       Tinting::None,    0,   false },
         { Tiles::ScaffoldBottom,{ "scaffolding_bottom", nullptr },                     Tinting::None,    0,   false },
+        // A sign is a plank board. Minecraft draws its signs off an
+        // entity sheet, so a pack has no block texture to give: the
+        // planks are what it is made of, and the words go over it.
+        { Tiles::SignTile,      { "oak_planks", "planks_oak", nullptr },               Tinting::None,    0,   false },
+        { Tiles::ItemFrameTile, { "item_frame", nullptr },                             Tinting::None,    0,   false },
         { Tiles::PistonTop,     { "piston_side", nullptr },                            Tinting::None,    0,   false },
         { Tiles::PistonSide,    { "piston_side", nullptr },                            Tinting::None,    0,   false },
         { Tiles::PistonFace,    { "piston_top", "piston_top_normal", nullptr },         Tinting::None,    0,   false },

@@ -581,7 +581,7 @@ void buildChunkMesh(const MeshSnapshot& snapshot, MeshResult& out)
                 {
                     emitCross(snapshot, lx, y, lz, id, out.opaqueVertices);
                 }
-                else if (isLadder(id))
+                else if (isWallPanel(id))
                 {
                     emitLadder(snapshot, lx, y, lz, id, out.opaqueVertices);
                 }

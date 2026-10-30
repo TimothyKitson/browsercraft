@@ -48,7 +48,24 @@ public:
     // items, and they spin, so a dynamic buffer is simpler than instancing.
     void render(Shader& chunkShader, const World& world);
 
-    void clear() { m_items.clear(); }
+    // An item held in a frame on a wall. Not a drop: it does not
+    // fall, does not merge, cannot be walked onto and never ages out.
+    // It is drawn here because this is the one place an item is drawn
+    // standing in the world, and a second copy of that would drift.
+    //
+    // Refilled every frame by whoever owns the frames, the way the
+    // nameplates are: a frame can be written to, broken or loaded
+    // between one frame and the next.
+    struct Pinned
+    {
+        glm::vec3 position{ 0.0f };   // the middle of the frame's block
+        int facing = 0;               // the ladder's four
+        StackId item = Blocks::Air;
+    };
+    void clearPinned() { m_pinned.clear(); }
+    void pin(const Pinned& one) { m_pinned.push_back(one); }
+
+    void clear() { m_items.clear(); m_pinned.clear(); }
     int count() const { return static_cast<int>(m_items.size()); }
 
 private:
@@ -66,6 +83,7 @@ private:
     };
 
     std::vector<Item> m_items;
+    std::vector<Pinned> m_pinned;
     Mesh m_mesh;
     std::vector<float> m_vertices;
 

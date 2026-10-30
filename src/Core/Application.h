@@ -23,6 +23,8 @@
 #include "Entity/Rain.h"
 #include "Game/Anvil.h"
 #include "Game/Brewing.h"
+#include "World/Signs.h"
+#include "World/Frames.h"
 #include "Game/Shield.h"
 #include "Game/VillageLoot.h"
 #include "Game/StructureLoot.h"
@@ -236,6 +238,13 @@ private:
         float scale = 1.0f;
     };
     std::vector<Nameplate> m_nameplates;
+
+    Signs m_signs;
+    Frames m_frames;
+    bool m_signOpen = false;
+    glm::ivec3 m_signAt{ 0 };
+    Signs::Text m_signDraft;
+    int m_signLine = 0;
 
     // Minecraft's F5: your own eyes, behind you, or facing you.
     enum class Perspective { FirstPerson, ThirdBack, ThirdFront };
@@ -673,6 +682,19 @@ private:
     // The workstations that need no screen: each is one action on what
     // you are holding. True when it took it, so the caller can fall
     // through to placing a block when it did not.
+    // A sign is hung, then written on. The editor is the chat line's
+    // machinery over four short lines rather than one long one.
+    void openSign(const glm::ivec3& at);
+    void closeSign();
+    void updateSignInput();
+    void renderSignEditor();
+    void collectSignPlates(const glm::mat4& viewProjection,
+                           float screenWidth, float screenHeight);
+
+    // An item frame takes one thing and gives it back.
+    bool useFrame(const glm::ivec3& at, BlockId block);
+    void pinFramedItems();
+
     bool useCake(const glm::ivec3& at, BlockId block);
     bool useCandle(const glm::ivec3& at, BlockId block);
     bool plantCocoa(const glm::ivec3& at);

@@ -199,6 +199,14 @@ namespace Items
         Cookie,
         CocoaBeans,
 
+        // A board on a wall with words on it. One item, four ways of
+        // hanging it, the same as a ladder.
+        Sign,
+
+        // A frame hung on a wall to show one thing off, or to say what
+        // is in the chest under it.
+        ItemFrame,
+
         // What a wither leaves. One of them makes a beacon, which is
         // the only thing in the game it is for.
         NetherStar,

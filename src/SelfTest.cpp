@@ -27,6 +27,9 @@
 #include "Game/Tools.h"
 #include "Game/Smelting.h"
 #include "Game/Composting.h"
+#include "World/Signs.h"
+#include "World/Frames.h"
+#include "World/WallFacing.h"
 #include "Game/Armour.h"
 #include "Game/Sleep.h"
 #include "Game/Explosion.h"
@@ -9956,6 +9959,189 @@ namespace
         {
             check(read.chestDimensions[0] == 0, "the first in the overworld");
             check(read.chestDimensions[1] == 1, "and the second in the Nether");
+        }
+
+        section("signs");
+
+        // Four facings off the same arithmetic the ladder uses, so a
+        // sign hung on a north wall is the one that faces north.
+        for (int facing = 0; facing < 4; ++facing)
+        {
+            const BlockId board = signFacingAs(facing);
+            check(isSign(board), "every facing reads as a sign");
+            check(signFacing(board) == facing, "and knows which way it faces");
+            check(blockDrop(board) == Items::Sign,
+                  "and gives back one sign however it was hung");
+            check(!isObtainable(board),
+                  "the block is where it ended up, not the thing in your hand");
+            check(!blockInfo(board).collides, "you walk through a board");
+        }
+        check(signFacingAs(99) == Blocks::SignWest, "a facing cannot run off the end");
+        check(signFacingAs(-4) == Blocks::SignNorth, "nor off the front");
+        check(!isSign(Blocks::LadderNorth), "a ladder is not a sign");
+
+        // What a sign says belongs to the sign, and to the world it
+        // stands in. Keyed on position alone, a sign in the Nether at
+        // matching coordinates read back the overworld's words --
+        // which is exactly the bug the chests had.
+        Signs signs;
+        signs.setDimension(0);
+        signs.at(spot) = Signs::Text{ "HOME", "", "", "" };
+        check(signs.has(spot), "a sign in the overworld is on record");
+
+        signs.setDimension(1);
+        check(!signs.has(spot), "and the same spot in the Nether is blank");
+        signs.at(spot) = Signs::Text{ "MIND", "THE", "LAVA", "" };
+
+        signs.setDimension(0);
+        check(signs.find(spot) != nullptr, "the overworld one is still there");
+        check((*signs.find(spot))[0] == "HOME", "and still says what it said");
+        check(signs.all().size() == 2, "two signs, not one");
+
+        signs.remove(spot);
+        check(!signs.has(spot), "breaking it forgets what it said");
+        signs.setDimension(1);
+        check(signs.has(spot), "and leaves the Nether one standing");
+
+        // A board with nothing on it needs no row.
+        check(Signs::blank(Signs::Text{}), "four blank lines is a blank sign");
+        check(!Signs::blank(Signs::Text{ "", "", "X", "" }), "one word is not");
+
+        // Only what is close enough to read.
+        {
+            Signs reach;
+            reach.setDimension(0);
+            reach.at(glm::ivec3(0, 64, 0)) = Signs::Text{ "NEAR", "", "", "" };
+            reach.at(glm::ivec3(60, 64, 0)) = Signs::Text{ "FAR", "", "", "" };
+
+            const auto close = reach.near(glm::vec3(0.0f, 64.0f, 0.0f), 14.0f);
+            check(close.size() == 1, "only the near one is worth drawing");
+            if (close.size() == 1)
+                check((*close[0].text)[0] == "NEAR", "and it is the near one");
+
+            reach.setDimension(1);
+            check(reach.near(glm::vec3(0.0f, 64.0f, 0.0f), 14.0f).empty(),
+                  "and a sign in another world is not drawn in this one");
+        }
+
+        // Through the file and back, words and all.
+        {
+            LevelState withSigns;
+            withSigns.seed = 11u;
+
+            LevelState::SavedSign written;
+            written.x = 4; written.y = 70; written.z = -9;
+            written.dimension = 1;
+            written.lines = { "TO THE", "FORTRESS", "->", "" };
+            withSigns.signs.push_back(written);
+
+            WorldSave::saveLevel(dir, withSigns);
+
+            LevelState back;
+            check(WorldSave::loadLevel(dir, back), "a level with a sign reads back");
+            check(back.signs.size() == 1, "the sign is there");
+            if (back.signs.size() == 1)
+            {
+                check(back.signs[0].x == 4 && back.signs[0].y == 70 &&
+                      back.signs[0].z == -9, "where it was");
+                check(back.signs[0].dimension == 1, "in the world it was in");
+                check(back.signs[0].lines[0] == "TO THE", "saying what it said");
+                check(back.signs[0].lines[1] == "FORTRESS", "every line of it");
+                check(back.signs[0].lines[3].empty(), "blank lines included");
+            }
+        }
+
+        section("item frames");
+
+        for (int facing = 0; facing < 4; ++facing)
+        {
+            const BlockId frame = frameFacingAs(facing);
+            check(isFrame(frame), "every facing reads as a frame");
+            check(frameFacing(frame) == facing, "and knows which way it faces");
+            check(blockDrop(frame) == Items::ItemFrame, "and gives back one frame");
+            check(!isObtainable(frame), "the block is where it ended up");
+            check(!isSign(frame), "a frame is not a sign");
+        }
+        check(frameFacingAs(9) == Blocks::FrameWest, "a facing cannot run off the end");
+
+        // The four facings have to agree with the way a wall is faced,
+        // or the words and the item stand inside the wall instead of
+        // in front of it.
+        check(wallOut(0) == glm::vec3(0.0f, 0.0f, 1.0f), "north faces +z");
+        check(wallOut(1) == glm::vec3(-1.0f, 0.0f, 0.0f), "east faces -x");
+        check(wallOut(2) == glm::vec3(0.0f, 0.0f, -1.0f), "south faces -z");
+        check(wallOut(3) == glm::vec3(1.0f, 0.0f, 0.0f), "west faces +x");
+        for (int facing = 0; facing < 4; ++facing)
+            check(glm::length(wallOut(facing)) > 0.99f &&
+                  glm::length(wallOut(facing)) < 1.01f,
+                  "and each of them is one block long");
+
+        Frames frames;
+        frames.setDimension(0);
+        frames.at(spot) = ItemStack{ Items::Diamond, 1 };
+        check(frames.has(spot), "a frame in the overworld is on record");
+
+        frames.setDimension(1);
+        check(!frames.has(spot), "and the same spot in the Nether is empty");
+        frames.at(spot) = ItemStack{ Blocks::Netherrack, 1 };
+
+        frames.setDimension(0);
+        check(frames.find(spot) != nullptr && frames.find(spot)->id == Items::Diamond,
+              "and the overworld one keeps its diamond");
+
+        {
+            Frames reach;
+            reach.setDimension(0);
+            reach.at(glm::ivec3(0, 64, 0)) = ItemStack{ Items::Diamond, 1 };
+            reach.at(glm::ivec3(90, 64, 0)) = ItemStack{ Items::Coal, 1 };
+            // A frame nobody has put anything in is nothing to draw.
+            reach.at(glm::ivec3(1, 64, 0));
+
+            const auto close = reach.near(glm::vec3(0.0f, 64.0f, 0.0f), 32.0f);
+            check(close.size() == 1, "only the near, full one is worth drawing");
+            if (close.size() == 1)
+                check(close[0].held.id == Items::Diamond, "and it is the near one");
+        }
+
+        {
+            LevelState withFrames;
+            withFrames.seed = 13u;
+
+            LevelState::SavedFrame hung;
+            hung.x = -3; hung.y = 65; hung.z = 8;
+            hung.dimension = 0;
+            hung.item = static_cast<uint16_t>(Items::DiamondPickaxe);
+            hung.count = 1;
+            hung.damage = 44;
+            hung.enchantments = 0x15u;
+            withFrames.frames.push_back(hung);
+
+            WorldSave::saveLevel(dir, withFrames);
+
+            LevelState back;
+            check(WorldSave::loadLevel(dir, back), "a level with a frame reads back");
+            check(back.frames.size() == 1, "the frame is there");
+            if (back.frames.size() == 1)
+            {
+                check(back.frames[0].item == static_cast<uint16_t>(Items::DiamondPickaxe),
+                      "holding what it held");
+                check(back.frames[0].damage == 44, "worn as it was worn");
+                check(back.frames[0].enchantments == 0x15u, "and enchanted as it was");
+            }
+        }
+
+        // A level written before signs existed has none, and reading
+        // one must not leave the loader hunting for them in whatever
+        // bytes happen to follow.
+        {
+            LevelState old;
+            old.seed = 12u;
+            WorldSave::saveLevel(dir, old);
+
+            LevelState back;
+            check(WorldSave::loadLevel(dir, back), "a level with no signs reads back");
+            check(back.signs.empty(), "and comes back with none");
+            check(back.frames.empty(), "and no frames either");
         }
     }
 

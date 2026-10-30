@@ -1,4 +1,5 @@
 #include "DroppedItems.h"
+#include "World/WallFacing.h"
 #include "World/World.h"
 #include "Player/Player.h"
 #include "Player/Inventory.h"
@@ -258,12 +259,16 @@ void DroppedItems::mergeNearby()
     }
 }
 
+// How big the thing in a frame is drawn. A touch smaller than the
+// frame's own border, so the wood shows round it.
+static constexpr float FRAME_SIZE = 0.52f;
+
 void DroppedItems::render(Shader& chunkShader, const World& world)
 {
-    if (m_items.empty()) return;
+    if (m_items.empty() && m_pinned.empty()) return;
 
     m_vertices.clear();
-    m_vertices.reserve(m_items.size() * 36 * 9);
+    m_vertices.reserve((m_items.size() + m_pinned.size()) * 36 * 9);
 
 
     const float half = SIZE * 0.5f;
@@ -358,7 +363,62 @@ void DroppedItems::render(Shader& chunkShader, const World& world)
         }
     }
 
+    // What is in the frames. Flat against the wall, facing out of
+    // it, and still: a framed item that bobbed and span would read as
+    // a drop somebody had left on a shelf.
+    for (const Pinned& shown : m_pinned)
+    {
+        if (shown.item == Blocks::Air) continue;
+
+        const glm::vec3 out = wallOut(shown.facing);
+        const glm::vec3 centre = shown.position + out * 0.46f;
+
+        int lx = static_cast<int>(std::floor(centre.x));
+        int ly = static_cast<int>(std::floor(centre.y));
+        int lz = static_cast<int>(std::floor(centre.z));
+        for (int step = 0; step < 3 && isOpaque(world.getBlock(lx, ly, lz)); ++step)
+            ++ly;
+
+        const float sky = world.skyLight(lx, ly, lz) / 15.0f;
+        const float blockLight =
+            std::max<float>(world.blockLightAt(lx, ly, lz),
+                            isItem(shown.item) ? 0 : lightEmission(asBlock(shown.item)))
+            / 15.0f;
+
+        auto pushPinned = [&](const glm::vec3& p, float tu, float tv, float shade) {
+            m_vertices.push_back(p.x);
+            m_vertices.push_back(p.y);
+            m_vertices.push_back(p.z);
+            m_vertices.push_back(tu);
+            m_vertices.push_back(tv);
+            m_vertices.push_back(shade);
+            m_vertices.push_back(sky);
+            m_vertices.push_back(blockLight);
+            m_vertices.push_back(6.0f);
+        };
+
+        // Across the wall, which is the horizontal perpendicular to
+        // the way the frame looks.
+        const glm::vec3 across = glm::vec3(-out.z, 0.0f, out.x) * (FRAME_SIZE * 0.5f);
+        const glm::vec3 up(0.0f, FRAME_SIZE, 0.0f);
+        const glm::vec3 foot = centre - glm::vec3(0.0f, FRAME_SIZE * 0.5f, 0.0f);
+
+        const TileUV uv = tileUV(atlasTileFor(shown.item));
+        const glm::vec3 corner[4] = {
+            foot - across, foot + across, foot + across + up, foot - across + up
+        };
+        const float tu[4] = { uv.u0, uv.u1, uv.u1, uv.u0 };
+        const float tv[4] = { uv.vBottom, uv.vBottom, uv.vTop, uv.vTop };
+
+        const int front[6] = { 0, 1, 2, 0, 2, 3 };
+        const int back[6]  = { 0, 2, 1, 0, 3, 2 };
+        for (int k : front) pushPinned(corner[k], tu[k], tv[k], 1.0f);
+        for (int k : back)  pushPinned(corner[k], tu[k], tv[k], 0.86f);
+    }
+
     (void)half;
+
+    if (m_vertices.empty()) return;
 
     m_mesh.upload(m_vertices, CHUNK_LAYOUT, true);
 

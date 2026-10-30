@@ -353,6 +353,16 @@ namespace
         { "Candle",       CandleLitTile, CandleLitTile,  CandleLitTile,  false, false, RenderType::Cross, 10,   0.1f },
 
         { "Scaffolding",  ScaffoldTop,   ScaffoldBottom, ScaffoldSide,   false, false, RenderType::Cube,   0,   0.2f },
+
+        { "Sign",         SignTile,      SignTile,       SignTile,       false, false, RenderType::Ladder, 0,   1.0f },
+        { "Sign",         SignTile,      SignTile,       SignTile,       false, false, RenderType::Ladder, 0,   1.0f },
+        { "Sign",         SignTile,      SignTile,       SignTile,       false, false, RenderType::Ladder, 0,   1.0f },
+        { "Sign",         SignTile,      SignTile,       SignTile,       false, false, RenderType::Ladder, 0,   1.0f },
+
+        { "Item Frame",   ItemFrameTile, ItemFrameTile,  ItemFrameTile,  false, false, RenderType::Ladder, 0,   0.3f },
+        { "Item Frame",   ItemFrameTile, ItemFrameTile,  ItemFrameTile,  false, false, RenderType::Ladder, 0,   0.3f },
+        { "Item Frame",   ItemFrameTile, ItemFrameTile,  ItemFrameTile,  false, false, RenderType::Ladder, 0,   0.3f },
+        { "Item Frame",   ItemFrameTile, ItemFrameTile,  ItemFrameTile,  false, false, RenderType::Ladder, 0,   0.3f },
     };
 }
 
@@ -415,6 +425,12 @@ bool isObtainable(BlockId id)
             // Cocoa is a pod on a trunk rather than a block anybody
             // places, and only the beans come off it.
             if (isCocoa(id)) return false;
+
+            // A sign is held as one item and hung four ways, the same
+            // as a ladder: the block is where it ended up, not the
+            // thing in your hand.
+            if (isSign(id)) return false;
+            if (isFrame(id)) return false;
             if (isCauldron(id) && id != Blocks::Cauldron0) return false;
 
             // Likewise for stairs: one of each four is the thing you
@@ -437,6 +453,7 @@ const char* blockSoundGroup(BlockId id)
     if (isLog(id) || isPlanks(id)) return "wood";
     if (isComposter(id) || isLectern(id)) return "wood";
     if (id == Blocks::Bamboo || id == Blocks::Scaffolding) return "wood";
+    if (isSign(id) || isFrame(id)) return "wood";
     if (id == Blocks::Melon || isCocoa(id)) return "grass";
     if (isCake(id) || id == Blocks::Candle || id == Blocks::CandleLit) return "cloth";
 
@@ -571,6 +588,7 @@ Material blockMaterial(BlockId id)
     if (isCake(id)) return Material::Wool;      // soft, and no tool helps
     if (id == Blocks::Candle || id == Blocks::CandleLit) return Material::Wool;
     if (id == Blocks::Scaffolding) return Material::Wood;
+    if (isSign(id) || isFrame(id)) return Material::Wood;
     if (isCauldron(id)) return Material::Stone;
     if (isFurnaceBlock(id)) return Material::Stone;
 

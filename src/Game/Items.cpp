@@ -140,6 +140,8 @@ namespace
         { "Cake",            Tiles::ItemCake,           1 },
         { "Cookie",          Tiles::ItemCookie,        64 },
         { "Cocoa Beans",     Tiles::ItemCocoaBeans,    64 },
+        { "Sign",            Tiles::ItemSign,          16 },
+        { "Item Frame",      Tiles::ItemItemFrame,     64 },
         { "Nether Star",     Tiles::ItemNetherStar,     1 },
     };
 
@@ -208,6 +210,10 @@ StackId blockDrop(BlockId id)
     if (isCake(id)) return Blocks::Air;
 
     if (id == Blocks::CandleLit) return Blocks::Candle;
+
+    // However it was hung, what comes back is one sign.
+    if (isSign(id)) return Items::Sign;
+    if (isFrame(id)) return Items::ItemFrame;
 
     // A melon comes apart into slices rather than into a melon, which
     // is Minecraft's and is what makes one worth planting.
