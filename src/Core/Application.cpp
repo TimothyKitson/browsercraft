@@ -1507,11 +1507,15 @@ bool Application::frame()
             const int perRow = (mobTypeCount() + rows - 1) / rows;
             const int halfWidth = perRow + 3;
 
-            for (int x = centreX - halfWidth; x <= centreX + halfWidth; ++x)
-                for (int z = centreZ - 26; z <= centreZ + 6; ++z)
+            // Cleared well past the line-up and well above it: on a
+            // hillside the old box left the camera in a trench with a
+            // wall of dirt two blocks in front of it, and the shot
+            // came back as a picture of the wall.
+            for (int x = centreX - halfWidth - 4; x <= centreX + halfWidth + 4; ++x)
+                for (int z = centreZ - 30; z <= centreZ + 8; ++z)
                 {
                     m_world->setBlock(x, baseY - 1, z, Blocks::Stone);
-                    for (int y = baseY; y < baseY + 8; ++y)
+                    for (int y = baseY; y < baseY + 16; ++y)
                         m_world->setBlock(x, y, z, Blocks::Air);
                 }
 
@@ -1528,13 +1532,18 @@ bool Application::frame()
             }
 
             // Stand back and look along +z at every row, high enough
-            // that the near row does not hide the far one.
+            // that the near row does not hide the far one. On a perch
+            // of its own, so the camera is not standing in mid-air.
+            const int standZ = centreZ - 10 - rows * 4;
+            for (int y = baseY; y <= baseY + 3; ++y)
+                m_world->setBlock(centreX, y, standZ, Blocks::Stone);
+
             m_player.position = glm::vec3(centreX + 0.5f,
-                                          static_cast<float>(baseY + 3),
-                                          centreZ - 10.5f - rows * 4.0f);
+                                          static_cast<float>(baseY + 4),
+                                          standZ + 0.5f);
             m_player.velocity = glm::vec3(0.0f);
             m_camera.position = m_player.eyePosition();
-            m_camera.setOrientation(90.0f, -6.0f);
+            m_camera.setOrientation(90.0f, -9.0f);
 
             // A breeding pair and a calf beside the line-up, plus wheat
             // in hand, so one screenshot covers the lot.

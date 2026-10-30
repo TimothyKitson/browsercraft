@@ -527,6 +527,14 @@ namespace
 
     // --- mobs -----------------------------------------------------------
 
+    // What a mob actually occupies, as against what its model is drawn
+    // at. Mojang draws several of them at a scale -- a guardian's model
+    // is twice its box, an elder guardian's is half of its -- so a
+    // comparison between two species has to use the scaled size or it
+    // is comparing drawings rather than animals.
+    float standsAt(const MobType& t) { return t.height * t.modelScale; }
+    float spans(const MobType& t) { return t.width * t.modelScale; }
+
     void testMobTypes()
     {
         section("mobs: species");
@@ -580,13 +588,20 @@ namespace
             // 64x128 is on the list because that is what Minecraft
             // draws a witch and a villager on. It was missing until
             // the witch went in and this caught her.
-            check((type.sheetWidth == 32 && type.sheetHeight == 32) ||
-                      (type.sheetWidth == 64 &&
-                       (type.sheetHeight == 32 || type.sheetHeight == 64 ||
-                        type.sheetHeight == 128)) ||
-                      (type.sheetWidth == 128 &&
-                       (type.sheetHeight == 64 || type.sheetHeight == 128)),
-                  who + " has a sheet the shape Minecraft draws on");
+            // Mojang's own sheet shapes, which are not all powers of
+            // two square: the fox is drawn on 48x32, the frog on
+            // 48x48 and the dragon on 256x256.
+            const bool shaped =
+                (type.sheetWidth == 32 && type.sheetHeight == 32) ||
+                (type.sheetWidth == 48 &&
+                 (type.sheetHeight == 32 || type.sheetHeight == 48)) ||
+                (type.sheetWidth == 64 &&
+                 (type.sheetHeight == 32 || type.sheetHeight == 64 ||
+                  type.sheetHeight == 128)) ||
+                (type.sheetWidth == 128 &&
+                 (type.sheetHeight == 64 || type.sheetHeight == 128)) ||
+                (type.sheetWidth == 256 && type.sheetHeight == 256);
+            check(shaped, who + " has a sheet the shape Minecraft draws on");
             check(MobSkin::fits(type.model, type.sheetWidth, type.sheetHeight),
                   who + " keeps every patch on its sheet");
         }
@@ -6331,7 +6346,7 @@ namespace
         check(dragon.maxHealth == 200, "with Minecraft's two hundred health");
         check(dragon.hoverHeight > 4.0f, "and it never lands");
         check(dragon.experience > 100, "it is worth the fight");
-        check(dragon.modelScale > 2.0f, "and it is drawn big");
+        check(standsAt(dragon) > 4.0f, "and it is drawn big");
 
         // Nothing else in the world is a boss, or the bar means
         // nothing.
@@ -10740,7 +10755,7 @@ namespace
             check(who->spawnClass == SpawnClass::Hostile, name + " is hostile");
             check(!who->burnsInSunlight, name + " does not burn in daylight");
             check(!who->neutral, name + " needs no provoking");
-            check(who->height == mobType(MobId::Villager).height,
+            check(std::fabs(standsAt(*who) - standsAt(mobType(MobId::Villager))) < 0.02f,
                   name + " stands as tall as the villager it used to be");
         }
 
@@ -10864,7 +10879,7 @@ namespace
         check(slime.drop == Blocks::Air && slime.dropCount == 0,
               "a big slime leaves nothing behind");
         check(small.drop == Items::Slimeball, "a small one leaves a slimeball");
-        check(slime.height > small.height * 1.8f, "and it really is half the size");
+        check(standsAt(slime) > standsAt(small) * 1.8f, "and it really is half the size");
         check(slime.maxHealth > small.maxHealth, "and harder to kill");
         check(slime.attackDamage > small.attackDamage, "and hits harder");
         check(small.walkSpeed > slime.walkSpeed, "but the small one is quicker");
@@ -10939,15 +10954,15 @@ namespace
 
         const MobType& caveSpider = mobType(MobId::CaveSpider);
         const MobType& spider = mobType(MobId::Spider);
-        check(caveSpider.modelScale < 1.0f, "a cave spider is smaller than a spider");
-        check(caveSpider.width * caveSpider.modelScale < spider.width * spider.modelScale,
+        check(spans(caveSpider) < spans(spider), "a cave spider is smaller than a spider");
+        check(spans(caveSpider) < spans(spider),
               "narrow enough for a gap a spider could not take");
         check(caveSpider.walkSpeed > spider.walkSpeed, "and quicker");
         check(caveSpider.maxHealth < spider.maxHealth, "and easier to kill");
         check(caveSpider.drop == Items::StringItem, "it leaves string, like its cousin");
 
         const MobType& silverfish = mobType(MobId::Silverfish);
-        check(silverfish.height < 0.5f, "a silverfish is barely there");
+        check(standsAt(silverfish) < 0.5f, "a silverfish is barely there");
         check(silverfish.attackDamage > 0, "but it bites");
         check(silverfish.drop == Blocks::Air, "and leaves nothing worth having");
     }
@@ -11298,7 +11313,7 @@ namespace
         check(phantom.attackDamage > 0, "and it means it");
 
         const MobType& endermite = mobType(MobId::Endermite);
-        check(endermite.height < 0.5f, "an endermite is barely there");
+        check(standsAt(endermite) < 0.5f, "an endermite is barely there");
         bool inEnd = false;
         for (int k = 0; k < EntityManager::endSpeciesCount(); ++k)
             if (EntityManager::endSpecies(k) == MobId::Endermite) inEnd = true;
@@ -11404,13 +11419,14 @@ namespace
         check(elder.maxHealth > 2 * guardian.maxHealth, "an elder guardian is far harder to kill");
         check(elder.arrowDamage > guardian.arrowDamage, "and its beam hurts more");
         check(elder.aquatic, "it lives in the water like its smaller cousin");
-        check(elder.modelScale > guardian.modelScale, "and it is drawn bigger");
+        check(standsAt(elder) > standsAt(guardian), "and it is drawn bigger");
         check(elder.secondDrop == Blocks::SeaLantern, "it leaves a sea lantern");
 
         const MobType& trader = mobType(MobId::WanderingTrader);
         check(trader.spawnClass == SpawnClass::Passive, "a wandering trader fights nobody");
         check(trader.experience == 0, "and killing one is worth nothing, like a villager");
-        check(trader.height == mobType(MobId::Villager).height, "he is a villager's size");
+        check(std::fabs(standsAt(trader) - standsAt(mobType(MobId::Villager))) < 0.02f,
+              "he is a villager's size");
 
         const MobType& camel = mobType(MobId::Camel);
         check(camel.rideable, "a camel can be ridden");

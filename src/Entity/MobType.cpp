@@ -50,6 +50,14 @@ namespace
         return box;
     }
 
+    // Mojang's cubes can be grown a little past their own size, which
+    // is how a robe sits outside the body it covers.
+    MobBox inflated(MobBox box, float by)
+    {
+        box.inflate = by;
+        return box;
+    }
+
     MobBox mirrored(MobBox box)
     {
         box.mirror = true;
@@ -275,11 +283,11 @@ namespace
             t.texture = "shulker";
             t.sheetWidth = 64;
             t.sheetHeight = 64;
+            t.width = 1.0000f;
+            t.height = 1.0000f;
             t.dimension = Dimension::End;
             t.spawnClass = SpawnClass::Hostile;
             t.maxHealth = 30;
-            t.width = 0.9f;
-            t.height = 0.9f;
             t.walkSpeed = 0.0f;
             t.stationary = true;
             t.limbSwing = 0.0f;
@@ -300,10 +308,11 @@ namespace
 
             // A box with a lid on it. The lid is filed as the head so
             // it turns towards whatever the thing is looking at.
-            t.width = 1.0f;
-            t.height = 1.0f;
-            t.model.push_back(mc(Part::Body, 0, 28, 16, 8, 16, -8, 16, -8, 0, 0, 0));
-            t.model.push_back(mc(Part::Head, 0, 0, 16, 8, 16, -8, -8, -8, 0, 16, 0));
+
+            t.model.push_back(mc(Part::Body, 0, 0, 16, 12, 16, -8, -16, -8, 0, 24, 0));
+            t.model.push_back(mc(Part::Body, 0, 28, 16, 8, 16, -8, -8, -8, 0, 24, 0));
+            t.model.push_back(mc(Part::Head, 0, 52, 6, 6, 6, -3, 0, -3, 0, 12, 0));
+
         }
         {
             // A zombie that went into the water and did not come out.
@@ -317,11 +326,13 @@ namespace
             t.deathVoice = Sound::MobDrownedDeath;
             t.name = "Drowned";
             t.texture = "drowned";
+            t.sheetWidth = 64;
             t.sheetHeight = 64;
+            t.width = 0.6154f;
+            t.height = 2.0000f;
+            t.modelScale = 0.9750f;
             t.spawnClass = SpawnClass::Hostile;
             t.maxHealth = 20;
-            t.width = 0.6f;
-            t.height = 1.95f;
             t.walkSpeed = 1.7f;
             t.aquatic = true;
             t.attackDamage = 3;
@@ -337,12 +348,13 @@ namespace
             t.pattern = MobType::Pattern::Speckled;
             t.markColour = rgb(44, 96, 86);
 
-            t.model.push_back(mc(Part::Head, 0, 0, 8, 8, 8, -4, -8, -4, 0, 0, 0));
             t.model.push_back(mc(Part::Body, 16, 16, 8, 12, 4, -4, 0, -2, 0, 0, 0));
-            t.model.push_back(mc(Part::LegFrontRight, 40, 16, 4, 12, 4, -3, -2, -2, -5, 2, 0));
-            t.model.push_back(mirrored(mc(Part::LegFrontLeft, 40, 16, 4, 12, 4, -1, -2, -2, 5, 2, 0)));
-            t.model.push_back(mc(Part::LegBackRight, 0, 16, 4, 12, 4, -2, 0, -2, -2, 12, 0));
-            t.model.push_back(mirrored(mc(Part::LegBackLeft, 0, 16, 4, 12, 4, -2, 0, -2, 2, 12, 0)));
+            t.model.push_back(mc(Part::Head, 0, 0, 8, 8, 8, -4, -8, -4, 0, 0, 0));
+            t.model.push_back(mc(Part::LegFrontRight, 0, 16, 4, 12, 4, -3, -2, -2, -5, 2, 0));
+            t.model.push_back(mc(Part::LegFrontLeft, 40, 16, 4, 12, 4, -1, -2, -2, 5, 2, 0));
+            t.model.push_back(mc(Part::LegBackRight, 16, 48, 4, 12, 4, -2, 0, -2, -2, 12, 0));
+            t.model.push_back(mc(Part::LegBackLeft, 32, 48, 4, 12, 4, -2, 0, -2, 2, 12, 0));
+
         }
         {
             // The frog. It does nothing to anybody and is only in the
@@ -356,12 +368,13 @@ namespace
             t.deathVoice = Sound::MobFrogDeath;
             t.name = "Frog";
             t.texture = "frog";
-            t.sheetWidth = 64;
-            t.sheetHeight = 64;
+            t.sheetWidth = 48;
+            t.sheetHeight = 48;
+            t.width = 0.5625f;
+            t.height = 0.5625f;
+            t.modelScale = 0.8889f;
             t.spawnClass = SpawnClass::Passive;
             t.maxHealth = 10;
-            t.width = 0.5f;
-            t.height = 0.5f;
             t.walkSpeed = 1.6f;
             t.limbSwing = 0.6f;
 
@@ -378,12 +391,24 @@ namespace
 
             // A body with a head on the front of it and four stubby
             // legs: eight pixels tall in all, which is half a block.
-            t.model.push_back(mc(Part::Body, 0, 0, 8, 4, 8, -4, 18, -4, 0, 0, 0));
-            t.model.push_back(mc(Part::Head, 0, 14, 6, 3, 4, -3, 17, 2, 0, 0, 0));
-            t.model.push_back(mc(Part::LegFrontRight, 0, 24, 2, 2, 2, 2, 22, 2, 0, 0, 0));
-            t.model.push_back(mirrored(mc(Part::LegFrontLeft, 0, 24, 2, 2, 2, -4, 22, 2, 0, 0, 0)));
-            t.model.push_back(mc(Part::LegBackRight, 0, 24, 2, 2, 2, 2, 22, -4, 0, 0, 0));
-            t.model.push_back(mirrored(mc(Part::LegBackLeft, 0, 24, 2, 2, 2, -4, 22, -4, 0, 0, 0)));
+
+            t.model.push_back(mc(Part::Body, 3, 1, 7, 3, 9, -4, -2, -8, 0, 21, 4));
+            t.model.push_back(mc(Part::Body, 23, 22, 7, 1, 9, -4, -1, -8, 0, 21, 4));
+            t.model.push_back(mc(Part::Head, 23, 13, 7, 1, 9, -4, -1, -7, 0, 19, 3));
+            t.model.push_back(mc(Part::Head, 0, 13, 7, 3, 9, -4, -2, -7, 0, 19, 3));
+            t.model.push_back(mc(Part::Head, 0, 0, 3, 2, 3, -2, -1, -2, -2, 16, -2));
+            t.model.push_back(mc(Part::Head, 0, 5, 3, 2, 3, -2, -1, -2, 2, 16, -2));
+            t.model.push_back(inflated(mc(Part::Body, 26, 5, 7, 2, 3, -4, 0, -3, 0, 20, -1), -0.100f));
+            t.model.push_back(mc(Part::Body, 17, 13, 4, 1, 7, -2, 0, -7, 0, 20, 5));
+            t.model.push_back(mc(Part::LegFrontLeft, 0, 32, 2, 3, 3, -1, 0, -1, 4, 20, -2));
+            t.model.push_back(mc(Part::LegFrontLeft, 18, 40, 8, 1, 8, -4, 3, -5, 4, 20, -2));
+            t.model.push_back(mc(Part::LegFrontRight, 0, 38, 2, 3, 3, -1, 0, -1, -4, 20, -2));
+            t.model.push_back(mc(Part::LegFrontRight, 2, 40, 8, 1, 8, -4, 3, -5, -4, 20, -2));
+            t.model.push_back(mc(Part::LegBackLeft, 14, 25, 3, 3, 4, -1, 0, -2, 4, 20, 4));
+            t.model.push_back(mc(Part::LegBackLeft, 2, 32, 8, 1, 8, -2, 3, -4, 4, 20, 4));
+            t.model.push_back(mc(Part::LegBackRight, 0, 25, 3, 3, 4, -2, 0, -2, -4, 20, 4));
+            t.model.push_back(mc(Part::LegBackRight, 18, 32, 8, 1, 8, -6, 3, -4, -4, 20, 4));
+
         }
         {
             // The squid. It swims about and does nothing at all, which
@@ -399,10 +424,11 @@ namespace
             t.texture = "squid";
             t.sheetWidth = 64;
             t.sheetHeight = 32;
+            t.width = 2.0625f;
+            t.height = 2.0625f;
+            t.modelScale = 0.3879f;
             t.spawnClass = SpawnClass::Passive;
             t.maxHealth = 10;
-            t.width = 0.8f;
-            t.height = 0.8f;
             t.walkSpeed = 1.2f;
             t.limbSwing = 0.4f;
             t.aquatic = true;
@@ -423,11 +449,17 @@ namespace
 
             // A bell with four arms under it, which is the whole of
             // what a squid looks like from any angle.
-            t.model.push_back(mc(Part::Body, 0, 0, 8, 6, 8, -4, 11, -4, 0, 0, 0));
-            t.model.push_back(mc(Part::LegFrontRight, 0, 16, 2, 7, 2, -1, 0, -1, 3, 17, 3));
-            t.model.push_back(mirrored(mc(Part::LegFrontLeft, 0, 16, 2, 7, 2, -1, 0, -1, -3, 17, 3)));
-            t.model.push_back(mc(Part::LegBackRight, 0, 16, 2, 7, 2, -1, 0, -1, 3, 17, -3));
-            t.model.push_back(mirrored(mc(Part::LegBackLeft, 0, 16, 2, 7, 2, -1, 0, -1, -3, 17, -3)));
+
+            t.model.push_back(mc(Part::Body, 0, 0, 12, 16, 12, -6, -8, -6, 0, -1, 0));
+            t.model.push_back(turned(mc(Part::LegFrontLeft, 48, 0, 2, 18, 2, -1, 0, -1, 5, 6, 0), 0.0000f, -1.5708f, 0.0000f));
+            t.model.push_back(turned(mc(Part::LegBackLeft, 48, 0, 2, 18, 2, -1, 0, -1, 4, 6, 4), 0.0000f, -0.7854f, 0.0000f));
+            t.model.push_back(mc(Part::LegBackRight, 48, 0, 2, 18, 2, -1, 0, -1, 0, 6, 5));
+            t.model.push_back(turned(mc(Part::LegBackRight, 48, 0, 2, 18, 2, -1, 0, -1, -4, 6, 4), 0.0000f, 0.7854f, 0.0000f));
+            t.model.push_back(turned(mc(Part::LegFrontRight, 48, 0, 2, 18, 2, -1, 0, -1, -5, 6, 0), 0.0000f, 1.5708f, 0.0000f));
+            t.model.push_back(turned(mc(Part::LegFrontRight, 48, 0, 2, 18, 2, -1, 0, -1, -4, 6, -4), 0.0000f, 2.3562f, 0.0000f));
+            t.model.push_back(turned(mc(Part::LegFrontRight, 48, 0, 2, 18, 2, -1, 0, -1, 0, 6, -5), 0.0000f, 3.1416f, 0.0000f));
+            t.model.push_back(turned(mc(Part::LegFrontLeft, 48, 0, 2, 18, 2, -1, 0, -1, 4, 6, -4), 0.0000f, 3.9270f, 0.0000f));
+
         }
         {
             // The ghast. It hangs in the air, it is enormous, and it
@@ -1129,10 +1161,11 @@ namespace
             t.texture = "guardian";
             t.sheetWidth = 64;
             t.sheetHeight = 64;
+            t.width = 1.7500f;
+            t.height = 1.7500f;
+            t.modelScale = 0.4857f;
             t.spawnClass = SpawnClass::Hostile;
             t.maxHealth = 30;
-            t.width = 0.85f;
-            t.height = 0.85f;
             t.walkSpeed = 2.4f;
             t.aquatic = true;
             t.limbSwing = 0.0f;
@@ -1159,14 +1192,32 @@ namespace
             // One body cube and the eye on the front of it, then the
             // tail behind. The eye is a Head so it tracks the player,
             // which is the whole of a guardian's menace.
-            t.model.push_back(mc(Part::Body, 0, 0, 12, 12, 12, -6, -6, -6, 0, 15, 0));
-            t.model.push_back(mc(Part::Head, 0, 24, 4, 4, 1, -2, -2, 0, 0, 15, -6));
-            t.model.push_back(mc(Part::LegBackLeft, 40, 0, 2, 2, 6, -1, -1, 0, 0, 15, 6));
-            t.model.push_back(mc(Part::LegBackRight, 40, 8, 2, 2, 5, -1, -1, 0, 0, 15, 12));
 
             // The spikes, which are what makes it dangerous to hit.
-            t.model.push_back(mc(Part::WingLeft, 0, 16, 2, 8, 2, -1, 0, -1, -7, 15, 0));
-            t.model.push_back(mc(Part::WingRight, 0, 16, 2, 8, 2, -1, 0, -1, 7, 15, 0));
+
+            t.model.push_back(mc(Part::Head, 0, 0, 12, 12, 16, -6, -14, -8, 0, 24, 0));
+            t.model.push_back(mc(Part::Head, 0, 28, 2, 12, 12, -8, -14, -6, 0, 24, 0));
+            t.model.push_back(mc(Part::Head, 0, 28, 2, 12, 12, 6, -14, -6, 0, 24, 0));
+            t.model.push_back(mc(Part::Head, 16, 40, 12, 2, 12, -6, -16, -6, 0, 24, 0));
+            t.model.push_back(mc(Part::Head, 16, 40, 12, 2, 12, -6, -2, -6, 0, 24, 0));
+            t.model.push_back(mc(Part::Head, 8, 0, 2, 2, 1, -1, 16, 0, 0, 0, 0));
+            t.model.push_back(mc(Part::Head, 40, 0, 4, 4, 8, -2, 14, 7, 0, 0, 0));
+            t.model.push_back(mc(Part::Head, 0, 54, 3, 3, 7, 0, 14, 0, 0, 0, 0));
+            t.model.push_back(mc(Part::Head, 41, 32, 2, 2, 6, 0, 14, 0, 0, 0, 0));
+            t.model.push_back(mc(Part::Head, 25, 19, 1, 9, 9, 1, 10, 3, 0, 0, 0));
+            t.model.push_back(mc(Part::Head, 0, 0, 2, 9, 2, -1, -4, -1, 0, 0, 0));
+            t.model.push_back(mc(Part::Head, 0, 0, 2, 9, 2, -1, -4, -1, 0, 0, 0));
+            t.model.push_back(mc(Part::Head, 0, 0, 2, 9, 2, -1, -4, -1, 0, 0, 0));
+            t.model.push_back(mc(Part::Head, 0, 0, 2, 9, 2, -1, -4, -1, 0, 0, 0));
+            t.model.push_back(mc(Part::Head, 0, 0, 2, 9, 2, -1, -4, -1, 0, 0, 0));
+            t.model.push_back(mc(Part::Head, 0, 0, 2, 9, 2, -1, -4, -1, 0, 0, 0));
+            t.model.push_back(mc(Part::Head, 0, 0, 2, 9, 2, -1, -4, -1, 0, 0, 0));
+            t.model.push_back(mc(Part::Head, 0, 0, 2, 9, 2, -1, -4, -1, 0, 0, 0));
+            t.model.push_back(mc(Part::Head, 0, 0, 2, 9, 2, -1, -4, -1, 0, 0, 0));
+            t.model.push_back(mc(Part::Head, 0, 0, 2, 9, 2, -1, -4, -1, 0, 0, 0));
+            t.model.push_back(mc(Part::Head, 0, 0, 2, 9, 2, -1, -4, -1, 0, 0, 0));
+            t.model.push_back(mc(Part::Head, 0, 0, 2, 9, 2, -1, -4, -1, 0, 0, 0));
+
         }
 
         {
@@ -1180,11 +1231,14 @@ namespace
             t.deathVoice = Sound::MobWardenDeath;
             t.name = "Warden";
             t.texture = "warden";
+            t.sheetWidth = 128;
+            t.sheetHeight = 128;
+            t.width = 1.1444f;
+            t.height = 3.6875f;
+            t.modelScale = 0.7864f;
             // Minecraft draws a warden on 64x64. These boxes are not
             // Minecraft's layout, and at 64 the arms ran off the edge
             // of the sheet -- which the model test caught.
-            t.sheetWidth = 128;
-            t.sheetHeight = 128;
             t.spawnClass = SpawnClass::Hostile;
 
             // Minecraft's has 500 health and hits for 30. Those are its
@@ -1192,8 +1246,6 @@ namespace
             // fight you win, it is a fight you leave.
             t.maxHealth = 500;
             t.attackDamage = 30;
-            t.width = 0.9f;
-            t.height = 2.9f;
             t.walkSpeed = 2.0f;
             t.limbSwing = 0.5f;
 
@@ -1210,12 +1262,18 @@ namespace
             // offsets were read the wrong way round: origin.y here is
             // the bottom of a box in pixels off the floor, not its
             // top.
-            t.model.push_back(mc(Part::LegBackRight, 64, 40, 6, 16, 6, -3, 0, -3, -4, 8, 0));
-            t.model.push_back(mirrored(mc(Part::LegBackLeft, 64, 40, 6, 16, 6, -3, 0, -3, 4, 8, 0)));
-            t.model.push_back(mc(Part::Body, 0, 32, 14, 21, 10, -7, 0, -5, 0, -13, 0));
-            t.model.push_back(mc(Part::WingRight, 64, 0, 8, 26, 8, -4, 0, -4, -11, -13, 0));
-            t.model.push_back(mirrored(mc(Part::WingLeft, 64, 0, 8, 26, 8, -4, 0, -4, 11, -13, 0)));
-            t.model.push_back(mc(Part::Head, 0, 0, 16, 14, 10, -8, 0, -5, 0, -27, 0));
+
+            t.model.push_back(mc(Part::Body, 0, 0, 18, 21, 11, -9, -13, -4, 0, 3, 0));
+            t.model.push_back(mc(Part::Body, 90, 11, 9, 21, 1, -2, -11, 0, -7, 1, -4));
+            t.model.push_back(mc(Part::Body, 90, 11, 9, 21, 1, -7, -11, 0, 7, 1, -4));
+            t.model.push_back(mc(Part::Head, 0, 32, 16, 16, 10, -8, -16, -5, 0, -10, 0));
+            t.model.push_back(mc(Part::Head, 52, 32, 16, 16, 1, -16, -13, 0, -8, -22, 0));
+            t.model.push_back(mc(Part::Head, 58, 0, 16, 16, 1, 0, -13, 0, 8, -22, 0));
+            t.model.push_back(mc(Part::LegFrontRight, 44, 50, 8, 28, 8, -4, 0, -4, -13, -10, 1));
+            t.model.push_back(mc(Part::LegFrontLeft, 0, 58, 8, 28, 8, -4, 0, -4, 13, -10, 1));
+            t.model.push_back(mc(Part::LegBackRight, 76, 48, 6, 13, 6, -3, 0, -3, -6, 11, 0));
+            t.model.push_back(mc(Part::LegBackLeft, 76, 76, 6, 13, 6, -3, 0, -3, 6, 11, 0));
+
         }
 
         {
@@ -1231,10 +1289,11 @@ namespace
             t.texture = "witch";
             t.sheetWidth = 64;
             t.sheetHeight = 128;
+            t.width = 0.6538f;
+            t.height = 2.1250f;
+            t.modelScale = 0.9176f;
             t.spawnClass = SpawnClass::Hostile;
             t.maxHealth = 26;
-            t.width = 0.6f;
-            t.height = 1.95f;
             t.walkSpeed = 2.4f;
             t.limbSwing = 0.5f;
 
@@ -1255,19 +1314,22 @@ namespace
             t.headColour = rgb(142, 118, 96);
             t.eyeColour = 0xFF203040;
 
-            t.model.push_back(mc(Part::LegBackRight, 0, 22, 4, 12, 4, -2, 0, -2, -2, 12, 0));
-            t.model.push_back(mirrored(mc(Part::LegBackLeft, 0, 22, 4, 12, 4, -2, 0, -2, 2, 12, 0)));
-            t.model.push_back(mc(Part::Body, 16, 20, 8, 12, 6, -4, 0, -3, 0, 0, 0));
-            t.model.push_back(mc(Part::LegFrontRight, 44, 22, 4, 12, 4, -3, -2, -2, -5, 2, 0));
-            t.model.push_back(mirrored(mc(Part::LegFrontLeft, 44, 22, 4, 12, 4, -1, -2, -2, 5, 2, 0)));
-            t.model.push_back(mc(Part::Head, 0, 0, 8, 10, 8, -4, -10, -4, 0, 0, 0));
             // The nose, which is the one thing everybody draws a witch
             // by, and the brim and point of the hat over it.
-            t.model.push_back(mc(Part::WingRight, 24, 0, 2, 4, 2, -1, -6, -6, 0, 0, 0));
             // One pixel lower than it looks like it wants to be: the
             // brim at -12 put the model's top at exactly the height
             // the model test allows, which is no margin at all.
-            t.model.push_back(mc(Part::WingLeft, 0, 64, 10, 2, 10, -5, -11, -5, 0, 0, 0));
+
+            t.model.push_back(mc(Part::Head, 0, 0, 8, 10, 8, -4, -10, -4, 0, 0, 0));
+            t.model.push_back(inflated(mc(Part::Head, 0, 0, 1, 1, 1, 0, -26, -7, 0, 24, 0), -0.250f));
+            t.model.push_back(mc(Part::Body, 16, 20, 8, 12, 6, -4, -24, -3, 0, 24, 0));
+            t.model.push_back(inflated(mc(Part::Body, 0, 38, 8, 18, 6, -4, -24, -3, 0, 24, 0), 0.500f));
+            t.model.push_back(mc(Part::LegFrontRight, 40, 38, 8, 4, 4, -4, 2, -2, 0, 2, 0));
+            t.model.push_back(mc(Part::LegFrontRight, 44, 22, 4, 8, 4, -8, -2, -2, 0, 2, 0));
+            t.model.push_back(mc(Part::LegFrontRight, 44, 22, 4, 8, 4, 4, -2, -2, 0, 2, 0));
+            t.model.push_back(mc(Part::LegBackRight, 0, 22, 4, 12, 4, -2, 0, -2, -2, 12, 0));
+            t.model.push_back(mc(Part::LegBackLeft, 0, 22, 4, 12, 4, -2, 0, -2, 2, 12, 0));
+
         }
 
         {
@@ -1283,8 +1345,11 @@ namespace
             t.deathVoice = Sound::MobDragonDeath;
             t.name = "Ender Dragon";
             t.texture = "enderdragon";
-            t.sheetWidth = 128;
-            t.sheetHeight = 128;
+            t.sheetWidth = 256;
+            t.sheetHeight = 256;
+            t.width = 9.2500f;
+            t.height = 4.6250f;
+            t.modelScale = 1.7297f;
             t.spawnClass = SpawnClass::Hostile;
             t.boss = true;
 
@@ -1293,8 +1358,6 @@ namespace
             // it, so the crystals are what you go for first.
             t.maxHealth = 200;
             t.attackDamage = 10;
-            t.width = 4.0f;
-            t.height = 2.6f;
             t.walkSpeed = 7.0f;
             t.limbSwing = 0.6f;
 
@@ -1307,7 +1370,6 @@ namespace
             // stays what it is -- a dragon you could never hit would
             // not be a fight -- but a dragon drawn at box size is a
             // bird, and the whole of the thing is that it is enormous.
-            t.modelScale = 3.0f;
 
             t.bodyColour = rgb(26, 20, 32);
             t.headColour = rgb(34, 26, 42);
@@ -1323,24 +1385,52 @@ namespace
             //
             // bz is what puts a box in front of or behind the middle,
             // because origin.z = -(bz + pz + depth).
-            t.model.push_back(mc(Part::Head, 0, 0, 10, 8, 16, -5, -4, -34, 0, 0, 0));
-            t.model.push_back(mc(Part::Body, 0, 32, 16, 12, 28, -8, -6, -14, 0, 0, 0));
 
             // The tail rides on Body rather than on a leg. Put on
             // LegBack* it was animated as a limb and swung back and
             // forth across the body, so the dragon came apart at close
             // range: a wing adrift on one side and the tail out at an
             // angle on the other.
-            t.model.push_back(mc(Part::Body, 64, 0, 8, 8, 20, -4, -4, 14, 0, 0, 0));
-            t.model.push_back(mc(Part::Body, 64, 32, 5, 5, 20, -2, -2, 34, 0, 0, 0));
 
             // Wings reaching well past the body either side, which is
             // the whole of the silhouette. Pivoted at the shoulder
             // rather than at the middle of the mob: swung about the
             // centre, a wing this long travels half the island.
-            t.model.push_back(mc(Part::WingLeft, 0, 80, 26, 3, 18, 0, -1, -12, 8, 0, 0));
-            t.model.push_back(mirrored(mc(Part::WingRight, 0, 80, 26, 3, 18,
-                                          -26, -1, -12, -8, 0, 0)));
+
+            t.model.push_back(mc(Part::Head, 176, 44, 12, 5, 16, -6, -1, -24, 0, -38, 0));
+            t.model.push_back(mc(Part::Head, 112, 30, 16, 16, 16, -8, -8, -10, 0, -38, 0));
+            t.model.push_back(mc(Part::Head, 0, 0, 2, 4, 6, -5, -12, -4, 0, -38, 0));
+            t.model.push_back(mc(Part::Head, 112, 0, 2, 2, 4, -5, -3, -22, 0, -38, 0));
+            t.model.push_back(mc(Part::Head, 0, 0, 2, 4, 6, 3, -12, -4, 0, -38, 0));
+            t.model.push_back(mc(Part::Head, 112, 0, 2, 2, 4, 3, -3, -22, 0, -38, 0));
+            t.model.push_back(mc(Part::Head, 176, 65, 12, 4, 16, -6, 0, -16, 0, -34, -8));
+            t.model.push_back(mc(Part::Head, 192, 104, 10, 10, 10, -5, -5, -5, 0, -38, 0));
+            t.model.push_back(mc(Part::Head, 48, 0, 2, 4, 6, -1, -9, -3, 0, -38, 0));
+            t.model.push_back(mc(Part::Body, 0, 0, 24, 24, 64, -12, 0, -16, 0, -34, 8));
+            t.model.push_back(mc(Part::Body, 220, 53, 2, 6, 12, -1, -6, -10, 0, -34, 8));
+            t.model.push_back(mc(Part::Body, 220, 53, 2, 6, 12, -1, -6, 10, 0, -34, 8));
+            t.model.push_back(mc(Part::Body, 220, 53, 2, 6, 12, -1, -6, 30, 0, -34, 8));
+            t.model.push_back(mc(Part::WingRight, 112, 88, 56, 8, 8, -56, -4, -4, -12, -33, 2));
+            t.model.push_back(mirrored(mc(Part::WingRight, 56, 88, 56, 1, 56, -56, 0, 2, -12, -33, 2)));
+            t.model.push_back(mc(Part::WingRight, 112, 136, 56, 4, 4, -56, -2, -2, -56, -38, 0));
+            t.model.push_back(mirrored(mc(Part::WingRight, 56, 144, 56, 1, 56, -56, 0, 2, -56, -38, 0)));
+            t.model.push_back(mc(Part::WingLeft, 112, 88, 56, 8, 8, -56, -4, -4, 12, -33, 2));
+            t.model.push_back(mirrored(mc(Part::WingLeft, 56, 88, 56, 1, 56, -56, 0, 2, 12, -33, 2)));
+            t.model.push_back(mc(Part::WingRight, 112, 136, 56, 4, 4, -56, -2, -2, -56, -38, 0));
+            t.model.push_back(mirrored(mc(Part::WingRight, 56, 144, 56, 1, 56, -56, 0, 2, -56, -38, 0)));
+            t.model.push_back(mc(Part::Head, 0, 0, 16, 32, 16, -8, -4, -8, -16, -22, 42));
+            t.model.push_back(mc(Part::Head, 0, 0, 16, 32, 16, -8, -4, -8, 16, -22, 42));
+            t.model.push_back(mc(Part::LegBackRight, 112, 104, 8, 24, 8, -4, -4, -4, -12, -18, 2));
+            t.model.push_back(mc(Part::LegBackLeft, 112, 104, 8, 24, 8, -4, -4, -4, 12, -18, 2));
+            t.model.push_back(mc(Part::Head, 196, 0, 12, 32, 12, -6, -2, 0, 0, -6, -4));
+            t.model.push_back(mc(Part::Head, 196, 0, 12, 32, 12, -6, -2, 0, 0, -6, -4));
+            t.model.push_back(mc(Part::LegFrontRight, 226, 138, 6, 24, 6, -3, -1, -3, 0, -18, -1));
+            t.model.push_back(mc(Part::LegFrontRight, 226, 138, 6, 24, 6, -3, -1, -3, 0, -18, -1));
+            t.model.push_back(mc(Part::Head, 112, 0, 18, 6, 24, -9, 0, -20, 0, -7, 4));
+            t.model.push_back(mc(Part::Head, 112, 0, 18, 6, 24, -9, 0, -20, 0, -7, 4));
+            t.model.push_back(mc(Part::LegBackRight, 144, 104, 8, 4, 16, -4, 0, -12, 0, -15, 0));
+            t.model.push_back(mc(Part::LegBackRight, 144, 104, 8, 4, 16, -4, 0, -12, 0, -15, 0));
+
         }
 
         {
@@ -1355,11 +1445,14 @@ namespace
             t.deathVoice = Sound::MobWitherDeath;
             t.name = "Wither";
             t.texture = "wither";
+            t.sheetWidth = 64;
+            t.sheetHeight = 64;
+            t.width = 0.3375f;
+            t.height = 1.3125f;
+            t.modelScale = 2.6667f;
             // Minecraft fits one on 64 square with its own layout.
             // These ribs are eighteen wide, which needs 66 across, so
             // the sheet is the wider of the two allowed shapes.
-            t.sheetWidth = 128;
-            t.sheetHeight = 64;
             t.spawnClass = SpawnClass::Hostile;
             t.boss = true;
 
@@ -1374,13 +1467,10 @@ namespace
             // be a wither anyway: the whole of fighting one is that it
             // stays out of reach.
             t.attackDamage = 0;
-            t.width = 0.9f;
-            t.height = 3.5f;
             t.walkSpeed = 4.0f;
             t.limbSwing = 0.0f;
             t.hoverHeight = 4.0f;
             t.fireproof = true;
-            t.modelScale = 1.4f;
 
             // It never closes: it throws skulls. Fast and often, which
             // is what makes a wither a fight you take cover from.
@@ -1398,16 +1488,19 @@ namespace
             // A ribcage hanging under three heads. The side heads are
             // on the wing parts because those are the ones that do not
             // swing like a limb -- the dragon's tail taught that.
-            t.model.push_back(mc(Part::Head, 0, 0, 10, 10, 10, -5, -10, -5, 0, -2, 0));
-            t.model.push_back(mc(Part::WingLeft, 0, 20, 6, 6, 6, -3, -8, -3, -8, -2, 0));
-            t.model.push_back(mirrored(mc(Part::WingRight, 0, 20, 6, 6, 6, -3, -8, -3, 8, -2, 0)));
 
             // The spine, and four ribs tapering down it.
-            t.model.push_back(mc(Part::Body, 0, 36, 4, 14, 4, -2, 0, -2, 0, 0, 0));
-            t.model.push_back(mc(Part::Body, 24, 36, 18, 3, 3, -9, 1, -2, 0, 0, 0));
-            t.model.push_back(mc(Part::Body, 24, 44, 14, 3, 3, -7, 5, -2, 0, 0, 0));
-            t.model.push_back(mc(Part::Body, 24, 52, 10, 3, 3, -5, 9, -2, 0, 0, 0));
-            t.model.push_back(mc(Part::Body, 70, 36, 6, 3, 3, -3, 13, -2, 0, 0, 0));
+
+            t.model.push_back(mc(Part::Body, 0, 16, 20, 3, 3, -10, -20, 0, 0, 31, 0));
+            t.model.push_back(mc(Part::Body, 0, 22, 3, 10, 3, 0, 0, 0, -2, 14, 0));
+            t.model.push_back(mc(Part::Body, 24, 22, 11, 2, 2, -4, 2, 0, -2, 14, 0));
+            t.model.push_back(mc(Part::Body, 24, 22, 11, 2, 2, -4, 4, 0, -2, 14, 0));
+            t.model.push_back(mc(Part::Body, 24, 22, 11, 2, 2, -4, 7, 0, -2, 14, 0));
+            t.model.push_back(mc(Part::Body, 12, 22, 3, 6, 3, 0, 0, 0, 0, 7, 0));
+            t.model.push_back(mc(Part::Head, 0, 0, 8, 8, 8, -4, -8, -4, 0, 11, 0));
+            t.model.push_back(mc(Part::Head, 32, 0, 6, 6, 6, -3, -6, -3, -9, 13, -1));
+            t.model.push_back(mc(Part::Head, 32, 0, 6, 6, 6, -3, -6, -3, 9, 13, -1));
+
         }
 
         {
@@ -1422,11 +1515,13 @@ namespace
             t.deathVoice = Sound::MobPillagerDeath;
             t.name = "Pillager";
             t.texture = "pillager";
+            t.sheetWidth = 64;
             t.sheetHeight = 64;
+            t.width = 0.6538f;
+            t.height = 2.1250f;
+            t.modelScale = 0.9176f;
             t.spawnClass = SpawnClass::Hostile;
             t.maxHealth = 24;
-            t.width = 0.6f;
-            t.height = 1.95f;
             t.walkSpeed = 2.2f;
             t.limbSwing = 0.5f;
 
@@ -1448,14 +1543,16 @@ namespace
             // The villager's own frame, which is what Mojang draws an
             // illager on too: the same robe and the same long head,
             // and only the colours say which one you are looking at.
+
             t.model.push_back(mc(Part::Head, 0, 0, 8, 10, 8, -4, -10, -4, 0, 0, 0));
-            t.model.push_back(mc(Part::Head, 24, 0, 2, 4, 2, -1, -5, -6, 0, 0, 0));
-            t.model.push_back(mc(Part::Body, 16, 20, 8, 12, 6, -4, 0, -3, 0, 0, 0));
-            t.model.push_back(mc(Part::Body, 0, 38, 8, 6, 6, -4, 12, -3, 0, 0, 0));
-            t.model.push_back(mc(Part::LegFrontRight, 44, 22, 4, 8, 4, -3, -2, -2, -5, 2, 0));
-            t.model.push_back(mirrored(mc(Part::LegFrontLeft, 44, 22, 4, 8, 4, -1, -2, -2, 5, 2, 0)));
+            t.model.push_back(mc(Part::Head, 24, 0, 2, 4, 2, -1, -1, -6, 0, -2, 0));
+            t.model.push_back(mc(Part::Body, 16, 20, 8, 12, 6, -4, -24, -3, 0, 24, 0));
+            t.model.push_back(inflated(mc(Part::Body, 0, 38, 8, 18, 6, -4, -24, -3, 0, 24, 0), 0.500f));
+            t.model.push_back(mc(Part::LegBackLeft, 0, 22, 4, 12, 4, -2, 0, -2, 2, 12, 0));
             t.model.push_back(mc(Part::LegBackRight, 0, 22, 4, 12, 4, -2, 0, -2, -2, 12, 0));
-            t.model.push_back(mirrored(mc(Part::LegBackLeft, 0, 22, 4, 12, 4, -2, 0, -2, 2, 12, 0)));
+            t.model.push_back(mc(Part::LegFrontRight, 40, 46, 4, 12, 4, -3, -2, -2, -5, 2, 0));
+            t.model.push_back(mc(Part::LegFrontLeft, 40, 46, 4, 12, 4, -1, -2, -2, 5, 2, 0));
+
         }
 
         {
@@ -1470,11 +1567,13 @@ namespace
             t.deathVoice = Sound::MobVindicatorDeath;
             t.name = "Vindicator";
             t.texture = "vindicator";
+            t.sheetWidth = 64;
             t.sheetHeight = 64;
+            t.width = 0.6538f;
+            t.height = 2.1250f;
+            t.modelScale = 0.9176f;
             t.spawnClass = SpawnClass::Hostile;
             t.maxHealth = 24;
-            t.width = 0.6f;
-            t.height = 1.95f;
             t.walkSpeed = 2.6f;
             t.limbSwing = 0.6f;
 
@@ -1496,14 +1595,19 @@ namespace
             // The villager's own frame, which is what Mojang draws an
             // illager on too: the same robe and the same long head,
             // and only the colours say which one you are looking at.
+
             t.model.push_back(mc(Part::Head, 0, 0, 8, 10, 8, -4, -10, -4, 0, 0, 0));
-            t.model.push_back(mc(Part::Head, 24, 0, 2, 4, 2, -1, -5, -6, 0, 0, 0));
+            t.model.push_back(mc(Part::Head, 24, 0, 2, 4, 2, -1, -1, -6, 0, -2, 0));
             t.model.push_back(mc(Part::Body, 16, 20, 8, 12, 6, -4, 0, -3, 0, 0, 0));
-            t.model.push_back(mc(Part::Body, 0, 38, 8, 6, 6, -4, 12, -3, 0, 0, 0));
-            t.model.push_back(mc(Part::LegFrontRight, 44, 22, 4, 8, 4, -3, -2, -2, -5, 2, 0));
-            t.model.push_back(mirrored(mc(Part::LegFrontLeft, 44, 22, 4, 8, 4, -1, -2, -2, 5, 2, 0)));
+            t.model.push_back(inflated(mc(Part::Body, 0, 38, 8, 18, 6, -4, 0, -3, 0, 0, 0), 0.500f));
+            t.model.push_back(mc(Part::LegFrontRight, 44, 22, 4, 8, 4, -8, -2, -2, 0, 2, 0));
+            t.model.push_back(mc(Part::LegFrontRight, 44, 22, 4, 8, 4, 4, -2, -2, 0, 2, 0));
+            t.model.push_back(mc(Part::LegFrontRight, 40, 38, 8, 4, 4, -4, 2, -2, 0, 2, 0));
             t.model.push_back(mc(Part::LegBackRight, 0, 22, 4, 12, 4, -2, 0, -2, -2, 12, 0));
-            t.model.push_back(mirrored(mc(Part::LegBackLeft, 0, 22, 4, 12, 4, -2, 0, -2, 2, 12, 0)));
+            t.model.push_back(mc(Part::LegBackLeft, 0, 22, 4, 12, 4, -2, 0, -2, 2, 12, 0));
+            t.model.push_back(mc(Part::LegFrontRight, 40, 46, 4, 12, 4, -3, -2, -2, -5, 2, 0));
+            t.model.push_back(mc(Part::LegFrontLeft, 40, 46, 4, 12, 4, -1, -2, -2, 5, 2, 0));
+
         }
 
         {
@@ -1518,11 +1622,13 @@ namespace
             t.deathVoice = Sound::MobEvokerDeath;
             t.name = "Evoker";
             t.texture = "evoker";
+            t.sheetWidth = 64;
             t.sheetHeight = 64;
+            t.width = 0.6538f;
+            t.height = 2.1250f;
+            t.modelScale = 0.9176f;
             t.spawnClass = SpawnClass::Hostile;
             t.maxHealth = 24;
-            t.width = 0.6f;
-            t.height = 1.95f;
             t.walkSpeed = 1.8f;
             t.limbSwing = 0.4f;
 
@@ -1547,14 +1653,19 @@ namespace
             // The villager's own frame, which is what Mojang draws an
             // illager on too: the same robe and the same long head,
             // and only the colours say which one you are looking at.
+
             t.model.push_back(mc(Part::Head, 0, 0, 8, 10, 8, -4, -10, -4, 0, 0, 0));
-            t.model.push_back(mc(Part::Head, 24, 0, 2, 4, 2, -1, -5, -6, 0, 0, 0));
+            t.model.push_back(mc(Part::Head, 24, 0, 2, 4, 2, -1, -1, -6, 0, -2, 0));
             t.model.push_back(mc(Part::Body, 16, 20, 8, 12, 6, -4, 0, -3, 0, 0, 0));
-            t.model.push_back(mc(Part::Body, 0, 38, 8, 6, 6, -4, 12, -3, 0, 0, 0));
-            t.model.push_back(mc(Part::LegFrontRight, 44, 22, 4, 8, 4, -3, -2, -2, -5, 2, 0));
-            t.model.push_back(mirrored(mc(Part::LegFrontLeft, 44, 22, 4, 8, 4, -1, -2, -2, 5, 2, 0)));
+            t.model.push_back(inflated(mc(Part::Body, 0, 38, 8, 18, 6, -4, 0, -3, 0, 0, 0), 0.500f));
+            t.model.push_back(mc(Part::LegBackLeft, 0, 22, 4, 12, 4, -2, 0, -2, 2, 12, 0));
             t.model.push_back(mc(Part::LegBackRight, 0, 22, 4, 12, 4, -2, 0, -2, -2, 12, 0));
-            t.model.push_back(mirrored(mc(Part::LegBackLeft, 0, 22, 4, 12, 4, -2, 0, -2, 2, 12, 0)));
+            t.model.push_back(mc(Part::LegFrontRight, 44, 22, 4, 8, 4, -8, -2, -2, 0, 2, 0));
+            t.model.push_back(mc(Part::LegFrontRight, 44, 22, 4, 8, 4, 4, -2, -2, 0, 2, 0));
+            t.model.push_back(mc(Part::LegFrontRight, 40, 38, 8, 4, 4, -4, 2, -2, 0, 2, 0));
+            t.model.push_back(mc(Part::LegFrontRight, 40, 46, 4, 12, 4, -3, -2, -2, -5, 2, 0));
+            t.model.push_back(mc(Part::LegFrontLeft, 40, 46, 4, 12, 4, -1, -2, -2, 5, 2, 0));
+
         }
 
         {
@@ -1571,10 +1682,11 @@ namespace
             t.texture = "ravager";
             t.sheetWidth = 128;
             t.sheetHeight = 128;
+            t.width = 2.0497f;
+            t.height = 2.3125f;
+            t.modelScale = 0.9514f;
             t.spawnClass = SpawnClass::Hostile;
             t.maxHealth = 100;
-            t.width = 1.95f;
-            t.height = 2.2f;
             t.walkSpeed = 2.0f;
             t.limbSwing = 0.5f;
 
@@ -1599,15 +1711,20 @@ namespace
             // A barrel on four legs with a head slung off the front of
             // it, horns included. Thirty-five pixels tall at the back,
             // which is the two and a bit blocks it collides at.
-            t.model.push_back(mc(Part::Body, 0, 55, 20, 16, 32, -10, -9, -16, 0, 0, 0));
-            t.model.push_back(mc(Part::Head, 0, 0, 16, 20, 16, -8, -13, -22, 0, 0, 0));
-            t.model.push_back(mc(Part::Head, 68, 0, 8, 8, 4, -4, -5, -26, 0, 0, 0));
-            t.model.push_back(mc(Part::Head, 104, 0, 2, 5, 2, -7, -15, -18, 0, 0, 0));
-            t.model.push_back(mirrored(mc(Part::Head, 104, 0, 2, 5, 2, 5, -15, -18, 0, 0, 0)));
-            t.model.push_back(mc(Part::LegFrontRight, 96, 40, 8, 17, 8, -4, 0, -4, -6, 7, -11));
-            t.model.push_back(mirrored(mc(Part::LegFrontLeft, 96, 40, 8, 17, 8, -4, 0, -4, 6, 7, -11)));
-            t.model.push_back(mc(Part::LegBackRight, 96, 40, 8, 17, 8, -4, 0, -4, -6, 7, 11));
-            t.model.push_back(mirrored(mc(Part::LegBackLeft, 96, 40, 8, 17, 8, -4, 0, -4, 6, 7, 11)));
+
+            t.model.push_back(turned(mc(Part::Body, 0, 55, 14, 16, 20, -7, -7, -4, 0, 5, 2), 1.5708f, -0.0000f, -0.0000f));
+            t.model.push_back(turned(mc(Part::Body, 0, 91, 12, 13, 18, -6, 9, -4, 0, 5, 2), 1.5708f, -0.0000f, -0.0000f));
+            t.model.push_back(mc(Part::Head, 0, 36, 16, 3, 16, -8, -1, -14, 0, 9, -10));
+            t.model.push_back(mc(Part::Head, 68, 73, 10, 10, 18, -5, -11, 10, 0, 4, -20));
+            t.model.push_back(mc(Part::Head, 0, 0, 16, 20, 16, -8, -6, -14, 0, -4, -10));
+            t.model.push_back(mc(Part::Head, 0, 0, 4, 8, 4, -2, 8, -18, 0, -4, -10));
+            t.model.push_back(mc(Part::LegBackRight, 96, 0, 8, 37, 8, 0, -7, -5, -12, -6, 22));
+            t.model.push_back(mc(Part::LegBackLeft, 96, 0, 8, 37, 8, 0, -7, -5, 4, -6, 22));
+            t.model.push_back(mc(Part::LegFrontRight, 64, 0, 8, 37, 8, -8, -11, -4, -4, -2, -4));
+            t.model.push_back(mc(Part::LegFrontRight, 64, 0, 8, 37, 8, 8, -11, -4, -4, -2, -4));
+            t.model.push_back(turned(mc(Part::Head, 74, 55, 2, 14, 4, -5, -14, -1, -5, -3, -19), 1.0472f, -0.0000f, -0.0000f));
+            t.model.push_back(turned(mc(Part::Head, 74, 55, 2, 14, 4, 13, -14, -1, -5, -3, -19), 1.0472f, -0.0000f, -0.0000f));
+
         }
 
         {
@@ -1621,10 +1738,13 @@ namespace
             t.deathVoice = Sound::MobSlimeDeath;
             t.name = "Slime";
             t.texture = "slime";
+            t.sheetWidth = 64;
+            t.sheetHeight = 32;
+            t.width = 0.3750f;
+            t.height = 0.3750f;
+            t.modelScale = 2.7733f;
             t.spawnClass = SpawnClass::Hostile;
             t.maxHealth = 16;
-            t.width = 1.04f;
-            t.height = 1.04f;
             t.walkSpeed = 1.4f;
             t.limbSwing = 0.0f;
             t.attackDamage = 4;
@@ -1639,7 +1759,11 @@ namespace
             t.pattern = MobType::Pattern::Speckled;
             t.markColour = rgb(74, 150, 64);
 
-            t.model.push_back(mc(Part::Body, 0, 0, 16, 16, 16, -8, 8, -8, 0, 0, 0));
+            t.model.push_back(mc(Part::Body, 0, 16, 6, 6, 6, -3, 17, -3, 0, 1, 0));
+            t.model.push_back(mc(Part::Head, 32, 0, 2, 2, 2, -3, 18, -4, 0, 1, 0));
+            t.model.push_back(mc(Part::Head, 32, 4, 2, 2, 2, 1, 18, -4, 0, 1, 0));
+            t.model.push_back(mc(Part::Head, 32, 8, 1, 1, 1, 0, 21, -4, 0, 1, 0));
+
         }
 
         {
@@ -1653,10 +1777,13 @@ namespace
             t.deathVoice = Sound::MobSlimeSmallDeath;
             t.name = "Small Slime";
             t.texture = "slime";
+            t.sheetWidth = 64;
+            t.sheetHeight = 32;
+            t.width = 0.3750f;
+            t.height = 0.3750f;
+            t.modelScale = 1.3867f;
             t.spawnClass = SpawnClass::Hostile;
             t.maxHealth = 4;
-            t.width = 0.52f;
-            t.height = 0.52f;
             t.walkSpeed = 1.8f;
             t.limbSwing = 0.0f;
             t.voicePitch = 1.5f;
@@ -1672,7 +1799,11 @@ namespace
             t.pattern = MobType::Pattern::Speckled;
             t.markColour = rgb(74, 150, 64);
 
-            t.model.push_back(mc(Part::Body, 0, 0, 8, 8, 8, -4, 16, -4, 0, 0, 0));
+            t.model.push_back(mc(Part::Body, 0, 16, 6, 6, 6, -3, 17, -3, 0, 1, 0));
+            t.model.push_back(mc(Part::Head, 32, 0, 2, 2, 2, -3, 18, -4, 0, 1, 0));
+            t.model.push_back(mc(Part::Head, 32, 4, 2, 2, 2, 1, 18, -4, 0, 1, 0));
+            t.model.push_back(mc(Part::Head, 32, 8, 1, 1, 1, 0, 21, -4, 0, 1, 0));
+
         }
 
         {
@@ -1686,10 +1817,13 @@ namespace
             t.deathVoice = Sound::MobBatDeath;
             t.name = "Bat";
             t.texture = "bat";
+            t.sheetWidth = 32;
+            t.sheetHeight = 32;
+            t.width = 0.4514f;
+            t.height = 0.8125f;
+            t.modelScale = 1.1077f;
             t.spawnClass = SpawnClass::Passive;
             t.maxHealth = 6;
-            t.width = 0.5f;
-            t.height = 0.9f;
             t.walkSpeed = 2.0f;
             t.limbSwing = 0.0f;
             t.voicePitch = 1.3f;
@@ -1706,10 +1840,16 @@ namespace
             t.eyeColour = rgb(190, 60, 50);
             t.pattern = MobType::Pattern::Belly;
 
-            t.model.push_back(mc(Part::Head, 0, 0, 4, 4, 4, -2, 8, -2, 0, 0, 0));
-            t.model.push_back(mc(Part::Body, 0, 10, 4, 6, 4, -2, 12, -2, 0, 0, 0));
-            t.model.push_back(mc(Part::WingRight, 20, 0, 10, 8, 1, -12, 11, -1, 0, 0, 0));
-            t.model.push_back(mirrored(mc(Part::WingLeft, 20, 0, 10, 8, 1, 2, 11, -1, 0, 0, 0)));
+            t.model.push_back(mc(Part::Head, 0, 7, 4, 3, 2, -2, -3, -1, 0, 17, 0));
+            t.model.push_back(mc(Part::Head, 1, 15, 3, 5, 1, -2, -4, 0, -2, 15, 0));
+            t.model.push_back(mc(Part::Head, 8, 15, 3, 5, 1, 0, -3, 0, 1, 14, 0));
+            t.model.push_back(mc(Part::Body, 0, 0, 3, 5, 2, -2, 0, -1, 0, 17, 0));
+            t.model.push_back(mc(Part::LegBackRight, 16, 16, 3, 2, 1, -2, 0, 0, 0, 22, 0));
+            t.model.push_back(mc(Part::WingRight, 12, 0, 2, 7, 1, -2, -2, 0, -2, 17, 0));
+            t.model.push_back(mc(Part::WingRight, 16, 0, 6, 8, 1, -6, -2, 0, -4, 17, 0));
+            t.model.push_back(mc(Part::WingLeft, 12, 7, 2, 7, 1, 0, -2, 0, 2, 17, 0));
+            t.model.push_back(mc(Part::WingLeft, 16, 8, 6, 8, 1, 0, -2, 0, 4, 17, 0));
+
         }
 
         {
@@ -1723,13 +1863,14 @@ namespace
             t.deathVoice = Sound::MobCaveSpiderDeath;
             t.name = "Cave Spider";
             t.texture = "cave_spider";
+            t.sheetWidth = 64;
+            t.sheetHeight = 32;
+            t.width = 0.7000f;
+            t.height = 0.5000f;
             t.spawnClass = SpawnClass::Hostile;
             t.maxHealth = 12;
-            t.width = 1.4f;
-            t.height = 0.9f;
             // Half again smaller than a spider, which is what lets one
             // through a gap you thought was safe.
-            t.modelScale = 0.55f;
             t.walkSpeed = 2.8f;
             t.limbSwing = 0.3f;
             t.voicePitch = 1.7f;
@@ -1746,13 +1887,23 @@ namespace
             t.pattern = MobType::Pattern::Patches;
             t.markColour = rgb(14, 40, 50);
 
-            t.model.push_back(mc(Part::Head, 32, 4, 8, 8, 8, -4, -4, -8, 0, 15, -3));
-            t.model.push_back(mc(Part::Body, 0, 0, 6, 6, 6, -3, -3, -3, 0, 15, 0));
-            t.model.push_back(mc(Part::Body, 0, 12, 10, 8, 12, -5, -4, -6, 0, 15, 9));
             addSpiderLeg(t.model, Part::LegBackRight,   2, LEG_WIDE,   LEG_WIDE);
             addSpiderLeg(t.model, Part::LegBackLeft,    1, LEG_NARROW, LEG_TURN);
             addSpiderLeg(t.model, Part::LegFrontRight,  0, LEG_NARROW, -LEG_TURN);
             addSpiderLeg(t.model, Part::LegFrontLeft,  -1, LEG_WIDE,   -LEG_WIDE);
+
+            t.model.push_back(mc(Part::Body, 0, 0, 6, 6, 6, -3, -3, -3, 0, 20, 0));
+            t.model.push_back(mc(Part::Head, 32, 4, 8, 8, 8, -4, -4, -8, 0, 20, -3));
+            t.model.push_back(mc(Part::Body, 0, 12, 10, 8, 12, -5, -4, -6, 0, 20, 9));
+            t.model.push_back(mc(Part::LegBackRight, 18, 0, 16, 2, 2, -15, -1, -1, -4, 20, 2));
+            t.model.push_back(mc(Part::LegBackLeft, 18, 0, 16, 2, 2, -1, -1, -1, 4, 20, 2));
+            t.model.push_back(mc(Part::LegBackRight, 18, 0, 16, 2, 2, -15, -1, -1, -4, 20, 1));
+            t.model.push_back(mc(Part::LegBackLeft, 18, 0, 16, 2, 2, -1, -1, -1, 4, 20, 1));
+            t.model.push_back(mc(Part::LegBackRight, 18, 0, 16, 2, 2, -15, -1, -1, -4, 20, 0));
+            t.model.push_back(mc(Part::LegBackLeft, 18, 0, 16, 2, 2, -1, -1, -1, 4, 20, 0));
+            t.model.push_back(mc(Part::LegFrontRight, 18, 0, 16, 2, 2, -15, -1, -1, -4, 20, -1));
+            t.model.push_back(mc(Part::LegFrontLeft, 18, 0, 16, 2, 2, -1, -1, -1, 4, 20, -1));
+
         }
 
         {
@@ -1767,10 +1918,13 @@ namespace
             t.deathVoice = Sound::MobSilverfishDeath;
             t.name = "Silverfish";
             t.texture = "silverfish";
+            t.sheetWidth = 64;
+            t.sheetHeight = 32;
+            t.width = 0.6667f;
+            t.height = 0.5000f;
+            t.modelScale = 0.6000f;
             t.spawnClass = SpawnClass::Hostile;
             t.maxHealth = 8;
-            t.width = 0.4f;
-            t.height = 0.3f;
             t.walkSpeed = 2.6f;
             t.limbSwing = 0.2f;
             t.voicePitch = 1.6f;
@@ -1786,9 +1940,18 @@ namespace
 
             // Three segments on the floor, the middle one tallest, so
             // it reads as a thing rather than as a brick.
-            t.model.push_back(mc(Part::Body, 0, 0, 5, 4, 4, -2, 20, -2, 0, 0, 0));
-            t.model.push_back(mc(Part::Head, 0, 10, 3, 3, 3, -1, 21, -5, 0, 0, 0));
-            t.model.push_back(mc(Part::Body, 0, 18, 4, 3, 4, -2, 21, 2, 0, 0, 0));
+
+            t.model.push_back(mc(Part::Body, 0, 0, 3, 2, 2, -2, 0, -1, 0, 22, -4));
+            t.model.push_back(mc(Part::Body, 0, 4, 4, 3, 2, -2, 0, -1, 0, 21, -2));
+            t.model.push_back(mc(Part::Body, 0, 9, 6, 4, 3, -3, 0, -2, 0, 20, 1));
+            t.model.push_back(mc(Part::Body, 0, 16, 3, 3, 3, -2, 0, -2, 0, 21, 4));
+            t.model.push_back(mc(Part::Body, 0, 22, 2, 2, 3, -1, 0, -2, 0, 22, 7));
+            t.model.push_back(mc(Part::Body, 11, 0, 2, 1, 2, -1, 0, -1, 0, 23, 10));
+            t.model.push_back(mc(Part::Body, 13, 4, 1, 1, 2, 0, 0, -1, 0, 23, 12));
+            t.model.push_back(mc(Part::Body, 20, 0, 10, 8, 3, -5, 0, -2, 0, 16, 1));
+            t.model.push_back(mc(Part::Body, 20, 11, 6, 4, 3, -3, 0, -2, 0, 20, 7));
+            t.model.push_back(mc(Part::Body, 20, 18, 6, 5, 2, -3, 0, -2, 0, 19, -2));
+
         }
 
         {
@@ -1804,7 +1967,11 @@ namespace
             t.deathVoice = Sound::MobPiglinDeath;
             t.name = "Piglin";
             t.texture = "piglin";
+            t.sheetWidth = 64;
             t.sheetHeight = 64;
+            t.width = 0.6150f;
+            t.height = 1.9988f;
+            t.modelScale = 0.9756f;
             t.spawnClass = SpawnClass::Hostile;
             t.neutral = true;
             t.dimension = Dimension::Nether;
@@ -1814,8 +1981,6 @@ namespace
             // the nearest lake and died before you ever met it.
             t.fireproof = true;
             t.maxHealth = 16;
-            t.width = 0.6f;
-            t.height = 1.95f;
             t.walkSpeed = 2.3f;
             t.limbSwing = 0.5f;
             t.attackDamage = 5;
@@ -1827,15 +1992,26 @@ namespace
             t.headColour = rgb(234, 168, 160);
             t.eyeColour = rgb(40, 32, 28);
 
-            t.model.push_back(mc(Part::Head, 0, 0, 8, 8, 8, -4, -8, -4, 0, 0, 0));
             // The snout, which is what tells a piglin from a man at
             // any distance worth looking from.
-            t.model.push_back(mc(Part::Head, 31, 1, 6, 3, 2, -3, -5, -6, 0, 0, 0));
+
             t.model.push_back(mc(Part::Body, 16, 16, 8, 12, 4, -4, 0, -2, 0, 0, 0));
+            t.model.push_back(inflated(mc(Part::Body, 16, 32, 8, 12, 4, -4, 0, -2, 0, 0, 0), 0.250f));
+            t.model.push_back(inflated(mc(Part::Head, 0, 0, 10, 8, 8, -5, -8, -4, 0, 0, 0), -0.020f));
+            t.model.push_back(mc(Part::Head, 31, 1, 4, 4, 1, -2, -4, -5, 0, 0, 0));
+            t.model.push_back(mc(Part::Head, 2, 4, 1, 2, 1, 2, -2, -5, 0, 0, 0));
+            t.model.push_back(mc(Part::Head, 2, 0, 1, 2, 1, -3, -2, -5, 0, 0, 0));
+            t.model.push_back(turned(mc(Part::Head, 51, 6, 1, 5, 4, -1, 0, -2, 5, -6, 0), 0.0000f, 0.0000f, 0.5236f));
+            t.model.push_back(turned(mc(Part::Head, 39, 6, 1, 5, 4, 0, 0, -2, -5, -6, 0), 0.0000f, 0.0000f, -0.5236f));
             t.model.push_back(mc(Part::LegFrontRight, 40, 16, 4, 12, 4, -3, -2, -2, -5, 2, 0));
-            t.model.push_back(mirrored(mc(Part::LegFrontLeft, 40, 16, 4, 12, 4, -1, -2, -2, 5, 2, 0)));
+            t.model.push_back(inflated(mc(Part::LegFrontRight, 40, 32, 4, 12, 4, -3, -2, -2, -5, 2, 0), 0.250f));
+            t.model.push_back(mc(Part::LegFrontLeft, 32, 48, 4, 12, 4, -1, -2, -2, 5, 2, 0));
+            t.model.push_back(inflated(mc(Part::LegFrontLeft, 48, 48, 4, 12, 4, -1, -2, -2, 5, 2, 0), 0.250f));
             t.model.push_back(mc(Part::LegBackRight, 0, 16, 4, 12, 4, -2, 0, -2, -2, 12, 0));
-            t.model.push_back(mirrored(mc(Part::LegBackLeft, 0, 16, 4, 12, 4, -2, 0, -2, 2, 12, 0)));
+            t.model.push_back(inflated(mc(Part::LegBackRight, 0, 32, 4, 12, 4, -2, 0, -2, -2, 12, 0), 0.250f));
+            t.model.push_back(mc(Part::LegBackLeft, 16, 48, 4, 12, 4, -2, 0, -2, 2, 12, 0));
+            t.model.push_back(inflated(mc(Part::LegBackLeft, 0, 48, 4, 12, 4, -2, 0, -2, 2, 12, 0), 0.250f));
+
         }
 
         {
@@ -1850,7 +2026,11 @@ namespace
             t.deathVoice = Sound::MobPiglinBruteDeath;
             t.name = "Piglin Brute";
             t.texture = "piglin_brute";
+            t.sheetWidth = 64;
             t.sheetHeight = 64;
+            t.width = 0.6150f;
+            t.height = 1.9988f;
+            t.modelScale = 0.9756f;
             t.spawnClass = SpawnClass::Hostile;
             t.dimension = Dimension::Nether;
             // Minecraft's piglins and hoglins burn like anything else.
@@ -1859,8 +2039,6 @@ namespace
             // the nearest lake and died before you ever met it.
             t.fireproof = true;
             t.maxHealth = 50;
-            t.width = 0.6f;
-            t.height = 1.95f;
             t.walkSpeed = 2.4f;
             t.limbSwing = 0.5f;
             t.attackDamage = 9;
@@ -1875,15 +2053,26 @@ namespace
             t.pattern = MobType::Pattern::Patches;
             t.markColour = rgb(44, 32, 28);
 
-            t.model.push_back(mc(Part::Head, 0, 0, 8, 8, 8, -4, -8, -4, 0, 0, 0));
             // The snout, which is what tells a piglin from a man at
             // any distance worth looking from.
-            t.model.push_back(mc(Part::Head, 31, 1, 6, 3, 2, -3, -5, -6, 0, 0, 0));
+
             t.model.push_back(mc(Part::Body, 16, 16, 8, 12, 4, -4, 0, -2, 0, 0, 0));
+            t.model.push_back(inflated(mc(Part::Body, 16, 32, 8, 12, 4, -4, 0, -2, 0, 0, 0), 0.250f));
+            t.model.push_back(inflated(mc(Part::Head, 0, 0, 10, 8, 8, -5, -8, -4, 0, 0, 0), -0.020f));
+            t.model.push_back(mc(Part::Head, 31, 1, 4, 4, 1, -2, -4, -5, 0, 0, 0));
+            t.model.push_back(mc(Part::Head, 2, 4, 1, 2, 1, 2, -2, -5, 0, 0, 0));
+            t.model.push_back(mc(Part::Head, 2, 0, 1, 2, 1, -3, -2, -5, 0, 0, 0));
+            t.model.push_back(turned(mc(Part::Head, 51, 6, 1, 5, 4, -1, 0, -2, 5, -6, 0), 0.0000f, 0.0000f, 0.5236f));
+            t.model.push_back(turned(mc(Part::Head, 39, 6, 1, 5, 4, 0, 0, -2, -5, -6, 0), 0.0000f, 0.0000f, -0.5236f));
             t.model.push_back(mc(Part::LegFrontRight, 40, 16, 4, 12, 4, -3, -2, -2, -5, 2, 0));
-            t.model.push_back(mirrored(mc(Part::LegFrontLeft, 40, 16, 4, 12, 4, -1, -2, -2, 5, 2, 0)));
+            t.model.push_back(inflated(mc(Part::LegFrontRight, 40, 32, 4, 12, 4, -3, -2, -2, -5, 2, 0), 0.250f));
+            t.model.push_back(mc(Part::LegFrontLeft, 32, 48, 4, 12, 4, -1, -2, -2, 5, 2, 0));
+            t.model.push_back(inflated(mc(Part::LegFrontLeft, 48, 48, 4, 12, 4, -1, -2, -2, 5, 2, 0), 0.250f));
             t.model.push_back(mc(Part::LegBackRight, 0, 16, 4, 12, 4, -2, 0, -2, -2, 12, 0));
-            t.model.push_back(mirrored(mc(Part::LegBackLeft, 0, 16, 4, 12, 4, -2, 0, -2, 2, 12, 0)));
+            t.model.push_back(inflated(mc(Part::LegBackRight, 0, 32, 4, 12, 4, -2, 0, -2, -2, 12, 0), 0.250f));
+            t.model.push_back(mc(Part::LegBackLeft, 16, 48, 4, 12, 4, -2, 0, -2, 2, 12, 0));
+            t.model.push_back(inflated(mc(Part::LegBackLeft, 0, 48, 4, 12, 4, -2, 0, -2, 2, 12, 0), 0.250f));
+
         }
 
         {
@@ -1899,6 +2088,9 @@ namespace
             t.texture = "hoglin";
             t.sheetWidth = 128;
             t.sheetHeight = 64;
+            t.width = 1.9961f;
+            t.height = 2.0013f;
+            t.modelScale = 0.6996f;
             t.spawnClass = SpawnClass::Hostile;
             t.dimension = Dimension::Nether;
             // Minecraft's piglins and hoglins burn like anything else.
@@ -1907,8 +2099,6 @@ namespace
             // the nearest lake and died before you ever met it.
             t.fireproof = true;
             t.maxHealth = 40;
-            t.width = 1.4f;
-            t.height = 1.4f;
             t.walkSpeed = 2.4f;
             t.limbSwing = 0.5f;
             t.attackDamage = 6;
@@ -1925,15 +2115,20 @@ namespace
             t.pattern = MobType::Pattern::Patches;
             t.markColour = rgb(106, 60, 48);
 
-            t.model.push_back(mc(Part::Body, 0, 0, 14, 12, 20, -7, 2, -10, 0, 0, 0));
-            t.model.push_back(mc(Part::Head, 70, 0, 10, 8, 10, -5, 4, -20, 0, 0, 0));
             // The tusks, which are the whole of why you run.
-            t.model.push_back(mc(Part::Head, 70, 20, 2, 3, 2, -6, 8, -20, 0, 0, 0));
-            t.model.push_back(mirrored(mc(Part::Head, 70, 20, 2, 3, 2, 4, 8, -20, 0, 0, 0)));
-            t.model.push_back(mc(Part::LegFrontRight, 0, 34, 6, 10, 6, -3, 0, -3, -4, 14, -6));
-            t.model.push_back(mirrored(mc(Part::LegFrontLeft, 0, 34, 6, 10, 6, -3, 0, -3, 4, 14, -6)));
-            t.model.push_back(mc(Part::LegBackRight, 0, 34, 6, 10, 6, -3, 0, -3, -4, 14, 6));
-            t.model.push_back(mirrored(mc(Part::LegBackLeft, 0, 34, 6, 10, 6, -3, 0, -3, 4, 14, 6)));
+
+            t.model.push_back(inflated(mc(Part::Body, 1, 1, 16, 14, 26, -8, -6, -4, 0, 5, -3), 0.020f));
+            t.model.push_back(inflated(mc(Part::Body, 90, 33, 1, 10, 19, 0, -13, -7, 0, 5, -3), 0.020f));
+            t.model.push_back(turned(mc(Part::Head, 61, 1, 14, 6, 19, -7, -5, -19, 0, 2, -5), 0.8727f, 0.0000f, 0.0000f));
+            t.model.push_back(turned(mc(Part::Head, 1, 13, 2, 11, 2, -8, -11, -14, 0, 2, -5), 0.8727f, 0.0000f, 0.0000f));
+            t.model.push_back(turned(mc(Part::Head, 1, 13, 2, 11, 2, 6, -11, -14, 0, 2, -5), 0.8727f, 0.0000f, 0.0000f));
+            t.model.push_back(turned(mc(Part::Head, 1, 1, 6, 1, 4, -6, 0, -3, -7, -3, -7), 0.0000f, 0.0000f, 0.8727f));
+            t.model.push_back(turned(mc(Part::Head, 1, 6, 6, 1, 4, 0, 0, -3, 7, -3, -7), 0.0000f, 0.0000f, -0.8727f));
+            t.model.push_back(mc(Part::LegBackLeft, 21, 45, 5, 11, 5, -14, -3, -4, 6, 16, 17));
+            t.model.push_back(mc(Part::LegBackRight, 0, 45, 5, 11, 5, 9, -3, -4, -6, 16, 17));
+            t.model.push_back(mc(Part::LegFrontRight, 66, 42, 6, 14, 6, -2, -2, -3, -6, 12, -3));
+            t.model.push_back(mc(Part::LegFrontLeft, 41, 42, 6, 14, 6, -4, -2, -3, 6, 12, -3));
+
         }
 
         {
@@ -1948,13 +2143,16 @@ namespace
             t.deathVoice = Sound::MobStriderDeath;
             t.name = "Strider";
             t.texture = "strider";
+            t.sheetWidth = 64;
+            t.sheetHeight = 128;
+            t.width = 0.9265f;
+            t.height = 1.7500f;
+            t.modelScale = 0.9714f;
             t.spawnClass = SpawnClass::Passive;
             t.dimension = Dimension::Nether;
             t.fireproof = true;
             t.lavaWalker = true;
             t.maxHealth = 20;
-            t.width = 0.9f;
-            t.height = 1.7f;
             t.walkSpeed = 1.6f;
             t.limbSwing = 0.7f;
 
@@ -1971,9 +2169,17 @@ namespace
             t.markColour = rgb(102, 30, 36);
 
             // A tall slab on two legs, which is the whole of it.
-            t.model.push_back(mc(Part::Body, 0, 0, 16, 14, 8, -8, -4, -4, 0, 0, 0));
-            t.model.push_back(mc(Part::LegBackRight, 48, 0, 4, 14, 4, -2, 0, -2, -4, 10, 0));
-            t.model.push_back(mirrored(mc(Part::LegBackLeft, 48, 0, 4, 14, 4, -2, 0, -2, 4, 10, 0)));
+
+            t.model.push_back(mc(Part::LegBackRight, 0, 32, 4, 16, 4, -2, 0, -2, -4, 8, 0));
+            t.model.push_back(mc(Part::LegBackLeft, 0, 55, 4, 16, 4, -2, 0, -2, 4, 8, 0));
+            t.model.push_back(mc(Part::Body, 0, 0, 16, 14, 16, -8, -12, -8, 0, 8, 0));
+            t.model.push_back(mc(Part::Body, 16, 65, 12, 1, 16, 0, 0, -8, 8, 5, 0));
+            t.model.push_back(mc(Part::Body, 16, 49, 12, 1, 16, 0, 0, -8, 8, 0, 0));
+            t.model.push_back(mc(Part::Body, 16, 33, 12, 1, 16, 0, 0, -8, 8, -4, 0));
+            t.model.push_back(mc(Part::Body, 16, 33, 12, 1, 16, -12, 0, -8, -8, -4, 0));
+            t.model.push_back(mc(Part::Body, 16, 49, 12, 1, 16, -12, 0, -8, -8, 0, 0));
+            t.model.push_back(mc(Part::Body, 16, 65, 12, 1, 16, -12, 0, -8, -8, 5, 0));
+
         }
 
         // The six in the sea. All of them live in the water the way a
@@ -1988,10 +2194,13 @@ namespace
             t.deathVoice = Sound::MobCodDeath;
             t.name = "Cod";
             t.texture = "cod";
+            t.sheetWidth = 32;
+            t.sheetHeight = 32;
+            t.width = 0.6250f;
+            t.height = 0.3750f;
+            t.modelScale = 0.8000f;
             t.spawnClass = SpawnClass::Passive;
             t.maxHealth = 3;
-            t.width = 0.5f;
-            t.height = 0.3f;
             t.walkSpeed = 2.2f;
             t.limbSwing = 0.0f;
             t.voicePitch = 1.6f;
@@ -2012,9 +2221,16 @@ namespace
             // is the way everything here faces -- the first pair of
             // fish were built across their own direction of travel
             // and swam through the sea sideways.
-            t.model.push_back(mc(Part::Body, 0, 0, 3, 5, 8, -1, 19, -4, 0, 0, 0));
-            t.model.push_back(mc(Part::LegBackRight, 0, 14, 1, 5, 4, 0, 19, 4, 0, 0, 0));
-            t.model.push_back(mc(Part::Head, 12, 14, 3, 2, 3, -1, 17, -2, 0, 0, 0));
+
+            t.model.push_back(mc(Part::Body, 0, 0, 2, 4, 7, -1, -4, 1, 0, 23, 0));
+            t.model.push_back(mirrored(mc(Part::Body, 20, 6, 1, 1, 6, 0, -5, 0, 0, 23, 0)));
+            t.model.push_back(mirrored(mc(Part::Body, 22, 1, 1, 1, 2, 0, 0, 3, 0, 23, 0)));
+            t.model.push_back(mc(Part::Head, 0, 0, 2, 3, 1, -1, -2, -3, 0, 21, 0));
+            t.model.push_back(mc(Part::Head, 11, 0, 2, 4, 3, -1, -2, -2, 0, 21, 0));
+            t.model.push_back(turned(mc(Part::WingLeft, 24, 4, 2, 1, 2, 0, 0, 0, 1, 22, 0), 0.0000f, -0.0000f, -0.6109f));
+            t.model.push_back(turned(mc(Part::WingRight, 24, 1, 2, 1, 2, -2, 0, 0, -1, 22, 0), 0.0000f, -0.0000f, 0.6109f));
+            t.model.push_back(mc(Part::WingRight, 20, 1, 1, 4, 6, 0, -4, 0, 0, 23, 8));
+
         }
 
         {
@@ -2027,10 +2243,13 @@ namespace
             t.deathVoice = Sound::MobSalmonDeath;
             t.name = "Salmon";
             t.texture = "salmon";
+            t.sheetWidth = 32;
+            t.sheetHeight = 32;
+            t.width = 1.0938f;
+            t.height = 0.6250f;
+            t.modelScale = 0.6400f;
             t.spawnClass = SpawnClass::Passive;
             t.maxHealth = 3;
-            t.width = 0.7f;
-            t.height = 0.4f;
             t.walkSpeed = 2.4f;
             t.limbSwing = 0.0f;
             t.voicePitch = 1.4f;
@@ -2046,9 +2265,15 @@ namespace
             t.pattern = MobType::Pattern::Belly;
             t.markColour = rgb(226, 182, 162);
 
-            t.model.push_back(mc(Part::Body, 0, 0, 4, 6, 10, -2, 18, -5, 0, 0, 0));
-            t.model.push_back(mc(Part::LegBackRight, 0, 18, 1, 6, 5, 0, 18, 5, 0, 0, 0));
-            t.model.push_back(mc(Part::Head, 14, 18, 4, 2, 4, -2, 16, -2, 0, 0, 0));
+            t.model.push_back(mc(Part::Body, 0, 0, 3, 5, 8, -2, -8, 0, 0, 25, -4));
+            t.model.push_back(mc(Part::Body, 0, 13, 3, 5, 8, -2, -8, 0, 0, 25, 4));
+            t.model.push_back(mc(Part::Body, 4, 2, 1, 2, 2, 0, -6, 0, 0, 20, 2));
+            t.model.push_back(mc(Part::Body, 2, 3, 1, 2, 3, 0, -6, 0, 0, 20, 4));
+            t.model.push_back(mc(Part::WingRight, 20, 10, 1, 5, 6, 0, -8, 0, 0, 25, 12));
+            t.model.push_back(mc(Part::Head, 22, 0, 2, 4, 3, -1, -6, -3, 0, 22, -4));
+            t.model.push_back(turned(mc(Part::WingLeft, 2, 0, 2, 1, 2, -2, -3, 0, 2, 24, -4), 0.0000f, -0.0000f, -0.6109f));
+            t.model.push_back(turned(mirrored(mc(Part::WingRight, 2, 0, 2, 1, 2, 0, -3, 0, -2, 24, -4)), 0.0000f, -0.0000f, 0.6109f));
+
         }
 
         {
@@ -2062,10 +2287,13 @@ namespace
             t.deathVoice = Sound::MobPufferfishDeath;
             t.name = "Pufferfish";
             t.texture = "pufferfish";
+            t.sheetWidth = 32;
+            t.sheetHeight = 32;
+            t.width = 0.1875f;
+            t.height = 0.1875f;
+            t.modelScale = 3.7333f;
             t.spawnClass = SpawnClass::Passive;
             t.maxHealth = 3;
-            t.width = 0.6f;
-            t.height = 0.6f;
             t.walkSpeed = 1.4f;
             t.limbSwing = 0.0f;
             t.voicePitch = 1.8f;
@@ -2081,8 +2309,13 @@ namespace
             t.pattern = MobType::Pattern::Speckled;
             t.markColour = rgb(150, 120, 36);
 
-            t.model.push_back(mc(Part::Body, 0, 0, 8, 8, 8, -4, 16, -4, 0, 0, 0));
-            t.model.push_back(mc(Part::Head, 0, 20, 2, 2, 2, -1, 19, -6, 0, 0, 0));
+            t.model.push_back(mc(Part::Body, 0, 27, 3, 2, 3, -2, -2, -2, 0, 24, 0));
+            t.model.push_back(mc(Part::Body, 24, 6, 1, 1, 1, 0, -3, -2, 0, 24, 0));
+            t.model.push_back(mc(Part::Body, 28, 6, 1, 1, 1, -2, -3, -2, 0, 24, 0));
+            t.model.push_back(mirrored(mc(Part::WingRight, 3, 0, 3, 1, 3, -2, -1, 2, 0, 24, 0)));
+            t.model.push_back(mc(Part::WingLeft, 25, 0, 1, 1, 2, -5, 4, -2, 6, 19, 0));
+            t.model.push_back(mc(Part::WingRight, 25, 0, 1, 1, 2, 4, 4, -2, -6, 19, 0));
+
         }
 
         {
@@ -2097,10 +2330,13 @@ namespace
             t.deathVoice = Sound::MobDolphinDeath;
             t.name = "Dolphin";
             t.texture = "dolphin";
+            t.sheetWidth = 64;
+            t.sheetHeight = 64;
+            t.width = 1.1216f;
+            t.height = 0.7478f;
+            t.modelScale = 0.8024f;
             t.spawnClass = SpawnClass::Passive;
             t.maxHealth = 10;
-            t.width = 0.9f;
-            t.height = 0.6f;
             t.walkSpeed = 3.6f;
             t.limbSwing = 0.0f;
             t.aquatic = true;
@@ -2115,10 +2351,15 @@ namespace
             t.pattern = MobType::Pattern::Belly;
             t.markColour = rgb(226, 236, 240);
 
-            t.model.push_back(mc(Part::Body, 0, 0, 7, 7, 13, -4, 16, -7, 0, 0, 0));
-            t.model.push_back(mc(Part::Head, 0, 22, 5, 4, 5, -3, 18, -11, 0, 0, 0));
-            t.model.push_back(mc(Part::LegBackRight, 24, 22, 6, 1, 5, -3, 20, 6, 0, 0, 0));
-            t.model.push_back(mc(Part::WingRight, 48, 22, 2, 4, 3, -1, 13, -3, 0, 0, 0));
+            t.model.push_back(mc(Part::Body, 0, 13, 8, 7, 13, -4, -7, 0, 0, 23, -3));
+            t.model.push_back(mc(Part::Head, 0, 0, 8, 7, 6, -4, -7, -6, 0, 23, -3));
+            t.model.push_back(mc(Part::Head, 0, 13, 2, 2, 4, -1, -2, 0, 0, 23, -13));
+            t.model.push_back(mc(Part::Body, 0, 33, 4, 5, 11, -2, -2, -1, 0, 21, 11));
+            t.model.push_back(mc(Part::WingRight, 0, 49, 10, 1, 6, -5, 0, -1, 0, 21, 20));
+            t.model.push_back(turned(mc(Part::WingRight, 29, 0, 1, 5, 4, 0, -4, -1, 0, 16, 2), -0.5236f, 0.0000f, 0.0000f));
+            t.model.push_back(turned(mc(Part::WingLeft, 40, 0, 8, 1, 4, 0, -1, -2, 3, 22, -1), 0.0000f, 0.4363f, -0.3491f));
+            t.model.push_back(turned(mc(Part::WingRight, 40, 6, 8, 1, 4, -8, -1, -2, -3, 22, -1), 0.0000f, -0.4363f, 0.3491f));
+
         }
 
         {
@@ -2132,10 +2373,13 @@ namespace
             t.deathVoice = Sound::MobTurtleDeath;
             t.name = "Turtle";
             t.texture = "turtle";
+            t.sheetWidth = 128;
+            t.sheetHeight = 64;
+            t.width = 3.7500f;
+            t.height = 1.2500f;
+            t.modelScale = 0.3200f;
             t.spawnClass = SpawnClass::Passive;
             t.maxHealth = 30;
-            t.width = 1.2f;
-            t.height = 0.4f;
             t.walkSpeed = 0.8f;
             t.limbSwing = 0.5f;
             t.voicePitch = 0.8f;
@@ -2154,12 +2398,15 @@ namespace
             t.pattern = MobType::Pattern::Patches;
             t.markColour = rgb(44, 78, 44);
 
-            t.model.push_back(mc(Part::Body, 0, 0, 14, 4, 12, -7, 20, -6, 0, 0, 0));
-            t.model.push_back(mc(Part::Head, 0, 20, 5, 4, 5, -2, 20, -10, 0, 0, 0));
-            t.model.push_back(mc(Part::LegFrontRight, 22, 20, 3, 1, 4, -8, 23, -5, 0, 0, 0));
-            t.model.push_back(mirrored(mc(Part::LegFrontLeft, 22, 20, 3, 1, 4, 5, 23, -5, 0, 0, 0)));
-            t.model.push_back(mc(Part::LegBackRight, 38, 20, 3, 1, 4, -8, 23, 2, 0, 0, 0));
-            t.model.push_back(mirrored(mc(Part::LegBackLeft, 38, 20, 3, 1, 4, 5, 23, 2, 0, 0, 0)));
+            t.model.push_back(mc(Part::Head, 2, 0, 6, 5, 6, -3, -1, -3, 0, 9, -10));
+            t.model.push_back(mc(Part::Body, 69, 33, 9, 18, 1, -4, 3, -14, 0, 1, -10));
+            t.model.push_back(mc(Part::Body, 6, 37, 19, 20, 6, -10, 3, -10, 0, 1, -10));
+            t.model.push_back(mc(Part::Body, 30, 1, 11, 18, 3, -6, 3, -13, 0, 1, -10));
+            t.model.push_back(mc(Part::LegBackRight, 0, 23, 4, 1, 10, -2, 0, 0, -4, 12, 11));
+            t.model.push_back(mc(Part::LegBackLeft, 0, 12, 4, 1, 10, -2, 0, 0, 4, 12, 11));
+            t.model.push_back(mc(Part::LegFrontRight, 26, 30, 13, 1, 5, -13, 0, -2, -5, 11, -4));
+            t.model.push_back(mc(Part::LegFrontLeft, 26, 24, 13, 1, 5, 0, 0, -2, 5, 11, -4));
+
         }
 
         {
@@ -2173,10 +2420,13 @@ namespace
             t.deathVoice = Sound::MobAxolotlDeath;
             t.name = "Axolotl";
             t.texture = "axolotl";
+            t.sheetWidth = 64;
+            t.sheetHeight = 64;
+            t.width = 1.3393f;
+            t.height = 0.7500f;
+            t.modelScale = 0.5600f;
             t.spawnClass = SpawnClass::Passive;
             t.maxHealth = 14;
-            t.width = 0.75f;
-            t.height = 0.42f;
             t.walkSpeed = 1.6f;
             t.limbSwing = 0.4f;
             t.voicePitch = 1.4f;
@@ -2191,13 +2441,20 @@ namespace
             t.pattern = MobType::Pattern::Belly;
             t.markColour = rgb(252, 226, 236);
 
-            t.model.push_back(mc(Part::Body, 0, 0, 5, 5, 8, -2, 19, -3, 0, 0, 0));
-            t.model.push_back(mc(Part::Head, 0, 14, 4, 3, 5, -2, 19, -8, 0, 0, 0));
             // The frills, which are the whole of why anybody wants one.
-            t.model.push_back(mc(Part::WingRight, 0, 24, 3, 2, 3, -5, 19, -7, 0, 0, 0));
-            t.model.push_back(mirrored(mc(Part::WingLeft, 0, 24, 3, 2, 3, 2, 19, -7, 0, 0, 0)));
-            t.model.push_back(mc(Part::LegBackRight, 14, 24, 2, 1, 4, -3, 23, -1, 0, 0, 0));
-            t.model.push_back(mirrored(mc(Part::LegBackLeft, 14, 24, 2, 1, 4, 1, 23, -1, 0, 0, 0)));
+
+            t.model.push_back(mc(Part::Body, 0, 11, 8, 4, 10, -4, -1, -9, 0, 17, 4));
+            t.model.push_back(mc(Part::Body, 2, 17, 1, 5, 9, 0, -2, -9, 0, 17, 4));
+            t.model.push_back(turned(mc(Part::LegFrontRight, 2, 13, 3, 5, 1, -2, 0, 0, -4, 19, -4), 0.0000f, 1.5708f, 0.0000f));
+            t.model.push_back(turned(mc(Part::LegBackRight, 2, 13, 3, 5, 1, -1, 0, 0, -4, 19, 4), 0.0000f, -1.5708f, 0.0000f));
+            t.model.push_back(turned(mc(Part::LegFrontLeft, 2, 13, 3, 5, 1, -1, 0, 0, 4, 19, -4), 0.0000f, -1.5708f, 0.0000f));
+            t.model.push_back(turned(mc(Part::LegBackLeft, 2, 13, 3, 5, 1, -2, 0, 0, 4, 19, 4), 0.0000f, 1.5708f, 0.0000f));
+            t.model.push_back(mc(Part::Body, 2, 19, 1, 5, 12, 0, -3, 0, 0, 18, 4));
+            t.model.push_back(mc(Part::Head, 0, 1, 8, 5, 5, -4, -3, -5, 0, 18, -5));
+            t.model.push_back(mc(Part::Head, 11, 40, 3, 7, 1, 0, -5, 0, 4, 18, -6));
+            t.model.push_back(mc(Part::Head, 0, 40, 3, 7, 1, -3, -5, 0, -4, 18, -6));
+            t.model.push_back(mc(Part::Head, 3, 37, 8, 3, 1, -4, -3, 0, 0, 15, -6));
+
         }
 
         // The country animals. Four species covered the whole of the
@@ -2214,10 +2471,13 @@ namespace
             t.deathVoice = Sound::MobRabbitDeath;
             t.name = "Rabbit";
             t.texture = "rabbit";
+            t.sheetWidth = 64;
+            t.sheetHeight = 32;
+            t.width = 0.8000f;
+            t.height = 1.0000f;
+            t.modelScale = 0.5000f;
             t.spawnClass = SpawnClass::Passive;
             t.maxHealth = 3;
-            t.width = 0.4f;
-            t.height = 0.5f;
             t.walkSpeed = 3.0f;
             t.limbSwing = 0.8f;
             t.voicePitch = 1.4f;
@@ -2232,15 +2492,18 @@ namespace
             t.pattern = MobType::Pattern::Belly;
             t.markColour = rgb(226, 212, 190);
 
-            t.model.push_back(mc(Part::Body, 0, 0, 4, 5, 8, -2, 19, -4, 0, 0, 0));
-            t.model.push_back(mc(Part::Head, 0, 15, 5, 4, 5, -2, 17, -8, 0, 0, 0));
             // The ears, which are the whole of what reads as a rabbit.
-            t.model.push_back(mc(Part::WingRight, 24, 15, 2, 5, 1, -2, 12, -6, 0, 0, 0));
-            t.model.push_back(mirrored(mc(Part::WingLeft, 24, 15, 2, 5, 1, 0, 12, -6, 0, 0, 0)));
-            t.model.push_back(mc(Part::LegFrontRight, 0, 26, 2, 3, 2, -2, 21, -5, 0, 0, 0));
-            t.model.push_back(mirrored(mc(Part::LegFrontLeft, 0, 26, 2, 3, 2, 0, 21, -5, 0, 0, 0)));
-            t.model.push_back(mc(Part::LegBackRight, 32, 15, 2, 4, 4, -2, 20, 1, 0, 0, 0));
-            t.model.push_back(mirrored(mc(Part::LegBackLeft, 32, 15, 2, 4, 4, 0, 20, 1, 0, 0, 0)));
+
+            t.model.push_back(turned(mc(Part::Body, 0, 0, 8, 6, 10, -4, -6, -9, 0, 21, 4), -0.3927f, 0.0000f, 0.0000f));
+            t.model.push_back(mc(Part::Body, 20, 16, 4, 4, 4, -2, -3, -1, 0, 16, 4));
+            t.model.push_back(turned(mc(Part::Head, 0, 16, 5, 5, 5, -2, -3, -4, 0, 16, -4), 0.3927f, 0.0000f, 0.0000f));
+            t.model.push_back(mc(Part::Head, 32, 0, 2, 5, 1, -1, -4, 0, 2, 12, -5));
+            t.model.push_back(mc(Part::Head, 26, 0, 2, 5, 1, -1, -4, 0, -2, 12, -5));
+            t.model.push_back(turned(mc(Part::LegFrontRight, 36, 18, 2, 4, 2, -1, -1, -1, -2, 21, -2), 0.3927f, 0.0000f, 0.0000f));
+            t.model.push_back(turned(mc(Part::LegFrontLeft, 44, 18, 2, 4, 2, -1, -1, -1, 2, 21, -2), 0.3927f, 0.0000f, 0.0000f));
+            t.model.push_back(mc(Part::LegBackRight, 20, 24, 2, 1, 6, -1, 0, -5, -3, 22, 4));
+            t.model.push_back(mc(Part::LegBackLeft, 36, 24, 2, 1, 6, -1, 0, -5, 3, 22, 4));
+
         }
 
         {
@@ -2253,10 +2516,13 @@ namespace
             t.deathVoice = Sound::MobFoxDeath;
             t.name = "Fox";
             t.texture = "fox";
+            t.sheetWidth = 48;
+            t.sheetHeight = 32;
+            t.width = 0.7500f;
+            t.height = 0.8750f;
+            t.modelScale = 0.8000f;
             t.spawnClass = SpawnClass::Passive;
             t.maxHealth = 10;
-            t.width = 0.6f;
-            t.height = 0.7f;
             t.walkSpeed = 3.2f;
             t.limbSwing = 0.7f;
             t.voicePitch = 1.2f;
@@ -2268,14 +2534,19 @@ namespace
             t.pattern = MobType::Pattern::Belly;
             t.markColour = rgb(238, 232, 222);
 
-            t.model.push_back(mc(Part::Body, 0, 0, 6, 6, 11, -3, 17, -5, 0, 0, 0));
-            t.model.push_back(mc(Part::Head, 0, 20, 8, 6, 6, -4, 15, -11, 0, 0, 0));
             // The snout and the brush, which is all a fox is.
-            t.model.push_back(mc(Part::Head, 32, 20, 4, 2, 3, -2, 19, -14, 0, 0, 0));
-            t.model.push_back(mc(Part::LegBackRight, 48, 20, 2, 6, 2, -3, 18, 6, 0, 0, 0));
-            t.model.push_back(mc(Part::LegFrontRight, 36, 0, 2, 7, 2, -3, 17, -4, 0, 0, 0));
-            t.model.push_back(mirrored(mc(Part::LegFrontLeft, 36, 0, 2, 7, 2, 1, 17, -4, 0, 0, 0)));
-            t.model.push_back(mc(Part::LegBackLeft, 46, 0, 2, 7, 2, -3, 17, 3, 0, 0, 0));
+
+            t.model.push_back(mc(Part::Body, 24, 15, 6, 11, 6, -3, -3, -3, 0, 14, 0));
+            t.model.push_back(mc(Part::Head, 0, 0, 8, 6, 6, -4, -2, -6, 0, 14, -3));
+            t.model.push_back(mc(Part::Head, 0, 0, 2, 2, 1, -4, -4, -5, 0, 14, -3));
+            t.model.push_back(mc(Part::Head, 22, 0, 2, 2, 1, 2, -4, -5, 0, 14, -3));
+            t.model.push_back(mc(Part::Head, 0, 24, 4, 2, 3, -2, 2, -9, 0, 14, -3));
+            t.model.push_back(mc(Part::LegBackRight, 14, 24, 2, 6, 2, 0, 0, -1, -3, 16, 6));
+            t.model.push_back(mc(Part::LegBackLeft, 22, 24, 2, 6, 2, 0, 0, -1, 1, 16, 6));
+            t.model.push_back(mc(Part::LegFrontRight, 14, 24, 2, 6, 2, 0, 0, -1, -3, 16, -1));
+            t.model.push_back(mc(Part::LegFrontLeft, 22, 24, 2, 6, 2, 0, 0, -1, 1, 16, -1));
+            t.model.push_back(mc(Part::Body, 28, 0, 4, 9, 5, -2, 1, -2, 0, 14, 7));
+
         }
 
         {
@@ -2289,12 +2560,13 @@ namespace
             t.deathVoice = Sound::MobGoatDeath;
             t.name = "Goat";
             t.texture = "goat";
-            t.sheetWidth = 128;
+            t.sheetWidth = 64;
             t.sheetHeight = 64;
+            t.width = 1.1250f;
+            t.height = 1.6250f;
+            t.modelScale = 0.8000f;
             t.spawnClass = SpawnClass::Passive;
             t.maxHealth = 10;
-            t.width = 0.9f;
-            t.height = 1.3f;
             t.walkSpeed = 2.6f;
             t.limbSwing = 0.6f;
             t.breedingFood = Items::Wheat;
@@ -2308,15 +2580,21 @@ namespace
             t.pattern = MobType::Pattern::Patches;
             t.markColour = rgb(190, 180, 166);
 
-            t.model.push_back(mc(Part::Body, 0, 0, 9, 11, 16, -5, 6, -8, 0, 0, 0));
-            t.model.push_back(mc(Part::Head, 50, 0, 5, 7, 10, -3, 2, -16, 0, 0, 0));
             // The horns, swept back the way a goat's are.
-            t.model.push_back(mc(Part::Head, 50, 18, 2, 5, 2, -4, 0, -12, 0, 0, 0));
-            t.model.push_back(mirrored(mc(Part::Head, 50, 18, 2, 5, 2, 2, 0, -12, 0, 0, 0)));
-            t.model.push_back(mc(Part::LegFrontRight, 0, 34, 3, 7, 3, -2, 0, -2, -3, 17, -5));
-            t.model.push_back(mirrored(mc(Part::LegFrontLeft, 0, 34, 3, 7, 3, -2, 0, -2, 3, 17, -5)));
-            t.model.push_back(mc(Part::LegBackRight, 0, 34, 3, 7, 3, -2, 0, -2, -3, 17, 5));
-            t.model.push_back(mirrored(mc(Part::LegBackLeft, 0, 34, 3, 7, 3, -2, 0, -2, 3, 17, 5)));
+
+            t.model.push_back(mc(Part::LegBackLeft, 36, 29, 3, 6, 3, 0, 4, 0, 1, 14, 4));
+            t.model.push_back(mc(Part::LegBackRight, 49, 29, 3, 6, 3, 0, 4, 0, -3, 14, 4));
+            t.model.push_back(mc(Part::LegFrontRight, 49, 2, 3, 10, 3, 0, 0, 0, -3, 14, -6));
+            t.model.push_back(mc(Part::LegFrontLeft, 35, 2, 3, 10, 3, 0, 0, 0, 1, 14, -6));
+            t.model.push_back(mc(Part::Body, 1, 1, 9, 11, 16, -4, -17, -7, 0, 24, 0));
+            t.model.push_back(mc(Part::Body, 0, 28, 11, 14, 11, -5, -18, -8, 0, 24, 0));
+            t.model.push_back(mc(Part::Head, 34, 46, 5, 7, 10, -2, -5, -8, 0, 7, -8));
+            t.model.push_back(mc(Part::Head, 2, 61, 3, 2, 1, 2, -4, -2, 0, 7, -8));
+            t.model.push_back(mc(Part::Head, 2, 61, 3, 2, 1, -6, -4, -2, 0, 7, -8));
+            t.model.push_back(mc(Part::Head, 23, 52, 1, 7, 5, 0, 4, -6, 0, 7, -8));
+            t.model.push_back(mc(Part::Head, 12, 55, 2, 7, 2, -3, -8, -2, 1, 6, -8));
+            t.model.push_back(mc(Part::Head, 12, 55, 2, 7, 2, 0, -8, -2, 1, 6, -8));
+
         }
 
         {
@@ -2332,10 +2610,11 @@ namespace
             t.texture = "panda";
             t.sheetWidth = 64;
             t.sheetHeight = 64;
+            t.width = 1.7550f;
+            t.height = 1.6875f;
+            t.modelScale = 0.7407f;
             t.spawnClass = SpawnClass::Passive;
             t.maxHealth = 20;
-            t.width = 1.3f;
-            t.height = 1.25f;
             t.walkSpeed = 1.6f;
             t.limbSwing = 0.5f;
             t.voicePitch = 0.8f;
@@ -2347,14 +2626,16 @@ namespace
             t.pattern = MobType::Pattern::Patches;
             t.markColour = rgb(36, 34, 34);
 
-            t.model.push_back(mc(Part::Body, 0, 0, 12, 10, 16, -6, 8, -8, 0, 0, 0));
-            t.model.push_back(mc(Part::Head, 0, 30, 9, 9, 9, -5, 6, -15, 0, 0, 0));
-            t.model.push_back(mc(Part::WingRight, 40, 30, 2, 3, 2, -6, 3, -12, 0, 0, 0));
-            t.model.push_back(mirrored(mc(Part::WingLeft, 40, 30, 2, 3, 2, 4, 3, -12, 0, 0, 0)));
-            t.model.push_back(mc(Part::LegFrontRight, 40, 44, 4, 6, 4, -2, 0, -2, -4, 18, -5));
-            t.model.push_back(mirrored(mc(Part::LegFrontLeft, 40, 44, 4, 6, 4, -2, 0, -2, 4, 18, -5)));
-            t.model.push_back(mc(Part::LegBackRight, 40, 44, 4, 6, 4, -2, 0, -2, -4, 18, 5));
-            t.model.push_back(mirrored(mc(Part::LegBackLeft, 40, 44, 4, 6, 4, -2, 0, -2, 4, 18, 5)));
+            t.model.push_back(mc(Part::Head, 0, 6, 13, 10, 9, -6, -5, -4, 0, 12, -17));
+            t.model.push_back(mc(Part::Head, 45, 16, 7, 5, 2, -4, 0, -6, 0, 12, -17));
+            t.model.push_back(mc(Part::Head, 52, 25, 5, 4, 1, -8, -8, -1, 0, 12, -17));
+            t.model.push_back(mc(Part::Head, 52, 25, 5, 4, 1, 4, -8, -1, 0, 12, -17));
+            t.model.push_back(mc(Part::Body, 0, 25, 19, 26, 13, -10, -13, -6, 0, 10, 0));
+            t.model.push_back(mc(Part::LegBackRight, 40, 0, 6, 9, 6, -3, 0, -3, -6, 15, 9));
+            t.model.push_back(mc(Part::LegBackLeft, 40, 0, 6, 9, 6, -3, 0, -3, 6, 15, 9));
+            t.model.push_back(mc(Part::LegFrontRight, 40, 0, 6, 9, 6, -3, 0, -3, -6, 15, -9));
+            t.model.push_back(mc(Part::LegFrontLeft, 40, 0, 6, 9, 6, -3, 0, -3, 6, 15, -9));
+
         }
 
         {
@@ -2369,6 +2650,11 @@ namespace
             t.deathVoice = Sound::MobBeeDeath;
             t.name = "Bee";
             t.texture = "bee";
+            t.sheetWidth = 64;
+            t.sheetHeight = 64;
+            t.width = 0.7695f;
+            t.height = 0.6596f;
+            t.modelScale = 0.9097f;
             // Passive is how it is spawned, not how it behaves:
             // the daylight rule that lets an animal be put down at
             // all asks the spawn class, and a bee put down only in
@@ -2378,8 +2664,6 @@ namespace
             t.spawnClass = SpawnClass::Passive;
             t.neutral = true;
             t.maxHealth = 10;
-            t.width = 0.7f;
-            t.height = 0.6f;
             t.walkSpeed = 2.2f;
             t.limbSwing = 0.0f;
             t.voicePitch = 1.2f;
@@ -2398,10 +2682,16 @@ namespace
             t.pattern = MobType::Pattern::Stripes;
             t.markColour = rgb(60, 48, 32);
 
-            t.model.push_back(mc(Part::Body, 0, 0, 7, 7, 10, -3, 16, -5, 0, 0, 0));
-            t.model.push_back(mc(Part::Head, 0, 20, 5, 5, 4, -2, 17, -8, 0, 0, 0));
-            t.model.push_back(mc(Part::WingRight, 20, 20, 9, 1, 6, -10, 14, -3, 0, 0, 0));
-            t.model.push_back(mirrored(mc(Part::WingLeft, 20, 20, 9, 1, 6, 1, 14, -3, 0, 0, 0)));
+            t.model.push_back(mc(Part::Body, 0, 0, 7, 7, 10, -4, -4, -5, 0, 19, 0));
+            t.model.push_back(mc(Part::Body, 2, 0, 1, 2, 3, 2, -4, -8, 0, 19, 0));
+            t.model.push_back(mc(Part::Body, 2, 3, 1, 2, 3, -2, -4, -8, 0, 19, 0));
+            t.model.push_back(mc(Part::Body, 26, 7, 1, 1, 2, 0, 0, 4, 0, 18, 1));
+            t.model.push_back(turned(mc(Part::WingRight, 0, 18, 9, 1, 6, -9, 0, 0, -1, 15, -3), 0.2618f, 0.2618f, 0.0000f));
+            t.model.push_back(turned(mc(Part::WingLeft, 9, 24, 9, 1, 6, 0, 0, 0, 2, 15, -3), 0.2618f, -0.2618f, 0.0000f));
+            t.model.push_back(mc(Part::LegFrontLeft, 26, 1, 7, 2, 1, -5, 0, 0, 2, 22, -2));
+            t.model.push_back(mc(Part::LegBackLeft, 26, 3, 7, 2, 1, -5, 0, 0, 2, 22, 0));
+            t.model.push_back(mc(Part::LegBackLeft, 26, 5, 7, 2, 1, -5, 0, 0, 2, 22, 2));
+
         }
 
         {
@@ -2415,10 +2705,13 @@ namespace
             t.deathVoice = Sound::MobCatDeath;
             t.name = "Cat";
             t.texture = "cat";
+            t.sheetWidth = 64;
+            t.sheetHeight = 32;
+            t.width = 0.8571f;
+            t.height = 1.0000f;
+            t.modelScale = 0.7000f;
             t.spawnClass = SpawnClass::Passive;
             t.maxHealth = 10;
-            t.width = 0.6f;
-            t.height = 0.7f;
             t.walkSpeed = 3.0f;
             t.limbSwing = 0.6f;
             t.voicePitch = 1.3f;
@@ -2430,14 +2723,18 @@ namespace
             t.pattern = MobType::Pattern::Patches;
             t.markColour = rgb(96, 78, 60);
 
-            t.model.push_back(mc(Part::Body, 0, 0, 5, 5, 12, -2, 17, -6, 0, 0, 0));
-            t.model.push_back(mc(Part::Head, 0, 20, 5, 4, 5, -2, 17, -11, 0, 0, 0));
-            t.model.push_back(mc(Part::Head, 24, 20, 1, 1, 2, -2, 15, -9, 0, 0, 0));
-            t.model.push_back(mirrored(mc(Part::Head, 24, 20, 1, 1, 2, 1, 15, -9, 0, 0, 0)));
-            t.model.push_back(mc(Part::LegBackRight, 34, 20, 1, 8, 1, 0, 16, 5, 0, 0, 0));
-            t.model.push_back(mc(Part::LegFrontRight, 42, 20, 2, 6, 2, -2, 18, -4, 0, 0, 0));
-            t.model.push_back(mirrored(mc(Part::LegFrontLeft, 42, 20, 2, 6, 2, 0, 18, -4, 0, 0, 0)));
-            t.model.push_back(mc(Part::LegBackLeft, 52, 20, 2, 6, 2, -2, 18, 2, 0, 0, 0));
+            t.model.push_back(mc(Part::Body, 20, 0, 4, 16, 6, -2, -8, -3, 0, 16, 1));
+            t.model.push_back(mc(Part::Head, 0, 0, 5, 4, 5, -2, -2, -3, 0, 14, -9));
+            t.model.push_back(mc(Part::Head, 0, 24, 3, 2, 2, -2, 0, -4, 0, 14, -9));
+            t.model.push_back(mc(Part::Head, 0, 10, 1, 1, 2, -2, -3, 0, 0, 14, -9));
+            t.model.push_back(mc(Part::Head, 6, 10, 1, 1, 2, 1, -3, 0, 0, 14, -9));
+            t.model.push_back(mc(Part::Body, 0, 15, 1, 8, 1, 0, 0, 0, 0, 14, 8));
+            t.model.push_back(mc(Part::Body, 4, 15, 1, 8, 1, 0, 0, 0, 0, 14, 16));
+            t.model.push_back(mc(Part::LegBackLeft, 8, 13, 2, 6, 2, -1, 0, -1, 1, 17, 7));
+            t.model.push_back(mc(Part::LegBackRight, 8, 13, 2, 6, 2, -1, 0, -1, -1, 17, 7));
+            t.model.push_back(mc(Part::LegFrontLeft, 40, 0, 2, 10, 2, -1, 0, -1, 1, 13, -4));
+            t.model.push_back(mc(Part::LegFrontRight, 40, 0, 2, 10, 2, -1, 0, -1, -1, 13, -4));
+
         }
 
         {
@@ -2453,10 +2750,11 @@ namespace
             t.texture = "llama";
             t.sheetWidth = 128;
             t.sheetHeight = 64;
+            t.width = 1.0829f;
+            t.height = 2.2500f;
+            t.modelScale = 0.8311f;
             t.spawnClass = SpawnClass::Passive;
             t.maxHealth = 20;
-            t.width = 0.9f;
-            t.height = 1.87f;
             t.walkSpeed = 2.2f;
             t.limbSwing = 0.5f;
             t.breedingFood = Items::Wheat;
@@ -2470,15 +2768,18 @@ namespace
             t.pattern = MobType::Pattern::Patches;
             t.markColour = rgb(146, 126, 102);
 
-            t.model.push_back(mc(Part::Body, 0, 0, 12, 18, 10, -6, 2, -5, 0, 0, 0));
-            t.model.push_back(mc(Part::Head, 50, 0, 4, 4, 9, -2, -8, -14, 0, 0, 0));
-            t.model.push_back(mc(Part::Head, 50, 14, 4, 10, 4, -2, -2, -11, 0, 0, 0));
-            t.model.push_back(mc(Part::Head, 80, 0, 1, 3, 2, -3, -10, -10, 0, 0, 0));
-            t.model.push_back(mirrored(mc(Part::Head, 80, 0, 1, 3, 2, 2, -10, -10, 0, 0, 0)));
-            t.model.push_back(mc(Part::LegFrontRight, 0, 30, 4, 14, 4, -2, 0, -2, -3, 10, -4));
-            t.model.push_back(mirrored(mc(Part::LegFrontLeft, 0, 30, 4, 14, 4, -2, 0, -2, 3, 10, -4)));
-            t.model.push_back(mc(Part::LegBackRight, 0, 30, 4, 14, 4, -2, 0, -2, -3, 10, 4));
-            t.model.push_back(mirrored(mc(Part::LegBackLeft, 0, 30, 4, 14, 4, -2, 0, -2, 3, 10, 4)));
+            t.model.push_back(mc(Part::Head, 0, 0, 4, 4, 9, -2, -14, -10, 0, 7, -6));
+            t.model.push_back(mc(Part::Head, 0, 14, 8, 18, 6, -4, -16, -6, 0, 7, -6));
+            t.model.push_back(mc(Part::Head, 17, 0, 3, 3, 2, -4, -19, -4, 0, 7, -6));
+            t.model.push_back(mc(Part::Head, 17, 0, 3, 3, 2, 1, -19, -4, 0, 7, -6));
+            t.model.push_back(turned(mc(Part::Body, 45, 28, 8, 8, 3, -3, 0, 0, -8, 3, 3), 0.0000f, -1.5708f, -0.0000f));
+            t.model.push_back(turned(mc(Part::Body, 45, 41, 8, 8, 3, -3, 0, 0, 6, 3, 3), 0.0000f, -1.5708f, -0.0000f));
+            t.model.push_back(mc(Part::Body, 29, 0, 12, 18, 10, -6, -10, -7, 0, 5, 2));
+            t.model.push_back(mc(Part::LegBackRight, 29, 29, 4, 14, 4, -2, 0, -2, -4, 10, 6));
+            t.model.push_back(mc(Part::LegBackLeft, 29, 29, 4, 14, 4, -2, 0, -2, 4, 10, 6));
+            t.model.push_back(mc(Part::LegFrontRight, 29, 29, 4, 14, 4, -2, 0, -2, -4, 10, -5));
+            t.model.push_back(mc(Part::LegFrontLeft, 29, 29, 4, 14, 4, -2, 0, -2, 4, 10, -5));
+
         }
 
         {
@@ -2495,11 +2796,12 @@ namespace
             t.texture = "polar_bear";
             t.sheetWidth = 128;
             t.sheetHeight = 64;
+            t.width = 2.5000f;
+            t.height = 2.5000f;
+            t.modelScale = 0.5600f;
             t.spawnClass = SpawnClass::Passive;
             t.neutral = true;
             t.maxHealth = 30;
-            t.width = 1.4f;
-            t.height = 1.4f;
             t.walkSpeed = 2.4f;
             t.limbSwing = 0.5f;
             t.voicePitch = 0.8f;
@@ -2510,13 +2812,17 @@ namespace
             t.headColour = rgb(244, 246, 246);
             t.eyeColour = rgb(36, 32, 32);
 
-            t.model.push_back(mc(Part::Body, 0, 0, 14, 14, 20, -7, 1, -10, 0, 0, 0));
-            t.model.push_back(mc(Part::Head, 70, 0, 9, 8, 10, -5, 3, -19, 0, 0, 0));
-            t.model.push_back(mc(Part::Head, 70, 20, 5, 3, 4, -3, 8, -22, 0, 0, 0));
-            t.model.push_back(mc(Part::LegFrontRight, 0, 36, 5, 9, 6, -3, 0, -3, -4, 15, -6));
-            t.model.push_back(mirrored(mc(Part::LegFrontLeft, 0, 36, 5, 9, 6, -3, 0, -3, 4, 15, -6)));
-            t.model.push_back(mc(Part::LegBackRight, 0, 36, 5, 9, 6, -3, 0, -3, -4, 15, 6));
-            t.model.push_back(mirrored(mc(Part::LegBackLeft, 0, 36, 5, 9, 6, -3, 0, -3, 4, 15, 6)));
+            t.model.push_back(mc(Part::Head, 0, 0, 7, 7, 7, -4, -3, -3, 0, 10, -16));
+            t.model.push_back(mc(Part::Head, 0, 44, 5, 3, 3, -2, 1, -6, 0, 10, -16));
+            t.model.push_back(mc(Part::Head, 26, 0, 2, 2, 1, -4, -4, -1, 0, 10, -16));
+            t.model.push_back(mc(Part::Head, 26, 0, 2, 2, 1, 2, -4, -1, 0, 10, -16));
+            t.model.push_back(mc(Part::Body, 0, 19, 14, 14, 11, -5, -13, -7, -2, 9, 12));
+            t.model.push_back(mc(Part::Body, 39, 0, 12, 12, 10, -4, -25, -7, -2, 9, 12));
+            t.model.push_back(mc(Part::LegBackRight, 50, 22, 4, 10, 8, -2, 0, -2, -4, 14, 6));
+            t.model.push_back(mc(Part::LegBackLeft, 50, 22, 4, 10, 8, -2, 0, -2, 4, 14, 6));
+            t.model.push_back(mc(Part::LegFrontRight, 50, 40, 4, 10, 6, -2, 0, -2, -4, 14, -8));
+            t.model.push_back(mc(Part::LegFrontLeft, 50, 40, 4, 10, 6, -2, 0, -2, 4, 14, -8));
+
         }
 
         // What a particular night has. The same five monsters turned
@@ -2533,11 +2839,13 @@ namespace
             t.deathVoice = Sound::MobStrayDeath;
             t.name = "Stray";
             t.texture = "stray";
-            t.sheetHeight = 64;
+            t.sheetWidth = 64;
+            t.sheetHeight = 32;
+            t.width = 0.6154f;
+            t.height = 2.0000f;
+            t.modelScale = 0.9750f;
             t.spawnClass = SpawnClass::Hostile;
             t.maxHealth = 20;
-            t.width = 0.6f;
-            t.height = 1.95f;
             t.walkSpeed = 2.0f;
             t.burnsInSunlight = true;
             t.voicePitch = 0.9f;
@@ -2557,12 +2865,13 @@ namespace
             t.pattern = MobType::Pattern::Speckled;
             t.markColour = rgb(140, 182, 196);
 
-            t.model.push_back(mc(Part::Head, 0, 0, 8, 8, 8, -4, -8, -4, 0, 0, 0));
             t.model.push_back(mc(Part::Body, 16, 16, 8, 12, 4, -4, 0, -2, 0, 0, 0));
+            t.model.push_back(mc(Part::Head, 0, 0, 8, 8, 8, -4, -8, -4, 0, 0, 0));
             t.model.push_back(mc(Part::LegFrontRight, 40, 16, 2, 12, 2, -1, -2, -1, -5, 2, 0));
-            t.model.push_back(mirrored(mc(Part::LegFrontLeft, 40, 16, 2, 12, 2, -1, -2, -1, 5, 2, 0)));
+            t.model.push_back(mc(Part::LegFrontLeft, 40, 16, 2, 12, 2, -1, -2, -1, 5, 2, 0));
             t.model.push_back(mc(Part::LegBackRight, 0, 16, 2, 12, 2, -1, 0, -1, -2, 12, 0));
-            t.model.push_back(mirrored(mc(Part::LegBackLeft, 0, 16, 2, 12, 2, -1, 0, -1, 2, 12, 0)));
+            t.model.push_back(mc(Part::LegBackLeft, 0, 16, 2, 12, 2, -1, 0, -1, 2, 12, 0));
+
         }
 
         {
@@ -2577,11 +2886,13 @@ namespace
             t.deathVoice = Sound::MobHuskDeath;
             t.name = "Husk";
             t.texture = "husk";
+            t.sheetWidth = 64;
             t.sheetHeight = 64;
+            t.width = 0.6154f;
+            t.height = 2.0000f;
+            t.modelScale = 0.9750f;
             t.spawnClass = SpawnClass::Hostile;
             t.maxHealth = 20;
-            t.width = 0.6f;
-            t.height = 1.95f;
             t.walkSpeed = 1.9f;
             t.burnsInSunlight = false;
             t.voicePitch = 0.85f;
@@ -2593,12 +2904,13 @@ namespace
             t.pattern = MobType::Pattern::Patches;
             t.markColour = rgb(104, 90, 60);
 
-            t.model.push_back(mc(Part::Head, 0, 0, 8, 8, 8, -4, -8, -4, 0, 0, 0));
             t.model.push_back(mc(Part::Body, 16, 16, 8, 12, 4, -4, 0, -2, 0, 0, 0));
+            t.model.push_back(mc(Part::Head, 0, 0, 8, 8, 8, -4, -8, -4, 0, 0, 0));
             t.model.push_back(mc(Part::LegFrontRight, 40, 16, 4, 12, 4, -3, -2, -2, -5, 2, 0));
-            t.model.push_back(mirrored(mc(Part::LegFrontLeft, 40, 16, 4, 12, 4, -1, -2, -2, 5, 2, 0)));
+            t.model.push_back(mc(Part::LegFrontLeft, 40, 16, 4, 12, 4, -1, -2, -2, 5, 2, 0));
             t.model.push_back(mc(Part::LegBackRight, 0, 16, 4, 12, 4, -2, 0, -2, -2, 12, 0));
-            t.model.push_back(mirrored(mc(Part::LegBackLeft, 0, 16, 4, 12, 4, -2, 0, -2, 2, 12, 0)));
+            t.model.push_back(mc(Part::LegBackLeft, 0, 16, 4, 12, 4, -2, 0, -2, 2, 12, 0));
+
         }
 
         {
@@ -2614,11 +2926,13 @@ namespace
             t.deathVoice = Sound::MobBoggedDeath;
             t.name = "Bogged";
             t.texture = "bogged";
-            t.sheetHeight = 64;
+            t.sheetWidth = 64;
+            t.sheetHeight = 32;
+            t.width = 0.6923f;
+            t.height = 2.2500f;
+            t.modelScale = 0.8667f;
             t.spawnClass = SpawnClass::Hostile;
             t.maxHealth = 16;
-            t.width = 0.6f;
-            t.height = 1.95f;
             t.walkSpeed = 1.9f;
             t.burnsInSunlight = true;
             t.voicePitch = 1.1f;
@@ -2636,12 +2950,19 @@ namespace
             t.pattern = MobType::Pattern::Patches;
             t.markColour = rgb(74, 96, 58);
 
-            t.model.push_back(mc(Part::Head, 0, 0, 8, 8, 8, -4, -8, -4, 0, 0, 0));
             t.model.push_back(mc(Part::Body, 16, 16, 8, 12, 4, -4, 0, -2, 0, 0, 0));
+            t.model.push_back(mc(Part::Head, 0, 0, 8, 8, 8, -4, -8, -4, 0, 0, 0));
+            t.model.push_back(mc(Part::Head, 50, 22, 6, 4, 1, -9, -4, -6, 3, -8, 3));
+            t.model.push_back(mc(Part::Head, 50, 22, 6, 4, 1, -9, -4, -6, 3, -8, 3));
+            t.model.push_back(mc(Part::Head, 50, 16, 6, 4, 1, -3, -4, 0, 3, -8, 3));
+            t.model.push_back(mc(Part::Head, 50, 16, 6, 4, 1, -3, -4, 0, 3, -8, 3));
+            t.model.push_back(mc(Part::Head, 50, 27, 6, 5, 1, -8, 2, 0, 3, -8, 3));
+            t.model.push_back(mc(Part::Head, 50, 27, 6, 5, 1, -8, 2, 0, 3, -8, 3));
             t.model.push_back(mc(Part::LegFrontRight, 40, 16, 2, 12, 2, -1, -2, -1, -5, 2, 0));
-            t.model.push_back(mirrored(mc(Part::LegFrontLeft, 40, 16, 2, 12, 2, -1, -2, -1, 5, 2, 0)));
+            t.model.push_back(mc(Part::LegFrontLeft, 40, 16, 2, 12, 2, -1, -2, -1, 5, 2, 0));
             t.model.push_back(mc(Part::LegBackRight, 0, 16, 2, 12, 2, -1, 0, -1, -2, 12, 0));
-            t.model.push_back(mirrored(mc(Part::LegBackLeft, 0, 16, 2, 12, 2, -1, 0, -1, 2, 12, 0)));
+            t.model.push_back(mc(Part::LegBackLeft, 0, 16, 2, 12, 2, -1, 0, -1, 2, 12, 0));
+
         }
 
         {
@@ -2656,10 +2977,13 @@ namespace
             t.deathVoice = Sound::MobPhantomDeath;
             t.name = "Phantom";
             t.texture = "phantom";
+            t.sheetWidth = 64;
+            t.sheetHeight = 64;
+            t.width = 0.4500f;
+            t.height = 0.2500f;
+            t.modelScale = 2.0000f;
             t.spawnClass = SpawnClass::Hostile;
             t.maxHealth = 20;
-            t.width = 0.9f;
-            t.height = 0.5f;
             t.walkSpeed = 3.8f;
             t.limbSwing = 0.0f;
             t.attackDamage = 4;
@@ -2678,11 +3002,15 @@ namespace
             t.pattern = MobType::Pattern::Speckled;
             t.markColour = rgb(140, 220, 90);
 
-            t.model.push_back(mc(Part::Body, 0, 8, 5, 3, 9, -2, 19, -4, 0, 0, 0));
-            t.model.push_back(mc(Part::Head, 0, 0, 5, 3, 3, -2, 19, -7, 0, 0, 0));
-            t.model.push_back(mc(Part::WingRight, 24, 0, 6, 2, 9, -8, 20, -4, 0, 0, 0));
-            t.model.push_back(mirrored(mc(Part::WingLeft, 24, 0, 6, 2, 9, 2, 20, -4, 0, 0, 0)));
-            t.model.push_back(mc(Part::LegBackRight, 0, 22, 2, 2, 6, -1, 20, 5, 0, 0, 0));
+            t.model.push_back(mc(Part::Body, 0, 8, 5, 3, 9, -3, -2, -8, 0, 22, 0));
+            t.model.push_back(mc(Part::WingLeft, 23, 12, 6, 2, 9, 0, 0, 0, 2, 20, -8));
+            t.model.push_back(mc(Part::WingLeft, 16, 24, 13, 1, 9, 0, 0, 0, 8, 20, -8));
+            t.model.push_back(mc(Part::WingRight, 23, 12, 6, 2, 9, -6, 0, 0, -3, 20, -8));
+            t.model.push_back(mc(Part::WingRight, 16, 24, 13, 1, 9, -13, -2, 0, -9, 22, -8));
+            t.model.push_back(mc(Part::Head, 0, 0, 7, 3, 5, -4, -2, -5, 0, 23, -7));
+            t.model.push_back(mc(Part::Body, 3, 20, 3, 2, 6, -2, 0, 0, 0, 20, 1));
+            t.model.push_back(mc(Part::Body, 4, 29, 1, 1, 6, -1, 0, 0, 0, 20, 7));
+
         }
 
         {
@@ -2696,11 +3024,13 @@ namespace
             t.deathVoice = Sound::MobZombieVillagerDeath;
             t.name = "Zombie Villager";
             t.texture = "zombie_villager";
+            t.sheetWidth = 64;
             t.sheetHeight = 64;
+            t.width = 0.6587f;
+            t.height = 2.1406f;
+            t.modelScale = 0.9109f;
             t.spawnClass = SpawnClass::Hostile;
             t.maxHealth = 20;
-            t.width = 0.6f;
-            t.height = 1.95f;
             t.walkSpeed = 1.8f;
             t.burnsInSunlight = true;
             t.attackDamage = 3;
@@ -2713,13 +3043,16 @@ namespace
 
             // The villager's long head and nose on a zombie's body,
             // which is exactly what one is.
-            t.model.push_back(mc(Part::Head, 0, 0, 8, 10, 8, -4, -10, -4, 0, 0, 0));
-            t.model.push_back(mc(Part::Head, 24, 0, 2, 4, 2, -1, -5, -6, 0, 0, 0));
+
+            t.model.push_back(inflated(mc(Part::Head, 0, 0, 8, 10, 8, -4, -10, -4, 0, 0, 0), 0.250f));
+            t.model.push_back(inflated(mc(Part::Head, 24, 0, 2, 4, 2, -1, -3, -6, 0, 0, 0), 0.250f));
             t.model.push_back(mc(Part::Body, 16, 20, 8, 12, 6, -4, 0, -3, 0, 0, 0));
-            t.model.push_back(mc(Part::LegFrontRight, 44, 22, 4, 8, 4, -3, -2, -2, -5, 2, 0));
-            t.model.push_back(mirrored(mc(Part::LegFrontLeft, 44, 22, 4, 8, 4, -1, -2, -2, 5, 2, 0)));
+            t.model.push_back(inflated(mc(Part::Body, 0, 38, 8, 18, 6, -4, 0, -3, 0, 0, 0), 0.500f));
+            t.model.push_back(mc(Part::LegFrontRight, 44, 22, 4, 12, 4, -3, -2, -2, -5, 2, 0));
+            t.model.push_back(mc(Part::LegFrontLeft, 44, 22, 4, 12, 4, -1, -2, -2, 5, 2, 0));
             t.model.push_back(mc(Part::LegBackRight, 0, 22, 4, 12, 4, -2, 0, -2, -2, 12, 0));
-            t.model.push_back(mirrored(mc(Part::LegBackLeft, 0, 22, 4, 12, 4, -2, 0, -2, 2, 12, 0)));
+            t.model.push_back(mc(Part::LegBackLeft, 0, 22, 4, 12, 4, -2, 0, -2, 2, 12, 0));
+
         }
 
         {
@@ -2733,10 +3066,13 @@ namespace
             t.deathVoice = Sound::MobEndermiteDeath;
             t.name = "Endermite";
             t.texture = "endermite";
+            t.sheetWidth = 64;
+            t.sheetHeight = 32;
+            t.width = 0.3333f;
+            t.height = 0.2500f;
+            t.modelScale = 1.2000f;
             t.spawnClass = SpawnClass::Hostile;
             t.maxHealth = 8;
-            t.width = 0.4f;
-            t.height = 0.3f;
             t.walkSpeed = 2.4f;
             t.limbSwing = 0.2f;
             t.voicePitch = 1.5f;
@@ -2749,9 +3085,11 @@ namespace
             t.pattern = MobType::Pattern::Speckled;
             t.markColour = rgb(140, 70, 170);
 
-            t.model.push_back(mc(Part::Body, 0, 0, 4, 4, 3, -2, 20, -2, 0, 0, 0));
-            t.model.push_back(mc(Part::Head, 0, 10, 3, 3, 3, -1, 20, -5, 0, 0, 0));
-            t.model.push_back(mc(Part::Body, 0, 18, 3, 3, 3, -1, 21, 1, 0, 0, 0));
+            t.model.push_back(mc(Part::Body, 0, 0, 4, 3, 2, -2, -3, -4, 0, 24, 0));
+            t.model.push_back(mc(Part::Body, 0, 5, 6, 4, 5, -3, -4, -2, 0, 24, 0));
+            t.model.push_back(mc(Part::Body, 0, 14, 3, 3, 1, -2, -3, 0, 0, 24, 2));
+            t.model.push_back(mc(Part::Body, 0, 18, 1, 2, 1, 0, -2, 4, 0, 24, 0));
+
         }
 
         {
@@ -2766,11 +3104,13 @@ namespace
             t.deathVoice = Sound::MobVexDeath;
             t.name = "Vex";
             t.texture = "vex";
-            t.sheetHeight = 64;
+            t.sheetWidth = 32;
+            t.sheetHeight = 32;
+            t.width = 0.3437f;
+            t.height = 0.6875f;
+            t.modelScale = 1.1636f;
             t.spawnClass = SpawnClass::Hostile;
             t.maxHealth = 14;
-            t.width = 0.4f;
-            t.height = 0.8f;
             t.walkSpeed = 4.0f;
             t.limbSwing = 0.3f;
             t.voicePitch = 1.4f;
@@ -2785,12 +3125,15 @@ namespace
             t.markColour = rgb(226, 236, 244);
 
             // A small person with wings, at half a villager's scale.
-            t.model.push_back(mc(Part::Head, 0, 0, 6, 6, 6, -3, 10, -3, 0, 0, 0));
-            t.model.push_back(mc(Part::Body, 16, 14, 5, 7, 3, -2, 16, -1, 0, 0, 0));
-            t.model.push_back(mc(Part::WingRight, 0, 32, 1, 8, 6, -4, 13, 0, 0, 0, 0));
-            t.model.push_back(mirrored(mc(Part::WingLeft, 0, 32, 1, 8, 6, 3, 13, 0, 0, 0, 0)));
-            t.model.push_back(mc(Part::LegFrontRight, 32, 14, 2, 5, 2, -1, 0, -1, -3, 17, 0));
-            t.model.push_back(mirrored(mc(Part::LegFrontLeft, 32, 14, 2, 5, 2, -1, 0, -1, 3, 17, 0)));
+
+            t.model.push_back(mc(Part::Body, 0, 10, 3, 4, 2, -2, -4, -1, 0, 22, 0));
+            t.model.push_back(inflated(mc(Part::Body, 0, 16, 3, 5, 2, -2, -3, -1, 0, 22, 0), -0.200f));
+            t.model.push_back(mc(Part::Head, 0, 0, 5, 5, 5, -2, -5, -2, 0, 18, 0));
+            t.model.push_back(inflated(mc(Part::LegFrontRight, 23, 0, 2, 4, 2, -1, 0, -1, -2, 18, 0), -0.100f));
+            t.model.push_back(inflated(mc(Part::LegFrontLeft, 23, 6, 2, 4, 2, -1, 0, -1, 2, 18, 0), -0.100f));
+            t.model.push_back(mc(Part::WingLeft, 16, 22, 8, 5, 1, 0, 0, 0, 0, 19, 1));
+            t.model.push_back(mc(Part::WingRight, 16, 22, 8, 5, 1, -8, 0, 0, 0, 19, 1));
+
         }
 
         {
@@ -2805,8 +3148,11 @@ namespace
             t.deathVoice = Sound::MobSnowGolemDeath;
             t.name = "Snow Golem";
             t.texture = "snow_golem";
-            t.sheetWidth = 128;
+            t.sheetWidth = 64;
             t.sheetHeight = 64;
+            t.width = 0.6332f;
+            t.height = 1.7188f;
+            t.modelScale = 1.1055f;
             t.spawnClass = SpawnClass::Passive;
             // Neutral like the iron golem: it is on your side and it
             // throws snow at what comes for you, and if you break it
@@ -2815,8 +3161,6 @@ namespace
             // against a passive mob that can somehow fight.
             t.neutral = true;
             t.maxHealth = 4;
-            t.width = 0.7f;
-            t.height = 1.9f;
             t.walkSpeed = 2.0f;
             t.limbSwing = 0.0f;
 
@@ -2836,11 +3180,13 @@ namespace
 
             // Two snowballs and a pumpkin, which is what it is made
             // of and what it looks like.
-            t.model.push_back(mc(Part::Body, 0, 0, 12, 10, 12, -6, 14, -6, 0, 0, 0));
-            t.model.push_back(mc(Part::Body, 0, 24, 10, 9, 10, -5, 5, -5, 0, 0, 0));
-            t.model.push_back(mc(Part::Head, 48, 24, 10, 10, 10, -5, -5, -5, 0, 0, 0));
-            t.model.push_back(mc(Part::LegFrontRight, 90, 0, 2, 8, 2, -1, 0, -1, -6, 6, 0));
-            t.model.push_back(mirrored(mc(Part::LegFrontLeft, 90, 0, 2, 8, 2, -1, 0, -1, 6, 6, 0)));
+
+            t.model.push_back(inflated(mc(Part::Head, 0, 0, 8, 8, 8, -4, -8, -4, 0, 4, 0), -0.500f));
+            t.model.push_back(inflated(mc(Part::LegFrontRight, 32, 0, 12, 2, 2, 1, -4, -1, 0, 6, 0), -0.500f));
+            t.model.push_back(inflated(mc(Part::LegFrontRight, 32, 0, 12, 2, 2, 1, -4, -1, 0, 6, 0), -0.500f));
+            t.model.push_back(inflated(mc(Part::Body, 0, 16, 10, 10, 10, -5, -10, -5, 0, 13, 0), -0.500f));
+            t.model.push_back(inflated(mc(Part::Body, 0, 36, 12, 12, 12, -6, -12, -6, 0, 24, 0), -0.500f));
+
         }
 
         {
@@ -2855,14 +3201,15 @@ namespace
             t.deathVoice = Sound::MobElderGuardianDeath;
             t.name = "Elder Guardian";
             t.texture = "elder_guardian";
+            t.sheetWidth = 64;
             t.sheetHeight = 64;
+            t.width = 1.7500f;
+            t.height = 1.7500f;
+            t.modelScale = 1.1414f;
             t.spawnClass = SpawnClass::Hostile;
             t.maxHealth = 80;
             // A guardian at twice the size, which is both the drawing
             // and the box: the numbers here are the model's own.
-            t.modelScale = 2.0f;
-            t.width = 0.95f;
-            t.height = 0.95f;
             t.walkSpeed = 1.8f;
             t.limbSwing = 0.3f;
             t.voicePitch = 0.6f;
@@ -2885,11 +3232,29 @@ namespace
             t.pattern = MobType::Pattern::Speckled;
             t.markColour = rgb(120, 118, 96);
 
-            t.model.push_back(mc(Part::Body, 0, 0, 14, 14, 14, -7, -7, -7, 0, 15, 0));
-            t.model.push_back(mc(Part::Head, 0, 28, 5, 5, 1, -2, -2, 0, 0, 15, -7));
-            t.model.push_back(mc(Part::LegBackLeft, 44, 0, 2, 2, 7, -1, -1, 0, 0, 15, 7));
-            t.model.push_back(mc(Part::WingLeft, 0, 18, 2, 9, 2, -1, 0, -1, -8, 15, 0));
-            t.model.push_back(mc(Part::WingRight, 0, 18, 2, 9, 2, -1, 0, -1, 8, 15, 0));
+            t.model.push_back(mc(Part::Head, 0, 0, 12, 12, 16, -6, -14, -8, 0, 24, 0));
+            t.model.push_back(mc(Part::Head, 0, 28, 2, 12, 12, -8, -14, -6, 0, 24, 0));
+            t.model.push_back(mc(Part::Head, 0, 28, 2, 12, 12, 6, -14, -6, 0, 24, 0));
+            t.model.push_back(mc(Part::Head, 16, 40, 12, 2, 12, -6, -16, -6, 0, 24, 0));
+            t.model.push_back(mc(Part::Head, 16, 40, 12, 2, 12, -6, -2, -6, 0, 24, 0));
+            t.model.push_back(mc(Part::Head, 8, 0, 2, 2, 1, -1, 16, 0, 0, 0, 0));
+            t.model.push_back(mc(Part::Head, 40, 0, 4, 4, 8, -2, 14, 7, 0, 0, 0));
+            t.model.push_back(mc(Part::Head, 0, 54, 3, 3, 7, 0, 14, 0, 0, 0, 0));
+            t.model.push_back(mc(Part::Head, 41, 32, 2, 2, 6, 0, 14, 0, 0, 0, 0));
+            t.model.push_back(mc(Part::Head, 25, 19, 1, 9, 9, 1, 10, 3, 0, 0, 0));
+            t.model.push_back(mc(Part::Head, 0, 0, 2, 9, 2, -1, -4, -1, 0, 0, 0));
+            t.model.push_back(mc(Part::Head, 0, 0, 2, 9, 2, -1, -4, -1, 0, 0, 0));
+            t.model.push_back(mc(Part::Head, 0, 0, 2, 9, 2, -1, -4, -1, 0, 0, 0));
+            t.model.push_back(mc(Part::Head, 0, 0, 2, 9, 2, -1, -4, -1, 0, 0, 0));
+            t.model.push_back(mc(Part::Head, 0, 0, 2, 9, 2, -1, -4, -1, 0, 0, 0));
+            t.model.push_back(mc(Part::Head, 0, 0, 2, 9, 2, -1, -4, -1, 0, 0, 0));
+            t.model.push_back(mc(Part::Head, 0, 0, 2, 9, 2, -1, -4, -1, 0, 0, 0));
+            t.model.push_back(mc(Part::Head, 0, 0, 2, 9, 2, -1, -4, -1, 0, 0, 0));
+            t.model.push_back(mc(Part::Head, 0, 0, 2, 9, 2, -1, -4, -1, 0, 0, 0));
+            t.model.push_back(mc(Part::Head, 0, 0, 2, 9, 2, -1, -4, -1, 0, 0, 0));
+            t.model.push_back(mc(Part::Head, 0, 0, 2, 9, 2, -1, -4, -1, 0, 0, 0));
+            t.model.push_back(mc(Part::Head, 0, 0, 2, 9, 2, -1, -4, -1, 0, 0, 0));
+
         }
 
         {
@@ -2903,11 +3268,13 @@ namespace
             t.deathVoice = Sound::MobTraderDeath;
             t.name = "Wandering Trader";
             t.texture = "wandering_trader";
+            t.sheetWidth = 64;
             t.sheetHeight = 64;
+            t.width = 0.6538f;
+            t.height = 2.1250f;
+            t.modelScale = 0.9176f;
             t.spawnClass = SpawnClass::Passive;
             t.maxHealth = 20;
-            t.width = 0.6f;
-            t.height = 1.95f;
             t.walkSpeed = 1.6f;
             t.voicePitch = 1.1f;
 
@@ -2916,13 +3283,15 @@ namespace
             t.eyeColour = rgb(40, 50, 70);
 
             t.model.push_back(mc(Part::Head, 0, 0, 8, 10, 8, -4, -10, -4, 0, 0, 0));
-            t.model.push_back(mc(Part::Head, 24, 0, 2, 4, 2, -1, -5, -6, 0, 0, 0));
-            t.model.push_back(mc(Part::Body, 16, 20, 8, 12, 6, -4, 0, -3, 0, 0, 0));
-            t.model.push_back(mc(Part::Body, 0, 38, 8, 6, 6, -4, 12, -3, 0, 0, 0));
-            t.model.push_back(mc(Part::LegFrontRight, 44, 22, 4, 8, 4, -3, -2, -2, -5, 2, 0));
-            t.model.push_back(mirrored(mc(Part::LegFrontLeft, 44, 22, 4, 8, 4, -1, -2, -2, 5, 2, 0)));
+            t.model.push_back(mc(Part::Head, 24, 0, 2, 4, 2, -1, -1, -6, 0, -2, 0));
+            t.model.push_back(mc(Part::Body, 16, 20, 8, 12, 6, -4, -24, -3, 0, 24, 0));
+            t.model.push_back(inflated(mc(Part::Body, 0, 38, 8, 18, 6, -4, -24, -3, 0, 24, 0), 0.500f));
+            t.model.push_back(mc(Part::LegFrontRight, 40, 38, 8, 4, 4, -4, 2, -2, 0, 2, 0));
+            t.model.push_back(mc(Part::LegFrontRight, 44, 22, 4, 8, 4, -8, -2, -2, 0, 2, 0));
+            t.model.push_back(mc(Part::LegFrontRight, 44, 22, 4, 8, 4, 4, -2, -2, 0, 2, 0));
             t.model.push_back(mc(Part::LegBackRight, 0, 22, 4, 12, 4, -2, 0, -2, -2, 12, 0));
-            t.model.push_back(mirrored(mc(Part::LegBackLeft, 0, 22, 4, 12, 4, -2, 0, -2, 2, 12, 0)));
+            t.model.push_back(mc(Part::LegBackLeft, 0, 22, 4, 12, 4, -2, 0, -2, 2, 12, 0));
+
         }
 
         {
@@ -2938,10 +3307,11 @@ namespace
             t.texture = "camel";
             t.sheetWidth = 128;
             t.sheetHeight = 128;
+            t.width = 1.9729f;
+            t.height = 2.7563f;
+            t.modelScale = 0.8617f;
             t.spawnClass = SpawnClass::Passive;
             t.maxHealth = 32;
-            t.width = 1.7f;
-            t.height = 2.375f;
             t.walkSpeed = 2.4f;
             t.limbSwing = 0.5f;
             t.voicePitch = 0.9f;
@@ -2956,15 +3326,32 @@ namespace
             t.pattern = MobType::Pattern::Belly;
             t.markColour = rgb(244, 220, 176);
 
-            t.model.push_back(mc(Part::Body, 0, 0, 12, 18, 23, -6, -6, -11, 0, 0, 0));
             // The hump, which is the whole of what reads as a camel.
-            t.model.push_back(mc(Part::Body, 76, 0, 9, 6, 11, -4, -12, -5, 0, 0, 0));
-            t.model.push_back(mc(Part::Head, 76, 20, 7, 12, 9, -3, -18, -20, 0, 0, 0));
-            t.model.push_back(mc(Part::Head, 76, 44, 5, 5, 8, -2, -10, -26, 0, 0, 0));
-            t.model.push_back(mc(Part::LegFrontRight, 0, 44, 4, 21, 4, -2, 0, -2, -4, 3, -8));
-            t.model.push_back(mirrored(mc(Part::LegFrontLeft, 0, 44, 4, 21, 4, -2, 0, -2, 4, 3, -8)));
-            t.model.push_back(mc(Part::LegBackRight, 0, 44, 4, 21, 4, -2, 0, -2, -4, 3, 8));
-            t.model.push_back(mirrored(mc(Part::LegBackLeft, 0, 44, 4, 21, 4, -2, 0, -2, 4, 3, 8)));
+
+            t.model.push_back(mc(Part::Body, 0, 25, 15, 12, 27, -8, -12, -24, 0, 4, 10));
+            t.model.push_back(inflated(mc(Part::Body, 74, 64, 9, 5, 11, -5, -17, -16, 0, 4, 10), 0.100f));
+            t.model.push_back(inflated(mc(Part::Body, 92, 114, 7, 3, 11, -4, -20, -16, 0, 4, 10), 0.100f));
+            t.model.push_back(inflated(mc(Part::Body, 0, 89, 15, 12, 27, -8, -12, -24, 0, 4, 10), 0.100f));
+            t.model.push_back(mc(Part::Body, 122, 0, 3, 14, 1, -2, 0, 0, 0, -5, 13));
+            t.model.push_back(mc(Part::Head, 60, 24, 7, 8, 19, -4, -5, -15, 0, -1, -10));
+            t.model.push_back(mc(Part::Head, 21, 0, 7, 14, 7, -4, -19, -15, 0, -1, -10));
+            t.model.push_back(mc(Part::Head, 50, 0, 5, 5, 6, -3, -19, -21, 0, -1, -10));
+            t.model.push_back(inflated(mc(Part::Head, 60, 87, 7, 8, 19, -4, -5, -15, 0, -1, -10), 0.100f));
+            t.model.push_back(inflated(mc(Part::Head, 21, 64, 7, 14, 7, -4, -19, -15, 0, -1, -10), 0.100f));
+            t.model.push_back(inflated(mc(Part::Head, 50, 64, 5, 5, 6, -3, -19, -21, 0, -1, -10), 0.100f));
+            t.model.push_back(mc(Part::Head, 74, 70, 1, 2, 2, 2, -17, -18, 0, -1, -10));
+            t.model.push_back(mc(Part::Head, 74, 70, 1, 2, 2, -4, -17, -18, 0, -1, -10));
+            t.model.push_back(mc(Part::Head, 45, 0, 3, 1, 2, 0, 0, -1, 3, -19, -20));
+            t.model.push_back(mc(Part::Head, 67, 0, 3, 1, 2, -3, 0, -1, -3, -19, -20));
+            t.model.push_back(mc(Part::Head, 98, 42, 1, 7, 15, 0, 0, 0, 4, -17, -27));
+            t.model.push_back(mc(Part::Head, 84, 57, 7, 7, 1, -7, 0, 15, 4, -17, -27));
+            t.model.push_back(mc(Part::Head, 98, 42, 1, 7, 15, -7, 0, 0, 4, -17, -27));
+            t.model.push_back(mc(Part::Body, 74, 0, 9, 5, 11, -5, -5, -6, 0, -8, 0));
+            t.model.push_back(mc(Part::LegFrontRight, 0, 26, 5, 21, 5, -2, 2, -2, -5, 1, -10));
+            t.model.push_back(mc(Part::LegFrontLeft, 0, 0, 5, 21, 5, -3, 2, -2, 5, 1, -10));
+            t.model.push_back(mc(Part::LegBackLeft, 58, 16, 5, 21, 5, -3, 2, -2, 5, 1, 10));
+            t.model.push_back(mc(Part::LegBackRight, 94, 16, 5, 21, 5, -2, 2, -2, -5, 1, 10));
+
         }
 
         {
@@ -2978,10 +3365,13 @@ namespace
             t.deathVoice = Sound::MobParrotDeath;
             t.name = "Parrot";
             t.texture = "parrot";
+            t.sheetWidth = 32;
+            t.sheetHeight = 32;
+            t.width = 0.5208f;
+            t.height = 0.9375f;
+            t.modelScale = 0.9600f;
             t.spawnClass = SpawnClass::Passive;
             t.maxHealth = 6;
-            t.width = 0.5f;
-            t.height = 0.9f;
             t.walkSpeed = 2.6f;
             t.limbSwing = 0.3f;
             t.voicePitch = 1.6f;
@@ -2997,14 +3387,18 @@ namespace
             t.pattern = MobType::Pattern::Patches;
             t.markColour = rgb(242, 196, 56);
 
-            t.model.push_back(mc(Part::Body, 0, 0, 4, 7, 3, -2, 13, -2, 0, 0, 0));
-            t.model.push_back(mc(Part::Head, 0, 12, 4, 4, 4, -2, 9, -2, 0, 0, 0));
-            t.model.push_back(mc(Part::Head, 20, 12, 2, 2, 2, -1, 11, -4, 0, 0, 0));
-            t.model.push_back(mc(Part::WingRight, 0, 22, 1, 5, 4, -3, 13, -2, 0, 0, 0));
-            t.model.push_back(mirrored(mc(Part::WingLeft, 0, 22, 1, 5, 4, 2, 13, -2, 0, 0, 0)));
-            t.model.push_back(mc(Part::LegBackRight, 14, 22, 1, 2, 1, -1, 22, 0, 0, 0, 0));
-            t.model.push_back(mirrored(mc(Part::LegBackLeft, 14, 22, 1, 2, 1, 0, 22, 0, 0, 0, 0)));
-            t.model.push_back(mc(Part::LegFrontRight, 20, 22, 2, 6, 1, -1, 18, 2, 0, 0, 0));
+            t.model.push_back(mc(Part::Head, 2, 2, 2, 3, 2, -1, -1, -1, 0, 15, -3));
+            t.model.push_back(mc(Part::Head, 10, 0, 2, 1, 4, -1, 15, -5, 0, -3, -1));
+            t.model.push_back(mc(Part::Head, 11, 7, 1, 2, 1, 0, 15, -3, 0, -1, -2));
+            t.model.push_back(mc(Part::Head, 16, 7, 1, 2, 1, 0, 16, -3, 0, -3, -2));
+            t.model.push_back(mc(Part::Body, 2, 8, 3, 6, 3, -2, 0, -2, 0, 15, -3));
+            t.model.push_back(mc(Part::Body, 22, 1, 3, 4, 1, -2, -1, -1, 0, 20, 1));
+            t.model.push_back(mc(Part::WingLeft, 19, 8, 1, 5, 3, 0, 0, -2, 2, 16, -3));
+            t.model.push_back(mc(Part::WingRight, 19, 8, 1, 5, 3, 0, 0, -2, -2, 16, -3));
+            t.model.push_back(mc(Part::Head, 2, 18, 1, 5, 4, 0, -4, -5, 0, 13, 0));
+            t.model.push_back(mc(Part::LegFrontLeft, 14, 18, 1, 2, 1, -1, 0, -1, 2, 22, 0));
+            t.model.push_back(mc(Part::LegFrontRight, 14, 18, 1, 2, 1, -1, 0, -1, 0, 22, 0));
+
         }
 
         {
@@ -3019,11 +3413,13 @@ namespace
             t.deathVoice = Sound::MobAllayDeath;
             t.name = "Allay";
             t.texture = "allay";
-            t.sheetHeight = 64;
+            t.sheetWidth = 32;
+            t.sheetHeight = 32;
+            t.width = 0.4010f;
+            t.height = 0.6875f;
+            t.modelScale = 0.8727f;
             t.spawnClass = SpawnClass::Passive;
             t.maxHealth = 20;
-            t.width = 0.35f;
-            t.height = 0.6f;
             t.walkSpeed = 3.0f;
             t.limbSwing = 0.2f;
             t.voicePitch = 1.5f;
@@ -3038,12 +3434,14 @@ namespace
             t.pattern = MobType::Pattern::Belly;
             t.markColour = rgb(206, 240, 252);
 
-            t.model.push_back(mc(Part::Head, 0, 0, 5, 5, 5, -2, 11, -2, 0, 0, 0));
-            t.model.push_back(mc(Part::Body, 0, 12, 3, 4, 2, -1, 16, -1, 0, 0, 0));
-            t.model.push_back(mc(Part::WingRight, 0, 20, 1, 6, 5, -3, 13, -1, 0, 0, 0));
-            t.model.push_back(mirrored(mc(Part::WingLeft, 0, 20, 1, 6, 5, 2, 13, -1, 0, 0, 0)));
-            t.model.push_back(mc(Part::LegFrontRight, 16, 20, 1, 4, 1, -1, 20, 0, 0, 0, 0));
-            t.model.push_back(mirrored(mc(Part::LegFrontLeft, 16, 20, 1, 4, 1, 0, 20, 0, 0, 0, 0)));
+            t.model.push_back(mc(Part::Head, 0, 0, 5, 5, 5, -2, -5, -3, 0, 18, 1));
+            t.model.push_back(mc(Part::Body, 0, 10, 3, 4, 2, -2, 0, -1, 0, 18, 0));
+            t.model.push_back(inflated(mc(Part::Body, 0, 16, 3, 5, 2, -2, 0, -1, 0, 18, 0), -0.200f));
+            t.model.push_back(mc(Part::LegFrontRight, 23, 0, 1, 4, 2, -1, 0, -1, -2, 19, 0));
+            t.model.push_back(mc(Part::LegFrontLeft, 23, 6, 1, 4, 2, 0, 0, -1, 2, 19, 0));
+            t.model.push_back(mc(Part::WingLeft, 16, 14, 1, 5, 8, 0, 0, 0, 0, 19, 1));
+            t.model.push_back(mc(Part::WingRight, 16, 14, 1, 5, 8, 0, 0, 0, 0, 19, 1));
+
         }
 
         return table;

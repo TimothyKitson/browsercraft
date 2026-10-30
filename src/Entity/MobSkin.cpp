@@ -175,8 +175,22 @@ bool MobSkin::fits(const std::vector<MobBox>& boxes, int sheetWidth, int sheetHe
 {
     for (const MobBox& box : boxes)
     {
-        const int w = 2 * (box.size.x + box.size.z);
-        const int h = box.size.y + box.size.z;
+        // A box one pixel thick is a plane in Mojang's models -- a
+        // bat's wing, a strider's bristles, the frog's markings --
+        // and they lay a plane out as a single patch rather than as
+        // six faces round a box. This engine has no plane to draw, so
+        // it draws a sliver of a box; the patch it needs is still the
+        // plane's.
+        const bool flat = box.size.x <= 1 || box.size.y <= 1 || box.size.z <= 1;
+
+        int w = 2 * (box.size.x + box.size.z);
+        int h = box.size.y + box.size.z;
+        if (flat)
+        {
+            w = std::max(box.size.x, box.size.z);
+            h = std::max(box.size.y, box.size.z);
+        }
+
         if (box.u < 0 || box.v < 0) return false;
         if (box.u + w > sheetWidth || box.v + h > sheetHeight) return false;
     }
@@ -251,15 +265,18 @@ bool MobSkin::loadFile(const std::string& path, std::vector<uint8_t>& pixels, in
     if (!data) return false;
 
     // Anything that is not a mob sheet would map the boxes onto nonsense,
-    // so it is turned away rather than drawn.
-    // A boat is laid out on a sheet twice as wide as an animal's; a
-    // breeze and a bat are on the smallest sheet in the game.
+    // so it is turned away rather than drawn. These are all of Mojang's
+    // own shapes: a breeze and a bat are on the smallest sheet in the
+    // game, a fox on 48x32 and a frog on 48x48, a boat and a witch on
+    // one twice an animal's, and the dragon on 256 square.
     const bool smallSheet = (w == 32 && h == 32);
-    const bool animalSheet = (w == 64 && (h == 32 || h == 64));
+    const bool oddSheet = (w == 48 && (h == 32 || h == 48));
+    const bool animalSheet = (w == 64 && (h == 32 || h == 64 || h == 128));
     const bool wideSheet = (w == 128 && (h == 64 || h == 128));
-    if (!smallSheet && !animalSheet && !wideSheet)
+    const bool dragonSheet = (w == 256 && h == 256);
+    if (!smallSheet && !oddSheet && !animalSheet && !wideSheet && !dragonSheet)
     {
-        std::printf("Mob texture %s ignored: expected 32x32, 64x32, 64x64 or 128x64, "
+        std::printf("Mob texture %s ignored: not one of Mojang's sheet shapes, "
                     "got %dx%d\n",
                     path.c_str(), w, h);
         stbi_image_free(data);
