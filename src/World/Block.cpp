@@ -261,6 +261,9 @@ namespace
         { "Note Block",   NoteBlockTile, NoteBlockTile,  NoteBlockTile,  true,  true,  RenderType::Cube,   0,   0.8f },
         { "Observer",     ObserverTop,   ObserverTop,    ObserverSide,   true,  true,  RenderType::Cube,   0,   3.0f },
         { "Observer",     ObserverTopLit,ObserverTopLit, ObserverSide,   true,  true,  RenderType::Cube,   0,   3.0f },
+        { "Hopper",       HopperTop,     HopperSide,     HopperSide,     true,  false, RenderType::Cube,   0,   3.0f },
+        { "Dropper",      DropperFront,  Cobblestone,   Cobblestone,    true,  true,  RenderType::Cube,   0,   3.5f },
+        { "Dispenser",    DispenserFront,Cobblestone,   Cobblestone,    true,  true,  RenderType::Cube,   0,   3.5f },
     };
 }
 

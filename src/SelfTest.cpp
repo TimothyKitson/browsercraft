@@ -7,6 +7,7 @@
 #include "Player/Inventory.h"
 #include "Game/Crafting.h"
 #include "Game/Beacon.h"
+#include "Game/Hopper.h"
 #include "Game/Redstone.h"
 #include "Game/Piston.h"
 #include "Game/Copper.h"
@@ -5612,6 +5613,134 @@ namespace
         }
     }
 
+    void testHopper()
+    {
+        section("hoppers, droppers and dispensers");
+
+        // A bench: blocks in one map, their contents in another, wired
+        // to the hopper rule. No world, no chunks.
+        struct Bench : Hopper::Holder
+        {
+            std::map<std::array<int,3>, BlockId> blocks;
+            std::map<std::array<int,3>, std::array<ItemStack, 27>> held;
+
+            BlockId at(int x, int y, int z) const override
+            {
+                const auto it = blocks.find({ x, y, z });
+                return it == blocks.end() ? Blocks::Air : it->second;
+            }
+
+            ItemStack* slotsAt(int x, int y, int z, int& count) override
+            {
+                count = Hopper::slotsOf(at(x, y, z));
+                if (count <= 0) return nullptr;
+                return held[{ x, y, z }].data();
+            }
+
+            int countOf(int x, int y, int z, StackId id)
+            {
+                int total = 0;
+                for (const ItemStack& slot : held[{ x, y, z }])
+                    if (slot.id == id) total += slot.count;
+                return total;
+            }
+        };
+
+        // How many slots each kind keeps. A hopper having fewer than a
+        // chest is not a detail: a five-slot hopper fills and stops,
+        // which is how a sorter is built.
+        check(Hopper::slotsOf(Blocks::Hopper) == Hopper::HOPPER_SLOTS,
+              "a hopper keeps five slots");
+        check(Hopper::slotsOf(Blocks::Chest) > Hopper::slotsOf(Blocks::Hopper),
+              "and a chest keeps more than a hopper");
+        check(Hopper::slotsOf(Blocks::Stone) == 0, "while stone keeps nothing");
+
+        // A chest, a hopper under it, a chest under that. One item
+        // should walk all the way down.
+        {
+            Bench bench;
+            bench.blocks[{ 0, 2, 0 }] = Blocks::Chest;
+            bench.blocks[{ 0, 1, 0 }] = Blocks::Hopper;
+            bench.blocks[{ 0, 0, 0 }] = Blocks::Chest;
+
+            bench.held[{ 0, 2, 0 }][0].id = Blocks::Cobblestone;
+            bench.held[{ 0, 2, 0 }][0].count = 3;
+
+            // Pulled down one at a time, not all at once.
+            check(Hopper::step(bench, 0, 1, 0), "a hopper under a full chest moves something");
+            check(bench.countOf(0, 2, 0, Blocks::Cobblestone) == 2,
+                  "and takes exactly one");
+
+            // Enough steps for all three to reach the bottom.
+            for (int i = 0; i < 8; ++i) Hopper::step(bench, 0, 1, 0);
+
+            check(bench.countOf(0, 2, 0, Blocks::Cobblestone) == 0, "the top chest empties");
+            check(bench.countOf(0, 0, 0, Blocks::Cobblestone) == 3,
+                  "and everything in it arrives at the bottom");
+        }
+
+        // Nothing is lost when the thing below is full. This is the
+        // one that matters: taken before the push was checked, an item
+        // would vanish every time a chest filled up.
+        {
+            Bench bench;
+            bench.blocks[{ 0, 2, 0 }] = Blocks::Chest;
+            bench.blocks[{ 0, 1, 0 }] = Blocks::Hopper;
+            bench.blocks[{ 0, 0, 0 }] = Blocks::Hopper;
+
+            bench.held[{ 0, 1, 0 }][0].id = Blocks::Dirt;
+            bench.held[{ 0, 1, 0 }][0].count = 1;
+
+            // Fill the one below so there is nowhere to push.
+            for (int i = 0; i < Hopper::HOPPER_SLOTS; ++i)
+            {
+                bench.held[{ 0, 0, 0 }][i].id = Blocks::Stone;
+                bench.held[{ 0, 0, 0 }][i].count = maxStackOf(Blocks::Stone);
+            }
+
+            Hopper::step(bench, 0, 1, 0);
+            check(bench.countOf(0, 1, 0, Blocks::Dirt) == 1,
+                  "a hopper over a full one keeps what it is holding");
+        }
+
+        // Stacking: a chest fed by a hopper must not fill with
+        // twenty-seven piles of one.
+        {
+            std::array<ItemStack, 27> into{};
+            for (int i = 0; i < 20; ++i)
+                check(Hopper::give(into.data(), 27, Blocks::Cobblestone),
+                      "a hopper keeps finding room");
+
+            int used = 0;
+            for (const ItemStack& slot : into) if (!slot.empty()) ++used;
+            check(used == 1, "and twenty of a thing land in one slot, not twenty");
+        }
+
+        // Taking from an empty holder gives nothing rather than
+        // inventing something.
+        {
+            std::array<ItemStack, 9> empty{};
+            check(Hopper::take(empty.data(), 9) == Blocks::Air,
+                  "nothing comes out of an empty dropper");
+        }
+
+        // And a dropper hands back what was put in it.
+        {
+            std::array<ItemStack, 9> loaded{};
+            loaded[3].id = Items::Arrow;
+            loaded[3].count = 2;
+
+            check(Hopper::take(loaded.data(), 9) == Items::Arrow,
+                  "a dropper throws what it is holding");
+            check(loaded[3].count == 1, "one at a time");
+        }
+
+        // The pace is Minecraft's, and it is a pace rather than a
+        // free-for-all.
+        check(Hopper::INTERVAL > 0.0f && Hopper::INTERVAL < 1.0f,
+              "a hopper moves at a steady rate rather than instantly");
+    }
+
     void testFortressAndMineshaft()
     {
         section("the fortress and the mineshaft");
@@ -9312,6 +9441,7 @@ int runSelfTest()
     testWither();
     testBeacon();
     testRedstoneParts();
+    testHopper();
     testAncientCity();
     testOtherDimensionStructures();
     testSearchAgreesWithStamp();

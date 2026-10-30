@@ -216,6 +216,10 @@ namespace Tiles
         ObserverTop,
         ObserverTopLit,
         ObserverSide,
+        HopperTop,
+        HopperSide,
+        DropperFront,
+        DispenserFront,
 
         RainDrop,
         SnowFlake,

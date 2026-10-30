@@ -34,6 +34,7 @@
 #include "Entity/HeldItem.h"
 #include "Game/Chat.h"
 #include "Game/Beacon.h"
+#include "Game/Hopper.h"
 #include "Entity/EntityManager.h"
 #include "Entity/MobModel.h"
 #include "Game/GameMode.h"
@@ -581,6 +582,20 @@ private:
     std::map<std::array<int, 3>, float> m_observerPulse;
     void wakeObservers(const glm::ivec3& around);
     void tickObservers(float deltaTime);
+
+    // The hoppers near the player, moving one item each. Swept over
+    // the chest table rather than the world: a hopper with nothing in
+    // it and nothing above it has nothing to do, and the table is the
+    // only place a hopper with contents can be hiding.
+    void tickHoppers(float deltaTime);
+    float m_hopperTimer = 0.0f;
+    std::set<std::array<int, 3>> m_hoppers;
+
+    // Droppers and dispensers already answering a signal. Edge
+    // triggered like the note block, and for the same reason: a held
+    // lever should throw one thing, not a stream of them.
+    std::set<std::array<int, 3>> m_throwerLive;
+    void fireThrower(const glm::ivec3& at, bool dispenser);
     void openExitPortal();
     void tryRaiseWither(const glm::ivec3& skull);
     float m_dragonTimer = 0.0f;

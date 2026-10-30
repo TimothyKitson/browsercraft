@@ -354,6 +354,12 @@ namespace Blocks
         Observer,
         ObserverLit,
 
+        // The three that hold things: one that moves them along on its
+        // own, and two that throw them out when told.
+        Hopper,
+        Dropper,
+        Dispenser,
+
         Count
     };
 }
@@ -473,6 +479,14 @@ inline bool isWaterPlant(BlockId id)
 inline bool isDeepDark(BlockId id)
 {
     return id >= Blocks::DeepslateBricks && id <= Blocks::ReinforcedDeepslate;
+}
+
+// Whether this block keeps a few item slots of its own. All three use
+// the same table the chests do: a block is a bare id with nowhere to
+// put contents, so they live beside the world.
+inline bool isItemHolder(BlockId id)
+{
+    return id == Blocks::Hopper || id == Blocks::Dropper || id == Blocks::Dispenser;
 }
 
 inline bool isNoteBlock(BlockId id)

@@ -209,6 +209,24 @@ namespace
           0, Blocks::CoalBlock, 1 },
         { true, 0, 0, { Blocks::CoalBlock }, 1, Items::Coal, 9 },
 
+        // A hopper: iron round a chest, which is Minecraft's. A
+        // dropper is cobble round nothing with redstone behind it,
+        // and a dispenser is a dropper with a bow in it.
+        { false, 3, 3, { Items::IronIngot,    Blocks::Air,     Items::IronIngot,
+                         Items::IronIngot,    Blocks::Chest,   Items::IronIngot,
+                         Blocks::Air,         Items::IronIngot, Blocks::Air },
+          0, Blocks::Hopper, 1 },
+
+        { false, 3, 3, { Blocks::Cobblestone, Blocks::Cobblestone, Blocks::Cobblestone,
+                         Blocks::Cobblestone, Blocks::Air,         Blocks::Cobblestone,
+                         Blocks::Cobblestone, Items::Redstone,     Blocks::Cobblestone },
+          0, Blocks::Dropper, 1 },
+
+        { false, 3, 3, { Blocks::Cobblestone, Blocks::Cobblestone, Blocks::Cobblestone,
+                         Blocks::Cobblestone, Items::Bow,          Blocks::Cobblestone,
+                         Blocks::Cobblestone, Items::Redstone,     Blocks::Cobblestone },
+          0, Blocks::Dispenser, 1 },
+
         // A note block: planks round redstone. An observer: cobble
         // and redstone round a lump of quartz -- there is no quartz
         // here, so a diamond stands in as the one thing precious

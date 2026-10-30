@@ -1255,6 +1255,7 @@ bool Application::frame()
         if (playing()) tickDragonFight(deltaTime);
         if (playing()) tickBeacons(deltaTime);
         if (playing()) tickObservers(deltaTime);
+        if (playing()) tickHoppers(deltaTime);
 
         // A pressed button lets go on its own, and everything it was
         // powering goes out with it.
@@ -4782,6 +4783,93 @@ void Application::raiseWitherForShot(int atX, int atY, int atZ)
     tryRaiseWither(glm::ivec3(atX, atY + 3, atZ));
 }
 
+// A dropper or a dispenser, throwing one thing out.
+//
+// The difference between the two is what they do with an arrow: a
+// dropper puts it on the floor and a dispenser looses it. Everything
+// else they hold, both simply drop.
+void Application::fireThrower(const glm::ivec3& at, bool dispenser)
+{
+    if (!m_world) return;
+
+    Chests::Contents& held = m_chests.at(at);
+    const StackId thrown = Hopper::take(held.data(), Hopper::THROWER_SLOTS);
+    if (thrown == Blocks::Air)
+    {
+        m_chests.forgetIfEmpty(at);
+        m_audio.play(Sound::Click, 0.4f, 0.7f);
+        return;
+    }
+
+    // Out of the face rather than out of the middle, so it lands in
+    // front of the block instead of inside it.
+    const glm::vec3 from = glm::vec3(at) + glm::vec3(0.5f, 1.2f, 0.5f);
+
+    if (dispenser && thrown == Items::Arrow)
+    {
+        m_arrows.spawn(from, glm::vec3(0.0f, 0.0f, -1.0f) * 22.0f,
+                       Arrows::damageFor(1.0f), false, Arrows::Kind::Shaft);
+        m_audio.play(Sound::Click, 0.8f, 1.6f);
+    }
+    else
+    {
+        m_drops.spawn(from, thrown, 1);
+        m_audio.play(Sound::Click, 0.6f, 1.2f);
+    }
+
+    m_chests.forgetIfEmpty(at);
+}
+
+// The hoppers, moving one item each.
+//
+// Kept rather than swept, the same way the beacons are: nothing
+// generates a hopper, so watching for the placement is exact.
+void Application::tickHoppers(float deltaTime)
+{
+    if (!m_world || m_hoppers.empty()) return;
+
+    m_hopperTimer -= deltaTime;
+    if (m_hopperTimer > 0.0f) return;
+    m_hopperTimer = Hopper::INTERVAL;
+
+    // The world and the container table, as the hopper rule wants to
+    // ask about them.
+    struct WorldHolder : Hopper::Holder
+    {
+        World* world = nullptr;
+        Chests* chests = nullptr;
+
+        BlockId at(int x, int y, int z) const override
+        {
+            return world->getBlock(x, y, z);
+        }
+
+        ItemStack* slotsAt(int x, int y, int z, int& count) override
+        {
+            const BlockId here = world->getBlock(x, y, z);
+            count = Hopper::slotsOf(here);
+            if (count <= 0) return nullptr;
+            return chests->at(glm::ivec3(x, y, z)).data();
+        }
+    } holder;
+    holder.world = m_world.get();
+    holder.chests = &m_chests;
+
+    for (auto it = m_hoppers.begin(); it != m_hoppers.end(); )
+    {
+        const int x = (*it)[0], y = (*it)[1], z = (*it)[2];
+
+        if (m_world->getBlock(x, y, z) != Blocks::Hopper)
+        {
+            it = m_hoppers.erase(it);
+            continue;
+        }
+        ++it;
+
+        Hopper::step(holder, x, y, z);
+    }
+}
+
 // An observer watches the block in front of it and sends a flash when
 // that block changes.
 //
@@ -5342,6 +5430,29 @@ void Application::settleRedstone(const glm::ivec3& at)
                     else if (!live && wasLive)
                     {
                         m_noteLive.erase(cell);
+                    }
+                    continue;
+                }
+
+                // A dropper throws one thing out on the edge of a
+                // signal; a dispenser does the same but looses an
+                // arrow if that is what it is holding. Both are edge
+                // triggered for the reason the note block is: one
+                // held signal should be one action, not a stream.
+                if (here == Blocks::Dropper || here == Blocks::Dispenser)
+                {
+                    const std::array<int, 3> cell = { x, y, z };
+                    const bool live = Redstone::poweredAt(cells, x, y, z);
+                    const bool wasLive = m_throwerLive.count(cell) > 0;
+
+                    if (live && !wasLive)
+                    {
+                        m_throwerLive.insert(cell);
+                        fireThrower(glm::ivec3(x, y, z), here == Blocks::Dispenser);
+                    }
+                    else if (!live && wasLive)
+                    {
+                        m_throwerLive.erase(cell);
                     }
                     continue;
                 }
@@ -6737,6 +6848,9 @@ void Application::handlePlacement()
 
     if (placing == Blocks::Beacon)
         m_beacons.insert({ target.x, target.y, target.z });
+
+    if (placing == Blocks::Hopper)
+        m_hoppers.insert({ target.x, target.y, target.z });
 
     // Anything watching this cell has just seen something happen.
     wakeObservers(target);

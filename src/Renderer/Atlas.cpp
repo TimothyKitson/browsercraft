@@ -1880,6 +1880,59 @@ namespace
         t.speckle(5, 495);
     }
 
+    // A hopper: a funnel seen from above, and a tapering box from the
+    // side. Drawn rather than modelled, because a hopper here is a
+    // cube like everything else.
+    void paintHopperTop(Tile& t)
+    {
+        t.fill(Color{ 60, 60, 62 });
+        for (int y = 0; y < Tile::N; ++y)
+            for (int x = 0; x < Tile::N; ++x)
+            {
+                const float edge = std::min(std::min(x, Tile::N - 1 - x),
+                                            std::min(y, Tile::N - 1 - y));
+                if (edge < 1.5f) t.set(x, y, Color{ 92, 92, 96 });
+                else if (edge > 4.5f) t.set(x, y, Color{ 26, 26, 28 });
+            }
+        t.speckle(4, 501);
+    }
+
+    void paintHopperSide(Tile& t)
+    {
+        t.fill(Color{ 52, 52, 54 });
+        // The taper: wide at the top, narrow at the bottom.
+        for (int y = 0; y < Tile::N; ++y)
+        {
+            const int inset = (y < 6) ? 0 : (y - 5);
+            for (int x = 0; x < inset && x < Tile::N; ++x)
+            {
+                t.set(x, y, Color{ 30, 30, 32 });
+                t.set(Tile::N - 1 - x, y, Color{ 30, 30, 32 });
+            }
+        }
+        t.speckle(4, 502);
+    }
+
+    // The two that throw: cobble with a face on the front. A dropper's
+    // mouth is square and a dispenser's has a bow in it, which is the
+    // only way to tell them apart at a glance.
+    void paintThrowerFace(Tile& t, bool barred)
+    {
+        paintCobble(t);
+        for (int y = 4; y < 12; ++y)
+            for (int x = 4; x < 12; ++x)
+                t.set(x, y, Color{ 32, 32, 32 });
+
+        if (!barred) return;
+        for (int y = 5; y < 11; ++y)
+            if ((y % 2) == 1)
+                for (int x = 5; x < 11; ++x)
+                    t.set(x, y, Color{ 128, 128, 128 });
+    }
+
+    void paintDropperFront(Tile& t)   { paintThrowerFace(t, false); }
+    void paintDispenserFront(Tile& t) { paintThrowerFace(t, true); }
+
     void paintSpawnerIn(Tile& t, Color bars, Color inside)
     {
         t.fill(inside);
@@ -4541,6 +4594,10 @@ namespace
         { Tiles::ObserverTop, paintObserverTop },
         { Tiles::ObserverTopLit, paintObserverTopLit },
         { Tiles::ObserverSide, paintObserverSide },
+        { Tiles::HopperTop, paintHopperTop },
+        { Tiles::HopperSide, paintHopperSide },
+        { Tiles::DropperFront, paintDropperFront },
+        { Tiles::DispenserFront, paintDispenserFront },
         { Tiles::Obsidian, paintObsidian },
         { Tiles::TallGrass, paintTallGrass },
         { Tiles::FlowerRed, paintFlowerRed },
@@ -4911,6 +4968,10 @@ namespace
         { Tiles::ObserverTop,   { "observer_front", nullptr },                         Tinting::None,    0,   false },
         { Tiles::ObserverTopLit, { "observer_front", nullptr },                        Tinting::None,    0,   false },
         { Tiles::ObserverSide,  { "observer_side", nullptr },                          Tinting::None,    0,   false },
+        { Tiles::HopperTop,     { "hopper_top", nullptr },                             Tinting::None,    0,   false },
+        { Tiles::HopperSide,    { "hopper_outside", nullptr },                         Tinting::None,    0,   false },
+        { Tiles::DropperFront,  { "dropper_front", nullptr },                          Tinting::None,    0,   false },
+        { Tiles::DispenserFront, { "dispenser_front", nullptr },                       Tinting::None,    0,   false },
         { Tiles::PistonTop,     { "piston_side", nullptr },                            Tinting::None,    0,   false },
         { Tiles::PistonSide,    { "piston_side", nullptr },                            Tinting::None,    0,   false },
         { Tiles::PistonFace,    { "piston_top", "piston_top_normal", nullptr },         Tinting::None,    0,   false },
