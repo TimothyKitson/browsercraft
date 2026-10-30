@@ -311,6 +311,28 @@ namespace
         { "Cauldron",     CauldronWater1,CauldronBottom, CauldronSide,   true,  true,  RenderType::Cube,   0,   2.0f },
         { "Cauldron",     CauldronWater2,CauldronBottom, CauldronSide,   true,  true,  RenderType::Cube,   0,   2.0f },
         { "Cauldron",     CauldronWater3,CauldronBottom, CauldronSide,   true,  true,  RenderType::Cube,   0,   2.0f },
+
+        { "Beetroots",    BeetrootStage0,BeetrootStage0, BeetrootStage0, false, false, RenderType::Cross,  0,   0.0f },
+        { "Beetroots",    BeetrootStage1,BeetrootStage1, BeetrootStage1, false, false, RenderType::Cross,  0,   0.0f },
+        { "Beetroots",    BeetrootStage2,BeetrootStage2, BeetrootStage2, false, false, RenderType::Cross,  0,   0.0f },
+        { "Beetroots",    BeetrootStage3,BeetrootStage3, BeetrootStage3, false, false, RenderType::Cross,  0,   0.0f },
+        { "Beetroots",    BeetrootStage4,BeetrootStage4, BeetrootStage4, false, false, RenderType::Cross,  0,   0.0f },
+        { "Beetroots",    BeetrootStage5,BeetrootStage5, BeetrootStage5, false, false, RenderType::Cross,  0,   0.0f },
+        { "Beetroots",    BeetrootStage6,BeetrootStage6, BeetrootStage6, false, false, RenderType::Cross,  0,   0.0f },
+        { "Beetroots",    BeetrootStage7,BeetrootStage7, BeetrootStage7, false, false, RenderType::Cross,  0,   0.0f },
+
+        { "Melon",        MelonTop,      MelonTop,       MelonSide,      true,  true,  RenderType::Cube,   0,   1.0f },
+
+        { "Melon Stem",   MelonStemYoung,MelonStemYoung, MelonStemYoung, false, false, RenderType::Cross,  0,   0.0f },
+        { "Melon Stem",   MelonStemYoung,MelonStemYoung, MelonStemYoung, false, false, RenderType::Cross,  0,   0.0f },
+        { "Melon Stem",   MelonStemYoung,MelonStemYoung, MelonStemYoung, false, false, RenderType::Cross,  0,   0.0f },
+        { "Melon Stem",   MelonStemYoung,MelonStemYoung, MelonStemYoung, false, false, RenderType::Cross,  0,   0.0f },
+        { "Melon Stem",   MelonStemYoung,MelonStemYoung, MelonStemYoung, false, false, RenderType::Cross,  0,   0.0f },
+        { "Melon Stem",   MelonStemYoung,MelonStemYoung, MelonStemYoung, false, false, RenderType::Cross,  0,   0.0f },
+        { "Melon Stem",   MelonStemRipe, MelonStemRipe,  MelonStemRipe,  false, false, RenderType::Cross,  0,   0.0f },
+        { "Melon Stem",   MelonStemRipe, MelonStemRipe,  MelonStemRipe,  false, false, RenderType::Cross,  0,   0.0f },
+
+        { "Bamboo",       BambooTile,    BambooTile,     BambooTile,     false, false, RenderType::Cross,  0,   0.3f },
     };
 }
 
@@ -384,6 +406,8 @@ const char* blockSoundGroup(BlockId id)
     if (isLeaves(id)) return "grass";
     if (isLog(id) || isPlanks(id)) return "wood";
     if (isComposter(id) || isLectern(id)) return "wood";
+    if (id == Blocks::Bamboo) return "wood";
+    if (id == Blocks::Melon) return "grass";
 
     switch (id)
     {
@@ -510,6 +534,8 @@ Material blockMaterial(BlockId id)
     // The workstations, whichever state they are in. A composter and a
     // lectern are boxes of planks; the rest are stone and iron.
     if (isComposter(id) || isLectern(id)) return Material::Wood;
+    if (id == Blocks::Melon) return Material::Plant;
+    if (id == Blocks::Bamboo) return Material::Wood;
     if (isCauldron(id)) return Material::Stone;
     if (isFurnaceBlock(id)) return Material::Stone;
 

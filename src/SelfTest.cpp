@@ -3162,10 +3162,12 @@ namespace
     {
         section("carrots and potatoes");
 
-        const BlockId FIRST[] = { Blocks::Wheat0, Blocks::Carrot0, Blocks::Potato0 };
-        const char* NAMES[] = { "wheat", "carrot", "potato" };
+        const BlockId FIRST[] = { Blocks::Wheat0, Blocks::Carrot0, Blocks::Potato0,
+                                  Blocks::Beetroot0, Blocks::MelonStem0 };
+        const char* NAMES[] = { "wheat", "carrot", "potato", "beetroot", "melon stem" };
+        constexpr int KINDS = 5;
 
-        for (int c = 0; c < 3; ++c)
+        for (int c = 0; c < KINDS; ++c)
         {
             const std::string what = NAMES[c];
 
@@ -3181,7 +3183,8 @@ namespace
                 // Exactly one of the three predicates may claim it, or
                 // a carrot would harvest as wheat.
                 const int claims = (isWheat(at) ? 1 : 0) + (isCarrot(at) ? 1 : 0) +
-                                   (isPotato(at) ? 1 : 0);
+                                   (isPotato(at) ? 1 : 0) + (isBeetroot(at) ? 1 : 0) +
+                                   (isMelonStem(at) ? 1 : 0);
                 check(claims == 1, "and only one crop claims it");
 
                 check(!isObtainable(at), "a crop is planted, never held");
@@ -3212,6 +3215,10 @@ namespace
               "a carrot sows a carrot");
         check(Farming::cropFromSeed(Items::Potato) == Blocks::Potato0,
               "a potato sows a potato");
+        check(Farming::cropFromSeed(Items::BeetrootSeeds) == Blocks::Beetroot0,
+              "beetroot seeds sow a beet");
+        check(Farming::cropFromSeed(Items::MelonSeeds) == Blocks::MelonStem0,
+              "and melon seeds sow a stem, not a melon");
         check(Farming::cropFromSeed(Items::BakedPotato) == Blocks::Air,
               "a baked one does not: it has been cooked");
         check(Farming::cropFromSeed(Items::Bread) == Blocks::Air,
@@ -3255,20 +3262,105 @@ namespace
         check(Smelting::resultOf(Items::BakedPotato) == Blocks::Air,
               "and a baked potato does not bake twice");
 
-        // The three items are easy to mix up in the table that names
-        // them, and getting that wrong once called a nether star an
-        // apple. Each must have its own name and its own icon.
-        const StackId TRIO[] = { Items::Carrot, Items::Potato, Items::BakedPotato };
-        const char* WANTED[] = { "Carrot", "Potato", "Baked Potato" };
-        for (int i = 0; i < 3; ++i)
+        // A beet is the seed and the food apart, the way wheat is, so
+        // it has to pay back at least the seed it cost or a field of
+        // them runs down.
+        const Farming::Harvest youngBeet = Farming::harvestOf(Blocks::Beetroot4, 0);
+        check(youngBeet.first == Items::BeetrootSeeds && youngBeet.firstCount == 1,
+              "an unripe beet gives back one seed");
+        bool beetPays = true;
+        for (uint32_t roll = 0; roll < 16; ++roll)
         {
-            check(std::string(itemInfo(TRIO[i]).name) == WANTED[i],
+            const Farming::Harvest ripe = Farming::harvestOf(Blocks::Beetroot7, roll);
+            if (ripe.first != Items::Beetroot || ripe.firstCount != 1) beetPays = false;
+            if (ripe.second != Items::BeetrootSeeds) beetPays = false;
+            if (ripe.secondCount < 1 || ripe.secondCount > 3) beetPays = false;
+        }
+        check(beetPays, "a ripe beet gives a beetroot and one to three seeds");
+
+        // A stem is the odd one: what it ripens into stands beside it,
+        // so breaking the stem at any stage gives back only the seed.
+        for (int stage = 0; stage < WHEAT_STAGES; ++stage)
+        {
+            const Farming::Harvest cut =
+                Farming::harvestOf(cropAtStage(Blocks::MelonStem0, stage), 0);
+            check(cut.first == Items::MelonSeeds && cut.firstCount == 1,
+                  "a melon stem gives back one seed whatever stage it is at");
+            check(cut.secondCount == 0, "and nothing else");
+        }
+
+        // The items are easy to mix up in the table that names them,
+        // and getting that wrong once called a nether star an apple.
+        // Each must have its own name and its own icon.
+        const StackId NEW_ITEMS[] = {
+            Items::Carrot, Items::Potato, Items::BakedPotato, Items::Bowl,
+            Items::Beetroot, Items::BeetrootSeeds, Items::BeetrootSoup,
+            Items::MelonSlice, Items::MelonSeeds,
+        };
+        const char* WANTED[] = {
+            "Carrot", "Potato", "Baked Potato", "Bowl",
+            "Beetroot", "Beetroot Seeds", "Beetroot Soup",
+            "Melon Slice", "Melon Seeds",
+        };
+        constexpr int NEW_COUNT = 9;
+        for (int i = 0; i < NEW_COUNT; ++i)
+        {
+            check(std::string(itemInfo(NEW_ITEMS[i]).name) == WANTED[i],
                   std::string("the item table calls it a ") + WANTED[i]);
-            for (int j = i + 1; j < 3; ++j)
-                check(itemInfo(TRIO[i]).tile != itemInfo(TRIO[j]).tile,
+            for (int j = i + 1; j < NEW_COUNT; ++j)
+                check(itemInfo(NEW_ITEMS[i]).tile != itemInfo(NEW_ITEMS[j]).tile,
                       std::string(WANTED[i]) + " and " + WANTED[j] +
                           " do not share an icon");
         }
+    }
+
+    // --- the melon and the bamboo ---------------------------------------
+
+    // The two plants that are not crops: one grows beside its stem
+    // rather than on it, and one grows straight up out of the ground.
+    void testMelonAndBamboo()
+    {
+        section("melons and bamboo");
+
+        check(blockDrop(Blocks::Melon) == Items::MelonSlice,
+              "a melon comes apart into slices");
+        check(Food::isEdible(Items::MelonSlice), "and a slice is food");
+        check(isObtainable(Blocks::Melon), "a melon is a block you can hold");
+        check(blockInfo(Blocks::Melon).collides, "and stand on");
+        check(blockMaterial(Blocks::Melon) == Material::Plant,
+              "it comes apart like a plant rather than wanting a pickaxe");
+        check(Tools::canHarvest(Blocks::Air, Blocks::Melon), "so bare hands get it");
+
+        // Nine slices back into a melon and one into a seed: the loop
+        // that makes a melon worth planting rather than just eating.
+        const std::vector<StackId> made = Crafting::everyOutput();
+        check(std::find(made.begin(), made.end(),
+                        static_cast<StackId>(Blocks::Melon)) != made.end(),
+              "slices make a melon back");
+        check(std::find(made.begin(), made.end(),
+                        static_cast<StackId>(Items::MelonSeeds)) != made.end(),
+              "and a slice makes the seed that grows another");
+        check(std::find(made.begin(), made.end(),
+                        static_cast<StackId>(Items::BeetrootSoup)) != made.end(),
+              "and six beets in a bowl make soup");
+
+        // Bamboo: a plant, broken by hand, and the tallest thing in
+        // the game that is not a tree.
+        check(Farming::BAMBOO_MAX > 8, "bamboo grows taller than a person can reach");
+        check(isObtainable(Blocks::Bamboo), "a cane is a thing you hold");
+        check(blockDrop(Blocks::Bamboo) == Blocks::Bamboo, "and gives back itself");
+        check(!blockInfo(Blocks::Bamboo).collides, "you walk through a grove");
+        check(blockInfo(Blocks::Bamboo).render == RenderType::Cross,
+              "and it is drawn as a plant rather than a box");
+        check(Tools::canHarvest(Blocks::Air, Blocks::Bamboo), "bare hands cut it");
+
+        // The stem does not stack into the melon's own ids: an
+        // off-by-one here would have a ripe stem read as a melon.
+        check(!isMelonStem(Blocks::Melon), "a melon is not its own stem");
+        check(!isCrop(Blocks::Melon), "nor a crop");
+        check(!isCrop(Blocks::Bamboo), "and neither is bamboo");
+        check(cropAtStage(Blocks::MelonStem0, 7) == Blocks::MelonStem7,
+              "a stem's last stage is its own last id");
     }
 
     // --- the workstations -----------------------------------------------
@@ -5499,7 +5591,22 @@ namespace
 
             bool obtainable = false;
             for (int b = 0; b < static_cast<int>(Blocks::Count) && !obtainable; ++b)
-                if (blockDrop(static_cast<BlockId>(b)) == id) obtainable = true;
+            {
+                const BlockId block = static_cast<BlockId>(b);
+                if (blockDrop(block) == id) obtainable = true;
+
+                // A crop does not drop what it is; it drops what it
+                // grew, and blockDrop cannot say that. Left out, the
+                // beetroot read as a food nobody could hold -- which
+                // this test caught the day it was added.
+                if (!isCrop(block)) continue;
+                for (uint32_t roll = 0; roll < 4 && !obtainable; ++roll)
+                {
+                    const Farming::Harvest cut = Farming::harvestOf(block, roll);
+                    if (cut.firstCount > 0 && cut.first == id) obtainable = true;
+                    if (cut.secondCount > 0 && cut.second == id) obtainable = true;
+                }
+            }
             for (int m = 0; m < mobTypeCount() && !obtainable; ++m)
             {
                 const MobType& type = mobType(static_cast<MobId>(m));
@@ -9934,6 +10041,7 @@ int runSelfTest()
     testFarming();
     testRootCrops();
     testWorkstations();
+    testMelonAndBamboo();
     testPathfinding();
     testChatCommands();
     testCrackStages();

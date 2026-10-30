@@ -129,6 +129,12 @@ namespace
         { "Carrot",          Tiles::ItemCarrot,        64 },
         { "Potato",          Tiles::ItemPotato,        64 },
         { "Baked Potato",    Tiles::ItemBakedPotato,   64 },
+        { "Bowl",            Tiles::ItemBowl,          64 },
+        { "Beetroot",        Tiles::ItemBeetroot,      64 },
+        { "Beetroot Seeds",  Tiles::ItemBeetrootSeeds, 64 },
+        { "Beetroot Soup",   Tiles::ItemBeetrootSoup,   1 },
+        { "Melon Slice",     Tiles::ItemMelonSlice,    64 },
+        { "Melon Seeds",     Tiles::ItemMelonSeeds,    64 },
         { "Nether Star",     Tiles::ItemNetherStar,     1 },
     };
 
@@ -188,6 +194,10 @@ bool isBreedingFood(StackId id)
 StackId blockDrop(BlockId id)
 {
     if (isLeaves(id)) return Blocks::Air;   // leaves drop nothing
+
+    // A melon comes apart into slices rather than into a melon, which
+    // is Minecraft's and is what makes one worth planting.
+    if (id == Blocks::Melon) return Items::MelonSlice;
 
     // A composter and a cauldron come up empty however full they were,
     // which is Minecraft's: what was in them is not yours.

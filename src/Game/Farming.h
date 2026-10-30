@@ -57,6 +57,20 @@ namespace Farming
     // each call so the same columns are not picked every time.
     void grow(World& world, const glm::vec3& around, uint32_t& seed);
 
+    // How tall a cane of bamboo gets. Minecraft's is twelve to
+    // sixteen; one number here, because a cane that stopped at a
+    // different height each time would want a per-cane state and
+    // there is nowhere to keep one.
+    constexpr int BAMBOO_MAX = 14;
+
+    // One more cane on top, if there is room and ground under it.
+    bool growBambooAt(World& world, const glm::ivec3& cane);
+
+    // A ripe melon stem puts a melon on the ground beside it. False
+    // when there is nowhere to put one, which is what stops a field
+    // of them filling in solid.
+    bool growMelonBeside(World& world, const glm::ivec3& stem, uint32_t& seed);
+
     // Whether this block would grow if it were ticked: a crop, not yet
     // ripe, standing on farmland in enough light.
     bool canGrowAt(const World& world, const glm::ivec3& at);

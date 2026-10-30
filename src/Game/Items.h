@@ -167,6 +167,22 @@ namespace Items
         Potato,
         BakedPotato,
 
+        // Three planks. The one thing in the game that is a container
+        // rather than a tool or a food, and the only way to carry a
+        // soup about.
+        Bowl,
+
+        // The fourth crop, and the one thing you can make of it. A
+        // beetroot is barely food; six of them in a bowl is a meal.
+        Beetroot,
+        BeetrootSeeds,
+        BeetrootSoup,
+
+        // A melon is a block, so it is not here; what it is cut into
+        // is, and the seed that goes back in the ground.
+        MelonSlice,
+        MelonSeeds,
+
         // What a wither leaves. One of them makes a beacon, which is
         // the only thing in the game it is for.
         NetherStar,

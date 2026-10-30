@@ -2412,6 +2412,172 @@ namespace
     void paintCauldronWater2(Tile& t) { paintCauldronIn(t, 2); }
     void paintCauldronWater3(Tile& t) { paintCauldronIn(t, 3); }
 
+    // --- the other plants ---------------------------------------------
+
+    // Painted off the same shape the carrot uses, which is defined
+    // further down beside the other two crops.
+    void paintRootCropStage(Tile& t, int stage, Color leaf, Color root);
+
+    // Beetroot: a low leafy crop with the red crown showing once it
+    // is grown. A root crop is a root crop.
+    void paintBeetrootStage(Tile& t, int stage)
+    {
+        paintRootCropStage(t, stage, Color{ 66, 128, 48 }, Color{ 164, 42, 56 });
+        if (stage >= 5)
+            for (int i = 0; i < Tile::N; i += 4)
+                t.set(i + 1, Tile::N - 3, Color{ 196, 60, 74 });
+    }
+
+    void paintBeetroot0(Tile& t) { paintBeetrootStage(t, 0); }
+    void paintBeetroot1(Tile& t) { paintBeetrootStage(t, 1); }
+    void paintBeetroot2(Tile& t) { paintBeetrootStage(t, 2); }
+    void paintBeetroot3(Tile& t) { paintBeetrootStage(t, 3); }
+    void paintBeetroot4(Tile& t) { paintBeetrootStage(t, 4); }
+    void paintBeetroot5(Tile& t) { paintBeetrootStage(t, 5); }
+    void paintBeetroot6(Tile& t) { paintBeetrootStage(t, 6); }
+    void paintBeetroot7(Tile& t) { paintBeetrootStage(t, 7); }
+
+    void paintMelonSide(Tile& t)
+    {
+        t.fill(Color{ 118, 150, 42 });
+        // The stripes down it, which are the whole of what tells a
+        // melon from a block of moss at the size it is seen.
+        for (int x = 0; x < Tile::N; ++x)
+        {
+            const int band = (x / 3) % 2;
+            for (int y = 0; y < Tile::N; ++y)
+                if (band == 0) t.set(x, y, Color{ 86, 118, 32 });
+        }
+        t.speckle(6, 601);
+    }
+
+    void paintMelonTop(Tile& t)
+    {
+        t.fill(Color{ 128, 160, 50 });
+        for (int y = 0; y < Tile::N; ++y)
+            for (int x = 0; x < Tile::N; ++x)
+            {
+                const float dx = x - 7.5f, dy = y - 7.5f;
+                if (dx * dx + dy * dy > 42.0f) continue;
+                t.set(x, y, Color{ 96, 128, 36 });
+            }
+        t.speckle(6, 602);
+    }
+
+    // The stem. Young it is a green curl; ripe it is the brown one
+    // that has a melon on the end of it.
+    void paintMelonStem(Tile& t, Color vine)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 4; y < Tile::N; ++y)
+        {
+            const int x = 7 + static_cast<int>(2.0f * std::sin((y - 4) * 0.55f));
+            t.set(x, y, vine);
+            t.set(x + 1, y, shade(vine, -18));
+        }
+        for (int i = 0; i < 4; ++i)
+        {
+            t.set(4 + i, 6 + i / 2, vine);
+            t.set(11 - i, 9 + i / 2, vine);
+        }
+    }
+
+    void paintMelonStemYoung(Tile& t) { paintMelonStem(t, Color{ 96, 150, 54 }); }
+    void paintMelonStemRipe(Tile& t)  { paintMelonStem(t, Color{ 150, 134, 48 }); }
+
+    void paintBamboo(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        // A thin cane up the middle, with a knuckle every few blocks.
+        for (int y = 0; y < Tile::N; ++y)
+            for (int x = 6; x < 10; ++x)
+                t.set(x, y, (x < 7) ? Color{ 108, 150, 46 } : Color{ 86, 126, 36 });
+        for (int y = 2; y < Tile::N; y += 6)
+            for (int x = 5; x < 11; ++x)
+                t.set(x, y, Color{ 142, 176, 70 });
+        // A leaf either side, so a cane is not a green stick.
+        for (int i = 0; i < 4; ++i)
+        {
+            t.set(5 - i / 2, 4 + i, Color{ 84, 140, 48 });
+            t.set(10 + i / 2, 9 + i, Color{ 84, 140, 48 });
+        }
+    }
+
+    void paintItemBeetroot(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 5; y < 14; ++y)
+            for (int x = 4; x < 12; ++x)
+            {
+                const float dx = (x - 7.5f) / 4.2f;
+                const float dy = (y - 9.0f) / 4.6f;
+                if (dx * dx + dy * dy > 1.0f) continue;
+                t.set(x, y, (dx + dy < -0.4f) ? Color{ 186, 58, 74 }
+                                              : Color{ 142, 30, 48 });
+            }
+        for (int i = 0; i < 4; ++i)
+        {
+            t.set(7 - i / 2, 4 - i / 2 + 1, Color{ 72, 140, 56 });
+            t.set(9 + i / 2, 3 + i / 2, Color{ 96, 170, 72 });
+        }
+    }
+
+    void paintSeedsIn(Tile& t, Color seed)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int i = 0; i < 9; ++i)
+        {
+            const int x = 4 + (i % 3) * 3 + ((i / 3) % 2);
+            const int y = 5 + (i / 3) * 3;
+            t.set(x, y, seed);
+            t.set(x + 1, y, shade(seed, -24));
+            t.set(x, y + 1, shade(seed, -24));
+        }
+    }
+
+    void paintItemBeetrootSeeds(Tile& t) { paintSeedsIn(t, Color{ 196, 148, 96 }); }
+    void paintItemMelonSeeds(Tile& t)    { paintSeedsIn(t, Color{ 214, 206, 160 }); }
+
+    void paintBowlIn(Tile& t, bool full)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 8; y < 14; ++y)
+            for (int x = 2; x < 14; ++x)
+            {
+                const float dx = (x - 7.5f) / 6.0f;
+                const float dy = (y - 8.0f) / 5.6f;
+                if (dx * dx + dy * dy > 1.0f) continue;
+                t.set(x, y, Color{ 158, 108, 72 });
+            }
+        for (int x = 3; x < 13; ++x)
+        {
+            t.set(x, 7, full ? Color{ 176, 46, 60 } : Color{ 112, 74, 48 });
+            t.set(x, 8, full ? Color{ 148, 34, 48 } : Color{ 128, 88, 56 });
+        }
+        t.speckle(5, full ? 605 : 606);
+    }
+
+    void paintItemBowl(Tile& t)         { paintBowlIn(t, false); }
+    void paintItemBeetrootSoup(Tile& t) { paintBowlIn(t, true); }
+
+    void paintItemMelonSlice(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        // A wedge: rind at the bottom, flesh above it, pips in it.
+        for (int y = 3; y < 14; ++y)
+        {
+            const int half = (y - 2);
+            for (int x = 8 - half; x <= 7 + half; ++x)
+            {
+                if (x < 0 || x >= Tile::N) continue;
+                t.set(x, y, (y >= 12) ? Color{ 88, 128, 36 }
+                                      : Color{ 226, 74, 82 });
+            }
+        }
+        for (int i = 0; i < 4; ++i)
+            t.set(5 + i * 2, 8 + (i % 2) * 2, Color{ 44, 36, 30 });
+    }
+
     void paintSpawnerIn(Tile& t, Color bars, Color inside)
     {
         t.fill(inside);
@@ -5279,6 +5445,25 @@ namespace
         { Tiles::CauldronWater1, paintCauldronWater1 },
         { Tiles::CauldronWater2, paintCauldronWater2 },
         { Tiles::CauldronWater3, paintCauldronWater3 },
+        { Tiles::BeetrootStage0, paintBeetroot0 },
+        { Tiles::BeetrootStage1, paintBeetroot1 },
+        { Tiles::BeetrootStage2, paintBeetroot2 },
+        { Tiles::BeetrootStage3, paintBeetroot3 },
+        { Tiles::BeetrootStage4, paintBeetroot4 },
+        { Tiles::BeetrootStage5, paintBeetroot5 },
+        { Tiles::BeetrootStage6, paintBeetroot6 },
+        { Tiles::BeetrootStage7, paintBeetroot7 },
+        { Tiles::MelonSide, paintMelonSide },
+        { Tiles::MelonTop, paintMelonTop },
+        { Tiles::MelonStemYoung, paintMelonStemYoung },
+        { Tiles::MelonStemRipe, paintMelonStemRipe },
+        { Tiles::BambooTile, paintBamboo },
+        { Tiles::ItemBowl, paintItemBowl },
+        { Tiles::ItemBeetroot, paintItemBeetroot },
+        { Tiles::ItemBeetrootSeeds, paintItemBeetrootSeeds },
+        { Tiles::ItemBeetrootSoup, paintItemBeetrootSoup },
+        { Tiles::ItemMelonSlice, paintItemMelonSlice },
+        { Tiles::ItemMelonSeeds, paintItemMelonSeeds },
         { Tiles::CampfireLog, paintCampfireLog },
         { Tiles::Obsidian, paintObsidian },
         { Tiles::TallGrass, paintTallGrass },
@@ -5550,6 +5735,12 @@ namespace
         { Tiles::ItemCarrot, { "carrot", nullptr, nullptr } },
         { Tiles::ItemPotato, { "potato", nullptr, nullptr } },
         { Tiles::ItemBakedPotato, { "baked_potato", nullptr, nullptr } },
+        { Tiles::ItemBowl, { "bowl", nullptr, nullptr } },
+        { Tiles::ItemBeetroot, { "beetroot", nullptr, nullptr } },
+        { Tiles::ItemBeetrootSeeds, { "beetroot_seeds", nullptr, nullptr } },
+        { Tiles::ItemBeetrootSoup, { "beetroot_soup", nullptr, nullptr } },
+        { Tiles::ItemMelonSlice, { "melon_slice", nullptr, nullptr } },
+        { Tiles::ItemMelonSeeds, { "melon_seeds", nullptr, nullptr } },
     };
 
     const PackTile PACK_TILES[] = {
@@ -5753,6 +5944,21 @@ namespace
         { Tiles::CauldronWater1, { "water_still", nullptr },                           Tinting::Water,   0,   true  },
         { Tiles::CauldronWater2, { "water_still", nullptr },                           Tinting::Water,   0,   true  },
         { Tiles::CauldronWater3, { "water_still", nullptr },                           Tinting::Water,   0,   true  },
+        // Four pictures over eight states, which is Minecraft's own
+        // mapping: a beet looks the same for two stages at a time.
+        { Tiles::BeetrootStage0, { "beetroots_stage0", nullptr },                      Tinting::None,    0,   false },
+        { Tiles::BeetrootStage1, { "beetroots_stage0", nullptr },                      Tinting::None,    0,   false },
+        { Tiles::BeetrootStage2, { "beetroots_stage1", nullptr },                      Tinting::None,    0,   false },
+        { Tiles::BeetrootStage3, { "beetroots_stage1", nullptr },                      Tinting::None,    0,   false },
+        { Tiles::BeetrootStage4, { "beetroots_stage2", nullptr },                      Tinting::None,    0,   false },
+        { Tiles::BeetrootStage5, { "beetroots_stage2", nullptr },                      Tinting::None,    0,   false },
+        { Tiles::BeetrootStage6, { "beetroots_stage2", nullptr },                      Tinting::None,    0,   false },
+        { Tiles::BeetrootStage7, { "beetroots_stage3", nullptr },                      Tinting::None,    0,   false },
+        { Tiles::MelonSide,     { "melon_side", nullptr },                             Tinting::None,    0,   false },
+        { Tiles::MelonTop,      { "melon_top", nullptr },                              Tinting::None,    0,   false },
+        { Tiles::MelonStemYoung,{ "melon_stem", nullptr },                             Tinting::None,    0,   false },
+        { Tiles::MelonStemRipe, { "attached_melon_stem", nullptr },                    Tinting::None,    0,   false },
+        { Tiles::BambooTile,    { "bamboo_stalk", nullptr },                           Tinting::None,    0,   false },
         { Tiles::PistonTop,     { "piston_side", nullptr },                            Tinting::None,    0,   false },
         { Tiles::PistonSide,    { "piston_side", nullptr },                            Tinting::None,    0,   false },
         { Tiles::PistonFace,    { "piston_top", "piston_top_normal", nullptr },         Tinting::None,    0,   false },

@@ -992,9 +992,9 @@ void WorldGen::stampBuilding(Chunk& chunk, const Village::Building& building,
                 // of a field reads as a planted thing. Minecraft sows a
                 // village farm the same way: a bed at a time.
                 static const BlockId CROPS[] = { Blocks::Wheat0, Blocks::Carrot0,
-                                                 Blocks::Potato0 };
+                                                 Blocks::Potato0, Blocks::Beetroot0 };
                 const BlockId crop = CROPS[hashCoords(x0, (z < midZ) ? 0 : 1, z0,
-                                                      m_seed + 55041) % 3u];
+                                                      m_seed + 55041) % 4u];
                 put(chunk, x, ground + 1, z, cropAtStage(crop, stage));
             }
 
@@ -2499,28 +2499,9 @@ void WorldGen::decorate(Chunk& chunk) const
     {
         for (int wz = baseZ - 3; wz < baseZ + Chunk::SZ + 3; ++wz)
         {
+            if (!treeStandsAt(wx, wz)) continue;
+
             const Biome biome = biomeAt(wx, wz);
-            float treeChance = 0.0f;
-            switch (biome)
-            {
-                case Biome::Forest: treeChance = 0.055f; break;
-                case Biome::Plains: treeChance = 0.004f; break;
-                case Biome::Snowy: treeChance = 0.018f; break;
-                case Biome::Mountains: treeChance = 0.006f; break;
-                // Thicker than anywhere else, and a savanna is nearly
-                // bare: the two read as what they are from the density
-                // of the trees before you are close enough to see one.
-                case Biome::Jungle: treeChance = 0.085f; break;
-                case Biome::Savanna: treeChance = 0.010f; break;
-                // Scattered rather than thick, which is what makes a
-                // swamp read as open water with trees standing in it.
-                case Biome::Swamp: treeChance = 0.020f; break;
-                default: break;
-            }
-            if (treeChance <= 0.0f) continue;
-
-            if (hashToFloat(hashCoords(wx, 7, wz, m_seed + 4242)) >= treeChance) continue;
-
             const int surface = surfaceHeight(wx, wz);
             if (surface <= SEA_LEVEL) continue; // no trees in water
 
@@ -2607,6 +2588,31 @@ void WorldGen::decorate(Chunk& chunk) const
 
             if (ground != Blocks::Grass && ground != Blocks::SnowGrass) continue;
 
+            // A jungle has two things nowhere else does: bamboo in
+            // groves, and melons lying on the floor. Both are what
+            // makes walking into one worth the trip, and both are
+            // where Minecraft puts them.
+            if (biome == Biome::Jungle)
+            {
+                // Sparse on purpose. A cane is a cross of quads and a
+                // grove is a dozen of them stacked, so the rate here
+                // is paid for in the jungle's mesh -- already the
+                // heaviest biome in the game before any of it.
+                if (roll < 0.012f)
+                {
+                    const int canes = 5 + static_cast<int>(
+                        hashToFloat(hashCoords(wx, 9, wz, m_seed + 5501)) * 7.0f);
+                    for (int i = 0; i < canes && above + i < Chunk::SY; ++i)
+                        chunk.setBlockRaw(lx, above + i, lz, Blocks::Bamboo);
+                    continue;
+                }
+                if (roll < 0.0145f)
+                {
+                    chunk.setBlockRaw(lx, above, lz, Blocks::Melon);
+                    continue;
+                }
+            }
+
             if (roll < 0.14f)
                 chunk.setBlockRaw(lx, above, lz, Blocks::TallGrass);
             else if (roll < 0.155f)
@@ -2617,6 +2623,34 @@ void WorldGen::decorate(Chunk& chunk) const
                 chunk.setBlockRaw(lx, above, lz, Blocks::Pumpkin);
         }
     }
+}
+
+// Whether a tree grows out of this column. Asked by the decorator
+// that plants them and by the spawn finder that has to keep out of
+// their way: the two read the same dice, so a spawn chosen clear of a
+// tree stays clear once the chunk is built.
+bool WorldGen::treeStandsAt(int wx, int wz) const
+{
+    float treeChance = 0.0f;
+    switch (biomeAt(wx, wz))
+    {
+        case Biome::Forest: treeChance = 0.055f; break;
+        case Biome::Plains: treeChance = 0.004f; break;
+        case Biome::Snowy: treeChance = 0.018f; break;
+        case Biome::Mountains: treeChance = 0.006f; break;
+        // Thicker than anywhere else, and a savanna is nearly bare:
+        // the two read as what they are from the density of the trees
+        // before you are close enough to see one.
+        case Biome::Jungle: treeChance = 0.085f; break;
+        case Biome::Savanna: treeChance = 0.010f; break;
+        // Scattered rather than thick, which is what makes a swamp
+        // read as open water with trees standing in it.
+        case Biome::Swamp: treeChance = 0.020f; break;
+        default: break;
+    }
+    if (treeChance <= 0.0f) return false;
+
+    return hashToFloat(hashCoords(wx, 7, wz, m_seed + 4242)) < treeChance;
 }
 
 void WorldGen::findSpawn(int& outX, int& outY, int& outZ) const
@@ -2657,6 +2691,16 @@ void WorldGen::findSpawn(int& outX, int& outY, int& outZ) const
             for (int dz = -24; dz <= 24 && roomToStand; dz += 12)
                 for (int dx = -24; dx <= 24 && roomToStand; dx += 12)
                     if (surfaceHeight(x + dx, z + dz) <= SEA_LEVEL) roomToStand = false;
+
+            // And not under a tree. A jungle plants one column in
+            // twelve, and the first jungle world this engine made
+            // started the player buried in leaves with the sky
+            // nowhere in sight. A canopy is wider than its trunk, so
+            // the whole footprint has to be clear, not just the
+            // column stood on.
+            for (int dz = -3; dz <= 3 && roomToStand; ++dz)
+                for (int dx = -3; dx <= 3 && roomToStand; ++dx)
+                    if (treeStandsAt(x + dx, z + dz)) roomToStand = false;
 
             if (roomToStand)
             {

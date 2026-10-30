@@ -243,6 +243,12 @@ namespace Tiles
         CauldronTop, CauldronSide, CauldronBottom,
         CauldronWater1, CauldronWater2, CauldronWater3,
 
+        BeetrootStage0, BeetrootStage1, BeetrootStage2, BeetrootStage3,
+        BeetrootStage4, BeetrootStage5, BeetrootStage6, BeetrootStage7,
+        MelonSide, MelonTop,
+        MelonStemYoung, MelonStemRipe,
+        BambooTile,
+
         RainDrop,
         SnowFlake,
 
@@ -371,8 +377,14 @@ namespace Tiles
         ItemCarrot,
         ItemPotato,
         ItemBakedPotato,
+        ItemBowl,
+        ItemBeetroot,
+        ItemBeetrootSeeds,
+        ItemBeetrootSoup,
+        ItemMelonSlice,
+        ItemMelonSeeds,
 
-        ItemTileEnd = ItemBakedPotato + 1
+        ItemTileEnd = ItemMelonSeeds + 1
     };
 
     // Ten progressively more broken overlay tiles for the mining animation.

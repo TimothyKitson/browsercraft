@@ -276,6 +276,11 @@ public:
     // Picks a reasonable, dry spawn point near the origin.
     void findSpawn(int& outX, int& outY, int& outZ) const;
 
+    // Whether a tree grows out of this column. Public so the spawn
+    // finder and --selftest can ask the same question the decorator
+    // asks, rather than each keeping its own copy of the dice.
+    bool treeStandsAt(int wx, int wz) const;
+
 private:
     uint32_t m_seed;
     Dimension m_dimension;

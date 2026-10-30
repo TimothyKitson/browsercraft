@@ -419,6 +419,23 @@ namespace Blocks
         // Four levels of water, filled from a bucket or by the rain.
         Cauldron0, Cauldron1, Cauldron2, Cauldron3,
 
+        // The fourth crop. Costs eight ids and a tile and nothing
+        // else, which is the whole reason the crops were made general
+        // when the carrot went in.
+        Beetroot0, Beetroot1, Beetroot2, Beetroot3,
+        Beetroot4, Beetroot5, Beetroot6, Beetroot7,
+
+        // A melon, and the stem that grows one. The stem is a crop
+        // like any other; what makes it a melon is that the thing it
+        // ripens into stands beside it rather than on it.
+        Melon,
+        MelonStem0, MelonStem1, MelonStem2, MelonStem3,
+        MelonStem4, MelonStem5, MelonStem6, MelonStem7,
+
+        // What grows fastest of anything in the game, and the only
+        // thing in a jungle worth cutting down twice.
+        Bamboo,
+
         Count
     };
 }
@@ -827,6 +844,15 @@ inline int wheatStage(BlockId id) { return isWheat(id) ? id - Blocks::Wheat0 : 0
 
 inline bool isCarrot(BlockId id) { return id >= Blocks::Carrot0 && id <= Blocks::Carrot7; }
 inline bool isPotato(BlockId id) { return id >= Blocks::Potato0 && id <= Blocks::Potato7; }
+inline bool isBeetroot(BlockId id) { return id >= Blocks::Beetroot0 && id <= Blocks::Beetroot7; }
+
+// The melon's stem. A crop in every way that matters -- it is sown,
+// it ripens through eight stages and it is broken for its seed -- but
+// what it ripens into is a block beside it rather than itself.
+inline bool isMelonStem(BlockId id)
+{
+    return id >= Blocks::MelonStem0 && id <= Blocks::MelonStem7;
+}
 
 // Any of the three. Everything that treats a crop as a crop -- growing
 // it, harvesting it, bone meal, what it drops -- asks this rather than
@@ -834,7 +860,8 @@ inline bool isPotato(BlockId id) { return id >= Blocks::Potato0 && id <= Blocks:
 // anywhere else.
 inline bool isCrop(BlockId id)
 {
-    return isWheat(id) || isCarrot(id) || isPotato(id);
+    return isWheat(id) || isCarrot(id) || isPotato(id) || isBeetroot(id) ||
+           isMelonStem(id);
 }
 
 // Which of the eight stages a crop is at, whichever crop it is.
@@ -843,6 +870,8 @@ inline int cropStage(BlockId id)
     if (isWheat(id)) return id - Blocks::Wheat0;
     if (isCarrot(id)) return id - Blocks::Carrot0;
     if (isPotato(id)) return id - Blocks::Potato0;
+    if (isBeetroot(id)) return id - Blocks::Beetroot0;
+    if (isMelonStem(id)) return id - Blocks::MelonStem0;
     return 0;
 }
 
@@ -854,6 +883,8 @@ inline BlockId cropAtStage(BlockId id, int stage)
     if (isWheat(id)) return static_cast<BlockId>(Blocks::Wheat0 + stage);
     if (isCarrot(id)) return static_cast<BlockId>(Blocks::Carrot0 + stage);
     if (isPotato(id)) return static_cast<BlockId>(Blocks::Potato0 + stage);
+    if (isBeetroot(id)) return static_cast<BlockId>(Blocks::Beetroot0 + stage);
+    if (isMelonStem(id)) return static_cast<BlockId>(Blocks::MelonStem0 + stage);
     return id;
 }
 // The three machines that smelt. They are one block as far as

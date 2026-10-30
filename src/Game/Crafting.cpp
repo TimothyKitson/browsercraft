@@ -230,6 +230,29 @@ namespace
         // A bone ground up makes three meal, which is Minecraft's.
         { true, 0, 0, { Items::Bone }, 1, Items::BoneMeal, 3 },
 
+        // Three planks in a V. The bowl is the only container in the
+        // game that is not a block, and the only way to carry a soup.
+        { false, 3, 3, { Blocks::Planks, Blocks::Air,    Blocks::Planks,
+                         Blocks::Air,    Blocks::Planks, Blocks::Air,
+                         Blocks::Air,    Blocks::Air,    Blocks::Air },
+          0, Items::Bowl, 4 },
+
+        // Six beets in a bowl, which is Minecraft's and is the one
+        // thing a beetroot is for.
+        { false, 3, 3, { Items::Beetroot, Items::Beetroot, Items::Beetroot,
+                         Items::Beetroot, Items::Beetroot, Items::Beetroot,
+                         Blocks::Air,     Items::Bowl,     Blocks::Air },
+          0, Items::BeetrootSoup, 1 },
+
+        // Nine slices make a melon back, and one slice makes the seed
+        // that grows another. Both are Minecraft's.
+        { false, 3, 3, { Items::MelonSlice, Items::MelonSlice, Items::MelonSlice,
+                         Items::MelonSlice, Items::MelonSlice, Items::MelonSlice,
+                         Items::MelonSlice, Items::MelonSlice, Items::MelonSlice },
+          0, Blocks::Melon, 1 },
+
+        { true, 0, 0, { Items::MelonSlice }, 1, Items::MelonSeeds, 1 },
+
         // The workstations. A smoker is a furnace with logs built
         // round it; a blast furnace is one with iron over it and
         // smooth stone under. Both are Minecraft's, and both are the

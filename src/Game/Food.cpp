@@ -38,6 +38,15 @@ namespace
         { Items::Carrot,         { 3, 3.6f } },
         { Items::Potato,         { 1, 0.6f } },
         { Items::BakedPotato,    { 5, 6.0f } },
+
+        // A beet is barely worth eating; six of them in a bowl is a
+        // meal, which is the whole reason the bowl exists.
+        { Items::Beetroot,       { 1, 1.2f } },
+        { Items::BeetrootSoup,   { 6, 7.2f } },
+
+        // Melon: two hunger a slice and a great many slices to a
+        // melon, which is what makes one worth planting.
+        { Items::MelonSlice,     { 2, 1.2f } },
     };
 }
 

@@ -41,9 +41,21 @@ Farming::Harvest Farming::harvestOf(BlockId crop, uint32_t roll)
 
     // What this crop is sown from. For the roots it is the food
     // itself, which is why pulling one up early costs nothing.
-    const StackId seed = isWheat(crop)  ? Items::WheatSeeds
-                       : isCarrot(crop) ? Items::Carrot
-                                        : Items::Potato;
+    const StackId seed = isWheat(crop)     ? Items::WheatSeeds
+                       : isCarrot(crop)    ? Items::Carrot
+                       : isPotato(crop)    ? Items::Potato
+                       : isBeetroot(crop)  ? Items::BeetrootSeeds
+                                           : Items::MelonSeeds;
+
+    // A stem is never ripe in the sense the others are: what it grows
+    // stands beside it. Broken, it gives back its seed whatever stage
+    // it had reached.
+    if (isMelonStem(crop))
+    {
+        out.first = Items::MelonSeeds;
+        out.firstCount = 1;
+        return out;
+    }
 
     if (!isCropRipe(crop))
     {
@@ -62,6 +74,16 @@ Farming::Harvest Farming::harvestOf(BlockId crop, uint32_t roll)
         return out;
     }
 
+    // A beet is the seed and the food apart, the way wheat is.
+    if (isBeetroot(crop))
+    {
+        out.first = Items::Beetroot;
+        out.firstCount = 1;
+        out.second = Items::BeetrootSeeds;
+        out.secondCount = 1 + static_cast<int>(roll % 3u);
+        return out;
+    }
+
     // A root is its own seed, so a ripe one pays several of the same
     // thing: two to five, which is Minecraft's and is what makes a
     // field grow from one carrot.
@@ -74,10 +96,12 @@ BlockId Farming::cropFromSeed(StackId held)
 {
     switch (held)
     {
-        case Items::WheatSeeds: return Blocks::Wheat0;
-        case Items::Carrot:     return Blocks::Carrot0;
-        case Items::Potato:     return Blocks::Potato0;
-        default:                return Blocks::Air;
+        case Items::WheatSeeds:    return Blocks::Wheat0;
+        case Items::Carrot:        return Blocks::Carrot0;
+        case Items::Potato:        return Blocks::Potato0;
+        case Items::BeetrootSeeds: return Blocks::Beetroot0;
+        case Items::MelonSeeds:    return Blocks::MelonStem0;
+        default:                   return Blocks::Air;
     }
 }
 
@@ -93,6 +117,62 @@ bool Farming::plant(World& world, const glm::ivec3& ground, BlockId crop)
     world.setBlock(ground.x, ground.y, ground.z, Blocks::Farmland);
     world.setBlock(above.x, above.y, above.z, cropAtStage(crop, 0));
     return true;
+}
+
+bool Farming::growBambooAt(World& world, const glm::ivec3& cane)
+{
+    if (world.getBlock(cane.x, cane.y + 1, cane.z) != Blocks::Air) return false;
+
+    // Count down to the ground. A cane that has reached its height
+    // stops, which is what keeps a grove a grove rather than a wall
+    // from the floor to the sky.
+    int height = 0;
+    for (int y = cane.y; y >= 0; --y)
+    {
+        const BlockId here = world.getBlock(cane.x, y, cane.z);
+        if (here == Blocks::Bamboo) { ++height; continue; }
+
+        // Only the ground a cane will stand on.
+        if (here != Blocks::Grass && here != Blocks::Dirt &&
+            here != Blocks::Sand && here != Blocks::Moss) return false;
+        break;
+    }
+
+    if (height <= 0 || height >= BAMBOO_MAX) return false;
+
+    world.setBlock(cane.x, cane.y + 1, cane.z, Blocks::Bamboo);
+    return true;
+}
+
+bool Farming::growMelonBeside(World& world, const glm::ivec3& stem, uint32_t& seed)
+{
+    // Tilled earth under the stem, the same as any other crop.
+    if (world.getBlock(stem.x, stem.y - 1, stem.z) != Blocks::Farmland) return false;
+
+    static const int DX[] = { 1, -1, 0, 0 };
+    static const int DZ[] = { 0, 0, 1, -1 };
+
+    // Start somewhere different each time, or every stem in a field
+    // would put its melon on the same side and a row of them would
+    // read as a wall.
+    const int from = static_cast<int>(nextRandom(seed) % 4u);
+
+    for (int i = 0; i < 4; ++i)
+    {
+        const int side = (from + i) % 4;
+        const int x = stem.x + DX[side];
+        const int z = stem.z + DZ[side];
+
+        if (world.getBlock(x, stem.y, z) != Blocks::Air) continue;
+
+        const BlockId under = world.getBlock(x, stem.y - 1, z);
+        if (under != Blocks::Grass && under != Blocks::Dirt &&
+            under != Blocks::Farmland) continue;
+
+        world.setBlock(x, stem.y, z, Blocks::Melon);
+        return true;
+    }
+    return false;
 }
 
 bool Farming::canGrowAt(const World& world, const glm::ivec3& at)
@@ -134,6 +214,27 @@ void Farming::grow(World& world, const glm::vec3& around, uint32_t& seed)
             around.world = &world;
             if (Cane::canGrowAt(around, x, y, z))
                 world.setBlock(x, y + 1, z, Blocks::SugarCane);
+            continue;
+        }
+
+        // Bamboo, which grows faster than anything in the game and
+        // needs nothing but ground and light. Ticked by this pass for
+        // the same reason the cane is: a second sampling pass would
+        // cost the same again to find the same columns.
+        if (world.getBlock(x, y, z) == Blocks::Bamboo)
+        {
+            growBambooAt(world, glm::ivec3(x, y, z));
+            continue;
+        }
+
+        // A ripe stem does not grow any further: it puts a melon on
+        // the ground beside it, and goes on doing so as long as there
+        // is ground beside it to put one on. That is the whole of
+        // what makes a melon different from the four crops.
+        const BlockId standing = world.getBlock(x, y, z);
+        if (isMelonStem(standing) && isCropRipe(standing))
+        {
+            growMelonBeside(world, glm::ivec3(x, y, z), seed);
             continue;
         }
 

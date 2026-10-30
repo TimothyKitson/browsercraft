@@ -68,6 +68,7 @@ namespace
         // the first carrot anyone gets who has not found a field.
         { Items::Carrot,        1, 4 },
         { Items::Potato,        1, 4 },
+        { Items::BeetrootSeeds, 1, 4 },
         { Items::Stick,         1, 6 },
         { Blocks::Planks,       2, 8 },
         { Blocks::Torch,        1, 6 },
