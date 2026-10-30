@@ -268,6 +268,9 @@ namespace
         { "Budding Amethyst",BuddingTile, BuddingTile,    BuddingTile,    true,  true,  RenderType::Cube,   0,   1.5f },
         { "Amethyst Cluster",ClusterTile, ClusterTile,    ClusterTile,    false, false, RenderType::Cross,  5,   1.5f },
         { "Smooth Basalt",SmoothBasaltTile,SmoothBasaltTile,SmoothBasaltTile,true,true,RenderType::Cube,   0,   1.25f },
+        { "Lantern",      LanternTile,   LanternTile,    LanternTile,    true,  true,  RenderType::Cube,  15,   0.3f },
+        { "Barrel",       BarrelTop,     BarrelTop,      BarrelSide,     true,  true,  RenderType::Cube,   0,   2.5f },
+        { "Campfire",     CampfireTop,   CampfireLog,    CampfireLog,    true,  false, RenderType::Cube,  15,   2.0f },
     };
 }
 

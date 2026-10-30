@@ -340,6 +340,26 @@ bool Player::isInLava(const World& world) const
     return false;
 }
 
+// Standing in a campfire. Kept apart from the lava test because what
+// it does is different: lava is a hazard you fall into and a campfire
+// is one you walk over, so this only counts the block under your feet
+// and the one you are standing in.
+bool Player::isInFire(const World& world) const
+{
+    const AABB box = aabb();
+    const int minX = static_cast<int>(std::floor(box.min.x));
+    const int maxX = static_cast<int>(std::floor(box.max.x - 0.0001f));
+    const int minZ = static_cast<int>(std::floor(box.min.z));
+    const int maxZ = static_cast<int>(std::floor(box.max.z - 0.0001f));
+    const int footY = static_cast<int>(std::floor(box.min.y));
+
+    for (int x = minX; x <= maxX; ++x)
+        for (int z = minZ; z <= maxZ; ++z)
+            if (world.getBlock(x, footY, z) == Blocks::Campfire) return true;
+
+    return false;
+}
+
 void Player::ignite(float seconds)
 {
     if (creative() || health <= 0 || Effects::fireImmune(effects)) return;

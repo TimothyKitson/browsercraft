@@ -47,6 +47,10 @@ public:
     // to the player is its own thing.
     bool isInLava(const World& world) const;
 
+    // Standing in a campfire, which burns you the way lava does but
+    // for walking over rather than falling in.
+    bool isInFire(const World& world) const;
+
     // Four a go, twice a second, which is Minecraft's. Fire resistance
     // takes all of it: swimming lava is the whole point of the drink.
     static constexpr int LAVA_DAMAGE = 4;

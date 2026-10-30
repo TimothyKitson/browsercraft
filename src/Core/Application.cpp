@@ -1294,7 +1294,8 @@ bool Application::frame()
             if (m_player.isInWater(*m_world)) m_player.douse();
 
             const bool wasAlight = m_player.onFire();
-            if (m_player.burn(deltaTime, m_player.isInLava(*m_world)))
+            if (m_player.burn(deltaTime, m_player.isInLava(*m_world) ||
+                                         m_player.isInFire(*m_world)))
                 m_audio.play(Sound::Hurt, 0.9f, 0.8f);
             if (m_player.onFire() && !wasAlight) m_audio.play(Sound::Fire, 0.7f);
 
@@ -1340,7 +1341,7 @@ bool Application::frame()
 
             const bool stillThere =
                 m_benchOpen   ? there == Blocks::CraftingTable
-              : m_chestOpen   ? there == Blocks::Chest
+              : m_chestOpen   ? isContainerBlock(there)
               : m_enchantOpen ? there == Blocks::EnchantingTable
               : m_anvilOpen   ? there == Blocks::Anvil
               : m_brewOpen    ? there == Blocks::BrewingStand
@@ -4525,7 +4526,7 @@ void Application::updateMining(float deltaTime)
             // A chest gives back everything in it. Twenty-seven stacks
             // is a lot to drop at once, which is why they come out of
             // the block rather than the player.
-            if (id == Blocks::Chest)
+            if (isContainerBlock(id))
             {
                 if (m_chestOpen && m_chestBlock == hit.block) stowChest();
 
@@ -6035,7 +6036,7 @@ void Application::applyBlast(const glm::vec3& at, float radius, int damage)
 
                 // A chest or a furnace gives up what was in it rather
                 // than taking it with it.
-                if (block == Blocks::Chest && m_chests.has(where))
+                if (isContainerBlock(block) && m_chests.has(where))
                 {
                     for (const ItemStack& held : m_chests.at(where))
                         if (!held.empty())
@@ -6418,7 +6419,7 @@ void Application::handlePlacement()
                 m_audio.play(Sound::Click, 0.4f);
                 return;
             }
-            if (used == Blocks::Chest)
+            if (isContainerBlock(used))
             {
                 openChest(bench.block);
                 m_audio.play(Sound::DigWood, 0.5f, 0.8f);

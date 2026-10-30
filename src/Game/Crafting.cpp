@@ -209,6 +209,24 @@ namespace
           0, Blocks::CoalBlock, 1 },
         { true, 0, 0, { Blocks::CoalBlock }, 1, Items::Coal, 9 },
 
+        // A lantern: iron round a torch. A barrel: planks and slabs,
+        // which is Minecraft's and the cheapest chest in the game. A
+        // campfire: logs under a stick frame, with coal to light it.
+        { false, 3, 3, { Items::IronIngot, Items::IronIngot, Items::IronIngot,
+                         Items::IronIngot, Blocks::Torch,    Items::IronIngot,
+                         Items::IronIngot, Items::IronIngot, Items::IronIngot },
+          0, Blocks::Lantern, 1 },
+
+        { false, 3, 3, { Blocks::Planks,   Blocks::PlankSlab, Blocks::Planks,
+                         Blocks::Planks,   Blocks::Air,       Blocks::Planks,
+                         Blocks::Planks,   Blocks::PlankSlab, Blocks::Planks },
+          0, Blocks::Barrel, 1 },
+
+        { false, 3, 3, { Blocks::Air,    Items::Stick,  Blocks::Air,
+                         Items::Stick,   Items::Coal,   Items::Stick,
+                         Blocks::Log,    Blocks::Log,   Blocks::Log },
+          0, Blocks::Campfire, 1 },
+
         // A bone ground up makes three meal, which is Minecraft's.
         { true, 0, 0, { Items::Bone }, 1, Items::BoneMeal, 3 },
 

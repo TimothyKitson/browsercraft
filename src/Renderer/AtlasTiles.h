@@ -224,6 +224,11 @@ namespace Tiles
         BuddingTile,
         ClusterTile,
         SmoothBasaltTile,
+        LanternTile,
+        BarrelTop,
+        BarrelSide,
+        CampfireTop,
+        CampfireLog,
 
         RainDrop,
         SnowFlake,

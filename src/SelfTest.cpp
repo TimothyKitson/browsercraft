@@ -903,21 +903,37 @@ namespace
     {
         section("items");
 
-        // The whole design rests on the two id ranges never meeting. A
-        // block id is a byte, and the items begin one past the largest
-        // value a byte can hold.
-        check(Items::FIRST == 256, "items start past every possible block id");
-        check(static_cast<int>(Blocks::Count) < Items::FIRST, "and no block reaches them");
+        // The whole design rests on the two id ranges never meeting.
+        // Blocks have everything below Items::FIRST and items have
+        // everything above it, which is what lets one stack hold
+        // either.
+        //
+        // This used to read "FIRST == 256", because a block id was a
+        // byte and 256 was one past every value one could hold. Both
+        // moved when the game ran out of blocks at the lantern. What
+        // has to be true is not a particular number but that the
+        // blocks have not reached the items, with room left over.
+        check(static_cast<int>(Blocks::Count) < Items::FIRST,
+              "the blocks have not reached the items");
+        check(Items::FIRST - static_cast<int>(Blocks::Count) > 64,
+              "and there is room left for more of them");
         check(!isItem(Blocks::Air) && !isItem(Blocks::Stone), "blocks are not items");
         check(isBlockStack(Blocks::Stone), "and blocks read as blocks");
         check(isItem(Items::Wheat) && isItem(Items::Gunpowder), "items are items");
         check(!isBlockStack(Items::Wheat), "and items are not blocks");
         check(!isItem(Items::Count), "nothing past the last item is one");
 
-        // Narrowing an item to a BlockId is exactly the mistake this
-        // range is meant to make impossible to miss.
-        check(static_cast<BlockId>(Items::Wheat) != Items::Wheat,
-              "an item does not survive being squeezed into a block id");
+        // Narrowing an item to a BlockId is the mistake this range
+        // exists to catch. While a block id was a byte the value
+        // visibly changed, which is what this used to check; with
+        // sixteen bits it survives the cast intact, so what protects
+        // against it now is that the result is not a block -- the
+        // table is bounds-checked and hands back air rather than
+        // reading past its end.
+        check(static_cast<int>(Items::Wheat) >= static_cast<int>(Blocks::Count),
+              "an item narrowed to a block id is not a block");
+        check(&blockInfo(static_cast<BlockId>(Items::Wheat)) == &blockInfo(Blocks::Air),
+              "and asking the block table about one gives air, not whatever is there");
 
         for (StackId id = Items::FIRST; id < Items::Count; ++id)
         {

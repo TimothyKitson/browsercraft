@@ -11,7 +11,11 @@ namespace
     constexpr uint32_t LEVEL_MAGIC = 0x56584C56; // "VXLV"
     // 2: slot ids widened to sixteen bits so inventories can hold items,
     //    and the game mode and hardcore death now persist.
-    constexpr uint16_t FORMAT_VERSION = 2;
+    // 3: block ids are sixteen bits. A version 2 file stores them as
+    // single bytes, so reading one as this format would turn every
+    // chunk into noise -- the version check rejects it instead and
+    // the world is generated again, which is what that check is for.
+    constexpr uint16_t FORMAT_VERSION = 3;
 
     std::string chunkPath(const std::string& dir, ChunkPos pos)
     {

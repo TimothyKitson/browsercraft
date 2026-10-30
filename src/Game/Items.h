@@ -18,7 +18,14 @@ using StackId = uint16_t;
 
 namespace Items
 {
-    constexpr StackId FIRST = 256;
+    // Where the items begin. Blocks have everything below this, so
+    // this is also the ceiling on how many blocks there can be.
+    //
+    // It was 256, which was the whole of a uint8_t and so the whole of
+    // the block space. Both moved together: a block id is sixteen bits
+    // now, and the items start far enough up that running out again is
+    // not something anybody has to think about.
+    constexpr StackId FIRST = 1024;
 
     enum : StackId
     {

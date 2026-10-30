@@ -1,12 +1,20 @@
 #include "Items.h"
 #include <algorithm>
 
-// A BlockId is a byte, and Items::FIRST is one past the largest value a
-// byte holds, so the two ranges cannot meet. Checked rather than assumed,
-// because the day BlockId widens this is what will catch it.
+// Blocks and items share one number line: everything below
+// Items::FIRST is a block and everything above it is an item, which is
+// what lets one stack hold either.
+//
+// This used to assert that FIRST was past the largest value a BlockId
+// could hold. That worked while a BlockId was a byte and FIRST was
+// 256, and it is what caught the widening -- but with sixteen bits the
+// type's maximum is 65535 and a bound there would mean no items at
+// all. What actually has to hold is that FIRST is past the last block
+// in use, so that is what is checked. Saved worlds from before the
+// widening are rejected by the format version rather than migrated.
 static_assert(static_cast<unsigned long long>(Items::FIRST) >
-                  static_cast<unsigned long long>(static_cast<BlockId>(~BlockId{ 0 })),
-              "BlockId has grown; raise Items::FIRST and migrate saved inventories");
+                  static_cast<unsigned long long>(Blocks::Count),
+              "the blocks have reached Items::FIRST; raise it");
 
 namespace
 {

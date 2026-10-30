@@ -1,7 +1,17 @@
 #pragma once
 #include <cstdint>
 
-using BlockId = uint8_t;
+// Sixteen bits rather than eight.
+//
+// The game ran out: there were 256 ids and the two hundred and
+// fifty-seventh block was a lantern. Everything past that point was
+// simply impossible to add, which is not a limit worth keeping for a
+// byte.
+//
+// It costs a byte per block in a chunk -- 32 KB becomes 64 KB, and
+// what a render distance of eight holds goes from about ten megabytes
+// to twenty. That is affordable where "no more blocks, ever" is not.
+using BlockId = uint16_t;
 
 // What a block is made of, as far as the ear is concerned: it picks the
 // digging and footstep sounds.
@@ -368,6 +378,13 @@ namespace Blocks
         AmethystCluster,
         SmoothBasalt,
 
+        // The three every base ends up with: a light you can hang, a
+        // chest that wants no room above it, and a fire you can cook
+        // on and should not stand in.
+        Lantern,
+        Barrel,
+        Campfire,
+
         Count
     };
 }
@@ -494,6 +511,14 @@ inline bool isDeepDark(BlockId id)
 // put contents, so they live beside the world.
 // What a geode is made of. Useful as one question because the whole
 // shell is tested together.
+// A barrel holds what a chest holds, and is opened the same way. The
+// difference is that it needs no room above it, which is the whole
+// reason to build one.
+inline bool isContainerBlock(BlockId id)
+{
+    return id == Blocks::Chest || id == Blocks::Barrel;
+}
+
 inline bool isGeode(BlockId id)
 {
     return id >= Blocks::AmethystBlock && id <= Blocks::SmoothBasalt;

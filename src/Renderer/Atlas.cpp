@@ -1994,6 +1994,89 @@ namespace
         t.speckle(3, 518);
     }
 
+    // A lantern: the same cage as the soul one with an ordinary
+    // flame in it, so the two read as a pair.
+    void paintLantern(Tile& t)
+    {
+        t.fill(Color{ 58, 56, 52 });
+        for (int y = 3; y < 13; ++y)
+            for (int x = 4; x < 12; ++x)
+                t.set(x, y, (hash2(x, y, 531) > 0.4f) ? Color{ 252, 214, 118 }
+                                                      : Color{ 238, 160, 60 });
+        for (int x = 0; x < Tile::N; ++x)
+        {
+            t.set(x, 0, Color{ 44, 42, 40 });
+            t.set(x, Tile::N - 1, Color{ 44, 42, 40 });
+        }
+        // The bars across the glass.
+        for (int y = 3; y < 13; ++y)
+        {
+            t.set(5, y, Color{ 72, 68, 62 });
+            t.set(10, y, Color{ 72, 68, 62 });
+        }
+    }
+
+    void paintBarrelTop(Tile& t)
+    {
+        t.fill(Color{ 126, 94, 56 });
+        // The lid, with a ring of hoop round it.
+        for (int y = 0; y < Tile::N; ++y)
+            for (int x = 0; x < Tile::N; ++x)
+            {
+                const float edge = std::min(std::min(x, Tile::N - 1 - x),
+                                            std::min(y, Tile::N - 1 - y));
+                if (edge < 1.5f) t.set(x, y, Color{ 76, 62, 44 });
+                else if (edge < 2.5f) t.set(x, y, Color{ 152, 116, 72 });
+            }
+        for (int x = 3; x < 13; ++x) t.set(x, 8, Color{ 86, 68, 46 });
+        t.speckle(5, 533);
+    }
+
+    void paintBarrelSide(Tile& t)
+    {
+        t.fill(Color{ 118, 88, 52 });
+        // Staves down it, and two hoops round it.
+        for (int x = 0; x < Tile::N; ++x)
+            if ((x % 4) == 3)
+                for (int y = 0; y < Tile::N; ++y) t.set(x, y, Color{ 94, 70, 42 });
+        for (int x = 0; x < Tile::N; ++x)
+        {
+            t.set(x, 2, Color{ 62, 56, 48 });
+            t.set(x, 3, Color{ 78, 70, 58 });
+            t.set(x, Tile::N - 4, Color{ 78, 70, 58 });
+            t.set(x, Tile::N - 3, Color{ 62, 56, 48 });
+        }
+        t.speckle(5, 534);
+    }
+
+    void paintCampfireTop(Tile& t)
+    {
+        t.fill(Color{ 72, 52, 34 });
+        // Logs crossed, with the fire between them.
+        for (int i = 0; i < Tile::N; ++i)
+        {
+            t.set(i, 4, Color{ 104, 76, 48 });
+            t.set(i, 11, Color{ 104, 76, 48 });
+        }
+        for (int y = 5; y < 11; ++y)
+            for (int x = 3; x < 13; ++x)
+                t.set(x, y, (hash2(x, y, 535) > 0.45f) ? Color{ 250, 176, 56 }
+                                                       : Color{ 226, 104, 36 });
+        t.speckle(5, 536);
+    }
+
+    void paintCampfireLog(Tile& t)
+    {
+        t.fill(Color{ 92, 66, 42 });
+        for (int y = 0; y < Tile::N; ++y)
+            if ((y % 5) == 2)
+                for (int x = 0; x < Tile::N; ++x) t.set(x, y, Color{ 68, 48, 32 });
+        // Embers glowing underneath.
+        for (int x = 0; x < Tile::N; ++x)
+            if (hash2(x, 0, 537) > 0.6f) t.set(x, Tile::N - 1, Color{ 232, 120, 44 });
+        t.speckle(5, 538);
+    }
+
     void paintSpawnerIn(Tile& t, Color bars, Color inside)
     {
         t.fill(inside);
@@ -4700,6 +4783,11 @@ namespace
         { Tiles::BuddingTile, paintBudding },
         { Tiles::ClusterTile, paintCluster },
         { Tiles::SmoothBasaltTile, paintSmoothBasalt },
+        { Tiles::LanternTile, paintLantern },
+        { Tiles::BarrelTop, paintBarrelTop },
+        { Tiles::BarrelSide, paintBarrelSide },
+        { Tiles::CampfireTop, paintCampfireTop },
+        { Tiles::CampfireLog, paintCampfireLog },
         { Tiles::Obsidian, paintObsidian },
         { Tiles::TallGrass, paintTallGrass },
         { Tiles::FlowerRed, paintFlowerRed },
@@ -5082,6 +5170,11 @@ namespace
         { Tiles::BuddingTile,   { "budding_amethyst", nullptr },                       Tinting::None,    0,   false },
         { Tiles::ClusterTile,   { "amethyst_cluster", nullptr },                       Tinting::None,    0,   false },
         { Tiles::SmoothBasaltTile, { "smooth_basalt", nullptr },                       Tinting::None,    0,   false },
+        { Tiles::LanternTile,   { "lantern", nullptr },                                Tinting::None,    0,   false },
+        { Tiles::BarrelTop,     { "barrel_top", nullptr },                             Tinting::None,    0,   false },
+        { Tiles::BarrelSide,    { "barrel_side", nullptr },                            Tinting::None,    0,   false },
+        { Tiles::CampfireTop,   { "campfire_fire", nullptr },                          Tinting::None,    0,   false },
+        { Tiles::CampfireLog,   { "campfire_log", nullptr },                           Tinting::None,    0,   false },
         { Tiles::PistonTop,     { "piston_side", nullptr },                            Tinting::None,    0,   false },
         { Tiles::PistonSide,    { "piston_side", nullptr },                            Tinting::None,    0,   false },
         { Tiles::PistonFace,    { "piston_top", "piston_top_normal", nullptr },         Tinting::None,    0,   false },
