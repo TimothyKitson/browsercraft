@@ -4367,6 +4367,21 @@ void Application::updateMining(float deltaTime)
                 for (int i = 0; i < crop.secondCount; ++i)
                     m_drops.spawnFromBrokenBlock(hit.block, crop.second);
             }
+            else if (isLeaves(id))
+            {
+                // Oak gives up an apple about one time in sixteen,
+                // which is Minecraft's rate and the only food you get
+                // out of a tree. The other woods give nothing, as
+                // there too.
+                if (id == Blocks::Leaves)
+                {
+                    const uint32_t roll = static_cast<uint32_t>(
+                        hit.block.x * 73856093 ^ hit.block.y * 19349663 ^
+                        hit.block.z * 83492791);
+                    if (roll % 16 == 0)
+                        m_drops.spawnFromBrokenBlock(hit.block, Items::Apple);
+                }
+            }
             else if (Tools::canHarvest(tool, id))
             {
                 StackId drop = blockDrop(id);
@@ -6696,6 +6711,44 @@ void Application::handlePlacement()
         }
         m_audio.play(Sound::Pickup, 0.5f, 1.4f);
         return;
+    }
+
+    // Bone meal, thrown on a crop. It brings it on a stage or two,
+    // which is the difference between a field and a wait.
+    if (stack.id == Items::BoneMeal)
+    {
+        const RaycastHit crop = m_world->raycast(m_camera.position, m_camera.front,
+                                                 REACH_DISTANCE);
+        if (crop.hit && isWheat(m_world->getBlock(crop.block.x, crop.block.y, crop.block.z)))
+        {
+            const BlockId was = m_world->getBlock(crop.block.x, crop.block.y, crop.block.z);
+            const int stage = wheatStage(was);
+
+            if (stage < 7)
+            {
+                // Two or three stages, so a handful finishes a crop
+                // rather than one pinch doing it.
+                const uint32_t roll = static_cast<uint32_t>(
+                    crop.block.x * 73856093 ^ crop.block.y * 19349663 ^
+                    crop.block.z * 83492791 ^
+                    static_cast<int>(m_elapsedSeconds * 977.0f));
+                const int grown = std::min(7, stage + 2 + static_cast<int>(roll % 2));
+
+                m_world->setBlock(crop.block.x, crop.block.y, crop.block.z,
+                                  static_cast<BlockId>(Blocks::Wheat0 + grown));
+                m_net.onLocalBlockChange(crop.block.x, crop.block.y, crop.block.z,
+                                         static_cast<BlockId>(Blocks::Wheat0 + grown));
+                m_particles.spawnBlockBreak(crop.block, Blocks::TallGrass);
+                m_audio.play(Sound::Place, 0.5f, 1.5f);
+
+                if (!m_player.creative())
+                {
+                    stack.count -= 1;
+                    if (stack.count <= 0) stack.clear();
+                }
+            }
+            return;
+        }
     }
 
     // Sowing. Seeds till the ground they are used on and plant

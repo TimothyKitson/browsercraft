@@ -4296,6 +4296,43 @@ namespace
 
     // The star a wither leaves. A four-pointed white burst, which is
     // the one item in the game that is not a thing but a trophy.
+    void paintItemApple(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 3; y < 15; ++y)
+            for (int x = 3; x < 13; ++x)
+            {
+                const float dx = (x - 7.5f) / 5.0f;
+                const float dy = (y - 9.5f) / 5.5f;
+                if (dx * dx + dy * dy > 1.0f) continue;
+                t.set(x, y, (dx < -0.3f && dy < -0.2f) ? Color{ 236, 108, 96 }
+                                                       : Color{ 194, 48, 44 });
+            }
+
+        // The stalk and one leaf, which is what makes it an apple
+        // rather than a red circle.
+        t.set(8, 2, Color{ 96, 64, 38 });
+        t.set(8, 3, Color{ 96, 64, 38 });
+        t.set(9, 3, Color{ 72, 140, 56 });
+        t.set(10, 3, Color{ 72, 140, 56 });
+    }
+
+    void paintItemBoneMeal(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        // A heap of powder rather than a bone: it is what a bone
+        // becomes, and the two have to be told apart in a hotbar.
+        for (int y = 6; y < 14; ++y)
+        {
+            const int wide = 2 + (y - 6);
+            for (int x = 8 - wide; x <= 7 + wide && x < Tile::N; ++x)
+                if (x >= 0)
+                    t.set(x, y, (y < 8) ? Color{ 248, 248, 240 }
+                                        : Color{ 222, 222, 210 });
+        }
+        t.speckle(6, 521);
+    }
+
     void paintItemNetherStar(Tile& t)
     {
         t.fill(Color{ 0, 0, 0, 0 });
@@ -4760,6 +4797,8 @@ namespace
         { Tiles::ItemOminousBottle, paintItemOminousBottle },
         { Tiles::ItemOminousKey,    paintItemOminousKey },
         { Tiles::ItemNetherStar,    paintItemNetherStar },
+        { Tiles::ItemApple,         paintItemApple },
+        { Tiles::ItemBoneMeal,      paintItemBoneMeal },
         { Tiles::ItemMagmaCream,    paintItemMagmaCream },
         { Tiles::ItemGlowstoneDust, paintItemGlowstoneDust },
         { Tiles::EndFrameTop,   paintEndFrameTop },
@@ -4907,6 +4946,8 @@ namespace
         { Tiles::ItemOminousBottle, { "ominous_bottle", nullptr, nullptr } },
         { Tiles::ItemOminousKey, { "ominous_trial_key", nullptr, nullptr } },
         { Tiles::ItemNetherStar, { "nether_star", nullptr, nullptr } },
+        { Tiles::ItemApple, { "apple", nullptr, nullptr } },
+        { Tiles::ItemBoneMeal, { "bone_meal", nullptr, nullptr } },
     };
 
     const PackTile PACK_TILES[] = {

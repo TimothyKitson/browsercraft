@@ -116,6 +116,8 @@ namespace
         { "Glow Berries",    Tiles::ItemGlowBerries,    64 },
         { "Ominous Bottle",  Tiles::ItemOminousBottle,   1 },
         { "Ominous Trial Key", Tiles::ItemOminousKey,    64 },
+        { "Apple",           Tiles::ItemApple,         64 },
+        { "Bone Meal",       Tiles::ItemBoneMeal,      64 },
         { "Nether Star",     Tiles::ItemNetherStar,     1 },
     };
 

@@ -5167,6 +5167,25 @@ namespace
             for (int k = 0; k < static_cast<int>(Items::Count) && !obtainable; ++k)
                 if (Smelting::resultOf(static_cast<StackId>(k)) == id) obtainable = true;
 
+            // And what is in a chest somewhere. This was missing, and
+            // the apple found it: its other route is a chance drop off
+            // oak leaves, which is not something blockDrop can say, so
+            // by this test's old reckoning a food you can pick up in
+            // any village was unobtainable.
+            for (Village::Kind kind : { Village::Kind::Home, Village::Kind::Blacksmith,
+                                        Village::Kind::Library, Village::Kind::Butcher })
+                for (int n = 0; n < 30 && !obtainable; ++n)
+                    for (const VillageLoot::Stack& stack :
+                             VillageLoot::rollFor(kind, n * 5, 70, n * 3, 4242u))
+                        if (stack.id == id) obtainable = true;
+
+            for (int h = 0; h <= static_cast<int>(WorldGen::Hoard::TrialChamber) &&
+                            !obtainable; ++h)
+                for (int n = 0; n < 30 && !obtainable; ++n)
+                    for (const StructureLoot::Stack& stack : StructureLoot::rollFor(
+                             static_cast<WorldGen::Hoard>(h), n * 7, 50, n * 11, 4242u))
+                        if (stack.id == id) obtainable = true;
+
             check(obtainable,
                   std::string(displayName(id)) + " can be got hold of, not just eaten");
         }
@@ -5845,6 +5864,60 @@ namespace
               "the geode blocks are the geode's");
         check(!isGeode(Blocks::Calcite),
               "while calcite is its own block and turns up elsewhere too");
+    }
+
+    void testAppleAndBoneMeal()
+    {
+        section("apples, and bone meal");
+
+        // An apple is food, and modest food: it is what you eat on the
+        // way somewhere, which is why it falls out of trees.
+        check(Food::isEdible(Items::Apple), "an apple can be eaten");
+        check(Food::valueOf(Items::Apple).hunger < Food::valueOf(Items::Steak).hunger,
+              "and is worth less than a steak");
+        check(Food::valueOf(Items::Apple).hunger > Food::valueOf(Items::GlowBerries).hunger,
+              "but more than a glow berry");
+
+        // Bone meal comes off a bone, three at a time, which is
+        // Minecraft's rate.
+        bool fromBone = false;
+        for (StackId made : Crafting::everyOutput())
+            if (made == Items::BoneMeal) fromBone = true;
+        check(fromBone, "bone meal is made from something");
+
+        {
+            ItemStack grid[9];
+            grid[0].id = Items::Bone;
+            grid[0].count = 1;
+            const CraftOutput meal = Crafting::match(grid, 3);
+            check(meal.id == Items::BoneMeal && meal.count == 3,
+                  "one bone grinds into three meal");
+        }
+
+        // The two are told apart in a hotbar. They were not, once: the
+        // item table is read by enum index and these two were appended
+        // to the end of it while the enum had them in the middle, so
+        // every item from the apple onward came back with somebody
+        // else's name and somebody else's icon.
+        check(std::string(displayName(Items::Apple)) == "Apple",
+              "an apple is called an apple");
+        check(std::string(displayName(Items::BoneMeal)) == "Bone Meal",
+              "and bone meal is called bone meal");
+        check(std::string(displayName(Items::NetherStar)) == "Nether Star",
+              "and the star is still the star");
+        check(atlasTileFor(Items::Apple) != atlasTileFor(Items::BoneMeal),
+              "and they are not drawn with the same picture");
+
+        // The table and the enum have to stay in step. This is the
+        // check that would have caught it outright.
+        for (int i = static_cast<int>(Items::FIRST); i < static_cast<int>(Items::Count); ++i)
+        {
+            const StackId id = static_cast<StackId>(i);
+            check(displayName(id)[0] != '\0',
+                  "item " + std::to_string(i) + " has a name");
+            check(atlasTileFor(id) != Tiles::Blank,
+                  std::string(displayName(id)) + " has a picture of its own");
+        }
     }
 
     void testFortressAndMineshaft()
@@ -9549,6 +9622,7 @@ int runSelfTest()
     testRedstoneParts();
     testHopper();
     testGeodes();
+    testAppleAndBoneMeal();
     testAncientCity();
     testOtherDimensionStructures();
     testSearchAgreesWithStamp();

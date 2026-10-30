@@ -56,6 +56,11 @@ namespace
     // An ordinary household: what anybody would have about the place.
     const Entry HOME[] = {
         { Items::Bread,         1, 3 },
+        // Apples are in a Minecraft village house chest too. They are
+        // also the only route into the game the block audit can see:
+        // the other one is a chance drop off oak leaves, which is not
+        // something blockDrop can say.
+        { Items::Apple,         1, 3 },
         { Items::WheatSeeds,    1, 6 },
         { Items::Wheat,         1, 4 },
         { Items::Stick,         1, 6 },

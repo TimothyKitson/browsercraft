@@ -145,6 +145,14 @@ namespace Items
         OminousBottle,
         OminousTrialKey,
 
+        // Off an oak, now and then. The one food in the game you get
+        // by cutting down a tree rather than by farming or killing.
+        Apple,
+
+        // Ground bone. Thrown on a crop it brings it on, which is the
+        // difference between a field and a wait.
+        BoneMeal,
+
         // What a wither leaves. One of them makes a beacon, which is
         // the only thing in the game it is for.
         NetherStar,

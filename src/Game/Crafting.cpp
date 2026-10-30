@@ -209,6 +209,9 @@ namespace
           0, Blocks::CoalBlock, 1 },
         { true, 0, 0, { Blocks::CoalBlock }, 1, Items::Coal, 9 },
 
+        // A bone ground up makes three meal, which is Minecraft's.
+        { true, 0, 0, { Items::Bone }, 1, Items::BoneMeal, 3 },
+
         // A hopper: iron round a chest, which is Minecraft's. A
         // dropper is cobble round nothing with redstone behind it,
         // and a dispenser is a dropper with a bow in it.

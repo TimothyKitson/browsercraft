@@ -343,8 +343,10 @@ namespace Tiles
         ItemOminousBottle,
         ItemOminousKey,
         ItemNetherStar,
+        ItemApple,
+        ItemBoneMeal,
 
-        ItemTileEnd = ItemNetherStar + 1
+        ItemTileEnd = ItemBoneMeal + 1
     };
 
     // Ten progressively more broken overlay tiles for the mining animation.
