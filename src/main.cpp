@@ -8,6 +8,8 @@
 #include "Game/Trial.h"
 #include "Game/Farming.h"
 #include "Entity/MobType.h"
+#include <chrono>
+#include "World/ChunkMesher.h"
 #include <set>
 #include <algorithm>
 #include "World/Structures.h"
@@ -704,6 +706,147 @@ namespace
         return clean ? 0 : 1;
     }
 
+    // What the world costs to make and to draw, biome by biome.
+    //
+    // The target this game is built against is a Latitude 3520 with
+    // four gigabytes on the lowest settings, and every block added is
+    // paid for there. Measuring it is the only way to know: a jungle
+    // full of bamboo and a plain full of grass are not the same
+    // chunk, and neither is the sea.
+    int printCostCheck(uint32_t seed)
+    {
+        const WorldGen generator(seed);
+
+        struct Place
+        {
+            const char* name;
+            int chunkX, chunkZ;
+        };
+
+        // Found by walking out until each biome turns up, so the same
+        // seed measures the same ground every time.
+        std::vector<Place> places;
+        {
+            const char* wanted[] = { "Plains", "Forest", "Jungle", "Desert",
+                                     "Swamp", "Ocean", "Mountains", "Savanna" };
+            for (const char* name : wanted)
+            {
+                bool found = false;
+                for (int ring = 0; ring < 220 && !found; ++ring)
+                    for (int step = 0; step < 8 && !found; ++step)
+                    {
+                        const float angle = step * 0.785398f;
+                        const int cx = static_cast<int>(std::cos(angle) * ring);
+                        const int cz = static_cast<int>(std::sin(angle) * ring);
+                        const char* here = biomeName(
+                            generator.biomeAt(cx * Chunk::SX + 8, cz * Chunk::SZ + 8));
+                        if (std::strcmp(here, name) != 0) continue;
+                        places.push_back(Place{ name, cx, cz });
+                        found = true;
+                    }
+                if (!found) std::printf("  (no %s within range of this seed)\n", name);
+            }
+        }
+
+        std::printf("\n  %-12s %10s %10s %10s %10s\n",
+                    "biome", "gen ms", "mesh ms", "mesh KB", "quads");
+        std::printf("  %-12s %10s %10s %10s %10s\n",
+                    "-----", "------", "-------", "-------", "-----");
+
+        double worstMesh = 0.0;
+        const char* worstName = "";
+
+        for (const Place& place : places)
+        {
+            constexpr int RUNS = 8;
+            double genMs = 0.0, meshMs = 0.0;
+            size_t bytes = 0;
+            size_t quads = 0;
+
+            for (int run = 0; run < RUNS; ++run)
+            {
+                Chunk chunk(ChunkPos{ place.chunkX + run, place.chunkZ });
+
+                const auto genStart = std::chrono::steady_clock::now();
+                generator.generate(chunk);
+                const auto genEnd = std::chrono::steady_clock::now();
+                genMs += std::chrono::duration<double, std::milli>(genEnd - genStart).count();
+
+                // The border is filled from the eight neighbours, the
+                // same as the real mesher gets. Left as air it draws
+                // every face round the edge of the chunk that should
+                // have been culled, which on a 16x256 chunk is eight
+                // thousand quads of pure measurement error.
+                MeshSnapshot snapshot;
+                snapshot.pos = chunk.position();
+                for (int dz = -1; dz <= 1; ++dz)
+                    for (int dx = -1; dx <= 1; ++dx)
+                    {
+                        Chunk* from = &chunk;
+                        Chunk beside(ChunkPos{ chunk.position().x + dx,
+                                               chunk.position().z + dz });
+                        if (dx != 0 || dz != 0)
+                        {
+                            generator.generate(beside);
+                            from = &beside;
+                        }
+
+                        // Only the strip of it that the snapshot can
+                        // hold: one block in from each side.
+                        const int x0 = (dx < 0) ? Chunk::SX - 1 : 0;
+                        const int x1 = (dx > 0) ? 0 : Chunk::SX - 1;
+                        const int z0 = (dz < 0) ? Chunk::SZ - 1 : 0;
+                        const int z1 = (dz > 0) ? 0 : Chunk::SZ - 1;
+
+                        for (int y = 0; y < Chunk::SY; ++y)
+                            for (int z = z0; z <= z1; ++z)
+                                for (int x = x0; x <= x1; ++x)
+                                {
+                                    const int sx = x + dx * Chunk::SX;
+                                    const int sz = z + dz * Chunk::SZ;
+                                    if (!MeshSnapshot::inRange(sx, y, sz)) continue;
+                                    snapshot.blocks[MeshSnapshot::index(sx, y, sz)] =
+                                        from->getBlock(x, y, z);
+                                }
+                    }
+
+                MeshResult mesh;
+                const auto meshStart = std::chrono::steady_clock::now();
+                buildChunkMesh(snapshot, mesh);
+                const auto meshEnd = std::chrono::steady_clock::now();
+                meshMs += std::chrono::duration<double, std::milli>(meshEnd - meshStart).count();
+
+                const size_t floats = mesh.opaqueVertices.size() +
+                                      mesh.transparentVertices.size();
+                bytes += floats * sizeof(float);
+                quads += floats / 9 / 6;   // nine floats a vertex, six a quad
+            }
+
+            const double meshAvg = meshMs / RUNS;
+            if (meshAvg > worstMesh) { worstMesh = meshAvg; worstName = place.name; }
+
+            std::printf("  %-12s %10.2f %10.2f %10.0f %10zu\n",
+                        place.name, genMs / RUNS, meshAvg,
+                        static_cast<double>(bytes) / RUNS / 1024.0, quads / RUNS);
+        }
+
+        // What a loaded world costs at the distance the lowest
+        // settings use. Block data only: the mesh is counted above.
+        constexpr int LOW_DISTANCE = 2;
+        const int loaded = (LOW_DISTANCE * 2 + 1) * (LOW_DISTANCE * 2 + 1);
+        const double blockKb =
+            static_cast<double>(loaded) * Chunk::SX * Chunk::SY * Chunk::SZ *
+            sizeof(BlockId) / 1024.0;
+
+        std::printf("\n  At the lowest render distance (%d) that is %d chunks,\n",
+                    LOW_DISTANCE, loaded);
+        std::printf("  %.1f MB of block ids before any mesh.\n", blockKb / 1024.0);
+        std::printf("  The heaviest biome to mesh is %s at %.2f ms a chunk.\n",
+                    worstName, worstMesh);
+
+        return 0;
+    }
+
     int printSeabedInfo(uint32_t seed)
     {
         const WorldGen generator(seed);
@@ -933,6 +1076,7 @@ int main(int argc, char** argv)
     bool worldInfo = false;
     bool selfTest = false;
     bool seabedInfo = false;
+    bool costCheck = false;
     bool packCheck = false;
     bool blockAudit = false;
     bool structureInfo = false;
@@ -982,6 +1126,10 @@ int main(int argc, char** argv)
         else if (std::strcmp(argv[i], "--scout") == 0 && i + 1 < argc)
         {
             scoutSeeds = std::atoi(argv[++i]);
+        }
+        else if (std::strcmp(argv[i], "--costcheck") == 0)
+        {
+            costCheck = true;
         }
         else if (std::strcmp(argv[i], "--seabedinfo") == 0)
         {
@@ -1050,6 +1198,7 @@ int main(int argc, char** argv)
 
     if (selfTest) return runSelfTest();
     if (worldInfo) return printWorldInfo(hasSeed ? seed : 12345u);
+    if (costCheck) return printCostCheck(hasSeed ? seed : 12345u);
     if (seabedInfo) return printSeabedInfo(hasSeed ? seed : 12345u);
     if (packCheck) return printPackCheck();
     if (blockAudit) return printBlockAudit(hasSeed ? seed : 12345u);
