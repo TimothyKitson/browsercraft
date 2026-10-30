@@ -6140,6 +6140,14 @@ namespace
             for (int k = 0; k < EntityManager::seaSpeciesCount(); ++k)
                 if (EntityManager::seaSpecies(k) == id) meetable = true;
 
+            // And what each biome has of its own, asked of the table
+            // the spawner reads rather than copied out of it.
+            for (int biome = 0; biome <= static_cast<int>(Biome::Swamp); ++biome)
+                for (int step = 0; step < 100; ++step)
+                    if (EntityManager::biomeSpecies(static_cast<Biome>(biome),
+                                                    step * 0.01f) == id)
+                        meetable = true;
+
             // What a cage sends out.
             for (Dimension where : { Dimension::Overworld, Dimension::Nether, Dimension::End })
                 if (cageSpecies(where) == id) meetable = true;
@@ -11080,6 +11088,127 @@ namespace
         check(poisonous == 1, "it is the only food in the game that is worse than nothing");
     }
 
+    void testCountryAnimals()
+    {
+        section("the country: what lives where");
+
+        // Every biome's table must add up to less than one, or the
+        // rows past the overflow are rows nobody ever draws and the
+        // ordinary livestock never turns up at all.
+        for (int biome = 0; biome <= static_cast<int>(Biome::Swamp); ++biome)
+        {
+            const Biome where = static_cast<Biome>(biome);
+            const std::string name = std::to_string(biome);
+
+            bool plain = false;
+            for (int step = 99; step >= 0; --step)
+                if (EntityManager::biomeSpecies(where, step * 0.01f) == MobId::Count)
+                { plain = true; break; }
+
+            check(plain, "biome " + name + " still has room for ordinary livestock");
+            check(EntityManager::biomeSpecies(where, 0.999f) == MobId::Count,
+                  "biome " + name + ": the last roll is always the livestock");
+        }
+
+        // What belongs where. These are the rows that make one biome
+        // feel different from the next.
+        struct Local { Biome where; MobId who; const char* what; };
+        const Local LOCALS[] = {
+            { Biome::Forest,    MobId::Wolf,      "wolves keep to the trees" },
+            { Biome::Forest,    MobId::Fox,       "and so do foxes" },
+            { Biome::Plains,    MobId::Horse,     "horses keep to open country" },
+            { Biome::Plains,    MobId::Bee,       "and bees to the flowers in it" },
+            { Biome::Desert,    MobId::Rabbit,    "a rabbit is what a desert has" },
+            { Biome::Snowy,     MobId::PolarBear, "a polar bear belongs in the snow" },
+            { Biome::Mountains, MobId::Goat,      "a goat wants somewhere steep" },
+            { Biome::Mountains, MobId::Llama,     "and a llama is happy up there too" },
+            { Biome::Savanna,   MobId::Llama,     "a llama belongs on a savanna" },
+            { Biome::Jungle,    MobId::Panda,     "a panda belongs in a jungle" },
+            { Biome::Jungle,    MobId::Cat,       "and so does a cat" },
+        };
+        for (const Local& local : LOCALS)
+        {
+            bool found = false;
+            for (int step = 0; step < 100; ++step)
+                if (EntityManager::biomeSpecies(local.where, step * 0.01f) == local.who)
+                    found = true;
+            check(found, local.what);
+        }
+
+        // And what does not. A polar bear in a jungle is the same bug
+        // as a zombie in the Nether.
+        check(EntityManager::biomeSpecies(Biome::Jungle, 0.05f) != MobId::PolarBear,
+              "a polar bear is not a jungle animal");
+        for (int step = 0; step < 100; ++step)
+        {
+            check(EntityManager::biomeSpecies(Biome::Desert, step * 0.01f) != MobId::Panda,
+                  "nor is a panda a desert one");
+            check(EntityManager::biomeSpecies(Biome::Ocean, step * 0.01f) == MobId::Count,
+                  "and the sea has none of them");
+        }
+
+        section("the country animals themselves");
+
+        const MobType& rabbit = mobType(MobId::Rabbit);
+        const MobType& fox = mobType(MobId::Fox);
+        const MobType& goat = mobType(MobId::Goat);
+        const MobType& panda = mobType(MobId::Panda);
+        const MobType& bee = mobType(MobId::Bee);
+        const MobType& cat = mobType(MobId::Cat);
+        const MobType& llama = mobType(MobId::Llama);
+        const MobType& bear = mobType(MobId::PolarBear);
+
+        // Everything out here has something that tempts it, or it is
+        // an animal you can never do anything with.
+        for (const MobType* who : { &rabbit, &fox, &goat, &panda, &cat, &llama })
+            check(who->breedingFood != Blocks::Air,
+                  std::string(who->name) + " can be led somewhere");
+
+        // The two that fight back if you start it, and nothing else.
+        check(bee.neutral, "a bee stings only if you hit it");
+        check(bear.neutral, "and a polar bear is the same");
+        check(!rabbit.neutral && rabbit.attackDamage == 0, "a rabbit does nothing at all");
+        check(!fox.neutral && fox.attackDamage == 0, "nor does a fox");
+
+        check(bee.hoverHeight > 0.0f, "a bee flies");
+        check(bee.drop == Items::Honeycomb, "and the wax it leaves is what a candle is");
+        check(rabbit.drop == Items::RawRabbit, "a rabbit is food");
+        check(goat.drop == Items::RawMutton, "and a goat is mutton, near enough");
+
+        check(bear.maxHealth > 2 * fox.maxHealth, "a polar bear takes some killing");
+        check(bear.attackDamage >= 5, "and hits like the thing it is");
+        check(rabbit.walkSpeed > goat.walkSpeed, "a rabbit is quicker than a goat");
+        check(llama.height > goat.height, "a llama stands taller than a goat");
+        check(panda.maxHealth > rabbit.maxHealth, "a panda is a bigger animal than a rabbit");
+        check(cat.breedingFood == Items::RawCod, "a cat follows a fish");
+
+        section("rabbit and honeycomb");
+
+        check(Food::isEdible(Items::RawRabbit), "raw rabbit is food");
+        check(Smelting::resultOf(Items::RawRabbit) == Items::CookedRabbit, "and it cooks");
+        check(Food::valueOf(Items::CookedRabbit).hunger > Food::valueOf(Items::RawRabbit).hunger,
+              "which is worth doing");
+
+        // Minecraft's candle, now that there are bees to take the wax
+        // off: it stood on wool before, for want of one.
+        {
+            Inventory bench;
+            bench.slot(Inventory::CRAFT_FIRST + 0) = ItemStack{ Items::StringItem, 1 };
+            bench.slot(Inventory::CRAFT_FIRST + 3) = ItemStack{ Items::Honeycomb, 1 };
+            bench.refreshCraftResult();
+            check(bench.slot(Inventory::CRAFT_RESULT).id == Blocks::Candle,
+                  "a wick in wax makes a candle");
+        }
+        {
+            Inventory bench;
+            bench.slot(Inventory::CRAFT_FIRST + 0) = ItemStack{ Items::StringItem, 1 };
+            bench.slot(Inventory::CRAFT_FIRST + 3) = ItemStack{ Blocks::Wool, 1 };
+            bench.refreshCraftResult();
+            check(bench.slot(Inventory::CRAFT_RESULT).empty(),
+                  "and wool no longer will, now that wax exists");
+        }
+    }
+
     void testDyes()
     {
         section("dye: the sixteen colours");
@@ -11437,6 +11566,7 @@ int runSelfTest()
     testCaveCrowd();
     testNetherCrowd();
     testTheSea();
+    testCountryAnimals();
 
     std::printf("\n%d checks, %d failed\n", g_checks, g_failures);
     return g_failures == 0 ? 0 : 1;

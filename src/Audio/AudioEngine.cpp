@@ -349,6 +349,22 @@ void AudioEngine::buildSounds()
                  Sound::MobTurtleDeath, "mob/turtle");
     loadMobVoice(Sound::MobAxolotlSay, Sound::MobAxolotlHurt,
                  Sound::MobAxolotlDeath, "mob/axolotl");
+    loadMobVoice(Sound::MobRabbitSay, Sound::MobRabbitHurt,
+                 Sound::MobRabbitDeath, "mob/rabbit");
+    loadMobVoice(Sound::MobFoxSay, Sound::MobFoxHurt,
+                 Sound::MobFoxDeath, "mob/fox");
+    loadMobVoice(Sound::MobGoatSay, Sound::MobGoatHurt,
+                 Sound::MobGoatDeath, "mob/goat");
+    loadMobVoice(Sound::MobPandaSay, Sound::MobPandaHurt,
+                 Sound::MobPandaDeath, "mob/panda");
+    loadMobVoice(Sound::MobBeeSay, Sound::MobBeeHurt,
+                 Sound::MobBeeDeath, "mob/bee");
+    loadMobVoice(Sound::MobCatSay, Sound::MobCatHurt,
+                 Sound::MobCatDeath, "mob/cat");
+    loadMobVoice(Sound::MobLlamaSay, Sound::MobLlamaHurt,
+                 Sound::MobLlamaDeath, "mob/llama");
+    loadMobVoice(Sound::MobPolarBearSay, Sound::MobPolarBearHurt,
+                 Sound::MobPolarBearDeath, "mob/polar_bear");
     loadVariants(Sound::Rain, "weather/rain", 1);
     loadVariants(Sound::Thunder, "weather/thunder", 1);
 
@@ -1326,6 +1342,68 @@ void AudioEngine::buildSounds()
              240.0f, 900.0f, 1021);
     wetVoice(Sound::MobAxolotlSay, Sound::MobAxolotlHurt, Sound::MobAxolotlDeath,
              880.0f, 2000.0f, 1031);
+
+    // The country animals. A call, a yelp and a last breath, off one
+    // description each: eight species written out by hand would be
+    // twenty-four blocks and twenty-four chances to paste the wrong
+    // seed, which is what the fish taught.
+    auto beastVoice = [&](Sound say, Sound hurt, Sound death, float hz,
+                          float rasp, float length, uint32_t seed) {
+        {
+            Synth s = make(say);
+            s.addTone(length, hz, hz * 0.82f, 6.0f / length, 0.34f, true);
+            s.addNoise(length * 0.7f, hz * 4.0f, 9.0f, rasp, false, seed);
+            s.finish(0.52f);
+        }
+        {
+            Synth s = make(hurt);
+            s.addTone(length * 0.6f, hz * 1.6f, hz * 0.9f, 14.0f, 0.36f, true);
+            s.addNoise(length * 0.5f, hz * 6.0f, 18.0f, rasp, true, seed + 1);
+            s.finish(0.58f);
+        }
+        {
+            Synth s = make(death);
+            s.addTone(length * 1.8f, hz * 1.2f, hz * 0.4f, 4.0f, 0.36f, true);
+            s.addNoise(length * 1.2f, hz * 3.0f, 6.0f, rasp, false, seed + 2);
+            s.finish(0.60f);
+        }
+    };
+
+    beastVoice(Sound::MobRabbitSay, Sound::MobRabbitHurt, Sound::MobRabbitDeath,
+               620.0f, 0.10f, 0.14f, 1041);
+    beastVoice(Sound::MobFoxSay, Sound::MobFoxHurt, Sound::MobFoxDeath,
+               430.0f, 0.18f, 0.22f, 1051);
+    beastVoice(Sound::MobGoatSay, Sound::MobGoatHurt, Sound::MobGoatDeath,
+               300.0f, 0.22f, 0.34f, 1061);
+    beastVoice(Sound::MobPandaSay, Sound::MobPandaHurt, Sound::MobPandaDeath,
+               170.0f, 0.20f, 0.40f, 1071);
+    beastVoice(Sound::MobCatSay, Sound::MobCatHurt, Sound::MobCatDeath,
+               740.0f, 0.12f, 0.26f, 1081);
+    beastVoice(Sound::MobLlamaSay, Sound::MobLlamaHurt, Sound::MobLlamaDeath,
+               360.0f, 0.16f, 0.30f, 1091);
+    beastVoice(Sound::MobPolarBearSay, Sound::MobPolarBearHurt, Sound::MobPolarBearDeath,
+               120.0f, 0.24f, 0.52f, 1101);
+
+    // The bee, which is not a call at all: a wingbeat, which is two
+    // close tones beating against each other.
+    {
+        Synth s = make(Sound::MobBeeSay);
+        s.addTone(0.60f, 220.0f, 220.0f, 1.6f, 0.26f, false);
+        s.addTone(0.60f, 227.0f, 227.0f, 1.6f, 0.26f, false);
+        s.finish(0.40f);
+    }
+    {
+        Synth s = make(Sound::MobBeeHurt);
+        s.addTone(0.20f, 420.0f, 260.0f, 12.0f, 0.30f, false);
+        s.addTone(0.20f, 434.0f, 268.0f, 12.0f, 0.24f, false);
+        s.finish(0.50f);
+    }
+    {
+        Synth s = make(Sound::MobBeeDeath);
+        s.addTone(0.44f, 260.0f, 90.0f, 5.0f, 0.30f, false);
+        s.addTone(0.44f, 268.0f, 94.0f, 5.0f, 0.24f, false);
+        s.finish(0.52f);
+    }
 
     // The ghast: a long wail that falls away. Mostly tone, almost no
     // noise, and slower than anything else in the game -- which is

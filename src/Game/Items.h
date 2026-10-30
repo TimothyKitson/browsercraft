@@ -279,6 +279,11 @@ namespace Items
         CookedSalmon,
         Pufferfish,
 
+        // Off a rabbit, and the wax off a bee.
+        RawRabbit,
+        CookedRabbit,
+        Honeycomb,
+
         Count
     };
 }

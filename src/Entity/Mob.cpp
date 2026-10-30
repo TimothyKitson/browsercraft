@@ -951,9 +951,13 @@ void Mob::damage(int amount, const glm::vec3& fromDirection)
         m_velocity.y = std::max(m_velocity.y, 4.2f);
     }
 
-    // Being hit is a good reason to stop ambling and react.
+    // Being hit is a good reason to stop ambling and react. What
+    // cannot fight back runs; what can turns round, which is the
+    // whole difference between a cow and a polar bear. m_provoked is
+    // already set above, so hostileNow() knows which this is.
     m_goalTimer = 0.0f;
-    if (type().spawnClass == SpawnClass::Passive) m_panicTimer = PANIC_SECONDS;
+    if (type().spawnClass == SpawnClass::Passive && !hostileNow())
+        m_panicTimer = PANIC_SECONDS;
 
     // A mob on fire takes a hit every second for as long as it lasts, and
     // a yelp for each one is a lot of yelping from a herd at dawn. Dying

@@ -184,6 +184,9 @@ namespace
         { "Raw Salmon",           Tiles::ItemRawSalmon,         64 },
         { "Cooked Salmon",        Tiles::ItemCookedSalmon,      64 },
         { "Pufferfish",           Tiles::ItemPufferfish,        64 },
+        { "Raw Rabbit",           Tiles::ItemRawRabbit,         64 },
+        { "Cooked Rabbit",        Tiles::ItemCookedRabbit,      64 },
+        { "Honeycomb",            Tiles::ItemHoneycomb,         64 },
     };
 
     static_assert(sizeof(ITEMS) / sizeof(ITEMS[0]) ==

@@ -2153,6 +2153,311 @@ namespace
             t.model.push_back(mirrored(mc(Part::LegBackLeft, 14, 24, 2, 1, 4, 1, 23, -1, 0, 0, 0)));
         }
 
+        // The country animals. Four species covered the whole of the
+        // overworld before these: a sheep, a pig, a cow and a chicken,
+        // in every biome whatever the ground was made of.
+        {
+            // The rabbit: the small thing that runs away, and the one
+            // animal in a desert worth eating.
+            MobType& t = table[static_cast<size_t>(MobId::Rabbit)];
+            t.id = MobId::Rabbit;
+            t.experience = 1;
+            t.voice = Sound::MobRabbitSay;
+            t.hurtVoice = Sound::MobRabbitHurt;
+            t.deathVoice = Sound::MobRabbitDeath;
+            t.name = "Rabbit";
+            t.texture = "rabbit";
+            t.spawnClass = SpawnClass::Passive;
+            t.maxHealth = 3;
+            t.width = 0.4f;
+            t.height = 0.5f;
+            t.walkSpeed = 3.0f;
+            t.limbSwing = 0.8f;
+            t.voicePitch = 1.4f;
+            t.breedingFood = Items::Carrot;
+
+            t.drop = Items::RawRabbit;
+            t.dropCount = 1;
+
+            t.bodyColour = rgb(166, 140, 112);
+            t.headColour = rgb(186, 162, 134);
+            t.eyeColour = rgb(180, 70, 70);
+
+            t.model.push_back(mc(Part::Body, 0, 0, 4, 5, 8, -2, 19, -4, 0, 0, 0));
+            t.model.push_back(mc(Part::Head, 0, 15, 5, 4, 5, -2, 17, -8, 0, 0, 0));
+            // The ears, which are the whole of what reads as a rabbit.
+            t.model.push_back(mc(Part::WingRight, 24, 15, 2, 5, 1, -2, 12, -6, 0, 0, 0));
+            t.model.push_back(mirrored(mc(Part::WingLeft, 24, 15, 2, 5, 1, 0, 12, -6, 0, 0, 0)));
+            t.model.push_back(mc(Part::LegFrontRight, 0, 26, 2, 3, 2, -2, 21, -5, 0, 0, 0));
+            t.model.push_back(mirrored(mc(Part::LegFrontLeft, 0, 26, 2, 3, 2, 0, 21, -5, 0, 0, 0)));
+            t.model.push_back(mc(Part::LegBackRight, 32, 15, 2, 4, 4, -2, 20, 1, 0, 0, 0));
+            t.model.push_back(mirrored(mc(Part::LegBackLeft, 32, 15, 2, 4, 4, 0, 20, 1, 0, 0, 0)));
+        }
+
+        {
+            // The fox: the thing in the trees that is not a wolf.
+            MobType& t = table[static_cast<size_t>(MobId::Fox)];
+            t.id = MobId::Fox;
+            t.experience = 1;
+            t.voice = Sound::MobFoxSay;
+            t.hurtVoice = Sound::MobFoxHurt;
+            t.deathVoice = Sound::MobFoxDeath;
+            t.name = "Fox";
+            t.texture = "fox";
+            t.spawnClass = SpawnClass::Passive;
+            t.maxHealth = 10;
+            t.width = 0.6f;
+            t.height = 0.7f;
+            t.walkSpeed = 3.2f;
+            t.limbSwing = 0.7f;
+            t.voicePitch = 1.2f;
+            t.breedingFood = Items::GlowBerries;
+
+            t.bodyColour = rgb(212, 124, 50);
+            t.headColour = rgb(226, 150, 76);
+            t.eyeColour = rgb(40, 32, 28);
+
+            t.model.push_back(mc(Part::Body, 0, 0, 6, 6, 11, -3, 17, -5, 0, 0, 0));
+            t.model.push_back(mc(Part::Head, 0, 20, 8, 6, 6, -4, 15, -11, 0, 0, 0));
+            // The snout and the brush, which is all a fox is.
+            t.model.push_back(mc(Part::Head, 32, 20, 4, 2, 3, -2, 19, -14, 0, 0, 0));
+            t.model.push_back(mc(Part::LegBackRight, 48, 20, 2, 6, 2, -3, 18, 6, 0, 0, 0));
+            t.model.push_back(mc(Part::LegFrontRight, 36, 0, 2, 7, 2, -3, 17, -4, 0, 0, 0));
+            t.model.push_back(mirrored(mc(Part::LegFrontLeft, 36, 0, 2, 7, 2, 1, 17, -4, 0, 0, 0)));
+            t.model.push_back(mc(Part::LegBackLeft, 46, 0, 2, 7, 2, -3, 17, 3, 0, 0, 0));
+        }
+
+        {
+            // The goat: what a mountain is missing. It is the only
+            // animal in the game that would rather be somewhere steep.
+            MobType& t = table[static_cast<size_t>(MobId::Goat)];
+            t.id = MobId::Goat;
+            t.experience = 1;
+            t.voice = Sound::MobGoatSay;
+            t.hurtVoice = Sound::MobGoatHurt;
+            t.deathVoice = Sound::MobGoatDeath;
+            t.name = "Goat";
+            t.texture = "goat";
+            t.sheetWidth = 128;
+            t.sheetHeight = 64;
+            t.spawnClass = SpawnClass::Passive;
+            t.maxHealth = 10;
+            t.width = 0.9f;
+            t.height = 1.3f;
+            t.walkSpeed = 2.6f;
+            t.limbSwing = 0.6f;
+            t.breedingFood = Items::Wheat;
+
+            t.drop = Items::RawMutton;
+            t.dropCount = 1;
+
+            t.bodyColour = rgb(226, 220, 210);
+            t.headColour = rgb(236, 232, 224);
+            t.eyeColour = rgb(50, 44, 40);
+
+            t.model.push_back(mc(Part::Body, 0, 0, 9, 11, 16, -5, 6, -8, 0, 0, 0));
+            t.model.push_back(mc(Part::Head, 50, 0, 5, 7, 10, -3, 2, -16, 0, 0, 0));
+            // The horns, swept back the way a goat's are.
+            t.model.push_back(mc(Part::Head, 50, 18, 2, 5, 2, -4, 0, -12, 0, 0, 0));
+            t.model.push_back(mirrored(mc(Part::Head, 50, 18, 2, 5, 2, 2, 0, -12, 0, 0, 0)));
+            t.model.push_back(mc(Part::LegFrontRight, 0, 34, 3, 7, 3, -2, 0, -2, -3, 17, -5));
+            t.model.push_back(mirrored(mc(Part::LegFrontLeft, 0, 34, 3, 7, 3, -2, 0, -2, 3, 17, -5)));
+            t.model.push_back(mc(Part::LegBackRight, 0, 34, 3, 7, 3, -2, 0, -2, -3, 17, 5));
+            t.model.push_back(mirrored(mc(Part::LegBackLeft, 0, 34, 3, 7, 3, -2, 0, -2, 3, 17, 5)));
+        }
+
+        {
+            // The panda: the one thing a jungle has that nowhere else
+            // does, and the only reason to go into one on purpose.
+            MobType& t = table[static_cast<size_t>(MobId::Panda)];
+            t.id = MobId::Panda;
+            t.experience = 1;
+            t.voice = Sound::MobPandaSay;
+            t.hurtVoice = Sound::MobPandaHurt;
+            t.deathVoice = Sound::MobPandaDeath;
+            t.name = "Panda";
+            t.texture = "panda";
+            t.sheetWidth = 64;
+            t.sheetHeight = 64;
+            t.spawnClass = SpawnClass::Passive;
+            t.maxHealth = 20;
+            t.width = 1.3f;
+            t.height = 1.25f;
+            t.walkSpeed = 1.6f;
+            t.limbSwing = 0.5f;
+            t.voicePitch = 0.8f;
+            t.breedingFood = Blocks::Bamboo;
+
+            t.bodyColour = rgb(226, 222, 214);
+            t.headColour = rgb(234, 232, 226);
+            t.eyeColour = rgb(36, 32, 32);
+
+            t.model.push_back(mc(Part::Body, 0, 0, 12, 10, 16, -6, 8, -8, 0, 0, 0));
+            t.model.push_back(mc(Part::Head, 0, 30, 9, 9, 9, -5, 6, -15, 0, 0, 0));
+            t.model.push_back(mc(Part::WingRight, 40, 30, 2, 3, 2, -6, 3, -12, 0, 0, 0));
+            t.model.push_back(mirrored(mc(Part::WingLeft, 40, 30, 2, 3, 2, 4, 3, -12, 0, 0, 0)));
+            t.model.push_back(mc(Part::LegFrontRight, 40, 44, 4, 6, 4, -2, 0, -2, -4, 18, -5));
+            t.model.push_back(mirrored(mc(Part::LegFrontLeft, 40, 44, 4, 6, 4, -2, 0, -2, 4, 18, -5)));
+            t.model.push_back(mc(Part::LegBackRight, 40, 44, 4, 6, 4, -2, 0, -2, -4, 18, 5));
+            t.model.push_back(mirrored(mc(Part::LegBackLeft, 40, 44, 4, 6, 4, -2, 0, -2, 4, 18, 5)));
+        }
+
+        {
+            // The bee. It flies, it minds its own business until you
+            // hit it, and the wax it leaves is what a candle is made
+            // of -- which used to be wool, for want of a bee.
+            MobType& t = table[static_cast<size_t>(MobId::Bee)];
+            t.id = MobId::Bee;
+            t.experience = 1;
+            t.voice = Sound::MobBeeSay;
+            t.hurtVoice = Sound::MobBeeHurt;
+            t.deathVoice = Sound::MobBeeDeath;
+            t.name = "Bee";
+            t.texture = "bee";
+            // Passive is how it is spawned, not how it behaves:
+            // the daylight rule that lets an animal be put down at
+            // all asks the spawn class, and a bee put down only in
+            // the dark is a bee nobody ever meets. What it does when
+            // you hit it is the neutral flag below, which is how the
+            // iron golem works too.
+            t.spawnClass = SpawnClass::Passive;
+            t.neutral = true;
+            t.maxHealth = 10;
+            t.width = 0.7f;
+            t.height = 0.6f;
+            t.walkSpeed = 2.2f;
+            t.limbSwing = 0.0f;
+            t.voicePitch = 1.2f;
+            t.attackDamage = 2;
+            t.hoverHeight = 2.0f;
+
+            t.ambientMinSeconds = 3.0f;
+            t.ambientMaxSeconds = 9.0f;
+
+            t.drop = Items::Honeycomb;
+            t.dropCount = 1;
+
+            t.bodyColour = rgb(228, 186, 60);
+            t.headColour = rgb(76, 62, 44);
+            t.eyeColour = rgb(30, 26, 24);
+
+            t.model.push_back(mc(Part::Body, 0, 0, 7, 7, 10, -3, 16, -5, 0, 0, 0));
+            t.model.push_back(mc(Part::Head, 0, 20, 5, 5, 4, -2, 17, -8, 0, 0, 0));
+            t.model.push_back(mc(Part::WingRight, 20, 20, 9, 1, 6, -10, 14, -3, 0, 0, 0));
+            t.model.push_back(mirrored(mc(Part::WingLeft, 20, 20, 9, 1, 6, 1, 14, -3, 0, 0, 0)));
+        }
+
+        {
+            // The cat: it follows you about and it does nothing at
+            // all, which is the whole of what a cat is for.
+            MobType& t = table[static_cast<size_t>(MobId::Cat)];
+            t.id = MobId::Cat;
+            t.experience = 1;
+            t.voice = Sound::MobCatSay;
+            t.hurtVoice = Sound::MobCatHurt;
+            t.deathVoice = Sound::MobCatDeath;
+            t.name = "Cat";
+            t.texture = "cat";
+            t.spawnClass = SpawnClass::Passive;
+            t.maxHealth = 10;
+            t.width = 0.6f;
+            t.height = 0.7f;
+            t.walkSpeed = 3.0f;
+            t.limbSwing = 0.6f;
+            t.voicePitch = 1.3f;
+            t.breedingFood = Items::RawCod;
+
+            t.bodyColour = rgb(150, 126, 102);
+            t.headColour = rgb(168, 146, 120);
+            t.eyeColour = rgb(200, 190, 70);
+
+            t.model.push_back(mc(Part::Body, 0, 0, 5, 5, 12, -2, 17, -6, 0, 0, 0));
+            t.model.push_back(mc(Part::Head, 0, 20, 5, 4, 5, -2, 17, -11, 0, 0, 0));
+            t.model.push_back(mc(Part::Head, 24, 20, 1, 1, 2, -2, 15, -9, 0, 0, 0));
+            t.model.push_back(mirrored(mc(Part::Head, 24, 20, 1, 1, 2, 1, 15, -9, 0, 0, 0)));
+            t.model.push_back(mc(Part::LegBackRight, 34, 20, 1, 8, 1, 0, 16, 5, 0, 0, 0));
+            t.model.push_back(mc(Part::LegFrontRight, 42, 20, 2, 6, 2, -2, 18, -4, 0, 0, 0));
+            t.model.push_back(mirrored(mc(Part::LegFrontLeft, 42, 20, 2, 6, 2, 0, 18, -4, 0, 0, 0)));
+            t.model.push_back(mc(Part::LegBackLeft, 52, 20, 2, 6, 2, -2, 18, 2, 0, 0, 0));
+        }
+
+        {
+            // The llama: what a savanna is missing, and the only
+            // animal in the game that is taller than it is long.
+            MobType& t = table[static_cast<size_t>(MobId::Llama)];
+            t.id = MobId::Llama;
+            t.experience = 1;
+            t.voice = Sound::MobLlamaSay;
+            t.hurtVoice = Sound::MobLlamaHurt;
+            t.deathVoice = Sound::MobLlamaDeath;
+            t.name = "Llama";
+            t.texture = "llama";
+            t.sheetWidth = 128;
+            t.sheetHeight = 64;
+            t.spawnClass = SpawnClass::Passive;
+            t.maxHealth = 20;
+            t.width = 0.9f;
+            t.height = 1.87f;
+            t.walkSpeed = 2.2f;
+            t.limbSwing = 0.5f;
+            t.breedingFood = Items::Wheat;
+
+            t.drop = Items::Leather;
+            t.dropCount = 1;
+
+            t.bodyColour = rgb(196, 176, 148);
+            t.headColour = rgb(214, 196, 170);
+            t.eyeColour = rgb(40, 34, 30);
+
+            t.model.push_back(mc(Part::Body, 0, 0, 12, 18, 10, -6, 2, -5, 0, 0, 0));
+            t.model.push_back(mc(Part::Head, 50, 0, 4, 4, 9, -2, -8, -14, 0, 0, 0));
+            t.model.push_back(mc(Part::Head, 50, 14, 4, 10, 4, -2, -2, -11, 0, 0, 0));
+            t.model.push_back(mc(Part::Head, 80, 0, 1, 3, 2, -3, -10, -10, 0, 0, 0));
+            t.model.push_back(mirrored(mc(Part::Head, 80, 0, 1, 3, 2, 2, -10, -10, 0, 0, 0)));
+            t.model.push_back(mc(Part::LegFrontRight, 0, 30, 4, 14, 4, -2, 0, -2, -3, 10, -4));
+            t.model.push_back(mirrored(mc(Part::LegFrontLeft, 0, 30, 4, 14, 4, -2, 0, -2, 3, 10, -4)));
+            t.model.push_back(mc(Part::LegBackRight, 0, 30, 4, 14, 4, -2, 0, -2, -3, 10, 4));
+            t.model.push_back(mirrored(mc(Part::LegBackLeft, 0, 30, 4, 14, 4, -2, 0, -2, 3, 10, 4)));
+        }
+
+        {
+            // The polar bear: the only thing in the snow that is not
+            // either a sheep or a skeleton, and the only animal in the
+            // game you should walk away from.
+            MobType& t = table[static_cast<size_t>(MobId::PolarBear)];
+            t.id = MobId::PolarBear;
+            t.experience = 5;
+            t.voice = Sound::MobPolarBearSay;
+            t.hurtVoice = Sound::MobPolarBearHurt;
+            t.deathVoice = Sound::MobPolarBearDeath;
+            t.name = "Polar Bear";
+            t.texture = "polar_bear";
+            t.sheetWidth = 128;
+            t.sheetHeight = 64;
+            t.spawnClass = SpawnClass::Passive;
+            t.neutral = true;
+            t.maxHealth = 30;
+            t.width = 1.4f;
+            t.height = 1.4f;
+            t.walkSpeed = 2.4f;
+            t.limbSwing = 0.5f;
+            t.voicePitch = 0.8f;
+            t.attackDamage = 6;
+            t.attackReach = 1.4f;
+
+            t.bodyColour = rgb(238, 240, 240);
+            t.headColour = rgb(244, 246, 246);
+            t.eyeColour = rgb(36, 32, 32);
+
+            t.model.push_back(mc(Part::Body, 0, 0, 14, 14, 20, -7, 1, -10, 0, 0, 0));
+            t.model.push_back(mc(Part::Head, 70, 0, 9, 8, 10, -5, 3, -19, 0, 0, 0));
+            t.model.push_back(mc(Part::Head, 70, 20, 5, 3, 4, -3, 8, -22, 0, 0, 0));
+            t.model.push_back(mc(Part::LegFrontRight, 0, 36, 5, 9, 6, -3, 0, -3, -4, 15, -6));
+            t.model.push_back(mirrored(mc(Part::LegFrontLeft, 0, 36, 5, 9, 6, -3, 0, -3, 4, 15, -6)));
+            t.model.push_back(mc(Part::LegBackRight, 0, 36, 5, 9, 6, -3, 0, -3, -4, 15, 6));
+            t.model.push_back(mirrored(mc(Part::LegBackLeft, 0, 36, 5, 9, 6, -3, 0, -3, 4, 15, 6)));
+        }
+
         return table;
     }
 }

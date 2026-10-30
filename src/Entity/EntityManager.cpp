@@ -16,13 +16,31 @@ namespace
 
     const MobId PASSIVE_SPECIES[] = { MobId::Sheep, MobId::Pig, MobId::Cow, MobId::Chicken };
 
-    // Horses keep to open country, which is where Minecraft puts them
-    // and where there is room to ride one.
-    const MobId PLAINS_SPECIES[] = { MobId::Horse };
-
-    // Wolves keep to the trees, which is where Minecraft puts them and
-    // what stops a pack turning up in the middle of a field.
-    const MobId FOREST_SPECIES[] = { MobId::Wolf };
+    // What each biome has that the next one does not. One table
+    // rather than a chain of ifs: adding an animal to a biome is
+    // adding a row, and it was two ifs -- wolves in the trees and
+    // horses in the fields -- for the whole of the overworld.
+    //
+    // The chances are read in order and add up, so a biome's rows
+    // must total less than one: whatever is left over is the ordinary
+    // livestock, which is most of what you meet anywhere.
+    struct BiomeLife { Biome where; MobId who; float chance; };
+    const BiomeLife BIOME_LIFE[] = {
+        { Biome::Forest,    MobId::Wolf,      0.16f },
+        { Biome::Forest,    MobId::Fox,       0.14f },
+        { Biome::Plains,    MobId::Horse,     0.12f },
+        { Biome::Plains,    MobId::Bee,       0.12f },
+        { Biome::Plains,    MobId::Rabbit,    0.10f },
+        { Biome::Desert,    MobId::Rabbit,    0.34f },
+        { Biome::Snowy,     MobId::PolarBear, 0.16f },
+        { Biome::Snowy,     MobId::Rabbit,    0.18f },
+        { Biome::Mountains, MobId::Goat,      0.30f },
+        { Biome::Mountains, MobId::Llama,     0.16f },
+        { Biome::Savanna,   MobId::Llama,     0.26f },
+        { Biome::Savanna,   MobId::Horse,     0.14f },
+        { Biome::Jungle,    MobId::Panda,     0.18f },
+        { Biome::Jungle,    MobId::Cat,       0.16f },
+    };
     // No breeze. It comes out of a trial spawner and nowhere else,
     // which is Minecraft's -- it was in this list only while there
     // were no chambers for it to come out of.
@@ -138,6 +156,18 @@ MobId EntityManager::nightSpecies(int index)
 {
     const int count = nightSpeciesCount();
     return HOSTILE_SPECIES[((index % count) + count) % count];
+}
+
+MobId EntityManager::biomeSpecies(Biome where, float roll)
+{
+    float seen = 0.0f;
+    for (const BiomeLife& life : BIOME_LIFE)
+    {
+        if (life.where != where) continue;
+        seen += life.chance;
+        if (roll < seen) return life.who;
+    }
+    return MobId::Count;
 }
 
 int EntityManager::seaSpeciesCount()
@@ -382,25 +412,13 @@ void EntityManager::trySpawnWave(const World& world, const glm::vec3& playerPosi
             }
             else
             {
+                // What this particular biome has, if it has anything.
                 // Out in the country they are rare enough that meeting
                 // one is an event rather than livestock.
                 const Biome here = world.generator().biomeAt(x, z);
-                const bool woods = (here == Biome::Forest);
+                const MobId local = biomeSpecies(here, random01());
 
-                if (woods && random01() < 0.22f)
-                {
-                    constexpr int FOREST_COUNT =
-                        static_cast<int>(std::size(FOREST_SPECIES));
-                    species = FOREST_SPECIES[static_cast<int>(random01() * FOREST_COUNT)
-                                             % FOREST_COUNT];
-                }
-                else if (here == Biome::Plains && random01() < 0.14f)
-                {
-                    constexpr int PLAINS_COUNT =
-                        static_cast<int>(std::size(PLAINS_SPECIES));
-                    species = PLAINS_SPECIES[static_cast<int>(random01() * PLAINS_COUNT)
-                                             % PLAINS_COUNT];
-                }
+                if (local != MobId::Count) species = local;
                 else
                 {
                     species = (random01() < 0.02f)

@@ -3300,6 +3300,43 @@ namespace
         }
     }
 
+    // A cut of meat: the same shape as the beef and mutton already
+    // here, in whatever colour the animal was.
+    void paintMeat(Tile& t, Color lean, Color fat)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 4; y < 13; ++y)
+            for (int x = 3; x < 14; ++x)
+            {
+                if ((x == 3 || x == 13) && (y == 4 || y == 12)) continue;
+                t.set(x, y, ((x + y) % 5 == 0) ? fat : lean);
+            }
+        for (int x = 5; x < 12; ++x) t.set(x, 4, fat);
+    }
+
+    void paintItemRawRabbit(Tile& t) { paintMeat(t, { 198, 118, 112 }, { 226, 170, 162 }); }
+    void paintItemCookedRabbit(Tile& t) { paintMeat(t, { 164, 104, 56 }, { 202, 148, 92 }); }
+
+    void paintItemHoneycomb(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+
+        // A slab of comb: amber, with the cells drawn in darker on a
+        // staggered grid, which is the whole of what reads as a comb.
+        for (int y = 3; y < 13; ++y)
+            for (int x = 2; x < 14; ++x)
+                t.set(x, y, Color{ 226, 160, 50 });
+
+        for (int y = 4; y < 12; y += 3)
+            for (int x = 3; x < 13; x += 3)
+            {
+                const int shift = ((y / 3) % 2) ? 1 : 0;
+                t.set(x + shift, y, Color{ 160, 104, 24 });
+                t.set(x + shift + 1, y, Color{ 160, 104, 24 });
+                t.set(x + shift, y + 1, Color{ 186, 124, 32 });
+            }
+    }
+
     void paintItemSign(Tile& t)
     {
         t.fill(Color{ 0, 0, 0, 0 });
@@ -6246,6 +6283,9 @@ namespace
         { Tiles::ItemRawSalmon, paintItemRawSalmon },
         { Tiles::ItemCookedSalmon, paintItemCookedSalmon },
         { Tiles::ItemPufferfish, paintItemPufferfish },
+        { Tiles::ItemRawRabbit, paintItemRawRabbit },
+        { Tiles::ItemCookedRabbit, paintItemCookedRabbit },
+        { Tiles::ItemHoneycomb, paintItemHoneycomb },
         { Tiles::ItemBowl, paintItemBowl },
         { Tiles::ItemBeetroot, paintItemBeetroot },
         { Tiles::ItemBeetrootSeeds, paintItemBeetrootSeeds },
@@ -6577,6 +6617,9 @@ namespace
         { Tiles::ItemRawSalmon, { "salmon", "fish_salmon_raw", nullptr } },
         { Tiles::ItemCookedSalmon, { "cooked_salmon", "fish_salmon_cooked", nullptr } },
         { Tiles::ItemPufferfish, { "pufferfish", "fish_pufferfish_raw", nullptr } },
+        { Tiles::ItemRawRabbit, { "rabbit", nullptr, nullptr } },
+        { Tiles::ItemCookedRabbit, { "cooked_rabbit", nullptr, nullptr } },
+        { Tiles::ItemHoneycomb, { "honeycomb", nullptr, nullptr } },
     };
 
     const PackTile PACK_TILES[] = {

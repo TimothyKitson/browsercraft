@@ -301,9 +301,17 @@ namespace Tiles
     // Raised from 240 when the crops took the block tiles past it --
     // sixteen stages between carrots and potatoes. The grid went from
     // 400 tiles to 576 at the same time, so this is not the items
-    // being squeezed: blocks get 400 and items get 160, where before
-    // they had 240 and 150.
-    constexpr int ItemFirst = 400;
+    // being squeezed: blocks got 400 and items 160, where before they
+    // had 240 and 150.
+    //
+    // And lowered to 352 when the items ran into the cracks instead:
+    // the fish, the gold nuggets and the rest of what the new mobs
+    // leave took them three past 560. The blocks were using 332 of
+    // their 400, so forty-eight of that slack went to the items. Same
+    // grid, same texture memory; nothing stores a tile index, so
+    // moving the line costs nothing but the two static_asserts below
+    // keeping watch.
+    constexpr int ItemFirst = 352;
 
     enum : int
     {
@@ -436,8 +444,11 @@ namespace Tiles
         ItemRawSalmon,
         ItemCookedSalmon,
         ItemPufferfish,
+        ItemRawRabbit,
+        ItemCookedRabbit,
+        ItemHoneycomb,
 
-        ItemTileEnd = ItemPufferfish + 1
+        ItemTileEnd = ItemHoneycomb + 1
     };
 
     // Ten progressively more broken overlay tiles for the mining animation.

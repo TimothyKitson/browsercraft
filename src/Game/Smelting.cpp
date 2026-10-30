@@ -41,6 +41,7 @@ StackId Smelting::resultOf(StackId input)
         case Items::RawPorkchop: return Items::CookedPorkchop;
         case Items::RawCod:      return Items::CookedCod;
         case Items::RawSalmon:   return Items::CookedSalmon;
+        case Items::RawRabbit:   return Items::CookedRabbit;
         case Items::RawChicken: return Items::CookedChicken;
         case Items::RawMutton:  return Items::CookedMutton;
 

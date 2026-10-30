@@ -376,11 +376,11 @@ namespace
                          Blocks::Bamboo, Blocks::Air,       Blocks::Bamboo },
           0, Blocks::Scaffolding, 6 },
 
-        // A wick on something soft. Minecraft wants honeycomb for the
-        // wax and there are no bees here, so the wick stands on wool
-        // instead -- which is at least white, and the same shape.
+        // A wick in wax. Minecraft's own recipe, now that there are
+        // bees to take the wax off: it used to stand on wool instead,
+        // which was at least white and the same shape.
         { false, 1, 2, { Items::StringItem,
-                         Blocks::Wool }, 0, Blocks::Candle, 1 },
+                         Items::Honeycomb }, 0, Blocks::Candle, 1 },
 
         // The workstations. A smoker is a furnace with logs built
         // round it; a blast furnace is one with iron over it and

@@ -4,6 +4,7 @@
 #include <vector>
 
 class World;
+enum class Biome : uint8_t;
 
 // Owns every mob in the world: spawns them around the player, steps them,
 // and drops the ones that have died or wandered too far.
@@ -135,6 +136,12 @@ public:
     // spawner wants somewhere to stand and the sea has nowhere.
     static int seaSpeciesCount();
     static MobId seaSpecies(int index);
+
+    // What a biome has that the next one does not. MobId::Count means
+    // nothing in particular lives here and the usual livestock will
+    // do. A pure function of the biome and one roll in [0, 1), so
+    // --selftest can walk every biome without a world.
+    static MobId biomeSpecies(Biome where, float roll);
 
     // Whether a mob can be where this block is. One rule in one place,
     // so a test can ask exactly what the spawn asks: water is a wall

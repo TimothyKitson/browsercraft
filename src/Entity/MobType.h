@@ -87,6 +87,18 @@ enum class MobId : uint8_t
     Turtle,
     Axolotl,
 
+    // The country. Four animals in four biomes was the whole of the
+    // overworld's wildlife: a sheep, a pig, a cow and a chicken,
+    // wherever you went and whatever the ground was made of.
+    Rabbit,
+    Fox,
+    Goat,
+    Panda,
+    Bee,
+    Cat,
+    Llama,
+    PolarBear,
+
     Count
 };
 
