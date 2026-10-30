@@ -76,6 +76,12 @@ if(EMSCRIPTEN)
         -sEXIT_RUNTIME=0
         -sENVIRONMENT=web
         -lidbfs.js                     # persist saved worlds in IndexedDB
+        # The shell reaches for FS and IDBFS by name to mount that
+        # storage. Linking the library is not enough: nothing puts
+        # either on the page unless it is asked for, and without this
+        # the mount threw "IDBFS is not defined" and every world made
+        # in a browser was gone the moment the tab closed.
+        -sEXPORTED_RUNTIME_METHODS=FS,IDBFS,addRunDependency,removeRunDependency
         -O2
         --preload-file "${WEB_ASSET_DIR}@assets"
         --shell-file "${CMAKE_SOURCE_DIR}/web/shell.html"
