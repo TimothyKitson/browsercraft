@@ -164,7 +164,9 @@ void WorldGen::generate(Chunk& chunk) const
         case Dimension::End:
             generateEnd(chunk);
             buildEndPillars(chunk);
+            buildEndGateways(chunk);
             buildEndCities(chunk);
+            plantChorus(chunk);
             return;
         default:
             break;
@@ -296,13 +298,20 @@ void WorldGen::generateNether(Chunk& chunk) const
     }
 }
 
-// Islands of end stone floating in the void: one large central plateau at the
-// origin, and scattered outer islands beyond it.
+// Islands of end stone floating in the void, laid out the way
+// Minecraft lays the End out: the island you arrive on, about a
+// hundred blocks across the radius and flat on top; a thousand blocks
+// of nothing; then the outer islands, where the cities and the chorus
+// are.
+//
+// The first version of this made the main island a lens -- thick in
+// the middle, thinning to nothing at the rim, top and bottom alike --
+// which is not what the End looks like from anywhere. Minecraft's is
+// a slab: flat enough on top to fight a dragon on, ragged round the
+// edge, and tapering away underneath.
 void WorldGen::generateEnd(Chunk& chunk) const
 {
     constexpr int CENTRE_Y = END_ISLAND_LEVEL;
-    constexpr float MAIN_RADIUS = 76.0f;
-    constexpr float INNER_VOID = 420.0f; // gap before the outer islands begin
 
     const int baseX = chunk.position().x * Chunk::SX;
     const int baseZ = chunk.position().z * Chunk::SZ;
@@ -313,40 +322,75 @@ void WorldGen::generateEnd(Chunk& chunk) const
         {
             const int wx = baseX + lx;
             const int wz = baseZ + lz;
-            const float distance = std::sqrt(static_cast<float>(wx) * wx + static_cast<float>(wz) * wz);
+            const float distance =
+                std::sqrt(static_cast<float>(wx) * wx + static_cast<float>(wz) * wz);
 
-            // How solid this column wants to be, 0 at the rim and 1 at the core.
-            float density;
-            if (distance < MAIN_RADIUS)
+            int top = 0;
+            int bottom = 0;
+
+            if (distance < END_MAIN_RADIUS * 1.2f)
             {
-                density = 1.0f - (distance / MAIN_RADIUS);
+                // The rim wanders, so the island ends in a coastline
+                // rather than in a circle drawn with a compass.
+                const float wander = m_height.fbm2D(wx * 0.018f, wz * 0.018f, 3);
+                const float edge = END_MAIN_RADIUS * (0.82f + wander * 0.34f);
+                if (distance > edge) continue;
+
+                // Flat on top, with a block or two of relief, and a
+                // slab that thins towards the edge underneath.
+                const float inward = 1.0f - distance / edge;
+                const float bumps = m_height.fbm2D(wx * 0.06f, wz * 0.06f, 2);
+                top = CENTRE_Y + static_cast<int>(bumps * 2.0f);
+                bottom = CENTRE_Y - static_cast<int>(3.0f + inward * 24.0f);
             }
-            else if (distance > INNER_VOID)
+            else if (distance > END_OUTER_VOID)
             {
                 const float islands = m_height.fbm2D(wx * 0.0055f, wz * 0.0055f, 3);
-                density = islands - 0.22f;
+                const float density = islands - 0.22f;
+                if (density <= 0.0f) continue;
+
+                top = CENTRE_Y + static_cast<int>(density * 14.0f);
+                bottom = CENTRE_Y - static_cast<int>(3.0f + density * 34.0f);
             }
             else
             {
-                continue; // the ring of empty space around the main island
+                continue;   // the thousand blocks of nothing in between
             }
 
-            if (density <= 0.0f) continue;
-
-            const int halfHeight = static_cast<int>(4.0f + density * 22.0f);
-            for (int y = CENTRE_Y - halfHeight; y <= CENTRE_Y + halfHeight / 3; ++y)
+            for (int y = bottom; y <= top; ++y)
             {
                 if (y < 1 || y >= Chunk::SY) continue;
 
-                // Erode the underside so islands taper rather than ending flat.
+                // Erode the underside so an island tapers away rather
+                // than ending in a flat floor.
                 const float erosion = m_caves.fbm3D(wx * 0.04f, y * 0.06f, wz * 0.04f, 2);
-                const float depth = static_cast<float>(CENTRE_Y - y) / (halfHeight + 1.0f);
-                if (erosion > 0.42f - depth * 0.3f) continue;
+                const float depth = static_cast<float>(top - y) /
+                                    static_cast<float>(top - bottom + 1);
+                if (depth > 0.35f && erosion > 0.46f - depth * 0.28f) continue;
 
                 chunk.setBlockRaw(lx, y, lz, Blocks::EndStone);
             }
         }
     }
+}
+
+void WorldGen::endGateway(int index, int& outX, int& outZ)
+{
+    const float turn = 6.2831853f * static_cast<float>(index) /
+                       static_cast<float>(END_GATES);
+    outX = static_cast<int>(std::cos(turn) * END_GATE_RING);
+    outZ = static_cast<int>(std::sin(turn) * END_GATE_RING);
+}
+
+void WorldGen::endGatewayExit(int index, int& outX, int& outZ)
+{
+    // Straight out along the same bearing, which is what makes the
+    // ring legible: the gateway on the north side of the island puts
+    // you down on the northern outer islands.
+    const float turn = 6.2831853f * static_cast<float>(index) /
+                       static_cast<float>(END_GATES);
+    outX = static_cast<int>(std::cos(turn) * END_GATE_OUT);
+    outZ = static_cast<int>(std::sin(turn) * END_GATE_OUT);
 }
 
 void WorldGen::generateColumns(Chunk& chunk) const
@@ -3889,6 +3933,86 @@ void WorldGen::endPillar(int index, int& outX, int& outZ, int& outTall)
     // Between 12 and 22, alternating rather than random: a ring whose
     // heights were rolled came out looking like a broken fence.
     outTall = 12 + (index % 5) * 2 + ((index % 2) ? 2 : 0);
+}
+
+// The ring of gateways, and the one standing at the far end of each.
+// Both ends are built by the generator rather than placed when the
+// dragon dies: a world you can walk into the middle of and find the
+// way out of is worth more here than Minecraft's ceremony.
+void WorldGen::buildEndGateways(Chunk& chunk) const
+{
+    const int baseX = chunk.position().x * Chunk::SX;
+    const int baseZ = chunk.position().z * Chunk::SZ;
+
+    auto stand = [&](int gx, int gz, int gy) {
+        // A bedrock-ish shell with the gateway in the middle of it,
+        // the way Minecraft frames one. Obsidian stands in for the
+        // bedrock, which this world does not have.
+        for (int dy = -1; dy <= 1; ++dy)
+            for (int dx = -1; dx <= 1; ++dx)
+                for (int dz = -1; dz <= 1; ++dz)
+                {
+                    const bool middle = dx == 0 && dy == 0 && dz == 0;
+                    put(chunk, gx + dx, gy + dy, gz + dz,
+                        middle ? Blocks::EndGateway : Blocks::Obsidian);
+                }
+    };
+
+    for (int i = 0; i < END_GATES; ++i)
+    {
+        int gx = 0, gz = 0;
+        endGateway(i, gx, gz);
+
+        if (std::abs(gx - baseX) < Chunk::SX + 4 && std::abs(gz - baseZ) < Chunk::SZ + 4)
+            stand(gx, gz, END_ISLAND_LEVEL + END_GATE_HEIGHT);
+
+        int ox = 0, oz = 0;
+        endGatewayExit(i, ox, oz);
+
+        if (std::abs(ox - baseX) < Chunk::SX + 4 && std::abs(oz - baseZ) < Chunk::SZ + 4)
+            stand(ox, oz, END_ISLAND_LEVEL + END_GATE_HEIGHT);
+    }
+}
+
+// Chorus, which is the only thing that grows out there. A stalk of
+// three to six with a flower on the end of it, on the surface of an
+// outer island and nowhere else.
+void WorldGen::plantChorus(Chunk& chunk) const
+{
+    const int baseX = chunk.position().x * Chunk::SX;
+    const int baseZ = chunk.position().z * Chunk::SZ;
+
+    const long long away = static_cast<long long>(baseX) * baseX +
+                           static_cast<long long>(baseZ) * baseZ;
+    if (away < static_cast<long long>(END_OUTER_VOID) * END_OUTER_VOID) return;
+
+    for (int lx = 0; lx < Chunk::SX; ++lx)
+        for (int lz = 0; lz < Chunk::SZ; ++lz)
+        {
+            const int wx = baseX + lx;
+            const int wz = baseZ + lz;
+
+            if (hashToFloat(hashCoords(wx, 0, wz, m_seed ^ 0x6C470Bu)) > 0.012f) continue;
+
+            // The first end stone from the top, with nothing on it.
+            int ground = -1;
+            for (int y = Chunk::SY - 2; y > 1; --y)
+                if (chunk.getBlock(lx, y, lz) == Blocks::EndStone &&
+                    chunk.getBlock(lx, y + 1, lz) == Blocks::Air)
+                { ground = y; break; }
+
+            if (ground < 0) continue;
+
+            const int tall = 3 + static_cast<int>(
+                hashToFloat(hashCoords(wx, 1, wz, m_seed ^ 0x6C470Bu)) * 4.0f);
+
+            for (int dy = 1; dy <= tall; ++dy)
+            {
+                if (ground + dy >= Chunk::SY) break;
+                chunk.setBlockRaw(lx, ground + dy, lz,
+                                  dy == tall ? Blocks::ChorusFlower : Blocks::ChorusPlant);
+            }
+        }
 }
 
 void WorldGen::buildEndPillars(Chunk& chunk) const

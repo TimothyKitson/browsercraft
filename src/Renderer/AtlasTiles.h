@@ -266,6 +266,7 @@ namespace Tiles
         VerdantFroglightTop, VerdantFroglightSide,
         PearlescentFroglightTop, PearlescentFroglightSide,
         SlimeBlockTile,
+        EndGatewayTile,
 
         RainDrop,
         SnowFlake,

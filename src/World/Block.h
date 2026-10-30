@@ -499,6 +499,11 @@ namespace Blocks
         // only thing in the game that does.
         SlimeBlock,
 
+        // The way across the thousand blocks of nothing between the
+        // island you arrive on and the ones the cities are built on.
+        // Step into one and it puts you down on the far side.
+        EndGateway,
+
         Count
     };
 }

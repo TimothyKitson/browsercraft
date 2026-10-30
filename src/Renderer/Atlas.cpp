@@ -2920,6 +2920,21 @@ namespace
         t.speckle(5, 668);
     }
 
+    void paintEndGateway(Tile& t)
+    {
+        // The same black-and-stars as an end portal, which is what it
+        // is: a hole with the End on the other side of it.
+        t.fill(Color{ 10, 6, 18 });
+        for (int y = 0; y < Tile::N; ++y)
+            for (int x = 0; x < Tile::N; ++x)
+            {
+                const float n = hash2(x, y, 913);
+                if (n > 0.965f) t.set(x, y, Color{ 226, 214, 248 });
+                else if (n > 0.92f) t.set(x, y, Color{ 150, 122, 206 });
+                else if (n > 0.86f) t.set(x, y, Color{ 70, 48, 112 });
+            }
+    }
+
     void paintSlimeBlock(Tile& t)
     {
         // A pale green jelly with a darker cube suspended in it, which
@@ -6275,6 +6290,7 @@ namespace
         { Tiles::AncientDebrisSide, paintAncientDebrisSide },
         { Tiles::NetheriteBlockTile, paintNetheriteBlock },
         { Tiles::SlimeBlockTile, paintSlimeBlock },
+        { Tiles::EndGatewayTile, paintEndGateway },
         { Tiles::OchreFroglightTop, paintOchreTop },
         { Tiles::OchreFroglightSide, paintOchreSide },
         { Tiles::VerdantFroglightTop, paintVerdantTop },

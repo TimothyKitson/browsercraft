@@ -5687,6 +5687,54 @@ void Application::tryRaiseGolem(const glm::ivec3& pumpkin)
     }
 }
 
+// Which gateway you stepped into is whichever of the two dozen is
+// nearest; where it puts you down is that one's partner. The ring
+// round the island and the ring out among the islands are the same
+// twelve bearings, so a gateway on the north side of the island lands
+// you on the northern outer islands -- which is what makes the ring
+// legible rather than a dozen identical holes.
+void Application::stepThroughGateway()
+{
+    if (!m_world) return;
+
+    int best = -1;
+    bool fromRing = true;
+    float nearest = 0.0f;
+
+    for (int i = 0; i < WorldGen::END_GATES; ++i)
+    {
+        int rx = 0, rz = 0, ox = 0, oz = 0;
+        WorldGen::endGateway(i, rx, rz);
+        WorldGen::endGatewayExit(i, ox, oz);
+
+        const float toRing = glm::length(glm::vec2(m_player.position.x - rx,
+                                                   m_player.position.z - rz));
+        const float toOut = glm::length(glm::vec2(m_player.position.x - ox,
+                                                  m_player.position.z - oz));
+
+        if (best < 0 || toRing < nearest) { best = i; fromRing = true; nearest = toRing; }
+        if (toOut < nearest) { best = i; fromRing = false; nearest = toOut; }
+    }
+
+    if (best < 0) return;
+
+    int tx = 0, tz = 0;
+    if (fromRing) WorldGen::endGatewayExit(best, tx, tz);
+    else WorldGen::endGateway(best, tx, tz);
+
+    // A step to the side of the far gateway rather than inside it, or
+    // you arrive in the hole you came out of and go straight back.
+    const int y = WorldGen::END_ISLAND_LEVEL + WorldGen::END_GATE_HEIGHT;
+    m_player.position = glm::vec3(tx + 2.5f, static_cast<float>(y), tz + 0.5f);
+    m_player.velocity = glm::vec3(0.0f);
+    m_camera.position = m_player.eyePosition();
+
+    // Long enough to walk clear of it, which is Minecraft's rule too.
+    m_gatewayCooldown = 4.0f;
+    m_chatLog.add(fromRing ? "Through the gateway, to the outer islands."
+                           : "Through the gateway, back to the island.");
+}
+
 void Application::tickStructureLairs(float deltaTime)
 {
     if (!m_world) return;
@@ -6808,6 +6856,21 @@ void Application::updatePortal(float deltaTime)
         }
         return;
     }
+
+    // A gateway is the other way out of the End: not to another
+    // world but to the far side of the thousand blocks of nothing
+    // between the island you arrive on and the ones the cities are
+    // built on.
+    const BlockId feet = m_world->getBlock(static_cast<int>(std::floor(m_player.position.x)),
+                                           static_cast<int>(std::floor(m_player.position.y)),
+                                           static_cast<int>(std::floor(m_player.position.z)));
+    if (inside == Blocks::EndGateway || feet == Blocks::EndGateway)
+    {
+        m_portalTimer = 0.0f;
+        if (m_gatewayCooldown <= 0.0f) stepThroughGateway();
+        return;
+    }
+    m_gatewayCooldown = std::max(0.0f, m_gatewayCooldown - deltaTime);
 
     if (inside != Blocks::NetherPortal)
     {

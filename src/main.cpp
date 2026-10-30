@@ -625,6 +625,7 @@ namespace
             else if (id == Blocks::TntPrimed)     why = "TNT that has been lit";
             else if (id == Blocks::NetherPortal || id == Blocks::EndPortal)
                                                   why = "a portal the player opened";
+            else if (id == Blocks::EndGateway)    why = "the ring the End is built with";
             else if (id == Blocks::EndPortalFrameFilled)
                                                   why = "a frame with an eye put in it";
             else if (id == Blocks::RedstoneDustLit || id == Blocks::RedstoneTorchOff ||

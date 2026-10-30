@@ -221,7 +221,30 @@ public:
 
     // How far out the outer islands start. A city inside this is on
     // the island you arrive on, where Minecraft puts none either.
-    static constexpr long long END_CITY_VOID = 460;
+    // Minecraft's own numbers. The island you arrive on is about a
+    // hundred blocks across the radius; then a thousand blocks of
+    // nothing; then the outer islands, where the cities are. The gap
+    // used to be four hundred, which was a gap you could see across.
+    static constexpr float END_MAIN_RADIUS = 100.0f;
+    static constexpr float END_OUTER_VOID = 1000.0f;
+    static constexpr long long END_CITY_VOID = 1000;
+
+    // And the way across it. A ring of gateways round the island, one
+    // for each pillar, each of which puts you down on the outer
+    // islands along its own bearing -- which is Minecraft's answer to
+    // a thousand blocks of void and the only reason an end city is a
+    // place you can get to.
+    static constexpr int END_GATES = 12;
+    static constexpr int END_GATE_RING = 96;
+    static constexpr int END_GATE_HEIGHT = 17;
+    static constexpr int END_GATE_OUT = 1056;
+
+    // Where the nth gateway stands, and where it puts you down. Pure
+    // arithmetic over the index, so the generator that builds them and
+    // the code that steps you through one agree without either being
+    // told.
+    static void endGateway(int index, int& outX, int& outZ);
+    static void endGatewayExit(int index, int& outX, int& outZ);
 
     // The ring of obsidian pillars round the middle of the main
     // island, each with a crystal on top that heals the dragon.
@@ -352,6 +375,8 @@ private:
     void buildGeodes(Chunk& chunk) const;
     void buildAncientCities(Chunk& chunk) const;
     void buildEndCities(Chunk& chunk) const;
+    void buildEndGateways(Chunk& chunk) const;
+    void plantChorus(Chunk& chunk) const;
     void buildEndPillars(Chunk& chunk) const;
     void stampEndCity(Chunk& chunk, int midX, int midZ, int ground) const;
     void buildBastions(Chunk& chunk) const;

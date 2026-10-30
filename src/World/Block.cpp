@@ -392,6 +392,9 @@ namespace
         // Not opaque: Minecraft's is see-through, and the light that
         // gets through it is half the reason anybody builds with one.
         { "Slime Block", SlimeBlockTile, SlimeBlockTile, SlimeBlockTile, true, false, RenderType::Cube, 0, 0.0f },
+        // You walk into one, so it cannot collide; it is its own
+        // light, so the ring of them is visible from the island.
+        { "End Gateway", EndGatewayTile, EndGatewayTile, EndGatewayTile, false, false, RenderType::Cube, 15, -1.0f },
     };
 }
 

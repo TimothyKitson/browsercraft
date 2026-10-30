@@ -11446,6 +11446,69 @@ namespace
         check(allay.width < 0.5f, "it is the smallest thing in the game");
     }
 
+    void testTheEnd()
+    {
+        section("the End: the way it is laid out");
+
+        // Minecraft's own numbers. The island you arrive on is about a
+        // hundred across the radius; then a thousand blocks of
+        // nothing; then the outer islands.
+        check(WorldGen::END_MAIN_RADIUS >= 90.0f && WorldGen::END_MAIN_RADIUS <= 110.0f,
+              "the island you arrive on is about a hundred across the radius");
+        check(WorldGen::END_OUTER_VOID >= 1000.0f,
+              "and a thousand blocks of nothing lie past it");
+        check(WorldGen::END_CITY_VOID >= static_cast<long long>(WorldGen::END_OUTER_VOID),
+              "no city stands on the island you arrive on");
+
+        section("the End: the ring of gateways");
+
+        // Twelve, evenly round the island, all at the same distance.
+        std::set<std::pair<int, int>> where;
+        for (int i = 0; i < WorldGen::END_GATES; ++i)
+        {
+            int gx = 0, gz = 0;
+            WorldGen::endGateway(i, gx, gz);
+
+            const float away = std::sqrt(static_cast<float>(gx * gx + gz * gz));
+            check(std::fabs(away - WorldGen::END_GATE_RING) < 2.0f,
+                  "gateway " + std::to_string(i) + " stands on the ring");
+            check(where.insert({ gx, gz }).second,
+                  "and nowhere another one already stands");
+
+            // Clear of the pillars, or a gateway would be inside one.
+            check(away > WorldGen::END_PILLAR_RING + 20,
+                  "and well outside the ring of pillars");
+        }
+
+        // Each one puts you down along its own bearing, out past the
+        // void, which is what makes the ring legible rather than a
+        // dozen identical holes.
+        for (int i = 0; i < WorldGen::END_GATES; ++i)
+        {
+            int gx = 0, gz = 0, ox = 0, oz = 0;
+            WorldGen::endGateway(i, gx, gz);
+            WorldGen::endGatewayExit(i, ox, oz);
+
+            const float out = std::sqrt(static_cast<float>(ox * ox + oz * oz));
+            check(out > WorldGen::END_OUTER_VOID,
+                  "gateway " + std::to_string(i) + " lands past the void");
+
+            // The same bearing. Asked as the sine of the angle between
+            // them rather than as the cross product itself: both ends
+            // are whole blocks, and half a block of rounding at
+            // ninety-six becomes five at a thousand.
+            const float ring = std::sqrt(static_cast<float>(gx * gx + gz * gz));
+            const float cross = static_cast<float>(gx) * oz - static_cast<float>(gz) * ox;
+            const float dot = static_cast<float>(gx) * ox + static_cast<float>(gz) * oz;
+            check(std::fabs(cross) / (ring * out) < 0.02f, "on its own bearing");
+            check(dot > 0.0f, "and the same way out, not the opposite side");
+        }
+
+        check(!blockInfo(Blocks::EndGateway).collides, "you walk into a gateway");
+        check(blockInfo(Blocks::EndGateway).lightEmission > 0,
+              "and it is its own light, so the ring can be seen from the island");
+    }
+
     void testDyes()
     {
         section("dye: the sixteen colours");
@@ -11806,6 +11869,7 @@ int runSelfTest()
     testCountryAnimals();
     testNightVariants();
     testGolemsAndTheLast();
+    testTheEnd();
 
     std::printf("\n%d checks, %d failed\n", g_checks, g_failures);
     return g_failures == 0 ? 0 : 1;
