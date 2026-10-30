@@ -1803,6 +1803,29 @@ namespace
         }
     }
 
+    // The storage blocks. Each is its metal in a solid face with the
+    // corners knocked off, which is how Minecraft draws all of them.
+    void paintStorageBlock(Tile& t, Color body, int salt)
+    {
+        t.fill(body);
+        for (int y = 0; y < Tile::N; ++y)
+            for (int x = 0; x < Tile::N; ++x)
+            {
+                const float edge = std::min(std::min(x, Tile::N - 1 - x),
+                                            std::min(y, Tile::N - 1 - y));
+                if (edge < 1.5f) t.set(x, y, shade(body, -34));
+                else if (edge < 2.5f) t.set(x, y, shade(body, 20));
+                else if (hash2(x, y, salt) > 0.86f) t.set(x, y, shade(body, 16));
+            }
+        t.speckle(4, salt + 1);
+    }
+
+    void paintIronBlock(Tile& t)    { paintStorageBlock(t, Color{ 220, 220, 220 }, 481); }
+    void paintGoldBlock(Tile& t)    { paintStorageBlock(t, Color{ 246, 208,  62 }, 483); }
+    void paintDiamondBlock(Tile& t) { paintStorageBlock(t, Color{  98, 219, 214 }, 485); }
+    void paintEmeraldBlock(Tile& t) { paintStorageBlock(t, Color{  66, 200,  96 }, 487); }
+    void paintCoalBlock(Tile& t)    { paintStorageBlock(t, Color{  24,  24,  26 }, 489); }
+
     void paintSpawnerIn(Tile& t, Color bars, Color inside)
     {
         t.fill(inside);
@@ -4455,6 +4478,11 @@ namespace
         { Tiles::EndCrystalTile, paintEndCrystal },
         { Tiles::WitherSkullTile, paintWitherSkull },
         { Tiles::BeaconTile, paintBeacon },
+        { Tiles::IronBlockTile, paintIronBlock },
+        { Tiles::GoldBlockTile, paintGoldBlock },
+        { Tiles::DiamondBlockTile, paintDiamondBlock },
+        { Tiles::EmeraldBlockTile, paintEmeraldBlock },
+        { Tiles::CoalBlockTile, paintCoalBlock },
         { Tiles::Obsidian, paintObsidian },
         { Tiles::TallGrass, paintTallGrass },
         { Tiles::FlowerRed, paintFlowerRed },
@@ -4816,6 +4844,11 @@ namespace
         { Tiles::VineTile,      { "vine", nullptr },                                   Tinting::Foliage, 0,   false },
         { Tiles::MudTile,       { "mud", nullptr },                                    Tinting::None,    0,   false },
         { Tiles::BeaconTile,    { "beacon", nullptr },                                 Tinting::None,    0,   false },
+        { Tiles::IronBlockTile, { "iron_block", nullptr },                             Tinting::None,    0,   false },
+        { Tiles::GoldBlockTile, { "gold_block", nullptr },                             Tinting::None,    0,   false },
+        { Tiles::DiamondBlockTile, { "diamond_block", nullptr },                       Tinting::None,    0,   false },
+        { Tiles::EmeraldBlockTile, { "emerald_block", nullptr },                       Tinting::None,    0,   false },
+        { Tiles::CoalBlockTile, { "coal_block", nullptr },                             Tinting::None,    0,   false },
         { Tiles::PistonTop,     { "piston_side", nullptr },                            Tinting::None,    0,   false },
         { Tiles::PistonSide,    { "piston_side", nullptr },                            Tinting::None,    0,   false },
         { Tiles::PistonFace,    { "piston_top", "piston_top_normal", nullptr },         Tinting::None,    0,   false },

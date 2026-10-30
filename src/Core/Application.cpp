@@ -1253,6 +1253,7 @@ bool Application::frame()
         if (playing()) tickMonsterCages(deltaTime);
         if (playing()) tickStructureLairs(deltaTime);
         if (playing()) tickDragonFight(deltaTime);
+        if (playing()) tickBeacons(deltaTime);
 
         // A pressed button lets go on its own, and everything it was
         // powering goes out with it.
@@ -4775,6 +4776,75 @@ void Application::raiseWitherForShot(int atX, int atY, int atZ)
     tryRaiseWither(glm::ivec3(atX, atY + 3, atZ));
 }
 
+// What the beacons near the player are worth.
+//
+// Swept rather than remembered: a beacon is a block and a block has
+// nowhere to keep a list, so the only honest way to know where they
+// are is to look. Cheap enough at once a second over the box the
+// player could be standing in range of.
+void Application::tickBeacons(float deltaTime)
+{
+    if (!m_world) return;
+
+    constexpr float INTERVAL = 1.0f;
+    constexpr float SECONDS = 6.0f;   // longer than the sweep, so it never flickers
+
+    m_beaconTimer -= deltaTime;
+    if (m_beaconTimer > 0.0f) return;
+    m_beaconTimer = INTERVAL;
+
+    // The world, as the beacon code wants to ask about it.
+    struct WorldGround : Beacon::Ground
+    {
+        const World* world = nullptr;
+        BlockId at(int x, int y, int z) const override
+        {
+            return world->getBlock(x, y, z);
+        }
+    } ground;
+    ground.world = m_world.get();
+
+    const int px = static_cast<int>(std::floor(m_player.position.x));
+    const int py = static_cast<int>(std::floor(m_player.position.y));
+    const int pz = static_cast<int>(std::floor(m_player.position.z));
+
+    int best = 0;
+    for (auto it = m_beacons.begin(); it != m_beacons.end(); )
+    {
+        const int bx = (*it)[0], by = (*it)[1], bz = (*it)[2];
+
+        // Gone, or never was: forget it rather than asking again
+        // every second for the rest of the session.
+        if (m_world->getBlock(bx, by, bz) != Blocks::Beacon)
+        {
+            it = m_beacons.erase(it);
+            continue;
+        }
+        ++it;
+
+        const int tiers = Beacon::tiersUnder(ground, bx, by, bz);
+        if (tiers <= 0) continue;
+        if (!Beacon::seesSky(ground, bx, by, bz, Chunk::SY)) continue;
+
+        // In range of this one, not merely in the world with it.
+        const int far = std::max(std::abs(bx - px), std::abs(bz - pz));
+        if (far > Beacon::rangeFor(tiers)) continue;
+
+        best = std::max(best, tiers);
+    }
+
+    if (best <= 0) return;
+
+    // What it gives. Minecraft lets you choose; there is no beacon
+    // panel here, so it gives the two that are worth having and
+    // scales them with the pyramid.
+    Effects::give(m_player.effects, Effects::Kind::Speed,
+                  best >= 3 ? 1 : 0, SECONDS);
+    if (best >= 2)
+        Effects::give(m_player.effects, Effects::Kind::Regeneration,
+                      best >= 4 ? 1 : 0, SECONDS);
+}
+
 // The wither: the boss you build rather than the one you find.
 //
 // Three skulls across the top of a T of soul sand. Checked from the
@@ -6583,6 +6653,9 @@ void Application::handlePlacement()
 
     // The one block in the game whose placing can build something.
     if (placing == Blocks::WitherSkull) tryRaiseWither(target);
+
+    if (placing == Blocks::Beacon)
+        m_beacons.insert({ target.x, target.y, target.z });
 
     if (!m_player.creative())
     {

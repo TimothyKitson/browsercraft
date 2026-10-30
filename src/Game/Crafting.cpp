@@ -180,6 +180,35 @@ namespace
                          Blocks::Obsidian,  Blocks::Obsidian,  Blocks::Obsidian },
           0, Blocks::EnchantingTable, 1 },
 
+        // Nine of a thing into one block, and the one block back
+        // into nine. Minecraft's oldest way of tidying a chest, and
+        // what a beacon's pyramid is built out of.
+        { false, 3, 3, { Items::IronIngot, Items::IronIngot, Items::IronIngot,
+                         Items::IronIngot, Items::IronIngot, Items::IronIngot,
+                         Items::IronIngot, Items::IronIngot, Items::IronIngot },
+          0, Blocks::IronBlock, 1 },
+        { true, 0, 0, { Blocks::IronBlock }, 1, Items::IronIngot, 9 },
+        { false, 3, 3, { Items::GoldIngot, Items::GoldIngot, Items::GoldIngot,
+                         Items::GoldIngot, Items::GoldIngot, Items::GoldIngot,
+                         Items::GoldIngot, Items::GoldIngot, Items::GoldIngot },
+          0, Blocks::GoldBlock, 1 },
+        { true, 0, 0, { Blocks::GoldBlock }, 1, Items::GoldIngot, 9 },
+        { false, 3, 3, { Items::Diamond, Items::Diamond, Items::Diamond,
+                         Items::Diamond, Items::Diamond, Items::Diamond,
+                         Items::Diamond, Items::Diamond, Items::Diamond },
+          0, Blocks::DiamondBlock, 1 },
+        { true, 0, 0, { Blocks::DiamondBlock }, 1, Items::Diamond, 9 },
+        { false, 3, 3, { Items::Emerald, Items::Emerald, Items::Emerald,
+                         Items::Emerald, Items::Emerald, Items::Emerald,
+                         Items::Emerald, Items::Emerald, Items::Emerald },
+          0, Blocks::EmeraldBlock, 1 },
+        { true, 0, 0, { Blocks::EmeraldBlock }, 1, Items::Emerald, 9 },
+        { false, 3, 3, { Items::Coal, Items::Coal, Items::Coal,
+                         Items::Coal, Items::Coal, Items::Coal,
+                         Items::Coal, Items::Coal, Items::Coal },
+          0, Blocks::CoalBlock, 1 },
+        { true, 0, 0, { Blocks::CoalBlock }, 1, Items::Coal, 9 },
+
         // The beacon: glass over the star, obsidian under it. The one
         // recipe in the game you can only make once you have killed
         // something, which is the whole point of a nether star.

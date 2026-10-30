@@ -337,6 +337,15 @@ namespace Blocks
         WitherSkull,
         Beacon,
 
+        // The storage blocks. Nine of a thing packed into one, which
+        // is Minecraft's oldest way of tidying a chest -- and what a
+        // beacon's pyramid is built out of.
+        IronBlock,
+        GoldBlock,
+        DiamondBlock,
+        EmeraldBlock,
+        CoalBlock,
+
         Count
     };
 }
@@ -456,6 +465,15 @@ inline bool isWaterPlant(BlockId id)
 inline bool isDeepDark(BlockId id)
 {
     return id >= Blocks::DeepslateBricks && id <= Blocks::ReinforcedDeepslate;
+}
+
+// What a beacon will stand on. Minecraft's pyramid takes iron, gold,
+// diamond and emerald and nothing else -- coal is the one storage
+// block that is not good enough, which is the joke of it.
+inline bool isBeaconBase(BlockId id)
+{
+    return id == Blocks::IronBlock || id == Blocks::GoldBlock ||
+           id == Blocks::DiamondBlock || id == Blocks::EmeraldBlock;
 }
 
 // Whether this is one of the End city's blocks, or one of a bastion's.

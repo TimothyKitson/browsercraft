@@ -33,6 +33,7 @@
 #include "Entity/PlayerModel.h"
 #include "Entity/HeldItem.h"
 #include "Game/Chat.h"
+#include "Game/Beacon.h"
 #include "Entity/EntityManager.h"
 #include "Entity/MobModel.h"
 #include "Game/GameMode.h"
@@ -554,6 +555,20 @@ private:
     // Kept apart from the lairs because it is not a spawn rule -- it
     // is one fight, with one of everything in it.
     void tickDragonFight(float deltaTime);
+
+    // The beacons near the player, and what they are worth. Swept
+    // rather than remembered: a beacon is a block, and a block has
+    // nowhere to keep a list.
+    void tickBeacons(float deltaTime);
+    float m_beaconTimer = 0.0f;
+
+    // Where the beacons are. Kept rather than swept: looking for them
+    // meant a quarter of a million block lookups a second, which is
+    // not affordable on the machine this has to run on. Nothing
+    // generates a beacon -- the only way one exists is that somebody
+    // placed it -- so watching place and break is exact, not a
+    // guess.
+    std::set<std::array<int, 3>> m_beacons;
     void openExitPortal();
     void tryRaiseWither(const glm::ivec3& skull);
     float m_dragonTimer = 0.0f;

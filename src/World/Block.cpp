@@ -252,6 +252,11 @@ namespace
         { "Crystal Base", Bedrock,       Bedrock,        Bedrock,        true,  true,  RenderType::Cube,   0,  -1.0f },
         { "Wither Skeleton Skull",WitherSkullTile,WitherSkullTile,WitherSkullTile,true,true,RenderType::Cube,0,1.0f },
         { "Beacon",       BeaconTile,    BeaconTile,     BeaconTile,     true,  true,  RenderType::Cube,  15,   3.0f },
+        { "Block of Iron",IronBlockTile, IronBlockTile,  IronBlockTile,  true,  true,  RenderType::Cube,   0,   5.0f },
+        { "Block of Gold",GoldBlockTile, GoldBlockTile,  GoldBlockTile,  true,  true,  RenderType::Cube,   0,   3.0f },
+        { "Block of Diamond",DiamondBlockTile,DiamondBlockTile,DiamondBlockTile,true,true,RenderType::Cube,0,5.0f },
+        { "Block of Emerald",EmeraldBlockTile,EmeraldBlockTile,EmeraldBlockTile,true,true,RenderType::Cube,0,5.0f },
+        { "Block of Coal", CoalBlockTile, CoalBlockTile,  CoalBlockTile,  true,  true,  RenderType::Cube,   0,   5.0f },
     };
 }
 

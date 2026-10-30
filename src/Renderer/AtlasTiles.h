@@ -207,6 +207,11 @@ namespace Tiles
         EndCrystalTile,
         WitherSkullTile,
         BeaconTile,
+        IronBlockTile,
+        GoldBlockTile,
+        DiamondBlockTile,
+        EmeraldBlockTile,
+        CoalBlockTile,
 
         RainDrop,
         SnowFlake,

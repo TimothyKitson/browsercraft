@@ -6,6 +6,7 @@
 
 #include "Player/Inventory.h"
 #include "Game/Crafting.h"
+#include "Game/Beacon.h"
 #include "Game/Redstone.h"
 #include "Game/Piston.h"
 #include "Game/Copper.h"
@@ -5420,6 +5421,126 @@ namespace
               "and what comes up is the skull again, so a failed build is not lost");
     }
 
+    void testBeacon()
+    {
+        section("the beacon, and the pyramid under it");
+
+        // A world made of a map, so a pyramid can be measured without
+        // anything to stand it in.
+        struct Bench : Beacon::Ground
+        {
+            std::map<std::array<int,3>, BlockId> blocks;
+            BlockId at(int x, int y, int z) const override
+            {
+                const auto it = blocks.find({ x, y, z });
+                return it == blocks.end() ? Blocks::Air : it->second;
+            }
+            void lay(int tiers, BlockId of)
+            {
+                for (int tier = 1; tier <= tiers; ++tier)
+                    for (int dx = -tier; dx <= tier; ++dx)
+                        for (int dz = -tier; dz <= tier; ++dz)
+                            blocks[{ dx, -tier, dz }] = of;
+            }
+        };
+
+        // Nothing under it is worth nothing. A beacon on the ground is
+        // a lamp, which is the whole reason the pyramid is interesting.
+        {
+            Bench bench;
+            check(Beacon::tiersUnder(bench, 0, 0, 0) == 0,
+                  "a beacon standing on nothing has no pyramid");
+            check(Beacon::rangeFor(0) == 0, "and reaches nobody");
+        }
+
+        // Each complete layer counts.
+        for (int built = 1; built <= Beacon::MAX_TIERS; ++built)
+        {
+            Bench bench;
+            bench.lay(built, Blocks::IronBlock);
+            check(Beacon::tiersUnder(bench, 0, 0, 0) == built,
+                  "a pyramid of " + std::to_string(built) + " counts as " +
+                      std::to_string(built));
+            check(Beacon::rangeFor(built) > Beacon::rangeFor(built - 1),
+                  "and reaches further than one layer smaller");
+        }
+
+        // One block missing from the top layer and the whole thing is
+        // worth nothing: a pyramid is complete or it is not.
+        {
+            Bench bench;
+            bench.lay(3, Blocks::GoldBlock);
+            bench.blocks[{ 1, -1, 1 }] = Blocks::Air;
+            check(Beacon::tiersUnder(bench, 0, 0, 0) == 0,
+                  "one gap in the first layer and the pyramid counts for nothing");
+        }
+
+        // A gap lower down stops the count there rather than being
+        // ignored -- a three-tier pyramid with no bottom is a
+        // two-tier pyramid.
+        {
+            Bench bench;
+            bench.lay(3, Blocks::DiamondBlock);
+            bench.blocks[{ 0, -3, 0 }] = Blocks::Air;
+            check(Beacon::tiersUnder(bench, 0, 0, 0) == 2,
+                  "and a gap in the bottom layer costs that layer, not the ones above");
+        }
+
+        // Only the four metals count. Coal is a storage block and not
+        // good enough, which is Minecraft's joke and this one's.
+        {
+            Bench bench;
+            bench.lay(2, Blocks::CoalBlock);
+            check(Beacon::tiersUnder(bench, 0, 0, 0) == 0,
+                  "a pyramid of coal is worth nothing");
+        }
+        check(isBeaconBase(Blocks::IronBlock) && isBeaconBase(Blocks::GoldBlock) &&
+              isBeaconBase(Blocks::DiamondBlock) && isBeaconBase(Blocks::EmeraldBlock),
+              "iron, gold, diamond and emerald all build one");
+        check(!isBeaconBase(Blocks::CoalBlock) && !isBeaconBase(Blocks::Stone),
+              "and coal and stone do not");
+
+        // It wants to see the sky, which is what stops one working in
+        // a cellar.
+        {
+            Bench bench;
+            bench.lay(1, Blocks::IronBlock);
+            check(Beacon::seesSky(bench, 0, 0, 0, 128), "a beacon under open sky works");
+            bench.blocks[{ 0, 9, 0 }] = Blocks::Stone;
+            check(!Beacon::seesSky(bench, 0, 0, 0, 128),
+                  "and one with a roof over it does not");
+        }
+
+        // The storage blocks pack and unpack. Nine in, one out, nine
+        // back: a block that could not be opened again would be a
+        // trap rather than a tidy.
+        struct Pair { StackId item; BlockId block; };
+        const Pair PAIRS[] = {
+            { Items::IronIngot, Blocks::IronBlock },
+            { Items::GoldIngot, Blocks::GoldBlock },
+            { Items::Diamond,   Blocks::DiamondBlock },
+            { Items::Emerald,   Blocks::EmeraldBlock },
+            { Items::Coal,      Blocks::CoalBlock },
+        };
+
+        for (const Pair& pair : PAIRS)
+        {
+            ItemStack grid[9];
+            for (ItemStack& slot : grid) { slot.id = pair.item; slot.count = 1; }
+
+            const CraftOutput packed = Crafting::match(grid, 3);
+            check(packed.id == pair.block && packed.count == 1,
+                  std::string(displayName(pair.block)) + ": nine of them pack into one");
+
+            ItemStack back[9];
+            back[0].id = pair.block;
+            back[0].count = 1;
+            const CraftOutput loose = Crafting::match(back, 3);
+            check(loose.id == pair.item && loose.count == 9,
+                  std::string(displayName(pair.block)) + ": and one comes back as nine");
+        }
+    }
+
     void testFortressAndMineshaft()
     {
         section("the fortress and the mineshaft");
@@ -9118,6 +9239,7 @@ int runSelfTest()
     testWitchPotions();
     testDragonFight();
     testWither();
+    testBeacon();
     testAncientCity();
     testOtherDimensionStructures();
     testSearchAgreesWithStamp();
