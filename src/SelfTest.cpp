@@ -60,6 +60,7 @@
 #include "Entity/Pathfinder.h"
 #include "Game/Chat.h"
 #include "Game/Food.h"
+#include "Game/Golems.h"
 #include "Renderer/Atlas.h"
 #include "Audio/AudioEngine.h"
 #include "Player/Player.h"
@@ -1939,8 +1940,9 @@ namespace
             const MobType& t = mobType(static_cast<MobId>(i));
             if (t.rideable && !t.inanimate) ++rideable;
         }
-        check(rideable == 2, "it and the strider are the only two you can get on");
-        check(mobType(MobId::Strider).rideable, "and the strider really is the other one");
+        check(rideable == 3, "it, the strider and the camel are the three you can get on");
+        check(mobType(MobId::Strider).rideable, "the strider is one of the others");
+        check(mobType(MobId::Camel).rideable, "and the camel is the third");
 
         check(Mob::tamingFood(MobId::Horse) == Items::Wheat, "wheat tames one");
 
@@ -6185,6 +6187,16 @@ namespace
                 // A vex is what an evoker brings with it, so it comes
                 // out of the mansion beside its master.
                 case MobId::Vex:
+                // A snow golem is built rather than spawned: two snow
+                // blocks and a pumpkin on top.
+                case MobId::SnowGolem:
+                // The monument's own, and the allay in its cage at
+                // the outpost.
+                case MobId::ElderGuardian:
+                case MobId::Allay:
+                // A wandering trader belongs nowhere, which is why he
+                // turns up anywhere in daylight.
+                case MobId::WanderingTrader:
                 // The illagers belong to the two buildings that were
                 // built for them: the outpost and the mansion.
                 case MobId::Pillager: case MobId::Vindicator:
@@ -11315,6 +11327,109 @@ namespace
         }
     }
 
+    void testGolemsAndTheLast()
+    {
+        section("building a golem");
+
+        // Two snow blocks under a pumpkin, which is Minecraft's.
+        {
+            Golems::Shape snow;
+            snow.upper = Blocks::Snow;
+            snow.lower = Blocks::Snow;
+            check(Golems::madeBy(snow) == MobId::SnowGolem, "two snow blocks make a snow golem");
+        }
+
+        // Iron wants the arms as well. Without that rule a tower of
+        // iron blocks with a pumpkin on it would be a golem by
+        // accident, which is exactly what Minecraft's rule prevents.
+        {
+            Golems::Shape tower;
+            tower.upper = Blocks::IronBlock;
+            tower.lower = Blocks::IronBlock;
+            check(Golems::madeBy(tower) == MobId::Count, "a tower of iron is not a golem");
+
+            tower.armA = Blocks::IronBlock;
+            check(Golems::madeBy(tower) == MobId::Count, "nor is one with a single arm");
+
+            tower.armB = Blocks::IronBlock;
+            check(Golems::madeBy(tower) == MobId::IronGolem, "the cross is what makes one");
+        }
+
+        // And nothing else does.
+        {
+            Golems::Shape wrong;
+            wrong.upper = Blocks::Dirt;
+            wrong.lower = Blocks::Dirt;
+            check(Golems::madeBy(wrong) == MobId::Count, "dirt makes nothing");
+
+            wrong.upper = Blocks::Snow;
+            check(Golems::madeBy(wrong) == MobId::Count, "one snow block is not enough");
+
+            wrong.upper = Blocks::IronBlock;
+            wrong.lower = Blocks::Snow;
+            wrong.armA = Blocks::IronBlock;
+            wrong.armB = Blocks::IronBlock;
+            check(Golems::madeBy(wrong) == MobId::Count, "and the two do not mix");
+        }
+
+        check(Golems::isTrigger(Blocks::Pumpkin), "a pumpkin is what finishes one");
+        check(!Golems::isTrigger(Blocks::Snow), "a snow block on its own is not");
+        check(!Golems::isTrigger(Blocks::IronBlock), "nor is an iron one");
+
+        section("the snow golem");
+
+        const MobType& snowman = mobType(MobId::SnowGolem);
+        check(snowman.arrowDamage > 0, "a snow golem throws something");
+        check(snowman.arrowDamage <= 2, "and what it throws barely hurts, which is the point");
+        check(snowman.arrowInterval < mobType(MobId::Skeleton).arrowInterval,
+              "it throws faster than a skeleton shoots");
+        check(snowman.maxHealth <= 6, "it comes apart easily");
+        check(snowman.drop == Items::Snowball, "and leaves the snow it was made of");
+
+        // Snowballs: off a snow block and back into one.
+        check(blockDrop(Blocks::Snow) == Items::Snowball, "a snow block comes apart into snowballs");
+        {
+            Inventory bench;
+            for (int cell : { 0, 1, 3, 4 })
+                bench.slot(Inventory::CRAFT_FIRST + cell) = ItemStack{ Items::Snowball, 1 };
+            bench.refreshCraftResult();
+            check(bench.slot(Inventory::CRAFT_RESULT).id == Blocks::Snow,
+                  "and four of them pack back into one");
+        }
+
+        section("the elder guardian, the trader, the camel, the parrot and the allay");
+
+        const MobType& elder = mobType(MobId::ElderGuardian);
+        const MobType& guardian = mobType(MobId::Guardian);
+        check(elder.maxHealth > 2 * guardian.maxHealth, "an elder guardian is far harder to kill");
+        check(elder.arrowDamage > guardian.arrowDamage, "and its beam hurts more");
+        check(elder.aquatic, "it lives in the water like its smaller cousin");
+        check(elder.modelScale > guardian.modelScale, "and it is drawn bigger");
+        check(elder.secondDrop == Blocks::SeaLantern, "it leaves a sea lantern");
+
+        const MobType& trader = mobType(MobId::WanderingTrader);
+        check(trader.spawnClass == SpawnClass::Passive, "a wandering trader fights nobody");
+        check(trader.experience == 0, "and killing one is worth nothing, like a villager");
+        check(trader.height == mobType(MobId::Villager).height, "he is a villager's size");
+
+        const MobType& camel = mobType(MobId::Camel);
+        check(camel.rideable, "a camel can be ridden");
+        check(camel.saddleHeight > mobType(MobId::Horse).saddleHeight,
+              "and you sit higher on one than on a horse");
+        check(camel.height > mobType(MobId::Horse).height, "because it is taller");
+        check(camel.breedingFood == Blocks::Cactus, "it follows a cactus");
+
+        const MobType& parrot = mobType(MobId::Parrot);
+        check(parrot.hoverHeight > 0.0f, "a parrot flies");
+        check(parrot.drop == Items::Feather, "and leaves a feather");
+
+        const MobType& allay = mobType(MobId::Allay);
+        check(allay.hoverHeight > 0.0f, "an allay flies too");
+        check(allay.attackDamage == 0, "it fights nobody");
+        check(allay.experience == 0, "and is worth nothing to kill");
+        check(allay.width < 0.5f, "it is the smallest thing in the game");
+    }
+
     void testDyes()
     {
         section("dye: the sixteen colours");
@@ -11674,6 +11789,7 @@ int runSelfTest()
     testTheSea();
     testCountryAnimals();
     testNightVariants();
+    testGolemsAndTheLast();
 
     std::printf("\n%d checks, %d failed\n", g_checks, g_failures);
     return g_failures == 0 ? 0 : 1;

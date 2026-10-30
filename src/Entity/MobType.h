@@ -111,6 +111,16 @@ enum class MobId : uint8_t
     Endermite,
     Vex,
 
+    // The last of them: the one you build, the one the monument is
+    // for, the one that turns up to sell you something, and three
+    // that are simply alive.
+    SnowGolem,
+    ElderGuardian,
+    WanderingTrader,
+    Camel,
+    Parrot,
+    Allay,
+
     Count
 };
 

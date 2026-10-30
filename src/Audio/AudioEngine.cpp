@@ -379,6 +379,18 @@ void AudioEngine::buildSounds()
                  Sound::MobEndermiteDeath, "mob/endermite");
     loadMobVoice(Sound::MobVexSay, Sound::MobVexHurt,
                  Sound::MobVexDeath, "mob/vex");
+    loadMobVoice(Sound::MobSnowGolemSay, Sound::MobSnowGolemHurt,
+                 Sound::MobSnowGolemDeath, "mob/snow_golem");
+    loadMobVoice(Sound::MobElderGuardianSay, Sound::MobElderGuardianHurt,
+                 Sound::MobElderGuardianDeath, "mob/elder_guardian");
+    loadMobVoice(Sound::MobTraderSay, Sound::MobTraderHurt,
+                 Sound::MobTraderDeath, "mob/wandering_trader");
+    loadMobVoice(Sound::MobCamelSay, Sound::MobCamelHurt,
+                 Sound::MobCamelDeath, "mob/camel");
+    loadMobVoice(Sound::MobParrotSay, Sound::MobParrotHurt,
+                 Sound::MobParrotDeath, "mob/parrot");
+    loadMobVoice(Sound::MobAllaySay, Sound::MobAllayHurt,
+                 Sound::MobAllayDeath, "mob/allay");
     loadVariants(Sound::Rain, "weather/rain", 1);
     loadVariants(Sound::Thunder, "weather/thunder", 1);
 
@@ -1470,6 +1482,73 @@ void AudioEngine::buildSounds()
         Synth s = make(Sound::MobVexDeath);
         s.addTone(0.46f, 1100.0f, 260.0f, 5.0f, 0.28f, true);
         s.finish(0.56f);
+    }
+
+    // The last six. A snow golem has no voice at all in Minecraft and
+    // this gives it a soft crunch; the rest are a call, a yelp and a
+    // last breath off one description each.
+    beastVoice(Sound::MobCamelSay, Sound::MobCamelHurt, Sound::MobCamelDeath,
+               210.0f, 0.20f, 0.42f, 1171);
+    beastVoice(Sound::MobTraderSay, Sound::MobTraderHurt, Sound::MobTraderDeath,
+               275.0f, 0.12f, 0.24f, 1181);
+    beastVoice(Sound::MobParrotSay, Sound::MobParrotHurt, Sound::MobParrotDeath,
+               1450.0f, 0.10f, 0.12f, 1191);
+
+    {
+        Synth s = make(Sound::MobSnowGolemSay);
+        s.addNoise(0.22f, 2800.0f, 14.0f, 0.24f, true, 1201);
+        s.finish(0.42f);
+    }
+    {
+        Synth s = make(Sound::MobSnowGolemHurt);
+        s.addNoise(0.18f, 3600.0f, 20.0f, 0.28f, true, 1202);
+        s.addTone(0.14f, 420.0f, 240.0f, 20.0f, 0.12f, false);
+        s.finish(0.50f);
+    }
+    {
+        Synth s = make(Sound::MobSnowGolemDeath);
+        s.addNoise(0.42f, 2000.0f, 7.0f, 0.28f, true, 1203);
+        s.finish(0.52f);
+    }
+
+    // The elder guardian: the same groan as a guardian, an octave
+    // down and twice as long, because it is the same thing four
+    // times the size.
+    {
+        Synth s = make(Sound::MobElderGuardianSay);
+        s.addTone(0.90f, 68.0f, 52.0f, 2.2f, 0.42f, true);
+        s.addNoise(0.70f, 300.0f, 3.4f, 0.20f, false, 1211);
+        s.finish(0.70f);
+    }
+    {
+        Synth s = make(Sound::MobElderGuardianHurt);
+        s.addTone(0.42f, 120.0f, 56.0f, 8.0f, 0.42f, true);
+        s.addNoise(0.30f, 520.0f, 12.0f, 0.20f, false, 1212);
+        s.finish(0.72f);
+    }
+    {
+        Synth s = make(Sound::MobElderGuardianDeath);
+        s.addTone(1.10f, 90.0f, 34.0f, 1.8f, 0.42f, true);
+        s.addNoise(0.80f, 260.0f, 2.8f, 0.20f, false, 1213);
+        s.finish(0.74f);
+    }
+
+    // The allay: a chime, which is the whole of what one sounds like.
+    {
+        Synth s = make(Sound::MobAllaySay);
+        s.addTone(0.50f, 1320.0f, 1320.0f, 4.0f, 0.22f, false);
+        s.addTone(0.50f, 1976.0f, 1976.0f, 5.0f, 0.12f, false, 0.06f);
+        s.finish(0.44f);
+    }
+    {
+        Synth s = make(Sound::MobAllayHurt);
+        s.addTone(0.22f, 1760.0f, 880.0f, 14.0f, 0.26f, false);
+        s.finish(0.52f);
+    }
+    {
+        Synth s = make(Sound::MobAllayDeath);
+        s.addTone(0.64f, 1320.0f, 330.0f, 4.0f, 0.26f, false);
+        s.finish(0.54f);
     }
 
     // The ghast: a long wail that falls away. Mostly tone, almost no

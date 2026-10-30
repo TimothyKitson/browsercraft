@@ -333,6 +333,11 @@ namespace
           0, Items::GoldIngot, 1 },
         { true, 0, 0, { Items::GoldIngot }, 1, Items::GoldNugget, 9 },
 
+        // Four snowballs pack back into the block they came off.
+        { false, 2, 2, { Items::Snowball, Items::Snowball,
+                         Items::Snowball, Items::Snowball },
+          0, Blocks::Snow, 1 },
+
         // Cobblestone and a vine. Minecraft's recipe, and the only
         // way to mossy cobble that does not involve finding a village
         // built in a swamp -- which is where the one in this world

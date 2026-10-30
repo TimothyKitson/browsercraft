@@ -3,6 +3,7 @@
 #include "GLFunctions.h"
 #include "Renderer/Screenshot.h"
 #include "Entity/PlayerAnimation.h"
+#include "Game/Golems.h"
 #include "Game/Farming.h"
 #include "Game/Food.h"
 #include "Game/Tools.h"
@@ -5630,6 +5631,53 @@ void Application::openExitPortal()
         }
 }
 
+// A pumpkin put down on the right body makes a golem: two snow blocks
+// for a snow one, an iron cross for an iron one. Which shape it is
+// belongs to Golems; what the world does about it belongs here.
+void Application::tryRaiseGolem(const glm::ivec3& pumpkin)
+{
+    if (!m_world) return;
+
+    // The arms can lie along either axis, so both are tried. The
+    // first one that makes something wins.
+    const glm::ivec3 ARMS[2] = { { 1, 0, 0 }, { 0, 0, 1 } };
+
+    for (const glm::ivec3& across : ARMS)
+    {
+        Golems::Shape shape;
+        shape.upper = m_world->getBlock(pumpkin.x, pumpkin.y - 1, pumpkin.z);
+        shape.lower = m_world->getBlock(pumpkin.x, pumpkin.y - 2, pumpkin.z);
+        shape.armA = m_world->getBlock(pumpkin.x - across.x, pumpkin.y - 1,
+                                       pumpkin.z - across.z);
+        shape.armB = m_world->getBlock(pumpkin.x + across.x, pumpkin.y - 1,
+                                       pumpkin.z + across.z);
+
+        const MobId made = Golems::madeBy(shape);
+        if (made == MobId::Count) continue;
+
+        // The blocks go into the golem, which is what makes building
+        // one a decision rather than a decoration.
+        m_world->setBlock(pumpkin.x, pumpkin.y, pumpkin.z, Blocks::Air);
+        m_world->setBlock(pumpkin.x, pumpkin.y - 1, pumpkin.z, Blocks::Air);
+        m_world->setBlock(pumpkin.x, pumpkin.y - 2, pumpkin.z, Blocks::Air);
+        if (made == MobId::IronGolem)
+        {
+            m_world->setBlock(pumpkin.x - across.x, pumpkin.y - 1,
+                              pumpkin.z - across.z, Blocks::Air);
+            m_world->setBlock(pumpkin.x + across.x, pumpkin.y - 1,
+                              pumpkin.z + across.z, Blocks::Air);
+        }
+
+        const glm::vec3 feet(pumpkin.x + 0.5f,
+                             static_cast<float>(pumpkin.y - 2),
+                             pumpkin.z + 0.5f);
+        m_entities.spawnAt(made, feet, *m_world);
+        m_chatLog.add(made == MobId::SnowGolem ? "A snow golem stands up."
+                                               : "An iron golem stands up.");
+        return;
+    }
+}
+
 void Application::tickStructureLairs(float deltaTime)
 {
     if (!m_world) return;
@@ -5849,11 +5897,49 @@ void Application::tickStructureLairs(float deltaTime)
                     {
                         const int x = midX + post.dx;
                         const int z = midZ + post.dz;
+
                         const int floorY = post.onTower
                                                ? ground + post.dy
                                                : gen.surfaceHeight(x, z) + 1;
                         const glm::vec3 feet(x + 0.5f, static_cast<float>(floorY), z + 0.5f);
                         if (m_entities.spawnAt(MobId::Pillager, feet, *m_world)) return;
+                    }
+                }
+            }
+        }
+    }
+
+    // And the allay the outpost keeps in a cage, which is where
+    // Minecraft puts them and the only place you find one.
+    {
+        const Structures::Spot spot =
+            gen.nearestLandmark(WorldGen::Landmark::PillagerOutpost, px, pz, 1);
+        if (spot.exists)
+        {
+            const int midX = spot.chunkX * Structures::CHUNK + Structures::CHUNK / 2;
+            const int midZ = spot.chunkZ * Structures::CHUNK + Structures::CHUNK / 2;
+            const int dx = px - midX;
+            const int dz = pz - midZ;
+
+            if (dx * dx + dz * dz < 28 * 28)
+            {
+                int already = 0;
+                for (const Mob& mob : m_entities.mobs())
+                    if (mob.alive() && mob.typeId() == MobId::Allay) ++already;
+
+                if (already == 0)
+                {
+                    const int ground = gen.surfaceHeight(midX, midZ);
+                    for (int tries = 0; tries < 8; ++tries)
+                    {
+                        const float angle = tries * 0.785398f;
+                        const int x = midX + static_cast<int>(std::cos(angle) * 5.0f);
+                        const int z = midZ + static_cast<int>(std::sin(angle) * 5.0f);
+                        const glm::vec3 feet(x + 0.5f,
+                                             static_cast<float>(gen.surfaceHeight(x, z) + 2),
+                                             z + 0.5f);
+                        if (feet.y < ground - 6.0f) continue;
+                        if (m_entities.spawnAt(MobId::Allay, feet, *m_world)) return;
                     }
                 }
             }
@@ -6171,6 +6257,19 @@ void Application::tickStructureLairs(float deltaTime)
 
         if (m_entities.spawnAt(MobId::Guardian, feet, *m_world)) return;
     }
+
+    // And the one elder, in the middle of it. It comes last, after the
+    // guardians are up, which is also the order you meet them in.
+    int elders = 0;
+    for (const Mob& mob : m_entities.mobs())
+        if (mob.alive() && mob.typeId() == MobId::ElderGuardian) ++elders;
+
+    if (elders == 0)
+        for (int dy = 2; dy < 8; ++dy)
+        {
+            const glm::vec3 feet(midX + 0.5f, static_cast<float>(floorY + dy), midZ + 0.5f);
+            if (m_entities.spawnAt(MobId::ElderGuardian, feet, *m_world)) return;
+        }
 }
 
 // Everything copper within sight of the player gets a roll every few
@@ -8194,8 +8293,9 @@ void Application::handlePlacement()
     if (isRail(placing)) reshapeRailsAround(target);
     settleRedstone(target);
 
-    // The one block in the game whose placing can build something.
+    // The two blocks in the game whose placing can build something.
     if (placing == Blocks::WitherSkull) tryRaiseWither(target);
+    if (Golems::isTrigger(placing)) tryRaiseGolem(target);
 
     if (placing == Blocks::Beacon)
         m_beacons.insert({ target.x, target.y, target.z });

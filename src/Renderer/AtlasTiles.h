@@ -447,8 +447,9 @@ namespace Tiles
         ItemRawRabbit,
         ItemCookedRabbit,
         ItemHoneycomb,
+        ItemSnowball,
 
-        ItemTileEnd = ItemHoneycomb + 1
+        ItemTileEnd = ItemSnowball + 1
     };
 
     // Ten progressively more broken overlay tiles for the mining animation.

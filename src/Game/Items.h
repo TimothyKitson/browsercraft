@@ -284,6 +284,10 @@ namespace Items
         CookedRabbit,
         Honeycomb,
 
+        // Off a snow block, and what a snow golem throws. Four of
+        // them pack back into the block they came from.
+        Snowball,
+
         Count
     };
 }

@@ -3337,6 +3337,21 @@ namespace
             }
     }
 
+    void paintItemSnowball(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 3; y < 13; ++y)
+            for (int x = 3; x < 13; ++x)
+            {
+                const float dx = (x - 7.5f) / 5.0f;
+                const float dy = (y - 7.5f) / 5.0f;
+                if (dx * dx + dy * dy > 1.0f) continue;
+                t.set(x, y, (dx + dy < -0.4f) ? Color{ 252, 254, 255 }
+                                              : Color{ 224, 236, 244 });
+            }
+        t.speckle(3, 711);
+    }
+
     void paintItemSign(Tile& t)
     {
         t.fill(Color{ 0, 0, 0, 0 });
@@ -6286,6 +6301,7 @@ namespace
         { Tiles::ItemRawRabbit, paintItemRawRabbit },
         { Tiles::ItemCookedRabbit, paintItemCookedRabbit },
         { Tiles::ItemHoneycomb, paintItemHoneycomb },
+        { Tiles::ItemSnowball, paintItemSnowball },
         { Tiles::ItemBowl, paintItemBowl },
         { Tiles::ItemBeetroot, paintItemBeetroot },
         { Tiles::ItemBeetrootSeeds, paintItemBeetrootSeeds },
@@ -6620,6 +6636,7 @@ namespace
         { Tiles::ItemRawRabbit, { "rabbit", nullptr, nullptr } },
         { Tiles::ItemCookedRabbit, { "cooked_rabbit", nullptr, nullptr } },
         { Tiles::ItemHoneycomb, { "honeycomb", nullptr, nullptr } },
+        { Tiles::ItemSnowball, { "snowball", nullptr, nullptr } },
     };
 
     const PackTile PACK_TILES[] = {

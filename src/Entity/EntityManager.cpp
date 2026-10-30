@@ -40,6 +40,8 @@ namespace
         { Biome::Savanna,   MobId::Horse,     0.14f },
         { Biome::Jungle,    MobId::Panda,     0.18f },
         { Biome::Jungle,    MobId::Cat,       0.16f },
+        { Biome::Jungle,    MobId::Parrot,    0.16f },
+        { Biome::Desert,    MobId::Camel,     0.16f },
     };
     // No breeze. It comes out of a trial spawner and nowhere else,
     // which is Minecraft's -- it was in this list only while there
@@ -457,9 +459,13 @@ void EntityManager::trySpawnWave(const World& world, const glm::vec3& playerPosi
                 if (local != MobId::Count) species = local;
                 else
                 {
-                    species = (random01() < 0.02f)
-                                  ? MobId::Villager
-                                  : PASSIVE_SPECIES[static_cast<int>(random01() * 4.0f) & 3];
+                    // A wandering trader belongs to no biome and no
+                    // village: he turns up where you are, which is
+                    // the whole of what one is.
+                    const float roll = random01();
+                    species = roll < 0.015f ? MobId::WanderingTrader
+                            : roll < 0.035f ? MobId::Villager
+                            : PASSIVE_SPECIES[static_cast<int>(random01() * 4.0f) & 3];
                 }
             }
         }

@@ -2718,6 +2718,251 @@ namespace
             t.model.push_back(mirrored(mc(Part::LegFrontLeft, 32, 14, 2, 5, 2, -1, 0, -1, 3, 17, 0)));
         }
 
+        {
+            // The snow golem: the one mob in the game you build. Two
+            // snow blocks and a pumpkin on top, which is Minecraft's
+            // and the reason a pumpkin is worth keeping.
+            MobType& t = table[static_cast<size_t>(MobId::SnowGolem)];
+            t.id = MobId::SnowGolem;
+            t.experience = 0;
+            t.voice = Sound::MobSnowGolemSay;
+            t.hurtVoice = Sound::MobSnowGolemHurt;
+            t.deathVoice = Sound::MobSnowGolemDeath;
+            t.name = "Snow Golem";
+            t.texture = "snow_golem";
+            t.sheetWidth = 128;
+            t.sheetHeight = 64;
+            t.spawnClass = SpawnClass::Passive;
+            // Neutral like the iron golem: it is on your side and it
+            // throws snow at what comes for you, and if you break it
+            // up it will throw snow at you instead. Minecraft's never
+            // turns on the player; this one does, which is one line
+            // against a passive mob that can somehow fight.
+            t.neutral = true;
+            t.maxHealth = 4;
+            t.width = 0.7f;
+            t.height = 1.9f;
+            t.walkSpeed = 2.0f;
+            t.limbSwing = 0.0f;
+
+            // It throws snow. In Minecraft that barely hurts anything
+            // -- what it does is knock them back and keep them off
+            // you, which is the whole of what one is for.
+            t.arrowDamage = 1;
+            t.arrowRange = 14.0f;
+            t.arrowInterval = 1.2f;
+
+            t.drop = Items::Snowball;
+            t.dropCount = 4;
+
+            t.bodyColour = rgb(242, 246, 250);
+            t.headColour = rgb(224, 150, 44);
+            t.eyeColour = rgb(40, 34, 30);
+
+            // Two snowballs and a pumpkin, which is what it is made
+            // of and what it looks like.
+            t.model.push_back(mc(Part::Body, 0, 0, 12, 10, 12, -6, 14, -6, 0, 0, 0));
+            t.model.push_back(mc(Part::Body, 0, 24, 10, 9, 10, -5, 5, -5, 0, 0, 0));
+            t.model.push_back(mc(Part::Head, 48, 24, 10, 10, 10, -5, -5, -5, 0, 0, 0));
+            t.model.push_back(mc(Part::LegFrontRight, 90, 0, 2, 8, 2, -1, 0, -1, -6, 6, 0));
+            t.model.push_back(mirrored(mc(Part::LegFrontLeft, 90, 0, 2, 8, 2, -1, 0, -1, 6, 6, 0)));
+        }
+
+        {
+            // The elder guardian: what an ocean monument is for. A
+            // guardian four times the size, and the only thing in the
+            // sea worth drowning over.
+            MobType& t = table[static_cast<size_t>(MobId::ElderGuardian)];
+            t.id = MobId::ElderGuardian;
+            t.experience = 40;
+            t.voice = Sound::MobElderGuardianSay;
+            t.hurtVoice = Sound::MobElderGuardianHurt;
+            t.deathVoice = Sound::MobElderGuardianDeath;
+            t.name = "Elder Guardian";
+            t.texture = "elder_guardian";
+            t.sheetHeight = 64;
+            t.spawnClass = SpawnClass::Hostile;
+            t.maxHealth = 80;
+            // A guardian at twice the size, which is both the drawing
+            // and the box: the numbers here are the model's own.
+            t.modelScale = 2.0f;
+            t.width = 0.95f;
+            t.height = 0.95f;
+            t.walkSpeed = 1.8f;
+            t.limbSwing = 0.3f;
+            t.voicePitch = 0.6f;
+            t.aquatic = true;
+            t.hoverHeight = 2.2f;
+
+            t.shootsFire = true;
+            t.arrowDamage = 8;
+            t.arrowRange = 18.0f;
+            t.arrowInterval = 3.4f;
+
+            t.drop = Blocks::Prismarine;
+            t.dropCount = 3;
+            t.secondDrop = Blocks::SeaLantern;
+            t.secondDropCount = 1;
+
+            t.bodyColour = rgb(170, 168, 142);
+            t.headColour = rgb(192, 190, 164);
+            t.eyeColour = 0xFFE8D070;
+
+            t.model.push_back(mc(Part::Body, 0, 0, 14, 14, 14, -7, -7, -7, 0, 15, 0));
+            t.model.push_back(mc(Part::Head, 0, 28, 5, 5, 1, -2, -2, 0, 0, 15, -7));
+            t.model.push_back(mc(Part::LegBackLeft, 44, 0, 2, 2, 7, -1, -1, 0, 0, 15, 7));
+            t.model.push_back(mc(Part::WingLeft, 0, 18, 2, 9, 2, -1, 0, -1, -8, 15, 0));
+            t.model.push_back(mc(Part::WingRight, 0, 18, 2, 9, 2, -1, 0, -1, 8, 15, 0));
+        }
+
+        {
+            // The wandering trader: a villager with no village, who
+            // turns up where you are and sells what a village would.
+            MobType& t = table[static_cast<size_t>(MobId::WanderingTrader)];
+            t.id = MobId::WanderingTrader;
+            t.experience = 0;
+            t.voice = Sound::MobTraderSay;
+            t.hurtVoice = Sound::MobTraderHurt;
+            t.deathVoice = Sound::MobTraderDeath;
+            t.name = "Wandering Trader";
+            t.texture = "wandering_trader";
+            t.sheetHeight = 64;
+            t.spawnClass = SpawnClass::Passive;
+            t.maxHealth = 20;
+            t.width = 0.6f;
+            t.height = 1.95f;
+            t.walkSpeed = 1.6f;
+            t.voicePitch = 1.1f;
+
+            t.bodyColour = rgb(44, 76, 132);
+            t.headColour = rgb(188, 146, 118);
+            t.eyeColour = rgb(40, 50, 70);
+
+            t.model.push_back(mc(Part::Head, 0, 0, 8, 10, 8, -4, -10, -4, 0, 0, 0));
+            t.model.push_back(mc(Part::Head, 24, 0, 2, 4, 2, -1, -5, -6, 0, 0, 0));
+            t.model.push_back(mc(Part::Body, 16, 20, 8, 12, 6, -4, 0, -3, 0, 0, 0));
+            t.model.push_back(mc(Part::Body, 0, 38, 8, 6, 6, -4, 12, -3, 0, 0, 0));
+            t.model.push_back(mc(Part::LegFrontRight, 44, 22, 4, 8, 4, -3, -2, -2, -5, 2, 0));
+            t.model.push_back(mirrored(mc(Part::LegFrontLeft, 44, 22, 4, 8, 4, -1, -2, -2, 5, 2, 0)));
+            t.model.push_back(mc(Part::LegBackRight, 0, 22, 4, 12, 4, -2, 0, -2, -2, 12, 0));
+            t.model.push_back(mirrored(mc(Part::LegBackLeft, 0, 22, 4, 12, 4, -2, 0, -2, 2, 12, 0)));
+        }
+
+        {
+            // The camel: the tallest thing you can sit on, and what a
+            // desert has instead of a horse.
+            MobType& t = table[static_cast<size_t>(MobId::Camel)];
+            t.id = MobId::Camel;
+            t.experience = 1;
+            t.voice = Sound::MobCamelSay;
+            t.hurtVoice = Sound::MobCamelHurt;
+            t.deathVoice = Sound::MobCamelDeath;
+            t.name = "Camel";
+            t.texture = "camel";
+            t.sheetWidth = 128;
+            t.sheetHeight = 128;
+            t.spawnClass = SpawnClass::Passive;
+            t.maxHealth = 32;
+            t.width = 1.7f;
+            t.height = 2.375f;
+            t.walkSpeed = 2.4f;
+            t.limbSwing = 0.5f;
+            t.voicePitch = 0.9f;
+            t.breedingFood = Blocks::Cactus;
+
+            t.rideable = true;
+            t.saddleHeight = 2.1f;
+
+            t.bodyColour = rgb(222, 186, 124);
+            t.headColour = rgb(232, 200, 142);
+            t.eyeColour = rgb(50, 40, 32);
+
+            t.model.push_back(mc(Part::Body, 0, 0, 12, 18, 23, -6, -6, -11, 0, 0, 0));
+            // The hump, which is the whole of what reads as a camel.
+            t.model.push_back(mc(Part::Body, 76, 0, 9, 6, 11, -4, -12, -5, 0, 0, 0));
+            t.model.push_back(mc(Part::Head, 76, 20, 7, 12, 9, -3, -18, -20, 0, 0, 0));
+            t.model.push_back(mc(Part::Head, 76, 44, 5, 5, 8, -2, -10, -26, 0, 0, 0));
+            t.model.push_back(mc(Part::LegFrontRight, 0, 44, 4, 21, 4, -2, 0, -2, -4, 3, -8));
+            t.model.push_back(mirrored(mc(Part::LegFrontLeft, 0, 44, 4, 21, 4, -2, 0, -2, 4, 3, -8)));
+            t.model.push_back(mc(Part::LegBackRight, 0, 44, 4, 21, 4, -2, 0, -2, -4, 3, 8));
+            t.model.push_back(mirrored(mc(Part::LegBackLeft, 0, 44, 4, 21, 4, -2, 0, -2, 4, 3, 8)));
+        }
+
+        {
+            // The parrot: the one thing in a jungle that is the right
+            // colour for it.
+            MobType& t = table[static_cast<size_t>(MobId::Parrot)];
+            t.id = MobId::Parrot;
+            t.experience = 1;
+            t.voice = Sound::MobParrotSay;
+            t.hurtVoice = Sound::MobParrotHurt;
+            t.deathVoice = Sound::MobParrotDeath;
+            t.name = "Parrot";
+            t.texture = "parrot";
+            t.spawnClass = SpawnClass::Passive;
+            t.maxHealth = 6;
+            t.width = 0.5f;
+            t.height = 0.9f;
+            t.walkSpeed = 2.6f;
+            t.limbSwing = 0.3f;
+            t.voicePitch = 1.6f;
+            t.breedingFood = Items::WheatSeeds;
+            t.hoverHeight = 3.0f;
+
+            t.drop = Items::Feather;
+            t.dropCount = 1;
+
+            t.bodyColour = rgb(206, 48, 44);
+            t.headColour = rgb(60, 112, 196);
+            t.eyeColour = rgb(30, 28, 26);
+
+            t.model.push_back(mc(Part::Body, 0, 0, 4, 7, 3, -2, 13, -2, 0, 0, 0));
+            t.model.push_back(mc(Part::Head, 0, 12, 4, 4, 4, -2, 9, -2, 0, 0, 0));
+            t.model.push_back(mc(Part::Head, 20, 12, 2, 2, 2, -1, 11, -4, 0, 0, 0));
+            t.model.push_back(mc(Part::WingRight, 0, 22, 1, 5, 4, -3, 13, -2, 0, 0, 0));
+            t.model.push_back(mirrored(mc(Part::WingLeft, 0, 22, 1, 5, 4, 2, 13, -2, 0, 0, 0)));
+            t.model.push_back(mc(Part::LegBackRight, 14, 22, 1, 2, 1, -1, 22, 0, 0, 0, 0));
+            t.model.push_back(mirrored(mc(Part::LegBackLeft, 14, 22, 1, 2, 1, 0, 22, 0, 0, 0, 0)));
+            t.model.push_back(mc(Part::LegFrontRight, 20, 22, 2, 6, 1, -1, 18, 2, 0, 0, 0));
+        }
+
+        {
+            // The allay: a small blue thing that follows you about.
+            // Minecraft's fetches what you show it; this one has no
+            // hands for that yet and is simply alive.
+            MobType& t = table[static_cast<size_t>(MobId::Allay)];
+            t.id = MobId::Allay;
+            t.experience = 0;
+            t.voice = Sound::MobAllaySay;
+            t.hurtVoice = Sound::MobAllayHurt;
+            t.deathVoice = Sound::MobAllayDeath;
+            t.name = "Allay";
+            t.texture = "allay";
+            t.sheetHeight = 64;
+            t.spawnClass = SpawnClass::Passive;
+            t.maxHealth = 20;
+            t.width = 0.35f;
+            t.height = 0.6f;
+            t.walkSpeed = 3.0f;
+            t.limbSwing = 0.2f;
+            t.voicePitch = 1.5f;
+            t.hoverHeight = 1.8f;
+
+            t.ambientMinSeconds = 5.0f;
+            t.ambientMaxSeconds = 14.0f;
+
+            t.bodyColour = rgb(74, 150, 226);
+            t.headColour = rgb(140, 206, 246);
+            t.eyeColour = rgb(226, 240, 252);
+
+            t.model.push_back(mc(Part::Head, 0, 0, 5, 5, 5, -2, 11, -2, 0, 0, 0));
+            t.model.push_back(mc(Part::Body, 0, 12, 3, 4, 2, -1, 16, -1, 0, 0, 0));
+            t.model.push_back(mc(Part::WingRight, 0, 20, 1, 6, 5, -3, 13, -1, 0, 0, 0));
+            t.model.push_back(mirrored(mc(Part::WingLeft, 0, 20, 1, 6, 5, 2, 13, -1, 0, 0, 0)));
+            t.model.push_back(mc(Part::LegFrontRight, 16, 20, 1, 4, 1, -1, 20, 0, 0, 0, 0));
+            t.model.push_back(mirrored(mc(Part::LegFrontLeft, 16, 20, 1, 4, 1, 0, 20, 0, 0, 0, 0)));
+        }
+
         return table;
     }
 }

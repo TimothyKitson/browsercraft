@@ -591,6 +591,7 @@ private:
     // allowed anywhere else.
     float m_lairTimer = 0.0f;
     void tickStructureLairs(float deltaTime);
+    void tryRaiseGolem(const glm::ivec3& pumpkin);
 
     // The End's fight: the dragon, and the crystals that keep it up.
     // Kept apart from the lairs because it is not a spawn rule -- it

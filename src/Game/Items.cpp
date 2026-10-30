@@ -187,6 +187,7 @@ namespace
         { "Raw Rabbit",           Tiles::ItemRawRabbit,         64 },
         { "Cooked Rabbit",        Tiles::ItemCookedRabbit,      64 },
         { "Honeycomb",            Tiles::ItemHoneycomb,         64 },
+        { "Snowball",             Tiles::ItemSnowball,          16 },
     };
 
     static_assert(sizeof(ITEMS) / sizeof(ITEMS[0]) ==
@@ -296,6 +297,9 @@ StackId blockDrop(BlockId id)
         case Blocks::NetherWart: return Items::NetherWart;
         case Blocks::RedstoneOre: return Items::Redstone;
         case Blocks::LapisOre: return Items::LapisLazuli;
+        // Minecraft's: a snow block comes apart into snowballs, and
+        // four of them pack back into one.
+        case Blocks::Snow: return Items::Snowball;
 
         // The berries come off the vine as something you can eat. They
         // used to come off as the block, which meant the one food that
