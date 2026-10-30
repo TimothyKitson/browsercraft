@@ -99,6 +99,18 @@ enum class MobId : uint8_t
     Llama,
     PolarBear,
 
+    // The night, which was the same five monsters everywhere. These
+    // are the ones a particular place has: the snow, the desert and
+    // the swamp each keep their own, and the sky has its own reason
+    // to come after you.
+    Stray,
+    Husk,
+    Bogged,
+    Phantom,
+    ZombieVillager,
+    Endermite,
+    Vex,
+
     Count
 };
 

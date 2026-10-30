@@ -5641,6 +5641,7 @@ void Application::tickStructureLairs(float deltaTime)
     constexpr int PILLAGER_LIMIT = 6;
     constexpr int VINDICATOR_LIMIT = 5;
     constexpr int BRUTE_LIMIT = 4;
+    constexpr int VEX_LIMIT = 3;
 
     m_lairTimer -= deltaTime;
     if (m_lairTimer > 0.0f) return;
@@ -5894,6 +5895,10 @@ void Application::tickStructureLairs(float deltaTime)
                     {  8,  3 }, { -8, -3 },
                 };
 
+                int vexes = 0;
+                for (const Mob& mob : m_entities.mobs())
+                    if (mob.alive() && mob.typeId() == MobId::Vex) ++vexes;
+
                 // The evoker first, and only at the top: the thing
                 // worth coming for should be the last thing you meet.
                 if (evokers == 0)
@@ -5905,6 +5910,22 @@ void Application::tickStructureLairs(float deltaTime)
                                              midZ + room.y + 0.5f);
                         if (m_entities.spawnAt(MobId::Evoker, feet, *m_world)) return;
                     }
+                }
+
+                // And the vexes it brings with it. There is nothing
+                // here that summons one, so they come out of the
+                // mansion beside their master: a mansion with an
+                // evoker in it and no vexes is half an evoker.
+                if (evokers > 0 && vexes < VEX_LIMIT)
+                {
+                    for (int storey = 2; storey >= 0; --storey)
+                        for (const glm::ivec2& room : ROOMS)
+                        {
+                            const glm::vec3 feet(midX + room.x + 0.5f,
+                                                 static_cast<float>(ground + storey * STOREY + 2),
+                                                 midZ + room.y + 0.5f);
+                            if (m_entities.spawnAt(MobId::Vex, feet, *m_world)) return;
+                        }
                 }
 
                 if (vindicators < VINDICATOR_LIMIT)

@@ -143,6 +143,10 @@ public:
     // --selftest can walk every biome without a world.
     static MobId biomeSpecies(Biome where, float roll);
 
+    // And the same for the night: what a particular place has after
+    // dark, over and above the five that turn up everywhere.
+    static MobId biomeNight(Biome where, float roll);
+
     // Whether a mob can be where this block is. One rule in one place,
     // so a test can ask exactly what the spawn asks: water is a wall
     // to almost everything, and is not a wall to the three things that

@@ -45,7 +45,17 @@ namespace
     // which is Minecraft's -- it was in this list only while there
     // were no chambers for it to come out of.
     const MobId HOSTILE_SPECIES[] = { MobId::Zombie, MobId::Skeleton, MobId::Creeper,
-                                      MobId::Spider, MobId::Enderman };
+                                      MobId::Spider, MobId::Enderman,
+                                      MobId::ZombieVillager, MobId::Phantom };
+
+    // And what a particular place has after dark. Same shape as the
+    // daytime table: the rows for a biome are read in order and add
+    // up, and whatever is left over is the ordinary five above.
+    const BiomeLife BIOME_NIGHT[] = {
+        { Biome::Snowy,  MobId::Stray,  0.34f },
+        { Biome::Desert, MobId::Husk,   0.40f },
+        { Biome::Swamp,  MobId::Bogged, 0.34f },
+    };
 
     // The Nether has its own, and nothing else belongs there: a sheep on
     // netherrack and a piglin in a meadow are both wrong.
@@ -60,7 +70,7 @@ namespace
     // outdoors, and the whole underworld was a safe place to walk.
     const MobId CAVE_SPECIES[] = { MobId::Zombie, MobId::Skeleton, MobId::Creeper,
                                    MobId::Spider, MobId::CaveSpider, MobId::Silverfish,
-                                   MobId::Slime, MobId::Bat };
+                                   MobId::Slime, MobId::Bat, MobId::Endermite };
 
     // What swims. The squid was alone down there; these are the rest
     // of it. The axolotl belongs to a lush cave in Minecraft rather
@@ -77,7 +87,7 @@ namespace
     // The End has endermen and nothing else, which is also true of
     // Minecraft's. The enderman is the one species in two lists: it
     // belongs to the End and wanders the overworld at night.
-    const MobId END_SPECIES[] = { MobId::Enderman };
+    const MobId END_SPECIES[] = { MobId::Enderman, MobId::Endermite };
 
     // The world as the pathfinder sees it: can a mob of this height
     // stand here, with a floor under it and nothing in the way.
@@ -158,16 +168,32 @@ MobId EntityManager::nightSpecies(int index)
     return HOSTILE_SPECIES[((index % count) + count) % count];
 }
 
+namespace
+{
+    // The two tables are read the same way, so they are read by the
+    // same function: a biome's rows in order, adding up, and
+    // MobId::Count when the roll runs off the end of them.
+    MobId pickLocal(const BiomeLife* rows, size_t count, Biome where, float roll)
+    {
+        float seen = 0.0f;
+        for (size_t i = 0; i < count; ++i)
+        {
+            if (rows[i].where != where) continue;
+            seen += rows[i].chance;
+            if (roll < seen) return rows[i].who;
+        }
+        return MobId::Count;
+    }
+}
+
 MobId EntityManager::biomeSpecies(Biome where, float roll)
 {
-    float seen = 0.0f;
-    for (const BiomeLife& life : BIOME_LIFE)
-    {
-        if (life.where != where) continue;
-        seen += life.chance;
-        if (roll < seen) return life.who;
-    }
-    return MobId::Count;
+    return pickLocal(BIOME_LIFE, std::size(BIOME_LIFE), where, roll);
+}
+
+MobId EntityManager::biomeNight(Biome where, float roll)
+{
+    return pickLocal(BIOME_NIGHT, std::size(BIOME_NIGHT), where, roll);
 }
 
 int EntityManager::seaSpeciesCount()
@@ -381,8 +407,18 @@ void EntityManager::trySpawnWave(const World& world, const glm::vec3& playerPosi
         }
         else if (night)
         {
-            constexpr int HOSTILE_COUNT = static_cast<int>(std::size(HOSTILE_SPECIES));
-            species = HOSTILE_SPECIES[static_cast<int>(random01() * HOSTILE_COUNT) % HOSTILE_COUNT];
+            // What this place has after dark, if it has anything, and
+            // the ordinary five otherwise.
+            const Biome here = world.generator().biomeAt(x, z);
+            const MobId local = biomeNight(here, random01());
+
+            if (local != MobId::Count) species = local;
+            else
+            {
+                constexpr int HOSTILE_COUNT = static_cast<int>(std::size(HOSTILE_SPECIES));
+                species = HOSTILE_SPECIES[static_cast<int>(random01() * HOSTILE_COUNT) %
+                                          HOSTILE_COUNT];
+            }
         }
         else
         {

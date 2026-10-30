@@ -2458,6 +2458,266 @@ namespace
             t.model.push_back(mirrored(mc(Part::LegBackLeft, 0, 36, 5, 9, 6, -3, 0, -3, 4, 15, 6)));
         }
 
+        // What a particular night has. The same five monsters turned
+        // up everywhere before these, whatever the ground was made of
+        // and whatever the weather had been doing.
+        {
+            // The stray: a skeleton that has been out in the cold. It
+            // keeps to the snow and it shoots harder than its cousin.
+            MobType& t = table[static_cast<size_t>(MobId::Stray)];
+            t.id = MobId::Stray;
+            t.experience = 5;
+            t.voice = Sound::MobStraySay;
+            t.hurtVoice = Sound::MobStrayHurt;
+            t.deathVoice = Sound::MobStrayDeath;
+            t.name = "Stray";
+            t.texture = "stray";
+            t.sheetHeight = 64;
+            t.spawnClass = SpawnClass::Hostile;
+            t.maxHealth = 20;
+            t.width = 0.6f;
+            t.height = 1.95f;
+            t.walkSpeed = 2.0f;
+            t.burnsInSunlight = true;
+            t.voicePitch = 0.9f;
+
+            t.arrowDamage = 4;
+            t.arrowRange = 17.0f;
+            t.arrowInterval = 2.0f;
+
+            t.drop = Items::Bone;
+            t.dropCount = 2;
+            t.secondDrop = Items::Arrow;
+            t.secondDropCount = 1;
+
+            t.bodyColour = rgb(172, 194, 196);
+            t.headColour = rgb(196, 214, 216);
+            t.eyeColour = rgb(20, 20, 20);
+
+            t.model.push_back(mc(Part::Head, 0, 0, 8, 8, 8, -4, -8, -4, 0, 0, 0));
+            t.model.push_back(mc(Part::Body, 16, 16, 8, 12, 4, -4, 0, -2, 0, 0, 0));
+            t.model.push_back(mc(Part::LegFrontRight, 40, 16, 2, 12, 2, -1, -2, -1, -5, 2, 0));
+            t.model.push_back(mirrored(mc(Part::LegFrontLeft, 40, 16, 2, 12, 2, -1, -2, -1, 5, 2, 0)));
+            t.model.push_back(mc(Part::LegBackRight, 0, 16, 2, 12, 2, -1, 0, -1, -2, 12, 0));
+            t.model.push_back(mirrored(mc(Part::LegBackLeft, 0, 16, 2, 12, 2, -1, 0, -1, 2, 12, 0)));
+        }
+
+        {
+            // The husk: a zombie dried out. The sun is nothing to it,
+            // which is the whole of what makes a desert dangerous by
+            // day as well as by night.
+            MobType& t = table[static_cast<size_t>(MobId::Husk)];
+            t.id = MobId::Husk;
+            t.experience = 5;
+            t.voice = Sound::MobHuskSay;
+            t.hurtVoice = Sound::MobHuskHurt;
+            t.deathVoice = Sound::MobHuskDeath;
+            t.name = "Husk";
+            t.texture = "husk";
+            t.sheetHeight = 64;
+            t.spawnClass = SpawnClass::Hostile;
+            t.maxHealth = 20;
+            t.width = 0.6f;
+            t.height = 1.95f;
+            t.walkSpeed = 1.9f;
+            t.burnsInSunlight = false;
+            t.voicePitch = 0.85f;
+            t.attackDamage = 4;
+
+            t.bodyColour = rgb(132, 116, 78);
+            t.headColour = rgb(156, 138, 94);
+            t.eyeColour = rgb(30, 26, 20);
+
+            t.model.push_back(mc(Part::Head, 0, 0, 8, 8, 8, -4, -8, -4, 0, 0, 0));
+            t.model.push_back(mc(Part::Body, 16, 16, 8, 12, 4, -4, 0, -2, 0, 0, 0));
+            t.model.push_back(mc(Part::LegFrontRight, 40, 16, 4, 12, 4, -3, -2, -2, -5, 2, 0));
+            t.model.push_back(mirrored(mc(Part::LegFrontLeft, 40, 16, 4, 12, 4, -1, -2, -2, 5, 2, 0)));
+            t.model.push_back(mc(Part::LegBackRight, 0, 16, 4, 12, 4, -2, 0, -2, -2, 12, 0));
+            t.model.push_back(mirrored(mc(Part::LegBackLeft, 0, 16, 4, 12, 4, -2, 0, -2, 2, 12, 0)));
+        }
+
+        {
+            // The bogged: a skeleton that has been in the water, and
+            // 1.21's own. It is softer than a skeleton and it shoots
+            // more often, which is what makes a swamp at night a
+            // place you leave rather than fight through.
+            MobType& t = table[static_cast<size_t>(MobId::Bogged)];
+            t.id = MobId::Bogged;
+            t.experience = 5;
+            t.voice = Sound::MobBoggedSay;
+            t.hurtVoice = Sound::MobBoggedHurt;
+            t.deathVoice = Sound::MobBoggedDeath;
+            t.name = "Bogged";
+            t.texture = "bogged";
+            t.sheetHeight = 64;
+            t.spawnClass = SpawnClass::Hostile;
+            t.maxHealth = 16;
+            t.width = 0.6f;
+            t.height = 1.95f;
+            t.walkSpeed = 1.9f;
+            t.burnsInSunlight = true;
+            t.voicePitch = 1.1f;
+
+            t.arrowDamage = 3;
+            t.arrowRange = 15.0f;
+            t.arrowInterval = 1.5f;
+
+            t.drop = Items::Bone;
+            t.dropCount = 2;
+
+            t.bodyColour = rgb(118, 132, 96);
+            t.headColour = rgb(140, 152, 112);
+            t.eyeColour = rgb(20, 24, 18);
+
+            t.model.push_back(mc(Part::Head, 0, 0, 8, 8, 8, -4, -8, -4, 0, 0, 0));
+            t.model.push_back(mc(Part::Body, 16, 16, 8, 12, 4, -4, 0, -2, 0, 0, 0));
+            t.model.push_back(mc(Part::LegFrontRight, 40, 16, 2, 12, 2, -1, -2, -1, -5, 2, 0));
+            t.model.push_back(mirrored(mc(Part::LegFrontLeft, 40, 16, 2, 12, 2, -1, -2, -1, 5, 2, 0)));
+            t.model.push_back(mc(Part::LegBackRight, 0, 16, 2, 12, 2, -1, 0, -1, -2, 12, 0));
+            t.model.push_back(mirrored(mc(Part::LegBackLeft, 0, 16, 2, 12, 2, -1, 0, -1, 2, 12, 0)));
+        }
+
+        {
+            // The phantom: the thing in the sky. It is the only
+            // monster in the game that comes to you rather than
+            // waiting to be found.
+            MobType& t = table[static_cast<size_t>(MobId::Phantom)];
+            t.id = MobId::Phantom;
+            t.experience = 5;
+            t.voice = Sound::MobPhantomSay;
+            t.hurtVoice = Sound::MobPhantomHurt;
+            t.deathVoice = Sound::MobPhantomDeath;
+            t.name = "Phantom";
+            t.texture = "phantom";
+            t.spawnClass = SpawnClass::Hostile;
+            t.maxHealth = 20;
+            t.width = 0.9f;
+            t.height = 0.5f;
+            t.walkSpeed = 3.8f;
+            t.limbSwing = 0.0f;
+            t.attackDamage = 4;
+            t.attackReach = 1.2f;
+
+            // High up, which is where it comes from and the reason you
+            // hear one before you see it.
+            t.hoverHeight = 5.0f;
+
+            t.ambientMinSeconds = 4.0f;
+            t.ambientMaxSeconds = 12.0f;
+
+            t.bodyColour = rgb(68, 96, 108);
+            t.headColour = rgb(84, 116, 128);
+            t.eyeColour = rgb(140, 220, 90);
+
+            t.model.push_back(mc(Part::Body, 0, 8, 5, 3, 9, -2, 19, -4, 0, 0, 0));
+            t.model.push_back(mc(Part::Head, 0, 0, 5, 3, 3, -2, 19, -7, 0, 0, 0));
+            t.model.push_back(mc(Part::WingRight, 24, 0, 6, 2, 9, -8, 20, -4, 0, 0, 0));
+            t.model.push_back(mirrored(mc(Part::WingLeft, 24, 0, 6, 2, 9, 2, 20, -4, 0, 0, 0)));
+            t.model.push_back(mc(Part::LegBackRight, 0, 22, 2, 2, 6, -1, 20, 5, 0, 0, 0));
+        }
+
+        {
+            // A villager that did not get away. It is worth nothing
+            // and it is the one monster that is somebody.
+            MobType& t = table[static_cast<size_t>(MobId::ZombieVillager)];
+            t.id = MobId::ZombieVillager;
+            t.experience = 5;
+            t.voice = Sound::MobZombieVillagerSay;
+            t.hurtVoice = Sound::MobZombieVillagerHurt;
+            t.deathVoice = Sound::MobZombieVillagerDeath;
+            t.name = "Zombie Villager";
+            t.texture = "zombie_villager";
+            t.sheetHeight = 64;
+            t.spawnClass = SpawnClass::Hostile;
+            t.maxHealth = 20;
+            t.width = 0.6f;
+            t.height = 1.95f;
+            t.walkSpeed = 1.8f;
+            t.burnsInSunlight = true;
+            t.attackDamage = 3;
+
+            t.bodyColour = rgb(78, 96, 76);
+            t.headColour = rgb(96, 128, 76);
+            t.eyeColour = rgb(24, 32, 24);
+
+            // The villager's long head and nose on a zombie's body,
+            // which is exactly what one is.
+            t.model.push_back(mc(Part::Head, 0, 0, 8, 10, 8, -4, -10, -4, 0, 0, 0));
+            t.model.push_back(mc(Part::Head, 24, 0, 2, 4, 2, -1, -5, -6, 0, 0, 0));
+            t.model.push_back(mc(Part::Body, 16, 20, 8, 12, 6, -4, 0, -3, 0, 0, 0));
+            t.model.push_back(mc(Part::LegFrontRight, 44, 22, 4, 8, 4, -3, -2, -2, -5, 2, 0));
+            t.model.push_back(mirrored(mc(Part::LegFrontLeft, 44, 22, 4, 8, 4, -1, -2, -2, 5, 2, 0)));
+            t.model.push_back(mc(Part::LegBackRight, 0, 22, 4, 12, 4, -2, 0, -2, -2, 12, 0));
+            t.model.push_back(mirrored(mc(Part::LegBackLeft, 0, 22, 4, 12, 4, -2, 0, -2, 2, 12, 0)));
+        }
+
+        {
+            // The endermite: what the End has in its walls, the way a
+            // stronghold has silverfish in its.
+            MobType& t = table[static_cast<size_t>(MobId::Endermite)];
+            t.id = MobId::Endermite;
+            t.experience = 3;
+            t.voice = Sound::MobEndermiteSay;
+            t.hurtVoice = Sound::MobEndermiteHurt;
+            t.deathVoice = Sound::MobEndermiteDeath;
+            t.name = "Endermite";
+            t.texture = "endermite";
+            t.spawnClass = SpawnClass::Hostile;
+            t.maxHealth = 8;
+            t.width = 0.4f;
+            t.height = 0.3f;
+            t.walkSpeed = 2.4f;
+            t.limbSwing = 0.2f;
+            t.voicePitch = 1.5f;
+            t.attackDamage = 2;
+            t.attackReach = 0.8f;
+
+            t.bodyColour = rgb(52, 36, 64);
+            t.headColour = rgb(72, 50, 88);
+            t.eyeColour = rgb(200, 90, 230);
+
+            t.model.push_back(mc(Part::Body, 0, 0, 4, 4, 3, -2, 20, -2, 0, 0, 0));
+            t.model.push_back(mc(Part::Head, 0, 10, 3, 3, 3, -1, 20, -5, 0, 0, 0));
+            t.model.push_back(mc(Part::Body, 0, 18, 3, 3, 3, -1, 21, 1, 0, 0, 0));
+        }
+
+        {
+            // The vex: what an evoker sends at you. Small, fast and
+            // through walls, and there is nothing to kill but the
+            // thing that made it.
+            MobType& t = table[static_cast<size_t>(MobId::Vex)];
+            t.id = MobId::Vex;
+            t.experience = 3;
+            t.voice = Sound::MobVexSay;
+            t.hurtVoice = Sound::MobVexHurt;
+            t.deathVoice = Sound::MobVexDeath;
+            t.name = "Vex";
+            t.texture = "vex";
+            t.sheetHeight = 64;
+            t.spawnClass = SpawnClass::Hostile;
+            t.maxHealth = 14;
+            t.width = 0.4f;
+            t.height = 0.8f;
+            t.walkSpeed = 4.0f;
+            t.limbSwing = 0.3f;
+            t.voicePitch = 1.4f;
+            t.attackDamage = 5;
+            t.attackReach = 1.0f;
+            t.hoverHeight = 2.2f;
+
+            t.bodyColour = rgb(138, 156, 172);
+            t.headColour = rgb(206, 218, 226);
+            t.eyeColour = rgb(220, 60, 50);
+
+            // A small person with wings, at half a villager's scale.
+            t.model.push_back(mc(Part::Head, 0, 0, 6, 6, 6, -3, 10, -3, 0, 0, 0));
+            t.model.push_back(mc(Part::Body, 16, 14, 5, 7, 3, -2, 16, -1, 0, 0, 0));
+            t.model.push_back(mc(Part::WingRight, 0, 32, 1, 8, 6, -4, 13, 0, 0, 0, 0));
+            t.model.push_back(mirrored(mc(Part::WingLeft, 0, 32, 1, 8, 6, 3, 13, 0, 0, 0, 0)));
+            t.model.push_back(mc(Part::LegFrontRight, 32, 14, 2, 5, 2, -1, 0, -1, -3, 17, 0));
+            t.model.push_back(mirrored(mc(Part::LegFrontLeft, 32, 14, 2, 5, 2, -1, 0, -1, 3, 17, 0)));
+        }
+
         return table;
     }
 }

@@ -365,6 +365,20 @@ void AudioEngine::buildSounds()
                  Sound::MobLlamaDeath, "mob/llama");
     loadMobVoice(Sound::MobPolarBearSay, Sound::MobPolarBearHurt,
                  Sound::MobPolarBearDeath, "mob/polar_bear");
+    loadMobVoice(Sound::MobStraySay, Sound::MobStrayHurt,
+                 Sound::MobStrayDeath, "mob/stray");
+    loadMobVoice(Sound::MobHuskSay, Sound::MobHuskHurt,
+                 Sound::MobHuskDeath, "mob/husk");
+    loadMobVoice(Sound::MobBoggedSay, Sound::MobBoggedHurt,
+                 Sound::MobBoggedDeath, "mob/bogged");
+    loadMobVoice(Sound::MobPhantomSay, Sound::MobPhantomHurt,
+                 Sound::MobPhantomDeath, "mob/phantom");
+    loadMobVoice(Sound::MobZombieVillagerSay, Sound::MobZombieVillagerHurt,
+                 Sound::MobZombieVillagerDeath, "mob/zombie_villager");
+    loadMobVoice(Sound::MobEndermiteSay, Sound::MobEndermiteHurt,
+                 Sound::MobEndermiteDeath, "mob/endermite");
+    loadMobVoice(Sound::MobVexSay, Sound::MobVexHurt,
+                 Sound::MobVexDeath, "mob/vex");
     loadVariants(Sound::Rain, "weather/rain", 1);
     loadVariants(Sound::Thunder, "weather/thunder", 1);
 
@@ -1403,6 +1417,59 @@ void AudioEngine::buildSounds()
         s.addTone(0.44f, 260.0f, 90.0f, 5.0f, 0.30f, false);
         s.addTone(0.44f, 268.0f, 94.0f, 5.0f, 0.24f, false);
         s.finish(0.52f);
+    }
+
+    // The night's own. A stray is a skeleton with the cold in it, a
+    // husk is a zombie dried out, a bogged is one that has been in the
+    // water: each is the voice it came from, moved.
+    beastVoice(Sound::MobStraySay, Sound::MobStrayHurt, Sound::MobStrayDeath,
+               260.0f, 0.26f, 0.26f, 1111);
+    beastVoice(Sound::MobHuskSay, Sound::MobHuskHurt, Sound::MobHuskDeath,
+               150.0f, 0.24f, 0.44f, 1121);
+    beastVoice(Sound::MobBoggedSay, Sound::MobBoggedHurt, Sound::MobBoggedDeath,
+               205.0f, 0.30f, 0.32f, 1131);
+    beastVoice(Sound::MobZombieVillagerSay, Sound::MobZombieVillagerHurt,
+               Sound::MobZombieVillagerDeath, 185.0f, 0.18f, 0.38f, 1141);
+    beastVoice(Sound::MobEndermiteSay, Sound::MobEndermiteHurt,
+               Sound::MobEndermiteDeath, 1300.0f, 0.14f, 0.10f, 1151);
+
+    // The phantom: a shriek out of the dark overhead, which is the
+    // only warning you get.
+    {
+        Synth s = make(Sound::MobPhantomSay);
+        s.addTone(0.46f, 1700.0f, 760.0f, 5.0f, 0.28f, false);
+        s.addNoise(0.34f, 2600.0f, 7.0f, 0.12f, true, 1161);
+        s.finish(0.54f);
+    }
+    {
+        Synth s = make(Sound::MobPhantomHurt);
+        s.addTone(0.20f, 2200.0f, 900.0f, 17.0f, 0.30f, false);
+        s.addNoise(0.14f, 3200.0f, 22.0f, 0.14f, true, 1162);
+        s.finish(0.58f);
+    }
+    {
+        Synth s = make(Sound::MobPhantomDeath);
+        s.addTone(0.62f, 1500.0f, 300.0f, 4.0f, 0.30f, false);
+        s.addNoise(0.44f, 2000.0f, 5.0f, 0.14f, true, 1163);
+        s.finish(0.60f);
+    }
+
+    // The vex: a small angry thing, and the noise is all edge.
+    {
+        Synth s = make(Sound::MobVexSay);
+        s.addTone(0.22f, 980.0f, 860.0f, 9.0f, 0.24f, true);
+        s.addTone(0.22f, 1010.0f, 890.0f, 9.0f, 0.18f, true);
+        s.finish(0.48f);
+    }
+    {
+        Synth s = make(Sound::MobVexHurt);
+        s.addTone(0.16f, 1400.0f, 700.0f, 19.0f, 0.28f, true);
+        s.finish(0.54f);
+    }
+    {
+        Synth s = make(Sound::MobVexDeath);
+        s.addTone(0.46f, 1100.0f, 260.0f, 5.0f, 0.28f, true);
+        s.finish(0.56f);
     }
 
     // The ghast: a long wail that falls away. Mostly tone, almost no

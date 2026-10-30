@@ -6140,13 +6140,17 @@ namespace
             for (int k = 0; k < EntityManager::seaSpeciesCount(); ++k)
                 if (EntityManager::seaSpecies(k) == id) meetable = true;
 
-            // And what each biome has of its own, asked of the table
-            // the spawner reads rather than copied out of it.
+            // And what each biome has of its own, by day and after
+            // dark, asked of the tables the spawner reads rather than
+            // copied out of them.
             for (int biome = 0; biome <= static_cast<int>(Biome::Swamp); ++biome)
                 for (int step = 0; step < 100; ++step)
-                    if (EntityManager::biomeSpecies(static_cast<Biome>(biome),
-                                                    step * 0.01f) == id)
-                        meetable = true;
+                {
+                    const Biome where = static_cast<Biome>(biome);
+                    const float roll = step * 0.01f;
+                    if (EntityManager::biomeSpecies(where, roll) == id) meetable = true;
+                    if (EntityManager::biomeNight(where, roll) == id) meetable = true;
+                }
 
             // What a cage sends out.
             for (Dimension where : { Dimension::Overworld, Dimension::Nether, Dimension::End })
@@ -6178,6 +6182,9 @@ namespace
                 // The brute belongs to a bastion and is put there by
                 // hand, the way a shulker belongs to an End city.
                 case MobId::PiglinBrute:
+                // A vex is what an evoker brings with it, so it comes
+                // out of the mansion beside its master.
+                case MobId::Vex:
                 // The illagers belong to the two buildings that were
                 // built for them: the outpost and the mansion.
                 case MobId::Pillager: case MobId::Vindicator:
@@ -11209,6 +11216,105 @@ namespace
         }
     }
 
+    void testNightVariants()
+    {
+        section("the night: what a particular place has");
+
+        // Each of the three belongs to one biome and to no other. A
+        // husk in the snow is the same bug as a zombie in the Nether.
+        struct Local { Biome where; MobId who; const char* what; };
+        const Local LOCALS[] = {
+            { Biome::Snowy,  MobId::Stray,  "a stray belongs to the snow" },
+            { Biome::Desert, MobId::Husk,   "a husk to the desert" },
+            { Biome::Swamp,  MobId::Bogged, "and a bogged to the swamp" },
+        };
+
+        for (const Local& local : LOCALS)
+        {
+            bool here = false;
+            for (int step = 0; step < 100; ++step)
+                if (EntityManager::biomeNight(local.where, step * 0.01f) == local.who)
+                    here = true;
+            check(here, local.what);
+
+            for (int biome = 0; biome <= static_cast<int>(Biome::Swamp); ++biome)
+            {
+                if (static_cast<Biome>(biome) == local.where) continue;
+                bool elsewhere = false;
+                for (int step = 0; step < 100; ++step)
+                    if (EntityManager::biomeNight(static_cast<Biome>(biome),
+                                                  step * 0.01f) == local.who)
+                        elsewhere = true;
+                check(!elsewhere, std::string(mobType(local.who).name) +
+                                      " is nowhere else after dark");
+            }
+        }
+
+        // And the ordinary night still happens everywhere, or a snowy
+        // night would be nothing but strays.
+        for (int biome = 0; biome <= static_cast<int>(Biome::Swamp); ++biome)
+            check(EntityManager::biomeNight(static_cast<Biome>(biome), 0.999f) == MobId::Count,
+                  "biome " + std::to_string(biome) + " still has an ordinary night");
+
+        section("the three variants themselves");
+
+        const MobType& stray = mobType(MobId::Stray);
+        const MobType& husk = mobType(MobId::Husk);
+        const MobType& bogged = mobType(MobId::Bogged);
+        const MobType& skeleton = mobType(MobId::Skeleton);
+        const MobType& zombie = mobType(MobId::Zombie);
+
+        // A stray is a skeleton with the cold in it.
+        check(stray.arrowDamage > skeleton.arrowDamage, "a stray shoots harder");
+        check(stray.drop == Items::Bone, "and still leaves bones");
+        check(stray.burnsInSunlight, "and still burns at dawn");
+
+        // A husk is a zombie that does not.
+        check(!husk.burnsInSunlight, "a husk does not burn in daylight");
+        check(zombie.burnsInSunlight, "where a zombie does");
+        check(husk.attackDamage > zombie.attackDamage, "and it hits harder");
+
+        // A bogged is softer and faster with the bow, which is 1.21's.
+        check(bogged.maxHealth < skeleton.maxHealth, "a bogged is softer than a skeleton");
+        check(bogged.arrowInterval < skeleton.arrowInterval, "and shoots more often");
+
+        section("the phantom, the endermite and the vex");
+
+        const MobType& phantom = mobType(MobId::Phantom);
+        check(phantom.hoverHeight > 3.0f, "a phantom comes out of the sky");
+        check(phantom.walkSpeed > zombie.walkSpeed, "and it is faster than anything on legs");
+        check(phantom.attackDamage > 0, "and it means it");
+
+        const MobType& endermite = mobType(MobId::Endermite);
+        check(endermite.height < 0.5f, "an endermite is barely there");
+        bool inEnd = false;
+        for (int k = 0; k < EntityManager::endSpeciesCount(); ++k)
+            if (EntityManager::endSpecies(k) == MobId::Endermite) inEnd = true;
+        check(inEnd, "and the End has them in its walls");
+
+        const MobType& vex = mobType(MobId::Vex);
+        const MobType& evoker = mobType(MobId::Evoker);
+        check(vex.hoverHeight > 0.0f, "a vex flies");
+        check(vex.walkSpeed > evoker.walkSpeed * 2.0f, "and it is far faster than its master");
+        check(vex.attackDamage > evoker.arrowDamage, "and hits harder than he throws");
+        check(vex.maxHealth < evoker.maxHealth, "but there is less of it");
+
+        // Every one of the seven has three voices of its own: this is
+        // the check that catches a block pasted from the one above it.
+        const MobId NEW_TONIGHT[] = { MobId::Stray, MobId::Husk, MobId::Bogged,
+                                      MobId::Phantom, MobId::ZombieVillager,
+                                      MobId::Endermite, MobId::Vex };
+        std::set<int> voices;
+        for (MobId id : NEW_TONIGHT)
+        {
+            const MobType& type = mobType(id);
+            check(voices.insert(static_cast<int>(type.voice)).second,
+                  std::string(type.name) + " has a voice nobody else has");
+            check(type.spawnClass == SpawnClass::Hostile,
+                  std::string(type.name) + " is hostile");
+        }
+    }
+
     void testDyes()
     {
         section("dye: the sixteen colours");
@@ -11567,6 +11673,7 @@ int runSelfTest()
     testNetherCrowd();
     testTheSea();
     testCountryAnimals();
+    testNightVariants();
 
     std::printf("\n%d checks, %d failed\n", g_checks, g_failures);
     return g_failures == 0 ? 0 : 1;
