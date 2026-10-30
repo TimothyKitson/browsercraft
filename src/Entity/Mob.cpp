@@ -840,6 +840,7 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
             shot.damage = t.arrowDamage;
             shot.kind = t.shootsFire ? Arrows::Kind::Fire
                       : t.shootsWind ? Arrows::Kind::Wind
+                      : t.throwsPotions ? Arrows::Kind::Potion
                                      : Arrows::Kind::Shaft;
             m_shots.push_back(shot);
 

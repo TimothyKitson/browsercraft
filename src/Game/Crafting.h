@@ -1,6 +1,7 @@
 #pragma once
 #include "World/Block.h"
 #include "Items.h"
+#include <vector>
 
 struct ItemStack;
 
@@ -23,4 +24,9 @@ namespace Crafting
 
     // Removes one of each ingredient used. Call after taking the result.
     void consume(ItemStack* grid, int size);
+
+    // Everything the recipe book can make, as a flat list. The audit
+    // needs this: without it there is no way to tell a block that is
+    // crafted from one that nothing in the game can produce at all.
+    std::vector<StackId> everyOutput();
 }

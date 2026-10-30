@@ -14,6 +14,12 @@ StackId Smelting::resultOf(StackId input)
         case Blocks::Cobblestone: return Blocks::Stone;
         case Blocks::Clay:      return Blocks::Bricks;
 
+        // A wet sponge dried out, which is Minecraft's recipe and the
+        // only way to get a dry one. Without it the sponge in a
+        // monument was the one block in the game nobody could ever
+        // have -- which is what the block audit was written to find.
+        case Blocks::WetSponge: return Blocks::Sponge;
+
         // Netherrack fired is a nether brick, which is Minecraft's.
         // It used to give blaze powder here, standing in for a blaze
         // there was no way to meet; now there is one, and the powder

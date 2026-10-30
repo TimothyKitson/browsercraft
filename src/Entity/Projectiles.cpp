@@ -128,7 +128,7 @@ void Projectiles::update(float deltaTime, const Blocks& blocks, Targets& targets
             // it -- that is what the flag is for.
             if (targets.strike(next, arrow.damage, arrow.fromPlayer, arrow.kind))
             {
-                if (arrow.flies()) targets.burst(next, arrow.kind, arrow.fromPlayer);
+                if (arrow.bursts()) targets.burst(next, arrow.kind, arrow.fromPlayer);
                 done = true;
                 break;
             }
@@ -139,8 +139,9 @@ void Projectiles::update(float deltaTime, const Blocks& blocks, Targets& targets
                                static_cast<int>(std::floor(next.z))))
             {
                 // A charge bursts rather than sticking: nothing is left
-                // in the wall to look at.
-                if (arrow.flies())
+                // in the wall to look at. So does a potion, which is
+                // the whole of what a potion is for.
+                if (arrow.bursts())
                 {
                     targets.burst(next - slice * 0.5f, arrow.kind, arrow.fromPlayer);
                     done = true;
@@ -193,6 +194,7 @@ void Projectiles::render(Shader& shader, const Camera& camera, const Atlas& atla
     const TileUV fireUV = tileUV(Tiles::FireCharge);
     const TileUV windUV = tileUV(Tiles::WindCharge);
     const TileUV eyeUV = tileUV(Tiles::ItemEyeOfEnder);
+    const TileUV potionUV = tileUV(Tiles::ItemPotion);
     constexpr float LENGTH = 0.62f;
     constexpr float WIDTH = 0.16f;
 
@@ -222,9 +224,13 @@ void Projectiles::render(Shader& shader, const Camera& camera, const Atlas& atla
         const TileUV uv = (arrow.kind == Arrows::Kind::Fire) ? fireUV
                         : (arrow.kind == Arrows::Kind::Wind) ? windUV
                         : (arrow.kind == Arrows::Kind::Eye)  ? eyeUV
+                        : (arrow.kind == Arrows::Kind::Potion) ? potionUV
                                                              : arrowUV;
-        const float length = charge ? 0.34f : LENGTH;
-        const float width = charge ? 0.34f : WIDTH;
+        // A potion is drawn as the bottle it is rather than as a
+        // shaft, so it is square like a charge without being one.
+        const bool bottle = arrow.kind == Arrows::Kind::Potion;
+        const float length = (charge || bottle) ? 0.34f : LENGTH;
+        const float width = (charge || bottle) ? 0.34f : WIDTH;
 
         auto push = [&](const glm::vec3& p, float tu, float tv, float shade) {
             m_vertices.push_back(p.x);

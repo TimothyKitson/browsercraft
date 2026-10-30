@@ -474,3 +474,12 @@ namespace Crafting
             }
     }
 }
+
+
+std::vector<StackId> Crafting::everyOutput()
+{
+    std::vector<StackId> out;
+    out.reserve(std::size(RECIPES));
+    for (const Recipe& recipe : RECIPES) out.push_back(recipe.result);
+    return out;
+}

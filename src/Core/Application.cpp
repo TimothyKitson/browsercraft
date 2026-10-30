@@ -5583,6 +5583,7 @@ namespace
                     Arrows::Kind kind) override
         {
             burning = kind == Arrows::Kind::Fire;
+            splash = kind == Arrows::Kind::Potion;
             return strike(point, damage, fromPlayer);
         }
 
@@ -5590,9 +5591,32 @@ namespace
         // went off, not on whatever stopped it: one thrown at your own
         // feet throws you into the air, and that is most of what
         // anybody uses one for.
+        //
+        // A splash potion works the same way, which is why it is here
+        // rather than on the impact: what it does, it does to whoever
+        // is standing near where it broke, not to whatever stopped it.
         void burst(const glm::vec3& at, Arrows::Kind kind, bool fromPlayer) override
         {
             (void)fromPlayer;
+
+            if (kind == Arrows::Kind::Potion)
+            {
+                bursts.push_back(at);
+
+                const float reach = glm::length(at - player->position);
+                if (reach < SPLASH_RADIUS)
+                {
+                    // Closer to the middle of it, the longer it lasts
+                    // -- which is Minecraft's rule for a splash.
+                    const float share = 1.0f - reach / SPLASH_RADIUS;
+                    Effects::give(player->effects, Effects::Kind::Poison, 0,
+                                  4.0f + share * 6.0f);
+                    Effects::give(player->effects, Effects::Kind::Slowness, 0,
+                                  3.0f + share * 5.0f);
+                }
+                return;
+            }
+
             if (kind != Arrows::Kind::Wind) return;
 
             bursts.push_back(at);
@@ -5617,6 +5641,11 @@ namespace
         }
 
         std::vector<glm::vec3> bursts;
+
+        // How far a thrown potion reaches. Minecraft's is four blocks
+        // at full strength, tailing off to nothing.
+        static constexpr float SPLASH_RADIUS = 4.0f;
+        bool splash = false;
 
         bool strike(const glm::vec3& point, int damage, bool fromPlayer) override
         {

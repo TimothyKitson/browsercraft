@@ -995,7 +995,9 @@ namespace
             t.limbSwing = 0.5f;
 
             // She throws rather than closes, which is the whole of how
-            // a witch fights: splash potions from a distance.
+            // a witch fights: splash potions from a distance. The
+            // damage is small on purpose -- what lands on you is.
+            t.throwsPotions = true;
             t.arrowDamage = 3;
             t.arrowRange = 12.0f;
             t.arrowInterval = 2.6f;

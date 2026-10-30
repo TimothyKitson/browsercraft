@@ -5115,6 +5115,112 @@ namespace
               "and throws rather than closes, which is how a witch fights");
     }
 
+    // Every block and every mob has to be reachable by somebody.
+    //
+    // This is the test that was missing. Everything else asks whether
+    // a thing is correct; nothing asked whether it was there. The
+    // three swamp blocks sat textured, named and unreachable for a
+    // week because no test could tell the difference between a block
+    // nobody has got round to generating and a block that is crafted.
+    void testEverythingIsReachable()
+    {
+        section("everything in the game can be got at");
+
+        // The sponge is the one the audit actually caught. A monument
+        // has wet sponge in it and nothing dried it, so the dry block
+        // existed with no route into anybody's hands.
+        check(Smelting::resultOf(Blocks::WetSponge) == Blocks::Sponge,
+              "a wet sponge dries into a dry one, which is Minecraft's recipe");
+        check(Smelting::resultOf(Blocks::Clay) == Blocks::Bricks,
+              "and clay still fires into bricks");
+
+        // Every mob has to be meetable. A species in the table that
+        // is in no spawn list is a model nobody ever sees.
+        for (int i = 0; i < mobTypeCount(); ++i)
+        {
+            const MobId id = static_cast<MobId>(i);
+            const MobType& type = mobType(id);
+            const std::string who = type.name;
+
+            // Boats and minecarts ride in the mob table because they
+            // are entities with models, but nothing spawns them.
+            if (id == MobId::Boat || id == MobId::Minecart) continue;
+
+            bool meetable = false;
+
+            // The night list, the Nether's, and the End's.
+            for (int k = 0; k < EntityManager::nightSpeciesCount(); ++k)
+                if (EntityManager::nightSpecies(k) == id) meetable = true;
+
+            // What a cage sends out.
+            for (Dimension where : { Dimension::Overworld, Dimension::Nether, Dimension::End })
+                if (cageSpecies(where) == id) meetable = true;
+
+            // The ones that belong to one structure each, and the ones
+            // the world puts down by hand.
+            switch (id)
+            {
+                case MobId::Sheep: case MobId::Pig: case MobId::Cow: case MobId::Chicken:
+                case MobId::Wolf:  case MobId::Horse:
+                case MobId::Villager: case MobId::IronGolem:
+                case MobId::ZombiePigman: case MobId::WitherSkeleton:
+                case MobId::MagmaCube: case MobId::Blaze:
+                case MobId::Breeze:
+                case MobId::Guardian: case MobId::Warden: case MobId::Witch:
+                    meetable = true;
+                    break;
+                default:
+                    break;
+            }
+
+            check(meetable, who + " can be met somewhere in the world");
+            check(type.voice != type.hurtVoice && type.hurtVoice != type.deathVoice,
+                  who + " has three voices of its own");
+        }
+
+        // And the three that belong to a structure each really are
+        // tied to one, rather than wandering in with the night.
+        for (int k = 0; k < EntityManager::nightSpeciesCount(); ++k)
+        {
+            const MobId id = EntityManager::nightSpecies(k);
+            check(id != MobId::Warden, "a warden never turns up with the night");
+            check(id != MobId::Guardian, "nor a guardian");
+            check(id != MobId::Witch, "nor a witch");
+        }
+    }
+
+    void testWitchPotions()
+    {
+        section("the witch throws, and what she throws breaks");
+
+        const MobType& witch = mobType(MobId::Witch);
+        check(witch.throwsPotions, "a witch throws potions");
+        check(!witch.shootsFire && !witch.shootsWind,
+              "and neither fire nor wind, which are somebody else's");
+        check(witch.arrowDamage > 0 && witch.arrowDamage <= 4,
+              "the throw itself barely hurts -- what lands on you is the point");
+
+        // The two things a projectile can be, which used to be one
+        // test. A potion arcs like an arrow and breaks like a charge;
+        // while flies() answered both, a thrown potion stuck in the
+        // wall like a dart and never went off.
+        Arrow shaft;  shaft.kind = Arrows::Kind::Shaft;
+        Arrow fire;   fire.kind = Arrows::Kind::Fire;
+        Arrow wind;   wind.kind = Arrows::Kind::Wind;
+        Arrow potion; potion.kind = Arrows::Kind::Potion;
+
+        check(!shaft.flies() && !shaft.bursts(), "an arrow arcs, and sticks where it lands");
+        check(fire.flies() && fire.bursts(), "a fire charge flies flat and breaks");
+        check(wind.flies() && wind.bursts(), "so does a wind charge");
+        check(!potion.flies(), "a potion arcs rather than flying flat");
+        check(potion.bursts(), "but it breaks rather than sticking, which is the whole point");
+
+        // And it is drawn as something, rather than as whatever tile
+        // index zero happens to be.
+        check(tileUV(Tiles::ItemPotion).u1 > tileUV(Tiles::ItemPotion).u0,
+              "and there is a bottle to draw it with");
+    }
+
     void testFortressAndMineshaft()
     {
         section("the fortress and the mineshaft");
@@ -8809,6 +8915,8 @@ int runSelfTest()
     testSeabed();
     testDesertWell();
     testSwamp();
+    testEverythingIsReachable();
+    testWitchPotions();
     testAncientCity();
     testOtherDimensionStructures();
     testSearchAgreesWithStamp();

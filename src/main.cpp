@@ -2,6 +2,11 @@
 #include "World/WorldGen.h"
 #include "Game/VillageLoot.h"
 #include "Renderer/Atlas.h"
+#include "Game/Crafting.h"
+#include "Game/Smelting.h"
+#include "Entity/MobType.h"
+#include <set>
+#include <algorithm>
 #include "World/Structures.h"
 #include <cstdio>
 #include <cstdlib>
@@ -357,6 +362,183 @@ namespace
         return missing == 0 ? 0 : 1;
     }
 
+
+    // Every block in the game, and whether anybody can ever get one.
+    //
+    // A block that nothing generates and no recipe makes is content
+    // that exists only in the block table. That is exactly what the
+    // three swamp blocks were for a week: textured, painted, named,
+    // and unreachable. Nothing caught it, because every other test
+    // asks whether a block is correct rather than whether it is there.
+    //
+    // Walks to each structure by name rather than sweeping and hoping
+    // to land on one. A blind sweep reported prismarine missing from a
+    // world whose nearest monument was 160 chunks away.
+    int printBlockAudit(uint32_t seed)
+    {
+        std::set<int> reachable;
+
+        auto sweep = [&reachable](const WorldGen& gen, int cx, int cz, int reach)
+        {
+            for (int z = cz - reach; z <= cz + reach; ++z)
+                for (int x = cx - reach; x <= cx + reach; ++x)
+                {
+                    Chunk chunk(ChunkPos{ x, z });
+                    gen.generate(chunk);
+                    for (int y = 0; y < Chunk::SY; ++y)
+                        for (int lx = 0; lx < Chunk::SX; ++lx)
+                            for (int lz = 0; lz < Chunk::SZ; ++lz)
+                                reachable.insert(chunk.getBlock(lx, y, lz));
+                }
+        };
+
+        const WorldGen over(seed);
+        const WorldGen nether(seed, Dimension::Nether);
+        const WorldGen end(seed, Dimension::End);
+
+        std::printf("Walking to every structure...\n");
+
+        // Ordinary terrain first, in all three dimensions.
+        sweep(over, 0, 0, 6);
+        sweep(nether, 0, 0, 4);
+        sweep(end, 0, 0, 4);
+
+        // Then each structure, by name.
+        for (int k = 0; k < static_cast<int>(WorldGen::Landmark::Count); ++k)
+        {
+            const WorldGen::Landmark kind = static_cast<WorldGen::Landmark>(k);
+            const Structures::Spot spot = over.nearestLandmark(
+                kind, 0, 0, kind == WorldGen::Landmark::WoodlandMansion ? 2 : 8);
+            if (spot.exists) sweep(over, spot.chunkX, spot.chunkZ, 2);
+        }
+
+        {
+            // A village, which is where the farmland, the crops and
+            // the paths are. Left out, the audit called all three
+            // unreachable -- a sampling accident, not a fact.
+            const Village::Site village = over.nearestVillage(0, 0, 6);
+            if (village.exists)
+                sweep(over, village.x / Structures::CHUNK, village.z / Structures::CHUNK, 3);
+        }
+
+        const Structures::Spot wreck = over.nearestShipwreck(0, 0, 14);
+        if (wreck.exists) sweep(over, wreck.chunkX, wreck.chunkZ, 2);
+
+        const Structures::Spot monument = over.nearestMonument(0, 0, 14);
+        if (monument.exists) sweep(over, monument.chunkX, monument.chunkZ, 2);
+
+        const Structures::Spot city = over.nearestAncientCity(0, 0, 6);
+        if (city.exists) sweep(over, city.chunkX, city.chunkZ, 2);
+
+        const Structures::Spot bastion = nether.nearestBastion(0, 0, 6);
+        if (bastion.exists) sweep(nether, bastion.chunkX, bastion.chunkZ, 2);
+
+        const Structures::Spot endCity = end.nearestEndCity(0, 0, 40);
+        if (endCity.exists) sweep(end, endCity.chunkX, endCity.chunkZ, 2);
+
+        {
+            int sx = 0, sz = 0;
+            Structures::nearestStronghold(0, 0, seed, sx, sz);
+            sweep(over, sx / Structures::CHUNK, sz / Structures::CHUNK, 2);
+        }
+
+        // The two that go down by the spread rather than a grid, so
+        // there is no "nearest" to ask: walked out to until one turns
+        // up. Without this the audit reported the monster spawner
+        // unreachable, which was a sampling accident rather than a
+        // fact about the game.
+        for (int ring = 0, found = 0; ring <= 60 && found < 2; ++ring)
+            for (int cz = -ring; cz <= ring && found < 2; ++cz)
+                for (int cx = -ring; cx <= ring && found < 2; ++cx)
+                {
+                    if (ring > 0 && std::abs(cx) != ring && std::abs(cz) != ring) continue;
+                    if (!Structures::spreadAt(cx, cz, seed, WorldGen::MINESHAFT_SALT,
+                                              WorldGen::MINESHAFT_CHANCE))
+                        continue;
+                    sweep(over, cx, cz, 2);
+                    ++found;
+                }
+
+        {
+            const Structures::Spot fort =
+                Structures::nearest(Structures::NETHER_FORTRESS, 0, 0, seed, 6);
+            if (fort.exists) sweep(nether, fort.chunkX, fort.chunkZ, 2);
+        }
+
+        const int generated = static_cast<int>(reachable.size());
+
+        // What the recipe book makes, and what a furnace makes of
+        // what it makes. Smelting matters as much as crafting here:
+        // bricks and dry sponge have no other route into the game.
+        int crafted = 0;
+        std::vector<StackId> made = Crafting::everyOutput();
+        for (int b = 0; b < static_cast<int>(Blocks::Count); ++b)
+            made.push_back(static_cast<StackId>(b));
+
+        for (StackId id : made)
+        {
+            if (isBlockStack(id) && !reachable.count(id) &&
+                std::find(Crafting::everyOutput().begin(), Crafting::everyOutput().end(), id) !=
+                    Crafting::everyOutput().end())
+            { reachable.insert(id); ++crafted; }
+
+            const StackId fired = Smelting::resultOf(id);
+            if (fired != Blocks::Air && isBlockStack(fired) && !reachable.count(fired))
+            { reachable.insert(fired); ++crafted; }
+        }
+
+        std::printf("  %d block ids appear in the world, %d more are crafted.\n\n",
+                    generated, crafted);
+
+        // What is left has to be a runtime state: a block the game
+        // swaps in while something is happening, which no generator
+        // writes and no recipe makes. Each one is listed by hand,
+        // because "it is probably fine" is how the swamp blocks sat
+        // unreachable for a week.
+        std::printf("  %-26s %s\n", "unreachable", "why that is right");
+        std::printf("  %-26s %s\n", "-----------", "------------------");
+
+        int unexplained = 0;
+        for (int b = 1; b < static_cast<int>(Blocks::Count); ++b)
+        {
+            const BlockId id = static_cast<BlockId>(b);
+            if (reachable.count(b)) continue;
+
+            const char* why = nullptr;
+            if (isDoor(id))                       why = "the other half, or the open state";
+            else if (isLadder(id) || isStairs(id) || isRail(id))
+                                                  why = "another facing of a crafted block";
+            else if (isPiston(id) || isPistonHead(id))
+                                                  why = "a piston mid-stroke";
+            else if (id == Blocks::FurnaceLit)    why = "a furnace that is burning";
+            else if (id == Blocks::TntPrimed)     why = "TNT that has been lit";
+            else if (id == Blocks::NetherPortal || id == Blocks::EndPortal)
+                                                  why = "a portal the player opened";
+            else if (id == Blocks::EndPortalFrameFilled)
+                                                  why = "a frame with an eye put in it";
+            else if (id == Blocks::RedstoneDustLit || id == Blocks::RedstoneTorchOff ||
+                     id == Blocks::LeverOn || id == Blocks::ButtonOn ||
+                     id == Blocks::RedstoneLampLit || id == Blocks::CopperBulbLit ||
+                     id == Blocks::CrafterLit || id == Blocks::SculkSensorLit)
+                                                  why = "the powered state of a block";
+            else if (id == Blocks::TrialSpawnerActive || id == Blocks::TrialSpawnerSpent)
+                                                  why = "a spawner part way through its waves";
+            else if (id == Blocks::VaultOpen || id == Blocks::OminousVaultOpen)
+                                                  why = "a vault that has been opened";
+            else if (isCopper(id))                why = "copper the player placed and weathered";
+
+            if (why) { std::printf("  %-26s %s\n", blockInfo(id).name, why); continue; }
+
+            std::printf("  %-26s *** NOTHING MAKES THIS ***\n", blockInfo(id).name);
+            ++unexplained;
+        }
+
+        std::printf("\n%s\n", unexplained == 0
+                    ? "Every block in the game can be reached."
+                    : "Some blocks exist that nobody can ever get -- see above.");
+        return unexplained == 0 ? 0 : 1;
+    }
+
     int printSeabedInfo(uint32_t seed)
     {
         const WorldGen generator(seed);
@@ -587,6 +769,7 @@ int main(int argc, char** argv)
     bool selfTest = false;
     bool seabedInfo = false;
     bool packCheck = false;
+    bool blockAudit = false;
     bool structureInfo = false;
     bool oreInfo = false;
     bool villageInfo = false;
@@ -637,6 +820,10 @@ int main(int argc, char** argv)
         else if (std::strcmp(argv[i], "--seabedinfo") == 0)
         {
             seabedInfo = true;
+        }
+        else if (std::strcmp(argv[i], "--blockaudit") == 0)
+        {
+            blockAudit = true;
         }
         else if (std::strcmp(argv[i], "--packcheck") == 0)
         {
@@ -695,6 +882,7 @@ int main(int argc, char** argv)
     if (worldInfo) return printWorldInfo(hasSeed ? seed : 12345u);
     if (seabedInfo) return printSeabedInfo(hasSeed ? seed : 12345u);
     if (packCheck) return printPackCheck();
+    if (blockAudit) return printBlockAudit(hasSeed ? seed : 12345u);
     if (structureInfo) return printStructureInfo(hasSeed ? seed : 12345u);
     if (oreInfo) return printOreInfo(hasSeed ? seed : 12345u);
     if (villageInfo) return printVillageInfo(hasSeed ? seed : 12345u);

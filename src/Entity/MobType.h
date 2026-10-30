@@ -185,6 +185,10 @@ struct MobType
     // flat and sets what it hits alight; a wind charge flies flat and
     // bursts, shoving whatever is near it.
     bool shootsFire = false;
+
+    // Throws splash potions, which is how a witch fights: the damage
+    // is not the point, what lands on you is.
+    bool throwsPotions = false;
     bool shootsWind = false;
 
     // The whole figure, scaled. Mojang renders several mobs off a

@@ -20,6 +20,11 @@ namespace Arrows
     // flies flat and sets what it hits alight; a wind charge flies flat
     // and bursts, shoving everything near it.
     enum class Kind : uint8_t { Shaft, Fire, Wind,
+                                // A splash potion, thrown by a witch.
+                                // It arcs like an arrow rather than
+                                // flying flat, and what it does it
+                                // does to whoever it lands on.
+                                Potion,
                                 // An eye of ender, thrown to be
                                 // followed: it goes where the
                                 // stronghold is, through anything in
@@ -80,7 +85,19 @@ struct Arrow
     // sticking.
     Arrows::Kind kind = Arrows::Kind::Shaft;
 
-    bool flies() const { return kind != Arrows::Kind::Shaft; }
+    // "Flies" means flat and self-lit: a thrown charge. A potion is
+    // lobbed, so it falls like an arrow and is not one of these.
+    bool flies() const
+    {
+        return kind != Arrows::Kind::Shaft && kind != Arrows::Kind::Potion;
+    }
+
+    // Whether it breaks on impact rather than sticking in what it hit.
+    // Kept apart from flies() because a potion is the one thing that
+    // is both: it arcs like an arrow and breaks like a charge. While
+    // the two were one test a thrown potion stuck in the wall like a
+    // dart and never went off.
+    bool bursts() const { return kind != Arrows::Kind::Shaft; }
 
     // Through the ground rather than into it, and hitting nothing on
     // the way: an eye is a signpost, not a weapon.
