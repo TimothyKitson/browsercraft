@@ -59,6 +59,12 @@ public:
     };
     std::vector<Death> drainDeaths();
 
+    // Where a chicken has just laid an egg. Drained the same way a
+    // death is, and for the same reason: the egg belongs where the
+    // bird was standing, not where it has wandered to by the time
+    // anybody asks.
+    std::vector<glm::vec3> drainLaidEggs();
+
     // Where a calf was just born, for the hearts and the sound.
     std::vector<glm::vec3> drainBirths();
 
@@ -81,7 +87,10 @@ public:
     Mob* rideable(const glm::vec3& origin, const glm::vec3& direction, float maxDistance);
 
     bool spawnAt(MobId type, glm::vec3 feetPosition, const World& world, bool baby = false);
-    void clear() { m_mobs.clear(); m_deaths.clear(); m_births.clear(); }
+    void clear()
+    {
+        m_mobs.clear(); m_deaths.clear(); m_births.clear(); m_laidEggs.clear();
+    }
 
     const std::vector<Mob>& mobs() const { return m_mobs; }
     std::vector<Mob>& mobs() { return m_mobs; }
@@ -112,6 +121,7 @@ private:
     Dimension m_dimension = Dimension::Overworld;
     std::vector<Mob> m_mobs;
     std::vector<Death> m_deaths;
+    std::vector<glm::vec3> m_laidEggs;
     std::vector<glm::vec3> m_births;
     void pairOffLovers(const World& world);
 

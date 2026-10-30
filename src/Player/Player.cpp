@@ -276,7 +276,8 @@ bool Player::onLadder(const World& world) const
     const int footY = static_cast<int>(std::floor(position.y));
     const int headY = static_cast<int>(std::floor(position.y + HEIGHT * 0.6f));
 
-    return isLadder(world.getBlock(x, footY, z)) || isLadder(world.getBlock(x, headY, z));
+    return isClimbable(world.getBlock(x, footY, z)) ||
+           isClimbable(world.getBlock(x, headY, z));
 }
 
 bool Player::isInWater(const World& world) const

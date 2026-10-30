@@ -436,6 +436,23 @@ namespace Blocks
         // thing in a jungle worth cutting down twice.
         Bamboo,
 
+        // Cocoa, which grows on the side of a jungle trunk and is the
+        // only thing in the game that grows on wood.
+        Cocoa0, Cocoa1, Cocoa2,
+
+        // A cake is eaten where it stands rather than carried, so its
+        // seven states are seven blocks: a cake with a slice out of it
+        // is a different block from a whole one.
+        Cake0, Cake1, Cake2, Cake3, Cake4, Cake5, Cake6,
+
+        // A light you can put out again, which no other light in the
+        // game can do.
+        Candle, CandleLit,
+
+        // Climbed rather than stood on, and the only quick way up the
+        // outside of something you are building.
+        Scaffolding,
+
         Count
     };
 }
@@ -483,6 +500,13 @@ inline bool isLiquid(BlockId id) { return blockInfo(id).render == RenderType::Li
 inline bool isCross(BlockId id) { return blockInfo(id).render == RenderType::Cross; }
 inline bool isSlab(BlockId id) { return blockInfo(id).render == RenderType::Slab; }
 inline bool isLadder(BlockId id) { return blockInfo(id).render == RenderType::Ladder; }
+
+// What you can go up the outside of. A ladder, and scaffolding, which
+// is the only reason to build scaffolding.
+inline bool isClimbable(BlockId id)
+{
+    return isLadder(id) || id == Blocks::Scaffolding;
+}
 inline bool isStairs(BlockId id) { return blockInfo(id).render == RenderType::Stairs; }
 inline bool isFence(BlockId id) { return blockInfo(id).render == RenderType::Fence; }
 inline bool isDoor(BlockId id) { return blockInfo(id).render == RenderType::Door; }
@@ -929,6 +953,30 @@ inline BlockId composterAt(int level)
     if (level > COMPOST_FULL) level = COMPOST_FULL;
     return static_cast<BlockId>(Blocks::Composter0 + level);
 }
+
+// Cocoa, and how ripe it is. Three stages rather than eight, which is
+// Minecraft's: it is a pod rather than a crop and grows on wood.
+constexpr int COCOA_RIPE = 2;
+inline bool isCocoa(BlockId id)
+{
+    return id >= Blocks::Cocoa0 && id <= Blocks::Cocoa2;
+}
+inline int cocoaStage(BlockId id) { return isCocoa(id) ? id - Blocks::Cocoa0 : 0; }
+inline BlockId cocoaAt(int stage)
+{
+    if (stage < 0) stage = 0;
+    if (stage > COCOA_RIPE) stage = COCOA_RIPE;
+    return static_cast<BlockId>(Blocks::Cocoa0 + stage);
+}
+
+// A cake, and how many slices are gone. Seven is the last one: eat
+// that and there is no cake.
+constexpr int CAKE_SLICES = 7;
+inline bool isCake(BlockId id)
+{
+    return id >= Blocks::Cake0 && id <= Blocks::Cake6;
+}
+inline int cakeEaten(BlockId id) { return isCake(id) ? id - Blocks::Cake0 : 0; }
 
 // A lectern, with or without a book open on it. Like a chest, it does
 // not say from outside what is in it -- the engine draws cubes, and

@@ -3571,6 +3571,118 @@ namespace
               "and a cauldron is iron, which comes apart the same way");
     }
 
+    // --- what is made rather than grown ---------------------------------
+
+    // The cake, the cookie, the candle and the scaffolding, and the
+    // two things a cake cannot be made without.
+    void testMadeThings()
+    {
+        section("cake, cookies, candles and scaffolding");
+
+        // A cake is carried as an item and set down as a block, and
+        // from then on it is eaten where it stands. Nothing else in
+        // the game works that way.
+        check(isItem(Items::Cake), "a cake is carried as an item");
+        check(maxStackOf(Items::Cake) == 1, "one at a time, like a bucket");
+        for (int eaten = 0; eaten < CAKE_SLICES; ++eaten)
+        {
+            const BlockId at = static_cast<BlockId>(Blocks::Cake0 + eaten);
+            check(isCake(at), "every state of it reads as a cake");
+            check(cakeEaten(at) == eaten, "and knows how much is gone");
+            check(blockDrop(at) == Blocks::Air,
+                  "breaking one gives nothing back, which is Minecraft's");
+            check(!isObtainable(at), "and none of them is a block you hold");
+        }
+        check(!isCake(Blocks::Candle), "a candle is not a cake");
+        check(cakeEaten(Blocks::Cake6) == CAKE_SLICES - 1,
+              "the last state is one slice from gone");
+
+        // A candle is the one light you can put out again.
+        check(blockInfo(Blocks::CandleLit).lightEmission > 0, "a lit candle gives light");
+        check(blockInfo(Blocks::Candle).lightEmission == 0, "an unlit one does not");
+        check(blockDrop(Blocks::CandleLit) == Blocks::Candle,
+              "and breaking a lit one gives back a candle");
+        check(isObtainable(Blocks::Candle), "a candle is a thing you hold");
+        check(!isObtainable(Blocks::CandleLit), "a lit one is the same candle alight");
+
+        // Scaffolding is climbed, which is the whole of what it is for.
+        check(isClimbable(Blocks::Scaffolding), "scaffolding can be climbed");
+        check(isClimbable(Blocks::LadderNorth), "so can a ladder");
+        check(!isClimbable(Blocks::Stone), "stone cannot");
+        check(!blockInfo(Blocks::Scaffolding).collides,
+              "and you are inside it rather than on it");
+        check(blockDrop(Blocks::Scaffolding) == Blocks::Scaffolding,
+              "it gives back itself");
+
+        // Cocoa: three stages, on a trunk, and the only route to a
+        // cookie.
+        check(COCOA_RIPE == 2, "cocoa has three stages");
+        for (int stage = 0; stage <= COCOA_RIPE; ++stage)
+        {
+            const BlockId pod = cocoaAt(stage);
+            check(isCocoa(pod), "every stage reads as cocoa");
+            check(cocoaStage(pod) == stage, "and knows how ripe it is");
+            check(blockDrop(pod) == Items::CocoaBeans, "and gives beans");
+            check(!isObtainable(pod), "a pod is not a block anybody places");
+            check(blockMaterial(pod) == Material::Plant, "and comes apart like a plant");
+        }
+        check(cocoaAt(99) == Blocks::Cocoa2, "it cannot ripen past ripe");
+        check(cocoaAt(-1) == Blocks::Cocoa0, "nor unripen");
+
+        // The recipes. Each of these is the only route to its result,
+        // so a missing one is a thing in the game nobody can have.
+        const std::vector<StackId> made = Crafting::everyOutput();
+        auto craftable = [&](StackId id)
+        {
+            return std::find(made.begin(), made.end(), id) != made.end();
+        };
+        check(craftable(Items::Cake), "a cake can be made");
+        check(craftable(Items::Cookie), "a cookie can be made");
+        check(craftable(Blocks::Scaffolding), "scaffolding can be made");
+        check(craftable(Blocks::Candle), "a candle can be made");
+        check(Food::isEdible(Items::Cookie), "and a cookie is food");
+
+        // The bucket comes back out of the grid. Without this a cake
+        // cost three iron as well as three milk, which is Minecraft's
+        // recipe at four times the price.
+        {
+            ItemStack grid[9];
+            grid[0].id = Items::MilkBucket; grid[0].count = 1;
+            grid[1].id = Items::Wheat;      grid[1].count = 3;
+
+            Crafting::consume(grid, 3);
+            check(grid[0].id == Items::Bucket && grid[0].count == 1,
+                  "a milk bucket used in a recipe leaves the bucket behind");
+            check(grid[1].count == 2, "and everything else is spent one at a time");
+        }
+
+        // Milk is the only way out of a bad potion, so it has to be
+        // drinkable and it has to not be food: a full player must
+        // still be able to drink one.
+        check(!Food::isEdible(Items::MilkBucket),
+              "milk does not go through the food table");
+        check(maxStackOf(Items::MilkBucket) == 1, "and comes one to a bucket");
+
+        // The names and the icons, which is where the item table goes
+        // wrong when something is added in the middle of the enum.
+        const StackId MADE[] = { Items::Egg, Items::MilkBucket, Items::Cake,
+                                 Items::Cookie, Items::CocoaBeans };
+        const char* NAMES[] = { "Egg", "Milk Bucket", "Cake", "Cookie", "Cocoa Beans" };
+        for (int i = 0; i < 5; ++i)
+        {
+            check(std::string(itemInfo(MADE[i]).name) == NAMES[i],
+                  std::string("the item table calls it a ") + NAMES[i]);
+            for (int j = i + 1; j < 5; ++j)
+                check(itemInfo(MADE[i]).tile != itemInfo(MADE[j]).tile,
+                      std::string(NAMES[i]) + " and " + NAMES[j] +
+                          " do not share an icon");
+        }
+
+        // A chicken lays on a clock of its own, which is the only way
+        // an egg gets into the game.
+        check(Mob::EGG_SECONDS > 0.0f, "a chicken lays on a clock");
+    }
+
     // --- pathfinding ----------------------------------------------------
 
     // A map drawn as text, one row per line of z. '.' is floor, '#' is
@@ -10042,6 +10154,7 @@ int runSelfTest()
     testRootCrops();
     testWorkstations();
     testMelonAndBamboo();
+    testMadeThings();
     testPathfinding();
     testChatCommands();
     testCrackStages();

@@ -1163,6 +1163,12 @@ bool Application::frame()
                 Blocks::Composter8, Blocks::Grindstone, Blocks::LecternBook,
                 Blocks::Cauldron3, Blocks::Furnace,
             };
+            // The second row: what is grown and what is made of it.
+            const BlockId PLANTS[] = {
+                Blocks::Melon, Blocks::Bamboo, Blocks::Cocoa2, Blocks::Cake0,
+                Blocks::Cake3, Blocks::CandleLit, Blocks::Scaffolding,
+                Blocks::Beetroot7,
+            };
             const int wide = static_cast<int>(std::size(ROW));
 
             const int baseY = static_cast<int>(std::floor(m_player.position.y));
@@ -1181,16 +1187,26 @@ bool Application::frame()
                 }
 
             for (int i = 0; i < wide; ++i)
+            {
                 m_world->setBlock(centreX - wide / 2 + i, baseY, centreZ, ROW[i]);
+                m_world->setBlock(centreX - wide / 2 + i, baseY, centreZ - 3,
+                                  PLANTS[i]);
+            }
+
+            // The crop needs its tilled earth, or it is a sprite
+            // standing on stone.
+            m_world->setBlock(centreX - wide / 2 + wide - 1, baseY - 1, centreZ - 3,
+                              Blocks::Farmland);
 
             m_player.position = glm::vec3(centreX + 0.5f, static_cast<float>(baseY),
-                                          centreZ - 7.5f);
+                                          centreZ - 9.5f);
             m_player.velocity = glm::vec3(0.0f);
             m_camera.position = m_player.eyePosition();
             m_camera.setOrientation(90.0f, -10.0f);
             m_pendingFurnaceLight = true;
 
-            std::printf("[test] stood %d workstations in a row at y=%d\n", wide, baseY);
+            std::printf("[test] stood %d workstations and %d plants at y=%d\n",
+                        wide, wide, baseY);
             std::fflush(stdout);
         }
 
@@ -4599,6 +4615,13 @@ void Application::updateMining(float deltaTime)
 
             // A furnace gives back whatever was inside it, lit or not,
             // and whether or not the furnace itself survives the pick.
+            // A ripe pod gives three beans and an unripe one gives
+            // one, which blockDrop cannot say: it answers with one
+            // thing and no count.
+            if (isCocoa(id) && cocoaStage(id) == COCOA_RIPE)
+                for (int i = 0; i < 2; ++i)
+                    m_drops.spawnFromBrokenBlock(hit.block, Items::CocoaBeans);
+
             // The book off a lectern, which blockDrop cannot say: it
             // gives back one thing and a lectern gives back two.
             if (id == Blocks::LecternBook)
@@ -6393,8 +6416,9 @@ void Application::handleEating(float deltaTime)
 void Application::handleDrinking(float deltaTime)
 {
     ItemStack& stack = m_inventory.selected();
+    const bool drinkable = stack.id == Items::Potion || stack.id == Items::MilkBucket;
     const bool holding = inGame() && m_keys.down(m_input, Action::Use) &&
-                         stack.id == Items::Potion && !stack.empty();
+                         drinkable && !stack.empty();
 
     if (!holding)
     {
@@ -6405,6 +6429,22 @@ void Application::handleDrinking(float deltaTime)
     m_drinkTimer += deltaTime;
     if (m_drinkTimer < Food::EAT_SECONDS) return;
     m_drinkTimer = 0.0f;
+
+    // Milk clears whatever is on you, good and bad alike, which is
+    // Minecraft's and the only way out of a bad potion. The bucket
+    // comes back the way the bottle does.
+    if (stack.id == Items::MilkBucket)
+    {
+        Effects::clear(m_player.effects);
+
+        stack.count -= 1;
+        if (stack.count <= 0) stack.clear();
+        if (m_inventory.add(Items::Bucket, 1) > 0)
+            m_drops.spawn(m_player.position, Items::Bucket, 1);
+
+        m_audio.play(Sound::Pickup, 0.6f, 0.9f);
+        return;
+    }
 
     const Brewing::Potion potion = Brewing::fromDamage(stack.damage);
 
@@ -6421,6 +6461,71 @@ void Application::handleDrinking(float deltaTime)
         m_drops.spawn(m_player.position, Items::GlassBottle, 1);
 
     m_audio.play(Sound::Pickup, 0.6f, 1.25f);
+}
+
+// A cake is eaten where it stands, a slice at a time, which nothing
+// else in the game is. Seven slices and it is gone.
+bool Application::useCake(const glm::ivec3& at, BlockId block)
+{
+    if (!m_player.canEat() && !m_player.creative()) return false;
+
+    const FoodValue slice{ 2, 0.4f };
+    if (!m_player.eat(slice.hunger, slice.saturation)) return false;
+
+    const int eaten = cakeEaten(block) + 1;
+    const BlockId now = (eaten >= CAKE_SLICES)
+                            ? Blocks::Air
+                            : static_cast<BlockId>(Blocks::Cake0 + eaten);
+
+    m_world->setBlock(at.x, at.y, at.z, now);
+    m_net.onLocalBlockChange(at.x, at.y, at.z, now);
+    m_audio.play(Sound::Pickup, 0.6f, 0.85f);
+    return true;
+}
+
+// A candle is the one light in the game you can put out again. Lit
+// with flint and steel, snuffed by hand.
+bool Application::useCandle(const glm::ivec3& at, BlockId block)
+{
+    const ItemStack& held = m_inventory.selected();
+
+    if (block == Blocks::Candle)
+    {
+        if (held.empty() || held.id != Items::FlintAndSteel) return false;
+
+        m_world->setBlock(at.x, at.y, at.z, Blocks::CandleLit);
+        m_net.onLocalBlockChange(at.x, at.y, at.z, Blocks::CandleLit);
+        m_audio.play(Sound::Fire, 0.5f, 1.4f);
+        wearTool(Blocks::Candle);
+        return true;
+    }
+
+    if (!held.empty()) return false;   // a full hand is placing, not snuffing
+
+    m_world->setBlock(at.x, at.y, at.z, Blocks::Candle);
+    m_net.onLocalBlockChange(at.x, at.y, at.z, Blocks::Candle);
+    m_audio.play(Sound::Click, 0.4f, 0.7f);
+    return true;
+}
+
+// Cocoa grows on the side of a trunk and nowhere else, which is the
+// only thing in the game that grows on wood.
+bool Application::plantCocoa(const glm::ivec3& at)
+{
+    ItemStack& held = m_inventory.selected();
+    if (held.empty() || held.id != Items::CocoaBeans) return false;
+    if (m_world->getBlock(at.x, at.y, at.z) != Blocks::Air) return false;
+
+    m_world->setBlock(at.x, at.y, at.z, Blocks::Cocoa0);
+    m_net.onLocalBlockChange(at.x, at.y, at.z, Blocks::Cocoa0);
+    m_audio.playPlace(Blocks::Cocoa0);
+
+    if (!m_player.creative())
+    {
+        held.count -= 1;
+        if (held.count <= 0) held.clear();
+    }
+    return true;
 }
 
 // --- the workstations -----------------------------------------------
@@ -6726,6 +6831,10 @@ void Application::handlePlacement()
             // whether it wanted it; a no falls through to placing the
             // block, so a composter you have nothing for is still
             // something to build against.
+            if (isCake(used) && useCake(bench.block, used)) return;
+            if ((used == Blocks::Candle || used == Blocks::CandleLit) &&
+                useCandle(bench.block, used)) return;
+            if (isLog(used) && plantCocoa(bench.previous)) return;
             if (isComposter(used) && useComposter(bench.block, used)) return;
             if (isCauldron(used) && useCauldron(bench.block, used)) return;
             if (isLectern(used) && useLectern(bench.block, used)) return;
@@ -6779,6 +6888,31 @@ void Application::handlePlacement()
 
         m_audio.play(Sound::Pickup, 0.5f, 1.1f);
         return;
+    }
+
+    // A bucket on a cow before a bucket on a pond: standing a cow in
+    // front of a lake and trying to milk it should milk the cow.
+    if (stack.id == Items::Bucket)
+    {
+        if (const Mob* cow = m_entities.pick(m_camera.position, m_camera.front,
+                                             ATTACK_REACH))
+        {
+            if (cow->typeId() == MobId::Cow && cow->alive() && !cow->baby())
+            {
+                if (!m_player.creative())
+                {
+                    stack.count -= 1;
+                    ItemStack milk;
+                    milk.id = Items::MilkBucket;
+                    milk.count = 1;
+                    if (stack.count <= 0) stack = milk;
+                    else if (m_inventory.addStack(milk) > 0)
+                        m_drops.spawnStack(m_player.position, milk);
+                }
+                m_audio.play(Sound::MobCowSay, 0.5f, 1.1f);
+                return;
+            }
+        }
     }
 
     // Buckets: fill from a liquid you are looking at, or empty into the
@@ -7099,6 +7233,9 @@ void Application::handlePlacement()
     // the same way a door is.
     BlockId fromItem = Blocks::Air;
     if (stack.id == Items::Redstone) fromItem = Blocks::RedstoneDust;
+    // A cake is carried as an item and set down as a block, and from
+    // then on it is eaten where it stands rather than picked up.
+    if (stack.id == Items::Cake) fromItem = Blocks::Cake0;
     if (isItem(stack.id) && fromItem == Blocks::Air) return;
 
     const RaycastHit hit = m_world->raycast(m_camera.position, m_camera.front, REACH_DISTANCE);
@@ -7961,6 +8098,14 @@ void Application::updateMobs(float deltaTime)
     {
         (void)born;
         m_audio.play(Sound::Pickup, 0.6f, 1.6f);
+    }
+
+    // A chicken lays an egg every few minutes whether anybody is
+    // watching or not, which is what makes a flock worth keeping.
+    for (const glm::vec3& nest : m_entities.drainLaidEggs())
+    {
+        m_drops.spawn(nest + glm::vec3(0.0f, 0.3f, 0.0f), Items::Egg, 1);
+        m_audio.play(Sound::MobChickenSay, 0.5f, 1.3f);
     }
 }
 

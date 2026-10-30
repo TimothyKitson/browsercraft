@@ -183,6 +183,22 @@ namespace Items
         MelonSlice,
         MelonSeeds,
 
+        // What a chicken lays, and what a bucket gets out of a cow.
+        // Both are here for the cake, which cannot be made without
+        // them, and the milk is also the one thing that clears what
+        // is on you.
+        Egg,
+        MilkBucket,
+
+        // Set down and eaten where it stands, which nothing else in
+        // the game is.
+        Cake,
+
+        // Two wheat and a bean. The bean grows on the side of a
+        // jungle trunk and is the only thing in the game that does.
+        Cookie,
+        CocoaBeans,
+
         // What a wither leaves. One of them makes a beacon, which is
         // the only thing in the game it is for.
         NetherStar,

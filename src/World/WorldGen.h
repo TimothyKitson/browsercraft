@@ -316,6 +316,7 @@ private:
     void stampLandmark(Chunk& chunk, Landmark kind, int midX, int midZ) const;
     void stampSwampHut(Chunk& chunk, int midX, int midZ, int ground) const;
     void hangVines(Chunk& chunk, int worldX, int ground, int worldZ) const;
+    void hangCocoa(Chunk& chunk, int worldX, int ground, int worldZ) const;
     void dressSeabed(Chunk& chunk) const;
     void buildDesertWells(Chunk& chunk) const;
     void buildGeodes(Chunk& chunk) const;

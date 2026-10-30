@@ -253,6 +253,35 @@ namespace
 
         { true, 0, 0, { Items::MelonSlice }, 1, Items::MelonSeeds, 1 },
 
+        // A cake: milk along the top, an egg between two sugars, and
+        // wheat under it. Minecraft's, buckets and all -- and the
+        // buckets come back, which is handled where the grid is
+        // emptied rather than here.
+        { false, 3, 3, { Items::MilkBucket, Items::MilkBucket, Items::MilkBucket,
+                         Items::Sugar,      Items::Egg,        Items::Sugar,
+                         Items::Wheat,      Items::Wheat,      Items::Wheat },
+          0, Items::Cake, 1 },
+
+        // Two wheat round a bean makes eight cookies, which is
+        // Minecraft's and the reason cocoa is worth climbing for.
+        { false, 3, 3, { Items::Wheat, Items::CocoaBeans, Items::Wheat,
+                         Blocks::Air,  Blocks::Air,       Blocks::Air,
+                         Blocks::Air,  Blocks::Air,       Blocks::Air },
+          0, Items::Cookie, 8 },
+
+        // Six canes and a string make six scaffolding, which is
+        // Minecraft's and the only thing bamboo is really for.
+        { false, 3, 3, { Blocks::Bamboo, Items::StringItem, Blocks::Bamboo,
+                         Blocks::Bamboo, Blocks::Air,       Blocks::Bamboo,
+                         Blocks::Bamboo, Blocks::Air,       Blocks::Bamboo },
+          0, Blocks::Scaffolding, 6 },
+
+        // A wick on something soft. Minecraft wants honeycomb for the
+        // wax and there are no bees here, so the wick stands on wool
+        // instead -- which is at least white, and the same shape.
+        { false, 1, 2, { Items::StringItem,
+                         Blocks::Wool }, 0, Blocks::Candle, 1 },
+
         // The workstations. A smoker is a furnace with logs built
         // round it; a blast furnace is one with iron over it and
         // smooth stone under. Both are Minecraft's, and both are the
@@ -620,6 +649,22 @@ namespace Crafting
             {
                 ItemStack& cell = grid[y * 3 + x];
                 if (cell.empty()) continue;
+
+                // A recipe uses what is in the bucket, not the bucket.
+                // Without this a cake cost three iron as well as three
+                // milk, which is Minecraft's recipe at four times the
+                // price. Only a single bucket can be in a slot, so
+                // there is never a count to carry across.
+                if (cell.id == Items::MilkBucket || cell.id == Items::WaterBucket ||
+                    cell.id == Items::LavaBucket)
+                {
+                    cell.id = Items::Bucket;
+                    cell.count = 1;
+                    cell.damage = 0;
+                    cell.enchantments = 0;
+                    continue;
+                }
+
                 cell.count -= 1;
                 if (cell.count <= 0) cell.clear();
             }

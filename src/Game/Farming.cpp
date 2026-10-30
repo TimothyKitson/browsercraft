@@ -217,6 +217,19 @@ void Farming::grow(World& world, const glm::vec3& around, uint32_t& seed)
             continue;
         }
 
+        // Cocoa, which ripens where it hangs. Three stages rather
+        // than eight, and no farmland under it: it is a pod on a
+        // trunk, not a crop in a field.
+        {
+            const BlockId pod = world.getBlock(x, y, z);
+            if (isCocoa(pod))
+            {
+                if (cocoaStage(pod) < COCOA_RIPE)
+                    world.setBlock(x, y, z, cocoaAt(cocoaStage(pod) + 1));
+                continue;
+            }
+        }
+
         // Bamboo, which grows faster than anything in the game and
         // needs nothing but ground and light. Ticked by this pass for
         // the same reason the cane is: a second sampling pass would

@@ -361,6 +361,13 @@ bool Mob::takeDeathReport()
     return true;
 }
 
+bool Mob::takeEggReport()
+{
+    if (!m_eggReady) return false;
+    m_eggReady = false;
+    return true;
+}
+
 float Mob::fuse() const
 {
     const MobType& t = type();
@@ -569,6 +576,19 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
     if (m_huntTimer > 0.0f) m_huntTimer = std::max(0.0f, m_huntTimer - deltaTime);
     if (m_biteTimer > 0.0f) m_biteTimer = std::max(0.0f, m_biteTimer - deltaTime);
     if (m_babyTimer > 0.0f) m_babyTimer = std::max(0.0f, m_babyTimer - deltaTime);
+
+    // A grown chicken lays an egg every few minutes. The clock runs
+    // whether anybody is watching or not, which is why a flock left
+    // alone is worth coming back to.
+    if (m_type == MobId::Chicken && alive() && !baby())
+    {
+        m_eggTimer -= deltaTime;
+        if (m_eggTimer <= 0.0f)
+        {
+            m_eggTimer = EGG_SECONDS;
+            m_eggReady = true;
+        }
+    }
 
     if (!alive())
     {

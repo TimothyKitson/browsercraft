@@ -47,6 +47,10 @@ namespace
         // Melon: two hunger a slice and a great many slices to a
         // melon, which is what makes one worth planting.
         { Items::MelonSlice,     { 2, 1.2f } },
+
+        // Two wheat and a bean, and the cheapest food in the game to
+        // carry in bulk: eight of them from one handful.
+        { Items::Cookie,         { 2, 0.4f } },
     };
 }
 

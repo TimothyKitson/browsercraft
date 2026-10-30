@@ -160,6 +160,14 @@ public:
     // behind cannot wait for the removal.
     bool takeDeathReport();
 
+    // A chicken lays an egg every few minutes, which is Minecraft's
+    // and is the only way an egg gets into the game. True exactly
+    // once per egg, on the first call after one is due, for the same
+    // reason the death report is: whatever it leaves belongs where it
+    // was standing when it laid it.
+    static constexpr float EGG_SECONDS = 180.0f;
+    bool takeEggReport();
+
     // --- breeding ---
     //
     // A fed animal is "in love" for half a minute. Two of the same kind
@@ -418,6 +426,8 @@ private:
     float m_burnTick = 0.0f;
     float m_removeTimer = 0.6f;
     bool m_deathReported = false;
+    float m_eggTimer = EGG_SECONDS;
+    bool m_eggReady = false;
 
     uint32_t m_rng = 1;
     uint32_t m_birthSeed = 1;

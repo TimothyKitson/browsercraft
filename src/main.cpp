@@ -625,6 +625,10 @@ namespace
             else if (i == static_cast<int>(Items::TrialKey) ||
                      i == static_cast<int>(Items::OminousTrialKey))
                 byHand = "paid out by a spawner that has finished its waves";
+            else if (i == static_cast<int>(Items::Egg))
+                byHand = "laid by a chicken every few minutes";
+            else if (i == static_cast<int>(Items::MilkBucket))
+                byHand = "a bucket used on a cow";
 
             if (byHand)
             {
@@ -641,6 +645,13 @@ namespace
         // ------------------------------------------------------------
         // Recipes you could never perform, and mobs that cannot fight.
         // ------------------------------------------------------------
+        // The same two the list above explains: an ingredient that is
+        // got by doing rather than by a table is not a dead recipe.
+        haveItem.insert(static_cast<int>(Items::Egg));
+        haveItem.insert(static_cast<int>(Items::MilkBucket));
+        haveItem.insert(static_cast<int>(Items::WaterBucket));
+        haveItem.insert(static_cast<int>(Items::LavaBucket));
+
         auto obtainable = [&](StackId id)
         {
             return (isBlockStack(id) && reachable.count(id)) || haveItem.count(id);

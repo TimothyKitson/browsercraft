@@ -333,6 +333,26 @@ namespace
         { "Melon Stem",   MelonStemRipe, MelonStemRipe,  MelonStemRipe,  false, false, RenderType::Cross,  0,   0.0f },
 
         { "Bamboo",       BambooTile,    BambooTile,     BambooTile,     false, false, RenderType::Cross,  0,   0.3f },
+
+        { "Cocoa",        CocoaStage0,   CocoaStage0,    CocoaStage0,    false, false, RenderType::Cross,  0,   0.2f },
+        { "Cocoa",        CocoaStage1,   CocoaStage1,    CocoaStage1,    false, false, RenderType::Cross,  0,   0.2f },
+        { "Cocoa",        CocoaStage2,   CocoaStage2,    CocoaStage2,    false, false, RenderType::Cross,  0,   0.2f },
+
+        // A whole cake, and the six stages of one somebody has started.
+        // The cut face is the sponge, which is what tells the two
+        // apart across a room.
+        { "Cake",         CakeTop,       CakeBottom,     CakeSide,       true,  false, RenderType::Cube,   0,   0.5f },
+        { "Cake",         CakeTop,       CakeBottom,     CakeInner,      true,  false, RenderType::Cube,   0,   0.5f },
+        { "Cake",         CakeTop,       CakeBottom,     CakeInner,      true,  false, RenderType::Cube,   0,   0.5f },
+        { "Cake",         CakeTop,       CakeBottom,     CakeInner,      true,  false, RenderType::Cube,   0,   0.5f },
+        { "Cake",         CakeTop,       CakeBottom,     CakeInner,      true,  false, RenderType::Cube,   0,   0.5f },
+        { "Cake",         CakeTop,       CakeBottom,     CakeInner,      true,  false, RenderType::Cube,   0,   0.5f },
+        { "Cake",         CakeTop,       CakeBottom,     CakeInner,      true,  false, RenderType::Cube,   0,   0.5f },
+
+        { "Candle",       CandleTile,    CandleTile,     CandleTile,     false, false, RenderType::Cross,  0,   0.1f },
+        { "Candle",       CandleLitTile, CandleLitTile,  CandleLitTile,  false, false, RenderType::Cross, 10,   0.1f },
+
+        { "Scaffolding",  ScaffoldTop,   ScaffoldBottom, ScaffoldSide,   false, false, RenderType::Cube,   0,   0.2f },
     };
 }
 
@@ -385,6 +405,16 @@ bool isObtainable(BlockId id)
             // A lectern with a book on it is the same block holding
             // something, which is not a second thing to hold.
             if (id == Blocks::LecternBook) return false;
+
+            // A cake is placed from an item and eaten where it
+            // stands: it never goes back in a hand, whole or part
+            // eaten. A lit candle is the same candle alight.
+            if (isCake(id)) return false;
+            if (id == Blocks::CandleLit) return false;
+
+            // Cocoa is a pod on a trunk rather than a block anybody
+            // places, and only the beans come off it.
+            if (isCocoa(id)) return false;
             if (isCauldron(id) && id != Blocks::Cauldron0) return false;
 
             // Likewise for stairs: one of each four is the thing you
@@ -406,8 +436,9 @@ const char* blockSoundGroup(BlockId id)
     if (isLeaves(id)) return "grass";
     if (isLog(id) || isPlanks(id)) return "wood";
     if (isComposter(id) || isLectern(id)) return "wood";
-    if (id == Blocks::Bamboo) return "wood";
-    if (id == Blocks::Melon) return "grass";
+    if (id == Blocks::Bamboo || id == Blocks::Scaffolding) return "wood";
+    if (id == Blocks::Melon || isCocoa(id)) return "grass";
+    if (isCake(id) || id == Blocks::Candle || id == Blocks::CandleLit) return "cloth";
 
     switch (id)
     {
@@ -536,6 +567,10 @@ Material blockMaterial(BlockId id)
     if (isComposter(id) || isLectern(id)) return Material::Wood;
     if (id == Blocks::Melon) return Material::Plant;
     if (id == Blocks::Bamboo) return Material::Wood;
+    if (isCocoa(id)) return Material::Plant;
+    if (isCake(id)) return Material::Wool;      // soft, and no tool helps
+    if (id == Blocks::Candle || id == Blocks::CandleLit) return Material::Wool;
+    if (id == Blocks::Scaffolding) return Material::Wood;
     if (isCauldron(id)) return Material::Stone;
     if (isFurnaceBlock(id)) return Material::Stone;
 

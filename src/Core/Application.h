@@ -673,6 +673,9 @@ private:
     // The workstations that need no screen: each is one action on what
     // you are holding. True when it took it, so the caller can fall
     // through to placing a block when it did not.
+    bool useCake(const glm::ivec3& at, BlockId block);
+    bool useCandle(const glm::ivec3& at, BlockId block);
+    bool plantCocoa(const glm::ivec3& at);
     bool useComposter(const glm::ivec3& at, BlockId block);
     bool useCauldron(const glm::ivec3& at, BlockId block);
     bool useLectern(const glm::ivec3& at, BlockId block);

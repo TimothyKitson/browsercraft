@@ -248,6 +248,10 @@ namespace Tiles
         MelonSide, MelonTop,
         MelonStemYoung, MelonStemRipe,
         BambooTile,
+        CocoaStage0, CocoaStage1, CocoaStage2,
+        CakeTop, CakeSide, CakeBottom, CakeInner,
+        CandleTile, CandleLitTile,
+        ScaffoldTop, ScaffoldSide, ScaffoldBottom,
 
         RainDrop,
         SnowFlake,
@@ -383,8 +387,13 @@ namespace Tiles
         ItemBeetrootSoup,
         ItemMelonSlice,
         ItemMelonSeeds,
+        ItemEgg,
+        ItemMilkBucket,
+        ItemCake,
+        ItemCookie,
+        ItemCocoaBeans,
 
-        ItemTileEnd = ItemMelonSeeds + 1
+        ItemTileEnd = ItemCocoaBeans + 1
     };
 
     // Ten progressively more broken overlay tiles for the mining animation.

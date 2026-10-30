@@ -135,6 +135,11 @@ namespace
         { "Beetroot Soup",   Tiles::ItemBeetrootSoup,   1 },
         { "Melon Slice",     Tiles::ItemMelonSlice,    64 },
         { "Melon Seeds",     Tiles::ItemMelonSeeds,    64 },
+        { "Egg",             Tiles::ItemEgg,           16 },
+        { "Milk Bucket",     Tiles::ItemMilkBucket,     1 },
+        { "Cake",            Tiles::ItemCake,           1 },
+        { "Cookie",          Tiles::ItemCookie,        64 },
+        { "Cocoa Beans",     Tiles::ItemCocoaBeans,    64 },
         { "Nether Star",     Tiles::ItemNetherStar,     1 },
     };
 
@@ -194,6 +199,15 @@ bool isBreedingFood(StackId id)
 StackId blockDrop(BlockId id)
 {
     if (isLeaves(id)) return Blocks::Air;   // leaves drop nothing
+
+    // A cocoa pod gives its beans; the pod itself is not a thing.
+    if (isCocoa(id)) return Items::CocoaBeans;
+
+    // A cake part eaten is not a cake. Minecraft gives nothing back
+    // for breaking one either -- you eat it or you lose it.
+    if (isCake(id)) return Blocks::Air;
+
+    if (id == Blocks::CandleLit) return Blocks::Candle;
 
     // A melon comes apart into slices rather than into a melon, which
     // is Minecraft's and is what makes one worth planting.

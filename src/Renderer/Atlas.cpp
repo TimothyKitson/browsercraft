@@ -2578,6 +2578,212 @@ namespace
             t.set(5 + i * 2, 8 + (i % 2) * 2, Color{ 44, 36, 30 });
     }
 
+    // --- what is made rather than grown ---------------------------------
+
+    void paintCocoaStage(Tile& t, int stage)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        // A pod hung off the trunk, bigger and browner as it ripens.
+        const int radius = 3 + stage;
+        const Color skin = (stage == 0) ? Color{ 128, 164, 70 }
+                         : (stage == 1) ? Color{ 162, 122, 52 }
+                                        : Color{ 142, 78, 36 };
+
+        for (int y = 0; y < Tile::N; ++y)
+            for (int x = 0; x < Tile::N; ++x)
+            {
+                const float dx = (x - 7.5f) / radius;
+                const float dy = (y - 6.0f) / (radius + 1.0f);
+                if (dx * dx + dy * dy > 1.0f) continue;
+                t.set(x, y, (dx + dy < -0.3f) ? shade(skin, 26) : skin);
+            }
+
+        // The stalk it hangs by.
+        for (int y = 0; y < 3; ++y) t.set(7, y, Color{ 92, 70, 44 });
+        t.speckle(5, 611 + stage);
+    }
+
+    void paintCocoa0(Tile& t) { paintCocoaStage(t, 0); }
+    void paintCocoa1(Tile& t) { paintCocoaStage(t, 1); }
+    void paintCocoa2(Tile& t) { paintCocoaStage(t, 2); }
+
+    void paintCakeTop(Tile& t)
+    {
+        t.fill(Color{ 244, 240, 232 });
+        // Icing, with the cherries Minecraft puts on it.
+        for (int y = 1; y < Tile::N - 1; ++y)
+            for (int x = 1; x < Tile::N - 1; ++x)
+                t.set(x, y, Color{ 236, 230, 220 });
+        for (int i = 0; i < 4; ++i)
+        {
+            const int x = 3 + (i % 2) * 8;
+            const int y = 3 + (i / 2) * 8;
+            for (int dy = 0; dy < 2; ++dy)
+                for (int dx = 0; dx < 2; ++dx)
+                    t.set(x + dx, y + dy, Color{ 192, 44, 48 });
+        }
+        t.speckle(4, 615);
+    }
+
+    void paintCakeSide(Tile& t)
+    {
+        t.fill(Color{ 166, 112, 70 });
+        // Icing over the top third, sponge below it.
+        for (int y = 0; y < 5; ++y)
+            for (int x = 0; x < Tile::N; ++x)
+                t.set(x, y, (y < 4) ? Color{ 236, 230, 220 } : Color{ 206, 198, 184 });
+        t.speckle(6, 616);
+    }
+
+    void paintCakeBottom(Tile& t)
+    {
+        t.fill(Color{ 140, 92, 56 });
+        t.speckle(6, 617);
+    }
+
+    // The cut face: sponge all the way up, with no icing on it. This
+    // is what tells a cake somebody has started from a whole one.
+    void paintCakeInner(Tile& t)
+    {
+        t.fill(Color{ 196, 140, 88 });
+        for (int y = 0; y < Tile::N; ++y)
+            for (int x = 0; x < Tile::N; ++x)
+                if (((x + y) % 5) == 0) t.set(x, y, Color{ 172, 118, 70 });
+        t.speckle(6, 618);
+    }
+
+    void paintCandleIn(Tile& t, bool lit)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 6; y < Tile::N; ++y)
+            for (int x = 6; x < 10; ++x)
+                t.set(x, y, (x < 7) ? Color{ 238, 232, 214 } : Color{ 214, 206, 186 });
+
+        // The wick, and the flame on top of it when it is alight.
+        t.set(7, 5, Color{ 60, 52, 44 });
+        t.set(8, 5, Color{ 60, 52, 44 });
+        if (!lit) return;
+
+        for (int y = 1; y < 5; ++y)
+            for (int x = 6; x < 10; ++x)
+            {
+                const bool core = (y > 2 && x > 6 && x < 9);
+                t.set(x, y, core ? Color{ 255, 238, 170 } : Color{ 248, 170, 54 });
+            }
+    }
+
+    void paintCandle(Tile& t)    { paintCandleIn(t, false); }
+    void paintCandleLit(Tile& t) { paintCandleIn(t, true); }
+
+    void paintScaffoldSide(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        // Two uprights and the rungs between them: you see through it,
+        // which is most of what makes scaffolding read as scaffolding.
+        const Color pole{ 196, 160, 94 };
+        const Color dark{ 158, 124, 68 };
+        for (int y = 0; y < Tile::N; ++y)
+            for (int x = 0; x < 3; ++x)
+            {
+                t.set(x, y, (x == 0) ? dark : pole);
+                t.set(Tile::N - 1 - x, y, (x == 0) ? dark : pole);
+            }
+        for (int y = 1; y < Tile::N; y += 7)
+            for (int x = 3; x < Tile::N - 3; ++x)
+            {
+                t.set(x, y, pole);
+                t.set(x, y + 1, dark);
+            }
+    }
+
+    void paintScaffoldTop(Tile& t)
+    {
+        t.fill(Color{ 186, 150, 88 });
+        for (int y = 3; y < Tile::N - 3; ++y)
+            for (int x = 3; x < Tile::N - 3; ++x)
+                t.set(x, y, Color{ 152, 118, 64 });
+        t.speckle(5, 621);
+    }
+
+    void paintScaffoldBottom(Tile& t)
+    {
+        paintScaffoldSide(t);
+    }
+
+    void paintItemEgg(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 3; y < 14; ++y)
+            for (int x = 4; x < 12; ++x)
+            {
+                const float dx = (x - 7.5f) / 3.8f;
+                const float dy = (y - 9.0f) / 5.4f;
+                if (dx * dx + dy * dy > 1.0f) continue;
+                t.set(x, y, (dx + dy < -0.4f) ? Color{ 246, 240, 226 }
+                                              : Color{ 214, 204, 184 });
+            }
+        t.speckle(4, 623);
+    }
+
+    void paintItemMilkBucket(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 4; y < 14; ++y)
+        {
+            const int inset = (y - 4) / 5;
+            for (int x = 3 + inset; x < 13 - inset; ++x)
+                t.set(x, y, (x < 5) ? Color{ 186, 190, 196 } : Color{ 150, 154, 162 });
+        }
+        for (int x = 4; x < 12; ++x)
+        {
+            t.set(x, 4, Color{ 248, 248, 244 });
+            t.set(x, 5, Color{ 234, 234, 230 });
+        }
+        t.speckle(4, 624);
+    }
+
+    void paintItemCake(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 5; y < 13; ++y)
+            for (int x = 2; x < 14; ++x)
+                t.set(x, y, (y < 8) ? Color{ 236, 230, 220 } : Color{ 174, 118, 72 });
+        for (int i = 0; i < 3; ++i)
+            for (int dy = 0; dy < 2; ++dy)
+                for (int dx = 0; dx < 2; ++dx)
+                    t.set(4 + i * 4 + dx, 5 + dy, Color{ 192, 44, 48 });
+        t.speckle(4, 625);
+    }
+
+    void paintItemCookie(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 3; y < 14; ++y)
+            for (int x = 3; x < 14; ++x)
+            {
+                const float dx = x - 8.0f, dy = y - 8.5f;
+                if (dx * dx + dy * dy > 28.0f) continue;
+                t.set(x, y, Color{ 186, 138, 84 });
+            }
+        for (int i = 0; i < 5; ++i)
+            t.set(5 + (i * 3) % 8, 6 + (i * 2) % 6, Color{ 78, 52, 34 });
+        t.speckle(4, 626);
+    }
+
+    void paintItemCocoaBeans(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int i = 0; i < 5; ++i)
+        {
+            const int x = 4 + (i % 3) * 3;
+            const int y = 5 + (i / 3) * 4;
+            for (int dy = 0; dy < 3; ++dy)
+                for (int dx = 0; dx < 2; ++dx)
+                    t.set(x + dx, y + dy, (dx == 0) ? Color{ 142, 78, 36 }
+                                                    : Color{ 108, 58, 26 });
+        }
+    }
+
     void paintSpawnerIn(Tile& t, Color bars, Color inside)
     {
         t.fill(inside);
@@ -5458,6 +5664,23 @@ namespace
         { Tiles::MelonStemYoung, paintMelonStemYoung },
         { Tiles::MelonStemRipe, paintMelonStemRipe },
         { Tiles::BambooTile, paintBamboo },
+        { Tiles::CocoaStage0, paintCocoa0 },
+        { Tiles::CocoaStage1, paintCocoa1 },
+        { Tiles::CocoaStage2, paintCocoa2 },
+        { Tiles::CakeTop, paintCakeTop },
+        { Tiles::CakeSide, paintCakeSide },
+        { Tiles::CakeBottom, paintCakeBottom },
+        { Tiles::CakeInner, paintCakeInner },
+        { Tiles::CandleTile, paintCandle },
+        { Tiles::CandleLitTile, paintCandleLit },
+        { Tiles::ScaffoldTop, paintScaffoldTop },
+        { Tiles::ScaffoldSide, paintScaffoldSide },
+        { Tiles::ScaffoldBottom, paintScaffoldBottom },
+        { Tiles::ItemEgg, paintItemEgg },
+        { Tiles::ItemMilkBucket, paintItemMilkBucket },
+        { Tiles::ItemCake, paintItemCake },
+        { Tiles::ItemCookie, paintItemCookie },
+        { Tiles::ItemCocoaBeans, paintItemCocoaBeans },
         { Tiles::ItemBowl, paintItemBowl },
         { Tiles::ItemBeetroot, paintItemBeetroot },
         { Tiles::ItemBeetrootSeeds, paintItemBeetrootSeeds },
@@ -5741,6 +5964,11 @@ namespace
         { Tiles::ItemBeetrootSoup, { "beetroot_soup", nullptr, nullptr } },
         { Tiles::ItemMelonSlice, { "melon_slice", nullptr, nullptr } },
         { Tiles::ItemMelonSeeds, { "melon_seeds", nullptr, nullptr } },
+        { Tiles::ItemEgg, { "egg", nullptr, nullptr } },
+        { Tiles::ItemMilkBucket, { "milk_bucket", nullptr, nullptr } },
+        { Tiles::ItemCake, { "cake", nullptr, nullptr } },
+        { Tiles::ItemCookie, { "cookie", nullptr, nullptr } },
+        { Tiles::ItemCocoaBeans, { "cocoa_beans", nullptr, nullptr } },
     };
 
     const PackTile PACK_TILES[] = {
@@ -5958,7 +6186,24 @@ namespace
         { Tiles::MelonTop,      { "melon_top", nullptr },                              Tinting::None,    0,   false },
         { Tiles::MelonStemYoung,{ "melon_stem", nullptr },                             Tinting::None,    0,   false },
         { Tiles::MelonStemRipe, { "attached_melon_stem", nullptr },                    Tinting::None,    0,   false },
-        { Tiles::BambooTile,    { "bamboo_stalk", nullptr },                           Tinting::None,    0,   false },
+        // The leaves rather than the stalk. Minecraft tiles the stalk
+        // texture onto a 2px column and hangs the leaves off it as
+        // separate sprites; this engine draws one cross, and a fully
+        // opaque stalk texture on it came out as a solid green slab
+        // the width of the block.
+        { Tiles::BambooTile,    { "bamboo_large_leaves", "bamboo_stalk", nullptr },    Tinting::None,    0,   false },
+        { Tiles::CocoaStage0,   { "cocoa_stage0", nullptr },                           Tinting::None,    0,   false },
+        { Tiles::CocoaStage1,   { "cocoa_stage1", nullptr },                           Tinting::None,    0,   false },
+        { Tiles::CocoaStage2,   { "cocoa_stage2", nullptr },                           Tinting::None,    0,   false },
+        { Tiles::CakeTop,       { "cake_top", nullptr },                               Tinting::None,    0,   false },
+        { Tiles::CakeSide,      { "cake_side", nullptr },                              Tinting::None,    0,   false },
+        { Tiles::CakeBottom,    { "cake_bottom", nullptr },                            Tinting::None,    0,   false },
+        { Tiles::CakeInner,     { "cake_inner", nullptr },                             Tinting::None,    0,   false },
+        { Tiles::CandleTile,    { "candle", nullptr },                                 Tinting::None,    0,   false },
+        { Tiles::CandleLitTile, { "candle_lit", nullptr },                             Tinting::None,    0,   false },
+        { Tiles::ScaffoldTop,   { "scaffolding_top", nullptr },                        Tinting::None,    0,   false },
+        { Tiles::ScaffoldSide,  { "scaffolding_side", nullptr },                       Tinting::None,    0,   false },
+        { Tiles::ScaffoldBottom,{ "scaffolding_bottom", nullptr },                     Tinting::None,    0,   false },
         { Tiles::PistonTop,     { "piston_side", nullptr },                            Tinting::None,    0,   false },
         { Tiles::PistonSide,    { "piston_side", nullptr },                            Tinting::None,    0,   false },
         { Tiles::PistonFace,    { "piston_top", "piston_top_normal", nullptr },         Tinting::None,    0,   false },

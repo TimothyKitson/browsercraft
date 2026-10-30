@@ -320,6 +320,8 @@ void EntityManager::update(float deltaTime, const World& world,
         // whatever it drops belongs where it fell, not where it stopped.
         if (mob.takeDeathReport())
             m_deaths.push_back(Death{ mob.typeId(), mob.position(), mob.baby() });
+
+        if (mob.takeEggReport()) m_laidEggs.push_back(mob.position());
     }
 
     // Drop anything dead-and-done, or far enough off that nobody will
@@ -669,6 +671,13 @@ std::vector<EntityManager::Death> EntityManager::drainDeaths()
 {
     std::vector<Death> all;
     all.swap(m_deaths);
+    return all;
+}
+
+std::vector<glm::vec3> EntityManager::drainLaidEggs()
+{
+    std::vector<glm::vec3> all;
+    all.swap(m_laidEggs);
     return all;
 }
 

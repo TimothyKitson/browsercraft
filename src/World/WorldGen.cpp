@@ -2486,6 +2486,30 @@ void WorldGen::hangVines(Chunk& chunk, int worldX, int ground, int worldZ) const
         }
 }
 
+// A cocoa pod on the side of a jungle trunk. The only thing in the
+// game that grows on wood, and the only way to a cookie.
+void WorldGen::hangCocoa(Chunk& chunk, int worldX, int ground, int worldZ) const
+{
+    static const int DX[] = { 1, -1, 0, 0 };
+    static const int DZ[] = { 0, 0, 1, -1 };
+
+    for (int y = ground + 2; y <= ground + 6; ++y)
+    {
+        if (hashToFloat(hashCoords(worldX, y, worldZ, m_seed + 7811)) > 0.22f) continue;
+
+        const int side = static_cast<int>(
+            hashCoords(worldX, y + 64, worldZ, m_seed + 7812) % 4u);
+        const int wx = worldX + DX[side];
+        const int wz = worldZ + DZ[side];
+
+        // Ripeness is fixed at generation rather than grown in: a pod
+        // nobody has been near is as likely to be ready as not.
+        const int stage = static_cast<int>(
+            hashCoords(wx, y, wz, m_seed + 7813) % 3u);
+        put(chunk, wx, y, wz, cocoaAt(stage));
+    }
+}
+
 void WorldGen::decorate(Chunk& chunk) const
 {
     const int baseX = chunk.position().x * Chunk::SX;
@@ -2532,6 +2556,10 @@ void WorldGen::decorate(Chunk& chunk) const
             // tree rather than built into buildTree, so every wood
             // keeps the shape it had.
             if (here == Biome::Swamp) hangVines(chunk, wx, surface, wz);
+
+            // And cocoa on a jungle trunk, which is where Minecraft
+            // puts it and the only place it grows.
+            if (kind == TreeKind::Jungle) hangCocoa(chunk, wx, surface, wz);
         }
     }
 
