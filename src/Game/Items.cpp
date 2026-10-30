@@ -143,6 +143,7 @@ namespace
         { "Sign",            Tiles::ItemSign,          16 },
         { "Item Frame",      Tiles::ItemItemFrame,     64 },
         { "Elytra",          Tiles::ItemElytra,         1 },
+        { "Ghast Tear",      Tiles::ItemGhastTear,     64 },
         { "Shulker Shell",   Tiles::ItemShulkerShell,  64 },
         { "Trident",         Tiles::ItemTrident,        1 },
         { "Nether Star",     Tiles::ItemNetherStar,     1 },

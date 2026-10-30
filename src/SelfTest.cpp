@@ -3816,6 +3816,41 @@ namespace
         check(Tools::kindOf(Items::Trident) == Tools::Kind::Trident,
               "and it is its own kind of weapon");
 
+        section("the ghast");
+
+        const MobType& ghast = mobType(MobId::Ghast);
+        check(ghast.dimension == Dimension::Nether, "a ghast belongs to the Nether");
+        check(ghast.hoverHeight > 0.0f, "and hangs in the air");
+        check(ghast.arrowRange > mobType(MobId::Blaze).arrowRange,
+              "and shoots from further off than anything else down there");
+        check(ghast.fireproof, "lava does not trouble it");
+        check(ghast.drop == Items::GhastTear, "and it leaves a tear");
+
+        // Ten half-hearts and an enormous target: reaching one is the
+        // whole of the fight, not surviving it.
+        check(ghast.maxHealth < mobType(MobId::Blaze).maxHealth,
+              "it dies to almost anything that reaches it");
+        check(ghast.width >= 2.0f && ghast.height >= 2.0f, "but it is enormous");
+
+        // The tear is the only route to a drink that puts hearts back.
+        check(Brewing::isIngredient(Items::GhastTear), "a tear brews");
+        check(Brewing::brew(Brewing::Potion::Awkward, Items::GhastTear) ==
+                  Brewing::Potion::Regeneration,
+              "and what it makes is regeneration");
+        {
+            Effects::Kind kind = Effects::Kind::Speed;
+            int amplifier = 0;
+            float seconds = 0.0f;
+            check(Brewing::effectOf(Brewing::Potion::Regeneration, kind, amplifier, seconds),
+                  "which is something you drink rather than brew with");
+            check(kind == Effects::Kind::Regeneration, "and it regenerates");
+            check(seconds > 0.0f && seconds < 120.0f,
+                  "for a shorter while than the rest, because it is worth more");
+        }
+        check(Brewing::brew(Brewing::Potion::Water, Items::GhastTear) ==
+                  Brewing::Potion::Count,
+              "a tear does nothing to plain water");
+
         section("frogs and froglights");
 
         const MobType& frog = mobType(MobId::Frog);
@@ -5950,6 +5985,16 @@ namespace
             // The night list, the Nether's, and the End's.
             for (int k = 0; k < EntityManager::nightSpeciesCount(); ++k)
                 if (EntityManager::nightSpecies(k) == id) meetable = true;
+
+            // And the two other worlds' own lists, asked of the game
+            // rather than copied into the switch below. A ghast was
+            // added to the Nether's list and this test still called
+            // it unmeetable, which is the test being out of date
+            // rather than the game being wrong.
+            for (int k = 0; k < EntityManager::netherSpeciesCount(); ++k)
+                if (EntityManager::netherSpecies(k) == id) meetable = true;
+            for (int k = 0; k < EntityManager::endSpeciesCount(); ++k)
+                if (EntityManager::endSpecies(k) == id) meetable = true;
 
             // What a cage sends out.
             for (Dimension where : { Dimension::Overworld, Dimension::Nether, Dimension::End })

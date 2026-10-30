@@ -401,6 +401,7 @@ namespace Tiles
         ItemSign,
         ItemItemFrame,
         ItemElytra,
+        ItemGhastTear,
         ItemShulkerShell,
         ItemTrident,
 

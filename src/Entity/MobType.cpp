@@ -377,6 +377,62 @@ namespace
             t.model.push_back(mirrored(mc(Part::LegBackLeft, 0, 24, 2, 2, 2, -4, 22, -4, 0, 0, 0)));
         }
         {
+            // The ghast. It hangs in the air, it is enormous, and it
+            // shoots from further off than anything else in the game.
+            // A Nether with nothing above the floor is a corridor.
+            MobType& t = table[static_cast<size_t>(MobId::Ghast)];
+            t.id = MobId::Ghast;
+            t.experience = 5;
+            t.voice = Sound::MobGhastSay;
+            t.hurtVoice = Sound::MobGhastHurt;
+            t.deathVoice = Sound::MobGhastDeath;
+            t.name = "Ghast";
+            t.texture = "ghast";
+            t.sheetWidth = 64;
+            t.sheetHeight = 64;
+            t.dimension = Dimension::Nether;
+            t.spawnClass = SpawnClass::Hostile;
+
+            // Ten half-hearts and an enormous target: Minecraft's
+            // ghast dies to almost anything that reaches it, and
+            // reaching it is the whole of the fight.
+            t.maxHealth = 10;
+            t.width = 3.0f;
+            t.height = 3.0f;
+            t.walkSpeed = 1.4f;
+            t.limbSwing = 0.3f;
+            t.hoverHeight = 7.0f;
+            t.fireproof = true;
+
+            // Drawn twice the size the boxes say, like the dragon: a
+            // ghast at box size is a balloon, and the whole of the
+            // thing is that it fills the sky.
+            t.modelScale = 2.0f;
+
+            t.shootsFire = true;
+            t.arrowDamage = 6;
+            t.arrowRange = 28.0f;
+            t.arrowInterval = 3.2f;
+
+            t.drop = Items::GhastTear;
+            t.dropCount = 1;
+            t.secondDrop = Items::Gunpowder;
+            t.secondDropCount = 1;
+
+            t.bodyColour = rgb(228, 228, 228);
+            t.headColour = rgb(240, 240, 240);
+            t.eyeColour = rgb(40, 20, 30);
+
+            // A box with tentacles under it. Nine in Minecraft; four
+            // here, because the other five are behind the first four
+            // from every angle anybody sees one from.
+            t.model.push_back(mc(Part::Body, 0, 0, 16, 16, 16, -8, -8, -8, 0, 0, 0));
+            t.model.push_back(mc(Part::LegFrontRight, 0, 34, 2, 16, 2, 4, 8, 4, 0, 0, 0));
+            t.model.push_back(mirrored(mc(Part::LegFrontLeft, 0, 34, 2, 16, 2, -6, 8, 4, 0, 0, 0)));
+            t.model.push_back(mc(Part::LegBackRight, 0, 34, 2, 16, 2, 4, 8, -6, 0, 0, 0));
+            t.model.push_back(mirrored(mc(Part::LegBackLeft, 0, 34, 2, 16, 2, -6, 8, -6, 0, 0, 0)));
+        }
+        {
             MobType& t = table[static_cast<size_t>(MobId::Skeleton)];
             t.id = MobId::Skeleton;
             t.experience = 5;

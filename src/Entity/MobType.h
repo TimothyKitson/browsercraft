@@ -42,6 +42,10 @@ enum class MobId : uint8_t
     // back outside a monument.
     Drowned,
 
+    // The thing everyone remembers about the Nether: huge, slow, and
+    // it shoots fire from across the room.
+    Ghast,
+
     // What a swamp is missing. It eats a magma cube and leaves a
     // light behind, which is the only way to a froglight.
     Frog,

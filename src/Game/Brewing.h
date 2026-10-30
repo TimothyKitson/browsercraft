@@ -24,6 +24,11 @@ namespace Brewing
         Strength,
         NightVision,
         FireResistance,
+
+        // What a ghast's tear makes. The only drink in the game that
+        // puts hearts back rather than keeping them on.
+        Regeneration,
+
         Count
     };
 

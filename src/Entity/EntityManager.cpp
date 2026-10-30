@@ -32,7 +32,7 @@ namespace
     // The Nether has its own, and nothing else belongs there: a sheep on
     // netherrack and a piglin in a meadow are both wrong.
     const MobId NETHER_SPECIES[] = { MobId::ZombiePigman, MobId::WitherSkeleton,
-                                     MobId::MagmaCube, MobId::Blaze };
+                                     MobId::MagmaCube, MobId::Blaze, MobId::Ghast };
 
     // The End has endermen and nothing else, which is also true of
     // Minecraft's. The enderman is the one species in two lists: it
@@ -116,6 +116,28 @@ MobId EntityManager::nightSpecies(int index)
 {
     const int count = nightSpeciesCount();
     return HOSTILE_SPECIES[((index % count) + count) % count];
+}
+
+int EntityManager::netherSpeciesCount()
+{
+    return static_cast<int>(std::size(NETHER_SPECIES));
+}
+
+MobId EntityManager::netherSpecies(int index)
+{
+    const int count = netherSpeciesCount();
+    return NETHER_SPECIES[((index % count) + count) % count];
+}
+
+int EntityManager::endSpeciesCount()
+{
+    return static_cast<int>(std::size(END_SPECIES));
+}
+
+MobId EntityManager::endSpecies(int index)
+{
+    const int count = endSpeciesCount();
+    return END_SPECIES[((index % count) + count) % count];
 }
 
 bool EntityManager::fits(const World& world, const MobType& type, const glm::vec3& feet) const

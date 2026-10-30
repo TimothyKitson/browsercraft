@@ -11,6 +11,7 @@ const char* Brewing::name(Potion potion)
         case Potion::Strength:    return "Potion of Strength";
         case Potion::NightVision: return "Potion of Night Vision";
         case Potion::FireResistance: return "Potion of Fire Resistance";
+        case Potion::Regeneration: return "Potion of Regeneration";
         case Potion::Count:       break;
     }
     return "Potion";
@@ -34,6 +35,11 @@ bool Brewing::effectOf(Potion potion, Effects::Kind& kind, int& amplifier, float
             kind = Effects::Kind::NightVision; amplifier = 0; seconds = 180.0f; return true;
         case Potion::FireResistance:
             kind = Effects::Kind::FireResistance; amplifier = 0; seconds = 180.0f; return true;
+
+        // Shorter than the rest, because what it does is worth more:
+        // forty-five seconds is Minecraft's and is about four hearts.
+        case Potion::Regeneration:
+            kind = Effects::Kind::Regeneration; amplifier = 0; seconds = 45.0f; return true;
 
         // Nothing to drink for: these are stages on the way.
         case Potion::Water:
@@ -59,6 +65,7 @@ Brewing::Potion Brewing::brew(Potion base, StackId ingredient)
         case Items::BlazePowder:   return Potion::Strength;
         case Items::GlowstoneDust: return Potion::NightVision;
         case Items::MagmaCream:    return Potion::FireResistance;
+        case Items::GhastTear:     return Potion::Regeneration;
         default:                   return Potion::Count;
     }
 }
@@ -67,5 +74,5 @@ bool Brewing::isIngredient(StackId id)
 {
     return id == Items::NetherWart || id == Items::Sugar ||
            id == Items::BlazePowder || id == Items::GlowstoneDust ||
-           id == Items::MagmaCream;
+           id == Items::MagmaCream || id == Items::GhastTear;
 }

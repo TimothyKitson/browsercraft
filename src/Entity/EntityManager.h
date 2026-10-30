@@ -20,6 +20,15 @@ public:
     static int nightSpeciesCount();
     static MobId nightSpecies(int index);
 
+    // The two other worlds' own lists. Exposed for the same reason
+    // the night one is: --selftest asks what can actually spawn
+    // rather than keeping its own copy of the answer, which is how a
+    // ghast came to exist with nowhere to appear.
+    static int netherSpeciesCount();
+    static MobId netherSpecies(int index);
+    static int endSpeciesCount();
+    static MobId endSpecies(int index);
+
     static constexpr int MAX_MOBS = 48;
     static constexpr float SPAWN_MIN_DISTANCE = 22.0f;
     static constexpr float SPAWN_MAX_DISTANCE = 44.0f;

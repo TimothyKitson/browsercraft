@@ -307,6 +307,8 @@ void AudioEngine::buildSounds()
                  Sound::MobDrownedDeath, "mob/drowned");
     loadMobVoice(Sound::MobFrogSay, Sound::MobFrogHurt,
                  Sound::MobFrogDeath, "mob/frog");
+    loadMobVoice(Sound::MobGhastSay, Sound::MobGhastHurt,
+                 Sound::MobGhastDeath, "mob/ghast");
     loadVariants(Sound::Rain, "weather/rain", 1);
     loadVariants(Sound::Thunder, "weather/thunder", 1);
 
@@ -958,6 +960,30 @@ void AudioEngine::buildSounds()
         s.addTone(0.34f, 260.0f, 110.0f, 6.0f, 0.58f, true);
         s.addNoise(0.34f, 700.0f, 7.0f, 0.22f, true, 903);
         s.finish(0.58f);
+    }
+
+    // The ghast: a long wail that falls away. Mostly tone, almost no
+    // noise, and slower than anything else in the game -- which is
+    // what makes one audible across a cavern before it is visible.
+    {
+        Synth s = make(Sound::MobGhastSay);
+        s.addTone(1.60f, 520.0f, 300.0f, 1.1f, 0.52f, true);
+        s.addTone(1.60f, 262.0f, 150.0f, 1.0f, 0.34f, true);
+        s.addNoise(0.50f, 1600.0f, 2.2f, 0.08f, true, 911);
+        s.finish(0.62f);
+    }
+    {
+        Synth s = make(Sound::MobGhastHurt);
+        s.addTone(0.34f, 760.0f, 380.0f, 8.0f, 0.60f, true);
+        s.addNoise(0.26f, 2200.0f, 10.0f, 0.16f, false, 912);
+        s.finish(0.64f);
+    }
+    {
+        Synth s = make(Sound::MobGhastDeath);
+        s.addTone(1.90f, 440.0f, 110.0f, 1.3f, 0.56f, true);
+        s.addTone(1.90f, 220.0f, 60.0f, 1.2f, 0.36f, true);
+        s.addNoise(0.90f, 900.0f, 2.0f, 0.12f, true, 913);
+        s.finish(0.66f);
     }
 
     // The breeze: wind, which is noise with no tone under it and a

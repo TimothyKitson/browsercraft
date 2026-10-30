@@ -2894,6 +2894,26 @@ namespace
         t.speckle(5, 645);
     }
 
+    void paintItemGhastTear(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        // A teardrop: round at the bottom, drawn to a point at the top.
+        for (int y = 3; y < 14; ++y)
+        {
+            const float along = (y - 3) / 10.0f;
+            const int wide = 1 + static_cast<int>(along * 4.0f);
+            for (int o = -wide; o <= wide; ++o)
+            {
+                const int x = 8 + o;
+                if (x < 0 || x >= Tile::N) continue;
+                t.set(x, y, (o < 0) ? Color{ 228, 240, 224 }
+                                    : Color{ 186, 212, 190 });
+            }
+        }
+        t.set(8, 5, Color{ 248, 252, 248 });
+        t.set(7, 6, Color{ 248, 252, 248 });
+    }
+
     void paintItemShulkerShell(Tile& t)
     {
         t.fill(Color{ 0, 0, 0, 0 });
@@ -5855,6 +5875,7 @@ namespace
         { Tiles::VerdantFroglightSide, paintVerdantSide },
         { Tiles::PearlescentFroglightTop, paintPearlTop },
         { Tiles::PearlescentFroglightSide, paintPearlSide },
+        { Tiles::ItemGhastTear, paintItemGhastTear },
         { Tiles::ItemShulkerShell, paintItemShulkerShell },
         { Tiles::ItemTrident, paintItemTrident },
         { Tiles::ItemBowl, paintItemBowl },
@@ -6148,6 +6169,7 @@ namespace
         { Tiles::ItemSign, { "oak_sign", nullptr, nullptr } },
         { Tiles::ItemItemFrame, { "item_frame", nullptr, nullptr } },
         { Tiles::ItemElytra, { "elytra", nullptr, nullptr } },
+        { Tiles::ItemGhastTear, { "ghast_tear", nullptr, nullptr } },
         { Tiles::ItemShulkerShell, { "shulker_shell", nullptr, nullptr } },
         { Tiles::ItemTrident, { "trident", nullptr, nullptr } },
     };

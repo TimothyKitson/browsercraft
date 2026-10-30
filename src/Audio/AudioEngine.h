@@ -107,6 +107,9 @@ enum class Sound : uint8_t
     MobFrogSay,
     MobFrogHurt,
     MobFrogDeath,
+    MobGhastSay,
+    MobGhastHurt,
+    MobGhastDeath,
     Rain,
     Thunder,
 

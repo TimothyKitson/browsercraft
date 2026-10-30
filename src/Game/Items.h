@@ -216,6 +216,10 @@ namespace Items
         // can be carried.
         ShulkerShell,
 
+        // What a ghast leaves. Brewed, it is the only thing in the
+        // game that puts hearts back on their own.
+        GhastTear,
+
         // Off a drowned, now and then. The hardest swing in the game
         // short of a mace at the end of a fall. Minecraft throws it
         // as well; nothing here can throw a thing and get it back.
