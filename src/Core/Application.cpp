@@ -101,9 +101,18 @@ namespace
         return buffer;
     }
 
-    // Hotbar / inventory geometry, in pixels before UI scaling.
+    // The container panels -- inventory, chest, furnace, the lot -- were
+    // laid out in pixels of their own, with a slot 46 of them across.
+    // Minecraft's slot is 16, so they are drawn at this many interface
+    // pixels to one of their own: every offset in them then comes out
+    // at Minecraft's size without each one being rewritten.
     constexpr float SLOT_SIZE = 46.0f;
     constexpr float SLOT_GAP = 4.0f;
+    constexpr float PANEL_UNIT = 16.0f / SLOT_SIZE;
+
+    // And text drawn on a panel, which wants to come out the same size
+    // as every other line of text in the game.
+    constexpr float PANEL_TEXT = 1.0f / PANEL_UNIT;
 
     // The HUD, in Minecraft's own interface pixels. Every one of these
     // is a number out of the vanilla client rather than a guess: the
@@ -9912,6 +9921,21 @@ void Application::renderHud()
 
 // ---------------------------------------------------------------- menus ---
 
+// Draws in the panel's own units for as long as it is in scope, which
+// is how a menu written in them comes out at Minecraft's size.
+namespace
+{
+    struct ScopedPanelUnits
+    {
+        UIRenderer& ui;
+        explicit ScopedPanelUnits(UIRenderer& renderer, int scale) : ui(renderer)
+        {
+            ui.setScale(static_cast<float>(scale) * PANEL_UNIT);
+        }
+        ~ScopedPanelUnits() { ui.setScale(1.0f); }
+    };
+}
+
 void Application::roundedQuad(float x, float y, float w, float h,
                               const glm::vec4& colour, float radius)
 {
@@ -9941,15 +9965,14 @@ void Application::roundedQuad(float x, float y, float w, float h,
 void Application::bevel(float x, float y, float w, float h, const glm::vec4& face,
                         const glm::vec4& light, const glm::vec4& dark, float edge)
 {
-    const float radius = std::min(6.0f, std::min(w, h) * 0.22f);
-
-    // Three stacked rounded rectangles: a lit one, a shaded one pushed
-    // down and right so only that side of it shows, and the face on top.
-    // Doing it this way means the bevel follows the curve for free.
-    roundedQuad(x, y, w, h, light, radius);
-    roundedQuad(x + edge, y + edge, w - edge, h - edge, dark, radius);
-    roundedQuad(x + edge, y + edge, w - edge * 2.0f, h - edge * 2.0f, face,
-                std::max(1.0f, radius - edge * 0.5f));
+    // Three stacked rectangles, square-cornered: a lit one, a shaded
+    // one pushed down and right so only that side of it shows, and the
+    // face on top. Minecraft's panels have no curve anywhere on them --
+    // every edge is one hard pixel -- and a rounded corner beside this
+    // font reads as a rendering mistake.
+    m_ui.quad(x, y, w, h, light);
+    m_ui.quad(x + edge, y + edge, w - edge, h - edge, dark);
+    m_ui.quad(x + edge, y + edge, w - edge * 2.0f, h - edge * 2.0f, face);
 }
 
 
@@ -9957,7 +9980,7 @@ void Application::guiPanel(float x, float y, float w, float h)
 {
     // A dark outline first: vanilla panels sit on a one-pixel black edge,
     // which is what keeps them from dissolving into a bright sky.
-    roundedQuad(x - 2.0f, y - 2.0f, w + 4.0f, h + 4.0f, glm::vec4(0.0f, 0.0f, 0.0f, 0.70f), 5.0f);
+    m_ui.quad(x - 3.0f, y - 3.0f, w + 6.0f, h + 6.0f, glm::vec4(0.0f, 0.0f, 0.0f, 0.70f));
     bevel(x, y, w, h, GUI_PANEL, GUI_PANEL_LIGHT, GUI_PANEL_DARK, 3.0f);
 }
 
@@ -9974,8 +9997,10 @@ bool Application::menuButton(const Rect& rect, const std::string& label, bool en
     // to whatever the real cursor is doing.
     const bool acceptClicks = !m_automated;
 
-    const float mouseX = static_cast<float>(m_input.mouseX());
-    const float mouseY = static_cast<float>(m_input.mouseY());
+    // The rect is in whatever units the screen is being drawn in, so
+    // the cursor has to be read in them too.
+    const float mouseX = static_cast<float>(m_input.mouseX()) / m_ui.scale();
+    const float mouseY = static_cast<float>(m_input.mouseY()) / m_ui.scale();
     const bool hovered = enabled &&
                          mouseX >= rect.x && mouseX <= rect.x + rect.w &&
                          mouseY >= rect.y && mouseY <= rect.y + rect.h;
@@ -9983,11 +10008,11 @@ bool Application::menuButton(const Rect& rect, const std::string& label, bool en
     const glm::vec4 face = !enabled ? BUTTON_FACE_OFF
                                     : (hovered ? BUTTON_FACE_HOVER : BUTTON_FACE);
 
-    roundedQuad(rect.x - 2.0f, rect.y - 2.0f, rect.w + 4.0f, rect.h + 4.0f,
-                glm::vec4(0.0f, 0.0f, 0.0f, 0.75f), 5.0f);
+    m_ui.quad(rect.x - 3.0f, rect.y - 3.0f, rect.w + 6.0f, rect.h + 6.0f,
+              glm::vec4(0.0f, 0.0f, 0.0f, 0.75f));
     bevel(rect.x, rect.y, rect.w, rect.h, face, BUTTON_LIGHT, BUTTON_DARK, 2.0f);
 
-    const float scale = 2.4f;
+    const float scale = PANEL_TEXT;
     const glm::vec4 textColour = !enabled ? BUTTON_TEXT_OFF
                                           : (hovered ? BUTTON_TEXT_HOVER : TEXT_COLOR);
     m_ui.textWithShadow(label,
@@ -10000,14 +10025,15 @@ bool Application::menuButton(const Rect& rect, const std::string& label, bool en
 
 void Application::centredText(const std::string& text, float y, float scale, const glm::vec4& colour)
 {
-    const float w = static_cast<float>(m_window.width());
+    const float w = m_ui.canvasWidth();
     m_ui.textWithShadow(text, w * 0.5f - UIRenderer::textWidth(text, scale) * 0.5f, y, scale, colour);
 }
 
 void Application::renderTitleScreen()
 {
-    const float w = static_cast<float>(m_window.width());
-    const float h = static_cast<float>(m_window.height());
+    const ScopedPanelUnits panel(m_ui, guiScale());
+    const float w = m_ui.canvasWidth();
+    const float h = m_ui.canvasHeight();
 
     m_ui.quad(0, 0, w, h, glm::vec4(0.0f, 0.0f, 0.0f, 0.30f));
 
@@ -10104,8 +10130,9 @@ void Application::renderTitleScreen()
 
 void Application::renderSingleplayerScreen()
 {
-    const float w = static_cast<float>(m_window.width());
-    const float h = static_cast<float>(m_window.height());
+    const ScopedPanelUnits panel(m_ui, guiScale());
+    const float w = m_ui.canvasWidth();
+    const float h = m_ui.canvasHeight();
 
     m_ui.quad(0, 0, w, h, glm::vec4(0.0f, 0.0f, 0.0f, 0.45f));
     centredText("Singleplayer", h * 0.13f, 4.4f, TEXT_COLOR);
@@ -10158,8 +10185,9 @@ void Application::renderSingleplayerScreen()
 
 void Application::renderMultiplayerScreen()
 {
-    const float w = static_cast<float>(m_window.width());
-    const float h = static_cast<float>(m_window.height());
+    const ScopedPanelUnits panel(m_ui, guiScale());
+    const float w = m_ui.canvasWidth();
+    const float h = m_ui.canvasHeight();
 
     m_ui.quad(0, 0, w, h, glm::vec4(0.0f, 0.0f, 0.0f, 0.45f));
     centredText("Multiplayer", h * 0.10f, 4.4f, TEXT_COLOR);
@@ -10234,8 +10262,9 @@ void Application::renderMultiplayerScreen()
 
 void Application::renderSettingsScreen()
 {
-    const float w = static_cast<float>(m_window.width());
-    const float h = static_cast<float>(m_window.height());
+    const ScopedPanelUnits panel(m_ui, guiScale());
+    const float w = m_ui.canvasWidth();
+    const float h = m_ui.canvasHeight();
 
     m_ui.quad(0, 0, w, h, glm::vec4(0.0f, 0.0f, 0.0f, 0.45f));
     centredText("Settings", h * 0.13f, 4.4f, TEXT_COLOR);
@@ -10289,8 +10318,9 @@ void Application::renderSettingsScreen()
 
 void Application::renderControlsScreen()
 {
-    const float w = static_cast<float>(m_window.width());
-    const float h = static_cast<float>(m_window.height());
+    const ScopedPanelUnits panel(m_ui, guiScale());
+    const float w = m_ui.canvasWidth();
+    const float h = m_ui.canvasHeight();
 
     m_ui.quad(0, 0, w, h, glm::vec4(0.0f, 0.0f, 0.0f, 0.62f));
     centredText("Controls", h * 0.05f, 3.6f, TEXT_COLOR);
@@ -10367,8 +10397,9 @@ void Application::renderControlsScreen()
 
 void Application::renderNameEntryScreen()
 {
-    const float w = static_cast<float>(m_window.width());
-    const float h = static_cast<float>(m_window.height());
+    const ScopedPanelUnits panel(m_ui, guiScale());
+    const float w = m_ui.canvasWidth();
+    const float h = m_ui.canvasHeight();
 
     m_ui.quad(0, 0, w, h, glm::vec4(0.0f, 0.0f, 0.0f, 0.62f));
 
@@ -10511,8 +10542,9 @@ void Application::renderNameEntryScreen()
 
 void Application::renderPauseMenu()
 {
-    const float w = static_cast<float>(m_window.width());
-    const float h = static_cast<float>(m_window.height());
+    const ScopedPanelUnits panel(m_ui, guiScale());
+    const float w = m_ui.canvasWidth();
+    const float h = m_ui.canvasHeight();
 
     m_ui.quad(0, 0, w, h, glm::vec4(0.0f, 0.0f, 0.0f, 0.62f));
 
@@ -10568,8 +10600,9 @@ void Application::renderPauseMenu()
 
 void Application::renderDeathScreen()
 {
-    const float w = static_cast<float>(m_window.width());
-    const float h = static_cast<float>(m_window.height());
+    const ScopedPanelUnits panel(m_ui, guiScale());
+    const float w = m_ui.canvasWidth();
+    const float h = m_ui.canvasHeight();
 
     const bool hardcore = modeIsHardcore(m_gameMode);
 

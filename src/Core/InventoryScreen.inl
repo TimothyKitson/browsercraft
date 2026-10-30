@@ -242,9 +242,10 @@ void Application::drawItem(float x, float y, float size, StackId id, int count,
 {
     if (id == Blocks::Air) return;
 
-    // Minecraft leaves a clear margin around an item in its slot; at
-    // 11% the blocks looked wedged in.
-    const float inset = size * 0.19f;
+    // Minecraft draws a 16-pixel item inside an 18-pixel slot, so the
+    // only margin is the slot's own border. At 19 per cent the icons
+    // sat in the middle of their slots like stamps on envelopes.
+    const float inset = size * 0.0625f;
 
     if (!drawBlockIcon(x + inset, y + inset, size - inset * 2.0f, id, tint))
     {
@@ -317,8 +318,14 @@ void Application::drawPlayerDoll(const PlayerSkin& skin, float x, float y, float
 
 void Application::renderInventoryScreen()
 {
-    const float w = static_cast<float>(m_window.width());
-    const float h = static_cast<float>(m_window.height());
+    // Drawn in the panel's own units, which the scale turns into
+    // Minecraft's: a slot 46 of them across comes out 16 interface
+    // pixels, so the whole panel lands at vanilla's size and keeps
+    // its own arrangement.
+    m_ui.setScale(static_cast<float>(guiScale()) * PANEL_UNIT);
+
+    const float w = m_ui.canvasWidth();
+    const float h = m_ui.canvasHeight();
     const bool creative = m_player.creative();
 
     m_slotBoxes.clear();
@@ -388,7 +395,7 @@ void Application::renderInventoryScreen()
                                    : (m_crafterOpen ? "Crafter"
                                    : (m_furnaceOpen ? "Furnace"
                                    : (m_benchOpen ? "Crafting" : "Inventory"))));
-    m_ui.text(title, panelX + 10.0f, panelY + 10.0f, 2.2f, GUI_TEXT);
+    m_ui.text(title, panelX + 10.0f, panelY + 10.0f, PANEL_TEXT, GUI_TEXT);
 
     // --------------------------------------------- the open chest ---
     // A chest is the one container too big for a corner, so it takes the
@@ -435,7 +442,7 @@ void Application::renderInventoryScreen()
             }
 
         m_ui.text("Power it to Craft", panelX + SLOT_GAP + 4.0f * step,
-                  topY + SLOT_GAP + step, 1.6f, GUI_TEXT);
+                  topY + SLOT_GAP + step, PANEL_TEXT, GUI_TEXT);
     }
 
     // ------------------------------- armour, body preview, crafting ---
@@ -497,7 +504,7 @@ void Application::renderInventoryScreen()
             const float cell = SLOT_SIZE * 0.78f;
             const float rowHeight = cell + 3.0f;
 
-            m_ui.text(Trading::name(m_tradeWith), tx, ty, 1.6f, TEXT_COLOR);
+            m_ui.text(Trading::name(m_tradeWith), tx, ty, PANEL_TEXT, TEXT_COLOR);
 
             for (size_t row = 0; row < offers.size(); ++row)
             {
@@ -525,7 +532,7 @@ void Application::renderInventoryScreen()
                 }
                 cx += cell + 3.0f;
 
-                m_ui.text("->", cx, ry + cell * 0.28f, 1.6f,
+                m_ui.text("->", cx, ry + cell * 0.28f, PANEL_TEXT,
                           canPay ? TEXT_COLOR : TEXT_DIM);
                 cx += 22.0f;
 
@@ -589,7 +596,7 @@ void Application::renderInventoryScreen()
 
                 if (!offer.valid())
                 {
-                    m_ui.text("-", rowX + 10.0f, ry + 8.0f, 1.8f, TEXT_DIM);
+                    m_ui.text("-", rowX + 10.0f, ry + 8.0f, PANEL_TEXT, TEXT_DIM);
                     continue;
                 }
 
@@ -599,12 +606,12 @@ void Application::renderInventoryScreen()
                                                   ? glm::vec4(0.49f, 0.98f, 0.24f, 1.0f)
                                                   : glm::vec4(0.55f, 0.30f, 0.30f, 1.0f);
                 const std::string price = std::to_string(offer.cost);
-                m_ui.text(price, rowX + 8.0f, ry + 8.0f, 2.0f, priceColour);
+                m_ui.text(price, rowX + 8.0f, ry + 8.0f, PANEL_TEXT, priceColour);
 
                 std::string what = Enchanting::name(offer.kind);
                 what += " ";
                 what += std::to_string(offer.level);
-                m_ui.text(what, rowX + 42.0f, ry + 9.0f, 1.6f,
+                m_ui.text(what, rowX + 42.0f, ry + 9.0f, PANEL_TEXT,
                           affordable ? TEXT_COLOR : TEXT_DIM);
             }
 
@@ -612,7 +619,7 @@ void Application::renderInventoryScreen()
             // of the slot it ran straight across the player doll.
             const std::string shelves = std::to_string(m_enchantShelves) + " shelves";
             m_ui.text(shelves, rowX + 2.0f, ey + 3.0f * (rowHeight + 6.0f) + 4.0f,
-                      1.5f, TEXT_DIM);
+                      PANEL_TEXT, TEXT_DIM);
         }
         else
 
@@ -691,8 +698,8 @@ void Application::renderInventoryScreen()
                                         slots[i], xs[i], ay, SLOT_SIZE });
             }
 
-            m_ui.text("+", ax + step * 1.02f, ay + SLOT_SIZE * 0.26f, 2.0f, TEXT_DIM);
-            m_ui.text("->", ax + step * 2.33f, ay + SLOT_SIZE * 0.30f, 1.8f, TEXT_DIM);
+            m_ui.text("+", ax + step * 1.02f, ay + SLOT_SIZE * 0.26f, PANEL_TEXT, TEXT_DIM);
+            m_ui.text("->", ax + step * 2.33f, ay + SLOT_SIZE * 0.30f, PANEL_TEXT, TEXT_DIM);
 
             const Anvil::Result made = anvilResult();
             const int level = Experience::levelFor(m_player.experience);
@@ -700,14 +707,14 @@ void Application::renderInventoryScreen()
 
             if (made.tooExpensive)
             {
-                m_ui.text("Too expensive", ax, priceY, 1.6f,
+                m_ui.text("Too expensive", ax, priceY, PANEL_TEXT,
                           glm::vec4(0.80f, 0.30f, 0.30f, 1.0f));
             }
             else if (made.valid)
             {
                 const bool affordable = m_player.creative() || level >= made.levelCost;
                 const std::string price = "Cost: " + std::to_string(made.levelCost);
-                m_ui.text(price, ax, priceY, 1.6f,
+                m_ui.text(price, ax, priceY, PANEL_TEXT,
                           affordable ? glm::vec4(0.49f, 0.98f, 0.24f, 1.0f)
                                      : glm::vec4(0.55f, 0.30f, 0.30f, 1.0f));
             }
@@ -800,8 +807,8 @@ void Application::renderInventoryScreen()
 
         const float arrowX = craftX + craftSize * step + 4.0f;
         const float arrowY = craftY + (craftSize * step - SLOT_SIZE) * 0.5f;
-        m_ui.text("->", arrowX, arrowY + SLOT_SIZE * 0.5f - UIRenderer::textHeight(2.4f) * 0.5f,
-                  2.4f, GUI_TEXT);
+        m_ui.text("->", arrowX, arrowY + SLOT_SIZE * 0.5f - UIRenderer::textHeight(PANEL_TEXT) * 0.5f,
+                  PANEL_TEXT, GUI_TEXT);
 
         const float resultX = arrowX + 30.0f;
         // The result slot is drawn bigger, the way vanilla does.
@@ -878,16 +885,21 @@ void Application::renderInventoryScreen()
     const ItemStack& held = m_inventory.cursor();
     if (!held.empty())
     {
-        const float x = static_cast<float>(m_input.mouseX()) - SLOT_SIZE * 0.5f;
-        const float y = static_cast<float>(m_input.mouseY()) - SLOT_SIZE * 0.5f;
+        const float x = static_cast<float>(m_input.mouseX()) / m_ui.scale() - SLOT_SIZE * 0.5f;
+        const float y = static_cast<float>(m_input.mouseY()) / m_ui.scale() - SLOT_SIZE * 0.5f;
         drawItem(x, y, SLOT_SIZE, held.id, held.count, glm::vec4(1.0f), held.damage);
     }
+
+    m_ui.setScale(1.0f);
 }
 
 const Application::SlotBox* Application::slotBoxAt(int mouseX, int mouseY) const
 {
-    const float x = static_cast<float>(mouseX);
-    const float y = static_cast<float>(mouseY);
+    // The boxes were recorded in the panel's own units, so the cursor
+    // has to be read in them too.
+    const float unit = static_cast<float>(guiScale()) * PANEL_UNIT;
+    const float x = static_cast<float>(mouseX) / unit;
+    const float y = static_cast<float>(mouseY) / unit;
 
     for (const SlotBox& box : m_slotBoxes)
         if (x >= box.x && x < box.x + box.hitWidth() && y >= box.y && y < box.y + box.size)
