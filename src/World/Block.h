@@ -360,6 +360,14 @@ namespace Blocks
         Dropper,
         Dispenser,
 
+        // A geode: a hollow ball of amethyst buried in the rock, with
+        // a shell of calcite round it. The one thing underground that
+        // is worth finding for how it looks.
+        AmethystBlock,
+        BuddingAmethyst,
+        AmethystCluster,
+        SmoothBasalt,
+
         Count
     };
 }
@@ -484,6 +492,13 @@ inline bool isDeepDark(BlockId id)
 // Whether this block keeps a few item slots of its own. All three use
 // the same table the chests do: a block is a bare id with nowhere to
 // put contents, so they live beside the world.
+// What a geode is made of. Useful as one question because the whole
+// shell is tested together.
+inline bool isGeode(BlockId id)
+{
+    return id >= Blocks::AmethystBlock && id <= Blocks::SmoothBasalt;
+}
+
 inline bool isItemHolder(BlockId id)
 {
     return id == Blocks::Hopper || id == Blocks::Dropper || id == Blocks::Dispenser;

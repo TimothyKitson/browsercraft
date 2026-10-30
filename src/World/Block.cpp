@@ -264,6 +264,10 @@ namespace
         { "Hopper",       HopperTop,     HopperSide,     HopperSide,     true,  false, RenderType::Cube,   0,   3.0f },
         { "Dropper",      DropperFront,  Cobblestone,   Cobblestone,    true,  true,  RenderType::Cube,   0,   3.5f },
         { "Dispenser",    DispenserFront,Cobblestone,   Cobblestone,    true,  true,  RenderType::Cube,   0,   3.5f },
+        { "Block of Amethyst",AmethystTile,AmethystTile,  AmethystTile,   true,  true,  RenderType::Cube,   0,   1.5f },
+        { "Budding Amethyst",BuddingTile, BuddingTile,    BuddingTile,    true,  true,  RenderType::Cube,   0,   1.5f },
+        { "Amethyst Cluster",ClusterTile, ClusterTile,    ClusterTile,    false, false, RenderType::Cross,  5,   1.5f },
+        { "Smooth Basalt",SmoothBasaltTile,SmoothBasaltTile,SmoothBasaltTile,true,true,RenderType::Cube,   0,   1.25f },
     };
 }
 
@@ -443,6 +447,9 @@ Material blockMaterial(BlockId id)
     // wanted a pickaxe to break something with no hardness at all,
     // which the block table's own test caught. Again.
     if (id == Blocks::EndCrystal) return Material::Plant;
+
+    // A cluster is knocked off rather than mined, like a plant.
+    if (id == Blocks::AmethystCluster) return Material::Plant;
 
     switch (id)
     {

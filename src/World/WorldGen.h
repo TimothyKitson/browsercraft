@@ -167,6 +167,15 @@ public:
     // The ancient city, which is the one thing here that lives below
     // the ores. Minecraft puts it at the bottom of the deep dark; this
     // world's floor is y=0, so it sits just above the bedrock.
+    // A geode: a hollow ball of amethyst in a shell of calcite and
+    // smooth basalt. Minecraft puts them anywhere below the surface;
+    // these sit in the band between the ores and the deep, which is
+    // where somebody digging will actually run into one.
+    static constexpr float GEODE_CHANCE = 0.006f;
+    static constexpr uint32_t GEODE_SALT = 55123u;
+    static constexpr int GEODE_MIN = 16;
+    static constexpr int GEODE_MAX = 46;
+
     static constexpr int CITY_FLOOR = 8;
     static constexpr int CITY_HALF = 20;
     static constexpr int CITY_TALL = 14;
@@ -304,6 +313,7 @@ private:
     void hangVines(Chunk& chunk, int worldX, int ground, int worldZ) const;
     void dressSeabed(Chunk& chunk) const;
     void buildDesertWells(Chunk& chunk) const;
+    void buildGeodes(Chunk& chunk) const;
     void buildAncientCities(Chunk& chunk) const;
     void buildEndCities(Chunk& chunk) const;
     void buildEndPillars(Chunk& chunk) const;

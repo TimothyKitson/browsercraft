@@ -1421,6 +1421,7 @@ bool Application::frame()
             m_startupScreen == "hut" || m_startupScreen == "swamp" ||
             m_startupScreen == "dragon" ||
             m_startupScreen == "wither" ||
+            m_startupScreen == "geode" ||
             m_startupScreen == "city" || m_startupScreen == "bastion" ||
             m_startupScreen == "endcity" ||
             m_startupScreen == "shipwreck" || m_startupScreen == "monument" ||
@@ -1484,6 +1485,7 @@ bool Application::frame()
                                   m_startupScreen != "swamp" &&
                                   m_startupScreen != "dragon" &&
                                   m_startupScreen != "wither" &&
+                                  m_startupScreen != "geode" &&
                                   m_startupScreen != "city" &&
                                   m_startupScreen != "bastion" &&
                                   m_startupScreen != "endcity" &&
@@ -2184,6 +2186,79 @@ bool Application::frame()
                 else
                 {
                     std::printf("No ancient city found\n");
+                    std::fflush(stdout);
+                }
+
+                m_player.mode = GameMode::Creative;
+                m_player.health = Player::MAX_HEALTH;
+            }
+
+            // Into a geode. Found by generating chunks and looking for
+            // one rather than by asking a grid: they go down by the
+            // spread, so there is no "nearest" to ask.
+            if (m_startupScreen == "geode")
+            {
+                const WorldGen& gen = m_world->generator();
+                bool found = false;
+                int standX = 0, standY = 0, standZ = 0;
+
+                for (int ring = 0; ring <= 60 && !found; ++ring)
+                    for (int cz = -ring; cz <= ring && !found; ++cz)
+                        for (int cx = -ring; cx <= ring && !found; ++cx)
+                        {
+                            if (ring > 0 && std::abs(cx) != ring && std::abs(cz) != ring)
+                                continue;
+                            if (!Structures::spreadAt(cx, cz, m_world->seed(),
+                                                      WorldGen::GEODE_SALT,
+                                                      WorldGen::GEODE_CHANCE))
+                                continue;
+
+                            Chunk probe(ChunkPos{ cx, cz });
+                            gen.generate(probe);
+
+                            for (int y = 2; y < Chunk::SY && !found; ++y)
+                                for (int lx = 0; lx < Chunk::SX && !found; ++lx)
+                                    for (int lz = 0; lz < Chunk::SZ && !found; ++lz)
+                                    {
+                                        if (probe.getBlock(lx, y, lz) != Blocks::Air) continue;
+                                        if (probe.getBlock(lx, y - 1, lz) !=
+                                            Blocks::AmethystBlock &&
+                                            probe.getBlock(lx, y - 1, lz) !=
+                                            Blocks::BuddingAmethyst)
+                                            continue;
+
+                                        standX = cx * Chunk::SX + lx;
+                                        standY = y;
+                                        standZ = cz * Chunk::SZ + lz;
+                                        found = true;
+                                    }
+                        }
+
+                if (found)
+                {
+                    m_player.position = glm::vec3(static_cast<float>(standX) + 0.5f,
+                                                  static_cast<float>(standY),
+                                                  static_cast<float>(standZ) + 0.5f);
+                    m_player.velocity = glm::vec3(0.0f);
+                    m_player.flying = true;
+                    m_placeOnSurface = false;
+                    m_camera.setOrientation(-90.0f, -6.0f);
+                    m_camera.addLook(0.0f, 0.0f, 0.0f);
+
+                    // A geode is unlit, and an unlit shot of one is a
+                    // black square.
+                    m_pendingArena = true;
+                    m_arenaKind = ArenaKind::CaveProps;
+                    m_arenaX = standX;
+                    m_arenaY = standY;
+                    m_arenaZ = standZ;
+
+                    std::printf("Geode at %d, %d, %d\n", standX, standY, standZ);
+                    std::fflush(stdout);
+                }
+                else
+                {
+                    std::printf("No geode found\n");
                     std::fflush(stdout);
                 }
 

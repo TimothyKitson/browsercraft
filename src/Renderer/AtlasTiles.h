@@ -220,6 +220,10 @@ namespace Tiles
         HopperSide,
         DropperFront,
         DispenserFront,
+        AmethystTile,
+        BuddingTile,
+        ClusterTile,
+        SmoothBasaltTile,
 
         RainDrop,
         SnowFlake,

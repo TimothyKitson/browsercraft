@@ -5741,6 +5741,112 @@ namespace
               "a hopper moves at a steady rate rather than instantly");
     }
 
+    void testGeodes()
+    {
+        section("geodes");
+
+        constexpr uint32_t SEED = 4242u;
+        const WorldGen generator(SEED);
+
+        // Rare enough to be worth finding. A geode behind every wall
+        // would be scenery rather than a find.
+        check(WorldGen::GEODE_CHANCE > 0.0f && WorldGen::GEODE_CHANCE < 0.02f,
+              "a geode is rare enough to be worth running into");
+
+        bool looked = false;
+        for (int ring = 0; ring <= 60 && !looked; ++ring)
+            for (int cz = -ring; cz <= ring && !looked; ++cz)
+                for (int cx = -ring; cx <= ring && !looked; ++cx)
+                {
+                    if (ring > 0 && std::abs(cx) != ring && std::abs(cz) != ring) continue;
+                    if (!Structures::spreadAt(cx, cz, SEED, WorldGen::GEODE_SALT,
+                                              WorldGen::GEODE_CHANCE))
+                        continue;
+
+                    int amethyst = 0, budding = 0, clusters = 0;
+                    int calcite = 0, basalt = 0, hollow = 0;
+                    int lowest = 999, highest = 0;
+
+                    for (int dz = -1; dz <= 1; ++dz)
+                        for (int dx = -1; dx <= 1; ++dx)
+                        {
+                            Chunk chunk(ChunkPos{ cx + dx, cz + dz });
+                            generator.generate(chunk);
+
+                            for (int y = 0; y < Chunk::SY; ++y)
+                                for (int lx = 0; lx < Chunk::SX; ++lx)
+                                    for (int lz = 0; lz < Chunk::SZ; ++lz)
+                                    {
+                                        const BlockId block = chunk.getBlock(lx, y, lz);
+                                        if (!isGeode(block) && block != Blocks::Calcite)
+                                            continue;
+
+                                        // Measured off the geode's own
+                                        // blocks only. Calcite turns up
+                                        // as an ordinary stone variant
+                                        // all through the rock, so
+                                        // bounding on it said the geode
+                                        // reached the bedrock.
+                                        if (isGeode(block))
+                                        {
+                                            lowest = std::min(lowest, y);
+                                            highest = std::max(highest, y);
+                                        }
+
+                                        switch (block)
+                                        {
+                                            case Blocks::AmethystBlock:   ++amethyst; break;
+                                            case Blocks::BuddingAmethyst: ++budding; break;
+                                            case Blocks::AmethystCluster: ++clusters; break;
+                                            case Blocks::SmoothBasalt:    ++basalt; break;
+                                            case Blocks::Calcite:         ++calcite; break;
+                                            default: break;
+                                        }
+                                    }
+                        }
+
+                    check(amethyst > 20, "a geode is lined with amethyst");
+                    check(budding > 0, "some of it budding, which is what makes it worth keeping");
+                    check(budding < amethyst, "but most of it plain");
+                    check(clusters > 0, "with clusters growing off the lining");
+                    check(calcite > 20, "a shell of calcite round it");
+                    check(basalt > 20, "and basalt round that");
+
+                    // It is hollow. A solid ball of amethyst would be
+                    // a seam, not a geode -- and you could not get in.
+                    for (int dz = -1; dz <= 1; ++dz)
+                        for (int dx = -1; dx <= 1; ++dx)
+                        {
+                            Chunk chunk(ChunkPos{ cx + dx, cz + dz });
+                            generator.generate(chunk);
+                            for (int y = lowest; y <= highest; ++y)
+                                for (int lx = 0; lx < Chunk::SX; ++lx)
+                                    for (int lz = 0; lz < Chunk::SZ; ++lz)
+                                        if (chunk.getBlock(lx, y, lz) == Blocks::Air) ++hollow;
+                        }
+                    check(hollow > 0, "and it is hollow, so there is something to walk into");
+
+                    // Underground, where somebody digging will meet it.
+                    check(lowest >= 2, "a geode sits above the bedrock");
+                    check(highest <= WorldGen::GEODE_MAX + 8,
+                          "and below the surface rather than poking out of a hillside");
+
+                    looked = true;
+                }
+
+        check(looked, "there is a geode somewhere near the origin");
+
+        // A cluster is knocked off rather than mined, so it must not
+        // want a pickaxe -- the mistake this block table has caught
+        // five times now.
+        check(blockMaterial(Blocks::AmethystCluster) == Material::Plant,
+              "a cluster comes off by hand rather than wanting a pickaxe");
+        check(isGeode(Blocks::AmethystBlock) && isGeode(Blocks::SmoothBasalt),
+              "the geode blocks are the geode's");
+        check(!isGeode(Blocks::Calcite),
+              "while calcite is its own block and turns up elsewhere too");
+    }
+
     void testFortressAndMineshaft()
     {
         section("the fortress and the mineshaft");
@@ -9442,6 +9548,7 @@ int runSelfTest()
     testBeacon();
     testRedstoneParts();
     testHopper();
+    testGeodes();
     testAncientCity();
     testOtherDimensionStructures();
     testSearchAgreesWithStamp();

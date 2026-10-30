@@ -182,6 +182,7 @@ void WorldGen::generate(Chunk& chunk) const
     buildMineshafts(chunk);
     buildLandmarks(chunk);
     buildDesertWells(chunk);
+    buildGeodes(chunk);
     buildAncientCities(chunk);
     dressSeabed(chunk);
     buildOceanStructures(chunk);
@@ -3770,4 +3771,96 @@ void WorldGen::buildEndPillars(Chunk& chunk) const
                     put(chunk, px + dx, top + dy, pz + dz, Blocks::Obsidian);
                 }
     }
+}
+
+// ---------------------------------------------------------------------
+// Geodes.
+//
+// A hollow ball of amethyst in a shell of calcite and smooth basalt,
+// buried in the rock. Laid down by the spread rather than a grid --
+// Minecraft scatters them the same way -- and the whole thing is built
+// out of one distance test, which is what makes a ball a ball rather
+// than a box with the corners filed off.
+//
+// The shells are what make it worth cutting into: you hit basalt,
+// which is odd enough underground to make you keep going, then
+// calcite, which tells you what you have found before you see it.
+// ---------------------------------------------------------------------
+void WorldGen::buildGeodes(Chunk& chunk) const
+{
+    const int chunkX = chunk.position().x;
+    const int chunkZ = chunk.position().z;
+
+    // A geode is about a dozen blocks across, so it can reach one
+    // chunk past the one it is centred in.
+    for (int dz = -1; dz <= 1; ++dz)
+        for (int dx = -1; dx <= 1; ++dx)
+        {
+            const int cx = chunkX + dx;
+            const int cz = chunkZ + dz;
+            if (!Structures::spreadAt(cx, cz, m_seed, GEODE_SALT, GEODE_CHANCE)) continue;
+
+            const int midX = cx * Chunk::SX + Chunk::SX / 2;
+            const int midZ = cz * Chunk::SZ + Chunk::SZ / 2;
+
+            const int midY = GEODE_MIN +
+                static_cast<int>(hashToFloat(hashCoords(cx, 31, cz, m_seed + GEODE_SALT)) *
+                                 static_cast<float>(GEODE_MAX - GEODE_MIN));
+
+            // Between five and seven across the middle, which is
+            // Minecraft's range and big enough to stand up in.
+            const int inner = 4 +
+                static_cast<int>(hashToFloat(hashCoords(cx, 32, cz, m_seed + GEODE_SALT)) * 3.0f);
+            const int outer = inner + 3;
+
+            for (int ox = -outer; ox <= outer; ++ox)
+                for (int oy = -outer; oy <= outer; ++oy)
+                    for (int oz = -outer; oz <= outer; ++oz)
+                    {
+                        const float away =
+                            std::sqrt(static_cast<float>(ox * ox + oy * oy + oz * oz));
+                        if (away > outer + 0.5f) continue;
+
+                        const int wx = midX + ox;
+                        const int wy = midY + oy;
+                        const int wz = midZ + oz;
+                        if (wy < 2 || wy >= Chunk::SY) continue;
+
+                        BlockId block;
+                        if (away > inner + 1.5f)      block = Blocks::SmoothBasalt;
+                        else if (away > inner + 0.4f) block = Blocks::Calcite;
+                        else if (away > inner - 0.8f)
+                        {
+                            // The lining. One block in eight is
+                            // budding, which is what makes a geode
+                            // worth coming back to rather than
+                            // stripping once.
+                            block = hashToFloat(hashCoords(wx, wy, wz, m_seed + 5601)) < 0.12f
+                                        ? Blocks::BuddingAmethyst
+                                        : Blocks::AmethystBlock;
+                        }
+                        else
+                        {
+                            block = Blocks::Air;
+                        }
+
+                        put(chunk, wx, wy, wz, block);
+                    }
+
+            // Clusters growing off the lining into the hollow. Done
+            // after the shell, or the shell would overwrite them.
+            for (int ox = -inner; ox <= inner; ++ox)
+                for (int oy = -inner; oy <= inner; ++oy)
+                    for (int oz = -inner; oz <= inner; ++oz)
+                    {
+                        const float away =
+                            std::sqrt(static_cast<float>(ox * ox + oy * oy + oz * oz));
+                        if (away < inner - 2.0f || away > inner - 0.8f) continue;
+                        if (hashToFloat(hashCoords(midX + ox, midY + oy, midZ + oz,
+                                                   m_seed + 5602)) > 0.22f)
+                            continue;
+
+                        put(chunk, midX + ox, midY + oy, midZ + oz, Blocks::AmethystCluster);
+                    }
+        }
 }

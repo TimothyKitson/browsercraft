@@ -1933,6 +1933,67 @@ namespace
     void paintDropperFront(Tile& t)   { paintThrowerFace(t, false); }
     void paintDispenserFront(Tile& t) { paintThrowerFace(t, true); }
 
+    // Amethyst. Violet with facets in it, which is the only colour
+    // underground that is not a shade of grey or brown.
+    void paintAmethystIn(Tile& t, Color body, bool budding)
+    {
+        t.fill(body);
+        for (int y = 0; y < Tile::N; ++y)
+            for (int x = 0; x < Tile::N; ++x)
+            {
+                const float facet = hash2(x / 3, y / 3, 511);
+                if (facet > 0.72f) t.set(x, y, shade(body, 30));
+                else if (facet < 0.28f) t.set(x, y, shade(body, -28));
+            }
+
+        // Budding amethyst has the buds showing on its faces, which
+        // is how you tell the block worth keeping from the one worth
+        // mining.
+        if (budding)
+            for (int i = 0; i < 5; ++i)
+            {
+                const int x = 2 + static_cast<int>(hash2(i, 0, 513) * 11.0f);
+                const int y = 2 + static_cast<int>(hash2(i, 1, 513) * 11.0f);
+                for (int d = 0; d < 3; ++d)
+                {
+                    t.set(x, y + d, Color{ 226, 186, 250 });
+                    t.set(x + 1, y + d, Color{ 186, 138, 222 });
+                }
+            }
+
+        t.speckle(5, 512);
+    }
+
+    void paintAmethyst(Tile& t) { paintAmethystIn(t, Color{ 134, 98, 178 }, false); }
+    void paintBudding(Tile& t)  { paintAmethystIn(t, Color{ 120, 86, 164 }, true); }
+
+    void paintCluster(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int spike = 0; spike < 5; ++spike)
+        {
+            const int x = 2 + spike * 3;
+            const int tall = 6 + static_cast<int>(hash2(spike, 0, 515) * 7.0f);
+            for (int k = 0; k < tall; ++k)
+            {
+                const int y = Tile::N - 1 - k;
+                const int wide = (k < tall - 3) ? 1 : 0;
+                for (int w = -wide; w <= wide; ++w)
+                    t.set(x + w, y, (k > tall - 4) ? Color{ 232, 198, 252 }
+                                                   : Color{ 170, 124, 212 });
+            }
+        }
+    }
+
+    void paintSmoothBasalt(Tile& t)
+    {
+        t.fill(Color{ 62, 60, 66 });
+        for (int y = 0; y < Tile::N; ++y)
+            for (int x = 0; x < Tile::N; ++x)
+                if (hash2(x, y, 517) > 0.80f) t.set(x, y, Color{ 74, 72, 80 });
+        t.speckle(3, 518);
+    }
+
     void paintSpawnerIn(Tile& t, Color bars, Color inside)
     {
         t.fill(inside);
@@ -4598,6 +4659,10 @@ namespace
         { Tiles::HopperSide, paintHopperSide },
         { Tiles::DropperFront, paintDropperFront },
         { Tiles::DispenserFront, paintDispenserFront },
+        { Tiles::AmethystTile, paintAmethyst },
+        { Tiles::BuddingTile, paintBudding },
+        { Tiles::ClusterTile, paintCluster },
+        { Tiles::SmoothBasaltTile, paintSmoothBasalt },
         { Tiles::Obsidian, paintObsidian },
         { Tiles::TallGrass, paintTallGrass },
         { Tiles::FlowerRed, paintFlowerRed },
@@ -4972,6 +5037,10 @@ namespace
         { Tiles::HopperSide,    { "hopper_outside", nullptr },                         Tinting::None,    0,   false },
         { Tiles::DropperFront,  { "dropper_front", nullptr },                          Tinting::None,    0,   false },
         { Tiles::DispenserFront, { "dispenser_front", nullptr },                       Tinting::None,    0,   false },
+        { Tiles::AmethystTile,  { "amethyst_block", nullptr },                         Tinting::None,    0,   false },
+        { Tiles::BuddingTile,   { "budding_amethyst", nullptr },                       Tinting::None,    0,   false },
+        { Tiles::ClusterTile,   { "amethyst_cluster", nullptr },                       Tinting::None,    0,   false },
+        { Tiles::SmoothBasaltTile, { "smooth_basalt", nullptr },                       Tinting::None,    0,   false },
         { Tiles::PistonTop,     { "piston_side", nullptr },                            Tinting::None,    0,   false },
         { Tiles::PistonSide,    { "piston_side", nullptr },                            Tinting::None,    0,   false },
         { Tiles::PistonFace,    { "piston_top", "piston_top_normal", nullptr },         Tinting::None,    0,   false },
