@@ -307,6 +307,27 @@ struct MobType
     // despawn, and nothing else in the world is allowed to be one.
     bool boss = false;
 
+    // What the skin painter does with a second colour. Most of what
+    // tells one animal from another at this size is not its shape --
+    // a fox and a wolf are the same boxes -- it is the markings, and
+    // without them everything painted in code was a flat-coloured
+    // box with two eyes on the front.
+    enum class Pattern : uint8_t
+    {
+        Plain,      // one colour, the way it always was
+        Patches,    // irregular blotches: a cow, a panda, a llama
+        Stripes,    // bands across the body: a bee
+        Belly,      // a pale underside: a fox, a fish, a camel
+        Speckled,   // a fine grain of the second colour: a fish, a slime
+    };
+
+    Pattern pattern = Pattern::Plain;
+
+    // The colour the pattern is drawn in. Nought means "work one out
+    // from the body", which is what most animals want: a paler belly
+    // and a darker blotch are both the body colour moved.
+    uint32_t markColour = 0;
+
     Sound voice = Sound::MobPigSay;
     Sound hurtVoice = Sound::MobPigHurt;
     Sound deathVoice = Sound::MobPigDeath;

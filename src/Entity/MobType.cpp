@@ -216,6 +216,10 @@ namespace
             t.bodyColour = rgb(234, 234, 230);
             t.headColour = rgb(234, 234, 230);
             t.eyeColour = rgb(190, 60, 40);
+            t.pattern = MobType::Pattern::Patches;
+            t.markColour = rgb(216, 136, 136);
+            t.pattern = MobType::Pattern::Patches;
+            t.markColour = rgb(242, 240, 236);
             t.model.push_back(mc(Part::Head, 0, 0, 4, 6, 3, -2, -6, -2, 0, 15, -4));
             t.model.push_back(mc(Part::Head, 14, 0, 4, 2, 2, -2, -4, -4, 0, 15, -4));
             t.model.push_back(mc(Part::Head, 14, 4, 2, 2, 2, -1, -2, -3, 0, 15, -4));
@@ -330,6 +334,8 @@ namespace
             t.bodyColour = rgb(44, 96, 104);
             t.headColour = rgb(62, 128, 118);
             t.eyeColour = rgb(140, 200, 190);
+            t.pattern = MobType::Pattern::Speckled;
+            t.markColour = rgb(44, 96, 86);
 
             t.model.push_back(mc(Part::Head, 0, 0, 8, 8, 8, -4, -8, -4, 0, 0, 0));
             t.model.push_back(mc(Part::Body, 16, 16, 8, 12, 4, -4, 0, -2, 0, 0, 0));
@@ -367,6 +373,8 @@ namespace
             t.bodyColour = rgb(140, 170, 92);
             t.headColour = rgb(164, 196, 108);
             t.eyeColour = rgb(226, 150, 60);
+            t.pattern = MobType::Pattern::Patches;
+            t.markColour = rgb(96, 128, 60);
 
             // A body with a head on the front of it and four stubby
             // legs: eight pixels tall in all, which is half a block.
@@ -410,6 +418,8 @@ namespace
             t.bodyColour = rgb(44, 70, 92);
             t.headColour = rgb(58, 88, 112);
             t.eyeColour = rgb(22, 30, 40);
+            t.pattern = MobType::Pattern::Speckled;
+            t.markColour = rgb(30, 50, 68);
 
             // A bell with four arms under it, which is the whole of
             // what a squid looks like from any angle.
@@ -564,6 +574,8 @@ namespace
             t.bodyColour = rgb(44, 38, 38);
             t.headColour = rgb(56, 48, 46);
             t.eyeColour = rgb(190, 40, 40);
+            t.pattern = MobType::Pattern::Patches;
+            t.markColour = rgb(120, 30, 28);
             t.model.push_back(mc(Part::Head, 32, 4, 8, 8, 8, -4, -4, -8, 0, 15, -3));
             t.model.push_back(mc(Part::Body, 0, 0, 6, 6, 6, -3, -3, -3, 0, 15, 0));
             t.model.push_back(mc(Part::Body, 0, 12, 10, 8, 12, -5, -4, -6, 0, 15, 9));
@@ -604,6 +616,8 @@ namespace
             t.bodyColour = rgb(18, 18, 22);
             t.headColour = rgb(24, 24, 28);
             t.eyeColour = rgb(214, 108, 240);
+            t.pattern = MobType::Pattern::Speckled;
+            t.markColour = rgb(92, 48, 118);
             // The same biped as a zombie, stretched: long limbs, small
             // body, which is what makes the silhouette unmistakable.
             // Stacked so the feet land on zero: legs from 0 to 30, body
@@ -944,6 +958,8 @@ namespace
             t.bodyColour = rgb(246, 180, 44);
             t.headColour = rgb(255, 198, 54);
             t.eyeColour = 0xFFFFF4C0;
+            t.pattern = MobType::Pattern::Patches;
+            t.pattern = MobType::Pattern::Belly;
 
             t.model.push_back(mc(Part::Head, 0, 0, 8, 8, 8, -4, -4, -4, 0, 0, 0));
 
@@ -1137,6 +1153,8 @@ namespace
             t.bodyColour = rgb(92, 148, 140);
             t.headColour = rgb(106, 170, 158);
             t.eyeColour = 0xFFE8D070;
+            t.pattern = MobType::Pattern::Speckled;
+            t.markColour = rgb(60, 104, 100);
 
             // One body cube and the eye on the front of it, then the
             // tail behind. The eye is a Head so it tracks the player,
@@ -1575,6 +1593,8 @@ namespace
             t.bodyColour = rgb(76, 72, 66);
             t.headColour = rgb(92, 86, 78);
             t.eyeColour = rgb(200, 60, 40);
+            t.pattern = MobType::Pattern::Patches;
+            t.markColour = rgb(54, 50, 46);
 
             // A barrel on four legs with a head slung off the front of
             // it, horns included. Thirty-five pixels tall at the back,
@@ -1616,6 +1636,8 @@ namespace
             t.bodyColour = rgb(104, 182, 90);
             t.headColour = rgb(124, 198, 108);
             t.eyeColour = rgb(40, 60, 36);
+            t.pattern = MobType::Pattern::Speckled;
+            t.markColour = rgb(74, 150, 64);
 
             t.model.push_back(mc(Part::Body, 0, 0, 16, 16, 16, -8, 8, -8, 0, 0, 0));
         }
@@ -1647,6 +1669,8 @@ namespace
             t.bodyColour = rgb(104, 182, 90);
             t.headColour = rgb(124, 198, 108);
             t.eyeColour = rgb(40, 60, 36);
+            t.pattern = MobType::Pattern::Speckled;
+            t.markColour = rgb(74, 150, 64);
 
             t.model.push_back(mc(Part::Body, 0, 0, 8, 8, 8, -4, 16, -4, 0, 0, 0));
         }
@@ -1680,6 +1704,7 @@ namespace
             t.bodyColour = rgb(68, 54, 44);
             t.headColour = rgb(84, 66, 52);
             t.eyeColour = rgb(190, 60, 50);
+            t.pattern = MobType::Pattern::Belly;
 
             t.model.push_back(mc(Part::Head, 0, 0, 4, 4, 4, -2, 8, -2, 0, 0, 0));
             t.model.push_back(mc(Part::Body, 0, 10, 4, 6, 4, -2, 12, -2, 0, 0, 0));
@@ -1718,6 +1743,8 @@ namespace
             t.bodyColour = rgb(22, 60, 72);
             t.headColour = rgb(30, 74, 88);
             t.eyeColour = rgb(200, 60, 50);
+            t.pattern = MobType::Pattern::Patches;
+            t.markColour = rgb(14, 40, 50);
 
             t.model.push_back(mc(Part::Head, 32, 4, 8, 8, 8, -4, -4, -8, 0, 15, -3));
             t.model.push_back(mc(Part::Body, 0, 0, 6, 6, 6, -3, -3, -3, 0, 15, 0));
@@ -1754,6 +1781,8 @@ namespace
             t.bodyColour = rgb(112, 112, 116);
             t.headColour = rgb(140, 140, 146);
             t.eyeColour = rgb(40, 40, 44);
+            t.pattern = MobType::Pattern::Speckled;
+            t.markColour = rgb(76, 76, 80);
 
             // Three segments on the floor, the middle one tallest, so
             // it reads as a thing rather than as a brick.
@@ -1843,6 +1872,8 @@ namespace
             t.bodyColour = rgb(66, 50, 44);
             t.headColour = rgb(214, 150, 142);
             t.eyeColour = rgb(40, 32, 28);
+            t.pattern = MobType::Pattern::Patches;
+            t.markColour = rgb(44, 32, 28);
 
             t.model.push_back(mc(Part::Head, 0, 0, 8, 8, 8, -4, -8, -4, 0, 0, 0));
             // The snout, which is what tells a piglin from a man at
@@ -1891,6 +1922,8 @@ namespace
             t.bodyColour = rgb(142, 86, 70);
             t.headColour = rgb(156, 96, 78);
             t.eyeColour = rgb(40, 28, 24);
+            t.pattern = MobType::Pattern::Patches;
+            t.markColour = rgb(106, 60, 48);
 
             t.model.push_back(mc(Part::Body, 0, 0, 14, 12, 20, -7, 2, -10, 0, 0, 0));
             t.model.push_back(mc(Part::Head, 70, 0, 10, 8, 10, -5, 4, -20, 0, 0, 0));
@@ -1934,6 +1967,8 @@ namespace
             t.bodyColour = rgb(148, 48, 54);
             t.headColour = rgb(170, 60, 64);
             t.eyeColour = rgb(226, 214, 200);
+            t.pattern = MobType::Pattern::Speckled;
+            t.markColour = rgb(102, 30, 36);
 
             // A tall slab on two legs, which is the whole of it.
             t.model.push_back(mc(Part::Body, 0, 0, 16, 14, 8, -8, -4, -4, 0, 0, 0));
@@ -1969,6 +2004,8 @@ namespace
             t.bodyColour = rgb(186, 160, 118);
             t.headColour = rgb(206, 182, 140);
             t.eyeColour = rgb(30, 30, 36);
+            t.pattern = MobType::Pattern::Belly;
+            t.markColour = rgb(238, 226, 198);
 
             // A body, a tail and a fin: at half a block long there is
             // nothing else to put on one. Long along z, because that
@@ -2006,6 +2043,8 @@ namespace
             t.bodyColour = rgb(168, 78, 62);
             t.headColour = rgb(188, 104, 86);
             t.eyeColour = rgb(30, 30, 36);
+            t.pattern = MobType::Pattern::Belly;
+            t.markColour = rgb(226, 182, 162);
 
             t.model.push_back(mc(Part::Body, 0, 0, 4, 6, 10, -2, 18, -5, 0, 0, 0));
             t.model.push_back(mc(Part::LegBackRight, 0, 18, 1, 6, 5, 0, 18, 5, 0, 0, 0));
@@ -2039,6 +2078,8 @@ namespace
             t.bodyColour = rgb(220, 180, 60);
             t.headColour = rgb(234, 200, 96);
             t.eyeColour = rgb(30, 30, 36);
+            t.pattern = MobType::Pattern::Speckled;
+            t.markColour = rgb(150, 120, 36);
 
             t.model.push_back(mc(Part::Body, 0, 0, 8, 8, 8, -4, 16, -4, 0, 0, 0));
             t.model.push_back(mc(Part::Head, 0, 20, 2, 2, 2, -1, 19, -6, 0, 0, 0));
@@ -2071,6 +2112,8 @@ namespace
             t.bodyColour = rgb(96, 128, 150);
             t.headColour = rgb(116, 148, 170);
             t.eyeColour = rgb(24, 26, 32);
+            t.pattern = MobType::Pattern::Belly;
+            t.markColour = rgb(226, 236, 240);
 
             t.model.push_back(mc(Part::Body, 0, 0, 7, 7, 13, -4, 16, -7, 0, 0, 0));
             t.model.push_back(mc(Part::Head, 0, 22, 5, 4, 5, -3, 18, -11, 0, 0, 0));
@@ -2108,6 +2151,8 @@ namespace
             t.bodyColour = rgb(72, 108, 66);
             t.headColour = rgb(118, 158, 96);
             t.eyeColour = rgb(30, 30, 36);
+            t.pattern = MobType::Pattern::Patches;
+            t.markColour = rgb(44, 78, 44);
 
             t.model.push_back(mc(Part::Body, 0, 0, 14, 4, 12, -7, 20, -6, 0, 0, 0));
             t.model.push_back(mc(Part::Head, 0, 20, 5, 4, 5, -2, 20, -10, 0, 0, 0));
@@ -2143,6 +2188,8 @@ namespace
             t.bodyColour = rgb(236, 174, 196);
             t.headColour = rgb(244, 192, 210);
             t.eyeColour = rgb(40, 32, 40);
+            t.pattern = MobType::Pattern::Belly;
+            t.markColour = rgb(252, 226, 236);
 
             t.model.push_back(mc(Part::Body, 0, 0, 5, 5, 8, -2, 19, -3, 0, 0, 0));
             t.model.push_back(mc(Part::Head, 0, 14, 4, 3, 5, -2, 19, -8, 0, 0, 0));
@@ -2182,6 +2229,8 @@ namespace
             t.bodyColour = rgb(166, 140, 112);
             t.headColour = rgb(186, 162, 134);
             t.eyeColour = rgb(180, 70, 70);
+            t.pattern = MobType::Pattern::Belly;
+            t.markColour = rgb(226, 212, 190);
 
             t.model.push_back(mc(Part::Body, 0, 0, 4, 5, 8, -2, 19, -4, 0, 0, 0));
             t.model.push_back(mc(Part::Head, 0, 15, 5, 4, 5, -2, 17, -8, 0, 0, 0));
@@ -2216,6 +2265,8 @@ namespace
             t.bodyColour = rgb(212, 124, 50);
             t.headColour = rgb(226, 150, 76);
             t.eyeColour = rgb(40, 32, 28);
+            t.pattern = MobType::Pattern::Belly;
+            t.markColour = rgb(238, 232, 222);
 
             t.model.push_back(mc(Part::Body, 0, 0, 6, 6, 11, -3, 17, -5, 0, 0, 0));
             t.model.push_back(mc(Part::Head, 0, 20, 8, 6, 6, -4, 15, -11, 0, 0, 0));
@@ -2254,6 +2305,8 @@ namespace
             t.bodyColour = rgb(226, 220, 210);
             t.headColour = rgb(236, 232, 224);
             t.eyeColour = rgb(50, 44, 40);
+            t.pattern = MobType::Pattern::Patches;
+            t.markColour = rgb(190, 180, 166);
 
             t.model.push_back(mc(Part::Body, 0, 0, 9, 11, 16, -5, 6, -8, 0, 0, 0));
             t.model.push_back(mc(Part::Head, 50, 0, 5, 7, 10, -3, 2, -16, 0, 0, 0));
@@ -2291,6 +2344,8 @@ namespace
             t.bodyColour = rgb(226, 222, 214);
             t.headColour = rgb(234, 232, 226);
             t.eyeColour = rgb(36, 32, 32);
+            t.pattern = MobType::Pattern::Patches;
+            t.markColour = rgb(36, 34, 34);
 
             t.model.push_back(mc(Part::Body, 0, 0, 12, 10, 16, -6, 8, -8, 0, 0, 0));
             t.model.push_back(mc(Part::Head, 0, 30, 9, 9, 9, -5, 6, -15, 0, 0, 0));
@@ -2340,6 +2395,8 @@ namespace
             t.bodyColour = rgb(228, 186, 60);
             t.headColour = rgb(76, 62, 44);
             t.eyeColour = rgb(30, 26, 24);
+            t.pattern = MobType::Pattern::Stripes;
+            t.markColour = rgb(60, 48, 32);
 
             t.model.push_back(mc(Part::Body, 0, 0, 7, 7, 10, -3, 16, -5, 0, 0, 0));
             t.model.push_back(mc(Part::Head, 0, 20, 5, 5, 4, -2, 17, -8, 0, 0, 0));
@@ -2370,6 +2427,8 @@ namespace
             t.bodyColour = rgb(150, 126, 102);
             t.headColour = rgb(168, 146, 120);
             t.eyeColour = rgb(200, 190, 70);
+            t.pattern = MobType::Pattern::Patches;
+            t.markColour = rgb(96, 78, 60);
 
             t.model.push_back(mc(Part::Body, 0, 0, 5, 5, 12, -2, 17, -6, 0, 0, 0));
             t.model.push_back(mc(Part::Head, 0, 20, 5, 4, 5, -2, 17, -11, 0, 0, 0));
@@ -2408,6 +2467,8 @@ namespace
             t.bodyColour = rgb(196, 176, 148);
             t.headColour = rgb(214, 196, 170);
             t.eyeColour = rgb(40, 34, 30);
+            t.pattern = MobType::Pattern::Patches;
+            t.markColour = rgb(146, 126, 102);
 
             t.model.push_back(mc(Part::Body, 0, 0, 12, 18, 10, -6, 2, -5, 0, 0, 0));
             t.model.push_back(mc(Part::Head, 50, 0, 4, 4, 9, -2, -8, -14, 0, 0, 0));
@@ -2493,6 +2554,8 @@ namespace
             t.bodyColour = rgb(172, 194, 196);
             t.headColour = rgb(196, 214, 216);
             t.eyeColour = rgb(20, 20, 20);
+            t.pattern = MobType::Pattern::Speckled;
+            t.markColour = rgb(140, 182, 196);
 
             t.model.push_back(mc(Part::Head, 0, 0, 8, 8, 8, -4, -8, -4, 0, 0, 0));
             t.model.push_back(mc(Part::Body, 16, 16, 8, 12, 4, -4, 0, -2, 0, 0, 0));
@@ -2527,6 +2590,8 @@ namespace
             t.bodyColour = rgb(132, 116, 78);
             t.headColour = rgb(156, 138, 94);
             t.eyeColour = rgb(30, 26, 20);
+            t.pattern = MobType::Pattern::Patches;
+            t.markColour = rgb(104, 90, 60);
 
             t.model.push_back(mc(Part::Head, 0, 0, 8, 8, 8, -4, -8, -4, 0, 0, 0));
             t.model.push_back(mc(Part::Body, 16, 16, 8, 12, 4, -4, 0, -2, 0, 0, 0));
@@ -2568,6 +2633,8 @@ namespace
             t.bodyColour = rgb(118, 132, 96);
             t.headColour = rgb(140, 152, 112);
             t.eyeColour = rgb(20, 24, 18);
+            t.pattern = MobType::Pattern::Patches;
+            t.markColour = rgb(74, 96, 58);
 
             t.model.push_back(mc(Part::Head, 0, 0, 8, 8, 8, -4, -8, -4, 0, 0, 0));
             t.model.push_back(mc(Part::Body, 16, 16, 8, 12, 4, -4, 0, -2, 0, 0, 0));
@@ -2608,6 +2675,8 @@ namespace
             t.bodyColour = rgb(68, 96, 108);
             t.headColour = rgb(84, 116, 128);
             t.eyeColour = rgb(140, 220, 90);
+            t.pattern = MobType::Pattern::Speckled;
+            t.markColour = rgb(140, 220, 90);
 
             t.model.push_back(mc(Part::Body, 0, 8, 5, 3, 9, -2, 19, -4, 0, 0, 0));
             t.model.push_back(mc(Part::Head, 0, 0, 5, 3, 3, -2, 19, -7, 0, 0, 0));
@@ -2639,6 +2708,8 @@ namespace
             t.bodyColour = rgb(78, 96, 76);
             t.headColour = rgb(96, 128, 76);
             t.eyeColour = rgb(24, 32, 24);
+            t.pattern = MobType::Pattern::Patches;
+            t.markColour = rgb(56, 72, 54);
 
             // The villager's long head and nose on a zombie's body,
             // which is exactly what one is.
@@ -2675,6 +2746,8 @@ namespace
             t.bodyColour = rgb(52, 36, 64);
             t.headColour = rgb(72, 50, 88);
             t.eyeColour = rgb(200, 90, 230);
+            t.pattern = MobType::Pattern::Speckled;
+            t.markColour = rgb(140, 70, 170);
 
             t.model.push_back(mc(Part::Body, 0, 0, 4, 4, 3, -2, 20, -2, 0, 0, 0));
             t.model.push_back(mc(Part::Head, 0, 10, 3, 3, 3, -1, 20, -5, 0, 0, 0));
@@ -2708,6 +2781,8 @@ namespace
             t.bodyColour = rgb(138, 156, 172);
             t.headColour = rgb(206, 218, 226);
             t.eyeColour = rgb(220, 60, 50);
+            t.pattern = MobType::Pattern::Belly;
+            t.markColour = rgb(226, 236, 244);
 
             // A small person with wings, at half a villager's scale.
             t.model.push_back(mc(Part::Head, 0, 0, 6, 6, 6, -3, 10, -3, 0, 0, 0));
@@ -2807,6 +2882,8 @@ namespace
             t.bodyColour = rgb(170, 168, 142);
             t.headColour = rgb(192, 190, 164);
             t.eyeColour = 0xFFE8D070;
+            t.pattern = MobType::Pattern::Speckled;
+            t.markColour = rgb(120, 118, 96);
 
             t.model.push_back(mc(Part::Body, 0, 0, 14, 14, 14, -7, -7, -7, 0, 15, 0));
             t.model.push_back(mc(Part::Head, 0, 28, 5, 5, 1, -2, -2, 0, 0, 15, -7));
@@ -2876,6 +2953,8 @@ namespace
             t.bodyColour = rgb(222, 186, 124);
             t.headColour = rgb(232, 200, 142);
             t.eyeColour = rgb(50, 40, 32);
+            t.pattern = MobType::Pattern::Belly;
+            t.markColour = rgb(244, 220, 176);
 
             t.model.push_back(mc(Part::Body, 0, 0, 12, 18, 23, -6, -6, -11, 0, 0, 0));
             // The hump, which is the whole of what reads as a camel.
@@ -2915,6 +2994,8 @@ namespace
             t.bodyColour = rgb(206, 48, 44);
             t.headColour = rgb(60, 112, 196);
             t.eyeColour = rgb(30, 28, 26);
+            t.pattern = MobType::Pattern::Patches;
+            t.markColour = rgb(242, 196, 56);
 
             t.model.push_back(mc(Part::Body, 0, 0, 4, 7, 3, -2, 13, -2, 0, 0, 0));
             t.model.push_back(mc(Part::Head, 0, 12, 4, 4, 4, -2, 9, -2, 0, 0, 0));
@@ -2954,6 +3035,8 @@ namespace
             t.bodyColour = rgb(74, 150, 226);
             t.headColour = rgb(140, 206, 246);
             t.eyeColour = rgb(226, 240, 252);
+            t.pattern = MobType::Pattern::Belly;
+            t.markColour = rgb(206, 240, 252);
 
             t.model.push_back(mc(Part::Head, 0, 0, 5, 5, 5, -2, 11, -2, 0, 0, 0));
             t.model.push_back(mc(Part::Body, 0, 12, 3, 4, 2, -1, 16, -1, 0, 0, 0));

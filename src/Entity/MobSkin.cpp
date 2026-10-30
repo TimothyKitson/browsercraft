@@ -79,6 +79,56 @@ namespace
                     set(x + i, y + j, c);
         }
 
+        // A one-pixel darker rim, so one box reads as separate from
+        // the next.
+        void rim(int x, int y, int w, int h, Rgba c)
+        {
+            if (w < 3 || h < 3) return;
+            for (int i = 0; i < w; ++i) { set(x + i, y, c); set(x + i, y + h - 1, c); }
+            for (int j = 0; j < h; ++j) { set(x, y + j, c); set(x + w - 1, y + j, c); }
+        }
+
+        // Irregular blotches, on a coarse grid so they read as patches
+        // rather than as noise: a cow, a panda, a llama.
+        void blotches(int x, int y, int w, int h, Rgba c, uint32_t salt)
+        {
+            for (int j = 0; j < h; ++j)
+                for (int i = 0; i < w; ++i)
+                {
+                    const float n = hashToFloat(hashCoords((x + i) / 3, (y + j) / 3, 0, salt));
+                    const float edge = hashToFloat(hashCoords(x + i, y + j, 1, salt));
+                    if (n > 0.58f || (n > 0.50f && edge > 0.6f)) set(x + i, y + j, c);
+                }
+        }
+
+        // Bands across the patch: a bee, and nothing else so far.
+        void bands(int x, int y, int w, int h, Rgba c)
+        {
+            for (int j = 0; j < h; ++j)
+                if (((y + j) / 2) % 2 == 1)
+                    for (int i = 0; i < w; ++i) set(x + i, y + j, c);
+        }
+
+        // A pale underside over the bottom third, faded in so it does
+        // not read as a painted line.
+        void underside(int x, int y, int w, int h, Rgba c)
+        {
+            const int from = y + (h * 2) / 3;
+            for (int j = from; j < y + h; ++j)
+                for (int i = 0; i < w; ++i)
+                    set(x + i, j, (j == from) ? mix(c, 0.5f) : c);
+        }
+
+        // A fine grain of the second colour: scales, or whatever a
+        // slime is made of.
+        void grain(int x, int y, int w, int h, Rgba c, uint32_t salt)
+        {
+            for (int j = 0; j < h; ++j)
+                for (int i = 0; i < w; ++i)
+                    if (hashToFloat(hashCoords(x + i, y + j, 2, salt)) > 0.78f)
+                        set(x + i, y + j, c);
+        }
+
         // Flat colour under a light speckle, the same treatment the
         // player's cloth gets: at this scale it reads as hide rather
         // than as a flat fill.
@@ -95,6 +145,15 @@ namespace
         }
 
     private:
+        // Halfway between what is already there and the new colour,
+        // which is what makes a belly fade in rather than start.
+        Rgba mix(Rgba c, float amount) const
+        {
+            return Rgba{ scaleChannel(c.r, 1.0f - 0.18f * amount),
+                         scaleChannel(c.g, 1.0f - 0.18f * amount),
+                         scaleChannel(c.b, 1.0f - 0.18f * amount), c.a };
+        }
+
         std::vector<uint8_t>& m_pixels;
         int m_width, m_height;
     };
@@ -276,6 +335,13 @@ void MobSkin::paint(const MobType& type)
     const Rgba head = unpack(type.headColour);
     const Rgba eye = unpack(type.eyeColour);
 
+    // The second colour. Nought means work one out from the body,
+    // which is what most animals want: a blotch is the body darkened
+    // and a belly is the body lightened, and neither needs naming.
+    const bool paleMark = type.pattern == MobType::Pattern::Belly;
+    const Rgba mark = type.markColour ? unpack(type.markColour)
+                                      : shade(body, paleMark ? 1.34f : 0.66f);
+
     uint32_t salt = 7u;
 
     for (const MobBox& box : m_boxes)
@@ -283,7 +349,17 @@ void MobSkin::paint(const MobType& type)
         if (box.layer != 0) continue;
 
         const bool isHead = box.part == Part::Head;
-        const Rgba base = isHead ? head : body;
+        const bool isBody = box.part == Part::Body;
+
+        // Limbs sit a shade under the body and wings a shade under
+        // them. Nothing in nature is one flat colour from nose to
+        // foot, and without this every animal read as a single
+        // extruded shape rather than a thing with parts.
+        float partTone = 1.0f;
+        if (!isHead && !isBody) partTone = 0.92f;
+        if (box.part == Part::WingLeft || box.part == Part::WingRight) partTone = 0.86f;
+
+        const Rgba base = shade(isHead ? head : body, partTone);
 
         // Every face of the box, so it is covered from any angle.
         for (int face = 0; face < 6; ++face)
@@ -299,6 +375,32 @@ void MobSkin::paint(const MobType& type)
             else if (face == BoxMesh::Bottom) tone = 0.82f;
 
             canvas.hide(x, y, w, h, shade(base, tone), salt++);
+
+            // And the markings, which is most of what tells one
+            // animal from another at this size.
+            const bool side = face != BoxMesh::Top && face != BoxMesh::Bottom;
+            switch (type.pattern)
+            {
+                case MobType::Pattern::Patches:
+                    canvas.blotches(x, y, w, h, mark, salt++);
+                    break;
+                case MobType::Pattern::Stripes:
+                    if (side) canvas.bands(x, y, w, h, mark);
+                    break;
+                case MobType::Pattern::Belly:
+                    if (side && (isBody || isHead)) canvas.underside(x, y, w, h, mark);
+                    break;
+                case MobType::Pattern::Speckled:
+                    canvas.grain(x, y, w, h, mark, salt++);
+                    break;
+                case MobType::Pattern::Plain:
+                    break;
+            }
+
+            // A one-pixel darker rim round every patch. It is what
+            // makes a leg read as a leg rather than as part of the
+            // body it hangs off, and it costs four lines.
+            canvas.rim(x, y, w, h, shade(base, 0.80f));
         }
 
         // Mojang's layout stacks the snout, horns and wattle on the head
@@ -318,14 +420,34 @@ void MobSkin::paint(const MobType& type)
         const int eyeW = std::max(1, fw / 6);
         const int eyeH = std::max(1, fh / 6);
 
-        canvas.rect(fx + inset, eyeY, eyeW, eyeH, eye);
-        canvas.rect(fx + fw - inset - eyeW, eyeY, eyeW, eyeH, eye);
+        // White round a dark pupil where there is room for both. One
+        // flat rectangle of eye colour is a dot; a dot with a white
+        // round it is an eye, and that is the difference between a
+        // box and an animal looking at you.
+        const Rgba white{ 236, 238, 240, 255 };
+        const bool roomForWhite = eyeW >= 2 && eyeH >= 2;
+
+        for (int which = 0; which < 2; ++which)
+        {
+            const int ex = which == 0 ? fx + inset : fx + fw - inset - eyeW;
+            if (roomForWhite)
+            {
+                canvas.rect(ex, eyeY, eyeW, eyeH, white);
+                canvas.rect(ex + (which == 0 ? eyeW - 1 : 0), eyeY, 1, eyeH, eye);
+            }
+            else
+            {
+                canvas.rect(ex, eyeY, eyeW, eyeH, eye);
+            }
+        }
 
         // A creeper's face is the one everybody knows: two eyes and a
         // mouth that drops into a pair of legs.
         if (type.id == MobId::Creeper)
         {
             const int mouthX = fx + fw / 2 - 1;
+            canvas.rect(fx + inset, eyeY, eyeW, eyeH, eye);
+            canvas.rect(fx + fw - inset - eyeW, eyeY, eyeW, eyeH, eye);
             canvas.rect(mouthX, eyeY + eyeH, 2, std::max(1, fh / 4), eye);
             canvas.rect(mouthX - 1, eyeY + eyeH + std::max(1, fh / 4), 1, std::max(1, fh / 5), eye);
             canvas.rect(mouthX + 2, eyeY + eyeH + std::max(1, fh / 4), 1, std::max(1, fh / 5), eye);
