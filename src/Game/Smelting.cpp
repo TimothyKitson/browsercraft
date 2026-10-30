@@ -39,6 +39,8 @@ StackId Smelting::resultOf(StackId input)
         // reason to carry a furnace about.
         case Items::RawBeef:    return Items::Steak;
         case Items::RawPorkchop: return Items::CookedPorkchop;
+        case Items::RawCod:      return Items::CookedCod;
+        case Items::RawSalmon:   return Items::CookedSalmon;
         case Items::RawChicken: return Items::CookedChicken;
         case Items::RawMutton:  return Items::CookedMutton;
 

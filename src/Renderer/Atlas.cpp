@@ -3236,6 +3236,70 @@ namespace
                 }
     }
 
+    // The fish. One painter over a table, because a fish at sixteen
+    // pixels is a body, a tail and an eye, and the only thing that
+    // differs between them is the colour and how fat it is.
+    struct FishLook { Color body; Color belly; Color fin; int fat; };
+
+    void paintFish(Tile& t, const FishLook& look)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+
+        const float wide = 5.0f + look.fat * 0.9f;
+        const float tall = 2.6f + look.fat * 1.1f;
+
+        for (int y = 0; y < Tile::N; ++y)
+            for (int x = 0; x < Tile::N; ++x)
+            {
+                const float dx = (x - 8.5f) / wide;
+                const float dy = (y - 8.0f) / tall;
+                if (dx * dx + dy * dy > 1.0f) continue;
+                t.set(x, y, (dy > 0.25f) ? look.belly : look.body);
+            }
+
+        // The tail, a wedge off the back of it.
+        for (int i = 0; i < 4; ++i)
+            for (int y = 8 - 1 - i; y <= 8 + i; ++y)
+                t.set(2 + i, y, look.fin);
+
+        // A top fin, and the eye everyone reads a fish by.
+        for (int x = 7; x < 12; ++x) t.set(x, static_cast<int>(8.0f - tall), look.fin);
+        t.set(12, 7, Color{ 250, 250, 250 });
+        t.set(13, 7, Color{ 30, 30, 36 });
+    }
+
+    void paintItemRawCod(Tile& t)
+    {
+        paintFish(t, { { 186, 160, 118 }, { 226, 210, 176 }, { 142, 118, 84 }, 1 });
+    }
+
+    void paintItemCookedCod(Tile& t)
+    {
+        paintFish(t, { { 206, 160, 92 }, { 232, 200, 150 }, { 160, 112, 56 }, 1 });
+    }
+
+    void paintItemRawSalmon(Tile& t)
+    {
+        paintFish(t, { { 168, 78, 62 }, { 206, 134, 112 }, { 120, 52, 44 }, 2 });
+    }
+
+    void paintItemCookedSalmon(Tile& t)
+    {
+        paintFish(t, { { 196, 112, 70 }, { 226, 168, 118 }, { 140, 74, 44 }, 2 });
+    }
+
+    void paintItemPufferfish(Tile& t)
+    {
+        paintFish(t, { { 220, 180, 60 }, { 234, 208, 120 }, { 150, 120, 36 }, 4 });
+
+        // The spines, which are the whole of why you do not eat one.
+        for (int i = 0; i < Tile::N; i += 3)
+        {
+            t.set(i, 2, Color{ 120, 96, 30 });
+            t.set(i, Tile::N - 3, Color{ 120, 96, 30 });
+        }
+    }
+
     void paintItemSign(Tile& t)
     {
         t.fill(Color{ 0, 0, 0, 0 });
@@ -6177,6 +6241,11 @@ namespace
         { Tiles::ItemTotem, paintItemTotem },
         { Tiles::ItemSlimeball, paintItemSlimeball },
         { Tiles::ItemGoldNugget, paintItemGoldNugget },
+        { Tiles::ItemRawCod, paintItemRawCod },
+        { Tiles::ItemCookedCod, paintItemCookedCod },
+        { Tiles::ItemRawSalmon, paintItemRawSalmon },
+        { Tiles::ItemCookedSalmon, paintItemCookedSalmon },
+        { Tiles::ItemPufferfish, paintItemPufferfish },
         { Tiles::ItemBowl, paintItemBowl },
         { Tiles::ItemBeetroot, paintItemBeetroot },
         { Tiles::ItemBeetrootSeeds, paintItemBeetrootSeeds },
@@ -6503,6 +6572,11 @@ namespace
         { Tiles::ItemTotem, { "totem_of_undying", "totem", nullptr } },
         { Tiles::ItemSlimeball, { "slime_ball", "slimeball", nullptr } },
         { Tiles::ItemGoldNugget, { "gold_nugget", nullptr, nullptr } },
+        { Tiles::ItemRawCod, { "cod", "fish_cod_raw", nullptr } },
+        { Tiles::ItemCookedCod, { "cooked_cod", "fish_cod_cooked", nullptr } },
+        { Tiles::ItemRawSalmon, { "salmon", "fish_salmon_raw", nullptr } },
+        { Tiles::ItemCookedSalmon, { "cooked_salmon", "fish_salmon_cooked", nullptr } },
+        { Tiles::ItemPufferfish, { "pufferfish", "fish_pufferfish_raw", nullptr } },
     };
 
     const PackTile PACK_TILES[] = {

@@ -77,6 +77,16 @@ enum class MobId : uint8_t
     Hoglin,
     Strider,
 
+    // The sea, which had a squid in it and nothing else. Six more:
+    // two to eat, one that poisons you, one that plays, one that
+    // lays eggs and one that is only there to be looked at.
+    Cod,
+    Salmon,
+    Pufferfish,
+    Dolphin,
+    Turtle,
+    Axolotl,
+
     Count
 };
 

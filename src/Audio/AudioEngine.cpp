@@ -337,6 +337,18 @@ void AudioEngine::buildSounds()
                  Sound::MobHoglinDeath, "mob/hoglin");
     loadMobVoice(Sound::MobStriderSay, Sound::MobStriderHurt,
                  Sound::MobStriderDeath, "mob/strider");
+    loadMobVoice(Sound::MobCodSay, Sound::MobCodHurt,
+                 Sound::MobCodDeath, "mob/cod");
+    loadMobVoice(Sound::MobSalmonSay, Sound::MobSalmonHurt,
+                 Sound::MobSalmonDeath, "mob/salmon");
+    loadMobVoice(Sound::MobPufferfishSay, Sound::MobPufferfishHurt,
+                 Sound::MobPufferfishDeath, "mob/pufferfish");
+    loadMobVoice(Sound::MobDolphinSay, Sound::MobDolphinHurt,
+                 Sound::MobDolphinDeath, "mob/dolphin");
+    loadMobVoice(Sound::MobTurtleSay, Sound::MobTurtleHurt,
+                 Sound::MobTurtleDeath, "mob/turtle");
+    loadMobVoice(Sound::MobAxolotlSay, Sound::MobAxolotlHurt,
+                 Sound::MobAxolotlDeath, "mob/axolotl");
     loadVariants(Sound::Rain, "weather/rain", 1);
     loadVariants(Sound::Thunder, "weather/thunder", 1);
 
@@ -1275,6 +1287,45 @@ void AudioEngine::buildSounds()
         s.addTone(0.56f, 240.0f, 80.0f, 4.0f, 0.16f, false);
         s.finish(0.58f);
     }
+
+    // The six in the sea. All of them are the same shape of noise --
+    // a wet flop with a note under it -- so they come off one
+    // description rather than eighteen blocks written out by hand,
+    // which would have been eighteen chances to paste the wrong seed.
+    auto wetVoice = [&](Sound say, Sound hurt, Sound death,
+                        float hz, float noiseHz, uint32_t seed) {
+        {
+            Synth s = make(say);
+            s.addNoise(0.16f, noiseHz, 16.0f, 0.26f, true, seed);
+            s.addTone(0.14f, hz, hz * 0.7f, 15.0f, 0.22f, false);
+            s.finish(0.44f);
+        }
+        {
+            Synth s = make(hurt);
+            s.addNoise(0.14f, noiseHz * 1.5f, 20.0f, 0.28f, true, seed + 1);
+            s.addTone(0.12f, hz * 1.5f, hz * 0.8f, 19.0f, 0.24f, false);
+            s.finish(0.50f);
+        }
+        {
+            Synth s = make(death);
+            s.addNoise(0.34f, noiseHz * 0.8f, 7.0f, 0.28f, true, seed + 2);
+            s.addTone(0.28f, hz, hz * 0.4f, 7.0f, 0.24f, false);
+            s.finish(0.52f);
+        }
+    };
+
+    wetVoice(Sound::MobCodSay, Sound::MobCodHurt, Sound::MobCodDeath,
+             520.0f, 1800.0f, 981);
+    wetVoice(Sound::MobSalmonSay, Sound::MobSalmonHurt, Sound::MobSalmonDeath,
+             420.0f, 1500.0f, 991);
+    wetVoice(Sound::MobPufferfishSay, Sound::MobPufferfishHurt, Sound::MobPufferfishDeath,
+             680.0f, 2400.0f, 1001);
+    wetVoice(Sound::MobDolphinSay, Sound::MobDolphinHurt, Sound::MobDolphinDeath,
+             1500.0f, 3200.0f, 1011);
+    wetVoice(Sound::MobTurtleSay, Sound::MobTurtleHurt, Sound::MobTurtleDeath,
+             240.0f, 900.0f, 1021);
+    wetVoice(Sound::MobAxolotlSay, Sound::MobAxolotlHurt, Sound::MobAxolotlDeath,
+             880.0f, 2000.0f, 1031);
 
     // The ghast: a long wail that falls away. Mostly tone, almost no
     // noise, and slower than anything else in the game -- which is

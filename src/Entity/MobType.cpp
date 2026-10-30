@@ -1941,6 +1941,218 @@ namespace
             t.model.push_back(mirrored(mc(Part::LegBackLeft, 48, 0, 4, 14, 4, -2, 0, -2, 4, 10, 0)));
         }
 
+        // The six in the sea. All of them live in the water the way a
+        // squid does, and none of them can be put anywhere else.
+        {
+            // The cod: the ordinary fish, and the one you eat.
+            MobType& t = table[static_cast<size_t>(MobId::Cod)];
+            t.id = MobId::Cod;
+            t.experience = 1;
+            t.voice = Sound::MobCodSay;
+            t.hurtVoice = Sound::MobCodHurt;
+            t.deathVoice = Sound::MobCodDeath;
+            t.name = "Cod";
+            t.texture = "cod";
+            t.spawnClass = SpawnClass::Passive;
+            t.maxHealth = 3;
+            t.width = 0.5f;
+            t.height = 0.3f;
+            t.walkSpeed = 2.2f;
+            t.limbSwing = 0.0f;
+            t.voicePitch = 1.6f;
+            t.aquatic = true;
+            t.hoverHeight = 1.8f;
+
+            t.drop = Items::RawCod;
+            t.dropCount = 1;
+
+            t.bodyColour = rgb(186, 160, 118);
+            t.headColour = rgb(206, 182, 140);
+            t.eyeColour = rgb(30, 30, 36);
+
+            // A body, a tail and a fin: at half a block long there is
+            // nothing else to put on one. Long along z, because that
+            // is the way everything here faces -- the first pair of
+            // fish were built across their own direction of travel
+            // and swam through the sea sideways.
+            t.model.push_back(mc(Part::Body, 0, 0, 3, 5, 8, -1, 19, -4, 0, 0, 0));
+            t.model.push_back(mc(Part::LegBackRight, 0, 14, 1, 5, 4, 0, 19, 4, 0, 0, 0));
+            t.model.push_back(mc(Part::Head, 12, 14, 3, 2, 3, -1, 17, -2, 0, 0, 0));
+        }
+
+        {
+            // The salmon: bigger, redder, and worth more cooked.
+            MobType& t = table[static_cast<size_t>(MobId::Salmon)];
+            t.id = MobId::Salmon;
+            t.experience = 1;
+            t.voice = Sound::MobSalmonSay;
+            t.hurtVoice = Sound::MobSalmonHurt;
+            t.deathVoice = Sound::MobSalmonDeath;
+            t.name = "Salmon";
+            t.texture = "salmon";
+            t.spawnClass = SpawnClass::Passive;
+            t.maxHealth = 3;
+            t.width = 0.7f;
+            t.height = 0.4f;
+            t.walkSpeed = 2.4f;
+            t.limbSwing = 0.0f;
+            t.voicePitch = 1.4f;
+            t.aquatic = true;
+            t.hoverHeight = 2.0f;
+
+            t.drop = Items::RawSalmon;
+            t.dropCount = 1;
+
+            t.bodyColour = rgb(168, 78, 62);
+            t.headColour = rgb(188, 104, 86);
+            t.eyeColour = rgb(30, 30, 36);
+
+            t.model.push_back(mc(Part::Body, 0, 0, 4, 6, 10, -2, 18, -5, 0, 0, 0));
+            t.model.push_back(mc(Part::LegBackRight, 0, 18, 1, 6, 5, 0, 18, 5, 0, 0, 0));
+            t.model.push_back(mc(Part::Head, 14, 18, 4, 2, 4, -2, 16, -2, 0, 0, 0));
+        }
+
+        {
+            // The pufferfish: the one thing in the sea you should not
+            // eat, and the only food in the game that is a mistake.
+            MobType& t = table[static_cast<size_t>(MobId::Pufferfish)];
+            t.id = MobId::Pufferfish;
+            t.experience = 1;
+            t.voice = Sound::MobPufferfishSay;
+            t.hurtVoice = Sound::MobPufferfishHurt;
+            t.deathVoice = Sound::MobPufferfishDeath;
+            t.name = "Pufferfish";
+            t.texture = "pufferfish";
+            t.spawnClass = SpawnClass::Passive;
+            t.maxHealth = 3;
+            t.width = 0.6f;
+            t.height = 0.6f;
+            t.walkSpeed = 1.4f;
+            t.limbSwing = 0.0f;
+            t.voicePitch = 1.8f;
+            t.aquatic = true;
+            t.hoverHeight = 1.6f;
+
+            t.drop = Items::Pufferfish;
+            t.dropCount = 1;
+
+            t.bodyColour = rgb(220, 180, 60);
+            t.headColour = rgb(234, 200, 96);
+            t.eyeColour = rgb(30, 30, 36);
+
+            t.model.push_back(mc(Part::Body, 0, 0, 8, 8, 8, -4, 16, -4, 0, 0, 0));
+            t.model.push_back(mc(Part::Head, 0, 20, 2, 2, 2, -1, 19, -6, 0, 0, 0));
+        }
+
+        {
+            // The dolphin: the one thing in the sea that plays. It is
+            // not food and it is not a fight; it is the reason an
+            // ocean is worth crossing on the surface.
+            MobType& t = table[static_cast<size_t>(MobId::Dolphin)];
+            t.id = MobId::Dolphin;
+            t.experience = 3;
+            t.voice = Sound::MobDolphinSay;
+            t.hurtVoice = Sound::MobDolphinHurt;
+            t.deathVoice = Sound::MobDolphinDeath;
+            t.name = "Dolphin";
+            t.texture = "dolphin";
+            t.spawnClass = SpawnClass::Passive;
+            t.maxHealth = 10;
+            t.width = 0.9f;
+            t.height = 0.6f;
+            t.walkSpeed = 3.6f;
+            t.limbSwing = 0.0f;
+            t.aquatic = true;
+            t.hoverHeight = 2.6f;
+
+            t.drop = Items::RawCod;
+            t.dropCount = 1;
+
+            t.bodyColour = rgb(96, 128, 150);
+            t.headColour = rgb(116, 148, 170);
+            t.eyeColour = rgb(24, 26, 32);
+
+            t.model.push_back(mc(Part::Body, 0, 0, 7, 7, 13, -4, 16, -7, 0, 0, 0));
+            t.model.push_back(mc(Part::Head, 0, 22, 5, 4, 5, -3, 18, -11, 0, 0, 0));
+            t.model.push_back(mc(Part::LegBackRight, 24, 22, 6, 1, 5, -3, 20, 6, 0, 0, 0));
+            t.model.push_back(mc(Part::WingRight, 48, 22, 2, 4, 3, -1, 13, -3, 0, 0, 0));
+        }
+
+        {
+            // The turtle: it swims, it comes ashore, and it is the one
+            // thing in the sea that is not in a hurry.
+            MobType& t = table[static_cast<size_t>(MobId::Turtle)];
+            t.id = MobId::Turtle;
+            t.experience = 1;
+            t.voice = Sound::MobTurtleSay;
+            t.hurtVoice = Sound::MobTurtleHurt;
+            t.deathVoice = Sound::MobTurtleDeath;
+            t.name = "Turtle";
+            t.texture = "turtle";
+            t.spawnClass = SpawnClass::Passive;
+            t.maxHealth = 30;
+            t.width = 1.2f;
+            t.height = 0.4f;
+            t.walkSpeed = 0.8f;
+            t.limbSwing = 0.5f;
+            t.voicePitch = 0.8f;
+            // It swims, but it walks on the bottom and on the beach
+            // rather than hanging in the water the way a fish does.
+            t.aquatic = true;
+
+            t.breedingFood = Items::WheatSeeds;
+
+            t.drop = Blocks::Seagrass;
+            t.dropCount = 1;
+
+            t.bodyColour = rgb(72, 108, 66);
+            t.headColour = rgb(118, 158, 96);
+            t.eyeColour = rgb(30, 30, 36);
+
+            t.model.push_back(mc(Part::Body, 0, 0, 14, 4, 12, -7, 20, -6, 0, 0, 0));
+            t.model.push_back(mc(Part::Head, 0, 20, 5, 4, 5, -2, 20, -10, 0, 0, 0));
+            t.model.push_back(mc(Part::LegFrontRight, 22, 20, 3, 1, 4, -8, 23, -5, 0, 0, 0));
+            t.model.push_back(mirrored(mc(Part::LegFrontLeft, 22, 20, 3, 1, 4, 5, 23, -5, 0, 0, 0)));
+            t.model.push_back(mc(Part::LegBackRight, 38, 20, 3, 1, 4, -8, 23, 2, 0, 0, 0));
+            t.model.push_back(mirrored(mc(Part::LegBackLeft, 38, 20, 3, 1, 4, 5, 23, 2, 0, 0, 0)));
+        }
+
+        {
+            // The axolotl: it does nothing useful and it is the best
+            // thing in the lush caves.
+            MobType& t = table[static_cast<size_t>(MobId::Axolotl)];
+            t.id = MobId::Axolotl;
+            t.experience = 1;
+            t.voice = Sound::MobAxolotlSay;
+            t.hurtVoice = Sound::MobAxolotlHurt;
+            t.deathVoice = Sound::MobAxolotlDeath;
+            t.name = "Axolotl";
+            t.texture = "axolotl";
+            t.spawnClass = SpawnClass::Passive;
+            t.maxHealth = 14;
+            t.width = 0.75f;
+            t.height = 0.42f;
+            t.walkSpeed = 1.6f;
+            t.limbSwing = 0.4f;
+            t.voicePitch = 1.4f;
+            t.aquatic = true;
+            t.hoverHeight = 1.4f;
+
+            t.breedingFood = Items::RawCod;
+
+            t.bodyColour = rgb(236, 174, 196);
+            t.headColour = rgb(244, 192, 210);
+            t.eyeColour = rgb(40, 32, 40);
+
+            t.model.push_back(mc(Part::Body, 0, 0, 5, 5, 8, -2, 19, -3, 0, 0, 0));
+            t.model.push_back(mc(Part::Head, 0, 14, 4, 3, 5, -2, 19, -8, 0, 0, 0));
+            // The frills, which are the whole of why anybody wants one.
+            t.model.push_back(mc(Part::WingRight, 0, 24, 3, 2, 3, -5, 19, -7, 0, 0, 0));
+            t.model.push_back(mirrored(mc(Part::WingLeft, 0, 24, 3, 2, 3, 2, 19, -7, 0, 0, 0)));
+            t.model.push_back(mc(Part::LegBackRight, 14, 24, 2, 1, 4, -3, 23, -1, 0, 0, 0));
+            t.model.push_back(mirrored(mc(Part::LegBackLeft, 14, 24, 2, 1, 4, 1, 23, -1, 0, 0, 0)));
+        }
+
         return table;
     }
 }

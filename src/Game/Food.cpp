@@ -51,7 +51,23 @@ namespace
         // Two wheat and a bean, and the cheapest food in the game to
         // carry in bulk: eight of them from one handful.
         { Items::Cookie,         { 2, 0.4f } },
+
+        // Out of the sea. Cooking a fish is worth as much as cooking
+        // anything else, and a pufferfish is worth nothing at all --
+        // it is the one food in the game that is a mistake.
+        { Items::RawCod,         { 2, 0.4f } },
+        { Items::CookedCod,      { 5, 6.0f } },
+        { Items::RawSalmon,      { 2, 0.4f } },
+        { Items::CookedSalmon,   { 6, 9.6f } },
+        { Items::Pufferfish,     { 1, 0.2f } },
     };
+}
+
+bool Food::poisons(StackId id)
+{
+    // One. Minecraft's pufferfish is the only food that is worse than
+    // not eating, and that is the whole of what it is for.
+    return id == Items::Pufferfish;
 }
 
 bool Food::isEdible(StackId id)

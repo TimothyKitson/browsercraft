@@ -271,6 +271,14 @@ namespace Items
         // in the game that turns what a mob leaves into a metal.
         GoldNugget,
 
+        // Out of the sea. Two worth cooking, and one that is worth
+        // nothing at all and will make you ill.
+        RawCod,
+        CookedCod,
+        RawSalmon,
+        CookedSalmon,
+        Pufferfish,
+
         Count
     };
 }

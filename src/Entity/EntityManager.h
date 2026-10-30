@@ -130,6 +130,12 @@ public:
     static int caveSpeciesCount();
     static MobId caveSpecies(int index);
 
+    // And what lives in the sea. Put down by hand in open water the
+    // way the drowned and the guardian are, because the ordinary
+    // spawner wants somewhere to stand and the sea has nowhere.
+    static int seaSpeciesCount();
+    static MobId seaSpecies(int index);
+
     // Whether a mob can be where this block is. One rule in one place,
     // so a test can ask exactly what the spawn asks: water is a wall
     // to almost everything, and is not a wall to the three things that

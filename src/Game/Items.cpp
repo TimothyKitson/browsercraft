@@ -179,6 +179,11 @@ namespace
         { "Totem of Undying",     Tiles::ItemTotem,              1 },
         { "Slimeball",            Tiles::ItemSlimeball,         64 },
         { "Gold Nugget",          Tiles::ItemGoldNugget,        64 },
+        { "Raw Cod",              Tiles::ItemRawCod,            64 },
+        { "Cooked Cod",           Tiles::ItemCookedCod,         64 },
+        { "Raw Salmon",           Tiles::ItemRawSalmon,         64 },
+        { "Cooked Salmon",        Tiles::ItemCookedSalmon,      64 },
+        { "Pufferfish",           Tiles::ItemPufferfish,        64 },
     };
 
     static_assert(sizeof(ITEMS) / sizeof(ITEMS[0]) ==

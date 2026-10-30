@@ -6137,6 +6137,8 @@ namespace
                 if (EntityManager::endSpecies(k) == id) meetable = true;
             for (int k = 0; k < EntityManager::caveSpeciesCount(); ++k)
                 if (EntityManager::caveSpecies(k) == id) meetable = true;
+            for (int k = 0; k < EntityManager::seaSpeciesCount(); ++k)
+                if (EntityManager::seaSpecies(k) == id) meetable = true;
 
             // What a cage sends out.
             for (Dimension where : { Dimension::Overworld, Dimension::Nether, Dimension::End })
@@ -11000,6 +11002,84 @@ namespace
               "rock is still rock to it");
     }
 
+    void testTheSea()
+    {
+        section("the sea: what lives in it");
+
+        // Everything on the list lives in water and can be put in it.
+        // The squid was the first and was alone in it for a long time.
+        bool hasSquid = false;
+        for (int k = 0; k < EntityManager::seaSpeciesCount(); ++k)
+        {
+            const MobId id = EntityManager::seaSpecies(k);
+            const MobType& type = mobType(id);
+            const std::string who = type.name;
+
+            if (id == MobId::Squid) hasSquid = true;
+            check(type.aquatic, who + " lives in the water");
+            check(EntityManager::roomFor(type, Blocks::Water),
+                  who + " can be put in water");
+            check(!EntityManager::roomFor(type, Blocks::Lava), who + " cannot be put in lava");
+            check(type.dimension == Dimension::Overworld, who + " belongs to this world");
+            check(type.attackDamage == 0, who + " attacks nobody");
+        }
+        check(hasSquid, "the squid is still down there");
+        check(EntityManager::seaSpeciesCount() >= 7, "and it is not alone any more");
+
+        section("the fish");
+
+        const MobType& cod = mobType(MobId::Cod);
+        const MobType& salmon = mobType(MobId::Salmon);
+        const MobType& puffer = mobType(MobId::Pufferfish);
+        const MobType& dolphin = mobType(MobId::Dolphin);
+        const MobType& turtle = mobType(MobId::Turtle);
+        const MobType& axolotl = mobType(MobId::Axolotl);
+
+        check(cod.drop == Items::RawCod, "a cod is a cod");
+        check(salmon.drop == Items::RawSalmon, "and a salmon is a salmon");
+        check(puffer.drop == Items::Pufferfish, "and a pufferfish is a mistake");
+        check(salmon.width > cod.width, "a salmon is the bigger fish");
+        check(dolphin.walkSpeed > cod.walkSpeed, "a dolphin is quicker than anything it eats");
+        check(turtle.maxHealth > 5 * cod.maxHealth, "a turtle takes some killing");
+        check(turtle.walkSpeed < cod.walkSpeed, "and is in no hurry");
+        check(axolotl.breedingFood == Items::RawCod, "an axolotl follows a fish");
+        check(turtle.breedingFood != Blocks::Air, "and a turtle follows something too");
+
+        // A turtle walks the bottom; the fish hang in the water.
+        check(turtle.hoverHeight == 0.0f, "a turtle walks on the bottom");
+        for (const MobType* who : { &cod, &salmon, &puffer, &dolphin, &axolotl })
+            check(who->hoverHeight > 0.0f,
+                  std::string(who->name) + " hangs in the water rather than sinking");
+
+        section("fish as food");
+
+        check(Food::isEdible(Items::RawCod), "a raw cod is food");
+        check(Food::isEdible(Items::CookedCod), "and a cooked one is better");
+        check(Food::valueOf(Items::CookedCod).hunger > Food::valueOf(Items::RawCod).hunger,
+              "cooking a cod is worth the furnace");
+        check(Food::valueOf(Items::CookedSalmon).hunger >
+                  Food::valueOf(Items::CookedCod).hunger,
+              "and a salmon is worth more than a cod");
+
+        check(Smelting::resultOf(Items::RawCod) == Items::CookedCod, "a cod cooks");
+        check(Smelting::resultOf(Items::RawSalmon) == Items::CookedSalmon, "and so does a salmon");
+        check(Smelting::suits(Smelting::Kind::Smoker, Items::RawCod),
+              "and a smoker will do it, because a smoker cooks what you eat");
+
+        // The one food in the game that is a mistake.
+        check(Food::isEdible(Items::Pufferfish), "a pufferfish can be eaten");
+        check(Food::poisons(Items::Pufferfish), "and it will make you ill");
+        check(!Food::poisons(Items::CookedCod), "a cooked cod will not");
+        check(!Food::poisons(Items::Bread), "nor will bread");
+        check(Smelting::resultOf(Items::Pufferfish) == Blocks::Air,
+              "and cooking does not save it");
+
+        int poisonous = 0;
+        for (int id = Items::FIRST; id < Items::Count; ++id)
+            if (Food::poisons(static_cast<StackId>(id))) ++poisonous;
+        check(poisonous == 1, "it is the only food in the game that is worse than nothing");
+    }
+
     void testDyes()
     {
         section("dye: the sixteen colours");
@@ -11356,6 +11436,7 @@ int runSelfTest()
     testIllagers();
     testCaveCrowd();
     testNetherCrowd();
+    testTheSea();
 
     std::printf("\n%d checks, %d failed\n", g_checks, g_failures);
     return g_failures == 0 ? 0 : 1;

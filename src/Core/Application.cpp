@@ -1437,16 +1437,30 @@ bool Application::frame()
                 for (int z = centreZ - 3; z <= centreZ + 15; z += 3)
                     m_world->setBlock(x, tankFloor, z, Blocks::Glowstone);
 
+            // Everything that lives in water, asked of the game rather
+            // than listed here: a species added to the sea and not to
+            // this screen is a species nobody ever looks at.
             struct Swimmer { MobId id; float x; float y; float z; };
-            const Swimmer SWIMMERS[] = {
-                { MobId::Squid,    centreX + 0.5f, tankFloor + 3.0f, centreZ + 1.5f },
-                { MobId::Squid,    centreX - 2.5f, tankFloor + 4.0f, centreZ + 3.5f },
-                { MobId::Drowned,  centreX - 3.5f, tankFloor + 1.0f, centreZ + 1.5f },
-                { MobId::Guardian, centreX + 3.5f, tankFloor + 3.0f, centreZ + 2.5f },
-            };
+            std::vector<Swimmer> swimmers;
+
+            for (int k = 0; k < EntityManager::seaSpeciesCount(); ++k)
+            {
+                const float across = -5.0f + (k % 4) * 3.0f;
+                const float along = 1.5f + (k / 4) * 3.0f;
+                const float up = 2.0f + (k % 3);
+                swimmers.push_back({ EntityManager::seaSpecies(k),
+                                     centreX + across, tankFloor + up, centreZ + along });
+            }
+
+            // And the two that fight, which belong in the water as
+            // much as anything else does.
+            swimmers.push_back({ MobId::Drowned,  centreX - 6.5f, tankFloor + 1.0f,
+                                 centreZ + 1.5f });
+            swimmers.push_back({ MobId::Guardian, centreX + 5.5f, tankFloor + 3.0f,
+                                 centreZ + 4.5f });
 
             int swimming = 0;
-            for (const Swimmer& who : SWIMMERS)
+            for (const Swimmer& who : swimmers)
                 if (m_entities.spawnAt(who.id, glm::vec3(who.x, who.y, who.z), *m_world))
                     ++swimming;
 
@@ -1463,7 +1477,7 @@ bool Application::frame()
             m_player.mode = GameMode::Creative;
 
             std::printf("[test] %d of %d swimmers took to the water\n",
-                        swimming, static_cast<int>(std::size(SWIMMERS)));
+                        swimming, static_cast<int>(swimmers.size()));
             std::fflush(stdout);
         }
 
@@ -6055,18 +6069,21 @@ void Application::tickStructureLairs(float deltaTime)
         }
     }
 
-    // Squid, in open water. They do nothing to anybody; what they
-    // are for is that an ocean with nothing alive in it reads as a
-    // texture rather than a place -- and they are the only black in
-    // the game.
+    // What swims, in open water. They do nothing to anybody; what
+    // they are for is that an ocean with nothing alive in it reads as
+    // a texture rather than a place.
     {
-        constexpr int SQUID_LIMIT = 6;
+        constexpr int SEA_LIMIT = 10;
 
         int already = 0;
         for (const Mob& mob : m_entities.mobs())
-            if (mob.alive() && mob.typeId() == MobId::Squid) ++already;
+        {
+            if (!mob.alive()) continue;
+            for (int k = 0; k < EntityManager::seaSpeciesCount(); ++k)
+                if (mob.typeId() == EntityManager::seaSpecies(k)) { ++already; break; }
+        }
 
-        if (already < SQUID_LIMIT)
+        if (already < SEA_LIMIT)
         {
             for (int tries = 0; tries < 16; ++tries)
             {
@@ -6085,7 +6102,16 @@ void Application::tickStructureLairs(float deltaTime)
                 if (m_world->getBlock(x, y + 1, z) != Blocks::Water) continue;
 
                 const glm::vec3 feet(x + 0.5f, static_cast<float>(y), z + 0.5f);
-                if (m_entities.spawnAt(MobId::Squid, feet, *m_world)) return;
+
+                // Which one, drawn off the position so a stretch of
+                // sea keeps the same inhabitants rather than reshuffling
+                // every four seconds.
+                const int which = (x * 73856093 ^ z * 19349663 ^ y * 83492791) &
+                                  0x7FFFFFFF;
+                const MobId species =
+                    EntityManager::seaSpecies(which % EntityManager::seaSpeciesCount());
+
+                if (m_entities.spawnAt(species, feet, *m_world)) return;
             }
         }
     }
@@ -7158,6 +7184,15 @@ void Application::handleEating(float deltaTime)
 
     const FoodValue value = Food::valueOf(stack.id);
     if (!m_player.eat(value.hunger, value.saturation)) return;
+
+    // And what it does to you besides filling you. One food does
+    // something, and it is the one you should not have eaten.
+    if (Food::poisons(stack.id))
+    {
+        Effects::give(m_player.effects, Effects::Kind::Poison,
+                      Food::POISON_LEVEL, Food::POISON_SECONDS);
+        m_chatLog.add("That was a pufferfish.");
+    }
 
     stack.count -= 1;
     if (stack.count <= 0) stack.clear();

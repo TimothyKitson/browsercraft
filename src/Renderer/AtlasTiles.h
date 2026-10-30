@@ -431,8 +431,13 @@ namespace Tiles
         ItemTotem,
         ItemSlimeball,
         ItemGoldNugget,
+        ItemRawCod,
+        ItemCookedCod,
+        ItemRawSalmon,
+        ItemCookedSalmon,
+        ItemPufferfish,
 
-        ItemTileEnd = ItemGoldNugget + 1
+        ItemTileEnd = ItemPufferfish + 1
     };
 
     // Ten progressively more broken overlay tiles for the mining animation.

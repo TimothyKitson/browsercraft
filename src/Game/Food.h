@@ -15,6 +15,15 @@ namespace Food
     bool isEdible(StackId id);
     FoodValue valueOf(StackId id);
 
+    // Whether swallowing it makes you ill. Whoever applies the bite
+    // owns the effect; this only says which food deserves one.
+    bool poisons(StackId id);
+
+    // How long the poison lasts, in seconds, and how strong. Minecraft
+    // gives a pufferfish poison for a quarter of a minute.
+    constexpr float POISON_SECONDS = 15.0f;
+    constexpr int POISON_LEVEL = 1;
+
     struct Bite
     {
         float timer = 0.0f;

@@ -44,6 +44,14 @@ namespace
                                    MobId::Spider, MobId::CaveSpider, MobId::Silverfish,
                                    MobId::Slime, MobId::Bat };
 
+    // What swims. The squid was alone down there; these are the rest
+    // of it. The axolotl belongs to a lush cave in Minecraft rather
+    // than to the open sea, and goes in here because this engine has
+    // no underground water worth a rule of its own yet.
+    const MobId SEA_SPECIES[] = { MobId::Squid, MobId::Cod, MobId::Salmon,
+                                  MobId::Pufferfish, MobId::Dolphin,
+                                  MobId::Turtle, MobId::Axolotl };
+
     // How far down a slime will go to, as Minecraft has it: they keep
     // to the bottom of the world rather than the first cave you find.
     constexpr int SLIME_CEILING = 40;
@@ -130,6 +138,17 @@ MobId EntityManager::nightSpecies(int index)
 {
     const int count = nightSpeciesCount();
     return HOSTILE_SPECIES[((index % count) + count) % count];
+}
+
+int EntityManager::seaSpeciesCount()
+{
+    return static_cast<int>(std::size(SEA_SPECIES));
+}
+
+MobId EntityManager::seaSpecies(int index)
+{
+    const int count = seaSpeciesCount();
+    return SEA_SPECIES[((index % count) + count) % count];
 }
 
 int EntityManager::lavaSurfaceBelow(const World& world, int x, int startY, int z) const
