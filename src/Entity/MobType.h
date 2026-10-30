@@ -31,6 +31,7 @@ enum class MobId : uint8_t
     Guardian,
     Warden,
     Witch,
+    EnderDragon,
     Count
 };
 
@@ -196,6 +197,10 @@ struct MobType
     // skeleton at 1.2 -- and this is both the drawing and the hitbox,
     // so width and height below are the model's own and get multiplied.
     float modelScale = 1.0f;
+
+    // A boss: it has a bar across the top of the screen, it does not
+    // despawn, and nothing else in the world is allowed to be one.
+    bool boss = false;
 
     Sound voice = Sound::MobPigSay;
     Sound hurtVoice = Sound::MobPigHurt;

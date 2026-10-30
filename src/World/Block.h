@@ -328,6 +328,11 @@ namespace Blocks
         Vine,
         Mud,
 
+        // The End's own two: the cage a crystal sits in, and the
+        // bedrock slab under it.
+        EndCrystal,
+        EndCrystalBase,
+
         Count
     };
 }

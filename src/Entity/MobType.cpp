@@ -1026,6 +1026,79 @@ namespace
             t.model.push_back(mc(Part::WingLeft, 0, 64, 10, 2, 10, -5, -11, -5, 0, 0, 0));
         }
 
+        {
+            // The dragon. The one boss in the game, and the reason the
+            // End exists at all: the strongholds, the eyes and the
+            // portal all lead here and used to arrive at an empty
+            // island.
+            MobType& t = table[static_cast<size_t>(MobId::EnderDragon)];
+            t.id = MobId::EnderDragon;
+            t.experience = 500;
+            t.voice = Sound::MobDragonSay;
+            t.hurtVoice = Sound::MobDragonHurt;
+            t.deathVoice = Sound::MobDragonDeath;
+            t.name = "Ender Dragon";
+            t.texture = "enderdragon";
+            t.sheetWidth = 128;
+            t.sheetHeight = 128;
+            t.spawnClass = SpawnClass::Hostile;
+            t.boss = true;
+
+            // Minecraft's numbers. The health is the whole shape of
+            // the fight: you cannot out-damage the crystals healing
+            // it, so the crystals are what you go for first.
+            t.maxHealth = 200;
+            t.attackDamage = 10;
+            t.width = 4.0f;
+            t.height = 2.6f;
+            t.walkSpeed = 7.0f;
+            t.limbSwing = 0.6f;
+
+            // It never lands. Everything about fighting one is that it
+            // is in the air and you are not.
+            t.hoverHeight = 9.0f;
+            t.fireproof = true;
+
+            // Drawn three times the size the boxes say. The hitbox
+            // stays what it is -- a dragon you could never hit would
+            // not be a fight -- but a dragon drawn at box size is a
+            // bird, and the whole of the thing is that it is enormous.
+            t.modelScale = 3.0f;
+
+            t.bodyColour = rgb(26, 20, 32);
+            t.headColour = rgb(34, 26, 42);
+            t.eyeColour = 0xFFD050F0;
+
+            // Head and jaw out front, a long body, and wings that
+            // reach well past it either side -- the silhouette is the
+            // whole of how you recognise one coming.
+            // Laid out along Z: head out front, body, then a tail
+            // that is most of its length. The first version was a
+            // compact blob with wings and read as a bat -- a dragon
+            // is recognised by being long.
+            //
+            // bz is what puts a box in front of or behind the middle,
+            // because origin.z = -(bz + pz + depth).
+            t.model.push_back(mc(Part::Head, 0, 0, 10, 8, 16, -5, -4, -34, 0, 0, 0));
+            t.model.push_back(mc(Part::Body, 0, 32, 16, 12, 28, -8, -6, -14, 0, 0, 0));
+
+            // The tail rides on Body rather than on a leg. Put on
+            // LegBack* it was animated as a limb and swung back and
+            // forth across the body, so the dragon came apart at close
+            // range: a wing adrift on one side and the tail out at an
+            // angle on the other.
+            t.model.push_back(mc(Part::Body, 64, 0, 8, 8, 20, -4, -4, 14, 0, 0, 0));
+            t.model.push_back(mc(Part::Body, 64, 32, 5, 5, 20, -2, -2, 34, 0, 0, 0));
+
+            // Wings reaching well past the body either side, which is
+            // the whole of the silhouette. Pivoted at the shoulder
+            // rather than at the middle of the mob: swung about the
+            // centre, a wing this long travels half the island.
+            t.model.push_back(mc(Part::WingLeft, 0, 80, 26, 3, 18, 0, -1, -12, 8, 0, 0));
+            t.model.push_back(mirrored(mc(Part::WingRight, 0, 80, 26, 3, 18,
+                                          -26, -1, -12, -8, 0, 0)));
+        }
+
         return table;
     }
 }

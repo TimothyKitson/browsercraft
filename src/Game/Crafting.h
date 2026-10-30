@@ -29,4 +29,9 @@ namespace Crafting
     // needs this: without it there is no way to tell a block that is
     // crafted from one that nothing in the game can produce at all.
     std::vector<StackId> everyOutput();
+
+    // Every ingredient any recipe asks for. The other half of the
+    // audit: a recipe whose inputs nobody can get is as dead as an
+    // item nothing makes, and reads exactly the same from the table.
+    std::vector<StackId> everyIngredient();
 }

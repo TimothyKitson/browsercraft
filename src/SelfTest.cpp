@@ -5202,6 +5202,7 @@ namespace
                 case MobId::MagmaCube: case MobId::Blaze:
                 case MobId::Breeze:
                 case MobId::Guardian: case MobId::Warden: case MobId::Witch:
+                case MobId::EnderDragon:
                     meetable = true;
                     break;
                 default:
@@ -5254,6 +5255,110 @@ namespace
         // index zero happens to be.
         check(tileUV(Tiles::ItemPotion).u1 > tileUV(Tiles::ItemPotion).u0,
               "and there is a bottle to draw it with");
+    }
+
+    void testDragonFight()
+    {
+        section("the End island, and the dragon over it");
+
+        constexpr uint32_t SEED = 4242u;
+        const WorldGen end(SEED, Dimension::End);
+
+        // Ten pillars in a ring, which is Minecraft's count.
+        check(WorldGen::END_PILLARS == 10, "ten pillars, as Minecraft has");
+
+        std::vector<std::pair<int,int>> where;
+        for (int i = 0; i < WorldGen::END_PILLARS; ++i)
+        {
+            int px = 0, pz = 0, tall = 0;
+            WorldGen::endPillar(i, px, pz, tall);
+
+            check(tall >= 12 && tall <= 22, "every pillar is between twelve and twenty-two tall");
+
+            const float out = std::sqrt(static_cast<float>(px * px + pz * pz));
+            check(out > WorldGen::END_PILLAR_RING - 2.0f &&
+                  out < WorldGen::END_PILLAR_RING + 2.0f,
+                  "and stands on the ring rather than wherever it likes");
+
+            // No two in the same place: a ring of ten that was really
+            // six would be hard to see and easy to miss.
+            for (const auto& seen : where)
+                check(seen.first != px || seen.second != pz,
+                      "no two pillars stand in the same place");
+            where.push_back({ px, pz });
+        }
+
+        // They are not all the same height, or the ring is a fence.
+        int shortest = 99, tallest = 0;
+        for (int i = 0; i < WorldGen::END_PILLARS; ++i)
+        {
+            int px = 0, pz = 0, tall = 0;
+            WorldGen::endPillar(i, px, pz, tall);
+            shortest = std::min(shortest, tall);
+            tallest = std::max(tallest, tall);
+        }
+        check(tallest > shortest, "and they are not all the same height");
+
+        // Built, with a crystal on each. Generated for real rather
+        // than trusting the arithmetic that placed them.
+        int obsidian = 0, crystals = 0, bases = 0;
+        for (int cz = -4; cz <= 4; ++cz)
+            for (int cx = -4; cx <= 4; ++cx)
+            {
+                Chunk chunk(ChunkPos{ cx, cz });
+                end.generate(chunk);
+
+                for (int y = 0; y < Chunk::SY; ++y)
+                    for (int lx = 0; lx < Chunk::SX; ++lx)
+                        for (int lz = 0; lz < Chunk::SZ; ++lz)
+                            switch (chunk.getBlock(lx, y, lz))
+                            {
+                                case Blocks::Obsidian:       ++obsidian; break;
+                                case Blocks::EndCrystal:     ++crystals; break;
+                                case Blocks::EndCrystalBase: ++bases; break;
+                                default: break;
+                            }
+            }
+
+        check(obsidian > 500, "the pillars are built, and out of obsidian");
+        check(crystals == WorldGen::END_PILLARS,
+              "with exactly one crystal on each -- no more, and none missing");
+        check(bases == WorldGen::END_PILLARS, "each standing on its own slab");
+
+        // The dragon itself.
+        const MobType& dragon = mobType(MobId::EnderDragon);
+        check(dragon.boss, "the dragon is a boss");
+        check(dragon.maxHealth == 200, "with Minecraft's two hundred health");
+        check(dragon.hoverHeight > 4.0f, "and it never lands");
+        check(dragon.experience > 100, "it is worth the fight");
+        check(dragon.modelScale > 2.0f, "and it is drawn big");
+
+        // Nothing else in the world is a boss, or the bar means
+        // nothing.
+        int bosses = 0;
+        for (int i = 0; i < mobTypeCount(); ++i)
+            if (mobType(static_cast<MobId>(i)).boss) ++bosses;
+        check(bosses == 1, "and it is the only one");
+
+        // It is not on the night list: it belongs to the island.
+        for (int k = 0; k < EntityManager::nightSpeciesCount(); ++k)
+            check(EntityManager::nightSpecies(k) != MobId::EnderDragon,
+                  "a dragon never turns up with the night");
+
+        // Healing is what makes the crystals the fight. Ten of them
+        // put back more than most weapons take off, so going for the
+        // pillars is not a tactic -- it is the only way through.
+        Mob mob(MobId::EnderDragon, glm::vec3(0.0f, 80.0f, 0.0f), 4242u);
+        const int full = mob.health();
+        mob.damage(60, glm::vec3(0.0f, 0.0f, 1.0f));
+        check(mob.health() < full, "a dragon can be hurt");
+
+        const int hurt = mob.health();
+        mob.heal(10);
+        check(mob.health() == hurt + 10, "and healed by what the crystals put back");
+
+        mob.heal(10000);
+        check(mob.health() == full, "but never past what it started with");
     }
 
     void testFortressAndMineshaft()
@@ -8952,6 +9057,7 @@ int runSelfTest()
     testSwamp();
     testEverythingIsReachable();
     testWitchPotions();
+    testDragonFight();
     testAncientCity();
     testOtherDimensionStructures();
     testSearchAgreesWithStamp();

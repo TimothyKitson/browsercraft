@@ -204,6 +204,7 @@ namespace Tiles
         LilyPadTile,
         VineTile,
         MudTile,
+        EndCrystalTile,
 
         RainDrop,
         SnowFlake,

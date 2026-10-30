@@ -191,6 +191,17 @@ public:
     // the island you arrive on, where Minecraft puts none either.
     static constexpr long long END_CITY_VOID = 460;
 
+    // The ring of obsidian pillars round the middle of the main
+    // island, each with a crystal on top that heals the dragon.
+    // Minecraft has ten; so does this.
+    static constexpr int END_PILLARS = 10;
+    static constexpr int END_PILLAR_RING = 43;
+
+    // Where the nth pillar stands and how tall it is. Pure arithmetic
+    // over the index, so the dragon and the generator agree about
+    // where the crystals are without either telling the other.
+    static void endPillar(int index, int& outX, int& outZ, int& outTall);
+
     bool endCityStands(int midX, int midZ) const;
 
     // Which of a bastion and a fortress a square drew. Public because
@@ -295,6 +306,7 @@ private:
     void buildDesertWells(Chunk& chunk) const;
     void buildAncientCities(Chunk& chunk) const;
     void buildEndCities(Chunk& chunk) const;
+    void buildEndPillars(Chunk& chunk) const;
     void stampEndCity(Chunk& chunk, int midX, int midZ, int ground) const;
     void buildBastions(Chunk& chunk) const;
 

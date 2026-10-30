@@ -295,6 +295,8 @@ void AudioEngine::buildSounds()
                  Sound::MobGuardianDeath, "mob/guardian");
     loadMobVoice(Sound::MobWitchSay, Sound::MobWitchHurt,
                  Sound::MobWitchDeath, "mob/witch");
+    loadMobVoice(Sound::MobDragonSay, Sound::MobDragonHurt,
+                 Sound::MobDragonDeath, "mob/enderdragon");
     loadMobVoice(Sound::MobWardenSay, Sound::MobWardenHurt,
                  Sound::MobWardenDeath, "mob/warden");
     loadVariants(Sound::Rain, "weather/rain", 1);
@@ -769,6 +771,31 @@ void AudioEngine::buildSounds()
         s.addNoise(0.34f, 420.0f, 12.0f, 0.44f, false, 845);
         s.addNoise(0.34f, 1400.0f, 9.0f, 0.18f, true, 846);
         s.finish(0.78f);
+    }
+
+    // The dragon: the biggest noise in the game. A long roar made of
+    // two tones a fifth apart sliding down together, with a growl of
+    // noise under them -- loud and low rather than sharp, so it
+    // carries across the island.
+    {
+        Synth s = make(Sound::MobDragonSay);
+        s.addTone(1.60f, 150.0f, 64.0f, 1.2f, 0.78f, true);
+        s.addTone(1.60f, 100.0f, 42.0f, 1.1f, 0.54f, true);
+        s.addNoise(1.20f, 320.0f, 2.0f, 0.22f, true, 891);
+        s.finish(0.90f);
+    }
+    {
+        Synth s = make(Sound::MobDragonHurt);
+        s.addTone(0.50f, 260.0f, 110.0f, 7.0f, 0.80f, true);
+        s.addNoise(0.42f, 800.0f, 9.0f, 0.28f, false, 892);
+        s.finish(0.86f);
+    }
+    {
+        Synth s = make(Sound::MobDragonDeath);
+        s.addTone(2.40f, 170.0f, 34.0f, 1.0f, 0.80f, true);
+        s.addTone(2.40f, 112.0f, 22.0f, 0.9f, 0.56f, true);
+        s.addNoise(1.80f, 400.0f, 1.6f, 0.24f, true, 893);
+        s.finish(0.94f);
     }
 
     // The witch: a cackle, which is a tone that jumps rather than

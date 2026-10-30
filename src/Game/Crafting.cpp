@@ -483,3 +483,15 @@ std::vector<StackId> Crafting::everyOutput()
     for (const Recipe& recipe : RECIPES) out.push_back(recipe.result);
     return out;
 }
+
+std::vector<StackId> Crafting::everyIngredient()
+{
+    std::vector<StackId> out;
+    for (const Recipe& recipe : RECIPES)
+    {
+        const int many = recipe.shapeless ? recipe.inputCount : 9;
+        for (int i = 0; i < many; ++i)
+            if (recipe.pattern[i] != Blocks::Air) out.push_back(recipe.pattern[i]);
+    }
+    return out;
+}

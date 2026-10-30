@@ -1252,6 +1252,7 @@ bool Application::frame()
         if (playing()) tickCopper(deltaTime);
         if (playing()) tickMonsterCages(deltaTime);
         if (playing()) tickStructureLairs(deltaTime);
+        if (playing()) tickDragonFight(deltaTime);
 
         // A pressed button lets go on its own, and everything it was
         // powering goes out with it.
@@ -1415,6 +1416,7 @@ bool Application::frame()
             m_startupScreen == "portalruin" || m_startupScreen == "outpost" ||
             m_startupScreen == "mansion" || m_startupScreen == "well" ||
             m_startupScreen == "hut" || m_startupScreen == "swamp" ||
+            m_startupScreen == "dragon" ||
             m_startupScreen == "city" || m_startupScreen == "bastion" ||
             m_startupScreen == "endcity" ||
             m_startupScreen == "shipwreck" || m_startupScreen == "monument" ||
@@ -1476,6 +1478,7 @@ bool Application::frame()
                                   m_startupScreen != "mansion" &&
                                   m_startupScreen != "hut" &&
                                   m_startupScreen != "swamp" &&
+                                  m_startupScreen != "dragon" &&
                                   m_startupScreen != "city" &&
                                   m_startupScreen != "bastion" &&
                                   m_startupScreen != "endcity" &&
@@ -2176,6 +2179,59 @@ bool Application::frame()
                 else
                 {
                     std::printf("No ancient city found\n");
+                    std::fflush(stdout);
+                }
+
+                m_player.mode = GameMode::Creative;
+                m_player.health = Player::MAX_HEALTH;
+            }
+
+            // The End island, with the dragon over it. Wants --dim end.
+            if (m_startupScreen == "dragon")
+            {
+                if (m_dimension != Dimension::End)
+                {
+                    std::printf("Run this with --dim end\n");
+                    std::fflush(stdout);
+                }
+                else
+                {
+                    // On the island looking up at the ring, far enough
+                    // out that the pillars and the dragon are both in
+                    // the shot.
+                    m_player.position = glm::vec3(
+                        0.5f,
+                        static_cast<float>(WorldGen::END_ISLAND_LEVEL) + 22.0f,
+                        26.5f);
+                    m_player.velocity = glm::vec3(0.0f);
+                    m_player.flying = true;
+                    m_placeOnSurface = false;
+                    m_camera.setOrientation(-90.0f, 2.0f);
+                    m_camera.addLook(0.0f, 0.0f, 0.0f);
+
+                    // Counted out of a freshly generated chunk rather
+                    // than off the world: at setup time the chunks
+                    // round the ring have not streamed in yet, so the
+                    // world says every crystal is missing.
+                    int standing = 0;
+                    for (int i = 0; i < WorldGen::END_PILLARS; ++i)
+                    {
+                        int px = 0, pz = 0, tall = 0;
+                        WorldGen::endPillar(i, px, pz, tall);
+
+                        Chunk probe(ChunkPos{ Structures::squareOf(px, Chunk::SX),
+                                              Structures::squareOf(pz, Chunk::SZ) });
+                        m_world->generator().generate(probe);
+
+                        const int lx = px - probe.position().x * Chunk::SX;
+                        const int lz = pz - probe.position().z * Chunk::SZ;
+                        if (probe.getBlock(lx, WorldGen::END_ISLAND_LEVEL + tall + 2, lz) ==
+                            Blocks::EndCrystal)
+                            ++standing;
+                    }
+
+                    std::printf("End island: %d of %d crystals standing\n",
+                                standing, WorldGen::END_PILLARS);
                     std::fflush(stdout);
                 }
 
@@ -4586,6 +4642,102 @@ void Application::tickMonsterCages(float deltaTime)
 // So the test is where the player is standing rather than what the
 // light level is: inside the footprint of one of those two
 // structures, and nowhere else.
+// The dragon, and the crystals that keep it alive.
+//
+// Not a spawn rule: there is one dragon, it is there when you arrive
+// and it stays until it is killed. The crystals are the fight -- you
+// cannot out-damage ten of them healing it, so going for the pillars
+// is not a tactic, it is the only way through.
+void Application::tickDragonFight(float deltaTime)
+{
+    if (!m_world) return;
+    if (m_dimension != Dimension::End) return;
+    if (m_dragonSlain) return;
+
+    constexpr float INTERVAL = 1.0f;
+    constexpr float HEAL_PER_CRYSTAL = 1.0f;   // health a second, each
+    constexpr float ARRIVAL = 180.0f;          // how near the island counts
+
+    m_dragonTimer -= deltaTime;
+    if (m_dragonTimer > 0.0f) return;
+    m_dragonTimer = INTERVAL;
+
+    // Only once you are on the island it lives over, not the moment
+    // you step into the dimension: an End city is in the End too.
+    const float fromMiddle = glm::length(glm::vec2(m_player.position.x, m_player.position.z));
+    if (fromMiddle > ARRIVAL) return;
+
+    Mob* dragon = nullptr;
+    for (Mob& mob : m_entities.mobs())
+        if (mob.alive() && mob.typeId() == MobId::EnderDragon) { dragon = &mob; break; }
+
+    if (dragon) m_dragonSeen = true;
+
+    // There was one and now there is not, and the player has not left
+    // the island: it is dead. Nothing else reports a mob's death --
+    // one that has died is simply gone from the list.
+    if (!dragon && m_dragonSeen)
+    {
+        m_dragonSlain = true;
+        openExitPortal();
+        m_chatLog.add("The dragon is dead.");
+        return;
+    }
+
+    if (!dragon)
+    {
+        // It is put over the middle of the island rather than beside
+        // the player: arriving to find it already circling is the
+        // whole of how the End introduces itself.
+        const glm::vec3 feet(0.5f,
+                             static_cast<float>(WorldGen::END_ISLAND_LEVEL) + 26.0f,
+                             0.5f);
+        m_entities.spawnAt(MobId::EnderDragon, feet, *m_world);
+        return;
+    }
+
+    // Count the crystals still standing and heal it for each. Counted
+    // off the world rather than kept in a list, so one broken while
+    // the chunk was unloaded still counts as broken.
+    int standing = 0;
+    for (int i = 0; i < WorldGen::END_PILLARS; ++i)
+    {
+        int px = 0, pz = 0, tall = 0;
+        WorldGen::endPillar(i, px, pz, tall);
+
+        const int top = WorldGen::END_ISLAND_LEVEL + tall;
+        if (m_world->getBlock(px, top + 2, pz) == Blocks::EndCrystal) ++standing;
+    }
+
+    if (standing > 0)
+        dragon->heal(static_cast<int>(HEAL_PER_CRYSTAL * standing * INTERVAL));
+}
+
+// The way home, which only exists once the dragon is dead.
+//
+// Minecraft builds a bedrock fountain at the middle of the island with
+// the portal in the top of it. This is that: the point is that it is
+// not there while the fight is on, so the island has one exit and you
+// have to earn it.
+void Application::openExitPortal()
+{
+    if (!m_world) return;
+
+    const int top = WorldGen::END_ISLAND_LEVEL + 1;
+
+    for (int dx = -2; dx <= 2; ++dx)
+        for (int dz = -2; dz <= 2; ++dz)
+        {
+            const bool rim = std::abs(dx) == 2 || std::abs(dz) == 2;
+            m_world->setBlock(dx, top, dz,
+                              rim ? Blocks::EndCrystalBase : Blocks::EndPortal);
+
+            // A lip round it so it reads as a fountain rather than as
+            // a hole somebody cut in the floor.
+            if (rim) m_world->setBlock(dx, top + 1, dz, Blocks::EndCrystalBase);
+        }
+}
+
 void Application::tickStructureLairs(float deltaTime)
 {
     if (!m_world) return;

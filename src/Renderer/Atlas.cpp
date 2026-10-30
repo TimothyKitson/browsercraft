@@ -1742,6 +1742,23 @@ namespace
         t.speckle(6, 466);
     }
 
+    // The crystal on top of a pillar. Pale violet glass with a core
+    // in it, which is the one bright thing on a dark island.
+    void paintEndCrystal(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 0; y < Tile::N; ++y)
+            for (int x = 0; x < Tile::N; ++x)
+            {
+                const float dx = x - 7.5f, dy = y - 7.5f;
+                const float d = std::abs(dx) + std::abs(dy);   // a diamond, not a disc
+                if (d > 7.5f) continue;
+                if (d < 2.5f) t.set(x, y, Color{ 240, 226, 250 });
+                else if (d < 5.0f) t.set(x, y, Color{ 196, 150, 220 });
+                else t.set(x, y, Color{ 134, 92, 168 });
+            }
+    }
+
     void paintSpawnerIn(Tile& t, Color bars, Color inside)
     {
         t.fill(inside);
@@ -4371,6 +4388,7 @@ namespace
         { Tiles::LilyPadTile, paintLilyPad },
         { Tiles::VineTile, paintVine },
         { Tiles::MudTile, paintMud },
+        { Tiles::EndCrystalTile, paintEndCrystal },
         { Tiles::Obsidian, paintObsidian },
         { Tiles::TallGrass, paintTallGrass },
         { Tiles::FlowerRed, paintFlowerRed },

@@ -625,10 +625,56 @@ namespace
         }
         if (lostItems == 0) std::printf("  (none)\n");
 
-        std::printf("\n%s\n", (unexplained == 0 && lostItems == 0)
-                    ? "Every block and every item in the game can be reached."
-                    : "Some things exist that nobody can ever get -- see above.");
-        return (unexplained == 0 && lostItems == 0) ? 0 : 1;
+        // ------------------------------------------------------------
+        // Recipes you could never perform, and mobs that cannot fight.
+        // ------------------------------------------------------------
+        auto obtainable = [&](StackId id)
+        {
+            return (isBlockStack(id) && reachable.count(id)) || haveItem.count(id);
+        };
+
+        std::printf("\n  %-26s %s\n", "recipe asks for", "which nobody can get");
+        std::printf("  %-26s %s\n", "---------------", "--------------------");
+
+        int deadRecipes = 0;
+        std::set<int> alreadySaid;
+        for (StackId need : Crafting::everyIngredient())
+        {
+            if (obtainable(need) || alreadySaid.count(need)) continue;
+            alreadySaid.insert(need);
+            std::printf("  %-26s *** DEAD RECIPE ***\n", displayName(need));
+            ++deadRecipes;
+        }
+        if (deadRecipes == 0) std::printf("  (none)\n");
+
+        std::printf("\n  %-26s %s\n", "mob that cannot fight", "");
+        std::printf("  %-26s %s\n", "---------------------", "");
+
+        int harmless = 0;
+        for (int m = 0; m < mobTypeCount(); ++m)
+        {
+            const MobId id = static_cast<MobId>(m);
+            const MobType& type = mobType(id);
+
+            if (type.spawnClass != SpawnClass::Hostile) continue;
+            if (id == MobId::Boat || id == MobId::Minecart) continue;
+
+            // A hostile that hits for nothing and shoots nothing is
+            // scenery that walks towards you.
+            if (type.attackDamage > 0 || type.arrowDamage > 0 || type.blastDamage > 0)
+                continue;
+
+            std::printf("  %-26s *** HARMLESS ***\n", type.name);
+            ++harmless;
+        }
+        if (harmless == 0) std::printf("  (none)\n");
+
+        const bool clean = unexplained == 0 && lostItems == 0 &&
+                           deadRecipes == 0 && harmless == 0;
+        std::printf("\n%s\n", clean
+                    ? "Every block, item, recipe and mob in the game works."
+                    : "Some things exist that do not work -- see above.");
+        return clean ? 0 : 1;
     }
 
     int printSeabedInfo(uint32_t seed)

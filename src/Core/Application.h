@@ -549,6 +549,19 @@ private:
     float m_lairTimer = 0.0f;
     void tickStructureLairs(float deltaTime);
 
+    // The End's fight: the dragon, and the crystals that keep it up.
+    // Kept apart from the lairs because it is not a spawn rule -- it
+    // is one fight, with one of everything in it.
+    void tickDragonFight(float deltaTime);
+    void openExitPortal();
+    float m_dragonTimer = 0.0f;
+    bool m_dragonSlain = false;
+
+    // Whether one has been seen alive on this island. "There was one
+    // and now there is not" is how its death is noticed: a mob that
+    // has died is gone from the list, and nothing else reports it.
+    bool m_dragonSeen = false;
+
     // Which copper bulbs are sitting in a live signal. A bulb flips on
     // the edge of a pulse rather than following the power, so it has to
     // remember whether it has already answered this one; the block id

@@ -132,6 +132,11 @@ public:
     float yaw() const { return m_yaw; }
     int health() const { return m_health; }
 
+    // Put health back, never past what the species starts with. The
+    // dragon's crystals are the only thing that uses this: everything
+    // else in the world only ever loses health.
+    void heal(int amount);
+
     // Non-zero while flashing from a hit.
     float hurtFlash() const { return m_hurtFlash; }
     // 0 standing, 1 at walking pace; drives how far the legs swing.

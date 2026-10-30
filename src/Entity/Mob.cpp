@@ -941,3 +941,9 @@ void Mob::damage(int amount, const glm::vec3& fromDirection)
         emit(type().hurtVoice, 0.9f, 0.9f + random01() * 0.2f);
     }
 }
+
+void Mob::heal(int amount)
+{
+    if (amount <= 0 || m_health <= 0) return;
+    m_health = std::min(m_health + amount, mobType(m_type).maxHealth);
+}

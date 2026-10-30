@@ -163,6 +163,7 @@ void WorldGen::generate(Chunk& chunk) const
             return;
         case Dimension::End:
             generateEnd(chunk);
+            buildEndPillars(chunk);
             buildEndCities(chunk);
             return;
         default:
@@ -3692,4 +3693,81 @@ void WorldGen::stampBastion(Chunk& chunk, int midX, int midZ) const
 
     put(chunk, midX - 4, base + 1, midZ + 4, Blocks::Chest);
     put(chunk, midX + 4, base + 1, midZ - 4, Blocks::Chest);
+}
+
+// ---------------------------------------------------------------------
+// The obsidian pillars, and the crystals on them.
+//
+// Ten of them in a ring round the middle of the main island, which is
+// Minecraft's count. Their heights vary so the ring does not read as a
+// fence; the tallest carry a cage round the crystal, which is what
+// stops you simply shooting them all from the ground.
+//
+// Where they stand is arithmetic over the index rather than anything
+// stored, so the generator and the dragon agree about where the
+// crystals are without either having to tell the other.
+// ---------------------------------------------------------------------
+void WorldGen::endPillar(int index, int& outX, int& outZ, int& outTall)
+{
+    const float turn = 6.2831853f * static_cast<float>(index) /
+                       static_cast<float>(END_PILLARS);
+
+    outX = static_cast<int>(std::cos(turn) * END_PILLAR_RING);
+    outZ = static_cast<int>(std::sin(turn) * END_PILLAR_RING);
+
+    // Between 12 and 22, alternating rather than random: a ring whose
+    // heights were rolled came out looking like a broken fence.
+    outTall = 12 + (index % 5) * 2 + ((index % 2) ? 2 : 0);
+}
+
+void WorldGen::buildEndPillars(Chunk& chunk) const
+{
+    const int baseX = chunk.position().x * Chunk::SX;
+    const int baseZ = chunk.position().z * Chunk::SZ;
+
+    // The ring is within sixty blocks of the origin, so only the
+    // chunks near it need to think about this at all.
+    if (std::abs(baseX) > END_PILLAR_RING + 40 ||
+        std::abs(baseZ) > END_PILLAR_RING + 40)
+        return;
+
+    for (int i = 0; i < END_PILLARS; ++i)
+    {
+        int px = 0, pz = 0, tall = 0;
+        endPillar(i, px, pz, tall);
+
+        const int radius = 2 + (i % 3);
+        const int top = END_ISLAND_LEVEL + tall;
+
+        for (int dx = -radius; dx <= radius; ++dx)
+            for (int dz = -radius; dz <= radius; ++dz)
+            {
+                if (dx * dx + dz * dz > radius * radius) continue;
+
+                // Down into the island rather than resting on it, so a
+                // pillar does not end in mid-air where the ground
+                // happens to be low.
+                for (int y = END_ISLAND_LEVEL - 12; y <= top; ++y)
+                    put(chunk, px + dx, y, pz + dz, Blocks::Obsidian);
+            }
+
+        // The crystal, on a slab of bedrock on the cap.
+        put(chunk, px, top + 1, pz, Blocks::EndCrystalBase);
+        put(chunk, px, top + 2, pz, Blocks::EndCrystal);
+
+        // A cage of iron bars round the taller ones. There are no bars
+        // here, so obsidian with gaps in it does the same job: it
+        // means the tall crystals have to be reached rather than shot.
+        if (tall < 18) continue;
+
+        for (int dy = 1; dy <= 3; ++dy)
+            for (int dx = -1; dx <= 1; ++dx)
+                for (int dz = -1; dz <= 1; ++dz)
+                {
+                    if (dx == 0 && dz == 0) continue;
+                    if (std::abs(dx) == 1 && std::abs(dz) == 1) continue;
+                    if (dy == 2) continue;   // the gap you climb through
+                    put(chunk, px + dx, top + dy, pz + dz, Blocks::Obsidian);
+                }
+    }
 }

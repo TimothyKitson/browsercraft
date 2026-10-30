@@ -248,6 +248,8 @@ namespace
         { "Lily Pad",     LilyPadTile,   LilyPadTile,    LilyPadTile,    false, false, RenderType::Flat,   0,   0.0f },
         { "Vines",        VineTile,      VineTile,       VineTile,       false, false, RenderType::Cross,  0,   0.2f },
         { "Mud",          MudTile,       MudTile,        MudTile,        true,  true,  RenderType::Cube,   0,   0.5f },
+        { "End Crystal",  EndCrystalTile,EndCrystalTile, EndCrystalTile, false, false, RenderType::Cube,  15,   0.0f },
+        { "Crystal Base", Bedrock,       Bedrock,        Bedrock,        true,  true,  RenderType::Cube,   0,  -1.0f },
     };
 }
 
@@ -421,6 +423,12 @@ Material blockMaterial(BlockId id)
     // pickaxe. The block table's own test caught it, again.
     if (isWaterPlant(id)) return Material::Plant;
     if (id == Blocks::LilyPad || id == Blocks::Vine) return Material::Plant;
+
+    // A crystal is struck rather than mined -- in Minecraft it is an
+    // entity you shoot. Left to fall through it came out as stone and
+    // wanted a pickaxe to break something with no hardness at all,
+    // which the block table's own test caught. Again.
+    if (id == Blocks::EndCrystal) return Material::Plant;
 
     switch (id)
     {
