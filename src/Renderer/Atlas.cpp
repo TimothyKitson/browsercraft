@@ -2077,6 +2077,341 @@ namespace
         t.speckle(5, 538);
     }
 
+    // --- the workstations -------------------------------------------
+
+    // The smoker and the blast furnace are the furnace in a different
+    // shell: the mouth is painted the same way so that all three read
+    // as the same machine, which is what they are.
+    void paintKilnBody(Tile& t, Color base, int salt)
+    {
+        t.fill(base);
+        for (int y = 0; y < Tile::N; ++y)
+            for (int x = 0; x < Tile::N; ++x)
+            {
+                const float n = hash2(x / 2, y / 2, salt);
+                t.set(x, y, shade(t.get(x, y), n > 0.62f ? 16 : (n < 0.34f ? -18 : 0)));
+            }
+        t.speckle(6, salt + 1);
+    }
+
+    void paintKilnFace(Tile& t, Color base, int salt, bool lit, Color frame)
+    {
+        paintKilnBody(t, base, salt);
+
+        const int n = Tile::N;
+        const int x0 = n / 8, x1 = n - n / 8 - 1;
+        const int y0 = n / 2 - n / 16, y1 = n - n / 8;
+
+        const Color inner{ 44, 40, 38 };
+        const Color mouth = lit ? Color{ 252, 170, 48 } : Color{ 14, 14, 16 };
+        const Color ember = lit ? Color{ 255, 228, 138 } : Color{ 28, 28, 32 };
+
+        for (int y = y0; y <= y1; ++y)
+            for (int x = x0; x <= x1; ++x)
+            {
+                const bool edge = (x == x0 || x == x1 || y == y0 || y == y1);
+                if (edge) { t.set(x, y, frame); continue; }
+
+                const bool rim = (x == x0 + 1 || x == x1 - 1 || y == y0 + 1 || y == y1 - 1);
+                if (rim) { t.set(x, y, inner); continue; }
+
+                t.set(x, y, hash2(x, y, salt + 2) > 0.6f ? ember : mouth);
+            }
+    }
+
+    // Logs round the mouth, because a smoker is a furnace with wood
+    // built round it and that is the only way to tell them apart.
+    const Color SMOKER_WOOD{ 94, 70, 44 };
+    const Color BLAST_STONE{ 66, 66, 70 };
+
+    void paintSmokerFace(Tile& t, bool lit)
+    {
+        paintKilnFace(t, SMOKER_WOOD, 571, lit, Color{ 148, 112, 68 });
+        // Grain down the staves either side of the mouth.
+        for (int y = 0; y < Tile::N; ++y)
+            if ((y % 5) == 1)
+                for (int x = 0; x < 2; ++x)
+                {
+                    t.set(x, y, Color{ 74, 54, 34 });
+                    t.set(Tile::N - 1 - x, y, Color{ 74, 54, 34 });
+                }
+    }
+
+    void paintSmokerFront(Tile& t) { paintSmokerFace(t, false); }
+    void paintSmokerFrontLit(Tile& t) { paintSmokerFace(t, true); }
+
+    void paintSmokerTop(Tile& t)
+    {
+        paintKilnBody(t, SMOKER_WOOD, 572);
+        // The hole the smoke leaves by.
+        for (int y = 5; y < 11; ++y)
+            for (int x = 5; x < 11; ++x)
+                t.set(x, y, (x == 5 || x == 10 || y == 5 || y == 10)
+                                ? Color{ 64, 46, 30 } : Color{ 26, 24, 22 });
+    }
+
+    void paintSmokerSide(Tile& t)
+    {
+        paintKilnBody(t, SMOKER_WOOD, 573);
+        for (int y = 0; y < Tile::N; ++y)
+            if ((y % 5) == 2)
+                for (int x = 0; x < Tile::N; ++x) t.set(x, y, Color{ 70, 52, 32 });
+    }
+
+    void paintBlastFace(Tile& t, bool lit)
+    {
+        paintKilnFace(t, BLAST_STONE, 575, lit, Color{ 118, 118, 124 });
+        // The two iron straps a blast furnace is bound with.
+        for (int y = 1; y < 4; ++y)
+            for (int x = 2; x < Tile::N - 2; ++x)
+                if (y == 2) t.set(x, y, Color{ 176, 176, 182 });
+    }
+
+    void paintBlastFurnaceFront(Tile& t) { paintBlastFace(t, false); }
+    void paintBlastFurnaceFrontLit(Tile& t) { paintBlastFace(t, true); }
+
+    void paintBlastFurnaceTop(Tile& t)
+    {
+        paintKilnBody(t, BLAST_STONE, 576);
+        for (int k = 0; k < Tile::N; ++k)
+        {
+            t.set(k, 0, Color{ 44, 44, 48 }); t.set(k, Tile::N - 1, Color{ 44, 44, 48 });
+            t.set(0, k, Color{ 44, 44, 48 }); t.set(Tile::N - 1, k, Color{ 44, 44, 48 });
+        }
+        for (int y = 6; y < 10; ++y)
+            for (int x = 6; x < 10; ++x) t.set(x, y, Color{ 24, 22, 24 });
+    }
+
+    void paintBlastFurnaceSide(Tile& t)
+    {
+        paintKilnBody(t, BLAST_STONE, 577);
+        for (int x = 0; x < Tile::N; ++x)
+        {
+            t.set(x, 3, Color{ 150, 150, 156 });
+            t.set(x, Tile::N - 4, Color{ 150, 150, 156 });
+        }
+    }
+
+    // The composter: a slatted wooden box with whatever is rotting in
+    // it showing over the rim.
+    void paintComposterWood(Tile& t, int salt)
+    {
+        t.fill(Color{ 128, 100, 60 });
+        for (int x = 0; x < Tile::N; ++x)
+            if ((x % 4) == 3)
+                for (int y = 0; y < Tile::N; ++y) t.set(x, y, Color{ 96, 72, 42 });
+        t.speckle(6, salt);
+    }
+
+    void paintComposterSide(Tile& t)
+    {
+        paintComposterWood(t, 581);
+        // The slats, which are what a composter is: a box with gaps.
+        for (int y = 0; y < Tile::N; ++y)
+            if ((y % 6) == 4)
+                for (int x = 0; x < Tile::N; ++x) t.set(x, y, Color{ 74, 56, 34 });
+    }
+
+    void paintComposterBottom(Tile& t) { paintComposterWood(t, 582); }
+
+    // The top is the rim with a hole in it; the fills put more and
+    // more compost into that hole.
+    void paintComposterIn(Tile& t, int level)
+    {
+        paintComposterWood(t, 583);
+        for (int y = 2; y < Tile::N - 2; ++y)
+            for (int x = 2; x < Tile::N - 2; ++x)
+                t.set(x, y, Color{ 46, 34, 22 });
+
+        if (level <= 0) return;
+
+        // Three heights of compost, and a fourth that is ready: the
+        // ready one is green, because that is the one worth opening.
+        const int top = (level >= 4) ? 3 : (Tile::N - 2) - level * 3;
+        const Color muck = (level >= 4) ? Color{ 112, 156, 62 } : Color{ 92, 72, 36 };
+        const Color fleck = (level >= 4) ? Color{ 148, 192, 86 } : Color{ 122, 98, 50 };
+
+        for (int y = std::max(3, top); y < Tile::N - 2; ++y)
+            for (int x = 3; x < Tile::N - 3; ++x)
+                t.set(x, y, hash2(x, y, 584 + level) > 0.55f ? fleck : muck);
+    }
+
+    void paintComposterTop(Tile& t)   { paintComposterIn(t, 0); }
+    void paintComposterFill1(Tile& t) { paintComposterIn(t, 1); }
+    void paintComposterFill2(Tile& t) { paintComposterIn(t, 2); }
+    void paintComposterFill3(Tile& t) { paintComposterIn(t, 3); }
+    void paintComposterReady(Tile& t) { paintComposterIn(t, 4); }
+
+    // The grindstone: a wheel between two posts.
+    void paintGrindstoneSide(Tile& t)
+    {
+        t.fill(Color{ 118, 92, 58 });
+        for (int y = 0; y < Tile::N; ++y)
+            if ((y % 5) == 2)
+                for (int x = 0; x < Tile::N; ++x) t.set(x, y, Color{ 92, 70, 42 });
+
+        // The wheel seen edge-on, which is the whole of what it does.
+        for (int y = 2; y < Tile::N - 2; ++y)
+            for (int x = 5; x < 11; ++x)
+                t.set(x, y, hash2(x, y, 586) > 0.5f ? Color{ 136, 136, 140 }
+                                                    : Color{ 108, 108, 112 });
+        t.speckle(5, 587);
+    }
+
+    void paintGrindstoneFace(Tile& t)
+    {
+        t.fill(Color{ 118, 92, 58 });
+        for (int y = 0; y < Tile::N; ++y)
+            for (int x = 0; x < Tile::N; ++x)
+            {
+                const float dx = x - 7.5f, dy = y - 7.5f;
+                const float r = std::sqrt(dx * dx + dy * dy);
+                if (r > 6.4f) continue;
+                if (r < 1.6f) { t.set(x, y, Color{ 74, 56, 34 }); continue; }
+                t.set(x, y, hash2(x, y, 588) > 0.5f ? Color{ 142, 142, 146 }
+                                                    : Color{ 110, 110, 114 });
+            }
+        t.speckle(5, 589);
+    }
+
+    void paintGrindstonePivot(Tile& t)
+    {
+        t.fill(Color{ 118, 92, 58 });
+        for (int y = 6; y < 10; ++y)
+            for (int x = 0; x < Tile::N; ++x) t.set(x, y, Color{ 86, 64, 38 });
+        for (int y = 5; y < 11; ++y)
+            for (int x = 5; x < 11; ++x) t.set(x, y, Color{ 128, 128, 132 });
+        t.speckle(5, 590);
+    }
+
+    // The lectern: a stand with a book open on it.
+    void paintLecternBase(Tile& t)
+    {
+        t.fill(Color{ 120, 94, 58 });
+        for (int x = 0; x < Tile::N; ++x)
+            if ((x % 4) == 1)
+                for (int y = 0; y < Tile::N; ++y) t.set(x, y, Color{ 94, 72, 44 });
+        t.speckle(5, 592);
+    }
+
+    void paintLecternSide(Tile& t)
+    {
+        paintLecternBase(t);
+        // The sloped desk across the top of it.
+        for (int x = 0; x < Tile::N; ++x)
+        {
+            const int top = 2 + x / 3;
+            for (int y = top; y < top + 3 && y < Tile::N; ++y)
+                t.set(x, y, Color{ 150, 118, 74 });
+        }
+    }
+
+    void paintLecternFront(Tile& t)
+    {
+        paintLecternBase(t);
+        for (int y = 2; y < 6; ++y)
+            for (int x = 1; x < Tile::N - 1; ++x)
+                t.set(x, y, Color{ 152, 120, 76 });
+    }
+
+    void paintLecternTop(Tile& t)
+    {
+        t.fill(Color{ 134, 104, 64 });
+        for (int y = 0; y < Tile::N; ++y)
+            for (int x = 0; x < Tile::N; ++x)
+                if (((x + y) % 7) == 0) t.set(x, y, Color{ 118, 90, 54 });
+        for (int k = 0; k < Tile::N; ++k)
+        {
+            t.set(k, 0, Color{ 100, 76, 46 }); t.set(k, Tile::N - 1, Color{ 100, 76, 46 });
+            t.set(0, k, Color{ 100, 76, 46 }); t.set(Tile::N - 1, k, Color{ 100, 76, 46 });
+        }
+        t.speckle(4, 594);
+    }
+
+    // The same desk with a book open on it. Minecraft draws that book
+    // as a model and so has no texture for it; this engine draws cubes
+    // and so needs one.
+    void paintLecternTopBook(Tile& t)
+    {
+        t.fill(Color{ 134, 104, 64 });
+        // A book open on the desk, spine down the middle.
+        for (int y = 2; y < Tile::N - 2; ++y)
+            for (int x = 2; x < Tile::N - 2; ++x)
+                t.set(x, y, Color{ 232, 224, 198 });
+        for (int y = 2; y < Tile::N - 2; ++y)
+        {
+            t.set(7, y, Color{ 148, 54, 44 });
+            t.set(8, y, Color{ 148, 54, 44 });
+        }
+        for (int y = 4; y < Tile::N - 4; y += 2)
+            for (int x = 3; x < 7; ++x)
+            {
+                t.set(x, y, Color{ 176, 168, 148 });
+                t.set(Tile::N - 1 - x, y, Color{ 176, 168, 148 });
+            }
+        t.speckle(4, 593);
+    }
+
+    // The cauldron: an iron pot, empty or with water standing in it.
+    void paintCauldronIron(Tile& t, int salt)
+    {
+        t.fill(Color{ 72, 72, 76 });
+        for (int y = 0; y < Tile::N; ++y)
+            for (int x = 0; x < Tile::N; ++x)
+            {
+                const float n = hash2(x / 2, y / 2, salt);
+                t.set(x, y, shade(t.get(x, y), n > 0.6f ? 14 : (n < 0.35f ? -14 : 0)));
+            }
+    }
+
+    void paintCauldronSide(Tile& t)
+    {
+        paintCauldronIron(t, 595);
+        // The band round the top, and the feet under it.
+        for (int x = 0; x < Tile::N; ++x)
+        {
+            t.set(x, 0, Color{ 108, 108, 114 });
+            t.set(x, 1, Color{ 96, 96, 102 });
+        }
+        for (int y = Tile::N - 3; y < Tile::N; ++y)
+            for (int x = 0; x < Tile::N; ++x)
+                if (x > 2 && x < Tile::N - 3) t.set(x, y, Color{ 40, 40, 44 });
+    }
+
+    void paintCauldronBottom(Tile& t) { paintCauldronIron(t, 596); }
+
+    void paintCauldronIn(Tile& t, int water)
+    {
+        paintCauldronIron(t, 597);
+        for (int k = 0; k < Tile::N; ++k)
+        {
+            t.set(k, 0, Color{ 104, 104, 110 }); t.set(k, Tile::N - 1, Color{ 104, 104, 110 });
+            t.set(0, k, Color{ 104, 104, 110 }); t.set(Tile::N - 1, k, Color{ 104, 104, 110 });
+        }
+
+        // Inside it: the dark of an empty pot, or water at one of three
+        // depths. Depth is the only thing a cauldron has to say, and
+        // this is the face it says it on.
+        const Color empty{ 28, 28, 30 };
+        for (int y = 2; y < Tile::N - 2; ++y)
+            for (int x = 2; x < Tile::N - 2; ++x)
+                t.set(x, y, empty);
+
+        if (water <= 0) return;
+
+        const int inset = 3 - water;        // deeper water fills more of it
+        const Color top{ 60, 110, 200 };
+        const Color deep{ 42, 86, 170 };
+        for (int y = 2 + inset; y < Tile::N - 2 - inset; ++y)
+            for (int x = 2 + inset; x < Tile::N - 2 - inset; ++x)
+                t.set(x, y, hash2(x, y, 598 + water) > 0.55f ? top : deep);
+    }
+
+    void paintCauldronTop(Tile& t)    { paintCauldronIn(t, 0); }
+    void paintCauldronWater1(Tile& t) { paintCauldronIn(t, 1); }
+    void paintCauldronWater2(Tile& t) { paintCauldronIn(t, 2); }
+    void paintCauldronWater3(Tile& t) { paintCauldronIn(t, 3); }
+
     void paintSpawnerIn(Tile& t, Color bars, Color inside)
     {
         t.fill(inside);
@@ -4915,6 +5250,35 @@ namespace
         { Tiles::BarrelTop, paintBarrelTop },
         { Tiles::BarrelSide, paintBarrelSide },
         { Tiles::CampfireTop, paintCampfireTop },
+        { Tiles::SmokerFront, paintSmokerFront },
+        { Tiles::SmokerFrontLit, paintSmokerFrontLit },
+        { Tiles::SmokerTop, paintSmokerTop },
+        { Tiles::SmokerSide, paintSmokerSide },
+        { Tiles::BlastFurnaceFront, paintBlastFurnaceFront },
+        { Tiles::BlastFurnaceFrontLit, paintBlastFurnaceFrontLit },
+        { Tiles::BlastFurnaceTop, paintBlastFurnaceTop },
+        { Tiles::BlastFurnaceSide, paintBlastFurnaceSide },
+        { Tiles::ComposterSide, paintComposterSide },
+        { Tiles::ComposterBottom, paintComposterBottom },
+        { Tiles::ComposterTop, paintComposterTop },
+        { Tiles::ComposterFill1, paintComposterFill1 },
+        { Tiles::ComposterFill2, paintComposterFill2 },
+        { Tiles::ComposterFill3, paintComposterFill3 },
+        { Tiles::ComposterReady, paintComposterReady },
+        { Tiles::GrindstoneSide, paintGrindstoneSide },
+        { Tiles::GrindstoneFace, paintGrindstoneFace },
+        { Tiles::GrindstonePivot, paintGrindstonePivot },
+        { Tiles::LecternTop, paintLecternTop },
+        { Tiles::LecternTopBook, paintLecternTopBook },
+        { Tiles::LecternSide, paintLecternSide },
+        { Tiles::LecternFront, paintLecternFront },
+        { Tiles::LecternBase, paintLecternBase },
+        { Tiles::CauldronTop, paintCauldronTop },
+        { Tiles::CauldronSide, paintCauldronSide },
+        { Tiles::CauldronBottom, paintCauldronBottom },
+        { Tiles::CauldronWater1, paintCauldronWater1 },
+        { Tiles::CauldronWater2, paintCauldronWater2 },
+        { Tiles::CauldronWater3, paintCauldronWater3 },
         { Tiles::CampfireLog, paintCampfireLog },
         { Tiles::Obsidian, paintObsidian },
         { Tiles::TallGrass, paintTallGrass },
@@ -5354,6 +5718,41 @@ namespace
         { Tiles::BarrelSide,    { "barrel_side", nullptr },                            Tinting::None,    0,   false },
         { Tiles::CampfireTop,   { "campfire_fire", nullptr },                          Tinting::None,    0,   false },
         { Tiles::CampfireLog,   { "campfire_log", nullptr },                           Tinting::None,    0,   false },
+        { Tiles::SmokerFront,   { "smoker_front", nullptr },                           Tinting::None,    0,   false },
+        { Tiles::SmokerFrontLit,{ "smoker_front_on", nullptr },                        Tinting::None,    0,   false },
+        { Tiles::SmokerTop,     { "smoker_top", nullptr },                             Tinting::None,    0,   false },
+        { Tiles::SmokerSide,    { "smoker_side", nullptr },                            Tinting::None,    0,   false },
+        { Tiles::BlastFurnaceFront,    { "blast_furnace_front", nullptr },             Tinting::None,    0,   false },
+        { Tiles::BlastFurnaceFrontLit, { "blast_furnace_front_on", nullptr },          Tinting::None,    0,   false },
+        { Tiles::BlastFurnaceTop,      { "blast_furnace_top", nullptr },               Tinting::None,    0,   false },
+        { Tiles::BlastFurnaceSide,     { "blast_furnace_side", nullptr },              Tinting::None,    0,   false },
+        { Tiles::ComposterSide, { "composter_side", nullptr },                         Tinting::None,    0,   false },
+        { Tiles::ComposterBottom, { "composter_bottom", nullptr },                     Tinting::None,    0,   false },
+        { Tiles::ComposterTop,  { "composter_top", nullptr },                          Tinting::None,    0,   false },
+        // The pack has one compost texture and one for when it is
+        // ready, where this has three heights of fill. The three all
+        // take the compost; only the last is the green one.
+        { Tiles::ComposterFill1, { "composter_compost", nullptr },                     Tinting::None,    0,   false },
+        { Tiles::ComposterFill2, { "composter_compost", nullptr },                     Tinting::None,    0,   false },
+        { Tiles::ComposterFill3, { "composter_compost", nullptr },                     Tinting::None,    0,   false },
+        { Tiles::ComposterReady, { "composter_ready", nullptr },                       Tinting::None,    0,   false },
+        { Tiles::GrindstoneSide, { "grindstone_side", nullptr },                       Tinting::None,    0,   false },
+        { Tiles::GrindstoneFace, { "grindstone_round", nullptr },                      Tinting::None,    0,   false },
+        { Tiles::GrindstonePivot, { "grindstone_pivot", nullptr },                     Tinting::None,    0,   false },
+        { Tiles::LecternTop,    { "lectern_top", nullptr },                            Tinting::None,    0,   false },
+        { Tiles::LecternSide,   { "lectern_sides", nullptr },                          Tinting::None,    0,   false },
+        { Tiles::LecternFront,  { "lectern_front", nullptr },                          Tinting::None,    0,   false },
+        { Tiles::LecternBase,   { "lectern_base", nullptr },                           Tinting::None,    0,   false },
+        { Tiles::CauldronSide,  { "cauldron_side", nullptr },                          Tinting::None,    0,   false },
+        { Tiles::CauldronBottom,{ "cauldron_bottom", nullptr },                        Tinting::None,    0,   false },
+        { Tiles::CauldronTop,   { "cauldron_inner", nullptr },                         Tinting::None,    0,   false },
+        // Minecraft draws the water in a cauldron as a layer over the
+        // inner wall. There is no layer here, so the three levels take
+        // the water texture itself and the painted versions keep the
+        // depth the level means.
+        { Tiles::CauldronWater1, { "water_still", nullptr },                           Tinting::Water,   0,   true  },
+        { Tiles::CauldronWater2, { "water_still", nullptr },                           Tinting::Water,   0,   true  },
+        { Tiles::CauldronWater3, { "water_still", nullptr },                           Tinting::Water,   0,   true  },
         { Tiles::PistonTop,     { "piston_side", nullptr },                            Tinting::None,    0,   false },
         { Tiles::PistonSide,    { "piston_side", nullptr },                            Tinting::None,    0,   false },
         { Tiles::PistonFace,    { "piston_top", "piston_top_normal", nullptr },         Tinting::None,    0,   false },

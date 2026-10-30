@@ -190,6 +190,12 @@ void WorldSave::saveLevel(const std::string& saveDirectory, const LevelState& st
         write(out, state.effectAmplifiers[i]);
         write(out, i < state.effectSeconds.size() ? state.effectSeconds[i] : 0.0f);
     }
+
+    // And after those, which machine each furnace is. Counted off the
+    // furnace list, like the dimensions above.
+    for (size_t i = 0; i < state.furnaces.size(); ++i)
+        write(out, i < state.furnaceKinds.size()
+                       ? state.furnaceKinds[i] : static_cast<uint8_t>(0));
 }
 
 bool WorldSave::loadLevel(const std::string& saveDirectory, LevelState& out)
@@ -346,6 +352,19 @@ bool WorldSave::loadLevel(const std::string& saveDirectory, LevelState& out)
                                             if (!read(in, seconds)) break;
                                             out.effectAmplifiers.push_back(amplifier);
                                             out.effectSeconds.push_back(seconds);
+                                        }
+
+                                        // One byte per furnace saying
+                                        // which machine it is. A level
+                                        // from before the smoker runs
+                                        // out here and keeps the zero,
+                                        // which means a furnace.
+                                        out.furnaceKinds.assign(out.furnaces.size(), 0);
+                                        for (size_t i = 0; i < out.furnaces.size(); ++i)
+                                        {
+                                            uint8_t kind = 0;
+                                            if (!read(in, kind)) break;
+                                            out.furnaceKinds[i] = kind;
                                         }
                                     }
                                 }

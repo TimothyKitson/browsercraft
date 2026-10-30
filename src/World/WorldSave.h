@@ -37,6 +37,11 @@ struct LevelState
     // with all of them in the overworld -- which is what they were.
     std::vector<uint8_t> chestDimensions;
     std::vector<uint8_t> furnaceDimensions;
+    // Which of the three machines each furnace is, in that same order
+    // and written after everything else for the same reason: a level
+    // from before the smoker existed runs out here and reads back as
+    // all furnaces, which is what it held.
+    std::vector<uint8_t> furnaceKinds;
     // One packed word per slot, in the same order as the inventory
     // above. Empty on a level written before enchanting existed, which
     // reads back as nothing enchanted.

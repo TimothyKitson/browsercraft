@@ -1218,6 +1218,12 @@ void WorldGen::stampInterior(Chunk& chunk, const Village::Building& building, in
             put(chunk, cx, ground + 1, cz, Blocks::Anvil);
             nextCorner(cx, cz);
             put(chunk, cx, ground + 1, cz, Blocks::Chest);
+            // What a smith actually stands at: one for the metal and
+            // one for taking an enchantment back off.
+            nextCorner(cx, cz);
+            put(chunk, cx, ground + 1, cz, Blocks::BlastFurnace);
+            nextCorner(cx, cz);
+            put(chunk, cx, ground + 1, cz, Blocks::Grindstone);
             break;
         }
 
@@ -1236,6 +1242,9 @@ void WorldGen::stampInterior(Chunk& chunk, const Village::Building& building, in
 
             nextCorner(cx, cz);
             put(chunk, cx, ground + 1, cz, Blocks::Chest);
+            // The librarian's own desk, with a book already on it.
+            nextCorner(cx, cz);
+            put(chunk, cx, ground + 1, cz, Blocks::LecternBook);
             break;
         }
 
@@ -1245,6 +1254,11 @@ void WorldGen::stampInterior(Chunk& chunk, const Village::Building& building, in
             put(chunk, cx, ground + 1, cz, Blocks::Furnace);
             nextCorner(cx, cz);
             put(chunk, cx, ground + 1, cz, Blocks::Chest);
+            // A butcher cooks, so a butcher has the thing that cooks.
+            nextCorner(cx, cz);
+            put(chunk, cx, ground + 1, cz, Blocks::Smoker);
+            nextCorner(cx, cz);
+            put(chunk, cx, ground + 1, cz, Blocks::Cauldron3);
             break;
         }
 
@@ -1254,6 +1268,9 @@ void WorldGen::stampInterior(Chunk& chunk, const Village::Building& building, in
             put(chunk, cx, ground + 1, cz, Blocks::CraftingTable);
             nextCorner(cx, cz);
             put(chunk, cx, ground + 1, cz, Blocks::Chest);
+            // Every house has one: the field outside is what fills it.
+            nextCorner(cx, cz);
+            put(chunk, cx, ground + 1, cz, Blocks::Composter0);
             break;
         }
     }

@@ -1,4 +1,5 @@
 #include "Smelting.h"
+#include "Food.h"
 #include "Player/Inventory.h"
 #include <algorithm>
 
@@ -71,9 +72,42 @@ float Smelting::burnSeconds(StackId fuel)
     }
 }
 
+bool Smelting::suits(Kind kind, StackId input)
+{
+    if (resultOf(input) == Blocks::Air) return false;
+
+    switch (kind)
+    {
+        case Kind::Furnace:
+            return true;
+
+        // A smoker cooks what you eat. Asked of Food rather than
+        // listed here, so a food added later is cookable in one
+        // without anybody having to remember this function -- which
+        // is the mistake the block table has caught five times.
+        case Kind::Smoker:
+            return Food::isEdible(input);
+
+        // A blast furnace smelts metal: what comes out of the ground
+        // with a metal in it, and the raw metal itself.
+        case Kind::BlastFurnace:
+            return input == Blocks::IronOre || input == Blocks::GoldOre ||
+                   input == Blocks::CopperOre || input == Items::RawCopper;
+    }
+    return false;
+}
+
+Smelting::Kind Smelting::kindOf(BlockId block)
+{
+    if (block == Blocks::Smoker || block == Blocks::SmokerLit) return Kind::Smoker;
+    if (block == Blocks::BlastFurnace || block == Blocks::BlastFurnaceLit)
+        return Kind::BlastFurnace;
+    return Kind::Furnace;
+}
+
 float Furnace::cookFraction() const
 {
-    return std::clamp(cooked / Smelting::COOK_SECONDS, 0.0f, 1.0f);
+    return std::clamp(cooked / Smelting::cookSeconds(kind), 0.0f, 1.0f);
 }
 
 float Furnace::burnFraction() const
@@ -86,7 +120,8 @@ void Furnace::tick(float deltaTime)
 {
     if (!input || !fuel || !output) return;
 
-    const StackId making = input->empty() ? Blocks::Air : Smelting::resultOf(input->id);
+    const StackId making = input->empty() ? Blocks::Air
+                                         : Smelting::resultIn(kind, input->id);
 
     // Is there room for what this would produce? A full output slot, or
     // one holding something else, stops the furnace dead.
@@ -117,9 +152,9 @@ void Furnace::tick(float deltaTime)
     }
 
     cooked += deltaTime;
-    if (cooked < Smelting::COOK_SECONDS) return;
+    if (cooked < Smelting::cookSeconds(kind)) return;
 
-    cooked -= Smelting::COOK_SECONDS;
+    cooked -= Smelting::cookSeconds(kind);
 
     if (output->empty())
     {

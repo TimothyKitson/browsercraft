@@ -45,6 +45,7 @@ std::vector<glm::ivec3> Furnaces::tick(float deltaTime, const glm::ivec3* except
         furnace.burnLeft = state.burnLeft;
         furnace.burnTotal = state.burnTotal;
         furnace.cooked = state.cooked;
+        furnace.kind = state.kind;
 
         furnace.tick(deltaTime);
 

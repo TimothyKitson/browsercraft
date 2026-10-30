@@ -189,6 +189,11 @@ StackId blockDrop(BlockId id)
 {
     if (isLeaves(id)) return Blocks::Air;   // leaves drop nothing
 
+    // A composter and a cauldron come up empty however full they were,
+    // which is Minecraft's: what was in them is not yours.
+    if (isComposter(id)) return Blocks::Composter0;
+    if (isCauldron(id)) return Blocks::Cauldron0;
+
     switch (id)
     {
         case Blocks::Grass:
@@ -204,6 +209,12 @@ StackId blockDrop(BlockId id)
         // Ore gives up what is in it. Iron and gold stay as ore --
         // they want a furnace, and there is not one yet.
         case Blocks::FurnaceLit: return Blocks::Furnace;
+        case Blocks::SmokerLit: return Blocks::Smoker;
+        case Blocks::BlastFurnaceLit: return Blocks::BlastFurnace;
+
+        // The book on it is given back by the hand that breaks it,
+        // the way a furnace gives back what was inside.
+        case Blocks::LecternBook: return Blocks::Lectern;
         case Blocks::CoalOre: return Items::Coal;
         case Blocks::DiamondOre: return Items::Diamond;
         case Blocks::EmeraldOre: return Items::Emerald;

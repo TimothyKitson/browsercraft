@@ -230,6 +230,44 @@ namespace
         // A bone ground up makes three meal, which is Minecraft's.
         { true, 0, 0, { Items::Bone }, 1, Items::BoneMeal, 3 },
 
+        // The workstations. A smoker is a furnace with logs built
+        // round it; a blast furnace is one with iron over it and
+        // smooth stone under. Both are Minecraft's, and both are the
+        // same trade: half the diet for twice the speed.
+        { false, 3, 3, { Blocks::Air,  Blocks::Log,     Blocks::Air,
+                         Blocks::Log,  Blocks::Furnace, Blocks::Log,
+                         Blocks::Air,  Blocks::Log,     Blocks::Air },
+          0, Blocks::Smoker, 1 },
+
+        { false, 3, 3, { Items::IronIngot, Items::IronIngot, Items::IronIngot,
+                         Items::IronIngot, Blocks::Furnace,  Items::IronIngot,
+                         Blocks::Stone,    Blocks::Stone,    Blocks::Stone },
+          0, Blocks::BlastFurnace, 1 },
+
+        // A composter is a slatted box: seven slabs with the top open.
+        { false, 3, 3, { Blocks::PlankSlab, Blocks::Air,       Blocks::PlankSlab,
+                         Blocks::PlankSlab, Blocks::Air,       Blocks::PlankSlab,
+                         Blocks::PlankSlab, Blocks::PlankSlab, Blocks::PlankSlab },
+          0, Blocks::Composter0, 1 },
+
+        // A grindstone is a wheel slung between two posts.
+        { false, 3, 3, { Items::Stick,     Blocks::StoneSlab, Items::Stick,
+                         Blocks::Planks,   Blocks::Air,       Blocks::Planks,
+                         Blocks::Air,      Blocks::Air,       Blocks::Air },
+          0, Blocks::Grindstone, 1 },
+
+        // A lectern is a bookshelf on a stand, which is what it is.
+        { false, 3, 3, { Blocks::PlankSlab, Blocks::PlankSlab, Blocks::PlankSlab,
+                         Blocks::Air,       Blocks::Bookshelf, Blocks::Air,
+                         Blocks::Air,       Blocks::PlankSlab, Blocks::Air },
+          0, Blocks::Lectern, 1 },
+
+        // A cauldron is seven iron round an open top.
+        { false, 3, 3, { Items::IronIngot, Blocks::Air,      Items::IronIngot,
+                         Items::IronIngot, Blocks::Air,      Items::IronIngot,
+                         Items::IronIngot, Items::IronIngot, Items::IronIngot },
+          0, Blocks::Cauldron0, 1 },
+
         // A hopper: iron round a chest, which is Minecraft's. A
         // dropper is cobble round nothing with redstone behind it,
         // and a dispenser is a dropper with a bow in it.

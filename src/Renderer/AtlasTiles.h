@@ -234,6 +234,15 @@ namespace Tiles
         PotatoStage0, PotatoStage1, PotatoStage2, PotatoStage3,
         PotatoStage4, PotatoStage5, PotatoStage6, PotatoStage7,
 
+        SmokerFront, SmokerFrontLit, SmokerTop, SmokerSide,
+        BlastFurnaceFront, BlastFurnaceFrontLit, BlastFurnaceTop, BlastFurnaceSide,
+        ComposterSide, ComposterBottom, ComposterTop,
+        ComposterFill1, ComposterFill2, ComposterFill3, ComposterReady,
+        GrindstoneSide, GrindstoneFace, GrindstonePivot,
+        LecternTop, LecternTopBook, LecternSide, LecternFront, LecternBase,
+        CauldronTop, CauldronSide, CauldronBottom,
+        CauldronWater1, CauldronWater2, CauldronWater3,
+
         RainDrop,
         SnowFlake,
 

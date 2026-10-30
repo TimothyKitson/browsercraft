@@ -1458,7 +1458,14 @@ void Application::openFurnace(const glm::ivec3& block)
     m_furnaceBlock = block;
     m_furnaceOpen = true;
 
-    const Furnaces::State& state = m_furnaces.at(block);
+    Furnaces::State& state = m_furnaces.at(block);
+
+    // Which machine this is comes off the block, not off the record:
+    // the record is made the first time one is opened, and a smoker
+    // that remembered itself as a furnace would cook at half speed and
+    // take ore.
+    state.kind = Smelting::kindOf(m_world->getBlock(block.x, block.y, block.z));
+
     m_inventory.slot(Inventory::FURNACE_INPUT) = state.input;
     m_inventory.slot(Inventory::FURNACE_FUEL) = state.fuel;
     m_inventory.slot(Inventory::FURNACE_OUTPUT) = state.output;
@@ -1516,6 +1523,7 @@ void Application::tickFurnaces(float deltaTime)
         running.burnLeft = state.burnLeft;
         running.burnTotal = state.burnTotal;
         running.cooked = state.cooked;
+        running.kind = state.kind;
 
         running.tick(deltaTime);
 
@@ -1550,9 +1558,9 @@ void Application::tickFurnaces(float deltaTime)
 void Application::setFurnaceLit(const glm::ivec3& block, bool lit)
 {
     const BlockId now = m_world->getBlock(block.x, block.y, block.z);
-    if (now != Blocks::Furnace && now != Blocks::FurnaceLit) return;
+    if (!isFurnaceBlock(now)) return;
 
-    const BlockId wanted = lit ? Blocks::FurnaceLit : Blocks::Furnace;
+    const BlockId wanted = lit ? furnaceLit(now) : furnaceCold(now);
     if (now == wanted) return;
 
     m_world->setBlock(block.x, block.y, block.z, wanted);

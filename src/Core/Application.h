@@ -131,6 +131,7 @@ public:
     // Dev aid: sow a field of wheat at every stage of growth in front
     // of the player, so a screenshot shows the whole crop at once.
     void setFarmTest() { m_farmTest = true; m_startImmediately = true; }
+    void setShopTest() { m_shopTest = true; m_startImmediately = true; }
     // Dev aid: open straight into another dimension.
     void setStartupDimension(Dimension dimension) { m_startupDimension = dimension; }
     // Dev aid: preview a candidate panorama viewpoint.
@@ -406,6 +407,8 @@ private:
     bool m_mobTestDone = false;
     bool m_farmTest = false;
     bool m_farmTestDone = false;
+    bool m_shopTest = false;
+    bool m_shopTestDone = false;
     Dimension m_startupDimension = Dimension::Overworld;
     uint32_t m_panoramaSeed = 0;
     glm::vec3 m_panoramaSpot{ 0.0f };
@@ -666,6 +669,17 @@ private:
     void fillVillageChest(const glm::ivec3& block);
 
     void openFurnace(const glm::ivec3& block);
+
+    // The workstations that need no screen: each is one action on what
+    // you are holding. True when it took it, so the caller can fall
+    // through to placing a block when it did not.
+    bool useComposter(const glm::ivec3& at, BlockId block);
+    bool useCauldron(const glm::ivec3& at, BlockId block);
+    bool useLectern(const glm::ivec3& at, BlockId block);
+    bool useGrindstone(const glm::ivec3& at);
+
+    // Rain raises a cauldron that has the sky over it.
+    void fillCauldronsInRain();
     // Looks for a completed ring of eyed frames round a frame that was
     // just filled, and opens the portal inside it if there is one.
     void lightEndPortalAround(const glm::ivec3& frame);

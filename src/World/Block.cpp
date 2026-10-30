@@ -287,6 +287,30 @@ namespace
         { "Potato Crop",  PotatoStage5,  PotatoStage5,   PotatoStage5,   false, false, RenderType::Cross,  0,   0.0f },
         { "Potato Crop",  PotatoStage6,  PotatoStage6,   PotatoStage6,   false, false, RenderType::Cross,  0,   0.0f },
         { "Potato Crop",  PotatoStage7,  PotatoStage7,   PotatoStage7,   false, false, RenderType::Cross,  0,   0.0f },
+
+        { "Smoker",       SmokerTop,     SmokerSide,     SmokerFront,    true,  true,  RenderType::Cube,   0,   3.5f },
+        { "Smoker",       SmokerTop,     SmokerSide,     SmokerFrontLit, true,  true,  RenderType::Cube,  13,   3.5f },
+        { "Blast Furnace",BlastFurnaceTop,BlastFurnaceSide,BlastFurnaceFront,true,true,RenderType::Cube,   0,   3.5f },
+        { "Blast Furnace",BlastFurnaceTop,BlastFurnaceSide,BlastFurnaceFrontLit,true,true,RenderType::Cube,13, 3.5f },
+
+        { "Composter",    ComposterTop,  ComposterBottom,ComposterSide,  true,  true,  RenderType::Cube,   0,   0.6f },
+        { "Composter",    ComposterFill1,ComposterBottom,ComposterSide,  true,  true,  RenderType::Cube,   0,   0.6f },
+        { "Composter",    ComposterFill1,ComposterBottom,ComposterSide,  true,  true,  RenderType::Cube,   0,   0.6f },
+        { "Composter",    ComposterFill2,ComposterBottom,ComposterSide,  true,  true,  RenderType::Cube,   0,   0.6f },
+        { "Composter",    ComposterFill2,ComposterBottom,ComposterSide,  true,  true,  RenderType::Cube,   0,   0.6f },
+        { "Composter",    ComposterFill3,ComposterBottom,ComposterSide,  true,  true,  RenderType::Cube,   0,   0.6f },
+        { "Composter",    ComposterFill3,ComposterBottom,ComposterSide,  true,  true,  RenderType::Cube,   0,   0.6f },
+        { "Composter",    ComposterFill3,ComposterBottom,ComposterSide,  true,  true,  RenderType::Cube,   0,   0.6f },
+        { "Composter",    ComposterReady,ComposterBottom,ComposterSide,  true,  true,  RenderType::Cube,   0,   0.6f },
+
+        { "Grindstone",   GrindstonePivot,GrindstonePivot,GrindstoneSide,true,  true,  RenderType::Cube,   0,   2.0f },
+        { "Lectern",      LecternTop,    LecternBase,    LecternSide,    true,  true,  RenderType::Cube,   0,   2.5f },
+        { "Lectern",      LecternTopBook,LecternBase,    LecternSide,    true,  true,  RenderType::Cube,   0,   2.5f },
+
+        { "Cauldron",     CauldronTop,   CauldronBottom, CauldronSide,   true,  true,  RenderType::Cube,   0,   2.0f },
+        { "Cauldron",     CauldronWater1,CauldronBottom, CauldronSide,   true,  true,  RenderType::Cube,   0,   2.0f },
+        { "Cauldron",     CauldronWater2,CauldronBottom, CauldronSide,   true,  true,  RenderType::Cube,   0,   2.0f },
+        { "Cauldron",     CauldronWater3,CauldronBottom, CauldronSide,   true,  true,  RenderType::Cube,   0,   2.0f },
     };
 }
 
@@ -306,6 +330,8 @@ bool isObtainable(BlockId id)
         case Blocks::NetherPortal: // made by lighting a frame, never placed
         case Blocks::EndPortal:    // the same: it appears when a ring is finished
         case Blocks::FurnaceLit:   // the burning state of one, not a thing you hold
+        case Blocks::SmokerLit:
+        case Blocks::BlastFurnaceLit:
         case Blocks::EndPortalFrameFilled: // a frame with an eye already in it
         case Blocks::TntPrimed:    // likewise: a lit stick is not an item
         // Only one ladder is a thing you hold; the other three are the
@@ -329,6 +355,16 @@ bool isObtainable(BlockId id)
             // one would mean anything in a hand anyway.
             if (isCrop(id)) return false;
 
+            // A composter and a cauldron keep their contents in their
+            // id, the way a crop keeps its growth. Only the empty one
+            // is a thing you hold.
+            if (isComposter(id) && id != Blocks::Composter0) return false;
+
+            // A lectern with a book on it is the same block holding
+            // something, which is not a second thing to hold.
+            if (id == Blocks::LecternBook) return false;
+            if (isCauldron(id) && id != Blocks::Cauldron0) return false;
+
             // Likewise for stairs: one of each four is the thing you
             // hold, the rest are it turned round.
             if (isStairs(id) && blockFacing(id) != 0) return false;
@@ -347,6 +383,7 @@ const char* blockSoundGroup(BlockId id)
     // like whatever the default happens to be.
     if (isLeaves(id)) return "grass";
     if (isLog(id) || isPlanks(id)) return "wood";
+    if (isComposter(id) || isLectern(id)) return "wood";
 
     switch (id)
     {
@@ -469,6 +506,12 @@ Material blockMaterial(BlockId id)
 
     // A cluster is knocked off rather than mined, like a plant.
     if (id == Blocks::AmethystCluster) return Material::Plant;
+
+    // The workstations, whichever state they are in. A composter and a
+    // lectern are boxes of planks; the rest are stone and iron.
+    if (isComposter(id) || isLectern(id)) return Material::Wood;
+    if (isCauldron(id)) return Material::Stone;
+    if (isFurnaceBlock(id)) return Material::Stone;
 
     switch (id)
     {

@@ -24,6 +24,11 @@ public:
         float burnTotal = 0.0f;
         float cooked = 0.0f;
 
+        // Which of the three machines stands here. Defaulted, so a
+        // save written before the smoker existed loads as furnaces,
+        // which is what it held.
+        Smelting::Kind kind = Smelting::Kind::Furnace;
+
         bool lit() const { return burnLeft > 0.0f; }
         bool idle() const
         {

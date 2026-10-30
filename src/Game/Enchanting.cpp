@@ -109,6 +109,14 @@ namespace Enchanting
     bool has(Set set, Kind kind) { return levelOf(set, kind) > 0; }
     bool any(Set set) { return set != 0u; }
 
+    int grindHundredths(Set set)
+    {
+        int levels = 0;
+        for (int k = 0; k < static_cast<int>(Kind::Count); ++k)
+            levels += levelOf(set, static_cast<Kind>(k));
+        return levels * 300;
+    }
+
     std::vector<std::pair<Kind, int>> listOf(Set set)
     {
         std::vector<std::pair<Kind, int>> out;

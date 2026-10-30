@@ -10,6 +10,7 @@
 #include "Game/Experience.h"
 #include "Game/Cane.h"
 #include "Game/Enchanting.h"
+#include "Game/Composting.h"
 #include "Game/EndPortal.h"
 #include "Game/Redstone.h"
 #include "Game/Trial.h"
@@ -578,6 +579,9 @@ void Application::loadLevel()
             const size_t which = static_cast<size_t>(&saved - state.furnaces.data());
             const int where = which < state.furnaceDimensions.size()
                                   ? state.furnaceDimensions[which] : 0;
+            furnace.kind = (which < state.furnaceKinds.size())
+                               ? static_cast<Smelting::Kind>(state.furnaceKinds[which])
+                               : Smelting::Kind::Furnace;
             m_furnaces.putIn(where, glm::ivec3(saved.x, saved.y, saved.z), furnace);
         }
 
@@ -736,6 +740,7 @@ void Application::saveLevel()
         saved.y = entry.first[2];
         saved.z = entry.first[3];
         state.furnaceDimensions.push_back(static_cast<uint8_t>(entry.first[0]));
+        state.furnaceKinds.push_back(static_cast<uint8_t>(furnace.kind));
         saved.input = furnace.input.id;
         saved.inputCount = static_cast<uint16_t>(std::max(0, furnace.input.count));
         saved.fuel = furnace.fuel.id;
@@ -1145,6 +1150,50 @@ bool Application::frame()
             std::fflush(stdout);
         }
 
+        // Dev aid: the six workstations in a row, so one shot shows
+        // the lot. Built the same way the farm is -- after the world
+        // is up, because a setBlock into a chunk that is not loaded
+        // yet is dropped on the floor without a word.
+        if (m_shopTest && m_worldReady && !m_shopTestDone)
+        {
+            m_shopTestDone = true;
+
+            const BlockId ROW[] = {
+                Blocks::SmokerLit, Blocks::BlastFurnaceLit, Blocks::Composter4,
+                Blocks::Composter8, Blocks::Grindstone, Blocks::LecternBook,
+                Blocks::Cauldron3, Blocks::Furnace,
+            };
+            const int wide = static_cast<int>(std::size(ROW));
+
+            const int baseY = static_cast<int>(std::floor(m_player.position.y));
+            const int centreX = static_cast<int>(std::floor(m_player.position.x));
+            const int centreZ = static_cast<int>(std::floor(m_player.position.z));
+
+            // A flat stone stage rather than whatever terrain happens
+            // to be underfoot: spawn can land in a jungle, and a row
+            // of blocks is no use behind a wall of leaves.
+            for (int x = centreX - wide; x <= centreX + wide; ++x)
+                for (int z = centreZ - 12; z <= centreZ + 4; ++z)
+                {
+                    m_world->setBlock(x, baseY - 1, z, Blocks::Stone);
+                    for (int y = baseY; y < baseY + 10; ++y)
+                        m_world->setBlock(x, y, z, Blocks::Air);
+                }
+
+            for (int i = 0; i < wide; ++i)
+                m_world->setBlock(centreX - wide / 2 + i, baseY, centreZ, ROW[i]);
+
+            m_player.position = glm::vec3(centreX + 0.5f, static_cast<float>(baseY),
+                                          centreZ - 7.5f);
+            m_player.velocity = glm::vec3(0.0f);
+            m_camera.position = m_player.eyePosition();
+            m_camera.setOrientation(90.0f, -10.0f);
+            m_pendingFurnaceLight = true;
+
+            std::printf("[test] stood %d workstations in a row at y=%d\n", wide, baseY);
+            std::fflush(stdout);
+        }
+
         // Dev aid: one of every species, lined up in front of spawn and
         // facing the player, so a screenshot shows all eight at once
         // rather than waiting on the spawner to oblige.
@@ -1352,7 +1401,7 @@ bool Application::frame()
               : m_enchantOpen ? there == Blocks::EnchantingTable
               : m_anvilOpen   ? there == Blocks::Anvil
               : m_brewOpen    ? there == Blocks::BrewingStand
-                              : (there == Blocks::Furnace || there == Blocks::FurnaceLit);
+                              : isFurnaceBlock(there);
 
             if (!stillThere || glm::length(m_player.position - middle) > BENCH_REACH)
             {
@@ -3591,6 +3640,8 @@ bool Application::frame()
                 if (m_startupScreen == "furnace") openFurnace(where);
             }
 
+            // The six a village is built round, in a row, so one shot
+            // shows the lot. Lit where lighting one means anything.
             if (m_startupScreen == "tools")
             {
                 m_inventory.clear();
@@ -4548,7 +4599,12 @@ void Application::updateMining(float deltaTime)
 
             // A furnace gives back whatever was inside it, lit or not,
             // and whether or not the furnace itself survives the pick.
-            if (id == Blocks::Furnace || id == Blocks::FurnaceLit)
+            // The book off a lectern, which blockDrop cannot say: it
+            // gives back one thing and a lectern gives back two.
+            if (id == Blocks::LecternBook)
+                m_drops.spawnFromBrokenBlock(hit.block, Items::Book);
+
+            if (isFurnaceBlock(id))
             {
                 if (m_furnaceOpen && m_furnaceBlock == hit.block) stowFurnace();
 
@@ -6050,8 +6106,7 @@ void Application::applyBlast(const glm::vec3& at, float radius, int damage)
                             m_drops.spawnFromBrokenBlock(where, held.id, held.count);
                     m_chests.remove(where);
                 }
-                if ((block == Blocks::Furnace || block == Blocks::FurnaceLit) &&
-                    m_furnaces.has(where))
+                if (isFurnaceBlock(block) && m_furnaces.has(where))
                 {
                     const Furnaces::State& inside = m_furnaces.at(where);
                     for (const ItemStack* held : { &inside.input, &inside.fuel, &inside.output })
@@ -6368,6 +6423,176 @@ void Application::handleDrinking(float deltaTime)
     m_audio.play(Sound::Pickup, 0.6f, 1.25f);
 }
 
+// --- the workstations -----------------------------------------------
+
+// A composter takes what grows and pays bone meal once it is full.
+// Each throw has its own chance of raising the level, which is why a
+// composter is worth more than a pile of seeds: the poor things go in
+// too, they just take longer.
+bool Application::useComposter(const glm::ivec3& at, BlockId block)
+{
+    const int level = compostLevel(block);
+
+    // Full: take the bone meal out and start again.
+    if (level >= COMPOST_FULL)
+    {
+        ItemStack paid;
+        paid.id = Items::BoneMeal;
+        paid.count = Composting::BONE_MEAL;
+        if (m_inventory.addStack(paid) > 0) m_drops.spawnStack(m_player.position, paid);
+
+        m_world->setBlock(at.x, at.y, at.z, Blocks::Composter0);
+        m_net.onLocalBlockChange(at.x, at.y, at.z, Blocks::Composter0);
+        m_audio.play(Sound::Pickup, 0.6f, 0.9f);
+        return true;
+    }
+
+    ItemStack& held = m_inventory.selected();
+    if (held.empty() || !Composting::composts(held.id)) return false;
+
+    const uint32_t roll = static_cast<uint32_t>(
+        at.x * 73856093 ^ at.y * 19349663 ^ at.z * 83492791 ^
+        static_cast<int>(m_elapsedSeconds * 1013.0f));
+
+    if (Composting::raises(held.id, roll))
+    {
+        // The seventh throw fills it rather than raising it to seven:
+        // a composter at seven is one that is about to be ready, and
+        // there is no state between that and ready.
+        const BlockId now = composterAt(level + 1);
+        m_world->setBlock(at.x, at.y, at.z, now);
+        m_net.onLocalBlockChange(at.x, at.y, at.z, now);
+        m_audio.play(Sound::DigGrass, 0.5f, 1.2f);
+    }
+    else
+    {
+        m_audio.play(Sound::DigGrass, 0.3f, 0.8f);
+    }
+
+    if (!m_player.creative())
+    {
+        held.count -= 1;
+        if (held.count <= 0) held.clear();
+    }
+    return true;
+}
+
+// A cauldron holds three levels of water. A bucket fills it or empties
+// it; a bottle takes one level, which is what makes a cauldron worth
+// standing in a base rather than walking to a pond three times.
+bool Application::useCauldron(const glm::ivec3& at, BlockId block)
+{
+    const int level = cauldronLevel(block);
+    ItemStack& held = m_inventory.selected();
+    if (held.empty()) return false;
+
+    auto setLevel = [&](int to)
+    {
+        const BlockId now = cauldronAt(to);
+        m_world->setBlock(at.x, at.y, at.z, now);
+        m_net.onLocalBlockChange(at.x, at.y, at.z, now);
+    };
+
+    auto swapHeld = [&](StackId becomes)
+    {
+        if (m_player.creative()) return;
+        held.count -= 1;
+        ItemStack left;
+        left.id = becomes;
+        left.count = 1;
+        if (held.count <= 0) { held = left; return; }
+        if (m_inventory.addStack(left) > 0) m_drops.spawnStack(m_player.position, left);
+    };
+
+    if (held.id == Items::WaterBucket && level < CAULDRON_FULL)
+    {
+        setLevel(CAULDRON_FULL);
+        swapHeld(Items::Bucket);
+        m_audio.play(Sound::Pickup, 0.5f, 0.7f);
+        return true;
+    }
+
+    if (held.id == Items::Bucket && level >= CAULDRON_FULL)
+    {
+        setLevel(0);
+        swapHeld(Items::WaterBucket);
+        m_audio.play(Sound::Pickup, 0.5f, 1.0f);
+        return true;
+    }
+
+    if (held.id == Items::GlassBottle && level > 0)
+    {
+        setLevel(level - 1);
+
+        ItemStack filled;
+        filled.id = Items::Potion;
+        filled.count = 1;
+        filled.damage = Brewing::toDamage(Brewing::Potion::Water);
+        if (!m_player.creative())
+        {
+            held.count -= 1;
+            if (held.count <= 0) held.clear();
+        }
+        if (m_inventory.addStack(filled) > 0) m_drops.spawnStack(m_player.position, filled);
+        m_audio.play(Sound::Pickup, 0.5f, 1.1f);
+        return true;
+    }
+
+    return false;
+}
+
+// A lectern holds one book. Like a chest it says nothing from outside
+// about what is in it, because this engine draws cubes and Minecraft's
+// open book is a model.
+bool Application::useLectern(const glm::ivec3& at, BlockId block)
+{
+    ItemStack& held = m_inventory.selected();
+
+    if (block == Blocks::Lectern)
+    {
+        if (held.empty() || held.id != Items::Book) return false;
+
+        m_world->setBlock(at.x, at.y, at.z, Blocks::LecternBook);
+        m_net.onLocalBlockChange(at.x, at.y, at.z, Blocks::LecternBook);
+
+        if (!m_player.creative())
+        {
+            held.count -= 1;
+            if (held.count <= 0) held.clear();
+        }
+        m_audio.play(Sound::DigWood, 0.5f, 1.2f);
+        return true;
+    }
+
+    ItemStack book;
+    book.id = Items::Book;
+    book.count = 1;
+    if (m_inventory.addStack(book) > 0) m_drops.spawnStack(m_player.position, book);
+
+    m_world->setBlock(at.x, at.y, at.z, Blocks::Lectern);
+    m_net.onLocalBlockChange(at.x, at.y, at.z, Blocks::Lectern);
+    m_audio.play(Sound::DigWood, 0.5f, 0.9f);
+    return true;
+}
+
+// A grindstone takes the enchantments back off a thing and gives you
+// some of the levels back. Minecraft puts a screen on it; here it is
+// one action on what you are holding, which does the same work.
+bool Application::useGrindstone(const glm::ivec3& at)
+{
+    (void)at;
+    ItemStack& held = m_inventory.selected();
+    if (held.empty() || !Enchanting::any(held.enchantments)) return false;
+
+    const int paid = Enchanting::grindHundredths(held.enchantments);
+    held.enchantments = 0;
+
+    if (m_player.addExperienceHundredths(paid))
+        m_audio.play(Sound::Pickup, 0.7f, 0.55f);
+    m_audio.play(Sound::DigStone, 0.6f, 0.7f);
+    return true;
+}
+
 void Application::handlePlacement()
 {
     if (m_keys.pressed(m_input, Action::PickBlock))
@@ -6420,7 +6645,7 @@ void Application::handlePlacement()
                 m_audio.play(Sound::Click, 0.4f);
                 return;
             }
-            if (used == Blocks::Furnace || used == Blocks::FurnaceLit)
+            if (isFurnaceBlock(used))
             {
                 openFurnace(bench.block);
                 m_audio.play(Sound::Click, 0.4f);
@@ -6496,6 +6721,15 @@ void Application::handlePlacement()
                 m_audio.play(Sound::Click, 0.4f);
                 return;
             }
+
+            // The workstations. Each takes what it is given and says
+            // whether it wanted it; a no falls through to placing the
+            // block, so a composter you have nothing for is still
+            // something to build against.
+            if (isComposter(used) && useComposter(bench.block, used)) return;
+            if (isCauldron(used) && useCauldron(bench.block, used)) return;
+            if (isLectern(used) && useLectern(bench.block, used)) return;
+            if (used == Blocks::Grindstone && useGrindstone(bench.block)) return;
 
             // A lever stays where you put it; a button lets go on its
             // own a second later, which is the whole difference
@@ -7591,10 +7825,48 @@ void Application::updateWorldAround(float deltaTime)
     {
         m_growthTimer = 0.0f;
         if (m_net.role() != Net::Role::Guest)
+        {
             Farming::grow(*m_world, m_player.position, m_growthSeed);
+            if (m_weather.depth > 0.2f && !m_snowing) fillCauldronsInRain();
+        }
     }
 
     updateMobs(deltaTime);
+}
+
+// Rain fills a cauldron that has the sky over it, which is Minecraft's
+// and is the only water you get without walking to a pond. Sampled near
+// the player the way the crops are, and for the same reason: a sweep of
+// every block in range would cost hundreds of thousands of lookups a
+// second to find the two or three cauldrons anybody has built.
+void Application::fillCauldronsInRain()
+{
+    const int cx = static_cast<int>(std::floor(m_player.position.x));
+    const int cy = static_cast<int>(std::floor(m_player.position.y));
+    const int cz = static_cast<int>(std::floor(m_player.position.z));
+
+    constexpr int SAMPLES = 48;
+    constexpr int REACH = 16;
+
+    for (int i = 0; i < SAMPLES; ++i)
+    {
+        m_growthSeed ^= m_growthSeed << 13;
+        m_growthSeed ^= m_growthSeed >> 17;
+        m_growthSeed ^= m_growthSeed << 5;
+
+        const int x = cx + static_cast<int>(m_growthSeed % (REACH * 2u)) - REACH;
+        const int z = cz + static_cast<int>((m_growthSeed >> 8) % (REACH * 2u)) - REACH;
+        const int y = cy + static_cast<int>((m_growthSeed >> 16) % 9u) - 4;
+        if (y < 1) continue;
+
+        const BlockId here = m_world->getBlock(x, y, z);
+        if (!isCauldron(here) || here == Blocks::Cauldron3) continue;
+        if (m_world->skyLight(x, y + 1, z) < 15) continue;   // something is over it
+
+        const BlockId now = cauldronAt(cauldronLevel(here) + 1);
+        m_world->setBlock(x, y, z, now);
+        m_net.onLocalBlockChange(x, y, z, now);
+    }
 }
 
 void Application::updateMobs(float deltaTime)

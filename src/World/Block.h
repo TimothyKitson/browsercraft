@@ -392,6 +392,33 @@ namespace Blocks
         Carrot0, Carrot1, Carrot2, Carrot3, Carrot4, Carrot5, Carrot6, Carrot7,
         Potato0, Potato1, Potato2, Potato3, Potato4, Potato5, Potato6, Potato7,
 
+        // The workstations. A village had a bench and a furnace in it
+        // and nothing else anybody would stand at, which is most of
+        // why its houses read as sheds.
+        //
+        // The first two are the furnace with a narrower diet and half
+        // the clock: food in one, metal in the other. Everything that
+        // runs a furnace runs these, which is why they are a kind
+        // rather than a second machine.
+        Smoker, SmokerLit,
+        BlastFurnace, BlastFurnaceLit,
+
+        // Nine ids for nine levels, because a composter's whole state
+        // is how full it is -- the same trick the crops use, and for
+        // the same reason: it saves with the chunk it stands in.
+        Composter0, Composter1, Composter2, Composter3, Composter4,
+        Composter5, Composter6, Composter7, Composter8,
+
+        // One takes an enchantment back off, and one holds a book
+        // open. Neither is worth much alone; together they are what a
+        // village library is for.
+        Grindstone,
+        Lectern,
+        LecternBook,
+
+        // Four levels of water, filled from a bucket or by the rain.
+        Cauldron0, Cauldron1, Cauldron2, Cauldron3,
+
         Count
     };
 }
@@ -829,6 +856,74 @@ inline BlockId cropAtStage(BlockId id, int stage)
     if (isPotato(id)) return static_cast<BlockId>(Blocks::Potato0 + stage);
     return id;
 }
+// The three machines that smelt. They are one block as far as
+// everything that opens, ticks or lights one is concerned; which of
+// them it is decides only what it will take and how fast.
+inline bool isFurnaceBlock(BlockId id)
+{
+    return id == Blocks::Furnace || id == Blocks::FurnaceLit ||
+           id == Blocks::Smoker || id == Blocks::SmokerLit ||
+           id == Blocks::BlastFurnace || id == Blocks::BlastFurnaceLit;
+}
+inline BlockId furnaceLit(BlockId id)
+{
+    if (id == Blocks::Furnace || id == Blocks::FurnaceLit) return Blocks::FurnaceLit;
+    if (id == Blocks::Smoker || id == Blocks::SmokerLit) return Blocks::SmokerLit;
+    if (id == Blocks::BlastFurnace || id == Blocks::BlastFurnaceLit)
+        return Blocks::BlastFurnaceLit;
+    return id;
+}
+inline BlockId furnaceCold(BlockId id)
+{
+    if (id == Blocks::Furnace || id == Blocks::FurnaceLit) return Blocks::Furnace;
+    if (id == Blocks::Smoker || id == Blocks::SmokerLit) return Blocks::Smoker;
+    if (id == Blocks::BlastFurnace || id == Blocks::BlastFurnaceLit)
+        return Blocks::BlastFurnace;
+    return id;
+}
+
+// A composter, and how full it is. Eight is full and ready to empty.
+constexpr int COMPOST_FULL = 8;
+inline bool isComposter(BlockId id)
+{
+    return id >= Blocks::Composter0 && id <= Blocks::Composter8;
+}
+inline int compostLevel(BlockId id)
+{
+    return isComposter(id) ? id - Blocks::Composter0 : 0;
+}
+inline BlockId composterAt(int level)
+{
+    if (level < 0) level = 0;
+    if (level > COMPOST_FULL) level = COMPOST_FULL;
+    return static_cast<BlockId>(Blocks::Composter0 + level);
+}
+
+// A lectern, with or without a book open on it. Like a chest, it does
+// not say from outside what is in it -- the engine draws cubes, and
+// Minecraft's book is a model rather than a texture.
+inline bool isLectern(BlockId id)
+{
+    return id == Blocks::Lectern || id == Blocks::LecternBook;
+}
+
+// A cauldron, and how much water is in it. Three is full.
+constexpr int CAULDRON_FULL = 3;
+inline bool isCauldron(BlockId id)
+{
+    return id >= Blocks::Cauldron0 && id <= Blocks::Cauldron3;
+}
+inline int cauldronLevel(BlockId id)
+{
+    return isCauldron(id) ? id - Blocks::Cauldron0 : 0;
+}
+inline BlockId cauldronAt(int level)
+{
+    if (level < 0) level = 0;
+    if (level > CAULDRON_FULL) level = CAULDRON_FULL;
+    return static_cast<BlockId>(Blocks::Cauldron0 + level);
+}
+
 // Grown as far as it goes, whichever crop it is.
 inline bool isCropRipe(BlockId id)
 {

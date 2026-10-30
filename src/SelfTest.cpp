@@ -26,6 +26,7 @@
 #include "World/WorldSave.h"
 #include "Game/Tools.h"
 #include "Game/Smelting.h"
+#include "Game/Composting.h"
 #include "Game/Armour.h"
 #include "Game/Sleep.h"
 #include "Game/Explosion.h"
@@ -3268,6 +3269,214 @@ namespace
                       std::string(WANTED[i]) + " and " + WANTED[j] +
                           " do not share an icon");
         }
+    }
+
+    // --- the workstations -----------------------------------------------
+
+    // A village had a bench and a furnace in it and nothing else
+    // anybody would stand at. These are the rest: two kilns, a box
+    // that rots plants, a wheel that strips enchantments, a desk and
+    // a pot.
+    void testWorkstations()
+    {
+        section("the village workstations");
+
+        // The three kilns are one machine. Everything that opens,
+        // lights or breaks one asks these, so a fourth would be ids
+        // and a tile and nothing else.
+        const BlockId KILNS[] = { Blocks::Furnace, Blocks::FurnaceLit,
+                                  Blocks::Smoker, Blocks::SmokerLit,
+                                  Blocks::BlastFurnace, Blocks::BlastFurnaceLit };
+        for (BlockId id : KILNS)
+        {
+            check(isFurnaceBlock(id), std::string(blockInfo(id).name) + " is a kiln");
+            check(isFurnaceBlock(furnaceLit(id)) && isFurnaceBlock(furnaceCold(id)),
+                  "and both its states are");
+            check(furnaceCold(furnaceLit(id)) == furnaceCold(id),
+                  "lighting it and putting it out is the same block again");
+            check(Smelting::kindOf(furnaceLit(id)) == Smelting::kindOf(furnaceCold(id)),
+                  "and lighting it does not change what it is");
+        }
+        check(!isFurnaceBlock(Blocks::CraftingTable), "a bench is not a kiln");
+        check(furnaceLit(Blocks::Smoker) == Blocks::SmokerLit, "a lit smoker is a smoker");
+        check(furnaceCold(Blocks::BlastFurnaceLit) == Blocks::BlastFurnace,
+              "and a cold blast furnace is one too");
+
+        check(Smelting::kindOf(Blocks::Smoker) == Smelting::Kind::Smoker, "a smoker");
+        check(Smelting::kindOf(Blocks::BlastFurnaceLit) == Smelting::Kind::BlastFurnace,
+              "a blast furnace");
+        check(Smelting::kindOf(Blocks::Stone) == Smelting::Kind::Furnace,
+              "and anything else is a plain furnace, which is the harmless answer");
+
+        // What each will take. The whole point of the two specialists
+        // is that they take less, so a smoker that smelted ore would
+        // make the furnace pointless.
+        check(Smelting::suits(Smelting::Kind::Furnace, Items::RawBeef), "a furnace cooks meat");
+        check(Smelting::suits(Smelting::Kind::Furnace, Blocks::IronOre), "and smelts ore");
+        check(Smelting::suits(Smelting::Kind::Smoker, Items::RawBeef), "a smoker cooks meat");
+        check(!Smelting::suits(Smelting::Kind::Smoker, Blocks::IronOre),
+              "but will not touch ore");
+        check(Smelting::suits(Smelting::Kind::BlastFurnace, Blocks::IronOre),
+              "a blast furnace smelts ore");
+        check(Smelting::suits(Smelting::Kind::BlastFurnace, Items::RawCopper),
+              "and raw metal");
+        check(!Smelting::suits(Smelting::Kind::BlastFurnace, Items::RawBeef),
+              "but will not cook dinner");
+        check(!Smelting::suits(Smelting::Kind::Smoker, Blocks::Sand),
+              "and neither makes glass");
+
+        check(Smelting::resultIn(Smelting::Kind::Smoker, Items::Potato) == Items::BakedPotato,
+              "what a smoker takes it still makes");
+        check(Smelting::resultIn(Smelting::Kind::Smoker, Blocks::IronOre) == Blocks::Air,
+              "and what it will not take it makes nothing of");
+
+        check(Smelting::cookSeconds(Smelting::Kind::Smoker) <
+                  Smelting::cookSeconds(Smelting::Kind::Furnace),
+              "a smoker is faster than a furnace");
+        check(Smelting::cookSeconds(Smelting::Kind::BlastFurnace) ==
+                  Smelting::cookSeconds(Smelting::Kind::Smoker),
+              "and the two specialists run at the same speed");
+
+        // Run one of each with the same load and count what comes out.
+        // Twice the speed has to mean twice the output, or the trade
+        // the two specialists offer is not a trade.
+        auto runFor = [](Smelting::Kind kind, StackId load, float seconds)
+        {
+            ItemStack in, fuel, out;
+            in.id = load; in.count = 64;
+            fuel.id = Items::Coal; fuel.count = 64;
+
+            Furnace machine;
+            machine.input = &in;
+            machine.fuel = &fuel;
+            machine.output = &out;
+            machine.kind = kind;
+
+            for (float t = 0.0f; t < seconds; t += 0.05f) machine.tick(0.05f);
+            return out.count;
+        };
+
+        const int slow = runFor(Smelting::Kind::Furnace, Items::RawBeef, 61.0f);
+        const int fast = runFor(Smelting::Kind::Smoker, Items::RawBeef, 61.0f);
+        check(slow > 0, "a furnace cooks something in a minute");
+        check(fast >= slow * 2, "and a smoker cooks at least twice as much");
+        check(runFor(Smelting::Kind::Smoker, Blocks::IronOre, 61.0f) == 0,
+              "a smoker given ore sits there doing nothing");
+
+        // --- the composter ---
+        check(COMPOST_FULL == 8, "a composter has eight levels");
+        for (int level = 0; level <= COMPOST_FULL; ++level)
+        {
+            const BlockId at = composterAt(level);
+            check(isComposter(at), "every level reads as a composter");
+            check(compostLevel(at) == level, "and knows which level it is at");
+            check(blockDrop(at) == Blocks::Composter0,
+                  "and comes up empty however full it was");
+            check(isObtainable(at) == (level == 0),
+                  "only the empty one is a thing you hold");
+        }
+        check(composterAt(99) == Blocks::Composter8, "it cannot fill past full");
+        check(composterAt(-3) == Blocks::Composter0, "nor empty past empty");
+        check(!isComposter(Blocks::Barrel), "a barrel is not a composter");
+
+        // What goes in it. Asked of the families, so a leaf or a crop
+        // added later composts without anybody remembering to say so.
+        check(Composting::composts(Items::WheatSeeds), "seeds compost");
+        check(Composting::composts(Blocks::Leaves), "leaves compost");
+        check(Composting::composts(Blocks::TallGrass), "grass composts");
+        check(Composting::composts(Items::Carrot), "a carrot composts");
+        check(Composting::composts(Items::Bread), "bread composts");
+        check(!Composting::composts(Blocks::Stone), "stone does not");
+        check(!Composting::composts(Items::IronIngot), "nor iron");
+        check(!Composting::composts(Items::RawBeef), "nor meat");
+
+        check(Composting::chanceOf(Items::Bread) > Composting::chanceOf(Items::Wheat),
+              "bread is worth more than the wheat it was made of");
+        check(Composting::chanceOf(Items::Wheat) > Composting::chanceOf(Items::WheatSeeds),
+              "and wheat is worth more than its seed");
+
+        // A hundred throws of each, so the chances mean what they say.
+        for (StackId what : { static_cast<StackId>(Items::WheatSeeds),
+                              static_cast<StackId>(Items::Wheat),
+                              static_cast<StackId>(Items::Bread) })
+        {
+            int raised = 0;
+            for (uint32_t roll = 0; roll < 100; ++roll)
+                if (Composting::raises(what, roll)) ++raised;
+
+            const int wanted = static_cast<int>(Composting::chanceOf(what) * 100.0f + 0.5f);
+            check(raised == wanted,
+                  std::string(displayName(what)) + " raises it " +
+                      std::to_string(wanted) + " times in a hundred");
+        }
+        int neverRaises = 0;
+        for (uint32_t roll = 0; roll < 100; ++roll)
+            if (Composting::raises(Blocks::Stone, roll)) ++neverRaises;
+        check(neverRaises == 0, "and stone never raises it at all");
+
+        // --- the cauldron ---
+        check(CAULDRON_FULL == 3, "a cauldron holds three");
+        for (int level = 0; level <= CAULDRON_FULL; ++level)
+        {
+            const BlockId at = cauldronAt(level);
+            check(isCauldron(at), "every level reads as a cauldron");
+            check(cauldronLevel(at) == level, "and knows how full it is");
+            check(blockDrop(at) == Blocks::Cauldron0, "and comes up empty");
+            check(isObtainable(at) == (level == 0), "only the empty one is held");
+        }
+        check(cauldronAt(99) == Blocks::Cauldron3, "it cannot fill past full");
+        check(cauldronAt(-1) == Blocks::Cauldron0, "nor empty past empty");
+
+        // --- the lectern ---
+        check(isLectern(Blocks::Lectern) && isLectern(Blocks::LecternBook),
+              "both lecterns read as one");
+        check(!isLectern(Blocks::Bookshelf), "a bookshelf does not");
+        check(isObtainable(Blocks::Lectern), "an empty lectern is a thing you hold");
+        check(!isObtainable(Blocks::LecternBook),
+              "one with a book on it is the same block holding something");
+        check(blockDrop(Blocks::LecternBook) == Blocks::Lectern,
+              "and breaking it gives back the lectern");
+
+        // --- the grindstone ---
+        check(Enchanting::grindHundredths(0) == 0, "nothing on it is worth nothing");
+        const Enchanting::Set one =
+            Enchanting::withLevel(0, Enchanting::Kind::Sharpness, 1);
+        const Enchanting::Set five =
+            Enchanting::withLevel(0, Enchanting::Kind::Sharpness, 5);
+        check(Enchanting::grindHundredths(five) > Enchanting::grindHundredths(one),
+              "and a better enchantment pays better");
+        check(Enchanting::grindHundredths(five) ==
+                  5 * Enchanting::grindHundredths(one),
+              "five levels pay five times one");
+
+        // --- all six, as blocks ---
+        const BlockId SHOP[] = { Blocks::Smoker, Blocks::BlastFurnace,
+                                 Blocks::Composter0, Blocks::Grindstone,
+                                 Blocks::Lectern, Blocks::Cauldron0 };
+        for (BlockId id : SHOP)
+        {
+            check(isObtainable(id), std::string(blockInfo(id).name) + " can be held");
+            check(blockInfo(id).hardness > 0.0f, "and takes work to break");
+            check(blockInfo(id).collides, "and is something to stand on");
+            check(blockSoundGroup(id) != nullptr, "and makes a noise when it breaks");
+        }
+
+        // Each is made at a bench, since none of them is found.
+        const std::vector<StackId> made = Crafting::everyOutput();
+        for (BlockId id : SHOP)
+            check(std::find(made.begin(), made.end(), static_cast<StackId>(id)) != made.end(),
+                  std::string(blockInfo(id).name) + " has a recipe");
+
+        // Wood wants an axe and stone wants a pickaxe. Left to fall
+        // through, every one of these would have wanted a pickaxe --
+        // which is the mistake the block table has caught five times.
+        check(blockMaterial(Blocks::Composter0) == Material::Wood, "a composter is wood");
+        check(blockMaterial(Blocks::Lectern) == Material::Wood, "so is a lectern");
+        check(blockMaterial(Blocks::Composter8) == Material::Wood,
+              "and a full composter is still wood");
+        check(blockMaterial(Blocks::Smoker) == Material::Stone, "a smoker is stone");
+        check(blockMaterial(Blocks::Cauldron3) == Material::Stone,
+              "and a cauldron is iron, which comes apart the same way");
     }
 
     // --- pathfinding ----------------------------------------------------
@@ -9724,6 +9933,7 @@ int runSelfTest()
     testEffectsOnThePlayer();
     testFarming();
     testRootCrops();
+    testWorkstations();
     testPathfinding();
     testChatCommands();
     testCrackStages();

@@ -65,6 +65,12 @@ namespace Enchanting
     // Every kind on the item, for showing it and for saving it.
     std::vector<std::pair<Kind, int>> listOf(Set set);
 
+    // What a grindstone pays for taking this lot off, in hundredths of
+    // an experience point -- the same unit the furnace pays in. Three
+    // points a level, so stripping a good sword is worth doing and
+    // stripping a bad one is not worth the walk.
+    int grindHundredths(Set set);
+
     // --- the table -----------------------------------------------------
 
     // Shelves only count up to fifteen, and only when they stand one

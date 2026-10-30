@@ -931,6 +931,7 @@ int main(int argc, char** argv)
     bool buildTest = false;
     bool mobTest = false;
     bool farmTest = false;
+    bool shopTest = false;
     const char* joinAddress = nullptr;
 
     for (int i = 1; i < argc; ++i)
@@ -1000,6 +1001,10 @@ int main(int argc, char** argv)
         {
             farmTest = true;
         }
+        else if (std::strcmp(argv[i], "--shoptest") == 0)
+        {
+            shopTest = true;
+        }
         else if (std::strcmp(argv[i], "--mobtest") == 0)
         {
             mobTest = true;
@@ -1048,6 +1053,7 @@ int main(int argc, char** argv)
         if (buildTest) app.setBuildTest();
         if (mobTest) app.setMobTest();
         if (farmTest) app.setFarmTest();
+        if (shopTest) app.setShopTest();
         if (panorama)
         {
             unsigned int panoramaSeed = 0;
