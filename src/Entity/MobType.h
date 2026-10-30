@@ -32,6 +32,7 @@ enum class MobId : uint8_t
     Warden,
     Witch,
     EnderDragon,
+    Wither,
     Count
 };
 

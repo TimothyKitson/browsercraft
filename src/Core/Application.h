@@ -385,7 +385,7 @@ private:
     // streamed in yet, and setBlock into a chunk that does not exist
     // does nothing. So the clearing waits until the world says it is
     // ready, which is the same gate the screenshot itself waits on.
-    enum class ArenaKind { BiomePocket, ChamberProps, CaveProps };
+    enum class ArenaKind { BiomePocket, ChamberProps, CaveProps, WitherAltar };
     bool m_pendingArena = false;
     ArenaKind m_arenaKind = ArenaKind::BiomePocket;
     int m_arenaX = 0, m_arenaY = 0, m_arenaZ = 0;
@@ -393,6 +393,7 @@ private:
     void buildBiomeArena(int standX, int standZ);
     void dressChamberRoom(int atX, int atY, int atZ);
     void lightCave(int atX, int atY, int atZ);
+    void raiseWitherForShot(int atX, int atY, int atZ);
     uint32_t m_seedOverride = 0;
     bool m_hasSeedOverride = false;
     bool m_hostOnStart = false;
@@ -554,6 +555,7 @@ private:
     // is one fight, with one of everything in it.
     void tickDragonFight(float deltaTime);
     void openExitPortal();
+    void tryRaiseWither(const glm::ivec3& skull);
     float m_dragonTimer = 0.0f;
     bool m_dragonSlain = false;
 

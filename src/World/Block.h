@@ -333,6 +333,10 @@ namespace Blocks
         EndCrystal,
         EndCrystalBase,
 
+        // What a wither is built out of, and what it pays for.
+        WitherSkull,
+        Beacon,
+
         Count
     };
 }

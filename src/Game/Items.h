@@ -145,6 +145,10 @@ namespace Items
         OminousBottle,
         OminousTrialKey,
 
+        // What a wither leaves. One of them makes a beacon, which is
+        // the only thing in the game it is for.
+        NetherStar,
+
         Count
     };
 }

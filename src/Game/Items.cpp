@@ -116,6 +116,7 @@ namespace
         { "Glow Berries",    Tiles::ItemGlowBerries,    64 },
         { "Ominous Bottle",  Tiles::ItemOminousBottle,   1 },
         { "Ominous Trial Key", Tiles::ItemOminousKey,    64 },
+        { "Nether Star",     Tiles::ItemNetherStar,     1 },
     };
 
     static_assert(sizeof(ITEMS) / sizeof(ITEMS[0]) ==

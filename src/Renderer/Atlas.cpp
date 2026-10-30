@@ -1759,6 +1759,50 @@ namespace
             }
     }
 
+    // The skull you build a wither out of. Charcoal-grey bone with
+    // two sockets, which is the whole of how you know it from an
+    // ordinary skeleton's.
+    void paintWitherSkull(Tile& t)
+    {
+        t.fill(Color{ 46, 46, 46 });
+        for (int y = 0; y < Tile::N; ++y)
+            for (int x = 0; x < Tile::N; ++x)
+                if (hash2(x, y, 471) > 0.78f) t.set(x, y, Color{ 62, 62, 62 });
+
+        for (int y = 5; y < 9; ++y)
+            for (int x = 3; x < 7; ++x)
+            {
+                t.set(x, y, Color{ 10, 10, 10 });
+                t.set(x + 6, y, Color{ 10, 10, 10 });
+            }
+
+        // The jaw.
+        for (int x = 4; x < 12; ++x) t.set(x, 12, Color{ 24, 24, 24 });
+        t.speckle(5, 472);
+    }
+
+    void paintBeacon(Tile& t)
+    {
+        t.fill(Color{ 28, 60, 64 });
+        // The core, which is the bright part: a beacon is the one
+        // block in the game that is a light you built.
+        for (int y = 3; y < 13; ++y)
+            for (int x = 3; x < 13; ++x)
+            {
+                const float d = std::max(std::abs(x - 7.5f), std::abs(y - 7.5f));
+                t.set(x, y, d < 2.5f ? Color{ 236, 252, 250 }
+                          : d < 4.0f ? Color{ 140, 226, 220 }
+                                     : Color{ 70, 150, 160 });
+            }
+        for (int i = 0; i < Tile::N; ++i)
+        {
+            t.set(i, 0, Color{ 18, 40, 44 });
+            t.set(i, Tile::N - 1, Color{ 18, 40, 44 });
+            t.set(0, i, Color{ 18, 40, 44 });
+            t.set(Tile::N - 1, i, Color{ 18, 40, 44 });
+        }
+    }
+
     void paintSpawnerIn(Tile& t, Color bars, Color inside)
     {
         t.fill(inside);
@@ -4059,6 +4103,26 @@ namespace
                 t.set(x, y, Color{ 196, 190, 214 });
     }
 
+    // The star a wither leaves. A four-pointed white burst, which is
+    // the one item in the game that is not a thing but a trophy.
+    void paintItemNetherStar(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 0; y < Tile::N; ++y)
+            for (int x = 0; x < Tile::N; ++x)
+            {
+                const float dx = std::abs(x - 7.5f);
+                const float dy = std::abs(y - 7.5f);
+                const float arm = std::min(dx, dy);
+                const float reach = std::max(dx, dy);
+                if (arm * 2.4f + reach > 9.0f) continue;
+
+                t.set(x, y, (arm < 1.2f && reach > 4.0f) ? Color{ 214, 220, 236 }
+                          : (reach < 2.6f)               ? Color{ 255, 255, 255 }
+                                                         : Color{ 236, 240, 250 });
+            }
+    }
+
     void paintItemOminousKey(Tile& t)
     {
         t.fill(Color{ 0, 0, 0, 0 });
@@ -4389,6 +4453,8 @@ namespace
         { Tiles::VineTile, paintVine },
         { Tiles::MudTile, paintMud },
         { Tiles::EndCrystalTile, paintEndCrystal },
+        { Tiles::WitherSkullTile, paintWitherSkull },
+        { Tiles::BeaconTile, paintBeacon },
         { Tiles::Obsidian, paintObsidian },
         { Tiles::TallGrass, paintTallGrass },
         { Tiles::FlowerRed, paintFlowerRed },
@@ -4485,6 +4551,7 @@ namespace
         { Tiles::ItemGlowBerries,   paintItemGlowBerries },
         { Tiles::ItemOminousBottle, paintItemOminousBottle },
         { Tiles::ItemOminousKey,    paintItemOminousKey },
+        { Tiles::ItemNetherStar,    paintItemNetherStar },
         { Tiles::ItemMagmaCream,    paintItemMagmaCream },
         { Tiles::ItemGlowstoneDust, paintItemGlowstoneDust },
         { Tiles::EndFrameTop,   paintEndFrameTop },
@@ -4631,6 +4698,7 @@ namespace
         { Tiles::ItemGlowBerries, { "glow_berries", nullptr, nullptr } },
         { Tiles::ItemOminousBottle, { "ominous_bottle", nullptr, nullptr } },
         { Tiles::ItemOminousKey, { "ominous_trial_key", nullptr, nullptr } },
+        { Tiles::ItemNetherStar, { "nether_star", nullptr, nullptr } },
     };
 
     const PackTile PACK_TILES[] = {
@@ -4747,6 +4815,7 @@ namespace
         { Tiles::LilyPadTile,   { "lily_pad", nullptr },                               Tinting::Foliage, 0,   false },
         { Tiles::VineTile,      { "vine", nullptr },                                   Tinting::Foliage, 0,   false },
         { Tiles::MudTile,       { "mud", nullptr },                                    Tinting::None,    0,   false },
+        { Tiles::BeaconTile,    { "beacon", nullptr },                                 Tinting::None,    0,   false },
         { Tiles::PistonTop,     { "piston_side", nullptr },                            Tinting::None,    0,   false },
         { Tiles::PistonSide,    { "piston_side", nullptr },                            Tinting::None,    0,   false },
         { Tiles::PistonFace,    { "piston_top", "piston_top_normal", nullptr },         Tinting::None,    0,   false },

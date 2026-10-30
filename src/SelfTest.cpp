@@ -5203,6 +5203,7 @@ namespace
                 case MobId::Breeze:
                 case MobId::Guardian: case MobId::Warden: case MobId::Witch:
                 case MobId::EnderDragon:
+                case MobId::Wither:
                     meetable = true;
                     break;
                 default:
@@ -5338,7 +5339,7 @@ namespace
         int bosses = 0;
         for (int i = 0; i < mobTypeCount(); ++i)
             if (mobType(static_cast<MobId>(i)).boss) ++bosses;
-        check(bosses == 1, "and it is the only one");
+        check(bosses >= 1, "and it is one");
 
         // It is not on the night list: it belongs to the island.
         for (int k = 0; k < EntityManager::nightSpeciesCount(); ++k)
@@ -5359,6 +5360,64 @@ namespace
 
         mob.heal(10000);
         check(mob.health() == full, "but never past what it started with");
+    }
+
+    void testWither()
+    {
+        section("the wither, and the beacon it pays for");
+
+        const MobType& wither = mobType(MobId::Wither);
+        check(wither.boss, "the wither is a boss");
+        check(wither.maxHealth == 300, "with Minecraft's three hundred health");
+        check(wither.hoverHeight > 0.0f, "it never lands");
+        check(wither.arrowDamage > 0 && wither.arrowRange > 15.0f,
+              "and it throws from a long way off rather than closing");
+        check(wither.drop == Items::NetherStar, "it leaves a nether star");
+
+        // Two bosses now, and no more. The dragon test asserted there
+        // was exactly one; both are checked here so neither can be
+        // quietly joined by a third.
+        int bosses = 0;
+        for (int i = 0; i < mobTypeCount(); ++i)
+            if (mobType(static_cast<MobId>(i)).boss) ++bosses;
+        check(bosses == 2, "there are two bosses in the game, and only two");
+
+        // The skull, which is the only way to build one.
+        const MobType& skeleton = mobType(MobId::WitherSkeleton);
+        check(skeleton.secondDrop == Blocks::WitherSkull,
+              "a wither skeleton drops the skull you build it from");
+
+        // Neither boss turns up with the night.
+        for (int k = 0; k < EntityManager::nightSpeciesCount(); ++k)
+        {
+            check(EntityManager::nightSpecies(k) != MobId::Wither,
+                  "a wither is built, never met");
+            check(EntityManager::nightSpecies(k) != MobId::EnderDragon,
+                  "and a dragon belongs to its island");
+        }
+
+        // The star is good for one thing, and that thing exists.
+        bool makesBeacon = false;
+        for (StackId made : Crafting::everyOutput())
+            if (made == Blocks::Beacon) makesBeacon = true;
+        check(makesBeacon, "a beacon can be made");
+
+        bool wantsStar = false;
+        for (StackId need : Crafting::everyIngredient())
+            if (need == Items::NetherStar) wantsStar = true;
+        check(wantsStar, "and the star is what it is made from");
+
+        // A beacon is a light you built: if it were dark it would be
+        // an expensive block of glass.
+        check(lightEmission(Blocks::Beacon) > 12,
+              "a beacon lights the place it stands in");
+
+        // The skull is a block you place, so it has to be placeable
+        // and breakable like one.
+        check(blockInfo(Blocks::WitherSkull).hardness > 0.0f,
+              "the skull can be broken once it is placed");
+        check(blockDrop(Blocks::WitherSkull) == Blocks::WitherSkull,
+              "and what comes up is the skull again, so a failed build is not lost");
     }
 
     void testFortressAndMineshaft()
@@ -9058,6 +9117,7 @@ int runSelfTest()
     testEverythingIsReachable();
     testWitchPotions();
     testDragonFight();
+    testWither();
     testAncientCity();
     testOtherDimensionStructures();
     testSearchAgreesWithStamp();

@@ -765,8 +765,14 @@ namespace
 
             t.drop = Items::Coal;
             t.dropCount = 1;
-            t.secondDrop = Items::Bone;
-            t.secondDropCount = 2;
+
+            // The skull, which is the only way to get one and the
+            // only reason to hunt these rather than avoid them.
+            // Minecraft drops it rarely; the drop here is the second
+            // one, which every kill gives, so three kills is three
+            // skulls rather than a grind.
+            t.secondDrop = Blocks::WitherSkull;
+            t.secondDropCount = 1;
 
             t.bodyColour = rgb(52, 56, 52);
             t.headColour = rgb(58, 62, 58);
@@ -1097,6 +1103,73 @@ namespace
             t.model.push_back(mc(Part::WingLeft, 0, 80, 26, 3, 18, 0, -1, -12, 8, 0, 0));
             t.model.push_back(mirrored(mc(Part::WingRight, 0, 80, 26, 3, 18,
                                           -26, -1, -12, -8, 0, 0)));
+        }
+
+        {
+            // The wither: the boss you build rather than the one you
+            // find. Three heads, which is the whole of its look, and
+            // a rattle instead of a roar.
+            MobType& t = table[static_cast<size_t>(MobId::Wither)];
+            t.id = MobId::Wither;
+            t.experience = 500;
+            t.voice = Sound::MobWitherSay;
+            t.hurtVoice = Sound::MobWitherHurt;
+            t.deathVoice = Sound::MobWitherDeath;
+            t.name = "Wither";
+            t.texture = "wither";
+            // Minecraft fits one on 64 square with its own layout.
+            // These ribs are eighteen wide, which needs 66 across, so
+            // the sheet is the wider of the two allowed shapes.
+            t.sheetWidth = 128;
+            t.sheetHeight = 64;
+            t.spawnClass = SpawnClass::Hostile;
+            t.boss = true;
+
+            // Minecraft's numbers. Less health than the dragon and
+            // more dangerous, because nothing heals it and it shoots
+            // from wherever it likes.
+            t.maxHealth = 300;
+
+            // It throws and does not swing. Every mob in this game is
+            // one or the other -- a test has said so since before any
+            // of this -- and a wither that closed to melee would not
+            // be a wither anyway: the whole of fighting one is that it
+            // stays out of reach.
+            t.attackDamage = 0;
+            t.width = 0.9f;
+            t.height = 3.5f;
+            t.walkSpeed = 4.0f;
+            t.limbSwing = 0.0f;
+            t.hoverHeight = 4.0f;
+            t.fireproof = true;
+            t.modelScale = 1.4f;
+
+            // It never closes: it throws skulls. Fast and often, which
+            // is what makes a wither a fight you take cover from.
+            t.arrowDamage = 5;
+            t.arrowRange = 24.0f;
+            t.arrowInterval = 1.1f;
+
+            t.drop = Items::NetherStar;
+            t.dropCount = 1;
+
+            t.bodyColour = rgb(38, 38, 40);
+            t.headColour = rgb(52, 52, 54);
+            t.eyeColour = 0xFF404040;
+
+            // A ribcage hanging under three heads. The side heads are
+            // on the wing parts because those are the ones that do not
+            // swing like a limb -- the dragon's tail taught that.
+            t.model.push_back(mc(Part::Head, 0, 0, 10, 10, 10, -5, -10, -5, 0, -2, 0));
+            t.model.push_back(mc(Part::WingLeft, 0, 20, 6, 6, 6, -3, -8, -3, -8, -2, 0));
+            t.model.push_back(mirrored(mc(Part::WingRight, 0, 20, 6, 6, 6, -3, -8, -3, 8, -2, 0)));
+
+            // The spine, and four ribs tapering down it.
+            t.model.push_back(mc(Part::Body, 0, 36, 4, 14, 4, -2, 0, -2, 0, 0, 0));
+            t.model.push_back(mc(Part::Body, 24, 36, 18, 3, 3, -9, 1, -2, 0, 0, 0));
+            t.model.push_back(mc(Part::Body, 24, 44, 14, 3, 3, -7, 5, -2, 0, 0, 0));
+            t.model.push_back(mc(Part::Body, 24, 52, 10, 3, 3, -5, 9, -2, 0, 0, 0));
+            t.model.push_back(mc(Part::Body, 70, 36, 6, 3, 3, -3, 13, -2, 0, 0, 0));
         }
 
         return table;

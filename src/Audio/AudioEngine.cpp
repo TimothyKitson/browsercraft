@@ -297,6 +297,8 @@ void AudioEngine::buildSounds()
                  Sound::MobWitchDeath, "mob/witch");
     loadMobVoice(Sound::MobDragonSay, Sound::MobDragonHurt,
                  Sound::MobDragonDeath, "mob/enderdragon");
+    loadMobVoice(Sound::MobWitherSay, Sound::MobWitherHurt,
+                 Sound::MobWitherDeath, "mob/wither");
     loadMobVoice(Sound::MobWardenSay, Sound::MobWardenHurt,
                  Sound::MobWardenDeath, "mob/warden");
     loadVariants(Sound::Rain, "weather/rain", 1);
@@ -771,6 +773,31 @@ void AudioEngine::buildSounds()
         s.addNoise(0.34f, 420.0f, 12.0f, 0.44f, false, 845);
         s.addNoise(0.34f, 1400.0f, 9.0f, 0.18f, true, 846);
         s.finish(0.78f);
+    }
+
+    // The wither: a rattle rather than a roar. Three heads, so three
+    // tones close enough together to beat against each other, which
+    // is what makes it sound wrong rather than just loud.
+    {
+        Synth s = make(Sound::MobWitherSay);
+        s.addTone(1.10f, 196.0f, 150.0f, 1.8f, 0.64f, true);
+        s.addTone(1.10f, 203.0f, 156.0f, 1.8f, 0.52f, true);
+        s.addTone(1.10f, 131.0f, 100.0f, 1.6f, 0.46f, true);
+        s.addNoise(0.80f, 540.0f, 2.6f, 0.20f, true, 901);
+        s.finish(0.86f);
+    }
+    {
+        Synth s = make(Sound::MobWitherHurt);
+        s.addTone(0.34f, 300.0f, 150.0f, 10.0f, 0.74f, true);
+        s.addNoise(0.28f, 1000.0f, 12.0f, 0.26f, false, 902);
+        s.finish(0.80f);
+    }
+    {
+        Synth s = make(Sound::MobWitherDeath);
+        s.addTone(1.80f, 210.0f, 58.0f, 1.3f, 0.74f, true);
+        s.addTone(1.80f, 139.0f, 40.0f, 1.2f, 0.50f, true);
+        s.addNoise(1.30f, 460.0f, 1.8f, 0.22f, true, 903);
+        s.finish(0.90f);
     }
 
     // The dragon: the biggest noise in the game. A long roar made of

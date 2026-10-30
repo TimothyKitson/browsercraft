@@ -250,6 +250,8 @@ namespace
         { "Mud",          MudTile,       MudTile,        MudTile,        true,  true,  RenderType::Cube,   0,   0.5f },
         { "End Crystal",  EndCrystalTile,EndCrystalTile, EndCrystalTile, false, false, RenderType::Cube,  15,   0.0f },
         { "Crystal Base", Bedrock,       Bedrock,        Bedrock,        true,  true,  RenderType::Cube,   0,  -1.0f },
+        { "Wither Skeleton Skull",WitherSkullTile,WitherSkullTile,WitherSkullTile,true,true,RenderType::Cube,0,1.0f },
+        { "Beacon",       BeaconTile,    BeaconTile,     BeaconTile,     true,  true,  RenderType::Cube,  15,   3.0f },
     };
 }
 

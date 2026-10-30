@@ -205,6 +205,8 @@ namespace Tiles
         VineTile,
         MudTile,
         EndCrystalTile,
+        WitherSkullTile,
+        BeaconTile,
 
         RainDrop,
         SnowFlake,
@@ -323,8 +325,9 @@ namespace Tiles
         ItemGlowBerries,
         ItemOminousBottle,
         ItemOminousKey,
+        ItemNetherStar,
 
-        ItemTileEnd = ItemOminousKey + 1
+        ItemTileEnd = ItemNetherStar + 1
     };
 
     // Ten progressively more broken overlay tiles for the mining animation.

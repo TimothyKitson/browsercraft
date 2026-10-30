@@ -1417,6 +1417,7 @@ bool Application::frame()
             m_startupScreen == "mansion" || m_startupScreen == "well" ||
             m_startupScreen == "hut" || m_startupScreen == "swamp" ||
             m_startupScreen == "dragon" ||
+            m_startupScreen == "wither" ||
             m_startupScreen == "city" || m_startupScreen == "bastion" ||
             m_startupScreen == "endcity" ||
             m_startupScreen == "shipwreck" || m_startupScreen == "monument" ||
@@ -1479,6 +1480,7 @@ bool Application::frame()
                                   m_startupScreen != "hut" &&
                                   m_startupScreen != "swamp" &&
                                   m_startupScreen != "dragon" &&
+                                  m_startupScreen != "wither" &&
                                   m_startupScreen != "city" &&
                                   m_startupScreen != "bastion" &&
                                   m_startupScreen != "endcity" &&
@@ -2181,6 +2183,40 @@ bool Application::frame()
                     std::printf("No ancient city found\n");
                     std::fflush(stdout);
                 }
+
+                m_player.mode = GameMode::Creative;
+                m_player.health = Player::MAX_HEALTH;
+            }
+
+            // The wither, raised the way a player raises one: the
+            // pattern is built in front of the camera and the place
+            // code finds it, so the shot proves the summon works
+            // rather than just the model.
+            if (m_startupScreen == "wither")
+            {
+                m_timeOfDay = 0.5f;
+
+                const int groundY = m_world->generator().surfaceHeight(0, 0);
+                m_player.position = glm::vec3(0.5f, static_cast<float>(groundY + 2), 0.5f);
+                m_player.velocity = glm::vec3(0.0f);
+                m_player.flying = true;
+                m_placeOnSurface = false;
+
+                // Tilted up: a wither hovers four blocks over where it
+                // was raised and sits above a level eye line.
+                m_camera.setOrientation(-90.0f, 16.0f);
+                m_camera.addLook(0.0f, 0.0f, 0.0f);
+
+                // Asked for rather than built. The pattern goes
+                // eighteen blocks out, whose chunks have not streamed
+                // in at setup time -- setBlock into one that does not
+                // exist does nothing, so the first attempt laid no
+                // soul sand and nothing was summoned.
+                m_pendingArena = true;
+                m_arenaKind = ArenaKind::WitherAltar;
+                m_arenaX = 0;
+                m_arenaY = groundY + 2;
+                m_arenaZ = -18;
 
                 m_player.mode = GameMode::Creative;
                 m_player.health = Player::MAX_HEALTH;
@@ -3507,6 +3543,8 @@ bool Application::frame()
             if (m_arenaKind == ArenaKind::BiomePocket) buildBiomeArena(m_arenaX, m_arenaZ);
             else if (m_arenaKind == ArenaKind::CaveProps)
                 lightCave(m_arenaX, m_arenaY, m_arenaZ);
+            else if (m_arenaKind == ArenaKind::WitherAltar)
+                raiseWitherForShot(m_arenaX, m_arenaY, m_arenaZ);
             else dressChamberRoom(m_arenaX, m_arenaY, m_arenaZ);
             m_pendingArena = false;
         }
@@ -4711,6 +4749,95 @@ void Application::tickDragonFight(float deltaTime)
 
     if (standing > 0)
         dragon->heal(static_cast<int>(HEAL_PER_CRYSTAL * standing * INTERVAL));
+}
+
+// Builds the summoning pattern for the dev screen and lets the normal
+// place code find it, so the shot proves the summon works rather than
+// just the model.
+void Application::raiseWitherForShot(int atX, int atY, int atZ)
+{
+    if (!m_world) return;
+
+    for (int dx = -7; dx <= 7; ++dx)
+        for (int dz = -7; dz <= 22; ++dz)
+        {
+            for (int dy = 0; dy <= 14; ++dy)
+                m_world->setBlock(atX + dx, atY + dy, atZ + dz, Blocks::Air);
+            m_world->setBlock(atX + dx, atY - 1, atZ + dz, Blocks::Stone);
+        }
+
+    m_world->setBlock(atX, atY + 1, atZ, Blocks::SoulSand);
+    for (int i = -1; i <= 1; ++i)
+        m_world->setBlock(atX + i, atY + 2, atZ, Blocks::SoulSand);
+    for (int i = -1; i <= 1; ++i)
+        m_world->setBlock(atX + i, atY + 3, atZ, Blocks::WitherSkull);
+
+    tryRaiseWither(glm::ivec3(atX, atY + 3, atZ));
+}
+
+// The wither: the boss you build rather than the one you find.
+//
+// Three skulls across the top of a T of soul sand. Checked from the
+// skull just placed rather than from the middle, because any of the
+// three can be the last one laid -- so the same arrangement is found
+// whichever order it was built in.
+void Application::tryRaiseWither(const glm::ivec3& skull)
+{
+    if (!m_world) return;
+
+    // Which of the three the player just put down. Trying all three
+    // is what makes the order not matter.
+    for (int offset = -1; offset <= 1; ++offset)
+    {
+        const int mx = skull.x - offset;
+        const int my = skull.y;
+        const int mz = skull.z;
+
+        // ... and the same again for a T built along Z rather than X.
+        for (int along = 0; along < 2; ++along)
+        {
+            const int stepX = along ? 0 : 1;
+            const int stepZ = along ? 1 : 0;
+
+            const int midX = along ? skull.x : mx;
+            const int midZ = along ? skull.z - offset : mz;
+
+            auto at = [&](int dx, int dy, int dz)
+            {
+                return m_world->getBlock(midX + dx, my + dy, midZ + dz);
+            };
+
+            // Three skulls across the top.
+            bool heads = true;
+            for (int i = -1; i <= 1; ++i)
+                if (at(stepX * i, 0, stepZ * i) != Blocks::WitherSkull) heads = false;
+            if (!heads) continue;
+
+            // Three soul sand under them, and two more below the
+            // middle one: the T.
+            bool base = true;
+            for (int i = -1; i <= 1; ++i)
+                if (at(stepX * i, -1, stepZ * i) != Blocks::SoulSand) base = false;
+            if (at(0, -2, 0) != Blocks::SoulSand) base = false;
+            if (!base) continue;
+
+            // Built. Take the pattern down first, so it cannot be
+            // read a second time by the next block placed near it.
+            for (int i = -1; i <= 1; ++i)
+            {
+                m_world->setBlock(midX + stepX * i, my, midZ + stepZ * i, Blocks::Air);
+                m_world->setBlock(midX + stepX * i, my - 1, midZ + stepZ * i, Blocks::Air);
+            }
+            m_world->setBlock(midX, my - 2, midZ, Blocks::Air);
+
+            m_entities.spawnAt(MobId::Wither,
+                               glm::vec3(midX + 0.5f, static_cast<float>(my), midZ + 0.5f),
+                               *m_world);
+            m_audio.play(Sound::MobWitherSay, 1.0f, 1.0f);
+            m_chatLog.add("Something has been built.");
+            return;
+        }
+    }
 }
 
 // The way home, which only exists once the dragon is dead.
@@ -6453,6 +6580,9 @@ void Application::handlePlacement()
 
     if (isRail(placing)) reshapeRailsAround(target);
     settleRedstone(target);
+
+    // The one block in the game whose placing can build something.
+    if (placing == Blocks::WitherSkull) tryRaiseWither(target);
 
     if (!m_player.creative())
     {

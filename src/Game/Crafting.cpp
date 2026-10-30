@@ -180,6 +180,14 @@ namespace
                          Blocks::Obsidian,  Blocks::Obsidian,  Blocks::Obsidian },
           0, Blocks::EnchantingTable, 1 },
 
+        // The beacon: glass over the star, obsidian under it. The one
+        // recipe in the game you can only make once you have killed
+        // something, which is the whole point of a nether star.
+        { false, 3, 3, { Blocks::Glass,    Blocks::Glass,      Blocks::Glass,
+                         Blocks::Glass,    Items::NetherStar,  Blocks::Glass,
+                         Blocks::Obsidian, Blocks::Obsidian,   Blocks::Obsidian },
+          0, Blocks::Beacon, 1 },
+
         // Three cane in a row makes three paper, three paper and a
         // hide makes a book, and six planks round three books makes a
         // shelf. All three want a bench: every one of them is three
