@@ -329,6 +329,14 @@ void AudioEngine::buildSounds()
                  Sound::MobCaveSpiderDeath, "mob/cave_spider");
     loadMobVoice(Sound::MobSilverfishSay, Sound::MobSilverfishHurt,
                  Sound::MobSilverfishDeath, "mob/silverfish");
+    loadMobVoice(Sound::MobPiglinSay, Sound::MobPiglinHurt,
+                 Sound::MobPiglinDeath, "mob/piglin");
+    loadMobVoice(Sound::MobPiglinBruteSay, Sound::MobPiglinBruteHurt,
+                 Sound::MobPiglinBruteDeath, "mob/piglin_brute");
+    loadMobVoice(Sound::MobHoglinSay, Sound::MobHoglinHurt,
+                 Sound::MobHoglinDeath, "mob/hoglin");
+    loadMobVoice(Sound::MobStriderSay, Sound::MobStriderHurt,
+                 Sound::MobStriderDeath, "mob/strider");
     loadVariants(Sound::Rain, "weather/rain", 1);
     loadVariants(Sound::Thunder, "weather/thunder", 1);
 
@@ -1183,6 +1191,89 @@ void AudioEngine::buildSounds()
         s.addNoise(0.28f, 3400.0f, 10.0f, 0.28f, true, 955);
         s.addTone(0.20f, 700.0f, 260.0f, 10.0f, 0.10f, false);
         s.finish(0.50f);
+    }
+
+    // The piglins: a pig's grunt with words nearly in it. The brute
+    // is the same an octave down and twice as long, which is how you
+    // know which one has come round the corner.
+    {
+        Synth s = make(Sound::MobPiglinSay);
+        s.addTone(0.18f, 220.0f, 164.0f, 11.0f, 0.32f, true);
+        s.addNoise(0.14f, 1100.0f, 18.0f, 0.14f, false, 961);
+        s.finish(0.52f);
+    }
+    {
+        Synth s = make(Sound::MobPiglinHurt);
+        s.addTone(0.17f, 340.0f, 190.0f, 16.0f, 0.34f, true);
+        s.addNoise(0.12f, 1500.0f, 22.0f, 0.16f, true, 962);
+        s.finish(0.58f);
+    }
+    {
+        Synth s = make(Sound::MobPiglinDeath);
+        s.addTone(0.46f, 260.0f, 90.0f, 5.0f, 0.34f, true);
+        s.addNoise(0.28f, 900.0f, 9.0f, 0.14f, false, 963);
+        s.finish(0.60f);
+    }
+    {
+        Synth s = make(Sound::MobPiglinBruteSay);
+        s.addTone(0.34f, 118.0f, 86.0f, 6.0f, 0.38f, true);
+        s.addNoise(0.26f, 540.0f, 10.0f, 0.18f, false, 964);
+        s.finish(0.56f);
+    }
+    {
+        Synth s = make(Sound::MobPiglinBruteHurt);
+        s.addTone(0.26f, 190.0f, 94.0f, 12.0f, 0.38f, true);
+        s.addNoise(0.18f, 800.0f, 17.0f, 0.18f, false, 965);
+        s.finish(0.62f);
+    }
+    {
+        Synth s = make(Sound::MobPiglinBruteDeath);
+        s.addTone(0.62f, 150.0f, 52.0f, 4.0f, 0.38f, true);
+        s.addNoise(0.40f, 460.0f, 6.0f, 0.18f, false, 966);
+        s.finish(0.64f);
+    }
+
+    // The hoglin: a boar, and nothing in that noise is friendly.
+    {
+        Synth s = make(Sound::MobHoglinSay);
+        s.addTone(0.40f, 96.0f, 74.0f, 4.5f, 0.40f, true);
+        s.addNoise(0.34f, 400.0f, 7.0f, 0.22f, false, 967);
+        s.finish(0.62f);
+    }
+    {
+        Synth s = make(Sound::MobHoglinHurt);
+        s.addTone(0.26f, 180.0f, 86.0f, 12.0f, 0.40f, true);
+        s.addNoise(0.20f, 680.0f, 16.0f, 0.22f, false, 968);
+        s.finish(0.66f);
+    }
+    {
+        Synth s = make(Sound::MobHoglinDeath);
+        s.addTone(0.70f, 130.0f, 44.0f, 3.2f, 0.40f, true);
+        s.addNoise(0.48f, 360.0f, 5.0f, 0.22f, false, 969);
+        s.finish(0.68f);
+    }
+
+    // The strider: a creaking, as if whatever it is made of is about
+    // to give. Vanilla's is a strange one and this is as near as a
+    // couple of oscillators get.
+    {
+        Synth s = make(Sound::MobStriderSay);
+        s.addTone(0.46f, 320.0f, 290.0f, 4.0f, 0.22f, true);
+        s.addTone(0.46f, 196.0f, 210.0f, 4.0f, 0.18f, false);
+        s.addNoise(0.30f, 1600.0f, 8.0f, 0.08f, true, 970);
+        s.finish(0.48f);
+    }
+    {
+        Synth s = make(Sound::MobStriderHurt);
+        s.addTone(0.22f, 480.0f, 240.0f, 14.0f, 0.26f, true);
+        s.addTone(0.22f, 300.0f, 160.0f, 14.0f, 0.16f, false);
+        s.finish(0.56f);
+    }
+    {
+        Synth s = make(Sound::MobStriderDeath);
+        s.addTone(0.56f, 380.0f, 120.0f, 4.0f, 0.26f, true);
+        s.addTone(0.56f, 240.0f, 80.0f, 4.0f, 0.16f, false);
+        s.finish(0.58f);
     }
 
     // The ghast: a long wail that falls away. Mostly tone, almost no

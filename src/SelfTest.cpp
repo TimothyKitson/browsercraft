@@ -1930,15 +1930,17 @@ namespace
         check(horse.walkSpeed > 5.0f, "it is faster than you are on foot, which is the point");
         check(horse.spawnClass == SpawnClass::Passive, "and it is not out to get you");
 
-        // Only the horse, among the living. Riding a creeper would be
-        // a different game.
+        // The horse and the strider, among the living. Riding a
+        // creeper would be a different game; riding a strider is how
+        // Minecraft gets you across a lava sea.
         int rideable = 0;
         for (int i = 0; i < static_cast<int>(MobId::Count); ++i)
         {
             const MobType& t = mobType(static_cast<MobId>(i));
             if (t.rideable && !t.inanimate) ++rideable;
         }
-        check(rideable == 1, "and it is the only animal you can get on");
+        check(rideable == 2, "it and the strider are the only two you can get on");
+        check(mobType(MobId::Strider).rideable, "and the strider really is the other one");
 
         check(Mob::tamingFood(MobId::Horse) == Items::Wheat, "wheat tames one");
 
@@ -2127,7 +2129,11 @@ namespace
         {
             const MobType& t = mobType(static_cast<MobId>(i));
             if (t.dimension != Dimension::Nether) continue;
-            check(t.spawnClass == SpawnClass::Hostile || t.neutral,
+            // The strider is the exception, and Minecraft's is too:
+            // it attacks nobody, nothing attacks it, and it is the one
+            // way across a lava sea.
+            check(t.spawnClass == SpawnClass::Hostile || t.neutral ||
+                      t.id == MobId::Strider,
                   std::string(t.name) + " is not something you meet in the Nether and pet");
             check(t.fireproof, std::string(t.name) + " is not hurt by the fire it lives in");
         }
@@ -6159,6 +6165,9 @@ namespace
                 // A small slime is never spawned: it is what a big
                 // one leaves behind when it is killed.
                 case MobId::SlimeSmall:
+                // The brute belongs to a bastion and is put there by
+                // hand, the way a shulker belongs to an End city.
+                case MobId::PiglinBrute:
                 // The illagers belong to the two buildings that were
                 // built for them: the outpost and the mansion.
                 case MobId::Pillager: case MobId::Vindicator:
@@ -10914,6 +10923,83 @@ namespace
         check(silverfish.drop == Blocks::Air, "and leaves nothing worth having");
     }
 
+    void testNetherCrowd()
+    {
+        section("the Nether: the piglins and what lives with them");
+
+        const MobType& piglin = mobType(MobId::Piglin);
+        const MobType& brute = mobType(MobId::PiglinBrute);
+        const MobType& hoglin = mobType(MobId::Hoglin);
+        const MobType& strider = mobType(MobId::Strider);
+
+        for (const MobType* who : { &piglin, &brute, &hoglin, &strider })
+            check(who->dimension == Dimension::Nether,
+                  std::string(who->name) + " belongs to the Nether");
+
+        // A piglin minds its own business until you give it a reason
+        // not to; a brute never did and never will.
+        check(piglin.neutral, "a piglin is neutral");
+        check(!brute.neutral, "a brute is not");
+        check(brute.maxHealth > 2 * piglin.maxHealth, "and it takes far more killing");
+        check(brute.attackDamage > piglin.attackDamage, "and hits harder");
+        check(brute.experience > piglin.experience, "and is worth more");
+
+        // Gold. Nine nuggets to an ingot, which is the only thing in
+        // the game that turns what a mob leaves into a metal.
+        check(piglin.drop == Items::GoldNugget, "a piglin leaves gold");
+        check(brute.drop == Items::GoldNugget, "and so does a brute");
+        check(brute.dropCount > piglin.dropCount, "the brute carries more of it");
+        {
+            Inventory bench;
+            bench.setCraftSize(3);
+            for (int cell = 0; cell < 9; ++cell)
+                bench.slot(Inventory::CRAFT_FIRST + cell) = ItemStack{ Items::GoldNugget, 1 };
+            bench.refreshCraftResult();
+            check(bench.slot(Inventory::CRAFT_RESULT).id == Items::GoldIngot,
+                  "nine nuggets make an ingot");
+        }
+        {
+            Inventory bench;
+            bench.slot(Inventory::CRAFT_FIRST) = ItemStack{ Items::GoldIngot, 1 };
+            bench.refreshCraftResult();
+            check(bench.slot(Inventory::CRAFT_RESULT).id == Items::GoldNugget,
+                  "and the ingot gives the nine back");
+            check(bench.slot(Inventory::CRAFT_RESULT).count == 9, "all nine");
+        }
+
+        // The hoglin is the Nether's livestock, in the sense that it
+        // is made of meat and would rather you were.
+        check(hoglin.drop == Items::RawPorkchop, "a hoglin is made of pork");
+        check(hoglin.dropCount >= 2, "enough of it to be worth hunting");
+        check(hoglin.spawnClass == SpawnClass::Hostile, "and it comes for you");
+        check(hoglin.width > 1.0f, "it is a big animal");
+
+        section("the strider");
+
+        // The one way across a lava sea, and the only passive thing
+        // down there.
+        check(strider.lavaWalker, "a strider walks on lava");
+        check(strider.fireproof, "which would be a short walk otherwise");
+        check(strider.spawnClass == SpawnClass::Passive, "it attacks nobody");
+        check(strider.rideable, "and you can get on it");
+        check(strider.saddleHeight > 1.0f, "sitting up where you can see");
+
+        // Nothing else does. A world where everything walked on lava
+        // would be a world where lava was a floor.
+        int walkers = 0;
+        for (int i = 0; i < mobTypeCount(); ++i)
+            if (mobType(static_cast<MobId>(i)).lavaWalker) ++walkers;
+        check(walkers == 1, "and it is the only thing in the game that does");
+
+        // The rule the spawn asks, rather than the flag behind it.
+        check(EntityManager::roomFor(strider, Blocks::Lava),
+              "lava is somewhere a strider can be put");
+        check(!EntityManager::roomFor(mobType(MobId::Piglin), Blocks::Lava),
+              "and nowhere a piglin can");
+        check(!EntityManager::roomFor(strider, Blocks::Netherrack),
+              "rock is still rock to it");
+    }
+
     void testDyes()
     {
         section("dye: the sixteen colours");
@@ -11269,6 +11355,7 @@ int runSelfTest()
     testDyes();
     testIllagers();
     testCaveCrowd();
+    testNetherCrowd();
 
     std::printf("\n%d checks, %d failed\n", g_checks, g_failures);
     return g_failures == 0 ? 0 : 1;

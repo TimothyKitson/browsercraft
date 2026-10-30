@@ -3218,6 +3218,24 @@ namespace
         t.set(8, 5, dark);
     }
 
+    void paintItemGoldNugget(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+
+        // Three small lumps rather than one, which is what tells a
+        // nugget from an ingot at this size.
+        const int LUMPS[3][2] = { { 5, 6 }, { 9, 5 }, { 7, 10 } };
+        for (const auto& lump : LUMPS)
+            for (int dy = 0; dy < 3; ++dy)
+                for (int dx = 0; dx < 3; ++dx)
+                {
+                    if (dx == 2 && dy == 2) continue;
+                    const Color c = (dx == 0 || dy == 0) ? Color{ 246, 220, 118 }
+                                                         : Color{ 206, 168, 58 };
+                    t.set(lump[0] + dx, lump[1] + dy, c);
+                }
+    }
+
     void paintItemSign(Tile& t)
     {
         t.fill(Color{ 0, 0, 0, 0 });
@@ -6158,6 +6176,7 @@ namespace
         { Tiles::ItemTrident, paintItemTrident },
         { Tiles::ItemTotem, paintItemTotem },
         { Tiles::ItemSlimeball, paintItemSlimeball },
+        { Tiles::ItemGoldNugget, paintItemGoldNugget },
         { Tiles::ItemBowl, paintItemBowl },
         { Tiles::ItemBeetroot, paintItemBeetroot },
         { Tiles::ItemBeetrootSeeds, paintItemBeetrootSeeds },
@@ -6483,6 +6502,7 @@ namespace
         { Tiles::ItemTrident, { "trident", nullptr, nullptr } },
         { Tiles::ItemTotem, { "totem_of_undying", "totem", nullptr } },
         { Tiles::ItemSlimeball, { "slime_ball", "slimeball", nullptr } },
+        { Tiles::ItemGoldNugget, { "gold_nugget", nullptr, nullptr } },
     };
 
     const PackTile PACK_TILES[] = {

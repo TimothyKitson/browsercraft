@@ -89,12 +89,17 @@ bool Mob::floatTowardsSurface(const World& world, float deltaTime)
     const int z = static_cast<int>(std::floor(m_position.z));
     const int feet = static_cast<int>(std::floor(m_position.y + 0.05f));
 
-    if (world.getBlock(x, feet, z) != Blocks::Water) return false;
+    // What this one rides on. A strider stands on lava exactly the
+    // way a boat sits on water, so it is the same arithmetic over a
+    // different block rather than a second copy of it.
+    const BlockId liquid = type().lavaWalker ? Blocks::Lava : Blocks::Water;
 
-    // The top of the water it is sitting in, so a hull dropped into a
+    if (world.getBlock(x, feet, z) != liquid) return false;
+
+    // The top of the liquid it is sitting in, so a hull dropped into a
     // deep lake rises to the surface instead of resting on the bed.
     int surface = feet;
-    while (surface < feet + FLOAT_RISE && world.getBlock(x, surface + 1, z) == Blocks::Water)
+    while (surface < feet + FLOAT_RISE && world.getBlock(x, surface + 1, z) == liquid)
         ++surface;
 
     const float waterline = static_cast<float>(surface + 1) - FLOAT_DRAFT;
@@ -707,7 +712,7 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
     // towards the surface and damped, so it settles instead of bobbing
     // for ever. Out of the water gravity has it like anything else, and
     // that is the only branch that applies the fall.
-    const bool afloat = t.floats && floatTowardsSurface(world, deltaTime);
+    const bool afloat = (t.floats || t.lavaWalker) && floatTowardsSurface(world, deltaTime);
     const bool hovering = !afloat && t.hoverHeight > 0.0f &&
                           hoverAboveGround(world, deltaTime);
     if (onRail) m_velocity.y = 0.0f;

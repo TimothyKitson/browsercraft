@@ -32,7 +32,8 @@ namespace
     // The Nether has its own, and nothing else belongs there: a sheep on
     // netherrack and a piglin in a meadow are both wrong.
     const MobId NETHER_SPECIES[] = { MobId::ZombiePigman, MobId::WitherSkeleton,
-                                     MobId::MagmaCube, MobId::Blaze, MobId::Ghast };
+                                     MobId::MagmaCube, MobId::Blaze, MobId::Ghast,
+                                     MobId::Piglin, MobId::Hoglin, MobId::Strider };
 
     // Underground, which until now had nothing at all: the spawner
     // only ever looked down from the sky, so the first standable
@@ -131,6 +132,22 @@ MobId EntityManager::nightSpecies(int index)
     return HOSTILE_SPECIES[((index % count) + count) % count];
 }
 
+int EntityManager::lavaSurfaceBelow(const World& world, int x, int startY, int z) const
+{
+    for (int y = std::min(startY, WORLD_TOP); y > 1; --y)
+    {
+        if (world.getBlock(x, y, z) != Blocks::Lava) continue;
+        if (world.getBlock(x, y + 1, z) != Blocks::Air) continue;
+        if (world.getBlock(x, y + 2, z) != Blocks::Air) continue;
+
+        // Feet in the top block of the lava, the way a boat's are in
+        // the top block of the water it sits on.
+        return y;
+    }
+
+    return -1;
+}
+
 int EntityManager::caveSpeciesCount()
 {
     return static_cast<int>(std::size(CAVE_SPECIES));
@@ -175,7 +192,11 @@ bool EntityManager::roomFor(const MobType& type, BlockId block)
     // as rock, so neither was ever once seen. Lava turns everything
     // away.
     if (isLiquid(block) && !((type.floats || type.aquatic) && block == Blocks::Water))
-        return false;
+    {
+        // Except the one thing that walks on lava, to which lava is
+        // the floor and water is nothing at all.
+        if (!(type.lavaWalker && block == Blocks::Lava)) return false;
+    }
 
     return true;
 }
@@ -248,11 +269,23 @@ void EntityManager::trySpawnWave(const World& world, const glm::vec3& playerPosi
         const int x = static_cast<int>(std::floor(playerPosition.x + std::sin(angle) * distance));
         const int z = static_cast<int>(std::floor(playerPosition.z + std::cos(angle) * distance));
 
-        // Half the attempts look for a cave floor rather than the
-        // ground: start the search from a random depth below the
+        // Where to start looking down from. In the overworld that is
+        // the sky; in the Nether it cannot be, because the Nether is a
+        // closed cavern with a roof on it and the first standable
+        // block below the sky is the top of that roof. Every mob the
+        // Nether ever spawned was put on the roof, above the ceiling,
+        // where nobody has ever been -- they all read y=120 when the
+        // spawner was finally asked to say where it was putting them.
+        const int ceiling = (m_dimension == Dimension::Nether)
+                                ? static_cast<int>(playerPosition.y) + 16
+                                : WORLD_TOP;
+
+        // Half the overworld's waves look for a cave floor rather than
+        // the ground: start the search from a random depth below the
         // surface, and the first standable block under that is a cave
         // floor by construction.
-        const int surface = surfaceBelow(world, x, WORLD_TOP, z);
+        const int surface = surfaceBelow(world, x, ceiling, z);
+
         if (surface < 0) continue;
 
         const bool underground = digging && surface > 20;
@@ -366,13 +399,39 @@ void EntityManager::trySpawnWave(const World& world, const glm::vec3& playerPosi
         if (m_dimension == Dimension::Overworld &&
             mobType(species).dimension != Dimension::Overworld)
             continue;
+        glm::vec3 mobFeet(x + 0.5f, static_cast<float>(y), z + 0.5f);
+
+        // Two species are not asked the ordinary question about where
+        // they may stand, because the ordinary question is the wrong
+        // one for both of them.
+        //
+        // A strider stands on the lava, not on the bank beside it, so
+        // the lava's own top replaces whatever the ordinary search
+        // found -- the ordinary search cannot see a lava surface at
+        // all, because lava is nowhere to stand to anything else in
+        // the game. Two earlier rules here were both wrong and both
+        // gave nothing: the surface a column offers is usually a
+        // ledge far above its lava, so neither "only when there is no
+        // footing" nor "only when the lava is the higher of the two"
+        // ever let one through. And it is passive, so the
+        // daylight-and-grass rule would have refused it on netherrack
+        // even once it was standing in the right place.
+        const bool onLava = mobType(species).lavaWalker;
+        if (onLava)
+        {
+            const int top = lavaSurfaceBelow(world, x, ceiling, z);
+            if (top < 0) continue;
+            mobFeet.y = static_cast<float>(top);
+        }
         // A bat is the one passive thing that belongs in the dark, so
         // the daylight-and-grass rule that keeps animals out of caves
-        // is the wrong question to ask about one.
-        if (species != MobId::Bat && !canSpawnOn(species, ground, light)) continue;
-        if (species == MobId::Bat && (!isSolid(ground) || light > HOSTILE_MAX_LIGHT)) continue;
+        // is the wrong question to ask about one either.
+        else if (species == MobId::Bat)
+        {
+            if (!isSolid(ground) || light > HOSTILE_MAX_LIGHT) continue;
+        }
+        else if (!canSpawnOn(species, ground, light)) continue;
 
-        const glm::vec3 mobFeet(x + 0.5f, static_cast<float>(y), z + 0.5f);
         if (!spawnAt(species, mobFeet, world)) continue;
 
         // A villager standing in a building takes that building's

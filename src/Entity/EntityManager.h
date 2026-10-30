@@ -144,6 +144,12 @@ private:
     float random01();
     void trySpawnWave(const World& world, const glm::vec3& playerPosition, float daylight);
     int surfaceBelow(const World& world, int x, int startY, int z) const;
+
+    // The top of a lava lake, which is where a strider stands. The
+    // ordinary search cannot find it: lava is not somewhere to stand
+    // to anything else in the game, so a strider was chosen and then
+    // put down on the rock beside the sea it belongs on.
+    int lavaSurfaceBelow(const World& world, int x, int startY, int z) const;
     bool fits(const World& world, const MobType& type, const glm::vec3& feet) const;
 
     Dimension m_dimension = Dimension::Overworld;

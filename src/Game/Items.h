@@ -267,6 +267,10 @@ namespace Items
         // and with blaze powder it is magma cream.
         Slimeball,
 
+        // Off a piglin. Nine make an ingot, which is the only thing
+        // in the game that turns what a mob leaves into a metal.
+        GoldNugget,
+
         Count
     };
 }

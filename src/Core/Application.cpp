@@ -1481,16 +1481,19 @@ bool Application::frame()
             const int baseY = static_cast<int>(std::floor(m_player.position.y));
             const int centreX = static_cast<int>(std::floor(m_player.position.x));
             const int centreZ = static_cast<int>(std::floor(m_player.position.z));
-            // Two rows rather than one. At one, the line grew wider
+            // Rows rather than one line. At one, the line grew wider
             // than the camera could see the moment the species count
             // passed twenty -- the ends of it were simply off the
             // sides of every shot, which is how two mobs can be added
-            // and neither of them ever looked at.
-            const int perRow = (mobTypeCount() + 1) / 2;
+            // and neither of them ever looked at. Twenty to a row,
+            // and as many rows as that takes, so the same thing does
+            // not happen again at forty.
+            const int rows = (mobTypeCount() + 19) / 20;
+            const int perRow = (mobTypeCount() + rows - 1) / rows;
             const int halfWidth = perRow + 3;
 
             for (int x = centreX - halfWidth; x <= centreX + halfWidth; ++x)
-                for (int z = centreZ - 22; z <= centreZ + 6; ++z)
+                for (int z = centreZ - 26; z <= centreZ + 6; ++z)
                 {
                     m_world->setBlock(x, baseY - 1, z, Blocks::Stone);
                     for (int y = baseY; y < baseY + 8; ++y)
@@ -1509,12 +1512,14 @@ bool Application::frame()
                 if (m_entities.spawnAt(static_cast<MobId>(i), feet, *m_world)) ++placed;
             }
 
-            // Stand back and look north along +z at both rows.
-            m_player.position = glm::vec3(centreX + 0.5f, static_cast<float>(baseY),
-                                          centreZ - 20.5f);
+            // Stand back and look along +z at every row, high enough
+            // that the near row does not hide the far one.
+            m_player.position = glm::vec3(centreX + 0.5f,
+                                          static_cast<float>(baseY + 3),
+                                          centreZ - 10.5f - rows * 4.0f);
             m_player.velocity = glm::vec3(0.0f);
             m_camera.position = m_player.eyePosition();
-            m_camera.setOrientation(90.0f, -3.0f);
+            m_camera.setOrientation(90.0f, -6.0f);
 
             // A breeding pair and a calf beside the line-up, plus wheat
             // in hand, so one screenshot covers the lot.
@@ -5614,7 +5619,6 @@ void Application::openExitPortal()
 void Application::tickStructureLairs(float deltaTime)
 {
     if (!m_world) return;
-    if (m_dimension == Dimension::Nether) return;
 
     constexpr float INTERVAL = 4.0f;
     constexpr int GUARDIAN_LIMIT = 6;
@@ -5622,6 +5626,7 @@ void Application::tickStructureLairs(float deltaTime)
     constexpr int DROWNED_LIMIT = 5;
     constexpr int PILLAGER_LIMIT = 6;
     constexpr int VINDICATOR_LIMIT = 5;
+    constexpr int BRUTE_LIMIT = 4;
 
     m_lairTimer -= deltaTime;
     if (m_lairTimer > 0.0f) return;
@@ -5631,6 +5636,49 @@ void Application::tickStructureLairs(float deltaTime)
     const int px = static_cast<int>(m_player.position.x);
     const int py = static_cast<int>(m_player.position.y);
     const int pz = static_cast<int>(m_player.position.z);
+
+    // The Nether's own: the bastion, and the brutes that guard it.
+    // Everything else down there wanders; a brute does not, which is
+    // what makes a bastion a place rather than a shape.
+    if (m_dimension == Dimension::Nether)
+    {
+        const Structures::Spot spot = gen.nearestBastion(px, pz, 1);
+        if (!spot.exists) return;
+
+        const int midX = spot.chunkX * Structures::CHUNK + Structures::CHUNK / 2;
+        const int midZ = spot.chunkZ * Structures::CHUNK + Structures::CHUNK / 2;
+        const int dx = px - midX;
+        const int dz = pz - midZ;
+        const int half = WorldGen::BASTION_HALF + 14;
+        if (dx * dx + dz * dz > half * half) return;
+
+        int already = 0;
+        for (const Mob& mob : m_entities.mobs())
+            if (mob.alive() && mob.typeId() == MobId::PiglinBrute) ++already;
+        if (already >= BRUTE_LIMIT) return;
+
+        // The bastion stands over the lava rather than on the floor,
+        // so its own deck is the only ground there is to stand on.
+        for (int tries = 0; tries < 20; ++tries)
+        {
+            const float angle = tries * 0.3142f;
+            const float reach = 3.0f + (tries % 4) * 3.0f;
+            const int x = midX + static_cast<int>(std::cos(angle) * reach);
+            const int z = midZ + static_cast<int>(std::sin(angle) * reach);
+
+            for (int dy = 0; dy < 18; ++dy)
+            {
+                const int y = WorldGen::NETHER_LAVA_LEVEL + 6 + dy;
+                if (!isSolid(m_world->getBlock(x, y - 1, z))) continue;
+                if (m_world->getBlock(x, y, z) != Blocks::Air) continue;
+
+                const glm::vec3 feet(x + 0.5f, static_cast<float>(y), z + 0.5f);
+                if (m_entities.spawnAt(MobId::PiglinBrute, feet, *m_world)) return;
+                break;
+            }
+        }
+        return;
+    }
 
     // The End's own lair: the city, and the shulkers bolted to it.
     // Nowhere else in the End has them, which is what makes a city

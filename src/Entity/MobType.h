@@ -70,6 +70,13 @@ enum class MobId : uint8_t
     CaveSpider,
     Silverfish,
 
+    // The Nether's own, which it has been short of: the zombified
+    // ones were there, and nothing they used to be.
+    Piglin,
+    PiglinBrute,
+    Hoglin,
+    Strider,
+
     Count
 };
 
@@ -208,6 +215,9 @@ struct MobType
     bool inanimate = false;
     // Rides on top of water rather than sinking through it.
     bool floats = false;
+    // Walks on lava the way a boat sits on water. The strider is the
+    // only one, and it is the only way across a lava sea.
+    bool lavaWalker = false;
     // Lives in the water rather than on top of it: water is not a wall
     // to be spawned outside of, which is what it is to everything else.
     // Without this a guardian could not be put in its own monument and

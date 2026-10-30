@@ -325,6 +325,14 @@ namespace
         { true, 0, 0, { Items::Slimeball, Items::BlazePowder },
           2, Items::MagmaCream, 1 },
 
+        // Nine nuggets to an ingot and back. The only thing in the
+        // game that turns what a mob leaves into a metal.
+        { false, 3, 3, { Items::GoldNugget, Items::GoldNugget, Items::GoldNugget,
+                         Items::GoldNugget, Items::GoldNugget, Items::GoldNugget,
+                         Items::GoldNugget, Items::GoldNugget, Items::GoldNugget },
+          0, Items::GoldIngot, 1 },
+        { true, 0, 0, { Items::GoldIngot }, 1, Items::GoldNugget, 9 },
+
         // Cobblestone and a vine. Minecraft's recipe, and the only
         // way to mossy cobble that does not involve finding a village
         // built in a swamp -- which is where the one in this world

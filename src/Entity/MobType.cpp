@@ -1762,6 +1762,185 @@ namespace
             t.model.push_back(mc(Part::Body, 0, 18, 4, 3, 4, -2, 21, 2, 0, 0, 0));
         }
 
+        {
+            // The piglin: what a zombified one used to be. Neutral,
+            // like Minecraft's -- it minds its own business until you
+            // give it a reason not to, which is what makes a bastion
+            // somewhere you can walk through if you are careful.
+            MobType& t = table[static_cast<size_t>(MobId::Piglin)];
+            t.id = MobId::Piglin;
+            t.experience = 5;
+            t.voice = Sound::MobPiglinSay;
+            t.hurtVoice = Sound::MobPiglinHurt;
+            t.deathVoice = Sound::MobPiglinDeath;
+            t.name = "Piglin";
+            t.texture = "piglin";
+            t.sheetHeight = 64;
+            t.spawnClass = SpawnClass::Hostile;
+            t.neutral = true;
+            t.dimension = Dimension::Nether;
+            // Minecraft's piglins and hoglins burn like anything else.
+            // Here nothing teaches a mob to walk round a lava lake, so
+            // one that was not fireproof would be one that walked into
+            // the nearest lake and died before you ever met it.
+            t.fireproof = true;
+            t.maxHealth = 16;
+            t.width = 0.6f;
+            t.height = 1.95f;
+            t.walkSpeed = 2.3f;
+            t.limbSwing = 0.5f;
+            t.attackDamage = 5;
+
+            t.drop = Items::GoldNugget;
+            t.dropCount = 2;
+
+            t.bodyColour = rgb(96, 70, 56);
+            t.headColour = rgb(234, 168, 160);
+            t.eyeColour = rgb(40, 32, 28);
+
+            t.model.push_back(mc(Part::Head, 0, 0, 8, 8, 8, -4, -8, -4, 0, 0, 0));
+            // The snout, which is what tells a piglin from a man at
+            // any distance worth looking from.
+            t.model.push_back(mc(Part::Head, 31, 1, 6, 3, 2, -3, -5, -6, 0, 0, 0));
+            t.model.push_back(mc(Part::Body, 16, 16, 8, 12, 4, -4, 0, -2, 0, 0, 0));
+            t.model.push_back(mc(Part::LegFrontRight, 40, 16, 4, 12, 4, -3, -2, -2, -5, 2, 0));
+            t.model.push_back(mirrored(mc(Part::LegFrontLeft, 40, 16, 4, 12, 4, -1, -2, -2, 5, 2, 0)));
+            t.model.push_back(mc(Part::LegBackRight, 0, 16, 4, 12, 4, -2, 0, -2, -2, 12, 0));
+            t.model.push_back(mirrored(mc(Part::LegBackLeft, 0, 16, 4, 12, 4, -2, 0, -2, 2, 12, 0)));
+        }
+
+        {
+            // The brute, which is not neutral about anything. It
+            // guards a bastion and it does not care what you are
+            // wearing.
+            MobType& t = table[static_cast<size_t>(MobId::PiglinBrute)];
+            t.id = MobId::PiglinBrute;
+            t.experience = 20;
+            t.voice = Sound::MobPiglinBruteSay;
+            t.hurtVoice = Sound::MobPiglinBruteHurt;
+            t.deathVoice = Sound::MobPiglinBruteDeath;
+            t.name = "Piglin Brute";
+            t.texture = "piglin_brute";
+            t.sheetHeight = 64;
+            t.spawnClass = SpawnClass::Hostile;
+            t.dimension = Dimension::Nether;
+            // Minecraft's piglins and hoglins burn like anything else.
+            // Here nothing teaches a mob to walk round a lava lake, so
+            // one that was not fireproof would be one that walked into
+            // the nearest lake and died before you ever met it.
+            t.fireproof = true;
+            t.maxHealth = 50;
+            t.width = 0.6f;
+            t.height = 1.95f;
+            t.walkSpeed = 2.4f;
+            t.limbSwing = 0.5f;
+            t.attackDamage = 9;
+            t.attackInterval = 1.1f;
+
+            t.drop = Items::GoldNugget;
+            t.dropCount = 4;
+
+            t.bodyColour = rgb(66, 50, 44);
+            t.headColour = rgb(214, 150, 142);
+            t.eyeColour = rgb(40, 32, 28);
+
+            t.model.push_back(mc(Part::Head, 0, 0, 8, 8, 8, -4, -8, -4, 0, 0, 0));
+            // The snout, which is what tells a piglin from a man at
+            // any distance worth looking from.
+            t.model.push_back(mc(Part::Head, 31, 1, 6, 3, 2, -3, -5, -6, 0, 0, 0));
+            t.model.push_back(mc(Part::Body, 16, 16, 8, 12, 4, -4, 0, -2, 0, 0, 0));
+            t.model.push_back(mc(Part::LegFrontRight, 40, 16, 4, 12, 4, -3, -2, -2, -5, 2, 0));
+            t.model.push_back(mirrored(mc(Part::LegFrontLeft, 40, 16, 4, 12, 4, -1, -2, -2, 5, 2, 0)));
+            t.model.push_back(mc(Part::LegBackRight, 0, 16, 4, 12, 4, -2, 0, -2, -2, 12, 0));
+            t.model.push_back(mirrored(mc(Part::LegBackLeft, 0, 16, 4, 12, 4, -2, 0, -2, 2, 12, 0)));
+        }
+
+        {
+            // The hoglin: the Nether's own livestock, in the sense
+            // that it is made of meat and would rather you were.
+            MobType& t = table[static_cast<size_t>(MobId::Hoglin)];
+            t.id = MobId::Hoglin;
+            t.experience = 5;
+            t.voice = Sound::MobHoglinSay;
+            t.hurtVoice = Sound::MobHoglinHurt;
+            t.deathVoice = Sound::MobHoglinDeath;
+            t.name = "Hoglin";
+            t.texture = "hoglin";
+            t.sheetWidth = 128;
+            t.sheetHeight = 64;
+            t.spawnClass = SpawnClass::Hostile;
+            t.dimension = Dimension::Nether;
+            // Minecraft's piglins and hoglins burn like anything else.
+            // Here nothing teaches a mob to walk round a lava lake, so
+            // one that was not fireproof would be one that walked into
+            // the nearest lake and died before you ever met it.
+            t.fireproof = true;
+            t.maxHealth = 40;
+            t.width = 1.4f;
+            t.height = 1.4f;
+            t.walkSpeed = 2.4f;
+            t.limbSwing = 0.5f;
+            t.attackDamage = 6;
+            t.attackReach = 1.4f;
+
+            t.drop = Items::RawPorkchop;
+            t.dropCount = 3;
+            t.secondDrop = Items::Leather;
+            t.secondDropCount = 1;
+
+            t.bodyColour = rgb(142, 86, 70);
+            t.headColour = rgb(156, 96, 78);
+            t.eyeColour = rgb(40, 28, 24);
+
+            t.model.push_back(mc(Part::Body, 0, 0, 14, 12, 20, -7, 2, -10, 0, 0, 0));
+            t.model.push_back(mc(Part::Head, 70, 0, 10, 8, 10, -5, 4, -20, 0, 0, 0));
+            // The tusks, which are the whole of why you run.
+            t.model.push_back(mc(Part::Head, 70, 20, 2, 3, 2, -6, 8, -20, 0, 0, 0));
+            t.model.push_back(mirrored(mc(Part::Head, 70, 20, 2, 3, 2, 4, 8, -20, 0, 0, 0)));
+            t.model.push_back(mc(Part::LegFrontRight, 0, 34, 6, 10, 6, -3, 0, -3, -4, 14, -6));
+            t.model.push_back(mirrored(mc(Part::LegFrontLeft, 0, 34, 6, 10, 6, -3, 0, -3, 4, 14, -6)));
+            t.model.push_back(mc(Part::LegBackRight, 0, 34, 6, 10, 6, -3, 0, -3, -4, 14, 6));
+            t.model.push_back(mirrored(mc(Part::LegBackLeft, 0, 34, 6, 10, 6, -3, 0, -3, 4, 14, 6)));
+        }
+
+        {
+            // The strider: the one way across a lava sea. It attacks
+            // nobody, nothing in the Nether attacks it, and it walks
+            // on the surface of the lava the way a boat sits on water.
+            MobType& t = table[static_cast<size_t>(MobId::Strider)];
+            t.id = MobId::Strider;
+            t.experience = 1;
+            t.voice = Sound::MobStriderSay;
+            t.hurtVoice = Sound::MobStriderHurt;
+            t.deathVoice = Sound::MobStriderDeath;
+            t.name = "Strider";
+            t.texture = "strider";
+            t.spawnClass = SpawnClass::Passive;
+            t.dimension = Dimension::Nether;
+            t.fireproof = true;
+            t.lavaWalker = true;
+            t.maxHealth = 20;
+            t.width = 0.9f;
+            t.height = 1.7f;
+            t.walkSpeed = 1.6f;
+            t.limbSwing = 0.7f;
+
+            t.rideable = true;
+            t.saddleHeight = 1.6f;
+
+            t.drop = Items::StringItem;
+            t.dropCount = 2;
+
+            t.bodyColour = rgb(148, 48, 54);
+            t.headColour = rgb(170, 60, 64);
+            t.eyeColour = rgb(226, 214, 200);
+
+            // A tall slab on two legs, which is the whole of it.
+            t.model.push_back(mc(Part::Body, 0, 0, 16, 14, 8, -8, -4, -4, 0, 0, 0));
+            t.model.push_back(mc(Part::LegBackRight, 48, 0, 4, 14, 4, -2, 0, -2, -4, 10, 0));
+            t.model.push_back(mirrored(mc(Part::LegBackLeft, 48, 0, 4, 14, 4, -2, 0, -2, 4, 10, 0)));
+        }
+
         return table;
     }
 }

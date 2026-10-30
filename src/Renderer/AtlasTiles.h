@@ -430,8 +430,9 @@ namespace Tiles
         ItemTrident,
         ItemTotem,
         ItemSlimeball,
+        ItemGoldNugget,
 
-        ItemTileEnd = ItemSlimeball + 1
+        ItemTileEnd = ItemGoldNugget + 1
     };
 
     // Ten progressively more broken overlay tiles for the mining animation.
