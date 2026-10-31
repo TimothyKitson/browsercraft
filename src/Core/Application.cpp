@@ -101,18 +101,22 @@ namespace
         return buffer;
     }
 
-    // The container panels -- inventory, chest, furnace, the lot -- were
-    // laid out in pixels of their own, with a slot 46 of them across.
-    // Minecraft's slot is 16, so they are drawn at this many interface
-    // pixels to one of their own: every offset in them then comes out
-    // at Minecraft's size without each one being rewritten.
-    constexpr float SLOT_SIZE = 46.0f;
-    constexpr float SLOT_GAP = 4.0f;
-    constexpr float PANEL_UNIT = 16.0f / SLOT_SIZE;
+    // A slot, the way the open-source client counts one: sixteen
+    // interface pixels of item inside an eighteen-pixel box, so a row
+    // of nine is a hundred and sixty-two across and the panel round it
+    // is a hundred and seventy-six.
+    constexpr float SLOT = 16.0f;
+    constexpr float PITCH = 18.0f;
 
-    // And text drawn on a panel, which wants to come out the same size
+    // The menus are still laid out in pixels of their own, a button 46
+    // tall. They are drawn at this many interface pixels to one of
+    // those, so every offset in them comes out at Minecraft's size
+    // without each one being rewritten.
+    constexpr float MENU_UNIT = 16.0f / 46.0f;
+
+    // And text drawn on a menu, which wants to come out the same size
     // as every other line of text in the game.
-    constexpr float PANEL_TEXT = 1.0f / PANEL_UNIT;
+    constexpr float PANEL_TEXT = 1.0f / MENU_UNIT;
 
     // The HUD, in Minecraft's own interface pixels. Every one of these
     // is a number out of the vanilla client rather than a guess: the
@@ -4075,6 +4079,15 @@ bool Application::frame()
 
             // A screenshot of the bench wants the big grid showing.
             if (m_startupScreen == "bench") m_inventory.setCraftSize(3);
+
+            // And one of the creative palette wants the player in
+            // creative, whatever the saved world was last left in:
+            // without it the shot came back as the survival panel.
+            if (m_startupScreen == "creative")
+            {
+                m_player.mode = GameMode::Creative;
+                m_creativeTab = 0;
+            }
         }
         else if (m_startupScreen == "pause") m_screen = Screen::Paused;
         else if (m_startupScreen == "dead" || m_startupScreen == "hardcore")
@@ -9930,7 +9943,7 @@ namespace
         UIRenderer& ui;
         explicit ScopedPanelUnits(UIRenderer& renderer, int scale) : ui(renderer)
         {
-            ui.setScale(static_cast<float>(scale) * PANEL_UNIT);
+            ui.setScale(static_cast<float>(scale) * MENU_UNIT);
         }
         ~ScopedPanelUnits() { ui.setScale(1.0f); }
     };
@@ -9980,14 +9993,16 @@ void Application::guiPanel(float x, float y, float w, float h)
 {
     // A dark outline first: vanilla panels sit on a one-pixel black edge,
     // which is what keeps them from dissolving into a bright sky.
-    m_ui.quad(x - 3.0f, y - 3.0f, w + 6.0f, h + 6.0f, glm::vec4(0.0f, 0.0f, 0.0f, 0.70f));
+    m_ui.quad(x - 1.0f, y - 1.0f, w + 2.0f, h + 2.0f, glm::vec4(0.0f, 0.0f, 0.0f, 0.70f));
     bevel(x, y, w, h, GUI_PANEL, GUI_PANEL_LIGHT, GUI_PANEL_DARK, 3.0f);
 }
 
 void Application::guiWell(float x, float y, float w, float h)
 {
-    // The same bevel with the light and dark swapped, so it reads sunken.
-    bevel(x, y, w, h, GUI_WELL, GUI_WELL_DARK, GUI_PANEL_LIGHT, 2.0f);
+    // The same bevel with the light and dark swapped, so it reads
+    // sunken. One interface pixel of edge, which is what a slot has:
+    // the client draws an 18-pixel box round a 16-pixel item.
+    bevel(x, y, w, h, GUI_WELL, GUI_WELL_DARK, GUI_PANEL_LIGHT, 1.0f);
 }
 
 bool Application::menuButton(const Rect& rect, const std::string& label, bool enabled)

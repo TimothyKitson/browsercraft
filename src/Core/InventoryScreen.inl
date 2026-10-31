@@ -318,11 +318,14 @@ void Application::drawPlayerDoll(const PlayerSkin& skin, float x, float y, float
 
 void Application::renderInventoryScreen()
 {
-    // Drawn in the panel's own units, which the scale turns into
-    // Minecraft's: a slot 46 of them across comes out 16 interface
-    // pixels, so the whole panel lands at vanilla's size and keeps
-    // its own arrangement.
-    m_ui.setScale(static_cast<float>(guiScale()) * PANEL_UNIT);
+    // Interface pixels, the same ones the HUD is drawn in, and the same
+    // ones the open-source client lays its containers out in. Every
+    // number below is one of its own: a panel 176 by 166, the player's
+    // storage at 8 across and 84 down, the hotbar at 142, the armour
+    // column at 8 and 8, the little crafting grid at 88 and 26 with its
+    // result at 144 and 36. Lining up with them is what makes a
+    // screenshot of this sit on top of a screenshot of that.
+    m_ui.setScale(static_cast<float>(guiScale()));
 
     const float w = m_ui.canvasWidth();
     const float h = m_ui.canvasHeight();
@@ -332,160 +335,177 @@ void Application::renderInventoryScreen()
 
     m_ui.quad(0, 0, w, h, glm::vec4(0.0f, 0.0f, 0.0f, 0.62f));
 
-    const float step = SLOT_SIZE + SLOT_GAP;
-    const float gridWidth = PALETTE_COLUMNS * step + SLOT_GAP;
-    const float panelX = w * 0.5f - gridWidth * 0.5f;
-
     // Creative item tabs show a palette; the inventory tab (and all of
     // survival) shows the character, armour, crafting and storage.
     const bool showPalette = creative && m_creativeTab != INVENTORY_TAB;
-    const int gridRows = showPalette ? PALETTE_ROWS : 3;
 
-    const float titleHeight = 34.0f;
-    // The top of the panel holds the armour and the character, or, with
-    // a chest open, the chest's own three rows -- which are one row
-    // shorter, so the panel closes up rather than leaving a gap.
-    const float topRows = (m_chestOpen || m_crafterOpen)
-                              ? 3.0f
-                              : static_cast<float>(Inventory::ARMOR_SLOTS);
-    const float topHeight = showPalette ? 0.0f : topRows * step + SLOT_GAP;
-    const float gridHeight = gridRows * step + SLOT_GAP;
-    const float hotbarHeight = step + SLOT_GAP;
-    const float panelHeight = titleHeight + topHeight + gridHeight + 18.0f + hotbarHeight;
-    const float tabHeight = creative ? SLOT_SIZE + 6.0f : 0.0f;
+    // A chest's panel is a row taller than the rest, and the creative
+    // palette's is shorter: it has no storage rows under it, only the
+    // hotbar. Both are the client's own figures.
+    const float PANEL_W = 176.0f;
+    const float PANEL_H = showPalette ? 136.0f : (m_chestOpen ? 168.0f : 166.0f);
 
-    float panelY = h * 0.5f - (panelHeight + tabHeight) * 0.5f + tabHeight;
-    panelY = std::max(panelY, tabHeight + 10.0f);
+    const float tabHeight = creative ? 16.0f : 0.0f;
+    const float panelX = std::floor((w - PANEL_W) * 0.5f);
+    float panelY = std::floor((h - PANEL_H) * 0.5f);
+    panelY = std::max(panelY, tabHeight + 2.0f);
+
+    // Where the player's own rows go, which is the same in every
+    // container the game has: a chest pushes them down a row, the
+    // palette has none at all.
+    // A chest's own rows push the player's down, but not by a whole
+    // row: the client works it out as 103 + (rows - 4) * 18, which for
+    // the three rows a chest has comes to 85, and the hotbar to 143.
+    const float storageY = panelY + (m_chestOpen ? 85.0f : 84.0f);
+    const float hotbarY = panelY + (showPalette ? 112.0f
+                                                : (m_chestOpen ? 143.0f : 142.0f));
+
+    // One slot, at the item's own top-left the way the client counts
+    // them: the well is the eighteen-pixel box drawn round it.
+    auto well = [this](float x, float y) {
+        guiWell(x - 1.0f, y - 1.0f, PITCH, PITCH);
+    };
+    auto slotBox = [this](SlotBox::Kind kind, int index, float x, float y) {
+        m_slotBoxes.push_back({ kind, index, x - 1.0f, y - 1.0f, PITCH });
+    };
+    auto drawSlot = [&](int index, float x, float y) {
+        well(x, y);
+        const ItemStack& stack = m_inventory.slot(index);
+        drawItem(x, y, SLOT, stack.id, stack.count, glm::vec4(1.0f), stack.damage);
+        slotBox(SlotBox::Kind::Slot, index, x, y);
+    };
 
     // ------------------------------------------------------------ tabs ---
     if (creative)
     {
-        const float tabWidth = std::min(SLOT_SIZE + 4.0f, (gridWidth - 8.0f) / TAB_COUNT);
+        const float tabWidth = std::min(20.0f, (PANEL_W - 4.0f) / TAB_COUNT);
         for (int i = 0; i < TAB_COUNT; ++i)
         {
-            const float tabX = panelX + 4.0f + i * (tabWidth + 2.0f);
+            const float tabX = panelX + 2.0f + i * tabWidth;
             const float tabY = panelY - tabHeight;
             const bool active = (i == m_creativeTab);
 
-            // The active tab is lifted and lit so it reads as part of the
-            // panel below it rather than a button floating above it.
-            // The selected tab is raised and the same colour as the panel,
-            // so it joins onto it; the rest sit back and darker.
+            // The selected tab is raised and the same colour as the
+            // panel, so it joins onto it; the rest sit back and darker.
             if (active)
-                bevel(tabX, tabY, tabWidth, tabHeight + 6.0f,
-                      GUI_PANEL, GUI_PANEL_LIGHT, GUI_PANEL_DARK, 3.0f);
+                bevel(tabX, tabY, tabWidth - 1.0f, tabHeight + 3.0f,
+                      GUI_PANEL, GUI_PANEL_LIGHT, GUI_PANEL_DARK, 1.0f);
             else
-                bevel(tabX, tabY + 4.0f, tabWidth, tabHeight,
+                bevel(tabX, tabY + 2.0f, tabWidth - 1.0f, tabHeight,
                       glm::vec4(0.569f, 0.569f, 0.569f, 1.0f),
-                      glm::vec4(0.69f, 0.69f, 0.69f, 1.0f), GUI_PANEL_DARK, 2.0f);
-            drawItem(tabX + 2.0f, tabY + (active ? 2.0f : 6.0f), tabWidth - 4.0f,
+                      glm::vec4(0.69f, 0.69f, 0.69f, 1.0f), GUI_PANEL_DARK, 1.0f);
+
+            drawItem(tabX + 2.0f, tabY + (active ? 1.0f : 3.0f), tabWidth - 5.0f,
                      CREATIVE_TABS[i].icon, 0,
                      active ? glm::vec4(1.0f) : glm::vec4(0.72f, 0.72f, 0.72f, 0.9f));
 
-            m_slotBoxes.push_back({ SlotBox::Kind::Tab, i, tabX, tabY, tabWidth });
+            m_slotBoxes.push_back({ SlotBox::Kind::Tab, i, tabX, tabY, tabHeight + 3.0f,
+                                    tabWidth });
         }
     }
 
-    guiPanel(panelX, panelY, gridWidth, panelHeight);
+    guiPanel(panelX, panelY, PANEL_W, PANEL_H);
 
-    // Dark text with no shadow: on a light panel a drop shadow just looks
-    // like a smudge, and vanilla does not use one here either.
-    const char* title = creative ? CREATIVE_TABS[m_creativeTab].name
-                                 : (m_chestOpen ? "Chest"
-                                   : (m_crafterOpen ? "Crafter"
-                                   : (m_furnaceOpen ? "Furnace"
-                                   : (m_benchOpen ? "Crafting" : "Inventory"))));
-    m_ui.text(title, panelX + 10.0f, panelY + 10.0f, PANEL_TEXT, GUI_TEXT);
+    // Dark text with no shadow, at the client's own two corners: the
+    // container's name eight in and six down, and the word for the
+    // player's own rows ninety-four up from the bottom edge.
+    // The player's own screen is the one the client gives no heading
+    // at all: it labels the little grid "Crafting" over the top of it
+    // and leaves the rest bare. Everything else gets its name in the
+    // corner and the word for the player's rows above them.
+    // A workbench's screen is the one with a three by three in it,
+    // which is the difference that actually shows: the flag is set
+    // when one is opened in the world and not when a dev screen asks
+    // for the same grid.
+    const bool bench = m_inventory.craftSize() >= 3;
+    const bool plainInventory = !creative && !m_chestOpen && !m_crafterOpen &&
+                                !m_furnaceOpen && !bench && !m_tradeOpen &&
+                                !m_enchantOpen && !m_brewOpen && !m_anvilOpen;
+
+    if (!plainInventory)
+    {
+        const char* title = creative ? CREATIVE_TABS[m_creativeTab].name
+                                     : (m_chestOpen ? "Chest"
+                                       : (m_crafterOpen ? "Crafter"
+                                       : (m_furnaceOpen ? "Furnace"
+                                       : (bench ? "Crafting" : "Inventory"))));
+        m_ui.text(title, panelX + 8.0f, panelY + 6.0f, 1.0f, GUI_TEXT);
+    }
+    if (!showPalette)
+        m_ui.text("Inventory", panelX + 8.0f, panelY + PANEL_H - 94.0f, 1.0f, GUI_TEXT);
 
     // --------------------------------------------- the open chest ---
-    // A chest is the one container too big for a corner, so it takes the
-    // whole top of the panel: the same nine across as the storage below
-    // it, which is what makes the two read as one tall grid.
+    // Three rows of nine, eighteen down from the top of the panel,
+    // directly above the player's own rows.
     if (m_chestOpen && !showPalette)
     {
-        const float topY = panelY + titleHeight;
-
         for (int row = 0; row < 3; ++row)
             for (int column = 0; column < PALETTE_COLUMNS; ++column)
-            {
-                const float x = panelX + SLOT_GAP + column * step;
-                const float y = topY + SLOT_GAP + row * step;
-                const int index = Inventory::CHEST_FIRST + row * PALETTE_COLUMNS + column;
-
-                guiWell(x, y, SLOT_SIZE, SLOT_SIZE);
-                const ItemStack& stack = m_inventory.slot(index);
-                drawItem(x, y, SLOT_SIZE, stack.id, stack.count, glm::vec4(1.0f), stack.damage);
-                m_slotBoxes.push_back({ SlotBox::Kind::Slot, index, x, y, SLOT_SIZE });
-            }
+                drawSlot(Inventory::CHEST_FIRST + row * PALETTE_COLUMNS + column,
+                         panelX + 8.0f + column * PITCH, panelY + 18.0f + row * PITCH);
     }
 
     // ------------------------------------------ the open crafter ---
-    // Three by three at the top left, which is the shape of what it
-    // makes. There is no result slot: a crafter is worked by a pulse
-    // rather than by hand, and a slot that only ever looked back at
-    // you would be a lie.
+    // Three by three where a workbench puts its grid. There is no
+    // result slot: a crafter is worked by a pulse rather than by hand,
+    // and a slot that only ever looked back at you would be a lie.
     if (m_crafterOpen && !showPalette)
     {
-        const float topY = panelY + titleHeight;
-
         for (int row = 0; row < 3; ++row)
             for (int column = 0; column < 3; ++column)
-            {
-                const float x = panelX + SLOT_GAP + column * step;
-                const float y = topY + SLOT_GAP + row * step;
-                const int index = Inventory::CHEST_FIRST + row * 3 + column;
+                drawSlot(Inventory::CHEST_FIRST + row * 3 + column,
+                         panelX + 30.0f + column * PITCH, panelY + 17.0f + row * PITCH);
 
-                guiWell(x, y, SLOT_SIZE, SLOT_SIZE);
-                const ItemStack& stack = m_inventory.slot(index);
-                drawItem(x, y, SLOT_SIZE, stack.id, stack.count, glm::vec4(1.0f), stack.damage);
-                m_slotBoxes.push_back({ SlotBox::Kind::Slot, index, x, y, SLOT_SIZE });
-            }
-
-        m_ui.text("Power it to Craft", panelX + SLOT_GAP + 4.0f * step,
-                  topY + SLOT_GAP + step, PANEL_TEXT, GUI_TEXT);
+        m_ui.text("Power it to craft", panelX + 95.0f, panelY + 38.0f, 1.0f, GUI_TEXT);
     }
 
     // ------------------------------- armour, body preview, crafting ---
     if (!showPalette && !m_chestOpen && !m_crafterOpen)
     {
-        const float topY = panelY + titleHeight;
+        // The armour column and the character are the player's own
+        // screen and nothing else: the client draws neither on a
+        // workbench, a furnace, an anvil or a trade. They used to be
+        // drawn on all of them, which is how a furnace came to have a
+        // man standing in the middle of its fire.
+        const bool otherBusiness = m_tradeOpen || m_enchantOpen || m_brewOpen ||
+                                   m_anvilOpen || m_furnaceOpen || bench;
 
-        // Armour down the left edge.
-        for (int i = 0; i < Inventory::ARMOR_SLOTS; ++i)
+        // Armour down the left edge, at 8 and 8, a slot apart.
+        for (int i = 0; !otherBusiness && i < Inventory::ARMOR_SLOTS; ++i)
         {
-            const float x = panelX + SLOT_GAP;
-            const float y = topY + SLOT_GAP + i * step;
+            const float x = panelX + 8.0f;
+            const float y = panelY + 8.0f + i * PITCH;
             const int index = Inventory::ARMOR_FIRST + i;
 
-            guiWell(x, y, SLOT_SIZE, SLOT_SIZE);
+            well(x, y);
 
             const ItemStack& stack = m_inventory.slot(index);
             if (stack.empty())
             {
                 // A faint silhouette of the piece that belongs here, the
                 // way Minecraft marks its empty armour slots.
-                const float inset = SLOT_SIZE * 0.16f;
-                m_ui.texturedQuad(m_gui.texture(ARMOR_GHOSTS[i]),
-                                  x + inset, y + inset,
-                                  SLOT_SIZE - inset * 2.0f, SLOT_SIZE - inset * 2.0f,
+                m_ui.texturedQuad(m_gui.texture(ARMOR_GHOSTS[i]), x, y, SLOT, SLOT,
                                   0.0f, 0.0f, 1.0f, 1.0f, glm::vec4(1.0f));
             }
             else
             {
-                drawItem(x, y, SLOT_SIZE, stack.id, stack.count, glm::vec4(1.0f), stack.damage);
+                drawItem(x, y, SLOT, stack.id, stack.count, glm::vec4(1.0f), stack.damage);
             }
 
-            m_slotBoxes.push_back({ SlotBox::Kind::Slot, index, x, y, SLOT_SIZE });
+            slotBox(SlotBox::Kind::Slot, index, x, y);
         }
 
-        // The character, beside the armour column.
-        const float dollHeight = Inventory::ARMOR_SLOTS * step - SLOT_GAP * 2.0f;
-        const float unit = dollHeight / 32.0f;   // the doll is 32 skin pixels tall
-        const float dollWidth = (activeSkin().armWidth() * 2.0f + 8.0f) * unit;
-        guiWell(panelX + SLOT_GAP + step, topY + SLOT_GAP,
-                dollWidth + 28.0f, dollHeight + SLOT_GAP * 2.0f);
-        drawPlayerDoll(activeSkin(), panelX + SLOT_GAP + step + 14.0f,
-                       topY + SLOT_GAP * 2.0f, unit);
+        // The character, in the recess the client leaves for it: a box
+        // from 26 and 8 across to 76 and 78, with the figure standing
+        // on 75.
+        if (!otherBusiness)
+        {
+            guiWell(panelX + 25.0f, panelY + 7.0f, 52.0f, 72.0f);
+            const float unit = 51.0f / 32.0f;   // the doll is 32 skin pixels tall
+            const float dollWidth = (activeSkin().armWidth() * 2.0f + 8.0f) * unit;
+            drawPlayerDoll(activeSkin(), panelX + 51.0f - dollWidth * 0.5f,
+                           panelY + 75.0f - 51.0f, unit);
+        }
 
         // Trading: the villager's deals, one to a row. Each shows what
         // it wants on the left and what it gives on the right, drawn as
@@ -495,21 +515,15 @@ void Application::renderInventoryScreen()
         {
             const std::vector<Trading::Offer> offers = Trading::offersFor(m_tradeWith);
 
-            const float tx = panelX + gridWidth * 0.36f;
-            const float ty = topY + SLOT_GAP;
+            const float tx = panelX + 80.0f;
+            const float ty = panelY + 6.0f;
 
-            // Four rows have to fit beside the player doll, and at full
-            // slot size the last one ran down into the storage grid, so
-            // the trade slots are drawn a little smaller than the rest.
-            const float cell = SLOT_SIZE * 0.78f;
-            const float rowHeight = cell + 3.0f;
-
-            m_ui.text(Trading::name(m_tradeWith), tx, ty, PANEL_TEXT, TEXT_COLOR);
+            m_ui.text(Trading::name(m_tradeWith), tx, ty, 1.0f, TEXT_COLOR);
 
             for (size_t row = 0; row < offers.size(); ++row)
             {
                 const Trading::Offer& offer = offers[row];
-                const float ry = ty + 18.0f + static_cast<float>(row) * rowHeight;
+                const float ry = ty + 12.0f + static_cast<float>(row) * PITCH;
 
                 const int haveWant = m_inventory.countOf(offer.want);
                 const int haveAlso = (offer.also == Blocks::Air)
@@ -521,66 +535,60 @@ void Application::renderInventoryScreen()
                                               : glm::vec4(1.0f, 1.0f, 1.0f, 0.4f);
 
                 float cx = tx;
-                guiWell(cx, ry, cell, cell);
-                drawItem(cx, ry, cell, offer.want, offer.wantCount, tint);
-                cx += cell + 3.0f;
+                well(cx, ry);
+                drawItem(cx, ry, SLOT, offer.want, offer.wantCount, tint);
+                cx += PITCH;
 
                 if (offer.also != Blocks::Air)
                 {
-                    guiWell(cx, ry, cell, cell);
-                    drawItem(cx, ry, cell, offer.also, offer.alsoCount, tint);
+                    well(cx, ry);
+                    drawItem(cx, ry, SLOT, offer.also, offer.alsoCount, tint);
                 }
-                cx += cell + 3.0f;
+                cx += PITCH;
 
-                m_ui.text("->", cx, ry + cell * 0.28f, PANEL_TEXT,
-                          canPay ? TEXT_COLOR : TEXT_DIM);
-                cx += 22.0f;
+                m_ui.text("->", cx, ry + 5.0f, 1.0f, canPay ? TEXT_COLOR : TEXT_DIM);
+                cx += 14.0f;
 
-                guiWell(cx, ry, cell, cell);
-                drawItem(cx, ry, cell, offer.give, offer.giveCount, tint);
+                well(cx, ry);
+                drawItem(cx, ry, SLOT, offer.give, offer.giveCount, tint);
 
                 // The whole row is the button, out to the far edge of
                 // what it gives you, so a deal can be struck by
                 // clicking anywhere along it rather than only on the
                 // one slot that happens to be the price.
                 if (canPay)
-                {
-                    const float rowWidth = (cx + cell) - tx;
                     m_slotBoxes.push_back({ SlotBox::Kind::Trade, static_cast<int>(row),
-                                            tx, ry, cell, rowWidth });
-                }
+                                            tx - 1.0f, ry - 1.0f, PITCH,
+                                            (cx + SLOT) - tx + 1.0f });
             }
         }
         else
 
-        // The enchanting table: the item on the left, three offers down
-        // the right. Each row shows what it costs in levels and, once
-        // you could afford it, what it would put on the item -- which
-        // is the one place this is kinder than Minecraft, where the
-        // rows are written in a rune alphabet nobody can read.
+        // The enchanting table: the item at 25 and 47, three offers
+        // down the right at 60 and 14, nineteen apart -- the client's
+        // own numbers. Each row shows what it costs in levels and what
+        // it would put on the item, which is the one place this is
+        // kinder than Minecraft, where the rows are written in a rune
+        // alphabet nobody can read.
         if (m_enchantOpen)
         {
-            // Over on the right, clear of the player doll and the
-            // armour slots down the left-hand side: the first attempt
-            // put the item being enchanted straight on top of them.
-            const float ex = panelX + gridWidth * 0.42f;
-            const float ey = topY + SLOT_GAP + step * 0.5f;
+            const float ex = panelX + 25.0f;
+            const float ey = panelY + 47.0f;
 
-            guiWell(ex, ey, SLOT_SIZE, SLOT_SIZE);
+            well(ex, ey);
             const ItemStack& subject = m_inventory.slot(Inventory::ENCHANT_SLOT);
-            drawItem(ex, ey, SLOT_SIZE, subject.id, subject.count, glm::vec4(1.0f),
+            drawItem(ex, ey, SLOT, subject.id, subject.count, glm::vec4(1.0f),
                      subject.damage);
-            m_slotBoxes.push_back({ SlotBox::Kind::Slot, Inventory::ENCHANT_SLOT,
-                                    ex, ey, SLOT_SIZE });
+            slotBox(SlotBox::Kind::Slot, Inventory::ENCHANT_SLOT, ex, ey);
 
-            const float rowX = ex + step + 24.0f;
-            const float rowWidth = gridWidth - (rowX - panelX) - SLOT_GAP * 2.0f;
-            const float rowHeight = 30.0f;
+            const float rowX = panelX + 60.0f;
+            const float rowWidth = 108.0f;
+            const float rowHeight = 19.0f;
             const int level = Experience::levelFor(m_player.experience);
 
             for (int row = 0; row < 3; ++row)
             {
-                const float ry = ey + row * (rowHeight + 6.0f);
+                const float ry = panelY + 14.0f + row * rowHeight;
                 const Enchanting::Offer offer =
                     Enchanting::offerFor(row, m_enchantShelves, subject.id, m_enchantRoll);
 
@@ -589,14 +597,14 @@ void Application::renderInventoryScreen()
                 const bool affordable = offer.valid() &&
                                         (m_player.creative() || level >= offer.cost);
 
-                guiWell(rowX, ry, rowWidth, rowHeight);
+                guiWell(rowX, ry, rowWidth, rowHeight - 1.0f);
                 if (offer.valid())
                     m_slotBoxes.push_back({ SlotBox::Kind::Enchant, row, rowX, ry,
-                                            rowHeight, rowWidth });
+                                            rowHeight - 1.0f, rowWidth });
 
                 if (!offer.valid())
                 {
-                    m_ui.text("-", rowX + 10.0f, ry + 8.0f, PANEL_TEXT, TEXT_DIM);
+                    m_ui.text("-", rowX + 5.0f, ry + 5.0f, 1.0f, TEXT_DIM);
                     continue;
                 }
 
@@ -606,60 +614,43 @@ void Application::renderInventoryScreen()
                                                   ? glm::vec4(0.49f, 0.98f, 0.24f, 1.0f)
                                                   : glm::vec4(0.55f, 0.30f, 0.30f, 1.0f);
                 const std::string price = std::to_string(offer.cost);
-                m_ui.text(price, rowX + 8.0f, ry + 8.0f, PANEL_TEXT, priceColour);
+                m_ui.text(price, rowX + 4.0f, ry + 5.0f, 1.0f, priceColour);
 
                 std::string what = Enchanting::name(offer.kind);
                 what += " ";
                 what += std::to_string(offer.level);
-                m_ui.text(what, rowX + 42.0f, ry + 9.0f, PANEL_TEXT,
+                m_ui.text(what, rowX + 18.0f, ry + 5.0f, 1.0f,
                           affordable ? TEXT_COLOR : TEXT_DIM);
             }
 
-            // Under the offers rather than beside the item: to the left
-            // of the slot it ran straight across the player doll.
             const std::string shelves = std::to_string(m_enchantShelves) + " shelves";
-            m_ui.text(shelves, rowX + 2.0f, ey + 3.0f * (rowHeight + 6.0f) + 4.0f,
-                      PANEL_TEXT, TEXT_DIM);
+            m_ui.text(shelves, rowX, panelY + 14.0f + 3.0f * rowHeight + 2.0f,
+                      1.0f, TEXT_DIM);
         }
         else
 
-        // The brewing stand: the ingredient on top, three bottles under
-        // it, and a bar showing how far along it is.
+        // The brewing stand, at the client's own four: the ingredient
+        // on top at 79 and 17, and the three bottles under it at 56,
+        // 79 and 102, the outer two a notch higher than the middle.
         if (m_brewOpen)
         {
-            const float bx = panelX + gridWidth * 0.34f;
-            const float by = topY + SLOT_GAP;
+            drawSlot(Inventory::BREW_INGREDIENT, panelX + 79.0f, panelY + 17.0f);
 
-            guiWell(bx + step, by, SLOT_SIZE, SLOT_SIZE);
-            {
-                const ItemStack& stack = m_inventory.slot(Inventory::BREW_INGREDIENT);
-                drawItem(bx + step, by, SLOT_SIZE, stack.id, stack.count,
-                         glm::vec4(1.0f), stack.damage);
-                m_slotBoxes.push_back({ SlotBox::Kind::Slot, Inventory::BREW_INGREDIENT,
-                                        bx + step, by, SLOT_SIZE });
-            }
-
-            const float bottleY = by + step * 1.6f;
+            const float bottleX[3] = { 56.0f, 79.0f, 102.0f };
+            const float bottleY[3] = { 46.0f, 53.0f, 46.0f };
             for (int i = 0; i < Inventory::BREW_BOTTLES; ++i)
-            {
-                const float sx = bx + step * static_cast<float>(i);
-                guiWell(sx, bottleY, SLOT_SIZE, SLOT_SIZE);
-                const int slot = Inventory::BREW_BOTTLE_FIRST + i;
-                const ItemStack& stack = m_inventory.slot(slot);
-                drawItem(sx, bottleY, SLOT_SIZE, stack.id, stack.count,
-                         glm::vec4(1.0f), stack.damage);
-                m_slotBoxes.push_back({ SlotBox::Kind::Slot, slot, sx, bottleY, SLOT_SIZE });
-            }
+                drawSlot(Inventory::BREW_BOTTLE_FIRST + i,
+                         panelX + bottleX[i], panelY + bottleY[i]);
 
-            // The bar runs down between the ingredient and the bottles,
-            // which is where the bubbles go in Minecraft.
-            const float barX = bx + step + SLOT_SIZE * 0.42f;
-            const float barTop = by + SLOT_SIZE + 4.0f;
-            const float barHeight = bottleY - barTop - 4.0f;
+            // The bubbles run down between the ingredient and the
+            // bottles, which is where the client draws them.
+            const float barX = panelX + 86.0f;
+            const float barTop = panelY + 39.0f;
+            const float barHeight = 10.0f;
             const float along = std::min(1.0f, m_brewProgress / Brewing::BREW_SECONDS);
-            guiWell(barX, barTop, 6.0f, barHeight);
+            guiWell(barX, barTop, 4.0f, barHeight);
             if (along > 0.0f)
-                m_ui.quad(barX, barTop + barHeight * (1.0f - along), 6.0f, barHeight * along,
+                m_ui.quad(barX, barTop + barHeight * (1.0f - along), 4.0f, barHeight * along,
                           glm::vec4(0.62f, 0.38f, 0.86f, 1.0f));
 
             // What the bottle under the cursor actually holds, since
@@ -667,63 +658,60 @@ void Application::renderInventoryScreen()
             const ItemStack& first = m_inventory.slot(Inventory::BREW_BOTTLE_FIRST);
             if (first.id == Items::Potion)
                 m_ui.text(Brewing::name(Brewing::fromDamage(first.damage)),
-                          bx, bottleY + SLOT_SIZE + 6.0f, 1.4f, TEXT_DIM);
+                          panelX + 8.0f, panelY + 72.0f, 1.0f, TEXT_DIM);
         }
         else
 
-        // The anvil: two things in, one out, and the price in levels
-        // under them. The left slot is what you are working on and the
-        // right is what you are working into it -- which way round they
-        // go matters, so the arrow between them is not decoration.
+        // The anvil: two in at 27 and 76, one out at 134, all on 47.
+        // Which way round the two go matters, so the plus between them
+        // is not decoration.
         if (m_anvilOpen)
         {
-            const float ax = panelX + gridWidth * 0.30f;
-            const float ay = topY + SLOT_GAP + step * 0.5f;
-
             const int slots[3] = { Inventory::ANVIL_LEFT, Inventory::ANVIL_RIGHT,
                                    Inventory::ANVIL_RESULT };
-            const float xs[3] = { ax, ax + step * 1.35f, ax + step * 2.9f };
+            const float xs[3] = { 27.0f, 76.0f, 134.0f };
+            const float ay = panelY + 47.0f;
 
             for (int i = 0; i < 3; ++i)
             {
-                guiWell(xs[i], ay, SLOT_SIZE, SLOT_SIZE);
+                const float x = panelX + xs[i];
+                well(x, ay);
                 const ItemStack& stack = m_inventory.slot(slots[i]);
-                drawItem(xs[i], ay, SLOT_SIZE, stack.id, stack.count,
-                         glm::vec4(1.0f), stack.damage);
+                drawItem(x, ay, SLOT, stack.id, stack.count, glm::vec4(1.0f), stack.damage);
 
                 // The result is taken, never filled, so it gets its own
                 // click rather than the ordinary slot one.
-                m_slotBoxes.push_back({ i == 2 ? SlotBox::Kind::AnvilTake
-                                              : SlotBox::Kind::Slot,
-                                        slots[i], xs[i], ay, SLOT_SIZE });
+                slotBox(i == 2 ? SlotBox::Kind::AnvilTake : SlotBox::Kind::Slot,
+                        slots[i], x, ay);
             }
 
-            m_ui.text("+", ax + step * 1.02f, ay + SLOT_SIZE * 0.26f, PANEL_TEXT, TEXT_DIM);
-            m_ui.text("->", ax + step * 2.33f, ay + SLOT_SIZE * 0.30f, PANEL_TEXT, TEXT_DIM);
+            m_ui.text("+", panelX + 60.0f, ay + 5.0f, 1.0f, TEXT_DIM);
+            m_ui.text("->", panelX + 103.0f, ay + 5.0f, 1.0f, TEXT_DIM);
 
             const Anvil::Result made = anvilResult();
             const int level = Experience::levelFor(m_player.experience);
-            const float priceY = ay + SLOT_SIZE + 14.0f;
+            const float priceY = ay + 22.0f;
 
             if (made.tooExpensive)
             {
-                m_ui.text("Too expensive", ax, priceY, PANEL_TEXT,
+                m_ui.text("Too expensive", panelX + 27.0f, priceY, 1.0f,
                           glm::vec4(0.80f, 0.30f, 0.30f, 1.0f));
             }
             else if (made.valid)
             {
                 const bool affordable = m_player.creative() || level >= made.levelCost;
                 const std::string price = "Cost: " + std::to_string(made.levelCost);
-                m_ui.text(price, ax, priceY, PANEL_TEXT,
+                m_ui.text(price, panelX + 27.0f, priceY, 1.0f,
                           affordable ? glm::vec4(0.49f, 0.98f, 0.24f, 1.0f)
                                      : glm::vec4(0.55f, 0.30f, 0.30f, 1.0f));
             }
         }
         else
 
-        // A furnace takes the same corner the crafting grid does: ore on
-        // top, fuel below it, the fire between them and the result off
-        // to the right, which is the shape Minecraft uses.
+        // A furnace: the ore at 56 and 17, the fuel under it at 53, the
+        // fire between them at 36 and the result off to the right at
+        // 116 and 35. The client's own four, and the shape everybody
+        // recognises.
         if (m_furnaceOpen)
         {
             const Furnaces::State& state = m_furnaces.at(m_furnaceBlock);
@@ -733,27 +721,14 @@ void Application::renderInventoryScreen()
             gauge.burnTotal = state.burnTotal;
             gauge.cooked = state.cooked;
 
-            const float resultWidth = step + 34.0f;
-            const float fx = panelX + gridWidth - SLOT_GAP - step - resultWidth;
-            const float fy = topY + SLOT_GAP + step * 0.5f;
+            drawSlot(Inventory::FURNACE_INPUT, panelX + 56.0f, panelY + 17.0f);
+            drawSlot(Inventory::FURNACE_FUEL, panelX + 56.0f, panelY + 53.0f);
 
-            const int SLOTS[3] = { Inventory::FURNACE_INPUT, Inventory::FURNACE_FUEL,
-                                   Inventory::FURNACE_OUTPUT };
-
-            // Input above, fuel below.
-            for (int i = 0; i < 2; ++i)
-            {
-                const float y = fy + i * step * 1.4f;
-                guiWell(fx, y, SLOT_SIZE, SLOT_SIZE);
-                const ItemStack& stack = m_inventory.slot(SLOTS[i]);
-                drawItem(fx, y, SLOT_SIZE, stack.id, stack.count, glm::vec4(1.0f), stack.damage);
-                m_slotBoxes.push_back({ SlotBox::Kind::Slot, SLOTS[i], fx, y, SLOT_SIZE });
-            }
-
-            // The fire between them, burning down as the fuel goes.
-            const float flameSize = SLOT_SIZE * 0.5f;
-            const float flameX = fx + (SLOT_SIZE - flameSize) * 0.5f;
-            const float flameY = fy + step + (step * 0.4f - flameSize) * 0.5f;
+            // The fire between them, burning down as the fuel goes:
+            // fourteen square at 56 and 36.
+            const float flameX = panelX + 57.0f;
+            const float flameY = panelY + 36.0f;
+            const float flameSize = 14.0f;
             const float alight = gauge.burnFraction();
 
             m_ui.quad(flameX, flameY, flameSize, flameSize, glm::vec4(0.0f, 0.0f, 0.0f, 0.25f));
@@ -762,132 +737,106 @@ void Application::renderInventoryScreen()
                           flameSize, flameSize * alight,
                           glm::vec4(1.0f, 0.65f, 0.15f, 1.0f));
 
-            // The arrow, filling as the item cooks.
-            const float arrowX = fx + step + 4.0f;
-            const float arrowY = fy + step * 0.7f;
-            const float arrowWidth = 26.0f;
+            // The arrow, filling as the item cooks: twenty-four by
+            // sixteen at 79 and 34.
+            const float arrowX = panelX + 79.0f;
+            const float arrowY = panelY + 38.0f;
+            const float arrowWidth = 24.0f;
             const float arrowHeight = 8.0f;
 
             m_ui.quad(arrowX, arrowY, arrowWidth, arrowHeight, glm::vec4(0.0f, 0.0f, 0.0f, 0.25f));
             m_ui.quad(arrowX, arrowY, arrowWidth * gauge.cookFraction(), arrowHeight,
                       glm::vec4(0.92f, 0.92f, 0.92f, 1.0f));
 
-            const float outX = arrowX + arrowWidth + 8.0f;
-            bevel(outX - 4.0f, arrowY - SLOT_SIZE * 0.5f - 4.0f, SLOT_SIZE + 8.0f, SLOT_SIZE + 8.0f,
-                  GUI_PANEL, GUI_PANEL_LIGHT, GUI_PANEL_DARK, 2.0f);
-            const float outY = arrowY - SLOT_SIZE * 0.5f;
-            guiWell(outX, outY, SLOT_SIZE, SLOT_SIZE);
-            const ItemStack& made = m_inventory.slot(Inventory::FURNACE_OUTPUT);
-            drawItem(outX, outY, SLOT_SIZE, made.id, made.count, glm::vec4(1.0f), made.damage);
-            m_slotBoxes.push_back({ SlotBox::Kind::Slot, Inventory::FURNACE_OUTPUT,
-                                    outX, outY, SLOT_SIZE });
+            drawSlot(Inventory::FURNACE_OUTPUT, panelX + 116.0f, panelY + 35.0f);
         }
         else
         {
+            // Crafting. A workbench puts its three by three at 30 and
+            // 17 with the result at 124 and 35; the player's own two by
+            // two goes at 88 and 26 with the result at 144 and 36.
+            const int size = m_inventory.craftSize();
 
-        // Crafting, over on the right: a 2x2 grid, an arrow, the result.
-        const float craftSize = static_cast<float>(m_inventory.craftSize());
-        const float resultWidth = step + 34.0f;
-        const float craftX = panelX + gridWidth - SLOT_GAP - craftSize * step - resultWidth;
-        const float craftY = topY + SLOT_GAP + step * 0.5f;
+            const float gridX = panelX + (bench ? 30.0f : 88.0f);
+            const float gridY = panelY + (bench ? 17.0f : 26.0f);
 
-        for (int row = 0; row < m_inventory.craftSize(); ++row)
-            for (int column = 0; column < m_inventory.craftSize(); ++column)
-            {
-                const float x = craftX + column * step;
-                const float y = craftY + row * step;
-                // The grid is addressed as 3x3 even when only 2x2 shows.
-                const int index = Inventory::CRAFT_FIRST + row * 3 + column;
+            for (int row = 0; row < size; ++row)
+                for (int column = 0; column < size; ++column)
+                    // The grid is addressed as 3x3 even when only 2x2 shows.
+                    drawSlot(Inventory::CRAFT_FIRST + row * 3 + column,
+                             gridX + column * PITCH, gridY + row * PITCH);
 
-                guiWell(x, y, SLOT_SIZE, SLOT_SIZE);
-                const ItemStack& stack = m_inventory.slot(index);
-                drawItem(x, y, SLOT_SIZE, stack.id, stack.count, glm::vec4(1.0f), stack.damage);
-                m_slotBoxes.push_back({ SlotBox::Kind::Slot, index, x, y, SLOT_SIZE });
-            }
+            const float resultX = panelX + (bench ? 124.0f : 144.0f);
+            const float resultY = panelY + (bench ? 35.0f : 36.0f);
 
-        const float arrowX = craftX + craftSize * step + 4.0f;
-        const float arrowY = craftY + (craftSize * step - SLOT_SIZE) * 0.5f;
-        m_ui.text("->", arrowX, arrowY + SLOT_SIZE * 0.5f - UIRenderer::textHeight(PANEL_TEXT) * 0.5f,
-                  PANEL_TEXT, GUI_TEXT);
+            m_ui.text("->", resultX - 20.0f, resultY + 5.0f, 1.0f, GUI_TEXT);
+            drawSlot(Inventory::CRAFT_RESULT, resultX, resultY);
 
-        const float resultX = arrowX + 30.0f;
-        // The result slot is drawn bigger, the way vanilla does.
-        bevel(resultX - 4.0f, arrowY - 4.0f, SLOT_SIZE + 8.0f, SLOT_SIZE + 8.0f,
-              GUI_PANEL, GUI_PANEL_LIGHT, GUI_PANEL_DARK, 2.0f);
-        guiWell(resultX, arrowY, SLOT_SIZE, SLOT_SIZE);
-        const ItemStack& result = m_inventory.slot(Inventory::CRAFT_RESULT);
-        drawItem(resultX, arrowY, SLOT_SIZE, result.id, result.count, glm::vec4(1.0f), result.damage);
-        m_slotBoxes.push_back({ SlotBox::Kind::Slot, Inventory::CRAFT_RESULT,
-                                resultX, arrowY, SLOT_SIZE });
+            // "Crafting" sits over the little grid rather than along
+            // the top, which is where the client puts it.
+            if (!bench)
+                m_ui.text("Crafting", panelX + 86.0f, panelY + 16.0f, 1.0f, GUI_TEXT);
         }
     }
 
     // ------------------------------------------------------- main grid ---
-    const float gridY = panelY + titleHeight + topHeight;
     const StackId* paletteItems = nullptr;
     int paletteCount = 0;
     if (showPalette) tabContents(m_creativeTab, paletteItems, paletteCount);
 
     // A tab with more in it than the grid holds scrolls on the wheel.
-    // Without this the tools, and most of EVERYTHING, were simply not
+    // Without this the tools, and most of Everything, were simply not
     // reachable: the grid drew the first forty-five and stopped.
     const int paletteRows = showPalette
         ? (paletteCount + PALETTE_COLUMNS - 1) / PALETTE_COLUMNS : 0;
     const int maxRow = std::max(0, paletteRows - PALETTE_ROWS);
     m_paletteRow = std::clamp(m_paletteRow, 0, maxRow);
 
+    const int gridRows = showPalette ? PALETTE_ROWS : 3;
+
     for (int row = 0; row < gridRows; ++row)
     {
         for (int column = 0; column < PALETTE_COLUMNS; ++column)
         {
-            const int cell = (row + m_paletteRow) * PALETTE_COLUMNS + column;
-            const float x = panelX + SLOT_GAP + column * step;
-            const float y = gridY + SLOT_GAP + row * step;
-
-            guiWell(x, y, SLOT_SIZE, SLOT_SIZE);
+            const float x = panelX + 8.0f + column * PITCH;
+            const float y = showPalette ? panelY + 18.0f + row * PITCH
+                                        : storageY + row * PITCH;
 
             if (showPalette)
             {
+                well(x, y);
+                const int cell = (row + m_paletteRow) * PALETTE_COLUMNS + column;
                 if (cell >= paletteCount) continue;
-                drawItem(x, y, SLOT_SIZE, paletteItems[cell], 0, glm::vec4(1.0f));
-                m_slotBoxes.push_back({ SlotBox::Kind::Palette, paletteItems[cell], x, y, SLOT_SIZE });
+                drawItem(x, y, SLOT, paletteItems[cell], 0, glm::vec4(1.0f));
+                m_slotBoxes.push_back({ SlotBox::Kind::Palette, paletteItems[cell],
+                                        x - 1.0f, y - 1.0f, PITCH });
             }
             else
             {
-                // Storage runs 9..35, directly above the hotbar. It does
-                // not scroll, so it counts from the row on screen rather
-                // than from the palette's offset into a longer list.
-                const int index = Inventory::HOTBAR_SLOTS + row * PALETTE_COLUMNS + column;
-                const ItemStack& stack = m_inventory.slot(index);
-                drawItem(x, y, SLOT_SIZE, stack.id, stack.count, glm::vec4(1.0f), stack.damage);
-                m_slotBoxes.push_back({ SlotBox::Kind::Slot, index, x, y, SLOT_SIZE });
+                // Storage runs 9..35, directly above the hotbar.
+                drawSlot(Inventory::HOTBAR_SLOTS + row * PALETTE_COLUMNS + column, x, y);
             }
         }
     }
 
     // --------------------------------- hotbar, always the bottom row ---
-    const float hotbarY = gridY + gridHeight + 18.0f;
     for (int i = 0; i < Inventory::HOTBAR_SLOTS; ++i)
     {
-        const float x = panelX + SLOT_GAP + i * step;
-        const bool selected = (i == m_inventory.selectedSlot());
+        const float x = panelX + 8.0f + i * PITCH;
 
-        if (selected)
-            m_ui.quad(x - 3.0f, hotbarY - 3.0f, SLOT_SIZE + 6.0f, SLOT_SIZE + 6.0f, SELECTED_COLOR);
-        guiWell(x, hotbarY, SLOT_SIZE, SLOT_SIZE);
+        if (i == m_inventory.selectedSlot())
+            m_ui.quad(x - 2.0f, hotbarY - 2.0f, PITCH + 2.0f, PITCH + 2.0f, SELECTED_COLOR);
 
-        const ItemStack& stack = m_inventory.slot(i);
-        drawItem(x, hotbarY, SLOT_SIZE, stack.id, stack.count, glm::vec4(1.0f), stack.damage);
-        m_slotBoxes.push_back({ SlotBox::Kind::Slot, i, x, hotbarY, SLOT_SIZE });
+        drawSlot(i, x, hotbarY);
     }
 
     // ------------------------- whatever is on the cursor, drawn last ---
     const ItemStack& held = m_inventory.cursor();
     if (!held.empty())
     {
-        const float x = static_cast<float>(m_input.mouseX()) / m_ui.scale() - SLOT_SIZE * 0.5f;
-        const float y = static_cast<float>(m_input.mouseY()) / m_ui.scale() - SLOT_SIZE * 0.5f;
-        drawItem(x, y, SLOT_SIZE, held.id, held.count, glm::vec4(1.0f), held.damage);
+        const float x = static_cast<float>(m_input.mouseX()) / m_ui.scale() - SLOT * 0.5f;
+        const float y = static_cast<float>(m_input.mouseY()) / m_ui.scale() - SLOT * 0.5f;
+        drawItem(x, y, SLOT, held.id, held.count, glm::vec4(1.0f), held.damage);
     }
 
     m_ui.setScale(1.0f);
@@ -895,9 +844,9 @@ void Application::renderInventoryScreen()
 
 const Application::SlotBox* Application::slotBoxAt(int mouseX, int mouseY) const
 {
-    // The boxes were recorded in the panel's own units, so the cursor
-    // has to be read in them too.
-    const float unit = static_cast<float>(guiScale()) * PANEL_UNIT;
+    // The boxes were recorded in interface pixels, so the cursor has
+    // to be read in them too.
+    const float unit = static_cast<float>(guiScale());
     const float x = static_cast<float>(mouseX) / unit;
     const float y = static_cast<float>(mouseY) / unit;
 
