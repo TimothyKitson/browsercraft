@@ -422,17 +422,42 @@ void Application::renderInventoryScreen()
                                 !m_furnaceOpen && !bench && !m_tradeOpen &&
                                 !m_enchantOpen && !m_brewOpen && !m_anvilOpen;
 
+    // Each screen's heading goes where the client puts that screen's
+    // heading: a furnace's and a brewing stand's are centred, an
+    // anvil's starts at 60, an enchanting table's at 12, and the rest
+    // sit in the corner at 8.
     if (!plainInventory)
     {
         const char* title = creative ? CREATIVE_TABS[m_creativeTab].name
                                      : (m_chestOpen ? "Chest"
                                        : (m_crafterOpen ? "Crafter"
                                        : (m_furnaceOpen ? "Furnace"
-                                       : (bench ? "Crafting" : "Inventory"))));
-        m_ui.text(title, panelX + 8.0f, panelY + 6.0f, 1.0f, GUI_TEXT);
+                                       : (m_brewOpen ? "Brewing"
+                                       : (m_anvilOpen ? "Repair & Name"
+                                       : (m_enchantOpen ? "Enchant"
+                                       : (m_tradeOpen ? Trading::name(m_tradeWith)
+                                       : (bench ? "Crafting" : "Inventory"))))))));
+
+        const float titleX = (m_furnaceOpen || m_brewOpen)
+                                 ? panelX + PANEL_W * 0.5f
+                                       - UIRenderer::textWidth(title, 1.0f) * 0.5f
+                                 : panelX + (m_anvilOpen ? 60.0f
+                                                         : (m_enchantOpen ? 12.0f : 8.0f));
+        m_ui.text(title, titleX, panelY + (m_enchantOpen ? 5.0f : 6.0f), 1.0f, GUI_TEXT);
     }
-    if (!showPalette)
+
+    // The word over the player's own rows. An anvil is the one screen
+    // the client leaves it off, so that its price has somewhere to go.
+    if (!showPalette && !m_anvilOpen)
         m_ui.text("Inventory", panelX + 8.0f, panelY + PANEL_H - 94.0f, 1.0f, GUI_TEXT);
+
+    // A line of their own for the two screens that have something to
+    // say and nowhere to say it: the shelf count and what is in the
+    // bottle. Right-aligned in the heading row, clear of everything.
+    auto noteOnTheRight = [&](const std::string& text) {
+        m_ui.text(text, panelX + PANEL_W - 8.0f - UIRenderer::textWidth(text, 1.0f),
+                  panelY + 6.0f, 1.0f, TEXT_DIM);
+    };
 
     // --------------------------------------------- the open chest ---
     // Three rows of nine, eighteen down from the top of the panel,
@@ -517,8 +542,6 @@ void Application::renderInventoryScreen()
 
             const float tx = panelX + 80.0f;
             const float ty = panelY + 6.0f;
-
-            m_ui.text(Trading::name(m_tradeWith), tx, ty, 1.0f, TEXT_COLOR);
 
             for (size_t row = 0; row < offers.size(); ++row)
             {
@@ -623,9 +646,7 @@ void Application::renderInventoryScreen()
                           affordable ? TEXT_COLOR : TEXT_DIM);
             }
 
-            const std::string shelves = std::to_string(m_enchantShelves) + " shelves";
-            m_ui.text(shelves, rowX, panelY + 14.0f + 3.0f * rowHeight + 2.0f,
-                      1.0f, TEXT_DIM);
+            noteOnTheRight(std::to_string(m_enchantShelves) + " shelves");
         }
         else
 
@@ -655,10 +676,14 @@ void Application::renderInventoryScreen()
 
             // What the bottle under the cursor actually holds, since
             // every potion is the same item id with a different number.
+            // Above the panel rather than on it. Minecraft says what
+            // is in a bottle in a tooltip and there is no tooltip
+            // here, and every clear strip inside a brewing stand's
+            // panel is shorter than the longest name that goes in it.
             const ItemStack& first = m_inventory.slot(Inventory::BREW_BOTTLE_FIRST);
             if (first.id == Items::Potion)
-                m_ui.text(Brewing::name(Brewing::fromDamage(first.damage)),
-                          panelX + 8.0f, panelY + 72.0f, 1.0f, TEXT_DIM);
+                m_ui.textWithShadow(Brewing::name(Brewing::fromDamage(first.damage)),
+                                    panelX + 8.0f, panelY - 12.0f, 1.0f, TEXT_COLOR);
         }
         else
 
@@ -688,22 +713,35 @@ void Application::renderInventoryScreen()
             m_ui.text("+", panelX + 60.0f, ay + 5.0f, 1.0f, TEXT_DIM);
             m_ui.text("->", panelX + 103.0f, ay + 5.0f, 1.0f, TEXT_DIM);
 
+            // The price, right-aligned on 67 with a shadow behind it,
+            // which is where and how the client draws an anvil's.
             const Anvil::Result made = anvilResult();
             const int level = Experience::levelFor(m_player.experience);
-            const float priceY = ay + 22.0f;
+
+            std::string price;
+            glm::vec4 colour(0.502f, 1.0f, 0.125f, 1.0f);     // the client's green
 
             if (made.tooExpensive)
             {
-                m_ui.text("Too expensive", panelX + 27.0f, priceY, 1.0f,
-                          glm::vec4(0.80f, 0.30f, 0.30f, 1.0f));
+                price = "Too expensive!";
+                colour = glm::vec4(1.0f, 0.439f, 0.376f, 1.0f);   // and its red
             }
             else if (made.valid)
             {
-                const bool affordable = m_player.creative() || level >= made.levelCost;
-                const std::string price = "Cost: " + std::to_string(made.levelCost);
-                m_ui.text(price, panelX + 27.0f, priceY, 1.0f,
-                          affordable ? glm::vec4(0.49f, 0.98f, 0.24f, 1.0f)
-                                     : glm::vec4(0.55f, 0.30f, 0.30f, 1.0f));
+                price = "Repair cost: " + std::to_string(made.levelCost);
+                if (!m_player.creative() && level < made.levelCost)
+                    colour = glm::vec4(1.0f, 0.439f, 0.376f, 1.0f);
+            }
+
+            if (!price.empty())
+            {
+                const float px = panelX + PANEL_W - 8.0f
+                                 - UIRenderer::textWidth(price, 1.0f);
+                const float py = panelY + 67.0f;
+                m_ui.text(price, px + 1.0f, py + 1.0f, 1.0f,
+                          glm::vec4(colour.r * 0.25f, colour.g * 0.25f,
+                                    colour.b * 0.25f, 1.0f));
+                m_ui.text(price, px, py, 1.0f, colour);
             }
         }
         else
