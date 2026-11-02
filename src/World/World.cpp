@@ -610,7 +610,7 @@ void World::uploadCompletedMeshes()
         m_completedMeshes.erase(m_completedMeshes.begin(), m_completedMeshes.begin() + take);
     }
 
-    static const std::vector<int> LAYOUT = { 3, 2, 1, 1, 1 }; // pos, uv, shade, sky, block
+    static const std::vector<int> LAYOUT = { 3, 2, 1, 1, 1, 1 }; // pos, uv, shade, sky, block, tag
 
     for (MeshResult& result : ready)
     {

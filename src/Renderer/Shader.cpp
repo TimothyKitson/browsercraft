@@ -12,7 +12,28 @@ std::string Shader::readFile(const std::string& path)
         throw std::runtime_error("Shader: could not open " + path);
     std::stringstream ss;
     ss << file.rdbuf();
-    return ss.str();
+
+    // One level of #include "name", resolved beside the including file,
+    // so the shader passes can share their sky, light and noise code.
+    const std::string folder = path.substr(0, path.find_last_of('/') + 1);
+    std::string out;
+    std::string line;
+    std::istringstream lines(ss.str());
+    while (std::getline(lines, line))
+    {
+        const size_t at = line.find("#include \"");
+        if (at != std::string::npos && line.find_first_not_of(" \t") == at)
+        {
+            const size_t start = at + 10;
+            const size_t end = line.find('"', start);
+            out += readFile(folder + line.substr(start, end - start));
+            out += "\n";
+            continue;
+        }
+        out += line;
+        out += "\n";
+    }
+    return out;
 }
 
 namespace
@@ -29,7 +50,8 @@ namespace
             "#version 300 es\n"
             "precision highp float;\n"
             "precision highp int;\n"
-            "precision highp sampler2D;\n";
+            "precision highp sampler2D;\n"
+            "precision highp sampler2DShadow;\n";
 
         const size_t at = source.find(desktopVersion);
         if (at == std::string::npos) return source;

@@ -5,7 +5,7 @@ layout (location = 1) in vec2 aUV;
 layout (location = 2) in float aShade;      // face direction * ambient occlusion
 layout (location = 3) in float aSkyLight;   // 0..1
 layout (location = 4) in float aBlockLight; // 0..1
-layout (location = 5) in float aFace;       // 0-5 cube faces, 6 = cross-shaped plant
+layout (location = 5) in float aFace;       // face + 8 * block id; faces 0-5, 6 = plant, 7 = turned
 
 uniform mat4 uView;
 uniform mat4 uProjection;
@@ -58,7 +58,7 @@ void main()
     vViewDistance = length(viewPos.xyz);
     vWorldPos = worldPos;
 
-    int face = int(aFace + 0.5);
+    int face = int(aFace + 0.5) & 7;
     if (face == 7)
     {
         // Mapped, but turned: the fragment stage works the frame out

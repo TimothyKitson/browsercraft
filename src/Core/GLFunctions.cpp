@@ -44,6 +44,14 @@ PFNGLUNIFORMMATRIX4FVPROC glUniformMatrix4fv = nullptr;
 PFNGLACTIVETEXTUREPROC glActiveTexture = nullptr;
 PFNGLGENERATEMIPMAPPROC glGenerateMipmap = nullptr;
 
+PFNGLGENFRAMEBUFFERSPROC glGenFramebuffers = nullptr;
+PFNGLDELETEFRAMEBUFFERSPROC glDeleteFramebuffers = nullptr;
+PFNGLBINDFRAMEBUFFERPROC glBindFramebuffer = nullptr;
+PFNGLFRAMEBUFFERTEXTURE2DPROC glFramebufferTexture2D = nullptr;
+PFNGLCHECKFRAMEBUFFERSTATUSPROC glCheckFramebufferStatus = nullptr;
+PFNGLDRAWBUFFERSPROC glDrawBuffers = nullptr;
+PFNGLBLITFRAMEBUFFERPROC glBlitFramebuffer = nullptr;
+
 namespace
 {
     bool g_failed = false;
@@ -101,6 +109,13 @@ bool LoadGLFunctions()
 
     LOAD(glActiveTexture);
     LOAD(glGenerateMipmap);
+    LOAD(glGenFramebuffers);
+    LOAD(glDeleteFramebuffers);
+    LOAD(glBindFramebuffer);
+    LOAD(glFramebufferTexture2D);
+    LOAD(glCheckFramebufferStatus);
+    LOAD(glDrawBuffers);
+    LOAD(glBlitFramebuffer);
 #undef LOAD
     return !g_failed;
 }

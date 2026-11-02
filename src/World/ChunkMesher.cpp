@@ -91,10 +91,20 @@ namespace
         return LEVELS[occluders < 0 ? 0 : (occluders > 3 ? 3 : occluders)];
     }
 
+    // The last attribute carries which way the face looks and what it
+    // is a face of: face + 8 * block id, so the shaders can treat water,
+    // leaves and lava differently and light a face by its real normal.
+    // Six is a plant's crossed quads, which have no single normal.
+    constexpr int CROSS_FACE = 6;
+    float tagOf(int face, BlockId id, bool top = false)
+    {
+        return static_cast<float>(face + 8 * static_cast<int>(id) + (top ? 8192 : 0));
+    }
+
     void pushVertex(std::vector<float>& out,
                     float x, float y, float z,
                     float u, float v,
-                    float shade, float sky, float block)
+                    float shade, float sky, float block, float tag)
     {
         out.push_back(x);
         out.push_back(y);
@@ -104,6 +114,7 @@ namespace
         out.push_back(shade);
         out.push_back(sky);
         out.push_back(block);
+        out.push_back(tag);
     }
 
     int tileForFace(const BlockInfo& info, int faceIndex)
@@ -239,7 +250,7 @@ namespace
                 for (int k = 0; k < 3; ++k)
                 {
                     const int c = flip ? orderFlipped[tri][k] : order[tri][k];
-                    pushVertex(out, vx[c], vy[c], vz[c], vu[c], vv[c], vshade[c], vsky[c], vblock[c]);
+                    pushVertex(out, vx[c], vy[c], vz[c], vu[c], vv[c], vshade[c], vsky[c], vblock[c], tagOf(f, id, face.corner[c][1] == 1));
                 }
             }
         }
@@ -317,7 +328,7 @@ namespace
 
             const int order[6] = { 0, 1, 2, 0, 2, 3 };
             for (int k : order)
-                pushVertex(out, vx[k], vy[k], vz[k], vu[k], vv[k], face.shade, sky, block);
+                pushVertex(out, vx[k], vy[k], vz[k], vu[k], vv[k], face.shade, sky, block, tagOf(f, id, face.corner[k][1] == 1));
         }
     }
 
@@ -464,9 +475,9 @@ namespace
         const int back[6]  = { 0, 2, 1, 0, 3, 2 };
 
         for (int k : front)
-            pushVertex(out, corner[k].x, corner[k].y, corner[k].z, u[k], v[k], 1.0f, sky, block);
+            pushVertex(out, corner[k].x, corner[k].y, corner[k].z, u[k], v[k], 1.0f, sky, block, tagOf(CROSS_FACE, id));
         for (int k : back)
-            pushVertex(out, corner[k].x, corner[k].y, corner[k].z, u[k], v[k], 0.86f, sky, block);
+            pushVertex(out, corner[k].x, corner[k].y, corner[k].z, u[k], v[k], 0.86f, sky, block, tagOf(CROSS_FACE, id));
     }
 
     // A rail: one flat panel just off the floor, turned so the strips
@@ -515,7 +526,7 @@ namespace
         for (int k : top)
         {
             const int t = (k + turn) & 3;
-            pushVertex(out, corner[k].x, corner[k].y, corner[k].z, u[t], v[t], 1.0f, sky, block);
+            pushVertex(out, corner[k].x, corner[k].y, corner[k].z, u[t], v[t], 1.0f, sky, block, tagOf(2, id));
         }
     }
 
@@ -549,13 +560,13 @@ namespace
                 const float bx = side == 0 ? q.bx : q.ax;
                 const float bz = side == 0 ? q.bz : q.az;
 
-                pushVertex(out, x0 + ax, y0, z0 + az, uv.u0, uv.vBottom, shade, sky, block);
-                pushVertex(out, x0 + bx, y0, z0 + bz, uv.u1, uv.vBottom, shade, sky, block);
-                pushVertex(out, x0 + bx, y0 + 1.0f, z0 + bz, uv.u1, uv.vTop, shade, sky, block);
+                pushVertex(out, x0 + ax, y0, z0 + az, uv.u0, uv.vBottom, shade, sky, block, tagOf(CROSS_FACE, id));
+                pushVertex(out, x0 + bx, y0, z0 + bz, uv.u1, uv.vBottom, shade, sky, block, tagOf(CROSS_FACE, id));
+                pushVertex(out, x0 + bx, y0 + 1.0f, z0 + bz, uv.u1, uv.vTop, shade, sky, block, tagOf(CROSS_FACE, id, true));
 
-                pushVertex(out, x0 + ax, y0, z0 + az, uv.u0, uv.vBottom, shade, sky, block);
-                pushVertex(out, x0 + bx, y0 + 1.0f, z0 + bz, uv.u1, uv.vTop, shade, sky, block);
-                pushVertex(out, x0 + ax, y0 + 1.0f, z0 + az, uv.u0, uv.vTop, shade, sky, block);
+                pushVertex(out, x0 + ax, y0, z0 + az, uv.u0, uv.vBottom, shade, sky, block, tagOf(CROSS_FACE, id));
+                pushVertex(out, x0 + bx, y0 + 1.0f, z0 + bz, uv.u1, uv.vTop, shade, sky, block, tagOf(CROSS_FACE, id, true));
+                pushVertex(out, x0 + ax, y0 + 1.0f, z0 + az, uv.u0, uv.vTop, shade, sky, block, tagOf(CROSS_FACE, id, true));
             }
         }
     }

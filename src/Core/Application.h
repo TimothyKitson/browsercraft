@@ -9,6 +9,7 @@
 #include "Renderer/Camera.h"
 #include "Renderer/UIRenderer.h"
 #include "Renderer/SkyRenderer.h"
+#include "Renderer/ShaderPipeline.h"
 #include "Renderer/SelectionRenderer.h"
 #include "Renderer/GuiTextures.h"
 #include "World/World.h"
@@ -58,6 +59,8 @@ enum class Screen
     Singleplayer,
     Multiplayer,
     Settings,
+    VideoSettings,
+    Credits,
     Controls,
     Playing,
     Paused,
@@ -96,6 +99,11 @@ enum class MenuAction
     Respawn,
     DeleteWorld,
     TogglePbr,
+    ToggleShaders,
+    GoVideoSettings,
+    GoCredits,
+    BackToOptions,
+    LeaveOptions,
     ToggleSound,
     RenderDistanceDown,
     RenderDistanceUp
@@ -115,6 +123,8 @@ public:
     // quits. Used for automated visual checks; 0 disables it.
     void setAutoScreenshot(float delaySeconds) { m_autoScreenshotDelay = delaySeconds; }
     void setPbrEnabled(bool enabled) { m_pbrEnabled = enabled; }
+    void setShadersEnabled(bool enabled) { m_shadersOn = enabled; }
+    void setTimeOverride(float timeOfDay) { m_timeOverride = timeOfDay; }
     // Skips the title screen and drops straight into a world.
     void setStartupMode(GameMode mode) { m_startupMode = mode; m_startImmediately = true; }
     // Dev aid: open on a particular screen so menus can be screenshotted.
@@ -178,6 +188,16 @@ private:
     GuiTextures m_gui;
     Shader m_chunkShader;
     SkyRenderer m_sky;
+    std::unique_ptr<ShaderPipeline> m_fx;
+    bool m_shadersOn = false;
+    Shader* m_activeShader = nullptr;
+    Screen m_optionsReturn = Screen::Title;
+    bool shadersActive();
+    void renderWorldShaded();
+    void renderVideoScreen();
+    void renderCreditsScreen();
+    void loadOptions();
+    void saveOptions();
     SelectionRenderer m_selection;
     UIRenderer m_ui;
 
@@ -388,6 +408,8 @@ private:
     static constexpr float TITLE_TIME_OF_DAY = 0.38f;
     float m_timeOfDay = TITLE_TIME_OF_DAY;
     float m_elapsedSeconds = 0.0f;
+    float m_lastFrameSeconds = 0.016f;
+    float m_timeOverride = -1.0f;
     float m_autosaveTimer = 0.0f;
     float m_titleSpin = 0.0f;            // slow camera drift behind the menus
     bool m_menuWorld = false;            // the loaded world is the title panorama

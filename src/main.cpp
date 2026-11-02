@@ -1313,6 +1313,8 @@ int main(int argc, char** argv)
     int height = 720;
     float autoShotDelay = 0.0f;
     bool pbr = true;
+    int shaders = -1;
+    float timeOverride = -1.0f;
     const char* startupScreen = nullptr;
     uint32_t seed = 0;
     bool hasSeed = false;
@@ -1347,6 +1349,18 @@ int main(int argc, char** argv)
         else if (std::strcmp(argv[i], "--nopbr") == 0)
         {
             pbr = false;
+        }
+        else if (std::strcmp(argv[i], "--shaders") == 0)
+        {
+            shaders = 1;
+        }
+        else if (std::strcmp(argv[i], "--noshaders") == 0)
+        {
+            shaders = 0;
+        }
+        else if (std::strcmp(argv[i], "--time") == 0 && i + 1 < argc)
+        {
+            timeOverride = static_cast<float>(std::atof(argv[++i]));
         }
         else if (std::strcmp(argv[i], "--screen") == 0 && i + 1 < argc)
         {
@@ -1469,7 +1483,9 @@ int main(int argc, char** argv)
     try
     {
         Application app(width, height);
-        app.setPbrEnabled(pbr);
+        if (!pbr) app.setPbrEnabled(false);
+        if (shaders >= 0) app.setShadersEnabled(shaders == 1);
+        if (timeOverride >= 0.0f) app.setTimeOverride(timeOverride);
         if (startupScreen) app.setStartupScreen(startupScreen);
         if (hasSeed) app.setSeedOverride(seed);
         if (buildTest) app.setBuildTest();

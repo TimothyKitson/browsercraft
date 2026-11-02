@@ -328,6 +328,44 @@ void Application::loadProfile()
     }
 }
 
+void Application::loadOptions()
+{
+    std::FILE* file = std::fopen((m_savePath + "/options.txt").c_str(), "rb");
+    if (!file) return;
+    char line[128];
+    while (std::fgets(line, sizeof(line), file))
+    {
+        int value = 0;
+        if (std::sscanf(line, "shaders=%d", &value) == 1) m_shadersOn = value != 0;
+        else if (std::sscanf(line, "pbr=%d", &value) == 1) m_pbrEnabled = value != 0;
+    }
+    std::fclose(file);
+}
+
+void Application::saveOptions()
+{
+    std::error_code ec;
+    std::filesystem::create_directories(m_savePath, ec);
+    std::FILE* file = std::fopen((m_savePath + "/options.txt").c_str(), "wb");
+    if (!file) return;
+    std::fprintf(file, "shaders=%d\npbr=%d\n", m_shadersOn ? 1 : 0, m_pbrEnabled ? 1 : 0);
+    std::fclose(file);
+#ifdef __EMSCRIPTEN__
+    EM_ASM({
+        if (typeof FS !== 'undefined') FS.syncfs(false, function (err) {
+            if (err) console.error('Options save failed:', err);
+        });
+    });
+#endif
+}
+
+bool Application::shadersActive()
+{
+    if (!m_shadersOn) return false;
+    if (!m_fx) m_fx = std::make_unique<ShaderPipeline>();
+    return m_fx->ready();
+}
+
 void Application::saveProfile()
 {
     std::error_code ec;
@@ -1050,8 +1088,11 @@ void Application::run()
     // Dev aid: --screen opens straight onto a given menu for screenshots.
     const bool menuOnly = (m_startupScreen == "title" || m_startupScreen == "modes" ||
                            m_startupScreen == "settings" || m_startupScreen == "multiplayer" ||
-                           m_startupScreen == "controls" || m_startupScreen == "name");
+                           m_startupScreen == "controls" || m_startupScreen == "name" ||
+                           m_startupScreen == "video" || m_startupScreen == "credits");
     if (m_startupScreen == "title") m_screen = Screen::Title;
+    if (m_startupScreen == "video") m_screen = Screen::VideoSettings;
+    if (m_startupScreen == "credits") m_screen = Screen::Credits;
     if (m_startupScreen == "modes") m_screen = Screen::Singleplayer;
     if (m_startupScreen == "settings") m_screen = Screen::Settings;
     if (m_startupScreen == "multiplayer")
@@ -1072,6 +1113,7 @@ void Application::run()
     // A returning visitor keeps their name; a new one is asked for it
     // before anything else, the way the game asks on first launch.
     loadProfile();
+    loadOptions();
     m_keys.load(m_savePath);
     if (m_playerName.empty() && !m_automated && m_startupScreen.empty())
         m_screen = Screen::NameEntry;
@@ -1134,6 +1176,7 @@ bool Application::frame()
     deltaTime = std::min(deltaTime, 0.1f);
 
     m_elapsedSeconds += deltaTime;
+    m_lastFrameSeconds = deltaTime;
     m_fpsAccumulator += deltaTime;
 
     // Back the streamer off only when frames are genuinely running long.
@@ -1249,6 +1292,7 @@ bool Application::frame()
             m_timeOfDay += deltaTime / DAY_LENGTH_SECONDS;
             if (m_timeOfDay >= 1.0f) m_timeOfDay -= 1.0f;
         }
+        if (m_timeOverride >= 0.0f) m_timeOfDay = m_timeOverride;
 
         // Dev aid: a landmark the automated multiplayer test can look for.
         if (m_buildTest && m_worldReady && !m_buildTestDone)
@@ -4252,7 +4296,19 @@ void Application::applyMenuAction()
         case MenuAction::JoinDiscovered:
             break;
 #endif
-        case MenuAction::GoSettings:     m_screen = Screen::Settings; break;
+        case MenuAction::GoSettings:
+            if (m_screen == Screen::Title || m_screen == Screen::Paused) m_optionsReturn = m_screen;
+            m_screen = Screen::Settings;
+            break;
+        case MenuAction::GoVideoSettings: m_screen = Screen::VideoSettings; break;
+        case MenuAction::GoCredits:       m_screen = Screen::Credits; break;
+        case MenuAction::BackToOptions:   m_screen = Screen::Settings; break;
+        case MenuAction::LeaveOptions:    m_screen = m_optionsReturn; break;
+        case MenuAction::ToggleShaders:
+            m_shadersOn = !m_shadersOn;
+            if (m_shadersOn && !shadersActive()) m_shadersOn = false;
+            saveOptions();
+            break;
         case MenuAction::GoControls:
             m_rebinding = Action::Count;
             m_screen = Screen::Controls;
@@ -4339,7 +4395,7 @@ void Application::applyMenuAction()
             setMouseCaptured(false);
             break;
 
-        case MenuAction::TogglePbr:     m_pbrEnabled = !m_pbrEnabled; break;
+        case MenuAction::TogglePbr:     m_pbrEnabled = !m_pbrEnabled; saveOptions(); break;
         case MenuAction::ToggleSound:   m_audio.setMuted(!m_audio.muted()); break;
     }
 }
@@ -4468,8 +4524,15 @@ void Application::handleEvents()
             m_rebinding = Action::Count;
             m_screen = Screen::Settings; // back up one level, not all the way out
         }
-        else if (m_screen == Screen::Singleplayer || m_screen == Screen::Multiplayer ||
-                 m_screen == Screen::Settings)
+        else if (m_screen == Screen::VideoSettings || m_screen == Screen::Credits)
+        {
+            m_screen = Screen::Settings;
+        }
+        else if (m_screen == Screen::Settings)
+        {
+            m_screen = m_optionsReturn;
+        }
+        else if (m_screen == Screen::Singleplayer || m_screen == Screen::Multiplayer)
         {
             m_screen = Screen::Title;
         }
@@ -8603,6 +8666,8 @@ void Application::render()
         case Screen::Singleplayer: renderSingleplayerScreen(); break;
         case Screen::Multiplayer:  renderMultiplayerScreen(); break;
         case Screen::Settings:     renderSettingsScreen(); break;
+        case Screen::VideoSettings: renderVideoScreen(); break;
+        case Screen::Credits:      renderCreditsScreen(); break;
         case Screen::Controls:     renderControlsScreen(); break;
         case Screen::NameEntry:    renderNameEntryScreen(); break;
         case Screen::Playing:
@@ -8651,8 +8716,140 @@ float Application::dimensionAmbient() const
     }
 }
 
+void Application::renderWorldShaded()
+{
+    const Camera camera = viewCamera();
+    const glm::mat4 view = camera.viewMatrix();
+    const glm::mat4 projection = camera.projectionMatrix(m_window.aspect());
+
+    const glm::vec3 eye = camera.position;
+    const int ex = static_cast<int>(std::floor(eye.x));
+    const int ey = static_cast<int>(std::floor(eye.y));
+    const int ez = static_cast<int>(std::floor(eye.z));
+    const float eyeSky = static_cast<float>(m_world->skyLight(ex, ey, ez)) / 15.0f;
+    const float eyeBlock = static_cast<float>(m_world->blockLightAt(ex, ey, ez)) / 15.0f;
+
+    ShaderPipeline::Frame frame;
+    frame.view = view;
+    frame.projection = projection;
+    frame.cameraPosition = camera.position;
+    frame.sunDirection = sunDirection();
+    frame.daylight = viewDaylight();
+    frame.time = m_elapsedSeconds;
+    frame.rain = hasSky() ? m_weather.depth : 0.0f;
+    frame.dimension = m_dimension == Dimension::Nether ? 1 : m_dimension == Dimension::End ? 2 : 0;
+    frame.underwater = m_player.isHeadUnderwater(*m_world);
+    frame.inLava = m_world->getBlock(ex, ey, ez) == Blocks::Lava;
+    frame.eyeSkyLight = eyeSky;
+    frame.eyeLight = std::max(eyeSky * std::max(viewDaylight(), 0.25f), eyeBlock * 0.8f);
+    frame.renderDistance = static_cast<float>(m_world->renderDistance() * Chunk::SX);
+    frame.ambient = dimensionAmbient();
+    frame.nearPlane = camera.nearPlane;
+    frame.farPlane = camera.farPlane;
+    frame.backdrop = dimensionBackdrop();
+    frame.pbr = m_pbrEnabled && m_atlas.hasPbrMaps();
+    frame.deltaTime = m_lastFrameSeconds;
+
+    m_fx->prepare(m_window.width(), m_window.height(), frame);
+    m_atlas.bind(0, 1, 2);
+
+    if (m_fx->shadowsWanted())
+    {
+        m_fx->beginShadows();
+        Shader& shadow = m_fx->shadowShader();
+        const glm::vec3 centre = m_fx->shadowCentre();
+        const float reach = m_fx->shadowReach() + Chunk::SX;
+        for (const auto& [pos, chunk] : m_world->chunks())
+        {
+            if (chunk->opaqueMesh.empty()) continue;
+            const glm::vec3 middle = chunk->worldOrigin() + glm::vec3(Chunk::SX * 0.5f, 0.0f, Chunk::SZ * 0.5f);
+            if (std::abs(middle.x - centre.x) > reach || std::abs(middle.z - centre.z) > reach) continue;
+            shadow.setVec3("uChunkOffset", chunk->worldOrigin());
+            chunk->opaqueMesh.draw(GL_TRIANGLES);
+        }
+        m_fx->endShadows();
+    }
+
+    m_fx->beginScene();
+    Shader& world = m_fx->worldShader();
+    m_activeShader = &world;
+    m_atlas.bind(0, 1, 2);
+
+    Frustum frustum;
+    frustum.update(projection * view);
+
+    struct VisibleChunk { Chunk* chunk; float distance; };
+    std::vector<VisibleChunk> visible;
+    visible.reserve(m_world->chunks().size());
+    for (const auto& [pos, chunk] : m_world->chunks())
+    {
+        if (chunk->opaqueMesh.empty() && chunk->transparentMesh.empty()) continue;
+        if (!frustum.intersectsAABB(chunk->aabbMin(), chunk->aabbMax())) continue;
+        const glm::vec3 center = chunk->worldOrigin() + glm::vec3(Chunk::SX * 0.5f, Chunk::SY * 0.5f, Chunk::SZ * 0.5f);
+        visible.push_back({ chunk.get(), glm::length(center - camera.position) });
+    }
+
+    for (const VisibleChunk& entry : visible)
+    {
+        if (entry.chunk->opaqueMesh.empty()) continue;
+        world.setVec3("uChunkOffset", entry.chunk->worldOrigin());
+        entry.chunk->opaqueMesh.draw(GL_TRIANGLES);
+    }
+
+    m_drops.render(world, *m_world);
+    m_orbs.render(world, *m_world);
+    m_rain.render(world, *m_world, m_camera.right, m_camera.up);
+    m_arrows.render(world, m_camera, m_atlas, *m_world);
+    m_particles.render(world, *m_world, camera.right, camera.up);
+    renderPlayers(view, projection);
+    if (inGame()) m_mobModel.render(world, *m_world, m_entities);
+    m_atlas.bind(0, 1, 2);
+
+    if (playing() && !m_inventoryOpen)
+    {
+        const RaycastHit hit = m_world->raycast(m_camera.position, m_camera.front, REACH_DISTANCE);
+        if (hit.hit)
+        {
+            if (m_hasTarget && m_breakProgress > 0.0f && m_targetBlock == hit.block)
+            {
+                world.bind();
+                m_selection.drawCrack(world, hit.block,
+                                      static_cast<int>(m_breakProgress * Tiles::CrackStages));
+            }
+            m_selection.drawOutline(view, projection, hit.block);
+        }
+    }
+
+    std::sort(visible.begin(), visible.end(),
+              [](const VisibleChunk& a, const VisibleChunk& b) { return a.distance > b.distance; });
+
+    m_fx->beginTransparent();
+    m_atlas.bind(0, 1, 2);
+    for (const VisibleChunk& entry : visible)
+    {
+        if (entry.chunk->transparentMesh.empty()) continue;
+        world.setVec3("uChunkOffset", entry.chunk->worldOrigin());
+        entry.chunk->transparentMesh.draw(GL_TRIANGLES);
+    }
+    m_fx->endTransparent();
+
+    m_fx->beginHand();
+    m_atlas.bind(0, 1, 2);
+    renderHand();
+
+    m_fx->finish();
+    m_activeShader = nullptr;
+    glViewport(0, 0, m_window.width(), m_window.height());
+}
+
 void Application::renderWorld()
 {
+    if (shadersActive())
+    {
+        renderWorldShaded();
+        return;
+    }
+
     // Everything on screen is drawn from here, which in third person is
     // not where the player's eyes are. m_camera stays on the eyes so
     // that mining, placing and the selection outline are unaffected by
@@ -8920,12 +9117,12 @@ void Application::renderHand()
     for (int step = 0; step < 3 && isOpaque(m_world->getBlock(lx, ly, lz)); ++step) ++ly;
 
     const float sky = static_cast<float>(m_world->skyLight(lx, ly, lz)) / 15.0f *
-                      std::max(0.35f, viewDaylight());
+                      (m_activeShader ? 1.0f : std::max(0.35f, viewDaylight()));
     const float blockLight = static_cast<float>(m_world->blockLightAt(lx, ly, lz)) / 15.0f;
 
     const ItemStack& held = m_inventory.selected();
 
-    m_heldItem.render(m_chunkShader, m_camera, skinFor(localAppearance()), m_atlas,
+    m_heldItem.render(m_activeShader ? *m_activeShader : m_chunkShader, m_camera, skinFor(localAppearance()), m_atlas,
                       // Both arms of the conditional spelled as the same
                       // type: Blocks::Air is an unscoped enumerator and
                       // held.id is a StackId, and mixing them is what
@@ -9077,7 +9274,7 @@ void Application::renderPlayers(const glm::mat4& view, const glm::mat4& projecti
     pinFramedItems();
 
     auto draw = [&](const PlayerSkin& skin, const PlayerPose& pose, const std::string& name) {
-        m_playerModel.render(m_chunkShader, *m_world, skin, pose);
+        m_playerModel.render(m_activeShader ? *m_activeShader : m_chunkShader, *m_world, skin, pose);
         if (name.empty()) return;
 
         // The tag floats a little over the top of the head. Project it
@@ -10347,14 +10544,56 @@ void Application::renderSettingsScreen()
     const float h = m_ui.canvasHeight();
 
     m_ui.quad(0, 0, w, h, glm::vec4(0.0f, 0.0f, 0.0f, 0.45f));
-    centredText("Settings", h * 0.13f, 4.4f, TEXT_COLOR);
+    centredText("Options", h * 0.13f, 4.4f, TEXT_COLOR);
 
     const float buttonWidth = std::min(520.0f, w * 0.72f);
     const float buttonX = w * 0.5f - buttonWidth * 0.5f;
     const float buttonHeight = 52.0f;
     float y = h * 0.28f;
 
-    // Render distance, as a row of [-] value [+]
+    if (menuButton({ buttonX, y, buttonWidth, buttonHeight }, "Video Settings..."))
+        m_pendingAction = MenuAction::GoVideoSettings;
+    y += buttonHeight + 14.0f;
+
+    if (menuButton({ buttonX, y, buttonWidth, buttonHeight },
+                   m_audio.muted() ? "Sound: Off" : "Sound: On"))
+        m_pendingAction = MenuAction::ToggleSound;
+    y += buttonHeight + 14.0f;
+
+    if (menuButton({ buttonX, y, buttonWidth, buttonHeight }, "Controls..."))
+        m_pendingAction = MenuAction::GoControls;
+    y += buttonHeight + 14.0f;
+
+    if (m_optionsReturn == Screen::Title)
+    {
+        if (menuButton({ buttonX, y, buttonWidth, buttonHeight },
+                       m_playerName.empty() ? "Set Name" : ("Name: " + m_playerName)))
+            m_pendingAction = MenuAction::GoNameEntry;
+        y += buttonHeight + 14.0f;
+    }
+
+    if (menuButton({ buttonX, y, buttonWidth, buttonHeight }, "Credits..."))
+        m_pendingAction = MenuAction::GoCredits;
+    y += buttonHeight + 24.0f;
+
+    if (menuButton({ buttonX, y, buttonWidth, 46.0f }, "Done"))
+        m_pendingAction = MenuAction::LeaveOptions;
+}
+
+void Application::renderVideoScreen()
+{
+    const ScopedPanelUnits panel(m_ui, guiScale());
+    const float w = m_ui.canvasWidth();
+    const float h = m_ui.canvasHeight();
+
+    m_ui.quad(0, 0, w, h, glm::vec4(0.0f, 0.0f, 0.0f, 0.45f));
+    centredText("Video Settings", h * 0.13f, 4.4f, TEXT_COLOR);
+
+    const float buttonWidth = std::min(520.0f, w * 0.72f);
+    const float buttonX = w * 0.5f - buttonWidth * 0.5f;
+    const float buttonHeight = 52.0f;
+    float y = h * 0.28f;
+
     const float sideWidth = 60.0f;
     const int distance = m_world ? m_world->renderDistance() : 8;
     char label[64];
@@ -10372,28 +10611,60 @@ void Application::renderSettingsScreen()
         m_pendingAction = MenuAction::RenderDistanceUp;
     y += buttonHeight + 14.0f;
 
-    if (menuButton({ buttonX, y, buttonWidth, buttonHeight },
-                   m_audio.muted() ? "Sound: Off" : "Sound: On"))
-        m_pendingAction = MenuAction::ToggleSound;
+    const bool failed = m_fx && !m_fx->ready();
+    const std::string shaders = failed ? "Shaders: Not Supported"
+                                       : (m_shadersOn ? "Shaders: On" : "Shaders: Off");
+    if (menuButton({ buttonX, y, buttonWidth, buttonHeight }, shaders, !failed))
+        m_pendingAction = MenuAction::ToggleShaders;
     y += buttonHeight + 14.0f;
 
     if (menuButton({ buttonX, y, buttonWidth, buttonHeight },
                    m_pbrEnabled ? "Fancy Lighting: On" : "Fancy Lighting: Off",
                    m_atlas.hasPbrMaps()))
         m_pendingAction = MenuAction::TogglePbr;
-    y += buttonHeight + 14.0f;
-
-    if (menuButton({ buttonX, y, buttonWidth, buttonHeight }, "Controls"))
-        m_pendingAction = MenuAction::GoControls;
-    y += buttonHeight + 14.0f;
-
-    if (menuButton({ buttonX, y, buttonWidth, buttonHeight },
-                   m_playerName.empty() ? "Set Name" : ("Name: " + m_playerName)))
-        m_pendingAction = MenuAction::GoNameEntry;
     y += buttonHeight + 24.0f;
 
-    if (menuButton({ buttonX, y, buttonWidth, 46.0f }, "Back"))
-        m_pendingAction = MenuAction::BackToTitle;
+    if (menuButton({ buttonX, y, buttonWidth, 46.0f }, "Done"))
+        m_pendingAction = MenuAction::BackToOptions;
+}
+
+void Application::renderCreditsScreen()
+{
+    const ScopedPanelUnits panel(m_ui, guiScale());
+    const float w = m_ui.canvasWidth();
+    const float h = m_ui.canvasHeight();
+
+    m_ui.quad(0, 0, w, h, glm::vec4(0.0f, 0.0f, 0.0f, 0.62f));
+    centredText("Credits", h * 0.08f, 4.4f, TEXT_COLOR);
+
+    struct Line { std::string text; bool heading; };
+    std::vector<Line> lines = {
+        { "Browsercraft", true },
+        { "Made with C++, SDL2, OpenGL and GLM, and Emscripten for the browser.", false },
+        { "", false },
+        { "Shaders", true },
+        { "Browsercraft Shaders are written for this game.", false },
+        { "Reference: Complementary Shaders by Complementary Development", false },
+        { "(complementary.dev) were studied for ideas. None of their code is used.", false },
+        { "", false },
+        { "Textures", true },
+    };
+    const std::string& pack = m_atlas.packCredit();
+    lines.push_back({ pack.empty() ? "No texture pack installed." : pack, false });
+
+    float y = h * 0.20f;
+    for (const Line& line : lines)
+    {
+        if (!line.text.empty())
+            centredText(line.text, y, line.heading ? 2.6f : 1.9f,
+                        line.heading ? glm::vec4(1.0f, 1.0f, 0.62f, 1.0f) : TEXT_COLOR);
+        y += line.heading ? 38.0f : 30.0f;
+    }
+
+    const float buttonWidth = std::min(520.0f, w * 0.72f);
+    if (menuButton({ w * 0.5f - buttonWidth * 0.5f, std::max(y + 20.0f, h * 0.80f), buttonWidth, 46.0f },
+                   "Done"))
+        m_pendingAction = MenuAction::BackToOptions;
 }
 
 void Application::renderControlsScreen()
@@ -10640,14 +10911,8 @@ void Application::renderPauseMenu()
         m_pendingAction = MenuAction::Resume;
     y += buttonHeight + 12.0f;
 
-    if (menuButton({ buttonX, y, buttonWidth, buttonHeight },
-                   m_pbrEnabled ? "PBR Shading: On" : "PBR Shading: Off"))
-        m_pendingAction = MenuAction::TogglePbr;
-    y += buttonHeight + 12.0f;
-
-    if (menuButton({ buttonX, y, buttonWidth, buttonHeight },
-                   m_audio.muted() ? "Sound: Off" : "Sound: On"))
-        m_pendingAction = MenuAction::ToggleSound;
+    if (menuButton({ buttonX, y, buttonWidth, buttonHeight }, "Options..."))
+        m_pendingAction = MenuAction::GoSettings;
     y += buttonHeight + 12.0f;
 
 #ifndef __EMSCRIPTEN__
