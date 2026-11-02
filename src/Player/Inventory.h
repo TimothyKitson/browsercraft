@@ -113,6 +113,20 @@ public:
         return index >= ARMOR_FIRST && index < ARMOR_FIRST + ARMOR_SLOTS;
     }
 
+    // Whether this stack may sit in this slot at all. Everywhere takes
+    // anything except the four armour slots, which take their own piece
+    // and nothing else -- a pickaxe in the helmet slot is a broken save,
+    // not a choice anybody made.
+    static bool belongsIn(int index, StackId id);
+
+    // Moves anything sitting in an armour slot that is not that slot's
+    // piece back into the pack. Run on load, to mend saves made before
+    // the rule above held everywhere. Whatever the pack has no room for
+    // is taken off as well and handed back, for the caller to drop at
+    // the player's feet -- which is what Minecraft does with anything
+    // that has nowhere to go.
+    std::vector<ItemStack> evictMisfitArmour();
+
     // Puts a piece of armour on, swapping whatever that slot already
     // holds onto the cursor. Returns false if it is not armour, or if
     // the slot it belongs in is somehow out of range.

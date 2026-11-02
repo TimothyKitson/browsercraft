@@ -95,7 +95,7 @@ namespace
         { "Tools",            Items::IronPickaxe, TAB_TOOLS,    static_cast<int>(std::size(TAB_TOOLS)) },
         { "Armour",           Items::DiamondChestplate, TAB_ARMOUR, static_cast<int>(std::size(TAB_ARMOUR)) },
         { "Everything",       Blocks::Cobblestone,nullptr,      0 },
-        { "Your Inventory",   Blocks::Wool,       nullptr,      0 },  // the player's own slots
+        { "Your Inventory",   Blocks::Chest,      nullptr,      0 },  // the player's own slots
     };
 
     constexpr int TAB_COUNT = static_cast<int>(std::size(CREATIVE_TABS));
@@ -134,6 +134,14 @@ namespace
         }
         items = CREATIVE_TABS[tab].items;
         count = CREATIVE_TABS[tab].count;
+    }
+
+    // What a stack is called in a tooltip. A potion is one item id with
+    // the brew in its damage, so its name has to be read out of that.
+    std::string stackName(const ItemStack& stack)
+    {
+        if (stack.id == Items::Potion) return Brewing::name(Brewing::fromDamage(stack.damage));
+        return displayName(stack.id);
     }
 }
 
@@ -316,49 +324,183 @@ void Application::drawPlayerDoll(const PlayerSkin& skin, float x, float y, float
     part(arm + 4.0f,     20.0f, 4.0f, 12.0f, skin.legFront(),  false);
 }
 
+void Application::drawPlayerFigure(const PlayerSkin& skin, float centreX, float feetY,
+                                   float blockPixels)
+{
+    if (!skin.textureId()) return;
+
+    // Minecraft's: the body turns a twentieth of the way the cursor is,
+    // the head twice that, and the head tips up or down to meet it --
+    // all through an arctangent over forty pixels, so the figure leans
+    // towards the cursor and never spins round to chase it.
+    const float mouseX = static_cast<float>(m_input.mouseX()) / m_ui.scale();
+    const float mouseY = static_cast<float>(m_input.mouseY()) / m_ui.scale();
+    const float eyeY = feetY - blockPixels * 1.62f;
+
+    const float across = std::atan((centreX - mouseX) / 40.0f);
+    const float upDown = std::atan((eyeY - mouseY) / 40.0f);
+
+    // Facing out of the screen, which is +z with the eye looking back
+    // down -z at it.
+    PlayerPose pose;
+    pose.bodyYaw = 90.0f + across * 20.0f;
+    pose.headYaw = 90.0f + across * 40.0f;
+    pose.headPitch = upDown * 20.0f;
+
+    m_dollModel.build(skin, pose, 1.0f, 0.0f);
+    const std::vector<float>& v = m_dollModel.vertices();
+    const int stride = PlayerModel::FLOATS_PER_VERTEX;
+    const int triangles = static_cast<int>(v.size()) / (stride * 3);
+
+    struct Triangle { glm::vec2 corner[3]; glm::vec2 uv[3]; float shade; float depth; };
+    std::vector<Triangle> drawn;
+    drawn.reserve(static_cast<size_t>(triangles));
+
+    for (int t = 0; t < triangles; ++t)
+    {
+        const float* a = &v[static_cast<size_t>(t * 3 * stride)];
+        const glm::vec3 p0(a[0], a[1], a[2]);
+        const glm::vec3 p1(a[stride + 0], a[stride + 1], a[stride + 2]);
+        const glm::vec3 p2(a[2 * stride + 0], a[2 * stride + 1], a[2 * stride + 2]);
+
+        // Only what faces the eye: a box seen from outside shows at most
+        // three of its sides, and drawing the far three as well is what
+        // would put the back of the head over the face.
+        const glm::vec3 normal = glm::cross(p1 - p0, p2 - p0);
+        if (normal.z <= 0.0f) continue;
+
+        Triangle tri;
+        const glm::vec3 points[3] = { p0, p1, p2 };
+        for (int k = 0; k < 3; ++k)
+        {
+            tri.corner[k] = glm::vec2(centreX + points[k].x * blockPixels,
+                                      feetY - points[k].y * blockPixels);
+            tri.uv[k] = glm::vec2(a[k * stride + 3], a[k * stride + 4]);
+        }
+        tri.shade = a[5];
+        tri.depth = (p0.z + p1.z + p2.z) / 3.0f;
+        drawn.push_back(tri);
+    }
+
+    // Furthest first, so an arm swung in front of the body is drawn over
+    // it rather than under it: the interface has no depth buffer, so the
+    // order is the depth.
+    std::stable_sort(drawn.begin(), drawn.end(),
+                     [](const Triangle& l, const Triangle& r) { return l.depth < r.depth; });
+
+    for (const Triangle& tri : drawn)
+        m_ui.texturedTriangle(skin.textureId(), tri.corner, tri.uv,
+                              glm::vec4(tri.shade, tri.shade, tri.shade, 1.0f));
+}
+
+void Application::drawCraftArrow(float x, float y, float width, float height, float filled)
+{
+    // The client's arrow: a grey shaft into a head as tall as the arrow,
+    // drawn in the slot grey so it reads as part of the panel. Built a
+    // column at a time, which at this size is what the sprite is -- and
+    // which is what lets a furnace's fill it white from the left as the
+    // thing in it cooks.
+    const float head = std::floor(height * 0.5f + 0.5f);
+    const float headStart = x + width - head;
+    const float shaftHeight = std::max(2.0f, std::floor(height / 3.0f));
+    const float middle = y + std::floor(height * 0.5f);
+    const float fillEdge = x + width * std::clamp(filled, 0.0f, 1.0f);
+
+    for (float column = x; column < x + width; column += 1.0f)
+    {
+        const glm::vec4 colour = column < fillEdge ? glm::vec4(1.0f) : GUI_WELL;
+        if (column < headStart)
+        {
+            m_ui.quad(column, middle - std::floor(shaftHeight * 0.5f), 1.0f, shaftHeight, colour);
+        }
+        else
+        {
+            const float half = std::floor((head - (column - headStart)) - 0.5f);
+            m_ui.quad(column, middle - half, 1.0f, half * 2.0f + 1.0f, colour);
+        }
+    }
+}
+
+void Application::drawFurnaceFlame(float x, float y, float alight)
+{
+    // Fourteen columns of flame, tallest in the middle, yellow at the
+    // root and red at the tips -- and shown from the bottom up only as
+    // far as the fuel has left, so it burns down the way the client's
+    // does rather than draining like a bar.
+    static const float COLUMN[14] = { 4, 7, 9, 11, 12, 13, 14, 13, 14, 12, 10, 8, 6, 3 };
+    const float level = 14.0f * std::clamp(alight, 0.0f, 1.0f);
+    const glm::vec4 root(1.0f, 0.86f, 0.30f, 1.0f);
+    const glm::vec4 tip(0.86f, 0.24f, 0.08f, 1.0f);
+
+    for (int i = 0; i < 14; ++i)
+    {
+        const float shown = std::min(COLUMN[i], level);
+        if (shown <= 0.0f) continue;
+        const float top = y + 14.0f - shown;
+        const float along = shown / COLUMN[i];
+        m_ui.gradient(x + i, top, 1.0f, shown, glm::mix(root, tip, along), root);
+    }
+}
+
+int Application::creativeInventoryTab()
+{
+    return INVENTORY_TAB;
+}
+
 void Application::renderInventoryScreen()
 {
     // Interface pixels, the same ones the HUD is drawn in, and the same
-    // ones the open-source client lays its containers out in. Every
-    // number below is one of its own: a panel 176 by 166, the player's
-    // storage at 8 across and 84 down, the hotbar at 142, the armour
-    // column at 8 and 8, the little crafting grid at 88 and 26 with its
-    // result at 144 and 36. Lining up with them is what makes a
-    // screenshot of this sit on top of a screenshot of that.
+    // ones the open-source client lays its containers out in.
     m_ui.setScale(static_cast<float>(guiScale()));
 
     const float w = m_ui.canvasWidth();
     const float h = m_ui.canvasHeight();
-    const bool creative = m_player.creative();
 
     m_slotBoxes.clear();
 
-    m_ui.quad(0, 0, w, h, glm::vec4(0.0f, 0.0f, 0.0f, 0.62f));
+    // The wash behind every screen the client draws over a world: a
+    // gradient from C0101010 at the top to D0101010 at the bottom, so
+    // the world and the HUD stay faintly there under the panel.
+    m_ui.gradient(0.0f, 0.0f, w, h,
+                  glm::vec4(0.063f, 0.063f, 0.063f, 0.753f),
+                  glm::vec4(0.063f, 0.063f, 0.063f, 0.816f));
 
-    // Creative item tabs show a palette; the inventory tab (and all of
-    // survival) shows the character, armour, crafting and storage.
-    const bool showPalette = creative && m_creativeTab != INVENTORY_TAB;
+    // Creative has a screen of its own for the player's own things.
+    // A container opened in creative still shows the container's own
+    // screen, as it does in Minecraft: the palette used to take over
+    // there too, so a creative player could open a chest and never
+    // see what was in it.
+    const bool container = m_chestOpen || m_crafterOpen || m_furnaceOpen ||
+                           m_inventory.craftSize() >= 3 || m_tradeOpen ||
+                           m_enchantOpen || m_brewOpen || m_anvilOpen;
 
-    // A chest's panel is a row taller than the rest, and the creative
-    // palette's is shorter: it has no storage rows under it, only the
-    // hotbar. Both are the client's own figures.
+    if (m_player.creative() && !container) renderCreativeScreen(w, h);
+    else renderContainerScreen(w, h);
+
+    finishInventoryScreen();
+    m_ui.setScale(1.0f);
+}
+
+void Application::renderContainerScreen(float w, float h)
+{
+    // Every number below is one of the client's own: a panel 176 by
+    // 166, the player's storage at 8 across and 84 down, the hotbar at
+    // 142, the armour column at 8 and 8, the little crafting grid at
+    // 88 and 26 with its result at 144 and 36. Lining up with them is
+    // what makes a screenshot of this sit on top of a screenshot of
+    // that.
+    // A chest's panel is a row taller than the rest.
     const float PANEL_W = 176.0f;
-    const float PANEL_H = showPalette ? 136.0f : (m_chestOpen ? 168.0f : 166.0f);
+    const float PANEL_H = m_chestOpen ? 168.0f : 166.0f;
 
-    const float tabHeight = creative ? 16.0f : 0.0f;
     const float panelX = std::floor((w - PANEL_W) * 0.5f);
-    float panelY = std::floor((h - PANEL_H) * 0.5f);
-    panelY = std::max(panelY, tabHeight + 2.0f);
+    const float panelY = std::floor((h - PANEL_H) * 0.5f);
 
-    // Where the player's own rows go, which is the same in every
-    // container the game has: a chest pushes them down a row, the
-    // palette has none at all.
     // A chest's own rows push the player's down, but not by a whole
     // row: the client works it out as 103 + (rows - 4) * 18, which for
     // the three rows a chest has comes to 85, and the hotbar to 143.
     const float storageY = panelY + (m_chestOpen ? 85.0f : 84.0f);
-    const float hotbarY = panelY + (showPalette ? 112.0f
-                                                : (m_chestOpen ? 143.0f : 142.0f));
+    const float hotbarY = panelY + (m_chestOpen ? 143.0f : 142.0f);
 
     // One slot, at the item's own top-left the way the client counts
     // them: the well is the eighteen-pixel box drawn round it.
@@ -375,35 +517,6 @@ void Application::renderInventoryScreen()
         slotBox(SlotBox::Kind::Slot, index, x, y);
     };
 
-    // ------------------------------------------------------------ tabs ---
-    if (creative)
-    {
-        const float tabWidth = std::min(20.0f, (PANEL_W - 4.0f) / TAB_COUNT);
-        for (int i = 0; i < TAB_COUNT; ++i)
-        {
-            const float tabX = panelX + 2.0f + i * tabWidth;
-            const float tabY = panelY - tabHeight;
-            const bool active = (i == m_creativeTab);
-
-            // The selected tab is raised and the same colour as the
-            // panel, so it joins onto it; the rest sit back and darker.
-            if (active)
-                bevel(tabX, tabY, tabWidth - 1.0f, tabHeight + 3.0f,
-                      GUI_PANEL, GUI_PANEL_LIGHT, GUI_PANEL_DARK, 1.0f);
-            else
-                bevel(tabX, tabY + 2.0f, tabWidth - 1.0f, tabHeight,
-                      glm::vec4(0.569f, 0.569f, 0.569f, 1.0f),
-                      glm::vec4(0.69f, 0.69f, 0.69f, 1.0f), GUI_PANEL_DARK, 1.0f);
-
-            drawItem(tabX + 2.0f, tabY + (active ? 1.0f : 3.0f), tabWidth - 5.0f,
-                     CREATIVE_TABS[i].icon, 0,
-                     active ? glm::vec4(1.0f) : glm::vec4(0.72f, 0.72f, 0.72f, 0.9f));
-
-            m_slotBoxes.push_back({ SlotBox::Kind::Tab, i, tabX, tabY, tabHeight + 3.0f,
-                                    tabWidth });
-        }
-    }
-
     guiPanel(panelX, panelY, PANEL_W, PANEL_H);
 
     // Dark text with no shadow, at the client's own two corners: the
@@ -418,7 +531,7 @@ void Application::renderInventoryScreen()
     // when one is opened in the world and not when a dev screen asks
     // for the same grid.
     const bool bench = m_inventory.craftSize() >= 3;
-    const bool plainInventory = !creative && !m_chestOpen && !m_crafterOpen &&
+    const bool plainInventory = !m_chestOpen && !m_crafterOpen &&
                                 !m_furnaceOpen && !bench && !m_tradeOpen &&
                                 !m_enchantOpen && !m_brewOpen && !m_anvilOpen;
 
@@ -428,15 +541,14 @@ void Application::renderInventoryScreen()
     // sit in the corner at 8.
     if (!plainInventory)
     {
-        const char* title = creative ? CREATIVE_TABS[m_creativeTab].name
-                                     : (m_chestOpen ? "Chest"
-                                       : (m_crafterOpen ? "Crafter"
-                                       : (m_furnaceOpen ? "Furnace"
-                                       : (m_brewOpen ? "Brewing"
-                                       : (m_anvilOpen ? "Repair & Name"
-                                       : (m_enchantOpen ? "Enchant"
-                                       : (m_tradeOpen ? Trading::name(m_tradeWith)
-                                       : (bench ? "Crafting" : "Inventory"))))))));
+        const char* title = m_chestOpen ? "Chest"
+                          : m_crafterOpen ? "Crafter"
+                          : m_furnaceOpen ? "Furnace"
+                          : m_brewOpen ? "Brewing"
+                          : m_anvilOpen ? "Repair & Name"
+                          : m_enchantOpen ? "Enchant"
+                          : m_tradeOpen ? Trading::name(m_tradeWith)
+                          : bench ? "Crafting" : "Inventory";
 
         const float titleX = (m_furnaceOpen || m_brewOpen)
                                  ? panelX + PANEL_W * 0.5f
@@ -446,9 +558,11 @@ void Application::renderInventoryScreen()
         m_ui.text(title, titleX, panelY + (m_enchantOpen ? 5.0f : 6.0f), 1.0f, GUI_TEXT);
     }
 
-    // The word over the player's own rows. An anvil is the one screen
-    // the client leaves it off, so that its price has somewhere to go.
-    if (!showPalette && !m_anvilOpen)
+    // The word over the player's own rows. The client leaves it off two
+    // screens: an anvil's, so that its price has somewhere to go, and the
+    // player's own, where it was drawn under the character and the tail
+    // of its y poked out below the recess as a stray dash.
+    if (!m_anvilOpen && !plainInventory)
         m_ui.text("Inventory", panelX + 8.0f, panelY + PANEL_H - 94.0f, 1.0f, GUI_TEXT);
 
     // A line of their own for the two screens that have something to
@@ -462,7 +576,7 @@ void Application::renderInventoryScreen()
     // --------------------------------------------- the open chest ---
     // Three rows of nine, eighteen down from the top of the panel,
     // directly above the player's own rows.
-    if (m_chestOpen && !showPalette)
+    if (m_chestOpen)
     {
         for (int row = 0; row < 3; ++row)
             for (int column = 0; column < PALETTE_COLUMNS; ++column)
@@ -474,7 +588,7 @@ void Application::renderInventoryScreen()
     // Three by three where a workbench puts its grid. There is no
     // result slot: a crafter is worked by a pulse rather than by hand,
     // and a slot that only ever looked back at you would be a lie.
-    if (m_crafterOpen && !showPalette)
+    if (m_crafterOpen)
     {
         for (int row = 0; row < 3; ++row)
             for (int column = 0; column < 3; ++column)
@@ -485,7 +599,7 @@ void Application::renderInventoryScreen()
     }
 
     // ------------------------------- armour, body preview, crafting ---
-    if (!showPalette && !m_chestOpen && !m_crafterOpen)
+    if (!m_chestOpen && !m_crafterOpen)
     {
         // The armour column and the character are the player's own
         // screen and nothing else: the client draws neither on a
@@ -525,11 +639,10 @@ void Application::renderInventoryScreen()
         // on 75.
         if (!otherBusiness)
         {
+            // Thirty to the block, which is the client's scale for this
+            // figure, less the sixteenth the player model is shrunk by.
             guiWell(panelX + 25.0f, panelY + 7.0f, 52.0f, 72.0f);
-            const float unit = 51.0f / 32.0f;   // the doll is 32 skin pixels tall
-            const float dollWidth = (activeSkin().armWidth() * 2.0f + 8.0f) * unit;
-            drawPlayerDoll(activeSkin(), panelX + 51.0f - dollWidth * 0.5f,
-                           panelY + 75.0f - 51.0f, unit);
+            drawPlayerFigure(activeSkin(), panelX + 51.0f, panelY + 75.0f, 30.0f * 0.9375f);
         }
 
         // Trading: the villager's deals, one to a row. Each shows what
@@ -676,14 +789,6 @@ void Application::renderInventoryScreen()
 
             // What the bottle under the cursor actually holds, since
             // every potion is the same item id with a different number.
-            // Above the panel rather than on it. Minecraft says what
-            // is in a bottle in a tooltip and there is no tooltip
-            // here, and every clear strip inside a brewing stand's
-            // panel is shorter than the longest name that goes in it.
-            const ItemStack& first = m_inventory.slot(Inventory::BREW_BOTTLE_FIRST);
-            if (first.id == Items::Potion)
-                m_ui.textWithShadow(Brewing::name(Brewing::fromDamage(first.damage)),
-                                    panelX + 8.0f, panelY - 12.0f, 1.0f, TEXT_COLOR);
         }
         else
 
@@ -764,27 +869,11 @@ void Application::renderInventoryScreen()
 
             // The fire between them, burning down as the fuel goes:
             // fourteen square at 56 and 36.
-            const float flameX = panelX + 57.0f;
-            const float flameY = panelY + 36.0f;
-            const float flameSize = 14.0f;
-            const float alight = gauge.burnFraction();
+            drawFurnaceFlame(panelX + 57.0f, panelY + 36.0f, gauge.burnFraction());
 
-            m_ui.quad(flameX, flameY, flameSize, flameSize, glm::vec4(0.0f, 0.0f, 0.0f, 0.25f));
-            if (alight > 0.0f)
-                m_ui.quad(flameX, flameY + flameSize * (1.0f - alight),
-                          flameSize, flameSize * alight,
-                          glm::vec4(1.0f, 0.65f, 0.15f, 1.0f));
-
-            // The arrow, filling as the item cooks: twenty-four by
+            // The arrow, filling white as the item cooks: twenty-four by
             // sixteen at 79 and 34.
-            const float arrowX = panelX + 79.0f;
-            const float arrowY = panelY + 38.0f;
-            const float arrowWidth = 24.0f;
-            const float arrowHeight = 8.0f;
-
-            m_ui.quad(arrowX, arrowY, arrowWidth, arrowHeight, glm::vec4(0.0f, 0.0f, 0.0f, 0.25f));
-            m_ui.quad(arrowX, arrowY, arrowWidth * gauge.cookFraction(), arrowHeight,
-                      glm::vec4(0.92f, 0.92f, 0.92f, 1.0f));
+            drawCraftArrow(panelX + 79.0f, panelY + 34.0f, 24.0f, 16.0f, gauge.cookFraction());
 
             drawSlot(Inventory::FURNACE_OUTPUT, panelX + 116.0f, panelY + 35.0f);
         }
@@ -807,7 +896,11 @@ void Application::renderInventoryScreen()
             const float resultX = panelX + (bench ? 124.0f : 144.0f);
             const float resultY = panelY + (bench ? 35.0f : 36.0f);
 
-            m_ui.text("->", resultX - 20.0f, resultY + 5.0f, 1.0f, GUI_TEXT);
+            // The arrow between the grid and the result: 22 by 15 at 90
+            // and 35 on a workbench, and squeezed into the narrower gap
+            // the little grid leaves.
+            if (bench) drawCraftArrow(panelX + 90.0f, panelY + 35.0f, 22.0f, 15.0f);
+            else drawCraftArrow(panelX + 126.0f, panelY + 37.0f, 15.0f, 13.0f);
             drawSlot(Inventory::CRAFT_RESULT, resultX, resultY);
 
             // "Crafting" sits over the little grid rather than along
@@ -818,66 +911,301 @@ void Application::renderInventoryScreen()
     }
 
     // ------------------------------------------------------- main grid ---
-    const StackId* paletteItems = nullptr;
-    int paletteCount = 0;
-    if (showPalette) tabContents(m_creativeTab, paletteItems, paletteCount);
-
-    // A tab with more in it than the grid holds scrolls on the wheel.
-    // Without this the tools, and most of Everything, were simply not
-    // reachable: the grid drew the first forty-five and stopped.
-    const int paletteRows = showPalette
-        ? (paletteCount + PALETTE_COLUMNS - 1) / PALETTE_COLUMNS : 0;
-    const int maxRow = std::max(0, paletteRows - PALETTE_ROWS);
-    m_paletteRow = std::clamp(m_paletteRow, 0, maxRow);
-
-    const int gridRows = showPalette ? PALETTE_ROWS : 3;
-
-    for (int row = 0; row < gridRows; ++row)
-    {
+    // Storage runs 9..35, directly above the hotbar.
+    for (int row = 0; row < 3; ++row)
         for (int column = 0; column < PALETTE_COLUMNS; ++column)
-        {
-            const float x = panelX + 8.0f + column * PITCH;
-            const float y = showPalette ? panelY + 18.0f + row * PITCH
-                                        : storageY + row * PITCH;
+            drawSlot(Inventory::HOTBAR_SLOTS + row * PALETTE_COLUMNS + column,
+                     panelX + 8.0f + column * PITCH, storageY + row * PITCH);
 
-            if (showPalette)
+    // --------------------------------- hotbar, always the bottom row ---
+    // No mark on the selected one: a container's copy of the hotbar is
+    // nine more slots, and the client does not single one out.
+    for (int i = 0; i < Inventory::HOTBAR_SLOTS; ++i)
+        drawSlot(i, panelX + 8.0f + i * PITCH, hotbarY);
+
+}
+
+void Application::renderCreativeScreen(float w, float h)
+{
+    // The client's creative screen, at its own numbers: a panel 195 by
+    // 136, the palette nine by five at 9 and 18, the hotbar at 9 and
+    // 112, the scrollbar's track at 175 and 18, and the tabs 28 by 32,
+    // a row hanging behind the top edge and a row behind the bottom.
+    const float PANEL_W = 195.0f;
+    const float PANEL_H = 136.0f;
+
+    const float panelX = std::floor((w - PANEL_W) * 0.5f);
+    const float panelY = std::floor((h - PANEL_H) * 0.5f);
+
+    const bool inventoryTab = m_creativeTab == INVENTORY_TAB;
+
+    auto well = [this](float x, float y) {
+        guiWell(x - 1.0f, y - 1.0f, PITCH, PITCH);
+    };
+    auto drawSlot = [&](int index, float x, float y) {
+        well(x, y);
+        const ItemStack& stack = m_inventory.slot(index);
+        drawItem(x, y, SLOT, stack.id, stack.count, glm::vec4(1.0f), stack.damage);
+        m_slotBoxes.push_back({ SlotBox::Kind::Slot, index, x - 1.0f, y - 1.0f, PITCH });
+    };
+
+    // ------------------------------------------------------------ tabs ---
+    // Where each tab goes. The first five run along the top the way the
+    // client's do, and Everything takes the far corner of the top row
+    // where its search tab sits; tools and armour go along the bottom,
+    // and the player's own things take the far corner of that, which is
+    // where the client keeps its survival-inventory tab.
+    struct TabPlace { bool top; int column; };
+    const TabPlace PLACES[TAB_COUNT] = {
+        { true, 0 }, { true, 1 }, { true, 2 }, { true, 3 }, { true, 4 },
+        { false, 0 }, { false, 1 }, { true, 5 }, { false, 5 },
+    };
+
+    const glm::vec4 TAB_BACK(0.62f, 0.62f, 0.62f, 1.0f);
+    const glm::vec4 TAB_BACK_LIGHT(0.80f, 0.80f, 0.80f, 1.0f);
+    const glm::vec4 OUTLINE(0.0f, 0.0f, 0.0f, 0.85f);
+
+    auto drawTab = [&](int i) {
+        const TabPlace place = PLACES[i];
+        const bool open = i == m_creativeTab;
+
+        // Column five is pinned to the far edge; the rest step 29 along,
+        // which is 28 of tab and a pixel of gap.
+        const float tx = panelX + (place.column == 5 ? PANEL_W - 28.0f
+                                                     : place.column * 29.0f);
+        const float ty = place.top ? panelY - 28.0f : panelY + PANEL_H - 4.0f;
+
+        // An outline on the three sides that stand clear of the panel.
+        m_ui.quad(tx - 1.0f, place.top ? ty - 1.0f : ty, 30.0f, 33.0f, OUTLINE);
+
+        if (open)
+        {
+            bevel(tx, ty, 28.0f, 32.0f, GUI_PANEL, GUI_PANEL_LIGHT, GUI_PANEL_DARK, 2.0f);
+
+            // The open tab runs on into the panel with no seam: the edge
+            // it shares with the panel is painted over in the panel's own
+            // colour, border and all.
+            if (place.top)
+                m_ui.quad(tx + 2.0f, panelY - 1.0f, 24.0f, 6.0f, GUI_PANEL);
+            else
+                m_ui.quad(tx + 2.0f, panelY + PANEL_H - 5.0f, 24.0f, 6.0f, GUI_PANEL);
+        }
+        else
+        {
+            bevel(tx, ty, 28.0f, 32.0f, TAB_BACK, TAB_BACK_LIGHT, GUI_PANEL_DARK, 2.0f);
+        }
+
+        // The icon sits six in and nine down on the top row, seven down
+        // on the bottom, so it is centred on the part of the tab you see.
+        drawItem(tx + 6.0f, ty + (place.top ? 9.0f : 7.0f), SLOT,
+                 CREATIVE_TABS[i].icon, 0, glm::vec4(1.0f));
+
+        m_slotBoxes.push_back({ SlotBox::Kind::Tab, i, tx, ty, 32.0f, 28.0f });
+    };
+
+    // Every tab but the open one goes behind the panel.
+    for (int i = 0; i < TAB_COUNT; ++i)
+        if (i != m_creativeTab) drawTab(i);
+
+    guiPanel(panelX, panelY, PANEL_W, PANEL_H);
+
+    if (!inventoryTab)
+    {
+        // ------------------------------------------------- the palette ---
+        // The tab's name in the corner, where the client writes it.
+        m_ui.text(CREATIVE_TABS[m_creativeTab].name, panelX + 8.0f, panelY + 6.0f,
+                  1.0f, GUI_TEXT);
+
+        const StackId* items = nullptr;
+        int count = 0;
+        tabContents(m_creativeTab, items, count);
+
+        // A tab with more in it than the grid holds scrolls on the wheel.
+        const int rows = (count + PALETTE_COLUMNS - 1) / PALETTE_COLUMNS;
+        const int maxRow = std::max(0, rows - PALETTE_ROWS);
+        m_paletteRow = std::clamp(m_paletteRow, 0, maxRow);
+
+        for (int row = 0; row < PALETTE_ROWS; ++row)
+            for (int column = 0; column < PALETTE_COLUMNS; ++column)
             {
+                const float x = panelX + 9.0f + column * PITCH;
+                const float y = panelY + 18.0f + row * PITCH;
                 well(x, y);
+
                 const int cell = (row + m_paletteRow) * PALETTE_COLUMNS + column;
-                if (cell >= paletteCount) continue;
-                drawItem(x, y, SLOT, paletteItems[cell], 0, glm::vec4(1.0f));
-                m_slotBoxes.push_back({ SlotBox::Kind::Palette, paletteItems[cell],
+                if (cell >= count) continue;
+                drawItem(x, y, SLOT, items[cell], 0, glm::vec4(1.0f));
+                m_slotBoxes.push_back({ SlotBox::Kind::Palette, items[cell],
                                         x - 1.0f, y - 1.0f, PITCH });
             }
+
+        // The scrollbar: a sunken track at 175 and 18, a hundred and
+        // twelve tall, with the thumb twelve by fifteen running down it.
+        // Greyed out when there is nothing to scroll to, as the client's
+        // is.
+        const float trackX = panelX + 174.0f;
+        const float trackY = panelY + 17.0f;
+        guiWell(trackX, trackY, 14.0f, 112.0f);
+
+        // Dragged, the thumb follows the cursor down the track and the
+        // palette follows the thumb, as the client's does; the wheel
+        // still works as well. The press that starts it is the track's
+        // own slot box below.
+        if (m_draggingScroll && !m_input.isMouseButtonDown(SDL_BUTTON_LEFT))
+            m_draggingScroll = false;
+        if (m_draggingScroll && maxRow > 0)
+        {
+            const float mouseY = static_cast<float>(m_input.mouseY()) / m_ui.scale();
+            const float fraction = std::clamp((mouseY - (panelY + 18.0f) - 7.5f) / (112.0f - 17.0f),
+                                              0.0f, 1.0f);
+            m_paletteRow = static_cast<int>(std::lround(fraction * maxRow));
+        }
+        if (maxRow > 0)
+            m_slotBoxes.push_back({ SlotBox::Kind::Scroll, 0, trackX, trackY, 112.0f, 14.0f });
+
+        const float along = maxRow > 0 ? static_cast<float>(m_paletteRow) / maxRow : 0.0f;
+        const float thumbY = panelY + 18.0f + (112.0f - 17.0f) * along;
+        if (maxRow > 0)
+            bevel(trackX + 1.0f, thumbY, 12.0f, 15.0f,
+                  GUI_PANEL, GUI_PANEL_LIGHT, GUI_PANEL_DARK, 1.0f);
+        else
+            bevel(trackX + 1.0f, thumbY, 12.0f, 15.0f,
+                  TAB_BACK, TAB_BACK_LIGHT, GUI_PANEL_DARK, 1.0f);
+    }
+    else
+    {
+        // ------------------------------------ the player's own things ---
+        // The client's own layout for this tab, which is not the
+        // survival screen's: the armour in two pairs at 9 and 63, six
+        // and thirty-three down, the character standing between them,
+        // the storage at 54, and no crafting grid at all.
+        const float ARMOUR_X[4] = { 9.0f, 9.0f, 63.0f, 63.0f };
+        const float ARMOUR_Y[4] = { 6.0f, 33.0f, 6.0f, 33.0f };
+
+        for (int i = 0; i < Inventory::ARMOR_SLOTS; ++i)
+        {
+            const float x = panelX + ARMOUR_X[i];
+            const float y = panelY + ARMOUR_Y[i];
+            const int index = Inventory::ARMOR_FIRST + i;
+
+            well(x, y);
+            const ItemStack& stack = m_inventory.slot(index);
+            if (stack.empty())
+                m_ui.texturedQuad(m_gui.texture(ARMOR_GHOSTS[i]), x, y, SLOT, SLOT,
+                                  0.0f, 0.0f, 1.0f, 1.0f, glm::vec4(1.0f));
             else
+                drawItem(x, y, SLOT, stack.id, stack.count, glm::vec4(1.0f), stack.damage);
+            m_slotBoxes.push_back({ SlotBox::Kind::Slot, index, x - 1.0f, y - 1.0f, PITCH });
+        }
+
+        // The character, standing on 45 and centred on 43, twenty to a
+        // block -- two thirds the size it is on the survival screen.
+        guiWell(panelX + 26.0f, panelY + 5.0f, 36.0f, 46.0f);
+        drawPlayerFigure(activeSkin(), panelX + 44.0f, panelY + 45.0f, 20.0f * 0.9375f);
+
+        for (int row = 0; row < 3; ++row)
+            for (int column = 0; column < PALETTE_COLUMNS; ++column)
+                drawSlot(Inventory::HOTBAR_SLOTS + row * PALETTE_COLUMNS + column,
+                         panelX + 9.0f + column * PITCH, panelY + 54.0f + row * PITCH);
+
+        // The bin, at 173 and 112: whatever is dropped on it is gone.
+        const float binX = panelX + 173.0f;
+        const float binY = panelY + 112.0f;
+        well(binX, binY);
+        m_ui.text("x", binX + 6.0f, binY + 4.0f, 1.0f, glm::vec4(0.55f, 0.20f, 0.20f, 1.0f));
+        m_slotBoxes.push_back({ SlotBox::Kind::Destroy, 0, binX - 1.0f, binY - 1.0f, PITCH });
+    }
+
+    // The hotbar, at 9 and 112 whichever tab is open.
+    for (int i = 0; i < Inventory::HOTBAR_SLOTS; ++i)
+        drawSlot(i, panelX + 9.0f + i * PITCH, panelY + 112.0f);
+
+    // And the open tab last, in front of the panel it belongs to.
+    drawTab(m_creativeTab);
+}
+
+void Application::finishInventoryScreen()
+{
+    const float mouseX = static_cast<float>(m_input.mouseX()) / m_ui.scale();
+    const float mouseY = static_cast<float>(m_input.mouseY()) / m_ui.scale();
+
+    // The slot under the cursor washes white, empty or not, which is
+    // the client's: 80FFFFFF over the sixteen pixels the item sits in.
+    std::string tip;
+    if (const SlotBox* box = slotBoxAt(m_input.mouseX(), m_input.mouseY()))
+    {
+        const glm::vec4 wash(1.0f, 1.0f, 1.0f, 0.5f);
+        auto highlight = [&]() { m_ui.quad(box->x + 1.0f, box->y + 1.0f, SLOT, SLOT, wash); };
+
+        switch (box->kind)
+        {
+            case SlotBox::Kind::Slot:
+            case SlotBox::Kind::AnvilTake:
             {
-                // Storage runs 9..35, directly above the hotbar.
-                drawSlot(Inventory::HOTBAR_SLOTS + row * PALETTE_COLUMNS + column, x, y);
+                highlight();
+                const ItemStack& stack = m_inventory.slot(box->index);
+                if (!stack.empty()) tip = stackName(stack);
+                break;
             }
+            case SlotBox::Kind::Palette:
+                highlight();
+                tip = displayName(static_cast<StackId>(box->index));
+                break;
+            case SlotBox::Kind::Scroll:
+            m_draggingScroll = true;
+            break;
+
+        case SlotBox::Kind::Destroy:
+                highlight();
+                tip = "Destroy Item";
+                break;
+            case SlotBox::Kind::Tab:
+                tip = CREATIVE_TABS[box->index].name;
+                break;
+            default:
+                break;
         }
     }
 
-    // --------------------------------- hotbar, always the bottom row ---
-    for (int i = 0; i < Inventory::HOTBAR_SLOTS; ++i)
-    {
-        const float x = panelX + 8.0f + i * PITCH;
-
-        if (i == m_inventory.selectedSlot())
-            m_ui.quad(x - 2.0f, hotbarY - 2.0f, PITCH + 2.0f, PITCH + 2.0f, SELECTED_COLOR);
-
-        drawSlot(i, x, hotbarY);
-    }
-
-    // ------------------------- whatever is on the cursor, drawn last ---
+    // Whatever is on the cursor, drawn last, centred on it.
     const ItemStack& held = m_inventory.cursor();
     if (!held.empty())
-    {
-        const float x = static_cast<float>(m_input.mouseX()) / m_ui.scale() - SLOT * 0.5f;
-        const float y = static_cast<float>(m_input.mouseY()) / m_ui.scale() - SLOT * 0.5f;
-        drawItem(x, y, SLOT, held.id, held.count, glm::vec4(1.0f), held.damage);
-    }
+        drawItem(mouseX - SLOT * 0.5f, mouseY - SLOT * 0.5f, SLOT,
+                 held.id, held.count, glm::vec4(1.0f), held.damage);
 
-    m_ui.setScale(1.0f);
+    // The client names what is under the cursor only while the cursor
+    // is empty: with a stack in hand the tooltip would sit on top of it.
+    if (!tip.empty() && held.empty()) drawTooltip(tip, mouseX, mouseY);
+}
+
+void Application::drawTooltip(const std::string& text, float mouseX, float mouseY)
+{
+    const float textWidth = UIRenderer::textWidth(text, 1.0f);
+    const float textHeight = 8.0f;
+
+    float x = mouseX + 12.0f;
+    float y = mouseY - 12.0f;
+    if (x + textWidth > m_ui.canvasWidth()) x -= 28.0f + textWidth;
+    if (y + textHeight + 6.0f > m_ui.canvasHeight()) y = m_ui.canvasHeight() - textHeight - 6.0f;
+
+    // F0100010 for the body, with its corners nicked off; and a border
+    // that fades from 505000FF at the top to 5028007F at the bottom.
+    const glm::vec4 body(0.063f, 0.0f, 0.063f, 0.94f);
+    const glm::vec4 rimTop(0.314f, 0.0f, 1.0f, 0.314f);
+    const glm::vec4 rimBottom(0.157f, 0.0f, 0.498f, 0.314f);
+
+    m_ui.quad(x - 3.0f, y - 4.0f, textWidth + 6.0f, 1.0f, body);
+    m_ui.quad(x - 3.0f, y + textHeight + 3.0f, textWidth + 6.0f, 1.0f, body);
+    m_ui.quad(x - 3.0f, y - 3.0f, textWidth + 6.0f, textHeight + 6.0f, body);
+    m_ui.quad(x - 4.0f, y - 3.0f, 1.0f, textHeight + 6.0f, body);
+    m_ui.quad(x + textWidth + 3.0f, y - 3.0f, 1.0f, textHeight + 6.0f, body);
+
+    m_ui.gradient(x - 3.0f, y - 2.0f, 1.0f, textHeight + 4.0f, rimTop, rimBottom);
+    m_ui.gradient(x + textWidth + 2.0f, y - 2.0f, 1.0f, textHeight + 4.0f, rimTop, rimBottom);
+    m_ui.quad(x - 3.0f, y - 3.0f, textWidth + 6.0f, 1.0f, rimTop);
+    m_ui.quad(x - 3.0f, y + textHeight + 2.0f, textWidth + 6.0f, 1.0f, rimBottom);
+
+    m_ui.textWithShadow(text, x, y, 1.0f, glm::vec4(1.0f));
 }
 
 const Application::SlotBox* Application::slotBoxAt(int mouseX, int mouseY) const
@@ -931,6 +1259,15 @@ void Application::handleInventoryClick(int mouseX, int mouseY, bool rightButton,
             takeAnvilResult();
             break;
 
+        case SlotBox::Kind::Destroy:
+            // Whatever is in hand is gone, which is the bin's whole job.
+            if (!m_inventory.cursor().empty())
+            {
+                m_inventory.cursor() = ItemStack{};
+                m_audio.play(Sound::Click, 0.35f);
+            }
+            break;
+
         case SlotBox::Kind::Slot:
             if (shiftHeld) m_inventory.quickMove(box->index);
             else if (rightButton) m_inventory.rightClick(box->index);
@@ -959,6 +1296,7 @@ void Application::closeInventory()
     returnCursorToWorld();
     m_inventoryOpen = false;
     m_benchOpen = false;
+    m_draggingScroll = false;
     m_inventory.setCraftSize(2);
 }
 

@@ -366,3 +366,25 @@ void Inventory::takeFromPalette(BlockId id)
     m_cursor.id = id;
     m_cursor.count = maxStackOf(m_cursor.id);
 }
+
+bool Inventory::belongsIn(int index, StackId id)
+{
+    if (!isArmourSlot(index)) return true;
+    return Armour::slotFor(id) == index - ARMOR_FIRST;
+}
+
+std::vector<ItemStack> Inventory::evictMisfitArmour()
+{
+    std::vector<ItemStack> overflow;
+    for (int i = ARMOR_FIRST; i < ARMOR_FIRST + ARMOR_SLOTS; ++i)
+    {
+        ItemStack& worn = m_slots[i];
+        if (worn.empty() || belongsIn(i, worn.id)) continue;
+
+        ItemStack moving = worn;
+        worn.clear();
+        moving.count = addStack(moving);
+        if (moving.count > 0) overflow.push_back(moving);
+    }
+    return overflow;
+}

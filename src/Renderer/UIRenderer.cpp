@@ -172,6 +172,34 @@ void UIRenderer::quad(float x, float y, float w, float h, const glm::vec4& color
     pushQuad(x, y, w, h, 0.0f, 0.0f, 1.0f, 1.0f, color);
 }
 
+void UIRenderer::gradient(float x, float y, float w, float h,
+                          const glm::vec4& top, const glm::vec4& bottom)
+{
+    useTexture(m_white);
+
+    const float x0 = x * m_scale, y0 = y * m_scale;
+    const float x1 = (x + w) * m_scale, y1 = (y + h) * m_scale;
+    const struct { float x, y; const glm::vec4* c; } corners[6] = {
+        { x0, y0, &top }, { x0, y1, &bottom }, { x1, y1, &bottom },
+        { x0, y0, &top }, { x1, y1, &bottom }, { x1, y0, &top },
+    };
+
+    for (const auto& c : corners)
+    {
+        m_vertices.push_back(c.x);
+        m_vertices.push_back(c.y);
+        m_vertices.push_back(0.0f);
+        m_vertices.push_back(0.0f);
+        m_vertices.push_back(c.c->r);
+        m_vertices.push_back(c.c->g);
+        m_vertices.push_back(c.c->b);
+        m_vertices.push_back(c.c->a);
+        m_vertices.push_back(0.0f);
+        m_vertices.push_back(0.0f);
+        m_vertices.push_back(0.0f);
+    }
+}
+
 void UIRenderer::texturedQuad(unsigned int texture, float x, float y, float w, float h,
                               float u0, float v0, float u1, float v1, const glm::vec4& color)
 {
@@ -256,4 +284,25 @@ float UIRenderer::textWidth(const std::string& value, float scale)
     // The trailing clear column after the last glyph is not part of
     // the text: counted in, every centred line sits half a pixel left.
     return width - scale;
+}
+
+void UIRenderer::texturedTriangle(unsigned int texture, const glm::vec2 corner[3],
+                                  const glm::vec2 uv[3], const glm::vec4& color)
+{
+    useTexture(texture);
+
+    for (int k = 0; k < 3; ++k)
+    {
+        m_vertices.push_back(corner[k].x * m_scale);
+        m_vertices.push_back(corner[k].y * m_scale);
+        m_vertices.push_back(uv[k].x);
+        m_vertices.push_back(uv[k].y);
+        m_vertices.push_back(color.r);
+        m_vertices.push_back(color.g);
+        m_vertices.push_back(color.b);
+        m_vertices.push_back(color.a);
+        m_vertices.push_back(0.0f);
+        m_vertices.push_back(0.0f);
+        m_vertices.push_back(0.0f);
+    }
 }

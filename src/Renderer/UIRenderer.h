@@ -60,6 +60,12 @@ public:
     void setInvert(bool on);
 
     void quad(float x, float y, float w, float h, const glm::vec4& color);
+
+    // A rectangle that shades from one colour at the top to another at
+    // the bottom. Minecraft draws the dark wash behind every screen and
+    // the border of every tooltip this way.
+    void gradient(float x, float y, float w, float h,
+                  const glm::vec4& top, const glm::vec4& bottom);
     void texturedQuad(unsigned int texture, float x, float y, float w, float h,
                       float u0, float v0, float u1, float v1, const glm::vec4& color);
 
@@ -79,6 +85,12 @@ public:
     void texturedShape(unsigned int texture, const glm::vec2 corner[4],
                        const glm::vec2 uv[4], const glm::vec4& color,
                        const glm::vec3& light = glm::vec3(0.0f));
+
+    // One triangle, for a model flattened onto the interface a triangle
+    // at a time -- the figure in the inventory, which turns to follow the
+    // cursor and so is not made of rectangles once it is on screen.
+    void texturedTriangle(unsigned int texture, const glm::vec2 corner[3],
+                          const glm::vec2 uv[3], const glm::vec4& color);
 
     void text(const std::string& value, float x, float y, float scale, const glm::vec4& color);
     void textWithShadow(const std::string& value, float x, float y, float scale, const glm::vec4& color);

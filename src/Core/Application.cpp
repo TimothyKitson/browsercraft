@@ -763,6 +763,13 @@ void Application::loadLevel()
             m_inventory.slot(static_cast<int>(i)).enchantments =
                 i < state.enchantments.size() ? state.enchantments[i] : 0u;
         }
+
+        // Saves made before the stash below kept to the pack could have
+        // put a tool from the crafting grid into an armour slot. It goes
+        // back in the pack, or on the ground at the player's feet if the
+        // pack is full.
+        for (const ItemStack& spilled : m_inventory.evictMisfitArmour())
+            m_drops.spawnStack(m_player.position + glm::vec3(0.0f, 0.5f, 0.0f), spilled);
     }
     else
     {
@@ -839,6 +846,11 @@ void Application::saveLevel()
     // used to lose whatever was sitting in them. They are tucked into
     // empty slots of the snapshot instead, which leaves the screen the
     // player is looking at exactly as it was.
+    //
+    // Into a slot that may hold it, though: the snapshot runs on into
+    // the four armour slots, and with the pack full the first empty
+    // entry was the helmet -- which is how a pickaxe left on the
+    // enchanting table came back on the player's head.
     auto stash = [&](int slot) {
         const ItemStack& held = m_inventory.slot(slot);
         if (held.empty()) return;
@@ -847,6 +859,7 @@ void Application::saveLevel()
         {
             const size_t index = static_cast<size_t>(&entry - state.inventory.data());
             if (entry.second != 0) continue;
+            if (!Inventory::belongsIn(static_cast<int>(index), held.id)) continue;
 
             entry.first = held.id;
             entry.second = static_cast<uint16_t>(std::max(0, held.count));
@@ -1812,6 +1825,7 @@ bool Application::frame()
             m_startupScreen == "stairs" || m_startupScreen == "fence" ||
             m_startupScreen == "door" || m_startupScreen == "hand" ||
             m_startupScreen == "handempty" || m_startupScreen == "handitem" ||
+            m_startupScreen == "creativeinv" ||
             m_startupScreen == "xp" ||
             m_startupScreen == "shelf" || m_startupScreen == "enchant" ||
             m_startupScreen == "enchantblock" || m_startupScreen == "villager" ||
@@ -4083,10 +4097,10 @@ bool Application::frame()
             // And one of the creative palette wants the player in
             // creative, whatever the saved world was last left in:
             // without it the shot came back as the survival panel.
-            if (m_startupScreen == "creative")
+            if (m_startupScreen == "creative" || m_startupScreen == "creativeinv")
             {
                 m_player.mode = GameMode::Creative;
-                m_creativeTab = 0;
+                if (m_startupScreen == "creativeinv") m_creativeTab = creativeInventoryTab();
             }
         }
         else if (m_startupScreen == "pause") m_screen = Screen::Paused;
@@ -8524,6 +8538,21 @@ void Application::render()
     if (inGame() && !m_hudHidden) renderNameplates();
     if (inGame() && m_signOpen) renderSignEditor();
 
+    // Minecraft draws the HUD every frame -- the debug screen with it --
+    // and then draws whatever screen is open over the top, behind a dark
+    // wash. So the hotbar and F3 are under the inventory and the pause
+    // menu rather than instead of them or on top of them. On top was
+    // what wrote the debug lines straight across the middle of every
+    // panel.
+    const bool inWorld = m_screen == Screen::Playing || m_screen == Screen::Paused ||
+                         m_screen == Screen::Dead;
+    if (inWorld && !m_hudHidden)
+    {
+        renderHud();
+        renderChat();
+    }
+    if (inWorld && m_showDebug && m_world) renderDebugOverlay();
+
     switch (m_screen)
     {
         case Screen::Title:        renderTitleScreen(); break;
@@ -8533,23 +8562,15 @@ void Application::render()
         case Screen::Controls:     renderControlsScreen(); break;
         case Screen::NameEntry:    renderNameEntryScreen(); break;
         case Screen::Playing:
-            // The inventory replaces the HUD rather than covering it --
-            // a crosshair and a second hotbar drawn over the panel just
-            // looked like a bug.
             if (m_inventoryOpen) renderInventoryScreen();
-            else if (!m_hudHidden) { renderHud(); renderChat(); }
             break;
         case Screen::Paused:
-            renderHud();
             renderPauseMenu();
             break;
         case Screen::Dead:
-            renderHud();
             renderDeathScreen();
             break;
     }
-
-    if (m_showDebug && m_world) renderDebugOverlay();
 
     m_ui.end();
 }

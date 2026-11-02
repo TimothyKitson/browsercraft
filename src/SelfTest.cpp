@@ -11515,6 +11515,56 @@ namespace
               "and it is its own light, so the ring can be seen from the island");
     }
 
+    void testArmourSlotsHoldArmour()
+    {
+        section("the armour slots hold armour and nothing else");
+
+        const int helmet = Inventory::ARMOR_FIRST + Armour::slotFor(Items::DiamondHelmet);
+        const int chest = Inventory::ARMOR_FIRST + Armour::slotFor(Items::IronChestplate);
+
+        check(Inventory::belongsIn(helmet, Items::DiamondHelmet), "a helmet goes on the head");
+        check(!Inventory::belongsIn(helmet, Items::IronChestplate), "a chestplate does not");
+        check(!Inventory::belongsIn(helmet, Items::DiamondPickaxe), "nor does a pickaxe");
+        check(Inventory::belongsIn(chest, Items::Elytra), "the wings go where a chestplate goes");
+        check(Inventory::belongsIn(0, Items::DiamondPickaxe), "and the pack takes anything");
+        check(Inventory::belongsIn(Inventory::MAIN_SLOTS - 1, Items::DiamondHelmet),
+              "a helmet included");
+
+        // A save that put a pickaxe on the player's head -- which is
+        // what the save's stash did with a full pack -- is mended on
+        // load: the pickaxe goes back in the pack, the real armour
+        // stays on.
+        Inventory mended;
+        mended.slot(helmet) = ItemStack{ Items::DiamondPickaxe, 1 };
+        mended.slot(helmet).damage = 12;
+        mended.slot(chest) = ItemStack{ Items::IronChestplate, 1 };
+
+        check(mended.evictMisfitArmour().empty(), "everything finds room");
+        check(mended.slot(helmet).empty(), "the pickaxe is off the head");
+        check(mended.slot(chest).id == Items::IronChestplate, "the chestplate is left alone");
+        check(mended.has(Items::DiamondPickaxe), "and the pickaxe is in the pack");
+
+        bool wearKept = false;
+        for (int i = 0; i < Inventory::MAIN_SLOTS; ++i)
+            if (mended.slot(i).id == Items::DiamondPickaxe && mended.slot(i).damage == 12)
+                wearKept = true;
+        check(wearKept, "with its wear, so mending a save does not repair a tool");
+
+        // With nowhere to put it, it comes off anyway and is handed back
+        // to be dropped, the way Minecraft drops anything that has no
+        // room: a pickaxe left on the head would look like the bug it is.
+        Inventory full;
+        for (int i = 0; i < Inventory::MAIN_SLOTS; ++i)
+            full.slot(i) = ItemStack{ Blocks::Stone, 64 };
+        full.slot(helmet) = ItemStack{ Items::DiamondPickaxe, 1 };
+        full.slot(helmet).damage = 7;
+        const std::vector<ItemStack> spilled = full.evictMisfitArmour();
+        check(full.slot(helmet).empty(), "a full pack still takes it off the head");
+        check(spilled.size() == 1 && spilled[0].id == Items::DiamondPickaxe &&
+                  spilled[0].count == 1 && spilled[0].damage == 7,
+              "and hands it back whole, to be dropped rather than lost");
+    }
+
     void testTheHand()
     {
         section("the hand: where Minecraft puts it");
@@ -12098,6 +12148,7 @@ int runSelfTest()
     testTheShulker();
     testInterfaceScale();
     testTheHand();
+    testArmourSlotsHoldArmour();
 
     std::printf("\n%d checks, %d failed\n", g_checks, g_failures);
     return g_failures == 0 ? 0 : 1;

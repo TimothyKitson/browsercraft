@@ -230,6 +230,12 @@ private:
     // wire, so each one someone is wearing gets painted here on demand
     // and kept; the key is the variant and the model type together.
     PlayerModel m_playerModel;
+
+    // The figure on the inventory screen, built from the same model as
+    // everyone in the world and flattened onto the interface. Kept apart
+    // from the one above so drawing the panel never disturbs a buffer the
+    // world pass is using.
+    PlayerModel m_dollModel;
     EntityManager m_entities;
     MobModel m_mobModel;
     std::map<int, std::unique_ptr<PlayerSkin>> m_remoteSkins;
@@ -367,6 +373,10 @@ private:
 
     // How far down the creative palette has been scrolled.
     int m_paletteRow = 0;
+
+    // Set while the creative scrollbar's thumb is being dragged, which
+    // lasts from the press on the track until the button comes up.
+    bool m_draggingScroll = false;
     int m_previousHealth = Player::MAX_HEALTH;
 
     std::string m_savePath = "world";
@@ -522,6 +532,38 @@ private:
     void renderPauseMenu();
     void renderDeathScreen();
     void renderInventoryScreen();
+
+    // The two halves of it: every container the game has, and the
+    // creative screen with its tabs, which is a different shape.
+    void renderContainerScreen(float w, float h);
+    void renderCreativeScreen(float w, float h);
+
+    // What goes over the top of either: the highlight on the slot under
+    // the cursor, the tooltip naming what is in it, and whatever stack
+    // the cursor is carrying.
+    void finishInventoryScreen();
+
+    // The player, standing on (centreX, feetY) at this many interface
+    // pixels to the block, turning its body a little and its head a lot
+    // towards the cursor -- Minecraft's inventory figure, numbers and all.
+    void drawPlayerFigure(const PlayerSkin& skin, float centreX, float feetY,
+                          float blockPixels);
+
+    // The grey arrow between a crafting grid and what it makes, filled
+    // white from the left as far as `filled` -- a furnace's progress.
+    void drawCraftArrow(float x, float y, float width, float height, float filled = 0.0f);
+
+    // A furnace's flame, fourteen square, burnt down to what is left.
+    void drawFurnaceFlame(float x, float y, float alight);
+
+    // Which creative tab is the player's own things, which only the
+    // inventory screen's own file knows the order of.
+    static int creativeInventoryTab();
+
+    // Minecraft's tooltip: a near-black box with a purple edge, white
+    // text, twelve pixels right of the cursor and twelve up, pulled
+    // back on screen if it would run off it.
+    void drawTooltip(const std::string& text, float mouseX, float mouseY);
     // A block drawn as a cube seen from the corner, the way Minecraft
     // draws one in a slot. Returns false for anything that is not a
     // block with six faces -- an item, a flower, a liquid -- which the
@@ -881,7 +923,7 @@ private:
     // copies of the same geometry, and only one of them ever got fixed.
     struct SlotBox
     {
-        enum class Kind { Slot, Palette, Tab, Enchant, Trade, AnvilTake };
+        enum class Kind { Slot, Palette, Tab, Enchant, Trade, AnvilTake, Destroy, Scroll };
         Kind kind = Kind::Slot;
         int index = 0;        // inventory slot, block id, or tab number
         float x = 0.0f, y = 0.0f, size = 0.0f;
