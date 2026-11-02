@@ -88,15 +88,24 @@ public:
     static constexpr int ANVIL_RESULT = ANVIL_FIRST + 2;
     static constexpr int ANVIL_SLOTS = 3;
 
-    // The brewing stand: one ingredient over three bottles, the shape
-    // Minecraft uses. Borrowed the same way as the rest.
-    static constexpr int BREW_FIRST = ANVIL_FIRST + ANVIL_SLOTS;      // 84..87
+    // The brewing stand: one ingredient over three bottles, and the
+    // blaze powder that fuels it -- 1.21's five slots. Borrowed the same
+    // way as the rest.
+    static constexpr int BREW_FIRST = ANVIL_FIRST + ANVIL_SLOTS;      // 84..88
     static constexpr int BREW_INGREDIENT = BREW_FIRST;
     static constexpr int BREW_BOTTLE_FIRST = BREW_FIRST + 1;
     static constexpr int BREW_BOTTLES = 3;
-    static constexpr int BREW_SLOTS = 1 + BREW_BOTTLES;
+    static constexpr int BREW_FUEL = BREW_BOTTLE_FIRST + BREW_BOTTLES;
+    static constexpr int BREW_SLOTS = 1 + BREW_BOTTLES + 1;
 
-    static constexpr int SLOT_COUNT = BREW_FIRST + BREW_SLOTS;        // 88
+    // The enchanting table's second slot, for the lapis it is paid in.
+    // At the end rather than beside the table's first slot: nothing past
+    // the player's own forty is ever saved, but moving the anvil and the
+    // brewing stand along a slot is the kind of change that is only safe
+    // until it is not.
+    static constexpr int ENCHANT_LAPIS = BREW_FIRST + BREW_SLOTS;     // 89
+
+    static constexpr int SLOT_COUNT = ENCHANT_LAPIS + 1;              // 90
 
     // The ceiling. What a particular thing actually stacks to comes from
     // maxStackOf(), since items need not agree with blocks.
@@ -114,9 +123,11 @@ public:
     }
 
     // Whether this stack may sit in this slot at all. Everywhere takes
-    // anything except the four armour slots, which take their own piece
-    // and nothing else -- a pickaxe in the helmet slot is a broken save,
-    // not a choice anybody made.
+    // anything except the slots made for one thing: the four armour
+    // slots take their own piece -- a pickaxe in the helmet slot is a
+    // broken save, not a choice anybody made -- and the enchanting
+    // table's lapis slot and the brewing stand's fuel slot take lapis
+    // and blaze powder, as 1.21's do.
     static bool belongsIn(int index, StackId id);
 
     // Moves anything sitting in an armour slot that is not that slot's

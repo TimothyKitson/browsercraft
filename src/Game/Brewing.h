@@ -54,4 +54,8 @@ namespace Brewing
 
     // How long a brew takes. Minecraft's is twenty seconds.
     constexpr float BREW_SECONDS = 20.0f;
+
+    // A stand runs on blaze powder: one powder is twenty brews, and each
+    // brew burns one as it starts. 1.21's figures.
+    constexpr int FUEL_PER_POWDER = 20;
 }

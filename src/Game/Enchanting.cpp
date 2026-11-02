@@ -321,3 +321,18 @@ namespace Enchanting
         return std::max(1, through);
     }
 }
+
+Enchanting::Price Enchanting::priceOf(int row)
+{
+    Price price;
+    price.levels = row + 1;
+    price.lapis = row + 1;
+    return price;
+}
+
+bool Enchanting::affordable(const Offer& offer, int row, int playerLevel, int lapis, bool creative)
+{
+    if (!offer.valid()) return false;
+    if (creative) return true;
+    return playerLevel >= offer.cost && lapis >= priceOf(row).lapis;
+}

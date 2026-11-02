@@ -90,6 +90,21 @@ namespace Enchanting
         bool valid() const { return cost > 0 && level > 0; }
     };
 
+    // What an offer actually takes, which is not what it shows. In 1.21
+    // the number on a row is the level you must have reached to buy it;
+    // what is spent is one level and one lapis for the first row, two of
+    // each for the second, three for the third.
+    struct Price
+    {
+        int levels = 0;
+        int lapis = 0;
+    };
+    Price priceOf(int row);
+
+    // Whether the player can buy this row: the level shown, and the
+    // lapis the row takes. Creative needs neither.
+    bool affordable(const Offer& offer, int row, int playerLevel, int lapis, bool creative);
+
     // What counting shelves needs to know about the room. Named for
     // what it is rather than "Blocks", because inside anything deriving
     // from a type called Blocks the bare name Blocks:: finds the base

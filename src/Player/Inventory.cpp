@@ -233,10 +233,10 @@ void Inventory::leftClick(int index)
         return;
     }
 
-    // Boots go on feet. An armour slot takes its own piece and nothing
-    // else, so the four of them cannot be used as extra pockets.
-    if (isArmourSlot(index) && !m_cursor.empty() &&
-        Armour::slotFor(m_cursor.id) != index - ARMOR_FIRST)
+    // Boots go on feet, lapis goes in the lapis slot: a slot made for one
+    // thing takes that thing and nothing else, so none of them can be
+    // used as an extra pocket.
+    if (!m_cursor.empty() && !belongsIn(index, m_cursor.id))
         return;
 
     if (m_cursor.empty())
@@ -267,8 +267,7 @@ void Inventory::rightClick(int index)
     if (index < 0 || index >= SLOT_COUNT) return;
     if (index == CRAFT_RESULT) { takeCraftResult(); return; }
     if (index == FURNACE_OUTPUT && !m_cursor.empty()) return;
-    if (isArmourSlot(index) && !m_cursor.empty() &&
-        Armour::slotFor(m_cursor.id) != index - ARMOR_FIRST)
+    if (!m_cursor.empty() && !belongsIn(index, m_cursor.id))
         return;
 
     ItemStack& target = m_slots[index];
@@ -369,6 +368,8 @@ void Inventory::takeFromPalette(BlockId id)
 
 bool Inventory::belongsIn(int index, StackId id)
 {
+    if (index == ENCHANT_LAPIS) return id == Items::LapisLazuli;
+    if (index == BREW_FUEL) return id == Items::BlazePowder;
     if (!isArmourSlot(index)) return true;
     return Armour::slotFor(id) == index - ARMOR_FIRST;
 }

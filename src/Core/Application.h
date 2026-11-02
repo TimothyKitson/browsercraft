@@ -364,6 +364,7 @@ private:
     bool m_brewOpen = false;
     glm::ivec3 m_brewBlock{ 0 };
     float m_brewProgress = 0.0f;
+    int m_brewFuel = 0;          // brews left in the powder that is burning
     bool m_anvilOpen = false;
     glm::ivec3 m_anvilBlock{ 0 };
     glm::ivec3 m_enchantBlock{ 0 };
@@ -543,11 +544,11 @@ private:
     // the cursor is carrying.
     void finishInventoryScreen();
 
-    // The player, standing on (centreX, feetY) at this many interface
-    // pixels to the block, turning its body a little and its head a lot
-    // towards the cursor -- Minecraft's inventory figure, numbers and all.
-    void drawPlayerFigure(const PlayerSkin& skin, float centreX, float feetY,
-                          float blockPixels);
+    // The player in the box from (x1, y1) to (x2, y2), `size` interface
+    // pixels to the block, turning towards the cursor and leaning with it
+    // -- 1.21's inventory figure, numbers and all.
+    void drawPlayerFigure(const PlayerSkin& skin, float x1, float y1, float x2, float y2,
+                          float size);
 
     // The grey arrow between a crafting grid and what it makes, filled
     // white from the left as far as `filled` -- a furnace's progress.

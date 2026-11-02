@@ -870,6 +870,10 @@ void Application::saveLevel()
     };
 
     stash(Inventory::ENCHANT_SLOT);
+    stash(Inventory::ENCHANT_LAPIS);
+    for (int i = 0; i < Inventory::BREW_SLOTS; ++i) stash(Inventory::BREW_FIRST + i);
+    stash(Inventory::ANVIL_LEFT);
+    stash(Inventory::ANVIL_RIGHT);
     for (int i = 0; i < Inventory::CRAFT_SLOTS; ++i) stash(Inventory::CRAFT_FIRST + i);
 
     for (const auto& entry : m_furnaces.all())
@@ -1833,6 +1837,7 @@ bool Application::frame()
             m_startupScreen == "rain" || m_startupScreen == "storm" ||
             m_startupScreen == "pbr" || m_startupScreen == "anvil" ||
             m_startupScreen == "anvilblock" || m_startupScreen == "brew" ||
+            m_startupScreen == "crafter" ||
             m_startupScreen == "village" || m_startupScreen == "shield" ||
             m_startupScreen == "shieldup" ||
             m_startupScreen == "wolf" || m_startupScreen == "horse" ||
@@ -2101,6 +2106,9 @@ bool Application::frame()
                     ItemStack& slot = m_inventory.slot(Inventory::ENCHANT_SLOT);
                     slot.id = Items::DiamondPickaxe;
                     slot.count = 1;
+                    ItemStack& lapis = m_inventory.slot(Inventory::ENCHANT_LAPIS);
+                    lapis.id = Items::LapisLazuli;
+                    lapis.count = 2;
                     openEnchantingTable(glm::ivec3(bx, by, bz));
                 }
             }
@@ -3687,6 +3695,10 @@ bool Application::frame()
 
                 openBrewingStand(glm::ivec3(px + 3, py, pz));
                 m_brewProgress = Brewing::BREW_SECONDS * 0.45f;
+                m_brewFuel = 13;
+                ItemStack& powder = m_inventory.slot(Inventory::BREW_FUEL);
+                powder.id = Items::BlazePowder;
+                powder.count = 2;
             }
 
             if (m_startupScreen == "anvil" || m_startupScreen == "anvilblock")
@@ -3741,6 +3753,38 @@ bool Application::frame()
                 // use for seeing what it looks like.
                 if (m_startupScreen == "anvil") openAnvil(glm::ivec3(px + 3, py, pz));
                 else { m_inventoryOpen = false; setMouseCaptured(false); }
+            }
+
+            if (m_startupScreen == "crafter")
+            {
+                const int px = static_cast<int>(std::floor(m_player.position.x));
+                const int py = static_cast<int>(std::floor(m_player.position.y));
+                const int pz = static_cast<int>(std::floor(m_player.position.z));
+
+                for (int ax = 0; ax <= 12; ++ax)
+                    for (int az = -7; az <= 7; ++az)
+                    {
+                        for (int ay = 0; ay <= 5; ++ay)
+                            m_world->setBlock(px + ax, py + ay, pz + az, Blocks::Air);
+                        m_world->setBlock(px + ax, py - 1, pz + az, Blocks::Planks);
+                    }
+
+                m_world->setBlock(px + 3, py, pz, Blocks::Crafter);
+                m_world->setBlock(px + 8, py, pz - 4, Blocks::Bookshelf);
+                m_world->setBlock(px + 8, py, pz,     Blocks::DiamondOre);
+                m_world->setBlock(px + 8, py, pz + 4, Blocks::EndPortalFrame);
+
+                m_inventory.add(Blocks::Planks, 32);
+                m_inventory.add(Items::Stick, 16);
+                m_inventory.add(Blocks::Crafter, 1);
+
+                openCrafter(glm::ivec3(px + 3, py, pz));
+                for (int i : { 0, 1, 3, 4 })
+                {
+                    ItemStack& plank = m_inventory.slot(Inventory::CHEST_FIRST + i);
+                    plank.id = Blocks::Planks;
+                    plank.count = 4;
+                }
             }
 
             if (m_startupScreen == "pbr")

@@ -11565,6 +11565,49 @@ namespace
               "and hands it back whole, to be dropped rather than lost");
     }
 
+    void testTheTablesTake121sPrices()
+    {
+        section("an enchanting table and a brewing stand take what 1.21's take");
+
+        for (int row = 0; row < 3; ++row)
+        {
+            const Enchanting::Price price = Enchanting::priceOf(row);
+            check(price.levels == row + 1 && price.lapis == row + 1,
+                  "row " + std::to_string(row + 1) + " costs as many levels and lapis as its number");
+        }
+
+        Enchanting::Offer offer;
+        offer.cost = 30;
+        offer.kind = Enchanting::Kind::Efficiency;
+        offer.level = 3;
+        check(Enchanting::affordable(offer, 2, 30, 3, false), "thirty levels and three lapis buy the bottom row");
+        check(!Enchanting::affordable(offer, 2, 29, 3, false), "twenty-nine levels do not");
+        check(!Enchanting::affordable(offer, 2, 30, 2, false), "nor do two lapis");
+        check(Enchanting::affordable(offer, 2, 0, 0, true), "creative pays nothing");
+        Enchanting::Offer none;
+        check(!Enchanting::affordable(none, 0, 99, 64, true), "an empty row cannot be bought at any price");
+
+        check(Inventory::belongsIn(Inventory::ENCHANT_LAPIS, Items::LapisLazuli), "lapis goes in the lapis slot");
+        check(!Inventory::belongsIn(Inventory::ENCHANT_LAPIS, Items::Diamond), "a diamond does not");
+        check(Inventory::belongsIn(Inventory::BREW_FUEL, Items::BlazePowder), "blaze powder fuels a stand");
+        check(!Inventory::belongsIn(Inventory::BREW_FUEL, Items::Coal), "coal does not");
+
+        Inventory pack;
+        pack.slot(0) = ItemStack{ Items::Coal, 5 };
+        pack.leftClick(0);
+        pack.leftClick(Inventory::BREW_FUEL);
+        check(pack.slot(Inventory::BREW_FUEL).empty(), "coal dropped on the fuel slot stays on the cursor");
+        pack.leftClick(0);
+        pack.slot(1) = ItemStack{ Items::BlazePowder, 3 };
+        pack.leftClick(1);
+        pack.leftClick(Inventory::BREW_FUEL);
+        check(pack.slot(Inventory::BREW_FUEL).id == Items::BlazePowder &&
+                  pack.slot(Inventory::BREW_FUEL).count == 3,
+              "blaze powder dropped on it goes in");
+
+        check(Brewing::FUEL_PER_POWDER == 20, "one powder is twenty brews");
+    }
+
     void testTheHand()
     {
         section("the hand: where Minecraft puts it");
@@ -12149,6 +12192,7 @@ int runSelfTest()
     testInterfaceScale();
     testTheHand();
     testArmourSlotsHoldArmour();
+    testTheTablesTake121sPrices();
 
     std::printf("\n%d checks, %d failed\n", g_checks, g_failures);
     return g_failures == 0 ? 0 : 1;
