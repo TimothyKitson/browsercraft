@@ -101,7 +101,10 @@ mob breeze/breeze.png               breeze
 # model; what is lost is the nose and ears, which it does not draw.
 mob piglin/zombified_piglin.png     zombie_pigman
 
-[ -f "$src/entity/shield/base.png" ] && cp "$src/entity/shield/base.png" "$root/assets/skins/shield.png"
+for shield in "$src/entity/shield_base_nopattern.png" "$src/entity/shield/base_nopattern.png" \
+              "$src/entity/shield/base.png"; do
+    [ -f "$shield" ] && { cp "$shield" "$root/assets/skins/shield.png"; break; }
+done
 echo "Mobs: $(ls "$root/assets/skins/mob"/*.png 2>/dev/null | wc -l) sheets"
 
 printf 'Minecraft 1.21 (Mojang Studios) -- not for redistribution\n' > "$root/assets/textures/CREDIT.txt"

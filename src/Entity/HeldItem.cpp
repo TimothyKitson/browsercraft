@@ -6,6 +6,7 @@
 #include "Renderer/Shader.h"
 #include "Core/GLFunctions.h"
 #include <algorithm>
+#include <glm/gtc/matrix_transform.hpp>
 #include <cmath>
 #include <cstdio>
 #include <string>
@@ -84,9 +85,6 @@ namespace
     // draws it about its own middle, so it is 0.4 across however the
     // hand is turned. A flat item is that and then half as much again,
     // which is Mojang's 1.5 in renderItem.
-    constexpr float BLOCK_SIZE = 0.4f;
-    constexpr float ITEM_SCALE = 0.4f;
-    constexpr float SPRITE_SCALE = ITEM_SCALE * 1.5f;
 
     // And a flat item is a slab a sixteenth of a block thick rather
     // than a card with no edge, which is what you see when you turn one
@@ -97,26 +95,7 @@ namespace
 
     float degrees(float d) { return d * PI / 180.0f; }
 
-    // The shield's own sheet is 64x64 and its model is measured in the
-    // same sixteenths-of-a-block as everything Mojang draws. Held in
-    // the hand it is scaled down to about the size of the card it
-    // replaces, or a 22-pixel plank fills a third of the screen.
     constexpr float SHIELD_SHEET = 64.0f;
-    // How big a model unit is, for the shield alone.
-    //
-    // Mojang's shield.json asks for 1.25 of an item's usual size, but
-    // that 1.25 is against Minecraft's own first-person item, which is
-    // drawn a good deal larger than a held block is here -- so taking
-    // the quarter-again against BLOCK_SIZE, which is what this used to
-    // do, came out far too small.
-    //
-    // Measured off a vanilla screenshot instead: there the shield fills
-    // half the screen's width and half its height AND is cut off by two
-    // edges, so for a plate twelve units wide by twenty-two tall the
-    // whole thing stands about one and a half screens high. You only
-    // ever see its top corner. This is the per-unit size that puts
-    // twelve units across about half the view.
-    constexpr float SHIELD_SCALE = 0.032f;
     const char* SHIELD_TEXTURE = "assets/skins/shield.png";
 
     // Face 6 tells the chunk shader to skip tangent-space normal mapping,
@@ -168,6 +147,41 @@ namespace
         return glm::vec3(m * glm::vec4(x, y, z, 1.0f));
     }
 
+    // The same, wound so the quad faces away from `centre` whatever the
+    // transform did to its handedness: the held things are built in
+    // Minecraft's frame and carried into ours through a mirror.
+    void pushFacing(std::vector<float>& out, const Quad& q, const glm::vec3& centre,
+                    float sky, float blockLight, float face = NO_NORMAL_MAP)
+    {
+        const glm::vec3 normal = glm::cross(q.corner[1] - q.corner[0], q.corner[2] - q.corner[0]);
+        const glm::vec3 middle = (q.corner[0] + q.corner[1] + q.corner[2] + q.corner[3]) * 0.25f;
+        const bool outward = glm::dot(normal, middle - centre) >= 0.0f;
+        const int forwards[6] = { 0, 1, 2, 0, 2, 3 };
+        const int backwards[6] = { 0, 2, 1, 0, 3, 2 };
+        for (int k : (outward ? forwards : backwards))
+        {
+            out.push_back(q.corner[k].x);
+            out.push_back(q.corner[k].y);
+            out.push_back(q.corner[k].z);
+            out.push_back(q.u[k]);
+            out.push_back(q.v[k]);
+            out.push_back(q.shade);
+            out.push_back(sky);
+            out.push_back(blockLight);
+            out.push_back(face);
+        }
+    }
+
+    // A turn about one of Minecraft's axes, in degrees, as its
+    // RotationAxis gives one.
+    glm::mat4 mcRotate(const glm::vec3& axis, float degreesTurned)
+    {
+        return glm::rotate(glm::mat4(1.0f), glm::radians(degreesTurned), axis);
+    }
+
+    // Minecraft's camera looks down -z and ours down +z.
+    const glm::mat4 FLIP_FORWARD = glm::scale(glm::mat4(1.0f), glm::vec3(1.0f, 1.0f, -1.0f));
+
     const int CUBE_FACE[6][4][3] = {
         { {1,0,0}, {1,1,0}, {1,1,1}, {1,0,1} },
         { {0,0,0}, {0,0,1}, {0,1,1}, {0,1,0} },
@@ -188,12 +202,49 @@ namespace
 
     const float CUBE_SHADE[6] = { 0.72f, 0.72f, 1.00f, 0.50f, 0.86f, 0.86f };
 
-    int cubeTile(StackId id, int face)
+    // A model's first-person transform, as its JSON gives it: degrees,
+    // sixteenths of a block, and a scale.
+    struct Display
     {
-        const BlockInfo& info = blockInfo(asBlock(id));
-        if (face == 2) return info.tileTop;
-        if (face == 3) return info.tileBottom;
-        return info.tileSide;
+        glm::vec3 rotation;
+        glm::vec3 translation;
+        glm::vec3 scale;
+    };
+
+    const Display BLOCK_DISPLAY{ { 0.0f, 45.0f, 0.0f }, { 0.0f, 0.0f, 0.0f }, glm::vec3(0.4f) };
+    const Display ORIENTABLE_DISPLAY{ { 0.0f, 135.0f, 0.0f }, { 0.0f, 0.0f, 0.0f }, glm::vec3(0.4f) };
+    const Display CHEST_DISPLAY{ { 0.0f, 315.0f, 0.0f }, { 0.0f, 0.0f, 0.0f }, glm::vec3(0.4f) };
+    const Display ITEM_DISPLAY{ { 0.0f, -90.0f, 25.0f }, { 1.13f, 3.2f, 1.13f }, glm::vec3(0.68f) };
+    const Display MACE_DISPLAY{ { 0.0f, -90.0f, 25.0f }, { 0.0f, 3.0f, 0.8f }, glm::vec3(0.9f) };
+    const Display SHIELD_DISPLAY{ { 0.0f, 180.0f, 5.0f }, { -10.0f, 2.0f, -10.0f }, glm::vec3(1.25f) };
+    const Display SHIELD_BLOCKING_DISPLAY{ { 0.0f, 180.0f, -5.0f }, { -15.0f, 5.0f, -11.0f },
+                                           glm::vec3(1.25f) };
+
+    glm::mat4 displayMatrix(const Display& d)
+    {
+        glm::mat4 m = glm::translate(glm::mat4(1.0f), d.translation / 16.0f);
+        m = glm::rotate(m, glm::radians(d.rotation.x), glm::vec3(1.0f, 0.0f, 0.0f));
+        m = glm::rotate(m, glm::radians(d.rotation.y), glm::vec3(0.0f, 1.0f, 0.0f));
+        m = glm::rotate(m, glm::radians(d.rotation.z), glm::vec3(0.0f, 0.0f, 1.0f));
+        m = glm::scale(m, d.scale);
+        return glm::translate(m, glm::vec3(-0.5f));
+    }
+
+    // The blocks whose item model turns their face to you: the
+    // orientable ones at 135 degrees, and a chest the other way at 315.
+    bool orientable(BlockId id)
+    {
+        switch (id)
+        {
+            case Blocks::Furnace: case Blocks::FurnaceLit:
+            case Blocks::BlastFurnace: case Blocks::BlastFurnaceLit:
+            case Blocks::Smoker: case Blocks::SmokerLit:
+            case Blocks::Dispenser: case Blocks::Dropper:
+            case Blocks::Pumpkin: case Blocks::Lectern:
+                return true;
+            default:
+                return false;
+        }
     }
 
     bool drawsFlat(StackId id)
@@ -222,64 +273,55 @@ float HeldItem::swingProgress() const
     return 1.0f - (m_swing / SWING_SECONDS);
 }
 
-// Minecraft's own first-person pose. Every number here is out of the
-// vanilla client's ItemRenderer:
+// Minecraft's own first-person pose, out of 1.21's HeldItemRenderer.
+// With something held:
 //
-//   translate(-sin(sqrt(p)*PI) * 0.4, sin(sqrt(p)*PI*2) * 0.2, -sin(p*PI) * 0.2)
-//   translate(0.56, -0.52 - (1 - equipped) * 0.6, -0.72)
-//   rotateY(45)
-//   rotateY(-sin(p*p*PI) * 20), rotateZ(-sin(sqrt(p)*PI) * 20),
-//   rotateX(-sin(sqrt(p)*PI) * 80)
+//   translate(-0.4 sin(sqrt(p) PI), 0.2 sin(sqrt(p) 2 PI), -0.2 sin(p PI))
+//   translate(0.56, -0.52 - 0.6 (1 - equipped), -0.72)
+//   rotateY(45 - 20 sin(p p PI))  rotateZ(-20 sin(sqrt(p) PI))
+//   rotateX(-80 sin(sqrt(p) PI))  rotateY(-45)
 //
-// Its camera looks down -z and ours looks down +z, so every depth and
-// every angle changes sign on the way across and nothing else does.
-glm::mat4 HeldItem::pose(const glm::mat4& camera, bool item, bool sneaking,
-                         bool blocking) const
+// built in Minecraft's own frame, which looks down -z, and carried into
+// ours by flipping z once at the end. An empty hand keeps the fist pose
+// worked out from the arm's own stack, which 1.21 has unchanged.
+glm::mat4 HeldItem::pose(const glm::mat4& camera, bool item, bool, bool) const
 {
     const float p = swingProgress();
-    const float arc = std::sin(std::sqrt(p) * PI);        // out and back
-    const float lift = std::sin(std::sqrt(p) * PI * 2.0f); // up, then down
-    const float punch = std::sin(p * PI);                  // forward
+    const float arc = std::sin(std::sqrt(p) * PI);
+    const float lift = std::sin(std::sqrt(p) * PI * 2.0f);
+    const float punch = std::sin(p * PI);
 
-    float right = (item ? ITEM_RIGHT : HAND_RIGHT) - arc * (item ? 0.4f : 0.3f);
-    float down = (item ? ITEM_DOWN : HAND_DOWN) + (1.0f - m_equip) * EQUIP_DROP
-                 - lift * (item ? 0.2f : 0.4f);
-    float forward = (item ? ITEM_FORWARD : HAND_FORWARD) + punch * (item ? 0.2f : 0.4f);
+    if (item)
+    {
+        glm::mat4 m(1.0f);
+        m = glm::translate(m, glm::vec3(-0.4f * arc, 0.2f * lift, -0.2f * punch));
+        m = glm::translate(m, glm::vec3(ITEM_RIGHT, -ITEM_DOWN - EQUIP_DROP * (1.0f - m_equip),
+                                        -ITEM_FORWARD));
+        m = m * mcRotate(glm::vec3(0.0f, 1.0f, 0.0f), 45.0f - 20.0f * std::sin(p * p * PI));
+        m = m * mcRotate(glm::vec3(0.0f, 0.0f, 1.0f), -20.0f * arc);
+        m = m * mcRotate(glm::vec3(1.0f, 0.0f, 0.0f), -80.0f * arc);
+        m = m * mcRotate(glm::vec3(0.0f, 1.0f, 0.0f), -45.0f);
+        return camera * FLIP_FORWARD * m;
+    }
 
-    // Sneaking drops the whole hand with the camera, and a raised
-    // shield comes up and in across the front of you.
-    if (sneaking) down += 0.08f;
-    if (blocking) { down -= 0.26f; right -= 0.26f; forward -= 0.18f; }
+    const float right = HAND_RIGHT - arc * 0.3f;
+    const float down = HAND_DOWN + (1.0f - m_equip) * EQUIP_DROP - lift * 0.4f;
+    const float forward = HAND_FORWARD + punch * 0.4f;
 
     const glm::vec3 origin = glm::vec3(camera[3]) +
                              glm::vec3(camera[0]) * right +
                              glm::vec3(camera[1]) * -down +
                              glm::vec3(camera[2]) * forward;
 
-    // The turn. Forty-five degrees about the upright to begin with, so
-    // a block is seen corner-on, and then the three the swing adds.
-    // Crossing between Minecraft's frame and ours flips the forward
-    // axis, which negates a turn about the upright and a turn about
-    // the sideways one -- both of them mix z -- and leaves a turn in
-    // the plane of the screen alone, because that one mixes x and y
-    // and neither of those changed. Getting the last of those three
-    // wrong is what held a pickaxe out past the corner of the screen.
-    const float yaw = degrees(-45.0f + (item ? std::sin(p * p * PI) * 20.0f
-                                             : -arc * 70.0f));
-    const float roll = degrees(item ? -arc * 20.0f : -std::sin(p * p * PI) * 20.0f);
-    const float pitch = degrees(item ? arc * 80.0f : 0.0f);
+    const float yaw = degrees(-45.0f - arc * 70.0f);
+    const float roll = degrees(-std::sin(p * p * PI) * 20.0f);
 
     const float cy = std::cos(yaw), sy = std::sin(yaw);
     const float cr = std::cos(roll), sr = std::sin(roll);
-    const float cp = std::cos(pitch), sp = std::sin(pitch);
 
-    glm::mat3 turn(1.0f);
-    {
-        const glm::mat3 Ry(cy, 0.0f, -sy,  0.0f, 1.0f, 0.0f,  sy, 0.0f, cy);
-        const glm::mat3 Rz(cr, sr, 0.0f,  -sr, cr, 0.0f,  0.0f, 0.0f, 1.0f);
-        const glm::mat3 Rx(1.0f, 0.0f, 0.0f,  0.0f, cp, sp,  0.0f, -sp, cp);
-        turn = Ry * Rz * Rx;
-    }
+    const glm::mat3 Ry(cy, 0.0f, -sy,  0.0f, 1.0f, 0.0f,  sy, 0.0f, cy);
+    const glm::mat3 Rz(cr, sr, 0.0f,  -sr, cr, 0.0f,  0.0f, 0.0f, 1.0f);
+    const glm::mat3 turn = Ry * Rz;
 
     const glm::mat3 basis{ glm::vec3(camera[0]), glm::vec3(camera[1]), glm::vec3(camera[2]) };
     const glm::mat3 axes = basis * turn;
@@ -406,27 +448,82 @@ void HeldItem::appendArm(const glm::mat4& toWorld, const PlayerSkin& skin,
     }
 }
 
+// A block in the hand, at block.json's first-person transform: turned
+// 45 degrees about the upright and scaled to 0.4, about its own middle.
+// The faces take their textures the way Minecraft's model faces do.
 void HeldItem::appendBlock(const glm::mat4& toWorld, StackId stack, float sky, float blockLight)
 {
-    const float half = BLOCK_SIZE * 0.5f;
+    const BlockId block = asBlock(stack);
+    const bool turned = orientable(block);
+    const bool chest = block == Blocks::Chest;
+    const Display& display = turned ? ORIENTABLE_DISPLAY : chest ? CHEST_DISPLAY : BLOCK_DISPLAY;
 
-    for (int face = 0; face < 6; ++face)
-    {
-        const TileUV uv = tileUV(cubeTile(stack, face));
+    const glm::mat4 model = toWorld * displayMatrix(display);
+    const glm::vec3 centre = place(model, 0.5f, 0.5f, 0.5f);
 
-        Quad q;
-        q.shade = CUBE_SHADE[face];
+    struct Face { glm::vec3 corner[4]; int tile; float shade; };
+    const BlockInfo& info = blockInfo(block);
+
+    // Where the face goes: north on an orientable model, which the turn
+    // above brings round to you; south on a chest; and west on any other
+    // cube with a face, which is the side Minecraft's 45 degrees shows.
+    const bool hasFront = info.tileFront >= 0;
+    const int front = hasFront ? info.tileFront : info.tileSide;
+    const int westTile = (hasFront && !turned && !chest) ? front : info.tileSide;
+    const int northTile = (hasFront && turned) ? front : info.tileSide;
+    const int southTile = (hasFront && chest) ? front : info.tileSide;
+
+    auto side = [&](int axis, float at, float shade, int tile) {
+        Face f;
+        f.tile = tile;
+        f.shade = shade;
+        const int ua = axis == 0 ? 2 : 0;
+        const int va = axis == 1 ? 2 : 1;
+        const float cu[4] = { 0.0f, 1.0f, 1.0f, 0.0f };
+        const float cv[4] = { 0.0f, 0.0f, 1.0f, 1.0f };
         for (int k = 0; k < 4; ++k)
         {
-            const int* c = CUBE_FACE[face][k];
-            q.corner[k] = place(toWorld,
-                                (c[0] ? half : -half),
-                                (c[1] ? half : -half),
-                                (c[2] ? half : -half));
-            q.u[k] = (CUBE_UV[face][k][0] == 0.0f) ? uv.u0 : uv.u1;
-            q.v[k] = (CUBE_UV[face][k][1] == 0.0f) ? uv.vTop : uv.vBottom;
+            glm::vec3 c(0.0f);
+            c[axis] = at;
+            c[ua] = cu[k];
+            c[va] = cv[k];
+            f.corner[k] = c;
         }
-        pushQuad(m_vertices, q, sky, blockLight, DERIVED_BASIS);
+        return f;
+    };
+
+    const Face faces[6] = {
+        side(0, 1.0f, 0.6f, info.tileSide),
+        side(0, 0.0f, 0.6f, westTile),
+        side(1, 1.0f, 1.0f, info.tileTop),
+        side(1, 0.0f, 0.5f, info.tileBottom),
+        side(2, 1.0f, 0.8f, southTile),
+        side(2, 0.0f, 0.8f, northTile),
+    };
+    const int axisOf[6] = { 0, 0, 1, 1, 2, 2 };
+    const bool positive[6] = { true, false, true, false, true, false };
+
+    for (int i = 0; i < 6; ++i)
+    {
+        const Face& f = faces[i];
+        const TileUV uv = tileUV(f.tile);
+        Quad q;
+        q.shade = f.shade;
+        for (int k = 0; k < 4; ++k)
+        {
+            const glm::vec3 c = f.corner[k];
+            float u = 0.0f, v = 0.0f;
+            switch (axisOf[i])
+            {
+                case 0: u = positive[i] ? 1.0f - c.z : c.z; v = 1.0f - c.y; break;
+                case 1: u = c.x; v = positive[i] ? c.z : 1.0f - c.z; break;
+                default: u = positive[i] ? c.x : 1.0f - c.x; v = 1.0f - c.y; break;
+            }
+            q.corner[k] = place(model, c.x, c.y, c.z);
+            q.u[k] = uv.u0 + u * (uv.u1 - uv.u0);
+            q.v[k] = uv.vTop + v * (uv.vBottom - uv.vTop);
+        }
+        pushFacing(m_vertices, q, centre, sky, blockLight, DERIVED_BASIS);
     }
 }
 
@@ -463,166 +560,129 @@ unsigned int HeldItem::shieldTexture()
     return m_shieldTexture;
 }
 
-// One box of the shield, unwrapped at Mojang's own offsets: the six
-// faces of a box sit in the sheet exactly where BoxMesh says they do,
-// so the panel and the mobs read their art the same way.
+// One of the shield's two boxes, built the way Minecraft's ModelPart
+// builds a cuboid: corners in model pixels, and each face's patch of the
+// 64-square sheet where its uv rule puts it.
 void HeldItem::appendShieldBox(const glm::mat4& toWorld, int u, int v,
                                float w, float h, float d,
                                float ox, float oy, float oz,
                                float sky, float blockLight)
 {
-    const float hw = w * 0.5f * SHIELD_SCALE;
-    const float hh = h * 0.5f * SHIELD_SCALE;
-    const float hd = d * 0.5f * SHIELD_SCALE;
+    const float x0 = ox, y0 = oy, z0 = oz;
+    const float x1 = ox + w, y1 = oy + h, z1 = oz + d;
 
-    for (int face = 0; face < 6; ++face)
+    const glm::vec3 p[8] = {
+        { x0, y0, z0 }, { x1, y0, z0 }, { x1, y1, z0 }, { x0, y1, z0 },
+        { x0, y0, z1 }, { x1, y0, z1 }, { x1, y1, z1 }, { x0, y1, z1 },
+    };
+
+    const float j = static_cast<float>(u);
+    const float k = u + d;
+    const float l = u + d + w;
+    const float m = u + d + w + w;
+    const float n = u + d + w + d;
+    const float o = u + d + w + d + w;
+    const float pv = static_cast<float>(v);
+    const float q = v + d;
+    const float r = v + d + h;
+
+    struct Side { int corner[4]; float u1, v1, u2, v2; float shade; };
+    const Side sides[6] = {
+        { { 5, 4, 0, 1 }, k, pv, l, q, 1.0f },
+        { { 2, 3, 7, 6 }, l, q, m, pv, 0.5f },
+        { { 0, 4, 7, 3 }, j, q, k, r, 0.6f },
+        { { 1, 0, 3, 2 }, k, q, l, r, 0.8f },
+        { { 5, 1, 2, 6 }, l, q, n, r, 0.6f },
+        { { 4, 5, 6, 7 }, n, q, o, r, 0.8f },
+    };
+
+    const glm::vec3 centre = place(toWorld, (x0 + x1) * 0.5f, (y0 + y1) * 0.5f, (z0 + z1) * 0.5f);
+
+    for (const Side& side : sides)
     {
-        int px = 0, py = 0, pw = 0, ph = 0;
-        BoxMesh::facePatch(face, u, v, static_cast<int>(w), static_cast<int>(h),
-                           static_cast<int>(d), px, py, pw, ph);
+        const float us[4] = { side.u2, side.u1, side.u1, side.u2 };
+        const float vs[4] = { side.v1, side.v1, side.v2, side.v2 };
 
-        const float u0 = px / SHIELD_SHEET;
-        const float u1 = (px + pw) / SHIELD_SHEET;
-        const float v0 = py / SHIELD_SHEET;
-        const float v1 = (py + ph) / SHIELD_SHEET;
-
-        Quad q;
-        q.shade = CUBE_SHADE[face];
-        for (int k = 0; k < 4; ++k)
+        Quad quad;
+        quad.shade = side.shade;
+        for (int c = 0; c < 4; ++c)
         {
-            const int* c = CUBE_FACE[face][k];
-            q.corner[k] = place(toWorld,
-                                ox + (c[0] ? hw : -hw),
-                                oy + (c[1] ? hh : -hh),
-                                oz + (c[2] ? hd : -hd));
-            q.u[k] = (CUBE_UV[face][k][0] == 0.0f) ? u0 : u1;
-            q.v[k] = (CUBE_UV[face][k][1] == 0.0f) ? v0 : v1;
+            const glm::vec3& at = p[side.corner[c]];
+            quad.corner[c] = place(toWorld, at.x, at.y, at.z);
+            quad.u[c] = us[c] / SHIELD_SHEET;
+            quad.v[c] = vs[c] / SHIELD_SHEET;
         }
-
-        // No maps, the same as the arm and the item sprites. The shield
-        // has a sheet of its own and nothing in the block atlas, so
-        // asking the shader for a derived tangent basis set it marching
-        // the parallax through the normal atlas at the shield's own
-        // texture coordinates -- which dragged the UVs wherever that
-        // data happened to lead and smeared the plank face into a
-        // mottled smudge with a dark ring in the middle of it.
-        pushQuad(m_vertices, q, sky, blockLight, NO_NORMAL_MAP);
+        pushFacing(m_vertices, quad, centre, sky, blockLight, NO_NORMAL_MAP);
     }
 }
 
+// The shield, out of 1.21: its item model's first-person transform,
+// then the builtin renderer's flip of y and z, then ShieldEntityModel's
+// plate of 12x22x1 at (-6,-11,-2) off (0,0) and handle of 2x6x6 at
+// (-1,-3,-1) off (26,0), in sixteenths of a block.
 void HeldItem::appendShield(const glm::mat4& toWorld, float sky, float blockLight)
 {
-    // Mojang's own two boxes, read off shield_base_nopattern.png: a
-    // plate of 12x22x1 at (0,0) and a handle of 2x6x6 at (26,0).
-    //
-    // Built around the handle rather than around the plate, because the
-    // handle is the part the hand holds: put at the fist, the whole
-    // thing hangs off it the way a carried shield does. Centring the
-    // plate instead left the shield floating in mid-air beside the arm
-    // with nothing holding it.
-    appendShieldBox(toWorld, 26, 0, 2.0f, 6.0f, 6.0f,
-                    0.0f, 0.0f, 0.0f, sky, blockLight);
-
-    // The plate stands off the far side of the grip in the model's own
-    // space. The pose below turns the whole thing about, which is what
-    // Mojang's rotation of [0,180,_] means, so this ends up nearest the
-    // eye with its front towards you -- the studded side. Drawn without
-    // that turn you get the plain back of the shield, which is what the
-    // first version showed and what made it look wrong against a
-    // screenshot of the real thing.
-    appendShieldBox(toWorld, 0, 0, 12.0f, 22.0f, 1.0f,
-                    0.0f, 0.0f, 3.5f * SHIELD_SCALE, sky, blockLight);
+    appendShieldBox(toWorld, 0, 0, 12.0f, 22.0f, 1.0f, -6.0f, -11.0f, -2.0f, sky, blockLight);
+    appendShieldBox(toWorld, 26, 0, 2.0f, 6.0f, 6.0f, -1.0f, -3.0f, -1.0f, sky, blockLight);
 }
 
-// A flat item in the hand. Minecraft does not hang the sprite square
-// in front of you: out of its ItemRenderer, after the pose above it
-//
-//   translate(0, -0.3, 0); scale(1.5); rotateY(50); rotateZ(335);
-//   translate(-0.9375, -0.0625, 0)
-//
-// and then draws the sprite as a unit square a sixteenth of a block
-// thick, which is why a pickaxe held in Minecraft has an edge you can
-// see when you turn.
+// A flat item in the hand, at item/generated.json's first-person
+// transform -- translation (1.13, 3.2, 1.13) sixteenths, rotation
+// (0, -90, 25), scale 0.68 -- and then Minecraft's own sprite slab: the
+// sixteen pixels square across the model, a pixel thick about its middle,
+// with its edges between the two faces.
 void HeldItem::appendSprite(const glm::mat4& toWorld, StackId stack, float sky, float blockLight)
 {
     const TileUV uv = tileUV(atlasTileFor(stack));
 
-    const float yaw = degrees(-50.0f);       // our forward axis is the other way
-    const float roll = degrees(335.0f);      // but a turn in the screen's plane is not
-    const float cy = std::cos(yaw), sy = std::sin(yaw);
-    const float cr = std::cos(roll), sr = std::sin(roll);
+    const glm::mat4 model = toWorld * displayMatrix(stack == Items::Mace ? MACE_DISPLAY
+                                                                         : ITEM_DISPLAY);
 
-    const glm::mat3 Ry(cy, 0.0f, -sy,  0.0f, 1.0f, 0.0f,  sy, 0.0f, cy);
-    const glm::mat3 Rz(cr, sr, 0.0f,  -sr, cr, 0.0f,  0.0f, 0.0f, 1.0f);
-    const glm::mat3 turn = Ry * Rz;
+    const float z0 = 0.5f - SPRITE_DEPTH * 0.5f;
+    const float z1 = 0.5f + SPRITE_DEPTH * 0.5f;
+    const glm::vec3 centre = place(model, 0.5f, 0.5f, 0.5f);
 
-    const glm::mat3 basis{ glm::vec3(toWorld[0]), glm::vec3(toWorld[1]), glm::vec3(toWorld[2]) };
-    const glm::mat3 axes = basis * turn;
+    auto texel = [&](float x, float y, float& u, float& v) {
+        u = uv.u0 + x * (uv.u1 - uv.u0);
+        v = uv.vBottom + y * (uv.vTop - uv.vBottom);
+    };
 
-    // The 0.3 drop happens before the turn and inside Minecraft's own
-    // 0.4 scale, so it is that much of a block and not a third of one;
-    // the last translation comes after the turn, in the card's own
-    // frame, and is what puts the handle of a tool in the fist rather
-    // than its middle.
-    const glm::vec3 origin = glm::vec3(toWorld[3]) + glm::vec3(toWorld[1]) * (-0.3f * ITEM_SCALE);
+    const float fx[4] = { 0.0f, 1.0f, 1.0f, 0.0f };
+    const float fy[4] = { 0.0f, 0.0f, 1.0f, 1.0f };
+    for (int side = 0; side < 2; ++side)
+    {
+        Quad q;
+        q.shade = side == 0 ? 1.0f : 0.86f;
+        for (int k = 0; k < 4; ++k)
+        {
+            q.corner[k] = place(model, fx[k], fy[k], side == 0 ? z1 : z0);
+            texel(fx[k], fy[k], q.u[k], q.v[k]);
+        }
+        pushFacing(m_vertices, q, centre, sky, blockLight);
+    }
 
-    glm::mat4 card(1.0f);
-    card[0] = glm::vec4(axes[0] * SPRITE_SCALE, 0.0f);
-    card[1] = glm::vec4(axes[1] * SPRITE_SCALE, 0.0f);
-    card[2] = glm::vec4(axes[2] * SPRITE_SCALE, 0.0f);
-    card[3] = glm::vec4(origin + axes[0] * (-0.9375f * SPRITE_SCALE) +
-                            axes[1] * (-0.0625f * SPRITE_SCALE), 1.0f);
-
-    const float d = SPRITE_DEPTH;
-
-    // The two faces, back to back a sixteenth apart.
-    Quad front;
-    front.shade = 1.0f;
-    front.corner[0] = place(card, 0.0f, 0.0f, 0.0f);
-    front.corner[1] = place(card, 1.0f, 0.0f, 0.0f);
-    front.corner[2] = place(card, 1.0f, 1.0f, 0.0f);
-    front.corner[3] = place(card, 0.0f, 1.0f, 0.0f);
-    const float tu[4] = { uv.u0, uv.u1, uv.u1, uv.u0 };
-    const float tv[4] = { uv.vBottom, uv.vBottom, uv.vTop, uv.vTop };
-    for (int k = 0; k < 4; ++k) { front.u[k] = tu[k]; front.v[k] = tv[k]; }
-    pushQuad(m_vertices, front, sky, blockLight);
-
-    Quad back = front;
-    back.shade = 0.86f;
-    for (int k = 0; k < 4; ++k)
-        back.corner[k] = place(card,
-                               (k == 1 || k == 2) ? 1.0f : 0.0f,
-                               (k >= 2) ? 1.0f : 0.0f,
-                               d);
-    std::swap(back.corner[1], back.corner[3]);
-    std::swap(back.u[1], back.u[3]);
-    std::swap(back.v[1], back.v[3]);
-    pushQuad(m_vertices, back, sky, blockLight);
-
-    // And the four edges between them, each taking the strip of sprite
-    // it runs along, so the slab reads as solid from the side rather
-    // than as two cards with daylight between them.
-    struct Edge { float x0, y0, x1, y1; float u0, v0, u1, v1; float shade; };
+    struct Edge { float x0, y0, x1, y1; float tx0, ty0, tx1, ty1; float shade; };
+    const float inset = 0.5f / 16.0f;
     const Edge edges[4] = {
-        { 0.0f, 1.0f, 1.0f, 1.0f, uv.u0, uv.vTop,    uv.u1, uv.vTop,    1.00f },
-        { 0.0f, 0.0f, 1.0f, 0.0f, uv.u0, uv.vBottom, uv.u1, uv.vBottom, 0.50f },
-        { 0.0f, 0.0f, 0.0f, 1.0f, uv.u0, uv.vBottom, uv.u0, uv.vTop,    0.72f },
-        { 1.0f, 0.0f, 1.0f, 1.0f, uv.u1, uv.vBottom, uv.u1, uv.vTop,    0.72f },
+        { 0.0f, 1.0f, 1.0f, 1.0f, 0.0f, 1.0f - inset, 1.0f, 1.0f - inset, 1.00f },
+        { 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, inset, 1.0f, inset, 0.50f },
+        { 0.0f, 0.0f, 0.0f, 1.0f, inset, 0.0f, inset, 1.0f, 0.60f },
+        { 1.0f, 0.0f, 1.0f, 1.0f, 1.0f - inset, 0.0f, 1.0f - inset, 1.0f, 0.60f },
     };
 
     for (const Edge& e : edges)
     {
         Quad q;
         q.shade = e.shade;
-        q.corner[0] = place(card, e.x0, e.y0, 0.0f);
-        q.corner[1] = place(card, e.x1, e.y1, 0.0f);
-        q.corner[2] = place(card, e.x1, e.y1, d);
-        q.corner[3] = place(card, e.x0, e.y0, d);
-        q.u[0] = e.u0; q.v[0] = e.v0;
-        q.u[1] = e.u1; q.v[1] = e.v1;
-        q.u[2] = e.u1; q.v[2] = e.v1;
-        q.u[3] = e.u0; q.v[3] = e.v0;
-        pushQuad(m_vertices, q, sky, blockLight);
+        q.corner[0] = place(model, e.x0, e.y0, z0);
+        q.corner[1] = place(model, e.x1, e.y1, z0);
+        q.corner[2] = place(model, e.x1, e.y1, z1);
+        q.corner[3] = place(model, e.x0, e.y0, z1);
+        texel(e.tx0, e.ty0, q.u[0], q.v[0]);
+        texel(e.tx1, e.ty1, q.u[1], q.v[1]);
+        texel(e.tx1, e.ty1, q.u[2], q.v[2]);
+        texel(e.tx0, e.ty0, q.u[3], q.v[3]);
+        pushFacing(m_vertices, q, centre, sky, blockLight);
     }
 }
 
@@ -652,7 +712,7 @@ void HeldItem::render(Shader& chunkShader, const Camera& camera, const PlayerSki
     chunkShader.bind();
     chunkShader.setVec3("uChunkOffset", glm::vec3(0.0f));
 
-    if (skin.textureId())
+    if (skin.textureId() && empty)
     {
         m_vertices.clear();
         appendArm(pose(eye, false, sneaking, blocking), skin, sky, blockLight);
@@ -676,41 +736,18 @@ void HeldItem::render(Shader& chunkShader, const Camera& camera, const PlayerSki
     // tile, and it is a panel rather than a card.
     if (showing == Items::Shield && shieldTexture() != 0)
     {
-        // Mojang's own first-person pose, out of shield.json: well out
-        // to the left, well forward of the hand, a quarter again life
-        // size, and square to the eye rather than angled -- you look at
-        // the face of your own shield, which is how you can see the
-        // banner on one. Carried it leans five degrees; raised it
-        // straightens up, rises a little and comes closer.
-        //
-        //   firstperson_righthand  rotation [0,180,5]  translation [-10,2,-10]
-        //   shield_blocking        rotation [0,180,0]  translation [-10,2.5,-11]
-        // Placed against the camera rather than hung off the hand: a
-        // shield is far bigger than the fist holding it, and the two
-        // numbers that matter are where its face sits on the screen
-        // and how square to you it is. Carried, the near edge is out
-        // at the bottom right; raised, it comes across in front of
-        // you and most of the view is shield.
-        glm::mat4 panel = held;
-        const float outward = blocking ? 0.19f : 0.45f;
-        const float downward = blocking ? 0.49f : 0.80f;
-        const float along = blocking ? 0.61f : 0.82f;
-        panel[3] = glm::vec4(camera.position +
-                                 camera.right * outward +
-                                 camera.up * -downward +
-                                 camera.front * along, 1.0f);
+        // Raised, 1.21 holds it at the equip offset alone, with no swing,
+        // and turns to shield_blocking's transform.
+        glm::mat4 hand = held;
+        if (blocking)
+            hand = eye * FLIP_FORWARD *
+                   glm::translate(glm::mat4(1.0f),
+                                  glm::vec3(ITEM_RIGHT, -ITEM_DOWN - EQUIP_DROP * (1.0f - m_equip),
+                                            -ITEM_FORWARD));
 
-        const float roll = blocking ? 0.0f : 0.0873f;   // five degrees
-        const float cr = std::cos(roll), sr = std::sin(roll);
-        const glm::vec3 right = camera.right * cr + camera.up * sr;
-        const glm::vec3 up = -camera.right * sr + camera.up * cr;
-
-        // Turned about its own vertical axis, which negates right and
-        // forward. This is the half-turn in Mojang's [0,180,5]: without
-        // it you are looking at the back of your own shield.
-        panel[0] = glm::vec4(-right, 0.0f);
-        panel[1] = glm::vec4(up, 0.0f);
-        panel[2] = glm::vec4(-camera.front, 0.0f);
+        const glm::mat4 panel = hand * displayMatrix(blocking ? SHIELD_BLOCKING_DISPLAY
+                                                              : SHIELD_DISPLAY) *
+                                glm::scale(glm::mat4(1.0f), glm::vec3(1.0f, -1.0f, -1.0f) / 16.0f);
 
         m_vertices.clear();
         appendShield(panel, sky, blockLight);
