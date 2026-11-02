@@ -146,14 +146,16 @@ namespace
 }
 
 // A cube seen from above and to one side: the top face as a rhombus,
-// and two of the four sides below it. It is the same two-to-one
-// isometric Minecraft uses, which is why a block in a slot there looks
-// like a block rather than like a square of its own top texture.
+// and two of the four sides below it -- Minecraft's own view of a block
+// in a slot, numbers and all.
 //
-// Laid out so the whole thing fits a square of `size` on a side. With
-// `a` for the half-width, the rhombus is `a` wide and `a` tall between
-// its top and bottom corners, and the sides hang `a` below it, which
-// comes to `2a` -- the full square -- in all.
+// The client draws a block in a slot as a cube ten pixels on an edge,
+// turned 45 degrees about the upright and tipped 30 towards you. That
+// makes the top a rhombus 10 * sqrt 2 = 14.1 across and half that tall,
+// and the sides hang 10 * cos 30 = 8.7 below it: 14.1 wide and 15.7
+// tall in all, a little taller than wide. Fitting the same cube into a
+// square instead -- the sides only as tall as the top is deep -- is what
+// made every block in the game look sat on.
 bool Application::drawBlockIcon(float x, float y, float size, StackId id,
                                 const glm::vec4& tint)
 {
@@ -167,14 +169,18 @@ bool Application::drawBlockIcon(float x, float y, float size, StackId id,
     // draws them flat too.
     if (info.render != RenderType::Cube && info.render != RenderType::Slab) return false;
 
-    const float a = size * 0.5f;
-    const float tall = blockHeight(block);     // a slab stands half as high
-    const float sides = a * tall;
+    // Minecraft's proportions, scaled to the slot: 14.14 of 16 across.
+    const float width = size * (14.142f / 16.0f);
+    const float a = width * 0.5f;                       // half across, and the top's height
+    const float fullSides = width * 0.6124f;             // cos 30 / sqrt 2 of the width
+    const float tall = blockHeight(block);               // a slab stands half as high
+    const float sides = fullSides * tall;
 
-    // Bottom-aligned, so a slab sits in the bottom of the slot with the
-    // space above it rather than floating in the middle.
-    const float top = y + (size - (a + sides));
-    const float cx = x + a;
+    // Centred in the slot as a full cube, and a slab sits where the
+    // bottom of that cube would be rather than floating in the middle.
+    const float margin = (size - (a + fullSides)) * 0.5f;
+    const float top = y + size - margin - (a + sides);
+    const float cx = x + size * 0.5f;
 
     const glm::vec2 A(cx, top);                  // the rhombus, clockwise
     const glm::vec2 B(cx + a, top + a * 0.5f);
@@ -250,16 +256,14 @@ void Application::drawItem(float x, float y, float size, StackId id, int count,
 {
     if (id == Blocks::Air) return;
 
-    // Minecraft draws a 16-pixel item inside an 18-pixel slot, so the
-    // only margin is the slot's own border. At 19 per cent the icons
-    // sat in the middle of their slots like stamps on envelopes.
-    const float inset = size * 0.0625f;
-
-    if (!drawBlockIcon(x + inset, y + inset, size - inset * 2.0f, id, tint))
+    // Minecraft draws an item the full sixteen pixels of its slot's
+    // inside, with the slot's own border the only margin. Shrunk by a
+    // pixel a side on top of that, every icon came out a size smaller
+    // than the slot it was in.
+    if (!drawBlockIcon(x, y, size, id, tint))
     {
         const TileUV uv = tileUV(atlasTileFor(id));
-        m_ui.texturedQuad(m_atlas.textureId(), x + inset, y + inset,
-                          size - inset * 2.0f, size - inset * 2.0f,
+        m_ui.texturedQuad(m_atlas.textureId(), x, y, size, size,
                           uv.u0, uv.vTop, uv.u1, uv.vBottom, tint);
     }
 
@@ -268,15 +272,16 @@ void Application::drawItem(float x, float y, float size, StackId id, int count,
     const int limit = Tools::maxDurability(Tools::tierOf(id));
     if (limit > 0 && damage > 0)
     {
+        // The client's bar: a black strip 13 by 2 at 2 and 13, and the
+        // coloured one a pixel tall along the top of it.
         const float left = std::clamp(1.0f - static_cast<float>(damage) / limit, 0.0f, 1.0f);
-        const float barX = x + size * 0.16f;
-        const float barY = y + size * 0.78f;
-        const float barWidth = size * 0.68f;
-        const float barHeight = std::max(2.0f, size * 0.08f);
+        const float px = size / 16.0f;
+        const float barX = x + 2.0f * px;
+        const float barY = y + 13.0f * px;
 
-        m_ui.quad(barX, barY, barWidth, barHeight, glm::vec4(0.1f, 0.1f, 0.1f, 0.9f));
-        m_ui.quad(barX, barY, barWidth * left, barHeight,
-                  glm::vec4(1.0f - left, left, 0.12f, 1.0f));
+        m_ui.quad(barX, barY, 13.0f * px, 2.0f * px, glm::vec4(0.0f, 0.0f, 0.0f, 1.0f));
+        m_ui.quad(barX, barY, std::round(13.0f * left) * px, px,
+                  glm::vec4(1.0f - left, left, 0.0f, 1.0f));
     }
 
     // A single item shows no number, same as Minecraft.
