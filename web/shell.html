@@ -159,20 +159,6 @@
     }
   };
 
-  // Safari only had the prefixed name until recently, and from Chrome
-  // 113 this returns a promise that rejects loudly when the document is
-  // not allowed to take the lock -- inside an iframe, for instance.
-  function grabPointer() {
-    const request = canvas.requestPointerLock || canvas.webkitRequestPointerLock;
-    if (!request) return;
-    try {
-      const result = request.call(canvas);
-      if (result && typeof result.catch === 'function') result.catch(function () {});
-    } catch (e) {
-      /* the game is perfectly playable without it; the mouse just stays free */
-    }
-  }
-
   playButton.addEventListener('click', function () {
     overlay.classList.add('hidden');
     canvas.focus();
@@ -183,15 +169,6 @@
       const context = Module.SDL2 && Module.SDL2.audioContext;
       if (context && context.state === 'suspended') context.resume();
     } catch (e) { /* no audio is better than no game */ }
-
-    grabPointer();
-  });
-
-  // Clicking the canvas after Esc re-captures the mouse.
-  canvas.addEventListener('click', function () {
-    if (!document.pointerLockElement && overlay.classList.contains('hidden')) {
-      grabPointer();
-    }
   });
 
   // SDL asks for pointer lock from inside its own glue code, so a
