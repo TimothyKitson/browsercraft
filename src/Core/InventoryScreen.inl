@@ -1771,11 +1771,7 @@ void Application::takeTradeResult(bool all)
 
         const int rankAfter = Trading::rankFor(record.xp);
         if (rankAfter > rankBefore)
-        {
-            m_chatLog.add(std::string("The ") + Trading::name(m_tradeWith) + " is now " +
-                          (rankAfter == 1 ? "an " : "a ") + Trading::rankName(rankAfter) + ".");
             m_audio.play(Sound::Pickup, 0.8f, 0.6f);
-        }
         else
             m_audio.play(Sound::MobVillagerSay, 0.7f, 1.3f);
 

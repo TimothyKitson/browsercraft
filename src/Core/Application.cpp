@@ -1888,7 +1888,6 @@ bool Application::frame()
             ItemStack& held = m_inventory.selected();
             if (--held.count <= 0) held.clear();
             m_audio.play(Sound::Pickup, 0.9f, 0.6f);
-            m_chatLog.add("The totem gives itself up.");
         }
 
         // The big grid belongs to the bench, not to the player, so it
@@ -4948,8 +4947,6 @@ void Application::updateGameplay(float deltaTime)
             {
                 chest.damage = std::min(chest.damage + seconds,
                                         Armour::maxDurability(Items::Elytra));
-                if (chest.damage >= Armour::maxDurability(Items::Elytra))
-                    m_chatLog.add("The wings give out.");
             }
         }
     }
@@ -5649,7 +5646,6 @@ void Application::tickDragonFight(float deltaTime)
     {
         m_dragonSlain = true;
         openExitPortal();
-        m_chatLog.add("The dragon is dead.");
         return;
     }
 
@@ -5967,7 +5963,6 @@ void Application::tryRaiseWither(const glm::ivec3& skull)
                                glm::vec3(midX + 0.5f, static_cast<float>(my), midZ + 0.5f),
                                *m_world);
             m_audio.play(Sound::MobWitherSay, 1.0f, 1.0f);
-            m_chatLog.add("Something has been built.");
             return;
         }
     }
@@ -6039,8 +6034,6 @@ void Application::tryRaiseGolem(const glm::ivec3& pumpkin)
                              static_cast<float>(pumpkin.y - 2),
                              pumpkin.z + 0.5f);
         m_entities.spawnAt(made, feet, *m_world);
-        m_chatLog.add(made == MobId::SnowGolem ? "A snow golem stands up."
-                                               : "An iron golem stands up.");
         return;
     }
 }
@@ -6089,8 +6082,6 @@ void Application::stepThroughGateway()
 
     // Long enough to walk clear of it, which is Minecraft's rule too.
     m_gatewayCooldown = 4.0f;
-    m_chatLog.add(fromRing ? "Through the gateway, to the outer islands."
-                           : "Through the gateway, back to the island.");
 }
 
 void Application::tickStructureLairs(float deltaTime)
@@ -6774,8 +6765,6 @@ void Application::tickTrialSpawners(float deltaTime)
                     m_trials.push_back(ActiveTrial{ at, 0.0f, ominous });
 
                     m_audio.play(Sound::MobZombieSay, 0.7f, ominous ? 0.45f : 0.6f);
-                    m_chatLog.add(ominous ? "An ominous trial spawner wakes."
-                                          : "A trial spawner wakes.");
                 }
     }
 
@@ -6826,8 +6815,6 @@ void Application::tickTrialSpawners(float deltaTime)
                           Trial::keyFor(trial.ominous), 1);
 
         m_audio.play(Sound::Pickup, 0.8f, trial.ominous ? 1.1f : 1.4f);
-        m_chatLog.add(trial.ominous ? "The spawner gives up an ominous key."
-                                    : "The spawner gives up its key.");
 
         m_trials[i] = m_trials.back();
         m_trials.pop_back();
@@ -6870,7 +6857,6 @@ void Application::openVault(const glm::ivec3& block)
             m_drops.spawn(out, stack.id, 1);
 
     m_audio.play(Sound::Pickup, 0.9f, 0.8f);
-    m_chatLog.add("The vault opens.");
 }
 
 void Application::settleRedstone(const glm::ivec3& at)
@@ -7174,7 +7160,6 @@ bool Application::lightPortal(const glm::ivec3& at)
     }
 
     m_audio.play(Sound::DigStone, 0.8f, 1.6f);
-    m_chatLog.add("The portal opens.");
     return true;
 }
 
@@ -7741,7 +7726,6 @@ void Application::handleEating(float deltaTime)
     {
         Effects::give(m_player.effects, Effects::Kind::Poison,
                       Food::POISON_LEVEL, Food::POISON_SECONDS);
-        m_chatLog.add("That was a pufferfish.");
     }
 
     stack.count -= 1;
@@ -8516,15 +8500,6 @@ void Application::handlePlacement()
             if (range > 1.0f)
             {
                 heading = glm::normalize(away + glm::vec3(0.0f, 0.55f, 0.0f));
-
-                char line[96];
-                std::snprintf(line, sizeof(line), "The eye flies off. %d blocks.",
-                              static_cast<int>(range));
-                m_chatLog.add(line);
-            }
-            else
-            {
-                m_chatLog.add("The eye hangs in the air. You are standing on it.");
             }
         }
 
@@ -8548,7 +8523,6 @@ void Application::handlePlacement()
     if (stack.id == Items::OminousBottle)
     {
         Effects::give(m_player.effects, Effects::Kind::BadOmen, 0, Trial::OMEN_SECONDS);
-        m_chatLog.add("Bad omen. The next spawner will know.");
         m_audio.play(Sound::MobEndermanSay, 0.6f, 0.6f);
 
         if (!m_player.creative())
