@@ -570,7 +570,7 @@ void Application::renderContainerScreen(float w, float h)
         else if (m_brewOpen) title = "Brewing Stand";
         else if (m_anvilOpen) title = "Anvil";
         else if (m_enchantOpen) title = "Enchanting Table";
-        else if (m_tradeOpen) title = Trading::name(m_tradeWith);
+        else if (m_tradeOpen) title = std::string(Trading::name(m_tradeWith)) + " Villager";
         else if (bench) title = "Crafting Table";
 
         if (title.empty() || title == "Air") title = m_chestOpen ? "Chest" : "Furnace";
