@@ -253,7 +253,109 @@ void Application::deleteSavedWorld()
 {
     std::error_code ec;
     std::filesystem::remove_all(m_savePath, ec);
+    m_traders.clear();
     saveProfile(); // the name outlives any one world
+    saveOptions();
+}
+
+void Application::saveTraders()
+{
+    std::error_code ec;
+    std::filesystem::create_directories(m_savePath, ec);
+    std::FILE* file = std::fopen((m_savePath + "/traders.txt").c_str(), "wb");
+    if (!file) return;
+    for (const auto& [seed, record] : m_traders)
+    {
+        std::fprintf(file, "%u %d %d %.3f %.3f %.3f %d %.1f %zu", record.seed, record.profession,
+                     record.dimension, record.position.x, record.position.y, record.position.z,
+                     record.xp, record.restockIn, record.uses.size());
+        for (int used : record.uses) std::fprintf(file, " %d", used);
+        std::fprintf(file, "\n");
+    }
+    std::fclose(file);
+}
+
+void Application::loadTraders()
+{
+    m_traders.clear();
+    std::FILE* file = std::fopen((m_savePath + "/traders.txt").c_str(), "rb");
+    if (!file) return;
+    char line[1024];
+    while (std::fgets(line, sizeof(line), file))
+    {
+        TraderRecord record;
+        unsigned int seed = 0;
+        size_t count = 0;
+        int read = 0;
+        if (std::sscanf(line, "%u %d %d %f %f %f %d %f %zu%n", &seed, &record.profession,
+                        &record.dimension, &record.position.x, &record.position.y,
+                        &record.position.z, &record.xp, &record.restockIn, &count, &read) < 9)
+            continue;
+        record.seed = seed;
+        const char* rest = line + read;
+        for (size_t i = 0; i < count && i < 64; ++i)
+        {
+            int used = 0;
+            int step = 0;
+            if (std::sscanf(rest, " %d%n", &used, &step) != 1) break;
+            record.uses.push_back(used);
+            rest += step;
+        }
+        m_traders[record.seed] = record;
+    }
+    std::fclose(file);
+}
+
+// A villager remembers its deals whether or not it is in range: its
+// stock comes back on a clock, and when you come back near one that
+// wandered off or was unloaded it is standing where you left it.
+void Application::updateTraders(float deltaTime)
+{
+    for (auto& [seed, record] : m_traders)
+    {
+        record.restockIn -= deltaTime;
+        if (record.restockIn <= 0.0f)
+        {
+            std::fill(record.uses.begin(), record.uses.end(), 0);
+            record.restockIn = Trading::RESTOCK_SECONDS;
+        }
+    }
+
+    m_traderSyncTimer -= deltaTime;
+    if (m_traderSyncTimer > 0.0f || !m_world) return;
+    m_traderSyncTimer = 2.0f;
+
+    for (auto& [seed, record] : m_traders)
+    {
+        if (record.dimension != static_cast<int>(m_dimension)) continue;
+
+        bool alive = false;
+        for (const Mob& mob : m_entities.mobs())
+            if (mob.typeId() == MobId::Villager && mob.birthSeed() == seed && mob.alive())
+            {
+                record.position = mob.position();
+                alive = true;
+                break;
+            }
+        if (alive) continue;
+
+        const glm::vec3 away = record.position - m_player.position;
+        if (away.x * away.x + away.z * away.z > 48.0f * 48.0f) continue;
+
+        const int cx = static_cast<int>(std::floor(record.position.x / Chunk::SX));
+        const int cz = static_cast<int>(std::floor(record.position.z / Chunk::SZ));
+        const Chunk* chunk = m_world->chunkAt(cx, cz);
+        if (!chunk || chunk->state.load() != ChunkState::Lit) continue;
+
+        for (int lift = 0; lift < 4; ++lift)
+        {
+            const glm::vec3 at = record.position + glm::vec3(0.0f, static_cast<float>(lift), 0.0f);
+            if (!m_entities.spawnAt(MobId::Villager, at, *m_world)) continue;
+            m_entities.mobs().back().setBirthSeed(seed);
+            m_entities.mobs().back().setProfessionSlot(record.profession);
+            break;
+        }
+    }
 }
 
 void Application::rebuildSkinLibrary()
@@ -397,6 +499,8 @@ void Application::startWorld(GameMode mode, bool freshWorld)
     LevelState existing;
     const bool hasSave = !freshWorld && WorldSave::loadLevel(m_savePath, existing);
     if (hasSave && existing.seed != 0) seed = existing.seed;
+    if (hasSave) loadTraders();
+    else m_traders.clear();
 
     // Reset everything that belongs to a run.
     m_drops.clear();
@@ -912,6 +1016,8 @@ void Application::saveLevel()
     for (int i = 0; i < Inventory::BREW_SLOTS; ++i) stash(Inventory::BREW_FIRST + i);
     stash(Inventory::ANVIL_LEFT);
     stash(Inventory::ANVIL_RIGHT);
+    stash(Inventory::TRADE_PAY_A);
+    stash(Inventory::TRADE_PAY_B);
     for (int i = 0; i < Inventory::CRAFT_SLOTS; ++i) stash(Inventory::CRAFT_FIRST + i);
 
     for (const auto& entry : m_furnaces.all())
@@ -981,6 +1087,7 @@ void Application::saveLevel()
     }
 
     WorldSave::saveLevel(m_savePath, state);
+    saveTraders();
     m_world->saveAll();
 
 #ifdef __EMSCRIPTEN__
@@ -2129,6 +2236,12 @@ bool Application::frame()
                     {
                         if (mob.typeId() != MobId::Villager) continue;
                         openTrading(mob);
+                        openTrader().xp = 30;
+                        m_inventory.add(Items::Wheat, 64);
+                        m_inventory.add(Items::Paper, 48);
+                        m_inventory.add(Items::Coal, 30);
+                        m_inventory.add(Items::Stick, 64);
+                        selectTrade(1);
                         break;
                     }
                 }
@@ -4597,7 +4710,9 @@ void Application::handleEvents()
     // While the creative palette is up the wheel scrolls it rather than
     // the hotbar, which is the only way to reach a tab longer than the
     // five rows the grid shows.
-    if (m_inventoryOpen && m_player.creative() && m_input.wheelDelta() != 0)
+    if (m_inventoryOpen && m_tradeOpen && m_input.wheelDelta() != 0)
+        m_tradeScroll -= m_input.wheelDelta();
+    else if (m_inventoryOpen && m_player.creative() && m_input.wheelDelta() != 0)
         m_paletteRow -= m_input.wheelDelta();
 
     if (m_keys.pressed(m_input, Action::Inventory) && (playing() || m_inventoryOpen))
@@ -4720,6 +4835,7 @@ void Application::waitForSpawnChunk()
 
 void Application::updateGameplay(float deltaTime)
 {
+    updateTraders(deltaTime);
     // Typing comes first and takes everything: no walking, no looking and
     // no mining while the chat line is open.
     updateChatInput();

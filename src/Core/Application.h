@@ -48,6 +48,7 @@
 #include <string>
 #include <vector>
 #include <memory>
+#include <unordered_map>
 #include <map>
 
 // Which part of the game is on screen. The world only exists while playing,
@@ -381,6 +382,34 @@ private:
     bool m_tradeOpen = false;
     uint32_t m_tradeSeed = 0;
     Trading::Profession m_tradeWith = Trading::Profession::Farmer;
+
+    // What each villager you have traded with remembers: how far it has
+    // come, how much of each deal it has left, and when it restocks.
+    // Kept here and saved with the world, because mobs are not: a
+    // villager that has wandered out of range is brought back where it
+    // was when you return.
+    struct TraderRecord
+    {
+        uint32_t seed = 0;
+        int profession = 0;
+        int dimension = 0;
+        glm::vec3 position{ 0.0f };
+        int xp = 0;
+        std::vector<int> uses;
+        float restockIn = Trading::RESTOCK_SECONDS;
+    };
+    std::unordered_map<uint32_t, TraderRecord> m_traders;
+    int m_tradeSelected = -1;
+    int m_tradeScroll = 0;
+    float m_traderSyncTimer = 0.0f;
+    TraderRecord& openTrader();
+    void selectTrade(int deal);
+    void refreshTradeResult();
+    void takeTradeResult(bool all);
+    void stowTrading();
+    void updateTraders(float deltaTime);
+    void saveTraders();
+    void loadTraders();
 
     bool m_enchantOpen = false;
     float m_drinkTimer = 0.0f;
@@ -811,7 +840,7 @@ private:
     void lightEndPortalAround(const glm::ivec3& frame);
 
     void openTrading(const Mob& villager);
-    void acceptTrade(int row);
+
     const Mob* tradingVillager() const;
 
     void openEnchantingTable(const glm::ivec3& block);
@@ -949,7 +978,7 @@ private:
     // copies of the same geometry, and only one of them ever got fixed.
     struct SlotBox
     {
-        enum class Kind { Slot, Palette, Tab, Enchant, Trade, AnvilTake, Destroy, Scroll };
+        enum class Kind { Slot, Palette, Tab, Enchant, Trade, AnvilTake, Destroy, Scroll, TradeTake };
         Kind kind = Kind::Slot;
         int index = 0;        // inventory slot, block id, or tab number
         float x = 0.0f, y = 0.0f, size = 0.0f;

@@ -509,7 +509,9 @@ void Application::renderContainerScreen(float w, float h)
     const float PANEL_W = 176.0f;
     const float PANEL_H = m_chestOpen ? 168.0f : 166.0f;
 
-    const float panelX = std::floor((w - PANEL_W) * 0.5f);
+    const float TRADE_LIST_W = 100.0f;
+    const float panelWidth = m_tradeOpen ? PANEL_W + TRADE_LIST_W : PANEL_W;
+    const float panelX = std::floor((w - panelWidth) * 0.5f);
     const float panelY = std::floor((h - PANEL_H) * 0.5f);
 
     // A chest's own rows push the player's down, but not by a whole
@@ -539,7 +541,7 @@ void Application::renderContainerScreen(float w, float h)
         slotBox(SlotBox::Kind::Slot, index, x, y);
     };
 
-    guiPanel(panelX, panelY, PANEL_W, PANEL_H);
+    guiPanel(panelX, panelY, panelWidth, PANEL_H);
 
     // Dark text with no shadow, at the client's own two corners: the
     // container's name eight in and six down, and the word for the
@@ -570,11 +572,14 @@ void Application::renderContainerScreen(float w, float h)
         else if (m_brewOpen) title = "Brewing Stand";
         else if (m_anvilOpen) title = "Anvil";
         else if (m_enchantOpen) title = "Enchanting Table";
-        else if (m_tradeOpen) title = std::string(Trading::name(m_tradeWith)) + " Villager";
+        else if (m_tradeOpen) title.clear();
         else if (bench) title = "Crafting Table";
 
-        if (title.empty() || title == "Air") title = m_chestOpen ? "Chest" : "Furnace";
-        m_ui.text(title, panelX + 8.0f, panelY + 6.0f, 1.0f, GUI_TEXT);
+        if (!m_tradeOpen)
+        {
+            if (title.empty() || title == "Air") title = m_chestOpen ? "Chest" : "Furnace";
+            m_ui.text(title, panelX + 8.0f, panelY + 6.0f, 1.0f, GUI_TEXT);
+        }
     }
 
     // The word over the player's own rows. The client leaves it off two
@@ -615,13 +620,8 @@ void Application::renderContainerScreen(float w, float h)
                 grid[cell] = m_inventory.slot(index);
                 if (crafterSlotDisabled(cell))
                 {
-                    m_ui.quad(sx, sy, SLOT, SLOT, glm::vec4(0.22f, 0.22f, 0.22f, 1.0f));
-                    for (int k = 2; k < 14; ++k)
-                    {
-                        const float f = static_cast<float>(k);
-                        m_ui.quad(sx + f, sy + f, 1.0f, 1.0f, glm::vec4(0.45f, 0.45f, 0.45f, 1.0f));
-                        m_ui.quad(sx + 15.0f - f, sy + f, 1.0f, 1.0f, glm::vec4(0.45f, 0.45f, 0.45f, 1.0f));
-                    }
+                    bevel(sx - 1.0f, sy - 1.0f, PITCH, PITCH, GUI_PANEL, GUI_PANEL_LIGHT,
+                          GUI_PANEL_DARK, 1.0f);
                     addHint(sx - 1.0f, sy - 1.0f, PITCH, PITCH, "Disabled: click to enable");
                 }
                 else if (grid[cell].empty())
@@ -693,56 +693,187 @@ void Application::renderContainerScreen(float w, float h)
                              panelY + 78.0f, 30.0f);
         }
 
-        // Trading: the villager's deals as cards, two to a row, each
-        // reading what you give, then what it gives you back. A card
-        // you can pay for lights up under the cursor; one you cannot
-        // is dimmed and says what is missing.
+        // Trading. The villager's rank and progress across the top, the
+        // payment slots and what they buy in the middle, and the list of
+        // every deal it will make down the right-hand side.
         if (m_tradeOpen)
         {
-            const std::vector<Trading::Offer> offers = Trading::offersFor(m_tradeWith);
+            const std::vector<Trading::Deal> deals = Trading::dealsFor(m_tradeWith);
+            TraderRecord& record = openTrader();
+            const int rank = Trading::rankFor(record.xp);
             const float mouseX = static_cast<float>(m_input.mouseX()) / m_ui.scale();
             const float mouseY = static_cast<float>(m_input.mouseY()) / m_ui.scale();
 
-            for (size_t row = 0; row < offers.size() && row < 4; ++row)
+            auto softBox = [&](float x, float y, float bw, float bh, const glm::vec4& top,
+                               const glm::vec4& bottom, const glm::vec4& edge) {
+                m_ui.quad(x + 1.0f, y, bw - 2.0f, bh, edge);
+                m_ui.quad(x, y + 1.0f, bw, bh - 2.0f, edge);
+                m_ui.gradient(x + 1.0f, y + 1.0f, bw - 2.0f, bh - 2.0f, top, bottom);
+            };
+            auto redCross = [&](float x, float y, float size) {
+                const glm::vec4 red(0.85f, 0.18f, 0.15f, 1.0f);
+                for (int k = 0; k < static_cast<int>(size); ++k)
+                {
+                    const float f = static_cast<float>(k);
+                    m_ui.quad(x + f, y + f, 2.0f, 2.0f, red);
+                    m_ui.quad(x + size - 2.0f - f, y + f, 2.0f, 2.0f, red);
+                }
+            };
+
+            const std::string header = std::string(Trading::rankName(rank)) + " " +
+                                       Trading::name(m_tradeWith);
+            m_ui.text(header, panelX + PANEL_W * 0.5f - UIRenderer::textWidth(header, 1.0f) * 0.5f,
+                      panelY + 6.0f, 1.0f, GUI_TEXT);
+
+            const float barX = panelX + 38.0f;
+            const float barY = panelY + 18.0f;
+            const float barW = 100.0f;
+            guiWell(barX - 1.0f, barY - 1.0f, barW + 2.0f, 7.0f);
+            float progress = 1.0f;
+            std::string barTip = "Master: every trade is open";
+            if (rank + 1 < Trading::RANKS)
             {
-                const Trading::Offer& offer = offers[row];
-                const float cardX = panelX + 8.0f + static_cast<float>(row % 2) * 82.0f;
-                const float cardY = panelY + 17.0f + static_cast<float>(row / 2) * 26.0f;
-                const float cardW = 78.0f;
-                const float cardH = 23.0f;
+                const int from = Trading::xpForRank(rank);
+                const int to = Trading::xpForRank(rank + 1);
+                progress = std::clamp(static_cast<float>(record.xp - from) / static_cast<float>(to - from),
+                                      0.0f, 1.0f);
+                barTip = "Trades done: " + std::to_string(record.xp - from) + " of " +
+                         std::to_string(to - from) + " to " + Trading::rankName(rank + 1);
+            }
+            if (progress > 0.0f)
+            {
+                const bool master = rank + 1 >= Trading::RANKS;
+                m_ui.gradient(barX, barY, std::floor(barW * progress), 5.0f,
+                              master ? glm::vec4(1.0f, 0.86f, 0.35f, 1.0f) : glm::vec4(0.55f, 0.92f, 0.38f, 1.0f),
+                              master ? glm::vec4(0.85f, 0.62f, 0.15f, 1.0f) : glm::vec4(0.28f, 0.66f, 0.18f, 1.0f));
+            }
+            addHint(barX - 1.0f, barY - 1.0f, barW + 2.0f, 7.0f, barTip);
 
-                const int haveWant = m_inventory.countOf(offer.want);
-                const int haveAlso = (offer.also == Blocks::Air)
-                                         ? 0 : m_inventory.countOf(offer.also);
-                const bool canPay = m_player.creative() ||
-                                    Trading::affordable(offer, haveWant, haveAlso);
-                const bool hovered = mouseX >= cardX && mouseX < cardX + cardW &&
-                                     mouseY >= cardY && mouseY < cardY + cardH;
+            const bool chosen = m_tradeSelected >= 0 && m_tradeSelected < static_cast<int>(deals.size());
+            const float payY = panelY + 40.0f;
+            drawSlot(Inventory::TRADE_PAY_A, panelX + 36.0f, payY);
+            drawSlot(Inventory::TRADE_PAY_B, panelX + 62.0f, payY);
+            if (chosen)
+            {
+                const Trading::Offer& offer = deals[static_cast<size_t>(m_tradeSelected)].offer;
+                const glm::vec4 ghost(1.0f, 1.0f, 1.0f, 0.3f);
+                if (m_inventory.slot(Inventory::TRADE_PAY_A).empty())
+                    drawItem(panelX + 36.0f, payY, SLOT, offer.want, offer.wantCount, ghost);
+                if (offer.also != Blocks::Air && m_inventory.slot(Inventory::TRADE_PAY_B).empty())
+                    drawItem(panelX + 62.0f, payY, SLOT, offer.also, offer.alsoCount, ghost);
+            }
 
-                const glm::vec4 face = !canPay ? glm::vec4(0.60f, 0.60f, 0.60f, 1.0f)
-                                     : hovered ? glm::vec4(0.86f, 0.86f, 0.86f, 1.0f)
-                                               : glm::vec4(0.70f, 0.70f, 0.70f, 1.0f);
-                bevel(cardX, cardY, cardW, cardH, face, GUI_PANEL_LIGHT, GUI_PANEL_DARK, 1.0f);
+            drawCraftArrow(panelX + 88.0f, payY, 22.0f, 15.0f);
+            const bool soldOut = chosen &&
+                                 record.uses[static_cast<size_t>(m_tradeSelected)] >=
+                                     deals[static_cast<size_t>(m_tradeSelected)].maxUses;
+            if (soldOut)
+            {
+                redCross(panelX + 92.0f, payY - 1.0f, 15.0f);
+                addHint(panelX + 88.0f, payY - 1.0f, 22.0f, 17.0f, "Sold out: it restocks soon");
+            }
 
-                const glm::vec4 tint = canPay ? glm::vec4(1.0f) : glm::vec4(1.0f, 1.0f, 1.0f, 0.45f);
-                const float itemY = cardY + 3.5f;
-                drawItem(cardX + 3.0f, itemY, SLOT, offer.want, offer.wantCount, tint);
+            const float resultX = panelX + 130.0f;
+            guiWell(resultX - 5.0f, payY - 5.0f, 26.0f, 26.0f);
+            const ItemStack& made = m_inventory.slot(Inventory::TRADE_RESULT);
+            drawItem(resultX, payY, SLOT, made.id, made.count, glm::vec4(1.0f), made.damage);
+            m_slotBoxes.push_back({ SlotBox::Kind::TradeTake, Inventory::TRADE_RESULT,
+                                    resultX - 1.0f, payY - 1.0f, PITCH });
+            if (!chosen)
+            {
+                const std::string pick = "Pick a trade";
+                m_ui.text(pick, panelX + PANEL_W * 0.5f - UIRenderer::textWidth(pick, 1.0f) * 0.5f,
+                          panelY + 60.0f, 1.0f, TEXT_DIM);
+            }
+
+            const float listX = panelX + PANEL_W + 2.0f;
+            const float listTop = panelY + 17.0f;
+            const float rowH = 20.0f;
+            const int visibleRows = 7;
+            const std::string heading = "Trades";
+            m_ui.text(heading, panelX + PANEL_W + 44.0f - UIRenderer::textWidth(heading, 1.0f) * 0.5f,
+                      panelY + 6.0f, 1.0f, GUI_TEXT);
+
+            std::vector<int> open;
+            for (size_t i = 0; i < deals.size(); ++i)
+                if (deals[i].rank <= rank) open.push_back(static_cast<int>(i));
+            const int maxScroll = std::max(0, static_cast<int>(open.size()) - visibleRows);
+
+            const float trackX = panelX + PANEL_W + 85.0f;
+            const float trackH = rowH * visibleRows - 1.0f;
+            if (m_draggingScroll && !m_input.isMouseButtonDown(SDL_BUTTON_LEFT)) m_draggingScroll = false;
+            if (m_draggingScroll && maxScroll > 0)
+            {
+                const float along = std::clamp((mouseY - listTop - 7.5f) / (trackH - 15.0f), 0.0f, 1.0f);
+                m_tradeScroll = static_cast<int>(std::lround(along * maxScroll));
+            }
+            m_tradeScroll = std::clamp(m_tradeScroll, 0, maxScroll);
+
+            for (int r = 0; r < visibleRows; ++r)
+            {
+                const int at = r + m_tradeScroll;
+                if (at >= static_cast<int>(open.size())) break;
+                const int index = open[static_cast<size_t>(at)];
+                const Trading::Deal& deal = deals[static_cast<size_t>(index)];
+                const Trading::Offer& offer = deal.offer;
+                const float ry = listTop + rowH * r;
+                const float rw = 80.0f;
+                const bool out = record.uses[static_cast<size_t>(index)] >= deal.maxUses;
+                const bool selected = index == m_tradeSelected;
+                const bool hovered = mouseX >= listX && mouseX < listX + rw &&
+                                     mouseY >= ry && mouseY < ry + rowH - 1.0f;
+
+                const glm::vec4 top = out ? glm::vec4(0.58f, 0.58f, 0.58f, 1.0f)
+                                    : hovered ? glm::vec4(0.88f, 0.88f, 0.88f, 1.0f)
+                                              : glm::vec4(0.78f, 0.78f, 0.78f, 1.0f);
+                const glm::vec4 bottom = out ? glm::vec4(0.52f, 0.52f, 0.52f, 1.0f)
+                                       : hovered ? glm::vec4(0.78f, 0.78f, 0.78f, 1.0f)
+                                                 : glm::vec4(0.68f, 0.68f, 0.68f, 1.0f);
+                softBox(listX, ry, rw, rowH - 1.0f, top, bottom,
+                        selected ? glm::vec4(1.0f, 0.92f, 0.45f, 1.0f) : glm::vec4(0.40f, 0.40f, 0.40f, 1.0f));
+
+                const glm::vec4 tint = out ? glm::vec4(1.0f, 1.0f, 1.0f, 0.5f) : glm::vec4(1.0f);
+                drawItem(listX + 2.0f, ry + 1.5f, SLOT, offer.want, offer.wantCount, tint);
                 if (offer.also != Blocks::Air)
-                    drawItem(cardX + 21.0f, itemY, SLOT, offer.also, offer.alsoCount, tint);
-                drawCraftArrow(cardX + 40.0f, itemY + 2.0f, 14.0f, 12.0f);
-                drawItem(cardX + 58.0f, itemY, SLOT, offer.give, offer.giveCount, tint);
+                    drawItem(listX + 20.0f, ry + 1.5f, SLOT, offer.also, offer.alsoCount, tint);
+                if (out) redCross(listX + 41.0f, ry + 3.0f, 12.0f);
+                else drawCraftArrow(listX + 39.0f, ry + 4.0f, 15.0f, 11.0f);
+                drawItem(listX + 60.0f, ry + 1.5f, SLOT, offer.give, offer.giveCount, tint);
 
-                std::string tip = "Give " + std::to_string(offer.wantCount) + " " +
-                                  displayName(offer.want);
+                std::string tip = "Give " + std::to_string(offer.wantCount) + " " + displayName(offer.want);
                 if (offer.also != Blocks::Air)
                     tip += " and " + std::to_string(offer.alsoCount) + " " + displayName(offer.also);
                 tip += " for " + std::to_string(offer.giveCount) + " " + displayName(offer.give);
-                if (!canPay) tip += " (not enough)";
-                addHint(cardX, cardY, cardW, cardH, tip);
+                if (offer.giveEnchantments != 0)
+                    tip += " (enchanted)";
+                const int left = deal.maxUses - record.uses[static_cast<size_t>(index)];
+                tip += out ? " - sold out" : " - " + std::to_string(left) + " left";
+                addHint(listX, ry, rw, rowH - 1.0f, tip);
+                m_slotBoxes.push_back({ SlotBox::Kind::Trade, index, listX, ry, rowH - 1.0f, rw });
+            }
 
-                if (canPay)
-                    m_slotBoxes.push_back({ SlotBox::Kind::Trade, static_cast<int>(row),
-                                            cardX, cardY, cardH, cardW });
+            guiWell(trackX, listTop, 7.0f, trackH);
+            if (maxScroll > 0)
+            {
+                const float along = static_cast<float>(m_tradeScroll) / static_cast<float>(maxScroll);
+                const float thumbY = listTop + (trackH - 15.0f) * along;
+                bevel(trackX + 1.0f, thumbY, 5.0f, 15.0f, GUI_PANEL, GUI_PANEL_LIGHT, GUI_PANEL_DARK, 1.0f);
+                m_slotBoxes.push_back({ SlotBox::Kind::Scroll, 0, trackX, listTop, trackH, 7.0f });
+            }
+
+            if (rank + 1 < Trading::RANKS)
+            {
+                int locked = 0;
+                for (const Trading::Deal& deal : deals) if (deal.rank > rank) ++locked;
+                if (locked > 0 && static_cast<int>(open.size()) < visibleRows)
+                {
+                    const std::string more = std::to_string(locked) + " more at " +
+                                             Trading::rankName(rank + 1);
+                    const float unit = static_cast<float>(guiScale());
+                    const float small = std::max(0.5f, std::floor(unit * 0.75f) / unit);
+                    m_ui.text(more, listX + 40.0f - UIRenderer::textWidth(more, small) * 0.5f,
+                              listTop + rowH * static_cast<float>(open.size()) + 4.0f, small, TEXT_DIM);
+                }
             }
         }
         else
@@ -1394,7 +1525,11 @@ void Application::handleInventoryClick(int mouseX, int mouseY, bool rightButton,
             break;
 
         case SlotBox::Kind::Trade:
-            acceptTrade(box->index);
+            selectTrade(box->index);
+            break;
+
+        case SlotBox::Kind::TradeTake:
+            takeTradeResult(shiftHeld);
             break;
 
         case SlotBox::Kind::AnvilTake:
@@ -1436,6 +1571,7 @@ void Application::handleInventoryClick(int mouseX, int mouseY, bool rightButton,
             // out which ones can is not worth the bug it would cause.
             m_inventory.refreshCraftResult();
             refreshAnvilResult();
+            refreshTradeResult();
             m_audio.play(Sound::Click, 0.35f);
             break;
     }
@@ -1452,6 +1588,7 @@ void Application::closeInventory()
     stowEnchantingTable();
     stowAnvil();
     stowBrewingStand();
+    stowTrading();
     m_tradeOpen = false;
     returnCursorToWorld();
     m_inventoryOpen = false;
@@ -1472,6 +1609,8 @@ const Mob* Application::tradingVillager() const
 void Application::openTrading(const Mob& villager)
 {
     m_tradeOpen = true;
+    m_tradeSelected = -1;
+    m_tradeScroll = 0;
     m_tradeSeed = villager.birthSeed();
     // A villager that lives in a village keeps that building's trade.
     // One met out in the country has no building to take it from, so it
@@ -1480,38 +1619,199 @@ void Application::openTrading(const Mob& villager)
     m_tradeWith = (villager.professionSlot() >= 0)
                       ? static_cast<Trading::Profession>(villager.professionSlot())
                       : Trading::professionFor(villager.birthSeed());
+    TraderRecord& record = openTrader();
+    record.position = villager.position();
+    record.dimension = static_cast<int>(m_dimension);
     m_inventoryOpen = true;
     setMouseCaptured(false);
 }
 
-void Application::acceptTrade(int row)
+Application::TraderRecord& Application::openTrader()
+{
+    TraderRecord& record = m_traders[m_tradeSeed];
+    if (record.seed != m_tradeSeed)
+    {
+        record.seed = m_tradeSeed;
+        record.profession = static_cast<int>(m_tradeWith);
+        record.dimension = static_cast<int>(m_dimension);
+    }
+    const size_t deals = Trading::dealsFor(m_tradeWith).size();
+    if (record.uses.size() != deals) record.uses.resize(deals, 0);
+    return record;
+}
+
+// Picking a deal puts back whatever was waiting to pay with, then fills
+// the payment slots from the pack -- as much as a stack will hold, so
+// the same deal can be struck again and again by taking the result.
+void Application::selectTrade(int deal)
+{
+    const std::vector<Trading::Deal> deals = Trading::dealsFor(m_tradeWith);
+    if (deal < 0 || deal >= static_cast<int>(deals.size())) return;
+    m_tradeSelected = deal;
+
+    for (int slot : { Inventory::TRADE_PAY_A, Inventory::TRADE_PAY_B })
+    {
+        ItemStack& held = m_inventory.slot(slot);
+        if (held.empty()) continue;
+        const int leftOver = m_inventory.addStack(held);
+        if (leftOver > 0)
+        {
+            ItemStack rest = held;
+            rest.count = leftOver;
+            m_drops.spawnStack(m_player.position + glm::vec3(0.0f, 0.6f, 0.0f), rest);
+        }
+        held.clear();
+    }
+
+    const Trading::Offer& offer = deals[static_cast<size_t>(deal)].offer;
+    auto fill = [&](int slot, StackId want) {
+        if (want == Blocks::Air) return;
+        ItemStack& into = m_inventory.slot(slot);
+        const int room = maxStackOf(want);
+        for (int i = 0; i < Inventory::MAIN_SLOTS && into.count < room; ++i)
+        {
+            ItemStack& from = m_inventory.slot(i);
+            if (from.empty() || from.id != want || from.enchantments != 0) continue;
+            const int moved = std::min(from.count, room - into.count);
+            if (into.empty())
+            {
+                into = from;
+                into.count = 0;
+            }
+            into.count += moved;
+            from.count -= moved;
+            if (from.count <= 0) from.clear();
+        }
+    };
+    fill(Inventory::TRADE_PAY_A, offer.want);
+    fill(Inventory::TRADE_PAY_B, offer.also);
+    refreshTradeResult();
+    m_audio.play(Sound::Click, 0.35f);
+}
+
+void Application::refreshTradeResult()
+{
+    ItemStack& result = m_inventory.slot(Inventory::TRADE_RESULT);
+    result.clear();
+    if (!m_tradeOpen) return;
+
+    const std::vector<Trading::Deal> deals = Trading::dealsFor(m_tradeWith);
+    TraderRecord& record = openTrader();
+    const int rank = Trading::rankFor(record.xp);
+    const ItemStack& payA = m_inventory.slot(Inventory::TRADE_PAY_A);
+    const ItemStack& payB = m_inventory.slot(Inventory::TRADE_PAY_B);
+
+    if (m_tradeSelected < 0 && !payA.empty())
+        for (size_t i = 0; i < deals.size(); ++i)
+            if (deals[i].rank <= rank && deals[i].offer.want == payA.id)
+            {
+                m_tradeSelected = static_cast<int>(i);
+                break;
+            }
+
+    if (m_tradeSelected < 0 || m_tradeSelected >= static_cast<int>(deals.size())) return;
+    const Trading::Deal& deal = deals[static_cast<size_t>(m_tradeSelected)];
+    if (deal.rank > rank) return;
+    if (record.uses[static_cast<size_t>(m_tradeSelected)] >= deal.maxUses) return;
+
+    const Trading::Offer& offer = deal.offer;
+    if (payA.id != offer.want || payA.count < offer.wantCount) return;
+    if (offer.also != Blocks::Air && (payB.id != offer.also || payB.count < offer.alsoCount)) return;
+
+    result.id = offer.give;
+    result.count = offer.giveCount;
+    result.enchantments = offer.giveEnchantments;
+}
+
+void Application::takeTradeResult(bool all)
 {
     if (!m_tradeOpen) return;
 
-    const std::vector<Trading::Offer> offers = Trading::offersFor(m_tradeWith);
-    if (row < 0 || row >= static_cast<int>(offers.size())) return;
-
-    const Trading::Offer& offer = offers[static_cast<size_t>(row)];
-
-    const int haveWant = m_inventory.countOf(offer.want);
-    const int haveAlso = (offer.also == Blocks::Air) ? 0 : m_inventory.countOf(offer.also);
-    if (!m_player.creative() && !Trading::affordable(offer, haveWant, haveAlso)) return;
-
-    // Taken before it is given. The other way round, a trade that
-    // filled the last free slot would be paid for out of a pack that no
-    // longer had room for what it was paying with.
-    if (!m_player.creative())
+    for (int round = 0; round < 64; ++round)
     {
-        for (int i = 0; i < offer.wantCount; ++i) m_inventory.take(offer.want);
-        for (int i = 0; i < offer.alsoCount; ++i) m_inventory.take(offer.also);
+        refreshTradeResult();
+        const ItemStack made = m_inventory.slot(Inventory::TRADE_RESULT);
+        if (made.empty()) return;
+
+        ItemStack& cursor = m_inventory.cursor();
+        if (all)
+        {
+            if (m_inventory.addStack(made) > 0) return;
+        }
+        else
+        {
+            const bool fits = cursor.empty() ||
+                              (cursor.id == made.id && cursor.enchantments == made.enchantments &&
+                               cursor.count + made.count <= maxStackOf(made.id));
+            if (!fits) return;
+            if (cursor.empty()) cursor = made;
+            else cursor.count += made.count;
+        }
+
+        const std::vector<Trading::Deal> deals = Trading::dealsFor(m_tradeWith);
+        const Trading::Deal& deal = deals[static_cast<size_t>(m_tradeSelected)];
+        ItemStack& payA = m_inventory.slot(Inventory::TRADE_PAY_A);
+        ItemStack& payB = m_inventory.slot(Inventory::TRADE_PAY_B);
+        payA.count -= deal.offer.wantCount;
+        if (payA.count <= 0) payA.clear();
+        if (deal.offer.also != Blocks::Air)
+        {
+            payB.count -= deal.offer.alsoCount;
+            if (payB.count <= 0) payB.clear();
+        }
+
+        TraderRecord& record = openTrader();
+        const int rankBefore = Trading::rankFor(record.xp);
+        record.uses[static_cast<size_t>(m_tradeSelected)] += 1;
+        record.xp += deal.villagerXp;
+        for (const Mob& mob : m_entities.mobs())
+            if (mob.typeId() == MobId::Villager && mob.birthSeed() == m_tradeSeed)
+                record.position = mob.position();
+        m_player.experience += deal.playerXp;
+
+        const int rankAfter = Trading::rankFor(record.xp);
+        if (rankAfter > rankBefore)
+        {
+            m_chatLog.add(std::string("The ") + Trading::name(m_tradeWith) + " is now " +
+                          (rankAfter == 1 ? "an " : "a ") + Trading::rankName(rankAfter) + ".");
+            m_audio.play(Sound::Pickup, 0.8f, 0.6f);
+        }
+        else
+            m_audio.play(Sound::MobVillagerSay, 0.7f, 1.3f);
+
+        if (!all) break;
     }
+    refreshTradeResult();
+}
 
-    const int leftOver = m_inventory.add(offer.give, offer.giveCount);
-    if (leftOver > 0)
-        m_drops.spawn(m_player.position + glm::vec3(0.0f, 0.6f, 0.0f),
-                      offer.give, leftOver);
+void Application::stowTrading()
+{
+    for (int slot : { Inventory::TRADE_PAY_A, Inventory::TRADE_PAY_B })
+    {
+        ItemStack& held = m_inventory.slot(slot);
+        if (held.empty()) continue;
+        const int leftOver = m_inventory.addStack(held);
+        if (leftOver > 0)
+        {
+            ItemStack rest = held;
+            rest.count = leftOver;
+            m_drops.spawnStack(m_player.position + glm::vec3(0.0f, 0.6f, 0.0f), rest);
+        }
+        held.clear();
+    }
+    m_inventory.slot(Inventory::TRADE_RESULT).clear();
 
-    m_audio.play(Sound::MobVillagerSay, 0.7f, 1.3f);
+    if (m_tradeOpen)
+    {
+        auto found = m_traders.find(m_tradeSeed);
+        if (found != m_traders.end())
+        {
+            bool touched = found->second.xp > 0;
+            for (int used : found->second.uses) touched = touched || used > 0;
+            if (!touched) m_traders.erase(found);
+        }
+    }
+    m_tradeSelected = -1;
 }
 
 void Application::openEnchantingTable(const glm::ivec3& block)

@@ -370,6 +370,7 @@ bool Inventory::belongsIn(int index, StackId id)
 {
     if (index == ENCHANT_LAPIS) return id == Items::LapisLazuli;
     if (index == BREW_FUEL) return id == Items::BlazePowder;
+    if (index == TRADE_RESULT) return false;
     if (!isArmourSlot(index)) return true;
     return Armour::slotFor(id) == index - ARMOR_FIRST;
 }

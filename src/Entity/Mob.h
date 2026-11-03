@@ -112,6 +112,7 @@ public:
     // the same for the life of the mob -- a villager's profession, for
     // one, which would otherwise change as it wandered about.
     uint32_t birthSeed() const { return m_birthSeed; }
+    void setBirthSeed(uint32_t seed) { m_birthSeed = seed; }
 
     // A neutral mob that has been given a reason. Once set it stays
     // set: Minecraft's enderman does not forgive, and a mob that

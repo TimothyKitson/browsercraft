@@ -9826,6 +9826,40 @@ namespace
         }
         check(spends, "and every profession sells something for them");
 
+        section("trading: ranks and stock");
+
+        bool climbs = true;
+        for (int r = 1; r < Trading::RANKS; ++r)
+            if (Trading::xpForRank(r) <= Trading::xpForRank(r - 1)) climbs = false;
+        check(climbs, "each rank needs more experience than the last");
+        check(Trading::rankFor(0) == 0, "a new villager is a " + std::string(Trading::rankName(0)));
+        check(Trading::rankFor(Trading::xpForRank(1)) == 1, "reaching the threshold ranks it up");
+        check(Trading::rankFor(Trading::xpForRank(1) - 1) == 0, "and one short does not");
+        check(Trading::rankFor(100000) == Trading::RANKS - 1, "and it tops out at " +
+              std::string(Trading::rankName(Trading::RANKS - 1)));
+
+        bool everyRank = true;
+        bool stocked = true;
+        bool earnsXp = true;
+        for (int i = 0; i < static_cast<int>(Profession::Count); ++i)
+        {
+            const std::vector<Trading::Deal> deals = Trading::dealsFor(static_cast<Profession>(i));
+            for (int r = 0; r < Trading::RANKS; ++r)
+            {
+                bool any = false;
+                for (const Trading::Deal& d : deals) if (d.rank == r) any = true;
+                if (!any) everyRank = false;
+            }
+            for (const Trading::Deal& d : deals)
+            {
+                if (d.maxUses <= 0) stocked = false;
+                if (d.villagerXp <= 0 || d.playerXp <= 0) earnsXp = false;
+            }
+        }
+        check(everyRank, "every profession has something new at every rank");
+        check(stocked, "every deal can be struck at least once before it sells out");
+        check(earnsXp, "and every deal teaches the villager and the player something");
+
         section("trading: what you can afford");
 
         const Trading::Offer deal{ Items::Wheat, 18, Blocks::Air, 0, Items::Emerald, 1 };

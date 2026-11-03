@@ -105,7 +105,12 @@ public:
     // until it is not.
     static constexpr int ENCHANT_LAPIS = BREW_FIRST + BREW_SLOTS;     // 89
 
-    static constexpr int SLOT_COUNT = ENCHANT_LAPIS + 1;              // 90
+    // What you pay a villager with, and what it hands back.
+    static constexpr int TRADE_PAY_A = ENCHANT_LAPIS + 1;             // 90
+    static constexpr int TRADE_PAY_B = TRADE_PAY_A + 1;               // 91
+    static constexpr int TRADE_RESULT = TRADE_PAY_B + 1;              // 92
+
+    static constexpr int SLOT_COUNT = TRADE_RESULT + 1;               // 93
 
     // The ceiling. What a particular thing actually stacks to comes from
     // maxStackOf(), since items need not agree with blocks.

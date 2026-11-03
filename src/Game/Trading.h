@@ -41,6 +41,7 @@ namespace Trading
         int alsoCount = 0;
         StackId give = Blocks::Air;
         int giveCount = 0;
+        uint32_t giveEnchantments = 0;
 
         bool valid() const
         {
@@ -53,6 +54,31 @@ namespace Trading
     // four trades a villager, which is about what a Minecraft villager
     // shows before it has been levelled up.
     std::vector<Offer> offersFor(Profession trade);
+
+    // A villager's standing: it starts a Novice and works up to Master
+    // by trading, and each rank opens more of its list.
+    constexpr int RANKS = 5;
+    const char* rankName(int rank);
+    int xpForRank(int rank);
+    int rankFor(int xp);
+
+    // One line of a villager's list: the deal, the rank it opens at,
+    // how many times it can be struck before the villager runs out, and
+    // the experience it earns the villager and the player.
+    struct Deal
+    {
+        Offer offer;
+        int rank = 0;
+        int maxUses = 12;
+        int villagerXp = 2;
+        int playerXp = 1;
+    };
+
+    std::vector<Deal> dealsFor(Profession trade);
+
+    // How long a villager takes to restock everything it has sold out
+    // of, in seconds of play.
+    constexpr float RESTOCK_SECONDS = 600.0f;
 
     // Whether a pack holding these counts could pay for this offer.
     // Taken as counts rather than an Inventory so the rule can be
