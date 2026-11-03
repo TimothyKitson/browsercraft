@@ -3843,6 +3843,7 @@ bool Application::frame()
                 m_inventory.add(Blocks::Crafter, 1);
 
                 openCrafter(glm::ivec3(px + 3, py, pz));
+                setCrafterSlotDisabled(8, true);
                 for (int i : { 0, 1, 3, 4 })
                 {
                     ItemStack& plank = m_inventory.slot(Inventory::CHEST_FIRST + i);

@@ -607,9 +607,25 @@ void Application::renderContainerScreen(float w, float h)
         for (int row = 0; row < 3; ++row)
             for (int column = 0; column < 3; ++column)
             {
-                const int index = Inventory::CHEST_FIRST + row * 3 + column;
-                drawSlot(index, panelX + 26.0f + column * PITCH, panelY + 17.0f + row * PITCH);
-                grid[row * 3 + column] = m_inventory.slot(index);
+                const int cell = row * 3 + column;
+                const int index = Inventory::CHEST_FIRST + cell;
+                const float sx = panelX + 26.0f + column * PITCH;
+                const float sy = panelY + 17.0f + row * PITCH;
+                drawSlot(index, sx, sy);
+                grid[cell] = m_inventory.slot(index);
+                if (crafterSlotDisabled(cell))
+                {
+                    m_ui.quad(sx, sy, SLOT, SLOT, glm::vec4(0.22f, 0.22f, 0.22f, 1.0f));
+                    for (int k = 2; k < 14; ++k)
+                    {
+                        const float f = static_cast<float>(k);
+                        m_ui.quad(sx + f, sy + f, 1.0f, 1.0f, glm::vec4(0.45f, 0.45f, 0.45f, 1.0f));
+                        m_ui.quad(sx + 15.0f - f, sy + f, 1.0f, 1.0f, glm::vec4(0.45f, 0.45f, 0.45f, 1.0f));
+                    }
+                    addHint(sx - 1.0f, sy - 1.0f, PITCH, PITCH, "Disabled: click to enable");
+                }
+                else if (grid[cell].empty())
+                    addHint(sx - 1.0f, sy - 1.0f, PITCH, PITCH, "Click to disable this slot");
             }
 
         const bool powered = m_world->getBlock(m_crafterBlock.x, m_crafterBlock.y,
@@ -754,13 +770,17 @@ void Application::renderContainerScreen(float w, float h)
             const float mouseX = static_cast<float>(m_input.mouseX()) / m_ui.scale();
             const float mouseY = static_cast<float>(m_input.mouseY()) / m_ui.scale();
 
-            const glm::vec4 ROW_FACE(0.73f, 0.67f, 0.58f, 1.0f);
-            const glm::vec4 ROW_LIT(0.84f, 0.79f, 0.68f, 1.0f);
-            const glm::vec4 ROW_DEAD(0.50f, 0.47f, 0.42f, 1.0f);
-            const glm::vec4 TEXT_BROWN(0.30f, 0.26f, 0.19f, 1.0f);
-            const glm::vec4 TEXT_DEAD(0.36f, 0.33f, 0.29f, 1.0f);
-            const glm::vec4 LEVEL_GREEN(0.502f, 1.0f, 0.125f, 1.0f);
-            const glm::vec4 LEVEL_DARK(0.40f, 0.55f, 0.32f, 1.0f);
+            const glm::vec4 TEXT_BROWN(0.32f, 0.27f, 0.20f, 1.0f);
+            const glm::vec4 TEXT_DEAD(0.42f, 0.39f, 0.35f, 1.0f);
+            const glm::vec4 LEVEL_GREEN(0.62f, 0.95f, 0.42f, 1.0f);
+            const glm::vec4 LEVEL_DARK(0.48f, 0.58f, 0.44f, 1.0f);
+
+            auto softBox = [&](float x, float y, float bw, float bh, const glm::vec4& top,
+                               const glm::vec4& bottom, const glm::vec4& edge) {
+                m_ui.quad(x + 1.0f, y, bw - 2.0f, bh, edge);
+                m_ui.quad(x, y + 1.0f, bw, bh - 2.0f, edge);
+                m_ui.gradient(x + 1.0f, y + 1.0f, bw - 2.0f, bh - 2.0f, top, bottom);
+            };
 
             if (subject.empty())
             {
@@ -778,7 +798,9 @@ void Application::renderContainerScreen(float w, float h)
 
                 if (!offer.valid())
                 {
-                    if (!subject.empty()) guiWell(rx, ry, 108.0f, 18.0f);
+                    if (!subject.empty())
+                        softBox(rx, ry, 108.0f, 18.0f, glm::vec4(0.60f, 0.60f, 0.60f, 1.0f),
+                                glm::vec4(0.64f, 0.64f, 0.64f, 1.0f), glm::vec4(0.50f, 0.50f, 0.50f, 1.0f));
                     continue;
                 }
 
@@ -788,17 +810,26 @@ void Application::renderContainerScreen(float w, float h)
                 const bool hovered = mouseX >= rx && mouseY >= ry &&
                                      mouseX < rx + 108.0f && mouseY < ry + 18.0f;
 
-                bevel(rx, ry, 108.0f, 18.0f,
-                      canBuy ? (hovered ? ROW_LIT : ROW_FACE) : ROW_DEAD,
-                      GUI_PANEL_LIGHT, GUI_PANEL_DARK, 1.0f);
+                const glm::vec4 top = !canBuy ? glm::vec4(0.66f, 0.64f, 0.60f, 1.0f)
+                                    : hovered ? glm::vec4(0.93f, 0.88f, 0.76f, 1.0f)
+                                              : glm::vec4(0.86f, 0.80f, 0.69f, 1.0f);
+                const glm::vec4 bottom = !canBuy ? glm::vec4(0.60f, 0.58f, 0.55f, 1.0f)
+                                       : hovered ? glm::vec4(0.84f, 0.78f, 0.66f, 1.0f)
+                                                 : glm::vec4(0.76f, 0.70f, 0.60f, 1.0f);
+                softBox(rx, ry, 108.0f, 18.0f, top, bottom,
+                        hovered && canBuy ? glm::vec4(0.95f, 0.90f, 0.70f, 1.0f)
+                                          : glm::vec4(0.48f, 0.44f, 0.38f, 1.0f));
                 m_slotBoxes.push_back({ SlotBox::Kind::Enchant, row, rx, ry, 18.0f, 108.0f });
 
-                m_ui.quad(rx + 1.0f, ry + 1.0f, 16.0f, 16.0f, glm::vec4(0.12f, 0.12f, 0.12f, 1.0f));
+                softBox(rx + 2.0f, ry + 2.0f, 16.0f, 14.0f,
+                        canBuy ? glm::vec4(0.24f, 0.30f, 0.20f, 1.0f) : glm::vec4(0.36f, 0.36f, 0.34f, 1.0f),
+                        canBuy ? glm::vec4(0.17f, 0.22f, 0.14f, 1.0f) : glm::vec4(0.32f, 0.32f, 0.30f, 1.0f),
+                        canBuy ? glm::vec4(0.30f, 0.38f, 0.24f, 1.0f) : glm::vec4(0.40f, 0.40f, 0.38f, 1.0f));
                 const std::string need = std::to_string(offer.cost);
                 const float needScale = need.size() > 2 ? 0.75f : 1.0f;
-                m_ui.textWithShadow(need, rx + 9.0f - UIRenderer::textWidth(need, needScale) * 0.5f,
-                                    ry + 9.0f - UIRenderer::textHeight(needScale) * 0.5f, needScale,
-                                    canBuy ? LEVEL_GREEN : LEVEL_DARK);
+                m_ui.text(need, rx + 10.0f - UIRenderer::textWidth(need, needScale) * 0.5f,
+                          ry + 9.0f - UIRenderer::textHeight(needScale) * 0.5f, needScale,
+                          canBuy ? LEVEL_GREEN : LEVEL_DARK);
 
                 const float lapisX = rx + 108.0f - 18.0f;
                 drawItem(lapisX, ry + 1.0f, SLOT, Items::LapisLazuli, price.lapis,
@@ -807,14 +838,14 @@ void Application::renderContainerScreen(float w, float h)
                 std::string what = Enchanting::name(offer.kind);
                 what += " ";
                 what += std::to_string(offer.level);
-                const float room = lapisX - (rx + 20.0f) - 2.0f;
+                const float room = lapisX - (rx + 21.0f) - 2.0f;
                 float scale = 1.0f;
                 if (UIRenderer::textWidth(what, 1.0f) > room)
                 {
                     const float unit = static_cast<float>(guiScale());
                     scale = std::max(0.5f, std::floor(unit * room / UIRenderer::textWidth(what, 1.0f)) / unit);
                 }
-                m_ui.text(what, rx + 20.0f, ry + 9.0f - UIRenderer::textHeight(scale) * 0.5f,
+                m_ui.text(what, rx + 21.0f, ry + 9.0f - UIRenderer::textHeight(scale) * 0.5f,
                           scale, canBuy ? TEXT_BROWN : TEXT_DEAD);
 
                 std::string tip = what + ": needs level " + std::to_string(offer.cost) +
@@ -1380,6 +1411,24 @@ void Application::handleInventoryClick(int mouseX, int mouseY, bool rightButton,
             break;
 
         case SlotBox::Kind::Slot:
+            if (m_crafterOpen && box->index >= Inventory::CHEST_FIRST &&
+                box->index < Inventory::CHEST_FIRST + CRAFTER_SLOTS)
+            {
+                const int cell = box->index - Inventory::CHEST_FIRST;
+                const bool handEmpty = m_inventory.cursor().empty();
+                if (crafterSlotDisabled(cell))
+                {
+                    if (handEmpty && !shiftHeld) setCrafterSlotDisabled(cell, false);
+                    m_audio.play(Sound::Click, 0.35f, handEmpty ? 1.0f : 0.6f);
+                    break;
+                }
+                if (handEmpty && !shiftHeld && m_inventory.slot(box->index).empty())
+                {
+                    setCrafterSlotDisabled(cell, true);
+                    m_audio.play(Sound::Click, 0.35f, 0.8f);
+                    break;
+                }
+            }
             if (shiftHeld) m_inventory.quickMove(box->index);
             else if (rightButton) m_inventory.rightClick(box->index);
             else m_inventory.leftClick(box->index);
@@ -1874,6 +1923,30 @@ void Application::openCrafter(const glm::ivec3& block)
 
     m_inventoryOpen = true;
     setMouseCaptured(false);
+}
+
+bool Application::crafterSlotDisabled(int cell)
+{
+    if (!m_crafterOpen || cell < 0 || cell >= CRAFTER_SLOTS || !m_chests.has(m_crafterBlock))
+        return false;
+    const ItemStack& marker = m_chests.at(m_crafterBlock)[CRAFTER_MASK_SLOT];
+    if (marker.id != Blocks::Bedrock || marker.count <= 0) return false;
+    return ((marker.count - 1) >> cell) & 1;
+}
+
+void Application::setCrafterSlotDisabled(int cell, bool disabled)
+{
+    if (!m_crafterOpen || cell < 0 || cell >= CRAFTER_SLOTS) return;
+    ItemStack& marker = m_chests.at(m_crafterBlock)[CRAFTER_MASK_SLOT];
+    int mask = (marker.id == Blocks::Bedrock && marker.count > 0) ? marker.count - 1 : 0;
+    if (disabled) mask |= 1 << cell;
+    else mask &= ~(1 << cell);
+    if (mask == 0) marker.clear();
+    else
+    {
+        marker.id = Blocks::Bedrock;
+        marker.count = mask + 1;
+    }
 }
 
 void Application::stowCrafter()

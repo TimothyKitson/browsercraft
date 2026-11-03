@@ -349,6 +349,9 @@ private:
 
     // Three by three, which is the whole of what a crafter is.
     static constexpr int CRAFTER_SLOTS = 9;
+    static constexpr int CRAFTER_MASK_SLOT = 26;
+    bool crafterSlotDisabled(int cell);
+    void setCrafterSlotDisabled(int cell, bool disabled);
 
     // A crafter keeps what is in it in the same table a chest does: it
     // is a nine-slot chest with a trigger, and giving it a table of its
