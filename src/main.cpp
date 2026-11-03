@@ -228,6 +228,15 @@ namespace
 
         std::printf("%d tiles want a texture from the pack.\n", total);
 
+        const std::vector<int> unlinked = unlinkedTiles();
+        if (!unlinked.empty())
+        {
+            std::printf("\n%zu painted tiles have no pack file linked at all:\n ", unlinked.size());
+            for (int tile : unlinked) std::printf(" %d", tile);
+            std::printf("\nLink them in Atlas.cpp, or list them as drawn on purpose.\n");
+            return 1;
+        }
+
         if (gaps.empty())
         {
             std::printf("Every one of them resolves to a file. Nothing falls back.\n");

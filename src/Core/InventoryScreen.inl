@@ -241,7 +241,7 @@ bool Application::drawBlockIcon(float x, float y, float size, StackId id,
     // Left, then right. Drawn after the top so a seam between them is
     // covered by the face in front rather than showing through.
     const glm::vec2 leftFace[4] = { D, C, Cb, Db };
-    faceUV(sideUV, uv);
+    faceUV(info.tileFront >= 0 ? tileUV(info.tileFront) : sideUV, uv);
     m_ui.texturedShape(m_atlas.textureId(), leftFace, uv, shaded(0.78f), leftLight);
 
     const glm::vec2 rightFace[4] = { C, B, Bb, Cb };

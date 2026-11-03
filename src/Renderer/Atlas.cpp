@@ -6383,6 +6383,7 @@ namespace
         { Tiles::ItemCookedChicken, paintItemCookedChicken },
         { Tiles::ItemCookedMutton,  paintItemCookedMutton },
         { Tiles::CraftingSide,  paintCraftingSide },
+        { Tiles::CraftingFront, paintCraftingSide },
         { Tiles::ItemStick,     paintItemStick },
         { Tiles::ItemCoal,      paintItemCoal },
         { Tiles::ItemFlint,     paintItemFlint },
@@ -6510,6 +6511,13 @@ namespace
     };
 
     const PackItem PACK_ITEMS[] = {
+        { Tiles::ItemSteak, { "cooked_beef", nullptr, nullptr } },
+        { Tiles::ItemCookedChicken, { "cooked_chicken", nullptr, nullptr } },
+        { Tiles::ItemCookedPork, { "cooked_porkchop", nullptr, nullptr } },
+        { Tiles::ItemCookedMutton, { "cooked_mutton", nullptr, nullptr } },
+        { Tiles::ItemMinecart, { "minecart", nullptr, nullptr } },
+        { Tiles::FireCharge, { "fire_charge", nullptr, nullptr } },
+        { Tiles::WindCharge, { "wind_charge", nullptr, nullptr } },
         { Tiles::ItemWheatSeeds, { "wheat_seeds", "seeds_wheat", nullptr } },
         { Tiles::ItemWheat,      { "wheat", nullptr, nullptr } },
         { Tiles::ItemLeather,    { "leather", nullptr, nullptr } },
@@ -6657,6 +6665,25 @@ namespace
 
     const PackTile PACK_TILES[] = {
         { Tiles::Stone,         { "stone", nullptr },                                  Tinting::None,    0,   false },
+        { Tiles::CraftingTop,   { "crafting_table_top", nullptr },                     Tinting::None,    0,   false },
+        { Tiles::CraftingSide,  { "crafting_table_side", nullptr },                    Tinting::None,    0,   false },
+        { Tiles::CraftingFront, { "crafting_table_front", nullptr },                   Tinting::None,    0,   false },
+        { Tiles::FurnaceTop,    { "furnace_top", nullptr },                            Tinting::None,    0,   false },
+        { Tiles::FurnaceFront,  { "furnace_front", nullptr },                          Tinting::None,    0,   false },
+        { Tiles::FurnaceLit,    { "furnace_front_on", nullptr },                       Tinting::None,    0,   true  },
+        { Tiles::Netherrack,    { "netherrack", nullptr },                             Tinting::None,    0,   false },
+        { Tiles::SoulSand,      { "soul_sand", nullptr },                              Tinting::None,    0,   false },
+        { Tiles::EndStone,      { "end_stone", nullptr },                              Tinting::None,    0,   false },
+        { Tiles::TntTop,        { "tnt_top", nullptr },                                Tinting::None,    0,   false },
+        { Tiles::TntSide,       { "tnt_side", nullptr },                               Tinting::None,    0,   false },
+        { Tiles::TntBottom,     { "tnt_bottom", nullptr },                             Tinting::None,    0,   false },
+        { Tiles::LadderTile,    { "ladder", nullptr },                                 Tinting::None,    0,   false },
+        { Tiles::DoorLower,     { "oak_door_bottom", "door_wood_lower", nullptr },     Tinting::None,    0,   false },
+        { Tiles::DoorUpper,     { "oak_door_top", "door_wood_upper", nullptr },        Tinting::None,    0,   false },
+        { Tiles::FarmlandTop,   { "farmland_moist", "farmland", nullptr },             Tinting::None,    0,   false },
+        { Tiles::FarmlandSide,  { "dirt", nullptr },                                   Tinting::None,    0,   false },
+        { Tiles::NetherPortal,  { "nether_portal", nullptr },                          Tinting::None,  200,   true  },
+        { Tiles::LecternTopBook,{ "lectern_top", nullptr },                            Tinting::None,    0,   false },
         { Tiles::Dirt,          { "dirt", nullptr },                                   Tinting::None,    0,   false },
         { Tiles::GrassSide,     { "grass_block_side", "grass_side", nullptr },         Tinting::None,    0,   false },
         { Tiles::GrassTop,      { "grass_block_top", "grass_top", nullptr },           Tinting::Grass,   0,   false },
@@ -7581,6 +7608,32 @@ bool Atlas::hasPainter(int tileIndex)
 // in it is otherwise invisible: the tile comes out painted and nothing
 // says so.
 // ---------------------------------------------------------------------
+std::vector<int> unlinkedTiles()
+{
+    static const int DRAWN_ON_PURPOSE[] = {
+        Tiles::Blank, Tiles::ChestFront, Tiles::ChestSide, Tiles::ChestTop, Tiles::BedTop,
+        Tiles::BedSide, Tiles::EndPortalTile, Tiles::EndGatewayTile, Tiles::EndCrystalTile,
+        Tiles::WitherSkullTile, Tiles::LeverTile, Tiles::LeverOnTile, Tiles::ButtonTile,
+        Tiles::ButtonOnTile, Tiles::RedstoneDust, Tiles::RedstoneDustLit, Tiles::TntPrimedSide,
+        Tiles::ItemShield, Tiles::ExperienceOrb, Tiles::ArrowInFlight, Tiles::RainDrop,
+        Tiles::SnowFlake,
+    };
+
+    std::vector<int> unlinked;
+    for (const TileEntry& painter : TILE_PAINTERS)
+    {
+        bool linked = false;
+        for (const PackTile& entry : PACK_TILES)
+            if (entry.tile == painter.index) linked = true;
+        for (const PackItem& entry : PACK_ITEMS)
+            if (entry.tile == painter.index) linked = true;
+        for (int tile : DRAWN_ON_PURPOSE)
+            if (tile == painter.index) linked = true;
+        if (!linked) unlinked.push_back(painter.index);
+    }
+    return unlinked;
+}
+
 int packTileCount()
 {
     return static_cast<int>(std::size(PACK_TILES)) + static_cast<int>(std::size(PACK_ITEMS));

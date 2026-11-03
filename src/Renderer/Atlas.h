@@ -31,6 +31,12 @@ struct PackGap
 std::vector<PackGap> packGaps();
 int packTileCount();
 
+// Tiles the game paints for itself that no pack file is linked to,
+// leaving out the few that are meant to be painted (the chest, the bed
+// and others whose real art is a model's sheet rather than a block
+// face). Anything listed here can never use a pack's texture.
+std::vector<int> unlinkedTiles();
+
 // The block texture atlas: a 16x16 grid of square tiles.
 //
 // Tiles come from a resource pack in assets/textures/block (vanilla
