@@ -1,4 +1,5 @@
 #pragma once
+#include <algorithm>
 #include "MobType.h"
 #include "Projectiles.h"
 #include "Pathfinder.h"
@@ -192,6 +193,11 @@ public:
     // Half size while young, which is also what shrinks its hitbox.
     // Shoved by something that is not a blow: a wind charge's burst.
     void shove(const glm::vec3& push) { m_velocity += push; m_onGround = false; }
+
+    // Stands where it is for this long, as a villager does while it is
+    // being traded with.
+    void holdStill(float seconds) { m_holdTimer = std::max(m_holdTimer, seconds); }
+    bool held() const { return m_holdTimer > 0.0f; }
 
     float scale() const { return (baby() ? BABY_SCALE : 1.0f) * type().modelScale; }
     float width() const { return type().width * scale(); }
@@ -419,6 +425,7 @@ private:
     bool m_asleep = false;
     bool m_tamed = false;
     bool m_sitting = false;
+    float m_holdTimer = 0.0f;
     bool m_ridden = false;
     bool m_steerForward = false;
     bool m_steerJump = false;

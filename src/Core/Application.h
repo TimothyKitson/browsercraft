@@ -961,6 +961,17 @@ private:
 
         float hitWidth() const { return width > 0.0f ? width : size; }
     };
+
+    struct HintBox
+    {
+        float x = 0.0f, y = 0.0f, w = 0.0f, h = 0.0f;
+        std::string text;
+    };
+    std::vector<HintBox> m_hintBoxes;
+    void addHint(float x, float y, float w, float h, const std::string& text)
+    {
+        m_hintBoxes.push_back({ x, y, w, h, text });
+    }
     std::vector<SlotBox> m_slotBoxes;
     int m_creativeTab = 0;
 

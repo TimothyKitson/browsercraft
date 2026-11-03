@@ -472,6 +472,7 @@ void Application::renderInventoryScreen()
     const float h = m_ui.canvasHeight();
 
     m_slotBoxes.clear();
+    m_hintBoxes.clear();
 
     // The wash behind every screen the client draws over a world: a
     // gradient from C0101010 at the top to D0101010 at the bottom, so
@@ -556,25 +557,24 @@ void Application::renderContainerScreen(float w, float h)
                                 !m_furnaceOpen && !bench && !m_tradeOpen &&
                                 !m_enchantOpen && !m_brewOpen && !m_anvilOpen;
 
-    // Each screen's heading goes where the client puts that screen's
-    // heading: a furnace's and a brewing stand's are centred, an
-    // anvil's starts at 60, an enchanting table's at 12, and the rest
-    // sit in the corner at 8.
+    // Every screen is headed with the name of what was opened, in the
+    // top-left corner, so a barrel says Barrel and a smoker says Smoker.
     if (!plainInventory)
     {
-        const char* title = m_chestOpen ? "Chest"
-                          : m_crafterOpen ? "Crafter"
-                          : m_furnaceOpen ? "Furnace"
-                          : m_brewOpen ? "Brewing"
-                          : m_anvilOpen ? "Repair & Name"
-                          : m_enchantOpen ? "Enchant"
-                          : m_tradeOpen ? Trading::name(m_tradeWith)
-                          : bench ? "Crafting" : "Inventory";
+        std::string title = "Inventory";
+        if (m_chestOpen && m_world)
+            title = displayName(m_world->getBlock(m_chestBlock.x, m_chestBlock.y, m_chestBlock.z));
+        else if (m_furnaceOpen && m_world)
+            title = displayName(m_world->getBlock(m_furnaceBlock.x, m_furnaceBlock.y, m_furnaceBlock.z));
+        else if (m_crafterOpen) title = "Crafter";
+        else if (m_brewOpen) title = "Brewing Stand";
+        else if (m_anvilOpen) title = "Anvil";
+        else if (m_enchantOpen) title = "Enchanting Table";
+        else if (m_tradeOpen) title = Trading::name(m_tradeWith);
+        else if (bench) title = "Crafting Table";
 
-        const bool centred = m_furnaceOpen || m_brewOpen || m_crafterOpen;
-        const float titleX = centred ? panelX + std::floor((PANEL_W - UIRenderer::textWidth(title, 1.0f)) * 0.5f)
-                           : panelX + (m_anvilOpen ? 60.0f : (bench ? 29.0f : 8.0f));
-        m_ui.text(title, titleX, panelY + 6.0f, 1.0f, GUI_TEXT);
+        if (title.empty() || title == "Air") title = m_chestOpen ? "Chest" : "Furnace";
+        m_ui.text(title, panelX + 8.0f, panelY + 6.0f, 1.0f, GUI_TEXT);
     }
 
     // The word over the player's own rows. The client leaves it off two
@@ -584,13 +584,6 @@ void Application::renderContainerScreen(float w, float h)
     if (!plainInventory)
         m_ui.text("Inventory", panelX + 8.0f, panelY + PANEL_H - 94.0f, 1.0f, GUI_TEXT);
 
-    // A line of their own for the two screens that have something to
-    // say and nowhere to say it: the shelf count and what is in the
-    // bottle. Right-aligned in the heading row, clear of everything.
-    auto noteOnTheRight = [&](const std::string& text) {
-        m_ui.text(text, panelX + PANEL_W - 8.0f - UIRenderer::textWidth(text, 1.0f),
-                  panelY + 6.0f, 1.0f, TEXT_DIM);
-    };
 
     // --------------------------------------------- the open chest ---
     // Three rows of nine, eighteen down from the top of the panel,
@@ -621,8 +614,12 @@ void Application::renderContainerScreen(float w, float h)
 
         const bool powered = m_world->getBlock(m_crafterBlock.x, m_crafterBlock.y,
                                               m_crafterBlock.z) == Blocks::CrafterLit;
-        drawItem(panelX + 97.0f, panelY + 35.0f, SLOT, Items::Redstone, 1,
+        drawCraftArrow(panelX + 94.0f, panelY + 35.0f, 22.0f, 15.0f);
+        drawItem(panelX + 97.0f, panelY + 16.0f, SLOT, Items::Redstone, 1,
                  powered ? glm::vec4(1.0f) : glm::vec4(0.35f, 0.35f, 0.35f, 1.0f));
+        addHint(panelX + 96.0f, panelY + 15.0f, PITCH, PITCH,
+                powered ? "Powered" : "Not powered: a redstone pulse crafts once");
+        addHint(panelX + 129.0f, panelY + 30.0f, 26.0f, 26.0f, "What the next pulse makes");
 
         const float ox = panelX + 134.0f;
         const float oy = panelY + 35.0f;
@@ -680,71 +677,74 @@ void Application::renderContainerScreen(float w, float h)
                              panelY + 78.0f, 30.0f);
         }
 
-        // Trading: the villager's deals, one to a row. Each shows what
-        // it wants on the left and what it gives on the right, drawn as
-        // the items themselves rather than named, because the names are
-        // long and the panel is not wide.
+        // Trading: the villager's deals as cards, two to a row, each
+        // reading what you give, then what it gives you back. A card
+        // you can pay for lights up under the cursor; one you cannot
+        // is dimmed and says what is missing.
         if (m_tradeOpen)
         {
             const std::vector<Trading::Offer> offers = Trading::offersFor(m_tradeWith);
+            const float mouseX = static_cast<float>(m_input.mouseX()) / m_ui.scale();
+            const float mouseY = static_cast<float>(m_input.mouseY()) / m_ui.scale();
 
-            const float tx = panelX + 80.0f;
-            const float ty = panelY + 6.0f;
-
-            for (size_t row = 0; row < offers.size(); ++row)
+            for (size_t row = 0; row < offers.size() && row < 4; ++row)
             {
                 const Trading::Offer& offer = offers[row];
-                const float ry = ty + 12.0f + static_cast<float>(row) * PITCH;
+                const float cardX = panelX + 8.0f + static_cast<float>(row % 2) * 82.0f;
+                const float cardY = panelY + 17.0f + static_cast<float>(row / 2) * 26.0f;
+                const float cardW = 78.0f;
+                const float cardH = 23.0f;
 
                 const int haveWant = m_inventory.countOf(offer.want);
                 const int haveAlso = (offer.also == Blocks::Air)
                                          ? 0 : m_inventory.countOf(offer.also);
                 const bool canPay = m_player.creative() ||
                                     Trading::affordable(offer, haveWant, haveAlso);
+                const bool hovered = mouseX >= cardX && mouseX < cardX + cardW &&
+                                     mouseY >= cardY && mouseY < cardY + cardH;
 
-                const glm::vec4 tint = canPay ? glm::vec4(1.0f)
-                                              : glm::vec4(1.0f, 1.0f, 1.0f, 0.4f);
+                const glm::vec4 face = !canPay ? glm::vec4(0.60f, 0.60f, 0.60f, 1.0f)
+                                     : hovered ? glm::vec4(0.86f, 0.86f, 0.86f, 1.0f)
+                                               : glm::vec4(0.70f, 0.70f, 0.70f, 1.0f);
+                bevel(cardX, cardY, cardW, cardH, face, GUI_PANEL_LIGHT, GUI_PANEL_DARK, 1.0f);
 
-                float cx = tx;
-                well(cx, ry);
-                drawItem(cx, ry, SLOT, offer.want, offer.wantCount, tint);
-                cx += PITCH;
-
+                const glm::vec4 tint = canPay ? glm::vec4(1.0f) : glm::vec4(1.0f, 1.0f, 1.0f, 0.45f);
+                const float itemY = cardY + 3.5f;
+                drawItem(cardX + 3.0f, itemY, SLOT, offer.want, offer.wantCount, tint);
                 if (offer.also != Blocks::Air)
-                {
-                    well(cx, ry);
-                    drawItem(cx, ry, SLOT, offer.also, offer.alsoCount, tint);
-                }
-                cx += PITCH;
+                    drawItem(cardX + 21.0f, itemY, SLOT, offer.also, offer.alsoCount, tint);
+                drawCraftArrow(cardX + 40.0f, itemY + 2.0f, 14.0f, 12.0f);
+                drawItem(cardX + 58.0f, itemY, SLOT, offer.give, offer.giveCount, tint);
 
-                m_ui.text("->", cx, ry + 5.0f, 1.0f, canPay ? TEXT_COLOR : TEXT_DIM);
-                cx += 14.0f;
+                std::string tip = "Give " + std::to_string(offer.wantCount) + " " +
+                                  displayName(offer.want);
+                if (offer.also != Blocks::Air)
+                    tip += " and " + std::to_string(offer.alsoCount) + " " + displayName(offer.also);
+                tip += " for " + std::to_string(offer.giveCount) + " " + displayName(offer.give);
+                if (!canPay) tip += " (not enough)";
+                addHint(cardX, cardY, cardW, cardH, tip);
 
-                well(cx, ry);
-                drawItem(cx, ry, SLOT, offer.give, offer.giveCount, tint);
-
-                // The whole row is the button, out to the far edge of
-                // what it gives you, so a deal can be struck by
-                // clicking anywhere along it rather than only on the
-                // one slot that happens to be the price.
                 if (canPay)
                     m_slotBoxes.push_back({ SlotBox::Kind::Trade, static_cast<int>(row),
-                                            tx - 1.0f, ry - 1.0f, PITCH,
-                                            (cx + SLOT) - tx + 1.0f });
+                                            cardX, cardY, cardH, cardW });
             }
         }
         else
 
-        // The enchanting table, at 1.21's numbers: the item at 15 and 47,
-        // the lapis it is paid in beside it at 35, and three offers 108
-        // by 19 down the right from 60 and 14. Each row carries the level
-        // you need on the right in green and what it would put on the
-        // item where Minecraft writes its runes -- the one place this is
-        // kinder than Minecraft, whose rows nobody can read.
+        // The enchanting table. The item and the lapis that pays for it
+        // sit side by side in the middle of the left-hand space, level
+        // with the middle of the three offers beside them. Each offer
+        // shows the level it needs in a green badge, what it puts on the
+        // item, and the lapis it takes on the right.
         if (m_enchantOpen)
         {
-            drawSlot(Inventory::ENCHANT_SLOT, panelX + 15.0f, panelY + 47.0f);
-            drawSlot(Inventory::ENCHANT_LAPIS, panelX + 35.0f, panelY + 47.0f);
+            const float slotY = panelY + 34.0f;
+            drawSlot(Inventory::ENCHANT_SLOT, panelX + 15.0f, slotY);
+            drawSlot(Inventory::ENCHANT_LAPIS, panelX + 35.0f, slotY);
+            if (m_inventory.slot(Inventory::ENCHANT_LAPIS).empty())
+                drawItem(panelX + 35.0f, slotY, SLOT, Items::LapisLazuli, 0,
+                         glm::vec4(1.0f, 1.0f, 1.0f, 0.28f));
+            addHint(panelX + 34.0f, slotY - 1.0f, PITCH, PITCH, "Lapis Lazuli goes here");
 
             const ItemStack& subject = m_inventory.slot(Inventory::ENCHANT_SLOT);
             const ItemStack& lapis = m_inventory.slot(Inventory::ENCHANT_LAPIS);
@@ -754,17 +754,20 @@ void Application::renderContainerScreen(float w, float h)
             const float mouseX = static_cast<float>(m_input.mouseX()) / m_ui.scale();
             const float mouseY = static_cast<float>(m_input.mouseY()) / m_ui.scale();
 
-            // The row's own colours, out of the client: the text a dull
-            // brown, yellow under the cursor, and halved when the row is
-            // out of reach; the level green, or a darker green out of
-            // reach.
             const glm::vec4 ROW_FACE(0.73f, 0.67f, 0.58f, 1.0f);
-            const glm::vec4 ROW_LIT(0.82f, 0.77f, 0.66f, 1.0f);
-            const glm::vec4 ROW_DEAD(0.45f, 0.42f, 0.37f, 1.0f);
-            const glm::vec4 TEXT_BROWN(0.408f, 0.369f, 0.290f, 1.0f);    // 685E4A
-            const glm::vec4 TEXT_HOVER(1.0f, 1.0f, 0.502f, 1.0f);        // FFFF80
-            const glm::vec4 LEVEL_GREEN(0.502f, 1.0f, 0.125f, 1.0f);     // 80FF20
-            const glm::vec4 LEVEL_DARK(0.251f, 0.498f, 0.063f, 1.0f);    // 407F10
+            const glm::vec4 ROW_LIT(0.84f, 0.79f, 0.68f, 1.0f);
+            const glm::vec4 ROW_DEAD(0.50f, 0.47f, 0.42f, 1.0f);
+            const glm::vec4 TEXT_BROWN(0.30f, 0.26f, 0.19f, 1.0f);
+            const glm::vec4 TEXT_DEAD(0.36f, 0.33f, 0.29f, 1.0f);
+            const glm::vec4 LEVEL_GREEN(0.502f, 1.0f, 0.125f, 1.0f);
+            const glm::vec4 LEVEL_DARK(0.40f, 0.55f, 0.32f, 1.0f);
+
+            if (subject.empty())
+            {
+                const std::string hint = "Put in an item";
+                m_ui.text(hint, panelX + 60.0f + 54.0f - UIRenderer::textWidth(hint, 1.0f) * 0.5f,
+                          panelY + 38.0f, 1.0f, TEXT_DIM);
+            }
 
             for (int row = 0; row < 3; ++row)
             {
@@ -775,71 +778,95 @@ void Application::renderContainerScreen(float w, float h)
 
                 if (!offer.valid())
                 {
-                    guiWell(rx, ry, 108.0f, 19.0f);
+                    if (!subject.empty()) guiWell(rx, ry, 108.0f, 18.0f);
                     continue;
                 }
 
+                const Enchanting::Price price = Enchanting::priceOf(row);
                 const bool canBuy = Enchanting::affordable(offer, row, level, lapisHeld,
                                                            m_player.creative());
-                const bool hovered = canBuy && mouseX >= rx && mouseY >= ry &&
-                                     mouseX < rx + 108.0f && mouseY < ry + 19.0f;
+                const bool hovered = mouseX >= rx && mouseY >= ry &&
+                                     mouseX < rx + 108.0f && mouseY < ry + 18.0f;
 
-                bevel(rx, ry, 108.0f, 19.0f, canBuy ? (hovered ? ROW_LIT : ROW_FACE) : ROW_DEAD,
+                bevel(rx, ry, 108.0f, 18.0f,
+                      canBuy ? (hovered ? ROW_LIT : ROW_FACE) : ROW_DEAD,
                       GUI_PANEL_LIGHT, GUI_PANEL_DARK, 1.0f);
-                m_slotBoxes.push_back({ SlotBox::Kind::Enchant, row, rx, ry, 19.0f, 108.0f });
+                m_slotBoxes.push_back({ SlotBox::Kind::Enchant, row, rx, ry, 18.0f, 108.0f });
 
-                // The lapis the row takes, in a sixteen-pixel badge at the
-                // left of it where the client draws its numbered orb.
-                const glm::vec4 badge = canBuy ? glm::vec4(0.15f, 0.33f, 0.75f, 1.0f)
-                                               : glm::vec4(0.25f, 0.27f, 0.33f, 1.0f);
-                m_ui.quad(rx + 1.0f, ry + 1.0f, 16.0f, 16.0f, badge);
-                const std::string price = std::to_string(Enchanting::priceOf(row).lapis);
-                m_ui.textWithShadow(price, rx + 9.0f - UIRenderer::textWidth(price, 1.0f) * 0.5f,
-                                    ry + 5.0f, 1.0f, canBuy ? LEVEL_GREEN : LEVEL_DARK);
+                m_ui.quad(rx + 1.0f, ry + 1.0f, 16.0f, 16.0f, glm::vec4(0.12f, 0.12f, 0.12f, 1.0f));
+                const std::string need = std::to_string(offer.cost);
+                const float needScale = need.size() > 2 ? 0.75f : 1.0f;
+                m_ui.textWithShadow(need, rx + 9.0f - UIRenderer::textWidth(need, needScale) * 0.5f,
+                                    ry + 9.0f - UIRenderer::textHeight(needScale) * 0.5f, needScale,
+                                    canBuy ? LEVEL_GREEN : LEVEL_DARK);
+
+                const float lapisX = rx + 108.0f - 18.0f;
+                drawItem(lapisX, ry + 1.0f, SLOT, Items::LapisLazuli, price.lapis,
+                         glm::vec4(1.0f, 1.0f, 1.0f, canBuy ? 1.0f : 0.5f));
 
                 std::string what = Enchanting::name(offer.kind);
                 what += " ";
                 what += std::to_string(offer.level);
-                const glm::vec4 textColour = !canBuy ? TEXT_BROWN * glm::vec4(0.5f, 0.5f, 0.5f, 1.0f)
-                                           : hovered ? TEXT_HOVER : TEXT_BROWN;
-                m_ui.text(what, rx + 20.0f, ry + 2.0f, 1.0f, textColour);
+                const float room = lapisX - (rx + 20.0f) - 2.0f;
+                float scale = 1.0f;
+                if (UIRenderer::textWidth(what, 1.0f) > room)
+                {
+                    const float unit = static_cast<float>(guiScale());
+                    scale = std::max(0.5f, std::floor(unit * room / UIRenderer::textWidth(what, 1.0f)) / unit);
+                }
+                m_ui.text(what, rx + 20.0f, ry + 9.0f - UIRenderer::textHeight(scale) * 0.5f,
+                          scale, canBuy ? TEXT_BROWN : TEXT_DEAD);
 
-                const std::string cost = std::to_string(offer.cost);
-                m_ui.textWithShadow(cost, rx + 20.0f + 86.0f - UIRenderer::textWidth(cost, 1.0f),
-                                    ry + 9.0f, 1.0f, canBuy ? LEVEL_GREEN : LEVEL_DARK);
+                std::string tip = what + ": needs level " + std::to_string(offer.cost) +
+                                  ", costs " + std::to_string(price.levels) +
+                                  (price.levels == 1 ? " level and " : " levels and ") +
+                                  std::to_string(price.lapis) + " lapis";
+                addHint(rx, ry, 108.0f, 18.0f, tip);
             }
 
-            noteOnTheRight(std::to_string(m_enchantShelves) + " shelves");
+            const std::string shelves = std::to_string(m_enchantShelves) +
+                                        (m_enchantShelves == 1 ? " shelf" : " shelves");
+            m_ui.text(shelves, panelX + PANEL_W - 8.0f - UIRenderer::textWidth(shelves, 1.0f),
+                      panelY + 6.0f, 1.0f, TEXT_DIM);
+            addHint(panelX + PANEL_W - 8.0f - UIRenderer::textWidth(shelves, 1.0f), panelY + 5.0f,
+                    UIRenderer::textWidth(shelves, 1.0f), 10.0f,
+                    "Bookshelves around the table make stronger offers");
         }
         else
 
-        // The brewing stand, at 1.21's five: the ingredient on top at 79
-        // and 17, the three bottles at 56, 79 and 102 on 51, 58 and 51,
-        // and the blaze powder that fuels it out on its own at 17 and 17.
+        // The brewing stand. The ingredient goes in at the top and the
+        // arrow beside it runs down to the three bottles; the blaze
+        // powder that fuels it has its gauge right underneath it.
         if (m_brewOpen)
         {
             drawSlot(Inventory::BREW_INGREDIENT, panelX + 79.0f, panelY + 17.0f);
             drawSlot(Inventory::BREW_FUEL, panelX + 17.0f, panelY + 17.0f);
+            if (m_inventory.slot(Inventory::BREW_FUEL).empty())
+                drawItem(panelX + 17.0f, panelY + 17.0f, SLOT, Items::BlazePowder, 0,
+                         glm::vec4(1.0f, 1.0f, 1.0f, 0.28f));
+            addHint(panelX + 16.0f, panelY + 16.0f, PITCH, PITCH, "Blaze Powder fuels the stand");
 
             const float bottleX[3] = { 56.0f, 79.0f, 102.0f };
             const float bottleY[3] = { 51.0f, 58.0f, 51.0f };
             for (int i = 0; i < Inventory::BREW_BOTTLES; ++i)
-                drawSlot(Inventory::BREW_BOTTLE_FIRST + i,
-                         panelX + bottleX[i], panelY + bottleY[i]);
+            {
+                const int slot = Inventory::BREW_BOTTLE_FIRST + i;
+                drawSlot(slot, panelX + bottleX[i], panelY + bottleY[i]);
+                if (m_inventory.slot(slot).empty())
+                    drawItem(panelX + bottleX[i], panelY + bottleY[i], SLOT, Items::GlassBottle, 0,
+                             glm::vec4(1.0f, 1.0f, 1.0f, 0.28f));
+            }
 
-            // The fuel left, as the bar 18 by 4 at 60 and 44 -- the
-            // client rounds it up, so a stand with any fuel shows some.
             const int fuelPixels = std::clamp((18 * m_brewFuel + Brewing::FUEL_PER_POWDER - 1) /
                                                   Brewing::FUEL_PER_POWDER, 0, 18);
-            guiWell(panelX + 59.0f, panelY + 43.0f, 20.0f, 6.0f);
+            guiWell(panelX + 16.0f, panelY + 37.0f, 20.0f, 6.0f);
             if (fuelPixels > 0)
-                m_ui.gradient(panelX + 60.0f, panelY + 44.0f, static_cast<float>(fuelPixels), 4.0f,
+                m_ui.gradient(panelX + 17.0f, panelY + 38.0f, static_cast<float>(fuelPixels), 4.0f,
                               glm::vec4(1.0f, 0.80f, 0.25f, 1.0f), glm::vec4(0.85f, 0.45f, 0.10f, 1.0f));
+            addHint(panelX + 16.0f, panelY + 37.0f, 20.0f, 6.0f,
+                    "Fuel: " + std::to_string(m_brewFuel) + " brews left");
 
             const float along = std::min(1.0f, m_brewProgress / Brewing::BREW_SECONDS);
-            // The arrow down the right, 9 by 28 at 97 and 16, filling
-            // white from the top as the brew goes: a shaft three wide
-            // and a head that narrows to a point.
             static const int ARROW_WIDTH[28] = { 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
                                                  3, 3, 3, 3, 3, 3, 9, 9, 7, 7, 5, 5, 3, 1 };
             const int filledRows = static_cast<int>(std::floor(28.0f * along));
@@ -852,9 +879,6 @@ void Application::renderContainerScreen(float w, float h)
 
             if (along > 0.0f)
             {
-
-                // And the bubbles at 63 and 14, rising in the client's
-                // seven steps, a step every two ticks.
                 static const int BUBBLE[7] = { 29, 24, 20, 16, 11, 6, 0 };
                 const int ticksLeft = static_cast<int>((1.0f - along) * Brewing::BREW_SECONDS * 20.0f);
                 const float shown = static_cast<float>(BUBBLE[(ticksLeft / 2) % 7]);
@@ -868,62 +892,61 @@ void Application::renderContainerScreen(float w, float h)
         }
         else
 
-        // The anvil, at 1.21's numbers: two in at 27 and 76, one out at
-        // 134, all on 47, under the name field at 59 and 20 -- which holds
-        // the name of what is being worked on, since renaming is not here
-        // yet -- and the price right-aligned on 69, on its own dark band.
+        // The anvil: what is being worked on, plus what is put to it,
+        // gives what comes out, with the name of the result over the top
+        // and the price underneath.
         if (m_anvilOpen)
         {
             const int slots[3] = { Inventory::ANVIL_LEFT, Inventory::ANVIL_RIGHT,
                                    Inventory::ANVIL_RESULT };
             const float xs[3] = { 27.0f, 76.0f, 134.0f };
-            const float ay = panelY + 47.0f;
+            const float ay = panelY + 36.0f;
 
             const ItemStack& working = m_inventory.slot(Inventory::ANVIL_LEFT);
-            guiWell(panelX + 59.0f, panelY + 20.0f, 110.0f, 16.0f);
-            if (!working.empty())
-                m_ui.textWithShadow(stackName(working), panelX + 62.0f, panelY + 24.0f, 1.0f,
-                                    glm::vec4(1.0f));
+            const ItemStack& made = m_inventory.slot(Inventory::ANVIL_RESULT);
+            const std::string heading = !made.empty() ? stackName(made)
+                                      : !working.empty() ? stackName(working)
+                                      : std::string("Repair, combine or enchant");
+            m_ui.text(heading, panelX + PANEL_W * 0.5f - UIRenderer::textWidth(heading, 1.0f) * 0.5f,
+                      panelY + 22.0f, 1.0f, working.empty() ? TEXT_DIM : GUI_TEXT);
 
             for (int i = 0; i < 3; ++i)
             {
                 const float x = panelX + xs[i];
-                well(x, ay);
+                if (i == 2) guiWell(x - 5.0f, ay - 5.0f, 26.0f, 26.0f);
+                else well(x, ay);
                 const ItemStack& stack = m_inventory.slot(slots[i]);
                 drawItem(x, ay, SLOT, stack.id, stack.count, glm::vec4(1.0f), stack.damage);
-
-                // The result is taken, never filled, so it gets its own
-                // click rather than the ordinary slot one.
-                slotBox(i == 2 ? SlotBox::Kind::AnvilTake : SlotBox::Kind::Slot,
-                        slots[i], x, ay);
+                slotBox(i == 2 ? SlotBox::Kind::AnvilTake : SlotBox::Kind::Slot, slots[i], x, ay);
             }
 
             m_ui.text("+", panelX + 58.0f, ay + 4.0f, 1.0f, GUI_TEXT);
             drawCraftArrow(panelX + 102.0f, ay, 22.0f, 15.0f);
 
-            const Anvil::Result made = anvilResult();
+            const Anvil::Result result = anvilResult();
             const int level = Experience::levelFor(m_player.experience);
 
             std::string price;
-            glm::vec4 colour(0.502f, 1.0f, 0.125f, 1.0f);     // 80FF20
-            if (made.tooExpensive)
+            glm::vec4 colour(0.502f, 1.0f, 0.125f, 1.0f);
+            if (result.tooExpensive && !m_player.creative())
             {
                 price = "Too Expensive!";
-                colour = glm::vec4(1.0f, 0.376f, 0.376f, 1.0f);   // FF6060
+                colour = glm::vec4(1.0f, 0.376f, 0.376f, 1.0f);
             }
-            else if (made.valid)
+            else if (result.valid)
             {
-                price = "Enchantment Cost: " + std::to_string(made.levelCost);
-                if (!m_player.creative() && level < made.levelCost)
+                price = "Cost: " + std::to_string(result.levelCost) +
+                        (result.levelCost == 1 ? " level" : " levels");
+                if (!m_player.creative() && level < result.levelCost)
                     colour = glm::vec4(1.0f, 0.376f, 0.376f, 1.0f);
             }
 
             if (!price.empty())
             {
-                const float px = panelX + PANEL_W - 8.0f - UIRenderer::textWidth(price, 1.0f) - 2.0f;
-                m_ui.quad(px - 2.0f, panelY + 67.0f, panelX + PANEL_W - 8.0f - (px - 2.0f), 12.0f,
+                const float px = panelX + PANEL_W * 0.5f - UIRenderer::textWidth(price, 1.0f) * 0.5f;
+                m_ui.quad(px - 3.0f, panelY + 58.0f, UIRenderer::textWidth(price, 1.0f) + 6.0f, 12.0f,
                           glm::vec4(0.0f, 0.0f, 0.0f, 0.31f));
-                m_ui.textWithShadow(price, px, panelY + 69.0f, 1.0f, colour);
+                m_ui.textWithShadow(price, px, panelY + 60.0f, 1.0f, colour);
             }
         }
         else
@@ -1245,6 +1268,15 @@ void Application::finishInventoryScreen()
                 break;
         }
     }
+
+    if (tip.empty())
+        for (const HintBox& hint : m_hintBoxes)
+            if (mouseX >= hint.x && mouseX < hint.x + hint.w && mouseY >= hint.y &&
+                mouseY < hint.y + hint.h)
+            {
+                tip = hint.text;
+                break;
+            }
 
     // Whatever is on the cursor, drawn last, centred on it.
     const ItemStack& held = m_inventory.cursor();

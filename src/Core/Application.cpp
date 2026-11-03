@@ -1791,6 +1791,9 @@ bool Application::frame()
         // mob in place of a block.
         if (m_tradeOpen && playing())
         {
+            for (Mob& mob : m_entities.mobs())
+                if (mob.typeId() == MobId::Villager && mob.birthSeed() == m_tradeSeed)
+                    mob.holdStill(0.5f);
             const Mob* villager = tradingVillager();
             if (!villager ||
                 glm::length(m_player.position - villager->position()) > BENCH_REACH)
@@ -2088,12 +2091,29 @@ bool Application::frame()
                 m_camera.pitch = -4.0f;
                 m_camera.addLook(0.0f, 0.0f, 0.0f);
 
+                {
+                    const int px = static_cast<int>(std::floor(m_player.position.x));
+                    const int py = static_cast<int>(std::floor(m_player.position.y));
+                    const int pz = static_cast<int>(std::floor(m_player.position.z));
+                    for (int dx = -6; dx <= 6; ++dx)
+                        for (int dz = -6; dz <= 6; ++dz)
+                        {
+                            for (int dy = 0; dy <= 4; ++dy)
+                                m_world->setBlock(px + dx, py + dy, pz + dz, Blocks::Air);
+                            m_world->setBlock(px + dx, py - 1, pz + dz, Blocks::Grass);
+                        }
+                    m_world->setBlock(px + 5, py, pz - 5, Blocks::Bookshelf);
+                    m_world->setBlock(px + 5, py, pz,     Blocks::DiamondOre);
+                    m_world->setBlock(px + 5, py, pz + 5, Blocks::EndPortalFrame);
+                }
+
                 // One of each profession, in a row, so the model and
                 // all four trade lists can be seen in one shot.
                 for (int i = 0; i < 4; ++i)
                 {
-                    const glm::vec3 where = m_player.position + m_camera.front * 2.5f +
-                                            m_camera.right * (static_cast<float>(i) - 1.5f) * 1.6f;
+                    glm::vec3 where = m_player.position + m_camera.front * 2.5f +
+                                      m_camera.right * (static_cast<float>(i) - 1.5f) * 1.6f;
+                    where.y = std::floor(m_player.position.y) + 0.01f;
                     m_entities.spawnAt(MobId::Villager, where, *m_world);
                 }
 
@@ -10363,7 +10383,7 @@ void Application::renderTitleScreen()
 
     // Settings and the profile share a row, as they do in Eaglercraft.
     const float halfWidth = buttonWidth * 0.5f - 6.0f;
-    if (menuButton({ buttonX, y, halfWidth, buttonHeight }, "Settings"))
+    if (menuButton({ buttonX, y, halfWidth, buttonHeight }, "Options..."))
         m_pendingAction = MenuAction::GoSettings;
 
     const Rect profileButton{ buttonX + halfWidth + 12.0f, y, halfWidth, buttonHeight };
@@ -10618,9 +10638,9 @@ void Application::renderVideoScreen()
         m_pendingAction = MenuAction::ToggleShaders;
     y += buttonHeight + 14.0f;
 
-    if (menuButton({ buttonX, y, buttonWidth, buttonHeight },
-                   m_pbrEnabled ? "Fancy Lighting: On" : "Fancy Lighting: Off",
-                   m_atlas.hasPbrMaps()))
+    const std::string fancy = !m_atlas.hasPbrMaps() ? "Fancy Lighting: Needs a PBR Pack"
+                            : (m_pbrEnabled ? "Fancy Lighting: On" : "Fancy Lighting: Off");
+    if (menuButton({ buttonX, y, buttonWidth, buttonHeight }, fancy, m_atlas.hasPbrMaps()))
         m_pendingAction = MenuAction::TogglePbr;
     y += buttonHeight + 24.0f;
 

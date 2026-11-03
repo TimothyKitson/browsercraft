@@ -590,6 +590,7 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
     if (m_huntTimer > 0.0f) m_huntTimer = std::max(0.0f, m_huntTimer - deltaTime);
     if (m_biteTimer > 0.0f) m_biteTimer = std::max(0.0f, m_biteTimer - deltaTime);
     if (m_babyTimer > 0.0f) m_babyTimer = std::max(0.0f, m_babyTimer - deltaTime);
+    if (m_holdTimer > 0.0f) m_holdTimer = std::max(0.0f, m_holdTimer - deltaTime);
     m_age += deltaTime;
 
     // The lid. It opens when there is something to shoot at and shuts
@@ -651,7 +652,7 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
         if (m_steerJump && m_onGround && !t.inanimate) m_velocity.y = RIDDEN_JUMP;
         m_steerJump = false;
     }
-    else if (t.inanimate || t.stationary || m_sitting)
+    else if (t.inanimate || t.stationary || m_sitting || m_holdTimer > 0.0f)
     {
         // Left alone it stays where it was put. A boat has nothing to
         // want; a sitting wolf has been told; a shulker is bolted on.
