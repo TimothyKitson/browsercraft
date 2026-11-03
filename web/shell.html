@@ -131,6 +131,7 @@
   var Module = {
     canvas: canvas,
     arguments: [],
+    locateFile: function (path, prefix) { return prefix + path + '?v=__BUILD__'; },
     preRun: [mountSaveStorage],
     postRun: [],
     print: function (text) { console.log(text); },

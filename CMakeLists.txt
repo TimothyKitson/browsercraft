@@ -88,6 +88,8 @@ if(EMSCRIPTEN)
     )
     # Rebuild the page whenever the shell changes.
     set_property(TARGET VoxelEngine APPEND PROPERTY LINK_DEPENDS "${CMAKE_SOURCE_DIR}/web/shell.html")
+    add_custom_command(TARGET VoxelEngine POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -DDIR=$<TARGET_FILE_DIR:VoxelEngine> -P "${CMAKE_SOURCE_DIR}/web/stamp.cmake")
 else()
     target_link_libraries(VoxelEngine PRIVATE SDL2::SDL2 SDL2::SDL2main)
 
