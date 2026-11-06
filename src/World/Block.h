@@ -551,6 +551,10 @@ namespace Blocks
         MangroveTrapdoor, MangroveTrapdoorLast = MangroveTrapdoor + 15,
         MangroveSign, MangroveSignLast = MangroveSign + 3,
         MudBricks, PackedMud,
+        BambooBlock, StrippedBambooBlock, BambooPlanks, BambooMosaic, BambooSlab,
+        BambooDoor, BambooDoorLast = BambooDoor + 15,
+        BambooTrapdoor, BambooTrapdoorLast = BambooTrapdoor + 15,
+        BambooSign, BambooSignLast = BambooSign + 3,
 
         Count
     };
@@ -645,7 +649,7 @@ inline bool isLadder(BlockId id)
 
 // A sign, and which way it faces. The facings are in the ladder's
 // order, so the same arithmetic places both.
-constexpr int WOOD_COUNT = 8;
+constexpr int WOOD_COUNT = 9;
 
 struct WoodSet
 {
@@ -671,6 +675,8 @@ inline const WoodSet& woodSet(int wood)
           Blocks::CherrySapling, Blocks::CherryDoor, Blocks::CherryTrapdoor, Blocks::CherrySign },
         { Blocks::MangroveLog, Blocks::StrippedMangroveLog, Blocks::MangrovePlanks, Blocks::MangroveLeaves,
           Blocks::MangrovePropagule, Blocks::MangroveDoor, Blocks::MangroveTrapdoor, Blocks::MangroveSign },
+        { Blocks::BambooBlock, Blocks::StrippedBambooBlock, Blocks::BambooPlanks, Blocks::Air,
+          Blocks::Air, Blocks::BambooDoor, Blocks::BambooTrapdoor, Blocks::BambooSign },
     };
     return SETS[wood < 0 || wood >= WOOD_COUNT ? 0 : wood];
 }
@@ -1003,7 +1009,7 @@ inline bool isPlanks(BlockId id)
     return id == Blocks::Planks || id == Blocks::SprucePlanks ||
            id == Blocks::DarkOakPlanks || id == Blocks::JunglePlanks ||
            id == Blocks::AcaciaPlanks || id == Blocks::BirchPlanks || id == Blocks::CherryPlanks ||
-           id == Blocks::MangrovePlanks;
+           id == Blocks::MangrovePlanks || id == Blocks::BambooPlanks;
 }
 
 inline bool isLog(BlockId id)
@@ -1012,6 +1018,7 @@ inline bool isLog(BlockId id)
            id == Blocks::SpruceLog || id == Blocks::DarkOakLog ||
            id == Blocks::JungleLog || id == Blocks::AcaciaLog || id == Blocks::CherryLog ||
            id == Blocks::MangroveLog || id == Blocks::StrippedMangroveLog ||
+           id == Blocks::BambooBlock || id == Blocks::StrippedBambooBlock ||
            (id >= Blocks::StrippedOakLog && id <= Blocks::StrippedDarkOakLog) || id == Blocks::StrippedCherryLog;
 }
 
@@ -1020,6 +1027,7 @@ inline BlockId planksFromLog(BlockId log)
 {
     if (log == Blocks::CherryLog || log == Blocks::StrippedCherryLog) return Blocks::CherryPlanks;
     if (log == Blocks::MangroveLog || log == Blocks::StrippedMangroveLog) return Blocks::MangrovePlanks;
+    if (log == Blocks::BambooBlock || log == Blocks::StrippedBambooBlock) return Blocks::BambooPlanks;
     if (log >= Blocks::StrippedOakLog && log <= Blocks::StrippedDarkOakLog)
     {
         static const BlockId FROM[6] = { Blocks::Planks, Blocks::SprucePlanks, Blocks::BirchPlanks,
@@ -1118,6 +1126,7 @@ inline BlockId trapdoorPart(BlockId base, int facing, bool top, bool open)
 
 inline int saplingWood(BlockId id)
 {
+    if (id == Blocks::Air) return -1;
     for (int wood = 0; wood < WOOD_COUNT; ++wood)
         if (woodSet(wood).sapling == id) return wood;
     return -1;
@@ -1140,6 +1149,7 @@ inline int woodOfLog(BlockId id)
 }
 inline int woodOfLeaves(BlockId id)
 {
+    if (id == Blocks::Air) return -1;
     for (int wood = 0; wood < WOOD_COUNT; ++wood)
         if (woodSet(wood).leaves == id) return wood;
     return -1;

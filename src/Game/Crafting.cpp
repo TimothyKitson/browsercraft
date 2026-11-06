@@ -39,6 +39,15 @@ namespace
         { true,  0, 0, { Blocks::PinkPetals1 },        1, Items::DyePink,        1 },
         { true,  0, 0, { Blocks::MangroveLog },         1, Blocks::MangrovePlanks, 4 },
         { true,  0, 0, { Blocks::StrippedMangroveLog }, 1, Blocks::MangrovePlanks, 4 },
+        { true,  0, 0, { Blocks::BambooBlock },         1, Blocks::BambooPlanks,   2 },
+        { true,  0, 0, { Blocks::StrippedBambooBlock }, 1, Blocks::BambooPlanks,   2 },
+        { false, 3, 3, { Blocks::Bamboo, Blocks::Bamboo, Blocks::Bamboo,
+                         Blocks::Bamboo, Blocks::Bamboo, Blocks::Bamboo,
+                         Blocks::Bamboo, Blocks::Bamboo, Blocks::Bamboo },
+          0, Blocks::BambooBlock, 1 },
+        { false, 1, 2, { Blocks::BambooSlab,
+                         Blocks::BambooSlab },
+          0, Blocks::BambooMosaic, 1 },
         { true,  0, 0, { Blocks::Mud, Items::Wheat },   2, Blocks::PackedMud,     1 },
         { true,  0, 0, { Blocks::Mud, Blocks::MangroveRoots }, 2, Blocks::MuddyMangroveRoots, 1 },
         { false, 2, 2, { Blocks::PackedMud, Blocks::PackedMud,
@@ -723,6 +732,7 @@ namespace
         if (result == Blocks::DoorLowShutNorth) return doorBaseOf(wood);
         if (result == Blocks::OakTrapdoor) return trapdoorBaseOf(wood);
         if (result == Items::Sign) return signItemOfWood(wood);
+        if (result == Blocks::PlankSlab && wood == 8) return Blocks::BambooSlab;
         return result;
     }
 
@@ -909,6 +919,14 @@ std::vector<StackId> Crafting::everyOutput()
     // the colours unmakeable.
     for (int colour = 0; colour < DYE_COLOURS; ++colour)
         out.push_back(woolOfColour(colour));
+
+    for (int wood = 1; wood < WOOD_COUNT; ++wood)
+    {
+        out.push_back(doorBaseOf(wood));
+        out.push_back(trapdoorBaseOf(wood));
+        out.push_back(signItemOfWood(wood));
+    }
+    out.push_back(Blocks::BambooSlab);
 
     // And the nine the upgrade makes. It is a recipe the table cannot
     // hold -- it takes whichever diamond thing you give it -- but it

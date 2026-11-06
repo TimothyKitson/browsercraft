@@ -746,6 +746,47 @@ namespace
         { "Mangrove Sign", MangrovePlanksTile, MangrovePlanksTile, MangrovePlanksTile, false, false, RenderType::Ladder, 0, 1.0f },
         { "Mud Bricks", MudBricksTile, MudBricksTile, MudBricksTile, true, true, RenderType::Cube, 0, 1.5f },
         { "Packed Mud", PackedMudTile, PackedMudTile, PackedMudTile, true, true, RenderType::Cube, 0, 1.0f },
+        { "Block of Bamboo", BambooBlockTop, BambooBlockTop, BambooBlockSide, true, true, RenderType::Cube, 0, 2.0f },
+        { "Block of Stripped Bamboo", StrippedBambooBlockTop, StrippedBambooBlockTop, StrippedBambooBlockSide, true, true, RenderType::Cube, 0, 2.0f },
+        { "Bamboo Planks", BambooPlanksTile, BambooPlanksTile, BambooPlanksTile, true, true, RenderType::Cube, 0, 1.5f },
+        { "Bamboo Mosaic", BambooMosaicTile, BambooMosaicTile, BambooMosaicTile, true, true, RenderType::Cube, 0, 1.5f },
+        { "Bamboo Slab", BambooPlanksTile, BambooPlanksTile, BambooPlanksTile, true, false, RenderType::Slab, 0, 1.5f },
+        { "Bamboo Door", BambooDoorLower, BambooDoorLower, BambooDoorLower, true, false, RenderType::Door, 0, 3.0f },
+        { "Bamboo Door", BambooDoorLower, BambooDoorLower, BambooDoorLower, true, false, RenderType::Door, 0, 3.0f },
+        { "Bamboo Door", BambooDoorLower, BambooDoorLower, BambooDoorLower, true, false, RenderType::Door, 0, 3.0f },
+        { "Bamboo Door", BambooDoorLower, BambooDoorLower, BambooDoorLower, true, false, RenderType::Door, 0, 3.0f },
+        { "Bamboo Door", BambooDoorLower, BambooDoorLower, BambooDoorLower, true, false, RenderType::Door, 0, 3.0f },
+        { "Bamboo Door", BambooDoorLower, BambooDoorLower, BambooDoorLower, true, false, RenderType::Door, 0, 3.0f },
+        { "Bamboo Door", BambooDoorLower, BambooDoorLower, BambooDoorLower, true, false, RenderType::Door, 0, 3.0f },
+        { "Bamboo Door", BambooDoorLower, BambooDoorLower, BambooDoorLower, true, false, RenderType::Door, 0, 3.0f },
+        { "Bamboo Door", BambooDoorUpper, BambooDoorUpper, BambooDoorUpper, true, false, RenderType::Door, 0, 3.0f },
+        { "Bamboo Door", BambooDoorUpper, BambooDoorUpper, BambooDoorUpper, true, false, RenderType::Door, 0, 3.0f },
+        { "Bamboo Door", BambooDoorUpper, BambooDoorUpper, BambooDoorUpper, true, false, RenderType::Door, 0, 3.0f },
+        { "Bamboo Door", BambooDoorUpper, BambooDoorUpper, BambooDoorUpper, true, false, RenderType::Door, 0, 3.0f },
+        { "Bamboo Door", BambooDoorUpper, BambooDoorUpper, BambooDoorUpper, true, false, RenderType::Door, 0, 3.0f },
+        { "Bamboo Door", BambooDoorUpper, BambooDoorUpper, BambooDoorUpper, true, false, RenderType::Door, 0, 3.0f },
+        { "Bamboo Door", BambooDoorUpper, BambooDoorUpper, BambooDoorUpper, true, false, RenderType::Door, 0, 3.0f },
+        { "Bamboo Door", BambooDoorUpper, BambooDoorUpper, BambooDoorUpper, true, false, RenderType::Door, 0, 3.0f },
+        { "Bamboo Trapdoor", BambooTrapdoorTile, BambooTrapdoorTile, BambooTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Bamboo Trapdoor", BambooTrapdoorTile, BambooTrapdoorTile, BambooTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Bamboo Trapdoor", BambooTrapdoorTile, BambooTrapdoorTile, BambooTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Bamboo Trapdoor", BambooTrapdoorTile, BambooTrapdoorTile, BambooTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Bamboo Trapdoor", BambooTrapdoorTile, BambooTrapdoorTile, BambooTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Bamboo Trapdoor", BambooTrapdoorTile, BambooTrapdoorTile, BambooTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Bamboo Trapdoor", BambooTrapdoorTile, BambooTrapdoorTile, BambooTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Bamboo Trapdoor", BambooTrapdoorTile, BambooTrapdoorTile, BambooTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Bamboo Trapdoor", BambooTrapdoorTile, BambooTrapdoorTile, BambooTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Bamboo Trapdoor", BambooTrapdoorTile, BambooTrapdoorTile, BambooTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Bamboo Trapdoor", BambooTrapdoorTile, BambooTrapdoorTile, BambooTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Bamboo Trapdoor", BambooTrapdoorTile, BambooTrapdoorTile, BambooTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Bamboo Trapdoor", BambooTrapdoorTile, BambooTrapdoorTile, BambooTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Bamboo Trapdoor", BambooTrapdoorTile, BambooTrapdoorTile, BambooTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Bamboo Trapdoor", BambooTrapdoorTile, BambooTrapdoorTile, BambooTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Bamboo Trapdoor", BambooTrapdoorTile, BambooTrapdoorTile, BambooTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Bamboo Sign", BambooPlanksTile, BambooPlanksTile, BambooPlanksTile, false, false, RenderType::Ladder, 0, 1.0f },
+        { "Bamboo Sign", BambooPlanksTile, BambooPlanksTile, BambooPlanksTile, false, false, RenderType::Ladder, 0, 1.0f },
+        { "Bamboo Sign", BambooPlanksTile, BambooPlanksTile, BambooPlanksTile, false, false, RenderType::Ladder, 0, 1.0f },
+        { "Bamboo Sign", BambooPlanksTile, BambooPlanksTile, BambooPlanksTile, false, false, RenderType::Ladder, 0, 1.0f },
     };
 }
 
@@ -859,7 +900,7 @@ const char* blockSoundGroup(BlockId id)
     if (isSign(id) || isFrame(id)) return "wood";
     if (isDoor(id) || isTrapdoor(id)) return "wood";
     if (isSapling(id) || isPinkPetals(id) || id == Blocks::MangrovePropaguleHanging) return "grass";
-    if (id == Blocks::MangroveRoots) return "wood";
+    if (id == Blocks::MangroveRoots || id == Blocks::BambooMosaic || id == Blocks::BambooSlab) return "wood";
     if (id == Blocks::MuddyMangroveRoots || id == Blocks::PackedMud) return "gravel";
     if (id == Blocks::Melon || isCocoa(id)) return "grass";
     if (isCake(id) || id == Blocks::Candle || id == Blocks::CandleLit) return "cloth";
@@ -1003,7 +1044,7 @@ Material blockMaterial(BlockId id)
     if (isSign(id) || isFrame(id)) return Material::Wood;
     if (isDoor(id) || isTrapdoor(id)) return Material::Wood;
     if (isSapling(id) || isPinkPetals(id) || id == Blocks::MangrovePropaguleHanging) return Material::Plant;
-    if (id == Blocks::MangroveRoots) return Material::Wood;
+    if (id == Blocks::MangroveRoots || id == Blocks::BambooMosaic || id == Blocks::BambooSlab) return Material::Wood;
     if (id == Blocks::MuddyMangroveRoots || id == Blocks::PackedMud) return Material::Dirt;
     if (isCauldron(id)) return Material::Stone;
     if (isFurnaceBlock(id)) return Material::Stone;

@@ -2595,9 +2595,9 @@ bool Application::frame()
                     m_camera.setOrientation(0.0f, 4.0f);
                     for (int wood = 0; wood < WOOD_COUNT; ++wood)
                     {
-                        const int z = pz - 6 + wood * 2;
-                        m_world->setBlock(px + 8, py, z, static_cast<BlockId>(Blocks::OakSapling + wood));
-                        m_world->setBlock(px + 9, py, z, static_cast<BlockId>(Blocks::StrippedOakLog + wood));
+                        const int z = pz - 8 + wood * 2;
+                        m_world->setBlock(px + 8, py, z, woodSet(wood).sapling);
+                        m_world->setBlock(px + 9, py, z, woodSet(wood).stripped);
                         m_world->setBlock(px + 9, py + 1, z, planksOfWood(wood));
                         m_world->setBlock(px + 10, py, z, doorPart(doorBaseOf(wood), 1, false, wood % 2 == 1));
                         m_world->setBlock(px + 10, py + 1, z, doorPart(doorBaseOf(wood), 1, true, wood % 2 == 1));

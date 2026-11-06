@@ -3575,6 +3575,38 @@ namespace
     void paintMudBricksTile(Tile& t) { paintBricksIn(t, Color{ 137, 103, 79 }, Color{ 104, 80, 62 }); }
     void paintPackedMudTile(Tile& t) { t.fill(Color{ 142, 106, 79 }); t.speckle(12, 815); }
 
+    void paintBambooStalksIn(Tile& t, Color base)
+    {
+        const int n = Tile::N;
+        for (int y = 0; y < n; ++y)
+            for (int x = 0; x < n; ++x)
+            {
+                const bool seam = (x % 4) == 3;
+                const bool node = (y % 8) == ((x / 4) * 3) % 8;
+                t.set(x, y, shade(base, seam ? -40 : node ? -25 : static_cast<int>((hash2(x, y, 821) - 0.5f) * 14.0f)));
+            }
+    }
+    void paintBambooBlockSide(Tile& t) { paintBambooStalksIn(t, Color{ 126, 146, 50 }); }
+    void paintBambooBlockTop(Tile& t) { paintRings(t, Color{ 216, 196, 112 }, Color{ 196, 176, 92 }, Color{ 126, 146, 50 }, 822); }
+    void paintStrippedBambooBlockSide(Tile& t) { paintBambooStalksIn(t, Color{ 196, 176, 82 }); }
+    void paintStrippedBambooBlockTop(Tile& t) { paintRings(t, Color{ 216, 196, 112 }, Color{ 196, 176, 92 }, Color{ 196, 176, 82 }, 823); }
+    void paintBambooPlanksTile(Tile& t) { paintPlanksIn(t, Color{ 199, 178, 82 }, 121); }
+    void paintBambooMosaicTile(Tile& t)
+    {
+        const int n = Tile::N;
+        for (int y = 0; y < n; ++y)
+            for (int x = 0; x < n; ++x)
+            {
+                const bool across = ((x / 8) + (y / 8)) % 2 == 0;
+                const int stripe = across ? y % 4 : x % 4;
+                t.set(x, y, shade(Color{ 199, 178, 82 }, stripe == 3 ? -36 : 0));
+            }
+    }
+    void paintBambooDoorLower(Tile& t) { paintWoodDoorHalf(t, false, Color{ 199, 178, 82 }); }
+    void paintBambooDoorUpper(Tile& t) { paintWoodDoorHalf(t, true, Color{ 199, 178, 82 }); }
+    void paintBambooTrapdoorTile(Tile& t) { paintTrapdoorIn(t, Color{ 199, 178, 82 }); }
+    void paintItemBambooSign(Tile& t) { paintItemSignIn(t, Color{ 199, 178, 82 }); }
+
     void paintItemSign(Tile& t)
     {
         t.fill(Color{ 0, 0, 0, 0 });
@@ -6553,6 +6585,8 @@ namespace
         { Tiles::ItemHorseArmorDiamond, paintItemElytra },
         { Tiles::IconCherryDoor, paintCherryDoorLower },
         { Tiles::IconMangroveDoor, paintMangroveDoorLower },
+        { Tiles::IconBambooDoor, paintBambooDoorLower },
+        { Tiles::ItemBambooSign, paintItemBambooSign },
         { Tiles::ItemMangroveSign, paintItemMangroveSign },
         { Tiles::IconMangrovePropagule, paintMangrovePropaguleTile },
         { Tiles::ItemCherrySign, paintItemCherrySign },
@@ -6715,6 +6749,15 @@ namespace
         { Tiles::DustLine1Off, paintRedstoneDust },
         { Tiles::DustLine1On, paintRedstoneDustLit },
         { Tiles::LeverHandle, paintLever },
+        { Tiles::BambooBlockSide, paintBambooBlockSide },
+        { Tiles::BambooBlockTop, paintBambooBlockTop },
+        { Tiles::StrippedBambooBlockSide, paintStrippedBambooBlockSide },
+        { Tiles::StrippedBambooBlockTop, paintStrippedBambooBlockTop },
+        { Tiles::BambooPlanksTile, paintBambooPlanksTile },
+        { Tiles::BambooMosaicTile, paintBambooMosaicTile },
+        { Tiles::BambooDoorLower, paintBambooDoorLower },
+        { Tiles::BambooDoorUpper, paintBambooDoorUpper },
+        { Tiles::BambooTrapdoorTile, paintBambooTrapdoorTile },
         { Tiles::MangroveLogSide, paintMangroveLogSide },
         { Tiles::MangroveLogTop, paintMangroveLogTop },
         { Tiles::MangroveLeavesTile, paintMangroveLeavesTile },
@@ -7075,6 +7118,8 @@ namespace
         { Tiles::ItemHorseArmorDiamond, { "diamond_horse_armor", nullptr, nullptr } },
         { Tiles::IconCherryDoor, { "cherry_door", nullptr, nullptr } },
         { Tiles::IconMangroveDoor, { "mangrove_door", nullptr, nullptr } },
+        { Tiles::IconBambooDoor, { "bamboo_door", nullptr, nullptr } },
+        { Tiles::ItemBambooSign, { "bamboo_sign", nullptr, nullptr } },
         { Tiles::ItemMangroveSign, { "mangrove_sign", nullptr, nullptr } },
         { Tiles::IconMangrovePropagule, { "mangrove_propagule", nullptr, nullptr } },
         { Tiles::ItemCherrySign, { "cherry_sign", nullptr, nullptr } },
@@ -7209,6 +7254,15 @@ namespace
         { Tiles::DustLine1Off, { "redstone_dust_line1", nullptr }, Tinting::RedstoneOff, 0, false },
         { Tiles::DustLine1On, { "redstone_dust_line1", nullptr }, Tinting::RedstoneOn, 0, false },
         { Tiles::LeverHandle, { "lever", nullptr }, Tinting::None, 0, false },
+        { Tiles::BambooBlockSide, { "bamboo_block", nullptr }, Tinting::None, 0, false },
+        { Tiles::BambooBlockTop, { "bamboo_block_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::StrippedBambooBlockSide, { "stripped_bamboo_block", nullptr }, Tinting::None, 0, false },
+        { Tiles::StrippedBambooBlockTop, { "stripped_bamboo_block_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::BambooPlanksTile, { "bamboo_planks", nullptr }, Tinting::None, 0, false },
+        { Tiles::BambooMosaicTile, { "bamboo_mosaic", nullptr }, Tinting::None, 0, false },
+        { Tiles::BambooDoorLower, { "bamboo_door_bottom", nullptr }, Tinting::None, 0, false },
+        { Tiles::BambooDoorUpper, { "bamboo_door_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::BambooTrapdoorTile, { "bamboo_trapdoor", nullptr }, Tinting::None, 0, false },
         { Tiles::MangroveLogSide, { "mangrove_log", nullptr }, Tinting::None, 0, false },
         { Tiles::MangroveLogTop, { "mangrove_log_top", nullptr }, Tinting::None, 0, false },
         { Tiles::MangroveLeavesTile, { "mangrove_leaves", nullptr }, Tinting::Foliage, 0, false },

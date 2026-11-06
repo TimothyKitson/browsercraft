@@ -11941,6 +11941,18 @@ namespace
             check(std::string(biomeName(Biome::CherryGrove)) == "Cherry Grove", "and are called so");
         }
 
+        check(!isSapling(Blocks::Air) && woodOfLeaves(Blocks::Air) < 0, "air is no wood's sapling or leaves");
+        check(planksFromLog(Blocks::BambooBlock) == Blocks::BambooPlanks, "a block of bamboo makes bamboo planks");
+        {
+            ItemStack slabs[9];
+            for (int i = 0; i < 3; ++i) slabs[i] = ItemStack{ Blocks::BambooPlanks, 1 };
+            check(Crafting::match(slabs, 3).id == Blocks::BambooSlab, "bamboo planks make bamboo slabs");
+            ItemStack mosaic[9];
+            mosaic[0] = ItemStack{ Blocks::BambooSlab, 1 };
+            mosaic[3] = ItemStack{ Blocks::BambooSlab, 1 };
+            check(Crafting::match(mosaic, 3).id == Blocks::BambooMosaic, "and two of those a mosaic");
+        }
+
         Plot mangrove;
         mangrove.set(0, 64, 0, Blocks::MangrovePropagule);
         check(Saplings::grow(mangrove, glm::ivec3(0, 64, 0), 3u), "a propagule grows");

@@ -200,6 +200,7 @@ namespace
         { "Dark Oak Sign",        Tiles::ItemDarkOakSign,       16 },
         { "Cherry Sign",          Tiles::ItemCherrySign,        16 },
         { "Mangrove Sign",        Tiles::ItemMangroveSign,      16 },
+        { "Bamboo Sign",          Tiles::ItemBambooSign,        16 },
     };
 
     static_assert(sizeof(ITEMS) / sizeof(ITEMS[0]) ==
@@ -226,7 +227,8 @@ int flatIconFor(BlockId id)
     {
         static const int ICONS[WOOD_COUNT] = { Tiles::IconOakDoor, Tiles::IconSpruceDoor, Tiles::IconBirchDoor,
                                                Tiles::IconJungleDoor, Tiles::IconAcaciaDoor, Tiles::IconDarkOakDoor,
-                                               Tiles::IconCherryDoor, Tiles::IconMangroveDoor };
+                                               Tiles::IconCherryDoor, Tiles::IconMangroveDoor,
+                                               Tiles::IconBambooDoor };
         const int wood = doorWood(id);
         return ICONS[wood < 0 ? 0 : wood];
     }

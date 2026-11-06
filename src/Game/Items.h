@@ -296,6 +296,7 @@ namespace Items
         SpruceSign, BirchSign, JungleSign, AcaciaSign, DarkOakSign,
         CherrySign,
         MangroveSign,
+        BambooSign,
         Count
     };
 }
@@ -312,7 +313,7 @@ inline StackId signItemOfWood(int wood)
 {
     static const StackId SIGNS[] = { Items::Sign, Items::SpruceSign, Items::BirchSign, Items::JungleSign,
                                      Items::AcaciaSign, Items::DarkOakSign, Items::CherrySign,
-                                     Items::MangroveSign };
+                                     Items::MangroveSign, Items::BambooSign };
     return SIGNS[wood < 0 || wood >= static_cast<int>(sizeof(SIGNS) / sizeof(SIGNS[0])) ? 0 : wood];
 }
 inline int woodOfSignItem(StackId id)

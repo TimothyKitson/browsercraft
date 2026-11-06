@@ -301,6 +301,8 @@ namespace Tiles
         StrippedMangroveLogTop, MangrovePropaguleTile, MangrovePropaguleHangingTile, MangroveRootsSide,
         MangroveRootsTop, MuddyMangroveRootsSide, MuddyMangroveRootsTop, MangroveDoorLower, MangroveDoorUpper,
         MangroveTrapdoorTile, MudBricksTile, PackedMudTile,
+        BambooBlockSide, BambooBlockTop, StrippedBambooBlockSide, StrippedBambooBlockTop, BambooPlanksTile,
+        BambooMosaicTile, BambooDoorLower, BambooDoorUpper, BambooTrapdoorTile,
 
         TileCount
     };
@@ -488,8 +490,9 @@ namespace Tiles
         IconSpruceDoor, IconBirchDoor, IconJungleDoor, IconAcaciaDoor, IconDarkOakDoor, ItemSpruceSign, ItemBirchSign, ItemJungleSign, ItemAcaciaSign, ItemDarkOakSign,
         IconCherryDoor, ItemCherrySign,
         IconMangroveDoor, ItemMangroveSign, IconMangrovePropagule,
+        IconBambooDoor, ItemBambooSign,
 
-        ItemTileEnd = IconMangrovePropagule + 1
+        ItemTileEnd = ItemBambooSign + 1
     };
 
     // Ten progressively more broken overlay tiles for the mining animation.

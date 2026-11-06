@@ -32,6 +32,8 @@ namespace
         Blocks::MangroveLog, Blocks::StrippedMangroveLog, Blocks::MangrovePlanks, Blocks::MangroveDoor,
         Blocks::MangroveTrapdoor, Blocks::MangroveRoots, Blocks::MuddyMangroveRoots, Blocks::Mud,
         Blocks::PackedMud, Blocks::MudBricks,
+        Blocks::BambooBlock, Blocks::StrippedBambooBlock, Blocks::BambooPlanks, Blocks::BambooMosaic,
+        Blocks::BambooSlab, Blocks::BambooDoor, Blocks::BambooTrapdoor,
     };
 
     const StackId TAB_NATURE[] = {
@@ -75,7 +77,7 @@ namespace
         Items::CookedMutton,
         Items::Paper, Items::Book, Items::Emerald, Items::EnderPearl, Items::EyeOfEnder,
         Items::Sign, Items::SpruceSign, Items::BirchSign, Items::JungleSign, Items::AcaciaSign, Items::DarkOakSign,
-        Items::CherrySign, Items::MangroveSign,
+        Items::CherrySign, Items::MangroveSign, Items::BambooSign,
     };
 
     // The twenty-five tools, their materials, and the two benches you
