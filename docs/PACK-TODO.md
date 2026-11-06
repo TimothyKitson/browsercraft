@@ -88,7 +88,7 @@ Everything in the 1.21 textures zip the game doesn't use yet, turned into work. 
     - I. Repair two of the same item.
     - II. Strip enchantments and pay back XP.
     - III. Show the error icon when it can't.
-21. Fix the audit tool so names the game builds in code (destroy stages and other numbered textures) count as used.
+21. Fix the audit tool so names the game builds in code (destroy stages and other numbered textures) count as used. (done)
 
 ## Part 2: new blocks
 
