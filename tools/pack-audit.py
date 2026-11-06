@@ -1,3 +1,4 @@
+import hashlib
 import os
 import re
 import sys
@@ -20,6 +21,14 @@ for value in quoted:
     for part in value.replace("|", "/").split("/"):
         quoted_stems.add(part.replace(".png", ""))
 
+installed = set()
+skins = os.path.join(root, "assets", "skins")
+for base, _, files in os.walk(skins):
+    for name in files:
+        if name.endswith(".png"):
+            with open(os.path.join(base, name), "rb") as handle:
+                installed.add(hashlib.sha1(handle.read()).hexdigest())
+
 def used(category, rel):
     stem = os.path.basename(rel)[:-4]
     path = rel[:-4]
@@ -34,6 +43,9 @@ def used(category, rel):
             base = "sga_"
         return ('"' + base + '"') in text
     if category == "entity":
+        with open(os.path.join(pack, rel), "rb") as handle:
+            if hashlib.sha1(handle.read()).hexdigest() in installed:
+                return True
         return (inner + ".png") in text or ('"' + path + '"') in text or ("../" + path + '"') in text
     return ('"' + path + '"') in text or ('"../' + path + '"') in text or (path + ".png") in text
 
