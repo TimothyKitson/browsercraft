@@ -195,6 +195,8 @@ void Projectiles::render(Shader& shader, const Camera& camera, const Atlas& atla
     const TileUV windUV = tileUV(Tiles::WindCharge);
     const TileUV eyeUV = tileUV(Tiles::ItemEyeOfEnder);
     const TileUV potionUV = tileUV(Tiles::ItemPotion);
+    const TileUV bulletUV = tileUV(Tiles::ShulkerBulletTile);
+    const TileUV breathUV = tileUV(Tiles::DragonFireballTile);
     constexpr float LENGTH = 0.62f;
     constexpr float WIDTH = 0.16f;
 
@@ -225,6 +227,8 @@ void Projectiles::render(Shader& shader, const Camera& camera, const Atlas& atla
                         : (arrow.kind == Arrows::Kind::Wind) ? windUV
                         : (arrow.kind == Arrows::Kind::Eye)  ? eyeUV
                         : (arrow.kind == Arrows::Kind::Potion) ? potionUV
+                        : (arrow.kind == Arrows::Kind::Bullet) ? bulletUV
+                        : (arrow.kind == Arrows::Kind::Breath) ? breathUV
                                                              : arrowUV;
         // A potion is drawn as the bottle it is rather than as a
         // shaft, so it is square like a charge without being one.

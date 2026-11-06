@@ -329,6 +329,7 @@ void MobModel::renderExtras(MobId id, const MobSkin& skin, const World& world, c
         { MobId::CaveSpider, "assets/textures/entity/spider_eyes.png", 0.0f },
         { MobId::Phantom, "assets/textures/entity/phantom_eyes.png", 0.0f },
         { MobId::EnderDragon, "assets/textures/entity/enderdragon/dragon_eyes.png", 0.0f },
+        { MobId::EnderDragon, "assets/textures/entity/enderdragon/dragon_exploding.png", 0.0f },
         { MobId::Warden, "assets/textures/entity/warden/warden_bioluminescent_layer.png", 0.0f },
         { MobId::Warden, "assets/textures/entity/warden/warden_pulsating_spots_1.png", 0.0f },
         { MobId::Warden, "assets/textures/entity/warden/warden_pulsating_spots_2.png", 0.0f },
@@ -362,7 +363,9 @@ void MobModel::renderExtras(MobId id, const MobSkin& skin, const World& world, c
     auto glowFor = [&](const char* path, const Mob& mob) -> float {
         const std::string p(path);
         const float health = static_cast<float>(mob.health()) / std::max(1, mob.type().maxHealth);
-        if (p.find("_eyes") != std::string::npos || p.find("bioluminescent") != std::string::npos) return 1.0f;
+        if (p.find("exploding") != std::string::npos) return mob.alive() ? -1.0f : 1.0f;
+        if (p.find("_eyes") != std::string::npos || p.find("bioluminescent") != std::string::npos)
+            return mob.alive() ? 1.0f : -1.0f;
         if (p.find("spots_1") != std::string::npos)
         {
             const float pulse = std::cos(mob.age() * 0.9f);

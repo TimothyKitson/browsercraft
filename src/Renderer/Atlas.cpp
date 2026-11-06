@@ -6556,6 +6556,8 @@ namespace
         { Tiles::IconHopper,        paintHopperSide },
         { Tiles::IconDripstone,     paintDripstoneSpike },
         { Tiles::IconBamboo,        paintBamboo },
+        { Tiles::ShulkerBulletTile, paintFireCharge },
+        { Tiles::DragonFireballTile, paintFireCharge },
         { Tiles::ItemNetherWart,    paintItemNetherWart },
         { Tiles::ItemSugar,         paintItemSugar },
         { Tiles::ItemBlazePowder,   paintItemBlazePowder },
@@ -7751,6 +7753,16 @@ Atlas::Atlas()
         overlay(Tiles::CauldronTop, "cauldron_top");
         underlay(Tiles::SculkShriekerTop, "sculk_shrieker_inner_top");
 
+        const Image spark = loadPNG("assets/textures/entity/shulker/spark.png");
+        if (spark.valid())
+        {
+            const int k = unit(spark, 64);
+            blitImage(Tiles::ShulkerBulletTile, scaleNearest(cropImage(spark, 2 * k, 2 * k, 8 * k, 8 * k), tilePixels, tilePixels));
+        }
+        const Image dragonBall = loadPNG("assets/textures/entity/enderdragon/dragon_fireball.png");
+        if (dragonBall.valid())
+            blitImage(Tiles::DragonFireballTile, scaleNearest(squareOf(dragonBall), tilePixels, tilePixels));
+
         const Image orb = loadPNG("assets/textures/entity/experience_orb.png");
         if (orb.valid())
         {
@@ -8120,7 +8132,7 @@ std::vector<int> unlinkedTiles()
         Tiles::WitherSkullTile, Tiles::LeverTile, Tiles::LeverOnTile, Tiles::ButtonTile,
         Tiles::ButtonOnTile, Tiles::RedstoneDust, Tiles::RedstoneDustLit, Tiles::TntPrimedSide,
         Tiles::ItemShield, Tiles::ExperienceOrb, Tiles::ArrowInFlight, Tiles::RainDrop,
-        Tiles::SnowFlake,
+        Tiles::SnowFlake, Tiles::ShulkerBulletTile, Tiles::DragonFireballTile,
     };
 
     std::vector<int> unlinked;

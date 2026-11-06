@@ -134,6 +134,8 @@ public:
     float yaw() const { return m_yaw; }
     int health() const { return m_health; }
     float spawnPhase() const { return m_spawnPhase; }
+    float laserCharge() const { return m_laserCharge; }
+    static constexpr float LASER_SECONDS = 2.0f;
     float lastRange() const { return m_lastRange; }
     bool aboutToShoot() const
     {
@@ -425,6 +427,7 @@ private:
     float m_hurtVoiceTimer = 0.0f;
     float m_shootTimer = 0.0f;
     float m_spawnPhase = 0.0f;
+    float m_laserCharge = 0.0f;
     float m_lastRange = 1.0e9f;
     float m_fuseTimer = 0.0f;
     bool m_lit = false;

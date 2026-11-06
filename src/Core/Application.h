@@ -29,6 +29,7 @@
 #include "World/Frames.h"
 #include "Game/Shield.h"
 #include "Game/Fluids.h"
+#include "Renderer/BeamRenderer.h"
 #include "Game/VillageLoot.h"
 #include "Game/StructureLoot.h"
 #include "Game/Weather.h"
@@ -247,6 +248,15 @@ private:
     long long m_fluidTicks = 0;
     void tickFluids(float deltaTime);
     void claimJobSites();
+    BeamRenderer m_beams;
+    float m_beamClock = 0.0f;
+    float m_dragonBreathTimer = 5.0f;
+    std::vector<glm::ivec3> m_litBeacons;
+    std::vector<std::pair<glm::ivec3, float>> m_gatewayFlashes;
+    struct BreathCloud { glm::vec3 at; float left; float tick; };
+    std::vector<BreathCloud> m_breathClouds;
+    void queueBeams();
+    void tickBreathClouds(float deltaTime);
     float m_jobSiteTimer = 0.0f;
     static constexpr int JOB_SITE_REACH = 4;
     void setBlockFor(const glm::ivec3& at, BlockId now, BlockId then, float seconds);

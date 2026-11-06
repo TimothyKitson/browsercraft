@@ -908,7 +908,30 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
         const glm::vec3 toPlayer = aim - eye;
         const float range = glm::length(toPlayer);
 
-        if (m_shootTimer <= 0.0f && range > 2.5f && range < t.arrowRange &&
+        if (t.laser)
+        {
+            const bool locked = range > 1.5f && range < t.arrowRange &&
+                                (m_laserCharge > 0.0f || m_shootTimer <= 0.0f) &&
+                                world.hasLineOfSight(eye, aim);
+            if (locked)
+            {
+                m_laserCharge += deltaTime;
+                if (m_laserCharge >= LASER_SECONDS)
+                {
+                    MobStrike strike;
+                    strike.damage = t.arrowDamage;
+                    strike.from = m_position;
+                    m_strikes.push_back(strike);
+                    m_laserCharge = 0.0f;
+                    m_shootTimer = t.arrowInterval;
+                }
+            }
+            else
+            {
+                m_laserCharge = 0.0f;
+            }
+        }
+        else if (m_shootTimer <= 0.0f && range > 2.5f && range < t.arrowRange &&
             world.hasLineOfSight(eye, aim))
         {
             m_shootTimer = t.arrowInterval;
@@ -917,17 +940,19 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
             // rather than always falling short. A fire charge does not
             // drop, so it is aimed straight at what it is thrown at.
             const glm::vec3 flat = glm::normalize(toPlayer);
-            const bool charge = t.shootsFire || t.shootsWind;
+            const bool charge = t.shootsFire || t.shootsWind || t.shootsBullet || t.shootsBreath;
             const float lift = charge ? 0.0f
                                       : std::clamp(range * 0.018f, 0.0f, 0.35f);
             const glm::vec3 heading = glm::normalize(flat + glm::vec3(0.0f, lift, 0.0f));
 
             MobShot shot;
             shot.from = eye + heading * 0.5f;
-            shot.velocity = heading * (charge ? 16.0f : 28.0f);
+            shot.velocity = heading * (t.shootsBullet ? 7.0f : charge ? 16.0f : 28.0f);
             shot.damage = t.arrowDamage;
             shot.kind = t.shootsFire ? Arrows::Kind::Fire
                       : t.shootsWind ? Arrows::Kind::Wind
+                      : t.shootsBullet ? Arrows::Kind::Bullet
+                      : t.shootsBreath ? Arrows::Kind::Breath
                       : t.throwsPotions ? Arrows::Kind::Potion
                                      : Arrows::Kind::Shaft;
             m_shots.push_back(shot);

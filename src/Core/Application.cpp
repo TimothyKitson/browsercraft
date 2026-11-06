@@ -2027,7 +2027,7 @@ bool Application::frame()
             m_startupScreen == "rock" ||
             m_startupScreen == "faces" || m_startupScreen == "backs" ||
             m_startupScreen == "flow" || m_startupScreen == "buds" ||
-            m_startupScreen == "icons")
+            m_startupScreen == "icons" || m_startupScreen == "beam")
         {
             // Dev aid: open the inventory with something in it, so the
             // screenshot shows a real grid rather than 36 empty boxes.
@@ -2052,6 +2052,7 @@ bool Application::frame()
                                   m_startupScreen != "backs" &&
                                   m_startupScreen != "flow" &&
                                   m_startupScreen != "buds" &&
+                                  m_startupScreen != "beam" &&
                                   m_startupScreen != "enchantblock" &&
                                   m_startupScreen != "villager" &&
                                   m_startupScreen != "endportal" &&
@@ -4122,6 +4123,30 @@ bool Application::frame()
                 m_inventory.add(Blocks::Bookshelf, 4);
             }
 
+            if (m_startupScreen == "beam")
+            {
+                m_camera.setOrientation(0.0f, 18.0f);
+                m_showDebug = false;
+                m_timeOfDay = 0.0f;
+                const int bx = static_cast<int>(std::floor(m_player.position.x));
+                const int by = static_cast<int>(std::floor(m_player.position.y));
+                const int bz = static_cast<int>(std::floor(m_player.position.z));
+                for (int dx = 1; dx <= 14; ++dx)
+                    for (int dy = 0; dy <= 12; ++dy)
+                        for (int dz = -7; dz <= 7; ++dz)
+                            m_world->setBlock(bx + dx, by + dy, bz + dz, Blocks::Air);
+                for (int dx = -1; dx <= 1; ++dx)
+                    for (int dz = -1; dz <= 1; ++dz)
+                        m_world->setBlock(bx + 9 + dx, by, bz + dz, Blocks::IronBlock);
+                m_world->setBlock(bx + 9, by + 1, bz, Blocks::Beacon);
+                m_beacons.insert({ bx + 9, by + 1, bz });
+                for (int dx = -1; dx <= 1; ++dx)
+                    for (int dz = -1; dz <= 1; ++dz)
+                        for (int dy = 0; dy <= 2; ++dy)
+                            m_world->setBlock(bx + 6 + dx, by + dy, bz - 4 + dz, Blocks::Water);
+                m_entities.spawnAt(MobId::Guardian, glm::vec3(bx + 6.5f, by + 0.5f, bz - 3.5f), *m_world);
+            }
+
             if (m_startupScreen == "buds")
             {
                 m_camera.setOrientation(90.0f, 0.0f);
@@ -5917,6 +5942,21 @@ void Application::tickDragonFight(float deltaTime)
 
     if (standing > 0)
         dragon->heal(static_cast<int>(HEAL_PER_CRYSTAL * standing * INTERVAL));
+
+    m_dragonBreathTimer -= INTERVAL;
+    if (m_dragonBreathTimer <= 0.0f)
+    {
+        const glm::vec3 mouth = dragon->position() + glm::vec3(0.0f, dragon->height() * 0.6f, 0.0f);
+        const glm::vec3 chest = m_player.position + glm::vec3(0.0f, 0.9f, 0.0f);
+        const float range = glm::length(chest - mouth);
+        if (range > 6.0f && range < 48.0f && m_world->hasLineOfSight(mouth, chest))
+        {
+            const glm::vec3 heading = glm::normalize(chest - mouth);
+            m_arrows.spawn(mouth + heading * 3.0f, heading * 14.0f, 6, false, Arrows::Kind::Breath);
+            m_audio.play(Sound::Fire, 0.7f, 0.7f);
+            m_dragonBreathTimer = 8.0f;
+        }
+    }
 }
 
 // Builds the summoning pattern for the dev screen and lets the normal
@@ -6109,6 +6149,7 @@ void Application::tickBeacons(float deltaTime)
     const int pz = static_cast<int>(std::floor(m_player.position.z));
 
     int best = 0;
+    std::vector<glm::ivec3> lit;
     for (auto it = m_beacons.begin(); it != m_beacons.end(); )
     {
         const int bx = (*it)[0], by = (*it)[1], bz = (*it)[2];
@@ -6125,6 +6166,7 @@ void Application::tickBeacons(float deltaTime)
         const int tiers = Beacon::tiersUnder(ground, bx, by, bz);
         if (tiers <= 0) continue;
         if (!Beacon::seesSky(ground, bx, by, bz, Chunk::SY)) continue;
+        lit.push_back(glm::ivec3(bx, by, bz));
 
         // In range of this one, not merely in the world with it.
         const int far = std::max(std::abs(bx - px), std::abs(bz - pz));
@@ -6132,6 +6174,7 @@ void Application::tickBeacons(float deltaTime)
 
         best = std::max(best, tiers);
     }
+    m_litBeacons = lit;
 
     if (best <= 0) return;
 
@@ -6323,6 +6366,13 @@ void Application::stepThroughGateway()
 
     // Long enough to walk clear of it, which is Minecraft's rule too.
     m_gatewayCooldown = 4.0f;
+    {
+        int fx = 0, fz = 0;
+        if (fromRing) WorldGen::endGateway(best, fx, fz);
+        else WorldGen::endGatewayExit(best, fx, fz);
+        m_gatewayFlashes.push_back({ glm::ivec3(fx, y, fz), 2.0f });
+        m_gatewayFlashes.push_back({ glm::ivec3(tx, y, tz), 2.0f });
+    }
 }
 
 void Application::tickStructureLairs(float deltaTime)
@@ -7830,6 +7880,12 @@ namespace
         {
             (void)fromPlayer;
 
+            if (kind == Arrows::Kind::Breath)
+            {
+                breathBursts.push_back(at);
+                return;
+            }
+
             if (kind == Arrows::Kind::Potion)
             {
                 bursts.push_back(at);
@@ -7876,6 +7932,7 @@ namespace
         std::vector<glm::vec3> bursts;
         std::vector<glm::vec3> windBursts;
         std::vector<glm::vec3> potionBursts;
+        std::vector<glm::vec3> breathBursts;
 
         // How far a thrown potion reaches. Minecraft's is four blocks
         // at full strength, tailing off to nothing.
@@ -7949,6 +8006,11 @@ void Application::updateArrows(float deltaTime)
     }
     for (const glm::vec3& at : targets.potionBursts)
         sprites(SpriteParticles::Kind::Spell, at, 24, 1.2f, 1.5f, 0.25f, 1.2f);
+    for (const glm::vec3& at : targets.breathBursts)
+    {
+        m_breathClouds.push_back({ at, 6.0f, 0.0f });
+        sprites(SpriteParticles::Kind::Portal, at, 20, 1.5f, 1.2f, 0.18f, 1.4f);
+    }
 
     if (targets.playerHits > 0)
     {
@@ -9283,6 +9345,9 @@ void Application::renderWorldShaded()
     m_particles.render(world, *m_world, camera.right, camera.up);
     if (!m_sprites) m_sprites = std::make_unique<SpriteParticles>();
     m_sprites->render(world, *m_world, camera.right, camera.up, m_atlas.textureId());
+    queueBeams();
+    m_beams.render(world);
+    m_atlas.bind(0, 1, 2);
     renderPlayers(view, projection);
     if (inGame())
     {
@@ -9411,6 +9476,9 @@ void Application::renderWorld()
     m_particles.render(m_chunkShader, *m_world, camera.right, camera.up);
     if (!m_sprites) m_sprites = std::make_unique<SpriteParticles>();
     m_sprites->render(m_chunkShader, *m_world, camera.right, camera.up, m_atlas.textureId());
+    queueBeams();
+    m_beams.render(m_chunkShader);
+    m_atlas.bind(0, 1, 2);
 
     // Players are opaque too, but each one brings its own texture, so
     // the atlas has to go back on the albedo unit afterwards for the
@@ -10132,6 +10200,108 @@ void Application::tickFluids(float deltaTime)
     if (m_fluidClock > 0.05f) m_fluidClock = 0.0f;
 }
 
+void Application::tickBreathClouds(float deltaTime)
+{
+    m_beamClock += deltaTime;
+    for (auto& flash : m_gatewayFlashes) flash.second -= deltaTime;
+    m_gatewayFlashes.erase(std::remove_if(m_gatewayFlashes.begin(), m_gatewayFlashes.end(),
+                                          [](const auto& f) { return f.second <= 0.0f; }),
+                           m_gatewayFlashes.end());
+
+    for (BreathCloud& cloud : m_breathClouds)
+    {
+        cloud.left -= deltaTime;
+        cloud.tick -= deltaTime;
+        if (cloud.tick > 0.0f) continue;
+        cloud.tick = 0.5f;
+        sprites(SpriteParticles::Kind::Portal, cloud.at + glm::vec3(0.0f, 0.3f, 0.0f), 6, 2.2f, 0.3f, 0.16f, 1.0f);
+        const glm::vec3 off = m_player.position - cloud.at;
+        if (glm::length(glm::vec2(off.x, off.z)) < 3.0f && off.y > -1.0f && off.y < 2.0f &&
+            m_player.damage(3))
+            m_audio.play(Sound::Hurt, 0.8f);
+    }
+    m_breathClouds.erase(std::remove_if(m_breathClouds.begin(), m_breathClouds.end(),
+                                        [](const BreathCloud& c) { return c.left <= 0.0f; }),
+                         m_breathClouds.end());
+}
+
+void Application::queueBeams()
+{
+    m_beams.clear();
+    if (!m_world) return;
+    const float t = m_beamClock;
+    const float top = static_cast<float>(Chunk::SY + 64);
+
+    for (const glm::ivec3& b : m_litBeacons)
+    {
+        if (m_world->getBlock(b.x, b.y, b.z) != Blocks::Beacon) continue;
+        const glm::vec3 base(b.x + 0.5f, b.y + 1.0f, b.z + 0.5f);
+        const glm::vec3 sky(b.x + 0.5f, top, b.z + 0.5f);
+        m_beams.beam(BeamRenderer::Look::Beacon, base, sky, 0.2f, t * 2.0f, t * 0.6f);
+        m_beams.beam(BeamRenderer::Look::BeaconHaze, base, sky, 0.25f, t * 1.0f, 0.0f);
+    }
+
+    for (const auto& flash : m_gatewayFlashes)
+    {
+        const glm::vec3 base(flash.first.x + 0.5f, flash.first.y + 1.0f, flash.first.z + 0.5f);
+        m_beams.beam(BeamRenderer::Look::Gateway, base, base + glm::vec3(0.0f, 50.0f, 0.0f), 0.2f, t * 2.0f, t);
+    }
+
+    const Mob* dragon = nullptr;
+    for (const Mob& mob : m_entities.mobs())
+    {
+        if (mob.typeId() == MobId::EnderDragon) dragon = &mob;
+
+        if ((mob.typeId() == MobId::Guardian || mob.typeId() == MobId::ElderGuardian) && mob.alive() &&
+            mob.laserCharge() > 0.0f)
+        {
+            const float progress = mob.laserCharge() / Mob::LASER_SECONDS;
+            const BeamRenderer::Look look = progress < 0.25f ? BeamRenderer::Look::GuardianDim
+                                          : progress < 0.5f  ? BeamRenderer::Look::GuardianWarm
+                                          : progress < 0.75f ? BeamRenderer::Look::GuardianHot
+                                                             : BeamRenderer::Look::GuardianFull;
+            const glm::vec3 eye = mob.position() + glm::vec3(0.0f, mob.height() * 0.5f, 0.0f);
+            const glm::vec3 chest = m_player.position + glm::vec3(0.0f, 1.0f, 0.0f);
+            m_beams.beam(look, eye, chest, 0.07f, t * 6.0f, t * 3.0f);
+        }
+    }
+
+    if (dragon && m_dimension == Dimension::End)
+    {
+        const glm::vec3 heart = dragon->position() + glm::vec3(0.0f, dragon->height() * 0.5f, 0.0f);
+        if (dragon->alive())
+        {
+            for (int i = 0; i < WorldGen::END_PILLARS; ++i)
+            {
+                int px = 0, pz = 0, tall = 0;
+                WorldGen::endPillar(i, px, pz, tall);
+                const int y = WorldGen::END_ISLAND_LEVEL + tall + 2;
+                if (m_world->getBlock(px, y, pz) != Blocks::EndCrystal) continue;
+                const glm::vec3 crystal(px + 0.5f, y + 0.5f, pz + 0.5f);
+                if (glm::length(heart - crystal) > 64.0f) continue;
+                m_beams.beam(BeamRenderer::Look::Crystal, crystal, heart, 0.1f, t * 1.5f, t);
+            }
+        }
+        else
+        {
+            const float progress = 1.0f - dragon->deathFade();
+            uint32_t seed = 432u;
+            for (int ray = 0; ray < 18; ++ray)
+            {
+                auto next = [&]() {
+                    seed = seed * 1664525u + 1013904223u;
+                    return static_cast<float>((seed >> 8) & 0xFFFF) / 65535.0f;
+                };
+                const float yaw = next() * 6.2831f + t * 0.4f;
+                const float pitch = (next() - 0.5f) * 3.0f;
+                const glm::vec3 dir(std::cos(yaw) * std::cos(pitch), std::sin(pitch), std::sin(yaw) * std::cos(pitch));
+                const float length = (4.0f + next() * 12.0f) * progress;
+                m_beams.beam(BeamRenderer::Look::Ray, heart, heart + dir * length, 0.08f + progress * 0.5f, 0.0f, 0.0f);
+            }
+        }
+    }
+}
+
 void Application::claimJobSites()
 {
     for (Mob& villager : m_entities.mobs())
@@ -10168,6 +10338,7 @@ void Application::updateWorldAround(float deltaTime)
     tickSpriteParticles(deltaTime);
     tickTimedBlocks(deltaTime);
     tickFluids(deltaTime);
+    tickBreathClouds(deltaTime);
 
     m_jobSiteTimer += deltaTime;
     if (m_jobSiteTimer >= 2.0f)

@@ -29,7 +29,9 @@ namespace Arrows
                                 // followed: it goes where the
                                 // stronghold is, through anything in
                                 // the way, and burns out.
-                                Eye };
+                                Eye,
+                                Bullet,
+                                Breath };
 
     // How far a wind charge's burst reaches, and how hard it pushes at
     // the middle of it. Pure arithmetic over two points, so --selftest

@@ -294,7 +294,7 @@ namespace
 
             // Its bullet. Slow, and it comes at you across a room
             // rather than down a corridor.
-            t.shootsFire = true;
+            t.shootsBullet = true;
             t.arrowDamage = 4;
             t.arrowRange = 16.0f;
             t.arrowInterval = 2.4f;
@@ -1175,7 +1175,7 @@ namespace
             // it is a beam that takes a few seconds to charge and then
             // hits whatever it was pointed at -- but the slow interval
             // and the long reach are what make it feel like one.
-            t.shootsFire = true;
+            t.laser = true;
             t.arrowDamage = 6;
             t.arrowRange = 15.0f;
             t.arrowInterval = 3.0f;
@@ -3216,7 +3216,7 @@ namespace
             t.aquatic = true;
             t.hoverHeight = 2.2f;
 
-            t.shootsFire = true;
+            t.laser = true;
             t.arrowDamage = 8;
             t.arrowRange = 18.0f;
             t.arrowInterval = 3.4f;

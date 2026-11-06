@@ -297,6 +297,9 @@ struct MobType
     // is not the point, what lands on you is.
     bool throwsPotions = false;
     bool shootsWind = false;
+    bool shootsBullet = false;
+    bool shootsBreath = false;
+    bool laser = false;
 
     // The whole figure, scaled. Mojang renders several mobs off a
     // shared model at a different size -- a wither skeleton is a

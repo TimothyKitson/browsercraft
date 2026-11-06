@@ -476,8 +476,9 @@ namespace Tiles
         BowPulling0, BowPulling1, BowPulling2,
         PotionBottle, PotionLiquid,
         IconOakDoor, IconCampfire, IconCauldron, IconHopper, IconDripstone, IconBamboo,
+        ShulkerBulletTile, DragonFireballTile,
 
-        ItemTileEnd = IconBamboo + 1
+        ItemTileEnd = DragonFireballTile + 1
     };
 
     // Ten progressively more broken overlay tiles for the mining animation.

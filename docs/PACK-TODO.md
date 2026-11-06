@@ -49,12 +49,13 @@ Everything in the 1.21 textures zip the game doesn't use yet, turned into work. 
    - II. Zombie villagers wear the biome, job and rank layers.
    - III. Curing a zombie villager gives discounts, shown with the strikethrough price.
    - Left for later: curing needs the golden apple (51) and splash weakness (60), so it goes in with those. The jobs whose stations are not in yet (cartographer, mason, shepherd, toolsmith, fletcher) are handed out by seed until 46 adds the stations.
-9. Beams and attack effects
+9. Beams and attack effects (done)
    - I. The beacon beam.
    - II. The End gateway beam, and the End crystal beam that heals the dragon.
    - III. The guardian laser.
    - IV. The dragon fireball, and the dragon's death explosion.
    - V. The shulker bullet.
+   - Left for later: the breeze's wind swirl, which needs its own model.
 10. Enchanting table book
     - I. A floating book above the table.
     - II. It opens when a player is near, turns pages and follows the player, like Minecraft.
