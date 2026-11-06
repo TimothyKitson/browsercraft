@@ -33,7 +33,7 @@ out vec4 FragColor;
 // The atlas is a grid of tiles, so a UV may only be moved within the
 // tile it landed in. Step outside and the stone picks up the edge of
 // whatever was painted next to it.
-const float ATLAS_TILES = 16.0;
+uniform float uAtlasTiles;
 
 // How deep the relief reads, as a fraction of a block. Small: this is
 // the one knob that turns believable stonework into melted wax.
@@ -45,8 +45,8 @@ const float PARALLAX_DEPTH = 0.075;
 // each other as you walk past, which no amount of shading can fake.
 vec2 parallaxUV(vec2 uv, vec3 viewTangent)
 {
-    vec2 tile = floor(uv * ATLAS_TILES);
-    vec2 within = uv * ATLAS_TILES - tile;
+    vec2 tile = floor(uv * uAtlasTiles);
+    vec2 within = uv * uAtlasTiles - tile;
 
     // More steps edge-on, where the ray crosses more of the height
     // field and a coarse march shows up as banding.
@@ -60,13 +60,13 @@ vec2 parallaxUV(vec2 uv, vec3 viewTangent)
 
     float depth = 0.0;
     vec2 at = within;
-    float surface = 1.0 - textureLod(uNormalAtlas, (tile + fract(at)) / ATLAS_TILES, 0.0).a;
+    float surface = 1.0 - textureLod(uNormalAtlas, (tile + fract(at)) / uAtlasTiles, 0.0).a;
 
     for (int i = 0; i < 32; ++i)
     {
         if (depth >= surface) break;
         at -= step;
-        surface = 1.0 - textureLod(uNormalAtlas, (tile + fract(at)) / ATLAS_TILES, 0.0).a;
+        surface = 1.0 - textureLod(uNormalAtlas, (tile + fract(at)) / uAtlasTiles, 0.0).a;
         depth += layerDepth;
     }
 
@@ -76,13 +76,13 @@ vec2 parallaxUV(vec2 uv, vec3 viewTangent)
     vec2 before = at + step;
     float after = surface - depth;
     float priorSurface = 1.0 - textureLod(uNormalAtlas,
-                                          (tile + fract(before)) / ATLAS_TILES, 0.0).a;
+                                          (tile + fract(before)) / uAtlasTiles, 0.0).a;
     float prior = priorSurface - depth + layerDepth;
 
     float blend = after / max(after - prior, 0.0001);
     at = mix(at, before, clamp(blend, 0.0, 1.0));
 
-    return (tile + fract(at)) / ATLAS_TILES;
+    return (tile + fract(at)) / uAtlasTiles;
 }
 
 void main()

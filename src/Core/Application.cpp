@@ -9191,6 +9191,7 @@ void Application::renderWorld()
     m_chunkShader.setMat4("uProjection", projection);
     m_chunkShader.setInt("uAtlas", 0);
     m_chunkShader.setInt("uNormalAtlas", 1);
+    m_chunkShader.setFloat("uAtlasTiles", static_cast<float>(Atlas::TILES_PER_ROW));
     m_chunkShader.setInt("uSpecularAtlas", 2);
     m_chunkShader.setFloat("uDaylight", hasSky() ? daylight : 0.0f);
     m_chunkShader.setFloat("uAmbient", dimensionAmbient());

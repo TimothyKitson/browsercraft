@@ -56,7 +56,7 @@ public:
     // many tiles again. Nothing is lost by it: the packs in use are 16
     // and 32 pixels a tile, so 96 was already far more room than any
     // of their art needs.
-    static constexpr int TILES_PER_ROW = 24;
+    static constexpr int TILES_PER_ROW = 48;
     static constexpr int FALLBACK_TILE_PIXELS = 16;
     // Highest per-tile resolution we'll build an atlas at. Higher-resolution
     // packs are box-filtered down to this.
@@ -67,9 +67,9 @@ public:
     // came down, so the memory went down with it. A pack finer than
     // 128 is reduced to it; the two in use here are 16 and 32.
 #ifdef __EMSCRIPTEN__
-    static constexpr int MAX_TILE_PIXELS = 64; // keep the web download small
+    static constexpr int MAX_TILE_PIXELS = 32;
 #else
-    static constexpr int MAX_TILE_PIXELS = 96;
+    static constexpr int MAX_TILE_PIXELS = 64;
 #endif
 
     Atlas();

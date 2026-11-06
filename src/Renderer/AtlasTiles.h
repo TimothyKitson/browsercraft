@@ -313,7 +313,7 @@ namespace Tiles
     // grid, same texture memory; nothing stores a tile index, so
     // moving the line costs nothing but the two static_asserts below
     // keeping watch.
-    constexpr int ItemFirst = 352;
+    constexpr int ItemFirst = 1400;
 
     enum : int
     {
@@ -455,7 +455,7 @@ namespace Tiles
     };
 
     // Ten progressively more broken overlay tiles for the mining animation.
-    constexpr int CrackFirst = 560;
+    constexpr int CrackFirst = 2240;
     constexpr int CrackStages = 10;
 
     static_assert(static_cast<int>(TileCount) <= ItemFirst, "block tiles ran into the items");
