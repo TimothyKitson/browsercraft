@@ -996,6 +996,24 @@ namespace
             }
     }
 
+    void paintBricksIn(Tile& t, Color brickColour, Color mortar)
+    {
+        t.fill(mortar);
+        for (int row = 0; row < 4; ++row)
+        {
+            int offset = (row % 2) * 4;
+            for (int y = 0; y < 3; ++y)
+                for (int x = 0; x < Tile::N; ++x)
+                {
+                    int bx = (x + offset) % Tile::N;
+                    if ((bx % 8) == 7) continue;
+                    int brick = (x + offset) / 8 + row * 3;
+                    int delta = static_cast<int>((hash2(brick, row, 202) - 0.5f) * 20.0f);
+                    t.set(x, row * 4 + y, shade(brickColour, delta));
+                }
+        }
+    }
+
     void paintBricks(Tile& t)
     {
         t.fill(Color{ 166, 157, 150 }); // mortar
@@ -3519,6 +3537,43 @@ namespace
             t.set(cx, cy, Color{ 250, 220, 120 });
         }
     }
+
+    void paintMangroveLogSide(Tile& t) { paintLogSideIn(t, Color{ 84, 62, 44 }, 810); }
+    void paintMangroveLogTop(Tile& t) { paintRings(t, Color{ 117, 54, 48 }, Color{ 102, 46, 40 }, Color{ 84, 62, 44 }, 811); }
+    void paintMangroveLeavesTile(Tile& t) { paintLeavesBase(t, Color{ 92, 136, 56 }, 812); }
+    void paintMangrovePlanksTile(Tile& t) { paintPlanksIn(t, Color{ 117, 54, 48 }, 111); }
+    void paintStrippedMangroveLogSide(Tile& t) { paintLogSideIn(t, Color{ 122, 58, 50 }, 813); }
+    void paintStrippedMangroveLogTop(Tile& t) { paintRings(t, Color{ 117, 54, 48 }, Color{ 102, 46, 40 }, Color{ 122, 58, 50 }, 814); }
+    void paintMangrovePropaguleTile(Tile& t) { paintSaplingIn(t, Color{ 110, 150, 60 }, Color{ 90, 120, 50 }); }
+    void paintMangrovePropaguleHangingTile(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        const int n = Tile::N;
+        for (int y = 0; y < n - 2; ++y) t.set(n / 2, y, y < n / 2 ? Color{ 96, 140, 56 } : Color{ 120, 104, 60 });
+        for (int x = n / 2 - 2; x <= n / 2 + 2; ++x) t.set(x, 1, Color{ 96, 140, 56 });
+    }
+    void paintRootsIn(Tile& t, Color fill, uint8_t alpha)
+    {
+        const int n = Tile::N;
+        t.fill(Color{ fill.r, fill.g, fill.b, alpha });
+        const Color root{ 74, 56, 38 };
+        for (int k = 0; k < n; ++k)
+        {
+            t.set(k, (k * 3 / 2) % n, root);
+            t.set((k * 5 / 3 + 4) % n, k, root);
+            t.set(n - 1 - k, (k + 7) % n, root);
+        }
+    }
+    void paintMangroveRootsSide(Tile& t) { paintRootsIn(t, Color{ 0, 0, 0 }, 0); }
+    void paintMangroveRootsTop(Tile& t) { paintRootsIn(t, Color{ 0, 0, 0 }, 0); }
+    void paintMuddyMangroveRootsSide(Tile& t) { paintRootsIn(t, Color{ 58, 54, 60 }, 255); }
+    void paintMuddyMangroveRootsTop(Tile& t) { paintRootsIn(t, Color{ 58, 54, 60 }, 255); }
+    void paintMangroveDoorLower(Tile& t) { paintWoodDoorHalf(t, false, Color{ 117, 54, 48 }); }
+    void paintMangroveDoorUpper(Tile& t) { paintWoodDoorHalf(t, true, Color{ 117, 54, 48 }); }
+    void paintMangroveTrapdoorTile(Tile& t) { paintTrapdoorIn(t, Color{ 117, 54, 48 }); }
+    void paintItemMangroveSign(Tile& t) { paintItemSignIn(t, Color{ 117, 54, 48 }); }
+    void paintMudBricksTile(Tile& t) { paintBricksIn(t, Color{ 137, 103, 79 }, Color{ 104, 80, 62 }); }
+    void paintPackedMudTile(Tile& t) { t.fill(Color{ 142, 106, 79 }); t.speckle(12, 815); }
 
     void paintItemSign(Tile& t)
     {
@@ -6497,6 +6552,9 @@ namespace
         { Tiles::ItemHorseArmorGold, paintItemElytra },
         { Tiles::ItemHorseArmorDiamond, paintItemElytra },
         { Tiles::IconCherryDoor, paintCherryDoorLower },
+        { Tiles::IconMangroveDoor, paintMangroveDoorLower },
+        { Tiles::ItemMangroveSign, paintItemMangroveSign },
+        { Tiles::IconMangrovePropagule, paintMangrovePropaguleTile },
         { Tiles::ItemCherrySign, paintItemCherrySign },
         { Tiles::IconSpruceDoor, paintSpruceDoorLower },
         { Tiles::ItemSpruceSign, paintItemSpruceSign },
@@ -6657,6 +6715,23 @@ namespace
         { Tiles::DustLine1Off, paintRedstoneDust },
         { Tiles::DustLine1On, paintRedstoneDustLit },
         { Tiles::LeverHandle, paintLever },
+        { Tiles::MangroveLogSide, paintMangroveLogSide },
+        { Tiles::MangroveLogTop, paintMangroveLogTop },
+        { Tiles::MangroveLeavesTile, paintMangroveLeavesTile },
+        { Tiles::MangrovePlanksTile, paintMangrovePlanksTile },
+        { Tiles::StrippedMangroveLogSide, paintStrippedMangroveLogSide },
+        { Tiles::StrippedMangroveLogTop, paintStrippedMangroveLogTop },
+        { Tiles::MangrovePropaguleTile, paintMangrovePropaguleTile },
+        { Tiles::MangrovePropaguleHangingTile, paintMangrovePropaguleHangingTile },
+        { Tiles::MangroveRootsSide, paintMangroveRootsSide },
+        { Tiles::MangroveRootsTop, paintMangroveRootsTop },
+        { Tiles::MuddyMangroveRootsSide, paintMuddyMangroveRootsSide },
+        { Tiles::MuddyMangroveRootsTop, paintMuddyMangroveRootsTop },
+        { Tiles::MangroveDoorLower, paintMangroveDoorLower },
+        { Tiles::MangroveDoorUpper, paintMangroveDoorUpper },
+        { Tiles::MangroveTrapdoorTile, paintMangroveTrapdoorTile },
+        { Tiles::MudBricksTile, paintMudBricksTile },
+        { Tiles::PackedMudTile, paintPackedMudTile },
         { Tiles::CherryLogSide, paintCherryLogSide },
         { Tiles::CherryLogTop, paintCherryLogTop },
         { Tiles::CherryLeavesTile, paintCherryLeavesTile },
@@ -6999,6 +7074,9 @@ namespace
         { Tiles::ItemHorseArmorGold, { "golden_horse_armor", nullptr, nullptr } },
         { Tiles::ItemHorseArmorDiamond, { "diamond_horse_armor", nullptr, nullptr } },
         { Tiles::IconCherryDoor, { "cherry_door", nullptr, nullptr } },
+        { Tiles::IconMangroveDoor, { "mangrove_door", nullptr, nullptr } },
+        { Tiles::ItemMangroveSign, { "mangrove_sign", nullptr, nullptr } },
+        { Tiles::IconMangrovePropagule, { "mangrove_propagule", nullptr, nullptr } },
         { Tiles::ItemCherrySign, { "cherry_sign", nullptr, nullptr } },
         { Tiles::IconSpruceDoor, { "spruce_door", nullptr, nullptr } },
         { Tiles::ItemSpruceSign, { "spruce_sign", nullptr, nullptr } },
@@ -7131,6 +7209,23 @@ namespace
         { Tiles::DustLine1Off, { "redstone_dust_line1", nullptr }, Tinting::RedstoneOff, 0, false },
         { Tiles::DustLine1On, { "redstone_dust_line1", nullptr }, Tinting::RedstoneOn, 0, false },
         { Tiles::LeverHandle, { "lever", nullptr }, Tinting::None, 0, false },
+        { Tiles::MangroveLogSide, { "mangrove_log", nullptr }, Tinting::None, 0, false },
+        { Tiles::MangroveLogTop, { "mangrove_log_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::MangroveLeavesTile, { "mangrove_leaves", nullptr }, Tinting::Foliage, 0, false },
+        { Tiles::MangrovePlanksTile, { "mangrove_planks", nullptr }, Tinting::None, 0, false },
+        { Tiles::StrippedMangroveLogSide, { "stripped_mangrove_log", nullptr }, Tinting::None, 0, false },
+        { Tiles::StrippedMangroveLogTop, { "stripped_mangrove_log_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::MangrovePropaguleTile, { "mangrove_propagule", nullptr }, Tinting::None, 0, false },
+        { Tiles::MangrovePropaguleHangingTile, { "mangrove_propagule_hanging", nullptr }, Tinting::None, 0, false },
+        { Tiles::MangroveRootsSide, { "mangrove_roots_side", nullptr }, Tinting::None, 0, false },
+        { Tiles::MangroveRootsTop, { "mangrove_roots_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::MuddyMangroveRootsSide, { "muddy_mangrove_roots_side", nullptr }, Tinting::None, 0, false },
+        { Tiles::MuddyMangroveRootsTop, { "muddy_mangrove_roots_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::MangroveDoorLower, { "mangrove_door_bottom", nullptr }, Tinting::None, 0, false },
+        { Tiles::MangroveDoorUpper, { "mangrove_door_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::MangroveTrapdoorTile, { "mangrove_trapdoor", nullptr }, Tinting::None, 0, false },
+        { Tiles::MudBricksTile, { "mud_bricks", nullptr }, Tinting::None, 0, false },
+        { Tiles::PackedMudTile, { "packed_mud", nullptr }, Tinting::None, 0, false },
         { Tiles::CherryLogSide, { "cherry_log", nullptr }, Tinting::None, 0, false },
         { Tiles::CherryLogTop, { "cherry_log_top", nullptr }, Tinting::None, 0, false },
         { Tiles::CherryLeavesTile, { "cherry_leaves", nullptr }, Tinting::None, 0, false },

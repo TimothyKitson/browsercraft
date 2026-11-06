@@ -2044,7 +2044,7 @@ bool Application::frame()
             m_startupScreen == "gamemode" || m_startupScreen == "spectator" ||
             m_startupScreen == "beaconui" || m_startupScreen == "grindstone" ||
             m_startupScreen == "grinderror" || m_startupScreen == "woods" ||
-            m_startupScreen == "cherry" ||
+            m_startupScreen == "cherry" || m_startupScreen == "mangrove" ||
             m_startupScreen == "boat" || m_startupScreen == "rails" ||
             m_startupScreen == "mobs" || m_startupScreen == "golem" ||
             m_startupScreen == "glowmobs" || m_startupScreen == "variants" ||
@@ -2126,6 +2126,7 @@ bool Application::frame()
                                   m_startupScreen != "grinderror" &&
                                   m_startupScreen != "woods" &&
                                   m_startupScreen != "cherry" &&
+                                  m_startupScreen != "mangrove" &&
                                   m_startupScreen != "boat" &&
                                   m_startupScreen != "rails" &&
                                   m_startupScreen != "mobs" &&
@@ -2496,7 +2497,7 @@ bool Application::frame()
                 m_startupScreen == "gamemode" || m_startupScreen == "spectator" ||
                 m_startupScreen == "beaconui" || m_startupScreen == "grindstone" ||
                 m_startupScreen == "grinderror" || m_startupScreen == "woods" ||
-                m_startupScreen == "cherry")
+                m_startupScreen == "cherry" || m_startupScreen == "mangrove")
             {
                 m_camera.setOrientation(0.0f, -25.0f);
                 m_camera.addLook(0.0f, 0.0f, 0.0f);
@@ -2538,6 +2539,36 @@ bool Application::frame()
                 }
                 else
                     m_attackIndicator = 1;
+                if (m_startupScreen == "mangrove")
+                {
+                    m_devAttackStrength = 1.0f;
+                    m_camera.setOrientation(0.0f, 10.0f);
+                    for (int dx = 4; dx <= 14; ++dx)
+                        for (int dz = -7; dz <= 7; ++dz)
+                        {
+                            m_world->setBlock(px + dx, py - 1, pz + dz, Blocks::Mud);
+                            if ((dx + dz * 3) % 5 == 0) m_world->setBlock(px + dx, py - 1, pz + dz, Blocks::Water);
+                        }
+                    for (int t = 0; t < 2; ++t)
+                    {
+                        const glm::ivec3 at(px + 9, py, pz - 4 + t * 8);
+                        m_world->setBlock(at.x, at.y - 1, at.z, Blocks::Mud);
+                        m_world->setBlock(at.x, at.y, at.z, Blocks::MangrovePropagule);
+                        growSapling(at, 41u + t * 13u);
+                    }
+                    m_world->setBlock(px + 5, py, pz - 2, Blocks::MudBricks);
+                    m_world->setBlock(px + 5, py, pz - 1, Blocks::PackedMud);
+                    m_world->setBlock(px + 5, py, pz, Blocks::MuddyMangroveRoots);
+                    m_world->setBlock(px + 5, py, pz + 1, Blocks::MangrovePlanks);
+                    m_world->setBlock(px + 5, py, pz + 2, Blocks::StrippedMangroveLog);
+                    m_world->setBlock(px + 5, py + 1, pz + 1, Blocks::MangrovePropagule);
+                    m_world->setBlock(px + 6, py, pz + 3, doorPart(Blocks::MangroveDoor, 1, false, false));
+                    m_world->setBlock(px + 6, py + 1, pz + 3, doorPart(Blocks::MangroveDoor, 1, true, false));
+                    m_world->setBlock(px + 6, py, pz - 3, trapdoorPart(Blocks::MangroveTrapdoor, 3, false, false));
+                    m_world->setBlock(px + 15, py, pz - 2, Blocks::Bookshelf);
+                    m_world->setBlock(px + 15, py, pz, Blocks::DiamondOre);
+                    m_world->setBlock(px + 15, py, pz + 2, Blocks::EndPortalFrame);
+                }
                 if (m_startupScreen == "cherry")
                 {
                     m_devAttackStrength = 1.0f;
@@ -9167,6 +9198,20 @@ void Application::handlePlacement()
     {
         const RaycastHit crop = m_world->raycast(m_camera.position, m_camera.front,
                                                  REACH_DISTANCE);
+        if (crop.hit && m_world->getBlock(crop.block.x, crop.block.y, crop.block.z) == Blocks::MangroveLeaves &&
+            m_world->getBlock(crop.block.x, crop.block.y - 1, crop.block.z) == Blocks::Air)
+        {
+            m_world->setBlock(crop.block.x, crop.block.y - 1, crop.block.z, Blocks::MangrovePropaguleHanging);
+            m_net.onLocalBlockChange(crop.block.x, crop.block.y - 1, crop.block.z, Blocks::MangrovePropaguleHanging);
+            m_particles.spawnBlockBreak(crop.block, Blocks::TallGrass);
+            m_audio.play(Sound::Place, 0.5f, 1.5f);
+            if (!m_player.creative())
+            {
+                stack.count -= 1;
+                if (stack.count <= 0) stack.clear();
+            }
+            return;
+        }
         if (crop.hit && isSapling(m_world->getBlock(crop.block.x, crop.block.y, crop.block.z)))
         {
             const uint32_t roll = static_cast<uint32_t>(

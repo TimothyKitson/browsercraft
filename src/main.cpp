@@ -741,6 +741,8 @@ namespace
             else if (isSapling(id))               why = "dropped by leaves of its tree";
             else if (isStrippedLog(id))           why = "a log with an axe used on it";
             else if (isPinkPetals(id))            why = "petals with more set down on them";
+            else if (id == Blocks::MangrovePropaguleHanging)
+                                                  why = "hangs under mangrove leaves";
             else if (isLadder(id) || isStairs(id) || isRail(id) ||
                      isSign(id) || isFrame(id))
                                                   why = "another facing of a crafted block";

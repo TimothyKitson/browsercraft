@@ -42,6 +42,7 @@ const char* biomeName(Biome biome)
         case Biome::Jungle: return "Jungle";
         case Biome::Savanna: return "Savanna";
         case Biome::CherryGrove: return "Cherry Grove";
+        case Biome::MangroveSwamp: return "Mangrove Swamp";
         case Biome::Swamp:   return "Swamp";
     }
     return "Unknown";
@@ -132,7 +133,7 @@ Biome WorldGen::biomeAt(int worldX, int worldZ) const
     // middle of the sea: only the shallows are allowed to go swampy.
     if (height >= SEA_LEVEL - 4 && height <= SEA_LEVEL + 2 &&
         temperature > -0.10f && humidity > 0.14f)
-        return Biome::Swamp;
+        return temperature > 0.30f ? Biome::MangroveSwamp : Biome::Swamp;
 
     if (height < SEA_LEVEL - 1) return Biome::Ocean;
     if (height <= SEA_LEVEL) return Biome::Beach;
@@ -468,6 +469,11 @@ void WorldGen::generateColumns(Chunk& chunk) const
                             }
                             break;
 
+                        case Biome::MangroveSwamp:
+                            if (depth <= 2) block = Blocks::Mud;
+                            else if (depth <= 4) block = Blocks::Dirt;
+                            break;
+
                         case Biome::Swamp:
                             // Mud where the water stands over it,
                             // grass on the tussocks that are clear of
@@ -801,6 +807,11 @@ void WorldGen::buildTree(Chunk& chunk, int worldX, int surfaceY, int worldZ, Tre
             extraHeight = 2;
             canopyRadius = 3;
             break;
+        case TreeKind::Mangrove:
+            logBlock = Blocks::MangroveLog; leafBlock = Blocks::MangroveLeaves;
+            extraHeight = 1;
+            canopyRadius = 3;
+            break;
         case TreeKind::Cherry:
             logBlock = Blocks::CherryLog; leafBlock = Blocks::CherryLeaves;
             extraHeight = 1;
@@ -808,6 +819,29 @@ void WorldGen::buildTree(Chunk& chunk, int worldX, int surfaceY, int worldZ, Tre
             break;
         case TreeKind::Oak:
             break;
+    }
+
+    if (kind == TreeKind::Mangrove)
+    {
+        const int ground = surfaceY;
+        const int lifted = std::max(surfaceY, SEA_LEVEL) + 2;
+        auto root = [&](int wx, int y, int wz) {
+            const int lx = wx - baseX, lz = wz - baseZ;
+            if (!Chunk::inBounds(lx, y, lz)) return;
+            const BlockId here = chunk.getBlock(lx, y, lz);
+            if (here == Blocks::Air || isWater(here) || here == Blocks::TallGrass)
+                chunk.setBlockRaw(lx, y, lz, Blocks::MangroveRoots);
+        };
+        for (int y = ground + 1; y <= lifted; ++y) root(worldX, y, worldZ);
+        static const int LEGS[4][2] = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } };
+        for (int leg = 0; leg < 4; ++leg)
+        {
+            if (hashToFloat(hashCoords(worldX, 20 + leg, worldZ, m_seed + 5160)) < 0.25f) continue;
+            const int fx = worldX + LEGS[leg][0] * 2, fz = worldZ + LEGS[leg][1] * 2;
+            root(worldX + LEGS[leg][0], lifted, worldZ + LEGS[leg][1]);
+            for (int y = lifted - 1; y > ground - 2; --y) root(fx, y, fz);
+        }
+        surfaceY = lifted;
     }
 
     uint32_t h = hashCoords(worldX, 0, worldZ, m_seed + 5150);
@@ -2647,7 +2681,7 @@ void WorldGen::decorate(Chunk& chunk) const
 
             const Biome biome = biomeAt(wx, wz);
             const int surface = surfaceHeight(wx, wz);
-            if (surface <= SEA_LEVEL) continue; // no trees in water
+            if (surface <= SEA_LEVEL && !(biome == Biome::MangroveSwamp && surface >= SEA_LEVEL - 3)) continue;
 
             // Which tree grows here is the biome's business. Spruce in
             // the cold and on the heights, dark oak in the thick of the
@@ -2662,6 +2696,8 @@ void WorldGen::decorate(Chunk& chunk) const
                 kind = TreeKind::Acacia;
             else if (here == Biome::CherryGrove)
                 kind = TreeKind::Cherry;
+            else if (here == Biome::MangroveSwamp)
+                kind = TreeKind::Mangrove;
             else if (here == Biome::Snowy || here == Biome::Mountains)
                 kind = (roll < 0.80f) ? TreeKind::Spruce : TreeKind::Oak;
             else if (here == Biome::Forest)
@@ -2809,6 +2845,7 @@ bool WorldGen::treeStandsAt(int wx, int wz) const
         // read as open water with trees standing in it.
         case Biome::Swamp: treeChance = 0.020f; break;
         case Biome::CherryGrove: treeChance = 0.016f; break;
+        case Biome::MangroveSwamp: treeChance = 0.045f; break;
         default: break;
     }
     if (treeChance <= 0.0f) return false;

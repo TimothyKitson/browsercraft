@@ -297,6 +297,10 @@ namespace Tiles
         BirchPlanksTile, OakSaplingTile, SpruceSaplingTile, BirchSaplingTile, JungleSaplingTile, AcaciaSaplingTile, DarkOakSaplingTile, StrippedOakLogSide, StrippedOakLogTop, StrippedSpruceLogSide, StrippedSpruceLogTop, StrippedBirchLogSide, StrippedBirchLogTop, StrippedJungleLogSide, StrippedJungleLogTop, StrippedAcaciaLogSide, StrippedAcaciaLogTop, StrippedDarkOakLogSide, StrippedDarkOakLogTop, SpruceDoorLower, SpruceDoorUpper, BirchDoorLower, BirchDoorUpper, JungleDoorLower, JungleDoorUpper, AcaciaDoorLower, AcaciaDoorUpper, DarkOakDoorLower, DarkOakDoorUpper, OakTrapdoorTile, SpruceTrapdoorTile, BirchTrapdoorTile, JungleTrapdoorTile, AcaciaTrapdoorTile, DarkOakTrapdoorTile,
         CherryLogSide, CherryLogTop, CherryLeavesTile, CherryPlanksTile, StrippedCherryLogSide, StrippedCherryLogTop,
         CherrySaplingTile, CherryDoorLower, CherryDoorUpper, CherryTrapdoorTile, PinkPetalsTile,
+        MangroveLogSide, MangroveLogTop, MangroveLeavesTile, MangrovePlanksTile, StrippedMangroveLogSide,
+        StrippedMangroveLogTop, MangrovePropaguleTile, MangrovePropaguleHangingTile, MangroveRootsSide,
+        MangroveRootsTop, MuddyMangroveRootsSide, MuddyMangroveRootsTop, MangroveDoorLower, MangroveDoorUpper,
+        MangroveTrapdoorTile, MudBricksTile, PackedMudTile,
 
         TileCount
     };
@@ -483,8 +487,9 @@ namespace Tiles
         ItemSaddle, ItemHorseArmorLeather, ItemHorseArmorIron, ItemHorseArmorGold, ItemHorseArmorDiamond,
         IconSpruceDoor, IconBirchDoor, IconJungleDoor, IconAcaciaDoor, IconDarkOakDoor, ItemSpruceSign, ItemBirchSign, ItemJungleSign, ItemAcaciaSign, ItemDarkOakSign,
         IconCherryDoor, ItemCherrySign,
+        IconMangroveDoor, ItemMangroveSign, IconMangrovePropagule,
 
-        ItemTileEnd = ItemCherrySign + 1
+        ItemTileEnd = IconMangrovePropagule + 1
     };
 
     // Ten progressively more broken overlay tiles for the mining animation.

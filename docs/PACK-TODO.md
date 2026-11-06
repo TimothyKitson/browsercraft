@@ -102,7 +102,7 @@ Everything in the 1.21 textures zip the game doesn't use yet, turned into work. 
 23. Cherry wood (done)
     - I. Logs, leaves, planks, door, trapdoor, sapling and sign.
     - II. The cherry grove biome, pink petals and falling-petal particles.
-24. Mangrove
+24. Mangrove (done)
     - I. Logs, roots, muddy roots, leaves, propagule (hanging and planted), planks, door and trapdoor.
     - II. Mud bricks and packed mud.
     - III. The mangrove swamp biome.

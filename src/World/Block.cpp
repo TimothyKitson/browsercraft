@@ -700,6 +700,52 @@ namespace
         { "Pink Petals", PinkPetalsTile, PinkPetalsTile, PinkPetalsTile, false, false, RenderType::Flat, 0, 0.0f },
         { "Pink Petals", PinkPetalsTile, PinkPetalsTile, PinkPetalsTile, false, false, RenderType::Flat, 0, 0.0f },
         { "Pink Petals", PinkPetalsTile, PinkPetalsTile, PinkPetalsTile, false, false, RenderType::Flat, 0, 0.0f },
+        { "Mangrove Log", MangroveLogTop, MangroveLogTop, MangroveLogSide, true, true, RenderType::Cube, 0, 2.0f },
+        { "Mangrove Leaves", MangroveLeavesTile, MangroveLeavesTile, MangroveLeavesTile, true, false, RenderType::Cube, 0, 0.2f },
+        { "Mangrove Planks", MangrovePlanksTile, MangrovePlanksTile, MangrovePlanksTile, true, true, RenderType::Cube, 0, 1.5f },
+        { "Stripped Mangrove Log", StrippedMangroveLogTop, StrippedMangroveLogTop, StrippedMangroveLogSide, true, true, RenderType::Cube, 0, 2.0f },
+        { "Mangrove Propagule", MangrovePropaguleTile, MangrovePropaguleTile, MangrovePropaguleTile, false, false, RenderType::Cross, 0, 0.0f },
+        { "Mangrove Propagule", MangrovePropaguleHangingTile, MangrovePropaguleHangingTile, MangrovePropaguleHangingTile, false, false, RenderType::Cross, 0, 0.0f },
+        { "Mangrove Roots", MangroveRootsTop, MangroveRootsTop, MangroveRootsSide, true, false, RenderType::Cube, 0, 0.7f },
+        { "Muddy Mangrove Roots", MuddyMangroveRootsTop, MuddyMangroveRootsTop, MuddyMangroveRootsSide, true, true, RenderType::Cube, 0, 0.7f },
+        { "Mangrove Door", MangroveDoorLower, MangroveDoorLower, MangroveDoorLower, true, false, RenderType::Door, 0, 3.0f },
+        { "Mangrove Door", MangroveDoorLower, MangroveDoorLower, MangroveDoorLower, true, false, RenderType::Door, 0, 3.0f },
+        { "Mangrove Door", MangroveDoorLower, MangroveDoorLower, MangroveDoorLower, true, false, RenderType::Door, 0, 3.0f },
+        { "Mangrove Door", MangroveDoorLower, MangroveDoorLower, MangroveDoorLower, true, false, RenderType::Door, 0, 3.0f },
+        { "Mangrove Door", MangroveDoorLower, MangroveDoorLower, MangroveDoorLower, true, false, RenderType::Door, 0, 3.0f },
+        { "Mangrove Door", MangroveDoorLower, MangroveDoorLower, MangroveDoorLower, true, false, RenderType::Door, 0, 3.0f },
+        { "Mangrove Door", MangroveDoorLower, MangroveDoorLower, MangroveDoorLower, true, false, RenderType::Door, 0, 3.0f },
+        { "Mangrove Door", MangroveDoorLower, MangroveDoorLower, MangroveDoorLower, true, false, RenderType::Door, 0, 3.0f },
+        { "Mangrove Door", MangroveDoorUpper, MangroveDoorUpper, MangroveDoorUpper, true, false, RenderType::Door, 0, 3.0f },
+        { "Mangrove Door", MangroveDoorUpper, MangroveDoorUpper, MangroveDoorUpper, true, false, RenderType::Door, 0, 3.0f },
+        { "Mangrove Door", MangroveDoorUpper, MangroveDoorUpper, MangroveDoorUpper, true, false, RenderType::Door, 0, 3.0f },
+        { "Mangrove Door", MangroveDoorUpper, MangroveDoorUpper, MangroveDoorUpper, true, false, RenderType::Door, 0, 3.0f },
+        { "Mangrove Door", MangroveDoorUpper, MangroveDoorUpper, MangroveDoorUpper, true, false, RenderType::Door, 0, 3.0f },
+        { "Mangrove Door", MangroveDoorUpper, MangroveDoorUpper, MangroveDoorUpper, true, false, RenderType::Door, 0, 3.0f },
+        { "Mangrove Door", MangroveDoorUpper, MangroveDoorUpper, MangroveDoorUpper, true, false, RenderType::Door, 0, 3.0f },
+        { "Mangrove Door", MangroveDoorUpper, MangroveDoorUpper, MangroveDoorUpper, true, false, RenderType::Door, 0, 3.0f },
+        { "Mangrove Trapdoor", MangroveTrapdoorTile, MangroveTrapdoorTile, MangroveTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Mangrove Trapdoor", MangroveTrapdoorTile, MangroveTrapdoorTile, MangroveTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Mangrove Trapdoor", MangroveTrapdoorTile, MangroveTrapdoorTile, MangroveTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Mangrove Trapdoor", MangroveTrapdoorTile, MangroveTrapdoorTile, MangroveTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Mangrove Trapdoor", MangroveTrapdoorTile, MangroveTrapdoorTile, MangroveTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Mangrove Trapdoor", MangroveTrapdoorTile, MangroveTrapdoorTile, MangroveTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Mangrove Trapdoor", MangroveTrapdoorTile, MangroveTrapdoorTile, MangroveTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Mangrove Trapdoor", MangroveTrapdoorTile, MangroveTrapdoorTile, MangroveTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Mangrove Trapdoor", MangroveTrapdoorTile, MangroveTrapdoorTile, MangroveTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Mangrove Trapdoor", MangroveTrapdoorTile, MangroveTrapdoorTile, MangroveTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Mangrove Trapdoor", MangroveTrapdoorTile, MangroveTrapdoorTile, MangroveTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Mangrove Trapdoor", MangroveTrapdoorTile, MangroveTrapdoorTile, MangroveTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Mangrove Trapdoor", MangroveTrapdoorTile, MangroveTrapdoorTile, MangroveTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Mangrove Trapdoor", MangroveTrapdoorTile, MangroveTrapdoorTile, MangroveTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Mangrove Trapdoor", MangroveTrapdoorTile, MangroveTrapdoorTile, MangroveTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Mangrove Trapdoor", MangroveTrapdoorTile, MangroveTrapdoorTile, MangroveTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Mangrove Sign", MangrovePlanksTile, MangrovePlanksTile, MangrovePlanksTile, false, false, RenderType::Ladder, 0, 1.0f },
+        { "Mangrove Sign", MangrovePlanksTile, MangrovePlanksTile, MangrovePlanksTile, false, false, RenderType::Ladder, 0, 1.0f },
+        { "Mangrove Sign", MangrovePlanksTile, MangrovePlanksTile, MangrovePlanksTile, false, false, RenderType::Ladder, 0, 1.0f },
+        { "Mangrove Sign", MangrovePlanksTile, MangrovePlanksTile, MangrovePlanksTile, false, false, RenderType::Ladder, 0, 1.0f },
+        { "Mud Bricks", MudBricksTile, MudBricksTile, MudBricksTile, true, true, RenderType::Cube, 0, 1.5f },
+        { "Packed Mud", PackedMudTile, PackedMudTile, PackedMudTile, true, true, RenderType::Cube, 0, 1.0f },
     };
 }
 
@@ -794,6 +840,7 @@ bool isObtainable(BlockId id)
             if (isDoor(id) && id != doorBase(id)) return false;
             if (isTrapdoor(id) && id != trapdoorBase(id)) return false;
             if (isPinkPetals(id) && id != Blocks::PinkPetals1) return false;
+            if (id == Blocks::MangrovePropaguleHanging) return false;
 
             return id < Blocks::Count;
     }
@@ -811,7 +858,9 @@ const char* blockSoundGroup(BlockId id)
     if (id == Blocks::Bamboo || id == Blocks::Scaffolding) return "wood";
     if (isSign(id) || isFrame(id)) return "wood";
     if (isDoor(id) || isTrapdoor(id)) return "wood";
-    if (isSapling(id) || isPinkPetals(id)) return "grass";
+    if (isSapling(id) || isPinkPetals(id) || id == Blocks::MangrovePropaguleHanging) return "grass";
+    if (id == Blocks::MangroveRoots) return "wood";
+    if (id == Blocks::MuddyMangroveRoots || id == Blocks::PackedMud) return "gravel";
     if (id == Blocks::Melon || isCocoa(id)) return "grass";
     if (isCake(id) || id == Blocks::Candle || id == Blocks::CandleLit) return "cloth";
 
@@ -953,7 +1002,9 @@ Material blockMaterial(BlockId id)
     if (id == Blocks::SlimeBlock) return Material::Wool;
     if (isSign(id) || isFrame(id)) return Material::Wood;
     if (isDoor(id) || isTrapdoor(id)) return Material::Wood;
-    if (isSapling(id) || isPinkPetals(id)) return Material::Plant;
+    if (isSapling(id) || isPinkPetals(id) || id == Blocks::MangrovePropaguleHanging) return Material::Plant;
+    if (id == Blocks::MangroveRoots) return Material::Wood;
+    if (id == Blocks::MuddyMangroveRoots || id == Blocks::PackedMud) return Material::Dirt;
     if (isCauldron(id)) return Material::Stone;
     if (isFurnaceBlock(id)) return Material::Stone;
 

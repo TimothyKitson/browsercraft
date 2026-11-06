@@ -11941,6 +11941,22 @@ namespace
             check(std::string(biomeName(Biome::CherryGrove)) == "Cherry Grove", "and are called so");
         }
 
+        Plot mangrove;
+        mangrove.set(0, 64, 0, Blocks::MangrovePropagule);
+        check(Saplings::grow(mangrove, glm::ivec3(0, 64, 0), 3u), "a propagule grows");
+        check(mangrove.at(0, 64, 0) == Blocks::MangroveRoots && mangrove.at(0, 66, 0) == Blocks::MangroveLog,
+              "into a mangrove standing on its roots");
+        check(blockDrop(Blocks::MangrovePropaguleHanging) == Blocks::MangrovePropagule,
+              "and a hanging propagule comes off as one to plant");
+        {
+            const WorldGen generator(4242u);
+            int mangroves = 0;
+            for (int x = -8000; x <= 8000 && mangroves == 0; x += 32)
+                for (int z = -8000; z <= 8000 && mangroves == 0; z += 32)
+                    if (generator.biomeAt(x, z) == Biome::MangroveSwamp) ++mangroves;
+            check(mangroves > 0, "mangrove swamps grow somewhere in a world");
+        }
+
         Plot cherry;
         cherry.set(0, 64, 0, Blocks::CherrySapling);
         check(Saplings::grow(cherry, glm::ivec3(0, 64, 0), 5u), "a cherry sapling grows");

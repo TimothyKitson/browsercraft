@@ -13,7 +13,7 @@ namespace
         return seed;
     }
 
-    bool roomy(BlockId id) { return id == Blocks::Air || isLeaves(id) || isSapling(id) || id == Blocks::TallGrass; }
+    bool roomy(BlockId id) { return id == Blocks::Air || isLeaves(id) || isSapling(id) || id == Blocks::TallGrass || isWater(id); }
 
     void leaf(Saplings::Cells& cells, int x, int y, int z, BlockId leaves)
     {
@@ -67,6 +67,42 @@ namespace
             const int top = at.y + height;
             blob(cells, topX, top - 1, topZ, 3, leaves, seed, true);
             blob(cells, topX, top, topZ, 2, leaves, seed, true);
+            return true;
+        }
+
+        if (wood == 7)
+        {
+            const int lift = 2;
+            if (!columnClear(cells, at.x, at.y + lift, at.z, height + 2, 1)) return false;
+            auto root = [&](int x, int y, int z) {
+                const BlockId here = cells.at(x, y, z);
+                if (here == Blocks::Air || isWater(here) || here == Blocks::TallGrass || isSapling(here))
+                    cells.set(x, y, z, Blocks::MangroveRoots);
+            };
+            root(at.x, at.y, at.z);
+            root(at.x, at.y + 1, at.z);
+            static const int LEGS[4][2] = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } };
+            for (const auto& leg : LEGS)
+            {
+                if (next(seed) % 4u == 0u) continue;
+                root(at.x + leg[0], at.y + 1, at.z + leg[1]);
+                for (int y = at.y; y >= at.y - 3; --y)
+                {
+                    const BlockId below = cells.at(at.x + leg[0] * 2, y, at.z + leg[1] * 2);
+                    if (below != Blocks::Air && !isWater(below) && below != Blocks::TallGrass) break;
+                    root(at.x + leg[0] * 2, y, at.z + leg[1] * 2);
+                }
+            }
+            for (int i = 0; i < height; ++i) cells.set(at.x, at.y + lift + i, at.z, log);
+            const int top = at.y + lift + height - 1;
+            blob(cells, at.x, top - 1, at.z, 3, leaves, seed, true);
+            blob(cells, at.x, top, at.z, 3, leaves, seed, true);
+            blob(cells, at.x, top + 1, at.z, 2, leaves, seed, true);
+            for (int dx = -3; dx <= 3; ++dx)
+                for (int dz = -3; dz <= 3; ++dz)
+                    if (cells.at(at.x + dx, top - 1, at.z + dz) == leaves &&
+                        cells.at(at.x + dx, top - 2, at.z + dz) == Blocks::Air && next(seed) % 7u == 0u)
+                        cells.set(at.x + dx, top - 2, at.z + dz, Blocks::MangrovePropaguleHanging);
             return true;
         }
 
@@ -163,7 +199,8 @@ namespace
 bool Saplings::canPlantOn(BlockId ground)
 {
     return ground == Blocks::Grass || ground == Blocks::Dirt || ground == Blocks::SnowGrass ||
-           ground == Blocks::Farmland;
+           ground == Blocks::Farmland || ground == Blocks::Mud || ground == Blocks::MuddyMangroveRoots ||
+           ground == Blocks::Clay;
 }
 
 bool Saplings::needsSquare(int wood) { return wood == 5; }
@@ -219,7 +256,7 @@ bool Saplings::grow(Cells& cells, const glm::ivec3& at, uint32_t seed)
 BlockId Saplings::leafDrop(BlockId leaves, uint32_t roll)
 {
     const int wood = woodOfLeaves(leaves);
-    if (wood < 0) return Blocks::Air;
+    if (wood < 0 || wood == 7) return Blocks::Air;
     const uint32_t chance = wood == 3 ? 40u : 20u;
     if (roll % chance == 0u) return static_cast<BlockId>(Blocks::OakSapling + wood);
     return Blocks::Air;

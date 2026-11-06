@@ -199,6 +199,7 @@ namespace
         { "Acacia Sign",          Tiles::ItemAcaciaSign,        16 },
         { "Dark Oak Sign",        Tiles::ItemDarkOakSign,       16 },
         { "Cherry Sign",          Tiles::ItemCherrySign,        16 },
+        { "Mangrove Sign",        Tiles::ItemMangroveSign,      16 },
     };
 
     static_assert(sizeof(ITEMS) / sizeof(ITEMS[0]) ==
@@ -225,11 +226,12 @@ int flatIconFor(BlockId id)
     {
         static const int ICONS[WOOD_COUNT] = { Tiles::IconOakDoor, Tiles::IconSpruceDoor, Tiles::IconBirchDoor,
                                                Tiles::IconJungleDoor, Tiles::IconAcaciaDoor, Tiles::IconDarkOakDoor,
-                                               Tiles::IconCherryDoor };
+                                               Tiles::IconCherryDoor, Tiles::IconMangroveDoor };
         const int wood = doorWood(id);
         return ICONS[wood < 0 ? 0 : wood];
     }
     if (isTrapdoor(id)) return blockInfo(id).tileTop;
+    if (id == Blocks::MangrovePropagule || id == Blocks::MangrovePropaguleHanging) return Tiles::IconMangrovePropagule;
     if (id == Blocks::Campfire) return Tiles::IconCampfire;
     if (isCauldron(id)) return Tiles::IconCauldron;
     if (id == Blocks::Hopper) return Tiles::IconHopper;
@@ -299,6 +301,7 @@ StackId blockDrop(BlockId id)
     if (isDoor(id)) return doorBase(id);
     if (isTrapdoor(id)) return trapdoorBase(id);
     if (isPinkPetals(id)) return Blocks::PinkPetals1;
+    if (id == Blocks::MangrovePropaguleHanging) return Blocks::MangrovePropagule;
     if (isFrame(id)) return Items::ItemFrame;
 
     // A melon comes apart into slices rather than into a melon, which
