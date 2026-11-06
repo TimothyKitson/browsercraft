@@ -10787,6 +10787,12 @@ namespace
             hung.enchantments = 0x15u;
             withFrames.frames.push_back(hung);
 
+            LevelState::SavedBeacon beacon;
+            beacon.x = 10; beacon.y = 70; beacon.z = -4;
+            beacon.primary = static_cast<int8_t>(Effects::Kind::Haste);
+            beacon.secondary = static_cast<int8_t>(Effects::Kind::Regeneration);
+            withFrames.beacons.push_back(beacon);
+
             WorldSave::saveLevel(dir, withFrames);
 
             LevelState back;
@@ -10798,6 +10804,14 @@ namespace
                       "holding what it held");
                 check(back.frames[0].damage == 44, "worn as it was worn");
                 check(back.frames[0].enchantments == 0x15u, "and enchanted as it was");
+            }
+            check(back.beacons.size() == 1, "the beacon's chosen powers come back");
+            if (back.beacons.size() == 1)
+            {
+                check(back.beacons[0].primary == static_cast<int8_t>(Effects::Kind::Haste), "haste first");
+                check(back.beacons[0].secondary == static_cast<int8_t>(Effects::Kind::Regeneration),
+                      "and regeneration second");
+                check(back.beacons[0].y == 70, "at the beacon's own place");
             }
         }
 
@@ -11752,6 +11766,41 @@ namespace
               "and it is its own light, so the ring can be seen from the island");
     }
 
+    void testBeaconPowers()
+    {
+        section("beacon powers, haste and resistance");
+
+        const int speed = static_cast<int>(Effects::Kind::Speed);
+        const int strength = static_cast<int>(Effects::Kind::Strength);
+        const int regen = static_cast<int>(Effects::Kind::Regeneration);
+        check(Beacon::isPrimary(speed, 1), "one layer offers speed");
+        check(!Beacon::isPrimary(strength, 2), "but strength wants three");
+        check(Beacon::isPrimary(strength, 3), "and has it at three");
+        check(!Beacon::isPrimary(regen, 4), "regeneration is never a primary");
+        check(!Beacon::isSecondary(regen, speed, 3), "nothing second below four layers");
+        check(Beacon::isSecondary(regen, speed, 4), "regeneration second at four");
+        check(Beacon::isSecondary(speed, speed, 4), "or the primary again, which makes it II");
+        check(!Beacon::isSecondary(strength, speed, 4), "and nothing else");
+        check(Beacon::seconds(4) == 17.0f, "a full pyramid lasts seventeen seconds a sweep");
+
+        Effects::Set set;
+        check(Effects::digMultiplier(set) == 1.0f, "no haste, no change");
+        Effects::give(set, Effects::Kind::Haste, 1, 10.0f);
+        check(Effects::digMultiplier(set) > 1.39f && Effects::digMultiplier(set) < 1.41f,
+              "haste II digs forty per cent faster");
+        Effects::give(set, Effects::Kind::Resistance, 0, 10.0f);
+        check(Effects::resisted(set, 10) == 8, "resistance I takes a fifth off a blow");
+
+        Player tough(glm::vec3(0.0f, 70.0f, 0.0f));
+        tough.health = Player::MAX_HEALTH;
+        Effects::give(tough.effects, Effects::Kind::Resistance, 4, 10.0f);
+        check(!tough.damage(6), "resistance V shrugs off a blow");
+        check(tough.health == Player::MAX_HEALTH, "entirely");
+
+        check(Inventory::belongsIn(Inventory::BEACON_PAYMENT, Items::Diamond), "a diamond pays a beacon");
+        check(!Inventory::belongsIn(Inventory::BEACON_PAYMENT, Items::Stick), "a stick does not");
+    }
+
     void testGameModes()
     {
         section("adventure and spectator");
@@ -12473,6 +12522,7 @@ int runSelfTest()
     testArmourSlotsHoldArmour();
     testAttackCooldown();
     testGameModes();
+    testBeaconPowers();
     testTheTablesTake121sPrices();
 
     std::printf("\n%d checks, %d failed\n", g_checks, g_failures);

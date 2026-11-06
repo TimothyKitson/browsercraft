@@ -1,5 +1,7 @@
 #pragma once
 #include "World/Block.h"
+#include "Effects.h"
+#include <vector>
 
 // The beacon's pyramid, and what it is worth.
 //
@@ -43,4 +45,10 @@ namespace Beacon
     // Whether a beacon here can see the sky. Minecraft wants a clear
     // column above it, which is what stops one working in a cellar.
     bool seesSky(const Ground& ground, int x, int y, int z, int worldTop);
+
+    constexpr int NO_POWER = -1;
+    std::vector<Effects::Kind> powersAt(int tier);
+    bool isPrimary(int power, int tiers);
+    bool isSecondary(int power, int primary, int tiers);
+    float seconds(int tiers);
 }

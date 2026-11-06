@@ -435,6 +435,9 @@ bool Player::damage(int amount)
     // which is the order Minecraft applies them in and the reason a
     // protected leather suit is worth more than its points suggest.
     amount = Enchanting::protectionReduced(protection, amount);
+    const int unresisted = amount;
+    amount = Effects::resisted(effects, amount);
+    if (amount <= 0 && unresisted > 0) return false;
 
     health = std::max(0, health - amount);
 

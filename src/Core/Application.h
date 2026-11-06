@@ -782,6 +782,15 @@ private:
     // placed it -- so watching place and break is exact, not a
     // guess.
     std::set<std::array<int, 3>> m_beacons;
+    std::map<std::array<int, 4>, std::array<int, 2>> m_beaconPowers;
+    bool m_beaconOpen = false;
+    glm::ivec3 m_beaconBlock{ 0 };
+    int m_beaconPrimary = -1;
+    int m_beaconSecondary = -1;
+    void openBeacon(const glm::ivec3& block);
+    void stowBeacon();
+    void confirmBeacon();
+    int beaconTiers() const;
 
     // Which note blocks are already sounding. A note block strikes on
     // the edge of a signal rather than while one is held: nothing can
@@ -1070,7 +1079,7 @@ private:
     // copies of the same geometry, and only one of them ever got fixed.
     struct SlotBox
     {
-        enum class Kind { Slot, Palette, Tab, Enchant, Trade, AnvilTake, Destroy, Scroll, TradeTake };
+        enum class Kind { Slot, Palette, Tab, Enchant, Trade, AnvilTake, Destroy, Scroll, TradeTake, BeaconPower, BeaconConfirm, BeaconCancel };
         Kind kind = Kind::Slot;
         int index = 0;        // inventory slot, block id, or tab number
         float x = 0.0f, y = 0.0f, size = 0.0f;

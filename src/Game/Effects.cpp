@@ -1,5 +1,6 @@
 #include "Effects.h"
 #include <algorithm>
+#include <cmath>
 
 namespace
 {
@@ -21,6 +22,8 @@ unsigned int Effects::colour(Kind kind)
         case Kind::NightVision: return 0xC2FF66;
         case Kind::JumpBoost: return 0xFDFF84;
         case Kind::BadOmen: return 0x0B6138;
+        case Kind::Haste: return 0xD9C043;
+        case Kind::Resistance: return 0x9146F0;
         default: return 0x385DC6;
     }
 }
@@ -40,6 +43,8 @@ const char* Effects::name(Kind kind)
         case Kind::NightVision:    return "Night Vision";
         case Kind::JumpBoost:      return "Jump Boost";
         case Kind::BadOmen:        return "Bad Omen";
+        case Kind::Haste:          return "Haste";
+        case Kind::Resistance:     return "Resistance";
         case Kind::Count:          break;
     }
     return "";
@@ -176,6 +181,19 @@ float Effects::jumpMultiplier(const Set& set)
 }
 
 bool Effects::fireImmune(const Set& set) { return set.has(Kind::FireResistance); }
+
+float Effects::digMultiplier(const Set& set)
+{
+    if (!set.has(Kind::Haste)) return 1.0f;
+    return 1.0f + 0.20f * static_cast<float>(set.amplifier(Kind::Haste) + 1);
+}
+
+int Effects::resisted(const Set& set, int amount)
+{
+    if (!set.has(Kind::Resistance) || amount <= 0) return amount;
+    const float kept = std::max(0.0f, 1.0f - 0.20f * static_cast<float>(set.amplifier(Kind::Resistance) + 1));
+    return static_cast<int>(std::lround(static_cast<float>(amount) * kept));
+}
 bool Effects::breathesWater(const Set& set) { return set.has(Kind::WaterBreathing); }
 
 float Effects::nightVisionFloor(const Set& set)

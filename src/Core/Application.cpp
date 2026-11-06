@@ -551,6 +551,7 @@ void Application::startWorld(GameMode mode, bool freshWorld)
     m_entities.setDimension(m_dimension);
     m_chests.setDimension(static_cast<int>(m_dimension));
     m_signs.setDimension(static_cast<int>(m_dimension));
+    m_beaconPowers.clear();
     m_frames.setDimension(static_cast<int>(m_dimension));
     m_furnaces.setDimension(static_cast<int>(m_dimension));
 
@@ -874,6 +875,10 @@ void Application::loadLevel()
                           glm::ivec3(saved.x, saved.y, saved.z), text);
         }
 
+        m_beaconPowers.clear();
+        for (const LevelState::SavedBeacon& saved : state.beacons)
+            m_beaconPowers[{ saved.dimension, saved.x, saved.y, saved.z }] = { saved.primary, saved.secondary };
+
         m_frames.clear();
         for (const LevelState::SavedFrame& saved : state.frames)
         {
@@ -1099,6 +1104,18 @@ void Application::saveLevel()
         saved.damage = static_cast<uint16_t>(std::max(0, entry.second.damage));
         saved.enchantments = entry.second.enchantments;
         state.frames.push_back(saved);
+    }
+
+    for (const auto& [where, powers] : m_beaconPowers)
+    {
+        LevelState::SavedBeacon saved;
+        saved.dimension = static_cast<uint8_t>(where[0]);
+        saved.x = where[1];
+        saved.y = where[2];
+        saved.z = where[3];
+        saved.primary = static_cast<int8_t>(powers[0]);
+        saved.secondary = static_cast<int8_t>(powers[1]);
+        state.beacons.push_back(saved);
     }
 
     WorldSave::saveLevel(m_savePath, state);
@@ -1931,9 +1948,10 @@ bool Application::frame()
         }
 
         if ((m_benchOpen || m_furnaceOpen || m_chestOpen || m_enchantOpen ||
-             m_anvilOpen || m_brewOpen) && playing())
+             m_anvilOpen || m_brewOpen || m_beaconOpen) && playing())
         {
             const glm::ivec3 block = m_benchOpen    ? m_benchBlock
+                                   : m_beaconOpen   ? m_beaconBlock
                                    : m_chestOpen    ? m_chestBlock
                                    : m_enchantOpen  ? m_enchantBlock
                                    : m_anvilOpen    ? m_anvilBlock
@@ -1944,6 +1962,7 @@ bool Application::frame()
 
             const bool stillThere =
                 m_benchOpen   ? there == Blocks::CraftingTable
+              : m_beaconOpen  ? there == Blocks::Beacon
               : m_chestOpen   ? (isContainerBlock(there) || isItemHolder(there))
               : m_enchantOpen ? there == Blocks::EnchantingTable
               : m_anvilOpen   ? isAnvil(there)
@@ -2021,6 +2040,7 @@ bool Application::frame()
             m_startupScreen == "attackhud" || m_startupScreen == "attackready" ||
             m_startupScreen == "attackhotbar" || m_startupScreen == "bossbars" ||
             m_startupScreen == "gamemode" || m_startupScreen == "spectator" ||
+            m_startupScreen == "beaconui" ||
             m_startupScreen == "boat" || m_startupScreen == "rails" ||
             m_startupScreen == "mobs" || m_startupScreen == "golem" ||
             m_startupScreen == "glowmobs" || m_startupScreen == "variants" ||
@@ -2097,6 +2117,7 @@ bool Application::frame()
                                   m_startupScreen != "bossbars" &&
                                   m_startupScreen != "gamemode" &&
                                   m_startupScreen != "spectator" &&
+                                  m_startupScreen != "beaconui" &&
                                   m_startupScreen != "boat" &&
                                   m_startupScreen != "rails" &&
                                   m_startupScreen != "mobs" &&
@@ -2464,7 +2485,8 @@ bool Application::frame()
 
             if (m_startupScreen == "attackhud" || m_startupScreen == "attackready" ||
                 m_startupScreen == "attackhotbar" || m_startupScreen == "bossbars" ||
-                m_startupScreen == "gamemode" || m_startupScreen == "spectator")
+                m_startupScreen == "gamemode" || m_startupScreen == "spectator" ||
+                m_startupScreen == "beaconui")
             {
                 m_camera.setOrientation(0.0f, -25.0f);
                 m_camera.addLook(0.0f, 0.0f, 0.0f);
@@ -2506,6 +2528,24 @@ bool Application::frame()
                 }
                 else
                     m_attackIndicator = 1;
+                if (m_startupScreen == "beaconui")
+                {
+                    m_devAttackStrength = 1.0f;
+                    const glm::ivec3 top(px + 3, py - 1, pz);
+                    for (int layer = 1; layer <= 4; ++layer)
+                        for (int dx = -layer; dx <= layer; ++dx)
+                            for (int dz = -layer; dz <= layer; ++dz)
+                                m_world->setBlock(top.x + dx, top.y - layer, top.z + dz, Blocks::IronBlock);
+                    m_world->setBlock(top.x, top.y, top.z, Blocks::Beacon);
+                    m_beacons.insert({ top.x, top.y, top.z });
+                    openBeacon(top);
+                    m_beaconPrimary = static_cast<int>(Effects::Kind::Haste);
+                    m_beaconSecondary = m_beaconPrimary;
+                    ItemStack diamond;
+                    diamond.id = Items::Diamond;
+                    diamond.count = 1;
+                    m_inventory.slot(Inventory::BEACON_PAYMENT) = diamond;
+                }
                 if (m_startupScreen == "gamemode")
                 {
                     m_devAttackStrength = 1.0f;
@@ -5616,7 +5656,7 @@ void Application::updateMining(float deltaTime)
     // folded into breakSeconds, which stays a pure function of a tool
     // and a block and knows nothing about what has been put on it.
     if (seconds > 0.0f)
-        seconds /= Enchanting::digSpeedMultiplier(m_inventory.selected().enchantments);
+        seconds /= Enchanting::digSpeedMultiplier(m_inventory.selected().enchantments) * Effects::digMultiplier(m_player.effects);
     if (seconds < 0.0f) return; // bedrock and liquids never break
 
     if (m_player.creative() || seconds <= 0.0f)
@@ -6348,7 +6388,6 @@ void Application::tickBeacons(float deltaTime)
     if (!m_world) return;
 
     constexpr float INTERVAL = 1.0f;
-    constexpr float SECONDS = 6.0f;   // longer than the sweep, so it never flickers
 
     m_beaconTimer -= deltaTime;
     if (m_beaconTimer > 0.0f) return;
@@ -6392,21 +6431,23 @@ void Application::tickBeacons(float deltaTime)
         // In range of this one, not merely in the world with it.
         const int far = std::max(std::abs(bx - px), std::abs(bz - pz));
         if (far > Beacon::rangeFor(tiers)) continue;
+        if (py < by - Beacon::rangeFor(tiers)) continue;
 
         best = std::max(best, tiers);
+        const auto chosen = m_beaconPowers.find({ static_cast<int>(m_dimension), bx, by, bz });
+        if (chosen == m_beaconPowers.end()) continue;
+        const int primary = chosen->second[0];
+        const int secondary = chosen->second[1];
+        if (!Beacon::isPrimary(primary, tiers)) continue;
+        const bool doubled = tiers >= Beacon::MAX_TIERS && secondary == primary;
+        Effects::give(m_player.effects, static_cast<Effects::Kind>(primary), doubled ? 1 : 0,
+                      Beacon::seconds(tiers));
+        if (secondary != primary && Beacon::isSecondary(secondary, primary, tiers))
+            Effects::give(m_player.effects, static_cast<Effects::Kind>(secondary), 0, Beacon::seconds(tiers));
     }
     m_litBeacons = lit;
 
-    if (best <= 0) return;
-
-    // What it gives. Minecraft lets you choose; there is no beacon
-    // panel here, so it gives the two that are worth having and
-    // scales them with the pyramid.
-    Effects::give(m_player.effects, Effects::Kind::Speed,
-                  best >= 3 ? 1 : 0, SECONDS);
-    if (best >= 2)
-        Effects::give(m_player.effects, Effects::Kind::Regeneration,
-                      best >= 4 ? 1 : 0, SECONDS);
+    (void)best;
 }
 
 // The wither: the boss you build rather than the one you find.
@@ -8658,6 +8699,12 @@ void Application::handlePlacement()
                 return;
             }
 
+            if (used == Blocks::Beacon)
+            {
+                openBeacon(bench.block);
+                m_audio.play(Sound::Click, 0.4f);
+                return;
+            }
             if (used == Blocks::EnchantingTable)
             {
                 openEnchantingTable(bench.block);
@@ -11353,6 +11400,7 @@ void Application::renderEffectIcons(float w)
         "../mob_effect/weakness", "../mob_effect/regeneration", "../mob_effect/poison",
         "../mob_effect/fire_resistance", "../mob_effect/water_breathing",
         "../mob_effect/night_vision", "../mob_effect/jump_boost", "../mob_effect/bad_omen",
+        "../mob_effect/haste", "../mob_effect/resistance",
     };
     if (!m_gui.has("sprites/hud/effect_background")) return;
 

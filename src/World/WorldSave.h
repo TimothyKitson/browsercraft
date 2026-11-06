@@ -70,6 +70,15 @@ struct LevelState
         uint32_t enchantments = 0;
     };
     std::vector<SavedFrame> frames;
+
+    struct SavedBeacon
+    {
+        int x = 0, y = 0, z = 0;
+        uint8_t dimension = 0;
+        int8_t primary = -1;
+        int8_t secondary = -1;
+    };
+    std::vector<SavedBeacon> beacons;
     // One packed word per slot, in the same order as the inventory
     // above. Empty on a level written before enchanting existed, which
     // reads back as nothing enchanted.

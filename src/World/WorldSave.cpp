@@ -242,6 +242,17 @@ void WorldSave::saveLevel(const std::string& saveDirectory, const LevelState& st
         write(out, frame.damage);
         write(out, frame.enchantments);
     }
+
+    write(out, static_cast<uint16_t>(state.beacons.size()));
+    for (const LevelState::SavedBeacon& beacon : state.beacons)
+    {
+        write(out, beacon.x);
+        write(out, beacon.y);
+        write(out, beacon.z);
+        write(out, beacon.dimension);
+        write(out, beacon.primary);
+        write(out, beacon.secondary);
+    }
 }
 
 bool WorldSave::loadLevel(const std::string& saveDirectory, LevelState& out)
@@ -441,20 +452,35 @@ bool WorldSave::loadLevel(const std::string& saveDirectory, LevelState& out)
                                         }
 
                                         uint16_t frameCount = 0;
-                                        if (signsWhole && read(in, frameCount))
+                                        bool framesWhole = signsWhole && read(in, frameCount);
+                                        if (framesWhole)
                                         {
                                             for (uint16_t i = 0; i < frameCount; ++i)
                                             {
                                                 LevelState::SavedFrame frame;
-                                                if (!read(in, frame.x)) break;
-                                                if (!read(in, frame.y)) break;
-                                                if (!read(in, frame.z)) break;
-                                                if (!read(in, frame.dimension)) break;
-                                                if (!read(in, frame.item)) break;
-                                                if (!read(in, frame.count)) break;
-                                                if (!read(in, frame.damage)) break;
-                                                if (!read(in, frame.enchantments)) break;
+                                                if (!read(in, frame.x) || !read(in, frame.y) || !read(in, frame.z) ||
+                                                    !read(in, frame.dimension) || !read(in, frame.item) ||
+                                                    !read(in, frame.count) || !read(in, frame.damage) ||
+                                                    !read(in, frame.enchantments))
+                                                {
+                                                    framesWhole = false;
+                                                    break;
+                                                }
                                                 out.frames.push_back(frame);
+                                            }
+                                        }
+
+                                        uint16_t beaconCount = 0;
+                                        if (framesWhole && read(in, beaconCount))
+                                        {
+                                            for (uint16_t i = 0; i < beaconCount; ++i)
+                                            {
+                                                LevelState::SavedBeacon beacon;
+                                                if (!read(in, beacon.x) || !read(in, beacon.y) || !read(in, beacon.z) ||
+                                                    !read(in, beacon.dimension) || !read(in, beacon.primary) ||
+                                                    !read(in, beacon.secondary))
+                                                    break;
+                                                out.beacons.push_back(beacon);
                                             }
                                         }
                                     }

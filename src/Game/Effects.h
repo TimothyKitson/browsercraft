@@ -33,6 +33,8 @@ namespace Effects
         // to you. Drunk from an ominous bottle, it is the game's own
         // hard mode.
         BadOmen,
+        Haste,
+        Resistance,
 
         Count
     };
@@ -109,6 +111,8 @@ namespace Effects
     float jumpMultiplier(const Set& set);
 
     bool fireImmune(const Set& set);
+    float digMultiplier(const Set& set);
+    int resisted(const Set& set, int amount);
     bool breathesWater(const Set& set);
 
     // The least daylight the world is allowed to look like while night

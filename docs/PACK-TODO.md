@@ -81,7 +81,7 @@ Everything in the 1.21 textures zip the game doesn't use yet, turned into work. 
     - Left for later: the creative search tab's compass icon waits for the compass (item 49); the plain text_field sprite gets used once a screen has more than one field (item 78); raids use the red notched bar once raids exist.
 18. Gamemode switcher: the F3+F4 overlay with its slots and selection. (done)
     - Adventure and spectator now exist so all four slots work. Spectator here is the core of it (fly through blocks, no body, no hotbar, mobs ignore you); the spectator menu stays with item 82.
-19. Beacon screen
+19. Beacon screen (done)
     - I. Pick primary and secondary powers with the beacon buttons, confirm and cancel.
     - II. Add Haste and Resistance so every beacon power exists.
 20. Grindstone screen

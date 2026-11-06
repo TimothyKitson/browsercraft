@@ -663,7 +663,7 @@ void Application::renderInventoryScreen()
     // see what was in it.
     const bool container = m_chestOpen || m_crafterOpen || m_furnaceOpen ||
                            m_inventory.craftSize() >= 3 || m_tradeOpen ||
-                           m_enchantOpen || m_brewOpen || m_anvilOpen || m_horseOpen;
+                           m_enchantOpen || m_brewOpen || m_anvilOpen || m_horseOpen || m_beaconOpen;
 
     if (m_player.creative() && !container) renderCreativeScreen(w, h);
     else renderContainerScreen(w, h);
@@ -697,6 +697,7 @@ void Application::renderContainerScreen(float w, float h)
                    : shulker ? "container/shulker_box" : "container/generic_54";
     else if (m_crafterOpen) background = "container/crafter";
     else if (m_horseOpen) background = "container/horse";
+    else if (m_beaconOpen) background = "container/beacon";
     else if (m_tradeOpen) { background = "container/villager"; textureW = 512.0f; }
     else if (m_enchantOpen) background = "container/enchanting_table";
     else if (m_brewOpen) background = "container/brewing_stand";
@@ -721,8 +722,8 @@ void Application::renderContainerScreen(float w, float h)
         burnSprite = "sprites/container/blast_furnace/burn_progress";
     }
 
-    const float PANEL_W = 176.0f;
-    const float PANEL_H = hopper ? 133.0f : bigChest ? 168.0f : 166.0f;
+    const float PANEL_W = m_beaconOpen ? 230.0f : 176.0f;
+    const float PANEL_H = m_beaconOpen ? 219.0f : hopper ? 133.0f : bigChest ? 168.0f : 166.0f;
 
     const float TRADE_LIST_W = 100.0f;
     const float panelWidth = m_tradeOpen ? PANEL_W + TRADE_LIST_W : PANEL_W;
@@ -730,9 +731,9 @@ void Application::renderContainerScreen(float w, float h)
     const float panelY = std::floor((h - PANEL_H) * 0.5f);
     const float shift = m_tradeOpen && skin ? TRADE_LIST_W : 0.0f;
 
-    const float storageY = panelY + (hopper ? 51.0f : bigChest ? 85.0f : 84.0f);
-    const float hotbarY = panelY + (hopper ? 109.0f : bigChest ? 143.0f : 142.0f);
-    const float invX = panelX + 8.0f + shift;
+    const float storageY = panelY + (m_beaconOpen ? 137.0f : hopper ? 51.0f : bigChest ? 85.0f : 84.0f);
+    const float hotbarY = panelY + (m_beaconOpen ? 195.0f : hopper ? 109.0f : bigChest ? 143.0f : 142.0f);
+    const float invX = panelX + (m_beaconOpen ? 36.0f : 8.0f) + shift;
 
     auto well = [this, skin](float x, float y) {
         if (!skin) guiWell(x - 1.0f, y - 1.0f, PITCH, PITCH);
@@ -779,11 +780,11 @@ void Application::renderContainerScreen(float w, float h)
     // for the same grid.
     const bool plainInventory = !m_chestOpen && !m_crafterOpen &&
                                 !m_furnaceOpen && !bench && !m_tradeOpen &&
-                                !m_enchantOpen && !m_brewOpen && !m_anvilOpen && !m_horseOpen;
+                                !m_enchantOpen && !m_brewOpen && !m_anvilOpen && !m_horseOpen && !m_beaconOpen;
 
     // Every screen is headed with the name of what was opened, in the
     // top-left corner, so a barrel says Barrel and a smoker says Smoker.
-    if (!plainInventory)
+    if (!plainInventory && !m_beaconOpen)
     {
         std::string title = "Inventory";
         if (m_chestOpen && m_world)
@@ -816,7 +817,7 @@ void Application::renderContainerScreen(float w, float h)
     // screens: an anvil's, so that its price has somewhere to go, and the
     // player's own, where it was drawn under the character and the tail
     // of its y poked out below the recess as a stray dash.
-    if (!plainInventory)
+    if (!plainInventory && !m_beaconOpen)
         m_ui.text("Inventory", m_tradeOpen && skin ? panelX + 107.0f : panelX + 8.0f,
                   panelY + PANEL_H - 94.0f, 1.0f, GUI_TEXT);
 
@@ -867,6 +868,83 @@ void Application::renderContainerScreen(float w, float h)
                 drawMobFigure(mob, panelX + 26.0f, panelY + 18.0f, panelX + 78.0f, panelY + 70.0f, 17.0f);
                 break;
             }
+    }
+
+    if (m_beaconOpen)
+    {
+        const int tiers = beaconTiers();
+        const float mouseX = static_cast<float>(m_input.mouseX()) / m_ui.scale();
+        const float mouseY = static_cast<float>(m_input.mouseY()) / m_ui.scale();
+        static const char* ICONS[Effects::KIND_COUNT] = {
+            "../mob_effect/speed", "../mob_effect/slowness", "../mob_effect/strength",
+            "../mob_effect/weakness", "../mob_effect/regeneration", "../mob_effect/poison",
+            "../mob_effect/fire_resistance", "../mob_effect/water_breathing",
+            "../mob_effect/night_vision", "../mob_effect/jump_boost", "../mob_effect/bad_omen",
+            "../mob_effect/haste", "../mob_effect/resistance",
+        };
+        const glm::vec4 label(0.878f, 0.878f, 0.878f, 1.0f);
+        const std::string primaryLabel = "Primary Power";
+        const std::string secondaryLabel = "Secondary Power";
+        m_ui.textWithShadow(primaryLabel, panelX + 62.0f - std::floor(UIRenderer::textWidth(primaryLabel, 1.0f) * 0.5f),
+                            panelY + 10.0f, 1.0f, label);
+        m_ui.textWithShadow(secondaryLabel, panelX + 169.0f - std::floor(UIRenderer::textWidth(secondaryLabel, 1.0f) * 0.5f),
+                            panelY + 10.0f, 1.0f, label);
+
+        auto button = [&](float bx, float by, bool active, bool selected, const char* icon, int kind, int index,
+                          const std::string& tip) {
+            const bool over = mouseX >= bx && mouseX < bx + 22.0f && mouseY >= by && mouseY < by + 22.0f;
+            const char* face = !active ? "sprites/container/beacon/button_disabled"
+                             : selected ? "sprites/container/beacon/button_selected"
+                             : over ? "sprites/container/beacon/button_highlighted"
+                                    : "sprites/container/beacon/button";
+            if (!guiSprite(face, bx, by, 22.0f, 22.0f))
+                bevel(bx, by, 22.0f, 22.0f, selected ? GUI_PANEL_DARK : GUI_PANEL, GUI_PANEL_LIGHT, GUI_PANEL_DARK, 1.0f);
+            if (icon) guiSprite(icon, bx + 2.0f, by + 2.0f, 18.0f, 18.0f);
+            if (active)
+                m_slotBoxes.push_back({ static_cast<SlotBox::Kind>(kind), index, bx, by, 22.0f });
+            if (over && !tip.empty()) addHint(bx, by, 22.0f, 22.0f, tip);
+        };
+
+        for (int tier = 0; tier < 3; ++tier)
+        {
+            const std::vector<Effects::Kind> powers = Beacon::powersAt(tier);
+            const float count = static_cast<float>(powers.size());
+            const float width = count * 22.0f + (count - 1.0f) * 2.0f;
+            for (size_t k = 0; k < powers.size(); ++k)
+            {
+                const int power = static_cast<int>(powers[k]);
+                button(panelX + 76.0f + static_cast<float>(k) * 24.0f - std::floor(width * 0.5f),
+                       panelY + 22.0f + static_cast<float>(tier) * 25.0f, tiers > tier, m_beaconPrimary == power,
+                       ICONS[power], static_cast<int>(SlotBox::Kind::BeaconPower), power,
+                       Effects::name(powers[k]));
+            }
+        }
+
+        {
+            const float width = 2.0f * 22.0f + 2.0f;
+            const int regen = static_cast<int>(Effects::Kind::Regeneration);
+            const bool open = tiers >= Beacon::MAX_TIERS && m_beaconPrimary >= 0;
+            button(panelX + 167.0f - std::floor(width * 0.5f), panelY + 47.0f, open, m_beaconSecondary == regen,
+                   ICONS[regen], static_cast<int>(SlotBox::Kind::BeaconPower), 100 + regen, "Regeneration");
+            if (m_beaconPrimary >= 0)
+                button(panelX + 167.0f + 24.0f - std::floor(width * 0.5f), panelY + 47.0f, open,
+                       m_beaconSecondary == m_beaconPrimary, ICONS[m_beaconPrimary],
+                       static_cast<int>(SlotBox::Kind::BeaconPower), 100 + m_beaconPrimary,
+                       std::string(Effects::name(static_cast<Effects::Kind>(m_beaconPrimary))) + " II");
+        }
+
+        const bool paid = !m_inventory.slot(Inventory::BEACON_PAYMENT).empty();
+        button(panelX + 164.0f, panelY + 107.0f, paid && m_beaconPrimary >= 0, false,
+               "sprites/container/beacon/confirm", static_cast<int>(SlotBox::Kind::BeaconConfirm), 0, "Done");
+        button(panelX + 190.0f, panelY + 107.0f, true, false, "sprites/container/beacon/cancel",
+               static_cast<int>(SlotBox::Kind::BeaconCancel), 0, "Cancel");
+
+        drawItem(panelX + 20.0f, panelY + 109.0f, SLOT, Items::NetheriteIngot, 0, glm::vec4(1.0f));
+        drawItem(panelX + 41.0f, panelY + 109.0f, SLOT, Items::Emerald, 0, glm::vec4(1.0f));
+        drawItem(panelX + 63.0f, panelY + 109.0f, SLOT, Items::Diamond, 0, glm::vec4(1.0f));
+        drawItem(panelX + 86.0f, panelY + 109.0f, SLOT, Items::GoldIngot, 0, glm::vec4(1.0f));
+        drawItem(panelX + 108.0f, panelY + 109.0f, SLOT, Items::IronIngot, 0, glm::vec4(1.0f));
+        drawSlot(Inventory::BEACON_PAYMENT, panelX + 136.0f, panelY + 110.0f);
     }
 
     // ------------------------------------------ the open crafter ---
@@ -934,7 +1012,7 @@ void Application::renderContainerScreen(float w, float h)
         // drawn on all of them, which is how a furnace came to have a
         // man standing in the middle of its fire.
         const bool otherBusiness = m_tradeOpen || m_enchantOpen || m_brewOpen ||
-                                   m_anvilOpen || m_furnaceOpen || bench || m_horseOpen;
+                                   m_anvilOpen || m_furnaceOpen || bench || m_horseOpen || m_beaconOpen;
 
         // Armour down the left edge, at 8 and 8, a slot apart.
         for (int i = 0; !otherBusiness && i < Inventory::ARMOR_SLOTS; ++i)
@@ -1707,7 +1785,7 @@ void Application::renderContainerScreen(float w, float h)
         // fire between them at 36 and the result off to the right at
         // 116 and 35. The client's own four, and the shape everybody
         // recognises.
-        if (m_horseOpen) {}
+        if (m_horseOpen || m_beaconOpen) {}
         else if (m_furnaceOpen)
         {
             const Furnaces::State& state = m_furnaces.at(m_furnaceBlock);
@@ -2084,6 +2162,7 @@ void Application::drawInventoryEffects(float panelRight, float panelTop, float w
         "../mob_effect/weakness", "../mob_effect/regeneration", "../mob_effect/poison",
         "../mob_effect/fire_resistance", "../mob_effect/water_breathing",
         "../mob_effect/night_vision", "../mob_effect/jump_boost", "../mob_effect/bad_omen",
+        "../mob_effect/haste", "../mob_effect/resistance",
     };
     static const char* NUMERALS[6] = { "", " II", " III", " IV", " V", " VI" };
 
@@ -2268,6 +2347,27 @@ void Application::handleInventoryClick(int mouseX, int mouseY, bool rightButton,
             takeAnvilResult();
             break;
 
+        case SlotBox::Kind::BeaconPower:
+            if (box->index >= 100) m_beaconSecondary = box->index - 100;
+            else
+            {
+                m_beaconPrimary = box->index;
+                if (m_beaconSecondary >= 0 && m_beaconSecondary != static_cast<int>(Effects::Kind::Regeneration))
+                    m_beaconSecondary = m_beaconPrimary;
+            }
+            m_audio.play(Sound::Click, 0.45f);
+            break;
+
+        case SlotBox::Kind::BeaconConfirm:
+            confirmBeacon();
+            break;
+
+        case SlotBox::Kind::BeaconCancel:
+            m_audio.play(Sound::Click, 0.45f);
+            closeInventory();
+            setMouseCaptured(true);
+            break;
+
         case SlotBox::Kind::Destroy:
             // Whatever is in hand is gone, which is the bin's whole job.
             if (!m_inventory.cursor().empty())
@@ -2324,6 +2424,63 @@ void Application::openHorse(Mob& horse)
     m_inventory.slot(Inventory::HORSE_ARMOUR) = armour;
 }
 
+int Application::beaconTiers() const
+{
+    if (!m_world) return 0;
+    struct WorldGround : Beacon::Ground
+    {
+        const World* world = nullptr;
+        BlockId at(int x, int y, int z) const override { return world->getBlock(x, y, z); }
+    } ground;
+    ground.world = m_world.get();
+    return Beacon::tiersUnder(ground, m_beaconBlock.x, m_beaconBlock.y, m_beaconBlock.z);
+}
+
+void Application::openBeacon(const glm::ivec3& block)
+{
+    m_beaconBlock = block;
+    m_beaconOpen = true;
+    m_beaconPrimary = -1;
+    m_beaconSecondary = -1;
+    const auto chosen = m_beaconPowers.find({ static_cast<int>(m_dimension), block.x, block.y, block.z });
+    if (chosen != m_beaconPowers.end())
+    {
+        m_beaconPrimary = chosen->second[0];
+        m_beaconSecondary = chosen->second[1];
+    }
+    m_inventoryOpen = true;
+    setMouseCaptured(false);
+}
+
+void Application::confirmBeacon()
+{
+    ItemStack& payment = m_inventory.slot(Inventory::BEACON_PAYMENT);
+    if (payment.empty() || m_beaconPrimary < 0) return;
+    const int tiers = beaconTiers();
+    if (!Beacon::isPrimary(m_beaconPrimary, tiers)) return;
+    const int secondary = Beacon::isSecondary(m_beaconSecondary, m_beaconPrimary, tiers) ? m_beaconSecondary : -1;
+    m_beaconPowers[{ static_cast<int>(m_dimension), m_beaconBlock.x, m_beaconBlock.y, m_beaconBlock.z }] =
+        { m_beaconPrimary, secondary };
+    payment.count -= 1;
+    if (payment.count <= 0) payment.clear();
+    m_beaconTimer = 0.0f;
+    m_audio.play(Sound::Click, 0.6f, 1.2f);
+    closeInventory();
+    setMouseCaptured(true);
+}
+
+void Application::stowBeacon()
+{
+    if (!m_beaconOpen) return;
+    m_beaconOpen = false;
+    ItemStack& held = m_inventory.slot(Inventory::BEACON_PAYMENT);
+    if (held.empty()) return;
+    ItemStack leftOver = held;
+    leftOver.count = m_inventory.addStack(held);
+    if (leftOver.count > 0) m_drops.spawnStack(m_player.position + glm::vec3(0.0f, 0.6f, 0.0f), leftOver);
+    held.clear();
+}
+
 void Application::stowHorse()
 {
     if (!m_horseOpen) return;
@@ -2350,6 +2507,7 @@ void Application::stowHorse()
 void Application::closeInventory()
 {
     stowHorse();
+    stowBeacon();
     stowChest();
     stowCrafter();
     stowFurnace();
