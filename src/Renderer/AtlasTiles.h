@@ -325,6 +325,14 @@ namespace Tiles
         BedSidesTile, BedSidesTileLast = BedSidesTile + 15,
         BedEndsTile, BedEndsTileLast = BedEndsTile + 15,
         ChestTileFirst, ChestTileLast = ChestTileFirst + 59,
+        CutCopperTile, CutCopperTileLast = CutCopperTile + 3,
+        ChiseledCopperTile, ChiseledCopperTileLast = ChiseledCopperTile + 3,
+        CopperGrateTile, CopperGrateTileLast = CopperGrateTile + 3,
+        CopperBulbStageTile, CopperBulbStageTileLast = CopperBulbStageTile + 11,
+        CopperDoorTopTile, CopperDoorTopTileLast = CopperDoorTopTile + 3,
+        CopperDoorBottomTile, CopperDoorBottomTileLast = CopperDoorBottomTile + 3,
+        CopperTrapdoorTile, CopperTrapdoorTileLast = CopperTrapdoorTile + 3,
+        LightningRodTile, LightningRodOnTile,
 
         TileCount
     };
@@ -518,8 +526,9 @@ namespace Tiles
         ItemCandleFirst, ItemCandleLast = ItemCandleFirst + 16,
         ItemBedFirst, ItemBedLast = ItemBedFirst + 15,
         ItemTripwireHook,
+        ItemCopperDoorFirst, ItemCopperDoorLast = ItemCopperDoorFirst + 3,
 
-        ItemTileEnd = ItemTripwireHook + 1
+        ItemTileEnd = ItemCopperDoorLast + 1
     };
 
     // Ten progressively more broken overlay tiles for the mining animation.

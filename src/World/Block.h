@@ -584,6 +584,15 @@ namespace Blocks
         ShulkerBoxFirst, ShulkerBoxLast = ShulkerBoxFirst + 15,
         BedFirst, BedLast = BedFirst + 127,
         ChestRunFirst, ChestRunLast = ChestRunFirst + 38,
+        WaxedCopperFirst, WaxedCopperLast = WaxedCopperFirst + 3,
+        CutCopperFirst, CutCopperLast = CutCopperFirst + 7,
+        ChiseledCopperFirst, ChiseledCopperLast = ChiseledCopperFirst + 7,
+        CopperGrateFirst, CopperGrateLast = CopperGrateFirst + 7,
+        CutCopperSlabFirst, CutCopperSlabLast = CutCopperSlabFirst + 7,
+        CopperBulbRunFirst, CopperBulbRunLast = CopperBulbRunFirst + 27,
+        CopperDoorFirst, CopperDoorLast = CopperDoorFirst + 127,
+        CopperTrapdoorFirst, CopperTrapdoorLast = CopperTrapdoorFirst + 127,
+        LightningRodFirst, LightningRodLast = LightningRodFirst + 11,
 
         Count
     };
@@ -606,7 +615,8 @@ enum class RenderType : uint8_t
     Pane,
     Candle,
     Bed,
-    Chest
+    Chest,
+    Rod
 };
 
 struct BlockInfo
@@ -1024,10 +1034,30 @@ inline bool isTrialSpawnerActive(BlockId id)
     return id == Blocks::TrialSpawnerActive || id == Blocks::TrialSpawnerActiveOminous;
 }
 
-// Copper in any of its four stages, which is the set that weathers.
-inline bool isCopper(BlockId id)
+enum class CopperFamily : uint8_t { None, Block, Cut, Chiseled, Grate, Slab, Bulb, Door, Trapdoor };
+struct CopperForm
 {
-    return id >= Blocks::CopperBlock && id <= Blocks::OxidizedCopper;
+    CopperFamily family;
+    int stage;
+    bool waxed;
+    int state;
+};
+CopperForm copperForm(BlockId id);
+BlockId copperBlockOf(CopperFamily family, int stage, bool waxed, int state = 0);
+inline bool isCopper(BlockId id) { return copperForm(id).family != CopperFamily::None; }
+inline BlockId copperWith(BlockId id, int stage, bool waxed)
+{
+    const CopperForm form = copperForm(id);
+    if (form.family == CopperFamily::None) return id;
+    return copperBlockOf(form.family, stage, waxed, form.state);
+}
+inline bool isLightningRod(BlockId id) { return id >= Blocks::LightningRodFirst && id <= Blocks::LightningRodLast; }
+inline int lightningRodFacing(BlockId id) { return isLightningRod(id) ? (id - Blocks::LightningRodFirst) / 2 : 0; }
+inline bool lightningRodPowered(BlockId id) { return isLightningRod(id) && (id - Blocks::LightningRodFirst) % 2 == 1; }
+inline BlockId lightningRodOf(int facing, bool powered)
+{
+    if (facing < 0 || facing > 5) facing = 0;
+    return static_cast<BlockId>(Blocks::LightningRodFirst + facing * 2 + (powered ? 1 : 0));
 }
 
 inline bool isAmethystGrowth(BlockId id)
@@ -1060,16 +1090,22 @@ inline bool isPointedDripstone(BlockId id)
 inline bool isCopperBulb(BlockId id)
 {
     return id == Blocks::CopperBulb || id == Blocks::CopperBulbLit ||
-           id == Blocks::CopperBulbPowered || id == Blocks::CopperBulbLitPowered;
+           id == Blocks::CopperBulbPowered || id == Blocks::CopperBulbLitPowered ||
+           (id >= Blocks::CopperBulbRunFirst && id <= Blocks::CopperBulbRunLast);
 }
 inline bool copperBulbLit(BlockId id)
 {
-    return id == Blocks::CopperBulbLit || id == Blocks::CopperBulbLitPowered;
+    return (copperForm(id).state & 1) != 0;
 }
 inline BlockId copperBulbAs(bool lit, bool powered)
 {
     if (lit) return powered ? Blocks::CopperBulbLitPowered : Blocks::CopperBulbLit;
     return powered ? Blocks::CopperBulbPowered : Blocks::CopperBulb;
+}
+inline BlockId copperBulbWith(BlockId id, bool lit, bool powered)
+{
+    const CopperForm form = copperForm(id);
+    return copperBlockOf(CopperFamily::Bulb, form.stage, form.waxed, (lit ? 1 : 0) + (powered ? 2 : 0));
 }
 inline bool isAnvil(BlockId id)
 {
@@ -1217,7 +1253,12 @@ inline int doorWood(BlockId id)
     return -1;
 }
 inline BlockId doorBaseOf(int wood) { return woodSet(wood).door; }
-inline BlockId doorBase(BlockId id) { return doorBaseOf(doorWood(id)); }
+inline BlockId doorBase(BlockId id)
+{
+    if (id >= Blocks::CopperDoorFirst && id <= Blocks::CopperDoorLast)
+        return static_cast<BlockId>(Blocks::CopperDoorFirst + ((id - Blocks::CopperDoorFirst) / 16) * 16);
+    return doorBaseOf(doorWood(id));
+}
 inline bool doorIsTop(BlockId id) { return ((id - doorBase(id)) & 8) != 0; }
 inline bool doorIsOpen(BlockId id) { return ((id - doorBase(id)) & 4) != 0; }
 inline BlockId doorPart(BlockId base, int facing, bool top, bool open)
@@ -1237,7 +1278,12 @@ inline int trapdoorWood(BlockId id)
         if (id >= woodSet(wood).trapdoor && id < woodSet(wood).trapdoor + 16) return wood;
     return 0;
 }
-inline BlockId trapdoorBase(BlockId id) { return trapdoorBaseOf(trapdoorWood(id)); }
+inline BlockId trapdoorBase(BlockId id)
+{
+    if (id >= Blocks::CopperTrapdoorFirst && id <= Blocks::CopperTrapdoorLast)
+        return static_cast<BlockId>(Blocks::CopperTrapdoorFirst + ((id - Blocks::CopperTrapdoorFirst) / 16) * 16);
+    return trapdoorBaseOf(trapdoorWood(id));
+}
 inline bool trapdoorIsTop(BlockId id) { return ((id - trapdoorBase(id)) & 8) != 0; }
 inline bool trapdoorIsOpen(BlockId id) { return ((id - trapdoorBase(id)) & 4) != 0; }
 inline int trapdoorFacing(BlockId id) { return (id - trapdoorBase(id)) & 3; }

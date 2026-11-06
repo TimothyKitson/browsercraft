@@ -7456,17 +7456,19 @@ namespace
               "both bulbs are bulbs");
         check(lightEmission(Blocks::CopperBulbLit) == 15, "a lit bulb is as bright as it gets");
         check(lightEmission(Blocks::CopperBulb) == 0, "and an unlit one gives nothing");
-        check(!Copper::ages(Blocks::CopperBulb), "a bulb does not weather");
+        check(Copper::ages(Blocks::CopperBulb) && !Copper::ages(Copper::waxed(Blocks::CopperBulb)),
+              "a bulb weathers like the copper it is made of, unless it is waxed");
 
         {
             ItemStack bulb[9];
-            bulb[1].id = Items::CopperIngot; bulb[1].count = 1;
-            bulb[3].id = Items::CopperIngot; bulb[3].count = 1;
+            bulb[1].id = Blocks::CopperBlock; bulb[1].count = 1;
+            bulb[3].id = Blocks::CopperBlock; bulb[3].count = 1;
             bulb[4].id = Items::BlazeRod;    bulb[4].count = 1;
-            bulb[5].id = Items::CopperIngot; bulb[5].count = 1;
+            bulb[5].id = Blocks::CopperBlock; bulb[5].count = 1;
             bulb[7].id = Items::Redstone;    bulb[7].count = 1;
             const CraftOutput made = Crafting::match(bulb, 3);
-            check(made.valid() && made.id == Blocks::CopperBulb, "a bulb can be made");
+            check(made.valid() && made.id == Blocks::CopperBulb && made.count == 4,
+                  "three copper blocks, a blaze rod and redstone make four bulbs");
         }
 
         // There is copper in the ground to find, and it is up where
@@ -12017,6 +12019,91 @@ namespace
         check(Saplings::leafDrop(Blocks::Stone, 0u) == Blocks::Air, "stone gives none");
     }
 
+    void testCopperSet()
+    {
+        section("the copper set, waxing and the lightning rod");
+        bool roundTrip = true;
+        for (CopperFamily family : { CopperFamily::Block, CopperFamily::Cut, CopperFamily::Chiseled, CopperFamily::Grate,
+                                     CopperFamily::Slab, CopperFamily::Bulb, CopperFamily::Door, CopperFamily::Trapdoor })
+            for (int stage = 0; stage < 4; ++stage)
+                for (int waxed = 0; waxed < 2; ++waxed)
+                {
+                    const int states = family == CopperFamily::Bulb ? 4 : (family == CopperFamily::Door || family == CopperFamily::Trapdoor) ? 16 : 1;
+                    for (int state = 0; state < states; ++state)
+                    {
+                        const BlockId id = copperBlockOf(family, stage, waxed == 1, state);
+                        const CopperForm form = copperForm(id);
+                        if (form.family != family || form.stage != stage || form.waxed != (waxed == 1) || form.state != state)
+                            roundTrip = false;
+                    }
+                }
+        check(roundTrip, "every copper block knows its family, stage, wax and state");
+        check(Copper::next(copperBlockOf(CopperFamily::Cut, 0, false)) == copperBlockOf(CopperFamily::Cut, 1, false),
+              "cut copper weathers a stage at a time");
+        check(Copper::next(copperBlockOf(CopperFamily::Grate, 3, false)) == copperBlockOf(CopperFamily::Grate, 3, false),
+              "oxidised is the end of it");
+        check(!Copper::ages(copperBlockOf(CopperFamily::Door, 1, true, 9)), "waxed copper never weathers");
+        check(Copper::waxed(copperBlockOf(CopperFamily::Chiseled, 2, false)) == copperBlockOf(CopperFamily::Chiseled, 2, true),
+              "honeycomb waxes copper where it stands");
+        check(Copper::scraped(copperBlockOf(CopperFamily::Trapdoor, 2, true, 5)) == copperBlockOf(CopperFamily::Trapdoor, 2, false, 5),
+              "an axe scrapes the wax off first");
+        check(Copper::scraped(copperBlockOf(CopperFamily::Trapdoor, 2, false, 5)) == copperBlockOf(CopperFamily::Trapdoor, 1, false, 5),
+              "and then a stage of green");
+        check(Copper::cleaned(Blocks::OxidizedCopper) == Blocks::CopperBlock &&
+                  Copper::cleaned(copperBlockOf(CopperFamily::Block, 3, true)) == copperBlockOf(CopperFamily::Block, 3, true),
+              "lightning cleans bare copper back to new, and leaves waxed alone");
+        check(isDoor(copperBlockOf(CopperFamily::Door, 3, false, 0)) &&
+                  doorBase(copperBlockOf(CopperFamily::Door, 3, false, 13)) == copperBlockOf(CopperFamily::Door, 3, false, 0),
+              "a copper door is a door, and knows which door it is");
+        check(isTrapdoor(copperBlockOf(CopperFamily::Trapdoor, 1, true, 0)) &&
+                  trapdoorBase(copperBlockOf(CopperFamily::Trapdoor, 1, true, 7)) == copperBlockOf(CopperFamily::Trapdoor, 1, true, 0),
+              "and a copper trapdoor likewise");
+        check(blockMaterial(copperBlockOf(CopperFamily::Door, 0, false)) == Material::Stone, "copper wants a pickaxe");
+        check(lightEmission(copperBlockOf(CopperFamily::Bulb, 3, false, 1)) == 4 &&
+                  lightEmission(copperBlockOf(CopperFamily::Bulb, 1, true, 1)) == 12,
+              "a bulb dims as it weathers");
+        check(copperBulbWith(copperBlockOf(CopperFamily::Bulb, 2, true, 0), true, true) == copperBlockOf(CopperFamily::Bulb, 2, true, 3),
+              "a bulb keeps its stage when it is switched");
+
+        ItemStack cut[9];
+        for (int i : { 0, 1, 3, 4 }) cut[i] = ItemStack{ Blocks::WeatheredCopper, 1 };
+        check(Crafting::match(cut, 3).id == copperBlockOf(CopperFamily::Cut, 2, false) && Crafting::match(cut, 3).count == 4,
+              "four weathered copper make four weathered cut copper");
+        ItemStack grate[9];
+        for (int i : { 1, 3, 5, 7 }) grate[i] = ItemStack{ Blocks::CopperBlock, 1 };
+        check(Crafting::match(grate, 3).id == copperBlockOf(CopperFamily::Grate, 0, false), "copper round a gap makes grates");
+        ItemStack slabs[9];
+        slabs[1] = ItemStack{ copperBlockOf(CopperFamily::Slab, 1, false), 1 };
+        slabs[4] = ItemStack{ copperBlockOf(CopperFamily::Slab, 1, false), 1 };
+        check(Crafting::match(slabs, 3).id == copperBlockOf(CopperFamily::Chiseled, 1, false), "two slabs make chiseled copper");
+        ItemStack wax[9];
+        wax[0] = ItemStack{ copperBlockOf(CopperFamily::Door, 2, false), 1 };
+        wax[1] = ItemStack{ Items::Honeycomb, 1 };
+        check(Crafting::match(wax, 3).id == copperBlockOf(CopperFamily::Door, 2, true), "honeycomb waxes a door at the bench too");
+        ItemStack door[9];
+        for (int i : { 0, 1, 3, 4, 6, 7 }) door[i] = ItemStack{ Items::CopperIngot, 1 };
+        check(Crafting::match(door, 3).id == copperBlockOf(CopperFamily::Door, 0, false) && Crafting::match(door, 3).count == 3,
+              "six ingots make three copper doors");
+        ItemStack rod[9];
+        for (int i : { 1, 4, 7 }) rod[i] = ItemStack{ Items::CopperIngot, 1 };
+        check(Crafting::match(rod, 3).id == lightningRodOf(0, false), "three ingots stood up make a lightning rod");
+
+        bool rods = true;
+        for (int facing = 0; facing < 6; ++facing)
+            for (int powered = 0; powered < 2; ++powered)
+            {
+                const BlockId id = lightningRodOf(facing, powered == 1);
+                if (!isLightningRod(id) || lightningRodFacing(id) != facing || lightningRodPowered(id) != (powered == 1)) rods = false;
+                if (blockDrop(id) != lightningRodOf(0, false)) rods = false;
+            }
+        check(rods, "a lightning rod points six ways and always breaks into one rod");
+        check(Redstone::isSource(lightningRodOf(2, true)) && !Redstone::isSource(lightningRodOf(2, false)),
+              "a struck rod gives a pulse of power");
+        check(blockOverlaps(lightningRodOf(0, false), 0, 0, 0, 0.45f, 0.5f, 0.45f, 0.55f, 0.6f, 0.55f) &&
+                  !blockOverlaps(lightningRodOf(0, false), 0, 0, 0, 0.0f, 0.0f, 0.0f, 0.3f, 1.0f, 0.3f),
+              "a rod is thin");
+    }
+
     void testChestKinds()
     {
         section("double, trapped and ender chests");
@@ -13140,6 +13227,7 @@ int runSelfTest()
     testShulkerBoxes();
     testBeds();
     testChestKinds();
+    testCopperSet();
     testTheTablesTake121sPrices();
 
     std::printf("\n%d checks, %d failed\n", g_checks, g_failures);

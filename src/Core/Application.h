@@ -247,6 +247,10 @@ private:
     float m_bubbleClock = 0.0f;
     struct TimedBlock { glm::ivec3 at; BlockId expect; BlockId then; float left; };
     std::vector<TimedBlock> m_timedBlocks;
+    std::vector<glm::vec3> m_boltPoints;
+    float m_boltLeft = 0.0f;
+    void strikeLightning();
+    void setCopper(const glm::ivec3& at, BlockId now);
     Fluids::Scheduler m_fluids;
     std::vector<glm::ivec3> m_fluidChanges;
     const World* m_fluidWorld = nullptr;

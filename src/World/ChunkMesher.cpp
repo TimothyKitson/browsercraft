@@ -678,6 +678,32 @@ namespace
         emitPart(snap, lx, y, lz, id, lo, hi, world, out);
     }
 
+    void emitRod(const MeshSnapshot& snap, int lx, int y, int lz, BlockId id, std::vector<float>& out)
+    {
+        const int facing = lightningRodFacing(id);
+        const int tile = blockInfo(id).tileSide;
+        auto place = [facing](float x, float y, float z) {
+            switch (facing)
+            {
+                case 1: return glm::vec3(x, 16.0f - y, z);
+                case 2: return glm::vec3(x, z, 16.0f - y);
+                case 3: return glm::vec3(y, z, x);
+                case 4: return glm::vec3(x, z, y);
+                case 5: return glm::vec3(16.0f - y, z, x);
+                default: return glm::vec3(x, y, z);
+            }
+        };
+        auto box = [&](float x0, float y0, float z0, float x1, float y1, float z1, float u0, float v0, float u1, float v1) {
+            const glm::vec3 a = place(x0, y0, z0), b = place(x1, y1, z1);
+            const glm::vec3 lo = glm::min(a, b) / 16.0f, hi = glm::max(a, b) / 16.0f;
+            PartFace faces[6];
+            for (int k = 0; k < 6; ++k) faces[k] = PartFace{ tile, u0, v0, u1, v1 };
+            emitPart(snap, lx, y, lz, id, lo, hi, faces, out);
+        };
+        box(7.0f, 0.0f, 7.0f, 9.0f, 12.0f, 9.0f, 0.0f, 4.0f, 2.0f, 16.0f);
+        box(6.0f, 12.0f, 6.0f, 10.0f, 16.0f, 10.0f, 0.0f, 0.0f, 4.0f, 4.0f);
+    }
+
     void emitChest(const MeshSnapshot& snap, int lx, int y, int lz, BlockId id, std::vector<float>& out)
     {
         const ChestState state = chestState(id);
@@ -1333,6 +1359,10 @@ void buildChunkMesh(const MeshSnapshot& snapshot, MeshResult& out)
                 else if (isChestFamily(id))
                 {
                     emitChest(snapshot, lx, y, lz, id, out.opaqueVertices);
+                }
+                else if (isLightningRod(id))
+                {
+                    emitRod(snapshot, lx, y, lz, id, out.opaqueVertices);
                 }
                 else
                 {

@@ -1385,6 +1385,338 @@ namespace
         { "Ender Chest", ChestTileFirst + 45, ChestTileFirst + 45 + 4, ChestTileFirst + 45 + 1, true, false, RenderType::Chest, 7, 22.5f },
         { "Ender Chest", ChestTileFirst + 45, ChestTileFirst + 45 + 4, ChestTileFirst + 45 + 1, true, false, RenderType::Chest, 7, 22.5f },
         { "Ender Chest", ChestTileFirst + 45, ChestTileFirst + 45 + 4, ChestTileFirst + 45 + 1, true, false, RenderType::Chest, 7, 22.5f },
+        { "Waxed Block of Copper", Tiles::CopperBlock, Tiles::CopperBlock, Tiles::CopperBlock, true, true, RenderType::Cube, 0, 3.0f },
+        { "Waxed Exposed Copper", ExposedCopper, ExposedCopper, ExposedCopper, true, true, RenderType::Cube, 0, 3.0f },
+        { "Waxed Weathered Copper", WeatheredCopper, WeatheredCopper, WeatheredCopper, true, true, RenderType::Cube, 0, 3.0f },
+        { "Waxed Oxidized Copper", OxidizedCopper, OxidizedCopper, OxidizedCopper, true, true, RenderType::Cube, 0, 3.0f },
+        { "Cut Copper", CutCopperTile + 0, CutCopperTile + 0, CutCopperTile + 0, true, true, RenderType::Cube, 0, 3.0f },
+        { "Exposed Cut Copper", CutCopperTile + 1, CutCopperTile + 1, CutCopperTile + 1, true, true, RenderType::Cube, 0, 3.0f },
+        { "Weathered Cut Copper", CutCopperTile + 2, CutCopperTile + 2, CutCopperTile + 2, true, true, RenderType::Cube, 0, 3.0f },
+        { "Oxidized Cut Copper", CutCopperTile + 3, CutCopperTile + 3, CutCopperTile + 3, true, true, RenderType::Cube, 0, 3.0f },
+        { "Waxed Cut Copper", CutCopperTile + 0, CutCopperTile + 0, CutCopperTile + 0, true, true, RenderType::Cube, 0, 3.0f },
+        { "Waxed Exposed Cut Copper", CutCopperTile + 1, CutCopperTile + 1, CutCopperTile + 1, true, true, RenderType::Cube, 0, 3.0f },
+        { "Waxed Weathered Cut Copper", CutCopperTile + 2, CutCopperTile + 2, CutCopperTile + 2, true, true, RenderType::Cube, 0, 3.0f },
+        { "Waxed Oxidized Cut Copper", CutCopperTile + 3, CutCopperTile + 3, CutCopperTile + 3, true, true, RenderType::Cube, 0, 3.0f },
+        { "Chiseled Copper", ChiseledCopperTile + 0, ChiseledCopperTile + 0, ChiseledCopperTile + 0, true, true, RenderType::Cube, 0, 3.0f },
+        { "Exposed Chiseled Copper", ChiseledCopperTile + 1, ChiseledCopperTile + 1, ChiseledCopperTile + 1, true, true, RenderType::Cube, 0, 3.0f },
+        { "Weathered Chiseled Copper", ChiseledCopperTile + 2, ChiseledCopperTile + 2, ChiseledCopperTile + 2, true, true, RenderType::Cube, 0, 3.0f },
+        { "Oxidized Chiseled Copper", ChiseledCopperTile + 3, ChiseledCopperTile + 3, ChiseledCopperTile + 3, true, true, RenderType::Cube, 0, 3.0f },
+        { "Waxed Chiseled Copper", ChiseledCopperTile + 0, ChiseledCopperTile + 0, ChiseledCopperTile + 0, true, true, RenderType::Cube, 0, 3.0f },
+        { "Waxed Exposed Chiseled Copper", ChiseledCopperTile + 1, ChiseledCopperTile + 1, ChiseledCopperTile + 1, true, true, RenderType::Cube, 0, 3.0f },
+        { "Waxed Weathered Chiseled Copper", ChiseledCopperTile + 2, ChiseledCopperTile + 2, ChiseledCopperTile + 2, true, true, RenderType::Cube, 0, 3.0f },
+        { "Waxed Oxidized Chiseled Copper", ChiseledCopperTile + 3, ChiseledCopperTile + 3, ChiseledCopperTile + 3, true, true, RenderType::Cube, 0, 3.0f },
+        { "Copper Grate", CopperGrateTile + 0, CopperGrateTile + 0, CopperGrateTile + 0, true, false, RenderType::Cube, 0, 3.0f },
+        { "Exposed Copper Grate", CopperGrateTile + 1, CopperGrateTile + 1, CopperGrateTile + 1, true, false, RenderType::Cube, 0, 3.0f },
+        { "Weathered Copper Grate", CopperGrateTile + 2, CopperGrateTile + 2, CopperGrateTile + 2, true, false, RenderType::Cube, 0, 3.0f },
+        { "Oxidized Copper Grate", CopperGrateTile + 3, CopperGrateTile + 3, CopperGrateTile + 3, true, false, RenderType::Cube, 0, 3.0f },
+        { "Waxed Copper Grate", CopperGrateTile + 0, CopperGrateTile + 0, CopperGrateTile + 0, true, false, RenderType::Cube, 0, 3.0f },
+        { "Waxed Exposed Copper Grate", CopperGrateTile + 1, CopperGrateTile + 1, CopperGrateTile + 1, true, false, RenderType::Cube, 0, 3.0f },
+        { "Waxed Weathered Copper Grate", CopperGrateTile + 2, CopperGrateTile + 2, CopperGrateTile + 2, true, false, RenderType::Cube, 0, 3.0f },
+        { "Waxed Oxidized Copper Grate", CopperGrateTile + 3, CopperGrateTile + 3, CopperGrateTile + 3, true, false, RenderType::Cube, 0, 3.0f },
+        { "Cut Copper Slab", CutCopperTile + 0, CutCopperTile + 0, CutCopperTile + 0, true, false, RenderType::Slab, 0, 3.0f },
+        { "Exposed Cut Copper Slab", CutCopperTile + 1, CutCopperTile + 1, CutCopperTile + 1, true, false, RenderType::Slab, 0, 3.0f },
+        { "Weathered Cut Copper Slab", CutCopperTile + 2, CutCopperTile + 2, CutCopperTile + 2, true, false, RenderType::Slab, 0, 3.0f },
+        { "Oxidized Cut Copper Slab", CutCopperTile + 3, CutCopperTile + 3, CutCopperTile + 3, true, false, RenderType::Slab, 0, 3.0f },
+        { "Waxed Cut Copper Slab", CutCopperTile + 0, CutCopperTile + 0, CutCopperTile + 0, true, false, RenderType::Slab, 0, 3.0f },
+        { "Waxed Exposed Cut Copper Slab", CutCopperTile + 1, CutCopperTile + 1, CutCopperTile + 1, true, false, RenderType::Slab, 0, 3.0f },
+        { "Waxed Weathered Cut Copper Slab", CutCopperTile + 2, CutCopperTile + 2, CutCopperTile + 2, true, false, RenderType::Slab, 0, 3.0f },
+        { "Waxed Oxidized Cut Copper Slab", CutCopperTile + 3, CutCopperTile + 3, CutCopperTile + 3, true, false, RenderType::Slab, 0, 3.0f },
+        { "Exposed Copper Bulb", CopperBulbStageTile + 0, CopperBulbStageTile + 0, CopperBulbStageTile + 0, true, true, RenderType::Cube, 0, 3.0f },
+        { "Exposed Copper Bulb", CopperBulbStageTile + 1, CopperBulbStageTile + 1, CopperBulbStageTile + 1, true, true, RenderType::Cube, 12, 3.0f },
+        { "Exposed Copper Bulb", CopperBulbStageTile + 2, CopperBulbStageTile + 2, CopperBulbStageTile + 2, true, true, RenderType::Cube, 0, 3.0f },
+        { "Exposed Copper Bulb", CopperBulbStageTile + 3, CopperBulbStageTile + 3, CopperBulbStageTile + 3, true, true, RenderType::Cube, 12, 3.0f },
+        { "Weathered Copper Bulb", CopperBulbStageTile + 4, CopperBulbStageTile + 4, CopperBulbStageTile + 4, true, true, RenderType::Cube, 0, 3.0f },
+        { "Weathered Copper Bulb", CopperBulbStageTile + 5, CopperBulbStageTile + 5, CopperBulbStageTile + 5, true, true, RenderType::Cube, 8, 3.0f },
+        { "Weathered Copper Bulb", CopperBulbStageTile + 6, CopperBulbStageTile + 6, CopperBulbStageTile + 6, true, true, RenderType::Cube, 0, 3.0f },
+        { "Weathered Copper Bulb", CopperBulbStageTile + 7, CopperBulbStageTile + 7, CopperBulbStageTile + 7, true, true, RenderType::Cube, 8, 3.0f },
+        { "Oxidized Copper Bulb", CopperBulbStageTile + 8, CopperBulbStageTile + 8, CopperBulbStageTile + 8, true, true, RenderType::Cube, 0, 3.0f },
+        { "Oxidized Copper Bulb", CopperBulbStageTile + 9, CopperBulbStageTile + 9, CopperBulbStageTile + 9, true, true, RenderType::Cube, 4, 3.0f },
+        { "Oxidized Copper Bulb", CopperBulbStageTile + 10, CopperBulbStageTile + 10, CopperBulbStageTile + 10, true, true, RenderType::Cube, 0, 3.0f },
+        { "Oxidized Copper Bulb", CopperBulbStageTile + 11, CopperBulbStageTile + 11, CopperBulbStageTile + 11, true, true, RenderType::Cube, 4, 3.0f },
+        { "Waxed Copper Bulb", CopperBulbTile, CopperBulbTile, CopperBulbTile, true, true, RenderType::Cube, 0, 3.0f },
+        { "Waxed Copper Bulb", CopperBulbLitTile, CopperBulbLitTile, CopperBulbLitTile, true, true, RenderType::Cube, 15, 3.0f },
+        { "Waxed Copper Bulb", CopperBulbPoweredTile, CopperBulbPoweredTile, CopperBulbPoweredTile, true, true, RenderType::Cube, 0, 3.0f },
+        { "Waxed Copper Bulb", CopperBulbLitPoweredTile, CopperBulbLitPoweredTile, CopperBulbLitPoweredTile, true, true, RenderType::Cube, 15, 3.0f },
+        { "Waxed Exposed Copper Bulb", CopperBulbStageTile + 0, CopperBulbStageTile + 0, CopperBulbStageTile + 0, true, true, RenderType::Cube, 0, 3.0f },
+        { "Waxed Exposed Copper Bulb", CopperBulbStageTile + 1, CopperBulbStageTile + 1, CopperBulbStageTile + 1, true, true, RenderType::Cube, 12, 3.0f },
+        { "Waxed Exposed Copper Bulb", CopperBulbStageTile + 2, CopperBulbStageTile + 2, CopperBulbStageTile + 2, true, true, RenderType::Cube, 0, 3.0f },
+        { "Waxed Exposed Copper Bulb", CopperBulbStageTile + 3, CopperBulbStageTile + 3, CopperBulbStageTile + 3, true, true, RenderType::Cube, 12, 3.0f },
+        { "Waxed Weathered Copper Bulb", CopperBulbStageTile + 4, CopperBulbStageTile + 4, CopperBulbStageTile + 4, true, true, RenderType::Cube, 0, 3.0f },
+        { "Waxed Weathered Copper Bulb", CopperBulbStageTile + 5, CopperBulbStageTile + 5, CopperBulbStageTile + 5, true, true, RenderType::Cube, 8, 3.0f },
+        { "Waxed Weathered Copper Bulb", CopperBulbStageTile + 6, CopperBulbStageTile + 6, CopperBulbStageTile + 6, true, true, RenderType::Cube, 0, 3.0f },
+        { "Waxed Weathered Copper Bulb", CopperBulbStageTile + 7, CopperBulbStageTile + 7, CopperBulbStageTile + 7, true, true, RenderType::Cube, 8, 3.0f },
+        { "Waxed Oxidized Copper Bulb", CopperBulbStageTile + 8, CopperBulbStageTile + 8, CopperBulbStageTile + 8, true, true, RenderType::Cube, 0, 3.0f },
+        { "Waxed Oxidized Copper Bulb", CopperBulbStageTile + 9, CopperBulbStageTile + 9, CopperBulbStageTile + 9, true, true, RenderType::Cube, 4, 3.0f },
+        { "Waxed Oxidized Copper Bulb", CopperBulbStageTile + 10, CopperBulbStageTile + 10, CopperBulbStageTile + 10, true, true, RenderType::Cube, 0, 3.0f },
+        { "Waxed Oxidized Copper Bulb", CopperBulbStageTile + 11, CopperBulbStageTile + 11, CopperBulbStageTile + 11, true, true, RenderType::Cube, 4, 3.0f },
+        { "Copper Door", CopperDoorBottomTile + 0, CopperDoorBottomTile + 0, CopperDoorBottomTile + 0, true, false, RenderType::Door, 0, 3.0f },
+        { "Copper Door", CopperDoorBottomTile + 0, CopperDoorBottomTile + 0, CopperDoorBottomTile + 0, true, false, RenderType::Door, 0, 3.0f },
+        { "Copper Door", CopperDoorBottomTile + 0, CopperDoorBottomTile + 0, CopperDoorBottomTile + 0, true, false, RenderType::Door, 0, 3.0f },
+        { "Copper Door", CopperDoorBottomTile + 0, CopperDoorBottomTile + 0, CopperDoorBottomTile + 0, true, false, RenderType::Door, 0, 3.0f },
+        { "Copper Door", CopperDoorBottomTile + 0, CopperDoorBottomTile + 0, CopperDoorBottomTile + 0, true, false, RenderType::Door, 0, 3.0f },
+        { "Copper Door", CopperDoorBottomTile + 0, CopperDoorBottomTile + 0, CopperDoorBottomTile + 0, true, false, RenderType::Door, 0, 3.0f },
+        { "Copper Door", CopperDoorBottomTile + 0, CopperDoorBottomTile + 0, CopperDoorBottomTile + 0, true, false, RenderType::Door, 0, 3.0f },
+        { "Copper Door", CopperDoorBottomTile + 0, CopperDoorBottomTile + 0, CopperDoorBottomTile + 0, true, false, RenderType::Door, 0, 3.0f },
+        { "Copper Door", CopperDoorTopTile + 0, CopperDoorTopTile + 0, CopperDoorTopTile + 0, true, false, RenderType::Door, 0, 3.0f },
+        { "Copper Door", CopperDoorTopTile + 0, CopperDoorTopTile + 0, CopperDoorTopTile + 0, true, false, RenderType::Door, 0, 3.0f },
+        { "Copper Door", CopperDoorTopTile + 0, CopperDoorTopTile + 0, CopperDoorTopTile + 0, true, false, RenderType::Door, 0, 3.0f },
+        { "Copper Door", CopperDoorTopTile + 0, CopperDoorTopTile + 0, CopperDoorTopTile + 0, true, false, RenderType::Door, 0, 3.0f },
+        { "Copper Door", CopperDoorTopTile + 0, CopperDoorTopTile + 0, CopperDoorTopTile + 0, true, false, RenderType::Door, 0, 3.0f },
+        { "Copper Door", CopperDoorTopTile + 0, CopperDoorTopTile + 0, CopperDoorTopTile + 0, true, false, RenderType::Door, 0, 3.0f },
+        { "Copper Door", CopperDoorTopTile + 0, CopperDoorTopTile + 0, CopperDoorTopTile + 0, true, false, RenderType::Door, 0, 3.0f },
+        { "Copper Door", CopperDoorTopTile + 0, CopperDoorTopTile + 0, CopperDoorTopTile + 0, true, false, RenderType::Door, 0, 3.0f },
+        { "Exposed Copper Door", CopperDoorBottomTile + 1, CopperDoorBottomTile + 1, CopperDoorBottomTile + 1, true, false, RenderType::Door, 0, 3.0f },
+        { "Exposed Copper Door", CopperDoorBottomTile + 1, CopperDoorBottomTile + 1, CopperDoorBottomTile + 1, true, false, RenderType::Door, 0, 3.0f },
+        { "Exposed Copper Door", CopperDoorBottomTile + 1, CopperDoorBottomTile + 1, CopperDoorBottomTile + 1, true, false, RenderType::Door, 0, 3.0f },
+        { "Exposed Copper Door", CopperDoorBottomTile + 1, CopperDoorBottomTile + 1, CopperDoorBottomTile + 1, true, false, RenderType::Door, 0, 3.0f },
+        { "Exposed Copper Door", CopperDoorBottomTile + 1, CopperDoorBottomTile + 1, CopperDoorBottomTile + 1, true, false, RenderType::Door, 0, 3.0f },
+        { "Exposed Copper Door", CopperDoorBottomTile + 1, CopperDoorBottomTile + 1, CopperDoorBottomTile + 1, true, false, RenderType::Door, 0, 3.0f },
+        { "Exposed Copper Door", CopperDoorBottomTile + 1, CopperDoorBottomTile + 1, CopperDoorBottomTile + 1, true, false, RenderType::Door, 0, 3.0f },
+        { "Exposed Copper Door", CopperDoorBottomTile + 1, CopperDoorBottomTile + 1, CopperDoorBottomTile + 1, true, false, RenderType::Door, 0, 3.0f },
+        { "Exposed Copper Door", CopperDoorTopTile + 1, CopperDoorTopTile + 1, CopperDoorTopTile + 1, true, false, RenderType::Door, 0, 3.0f },
+        { "Exposed Copper Door", CopperDoorTopTile + 1, CopperDoorTopTile + 1, CopperDoorTopTile + 1, true, false, RenderType::Door, 0, 3.0f },
+        { "Exposed Copper Door", CopperDoorTopTile + 1, CopperDoorTopTile + 1, CopperDoorTopTile + 1, true, false, RenderType::Door, 0, 3.0f },
+        { "Exposed Copper Door", CopperDoorTopTile + 1, CopperDoorTopTile + 1, CopperDoorTopTile + 1, true, false, RenderType::Door, 0, 3.0f },
+        { "Exposed Copper Door", CopperDoorTopTile + 1, CopperDoorTopTile + 1, CopperDoorTopTile + 1, true, false, RenderType::Door, 0, 3.0f },
+        { "Exposed Copper Door", CopperDoorTopTile + 1, CopperDoorTopTile + 1, CopperDoorTopTile + 1, true, false, RenderType::Door, 0, 3.0f },
+        { "Exposed Copper Door", CopperDoorTopTile + 1, CopperDoorTopTile + 1, CopperDoorTopTile + 1, true, false, RenderType::Door, 0, 3.0f },
+        { "Exposed Copper Door", CopperDoorTopTile + 1, CopperDoorTopTile + 1, CopperDoorTopTile + 1, true, false, RenderType::Door, 0, 3.0f },
+        { "Weathered Copper Door", CopperDoorBottomTile + 2, CopperDoorBottomTile + 2, CopperDoorBottomTile + 2, true, false, RenderType::Door, 0, 3.0f },
+        { "Weathered Copper Door", CopperDoorBottomTile + 2, CopperDoorBottomTile + 2, CopperDoorBottomTile + 2, true, false, RenderType::Door, 0, 3.0f },
+        { "Weathered Copper Door", CopperDoorBottomTile + 2, CopperDoorBottomTile + 2, CopperDoorBottomTile + 2, true, false, RenderType::Door, 0, 3.0f },
+        { "Weathered Copper Door", CopperDoorBottomTile + 2, CopperDoorBottomTile + 2, CopperDoorBottomTile + 2, true, false, RenderType::Door, 0, 3.0f },
+        { "Weathered Copper Door", CopperDoorBottomTile + 2, CopperDoorBottomTile + 2, CopperDoorBottomTile + 2, true, false, RenderType::Door, 0, 3.0f },
+        { "Weathered Copper Door", CopperDoorBottomTile + 2, CopperDoorBottomTile + 2, CopperDoorBottomTile + 2, true, false, RenderType::Door, 0, 3.0f },
+        { "Weathered Copper Door", CopperDoorBottomTile + 2, CopperDoorBottomTile + 2, CopperDoorBottomTile + 2, true, false, RenderType::Door, 0, 3.0f },
+        { "Weathered Copper Door", CopperDoorBottomTile + 2, CopperDoorBottomTile + 2, CopperDoorBottomTile + 2, true, false, RenderType::Door, 0, 3.0f },
+        { "Weathered Copper Door", CopperDoorTopTile + 2, CopperDoorTopTile + 2, CopperDoorTopTile + 2, true, false, RenderType::Door, 0, 3.0f },
+        { "Weathered Copper Door", CopperDoorTopTile + 2, CopperDoorTopTile + 2, CopperDoorTopTile + 2, true, false, RenderType::Door, 0, 3.0f },
+        { "Weathered Copper Door", CopperDoorTopTile + 2, CopperDoorTopTile + 2, CopperDoorTopTile + 2, true, false, RenderType::Door, 0, 3.0f },
+        { "Weathered Copper Door", CopperDoorTopTile + 2, CopperDoorTopTile + 2, CopperDoorTopTile + 2, true, false, RenderType::Door, 0, 3.0f },
+        { "Weathered Copper Door", CopperDoorTopTile + 2, CopperDoorTopTile + 2, CopperDoorTopTile + 2, true, false, RenderType::Door, 0, 3.0f },
+        { "Weathered Copper Door", CopperDoorTopTile + 2, CopperDoorTopTile + 2, CopperDoorTopTile + 2, true, false, RenderType::Door, 0, 3.0f },
+        { "Weathered Copper Door", CopperDoorTopTile + 2, CopperDoorTopTile + 2, CopperDoorTopTile + 2, true, false, RenderType::Door, 0, 3.0f },
+        { "Weathered Copper Door", CopperDoorTopTile + 2, CopperDoorTopTile + 2, CopperDoorTopTile + 2, true, false, RenderType::Door, 0, 3.0f },
+        { "Oxidized Copper Door", CopperDoorBottomTile + 3, CopperDoorBottomTile + 3, CopperDoorBottomTile + 3, true, false, RenderType::Door, 0, 3.0f },
+        { "Oxidized Copper Door", CopperDoorBottomTile + 3, CopperDoorBottomTile + 3, CopperDoorBottomTile + 3, true, false, RenderType::Door, 0, 3.0f },
+        { "Oxidized Copper Door", CopperDoorBottomTile + 3, CopperDoorBottomTile + 3, CopperDoorBottomTile + 3, true, false, RenderType::Door, 0, 3.0f },
+        { "Oxidized Copper Door", CopperDoorBottomTile + 3, CopperDoorBottomTile + 3, CopperDoorBottomTile + 3, true, false, RenderType::Door, 0, 3.0f },
+        { "Oxidized Copper Door", CopperDoorBottomTile + 3, CopperDoorBottomTile + 3, CopperDoorBottomTile + 3, true, false, RenderType::Door, 0, 3.0f },
+        { "Oxidized Copper Door", CopperDoorBottomTile + 3, CopperDoorBottomTile + 3, CopperDoorBottomTile + 3, true, false, RenderType::Door, 0, 3.0f },
+        { "Oxidized Copper Door", CopperDoorBottomTile + 3, CopperDoorBottomTile + 3, CopperDoorBottomTile + 3, true, false, RenderType::Door, 0, 3.0f },
+        { "Oxidized Copper Door", CopperDoorBottomTile + 3, CopperDoorBottomTile + 3, CopperDoorBottomTile + 3, true, false, RenderType::Door, 0, 3.0f },
+        { "Oxidized Copper Door", CopperDoorTopTile + 3, CopperDoorTopTile + 3, CopperDoorTopTile + 3, true, false, RenderType::Door, 0, 3.0f },
+        { "Oxidized Copper Door", CopperDoorTopTile + 3, CopperDoorTopTile + 3, CopperDoorTopTile + 3, true, false, RenderType::Door, 0, 3.0f },
+        { "Oxidized Copper Door", CopperDoorTopTile + 3, CopperDoorTopTile + 3, CopperDoorTopTile + 3, true, false, RenderType::Door, 0, 3.0f },
+        { "Oxidized Copper Door", CopperDoorTopTile + 3, CopperDoorTopTile + 3, CopperDoorTopTile + 3, true, false, RenderType::Door, 0, 3.0f },
+        { "Oxidized Copper Door", CopperDoorTopTile + 3, CopperDoorTopTile + 3, CopperDoorTopTile + 3, true, false, RenderType::Door, 0, 3.0f },
+        { "Oxidized Copper Door", CopperDoorTopTile + 3, CopperDoorTopTile + 3, CopperDoorTopTile + 3, true, false, RenderType::Door, 0, 3.0f },
+        { "Oxidized Copper Door", CopperDoorTopTile + 3, CopperDoorTopTile + 3, CopperDoorTopTile + 3, true, false, RenderType::Door, 0, 3.0f },
+        { "Oxidized Copper Door", CopperDoorTopTile + 3, CopperDoorTopTile + 3, CopperDoorTopTile + 3, true, false, RenderType::Door, 0, 3.0f },
+        { "Waxed Copper Door", CopperDoorBottomTile + 0, CopperDoorBottomTile + 0, CopperDoorBottomTile + 0, true, false, RenderType::Door, 0, 3.0f },
+        { "Waxed Copper Door", CopperDoorBottomTile + 0, CopperDoorBottomTile + 0, CopperDoorBottomTile + 0, true, false, RenderType::Door, 0, 3.0f },
+        { "Waxed Copper Door", CopperDoorBottomTile + 0, CopperDoorBottomTile + 0, CopperDoorBottomTile + 0, true, false, RenderType::Door, 0, 3.0f },
+        { "Waxed Copper Door", CopperDoorBottomTile + 0, CopperDoorBottomTile + 0, CopperDoorBottomTile + 0, true, false, RenderType::Door, 0, 3.0f },
+        { "Waxed Copper Door", CopperDoorBottomTile + 0, CopperDoorBottomTile + 0, CopperDoorBottomTile + 0, true, false, RenderType::Door, 0, 3.0f },
+        { "Waxed Copper Door", CopperDoorBottomTile + 0, CopperDoorBottomTile + 0, CopperDoorBottomTile + 0, true, false, RenderType::Door, 0, 3.0f },
+        { "Waxed Copper Door", CopperDoorBottomTile + 0, CopperDoorBottomTile + 0, CopperDoorBottomTile + 0, true, false, RenderType::Door, 0, 3.0f },
+        { "Waxed Copper Door", CopperDoorBottomTile + 0, CopperDoorBottomTile + 0, CopperDoorBottomTile + 0, true, false, RenderType::Door, 0, 3.0f },
+        { "Waxed Copper Door", CopperDoorTopTile + 0, CopperDoorTopTile + 0, CopperDoorTopTile + 0, true, false, RenderType::Door, 0, 3.0f },
+        { "Waxed Copper Door", CopperDoorTopTile + 0, CopperDoorTopTile + 0, CopperDoorTopTile + 0, true, false, RenderType::Door, 0, 3.0f },
+        { "Waxed Copper Door", CopperDoorTopTile + 0, CopperDoorTopTile + 0, CopperDoorTopTile + 0, true, false, RenderType::Door, 0, 3.0f },
+        { "Waxed Copper Door", CopperDoorTopTile + 0, CopperDoorTopTile + 0, CopperDoorTopTile + 0, true, false, RenderType::Door, 0, 3.0f },
+        { "Waxed Copper Door", CopperDoorTopTile + 0, CopperDoorTopTile + 0, CopperDoorTopTile + 0, true, false, RenderType::Door, 0, 3.0f },
+        { "Waxed Copper Door", CopperDoorTopTile + 0, CopperDoorTopTile + 0, CopperDoorTopTile + 0, true, false, RenderType::Door, 0, 3.0f },
+        { "Waxed Copper Door", CopperDoorTopTile + 0, CopperDoorTopTile + 0, CopperDoorTopTile + 0, true, false, RenderType::Door, 0, 3.0f },
+        { "Waxed Copper Door", CopperDoorTopTile + 0, CopperDoorTopTile + 0, CopperDoorTopTile + 0, true, false, RenderType::Door, 0, 3.0f },
+        { "Waxed Exposed Copper Door", CopperDoorBottomTile + 1, CopperDoorBottomTile + 1, CopperDoorBottomTile + 1, true, false, RenderType::Door, 0, 3.0f },
+        { "Waxed Exposed Copper Door", CopperDoorBottomTile + 1, CopperDoorBottomTile + 1, CopperDoorBottomTile + 1, true, false, RenderType::Door, 0, 3.0f },
+        { "Waxed Exposed Copper Door", CopperDoorBottomTile + 1, CopperDoorBottomTile + 1, CopperDoorBottomTile + 1, true, false, RenderType::Door, 0, 3.0f },
+        { "Waxed Exposed Copper Door", CopperDoorBottomTile + 1, CopperDoorBottomTile + 1, CopperDoorBottomTile + 1, true, false, RenderType::Door, 0, 3.0f },
+        { "Waxed Exposed Copper Door", CopperDoorBottomTile + 1, CopperDoorBottomTile + 1, CopperDoorBottomTile + 1, true, false, RenderType::Door, 0, 3.0f },
+        { "Waxed Exposed Copper Door", CopperDoorBottomTile + 1, CopperDoorBottomTile + 1, CopperDoorBottomTile + 1, true, false, RenderType::Door, 0, 3.0f },
+        { "Waxed Exposed Copper Door", CopperDoorBottomTile + 1, CopperDoorBottomTile + 1, CopperDoorBottomTile + 1, true, false, RenderType::Door, 0, 3.0f },
+        { "Waxed Exposed Copper Door", CopperDoorBottomTile + 1, CopperDoorBottomTile + 1, CopperDoorBottomTile + 1, true, false, RenderType::Door, 0, 3.0f },
+        { "Waxed Exposed Copper Door", CopperDoorTopTile + 1, CopperDoorTopTile + 1, CopperDoorTopTile + 1, true, false, RenderType::Door, 0, 3.0f },
+        { "Waxed Exposed Copper Door", CopperDoorTopTile + 1, CopperDoorTopTile + 1, CopperDoorTopTile + 1, true, false, RenderType::Door, 0, 3.0f },
+        { "Waxed Exposed Copper Door", CopperDoorTopTile + 1, CopperDoorTopTile + 1, CopperDoorTopTile + 1, true, false, RenderType::Door, 0, 3.0f },
+        { "Waxed Exposed Copper Door", CopperDoorTopTile + 1, CopperDoorTopTile + 1, CopperDoorTopTile + 1, true, false, RenderType::Door, 0, 3.0f },
+        { "Waxed Exposed Copper Door", CopperDoorTopTile + 1, CopperDoorTopTile + 1, CopperDoorTopTile + 1, true, false, RenderType::Door, 0, 3.0f },
+        { "Waxed Exposed Copper Door", CopperDoorTopTile + 1, CopperDoorTopTile + 1, CopperDoorTopTile + 1, true, false, RenderType::Door, 0, 3.0f },
+        { "Waxed Exposed Copper Door", CopperDoorTopTile + 1, CopperDoorTopTile + 1, CopperDoorTopTile + 1, true, false, RenderType::Door, 0, 3.0f },
+        { "Waxed Exposed Copper Door", CopperDoorTopTile + 1, CopperDoorTopTile + 1, CopperDoorTopTile + 1, true, false, RenderType::Door, 0, 3.0f },
+        { "Waxed Weathered Copper Door", CopperDoorBottomTile + 2, CopperDoorBottomTile + 2, CopperDoorBottomTile + 2, true, false, RenderType::Door, 0, 3.0f },
+        { "Waxed Weathered Copper Door", CopperDoorBottomTile + 2, CopperDoorBottomTile + 2, CopperDoorBottomTile + 2, true, false, RenderType::Door, 0, 3.0f },
+        { "Waxed Weathered Copper Door", CopperDoorBottomTile + 2, CopperDoorBottomTile + 2, CopperDoorBottomTile + 2, true, false, RenderType::Door, 0, 3.0f },
+        { "Waxed Weathered Copper Door", CopperDoorBottomTile + 2, CopperDoorBottomTile + 2, CopperDoorBottomTile + 2, true, false, RenderType::Door, 0, 3.0f },
+        { "Waxed Weathered Copper Door", CopperDoorBottomTile + 2, CopperDoorBottomTile + 2, CopperDoorBottomTile + 2, true, false, RenderType::Door, 0, 3.0f },
+        { "Waxed Weathered Copper Door", CopperDoorBottomTile + 2, CopperDoorBottomTile + 2, CopperDoorBottomTile + 2, true, false, RenderType::Door, 0, 3.0f },
+        { "Waxed Weathered Copper Door", CopperDoorBottomTile + 2, CopperDoorBottomTile + 2, CopperDoorBottomTile + 2, true, false, RenderType::Door, 0, 3.0f },
+        { "Waxed Weathered Copper Door", CopperDoorBottomTile + 2, CopperDoorBottomTile + 2, CopperDoorBottomTile + 2, true, false, RenderType::Door, 0, 3.0f },
+        { "Waxed Weathered Copper Door", CopperDoorTopTile + 2, CopperDoorTopTile + 2, CopperDoorTopTile + 2, true, false, RenderType::Door, 0, 3.0f },
+        { "Waxed Weathered Copper Door", CopperDoorTopTile + 2, CopperDoorTopTile + 2, CopperDoorTopTile + 2, true, false, RenderType::Door, 0, 3.0f },
+        { "Waxed Weathered Copper Door", CopperDoorTopTile + 2, CopperDoorTopTile + 2, CopperDoorTopTile + 2, true, false, RenderType::Door, 0, 3.0f },
+        { "Waxed Weathered Copper Door", CopperDoorTopTile + 2, CopperDoorTopTile + 2, CopperDoorTopTile + 2, true, false, RenderType::Door, 0, 3.0f },
+        { "Waxed Weathered Copper Door", CopperDoorTopTile + 2, CopperDoorTopTile + 2, CopperDoorTopTile + 2, true, false, RenderType::Door, 0, 3.0f },
+        { "Waxed Weathered Copper Door", CopperDoorTopTile + 2, CopperDoorTopTile + 2, CopperDoorTopTile + 2, true, false, RenderType::Door, 0, 3.0f },
+        { "Waxed Weathered Copper Door", CopperDoorTopTile + 2, CopperDoorTopTile + 2, CopperDoorTopTile + 2, true, false, RenderType::Door, 0, 3.0f },
+        { "Waxed Weathered Copper Door", CopperDoorTopTile + 2, CopperDoorTopTile + 2, CopperDoorTopTile + 2, true, false, RenderType::Door, 0, 3.0f },
+        { "Waxed Oxidized Copper Door", CopperDoorBottomTile + 3, CopperDoorBottomTile + 3, CopperDoorBottomTile + 3, true, false, RenderType::Door, 0, 3.0f },
+        { "Waxed Oxidized Copper Door", CopperDoorBottomTile + 3, CopperDoorBottomTile + 3, CopperDoorBottomTile + 3, true, false, RenderType::Door, 0, 3.0f },
+        { "Waxed Oxidized Copper Door", CopperDoorBottomTile + 3, CopperDoorBottomTile + 3, CopperDoorBottomTile + 3, true, false, RenderType::Door, 0, 3.0f },
+        { "Waxed Oxidized Copper Door", CopperDoorBottomTile + 3, CopperDoorBottomTile + 3, CopperDoorBottomTile + 3, true, false, RenderType::Door, 0, 3.0f },
+        { "Waxed Oxidized Copper Door", CopperDoorBottomTile + 3, CopperDoorBottomTile + 3, CopperDoorBottomTile + 3, true, false, RenderType::Door, 0, 3.0f },
+        { "Waxed Oxidized Copper Door", CopperDoorBottomTile + 3, CopperDoorBottomTile + 3, CopperDoorBottomTile + 3, true, false, RenderType::Door, 0, 3.0f },
+        { "Waxed Oxidized Copper Door", CopperDoorBottomTile + 3, CopperDoorBottomTile + 3, CopperDoorBottomTile + 3, true, false, RenderType::Door, 0, 3.0f },
+        { "Waxed Oxidized Copper Door", CopperDoorBottomTile + 3, CopperDoorBottomTile + 3, CopperDoorBottomTile + 3, true, false, RenderType::Door, 0, 3.0f },
+        { "Waxed Oxidized Copper Door", CopperDoorTopTile + 3, CopperDoorTopTile + 3, CopperDoorTopTile + 3, true, false, RenderType::Door, 0, 3.0f },
+        { "Waxed Oxidized Copper Door", CopperDoorTopTile + 3, CopperDoorTopTile + 3, CopperDoorTopTile + 3, true, false, RenderType::Door, 0, 3.0f },
+        { "Waxed Oxidized Copper Door", CopperDoorTopTile + 3, CopperDoorTopTile + 3, CopperDoorTopTile + 3, true, false, RenderType::Door, 0, 3.0f },
+        { "Waxed Oxidized Copper Door", CopperDoorTopTile + 3, CopperDoorTopTile + 3, CopperDoorTopTile + 3, true, false, RenderType::Door, 0, 3.0f },
+        { "Waxed Oxidized Copper Door", CopperDoorTopTile + 3, CopperDoorTopTile + 3, CopperDoorTopTile + 3, true, false, RenderType::Door, 0, 3.0f },
+        { "Waxed Oxidized Copper Door", CopperDoorTopTile + 3, CopperDoorTopTile + 3, CopperDoorTopTile + 3, true, false, RenderType::Door, 0, 3.0f },
+        { "Waxed Oxidized Copper Door", CopperDoorTopTile + 3, CopperDoorTopTile + 3, CopperDoorTopTile + 3, true, false, RenderType::Door, 0, 3.0f },
+        { "Waxed Oxidized Copper Door", CopperDoorTopTile + 3, CopperDoorTopTile + 3, CopperDoorTopTile + 3, true, false, RenderType::Door, 0, 3.0f },
+        { "Copper Trapdoor", CopperTrapdoorTile + 0, CopperTrapdoorTile + 0, CopperTrapdoorTile + 0, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Copper Trapdoor", CopperTrapdoorTile + 0, CopperTrapdoorTile + 0, CopperTrapdoorTile + 0, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Copper Trapdoor", CopperTrapdoorTile + 0, CopperTrapdoorTile + 0, CopperTrapdoorTile + 0, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Copper Trapdoor", CopperTrapdoorTile + 0, CopperTrapdoorTile + 0, CopperTrapdoorTile + 0, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Copper Trapdoor", CopperTrapdoorTile + 0, CopperTrapdoorTile + 0, CopperTrapdoorTile + 0, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Copper Trapdoor", CopperTrapdoorTile + 0, CopperTrapdoorTile + 0, CopperTrapdoorTile + 0, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Copper Trapdoor", CopperTrapdoorTile + 0, CopperTrapdoorTile + 0, CopperTrapdoorTile + 0, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Copper Trapdoor", CopperTrapdoorTile + 0, CopperTrapdoorTile + 0, CopperTrapdoorTile + 0, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Copper Trapdoor", CopperTrapdoorTile + 0, CopperTrapdoorTile + 0, CopperTrapdoorTile + 0, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Copper Trapdoor", CopperTrapdoorTile + 0, CopperTrapdoorTile + 0, CopperTrapdoorTile + 0, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Copper Trapdoor", CopperTrapdoorTile + 0, CopperTrapdoorTile + 0, CopperTrapdoorTile + 0, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Copper Trapdoor", CopperTrapdoorTile + 0, CopperTrapdoorTile + 0, CopperTrapdoorTile + 0, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Copper Trapdoor", CopperTrapdoorTile + 0, CopperTrapdoorTile + 0, CopperTrapdoorTile + 0, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Copper Trapdoor", CopperTrapdoorTile + 0, CopperTrapdoorTile + 0, CopperTrapdoorTile + 0, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Copper Trapdoor", CopperTrapdoorTile + 0, CopperTrapdoorTile + 0, CopperTrapdoorTile + 0, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Copper Trapdoor", CopperTrapdoorTile + 0, CopperTrapdoorTile + 0, CopperTrapdoorTile + 0, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Exposed Copper Trapdoor", CopperTrapdoorTile + 1, CopperTrapdoorTile + 1, CopperTrapdoorTile + 1, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Exposed Copper Trapdoor", CopperTrapdoorTile + 1, CopperTrapdoorTile + 1, CopperTrapdoorTile + 1, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Exposed Copper Trapdoor", CopperTrapdoorTile + 1, CopperTrapdoorTile + 1, CopperTrapdoorTile + 1, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Exposed Copper Trapdoor", CopperTrapdoorTile + 1, CopperTrapdoorTile + 1, CopperTrapdoorTile + 1, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Exposed Copper Trapdoor", CopperTrapdoorTile + 1, CopperTrapdoorTile + 1, CopperTrapdoorTile + 1, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Exposed Copper Trapdoor", CopperTrapdoorTile + 1, CopperTrapdoorTile + 1, CopperTrapdoorTile + 1, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Exposed Copper Trapdoor", CopperTrapdoorTile + 1, CopperTrapdoorTile + 1, CopperTrapdoorTile + 1, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Exposed Copper Trapdoor", CopperTrapdoorTile + 1, CopperTrapdoorTile + 1, CopperTrapdoorTile + 1, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Exposed Copper Trapdoor", CopperTrapdoorTile + 1, CopperTrapdoorTile + 1, CopperTrapdoorTile + 1, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Exposed Copper Trapdoor", CopperTrapdoorTile + 1, CopperTrapdoorTile + 1, CopperTrapdoorTile + 1, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Exposed Copper Trapdoor", CopperTrapdoorTile + 1, CopperTrapdoorTile + 1, CopperTrapdoorTile + 1, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Exposed Copper Trapdoor", CopperTrapdoorTile + 1, CopperTrapdoorTile + 1, CopperTrapdoorTile + 1, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Exposed Copper Trapdoor", CopperTrapdoorTile + 1, CopperTrapdoorTile + 1, CopperTrapdoorTile + 1, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Exposed Copper Trapdoor", CopperTrapdoorTile + 1, CopperTrapdoorTile + 1, CopperTrapdoorTile + 1, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Exposed Copper Trapdoor", CopperTrapdoorTile + 1, CopperTrapdoorTile + 1, CopperTrapdoorTile + 1, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Exposed Copper Trapdoor", CopperTrapdoorTile + 1, CopperTrapdoorTile + 1, CopperTrapdoorTile + 1, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Weathered Copper Trapdoor", CopperTrapdoorTile + 2, CopperTrapdoorTile + 2, CopperTrapdoorTile + 2, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Weathered Copper Trapdoor", CopperTrapdoorTile + 2, CopperTrapdoorTile + 2, CopperTrapdoorTile + 2, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Weathered Copper Trapdoor", CopperTrapdoorTile + 2, CopperTrapdoorTile + 2, CopperTrapdoorTile + 2, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Weathered Copper Trapdoor", CopperTrapdoorTile + 2, CopperTrapdoorTile + 2, CopperTrapdoorTile + 2, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Weathered Copper Trapdoor", CopperTrapdoorTile + 2, CopperTrapdoorTile + 2, CopperTrapdoorTile + 2, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Weathered Copper Trapdoor", CopperTrapdoorTile + 2, CopperTrapdoorTile + 2, CopperTrapdoorTile + 2, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Weathered Copper Trapdoor", CopperTrapdoorTile + 2, CopperTrapdoorTile + 2, CopperTrapdoorTile + 2, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Weathered Copper Trapdoor", CopperTrapdoorTile + 2, CopperTrapdoorTile + 2, CopperTrapdoorTile + 2, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Weathered Copper Trapdoor", CopperTrapdoorTile + 2, CopperTrapdoorTile + 2, CopperTrapdoorTile + 2, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Weathered Copper Trapdoor", CopperTrapdoorTile + 2, CopperTrapdoorTile + 2, CopperTrapdoorTile + 2, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Weathered Copper Trapdoor", CopperTrapdoorTile + 2, CopperTrapdoorTile + 2, CopperTrapdoorTile + 2, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Weathered Copper Trapdoor", CopperTrapdoorTile + 2, CopperTrapdoorTile + 2, CopperTrapdoorTile + 2, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Weathered Copper Trapdoor", CopperTrapdoorTile + 2, CopperTrapdoorTile + 2, CopperTrapdoorTile + 2, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Weathered Copper Trapdoor", CopperTrapdoorTile + 2, CopperTrapdoorTile + 2, CopperTrapdoorTile + 2, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Weathered Copper Trapdoor", CopperTrapdoorTile + 2, CopperTrapdoorTile + 2, CopperTrapdoorTile + 2, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Weathered Copper Trapdoor", CopperTrapdoorTile + 2, CopperTrapdoorTile + 2, CopperTrapdoorTile + 2, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Oxidized Copper Trapdoor", CopperTrapdoorTile + 3, CopperTrapdoorTile + 3, CopperTrapdoorTile + 3, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Oxidized Copper Trapdoor", CopperTrapdoorTile + 3, CopperTrapdoorTile + 3, CopperTrapdoorTile + 3, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Oxidized Copper Trapdoor", CopperTrapdoorTile + 3, CopperTrapdoorTile + 3, CopperTrapdoorTile + 3, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Oxidized Copper Trapdoor", CopperTrapdoorTile + 3, CopperTrapdoorTile + 3, CopperTrapdoorTile + 3, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Oxidized Copper Trapdoor", CopperTrapdoorTile + 3, CopperTrapdoorTile + 3, CopperTrapdoorTile + 3, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Oxidized Copper Trapdoor", CopperTrapdoorTile + 3, CopperTrapdoorTile + 3, CopperTrapdoorTile + 3, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Oxidized Copper Trapdoor", CopperTrapdoorTile + 3, CopperTrapdoorTile + 3, CopperTrapdoorTile + 3, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Oxidized Copper Trapdoor", CopperTrapdoorTile + 3, CopperTrapdoorTile + 3, CopperTrapdoorTile + 3, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Oxidized Copper Trapdoor", CopperTrapdoorTile + 3, CopperTrapdoorTile + 3, CopperTrapdoorTile + 3, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Oxidized Copper Trapdoor", CopperTrapdoorTile + 3, CopperTrapdoorTile + 3, CopperTrapdoorTile + 3, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Oxidized Copper Trapdoor", CopperTrapdoorTile + 3, CopperTrapdoorTile + 3, CopperTrapdoorTile + 3, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Oxidized Copper Trapdoor", CopperTrapdoorTile + 3, CopperTrapdoorTile + 3, CopperTrapdoorTile + 3, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Oxidized Copper Trapdoor", CopperTrapdoorTile + 3, CopperTrapdoorTile + 3, CopperTrapdoorTile + 3, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Oxidized Copper Trapdoor", CopperTrapdoorTile + 3, CopperTrapdoorTile + 3, CopperTrapdoorTile + 3, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Oxidized Copper Trapdoor", CopperTrapdoorTile + 3, CopperTrapdoorTile + 3, CopperTrapdoorTile + 3, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Oxidized Copper Trapdoor", CopperTrapdoorTile + 3, CopperTrapdoorTile + 3, CopperTrapdoorTile + 3, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Waxed Copper Trapdoor", CopperTrapdoorTile + 0, CopperTrapdoorTile + 0, CopperTrapdoorTile + 0, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Waxed Copper Trapdoor", CopperTrapdoorTile + 0, CopperTrapdoorTile + 0, CopperTrapdoorTile + 0, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Waxed Copper Trapdoor", CopperTrapdoorTile + 0, CopperTrapdoorTile + 0, CopperTrapdoorTile + 0, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Waxed Copper Trapdoor", CopperTrapdoorTile + 0, CopperTrapdoorTile + 0, CopperTrapdoorTile + 0, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Waxed Copper Trapdoor", CopperTrapdoorTile + 0, CopperTrapdoorTile + 0, CopperTrapdoorTile + 0, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Waxed Copper Trapdoor", CopperTrapdoorTile + 0, CopperTrapdoorTile + 0, CopperTrapdoorTile + 0, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Waxed Copper Trapdoor", CopperTrapdoorTile + 0, CopperTrapdoorTile + 0, CopperTrapdoorTile + 0, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Waxed Copper Trapdoor", CopperTrapdoorTile + 0, CopperTrapdoorTile + 0, CopperTrapdoorTile + 0, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Waxed Copper Trapdoor", CopperTrapdoorTile + 0, CopperTrapdoorTile + 0, CopperTrapdoorTile + 0, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Waxed Copper Trapdoor", CopperTrapdoorTile + 0, CopperTrapdoorTile + 0, CopperTrapdoorTile + 0, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Waxed Copper Trapdoor", CopperTrapdoorTile + 0, CopperTrapdoorTile + 0, CopperTrapdoorTile + 0, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Waxed Copper Trapdoor", CopperTrapdoorTile + 0, CopperTrapdoorTile + 0, CopperTrapdoorTile + 0, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Waxed Copper Trapdoor", CopperTrapdoorTile + 0, CopperTrapdoorTile + 0, CopperTrapdoorTile + 0, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Waxed Copper Trapdoor", CopperTrapdoorTile + 0, CopperTrapdoorTile + 0, CopperTrapdoorTile + 0, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Waxed Copper Trapdoor", CopperTrapdoorTile + 0, CopperTrapdoorTile + 0, CopperTrapdoorTile + 0, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Waxed Copper Trapdoor", CopperTrapdoorTile + 0, CopperTrapdoorTile + 0, CopperTrapdoorTile + 0, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Waxed Exposed Copper Trapdoor", CopperTrapdoorTile + 1, CopperTrapdoorTile + 1, CopperTrapdoorTile + 1, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Waxed Exposed Copper Trapdoor", CopperTrapdoorTile + 1, CopperTrapdoorTile + 1, CopperTrapdoorTile + 1, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Waxed Exposed Copper Trapdoor", CopperTrapdoorTile + 1, CopperTrapdoorTile + 1, CopperTrapdoorTile + 1, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Waxed Exposed Copper Trapdoor", CopperTrapdoorTile + 1, CopperTrapdoorTile + 1, CopperTrapdoorTile + 1, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Waxed Exposed Copper Trapdoor", CopperTrapdoorTile + 1, CopperTrapdoorTile + 1, CopperTrapdoorTile + 1, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Waxed Exposed Copper Trapdoor", CopperTrapdoorTile + 1, CopperTrapdoorTile + 1, CopperTrapdoorTile + 1, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Waxed Exposed Copper Trapdoor", CopperTrapdoorTile + 1, CopperTrapdoorTile + 1, CopperTrapdoorTile + 1, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Waxed Exposed Copper Trapdoor", CopperTrapdoorTile + 1, CopperTrapdoorTile + 1, CopperTrapdoorTile + 1, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Waxed Exposed Copper Trapdoor", CopperTrapdoorTile + 1, CopperTrapdoorTile + 1, CopperTrapdoorTile + 1, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Waxed Exposed Copper Trapdoor", CopperTrapdoorTile + 1, CopperTrapdoorTile + 1, CopperTrapdoorTile + 1, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Waxed Exposed Copper Trapdoor", CopperTrapdoorTile + 1, CopperTrapdoorTile + 1, CopperTrapdoorTile + 1, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Waxed Exposed Copper Trapdoor", CopperTrapdoorTile + 1, CopperTrapdoorTile + 1, CopperTrapdoorTile + 1, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Waxed Exposed Copper Trapdoor", CopperTrapdoorTile + 1, CopperTrapdoorTile + 1, CopperTrapdoorTile + 1, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Waxed Exposed Copper Trapdoor", CopperTrapdoorTile + 1, CopperTrapdoorTile + 1, CopperTrapdoorTile + 1, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Waxed Exposed Copper Trapdoor", CopperTrapdoorTile + 1, CopperTrapdoorTile + 1, CopperTrapdoorTile + 1, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Waxed Exposed Copper Trapdoor", CopperTrapdoorTile + 1, CopperTrapdoorTile + 1, CopperTrapdoorTile + 1, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Waxed Weathered Copper Trapdoor", CopperTrapdoorTile + 2, CopperTrapdoorTile + 2, CopperTrapdoorTile + 2, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Waxed Weathered Copper Trapdoor", CopperTrapdoorTile + 2, CopperTrapdoorTile + 2, CopperTrapdoorTile + 2, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Waxed Weathered Copper Trapdoor", CopperTrapdoorTile + 2, CopperTrapdoorTile + 2, CopperTrapdoorTile + 2, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Waxed Weathered Copper Trapdoor", CopperTrapdoorTile + 2, CopperTrapdoorTile + 2, CopperTrapdoorTile + 2, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Waxed Weathered Copper Trapdoor", CopperTrapdoorTile + 2, CopperTrapdoorTile + 2, CopperTrapdoorTile + 2, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Waxed Weathered Copper Trapdoor", CopperTrapdoorTile + 2, CopperTrapdoorTile + 2, CopperTrapdoorTile + 2, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Waxed Weathered Copper Trapdoor", CopperTrapdoorTile + 2, CopperTrapdoorTile + 2, CopperTrapdoorTile + 2, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Waxed Weathered Copper Trapdoor", CopperTrapdoorTile + 2, CopperTrapdoorTile + 2, CopperTrapdoorTile + 2, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Waxed Weathered Copper Trapdoor", CopperTrapdoorTile + 2, CopperTrapdoorTile + 2, CopperTrapdoorTile + 2, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Waxed Weathered Copper Trapdoor", CopperTrapdoorTile + 2, CopperTrapdoorTile + 2, CopperTrapdoorTile + 2, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Waxed Weathered Copper Trapdoor", CopperTrapdoorTile + 2, CopperTrapdoorTile + 2, CopperTrapdoorTile + 2, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Waxed Weathered Copper Trapdoor", CopperTrapdoorTile + 2, CopperTrapdoorTile + 2, CopperTrapdoorTile + 2, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Waxed Weathered Copper Trapdoor", CopperTrapdoorTile + 2, CopperTrapdoorTile + 2, CopperTrapdoorTile + 2, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Waxed Weathered Copper Trapdoor", CopperTrapdoorTile + 2, CopperTrapdoorTile + 2, CopperTrapdoorTile + 2, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Waxed Weathered Copper Trapdoor", CopperTrapdoorTile + 2, CopperTrapdoorTile + 2, CopperTrapdoorTile + 2, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Waxed Weathered Copper Trapdoor", CopperTrapdoorTile + 2, CopperTrapdoorTile + 2, CopperTrapdoorTile + 2, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Waxed Oxidized Copper Trapdoor", CopperTrapdoorTile + 3, CopperTrapdoorTile + 3, CopperTrapdoorTile + 3, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Waxed Oxidized Copper Trapdoor", CopperTrapdoorTile + 3, CopperTrapdoorTile + 3, CopperTrapdoorTile + 3, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Waxed Oxidized Copper Trapdoor", CopperTrapdoorTile + 3, CopperTrapdoorTile + 3, CopperTrapdoorTile + 3, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Waxed Oxidized Copper Trapdoor", CopperTrapdoorTile + 3, CopperTrapdoorTile + 3, CopperTrapdoorTile + 3, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Waxed Oxidized Copper Trapdoor", CopperTrapdoorTile + 3, CopperTrapdoorTile + 3, CopperTrapdoorTile + 3, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Waxed Oxidized Copper Trapdoor", CopperTrapdoorTile + 3, CopperTrapdoorTile + 3, CopperTrapdoorTile + 3, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Waxed Oxidized Copper Trapdoor", CopperTrapdoorTile + 3, CopperTrapdoorTile + 3, CopperTrapdoorTile + 3, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Waxed Oxidized Copper Trapdoor", CopperTrapdoorTile + 3, CopperTrapdoorTile + 3, CopperTrapdoorTile + 3, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Waxed Oxidized Copper Trapdoor", CopperTrapdoorTile + 3, CopperTrapdoorTile + 3, CopperTrapdoorTile + 3, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Waxed Oxidized Copper Trapdoor", CopperTrapdoorTile + 3, CopperTrapdoorTile + 3, CopperTrapdoorTile + 3, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Waxed Oxidized Copper Trapdoor", CopperTrapdoorTile + 3, CopperTrapdoorTile + 3, CopperTrapdoorTile + 3, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Waxed Oxidized Copper Trapdoor", CopperTrapdoorTile + 3, CopperTrapdoorTile + 3, CopperTrapdoorTile + 3, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Waxed Oxidized Copper Trapdoor", CopperTrapdoorTile + 3, CopperTrapdoorTile + 3, CopperTrapdoorTile + 3, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Waxed Oxidized Copper Trapdoor", CopperTrapdoorTile + 3, CopperTrapdoorTile + 3, CopperTrapdoorTile + 3, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Waxed Oxidized Copper Trapdoor", CopperTrapdoorTile + 3, CopperTrapdoorTile + 3, CopperTrapdoorTile + 3, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Waxed Oxidized Copper Trapdoor", CopperTrapdoorTile + 3, CopperTrapdoorTile + 3, CopperTrapdoorTile + 3, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Lightning Rod", LightningRodTile, LightningRodTile, LightningRodTile, true, false, RenderType::Rod, 0, 3.0f },
+        { "Lightning Rod", LightningRodOnTile, LightningRodOnTile, LightningRodOnTile, true, false, RenderType::Rod, 0, 3.0f },
+        { "Lightning Rod", LightningRodTile, LightningRodTile, LightningRodTile, true, false, RenderType::Rod, 0, 3.0f },
+        { "Lightning Rod", LightningRodOnTile, LightningRodOnTile, LightningRodOnTile, true, false, RenderType::Rod, 0, 3.0f },
+        { "Lightning Rod", LightningRodTile, LightningRodTile, LightningRodTile, true, false, RenderType::Rod, 0, 3.0f },
+        { "Lightning Rod", LightningRodOnTile, LightningRodOnTile, LightningRodOnTile, true, false, RenderType::Rod, 0, 3.0f },
+        { "Lightning Rod", LightningRodTile, LightningRodTile, LightningRodTile, true, false, RenderType::Rod, 0, 3.0f },
+        { "Lightning Rod", LightningRodOnTile, LightningRodOnTile, LightningRodOnTile, true, false, RenderType::Rod, 0, 3.0f },
+        { "Lightning Rod", LightningRodTile, LightningRodTile, LightningRodTile, true, false, RenderType::Rod, 0, 3.0f },
+        { "Lightning Rod", LightningRodOnTile, LightningRodOnTile, LightningRodOnTile, true, false, RenderType::Rod, 0, 3.0f },
+        { "Lightning Rod", LightningRodTile, LightningRodTile, LightningRodTile, true, false, RenderType::Rod, 0, 3.0f },
+        { "Lightning Rod", LightningRodOnTile, LightningRodOnTile, LightningRodOnTile, true, false, RenderType::Rod, 0, 3.0f },
     };
 }
 
@@ -1460,6 +1792,8 @@ bool isObtainable(BlockId id)
             if (isCandle(id) && (candleCount(id) != 1 || candleLit(id))) return false;
             if (isCandleCake(id)) return false;
             if (id == Blocks::Bed) return false;
+            if (isCopperBulb(id) && copperForm(id).state != 0) return false;
+            if (isLightningRod(id) && id != lightningRodOf(0, false)) return false;
             if (isChestFamily(id) && id != Blocks::Chest && id != chestOf(chestState(id).kind, 2, 0)) return false;
             if (isColourBed(id) && id != bedOf(bedColour(id), 0, false)) return false;
 
@@ -1501,10 +1835,12 @@ const char* blockSoundGroup(BlockId id)
     if (isComposter(id) || isLectern(id)) return "wood";
     if (id == Blocks::Bamboo || id == Blocks::Scaffolding) return "wood";
     if (isSign(id) || isFrame(id)) return "wood";
+    if (isCopper(id) || isLightningRod(id)) return "stone";
     if (isDoor(id) || isTrapdoor(id)) return "wood";
     if (isConcretePowder(id)) return "sand";
     if (isColourBed(id)) return "cloth";
     if (isEnderChest(id)) return "stone";
+    if (isCopper(id) || isLightningRod(id)) return "stone";
     if (isStorageChest(id)) return "wood";
     if (isSapling(id) || isPinkPetals(id) || id == Blocks::MangrovePropaguleHanging) return "grass";
     if (isNetherPlant(id) || id == Blocks::NetherWartBlock || id == Blocks::WarpedWartBlock ||
@@ -1651,10 +1987,12 @@ Material blockMaterial(BlockId id)
     // want the hardest tool. The block table's test caught that too.
     if (id == Blocks::SlimeBlock) return Material::Wool;
     if (isSign(id) || isFrame(id)) return Material::Wood;
+    if (isCopper(id) || isLightningRod(id)) return Material::Stone;
     if (isDoor(id) || isTrapdoor(id)) return Material::Wood;
     if (isConcretePowder(id)) return Material::Sand;
     if (isColourBed(id)) return Material::Wool;
     if (isEnderChest(id)) return Material::Stone;
+    if (isCopper(id) || isLightningRod(id)) return Material::Stone;
     if (isStorageChest(id)) return Material::Wood;
     if (isGlassLike(id) || isPane(id)) return Material::Glass;
     if (isSapling(id) || isPinkPetals(id) || id == Blocks::MangrovePropaguleHanging) return Material::Plant;
@@ -1807,6 +2145,16 @@ bool blockOverlaps(BlockId id, int bx, int by, int bz,
 
     if (isColourBed(id)) return overlaps(0.0f, 0.0f, 0.0f, 1.0f, 0.5625f, 1.0f);
     if (isChestFamily(id)) return overlaps(0.0625f, 0.0f, 0.0625f, 0.9375f, 0.875f, 0.9375f);
+    if (isLightningRod(id))
+    {
+        constexpr float LO = 0.375f, HI = 0.625f;
+        switch (lightningRodFacing(id))
+        {
+            case 0: case 1: return overlaps(LO, 0.0f, LO, HI, 1.0f, HI);
+            case 2: case 4: return overlaps(LO, LO, 0.0f, HI, HI, 1.0f);
+            default: return overlaps(0.0f, LO, LO, 1.0f, HI, HI);
+        }
+    }
 
     if (isCake(id) || isCandleCake(id))
     {
@@ -1860,3 +2208,78 @@ namespace
 
 void setChristmasChests(bool on) { g_christmasChests = on; }
 bool christmasChests() { return g_christmasChests; }
+
+CopperForm copperForm(BlockId id)
+{
+    if (id >= Blocks::CopperBlock && id <= Blocks::OxidizedCopper)
+        return { CopperFamily::Block, id - Blocks::CopperBlock, false, 0 };
+    if (id >= Blocks::WaxedCopperFirst && id <= Blocks::WaxedCopperLast)
+        return { CopperFamily::Block, id - Blocks::WaxedCopperFirst, true, 0 };
+    struct Run { BlockId first; BlockId last; CopperFamily family; };
+    static const Run RUNS[] = {
+        { Blocks::CutCopperFirst, Blocks::CutCopperLast, CopperFamily::Cut },
+        { Blocks::ChiseledCopperFirst, Blocks::ChiseledCopperLast, CopperFamily::Chiseled },
+        { Blocks::CopperGrateFirst, Blocks::CopperGrateLast, CopperFamily::Grate },
+        { Blocks::CutCopperSlabFirst, Blocks::CutCopperSlabLast, CopperFamily::Slab },
+    };
+    for (const Run& run : RUNS)
+        if (id >= run.first && id <= run.last)
+        {
+            const int t = id - run.first;
+            return { run.family, t % 4, t >= 4, 0 };
+        }
+    if (id == Blocks::CopperBulb) return { CopperFamily::Bulb, 0, false, 0 };
+    if (id == Blocks::CopperBulbLit) return { CopperFamily::Bulb, 0, false, 1 };
+    if (id == Blocks::CopperBulbPowered) return { CopperFamily::Bulb, 0, false, 2 };
+    if (id == Blocks::CopperBulbLitPowered) return { CopperFamily::Bulb, 0, false, 3 };
+    if (id >= Blocks::CopperBulbRunFirst && id <= Blocks::CopperBulbRunLast)
+    {
+        const int k = id - Blocks::CopperBulbRunFirst;
+        const int t = 1 + k / 4;
+        return { CopperFamily::Bulb, t % 4, t >= 4, k % 4 };
+    }
+    if (id >= Blocks::CopperDoorFirst && id <= Blocks::CopperDoorLast)
+    {
+        const int k = id - Blocks::CopperDoorFirst;
+        const int t = k / 16;
+        return { CopperFamily::Door, t % 4, t >= 4, k % 16 };
+    }
+    if (id >= Blocks::CopperTrapdoorFirst && id <= Blocks::CopperTrapdoorLast)
+    {
+        const int k = id - Blocks::CopperTrapdoorFirst;
+        const int t = k / 16;
+        return { CopperFamily::Trapdoor, t % 4, t >= 4, k % 16 };
+    }
+    return { CopperFamily::None, 0, false, 0 };
+}
+
+BlockId copperBlockOf(CopperFamily family, int stage, bool waxed, int state)
+{
+    if (stage < 0) stage = 0;
+    if (stage > 3) stage = 3;
+    const int t = stage + (waxed ? 4 : 0);
+    switch (family)
+    {
+        case CopperFamily::Block:
+            return waxed ? static_cast<BlockId>(Blocks::WaxedCopperFirst + stage)
+                         : static_cast<BlockId>(Blocks::CopperBlock + stage);
+        case CopperFamily::Cut: return static_cast<BlockId>(Blocks::CutCopperFirst + t);
+        case CopperFamily::Chiseled: return static_cast<BlockId>(Blocks::ChiseledCopperFirst + t);
+        case CopperFamily::Grate: return static_cast<BlockId>(Blocks::CopperGrateFirst + t);
+        case CopperFamily::Slab: return static_cast<BlockId>(Blocks::CutCopperSlabFirst + t);
+        case CopperFamily::Bulb:
+        {
+            const int st = state & 3;
+            if (t == 0)
+            {
+                static const BlockId FIRST[4] = { Blocks::CopperBulb, Blocks::CopperBulbLit,
+                                                  Blocks::CopperBulbPowered, Blocks::CopperBulbLitPowered };
+                return FIRST[st];
+            }
+            return static_cast<BlockId>(Blocks::CopperBulbRunFirst + (t - 1) * 4 + st);
+        }
+        case CopperFamily::Door: return static_cast<BlockId>(Blocks::CopperDoorFirst + t * 16 + (state & 15));
+        case CopperFamily::Trapdoor: return static_cast<BlockId>(Blocks::CopperTrapdoorFirst + t * 16 + (state & 15));
+        default: return Blocks::Air;
+    }
+}

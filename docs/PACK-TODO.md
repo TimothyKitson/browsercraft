@@ -139,10 +139,11 @@ Everything in the 1.21 textures zip the game doesn't use yet, turned into work. 
     - I. Two chests side by side join into a double chest, using the left and right textures and the 54-slot screen.
     - II. Trapped chest, ender chest (shared storage), and the Christmas chest in late December.
     - Notes: chests are 3D models cut from the pack's chest sheets and face the player. The tripwire hook arrived as a crafting item for the trapped chest; it becomes a placeable block with item 43. Lids do not swing open yet.
-36. Copper set
+36. Copper set (done)
     - I. Cut, chiseled, grate, door and trapdoor, at all four weathering stages.
     - II. Copper bulbs at every stage, lit and powered.
     - III. Waxing with honeycomb, scraping with an axe, and the lightning rod with lightning.
+    - Notes: cut copper slabs came along since chiseled copper is made from them; cut copper stairs are still to do. Storms now throw a visible bolt, and rods draw it, give a pulse of power and clean the copper they stand on. Lightning does not start fires or change mobs yet.
 37. Flowers and plants
     - I. Allium, azure bluet, blue orchid, cornflower, lily of the valley, oxeye daisy, four tulips, wither rose.
     - II. Torchflower (seeds and crop). Pitcher plant (pod and crop). Pink petals.

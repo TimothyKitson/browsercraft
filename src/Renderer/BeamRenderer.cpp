@@ -27,6 +27,7 @@ namespace
         { "assets/textures/entity/guardian_beam.png", 0xE0B050, 1.0f },
         { "assets/textures/entity/guardian_beam.png", 0xFFE040, 1.0f },
         { "assets/textures/entity/beacon_beam.png", 0xE8C8FF, 0.6f },
+        { nullptr, 0xFFFFFF, 1.0f },
     };
 
     unsigned int whiteTexture()
@@ -55,7 +56,7 @@ void BeamRenderer::load()
     {
         const Source& source = SOURCES[i];
         int width = 0, height = 0, channels = 0;
-        unsigned char* data = stbi_load(source.path, &width, &height, &channels, 4);
+        unsigned char* data = source.path ? stbi_load(source.path, &width, &height, &channels, 4) : nullptr;
         if (!data)
         {
             m_textures[i] = whiteTexture();

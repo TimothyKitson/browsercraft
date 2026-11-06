@@ -2812,6 +2812,98 @@ namespace
         for (int x = 5; x < 11; ++x) t.set(x, 14, shade(wood, -20));
     }
 
+    void paintCopperFamilyIn(Tile& t, int family, int stage)
+    {
+        static const Color BASE[4] = { Color{ 192, 107, 73 }, Color{ 161, 124, 100 }, Color{ 108, 155, 118 }, Color{ 82, 162, 132 } };
+        static const Color SPOT[4] = { Color{ 210, 126, 88 }, Color{ 136, 150, 118 }, Color{ 134, 126, 104 }, Color{ 104, 176, 146 } };
+        const Color base = BASE[stage & 3], spot = SPOT[stage & 3];
+        const int n = Tile::N;
+        t.fill(base);
+        for (int y = 0; y < n; ++y)
+            for (int x = 0; x < n; ++x)
+                if (hash2(x, y, 1200 + stage) > 0.74f) t.set(x, y, spot);
+        if (family == 0)
+        {
+            for (int k = 0; k < n; ++k)
+            {
+                t.set(k, n / 2 - 1, shade(base, -34));
+                t.set(k, n - 1, shade(base, -34));
+                t.set(n / 2 - 1, k, shade(base, -24));
+                t.set(n - 1, k, shade(base, -24));
+            }
+        }
+        else if (family == 1)
+        {
+            for (int k = 0; k < n; ++k)
+            {
+                t.set(k, 0, shade(base, -30)); t.set(k, n - 1, shade(base, -30));
+                t.set(0, k, shade(base, -30)); t.set(n - 1, k, shade(base, -30));
+            }
+            for (int y = 4; y < 12; ++y)
+                for (int x = 4; x < 12; ++x)
+                    t.set(x, y, (x == 4 || y == 4 || x == 11 || y == 11) ? shade(base, -40) : shade(base, 14));
+        }
+        else if (family == 2)
+        {
+            for (int y = 0; y < n; ++y)
+                for (int x = 0; x < n; ++x)
+                {
+                    const bool bar = (x % 4 == 0) || (y % 4 == 0) || x == n - 1 || y == n - 1;
+                    if (!bar) t.set(x, y, Color{ 0, 0, 0, 0 });
+                    else t.set(x, y, shade(base, (x % 4 == 0 && y % 4 == 0) ? -20 : 0));
+                }
+        }
+        else if (family == 3 || family == 4)
+        {
+            const bool top = family == 3;
+            for (int k = 0; k < n; ++k)
+            {
+                t.set(k, top ? 0 : n - 1, shade(base, -36));
+                t.set(0, k, shade(base, -36)); t.set(n - 1, k, shade(base, -36));
+            }
+            if (top)
+                for (int y = 3; y < 7; ++y)
+                    for (int x = 3; x < 13; ++x)
+                        if (x != 7 && x != 8) t.set(x, y, Color{ 0, 0, 0, 0 });
+            for (int x = 2; x < n - 2; ++x) t.set(x, top ? 9 : 4, shade(base, -24));
+        }
+        else if (family == 5)
+        {
+            for (int k = 0; k < n; ++k)
+            {
+                t.set(k, 0, shade(base, -36)); t.set(k, n - 1, shade(base, -36));
+                t.set(0, k, shade(base, -36)); t.set(n - 1, k, shade(base, -36));
+            }
+            for (int y = 3; y < 13; y += 5)
+                for (int x = 3; x < 13; x += 5)
+                    for (int dy = 0; dy < 3; ++dy)
+                        for (int dx = 0; dx < 3; ++dx) t.set(x + dx, y + dy, Color{ 0, 0, 0, 0 });
+        }
+    }
+
+    void paintItemCopperDoorIn(Tile& t, int stage)
+    {
+        Tile full;
+        paintCopperFamilyIn(full, 3, stage);
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 0; y < Tile::N; ++y)
+            for (int x = 4; x < 12; ++x)
+                t.set(x, y, full.get((x - 4) * 2, y));
+    }
+
+    void paintLightningRodIn(Tile& t, bool on)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        const Color body = on ? Color{ 255, 236, 200 } : Color{ 196, 112, 76 };
+        for (int y = 0; y < 4; ++y)
+            for (int x = 0; x < 4; ++x) t.set(x, y, shade(body, (x + y) % 3 == 0 ? 20 : 0));
+        for (int y = 4; y < Tile::N; ++y)
+            for (int x = 0; x < 2; ++x) t.set(x, y, shade(body, x == 0 ? 14 : -18));
+    }
+
+    void paintLightningRod(Tile& t) { paintLightningRodIn(t, false); }
+    void paintLightningRodOn(Tile& t) { paintLightningRodIn(t, true); }
+
     void paintCandle(Tile& t)    { paintCandleIn(t, Color{ 232, 222, 196 }, false); }
     void paintCandleLit(Tile& t) { paintCandleIn(t, Color{ 232, 222, 196 }, true); }
 
@@ -7211,6 +7303,8 @@ namespace
         { Tiles::DustLine1On, paintRedstoneDustLit },
         { Tiles::LeverHandle, paintLever },
         { Tiles::CandleFlameTile, paintCandleFlame },
+        { Tiles::LightningRodTile, paintLightningRod },
+        { Tiles::LightningRodOnTile, paintLightningRodOn },
         { Tiles::GlassPaneTopTile, paintGlassPaneTopTile },
         { Tiles::TerracottaPlainTile, paintTerracottaPlainTile },
         { Tiles::TintedGlassTile, paintTintedGlassTile },
@@ -7679,6 +7773,10 @@ namespace
         { Tiles::ItemRawGold, { "raw_gold", nullptr, nullptr } },
         { Tiles::ItemAmethystShard, { "amethyst_shard", nullptr, nullptr } },
         { Tiles::ItemTripwireHook, { "../block/tripwire_hook", nullptr, nullptr } },
+        { Tiles::ItemCopperDoorFirst + 0, { "copper_door", nullptr, nullptr } },
+        { Tiles::ItemCopperDoorFirst + 1, { "exposed_copper_door", nullptr, nullptr } },
+        { Tiles::ItemCopperDoorFirst + 2, { "weathered_copper_door", nullptr, nullptr } },
+        { Tiles::ItemCopperDoorFirst + 3, { "oxidized_copper_door", nullptr, nullptr } },
         { Tiles::ItemCandleFirst, { "candle", nullptr, nullptr } },
         { Tiles::ItemCandleFirst + 1, { "white_candle", nullptr, nullptr } },
         { Tiles::ItemCandleFirst + 2, { "orange_candle", nullptr, nullptr } },
@@ -7835,6 +7933,44 @@ namespace
         { Tiles::GlassPaneTopTile, { "glass_pane_top", nullptr }, Tinting::None, 0, false },
         { Tiles::TerracottaPlainTile, { "terracotta", "hardened_clay", nullptr }, Tinting::None, 0, false },
         { Tiles::TintedGlassTile, { "tinted_glass", nullptr }, Tinting::None, 0, false },
+        { Tiles::LightningRodTile, { "lightning_rod", nullptr }, Tinting::None, 0, false },
+        { Tiles::LightningRodOnTile, { "lightning_rod_on", nullptr }, Tinting::None, 0, false },
+        { Tiles::CutCopperTile + 0, { "cut_copper", nullptr }, Tinting::None, 0, false },
+        { Tiles::ChiseledCopperTile + 0, { "chiseled_copper", nullptr }, Tinting::None, 0, false },
+        { Tiles::CopperGrateTile + 0, { "copper_grate", nullptr }, Tinting::None, 0, false },
+        { Tiles::CopperDoorTopTile + 0, { "copper_door_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::CopperDoorBottomTile + 0, { "copper_door_bottom", nullptr }, Tinting::None, 0, false },
+        { Tiles::CopperTrapdoorTile + 0, { "copper_trapdoor", nullptr }, Tinting::None, 0, false },
+        { Tiles::CutCopperTile + 1, { "exposed_cut_copper", nullptr }, Tinting::None, 0, false },
+        { Tiles::ChiseledCopperTile + 1, { "exposed_chiseled_copper", nullptr }, Tinting::None, 0, false },
+        { Tiles::CopperGrateTile + 1, { "exposed_copper_grate", nullptr }, Tinting::None, 0, false },
+        { Tiles::CopperDoorTopTile + 1, { "exposed_copper_door_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::CopperDoorBottomTile + 1, { "exposed_copper_door_bottom", nullptr }, Tinting::None, 0, false },
+        { Tiles::CopperTrapdoorTile + 1, { "exposed_copper_trapdoor", nullptr }, Tinting::None, 0, false },
+        { Tiles::CopperBulbStageTile + 0, { "exposed_copper_bulb", nullptr }, Tinting::None, 0, false },
+        { Tiles::CopperBulbStageTile + 1, { "exposed_copper_bulb_lit", nullptr }, Tinting::None, 0, false },
+        { Tiles::CopperBulbStageTile + 2, { "exposed_copper_bulb_powered", nullptr }, Tinting::None, 0, false },
+        { Tiles::CopperBulbStageTile + 3, { "exposed_copper_bulb_lit_powered", nullptr }, Tinting::None, 0, false },
+        { Tiles::CutCopperTile + 2, { "weathered_cut_copper", nullptr }, Tinting::None, 0, false },
+        { Tiles::ChiseledCopperTile + 2, { "weathered_chiseled_copper", nullptr }, Tinting::None, 0, false },
+        { Tiles::CopperGrateTile + 2, { "weathered_copper_grate", nullptr }, Tinting::None, 0, false },
+        { Tiles::CopperDoorTopTile + 2, { "weathered_copper_door_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::CopperDoorBottomTile + 2, { "weathered_copper_door_bottom", nullptr }, Tinting::None, 0, false },
+        { Tiles::CopperTrapdoorTile + 2, { "weathered_copper_trapdoor", nullptr }, Tinting::None, 0, false },
+        { Tiles::CopperBulbStageTile + 4, { "weathered_copper_bulb", nullptr }, Tinting::None, 0, false },
+        { Tiles::CopperBulbStageTile + 5, { "weathered_copper_bulb_lit", nullptr }, Tinting::None, 0, false },
+        { Tiles::CopperBulbStageTile + 6, { "weathered_copper_bulb_powered", nullptr }, Tinting::None, 0, false },
+        { Tiles::CopperBulbStageTile + 7, { "weathered_copper_bulb_lit_powered", nullptr }, Tinting::None, 0, false },
+        { Tiles::CutCopperTile + 3, { "oxidized_cut_copper", nullptr }, Tinting::None, 0, false },
+        { Tiles::ChiseledCopperTile + 3, { "oxidized_chiseled_copper", nullptr }, Tinting::None, 0, false },
+        { Tiles::CopperGrateTile + 3, { "oxidized_copper_grate", nullptr }, Tinting::None, 0, false },
+        { Tiles::CopperDoorTopTile + 3, { "oxidized_copper_door_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::CopperDoorBottomTile + 3, { "oxidized_copper_door_bottom", nullptr }, Tinting::None, 0, false },
+        { Tiles::CopperTrapdoorTile + 3, { "oxidized_copper_trapdoor", nullptr }, Tinting::None, 0, false },
+        { Tiles::CopperBulbStageTile + 8, { "oxidized_copper_bulb", nullptr }, Tinting::None, 0, false },
+        { Tiles::CopperBulbStageTile + 9, { "oxidized_copper_bulb_lit", nullptr }, Tinting::None, 0, false },
+        { Tiles::CopperBulbStageTile + 10, { "oxidized_copper_bulb_powered", nullptr }, Tinting::None, 0, false },
+        { Tiles::CopperBulbStageTile + 11, { "oxidized_copper_bulb_lit_powered", nullptr }, Tinting::None, 0, false },
         { Tiles::ShulkerBoxColourTile + 0, { "white_shulker_box", nullptr }, Tinting::None, 0, false },
         { Tiles::ShulkerBoxColourTile + 1, { "orange_shulker_box", nullptr }, Tinting::None, 0, false },
         { Tiles::ShulkerBoxColourTile + 2, { "magenta_shulker_box", nullptr }, Tinting::None, 0, false },
@@ -8648,6 +8784,36 @@ Atlas::Atlas()
         blitPainted(Tiles::BedSidesTile + i, bedSides);
         blitPainted(Tiles::BedEndsTile + i, bedEnds);
         blitPainted(Tiles::ItemBedFirst + i, bedIcon);
+    }
+    for (int stage = 0; stage < 4; ++stage)
+    {
+        Tile cut, chiseled, grate, top, bottom, trap, icon;
+        paintCopperFamilyIn(cut, 0, stage);
+        paintCopperFamilyIn(chiseled, 1, stage);
+        paintCopperFamilyIn(grate, 2, stage);
+        paintCopperFamilyIn(top, 3, stage);
+        paintCopperFamilyIn(bottom, 4, stage);
+        paintCopperFamilyIn(trap, 5, stage);
+        paintItemCopperDoorIn(icon, stage);
+        blitPainted(Tiles::CutCopperTile + stage, cut);
+        blitPainted(Tiles::ChiseledCopperTile + stage, chiseled);
+        blitPainted(Tiles::CopperGrateTile + stage, grate);
+        blitPainted(Tiles::CopperDoorTopTile + stage, top);
+        blitPainted(Tiles::CopperDoorBottomTile + stage, bottom);
+        blitPainted(Tiles::CopperTrapdoorTile + stage, trap);
+        blitPainted(Tiles::ItemCopperDoorFirst + stage, icon);
+        if (stage > 0)
+        {
+            static const Color FRAME[4] = { Color{ 176, 104, 72 }, Color{ 156, 120, 98 }, Color{ 110, 150, 116 }, Color{ 86, 156, 128 } };
+            for (int st = 0; st < 4; ++st)
+            {
+                Tile bulb;
+                const bool lit = (st & 1) != 0;
+                paintCopperBulbIn(bulb, lit ? Color{ 255, 226 - stage * 20, 150 } : Color{ 92, 74, 58 }, FRAME[stage]);
+                if (st & 2) bulb.set(7, 7, Color{ 220, 40, 30 });
+                blitPainted(Tiles::CopperBulbStageTile + (stage - 1) * 4 + st, bulb);
+            }
+        }
     }
     {
         const Color WOOD[4] = { Color{ 160, 112, 58 }, Color{ 156, 106, 56 }, Color{ 176, 46, 42 }, Color{ 28, 46, 48 } };
@@ -9517,6 +9683,8 @@ bool Atlas::hasPainter(int tileIndex)
     if (tileIndex >= Tiles::BedHeadTopTile && tileIndex <= Tiles::BedEndsTileLast) return true;
     if (tileIndex >= Tiles::ItemBedFirst && tileIndex <= Tiles::ItemBedLast) return true;
     if (tileIndex >= Tiles::ChestTileFirst && tileIndex <= Tiles::ChestTileLast) return true;
+    if (tileIndex >= Tiles::CutCopperTile && tileIndex <= Tiles::CopperTrapdoorTileLast) return true;
+    if (tileIndex >= Tiles::ItemCopperDoorFirst && tileIndex <= Tiles::ItemCopperDoorLast) return true;
     if (tileIndex >= Tiles::CrackFirst &&
         tileIndex < Tiles::CrackFirst + Tiles::CrackStages)
         return true;

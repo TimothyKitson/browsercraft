@@ -1165,7 +1165,9 @@ void Application::updateWeather(float deltaTime)
         // together is wrong, and far enough apart is the one detail
         // that makes a storm feel like it has distance in it.
         m_audio.play(Sound::Thunder, 0.85f, 0.85f + (m_weatherSeed % 32u) * 0.01f);
+        strikeLightning();
     }
+    m_boltLeft = std::max(0.0f, m_boltLeft - deltaTime);
 
     // Snow rather than rain where it is cold enough, which is the one
     // thing about the weather that depends on where you are standing.
@@ -2047,6 +2049,7 @@ bool Application::frame()
             m_startupScreen == "cherry" || m_startupScreen == "mangrove" || m_startupScreen == "fungi" ||
             m_startupScreen == "stones" || m_startupScreen == "colours" || m_startupScreen == "candles" ||
             m_startupScreen == "shulkerboxes" || m_startupScreen == "beds" || m_startupScreen == "chests" ||
+            m_startupScreen == "copper" ||
             m_startupScreen == "boat" || m_startupScreen == "rails" ||
             m_startupScreen == "mobs" || m_startupScreen == "golem" ||
             m_startupScreen == "glowmobs" || m_startupScreen == "variants" ||
@@ -2137,6 +2140,7 @@ bool Application::frame()
                                   m_startupScreen != "shulkerboxes" &&
                                   m_startupScreen != "beds" &&
                                   m_startupScreen != "chests" &&
+                                  m_startupScreen != "copper" &&
                                   m_startupScreen != "boat" &&
                                   m_startupScreen != "rails" &&
                                   m_startupScreen != "mobs" &&
@@ -2512,7 +2516,8 @@ bool Application::frame()
                 m_startupScreen == "grinderror" || m_startupScreen == "woods" ||
                 m_startupScreen == "cherry" || m_startupScreen == "mangrove" || m_startupScreen == "fungi" ||
                 m_startupScreen == "stones" || m_startupScreen == "colours" || m_startupScreen == "candles" ||
-                m_startupScreen == "shulkerboxes" || m_startupScreen == "beds" || m_startupScreen == "chests")
+                m_startupScreen == "shulkerboxes" || m_startupScreen == "beds" || m_startupScreen == "chests" ||
+                m_startupScreen == "copper")
             {
                 m_camera.setOrientation(0.0f, -25.0f);
                 m_camera.addLook(0.0f, 0.0f, 0.0f);
@@ -2609,6 +2614,45 @@ bool Application::frame()
                     m_world->setBlock(px + 16, py, pz - 10, Blocks::Bookshelf);
                     m_world->setBlock(px + 16, py, pz + 10, Blocks::DiamondOre);
                     m_world->setBlock(px + 16, py + 1, pz + 10, Blocks::EndPortalFrame);
+                }
+                if (m_startupScreen == "copper")
+                {
+                    m_devAttackStrength = 1.0f;
+                    m_camera.setOrientation(0.0f, 6.0f);
+                    for (int dx = 1; dx <= 14; ++dx)
+                        for (int dz = -10; dz <= 10; ++dz)
+                        {
+                            for (int dy = 0; dy <= 12; ++dy) m_world->setBlock(px + dx, py + dy, pz + dz, Blocks::Air);
+                            m_world->setBlock(px + dx, py - 1, pz + dz, Blocks::Stone);
+                        }
+                    const CopperFamily ROWS[5] = { CopperFamily::Block, CopperFamily::Cut, CopperFamily::Chiseled,
+                                                   CopperFamily::Grate, CopperFamily::Bulb };
+                    for (int row = 0; row < 5; ++row)
+                        for (int stage = 0; stage < 4; ++stage)
+                            m_world->setBlock(px + 12, py + row, pz - 8 + stage * 2,
+                                              copperBlockOf(ROWS[row], stage, false, row == 4 && stage % 2 ? 1 : 0));
+                    for (int stage = 0; stage < 4; ++stage)
+                    {
+                        m_world->setBlock(px + 9, py, pz + 1 + stage * 2, copperBlockOf(CopperFamily::Door, stage, false, 3 + (stage == 2 ? 4 : 0)));
+                        m_world->setBlock(px + 9, py + 1, pz + 1 + stage * 2, copperBlockOf(CopperFamily::Door, stage, false, 11 + (stage == 2 ? 4 : 0)));
+                        m_world->setBlock(px + 7, py, pz + 1 + stage * 2, copperBlockOf(CopperFamily::Trapdoor, stage, false, stage % 2 ? 4 : 0));
+                        m_world->setBlock(px + 7, py, pz - 7 + stage * 2, copperBlockOf(CopperFamily::Slab, stage, false));
+                    }
+                    m_world->setBlock(px + 6, py, pz - 1, Blocks::CopperBlock);
+                    m_world->setBlock(px + 6, py + 1, pz - 1, lightningRodOf(0, false));
+                    m_world->setBlock(px + 5, py, pz - 1, lightningRodOf(5, false));
+                    m_world->setBlock(px + 13, py, pz - 10, Blocks::Bookshelf);
+                    m_world->setBlock(px + 13, py, pz + 10, Blocks::DiamondOre);
+                    m_world->setBlock(px + 13, py + 1, pz + 10, Blocks::EndPortalFrame);
+                    m_boltPoints.clear();
+                    glm::vec3 at(px + 6.5f, static_cast<float>(py) + 2.0f, pz - 0.5f);
+                    m_boltPoints.push_back(at);
+                    for (int k = 0; k < 10; ++k)
+                    {
+                        at += glm::vec3((k % 3 - 1) * 0.9f, 7.0f, ((k * 7) % 3 - 1) * 0.8f);
+                        m_boltPoints.push_back(at);
+                    }
+                    m_boltLeft = 1.0e6f;
                 }
                 if (m_startupScreen == "chests")
                 {
@@ -7623,6 +7667,90 @@ void Application::tickStructureLairs(float deltaTime)
 // Everything copper within sight of the player gets a roll every few
 // seconds. Only what is loaded ages, which is Minecraft's rule too: a
 // wall you walked away from is the colour you left it.
+void Application::setCopper(const glm::ivec3& at, BlockId now)
+{
+    const BlockId was = m_world->getBlock(at.x, at.y, at.z);
+    if (now == was) return;
+    m_world->setBlock(at.x, at.y, at.z, now);
+    m_net.onLocalBlockChange(at.x, at.y, at.z, now);
+    if (copperForm(was).family != CopperFamily::Door) return;
+    const glm::ivec3 other(at.x, at.y + (doorIsTop(was) ? -1 : 1), at.z);
+    const BlockId pair = m_world->getBlock(other.x, other.y, other.z);
+    if (copperForm(pair).family != CopperFamily::Door) return;
+    const CopperForm form = copperForm(now);
+    const BlockId matched = copperWith(pair, form.stage, form.waxed);
+    if (matched == pair) return;
+    m_world->setBlock(other.x, other.y, other.z, matched);
+    m_net.onLocalBlockChange(other.x, other.y, other.z, matched);
+}
+
+void Application::strikeLightning()
+{
+    if (!m_world) return;
+    uint32_t roll = m_weatherSeed * 2654435761u + static_cast<uint32_t>(m_elapsedSeconds * 1000.0f);
+    auto next = [&roll]() {
+        roll = roll * 1664525u + 1013904223u;
+        return static_cast<float>((roll >> 8) & 0xFFFF) / 65535.0f;
+    };
+    const glm::ivec3 feet(glm::floor(m_player.position));
+    const int cx = feet.x + static_cast<int>((next() - 0.5f) * 96.0f);
+    const int cz = feet.z + static_cast<int>((next() - 0.5f) * 96.0f);
+
+    bool found = false;
+    glm::ivec3 rod(0);
+    int best = 1 << 30;
+    for (int dx = -32; dx <= 32; ++dx)
+        for (int dz = -32; dz <= 32; ++dz)
+            for (int y = std::max(1, feet.y - 24); y <= std::min(Chunk::SY - 2, feet.y + 40); ++y)
+            {
+                const BlockId here = m_world->getBlock(cx + dx, y, cz + dz);
+                if (!isLightningRod(here)) continue;
+                bool open = true;
+                for (int above = y + 1; above < Chunk::SY && open; ++above)
+                    if (isOpaque(m_world->getBlock(cx + dx, above, cz + dz))) open = false;
+                if (!open) continue;
+                const int distance = dx * dx + dz * dz;
+                if (distance < best) { best = distance; rod = glm::ivec3(cx + dx, y, cz + dz); found = true; }
+            }
+
+    glm::vec3 strike;
+    if (found)
+    {
+        strike = glm::vec3(rod) + glm::vec3(0.5f, 1.0f, 0.5f);
+        const BlockId here = m_world->getBlock(rod.x, rod.y, rod.z);
+        const int facing = lightningRodFacing(here);
+        setBlockFor(rod, lightningRodOf(facing, true), lightningRodOf(facing, false), 0.4f);
+        settleRedstone(rod);
+        static const int BACK[6][3] = { { 0, -1, 0 }, { 0, 1, 0 }, { 0, 0, 1 }, { -1, 0, 0 }, { 0, 0, -1 }, { 1, 0, 0 } };
+        const glm::ivec3 base(rod.x + BACK[facing][0], rod.y + BACK[facing][1], rod.z + BACK[facing][2]);
+        setCopper(base, Copper::cleaned(m_world->getBlock(base.x, base.y, base.z)));
+        for (int k = 0; k < 4; ++k)
+        {
+            const glm::ivec3 near(base.x + static_cast<int>(next() * 5.0f) - 2, base.y + static_cast<int>(next() * 5.0f) - 2,
+                                  base.z + static_cast<int>(next() * 5.0f) - 2);
+            const BlockId there = m_world->getBlock(near.x, near.y, near.z);
+            if (copperForm(there).waxed) continue;
+            setCopper(near, Copper::scraped(there));
+        }
+    }
+    else
+    {
+        int top = Chunk::SY - 1;
+        while (top > 0 && m_world->getBlock(cx, top, cz) == Blocks::Air) --top;
+        strike = glm::vec3(cx + 0.5f, top + 1.0f, cz + 0.5f);
+    }
+
+    m_boltPoints.clear();
+    glm::vec3 at = strike;
+    m_boltPoints.push_back(at);
+    for (int k = 0; k < 14; ++k)
+    {
+        at += glm::vec3((next() - 0.5f) * 2.4f, 6.0f + next() * 4.0f, (next() - 0.5f) * 2.4f);
+        m_boltPoints.push_back(at);
+    }
+    m_boltLeft = Weather::FLASH_SECONDS;
+}
+
 void Application::tickCopper(float deltaTime)
 {
     if (!m_world) return;
@@ -7644,9 +7772,7 @@ void Application::tickCopper(float deltaTime)
                 if (!Copper::ages(here)) continue;
                 if (!Copper::ticks(x, y, z, m_world->seed(), m_copperTick)) continue;
 
-                const BlockId older = Copper::next(here);
-                m_world->setBlock(x, y, z, older);
-                m_net.onLocalBlockChange(x, y, z, older);
+                setCopper(glm::ivec3(x, y, z), Copper::next(here));
             }
 }
 
@@ -7894,7 +8020,7 @@ void Application::settleRedstone(const glm::ivec3& at)
                     {
                         m_bulbLive.erase(cell);
                     }
-                    const BlockId want = copperBulbAs(lit, live);
+                    const BlockId want = copperBulbWith(here, lit, live);
                     if (want != here) cells.set(x, y, z, want);
                     continue;
                 }
@@ -9342,12 +9468,43 @@ void Application::handlePlacement()
         }
     }
 
+    if (stack.id == Items::Honeycomb && modeCanBuild(m_player.mode))
+    {
+        const RaycastHit at = m_world->raycast(m_camera.position, m_camera.front, REACH_DISTANCE);
+        if (at.hit)
+        {
+            const BlockId here = m_world->getBlock(at.block.x, at.block.y, at.block.z);
+            const BlockId sealed = Copper::waxed(here);
+            if (sealed != here)
+            {
+                setCopper(at.block, sealed);
+                m_audio.play(Sound::Click, 0.6f, 1.3f);
+                m_heldItem.swing();
+                if (!m_player.creative())
+                {
+                    stack.count -= 1;
+                    if (stack.count <= 0) stack.clear();
+                }
+                return;
+            }
+        }
+    }
+
     if (Tools::kindOf(stack.id) == Tools::Kind::Axe && modeCanBuild(m_player.mode))
     {
         const RaycastHit bark = m_world->raycast(m_camera.position, m_camera.front, REACH_DISTANCE);
         if (bark.hit)
         {
             const BlockId log = m_world->getBlock(bark.block.x, bark.block.y, bark.block.z);
+            const BlockId scrapedCopper = Copper::scraped(log);
+            if (scrapedCopper != log)
+            {
+                setCopper(bark.block, scrapedCopper);
+                m_audio.play(Sound::DigStone, 0.6f, 1.4f);
+                m_heldItem.swing();
+                wearOnSwing(stack.id);
+                return;
+            }
             const BlockId stripped = strippedOf(log);
             if (stripped != Blocks::Air)
             {
@@ -9796,6 +9953,18 @@ void Application::handlePlacement()
         WorldCaneBlocks around;
         around.world = m_world.get();
         if (!Cane::canStandAt(around, target.x, target.y, target.z)) return;
+    }
+
+    if (isLightningRod(placing))
+    {
+        const glm::ivec3 normal = target - hit.block;
+        int facing = 0;
+        if (normal.y < 0) facing = 1;
+        else if (normal.z < 0) facing = 2;
+        else if (normal.x > 0) facing = 3;
+        else if (normal.z > 0) facing = 4;
+        else if (normal.x < 0) facing = 5;
+        placing = lightningRodOf(facing, false);
     }
 
     if (isChestFamily(placing))
@@ -11091,6 +11260,7 @@ void Application::tickTimedBlocks(float deltaTime)
         {
             m_world->setBlock(timed.at.x, timed.at.y, timed.at.z, timed.then);
             m_net.onLocalBlockChange(timed.at.x, timed.at.y, timed.at.z, timed.then);
+            if (isLightningRod(timed.then)) settleRedstone(timed.at);
         }
         m_timedBlocks[i] = m_timedBlocks.back();
         m_timedBlocks.pop_back();
@@ -11224,6 +11394,10 @@ void Application::queueBeams()
         m_beams.beam(BeamRenderer::Look::Beacon, base, sky, 0.2f, t * 2.0f, t * 0.6f);
         m_beams.beam(BeamRenderer::Look::BeaconHaze, base, sky, 0.25f, t * 1.0f, 0.0f);
     }
+
+    if (m_boltLeft > 0.0f)
+        for (size_t k = 0; k + 1 < m_boltPoints.size(); ++k)
+            m_beams.beam(BeamRenderer::Look::Lightning, m_boltPoints[k], m_boltPoints[k + 1], 0.09f, 0.0f, 0.0f);
 
     for (const auto& flash : m_gatewayFlashes)
     {

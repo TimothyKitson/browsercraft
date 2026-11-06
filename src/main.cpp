@@ -776,6 +776,7 @@ namespace
             else if (id == Blocks::Bed)           why = "a bed from a world saved before beds had colours";
             else if (isColourBed(id))             why = "the head, or another facing, of a bed";
             else if (isChestFamily(id))           why = "another facing, a joined half, or a trapped chest held open";
+            else if (isLightningRod(id))          why = "a rod set on another face, or one lightning has just struck";
             else if (id == Blocks::SmokerLit || id == Blocks::BlastFurnaceLit)
                                                   why = "a furnace that is burning";
             else if (id == Blocks::NoteBlockLit || id == Blocks::ObserverLit)
@@ -951,6 +952,10 @@ namespace
         haveItem.insert(static_cast<int>(Items::Trident));
         haveItem.insert(static_cast<int>(Items::WaterBucket));
         haveItem.insert(static_cast<int>(Items::LavaBucket));
+        for (int stage = 1; stage < 4; ++stage)
+            for (CopperFamily family : { CopperFamily::Block, CopperFamily::Cut, CopperFamily::Chiseled, CopperFamily::Grate,
+                                         CopperFamily::Slab, CopperFamily::Bulb, CopperFamily::Door, CopperFamily::Trapdoor })
+                haveItem.insert(static_cast<int>(copperBlockOf(family, stage, false)));
         for (int wood = 0; wood < WOOD_COUNT; ++wood)
             if (reachable.count(logOfWood(wood))) haveItem.insert(static_cast<int>(strippedOf(logOfWood(wood))));
 

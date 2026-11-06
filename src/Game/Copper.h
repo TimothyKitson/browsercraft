@@ -28,4 +28,8 @@ namespace Copper
     // and which tick it is, so two blocks laid together do not weather
     // in lockstep.
     bool ticks(int x, int y, int z, uint32_t seed, int tick);
+
+    BlockId waxed(BlockId id);
+    BlockId scraped(BlockId id);
+    BlockId cleaned(BlockId id);
 }

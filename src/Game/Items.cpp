@@ -230,6 +230,9 @@ const char* displayName(StackId id)
 
 int flatIconFor(BlockId id)
 {
+    if (isDoor(id) && copperForm(id).family == CopperFamily::Door)
+        return Tiles::ItemCopperDoorFirst + copperForm(id).stage;
+    if (isLightningRod(id)) return Tiles::LightningRodTile;
     if (isDoor(id))
     {
         static const int ICONS[WOOD_COUNT] = { Tiles::IconOakDoor, Tiles::IconSpruceDoor, Tiles::IconBirchDoor,
@@ -306,7 +309,8 @@ StackId blockDrop(BlockId id)
     if (isAmethystGrowth(id) && id != Blocks::AmethystCluster) return Blocks::Air;
     if (id == Blocks::AmethystCluster) return Items::AmethystShard;
     if (id == Blocks::NetherWart0 || id == Blocks::NetherWart1) return Items::NetherWart;
-    if (isCopperBulb(id)) return Blocks::CopperBulb;
+    if (isCopperBulb(id)) return copperBulbWith(id, false, false);
+    if (isLightningRod(id)) return lightningRodOf(0, false);
     if (id == Blocks::SculkCatalystBloom) return Blocks::SculkCatalyst;
 
     if (isCandle(id)) return candleOf(candleShade(id), 1, false);

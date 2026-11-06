@@ -19,6 +19,7 @@ public:
         GuardianHot,
         GuardianFull,
         Ray,
+        Lightning,
         Count
     };
 
