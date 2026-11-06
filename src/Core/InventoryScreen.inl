@@ -164,6 +164,7 @@ bool Application::drawBlockIcon(float x, float y, float size, StackId id,
 
     const BlockId block = asBlock(id);
     const BlockInfo& info = blockInfo(block);
+    if (flatIconFor(block) >= 0) return false;
 
     // Only things that really are a box. A flower is two crossed quads
     // and a liquid has no edges; both read better flat, and Minecraft
@@ -261,9 +262,21 @@ void Application::drawItem(float x, float y, float size, StackId id, int count,
     // inside, with the slot's own border the only margin. Shrunk by a
     // pixel a side on top of that, every icon came out a size smaller
     // than the slot it was in.
-    if (!drawBlockIcon(x, y, size, id, tint))
+    if (id == Items::Potion)
     {
-        const TileUV uv = tileUV(atlasTileFor(id));
+        const unsigned int rgb = Brewing::colour(Brewing::fromDamage(damage));
+        const glm::vec4 liquidTint(((rgb >> 16) & 0xFF) / 255.0f * tint.r, ((rgb >> 8) & 0xFF) / 255.0f * tint.g,
+                                   (rgb & 0xFF) / 255.0f * tint.b, tint.a);
+        const TileUV liquid = tileUV(Tiles::PotionLiquid);
+        const TileUV bottle = tileUV(Tiles::PotionBottle);
+        m_ui.texturedQuad(m_atlas.textureId(), x, y, size, size,
+                          liquid.u0, liquid.vTop, liquid.u1, liquid.vBottom, liquidTint);
+        m_ui.texturedQuad(m_atlas.textureId(), x, y, size, size,
+                          bottle.u0, bottle.vTop, bottle.u1, bottle.vBottom, tint);
+    }
+    else if (!drawBlockIcon(x, y, size, id, tint))
+    {
+        const TileUV uv = tileUV(m_iconOverride >= 0 ? m_iconOverride : atlasTileFor(id));
         m_ui.texturedQuad(m_atlas.textureId(), x, y, size, size,
                           uv.u0, uv.vTop, uv.u1, uv.vBottom, tint);
     }
@@ -801,7 +814,8 @@ void Application::renderContainerScreen(float w, float h)
             well(offX, offY);
             const ItemStack& offhand = m_inventory.slot(Inventory::OFFHAND);
             if (offhand.empty())
-                guiSprite("sprites/container/slot/shield", offX, offY, SLOT, SLOT);
+                if (!guiSprite("sprites/container/slot/shield", offX, offY, SLOT, SLOT))
+                    guiSprite("../item/empty_armor_slot_shield", offX, offY, SLOT, SLOT);
             else
                 drawItem(offX, offY, SLOT, offhand.id, offhand.count, glm::vec4(1.0f), offhand.damage);
             slotBox(SlotBox::Kind::Slot, Inventory::OFFHAND, offX, offY);
@@ -1864,7 +1878,8 @@ void Application::renderCreativeScreen(float w, float h)
             well(offX, offY);
             const ItemStack& offhand = m_inventory.slot(Inventory::OFFHAND);
             if (offhand.empty())
-                guiSprite("sprites/container/slot/shield", offX, offY, SLOT, SLOT);
+                if (!guiSprite("sprites/container/slot/shield", offX, offY, SLOT, SLOT))
+                    guiSprite("../item/empty_armor_slot_shield", offX, offY, SLOT, SLOT);
             else
                 drawItem(offX, offY, SLOT, offhand.id, offhand.count, glm::vec4(1.0f), offhand.damage);
             m_slotBoxes.push_back({ SlotBox::Kind::Slot, Inventory::OFFHAND, offX - 1.0f, offY - 1.0f, PITCH });

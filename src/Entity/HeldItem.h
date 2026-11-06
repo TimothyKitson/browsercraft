@@ -91,6 +91,12 @@ private:
     float m_swing = 0.0f;
     float m_equip = 1.0f;
     StackId m_shown = Blocks::Air;
+    int m_tileOverride = -1;
+
+public:
+    void setTileOverride(int tile) { m_tileOverride = tile; }
+
+private:
 
     float swingAngle() const;
     void appendArm(const glm::mat4& toWorld, const PlayerSkin& skin,

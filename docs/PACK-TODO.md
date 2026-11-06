@@ -22,12 +22,13 @@ Everything in the 1.21 textures zip the game doesn't use yet, turned into work. 
 4. Redstone dust and the lever (done)
    - I. Make dust join up like Minecraft's: a dot, straight lines or crosses, chosen from its neighbours, with the overlay on top.
    - II. Give the lever Minecraft's model: a cobblestone base and the pack's handle.
-5. Item icons the game still paints itself
+5. Item icons the game still paints itself (done)
    - I. Armour icons (16 of them), with the leather pieces tinted by their dye.
    - II. Item icons for doors, campfire, cauldron, hopper, end crystal, pointed dripstone and bamboo.
    - III. Bow pulling frames 0 to 2 while drawing the bow.
    - IV. The potion overlay, coloured by what's brewed in it.
    - V. Empty-slot ghosts for every slot that has one: ingot, shard, sword, pickaxe, axe, hoe, shovel, redstone, quartz, diamond, emerald, and the smithing templates.
+   - Left for later: the smithing ghosts go in with the smithing table (46), and dyed leather needs a colour on the item, which goes in with armour trims (72).
 6. Extra layers for mobs the game has
    - I. Glowing eyes for enderman, spider, cave spider, phantom and dragon. Warden glow, heart and pulsing spots.
    - II. Iron golem cracks that grow as it loses health.

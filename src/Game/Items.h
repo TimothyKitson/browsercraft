@@ -320,6 +320,7 @@ StackId blockDrop(BlockId id);
 // which they are holding.
 const char* displayName(StackId id);
 int atlasTileFor(StackId id);
+int flatIconFor(BlockId id);
 int maxStackOf(StackId id);
 
 // A dye, and which of the sixteen colours it is. The dyes are

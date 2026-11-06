@@ -633,7 +633,7 @@ void HeldItem::appendShield(const glm::mat4& toWorld, float sky, float blockLigh
 // with its edges between the two faces.
 void HeldItem::appendSprite(const glm::mat4& toWorld, StackId stack, float sky, float blockLight)
 {
-    const TileUV uv = tileUV(atlasTileFor(stack));
+    const TileUV uv = tileUV(m_tileOverride >= 0 ? m_tileOverride : atlasTileFor(stack));
 
     const glm::mat4 model = toWorld * displayMatrix(stack == Items::Mace ? MACE_DISPLAY
                                                                          : ITEM_DISPLAY);

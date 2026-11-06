@@ -364,6 +364,7 @@ private:
     Projectiles m_arrows;
     float m_bowDraw = 0.0f;      // seconds the bow has been held
     bool m_bowDrawing = false;
+    int m_iconOverride = -1;
     bool m_arrowDemo = false;   // dev aid: keep arrows in the air for a screenshot
 
     Chests m_chests;

@@ -2025,7 +2025,8 @@ bool Application::frame()
             m_startupScreen == "vault" || m_startupScreen == "stronghold" ||
             m_startupScreen == "rock" ||
             m_startupScreen == "faces" || m_startupScreen == "backs" ||
-            m_startupScreen == "flow" || m_startupScreen == "buds")
+            m_startupScreen == "flow" || m_startupScreen == "buds" ||
+            m_startupScreen == "icons")
         {
             // Dev aid: open the inventory with something in it, so the
             // screenshot shows a real grid rather than 36 empty boxes.
@@ -2130,6 +2131,26 @@ bool Application::frame()
             }
 
             if (m_startupScreen == "arrows") m_arrowDemo = true;
+
+            if (m_startupScreen == "icons")
+            {
+                m_inventory.clear();
+                const StackId show[] = {
+                    Items::LeatherHelmet, Items::LeatherChestplate, Items::LeatherLeggings, Items::LeatherBoots,
+                    Items::GoldHelmet, Items::IronChestplate, Items::DiamondLeggings, Items::DiamondBoots,
+                    Blocks::DoorLowShutNorth, Blocks::Campfire, Blocks::Cauldron0, Blocks::Hopper,
+                    Blocks::DripstoneDown, Blocks::Bamboo, Items::Bow,
+                };
+                for (StackId id : show) m_inventory.add(id, 1);
+                for (int brew = 0; brew < 12; ++brew)
+                {
+                    ItemStack potion;
+                    potion.id = Items::Potion;
+                    potion.count = 1;
+                    potion.damage = brew;
+                    m_inventory.addStack(potion);
+                }
+            }
 
             // The armour HUD shot doubles as the one that shows every
             // row at once: hearts, armour, hunger, bubbles and the
@@ -9560,6 +9581,10 @@ void Application::renderHand()
 
     const ItemStack& held = m_inventory.selected();
 
+    m_heldItem.setTileOverride(m_bowDrawing && held.id == Items::Bow
+                                   ? (m_bowDraw >= 0.9f ? Tiles::BowPulling2
+                                      : m_bowDraw >= 0.65f ? Tiles::BowPulling1 : Tiles::BowPulling0)
+                                   : -1);
     m_heldItem.render(m_activeShader ? *m_activeShader : m_chunkShader, m_camera, skinFor(localAppearance()), m_atlas,
                       // Both arms of the conditional spelled as the same
                       // type: Blocks::Air is an unscoped enumerator and
@@ -11009,9 +11034,13 @@ void Application::renderHud()
         // panel, so a block in the hotbar is the cube it is there and
         // not a flat square of its own top texture.
         // drawItem draws the count itself, in the slot's own corner.
+        if (i == m_inventory.selectedSlot() && m_bowDrawing && stack.id == Items::Bow)
+            m_iconOverride = m_bowDraw >= 0.9f ? Tiles::BowPulling2
+                           : m_bowDraw >= 0.65f ? Tiles::BowPulling1 : Tiles::BowPulling0;
         drawItem(slotX, slotY, ITEM_SIZE,
                  stack.id, m_player.creative() ? 0 : stack.count,
                  glm::vec4(1.0f), stack.damage);
+        m_iconOverride = -1;
     }
 
     {

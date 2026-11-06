@@ -6,6 +6,25 @@ namespace
     int index(Effects::Kind kind) { return static_cast<int>(kind); }
 }
 
+unsigned int Effects::colour(Kind kind)
+{
+    switch (kind)
+    {
+        case Kind::Speed: return 0x33EBFF;
+        case Kind::Slowness: return 0x8BAFE0;
+        case Kind::Strength: return 0xFFC700;
+        case Kind::Weakness: return 0x484D48;
+        case Kind::Regeneration: return 0xCD5CAB;
+        case Kind::Poison: return 0x87A363;
+        case Kind::FireResistance: return 0xFF9900;
+        case Kind::WaterBreathing: return 0x98DAC0;
+        case Kind::NightVision: return 0xC2FF66;
+        case Kind::JumpBoost: return 0xFDFF84;
+        case Kind::BadOmen: return 0x0B6138;
+        default: return 0x385DC6;
+    }
+}
+
 const char* Effects::name(Kind kind)
 {
     switch (kind)

@@ -40,6 +40,7 @@ namespace Effects
     constexpr int KIND_COUNT = static_cast<int>(Kind::Count);
 
     const char* name(Kind kind);
+    unsigned int colour(Kind kind);
 
     // Whether the effect is one you would rather not have. The milk
     // bucket does not exist yet, but the distinction is also what

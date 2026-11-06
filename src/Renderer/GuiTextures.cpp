@@ -191,10 +191,10 @@ GuiTextures::GuiTextures()
     // Armour slot ghosts. Vanilla packs name these files, so a pack that
     // has them wins; otherwise the silhouettes above are drawn.
     const char* ARMOR_FILES[4] = {
-        "sprites/container/slot/helmet|empty_armor_slot_helmet.png",
-        "sprites/container/slot/chestplate|empty_armor_slot_chestplate.png",
-        "sprites/container/slot/leggings|empty_armor_slot_leggings.png",
-        "sprites/container/slot/boots|empty_armor_slot_boots.png",
+        "sprites/container/slot/helmet|../item/empty_armor_slot_helmet.png",
+        "sprites/container/slot/chestplate|../item/empty_armor_slot_chestplate.png",
+        "sprites/container/slot/leggings|../item/empty_armor_slot_leggings.png",
+        "sprites/container/slot/boots|../item/empty_armor_slot_boots.png",
     };
     for (int piece = 0; piece < 4; ++piece)
     {

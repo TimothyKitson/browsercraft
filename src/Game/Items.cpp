@@ -208,12 +208,24 @@ const char* displayName(StackId id)
     return isItem(id) ? itemInfo(id).name : blockInfo(asBlock(id)).name;
 }
 
+int flatIconFor(BlockId id)
+{
+    if (isDoor(id)) return Tiles::IconOakDoor;
+    if (id == Blocks::Campfire) return Tiles::IconCampfire;
+    if (isCauldron(id)) return Tiles::IconCauldron;
+    if (id == Blocks::Hopper) return Tiles::IconHopper;
+    if (isPointedDripstone(id)) return Tiles::IconDripstone;
+    if (id == Blocks::Bamboo) return Tiles::IconBamboo;
+    return -1;
+}
+
 int atlasTileFor(StackId id)
 {
     // An item has one sprite and that is all it has.
     if (isItem(id)) return itemInfo(id).tile;
 
     const BlockId block = asBlock(id);
+    if (flatIconFor(block) >= 0) return flatIconFor(block);
 
     // A block is shown by its top face, which is what the inventory has
     // always drawn -- except where the top is not what the block looks

@@ -6545,6 +6545,17 @@ namespace
         { Tiles::ItemShield,        paintItemShield },
         { Tiles::ItemGlassBottle,   paintItemGlassBottle },
         { Tiles::ItemPotion,        paintItemPotion },
+        { Tiles::BowPulling0,       paintItemBow },
+        { Tiles::BowPulling1,       paintItemBow },
+        { Tiles::BowPulling2,       paintItemBow },
+        { Tiles::PotionBottle,      paintItemPotion },
+        { Tiles::PotionLiquid,      paintItemPotion },
+        { Tiles::IconOakDoor,       paintDoorLower },
+        { Tiles::IconCampfire,      paintCampfireTop },
+        { Tiles::IconCauldron,      paintCauldronSide },
+        { Tiles::IconHopper,        paintHopperSide },
+        { Tiles::IconDripstone,     paintDripstoneSpike },
+        { Tiles::IconBamboo,        paintBamboo },
         { Tiles::ItemNetherWart,    paintItemNetherWart },
         { Tiles::ItemSugar,         paintItemSugar },
         { Tiles::ItemBlazePowder,   paintItemBlazePowder },
@@ -6677,6 +6688,29 @@ namespace
         { Tiles::ItemEyeOfEnder, { "ender_eye", nullptr, nullptr } },
         { Tiles::ItemGlassBottle,   { "glass_bottle", nullptr, nullptr } },
         { Tiles::ItemPotion,        { "potion", "potion_bottle_drinkable", nullptr } },
+        { Tiles::PotionBottle,      { "potion", "potion_bottle_drinkable", nullptr } },
+        { Tiles::PotionLiquid,      { "potion_overlay", nullptr, nullptr } },
+        { Tiles::BowPulling0,       { "bow_pulling_0", nullptr, nullptr } },
+        { Tiles::BowPulling1,       { "bow_pulling_1", nullptr, nullptr } },
+        { Tiles::BowPulling2,       { "bow_pulling_2", nullptr, nullptr } },
+        { Tiles::IconOakDoor,       { "oak_door", nullptr, nullptr } },
+        { Tiles::IconCampfire,      { "campfire", nullptr, nullptr } },
+        { Tiles::IconCauldron,      { "cauldron", nullptr, nullptr } },
+        { Tiles::IconHopper,        { "hopper", nullptr, nullptr } },
+        { Tiles::IconDripstone,     { "pointed_dripstone", nullptr, nullptr } },
+        { Tiles::IconBamboo,        { "bamboo", nullptr, nullptr } },
+        { Tiles::ItemArmourFirst + 4,  { "golden_helmet", nullptr, nullptr } },
+        { Tiles::ItemArmourFirst + 5,  { "golden_chestplate", nullptr, nullptr } },
+        { Tiles::ItemArmourFirst + 6,  { "golden_leggings", nullptr, nullptr } },
+        { Tiles::ItemArmourFirst + 7,  { "golden_boots", nullptr, nullptr } },
+        { Tiles::ItemArmourFirst + 8,  { "iron_helmet", nullptr, nullptr } },
+        { Tiles::ItemArmourFirst + 9,  { "iron_chestplate", nullptr, nullptr } },
+        { Tiles::ItemArmourFirst + 10, { "iron_leggings", nullptr, nullptr } },
+        { Tiles::ItemArmourFirst + 11, { "iron_boots", nullptr, nullptr } },
+        { Tiles::ItemArmourFirst + 12, { "diamond_helmet", nullptr, nullptr } },
+        { Tiles::ItemArmourFirst + 13, { "diamond_chestplate", nullptr, nullptr } },
+        { Tiles::ItemArmourFirst + 14, { "diamond_leggings", nullptr, nullptr } },
+        { Tiles::ItemArmourFirst + 15, { "diamond_boots", nullptr, nullptr } },
         { Tiles::ItemNetherWart,    { "nether_wart", nullptr, nullptr } },
         { Tiles::ItemSugar,         { "sugar", nullptr, nullptr } },
         { Tiles::ItemBlazePowder,   { "blaze_powder", nullptr, nullptr } },
@@ -7367,6 +7401,42 @@ Atlas::Atlas()
 
             blitImage(entry.tile, scaleNearest(image, tilePixels, tilePixels));
             ++items;
+        }
+
+        {
+            const char* PIECES[4] = { "helmet", "chestplate", "leggings", "boots" };
+            const Color LEATHER{ 160, 101, 64, 255 };
+            for (int piece = 0; piece < 4; ++piece)
+            {
+                const std::string base = std::string(ITEM_PACK_DIRECTORY) + "/leather_" + PIECES[piece];
+                Image body = loadPNG(base + ".png");
+                if (!body.valid()) continue;
+                body = scaleNearest(body, tilePixels, tilePixels);
+                tintImage(body, LEATHER);
+                Image over = loadPNG(base + "_overlay.png");
+                if (over.valid())
+                {
+                    over = scaleNearest(over, tilePixels, tilePixels);
+                    for (int y = 0; y < tilePixels; ++y)
+                        for (int x = 0; x < tilePixels; ++x)
+                            if (over.at(x, y).a > 0) body.set(x, y, over.at(x, y));
+                }
+                blitImage(Tiles::ItemArmourFirst + piece, body);
+                ++items;
+            }
+
+            Image liquid = loadPNG(std::string(ITEM_PACK_DIRECTORY) + "/potion_overlay.png");
+            Image bottle = loadPNG(std::string(ITEM_PACK_DIRECTORY) + "/potion.png");
+            if (liquid.valid() && bottle.valid())
+            {
+                liquid = scaleNearest(liquid, tilePixels, tilePixels);
+                bottle = scaleNearest(bottle, tilePixels, tilePixels);
+                tintImage(liquid, Color{ 56, 93, 198, 255 });
+                for (int y = 0; y < tilePixels; ++y)
+                    for (int x = 0; x < tilePixels; ++x)
+                        if (bottle.at(x, y).a > 0) liquid.set(x, y, bottle.at(x, y));
+                blitImage(Tiles::ItemPotion, liquid);
+            }
         }
 
         if (items > 0)

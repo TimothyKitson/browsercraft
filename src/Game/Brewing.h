@@ -37,6 +37,7 @@ namespace Brewing
     // Encoding to and from the stack's damage field.
     inline int toDamage(Potion potion) { return static_cast<int>(potion); }
     Potion fromDamage(int damage);
+    unsigned int colour(Potion potion);
 
     // What drinking it leaves behind. Water and awkward leave nothing:
     // they are what you brew with, not what you drink. Returns false

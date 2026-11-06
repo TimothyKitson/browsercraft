@@ -23,6 +23,15 @@ Brewing::Potion Brewing::fromDamage(int damage)
     return static_cast<Potion>(damage);
 }
 
+unsigned int Brewing::colour(Potion potion)
+{
+    Effects::Kind kind = Effects::Kind::Count;
+    int amplifier = 0;
+    float seconds = 0.0f;
+    if (!effectOf(potion, kind, amplifier, seconds)) return 0x385DC6;
+    return Effects::colour(kind);
+}
+
 bool Brewing::effectOf(Potion potion, Effects::Kind& kind, int& amplifier, float& seconds)
 {
     switch (potion)
