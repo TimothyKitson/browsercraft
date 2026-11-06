@@ -329,6 +329,10 @@ void WorldGen::generateNether(Chunk& chunk) const
                     hashToFloat(hashCoords(wx / 2, y / 2, wz / 2, m_seed + 7901)) < 0.03f &&
                     hashToFloat(hashCoords(wx, y, wz, m_seed + 7902)) < 0.55f)
                     chunk.setBlockRaw(lx, y, lz, Blocks::NetherQuartzOre);
+                else if (chunk.getBlock(lx, y, lz) == Blocks::Netherrack &&
+                         hashToFloat(hashCoords(wx / 2, y / 2, wz / 2, m_seed + 7903)) < 0.015f &&
+                         hashToFloat(hashCoords(wx, y, wz, m_seed + 7904)) < 0.5f)
+                    chunk.setBlockRaw(lx, y, lz, Blocks::NetherGoldOre);
 
             // Ancient debris, buried in the rock below the lava and
             // never touching open air. Minecraft hides it the same
@@ -789,6 +793,7 @@ void WorldGen::placeOres(Chunk& chunk) const
         float chancePerCell;
         int maxVeinSize;
         uint32_t salt;
+        bool deepslateOnly = false;
     };
 
     // chancePerCell is rolled for every block in the range, so these
@@ -820,6 +825,7 @@ void WorldGen::placeOres(Chunk& chunk) const
         // Copper sits high and comes in fat seams: in Minecraft it is
         // the one ore you find more of than you know what to do with.
         { Blocks::CopperOre,  40, 110, 0.0024f, 16, 1012 },
+        { Blocks::CopperOre,   5, DEEPSLATE_TOP, 0.0010f, 10, 1014, true },
         // The upper rock is not one grey block. These are deliberately
         // fatter and commoner than any seam: they are scenery, not a
         // find, and at a vein of thirty they read as the blotches
@@ -853,8 +859,10 @@ void WorldGen::placeOres(Chunk& chunk) const
                         int dy = static_cast<int>(hashToFloat(h >> 8) * 3.0f) - 1;
                         int dz = static_cast<int>(hashToFloat(h >> 16) * 3.0f) - 1;
                         int px = lx + dx, py = y + dy, pz = lz + dz;
-                        if (isStoneFamily(chunk.getBlock(px, py, pz)))
-                            chunk.setBlockRaw(px, py, pz, ore.block);
+                        const BlockId host = chunk.getBlock(px, py, pz);
+                        if (ore.deepslateOnly && host != Blocks::Deepslate) continue;
+                        if (isStoneFamily(host))
+                            chunk.setBlockRaw(px, py, pz, host == Blocks::Deepslate ? deepslateOreOf(ore.block) : ore.block);
                     }
                 }
             }

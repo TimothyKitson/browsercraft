@@ -12054,6 +12054,31 @@ namespace
             check(badlands > 0, "badlands of red sand lie somewhere in a world");
         }
 
+        check(blockDrop(Blocks::IronOre) == Items::RawIron && blockDrop(Blocks::GoldOre) == Items::RawGold,
+              "iron and gold ore give raw metal");
+        check(Smelting::resultOf(Items::RawIron) == Items::IronIngot, "which fires to an ingot");
+        check(blockDrop(Blocks::DeepslateDiamondOre) == Items::Diamond, "deepslate diamond ore gives diamond");
+        check(Tools::requiredLevel(Blocks::DeepslateDiamondOre) == Tools::requiredLevel(Blocks::DiamondOre),
+              "and wants the same pickaxe");
+        check(Experience::forMining(Blocks::DeepslateEmeraldOre).any(), "and pays the same experience");
+        check(Smelting::resultOf(Blocks::DeepslateIronOre) == Items::IronIngot, "a deepslate ore fires like its twin");
+        check(blockDrop(Blocks::NetherGoldOre) == Items::GoldNugget, "nether gold ore gives nuggets");
+        {
+            const WorldGen generator(4242u);
+            int deep = 0;
+            for (int cx = -2; cx <= 2; ++cx)
+                for (int cz = -2; cz <= 2; ++cz)
+                {
+                    Chunk chunk(ChunkPos{ cx, cz });
+                    generator.generate(chunk);
+                    for (int y = 0; y < DEEPSLATE_TOP; ++y)
+                        for (int x = 0; x < Chunk::SX; ++x)
+                            for (int z = 0; z < Chunk::SZ; ++z)
+                                if (oreBase(chunk.getBlock(x, y, z)) != chunk.getBlock(x, y, z)) ++deep;
+                }
+            check(deep > 0, "ore in the deepslate comes out as deepslate ore");
+        }
+
         check(blockDrop(Blocks::NetherQuartzOre) == Items::NetherQuartz, "quartz ore gives quartz");
         check(Experience::forMining(Blocks::NetherQuartzOre).any(), "and experience with it");
         ItemStack quartz[9];

@@ -5936,6 +5936,11 @@ void Application::updateMining(float deltaTime)
                         hit.block.x * 83492791 ^ hit.block.y * 73856093 ^
                         hit.block.z * 19349663 ^ static_cast<int>(m_elapsedSeconds * 389.0f));
                     dropped = Enchanting::fortuneDrops(onTool, roll);
+                    const BlockId seam = oreBase(id);
+                    if (seam == Blocks::NetherGoldOre) dropped *= 2 + static_cast<int>(roll % 5u);
+                    else if (seam == Blocks::RedstoneOre) dropped *= 4 + static_cast<int>(roll % 2u);
+                    else if (seam == Blocks::LapisOre) dropped *= 4 + static_cast<int>(roll % 6u);
+                    else if (seam == Blocks::CopperOre) dropped *= 2 + static_cast<int>(roll % 4u);
                 }
 
                 if (drop != Blocks::Air)

@@ -307,6 +307,7 @@ namespace Tiles
         StoneBricksTile, MossyStoneBricksTile, CrackedStoneBricksTile, ChiseledStoneBricksTile, SmoothStoneTile, SmoothStoneSlabSide, PolishedGraniteTile, PolishedDioriteTile, PolishedAndesiteTile, CobbledDeepslateTile, PolishedDeepslateTile, ChiseledDeepslateTile, CrackedDeepslateBricksTile, CrackedDeepslateTilesTile, PolishedTuffTile, ChiseledTuffSide, ChiseledTuffTop, ChiseledTuffBricksSide, ChiseledTuffBricksTop, BlackstoneTop, PolishedBlackstonePlainTile, ChiseledPolishedBlackstoneTile, CrackedPolishedBlackstoneBricksTile, RedNetherBricksTile, CrackedNetherBricksTile, ChiseledNetherBricksTile,
         NetherQuartzOreTile, QuartzBlockTop, QuartzBlockBottom, QuartzBlockSide, QuartzBricksTile, QuartzPillarTop, QuartzPillarSide, ChiseledQuartzTop, ChiseledQuartzSide,
         RedSandTile, RedSandstoneTop, RedSandstoneBottom, RedSandstoneSide, CutRedSandstoneTile, ChiseledRedSandstoneTile, CutSandstoneTile, ChiseledSandstoneTile,
+        DeepslateCoalOreTile, DeepslateIronOreTile, DeepslateCopperOreTile, DeepslateGoldOreTile, DeepslateRedstoneOreTile, DeepslateEmeraldOreTile, DeepslateLapisOreTile, DeepslateDiamondOreTile, NetherGoldOreTile, RawIronBlockTile, RawGoldBlockTile, RawCopperBlockTile,
 
         TileCount
     };
@@ -496,9 +497,9 @@ namespace Tiles
         IconMangroveDoor, ItemMangroveSign, IconMangrovePropagule,
         IconBambooDoor, ItemBambooSign,
         IconCrimsonDoor, ItemCrimsonSign, IconWarpedDoor, ItemWarpedSign,
-        ItemQuartz,
+        ItemQuartz, ItemRawIron, ItemRawGold,
 
-        ItemTileEnd = ItemQuartz + 1
+        ItemTileEnd = ItemRawGold + 1
     };
 
     // Ten progressively more broken overlay tiles for the mining animation.

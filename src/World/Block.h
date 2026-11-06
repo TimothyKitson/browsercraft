@@ -568,6 +568,7 @@ namespace Blocks
         StoneBricks, MossyStoneBricks, CrackedStoneBricks, ChiseledStoneBricks, SmoothStone, SmoothStoneSlab, StoneBrickSlab, PolishedGranite, PolishedDiorite, PolishedAndesite, CobbledDeepslate, PolishedDeepslate, ChiseledDeepslate, CrackedDeepslateBricks, CrackedDeepslateTiles, CobbledDeepslateSlab, PolishedTuff, ChiseledTuff, ChiseledTuffBricks, TuffSlab, TuffBrickSlab, PolishedBlackstone, ChiseledPolishedBlackstone, CrackedPolishedBlackstoneBricks, PolishedBlackstoneSlab, RedNetherBricks, CrackedNetherBricks, ChiseledNetherBricks, NetherBrickSlab,
         NetherQuartzOre, QuartzBlock, QuartzBricks, QuartzPillar, ChiseledQuartzBlock, QuartzSlab,
         RedSand, RedSandstone, CutRedSandstone, ChiseledRedSandstone, SmoothRedSandstone, RedSandstoneSlab, CutSandstone, ChiseledSandstone, SmoothSandstone,
+        DeepslateCoalOre, DeepslateIronOre, DeepslateCopperOre, DeepslateGoldOre, DeepslateRedstoneOre, DeepslateEmeraldOre, DeepslateLapisOre, DeepslateDiamondOre, NetherGoldOre, RawIronBlock, RawGoldBlock, RawCopperBlock,
 
         Count
     };
@@ -1184,6 +1185,36 @@ inline BlockId strippedOf(BlockId log)
     return Blocks::Air;
 }
 inline bool isPinkPetals(BlockId id) { return id >= Blocks::PinkPetals1 && id <= Blocks::PinkPetals4; }
+inline BlockId oreBase(BlockId id)
+{
+    switch (id)
+    {
+        case Blocks::DeepslateCoalOre: return Blocks::CoalOre;
+        case Blocks::DeepslateIronOre: return Blocks::IronOre;
+        case Blocks::DeepslateCopperOre: return Blocks::CopperOre;
+        case Blocks::DeepslateGoldOre: return Blocks::GoldOre;
+        case Blocks::DeepslateRedstoneOre: return Blocks::RedstoneOre;
+        case Blocks::DeepslateEmeraldOre: return Blocks::EmeraldOre;
+        case Blocks::DeepslateLapisOre: return Blocks::LapisOre;
+        case Blocks::DeepslateDiamondOre: return Blocks::DiamondOre;
+        default: return id;
+    }
+}
+inline BlockId deepslateOreOf(BlockId ore)
+{
+    switch (ore)
+    {
+        case Blocks::CoalOre: return Blocks::DeepslateCoalOre;
+        case Blocks::IronOre: return Blocks::DeepslateIronOre;
+        case Blocks::CopperOre: return Blocks::DeepslateCopperOre;
+        case Blocks::GoldOre: return Blocks::DeepslateGoldOre;
+        case Blocks::RedstoneOre: return Blocks::DeepslateRedstoneOre;
+        case Blocks::EmeraldOre: return Blocks::DeepslateEmeraldOre;
+        case Blocks::LapisOre: return Blocks::DeepslateLapisOre;
+        case Blocks::DiamondOre: return Blocks::DeepslateDiamondOre;
+        default: return ore;
+    }
+}
 inline bool isNylium(BlockId id) { return id == Blocks::CrimsonNylium || id == Blocks::WarpedNylium; }
 inline bool isFungus(BlockId id) { return id == Blocks::CrimsonFungus || id == Blocks::WarpedFungus; }
 inline bool isNetherPlant(BlockId id)

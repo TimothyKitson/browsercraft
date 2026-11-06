@@ -923,6 +923,18 @@ namespace
         { "Cut Sandstone", SandstoneTop, SandstoneTop, CutSandstoneTile, true, true, RenderType::Cube, 0, 0.8f },
         { "Chiseled Sandstone", SandstoneTop, SandstoneTop, ChiseledSandstoneTile, true, true, RenderType::Cube, 0, 0.8f },
         { "Smooth Sandstone", SandstoneTop, SandstoneTop, SandstoneTop, true, true, RenderType::Cube, 0, 2.0f },
+        { "Deepslate Coal Ore", DeepslateCoalOreTile, DeepslateCoalOreTile, DeepslateCoalOreTile, true, true, RenderType::Cube, 0, 4.5f },
+        { "Deepslate Iron Ore", DeepslateIronOreTile, DeepslateIronOreTile, DeepslateIronOreTile, true, true, RenderType::Cube, 0, 4.5f },
+        { "Deepslate Copper Ore", DeepslateCopperOreTile, DeepslateCopperOreTile, DeepslateCopperOreTile, true, true, RenderType::Cube, 0, 4.5f },
+        { "Deepslate Gold Ore", DeepslateGoldOreTile, DeepslateGoldOreTile, DeepslateGoldOreTile, true, true, RenderType::Cube, 0, 4.5f },
+        { "Deepslate Redstone Ore", DeepslateRedstoneOreTile, DeepslateRedstoneOreTile, DeepslateRedstoneOreTile, true, true, RenderType::Cube, 0, 4.5f },
+        { "Deepslate Emerald Ore", DeepslateEmeraldOreTile, DeepslateEmeraldOreTile, DeepslateEmeraldOreTile, true, true, RenderType::Cube, 0, 4.5f },
+        { "Deepslate Lapis Lazuli Ore", DeepslateLapisOreTile, DeepslateLapisOreTile, DeepslateLapisOreTile, true, true, RenderType::Cube, 0, 4.5f },
+        { "Deepslate Diamond Ore", DeepslateDiamondOreTile, DeepslateDiamondOreTile, DeepslateDiamondOreTile, true, true, RenderType::Cube, 0, 4.5f },
+        { "Nether Gold Ore", NetherGoldOreTile, NetherGoldOreTile, NetherGoldOreTile, true, true, RenderType::Cube, 0, 3.0f },
+        { "Block of Raw Iron", RawIronBlockTile, RawIronBlockTile, RawIronBlockTile, true, true, RenderType::Cube, 0, 5.0f },
+        { "Block of Raw Gold", RawGoldBlockTile, RawGoldBlockTile, RawGoldBlockTile, true, true, RenderType::Cube, 0, 5.0f },
+        { "Block of Raw Copper", RawCopperBlockTile, RawCopperBlockTile, RawCopperBlockTile, true, true, RenderType::Cube, 0, 5.0f },
     };
 }
 

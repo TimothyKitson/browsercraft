@@ -3832,6 +3832,57 @@ namespace
     }
     void paintChiseledSandstoneTile(Tile& t) { paintChiseledIn(t, Color{ 216, 204, 158 }, 908); }
 
+    void paintDeepslateOreIn(Tile& t, Color oreColor, int salt)
+    {
+        paintDeepslate(t);
+        for (int i = 0; i < 5; ++i)
+        {
+            const int cx = 2 + static_cast<int>(hash2(i, 0, salt) * 12.0f);
+            const int cy = 2 + static_cast<int>(hash2(i, 1, salt) * 12.0f);
+            const int radius = hash2(i, 2, salt) > 0.5f ? 2 : 1;
+            for (int y = cy - radius; y <= cy + radius; ++y)
+                for (int x = cx - radius; x <= cx + radius; ++x)
+                    if ((x - cx) * (x - cx) + (y - cy) * (y - cy) <= radius * radius)
+                        t.set(x, y, shade(oreColor, static_cast<int>((hash2(x, y, salt + 5) - 0.5f) * 40.0f)));
+        }
+    }
+    void paintDeepslateCoalOreTile(Tile& t) { paintDeepslateOreIn(t, Color{ 38, 38, 38 }, 920); }
+    void paintDeepslateIronOreTile(Tile& t) { paintDeepslateOreIn(t, Color{ 203, 160, 122 }, 921); }
+    void paintDeepslateCopperOreTile(Tile& t) { paintDeepslateOreIn(t, Color{ 224, 120, 80 }, 922); }
+    void paintDeepslateGoldOreTile(Tile& t) { paintDeepslateOreIn(t, Color{ 247, 206, 73 }, 923); }
+    void paintDeepslateRedstoneOreTile(Tile& t) { paintDeepslateOreIn(t, Color{ 200, 20, 20 }, 924); }
+    void paintDeepslateEmeraldOreTile(Tile& t) { paintDeepslateOreIn(t, Color{ 40, 200, 90 }, 925); }
+    void paintDeepslateLapisOreTile(Tile& t) { paintDeepslateOreIn(t, Color{ 40, 70, 200 }, 926); }
+    void paintDeepslateDiamondOreTile(Tile& t) { paintDeepslateOreIn(t, Color{ 96, 231, 226 }, 927); }
+    void paintNetherGoldOreTile(Tile& t)
+    {
+        paintNetherrack(t);
+        for (int k = 0; k < 9; ++k)
+            t.set(2 + static_cast<int>(hash2(k, 0, 931) * 12.0f), 2 + static_cast<int>(hash2(k, 1, 931) * 12.0f),
+                  Color{ 247, 206, 73 });
+    }
+    void paintRawBlockIn(Tile& t, Color base, int salt)
+    {
+        const int n = Tile::N;
+        for (int y = 0; y < n; ++y)
+            for (int x = 0; x < n; ++x)
+                t.set(x, y, shade(base, static_cast<int>((hash2(x / 2, y / 2, salt) - 0.5f) * 50.0f)));
+    }
+    void paintRawIronBlockTile(Tile& t) { paintRawBlockIn(t, Color{ 166, 135, 107 }, 932); }
+    void paintRawGoldBlockTile(Tile& t) { paintRawBlockIn(t, Color{ 221, 169, 46 }, 933); }
+    void paintRawCopperBlockTile(Tile& t) { paintRawBlockIn(t, Color{ 154, 105, 79 }, 934); }
+    void paintRawItemIn(Tile& t, Color base, int salt)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        const int n = Tile::N;
+        for (int y = 3; y < n - 3; ++y)
+            for (int x = 3; x < n - 3; ++x)
+                if ((x - n / 2) * (x - n / 2) + (y - n / 2) * (y - n / 2) < 22)
+                    t.set(x, y, shade(base, static_cast<int>((hash2(x, y, salt) - 0.5f) * 50.0f)));
+    }
+    void paintItemRawIron(Tile& t) { paintRawItemIn(t, Color{ 190, 156, 126 }, 935); }
+    void paintItemRawGold(Tile& t) { paintRawItemIn(t, Color{ 236, 186, 56 }, 936); }
+
     void paintItemSign(Tile& t)
     {
         t.fill(Color{ 0, 0, 0, 0 });
@@ -6815,6 +6866,8 @@ namespace
         { Tiles::ItemCrimsonSign, paintItemCrimsonSign },
         { Tiles::IconWarpedDoor, paintWarpedDoorLower },
         { Tiles::ItemQuartz, paintItemQuartz },
+        { Tiles::ItemRawIron, paintItemRawIron },
+        { Tiles::ItemRawGold, paintItemRawGold },
         { Tiles::ItemWarpedSign, paintItemWarpedSign },
         { Tiles::ItemBambooSign, paintItemBambooSign },
         { Tiles::ItemMangroveSign, paintItemMangroveSign },
@@ -6979,6 +7032,18 @@ namespace
         { Tiles::DustLine1Off, paintRedstoneDust },
         { Tiles::DustLine1On, paintRedstoneDustLit },
         { Tiles::LeverHandle, paintLever },
+        { Tiles::DeepslateCoalOreTile, paintDeepslateCoalOreTile },
+        { Tiles::DeepslateIronOreTile, paintDeepslateIronOreTile },
+        { Tiles::DeepslateCopperOreTile, paintDeepslateCopperOreTile },
+        { Tiles::DeepslateGoldOreTile, paintDeepslateGoldOreTile },
+        { Tiles::DeepslateRedstoneOreTile, paintDeepslateRedstoneOreTile },
+        { Tiles::DeepslateEmeraldOreTile, paintDeepslateEmeraldOreTile },
+        { Tiles::DeepslateLapisOreTile, paintDeepslateLapisOreTile },
+        { Tiles::DeepslateDiamondOreTile, paintDeepslateDiamondOreTile },
+        { Tiles::NetherGoldOreTile, paintNetherGoldOreTile },
+        { Tiles::RawIronBlockTile, paintRawIronBlockTile },
+        { Tiles::RawGoldBlockTile, paintRawGoldBlockTile },
+        { Tiles::RawCopperBlockTile, paintRawCopperBlockTile },
         { Tiles::RedSandTile, paintRedSandTile },
         { Tiles::RedSandstoneTop, paintRedSandstoneTop },
         { Tiles::RedSandstoneBottom, paintRedSandstoneBottom },
@@ -7428,6 +7493,8 @@ namespace
         { Tiles::ItemCrimsonSign, { "crimson_sign", nullptr, nullptr } },
         { Tiles::IconWarpedDoor, { "warped_door", nullptr, nullptr } },
         { Tiles::ItemQuartz, { "quartz", nullptr, nullptr } },
+        { Tiles::ItemRawIron, { "raw_iron", nullptr, nullptr } },
+        { Tiles::ItemRawGold, { "raw_gold", nullptr, nullptr } },
         { Tiles::ItemWarpedSign, { "warped_sign", nullptr, nullptr } },
         { Tiles::ItemBambooSign, { "bamboo_sign", nullptr, nullptr } },
         { Tiles::ItemMangroveSign, { "mangrove_sign", nullptr, nullptr } },
@@ -7564,6 +7631,18 @@ namespace
         { Tiles::DustLine1Off, { "redstone_dust_line1", nullptr }, Tinting::RedstoneOff, 0, false },
         { Tiles::DustLine1On, { "redstone_dust_line1", nullptr }, Tinting::RedstoneOn, 0, false },
         { Tiles::LeverHandle, { "lever", nullptr }, Tinting::None, 0, false },
+        { Tiles::DeepslateCoalOreTile, { "deepslate_coal_ore", nullptr }, Tinting::None, 0, false },
+        { Tiles::DeepslateIronOreTile, { "deepslate_iron_ore", nullptr }, Tinting::None, 0, false },
+        { Tiles::DeepslateCopperOreTile, { "deepslate_copper_ore", nullptr }, Tinting::None, 0, false },
+        { Tiles::DeepslateGoldOreTile, { "deepslate_gold_ore", nullptr }, Tinting::None, 0, false },
+        { Tiles::DeepslateRedstoneOreTile, { "deepslate_redstone_ore", nullptr }, Tinting::None, 0, false },
+        { Tiles::DeepslateEmeraldOreTile, { "deepslate_emerald_ore", nullptr }, Tinting::None, 0, false },
+        { Tiles::DeepslateLapisOreTile, { "deepslate_lapis_ore", nullptr }, Tinting::None, 0, false },
+        { Tiles::DeepslateDiamondOreTile, { "deepslate_diamond_ore", nullptr }, Tinting::None, 0, false },
+        { Tiles::NetherGoldOreTile, { "nether_gold_ore", nullptr }, Tinting::None, 0, false },
+        { Tiles::RawIronBlockTile, { "raw_iron_block", nullptr }, Tinting::None, 0, false },
+        { Tiles::RawGoldBlockTile, { "raw_gold_block", nullptr }, Tinting::None, 0, false },
+        { Tiles::RawCopperBlockTile, { "raw_copper_block", nullptr }, Tinting::None, 0, false },
         { Tiles::RedSandTile, { "red_sand", nullptr }, Tinting::None, 0, false },
         { Tiles::RedSandstoneTop, { "red_sandstone_top", nullptr }, Tinting::None, 0, false },
         { Tiles::RedSandstoneBottom, { "red_sandstone_bottom", nullptr }, Tinting::None, 0, false },

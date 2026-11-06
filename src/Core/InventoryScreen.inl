@@ -59,7 +59,10 @@ namespace
 
     const StackId TAB_ORES[] = {
         Blocks::CoalOre, Blocks::IronOre, Blocks::GoldOre, Blocks::DiamondOre,
-        Blocks::EmeraldOre, Blocks::NetherQuartzOre,
+        Blocks::EmeraldOre, Blocks::NetherQuartzOre, Blocks::NetherGoldOre,
+        Blocks::DeepslateCoalOre, Blocks::DeepslateIronOre, Blocks::DeepslateCopperOre, Blocks::DeepslateGoldOre,
+        Blocks::DeepslateRedstoneOre, Blocks::DeepslateEmeraldOre, Blocks::DeepslateLapisOre,
+        Blocks::DeepslateDiamondOre, Blocks::RawIronBlock, Blocks::RawGoldBlock, Blocks::RawCopperBlock,
         Blocks::Stone, Blocks::Cobblestone, Blocks::Gravel, Blocks::Obsidian,
         Blocks::Bedrock,
     };

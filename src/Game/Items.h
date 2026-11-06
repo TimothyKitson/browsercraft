@@ -300,6 +300,8 @@ namespace Items
         CrimsonSign,
         WarpedSign,
         NetherQuartz,
+        RawIron,
+        RawGold,
         Count
     };
 }

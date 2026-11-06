@@ -107,6 +107,7 @@ int Tools::harvestLevel(Tier tier)
 
 int Tools::requiredLevel(BlockId block)
 {
+    block = oreBase(block);
     switch (block)
     {
         case Blocks::Obsidian:   return 4;
@@ -121,6 +122,8 @@ int Tools::requiredLevel(BlockId block)
         case Blocks::GoldOre:
         case Blocks::IronOre:    return 2;
         case Blocks::LapisOre:   return 2;   // stone, like iron
+        case Blocks::RawIronBlock: return 2;
+        case Blocks::RawGoldBlock: return 2;
         default: break;
     }
 

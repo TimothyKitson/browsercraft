@@ -80,12 +80,16 @@ namespace Experience
 
     Range forMining(StackId block)
     {
+        if (isBlockStack(block)) block = oreBase(static_cast<BlockId>(block));
         switch (block)
         {
         case Blocks::CoalOre:    return { 0, 2 };
         case Blocks::DiamondOre: return { 3, 7 };
         case Blocks::EmeraldOre: return { 3, 7 };
         case Blocks::NetherQuartzOre: return { 2, 5 };
+        case Blocks::NetherGoldOre: return { 0, 1 };
+        case Blocks::RedstoneOre: return { 1, 5 };
+        case Blocks::LapisOre: return { 2, 5 };
         default: break;
         }
         return {};

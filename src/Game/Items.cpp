@@ -204,6 +204,8 @@ namespace
         { "Crimson Sign",         Tiles::ItemCrimsonSign,       16 },
         { "Warped Sign",          Tiles::ItemWarpedSign,        16 },
         { "Nether Quartz",        Tiles::ItemQuartz,            64 },
+        { "Raw Iron",             Tiles::ItemRawIron,           64 },
+        { "Raw Gold",             Tiles::ItemRawGold,           64 },
     };
 
     static_assert(sizeof(ITEMS) / sizeof(ITEMS[0]) ==
@@ -284,6 +286,7 @@ bool isBreedingFood(StackId id)
 // outside Application could tell.
 StackId blockDrop(BlockId id)
 {
+    id = oreBase(id);
     if (isLeaves(id)) return Blocks::Air;   // leaves drop nothing
 
     // A cocoa pod gives its beans; the pod itself is not a thing.
@@ -360,6 +363,9 @@ StackId blockDrop(BlockId id)
         // along and the self-test had checked that it was.
         case Blocks::GlowBerries: return Items::GlowBerries;
         case Blocks::CopperOre: return Items::RawCopper;
+        case Blocks::IronOre: return Items::RawIron;
+        case Blocks::GoldOre: return Items::RawGold;
+        case Blocks::NetherGoldOre: return Items::GoldNugget;
 
         // Whatever state a thing was in when you broke it, what
         // comes up is the thing itself.

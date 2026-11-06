@@ -5,12 +5,15 @@
 
 StackId Smelting::resultOf(StackId input)
 {
+    if (isBlockStack(input)) input = oreBase(static_cast<BlockId>(input));
     switch (input)
     {
         case Blocks::IronOre:   return Items::IronIngot;
         case Blocks::GoldOre:   return Items::GoldIngot;
         case Blocks::CopperOre: return Items::CopperIngot;
         case Items::RawCopper:  return Items::CopperIngot;
+        case Items::RawIron:    return Items::IronIngot;
+        case Items::RawGold:    return Items::GoldIngot;
         case Blocks::Sand:      return Blocks::Glass;
         case Blocks::Cobblestone: return Blocks::Stone;
         case Blocks::Stone:     return Blocks::SmoothStone;
@@ -113,8 +116,10 @@ bool Smelting::suits(Kind kind, StackId input)
         // A blast furnace smelts metal: what comes out of the ground
         // with a metal in it, and the raw metal itself.
         case Kind::BlastFurnace:
+            if (isBlockStack(input)) input = oreBase(static_cast<BlockId>(input));
             return input == Blocks::IronOre || input == Blocks::GoldOre ||
                    input == Blocks::CopperOre || input == Items::RawCopper ||
+                   input == Items::RawIron || input == Items::RawGold ||
                    input == Blocks::AncientDebris;
     }
     return false;
