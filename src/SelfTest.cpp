@@ -9456,6 +9456,16 @@ namespace
         check(fall.at(0, 1, 0) == Blocks::Stone || fall.at(0, 2, 0) == Blocks::Obsidian,
               "lava meeting water below turns one of them to rock");
 
+        section("the wither: its first eleven seconds");
+        {
+            Mob wither(MobId::Wither, glm::vec3(0.0f, 80.0f, 0.0f), 77u);
+            check(wither.spawnPhase() > 10.0f, "a new wither starts in its spawn phase");
+            check(wither.health() == mobType(MobId::Wither).maxHealth / 3, "at a third of its health");
+            const int before = wither.health();
+            wither.damage(50, glm::vec3(1.0f, 0.0f, 0.0f));
+            check(wither.health() == before, "and nothing can hurt it until it wakes");
+        }
+
         section("amethyst: buds grow in four stages");
         check(amethystAtStage(0) == Blocks::SmallAmethystBud && amethystAtStage(3) == Blocks::AmethystCluster,
               "small, medium, large, then a cluster");

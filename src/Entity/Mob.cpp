@@ -37,6 +37,12 @@ Mob::Mob(MobId type, glm::vec3 feetPosition, uint32_t seed, bool baby)
     }
     m_goalYaw = m_yaw;
     m_ambientTimer = t.ambientMinSeconds + random01() * (t.ambientMaxSeconds - t.ambientMinSeconds);
+
+    if (type == MobId::Wither)
+    {
+        m_spawnPhase = WITHER_SPAWN_SECONDS;
+        m_health = std::max(1, t.maxHealth / 3);
+    }
 }
 
 float Mob::random01()
@@ -592,6 +598,26 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
     if (m_babyTimer > 0.0f) m_babyTimer = std::max(0.0f, m_babyTimer - deltaTime);
     if (m_holdTimer > 0.0f) m_holdTimer = std::max(0.0f, m_holdTimer - deltaTime);
     m_age += deltaTime;
+    m_lastRange = glm::length(playerPosition - m_position);
+
+    if (m_spawnPhase > 0.0f && alive())
+    {
+        m_spawnPhase = std::max(0.0f, m_spawnPhase - deltaTime);
+        const float grown = 1.0f - m_spawnPhase / WITHER_SPAWN_SECONDS;
+        const int target = t.maxHealth / 3 + static_cast<int>(grown * (t.maxHealth - t.maxHealth / 3));
+        m_health = std::max(m_health, std::min(t.maxHealth, target));
+        m_holdTimer = std::max(m_holdTimer, 0.1f);
+        m_shootTimer = std::max(m_shootTimer, 1.0f);
+        if (m_spawnPhase <= 0.0f)
+        {
+            m_health = t.maxHealth;
+            MobBlast blast;
+            blast.at = m_position + glm::vec3(0.0f, height() * 0.5f, 0.0f);
+            blast.radius = WITHER_SPAWN_BLAST;
+            blast.damage = 30;
+            m_blasts.push_back(blast);
+        }
+    }
 
     // The lid. It opens when there is something to shoot at and shuts
     // again when there is not, and a shut shulker is a block: it does
@@ -964,7 +990,7 @@ bool Mob::hostileNow() const
 
 void Mob::damage(int amount, const glm::vec3& fromDirection)
 {
-    if (amount <= 0 || !alive()) return;
+    if (amount <= 0 || !alive() || m_spawnPhase > 0.0f) return;
 
     // Hitting one is a reason, whatever it was doing before. Burning in
     // the sun is not, but that passes no direction and no attacker, and

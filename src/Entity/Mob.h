@@ -133,6 +133,13 @@ public:
     // Degrees, the same convention as the camera and the player model.
     float yaw() const { return m_yaw; }
     int health() const { return m_health; }
+    float spawnPhase() const { return m_spawnPhase; }
+    float lastRange() const { return m_lastRange; }
+    bool aboutToShoot() const
+    {
+        return type().arrowDamage > 0 && m_shootTimer > 0.0f && m_shootTimer < 0.5f &&
+               m_lastRange < type().arrowRange;
+    }
 
     // Put health back, never past what the species starts with. The
     // dragon's crystals are the only thing that uses this: everything
@@ -176,6 +183,8 @@ public:
     // reason the death report is: whatever it leaves belongs where it
     // was standing when it laid it.
     static constexpr float EGG_SECONDS = 180.0f;
+    static constexpr float WITHER_SPAWN_SECONDS = 11.0f;
+    static constexpr float WITHER_SPAWN_BLAST = 7.0f;
     bool takeEggReport();
 
     // --- breeding ---
@@ -415,6 +424,8 @@ private:
     float m_ambientTimer = 0.0f;
     float m_hurtVoiceTimer = 0.0f;
     float m_shootTimer = 0.0f;
+    float m_spawnPhase = 0.0f;
+    float m_lastRange = 1.0e9f;
     float m_fuseTimer = 0.0f;
     bool m_lit = false;
     float m_stepDistance = 0.0f;

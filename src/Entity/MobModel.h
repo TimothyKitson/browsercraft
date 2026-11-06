@@ -25,7 +25,8 @@ public:
     // The geometry for one mob, in world space, with no GL involved --
     // which is what lets --selftest check the models stand on the ground
     // and face the way they are walking.
-    void build(const MobSkin& skin, const Mob& mob, float sky, float blockLight, int layer = 0);
+    void build(const MobSkin& skin, const Mob& mob, float sky, float blockLight, int layer = 0,
+               float extraInflate = 0.0f);
     const std::vector<float>& vertices() const { return m_vertices; }
 
     // Built on demand and kept; painting one costs well under a
@@ -38,6 +39,7 @@ public:
 
 private:
     unsigned int villagerTexture(const char* path);
+    void renderExtras(MobId id, const MobSkin& skin, const World& world, const EntityManager& entities);
     std::vector<std::pair<std::string, unsigned int>> m_villagerTextures;
     std::vector<std::unique_ptr<MobSkin>> m_skins;
     Mesh m_mesh;

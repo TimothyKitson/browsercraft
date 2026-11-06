@@ -29,12 +29,13 @@ Everything in the 1.21 textures zip the game doesn't use yet, turned into work. 
    - IV. The potion overlay, coloured by what's brewed in it.
    - V. Empty-slot ghosts for every slot that has one: ingot, shard, sword, pickaxe, axe, hoe, shovel, redstone, quartz, diamond, emerald, and the smithing templates.
    - Left for later: the smithing ghosts go in with the smithing table (46), and dyed leather needs a colour on the item, which goes in with armour trims (72).
-6. Extra layers for mobs the game has
+6. Extra layers for mobs the game has (done)
    - I. Glowing eyes for enderman, spider, cave spider, phantom and dragon. Warden glow, heart and pulsing spots.
    - II. Iron golem cracks that grow as it loses health.
    - III. Wither armour below half health, and the blue invulnerable phase when it spawns.
    - IV. Ghast shooting face, breeze eyes and wind, drowned outer layer, bogged and stray overlays, charging vex.
    - V. Pig and strider saddles (needs the saddle in item 49), and the cold strider.
+   - Left for later: the saddles go in with the saddle (49), and the breeze's wind swirl is its own model, which goes in with the beams (9).
 7. Variants for mobs the game has
    - I. Wolves: 9 coats, the tame and angry faces, a collar tinted by dye, wolf armour and its cracks.
    - II. Cats: 11 breeds plus a collar. Ocelots.

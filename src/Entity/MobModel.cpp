@@ -8,6 +8,7 @@
 #include "Core/GLFunctions.h"
 #include "Renderer/Shader.h"
 #include "World/World.h"
+#include <string>
 #include <cmath>
 
 namespace
@@ -66,7 +67,8 @@ const MobSkin& MobModel::skinFor(MobId id)
     return *m_skins[index];
 }
 
-void MobModel::build(const MobSkin& skin, const Mob& mob, float sky, float blockLight, int layer)
+void MobModel::build(const MobSkin& skin, const Mob& mob, float sky, float blockLight, int layer,
+                     float extraInflate)
 {
     const MobType& type = mob.type();
 
@@ -122,7 +124,7 @@ void MobModel::build(const MobSkin& skin, const Mob& mob, float sky, float block
         box.u = source.u;
         box.v = source.v;
         box.mirror = source.mirror;
-        box.inflate = source.inflate;
+        box.inflate = source.inflate + extraInflate;
 
         // The rest pose first -- a spider's legs are already splayed
         // before it takes a step -- and the walk on top of it.
@@ -286,7 +288,129 @@ void MobModel::render(Shader& chunkShader, const World& world, const EntityManag
             }
             glDepthFunc(GL_LESS);
         }
+
+        renderExtras(id, skin, world, entities);
     }
+}
+
+void MobModel::renderExtras(MobId id, const MobSkin& skin, const World& world, const EntityManager& entities)
+{
+    struct Extra
+    {
+        MobId id;
+        const char* path;
+        float inflate;
+    };
+    static const Extra EXTRAS[] = {
+        { MobId::Enderman, "assets/textures/entity/enderman/enderman_eyes.png", 0.0f },
+        { MobId::Spider, "assets/textures/entity/spider_eyes.png", 0.0f },
+        { MobId::CaveSpider, "assets/textures/entity/spider_eyes.png", 0.0f },
+        { MobId::Phantom, "assets/textures/entity/phantom_eyes.png", 0.0f },
+        { MobId::EnderDragon, "assets/textures/entity/enderdragon/dragon_eyes.png", 0.0f },
+        { MobId::Warden, "assets/textures/entity/warden/warden_bioluminescent_layer.png", 0.0f },
+        { MobId::Warden, "assets/textures/entity/warden/warden_pulsating_spots_1.png", 0.0f },
+        { MobId::Warden, "assets/textures/entity/warden/warden_pulsating_spots_2.png", 0.0f },
+        { MobId::Warden, "assets/textures/entity/warden/warden_heart.png", 0.0f },
+        { MobId::IronGolem, "assets/textures/entity/iron_golem/iron_golem_crackiness_low.png", 0.0f },
+        { MobId::IronGolem, "assets/textures/entity/iron_golem/iron_golem_crackiness_medium.png", 0.0f },
+        { MobId::IronGolem, "assets/textures/entity/iron_golem/iron_golem_crackiness_high.png", 0.0f },
+        { MobId::Wither, "assets/textures/entity/wither/wither_invulnerable.png", 0.0f },
+        { MobId::Wither, "assets/textures/entity/wither/wither_armor.png", 0.5f },
+        { MobId::Ghast, "assets/textures/entity/ghast/ghast_shooting.png", 0.0f },
+        { MobId::Breeze, "assets/textures/entity/breeze/breeze_eyes.png", 0.0f },
+        { MobId::Drowned, "assets/textures/entity/zombie/drowned_outer_layer.png", 0.25f },
+        { MobId::Stray, "assets/textures/entity/skeleton/stray_overlay.png", 0.25f },
+        { MobId::Bogged, "assets/textures/entity/skeleton/bogged_overlay.png", 0.25f },
+        { MobId::Vex, "assets/textures/entity/illager/vex_charging.png", 0.0f },
+        { MobId::Strider, "assets/textures/entity/strider/strider_cold.png", 0.0f },
+    };
+
+    auto lit = [&](const Mob& mob, float& sky, float& blockLight) {
+        const glm::vec3 centre = mob.position();
+        const int lx = static_cast<int>(std::floor(centre.x));
+        int ly = static_cast<int>(std::floor(centre.y + mob.height() * 0.5f));
+        const int lz = static_cast<int>(std::floor(centre.z));
+        for (int step = 0; step < 3 && isOpaque(world.getBlock(lx, ly, lz)); ++step) ++ly;
+        const float fade = mob.deathFade();
+        sky = static_cast<float>(world.skyLight(lx, ly, lz)) / 15.0f * fade;
+        blockLight = std::min(1.0f, static_cast<float>(world.blockLightAt(lx, ly, lz)) / 15.0f +
+                                        mob.hurtFlash() * 1.6f) * fade;
+    };
+
+    auto glowFor = [&](const char* path, const Mob& mob) -> float {
+        const std::string p(path);
+        const float health = static_cast<float>(mob.health()) / std::max(1, mob.type().maxHealth);
+        if (p.find("_eyes") != std::string::npos || p.find("bioluminescent") != std::string::npos) return 1.0f;
+        if (p.find("spots_1") != std::string::npos)
+        {
+            const float pulse = std::cos(mob.age() * 0.9f);
+            return pulse > 0.3f ? 0.6f + 0.4f * pulse : -1.0f;
+        }
+        if (p.find("spots_2") != std::string::npos)
+        {
+            const float pulse = std::cos(mob.age() * 0.9f + 3.14159f);
+            return pulse > 0.3f ? 0.6f + 0.4f * pulse : -1.0f;
+        }
+        if (p.find("heart") != std::string::npos)
+        {
+            const float beat = std::sin(mob.age() * (mob.hostileNow() ? 9.0f : 5.0f));
+            return beat > 0.2f ? 0.5f + 0.5f * beat : -1.0f;
+        }
+        if (p.find("crackiness_low") != std::string::npos) return health < 0.75f && health >= 0.5f ? 0.0f : -1.0f;
+        if (p.find("crackiness_medium") != std::string::npos) return health < 0.5f && health >= 0.25f ? 0.0f : -1.0f;
+        if (p.find("crackiness_high") != std::string::npos) return health < 0.25f ? 0.0f : -1.0f;
+        if (p.find("invulnerable") != std::string::npos)
+            return mob.spawnPhase() > 0.0f && (mob.spawnPhase() > 2.0f || std::fmod(mob.spawnPhase(), 0.5f) < 0.25f)
+                       ? 0.0f : -1.0f;
+        if (p.find("wither_armor") != std::string::npos) return health <= 0.5f && mob.spawnPhase() <= 0.0f ? 1.0f : -1.0f;
+        if (p.find("shooting") != std::string::npos) return mob.aboutToShoot() ? 0.0f : -1.0f;
+        if (p.find("charging") != std::string::npos) return mob.hostileNow() && mob.lastRange() < 6.0f ? 0.0f : -1.0f;
+        if (p.find("strider_cold") != std::string::npos)
+        {
+            const glm::vec3 at = mob.position();
+            const int x = static_cast<int>(std::floor(at.x));
+            const int y = static_cast<int>(std::floor(at.y));
+            const int z = static_cast<int>(std::floor(at.z));
+            const bool warm = isLava(world.getBlock(x, y, z)) || isLava(world.getBlock(x, y - 1, z));
+            return warm ? -1.0f : 0.0f;
+        }
+        return 0.0f;
+    };
+
+    bool started = false;
+    for (const Extra& extra : EXTRAS)
+    {
+        if (extra.id != id) continue;
+        std::vector<float> batch;
+        for (const Mob& mob : entities.mobs())
+        {
+            if (mob.typeId() != id) continue;
+            const float glow = glowFor(extra.path, mob);
+            if (glow < 0.0f) continue;
+            float sky = 0.0f, blockLight = 0.0f;
+            lit(mob, sky, blockLight);
+            if (glow > 0.0f)
+            {
+                sky = 0.0f;
+                blockLight = std::max(blockLight, glow * mob.deathFade());
+            }
+            build(skin, mob, sky, blockLight, 0, extra.inflate);
+            batch.insert(batch.end(), m_vertices.begin(), m_vertices.end());
+        }
+        if (batch.empty()) continue;
+        const unsigned int texture = villagerTexture(extra.path);
+        if (!texture) continue;
+        if (!started)
+        {
+            glDepthFunc(GL_LEQUAL);
+            started = true;
+        }
+        m_mesh.upload(batch, CHUNK_LAYOUT, true);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, texture);
+        m_mesh.draw(GL_TRIANGLES);
+    }
+    if (started) glDepthFunc(GL_LESS);
 }
 
 MobModel::~MobModel()
@@ -311,7 +435,7 @@ unsigned int MobModel::villagerTexture(const char* path)
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        glTexImage2D(GL_TEXTURE_2D, 0, 0x8058, width, std::min(height, width), 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+        glTexImage2D(GL_TEXTURE_2D, 0, 0x8058, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
         glBindTexture(GL_TEXTURE_2D, 0);
         stbi_image_free(data);
     }

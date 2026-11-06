@@ -2005,6 +2005,7 @@ bool Application::frame()
             m_startupScreen == "wolf" || m_startupScreen == "horse" ||
             m_startupScreen == "boat" || m_startupScreen == "rails" ||
             m_startupScreen == "mobs" || m_startupScreen == "golem" ||
+            m_startupScreen == "glowmobs" ||
             m_startupScreen == "shulker" ||
             m_startupScreen == "nethermobs" || m_startupScreen == "lairmobs" ||
             m_startupScreen == "jungle" || m_startupScreen == "savanna" ||
@@ -2070,6 +2071,7 @@ bool Application::frame()
                                   m_startupScreen != "boat" &&
                                   m_startupScreen != "rails" &&
                                   m_startupScreen != "mobs" &&
+                                  m_startupScreen != "glowmobs" &&
                                   m_startupScreen != "golem" &&
                                   m_startupScreen != "shulker" &&
                                   m_startupScreen != "nethermobs" &&
@@ -2517,11 +2519,13 @@ bool Application::frame()
             }
 
             m_freezeMobs = m_startupScreen == "mobs" || m_startupScreen == "golem" ||
+                           m_startupScreen == "glowmobs" ||
                            m_startupScreen == "nethermobs" ||
                            m_startupScreen == "lairmobs";
 
-            if (m_startupScreen == "mobs")
+            if (m_startupScreen == "mobs" || m_startupScreen == "glowmobs")
             {
+                const bool glowing = m_startupScreen == "glowmobs";
                 m_camera.setOrientation(0.0f, -6.0f);
                 m_camera.addLook(0.0f, 0.0f, 0.0f);
 
@@ -2552,13 +2556,20 @@ bool Application::frame()
                 // Midday, whatever the saved world was left on: half
                 // these shots came back at dusk with the lineup in
                 // silhouette.
-                m_timeOfDay = 0.5f;
+                m_timeOfDay = glowing ? 0.0f : 0.5f;
 
-                const MobId LINEUP[] = {
+                const MobId DAY[] = {
                     MobId::Wolf, MobId::Horse, MobId::Villager, MobId::Breeze,
                     MobId::Pig, MobId::Sheep, MobId::Chicken,
                     MobId::Creeper, MobId::Cow, MobId::Skeleton,
                 };
+                const MobId NIGHT[] = {
+                    MobId::Enderman, MobId::Spider, MobId::CaveSpider, MobId::IronGolem,
+                    MobId::Drowned, MobId::Stray, MobId::Bogged, MobId::Strider,
+                    MobId::Breeze, MobId::Wither,
+                };
+                const MobId* LINEUP_START = glowing ? NIGHT : DAY;
+                const std::vector<MobId> LINEUP(LINEUP_START, LINEUP_START + 10);
                 // Two ranks of five, so ten of them fit the arena.
                 int slot = 0;
                 for (MobId id : LINEUP)
@@ -2568,6 +2579,9 @@ bool Application::frame()
                     m_entities.spawnAt(id, glm::vec3(x, static_cast<float>(py), z), *m_world);
                     ++slot;
                 }
+                if (glowing)
+                    for (Mob& mob : m_entities.mobs())
+                        if (mob.typeId() == MobId::IronGolem) mob.damage(60, glm::vec3(0.0f));
 
                 // The cart on its rail and the boat on its water, since
                 // neither sits anywhere else.
