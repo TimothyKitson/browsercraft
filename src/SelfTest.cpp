@@ -39,6 +39,7 @@
 #include "Game/Fluids.h"
 #include "Renderer/BookRenderer.h"
 #include "Game/Anvil.h"
+#include "Game/Grindstone.h"
 #include "Game/Shield.h"
 #include "Game/Effects.h"
 #include "Game/Brewing.h"
@@ -11801,6 +11802,44 @@ namespace
         check(!Inventory::belongsIn(Inventory::BEACON_PAYMENT, Items::Stick), "a stick does not");
     }
 
+    void testGrindstone()
+    {
+        section("the grindstone repairs and disenchants");
+
+        Anvil::Input sword;
+        sword.id = Items::DiamondSword;
+        sword.count = 1;
+        sword.damage = 900;
+        sword.enchantments = Enchanting::withLevel(0, Enchanting::Kind::Sharpness, 4);
+        Anvil::Input worn = sword;
+        worn.enchantments = 0;
+        worn.damage = 1200;
+        Anvil::Input none;
+
+        const Grindstone::Result alone = Grindstone::combine(sword, none);
+        check(alone.valid, "one enchanted sword grinds on its own");
+        check(alone.enchantments == 0, "and comes off bare");
+        check(alone.damage == 900, "no more worn than it went in");
+        check(!Grindstone::combine(worn, none).valid, "a plain one alone gives nothing");
+
+        const int most = Anvil::maxDurability(Items::DiamondSword);
+        const Grindstone::Result both = Grindstone::combine(sword, worn);
+        check(both.valid, "two of the same sword grind together");
+        check(both.damage == std::max(0, most - ((most - 900) + (most - 1200) + most * 5 / 100)),
+              "their wear added up with five per cent on top");
+        check(both.enchantments == 0, "and nothing enchanted survives");
+
+        Anvil::Input pick = worn;
+        pick.id = Items::IronPickaxe;
+        check(!Grindstone::combine(sword, pick).valid, "a sword and a pickaxe do not mix");
+
+        check(Grindstone::powerOf(sword.enchantments) == 34, "sharpness IV is worth thirty-four");
+        const int low = Grindstone::experienceFor(34, 0u);
+        const int high = Grindstone::experienceFor(34, 16u);
+        check(low == 17 && high == 33, "which pays seventeen to thirty-three points");
+        check(Grindstone::experienceFor(0, 5u) == 0, "nothing for nothing");
+    }
+
     void testGameModes()
     {
         section("adventure and spectator");
@@ -12523,6 +12562,7 @@ int runSelfTest()
     testAttackCooldown();
     testGameModes();
     testBeaconPowers();
+    testGrindstone();
     testTheTablesTake121sPrices();
 
     std::printf("\n%d checks, %d failed\n", g_checks, g_failures);

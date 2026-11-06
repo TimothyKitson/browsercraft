@@ -84,7 +84,7 @@ Everything in the 1.21 textures zip the game doesn't use yet, turned into work. 
 19. Beacon screen (done)
     - I. Pick primary and secondary powers with the beacon buttons, confirm and cancel.
     - II. Add Haste and Resistance so every beacon power exists.
-20. Grindstone screen
+20. Grindstone screen (done)
     - I. Repair two of the same item.
     - II. Strip enchantments and pay back XP.
     - III. Show the error icon when it can't.

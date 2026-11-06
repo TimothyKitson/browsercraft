@@ -663,7 +663,7 @@ void Application::renderInventoryScreen()
     // see what was in it.
     const bool container = m_chestOpen || m_crafterOpen || m_furnaceOpen ||
                            m_inventory.craftSize() >= 3 || m_tradeOpen ||
-                           m_enchantOpen || m_brewOpen || m_anvilOpen || m_horseOpen || m_beaconOpen;
+                           m_enchantOpen || m_brewOpen || m_anvilOpen || m_horseOpen || m_beaconOpen || m_grindOpen;
 
     if (m_player.creative() && !container) renderCreativeScreen(w, h);
     else renderContainerScreen(w, h);
@@ -698,6 +698,7 @@ void Application::renderContainerScreen(float w, float h)
     else if (m_crafterOpen) background = "container/crafter";
     else if (m_horseOpen) background = "container/horse";
     else if (m_beaconOpen) background = "container/beacon";
+    else if (m_grindOpen) background = "container/grindstone";
     else if (m_tradeOpen) { background = "container/villager"; textureW = 512.0f; }
     else if (m_enchantOpen) background = "container/enchanting_table";
     else if (m_brewOpen) background = "container/brewing_stand";
@@ -780,7 +781,7 @@ void Application::renderContainerScreen(float w, float h)
     // for the same grid.
     const bool plainInventory = !m_chestOpen && !m_crafterOpen &&
                                 !m_furnaceOpen && !bench && !m_tradeOpen &&
-                                !m_enchantOpen && !m_brewOpen && !m_anvilOpen && !m_horseOpen && !m_beaconOpen;
+                                !m_enchantOpen && !m_brewOpen && !m_anvilOpen && !m_horseOpen && !m_beaconOpen && !m_grindOpen;
 
     // Every screen is headed with the name of what was opened, in the
     // top-left corner, so a barrel says Barrel and a smoker says Smoker.
@@ -793,6 +794,7 @@ void Application::renderContainerScreen(float w, float h)
             title = displayName(m_world->getBlock(m_furnaceBlock.x, m_furnaceBlock.y, m_furnaceBlock.z));
         else if (m_crafterOpen) title = "Crafter";
         else if (m_horseOpen) title = "Horse";
+        else if (m_grindOpen) title = "Repair & Disenchant";
         else if (m_brewOpen) title = "Brewing Stand";
         else if (m_anvilOpen) title = "Anvil";
         else if (m_enchantOpen) title = "Enchanting Table";
@@ -947,6 +949,28 @@ void Application::renderContainerScreen(float w, float h)
         drawSlot(Inventory::BEACON_PAYMENT, panelX + 136.0f, panelY + 110.0f);
     }
 
+    if (m_grindOpen)
+    {
+        drawSlot(Inventory::GRIND_TOP, panelX + 49.0f, panelY + 19.0f);
+        drawSlot(Inventory::GRIND_BOTTOM, panelX + 49.0f, panelY + 40.0f);
+        const Grindstone::Result made = grindResult();
+        const float rx = panelX + 129.0f, ry = panelY + 34.0f;
+        well(rx, ry);
+        if (made.valid)
+        {
+            drawItem(rx, ry, SLOT, made.id, made.count, glm::vec4(1.0f), made.damage, made.enchantments);
+            m_slotBoxes.push_back({ SlotBox::Kind::GrindTake, Inventory::GRIND_RESULT, rx - 1.0f, ry - 1.0f, PITCH });
+        }
+        else if (!m_inventory.slot(Inventory::GRIND_TOP).empty() || !m_inventory.slot(Inventory::GRIND_BOTTOM).empty())
+        {
+            if (!guiSprite("sprites/container/grindstone/error", panelX + 92.0f, panelY + 31.0f, 28.0f, 21.0f))
+            {
+                m_ui.quad(panelX + 98.0f, panelY + 34.0f, 16.0f, 3.0f, glm::vec4(0.8f, 0.1f, 0.1f, 1.0f));
+                m_ui.quad(panelX + 98.0f, panelY + 44.0f, 16.0f, 3.0f, glm::vec4(0.8f, 0.1f, 0.1f, 1.0f));
+            }
+        }
+    }
+
     // ------------------------------------------ the open crafter ---
     // 1.21's: the three by three at 26 and 17, the redstone that says
     // whether it is powered at 97 and 35, and at 134 and 35 what the
@@ -1012,7 +1036,7 @@ void Application::renderContainerScreen(float w, float h)
         // drawn on all of them, which is how a furnace came to have a
         // man standing in the middle of its fire.
         const bool otherBusiness = m_tradeOpen || m_enchantOpen || m_brewOpen ||
-                                   m_anvilOpen || m_furnaceOpen || bench || m_horseOpen || m_beaconOpen;
+                                   m_anvilOpen || m_furnaceOpen || bench || m_horseOpen || m_beaconOpen || m_grindOpen;
 
         // Armour down the left edge, at 8 and 8, a slot apart.
         for (int i = 0; !otherBusiness && i < Inventory::ARMOR_SLOTS; ++i)
@@ -1785,7 +1809,7 @@ void Application::renderContainerScreen(float w, float h)
         // fire between them at 36 and the result off to the right at
         // 116 and 35. The client's own four, and the shape everybody
         // recognises.
-        if (m_horseOpen || m_beaconOpen) {}
+        if (m_horseOpen || m_beaconOpen || m_grindOpen) {}
         else if (m_furnaceOpen)
         {
             const Furnaces::State& state = m_furnaces.at(m_furnaceBlock);
@@ -2358,6 +2382,10 @@ void Application::handleInventoryClick(int mouseX, int mouseY, bool rightButton,
             m_audio.play(Sound::Click, 0.45f);
             break;
 
+        case SlotBox::Kind::GrindTake:
+            takeGrindResult(shiftHeld);
+            break;
+
         case SlotBox::Kind::BeaconConfirm:
             confirmBeacon();
             break;
@@ -2422,6 +2450,79 @@ void Application::openHorse(Mob& horse)
     ItemStack armour;
     if (horse.horseArmour()) { armour.id = horse.horseArmour(); armour.count = 1; }
     m_inventory.slot(Inventory::HORSE_ARMOUR) = armour;
+}
+
+Grindstone::Result Application::grindResult() const
+{
+    auto input = [this](int index) {
+        const ItemStack& stack = m_inventory.slot(index);
+        Anvil::Input in;
+        in.id = stack.id;
+        in.count = stack.empty() ? 0 : stack.count;
+        in.damage = stack.damage;
+        in.enchantments = stack.enchantments;
+        return in;
+    };
+    return Grindstone::combine(input(Inventory::GRIND_TOP), input(Inventory::GRIND_BOTTOM));
+}
+
+void Application::openGrindstone(const glm::ivec3& block)
+{
+    m_grindBlock = block;
+    m_grindOpen = true;
+    m_inventoryOpen = true;
+    setMouseCaptured(false);
+}
+
+void Application::takeGrindResult(bool toInventory)
+{
+    if (!m_grindOpen) return;
+    const Grindstone::Result made = grindResult();
+    if (!made.valid) return;
+    if (!toInventory && !m_inventory.cursor().empty()) return;
+
+    ItemStack taken;
+    taken.id = made.id;
+    taken.count = made.count;
+    taken.damage = made.damage;
+    taken.enchantments = made.enchantments;
+    if (toInventory)
+    {
+        const int left = m_inventory.addStack(taken);
+        if (left > 0) return;
+    }
+    else
+        m_inventory.cursor() = taken;
+
+    ItemStack& top = m_inventory.slot(Inventory::GRIND_TOP);
+    ItemStack& bottom = m_inventory.slot(Inventory::GRIND_BOTTOM);
+    const int power = Grindstone::powerOf(top.empty() ? 0 : top.enchantments) +
+                      Grindstone::powerOf(bottom.empty() ? 0 : bottom.enchantments);
+    top.clear();
+    bottom.clear();
+
+    m_grindRoll ^= m_grindRoll << 13;
+    m_grindRoll ^= m_grindRoll >> 17;
+    m_grindRoll ^= m_grindRoll << 5;
+    const int points = Grindstone::experienceFor(power, m_grindRoll);
+    if (points > 0)
+        m_orbs.spawnValue(glm::vec3(m_grindBlock) + glm::vec3(0.5f, 1.0f, 0.5f), points);
+    m_audio.play(Sound::DigStone, 0.6f, 0.7f);
+}
+
+void Application::stowGrindstone()
+{
+    if (!m_grindOpen) return;
+    m_grindOpen = false;
+    for (int slot : { Inventory::GRIND_TOP, Inventory::GRIND_BOTTOM })
+    {
+        ItemStack& held = m_inventory.slot(slot);
+        if (held.empty()) continue;
+        ItemStack leftOver = held;
+        leftOver.count = m_inventory.addStack(held);
+        if (leftOver.count > 0) m_drops.spawnStack(m_player.position + glm::vec3(0.0f, 0.6f, 0.0f), leftOver);
+        held.clear();
+    }
 }
 
 int Application::beaconTiers() const
@@ -2508,6 +2609,7 @@ void Application::closeInventory()
 {
     stowHorse();
     stowBeacon();
+    stowGrindstone();
     stowChest();
     stowCrafter();
     stowFurnace();

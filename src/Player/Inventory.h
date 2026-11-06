@@ -114,7 +114,10 @@ public:
     static constexpr int HORSE_SADDLE = OFFHAND + 1;                  // 94
     static constexpr int HORSE_ARMOUR = HORSE_SADDLE + 1;             // 95
     static constexpr int BEACON_PAYMENT = HORSE_ARMOUR + 1;           // 96
-    static constexpr int SLOT_COUNT = BEACON_PAYMENT + 1;             // 97
+    static constexpr int GRIND_TOP = BEACON_PAYMENT + 1;              // 97
+    static constexpr int GRIND_BOTTOM = GRIND_TOP + 1;                // 98
+    static constexpr int GRIND_RESULT = GRIND_BOTTOM + 1;             // 99
+    static constexpr int SLOT_COUNT = GRIND_RESULT + 1;               // 100
 
     // The ceiling. What a particular thing actually stacks to comes from
     // maxStackOf(), since items need not agree with blocks.

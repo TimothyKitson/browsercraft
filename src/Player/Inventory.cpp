@@ -1,3 +1,4 @@
+#include "Game/Anvil.h"
 #include "Inventory.h"
 #include "Game/Armour.h"
 #include "Game/Crafting.h"
@@ -374,6 +375,8 @@ bool Inventory::belongsIn(int index, StackId id)
     if (index == TRADE_RESULT) return false;
     if (index == HORSE_SADDLE) return id == Items::Saddle;
     if (index == HORSE_ARMOUR) return isHorseArmour(id);
+    if (index == GRIND_TOP || index == GRIND_BOTTOM) return Anvil::wearsOut(id) || id == Items::Book;
+    if (index == GRIND_RESULT) return false;
     if (index == BEACON_PAYMENT)
         return id == Items::IronIngot || id == Items::GoldIngot || id == Items::Emerald ||
                id == Items::Diamond || id == Items::NetheriteIngot;

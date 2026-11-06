@@ -1948,10 +1948,11 @@ bool Application::frame()
         }
 
         if ((m_benchOpen || m_furnaceOpen || m_chestOpen || m_enchantOpen ||
-             m_anvilOpen || m_brewOpen || m_beaconOpen) && playing())
+             m_anvilOpen || m_brewOpen || m_beaconOpen || m_grindOpen) && playing())
         {
             const glm::ivec3 block = m_benchOpen    ? m_benchBlock
                                    : m_beaconOpen   ? m_beaconBlock
+                                   : m_grindOpen    ? m_grindBlock
                                    : m_chestOpen    ? m_chestBlock
                                    : m_enchantOpen  ? m_enchantBlock
                                    : m_anvilOpen    ? m_anvilBlock
@@ -1963,6 +1964,7 @@ bool Application::frame()
             const bool stillThere =
                 m_benchOpen   ? there == Blocks::CraftingTable
               : m_beaconOpen  ? there == Blocks::Beacon
+              : m_grindOpen   ? there == Blocks::Grindstone
               : m_chestOpen   ? (isContainerBlock(there) || isItemHolder(there))
               : m_enchantOpen ? there == Blocks::EnchantingTable
               : m_anvilOpen   ? isAnvil(there)
@@ -2040,7 +2042,8 @@ bool Application::frame()
             m_startupScreen == "attackhud" || m_startupScreen == "attackready" ||
             m_startupScreen == "attackhotbar" || m_startupScreen == "bossbars" ||
             m_startupScreen == "gamemode" || m_startupScreen == "spectator" ||
-            m_startupScreen == "beaconui" ||
+            m_startupScreen == "beaconui" || m_startupScreen == "grindstone" ||
+            m_startupScreen == "grinderror" ||
             m_startupScreen == "boat" || m_startupScreen == "rails" ||
             m_startupScreen == "mobs" || m_startupScreen == "golem" ||
             m_startupScreen == "glowmobs" || m_startupScreen == "variants" ||
@@ -2118,6 +2121,8 @@ bool Application::frame()
                                   m_startupScreen != "gamemode" &&
                                   m_startupScreen != "spectator" &&
                                   m_startupScreen != "beaconui" &&
+                                  m_startupScreen != "grindstone" &&
+                                  m_startupScreen != "grinderror" &&
                                   m_startupScreen != "boat" &&
                                   m_startupScreen != "rails" &&
                                   m_startupScreen != "mobs" &&
@@ -2486,7 +2491,8 @@ bool Application::frame()
             if (m_startupScreen == "attackhud" || m_startupScreen == "attackready" ||
                 m_startupScreen == "attackhotbar" || m_startupScreen == "bossbars" ||
                 m_startupScreen == "gamemode" || m_startupScreen == "spectator" ||
-                m_startupScreen == "beaconui")
+                m_startupScreen == "beaconui" || m_startupScreen == "grindstone" ||
+                m_startupScreen == "grinderror")
             {
                 m_camera.setOrientation(0.0f, -25.0f);
                 m_camera.addLook(0.0f, 0.0f, 0.0f);
@@ -2528,6 +2534,24 @@ bool Application::frame()
                 }
                 else
                     m_attackIndicator = 1;
+                if (m_startupScreen == "grindstone" || m_startupScreen == "grinderror")
+                {
+                    m_devAttackStrength = 1.0f;
+                    const glm::ivec3 stone(px + 2, py, pz);
+                    m_world->setBlock(stone.x, stone.y, stone.z, Blocks::Grindstone);
+                    openGrindstone(stone);
+                    ItemStack top;
+                    top.id = Items::DiamondSword;
+                    top.count = 1;
+                    top.damage = 900;
+                    top.enchantments = Enchanting::withLevel(0, Enchanting::Kind::Sharpness, 4);
+                    ItemStack bottom;
+                    bottom.id = m_startupScreen == "grinderror" ? Items::IronPickaxe : Items::DiamondSword;
+                    bottom.count = 1;
+                    bottom.damage = 1200;
+                    m_inventory.slot(Inventory::GRIND_TOP) = top;
+                    m_inventory.slot(Inventory::GRIND_BOTTOM) = bottom;
+                }
                 if (m_startupScreen == "beaconui")
                 {
                     m_devAttackStrength = 1.0f;
@@ -8590,16 +8614,8 @@ bool Application::useLectern(const glm::ivec3& at, BlockId block)
 // one action on what you are holding, which does the same work.
 bool Application::useGrindstone(const glm::ivec3& at)
 {
-    (void)at;
-    ItemStack& held = m_inventory.selected();
-    if (held.empty() || !Enchanting::any(held.enchantments)) return false;
-
-    const int paid = Enchanting::grindHundredths(held.enchantments);
-    held.enchantments = 0;
-
-    if (m_player.addExperienceHundredths(paid))
-        m_audio.play(Sound::Pickup, 0.7f, 0.55f);
-    m_audio.play(Sound::DigStone, 0.6f, 0.7f);
+    openGrindstone(at);
+    m_audio.play(Sound::Click, 0.4f);
     return true;
 }
 

@@ -42,6 +42,7 @@
 #include "Entity/HeldItem.h"
 #include "Game/Chat.h"
 #include "Game/Beacon.h"
+#include "Game/Grindstone.h"
 #include "Game/Hopper.h"
 #include "Entity/EntityManager.h"
 #include "Entity/MobModel.h"
@@ -784,6 +785,13 @@ private:
     std::set<std::array<int, 3>> m_beacons;
     std::map<std::array<int, 4>, std::array<int, 2>> m_beaconPowers;
     bool m_beaconOpen = false;
+    bool m_grindOpen = false;
+    glm::ivec3 m_grindBlock{ 0 };
+    uint32_t m_grindRoll = 0x9E3779B9u;
+    void openGrindstone(const glm::ivec3& block);
+    void stowGrindstone();
+    void takeGrindResult(bool toInventory);
+    Grindstone::Result grindResult() const;
     glm::ivec3 m_beaconBlock{ 0 };
     int m_beaconPrimary = -1;
     int m_beaconSecondary = -1;
@@ -1079,7 +1087,7 @@ private:
     // copies of the same geometry, and only one of them ever got fixed.
     struct SlotBox
     {
-        enum class Kind { Slot, Palette, Tab, Enchant, Trade, AnvilTake, Destroy, Scroll, TradeTake, BeaconPower, BeaconConfirm, BeaconCancel };
+        enum class Kind { Slot, Palette, Tab, Enchant, Trade, AnvilTake, Destroy, Scroll, TradeTake, BeaconPower, BeaconConfirm, BeaconCancel, GrindTake };
         Kind kind = Kind::Slot;
         int index = 0;        // inventory slot, block id, or tab number
         float x = 0.0f, y = 0.0f, size = 0.0f;
