@@ -121,7 +121,8 @@ Everything in the 1.21 textures zip the game doesn't use yet, turned into work. 
     - V. Blackstone: top face, polished, chiseled, cracked bricks.
     - VI. Red nether bricks, cracked and chiseled nether bricks.
 28. Quartz: nether quartz ore, the quartz item, quartz block, bricks, pillar and chiseled. (done)
-29. Sand and sandstone: red sand, the full red sandstone set, cut and chiseled sandstone.
+29. Sand and sandstone: red sand, the full red sandstone set, cut and chiseled sandstone. (done)
+    - A plain badlands biome now gives the red sand a home; its terracotta bands come with item 31.
 30. Ores: deepslate versions of all 8 ores, nether gold ore, raw iron and raw gold, and raw ore blocks.
 31. Colours
     - I. Concrete and concrete powder, 16 colours each. Powder hardens in water.

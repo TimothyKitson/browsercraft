@@ -914,6 +914,15 @@ namespace
         { "Quartz Pillar", QuartzPillarTop, QuartzPillarTop, QuartzPillarSide, true, true, RenderType::Cube, 0, 0.8f },
         { "Chiseled Quartz Block", ChiseledQuartzTop, ChiseledQuartzTop, ChiseledQuartzSide, true, true, RenderType::Cube, 0, 0.8f },
         { "Quartz Slab", QuartzBlockTop, QuartzBlockTop, QuartzBlockSide, true, false, RenderType::Slab, 0, 2.0f },
+        { "Red Sand", RedSandTile, RedSandTile, RedSandTile, true, true, RenderType::Cube, 0, 0.5f },
+        { "Red Sandstone", RedSandstoneTop, RedSandstoneBottom, RedSandstoneSide, true, true, RenderType::Cube, 0, 0.8f },
+        { "Cut Red Sandstone", RedSandstoneTop, RedSandstoneTop, CutRedSandstoneTile, true, true, RenderType::Cube, 0, 0.8f },
+        { "Chiseled Red Sandstone", RedSandstoneTop, RedSandstoneTop, ChiseledRedSandstoneTile, true, true, RenderType::Cube, 0, 0.8f },
+        { "Smooth Red Sandstone", RedSandstoneTop, RedSandstoneTop, RedSandstoneTop, true, true, RenderType::Cube, 0, 2.0f },
+        { "Red Sandstone Slab", RedSandstoneTop, RedSandstoneBottom, RedSandstoneSide, true, false, RenderType::Slab, 0, 2.0f },
+        { "Cut Sandstone", SandstoneTop, SandstoneTop, CutSandstoneTile, true, true, RenderType::Cube, 0, 0.8f },
+        { "Chiseled Sandstone", SandstoneTop, SandstoneTop, ChiseledSandstoneTile, true, true, RenderType::Cube, 0, 0.8f },
+        { "Smooth Sandstone", SandstoneTop, SandstoneTop, SandstoneTop, true, true, RenderType::Cube, 0, 2.0f },
     };
 }
 

@@ -567,6 +567,7 @@ namespace Blocks
         WarpedSign, WarpedSignLast = WarpedSign + 3,
         StoneBricks, MossyStoneBricks, CrackedStoneBricks, ChiseledStoneBricks, SmoothStone, SmoothStoneSlab, StoneBrickSlab, PolishedGranite, PolishedDiorite, PolishedAndesite, CobbledDeepslate, PolishedDeepslate, ChiseledDeepslate, CrackedDeepslateBricks, CrackedDeepslateTiles, CobbledDeepslateSlab, PolishedTuff, ChiseledTuff, ChiseledTuffBricks, TuffSlab, TuffBrickSlab, PolishedBlackstone, ChiseledPolishedBlackstone, CrackedPolishedBlackstoneBricks, PolishedBlackstoneSlab, RedNetherBricks, CrackedNetherBricks, ChiseledNetherBricks, NetherBrickSlab,
         NetherQuartzOre, QuartzBlock, QuartzBricks, QuartzPillar, ChiseledQuartzBlock, QuartzSlab,
+        RedSand, RedSandstone, CutRedSandstone, ChiseledRedSandstone, SmoothRedSandstone, RedSandstoneSlab, CutSandstone, ChiseledSandstone, SmoothSandstone,
 
         Count
     };

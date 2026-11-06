@@ -2052,7 +2052,7 @@ bool Application::frame()
             m_startupScreen == "shulker" ||
             m_startupScreen == "nethermobs" || m_startupScreen == "lairmobs" ||
             m_startupScreen == "jungle" || m_startupScreen == "savanna" ||
-            m_startupScreen == "crimson" || m_startupScreen == "warped" ||
+            m_startupScreen == "crimson" || m_startupScreen == "warped" || m_startupScreen == "badlands" ||
             m_startupScreen == "redstone" || m_startupScreen == "chamber" ||
             m_startupScreen == "cave" || m_startupScreen == "dripstone" ||
             m_startupScreen == "mineshaft" || m_startupScreen == "pyramid" ||
@@ -2144,6 +2144,7 @@ bool Application::frame()
                                   m_startupScreen != "savanna" &&
                                   m_startupScreen != "crimson" &&
                                   m_startupScreen != "warped" &&
+                                  m_startupScreen != "badlands" &&
                                   m_startupScreen != "redstone" &&
                                   m_startupScreen != "chamber" &&
                                   m_startupScreen != "vault" &&
@@ -4220,10 +4221,11 @@ bool Application::frame()
                         }
             }
 
-            if (m_startupScreen == "jungle" || m_startupScreen == "savanna")
+            if (m_startupScreen == "jungle" || m_startupScreen == "savanna" || m_startupScreen == "badlands")
             {
                 const Biome wanted = m_startupScreen == "jungle" ? Biome::Jungle
-                                                                 : Biome::Savanna;
+                                   : m_startupScreen == "badlands" ? Biome::Badlands
+                                                                   : Biome::Savanna;
                 const int fromX = static_cast<int>(m_player.position.x);
                 const int fromZ = static_cast<int>(m_player.position.z);
 

@@ -44,6 +44,7 @@ const char* biomeName(Biome biome)
         case Biome::Savanna: return "Savanna";
         case Biome::CherryGrove: return "Cherry Grove";
         case Biome::MangroveSwamp: return "Mangrove Swamp";
+        case Biome::Badlands: return "Badlands";
         case Biome::NetherWastes: return "Nether Wastes";
         case Biome::CrimsonForest: return "Crimson Forest";
         case Biome::WarpedForest: return "Warped Forest";
@@ -150,6 +151,7 @@ Biome WorldGen::biomeAt(int worldX, int worldZ) const
     if (temperature > 0.30f)
     {
         if (humidity > 0.22f) return Biome::Jungle;
+        if (humidity < -0.12f && temperature > 0.40f) return Biome::Badlands;
         if (humidity < -0.05f) return Biome::Desert;
         return Biome::Savanna;
     }
@@ -537,6 +539,11 @@ void WorldGen::generateColumns(Chunk& chunk) const
                         case Biome::Desert:
                             if (depth <= 4) block = Blocks::Sand;
                             else if (depth <= 8) block = Blocks::Sandstone;
+                            break;
+
+                        case Biome::Badlands:
+                            if (depth <= 1) block = Blocks::RedSand;
+                            else if (depth <= 9) block = Blocks::RedSandstone;
                             break;
 
                         case Biome::Snowy:
@@ -2827,7 +2834,8 @@ void WorldGen::decorate(Chunk& chunk) const
             const Biome biome = biomeAt(wx, wz);
             const float roll = hashToFloat(hashCoords(wx, 3, wz, m_seed + 777));
 
-            if (biome == Biome::Desert && ground == Blocks::Sand)
+            if ((biome == Biome::Desert && ground == Blocks::Sand) ||
+                (biome == Biome::Badlands && ground == Blocks::RedSand))
             {
                 if (roll < 0.004f)
                 {

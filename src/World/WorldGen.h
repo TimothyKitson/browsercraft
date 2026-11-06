@@ -34,6 +34,7 @@ enum class Biome : uint8_t
     Swamp,
     CherryGrove,
     MangroveSwamp,
+    Badlands,
     NetherWastes,
     CrimsonForest,
     WarpedForest

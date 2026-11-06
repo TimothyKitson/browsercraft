@@ -3805,6 +3805,33 @@ namespace
                     t.set(x, y, shade(Color{ 236, 228, 220 }, static_cast<int>((hash2(x, y, 899) - 0.5f) * 30.0f)));
     }
 
+    void paintRedSandTile(Tile& t) { t.fill(Color{ 190, 102, 33 }); t.speckle(16, 901); }
+    void paintSandstoneSideIn(Tile& t, Color base, uint32_t salt)
+    {
+        const int n = Tile::N;
+        for (int y = 0; y < n; ++y)
+            for (int x = 0; x < n; ++x)
+            {
+                const int band = (y < 3) ? 12 : (y > n - 4) ? -18 : 0;
+                t.set(x, y, shade(base, band + static_cast<int>((hash2(x, y, salt) - 0.5f) * 12.0f)));
+            }
+    }
+    void paintRedSandstoneTop(Tile& t) { paintSmoothIn(t, Color{ 186, 99, 29 }, 902); }
+    void paintRedSandstoneBottom(Tile& t) { paintSmoothIn(t, Color{ 176, 92, 26 }, 903); }
+    void paintRedSandstoneSide(Tile& t) { paintSandstoneSideIn(t, Color{ 181, 97, 31 }, 904); }
+    void paintCutRedSandstoneTile(Tile& t)
+    {
+        paintSandstoneSideIn(t, Color{ 186, 101, 33 }, 905);
+        for (int x = 0; x < Tile::N; ++x) t.set(x, Tile::N / 2, Color{ 150, 80, 24 });
+    }
+    void paintChiseledRedSandstoneTile(Tile& t) { paintChiseledIn(t, Color{ 183, 98, 30 }, 906); }
+    void paintCutSandstoneTile(Tile& t)
+    {
+        paintSandstoneSideIn(t, Color{ 218, 207, 160 }, 907);
+        for (int x = 0; x < Tile::N; ++x) t.set(x, Tile::N / 2, Color{ 186, 174, 128 });
+    }
+    void paintChiseledSandstoneTile(Tile& t) { paintChiseledIn(t, Color{ 216, 204, 158 }, 908); }
+
     void paintItemSign(Tile& t)
     {
         t.fill(Color{ 0, 0, 0, 0 });
@@ -6952,6 +6979,14 @@ namespace
         { Tiles::DustLine1Off, paintRedstoneDust },
         { Tiles::DustLine1On, paintRedstoneDustLit },
         { Tiles::LeverHandle, paintLever },
+        { Tiles::RedSandTile, paintRedSandTile },
+        { Tiles::RedSandstoneTop, paintRedSandstoneTop },
+        { Tiles::RedSandstoneBottom, paintRedSandstoneBottom },
+        { Tiles::RedSandstoneSide, paintRedSandstoneSide },
+        { Tiles::CutRedSandstoneTile, paintCutRedSandstoneTile },
+        { Tiles::ChiseledRedSandstoneTile, paintChiseledRedSandstoneTile },
+        { Tiles::CutSandstoneTile, paintCutSandstoneTile },
+        { Tiles::ChiseledSandstoneTile, paintChiseledSandstoneTile },
         { Tiles::NetherQuartzOreTile, paintNetherQuartzOreTile },
         { Tiles::QuartzBlockTop, paintQuartzBlockTop },
         { Tiles::QuartzBlockBottom, paintQuartzBlockBottom },
@@ -7529,6 +7564,14 @@ namespace
         { Tiles::DustLine1Off, { "redstone_dust_line1", nullptr }, Tinting::RedstoneOff, 0, false },
         { Tiles::DustLine1On, { "redstone_dust_line1", nullptr }, Tinting::RedstoneOn, 0, false },
         { Tiles::LeverHandle, { "lever", nullptr }, Tinting::None, 0, false },
+        { Tiles::RedSandTile, { "red_sand", nullptr }, Tinting::None, 0, false },
+        { Tiles::RedSandstoneTop, { "red_sandstone_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::RedSandstoneBottom, { "red_sandstone_bottom", nullptr }, Tinting::None, 0, false },
+        { Tiles::RedSandstoneSide, { "red_sandstone", nullptr }, Tinting::None, 0, false },
+        { Tiles::CutRedSandstoneTile, { "cut_red_sandstone", nullptr }, Tinting::None, 0, false },
+        { Tiles::ChiseledRedSandstoneTile, { "chiseled_red_sandstone", nullptr }, Tinting::None, 0, false },
+        { Tiles::CutSandstoneTile, { "cut_sandstone", nullptr }, Tinting::None, 0, false },
+        { Tiles::ChiseledSandstoneTile, { "chiseled_sandstone", nullptr }, Tinting::None, 0, false },
         { Tiles::NetherQuartzOreTile, { "nether_quartz_ore", nullptr }, Tinting::None, 0, false },
         { Tiles::QuartzBlockTop, { "quartz_block_top", nullptr }, Tinting::None, 0, false },
         { Tiles::QuartzBlockBottom, { "quartz_block_bottom", nullptr }, Tinting::None, 0, false },

@@ -12040,6 +12040,20 @@ namespace
         check(Crafting::match(red, 3).id == Blocks::RedNetherBricks, "wart and nether brick make red nether bricks");
         check(blockMaterial(Blocks::PolishedBlackstone) == Material::Stone, "polished blackstone wants a pickaxe");
 
+        ItemStack redSand[9];
+        for (int i : { 0, 1, 3, 4 }) redSand[i] = ItemStack{ Blocks::RedSand, 1 };
+        check(Crafting::match(redSand, 3).id == Blocks::RedSandstone, "four red sand make red sandstone");
+        check(Smelting::resultOf(Blocks::Sandstone) == Blocks::SmoothSandstone, "fired sandstone goes smooth");
+        check(Smelting::resultOf(Blocks::RedSand) == Blocks::Glass, "and red sand makes glass too");
+        {
+            const WorldGen generator(4242u);
+            int badlands = 0;
+            for (int x = -8000; x <= 8000 && badlands == 0; x += 32)
+                for (int z = -8000; z <= 8000 && badlands == 0; z += 32)
+                    if (generator.biomeAt(x, z) == Biome::Badlands) ++badlands;
+            check(badlands > 0, "badlands of red sand lie somewhere in a world");
+        }
+
         check(blockDrop(Blocks::NetherQuartzOre) == Items::NetherQuartz, "quartz ore gives quartz");
         check(Experience::forMining(Blocks::NetherQuartzOre).any(), "and experience with it");
         ItemStack quartz[9];

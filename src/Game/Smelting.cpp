@@ -21,6 +21,9 @@ StackId Smelting::resultOf(StackId input)
         case Blocks::PolishedBlackstoneBricks: return Blocks::CrackedPolishedBlackstoneBricks;
         case Blocks::NetherBricks: return Blocks::CrackedNetherBricks;
         case Blocks::NetherQuartzOre: return Items::NetherQuartz;
+        case Blocks::RedSand: return Blocks::Glass;
+        case Blocks::Sandstone: return Blocks::SmoothSandstone;
+        case Blocks::RedSandstone: return Blocks::SmoothRedSandstone;
         case Blocks::Clay:      return Blocks::Bricks;
 
         // A cactus fired is green, which is Minecraft's and the only
