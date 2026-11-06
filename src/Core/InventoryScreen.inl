@@ -359,54 +359,78 @@ void Application::drawPlayerFigure(const PlayerSkin& skin, float x1, float y1, f
     pose.headYaw = 90.0f + across * 40.0f;
     pose.headPitch = upDown * 20.0f;
 
-    m_dollModel.build(skin, pose, 1.0f, 0.0f);
-    const std::vector<float>& v = m_dollModel.vertices();
-    const int stride = PlayerModel::FLOATS_PER_VERTEX;
-    const int triangles = static_cast<int>(v.size()) / (stride * 3);
-
-    struct Triangle { glm::vec2 corner[3]; glm::vec2 uv[3]; float shade; float depth; };
+    struct Triangle { glm::vec2 corner[3]; glm::vec2 uv[3]; float shade; float depth;
+                      unsigned int texture; glm::vec3 tint; };
     std::vector<Triangle> drawn;
-    drawn.reserve(static_cast<size_t>(triangles));
 
-    for (int t = 0; t < triangles; ++t)
-    {
-        const float* a = &v[static_cast<size_t>(t * 3 * stride)];
-        auto leaned = [&](const float* q) {
-            return glm::vec3(q[0], q[1] * leanCos - q[2] * leanSin,
-                             q[1] * leanSin + q[2] * leanCos);
-        };
-        const glm::vec3 p0 = leaned(a);
-        const glm::vec3 p1 = leaned(a + stride);
-        const glm::vec3 p2 = leaned(a + 2 * stride);
-
-        // Only what faces the eye: a box seen from outside shows at most
-        // three of its sides, and drawing the far three as well is what
-        // would put the back of the head over the face.
-        const glm::vec3 normal = glm::cross(p1 - p0, p2 - p0);
-        if (normal.z <= 0.0f) continue;
-
-        Triangle tri;
-        const glm::vec3 points[3] = { p0, p1, p2 };
-        for (int k = 0; k < 3; ++k)
+    auto gather = [&](unsigned int texture, const glm::vec3& tint, float nudge) {
+        const std::vector<float>& v = m_dollModel.vertices();
+        const int stride = PlayerModel::FLOATS_PER_VERTEX;
+        const int triangles = static_cast<int>(v.size()) / (stride * 3);
+        for (int t = 0; t < triangles; ++t)
         {
-            tri.corner[k] = glm::vec2(centreX + points[k].x * blockPixels,
-                                      feetY - points[k].y * blockPixels);
-            tri.uv[k] = glm::vec2(a[k * stride + 3], a[k * stride + 4]);
+            const float* a = &v[static_cast<size_t>(t * 3 * stride)];
+            auto leaned = [&](const float* q) {
+                return glm::vec3(q[0], q[1] * leanCos - q[2] * leanSin,
+                                 q[1] * leanSin + q[2] * leanCos);
+            };
+            const glm::vec3 p0 = leaned(a);
+            const glm::vec3 p1 = leaned(a + stride);
+            const glm::vec3 p2 = leaned(a + 2 * stride);
+            const glm::vec3 normal = glm::cross(p1 - p0, p2 - p0);
+            if (normal.z <= 0.0f) continue;
+
+            Triangle tri;
+            const glm::vec3 points[3] = { p0, p1, p2 };
+            for (int k = 0; k < 3; ++k)
+            {
+                tri.corner[k] = glm::vec2(centreX + points[k].x * blockPixels,
+                                          feetY - points[k].y * blockPixels);
+                tri.uv[k] = glm::vec2(a[k * stride + 3], a[k * stride + 4]);
+            }
+            tri.shade = a[5];
+            tri.depth = (p0.z + p1.z + p2.z) / 3.0f + nudge;
+            tri.texture = texture;
+            tri.tint = tint;
+            drawn.push_back(tri);
         }
-        tri.shade = a[5];
-        tri.depth = (p0.z + p1.z + p2.z) / 3.0f;
-        drawn.push_back(tri);
+    };
+
+    m_dollModel.build(skin, pose, 1.0f, 0.0f);
+    gather(skin.textureId(), glm::vec3(1.0f), 0.0f);
+
+    static const char* LAYER_ONE[6] = { nullptr, "../models/armor/leather_layer_1", "../models/armor/gold_layer_1",
+                                        "../models/armor/iron_layer_1", "../models/armor/diamond_layer_1",
+                                        "../models/armor/netherite_layer_1" };
+    static const char* LAYER_TWO[6] = { nullptr, "../models/armor/leather_layer_2", "../models/armor/gold_layer_2",
+                                        "../models/armor/iron_layer_2", "../models/armor/diamond_layer_2",
+                                        "../models/armor/netherite_layer_2" };
+    for (int slot = 0; slot < Inventory::ARMOR_SLOTS; ++slot)
+    {
+        const ItemStack& worn = m_inventory.slot(Inventory::ARMOR_FIRST + slot);
+        if (worn.empty()) continue;
+        const int tier = static_cast<int>(Armour::tierOf(worn.id));
+        const int piece = static_cast<int>(Armour::pieceOf(worn.id));
+        if (tier <= 0 || tier > 5 || piece <= 0) continue;
+        const GuiImage* image = m_gui.image(piece == 3 ? LAYER_TWO[tier] : LAYER_ONE[tier]);
+        if (!image) continue;
+        m_dollModel.buildArmour(pose, piece, 1.0f, 0.0f);
+        const bool leather = tier == 1;
+        gather(image->texture, leather ? glm::vec3(0.627f, 0.396f, 0.251f) : glm::vec3(1.0f), 0.01f);
+        if (leather)
+        {
+            const GuiImage* overlay = m_gui.image(piece == 3 ? "../models/armor/leather_layer_2_overlay"
+                                                             : "../models/armor/leather_layer_1_overlay");
+            if (overlay) gather(overlay->texture, glm::vec3(1.0f), 0.02f);
+        }
     }
 
-    // Furthest first, so an arm swung in front of the body is drawn over
-    // it rather than under it: the interface has no depth buffer, so the
-    // order is the depth.
     std::stable_sort(drawn.begin(), drawn.end(),
                      [](const Triangle& l, const Triangle& r) { return l.depth < r.depth; });
 
     for (const Triangle& tri : drawn)
-        m_ui.texturedTriangle(skin.textureId(), tri.corner, tri.uv,
-                              glm::vec4(tri.shade, tri.shade, tri.shade, 1.0f));
+        m_ui.texturedTriangle(tri.texture, tri.corner, tri.uv,
+                              glm::vec4(tri.tint * tri.shade, 1.0f));
 }
 
 void Application::drawCraftArrow(float x, float y, float width, float height, float filled)

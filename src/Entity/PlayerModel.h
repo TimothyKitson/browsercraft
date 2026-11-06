@@ -65,6 +65,7 @@ public:
     // position, uv, shade, sky light, block light, face.
     static constexpr int FLOATS_PER_VERTEX = BoxMesh::FLOATS_PER_VERTEX;
     void build(const PlayerSkin& skin, const PlayerPose& pose, float sky, float blockLight);
+    void buildArmour(const PlayerPose& pose, int piece, float sky, float blockLight);
     const std::vector<float>& vertices() const { return m_vertices; }
 
 private:

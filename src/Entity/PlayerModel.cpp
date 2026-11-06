@@ -20,12 +20,8 @@ namespace
 
     using Box = BoxMesh::Box;
 
-    void buildBoxes(std::vector<Box>& boxes, const PlayerSkin& skin, const PlayerPose& pose)
+    void buildBoxes(std::vector<Box>& boxes, float arm, bool twoLayer, const PlayerPose& pose)
     {
-        const float arm = static_cast<float>(skin.armWidth());
-        // The 64x64 layout carries a left arm and leg of their own, plus a
-        // second layer over every limb. The old 64x32 one has neither.
-        const bool twoLayer = skin.height() >= 64;
 
         const float phase = pose.limbPhase;
         const float amount = pose.limbAmount;
@@ -135,7 +131,7 @@ void PlayerModel::build(const PlayerSkin& skin, const PlayerPose& pose,
 
     std::vector<Box> boxes;
     boxes.reserve(12);
-    buildBoxes(boxes, skin, pose);
+    buildBoxes(boxes, static_cast<float>(skin.armWidth()), skin.height() >= 64, pose);
 
     BoxMesh::Frame frame;
     frame.feet = pose.feet;
@@ -147,6 +143,39 @@ void PlayerModel::build(const PlayerSkin& skin, const PlayerPose& pose,
     frame.jointAngle = pose.sneaking ? SNEAK_TILT : 0.0f;
     frame.jointPivot = glm::vec3(0.0f, HIP_Y, 0.0f);
 
+    BoxMesh::appendAll(m_vertices, boxes, frame);
+}
+
+void PlayerModel::buildArmour(const PlayerPose& pose, int piece, float sky, float blockLight)
+{
+    m_vertices.clear();
+    std::vector<Box> all;
+    buildBoxes(all, 4.0f, false, pose);
+
+    std::vector<Box> boxes;
+    const float inflate = piece == 3 ? 0.5f : 1.0f;
+    auto take = [&](int index) {
+        Box box = all[static_cast<size_t>(index)];
+        box.inflate = inflate;
+        if (index == 3 || index == 5) box.mirror = true;
+        if (index == 3) { box.u = 40; box.v = 16; }
+        if (index == 5) { box.u = 0; box.v = 16; }
+        boxes.push_back(box);
+    };
+    if (piece == 1) take(0);
+    if (piece == 2) { take(1); take(2); take(3); }
+    if (piece == 3) { take(1); take(4); take(5); }
+    if (piece == 4) { take(4); take(5); }
+
+    BoxMesh::Frame frame;
+    frame.feet = pose.feet;
+    frame.bodyYaw = pose.bodyYaw;
+    frame.sky = sky;
+    frame.blockLight = blockLight;
+    frame.textureWidth = 64.0f;
+    frame.textureHeight = 32.0f;
+    frame.jointAngle = pose.sneaking ? SNEAK_TILT : 0.0f;
+    frame.jointPivot = glm::vec3(0.0f, HIP_Y, 0.0f);
     BoxMesh::appendAll(m_vertices, boxes, frame);
 }
 
