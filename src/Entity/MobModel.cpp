@@ -8,6 +8,7 @@
 #include "Core/GLFunctions.h"
 #include "Renderer/Shader.h"
 #include "World/World.h"
+#include "Game/Trading.h"
 #include <string>
 #include <algorithm>
 #include <cstdlib>
@@ -244,30 +245,13 @@ void MobModel::render(Shader& chunkShader, const World& world, const EntityManag
         }
         }
 
-        if (id == MobId::Villager)
+        if (id == MobId::Villager || id == MobId::ZombieVillager)
         {
-            static const char* BIOMES[] = {
-                "assets/textures/entity/villager/type/plains.png",
-                "assets/textures/entity/villager/type/desert.png",
-                "assets/textures/entity/villager/type/jungle.png",
-                "assets/textures/entity/villager/type/savanna.png",
-                "assets/textures/entity/villager/type/snow.png",
-                "assets/textures/entity/villager/type/swamp.png",
-                "assets/textures/entity/villager/type/taiga.png",
-            };
-            static const char* JOBS[] = {
-                "assets/textures/entity/villager/profession/farmer.png",
-                "assets/textures/entity/villager/profession/librarian.png",
-                "assets/textures/entity/villager/profession/toolsmith.png",
-                "assets/textures/entity/villager/profession/fletcher.png",
-            };
-            static const char* RANKS[] = {
-                "assets/textures/entity/villager/profession_level/stone.png",
-                "assets/textures/entity/villager/profession_level/iron.png",
-                "assets/textures/entity/villager/profession_level/gold.png",
-                "assets/textures/entity/villager/profession_level/emerald.png",
-                "assets/textures/entity/villager/profession_level/diamond.png",
-            };
+            const std::string root = id == MobId::Villager ? "assets/textures/entity/villager/"
+                                                           : "assets/textures/entity/zombie_villager/";
+            static const char* BIOME_NAMES[] = { "plains", "desert", "jungle", "savanna", "snow", "swamp", "taiga" };
+            static const char* RANK_NAMES[] = { "stone", "iron", "gold", "emerald", "diamond" };
+            const int jobCount = static_cast<int>(Trading::Profession::Count);
             auto biomeIndex = [&](const Mob& mob) {
                 const glm::vec3 at = mob.position();
                 switch (world.generator().biomeAt(static_cast<int>(std::floor(at.x)), static_cast<int>(std::floor(at.z))))
@@ -286,18 +270,24 @@ void MobModel::render(Shader& chunkShader, const World& world, const EntityManag
             glDepthFunc(GL_LEQUAL);
             for (int pass = 0; pass < 3; ++pass)
             {
-                const int options = pass == 0 ? 7 : pass == 1 ? 4 : 5;
+                const int options = pass == 0 ? 7 : pass == 1 ? jobCount : 5;
                 for (int option = 0; option < options; ++option)
                 {
-                    const char* path = pass == 0 ? BIOMES[option] : pass == 1 ? JOBS[option] : RANKS[option];
-                    const unsigned int overlay = villagerTexture(path);
+                    const std::string path =
+                        pass == 0 ? root + "type/" + BIOME_NAMES[option] + ".png"
+                      : pass == 1 ? root + "profession/" +
+                                        Trading::textureName(static_cast<Trading::Profession>(option)) + ".png"
+                                  : root + "profession_level/" + RANK_NAMES[option] + ".png";
+                    const unsigned int overlay = villagerTexture(path.c_str());
                     if (!overlay) continue;
                     std::vector<float> batch;
                     for (const Mob& mob : entities.mobs())
                     {
                         if (mob.typeId() != id || mob.baby()) continue;
+                        const int job = professionOf ? professionOf(mob) : 0;
+                        if (pass == 2 && job == static_cast<int>(Trading::Profession::Nitwit)) continue;
                         const int which = pass == 0 ? biomeIndex(mob)
-                                        : pass == 1 ? (professionOf ? professionOf(mob) : 0)
+                                        : pass == 1 ? job
                                                     : (rankOf ? rankOf(mob) : 0);
                         if (which != option) continue;
                         const glm::vec3 centre = mob.position();

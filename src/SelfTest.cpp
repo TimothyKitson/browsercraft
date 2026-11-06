@@ -9476,6 +9476,19 @@ namespace
               "and each glows brighter than the last");
         check(blockDrop(Blocks::MediumAmethystBud) == Blocks::Air, "a bud broken early gives nothing");
 
+        section("villagers: job sites");
+        {
+            Trading::Profession job = Trading::Profession::Farmer;
+            check(Trading::jobSite(Blocks::Smoker, job) && job == Trading::Profession::Butcher, "a smoker makes a butcher");
+            check(Trading::jobSite(Blocks::BlastFurnace, job) && job == Trading::Profession::Armorer, "a blast furnace an armorer");
+            check(Trading::jobSite(Blocks::BrewingStand, job) && job == Trading::Profession::Cleric, "a brewing stand a cleric");
+            check(Trading::jobSite(Blocks::Barrel, job) && job == Trading::Profession::Fisherman, "a barrel a fisherman");
+            check(Trading::jobSite(Blocks::Cauldron0, job) && job == Trading::Profession::Leatherworker, "a cauldron a leatherworker");
+            check(Trading::jobSite(Blocks::Grindstone, job) && job == Trading::Profession::Weaponsmith, "a grindstone a weaponsmith");
+            check(Trading::jobSite(Blocks::Composter0, job) && job == Trading::Profession::Farmer, "a composter a farmer");
+            check(!Trading::jobSite(Blocks::Stone, job), "and stone is nobody's job");
+        }
+
         section("fluids: what water washes away");
         check(Fluids::washesAway(Blocks::Torch) || !isCross(Blocks::Torch), "a torch is washed away if it stands like a plant");
         check(!Fluids::washesAway(Blocks::Stone), "stone is not");
@@ -9924,9 +9937,8 @@ namespace
         for (int i = 0; i < static_cast<int>(Profession::Count); ++i)
         {
             if (seen[i] == 0) allAppear = false;
-            // Roughly a quarter each. Wide bounds: this is checking the
-            // seed is stirred at all, not that it is a good generator.
-            if (seen[i] < 300 || seen[i] > 700) evenish = false;
+            const int fair = 1999 / static_cast<int>(Profession::Count);
+            if (seen[i] < fair / 2 || seen[i] > fair * 2) evenish = false;
         }
         check(allAppear, "every profession turns up");
         check(evenish, "and they come up at roughly the same rate");
@@ -9950,6 +9962,7 @@ namespace
         int totalOffers = 0;
         for (int i = 0; i < static_cast<int>(Profession::Count); ++i)
         {
+            if (static_cast<Profession>(i) == Profession::Nitwit) continue;
             const std::vector<Trading::Offer> offers =
                 Trading::offersFor(static_cast<Profession>(i));
             if (offers.empty()) sound = false;
@@ -9979,8 +9992,10 @@ namespace
         // way of earning them, or the half of its list that spends them
         // is unreachable.
         bool earns = true;
+        check(Trading::offersFor(Profession::Nitwit).empty(), "a nitwit has nothing to trade");
         for (int i = 0; i < static_cast<int>(Profession::Count); ++i)
         {
+            if (static_cast<Profession>(i) == Profession::Nitwit) continue;
             bool sells = false;
             for (const Trading::Offer& offer :
                  Trading::offersFor(static_cast<Profession>(i)))
@@ -9992,6 +10007,7 @@ namespace
         bool spends = true;
         for (int i = 0; i < static_cast<int>(Profession::Count); ++i)
         {
+            if (static_cast<Profession>(i) == Profession::Nitwit) continue;
             bool buys = false;
             for (const Trading::Offer& offer :
                  Trading::offersFor(static_cast<Profession>(i)))
@@ -10017,6 +10033,7 @@ namespace
         bool earnsXp = true;
         for (int i = 0; i < static_cast<int>(Profession::Count); ++i)
         {
+            if (static_cast<Profession>(i) == Profession::Nitwit) continue;
             const std::vector<Trading::Deal> deals = Trading::dealsFor(static_cast<Profession>(i));
             for (int r = 0; r < Trading::RANKS; ++r)
             {

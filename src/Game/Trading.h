@@ -21,6 +21,16 @@ namespace Trading
         Librarian,
         Toolsmith,
         Fletcher,
+        Armorer,
+        Butcher,
+        Cartographer,
+        Cleric,
+        Fisherman,
+        Leatherworker,
+        Mason,
+        Nitwit,
+        Shepherd,
+        Weaponsmith,
         Count
     };
 
@@ -30,6 +40,8 @@ namespace Trading
     // given seed, so a villager keeps its profession across a save
     // without one being written down.
     Profession professionFor(uint32_t seed);
+    const char* textureName(Profession trade);
+    bool jobSite(BlockId block, Profession& trade);
 
     // One deal: hand over `wantCount` of `want` -- and, where there is
     // one, `alsoCount` of `also` -- and get `giveCount` of `give`.

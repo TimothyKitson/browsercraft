@@ -44,10 +44,11 @@ Everything in the 1.21 textures zip the game doesn't use yet, turned into work. 
    - V. Rabbits (7), parrots (5), axolotls (5), frogs (cold and warm), foxes (snowy and sleeping), pandas (7 moods), bees (angry, nectar, stinger), tropical fish (2 shapes, 6 patterns, colours).
    - VI. Mooshrooms, red and brown.
    - Left for later, since each is a new mob rather than a new coat: ocelots, donkeys, mules, skeleton and zombie horses (with 61-65), mooshrooms (with 38), tropical fish (with 53). Llama carpets and the trader llama go with carpets (31), wolf armour with 50, and bee nectar with bees and honey (40).
-8. Villager jobs
+8. Villager jobs (done)
    - I. Add the other 10 jobs, each with its job-site block and trades: armorer, butcher, cartographer, cleric, fisherman, leatherworker, mason, nitwit, shepherd, weaponsmith.
    - II. Zombie villagers wear the biome, job and rank layers.
    - III. Curing a zombie villager gives discounts, shown with the strikethrough price.
+   - Left for later: curing needs the golden apple (51) and splash weakness (60), so it goes in with those. The jobs whose stations are not in yet (cartographer, mason, shepherd, toolsmith, fletcher) are handed out by seed until 46 adds the stations.
 9. Beams and attack effects
    - I. The beacon beam.
    - II. The End gateway beam, and the End crystal beam that heals the dragon.

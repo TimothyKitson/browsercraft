@@ -246,6 +246,9 @@ private:
     float m_fluidClock = 0.0f;
     long long m_fluidTicks = 0;
     void tickFluids(float deltaTime);
+    void claimJobSites();
+    float m_jobSiteTimer = 0.0f;
+    static constexpr int JOB_SITE_REACH = 4;
     void setBlockFor(const glm::ivec3& at, BlockId now, BlockId then, float seconds);
     void tickTimedBlocks(float deltaTime);
     uint32_t m_wearSeed = 0x2545F491u;

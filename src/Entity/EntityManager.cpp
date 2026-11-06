@@ -318,7 +318,7 @@ namespace
         {
             case Village::Kind::Blacksmith: return Trading::Profession::Toolsmith;
             case Village::Kind::Library:    return Trading::Profession::Librarian;
-            case Village::Kind::Butcher:    return Trading::Profession::Farmer;
+            case Village::Kind::Butcher:    return Trading::Profession::Butcher;
             default:                        return Trading::Profession::Fletcher;
         }
     }

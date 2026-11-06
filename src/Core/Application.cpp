@@ -2568,7 +2568,7 @@ bool Application::frame()
                 const MobId NIGHT[] = {
                     MobId::Enderman, MobId::Spider, MobId::CaveSpider, MobId::IronGolem,
                     MobId::Drowned, MobId::Stray, MobId::Bogged, MobId::Strider,
-                    MobId::Breeze, MobId::Wither,
+                    MobId::ZombieVillager, MobId::Wither,
                 };
                 const MobId VARIED[] = {
                     MobId::Wolf, MobId::Cat, MobId::Horse, MobId::Horse, MobId::Llama,
@@ -8312,6 +8312,14 @@ void Application::handlePlacement()
         {
             if (villager->typeId() == MobId::Villager && villager->alive())
             {
+                const Trading::Profession job = villager->professionSlot() >= 0
+                    ? static_cast<Trading::Profession>(villager->professionSlot())
+                    : Trading::professionFor(villager->birthSeed());
+                if (Trading::dealsFor(job).empty())
+                {
+                    m_audio.play(Sound::MobVillagerSay, 0.6f, 0.7f);
+                    return;
+                }
                 openTrading(*villager);
                 m_audio.play(Sound::MobVillagerSay, 0.6f);
                 return;
@@ -10124,12 +10132,49 @@ void Application::tickFluids(float deltaTime)
     if (m_fluidClock > 0.05f) m_fluidClock = 0.0f;
 }
 
+void Application::claimJobSites()
+{
+    for (Mob& villager : m_entities.mobs())
+    {
+        if (villager.typeId() != MobId::Villager || !villager.alive() || villager.baby()) continue;
+        if (villager.professionSlot() < 0 &&
+            Trading::professionFor(villager.birthSeed()) == Trading::Profession::Nitwit)
+            continue;
+        const auto record = m_traders.find(villager.birthSeed());
+        if (record != m_traders.end() && record->second.xp > 0) continue;
+
+        const glm::ivec3 at = glm::ivec3(glm::floor(villager.position()));
+        bool found = false;
+        for (int dy = -1; dy <= 2 && !found; ++dy)
+            for (int dx = -JOB_SITE_REACH; dx <= JOB_SITE_REACH && !found; ++dx)
+                for (int dz = -JOB_SITE_REACH; dz <= JOB_SITE_REACH && !found; ++dz)
+                {
+                    Trading::Profession job;
+                    if (!Trading::jobSite(m_world->getBlock(at.x + dx, at.y + dy, at.z + dz), job)) continue;
+                    if (villager.professionSlot() != static_cast<int>(job))
+                    {
+                        villager.setProfessionSlot(static_cast<int>(job));
+                        sprites(SpriteParticles::Kind::Happy, villager.position() + glm::vec3(0.0f, 1.8f, 0.0f),
+                                6, 0.4f, 0.4f, 0.18f, 1.2f);
+                    }
+                    found = true;
+                }
+    }
+}
+
 void Application::updateWorldAround(float deltaTime)
 {
     if (!m_world || !m_worldReady) return;
     tickSpriteParticles(deltaTime);
     tickTimedBlocks(deltaTime);
     tickFluids(deltaTime);
+
+    m_jobSiteTimer += deltaTime;
+    if (m_jobSiteTimer >= 2.0f)
+    {
+        m_jobSiteTimer = 0.0f;
+        if (m_net.role() != Net::Role::Guest) claimJobSites();
+    }
 
     m_growthTimer += deltaTime;
     if (m_growthTimer >= Farming::TICK_INTERVAL)
