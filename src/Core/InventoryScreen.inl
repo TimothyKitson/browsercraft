@@ -2316,6 +2316,9 @@ void Application::takeTradeResult(bool all)
         TraderRecord& record = openTrader();
         const int rankBefore = Trading::rankFor(record.xp);
         record.uses[static_cast<size_t>(m_tradeSelected)] += 1;
+        if (const Mob* trader = tradingVillager())
+            sprites(SpriteParticles::Kind::Happy, trader->position() + glm::vec3(0.0f, 1.9f, 0.0f), 5, 0.5f,
+                    0.3f, 0.25f, 1.0f);
         record.xp += deal.villagerXp;
         for (const Mob& mob : m_entities.mobs())
             if (mob.typeId() == MobId::Villager && mob.birthSeed() == m_tradeSeed)

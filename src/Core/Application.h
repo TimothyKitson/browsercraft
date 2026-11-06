@@ -12,6 +12,7 @@
 #include "Renderer/ShaderPipeline.h"
 #include "Renderer/SelectionRenderer.h"
 #include "Renderer/GuiTextures.h"
+#include "Entity/SpriteParticles.h"
 #include "World/World.h"
 #include "World/Furnaces.h"
 #include "World/Chests.h"
@@ -233,6 +234,13 @@ private:
     StackId m_furnaceOutputId = Blocks::Air;
     int m_furnaceOutputCount = 0;
     Particles m_particles;
+    std::unique_ptr<SpriteParticles> m_sprites;
+    float m_ambientClock = 0.0f;
+    float m_bubbleClock = 0.0f;
+    bool m_particleDemo = false;
+    void tickSpriteParticles(float deltaTime);
+    void sprites(SpriteParticles::Kind kind, const glm::vec3& at, int count, float spread, float speed,
+                 float size, float lifetime, float gravity = 0.0f);
     // One texture per character in the picker. Painting eight 64x32
     // skins costs well under a millisecond, so the whole library is kept
     // resident rather than rebuilt as you scroll through it.

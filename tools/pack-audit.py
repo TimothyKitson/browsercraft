@@ -28,6 +28,11 @@ def used(category, rel):
         return stem in quoted or ("../" + path) in text or (path + ".png") in text
     if category == "gui":
         return ('"' + inner + '"') in text or ('"' + inner + "|") in text
+    if category == "particle":
+        base = re.sub(r"_\d+$", "", stem)
+        if stem.startswith("sga_"):
+            base = "sga_"
+        return ('"' + base + '"') in text
     if category == "entity":
         return (inner + ".png") in text or ('"' + path + '"') in text or ("../" + path + '"') in text
     return ('"' + path + '"') in text or ('"../' + path + '"') in text or (path + ".png") in text
