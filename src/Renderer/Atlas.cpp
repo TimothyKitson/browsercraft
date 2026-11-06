@@ -4204,8 +4204,8 @@ namespace
     }
 
     // Biome colours Minecraft multiplies its greyscale foliage art by.
-    const Color GRASS_TINT{ 145, 189, 89, 255 };
-    const Color FOLIAGE_TINT{ 119, 171, 47, 255 };
+    Color GRASS_TINT{ 145, 189, 89, 255 };
+    Color FOLIAGE_TINT{ 119, 171, 47, 255 };
     const Color BIRCH_TINT{ 128, 167, 85, 255 };
     const Color WATER_TINT{ 63, 118, 228, 255 };
     const Color REDSTONE_OFF_TINT{ 118, 16, 10, 255 };
@@ -7190,6 +7190,22 @@ Atlas::Atlas()
         // pack has already identified itself as Bedrock.
         const bool bedrockPack = packIsBedrockStyle();
 
+        {
+            const float temperature = 0.8f;
+            const float downfall = 0.4f * temperature;
+            const Image grassMap = loadPNG("assets/textures/colormap/grass.png");
+            const Image foliageMap = loadPNG("assets/textures/colormap/foliage.png");
+            auto sample = [&](const Image& map) {
+                const int x = std::clamp(static_cast<int>((1.0f - temperature) * (map.width - 1)), 0, map.width - 1);
+                const int y = std::clamp(static_cast<int>((1.0f - downfall) * (map.height - 1)), 0, map.height - 1);
+                Color c = map.at(x, y);
+                c.a = 255;
+                return c;
+            };
+            if (grassMap.valid()) GRASS_TINT = sample(grassMap);
+            if (foliageMap.valid()) FOLIAGE_TINT = sample(foliageMap);
+        }
+
         for (const PackTile& entry : PACK_TILES)
         {
             Image image = loadFirstAvailable(entry.candidates);
@@ -7360,6 +7376,148 @@ Atlas::Atlas()
         {
             const int cell = snow.width / 4;
             blitImage(Tiles::SnowFlake, scaleNearest(cropImage(snow, 0, 0, cell, cell), tilePixels, tilePixels));
+        }
+
+        auto blankImage = [](int w, int h) {
+            Image out;
+            out.width = w;
+            out.height = h;
+            out.rgba.assign(static_cast<size_t>(w) * h * 4, 0);
+            return out;
+        };
+        auto pasteImage = [](Image& into, const Image& from, int dx, int dy) {
+            for (int y = 0; y < from.height; ++y)
+                for (int x = 0; x < from.width; ++x)
+                {
+                    const int tx = dx + x, ty = dy + y;
+                    if (tx < 0 || ty < 0 || tx >= into.width || ty >= into.height) continue;
+                    const size_t s = (static_cast<size_t>(y) * from.width + x) * 4;
+                    if (from.rgba[s + 3] == 0) continue;
+                    const size_t d = (static_cast<size_t>(ty) * into.width + tx) * 4;
+                    for (int c = 0; c < 4; ++c) into.rgba[d + c] = from.rgba[s + c];
+                }
+        };
+        auto turnImage = [&](const Image& from) {
+            Image out = blankImage(from.height, from.width);
+            for (int y = 0; y < from.height; ++y)
+                for (int x = 0; x < from.width; ++x)
+                    for (int c = 0; c < 4; ++c)
+                        out.rgba[(static_cast<size_t>(x) * out.width + (from.height - 1 - y)) * 4 + c] =
+                            from.rgba[(static_cast<size_t>(y) * from.width + x) * 4 + c];
+            return out;
+        };
+        auto unit = [](const Image& sheet, int textureWidth) { return std::max(1, sheet.width / textureWidth); };
+
+        const Image chest = loadPNG("assets/textures/entity/chest/normal.png");
+        if (chest.valid())
+        {
+            const int k = unit(chest, 64);
+            blitImage(Tiles::ChestTop, scaleNearest(cropImage(chest, 14 * k, 0, 14 * k, 14 * k), tilePixels, tilePixels));
+            Image front = blankImage(14 * k, 15 * k);
+            pasteImage(front, cropImage(chest, 14 * k, 14 * k, 14 * k, 5 * k), 0, 0);
+            pasteImage(front, cropImage(chest, 14 * k, 33 * k, 14 * k, 10 * k), 0, 5 * k);
+            Image side = front;
+            pasteImage(side, cropImage(chest, 0, 14 * k, 14 * k, 5 * k), 0, 0);
+            pasteImage(side, cropImage(chest, 0, 33 * k, 14 * k, 10 * k), 0, 5 * k);
+            pasteImage(front, cropImage(chest, 1 * k, 1 * k, 2 * k, 4 * k), 6 * k, 3 * k);
+            blitImage(Tiles::ChestFront, scaleNearest(front, tilePixels, tilePixels));
+            blitImage(Tiles::ChestSide, scaleNearest(side, tilePixels, tilePixels));
+        }
+
+        const Image bed = loadPNG("assets/textures/entity/bed/red.png");
+        if (bed.valid())
+        {
+            const int k = unit(bed, 64);
+            blitImage(Tiles::BedTop, scaleNearest(cropImage(bed, 6 * k, 6 * k, 16 * k, 16 * k), tilePixels, tilePixels));
+            Image side = blankImage(16 * k, 16 * k);
+            pasteImage(side, cropImage(bed, 28 * k, 6 * k, 16 * k, 16 * k), 0, 0);
+            pasteImage(side, turnImage(cropImage(bed, 0, 6 * k, 6 * k, 16 * k)), 0, 0);
+            blitImage(Tiles::BedSide, scaleNearest(side, tilePixels, tilePixels));
+        }
+
+        const Image orb = loadPNG("assets/textures/entity/experience_orb.png");
+        if (orb.valid())
+        {
+            const int cell = orb.width / 4;
+            blitImage(Tiles::ExperienceOrb, scaleNearest(cropImage(orb, 2 * cell, cell, cell, cell), tilePixels, tilePixels));
+        }
+
+        const Image arrow = loadPNG("assets/textures/entity/projectiles/arrow.png");
+        if (arrow.valid())
+        {
+            const int k = unit(arrow, 32);
+            Image flight = blankImage(16 * k, 16 * k);
+            pasteImage(flight, cropImage(arrow, 0, 0, 16 * k, 5 * k), 0, 6 * k);
+            blitImage(Tiles::ArrowInFlight, scaleNearest(flight, tilePixels, tilePixels));
+        }
+
+        const Image portal = loadPNG("assets/textures/entity/end_portal.png");
+        if (portal.valid())
+        {
+            Image stars = scaleNearest(portal, tilePixels, tilePixels);
+            for (size_t i = 0; i + 3 < stars.rgba.size(); i += 4)
+            {
+                stars.rgba[i] = static_cast<uint8_t>(stars.rgba[i] * 0.35f + 8);
+                stars.rgba[i + 1] = static_cast<uint8_t>(stars.rgba[i + 1] * 0.55f + 14);
+                stars.rgba[i + 2] = static_cast<uint8_t>(stars.rgba[i + 2] * 0.60f + 20);
+                stars.rgba[i + 3] = 255;
+            }
+            blitImage(Tiles::EndPortalTile, stars);
+            blitImage(Tiles::EndGatewayTile, stars);
+        }
+
+        const Image crystal = loadPNG("assets/textures/entity/end_crystal/end_crystal.png");
+        if (crystal.valid())
+        {
+            const int k = unit(crystal, 64);
+            Image face = blankImage(8 * k, 8 * k);
+            pasteImage(face, cropImage(crystal, 40 * k, 8 * k, 8 * k, 8 * k), 0, 0);
+            pasteImage(face, cropImage(crystal, 8 * k, 8 * k, 8 * k, 8 * k), 0, 0);
+            blitImage(Tiles::EndCrystalTile, scaleNearest(face, tilePixels, tilePixels));
+        }
+
+        const Image witherHead = loadPNG("assets/textures/entity/skeleton/wither_skeleton.png");
+        if (witherHead.valid())
+        {
+            const int k = unit(witherHead, 64);
+            blitImage(Tiles::WitherSkullTile, scaleNearest(cropImage(witherHead, 8 * k, 8 * k, 8 * k, 8 * k), tilePixels, tilePixels));
+        }
+
+        const Image dustDot = loadPNG("assets/textures/block/redstone_dust_dot.png");
+        const Image dustLine = loadPNG("assets/textures/block/redstone_dust_line0.png");
+        if (dustDot.valid() && dustLine.valid() && dustDot.width == dustLine.width && dustDot.height == dustLine.height)
+        {
+            Image dust = dustDot;
+            pasteImage(dust, dustLine, 0, 0);
+            pasteImage(dust, turnImage(dustLine), 0, 0);
+            Image off = scaleNearest(dust, tilePixels, tilePixels);
+            Image on = off;
+            tintImage(off, REDSTONE_OFF_TINT);
+            tintImage(on, REDSTONE_ON_TINT);
+            blitImage(Tiles::RedstoneDust, off);
+            blitImage(Tiles::RedstoneDustLit, on);
+        }
+
+        const Image buttonStone = loadPNG("assets/textures/block/stone.png");
+        if (buttonStone.valid())
+        {
+            const Image square = scaleNearest(cropImage(buttonStone, 0, 0, buttonStone.width, buttonStone.width), tilePixels, tilePixels);
+            Image button = blankImage(tilePixels, tilePixels);
+            const int bw = tilePixels * 6 / 16, bh = tilePixels * 4 / 16;
+            pasteImage(button, cropImage(square, (tilePixels - bw) / 2, (tilePixels - bh) / 2, bw, bh),
+                       (tilePixels - bw) / 2, (tilePixels - bh) / 2);
+            blitImage(Tiles::ButtonTile, button);
+            blitImage(Tiles::ButtonOnTile, button);
+        }
+
+        const Image tntSide = loadPNG("assets/textures/block/tnt_side.png");
+        if (tntSide.valid())
+        {
+            Image flash = scaleNearest(cropImage(tntSide, 0, 0, tntSide.width, std::min(tntSide.width, tntSide.height)), tilePixels, tilePixels);
+            for (size_t i = 0; i + 3 < flash.rgba.size(); i += 4)
+                for (int c = 0; c < 3; ++c)
+                    flash.rgba[i + c] = static_cast<uint8_t>((flash.rgba[i + c] + 255) / 2);
+            blitImage(Tiles::TntPrimedSide, flash);
         }
 
         m_packCredit = readPackCredit();

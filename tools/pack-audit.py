@@ -25,7 +25,7 @@ def used(category, rel):
     path = rel[:-4]
     inner = path.split("/", 1)[1] if "/" in path else path
     if category in ("block", "item"):
-        return stem in quoted or ("../" + path) in text
+        return stem in quoted or ("../" + path) in text or (path + ".png") in text
     if category == "gui":
         return ('"' + inner + '"') in text or ('"' + inner + "|") in text
     if category == "entity":

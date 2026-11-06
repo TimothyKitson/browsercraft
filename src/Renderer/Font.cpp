@@ -1,6 +1,8 @@
 #include "Font.h"
 #include "Core/GLFunctions.h"
+#include <stb_image.h>
 #include <vector>
+#include <algorithm>
 #include <cstdint>
 
 #ifndef GL_RGBA8
@@ -110,6 +112,9 @@ namespace
         { 0x08, 0x04, 0x04, 0x08, 0x0C, 0x00 }, // ~
     };
 
+    bool g_fromPack = false;
+    int g_packWidth[128] = {};
+
     const uint8_t* columnsFor(char c)
     {
         const int index = static_cast<unsigned char>(c);
@@ -121,6 +126,12 @@ namespace
 int Font::widthOf(char c)
 {
     if (c == ' ') return SPACE_WIDTH;
+    if (g_fromPack)
+    {
+        const int index = static_cast<unsigned char>(c);
+        if (index < FIRST_CHAR || index > LAST_CHAR) return SPACE_WIDTH;
+        return g_packWidth[index] > 0 ? g_packWidth[index] : SPACE_WIDTH;
+    }
 
     const uint8_t* columns = columnsFor(c);
     if (!columns) return SPACE_WIDTH;
@@ -139,7 +150,36 @@ Font::Font()
     std::vector<Pixel> pixels(TEX_W * TEX_H, Pixel{ 255, 255, 255, 0 });
 
     const int glyphCount = LAST_CHAR - FIRST_CHAR + 1;
-    for (int g = 0; g < glyphCount; ++g)
+
+    int sheetW = 0, sheetH = 0, channels = 0;
+    unsigned char* sheet = stbi_load("assets/textures/font/ascii.png", &sheetW, &sheetH, &channels, 4);
+    if (sheet && sheetW >= 128 && sheetW == sheetH)
+    {
+        const int cell = sheetW / 16;
+        const int step = cell / 8;
+        for (int g = 0; g < glyphCount; ++g)
+        {
+            const int code = FIRST_CHAR + g;
+            const int cellX = (g % COLUMNS) * CELL_W;
+            const int cellY = (g / COLUMNS) * CELL_H;
+            int width = 0;
+            for (int row = 0; row < 8; ++row)
+                for (int col = 0; col < 8; ++col)
+                {
+                    const int sx = (code % 16) * cell + col * step;
+                    const int sy = (code / 16) * cell + row * step;
+                    const unsigned char alpha = sheet[(static_cast<size_t>(sy) * sheetW + sx) * 4 + 3];
+                    if (alpha < 128) continue;
+                    pixels[(cellY + row) * TEX_W + (cellX + col)] = Pixel{ 255, 255, 255, 255 };
+                    width = std::max(width, col + 1);
+                }
+            g_packWidth[code] = width;
+        }
+        g_fromPack = true;
+    }
+    if (sheet) stbi_image_free(sheet);
+
+    for (int g = 0; g < glyphCount && !g_fromPack; ++g)
     {
         const int cellX = (g % COLUMNS) * CELL_W;
         const int cellY = (g / COLUMNS) * CELL_H;
