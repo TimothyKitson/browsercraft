@@ -9369,6 +9369,8 @@ void Application::renderWorldShaded()
     queueBeams();
     m_beams.render(world);
     m_books.render(world, *m_world);
+    castShadows(view, projection);
+    world.bind();
     m_atlas.bind(0, 1, 2);
     renderPlayers(view, projection);
     if (inGame())
@@ -9501,6 +9503,8 @@ void Application::renderWorld()
     queueBeams();
     m_beams.render(m_chunkShader);
     m_books.render(m_chunkShader, *m_world);
+    castShadows(view, projection);
+    m_chunkShader.bind();
     m_atlas.bind(0, 1, 2);
 
     // Players are opaque too, but each one brings its own texture, so
@@ -10252,6 +10256,33 @@ void Application::tickBreathClouds(float deltaTime)
     m_breathClouds.erase(std::remove_if(m_breathClouds.begin(), m_breathClouds.end(),
                                         [](const BreathCloud& c) { return c.left <= 0.0f; }),
                          m_breathClouds.end());
+}
+
+void Application::castShadows(const glm::mat4& view, const glm::mat4& projection)
+{
+    m_shadows.clear();
+    if (!m_world || !inGame()) return;
+    const glm::vec3 eye = viewCamera().position;
+    auto near = [&](const glm::vec3& at) { return glm::length(at - eye) < 48.0f; };
+
+    for (const Mob& mob : m_entities.mobs())
+    {
+        if (mob.type().stationary || !near(mob.position())) continue;
+        m_shadows.cast(*m_world, mob.position(), std::clamp(mob.width() * 0.6f, 0.25f, 2.5f) * mob.deathFade());
+    }
+
+    std::vector<glm::vec3> small;
+    m_drops.positions(small);
+    m_orbs.positions(small);
+    for (const glm::vec3& at : small)
+        if (near(at)) m_shadows.cast(*m_world, at, 0.15f);
+
+    for (const auto& entry : m_net.players())
+        if (entry.second.positioned && near(entry.second.smoothed()))
+            m_shadows.cast(*m_world, entry.second.smoothed(), 0.5f);
+    if (m_perspective != Perspective::FirstPerson) m_shadows.cast(*m_world, m_player.position, 0.5f);
+
+    m_shadows.render(view, projection);
 }
 
 void Application::queueBeams()

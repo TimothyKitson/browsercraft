@@ -42,6 +42,10 @@ public:
 
     void clear() { m_orbs.clear(); }
     int count() const { return static_cast<int>(m_orbs.size()); }
+    void positions(std::vector<glm::vec3>& out) const
+    {
+        for (const Orb& orb : m_orbs) out.push_back(orb.position);
+    }
     int totalWorth() const;
 
 private:

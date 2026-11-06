@@ -62,7 +62,7 @@ Everything in the 1.21 textures zip the game doesn't use yet, turned into work. 
 11. Elytra (done)
     - I. Wings on the player's back when worn.
     - II. Use the broken elytra icon when it's out of durability.
-12. Shadows: round shadows under mobs, items and players (misc/shadow).
+12. Shadows: round shadows under mobs, items and players (misc/shadow). (done)
 13. Enchantment glint
     - I. A moving glint on enchanted items in slots and in the hand.
     - II. The glint on worn enchanted armour (entity glint).

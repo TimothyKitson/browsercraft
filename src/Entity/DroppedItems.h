@@ -67,6 +67,10 @@ public:
 
     void clear() { m_items.clear(); m_pinned.clear(); }
     int count() const { return static_cast<int>(m_items.size()); }
+    void positions(std::vector<glm::vec3>& out) const
+    {
+        for (const Item& item : m_items) out.push_back(item.position);
+    }
 
 private:
     struct Item
