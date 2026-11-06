@@ -1218,6 +1218,134 @@ namespace
         { "Green Shulker Box", ShulkerBoxColourTile + 13, ShulkerBoxColourTile + 13, ShulkerBoxColourTile + 13, true, true, RenderType::Cube, 0, 2.0f },
         { "Red Shulker Box", ShulkerBoxColourTile + 14, ShulkerBoxColourTile + 14, ShulkerBoxColourTile + 14, true, true, RenderType::Cube, 0, 2.0f },
         { "Black Shulker Box", ShulkerBoxColourTile + 15, ShulkerBoxColourTile + 15, ShulkerBoxColourTile + 15, true, true, RenderType::Cube, 0, 2.0f },
+        { "White Bed", BedFootTopTile + 0, Planks, BedSidesTile + 0, true, false, RenderType::Bed, 0, 0.2f },
+        { "White Bed", BedHeadTopTile + 0, Planks, BedSidesTile + 0, true, false, RenderType::Bed, 0, 0.2f },
+        { "White Bed", BedFootTopTile + 0, Planks, BedSidesTile + 0, true, false, RenderType::Bed, 0, 0.2f },
+        { "White Bed", BedHeadTopTile + 0, Planks, BedSidesTile + 0, true, false, RenderType::Bed, 0, 0.2f },
+        { "White Bed", BedFootTopTile + 0, Planks, BedSidesTile + 0, true, false, RenderType::Bed, 0, 0.2f },
+        { "White Bed", BedHeadTopTile + 0, Planks, BedSidesTile + 0, true, false, RenderType::Bed, 0, 0.2f },
+        { "White Bed", BedFootTopTile + 0, Planks, BedSidesTile + 0, true, false, RenderType::Bed, 0, 0.2f },
+        { "White Bed", BedHeadTopTile + 0, Planks, BedSidesTile + 0, true, false, RenderType::Bed, 0, 0.2f },
+        { "Orange Bed", BedFootTopTile + 1, Planks, BedSidesTile + 1, true, false, RenderType::Bed, 0, 0.2f },
+        { "Orange Bed", BedHeadTopTile + 1, Planks, BedSidesTile + 1, true, false, RenderType::Bed, 0, 0.2f },
+        { "Orange Bed", BedFootTopTile + 1, Planks, BedSidesTile + 1, true, false, RenderType::Bed, 0, 0.2f },
+        { "Orange Bed", BedHeadTopTile + 1, Planks, BedSidesTile + 1, true, false, RenderType::Bed, 0, 0.2f },
+        { "Orange Bed", BedFootTopTile + 1, Planks, BedSidesTile + 1, true, false, RenderType::Bed, 0, 0.2f },
+        { "Orange Bed", BedHeadTopTile + 1, Planks, BedSidesTile + 1, true, false, RenderType::Bed, 0, 0.2f },
+        { "Orange Bed", BedFootTopTile + 1, Planks, BedSidesTile + 1, true, false, RenderType::Bed, 0, 0.2f },
+        { "Orange Bed", BedHeadTopTile + 1, Planks, BedSidesTile + 1, true, false, RenderType::Bed, 0, 0.2f },
+        { "Magenta Bed", BedFootTopTile + 2, Planks, BedSidesTile + 2, true, false, RenderType::Bed, 0, 0.2f },
+        { "Magenta Bed", BedHeadTopTile + 2, Planks, BedSidesTile + 2, true, false, RenderType::Bed, 0, 0.2f },
+        { "Magenta Bed", BedFootTopTile + 2, Planks, BedSidesTile + 2, true, false, RenderType::Bed, 0, 0.2f },
+        { "Magenta Bed", BedHeadTopTile + 2, Planks, BedSidesTile + 2, true, false, RenderType::Bed, 0, 0.2f },
+        { "Magenta Bed", BedFootTopTile + 2, Planks, BedSidesTile + 2, true, false, RenderType::Bed, 0, 0.2f },
+        { "Magenta Bed", BedHeadTopTile + 2, Planks, BedSidesTile + 2, true, false, RenderType::Bed, 0, 0.2f },
+        { "Magenta Bed", BedFootTopTile + 2, Planks, BedSidesTile + 2, true, false, RenderType::Bed, 0, 0.2f },
+        { "Magenta Bed", BedHeadTopTile + 2, Planks, BedSidesTile + 2, true, false, RenderType::Bed, 0, 0.2f },
+        { "Light Blue Bed", BedFootTopTile + 3, Planks, BedSidesTile + 3, true, false, RenderType::Bed, 0, 0.2f },
+        { "Light Blue Bed", BedHeadTopTile + 3, Planks, BedSidesTile + 3, true, false, RenderType::Bed, 0, 0.2f },
+        { "Light Blue Bed", BedFootTopTile + 3, Planks, BedSidesTile + 3, true, false, RenderType::Bed, 0, 0.2f },
+        { "Light Blue Bed", BedHeadTopTile + 3, Planks, BedSidesTile + 3, true, false, RenderType::Bed, 0, 0.2f },
+        { "Light Blue Bed", BedFootTopTile + 3, Planks, BedSidesTile + 3, true, false, RenderType::Bed, 0, 0.2f },
+        { "Light Blue Bed", BedHeadTopTile + 3, Planks, BedSidesTile + 3, true, false, RenderType::Bed, 0, 0.2f },
+        { "Light Blue Bed", BedFootTopTile + 3, Planks, BedSidesTile + 3, true, false, RenderType::Bed, 0, 0.2f },
+        { "Light Blue Bed", BedHeadTopTile + 3, Planks, BedSidesTile + 3, true, false, RenderType::Bed, 0, 0.2f },
+        { "Yellow Bed", BedFootTopTile + 4, Planks, BedSidesTile + 4, true, false, RenderType::Bed, 0, 0.2f },
+        { "Yellow Bed", BedHeadTopTile + 4, Planks, BedSidesTile + 4, true, false, RenderType::Bed, 0, 0.2f },
+        { "Yellow Bed", BedFootTopTile + 4, Planks, BedSidesTile + 4, true, false, RenderType::Bed, 0, 0.2f },
+        { "Yellow Bed", BedHeadTopTile + 4, Planks, BedSidesTile + 4, true, false, RenderType::Bed, 0, 0.2f },
+        { "Yellow Bed", BedFootTopTile + 4, Planks, BedSidesTile + 4, true, false, RenderType::Bed, 0, 0.2f },
+        { "Yellow Bed", BedHeadTopTile + 4, Planks, BedSidesTile + 4, true, false, RenderType::Bed, 0, 0.2f },
+        { "Yellow Bed", BedFootTopTile + 4, Planks, BedSidesTile + 4, true, false, RenderType::Bed, 0, 0.2f },
+        { "Yellow Bed", BedHeadTopTile + 4, Planks, BedSidesTile + 4, true, false, RenderType::Bed, 0, 0.2f },
+        { "Lime Bed", BedFootTopTile + 5, Planks, BedSidesTile + 5, true, false, RenderType::Bed, 0, 0.2f },
+        { "Lime Bed", BedHeadTopTile + 5, Planks, BedSidesTile + 5, true, false, RenderType::Bed, 0, 0.2f },
+        { "Lime Bed", BedFootTopTile + 5, Planks, BedSidesTile + 5, true, false, RenderType::Bed, 0, 0.2f },
+        { "Lime Bed", BedHeadTopTile + 5, Planks, BedSidesTile + 5, true, false, RenderType::Bed, 0, 0.2f },
+        { "Lime Bed", BedFootTopTile + 5, Planks, BedSidesTile + 5, true, false, RenderType::Bed, 0, 0.2f },
+        { "Lime Bed", BedHeadTopTile + 5, Planks, BedSidesTile + 5, true, false, RenderType::Bed, 0, 0.2f },
+        { "Lime Bed", BedFootTopTile + 5, Planks, BedSidesTile + 5, true, false, RenderType::Bed, 0, 0.2f },
+        { "Lime Bed", BedHeadTopTile + 5, Planks, BedSidesTile + 5, true, false, RenderType::Bed, 0, 0.2f },
+        { "Pink Bed", BedFootTopTile + 6, Planks, BedSidesTile + 6, true, false, RenderType::Bed, 0, 0.2f },
+        { "Pink Bed", BedHeadTopTile + 6, Planks, BedSidesTile + 6, true, false, RenderType::Bed, 0, 0.2f },
+        { "Pink Bed", BedFootTopTile + 6, Planks, BedSidesTile + 6, true, false, RenderType::Bed, 0, 0.2f },
+        { "Pink Bed", BedHeadTopTile + 6, Planks, BedSidesTile + 6, true, false, RenderType::Bed, 0, 0.2f },
+        { "Pink Bed", BedFootTopTile + 6, Planks, BedSidesTile + 6, true, false, RenderType::Bed, 0, 0.2f },
+        { "Pink Bed", BedHeadTopTile + 6, Planks, BedSidesTile + 6, true, false, RenderType::Bed, 0, 0.2f },
+        { "Pink Bed", BedFootTopTile + 6, Planks, BedSidesTile + 6, true, false, RenderType::Bed, 0, 0.2f },
+        { "Pink Bed", BedHeadTopTile + 6, Planks, BedSidesTile + 6, true, false, RenderType::Bed, 0, 0.2f },
+        { "Gray Bed", BedFootTopTile + 7, Planks, BedSidesTile + 7, true, false, RenderType::Bed, 0, 0.2f },
+        { "Gray Bed", BedHeadTopTile + 7, Planks, BedSidesTile + 7, true, false, RenderType::Bed, 0, 0.2f },
+        { "Gray Bed", BedFootTopTile + 7, Planks, BedSidesTile + 7, true, false, RenderType::Bed, 0, 0.2f },
+        { "Gray Bed", BedHeadTopTile + 7, Planks, BedSidesTile + 7, true, false, RenderType::Bed, 0, 0.2f },
+        { "Gray Bed", BedFootTopTile + 7, Planks, BedSidesTile + 7, true, false, RenderType::Bed, 0, 0.2f },
+        { "Gray Bed", BedHeadTopTile + 7, Planks, BedSidesTile + 7, true, false, RenderType::Bed, 0, 0.2f },
+        { "Gray Bed", BedFootTopTile + 7, Planks, BedSidesTile + 7, true, false, RenderType::Bed, 0, 0.2f },
+        { "Gray Bed", BedHeadTopTile + 7, Planks, BedSidesTile + 7, true, false, RenderType::Bed, 0, 0.2f },
+        { "Light Gray Bed", BedFootTopTile + 8, Planks, BedSidesTile + 8, true, false, RenderType::Bed, 0, 0.2f },
+        { "Light Gray Bed", BedHeadTopTile + 8, Planks, BedSidesTile + 8, true, false, RenderType::Bed, 0, 0.2f },
+        { "Light Gray Bed", BedFootTopTile + 8, Planks, BedSidesTile + 8, true, false, RenderType::Bed, 0, 0.2f },
+        { "Light Gray Bed", BedHeadTopTile + 8, Planks, BedSidesTile + 8, true, false, RenderType::Bed, 0, 0.2f },
+        { "Light Gray Bed", BedFootTopTile + 8, Planks, BedSidesTile + 8, true, false, RenderType::Bed, 0, 0.2f },
+        { "Light Gray Bed", BedHeadTopTile + 8, Planks, BedSidesTile + 8, true, false, RenderType::Bed, 0, 0.2f },
+        { "Light Gray Bed", BedFootTopTile + 8, Planks, BedSidesTile + 8, true, false, RenderType::Bed, 0, 0.2f },
+        { "Light Gray Bed", BedHeadTopTile + 8, Planks, BedSidesTile + 8, true, false, RenderType::Bed, 0, 0.2f },
+        { "Cyan Bed", BedFootTopTile + 9, Planks, BedSidesTile + 9, true, false, RenderType::Bed, 0, 0.2f },
+        { "Cyan Bed", BedHeadTopTile + 9, Planks, BedSidesTile + 9, true, false, RenderType::Bed, 0, 0.2f },
+        { "Cyan Bed", BedFootTopTile + 9, Planks, BedSidesTile + 9, true, false, RenderType::Bed, 0, 0.2f },
+        { "Cyan Bed", BedHeadTopTile + 9, Planks, BedSidesTile + 9, true, false, RenderType::Bed, 0, 0.2f },
+        { "Cyan Bed", BedFootTopTile + 9, Planks, BedSidesTile + 9, true, false, RenderType::Bed, 0, 0.2f },
+        { "Cyan Bed", BedHeadTopTile + 9, Planks, BedSidesTile + 9, true, false, RenderType::Bed, 0, 0.2f },
+        { "Cyan Bed", BedFootTopTile + 9, Planks, BedSidesTile + 9, true, false, RenderType::Bed, 0, 0.2f },
+        { "Cyan Bed", BedHeadTopTile + 9, Planks, BedSidesTile + 9, true, false, RenderType::Bed, 0, 0.2f },
+        { "Purple Bed", BedFootTopTile + 10, Planks, BedSidesTile + 10, true, false, RenderType::Bed, 0, 0.2f },
+        { "Purple Bed", BedHeadTopTile + 10, Planks, BedSidesTile + 10, true, false, RenderType::Bed, 0, 0.2f },
+        { "Purple Bed", BedFootTopTile + 10, Planks, BedSidesTile + 10, true, false, RenderType::Bed, 0, 0.2f },
+        { "Purple Bed", BedHeadTopTile + 10, Planks, BedSidesTile + 10, true, false, RenderType::Bed, 0, 0.2f },
+        { "Purple Bed", BedFootTopTile + 10, Planks, BedSidesTile + 10, true, false, RenderType::Bed, 0, 0.2f },
+        { "Purple Bed", BedHeadTopTile + 10, Planks, BedSidesTile + 10, true, false, RenderType::Bed, 0, 0.2f },
+        { "Purple Bed", BedFootTopTile + 10, Planks, BedSidesTile + 10, true, false, RenderType::Bed, 0, 0.2f },
+        { "Purple Bed", BedHeadTopTile + 10, Planks, BedSidesTile + 10, true, false, RenderType::Bed, 0, 0.2f },
+        { "Blue Bed", BedFootTopTile + 11, Planks, BedSidesTile + 11, true, false, RenderType::Bed, 0, 0.2f },
+        { "Blue Bed", BedHeadTopTile + 11, Planks, BedSidesTile + 11, true, false, RenderType::Bed, 0, 0.2f },
+        { "Blue Bed", BedFootTopTile + 11, Planks, BedSidesTile + 11, true, false, RenderType::Bed, 0, 0.2f },
+        { "Blue Bed", BedHeadTopTile + 11, Planks, BedSidesTile + 11, true, false, RenderType::Bed, 0, 0.2f },
+        { "Blue Bed", BedFootTopTile + 11, Planks, BedSidesTile + 11, true, false, RenderType::Bed, 0, 0.2f },
+        { "Blue Bed", BedHeadTopTile + 11, Planks, BedSidesTile + 11, true, false, RenderType::Bed, 0, 0.2f },
+        { "Blue Bed", BedFootTopTile + 11, Planks, BedSidesTile + 11, true, false, RenderType::Bed, 0, 0.2f },
+        { "Blue Bed", BedHeadTopTile + 11, Planks, BedSidesTile + 11, true, false, RenderType::Bed, 0, 0.2f },
+        { "Brown Bed", BedFootTopTile + 12, Planks, BedSidesTile + 12, true, false, RenderType::Bed, 0, 0.2f },
+        { "Brown Bed", BedHeadTopTile + 12, Planks, BedSidesTile + 12, true, false, RenderType::Bed, 0, 0.2f },
+        { "Brown Bed", BedFootTopTile + 12, Planks, BedSidesTile + 12, true, false, RenderType::Bed, 0, 0.2f },
+        { "Brown Bed", BedHeadTopTile + 12, Planks, BedSidesTile + 12, true, false, RenderType::Bed, 0, 0.2f },
+        { "Brown Bed", BedFootTopTile + 12, Planks, BedSidesTile + 12, true, false, RenderType::Bed, 0, 0.2f },
+        { "Brown Bed", BedHeadTopTile + 12, Planks, BedSidesTile + 12, true, false, RenderType::Bed, 0, 0.2f },
+        { "Brown Bed", BedFootTopTile + 12, Planks, BedSidesTile + 12, true, false, RenderType::Bed, 0, 0.2f },
+        { "Brown Bed", BedHeadTopTile + 12, Planks, BedSidesTile + 12, true, false, RenderType::Bed, 0, 0.2f },
+        { "Green Bed", BedFootTopTile + 13, Planks, BedSidesTile + 13, true, false, RenderType::Bed, 0, 0.2f },
+        { "Green Bed", BedHeadTopTile + 13, Planks, BedSidesTile + 13, true, false, RenderType::Bed, 0, 0.2f },
+        { "Green Bed", BedFootTopTile + 13, Planks, BedSidesTile + 13, true, false, RenderType::Bed, 0, 0.2f },
+        { "Green Bed", BedHeadTopTile + 13, Planks, BedSidesTile + 13, true, false, RenderType::Bed, 0, 0.2f },
+        { "Green Bed", BedFootTopTile + 13, Planks, BedSidesTile + 13, true, false, RenderType::Bed, 0, 0.2f },
+        { "Green Bed", BedHeadTopTile + 13, Planks, BedSidesTile + 13, true, false, RenderType::Bed, 0, 0.2f },
+        { "Green Bed", BedFootTopTile + 13, Planks, BedSidesTile + 13, true, false, RenderType::Bed, 0, 0.2f },
+        { "Green Bed", BedHeadTopTile + 13, Planks, BedSidesTile + 13, true, false, RenderType::Bed, 0, 0.2f },
+        { "Red Bed", BedFootTopTile + 14, Planks, BedSidesTile + 14, true, false, RenderType::Bed, 0, 0.2f },
+        { "Red Bed", BedHeadTopTile + 14, Planks, BedSidesTile + 14, true, false, RenderType::Bed, 0, 0.2f },
+        { "Red Bed", BedFootTopTile + 14, Planks, BedSidesTile + 14, true, false, RenderType::Bed, 0, 0.2f },
+        { "Red Bed", BedHeadTopTile + 14, Planks, BedSidesTile + 14, true, false, RenderType::Bed, 0, 0.2f },
+        { "Red Bed", BedFootTopTile + 14, Planks, BedSidesTile + 14, true, false, RenderType::Bed, 0, 0.2f },
+        { "Red Bed", BedHeadTopTile + 14, Planks, BedSidesTile + 14, true, false, RenderType::Bed, 0, 0.2f },
+        { "Red Bed", BedFootTopTile + 14, Planks, BedSidesTile + 14, true, false, RenderType::Bed, 0, 0.2f },
+        { "Red Bed", BedHeadTopTile + 14, Planks, BedSidesTile + 14, true, false, RenderType::Bed, 0, 0.2f },
+        { "Black Bed", BedFootTopTile + 15, Planks, BedSidesTile + 15, true, false, RenderType::Bed, 0, 0.2f },
+        { "Black Bed", BedHeadTopTile + 15, Planks, BedSidesTile + 15, true, false, RenderType::Bed, 0, 0.2f },
+        { "Black Bed", BedFootTopTile + 15, Planks, BedSidesTile + 15, true, false, RenderType::Bed, 0, 0.2f },
+        { "Black Bed", BedHeadTopTile + 15, Planks, BedSidesTile + 15, true, false, RenderType::Bed, 0, 0.2f },
+        { "Black Bed", BedFootTopTile + 15, Planks, BedSidesTile + 15, true, false, RenderType::Bed, 0, 0.2f },
+        { "Black Bed", BedHeadTopTile + 15, Planks, BedSidesTile + 15, true, false, RenderType::Bed, 0, 0.2f },
+        { "Black Bed", BedFootTopTile + 15, Planks, BedSidesTile + 15, true, false, RenderType::Bed, 0, 0.2f },
+        { "Black Bed", BedHeadTopTile + 15, Planks, BedSidesTile + 15, true, false, RenderType::Bed, 0, 0.2f },
     };
 }
 
@@ -1292,6 +1420,8 @@ bool isObtainable(BlockId id)
             if (isCake(id)) return false;
             if (isCandle(id) && (candleCount(id) != 1 || candleLit(id))) return false;
             if (isCandleCake(id)) return false;
+            if (id == Blocks::Bed) return false;
+            if (isColourBed(id) && id != bedOf(bedColour(id), 0, false)) return false;
 
             // Cocoa is a pod on a trunk rather than a block anybody
             // places, and only the beans come off it.
@@ -1333,6 +1463,7 @@ const char* blockSoundGroup(BlockId id)
     if (isSign(id) || isFrame(id)) return "wood";
     if (isDoor(id) || isTrapdoor(id)) return "wood";
     if (isConcretePowder(id)) return "sand";
+    if (isColourBed(id)) return "cloth";
     if (isSapling(id) || isPinkPetals(id) || id == Blocks::MangrovePropaguleHanging) return "grass";
     if (isNetherPlant(id) || id == Blocks::NetherWartBlock || id == Blocks::WarpedWartBlock ||
         id == Blocks::Shroomlight) return "grass";
@@ -1480,6 +1611,7 @@ Material blockMaterial(BlockId id)
     if (isSign(id) || isFrame(id)) return Material::Wood;
     if (isDoor(id) || isTrapdoor(id)) return Material::Wood;
     if (isConcretePowder(id)) return Material::Sand;
+    if (isColourBed(id)) return Material::Wool;
     if (isGlassLike(id) || isPane(id)) return Material::Glass;
     if (isSapling(id) || isPinkPetals(id) || id == Blocks::MangrovePropaguleHanging) return Material::Plant;
     if (isNetherPlant(id) || id == Blocks::NetherWartBlock || id == Blocks::WarpedWartBlock ||
@@ -1628,6 +1760,8 @@ bool blockOverlaps(BlockId id, int bx, int by, int bz,
             default: return overlaps(0.0f, 0.0f, 0.0f, THICK, 1.0f, 1.0f);
         }
     }
+
+    if (isColourBed(id)) return overlaps(0.0f, 0.0f, 0.0f, 1.0f, 0.5625f, 1.0f);
 
     if (isCake(id) || isCandleCake(id))
     {

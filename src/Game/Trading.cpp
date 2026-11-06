@@ -289,10 +289,10 @@ namespace Trading
                 sell(1, Blocks::WoolLime, 1, 1),
                 buy(Items::DyeLightBlue, 12, 2),
                 buy(Items::DyeLime, 12, 2),
-                sell(3, Blocks::Bed, 1, 2),
+                sell(3, bedOf(0, 0, false), 1, 2),
                 sell(1, Blocks::WoolMagenta, 1, 3),
                 sell(1, Blocks::WoolYellow, 1, 3),
-                sell(2, Blocks::Bed, 1, 4),
+                sell(2, bedOf(14, 0, false), 1, 4),
             };
 
         case Profession::Weaponsmith:

@@ -242,6 +242,7 @@ int flatIconFor(BlockId id)
     if (isTrapdoor(id)) return blockInfo(id).tileTop;
     if (isPane(id)) return blockInfo(id).tileSide;
     if (isCandle(id)) return Tiles::ItemCandleFirst + candleShade(id);
+    if (isBed(id)) return Tiles::ItemBedFirst + bedColour(id);
     if (id == Blocks::MangrovePropagule || id == Blocks::MangrovePropaguleHanging) return Tiles::IconMangrovePropagule;
     if (id == Blocks::Campfire) return Tiles::IconCampfire;
     if (isCauldron(id)) return Tiles::IconCauldron;
@@ -308,6 +309,7 @@ StackId blockDrop(BlockId id)
     if (id == Blocks::SculkCatalystBloom) return Blocks::SculkCatalyst;
 
     if (isCandle(id)) return candleOf(candleShade(id), 1, false);
+    if (isBed(id)) return bedOf(bedColour(id), 0, false);
     if (isCandleCake(id)) return candleOf(candleCakeShade(id), 1, false);
 
     // However it was hung, what comes back is one sign.

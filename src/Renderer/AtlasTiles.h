@@ -320,6 +320,10 @@ namespace Tiles
         DyedCandleTile, DyedCandleTileLast = DyedCandleTile + 31,
         CandleFlameTile,
         ShulkerBoxColourTile, ShulkerBoxColourTileLast = ShulkerBoxColourTile + 15,
+        BedHeadTopTile, BedHeadTopTileLast = BedHeadTopTile + 15,
+        BedFootTopTile, BedFootTopTileLast = BedFootTopTile + 15,
+        BedSidesTile, BedSidesTileLast = BedSidesTile + 15,
+        BedEndsTile, BedEndsTileLast = BedEndsTile + 15,
 
         TileCount
     };
@@ -511,8 +515,9 @@ namespace Tiles
         IconCrimsonDoor, ItemCrimsonSign, IconWarpedDoor, ItemWarpedSign,
         ItemQuartz, ItemRawIron, ItemRawGold, ItemAmethystShard,
         ItemCandleFirst, ItemCandleLast = ItemCandleFirst + 16,
+        ItemBedFirst, ItemBedLast = ItemBedFirst + 15,
 
-        ItemTileEnd = ItemCandleLast + 1
+        ItemTileEnd = ItemBedLast + 1
     };
 
     // Ten progressively more broken overlay tiles for the mining animation.

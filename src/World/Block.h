@@ -582,6 +582,7 @@ namespace Blocks
         DyedCandleFirst, DyedCandleLast = DyedCandleFirst + 127,
         CandleCakeFirst, CandleCakeLast = CandleCakeFirst + 33,
         ShulkerBoxFirst, ShulkerBoxLast = ShulkerBoxFirst + 15,
+        BedFirst, BedLast = BedFirst + 127,
 
         Count
     };
@@ -602,7 +603,8 @@ enum class RenderType : uint8_t
     Flat,   // the same panel, for anything that is not a rail
     Trapdoor,
     Pane,
-    Candle
+    Candle,
+    Bed
 };
 
 struct BlockInfo
@@ -836,6 +838,23 @@ inline bool isDeepDark(BlockId id)
 // A barrel holds what a chest holds, and is opened the same way. The
 // difference is that it needs no room above it, which is the whole
 // reason to build one.
+inline bool isColourBed(BlockId id) { return id >= Blocks::BedFirst && id <= Blocks::BedLast; }
+inline bool isBed(BlockId id) { return id == Blocks::Bed || isColourBed(id); }
+inline int bedColour(BlockId id) { return isColourBed(id) ? (id - Blocks::BedFirst) / 8 : 14; }
+inline int bedFacing(BlockId id) { return isColourBed(id) ? ((id - Blocks::BedFirst) / 2) % 4 : 0; }
+inline bool bedIsHead(BlockId id) { return isColourBed(id) && (id - Blocks::BedFirst) % 2 == 1; }
+inline BlockId bedOf(int colour, int facing, bool head)
+{
+    if (colour < 0) colour = 0;
+    if (colour > 15) colour = 15;
+    return static_cast<BlockId>(Blocks::BedFirst + ((colour * 4 + (facing & 3)) * 2) + (head ? 1 : 0));
+}
+inline void bedStep(int facing, int& dx, int& dz)
+{
+    static const int STEP[4][2] = { { 0, -1 }, { 1, 0 }, { 0, 1 }, { -1, 0 } };
+    dx = STEP[facing & 3][0];
+    dz = STEP[facing & 3][1];
+}
 inline bool isShulkerBox(BlockId id)
 {
     return id == Blocks::ShulkerBox || (id >= Blocks::ShulkerBoxFirst && id <= Blocks::ShulkerBoxLast);

@@ -521,7 +521,7 @@ namespace
         }
     }
 
-    struct PartFace { int tile; float u0, v0, u1, v1; };
+    struct PartFace { int tile; float u0, v0, u1, v1; int turn = 0; bool flipU = false; };
 
     void emitPart(const MeshSnapshot& snap, int lx, int y, int lz, BlockId id,
                   const glm::vec3& lo, const glm::vec3& hi, const PartFace faces[6],
@@ -548,8 +548,18 @@ namespace
                 vx[c] = base.x + (face.corner[c][0] ? hi.x : lo.x);
                 vy[c] = base.y + (face.corner[c][1] ? hi.y : lo.y);
                 vz[c] = base.z + (face.corner[c][2] ? hi.z : lo.z);
-                const float pu = faces[f].u0 + (faces[f].u1 - faces[f].u0) * face.uv[c][0];
-                const float pv = faces[f].v0 + (faces[f].v1 - faces[f].v0) * face.uv[c][1];
+                const float wu = face.uv[c][0], wv = face.uv[c][1];
+                float su = wu, sv = wv;
+                switch (faces[f].turn & 3)
+                {
+                    case 1: su = wv; sv = 1.0f - wu; break;
+                    case 2: su = 1.0f - wu; sv = 1.0f - wv; break;
+                    case 3: su = 1.0f - wv; sv = wu; break;
+                    default: break;
+                }
+                if (faces[f].flipU) su = 1.0f - su;
+                const float pu = faces[f].u0 + (faces[f].u1 - faces[f].u0) * su;
+                const float pv = faces[f].v0 + (faces[f].v1 - faces[f].v0) * sv;
                 vu[c] = uv.u0 + (uv.u1 - uv.u0) * (pu / 16.0f);
                 vv[c] = uv.vTop + (uv.vBottom - uv.vTop) * (pv / 16.0f);
             }
@@ -619,6 +629,76 @@ namespace
             { Tiles::CakeSide, west, 8.0f, 15.0f, 16.0f } };
         emitPart(snap, lx, y, lz, id, glm::vec3(west / 16.0f, 0.0f, 1.0f / 16.0f),
                  glm::vec3(15.0f / 16.0f, 0.5f, 15.0f / 16.0f), faces, out);
+    }
+
+    void emitBed(const MeshSnapshot& snap, int lx, int y, int lz, BlockId id, std::vector<float>& out)
+    {
+        const int colour = bedColour(id);
+        const int facing = bedFacing(id);
+        const bool head = bedIsHead(id);
+
+        auto toWorld = [facing](float x, float z, float& wx, float& wz) {
+            switch (facing)
+            {
+                case 1: wx = 1.0f - z; wz = x; break;
+                case 2: wx = 1.0f - x; wz = 1.0f - z; break;
+                case 3: wx = z; wz = 1.0f - x; break;
+                default: wx = x; wz = z; break;
+            }
+        };
+        auto turnDir = [facing](int dx, int dz, int& wx, int& wz) {
+            switch (facing)
+            {
+                case 1: wx = -dz; wz = dx; break;
+                case 2: wx = -dx; wz = -dz; break;
+                case 3: wx = dz; wz = -dx; break;
+                default: wx = dx; wz = dz; break;
+            }
+        };
+        auto emitLocal = [&](float x0, float y0, float z0, float x1, float y1, float z1, const PartFace local[6]) {
+            float ax, az, bx, bz;
+            toWorld(x0 / 16.0f, z0 / 16.0f, ax, az);
+            toWorld(x1 / 16.0f, z1 / 16.0f, bx, bz);
+            const glm::vec3 lo(std::min(ax, bx), y0 / 16.0f, std::min(az, bz));
+            const glm::vec3 hi(std::max(ax, bx), y1 / 16.0f, std::max(az, bz));
+            PartFace world[6];
+            for (int k = 0; k < 6; ++k) world[k] = PartFace{ -1, 0.0f, 0.0f, 0.0f, 0.0f };
+            world[2] = local[2]; world[2].turn = facing;
+            world[3] = local[3]; world[3].turn = facing;
+            for (int k : { 0, 1, 4, 5 })
+            {
+                int nx = 0, nz = 0;
+                turnDir(FACES[k].nx, FACES[k].nz, nx, nz);
+                int w = 0;
+                for (int j : { 0, 1, 4, 5 })
+                    if (FACES[j].nx == nx && FACES[j].nz == nz) w = j;
+                world[w] = local[k];
+                int ux = 0, uz = 0;
+                if (k == 0 || k == 1) turnDir(0, 1, ux, uz);
+                else turnDir(1, 0, ux, uz);
+                world[w].flipU = (w == 0 || w == 1) ? uz < 0 : ux < 0;
+            }
+            emitPart(snap, lx, y, lz, id, lo, hi, world, out);
+        };
+
+        const int topTile = head ? Tiles::BedHeadTopTile + colour : Tiles::BedFootTopTile + colour;
+        const int sides = Tiles::BedSidesTile + colour;
+        const int ends = Tiles::BedEndsTile + colour;
+        const float row = head ? 0.0f : 6.0f;
+        const PartFace mattress[6] = {
+            { sides, 0.0f, row, 16.0f, row + 6.0f },
+            { sides, 0.0f, row, 16.0f, row + 6.0f },
+            { topTile, 0.0f, 0.0f, 16.0f, 16.0f },
+            { ends, 0.0f, 12.0f, 16.0f, 16.0f },
+            { head ? -1 : ends, 0.0f, 6.0f, 16.0f, 12.0f },
+            { head ? ends : -1, 0.0f, 0.0f, 16.0f, 6.0f } };
+        emitLocal(0.0f, 3.0f, 0.0f, 16.0f, 9.0f, 16.0f, mattress);
+
+        PartFace leg[6];
+        for (int k = 0; k < 6; ++k) leg[k] = PartFace{ sides, 0.0f, 12.0f, 3.0f, 15.0f };
+        const float lz0 = head ? 0.0f : 13.0f;
+        emitLocal(0.0f, 0.0f, lz0, 3.0f, 3.0f, lz0 + 3.0f, leg);
+        emitLocal(13.0f, 0.0f, lz0, 16.0f, 3.0f, lz0 + 3.0f, leg);
     }
 
     void emitCandles(const MeshSnapshot& snap, int lx, int y, int lz, BlockId id, std::vector<float>& out)
@@ -1211,6 +1291,10 @@ void buildChunkMesh(const MeshSnapshot& snapshot, MeshResult& out)
                 else if (isCake(id))
                 {
                     emitCake(snapshot, lx, y, lz, id, out.opaqueVertices);
+                }
+                else if (isColourBed(id))
+                {
+                    emitBed(snapshot, lx, y, lz, id, out.opaqueVertices);
                 }
                 else
                 {

@@ -2046,7 +2046,7 @@ bool Application::frame()
             m_startupScreen == "grinderror" || m_startupScreen == "woods" ||
             m_startupScreen == "cherry" || m_startupScreen == "mangrove" || m_startupScreen == "fungi" ||
             m_startupScreen == "stones" || m_startupScreen == "colours" || m_startupScreen == "candles" ||
-            m_startupScreen == "shulkerboxes" ||
+            m_startupScreen == "shulkerboxes" || m_startupScreen == "beds" ||
             m_startupScreen == "boat" || m_startupScreen == "rails" ||
             m_startupScreen == "mobs" || m_startupScreen == "golem" ||
             m_startupScreen == "glowmobs" || m_startupScreen == "variants" ||
@@ -2135,6 +2135,7 @@ bool Application::frame()
                                   m_startupScreen != "colours" &&
                                   m_startupScreen != "candles" &&
                                   m_startupScreen != "shulkerboxes" &&
+                                  m_startupScreen != "beds" &&
                                   m_startupScreen != "boat" &&
                                   m_startupScreen != "rails" &&
                                   m_startupScreen != "mobs" &&
@@ -2510,7 +2511,7 @@ bool Application::frame()
                 m_startupScreen == "grinderror" || m_startupScreen == "woods" ||
                 m_startupScreen == "cherry" || m_startupScreen == "mangrove" || m_startupScreen == "fungi" ||
                 m_startupScreen == "stones" || m_startupScreen == "colours" || m_startupScreen == "candles" ||
-                m_startupScreen == "shulkerboxes")
+                m_startupScreen == "shulkerboxes" || m_startupScreen == "beds")
             {
                 m_camera.setOrientation(0.0f, -25.0f);
                 m_camera.addLook(0.0f, 0.0f, 0.0f);
@@ -2607,6 +2608,30 @@ bool Application::frame()
                     m_world->setBlock(px + 16, py, pz - 10, Blocks::Bookshelf);
                     m_world->setBlock(px + 16, py, pz + 10, Blocks::DiamondOre);
                     m_world->setBlock(px + 16, py + 1, pz + 10, Blocks::EndPortalFrame);
+                }
+                if (m_startupScreen == "beds")
+                {
+                    m_devAttackStrength = 1.0f;
+                    m_camera.setOrientation(0.0f, -32.0f);
+                    for (int dx = 1; dx <= 12; ++dx)
+                        for (int dz = -9; dz <= 9; ++dz)
+                        {
+                            for (int dy = 0; dy <= 5; ++dy) m_world->setBlock(px + dx, py + dy, pz + dz, Blocks::Air);
+                            m_world->setBlock(px + dx, py - 1, pz + dz, Blocks::Planks);
+                        }
+                    auto bedAt = [&](int x, int z, int colour, int facing) {
+                        int sx = 0, sz = 0;
+                        bedStep(facing, sx, sz);
+                        m_world->setBlock(x, py, z, bedOf(colour, facing, false));
+                        m_world->setBlock(x + sx, py, z + sz, bedOf(colour, facing, true));
+                    };
+                    for (int c = 0; c < 8; ++c) bedAt(px + 9, pz - 8 + c * 2, c, 1);
+                    for (int c = 8; c < 12; ++c) bedAt(px + 5, pz - 8 + (c - 8) * 3, c, 2);
+                    for (int c = 12; c < 16; ++c) bedAt(px + 5, pz + 4 + (c - 12) * 2, c, 0);
+                    bedAt(px + 4, pz + 7, 14, 3);
+                    m_world->setBlock(px + 12, py, pz - 9, Blocks::Bookshelf);
+                    m_world->setBlock(px + 12, py, pz + 9, Blocks::DiamondOre);
+                    m_world->setBlock(px + 12, py + 1, pz + 9, Blocks::EndPortalFrame);
                 }
                 if (m_startupScreen == "shulkerboxes")
                 {
@@ -4814,7 +4839,7 @@ bool Application::frame()
                 m_inventory.add(Items::Arrow, 32);
                 m_inventory.add(Blocks::Tnt, 8);
                 m_inventory.add(Blocks::Chest, 2);
-                m_inventory.add(Blocks::Bed, 1);
+                m_inventory.add(bedOf(14, 0, false), 1);
                 m_inventory.add(Blocks::StoneSlab, 16);
             }
 
@@ -4912,7 +4937,8 @@ bool Application::frame()
                 const glm::ivec3 where(static_cast<int>(std::floor(ahead.x)),
                                        static_cast<int>(std::floor(m_player.position.y)),
                                        static_cast<int>(std::floor(ahead.z)));
-                m_world->setBlock(where.x, where.y + 1, where.z, Blocks::Bed);
+                m_world->setBlock(where.x, where.y + 1, where.z + 1, bedOf(14, 0, false));
+                m_world->setBlock(where.x, where.y + 1, where.z, bedOf(14, 0, true));
                 m_world->setBlock(where.x, where.y + 1, where.z - 1, Blocks::Chest);
             }
 
@@ -6095,6 +6121,20 @@ void Application::updateMining(float deltaTime)
                     m_net.onLocalBlockChange(other.x, other.y, other.z, Blocks::Air);
                     if (!m_player.creative() && isPistonBody(paired))
                         m_drops.spawnFromBrokenBlock(other, blockDrop(paired));
+                }
+            }
+
+            if (isColourBed(id))
+            {
+                int dx = 0, dz = 0;
+                bedStep(bedFacing(id), dx, dz);
+                const int sign = bedIsHead(id) ? -1 : 1;
+                const glm::ivec3 pair(hit.block.x + dx * sign, hit.block.y, hit.block.z + dz * sign);
+                const BlockId partner = m_world->getBlock(pair.x, pair.y, pair.z);
+                if (isColourBed(partner) && bedFacing(partner) == bedFacing(id) && bedIsHead(partner) != bedIsHead(id))
+                {
+                    m_world->setBlock(pair.x, pair.y, pair.z, Blocks::Air);
+                    m_net.onLocalBlockChange(pair.x, pair.y, pair.z, Blocks::Air);
                 }
             }
 
@@ -8198,6 +8238,27 @@ void Application::swingDoor(const glm::ivec3& block)
 
 void Application::sleepInBed(const glm::ivec3& block)
 {
+    if (m_world->dimension() != Dimension::Overworld)
+    {
+        const BlockId bed = m_world->getBlock(block.x, block.y, block.z);
+        m_world->setBlock(block.x, block.y, block.z, Blocks::Air);
+        m_net.onLocalBlockChange(block.x, block.y, block.z, Blocks::Air);
+        if (isColourBed(bed))
+        {
+            int dx = 0, dz = 0;
+            bedStep(bedFacing(bed), dx, dz);
+            const int sign = bedIsHead(bed) ? -1 : 1;
+            const glm::ivec3 pair(block.x + dx * sign, block.y, block.z + dz * sign);
+            if (isColourBed(m_world->getBlock(pair.x, pair.y, pair.z)))
+            {
+                m_world->setBlock(pair.x, pair.y, pair.z, Blocks::Air);
+                m_net.onLocalBlockChange(pair.x, pair.y, pair.z, Blocks::Air);
+            }
+        }
+        applyBlast(glm::vec3(block) + glm::vec3(0.5f), 5.0f, 10);
+        return;
+    }
+
     const glm::vec3 beside = glm::vec3(block) + glm::vec3(0.5f, 1.0f, 0.5f);
     m_spawnPoint = beside;
 
@@ -9088,7 +9149,7 @@ void Application::handlePlacement()
                 m_audio.play(Sound::Click, 0.4f);
                 return;
             }
-            if (used == Blocks::Bed)
+            if (isBed(used))
             {
                 sleepInBed(bench.block);
                 return;
@@ -9674,6 +9735,38 @@ void Application::handlePlacement()
         WorldCaneBlocks around;
         around.world = m_world.get();
         if (!Cane::canStandAt(around, target.x, target.y, target.z)) return;
+    }
+
+    if (isColourBed(placing))
+    {
+        const glm::vec3 look = m_camera.front;
+        const int facing = (std::fabs(look.x) > std::fabs(look.z))
+                               ? (look.x > 0.0f ? 1 : 3)
+                               : (look.z > 0.0f ? 2 : 0);
+        int dx = 0, dz = 0;
+        bedStep(facing, dx, dz);
+        const glm::ivec3 headAt(target.x + dx, target.y, target.z + dz);
+        const BlockId there = m_world->getBlock(headAt.x, headAt.y, headAt.z);
+        if (there != Blocks::Air && !isLiquid(there)) return;
+        const bool headInPlayer =
+            box.max.x > headAt.x && box.min.x < headAt.x + 1 &&
+            box.max.y > headAt.y && box.min.y < headAt.y + 1 &&
+            box.max.z > headAt.z && box.min.z < headAt.z + 1;
+        if (overlapsPlayer || headInPlayer) return;
+
+        const BlockId foot = bedOf(bedColour(placing), facing, false);
+        const BlockId head = bedOf(bedColour(placing), facing, true);
+        m_world->setBlock(target.x, target.y, target.z, foot);
+        m_world->setBlock(headAt.x, headAt.y, headAt.z, head);
+        m_net.onLocalBlockChange(target.x, target.y, target.z, foot);
+        m_net.onLocalBlockChange(headAt.x, headAt.y, headAt.z, head);
+        m_audio.playPlace(foot);
+        if (!m_player.creative())
+        {
+            stack.count -= 1;
+            if (stack.count <= 0) stack.clear();
+        }
+        return;
     }
 
     // A door is two blocks tall and wants headroom, and it faces the

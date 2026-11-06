@@ -137,7 +137,11 @@ namespace
     };
 
     const StackId TAB_TOOLS[] = {
-        Blocks::CraftingTable, Blocks::Furnace, Blocks::Chest, Blocks::Bed,
+        Blocks::CraftingTable, Blocks::Furnace, Blocks::Chest,
+        Blocks::BedFirst + 0, Blocks::BedFirst + 8, Blocks::BedFirst + 16, Blocks::BedFirst + 24,
+        Blocks::BedFirst + 32, Blocks::BedFirst + 40, Blocks::BedFirst + 48, Blocks::BedFirst + 56,
+        Blocks::BedFirst + 64, Blocks::BedFirst + 72, Blocks::BedFirst + 80, Blocks::BedFirst + 88,
+        Blocks::BedFirst + 96, Blocks::BedFirst + 104, Blocks::BedFirst + 112, Blocks::BedFirst + 120,
         Blocks::Bookshelf, Blocks::EnchantingTable, Blocks::Anvil,
         Blocks::EndPortalFrame,
         Items::Stick, Items::Coal, Items::Bow, Items::Arrow, Items::Shield, Items::FlintAndSteel, Items::Boat, Items::Minecart,

@@ -4687,7 +4687,7 @@ namespace
         for (int i : { 0, 1, 2 }) { bed[i].id = Blocks::Wool; bed[i].count = 1; }
         for (int i : { 3, 4, 5 }) { bed[i].id = Blocks::Planks; bed[i].count = 1; }
         const CraftOutput sleep = Crafting::match(bed, 3);
-        check(sleep.valid() && sleep.id == Blocks::Bed, "wool over planks makes a bed");
+        check(sleep.valid() && sleep.id == bedOf(0, 0, false), "white wool over planks makes a white bed");
 
         ItemStack box[9];
         for (int i : { 0, 1, 2, 3, 5, 6, 7, 8 }) { box[i].id = Blocks::Planks; box[i].count = 1; }
@@ -12017,6 +12017,41 @@ namespace
         check(Saplings::leafDrop(Blocks::Stone, 0u) == Blocks::Air, "stone gives none");
     }
 
+    void testBeds()
+    {
+        section("beds in sixteen colours");
+        bool roundTrip = true;
+        for (int colour = 0; colour < 16; ++colour)
+            for (int facing = 0; facing < 4; ++facing)
+                for (int head = 0; head < 2; ++head)
+                {
+                    const BlockId bed = bedOf(colour, facing, head == 1);
+                    if (!isBed(bed) || bedColour(bed) != colour || bedFacing(bed) != facing ||
+                        bedIsHead(bed) != (head == 1))
+                        roundTrip = false;
+                    if (isObtainable(bed) != (facing == 0 && head == 0)) roundTrip = false;
+                    if (blockDrop(bed) != bedOf(colour, 0, false)) roundTrip = false;
+                }
+        check(roundTrip, "every colour, facing and half is its own bed and breaks to one bed of its colour");
+        check(blockDrop(Blocks::Bed) == bedOf(14, 0, false) && !isObtainable(Blocks::Bed),
+              "an old bed breaks into a red one");
+        int dx = 0, dz = 0;
+        bedStep(1, dx, dz);
+        check(dx == 1 && dz == 0, "a bed facing east has its head to the east");
+        check(blockOverlaps(bedOf(3, 2, true), 0, 0, 0, 0.1f, 0.0f, 0.1f, 0.9f, 0.5f, 0.9f) &&
+                  !blockOverlaps(bedOf(3, 2, true), 0, 0, 0, 0.1f, 0.6f, 0.1f, 0.9f, 1.0f, 0.9f),
+              "a bed is nine sixteenths tall");
+        for (int colour = 0; colour < 16; ++colour)
+        {
+            ItemStack grid[9];
+            for (int i = 0; i < 3; ++i) grid[i] = ItemStack{ woolOfColour(colour), 1 };
+            for (int i = 3; i < 6; ++i) grid[i] = ItemStack{ colour % 2 ? Blocks::SprucePlanks : Blocks::Planks, 1 };
+            check(Crafting::match(grid, 3).id == bedOf(colour, 0, false),
+                  "three wool of colour " + std::to_string(colour) + " over planks make that bed");
+        }
+        check(blockMaterial(bedOf(0, 0, false)) == Material::Wool, "a bed comes apart easily");
+    }
+
     void testShulkerBoxes()
     {
         section("shulker boxes in sixteen colours");
@@ -13044,6 +13079,7 @@ int runSelfTest()
     testColourBlocks();
     testCandles();
     testShulkerBoxes();
+    testBeds();
     testTheTablesTake121sPrices();
 
     std::printf("\n%d checks, %d failed\n", g_checks, g_failures);

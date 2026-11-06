@@ -772,6 +772,8 @@ namespace
             else if (id == Blocks::LecternBook)   why = "a lectern with a book on it";
             else if (isCandle(id))                why = "candles set down together, or lit";
             else if (isCandleCake(id))            why = "a candle set on a whole cake";
+            else if (id == Blocks::Bed)           why = "a bed from a world saved before beds had colours";
+            else if (isColourBed(id))             why = "the head, or another facing, of a bed";
             else if (id == Blocks::SmokerLit || id == Blocks::BlastFurnaceLit)
                                                   why = "a furnace that is burning";
             else if (id == Blocks::NoteBlockLit || id == Blocks::ObserverLit)

@@ -1456,7 +1456,13 @@ void WorldGen::stampInterior(Chunk& chunk, const Village::Building& building, in
     // beds: that is what decides how many people can live in it and
     // whether there is room for another.
     nextCorner(cx, cz);
-    put(chunk, cx, ground + 1, cz, Blocks::Bed);
+    {
+        const bool nearSide = cz <= (z0 + z1) / 2;
+        const int footZ = nearSide ? cz + 1 : cz - 1;
+        const int facing = nearSide ? 0 : 2;
+        put(chunk, cx, ground + 1, footZ, bedOf(14, facing, false));
+        put(chunk, cx, ground + 1, cz, bedOf(14, facing, true));
+    }
 
     switch (building.kind)
     {
@@ -2102,7 +2108,8 @@ void WorldGen::stampLandmark(Chunk& chunk, Landmark kind, int midX, int midZ) co
                             (shell && !door) ? Blocks::Snow : Blocks::Air);
                     }
 
-            put(chunk, midX + 1, ground, midZ + 1, Blocks::Bed);
+            put(chunk, midX + 1, ground, midZ, bedOf(14, 2, false));
+            put(chunk, midX + 1, ground, midZ + 1, bedOf(14, 2, true));
             putChests(chunk, Landmark::Igloo, midX, ground, midZ);
             put(chunk, midX - 2, ground, midZ, Blocks::Furnace);
             break;

@@ -133,7 +133,8 @@ Everything in the 1.21 textures zip the game doesn't use yet, turned into work. 
     - Notes: candles are real 3D models now, with a baked flame when lit. Cakes got their proper half-height shape with bites taken out, since the candle cake needed it.
 33. Coloured shulker boxes in all 16 colours, plus shulker mobs in those colours. (done)
     - Notes: shulkers carry a colour like 1.21's (undyed by default, as end cities spawn them). Boxes still spill their contents when broken rather than keeping them in the item; that needs item data the game does not have yet.
-34. Beds in all 16 colours.
+34. Beds in all 16 colours. (done)
+    - Notes: beds are two blocks now, head and foot, facing the way you place them, drawn from the pack's bed sheets. Sleeping in the Nether or the End blows the bed up. Old single-block beds in saved worlds still work and break into a red bed.
 35. Chests
     - I. Two chests side by side join into a double chest, using the left and right textures and the 54-slot screen.
     - II. Trapped chest, ender chest (shared storage), and the Christmas chest in late December.

@@ -1,4 +1,5 @@
 #include "Atlas.h"
+#include "World/Block.h"
 #include "Core/GLFunctions.h"
 
 #define STB_IMAGE_IMPLEMENTATION
@@ -2717,6 +2718,58 @@ namespace
         t.set(7, 4, Color{ 56, 48, 40 });
         t.set(7, 3, Color{ 56, 48, 40 });
         if (plain) t.set(8, 9, shade(body, -18));
+    }
+
+    void paintBedTilesIn(Tile& headTop, Tile& footTop, Tile& sides, Tile& ends, Tile& icon, Color cloth)
+    {
+        const Color sheet{ 214, 206, 196 };
+        const Color pillow{ 240, 240, 242 };
+        const Color wood{ 140, 102, 58 };
+        const Color woodDark{ 104, 74, 40 };
+        const int n = Tile::N;
+        headTop.fill(sheet);
+        for (int y = 1; y < 7; ++y)
+            for (int x = 2; x < n - 2; ++x) headTop.set(x, y, hash2(x, y, 91) > 0.8f ? shade(pillow, -16) : pillow);
+        for (int y = 9; y < n; ++y)
+            for (int x = 0; x < n; ++x) headTop.set(x, y, hash2(x, y, 92) > 0.78f ? shade(cloth, -18) : cloth);
+        for (int x = 0; x < n; ++x) headTop.set(x, 9, shade(cloth, 26));
+        footTop.fill(cloth);
+        for (int y = 0; y < n; ++y)
+            for (int x = 0; x < n; ++x)
+                if (hash2(x, y, 93) > 0.78f || x == 0 || x == n - 1) footTop.set(x, y, shade(cloth, -18));
+        sides.fill(Color{ 0, 0, 0, 0 });
+        ends.fill(Color{ 0, 0, 0, 0 });
+        for (int x = 0; x < n; ++x)
+        {
+            for (int y = 0; y < 3; ++y)
+            {
+                sides.set(x, y, x < 7 ? sheet : cloth);
+                sides.set(x, y + 6, cloth);
+                ends.set(x, y, pillow);
+                ends.set(x, y + 6, cloth);
+            }
+            for (int y = 3; y < 6; ++y)
+            {
+                sides.set(x, y, hash2(x, y, 94) > 0.7f ? woodDark : wood);
+                sides.set(x, y + 6, hash2(x, y + 6, 94) > 0.7f ? woodDark : wood);
+                ends.set(x, y, hash2(x, y, 95) > 0.7f ? woodDark : wood);
+                ends.set(x, y + 6, hash2(x, y + 6, 95) > 0.7f ? woodDark : wood);
+            }
+            for (int y = 12; y < n; ++y) ends.set(x, y, hash2(x, y, 96) > 0.6f ? woodDark : wood);
+        }
+        for (int y = 12; y < 15; ++y)
+            for (int x = 0; x < 3; ++x) sides.set(x, y, woodDark);
+        icon.fill(Color{ 0, 0, 0, 0 });
+        for (int x = 1; x < n - 1; ++x)
+        {
+            for (int y = 6; y < 9; ++y) icon.set(x, y, x < 5 ? pillow : (y == 6 ? shade(cloth, 24) : cloth));
+            for (int y = 9; y < 11; ++y) icon.set(x, y, y == 9 ? wood : woodDark);
+        }
+        for (int y = 11; y < 13; ++y)
+        {
+            icon.set(1, y, woodDark); icon.set(2, y, woodDark);
+            icon.set(n - 2, y, woodDark); icon.set(n - 3, y, woodDark);
+        }
     }
 
     void paintCandle(Tile& t)    { paintCandleIn(t, Color{ 232, 222, 196 }, false); }
@@ -8546,6 +8599,13 @@ Atlas::Atlas()
         Tile box;
         paintShulkerBoxIn(box, shade(WOOL_COLOUR[i], -14), 1040 + i);
         blitPainted(Tiles::ShulkerBoxColourTile + i, box);
+        Tile headTop, footTop, bedSides, bedEnds, bedIcon;
+        paintBedTilesIn(headTop, footTop, bedSides, bedEnds, bedIcon, WOOL_COLOUR[i]);
+        blitPainted(Tiles::BedHeadTopTile + i, headTop);
+        blitPainted(Tiles::BedFootTopTile + i, footTop);
+        blitPainted(Tiles::BedSidesTile + i, bedSides);
+        blitPainted(Tiles::BedEndsTile + i, bedEnds);
+        blitPainted(Tiles::ItemBedFirst + i, bedIcon);
     }
     {
         Tile plainCandle;
@@ -8894,6 +8954,43 @@ Atlas::Atlas()
             pasteImage(side, cropImage(bed, 28 * k, 6 * k, 16 * k, 16 * k), 0, 0);
             pasteImage(side, turnImage(cropImage(bed, 0, 6 * k, 6 * k, 16 * k)), 0, 0);
             blitImage(Tiles::BedSide, scaleNearest(side, tilePixels, tilePixels));
+        }
+
+        for (int colour = 0; colour < 16; ++colour)
+        {
+            const Image sheet = loadPNG((std::string("assets/textures/entity/bed/") + colourFileName(colour) + ".png").c_str());
+            if (!sheet.valid()) continue;
+            const int k = unit(sheet, 64);
+            auto strip = [&](int x0, int y0) {
+                Image out = blankImage(16 * k, 6 * k);
+                for (int r = 0; r < 6 * k; ++r)
+                    for (int c = 0; c < 16 * k; ++c)
+                        for (int ch = 0; ch < 4; ++ch)
+                            out.rgba[(static_cast<size_t>(r) * out.width + c) * 4 + ch] =
+                                sheet.rgba[(static_cast<size_t>(y0 + c) * sheet.width + (x0 + 6 * k - 1 - r)) * 4 + ch];
+                return out;
+            };
+            auto flipped = [&](const Image& from) {
+                Image out = blankImage(from.width, from.height);
+                for (int r = 0; r < from.height; ++r)
+                    for (int c = 0; c < from.width; ++c)
+                        for (int ch = 0; ch < 4; ++ch)
+                            out.rgba[(static_cast<size_t>(r) * out.width + c) * 4 + ch] =
+                                from.rgba[(static_cast<size_t>(from.height - 1 - r) * from.width + c) * 4 + ch];
+                return out;
+            };
+            blitImage(Tiles::BedHeadTopTile + colour, scaleNearest(cropImage(sheet, 6 * k, 6 * k, 16 * k, 16 * k), tilePixels, tilePixels));
+            blitImage(Tiles::BedFootTopTile + colour, scaleNearest(cropImage(sheet, 6 * k, 28 * k, 16 * k, 16 * k), tilePixels, tilePixels));
+            Image sides = blankImage(16 * k, 16 * k);
+            pasteImage(sides, strip(0, 6 * k), 0, 0);
+            pasteImage(sides, strip(0, 28 * k), 0, 6 * k);
+            pasteImage(sides, cropImage(sheet, 53 * k, 3 * k, 3 * k, 3 * k), 0, 12 * k);
+            blitImage(Tiles::BedSidesTile + colour, scaleNearest(sides, tilePixels, tilePixels));
+            Image ends = blankImage(16 * k, 16 * k);
+            pasteImage(ends, flipped(cropImage(sheet, 6 * k, 0, 16 * k, 6 * k)), 0, 0);
+            pasteImage(ends, flipped(cropImage(sheet, 22 * k, 22 * k, 16 * k, 6 * k)), 0, 6 * k);
+            pasteImage(ends, cropImage(sheet, 28 * k, 6 * k, 16 * k, 4 * k), 0, 12 * k);
+            blitImage(Tiles::BedEndsTile + colour, scaleNearest(ends, tilePixels, tilePixels));
         }
 
         auto readTile = [&](int tileIndex) {
@@ -9291,6 +9388,8 @@ bool Atlas::hasPainter(int tileIndex)
     if (tileIndex >= Tiles::DyedCandleTile && tileIndex <= Tiles::DyedCandleTileLast) return true;
     if (tileIndex >= Tiles::ItemCandleFirst && tileIndex <= Tiles::ItemCandleLast) return true;
     if (tileIndex >= Tiles::ShulkerBoxColourTile && tileIndex <= Tiles::ShulkerBoxColourTileLast) return true;
+    if (tileIndex >= Tiles::BedHeadTopTile && tileIndex <= Tiles::BedEndsTileLast) return true;
+    if (tileIndex >= Tiles::ItemBedFirst && tileIndex <= Tiles::ItemBedLast) return true;
     if (tileIndex >= Tiles::CrackFirst &&
         tileIndex < Tiles::CrackFirst + Tiles::CrackStages)
         return true;
