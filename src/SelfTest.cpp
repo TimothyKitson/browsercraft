@@ -12017,6 +12017,33 @@ namespace
         check(Saplings::leafDrop(Blocks::Stone, 0u) == Blocks::Air, "stone gives none");
     }
 
+    void testShulkerBoxes()
+    {
+        section("shulker boxes in sixteen colours");
+        for (int colour = 0; colour < DYE_COLOURS; ++colour)
+        {
+            const BlockId box = colourIn(Blocks::ShulkerBoxFirst, colour);
+            check(isShulkerBox(box) && isContainerBlock(box) && shulkerBoxColour(box) == colour,
+                  std::string(blockInfo(box).name) + " is a shulker box of its colour");
+            check(isObtainable(box) && blockDrop(box) == box, "and comes back as itself");
+            ItemStack grid[9];
+            grid[4] = ItemStack{ Blocks::ShulkerBox, 1 };
+            grid[0] = ItemStack{ dyeOfColour(colour), 1 };
+            check(Crafting::match(grid, 3).id == box, "a shulker box takes the dye");
+            grid[4] = ItemStack{ colourIn(Blocks::ShulkerBoxFirst, (colour + 3) % 16), 1 };
+            check(Crafting::match(grid, 3).id == box, "even one already dyed");
+        }
+        check(shulkerBoxColour(Blocks::ShulkerBox) == -1, "the plain box has no dye");
+        check(std::string(colourFileName(3)) == "light_blue" && std::string(colourFileName(16)).empty(),
+              "colours have their file names");
+        Mob shulker(MobId::Shulker, glm::vec3(0.0f), 5u);
+        check(shulker.shulkerColour() == 16, "a shulker is born undyed");
+        shulker.setShulkerColour(14);
+        check(shulker.shulkerColour() == 14, "and keeps the colour it is given");
+        shulker.setShulkerColour(40);
+        check(shulker.shulkerColour() == 16, "and nothing past black");
+    }
+
     void testCandles()
     {
         section("candles in sixteen colours, and candle cakes");
@@ -13016,6 +13043,7 @@ int runSelfTest()
     testStoneSets();
     testColourBlocks();
     testCandles();
+    testShulkerBoxes();
     testTheTablesTake121sPrices();
 
     std::printf("\n%d checks, %d failed\n", g_checks, g_failures);

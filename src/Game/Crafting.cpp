@@ -987,7 +987,7 @@ namespace Crafting
     // the same order: a dye's colour is the wool it makes.
     CraftOutput matchDyeing(const ItemStack* grid, int size)
     {
-        int wools = 0, terracotta = 0, glass = 0, panes = 0, sand = 0, gravel = 0, candles = 0;
+        int wools = 0, terracotta = 0, glass = 0, panes = 0, sand = 0, gravel = 0, candles = 0, boxes = 0;
         int dyes = 0;
         int colour = 0;
         int others = 0;
@@ -1008,12 +1008,13 @@ namespace Crafting
                 else if (block == Blocks::Sand) ++sand;
                 else if (block == Blocks::Gravel) ++gravel;
                 else if (block == Blocks::Candle) ++candles;
+                else if (isShulkerBox(block)) ++boxes;
                 else ++others;
             }
 
         if (dyes != 1 || others > 0) return CraftOutput{};
 
-        const int families = (wools > 0) + (terracotta > 0) + (glass > 0) + (panes > 0) + (candles > 0) +
+        const int families = (wools > 0) + (terracotta > 0) + (glass > 0) + (panes > 0) + (candles > 0) + (boxes > 0) +
                              ((sand > 0 || gravel > 0) ? 1 : 0);
         if (families != 1) return CraftOutput{};
 
@@ -1022,6 +1023,7 @@ namespace Crafting
         else if (terracotta == 8) { out.id = colourIn(Blocks::TerracottaFirst, colour); out.count = 8; }
         else if (glass == 8) { out.id = colourIn(Blocks::StainedGlassFirst, colour); out.count = 8; }
         else if (panes == 8) { out.id = colourIn(Blocks::StainedGlassPaneFirst, colour); out.count = 8; }
+        else if (boxes == 1) { out.id = colourIn(Blocks::ShulkerBoxFirst, colour); out.count = 1; }
         else if (candles == 1) { out.id = candleOf(colour + 1, 1, false); out.count = 1; }
         else if (sand == 4 && gravel == 4) { out.id = colourIn(Blocks::ConcretePowderFirst, colour); out.count = 8; }
         return out;
@@ -1088,6 +1090,7 @@ std::vector<StackId> Crafting::everyOutput()
         out.push_back(colourIn(Blocks::StainedGlassPaneFirst, colour));
         out.push_back(colourIn(Blocks::ConcretePowderFirst, colour));
         out.push_back(candleOf(colour + 1, 1, false));
+        out.push_back(colourIn(Blocks::ShulkerBoxFirst, colour));
     }
 
     for (int wood = 1; wood < WOOD_COUNT; ++wood)
@@ -1122,6 +1125,7 @@ std::vector<StackId> Crafting::everyIngredient()
     out.push_back(Blocks::Wool);
     out.push_back(Blocks::Terracotta);
     out.push_back(Blocks::Candle);
+    out.push_back(Blocks::ShulkerBox);
     out.push_back(Blocks::GlassPane);
     out.push_back(Blocks::Sand);
     out.push_back(Blocks::Gravel);

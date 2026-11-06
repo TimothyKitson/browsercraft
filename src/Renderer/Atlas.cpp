@@ -3089,25 +3089,26 @@ namespace
         t.speckle(5, 684);
     }
 
-    void paintShulkerBox(Tile& t)
+    void paintShulkerBoxIn(Tile& t, Color base, int salt)
     {
-        t.fill(Color{ 148, 112, 158 });
-        // The lid, and the seam round the middle where it opens.
+        t.fill(base);
         for (int y = 0; y < 6; ++y)
             for (int x = 0; x < Tile::N; ++x)
-                t.set(x, y, Color{ 186, 152, 196 });
+                t.set(x, y, shade(base, 32));
         for (int x = 0; x < Tile::N; ++x)
         {
-            t.set(x, 6, Color{ 96, 68, 108 });
-            t.set(x, 7, Color{ 118, 88, 130 });
+            t.set(x, 6, shade(base, -46));
+            t.set(x, 7, shade(base, -26));
         }
         for (int k = 0; k < Tile::N; ++k)
         {
-            t.set(0, k, Color{ 108, 78, 118 });
-            t.set(Tile::N - 1, k, Color{ 108, 78, 118 });
+            t.set(0, k, shade(base, -36));
+            t.set(Tile::N - 1, k, shade(base, -36));
         }
-        t.speckle(5, 645);
+        t.speckle(5, salt);
     }
+
+    void paintShulkerBox(Tile& t) { paintShulkerBoxIn(t, Color{ 148, 112, 158 }, 645); }
 
     // A dye: a little heap of powder in whatever colour it is.
     void paintDyeTile(Tile& t, Color colour, int salt)
@@ -7739,6 +7740,22 @@ namespace
         { Tiles::GlassPaneTopTile, { "glass_pane_top", nullptr }, Tinting::None, 0, false },
         { Tiles::TerracottaPlainTile, { "terracotta", "hardened_clay", nullptr }, Tinting::None, 0, false },
         { Tiles::TintedGlassTile, { "tinted_glass", nullptr }, Tinting::None, 0, false },
+        { Tiles::ShulkerBoxColourTile + 0, { "white_shulker_box", nullptr }, Tinting::None, 0, false },
+        { Tiles::ShulkerBoxColourTile + 1, { "orange_shulker_box", nullptr }, Tinting::None, 0, false },
+        { Tiles::ShulkerBoxColourTile + 2, { "magenta_shulker_box", nullptr }, Tinting::None, 0, false },
+        { Tiles::ShulkerBoxColourTile + 3, { "light_blue_shulker_box", nullptr }, Tinting::None, 0, false },
+        { Tiles::ShulkerBoxColourTile + 4, { "yellow_shulker_box", nullptr }, Tinting::None, 0, false },
+        { Tiles::ShulkerBoxColourTile + 5, { "lime_shulker_box", nullptr }, Tinting::None, 0, false },
+        { Tiles::ShulkerBoxColourTile + 6, { "pink_shulker_box", nullptr }, Tinting::None, 0, false },
+        { Tiles::ShulkerBoxColourTile + 7, { "gray_shulker_box", nullptr }, Tinting::None, 0, false },
+        { Tiles::ShulkerBoxColourTile + 8, { "light_gray_shulker_box", nullptr }, Tinting::None, 0, false },
+        { Tiles::ShulkerBoxColourTile + 9, { "cyan_shulker_box", nullptr }, Tinting::None, 0, false },
+        { Tiles::ShulkerBoxColourTile + 10, { "purple_shulker_box", nullptr }, Tinting::None, 0, false },
+        { Tiles::ShulkerBoxColourTile + 11, { "blue_shulker_box", nullptr }, Tinting::None, 0, false },
+        { Tiles::ShulkerBoxColourTile + 12, { "brown_shulker_box", nullptr }, Tinting::None, 0, false },
+        { Tiles::ShulkerBoxColourTile + 13, { "green_shulker_box", nullptr }, Tinting::None, 0, false },
+        { Tiles::ShulkerBoxColourTile + 14, { "red_shulker_box", nullptr }, Tinting::None, 0, false },
+        { Tiles::ShulkerBoxColourTile + 15, { "black_shulker_box", nullptr }, Tinting::None, 0, false },
         { Tiles::DyedCandleTile + 0, { "white_candle", nullptr }, Tinting::None, 0, false },
         { Tiles::DyedCandleTile + 1, { "white_candle_lit", nullptr }, Tinting::None, 0, false },
         { Tiles::DyedCandleTile + 2, { "orange_candle", nullptr }, Tinting::None, 0, false },
@@ -8526,6 +8543,9 @@ Atlas::Atlas()
         blitPainted(Tiles::DyedCandleTile + i * 2, candle);
         blitPainted(Tiles::DyedCandleTile + i * 2 + 1, candleLit);
         blitPainted(Tiles::ItemCandleFirst + 1 + i, candleItem);
+        Tile box;
+        paintShulkerBoxIn(box, shade(WOOL_COLOUR[i], -14), 1040 + i);
+        blitPainted(Tiles::ShulkerBoxColourTile + i, box);
     }
     {
         Tile plainCandle;
@@ -9270,6 +9290,7 @@ bool Atlas::hasPainter(int tileIndex)
     if (tileIndex >= Tiles::StainedPaneTopTile && tileIndex <= Tiles::StainedPaneTopTileLast) return true;
     if (tileIndex >= Tiles::DyedCandleTile && tileIndex <= Tiles::DyedCandleTileLast) return true;
     if (tileIndex >= Tiles::ItemCandleFirst && tileIndex <= Tiles::ItemCandleLast) return true;
+    if (tileIndex >= Tiles::ShulkerBoxColourTile && tileIndex <= Tiles::ShulkerBoxColourTileLast) return true;
     if (tileIndex >= Tiles::CrackFirst &&
         tileIndex < Tiles::CrackFirst + Tiles::CrackStages)
         return true;

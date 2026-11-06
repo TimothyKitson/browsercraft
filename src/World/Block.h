@@ -581,6 +581,7 @@ namespace Blocks
         PlainCandleFirst, PlainCandleLast = PlainCandleFirst + 5,
         DyedCandleFirst, DyedCandleLast = DyedCandleFirst + 127,
         CandleCakeFirst, CandleCakeLast = CandleCakeFirst + 33,
+        ShulkerBoxFirst, ShulkerBoxLast = ShulkerBoxFirst + 15,
 
         Count
     };
@@ -835,10 +836,24 @@ inline bool isDeepDark(BlockId id)
 // A barrel holds what a chest holds, and is opened the same way. The
 // difference is that it needs no room above it, which is the whole
 // reason to build one.
+inline bool isShulkerBox(BlockId id)
+{
+    return id == Blocks::ShulkerBox || (id >= Blocks::ShulkerBoxFirst && id <= Blocks::ShulkerBoxLast);
+}
+inline int shulkerBoxColour(BlockId id)
+{
+    return (id >= Blocks::ShulkerBoxFirst && id <= Blocks::ShulkerBoxLast) ? id - Blocks::ShulkerBoxFirst : -1;
+}
 inline bool isContainerBlock(BlockId id)
 {
     return id == Blocks::Chest || id == Blocks::Barrel || id == Blocks::BarrelOpen ||
-           id == Blocks::ShulkerBox;
+           isShulkerBox(id);
+}
+inline const char* colourFileName(int colour)
+{
+    static const char* NAMES[16] = { "white", "orange", "magenta", "light_blue", "yellow", "lime", "pink", "gray",
+                                     "light_gray", "cyan", "purple", "blue", "brown", "green", "red", "black" };
+    return (colour >= 0 && colour < 16) ? NAMES[colour] : "";
 }
 
 // Wool, in any of its sixteen colours. White is where it always was

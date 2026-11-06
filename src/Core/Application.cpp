@@ -2046,6 +2046,7 @@ bool Application::frame()
             m_startupScreen == "grinderror" || m_startupScreen == "woods" ||
             m_startupScreen == "cherry" || m_startupScreen == "mangrove" || m_startupScreen == "fungi" ||
             m_startupScreen == "stones" || m_startupScreen == "colours" || m_startupScreen == "candles" ||
+            m_startupScreen == "shulkerboxes" ||
             m_startupScreen == "boat" || m_startupScreen == "rails" ||
             m_startupScreen == "mobs" || m_startupScreen == "golem" ||
             m_startupScreen == "glowmobs" || m_startupScreen == "variants" ||
@@ -2133,6 +2134,7 @@ bool Application::frame()
                                   m_startupScreen != "stones" &&
                                   m_startupScreen != "colours" &&
                                   m_startupScreen != "candles" &&
+                                  m_startupScreen != "shulkerboxes" &&
                                   m_startupScreen != "boat" &&
                                   m_startupScreen != "rails" &&
                                   m_startupScreen != "mobs" &&
@@ -2507,7 +2509,8 @@ bool Application::frame()
                 m_startupScreen == "beaconui" || m_startupScreen == "grindstone" ||
                 m_startupScreen == "grinderror" || m_startupScreen == "woods" ||
                 m_startupScreen == "cherry" || m_startupScreen == "mangrove" || m_startupScreen == "fungi" ||
-                m_startupScreen == "stones" || m_startupScreen == "colours" || m_startupScreen == "candles")
+                m_startupScreen == "stones" || m_startupScreen == "colours" || m_startupScreen == "candles" ||
+                m_startupScreen == "shulkerboxes")
             {
                 m_camera.setOrientation(0.0f, -25.0f);
                 m_camera.addLook(0.0f, 0.0f, 0.0f);
@@ -2604,6 +2607,27 @@ bool Application::frame()
                     m_world->setBlock(px + 16, py, pz - 10, Blocks::Bookshelf);
                     m_world->setBlock(px + 16, py, pz + 10, Blocks::DiamondOre);
                     m_world->setBlock(px + 16, py + 1, pz + 10, Blocks::EndPortalFrame);
+                }
+                if (m_startupScreen == "shulkerboxes")
+                {
+                    m_devAttackStrength = 1.0f;
+                    m_camera.setOrientation(0.0f, -6.0f);
+                    for (int dx = 1; dx <= 14; ++dx)
+                        for (int dz = -10; dz <= 10; ++dz)
+                        {
+                            for (int dy = 0; dy <= 6; ++dy) m_world->setBlock(px + dx, py + dy, pz + dz, Blocks::Air);
+                            m_world->setBlock(px + dx, py - 1, pz + dz, Blocks::EndStone);
+                        }
+                    m_world->setBlock(px + 12, py, pz - 9, Blocks::ShulkerBox);
+                    for (int c = 0; c < 16; ++c)
+                        m_world->setBlock(px + 12, py + (c % 2), pz - 8 + c, colourIn(Blocks::ShulkerBoxFirst, c));
+                    const int COLOURS[6] = { 16, 0, 4, 11, 14, 5 };
+                    for (int k = 0; k < 6; ++k)
+                        if (m_entities.spawnAt(MobId::Shulker, glm::vec3(px + 8.5f, static_cast<float>(py), pz - 5.0f + k * 2.0f), *m_world))
+                            m_entities.mobs().back().setShulkerColour(COLOURS[k]);
+                    m_world->setBlock(px + 14, py, pz - 10, Blocks::Bookshelf);
+                    m_world->setBlock(px + 14, py, pz + 10, Blocks::DiamondOre);
+                    m_world->setBlock(px + 14, py + 1, pz + 10, Blocks::EndPortalFrame);
                 }
                 if (m_startupScreen == "candles")
                 {

@@ -96,6 +96,11 @@ namespace
         Blocks::Torch, Blocks::Glowstone, Blocks::Water, Blocks::Lava,
         Blocks::Ice, Blocks::Glass, Blocks::Wool, Blocks::Pumpkin,
         Blocks::Bedrock,
+        Blocks::ShulkerBox,
+        Blocks::ShulkerBoxFirst + 0, Blocks::ShulkerBoxFirst + 1, Blocks::ShulkerBoxFirst + 2, Blocks::ShulkerBoxFirst + 3,
+        Blocks::ShulkerBoxFirst + 4, Blocks::ShulkerBoxFirst + 5, Blocks::ShulkerBoxFirst + 6, Blocks::ShulkerBoxFirst + 7,
+        Blocks::ShulkerBoxFirst + 8, Blocks::ShulkerBoxFirst + 9, Blocks::ShulkerBoxFirst + 10, Blocks::ShulkerBoxFirst + 11,
+        Blocks::ShulkerBoxFirst + 12, Blocks::ShulkerBoxFirst + 13, Blocks::ShulkerBoxFirst + 14, Blocks::ShulkerBoxFirst + 15,
         Blocks::Candle,
         Blocks::DyedCandleFirst + 0, Blocks::DyedCandleFirst + 8, Blocks::DyedCandleFirst + 16, Blocks::DyedCandleFirst + 24,
         Blocks::DyedCandleFirst + 32, Blocks::DyedCandleFirst + 40, Blocks::DyedCandleFirst + 48, Blocks::DyedCandleFirst + 56,
@@ -748,7 +753,7 @@ void Application::renderContainerScreen(float w, float h)
         ? furnaceBase(m_world->getBlock(m_furnaceBlock.x, m_furnaceBlock.y, m_furnaceBlock.z)) : Blocks::Air;
     const bool hopper = chestKind == Blocks::Hopper;
     const bool thrower = chestKind == Blocks::Dropper || chestKind == Blocks::Dispenser;
-    const bool shulker = chestKind == Blocks::ShulkerBox;
+    const bool shulker = isShulkerBox(chestKind);
     const bool bigChest = m_chestOpen && !hopper && !thrower && !shulker;
 
     const char* background = "container/inventory";

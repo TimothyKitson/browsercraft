@@ -522,6 +522,10 @@ std::string MobModel::variantOf(const Mob& mob) const
             const char* mood = mob.tamed() ? "_tame" : mob.hostileNow() ? "_angry" : "";
             return root + "wolf/" + coat + mood + ".png";
         }
+        case MobId::Shulker:
+            if (mob.shulkerColour() < 16)
+                return root + "shulker/shulker_" + colourFileName(mob.shulkerColour()) + ".png";
+            return "";
         case MobId::Cat:
         {
             static const char* BREEDS[] = { "tabby", "black", "red", "siamese", "british_shorthair", "calico",

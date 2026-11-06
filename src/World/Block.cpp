@@ -1202,6 +1202,22 @@ namespace
         { "Cake with Red Candle", CakeTop, CakeBottom, CakeSide, true, false, RenderType::Candle, 3, 0.5f },
         { "Cake with Black Candle", CakeTop, CakeBottom, CakeSide, true, false, RenderType::Candle, 0, 0.5f },
         { "Cake with Black Candle", CakeTop, CakeBottom, CakeSide, true, false, RenderType::Candle, 3, 0.5f },
+        { "White Shulker Box", ShulkerBoxColourTile + 0, ShulkerBoxColourTile + 0, ShulkerBoxColourTile + 0, true, true, RenderType::Cube, 0, 2.0f },
+        { "Orange Shulker Box", ShulkerBoxColourTile + 1, ShulkerBoxColourTile + 1, ShulkerBoxColourTile + 1, true, true, RenderType::Cube, 0, 2.0f },
+        { "Magenta Shulker Box", ShulkerBoxColourTile + 2, ShulkerBoxColourTile + 2, ShulkerBoxColourTile + 2, true, true, RenderType::Cube, 0, 2.0f },
+        { "Light Blue Shulker Box", ShulkerBoxColourTile + 3, ShulkerBoxColourTile + 3, ShulkerBoxColourTile + 3, true, true, RenderType::Cube, 0, 2.0f },
+        { "Yellow Shulker Box", ShulkerBoxColourTile + 4, ShulkerBoxColourTile + 4, ShulkerBoxColourTile + 4, true, true, RenderType::Cube, 0, 2.0f },
+        { "Lime Shulker Box", ShulkerBoxColourTile + 5, ShulkerBoxColourTile + 5, ShulkerBoxColourTile + 5, true, true, RenderType::Cube, 0, 2.0f },
+        { "Pink Shulker Box", ShulkerBoxColourTile + 6, ShulkerBoxColourTile + 6, ShulkerBoxColourTile + 6, true, true, RenderType::Cube, 0, 2.0f },
+        { "Gray Shulker Box", ShulkerBoxColourTile + 7, ShulkerBoxColourTile + 7, ShulkerBoxColourTile + 7, true, true, RenderType::Cube, 0, 2.0f },
+        { "Light Gray Shulker Box", ShulkerBoxColourTile + 8, ShulkerBoxColourTile + 8, ShulkerBoxColourTile + 8, true, true, RenderType::Cube, 0, 2.0f },
+        { "Cyan Shulker Box", ShulkerBoxColourTile + 9, ShulkerBoxColourTile + 9, ShulkerBoxColourTile + 9, true, true, RenderType::Cube, 0, 2.0f },
+        { "Purple Shulker Box", ShulkerBoxColourTile + 10, ShulkerBoxColourTile + 10, ShulkerBoxColourTile + 10, true, true, RenderType::Cube, 0, 2.0f },
+        { "Blue Shulker Box", ShulkerBoxColourTile + 11, ShulkerBoxColourTile + 11, ShulkerBoxColourTile + 11, true, true, RenderType::Cube, 0, 2.0f },
+        { "Brown Shulker Box", ShulkerBoxColourTile + 12, ShulkerBoxColourTile + 12, ShulkerBoxColourTile + 12, true, true, RenderType::Cube, 0, 2.0f },
+        { "Green Shulker Box", ShulkerBoxColourTile + 13, ShulkerBoxColourTile + 13, ShulkerBoxColourTile + 13, true, true, RenderType::Cube, 0, 2.0f },
+        { "Red Shulker Box", ShulkerBoxColourTile + 14, ShulkerBoxColourTile + 14, ShulkerBoxColourTile + 14, true, true, RenderType::Cube, 0, 2.0f },
+        { "Black Shulker Box", ShulkerBoxColourTile + 15, ShulkerBoxColourTile + 15, ShulkerBoxColourTile + 15, true, true, RenderType::Cube, 0, 2.0f },
     };
 }
 

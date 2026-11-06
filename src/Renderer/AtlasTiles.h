@@ -319,6 +319,7 @@ namespace Tiles
         TintedGlassTile,
         DyedCandleTile, DyedCandleTileLast = DyedCandleTile + 31,
         CandleFlameTile,
+        ShulkerBoxColourTile, ShulkerBoxColourTileLast = ShulkerBoxColourTile + 15,
 
         TileCount
     };

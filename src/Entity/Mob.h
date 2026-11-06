@@ -332,6 +332,8 @@ public:
     void setSaddled(bool on) { m_saddled = on; }
     uint16_t horseArmour() const { return m_horseArmour; }
     void setHorseArmour(uint16_t armour) { m_horseArmour = armour; }
+    int shulkerColour() const { return m_shulkerColour; }
+    void setShulkerColour(int colour) { m_shulkerColour = (colour >= 0 && colour < 16) ? colour : 16; }
     void setRidden(bool on);
     void steer(float yawDegrees, bool forward, bool jump, float jumpPower = 1.0f);
     bool onGround() const { return m_onGround; }
@@ -406,6 +408,7 @@ private:
     glm::vec3 m_position{ 0.0f };
     glm::vec3 m_velocity{ 0.0f };
     float m_yaw = 0.0f;
+    int m_shulkerColour = 16;
     int m_health = 1;
     bool m_onGround = false;
 
