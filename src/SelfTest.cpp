@@ -6630,6 +6630,38 @@ namespace
             check(bench.at(4, 1, 0) == Blocks::NoteBlockLit,
                   "a note block on a live wire is struck");
         }
+
+        {
+            struct Stair : Redstone::Cells
+            {
+                std::map<std::array<int,3>, BlockId> blocks;
+                BlockId at(int x, int y, int z) const override
+                {
+                    const auto it = blocks.find({ x, y, z });
+                    return it == blocks.end() ? (y <= 0 ? Blocks::Stone : Blocks::Air) : it->second;
+                }
+                void set(int x, int y, int z, BlockId b) override { blocks[{ x, y, z }] = b; }
+            } stair;
+
+            stair.blocks[{ -1, 1, 0 }] = Blocks::RedstoneTorch;
+            stair.blocks[{ 0, 1, 0 }] = Blocks::RedstoneDust;
+            stair.blocks[{ 1, 1, 0 }] = Blocks::Stone;
+            stair.blocks[{ 1, 2, 0 }] = Blocks::RedstoneDust;
+            stair.blocks[{ 2, 2, 0 }] = Blocks::RedstoneDust;
+            stair.blocks[{ 3, 1, 0 }] = Blocks::RedstoneDust;
+            stair.blocks[{ 4, 1, 0 }] = Blocks::RedstoneLamp;
+            Redstone::update(stair, 0, 1, 0);
+            check(stair.at(1, 2, 0) == Blocks::RedstoneDustLit, "dust climbs the side of a block");
+            check(stair.at(3, 1, 0) == Blocks::RedstoneDustLit, "and runs back down the far side");
+            check(stair.at(4, 1, 0) == Blocks::RedstoneLampLit, "and lights what it reaches");
+
+            stair.blocks[{ 0, 2, 0 }] = Blocks::Stone;
+            stair.blocks[{ 1, 2, 0 }] = Blocks::RedstoneDust;
+            stair.blocks[{ 2, 2, 0 }] = Blocks::RedstoneDust;
+            stair.blocks[{ 3, 1, 0 }] = Blocks::RedstoneDust;
+            Redstone::update(stair, 0, 1, 0);
+            check(stair.at(1, 2, 0) == Blocks::RedstoneDust, "but not with a block over it");
+        }
     }
 
     void testHopper()

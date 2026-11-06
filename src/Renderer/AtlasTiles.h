@@ -293,6 +293,7 @@ namespace Tiles
         SmallBudTile, MediumBudTile, LargeBudTile,
         DripstoneDownBase, DripstoneDownFrustum, DripstoneDownMiddle, DripstoneDownTipMerge,
         DripstoneUpTip, DripstoneUpBase, DripstoneUpFrustum, DripstoneUpMiddle, DripstoneUpTipMerge,
+        DustDotOff, DustDotOn, DustLine0Off, DustLine0On, DustLine1Off, DustLine1On, LeverHandle,
 
         TileCount
     };

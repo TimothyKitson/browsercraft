@@ -6481,6 +6481,13 @@ namespace
         { Tiles::DripstoneUpFrustum, paintDripstoneSpike },
         { Tiles::DripstoneUpMiddle, paintDripstoneSpike },
         { Tiles::DripstoneUpTipMerge, paintDripstoneSpike },
+        { Tiles::DustDotOff, paintRedstoneDust },
+        { Tiles::DustDotOn, paintRedstoneDustLit },
+        { Tiles::DustLine0Off, paintRedstoneDust },
+        { Tiles::DustLine0On, paintRedstoneDustLit },
+        { Tiles::DustLine1Off, paintRedstoneDust },
+        { Tiles::DustLine1On, paintRedstoneDustLit },
+        { Tiles::LeverHandle, paintLever },
         { Tiles::BedTop,        paintBedTop },
         { Tiles::LadderTile,    paintLadderTile },
         { Tiles::DoorLower,     paintDoorLower },
@@ -6848,6 +6855,13 @@ namespace
         { Tiles::DripstoneUpFrustum, { "pointed_dripstone_up_frustum", nullptr }, Tinting::None, 0, false },
         { Tiles::DripstoneUpMiddle, { "pointed_dripstone_up_middle", nullptr }, Tinting::None, 0, false },
         { Tiles::DripstoneUpTipMerge, { "pointed_dripstone_up_tip_merge", nullptr }, Tinting::None, 0, false },
+        { Tiles::DustDotOff, { "redstone_dust_dot", nullptr }, Tinting::RedstoneOff, 0, false },
+        { Tiles::DustDotOn, { "redstone_dust_dot", nullptr }, Tinting::RedstoneOn, 0, false },
+        { Tiles::DustLine0Off, { "redstone_dust_line0", nullptr }, Tinting::RedstoneOff, 0, false },
+        { Tiles::DustLine0On, { "redstone_dust_line0", nullptr }, Tinting::RedstoneOn, 0, false },
+        { Tiles::DustLine1Off, { "redstone_dust_line1", nullptr }, Tinting::RedstoneOff, 0, false },
+        { Tiles::DustLine1On, { "redstone_dust_line1", nullptr }, Tinting::RedstoneOn, 0, false },
+        { Tiles::LeverHandle, { "lever", nullptr }, Tinting::None, 0, false },
         { Tiles::FurnaceTop,    { "furnace_top", nullptr },                            Tinting::None,    0,   false },
         { Tiles::FurnaceFront,  { "furnace_front", nullptr },                          Tinting::None,    0,   false },
         { Tiles::FurnaceLit,    { "furnace_front_on", nullptr },                       Tinting::None,    0,   true  },
@@ -7714,6 +7728,10 @@ Atlas::Atlas()
             const int k = unit(witherHead, 64);
             blitImage(Tiles::WitherSkullTile, scaleNearest(cropImage(witherHead, 8 * k, 8 * k, 8 * k, 8 * k), tilePixels, tilePixels));
         }
+
+        for (int tile : { Tiles::DustDotOff, Tiles::DustDotOn, Tiles::DustLine0Off, Tiles::DustLine0On,
+                          Tiles::DustLine1Off, Tiles::DustLine1On })
+            overlay(tile, "redstone_dust_overlay");
 
         const Image dustDot = loadPNG("assets/textures/block/redstone_dust_dot.png");
         const Image dustLine = loadPNG("assets/textures/block/redstone_dust_line0.png");

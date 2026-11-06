@@ -5,9 +5,6 @@
 
 namespace
 {
-    // The six cells a signal can step to. Dust climbs nothing: in
-    // Minecraft it runs up and down the side of a block it is laid
-    // against, and that is a shape this engine's dust does not have.
     constexpr int DX[6] = { 1, -1, 0, 0, 0, 0 };
     constexpr int DY[6] = { 0, 0, 1, -1, 0, 0 };
     constexpr int DZ[6] = { 0, 0, 0, 0, 1, -1 };
@@ -152,6 +149,26 @@ namespace Redstone
 
                 reached[indexOf(ox, oy, oz)] = 1;
                 open.push(glm::ivec4(nx, ny, nz, here.w + 1));
+            }
+
+            for (int k = 0; k < 6; ++k)
+            {
+                if (DY[k] != 0) continue;
+                const int sx = here.x + DX[k], sz = here.z + DZ[k];
+                for (int dy = -1; dy <= 1; dy += 2)
+                {
+                    if (dy > 0 && isSolid(cells.at(here.x, here.y + 1, here.z))) continue;
+                    if (dy < 0 && isSolid(cells.at(sx, here.y, sz))) continue;
+                    const int ny = here.y + dy;
+                    const int ox = sx - x, oy = ny - y, oz = sz - z;
+                    if (std::abs(ox) > REACH || std::abs(oy) > REACH || std::abs(oz) > REACH)
+                        continue;
+                    if (!isWire(cells.at(sx, ny, sz))) continue;
+                    if (reached[indexOf(ox, oy, oz)]) continue;
+
+                    reached[indexOf(ox, oy, oz)] = 1;
+                    open.push(glm::ivec4(sx, ny, sz, here.w + 1));
+                }
             }
         }
 

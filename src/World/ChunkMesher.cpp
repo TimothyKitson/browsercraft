@@ -711,6 +711,171 @@ namespace
         }
     }
 
+    bool isDust(BlockId id) { return id == Blocks::RedstoneDust || id == Blocks::RedstoneDustLit; }
+
+    bool dustLinks(BlockId id)
+    {
+        return isDust(id) || id == Blocks::RedstoneTorch || id == Blocks::RedstoneTorchOff ||
+               id == Blocks::LeverOff || id == Blocks::LeverOn || id == Blocks::ButtonOff ||
+               id == Blocks::ButtonOn || id == Blocks::RedstoneBlock || id == Blocks::Observer ||
+               id == Blocks::ObserverLit;
+    }
+
+    void emitDust(const MeshSnapshot& snap, int lx, int y, int lz, BlockId id, std::vector<float>& out)
+    {
+        const bool lit = id == Blocks::RedstoneDustLit;
+        const float sky = static_cast<float>(snap.skyLight(lx, y, lz)) / 15.0f;
+        const float block = static_cast<float>(snap.blockLight(lx, y, lz)) / 15.0f;
+        static const int SIDE[4][2] = { { 0, -1 }, { 1, 0 }, { 0, 1 }, { -1, 0 } };
+
+        bool linked[4] = { false, false, false, false };
+        bool climbs[4] = { false, false, false, false };
+        const bool roofed = isOpaque(snap.block(lx, y + 1, lz));
+        for (int s = 0; s < 4; ++s)
+        {
+            const int nx = lx + SIDE[s][0];
+            const int nz = lz + SIDE[s][1];
+            const BlockId beside = snap.block(nx, y, nz);
+            if (dustLinks(beside)) linked[s] = true;
+            else if (isOpaque(beside) && !roofed && isDust(snap.block(nx, y + 1, nz))) linked[s] = climbs[s] = true;
+            else if (!isOpaque(beside) && isDust(snap.block(nx, y - 1, nz))) linked[s] = true;
+        }
+
+        int count = 0;
+        for (bool l : linked) count += l ? 1 : 0;
+        if (count == 0) for (bool& l : linked) l = true;
+        if (count == 1)
+            for (int s = 0; s < 4; ++s)
+                if (linked[s]) { linked[(s + 2) & 3] = true; break; }
+
+        const float x0 = static_cast<float>(lx);
+        const float z0 = static_cast<float>(lz);
+        const float y0 = static_cast<float>(y);
+
+        auto flat = [&](int tile, float ax, float az, float bx, float bz, bool across, float lift) {
+            const TileUV uv = tileUV(tile);
+            const float xs[4] = { ax, bx, bx, ax };
+            const float zs[4] = { az, az, bz, bz };
+            float us[4], vs[4];
+            for (int c = 0; c < 4; ++c)
+            {
+                const float a = across ? zs[c] : xs[c];
+                const float b = across ? xs[c] : zs[c];
+                us[c] = uv.u0 + (uv.u1 - uv.u0) * a;
+                vs[c] = uv.vTop + (uv.vBottom - uv.vTop) * b;
+            }
+            const int order[12] = { 0, 2, 1, 0, 3, 2, 0, 1, 2, 0, 2, 3 };
+            for (int k : order)
+                pushVertex(out, x0 + xs[k], y0 + lift, z0 + zs[k], us[k], vs[k], 1.0f, sky, block, tagOf(2, id));
+        };
+
+        const int line0 = lit ? Tiles::DustLine0On : Tiles::DustLine0Off;
+        const int line1 = lit ? Tiles::DustLine1On : Tiles::DustLine1Off;
+        if (linked[0]) flat(line0, 0.0f, 0.0f, 1.0f, 0.5f, false, 0.030f);
+        if (linked[2]) flat(line0, 0.0f, 0.5f, 1.0f, 1.0f, false, 0.030f);
+        if (linked[1]) flat(line1, 0.5f, 0.0f, 1.0f, 1.0f, true, 0.031f);
+        if (linked[3]) flat(line1, 0.0f, 0.0f, 0.5f, 1.0f, true, 0.031f);
+        if ((linked[0] || linked[2]) && (linked[1] || linked[3]))
+            flat(lit ? Tiles::DustDotOn : Tiles::DustDotOff, 0.0f, 0.0f, 1.0f, 1.0f, false, 0.032f);
+
+        for (int s = 0; s < 4; ++s)
+        {
+            if (!climbs[s]) continue;
+            const TileUV uv = tileUV(line0);
+            const float inset = 0.02f;
+            glm::vec3 p[4];
+            if (s == 0 || s == 2)
+            {
+                const float z = s == 0 ? inset : 1.0f - inset;
+                p[0] = { 0.0f, 0.0f, z }; p[1] = { 1.0f, 0.0f, z }; p[2] = { 1.0f, 1.0f, z }; p[3] = { 0.0f, 1.0f, z };
+            }
+            else
+            {
+                const float x = s == 3 ? inset : 1.0f - inset;
+                p[0] = { x, 0.0f, 0.0f }; p[1] = { x, 0.0f, 1.0f }; p[2] = { x, 1.0f, 1.0f }; p[3] = { x, 1.0f, 0.0f };
+            }
+            const float us[4] = { uv.u0, uv.u1, uv.u1, uv.u0 };
+            const float vs[4] = { uv.vBottom, uv.vBottom, uv.vTop, uv.vTop };
+            const int order[12] = { 0, 1, 2, 0, 2, 3, 0, 2, 1, 0, 3, 2 };
+            for (int k : order)
+                pushVertex(out, x0 + p[k].x, y0 + p[k].y, z0 + p[k].z, us[k], vs[k], 0.8f, sky, block, tagOf(7, id));
+        }
+    }
+
+    void emitPart(std::vector<float>& out, const glm::vec3& cell, const glm::vec3& from, const glm::vec3& to,
+                  int tile, const float (*faceUV)[4], float angle, const glm::vec3& pivot,
+                  float sky, float block, BlockId id, bool skipBottom)
+    {
+        const TileUV uv = tileUV(tile);
+        const float c = std::cos(glm::radians(angle));
+        const float s = std::sin(glm::radians(angle));
+        auto place = [&](glm::vec3 p) {
+            if (angle != 0.0f)
+            {
+                const glm::vec3 q = p - pivot;
+                p = pivot + glm::vec3(q.x, q.y * c - q.z * s, q.y * s + q.z * c);
+            }
+            return cell + p / 16.0f;
+        };
+        auto lerp = [](float a, float b, float t) { return a + (b - a) * t; };
+        static const float SHADE[6] = { 0.72f, 0.72f, 1.0f, 0.5f, 0.86f, 0.86f };
+
+        for (int f = 0; f < 6; ++f)
+        {
+            if (f == 3 && skipBottom) continue;
+            float r[4];
+            if (faceUV) { for (int k = 0; k < 4; ++k) r[k] = faceUV[f][k]; }
+            else if (f < 2) { r[0] = from.z; r[1] = 16.0f - to.y; r[2] = to.z; r[3] = 16.0f - from.y; }
+            else if (f < 4) { r[0] = from.x; r[1] = from.z; r[2] = to.x; r[3] = to.z; }
+            else { r[0] = from.x; r[1] = 16.0f - to.y; r[2] = to.x; r[3] = 16.0f - from.y; }
+
+            glm::vec3 p[4];
+            float us[4], vs[4];
+            const float st[4][2] = { { 0, 0 }, { 1, 0 }, { 1, 1 }, { 0, 1 } };
+            for (int k = 0; k < 4; ++k)
+            {
+                const float sa = st[k][0], ta = st[k][1];
+                const float x = lerp(from.x, to.x, sa), z = lerp(from.z, to.z, sa);
+                const float yy = lerp(from.y, to.y, ta);
+                switch (f)
+                {
+                    case 0: p[k] = { to.x, yy, z }; break;
+                    case 1: p[k] = { from.x, yy, z }; break;
+                    case 2: p[k] = { x, to.y, lerp(from.z, to.z, ta) }; break;
+                    case 3: p[k] = { x, from.y, lerp(from.z, to.z, ta) }; break;
+                    case 4: p[k] = { x, yy, to.z }; break;
+                    default: p[k] = { x, yy, from.z }; break;
+                }
+                us[k] = uv.u0 + (uv.u1 - uv.u0) * lerp(r[0], r[2], sa) / 16.0f;
+                const float tv = (f == 2 || f == 3) ? ta : 1.0f - ta;
+                vs[k] = uv.vTop + (uv.vBottom - uv.vTop) * lerp(r[1], r[3], tv) / 16.0f;
+                p[k] = place(p[k]);
+            }
+            const int order[12] = { 0, 1, 2, 0, 2, 3, 0, 2, 1, 0, 3, 2 };
+            for (int k : order)
+                pushVertex(out, p[k].x, p[k].y, p[k].z, us[k], vs[k], SHADE[f], sky, block,
+                           tagOf(angle != 0.0f ? 7 : f, id));
+        }
+    }
+
+    void emitLever(const MeshSnapshot& snap, int lx, int y, int lz, BlockId id, std::vector<float>& out)
+    {
+        const float sky = static_cast<float>(snap.skyLight(lx, y, lz)) / 15.0f;
+        const float block = static_cast<float>(snap.blockLight(lx, y, lz)) / 15.0f;
+        const glm::vec3 cell(static_cast<float>(lx), static_cast<float>(y), static_cast<float>(lz));
+        static const float BASE_UV[6][4] = {
+            { 4, 0, 12, 3 }, { 4, 0, 12, 3 }, { 5, 4, 11, 12 }, { 5, 4, 11, 12 }, { 5, 0, 11, 3 }, { 5, 0, 11, 3 },
+        };
+        static const float HANDLE_UV[6][4] = {
+            { 7, 6, 9, 16 }, { 7, 6, 9, 16 }, { 7, 6, 9, 8 }, { 7, 6, 9, 8 }, { 7, 6, 9, 16 }, { 7, 6, 9, 16 },
+        };
+        emitPart(out, cell, glm::vec3(5.0f, 0.0f, 4.0f), glm::vec3(11.0f, 3.0f, 12.0f), Tiles::Cobblestone,
+                 BASE_UV, 0.0f, glm::vec3(0.0f), sky, block, id, false);
+        emitPart(out, cell, glm::vec3(7.0f, 1.0f, 7.0f), glm::vec3(9.0f, 11.0f, 9.0f), Tiles::LeverHandle,
+                 HANDLE_UV, id == Blocks::LeverOn ? 45.0f : -45.0f, glm::vec3(8.0f, 1.0f, 8.0f),
+                 sky, block, id, true);
+    }
+
     int dripstoneTile(const MeshSnapshot& snap, int x, int y, int z, BlockId id)
     {
         const bool down = id == Blocks::DripstoneDown;
@@ -818,9 +983,17 @@ void buildChunkMesh(const MeshSnapshot& snapshot, MeshResult& out)
                 const BlockId id = snapshot.block(lx, y, lz);
                 if (!isVisible(id)) continue;
 
-                if (isCross(id))
+                if (id == Blocks::LeverOff || id == Blocks::LeverOn)
+                {
+                    emitLever(snapshot, lx, y, lz, id, out.opaqueVertices);
+                }
+                else if (isCross(id))
                 {
                     emitCross(snapshot, lx, y, lz, id, out.opaqueVertices);
+                }
+                else if (isDust(id))
+                {
+                    emitDust(snapshot, lx, y, lz, id, out.opaqueVertices);
                 }
                 else if (isWallPanel(id))
                 {

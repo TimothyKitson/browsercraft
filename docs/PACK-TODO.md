@@ -19,7 +19,7 @@ Everything in the 1.21 textures zip the game doesn't use yet, turned into work. 
    - I. Build dripstone columns from base, frustum, middle, tip and tip-merge pieces, by where each piece sits in the column.
    - II. Grow small, medium and large amethyst buds on budding amethyst until they become a cluster.
    - III. Run drips through all three stages: hang, fall, land.
-4. Redstone dust and the lever
+4. Redstone dust and the lever (done)
    - I. Make dust join up like Minecraft's: a dot, straight lines or crosses, chosen from its neighbours, with the overlay on top.
    - II. Give the lever Minecraft's model: a cobblestone base and the pack's handle.
 5. Item icons the game still paints itself
