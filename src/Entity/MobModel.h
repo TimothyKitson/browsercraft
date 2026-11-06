@@ -40,6 +40,8 @@ public:
 private:
     unsigned int villagerTexture(const char* path);
     void renderExtras(MobId id, const MobSkin& skin, const World& world, const EntityManager& entities);
+    std::string variantOf(const Mob& mob) const;
+    std::vector<std::string> coatOverlaysOf(const Mob& mob) const;
     std::vector<std::pair<std::string, unsigned int>> m_villagerTextures;
     std::vector<std::unique_ptr<MobSkin>> m_skins;
     Mesh m_mesh;

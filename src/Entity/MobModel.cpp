@@ -9,6 +9,8 @@
 #include "Renderer/Shader.h"
 #include "World/World.h"
 #include <string>
+#include <algorithm>
+#include <cstdlib>
 #include <cmath>
 
 namespace
@@ -175,6 +177,7 @@ void MobModel::render(Shader& chunkShader, const World& world, const EntityManag
         if (!texture) continue;
 
         std::vector<float> batch;
+        std::vector<std::pair<unsigned int, std::vector<float>>> variants;
 
         for (const Mob& mob : entities.mobs())
         {
@@ -201,15 +204,44 @@ void MobModel::render(Shader& chunkShader, const World& world, const EntityManag
             blockLight *= fade;
 
             build(skin, mob, sky, blockLight, layer);
-            batch.insert(batch.end(), m_vertices.begin(), m_vertices.end());
+
+            unsigned int own = 0;
+            if (layer == 0)
+            {
+                const std::string path = variantOf(mob);
+                if (!path.empty()) own = villagerTexture(path.c_str());
+            }
+            if (own)
+            {
+                auto found = std::find_if(variants.begin(), variants.end(),
+                                          [&](const auto& v) { return v.first == own; });
+                if (found == variants.end())
+                {
+                    variants.emplace_back(own, std::vector<float>());
+                    found = variants.end() - 1;
+                }
+                found->second.insert(found->second.end(), m_vertices.begin(), m_vertices.end());
+            }
+            else
+            {
+                batch.insert(batch.end(), m_vertices.begin(), m_vertices.end());
+            }
         }
 
-        if (batch.empty()) continue;
-
-        m_mesh.upload(batch, CHUNK_LAYOUT, true);
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, texture);
-        m_mesh.draw(GL_TRIANGLES);
+        if (!batch.empty())
+        {
+            m_mesh.upload(batch, CHUNK_LAYOUT, true);
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, texture);
+            m_mesh.draw(GL_TRIANGLES);
+        }
+        for (const auto& variant : variants)
+        {
+            m_mesh.upload(variant.second, CHUNK_LAYOUT, true);
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, variant.first);
+            m_mesh.draw(GL_TRIANGLES);
+        }
         }
 
         if (id == MobId::Villager)
@@ -378,6 +410,42 @@ void MobModel::renderExtras(MobId id, const MobSkin& skin, const World& world, c
     };
 
     bool started = false;
+
+    std::vector<std::pair<std::string, std::vector<float>>> coats;
+    for (const Mob& mob : entities.mobs())
+    {
+        if (mob.typeId() != id) continue;
+        const std::vector<std::string> layers = coatOverlaysOf(mob);
+        if (layers.empty()) continue;
+        float sky = 0.0f, blockLight = 0.0f;
+        lit(mob, sky, blockLight);
+        build(skin, mob, sky, blockLight, 0, 0.0f);
+        for (const std::string& path : layers)
+        {
+            auto found = std::find_if(coats.begin(), coats.end(), [&](const auto& c) { return c.first == path; });
+            if (found == coats.end())
+            {
+                coats.emplace_back(path, std::vector<float>());
+                found = coats.end() - 1;
+            }
+            found->second.insert(found->second.end(), m_vertices.begin(), m_vertices.end());
+        }
+    }
+    for (const auto& coat : coats)
+    {
+        const unsigned int texture = villagerTexture(coat.first.c_str());
+        if (!texture) continue;
+        if (!started)
+        {
+            glDepthFunc(GL_LEQUAL);
+            started = true;
+        }
+        m_mesh.upload(coat.second, CHUNK_LAYOUT, true);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, texture);
+        m_mesh.draw(GL_TRIANGLES);
+    }
+
     for (const Extra& extra : EXTRAS)
     {
         if (extra.id != id) continue;
@@ -419,16 +487,130 @@ MobModel::~MobModel()
         if (entry.second) glDeleteTextures(1, &entry.second);
 }
 
+std::string MobModel::variantOf(const Mob& mob) const
+{
+    const uint32_t seed = mob.birthSeed() * 2654435761u;
+    const uint32_t pick = (seed >> 8) % 1000u;
+    const std::string root = "assets/textures/entity/";
+    switch (mob.typeId())
+    {
+        case MobId::Wolf:
+        {
+            static const char* COATS[] = { "wolf", "wolf_ashen", "wolf_black", "wolf_chestnut", "wolf_rusty",
+                                           "wolf_snowy", "wolf_spotted", "wolf_striped", "wolf_woods" };
+            const std::string coat = COATS[pick % 9u];
+            const char* mood = mob.tamed() ? "_tame" : mob.hostileNow() ? "_angry" : "";
+            return root + "wolf/" + coat + mood + ".png";
+        }
+        case MobId::Cat:
+        {
+            static const char* BREEDS[] = { "tabby", "black", "red", "siamese", "british_shorthair", "calico",
+                                            "persian", "ragdoll", "white", "jellie", "all_black" };
+            return root + "cat/" + BREEDS[pick % 11u] + ".png";
+        }
+        case MobId::Horse:
+        {
+            static const char* COLOURS[] = { "white", "creamy", "chestnut", "brown", "black", "gray", "darkbrown" };
+            return root + "horse/horse_" + COLOURS[pick % 7u] + ".png";
+        }
+        case MobId::Llama:
+        {
+            static const char* COATS[] = { "creamy", "white", "brown", "gray" };
+            return root + "llama/" + COATS[pick % 4u] + ".png";
+        }
+        case MobId::Rabbit:
+        {
+            static const char* COATS[] = { "brown", "white", "black", "white_splotched", "gold", "salt" };
+            return root + "rabbit/" + COATS[pick % 6u] + ".png";
+        }
+        case MobId::Parrot:
+        {
+            static const char* COLOURS[] = { "red_blue", "blue", "green", "yellow_blue", "grey" };
+            return root + "parrot/parrot_" + COLOURS[pick % 5u] + ".png";
+        }
+        case MobId::Axolotl:
+        {
+            if (pick == 0u) return root + "axolotl/axolotl_blue.png";
+            static const char* COLOURS[] = { "lucy", "wild", "gold", "cyan" };
+            return root + "axolotl/axolotl_" + COLOURS[pick % 4u] + ".png";
+        }
+        case MobId::Frog:
+        {
+            static const char* KINDS[] = { "temperate", "warm", "cold" };
+            return root + "frog/" + KINDS[pick % 3u] + "_frog.png";
+        }
+        case MobId::Fox:
+        {
+            const bool snowy = pick % 4u == 0u;
+            return root + "fox/" + (snowy ? "snow_fox" : "fox") + (mob.asleep() ? "_sleep" : "") + ".png";
+        }
+        case MobId::Panda:
+        {
+            const uint32_t roll = pick % 100u;
+            const char* gene = roll < 2 ? "brown" : roll < 10 ? "lazy" : roll < 18 ? "worried" : roll < 26 ? "playful"
+                             : roll < 34 ? "weak" : roll < 42 ? "aggressive" : "";
+            return root + "panda/" + (*gene ? std::string(gene) + "_" : std::string()) + "panda.png";
+        }
+        case MobId::Bee:
+            return mob.hostileNow() ? root + "bee/bee_angry.png" : std::string();
+        default:
+            return std::string();
+    }
+}
+
+std::vector<std::string> MobModel::coatOverlaysOf(const Mob& mob) const
+{
+    std::vector<std::string> layers;
+    const uint32_t seed = mob.birthSeed() * 2654435761u;
+    const uint32_t pick = (seed >> 8) % 1000u;
+    const std::string root = "assets/textures/entity/";
+    switch (mob.typeId())
+    {
+        case MobId::Horse:
+        {
+            static const char* MARKS[] = { "", "white", "whitefield", "whitedots", "blackdots" };
+            const char* mark = MARKS[(pick / 7u) % 5u];
+            if (*mark) layers.push_back(root + "horse/horse_markings_" + mark + ".png");
+            break;
+        }
+        case MobId::Wolf:
+            if (mob.tamed()) layers.push_back(root + "wolf/wolf_collar.png#B02E26");
+            break;
+        case MobId::Cat:
+            if (mob.tamed()) layers.push_back(root + "cat/cat_collar.png#B02E26");
+            break;
+        default:
+            break;
+    }
+    return layers;
+}
+
 unsigned int MobModel::villagerTexture(const char* path)
 {
     for (const auto& entry : m_villagerTextures)
         if (entry.first == path) return entry.second;
 
+    std::string file(path);
+    unsigned int tint = 0xFFFFFF;
+    const size_t hash = file.find('#');
+    if (hash != std::string::npos)
+    {
+        tint = static_cast<unsigned int>(std::strtoul(file.c_str() + hash + 1, nullptr, 16));
+        file = file.substr(0, hash);
+    }
+
     int width = 0, height = 0, channels = 0;
-    unsigned char* data = stbi_load(path, &width, &height, &channels, 4);
+    unsigned char* data = stbi_load(file.c_str(), &width, &height, &channels, 4);
     unsigned int texture = 0;
     if (data)
     {
+        if (tint != 0xFFFFFF)
+            for (int i = 0; i < width * height; ++i)
+            {
+                data[i * 4 + 0] = static_cast<unsigned char>(data[i * 4 + 0] * ((tint >> 16) & 0xFF) / 255);
+                data[i * 4 + 1] = static_cast<unsigned char>(data[i * 4 + 1] * ((tint >> 8) & 0xFF) / 255);
+                data[i * 4 + 2] = static_cast<unsigned char>(data[i * 4 + 2] * (tint & 0xFF) / 255);
+            }
         glGenTextures(1, &texture);
         glBindTexture(GL_TEXTURE_2D, texture);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);

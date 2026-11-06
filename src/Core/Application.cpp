@@ -2005,7 +2005,7 @@ bool Application::frame()
             m_startupScreen == "wolf" || m_startupScreen == "horse" ||
             m_startupScreen == "boat" || m_startupScreen == "rails" ||
             m_startupScreen == "mobs" || m_startupScreen == "golem" ||
-            m_startupScreen == "glowmobs" ||
+            m_startupScreen == "glowmobs" || m_startupScreen == "variants" ||
             m_startupScreen == "shulker" ||
             m_startupScreen == "nethermobs" || m_startupScreen == "lairmobs" ||
             m_startupScreen == "jungle" || m_startupScreen == "savanna" ||
@@ -2072,6 +2072,7 @@ bool Application::frame()
                                   m_startupScreen != "rails" &&
                                   m_startupScreen != "mobs" &&
                                   m_startupScreen != "glowmobs" &&
+                                  m_startupScreen != "variants" &&
                                   m_startupScreen != "golem" &&
                                   m_startupScreen != "shulker" &&
                                   m_startupScreen != "nethermobs" &&
@@ -2519,13 +2520,14 @@ bool Application::frame()
             }
 
             m_freezeMobs = m_startupScreen == "mobs" || m_startupScreen == "golem" ||
-                           m_startupScreen == "glowmobs" ||
+                           m_startupScreen == "glowmobs" || m_startupScreen == "variants" ||
                            m_startupScreen == "nethermobs" ||
                            m_startupScreen == "lairmobs";
 
-            if (m_startupScreen == "mobs" || m_startupScreen == "glowmobs")
+            if (m_startupScreen == "mobs" || m_startupScreen == "glowmobs" || m_startupScreen == "variants")
             {
                 const bool glowing = m_startupScreen == "glowmobs";
+                const bool varied = m_startupScreen == "variants";
                 m_camera.setOrientation(0.0f, -6.0f);
                 m_camera.addLook(0.0f, 0.0f, 0.0f);
 
@@ -2568,7 +2570,11 @@ bool Application::frame()
                     MobId::Drowned, MobId::Stray, MobId::Bogged, MobId::Strider,
                     MobId::Breeze, MobId::Wither,
                 };
-                const MobId* LINEUP_START = glowing ? NIGHT : DAY;
+                const MobId VARIED[] = {
+                    MobId::Wolf, MobId::Cat, MobId::Horse, MobId::Horse, MobId::Llama,
+                    MobId::Rabbit, MobId::Parrot, MobId::Fox, MobId::Panda, MobId::Frog,
+                };
+                const MobId* LINEUP_START = glowing ? NIGHT : varied ? VARIED : DAY;
                 const std::vector<MobId> LINEUP(LINEUP_START, LINEUP_START + 10);
                 // Two ranks of five, so ten of them fit the arena.
                 int slot = 0;
@@ -2582,6 +2588,15 @@ bool Application::frame()
                 if (glowing)
                     for (Mob& mob : m_entities.mobs())
                         if (mob.typeId() == MobId::IronGolem) mob.damage(60, glm::vec3(0.0f));
+                if (varied)
+                {
+                    uint32_t next = 11u;
+                    for (Mob& mob : m_entities.mobs())
+                    {
+                        mob.setBirthSeed(next);
+                        next = next * 7919u + 13u;
+                    }
+                }
 
                 // The cart on its rail and the boat on its water, since
                 // neither sits anywhere else.

@@ -36,13 +36,14 @@ Everything in the 1.21 textures zip the game doesn't use yet, turned into work. 
    - IV. Ghast shooting face, breeze eyes and wind, drowned outer layer, bogged and stray overlays, charging vex.
    - V. Pig and strider saddles (needs the saddle in item 49), and the cold strider.
    - Left for later: the saddles go in with the saddle (49), and the breeze's wind swirl is its own model, which goes in with the beams (9).
-7. Variants for mobs the game has
+7. Variants for mobs the game has (done)
    - I. Wolves: 9 coats, the tame and angry faces, a collar tinted by dye, wolf armour and its cracks.
    - II. Cats: 11 breeds plus a collar. Ocelots.
    - III. Horses: 7 colours times 5 markings. Donkey, mule, skeleton horse and zombie horse.
    - IV. Llamas: 4 coats, the 16 carpet decors and the trader llama.
    - V. Rabbits (7), parrots (5), axolotls (5), frogs (cold and warm), foxes (snowy and sleeping), pandas (7 moods), bees (angry, nectar, stinger), tropical fish (2 shapes, 6 patterns, colours).
    - VI. Mooshrooms, red and brown.
+   - Left for later, since each is a new mob rather than a new coat: ocelots, donkeys, mules, skeleton and zombie horses (with 61-65), mooshrooms (with 38), tropical fish (with 53). Llama carpets and the trader llama go with carpets (31), wolf armour with 50, and bee nectar with bees and honey (40).
 8. Villager jobs
    - I. Add the other 10 jobs, each with its job-site block and trades: armorer, butcher, cartographer, cleric, fisherman, leatherworker, mason, nitwit, shepherd, weaponsmith.
    - II. Zombie villagers wear the biome, job and rank layers.
