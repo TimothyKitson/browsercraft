@@ -2648,11 +2648,17 @@ namespace
     void paintCakeSide(Tile& t)
     {
         t.fill(Color{ 166, 112, 70 });
-        // Icing over the top third, sponge below it.
-        for (int y = 0; y < 5; ++y)
-            for (int x = 0; x < Tile::N; ++x)
-                t.set(x, y, (y < 4) ? Color{ 236, 230, 220 } : Color{ 206, 198, 184 });
         t.speckle(6, 616);
+        for (int y = 8; y < 11; ++y)
+            for (int x = 0; x < Tile::N; ++x)
+                t.set(x, y, (y < 10) ? Color{ 236, 230, 220 } : Color{ 206, 198, 184 });
+        for (int y = 0; y < 8; ++y)
+            for (int x = 0; x < Tile::N; ++x) t.set(x, y, Color{ 0, 0, 0, 0 });
+        for (int y = 8; y < Tile::N; ++y)
+        {
+            t.set(0, y, Color{ 0, 0, 0, 0 });
+            t.set(Tile::N - 1, y, Color{ 0, 0, 0, 0 });
+        }
     }
 
     void paintCakeBottom(Tile& t)
@@ -2670,30 +2676,51 @@ namespace
             for (int x = 0; x < Tile::N; ++x)
                 if (((x + y) % 5) == 0) t.set(x, y, Color{ 172, 118, 70 });
         t.speckle(6, 618);
+        for (int y = 0; y < Tile::N; ++y)
+            for (int x = 0; x < Tile::N; ++x)
+                if (y < 8 || x == 0 || x == Tile::N - 1) t.set(x, y, Color{ 0, 0, 0, 0 });
     }
 
-    void paintCandleIn(Tile& t, bool lit)
+    void paintCandleIn(Tile& t, Color body, bool lit)
     {
         t.fill(Color{ 0, 0, 0, 0 });
-        for (int y = 6; y < Tile::N; ++y)
-            for (int x = 6; x < 10; ++x)
-                t.set(x, y, (x < 7) ? Color{ 238, 232, 214 } : Color{ 214, 206, 186 });
+        for (int y = 8; y < Tile::N; ++y)
+        {
+            t.set(0, y, shade(body, 14));
+            t.set(1, y, shade(body, -10));
+        }
+        t.set(0, 6, shade(body, 24)); t.set(1, 6, shade(body, 18));
+        t.set(0, 7, shade(body, 10)); t.set(1, 7, shade(body, 4));
+        t.set(0, 5, lit ? Color{ 255, 214, 120 } : Color{ 56, 48, 40 });
+    }
 
-        // The wick, and the flame on top of it when it is alight.
-        t.set(7, 5, Color{ 60, 52, 44 });
-        t.set(8, 5, Color{ 60, 52, 44 });
-        if (!lit) return;
-
-        for (int y = 1; y < 5; ++y)
-            for (int x = 6; x < 10; ++x)
+    void paintCandleFlame(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 4; y < 14; ++y)
+            for (int x = 5; x < 11; ++x)
             {
-                const bool core = (y > 2 && x > 6 && x < 9);
-                t.set(x, y, core ? Color{ 255, 238, 170 } : Color{ 248, 170, 54 });
+                const float dx = (x - 7.5f) / 3.0f, dy = (y - 10.0f) / 4.5f;
+                const float d = dx * dx + dy * dy * (y < 10 ? 1.0f : 2.2f);
+                if (d > 1.0f) continue;
+                t.set(x, y, d < 0.35f ? Color{ 255, 246, 200 } : Color{ 250, 168, 48 });
             }
     }
 
-    void paintCandle(Tile& t)    { paintCandleIn(t, false); }
-    void paintCandleLit(Tile& t) { paintCandleIn(t, true); }
+    void paintItemCandleIn(Tile& t, Color body, bool plain)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 5; y < 15; ++y)
+            for (int x = 6; x < 10; ++x)
+                t.set(x, y, shade(body, x < 7 ? 22 : (x > 8 ? -26 : 0)));
+        for (int x = 6; x < 10; ++x) t.set(x, 5, shade(body, 30));
+        t.set(7, 4, Color{ 56, 48, 40 });
+        t.set(7, 3, Color{ 56, 48, 40 });
+        if (plain) t.set(8, 9, shade(body, -18));
+    }
+
+    void paintCandle(Tile& t)    { paintCandleIn(t, Color{ 232, 222, 196 }, false); }
+    void paintCandleLit(Tile& t) { paintCandleIn(t, Color{ 232, 222, 196 }, true); }
 
     void paintScaffoldSide(Tile& t)
     {
@@ -7088,6 +7115,7 @@ namespace
         { Tiles::DustLine1Off, paintRedstoneDust },
         { Tiles::DustLine1On, paintRedstoneDustLit },
         { Tiles::LeverHandle, paintLever },
+        { Tiles::CandleFlameTile, paintCandleFlame },
         { Tiles::GlassPaneTopTile, paintGlassPaneTopTile },
         { Tiles::TerracottaPlainTile, paintTerracottaPlainTile },
         { Tiles::TintedGlassTile, paintTintedGlassTile },
@@ -7555,6 +7583,23 @@ namespace
         { Tiles::ItemRawIron, { "raw_iron", nullptr, nullptr } },
         { Tiles::ItemRawGold, { "raw_gold", nullptr, nullptr } },
         { Tiles::ItemAmethystShard, { "amethyst_shard", nullptr, nullptr } },
+        { Tiles::ItemCandleFirst, { "candle", nullptr, nullptr } },
+        { Tiles::ItemCandleFirst + 1, { "white_candle", nullptr, nullptr } },
+        { Tiles::ItemCandleFirst + 2, { "orange_candle", nullptr, nullptr } },
+        { Tiles::ItemCandleFirst + 3, { "magenta_candle", nullptr, nullptr } },
+        { Tiles::ItemCandleFirst + 4, { "light_blue_candle", nullptr, nullptr } },
+        { Tiles::ItemCandleFirst + 5, { "yellow_candle", nullptr, nullptr } },
+        { Tiles::ItemCandleFirst + 6, { "lime_candle", nullptr, nullptr } },
+        { Tiles::ItemCandleFirst + 7, { "pink_candle", nullptr, nullptr } },
+        { Tiles::ItemCandleFirst + 8, { "gray_candle", nullptr, nullptr } },
+        { Tiles::ItemCandleFirst + 9, { "light_gray_candle", nullptr, nullptr } },
+        { Tiles::ItemCandleFirst + 10, { "cyan_candle", nullptr, nullptr } },
+        { Tiles::ItemCandleFirst + 11, { "purple_candle", nullptr, nullptr } },
+        { Tiles::ItemCandleFirst + 12, { "blue_candle", nullptr, nullptr } },
+        { Tiles::ItemCandleFirst + 13, { "brown_candle", nullptr, nullptr } },
+        { Tiles::ItemCandleFirst + 14, { "green_candle", nullptr, nullptr } },
+        { Tiles::ItemCandleFirst + 15, { "red_candle", nullptr, nullptr } },
+        { Tiles::ItemCandleFirst + 16, { "black_candle", nullptr, nullptr } },
         { Tiles::ItemWarpedSign, { "warped_sign", nullptr, nullptr } },
         { Tiles::ItemBambooSign, { "bamboo_sign", nullptr, nullptr } },
         { Tiles::ItemMangroveSign, { "mangrove_sign", nullptr, nullptr } },
@@ -7694,6 +7739,38 @@ namespace
         { Tiles::GlassPaneTopTile, { "glass_pane_top", nullptr }, Tinting::None, 0, false },
         { Tiles::TerracottaPlainTile, { "terracotta", "hardened_clay", nullptr }, Tinting::None, 0, false },
         { Tiles::TintedGlassTile, { "tinted_glass", nullptr }, Tinting::None, 0, false },
+        { Tiles::DyedCandleTile + 0, { "white_candle", nullptr }, Tinting::None, 0, false },
+        { Tiles::DyedCandleTile + 1, { "white_candle_lit", nullptr }, Tinting::None, 0, false },
+        { Tiles::DyedCandleTile + 2, { "orange_candle", nullptr }, Tinting::None, 0, false },
+        { Tiles::DyedCandleTile + 3, { "orange_candle_lit", nullptr }, Tinting::None, 0, false },
+        { Tiles::DyedCandleTile + 4, { "magenta_candle", nullptr }, Tinting::None, 0, false },
+        { Tiles::DyedCandleTile + 5, { "magenta_candle_lit", nullptr }, Tinting::None, 0, false },
+        { Tiles::DyedCandleTile + 6, { "light_blue_candle", nullptr }, Tinting::None, 0, false },
+        { Tiles::DyedCandleTile + 7, { "light_blue_candle_lit", nullptr }, Tinting::None, 0, false },
+        { Tiles::DyedCandleTile + 8, { "yellow_candle", nullptr }, Tinting::None, 0, false },
+        { Tiles::DyedCandleTile + 9, { "yellow_candle_lit", nullptr }, Tinting::None, 0, false },
+        { Tiles::DyedCandleTile + 10, { "lime_candle", nullptr }, Tinting::None, 0, false },
+        { Tiles::DyedCandleTile + 11, { "lime_candle_lit", nullptr }, Tinting::None, 0, false },
+        { Tiles::DyedCandleTile + 12, { "pink_candle", nullptr }, Tinting::None, 0, false },
+        { Tiles::DyedCandleTile + 13, { "pink_candle_lit", nullptr }, Tinting::None, 0, false },
+        { Tiles::DyedCandleTile + 14, { "gray_candle", nullptr }, Tinting::None, 0, false },
+        { Tiles::DyedCandleTile + 15, { "gray_candle_lit", nullptr }, Tinting::None, 0, false },
+        { Tiles::DyedCandleTile + 16, { "light_gray_candle", nullptr }, Tinting::None, 0, false },
+        { Tiles::DyedCandleTile + 17, { "light_gray_candle_lit", nullptr }, Tinting::None, 0, false },
+        { Tiles::DyedCandleTile + 18, { "cyan_candle", nullptr }, Tinting::None, 0, false },
+        { Tiles::DyedCandleTile + 19, { "cyan_candle_lit", nullptr }, Tinting::None, 0, false },
+        { Tiles::DyedCandleTile + 20, { "purple_candle", nullptr }, Tinting::None, 0, false },
+        { Tiles::DyedCandleTile + 21, { "purple_candle_lit", nullptr }, Tinting::None, 0, false },
+        { Tiles::DyedCandleTile + 22, { "blue_candle", nullptr }, Tinting::None, 0, false },
+        { Tiles::DyedCandleTile + 23, { "blue_candle_lit", nullptr }, Tinting::None, 0, false },
+        { Tiles::DyedCandleTile + 24, { "brown_candle", nullptr }, Tinting::None, 0, false },
+        { Tiles::DyedCandleTile + 25, { "brown_candle_lit", nullptr }, Tinting::None, 0, false },
+        { Tiles::DyedCandleTile + 26, { "green_candle", nullptr }, Tinting::None, 0, false },
+        { Tiles::DyedCandleTile + 27, { "green_candle_lit", nullptr }, Tinting::None, 0, false },
+        { Tiles::DyedCandleTile + 28, { "red_candle", nullptr }, Tinting::None, 0, false },
+        { Tiles::DyedCandleTile + 29, { "red_candle_lit", nullptr }, Tinting::None, 0, false },
+        { Tiles::DyedCandleTile + 30, { "black_candle", nullptr }, Tinting::None, 0, false },
+        { Tiles::DyedCandleTile + 31, { "black_candle_lit", nullptr }, Tinting::None, 0, false },
         { Tiles::ConcreteTile + 0, { "white_concrete", nullptr }, Tinting::None, 0, false },
         { Tiles::ConcretePowderTile + 0, { "white_concrete_powder", nullptr }, Tinting::None, 0, false },
         { Tiles::TerracottaTile + 0, { "white_terracotta", nullptr }, Tinting::None, 0, false },
@@ -8442,6 +8519,18 @@ Atlas::Atlas()
         blitPainted(Tiles::GlazedTile + i, glazed);
         blitPainted(Tiles::StainedGlassTile + i, glass);
         blitPainted(Tiles::StainedPaneTopTile + i, pane);
+        Tile candle, candleLit, candleItem;
+        paintCandleIn(candle, WOOL_COLOUR[i], false);
+        paintCandleIn(candleLit, WOOL_COLOUR[i], true);
+        paintItemCandleIn(candleItem, WOOL_COLOUR[i], false);
+        blitPainted(Tiles::DyedCandleTile + i * 2, candle);
+        blitPainted(Tiles::DyedCandleTile + i * 2 + 1, candleLit);
+        blitPainted(Tiles::ItemCandleFirst + 1 + i, candleItem);
+    }
+    {
+        Tile plainCandle;
+        paintItemCandleIn(plainCandle, Color{ 232, 222, 196 }, true);
+        blitPainted(Tiles::ItemCandleFirst, plainCandle);
     }
     for (int i = 0; i < 4; ++i)
     {
@@ -9179,6 +9268,8 @@ bool Atlas::hasPainter(int tileIndex)
         tileIndex != Tiles::TerracottaPlainTile) return true;
     if (tileIndex >= Tiles::StainedGlassTile && tileIndex <= Tiles::StainedGlassTileLast) return true;
     if (tileIndex >= Tiles::StainedPaneTopTile && tileIndex <= Tiles::StainedPaneTopTileLast) return true;
+    if (tileIndex >= Tiles::DyedCandleTile && tileIndex <= Tiles::DyedCandleTileLast) return true;
+    if (tileIndex >= Tiles::ItemCandleFirst && tileIndex <= Tiles::ItemCandleLast) return true;
     if (tileIndex >= Tiles::CrackFirst &&
         tileIndex < Tiles::CrackFirst + Tiles::CrackStages)
         return true;
@@ -9203,7 +9294,7 @@ std::vector<int> unlinkedTiles()
         Tiles::WitherSkullTile, Tiles::LeverTile, Tiles::LeverOnTile, Tiles::ButtonTile,
         Tiles::ButtonOnTile, Tiles::RedstoneDust, Tiles::RedstoneDustLit, Tiles::TntPrimedSide,
         Tiles::ItemShield, Tiles::ExperienceOrb, Tiles::ArrowInFlight, Tiles::RainDrop,
-        Tiles::SnowFlake, Tiles::ShulkerBulletTile, Tiles::DragonFireballTile,
+        Tiles::SnowFlake, Tiles::ShulkerBulletTile, Tiles::DragonFireballTile, Tiles::CandleFlameTile,
     };
 
     std::vector<int> unlinked;

@@ -770,7 +770,8 @@ namespace
             else if (isCauldron(id))              why = "a cauldron with water in it";
             else if (isCake(id))                  why = "a cake set down and eaten from";
             else if (id == Blocks::LecternBook)   why = "a lectern with a book on it";
-            else if (id == Blocks::CandleLit)     why = "a candle somebody has lit";
+            else if (isCandle(id))                why = "candles set down together, or lit";
+            else if (isCandleCake(id))            why = "a candle set on a whole cake";
             else if (id == Blocks::SmokerLit || id == Blocks::BlastFurnaceLit)
                                                   why = "a furnace that is burning";
             else if (id == Blocks::NoteBlockLit || id == Blocks::ObserverLit)

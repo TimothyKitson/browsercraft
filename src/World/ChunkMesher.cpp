@@ -521,6 +521,131 @@ namespace
         }
     }
 
+    struct PartFace { int tile; float u0, v0, u1, v1; };
+
+    void emitPart(const MeshSnapshot& snap, int lx, int y, int lz, BlockId id,
+                  const glm::vec3& lo, const glm::vec3& hi, const PartFace faces[6],
+                  std::vector<float>& out)
+    {
+        const float sky = static_cast<float>(snap.skyLight(lx, y, lz)) / 15.0f;
+        const float block = static_cast<float>(snap.blockLight(lx, y, lz)) / 15.0f;
+        const glm::vec3 base(static_cast<float>(lx), static_cast<float>(y), static_cast<float>(lz));
+
+        for (int f = 0; f < 6; ++f)
+        {
+            if (faces[f].tile < 0) continue;
+            const FaceDef& face = FACES[f];
+            const bool flush =
+                (face.nx < 0 && lo.x <= 0.0f) || (face.nx > 0 && hi.x >= 1.0f) ||
+                (face.ny < 0 && lo.y <= 0.0f) || (face.ny > 0 && hi.y >= 1.0f) ||
+                (face.nz < 0 && lo.z <= 0.0f) || (face.nz > 0 && hi.z >= 1.0f);
+            if (flush && isOpaque(snap.block(lx + face.nx, y + face.ny, lz + face.nz))) continue;
+
+            const TileUV uv = tileUV(faces[f].tile);
+            float vx[4], vy[4], vz[4], vu[4], vv[4];
+            for (int c = 0; c < 4; ++c)
+            {
+                vx[c] = base.x + (face.corner[c][0] ? hi.x : lo.x);
+                vy[c] = base.y + (face.corner[c][1] ? hi.y : lo.y);
+                vz[c] = base.z + (face.corner[c][2] ? hi.z : lo.z);
+                const float pu = faces[f].u0 + (faces[f].u1 - faces[f].u0) * face.uv[c][0];
+                const float pv = faces[f].v0 + (faces[f].v1 - faces[f].v0) * face.uv[c][1];
+                vu[c] = uv.u0 + (uv.u1 - uv.u0) * (pu / 16.0f);
+                vv[c] = uv.vTop + (uv.vBottom - uv.vTop) * (pv / 16.0f);
+            }
+            const int order[6] = { 0, 1, 2, 0, 2, 3 };
+            for (int k : order)
+                pushVertex(out, vx[k], vy[k], vz[k], vu[k], vv[k], face.shade, sky, block, tagOf(f, id, face.corner[k][1] == 1));
+        }
+    }
+
+    void emitTinyCross(const MeshSnapshot& snap, int lx, int y, int lz, BlockId id,
+                       float cx, float cz, float y0, float y1, float half, int tile,
+                       float u0, float v0, float u1, float v1, std::vector<float>& out)
+    {
+        const TileUV uv = tileUV(tile);
+        const float sky = static_cast<float>(snap.skyLight(lx, y, lz)) / 15.0f;
+        const float block = std::max(static_cast<float>(snap.blockLight(lx, y, lz)),
+                                     static_cast<float>(lightEmission(id))) / 15.0f;
+        const float au = uv.u0 + (uv.u1 - uv.u0) * (u0 / 16.0f), bu = uv.u0 + (uv.u1 - uv.u0) * (u1 / 16.0f);
+        const float tv = uv.vTop + (uv.vBottom - uv.vTop) * (v0 / 16.0f), bv = uv.vTop + (uv.vBottom - uv.vTop) * (v1 / 16.0f);
+        const float x = static_cast<float>(lx) + cx, z = static_cast<float>(lz) + cz;
+        const float ly = static_cast<float>(y) + y0, hy = static_cast<float>(y) + y1;
+        const float d = half * 0.7071f;
+        const float ends[2][4] = { { -d, -d, d, d }, { -d, d, d, -d } };
+        for (const auto& e : ends)
+            for (int side = 0; side < 2; ++side)
+            {
+                const float ax = x + (side ? e[2] : e[0]), az = z + (side ? e[3] : e[1]);
+                const float bx = x + (side ? e[0] : e[2]), bz = z + (side ? e[1] : e[3]);
+                pushVertex(out, ax, ly, az, au, bv, 0.95f, sky, block, tagOf(CROSS_FACE, id));
+                pushVertex(out, bx, ly, bz, bu, bv, 0.95f, sky, block, tagOf(CROSS_FACE, id));
+                pushVertex(out, bx, hy, bz, bu, tv, 0.95f, sky, block, tagOf(CROSS_FACE, id, true));
+                pushVertex(out, ax, ly, az, au, bv, 0.95f, sky, block, tagOf(CROSS_FACE, id));
+                pushVertex(out, bx, hy, bz, bu, tv, 0.95f, sky, block, tagOf(CROSS_FACE, id, true));
+                pushVertex(out, ax, hy, az, au, tv, 0.95f, sky, block, tagOf(CROSS_FACE, id, true));
+            }
+    }
+
+    void emitOneCandle(const MeshSnapshot& snap, int lx, int y, int lz, BlockId id, int tile, bool lit,
+                       int px, int pz, int baseY, int height, std::vector<float>& out)
+    {
+        const float h = static_cast<float>(height);
+        const PartFace faces[6] = {
+            { tile, 0.0f, 8.0f, 2.0f, 8.0f + h }, { tile, 0.0f, 8.0f, 2.0f, 8.0f + h },
+            { tile, 0.0f, 6.0f, 2.0f, 8.0f },     { tile, 0.0f, 14.0f, 2.0f, 16.0f },
+            { tile, 0.0f, 8.0f, 2.0f, 8.0f + h }, { tile, 0.0f, 8.0f, 2.0f, 8.0f + h } };
+        const glm::vec3 lo(px / 16.0f, baseY / 16.0f, pz / 16.0f);
+        const glm::vec3 hi((px + 2) / 16.0f, (baseY + height) / 16.0f, (pz + 2) / 16.0f);
+        emitPart(snap, lx, y, lz, id, lo, hi, faces, out);
+        const float cx = (px + 1) / 16.0f, cz = (pz + 1) / 16.0f;
+        const float top = (baseY + height) / 16.0f;
+        emitTinyCross(snap, lx, y, lz, id, cx, cz, top, top + 1.0f / 16.0f, 0.5f / 16.0f, tile, 0.0f, 5.0f, 1.0f, 6.0f, out);
+        if (lit)
+            emitTinyCross(snap, lx, y, lz, id, cx, cz, top + 0.5f / 16.0f, top + 3.0f / 16.0f, 1.25f / 16.0f,
+                          Tiles::CandleFlameTile, 4.0f, 3.0f, 12.0f, 14.0f, out);
+    }
+
+    void emitCake(const MeshSnapshot& snap, int lx, int y, int lz, BlockId id, std::vector<float>& out)
+    {
+        const int bites = cakeEaten(id);
+        const float west = 1.0f + 2.0f * bites;
+        const PartFace faces[6] = {
+            { Tiles::CakeSide, 1.0f, 8.0f, 15.0f, 16.0f },
+            { bites > 0 ? Tiles::CakeInner : Tiles::CakeSide, 1.0f, 8.0f, 15.0f, 16.0f },
+            { Tiles::CakeTop, west, 1.0f, 15.0f, 15.0f },
+            { Tiles::CakeBottom, west, 1.0f, 15.0f, 15.0f },
+            { Tiles::CakeSide, west, 8.0f, 15.0f, 16.0f },
+            { Tiles::CakeSide, west, 8.0f, 15.0f, 16.0f } };
+        emitPart(snap, lx, y, lz, id, glm::vec3(west / 16.0f, 0.0f, 1.0f / 16.0f),
+                 glm::vec3(15.0f / 16.0f, 0.5f, 15.0f / 16.0f), faces, out);
+    }
+
+    void emitCandles(const MeshSnapshot& snap, int lx, int y, int lz, BlockId id, std::vector<float>& out)
+    {
+        if (isCandleCake(id))
+        {
+            emitCake(snap, lx, y, lz, id, out);
+            const int shade = candleCakeShade(id);
+            const bool lit = candleCakeLit(id);
+            const int tile = blockInfo(candleOf(shade, 1, lit)).tileSide;
+            emitOneCandle(snap, lx, y, lz, id, tile, lit, 7, 7, 8, 6, out);
+            return;
+        }
+        struct Spot { int x, z, h; };
+        static const Spot SPOTS[4][4] = {
+            { { 7, 7, 6 } },
+            { { 5, 7, 5 }, { 9, 6, 6 } },
+            { { 7, 9, 3 }, { 5, 7, 5 }, { 8, 6, 6 } },
+            { { 6, 8, 3 }, { 9, 8, 5 }, { 5, 5, 5 }, { 8, 5, 6 } } };
+        const int count = candleCount(id);
+        const bool lit = candleLit(id);
+        const int tile = blockInfo(id).tileSide;
+        for (int k = 0; k < count; ++k)
+            emitOneCandle(snap, lx, y, lz, id, tile, lit, SPOTS[count - 1][k].x, SPOTS[count - 1][k].z, 0,
+                          SPOTS[count - 1][k].h, out);
+    }
+
     // Stairs: the bottom half of the cell, plus a step on the back half
     // of the top. "Facing" is the low side -- the way you walk up.
     void emitStairs(const MeshSnapshot& snap, int lx, int y, int lz,
@@ -1078,6 +1203,14 @@ void buildChunkMesh(const MeshSnapshot& snapshot, MeshResult& out)
                 else if (isPane(id))
                 {
                     emitPane(snapshot, lx, y, lz, id, out.transparentVertices);
+                }
+                else if (isCandle(id) || isCandleCake(id))
+                {
+                    emitCandles(snapshot, lx, y, lz, id, out.opaqueVertices);
+                }
+                else if (isCake(id))
+                {
+                    emitCake(snapshot, lx, y, lz, id, out.opaqueVertices);
                 }
                 else
                 {

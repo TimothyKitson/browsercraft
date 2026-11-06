@@ -129,7 +129,8 @@ Everything in the 1.21 textures zip the game doesn't use yet, turned into work. 
     - II. Terracotta, plain and in 16 colours. Glazed terracotta in 16, which faces where you place it.
     - III. Stained glass and panes in 16 colours. Glass panes that connect like Minecraft's. Tinted glass.
     - Notes: badlands now have terracotta bands under the red sand. Amethyst shards came with tinted glass (clusters drop 4, four make a block). Glazed terracotta has one facing for now; turning it to face the placer is still to do.
-32. Candles in 16 colours: lit and unlit, 1 to 4 to a block, and candle cakes.
+32. Candles in 16 colours: lit and unlit, 1 to 4 to a block, and candle cakes. (done)
+    - Notes: candles are real 3D models now, with a baked flame when lit. Cakes got their proper half-height shape with bites taken out, since the candle cake needed it.
 33. Coloured shulker boxes in all 16 colours, plus shulker mobs in those colours.
 34. Beds in all 16 colours.
 35. Chests

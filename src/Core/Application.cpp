@@ -2045,7 +2045,7 @@ bool Application::frame()
             m_startupScreen == "beaconui" || m_startupScreen == "grindstone" ||
             m_startupScreen == "grinderror" || m_startupScreen == "woods" ||
             m_startupScreen == "cherry" || m_startupScreen == "mangrove" || m_startupScreen == "fungi" ||
-            m_startupScreen == "stones" || m_startupScreen == "colours" ||
+            m_startupScreen == "stones" || m_startupScreen == "colours" || m_startupScreen == "candles" ||
             m_startupScreen == "boat" || m_startupScreen == "rails" ||
             m_startupScreen == "mobs" || m_startupScreen == "golem" ||
             m_startupScreen == "glowmobs" || m_startupScreen == "variants" ||
@@ -2132,6 +2132,7 @@ bool Application::frame()
                                   m_startupScreen != "fungi" &&
                                   m_startupScreen != "stones" &&
                                   m_startupScreen != "colours" &&
+                                  m_startupScreen != "candles" &&
                                   m_startupScreen != "boat" &&
                                   m_startupScreen != "rails" &&
                                   m_startupScreen != "mobs" &&
@@ -2506,7 +2507,7 @@ bool Application::frame()
                 m_startupScreen == "beaconui" || m_startupScreen == "grindstone" ||
                 m_startupScreen == "grinderror" || m_startupScreen == "woods" ||
                 m_startupScreen == "cherry" || m_startupScreen == "mangrove" || m_startupScreen == "fungi" ||
-                m_startupScreen == "stones" || m_startupScreen == "colours")
+                m_startupScreen == "stones" || m_startupScreen == "colours" || m_startupScreen == "candles")
             {
                 m_camera.setOrientation(0.0f, -25.0f);
                 m_camera.addLook(0.0f, 0.0f, 0.0f);
@@ -2603,6 +2604,30 @@ bool Application::frame()
                     m_world->setBlock(px + 16, py, pz - 10, Blocks::Bookshelf);
                     m_world->setBlock(px + 16, py, pz + 10, Blocks::DiamondOre);
                     m_world->setBlock(px + 16, py + 1, pz + 10, Blocks::EndPortalFrame);
+                }
+                if (m_startupScreen == "candles")
+                {
+                    m_devAttackStrength = 1.0f;
+                    m_camera.setOrientation(0.0f, -30.0f);
+                    for (int dx = 1; dx <= 8; ++dx)
+                        for (int dz = -6; dz <= 6; ++dz)
+                        {
+                            for (int dy = 0; dy <= 4; ++dy) m_world->setBlock(px + dx, py + dy, pz + dz, Blocks::Air);
+                            m_world->setBlock(px + dx, py - 1, pz + dz, Blocks::Stone);
+                        }
+                    for (int shade = 0; shade <= 16; ++shade)
+                    {
+                        const int row = shade / 9, col = shade % 9;
+                        m_world->setBlock(px + 3 + row, py, pz - 4 + col, candleOf(shade, 1 + shade % 4, shade % 3 != 0));
+                    }
+                    for (int k = 0; k < 4; ++k)
+                        m_world->setBlock(px + 5, py, pz - 3 + k * 2, candleCakeOf(k * 4, k % 2 == 0));
+                    m_world->setBlock(px + 5, py, pz + 5, Blocks::Cake3);
+                    m_world->setBlock(px + 2, py, pz - 1, candleOf(0, 4, true));
+                    m_world->setBlock(px + 2, py, pz + 1, candleOf(15, 2, false));
+                    m_world->setBlock(px + 8, py, pz - 5, Blocks::Bookshelf);
+                    m_world->setBlock(px + 8, py, pz + 5, Blocks::DiamondOre);
+                    m_world->setBlock(px + 8, py + 1, pz + 5, Blocks::EndPortalFrame);
                 }
                 if (m_startupScreen == "fungi")
                 {
@@ -5954,7 +5979,7 @@ void Application::updateMining(float deltaTime)
                 // a seam comes home as ore, and glass as glass.
                 const Enchanting::Set onTool = m_inventory.selected().enchantments;
                 const bool silk = Enchanting::has(onTool, Enchanting::Kind::SilkTouch);
-                if (silk && drop != Blocks::Air) drop = id;
+                if (silk && drop != Blocks::Air && isObtainable(id)) drop = id;
 
                 int dropped = 1;
 
@@ -5975,6 +6000,7 @@ void Application::updateMining(float deltaTime)
                     else if (seam == Blocks::AmethystCluster) dropped *= 4;
                 }
 
+                if (isCandle(id)) dropped = candleCount(id);
                 if (drop != Blocks::Air)
                     m_drops.spawnFromBrokenBlock(hit.block, drop, dropped);
 
@@ -8626,6 +8652,21 @@ void Application::handleDrinking(float deltaTime)
 // else in the game is. Seven slices and it is gone.
 bool Application::useCake(const glm::ivec3& at, BlockId block)
 {
+    ItemStack& held = m_inventory.selected();
+    if (block == Blocks::Cake0 && !held.empty() && isBlockStack(held.id) && isCandle(asBlock(held.id)))
+    {
+        const BlockId topped = candleCakeOf(candleShade(asBlock(held.id)), false);
+        m_world->setBlock(at.x, at.y, at.z, topped);
+        m_net.onLocalBlockChange(at.x, at.y, at.z, topped);
+        m_audio.playPlace(topped);
+        if (!m_player.creative())
+        {
+            held.count -= 1;
+            if (held.count <= 0) held.clear();
+        }
+        return true;
+    }
+
     if (!m_player.canEat() && !m_player.creative()) return false;
 
     const FoodValue slice{ 2, 0.4f };
@@ -8646,24 +8687,78 @@ bool Application::useCake(const glm::ivec3& at, BlockId block)
 // with flint and steel, snuffed by hand.
 bool Application::useCandle(const glm::ivec3& at, BlockId block)
 {
-    const ItemStack& held = m_inventory.selected();
+    ItemStack& held = m_inventory.selected();
+    const int shade = candleShade(block);
+    const int count = candleCount(block);
+    const bool lit = candleLit(block);
 
-    if (block == Blocks::Candle)
+    auto become = [&](BlockId now) {
+        m_world->setBlock(at.x, at.y, at.z, now);
+        m_net.onLocalBlockChange(at.x, at.y, at.z, now);
+    };
+
+    if (!held.empty() && held.id == Items::FlintAndSteel)
     {
-        if (held.empty() || held.id != Items::FlintAndSteel) return false;
-
-        m_world->setBlock(at.x, at.y, at.z, Blocks::CandleLit);
-        m_net.onLocalBlockChange(at.x, at.y, at.z, Blocks::CandleLit);
+        if (lit) return false;
+        become(candleOf(shade, count, true));
         m_audio.play(Sound::Fire, 0.5f, 1.4f);
-        wearTool(Blocks::Candle);
+        wearTool(block);
         return true;
     }
 
-    if (!held.empty()) return false;   // a full hand is placing, not snuffing
+    if (!held.empty() && isBlockStack(held.id) && isCandle(asBlock(held.id)) &&
+        candleShade(asBlock(held.id)) == shade && count < 4)
+    {
+        become(candleOf(shade, count + 1, lit));
+        m_audio.playPlace(block);
+        if (!m_player.creative())
+        {
+            held.count -= 1;
+            if (held.count <= 0) held.clear();
+        }
+        return true;
+    }
 
-    m_world->setBlock(at.x, at.y, at.z, Blocks::Candle);
-    m_net.onLocalBlockChange(at.x, at.y, at.z, Blocks::Candle);
+    if (!held.empty() || !lit) return false;
+
+    become(candleOf(shade, count, false));
     m_audio.play(Sound::Click, 0.4f, 0.7f);
+    return true;
+}
+
+bool Application::useCandleCake(const glm::ivec3& at, BlockId block)
+{
+    ItemStack& held = m_inventory.selected();
+    const int shade = candleCakeShade(block);
+    const bool lit = candleCakeLit(block);
+
+    auto become = [&](BlockId now) {
+        m_world->setBlock(at.x, at.y, at.z, now);
+        m_net.onLocalBlockChange(at.x, at.y, at.z, now);
+    };
+
+    if (!held.empty() && held.id == Items::FlintAndSteel)
+    {
+        if (lit) return false;
+        become(candleCakeOf(shade, true));
+        m_audio.play(Sound::Fire, 0.5f, 1.4f);
+        wearTool(block);
+        return true;
+    }
+
+    if (held.empty() && lit)
+    {
+        become(candleCakeOf(shade, false));
+        m_audio.play(Sound::Click, 0.4f, 0.7f);
+        return true;
+    }
+
+    if (!m_player.canEat() && !m_player.creative()) return false;
+    const FoodValue slice{ 2, 0.4f };
+    if (!m_player.eat(slice.hunger, slice.saturation)) return false;
+    become(Blocks::Cake1);
+    if (!m_player.creative()) m_drops.spawnFromBrokenBlock(at, candleOf(shade, 1, false), 1);
+    m_audio.play(Sound::Pickup, 0.6f, 0.85f);
     return true;
 }
 
@@ -9017,8 +9112,8 @@ void Application::handlePlacement()
             }
 
             if (isCake(used) && useCake(bench.block, used)) return;
-            if ((used == Blocks::Candle || used == Blocks::CandleLit) &&
-                useCandle(bench.block, used)) return;
+            if (isCandle(used) && useCandle(bench.block, used)) return;
+            if (isCandleCake(used) && useCandleCake(bench.block, used)) return;
             if (isLog(used) && plantCocoa(bench.previous)) return;
             if (isComposter(used) && useComposter(bench.block, used)) return;
             if (isCauldron(used) && useCauldron(bench.block, used)) return;

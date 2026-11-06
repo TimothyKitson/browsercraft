@@ -916,6 +916,7 @@ private:
 
     bool useCake(const glm::ivec3& at, BlockId block);
     bool useCandle(const glm::ivec3& at, BlockId block);
+    bool useCandleCake(const glm::ivec3& at, BlockId block);
     bool plantCocoa(const glm::ivec3& at);
     bool useComposter(const glm::ivec3& at, BlockId block);
     bool useCauldron(const glm::ivec3& at, BlockId block);

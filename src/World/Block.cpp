@@ -349,8 +349,8 @@ namespace
         { "Cake",         CakeTop,       CakeBottom,     CakeInner,      true,  false, RenderType::Cube,   0,   0.5f },
         { "Cake",         CakeTop,       CakeBottom,     CakeInner,      true,  false, RenderType::Cube,   0,   0.5f },
 
-        { "Candle",       CandleTile,    CandleTile,     CandleTile,     false, false, RenderType::Cross,  0,   0.1f },
-        { "Candle",       CandleLitTile, CandleLitTile,  CandleLitTile,  false, false, RenderType::Cross, 10,   0.1f },
+        { "Candle",       CandleTile,    CandleTile,     CandleTile,     false, false, RenderType::Candle, 0,   0.1f },
+        { "Candle",       CandleLitTile, CandleLitTile,  CandleLitTile,  false, false, RenderType::Candle, 3,   0.1f },
 
         { "Scaffolding",  ScaffoldTop,   ScaffoldBottom, ScaffoldSide,   false, false, RenderType::Cube,   0,   0.2f },
 
@@ -1034,6 +1034,174 @@ namespace
         { "Red Stained Glass Pane", StainedPaneTopTile + 14, StainedPaneTopTile + 14, StainedGlassTile + 14, true, false, RenderType::Pane, 0, 0.3f },
         { "Black Stained Glass Pane", StainedPaneTopTile + 15, StainedPaneTopTile + 15, StainedGlassTile + 15, true, false, RenderType::Pane, 0, 0.3f },
         { "Tinted Glass", TintedGlassTile, TintedGlassTile, TintedGlassTile, true, false, RenderType::Cube, 0, 0.3f },
+        { "Candle", CandleTile, CandleTile, CandleTile, false, false, RenderType::Candle, 0, 0.1f },
+        { "Candle", CandleLitTile, CandleLitTile, CandleLitTile, false, false, RenderType::Candle, 6, 0.1f },
+        { "Candle", CandleTile, CandleTile, CandleTile, false, false, RenderType::Candle, 0, 0.1f },
+        { "Candle", CandleLitTile, CandleLitTile, CandleLitTile, false, false, RenderType::Candle, 9, 0.1f },
+        { "Candle", CandleTile, CandleTile, CandleTile, false, false, RenderType::Candle, 0, 0.1f },
+        { "Candle", CandleLitTile, CandleLitTile, CandleLitTile, false, false, RenderType::Candle, 12, 0.1f },
+        { "White Candle", DyedCandleTile + 0, DyedCandleTile + 0, DyedCandleTile + 0, false, false, RenderType::Candle, 0, 0.1f },
+        { "White Candle", DyedCandleTile + 1, DyedCandleTile + 1, DyedCandleTile + 1, false, false, RenderType::Candle, 3, 0.1f },
+        { "White Candle", DyedCandleTile + 0, DyedCandleTile + 0, DyedCandleTile + 0, false, false, RenderType::Candle, 0, 0.1f },
+        { "White Candle", DyedCandleTile + 1, DyedCandleTile + 1, DyedCandleTile + 1, false, false, RenderType::Candle, 6, 0.1f },
+        { "White Candle", DyedCandleTile + 0, DyedCandleTile + 0, DyedCandleTile + 0, false, false, RenderType::Candle, 0, 0.1f },
+        { "White Candle", DyedCandleTile + 1, DyedCandleTile + 1, DyedCandleTile + 1, false, false, RenderType::Candle, 9, 0.1f },
+        { "White Candle", DyedCandleTile + 0, DyedCandleTile + 0, DyedCandleTile + 0, false, false, RenderType::Candle, 0, 0.1f },
+        { "White Candle", DyedCandleTile + 1, DyedCandleTile + 1, DyedCandleTile + 1, false, false, RenderType::Candle, 12, 0.1f },
+        { "Orange Candle", DyedCandleTile + 2, DyedCandleTile + 2, DyedCandleTile + 2, false, false, RenderType::Candle, 0, 0.1f },
+        { "Orange Candle", DyedCandleTile + 3, DyedCandleTile + 3, DyedCandleTile + 3, false, false, RenderType::Candle, 3, 0.1f },
+        { "Orange Candle", DyedCandleTile + 2, DyedCandleTile + 2, DyedCandleTile + 2, false, false, RenderType::Candle, 0, 0.1f },
+        { "Orange Candle", DyedCandleTile + 3, DyedCandleTile + 3, DyedCandleTile + 3, false, false, RenderType::Candle, 6, 0.1f },
+        { "Orange Candle", DyedCandleTile + 2, DyedCandleTile + 2, DyedCandleTile + 2, false, false, RenderType::Candle, 0, 0.1f },
+        { "Orange Candle", DyedCandleTile + 3, DyedCandleTile + 3, DyedCandleTile + 3, false, false, RenderType::Candle, 9, 0.1f },
+        { "Orange Candle", DyedCandleTile + 2, DyedCandleTile + 2, DyedCandleTile + 2, false, false, RenderType::Candle, 0, 0.1f },
+        { "Orange Candle", DyedCandleTile + 3, DyedCandleTile + 3, DyedCandleTile + 3, false, false, RenderType::Candle, 12, 0.1f },
+        { "Magenta Candle", DyedCandleTile + 4, DyedCandleTile + 4, DyedCandleTile + 4, false, false, RenderType::Candle, 0, 0.1f },
+        { "Magenta Candle", DyedCandleTile + 5, DyedCandleTile + 5, DyedCandleTile + 5, false, false, RenderType::Candle, 3, 0.1f },
+        { "Magenta Candle", DyedCandleTile + 4, DyedCandleTile + 4, DyedCandleTile + 4, false, false, RenderType::Candle, 0, 0.1f },
+        { "Magenta Candle", DyedCandleTile + 5, DyedCandleTile + 5, DyedCandleTile + 5, false, false, RenderType::Candle, 6, 0.1f },
+        { "Magenta Candle", DyedCandleTile + 4, DyedCandleTile + 4, DyedCandleTile + 4, false, false, RenderType::Candle, 0, 0.1f },
+        { "Magenta Candle", DyedCandleTile + 5, DyedCandleTile + 5, DyedCandleTile + 5, false, false, RenderType::Candle, 9, 0.1f },
+        { "Magenta Candle", DyedCandleTile + 4, DyedCandleTile + 4, DyedCandleTile + 4, false, false, RenderType::Candle, 0, 0.1f },
+        { "Magenta Candle", DyedCandleTile + 5, DyedCandleTile + 5, DyedCandleTile + 5, false, false, RenderType::Candle, 12, 0.1f },
+        { "Light Blue Candle", DyedCandleTile + 6, DyedCandleTile + 6, DyedCandleTile + 6, false, false, RenderType::Candle, 0, 0.1f },
+        { "Light Blue Candle", DyedCandleTile + 7, DyedCandleTile + 7, DyedCandleTile + 7, false, false, RenderType::Candle, 3, 0.1f },
+        { "Light Blue Candle", DyedCandleTile + 6, DyedCandleTile + 6, DyedCandleTile + 6, false, false, RenderType::Candle, 0, 0.1f },
+        { "Light Blue Candle", DyedCandleTile + 7, DyedCandleTile + 7, DyedCandleTile + 7, false, false, RenderType::Candle, 6, 0.1f },
+        { "Light Blue Candle", DyedCandleTile + 6, DyedCandleTile + 6, DyedCandleTile + 6, false, false, RenderType::Candle, 0, 0.1f },
+        { "Light Blue Candle", DyedCandleTile + 7, DyedCandleTile + 7, DyedCandleTile + 7, false, false, RenderType::Candle, 9, 0.1f },
+        { "Light Blue Candle", DyedCandleTile + 6, DyedCandleTile + 6, DyedCandleTile + 6, false, false, RenderType::Candle, 0, 0.1f },
+        { "Light Blue Candle", DyedCandleTile + 7, DyedCandleTile + 7, DyedCandleTile + 7, false, false, RenderType::Candle, 12, 0.1f },
+        { "Yellow Candle", DyedCandleTile + 8, DyedCandleTile + 8, DyedCandleTile + 8, false, false, RenderType::Candle, 0, 0.1f },
+        { "Yellow Candle", DyedCandleTile + 9, DyedCandleTile + 9, DyedCandleTile + 9, false, false, RenderType::Candle, 3, 0.1f },
+        { "Yellow Candle", DyedCandleTile + 8, DyedCandleTile + 8, DyedCandleTile + 8, false, false, RenderType::Candle, 0, 0.1f },
+        { "Yellow Candle", DyedCandleTile + 9, DyedCandleTile + 9, DyedCandleTile + 9, false, false, RenderType::Candle, 6, 0.1f },
+        { "Yellow Candle", DyedCandleTile + 8, DyedCandleTile + 8, DyedCandleTile + 8, false, false, RenderType::Candle, 0, 0.1f },
+        { "Yellow Candle", DyedCandleTile + 9, DyedCandleTile + 9, DyedCandleTile + 9, false, false, RenderType::Candle, 9, 0.1f },
+        { "Yellow Candle", DyedCandleTile + 8, DyedCandleTile + 8, DyedCandleTile + 8, false, false, RenderType::Candle, 0, 0.1f },
+        { "Yellow Candle", DyedCandleTile + 9, DyedCandleTile + 9, DyedCandleTile + 9, false, false, RenderType::Candle, 12, 0.1f },
+        { "Lime Candle", DyedCandleTile + 10, DyedCandleTile + 10, DyedCandleTile + 10, false, false, RenderType::Candle, 0, 0.1f },
+        { "Lime Candle", DyedCandleTile + 11, DyedCandleTile + 11, DyedCandleTile + 11, false, false, RenderType::Candle, 3, 0.1f },
+        { "Lime Candle", DyedCandleTile + 10, DyedCandleTile + 10, DyedCandleTile + 10, false, false, RenderType::Candle, 0, 0.1f },
+        { "Lime Candle", DyedCandleTile + 11, DyedCandleTile + 11, DyedCandleTile + 11, false, false, RenderType::Candle, 6, 0.1f },
+        { "Lime Candle", DyedCandleTile + 10, DyedCandleTile + 10, DyedCandleTile + 10, false, false, RenderType::Candle, 0, 0.1f },
+        { "Lime Candle", DyedCandleTile + 11, DyedCandleTile + 11, DyedCandleTile + 11, false, false, RenderType::Candle, 9, 0.1f },
+        { "Lime Candle", DyedCandleTile + 10, DyedCandleTile + 10, DyedCandleTile + 10, false, false, RenderType::Candle, 0, 0.1f },
+        { "Lime Candle", DyedCandleTile + 11, DyedCandleTile + 11, DyedCandleTile + 11, false, false, RenderType::Candle, 12, 0.1f },
+        { "Pink Candle", DyedCandleTile + 12, DyedCandleTile + 12, DyedCandleTile + 12, false, false, RenderType::Candle, 0, 0.1f },
+        { "Pink Candle", DyedCandleTile + 13, DyedCandleTile + 13, DyedCandleTile + 13, false, false, RenderType::Candle, 3, 0.1f },
+        { "Pink Candle", DyedCandleTile + 12, DyedCandleTile + 12, DyedCandleTile + 12, false, false, RenderType::Candle, 0, 0.1f },
+        { "Pink Candle", DyedCandleTile + 13, DyedCandleTile + 13, DyedCandleTile + 13, false, false, RenderType::Candle, 6, 0.1f },
+        { "Pink Candle", DyedCandleTile + 12, DyedCandleTile + 12, DyedCandleTile + 12, false, false, RenderType::Candle, 0, 0.1f },
+        { "Pink Candle", DyedCandleTile + 13, DyedCandleTile + 13, DyedCandleTile + 13, false, false, RenderType::Candle, 9, 0.1f },
+        { "Pink Candle", DyedCandleTile + 12, DyedCandleTile + 12, DyedCandleTile + 12, false, false, RenderType::Candle, 0, 0.1f },
+        { "Pink Candle", DyedCandleTile + 13, DyedCandleTile + 13, DyedCandleTile + 13, false, false, RenderType::Candle, 12, 0.1f },
+        { "Gray Candle", DyedCandleTile + 14, DyedCandleTile + 14, DyedCandleTile + 14, false, false, RenderType::Candle, 0, 0.1f },
+        { "Gray Candle", DyedCandleTile + 15, DyedCandleTile + 15, DyedCandleTile + 15, false, false, RenderType::Candle, 3, 0.1f },
+        { "Gray Candle", DyedCandleTile + 14, DyedCandleTile + 14, DyedCandleTile + 14, false, false, RenderType::Candle, 0, 0.1f },
+        { "Gray Candle", DyedCandleTile + 15, DyedCandleTile + 15, DyedCandleTile + 15, false, false, RenderType::Candle, 6, 0.1f },
+        { "Gray Candle", DyedCandleTile + 14, DyedCandleTile + 14, DyedCandleTile + 14, false, false, RenderType::Candle, 0, 0.1f },
+        { "Gray Candle", DyedCandleTile + 15, DyedCandleTile + 15, DyedCandleTile + 15, false, false, RenderType::Candle, 9, 0.1f },
+        { "Gray Candle", DyedCandleTile + 14, DyedCandleTile + 14, DyedCandleTile + 14, false, false, RenderType::Candle, 0, 0.1f },
+        { "Gray Candle", DyedCandleTile + 15, DyedCandleTile + 15, DyedCandleTile + 15, false, false, RenderType::Candle, 12, 0.1f },
+        { "Light Gray Candle", DyedCandleTile + 16, DyedCandleTile + 16, DyedCandleTile + 16, false, false, RenderType::Candle, 0, 0.1f },
+        { "Light Gray Candle", DyedCandleTile + 17, DyedCandleTile + 17, DyedCandleTile + 17, false, false, RenderType::Candle, 3, 0.1f },
+        { "Light Gray Candle", DyedCandleTile + 16, DyedCandleTile + 16, DyedCandleTile + 16, false, false, RenderType::Candle, 0, 0.1f },
+        { "Light Gray Candle", DyedCandleTile + 17, DyedCandleTile + 17, DyedCandleTile + 17, false, false, RenderType::Candle, 6, 0.1f },
+        { "Light Gray Candle", DyedCandleTile + 16, DyedCandleTile + 16, DyedCandleTile + 16, false, false, RenderType::Candle, 0, 0.1f },
+        { "Light Gray Candle", DyedCandleTile + 17, DyedCandleTile + 17, DyedCandleTile + 17, false, false, RenderType::Candle, 9, 0.1f },
+        { "Light Gray Candle", DyedCandleTile + 16, DyedCandleTile + 16, DyedCandleTile + 16, false, false, RenderType::Candle, 0, 0.1f },
+        { "Light Gray Candle", DyedCandleTile + 17, DyedCandleTile + 17, DyedCandleTile + 17, false, false, RenderType::Candle, 12, 0.1f },
+        { "Cyan Candle", DyedCandleTile + 18, DyedCandleTile + 18, DyedCandleTile + 18, false, false, RenderType::Candle, 0, 0.1f },
+        { "Cyan Candle", DyedCandleTile + 19, DyedCandleTile + 19, DyedCandleTile + 19, false, false, RenderType::Candle, 3, 0.1f },
+        { "Cyan Candle", DyedCandleTile + 18, DyedCandleTile + 18, DyedCandleTile + 18, false, false, RenderType::Candle, 0, 0.1f },
+        { "Cyan Candle", DyedCandleTile + 19, DyedCandleTile + 19, DyedCandleTile + 19, false, false, RenderType::Candle, 6, 0.1f },
+        { "Cyan Candle", DyedCandleTile + 18, DyedCandleTile + 18, DyedCandleTile + 18, false, false, RenderType::Candle, 0, 0.1f },
+        { "Cyan Candle", DyedCandleTile + 19, DyedCandleTile + 19, DyedCandleTile + 19, false, false, RenderType::Candle, 9, 0.1f },
+        { "Cyan Candle", DyedCandleTile + 18, DyedCandleTile + 18, DyedCandleTile + 18, false, false, RenderType::Candle, 0, 0.1f },
+        { "Cyan Candle", DyedCandleTile + 19, DyedCandleTile + 19, DyedCandleTile + 19, false, false, RenderType::Candle, 12, 0.1f },
+        { "Purple Candle", DyedCandleTile + 20, DyedCandleTile + 20, DyedCandleTile + 20, false, false, RenderType::Candle, 0, 0.1f },
+        { "Purple Candle", DyedCandleTile + 21, DyedCandleTile + 21, DyedCandleTile + 21, false, false, RenderType::Candle, 3, 0.1f },
+        { "Purple Candle", DyedCandleTile + 20, DyedCandleTile + 20, DyedCandleTile + 20, false, false, RenderType::Candle, 0, 0.1f },
+        { "Purple Candle", DyedCandleTile + 21, DyedCandleTile + 21, DyedCandleTile + 21, false, false, RenderType::Candle, 6, 0.1f },
+        { "Purple Candle", DyedCandleTile + 20, DyedCandleTile + 20, DyedCandleTile + 20, false, false, RenderType::Candle, 0, 0.1f },
+        { "Purple Candle", DyedCandleTile + 21, DyedCandleTile + 21, DyedCandleTile + 21, false, false, RenderType::Candle, 9, 0.1f },
+        { "Purple Candle", DyedCandleTile + 20, DyedCandleTile + 20, DyedCandleTile + 20, false, false, RenderType::Candle, 0, 0.1f },
+        { "Purple Candle", DyedCandleTile + 21, DyedCandleTile + 21, DyedCandleTile + 21, false, false, RenderType::Candle, 12, 0.1f },
+        { "Blue Candle", DyedCandleTile + 22, DyedCandleTile + 22, DyedCandleTile + 22, false, false, RenderType::Candle, 0, 0.1f },
+        { "Blue Candle", DyedCandleTile + 23, DyedCandleTile + 23, DyedCandleTile + 23, false, false, RenderType::Candle, 3, 0.1f },
+        { "Blue Candle", DyedCandleTile + 22, DyedCandleTile + 22, DyedCandleTile + 22, false, false, RenderType::Candle, 0, 0.1f },
+        { "Blue Candle", DyedCandleTile + 23, DyedCandleTile + 23, DyedCandleTile + 23, false, false, RenderType::Candle, 6, 0.1f },
+        { "Blue Candle", DyedCandleTile + 22, DyedCandleTile + 22, DyedCandleTile + 22, false, false, RenderType::Candle, 0, 0.1f },
+        { "Blue Candle", DyedCandleTile + 23, DyedCandleTile + 23, DyedCandleTile + 23, false, false, RenderType::Candle, 9, 0.1f },
+        { "Blue Candle", DyedCandleTile + 22, DyedCandleTile + 22, DyedCandleTile + 22, false, false, RenderType::Candle, 0, 0.1f },
+        { "Blue Candle", DyedCandleTile + 23, DyedCandleTile + 23, DyedCandleTile + 23, false, false, RenderType::Candle, 12, 0.1f },
+        { "Brown Candle", DyedCandleTile + 24, DyedCandleTile + 24, DyedCandleTile + 24, false, false, RenderType::Candle, 0, 0.1f },
+        { "Brown Candle", DyedCandleTile + 25, DyedCandleTile + 25, DyedCandleTile + 25, false, false, RenderType::Candle, 3, 0.1f },
+        { "Brown Candle", DyedCandleTile + 24, DyedCandleTile + 24, DyedCandleTile + 24, false, false, RenderType::Candle, 0, 0.1f },
+        { "Brown Candle", DyedCandleTile + 25, DyedCandleTile + 25, DyedCandleTile + 25, false, false, RenderType::Candle, 6, 0.1f },
+        { "Brown Candle", DyedCandleTile + 24, DyedCandleTile + 24, DyedCandleTile + 24, false, false, RenderType::Candle, 0, 0.1f },
+        { "Brown Candle", DyedCandleTile + 25, DyedCandleTile + 25, DyedCandleTile + 25, false, false, RenderType::Candle, 9, 0.1f },
+        { "Brown Candle", DyedCandleTile + 24, DyedCandleTile + 24, DyedCandleTile + 24, false, false, RenderType::Candle, 0, 0.1f },
+        { "Brown Candle", DyedCandleTile + 25, DyedCandleTile + 25, DyedCandleTile + 25, false, false, RenderType::Candle, 12, 0.1f },
+        { "Green Candle", DyedCandleTile + 26, DyedCandleTile + 26, DyedCandleTile + 26, false, false, RenderType::Candle, 0, 0.1f },
+        { "Green Candle", DyedCandleTile + 27, DyedCandleTile + 27, DyedCandleTile + 27, false, false, RenderType::Candle, 3, 0.1f },
+        { "Green Candle", DyedCandleTile + 26, DyedCandleTile + 26, DyedCandleTile + 26, false, false, RenderType::Candle, 0, 0.1f },
+        { "Green Candle", DyedCandleTile + 27, DyedCandleTile + 27, DyedCandleTile + 27, false, false, RenderType::Candle, 6, 0.1f },
+        { "Green Candle", DyedCandleTile + 26, DyedCandleTile + 26, DyedCandleTile + 26, false, false, RenderType::Candle, 0, 0.1f },
+        { "Green Candle", DyedCandleTile + 27, DyedCandleTile + 27, DyedCandleTile + 27, false, false, RenderType::Candle, 9, 0.1f },
+        { "Green Candle", DyedCandleTile + 26, DyedCandleTile + 26, DyedCandleTile + 26, false, false, RenderType::Candle, 0, 0.1f },
+        { "Green Candle", DyedCandleTile + 27, DyedCandleTile + 27, DyedCandleTile + 27, false, false, RenderType::Candle, 12, 0.1f },
+        { "Red Candle", DyedCandleTile + 28, DyedCandleTile + 28, DyedCandleTile + 28, false, false, RenderType::Candle, 0, 0.1f },
+        { "Red Candle", DyedCandleTile + 29, DyedCandleTile + 29, DyedCandleTile + 29, false, false, RenderType::Candle, 3, 0.1f },
+        { "Red Candle", DyedCandleTile + 28, DyedCandleTile + 28, DyedCandleTile + 28, false, false, RenderType::Candle, 0, 0.1f },
+        { "Red Candle", DyedCandleTile + 29, DyedCandleTile + 29, DyedCandleTile + 29, false, false, RenderType::Candle, 6, 0.1f },
+        { "Red Candle", DyedCandleTile + 28, DyedCandleTile + 28, DyedCandleTile + 28, false, false, RenderType::Candle, 0, 0.1f },
+        { "Red Candle", DyedCandleTile + 29, DyedCandleTile + 29, DyedCandleTile + 29, false, false, RenderType::Candle, 9, 0.1f },
+        { "Red Candle", DyedCandleTile + 28, DyedCandleTile + 28, DyedCandleTile + 28, false, false, RenderType::Candle, 0, 0.1f },
+        { "Red Candle", DyedCandleTile + 29, DyedCandleTile + 29, DyedCandleTile + 29, false, false, RenderType::Candle, 12, 0.1f },
+        { "Black Candle", DyedCandleTile + 30, DyedCandleTile + 30, DyedCandleTile + 30, false, false, RenderType::Candle, 0, 0.1f },
+        { "Black Candle", DyedCandleTile + 31, DyedCandleTile + 31, DyedCandleTile + 31, false, false, RenderType::Candle, 3, 0.1f },
+        { "Black Candle", DyedCandleTile + 30, DyedCandleTile + 30, DyedCandleTile + 30, false, false, RenderType::Candle, 0, 0.1f },
+        { "Black Candle", DyedCandleTile + 31, DyedCandleTile + 31, DyedCandleTile + 31, false, false, RenderType::Candle, 6, 0.1f },
+        { "Black Candle", DyedCandleTile + 30, DyedCandleTile + 30, DyedCandleTile + 30, false, false, RenderType::Candle, 0, 0.1f },
+        { "Black Candle", DyedCandleTile + 31, DyedCandleTile + 31, DyedCandleTile + 31, false, false, RenderType::Candle, 9, 0.1f },
+        { "Black Candle", DyedCandleTile + 30, DyedCandleTile + 30, DyedCandleTile + 30, false, false, RenderType::Candle, 0, 0.1f },
+        { "Black Candle", DyedCandleTile + 31, DyedCandleTile + 31, DyedCandleTile + 31, false, false, RenderType::Candle, 12, 0.1f },
+        { "Cake with Candle", CakeTop, CakeBottom, CakeSide, true, false, RenderType::Candle, 0, 0.5f },
+        { "Cake with Candle", CakeTop, CakeBottom, CakeSide, true, false, RenderType::Candle, 3, 0.5f },
+        { "Cake with White Candle", CakeTop, CakeBottom, CakeSide, true, false, RenderType::Candle, 0, 0.5f },
+        { "Cake with White Candle", CakeTop, CakeBottom, CakeSide, true, false, RenderType::Candle, 3, 0.5f },
+        { "Cake with Orange Candle", CakeTop, CakeBottom, CakeSide, true, false, RenderType::Candle, 0, 0.5f },
+        { "Cake with Orange Candle", CakeTop, CakeBottom, CakeSide, true, false, RenderType::Candle, 3, 0.5f },
+        { "Cake with Magenta Candle", CakeTop, CakeBottom, CakeSide, true, false, RenderType::Candle, 0, 0.5f },
+        { "Cake with Magenta Candle", CakeTop, CakeBottom, CakeSide, true, false, RenderType::Candle, 3, 0.5f },
+        { "Cake with Light Blue Candle", CakeTop, CakeBottom, CakeSide, true, false, RenderType::Candle, 0, 0.5f },
+        { "Cake with Light Blue Candle", CakeTop, CakeBottom, CakeSide, true, false, RenderType::Candle, 3, 0.5f },
+        { "Cake with Yellow Candle", CakeTop, CakeBottom, CakeSide, true, false, RenderType::Candle, 0, 0.5f },
+        { "Cake with Yellow Candle", CakeTop, CakeBottom, CakeSide, true, false, RenderType::Candle, 3, 0.5f },
+        { "Cake with Lime Candle", CakeTop, CakeBottom, CakeSide, true, false, RenderType::Candle, 0, 0.5f },
+        { "Cake with Lime Candle", CakeTop, CakeBottom, CakeSide, true, false, RenderType::Candle, 3, 0.5f },
+        { "Cake with Pink Candle", CakeTop, CakeBottom, CakeSide, true, false, RenderType::Candle, 0, 0.5f },
+        { "Cake with Pink Candle", CakeTop, CakeBottom, CakeSide, true, false, RenderType::Candle, 3, 0.5f },
+        { "Cake with Gray Candle", CakeTop, CakeBottom, CakeSide, true, false, RenderType::Candle, 0, 0.5f },
+        { "Cake with Gray Candle", CakeTop, CakeBottom, CakeSide, true, false, RenderType::Candle, 3, 0.5f },
+        { "Cake with Light Gray Candle", CakeTop, CakeBottom, CakeSide, true, false, RenderType::Candle, 0, 0.5f },
+        { "Cake with Light Gray Candle", CakeTop, CakeBottom, CakeSide, true, false, RenderType::Candle, 3, 0.5f },
+        { "Cake with Cyan Candle", CakeTop, CakeBottom, CakeSide, true, false, RenderType::Candle, 0, 0.5f },
+        { "Cake with Cyan Candle", CakeTop, CakeBottom, CakeSide, true, false, RenderType::Candle, 3, 0.5f },
+        { "Cake with Purple Candle", CakeTop, CakeBottom, CakeSide, true, false, RenderType::Candle, 0, 0.5f },
+        { "Cake with Purple Candle", CakeTop, CakeBottom, CakeSide, true, false, RenderType::Candle, 3, 0.5f },
+        { "Cake with Blue Candle", CakeTop, CakeBottom, CakeSide, true, false, RenderType::Candle, 0, 0.5f },
+        { "Cake with Blue Candle", CakeTop, CakeBottom, CakeSide, true, false, RenderType::Candle, 3, 0.5f },
+        { "Cake with Brown Candle", CakeTop, CakeBottom, CakeSide, true, false, RenderType::Candle, 0, 0.5f },
+        { "Cake with Brown Candle", CakeTop, CakeBottom, CakeSide, true, false, RenderType::Candle, 3, 0.5f },
+        { "Cake with Green Candle", CakeTop, CakeBottom, CakeSide, true, false, RenderType::Candle, 0, 0.5f },
+        { "Cake with Green Candle", CakeTop, CakeBottom, CakeSide, true, false, RenderType::Candle, 3, 0.5f },
+        { "Cake with Red Candle", CakeTop, CakeBottom, CakeSide, true, false, RenderType::Candle, 0, 0.5f },
+        { "Cake with Red Candle", CakeTop, CakeBottom, CakeSide, true, false, RenderType::Candle, 3, 0.5f },
+        { "Cake with Black Candle", CakeTop, CakeBottom, CakeSide, true, false, RenderType::Candle, 0, 0.5f },
+        { "Cake with Black Candle", CakeTop, CakeBottom, CakeSide, true, false, RenderType::Candle, 3, 0.5f },
     };
 }
 
@@ -1106,7 +1274,8 @@ bool isObtainable(BlockId id)
             // stands: it never goes back in a hand, whole or part
             // eaten. A lit candle is the same candle alight.
             if (isCake(id)) return false;
-            if (id == Blocks::CandleLit) return false;
+            if (isCandle(id) && (candleCount(id) != 1 || candleLit(id))) return false;
+            if (isCandleCake(id)) return false;
 
             // Cocoa is a pod on a trunk rather than a block anybody
             // places, and only the beans come off it.
@@ -1154,7 +1323,7 @@ const char* blockSoundGroup(BlockId id)
     if (id == Blocks::MangroveRoots || id == Blocks::BambooMosaic || id == Blocks::BambooSlab) return "wood";
     if (id == Blocks::MuddyMangroveRoots || id == Blocks::PackedMud) return "gravel";
     if (id == Blocks::Melon || isCocoa(id)) return "grass";
-    if (isCake(id) || id == Blocks::Candle || id == Blocks::CandleLit) return "cloth";
+    if (isCake(id) || isCandle(id) || isCandleCake(id)) return "cloth";
 
     switch (id)
     {
@@ -1286,7 +1455,7 @@ Material blockMaterial(BlockId id)
     if (id == Blocks::Bamboo) return Material::Wood;
     if (isCocoa(id)) return Material::Plant;
     if (isCake(id)) return Material::Wool;      // soft, and no tool helps
-    if (id == Blocks::Candle || id == Blocks::CandleLit) return Material::Wool;
+    if (isCandle(id) || isCandleCake(id)) return Material::Wool;
     if (id == Blocks::Scaffolding) return Material::Wood;
     // A slime block comes apart in your hands; a pickaxe is no help
     // and asking for one would have made the softest block in the game
@@ -1442,6 +1611,12 @@ bool blockOverlaps(BlockId id, int bx, int by, int bz,
             case 2: return overlaps(0.0f, 0.0f, 1.0f - THICK, 1.0f, 1.0f, 1.0f);
             default: return overlaps(0.0f, 0.0f, 0.0f, THICK, 1.0f, 1.0f);
         }
+    }
+
+    if (isCake(id) || isCandleCake(id))
+    {
+        const float bite = 0.125f * static_cast<float>(cakeEaten(id));
+        return overlaps(0.0625f + bite, 0.0f, 0.0625f, 0.9375f, 0.5f, 0.9375f);
     }
 
     if (isPane(id))

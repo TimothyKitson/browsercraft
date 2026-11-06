@@ -317,6 +317,8 @@ namespace Tiles
         GlassPaneTopTile,
         StainedPaneTopTile, StainedPaneTopTileLast = StainedPaneTopTile + 15,
         TintedGlassTile,
+        DyedCandleTile, DyedCandleTileLast = DyedCandleTile + 31,
+        CandleFlameTile,
 
         TileCount
     };
@@ -507,8 +509,9 @@ namespace Tiles
         IconBambooDoor, ItemBambooSign,
         IconCrimsonDoor, ItemCrimsonSign, IconWarpedDoor, ItemWarpedSign,
         ItemQuartz, ItemRawIron, ItemRawGold, ItemAmethystShard,
+        ItemCandleFirst, ItemCandleLast = ItemCandleFirst + 16,
 
-        ItemTileEnd = ItemAmethystShard + 1
+        ItemTileEnd = ItemCandleLast + 1
     };
 
     // Ten progressively more broken overlay tiles for the mining animation.

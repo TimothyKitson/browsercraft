@@ -96,6 +96,11 @@ namespace
         Blocks::Torch, Blocks::Glowstone, Blocks::Water, Blocks::Lava,
         Blocks::Ice, Blocks::Glass, Blocks::Wool, Blocks::Pumpkin,
         Blocks::Bedrock,
+        Blocks::Candle,
+        Blocks::DyedCandleFirst + 0, Blocks::DyedCandleFirst + 8, Blocks::DyedCandleFirst + 16, Blocks::DyedCandleFirst + 24,
+        Blocks::DyedCandleFirst + 32, Blocks::DyedCandleFirst + 40, Blocks::DyedCandleFirst + 48, Blocks::DyedCandleFirst + 56,
+        Blocks::DyedCandleFirst + 64, Blocks::DyedCandleFirst + 72, Blocks::DyedCandleFirst + 80, Blocks::DyedCandleFirst + 88,
+        Blocks::DyedCandleFirst + 96, Blocks::DyedCandleFirst + 104, Blocks::DyedCandleFirst + 112, Blocks::DyedCandleFirst + 120,
     };
 
     struct CreativeTab

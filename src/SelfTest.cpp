@@ -12017,6 +12017,61 @@ namespace
         check(Saplings::leafDrop(Blocks::Stone, 0u) == Blocks::Air, "stone gives none");
     }
 
+    void testCandles()
+    {
+        section("candles in sixteen colours, and candle cakes");
+
+        bool roundTrip = true;
+        for (int shade = 0; shade <= 16; ++shade)
+            for (int count = 1; count <= 4; ++count)
+                for (int lit = 0; lit < 2; ++lit)
+                {
+                    const BlockId id = candleOf(shade, count, lit == 1);
+                    if (!isCandle(id) || candleShade(id) != shade || candleCount(id) != count ||
+                        candleLit(id) != (lit == 1))
+                        roundTrip = false;
+                    if (blockInfo(id).lightEmission != (lit ? 3 * count : 0)) roundTrip = false;
+                    if (isObtainable(id) != (count == 1 && !lit)) roundTrip = false;
+                    if (blockDrop(id) != candleOf(shade, 1, false)) roundTrip = false;
+                }
+        check(roundTrip, "every colour, count and flame is its own candle, and gives its own light");
+        check(candleOf(0, 1, false) == Blocks::Candle && candleOf(0, 1, true) == Blocks::CandleLit,
+              "the plain candle is the one that was always there");
+        check(blockInfo(candleOf(14, 4, true)).lightEmission == 12, "four lit candles give twelve");
+
+        for (int colour = 0; colour < DYE_COLOURS; ++colour)
+        {
+            ItemStack grid[9];
+            grid[0] = ItemStack{ Blocks::Candle, 1 };
+            grid[4] = ItemStack{ dyeOfColour(colour), 1 };
+            const CraftOutput made = Crafting::match(grid, 3);
+            check(made.id == candleOf(colour + 1, 1, false) && made.count == 1,
+                  "a candle and dye " + std::to_string(colour) + " make that candle");
+        }
+        {
+            ItemStack grid[9];
+            grid[0] = ItemStack{ candleOf(3, 1, false), 1 };
+            grid[1] = ItemStack{ Items::DyeRed, 1 };
+            check(!Crafting::match(grid, 3).valid(), "a coloured candle is not dyed again");
+        }
+
+        for (int shade = 0; shade <= 16; ++shade)
+        {
+            const BlockId cake = candleCakeOf(shade, shade % 2 == 1);
+            if (!isCandleCake(cake) || candleCakeShade(cake) != shade) check(false, "candle cake round trip");
+        }
+        check(blockDrop(candleCakeOf(5, true)) == candleOf(5, 1, false), "a broken candle cake gives back its candle");
+        check(blockInfo(candleCakeOf(0, true)).lightEmission == 3 && blockInfo(candleCakeOf(0, false)).lightEmission == 0,
+              "a lit candle cake glows like one candle");
+        check(!isObtainable(candleCakeOf(2, false)), "nobody carries a candle cake");
+        check(!blockOverlaps(Blocks::Cake0, 0, 0, 0, 0.2f, 0.6f, 0.2f, 0.8f, 1.0f, 0.8f),
+              "a cake is half a block tall");
+        check(blockOverlaps(Blocks::Cake0, 0, 0, 0, 0.2f, 0.3f, 0.2f, 0.8f, 1.0f, 0.8f), "and solid below that");
+        check(!blockOverlaps(Blocks::Cake6, 0, 0, 0, 0.0f, 0.0f, 0.0f, 0.5f, 0.4f, 1.0f),
+              "the eaten end of a cake is gone");
+        check(blockMaterial(candleOf(9, 2, true)) == Material::Wool, "candles come away in your hand");
+    }
+
     void testColourBlocks()
     {
         section("concrete, terracotta and stained glass");
@@ -12960,6 +13015,7 @@ int runSelfTest()
     testWoodSets();
     testStoneSets();
     testColourBlocks();
+    testCandles();
     testTheTablesTake121sPrices();
 
     std::printf("\n%d checks, %d failed\n", g_checks, g_failures);

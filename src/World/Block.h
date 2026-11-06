@@ -578,6 +578,9 @@ namespace Blocks
         GlassPane,
         StainedGlassPaneFirst, StainedGlassPaneLast = StainedGlassPaneFirst + 15,
         TintedGlass,
+        PlainCandleFirst, PlainCandleLast = PlainCandleFirst + 5,
+        DyedCandleFirst, DyedCandleLast = DyedCandleFirst + 127,
+        CandleCakeFirst, CandleCakeLast = CandleCakeFirst + 33,
 
         Count
     };
@@ -597,7 +600,8 @@ enum class RenderType : uint8_t
     Rail,   // a flat panel on the floor of its cell, which carts run on
     Flat,   // the same panel, for anything that is not a rail
     Trapdoor,
-    Pane
+    Pane,
+    Candle
 };
 
 struct BlockInfo
@@ -1236,6 +1240,49 @@ inline bool isStainedPane(BlockId id) { return inRun(id, Blocks::StainedGlassPan
 inline bool isGlassLike(BlockId id)
 {
     return id == Blocks::Glass || id == Blocks::TintedGlass || isStainedGlass(id);
+}
+inline bool isCandle(BlockId id)
+{
+    return id == Blocks::Candle || id == Blocks::CandleLit ||
+           (id >= Blocks::PlainCandleFirst && id <= Blocks::PlainCandleLast) ||
+           (id >= Blocks::DyedCandleFirst && id <= Blocks::DyedCandleLast);
+}
+inline bool isDyedCandle(BlockId id) { return id >= Blocks::DyedCandleFirst && id <= Blocks::DyedCandleLast; }
+inline int candleShade(BlockId id) { return isDyedCandle(id) ? 1 + (id - Blocks::DyedCandleFirst) / 8 : 0; }
+inline int candleCount(BlockId id)
+{
+    if (id >= Blocks::PlainCandleFirst && id <= Blocks::PlainCandleLast) return 2 + (id - Blocks::PlainCandleFirst) / 2;
+    if (isDyedCandle(id)) return 1 + ((id - Blocks::DyedCandleFirst) / 2) % 4;
+    return isCandle(id) ? 1 : 0;
+}
+inline bool candleLit(BlockId id)
+{
+    if (id == Blocks::CandleLit) return true;
+    if (id >= Blocks::PlainCandleFirst && id <= Blocks::PlainCandleLast) return (id - Blocks::PlainCandleFirst) % 2 == 1;
+    if (isDyedCandle(id)) return (id - Blocks::DyedCandleFirst) % 2 == 1;
+    return false;
+}
+inline BlockId candleOf(int shade, int count, bool lit)
+{
+    if (shade < 0) shade = 0;
+    if (shade > 16) shade = 16;
+    if (count < 1) count = 1;
+    if (count > 4) count = 4;
+    if (shade == 0)
+    {
+        if (count == 1) return lit ? Blocks::CandleLit : Blocks::Candle;
+        return static_cast<BlockId>(Blocks::PlainCandleFirst + (count - 2) * 2 + (lit ? 1 : 0));
+    }
+    return static_cast<BlockId>(Blocks::DyedCandleFirst + ((shade - 1) * 4 + count - 1) * 2 + (lit ? 1 : 0));
+}
+inline bool isCandleCake(BlockId id) { return id >= Blocks::CandleCakeFirst && id <= Blocks::CandleCakeLast; }
+inline int candleCakeShade(BlockId id) { return isCandleCake(id) ? (id - Blocks::CandleCakeFirst) / 2 : 0; }
+inline bool candleCakeLit(BlockId id) { return isCandleCake(id) && (id - Blocks::CandleCakeFirst) % 2 == 1; }
+inline BlockId candleCakeOf(int shade, bool lit)
+{
+    if (shade < 0) shade = 0;
+    if (shade > 16) shade = 16;
+    return static_cast<BlockId>(Blocks::CandleCakeFirst + shade * 2 + (lit ? 1 : 0));
 }
 inline bool paneJoins(BlockId other)
 {
