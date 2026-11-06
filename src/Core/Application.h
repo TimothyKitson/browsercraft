@@ -239,6 +239,7 @@ private:
     float m_bubbleClock = 0.0f;
     bool m_particleDemo = false;
     void tickSpriteParticles(float deltaTime);
+    void prepareMobModel();
     void sprites(SpriteParticles::Kind kind, const glm::vec3& at, int count, float spread, float speed,
                  float size, float lifetime, float gravity = 0.0f);
     // One texture per character in the picker. Painting eight 64x32

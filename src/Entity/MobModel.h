@@ -2,7 +2,9 @@
 #include "MobSkin.h"
 #include "MobType.h"
 #include "Renderer/Mesh.h"
+#include <functional>
 #include <memory>
+#include <string>
 #include <vector>
 
 class Shader;
@@ -30,7 +32,13 @@ public:
     // millisecond and there are only ever eight.
     const MobSkin& skinFor(MobId id);
 
+    std::function<int(const Mob&)> professionOf;
+    std::function<int(const Mob&)> rankOf;
+    ~MobModel();
+
 private:
+    unsigned int villagerTexture(const char* path);
+    std::vector<std::pair<std::string, unsigned int>> m_villagerTextures;
     std::vector<std::unique_ptr<MobSkin>> m_skins;
     Mesh m_mesh;
     std::vector<float> m_vertices;

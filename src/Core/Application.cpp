@@ -7693,6 +7693,7 @@ namespace
             if (kind == Arrows::Kind::Potion)
             {
                 bursts.push_back(at);
+                potionBursts.push_back(at);
 
                 const float reach = glm::length(at - player->position);
                 if (reach < SPLASH_RADIUS)
@@ -7711,6 +7712,7 @@ namespace
             if (kind != Arrows::Kind::Wind) return;
 
             bursts.push_back(at);
+            windBursts.push_back(at);
 
             const glm::vec3 push = Arrows::windImpulse(at, player->position);
             if (glm::length(push) > 0.0f)
@@ -7732,6 +7734,8 @@ namespace
         }
 
         std::vector<glm::vec3> bursts;
+        std::vector<glm::vec3> windBursts;
+        std::vector<glm::vec3> potionBursts;
 
         // How far a thrown potion reaches. Minecraft's is four blocks
         // at full strength, tailing off to nothing.
@@ -7798,6 +7802,13 @@ void Application::updateArrows(float deltaTime)
     targets.facing = m_camera.front;
 
     m_arrows.update(deltaTime, *m_world, targets);
+    for (const glm::vec3& at : targets.windBursts)
+    {
+        sprites(SpriteParticles::Kind::Gust, at, 1, 0.0f, 0.0f, 2.2f, 0.6f);
+        sprites(SpriteParticles::Kind::SmallGust, at, 6, 0.8f, 1.5f, 0.6f, 0.5f);
+    }
+    for (const glm::vec3& at : targets.potionBursts)
+        sprites(SpriteParticles::Kind::Spell, at, 24, 1.2f, 1.5f, 0.25f, 1.2f);
 
     if (targets.playerHits > 0)
     {
@@ -9097,7 +9108,11 @@ void Application::renderWorldShaded()
     if (!m_sprites) m_sprites = std::make_unique<SpriteParticles>();
     m_sprites->render(world, *m_world, camera.right, camera.up, m_atlas.textureId());
     renderPlayers(view, projection);
-    if (inGame()) m_mobModel.render(world, *m_world, m_entities);
+    if (inGame())
+    {
+        prepareMobModel();
+        m_mobModel.render(world, *m_world, m_entities);
+    }
     m_atlas.bind(0, 1, 2);
 
     if (playing() && !m_inventoryOpen)
@@ -9224,7 +9239,11 @@ void Application::renderWorld()
     // the atlas has to go back on the albedo unit afterwards for the
     // mining cracks and the water that follow.
     renderPlayers(view, projection);
-    if (inGame()) m_mobModel.render(m_chunkShader, *m_world, m_entities);
+    if (inGame())
+    {
+        prepareMobModel();
+        m_mobModel.render(m_chunkShader, *m_world, m_entities);
+    }
     m_atlas.bind(0, 1, 2);
 
     // Selection outline + mining cracks sit between the two passes so water
@@ -9642,6 +9661,20 @@ void Application::renderPlayers(const glm::mat4& view, const glm::mat4& projecti
 // putting either one only in updateGameplay is how the mob spawner and
 // then the crops each came to look broken when they were merely never
 // being stepped.
+void Application::prepareMobModel()
+{
+    if (m_mobModel.professionOf) return;
+    m_mobModel.professionOf = [](const Mob& villager) {
+        return static_cast<int>(villager.professionSlot() >= 0
+                                    ? static_cast<Trading::Profession>(villager.professionSlot())
+                                    : Trading::professionFor(villager.birthSeed()));
+    };
+    m_mobModel.rankOf = [this](const Mob& villager) {
+        const auto found = m_traders.find(villager.birthSeed());
+        return found == m_traders.end() ? 0 : Trading::rankFor(found->second.xp);
+    };
+}
+
 void Application::sprites(SpriteParticles::Kind kind, const glm::vec3& at, int count, float spread, float speed,
                           float size, float lifetime, float gravity)
 {

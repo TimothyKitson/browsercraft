@@ -1,4 +1,6 @@
 #include "MobModel.h"
+#include "World/WorldGen.h"
+#include <stb_image.h>
 #include "BoxMesh.h"
 #include "EntityManager.h"
 #include "Mob.h"
@@ -207,5 +209,112 @@ void MobModel::render(Shader& chunkShader, const World& world, const EntityManag
         glBindTexture(GL_TEXTURE_2D, texture);
         m_mesh.draw(GL_TRIANGLES);
         }
+
+        if (id == MobId::Villager)
+        {
+            static const char* BIOMES[] = {
+                "assets/textures/entity/villager/type/plains.png",
+                "assets/textures/entity/villager/type/desert.png",
+                "assets/textures/entity/villager/type/jungle.png",
+                "assets/textures/entity/villager/type/savanna.png",
+                "assets/textures/entity/villager/type/snow.png",
+                "assets/textures/entity/villager/type/swamp.png",
+                "assets/textures/entity/villager/type/taiga.png",
+            };
+            static const char* JOBS[] = {
+                "assets/textures/entity/villager/profession/farmer.png",
+                "assets/textures/entity/villager/profession/librarian.png",
+                "assets/textures/entity/villager/profession/toolsmith.png",
+                "assets/textures/entity/villager/profession/fletcher.png",
+            };
+            static const char* RANKS[] = {
+                "assets/textures/entity/villager/profession_level/stone.png",
+                "assets/textures/entity/villager/profession_level/iron.png",
+                "assets/textures/entity/villager/profession_level/gold.png",
+                "assets/textures/entity/villager/profession_level/emerald.png",
+                "assets/textures/entity/villager/profession_level/diamond.png",
+            };
+            auto biomeIndex = [&](const Mob& mob) {
+                const glm::vec3 at = mob.position();
+                switch (world.generator().biomeAt(static_cast<int>(std::floor(at.x)), static_cast<int>(std::floor(at.z))))
+                {
+                    case Biome::Desert: return 1;
+                    case Biome::Jungle: return 2;
+                    case Biome::Savanna: return 3;
+                    case Biome::Snowy: return 4;
+                    case Biome::Swamp: return 5;
+                    case Biome::Mountains:
+                    case Biome::Forest: return 6;
+                    default: return 0;
+                }
+            };
+
+            glDepthFunc(GL_LEQUAL);
+            for (int pass = 0; pass < 3; ++pass)
+            {
+                const int options = pass == 0 ? 7 : pass == 1 ? 4 : 5;
+                for (int option = 0; option < options; ++option)
+                {
+                    const char* path = pass == 0 ? BIOMES[option] : pass == 1 ? JOBS[option] : RANKS[option];
+                    const unsigned int overlay = villagerTexture(path);
+                    if (!overlay) continue;
+                    std::vector<float> batch;
+                    for (const Mob& mob : entities.mobs())
+                    {
+                        if (mob.typeId() != id || mob.baby()) continue;
+                        const int which = pass == 0 ? biomeIndex(mob)
+                                        : pass == 1 ? (professionOf ? professionOf(mob) : 0)
+                                                    : (rankOf ? rankOf(mob) : 0);
+                        if (which != option) continue;
+                        const glm::vec3 centre = mob.position();
+                        int lx = static_cast<int>(std::floor(centre.x));
+                        int ly = static_cast<int>(std::floor(centre.y + mob.height() * 0.5f));
+                        int lz = static_cast<int>(std::floor(centre.z));
+                        for (int step = 0; step < 3 && isOpaque(world.getBlock(lx, ly, lz)); ++step) ++ly;
+                        const float fade = mob.deathFade();
+                        build(skin, mob, static_cast<float>(world.skyLight(lx, ly, lz)) / 15.0f * fade,
+                              std::min(1.0f, static_cast<float>(world.blockLightAt(lx, ly, lz)) / 15.0f +
+                                                 mob.hurtFlash() * 1.6f) * fade, 0);
+                        batch.insert(batch.end(), m_vertices.begin(), m_vertices.end());
+                    }
+                    if (batch.empty()) continue;
+                    m_mesh.upload(batch, CHUNK_LAYOUT, true);
+                    glActiveTexture(GL_TEXTURE0);
+                    glBindTexture(GL_TEXTURE_2D, overlay);
+                    m_mesh.draw(GL_TRIANGLES);
+                }
+            }
+            glDepthFunc(GL_LESS);
+        }
     }
+}
+
+MobModel::~MobModel()
+{
+    for (auto& entry : m_villagerTextures)
+        if (entry.second) glDeleteTextures(1, &entry.second);
+}
+
+unsigned int MobModel::villagerTexture(const char* path)
+{
+    for (const auto& entry : m_villagerTextures)
+        if (entry.first == path) return entry.second;
+
+    int width = 0, height = 0, channels = 0;
+    unsigned char* data = stbi_load(path, &width, &height, &channels, 4);
+    unsigned int texture = 0;
+    if (data)
+    {
+        glGenTextures(1, &texture);
+        glBindTexture(GL_TEXTURE_2D, texture);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexImage2D(GL_TEXTURE_2D, 0, 0x8058, width, std::min(height, width), 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+        glBindTexture(GL_TEXTURE_2D, 0);
+        stbi_image_free(data);
+    }
+    m_villagerTextures.emplace_back(path, texture);
+    return texture;
 }
