@@ -396,6 +396,15 @@ const GuiImage* GuiTextures::image(const std::string& path)
 
     std::vector<unsigned char> pixels(data, data + static_cast<size_t>(width) * height * 4);
     stbi_image_free(data);
+    if (path.find("vignette") != std::string::npos)
+    {
+        for (size_t i = 0; i + 3 < pixels.size(); i += 4)
+        {
+            const int light = (pixels[i] * 3 + pixels[i + 1] * 4 + pixels[i + 2]) / 8;
+            pixels[i] = pixels[i + 1] = pixels[i + 2] = 0;
+            pixels[i + 3] = static_cast<unsigned char>(light);
+        }
+    }
     for (size_t i = 0; i + 3 < pixels.size(); i += 4)
         if (pixels[i + 3] == 0) pixels[i] = pixels[i + 1] = pixels[i + 2] = 0;
 

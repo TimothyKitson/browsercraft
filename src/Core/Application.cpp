@@ -1982,7 +1982,7 @@ bool Application::frame()
             m_startupScreen == "stairs" || m_startupScreen == "fence" ||
             m_startupScreen == "door" || m_startupScreen == "hand" ||
             m_startupScreen == "handempty" || m_startupScreen == "handitem" ||
-            m_startupScreen == "creativeinv" ||
+            m_startupScreen == "creativeinv" || m_startupScreen == "creativesearch" ||
             m_startupScreen == "xp" ||
             m_startupScreen == "shelf" || m_startupScreen == "enchant" ||
             m_startupScreen == "enchantblock" || m_startupScreen == "villager" ||
@@ -4318,10 +4318,19 @@ bool Application::frame()
             // And one of the creative palette wants the player in
             // creative, whatever the saved world was last left in:
             // without it the shot came back as the survival panel.
-            if (m_startupScreen == "creative" || m_startupScreen == "creativeinv")
+            if (m_startupScreen == "creative" || m_startupScreen == "creativeinv" ||
+                m_startupScreen == "creativesearch")
             {
                 m_player.mode = GameMode::Creative;
                 if (m_startupScreen == "creativeinv") m_creativeTab = creativeInventoryTab();
+                if (m_startupScreen == "creativesearch")
+                {
+                    m_creativeTab = creativeInventoryTab() - 1;
+                    m_creativeSearch = "stone";
+                    m_player.effects = Effects::Set{};
+                    Effects::give(m_player.effects, Effects::Kind::Speed, 1, 95.0f);
+                    Effects::give(m_player.effects, Effects::Kind::Poison, 0, 8.0f);
+                }
             }
         }
         else if (m_startupScreen == "pause") m_screen = Screen::Paused;
@@ -4484,6 +4493,9 @@ void Application::applyMenuAction()
 
         case MenuAction::RenderDistanceDown:
             if (m_world) m_world->setRenderDistance(m_world->renderDistance() - 1);
+            break;
+        case MenuAction::SetRenderDistance:
+            if (m_world) m_world->setRenderDistance(m_pendingRenderDistance);
             break;
         case MenuAction::RenderDistanceUp:
             if (m_world) m_world->setRenderDistance(m_world->renderDistance() + 1);
@@ -4714,7 +4726,20 @@ void Application::handleEvents()
     else if (m_inventoryOpen && m_player.creative() && m_input.wheelDelta() != 0)
         m_paletteRow -= m_input.wheelDelta();
 
-    if (m_keys.pressed(m_input, Action::Inventory) && (playing() || m_inventoryOpen))
+    const bool searching = creativeSearching();
+    if (searching)
+    {
+        for (char c : m_input.typedText())
+            if (c >= 32 && c < 127 && m_creativeSearch.size() < 40)
+            {
+                m_creativeSearch.push_back(c);
+                m_paletteRow = 0;
+            }
+        for (int i = 0; i < m_input.backspaces() && !m_creativeSearch.empty(); ++i)
+            m_creativeSearch.pop_back();
+    }
+
+    if (!searching && m_keys.pressed(m_input, Action::Inventory) && (playing() || m_inventoryOpen))
     {
         if (m_inventoryOpen)
         {
@@ -8743,8 +8768,9 @@ void Application::render()
     glClearColor(clear.r, clear.g, clear.b, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    if (m_world) renderWorld();
-    else renderMenuBackdrop(0.0f);
+    const bool panorama = panoramaShowing();
+    if (m_world && !panorama) renderWorld();
+    else if (!panorama) renderMenuBackdrop(0.0f);
 
     // The HUD lights its block icons off the pack's own normal maps,
     // so a cobblestone in the hotbar is the cobblestone underfoot and
@@ -8752,6 +8778,7 @@ void Application::render()
     // draws them the way they always were.
     m_ui.setNormalAtlas((m_pbrEnabled && m_atlas.hasPbrMaps()) ? m_atlas.normalTextureId() : 0);
     m_ui.begin(m_window.width(), m_window.height());
+    if (panorama) renderPanorama();
 
     if (m_world && !m_worldReady)
     {
@@ -8805,6 +8832,73 @@ void Application::render()
     }
 
     m_ui.end();
+}
+
+bool Application::panoramaShowing()
+{
+    if (inGame() || (m_world && !m_menuWorld)) return false;
+    return m_gui.has("title/background/panorama_0");
+}
+
+void Application::renderPanorama()
+{
+    static const char* FACES[6] = {
+        "title/background/panorama_0", "title/background/panorama_1", "title/background/panorama_2",
+        "title/background/panorama_3", "title/background/panorama_4", "title/background/panorama_5",
+    };
+    const glm::vec3 CENTRE[6] = { { 0, 0, -1 }, { 1, 0, 0 }, { 0, 0, 1 }, { -1, 0, 0 }, { 0, 1, 0 }, { 0, -1, 0 } };
+    const glm::vec3 ACROSS[6] = { { 1, 0, 0 }, { 0, 0, 1 }, { -1, 0, 0 }, { 0, 0, -1 }, { 1, 0, 0 }, { 1, 0, 0 } };
+    const glm::vec3 DOWN[6] = { { 0, -1, 0 }, { 0, -1, 0 }, { 0, -1, 0 }, { 0, -1, 0 }, { 0, 0, -1 }, { 0, 0, 1 } };
+
+    const float w = static_cast<float>(m_window.width());
+    const float h = static_cast<float>(m_window.height());
+    const float yaw = glm::radians(m_titleSpin);
+    const float pitch = glm::radians(10.0f);
+    const glm::vec3 forward(std::sin(yaw) * std::cos(pitch), -std::sin(pitch), -std::cos(yaw) * std::cos(pitch));
+    const glm::mat4 view = glm::lookAt(glm::vec3(0.0f), forward, glm::vec3(0.0f, 1.0f, 0.0f));
+    const glm::mat4 projection = glm::perspective(glm::radians(85.0f), w / std::max(h, 1.0f), 0.05f, 10.0f);
+    const glm::mat4 toClip = projection * view;
+
+    m_ui.quad(0.0f, 0.0f, w, h, glm::vec4(0.0f, 0.0f, 0.0f, 1.0f));
+
+    constexpr int CELLS = 12;
+    for (int face = 0; face < 6; ++face)
+    {
+        const GuiImage* image = m_gui.image(FACES[face]);
+        if (!image) continue;
+        for (int row = 0; row < CELLS; ++row)
+            for (int column = 0; column < CELLS; ++column)
+            {
+                glm::vec2 corner[4];
+                glm::vec2 uv[4];
+                bool visible = true;
+                const int du[4] = { 0, 1, 1, 0 };
+                const int dv[4] = { 0, 0, 1, 1 };
+                for (int k = 0; k < 4; ++k)
+                {
+                    const float u = static_cast<float>(column + du[k]) / CELLS;
+                    const float v = static_cast<float>(row + dv[k]) / CELLS;
+                    const glm::vec3 point = CENTRE[face] + (2.0f * u - 1.0f) * ACROSS[face] +
+                                            (2.0f * v - 1.0f) * DOWN[face];
+                    const glm::vec4 clip = toClip * glm::vec4(point, 1.0f);
+                    if (clip.w < 0.05f) { visible = false; break; }
+                    corner[k] = glm::vec2((clip.x / clip.w * 0.5f + 0.5f) * w,
+                                          (0.5f - clip.y / clip.w * 0.5f) * h);
+                    uv[k] = glm::vec2(u, v);
+                }
+                if (!visible) continue;
+                float minX = corner[0].x, maxX = corner[0].x, minY = corner[0].y, maxY = corner[0].y;
+                for (int k = 1; k < 4; ++k)
+                {
+                    minX = std::min(minX, corner[k].x); maxX = std::max(maxX, corner[k].x);
+                    minY = std::min(minY, corner[k].y); maxY = std::max(maxY, corner[k].y);
+                }
+                if (maxX < 0.0f || minX > w || maxY < 0.0f || minY > h) continue;
+                m_ui.texturedShape(image->texture, corner, uv, glm::vec4(1.0f));
+            }
+    }
+
+    guiSprite("title/background/panorama_overlay", 0.0f, 0.0f, w, h);
 }
 
 void Application::renderMenuBackdrop(float)
@@ -10294,6 +10388,19 @@ void Application::renderHud()
     const float cx = w * 0.5f;
     const float cy = h * 0.5f;
 
+    if (m_world && hasSky())
+    {
+        const int ex = static_cast<int>(std::floor(m_camera.position.x));
+        const int ey = static_cast<int>(std::floor(m_camera.position.y));
+        const int ez = static_cast<int>(std::floor(m_camera.position.z));
+        const float eyeSky = static_cast<float>(m_world->skyLight(ex, ey, ez)) / 15.0f;
+        const float eyeBlock = static_cast<float>(m_world->blockLightAt(ex, ey, ez)) / 15.0f;
+        const float bright = std::max(eyeSky * viewDaylight(), eyeBlock);
+        m_vignette += (std::clamp(1.0f - bright, 0.0f, 1.0f) - m_vignette) * 0.02f;
+        guiSprite("../misc/vignette", 0.0f, 0.0f, w, h,
+                  glm::vec4(1.0f, 1.0f, 1.0f, std::clamp(m_vignette, 0.0f, 1.0f)));
+    }
+
     // The crosshair. Minecraft draws it by inverting whatever is behind
     // it rather than painting over it, which is why it is legible on
     // snow and on coal alike without an outline.
@@ -10315,6 +10422,7 @@ void Application::renderHud()
     }
 
     renderEffectIcons(w);
+    renderBossBars(w);
 
     // The hotbar, at Minecraft's own measurements: a hundred and
     // eighty-two across and twenty-two tall, hard against the bottom
@@ -10528,6 +10636,72 @@ bool Application::guiSpritePart(const char* path, float spriteW, float spriteH, 
     m_ui.texturedQuad(image->texture, x, y, w, h, u / spriteW, v / spriteH,
                       (u + w) / spriteW, (v + h) / spriteH, glm::vec4(1.0f));
     return true;
+}
+
+bool Application::guiTiled(const char* path, float x, float y, float w, float h, float tile,
+                           const glm::vec4& tint)
+{
+    const GuiImage* image = m_gui.image(path);
+    if (!image) return false;
+    for (float ty = y; ty < y + h; ty += tile)
+        for (float tx = x; tx < x + w; tx += tile)
+        {
+            const float qw = std::min(tile, x + w - tx);
+            const float qh = std::min(tile, y + h - ty);
+            m_ui.texturedQuad(image->texture, tx, ty, qw, qh, 0.0f, 0.0f, qw / tile, qh / tile, tint);
+        }
+    return true;
+}
+
+void Application::menuBackdrop(float w, float h, float fallbackAlpha)
+{
+    const float unit = static_cast<float>(guiScale()) / m_ui.scale();
+    const bool inWorld = m_world != nullptr && m_screen != Screen::Title && m_worldReady &&
+                         m_optionsReturn == Screen::Paused;
+    const char* background = inWorld ? "inworld_menu_background" : "menu_background";
+    const char* header = inWorld ? "inworld_header_separator" : "header_separator";
+    const char* footer = inWorld ? "inworld_footer_separator" : "footer_separator";
+    if (!guiTiled(background, 0.0f, 0.0f, w, h, 32.0f * unit))
+    {
+        m_ui.quad(0, 0, w, h, glm::vec4(0.0f, 0.0f, 0.0f, fallbackAlpha));
+        return;
+    }
+    guiTiled(header, 0.0f, 33.0f * unit - 2.0f * unit, w, 2.0f * unit, 32.0f * unit);
+    guiTiled(footer, 0.0f, h - 33.0f * unit, w, 2.0f * unit, 32.0f * unit);
+}
+
+void Application::renderBossBars(float w)
+{
+    if (!m_world) return;
+    float y = 12.0f;
+    for (const Mob& mob : m_entities.mobs())
+    {
+        const MobId id = mob.type().id;
+        if (id != MobId::EnderDragon && id != MobId::Wither) continue;
+        if (!mob.alive()) continue;
+        if (glm::length(mob.position() - m_player.position) > 160.0f) continue;
+
+        const float x = std::floor(w * 0.5f) - 91.0f;
+        const float share = std::clamp(static_cast<float>(mob.health()) /
+                                       static_cast<float>(mob.type().maxHealth), 0.0f, 1.0f);
+        const bool dragon = id == MobId::EnderDragon;
+        const char* back = dragon ? "sprites/boss_bar/pink_background" : "sprites/boss_bar/purple_background";
+        const char* fill = dragon ? "sprites/boss_bar/pink_progress" : "sprites/boss_bar/purple_progress";
+        if (!guiSprite(back, x, y, 182.0f, 5.0f))
+        {
+            m_ui.quad(x, y, 182.0f, 5.0f, glm::vec4(0.2f, 0.0f, 0.2f, 0.9f));
+            m_ui.quad(x, y, std::floor(182.0f * share), 5.0f,
+                      dragon ? glm::vec4(0.93f, 0.35f, 0.82f, 1.0f) : glm::vec4(0.55f, 0.20f, 0.85f, 1.0f));
+        }
+        else
+        {
+            guiSpritePart(fill, 182.0f, 5.0f, 0.0f, 0.0f, x, y, std::floor(182.0f * share), 5.0f);
+        }
+        const std::string name = dragon ? "Ender Dragon" : "Wither";
+        m_ui.textWithShadow(name, std::floor(w * 0.5f - UIRenderer::textWidth(name, 1.0f) * 0.5f), y - 9.0f,
+                            1.0f, TEXT_COLOR);
+        y += 19.0f;
+    }
 }
 
 bool Application::guiNineSlice(const char* path, float x, float y, float w, float h, float unit,
@@ -10852,7 +11026,7 @@ void Application::renderSettingsScreen()
     const float w = m_ui.canvasWidth();
     const float h = m_ui.canvasHeight();
 
-    m_ui.quad(0, 0, w, h, glm::vec4(0.0f, 0.0f, 0.0f, 0.45f));
+    menuBackdrop(w, h, 0.45f);
     centredText("Options", h * 0.13f, 4.4f, TEXT_COLOR);
 
     const float buttonWidth = std::min(520.0f, w * 0.72f);
@@ -10895,7 +11069,7 @@ void Application::renderVideoScreen()
     const float w = m_ui.canvasWidth();
     const float h = m_ui.canvasHeight();
 
-    m_ui.quad(0, 0, w, h, glm::vec4(0.0f, 0.0f, 0.0f, 0.45f));
+    menuBackdrop(w, h, 0.45f);
     centredText("Video Settings", h * 0.13f, 4.4f, TEXT_COLOR);
 
     const float buttonWidth = std::min(520.0f, w * 0.72f);
@@ -10910,11 +11084,35 @@ void Application::renderVideoScreen()
 
     if (menuButton({ buttonX, y, sideWidth, buttonHeight }, "-"))
         m_pendingAction = MenuAction::RenderDistanceDown;
-    if (!guiNineSlice("sprites/widget/slider", buttonX + sideWidth + 8.0f, y,
-                      buttonWidth - sideWidth * 2.0f - 16.0f, buttonHeight,
-                      static_cast<float>(guiScale()) / m_ui.scale()))
-        bevel(buttonX + sideWidth + 8.0f, y, buttonWidth - sideWidth * 2.0f - 16.0f, buttonHeight,
-              BUTTON_FACE_OFF, BUTTON_LIGHT, BUTTON_DARK, 2.0f);
+    {
+        const float unit = static_cast<float>(guiScale()) / m_ui.scale();
+        const float sliderX = buttonX + sideWidth + 8.0f;
+        const float sliderW = buttonWidth - sideWidth * 2.0f - 16.0f;
+        const float mouseX = static_cast<float>(m_input.mouseX()) / m_ui.scale();
+        const float mouseY = static_cast<float>(m_input.mouseY()) / m_ui.scale();
+        const bool over = mouseX >= sliderX && mouseX < sliderX + sliderW &&
+                          mouseY >= y && mouseY < y + buttonHeight;
+        if (guiNineSlice(over ? "sprites/widget/slider_highlighted" : "sprites/widget/slider",
+                         sliderX, y, sliderW, buttonHeight, unit))
+        {
+            const float handleW = 8.0f * unit;
+            const float along = static_cast<float>(distance - 2) / 22.0f;
+            guiNineSlice(over ? "sprites/widget/slider_handle_highlighted" : "sprites/widget/slider_handle",
+                         sliderX + (sliderW - handleW) * along, y, handleW, buttonHeight, unit);
+            if (over && !m_automated && m_input.isMouseButtonDown(SDL_BUTTON_LEFT))
+            {
+                const float picked = std::clamp((mouseX - sliderX - handleW * 0.5f) / (sliderW - handleW), 0.0f, 1.0f);
+                const int wanted = 2 + static_cast<int>(std::lround(picked * 22.0f));
+                if (wanted != distance)
+                {
+                    m_pendingRenderDistance = wanted;
+                    m_pendingAction = MenuAction::SetRenderDistance;
+                }
+            }
+        }
+        else
+            bevel(sliderX, y, sliderW, buttonHeight, BUTTON_FACE_OFF, BUTTON_LIGHT, BUTTON_DARK, 2.0f);
+    }
     m_ui.textWithShadow(label,
                         buttonX + buttonWidth * 0.5f - UIRenderer::textWidth(label, 2.2f) * 0.5f,
                         y + buttonHeight * 0.5f - UIRenderer::textHeight(2.2f) * 0.5f,
@@ -10946,7 +11144,8 @@ void Application::renderCreditsScreen()
     const float w = m_ui.canvasWidth();
     const float h = m_ui.canvasHeight();
 
-    m_ui.quad(0, 0, w, h, glm::vec4(0.0f, 0.0f, 0.0f, 0.62f));
+    menuBackdrop(w, h, 0.62f);
+    guiSprite("../misc/credits_vignette", 0.0f, 0.0f, w, h);
     centredText("Credits", h * 0.08f, 4.4f, TEXT_COLOR);
 
     struct Line { std::string text; bool heading; };
@@ -10985,7 +11184,7 @@ void Application::renderControlsScreen()
     const float w = m_ui.canvasWidth();
     const float h = m_ui.canvasHeight();
 
-    m_ui.quad(0, 0, w, h, glm::vec4(0.0f, 0.0f, 0.0f, 0.62f));
+    menuBackdrop(w, h, 0.62f);
     centredText("Controls", h * 0.05f, 3.6f, TEXT_COLOR);
 
     const int rowCount = static_cast<int>(Action::Count);

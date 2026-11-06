@@ -23,12 +23,14 @@ for value in quoted:
 def used(category, rel):
     stem = os.path.basename(rel)[:-4]
     path = rel[:-4]
-    if category in ("block", "item"):
-        return stem in quoted or path in text
-    if path in text or ("../" + path) in text:
-        return True
     inner = path.split("/", 1)[1] if "/" in path else path
-    return inner in text
+    if category in ("block", "item"):
+        return stem in quoted or ("../" + path) in text
+    if category == "gui":
+        return ('"' + inner + '"') in text or ('"' + inner + "|") in text
+    if category == "entity":
+        return (inner + ".png") in text or ('"' + path + '"') in text or ("../" + path + '"') in text
+    return ('"' + path + '"') in text or ('"../' + path + '"') in text or (path + ".png") in text
 
 skip_dirs = {"block.", "item."}
 report = {}

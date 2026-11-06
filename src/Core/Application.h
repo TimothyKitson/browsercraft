@@ -107,6 +107,7 @@ enum class MenuAction
     LeaveOptions,
     ToggleSound,
     RenderDistanceDown,
+    SetRenderDistance,
     RenderDistanceUp
 };
 
@@ -888,6 +889,7 @@ private:
     void renderExperience(float x, float y, float width);
     void renderAir(float rightX, float y);
     void renderEffectIcons(float w);
+    void drawInventoryEffects(float panelRight, float panelTop, float w);
     void renderEatProgress(float cx, float cy);
     void handleEating(float deltaTime);
     void handleDrinking(float deltaTime);
@@ -927,6 +929,14 @@ private:
     bool guiNineSlice(const char* path, float x, float y, float w, float h, float unit,
                       const glm::vec4& tint = glm::vec4(1.0f));
     bool guiHas(const char* path) { return m_gui.has(path); }
+    bool guiTiled(const char* path, float x, float y, float w, float h, float tile,
+                  const glm::vec4& tint = glm::vec4(1.0f));
+    void menuBackdrop(float w, float h, float fallbackAlpha);
+    void renderBossBars(float w);
+    bool panoramaShowing();
+    void renderPanorama();
+    int m_pendingRenderDistance = 8;
+    float m_vignette = 0.0f;
     void centredText(const std::string& text, float y, float scale, const glm::vec4& colour);
     void applyMenuAction();
 
@@ -1016,6 +1026,8 @@ private:
     }
     std::vector<SlotBox> m_slotBoxes;
     int m_creativeTab = 0;
+    std::string m_creativeSearch;
+    bool creativeSearching() const;
 
     const SlotBox* slotBoxAt(int mouseX, int mouseY) const;
 };

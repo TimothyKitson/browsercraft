@@ -94,12 +94,13 @@ namespace
         { "Items",            Items::Wheat,       TAB_ITEMS,    static_cast<int>(std::size(TAB_ITEMS)) },
         { "Tools",            Items::IronPickaxe, TAB_TOOLS,    static_cast<int>(std::size(TAB_TOOLS)) },
         { "Armour",           Items::DiamondChestplate, TAB_ARMOUR, static_cast<int>(std::size(TAB_ARMOUR)) },
-        { "Everything",       Blocks::Cobblestone,nullptr,      0 },
+        { "Search Items",     Items::Book,        nullptr,      0 },
         { "Your Inventory",   Blocks::Chest,      nullptr,      0 },  // the player's own slots
     };
 
     constexpr int TAB_COUNT = static_cast<int>(std::size(CREATIVE_TABS));
     constexpr int INVENTORY_TAB = TAB_COUNT - 1;
+    constexpr int SEARCH_TAB = TAB_COUNT - 2;
     constexpr int PALETTE_COLUMNS = 9;
     constexpr int PALETTE_ROWS = 5;
 
@@ -457,6 +458,13 @@ void Application::drawFurnaceFlame(float x, float y, float alight)
     }
 }
 
+bool Application::creativeSearching() const
+{
+    return m_inventoryOpen && m_player.creative() && m_creativeTab == SEARCH_TAB &&
+           !m_chestOpen && !m_crafterOpen && !m_furnaceOpen && m_inventory.craftSize() < 3 &&
+           !m_tradeOpen && !m_enchantOpen && !m_brewOpen && !m_anvilOpen;
+}
+
 int Application::creativeInventoryTab()
 {
     return INVENTORY_TAB;
@@ -532,9 +540,18 @@ void Application::renderContainerScreen(float w, float h)
     else if (bench) background = "container/crafting_table";
     const bool skin = m_gui.has(background);
 
-    const char* furnaceSprites = "sprites/container/furnace/";
-    if (std::strcmp(background, "container/smoker") == 0) furnaceSprites = "sprites/container/smoker/";
-    if (std::strcmp(background, "container/blast_furnace") == 0) furnaceSprites = "sprites/container/blast_furnace/";
+    const char* litSprite = "sprites/container/furnace/lit_progress";
+    const char* burnSprite = "sprites/container/furnace/burn_progress";
+    if (std::strcmp(background, "container/smoker") == 0)
+    {
+        litSprite = "sprites/container/smoker/lit_progress";
+        burnSprite = "sprites/container/smoker/burn_progress";
+    }
+    if (std::strcmp(background, "container/blast_furnace") == 0)
+    {
+        litSprite = "sprites/container/blast_furnace/lit_progress";
+        burnSprite = "sprites/container/blast_furnace/burn_progress";
+    }
 
     const float PANEL_W = 176.0f;
     const float PANEL_H = hopper ? 133.0f : bigChest ? 168.0f : 166.0f;
@@ -1509,14 +1526,13 @@ void Application::renderContainerScreen(float w, float h)
 
             if (skin)
             {
-                const std::string base(furnaceSprites);
                 if (gauge.burnLeft > 0.0f)
                 {
                     const float lit = std::ceil(gauge.burnFraction() * 13.0f) + 1.0f;
-                    guiSpritePart((base + "lit_progress").c_str(), 14.0f, 14.0f, 0.0f, 14.0f - lit,
+                    guiSpritePart(litSprite, 14.0f, 14.0f, 0.0f, 14.0f - lit,
                                   panelX + 56.0f, panelY + 36.0f + 14.0f - lit, 14.0f, lit);
                 }
-                guiSpritePart((base + "burn_progress").c_str(), 24.0f, 16.0f, 0.0f, 0.0f,
+                guiSpritePart(burnSprite, 24.0f, 16.0f, 0.0f, 0.0f,
                               panelX + 79.0f, panelY + 34.0f, std::ceil(gauge.cookFraction() * 24.0f), 16.0f);
             }
             else
@@ -1572,6 +1588,8 @@ void Application::renderContainerScreen(float w, float h)
     for (int i = 0; i < Inventory::HOTBAR_SLOTS; ++i)
         drawSlot(i, invX + i * PITCH, hotbarY);
 
+    if (plainInventory) drawInventoryEffects(panelX + panelWidth, panelY, w);
+
 }
 
 void Application::renderCreativeScreen(float w, float h)
@@ -1587,8 +1605,10 @@ void Application::renderCreativeScreen(float w, float h)
     const float panelY = std::floor((h - PANEL_H) * 0.5f);
 
     const bool inventoryTab = m_creativeTab == INVENTORY_TAB;
+    const bool searchTab = m_creativeTab == SEARCH_TAB;
     const char* background = inventoryTab ? "container/creative_inventory/tab_inventory"
-                                          : "container/creative_inventory/tab_items";
+                           : searchTab ? "container/creative_inventory/tab_item_search"
+                                       : "container/creative_inventory/tab_items";
     const bool skin = m_gui.has(background);
 
     auto well = [this, skin](float x, float y) {
@@ -1697,12 +1717,40 @@ void Application::renderCreativeScreen(float w, float h)
     {
         // ------------------------------------------------- the palette ---
         // The tab's name in the corner, where the client writes it.
-        m_ui.text(CREATIVE_TABS[m_creativeTab].name, panelX + 8.0f, panelY + 6.0f,
-                  1.0f, GUI_TEXT);
+        if (!searchTab)
+            m_ui.text(CREATIVE_TABS[m_creativeTab].name, panelX + 8.0f, panelY + 6.0f,
+                      1.0f, GUI_TEXT);
 
         const StackId* items = nullptr;
         int count = 0;
         tabContents(m_creativeTab, items, count);
+
+        static std::vector<StackId> found;
+        if (searchTab)
+        {
+            if (!skin)
+            {
+                m_ui.text("Search Items", panelX + 8.0f, panelY + 6.0f, 1.0f, GUI_TEXT);
+                m_ui.quad(panelX + 81.0f, panelY + 4.0f, 90.0f, 12.0f, glm::vec4(0.0f, 0.0f, 0.0f, 1.0f));
+            }
+            const bool caretOn = ((SDL_GetTicks() / 500u) % 2u) == 0u;
+            m_ui.textWithShadow(m_creativeSearch + (caretOn ? "_" : ""), panelX + 83.0f, panelY + 6.0f, 1.0f,
+                                glm::vec4(1.0f));
+            if (!m_creativeSearch.empty())
+            {
+                std::string want = m_creativeSearch;
+                for (char& c : want) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+                found.clear();
+                for (int i = 0; i < count; ++i)
+                {
+                    std::string name = displayName(items[i]);
+                    for (char& c : name) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+                    if (name.find(want) != std::string::npos) found.push_back(items[i]);
+                }
+                items = found.data();
+                count = static_cast<int>(found.size());
+            }
+        }
 
         // A tab with more in it than the grid holds scrolls on the wheel.
         const int rows = (count + PALETTE_COLUMNS - 1) / PALETTE_COLUMNS;
@@ -1823,6 +1871,50 @@ void Application::renderCreativeScreen(float w, float h)
 
     // And the open tab last, in front of the panel it belongs to.
     drawTab(m_creativeTab);
+    drawInventoryEffects(panelX + PANEL_W, panelY, w);
+}
+
+void Application::drawInventoryEffects(float panelRight, float panelTop, float w)
+{
+    static const char* ICONS[Effects::KIND_COUNT] = {
+        "../mob_effect/speed", "../mob_effect/slowness", "../mob_effect/strength",
+        "../mob_effect/weakness", "../mob_effect/regeneration", "../mob_effect/poison",
+        "../mob_effect/fire_resistance", "../mob_effect/water_breathing",
+        "../mob_effect/night_vision", "../mob_effect/jump_boost", "../mob_effect/bad_omen",
+    };
+    static const char* NUMERALS[6] = { "", " II", " III", " IV", " V", " VI" };
+
+    std::vector<int> running;
+    for (int i = 0; i < Effects::KIND_COUNT; ++i)
+        if (m_player.effects.has(static_cast<Effects::Kind>(i))) running.push_back(i);
+    if (running.empty()) return;
+
+    const float x = panelRight + 2.0f;
+    const float room = w - x;
+    if (room < 32.0f) return;
+    const bool wide = room >= 120.0f;
+    const float step = running.size() > 5 ? 132.0f / static_cast<float>(running.size() - 1) : 33.0f;
+
+    float y = panelTop;
+    for (int i : running)
+    {
+        const Effects::Kind kind = static_cast<Effects::Kind>(i);
+        const bool drew = wide ? guiSprite("sprites/container/inventory/effect_background_large", x, y, 120.0f, 32.0f)
+                               : guiSprite("sprites/container/inventory/effect_background_small", x, y, 32.0f, 32.0f);
+        if (!drew) guiPanel(x, y, wide ? 120.0f : 32.0f, 32.0f);
+        guiSprite(ICONS[i], x + (wide ? 6.0f : 7.0f), y + 7.0f, 18.0f, 18.0f);
+        if (wide)
+        {
+            const int amplifier = std::clamp(m_player.effects.amplifier(kind), 0, 5);
+            m_ui.textWithShadow(std::string(Effects::name(kind)) + NUMERALS[amplifier], x + 28.0f, y + 6.0f,
+                                1.0f, glm::vec4(1.0f));
+            const int seconds = static_cast<int>(std::ceil(m_player.effects.secondsLeft(kind)));
+            char clock[16];
+            std::snprintf(clock, sizeof(clock), "%d:%02d", seconds / 60, seconds % 60);
+            m_ui.textWithShadow(clock, x + 28.0f, y + 16.0f, 1.0f, glm::vec4(0.498f, 0.498f, 0.498f, 1.0f));
+        }
+        y += step;
+    }
 }
 
 void Application::finishInventoryScreen()
