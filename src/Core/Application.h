@@ -30,6 +30,7 @@
 #include "Game/Shield.h"
 #include "Game/Fluids.h"
 #include "Renderer/BeamRenderer.h"
+#include "Renderer/BookRenderer.h"
 #include "Game/VillageLoot.h"
 #include "Game/StructureLoot.h"
 #include "Game/Weather.h"
@@ -249,6 +250,7 @@ private:
     void tickFluids(float deltaTime);
     void claimJobSites();
     BeamRenderer m_beams;
+    BookRenderer m_books;
     float m_beamClock = 0.0f;
     float m_dragonBreathTimer = 5.0f;
     std::vector<glm::ivec3> m_litBeacons;

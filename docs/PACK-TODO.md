@@ -56,7 +56,7 @@ Everything in the 1.21 textures zip the game doesn't use yet, turned into work. 
    - IV. The dragon fireball, and the dragon's death explosion.
    - V. The shulker bullet.
    - Left for later: the breeze's wind swirl, which needs its own model.
-10. Enchanting table book
+10. Enchanting table book (done)
     - I. A floating book above the table.
     - II. It opens when a player is near, turns pages and follows the player, like Minecraft.
 11. Elytra

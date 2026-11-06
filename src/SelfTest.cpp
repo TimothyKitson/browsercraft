@@ -37,6 +37,7 @@
 #include "Game/Experience.h"
 #include "Game/Cane.h"
 #include "Game/Fluids.h"
+#include "Renderer/BookRenderer.h"
 #include "Game/Anvil.h"
 #include "Game/Shield.h"
 #include "Game/Effects.h"
@@ -9464,6 +9465,17 @@ namespace
             const int before = wither.health();
             wither.damage(50, glm::vec3(1.0f, 0.0f, 0.0f));
             check(wither.health() == before, "and nothing can hurt it until it wakes");
+        }
+
+        section("enchanting table: the book");
+        {
+            BookRenderer::Book book;
+            uint32_t seed = 99u;
+            for (int i = 0; i < 20; ++i) BookRenderer::step(book, true, 0.0f, 2.0f, seed);
+            check(book.open > 0.99f, "the book opens when someone stands near");
+            check(std::abs(book.rotation - 1.5708f) < 0.05f, "and turns to face them");
+            for (int i = 0; i < 20; ++i) BookRenderer::step(book, false, 0.0f, 0.0f, seed);
+            check(book.open < 0.01f, "and shuts again when they leave");
         }
 
         section("amethyst: buds grow in four stages");

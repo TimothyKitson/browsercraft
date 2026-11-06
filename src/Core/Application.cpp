@@ -2334,7 +2334,8 @@ bool Application::frame()
                 // Close enough to stay in reach: walk out of range and
                 // the screen shuts itself, which is what happened the
                 // first time this was put six blocks away.
-                const glm::vec3 ahead = m_player.position + m_camera.front * 3.0f;
+                const glm::vec3 ahead = m_player.position +
+                                        m_camera.front * (m_startupScreen == "enchantblock" ? 2.2f : 3.0f);
                 const int bx = static_cast<int>(std::floor(ahead.x));
                 const int by = static_cast<int>(std::floor(m_player.position.y));
                 const int bz = static_cast<int>(std::floor(ahead.z));
@@ -9347,6 +9348,7 @@ void Application::renderWorldShaded()
     m_sprites->render(world, *m_world, camera.right, camera.up, m_atlas.textureId());
     queueBeams();
     m_beams.render(world);
+    m_books.render(world, *m_world);
     m_atlas.bind(0, 1, 2);
     renderPlayers(view, projection);
     if (inGame())
@@ -9478,6 +9480,7 @@ void Application::renderWorld()
     m_sprites->render(m_chunkShader, *m_world, camera.right, camera.up, m_atlas.textureId());
     queueBeams();
     m_beams.render(m_chunkShader);
+    m_books.render(m_chunkShader, *m_world);
     m_atlas.bind(0, 1, 2);
 
     // Players are opaque too, but each one brings its own texture, so
@@ -10339,6 +10342,7 @@ void Application::updateWorldAround(float deltaTime)
     tickTimedBlocks(deltaTime);
     tickFluids(deltaTime);
     tickBreathClouds(deltaTime);
+    m_books.update(deltaTime, *m_world, m_player.position);
 
     m_jobSiteTimer += deltaTime;
     if (m_jobSiteTimer >= 2.0f)
