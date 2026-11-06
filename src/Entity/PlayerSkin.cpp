@@ -75,6 +75,11 @@ namespace
           { 214, 182, 158, 255 }, { 216, 220, 228, 255 }, {  92, 140, 190, 255 },
           {  42,  54,  82, 255 }, {  52,  56,  66, 255 }, { 120, 162, 196, 255 },
           { 148,  98,  92, 255 } },
+
+        { "SLATE", "kai",
+          { 176, 128,  92, 255 }, {  40,  36,  34, 255 }, { 196, 156,  60, 255 },
+          {  66,  66,  74, 255 }, {  40,  40,  44, 255 }, {  60,  60,  66, 255 },
+          { 130,  84,  74, 255 } },
     };
 
     constexpr int PALETTE_COUNT = static_cast<int>(std::size(PALETTES));
@@ -145,8 +150,11 @@ bool PlayerSkin::customAvailable()
 std::string PlayerSkin::variantPath(Style style, int variant)
 {
     if (variant < 0 || variant >= PALETTE_COUNT) return {};
-    return std::string("assets/skins/") + (style == Style::Slim ? "slim/" : "wide/") +
-           PALETTES[variant].file + ".png";
+    const std::string shape = style == Style::Slim ? "slim/" : "wide/";
+    const std::string own = "assets/skins/" + shape + PALETTES[variant].file + ".png";
+    int w = 0, h = 0, channels = 0;
+    if (stbi_info(own.c_str(), &w, &h, &channels)) return own;
+    return "assets/textures/entity/player/" + shape + PALETTES[variant].file + ".png";
 }
 
 bool PlayerSkin::variantAvailable(Style style, int variant)
