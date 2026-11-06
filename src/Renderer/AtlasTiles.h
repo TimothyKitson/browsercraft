@@ -289,6 +289,7 @@ namespace Tiles
         NetherWart0Tile, NetherWart1Tile, AnvilTopChipped, AnvilTopDamaged,
         CopperBulbPoweredTile, CopperBulbLitPoweredTile,
         DispenserSide,
+        WaterFlow, LavaFlow, WaterOverlay,
 
         TileCount
     };

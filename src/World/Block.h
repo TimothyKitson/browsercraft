@@ -520,6 +520,8 @@ namespace Blocks
         TrialSpawnerEjecting,
         TrialSpawnerEjectingOminous,
         TrialSpawnerSpentOminous,
+        WaterFlow1, WaterFlow2, WaterFlow3, WaterFlow4, WaterFlow5, WaterFlow6, WaterFlow7, WaterFalling,
+        LavaFlow1, LavaFlow2, LavaFlow3, LavaFlow4, LavaFlow5, LavaFlow6, LavaFlow7, LavaFalling,
 
         Count
     };
@@ -566,6 +568,32 @@ inline bool isAir(BlockId id) { return id == Blocks::Air; }
 inline bool isOpaque(BlockId id) { return blockInfo(id).opaque; }
 inline bool isSolid(BlockId id) { return blockInfo(id).collides; }
 inline bool isLiquid(BlockId id) { return blockInfo(id).render == RenderType::Liquid; }
+inline bool isWater(BlockId id) { return id == Blocks::Water || (id >= Blocks::WaterFlow1 && id <= Blocks::WaterFalling); }
+inline bool isLava(BlockId id) { return id == Blocks::Lava || (id >= Blocks::LavaFlow1 && id <= Blocks::LavaFalling); }
+inline bool isFluid(BlockId id) { return isWater(id) || isLava(id); }
+inline bool isFluidSource(BlockId id) { return id == Blocks::Water || id == Blocks::Lava; }
+inline bool isFluidFalling(BlockId id) { return id == Blocks::WaterFalling || id == Blocks::LavaFalling; }
+inline BlockId fluidBase(BlockId id)
+{
+    if (isWater(id)) return Blocks::Water;
+    if (isLava(id)) return Blocks::Lava;
+    return Blocks::Air;
+}
+inline int fluidAmount(BlockId id)
+{
+    if (isFluidSource(id) || isFluidFalling(id)) return 8;
+    if (id >= Blocks::WaterFlow1 && id <= Blocks::WaterFlow7) return id - Blocks::WaterFlow1 + 1;
+    if (id >= Blocks::LavaFlow1 && id <= Blocks::LavaFlow7) return id - Blocks::LavaFlow1 + 1;
+    return 0;
+}
+inline BlockId flowingFluid(BlockId base, int amount, bool falling)
+{
+    const bool lava = base == Blocks::Lava;
+    if (falling) return lava ? Blocks::LavaFalling : Blocks::WaterFalling;
+    if (amount <= 0) return Blocks::Air;
+    if (amount > 7) amount = 7;
+    return static_cast<BlockId>((lava ? Blocks::LavaFlow1 : Blocks::WaterFlow1) + amount - 1);
+}
 inline bool isCross(BlockId id) { return blockInfo(id).render == RenderType::Cross; }
 inline bool isSlab(BlockId id) { return blockInfo(id).render == RenderType::Slab; }
 // Anything drawn as a flat panel against one wall of its cell: the

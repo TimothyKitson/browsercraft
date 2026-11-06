@@ -28,6 +28,7 @@
 #include "World/Signs.h"
 #include "World/Frames.h"
 #include "Game/Shield.h"
+#include "Game/Fluids.h"
 #include "Game/VillageLoot.h"
 #include "Game/StructureLoot.h"
 #include "Game/Weather.h"
@@ -239,6 +240,12 @@ private:
     float m_bubbleClock = 0.0f;
     struct TimedBlock { glm::ivec3 at; BlockId expect; BlockId then; float left; };
     std::vector<TimedBlock> m_timedBlocks;
+    Fluids::Scheduler m_fluids;
+    std::vector<glm::ivec3> m_fluidChanges;
+    const World* m_fluidWorld = nullptr;
+    float m_fluidClock = 0.0f;
+    long long m_fluidTicks = 0;
+    void tickFluids(float deltaTime);
     void setBlockFor(const glm::ivec3& at, BlockId now, BlockId then, float seconds);
     void tickTimedBlocks(float deltaTime);
     uint32_t m_wearSeed = 0x2545F491u;

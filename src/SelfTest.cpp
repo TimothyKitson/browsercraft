@@ -36,6 +36,7 @@
 #include "Game/Explosion.h"
 #include "Game/Experience.h"
 #include "Game/Cane.h"
+#include "Game/Fluids.h"
 #include "Game/Anvil.h"
 #include "Game/Shield.h"
 #include "Game/Effects.h"
@@ -9309,6 +9310,127 @@ namespace
         }
     };
 
+    struct FakeFluidWorld : Fluids::Cells
+    {
+        std::map<std::array<int, 3>, BlockId> cells;
+        int floorY = 0;
+
+        BlockId at(int x, int y, int z) const override
+        {
+            const auto it = cells.find({ x, y, z });
+            if (it != cells.end()) return it->second;
+            return y <= floorY ? ::Blocks::Stone : ::Blocks::Air;
+        }
+        void set(int x, int y, int z, BlockId id) override { cells[{ x, y, z }] = id; changed.push_back({ x, y, z }); }
+        std::vector<std::array<int, 3>> changed;
+
+        void settle(bool nether = false, int rounds = 400)
+        {
+            Fluids::Scheduler scheduler;
+            long long now = 0;
+            std::vector<std::array<int, 3>> wake = changed;
+            changed.clear();
+            for (const auto& c : wake) scheduler.wake(*this, c[0], c[1], c[2], now, nether);
+            for (int i = 0; i < rounds; ++i)
+            {
+                ++now;
+                scheduler.run(*this, now, nether, 4096);
+                wake.swap(changed);
+                changed.clear();
+                for (const auto& c : wake) scheduler.wake(*this, c[0], c[1], c[2], now, nether);
+                if (scheduler.pending() == 0) break;
+            }
+        }
+    };
+
+    void testFluids()
+    {
+        section("fluids: water spreads and settles");
+
+        FakeFluidWorld flat;
+        flat.set(0, 1, 0, Blocks::Water);
+        flat.settle();
+        check(flat.at(1, 1, 0) == Blocks::WaterFlow7, "water beside a source is one step down");
+        check(flat.at(7, 1, 0) == Blocks::WaterFlow1, "and runs seven blocks on the flat");
+        check(flat.at(8, 1, 0) == Blocks::Air, "and no further");
+        check(flat.at(3, 1, 3) == Blocks::WaterFlow2 && flat.at(4, 1, 3) == Blocks::WaterFlow1 &&
+              flat.at(4, 1, 4) == Blocks::Air, "it spreads round corners by steps, not as the crow flies");
+
+        flat.set(0, 1, 0, Blocks::Air);
+        flat.settle();
+        bool dried = true;
+        for (int x = -8; x <= 8; ++x)
+            for (int z = -8; z <= 8; ++z)
+                if (isFluid(flat.at(x, 1, z))) dried = false;
+        check(dried, "and drains away when the source is taken");
+
+        section("fluids: water runs downhill");
+        FakeFluidWorld slope;
+        slope.set(0, 1, 0, Blocks::Water);
+        slope.set(3, 1, 0, Blocks::Air);
+        slope.set(3, 0, 0, Blocks::Air);
+        slope.settle();
+        check(isWater(slope.at(3, 0, 0)), "it finds the hole three blocks away and pours in");
+        check(slope.at(-1, 1, 0) == Blocks::Air, "rather than spreading the other way");
+        check(isFluidFalling(slope.at(3, 0, 0)) || fluidAmount(slope.at(3, 0, 0)) > 0, "and falls into it");
+
+        section("fluids: infinite water");
+        FakeFluidWorld pool;
+        pool.set(0, 1, 0, Blocks::Water);
+        pool.set(2, 1, 0, Blocks::Water);
+        for (int x = -1; x <= 3; ++x)
+            for (int z = -1; z <= 1; ++z)
+                if (!(z == 0 && x >= 0 && x <= 2)) pool.set(x, 1, z, Blocks::Stone);
+        pool.settle();
+        check(pool.at(1, 1, 0) == Blocks::Water, "two sources either side make a third");
+
+        section("fluids: lava");
+        FakeFluidWorld lava;
+        lava.set(0, 1, 0, Blocks::Lava);
+        lava.settle();
+        check(lava.at(1, 1, 0) == Blocks::LavaFlow6, "lava in the overworld drops two a block");
+        check(lava.at(3, 1, 0) == Blocks::LavaFlow2, "and runs three blocks");
+        check(lava.at(4, 1, 0) == Blocks::Air, "and no further");
+
+        FakeFluidWorld hot;
+        hot.set(0, 1, 0, Blocks::Lava);
+        hot.settle(true);
+        check(hot.at(4, 1, 0) == Blocks::LavaFlow4, "but runs like water in the nether");
+
+        section("fluids: lava meets water");
+        FakeFluidWorld meet;
+        meet.set(0, 1, 0, Blocks::Lava);
+        meet.set(1, 1, 0, Blocks::Stone);
+        meet.set(0, 1, 1, Blocks::Stone);
+        meet.set(-1, 1, 0, Blocks::Stone);
+        meet.set(0, 1, -1, Blocks::Stone);
+        meet.set(3, 1, -1, Blocks::Water);
+        meet.settle();
+        meet.set(1, 1, 0, Blocks::WaterFlow3);
+        meet.settle();
+        check(meet.at(0, 1, 0) == Blocks::Obsidian, "water on a lava source makes obsidian");
+
+        FakeFluidWorld cobble;
+        cobble.set(0, 1, 0, Blocks::LavaFlow4);
+        cobble.set(-1, 1, 0, Blocks::LavaFlow6);
+        cobble.set(1, 1, 0, Blocks::WaterFlow5);
+        Fluids::update(cobble, 0, 1, 0, false);
+        check(cobble.at(0, 1, 0) == Blocks::Cobblestone, "water on running lava makes cobblestone");
+
+        FakeFluidWorld fall;
+        fall.set(0, 2, 0, Blocks::Lava);
+        fall.set(0, 1, 0, Blocks::Water);
+        Fluids::update(fall, 0, 2, 0, false);
+        check(fall.at(0, 1, 0) == Blocks::Stone || fall.at(0, 2, 0) == Blocks::Obsidian,
+              "lava meeting water below turns one of them to rock");
+
+        section("fluids: what water washes away");
+        check(Fluids::washesAway(Blocks::Torch) || !isCross(Blocks::Torch), "a torch is washed away if it stands like a plant");
+        check(!Fluids::washesAway(Blocks::Stone), "stone is not");
+        check(!Fluids::washesAway(Blocks::SugarCane), "sugar cane holds its ground, as in Minecraft");
+        check(!isObtainable(Blocks::WaterFlow3) && !isObtainable(Blocks::LavaFalling), "running water is never an item");
+    }
+
     void testSugarCane()
     {
         section("sugar cane: where it stands");
@@ -12204,6 +12326,7 @@ int runSelfTest()
     testLevelRoundTrip();
     testExperience();
     testSugarCane();
+    testFluids();
     testEnchanting();
     testTrading();
     testEndPortal();

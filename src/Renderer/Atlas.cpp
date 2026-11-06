@@ -11,6 +11,8 @@
 #include <string>
 #include <cstdio>
 #include <iterator>
+#include <cctype>
+#include <cstdlib>
 
 #ifndef GL_RGBA8
 #define GL_RGBA8 0x8058
@@ -3958,6 +3960,58 @@ namespace
         return Image{};
     }
 
+    bool readAnimationMeta(const char* const* candidates, int& frameTime, std::vector<int>& order)
+    {
+        for (int i = 0; candidates[i] != nullptr; ++i)
+        {
+            const std::string path = std::string(PACK_DIRECTORY) + "/" + candidates[i] + ".png";
+            std::FILE* png = std::fopen(path.c_str(), "rb");
+            if (!png) continue;
+            std::fclose(png);
+
+            std::FILE* file = std::fopen((path + ".mcmeta").c_str(), "rb");
+            if (!file) return false;
+            std::string text;
+            char buffer[4096];
+            size_t got = 0;
+            while ((got = std::fread(buffer, 1, sizeof(buffer), file)) > 0) text.append(buffer, got);
+            std::fclose(file);
+
+            frameTime = 1;
+            const size_t timeAt = text.find("\"frametime\"");
+            if (timeAt != std::string::npos)
+            {
+                const size_t colon = text.find(':', timeAt);
+                if (colon != std::string::npos) frameTime = std::max(1, std::atoi(text.c_str() + colon + 1));
+            }
+
+            order.clear();
+            const size_t framesAt = text.find("\"frames\"");
+            if (framesAt != std::string::npos)
+            {
+                const size_t open = text.find('[', framesAt);
+                const size_t close = (open == std::string::npos) ? open : text.find(']', open);
+                if (close != std::string::npos)
+                {
+                    const std::string list = text.substr(open + 1, close - open - 1);
+                    if (list.find('{') == std::string::npos)
+                    {
+                        size_t at = 0;
+                        while (at < list.size())
+                        {
+                            while (at < list.size() && !std::isdigit(static_cast<unsigned char>(list[at]))) ++at;
+                            if (at >= list.size()) break;
+                            order.push_back(std::atoi(list.c_str() + at));
+                            while (at < list.size() && std::isdigit(static_cast<unsigned char>(list[at]))) ++at;
+                        }
+                    }
+                }
+            }
+            return true;
+        }
+        return false;
+    }
+
     // ---------- Bedrock "texture set" PBR ----------
     //
 
@@ -6412,6 +6466,9 @@ namespace
         { Tiles::CopperBulbPoweredTile, paintCopperBulb },
         { Tiles::CopperBulbLitPoweredTile, paintCopperBulbLit },
         { Tiles::DispenserSide, paintFurnaceTop },
+        { Tiles::WaterFlow, paintWater },
+        { Tiles::LavaFlow, paintLava },
+        { Tiles::WaterOverlay, paintWater },
         { Tiles::BedTop,        paintBedTop },
         { Tiles::LadderTile,    paintLadderTile },
         { Tiles::DoorLower,     paintDoorLower },
@@ -6764,6 +6821,9 @@ namespace
         { Tiles::CopperBulbPoweredTile, { "copper_bulb_powered", nullptr }, Tinting::None, 0, false },
         { Tiles::CopperBulbLitPoweredTile, { "copper_bulb_lit_powered", nullptr }, Tinting::None, 0, false },
         { Tiles::DispenserSide, { "furnace_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::WaterFlow, { "water_flow", nullptr }, Tinting::Water, 200, true },
+        { Tiles::LavaFlow, { "lava_flow", nullptr }, Tinting::None, 0, true },
+        { Tiles::WaterOverlay, { "water_overlay", nullptr }, Tinting::Water, 200, false },
         { Tiles::FurnaceTop,    { "furnace_top", nullptr },                            Tinting::None,    0,   false },
         { Tiles::FurnaceFront,  { "furnace_front", nullptr },                          Tinting::None,    0,   false },
         { Tiles::FurnaceLit,    { "furnace_front_on", nullptr },                       Tinting::None,    0,   true  },
@@ -7316,8 +7376,19 @@ Atlas::Atlas()
 
             const int frameHeight = (frameCount > 1) ? image.height / frameCount : image.height;
 
+            const bool halfFrame = entry.tile == Tiles::WaterFlow || entry.tile == Tiles::LavaFlow;
             auto prepare = [&](const Image& raw) {
-                Image frame = scaleNearest(raw, tilePixels, tilePixels);
+                Image source = raw;
+                if (halfFrame && raw.width >= 2 && raw.height >= 2)
+                {
+                    source.width = raw.width / 2;
+                    source.height = raw.height / 2;
+                    source.rgba.assign(static_cast<size_t>(source.width) * source.height * 4, 0);
+                    for (int y = 0; y < source.height; ++y)
+                        for (int x = 0; x < source.width; ++x)
+                            source.set(x, y, raw.at(x, y));
+                }
+                Image frame = scaleNearest(source, tilePixels, tilePixels);
                 applyTint(frame, entry.tint);
                 if (entry.maxAlpha > 0) setOpacity(frame, entry.maxAlpha);
                 return frame;
@@ -7329,6 +7400,14 @@ Atlas::Atlas()
                 animation.tile = entry.tile;
                 animation.frameCount = frameCount;
                 animation.frameSeconds = (entry.tile == Tiles::Lava) ? 0.15f : 0.08f;
+                int frameTime = 0;
+                std::vector<int> order;
+                if (readAnimationMeta(entry.candidates, frameTime, order))
+                {
+                    animation.frameSeconds = frameTime * 0.05f;
+                    for (int index : order)
+                        if (index >= 0 && index < frameCount) animation.order.push_back(index);
+                }
                 animation.frames.resize(static_cast<size_t>(frameCount) * tilePixels * tilePixels * 4);
 
                 for (int f = 0; f < frameCount; ++f)
@@ -7865,9 +7944,13 @@ void Atlas::update(float deltaTime)
         animation.timer += deltaTime;
         if (animation.timer < animation.frameSeconds) continue;
 
-        animation.timer = 0.0f;
-        animation.current = (animation.current + 1) % animation.frameCount;
-        uploadTile(animation.tile, animation.frames.data() + animation.current * frameBytes);
+        animation.timer -= animation.frameSeconds;
+        if (animation.timer > animation.frameSeconds) animation.timer = 0.0f;
+        const int steps = animation.order.empty() ? animation.frameCount
+                                                  : static_cast<int>(animation.order.size());
+        animation.current = (animation.current + 1) % steps;
+        const int frame = animation.order.empty() ? animation.current : animation.order[animation.current];
+        uploadTile(animation.tile, animation.frames.data() + static_cast<size_t>(frame) * frameBytes);
     }
 }
 

@@ -769,6 +769,7 @@ namespace
             else if (id == Blocks::FurnaceLit)    why = "a furnace that is burning";
             else if (furnaceFacing(id) != 0)      why = "another facing of a crafted block";
             else if (id == Blocks::BarrelOpen)    why = "a barrel somebody has open";
+            else if (isFluid(id))                 why = "water or lava running from a source";
             else if (id == Blocks::NetherWart0 || id == Blocks::NetherWart1)
                                                   why = "nether wart still growing";
             else if (id == Blocks::AnvilChipped || id == Blocks::AnvilDamaged)
@@ -1138,8 +1139,8 @@ namespace
                         for (int y = Chunk::SY - 1; y > 0; --y)
                         {
                             const BlockId b = chunk.getBlock(x, y, z);
-                            if (b == Blocks::Water) submerged = true;
-                            if (b != Blocks::Air && b != Blocks::Water) { surface = y; break; }
+                            if (isWater(b)) submerged = true;
+                            if (b != Blocks::Air && !isWater(b)) { surface = y; break; }
                         }
                         if (surface < 0 || !submerged) { inRun = false; continue; }
 

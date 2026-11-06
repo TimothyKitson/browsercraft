@@ -24,9 +24,9 @@ uint8_t lightAttenuation(BlockId id)
 {
     if (isOpaque(id)) return 15;
     if (isLeaves(id)) return 2;
+    if (isWater(id)) return 1;
     switch (id)
     {
-        case Blocks::Water:
         case Blocks::Ice:
             return 1;
         default:
@@ -161,6 +161,11 @@ void World::setBlock(int x, int y, int z, BlockId id)
     chunk->setBlockRaw(lx, y, lz, id);
     chunk->modified = true;
     chunk->meshDirty = true;
+    if (m_recordChanges)
+    {
+        if (m_changes.size() >= 262144) m_changes.clear();
+        m_changes.emplace_back(x, y, z);
+    }
 
     // A block on a chunk border changes the neighbour's visible faces too.
     if (lx == 0) markDirty(chunkX - 1, chunkZ);
@@ -717,7 +722,7 @@ RaycastHit World::raycast(const glm::vec3& origin, const glm::vec3& direction, f
     while (travelled <= maxDistance)
     {
         const BlockId id = getBlock(voxel.x, voxel.y, voxel.z);
-        if (id != Blocks::Air && (stopAtLiquids || !isLiquid(id)))
+        if (id != Blocks::Air && (stopAtLiquids ? !(isFluid(id) && !isFluidSource(id)) : !isLiquid(id)))
         {
             hit.hit = true;
             hit.block = voxel;

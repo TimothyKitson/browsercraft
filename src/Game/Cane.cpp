@@ -15,10 +15,10 @@ namespace Cane
     {
         if (!isPlantable(blocks.at(x, y, z))) return false;
 
-        return blocks.at(x - 1, y, z) == ::Blocks::Water ||
-               blocks.at(x + 1, y, z) == ::Blocks::Water ||
-               blocks.at(x, y, z - 1) == ::Blocks::Water ||
-               blocks.at(x, y, z + 1) == ::Blocks::Water;
+        return isWater(blocks.at(x - 1, y, z)) ||
+               isWater(blocks.at(x + 1, y, z)) ||
+               isWater(blocks.at(x, y, z - 1)) ||
+               isWater(blocks.at(x, y, z + 1));
     }
 
     int stackHeight(const Blocks& blocks, int x, int y, int z)

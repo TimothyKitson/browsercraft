@@ -5,6 +5,7 @@
 #include "Entity/PlayerAnimation.h"
 #include "Game/Golems.h"
 #include "Game/Farming.h"
+#include "Game/Fluids.h"
 #include "Game/Food.h"
 #include "Game/Tools.h"
 #include "Game/Armour.h"
@@ -2023,7 +2024,8 @@ bool Application::frame()
             m_startupScreen == "seabed" || m_startupScreen == "reef" ||
             m_startupScreen == "vault" || m_startupScreen == "stronghold" ||
             m_startupScreen == "rock" ||
-            m_startupScreen == "faces" || m_startupScreen == "backs")
+            m_startupScreen == "faces" || m_startupScreen == "backs" ||
+            m_startupScreen == "flow")
         {
             // Dev aid: open the inventory with something in it, so the
             // screenshot shows a real grid rather than 36 empty boxes.
@@ -2046,6 +2048,7 @@ bool Application::frame()
                                   m_startupScreen != "shelf" &&
                                   m_startupScreen != "faces" &&
                                   m_startupScreen != "backs" &&
+                                  m_startupScreen != "flow" &&
                                   m_startupScreen != "enchantblock" &&
                                   m_startupScreen != "villager" &&
                                   m_startupScreen != "endportal" &&
@@ -4066,6 +4069,27 @@ bool Application::frame()
                 m_inventory.add(Items::Paper, 6);
                 m_inventory.add(Items::Book, 3);
                 m_inventory.add(Blocks::Bookshelf, 4);
+            }
+
+            if (m_startupScreen == "flow")
+            {
+                m_camera.setOrientation(90.0f, -30.0f);
+                m_showDebug = false;
+                const int bx = static_cast<int>(std::floor(m_player.position.x));
+                const int by = static_cast<int>(std::floor(m_player.position.y));
+                const int bz = static_cast<int>(std::floor(m_player.position.z));
+                auto top = [&](int d) { return by - 1 - std::max(0, d - 3) / 3; };
+                for (int dx = -9; dx <= 9; ++dx)
+                    for (int dy = -8; dy <= 6; ++dy)
+                        for (int d = -1; d <= 20; ++d)
+                            m_world->setBlock(bx + dx, by + dy, bz + d,
+                                              by + dy <= top(d) ? Blocks::Stone : Blocks::Air);
+                m_world->setBlock(bx - 1, top(4) + 1, bz + 4, Blocks::Water);
+                m_world->setBlock(bx + 4, top(4) + 1, bz + 4, Blocks::Lava);
+                for (int d = 3; d <= 12; ++d)
+                    m_world->setBlock(bx, top(d) + 1, bz + d, Blocks::Glass);
+                for (int d = 9; d <= 14; ++d)
+                    m_world->setBlock(bx - 6, top(d) + 1, bz + d, Blocks::Leaves);
             }
 
             if (m_startupScreen == "faces" || m_startupScreen == "backs")
@@ -6619,8 +6643,8 @@ void Application::tickStructureLairs(float deltaTime)
                 if (floorY >= WorldGen::SEA_LEVEL - 2) continue;
 
                 const glm::vec3 feet(x + 0.5f, static_cast<float>(floorY + 1), z + 0.5f);
-                if (m_world->getBlock(x, floorY + 1, z) != Blocks::Water) continue;
-                if (m_world->getBlock(x, floorY + 2, z) != Blocks::Water) continue;
+                if (!isWater(m_world->getBlock(x, floorY + 1, z))) continue;
+                if (!isWater(m_world->getBlock(x, floorY + 2, z))) continue;
 
                 // Deep enough that the sun does not reach, so a
                 // shallow bay stays somewhere you can swim.
@@ -6750,8 +6774,8 @@ void Application::tickStructureLairs(float deltaTime)
                 // Well off the bottom, where a squid actually swims.
                 const int y = floorY + 2 + (tries % 3);
                 if (y >= WorldGen::SEA_LEVEL) continue;
-                if (m_world->getBlock(x, y, z) != Blocks::Water) continue;
-                if (m_world->getBlock(x, y + 1, z) != Blocks::Water) continue;
+                if (!isWater(m_world->getBlock(x, y, z))) continue;
+                if (!isWater(m_world->getBlock(x, y + 1, z))) continue;
 
                 const glm::vec3 feet(x + 0.5f, static_cast<float>(y), z + 0.5f);
 
@@ -6796,8 +6820,8 @@ void Application::tickStructureLairs(float deltaTime)
                              midZ + std::sin(angle) * reach + 0.5f);
 
         // In the water, which is where it lives.
-        if (m_world->getBlock(static_cast<int>(feet.x), static_cast<int>(feet.y),
-                              static_cast<int>(feet.z)) != Blocks::Water)
+        if (!isWater(m_world->getBlock(static_cast<int>(feet.x), static_cast<int>(feet.y),
+                                       static_cast<int>(feet.z))))
             continue;
 
         if (m_entities.spawnAt(MobId::Guardian, feet, *m_world)) return;
@@ -8362,7 +8386,7 @@ void Application::handlePlacement()
         const RaycastHit scoop = m_world->raycast(m_camera.position, m_camera.front,
                                                   REACH_DISTANCE, true);
         if (!scoop.hit) return;
-        if (m_world->getBlock(scoop.block.x, scoop.block.y, scoop.block.z) != Blocks::Water)
+        if (!isWater(m_world->getBlock(scoop.block.x, scoop.block.y, scoop.block.z)))
             return;
 
         ItemStack filled;
@@ -8418,7 +8442,7 @@ void Application::handlePlacement()
 
         if (stack.id == Items::Bucket)
         {
-            if (!isLiquid(looking)) return;
+            if (!isFluidSource(looking)) return;
 
             m_world->setBlock(scoop.block.x, scoop.block.y, scoop.block.z, Blocks::Air);
             m_net.onLocalBlockChange(scoop.block.x, scoop.block.y, scoop.block.z, Blocks::Air);
@@ -9109,7 +9133,7 @@ void Application::renderWorldShaded()
     frame.dimension = m_dimension == Dimension::Nether ? 1 : m_dimension == Dimension::End ? 2 : 0;
     frame.moonPhase = m_dayNumber;
     frame.underwater = m_player.isHeadUnderwater(*m_world);
-    frame.inLava = m_world->getBlock(ex, ey, ez) == Blocks::Lava;
+    frame.inLava = isLava(m_world->getBlock(ex, ey, ez));
     frame.eyeSkyLight = eyeSky;
     frame.eyeLight = std::max(eyeSky * std::max(viewDaylight(), 0.25f), eyeBlock * 0.8f);
     frame.renderDistance = static_cast<float>(m_world->renderDistance() * Chunk::SX);
@@ -9830,7 +9854,7 @@ void Application::tickSpriteParticles(float deltaTime)
                             fx.spawn(Kind::Enchant, from, (to - from) * 1.0f, 0.16f, 1.0f);
                         }
             }
-            else if (block == Blocks::Lava && m_world->getBlock(x, y + 1, z) == Blocks::Air)
+            else if (isLava(block) && m_world->getBlock(x, y + 1, z) == Blocks::Air)
             {
                 if (roll < 0.02f)
                 {
@@ -9842,7 +9866,7 @@ void Application::tickSpriteParticles(float deltaTime)
             else if (block == Blocks::DripstoneDown)
             {
                 if (roll < 0.06f)
-                    fx.spawn(m_world->getBlock(x, y + 2, z) == Blocks::Lava ? Kind::DripLava : Kind::DripWater,
+                    fx.spawn(isLava(m_world->getBlock(x, y + 2, z)) ? Kind::DripLava : Kind::DripWater,
                              middle + glm::vec3(0.0f, -0.5f, 0.0f), glm::vec3(0.0f), 0.12f, 1.6f, 9.0f);
             }
             else if (isTrialSpawnerActive(block))
@@ -9949,11 +9973,69 @@ void Application::tickTimedBlocks(float deltaTime)
     }
 }
 
+namespace
+{
+    struct FluidCells : Fluids::Cells
+    {
+        World* world = nullptr;
+        Net::Session* net = nullptr;
+
+        BlockId at(int x, int y, int z) const override
+        {
+            if (y < 0) return Blocks::Bedrock;
+            const Chunk* chunk = world->chunkAt(World::floorDiv(x, Chunk::SX), World::floorDiv(z, Chunk::SZ));
+            if (!chunk || chunk->state.load() < ChunkState::Generated) return Blocks::Bedrock;
+            return world->getBlock(x, y, z);
+        }
+
+        void set(int x, int y, int z, BlockId block) override
+        {
+            world->setBlock(x, y, z, block);
+            if (net) net->onLocalBlockChange(x, y, z, block);
+        }
+    };
+}
+
+void Application::tickFluids(float deltaTime)
+{
+    if (m_world.get() != m_fluidWorld)
+    {
+        m_fluids.clear();
+        m_fluidChanges.clear();
+        m_fluidWorld = m_world.get();
+    }
+    if (m_net.role() == Net::Role::Guest)
+    {
+        m_world->takeChanges(m_fluidChanges);
+        m_fluidChanges.clear();
+        return;
+    }
+
+    FluidCells cells;
+    cells.world = m_world.get();
+    cells.net = &m_net;
+    const bool nether = m_world->dimension() == Dimension::Nether;
+
+    m_fluidClock += deltaTime;
+    for (int step = 0; step < 4 && m_fluidClock >= 0.05f; ++step)
+    {
+        m_fluidClock -= 0.05f;
+        ++m_fluidTicks;
+        m_world->takeChanges(m_fluidChanges);
+        for (const glm::ivec3& at : m_fluidChanges)
+            m_fluids.wake(cells, at.x, at.y, at.z, m_fluidTicks, nether);
+        m_fluidChanges.clear();
+        m_fluids.run(cells, m_fluidTicks, nether, 512);
+    }
+    if (m_fluidClock > 0.05f) m_fluidClock = 0.0f;
+}
+
 void Application::updateWorldAround(float deltaTime)
 {
     if (!m_world || !m_worldReady) return;
     tickSpriteParticles(deltaTime);
     tickTimedBlocks(deltaTime);
+    tickFluids(deltaTime);
 
     m_growthTimer += deltaTime;
     if (m_growthTimer >= Farming::TICK_INTERVAL)

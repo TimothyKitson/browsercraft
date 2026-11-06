@@ -16,7 +16,7 @@ namespace
         { "Cobblestone",  Cobblestone,   Cobblestone,    Cobblestone,    true,  true,  RenderType::Cube,   0,   1.7f },
         { "Planks",       Planks,        Planks,         Planks,         true,  true,  RenderType::Cube,   0,   1.5f },
         { "Bedrock",      Bedrock,       Bedrock,        Bedrock,        true,  true,  RenderType::Cube,   0,  -1.0f },
-        { "Water",        Water,         Water,          Water,          false, false, RenderType::Liquid, 0,  -1.0f },
+        { "Water",        Water,         Water,          WaterFlow,      false, false, RenderType::Liquid, 0,  -1.0f },
         { "Sand",         Sand,          Sand,           Sand,           true,  true,  RenderType::Cube,   0,   0.5f },
         { "Gravel",       Gravel,        Gravel,         Gravel,         true,  true,  RenderType::Cube,   0,   0.6f },
         { "Gold Ore",     GoldOre,       GoldOre,        GoldOre,        true,  true,  RenderType::Cube,   0,   3.0f },
@@ -43,7 +43,7 @@ namespace
         { "Birch Log",    BirchLogTop,   BirchLogTop,    BirchLogSide,   true,  true,  RenderType::Cube,   0,   2.0f },
         { "Birch Leaves", BirchLeaves,   BirchLeaves,    BirchLeaves,    true,  false, RenderType::Cube,   0,   0.2f },
         { "Glowstone",    Glowstone,     Glowstone,      Glowstone,      true,  true,  RenderType::Cube,  15,   0.3f },
-        { "Lava",         Lava,          Lava,           Lava,           false, false, RenderType::Liquid,15,  -1.0f },
+        { "Lava",         Lava,          Lava,           LavaFlow,       false, false, RenderType::Liquid,15,  -1.0f },
         { "Snowy Grass",  SnowTile,      Dirt,           SnowGrassSide,  true,  true,  RenderType::Cube,   0,   0.6f },
         { "Netherrack",   Netherrack,    Netherrack,     Netherrack,     true,  true,  RenderType::Cube,   0,   0.4f },
         { "Soul Sand",    SoulSand,      SoulSand,       SoulSand,       true,  true,  RenderType::Cube,   0,   0.5f },
@@ -427,6 +427,22 @@ namespace
         { "Trial Spawner", TrialSpawnerTopEjecting, TrialSpawnerBottom, TrialSpawnerSideLit, true, true, RenderType::Cube, 8, -1.0f },
         { "Trial Spawner", TrialSpawnerTopEjectingOminous, TrialSpawnerBottom, TrialSpawnerSideActiveOminous, true, true, RenderType::Cube, 8, -1.0f },
         { "Trial Spawner", TrialSpawnerTopInactiveOminous, TrialSpawnerBottom, TrialSpawnerSideInactiveOminous, true, true, RenderType::Cube, 0, -1.0f },
+        { "Water", WaterFlow, Water, WaterFlow, false, false, RenderType::Liquid, 0, -1.0f },
+        { "Water", WaterFlow, Water, WaterFlow, false, false, RenderType::Liquid, 0, -1.0f },
+        { "Water", WaterFlow, Water, WaterFlow, false, false, RenderType::Liquid, 0, -1.0f },
+        { "Water", WaterFlow, Water, WaterFlow, false, false, RenderType::Liquid, 0, -1.0f },
+        { "Water", WaterFlow, Water, WaterFlow, false, false, RenderType::Liquid, 0, -1.0f },
+        { "Water", WaterFlow, Water, WaterFlow, false, false, RenderType::Liquid, 0, -1.0f },
+        { "Water", WaterFlow, Water, WaterFlow, false, false, RenderType::Liquid, 0, -1.0f },
+        { "Water", WaterFlow, Water, WaterFlow, false, false, RenderType::Liquid, 0, -1.0f },
+        { "Lava", LavaFlow, Lava, LavaFlow, false, false, RenderType::Liquid, 15, -1.0f },
+        { "Lava", LavaFlow, Lava, LavaFlow, false, false, RenderType::Liquid, 15, -1.0f },
+        { "Lava", LavaFlow, Lava, LavaFlow, false, false, RenderType::Liquid, 15, -1.0f },
+        { "Lava", LavaFlow, Lava, LavaFlow, false, false, RenderType::Liquid, 15, -1.0f },
+        { "Lava", LavaFlow, Lava, LavaFlow, false, false, RenderType::Liquid, 15, -1.0f },
+        { "Lava", LavaFlow, Lava, LavaFlow, false, false, RenderType::Liquid, 15, -1.0f },
+        { "Lava", LavaFlow, Lava, LavaFlow, false, false, RenderType::Liquid, 15, -1.0f },
+        { "Lava", LavaFlow, Lava, LavaFlow, false, false, RenderType::Liquid, 15, -1.0f },
     };
 }
 
@@ -438,6 +454,7 @@ const BlockInfo& blockInfo(BlockId id)
 
 bool isObtainable(BlockId id)
 {
+    if (isFluid(id) && !isFluidSource(id)) return false;
     if (furnaceFacing(id) != 0) return false;
     switch (id)
     {
@@ -524,6 +541,7 @@ bool isObtainable(BlockId id)
 
 const char* blockSoundGroup(BlockId id)
 {
+    if (isFluid(id)) return nullptr;
     // By family, so a wood added later sounds like wood rather than
     // like whatever the default happens to be.
     if (isLeaves(id)) return "grass";

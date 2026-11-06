@@ -4,14 +4,14 @@ Everything in the 1.21 textures zip the game doesn't use yet, turned into work. 
 
 ## Part 1: art for things the game already has
 
-1. Link the missing block faces
+1. Link the missing block faces (done)
    - I. Observer back, back lit and top. Dispenser and dropper vertical fronts. Hopper inside. Barrel open top and bottom.
    - II. Crafter faces for each direction, plus its triggered and crafting states.
    - III. Furnace side, smoker bottom, enchanting table bottom, brewing stand base, cactus bottom, sandstone bottom, campfire lit logs, cauldron top, reinforced deepslate bottom.
    - IV. Trial spawner and vault states: ominous, active, inactive and ejecting reward.
    - V. Sculk sensor bottom and tendrils, sculk catalyst bloom, sculk shrieker inner tops.
    - VI. Nether wart stages 0 and 1, chipped and damaged anvil, copper bulb lit and powered.
-2. Flowing water and lava
+2. Flowing water and lava (done)
    - I. Use water_flow and lava_flow on moving fluid and on the sides of fluid.
    - II. Use water_overlay where water meets glass, leaves and other see-through blocks.
    - III. Make the flow scroll the way water flows downhill, at Minecraft's speed.

@@ -103,12 +103,12 @@ bool Mob::floatTowardsSurface(const World& world, float deltaTime)
     // different block rather than a second copy of it.
     const BlockId liquid = type().lavaWalker ? Blocks::Lava : Blocks::Water;
 
-    if (world.getBlock(x, feet, z) != liquid) return false;
+    if (fluidBase(world.getBlock(x, feet, z)) != liquid) return false;
 
     // The top of the liquid it is sitting in, so a hull dropped into a
     // deep lake rises to the surface instead of resting on the bed.
     int surface = feet;
-    while (surface < feet + FLOAT_RISE && world.getBlock(x, surface + 1, z) == liquid)
+    while (surface < feet + FLOAT_RISE && fluidBase(world.getBlock(x, surface + 1, z)) == liquid)
         ++surface;
 
     const float waterline = static_cast<float>(surface + 1) - FLOAT_DRAFT;

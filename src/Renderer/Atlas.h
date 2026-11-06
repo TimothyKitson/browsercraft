@@ -132,6 +132,7 @@ private:
         float frameSeconds = 0.1f;
         float timer = 0.0f;
         int current = 0;
+        std::vector<int> order;
         std::vector<uint8_t> frames; // frameCount * tilePixels * tilePixels * 4
     };
 

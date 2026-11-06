@@ -1,5 +1,6 @@
 #include "ChunkMesher.h"
 #include "Renderer/Atlas.h"
+#include "Renderer/AtlasTiles.h"
 #include <array>
 #include <cmath>
 
@@ -138,6 +139,184 @@ namespace
         if (facing == blockFacing(id)) return info.tileFront;
         if (info.tileBack >= 0 && facing == ((blockFacing(id) + 2) & 3)) return info.tileBack;
         return info.tileSide;
+    }
+
+    float fluidHeightAt(const MeshSnapshot& snap, int x, int y, int z, BlockId base)
+    {
+        const BlockId here = snap.block(x, y, z);
+        if (fluidBase(here) == base)
+            return fluidBase(snap.block(x, y + 1, z)) == base ? 1.0f : fluidAmount(here) / 9.0f;
+        return blockInfo(here).collides ? -1.0f : 0.0f;
+    }
+
+    float fluidCorner(const MeshSnapshot& snap, int x, int y, int z, BlockId base,
+                      float origin, int sx, int sz)
+    {
+        const float northSouth = fluidHeightAt(snap, x, y, z + sz, base);
+        const float eastWest = fluidHeightAt(snap, x + sx, y, z, base);
+        if (northSouth >= 1.0f || eastWest >= 1.0f) return 1.0f;
+
+        float sum = 0.0f;
+        float weight = 0.0f;
+        auto add = [&](float h) {
+            if (h >= 0.8f) { sum += h * 10.0f; weight += 10.0f; }
+            else if (h >= 0.0f) { sum += h; weight += 1.0f; }
+        };
+        if (northSouth > 0.0f || eastWest > 0.0f)
+        {
+            const float diagonal = fluidHeightAt(snap, x + sx, y, z + sz, base);
+            if (diagonal >= 1.0f) return 1.0f;
+            add(diagonal);
+        }
+        add(origin);
+        add(northSouth);
+        add(eastWest);
+        return weight > 0.0f ? sum / weight : origin;
+    }
+
+    glm::vec2 fluidFlow(const MeshSnapshot& snap, int x, int y, int z, BlockId id)
+    {
+        const BlockId base = fluidBase(id);
+        const float self = fluidAmount(id) / 9.0f;
+        static const int DIRS[4][2] = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } };
+        glm::vec2 flow(0.0f);
+        for (const auto& d : DIRS)
+        {
+            const BlockId next = snap.block(x + d[0], y, z + d[1]);
+            if (isFluid(next) && fluidBase(next) != base) continue;
+            const float height = fluidBase(next) == base ? fluidAmount(next) / 9.0f : 0.0f;
+            float push = 0.0f;
+            if (height == 0.0f)
+            {
+                if (blockInfo(next).collides) continue;
+                const BlockId below = snap.block(x + d[0], y - 1, z + d[1]);
+                if (!isFluid(below) || fluidBase(below) == base)
+                {
+                    const float under = fluidBase(below) == base ? fluidAmount(below) / 9.0f : 0.0f;
+                    if (under > 0.0f) push = self - (under - 8.0f / 9.0f);
+                }
+            }
+            else
+            {
+                push = self - height;
+            }
+            flow += glm::vec2(static_cast<float>(d[0]), static_cast<float>(d[1])) * push;
+        }
+        return flow;
+    }
+
+    void emitFluid(const MeshSnapshot& snap, int lx, int y, int lz, BlockId id, std::vector<float>& out)
+    {
+        const BlockId base = fluidBase(id);
+        const BlockInfo& still = blockInfo(base);
+        const bool water = base == Blocks::Water;
+        const bool covered = fluidBase(snap.block(lx, y + 1, lz)) == base;
+
+        const float origin = fluidHeightAt(snap, lx, y, lz, base);
+        float corner[2][2];
+        for (int cx = 0; cx < 2; ++cx)
+            for (int cz = 0; cz < 2; ++cz)
+                corner[cx][cz] = covered ? 1.0f
+                                         : fluidCorner(snap, lx, y, lz, base, origin, cx ? 1 : -1, cz ? 1 : -1);
+
+        auto lightOf = [&](int x, int yy, int z, float& sky, float& block) {
+            sky = static_cast<float>(snap.skyLight(x, yy, z)) / 15.0f;
+            block = static_cast<float>(snap.blockLight(x, yy, z)) / 15.0f;
+            const float selfSky = static_cast<float>(snap.skyLight(lx, y, lz)) / 15.0f;
+            const float selfBlock = static_cast<float>(snap.blockLight(lx, y, lz)) / 15.0f;
+            sky = std::max(sky, selfSky);
+            block = std::max(block, selfBlock);
+        };
+
+        auto emitQuad = [&](int f, const float px[4], const float py[4], const float pz[4],
+                            const float pu[4], const float pv[4], float sky, float block) {
+            const float shade = FACES[f].shade;
+            const int order[6] = { 0, 1, 2, 0, 2, 3 };
+            for (int k = 0; k < 6; ++k)
+            {
+                const int c = order[k];
+                pushVertex(out, px[c], py[c], pz[c], pu[c], pv[c], shade, sky, block,
+                           tagOf(f, id, py[c] > static_cast<float>(y) + 0.01f));
+            }
+        };
+
+        if (!covered)
+        {
+            const glm::vec2 flow = isFluidSource(id) ? glm::vec2(0.0f) : fluidFlow(snap, lx, y, lz, id);
+            const bool moving = std::abs(flow.x) > 1e-4f || std::abs(flow.y) > 1e-4f;
+            const TileUV uv = tileUV(moving ? still.tileSide : still.tileTop);
+            int along = 2;
+            if (moving)
+            {
+                if (std::abs(flow.x) > std::abs(flow.y)) along = flow.x > 0.0f ? 1 : 3;
+                else along = flow.y > 0.0f ? 2 : 0;
+            }
+
+            float px[4], py[4], pz[4], pu[4], pv[4];
+            const FaceDef& top = FACES[2];
+            for (int c = 0; c < 4; ++c)
+            {
+                const int cx = top.corner[c][0];
+                const int cz = top.corner[c][2];
+                px[c] = static_cast<float>(lx + cx);
+                pz[c] = static_cast<float>(lz + cz);
+                py[c] = static_cast<float>(y) + corner[cx][cz];
+                float u = static_cast<float>(cx);
+                float v = static_cast<float>(cz);
+                switch (along)
+                {
+                    case 0: u = 1.0f - cx; v = 1.0f - cz; break;
+                    case 1: u = 1.0f - cz; v = static_cast<float>(cx); break;
+                    case 3: u = static_cast<float>(cz); v = 1.0f - cx; break;
+                    default: break;
+                }
+                pu[c] = uv.u0 + (uv.u1 - uv.u0) * u;
+                pv[c] = uv.vTop + (uv.vBottom - uv.vTop) * v;
+            }
+            float sky = 0.0f, block = 0.0f;
+            lightOf(lx, y + 1, lz, sky, block);
+            emitQuad(2, px, py, pz, pu, pv, sky, block);
+        }
+
+        for (int f = 0; f < 6; ++f)
+        {
+            if (f == 2) continue;
+            const FaceDef& face = FACES[f];
+            const int nx = lx + face.nx;
+            const int ny = y + face.ny;
+            const int nz = lz + face.nz;
+            const BlockId next = snap.block(nx, ny, nz);
+            if (fluidBase(next) == base) continue;
+            if (isOpaque(next)) continue;
+            if (water && isWaterPlant(next)) continue;
+
+            int tile = still.tileSide;
+            if (f == 3) tile = still.tileBottom;
+            else if (water && (isLeaves(next) || next == Blocks::Glass || next == Blocks::Ice ||
+                               next == Blocks::SlimeBlock))
+                tile = Tiles::WaterOverlay;
+            const TileUV uv = tileUV(tile);
+
+            float px[4], py[4], pz[4], pu[4], pv[4];
+            for (int c = 0; c < 4; ++c)
+            {
+                const int cx = face.corner[c][0];
+                const int cy = face.corner[c][1];
+                const int cz = face.corner[c][2];
+                px[c] = static_cast<float>(lx + cx);
+                pz[c] = static_cast<float>(lz + cz);
+                const float h = (f == 3) ? 0.0f : (cy ? corner[cx][cz] : 0.0f);
+                py[c] = static_cast<float>(y) + ((f == 3) ? 0.0f : h);
+                pu[c] = (face.uv[c][0] == 0.0f) ? uv.u0 : uv.u1;
+                if (f == 3)
+                    pv[c] = (face.uv[c][1] == 0.0f) ? uv.vTop : uv.vBottom;
+                else
+                    pv[c] = cy ? uv.vBottom + (uv.vTop - uv.vBottom) * h : uv.vBottom;
+            }
+            float sky = 0.0f, block = 0.0f;
+            lightOf(nx, ny, nz, sky, block);
+            emitQuad(f, px, py, pz, pu, pv, sky, block);
+        }
     }
 
     void emitCubeFaces(const MeshSnapshot& snap, int lx, int y, int lz,
@@ -619,7 +798,8 @@ void buildChunkMesh(const MeshSnapshot& snapshot, MeshResult& out)
                     std::vector<float>& target = usesTransparentPass(id)
                         ? out.transparentVertices
                         : out.opaqueVertices;
-                    emitCubeFaces(snapshot, lx, y, lz, id, target);
+                    if (isFluid(id)) emitFluid(snapshot, lx, y, lz, id, target);
+                    else emitCubeFaces(snapshot, lx, y, lz, id, target);
                 }
             }
         }

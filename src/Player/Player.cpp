@@ -15,11 +15,11 @@ namespace
     // stood on dry land by somebody in creative.
     bool besideWater(const World& world, int x, int y, int z)
     {
-        return world.getBlock(x + 1, y, z) == Blocks::Water ||
-               world.getBlock(x - 1, y, z) == Blocks::Water ||
-               world.getBlock(x, y, z + 1) == Blocks::Water ||
-               world.getBlock(x, y, z - 1) == Blocks::Water ||
-               world.getBlock(x, y + 1, z) == Blocks::Water;
+        return isWater(world.getBlock(x + 1, y, z)) ||
+               isWater(world.getBlock(x - 1, y, z)) ||
+               isWater(world.getBlock(x, y, z + 1)) ||
+               isWater(world.getBlock(x, y, z - 1)) ||
+               isWater(world.getBlock(x, y + 1, z));
     }
 
     // Water, lava, or something standing in water: all of them hold
@@ -321,7 +321,8 @@ bool Player::isHeadUnderwater(const World& world) const
     const int z = static_cast<int>(std::floor(eye.z));
 
     const BlockId here = world.getBlock(x, y, z);
-    if (here == Blocks::Water) return true;
+    if (isWater(here))
+        return isWater(world.getBlock(x, y + 1, z)) || eye.y < static_cast<float>(y) + fluidAmount(here) / 9.0f;
 
     // A blade of seagrass stands in the water rather than beside it,
     // so swimming through one is still swimming. Without this, a kelp
@@ -343,7 +344,7 @@ bool Player::isInLava(const World& world) const
     for (int x = minX; x <= maxX; ++x)
         for (int y = minY; y <= maxY; ++y)
             for (int z = minZ; z <= maxZ; ++z)
-                if (world.getBlock(x, y, z) == Blocks::Lava)
+                if (isLava(world.getBlock(x, y, z)))
                     return true;
 
     return false;

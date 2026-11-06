@@ -213,7 +213,7 @@ int EntityManager::lavaSurfaceBelow(const World& world, int x, int startY, int z
 {
     for (int y = std::min(startY, WORLD_TOP); y > 1; --y)
     {
-        if (world.getBlock(x, y, z) != Blocks::Lava) continue;
+        if (!isLava(world.getBlock(x, y, z))) continue;
         if (world.getBlock(x, y + 1, z) != Blocks::Air) continue;
         if (world.getBlock(x, y + 2, z) != Blocks::Air) continue;
 
@@ -268,11 +268,11 @@ bool EntityManager::roomFor(const MobType& type, BlockId block)
     // the sea -- both were spawned into water that the spawn then read
     // as rock, so neither was ever once seen. Lava turns everything
     // away.
-    if (isLiquid(block) && !((type.floats || type.aquatic) && block == Blocks::Water))
+    if (isLiquid(block) && !((type.floats || type.aquatic) && isWater(block)))
     {
         // Except the one thing that walks on lava, to which lava is
         // the floor and water is nothing at all.
-        if (!(type.lavaWalker && block == Blocks::Lava)) return false;
+        if (!(type.lavaWalker && isLava(block))) return false;
     }
 
     return true;

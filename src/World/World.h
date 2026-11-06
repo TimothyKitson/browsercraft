@@ -51,6 +51,8 @@ public:
     // Player-driven edit: updates light, flags neighbours for remeshing and
     // marks the chunk as needing a save.
     void setBlock(int x, int y, int z, BlockId id);
+    void recordChanges(bool on) { m_recordChanges = on; if (!on) m_changes.clear(); }
+    void takeChanges(std::vector<glm::ivec3>& into) { into.swap(m_changes); m_changes.clear(); }
 
     uint8_t skyLight(int x, int y, int z) const;
     uint8_t blockLightAt(int x, int y, int z) const;
@@ -93,6 +95,8 @@ private:
     std::string m_saveDirectory;
     int m_renderDistance;
     double m_chunkBudgetMs = 6.0;
+    bool m_recordChanges = true;
+    std::vector<glm::ivec3> m_changes;
 
     WorldGen m_generator;
     ThreadPool m_pool;
