@@ -11868,9 +11868,9 @@ namespace
 
     void testWoodSets()
     {
-        section("the six woods: doors, trapdoors, signs, saplings, stripped logs");
+        section("the woods: doors, trapdoors, signs, saplings, stripped logs");
 
-        for (int wood = 0; wood < 6; ++wood)
+        for (int wood = 0; wood < WOOD_COUNT; ++wood)
         {
             const BlockId base = doorBaseOf(wood);
             const BlockId open = doorPart(base, 2, true, true);
@@ -11930,6 +11930,28 @@ namespace
             for (int dz = 0; dz < 2; ++dz) jungle.set(dx, 64, dz, Blocks::JungleSapling);
         check(Saplings::grow(jungle, glm::ivec3(0, 64, 0), 11u), "four jungle saplings grow");
         check(jungle.at(1, 74, 0) == Blocks::JungleLog, "into a giant at least ten high");
+
+        {
+            const WorldGen generator(4242u);
+            int groves = 0;
+            for (int x = -6000; x <= 6000 && groves == 0; x += 48)
+                for (int z = -6000; z <= 6000 && groves == 0; z += 48)
+                    if (generator.biomeAt(x, z) == Biome::CherryGrove) ++groves;
+            check(groves > 0, "cherry groves grow somewhere in a world");
+            check(std::string(biomeName(Biome::CherryGrove)) == "Cherry Grove", "and are called so");
+        }
+
+        Plot cherry;
+        cherry.set(0, 64, 0, Blocks::CherrySapling);
+        check(Saplings::grow(cherry, glm::ivec3(0, 64, 0), 5u), "a cherry sapling grows");
+        check(cherry.at(0, 64, 0) == Blocks::CherryLog, "into a cherry tree");
+        int pink = 0;
+        for (const auto& [where, id] : cherry.cells)
+            if (id == Blocks::CherryLeaves) ++pink;
+        check(pink > 20, "with a pink crown");
+        check(planksFromLog(Blocks::CherryLog) == Blocks::CherryPlanks, "cherry logs make cherry planks");
+        check(isPinkPetals(Blocks::PinkPetals3) && blockDrop(Blocks::PinkPetals3) == Blocks::PinkPetals1,
+              "petals come back as one handful");
 
         int saplings = 0;
         for (uint32_t roll = 0; roll < 2000u; ++roll)

@@ -2044,6 +2044,7 @@ bool Application::frame()
             m_startupScreen == "gamemode" || m_startupScreen == "spectator" ||
             m_startupScreen == "beaconui" || m_startupScreen == "grindstone" ||
             m_startupScreen == "grinderror" || m_startupScreen == "woods" ||
+            m_startupScreen == "cherry" ||
             m_startupScreen == "boat" || m_startupScreen == "rails" ||
             m_startupScreen == "mobs" || m_startupScreen == "golem" ||
             m_startupScreen == "glowmobs" || m_startupScreen == "variants" ||
@@ -2124,6 +2125,7 @@ bool Application::frame()
                                   m_startupScreen != "grindstone" &&
                                   m_startupScreen != "grinderror" &&
                                   m_startupScreen != "woods" &&
+                                  m_startupScreen != "cherry" &&
                                   m_startupScreen != "boat" &&
                                   m_startupScreen != "rails" &&
                                   m_startupScreen != "mobs" &&
@@ -2493,7 +2495,8 @@ bool Application::frame()
                 m_startupScreen == "attackhotbar" || m_startupScreen == "bossbars" ||
                 m_startupScreen == "gamemode" || m_startupScreen == "spectator" ||
                 m_startupScreen == "beaconui" || m_startupScreen == "grindstone" ||
-                m_startupScreen == "grinderror" || m_startupScreen == "woods")
+                m_startupScreen == "grinderror" || m_startupScreen == "woods" ||
+                m_startupScreen == "cherry")
             {
                 m_camera.setOrientation(0.0f, -25.0f);
                 m_camera.addLook(0.0f, 0.0f, 0.0f);
@@ -2535,13 +2538,33 @@ bool Application::frame()
                 }
                 else
                     m_attackIndicator = 1;
+                if (m_startupScreen == "cherry")
+                {
+                    m_devAttackStrength = 1.0f;
+                    m_camera.setOrientation(0.0f, 8.0f);
+                    for (int t = 0; t < 2; ++t)
+                    {
+                        const glm::ivec3 at(px + 9, py, pz - 4 + t * 8);
+                        m_world->setBlock(at.x, at.y, at.z, Blocks::CherrySapling);
+                        growSapling(at, 31u + t * 17u);
+                    }
+                    for (int dx = 3; dx <= 12; ++dx)
+                        for (int dz = -6; dz <= 6; ++dz)
+                            if (m_world->getBlock(px + dx, py, pz + dz) == Blocks::Air && ((dx * 7 + dz * 3) % 4) == 0)
+                                m_world->setBlock(px + dx, py, pz + dz,
+                                                  static_cast<BlockId>(Blocks::PinkPetals1 + ((dx + dz) & 3)));
+                    m_world->setBlock(px + 5, py, pz, Blocks::CherrySapling);
+                    m_world->setBlock(px + 13, py, pz - 2, Blocks::Bookshelf);
+                    m_world->setBlock(px + 13, py, pz, Blocks::DiamondOre);
+                    m_world->setBlock(px + 13, py, pz + 2, Blocks::EndPortalFrame);
+                }
                 if (m_startupScreen == "woods")
                 {
                     m_devAttackStrength = 1.0f;
                     m_camera.setOrientation(0.0f, 4.0f);
-                    for (int wood = 0; wood < 6; ++wood)
+                    for (int wood = 0; wood < WOOD_COUNT; ++wood)
                     {
-                        const int z = pz - 5 + wood * 2;
+                        const int z = pz - 6 + wood * 2;
                         m_world->setBlock(px + 8, py, z, static_cast<BlockId>(Blocks::OakSapling + wood));
                         m_world->setBlock(px + 9, py, z, static_cast<BlockId>(Blocks::StrippedOakLog + wood));
                         m_world->setBlock(px + 9, py + 1, z, planksOfWood(wood));
@@ -9319,6 +9342,24 @@ void Application::handlePlacement()
     const RaycastHit hit = m_world->raycast(m_camera.position, m_camera.front, REACH_DISTANCE);
     if (!hit.hit) return;
 
+    if (stack.id == Blocks::PinkPetals1)
+    {
+        const BlockId there = m_world->getBlock(hit.block.x, hit.block.y, hit.block.z);
+        if (isPinkPetals(there) && there != Blocks::PinkPetals4)
+        {
+            const BlockId more = static_cast<BlockId>(there + 1);
+            m_world->setBlock(hit.block.x, hit.block.y, hit.block.z, more);
+            m_net.onLocalBlockChange(hit.block.x, hit.block.y, hit.block.z, more);
+            m_audio.playPlace(more);
+            if (!m_player.creative())
+            {
+                stack.count -= 1;
+                if (stack.count <= 0) stack.clear();
+            }
+            return;
+        }
+    }
+
     const glm::ivec3 target = hit.previous;
     const BlockId existing = m_world->getBlock(target.x, target.y, target.z);
     if (existing != Blocks::Air && !isLiquid(existing)) return;
@@ -9416,7 +9457,8 @@ void Application::handlePlacement()
         placing = ladderFacing(facing);
     }
 
-    if (isSapling(placing) && !Saplings::canPlantOn(m_world->getBlock(target.x, target.y - 1, target.z))) return;
+    if ((isSapling(placing) || isPinkPetals(placing)) &&
+        !Saplings::canPlantOn(m_world->getBlock(target.x, target.y - 1, target.z))) return;
 
     if (isTrapdoor(placing))
     {
@@ -10453,6 +10495,13 @@ void Application::tickSpriteParticles(float deltaTime)
                              glm::vec3(fx.random() - 0.5f, 3.0f, fx.random() - 0.5f), 0.18f, 1.2f, 9.0f);
                     fx.spawn(Kind::Smoke, middle + glm::vec3(0.0f, 0.6f, 0.0f), glm::vec3(0.0f, 0.5f, 0.0f), 0.3f, 1.4f);
                 }
+            }
+            else if (block == Blocks::CherryLeaves && m_world->getBlock(x, y - 1, z) == Blocks::Air)
+            {
+                if (roll < 0.04f)
+                    fx.spawn(Kind::Cherry, glm::vec3(x + fx.random(), static_cast<float>(y) - 0.05f, z + fx.random()),
+                             glm::vec3((fx.random() - 0.5f) * 0.6f, -0.35f, (fx.random() - 0.5f) * 0.6f),
+                             0.12f, 7.0f, 0.15f);
             }
             else if (block == Blocks::DripstoneDown && m_world->getBlock(x, y - 1, z) != Blocks::DripstoneDown)
             {

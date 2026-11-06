@@ -70,6 +70,27 @@ namespace
             return true;
         }
 
+        if (wood == 6)
+        {
+            for (int i = 0; i < height; ++i) cells.set(at.x, at.y + i, at.z, log);
+            const int top = at.y + height - 1;
+            const int ways = 1 + static_cast<int>(next(seed) % 2u);
+            for (int branch = 0; branch < ways; ++branch)
+            {
+                const int way = static_cast<int>(next(seed) % 4u);
+                const int dx = way == 0 ? 1 : way == 1 ? -1 : 0;
+                const int dz = way == 2 ? 1 : way == 3 ? -1 : 0;
+                for (int k = 1; k <= 3; ++k) cells.set(at.x + dx * k, top - 1 + k, at.z + dz * k, log);
+                const int tx = at.x + dx * 3, ty = top + 2, tz = at.z + dz * 3;
+                blob(cells, tx, ty - 1, tz, 3, leaves, seed, true);
+                blob(cells, tx, ty, tz, 3, leaves, seed, true);
+                blob(cells, tx, ty + 1, tz, 2, leaves, seed, true);
+            }
+            blob(cells, at.x, top, at.z, 3, leaves, seed, true);
+            blob(cells, at.x, top + 1, at.z, 2, leaves, seed, true);
+            return true;
+        }
+
         for (int i = 0; i < height; ++i) cells.set(at.x, at.y + i, at.z, log);
         const int top = at.y + height - 1;
         if (wood == 1)

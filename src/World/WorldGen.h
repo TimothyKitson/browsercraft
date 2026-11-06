@@ -12,7 +12,7 @@ const char* dimensionFolder(Dimension dimension);
 // Which tree is being planted. Spruce grows tall and narrow in the
 // cold, dark oak short and broad in the thick of the forest, which is
 // most of what tells one wood from another at a distance.
-enum class TreeKind : uint8_t { Oak, Birch, Spruce, DarkOak, Jungle, Acacia };
+enum class TreeKind : uint8_t { Oak, Birch, Spruce, DarkOak, Jungle, Acacia, Cherry };
 
 enum class Biome : uint8_t
 {
@@ -31,7 +31,8 @@ enum class Biome : uint8_t
 
     // Low, warm and wet: the flats just above the sea where the water
     // stands in the hollows rather than draining off them.
-    Swamp
+    Swamp,
+    CherryGrove
 };
 
 const char* biomeName(Biome biome);

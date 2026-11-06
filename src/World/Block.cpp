@@ -655,6 +655,51 @@ namespace
         { "Dark Oak Sign", DarkOakPlanks, DarkOakPlanks, DarkOakPlanks, false, false, RenderType::Ladder, 0, 1.0f },
         { "Dark Oak Sign", DarkOakPlanks, DarkOakPlanks, DarkOakPlanks, false, false, RenderType::Ladder, 0, 1.0f },
         { "Dark Oak Sign", DarkOakPlanks, DarkOakPlanks, DarkOakPlanks, false, false, RenderType::Ladder, 0, 1.0f },
+        { "Cherry Log", CherryLogTop, CherryLogTop, CherryLogSide, true, true, RenderType::Cube, 0, 2.0f },
+        { "Cherry Leaves", CherryLeavesTile, CherryLeavesTile, CherryLeavesTile, true, false, RenderType::Cube, 0, 0.2f },
+        { "Cherry Planks", CherryPlanksTile, CherryPlanksTile, CherryPlanksTile, true, true, RenderType::Cube, 0, 1.5f },
+        { "Stripped Cherry Log", StrippedCherryLogTop, StrippedCherryLogTop, StrippedCherryLogSide, true, true, RenderType::Cube, 0, 2.0f },
+        { "Cherry Sapling", CherrySaplingTile, CherrySaplingTile, CherrySaplingTile, false, false, RenderType::Cross, 0, 0.0f },
+        { "Cherry Door", CherryDoorLower, CherryDoorLower, CherryDoorLower, true, false, RenderType::Door, 0, 3.0f },
+        { "Cherry Door", CherryDoorLower, CherryDoorLower, CherryDoorLower, true, false, RenderType::Door, 0, 3.0f },
+        { "Cherry Door", CherryDoorLower, CherryDoorLower, CherryDoorLower, true, false, RenderType::Door, 0, 3.0f },
+        { "Cherry Door", CherryDoorLower, CherryDoorLower, CherryDoorLower, true, false, RenderType::Door, 0, 3.0f },
+        { "Cherry Door", CherryDoorLower, CherryDoorLower, CherryDoorLower, true, false, RenderType::Door, 0, 3.0f },
+        { "Cherry Door", CherryDoorLower, CherryDoorLower, CherryDoorLower, true, false, RenderType::Door, 0, 3.0f },
+        { "Cherry Door", CherryDoorLower, CherryDoorLower, CherryDoorLower, true, false, RenderType::Door, 0, 3.0f },
+        { "Cherry Door", CherryDoorLower, CherryDoorLower, CherryDoorLower, true, false, RenderType::Door, 0, 3.0f },
+        { "Cherry Door", CherryDoorUpper, CherryDoorUpper, CherryDoorUpper, true, false, RenderType::Door, 0, 3.0f },
+        { "Cherry Door", CherryDoorUpper, CherryDoorUpper, CherryDoorUpper, true, false, RenderType::Door, 0, 3.0f },
+        { "Cherry Door", CherryDoorUpper, CherryDoorUpper, CherryDoorUpper, true, false, RenderType::Door, 0, 3.0f },
+        { "Cherry Door", CherryDoorUpper, CherryDoorUpper, CherryDoorUpper, true, false, RenderType::Door, 0, 3.0f },
+        { "Cherry Door", CherryDoorUpper, CherryDoorUpper, CherryDoorUpper, true, false, RenderType::Door, 0, 3.0f },
+        { "Cherry Door", CherryDoorUpper, CherryDoorUpper, CherryDoorUpper, true, false, RenderType::Door, 0, 3.0f },
+        { "Cherry Door", CherryDoorUpper, CherryDoorUpper, CherryDoorUpper, true, false, RenderType::Door, 0, 3.0f },
+        { "Cherry Door", CherryDoorUpper, CherryDoorUpper, CherryDoorUpper, true, false, RenderType::Door, 0, 3.0f },
+        { "Cherry Trapdoor", CherryTrapdoorTile, CherryTrapdoorTile, CherryTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Cherry Trapdoor", CherryTrapdoorTile, CherryTrapdoorTile, CherryTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Cherry Trapdoor", CherryTrapdoorTile, CherryTrapdoorTile, CherryTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Cherry Trapdoor", CherryTrapdoorTile, CherryTrapdoorTile, CherryTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Cherry Trapdoor", CherryTrapdoorTile, CherryTrapdoorTile, CherryTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Cherry Trapdoor", CherryTrapdoorTile, CherryTrapdoorTile, CherryTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Cherry Trapdoor", CherryTrapdoorTile, CherryTrapdoorTile, CherryTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Cherry Trapdoor", CherryTrapdoorTile, CherryTrapdoorTile, CherryTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Cherry Trapdoor", CherryTrapdoorTile, CherryTrapdoorTile, CherryTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Cherry Trapdoor", CherryTrapdoorTile, CherryTrapdoorTile, CherryTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Cherry Trapdoor", CherryTrapdoorTile, CherryTrapdoorTile, CherryTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Cherry Trapdoor", CherryTrapdoorTile, CherryTrapdoorTile, CherryTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Cherry Trapdoor", CherryTrapdoorTile, CherryTrapdoorTile, CherryTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Cherry Trapdoor", CherryTrapdoorTile, CherryTrapdoorTile, CherryTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Cherry Trapdoor", CherryTrapdoorTile, CherryTrapdoorTile, CherryTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Cherry Trapdoor", CherryTrapdoorTile, CherryTrapdoorTile, CherryTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Cherry Sign", CherryPlanksTile, CherryPlanksTile, CherryPlanksTile, false, false, RenderType::Ladder, 0, 1.0f },
+        { "Cherry Sign", CherryPlanksTile, CherryPlanksTile, CherryPlanksTile, false, false, RenderType::Ladder, 0, 1.0f },
+        { "Cherry Sign", CherryPlanksTile, CherryPlanksTile, CherryPlanksTile, false, false, RenderType::Ladder, 0, 1.0f },
+        { "Cherry Sign", CherryPlanksTile, CherryPlanksTile, CherryPlanksTile, false, false, RenderType::Ladder, 0, 1.0f },
+        { "Pink Petals", PinkPetalsTile, PinkPetalsTile, PinkPetalsTile, false, false, RenderType::Flat, 0, 0.0f },
+        { "Pink Petals", PinkPetalsTile, PinkPetalsTile, PinkPetalsTile, false, false, RenderType::Flat, 0, 0.0f },
+        { "Pink Petals", PinkPetalsTile, PinkPetalsTile, PinkPetalsTile, false, false, RenderType::Flat, 0, 0.0f },
+        { "Pink Petals", PinkPetalsTile, PinkPetalsTile, PinkPetalsTile, false, false, RenderType::Flat, 0, 0.0f },
     };
 }
 
@@ -748,6 +793,7 @@ bool isObtainable(BlockId id)
             // only the shut lower north half is a thing in your hand.
             if (isDoor(id) && id != doorBase(id)) return false;
             if (isTrapdoor(id) && id != trapdoorBase(id)) return false;
+            if (isPinkPetals(id) && id != Blocks::PinkPetals1) return false;
 
             return id < Blocks::Count;
     }
@@ -765,7 +811,7 @@ const char* blockSoundGroup(BlockId id)
     if (id == Blocks::Bamboo || id == Blocks::Scaffolding) return "wood";
     if (isSign(id) || isFrame(id)) return "wood";
     if (isDoor(id) || isTrapdoor(id)) return "wood";
-    if (isSapling(id)) return "grass";
+    if (isSapling(id) || isPinkPetals(id)) return "grass";
     if (id == Blocks::Melon || isCocoa(id)) return "grass";
     if (isCake(id) || id == Blocks::Candle || id == Blocks::CandleLit) return "cloth";
 
@@ -907,7 +953,7 @@ Material blockMaterial(BlockId id)
     if (id == Blocks::SlimeBlock) return Material::Wool;
     if (isSign(id) || isFrame(id)) return Material::Wood;
     if (isDoor(id) || isTrapdoor(id)) return Material::Wood;
-    if (isSapling(id)) return Material::Plant;
+    if (isSapling(id) || isPinkPetals(id)) return Material::Plant;
     if (isCauldron(id)) return Material::Stone;
     if (isFurnaceBlock(id)) return Material::Stone;
 

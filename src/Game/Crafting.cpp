@@ -34,6 +34,9 @@ namespace
         { true,  0, 0, { Blocks::StrippedJungleLog },  1, Blocks::JunglePlanks,  4 },
         { true,  0, 0, { Blocks::StrippedAcaciaLog },  1, Blocks::AcaciaPlanks,  4 },
         { true,  0, 0, { Blocks::StrippedDarkOakLog }, 1, Blocks::DarkOakPlanks, 4 },
+        { true,  0, 0, { Blocks::CherryLog },          1, Blocks::CherryPlanks,  4 },
+        { true,  0, 0, { Blocks::StrippedCherryLog },  1, Blocks::CherryPlanks,  4 },
+        { true,  0, 0, { Blocks::PinkPetals1 },        1, Items::DyePink,        1 },
         { true,  0, 0, { Blocks::SpruceLog },  1, Blocks::SprucePlanks,  4 },
         { true,  0, 0, { Blocks::DarkOakLog }, 1, Blocks::DarkOakPlanks, 4 },
         { true,  0, 0, { Blocks::JungleLog },  1, Blocks::JunglePlanks,  4 },
@@ -704,7 +707,7 @@ namespace
                 const ItemStack& cell = grid[y * 3 + x];
                 if (cell.empty() || !isBlockStack(cell.id) || !isPlanks(asBlock(cell.id))) continue;
                 int here = 0;
-                for (int w = 0; w < 6; ++w)
+                for (int w = 0; w < WOOD_COUNT; ++w)
                     if (planksOfWood(w) == asBlock(cell.id)) here = w;
                 if (wood >= 0 && wood != here) return result;
                 wood = here;

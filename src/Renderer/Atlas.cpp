@@ -3490,6 +3490,36 @@ namespace
     void paintItemDarkOakSign(Tile& t) { paintItemSignIn(t, Color{ 79, 53, 28 }); }
     void paintBirchPlanksTile(Tile& t) { paintPlanksIn(t, Color{ 196, 178, 122 }, 91); }
 
+    void paintCherryLogSide(Tile& t) { paintLogSideIn(t, Color{ 58, 32, 40 }, 800); }
+    void paintCherryLogTop(Tile& t) { paintRings(t, Color{ 226, 178, 172 }, Color{ 206, 150, 148 }, Color{ 58, 32, 40 }, 801); }
+    void paintCherryLeavesTile(Tile& t) { paintLeavesBase(t, Color{ 236, 158, 196 }, 802); }
+    void paintCherryPlanksTile(Tile& t) { paintPlanksIn(t, Color{ 226, 178, 172 }, 101); }
+    void paintStrippedCherryLogSide(Tile& t) { paintLogSideIn(t, Color{ 216, 150, 150 }, 803); }
+    void paintStrippedCherryLogTop(Tile& t) { paintRings(t, Color{ 226, 178, 172 }, Color{ 206, 150, 148 }, Color{ 216, 150, 150 }, 804); }
+    void paintCherrySaplingTile(Tile& t) { paintSaplingIn(t, Color{ 236, 150, 190 }, Color{ 80, 40, 50 }); }
+    void paintCherryDoorLower(Tile& t) { paintWoodDoorHalf(t, false, Color{ 226, 178, 172 }); }
+    void paintCherryDoorUpper(Tile& t) { paintWoodDoorHalf(t, true, Color{ 226, 178, 172 }); }
+    void paintCherryTrapdoorTile(Tile& t) { paintTrapdoorIn(t, Color{ 226, 178, 172 }); }
+    void paintItemCherrySign(Tile& t) { paintItemSignIn(t, Color{ 226, 178, 172 }); }
+    void paintPinkPetalsTile(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        const int n = Tile::N;
+        for (int quarter = 0; quarter < 4; ++quarter)
+        {
+            const int cx = (quarter % 2) ? n * 3 / 4 : n / 4;
+            const int cy = (quarter / 2) ? n * 3 / 4 : n / 4;
+            for (int k = -2; k <= 2; ++k)
+            {
+                t.set(cx + k, cy, Color{ 240, 160, 200 });
+                t.set(cx, cy + k, Color{ 240, 160, 200 });
+            }
+            t.set(cx + 1, cy + 1, Color{ 226, 130, 180 });
+            t.set(cx - 1, cy - 1, Color{ 226, 130, 180 });
+            t.set(cx, cy, Color{ 250, 220, 120 });
+        }
+    }
+
     void paintItemSign(Tile& t)
     {
         t.fill(Color{ 0, 0, 0, 0 });
@@ -6466,6 +6496,8 @@ namespace
         { Tiles::ItemHorseArmorIron, paintItemElytra },
         { Tiles::ItemHorseArmorGold, paintItemElytra },
         { Tiles::ItemHorseArmorDiamond, paintItemElytra },
+        { Tiles::IconCherryDoor, paintCherryDoorLower },
+        { Tiles::ItemCherrySign, paintItemCherrySign },
         { Tiles::IconSpruceDoor, paintSpruceDoorLower },
         { Tiles::ItemSpruceSign, paintItemSpruceSign },
         { Tiles::IconBirchDoor, paintBirchDoorLower },
@@ -6625,6 +6657,17 @@ namespace
         { Tiles::DustLine1Off, paintRedstoneDust },
         { Tiles::DustLine1On, paintRedstoneDustLit },
         { Tiles::LeverHandle, paintLever },
+        { Tiles::CherryLogSide, paintCherryLogSide },
+        { Tiles::CherryLogTop, paintCherryLogTop },
+        { Tiles::CherryLeavesTile, paintCherryLeavesTile },
+        { Tiles::CherryPlanksTile, paintCherryPlanksTile },
+        { Tiles::StrippedCherryLogSide, paintStrippedCherryLogSide },
+        { Tiles::StrippedCherryLogTop, paintStrippedCherryLogTop },
+        { Tiles::CherrySaplingTile, paintCherrySaplingTile },
+        { Tiles::CherryDoorLower, paintCherryDoorLower },
+        { Tiles::CherryDoorUpper, paintCherryDoorUpper },
+        { Tiles::CherryTrapdoorTile, paintCherryTrapdoorTile },
+        { Tiles::PinkPetalsTile, paintPinkPetalsTile },
         { Tiles::BirchPlanksTile, paintBirchPlanksTile },
         { Tiles::OakSaplingTile, paintOakSaplingTile },
         { Tiles::StrippedOakLogSide, paintStrippedOakLogSide },
@@ -6955,6 +6998,8 @@ namespace
         { Tiles::ItemHorseArmorIron, { "iron_horse_armor", nullptr, nullptr } },
         { Tiles::ItemHorseArmorGold, { "golden_horse_armor", nullptr, nullptr } },
         { Tiles::ItemHorseArmorDiamond, { "diamond_horse_armor", nullptr, nullptr } },
+        { Tiles::IconCherryDoor, { "cherry_door", nullptr, nullptr } },
+        { Tiles::ItemCherrySign, { "cherry_sign", nullptr, nullptr } },
         { Tiles::IconSpruceDoor, { "spruce_door", nullptr, nullptr } },
         { Tiles::ItemSpruceSign, { "spruce_sign", nullptr, nullptr } },
         { Tiles::IconBirchDoor, { "birch_door", nullptr, nullptr } },
@@ -7086,6 +7131,17 @@ namespace
         { Tiles::DustLine1Off, { "redstone_dust_line1", nullptr }, Tinting::RedstoneOff, 0, false },
         { Tiles::DustLine1On, { "redstone_dust_line1", nullptr }, Tinting::RedstoneOn, 0, false },
         { Tiles::LeverHandle, { "lever", nullptr }, Tinting::None, 0, false },
+        { Tiles::CherryLogSide, { "cherry_log", nullptr }, Tinting::None, 0, false },
+        { Tiles::CherryLogTop, { "cherry_log_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::CherryLeavesTile, { "cherry_leaves", nullptr }, Tinting::None, 0, false },
+        { Tiles::CherryPlanksTile, { "cherry_planks", nullptr }, Tinting::None, 0, false },
+        { Tiles::StrippedCherryLogSide, { "stripped_cherry_log", nullptr }, Tinting::None, 0, false },
+        { Tiles::StrippedCherryLogTop, { "stripped_cherry_log_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::CherrySaplingTile, { "cherry_sapling", nullptr }, Tinting::None, 0, false },
+        { Tiles::CherryDoorLower, { "cherry_door_bottom", nullptr }, Tinting::None, 0, false },
+        { Tiles::CherryDoorUpper, { "cherry_door_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::CherryTrapdoorTile, { "cherry_trapdoor", nullptr }, Tinting::None, 0, false },
+        { Tiles::PinkPetalsTile, { "pink_petals", nullptr }, Tinting::None, 0, false },
         { Tiles::BirchPlanksTile, { "birch_planks", "planks_birch", nullptr }, Tinting::None, 0, false },
         { Tiles::OakSaplingTile, { "oak_sapling", "sapling_oak", nullptr }, Tinting::None, 0, false },
         { Tiles::StrippedOakLogSide, { "stripped_oak_log", nullptr }, Tinting::None, 0, false },

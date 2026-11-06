@@ -41,6 +41,7 @@ const char* biomeName(Biome biome)
         case Biome::Snowy: return "Snowy";
         case Biome::Jungle: return "Jungle";
         case Biome::Savanna: return "Savanna";
+        case Biome::CherryGrove: return "Cherry Grove";
         case Biome::Swamp:   return "Swamp";
     }
     return "Unknown";
@@ -148,6 +149,8 @@ Biome WorldGen::biomeAt(int worldX, int worldZ) const
         return Biome::Savanna;
     }
 
+    if (height > SEA_LEVEL + 16 && temperature > 0.08f && temperature < 0.28f && humidity > -0.04f && humidity < 0.06f)
+        return Biome::CherryGrove;
     if (humidity > 0.05f) return Biome::Forest;
     return Biome::Plains;
 }
@@ -796,6 +799,11 @@ void WorldGen::buildTree(Chunk& chunk, int worldX, int surfaceY, int worldZ, Tre
             // Bare trunk and then a flat plate of leaves on top, which
             // is the one tree you can name from its silhouette alone.
             extraHeight = 2;
+            canopyRadius = 3;
+            break;
+        case TreeKind::Cherry:
+            logBlock = Blocks::CherryLog; leafBlock = Blocks::CherryLeaves;
+            extraHeight = 1;
             canopyRadius = 3;
             break;
         case TreeKind::Oak:
@@ -2652,6 +2660,8 @@ void WorldGen::decorate(Chunk& chunk) const
                 kind = (roll < 0.85f) ? TreeKind::Jungle : TreeKind::Oak;
             else if (here == Biome::Savanna)
                 kind = TreeKind::Acacia;
+            else if (here == Biome::CherryGrove)
+                kind = TreeKind::Cherry;
             else if (here == Biome::Snowy || here == Biome::Mountains)
                 kind = (roll < 0.80f) ? TreeKind::Spruce : TreeKind::Oak;
             else if (here == Biome::Forest)
@@ -2753,6 +2763,13 @@ void WorldGen::decorate(Chunk& chunk) const
                 }
             }
 
+            if (biome == Biome::CherryGrove && roll < 0.22f)
+            {
+                const int amount = static_cast<int>(hashToFloat(hashCoords(wx, 11, wz, m_seed + 5611)) * 4.0f);
+                chunk.setBlockRaw(lx, above, lz, static_cast<BlockId>(Blocks::PinkPetals1 + std::min(3, amount)));
+                continue;
+            }
+
             if (roll < 0.14f)
                 chunk.setBlockRaw(lx, above, lz, Blocks::TallGrass);
             else if (roll < 0.155f)
@@ -2791,6 +2808,7 @@ bool WorldGen::treeStandsAt(int wx, int wz) const
         // Scattered rather than thick, which is what makes a swamp
         // read as open water with trees standing in it.
         case Biome::Swamp: treeChance = 0.020f; break;
+        case Biome::CherryGrove: treeChance = 0.016f; break;
         default: break;
     }
     if (treeChance <= 0.0f) return false;

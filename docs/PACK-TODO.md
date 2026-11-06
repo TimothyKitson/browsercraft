@@ -99,7 +99,7 @@ Everything in the 1.21 textures zip the game doesn't use yet, turned into work. 
     - IV. Birch planks.
     - V. Signs for every wood.
     - Left for later: wooden stairs, slabs and fences for the five newer woods, and the mega spruce from four spruce saplings.
-23. Cherry wood
+23. Cherry wood (done)
     - I. Logs, leaves, planks, door, trapdoor, sapling and sign.
     - II. The cherry grove biome, pink petals and falling-petal particles.
 24. Mangrove

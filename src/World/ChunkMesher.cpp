@@ -1022,6 +1022,14 @@ void buildChunkMesh(const MeshSnapshot& snapshot, MeshResult& out)
                 {
                     emitLadder(snapshot, lx, y, lz, id, out.opaqueVertices);
                 }
+                else if (isPinkPetals(id))
+                {
+                    const int amount = id - Blocks::PinkPetals1 + 1;
+                    static const float QUARTERS[4][2] = { { 0.0f, 0.0f }, { 0.5f, 0.0f }, { 0.5f, 0.5f }, { 0.0f, 0.5f } };
+                    for (int q = 0; q < amount; ++q)
+                        emitBox(snapshot, lx, y, lz, id, glm::vec3(QUARTERS[q][0], 0.0f, QUARTERS[q][1]),
+                                glm::vec3(QUARTERS[q][0] + 0.5f, 0.0625f, QUARTERS[q][1] + 0.5f), out.opaqueVertices);
+                }
                 else if (isRail(id) || isFlat(id))
                 {
                     emitRail(snapshot, lx, y, lz, id, out.opaqueVertices);
