@@ -276,7 +276,9 @@ void Application::drawItem(float x, float y, float size, StackId id, int count,
     }
     else if (!drawBlockIcon(x, y, size, id, tint))
     {
-        const TileUV uv = tileUV(m_iconOverride >= 0 ? m_iconOverride : atlasTileFor(id));
+        int tile = m_iconOverride >= 0 ? m_iconOverride : atlasTileFor(id);
+        if (id == Items::Elytra && damage >= Armour::maxDurability(Items::Elytra)) tile = Tiles::ItemBrokenElytra;
+        const TileUV uv = tileUV(tile);
         m_ui.texturedQuad(m_atlas.textureId(), x, y, size, size,
                           uv.u0, uv.vTop, uv.u1, uv.vBottom, tint);
     }
@@ -435,6 +437,16 @@ void Application::drawPlayerFigure(const PlayerSkin& skin, float x1, float y1, f
             const GuiImage* overlay = m_gui.image(piece == 3 ? "../models/armor/leather_layer_2_overlay"
                                                              : "../models/armor/leather_layer_1_overlay");
             if (overlay) gather(overlay->texture, glm::vec3(1.0f), 0.02f);
+        }
+    }
+
+    {
+        const ItemStack& chest = m_inventory.slot(Inventory::ARMOR_FIRST + Armour::slotFor(Items::Elytra));
+        const GuiImage* wings = m_gui.image("../entity/elytra");
+        if (!chest.empty() && chest.id == Items::Elytra && wings)
+        {
+            m_dollModel.buildElytra(pose, 1.0f, 0.0f);
+            gather(wings->texture, glm::vec3(1.0f), -0.01f);
         }
     }
 

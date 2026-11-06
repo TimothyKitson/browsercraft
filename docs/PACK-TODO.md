@@ -59,7 +59,7 @@ Everything in the 1.21 textures zip the game doesn't use yet, turned into work. 
 10. Enchanting table book (done)
     - I. A floating book above the table.
     - II. It opens when a player is near, turns pages and follows the player, like Minecraft.
-11. Elytra
+11. Elytra (done)
     - I. Wings on the player's back when worn.
     - II. Use the broken elytra icon when it's out of durability.
 12. Shadows: round shadows under mobs, items and players (misc/shadow).

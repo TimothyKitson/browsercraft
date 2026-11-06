@@ -6,6 +6,8 @@
 #include "Renderer/Shader.h"
 #include "Core/GLFunctions.h"
 #include <cmath>
+#include <algorithm>
+#include <stb_image.h>
 
 namespace
 {
@@ -177,6 +179,98 @@ void PlayerModel::buildArmour(const PlayerPose& pose, int piece, float sky, floa
     frame.jointAngle = pose.sneaking ? SNEAK_TILT : 0.0f;
     frame.jointPivot = glm::vec3(0.0f, HIP_Y, 0.0f);
     BoxMesh::appendAll(m_vertices, boxes, frame);
+}
+
+void PlayerModel::buildElytra(const PlayerPose& pose, float sky, float blockLight)
+{
+    m_vertices.clear();
+
+    float pitch = 0.2617994f;
+    float roll = -0.2617994f;
+    float drop = 0.0f;
+    float yaw = 0.0f;
+    if (pose.gliding)
+    {
+        const float open = 1.0f - std::pow(std::clamp(pose.fall, 0.0f, 1.0f), 1.5f);
+        pitch = open * 0.34906584f + (1.0f - open) * pitch;
+        roll = open * -1.5707964f + (1.0f - open) * roll;
+    }
+    else if (pose.sneaking)
+    {
+        pitch = 0.6981317f;
+        roll = -0.7853982f;
+        drop = 3.0f;
+        yaw = 0.08726646f;
+    }
+
+    std::vector<Box> wings;
+    for (int side = 0; side < 2; ++side)
+    {
+        const float s = side == 0 ? -1.0f : 1.0f;
+        Box wing;
+        wing.min = glm::vec3(-5.0f, 4.0f - drop, -4.0f);
+        wing.max = glm::vec3(5.0f, 24.0f - drop, -2.0f);
+        wing.pivot = glm::vec3(5.0f * s, 24.0f - drop, -2.0f);
+        wing.u = 22;
+        wing.v = 0;
+        wing.inflate = 1.0f;
+        wing.mirror = side == 1;
+        wing.pitch = -pitch;
+        wing.roll = roll * s;
+        wing.yaw = yaw * s;
+        wing.jointed = true;
+        wings.push_back(wing);
+    }
+
+    BoxMesh::Frame frame;
+    frame.feet = pose.feet;
+    frame.bodyYaw = pose.bodyYaw;
+    frame.sky = sky;
+    frame.blockLight = blockLight;
+    frame.textureWidth = 64.0f;
+    frame.textureHeight = 32.0f;
+    frame.jointAngle = pose.sneaking ? SNEAK_TILT : 0.0f;
+    frame.jointPivot = glm::vec3(0.0f, HIP_Y, 0.0f);
+    BoxMesh::appendAll(m_vertices, wings, frame);
+}
+
+void PlayerModel::renderElytra(Shader& chunkShader, const World& world, const PlayerPose& pose)
+{
+    if (!m_elytraLoaded)
+    {
+        m_elytraLoaded = true;
+        int width = 0, height = 0, channels = 0;
+        unsigned char* data = stbi_load("assets/textures/entity/elytra.png", &width, &height, &channels, 4);
+        if (data)
+        {
+            glGenTextures(1, &m_elytraTexture);
+            glBindTexture(GL_TEXTURE_2D, m_elytraTexture);
+            glTexImage2D(GL_TEXTURE_2D, 0, 0x8058, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+            stbi_image_free(data);
+        }
+    }
+    if (!m_elytraTexture) return;
+
+    int lx = static_cast<int>(std::floor(pose.feet.x));
+    int ly = static_cast<int>(std::floor(pose.feet.y + 1.6f));
+    int lz = static_cast<int>(std::floor(pose.feet.z));
+    for (int step = 0; step < 3 && isOpaque(world.getBlock(lx, ly, lz)); ++step) ++ly;
+    buildElytra(pose, static_cast<float>(world.skyLight(lx, ly, lz)) / 15.0f,
+                static_cast<float>(world.blockLightAt(lx, ly, lz)) / 15.0f);
+    if (m_vertices.empty()) return;
+
+    m_mesh.upload(m_vertices, CHUNK_LAYOUT, true);
+    chunkShader.bind();
+    chunkShader.setVec3("uChunkOffset", glm::vec3(0.0f));
+    glDisable(GL_CULL_FACE);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, m_elytraTexture);
+    m_mesh.draw(GL_TRIANGLES);
+    glEnable(GL_CULL_FACE);
 }
 
 void PlayerModel::render(Shader& chunkShader, const World& world,

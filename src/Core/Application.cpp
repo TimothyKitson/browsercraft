@@ -2027,7 +2027,8 @@ bool Application::frame()
             m_startupScreen == "rock" ||
             m_startupScreen == "faces" || m_startupScreen == "backs" ||
             m_startupScreen == "flow" || m_startupScreen == "buds" ||
-            m_startupScreen == "icons" || m_startupScreen == "beam")
+            m_startupScreen == "icons" || m_startupScreen == "beam" ||
+            m_startupScreen == "elytra" || m_startupScreen == "elytradoll")
         {
             // Dev aid: open the inventory with something in it, so the
             // screenshot shows a real grid rather than 36 empty boxes.
@@ -2053,6 +2054,7 @@ bool Application::frame()
                                   m_startupScreen != "flow" &&
                                   m_startupScreen != "buds" &&
                                   m_startupScreen != "beam" &&
+                                  m_startupScreen != "elytra" &&
                                   m_startupScreen != "enchantblock" &&
                                   m_startupScreen != "villager" &&
                                   m_startupScreen != "endportal" &&
@@ -4122,6 +4124,24 @@ bool Application::frame()
                 m_inventory.add(Items::Paper, 6);
                 m_inventory.add(Items::Book, 3);
                 m_inventory.add(Blocks::Bookshelf, 4);
+            }
+
+            if (m_startupScreen == "elytra" || m_startupScreen == "elytradoll")
+            {
+                ItemStack& chest = m_inventory.slot(Inventory::ARMOR_FIRST + Armour::slotFor(Items::Elytra));
+                chest.id = Items::Elytra;
+                chest.count = 1;
+                ItemStack broken;
+                broken.id = Items::Elytra;
+                broken.count = 1;
+                broken.damage = Armour::maxDurability(Items::Elytra);
+                m_inventory.addStack(broken);
+                if (m_startupScreen == "elytra")
+                {
+                    m_perspective = Perspective::ThirdBack;
+                    m_showDebug = false;
+                    m_camera.setOrientation(m_camera.yaw, 10.0f);
+                }
             }
 
             if (m_startupScreen == "beam")
@@ -9902,8 +9922,14 @@ void Application::renderPlayers(const glm::mat4& view, const glm::mat4& projecti
         pose.limbPhase = animation.phase;
         pose.limbAmount = animation.amount;
         pose.sneaking = m_player.sneaking;
+        pose.gliding = m_player.gliding;
+        const float speed = glm::length(m_player.velocity);
+        pose.fall = (speed > 0.001f && m_player.velocity.y < 0.0f) ? -m_player.velocity.y / speed : 0.0f;
 
         draw(activeSkin(), pose, std::string());
+        const ItemStack& chest = m_inventory.slot(Inventory::ARMOR_FIRST + Armour::slotFor(Items::Elytra));
+        if (!chest.empty() && chest.id == Items::Elytra)
+            m_playerModel.renderElytra(m_activeShader ? *m_activeShader : m_chunkShader, *m_world, pose);
     }
 }
 

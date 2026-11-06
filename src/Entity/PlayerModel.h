@@ -20,6 +20,8 @@ struct PlayerPose
     float limbPhase = 0.0f;    // radians around the walk cycle
     float limbAmount = 0.0f;   // 0 standing still, 1 at walking pace
     bool sneaking = false;
+    bool gliding = false;
+    float fall = 0.0f;
 };
 
 // A Minecraft player: six boxes wrapped in a 64x32 or 64x64 skin, built
@@ -66,9 +68,13 @@ public:
     static constexpr int FLOATS_PER_VERTEX = BoxMesh::FLOATS_PER_VERTEX;
     void build(const PlayerSkin& skin, const PlayerPose& pose, float sky, float blockLight);
     void buildArmour(const PlayerPose& pose, int piece, float sky, float blockLight);
+    void buildElytra(const PlayerPose& pose, float sky, float blockLight);
+    void renderElytra(Shader& chunkShader, const World& world, const PlayerPose& pose);
     const std::vector<float>& vertices() const { return m_vertices; }
 
 private:
+    unsigned int m_elytraTexture = 0;
+    bool m_elytraLoaded = false;
     Mesh m_mesh;
     std::vector<float> m_vertices;
 };
