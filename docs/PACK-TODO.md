@@ -113,7 +113,7 @@ Everything in the 1.21 textures zip the game doesn't use yet, turned into work. 
     - II. Weeping vines and twisting vines. Shroomlight.
     - III. Planks, doors, trapdoors and signs for both.
     - IV. The crimson forest and warped forest biomes.
-27. Stone sets
+27. Stone sets (done)
     - I. Stone bricks, plus mossy, cracked and chiseled. Smooth stone and its slab.
     - II. Polished granite, diorite and andesite.
     - III. Deepslate: cobbled, polished, chiseled, plus cracked bricks and tiles.

@@ -38,6 +38,7 @@ namespace
         Blocks::CrimsonTrapdoor, Blocks::WarpedStem, Blocks::StrippedWarpedStem, Blocks::WarpedPlanks,
         Blocks::WarpedDoor, Blocks::WarpedTrapdoor, Blocks::CrimsonNylium, Blocks::WarpedNylium,
         Blocks::NetherWartBlock, Blocks::WarpedWartBlock, Blocks::Shroomlight,
+        Blocks::StoneBricks, Blocks::MossyStoneBricks, Blocks::CrackedStoneBricks, Blocks::ChiseledStoneBricks, Blocks::SmoothStone, Blocks::SmoothStoneSlab, Blocks::StoneBrickSlab, Blocks::PolishedGranite, Blocks::PolishedDiorite, Blocks::PolishedAndesite, Blocks::CobbledDeepslate, Blocks::PolishedDeepslate, Blocks::ChiseledDeepslate, Blocks::CrackedDeepslateBricks, Blocks::CrackedDeepslateTiles, Blocks::CobbledDeepslateSlab, Blocks::PolishedTuff, Blocks::ChiseledTuff, Blocks::ChiseledTuffBricks, Blocks::TuffSlab, Blocks::TuffBrickSlab, Blocks::PolishedBlackstone, Blocks::ChiseledPolishedBlackstone, Blocks::CrackedPolishedBlackstoneBricks, Blocks::PolishedBlackstoneSlab, Blocks::RedNetherBricks, Blocks::CrackedNetherBricks, Blocks::ChiseledNetherBricks, Blocks::NetherBrickSlab,
     };
 
     const StackId TAB_NATURE[] = {

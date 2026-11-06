@@ -3684,6 +3684,94 @@ namespace
     void paintTwistingVinesTile(Tile& t) { paintVinesIn(t, Color{ 20, 150, 140 }, true); }
     void paintTwistingVinesPlantTile(Tile& t) { paintVinesIn(t, Color{ 20, 150, 140 }, false); }
 
+    void paintSmoothIn(Tile& t, Color base, uint32_t salt)
+    {
+        const int n = Tile::N;
+        for (int y = 0; y < n; ++y)
+            for (int x = 0; x < n; ++x)
+            {
+                const bool edge = x == 0 || y == 0 || x == n - 1 || y == n - 1;
+                t.set(x, y, shade(base, edge ? -18 : static_cast<int>((hash2(x, y, salt) - 0.5f) * 10.0f)));
+            }
+    }
+    void paintCracksOver(Tile& t, Color crack, uint32_t salt)
+    {
+        const int n = Tile::N;
+        for (int line = 0; line < 3; ++line)
+        {
+            int x = static_cast<int>(hash2(line, 0, salt) * n), y = static_cast<int>(hash2(line, 1, salt) * n);
+            for (int k = 0; k < n; ++k)
+            {
+                t.set(x, y, crack);
+                x = (x + (hash2(line, k, salt + 1) < 0.5f ? 1 : 0)) % n;
+                y = (y + 1) % n;
+            }
+        }
+    }
+    void paintChiseledIn(Tile& t, Color base, uint32_t salt)
+    {
+        paintSmoothIn(t, base, salt);
+        const int n = Tile::N;
+        const Color dark = shade(base, -40);
+        for (int k = 2; k < n - 2; ++k)
+        {
+            t.set(k, 2, dark); t.set(k, n - 3, dark); t.set(2, k, dark); t.set(n - 3, k, dark);
+        }
+        for (int y = 5; y < n - 5; ++y)
+            for (int x = 5; x < n - 5; ++x)
+            {
+                const float dx = x - (n - 1) * 0.5f, dy = y - (n - 1) * 0.5f;
+                if (std::abs(std::sqrt(dx * dx + dy * dy) - 2.2f) < 0.7f) t.set(x, y, dark);
+            }
+    }
+    void paintCobbledIn(Tile& t, Color base, uint32_t salt)
+    {
+        const int n = Tile::N;
+        for (int y = 0; y < n; ++y)
+            for (int x = 0; x < n; ++x)
+            {
+                const int cell = static_cast<int>(hash2(x / 4 + (y / 4) * 7, y / 3, salt) * 4.0f);
+                const bool seam = (x + y * 3 + cell) % 5 == 0;
+                t.set(x, y, shade(base, seam ? -30 : (cell - 2) * 8));
+            }
+    }
+    void paintStoneBricksTile(Tile& t) { paintBricksIn(t, Color{ 122, 121, 122 }, Color{ 88, 88, 88 }); }
+    void paintMossyStoneBricksTile(Tile& t)
+    {
+        paintStoneBricksTile(t);
+        for (int y = 0; y < Tile::N; ++y)
+            for (int x = 0; x < Tile::N; ++x)
+                if (hash2(x / 2, y / 2, 861) < 0.3f) t.set(x, y, Color{ 90, 116, 60 });
+    }
+    void paintCrackedStoneBricksTile(Tile& t) { paintStoneBricksTile(t); paintCracksOver(t, Color{ 70, 70, 70 }, 862); }
+    void paintChiseledStoneBricksTile(Tile& t) { paintChiseledIn(t, Color{ 122, 121, 122 }, 863); }
+    void paintSmoothStoneTile(Tile& t) { paintSmoothIn(t, Color{ 158, 158, 158 }, 864); }
+    void paintSmoothStoneSlabSide(Tile& t)
+    {
+        paintSmoothIn(t, Color{ 168, 168, 168 }, 865);
+        for (int x = 0; x < Tile::N; ++x) t.set(x, Tile::N / 2, Color{ 120, 120, 120 });
+    }
+    void paintPolishedGraniteTile(Tile& t) { paintSmoothIn(t, Color{ 154, 106, 89 }, 866); }
+    void paintPolishedDioriteTile(Tile& t) { paintSmoothIn(t, Color{ 193, 193, 195 }, 867); }
+    void paintPolishedAndesiteTile(Tile& t) { paintSmoothIn(t, Color{ 132, 135, 134 }, 868); }
+    void paintCobbledDeepslateTile(Tile& t) { paintCobbledIn(t, Color{ 77, 77, 80 }, 869); }
+    void paintPolishedDeepslateTile(Tile& t) { paintSmoothIn(t, Color{ 72, 72, 74 }, 870); }
+    void paintChiseledDeepslateTile(Tile& t) { paintChiseledIn(t, Color{ 54, 54, 55 }, 871); }
+    void paintCrackedDeepslateBricksTile(Tile& t) { paintBricksIn(t, Color{ 70, 70, 71 }, Color{ 40, 40, 42 }); paintCracksOver(t, Color{ 30, 30, 32 }, 872); }
+    void paintCrackedDeepslateTilesTile(Tile& t) { paintBricksIn(t, Color{ 54, 54, 55 }, Color{ 34, 34, 36 }); paintCracksOver(t, Color{ 24, 24, 26 }, 873); }
+    void paintPolishedTuffTile(Tile& t) { paintSmoothIn(t, Color{ 98, 104, 95 }, 874); }
+    void paintChiseledTuffSide(Tile& t) { paintChiseledIn(t, Color{ 100, 106, 98 }, 875); }
+    void paintChiseledTuffTop(Tile& t) { paintSmoothIn(t, Color{ 100, 106, 98 }, 876); }
+    void paintChiseledTuffBricksSide(Tile& t) { paintChiseledIn(t, Color{ 96, 100, 92 }, 877); }
+    void paintChiseledTuffBricksTop(Tile& t) { paintSmoothIn(t, Color{ 96, 100, 92 }, 878); }
+    void paintBlackstoneTop(Tile& t) { paintRings(t, Color{ 52, 44, 50 }, Color{ 44, 36, 42 }, Color{ 34, 28, 32 }, 879); }
+    void paintPolishedBlackstonePlainTile(Tile& t) { paintSmoothIn(t, Color{ 53, 48, 56 }, 880); }
+    void paintChiseledPolishedBlackstoneTile(Tile& t) { paintChiseledIn(t, Color{ 53, 48, 56 }, 881); }
+    void paintCrackedPolishedBlackstoneBricksTile(Tile& t) { paintBricksIn(t, Color{ 48, 42, 50 }, Color{ 28, 24, 30 }); paintCracksOver(t, Color{ 20, 16, 22 }, 882); }
+    void paintRedNetherBricksTile(Tile& t) { paintBricksIn(t, Color{ 69, 7, 9 }, Color{ 40, 4, 6 }); }
+    void paintCrackedNetherBricksTile(Tile& t) { paintBricksIn(t, Color{ 44, 22, 26 }, Color{ 22, 11, 14 }); paintCracksOver(t, Color{ 12, 6, 8 }, 883); }
+    void paintChiseledNetherBricksTile(Tile& t) { paintChiseledIn(t, Color{ 44, 22, 26 }, 884); }
+
     void paintItemSign(Tile& t)
     {
         t.fill(Color{ 0, 0, 0, 0 });
@@ -6830,6 +6918,32 @@ namespace
         { Tiles::DustLine1Off, paintRedstoneDust },
         { Tiles::DustLine1On, paintRedstoneDustLit },
         { Tiles::LeverHandle, paintLever },
+        { Tiles::StoneBricksTile, paintStoneBricksTile },
+        { Tiles::MossyStoneBricksTile, paintMossyStoneBricksTile },
+        { Tiles::CrackedStoneBricksTile, paintCrackedStoneBricksTile },
+        { Tiles::ChiseledStoneBricksTile, paintChiseledStoneBricksTile },
+        { Tiles::SmoothStoneTile, paintSmoothStoneTile },
+        { Tiles::SmoothStoneSlabSide, paintSmoothStoneSlabSide },
+        { Tiles::PolishedGraniteTile, paintPolishedGraniteTile },
+        { Tiles::PolishedDioriteTile, paintPolishedDioriteTile },
+        { Tiles::PolishedAndesiteTile, paintPolishedAndesiteTile },
+        { Tiles::CobbledDeepslateTile, paintCobbledDeepslateTile },
+        { Tiles::PolishedDeepslateTile, paintPolishedDeepslateTile },
+        { Tiles::ChiseledDeepslateTile, paintChiseledDeepslateTile },
+        { Tiles::CrackedDeepslateBricksTile, paintCrackedDeepslateBricksTile },
+        { Tiles::CrackedDeepslateTilesTile, paintCrackedDeepslateTilesTile },
+        { Tiles::PolishedTuffTile, paintPolishedTuffTile },
+        { Tiles::ChiseledTuffSide, paintChiseledTuffSide },
+        { Tiles::ChiseledTuffTop, paintChiseledTuffTop },
+        { Tiles::ChiseledTuffBricksSide, paintChiseledTuffBricksSide },
+        { Tiles::ChiseledTuffBricksTop, paintChiseledTuffBricksTop },
+        { Tiles::BlackstoneTop, paintBlackstoneTop },
+        { Tiles::PolishedBlackstonePlainTile, paintPolishedBlackstonePlainTile },
+        { Tiles::ChiseledPolishedBlackstoneTile, paintChiseledPolishedBlackstoneTile },
+        { Tiles::CrackedPolishedBlackstoneBricksTile, paintCrackedPolishedBlackstoneBricksTile },
+        { Tiles::RedNetherBricksTile, paintRedNetherBricksTile },
+        { Tiles::CrackedNetherBricksTile, paintCrackedNetherBricksTile },
+        { Tiles::ChiseledNetherBricksTile, paintChiseledNetherBricksTile },
         { Tiles::CrimsonStemSide, paintCrimsonStemSide },
         { Tiles::CrimsonStemTop, paintCrimsonStemTop },
         { Tiles::StrippedCrimsonStemSide, paintStrippedCrimsonStemSide },
@@ -7371,6 +7485,32 @@ namespace
         { Tiles::DustLine1Off, { "redstone_dust_line1", nullptr }, Tinting::RedstoneOff, 0, false },
         { Tiles::DustLine1On, { "redstone_dust_line1", nullptr }, Tinting::RedstoneOn, 0, false },
         { Tiles::LeverHandle, { "lever", nullptr }, Tinting::None, 0, false },
+        { Tiles::StoneBricksTile, { "stone_bricks", nullptr }, Tinting::None, 0, false },
+        { Tiles::MossyStoneBricksTile, { "mossy_stone_bricks", nullptr }, Tinting::None, 0, false },
+        { Tiles::CrackedStoneBricksTile, { "cracked_stone_bricks", nullptr }, Tinting::None, 0, false },
+        { Tiles::ChiseledStoneBricksTile, { "chiseled_stone_bricks", nullptr }, Tinting::None, 0, false },
+        { Tiles::SmoothStoneTile, { "smooth_stone", nullptr }, Tinting::None, 0, false },
+        { Tiles::SmoothStoneSlabSide, { "smooth_stone_slab_side", nullptr }, Tinting::None, 0, false },
+        { Tiles::PolishedGraniteTile, { "polished_granite", nullptr }, Tinting::None, 0, false },
+        { Tiles::PolishedDioriteTile, { "polished_diorite", nullptr }, Tinting::None, 0, false },
+        { Tiles::PolishedAndesiteTile, { "polished_andesite", nullptr }, Tinting::None, 0, false },
+        { Tiles::CobbledDeepslateTile, { "cobbled_deepslate", nullptr }, Tinting::None, 0, false },
+        { Tiles::PolishedDeepslateTile, { "polished_deepslate", nullptr }, Tinting::None, 0, false },
+        { Tiles::ChiseledDeepslateTile, { "chiseled_deepslate", nullptr }, Tinting::None, 0, false },
+        { Tiles::CrackedDeepslateBricksTile, { "cracked_deepslate_bricks", nullptr }, Tinting::None, 0, false },
+        { Tiles::CrackedDeepslateTilesTile, { "cracked_deepslate_tiles", nullptr }, Tinting::None, 0, false },
+        { Tiles::PolishedTuffTile, { "polished_tuff", nullptr }, Tinting::None, 0, false },
+        { Tiles::ChiseledTuffSide, { "chiseled_tuff", nullptr }, Tinting::None, 0, false },
+        { Tiles::ChiseledTuffTop, { "chiseled_tuff_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::ChiseledTuffBricksSide, { "chiseled_tuff_bricks", nullptr }, Tinting::None, 0, false },
+        { Tiles::ChiseledTuffBricksTop, { "chiseled_tuff_bricks_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::BlackstoneTop, { "blackstone_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::PolishedBlackstonePlainTile, { "polished_blackstone", nullptr }, Tinting::None, 0, false },
+        { Tiles::ChiseledPolishedBlackstoneTile, { "chiseled_polished_blackstone", nullptr }, Tinting::None, 0, false },
+        { Tiles::CrackedPolishedBlackstoneBricksTile, { "cracked_polished_blackstone_bricks", nullptr }, Tinting::None, 0, false },
+        { Tiles::RedNetherBricksTile, { "red_nether_bricks", nullptr }, Tinting::None, 0, false },
+        { Tiles::CrackedNetherBricksTile, { "cracked_nether_bricks", nullptr }, Tinting::None, 0, false },
+        { Tiles::ChiseledNetherBricksTile, { "chiseled_nether_bricks", nullptr }, Tinting::None, 0, false },
         { Tiles::CrimsonStemSide, { "crimson_stem", nullptr }, Tinting::None, 0, false },
         { Tiles::CrimsonStemTop, { "crimson_stem_top", nullptr }, Tinting::None, 0, false },
         { Tiles::StrippedCrimsonStemSide, { "stripped_crimson_stem", nullptr }, Tinting::None, 0, false },

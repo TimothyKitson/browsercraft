@@ -13,6 +13,13 @@ StackId Smelting::resultOf(StackId input)
         case Items::RawCopper:  return Items::CopperIngot;
         case Blocks::Sand:      return Blocks::Glass;
         case Blocks::Cobblestone: return Blocks::Stone;
+        case Blocks::Stone:     return Blocks::SmoothStone;
+        case Blocks::StoneBricks: return Blocks::CrackedStoneBricks;
+        case Blocks::CobbledDeepslate: return Blocks::Deepslate;
+        case Blocks::DeepslateBricks: return Blocks::CrackedDeepslateBricks;
+        case Blocks::DeepslateTiles: return Blocks::CrackedDeepslateTiles;
+        case Blocks::PolishedBlackstoneBricks: return Blocks::CrackedPolishedBlackstoneBricks;
+        case Blocks::NetherBricks: return Blocks::CrackedNetherBricks;
         case Blocks::Clay:      return Blocks::Bricks;
 
         // A cactus fired is green, which is Minecraft's and the only

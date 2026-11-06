@@ -326,6 +326,7 @@ StackId blockDrop(BlockId id)
         case Blocks::Grass:
         case Blocks::SnowGrass: return Blocks::Dirt;
         case Blocks::Stone: return Blocks::Cobblestone;
+        case Blocks::Deepslate: return Blocks::CobbledDeepslate;
         case Blocks::Ice: return Blocks::Air;
         // Where wheat comes from, until there is farmland to grow it
         // on: grass gives up its seeds the way it does in Minecraft,

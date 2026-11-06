@@ -686,6 +686,16 @@ namespace
             if (isBlockStack(type.secondDrop)) reachable.insert(type.secondDrop);
         }
 
+        {
+            std::vector<StackId> broken;
+            for (int id : reachable)
+            {
+                const StackId drop = blockDrop(static_cast<BlockId>(id));
+                if (isBlockStack(drop) && drop != Blocks::Air) broken.push_back(drop);
+            }
+            for (StackId drop : broken) reachable.insert(drop);
+        }
+
         const int generated = static_cast<int>(reachable.size());
 
         // What the recipe book makes, and what a furnace makes of

@@ -2045,6 +2045,7 @@ bool Application::frame()
             m_startupScreen == "beaconui" || m_startupScreen == "grindstone" ||
             m_startupScreen == "grinderror" || m_startupScreen == "woods" ||
             m_startupScreen == "cherry" || m_startupScreen == "mangrove" || m_startupScreen == "fungi" ||
+            m_startupScreen == "stones" ||
             m_startupScreen == "boat" || m_startupScreen == "rails" ||
             m_startupScreen == "mobs" || m_startupScreen == "golem" ||
             m_startupScreen == "glowmobs" || m_startupScreen == "variants" ||
@@ -2129,6 +2130,7 @@ bool Application::frame()
                                   m_startupScreen != "cherry" &&
                                   m_startupScreen != "mangrove" &&
                                   m_startupScreen != "fungi" &&
+                                  m_startupScreen != "stones" &&
                                   m_startupScreen != "boat" &&
                                   m_startupScreen != "rails" &&
                                   m_startupScreen != "mobs" &&
@@ -2501,7 +2503,8 @@ bool Application::frame()
                 m_startupScreen == "gamemode" || m_startupScreen == "spectator" ||
                 m_startupScreen == "beaconui" || m_startupScreen == "grindstone" ||
                 m_startupScreen == "grinderror" || m_startupScreen == "woods" ||
-                m_startupScreen == "cherry" || m_startupScreen == "mangrove" || m_startupScreen == "fungi")
+                m_startupScreen == "cherry" || m_startupScreen == "mangrove" || m_startupScreen == "fungi" ||
+                m_startupScreen == "stones")
             {
                 m_camera.setOrientation(0.0f, -25.0f);
                 m_camera.addLook(0.0f, 0.0f, 0.0f);
@@ -2543,6 +2546,32 @@ bool Application::frame()
                 }
                 else
                     m_attackIndicator = 1;
+                if (m_startupScreen == "stones")
+                {
+                    m_devAttackStrength = 1.0f;
+                    m_camera.setOrientation(0.0f, 2.0f);
+                    const BlockId SHOW[] = {
+                        Blocks::StoneBricks, Blocks::MossyStoneBricks, Blocks::CrackedStoneBricks,
+                        Blocks::ChiseledStoneBricks, Blocks::SmoothStone, Blocks::PolishedGranite,
+                        Blocks::PolishedDiorite, Blocks::PolishedAndesite, Blocks::CobbledDeepslate,
+                        Blocks::PolishedDeepslate, Blocks::ChiseledDeepslate, Blocks::CrackedDeepslateBricks,
+                        Blocks::CrackedDeepslateTiles, Blocks::PolishedTuff, Blocks::ChiseledTuff,
+                        Blocks::ChiseledTuffBricks, Blocks::Blackstone, Blocks::PolishedBlackstone,
+                        Blocks::ChiseledPolishedBlackstone, Blocks::CrackedPolishedBlackstoneBricks,
+                        Blocks::RedNetherBricks, Blocks::CrackedNetherBricks, Blocks::ChiseledNetherBricks,
+                        Blocks::SmoothStoneSlab, Blocks::StoneBrickSlab, Blocks::CobbledDeepslateSlab,
+                        Blocks::TuffSlab, Blocks::PolishedBlackstoneSlab };
+                    int i = 0;
+                    for (BlockId id : SHOW)
+                    {
+                        const int row = i / 7, col = i % 7;
+                        m_world->setBlock(px + 7, py + row, pz - 6 + col * 2, id);
+                        ++i;
+                    }
+                    m_world->setBlock(px + 9, py, pz - 8, Blocks::Bookshelf);
+                    m_world->setBlock(px + 9, py, pz + 8, Blocks::DiamondOre);
+                    m_world->setBlock(px + 9, py + 1, pz + 8, Blocks::EndPortalFrame);
+                }
                 if (m_startupScreen == "fungi")
                 {
                     m_devAttackStrength = 1.0f;

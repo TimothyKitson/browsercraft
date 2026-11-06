@@ -304,6 +304,7 @@ namespace Tiles
         BambooBlockSide, BambooBlockTop, StrippedBambooBlockSide, StrippedBambooBlockTop, BambooPlanksTile,
         BambooMosaicTile, BambooDoorLower, BambooDoorUpper, BambooTrapdoorTile,
         CrimsonStemSide, CrimsonStemTop, StrippedCrimsonStemSide, StrippedCrimsonStemTop, CrimsonPlanksTile, CrimsonNyliumTop, CrimsonNyliumSide, CrimsonFungusTile, CrimsonRootsTile, CrimsonDoorLower, CrimsonDoorUpper, CrimsonTrapdoorTile, WarpedStemSide, WarpedStemTop, StrippedWarpedStemSide, StrippedWarpedStemTop, WarpedPlanksTile, WarpedNyliumTop, WarpedNyliumSide, WarpedFungusTile, WarpedRootsTile, WarpedDoorLower, WarpedDoorUpper, WarpedTrapdoorTile, NetherSproutsTile, NetherWartBlockTile, WarpedWartBlockTile, ShroomlightTile, WeepingVinesTile, WeepingVinesPlantTile, TwistingVinesTile, TwistingVinesPlantTile,
+        StoneBricksTile, MossyStoneBricksTile, CrackedStoneBricksTile, ChiseledStoneBricksTile, SmoothStoneTile, SmoothStoneSlabSide, PolishedGraniteTile, PolishedDioriteTile, PolishedAndesiteTile, CobbledDeepslateTile, PolishedDeepslateTile, ChiseledDeepslateTile, CrackedDeepslateBricksTile, CrackedDeepslateTilesTile, PolishedTuffTile, ChiseledTuffSide, ChiseledTuffTop, ChiseledTuffBricksSide, ChiseledTuffBricksTop, BlackstoneTop, PolishedBlackstonePlainTile, ChiseledPolishedBlackstoneTile, CrackedPolishedBlackstoneBricksTile, RedNetherBricksTile, CrackedNetherBricksTile, ChiseledNetherBricksTile,
 
         TileCount
     };

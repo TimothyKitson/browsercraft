@@ -12017,6 +12017,30 @@ namespace
         check(Saplings::leafDrop(Blocks::Stone, 0u) == Blocks::Air, "stone gives none");
     }
 
+    void testStoneSets()
+    {
+        section("the stone sets");
+
+        ItemStack grid[9];
+        for (int i : { 0, 1, 3, 4 }) grid[i] = ItemStack{ Blocks::Stone, 1 };
+        check(Crafting::match(grid, 3).id == Blocks::StoneBricks, "four stone make stone bricks");
+        ItemStack slabs[9];
+        slabs[0] = ItemStack{ Blocks::StoneBrickSlab, 1 };
+        slabs[3] = ItemStack{ Blocks::StoneBrickSlab, 1 };
+        check(Crafting::match(slabs, 3).id == Blocks::ChiseledStoneBricks, "two brick slabs make chiseled bricks");
+        check(Smelting::resultOf(Blocks::StoneBricks) == Blocks::CrackedStoneBricks, "fired bricks crack");
+        check(Smelting::resultOf(Blocks::Stone) == Blocks::SmoothStone, "and fired stone goes smooth");
+        check(blockDrop(Blocks::Deepslate) == Blocks::CobbledDeepslate, "deepslate breaks to cobbled deepslate");
+        check(Smelting::resultOf(Blocks::CobbledDeepslate) == Blocks::Deepslate, "which fires back to deepslate");
+        ItemStack red[9];
+        red[0] = ItemStack{ Items::NetherWart, 1 };
+        red[1] = ItemStack{ Items::NetherBrick, 1 };
+        red[3] = ItemStack{ Items::NetherBrick, 1 };
+        red[4] = ItemStack{ Items::NetherWart, 1 };
+        check(Crafting::match(red, 3).id == Blocks::RedNetherBricks, "wart and nether brick make red nether bricks");
+        check(blockMaterial(Blocks::PolishedBlackstone) == Material::Stone, "polished blackstone wants a pickaxe");
+    }
+
     void testGameModes()
     {
         section("adventure and spectator");
@@ -12741,6 +12765,7 @@ int runSelfTest()
     testBeaconPowers();
     testGrindstone();
     testWoodSets();
+    testStoneSets();
     testTheTablesTake121sPrices();
 
     std::printf("\n%d checks, %d failed\n", g_checks, g_failures);
