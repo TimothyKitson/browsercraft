@@ -117,7 +117,8 @@ public:
     static constexpr int GRIND_TOP = BEACON_PAYMENT + 1;              // 97
     static constexpr int GRIND_BOTTOM = GRIND_TOP + 1;                // 98
     static constexpr int GRIND_RESULT = GRIND_BOTTOM + 1;             // 99
-    static constexpr int SLOT_COUNT = GRIND_RESULT + 1;               // 100
+    static constexpr int CHEST2_FIRST = GRIND_RESULT + 1;
+    static constexpr int SLOT_COUNT = CHEST2_FIRST + CHEST_SLOTS;
 
     // The ceiling. What a particular thing actually stacks to comes from
     // maxStackOf(), since items need not agree with blocks.

@@ -455,7 +455,7 @@ void HeldItem::appendBlock(const glm::mat4& toWorld, StackId stack, float sky, f
 {
     const BlockId block = asBlock(stack);
     const bool turned = orientable(block);
-    const bool chest = block == Blocks::Chest;
+    const bool chest = isChestFamily(block);
     const Display& display = turned ? ORIENTABLE_DISPLAY : chest ? CHEST_DISPLAY : BLOCK_DISPLAY;
 
     const glm::mat4 model = toWorld * displayMatrix(display);

@@ -122,7 +122,7 @@ namespace
         Items::Feather, Items::Bone, Items::StringItem, Items::Gunpowder, Items::Flint,
         Items::Bread, Items::Steak, Items::CookedPorkchop, Items::CookedChicken,
         Items::CookedMutton,
-        Items::Paper, Items::Book, Items::Emerald, Items::EnderPearl, Items::EyeOfEnder, Items::NetherQuartz, Items::AmethystShard,
+        Items::Paper, Items::Book, Items::Emerald, Items::EnderPearl, Items::EyeOfEnder, Items::NetherQuartz, Items::AmethystShard, Items::TripwireHook,
         Items::Sign, Items::SpruceSign, Items::BirchSign, Items::JungleSign, Items::AcaciaSign, Items::DarkOakSign,
         Items::CherrySign, Items::MangroveSign, Items::BambooSign, Items::CrimsonSign, Items::WarpedSign,
     };
@@ -137,7 +137,7 @@ namespace
     };
 
     const StackId TAB_TOOLS[] = {
-        Blocks::CraftingTable, Blocks::Furnace, Blocks::Chest,
+        Blocks::CraftingTable, Blocks::Furnace, Blocks::Chest, Blocks::ChestRunFirst + 17, Blocks::ChestRunFirst + 37,
         Blocks::BedFirst + 0, Blocks::BedFirst + 8, Blocks::BedFirst + 16, Blocks::BedFirst + 24,
         Blocks::BedFirst + 32, Blocks::BedFirst + 40, Blocks::BedFirst + 48, Blocks::BedFirst + 56,
         Blocks::BedFirst + 64, Blocks::BedFirst + 72, Blocks::BedFirst + 80, Blocks::BedFirst + 88,
@@ -794,7 +794,8 @@ void Application::renderContainerScreen(float w, float h)
     }
 
     const float PANEL_W = m_beaconOpen ? 230.0f : 176.0f;
-    const float PANEL_H = m_beaconOpen ? 219.0f : hopper ? 133.0f : bigChest ? 168.0f : 166.0f;
+    const float chestRows = m_chestDouble ? 6.0f : 3.0f;
+    const float PANEL_H = m_beaconOpen ? 219.0f : hopper ? 133.0f : bigChest ? chestRows * 18.0f + 114.0f : 166.0f;
 
     const float TRADE_LIST_W = 100.0f;
     const float panelWidth = m_tradeOpen ? PANEL_W + TRADE_LIST_W : PANEL_W;
@@ -802,8 +803,8 @@ void Application::renderContainerScreen(float w, float h)
     const float panelY = std::floor((h - PANEL_H) * 0.5f);
     const float shift = m_tradeOpen && skin ? TRADE_LIST_W : 0.0f;
 
-    const float storageY = panelY + (m_beaconOpen ? 137.0f : hopper ? 51.0f : bigChest ? 85.0f : 84.0f);
-    const float hotbarY = panelY + (m_beaconOpen ? 195.0f : hopper ? 109.0f : bigChest ? 143.0f : 142.0f);
+    const float storageY = panelY + (m_beaconOpen ? 137.0f : hopper ? 51.0f : bigChest ? chestRows * 18.0f + 31.0f : 84.0f);
+    const float hotbarY = panelY + (m_beaconOpen ? 195.0f : hopper ? 109.0f : bigChest ? chestRows * 18.0f + 89.0f : 142.0f);
     const float invX = panelX + (m_beaconOpen ? 36.0f : 8.0f) + shift;
 
     auto well = [this, skin](float x, float y) {
@@ -830,8 +831,8 @@ void Application::renderContainerScreen(float w, float h)
 
     if (skin && bigChest)
     {
-        guiBlit(background, panelX, panelY, 0.0f, 0.0f, PANEL_W, 3.0f * PITCH + 17.0f);
-        guiBlit(background, panelX, panelY + 3.0f * PITCH + 17.0f, 0.0f, 126.0f, PANEL_W, 96.0f);
+        guiBlit(background, panelX, panelY, 0.0f, 0.0f, PANEL_W, chestRows * PITCH + 17.0f);
+        guiBlit(background, panelX, panelY + chestRows * PITCH + 17.0f, 0.0f, 126.0f, PANEL_W, 96.0f);
     }
     else if (skin)
         guiBlit(background, panelX, panelY, 0.0f, 0.0f, panelWidth, PANEL_H, textureW, 256.0f);
@@ -858,7 +859,8 @@ void Application::renderContainerScreen(float w, float h)
     if (!plainInventory && !m_beaconOpen)
     {
         std::string title = "Inventory";
-        if (m_chestOpen && m_world)
+        if (m_chestOpen && m_chestDouble) title = "Large Chest";
+        else if (m_chestOpen && m_world)
             title = displayName(m_world->getBlock(m_chestBlock.x, m_chestBlock.y, m_chestBlock.z));
         else if (m_furnaceOpen && m_world)
             title = displayName(m_world->getBlock(m_furnaceBlock.x, m_furnaceBlock.y, m_furnaceBlock.z));
@@ -915,6 +917,11 @@ void Application::renderContainerScreen(float w, float h)
             for (int column = 0; column < PALETTE_COLUMNS; ++column)
                 drawSlot(Inventory::CHEST_FIRST + row * PALETTE_COLUMNS + column,
                          panelX + 8.0f + column * PITCH, panelY + 18.0f + row * PITCH);
+        if (m_chestDouble)
+            for (int row = 0; row < 3; ++row)
+                for (int column = 0; column < PALETTE_COLUMNS; ++column)
+                    drawSlot(Inventory::CHEST2_FIRST + row * PALETTE_COLUMNS + column,
+                             panelX + 8.0f + column * PITCH, panelY + 18.0f + (row + 3) * PITCH);
     }
 
     if (m_horseOpen)
@@ -3237,21 +3244,71 @@ void Application::openBench(const glm::ivec3& block)
     setMouseCaptured(false);
 }
 
+void Application::setTrappedOpen(const glm::ivec3& block, bool open)
+{
+    if (!m_world) return;
+    const BlockId here = m_world->getBlock(block.x, block.y, block.z);
+    if (!isTrappedChest(here)) return;
+    const ChestState state = chestState(here);
+    if (state.open == open) return;
+    const BlockId now = chestOf(state.kind, state.facing, state.half, open);
+    m_world->setBlock(block.x, block.y, block.z, now);
+    m_net.onLocalBlockChange(block.x, block.y, block.z, now);
+    settleRedstone(block);
+}
+
 void Application::openChest(const glm::ivec3& block)
 {
     m_chestBlock = block;
     m_chestOpen = true;
-    if (m_world && m_world->getBlock(block.x, block.y, block.z) == Blocks::Barrel)
+    m_chestDouble = false;
+    m_chestEnder = false;
+    const BlockId here = m_world ? m_world->getBlock(block.x, block.y, block.z) : Blocks::Air;
+    if (here == Blocks::Barrel)
     {
         m_world->setBlock(block.x, block.y, block.z, Blocks::BarrelOpen);
         m_net.onLocalBlockChange(block.x, block.y, block.z, Blocks::BarrelOpen);
     }
 
-    fillVillageChest(block);
+    if (isEnderChest(here))
+    {
+        m_chestEnder = true;
+        const Chests::Contents& held = m_chests.ender();
+        for (int i = 0; i < Inventory::CHEST_SLOTS; ++i)
+            m_inventory.slot(Inventory::CHEST_FIRST + i) = held[i];
+        m_inventoryOpen = true;
+        setMouseCaptured(false);
+        return;
+    }
 
-    const Chests::Contents& held = m_chests.at(block);
+    int dx = 0, dz = 0;
+    if (isStorageChest(here) && chestPartnerStep(here, dx, dz))
+    {
+        const glm::ivec3 other(block.x + dx, block.y, block.z + dz);
+        const BlockId there = m_world->getBlock(other.x, other.y, other.z);
+        if (isStorageChest(there) && chestState(there).half != 0 && chestState(there).half != chestState(here).half)
+        {
+            m_chestDouble = true;
+            const bool hereOnTop = chestState(here).half == 2;
+            m_chestBlock = hereOnTop ? block : other;
+            m_chestPartner = hereOnTop ? other : block;
+        }
+    }
+
+    fillVillageChest(m_chestBlock);
+    setTrappedOpen(m_chestBlock, true);
+
+    const Chests::Contents& held = m_chests.at(m_chestBlock);
     for (int i = 0; i < Inventory::CHEST_SLOTS; ++i)
         m_inventory.slot(Inventory::CHEST_FIRST + i) = held[i];
+    if (m_chestDouble)
+    {
+        fillVillageChest(m_chestPartner);
+        setTrappedOpen(m_chestPartner, true);
+        const Chests::Contents& more = m_chests.at(m_chestPartner);
+        for (int i = 0; i < Inventory::CHEST_SLOTS; ++i)
+            m_inventory.slot(Inventory::CHEST2_FIRST + i) = more[i];
+    }
 
     m_inventoryOpen = true;
     setMouseCaptured(false);
@@ -3390,17 +3447,34 @@ void Application::stowChest()
         m_net.onLocalBlockChange(m_chestBlock.x, m_chestBlock.y, m_chestBlock.z, Blocks::Barrel);
     }
 
-    Chests::Contents& held = m_chests.at(m_chestBlock);
+    Chests::Contents& held = m_chestEnder ? m_chests.ender() : m_chests.at(m_chestBlock);
     for (int i = 0; i < Inventory::CHEST_SLOTS; ++i)
     {
         held[i] = m_inventory.slot(Inventory::CHEST_FIRST + i);
         m_inventory.slot(Inventory::CHEST_FIRST + i).clear();
     }
+    if (m_chestDouble)
+    {
+        Chests::Contents& more = m_chests.at(m_chestPartner);
+        for (int i = 0; i < Inventory::CHEST_SLOTS; ++i)
+        {
+            more[i] = m_inventory.slot(Inventory::CHEST2_FIRST + i);
+            m_inventory.slot(Inventory::CHEST2_FIRST + i).clear();
+        }
+        m_chests.forgetIfEmpty(m_chestPartner);
+        setTrappedOpen(m_chestPartner, false);
+    }
 
     // An emptied chest is a plain block again; keeping a row of
     // twenty-seven nothings for it would bloat every save.
-    m_chests.forgetIfEmpty(m_chestBlock);
+    if (!m_chestEnder)
+    {
+        m_chests.forgetIfEmpty(m_chestBlock);
+        setTrappedOpen(m_chestBlock, false);
+    }
     m_chestOpen = false;
+    m_chestDouble = false;
+    m_chestEnder = false;
 }
 
 // Write-through, so a save can see what an open container holds
@@ -3409,9 +3483,15 @@ void Application::syncOpenContainers()
 {
     if (m_chestOpen)
     {
-        Chests::Contents& held = m_chests.at(m_chestBlock);
+        Chests::Contents& held = m_chestEnder ? m_chests.ender() : m_chests.at(m_chestBlock);
         for (int i = 0; i < Inventory::CHEST_SLOTS; ++i)
             held[i] = m_inventory.slot(Inventory::CHEST_FIRST + i);
+        if (m_chestDouble)
+        {
+            Chests::Contents& more = m_chests.at(m_chestPartner);
+            for (int i = 0; i < Inventory::CHEST_SLOTS; ++i)
+                more[i] = m_inventory.slot(Inventory::CHEST2_FIRST + i);
+        }
     }
 
     if (m_crafterOpen)

@@ -27,6 +27,8 @@ public:
     Contents& at(const glm::ivec3& block) { return m_chests[key(block)]; }
     bool has(const glm::ivec3& block) const { return m_chests.count(key(block)) > 0; }
     void remove(const glm::ivec3& block) { m_chests.erase(key(block)); }
+    static constexpr int ENDER_DIMENSION = 99;
+    Contents& ender() { return m_chests[{ ENDER_DIMENSION, 0, 0, 0 }]; }
     void clear() { m_chests.clear(); }
 
     // Drops the record if nothing is left in it. Called when a chest is

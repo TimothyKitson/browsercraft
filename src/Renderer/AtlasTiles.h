@@ -324,6 +324,7 @@ namespace Tiles
         BedFootTopTile, BedFootTopTileLast = BedFootTopTile + 15,
         BedSidesTile, BedSidesTileLast = BedSidesTile + 15,
         BedEndsTile, BedEndsTileLast = BedEndsTile + 15,
+        ChestTileFirst, ChestTileLast = ChestTileFirst + 59,
 
         TileCount
     };
@@ -516,8 +517,9 @@ namespace Tiles
         ItemQuartz, ItemRawIron, ItemRawGold, ItemAmethystShard,
         ItemCandleFirst, ItemCandleLast = ItemCandleFirst + 16,
         ItemBedFirst, ItemBedLast = ItemBedFirst + 15,
+        ItemTripwireHook,
 
-        ItemTileEnd = ItemBedLast + 1
+        ItemTileEnd = ItemTripwireHook + 1
     };
 
     // Ten progressively more broken overlay tiles for the mining animation.

@@ -207,6 +207,7 @@ namespace
         { "Raw Iron",             Tiles::ItemRawIron,           64 },
         { "Raw Gold",             Tiles::ItemRawGold,           64 },
         { "Amethyst Shard",       Tiles::ItemAmethystShard,     64 },
+        { "Tripwire Hook",        Tiles::ItemTripwireHook,      64 },
     };
 
     static_assert(sizeof(ITEMS) / sizeof(ITEMS[0]) ==
@@ -310,6 +311,9 @@ StackId blockDrop(BlockId id)
 
     if (isCandle(id)) return candleOf(candleShade(id), 1, false);
     if (isBed(id)) return bedOf(bedColour(id), 0, false);
+    if (isEnderChest(id)) return Blocks::Obsidian;
+    if (isTrappedChest(id)) return chestOf(1, 2, 0);
+    if (isChestFamily(id)) return Blocks::Chest;
     if (isCandleCake(id)) return candleOf(candleCakeShade(id), 1, false);
 
     // However it was hung, what comes back is one sign.

@@ -631,14 +631,12 @@ namespace
                  glm::vec3(15.0f / 16.0f, 0.5f, 15.0f / 16.0f), faces, out);
     }
 
-    void emitBed(const MeshSnapshot& snap, int lx, int y, int lz, BlockId id, std::vector<float>& out)
+    void emitRotated(const MeshSnapshot& snap, int lx, int y, int lz, BlockId id, int facing,
+                     float x0, float y0, float z0, float x1, float y1, float z1, const PartFace local[6],
+                     std::vector<float>& out)
     {
-        const int colour = bedColour(id);
-        const int facing = bedFacing(id);
-        const bool head = bedIsHead(id);
-
         auto toWorld = [facing](float x, float z, float& wx, float& wz) {
-            switch (facing)
+            switch (facing & 3)
             {
                 case 1: wx = 1.0f - z; wz = x; break;
                 case 2: wx = 1.0f - x; wz = 1.0f - z; break;
@@ -647,7 +645,7 @@ namespace
             }
         };
         auto turnDir = [facing](int dx, int dz, int& wx, int& wz) {
-            switch (facing)
+            switch (facing & 3)
             {
                 case 1: wx = -dz; wz = dx; break;
                 case 2: wx = -dx; wz = -dz; break;
@@ -655,30 +653,66 @@ namespace
                 default: wx = dx; wz = dz; break;
             }
         };
+        float ax, az, bx, bz;
+        toWorld(x0 / 16.0f, z0 / 16.0f, ax, az);
+        toWorld(x1 / 16.0f, z1 / 16.0f, bx, bz);
+        const glm::vec3 lo(std::min(ax, bx), y0 / 16.0f, std::min(az, bz));
+        const glm::vec3 hi(std::max(ax, bx), y1 / 16.0f, std::max(az, bz));
+        PartFace world[6];
+        for (int k = 0; k < 6; ++k) world[k] = PartFace{ -1, 0.0f, 0.0f, 0.0f, 0.0f };
+        world[2] = local[2]; world[2].turn = (local[2].turn + facing) & 3;
+        world[3] = local[3]; world[3].turn = (local[3].turn + facing) & 3;
+        for (int k : { 0, 1, 4, 5 })
+        {
+            int nx = 0, nz = 0;
+            turnDir(FACES[k].nx, FACES[k].nz, nx, nz);
+            int w = 0;
+            for (int j : { 0, 1, 4, 5 })
+                if (FACES[j].nx == nx && FACES[j].nz == nz) w = j;
+            world[w] = local[k];
+            int ux = 0, uz = 0;
+            if (k == 0 || k == 1) turnDir(0, 1, ux, uz);
+            else turnDir(1, 0, ux, uz);
+            world[w].flipU = local[k].flipU != ((w == 0 || w == 1) ? uz < 0 : ux < 0);
+        }
+        emitPart(snap, lx, y, lz, id, lo, hi, world, out);
+    }
+
+    void emitChest(const MeshSnapshot& snap, int lx, int y, int lz, BlockId id, std::vector<float>& out)
+    {
+        const ChestState state = chestState(id);
+        const int set = state.kind == 2 ? 3 : (christmasChests() ? 2 : state.kind);
+        const int half = state.kind == 2 ? 0 : state.half;
+        const int base = Tiles::ChestTileFirst + (set * 3 + half) * 5;
+        const float x0 = half == 2 ? 0.0f : 1.0f;
+        const float x1 = half == 1 ? 16.0f : 15.0f;
+        const float z0 = 1.0f, z1 = 15.0f, top = 14.0f;
+        PartFace faces[6];
+        faces[0] = PartFace{ half == 1 ? -1 : base + 2, 16.0f - z0, 2.0f, 16.0f - z1, 16.0f };
+        faces[1] = PartFace{ half == 2 ? -1 : base + 2, z0, 2.0f, z1, 16.0f };
+        faces[2] = PartFace{ base + 0, 16.0f - x0, 16.0f - z0, 16.0f - x1, 16.0f - z1 };
+        faces[3] = PartFace{ base + 4, x0, z0, x1, z1 };
+        faces[4] = PartFace{ base + 3, x0, 2.0f, x1, 16.0f };
+        faces[5] = PartFace{ base + 1, 16.0f - x0, 2.0f, 16.0f - x1, 16.0f };
+        emitRotated(snap, lx, y, lz, id, state.facing, x0, 0.0f, z0, x1, top, z1, faces, out);
+
+        const float latchX0 = half == 0 ? 7.0f : (half == 1 ? 15.0f : 0.0f);
+        const float latchX1 = half == 0 ? 9.0f : (half == 1 ? 16.0f : 1.0f);
+        PartFace latch[6];
+        for (int k = 0; k < 6; ++k) latch[k] = PartFace{ base + 1, 0.0f, 0.0f, 2.0f, 2.0f };
+        if (half == 1) latch[0].tile = -1;
+        if (half == 2) latch[1].tile = -1;
+        emitRotated(snap, lx, y, lz, id, state.facing, latchX0, 7.0f, 0.0f, latchX1, 11.0f, z0, latch, out);
+    }
+
+    void emitBed(const MeshSnapshot& snap, int lx, int y, int lz, BlockId id, std::vector<float>& out)
+    {
+        const int colour = bedColour(id);
+        const int facing = bedFacing(id);
+        const bool head = bedIsHead(id);
+
         auto emitLocal = [&](float x0, float y0, float z0, float x1, float y1, float z1, const PartFace local[6]) {
-            float ax, az, bx, bz;
-            toWorld(x0 / 16.0f, z0 / 16.0f, ax, az);
-            toWorld(x1 / 16.0f, z1 / 16.0f, bx, bz);
-            const glm::vec3 lo(std::min(ax, bx), y0 / 16.0f, std::min(az, bz));
-            const glm::vec3 hi(std::max(ax, bx), y1 / 16.0f, std::max(az, bz));
-            PartFace world[6];
-            for (int k = 0; k < 6; ++k) world[k] = PartFace{ -1, 0.0f, 0.0f, 0.0f, 0.0f };
-            world[2] = local[2]; world[2].turn = facing;
-            world[3] = local[3]; world[3].turn = facing;
-            for (int k : { 0, 1, 4, 5 })
-            {
-                int nx = 0, nz = 0;
-                turnDir(FACES[k].nx, FACES[k].nz, nx, nz);
-                int w = 0;
-                for (int j : { 0, 1, 4, 5 })
-                    if (FACES[j].nx == nx && FACES[j].nz == nz) w = j;
-                world[w] = local[k];
-                int ux = 0, uz = 0;
-                if (k == 0 || k == 1) turnDir(0, 1, ux, uz);
-                else turnDir(1, 0, ux, uz);
-                world[w].flipU = (w == 0 || w == 1) ? uz < 0 : ux < 0;
-            }
-            emitPart(snap, lx, y, lz, id, lo, hi, world, out);
+            emitRotated(snap, lx, y, lz, id, facing, x0, y0, z0, x1, y1, z1, local, out);
         };
 
         const int topTile = head ? Tiles::BedHeadTopTile + colour : Tiles::BedFootTopTile + colour;
@@ -1295,6 +1329,10 @@ void buildChunkMesh(const MeshSnapshot& snapshot, MeshResult& out)
                 else if (isColourBed(id))
                 {
                     emitBed(snapshot, lx, y, lz, id, out.opaqueVertices);
+                }
+                else if (isChestFamily(id))
+                {
+                    emitChest(snapshot, lx, y, lz, id, out.opaqueVertices);
                 }
                 else
                 {

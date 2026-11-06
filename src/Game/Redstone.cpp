@@ -26,6 +26,7 @@ namespace Redstone
         // as long as its pulse lasts, which is what makes it useful:
         // it turns a change into a signal.
         if (id == Blocks::ObserverLit) return true;
+        if (isTrappedChest(id) && chestState(id).open) return true;
         return id == Blocks::RedstoneTorch || id == Blocks::RedstoneBlock ||
                id == Blocks::LeverOn || id == Blocks::ButtonOn;
     }

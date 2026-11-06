@@ -135,9 +135,10 @@ Everything in the 1.21 textures zip the game doesn't use yet, turned into work. 
     - Notes: shulkers carry a colour like 1.21's (undyed by default, as end cities spawn them). Boxes still spill their contents when broken rather than keeping them in the item; that needs item data the game does not have yet.
 34. Beds in all 16 colours. (done)
     - Notes: beds are two blocks now, head and foot, facing the way you place them, drawn from the pack's bed sheets. Sleeping in the Nether or the End blows the bed up. Old single-block beds in saved worlds still work and break into a red bed.
-35. Chests
+35. Chests (done)
     - I. Two chests side by side join into a double chest, using the left and right textures and the 54-slot screen.
     - II. Trapped chest, ender chest (shared storage), and the Christmas chest in late December.
+    - Notes: chests are 3D models cut from the pack's chest sheets and face the player. The tripwire hook arrived as a crafting item for the trapped chest; it becomes a placeable block with item 43. Lids do not swing open yet.
 36. Copper set
     - I. Cut, chiseled, grate, door and trapdoor, at all four weathering stages.
     - II. Copper bulbs at every stage, lit and powered.

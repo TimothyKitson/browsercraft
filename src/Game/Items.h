@@ -303,6 +303,7 @@ namespace Items
         RawIron,
         RawGold,
         AmethystShard,
+        TripwireHook,
         Count
     };
 }

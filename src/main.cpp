@@ -10,6 +10,7 @@
 #include "Game/Farming.h"
 #include "Entity/MobType.h"
 #include <chrono>
+#include <ctime>
 #include "World/ChunkMesher.h"
 #include <set>
 #include <algorithm>
@@ -774,6 +775,7 @@ namespace
             else if (isCandleCake(id))            why = "a candle set on a whole cake";
             else if (id == Blocks::Bed)           why = "a bed from a world saved before beds had colours";
             else if (isColourBed(id))             why = "the head, or another facing, of a bed";
+            else if (isChestFamily(id))           why = "another facing, a joined half, or a trapped chest held open";
             else if (id == Blocks::SmokerLit || id == Blocks::BlastFurnaceLit)
                                                   why = "a furnace that is burning";
             else if (id == Blocks::NoteBlockLit || id == Blocks::ObserverLit)
@@ -1361,6 +1363,12 @@ int runSelfTest();   // SelfTest.cpp: headless inventory and crafting checks
 //   --nopbr    starts with resource-pack PBR shading off (toggle in-game with P).
 int main(int argc, char** argv)
 {
+    {
+        const std::time_t now = std::time(nullptr);
+        const std::tm* local = std::localtime(&now);
+        if (local && local->tm_mon == 11 && local->tm_mday >= 24 && local->tm_mday <= 26)
+            setChristmasChests(true);
+    }
     int width = 1280;
     int height = 720;
     float autoShotDelay = 0.0f;
@@ -1409,6 +1417,10 @@ int main(int argc, char** argv)
         else if (std::strcmp(argv[i], "--noshaders") == 0)
         {
             shaders = 0;
+        }
+        else if (std::strcmp(argv[i], "--christmas") == 0)
+        {
+            setChristmasChests(true);
         }
         else if (std::strcmp(argv[i], "--time") == 0 && i + 1 < argc)
         {

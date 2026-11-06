@@ -2015,7 +2015,7 @@ bool Application::frame()
         if (m_startupScreen == "inventory" || m_startupScreen == "creative" ||
             m_startupScreen == "bench" || m_startupScreen == "tools" ||
             m_startupScreen == "furnace" || m_startupScreen == "furnaceblock" ||
-            m_startupScreen == "chest" || m_startupScreen == "armour" ||
+            m_startupScreen == "chest" || m_startupScreen == "largechest" || m_startupScreen == "armour" ||
             m_startupScreen == "armourhud" || m_startupScreen == "bed" ||
             m_startupScreen == "arrows" || m_startupScreen == "slabs" ||
             m_startupScreen == "boom" || m_startupScreen == "tnt" ||
@@ -2046,7 +2046,7 @@ bool Application::frame()
             m_startupScreen == "grinderror" || m_startupScreen == "woods" ||
             m_startupScreen == "cherry" || m_startupScreen == "mangrove" || m_startupScreen == "fungi" ||
             m_startupScreen == "stones" || m_startupScreen == "colours" || m_startupScreen == "candles" ||
-            m_startupScreen == "shulkerboxes" || m_startupScreen == "beds" ||
+            m_startupScreen == "shulkerboxes" || m_startupScreen == "beds" || m_startupScreen == "chests" ||
             m_startupScreen == "boat" || m_startupScreen == "rails" ||
             m_startupScreen == "mobs" || m_startupScreen == "golem" ||
             m_startupScreen == "glowmobs" || m_startupScreen == "variants" ||
@@ -2136,6 +2136,7 @@ bool Application::frame()
                                   m_startupScreen != "candles" &&
                                   m_startupScreen != "shulkerboxes" &&
                                   m_startupScreen != "beds" &&
+                                  m_startupScreen != "chests" &&
                                   m_startupScreen != "boat" &&
                                   m_startupScreen != "rails" &&
                                   m_startupScreen != "mobs" &&
@@ -2511,7 +2512,7 @@ bool Application::frame()
                 m_startupScreen == "grinderror" || m_startupScreen == "woods" ||
                 m_startupScreen == "cherry" || m_startupScreen == "mangrove" || m_startupScreen == "fungi" ||
                 m_startupScreen == "stones" || m_startupScreen == "colours" || m_startupScreen == "candles" ||
-                m_startupScreen == "shulkerboxes" || m_startupScreen == "beds")
+                m_startupScreen == "shulkerboxes" || m_startupScreen == "beds" || m_startupScreen == "chests")
             {
                 m_camera.setOrientation(0.0f, -25.0f);
                 m_camera.addLook(0.0f, 0.0f, 0.0f);
@@ -2608,6 +2609,29 @@ bool Application::frame()
                     m_world->setBlock(px + 16, py, pz - 10, Blocks::Bookshelf);
                     m_world->setBlock(px + 16, py, pz + 10, Blocks::DiamondOre);
                     m_world->setBlock(px + 16, py + 1, pz + 10, Blocks::EndPortalFrame);
+                }
+                if (m_startupScreen == "chests")
+                {
+                    m_devAttackStrength = 1.0f;
+                    m_camera.setOrientation(0.0f, -22.0f);
+                    for (int dx = 1; dx <= 10; ++dx)
+                        for (int dz = -8; dz <= 8; ++dz)
+                        {
+                            for (int dy = 0; dy <= 5; ++dy) m_world->setBlock(px + dx, py + dy, pz + dz, Blocks::Air);
+                            m_world->setBlock(px + dx, py - 1, pz + dz, Blocks::Stone);
+                        }
+                    m_world->setBlock(px + 6, py, pz - 6, chestOf(0, 3, 0));
+                    m_world->setBlock(px + 6, py, pz - 3, chestOf(0, 3, 1));
+                    m_world->setBlock(px + 6, py, pz - 4, chestOf(0, 3, 2));
+                    m_world->setBlock(px + 6, py, pz, chestOf(1, 3, 1));
+                    m_world->setBlock(px + 6, py, pz - 1, chestOf(1, 3, 2));
+                    m_world->setBlock(px + 6, py, pz + 2, chestOf(1, 3, 0, true));
+                    m_world->setBlock(px + 6, py, pz + 4, chestOf(2, 3, 0));
+                    m_world->setBlock(px + 9, py, pz + 6, chestOf(0, 0, 0));
+                    m_world->setBlock(px + 3, py, pz + 6, chestOf(0, 2, 0));
+                    m_world->setBlock(px + 10, py, pz - 8, Blocks::Bookshelf);
+                    m_world->setBlock(px + 10, py, pz + 8, Blocks::DiamondOre);
+                    m_world->setBlock(px + 10, py + 1, pz + 8, Blocks::EndPortalFrame);
                 }
                 if (m_startupScreen == "beds")
                 {
@@ -4963,6 +4987,25 @@ bool Application::frame()
                 }
                 openChest(where);
             }
+            if (m_startupScreen == "largechest")
+            {
+                const glm::vec3 ahead = m_player.position + m_camera.front * 3.0f;
+                const glm::ivec3 where(static_cast<int>(std::floor(ahead.x)),
+                                       static_cast<int>(std::floor(m_player.position.y)),
+                                       static_cast<int>(std::floor(ahead.z)));
+                m_world->setBlock(where.x, where.y, where.z, chestOf(0, 2, 1));
+                m_world->setBlock(where.x - 1, where.y, where.z, chestOf(0, 2, 2));
+                const StackId SAMPLE[] = { Items::Diamond, Items::IronIngot, Blocks::Cobblestone, Items::Bread,
+                                           Blocks::Torch, Items::GoldIngot, Blocks::Planks, Items::Coal };
+                Chests::Contents& left = m_chests.at(where);
+                Chests::Contents& right = m_chests.at(glm::ivec3(where.x - 1, where.y, where.z));
+                for (int i = 0; i < 8; ++i)
+                {
+                    left[i * 3] = ItemStack{ SAMPLE[i], 8 + i };
+                    right[i * 3 + 1] = ItemStack{ SAMPLE[7 - i], 16 + i };
+                }
+                openChest(where);
+            }
             if (m_startupScreen == "furnace" || m_startupScreen == "furnaceblock")
             {
                 // A furnace a block away, already working, so the
@@ -6051,6 +6094,7 @@ void Application::updateMining(float deltaTime)
                 }
 
                 if (isCandle(id)) dropped = candleCount(id);
+                if (isEnderChest(id)) { drop = silk ? chestOf(2, 2, 0) : Blocks::Obsidian; dropped = silk ? 1 : 8; }
                 if (drop != Blocks::Air)
                     m_drops.spawnFromBrokenBlock(hit.block, drop, dropped);
 
@@ -6121,6 +6165,23 @@ void Application::updateMining(float deltaTime)
                     m_net.onLocalBlockChange(other.x, other.y, other.z, Blocks::Air);
                     if (!m_player.creative() && isPistonBody(paired))
                         m_drops.spawnFromBrokenBlock(other, blockDrop(paired));
+                }
+            }
+
+            if (isStorageChest(id))
+            {
+                int dx = 0, dz = 0;
+                if (chestPartnerStep(id, dx, dz))
+                {
+                    const glm::ivec3 pair(hit.block.x + dx, hit.block.y, hit.block.z + dz);
+                    const BlockId partner = m_world->getBlock(pair.x, pair.y, pair.z);
+                    if (isStorageChest(partner) && chestState(partner).half != 0)
+                    {
+                        const ChestState other = chestState(partner);
+                        const BlockId alone = chestOf(other.kind, other.facing, 0, other.open);
+                        m_world->setBlock(pair.x, pair.y, pair.z, alone);
+                        m_net.onLocalBlockChange(pair.x, pair.y, pair.z, alone);
+                    }
                 }
             }
 
@@ -9096,7 +9157,7 @@ void Application::handlePlacement()
                 m_audio.play(Sound::Click, 0.4f);
                 return;
             }
-            if (isContainerBlock(used) || isItemHolder(used))
+            if (isContainerBlock(used) || isItemHolder(used) || isEnderChest(used))
             {
                 openChest(bench.block);
                 m_audio.play(isItemHolder(used) ? Sound::Click : Sound::DigWood, 0.5f, 0.8f);
@@ -9735,6 +9796,31 @@ void Application::handlePlacement()
         WorldCaneBlocks around;
         around.world = m_world.get();
         if (!Cane::canStandAt(around, target.x, target.y, target.z)) return;
+    }
+
+    if (isChestFamily(placing))
+    {
+        static const int STEP[4][2] = { { 0, -1 }, { 1, 0 }, { 0, 1 }, { -1, 0 } };
+        const glm::vec3 look = m_camera.front;
+        const int lookDir = (std::fabs(look.x) > std::fabs(look.z)) ? (look.x > 0.0f ? 1 : 3)
+                                                                     : (look.z > 0.0f ? 2 : 0);
+        const int facing = (lookDir + 2) & 3;
+        const ChestState kind = chestState(placing);
+        int half = 0;
+        for (int side = 0; side < 2 && half == 0 && kind.kind != 2; ++side)
+        {
+            const int way = side == 0 ? (facing + 1) & 3 : (facing + 3) & 3;
+            const glm::ivec3 at(target.x + STEP[way][0], target.y, target.z + STEP[way][1]);
+            const BlockId there = m_world->getBlock(at.x, at.y, at.z);
+            if (!isStorageChest(there)) continue;
+            const ChestState other = chestState(there);
+            if (other.kind != kind.kind || other.facing != facing || other.half != 0) continue;
+            half = side == 0 ? 1 : 2;
+            const BlockId joined = chestOf(other.kind, other.facing, side == 0 ? 2 : 1, other.open);
+            m_world->setBlock(at.x, at.y, at.z, joined);
+            m_net.onLocalBlockChange(at.x, at.y, at.z, joined);
+        }
+        placing = chestOf(kind.kind, facing, half);
     }
 
     if (isColourBed(placing))

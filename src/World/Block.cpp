@@ -57,7 +57,7 @@ namespace
         { "Crafting Table", CraftingTop, Planks,     CraftingSide,   true,  true,  RenderType::Cube,   0,   2.5f, CraftingFront },
         { "Furnace",      FurnaceTop,    FurnaceTop,     FurnaceSide,    true,  true,  RenderType::Cube,   0,   3.5f, FurnaceFront },
         { "Furnace",      FurnaceTop,    FurnaceTop,     FurnaceSide,    true,  true,  RenderType::Cube,  13,   3.5f, FurnaceLit },
-        { "Chest",        ChestTop,      ChestTop,       ChestFront,     true,  true,  RenderType::Cube,   0,   2.5f },
+        { "Chest",        ChestTileFirst + 0, ChestTileFirst + 4, ChestTileFirst + 1, true, false, RenderType::Chest, 0, 2.5f },
         { "Bed",          BedTop,        Planks,         BedSide,        true,  true,  RenderType::Cube,   0,   0.2f },
         { "TNT",          TntTop,        TntBottom,      TntSide,        true,  true,  RenderType::Cube,   0,   0.0f },
         { "TNT",          TntTop,        TntBottom,      TntPrimedSide,  true,  true,  RenderType::Cube,   7,   0.0f },
@@ -1346,6 +1346,45 @@ namespace
         { "Black Bed", BedHeadTopTile + 15, Planks, BedSidesTile + 15, true, false, RenderType::Bed, 0, 0.2f },
         { "Black Bed", BedFootTopTile + 15, Planks, BedSidesTile + 15, true, false, RenderType::Bed, 0, 0.2f },
         { "Black Bed", BedHeadTopTile + 15, Planks, BedSidesTile + 15, true, false, RenderType::Bed, 0, 0.2f },
+        { "Chest", ChestTileFirst + 0, ChestTileFirst + 0 + 4, ChestTileFirst + 0 + 1, true, false, RenderType::Chest, 0, 2.5f },
+        { "Chest", ChestTileFirst + 5, ChestTileFirst + 5 + 4, ChestTileFirst + 5 + 1, true, false, RenderType::Chest, 0, 2.5f },
+        { "Chest", ChestTileFirst + 10, ChestTileFirst + 10 + 4, ChestTileFirst + 10 + 1, true, false, RenderType::Chest, 0, 2.5f },
+        { "Chest", ChestTileFirst + 0, ChestTileFirst + 0 + 4, ChestTileFirst + 0 + 1, true, false, RenderType::Chest, 0, 2.5f },
+        { "Chest", ChestTileFirst + 5, ChestTileFirst + 5 + 4, ChestTileFirst + 5 + 1, true, false, RenderType::Chest, 0, 2.5f },
+        { "Chest", ChestTileFirst + 10, ChestTileFirst + 10 + 4, ChestTileFirst + 10 + 1, true, false, RenderType::Chest, 0, 2.5f },
+        { "Chest", ChestTileFirst + 5, ChestTileFirst + 5 + 4, ChestTileFirst + 5 + 1, true, false, RenderType::Chest, 0, 2.5f },
+        { "Chest", ChestTileFirst + 10, ChestTileFirst + 10 + 4, ChestTileFirst + 10 + 1, true, false, RenderType::Chest, 0, 2.5f },
+        { "Chest", ChestTileFirst + 0, ChestTileFirst + 0 + 4, ChestTileFirst + 0 + 1, true, false, RenderType::Chest, 0, 2.5f },
+        { "Chest", ChestTileFirst + 5, ChestTileFirst + 5 + 4, ChestTileFirst + 5 + 1, true, false, RenderType::Chest, 0, 2.5f },
+        { "Chest", ChestTileFirst + 10, ChestTileFirst + 10 + 4, ChestTileFirst + 10 + 1, true, false, RenderType::Chest, 0, 2.5f },
+        { "Trapped Chest", ChestTileFirst + 15, ChestTileFirst + 15 + 4, ChestTileFirst + 15 + 1, true, false, RenderType::Chest, 0, 2.5f },
+        { "Trapped Chest", ChestTileFirst + 20, ChestTileFirst + 20 + 4, ChestTileFirst + 20 + 1, true, false, RenderType::Chest, 0, 2.5f },
+        { "Trapped Chest", ChestTileFirst + 25, ChestTileFirst + 25 + 4, ChestTileFirst + 25 + 1, true, false, RenderType::Chest, 0, 2.5f },
+        { "Trapped Chest", ChestTileFirst + 15, ChestTileFirst + 15 + 4, ChestTileFirst + 15 + 1, true, false, RenderType::Chest, 0, 2.5f },
+        { "Trapped Chest", ChestTileFirst + 20, ChestTileFirst + 20 + 4, ChestTileFirst + 20 + 1, true, false, RenderType::Chest, 0, 2.5f },
+        { "Trapped Chest", ChestTileFirst + 25, ChestTileFirst + 25 + 4, ChestTileFirst + 25 + 1, true, false, RenderType::Chest, 0, 2.5f },
+        { "Trapped Chest", ChestTileFirst + 15, ChestTileFirst + 15 + 4, ChestTileFirst + 15 + 1, true, false, RenderType::Chest, 0, 2.5f },
+        { "Trapped Chest", ChestTileFirst + 20, ChestTileFirst + 20 + 4, ChestTileFirst + 20 + 1, true, false, RenderType::Chest, 0, 2.5f },
+        { "Trapped Chest", ChestTileFirst + 25, ChestTileFirst + 25 + 4, ChestTileFirst + 25 + 1, true, false, RenderType::Chest, 0, 2.5f },
+        { "Trapped Chest", ChestTileFirst + 15, ChestTileFirst + 15 + 4, ChestTileFirst + 15 + 1, true, false, RenderType::Chest, 0, 2.5f },
+        { "Trapped Chest", ChestTileFirst + 20, ChestTileFirst + 20 + 4, ChestTileFirst + 20 + 1, true, false, RenderType::Chest, 0, 2.5f },
+        { "Trapped Chest", ChestTileFirst + 25, ChestTileFirst + 25 + 4, ChestTileFirst + 25 + 1, true, false, RenderType::Chest, 0, 2.5f },
+        { "Trapped Chest", ChestTileFirst + 15, ChestTileFirst + 15 + 4, ChestTileFirst + 15 + 1, true, false, RenderType::Chest, 0, 2.5f },
+        { "Trapped Chest", ChestTileFirst + 20, ChestTileFirst + 20 + 4, ChestTileFirst + 20 + 1, true, false, RenderType::Chest, 0, 2.5f },
+        { "Trapped Chest", ChestTileFirst + 25, ChestTileFirst + 25 + 4, ChestTileFirst + 25 + 1, true, false, RenderType::Chest, 0, 2.5f },
+        { "Trapped Chest", ChestTileFirst + 15, ChestTileFirst + 15 + 4, ChestTileFirst + 15 + 1, true, false, RenderType::Chest, 0, 2.5f },
+        { "Trapped Chest", ChestTileFirst + 20, ChestTileFirst + 20 + 4, ChestTileFirst + 20 + 1, true, false, RenderType::Chest, 0, 2.5f },
+        { "Trapped Chest", ChestTileFirst + 25, ChestTileFirst + 25 + 4, ChestTileFirst + 25 + 1, true, false, RenderType::Chest, 0, 2.5f },
+        { "Trapped Chest", ChestTileFirst + 15, ChestTileFirst + 15 + 4, ChestTileFirst + 15 + 1, true, false, RenderType::Chest, 0, 2.5f },
+        { "Trapped Chest", ChestTileFirst + 20, ChestTileFirst + 20 + 4, ChestTileFirst + 20 + 1, true, false, RenderType::Chest, 0, 2.5f },
+        { "Trapped Chest", ChestTileFirst + 25, ChestTileFirst + 25 + 4, ChestTileFirst + 25 + 1, true, false, RenderType::Chest, 0, 2.5f },
+        { "Trapped Chest", ChestTileFirst + 15, ChestTileFirst + 15 + 4, ChestTileFirst + 15 + 1, true, false, RenderType::Chest, 0, 2.5f },
+        { "Trapped Chest", ChestTileFirst + 20, ChestTileFirst + 20 + 4, ChestTileFirst + 20 + 1, true, false, RenderType::Chest, 0, 2.5f },
+        { "Trapped Chest", ChestTileFirst + 25, ChestTileFirst + 25 + 4, ChestTileFirst + 25 + 1, true, false, RenderType::Chest, 0, 2.5f },
+        { "Ender Chest", ChestTileFirst + 45, ChestTileFirst + 45 + 4, ChestTileFirst + 45 + 1, true, false, RenderType::Chest, 7, 22.5f },
+        { "Ender Chest", ChestTileFirst + 45, ChestTileFirst + 45 + 4, ChestTileFirst + 45 + 1, true, false, RenderType::Chest, 7, 22.5f },
+        { "Ender Chest", ChestTileFirst + 45, ChestTileFirst + 45 + 4, ChestTileFirst + 45 + 1, true, false, RenderType::Chest, 7, 22.5f },
+        { "Ender Chest", ChestTileFirst + 45, ChestTileFirst + 45 + 4, ChestTileFirst + 45 + 1, true, false, RenderType::Chest, 7, 22.5f },
     };
 }
 
@@ -1421,6 +1460,7 @@ bool isObtainable(BlockId id)
             if (isCandle(id) && (candleCount(id) != 1 || candleLit(id))) return false;
             if (isCandleCake(id)) return false;
             if (id == Blocks::Bed) return false;
+            if (isChestFamily(id) && id != Blocks::Chest && id != chestOf(chestState(id).kind, 2, 0)) return false;
             if (isColourBed(id) && id != bedOf(bedColour(id), 0, false)) return false;
 
             // Cocoa is a pod on a trunk rather than a block anybody
@@ -1464,6 +1504,8 @@ const char* blockSoundGroup(BlockId id)
     if (isDoor(id) || isTrapdoor(id)) return "wood";
     if (isConcretePowder(id)) return "sand";
     if (isColourBed(id)) return "cloth";
+    if (isEnderChest(id)) return "stone";
+    if (isStorageChest(id)) return "wood";
     if (isSapling(id) || isPinkPetals(id) || id == Blocks::MangrovePropaguleHanging) return "grass";
     if (isNetherPlant(id) || id == Blocks::NetherWartBlock || id == Blocks::WarpedWartBlock ||
         id == Blocks::Shroomlight) return "grass";
@@ -1612,6 +1654,8 @@ Material blockMaterial(BlockId id)
     if (isDoor(id) || isTrapdoor(id)) return Material::Wood;
     if (isConcretePowder(id)) return Material::Sand;
     if (isColourBed(id)) return Material::Wool;
+    if (isEnderChest(id)) return Material::Stone;
+    if (isStorageChest(id)) return Material::Wood;
     if (isGlassLike(id) || isPane(id)) return Material::Glass;
     if (isSapling(id) || isPinkPetals(id) || id == Blocks::MangrovePropaguleHanging) return Material::Plant;
     if (isNetherPlant(id) || id == Blocks::NetherWartBlock || id == Blocks::WarpedWartBlock ||
@@ -1762,6 +1806,7 @@ bool blockOverlaps(BlockId id, int bx, int by, int bz,
     }
 
     if (isColourBed(id)) return overlaps(0.0f, 0.0f, 0.0f, 1.0f, 0.5625f, 1.0f);
+    if (isChestFamily(id)) return overlaps(0.0625f, 0.0f, 0.0625f, 0.9375f, 0.875f, 0.9375f);
 
     if (isCake(id) || isCandleCake(id))
     {
@@ -1807,3 +1852,11 @@ bool blockOverlaps(BlockId id, int bx, int by, int bz,
 
     return overlaps(0.0f, 0.0f, 0.0f, 1.0f, blockHeight(id), 1.0f);
 }
+
+namespace
+{
+    bool g_christmasChests = false;
+}
+
+void setChristmasChests(bool on) { g_christmasChests = on; }
+bool christmasChests() { return g_christmasChests; }

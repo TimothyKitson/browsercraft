@@ -2772,6 +2772,46 @@ namespace
         }
     }
 
+    void paintChestPart(Tile& t, int part, int half, Color wood, Color edge, Color latch, int salt)
+    {
+        const int n = Tile::N;
+        t.fill(Color{ 0, 0, 0, 0 });
+        const int c0 = (part == 0 || part == 1) ? (half == 1 ? 0 : 1) : (half == 2 ? 0 : 1);
+        const int c1 = (part == 0 || part == 1) ? (half == 2 ? 16 : 15) : (half == 1 ? 16 : 15);
+        const int r0 = (part == 0 || part == 4) ? 1 : 2;
+        const int r1 = (part == 0 || part == 4) ? 15 : 16;
+        for (int y = r0; y < r1; ++y)
+            for (int x = c0; x < c1; ++x)
+            {
+                Color c = shade(wood, static_cast<int>((hash2(x, y, salt + part) - 0.5f) * 18.0f));
+                if ((y % 4) == 0 && part != 0 && part != 4) c = shade(wood, -16);
+                const bool rim = y == r0 || y == r1 - 1 ||
+                                 (x == c0 && !(half == 1 && part >= 1 && part <= 1) && !(half == 2 && part == 3)) ||
+                                 (x == c1 - 1 && !(half == 2 && part == 1) && !(half == 1 && part == 3));
+                if (rim) c = edge;
+                if ((part == 1 || part == 2 || part == 3) && (y == 6 || y == 7)) c = shade(edge, -10);
+                t.set(x, y, c);
+            }
+        if (part == 1)
+            for (int y = 0; y < 2; ++y)
+                for (int x = 0; x < 2; ++x) t.set(x, y, latch);
+    }
+
+    void paintItemTripwireHook(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        const Color iron{ 196, 196, 200 }, wood{ 140, 102, 58 };
+        for (int y = 2; y < 7; ++y)
+            for (int x = 6; x < 10; ++x)
+                if (y == 2 || y == 6 || x == 6 || x == 9) t.set(x, y, iron);
+        for (int y = 7; y < 14; ++y)
+        {
+            t.set(7, y, shade(wood, 10));
+            t.set(8, y, wood);
+        }
+        for (int x = 5; x < 11; ++x) t.set(x, 14, shade(wood, -20));
+    }
+
     void paintCandle(Tile& t)    { paintCandleIn(t, Color{ 232, 222, 196 }, false); }
     void paintCandleLit(Tile& t) { paintCandleIn(t, Color{ 232, 222, 196 }, true); }
 
@@ -7005,6 +7045,7 @@ namespace
         { Tiles::ItemRawIron, paintItemRawIron },
         { Tiles::ItemRawGold, paintItemRawGold },
         { Tiles::ItemAmethystShard, paintItemAmethystShard },
+        { Tiles::ItemTripwireHook, paintItemTripwireHook },
         { Tiles::ItemWarpedSign, paintItemWarpedSign },
         { Tiles::ItemBambooSign, paintItemBambooSign },
         { Tiles::ItemMangroveSign, paintItemMangroveSign },
@@ -7637,6 +7678,7 @@ namespace
         { Tiles::ItemRawIron, { "raw_iron", nullptr, nullptr } },
         { Tiles::ItemRawGold, { "raw_gold", nullptr, nullptr } },
         { Tiles::ItemAmethystShard, { "amethyst_shard", nullptr, nullptr } },
+        { Tiles::ItemTripwireHook, { "../block/tripwire_hook", nullptr, nullptr } },
         { Tiles::ItemCandleFirst, { "candle", nullptr, nullptr } },
         { Tiles::ItemCandleFirst + 1, { "white_candle", nullptr, nullptr } },
         { Tiles::ItemCandleFirst + 2, { "orange_candle", nullptr, nullptr } },
@@ -8608,6 +8650,19 @@ Atlas::Atlas()
         blitPainted(Tiles::ItemBedFirst + i, bedIcon);
     }
     {
+        const Color WOOD[4] = { Color{ 160, 112, 58 }, Color{ 156, 106, 56 }, Color{ 176, 46, 42 }, Color{ 28, 46, 48 } };
+        const Color EDGE[4] = { Color{ 92, 60, 30 }, Color{ 90, 56, 28 }, Color{ 236, 236, 230 }, Color{ 14, 22, 24 } };
+        const Color LATCH[4] = { Color{ 196, 196, 196 }, Color{ 196, 64, 52 }, Color{ 230, 196, 60 }, Color{ 64, 204, 160 } };
+        for (int set = 0; set < 4; ++set)
+            for (int half = 0; half < 3; ++half)
+                for (int part = 0; part < 5; ++part)
+                {
+                    Tile tile;
+                    paintChestPart(tile, part, half, WOOD[set], EDGE[set], LATCH[set], 1100 + set * 20);
+                    blitPainted(Tiles::ChestTileFirst + (set * 3 + half) * 5 + part, tile);
+                }
+    }
+    {
         Tile plainCandle;
         paintItemCandleIn(plainCandle, Color{ 232, 222, 196 }, true);
         blitPainted(Tiles::ItemCandleFirst, plainCandle);
@@ -8954,6 +9009,77 @@ Atlas::Atlas()
             pasteImage(side, cropImage(bed, 28 * k, 6 * k, 16 * k, 16 * k), 0, 0);
             pasteImage(side, turnImage(cropImage(bed, 0, 6 * k, 6 * k, 16 * k)), 0, 0);
             blitImage(Tiles::BedSide, scaleNearest(side, tilePixels, tilePixels));
+        }
+
+        {
+            auto flipV = [&](const Image& from) {
+                Image out = blankImage(from.width, from.height);
+                for (int r = 0; r < from.height; ++r)
+                    for (int c = 0; c < from.width; ++c)
+                        for (int ch = 0; ch < 4; ++ch)
+                            out.rgba[(static_cast<size_t>(r) * out.width + c) * 4 + ch] =
+                                from.rgba[(static_cast<size_t>(from.height - 1 - r) * from.width + c) * 4 + ch];
+                return out;
+            };
+            auto flipH = [&](const Image& from) {
+                Image out = blankImage(from.width, from.height);
+                for (int r = 0; r < from.height; ++r)
+                    for (int c = 0; c < from.width; ++c)
+                        for (int ch = 0; ch < 4; ++ch)
+                            out.rgba[(static_cast<size_t>(r) * out.width + c) * 4 + ch] =
+                                from.rgba[(static_cast<size_t>(r) * from.width + (from.width - 1 - c)) * 4 + ch];
+                return out;
+            };
+            static const char* SETS[4] = { "normal", "trapped", "christmas", "ender" };
+            static const char* HALVES[3] = { "", "_left", "_right" };
+            for (int set = 0; set < 4; ++set)
+                for (int half = 0; half < 3; ++half)
+                {
+                    const int sourceHalf = set == 3 ? 0 : half;
+                    const Image sheet = loadPNG(std::string("assets/textures/entity/chest/") + SETS[set] +
+                                                HALVES[sourceHalf] + ".png");
+                    if (!sheet.valid()) continue;
+                    const int k = unit(sheet, 64);
+                    const int w = (sourceHalf == 0 ? 14 : 15), d = 14;
+                    const int width = half == 0 ? 14 : 15;
+                    const int frontCol = half == 1 ? 0 : 1;
+                    const int backCol = half == 2 ? 0 : 1;
+                    const int base = Tiles::ChestTileFirst + (set * 3 + half) * 5;
+                    auto crop = [&](int x, int y, int cw, int ch) {
+                        Image piece = cropImage(sheet, x * k, y * k, cw * k, ch * k);
+                        if (cw > width) piece = cropImage(piece, 0, 0, width * k, ch * k);
+                        return piece;
+                    };
+                    Image top = blankImage(16 * k, 16 * k);
+                    pasteImage(top, flipH(crop(d + w, 0, w, d)), frontCol * k, 1 * k);
+                    blitImage(base + 0, scaleNearest(top, tilePixels, tilePixels));
+
+                    Image front = blankImage(16 * k, 16 * k);
+                    pasteImage(front, flipH(flipV(crop(2 * d + w, 19 + d, w, 10))), frontCol * k, 6 * k);
+                    pasteImage(front, flipH(flipV(crop(2 * d + w, d, w, 5))), frontCol * k, 2 * k);
+                    pasteImage(front, crop(1, 1, 2, 2), 0, 0);
+                    blitImage(base + 1, scaleNearest(front, tilePixels, tilePixels));
+
+                    Image side = blankImage(16 * k, 16 * k);
+                    pasteImage(side, flipV(crop(0, 19 + d, d, 10)), 1 * k, 6 * k);
+                    pasteImage(side, flipV(crop(0, d, d, 5)), 1 * k, 2 * k);
+                    if (sourceHalf == 1)
+                    {
+                        side = blankImage(16 * k, 16 * k);
+                        pasteImage(side, flipV(crop(d + w, 19 + d, d, 10)), 1 * k, 6 * k);
+                        pasteImage(side, flipV(crop(d + w, d, d, 5)), 1 * k, 2 * k);
+                    }
+                    blitImage(base + 2, scaleNearest(side, tilePixels, tilePixels));
+
+                    Image back = blankImage(16 * k, 16 * k);
+                    pasteImage(back, flipV(crop(d, 19 + d, w, 10)), backCol * k, 6 * k);
+                    pasteImage(back, flipV(crop(d, d, w, 5)), backCol * k, 2 * k);
+                    blitImage(base + 3, scaleNearest(back, tilePixels, tilePixels));
+
+                    Image bottom = blankImage(16 * k, 16 * k);
+                    pasteImage(bottom, crop(d, 19, w, d), backCol * k, 1 * k);
+                    blitImage(base + 4, scaleNearest(bottom, tilePixels, tilePixels));
+                }
         }
 
         for (int colour = 0; colour < 16; ++colour)
@@ -9390,6 +9516,7 @@ bool Atlas::hasPainter(int tileIndex)
     if (tileIndex >= Tiles::ShulkerBoxColourTile && tileIndex <= Tiles::ShulkerBoxColourTileLast) return true;
     if (tileIndex >= Tiles::BedHeadTopTile && tileIndex <= Tiles::BedEndsTileLast) return true;
     if (tileIndex >= Tiles::ItemBedFirst && tileIndex <= Tiles::ItemBedLast) return true;
+    if (tileIndex >= Tiles::ChestTileFirst && tileIndex <= Tiles::ChestTileLast) return true;
     if (tileIndex >= Tiles::CrackFirst &&
         tileIndex < Tiles::CrackFirst + Tiles::CrackStages)
         return true;

@@ -583,6 +583,7 @@ namespace Blocks
         CandleCakeFirst, CandleCakeLast = CandleCakeFirst + 33,
         ShulkerBoxFirst, ShulkerBoxLast = ShulkerBoxFirst + 15,
         BedFirst, BedLast = BedFirst + 127,
+        ChestRunFirst, ChestRunLast = ChestRunFirst + 38,
 
         Count
     };
@@ -604,7 +605,8 @@ enum class RenderType : uint8_t
     Trapdoor,
     Pane,
     Candle,
-    Bed
+    Bed,
+    Chest
 };
 
 struct BlockInfo
@@ -855,6 +857,53 @@ inline void bedStep(int facing, int& dx, int& dz)
     dx = STEP[facing & 3][0];
     dz = STEP[facing & 3][1];
 }
+struct ChestState
+{
+    int kind;
+    int facing;
+    int half;
+    bool open;
+};
+inline bool isChestFamily(BlockId id) { return id == Blocks::Chest || (id >= Blocks::ChestRunFirst && id <= Blocks::ChestRunLast); }
+inline ChestState chestState(BlockId id)
+{
+    if (!isChestFamily(id) || id == Blocks::Chest) return { 0, 2, 0, false };
+    int k = id - Blocks::ChestRunFirst;
+    if (k < 11)
+    {
+        if (k >= 6) ++k;
+        return { 0, k / 3, k % 3, false };
+    }
+    k -= 11;
+    if (k < 24) return { 1, (k % 12) / 3, (k % 12) % 3, k >= 12 };
+    return { 2, k - 24, 0, false };
+}
+inline BlockId chestOf(int kind, int facing, int half, bool open = false)
+{
+    facing &= 3;
+    if (half < 0 || half > 2) half = 0;
+    if (kind == 2) return static_cast<BlockId>(Blocks::ChestRunFirst + 35 + facing);
+    if (kind == 1) return static_cast<BlockId>(Blocks::ChestRunFirst + 11 + (open ? 12 : 0) + facing * 3 + half);
+    int k = facing * 3 + half;
+    if (k == 6) return Blocks::Chest;
+    if (k > 6) --k;
+    return static_cast<BlockId>(Blocks::ChestRunFirst + k);
+}
+inline bool isStorageChest(BlockId id) { return isChestFamily(id) && chestState(id).kind != 2; }
+inline bool isTrappedChest(BlockId id) { return isChestFamily(id) && chestState(id).kind == 1; }
+inline bool isEnderChest(BlockId id) { return isChestFamily(id) && chestState(id).kind == 2; }
+inline bool chestPartnerStep(BlockId id, int& dx, int& dz)
+{
+    static const int STEP[4][2] = { { 0, -1 }, { 1, 0 }, { 0, 1 }, { -1, 0 } };
+    const ChestState s = chestState(id);
+    if (!isChestFamily(id) || s.half == 0) { dx = dz = 0; return false; }
+    const int way = s.half == 1 ? (s.facing + 1) & 3 : (s.facing + 3) & 3;
+    dx = STEP[way][0];
+    dz = STEP[way][1];
+    return true;
+}
+void setChristmasChests(bool on);
+bool christmasChests();
 inline bool isShulkerBox(BlockId id)
 {
     return id == Blocks::ShulkerBox || (id >= Blocks::ShulkerBoxFirst && id <= Blocks::ShulkerBoxLast);
@@ -865,7 +914,7 @@ inline int shulkerBoxColour(BlockId id)
 }
 inline bool isContainerBlock(BlockId id)
 {
-    return id == Blocks::Chest || id == Blocks::Barrel || id == Blocks::BarrelOpen ||
+    return isStorageChest(id) || id == Blocks::Barrel || id == Blocks::BarrelOpen ||
            isShulkerBox(id);
 }
 inline const char* colourFileName(int colour)

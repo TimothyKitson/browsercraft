@@ -399,6 +399,9 @@ private:
     Chests m_chests;
     glm::ivec3 m_chestBlock{ 0 };
     bool m_chestOpen = false;
+    bool m_chestDouble = false;
+    bool m_chestEnder = false;
+    glm::ivec3 m_chestPartner{ 0 };
 
     // Three by three, which is the whole of what a crafter is.
     static constexpr int CRAFTER_SLOTS = 9;
@@ -886,6 +889,7 @@ private:
     void openChest(const glm::ivec3& block);
     std::vector<VillageLoot::Stack> villageChestLoot(const glm::ivec3& block) const;
     void stowChest();
+    void setTrappedOpen(const glm::ivec3& block, bool open);
     void openCrafter(const glm::ivec3& block);
     void stowCrafter();
 

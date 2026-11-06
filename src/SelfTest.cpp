@@ -12017,6 +12017,65 @@ namespace
         check(Saplings::leafDrop(Blocks::Stone, 0u) == Blocks::Air, "stone gives none");
     }
 
+    void testChestKinds()
+    {
+        section("double, trapped and ender chests");
+        bool roundTrip = true;
+        for (int kind = 0; kind < 3; ++kind)
+            for (int facing = 0; facing < 4; ++facing)
+                for (int half = 0; half < (kind == 2 ? 1 : 3); ++half)
+                    for (int open = 0; open < (kind == 1 ? 2 : 1); ++open)
+                    {
+                        const BlockId id = chestOf(kind, facing, half, open == 1);
+                        const ChestState s = chestState(id);
+                        if (!isChestFamily(id) || s.kind != kind || s.facing != facing || s.half != half ||
+                            s.open != (open == 1))
+                            roundTrip = false;
+                    }
+        check(roundTrip, "every kind, facing, half and lid of chest is its own block");
+        check(chestOf(0, 2, 0) == Blocks::Chest, "a plain chest facing south is the chest that was always there");
+        int dx = 0, dz = 0;
+        check(chestPartnerStep(chestOf(0, 0, 1), dx, dz) && dx == 1 && dz == 0,
+              "the left half of a north-facing chest has its partner to the east");
+        check(chestPartnerStep(chestOf(0, 0, 2), dx, dz) && dx == -1 && dz == 0, "and the right half to the west");
+        check(!chestPartnerStep(chestOf(0, 1, 0), dx, dz), "a single chest has no partner");
+        check(isContainerBlock(chestOf(1, 3, 2)) && !isContainerBlock(chestOf(2, 1, 0)),
+              "a trapped chest spills like a chest; an ender chest keeps its things elsewhere");
+        check(Redstone::isSource(chestOf(1, 0, 0, true)) && !Redstone::isSource(chestOf(1, 0, 0, false)),
+              "a trapped chest gives power only while it is open");
+        check(blockDrop(chestOf(0, 1, 2)) == Blocks::Chest && blockDrop(chestOf(1, 3, 1, true)) == chestOf(1, 2, 0),
+              "any half of a chest breaks into one chest of its kind");
+        check(blockDrop(chestOf(2, 0, 0)) == Blocks::Obsidian, "an ender chest breaks into obsidian");
+        check(isObtainable(chestOf(1, 2, 0)) && isObtainable(chestOf(2, 2, 0)) && !isObtainable(chestOf(0, 1, 1)),
+              "only the plain facing of each chest is carried");
+        check(blockInfo(chestOf(2, 0, 0)).lightEmission == 7, "an ender chest glows a little");
+        check(Hopper::slotsOf(chestOf(1, 0, 1)) == 27 && Hopper::slotsOf(chestOf(2, 0, 0)) == 0,
+              "hoppers feed chests and trapped chests but not ender chests");
+
+        ItemStack hook[9];
+        hook[1] = ItemStack{ Items::IronIngot, 1 };
+        hook[4] = ItemStack{ Items::Stick, 1 };
+        hook[7] = ItemStack{ Blocks::BirchPlanks, 1 };
+        check(Crafting::match(hook, 3).id == Items::TripwireHook && Crafting::match(hook, 3).count == 2,
+              "iron, a stick and planks make two tripwire hooks");
+        ItemStack trapped[9];
+        trapped[0] = ItemStack{ Blocks::Chest, 1 };
+        trapped[5] = ItemStack{ Items::TripwireHook, 1 };
+        check(Crafting::match(trapped, 3).id == chestOf(1, 2, 0), "a chest and a hook make a trapped chest");
+        ItemStack ender[9];
+        for (int i = 0; i < 9; ++i) ender[i] = ItemStack{ Blocks::Obsidian, 1 };
+        ender[4] = ItemStack{ Items::EyeOfEnder, 1 };
+        check(Crafting::match(ender, 3).id == chestOf(2, 2, 0), "obsidian round an eye of ender makes an ender chest");
+
+        Chests store;
+        store.ender()[3] = ItemStack{ Items::Diamond, 2 };
+        store.setDimension(1);
+        check(store.ender()[3].id == Items::Diamond, "the ender chest holds the same things in every dimension");
+        check(Inventory::CHEST2_FIRST + Inventory::CHEST_SLOTS == Inventory::SLOT_COUNT &&
+                  Inventory::CHEST2_FIRST > Inventory::GRIND_RESULT,
+              "a large chest's lower half has slots of its own after every older slot");
+    }
+
     void testBeds()
     {
         section("beds in sixteen colours");
@@ -13080,6 +13139,7 @@ int runSelfTest()
     testCandles();
     testShulkerBoxes();
     testBeds();
+    testChestKinds();
     testTheTablesTake121sPrices();
 
     std::printf("\n%d checks, %d failed\n", g_checks, g_failures);
