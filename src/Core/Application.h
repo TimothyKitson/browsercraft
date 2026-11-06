@@ -670,6 +670,7 @@ private:
     void drawItem(float x, float y, float size, StackId id, int count, const glm::vec4& tint,
                   int damage = 0, uint32_t enchantments = 0);
     unsigned int m_glintItem = 0;
+    unsigned int m_underwaterTexture = 0;
     unsigned int m_glintEntity = 0;
     unsigned int glintTexture(bool entity);
     glm::vec2 glintShift() const;

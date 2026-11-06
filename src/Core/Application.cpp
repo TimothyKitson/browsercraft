@@ -11266,6 +11266,37 @@ void Application::renderHud()
     const float cx = w * 0.5f;
     const float cy = h * 0.5f;
 
+    if (m_world && m_perspective == Perspective::FirstPerson && m_player.isHeadUnderwater(*m_world))
+    {
+        if (!m_underwaterTexture)
+        {
+            int width = 0, height = 0, channels = 0;
+            unsigned char* data = stbi_load("assets/textures/misc/underwater.png", &width, &height, &channels, 4);
+            const unsigned char FLAT[4] = { 40, 60, 120, 255 };
+            glGenTextures(1, &m_underwaterTexture);
+            glBindTexture(GL_TEXTURE_2D, m_underwaterTexture);
+            glTexImage2D(GL_TEXTURE_2D, 0, 0x8058, data ? width : 1, data ? height : 1, 0, GL_RGBA,
+                         GL_UNSIGNED_BYTE, data ? data : FLAT);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+            if (data) stbi_image_free(data);
+        }
+        const int ex = static_cast<int>(std::floor(m_camera.position.x));
+        const int ey = static_cast<int>(std::floor(m_camera.position.y));
+        const int ez = static_cast<int>(std::floor(m_camera.position.z));
+        const float level = std::max(static_cast<float>(m_world->skyLight(ex, ey, ez)) / 15.0f * viewDaylight(),
+                                     static_cast<float>(m_world->blockLightAt(ex, ey, ez)) / 15.0f);
+        const float shine = std::clamp(0.2f + level * 0.8f, 0.0f, 1.0f);
+        const float across = -m_camera.yaw / 64.0f;
+        const float down = m_camera.pitch / 64.0f;
+        const float aspect = w / std::max(h, 1.0f);
+        m_ui.texturedQuad(m_underwaterTexture, 0.0f, 0.0f, w, h,
+                          4.0f * aspect + across, 4.0f + down, across, down,
+                          glm::vec4(shine, shine, shine, 0.1f));
+    }
+
     if (m_world && hasSky())
     {
         const int ex = static_cast<int>(std::floor(m_camera.position.x));

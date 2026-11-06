@@ -66,7 +66,7 @@ Everything in the 1.21 textures zip the game doesn't use yet, turned into work. 
 13. Enchantment glint (done)
     - I. A moving glint on enchanted items in slots and in the hand.
     - II. The glint on worn enchanted armour (entity glint).
-14. Underwater overlay: the misc/underwater tint when your head is in water.
+14. Underwater overlay: the misc/underwater tint when your head is in water. (done)
 15. Player skins: offer the pack's 9 default skins in the character picker, in wide and slim.
 16. Horse riding UI
     - I. The horse inventory screen: saddle, armour and chest slots (including the llama armour slot).
