@@ -435,6 +435,64 @@ namespace
                          Items::Slimeball, Items::Slimeball, Items::Slimeball },
           0, Blocks::SlimeBlock, 1 },
         { true, 0, 0, { Blocks::SlimeBlock }, 1, Items::Slimeball, 9 },
+        { false, 3, 2, { Blocks::Glass, Blocks::Glass, Blocks::Glass,
+                         Blocks::Glass, Blocks::Glass, Blocks::Glass },
+          0, Blocks::GlassPane, 16 },
+        { false, 3, 3, { _, Items::AmethystShard, _,
+                         Items::AmethystShard, Blocks::Glass, Items::AmethystShard,
+                         _, Items::AmethystShard, _ },
+          0, Blocks::TintedGlass, 2 },
+        { false, 2, 2, { Items::AmethystShard, Items::AmethystShard,
+                         Items::AmethystShard, Items::AmethystShard },
+          0, Blocks::AmethystBlock, 1 },
+        { false, 3, 2, { Blocks::StainedGlassFirst + 0, Blocks::StainedGlassFirst + 0, Blocks::StainedGlassFirst + 0,
+                         Blocks::StainedGlassFirst + 0, Blocks::StainedGlassFirst + 0, Blocks::StainedGlassFirst + 0 },
+          0, Blocks::StainedGlassPaneFirst + 0, 16 },
+        { false, 3, 2, { Blocks::StainedGlassFirst + 1, Blocks::StainedGlassFirst + 1, Blocks::StainedGlassFirst + 1,
+                         Blocks::StainedGlassFirst + 1, Blocks::StainedGlassFirst + 1, Blocks::StainedGlassFirst + 1 },
+          0, Blocks::StainedGlassPaneFirst + 1, 16 },
+        { false, 3, 2, { Blocks::StainedGlassFirst + 2, Blocks::StainedGlassFirst + 2, Blocks::StainedGlassFirst + 2,
+                         Blocks::StainedGlassFirst + 2, Blocks::StainedGlassFirst + 2, Blocks::StainedGlassFirst + 2 },
+          0, Blocks::StainedGlassPaneFirst + 2, 16 },
+        { false, 3, 2, { Blocks::StainedGlassFirst + 3, Blocks::StainedGlassFirst + 3, Blocks::StainedGlassFirst + 3,
+                         Blocks::StainedGlassFirst + 3, Blocks::StainedGlassFirst + 3, Blocks::StainedGlassFirst + 3 },
+          0, Blocks::StainedGlassPaneFirst + 3, 16 },
+        { false, 3, 2, { Blocks::StainedGlassFirst + 4, Blocks::StainedGlassFirst + 4, Blocks::StainedGlassFirst + 4,
+                         Blocks::StainedGlassFirst + 4, Blocks::StainedGlassFirst + 4, Blocks::StainedGlassFirst + 4 },
+          0, Blocks::StainedGlassPaneFirst + 4, 16 },
+        { false, 3, 2, { Blocks::StainedGlassFirst + 5, Blocks::StainedGlassFirst + 5, Blocks::StainedGlassFirst + 5,
+                         Blocks::StainedGlassFirst + 5, Blocks::StainedGlassFirst + 5, Blocks::StainedGlassFirst + 5 },
+          0, Blocks::StainedGlassPaneFirst + 5, 16 },
+        { false, 3, 2, { Blocks::StainedGlassFirst + 6, Blocks::StainedGlassFirst + 6, Blocks::StainedGlassFirst + 6,
+                         Blocks::StainedGlassFirst + 6, Blocks::StainedGlassFirst + 6, Blocks::StainedGlassFirst + 6 },
+          0, Blocks::StainedGlassPaneFirst + 6, 16 },
+        { false, 3, 2, { Blocks::StainedGlassFirst + 7, Blocks::StainedGlassFirst + 7, Blocks::StainedGlassFirst + 7,
+                         Blocks::StainedGlassFirst + 7, Blocks::StainedGlassFirst + 7, Blocks::StainedGlassFirst + 7 },
+          0, Blocks::StainedGlassPaneFirst + 7, 16 },
+        { false, 3, 2, { Blocks::StainedGlassFirst + 8, Blocks::StainedGlassFirst + 8, Blocks::StainedGlassFirst + 8,
+                         Blocks::StainedGlassFirst + 8, Blocks::StainedGlassFirst + 8, Blocks::StainedGlassFirst + 8 },
+          0, Blocks::StainedGlassPaneFirst + 8, 16 },
+        { false, 3, 2, { Blocks::StainedGlassFirst + 9, Blocks::StainedGlassFirst + 9, Blocks::StainedGlassFirst + 9,
+                         Blocks::StainedGlassFirst + 9, Blocks::StainedGlassFirst + 9, Blocks::StainedGlassFirst + 9 },
+          0, Blocks::StainedGlassPaneFirst + 9, 16 },
+        { false, 3, 2, { Blocks::StainedGlassFirst + 10, Blocks::StainedGlassFirst + 10, Blocks::StainedGlassFirst + 10,
+                         Blocks::StainedGlassFirst + 10, Blocks::StainedGlassFirst + 10, Blocks::StainedGlassFirst + 10 },
+          0, Blocks::StainedGlassPaneFirst + 10, 16 },
+        { false, 3, 2, { Blocks::StainedGlassFirst + 11, Blocks::StainedGlassFirst + 11, Blocks::StainedGlassFirst + 11,
+                         Blocks::StainedGlassFirst + 11, Blocks::StainedGlassFirst + 11, Blocks::StainedGlassFirst + 11 },
+          0, Blocks::StainedGlassPaneFirst + 11, 16 },
+        { false, 3, 2, { Blocks::StainedGlassFirst + 12, Blocks::StainedGlassFirst + 12, Blocks::StainedGlassFirst + 12,
+                         Blocks::StainedGlassFirst + 12, Blocks::StainedGlassFirst + 12, Blocks::StainedGlassFirst + 12 },
+          0, Blocks::StainedGlassPaneFirst + 12, 16 },
+        { false, 3, 2, { Blocks::StainedGlassFirst + 13, Blocks::StainedGlassFirst + 13, Blocks::StainedGlassFirst + 13,
+                         Blocks::StainedGlassFirst + 13, Blocks::StainedGlassFirst + 13, Blocks::StainedGlassFirst + 13 },
+          0, Blocks::StainedGlassPaneFirst + 13, 16 },
+        { false, 3, 2, { Blocks::StainedGlassFirst + 14, Blocks::StainedGlassFirst + 14, Blocks::StainedGlassFirst + 14,
+                         Blocks::StainedGlassFirst + 14, Blocks::StainedGlassFirst + 14, Blocks::StainedGlassFirst + 14 },
+          0, Blocks::StainedGlassPaneFirst + 14, 16 },
+        { false, 3, 2, { Blocks::StainedGlassFirst + 15, Blocks::StainedGlassFirst + 15, Blocks::StainedGlassFirst + 15,
+                         Blocks::StainedGlassFirst + 15, Blocks::StainedGlassFirst + 15, Blocks::StainedGlassFirst + 15 },
+          0, Blocks::StainedGlassPaneFirst + 15, 16 },
         { true, 0, 0, { Blocks::PistonNorth, Items::Slimeball },
           2, Blocks::StickyPistonNorth, 1 },
         { true, 0, 0, { Items::Slimeball, Items::BlazePowder },
@@ -929,7 +987,7 @@ namespace Crafting
     // the same order: a dye's colour is the wool it makes.
     CraftOutput matchDyeing(const ItemStack* grid, int size)
     {
-        int wools = 0;
+        int wools = 0, terracotta = 0, glass = 0, panes = 0, sand = 0, gravel = 0;
         int dyes = 0;
         int colour = 0;
         int others = 0;
@@ -940,17 +998,30 @@ namespace Crafting
                 const ItemStack& cell = grid[y * 3 + x];
                 if (cell.empty()) continue;
 
-                if (isBlockStack(cell.id) && isWool(asBlock(cell.id)))
-                { wools += cell.count; continue; }
                 if (isDye(cell.id)) { ++dyes; colour = dyeColour(cell.id); continue; }
-                ++others;
+                if (!isBlockStack(cell.id)) { ++others; continue; }
+                const BlockId block = asBlock(cell.id);
+                if (isWool(block)) ++wools;
+                else if (block == Blocks::Terracotta) ++terracotta;
+                else if (block == Blocks::Glass) ++glass;
+                else if (block == Blocks::GlassPane) ++panes;
+                else if (block == Blocks::Sand) ++sand;
+                else if (block == Blocks::Gravel) ++gravel;
+                else ++others;
             }
 
-        if (wools < 1 || wools > 8 || dyes != 1 || others > 0) return CraftOutput{};
+        if (dyes != 1 || others > 0) return CraftOutput{};
+
+        const int families = (wools > 0) + (terracotta > 0) + (glass > 0) + (panes > 0) +
+                             ((sand > 0 || gravel > 0) ? 1 : 0);
+        if (families != 1) return CraftOutput{};
 
         CraftOutput out;
-        out.id = woolOfColour(colour);
-        out.count = wools;
+        if (wools >= 1 && wools <= 8) { out.id = woolOfColour(colour); out.count = wools; }
+        else if (terracotta == 8) { out.id = colourIn(Blocks::TerracottaFirst, colour); out.count = 8; }
+        else if (glass == 8) { out.id = colourIn(Blocks::StainedGlassFirst, colour); out.count = 8; }
+        else if (panes == 8) { out.id = colourIn(Blocks::StainedGlassPaneFirst, colour); out.count = 8; }
+        else if (sand == 4 && gravel == 4) { out.id = colourIn(Blocks::ConcretePowderFirst, colour); out.count = 8; }
         return out;
     }
 
@@ -1008,7 +1079,13 @@ std::vector<StackId> Crafting::everyOutput()
     // than a table: an audit that could not see it called fifteen of
     // the colours unmakeable.
     for (int colour = 0; colour < DYE_COLOURS; ++colour)
+    {
         out.push_back(woolOfColour(colour));
+        out.push_back(colourIn(Blocks::TerracottaFirst, colour));
+        out.push_back(colourIn(Blocks::StainedGlassFirst, colour));
+        out.push_back(colourIn(Blocks::StainedGlassPaneFirst, colour));
+        out.push_back(colourIn(Blocks::ConcretePowderFirst, colour));
+    }
 
     for (int wood = 1; wood < WOOD_COUNT; ++wood)
     {
@@ -1040,6 +1117,10 @@ std::vector<StackId> Crafting::everyIngredient()
     for (int colour = 0; colour < DYE_COLOURS; ++colour)
         out.push_back(dyeOfColour(colour));
     out.push_back(Blocks::Wool);
+    out.push_back(Blocks::Terracotta);
+    out.push_back(Blocks::GlassPane);
+    out.push_back(Blocks::Sand);
+    out.push_back(Blocks::Gravel);
 
     for (const Recipe& recipe : RECIPES)
     {

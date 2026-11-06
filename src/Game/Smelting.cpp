@@ -6,6 +6,8 @@
 StackId Smelting::resultOf(StackId input)
 {
     if (isBlockStack(input)) input = oreBase(static_cast<BlockId>(input));
+    if (isBlockStack(input) && isColouredTerracotta(static_cast<BlockId>(input)))
+        return colourIn(Blocks::GlazedTerracottaFirst, runColour(static_cast<BlockId>(input), Blocks::TerracottaFirst));
     switch (input)
     {
         case Blocks::IronOre:   return Items::IronIngot;

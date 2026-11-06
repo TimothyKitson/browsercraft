@@ -12017,6 +12017,141 @@ namespace
         check(Saplings::leafDrop(Blocks::Stone, 0u) == Blocks::Air, "stone gives none");
     }
 
+    void testColourBlocks()
+    {
+        section("concrete, terracotta and stained glass");
+
+        auto ring = [](StackId middle, StackId around) {
+            Inventory bench;
+            bench.setCraftSize(3);
+            for (int cell = 0; cell < 9; ++cell)
+                bench.slot(Inventory::CRAFT_FIRST + cell) = ItemStack{ cell == 4 ? middle : around, 1 };
+            bench.refreshCraftResult();
+            return bench.slot(Inventory::CRAFT_RESULT);
+        };
+        for (int colour = 0; colour < DYE_COLOURS; ++colour)
+        {
+            const StackId dye = dyeOfColour(colour);
+            const ItemStack terracotta = ring(dye, Blocks::Terracotta);
+            check(terracotta.id == colourIn(Blocks::TerracottaFirst, colour) && terracotta.count == 8,
+                  "eight terracotta round dye " + std::to_string(colour) + " take its colour");
+            const ItemStack glass = ring(dye, Blocks::Glass);
+            check(glass.id == colourIn(Blocks::StainedGlassFirst, colour) && glass.count == 8,
+                  "and eight glass do too");
+            const ItemStack panes = ring(dye, Blocks::GlassPane);
+            check(panes.id == colourIn(Blocks::StainedGlassPaneFirst, colour) && panes.count == 8,
+                  "and eight panes");
+            check(Smelting::resultOf(colourIn(Blocks::TerracottaFirst, colour)) ==
+                      colourIn(Blocks::GlazedTerracottaFirst, colour),
+                  "coloured terracotta fires glazed");
+        }
+        check(ring(Items::DyeRed, Blocks::Stone).empty(), "dye does nothing to stone");
+
+        {
+            Inventory bench;
+            bench.setCraftSize(3);
+            for (int cell = 0; cell < 4; ++cell) bench.slot(Inventory::CRAFT_FIRST + cell) = ItemStack{ Blocks::Sand, 1 };
+            for (int cell = 4; cell < 8; ++cell) bench.slot(Inventory::CRAFT_FIRST + cell) = ItemStack{ Blocks::Gravel, 1 };
+            bench.slot(Inventory::CRAFT_FIRST + 8) = ItemStack{ Items::DyeLime, 1 };
+            bench.refreshCraftResult();
+            check(bench.slot(Inventory::CRAFT_RESULT).id == colourIn(Blocks::ConcretePowderFirst, 5) &&
+                      bench.slot(Inventory::CRAFT_RESULT).count == 8,
+                  "four sand, four gravel and lime dye make eight lime concrete powder");
+        }
+
+        ItemStack glass[9];
+        for (int i = 0; i < 6; ++i) glass[i] = ItemStack{ Blocks::Glass, 1 };
+        check(Crafting::match(glass, 3).id == Blocks::GlassPane && Crafting::match(glass, 3).count == 16,
+              "six glass make sixteen panes");
+        ItemStack blue[9];
+        for (int i = 3; i < 9; ++i) blue[i] = ItemStack{ colourIn(Blocks::StainedGlassFirst, 11), 1 };
+        check(Crafting::match(blue, 3).id == colourIn(Blocks::StainedGlassPaneFirst, 11),
+              "six blue glass make blue panes");
+
+        check(blockDrop(Blocks::AmethystCluster) == Items::AmethystShard, "an amethyst cluster gives shards");
+        ItemStack shards[9];
+        for (int i : { 0, 1, 3, 4 }) shards[i] = ItemStack{ Items::AmethystShard, 1 };
+        check(Crafting::match(shards, 3).id == Blocks::AmethystBlock, "four shards make an amethyst block");
+        ItemStack tinted[9];
+        for (int i : { 1, 3, 5, 7 }) tinted[i] = ItemStack{ Items::AmethystShard, 1 };
+        tinted[4] = ItemStack{ Blocks::Glass, 1 };
+        check(Crafting::match(tinted, 3).id == Blocks::TintedGlass && Crafting::match(tinted, 3).count == 2,
+              "glass inside four shards makes two tinted glass");
+        check(blockMaterial(Blocks::TintedGlass) == Material::Glass &&
+                  blockMaterial(colourIn(Blocks::StainedGlassPaneFirst, 3)) == Material::Glass,
+              "tinted glass and panes are glass");
+        check(blockMaterial(colourIn(Blocks::ConcretePowderFirst, 2)) == Material::Sand,
+              "powder wants a shovel");
+        check(!isOpaque(Blocks::TintedGlass) && !isOpaque(colourIn(Blocks::StainedGlassFirst, 0)),
+              "glass of any kind can be seen through");
+
+        struct Pool : Fluids::Cells
+        {
+            std::map<std::tuple<int, int, int>, BlockId> cells;
+            BlockId at(int x, int y, int z) const override
+            {
+                const auto found = cells.find({ x, y, z });
+                return found == cells.end() ? Blocks::Air : found->second;
+            }
+            void set(int x, int y, int z, BlockId id) override { cells[{ x, y, z }] = id; }
+        };
+        {
+            Pool pool;
+            pool.set(0, 64, 0, colourIn(Blocks::ConcretePowderFirst, 14));
+            check(Fluids::hardenAround(pool, 0, 64, 0) == 0, "dry powder stays powder");
+            pool.set(1, 64, 0, Blocks::Water);
+            Fluids::hardenAround(pool, 1, 64, 0);
+            check(pool.at(0, 64, 0) == colourIn(Blocks::ConcreteFirst, 14), "water beside it sets it to red concrete");
+        }
+        {
+            Pool pool;
+            pool.set(0, 64, 0, Blocks::ConcretePowderFirst);
+            pool.set(0, 63, 0, Blocks::Water);
+            Fluids::hardenAround(pool, 0, 63, 0);
+            check(pool.at(0, 64, 0) == Blocks::ConcretePowderFirst, "water only underneath does not");
+            pool.set(0, 65, 0, Blocks::WaterFalling);
+            Fluids::hardenAround(pool, 0, 65, 0);
+            check(pool.at(0, 64, 0) == Blocks::ConcreteFirst, "water falling on it does");
+        }
+
+        const int lone = paneLinks([](int, int) { return Blocks::Air; });
+        check(lone == 0, "a lone pane joins nothing");
+        const int run = paneLinks([](int dx, int) { return dx != 0 ? Blocks::GlassPane : Blocks::Air; });
+        check(run == (4 | 8), "a pane in a row joins both neighbours");
+        check(paneLinks([](int dx, int dz) { return dz == -1 && dx == 0 ? Blocks::Stone : Blocks::Air; }) == 1,
+              "and joins a wall");
+        check(!blockOverlaps(Blocks::GlassPane, 0, 0, 0, 0.0f, 0.0f, 0.0f, 0.3f, 1.0f, 0.3f, 0),
+              "you can stand in the corner of a lone pane's cell");
+        check(blockOverlaps(Blocks::GlassPane, 0, 0, 0, 0.0f, 0.0f, 0.4f, 0.3f, 1.0f, 0.6f, 4),
+              "but not across its arm");
+        check(isPane(Blocks::GlassPane) && isPane(colourIn(Blocks::StainedGlassPaneFirst, 15)), "panes are panes");
+
+        {
+            const WorldGen generator(4242u);
+            int foundX = 0, foundZ = 0;
+            bool found = false;
+            for (int x = -8000; x <= 8000 && !found; x += 32)
+                for (int z = -8000; z <= 8000 && !found; z += 32)
+                    if (generator.biomeAt(x, z) == Biome::Badlands &&
+                        generator.biomeAt(x + 16, z + 16) == Biome::Badlands)
+                    { foundX = x; foundZ = z; found = true; }
+            int terracotta = 0;
+            if (found)
+            {
+                Chunk chunk(ChunkPos{ foundX / Chunk::SX, foundZ / Chunk::SZ });
+                generator.generate(chunk);
+                for (int y = 0; y < Chunk::SY; ++y)
+                    for (int lx = 0; lx < Chunk::SX; ++lx)
+                        for (int lz = 0; lz < Chunk::SZ; ++lz)
+                        {
+                            const BlockId b = chunk.getBlock(lx, y, lz);
+                            if (b == Blocks::Terracotta || isColouredTerracotta(b)) ++terracotta;
+                        }
+            }
+            check(terracotta > 0, "the badlands are banded with terracotta");
+        }
+    }
+
     void testStoneSets()
     {
         section("the stone sets");
@@ -12530,15 +12665,13 @@ namespace
             check(bench.slot(Inventory::CRAFT_RESULT).count == 8, "all eight of them");
         }
 
-        // Nine will not: Minecraft stops at eight because the dye needs
-        // a cell of its own.
         {
             Inventory bench;
             bench.setCraftSize(3);
             bench.slot(Inventory::CRAFT_FIRST + 0) = ItemStack{ Blocks::Wool, 9 };
             bench.slot(Inventory::CRAFT_FIRST + 8) = ItemStack{ Items::DyeRed, 1 };
             bench.refreshCraftResult();
-            check(bench.slot(Inventory::CRAFT_RESULT).empty(), "nine wools are too many");
+            check(bench.slot(Inventory::CRAFT_RESULT).count == 1, "a stack of nine in one cell dyes one");
         }
 
         // Already-coloured wool dyes over, which is how a mistake is
@@ -12826,6 +12959,7 @@ int runSelfTest()
     testGrindstone();
     testWoodSets();
     testStoneSets();
+    testColourBlocks();
     testTheTablesTake121sPrices();
 
     std::printf("\n%d checks, %d failed\n", g_checks, g_failures);

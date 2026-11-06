@@ -750,6 +750,7 @@ namespace
             else if (isTrapdoor(id))              why = "another facing, half or the open state";
             else if (isSapling(id))               why = "dropped by leaves of its tree";
             else if (isStrippedLog(id))           why = "a log with an axe used on it";
+            else if (isConcrete(id))              why = "concrete powder that touched water";
             else if (isPinkPetals(id))            why = "petals with more set down on them";
             else if (id == Blocks::MangrovePropaguleHanging)
                                                   why = "hangs under mangrove leaves";

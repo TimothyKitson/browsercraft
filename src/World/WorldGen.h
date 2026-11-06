@@ -356,6 +356,7 @@ private:
     float humidityAt(int x, int z) const;
 
     void generateColumns(Chunk& chunk) const;
+    BlockId badlandsBand(int wx, int y, int wz) const;
 
     // Villages. Each is wider than a chunk, so every chunk it reaches
     // into lays out the whole thing and stamps only its own part --

@@ -302,6 +302,7 @@ namespace Items
         NetherQuartz,
         RawIron,
         RawGold,
+        AmethystShard,
         Count
     };
 }

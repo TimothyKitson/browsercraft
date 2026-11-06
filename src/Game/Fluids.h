@@ -19,6 +19,7 @@ namespace Fluids
     bool washesAway(BlockId id);
 
     void update(Cells& cells, int x, int y, int z, bool nether);
+    int hardenAround(Cells& cells, int x, int y, int z);
 
     class Scheduler
     {

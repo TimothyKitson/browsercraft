@@ -493,6 +493,17 @@ void WorldGen::endGatewayExit(int index, int& outX, int& outZ)
     outZ = static_cast<int>(std::sin(turn) * END_GATE_OUT);
 }
 
+BlockId WorldGen::badlandsBand(int wx, int y, int wz) const
+{
+    static const int COLOURS[7] = { -1, 1, 4, 12, 14, 0, 8 };
+    const int wobble = static_cast<int>(m_humidity.fbm2D(wx * 0.02f + 91.0f, wz * 0.02f - 37.0f, 2) * 3.0f);
+    const int layer = (y + wobble) / 2;
+    const uint32_t roll = hashCoords(0, layer, 0, m_seed + 4073);
+    const int pick = COLOURS[roll % 7u];
+    if (pick < 0 || (roll >> 8) % 3u == 0u) return Blocks::Terracotta;
+    return colourIn(Blocks::TerracottaFirst, pick);
+}
+
 void WorldGen::generateColumns(Chunk& chunk) const
 {
     const int baseX = chunk.position().x * Chunk::SX;
@@ -546,8 +557,9 @@ void WorldGen::generateColumns(Chunk& chunk) const
                             break;
 
                         case Biome::Badlands:
-                            if (depth <= 1) block = Blocks::RedSand;
-                            else if (depth <= 9) block = Blocks::RedSandstone;
+                            if (depth <= 0) block = Blocks::RedSand;
+                            else if (depth <= 2) block = Blocks::RedSandstone;
+                            else if (depth <= 24) block = badlandsBand(wx, y, wz);
                             break;
 
                         case Biome::Snowy:

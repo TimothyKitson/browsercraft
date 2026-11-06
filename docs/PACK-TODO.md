@@ -124,10 +124,11 @@ Everything in the 1.21 textures zip the game doesn't use yet, turned into work. 
 29. Sand and sandstone: red sand, the full red sandstone set, cut and chiseled sandstone. (done)
     - A plain badlands biome now gives the red sand a home; its terracotta bands come with item 31.
 30. Ores: deepslate versions of all 8 ores, nether gold ore, raw iron and raw gold, and raw ore blocks. (done)
-31. Colours
+31. Colours (done)
     - I. Concrete and concrete powder, 16 colours each. Powder hardens in water.
     - II. Terracotta, plain and in 16 colours. Glazed terracotta in 16, which faces where you place it.
     - III. Stained glass and panes in 16 colours. Glass panes that connect like Minecraft's. Tinted glass.
+    - Notes: badlands now have terracotta bands under the red sand. Amethyst shards came with tinted glass (clusters drop 4, four make a block). Glazed terracotta has one facing for now; turning it to face the placer is still to do.
 32. Candles in 16 colours: lit and unlit, 1 to 4 to a block, and candle cakes.
 33. Coloured shulker boxes in all 16 colours, plus shulker mobs in those colours.
 34. Beds in all 16 colours.

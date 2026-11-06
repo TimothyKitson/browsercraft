@@ -2045,7 +2045,7 @@ bool Application::frame()
             m_startupScreen == "beaconui" || m_startupScreen == "grindstone" ||
             m_startupScreen == "grinderror" || m_startupScreen == "woods" ||
             m_startupScreen == "cherry" || m_startupScreen == "mangrove" || m_startupScreen == "fungi" ||
-            m_startupScreen == "stones" ||
+            m_startupScreen == "stones" || m_startupScreen == "colours" ||
             m_startupScreen == "boat" || m_startupScreen == "rails" ||
             m_startupScreen == "mobs" || m_startupScreen == "golem" ||
             m_startupScreen == "glowmobs" || m_startupScreen == "variants" ||
@@ -2131,6 +2131,7 @@ bool Application::frame()
                                   m_startupScreen != "mangrove" &&
                                   m_startupScreen != "fungi" &&
                                   m_startupScreen != "stones" &&
+                                  m_startupScreen != "colours" &&
                                   m_startupScreen != "boat" &&
                                   m_startupScreen != "rails" &&
                                   m_startupScreen != "mobs" &&
@@ -2505,7 +2506,7 @@ bool Application::frame()
                 m_startupScreen == "beaconui" || m_startupScreen == "grindstone" ||
                 m_startupScreen == "grinderror" || m_startupScreen == "woods" ||
                 m_startupScreen == "cherry" || m_startupScreen == "mangrove" || m_startupScreen == "fungi" ||
-                m_startupScreen == "stones")
+                m_startupScreen == "stones" || m_startupScreen == "colours")
             {
                 m_camera.setOrientation(0.0f, -25.0f);
                 m_camera.addLook(0.0f, 0.0f, 0.0f);
@@ -2572,6 +2573,36 @@ bool Application::frame()
                     m_world->setBlock(px + 9, py, pz - 8, Blocks::Bookshelf);
                     m_world->setBlock(px + 9, py, pz + 8, Blocks::DiamondOre);
                     m_world->setBlock(px + 9, py + 1, pz + 8, Blocks::EndPortalFrame);
+                }
+                if (m_startupScreen == "colours")
+                {
+                    m_devAttackStrength = 1.0f;
+                    m_camera.setOrientation(0.0f, 12.0f);
+                    for (int dx = 1; dx <= 16; ++dx)
+                        for (int dz = -11; dz <= 11; ++dz)
+                        {
+                            for (int dy = 0; dy <= 9; ++dy) m_world->setBlock(px + dx, py + dy, pz + dz, Blocks::Air);
+                            m_world->setBlock(px + dx, py - 1, pz + dz, Blocks::Grass);
+                        }
+                    const BlockId FIRSTS[6] = { Blocks::ConcreteFirst, Blocks::ConcretePowderFirst,
+                                                Blocks::TerracottaFirst, Blocks::GlazedTerracottaFirst,
+                                                Blocks::StainedGlassFirst, Blocks::StainedGlassPaneFirst };
+                    for (int row = 0; row < 6; ++row)
+                        for (int c = 0; c < 16; ++c)
+                            m_world->setBlock(px + 14, py + row, pz - 8 + c, colourIn(FIRSTS[row], c));
+                    m_world->setBlock(px + 14, py + 6, pz - 2, Blocks::Terracotta);
+                    m_world->setBlock(px + 14, py + 6, pz, Blocks::TintedGlass);
+                    m_world->setBlock(px + 14, py + 6, pz + 2, Blocks::Glass);
+                    for (int dz = -4; dz <= 4; ++dz)
+                        m_world->setBlock(px + 7, py, pz + dz, dz < 0 ? Blocks::GlassPane : colourIn(Blocks::StainedGlassPaneFirst, 3));
+                    m_world->setBlock(px + 8, py, pz + 4, Blocks::GlassPane);
+                    m_world->setBlock(px + 9, py, pz + 4, Blocks::GlassPane);
+                    m_world->setBlock(px + 7, py + 1, pz - 1, Blocks::GlassPane);
+                    m_world->setBlock(px + 10, py, pz - 6, colourIn(Blocks::ConcretePowderFirst, 11));
+                    m_world->setBlock(px + 10, py, pz - 5, Blocks::Water);
+                    m_world->setBlock(px + 16, py, pz - 10, Blocks::Bookshelf);
+                    m_world->setBlock(px + 16, py, pz + 10, Blocks::DiamondOre);
+                    m_world->setBlock(px + 16, py + 1, pz + 10, Blocks::EndPortalFrame);
                 }
                 if (m_startupScreen == "fungi")
                 {
@@ -5941,6 +5972,7 @@ void Application::updateMining(float deltaTime)
                     else if (seam == Blocks::RedstoneOre) dropped *= 4 + static_cast<int>(roll % 2u);
                     else if (seam == Blocks::LapisOre) dropped *= 4 + static_cast<int>(roll % 6u);
                     else if (seam == Blocks::CopperOre) dropped *= 2 + static_cast<int>(roll % 4u);
+                    else if (seam == Blocks::AmethystCluster) dropped *= 4;
                 }
 
                 if (drop != Blocks::Air)
@@ -10817,7 +10849,10 @@ void Application::tickFluids(float deltaTime)
         ++m_fluidTicks;
         m_world->takeChanges(m_fluidChanges);
         for (const glm::ivec3& at : m_fluidChanges)
+        {
             m_fluids.wake(cells, at.x, at.y, at.z, m_fluidTicks, nether);
+            Fluids::hardenAround(cells, at.x, at.y, at.z);
+        }
         m_fluidChanges.clear();
         m_fluids.run(cells, m_fluidTicks, nether, 512);
     }

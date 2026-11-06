@@ -238,4 +238,26 @@ namespace Fluids
         }
         return static_cast<int>(m_ready.size());
     }
+
+    int hardenAround(Cells& cells, int x, int y, int z)
+    {
+        static const int D[7][3] = { { 0, 0, 0 }, { 1, 0, 0 }, { -1, 0, 0 }, { 0, 1, 0 },
+                                     { 0, -1, 0 }, { 0, 0, 1 }, { 0, 0, -1 } };
+        int hardened = 0;
+        for (const auto& d : D)
+        {
+            const int px = x + d[0], py = y + d[1], pz = z + d[2];
+            const BlockId here = cells.at(px, py, pz);
+            if (!isConcretePowder(here)) continue;
+            for (int k = 1; k < 7; ++k)
+            {
+                if (k == 4) continue;
+                if (!isWater(cells.at(px + D[k][0], py + D[k][1], pz + D[k][2]))) continue;
+                cells.set(px, py, pz, colourIn(Blocks::ConcreteFirst, runColour(here, Blocks::ConcretePowderFirst)));
+                ++hardened;
+                break;
+            }
+        }
+        return hardened;
+    }
 }

@@ -935,6 +935,105 @@ namespace
         { "Block of Raw Iron", RawIronBlockTile, RawIronBlockTile, RawIronBlockTile, true, true, RenderType::Cube, 0, 5.0f },
         { "Block of Raw Gold", RawGoldBlockTile, RawGoldBlockTile, RawGoldBlockTile, true, true, RenderType::Cube, 0, 5.0f },
         { "Block of Raw Copper", RawCopperBlockTile, RawCopperBlockTile, RawCopperBlockTile, true, true, RenderType::Cube, 0, 5.0f },
+        { "White Concrete", ConcreteTile + 0, ConcreteTile + 0, ConcreteTile + 0, true, true, RenderType::Cube, 0, 1.8f },
+        { "Orange Concrete", ConcreteTile + 1, ConcreteTile + 1, ConcreteTile + 1, true, true, RenderType::Cube, 0, 1.8f },
+        { "Magenta Concrete", ConcreteTile + 2, ConcreteTile + 2, ConcreteTile + 2, true, true, RenderType::Cube, 0, 1.8f },
+        { "Light Blue Concrete", ConcreteTile + 3, ConcreteTile + 3, ConcreteTile + 3, true, true, RenderType::Cube, 0, 1.8f },
+        { "Yellow Concrete", ConcreteTile + 4, ConcreteTile + 4, ConcreteTile + 4, true, true, RenderType::Cube, 0, 1.8f },
+        { "Lime Concrete", ConcreteTile + 5, ConcreteTile + 5, ConcreteTile + 5, true, true, RenderType::Cube, 0, 1.8f },
+        { "Pink Concrete", ConcreteTile + 6, ConcreteTile + 6, ConcreteTile + 6, true, true, RenderType::Cube, 0, 1.8f },
+        { "Gray Concrete", ConcreteTile + 7, ConcreteTile + 7, ConcreteTile + 7, true, true, RenderType::Cube, 0, 1.8f },
+        { "Light Gray Concrete", ConcreteTile + 8, ConcreteTile + 8, ConcreteTile + 8, true, true, RenderType::Cube, 0, 1.8f },
+        { "Cyan Concrete", ConcreteTile + 9, ConcreteTile + 9, ConcreteTile + 9, true, true, RenderType::Cube, 0, 1.8f },
+        { "Purple Concrete", ConcreteTile + 10, ConcreteTile + 10, ConcreteTile + 10, true, true, RenderType::Cube, 0, 1.8f },
+        { "Blue Concrete", ConcreteTile + 11, ConcreteTile + 11, ConcreteTile + 11, true, true, RenderType::Cube, 0, 1.8f },
+        { "Brown Concrete", ConcreteTile + 12, ConcreteTile + 12, ConcreteTile + 12, true, true, RenderType::Cube, 0, 1.8f },
+        { "Green Concrete", ConcreteTile + 13, ConcreteTile + 13, ConcreteTile + 13, true, true, RenderType::Cube, 0, 1.8f },
+        { "Red Concrete", ConcreteTile + 14, ConcreteTile + 14, ConcreteTile + 14, true, true, RenderType::Cube, 0, 1.8f },
+        { "Black Concrete", ConcreteTile + 15, ConcreteTile + 15, ConcreteTile + 15, true, true, RenderType::Cube, 0, 1.8f },
+        { "White Concrete Powder", ConcretePowderTile + 0, ConcretePowderTile + 0, ConcretePowderTile + 0, true, true, RenderType::Cube, 0, 0.5f },
+        { "Orange Concrete Powder", ConcretePowderTile + 1, ConcretePowderTile + 1, ConcretePowderTile + 1, true, true, RenderType::Cube, 0, 0.5f },
+        { "Magenta Concrete Powder", ConcretePowderTile + 2, ConcretePowderTile + 2, ConcretePowderTile + 2, true, true, RenderType::Cube, 0, 0.5f },
+        { "Light Blue Concrete Powder", ConcretePowderTile + 3, ConcretePowderTile + 3, ConcretePowderTile + 3, true, true, RenderType::Cube, 0, 0.5f },
+        { "Yellow Concrete Powder", ConcretePowderTile + 4, ConcretePowderTile + 4, ConcretePowderTile + 4, true, true, RenderType::Cube, 0, 0.5f },
+        { "Lime Concrete Powder", ConcretePowderTile + 5, ConcretePowderTile + 5, ConcretePowderTile + 5, true, true, RenderType::Cube, 0, 0.5f },
+        { "Pink Concrete Powder", ConcretePowderTile + 6, ConcretePowderTile + 6, ConcretePowderTile + 6, true, true, RenderType::Cube, 0, 0.5f },
+        { "Gray Concrete Powder", ConcretePowderTile + 7, ConcretePowderTile + 7, ConcretePowderTile + 7, true, true, RenderType::Cube, 0, 0.5f },
+        { "Light Gray Concrete Powder", ConcretePowderTile + 8, ConcretePowderTile + 8, ConcretePowderTile + 8, true, true, RenderType::Cube, 0, 0.5f },
+        { "Cyan Concrete Powder", ConcretePowderTile + 9, ConcretePowderTile + 9, ConcretePowderTile + 9, true, true, RenderType::Cube, 0, 0.5f },
+        { "Purple Concrete Powder", ConcretePowderTile + 10, ConcretePowderTile + 10, ConcretePowderTile + 10, true, true, RenderType::Cube, 0, 0.5f },
+        { "Blue Concrete Powder", ConcretePowderTile + 11, ConcretePowderTile + 11, ConcretePowderTile + 11, true, true, RenderType::Cube, 0, 0.5f },
+        { "Brown Concrete Powder", ConcretePowderTile + 12, ConcretePowderTile + 12, ConcretePowderTile + 12, true, true, RenderType::Cube, 0, 0.5f },
+        { "Green Concrete Powder", ConcretePowderTile + 13, ConcretePowderTile + 13, ConcretePowderTile + 13, true, true, RenderType::Cube, 0, 0.5f },
+        { "Red Concrete Powder", ConcretePowderTile + 14, ConcretePowderTile + 14, ConcretePowderTile + 14, true, true, RenderType::Cube, 0, 0.5f },
+        { "Black Concrete Powder", ConcretePowderTile + 15, ConcretePowderTile + 15, ConcretePowderTile + 15, true, true, RenderType::Cube, 0, 0.5f },
+        { "Terracotta", TerracottaPlainTile, TerracottaPlainTile, TerracottaPlainTile, true, true, RenderType::Cube, 0, 1.25f },
+        { "White Terracotta", TerracottaTile + 0, TerracottaTile + 0, TerracottaTile + 0, true, true, RenderType::Cube, 0, 1.25f },
+        { "Orange Terracotta", TerracottaTile + 1, TerracottaTile + 1, TerracottaTile + 1, true, true, RenderType::Cube, 0, 1.25f },
+        { "Magenta Terracotta", TerracottaTile + 2, TerracottaTile + 2, TerracottaTile + 2, true, true, RenderType::Cube, 0, 1.25f },
+        { "Light Blue Terracotta", TerracottaTile + 3, TerracottaTile + 3, TerracottaTile + 3, true, true, RenderType::Cube, 0, 1.25f },
+        { "Yellow Terracotta", TerracottaTile + 4, TerracottaTile + 4, TerracottaTile + 4, true, true, RenderType::Cube, 0, 1.25f },
+        { "Lime Terracotta", TerracottaTile + 5, TerracottaTile + 5, TerracottaTile + 5, true, true, RenderType::Cube, 0, 1.25f },
+        { "Pink Terracotta", TerracottaTile + 6, TerracottaTile + 6, TerracottaTile + 6, true, true, RenderType::Cube, 0, 1.25f },
+        { "Gray Terracotta", TerracottaTile + 7, TerracottaTile + 7, TerracottaTile + 7, true, true, RenderType::Cube, 0, 1.25f },
+        { "Light Gray Terracotta", TerracottaTile + 8, TerracottaTile + 8, TerracottaTile + 8, true, true, RenderType::Cube, 0, 1.25f },
+        { "Cyan Terracotta", TerracottaTile + 9, TerracottaTile + 9, TerracottaTile + 9, true, true, RenderType::Cube, 0, 1.25f },
+        { "Purple Terracotta", TerracottaTile + 10, TerracottaTile + 10, TerracottaTile + 10, true, true, RenderType::Cube, 0, 1.25f },
+        { "Blue Terracotta", TerracottaTile + 11, TerracottaTile + 11, TerracottaTile + 11, true, true, RenderType::Cube, 0, 1.25f },
+        { "Brown Terracotta", TerracottaTile + 12, TerracottaTile + 12, TerracottaTile + 12, true, true, RenderType::Cube, 0, 1.25f },
+        { "Green Terracotta", TerracottaTile + 13, TerracottaTile + 13, TerracottaTile + 13, true, true, RenderType::Cube, 0, 1.25f },
+        { "Red Terracotta", TerracottaTile + 14, TerracottaTile + 14, TerracottaTile + 14, true, true, RenderType::Cube, 0, 1.25f },
+        { "Black Terracotta", TerracottaTile + 15, TerracottaTile + 15, TerracottaTile + 15, true, true, RenderType::Cube, 0, 1.25f },
+        { "White Glazed Terracotta", GlazedTile + 0, GlazedTile + 0, GlazedTile + 0, true, true, RenderType::Cube, 0, 1.4f },
+        { "Orange Glazed Terracotta", GlazedTile + 1, GlazedTile + 1, GlazedTile + 1, true, true, RenderType::Cube, 0, 1.4f },
+        { "Magenta Glazed Terracotta", GlazedTile + 2, GlazedTile + 2, GlazedTile + 2, true, true, RenderType::Cube, 0, 1.4f },
+        { "Light Blue Glazed Terracotta", GlazedTile + 3, GlazedTile + 3, GlazedTile + 3, true, true, RenderType::Cube, 0, 1.4f },
+        { "Yellow Glazed Terracotta", GlazedTile + 4, GlazedTile + 4, GlazedTile + 4, true, true, RenderType::Cube, 0, 1.4f },
+        { "Lime Glazed Terracotta", GlazedTile + 5, GlazedTile + 5, GlazedTile + 5, true, true, RenderType::Cube, 0, 1.4f },
+        { "Pink Glazed Terracotta", GlazedTile + 6, GlazedTile + 6, GlazedTile + 6, true, true, RenderType::Cube, 0, 1.4f },
+        { "Gray Glazed Terracotta", GlazedTile + 7, GlazedTile + 7, GlazedTile + 7, true, true, RenderType::Cube, 0, 1.4f },
+        { "Light Gray Glazed Terracotta", GlazedTile + 8, GlazedTile + 8, GlazedTile + 8, true, true, RenderType::Cube, 0, 1.4f },
+        { "Cyan Glazed Terracotta", GlazedTile + 9, GlazedTile + 9, GlazedTile + 9, true, true, RenderType::Cube, 0, 1.4f },
+        { "Purple Glazed Terracotta", GlazedTile + 10, GlazedTile + 10, GlazedTile + 10, true, true, RenderType::Cube, 0, 1.4f },
+        { "Blue Glazed Terracotta", GlazedTile + 11, GlazedTile + 11, GlazedTile + 11, true, true, RenderType::Cube, 0, 1.4f },
+        { "Brown Glazed Terracotta", GlazedTile + 12, GlazedTile + 12, GlazedTile + 12, true, true, RenderType::Cube, 0, 1.4f },
+        { "Green Glazed Terracotta", GlazedTile + 13, GlazedTile + 13, GlazedTile + 13, true, true, RenderType::Cube, 0, 1.4f },
+        { "Red Glazed Terracotta", GlazedTile + 14, GlazedTile + 14, GlazedTile + 14, true, true, RenderType::Cube, 0, 1.4f },
+        { "Black Glazed Terracotta", GlazedTile + 15, GlazedTile + 15, GlazedTile + 15, true, true, RenderType::Cube, 0, 1.4f },
+        { "White Stained Glass", StainedGlassTile + 0, StainedGlassTile + 0, StainedGlassTile + 0, true, false, RenderType::Cube, 0, 0.3f },
+        { "Orange Stained Glass", StainedGlassTile + 1, StainedGlassTile + 1, StainedGlassTile + 1, true, false, RenderType::Cube, 0, 0.3f },
+        { "Magenta Stained Glass", StainedGlassTile + 2, StainedGlassTile + 2, StainedGlassTile + 2, true, false, RenderType::Cube, 0, 0.3f },
+        { "Light Blue Stained Glass", StainedGlassTile + 3, StainedGlassTile + 3, StainedGlassTile + 3, true, false, RenderType::Cube, 0, 0.3f },
+        { "Yellow Stained Glass", StainedGlassTile + 4, StainedGlassTile + 4, StainedGlassTile + 4, true, false, RenderType::Cube, 0, 0.3f },
+        { "Lime Stained Glass", StainedGlassTile + 5, StainedGlassTile + 5, StainedGlassTile + 5, true, false, RenderType::Cube, 0, 0.3f },
+        { "Pink Stained Glass", StainedGlassTile + 6, StainedGlassTile + 6, StainedGlassTile + 6, true, false, RenderType::Cube, 0, 0.3f },
+        { "Gray Stained Glass", StainedGlassTile + 7, StainedGlassTile + 7, StainedGlassTile + 7, true, false, RenderType::Cube, 0, 0.3f },
+        { "Light Gray Stained Glass", StainedGlassTile + 8, StainedGlassTile + 8, StainedGlassTile + 8, true, false, RenderType::Cube, 0, 0.3f },
+        { "Cyan Stained Glass", StainedGlassTile + 9, StainedGlassTile + 9, StainedGlassTile + 9, true, false, RenderType::Cube, 0, 0.3f },
+        { "Purple Stained Glass", StainedGlassTile + 10, StainedGlassTile + 10, StainedGlassTile + 10, true, false, RenderType::Cube, 0, 0.3f },
+        { "Blue Stained Glass", StainedGlassTile + 11, StainedGlassTile + 11, StainedGlassTile + 11, true, false, RenderType::Cube, 0, 0.3f },
+        { "Brown Stained Glass", StainedGlassTile + 12, StainedGlassTile + 12, StainedGlassTile + 12, true, false, RenderType::Cube, 0, 0.3f },
+        { "Green Stained Glass", StainedGlassTile + 13, StainedGlassTile + 13, StainedGlassTile + 13, true, false, RenderType::Cube, 0, 0.3f },
+        { "Red Stained Glass", StainedGlassTile + 14, StainedGlassTile + 14, StainedGlassTile + 14, true, false, RenderType::Cube, 0, 0.3f },
+        { "Black Stained Glass", StainedGlassTile + 15, StainedGlassTile + 15, StainedGlassTile + 15, true, false, RenderType::Cube, 0, 0.3f },
+        { "Glass Pane", GlassPaneTopTile, GlassPaneTopTile, Glass, true, false, RenderType::Pane, 0, 0.3f },
+        { "White Stained Glass Pane", StainedPaneTopTile + 0, StainedPaneTopTile + 0, StainedGlassTile + 0, true, false, RenderType::Pane, 0, 0.3f },
+        { "Orange Stained Glass Pane", StainedPaneTopTile + 1, StainedPaneTopTile + 1, StainedGlassTile + 1, true, false, RenderType::Pane, 0, 0.3f },
+        { "Magenta Stained Glass Pane", StainedPaneTopTile + 2, StainedPaneTopTile + 2, StainedGlassTile + 2, true, false, RenderType::Pane, 0, 0.3f },
+        { "Light Blue Stained Glass Pane", StainedPaneTopTile + 3, StainedPaneTopTile + 3, StainedGlassTile + 3, true, false, RenderType::Pane, 0, 0.3f },
+        { "Yellow Stained Glass Pane", StainedPaneTopTile + 4, StainedPaneTopTile + 4, StainedGlassTile + 4, true, false, RenderType::Pane, 0, 0.3f },
+        { "Lime Stained Glass Pane", StainedPaneTopTile + 5, StainedPaneTopTile + 5, StainedGlassTile + 5, true, false, RenderType::Pane, 0, 0.3f },
+        { "Pink Stained Glass Pane", StainedPaneTopTile + 6, StainedPaneTopTile + 6, StainedGlassTile + 6, true, false, RenderType::Pane, 0, 0.3f },
+        { "Gray Stained Glass Pane", StainedPaneTopTile + 7, StainedPaneTopTile + 7, StainedGlassTile + 7, true, false, RenderType::Pane, 0, 0.3f },
+        { "Light Gray Stained Glass Pane", StainedPaneTopTile + 8, StainedPaneTopTile + 8, StainedGlassTile + 8, true, false, RenderType::Pane, 0, 0.3f },
+        { "Cyan Stained Glass Pane", StainedPaneTopTile + 9, StainedPaneTopTile + 9, StainedGlassTile + 9, true, false, RenderType::Pane, 0, 0.3f },
+        { "Purple Stained Glass Pane", StainedPaneTopTile + 10, StainedPaneTopTile + 10, StainedGlassTile + 10, true, false, RenderType::Pane, 0, 0.3f },
+        { "Blue Stained Glass Pane", StainedPaneTopTile + 11, StainedPaneTopTile + 11, StainedGlassTile + 11, true, false, RenderType::Pane, 0, 0.3f },
+        { "Brown Stained Glass Pane", StainedPaneTopTile + 12, StainedPaneTopTile + 12, StainedGlassTile + 12, true, false, RenderType::Pane, 0, 0.3f },
+        { "Green Stained Glass Pane", StainedPaneTopTile + 13, StainedPaneTopTile + 13, StainedGlassTile + 13, true, false, RenderType::Pane, 0, 0.3f },
+        { "Red Stained Glass Pane", StainedPaneTopTile + 14, StainedPaneTopTile + 14, StainedGlassTile + 14, true, false, RenderType::Pane, 0, 0.3f },
+        { "Black Stained Glass Pane", StainedPaneTopTile + 15, StainedPaneTopTile + 15, StainedGlassTile + 15, true, false, RenderType::Pane, 0, 0.3f },
+        { "Tinted Glass", TintedGlassTile, TintedGlassTile, TintedGlassTile, true, false, RenderType::Cube, 0, 0.3f },
     };
 }
 
@@ -1048,6 +1147,7 @@ const char* blockSoundGroup(BlockId id)
     if (id == Blocks::Bamboo || id == Blocks::Scaffolding) return "wood";
     if (isSign(id) || isFrame(id)) return "wood";
     if (isDoor(id) || isTrapdoor(id)) return "wood";
+    if (isConcretePowder(id)) return "sand";
     if (isSapling(id) || isPinkPetals(id) || id == Blocks::MangrovePropaguleHanging) return "grass";
     if (isNetherPlant(id) || id == Blocks::NetherWartBlock || id == Blocks::WarpedWartBlock ||
         id == Blocks::Shroomlight) return "grass";
@@ -1194,6 +1294,8 @@ Material blockMaterial(BlockId id)
     if (id == Blocks::SlimeBlock) return Material::Wool;
     if (isSign(id) || isFrame(id)) return Material::Wood;
     if (isDoor(id) || isTrapdoor(id)) return Material::Wood;
+    if (isConcretePowder(id)) return Material::Sand;
+    if (isGlassLike(id) || isPane(id)) return Material::Glass;
     if (isSapling(id) || isPinkPetals(id) || id == Blocks::MangrovePropaguleHanging) return Material::Plant;
     if (isNetherPlant(id) || id == Blocks::NetherWartBlock || id == Blocks::WarpedWartBlock ||
         id == Blocks::Shroomlight) return Material::Plant;
@@ -1297,7 +1399,7 @@ Material blockMaterial(BlockId id)
 
 bool blockOverlaps(BlockId id, int bx, int by, int bz,
                    float minX, float minY, float minZ,
-                   float maxX, float maxY, float maxZ)
+                   float maxX, float maxY, float maxZ, int links)
 {
     if (!isSolid(id)) return false;
 
@@ -1340,6 +1442,17 @@ bool blockOverlaps(BlockId id, int bx, int by, int bz,
             case 2: return overlaps(0.0f, 0.0f, 1.0f - THICK, 1.0f, 1.0f, 1.0f);
             default: return overlaps(0.0f, 0.0f, 0.0f, THICK, 1.0f, 1.0f);
         }
+    }
+
+    if (isPane(id))
+    {
+        constexpr float LO = 0.4375f, HI = 0.5625f;
+        if (overlaps(LO, 0.0f, LO, HI, 1.0f, HI)) return true;
+        if ((links & 1) && overlaps(LO, 0.0f, 0.0f, HI, 1.0f, LO)) return true;
+        if ((links & 2) && overlaps(LO, 0.0f, HI, HI, 1.0f, 1.0f)) return true;
+        if ((links & 4) && overlaps(0.0f, 0.0f, LO, LO, 1.0f, HI)) return true;
+        if ((links & 8) && overlaps(HI, 0.0f, LO, 1.0f, 1.0f, HI)) return true;
+        return false;
     }
 
     if (isFence(id))

@@ -3883,6 +3883,61 @@ namespace
     void paintItemRawIron(Tile& t) { paintRawItemIn(t, Color{ 190, 156, 126 }, 935); }
     void paintItemRawGold(Tile& t) { paintRawItemIn(t, Color{ 236, 186, 56 }, 936); }
 
+    void paintConcreteIn(Tile& t, Color base, int salt) { t.fill(base); t.speckle(4, salt); }
+    void paintPowderIn(Tile& t, Color base, int salt)
+    {
+        for (int y = 0; y < Tile::N; ++y)
+            for (int x = 0; x < Tile::N; ++x)
+                t.set(x, y, shade(base, static_cast<int>((hash2(x, y, salt) - 0.5f) * 40.0f) + 12));
+    }
+    void paintTerracottaIn(Tile& t, Color base, int salt)
+    {
+        for (int y = 0; y < Tile::N; ++y)
+            for (int x = 0; x < Tile::N; ++x)
+                t.set(x, y, shade(base, static_cast<int>((hash2(x, y, salt) - 0.5f) * 14.0f)));
+    }
+    void paintGlazedIn(Tile& t, Color base, int salt)
+    {
+        const int n = Tile::N;
+        const Color dark = shade(base, -50), light = shade(base, 40);
+        for (int y = 0; y < n; ++y)
+            for (int x = 0; x < n; ++x)
+            {
+                const int d = std::min(std::min(x, y), std::min(n - 1 - x, n - 1 - y));
+                const bool swirl = ((x + y * 2 + salt) % 7) < 2;
+                t.set(x, y, d == 0 ? dark : swirl ? light : (d % 3 == 0 ? dark : base));
+            }
+    }
+    void paintStainedGlassIn(Tile& t, Color base)
+    {
+        const int n = Tile::N;
+        t.fill(Color{ base.r, base.g, base.b, 110 });
+        for (int k = 0; k < n; ++k)
+        {
+            t.set(k, 0, Color{ base.r, base.g, base.b, 220 });
+            t.set(k, n - 1, Color{ base.r, base.g, base.b, 220 });
+            t.set(0, k, Color{ base.r, base.g, base.b, 220 });
+            t.set(n - 1, k, Color{ base.r, base.g, base.b, 220 });
+        }
+        t.set(3, 3, Color{ 255, 255, 255, 160 }); t.set(4, 4, Color{ 255, 255, 255, 160 });
+    }
+    void paintPaneTopIn(Tile& t, Color base)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 0; y < Tile::N; ++y)
+            for (int x = 7; x <= 8; ++x) t.set(x, y, Color{ base.r, base.g, base.b, 220 });
+    }
+    void paintGlassPaneTopTile(Tile& t) { paintPaneTopIn(t, Color{ 200, 220, 230 }); }
+    void paintTerracottaPlainTile(Tile& t) { paintTerracottaIn(t, Color{ 152, 94, 67 }, 951); }
+    void paintTintedGlassTile(Tile& t) { paintStainedGlassIn(t, Color{ 44, 36, 52 }); }
+    void paintItemAmethystShard(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 3; y < 13; ++y)
+            for (int x = 6; x < 10; ++x)
+                if (std::abs(x - 8) <= (13 - y) / 3 + 1) t.set(x + (12 - y) / 4, y, shade(Color{ 168, 120, 220 }, (x - 7) * 12));
+    }
+
     void paintItemSign(Tile& t)
     {
         t.fill(Color{ 0, 0, 0, 0 });
@@ -6868,6 +6923,7 @@ namespace
         { Tiles::ItemQuartz, paintItemQuartz },
         { Tiles::ItemRawIron, paintItemRawIron },
         { Tiles::ItemRawGold, paintItemRawGold },
+        { Tiles::ItemAmethystShard, paintItemAmethystShard },
         { Tiles::ItemWarpedSign, paintItemWarpedSign },
         { Tiles::ItemBambooSign, paintItemBambooSign },
         { Tiles::ItemMangroveSign, paintItemMangroveSign },
@@ -7032,6 +7088,9 @@ namespace
         { Tiles::DustLine1Off, paintRedstoneDust },
         { Tiles::DustLine1On, paintRedstoneDustLit },
         { Tiles::LeverHandle, paintLever },
+        { Tiles::GlassPaneTopTile, paintGlassPaneTopTile },
+        { Tiles::TerracottaPlainTile, paintTerracottaPlainTile },
+        { Tiles::TintedGlassTile, paintTintedGlassTile },
         { Tiles::DeepslateCoalOreTile, paintDeepslateCoalOreTile },
         { Tiles::DeepslateIronOreTile, paintDeepslateIronOreTile },
         { Tiles::DeepslateCopperOreTile, paintDeepslateCopperOreTile },
@@ -7495,6 +7554,7 @@ namespace
         { Tiles::ItemQuartz, { "quartz", nullptr, nullptr } },
         { Tiles::ItemRawIron, { "raw_iron", nullptr, nullptr } },
         { Tiles::ItemRawGold, { "raw_gold", nullptr, nullptr } },
+        { Tiles::ItemAmethystShard, { "amethyst_shard", nullptr, nullptr } },
         { Tiles::ItemWarpedSign, { "warped_sign", nullptr, nullptr } },
         { Tiles::ItemBambooSign, { "bamboo_sign", nullptr, nullptr } },
         { Tiles::ItemMangroveSign, { "mangrove_sign", nullptr, nullptr } },
@@ -7631,6 +7691,105 @@ namespace
         { Tiles::DustLine1Off, { "redstone_dust_line1", nullptr }, Tinting::RedstoneOff, 0, false },
         { Tiles::DustLine1On, { "redstone_dust_line1", nullptr }, Tinting::RedstoneOn, 0, false },
         { Tiles::LeverHandle, { "lever", nullptr }, Tinting::None, 0, false },
+        { Tiles::GlassPaneTopTile, { "glass_pane_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::TerracottaPlainTile, { "terracotta", "hardened_clay", nullptr }, Tinting::None, 0, false },
+        { Tiles::TintedGlassTile, { "tinted_glass", nullptr }, Tinting::None, 0, false },
+        { Tiles::ConcreteTile + 0, { "white_concrete", nullptr }, Tinting::None, 0, false },
+        { Tiles::ConcretePowderTile + 0, { "white_concrete_powder", nullptr }, Tinting::None, 0, false },
+        { Tiles::TerracottaTile + 0, { "white_terracotta", nullptr }, Tinting::None, 0, false },
+        { Tiles::GlazedTile + 0, { "white_glazed_terracotta", nullptr }, Tinting::None, 0, false },
+        { Tiles::StainedGlassTile + 0, { "white_stained_glass", nullptr }, Tinting::None, 0, false },
+        { Tiles::StainedPaneTopTile + 0, { "white_stained_glass_pane_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::ConcreteTile + 1, { "orange_concrete", nullptr }, Tinting::None, 0, false },
+        { Tiles::ConcretePowderTile + 1, { "orange_concrete_powder", nullptr }, Tinting::None, 0, false },
+        { Tiles::TerracottaTile + 1, { "orange_terracotta", nullptr }, Tinting::None, 0, false },
+        { Tiles::GlazedTile + 1, { "orange_glazed_terracotta", nullptr }, Tinting::None, 0, false },
+        { Tiles::StainedGlassTile + 1, { "orange_stained_glass", nullptr }, Tinting::None, 0, false },
+        { Tiles::StainedPaneTopTile + 1, { "orange_stained_glass_pane_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::ConcreteTile + 2, { "magenta_concrete", nullptr }, Tinting::None, 0, false },
+        { Tiles::ConcretePowderTile + 2, { "magenta_concrete_powder", nullptr }, Tinting::None, 0, false },
+        { Tiles::TerracottaTile + 2, { "magenta_terracotta", nullptr }, Tinting::None, 0, false },
+        { Tiles::GlazedTile + 2, { "magenta_glazed_terracotta", nullptr }, Tinting::None, 0, false },
+        { Tiles::StainedGlassTile + 2, { "magenta_stained_glass", nullptr }, Tinting::None, 0, false },
+        { Tiles::StainedPaneTopTile + 2, { "magenta_stained_glass_pane_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::ConcreteTile + 3, { "light_blue_concrete", nullptr }, Tinting::None, 0, false },
+        { Tiles::ConcretePowderTile + 3, { "light_blue_concrete_powder", nullptr }, Tinting::None, 0, false },
+        { Tiles::TerracottaTile + 3, { "light_blue_terracotta", nullptr }, Tinting::None, 0, false },
+        { Tiles::GlazedTile + 3, { "light_blue_glazed_terracotta", nullptr }, Tinting::None, 0, false },
+        { Tiles::StainedGlassTile + 3, { "light_blue_stained_glass", nullptr }, Tinting::None, 0, false },
+        { Tiles::StainedPaneTopTile + 3, { "light_blue_stained_glass_pane_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::ConcreteTile + 4, { "yellow_concrete", nullptr }, Tinting::None, 0, false },
+        { Tiles::ConcretePowderTile + 4, { "yellow_concrete_powder", nullptr }, Tinting::None, 0, false },
+        { Tiles::TerracottaTile + 4, { "yellow_terracotta", nullptr }, Tinting::None, 0, false },
+        { Tiles::GlazedTile + 4, { "yellow_glazed_terracotta", nullptr }, Tinting::None, 0, false },
+        { Tiles::StainedGlassTile + 4, { "yellow_stained_glass", nullptr }, Tinting::None, 0, false },
+        { Tiles::StainedPaneTopTile + 4, { "yellow_stained_glass_pane_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::ConcreteTile + 5, { "lime_concrete", nullptr }, Tinting::None, 0, false },
+        { Tiles::ConcretePowderTile + 5, { "lime_concrete_powder", nullptr }, Tinting::None, 0, false },
+        { Tiles::TerracottaTile + 5, { "lime_terracotta", nullptr }, Tinting::None, 0, false },
+        { Tiles::GlazedTile + 5, { "lime_glazed_terracotta", nullptr }, Tinting::None, 0, false },
+        { Tiles::StainedGlassTile + 5, { "lime_stained_glass", nullptr }, Tinting::None, 0, false },
+        { Tiles::StainedPaneTopTile + 5, { "lime_stained_glass_pane_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::ConcreteTile + 6, { "pink_concrete", nullptr }, Tinting::None, 0, false },
+        { Tiles::ConcretePowderTile + 6, { "pink_concrete_powder", nullptr }, Tinting::None, 0, false },
+        { Tiles::TerracottaTile + 6, { "pink_terracotta", nullptr }, Tinting::None, 0, false },
+        { Tiles::GlazedTile + 6, { "pink_glazed_terracotta", nullptr }, Tinting::None, 0, false },
+        { Tiles::StainedGlassTile + 6, { "pink_stained_glass", nullptr }, Tinting::None, 0, false },
+        { Tiles::StainedPaneTopTile + 6, { "pink_stained_glass_pane_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::ConcreteTile + 7, { "gray_concrete", nullptr }, Tinting::None, 0, false },
+        { Tiles::ConcretePowderTile + 7, { "gray_concrete_powder", nullptr }, Tinting::None, 0, false },
+        { Tiles::TerracottaTile + 7, { "gray_terracotta", nullptr }, Tinting::None, 0, false },
+        { Tiles::GlazedTile + 7, { "gray_glazed_terracotta", nullptr }, Tinting::None, 0, false },
+        { Tiles::StainedGlassTile + 7, { "gray_stained_glass", nullptr }, Tinting::None, 0, false },
+        { Tiles::StainedPaneTopTile + 7, { "gray_stained_glass_pane_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::ConcreteTile + 8, { "light_gray_concrete", nullptr }, Tinting::None, 0, false },
+        { Tiles::ConcretePowderTile + 8, { "light_gray_concrete_powder", nullptr }, Tinting::None, 0, false },
+        { Tiles::TerracottaTile + 8, { "light_gray_terracotta", nullptr }, Tinting::None, 0, false },
+        { Tiles::GlazedTile + 8, { "light_gray_glazed_terracotta", nullptr }, Tinting::None, 0, false },
+        { Tiles::StainedGlassTile + 8, { "light_gray_stained_glass", nullptr }, Tinting::None, 0, false },
+        { Tiles::StainedPaneTopTile + 8, { "light_gray_stained_glass_pane_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::ConcreteTile + 9, { "cyan_concrete", nullptr }, Tinting::None, 0, false },
+        { Tiles::ConcretePowderTile + 9, { "cyan_concrete_powder", nullptr }, Tinting::None, 0, false },
+        { Tiles::TerracottaTile + 9, { "cyan_terracotta", nullptr }, Tinting::None, 0, false },
+        { Tiles::GlazedTile + 9, { "cyan_glazed_terracotta", nullptr }, Tinting::None, 0, false },
+        { Tiles::StainedGlassTile + 9, { "cyan_stained_glass", nullptr }, Tinting::None, 0, false },
+        { Tiles::StainedPaneTopTile + 9, { "cyan_stained_glass_pane_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::ConcreteTile + 10, { "purple_concrete", nullptr }, Tinting::None, 0, false },
+        { Tiles::ConcretePowderTile + 10, { "purple_concrete_powder", nullptr }, Tinting::None, 0, false },
+        { Tiles::TerracottaTile + 10, { "purple_terracotta", nullptr }, Tinting::None, 0, false },
+        { Tiles::GlazedTile + 10, { "purple_glazed_terracotta", nullptr }, Tinting::None, 0, false },
+        { Tiles::StainedGlassTile + 10, { "purple_stained_glass", nullptr }, Tinting::None, 0, false },
+        { Tiles::StainedPaneTopTile + 10, { "purple_stained_glass_pane_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::ConcreteTile + 11, { "blue_concrete", nullptr }, Tinting::None, 0, false },
+        { Tiles::ConcretePowderTile + 11, { "blue_concrete_powder", nullptr }, Tinting::None, 0, false },
+        { Tiles::TerracottaTile + 11, { "blue_terracotta", nullptr }, Tinting::None, 0, false },
+        { Tiles::GlazedTile + 11, { "blue_glazed_terracotta", nullptr }, Tinting::None, 0, false },
+        { Tiles::StainedGlassTile + 11, { "blue_stained_glass", nullptr }, Tinting::None, 0, false },
+        { Tiles::StainedPaneTopTile + 11, { "blue_stained_glass_pane_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::ConcreteTile + 12, { "brown_concrete", nullptr }, Tinting::None, 0, false },
+        { Tiles::ConcretePowderTile + 12, { "brown_concrete_powder", nullptr }, Tinting::None, 0, false },
+        { Tiles::TerracottaTile + 12, { "brown_terracotta", nullptr }, Tinting::None, 0, false },
+        { Tiles::GlazedTile + 12, { "brown_glazed_terracotta", nullptr }, Tinting::None, 0, false },
+        { Tiles::StainedGlassTile + 12, { "brown_stained_glass", nullptr }, Tinting::None, 0, false },
+        { Tiles::StainedPaneTopTile + 12, { "brown_stained_glass_pane_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::ConcreteTile + 13, { "green_concrete", nullptr }, Tinting::None, 0, false },
+        { Tiles::ConcretePowderTile + 13, { "green_concrete_powder", nullptr }, Tinting::None, 0, false },
+        { Tiles::TerracottaTile + 13, { "green_terracotta", nullptr }, Tinting::None, 0, false },
+        { Tiles::GlazedTile + 13, { "green_glazed_terracotta", nullptr }, Tinting::None, 0, false },
+        { Tiles::StainedGlassTile + 13, { "green_stained_glass", nullptr }, Tinting::None, 0, false },
+        { Tiles::StainedPaneTopTile + 13, { "green_stained_glass_pane_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::ConcreteTile + 14, { "red_concrete", nullptr }, Tinting::None, 0, false },
+        { Tiles::ConcretePowderTile + 14, { "red_concrete_powder", nullptr }, Tinting::None, 0, false },
+        { Tiles::TerracottaTile + 14, { "red_terracotta", nullptr }, Tinting::None, 0, false },
+        { Tiles::GlazedTile + 14, { "red_glazed_terracotta", nullptr }, Tinting::None, 0, false },
+        { Tiles::StainedGlassTile + 14, { "red_stained_glass", nullptr }, Tinting::None, 0, false },
+        { Tiles::StainedPaneTopTile + 14, { "red_stained_glass_pane_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::ConcreteTile + 15, { "black_concrete", nullptr }, Tinting::None, 0, false },
+        { Tiles::ConcretePowderTile + 15, { "black_concrete_powder", nullptr }, Tinting::None, 0, false },
+        { Tiles::TerracottaTile + 15, { "black_terracotta", nullptr }, Tinting::None, 0, false },
+        { Tiles::GlazedTile + 15, { "black_glazed_terracotta", nullptr }, Tinting::None, 0, false },
+        { Tiles::StainedGlassTile + 15, { "black_stained_glass", nullptr }, Tinting::None, 0, false },
+        { Tiles::StainedPaneTopTile + 15, { "black_stained_glass_pane_top", nullptr }, Tinting::None, 0, false },
         { Tiles::DeepslateCoalOreTile, { "deepslate_coal_ore", nullptr }, Tinting::None, 0, false },
         { Tiles::DeepslateIronOreTile, { "deepslate_iron_ore", nullptr }, Tinting::None, 0, false },
         { Tiles::DeepslateCopperOreTile, { "deepslate_copper_ore", nullptr }, Tinting::None, 0, false },
@@ -8267,6 +8426,22 @@ Atlas::Atlas()
         Tile tile;
         paintDyeTile(tile, WOOL_COLOUR[i], 710 + i);
         blitPainted(Tiles::ItemDyeFirst + i, tile);
+    }
+    for (int i = 0; i < 16; ++i)
+    {
+        Tile concrete, powder, terracotta, glazed, glass, pane;
+        paintConcreteIn(concrete, shade(WOOL_COLOUR[i], -12), 960 + i);
+        paintPowderIn(powder, WOOL_COLOUR[i], 980 + i);
+        paintTerracottaIn(terracotta, shade(WOOL_COLOUR[i], -55), 1000 + i);
+        paintGlazedIn(glazed, WOOL_COLOUR[i], i);
+        paintStainedGlassIn(glass, WOOL_COLOUR[i]);
+        paintPaneTopIn(pane, WOOL_COLOUR[i]);
+        blitPainted(Tiles::ConcreteTile + i, concrete);
+        blitPainted(Tiles::ConcretePowderTile + i, powder);
+        blitPainted(Tiles::TerracottaTile + i, terracotta);
+        blitPainted(Tiles::GlazedTile + i, glazed);
+        blitPainted(Tiles::StainedGlassTile + i, glass);
+        blitPainted(Tiles::StainedPaneTopTile + i, pane);
     }
     for (int i = 0; i < 4; ++i)
     {
@@ -9000,6 +9175,10 @@ bool Atlas::hasPainter(int tileIndex)
     if (tileIndex >= Tiles::WoolFirst && tileIndex < Tiles::WoolEnd) return true;
     if (tileIndex >= Tiles::ItemDyeFirst && tileIndex < Tiles::ItemDyeEnd) return true;
     if (tileIndex >= Tiles::ItemArmourFirst && tileIndex < Tiles::ItemArmourEnd) return true;
+    if (tileIndex >= Tiles::ConcreteTile && tileIndex <= Tiles::GlazedTileLast &&
+        tileIndex != Tiles::TerracottaPlainTile) return true;
+    if (tileIndex >= Tiles::StainedGlassTile && tileIndex <= Tiles::StainedGlassTileLast) return true;
+    if (tileIndex >= Tiles::StainedPaneTopTile && tileIndex <= Tiles::StainedPaneTopTileLast) return true;
     if (tileIndex >= Tiles::CrackFirst &&
         tileIndex < Tiles::CrackFirst + Tiles::CrackStages)
         return true;

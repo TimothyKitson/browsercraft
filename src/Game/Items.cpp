@@ -206,6 +206,7 @@ namespace
         { "Nether Quartz",        Tiles::ItemQuartz,            64 },
         { "Raw Iron",             Tiles::ItemRawIron,           64 },
         { "Raw Gold",             Tiles::ItemRawGold,           64 },
+        { "Amethyst Shard",       Tiles::ItemAmethystShard,     64 },
     };
 
     static_assert(sizeof(ITEMS) / sizeof(ITEMS[0]) ==
@@ -239,6 +240,7 @@ int flatIconFor(BlockId id)
         return ICONS[wood < 0 ? 0 : wood];
     }
     if (isTrapdoor(id)) return blockInfo(id).tileTop;
+    if (isPane(id)) return blockInfo(id).tileSide;
     if (id == Blocks::MangrovePropagule || id == Blocks::MangrovePropaguleHanging) return Tiles::IconMangrovePropagule;
     if (id == Blocks::Campfire) return Tiles::IconCampfire;
     if (isCauldron(id)) return Tiles::IconCauldron;
@@ -299,6 +301,7 @@ StackId blockDrop(BlockId id)
     if (isFurnaceBlock(id)) return furnaceCold(furnaceBase(id));
     if (id == Blocks::BarrelOpen) return Blocks::Barrel;
     if (isAmethystGrowth(id) && id != Blocks::AmethystCluster) return Blocks::Air;
+    if (id == Blocks::AmethystCluster) return Items::AmethystShard;
     if (id == Blocks::NetherWart0 || id == Blocks::NetherWart1) return Items::NetherWart;
     if (isCopperBulb(id)) return Blocks::CopperBulb;
     if (id == Blocks::SculkCatalystBloom) return Blocks::SculkCatalyst;

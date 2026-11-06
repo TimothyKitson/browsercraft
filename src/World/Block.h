@@ -569,6 +569,15 @@ namespace Blocks
         NetherQuartzOre, QuartzBlock, QuartzBricks, QuartzPillar, ChiseledQuartzBlock, QuartzSlab,
         RedSand, RedSandstone, CutRedSandstone, ChiseledRedSandstone, SmoothRedSandstone, RedSandstoneSlab, CutSandstone, ChiseledSandstone, SmoothSandstone,
         DeepslateCoalOre, DeepslateIronOre, DeepslateCopperOre, DeepslateGoldOre, DeepslateRedstoneOre, DeepslateEmeraldOre, DeepslateLapisOre, DeepslateDiamondOre, NetherGoldOre, RawIronBlock, RawGoldBlock, RawCopperBlock,
+        ConcreteFirst, ConcreteLast = ConcreteFirst + 15,
+        ConcretePowderFirst, ConcretePowderLast = ConcretePowderFirst + 15,
+        Terracotta,
+        TerracottaFirst, TerracottaLast = TerracottaFirst + 15,
+        GlazedTerracottaFirst, GlazedTerracottaLast = GlazedTerracottaFirst + 15,
+        StainedGlassFirst, StainedGlassLast = StainedGlassFirst + 15,
+        GlassPane,
+        StainedGlassPaneFirst, StainedGlassPaneLast = StainedGlassPaneFirst + 15,
+        TintedGlass,
 
         Count
     };
@@ -587,7 +596,8 @@ enum class RenderType : uint8_t
     Door,   // a thin panel on one edge of its cell, which swings aside
     Rail,   // a flat panel on the floor of its cell, which carts run on
     Flat,   // the same panel, for anything that is not a rail
-    Trapdoor
+    Trapdoor,
+    Pane
 };
 
 struct BlockInfo
@@ -741,6 +751,7 @@ inline bool isClimbable(BlockId id)
 inline bool isStairs(BlockId id) { return blockInfo(id).render == RenderType::Stairs; }
 inline bool isFence(BlockId id) { return blockInfo(id).render == RenderType::Fence; }
 inline bool isDoor(BlockId id) { return blockInfo(id).render == RenderType::Door; }
+inline bool isPane(BlockId id) { return blockInfo(id).render == RenderType::Pane; }
 inline bool isRail(BlockId id) { return blockInfo(id).render == RenderType::Rail; }
 
 // Pistons. Everything about one is read off its id: which way it
@@ -1215,6 +1226,39 @@ inline BlockId deepslateOreOf(BlockId ore)
         default: return ore;
     }
 }
+inline bool inRun(BlockId id, BlockId first) { return id >= first && id <= first + 15; }
+inline bool isConcrete(BlockId id) { return inRun(id, Blocks::ConcreteFirst); }
+inline bool isConcretePowder(BlockId id) { return inRun(id, Blocks::ConcretePowderFirst); }
+inline bool isColouredTerracotta(BlockId id) { return inRun(id, Blocks::TerracottaFirst); }
+inline bool isGlazedTerracotta(BlockId id) { return inRun(id, Blocks::GlazedTerracottaFirst); }
+inline bool isStainedGlass(BlockId id) { return inRun(id, Blocks::StainedGlassFirst); }
+inline bool isStainedPane(BlockId id) { return inRun(id, Blocks::StainedGlassPaneFirst); }
+inline bool isGlassLike(BlockId id)
+{
+    return id == Blocks::Glass || id == Blocks::TintedGlass || isStainedGlass(id);
+}
+inline bool paneJoins(BlockId other)
+{
+    return blockInfo(other).render == RenderType::Pane || isGlassLike(other) ||
+           (blockInfo(other).opaque && blockInfo(other).render == RenderType::Cube);
+}
+template <typename At>
+int paneLinks(At at)
+{
+    int links = 0;
+    if (paneJoins(at(0, -1))) links |= 1;
+    if (paneJoins(at(0, 1))) links |= 2;
+    if (paneJoins(at(-1, 0))) links |= 4;
+    if (paneJoins(at(1, 0))) links |= 8;
+    return links;
+}
+inline int runColour(BlockId id, BlockId first) { return inRun(id, first) ? id - first : 0; }
+inline BlockId colourIn(BlockId first, int colour)
+{
+    if (colour < 0) colour = 0;
+    if (colour > 15) colour = 15;
+    return static_cast<BlockId>(first + colour);
+}
 inline bool isNylium(BlockId id) { return id == Blocks::CrimsonNylium || id == Blocks::WarpedNylium; }
 inline bool isFungus(BlockId id) { return id == Blocks::CrimsonFungus || id == Blocks::WarpedFungus; }
 inline bool isNetherPlant(BlockId id)
@@ -1329,7 +1373,7 @@ inline float blockHeight(BlockId id) { return isSlab(id) ? 0.5f : 1.0f; }
 // C sources is not worth the one convenience.
 bool blockOverlaps(BlockId id, int bx, int by, int bz,
                    float minX, float minY, float minZ,
-                   float maxX, float maxY, float maxZ);
+                   float maxX, float maxY, float maxZ, int links = 15);
 inline bool isLeaves(BlockId id)
 {
     return id == Blocks::Leaves || id == Blocks::BirchLeaves ||

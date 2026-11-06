@@ -173,9 +173,13 @@ bool Player::collides(const World& world, const AABB& box) const
                 // corners of one, so the question is whether the solid
                 // part of the block overlaps the box -- not whether the
                 // cell is occupied at all.
-                if (blockOverlaps(world.getBlock(x, y, z), x, y, z,
+                const BlockId here = world.getBlock(x, y, z);
+                const int links = isPane(here)
+                    ? paneLinks([&](int dx, int dz) { return world.getBlock(x + dx, y, z + dz); })
+                    : 15;
+                if (blockOverlaps(here, x, y, z,
                                   box.min.x, box.min.y, box.min.z,
-                                  box.max.x, box.max.y, box.max.z))
+                                  box.max.x, box.max.y, box.max.z, links))
                     return true;
             }
 

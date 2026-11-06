@@ -52,7 +52,7 @@ namespace
 
     bool usesTransparentPass(BlockId id)
     {
-        return isLiquid(id) || id == Blocks::Glass || id == Blocks::Ice;
+        return isLiquid(id) || isGlassLike(id) || isPane(id) || id == Blocks::Ice;
     }
 
     // Should the face between `self` and `neighbour` be drawn?
@@ -292,7 +292,7 @@ namespace
 
             int tile = still.tileSide;
             if (f == 3) tile = still.tileBottom;
-            else if (water && (isLeaves(next) || next == Blocks::Glass || next == Blocks::Ice ||
+            else if (water && (isLeaves(next) || isGlassLike(next) || isPane(next) || next == Blocks::Ice ||
                                next == Blocks::SlimeBlock))
                 tile = Tiles::WaterOverlay;
             const TileUV uv = tileUV(tile);
@@ -443,7 +443,8 @@ namespace
     // for every ordinary block in the world, and a partial box has no
     // business reaching into it.
     void emitBox(const MeshSnapshot& snap, int lx, int y, int lz, BlockId id,
-                 const glm::vec3& lo, const glm::vec3& hi, std::vector<float>& out)
+                 const glm::vec3& lo, const glm::vec3& hi, std::vector<float>& out,
+                 bool turnTop = false, bool cullSame = false)
     {
         const BlockInfo& info = blockInfo(id);
 
@@ -466,6 +467,8 @@ namespace
                 (face.nz < 0 && lo.z <= 0.0f) || (face.nz > 0 && hi.z >= 1.0f);
 
             if (flush && isOpaque(snap.block(lx + face.nx, y + face.ny, lz + face.nz)))
+                continue;
+            if (flush && cullSame && snap.block(lx + face.nx, y + face.ny, lz + face.nz) == id)
                 continue;
 
             const TileUV uv = tileUV(tileForFace(info, f));
@@ -491,6 +494,11 @@ namespace
                 {
                     su = cz ? hi.z : lo.z;
                     sv = cy ? hi.y : lo.y;
+                }
+                else if (face.ny != 0 && turnTop)
+                {
+                    su = cz ? hi.z : lo.z;
+                    sv = cx ? hi.x : lo.x;
                 }
                 else if (face.ny != 0)
                 {
@@ -622,6 +630,23 @@ namespace
                 emitBox(snap, lx, y, lz, id, glm::vec3(POST_HI, lo, RAIL_LO),
                         glm::vec3(1.0f, hi, RAIL_HI), out);
         }
+    }
+
+    void emitPane(const MeshSnapshot& snap, int lx, int y, int lz,
+                  BlockId id, std::vector<float>& out)
+    {
+        constexpr float LO = 0.4375f, HI = 0.5625f;
+        const int links = paneLinks([&](int dx, int dz) { return snap.block(lx + dx, y, lz + dz); });
+
+        emitBox(snap, lx, y, lz, id, glm::vec3(LO, 0.0f, LO), glm::vec3(HI, 1.0f, HI), out, false, true);
+        if (links & 1)
+            emitBox(snap, lx, y, lz, id, glm::vec3(LO, 0.0f, 0.0f), glm::vec3(HI, 1.0f, LO), out, false, true);
+        if (links & 2)
+            emitBox(snap, lx, y, lz, id, glm::vec3(LO, 0.0f, HI), glm::vec3(HI, 1.0f, 1.0f), out, false, true);
+        if (links & 4)
+            emitBox(snap, lx, y, lz, id, glm::vec3(0.0f, 0.0f, LO), glm::vec3(LO, 1.0f, HI), out, true, true);
+        if (links & 8)
+            emitBox(snap, lx, y, lz, id, glm::vec3(HI, 0.0f, LO), glm::vec3(1.0f, 1.0f, HI), out, true, true);
     }
 
     // A ladder: one flat panel hard against the wall it hangs on, drawn
@@ -1049,6 +1074,10 @@ void buildChunkMesh(const MeshSnapshot& snapshot, MeshResult& out)
                 else if (isTrapdoor(id))
                 {
                     emitTrapdoor(snapshot, lx, y, lz, id, out.opaqueVertices);
+                }
+                else if (isPane(id))
+                {
+                    emitPane(snapshot, lx, y, lz, id, out.transparentVertices);
                 }
                 else
                 {
