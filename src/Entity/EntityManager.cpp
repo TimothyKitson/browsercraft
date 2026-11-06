@@ -538,9 +538,10 @@ void EntityManager::trySpawnWave(const World& world, const glm::vec3& playerPosi
 void EntityManager::update(float deltaTime, const World& world,
                            const glm::vec3& playerPosition, float daylight)
 {
+    const glm::vec3 target = m_playerHidden ? playerPosition + glm::vec3(0.0f, 100000.0f, 0.0f) : playerPosition;
     for (Mob& mob : m_mobs)
     {
-        mob.update(deltaTime, world, playerPosition, daylight);
+        mob.update(deltaTime, world, target, daylight);
 
         // Caught here rather than at removal: the corpse lingers, and
         // whatever it drops belongs where it fell, not where it stopped.
@@ -588,7 +589,7 @@ void EntityManager::update(float deltaTime, const World& world,
     setWolvesOnHostiles(deltaTime);
     courtVillagers(world, deltaTime);
     pairOffLovers(world);
-    routeChasers(world, playerPosition);
+    if (!m_playerHidden) routeChasers(world, playerPosition);
 
     m_spawnTimer -= deltaTime;
     if (m_spawnTimer <= 0.0f)

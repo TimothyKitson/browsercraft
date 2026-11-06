@@ -74,7 +74,7 @@ Player::Player(glm::vec3 feetPosition)
 
 void Player::addExhaustion(float amount)
 {
-    if (creative() || amount <= 0.0f) return;
+    if (exempt() || amount <= 0.0f) return;
     m_exhaustion += amount;
 }
 
@@ -89,7 +89,7 @@ bool Player::eat(int hungerPoints, float saturationPoints)
 
 void Player::updateVitals(float deltaTime)
 {
-    if (creative())
+    if (exempt())
     {
         hunger = MAX_HUNGER;
         saturation = 5.0f;
@@ -122,7 +122,7 @@ void Player::updateVitals(float deltaTime)
 
 void Player::regenerate(float deltaTime)
 {
-    const bool wellFed = creative() || hunger >= REGEN_HUNGER;
+    const bool wellFed = exempt() || hunger >= REGEN_HUNGER;
     if (health > 0 && health < MAX_HEALTH && damageFlash <= 0.0f && wellFed)
     {
         m_regenTimer += deltaTime;
@@ -261,7 +261,7 @@ bool Player::stepUp(const World& world, const glm::vec3& blocked)
 
 void Player::applyFallDamage(const World& world, float landingY)
 {
-    if (creative() || flying) return;
+    if (exempt() || flying) return;
 
     const float fallDistance = m_fallStartY - landingY;
     if (fallDistance <= SAFE_FALL_DISTANCE) return;
@@ -372,13 +372,13 @@ bool Player::isInFire(const World& world) const
 
 void Player::ignite(float seconds)
 {
-    if (creative() || health <= 0 || Effects::fireImmune(effects)) return;
+    if (exempt() || health <= 0 || Effects::fireImmune(effects)) return;
     m_fireSeconds = std::max(m_fireSeconds, seconds);
 }
 
 bool Player::burn(float deltaTime, bool inLava)
 {
-    if (creative() || health <= 0 || Effects::fireImmune(effects))
+    if (exempt() || health <= 0 || Effects::fireImmune(effects))
     {
         m_burnTimer = 0.0f;
         m_fireSeconds = 0.0f;
@@ -427,7 +427,7 @@ bool Player::burn(float deltaTime, bool inLava)
 
 bool Player::damage(int amount)
 {
-    if (creative() || amount <= 0 || m_hurtCooldown > 0.0f) return false;
+    if (exempt() || amount <= 0 || m_hurtCooldown > 0.0f) return false;
 
     amount = Armour::reduce(amount, armourPoints);
 
@@ -480,7 +480,7 @@ bool Player::updateEffects(float deltaTime)
     const int before = health;
 
     if (tick.healPulses > 0) heal(tick.healPulses);
-    if (tick.poisonPulses > 0 && !creative())
+    if (tick.poisonPulses > 0 && !exempt())
         health = std::max(1, health - tick.poisonPulses);
 
     return health != before;
@@ -488,7 +488,7 @@ bool Player::updateEffects(float deltaTime)
 
 bool Player::breathe(float deltaTime, bool headUnderwater)
 {
-    if (creative() || health <= 0)
+    if (exempt() || health <= 0)
     {
         air = MAX_AIR_SECONDS;
         m_drownTimer = 0.0f;
@@ -545,6 +545,7 @@ void Player::respawn(glm::vec3 feetPosition)
 void Player::update(float deltaTime, const World& world, const Controls& controls)
 {
     m_jumped = false;
+    if (spectator()) flying = true;
     if (damageFlash > 0.0f) damageFlash = std::max(0.0f, damageFlash - deltaTime);
     if (m_hurtCooldown > 0.0f) m_hurtCooldown = std::max(0.0f, m_hurtCooldown - deltaTime);
 
@@ -554,7 +555,7 @@ void Player::update(float deltaTime, const World& world, const Controls& control
     const bool inWater = isInWater(world);
     const bool climbing = !flying && !inWater && onLadder(world);
     sprinting = controls.sprint && !sneaking && glm::length(controls.wishDirection) > 0.1f &&
-                (creative() || hunger > SPRINT_HUNGER);
+                (exempt() || hunger > SPRINT_HUNGER);
 
     // Wings. The rules and the flying are both Glide's, so a descent
     // can be flown in a test without a world to fly it over.
@@ -679,9 +680,14 @@ void Player::update(float deltaTime, const World& world, const Controls& control
     // Resolve one axis at a time so sliding along a wall only cancels the
     // component that is actually blocked.
     const bool ledgeGuard = sneaking && !flying;
-    moveAxis(world, velocity.x * deltaTime, 0, ledgeGuard);
-    moveAxis(world, velocity.y * deltaTime, 1, false);
-    moveAxis(world, velocity.z * deltaTime, 2, ledgeGuard);
+    if (spectator())
+        position += velocity * deltaTime;
+    else
+    {
+        moveAxis(world, velocity.x * deltaTime, 0, ledgeGuard);
+        moveAxis(world, velocity.y * deltaTime, 1, false);
+        moveAxis(world, velocity.z * deltaTime, 2, ledgeGuard);
+    }
 
     if (!onGround && !flying && !inWater && !m_falling && velocity.y < 0.0f)
     {
@@ -690,7 +696,7 @@ void Player::update(float deltaTime, const World& world, const Controls& control
     }
 
     // Falling out of the world shouldn't trap you forever.
-    if (position.y < -8.0f && !creative())
+    if (position.y < -8.0f && !exempt())
         damage(2);
 
     if (onGround && !flying)

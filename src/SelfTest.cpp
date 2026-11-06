@@ -11752,6 +11752,27 @@ namespace
               "and it is its own light, so the ring can be seen from the island");
     }
 
+    void testGameModes()
+    {
+        section("adventure and spectator");
+
+        check(Chat::parse("/gamemode adventure", true).mode == static_cast<int>(GameMode::Adventure),
+              "/gamemode adventure names adventure");
+        check(Chat::parse("/gamemode spectator", true).mode == static_cast<int>(GameMode::Spectator),
+              "/gamemode spectator names spectator");
+        check(!modeCanBuild(GameMode::Adventure), "an adventurer cannot build or break");
+        check(!modeCanBuild(GameMode::Spectator), "nor can a spectator");
+        check(modeCanBuild(GameMode::Survival) && modeCanBuild(GameMode::Creative), "survival and creative can");
+        check(modeTakesDamage(GameMode::Adventure), "an adventurer gets hurt");
+        check(!modeTakesDamage(GameMode::Spectator), "a spectator does not");
+
+        Player ghost(glm::vec3(0.0f, 70.0f, 0.0f));
+        ghost.mode = GameMode::Spectator;
+        ghost.health = Player::MAX_HEALTH;
+        check(!ghost.damage(5), "a blow passes through a spectator");
+        check(ghost.health == Player::MAX_HEALTH, "and takes nothing off");
+    }
+
     void testAttackCooldown()
     {
         section("a swing has to recharge, and a weapon sets how fast");
@@ -12451,6 +12472,7 @@ int runSelfTest()
     testTheHand();
     testArmourSlotsHoldArmour();
     testAttackCooldown();
+    testGameModes();
     testTheTablesTake121sPrices();
 
     std::printf("\n%d checks, %d failed\n", g_checks, g_failures);

@@ -104,7 +104,7 @@ Chat::Command Chat::parse(const std::string& line, bool cheats)
     if (name == "gamemode" || name == "gm")
     {
         if (!cheats) return deny(name);
-        if (words.size() < 2) return fail("/gamemode survival|creative|hardcore");
+        if (words.size() < 2) return fail("/gamemode survival|creative|adventure|spectator|hardcore");
 
         const std::string wanted = lower(words[1]);
         if (wanted == "survival" || wanted == "s" || wanted == "0")
@@ -113,6 +113,10 @@ Chat::Command Chat::parse(const std::string& line, bool cheats)
             out.mode = static_cast<int>(GameMode::Creative);
         else if (wanted == "hardcore" || wanted == "h")
             out.mode = static_cast<int>(GameMode::Hardcore);
+        else if (wanted == "adventure" || wanted == "a" || wanted == "2")
+            out.mode = static_cast<int>(GameMode::Adventure);
+        else if (wanted == "spectator" || wanted == "sp" || wanted == "3")
+            out.mode = static_cast<int>(GameMode::Spectator);
         else
             return fail("No game mode called " + words[1] + ".");
 

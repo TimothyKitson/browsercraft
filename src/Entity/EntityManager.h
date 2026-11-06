@@ -39,6 +39,7 @@ public:
     // takes another tenth of a second to work out where to go.
     static constexpr int PATHS_PER_UPDATE = 4;
 
+    void setPlayerHidden(bool hidden) { m_playerHidden = hidden; }
     void update(float deltaTime, const World& world, const glm::vec3& playerPosition,
                 float daylight);
 
@@ -158,6 +159,7 @@ public:
     void setDimension(Dimension dimension) { m_dimension = dimension; }
 
 private:
+    bool m_playerHidden = false;
     float random01();
     void trySpawnWave(const World& world, const glm::vec3& playerPosition, float daylight);
     int surfaceBelow(const World& world, int x, int startY, int z) const;

@@ -2020,6 +2020,7 @@ bool Application::frame()
             m_startupScreen == "horseinv" || m_startupScreen == "horseride" ||
             m_startupScreen == "attackhud" || m_startupScreen == "attackready" ||
             m_startupScreen == "attackhotbar" || m_startupScreen == "bossbars" ||
+            m_startupScreen == "gamemode" || m_startupScreen == "spectator" ||
             m_startupScreen == "boat" || m_startupScreen == "rails" ||
             m_startupScreen == "mobs" || m_startupScreen == "golem" ||
             m_startupScreen == "glowmobs" || m_startupScreen == "variants" ||
@@ -2094,6 +2095,8 @@ bool Application::frame()
                                   m_startupScreen != "attackready" &&
                                   m_startupScreen != "attackhotbar" &&
                                   m_startupScreen != "bossbars" &&
+                                  m_startupScreen != "gamemode" &&
+                                  m_startupScreen != "spectator" &&
                                   m_startupScreen != "boat" &&
                                   m_startupScreen != "rails" &&
                                   m_startupScreen != "mobs" &&
@@ -2460,7 +2463,8 @@ bool Application::frame()
             }
 
             if (m_startupScreen == "attackhud" || m_startupScreen == "attackready" ||
-                m_startupScreen == "attackhotbar" || m_startupScreen == "bossbars")
+                m_startupScreen == "attackhotbar" || m_startupScreen == "bossbars" ||
+                m_startupScreen == "gamemode" || m_startupScreen == "spectator")
             {
                 m_camera.setOrientation(0.0f, -25.0f);
                 m_camera.addLook(0.0f, 0.0f, 0.0f);
@@ -2502,6 +2506,24 @@ bool Application::frame()
                 }
                 else
                     m_attackIndicator = 1;
+                if (m_startupScreen == "gamemode")
+                {
+                    m_devAttackStrength = 1.0f;
+                    m_gameModeSwitcher = true;
+                    m_switcherChoice = 2;
+                }
+                if (m_startupScreen == "spectator")
+                {
+                    m_devAttackStrength = 1.0f;
+                    setGameMode(GameMode::Spectator);
+                    for (int ax = 3; ax <= 6; ++ax)
+                        for (int ay = 0; ay <= 3; ++ay)
+                            for (int az = -3; az <= 3; ++az)
+                                m_world->setBlock(px + ax, py + ay, pz + az, Blocks::Stone);
+                    m_player.position = glm::vec3(static_cast<float>(px) + 4.5f, static_cast<float>(py) + 0.2f,
+                                                  static_cast<float>(pz) + 0.5f);
+                    m_camera.setOrientation(0.0f, 0.0f);
+                }
                 if (m_startupScreen == "bossbars")
                 {
                     m_devAttackStrength = 1.0f;
@@ -5028,7 +5050,37 @@ void Application::handleEvents()
     // plain F3 toggle so holding F3 to use a combination does not also
     // turn the screen off underneath you.
     const bool debugHeld = m_keys.down(m_input, Action::Debug);
-    if (debugHeld && m_input.wasKeyPressed(SDL_SCANCODE_F6))
+    static const GameMode SWITCHER_MODES[4] = { GameMode::Creative, GameMode::Survival, GameMode::Adventure,
+                                                GameMode::Spectator };
+    if (m_gameModeSwitcher)
+    {
+        if (m_input.wasKeyPressed(SDL_SCANCODE_F4)) m_switcherChoice = (m_switcherChoice + 1) % 4;
+        if ((!debugHeld || !inGame()) && m_startupScreen != "gamemode")
+        {
+            m_gameModeSwitcher = false;
+            if (inGame() && SWITCHER_MODES[m_switcherChoice] != m_gameMode)
+            {
+                setGameMode(SWITCHER_MODES[m_switcherChoice]);
+                m_chatLog.add(std::string("Set own game mode to ") + gameModeName(m_gameMode) + " Mode");
+            }
+        }
+    }
+    else if (debugHeld && m_input.wasKeyPressed(SDL_SCANCODE_F4) && inGame())
+    {
+        m_showDebug = m_debugBeforeF3;
+        if (!m_allowCheats || modeIsHardcore(m_gameMode))
+            m_chatLog.add("Unable to open game mode switcher; no permission");
+        else
+        {
+            GameMode start = m_hadPreviousGameMode ? m_previousGameMode
+                           : (m_gameMode == GameMode::Creative ? GameMode::Survival : GameMode::Creative);
+            m_switcherChoice = 1;
+            for (int i = 0; i < 4; ++i)
+                if (SWITCHER_MODES[i] == start) m_switcherChoice = i;
+            m_gameModeSwitcher = true;
+        }
+    }
+    else if (debugHeld && m_input.wasKeyPressed(SDL_SCANCODE_F6))
     {
         m_debugDetail = (m_debugDetail == DebugDetail::Minimal) ? DebugDetail::Default
                       : (m_debugDetail == DebugDetail::Default) ? DebugDetail::Full
@@ -5038,6 +5090,7 @@ void Application::handleEvents()
     }
     else if (m_keys.pressed(m_input, Action::Debug))
     {
+        m_debugBeforeF3 = m_showDebug;
         m_showDebug = !m_showDebug;
     }
     if (m_keys.pressed(m_input, Action::Screenshot)) m_pendingScreenshot = true;
@@ -5080,7 +5133,8 @@ void Application::handleEvents()
             m_creativeSearch.pop_back();
     }
 
-    if (!searching && m_keys.pressed(m_input, Action::Inventory) && (playing() || m_inventoryOpen))
+    if (!searching && m_keys.pressed(m_input, Action::Inventory) && (playing() || m_inventoryOpen) &&
+        !m_player.spectator())
     {
         if (m_inventoryOpen)
         {
@@ -5229,7 +5283,7 @@ void Application::updateGameplay(float deltaTime)
     m_camera.addLook(lookX, lookY, MOUSE_SENSITIVITY);
 
     // Flight is a creative-mode privilege.
-    if (m_keys.pressed(m_input, Action::Fly) && m_player.creative())
+    if (m_keys.pressed(m_input, Action::Fly) && m_player.creative() && !m_player.spectator())
         m_player.flying = !m_player.flying;
 
     if (m_keys.pressed(m_input, Action::SwapHands))
@@ -5443,6 +5497,12 @@ void Application::updateMining(float deltaTime)
         m_attackItem = m_inventory.selected().id;
         m_attackTicker = 0.0f;
     }
+    if (m_player.spectator())
+    {
+        m_hasTarget = false;
+        m_breakProgress = 0.0f;
+        return;
+    }
 
     if (Mob* target = m_entities.pick(m_camera.position, m_camera.front, ATTACK_REACH))
     {
@@ -5518,7 +5578,7 @@ void Application::updateMining(float deltaTime)
     }
 
     if (!hit.hit && m_keys.pressed(m_input, Action::Attack)) m_attackTicker = 0.0f;
-    if (!hit.hit || !m_keys.down(m_input, Action::Attack))
+    if (!hit.hit || !m_keys.down(m_input, Action::Attack) || !modeCanBuild(m_player.mode))
     {
         m_hasTarget = false;
         m_breakProgress = 0.0f;
@@ -8504,6 +8564,7 @@ bool Application::useGrindstone(const glm::ivec3& at)
 
 void Application::handlePlacement()
 {
+    if (m_player.spectator()) return;
     if (m_keys.pressed(m_input, Action::PickBlock))
     {
         const RaycastHit hit = m_world->raycast(m_camera.position, m_camera.front, REACH_DISTANCE);
@@ -8692,6 +8753,7 @@ void Application::handlePlacement()
     // potion would cost a pond.
     if (stack.id == Items::GlassBottle)
     {
+        if (!modeCanBuild(m_player.mode)) return;
         const RaycastHit scoop = m_world->raycast(m_camera.position, m_camera.front,
                                                   REACH_DISTANCE, true);
         if (!scoop.hit) return;
@@ -9099,6 +9161,7 @@ void Application::handlePlacement()
     if (stack.id == Items::Sign) fromItem = Blocks::SignNorth;
     if (stack.id == Items::ItemFrame) fromItem = Blocks::FrameNorth;
     if (isItem(stack.id) && fromItem == Blocks::Air) return;
+    if (!modeCanBuild(m_player.mode)) return;
 
     const RaycastHit hit = m_world->raycast(m_camera.position, m_camera.front, REACH_DISTANCE);
     if (!hit.hit) return;
@@ -9544,7 +9607,7 @@ void Application::renderWorldShaded()
     if (playing() && !m_inventoryOpen)
     {
         const RaycastHit hit = m_world->raycast(m_camera.position, m_camera.front, REACH_DISTANCE);
-        if (hit.hit)
+        if (hit.hit && !m_player.spectator())
         {
             if (m_hasTarget && m_breakProgress > 0.0f && m_targetBlock == hit.block)
             {
@@ -9684,7 +9747,7 @@ void Application::renderWorld()
     if (playing() && !m_inventoryOpen)
     {
         const RaycastHit hit = m_world->raycast(m_camera.position, m_camera.front, REACH_DISTANCE);
-        if (hit.hit)
+        if (hit.hit && !m_player.spectator())
         {
             if (m_hasTarget && m_breakProgress > 0.0f && m_targetBlock == hit.block)
             {
@@ -9779,8 +9842,7 @@ void Application::runChatLine(const std::string& line)
         }
 
         case Chat::Kind::GameMode:
-            m_gameMode = static_cast<GameMode>(command.mode);
-            m_player.mode = m_gameMode;
+            setGameMode(static_cast<GameMode>(command.mode));
             break;
 
         case Chat::Kind::TimeSet:
@@ -9859,7 +9921,7 @@ void Application::renderChat()
 
 void Application::renderHand()
 {
-    if (!playing() || m_inventoryOpen || m_hudHidden) return;
+    if (!playing() || m_inventoryOpen || m_hudHidden || m_player.spectator()) return;
     if (m_perspective != Perspective::FirstPerson) return;
 
     const glm::vec3 eye = m_player.eyePosition();
@@ -10636,6 +10698,7 @@ void Application::updateMobs(float deltaTime)
     // twelve-block clearing in two seconds. Frozen, every one of them
     // is still there when the shutter goes.
     const float mobTime = m_freezeMobs ? 0.0f : deltaTime;
+    m_entities.setPlayerHidden(m_player.spectator());
     m_entities.update(mobTime, *m_world, m_player.position, daylightFactor());
     m_entities.noticeStares(*m_world, m_camera.position, m_camera.front);
 
@@ -11542,6 +11605,14 @@ void Application::renderHud()
 
     renderEffectIcons(w);
     renderBossBars(w);
+    if (m_gameModeSwitcher) renderGameModeSwitcher(w, h);
+
+    if (m_player.spectator())
+    {
+        m_ui.textWithShadow(gameModeName(m_gameMode), 4.0f, h - 11.0f, 1.0f, glm::vec4(0.7f, 0.9f, 1.0f, 0.9f));
+        m_ui.setScale(1.0f);
+        return;
+    }
 
     // The hotbar, at Minecraft's own measurements: a hundred and
     // eighty-two across and twenty-two tall, hard against the bottom
@@ -11747,6 +11818,56 @@ void Application::guiWell(float x, float y, float w, float h)
     // sunken. One interface pixel of edge, which is what a slot has:
     // the client draws an 18-pixel box round a 16-pixel item.
     bevel(x, y, w, h, GUI_WELL, GUI_WELL_DARK, GUI_PANEL_LIGHT, 1.0f);
+}
+
+void Application::setGameMode(GameMode mode)
+{
+    if (mode == m_gameMode) return;
+    m_previousGameMode = m_gameMode;
+    m_hadPreviousGameMode = true;
+    m_gameMode = mode;
+    m_player.mode = mode;
+    if (modeIsSpectator(mode))
+    {
+        m_player.flying = true;
+        m_inventoryOpen = false;
+    }
+    else if (!modeIsCreative(mode))
+        m_player.flying = false;
+}
+
+void Application::renderGameModeSwitcher(float w, float h)
+{
+    static const char* NAMES[4] = { "Creative Mode", "Survival Mode", "Adventure Mode", "Spectator Mode" };
+    const float cx = std::floor(w * 0.5f);
+    const float cy = std::floor(h * 0.5f);
+    if (!guiBlit("container/gamemode_switcher", cx - 62.0f, cy - 31.0f - 27.0f, 0.0f, 0.0f, 125.0f, 75.0f,
+                 128.0f, 128.0f))
+        guiPanel(cx - 62.0f, cy - 31.0f - 27.0f, 125.0f, 75.0f);
+
+    const std::string title = NAMES[std::clamp(m_switcherChoice, 0, 3)];
+    m_ui.textWithShadow(title, std::floor(cx - UIRenderer::textWidth(title, 1.0f) * 0.5f), cy - 31.0f - 20.0f,
+                        1.0f, glm::vec4(1.0f));
+
+    const float uiWidth = 4.0f * 31.0f - 5.0f;
+    for (int i = 0; i < 4; ++i)
+    {
+        const float x = cx - std::floor(uiWidth * 0.5f) + static_cast<float>(i) * 31.0f;
+        const float y = cy - 31.0f;
+        if (!guiSprite("sprites/gamemode_switcher/slot", x, y, 26.0f, 26.0f)) guiWell(x, y, 26.0f, 26.0f);
+        if (i == 0) drawItem(x + 5.0f, y + 5.0f, 16.0f, Blocks::Grass, 0, glm::vec4(1.0f));
+        else if (i == 1) drawItem(x + 5.0f, y + 5.0f, 16.0f, Items::IronSword, 0, glm::vec4(1.0f));
+        else if (i == 2) guiSprite("../item/map", x + 5.0f, y + 5.0f, 16.0f, 16.0f);
+        else drawItem(x + 5.0f, y + 5.0f, 16.0f, Items::EyeOfEnder, 0, glm::vec4(1.0f));
+        if (i == m_switcherChoice) guiSprite("sprites/gamemode_switcher/selection", x, y, 26.0f, 26.0f);
+    }
+
+    const std::string key = "[ F4 ]";
+    const std::string next = " Next";
+    const float total = UIRenderer::textWidth(key + next, 1.0f);
+    const float tx = std::floor(cx - total * 0.5f);
+    m_ui.textWithShadow(key, tx, cy + 5.0f, 1.0f, glm::vec4(0.333f, 1.0f, 1.0f, 1.0f));
+    m_ui.textWithShadow(next, tx + UIRenderer::textWidth(key, 1.0f), cy + 5.0f, 1.0f, glm::vec4(1.0f));
 }
 
 bool Application::guiBlit(const char* path, float x, float y, float u, float v, float w, float h,

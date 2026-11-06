@@ -615,6 +615,13 @@ private:
     void renderWorld();
     void renderMenuBackdrop(float deltaTime);
     void renderHud();
+    void renderGameModeSwitcher(float w, float h);
+    void setGameMode(GameMode mode);
+    bool m_gameModeSwitcher = false;
+    int m_switcherChoice = 0;
+    bool m_debugBeforeF3 = false;
+    GameMode m_previousGameMode = GameMode::Survival;
+    bool m_hadPreviousGameMode = false;
     void renderTitleScreen();
     void renderSingleplayerScreen();
     void renderMultiplayerScreen();

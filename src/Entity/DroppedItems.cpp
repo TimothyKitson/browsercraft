@@ -138,7 +138,7 @@ void DroppedItems::update(float deltaTime, const World& world, const Player& pla
         const bool within = reach < COLLECT_RADIUS &&
                             apart.y > -1.0f && apart.y < Player::HEIGHT + 0.5f;
 
-        if (item.age > PICKUP_DELAY && within)
+        if (item.age > PICKUP_DELAY && within && !player.spectator())
         {
             ItemStack picking;
             picking.id = item.block;

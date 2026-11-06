@@ -187,6 +187,8 @@ public:
     bool addExperienceHundredths(int hundredths);
 
     bool creative() const { return modeIsCreative(mode); }
+    bool spectator() const { return modeIsSpectator(mode); }
+    bool exempt() const { return creative() || spectator(); }
 
     // True for the one update in which the player left the ground under
     // their own power. The audio reads this rather than the jump key,
