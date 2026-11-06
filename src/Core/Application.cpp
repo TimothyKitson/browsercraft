@@ -2025,7 +2025,7 @@ bool Application::frame()
             m_startupScreen == "vault" || m_startupScreen == "stronghold" ||
             m_startupScreen == "rock" ||
             m_startupScreen == "faces" || m_startupScreen == "backs" ||
-            m_startupScreen == "flow")
+            m_startupScreen == "flow" || m_startupScreen == "buds")
         {
             // Dev aid: open the inventory with something in it, so the
             // screenshot shows a real grid rather than 36 empty boxes.
@@ -2049,6 +2049,7 @@ bool Application::frame()
                                   m_startupScreen != "faces" &&
                                   m_startupScreen != "backs" &&
                                   m_startupScreen != "flow" &&
+                                  m_startupScreen != "buds" &&
                                   m_startupScreen != "enchantblock" &&
                                   m_startupScreen != "villager" &&
                                   m_startupScreen != "endportal" &&
@@ -4069,6 +4070,33 @@ bool Application::frame()
                 m_inventory.add(Items::Paper, 6);
                 m_inventory.add(Items::Book, 3);
                 m_inventory.add(Blocks::Bookshelf, 4);
+            }
+
+            if (m_startupScreen == "buds")
+            {
+                m_camera.setOrientation(90.0f, 0.0f);
+                m_showDebug = false;
+                const int bx = static_cast<int>(std::floor(m_player.position.x));
+                const int by = static_cast<int>(std::floor(m_player.position.y));
+                const int bz = static_cast<int>(std::floor(m_player.position.z));
+                for (int dx = -8; dx <= 8; ++dx)
+                    for (int dy = -1; dy <= 8; ++dy)
+                        for (int d = 1; d <= 12; ++d)
+                            m_world->setBlock(bx + dx, by + dy, bz + d,
+                                              dy < 0 || dy == 8 ? Blocks::Stone : Blocks::Air);
+                const int cy = by + 3;
+                const int cz = bz + 6;
+                m_world->setBlock(bx, cy, cz, Blocks::BuddingAmethyst);
+                m_world->setBlock(bx, cy + 1, cz, Blocks::AmethystCluster);
+                m_world->setBlock(bx, cy - 1, cz, Blocks::LargeAmethystBud);
+                m_world->setBlock(bx + 1, cy, cz, Blocks::MediumAmethystBud);
+                m_world->setBlock(bx - 1, cy, cz, Blocks::SmallAmethystBud);
+                m_world->setBlock(bx, cy, cz - 1, Blocks::LargeAmethystBud);
+                for (int y = by + 7; y >= by + 4; --y) m_world->setBlock(bx + 4, y, cz, Blocks::DripstoneDown);
+                for (int y = by; y <= by + 3; ++y) m_world->setBlock(bx + 4, y, cz, Blocks::DripstoneUp);
+                for (int y = by + 7; y >= by + 3; --y) m_world->setBlock(bx - 4, y, cz, Blocks::DripstoneDown);
+                m_world->setBlock(bx - 4, by + 9, cz, Blocks::Water);
+                for (int y = by; y <= by + 1; ++y) m_world->setBlock(bx - 6, y, cz, Blocks::DripstoneUp);
             }
 
             if (m_startupScreen == "flow")
@@ -9863,11 +9891,23 @@ void Application::tickSpriteParticles(float deltaTime)
                     fx.spawn(Kind::Smoke, middle + glm::vec3(0.0f, 0.6f, 0.0f), glm::vec3(0.0f, 0.5f, 0.0f), 0.3f, 1.4f);
                 }
             }
-            else if (block == Blocks::DripstoneDown)
+            else if (block == Blocks::DripstoneDown && m_world->getBlock(x, y - 1, z) != Blocks::DripstoneDown)
             {
-                if (roll < 0.06f)
-                    fx.spawn(isLava(m_world->getBlock(x, y + 2, z)) ? Kind::DripLava : Kind::DripWater,
-                             middle + glm::vec3(0.0f, -0.5f, 0.0f), glm::vec3(0.0f), 0.12f, 1.6f, 9.0f);
+                int root = y;
+                while (root < y + 12 && m_world->getBlock(x, root + 1, z) == Blocks::DripstoneDown) ++root;
+                const BlockId above = m_world->getBlock(x, root + 2, z);
+                const bool fed = isFluid(above);
+                if (roll < (fed ? 0.06f : 0.0012f))
+                {
+                    const bool lava = fed ? isLava(above) : m_dimension == Dimension::Nether;
+                    int floor = y - 1;
+                    while (floor > y - 48 && m_world->getBlock(x, floor, z) == Blocks::Air) --floor;
+                    const BlockId landOn = m_world->getBlock(x, floor, z);
+                    float floorY = static_cast<float>(floor + 1);
+                    if (isFluid(landOn)) floorY = static_cast<float>(floor) + fluidAmount(landOn) / 9.0f;
+                    else if (isCross(landOn)) floorY = static_cast<float>(floor);
+                    fx.drip(lava, glm::vec3(x + 0.5f, y + 0.25f, z + 0.5f), floorY);
+                }
             }
             else if (isTrialSpawnerActive(block))
             {

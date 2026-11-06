@@ -17,7 +17,8 @@ public:
         Lava, Effect, Spell, Sweep, Glitter, Gust, SmallGust, SonicBoom, TrialFlame,
         TrialFlameOminous, Vibration, Shriek, SculkSoul, SculkCharge, SculkChargePop,
         VaultConnection, OminousSpawning, TrialOmen, RaidOmen, Flash, Spark, Glow,
-        Soul, SoulFlame, Cherry, Nautilus, Infested, GoldHeart, Count
+        Soul, SoulFlame, Cherry, Nautilus, Infested, GoldHeart,
+        DripHangWater, DripHangLava, DripLandLava, Count
     };
 
     SpriteParticles();
@@ -29,6 +30,8 @@ public:
                float size, float lifetime, float gravity = 0.0f);
     void burst(Kind kind, const glm::vec3& position, int count, float spread, float speed,
                float size, float lifetime, float gravity = 0.0f);
+
+    void drip(bool lava, const glm::vec3& position, float floorY);
 
     void update(float deltaTime);
     void render(Shader& shader, const World& world, const glm::vec3& cameraRight,
@@ -48,6 +51,7 @@ private:
         float age = 0.0f;
         float lifetime = 1.0f;
         float gravity = 0.0f;
+        float floorY = -1.0e9f;
         int frame = 0;
     };
 

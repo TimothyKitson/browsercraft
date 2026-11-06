@@ -256,6 +256,7 @@ StackId blockDrop(BlockId id)
 
     if (isFurnaceBlock(id)) return furnaceCold(furnaceBase(id));
     if (id == Blocks::BarrelOpen) return Blocks::Barrel;
+    if (isAmethystGrowth(id) && id != Blocks::AmethystCluster) return Blocks::Air;
     if (id == Blocks::NetherWart0 || id == Blocks::NetherWart1) return Items::NetherWart;
     if (isCopperBulb(id)) return Blocks::CopperBulb;
     if (id == Blocks::SculkCatalystBloom) return Blocks::SculkCatalyst;

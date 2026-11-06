@@ -240,6 +240,23 @@ void Farming::grow(World& world, const glm::vec3& around, uint32_t& seed)
             continue;
         }
 
+        if (world.getBlock(x, y, z) == Blocks::BuddingAmethyst)
+        {
+            if (nextRandom(seed) % 5u == 0u)
+            {
+                static const int AWAY[6][3] = { { 0, 1, 0 }, { 0, -1, 0 }, { 1, 0, 0 },
+                                                { -1, 0, 0 }, { 0, 0, 1 }, { 0, 0, -1 } };
+                const int* d = AWAY[nextRandom(seed) % 6u];
+                const int gx = x + d[0], gy = y + d[1], gz = z + d[2];
+                const BlockId there = world.getBlock(gx, gy, gz);
+                if (there == Blocks::Air || there == Blocks::Water)
+                    world.setBlock(gx, gy, gz, Blocks::SmallAmethystBud);
+                else if (isAmethystGrowth(there) && there != Blocks::AmethystCluster)
+                    world.setBlock(gx, gy, gz, amethystAtStage(amethystStage(there) + 1));
+            }
+            continue;
+        }
+
         {
             const BlockId wart = world.getBlock(x, y, z);
             if (wart == Blocks::NetherWart0 || wart == Blocks::NetherWart1)

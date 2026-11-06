@@ -9424,6 +9424,16 @@ namespace
         check(fall.at(0, 1, 0) == Blocks::Stone || fall.at(0, 2, 0) == Blocks::Obsidian,
               "lava meeting water below turns one of them to rock");
 
+        section("amethyst: buds grow in four stages");
+        check(amethystAtStage(0) == Blocks::SmallAmethystBud && amethystAtStage(3) == Blocks::AmethystCluster,
+              "small, medium, large, then a cluster");
+        for (int stage = 0; stage < 4; ++stage)
+            check(amethystStage(amethystAtStage(stage)) == stage, "each stage knows where it is");
+        check(lightEmission(Blocks::SmallAmethystBud) < lightEmission(Blocks::LargeAmethystBud) &&
+              lightEmission(Blocks::LargeAmethystBud) < lightEmission(Blocks::AmethystCluster),
+              "and each glows brighter than the last");
+        check(blockDrop(Blocks::MediumAmethystBud) == Blocks::Air, "a bud broken early gives nothing");
+
         section("fluids: what water washes away");
         check(Fluids::washesAway(Blocks::Torch) || !isCross(Blocks::Torch), "a torch is washed away if it stands like a plant");
         check(!Fluids::washesAway(Blocks::Stone), "stone is not");

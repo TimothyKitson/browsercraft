@@ -443,6 +443,9 @@ namespace
         { "Lava", LavaFlow, Lava, LavaFlow, false, false, RenderType::Liquid, 15, -1.0f },
         { "Lava", LavaFlow, Lava, LavaFlow, false, false, RenderType::Liquid, 15, -1.0f },
         { "Lava", LavaFlow, Lava, LavaFlow, false, false, RenderType::Liquid, 15, -1.0f },
+        { "Small Amethyst Bud", SmallBudTile, SmallBudTile, SmallBudTile, false, false, RenderType::Cross, 1, 1.5f },
+        { "Medium Amethyst Bud", MediumBudTile, MediumBudTile, MediumBudTile, false, false, RenderType::Cross, 2, 1.5f },
+        { "Large Amethyst Bud", LargeBudTile, LargeBudTile, LargeBudTile, false, false, RenderType::Cross, 4, 1.5f },
     };
 }
 
@@ -455,6 +458,7 @@ const BlockInfo& blockInfo(BlockId id)
 bool isObtainable(BlockId id)
 {
     if (isFluid(id) && !isFluidSource(id)) return false;
+    if (isAmethystGrowth(id) && id != Blocks::AmethystCluster) return false;
     if (furnaceFacing(id) != 0) return false;
     switch (id)
     {
@@ -673,7 +677,7 @@ Material blockMaterial(BlockId id)
     if (id == Blocks::EndCrystal) return Material::Plant;
 
     // A cluster is knocked off rather than mined, like a plant.
-    if (id == Blocks::AmethystCluster) return Material::Plant;
+    if (isAmethystGrowth(id)) return Material::Plant;
 
     // The workstations, whichever state they are in. A composter and a
     // lectern are boxes of planks; the rest are stone and iron.

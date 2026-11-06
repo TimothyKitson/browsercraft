@@ -15,7 +15,7 @@ Everything in the 1.21 textures zip the game doesn't use yet, turned into work. 
    - I. Use water_flow and lava_flow on moving fluid and on the sides of fluid.
    - II. Use water_overlay where water meets glass, leaves and other see-through blocks.
    - III. Make the flow scroll the way water flows downhill, at Minecraft's speed.
-3. Pointed dripstone and amethyst growth
+3. Pointed dripstone and amethyst growth (done)
    - I. Build dripstone columns from base, frustum, middle, tip and tip-merge pieces, by where each piece sits in the column.
    - II. Grow small, medium and large amethyst buds on budding amethyst until they become a cluster.
    - III. Run drips through all three stages: hang, fall, land.

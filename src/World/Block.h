@@ -522,6 +522,7 @@ namespace Blocks
         TrialSpawnerSpentOminous,
         WaterFlow1, WaterFlow2, WaterFlow3, WaterFlow4, WaterFlow5, WaterFlow6, WaterFlow7, WaterFalling,
         LavaFlow1, LavaFlow2, LavaFlow3, LavaFlow4, LavaFlow5, LavaFlow6, LavaFlow7, LavaFalling,
+        SmallAmethystBud, MediumAmethystBud, LargeAmethystBud,
 
         Count
     };
@@ -841,6 +842,28 @@ inline bool isCopper(BlockId id)
     return id >= Blocks::CopperBlock && id <= Blocks::OxidizedCopper;
 }
 
+inline bool isAmethystGrowth(BlockId id)
+{
+    return id == Blocks::SmallAmethystBud || id == Blocks::MediumAmethystBud ||
+           id == Blocks::LargeAmethystBud || id == Blocks::AmethystCluster;
+}
+inline int amethystStage(BlockId id)
+{
+    switch (id)
+    {
+        case Blocks::SmallAmethystBud: return 0;
+        case Blocks::MediumAmethystBud: return 1;
+        case Blocks::LargeAmethystBud: return 2;
+        case Blocks::AmethystCluster: return 3;
+        default: return -1;
+    }
+}
+inline BlockId amethystAtStage(int stage)
+{
+    static const BlockId STAGES[4] = { Blocks::SmallAmethystBud, Blocks::MediumAmethystBud,
+                                       Blocks::LargeAmethystBud, Blocks::AmethystCluster };
+    return STAGES[stage < 0 ? 0 : stage > 3 ? 3 : stage];
+}
 inline bool isPointedDripstone(BlockId id)
 {
     return id == Blocks::DripstoneDown || id == Blocks::DripstoneUp;

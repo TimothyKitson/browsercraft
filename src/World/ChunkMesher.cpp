@@ -711,10 +711,53 @@ namespace
         }
     }
 
+    int dripstoneTile(const MeshSnapshot& snap, int x, int y, int z, BlockId id)
+    {
+        const bool down = id == Blocks::DripstoneDown;
+        const int step = down ? -1 : 1;
+        const BlockId opposite = down ? Blocks::DripstoneUp : Blocks::DripstoneDown;
+        const BlockId next = snap.block(x, y + step, z);
+        if (next == opposite) return down ? Tiles::DripstoneDownTipMerge : Tiles::DripstoneUpTipMerge;
+        if (next != id) return down ? Tiles::DripstoneSpike : Tiles::DripstoneUpTip;
+        if (snap.block(x, y + 2 * step, z) != id) return down ? Tiles::DripstoneDownFrustum : Tiles::DripstoneUpFrustum;
+        if (snap.block(x, y - step, z) == id) return down ? Tiles::DripstoneDownMiddle : Tiles::DripstoneUpMiddle;
+        return down ? Tiles::DripstoneDownBase : Tiles::DripstoneUpBase;
+    }
+
+    int growthFacing(const MeshSnapshot& snap, int x, int y, int z)
+    {
+        static const int SUPPORT[6][3] = { { 0, -1, 0 }, { 0, 1, 0 }, { -1, 0, 0 },
+                                           { 1, 0, 0 }, { 0, 0, -1 }, { 0, 0, 1 } };
+        for (int pass = 0; pass < 2; ++pass)
+            for (int i = 0; i < 6; ++i)
+            {
+                const BlockId b = snap.block(x + SUPPORT[i][0], y + SUPPORT[i][1], z + SUPPORT[i][2]);
+                if (pass == 0 ? b == Blocks::BuddingAmethyst : isOpaque(b)) return i;
+            }
+        return 0;
+    }
+
+    glm::vec3 turnCross(int facing, float a, float h, float b)
+    {
+        switch (facing)
+        {
+            case 1: return { a, 1.0f - h, b };
+            case 2: return { h, a, b };
+            case 3: return { 1.0f - h, a, b };
+            case 4: return { a, b, h };
+            case 5: return { a, b, 1.0f - h };
+            default: return { a, h, b };
+        }
+    }
+
     void emitCross(const MeshSnapshot& snap, int lx, int y, int lz,
                    BlockId id, std::vector<float>& out)
     {
-        const TileUV uv = tileUV(blockInfo(id).tileSide);
+        int tile = blockInfo(id).tileSide;
+        int facing = 0;
+        if (isPointedDripstone(id)) tile = dripstoneTile(snap, lx, y, lz, id);
+        if (isAmethystGrowth(id)) facing = growthFacing(snap, lx, y, lz);
+        const TileUV uv = tileUV(tile);
         const float sky = static_cast<float>(snap.skyLight(lx, y, lz)) / 15.0f;
         const float block = std::max(static_cast<float>(snap.blockLight(lx, y, lz)),
                                      static_cast<float>(lightEmission(id))) / 15.0f;
@@ -741,13 +784,19 @@ namespace
                 const float bx = side == 0 ? q.bx : q.ax;
                 const float bz = side == 0 ? q.bz : q.az;
 
-                pushVertex(out, x0 + ax, y0, z0 + az, uv.u0, uv.vBottom, shade, sky, block, tagOf(CROSS_FACE, id));
-                pushVertex(out, x0 + bx, y0, z0 + bz, uv.u1, uv.vBottom, shade, sky, block, tagOf(CROSS_FACE, id));
-                pushVertex(out, x0 + bx, y0 + 1.0f, z0 + bz, uv.u1, uv.vTop, shade, sky, block, tagOf(CROSS_FACE, id, true));
+                const glm::vec3 base(x0, y0, z0);
+                const glm::vec3 p0 = base + turnCross(facing, ax, 0.0f, az);
+                const glm::vec3 p1 = base + turnCross(facing, bx, 0.0f, bz);
+                const glm::vec3 p2 = base + turnCross(facing, bx, 1.0f, bz);
+                const glm::vec3 p3 = base + turnCross(facing, ax, 1.0f, az);
 
-                pushVertex(out, x0 + ax, y0, z0 + az, uv.u0, uv.vBottom, shade, sky, block, tagOf(CROSS_FACE, id));
-                pushVertex(out, x0 + bx, y0 + 1.0f, z0 + bz, uv.u1, uv.vTop, shade, sky, block, tagOf(CROSS_FACE, id, true));
-                pushVertex(out, x0 + ax, y0 + 1.0f, z0 + az, uv.u0, uv.vTop, shade, sky, block, tagOf(CROSS_FACE, id, true));
+                pushVertex(out, p0.x, p0.y, p0.z, uv.u0, uv.vBottom, shade, sky, block, tagOf(CROSS_FACE, id));
+                pushVertex(out, p1.x, p1.y, p1.z, uv.u1, uv.vBottom, shade, sky, block, tagOf(CROSS_FACE, id));
+                pushVertex(out, p2.x, p2.y, p2.z, uv.u1, uv.vTop, shade, sky, block, tagOf(CROSS_FACE, id, true));
+
+                pushVertex(out, p0.x, p0.y, p0.z, uv.u0, uv.vBottom, shade, sky, block, tagOf(CROSS_FACE, id));
+                pushVertex(out, p2.x, p2.y, p2.z, uv.u1, uv.vTop, shade, sky, block, tagOf(CROSS_FACE, id, true));
+                pushVertex(out, p3.x, p3.y, p3.z, uv.u0, uv.vTop, shade, sky, block, tagOf(CROSS_FACE, id, true));
             }
         }
     }

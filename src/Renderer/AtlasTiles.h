@@ -290,6 +290,9 @@ namespace Tiles
         CopperBulbPoweredTile, CopperBulbLitPoweredTile,
         DispenserSide,
         WaterFlow, LavaFlow, WaterOverlay,
+        SmallBudTile, MediumBudTile, LargeBudTile,
+        DripstoneDownBase, DripstoneDownFrustum, DripstoneDownMiddle, DripstoneDownTipMerge,
+        DripstoneUpTip, DripstoneUpBase, DripstoneUpFrustum, DripstoneUpMiddle, DripstoneUpTipMerge,
 
         TileCount
     };

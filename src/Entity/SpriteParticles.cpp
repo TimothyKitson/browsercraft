@@ -77,6 +77,9 @@ namespace
         { "nautilus", 0, { 1.0f, 1.0f, 1.0f }, false, false, true },
         { "infested", 0, { 1.0f, 1.0f, 1.0f }, false, false, false },
         { "goldheart", 3, { 1.0f, 1.0f, 1.0f }, true, false, false },
+        { "drip_hang", 0, { 0.25f, 0.35f, 1.0f }, false, false, false },
+        { "drip_hang", 0, { 1.0f, 0.4f, 0.05f }, false, false, true },
+        { "drip_land", 0, { 1.0f, 0.4f, 0.05f }, false, false, true },
     };
     static_assert(sizeof(KINDS) / sizeof(KINDS[0]) == static_cast<size_t>(SpriteParticles::Kind::Count),
                   "one definition per kind");
@@ -197,14 +200,46 @@ void SpriteParticles::burst(Kind kind, const glm::vec3& position, int count, flo
     }
 }
 
+void SpriteParticles::drip(bool lava, const glm::vec3& position, float floorY)
+{
+    Particle p;
+    p.kind = lava ? Kind::DripHangLava : Kind::DripHangWater;
+    p.position = position;
+    p.size = 0.14f;
+    p.lifetime = lava ? 2.0f : 1.0f;
+    p.floorY = floorY;
+    m_particles.push_back(p);
+}
+
 void SpriteParticles::update(float deltaTime)
 {
     for (Particle& p : m_particles)
     {
         p.age += deltaTime;
+        if (p.kind == Kind::DripHangWater || p.kind == Kind::DripHangLava)
+        {
+            if (p.age >= p.lifetime)
+            {
+                p.kind = p.kind == Kind::DripHangLava ? Kind::DripLava : Kind::DripWater;
+                p.age = 0.0f;
+                p.lifetime = 6.0f;
+                p.gravity = 9.0f;
+            }
+            continue;
+        }
         p.velocity.y -= p.gravity * deltaTime;
         p.velocity *= std::pow(0.4f, deltaTime);
         p.position += p.velocity * deltaTime;
+        if ((p.kind == Kind::DripWater || p.kind == Kind::DripLava) && p.position.y <= p.floorY)
+        {
+            p.kind = p.kind == Kind::DripLava ? Kind::DripLandLava : Kind::Splash;
+            p.position.y = p.floorY + 0.03f;
+            p.velocity = glm::vec3(0.0f);
+            p.gravity = 0.0f;
+            p.age = 0.0f;
+            p.lifetime = p.kind == Kind::Splash ? 0.3f : 0.5f;
+            p.frame = static_cast<int>(random() * 4.0f);
+        }
     }
     m_particles.erase(std::remove_if(m_particles.begin(), m_particles.end(),
                                      [](const Particle& p) { return p.age >= p.lifetime; }),

@@ -770,6 +770,7 @@ namespace
             else if (furnaceFacing(id) != 0)      why = "another facing of a crafted block";
             else if (id == Blocks::BarrelOpen)    why = "a barrel somebody has open";
             else if (isFluid(id))                 why = "water or lava running from a source";
+            else if (isAmethystGrowth(id))        why = "grows on budding amethyst";
             else if (id == Blocks::NetherWart0 || id == Blocks::NetherWart1)
                                                   why = "nether wart still growing";
             else if (id == Blocks::AnvilChipped || id == Blocks::AnvilDamaged)

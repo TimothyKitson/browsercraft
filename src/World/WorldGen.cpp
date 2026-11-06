@@ -4154,7 +4154,8 @@ void WorldGen::buildGeodes(Chunk& chunk) const
                                                    m_seed + 5602)) > 0.22f)
                             continue;
 
-                        put(chunk, midX + ox, midY + oy, midZ + oz, Blocks::AmethystCluster);
+                        const float stage = hashToFloat(hashCoords(midX + ox, midY + oy, midZ + oz, m_seed + 5603));
+                        put(chunk, midX + ox, midY + oy, midZ + oz, amethystAtStage(static_cast<int>(stage * 4.0f)));
                     }
         }
 }
