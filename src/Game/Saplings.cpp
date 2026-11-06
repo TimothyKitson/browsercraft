@@ -200,10 +200,62 @@ bool Saplings::canPlantOn(BlockId ground)
 {
     return ground == Blocks::Grass || ground == Blocks::Dirt || ground == Blocks::SnowGrass ||
            ground == Blocks::Farmland || ground == Blocks::Mud || ground == Blocks::MuddyMangroveRoots ||
-           ground == Blocks::Clay;
+           ground == Blocks::Clay || isNylium(ground) || ground == Blocks::SoulSand;
 }
 
 bool Saplings::needsSquare(int wood) { return wood == 5; }
+
+bool Saplings::hugeFungus(Cells& cells, const glm::ivec3& at, bool warped, uint32_t seed)
+{
+    if (seed == 0) seed = 0x51ED27u;
+    const BlockId stem = warped ? Blocks::WarpedStem : Blocks::CrimsonStem;
+    const BlockId wart = warped ? Blocks::WarpedWartBlock : Blocks::NetherWartBlock;
+    const int height = 4 + static_cast<int>(next(seed) % 9u);
+    for (int dy = 1; dy < height + 2; ++dy)
+        if (!roomy(cells.at(at.x, at.y + dy, at.z)) && !isNetherPlant(cells.at(at.x, at.y + dy, at.z))) return false;
+
+    for (int i = 0; i < height; ++i) cells.set(at.x, at.y + i, at.z, stem);
+    const int top = at.y + height - 1;
+    const int radius = height > 8 ? 3 : 2;
+    const int hat = std::min(height / 2 + 1, 5);
+    auto wartAt = [&](int x, int y, int z) {
+        const BlockId here = cells.at(x, y, z);
+        if (here == Blocks::Air || isNetherPlant(here))
+            cells.set(x, y, z, next(seed) % 14u == 0u ? Blocks::Shroomlight : wart);
+    };
+    for (int dx = -(radius - 1); dx <= radius - 1; ++dx)
+        for (int dz = -(radius - 1); dz <= radius - 1; ++dz) wartAt(at.x + dx, top + 1, at.z + dz);
+    for (int layer = 0; layer < hat; ++layer)
+    {
+        const int y = top - layer;
+        for (int dx = -radius; dx <= radius; ++dx)
+            for (int dz = -radius; dz <= radius; ++dz)
+            {
+                const bool edge = std::max(std::abs(dx), std::abs(dz)) == radius;
+                const bool corner = std::abs(dx) == radius && std::abs(dz) == radius;
+                if (corner && next(seed) % 2u == 0u) continue;
+                if (edge || (layer == 0 && next(seed) % 3u == 0u)) wartAt(at.x + dx, y, at.z + dz);
+            }
+    }
+    if (!warped)
+    {
+        const int bottom = top - hat;
+        for (int dx = -radius; dx <= radius; ++dx)
+            for (int dz = -radius; dz <= radius; ++dz)
+            {
+                if (cells.at(at.x + dx, bottom + 1, at.z + dz) != wart) continue;
+                if (next(seed) % 4u != 0u) continue;
+                const int length = 1 + static_cast<int>(next(seed) % 3u);
+                for (int k = 0; k < length; ++k)
+                {
+                    if (cells.at(at.x + dx, bottom - k, at.z + dz) != Blocks::Air) break;
+                    cells.set(at.x + dx, bottom - k, at.z + dz,
+                              k == length - 1 ? Blocks::WeepingVines : Blocks::WeepingVinesPlant);
+                }
+            }
+    }
+    return true;
+}
 
 bool Saplings::findSquare(const Cells& cells, const glm::ivec3& at, glm::ivec3& corner)
 {
@@ -230,6 +282,15 @@ bool Saplings::grow(Cells& cells, const glm::ivec3& at, uint32_t seed)
     if (!isSapling(here)) return false;
     if (!canPlantOn(cells.at(at.x, at.y - 1, at.z))) return false;
     const int wood = saplingWood(here);
+    if (isFungus(here))
+    {
+        const bool warped = here == Blocks::WarpedFungus;
+        if (cells.at(at.x, at.y - 1, at.z) != (warped ? Blocks::WarpedNylium : Blocks::CrimsonNylium)) return false;
+        cells.set(at.x, at.y, at.z, Blocks::Air);
+        if (hugeFungus(cells, at, warped, seed)) return true;
+        cells.set(at.x, at.y, at.z, here);
+        return false;
+    }
     if (seed == 0) seed = 0x9E3779B9u;
 
     glm::ivec3 corner;

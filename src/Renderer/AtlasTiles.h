@@ -303,6 +303,7 @@ namespace Tiles
         MangroveTrapdoorTile, MudBricksTile, PackedMudTile,
         BambooBlockSide, BambooBlockTop, StrippedBambooBlockSide, StrippedBambooBlockTop, BambooPlanksTile,
         BambooMosaicTile, BambooDoorLower, BambooDoorUpper, BambooTrapdoorTile,
+        CrimsonStemSide, CrimsonStemTop, StrippedCrimsonStemSide, StrippedCrimsonStemTop, CrimsonPlanksTile, CrimsonNyliumTop, CrimsonNyliumSide, CrimsonFungusTile, CrimsonRootsTile, CrimsonDoorLower, CrimsonDoorUpper, CrimsonTrapdoorTile, WarpedStemSide, WarpedStemTop, StrippedWarpedStemSide, StrippedWarpedStemTop, WarpedPlanksTile, WarpedNyliumTop, WarpedNyliumSide, WarpedFungusTile, WarpedRootsTile, WarpedDoorLower, WarpedDoorUpper, WarpedTrapdoorTile, NetherSproutsTile, NetherWartBlockTile, WarpedWartBlockTile, ShroomlightTile, WeepingVinesTile, WeepingVinesPlantTile, TwistingVinesTile, TwistingVinesPlantTile,
 
         TileCount
     };
@@ -491,8 +492,9 @@ namespace Tiles
         IconCherryDoor, ItemCherrySign,
         IconMangroveDoor, ItemMangroveSign, IconMangrovePropagule,
         IconBambooDoor, ItemBambooSign,
+        IconCrimsonDoor, ItemCrimsonSign, IconWarpedDoor, ItemWarpedSign,
 
-        ItemTileEnd = ItemBambooSign + 1
+        ItemTileEnd = ItemWarpedSign + 1
     };
 
     // Ten progressively more broken overlay tiles for the mining animation.

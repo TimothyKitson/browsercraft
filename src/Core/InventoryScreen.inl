@@ -34,6 +34,10 @@ namespace
         Blocks::PackedMud, Blocks::MudBricks,
         Blocks::BambooBlock, Blocks::StrippedBambooBlock, Blocks::BambooPlanks, Blocks::BambooMosaic,
         Blocks::BambooSlab, Blocks::BambooDoor, Blocks::BambooTrapdoor,
+        Blocks::CrimsonStem, Blocks::StrippedCrimsonStem, Blocks::CrimsonPlanks, Blocks::CrimsonDoor,
+        Blocks::CrimsonTrapdoor, Blocks::WarpedStem, Blocks::StrippedWarpedStem, Blocks::WarpedPlanks,
+        Blocks::WarpedDoor, Blocks::WarpedTrapdoor, Blocks::CrimsonNylium, Blocks::WarpedNylium,
+        Blocks::NetherWartBlock, Blocks::WarpedWartBlock, Blocks::Shroomlight,
     };
 
     const StackId TAB_NATURE[] = {
@@ -46,6 +50,8 @@ namespace
         Blocks::JungleSapling, Blocks::AcaciaSapling, Blocks::DarkOakSapling,
         Blocks::CherryLeaves, Blocks::CherrySapling, Blocks::PinkPetals1,
         Blocks::MangroveLeaves, Blocks::MangrovePropagule,
+        Blocks::CrimsonFungus, Blocks::WarpedFungus, Blocks::CrimsonRoots, Blocks::WarpedRoots,
+        Blocks::NetherSprouts, Blocks::WeepingVines, Blocks::TwistingVines,
     };
 
     const StackId TAB_ORES[] = {
@@ -77,7 +83,7 @@ namespace
         Items::CookedMutton,
         Items::Paper, Items::Book, Items::Emerald, Items::EnderPearl, Items::EyeOfEnder,
         Items::Sign, Items::SpruceSign, Items::BirchSign, Items::JungleSign, Items::AcaciaSign, Items::DarkOakSign,
-        Items::CherrySign, Items::MangroveSign, Items::BambooSign,
+        Items::CherrySign, Items::MangroveSign, Items::BambooSign, Items::CrimsonSign, Items::WarpedSign,
     };
 
     // The twenty-five tools, their materials, and the two benches you

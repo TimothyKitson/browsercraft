@@ -555,6 +555,16 @@ namespace Blocks
         BambooDoor, BambooDoorLast = BambooDoor + 15,
         BambooTrapdoor, BambooTrapdoorLast = BambooTrapdoor + 15,
         BambooSign, BambooSignLast = BambooSign + 3,
+        CrimsonStem, StrippedCrimsonStem, CrimsonPlanks, CrimsonNylium, CrimsonFungus, CrimsonRoots,
+        WarpedStem, StrippedWarpedStem, WarpedPlanks, WarpedNylium, WarpedFungus, WarpedRoots,
+        NetherSprouts, NetherWartBlock, WarpedWartBlock, Shroomlight,
+        WeepingVines, WeepingVinesPlant, TwistingVines, TwistingVinesPlant,
+        CrimsonDoor, CrimsonDoorLast = CrimsonDoor + 15,
+        WarpedDoor, WarpedDoorLast = WarpedDoor + 15,
+        CrimsonTrapdoor, CrimsonTrapdoorLast = CrimsonTrapdoor + 15,
+        WarpedTrapdoor, WarpedTrapdoorLast = WarpedTrapdoor + 15,
+        CrimsonSign, CrimsonSignLast = CrimsonSign + 3,
+        WarpedSign, WarpedSignLast = WarpedSign + 3,
 
         Count
     };
@@ -649,7 +659,7 @@ inline bool isLadder(BlockId id)
 
 // A sign, and which way it faces. The facings are in the ladder's
 // order, so the same arithmetic places both.
-constexpr int WOOD_COUNT = 9;
+constexpr int WOOD_COUNT = 11;
 
 struct WoodSet
 {
@@ -677,6 +687,10 @@ inline const WoodSet& woodSet(int wood)
           Blocks::MangrovePropagule, Blocks::MangroveDoor, Blocks::MangroveTrapdoor, Blocks::MangroveSign },
         { Blocks::BambooBlock, Blocks::StrippedBambooBlock, Blocks::BambooPlanks, Blocks::Air,
           Blocks::Air, Blocks::BambooDoor, Blocks::BambooTrapdoor, Blocks::BambooSign },
+        { Blocks::CrimsonStem, Blocks::StrippedCrimsonStem, Blocks::CrimsonPlanks, Blocks::Air,
+          Blocks::CrimsonFungus, Blocks::CrimsonDoor, Blocks::CrimsonTrapdoor, Blocks::CrimsonSign },
+        { Blocks::WarpedStem, Blocks::StrippedWarpedStem, Blocks::WarpedPlanks, Blocks::Air,
+          Blocks::WarpedFungus, Blocks::WarpedDoor, Blocks::WarpedTrapdoor, Blocks::WarpedSign },
     };
     return SETS[wood < 0 || wood >= WOOD_COUNT ? 0 : wood];
 }
@@ -717,7 +731,8 @@ inline BlockId frameFacingAs(int facing)
 // is the only reason to build scaffolding.
 inline bool isClimbable(BlockId id)
 {
-    return isLadder(id) || id == Blocks::Scaffolding;
+    return isLadder(id) || id == Blocks::Scaffolding || id == Blocks::WeepingVines ||
+           id == Blocks::WeepingVinesPlant || id == Blocks::TwistingVines || id == Blocks::TwistingVinesPlant;
 }
 inline bool isStairs(BlockId id) { return blockInfo(id).render == RenderType::Stairs; }
 inline bool isFence(BlockId id) { return blockInfo(id).render == RenderType::Fence; }
@@ -1009,7 +1024,8 @@ inline bool isPlanks(BlockId id)
     return id == Blocks::Planks || id == Blocks::SprucePlanks ||
            id == Blocks::DarkOakPlanks || id == Blocks::JunglePlanks ||
            id == Blocks::AcaciaPlanks || id == Blocks::BirchPlanks || id == Blocks::CherryPlanks ||
-           id == Blocks::MangrovePlanks || id == Blocks::BambooPlanks;
+           id == Blocks::MangrovePlanks || id == Blocks::BambooPlanks ||
+           id == Blocks::CrimsonPlanks || id == Blocks::WarpedPlanks;
 }
 
 inline bool isLog(BlockId id)
@@ -1019,6 +1035,8 @@ inline bool isLog(BlockId id)
            id == Blocks::JungleLog || id == Blocks::AcaciaLog || id == Blocks::CherryLog ||
            id == Blocks::MangroveLog || id == Blocks::StrippedMangroveLog ||
            id == Blocks::BambooBlock || id == Blocks::StrippedBambooBlock ||
+           id == Blocks::CrimsonStem || id == Blocks::StrippedCrimsonStem ||
+           id == Blocks::WarpedStem || id == Blocks::StrippedWarpedStem ||
            (id >= Blocks::StrippedOakLog && id <= Blocks::StrippedDarkOakLog) || id == Blocks::StrippedCherryLog;
 }
 
@@ -1028,6 +1046,8 @@ inline BlockId planksFromLog(BlockId log)
     if (log == Blocks::CherryLog || log == Blocks::StrippedCherryLog) return Blocks::CherryPlanks;
     if (log == Blocks::MangroveLog || log == Blocks::StrippedMangroveLog) return Blocks::MangrovePlanks;
     if (log == Blocks::BambooBlock || log == Blocks::StrippedBambooBlock) return Blocks::BambooPlanks;
+    if (log == Blocks::CrimsonStem || log == Blocks::StrippedCrimsonStem) return Blocks::CrimsonPlanks;
+    if (log == Blocks::WarpedStem || log == Blocks::StrippedWarpedStem) return Blocks::WarpedPlanks;
     if (log >= Blocks::StrippedOakLog && log <= Blocks::StrippedDarkOakLog)
     {
         static const BlockId FROM[6] = { Blocks::Planks, Blocks::SprucePlanks, Blocks::BirchPlanks,
@@ -1161,6 +1181,14 @@ inline BlockId strippedOf(BlockId log)
     return Blocks::Air;
 }
 inline bool isPinkPetals(BlockId id) { return id >= Blocks::PinkPetals1 && id <= Blocks::PinkPetals4; }
+inline bool isNylium(BlockId id) { return id == Blocks::CrimsonNylium || id == Blocks::WarpedNylium; }
+inline bool isFungus(BlockId id) { return id == Blocks::CrimsonFungus || id == Blocks::WarpedFungus; }
+inline bool isNetherPlant(BlockId id)
+{
+    return isFungus(id) || id == Blocks::CrimsonRoots || id == Blocks::WarpedRoots || id == Blocks::NetherSprouts ||
+           id == Blocks::WeepingVines || id == Blocks::WeepingVinesPlant || id == Blocks::TwistingVines ||
+           id == Blocks::TwistingVinesPlant;
+}
 
 // How far above its own cell a block stands. A fence is half a block
 // taller than the cell it sits in, which is what stops you stepping

@@ -16,5 +16,6 @@ namespace Saplings
     bool needsSquare(int wood);
     bool findSquare(const Cells& cells, const glm::ivec3& at, glm::ivec3& corner);
     bool grow(Cells& cells, const glm::ivec3& at, uint32_t seed);
+    bool hugeFungus(Cells& cells, const glm::ivec3& at, bool warped, uint32_t seed);
     BlockId leafDrop(BlockId leaves, uint32_t roll);
 }

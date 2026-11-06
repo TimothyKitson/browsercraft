@@ -3607,6 +3607,83 @@ namespace
     void paintBambooTrapdoorTile(Tile& t) { paintTrapdoorIn(t, Color{ 199, 178, 82 }); }
     void paintItemBambooSign(Tile& t) { paintItemSignIn(t, Color{ 199, 178, 82 }); }
 
+    void paintNyliumSideIn(Tile& t, Color top)
+    {
+        paintNetherrack(t);
+        const int n = Tile::N;
+        for (int x = 0; x < n; ++x)
+        {
+            const int depth = 3 + static_cast<int>(hash2(x, 0, 831) * 3.0f);
+            for (int y = 0; y < depth; ++y) t.set(x, y, shade(top, static_cast<int>((hash2(x, y, 832) - 0.5f) * 30.0f)));
+        }
+    }
+    void paintFungusIn(Tile& t, Color cap, Color stem)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        const int n = Tile::N;
+        for (int y = n / 2; y < n; ++y) t.set(n / 2, y, stem);
+        for (int y = n / 4; y < n / 2 + 1; ++y)
+            for (int x = n / 4; x < n - n / 4; ++x)
+                if (y > n / 4 || (x > n / 4 + 1 && x < n - n / 4 - 2)) t.set(x, y, shade(cap, static_cast<int>((hash2(x, y, 833) - 0.5f) * 30.0f)));
+        t.set(n / 2 - 2, n / 2 - 2, Color{ 255, 200, 90 });
+        t.set(n / 2 + 2, n / 2 - 3, Color{ 255, 200, 90 });
+    }
+    void paintRootsTileIn(Tile& t, Color root)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int blade = 0; blade < 6; ++blade)
+        {
+            const int x = 2 + static_cast<int>(hash2(blade, 0, 834) * 12.0f);
+            const int h = 6 + static_cast<int>(hash2(blade, 1, 834) * 8.0f);
+            for (int k = 0; k < h; ++k) t.set(x + (k % 4 == 3 ? 1 : 0), Tile::N - 1 - k, shade(root, -k * 2));
+        }
+    }
+    void paintWartBlockIn(Tile& t, Color wart) { t.fill(wart); t.speckle(30, 835); }
+    void paintVinesIn(Tile& t, Color vine, bool tip)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        const int n = Tile::N;
+        for (int y = 0; y < (tip ? n * 3 / 4 : n); ++y)
+        {
+            t.set(n / 2 + ((y / 3) % 2), y, vine);
+            if (y % 4 == 1) { t.set(n / 2 - 2, y, shade(vine, 20)); t.set(n / 2 + 3, y, shade(vine, 20)); }
+        }
+    }
+    void paintCrimsonStemSide(Tile& t) { paintLogSideIn(t, Color{ 92, 25, 29 }, 840); }
+    void paintCrimsonStemTop(Tile& t) { paintRings(t, Color{ 101, 48, 70 }, Color{ 86, 38, 58 }, Color{ 92, 25, 29 }, 841); }
+    void paintStrippedCrimsonStemSide(Tile& t) { paintLogSideIn(t, Color{ 137, 57, 90 }, 842); }
+    void paintStrippedCrimsonStemTop(Tile& t) { paintRings(t, Color{ 101, 48, 70 }, Color{ 86, 38, 58 }, Color{ 137, 57, 90 }, 843); }
+    void paintCrimsonPlanksTile(Tile& t) { paintPlanksIn(t, Color{ 101, 48, 70 }, 131); }
+    void paintCrimsonNyliumTop(Tile& t) { t.fill(Color{ 130, 31, 31 }); t.speckle(24, 844); }
+    void paintCrimsonNyliumSide(Tile& t) { paintNyliumSideIn(t, Color{ 130, 31, 31 }); }
+    void paintCrimsonFungusTile(Tile& t) { paintFungusIn(t, Color{ 168, 30, 30 }, Color{ 226, 160, 120 }); }
+    void paintCrimsonRootsTile(Tile& t) { paintRootsTileIn(t, Color{ 126, 8, 41 }); }
+    void paintCrimsonDoorLower(Tile& t) { paintWoodDoorHalf(t, false, Color{ 101, 48, 70 }); }
+    void paintCrimsonDoorUpper(Tile& t) { paintWoodDoorHalf(t, true, Color{ 101, 48, 70 }); }
+    void paintCrimsonTrapdoorTile(Tile& t) { paintTrapdoorIn(t, Color{ 101, 48, 70 }); }
+    void paintItemCrimsonSign(Tile& t) { paintItemSignIn(t, Color{ 101, 48, 70 }); }
+    void paintWarpedStemSide(Tile& t) { paintLogSideIn(t, Color{ 58, 58, 77 }, 850); }
+    void paintWarpedStemTop(Tile& t) { paintRings(t, Color{ 43, 104, 99 }, Color{ 38, 88, 84 }, Color{ 58, 58, 77 }, 851); }
+    void paintStrippedWarpedStemSide(Tile& t) { paintLogSideIn(t, Color{ 57, 150, 147 }, 852); }
+    void paintStrippedWarpedStemTop(Tile& t) { paintRings(t, Color{ 43, 104, 99 }, Color{ 38, 88, 84 }, Color{ 57, 150, 147 }, 853); }
+    void paintWarpedPlanksTile(Tile& t) { paintPlanksIn(t, Color{ 43, 104, 99 }, 141); }
+    void paintWarpedNyliumTop(Tile& t) { t.fill(Color{ 43, 114, 101 }); t.speckle(24, 854); }
+    void paintWarpedNyliumSide(Tile& t) { paintNyliumSideIn(t, Color{ 43, 114, 101 }); }
+    void paintWarpedFungusTile(Tile& t) { paintFungusIn(t, Color{ 20, 150, 140 }, Color{ 226, 120, 60 }); }
+    void paintWarpedRootsTile(Tile& t) { paintRootsTileIn(t, Color{ 20, 140, 130 }); }
+    void paintWarpedDoorLower(Tile& t) { paintWoodDoorHalf(t, false, Color{ 43, 104, 99 }); }
+    void paintWarpedDoorUpper(Tile& t) { paintWoodDoorHalf(t, true, Color{ 43, 104, 99 }); }
+    void paintWarpedTrapdoorTile(Tile& t) { paintTrapdoorIn(t, Color{ 43, 104, 99 }); }
+    void paintItemWarpedSign(Tile& t) { paintItemSignIn(t, Color{ 43, 104, 99 }); }
+    void paintNetherSproutsTile(Tile& t) { paintRootsTileIn(t, Color{ 20, 160, 150 }); }
+    void paintNetherWartBlockTile(Tile& t) { paintWartBlockIn(t, Color{ 115, 2, 2 }); }
+    void paintWarpedWartBlockTile(Tile& t) { paintWartBlockIn(t, Color{ 22, 119, 121 }); }
+    void paintShroomlightTile(Tile& t) { t.fill(Color{ 240, 146, 70 }); t.speckle(30, 855); }
+    void paintWeepingVinesTile(Tile& t) { paintVinesIn(t, Color{ 140, 20, 20 }, true); }
+    void paintWeepingVinesPlantTile(Tile& t) { paintVinesIn(t, Color{ 140, 20, 20 }, false); }
+    void paintTwistingVinesTile(Tile& t) { paintVinesIn(t, Color{ 20, 150, 140 }, true); }
+    void paintTwistingVinesPlantTile(Tile& t) { paintVinesIn(t, Color{ 20, 150, 140 }, false); }
+
     void paintItemSign(Tile& t)
     {
         t.fill(Color{ 0, 0, 0, 0 });
@@ -6586,6 +6663,10 @@ namespace
         { Tiles::IconCherryDoor, paintCherryDoorLower },
         { Tiles::IconMangroveDoor, paintMangroveDoorLower },
         { Tiles::IconBambooDoor, paintBambooDoorLower },
+        { Tiles::IconCrimsonDoor, paintCrimsonDoorLower },
+        { Tiles::ItemCrimsonSign, paintItemCrimsonSign },
+        { Tiles::IconWarpedDoor, paintWarpedDoorLower },
+        { Tiles::ItemWarpedSign, paintItemWarpedSign },
         { Tiles::ItemBambooSign, paintItemBambooSign },
         { Tiles::ItemMangroveSign, paintItemMangroveSign },
         { Tiles::IconMangrovePropagule, paintMangrovePropaguleTile },
@@ -6749,6 +6830,38 @@ namespace
         { Tiles::DustLine1Off, paintRedstoneDust },
         { Tiles::DustLine1On, paintRedstoneDustLit },
         { Tiles::LeverHandle, paintLever },
+        { Tiles::CrimsonStemSide, paintCrimsonStemSide },
+        { Tiles::CrimsonStemTop, paintCrimsonStemTop },
+        { Tiles::StrippedCrimsonStemSide, paintStrippedCrimsonStemSide },
+        { Tiles::StrippedCrimsonStemTop, paintStrippedCrimsonStemTop },
+        { Tiles::CrimsonPlanksTile, paintCrimsonPlanksTile },
+        { Tiles::CrimsonNyliumTop, paintCrimsonNyliumTop },
+        { Tiles::CrimsonNyliumSide, paintCrimsonNyliumSide },
+        { Tiles::CrimsonFungusTile, paintCrimsonFungusTile },
+        { Tiles::CrimsonRootsTile, paintCrimsonRootsTile },
+        { Tiles::CrimsonDoorLower, paintCrimsonDoorLower },
+        { Tiles::CrimsonDoorUpper, paintCrimsonDoorUpper },
+        { Tiles::CrimsonTrapdoorTile, paintCrimsonTrapdoorTile },
+        { Tiles::WarpedStemSide, paintWarpedStemSide },
+        { Tiles::WarpedStemTop, paintWarpedStemTop },
+        { Tiles::StrippedWarpedStemSide, paintStrippedWarpedStemSide },
+        { Tiles::StrippedWarpedStemTop, paintStrippedWarpedStemTop },
+        { Tiles::WarpedPlanksTile, paintWarpedPlanksTile },
+        { Tiles::WarpedNyliumTop, paintWarpedNyliumTop },
+        { Tiles::WarpedNyliumSide, paintWarpedNyliumSide },
+        { Tiles::WarpedFungusTile, paintWarpedFungusTile },
+        { Tiles::WarpedRootsTile, paintWarpedRootsTile },
+        { Tiles::WarpedDoorLower, paintWarpedDoorLower },
+        { Tiles::WarpedDoorUpper, paintWarpedDoorUpper },
+        { Tiles::WarpedTrapdoorTile, paintWarpedTrapdoorTile },
+        { Tiles::NetherSproutsTile, paintNetherSproutsTile },
+        { Tiles::NetherWartBlockTile, paintNetherWartBlockTile },
+        { Tiles::WarpedWartBlockTile, paintWarpedWartBlockTile },
+        { Tiles::ShroomlightTile, paintShroomlightTile },
+        { Tiles::WeepingVinesTile, paintWeepingVinesTile },
+        { Tiles::WeepingVinesPlantTile, paintWeepingVinesPlantTile },
+        { Tiles::TwistingVinesTile, paintTwistingVinesTile },
+        { Tiles::TwistingVinesPlantTile, paintTwistingVinesPlantTile },
         { Tiles::BambooBlockSide, paintBambooBlockSide },
         { Tiles::BambooBlockTop, paintBambooBlockTop },
         { Tiles::StrippedBambooBlockSide, paintStrippedBambooBlockSide },
@@ -7119,6 +7232,10 @@ namespace
         { Tiles::IconCherryDoor, { "cherry_door", nullptr, nullptr } },
         { Tiles::IconMangroveDoor, { "mangrove_door", nullptr, nullptr } },
         { Tiles::IconBambooDoor, { "bamboo_door", nullptr, nullptr } },
+        { Tiles::IconCrimsonDoor, { "crimson_door", nullptr, nullptr } },
+        { Tiles::ItemCrimsonSign, { "crimson_sign", nullptr, nullptr } },
+        { Tiles::IconWarpedDoor, { "warped_door", nullptr, nullptr } },
+        { Tiles::ItemWarpedSign, { "warped_sign", nullptr, nullptr } },
         { Tiles::ItemBambooSign, { "bamboo_sign", nullptr, nullptr } },
         { Tiles::ItemMangroveSign, { "mangrove_sign", nullptr, nullptr } },
         { Tiles::IconMangrovePropagule, { "mangrove_propagule", nullptr, nullptr } },
@@ -7254,6 +7371,38 @@ namespace
         { Tiles::DustLine1Off, { "redstone_dust_line1", nullptr }, Tinting::RedstoneOff, 0, false },
         { Tiles::DustLine1On, { "redstone_dust_line1", nullptr }, Tinting::RedstoneOn, 0, false },
         { Tiles::LeverHandle, { "lever", nullptr }, Tinting::None, 0, false },
+        { Tiles::CrimsonStemSide, { "crimson_stem", nullptr }, Tinting::None, 0, false },
+        { Tiles::CrimsonStemTop, { "crimson_stem_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::StrippedCrimsonStemSide, { "stripped_crimson_stem", nullptr }, Tinting::None, 0, false },
+        { Tiles::StrippedCrimsonStemTop, { "stripped_crimson_stem_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::CrimsonPlanksTile, { "crimson_planks", nullptr }, Tinting::None, 0, false },
+        { Tiles::CrimsonNyliumTop, { "crimson_nylium", nullptr }, Tinting::None, 0, false },
+        { Tiles::CrimsonNyliumSide, { "crimson_nylium_side", nullptr }, Tinting::None, 0, false },
+        { Tiles::CrimsonFungusTile, { "crimson_fungus", nullptr }, Tinting::None, 0, false },
+        { Tiles::CrimsonRootsTile, { "crimson_roots", nullptr }, Tinting::None, 0, false },
+        { Tiles::CrimsonDoorLower, { "crimson_door_bottom", nullptr }, Tinting::None, 0, false },
+        { Tiles::CrimsonDoorUpper, { "crimson_door_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::CrimsonTrapdoorTile, { "crimson_trapdoor", nullptr }, Tinting::None, 0, false },
+        { Tiles::WarpedStemSide, { "warped_stem", nullptr }, Tinting::None, 0, false },
+        { Tiles::WarpedStemTop, { "warped_stem_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::StrippedWarpedStemSide, { "stripped_warped_stem", nullptr }, Tinting::None, 0, false },
+        { Tiles::StrippedWarpedStemTop, { "stripped_warped_stem_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::WarpedPlanksTile, { "warped_planks", nullptr }, Tinting::None, 0, false },
+        { Tiles::WarpedNyliumTop, { "warped_nylium", nullptr }, Tinting::None, 0, false },
+        { Tiles::WarpedNyliumSide, { "warped_nylium_side", nullptr }, Tinting::None, 0, false },
+        { Tiles::WarpedFungusTile, { "warped_fungus", nullptr }, Tinting::None, 0, false },
+        { Tiles::WarpedRootsTile, { "warped_roots", nullptr }, Tinting::None, 0, false },
+        { Tiles::WarpedDoorLower, { "warped_door_bottom", nullptr }, Tinting::None, 0, false },
+        { Tiles::WarpedDoorUpper, { "warped_door_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::WarpedTrapdoorTile, { "warped_trapdoor", nullptr }, Tinting::None, 0, false },
+        { Tiles::NetherSproutsTile, { "nether_sprouts", nullptr }, Tinting::None, 0, false },
+        { Tiles::NetherWartBlockTile, { "nether_wart_block", nullptr }, Tinting::None, 0, false },
+        { Tiles::WarpedWartBlockTile, { "warped_wart_block", nullptr }, Tinting::None, 0, false },
+        { Tiles::ShroomlightTile, { "shroomlight", nullptr }, Tinting::None, 0, false },
+        { Tiles::WeepingVinesTile, { "weeping_vines", nullptr }, Tinting::None, 0, false },
+        { Tiles::WeepingVinesPlantTile, { "weeping_vines_plant", nullptr }, Tinting::None, 0, false },
+        { Tiles::TwistingVinesTile, { "twisting_vines", nullptr }, Tinting::None, 0, false },
+        { Tiles::TwistingVinesPlantTile, { "twisting_vines_plant", nullptr }, Tinting::None, 0, false },
         { Tiles::BambooBlockSide, { "bamboo_block", nullptr }, Tinting::None, 0, false },
         { Tiles::BambooBlockTop, { "bamboo_block_top", nullptr }, Tinting::None, 0, false },
         { Tiles::StrippedBambooBlockSide, { "stripped_bamboo_block", nullptr }, Tinting::None, 0, false },

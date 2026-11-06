@@ -11901,9 +11901,9 @@ namespace
             std::map<std::tuple<int, int, int>, BlockId> cells;
             BlockId at(int x, int y, int z) const override
             {
-                if (y < 64) return Blocks::Grass;
                 const auto found = cells.find({ x, y, z });
-                return found == cells.end() ? Blocks::Air : found->second;
+                if (found != cells.end()) return found->second;
+                return y < 64 ? Blocks::Grass : Blocks::Air;
             }
             void set(int x, int y, int z, BlockId id) override { cells[{ x, y, z }] = id; }
         };
@@ -11967,6 +11967,35 @@ namespace
                 for (int z = -8000; z <= 8000 && mangroves == 0; z += 32)
                     if (generator.biomeAt(x, z) == Biome::MangroveSwamp) ++mangroves;
             check(mangroves > 0, "mangrove swamps grow somewhere in a world");
+        }
+
+        Plot crimson;
+        crimson.cells[{ 0, 63, 0 }] = Blocks::CrimsonNylium;
+        crimson.set(0, 64, 0, Blocks::CrimsonFungus);
+        check(Saplings::grow(crimson, glm::ivec3(0, 64, 0), 21u), "a crimson fungus on crimson nylium grows");
+        check(crimson.at(0, 64, 0) == Blocks::CrimsonStem, "into a huge fungus on a crimson stem");
+        int wartBlocks = 0;
+        for (const auto& [where, id] : crimson.cells)
+            if (id == Blocks::NetherWartBlock || id == Blocks::Shroomlight) ++wartBlocks;
+        check(wartBlocks > 10, "under a hat of wart");
+        Plot wrongGround;
+        wrongGround.cells[{ 0, 63, 0 }] = Blocks::CrimsonNylium;
+        wrongGround.set(0, 64, 0, Blocks::WarpedFungus);
+        check(!Saplings::grow(wrongGround, glm::ivec3(0, 64, 0), 21u), "a warped fungus will not grow on crimson");
+        check(blockDrop(Blocks::WarpedNylium) == Blocks::Netherrack, "nylium breaks back to netherrack");
+        check(isClimbable(Blocks::WeepingVinesPlant), "weeping vines can be climbed");
+        check(lightEmission(Blocks::Shroomlight) == 15, "and shroomlight lights a forest");
+        {
+            const WorldGen generator(4242u, Dimension::Nether);
+            int red = 0, teal = 0;
+            for (int x = -3000; x <= 3000; x += 40)
+                for (int z = -3000; z <= 3000; z += 40)
+                {
+                    const Biome here = generator.netherBiomeAt(x, z);
+                    if (here == Biome::CrimsonForest) ++red;
+                    if (here == Biome::WarpedForest) ++teal;
+                }
+            check(red > 0 && teal > 0, "both nether forests grow somewhere");
         }
 
         Plot cherry;

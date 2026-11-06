@@ -231,6 +231,7 @@ void Farming::grow(World& world, const glm::vec3& around, uint32_t& seed)
             }
         }
 
+        if (isFungus(world.getBlock(x, y, z))) continue;
         if (isSapling(world.getBlock(x, y, z)))
         {
             if (nextRandom(seed) % 4u == 0u)

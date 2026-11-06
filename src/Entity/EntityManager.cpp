@@ -397,6 +397,12 @@ void EntityManager::trySpawnWave(const World& world, const glm::vec3& playerPosi
         {
             constexpr int NETHER_COUNT = static_cast<int>(std::size(NETHER_SPECIES));
             species = NETHER_SPECIES[static_cast<int>(random01() * NETHER_COUNT) % NETHER_COUNT];
+            const Biome forest = world.generator().netherBiomeAt(x, z);
+            const float pick = random01();
+            if (forest == Biome::CrimsonForest && pick < 0.7f)
+                species = pick < 0.4f ? MobId::Hoglin : MobId::Piglin;
+            else if (forest == Biome::WarpedForest && pick < 0.7f)
+                species = MobId::Enderman;
         }
         else if (underground)
         {

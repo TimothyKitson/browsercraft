@@ -743,6 +743,8 @@ namespace
             else if (isPinkPetals(id))            why = "petals with more set down on them";
             else if (id == Blocks::MangrovePropaguleHanging)
                                                   why = "hangs under mangrove leaves";
+            else if (id == Blocks::WeepingVinesPlant || id == Blocks::TwistingVinesPlant)
+                                                  why = "the stalk of a vine longer than one block";
             else if (isLadder(id) || isStairs(id) || isRail(id) ||
                      isSign(id) || isFrame(id))
                                                   why = "another facing of a crafted block";

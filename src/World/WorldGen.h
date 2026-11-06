@@ -33,7 +33,10 @@ enum class Biome : uint8_t
     // stands in the hollows rather than draining off them.
     Swamp,
     CherryGrove,
-    MangroveSwamp
+    MangroveSwamp,
+    NetherWastes,
+    CrimsonForest,
+    WarpedForest
 };
 
 const char* biomeName(Biome biome);
@@ -292,6 +295,7 @@ public:
 
     int surfaceHeight(int worldX, int worldZ) const;
     Biome biomeAt(int worldX, int worldZ) const;
+    Biome netherBiomeAt(int worldX, int worldZ) const;
 
     // The nearest village to a place, searching outwards a few squares.
     // Public because a dev screen and a command both want to find one,

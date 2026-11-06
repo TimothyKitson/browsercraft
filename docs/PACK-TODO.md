@@ -108,7 +108,7 @@ Everything in the 1.21 textures zip the game doesn't use yet, turned into work. 
     - III. The mangrove swamp biome.
 25. Bamboo wood: bamboo block (and stripped), planks, mosaic, door, trapdoor, sign, raft and chest raft. (done)
     - Left for later: the raft and chest raft go with the boats for every wood in item 55, which builds the raft's own flat model.
-26. Nether forests
+26. Nether forests (done)
     - I. Crimson and warped stems, nylium, fungus (grown into huge fungus with bone meal), roots, sprouts and wart blocks.
     - II. Weeping vines and twisting vines. Shroomlight.
     - III. Planks, doors, trapdoors and signs for both.

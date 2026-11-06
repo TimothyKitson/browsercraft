@@ -787,6 +787,98 @@ namespace
         { "Bamboo Sign", BambooPlanksTile, BambooPlanksTile, BambooPlanksTile, false, false, RenderType::Ladder, 0, 1.0f },
         { "Bamboo Sign", BambooPlanksTile, BambooPlanksTile, BambooPlanksTile, false, false, RenderType::Ladder, 0, 1.0f },
         { "Bamboo Sign", BambooPlanksTile, BambooPlanksTile, BambooPlanksTile, false, false, RenderType::Ladder, 0, 1.0f },
+        { "Crimson Stem", CrimsonStemTop, CrimsonStemTop, CrimsonStemSide, true, true, RenderType::Cube, 0, 2.0f },
+        { "Stripped Crimson Stem", StrippedCrimsonStemTop, StrippedCrimsonStemTop, StrippedCrimsonStemSide, true, true, RenderType::Cube, 0, 2.0f },
+        { "Crimson Planks", CrimsonPlanksTile, CrimsonPlanksTile, CrimsonPlanksTile, true, true, RenderType::Cube, 0, 1.5f },
+        { "Crimson Nylium", CrimsonNyliumTop, Netherrack, CrimsonNyliumSide, true, true, RenderType::Cube, 0, 0.6f },
+        { "Crimson Fungus", CrimsonFungusTile, CrimsonFungusTile, CrimsonFungusTile, false, false, RenderType::Cross, 0, 0.0f },
+        { "Crimson Roots", CrimsonRootsTile, CrimsonRootsTile, CrimsonRootsTile, false, false, RenderType::Cross, 0, 0.0f },
+        { "Warped Stem", WarpedStemTop, WarpedStemTop, WarpedStemSide, true, true, RenderType::Cube, 0, 2.0f },
+        { "Stripped Warped Stem", StrippedWarpedStemTop, StrippedWarpedStemTop, StrippedWarpedStemSide, true, true, RenderType::Cube, 0, 2.0f },
+        { "Warped Planks", WarpedPlanksTile, WarpedPlanksTile, WarpedPlanksTile, true, true, RenderType::Cube, 0, 1.5f },
+        { "Warped Nylium", WarpedNyliumTop, Netherrack, WarpedNyliumSide, true, true, RenderType::Cube, 0, 0.6f },
+        { "Warped Fungus", WarpedFungusTile, WarpedFungusTile, WarpedFungusTile, false, false, RenderType::Cross, 0, 0.0f },
+        { "Warped Roots", WarpedRootsTile, WarpedRootsTile, WarpedRootsTile, false, false, RenderType::Cross, 0, 0.0f },
+        { "Nether Sprouts", NetherSproutsTile, NetherSproutsTile, NetherSproutsTile, false, false, RenderType::Cross, 0, 0.0f },
+        { "Nether Wart Block", NetherWartBlockTile, NetherWartBlockTile, NetherWartBlockTile, true, true, RenderType::Cube, 0, 1.0f },
+        { "Warped Wart Block", WarpedWartBlockTile, WarpedWartBlockTile, WarpedWartBlockTile, true, true, RenderType::Cube, 0, 1.0f },
+        { "Shroomlight", ShroomlightTile, ShroomlightTile, ShroomlightTile, true, true, RenderType::Cube, 15, 1.0f },
+        { "Weeping Vines", WeepingVinesTile, WeepingVinesTile, WeepingVinesTile, false, false, RenderType::Cross, 0, 0.0f },
+        { "Weeping Vines", WeepingVinesPlantTile, WeepingVinesPlantTile, WeepingVinesPlantTile, false, false, RenderType::Cross, 0, 0.0f },
+        { "Twisting Vines", TwistingVinesTile, TwistingVinesTile, TwistingVinesTile, false, false, RenderType::Cross, 0, 0.0f },
+        { "Twisting Vines", TwistingVinesPlantTile, TwistingVinesPlantTile, TwistingVinesPlantTile, false, false, RenderType::Cross, 0, 0.0f },
+        { "Crimson Door", CrimsonDoorLower, CrimsonDoorLower, CrimsonDoorLower, true, false, RenderType::Door, 0, 3.0f },
+        { "Crimson Door", CrimsonDoorLower, CrimsonDoorLower, CrimsonDoorLower, true, false, RenderType::Door, 0, 3.0f },
+        { "Crimson Door", CrimsonDoorLower, CrimsonDoorLower, CrimsonDoorLower, true, false, RenderType::Door, 0, 3.0f },
+        { "Crimson Door", CrimsonDoorLower, CrimsonDoorLower, CrimsonDoorLower, true, false, RenderType::Door, 0, 3.0f },
+        { "Crimson Door", CrimsonDoorLower, CrimsonDoorLower, CrimsonDoorLower, true, false, RenderType::Door, 0, 3.0f },
+        { "Crimson Door", CrimsonDoorLower, CrimsonDoorLower, CrimsonDoorLower, true, false, RenderType::Door, 0, 3.0f },
+        { "Crimson Door", CrimsonDoorLower, CrimsonDoorLower, CrimsonDoorLower, true, false, RenderType::Door, 0, 3.0f },
+        { "Crimson Door", CrimsonDoorLower, CrimsonDoorLower, CrimsonDoorLower, true, false, RenderType::Door, 0, 3.0f },
+        { "Crimson Door", CrimsonDoorUpper, CrimsonDoorUpper, CrimsonDoorUpper, true, false, RenderType::Door, 0, 3.0f },
+        { "Crimson Door", CrimsonDoorUpper, CrimsonDoorUpper, CrimsonDoorUpper, true, false, RenderType::Door, 0, 3.0f },
+        { "Crimson Door", CrimsonDoorUpper, CrimsonDoorUpper, CrimsonDoorUpper, true, false, RenderType::Door, 0, 3.0f },
+        { "Crimson Door", CrimsonDoorUpper, CrimsonDoorUpper, CrimsonDoorUpper, true, false, RenderType::Door, 0, 3.0f },
+        { "Crimson Door", CrimsonDoorUpper, CrimsonDoorUpper, CrimsonDoorUpper, true, false, RenderType::Door, 0, 3.0f },
+        { "Crimson Door", CrimsonDoorUpper, CrimsonDoorUpper, CrimsonDoorUpper, true, false, RenderType::Door, 0, 3.0f },
+        { "Crimson Door", CrimsonDoorUpper, CrimsonDoorUpper, CrimsonDoorUpper, true, false, RenderType::Door, 0, 3.0f },
+        { "Crimson Door", CrimsonDoorUpper, CrimsonDoorUpper, CrimsonDoorUpper, true, false, RenderType::Door, 0, 3.0f },
+        { "Warped Door", WarpedDoorLower, WarpedDoorLower, WarpedDoorLower, true, false, RenderType::Door, 0, 3.0f },
+        { "Warped Door", WarpedDoorLower, WarpedDoorLower, WarpedDoorLower, true, false, RenderType::Door, 0, 3.0f },
+        { "Warped Door", WarpedDoorLower, WarpedDoorLower, WarpedDoorLower, true, false, RenderType::Door, 0, 3.0f },
+        { "Warped Door", WarpedDoorLower, WarpedDoorLower, WarpedDoorLower, true, false, RenderType::Door, 0, 3.0f },
+        { "Warped Door", WarpedDoorLower, WarpedDoorLower, WarpedDoorLower, true, false, RenderType::Door, 0, 3.0f },
+        { "Warped Door", WarpedDoorLower, WarpedDoorLower, WarpedDoorLower, true, false, RenderType::Door, 0, 3.0f },
+        { "Warped Door", WarpedDoorLower, WarpedDoorLower, WarpedDoorLower, true, false, RenderType::Door, 0, 3.0f },
+        { "Warped Door", WarpedDoorLower, WarpedDoorLower, WarpedDoorLower, true, false, RenderType::Door, 0, 3.0f },
+        { "Warped Door", WarpedDoorUpper, WarpedDoorUpper, WarpedDoorUpper, true, false, RenderType::Door, 0, 3.0f },
+        { "Warped Door", WarpedDoorUpper, WarpedDoorUpper, WarpedDoorUpper, true, false, RenderType::Door, 0, 3.0f },
+        { "Warped Door", WarpedDoorUpper, WarpedDoorUpper, WarpedDoorUpper, true, false, RenderType::Door, 0, 3.0f },
+        { "Warped Door", WarpedDoorUpper, WarpedDoorUpper, WarpedDoorUpper, true, false, RenderType::Door, 0, 3.0f },
+        { "Warped Door", WarpedDoorUpper, WarpedDoorUpper, WarpedDoorUpper, true, false, RenderType::Door, 0, 3.0f },
+        { "Warped Door", WarpedDoorUpper, WarpedDoorUpper, WarpedDoorUpper, true, false, RenderType::Door, 0, 3.0f },
+        { "Warped Door", WarpedDoorUpper, WarpedDoorUpper, WarpedDoorUpper, true, false, RenderType::Door, 0, 3.0f },
+        { "Warped Door", WarpedDoorUpper, WarpedDoorUpper, WarpedDoorUpper, true, false, RenderType::Door, 0, 3.0f },
+        { "Crimson Trapdoor", CrimsonTrapdoorTile, CrimsonTrapdoorTile, CrimsonTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Crimson Trapdoor", CrimsonTrapdoorTile, CrimsonTrapdoorTile, CrimsonTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Crimson Trapdoor", CrimsonTrapdoorTile, CrimsonTrapdoorTile, CrimsonTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Crimson Trapdoor", CrimsonTrapdoorTile, CrimsonTrapdoorTile, CrimsonTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Crimson Trapdoor", CrimsonTrapdoorTile, CrimsonTrapdoorTile, CrimsonTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Crimson Trapdoor", CrimsonTrapdoorTile, CrimsonTrapdoorTile, CrimsonTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Crimson Trapdoor", CrimsonTrapdoorTile, CrimsonTrapdoorTile, CrimsonTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Crimson Trapdoor", CrimsonTrapdoorTile, CrimsonTrapdoorTile, CrimsonTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Crimson Trapdoor", CrimsonTrapdoorTile, CrimsonTrapdoorTile, CrimsonTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Crimson Trapdoor", CrimsonTrapdoorTile, CrimsonTrapdoorTile, CrimsonTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Crimson Trapdoor", CrimsonTrapdoorTile, CrimsonTrapdoorTile, CrimsonTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Crimson Trapdoor", CrimsonTrapdoorTile, CrimsonTrapdoorTile, CrimsonTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Crimson Trapdoor", CrimsonTrapdoorTile, CrimsonTrapdoorTile, CrimsonTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Crimson Trapdoor", CrimsonTrapdoorTile, CrimsonTrapdoorTile, CrimsonTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Crimson Trapdoor", CrimsonTrapdoorTile, CrimsonTrapdoorTile, CrimsonTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Crimson Trapdoor", CrimsonTrapdoorTile, CrimsonTrapdoorTile, CrimsonTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Warped Trapdoor", WarpedTrapdoorTile, WarpedTrapdoorTile, WarpedTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Warped Trapdoor", WarpedTrapdoorTile, WarpedTrapdoorTile, WarpedTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Warped Trapdoor", WarpedTrapdoorTile, WarpedTrapdoorTile, WarpedTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Warped Trapdoor", WarpedTrapdoorTile, WarpedTrapdoorTile, WarpedTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Warped Trapdoor", WarpedTrapdoorTile, WarpedTrapdoorTile, WarpedTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Warped Trapdoor", WarpedTrapdoorTile, WarpedTrapdoorTile, WarpedTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Warped Trapdoor", WarpedTrapdoorTile, WarpedTrapdoorTile, WarpedTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Warped Trapdoor", WarpedTrapdoorTile, WarpedTrapdoorTile, WarpedTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Warped Trapdoor", WarpedTrapdoorTile, WarpedTrapdoorTile, WarpedTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Warped Trapdoor", WarpedTrapdoorTile, WarpedTrapdoorTile, WarpedTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Warped Trapdoor", WarpedTrapdoorTile, WarpedTrapdoorTile, WarpedTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Warped Trapdoor", WarpedTrapdoorTile, WarpedTrapdoorTile, WarpedTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Warped Trapdoor", WarpedTrapdoorTile, WarpedTrapdoorTile, WarpedTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Warped Trapdoor", WarpedTrapdoorTile, WarpedTrapdoorTile, WarpedTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Warped Trapdoor", WarpedTrapdoorTile, WarpedTrapdoorTile, WarpedTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Warped Trapdoor", WarpedTrapdoorTile, WarpedTrapdoorTile, WarpedTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Crimson Sign", CrimsonPlanksTile, CrimsonPlanksTile, CrimsonPlanksTile, false, false, RenderType::Ladder, 0, 1.0f },
+        { "Crimson Sign", CrimsonPlanksTile, CrimsonPlanksTile, CrimsonPlanksTile, false, false, RenderType::Ladder, 0, 1.0f },
+        { "Crimson Sign", CrimsonPlanksTile, CrimsonPlanksTile, CrimsonPlanksTile, false, false, RenderType::Ladder, 0, 1.0f },
+        { "Crimson Sign", CrimsonPlanksTile, CrimsonPlanksTile, CrimsonPlanksTile, false, false, RenderType::Ladder, 0, 1.0f },
+        { "Warped Sign", WarpedPlanksTile, WarpedPlanksTile, WarpedPlanksTile, false, false, RenderType::Ladder, 0, 1.0f },
+        { "Warped Sign", WarpedPlanksTile, WarpedPlanksTile, WarpedPlanksTile, false, false, RenderType::Ladder, 0, 1.0f },
+        { "Warped Sign", WarpedPlanksTile, WarpedPlanksTile, WarpedPlanksTile, false, false, RenderType::Ladder, 0, 1.0f },
+        { "Warped Sign", WarpedPlanksTile, WarpedPlanksTile, WarpedPlanksTile, false, false, RenderType::Ladder, 0, 1.0f },
     };
 }
 
@@ -882,6 +974,7 @@ bool isObtainable(BlockId id)
             if (isTrapdoor(id) && id != trapdoorBase(id)) return false;
             if (isPinkPetals(id) && id != Blocks::PinkPetals1) return false;
             if (id == Blocks::MangrovePropaguleHanging) return false;
+            if (id == Blocks::WeepingVinesPlant || id == Blocks::TwistingVinesPlant) return false;
 
             return id < Blocks::Count;
     }
@@ -900,6 +993,8 @@ const char* blockSoundGroup(BlockId id)
     if (isSign(id) || isFrame(id)) return "wood";
     if (isDoor(id) || isTrapdoor(id)) return "wood";
     if (isSapling(id) || isPinkPetals(id) || id == Blocks::MangrovePropaguleHanging) return "grass";
+    if (isNetherPlant(id) || id == Blocks::NetherWartBlock || id == Blocks::WarpedWartBlock ||
+        id == Blocks::Shroomlight) return "grass";
     if (id == Blocks::MangroveRoots || id == Blocks::BambooMosaic || id == Blocks::BambooSlab) return "wood";
     if (id == Blocks::MuddyMangroveRoots || id == Blocks::PackedMud) return "gravel";
     if (id == Blocks::Melon || isCocoa(id)) return "grass";
@@ -1044,6 +1139,8 @@ Material blockMaterial(BlockId id)
     if (isSign(id) || isFrame(id)) return Material::Wood;
     if (isDoor(id) || isTrapdoor(id)) return Material::Wood;
     if (isSapling(id) || isPinkPetals(id) || id == Blocks::MangrovePropaguleHanging) return Material::Plant;
+    if (isNetherPlant(id) || id == Blocks::NetherWartBlock || id == Blocks::WarpedWartBlock ||
+        id == Blocks::Shroomlight) return Material::Plant;
     if (id == Blocks::MangroveRoots || id == Blocks::BambooMosaic || id == Blocks::BambooSlab) return Material::Wood;
     if (id == Blocks::MuddyMangroveRoots || id == Blocks::PackedMud) return Material::Dirt;
     if (isCauldron(id)) return Material::Stone;

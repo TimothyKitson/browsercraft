@@ -2044,13 +2044,14 @@ bool Application::frame()
             m_startupScreen == "gamemode" || m_startupScreen == "spectator" ||
             m_startupScreen == "beaconui" || m_startupScreen == "grindstone" ||
             m_startupScreen == "grinderror" || m_startupScreen == "woods" ||
-            m_startupScreen == "cherry" || m_startupScreen == "mangrove" ||
+            m_startupScreen == "cherry" || m_startupScreen == "mangrove" || m_startupScreen == "fungi" ||
             m_startupScreen == "boat" || m_startupScreen == "rails" ||
             m_startupScreen == "mobs" || m_startupScreen == "golem" ||
             m_startupScreen == "glowmobs" || m_startupScreen == "variants" ||
             m_startupScreen == "shulker" ||
             m_startupScreen == "nethermobs" || m_startupScreen == "lairmobs" ||
             m_startupScreen == "jungle" || m_startupScreen == "savanna" ||
+            m_startupScreen == "crimson" || m_startupScreen == "warped" ||
             m_startupScreen == "redstone" || m_startupScreen == "chamber" ||
             m_startupScreen == "cave" || m_startupScreen == "dripstone" ||
             m_startupScreen == "mineshaft" || m_startupScreen == "pyramid" ||
@@ -2127,6 +2128,7 @@ bool Application::frame()
                                   m_startupScreen != "woods" &&
                                   m_startupScreen != "cherry" &&
                                   m_startupScreen != "mangrove" &&
+                                  m_startupScreen != "fungi" &&
                                   m_startupScreen != "boat" &&
                                   m_startupScreen != "rails" &&
                                   m_startupScreen != "mobs" &&
@@ -2138,6 +2140,8 @@ bool Application::frame()
                                   m_startupScreen != "lairmobs" &&
                                   m_startupScreen != "jungle" &&
                                   m_startupScreen != "savanna" &&
+                                  m_startupScreen != "crimson" &&
+                                  m_startupScreen != "warped" &&
                                   m_startupScreen != "redstone" &&
                                   m_startupScreen != "chamber" &&
                                   m_startupScreen != "vault" &&
@@ -2497,7 +2501,7 @@ bool Application::frame()
                 m_startupScreen == "gamemode" || m_startupScreen == "spectator" ||
                 m_startupScreen == "beaconui" || m_startupScreen == "grindstone" ||
                 m_startupScreen == "grinderror" || m_startupScreen == "woods" ||
-                m_startupScreen == "cherry" || m_startupScreen == "mangrove")
+                m_startupScreen == "cherry" || m_startupScreen == "mangrove" || m_startupScreen == "fungi")
             {
                 m_camera.setOrientation(0.0f, -25.0f);
                 m_camera.addLook(0.0f, 0.0f, 0.0f);
@@ -2539,6 +2543,36 @@ bool Application::frame()
                 }
                 else
                     m_attackIndicator = 1;
+                if (m_startupScreen == "fungi")
+                {
+                    m_devAttackStrength = 1.0f;
+                    m_camera.setOrientation(0.0f, 14.0f);
+                    for (int dx = 3; dx <= 15; ++dx)
+                        for (int dz = -8; dz <= 8; ++dz)
+                        {
+                            for (int dy = 0; dy <= 16; ++dy) m_world->setBlock(px + dx, py + dy, pz + dz, Blocks::Air);
+                            m_world->setBlock(px + dx, py - 1, pz + dz, dz < 0 ? Blocks::CrimsonNylium : Blocks::WarpedNylium);
+                        }
+                    const glm::ivec3 red(px + 10, py, pz - 4), teal(px + 10, py, pz + 4);
+                    m_world->setBlock(red.x, red.y, red.z, Blocks::CrimsonFungus);
+                    m_world->setBlock(teal.x, teal.y, teal.z, Blocks::WarpedFungus);
+                    growSapling(red, 77u);
+                    growSapling(teal, 91u);
+                    m_world->setBlock(px + 5, py, pz - 3, Blocks::CrimsonRoots);
+                    m_world->setBlock(px + 5, py, pz - 2, Blocks::CrimsonFungus);
+                    m_world->setBlock(px + 5, py, pz + 2, Blocks::WarpedRoots);
+                    m_world->setBlock(px + 5, py, pz + 3, Blocks::NetherSprouts);
+                    m_world->setBlock(px + 6, py, pz + 1, Blocks::TwistingVinesPlant);
+                    m_world->setBlock(px + 6, py + 1, pz + 1, Blocks::TwistingVines);
+                    m_world->setBlock(px + 6, py, pz - 1, Blocks::CrimsonPlanks);
+                    m_world->setBlock(px + 6, py, pz, Blocks::WarpedPlanks);
+                    m_world->setBlock(px + 7, py, pz, Blocks::StrippedCrimsonStem);
+                    m_world->setBlock(px + 7, py, pz + 1, Blocks::StrippedWarpedStem);
+                    m_world->setBlock(px + 7, py + 1, pz, Blocks::Shroomlight);
+                    m_world->setBlock(px + 16, py, pz - 2, Blocks::Bookshelf);
+                    m_world->setBlock(px + 16, py, pz, Blocks::DiamondOre);
+                    m_world->setBlock(px + 16, py, pz + 2, Blocks::EndPortalFrame);
+                }
                 if (m_startupScreen == "mangrove")
                 {
                     m_devAttackStrength = 1.0f;
@@ -4130,6 +4164,33 @@ bool Application::frame()
             // village screen walks to a real village: what is worth
             // looking at is what the generator actually makes, not an
             // arena with six trees planted in it.
+            if ((m_startupScreen == "crimson" || m_startupScreen == "warped") && m_dimension == Dimension::Nether)
+            {
+                const Biome wanted = m_startupScreen == "crimson" ? Biome::CrimsonForest : Biome::WarpedForest;
+                const int fromX = static_cast<int>(m_player.position.x);
+                const int fromZ = static_cast<int>(m_player.position.z);
+                const WorldGen& gen = m_world->generator();
+                bool found = false;
+                for (int ring = 0; ring <= 120 && !found; ++ring)
+                    for (int step = -ring; step <= ring && !found; ++step)
+                        for (int side = 0; side < 4 && !found; ++side)
+                        {
+                            const int dx = (side == 0) ? step : (side == 1) ? step : (side == 2) ? -ring : ring;
+                            const int dz = (side == 0) ? -ring : (side == 1) ? ring : step;
+                            const int x = fromX + dx * 16, z = fromZ + dz * 16;
+                            if (gen.netherBiomeAt(x, z) != wanted || gen.netherBiomeAt(x + 24, z) != wanted ||
+                                gen.netherBiomeAt(x - 24, z) != wanted)
+                                continue;
+                            m_player.position = glm::vec3(static_cast<float>(x) + 0.5f, 60.0f, static_cast<float>(z) + 0.5f);
+                            m_player.velocity = glm::vec3(0.0f);
+                            m_player.flying = true;
+                            m_placeOnSurface = false;
+                            m_camera.setOrientation(0.0f, -15.0f);
+                            m_camera.addLook(0.0f, 0.0f, 0.0f);
+                            found = true;
+                        }
+            }
+
             if (m_startupScreen == "jungle" || m_startupScreen == "savanna")
             {
                 const Biome wanted = m_startupScreen == "jungle" ? Biome::Jungle
@@ -13148,6 +13209,9 @@ void Application::renderDebugOverlay()
         if (hasSky())
             std::snprintf(buffer, sizeof(buffer), "Biome: %s",
                           biomeName(m_world->generator().biomeAt(bx, bz)));
+        else if (m_dimension == Dimension::Nether)
+            std::snprintf(buffer, sizeof(buffer), "Biome: %s",
+                          biomeName(m_world->generator().netherBiomeAt(bx, bz)));
         else
             std::snprintf(buffer, sizeof(buffer), "Dimension: %s", dimensionName(m_dimension));
         left(buffer);

@@ -201,6 +201,8 @@ namespace
         { "Cherry Sign",          Tiles::ItemCherrySign,        16 },
         { "Mangrove Sign",        Tiles::ItemMangroveSign,      16 },
         { "Bamboo Sign",          Tiles::ItemBambooSign,        16 },
+        { "Crimson Sign",         Tiles::ItemCrimsonSign,       16 },
+        { "Warped Sign",          Tiles::ItemWarpedSign,        16 },
     };
 
     static_assert(sizeof(ITEMS) / sizeof(ITEMS[0]) ==
@@ -228,7 +230,8 @@ int flatIconFor(BlockId id)
         static const int ICONS[WOOD_COUNT] = { Tiles::IconOakDoor, Tiles::IconSpruceDoor, Tiles::IconBirchDoor,
                                                Tiles::IconJungleDoor, Tiles::IconAcaciaDoor, Tiles::IconDarkOakDoor,
                                                Tiles::IconCherryDoor, Tiles::IconMangroveDoor,
-                                               Tiles::IconBambooDoor };
+                                               Tiles::IconBambooDoor, Tiles::IconCrimsonDoor,
+                                               Tiles::IconWarpedDoor };
         const int wood = doorWood(id);
         return ICONS[wood < 0 ? 0 : wood];
     }
@@ -304,6 +307,9 @@ StackId blockDrop(BlockId id)
     if (isTrapdoor(id)) return trapdoorBase(id);
     if (isPinkPetals(id)) return Blocks::PinkPetals1;
     if (id == Blocks::MangrovePropaguleHanging) return Blocks::MangrovePropagule;
+    if (isNylium(id)) return Blocks::Netherrack;
+    if (id == Blocks::WeepingVinesPlant) return Blocks::WeepingVines;
+    if (id == Blocks::TwistingVinesPlant) return Blocks::TwistingVines;
     if (isFrame(id)) return Items::ItemFrame;
 
     // A melon comes apart into slices rather than into a melon, which

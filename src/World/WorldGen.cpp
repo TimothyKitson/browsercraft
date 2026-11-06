@@ -1,5 +1,6 @@
 #include "WorldGen.h"
 #include "Game/EndPortal.h"
+#include "Game/Saplings.h"
 #include <algorithm>
 #include <cmath>
 
@@ -43,6 +44,9 @@ const char* biomeName(Biome biome)
         case Biome::Savanna: return "Savanna";
         case Biome::CherryGrove: return "Cherry Grove";
         case Biome::MangroveSwamp: return "Mangrove Swamp";
+        case Biome::NetherWastes: return "Nether Wastes";
+        case Biome::CrimsonForest: return "Crimson Forest";
+        case Biome::WarpedForest: return "Warped Forest";
         case Biome::Swamp:   return "Swamp";
     }
     return "Unknown";
@@ -197,6 +201,14 @@ void WorldGen::generate(Chunk& chunk) const
 // A closed cavern system rather than a landscape: solid netherrack between a
 // bedrock floor and ceiling, hollowed out by 3D noise, with lava filling
 // everything below the sea.
+Biome WorldGen::netherBiomeAt(int worldX, int worldZ) const
+{
+    const float forest = m_height.fbm2D(worldX * 0.0065f + 517.0f, worldZ * 0.0065f - 331.0f, 2);
+    if (forest > 0.16f) return Biome::CrimsonForest;
+    if (forest < -0.16f) return Biome::WarpedForest;
+    return Biome::NetherWastes;
+}
+
 void WorldGen::generateNether(Chunk& chunk) const
 {
     constexpr int ROOF = 120;
@@ -238,8 +250,50 @@ void WorldGen::generateNether(Chunk& chunk) const
                 chunk.setBlockRaw(lx, y, lz, block);
             }
 
+            const Biome forest = netherBiomeAt(wx, wz);
+            if (forest != Biome::NetherWastes)
+            {
+                const bool warped = forest == Biome::WarpedForest;
+                const BlockId nylium = warped ? Blocks::WarpedNylium : Blocks::CrimsonNylium;
+                for (int y = LAVA_LEVEL + 1; y < ROOF - 3; ++y)
+                {
+                    if (chunk.getBlock(lx, y, lz) != Blocks::Netherrack) continue;
+                    if (chunk.getBlock(lx, y + 1, lz) == Blocks::Air)
+                    {
+                        chunk.setBlockRaw(lx, y, lz, nylium);
+                        const float roll = hashToFloat(hashCoords(wx, y, wz, m_seed + 7801));
+                        BlockId plant = Blocks::Air;
+                        if (roll < 0.05f) plant = warped ? Blocks::WarpedFungus : Blocks::CrimsonFungus;
+                        else if (roll < 0.22f) plant = warped ? Blocks::WarpedRoots : Blocks::CrimsonRoots;
+                        else if (warped && roll < 0.30f) plant = Blocks::NetherSprouts;
+                        else if (warped && roll < 0.33f)
+                        {
+                            const int length = 1 + static_cast<int>(hashToFloat(hashCoords(wx, y, wz, m_seed + 7802)) * 6.0f);
+                            for (int k = 0; k < length && y + 1 + k < ROOF - 3; ++k)
+                            {
+                                if (chunk.getBlock(lx, y + 1 + k, lz) != Blocks::Air) break;
+                                chunk.setBlockRaw(lx, y + 1 + k, lz,
+                                                  k == length - 1 ? Blocks::TwistingVines : Blocks::TwistingVinesPlant);
+                            }
+                        }
+                        if (plant != Blocks::Air) chunk.setBlockRaw(lx, y + 1, lz, plant);
+                    }
+                    else if (!warped && chunk.getBlock(lx, y - 1, lz) == Blocks::Air &&
+                             hashToFloat(hashCoords(wx, y, wz, m_seed + 7803)) < 0.04f)
+                    {
+                        const int length = 1 + static_cast<int>(hashToFloat(hashCoords(wx, y, wz, m_seed + 7804)) * 6.0f);
+                        for (int k = 0; k < length && y - 1 - k > LAVA_LEVEL; ++k)
+                        {
+                            if (chunk.getBlock(lx, y - 1 - k, lz) != Blocks::Air) break;
+                            chunk.setBlockRaw(lx, y - 1 - k, lz,
+                                              k == length - 1 ? Blocks::WeepingVines : Blocks::WeepingVinesPlant);
+                        }
+                    }
+                }
+            }
+
             // Soul sand collects in the low flats, glowstone hangs from the roof.
-            for (int y = LAVA_LEVEL + 1; y < ROOF - 3; ++y)
+            for (int y = LAVA_LEVEL + 1; y < ROOF - 3 && forest == Biome::NetherWastes; ++y)
             {
                 if (chunk.getBlock(lx, y, lz) != Blocks::Netherrack) continue;
                 if (chunk.getBlock(lx, y + 1, lz) != Blocks::Air) continue;
@@ -300,6 +354,36 @@ void WorldGen::generateNether(Chunk& chunk) const
             }
         }
     }
+
+    struct ChunkCells : Saplings::Cells
+    {
+        Chunk* chunk = nullptr;
+        BlockId at(int x, int y, int z) const override
+        {
+            return Chunk::inBounds(x, y, z) ? chunk->getBlock(x, y, z) : Blocks::Netherrack;
+        }
+        void set(int x, int y, int z, BlockId id) override
+        {
+            if (Chunk::inBounds(x, y, z)) chunk->setBlockRaw(x, y, z, id);
+        }
+    } cells;
+    cells.chunk = &chunk;
+    for (int lx = 3; lx < Chunk::SX - 3; ++lx)
+        for (int lz = 3; lz < Chunk::SZ - 3; ++lz)
+        {
+            const int wx = baseX + lx, wz = baseZ + lz;
+            const Biome forest = netherBiomeAt(wx, wz);
+            if (forest == Biome::NetherWastes) continue;
+            if (hashToFloat(hashCoords(wx, 0, wz, m_seed + 7810)) >= 0.02f) continue;
+            for (int y = LAVA_LEVEL + 1; y < ROOF - 16; ++y)
+            {
+                if (!isNylium(chunk.getBlock(lx, y, lz)) || chunk.getBlock(lx, y + 1, lz) == Blocks::Netherrack) continue;
+                if (chunk.getBlock(lx, y + 1, lz) != Blocks::Air && !isNetherPlant(chunk.getBlock(lx, y + 1, lz))) continue;
+                Saplings::hugeFungus(cells, glm::ivec3(lx, y + 1, lz), forest == Biome::WarpedForest,
+                                     hashCoords(wx, y, wz, m_seed + 7811));
+                break;
+            }
+        }
 }
 
 // Islands of end stone floating in the void, laid out the way
