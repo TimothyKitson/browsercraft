@@ -523,6 +523,23 @@ namespace Blocks
         WaterFlow1, WaterFlow2, WaterFlow3, WaterFlow4, WaterFlow5, WaterFlow6, WaterFlow7, WaterFalling,
         LavaFlow1, LavaFlow2, LavaFlow3, LavaFlow4, LavaFlow5, LavaFlow6, LavaFlow7, LavaFalling,
         SmallAmethystBud, MediumAmethystBud, LargeAmethystBud,
+        BirchPlanks, OakSapling, SpruceSapling, BirchSapling, JungleSapling, AcaciaSapling, DarkOakSapling, StrippedOakLog, StrippedSpruceLog, StrippedBirchLog, StrippedJungleLog, StrippedAcaciaLog, StrippedDarkOakLog,
+        SpruceDoor, SpruceDoorLast = SpruceDoor + 15,
+        BirchDoor, BirchDoorLast = BirchDoor + 15,
+        JungleDoor, JungleDoorLast = JungleDoor + 15,
+        AcaciaDoor, AcaciaDoorLast = AcaciaDoor + 15,
+        DarkOakDoor, DarkOakDoorLast = DarkOakDoor + 15,
+        OakTrapdoor, OakTrapdoorLast = OakTrapdoor + 15,
+        SpruceTrapdoor, SpruceTrapdoorLast = SpruceTrapdoor + 15,
+        BirchTrapdoor, BirchTrapdoorLast = BirchTrapdoor + 15,
+        JungleTrapdoor, JungleTrapdoorLast = JungleTrapdoor + 15,
+        AcaciaTrapdoor, AcaciaTrapdoorLast = AcaciaTrapdoor + 15,
+        DarkOakTrapdoor, DarkOakTrapdoorLast = DarkOakTrapdoor + 15,
+        SpruceSign, SpruceSignLast = SpruceSign + 3,
+        BirchSign, BirchSignLast = BirchSign + 3,
+        JungleSign, JungleSignLast = JungleSign + 3,
+        AcaciaSign, AcaciaSignLast = AcaciaSign + 3,
+        DarkOakSign, DarkOakSignLast = DarkOakSign + 3,
 
         Count
     };
@@ -540,7 +557,8 @@ enum class RenderType : uint8_t
     Fence,  // a post in the middle of its cell, with arms to its neighbours
     Door,   // a thin panel on one edge of its cell, which swings aside
     Rail,   // a flat panel on the floor of its cell, which carts run on
-    Flat    // the same panel, for anything that is not a rail
+    Flat,   // the same panel, for anything that is not a rail
+    Trapdoor
 };
 
 struct BlockInfo
@@ -618,15 +636,27 @@ inline bool isLadder(BlockId id)
 // order, so the same arithmetic places both.
 inline bool isSign(BlockId id)
 {
-    return id >= Blocks::SignNorth && id <= Blocks::SignWest;
+    return (id >= Blocks::SignNorth && id <= Blocks::SignWest) ||
+           (id >= Blocks::SpruceSign && id <= Blocks::DarkOakSignLast);
 }
-inline int signFacing(BlockId id) { return isSign(id) ? id - Blocks::SignNorth : 0; }
-inline BlockId signFacingAs(int facing)
+inline int signWood(BlockId id)
+{
+    if (id >= Blocks::SpruceSign && id <= Blocks::DarkOakSignLast) return 1 + (id - Blocks::SpruceSign) / 4;
+    return 0;
+}
+inline BlockId signBaseOf(int wood)
+{
+    return wood <= 0 ? Blocks::SignNorth : static_cast<BlockId>(Blocks::SpruceSign + (wood - 1) * 4);
+}
+inline BlockId signBase(BlockId id) { return signBaseOf(signWood(id)); }
+inline int signFacing(BlockId id) { return isSign(id) ? id - signBase(id) : 0; }
+inline BlockId signFacingAs(BlockId base, int facing)
 {
     if (facing < 0) facing = 0;
     if (facing > 3) facing = 3;
-    return static_cast<BlockId>(Blocks::SignNorth + facing);
+    return static_cast<BlockId>(base + facing);
 }
+inline BlockId signFacingAs(int facing) { return signFacingAs(Blocks::SignNorth, facing); }
 
 // An item frame, and which way it faces. The same four as a sign, off
 // the same arithmetic.
@@ -937,22 +967,29 @@ inline bool isPlanks(BlockId id)
 {
     return id == Blocks::Planks || id == Blocks::SprucePlanks ||
            id == Blocks::DarkOakPlanks || id == Blocks::JunglePlanks ||
-           id == Blocks::AcaciaPlanks;
+           id == Blocks::AcaciaPlanks || id == Blocks::BirchPlanks;
 }
 
 inline bool isLog(BlockId id)
 {
     return id == Blocks::Log || id == Blocks::BirchLog ||
            id == Blocks::SpruceLog || id == Blocks::DarkOakLog ||
-           id == Blocks::JungleLog || id == Blocks::AcaciaLog;
+           id == Blocks::JungleLog || id == Blocks::AcaciaLog ||
+           (id >= Blocks::StrippedOakLog && id <= Blocks::StrippedDarkOakLog);
 }
 
 // The planks a log breaks down into.
 inline BlockId planksFromLog(BlockId log)
 {
+    if (log >= Blocks::StrippedOakLog && log <= Blocks::StrippedDarkOakLog)
+    {
+        static const BlockId FROM[6] = { Blocks::Planks, Blocks::SprucePlanks, Blocks::BirchPlanks,
+                                         Blocks::JunglePlanks, Blocks::AcaciaPlanks, Blocks::DarkOakPlanks };
+        return FROM[log - Blocks::StrippedOakLog];
+    }
     switch (log)
     {
-        case Blocks::BirchLog:   return Blocks::Planks;   // birch has no plank of its own yet
+        case Blocks::BirchLog:   return Blocks::BirchPlanks;
         case Blocks::SpruceLog:  return Blocks::SprucePlanks;
         case Blocks::DarkOakLog: return Blocks::DarkOakPlanks;
         case Blocks::JungleLog:  return Blocks::JunglePlanks;
@@ -1004,16 +1041,80 @@ inline BlockId railShapeFor(bool north, bool east, bool south, bool west)
     return Blocks::RailNorthSouth;
 }
 
-// The three things a door id carries, and how to build one back up.
-inline bool doorIsTop(BlockId id) { return id >= Blocks::DoorHighShutNorth; }
-inline bool doorIsOpen(BlockId id)
+inline int doorWood(BlockId id)
 {
-    return ((id - Blocks::DoorLowShutNorth) & 4) != 0;
+    if (id >= Blocks::DoorLowShutNorth && id <= Blocks::DoorHighOpenWest) return 0;
+    if (id >= Blocks::SpruceDoor && id <= Blocks::DarkOakDoorLast) return 1 + (id - Blocks::SpruceDoor) / 16;
+    return -1;
+}
+inline BlockId doorBaseOf(int wood)
+{
+    return wood <= 0 ? Blocks::DoorLowShutNorth : static_cast<BlockId>(Blocks::SpruceDoor + (wood - 1) * 16);
+}
+inline BlockId doorBase(BlockId id) { return doorBaseOf(doorWood(id)); }
+inline bool doorIsTop(BlockId id) { return ((id - doorBase(id)) & 8) != 0; }
+inline bool doorIsOpen(BlockId id) { return ((id - doorBase(id)) & 4) != 0; }
+inline BlockId doorPart(BlockId base, int facing, bool top, bool open)
+{
+    return static_cast<BlockId>(base + (top ? 8 : 0) + (open ? 4 : 0) + (facing & 3));
 }
 inline BlockId doorPart(int facing, bool top, bool open)
 {
-    return static_cast<BlockId>(Blocks::DoorLowShutNorth + (top ? 8 : 0) +
-                                (open ? 4 : 0) + (facing & 3));
+    return doorPart(Blocks::DoorLowShutNorth, facing, top, open);
+}
+
+inline bool isTrapdoor(BlockId id) { return id >= Blocks::OakTrapdoor && id <= Blocks::DarkOakTrapdoorLast; }
+inline BlockId trapdoorBaseOf(int wood) { return static_cast<BlockId>(Blocks::OakTrapdoor + wood * 16); }
+inline int trapdoorWood(BlockId id) { return (id - Blocks::OakTrapdoor) / 16; }
+inline BlockId trapdoorBase(BlockId id) { return trapdoorBaseOf(trapdoorWood(id)); }
+inline bool trapdoorIsTop(BlockId id) { return ((id - trapdoorBase(id)) & 8) != 0; }
+inline bool trapdoorIsOpen(BlockId id) { return ((id - trapdoorBase(id)) & 4) != 0; }
+inline int trapdoorFacing(BlockId id) { return (id - trapdoorBase(id)) & 3; }
+inline BlockId trapdoorPart(BlockId base, int facing, bool top, bool open)
+{
+    return static_cast<BlockId>(base + (top ? 8 : 0) + (open ? 4 : 0) + (facing & 3));
+}
+
+inline bool isSapling(BlockId id) { return id >= Blocks::OakSapling && id <= Blocks::DarkOakSapling; }
+inline int saplingWood(BlockId id) { return id - Blocks::OakSapling; }
+inline bool isStrippedLog(BlockId id) { return id >= Blocks::StrippedOakLog && id <= Blocks::StrippedDarkOakLog; }
+
+inline BlockId logOfWood(int wood)
+{
+    static const BlockId LOGS[6] = { Blocks::Log, Blocks::SpruceLog, Blocks::BirchLog,
+                                      Blocks::JungleLog, Blocks::AcaciaLog, Blocks::DarkOakLog };
+    return LOGS[wood < 0 || wood > 5 ? 0 : wood];
+}
+inline BlockId planksOfWood(int wood)
+{
+    static const BlockId PLANKS[6] = { Blocks::Planks, Blocks::SprucePlanks, Blocks::BirchPlanks,
+                                       Blocks::JunglePlanks, Blocks::AcaciaPlanks, Blocks::DarkOakPlanks };
+    return PLANKS[wood < 0 || wood > 5 ? 0 : wood];
+}
+inline BlockId leavesOfWood(int wood)
+{
+    static const BlockId LEAVES[6] = { Blocks::Leaves, Blocks::SpruceLeaves, Blocks::BirchLeaves,
+                                       Blocks::JungleLeaves, Blocks::AcaciaLeaves, Blocks::DarkOakLeaves };
+    return LEAVES[wood < 0 || wood > 5 ? 0 : wood];
+}
+inline int woodOfLog(BlockId id)
+{
+    for (int wood = 0; wood < 6; ++wood)
+        if (logOfWood(wood) == id) return wood;
+    if (isStrippedLog(id)) return id - Blocks::StrippedOakLog;
+    return -1;
+}
+inline int woodOfLeaves(BlockId id)
+{
+    for (int wood = 0; wood < 6; ++wood)
+        if (leavesOfWood(wood) == id) return wood;
+    return -1;
+}
+inline BlockId strippedOf(BlockId log)
+{
+    for (int wood = 0; wood < 6; ++wood)
+        if (logOfWood(wood) == log) return static_cast<BlockId>(Blocks::StrippedOakLog + wood);
+    return Blocks::Air;
 }
 
 // How far above its own cell a block stands. A fence is half a block
@@ -1084,7 +1185,8 @@ inline int blockFacing(BlockId id)
     if (isSign(id)) return signFacing(id);
     if (isFrame(id)) return frameFacing(id);
     if (isStairs(id)) return (id - Blocks::StoneStairsNorth) & 3;
-    if (isDoor(id)) return (id - Blocks::DoorLowShutNorth) & 3;
+    if (isDoor(id)) return (id - doorBase(id)) & 3;
+    if (isTrapdoor(id)) return trapdoorFacing(id);
     if (isPiston(id)) return pistonFacing(id);
     if (isFurnaceBlock(id)) return furnaceFacing(id);
     if (isVault(id)) return 2;

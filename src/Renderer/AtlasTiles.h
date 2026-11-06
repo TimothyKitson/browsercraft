@@ -294,6 +294,7 @@ namespace Tiles
         DripstoneDownBase, DripstoneDownFrustum, DripstoneDownMiddle, DripstoneDownTipMerge,
         DripstoneUpTip, DripstoneUpBase, DripstoneUpFrustum, DripstoneUpMiddle, DripstoneUpTipMerge,
         DustDotOff, DustDotOn, DustLine0Off, DustLine0On, DustLine1Off, DustLine1On, LeverHandle,
+        BirchPlanksTile, OakSaplingTile, SpruceSaplingTile, BirchSaplingTile, JungleSaplingTile, AcaciaSaplingTile, DarkOakSaplingTile, StrippedOakLogSide, StrippedOakLogTop, StrippedSpruceLogSide, StrippedSpruceLogTop, StrippedBirchLogSide, StrippedBirchLogTop, StrippedJungleLogSide, StrippedJungleLogTop, StrippedAcaciaLogSide, StrippedAcaciaLogTop, StrippedDarkOakLogSide, StrippedDarkOakLogTop, SpruceDoorLower, SpruceDoorUpper, BirchDoorLower, BirchDoorUpper, JungleDoorLower, JungleDoorUpper, AcaciaDoorLower, AcaciaDoorUpper, DarkOakDoorLower, DarkOakDoorUpper, OakTrapdoorTile, SpruceTrapdoorTile, BirchTrapdoorTile, JungleTrapdoorTile, AcaciaTrapdoorTile, DarkOakTrapdoorTile,
 
         TileCount
     };
@@ -478,8 +479,9 @@ namespace Tiles
         IconOakDoor, IconCampfire, IconCauldron, IconHopper, IconDripstone, IconBamboo,
         ShulkerBulletTile, DragonFireballTile, ItemBrokenElytra,
         ItemSaddle, ItemHorseArmorLeather, ItemHorseArmorIron, ItemHorseArmorGold, ItemHorseArmorDiamond,
+        IconSpruceDoor, IconBirchDoor, IconJungleDoor, IconAcaciaDoor, IconDarkOakDoor, ItemSpruceSign, ItemBirchSign, ItemJungleSign, ItemAcaciaSign, ItemDarkOakSign,
 
-        ItemTileEnd = ItemHorseArmorDiamond + 1
+        ItemTileEnd = ItemDarkOakSign + 1
     };
 
     // Ten progressively more broken overlay tiles for the mining animation.

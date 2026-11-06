@@ -92,12 +92,13 @@ Everything in the 1.21 textures zip the game doesn't use yet, turned into work. 
 
 ## Part 2: new blocks
 
-22. The six existing woods
+22. The six existing woods (done)
     - I. Saplings that grow into each tree, the 2x2 dark oak and jungle trees included.
     - II. Trapdoors for all six woods. Doors for spruce, birch, jungle, acacia and dark oak.
     - III. Stripped logs, stripped by right-clicking with an axe.
     - IV. Birch planks.
     - V. Signs for every wood.
+    - Left for later: wooden stairs, slabs and fences for the five newer woods, and the mega spruce from four spruce saplings.
 23. Cherry wood
     - I. Logs, leaves, planks, door, trapdoor, sapling and sign.
     - II. The cherry grove biome, pink petals and falling-petal particles.

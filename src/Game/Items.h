@@ -293,6 +293,7 @@ namespace Items
         GoldHorseArmor,
         DiamondHorseArmor,
 
+        SpruceSign, BirchSign, JungleSign, AcaciaSign, DarkOakSign,
         Count
     };
 }
@@ -305,6 +306,16 @@ struct ItemInfo
 };
 
 inline bool isItem(StackId id) { return id >= Items::FIRST && id < Items::Count; }
+inline StackId signItemOfWood(int wood)
+{
+    return wood <= 0 ? Items::Sign : static_cast<StackId>(Items::SpruceSign + wood - 1);
+}
+inline int woodOfSignItem(StackId id)
+{
+    if (id == Items::Sign) return 0;
+    if (id >= Items::SpruceSign && id <= Items::DarkOakSign) return 1 + (id - Items::SpruceSign);
+    return -1;
+}
 // Everything below the items is a block, Air included.
 inline bool isBlockStack(StackId id) { return id < Items::FIRST; }
 // Only call this once isBlockStack has said yes.

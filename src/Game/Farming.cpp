@@ -1,3 +1,4 @@
+#include "Saplings.h"
 #include "Farming.h"
 #include "Cane.h"
 #include "World/World.h"
@@ -228,6 +229,22 @@ void Farming::grow(World& world, const glm::vec3& around, uint32_t& seed)
                     world.setBlock(x, y, z, cocoaAt(cocoaStage(pod) + 1));
                 continue;
             }
+        }
+
+        if (isSapling(world.getBlock(x, y, z)))
+        {
+            if (nextRandom(seed) % 4u == 0u)
+            {
+                struct WorldCells : Saplings::Cells
+                {
+                    World* world = nullptr;
+                    BlockId at(int cx, int cy, int cz) const override { return world->getBlock(cx, cy, cz); }
+                    void set(int cx, int cy, int cz, BlockId id) override { world->setBlock(cx, cy, cz, id); }
+                } cells;
+                cells.world = &world;
+                Saplings::grow(cells, at, nextRandom(seed));
+            }
+            continue;
         }
 
         // Bamboo, which grows faster than anything in the game and

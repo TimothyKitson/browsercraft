@@ -193,6 +193,11 @@ namespace
         { "Iron Horse Armor",     Tiles::ItemHorseArmorIron,    1 },
         { "Golden Horse Armor",   Tiles::ItemHorseArmorGold,    1 },
         { "Diamond Horse Armor",  Tiles::ItemHorseArmorDiamond, 1 },
+        { "Spruce Sign",          Tiles::ItemSpruceSign,        16 },
+        { "Birch Sign",           Tiles::ItemBirchSign,         16 },
+        { "Jungle Sign",          Tiles::ItemJungleSign,        16 },
+        { "Acacia Sign",          Tiles::ItemAcaciaSign,        16 },
+        { "Dark Oak Sign",        Tiles::ItemDarkOakSign,       16 },
     };
 
     static_assert(sizeof(ITEMS) / sizeof(ITEMS[0]) ==
@@ -215,7 +220,14 @@ const char* displayName(StackId id)
 
 int flatIconFor(BlockId id)
 {
-    if (isDoor(id)) return Tiles::IconOakDoor;
+    if (isDoor(id))
+    {
+        static const int ICONS[6] = { Tiles::IconOakDoor, Tiles::IconSpruceDoor, Tiles::IconBirchDoor,
+                                      Tiles::IconJungleDoor, Tiles::IconAcaciaDoor, Tiles::IconDarkOakDoor };
+        const int wood = doorWood(id);
+        return ICONS[wood < 0 ? 0 : wood];
+    }
+    if (isTrapdoor(id)) return blockInfo(id).tileTop;
     if (id == Blocks::Campfire) return Tiles::IconCampfire;
     if (isCauldron(id)) return Tiles::IconCauldron;
     if (id == Blocks::Hopper) return Tiles::IconHopper;
@@ -281,7 +293,9 @@ StackId blockDrop(BlockId id)
     if (id == Blocks::CandleLit) return Blocks::Candle;
 
     // However it was hung, what comes back is one sign.
-    if (isSign(id)) return Items::Sign;
+    if (isSign(id)) return signItemOfWood(signWood(id));
+    if (isDoor(id)) return doorBase(id);
+    if (isTrapdoor(id)) return trapdoorBase(id);
     if (isFrame(id)) return Items::ItemFrame;
 
     // A melon comes apart into slices rather than into a melon, which

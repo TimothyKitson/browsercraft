@@ -446,6 +446,215 @@ namespace
         { "Small Amethyst Bud", SmallBudTile, SmallBudTile, SmallBudTile, false, false, RenderType::Cross, 1, 1.5f },
         { "Medium Amethyst Bud", MediumBudTile, MediumBudTile, MediumBudTile, false, false, RenderType::Cross, 2, 1.5f },
         { "Large Amethyst Bud", LargeBudTile, LargeBudTile, LargeBudTile, false, false, RenderType::Cross, 4, 1.5f },
+        { "Birch Planks", BirchPlanksTile, BirchPlanksTile, BirchPlanksTile, true, true, RenderType::Cube, 0, 1.5f },
+        { "Oak Sapling", OakSaplingTile, OakSaplingTile, OakSaplingTile, false, false, RenderType::Cross, 0, 0.0f },
+        { "Spruce Sapling", SpruceSaplingTile, SpruceSaplingTile, SpruceSaplingTile, false, false, RenderType::Cross, 0, 0.0f },
+        { "Birch Sapling", BirchSaplingTile, BirchSaplingTile, BirchSaplingTile, false, false, RenderType::Cross, 0, 0.0f },
+        { "Jungle Sapling", JungleSaplingTile, JungleSaplingTile, JungleSaplingTile, false, false, RenderType::Cross, 0, 0.0f },
+        { "Acacia Sapling", AcaciaSaplingTile, AcaciaSaplingTile, AcaciaSaplingTile, false, false, RenderType::Cross, 0, 0.0f },
+        { "Dark Oak Sapling", DarkOakSaplingTile, DarkOakSaplingTile, DarkOakSaplingTile, false, false, RenderType::Cross, 0, 0.0f },
+        { "Stripped Oak Log", StrippedOakLogTop, StrippedOakLogTop, StrippedOakLogSide, true, true, RenderType::Cube, 0, 2.0f },
+        { "Stripped Spruce Log", StrippedSpruceLogTop, StrippedSpruceLogTop, StrippedSpruceLogSide, true, true, RenderType::Cube, 0, 2.0f },
+        { "Stripped Birch Log", StrippedBirchLogTop, StrippedBirchLogTop, StrippedBirchLogSide, true, true, RenderType::Cube, 0, 2.0f },
+        { "Stripped Jungle Log", StrippedJungleLogTop, StrippedJungleLogTop, StrippedJungleLogSide, true, true, RenderType::Cube, 0, 2.0f },
+        { "Stripped Acacia Log", StrippedAcaciaLogTop, StrippedAcaciaLogTop, StrippedAcaciaLogSide, true, true, RenderType::Cube, 0, 2.0f },
+        { "Stripped Dark Oak Log", StrippedDarkOakLogTop, StrippedDarkOakLogTop, StrippedDarkOakLogSide, true, true, RenderType::Cube, 0, 2.0f },
+        { "Spruce Door", SpruceDoorLower, SpruceDoorLower, SpruceDoorLower, true, false, RenderType::Door, 0, 3.0f },
+        { "Spruce Door", SpruceDoorLower, SpruceDoorLower, SpruceDoorLower, true, false, RenderType::Door, 0, 3.0f },
+        { "Spruce Door", SpruceDoorLower, SpruceDoorLower, SpruceDoorLower, true, false, RenderType::Door, 0, 3.0f },
+        { "Spruce Door", SpruceDoorLower, SpruceDoorLower, SpruceDoorLower, true, false, RenderType::Door, 0, 3.0f },
+        { "Spruce Door", SpruceDoorLower, SpruceDoorLower, SpruceDoorLower, true, false, RenderType::Door, 0, 3.0f },
+        { "Spruce Door", SpruceDoorLower, SpruceDoorLower, SpruceDoorLower, true, false, RenderType::Door, 0, 3.0f },
+        { "Spruce Door", SpruceDoorLower, SpruceDoorLower, SpruceDoorLower, true, false, RenderType::Door, 0, 3.0f },
+        { "Spruce Door", SpruceDoorLower, SpruceDoorLower, SpruceDoorLower, true, false, RenderType::Door, 0, 3.0f },
+        { "Spruce Door", SpruceDoorUpper, SpruceDoorUpper, SpruceDoorUpper, true, false, RenderType::Door, 0, 3.0f },
+        { "Spruce Door", SpruceDoorUpper, SpruceDoorUpper, SpruceDoorUpper, true, false, RenderType::Door, 0, 3.0f },
+        { "Spruce Door", SpruceDoorUpper, SpruceDoorUpper, SpruceDoorUpper, true, false, RenderType::Door, 0, 3.0f },
+        { "Spruce Door", SpruceDoorUpper, SpruceDoorUpper, SpruceDoorUpper, true, false, RenderType::Door, 0, 3.0f },
+        { "Spruce Door", SpruceDoorUpper, SpruceDoorUpper, SpruceDoorUpper, true, false, RenderType::Door, 0, 3.0f },
+        { "Spruce Door", SpruceDoorUpper, SpruceDoorUpper, SpruceDoorUpper, true, false, RenderType::Door, 0, 3.0f },
+        { "Spruce Door", SpruceDoorUpper, SpruceDoorUpper, SpruceDoorUpper, true, false, RenderType::Door, 0, 3.0f },
+        { "Spruce Door", SpruceDoorUpper, SpruceDoorUpper, SpruceDoorUpper, true, false, RenderType::Door, 0, 3.0f },
+        { "Birch Door", BirchDoorLower, BirchDoorLower, BirchDoorLower, true, false, RenderType::Door, 0, 3.0f },
+        { "Birch Door", BirchDoorLower, BirchDoorLower, BirchDoorLower, true, false, RenderType::Door, 0, 3.0f },
+        { "Birch Door", BirchDoorLower, BirchDoorLower, BirchDoorLower, true, false, RenderType::Door, 0, 3.0f },
+        { "Birch Door", BirchDoorLower, BirchDoorLower, BirchDoorLower, true, false, RenderType::Door, 0, 3.0f },
+        { "Birch Door", BirchDoorLower, BirchDoorLower, BirchDoorLower, true, false, RenderType::Door, 0, 3.0f },
+        { "Birch Door", BirchDoorLower, BirchDoorLower, BirchDoorLower, true, false, RenderType::Door, 0, 3.0f },
+        { "Birch Door", BirchDoorLower, BirchDoorLower, BirchDoorLower, true, false, RenderType::Door, 0, 3.0f },
+        { "Birch Door", BirchDoorLower, BirchDoorLower, BirchDoorLower, true, false, RenderType::Door, 0, 3.0f },
+        { "Birch Door", BirchDoorUpper, BirchDoorUpper, BirchDoorUpper, true, false, RenderType::Door, 0, 3.0f },
+        { "Birch Door", BirchDoorUpper, BirchDoorUpper, BirchDoorUpper, true, false, RenderType::Door, 0, 3.0f },
+        { "Birch Door", BirchDoorUpper, BirchDoorUpper, BirchDoorUpper, true, false, RenderType::Door, 0, 3.0f },
+        { "Birch Door", BirchDoorUpper, BirchDoorUpper, BirchDoorUpper, true, false, RenderType::Door, 0, 3.0f },
+        { "Birch Door", BirchDoorUpper, BirchDoorUpper, BirchDoorUpper, true, false, RenderType::Door, 0, 3.0f },
+        { "Birch Door", BirchDoorUpper, BirchDoorUpper, BirchDoorUpper, true, false, RenderType::Door, 0, 3.0f },
+        { "Birch Door", BirchDoorUpper, BirchDoorUpper, BirchDoorUpper, true, false, RenderType::Door, 0, 3.0f },
+        { "Birch Door", BirchDoorUpper, BirchDoorUpper, BirchDoorUpper, true, false, RenderType::Door, 0, 3.0f },
+        { "Jungle Door", JungleDoorLower, JungleDoorLower, JungleDoorLower, true, false, RenderType::Door, 0, 3.0f },
+        { "Jungle Door", JungleDoorLower, JungleDoorLower, JungleDoorLower, true, false, RenderType::Door, 0, 3.0f },
+        { "Jungle Door", JungleDoorLower, JungleDoorLower, JungleDoorLower, true, false, RenderType::Door, 0, 3.0f },
+        { "Jungle Door", JungleDoorLower, JungleDoorLower, JungleDoorLower, true, false, RenderType::Door, 0, 3.0f },
+        { "Jungle Door", JungleDoorLower, JungleDoorLower, JungleDoorLower, true, false, RenderType::Door, 0, 3.0f },
+        { "Jungle Door", JungleDoorLower, JungleDoorLower, JungleDoorLower, true, false, RenderType::Door, 0, 3.0f },
+        { "Jungle Door", JungleDoorLower, JungleDoorLower, JungleDoorLower, true, false, RenderType::Door, 0, 3.0f },
+        { "Jungle Door", JungleDoorLower, JungleDoorLower, JungleDoorLower, true, false, RenderType::Door, 0, 3.0f },
+        { "Jungle Door", JungleDoorUpper, JungleDoorUpper, JungleDoorUpper, true, false, RenderType::Door, 0, 3.0f },
+        { "Jungle Door", JungleDoorUpper, JungleDoorUpper, JungleDoorUpper, true, false, RenderType::Door, 0, 3.0f },
+        { "Jungle Door", JungleDoorUpper, JungleDoorUpper, JungleDoorUpper, true, false, RenderType::Door, 0, 3.0f },
+        { "Jungle Door", JungleDoorUpper, JungleDoorUpper, JungleDoorUpper, true, false, RenderType::Door, 0, 3.0f },
+        { "Jungle Door", JungleDoorUpper, JungleDoorUpper, JungleDoorUpper, true, false, RenderType::Door, 0, 3.0f },
+        { "Jungle Door", JungleDoorUpper, JungleDoorUpper, JungleDoorUpper, true, false, RenderType::Door, 0, 3.0f },
+        { "Jungle Door", JungleDoorUpper, JungleDoorUpper, JungleDoorUpper, true, false, RenderType::Door, 0, 3.0f },
+        { "Jungle Door", JungleDoorUpper, JungleDoorUpper, JungleDoorUpper, true, false, RenderType::Door, 0, 3.0f },
+        { "Acacia Door", AcaciaDoorLower, AcaciaDoorLower, AcaciaDoorLower, true, false, RenderType::Door, 0, 3.0f },
+        { "Acacia Door", AcaciaDoorLower, AcaciaDoorLower, AcaciaDoorLower, true, false, RenderType::Door, 0, 3.0f },
+        { "Acacia Door", AcaciaDoorLower, AcaciaDoorLower, AcaciaDoorLower, true, false, RenderType::Door, 0, 3.0f },
+        { "Acacia Door", AcaciaDoorLower, AcaciaDoorLower, AcaciaDoorLower, true, false, RenderType::Door, 0, 3.0f },
+        { "Acacia Door", AcaciaDoorLower, AcaciaDoorLower, AcaciaDoorLower, true, false, RenderType::Door, 0, 3.0f },
+        { "Acacia Door", AcaciaDoorLower, AcaciaDoorLower, AcaciaDoorLower, true, false, RenderType::Door, 0, 3.0f },
+        { "Acacia Door", AcaciaDoorLower, AcaciaDoorLower, AcaciaDoorLower, true, false, RenderType::Door, 0, 3.0f },
+        { "Acacia Door", AcaciaDoorLower, AcaciaDoorLower, AcaciaDoorLower, true, false, RenderType::Door, 0, 3.0f },
+        { "Acacia Door", AcaciaDoorUpper, AcaciaDoorUpper, AcaciaDoorUpper, true, false, RenderType::Door, 0, 3.0f },
+        { "Acacia Door", AcaciaDoorUpper, AcaciaDoorUpper, AcaciaDoorUpper, true, false, RenderType::Door, 0, 3.0f },
+        { "Acacia Door", AcaciaDoorUpper, AcaciaDoorUpper, AcaciaDoorUpper, true, false, RenderType::Door, 0, 3.0f },
+        { "Acacia Door", AcaciaDoorUpper, AcaciaDoorUpper, AcaciaDoorUpper, true, false, RenderType::Door, 0, 3.0f },
+        { "Acacia Door", AcaciaDoorUpper, AcaciaDoorUpper, AcaciaDoorUpper, true, false, RenderType::Door, 0, 3.0f },
+        { "Acacia Door", AcaciaDoorUpper, AcaciaDoorUpper, AcaciaDoorUpper, true, false, RenderType::Door, 0, 3.0f },
+        { "Acacia Door", AcaciaDoorUpper, AcaciaDoorUpper, AcaciaDoorUpper, true, false, RenderType::Door, 0, 3.0f },
+        { "Acacia Door", AcaciaDoorUpper, AcaciaDoorUpper, AcaciaDoorUpper, true, false, RenderType::Door, 0, 3.0f },
+        { "Dark Oak Door", DarkOakDoorLower, DarkOakDoorLower, DarkOakDoorLower, true, false, RenderType::Door, 0, 3.0f },
+        { "Dark Oak Door", DarkOakDoorLower, DarkOakDoorLower, DarkOakDoorLower, true, false, RenderType::Door, 0, 3.0f },
+        { "Dark Oak Door", DarkOakDoorLower, DarkOakDoorLower, DarkOakDoorLower, true, false, RenderType::Door, 0, 3.0f },
+        { "Dark Oak Door", DarkOakDoorLower, DarkOakDoorLower, DarkOakDoorLower, true, false, RenderType::Door, 0, 3.0f },
+        { "Dark Oak Door", DarkOakDoorLower, DarkOakDoorLower, DarkOakDoorLower, true, false, RenderType::Door, 0, 3.0f },
+        { "Dark Oak Door", DarkOakDoorLower, DarkOakDoorLower, DarkOakDoorLower, true, false, RenderType::Door, 0, 3.0f },
+        { "Dark Oak Door", DarkOakDoorLower, DarkOakDoorLower, DarkOakDoorLower, true, false, RenderType::Door, 0, 3.0f },
+        { "Dark Oak Door", DarkOakDoorLower, DarkOakDoorLower, DarkOakDoorLower, true, false, RenderType::Door, 0, 3.0f },
+        { "Dark Oak Door", DarkOakDoorUpper, DarkOakDoorUpper, DarkOakDoorUpper, true, false, RenderType::Door, 0, 3.0f },
+        { "Dark Oak Door", DarkOakDoorUpper, DarkOakDoorUpper, DarkOakDoorUpper, true, false, RenderType::Door, 0, 3.0f },
+        { "Dark Oak Door", DarkOakDoorUpper, DarkOakDoorUpper, DarkOakDoorUpper, true, false, RenderType::Door, 0, 3.0f },
+        { "Dark Oak Door", DarkOakDoorUpper, DarkOakDoorUpper, DarkOakDoorUpper, true, false, RenderType::Door, 0, 3.0f },
+        { "Dark Oak Door", DarkOakDoorUpper, DarkOakDoorUpper, DarkOakDoorUpper, true, false, RenderType::Door, 0, 3.0f },
+        { "Dark Oak Door", DarkOakDoorUpper, DarkOakDoorUpper, DarkOakDoorUpper, true, false, RenderType::Door, 0, 3.0f },
+        { "Dark Oak Door", DarkOakDoorUpper, DarkOakDoorUpper, DarkOakDoorUpper, true, false, RenderType::Door, 0, 3.0f },
+        { "Dark Oak Door", DarkOakDoorUpper, DarkOakDoorUpper, DarkOakDoorUpper, true, false, RenderType::Door, 0, 3.0f },
+        { "Oak Trapdoor", OakTrapdoorTile, OakTrapdoorTile, OakTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Oak Trapdoor", OakTrapdoorTile, OakTrapdoorTile, OakTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Oak Trapdoor", OakTrapdoorTile, OakTrapdoorTile, OakTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Oak Trapdoor", OakTrapdoorTile, OakTrapdoorTile, OakTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Oak Trapdoor", OakTrapdoorTile, OakTrapdoorTile, OakTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Oak Trapdoor", OakTrapdoorTile, OakTrapdoorTile, OakTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Oak Trapdoor", OakTrapdoorTile, OakTrapdoorTile, OakTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Oak Trapdoor", OakTrapdoorTile, OakTrapdoorTile, OakTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Oak Trapdoor", OakTrapdoorTile, OakTrapdoorTile, OakTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Oak Trapdoor", OakTrapdoorTile, OakTrapdoorTile, OakTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Oak Trapdoor", OakTrapdoorTile, OakTrapdoorTile, OakTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Oak Trapdoor", OakTrapdoorTile, OakTrapdoorTile, OakTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Oak Trapdoor", OakTrapdoorTile, OakTrapdoorTile, OakTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Oak Trapdoor", OakTrapdoorTile, OakTrapdoorTile, OakTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Oak Trapdoor", OakTrapdoorTile, OakTrapdoorTile, OakTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Oak Trapdoor", OakTrapdoorTile, OakTrapdoorTile, OakTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Spruce Trapdoor", SpruceTrapdoorTile, SpruceTrapdoorTile, SpruceTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Spruce Trapdoor", SpruceTrapdoorTile, SpruceTrapdoorTile, SpruceTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Spruce Trapdoor", SpruceTrapdoorTile, SpruceTrapdoorTile, SpruceTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Spruce Trapdoor", SpruceTrapdoorTile, SpruceTrapdoorTile, SpruceTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Spruce Trapdoor", SpruceTrapdoorTile, SpruceTrapdoorTile, SpruceTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Spruce Trapdoor", SpruceTrapdoorTile, SpruceTrapdoorTile, SpruceTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Spruce Trapdoor", SpruceTrapdoorTile, SpruceTrapdoorTile, SpruceTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Spruce Trapdoor", SpruceTrapdoorTile, SpruceTrapdoorTile, SpruceTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Spruce Trapdoor", SpruceTrapdoorTile, SpruceTrapdoorTile, SpruceTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Spruce Trapdoor", SpruceTrapdoorTile, SpruceTrapdoorTile, SpruceTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Spruce Trapdoor", SpruceTrapdoorTile, SpruceTrapdoorTile, SpruceTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Spruce Trapdoor", SpruceTrapdoorTile, SpruceTrapdoorTile, SpruceTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Spruce Trapdoor", SpruceTrapdoorTile, SpruceTrapdoorTile, SpruceTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Spruce Trapdoor", SpruceTrapdoorTile, SpruceTrapdoorTile, SpruceTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Spruce Trapdoor", SpruceTrapdoorTile, SpruceTrapdoorTile, SpruceTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Spruce Trapdoor", SpruceTrapdoorTile, SpruceTrapdoorTile, SpruceTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Birch Trapdoor", BirchTrapdoorTile, BirchTrapdoorTile, BirchTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Birch Trapdoor", BirchTrapdoorTile, BirchTrapdoorTile, BirchTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Birch Trapdoor", BirchTrapdoorTile, BirchTrapdoorTile, BirchTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Birch Trapdoor", BirchTrapdoorTile, BirchTrapdoorTile, BirchTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Birch Trapdoor", BirchTrapdoorTile, BirchTrapdoorTile, BirchTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Birch Trapdoor", BirchTrapdoorTile, BirchTrapdoorTile, BirchTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Birch Trapdoor", BirchTrapdoorTile, BirchTrapdoorTile, BirchTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Birch Trapdoor", BirchTrapdoorTile, BirchTrapdoorTile, BirchTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Birch Trapdoor", BirchTrapdoorTile, BirchTrapdoorTile, BirchTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Birch Trapdoor", BirchTrapdoorTile, BirchTrapdoorTile, BirchTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Birch Trapdoor", BirchTrapdoorTile, BirchTrapdoorTile, BirchTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Birch Trapdoor", BirchTrapdoorTile, BirchTrapdoorTile, BirchTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Birch Trapdoor", BirchTrapdoorTile, BirchTrapdoorTile, BirchTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Birch Trapdoor", BirchTrapdoorTile, BirchTrapdoorTile, BirchTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Birch Trapdoor", BirchTrapdoorTile, BirchTrapdoorTile, BirchTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Birch Trapdoor", BirchTrapdoorTile, BirchTrapdoorTile, BirchTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Jungle Trapdoor", JungleTrapdoorTile, JungleTrapdoorTile, JungleTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Jungle Trapdoor", JungleTrapdoorTile, JungleTrapdoorTile, JungleTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Jungle Trapdoor", JungleTrapdoorTile, JungleTrapdoorTile, JungleTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Jungle Trapdoor", JungleTrapdoorTile, JungleTrapdoorTile, JungleTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Jungle Trapdoor", JungleTrapdoorTile, JungleTrapdoorTile, JungleTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Jungle Trapdoor", JungleTrapdoorTile, JungleTrapdoorTile, JungleTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Jungle Trapdoor", JungleTrapdoorTile, JungleTrapdoorTile, JungleTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Jungle Trapdoor", JungleTrapdoorTile, JungleTrapdoorTile, JungleTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Jungle Trapdoor", JungleTrapdoorTile, JungleTrapdoorTile, JungleTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Jungle Trapdoor", JungleTrapdoorTile, JungleTrapdoorTile, JungleTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Jungle Trapdoor", JungleTrapdoorTile, JungleTrapdoorTile, JungleTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Jungle Trapdoor", JungleTrapdoorTile, JungleTrapdoorTile, JungleTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Jungle Trapdoor", JungleTrapdoorTile, JungleTrapdoorTile, JungleTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Jungle Trapdoor", JungleTrapdoorTile, JungleTrapdoorTile, JungleTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Jungle Trapdoor", JungleTrapdoorTile, JungleTrapdoorTile, JungleTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Jungle Trapdoor", JungleTrapdoorTile, JungleTrapdoorTile, JungleTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Acacia Trapdoor", AcaciaTrapdoorTile, AcaciaTrapdoorTile, AcaciaTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Acacia Trapdoor", AcaciaTrapdoorTile, AcaciaTrapdoorTile, AcaciaTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Acacia Trapdoor", AcaciaTrapdoorTile, AcaciaTrapdoorTile, AcaciaTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Acacia Trapdoor", AcaciaTrapdoorTile, AcaciaTrapdoorTile, AcaciaTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Acacia Trapdoor", AcaciaTrapdoorTile, AcaciaTrapdoorTile, AcaciaTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Acacia Trapdoor", AcaciaTrapdoorTile, AcaciaTrapdoorTile, AcaciaTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Acacia Trapdoor", AcaciaTrapdoorTile, AcaciaTrapdoorTile, AcaciaTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Acacia Trapdoor", AcaciaTrapdoorTile, AcaciaTrapdoorTile, AcaciaTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Acacia Trapdoor", AcaciaTrapdoorTile, AcaciaTrapdoorTile, AcaciaTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Acacia Trapdoor", AcaciaTrapdoorTile, AcaciaTrapdoorTile, AcaciaTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Acacia Trapdoor", AcaciaTrapdoorTile, AcaciaTrapdoorTile, AcaciaTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Acacia Trapdoor", AcaciaTrapdoorTile, AcaciaTrapdoorTile, AcaciaTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Acacia Trapdoor", AcaciaTrapdoorTile, AcaciaTrapdoorTile, AcaciaTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Acacia Trapdoor", AcaciaTrapdoorTile, AcaciaTrapdoorTile, AcaciaTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Acacia Trapdoor", AcaciaTrapdoorTile, AcaciaTrapdoorTile, AcaciaTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Acacia Trapdoor", AcaciaTrapdoorTile, AcaciaTrapdoorTile, AcaciaTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Dark Oak Trapdoor", DarkOakTrapdoorTile, DarkOakTrapdoorTile, DarkOakTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Dark Oak Trapdoor", DarkOakTrapdoorTile, DarkOakTrapdoorTile, DarkOakTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Dark Oak Trapdoor", DarkOakTrapdoorTile, DarkOakTrapdoorTile, DarkOakTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Dark Oak Trapdoor", DarkOakTrapdoorTile, DarkOakTrapdoorTile, DarkOakTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Dark Oak Trapdoor", DarkOakTrapdoorTile, DarkOakTrapdoorTile, DarkOakTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Dark Oak Trapdoor", DarkOakTrapdoorTile, DarkOakTrapdoorTile, DarkOakTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Dark Oak Trapdoor", DarkOakTrapdoorTile, DarkOakTrapdoorTile, DarkOakTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Dark Oak Trapdoor", DarkOakTrapdoorTile, DarkOakTrapdoorTile, DarkOakTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Dark Oak Trapdoor", DarkOakTrapdoorTile, DarkOakTrapdoorTile, DarkOakTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Dark Oak Trapdoor", DarkOakTrapdoorTile, DarkOakTrapdoorTile, DarkOakTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Dark Oak Trapdoor", DarkOakTrapdoorTile, DarkOakTrapdoorTile, DarkOakTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Dark Oak Trapdoor", DarkOakTrapdoorTile, DarkOakTrapdoorTile, DarkOakTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Dark Oak Trapdoor", DarkOakTrapdoorTile, DarkOakTrapdoorTile, DarkOakTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Dark Oak Trapdoor", DarkOakTrapdoorTile, DarkOakTrapdoorTile, DarkOakTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Dark Oak Trapdoor", DarkOakTrapdoorTile, DarkOakTrapdoorTile, DarkOakTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Dark Oak Trapdoor", DarkOakTrapdoorTile, DarkOakTrapdoorTile, DarkOakTrapdoorTile, true, false, RenderType::Trapdoor, 0, 3.0f },
+        { "Spruce Sign", SprucePlanks, SprucePlanks, SprucePlanks, false, false, RenderType::Ladder, 0, 1.0f },
+        { "Spruce Sign", SprucePlanks, SprucePlanks, SprucePlanks, false, false, RenderType::Ladder, 0, 1.0f },
+        { "Spruce Sign", SprucePlanks, SprucePlanks, SprucePlanks, false, false, RenderType::Ladder, 0, 1.0f },
+        { "Spruce Sign", SprucePlanks, SprucePlanks, SprucePlanks, false, false, RenderType::Ladder, 0, 1.0f },
+        { "Birch Sign", BirchPlanksTile, BirchPlanksTile, BirchPlanksTile, false, false, RenderType::Ladder, 0, 1.0f },
+        { "Birch Sign", BirchPlanksTile, BirchPlanksTile, BirchPlanksTile, false, false, RenderType::Ladder, 0, 1.0f },
+        { "Birch Sign", BirchPlanksTile, BirchPlanksTile, BirchPlanksTile, false, false, RenderType::Ladder, 0, 1.0f },
+        { "Birch Sign", BirchPlanksTile, BirchPlanksTile, BirchPlanksTile, false, false, RenderType::Ladder, 0, 1.0f },
+        { "Jungle Sign", JunglePlanks, JunglePlanks, JunglePlanks, false, false, RenderType::Ladder, 0, 1.0f },
+        { "Jungle Sign", JunglePlanks, JunglePlanks, JunglePlanks, false, false, RenderType::Ladder, 0, 1.0f },
+        { "Jungle Sign", JunglePlanks, JunglePlanks, JunglePlanks, false, false, RenderType::Ladder, 0, 1.0f },
+        { "Jungle Sign", JunglePlanks, JunglePlanks, JunglePlanks, false, false, RenderType::Ladder, 0, 1.0f },
+        { "Acacia Sign", AcaciaPlanks, AcaciaPlanks, AcaciaPlanks, false, false, RenderType::Ladder, 0, 1.0f },
+        { "Acacia Sign", AcaciaPlanks, AcaciaPlanks, AcaciaPlanks, false, false, RenderType::Ladder, 0, 1.0f },
+        { "Acacia Sign", AcaciaPlanks, AcaciaPlanks, AcaciaPlanks, false, false, RenderType::Ladder, 0, 1.0f },
+        { "Acacia Sign", AcaciaPlanks, AcaciaPlanks, AcaciaPlanks, false, false, RenderType::Ladder, 0, 1.0f },
+        { "Dark Oak Sign", DarkOakPlanks, DarkOakPlanks, DarkOakPlanks, false, false, RenderType::Ladder, 0, 1.0f },
+        { "Dark Oak Sign", DarkOakPlanks, DarkOakPlanks, DarkOakPlanks, false, false, RenderType::Ladder, 0, 1.0f },
+        { "Dark Oak Sign", DarkOakPlanks, DarkOakPlanks, DarkOakPlanks, false, false, RenderType::Ladder, 0, 1.0f },
+        { "Dark Oak Sign", DarkOakPlanks, DarkOakPlanks, DarkOakPlanks, false, false, RenderType::Ladder, 0, 1.0f },
     };
 }
 
@@ -537,7 +746,8 @@ bool isObtainable(BlockId id)
 
             // A door is held as one item and placed as two blocks, so
             // only the shut lower north half is a thing in your hand.
-            if (isDoor(id) && id != Blocks::DoorLowShutNorth) return false;
+            if (isDoor(id) && id != doorBase(id)) return false;
+            if (isTrapdoor(id) && id != trapdoorBase(id)) return false;
 
             return id < Blocks::Count;
     }
@@ -554,6 +764,8 @@ const char* blockSoundGroup(BlockId id)
     if (isComposter(id) || isLectern(id)) return "wood";
     if (id == Blocks::Bamboo || id == Blocks::Scaffolding) return "wood";
     if (isSign(id) || isFrame(id)) return "wood";
+    if (isDoor(id) || isTrapdoor(id)) return "wood";
+    if (isSapling(id)) return "grass";
     if (id == Blocks::Melon || isCocoa(id)) return "grass";
     if (isCake(id) || id == Blocks::Candle || id == Blocks::CandleLit) return "cloth";
 
@@ -694,6 +906,8 @@ Material blockMaterial(BlockId id)
     // want the hardest tool. The block table's test caught that too.
     if (id == Blocks::SlimeBlock) return Material::Wool;
     if (isSign(id) || isFrame(id)) return Material::Wood;
+    if (isDoor(id) || isTrapdoor(id)) return Material::Wood;
+    if (isSapling(id)) return Material::Plant;
     if (isCauldron(id)) return Material::Stone;
     if (isFurnaceBlock(id)) return Material::Stone;
 
@@ -814,6 +1028,21 @@ bool blockOverlaps(BlockId id, int bx, int by, int bz,
         const int resting = doorIsOpen(id) ? ((blockFacing(id) + 1) & 3) : blockFacing(id);
 
         switch (resting)
+        {
+            case 0: return overlaps(0.0f, 0.0f, 0.0f, 1.0f, 1.0f, THICK);
+            case 1: return overlaps(1.0f - THICK, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f);
+            case 2: return overlaps(0.0f, 0.0f, 1.0f - THICK, 1.0f, 1.0f, 1.0f);
+            default: return overlaps(0.0f, 0.0f, 0.0f, THICK, 1.0f, 1.0f);
+        }
+    }
+
+    if (isTrapdoor(id))
+    {
+        constexpr float THICK = 0.1875f;
+        if (!trapdoorIsOpen(id))
+            return trapdoorIsTop(id) ? overlaps(0.0f, 1.0f - THICK, 0.0f, 1.0f, 1.0f, 1.0f)
+                                     : overlaps(0.0f, 0.0f, 0.0f, 1.0f, THICK, 1.0f);
+        switch ((trapdoorFacing(id) + 2) & 3)
         {
             case 0: return overlaps(0.0f, 0.0f, 0.0f, 1.0f, 1.0f, THICK);
             case 1: return overlaps(1.0f - THICK, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f);

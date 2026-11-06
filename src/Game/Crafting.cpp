@@ -27,7 +27,13 @@ namespace
         // plank of its own yet, so it gives oak -- planksFromLog() says
         // so in one place rather than this table saying it four times.
         { true,  0, 0, { Blocks::Log },        1, Blocks::Planks,        4 },
-        { true,  0, 0, { Blocks::BirchLog },   1, Blocks::Planks,        4 },
+        { true,  0, 0, { Blocks::BirchLog },   1, Blocks::BirchPlanks,   4 },
+        { true,  0, 0, { Blocks::StrippedOakLog },     1, Blocks::Planks,        4 },
+        { true,  0, 0, { Blocks::StrippedSpruceLog },  1, Blocks::SprucePlanks,  4 },
+        { true,  0, 0, { Blocks::StrippedBirchLog },   1, Blocks::BirchPlanks,   4 },
+        { true,  0, 0, { Blocks::StrippedJungleLog },  1, Blocks::JunglePlanks,  4 },
+        { true,  0, 0, { Blocks::StrippedAcaciaLog },  1, Blocks::AcaciaPlanks,  4 },
+        { true,  0, 0, { Blocks::StrippedDarkOakLog }, 1, Blocks::DarkOakPlanks, 4 },
         { true,  0, 0, { Blocks::SpruceLog },  1, Blocks::SprucePlanks,  4 },
         { true,  0, 0, { Blocks::DarkOakLog }, 1, Blocks::DarkOakPlanks, 4 },
         { true,  0, 0, { Blocks::JungleLog },  1, Blocks::JunglePlanks,  4 },
@@ -528,6 +534,9 @@ namespace
                          Blocks::Planks, Blocks::Planks,
                          Blocks::Planks, Blocks::Planks },
           0, Blocks::DoorLowShutNorth, 3 },
+        { false, 3, 2, { Blocks::Planks, Blocks::Planks, Blocks::Planks,
+                         Blocks::Planks, Blocks::Planks, Blocks::Planks },
+          0, Blocks::OakTrapdoor, 2 },
 
         // Four planks and two sticks make three lengths of fence.
         { false, 3, 2, { Blocks::Planks, Items::Stick, Blocks::Planks,
@@ -686,6 +695,27 @@ namespace
         return isPlanks(asBlock(wanted)) && isPlanks(asBlock(have));
     }
 
+    StackId inWoodOf(StackId result, const ItemStack* grid, int size)
+    {
+        int wood = -1;
+        for (int y = 0; y < size; ++y)
+            for (int x = 0; x < size; ++x)
+            {
+                const ItemStack& cell = grid[y * 3 + x];
+                if (cell.empty() || !isBlockStack(cell.id) || !isPlanks(asBlock(cell.id))) continue;
+                int here = 0;
+                for (int w = 0; w < 6; ++w)
+                    if (planksOfWood(w) == asBlock(cell.id)) here = w;
+                if (wood >= 0 && wood != here) return result;
+                wood = here;
+            }
+        if (wood <= 0) return result;
+        if (result == Blocks::DoorLowShutNorth) return doorBaseOf(wood);
+        if (result == Blocks::OakTrapdoor) return trapdoorBaseOf(wood);
+        if (result == Items::Sign) return signItemOfWood(wood);
+        return result;
+    }
+
     bool matchesShaped(const Recipe& recipe, const ItemStack* grid, int size)
     {
         int x0 = 0, y0 = 0, width = 0, height = 0;
@@ -820,7 +850,7 @@ namespace Crafting
         {
             const bool hit = recipe.shapeless ? matchesShapeless(recipe, grid, size)
                                               : matchesShaped(recipe, grid, size);
-            if (hit) return CraftOutput{ recipe.result, recipe.resultCount };
+            if (hit) return CraftOutput{ inWoodOf(recipe.result, grid, size), recipe.resultCount };
         }
         const CraftOutput dyed = matchDyeing(grid, size);
         if (dyed.valid()) return dyed;

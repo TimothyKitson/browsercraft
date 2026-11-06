@@ -737,6 +737,9 @@ namespace
 
             const char* why = nullptr;
             if (isDoor(id))                       why = "the other half, or the open state";
+            else if (isTrapdoor(id))              why = "another facing, half or the open state";
+            else if (isSapling(id))               why = "dropped by leaves of its tree";
+            else if (isStrippedLog(id))           why = "a log with an axe used on it";
             else if (isLadder(id) || isStairs(id) || isRail(id) ||
                      isSign(id) || isFrame(id))
                                                   why = "another facing of a crafted block";
@@ -902,6 +905,8 @@ namespace
                 byHand = "a bucket used on a cow";
             else if (i == static_cast<int>(Items::Trident))
                 byHand = "carried by a drowned about one time in eight";
+            else if (woodOfSignItem(static_cast<StackId>(i)) > 0)
+                byHand = "the sign recipe in that wood's planks";
 
             if (byHand)
             {
@@ -925,6 +930,8 @@ namespace
         haveItem.insert(static_cast<int>(Items::Trident));
         haveItem.insert(static_cast<int>(Items::WaterBucket));
         haveItem.insert(static_cast<int>(Items::LavaBucket));
+        for (int wood = 0; wood < 6; ++wood)
+            if (reachable.count(logOfWood(wood))) haveItem.insert(static_cast<int>(strippedOf(logOfWood(wood))));
 
         auto obtainable = [&](StackId id)
         {

@@ -43,6 +43,7 @@
 #include "Game/Chat.h"
 #include "Game/Beacon.h"
 #include "Game/Grindstone.h"
+#include "Game/Saplings.h"
 #include "Game/Hopper.h"
 #include "Entity/EntityManager.h"
 #include "Entity/MobModel.h"
@@ -875,6 +876,7 @@ private:
 
     void swingDoor(const glm::ivec3& block);
     void sleepInBed(const glm::ivec3& block);
+    void growSapling(const glm::ivec3& at, uint32_t seed);
 
     // Lighting a portal, standing in one, and building the one that
     // brings you back.

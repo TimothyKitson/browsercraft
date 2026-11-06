@@ -3369,6 +3369,127 @@ namespace
         t.speckle(3, 711);
     }
 
+    void paintWoodDoorHalf(Tile& t, bool upper, Color wood)
+    {
+        const int n = Tile::N;
+        const Color dark = shade(wood, -30);
+        const Color frame = shade(wood, -60);
+        for (int y = 0; y < n; ++y)
+            for (int x = 0; x < n; ++x)
+                t.set(x, y, ((x / std::max(1, n / 8)) % 2 == 0) ? wood : dark);
+        for (int k = 0; k < n; ++k)
+        {
+            t.set(0, k, frame);
+            t.set(n - 1, k, frame);
+            if (upper) t.set(k, 0, frame);
+            else t.set(k, n - 1, frame);
+        }
+        if (upper)
+        {
+            const int lo = n / 4, hi = n - n / 4 - 1;
+            for (int y = lo; y <= hi; ++y)
+                for (int x = lo; x <= hi; ++x)
+                    t.set(x, y, (x == lo || x == hi || y == lo || y == hi) ? frame : Color{ 0, 0, 0, 0 });
+        }
+        const int hy = upper ? n - n / 6 : n / 6;
+        for (int y = hy - 1; y <= hy + 1; ++y)
+            for (int x = n - n / 4; x < n - n / 8; ++x)
+                t.set(x, y, Color{ 120, 120, 126 });
+    }
+
+    void paintTrapdoorIn(Tile& t, Color wood)
+    {
+        const int n = Tile::N;
+        const Color frame = shade(wood, -45);
+        t.fill(wood);
+        t.speckle(5, 941);
+        for (int k = 0; k < n; ++k)
+        {
+            t.set(k, 0, frame); t.set(k, 1, frame);
+            t.set(k, n - 1, frame); t.set(k, n - 2, frame);
+            t.set(0, k, frame); t.set(1, k, frame);
+            t.set(n - 1, k, frame); t.set(n - 2, k, frame);
+        }
+        for (int hole = 0; hole < 4; ++hole)
+        {
+            const int hx = (hole % 2) ? n / 2 + 2 : 4;
+            const int hy = (hole / 2) ? n / 2 + 2 : 4;
+            for (int y = hy; y < hy + 3; ++y)
+                for (int x = hx; x < hx + 3; ++x)
+                    t.set(x, y, Color{ 0, 0, 0, 0 });
+        }
+    }
+
+    void paintSaplingIn(Tile& t, Color leaf, Color stem)
+    {
+        const int n = Tile::N;
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int y = n / 2; y < n; ++y) t.set(n / 2, y, stem);
+        for (int y = 2; y < n / 2 + 3; ++y)
+            for (int x = 2; x < n - 2; ++x)
+            {
+                const float dx = (x - n * 0.5f) / (n * 0.38f);
+                const float dy = (y - n * 0.36f) / (n * 0.3f);
+                if (dx * dx + dy * dy > 1.0f) continue;
+                if (hash2(x, y, 977) < 0.18f) continue;
+                t.set(x, y, shade(leaf, static_cast<int>((hash2(x, y, 978) - 0.5f) * 40.0f)));
+            }
+    }
+
+    void paintItemSignIn(Tile& t, Color wood)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 2; y < 10; ++y)
+            for (int x = 2; x < 14; ++x)
+                t.set(x, y, (y < 4) ? shade(wood, 18) : wood);
+        for (int y = 5; y < 8; ++y)
+            for (int x = 4; x < 12; ++x)
+                if ((y % 2) == 1) t.set(x, y, shade(wood, -40));
+        for (int y = 10; y < Tile::N - 1; ++y)
+            for (int x = 7; x < 9; ++x) t.set(x, y, shade(wood, -30));
+    }
+
+    void paintOakSaplingTile(Tile& t) { paintSaplingIn(t, Color{ 72, 140, 40 }, Color{ 96, 72, 40 }); }
+    void paintStrippedOakLogSide(Tile& t) { paintLogSideIn(t, shade(Color{ 162, 130, 78 }, 10), 700); }
+    void paintStrippedOakLogTop(Tile& t) { paintRings(t, Color{ 162, 130, 78 }, shade(Color{ 162, 130, 78 }, -15), shade(Color{ 162, 130, 78 }, 10), 720); }
+    void paintOakTrapdoorTile(Tile& t) { paintTrapdoorIn(t, Color{ 162, 130, 78 }); }
+    void paintSpruceSaplingTile(Tile& t) { paintSaplingIn(t, Color{ 58, 96, 58 }, Color{ 96, 72, 40 }); }
+    void paintStrippedSpruceLogSide(Tile& t) { paintLogSideIn(t, shade(Color{ 114, 84, 48 }, 10), 701); }
+    void paintStrippedSpruceLogTop(Tile& t) { paintRings(t, Color{ 114, 84, 48 }, shade(Color{ 114, 84, 48 }, -15), shade(Color{ 114, 84, 48 }, 10), 721); }
+    void paintSpruceTrapdoorTile(Tile& t) { paintTrapdoorIn(t, Color{ 114, 84, 48 }); }
+    void paintSpruceDoorLower(Tile& t) { paintWoodDoorHalf(t, false, Color{ 114, 84, 48 }); }
+    void paintSpruceDoorUpper(Tile& t) { paintWoodDoorHalf(t, true, Color{ 114, 84, 48 }); }
+    void paintItemSpruceSign(Tile& t) { paintItemSignIn(t, Color{ 114, 84, 48 }); }
+    void paintBirchSaplingTile(Tile& t) { paintSaplingIn(t, Color{ 110, 150, 70 }, Color{ 96, 72, 40 }); }
+    void paintStrippedBirchLogSide(Tile& t) { paintLogSideIn(t, shade(Color{ 196, 178, 122 }, 10), 702); }
+    void paintStrippedBirchLogTop(Tile& t) { paintRings(t, Color{ 196, 178, 122 }, shade(Color{ 196, 178, 122 }, -15), shade(Color{ 196, 178, 122 }, 10), 722); }
+    void paintBirchTrapdoorTile(Tile& t) { paintTrapdoorIn(t, Color{ 196, 178, 122 }); }
+    void paintBirchDoorLower(Tile& t) { paintWoodDoorHalf(t, false, Color{ 196, 178, 122 }); }
+    void paintBirchDoorUpper(Tile& t) { paintWoodDoorHalf(t, true, Color{ 196, 178, 122 }); }
+    void paintItemBirchSign(Tile& t) { paintItemSignIn(t, Color{ 196, 178, 122 }); }
+    void paintJungleSaplingTile(Tile& t) { paintSaplingIn(t, Color{ 58, 150, 32 }, Color{ 96, 72, 40 }); }
+    void paintStrippedJungleLogSide(Tile& t) { paintLogSideIn(t, shade(Color{ 150, 110, 78 }, 10), 703); }
+    void paintStrippedJungleLogTop(Tile& t) { paintRings(t, Color{ 150, 110, 78 }, shade(Color{ 150, 110, 78 }, -15), shade(Color{ 150, 110, 78 }, 10), 723); }
+    void paintJungleTrapdoorTile(Tile& t) { paintTrapdoorIn(t, Color{ 150, 110, 78 }); }
+    void paintJungleDoorLower(Tile& t) { paintWoodDoorHalf(t, false, Color{ 150, 110, 78 }); }
+    void paintJungleDoorUpper(Tile& t) { paintWoodDoorHalf(t, true, Color{ 150, 110, 78 }); }
+    void paintItemJungleSign(Tile& t) { paintItemSignIn(t, Color{ 150, 110, 78 }); }
+    void paintAcaciaSaplingTile(Tile& t) { paintSaplingIn(t, Color{ 96, 128, 34 }, Color{ 96, 72, 40 }); }
+    void paintStrippedAcaciaLogSide(Tile& t) { paintLogSideIn(t, shade(Color{ 173, 93, 50 }, 10), 704); }
+    void paintStrippedAcaciaLogTop(Tile& t) { paintRings(t, Color{ 173, 93, 50 }, shade(Color{ 173, 93, 50 }, -15), shade(Color{ 173, 93, 50 }, 10), 724); }
+    void paintAcaciaTrapdoorTile(Tile& t) { paintTrapdoorIn(t, Color{ 173, 93, 50 }); }
+    void paintAcaciaDoorLower(Tile& t) { paintWoodDoorHalf(t, false, Color{ 173, 93, 50 }); }
+    void paintAcaciaDoorUpper(Tile& t) { paintWoodDoorHalf(t, true, Color{ 173, 93, 50 }); }
+    void paintItemAcaciaSign(Tile& t) { paintItemSignIn(t, Color{ 173, 93, 50 }); }
+    void paintDarkOakSaplingTile(Tile& t) { paintSaplingIn(t, Color{ 48, 108, 28 }, Color{ 96, 72, 40 }); }
+    void paintStrippedDarkOakLogSide(Tile& t) { paintLogSideIn(t, shade(Color{ 79, 53, 28 }, 10), 705); }
+    void paintStrippedDarkOakLogTop(Tile& t) { paintRings(t, Color{ 79, 53, 28 }, shade(Color{ 79, 53, 28 }, -15), shade(Color{ 79, 53, 28 }, 10), 725); }
+    void paintDarkOakTrapdoorTile(Tile& t) { paintTrapdoorIn(t, Color{ 79, 53, 28 }); }
+    void paintDarkOakDoorLower(Tile& t) { paintWoodDoorHalf(t, false, Color{ 79, 53, 28 }); }
+    void paintDarkOakDoorUpper(Tile& t) { paintWoodDoorHalf(t, true, Color{ 79, 53, 28 }); }
+    void paintItemDarkOakSign(Tile& t) { paintItemSignIn(t, Color{ 79, 53, 28 }); }
+    void paintBirchPlanksTile(Tile& t) { paintPlanksIn(t, Color{ 196, 178, 122 }, 91); }
+
     void paintItemSign(Tile& t)
     {
         t.fill(Color{ 0, 0, 0, 0 });
@@ -6345,6 +6466,16 @@ namespace
         { Tiles::ItemHorseArmorIron, paintItemElytra },
         { Tiles::ItemHorseArmorGold, paintItemElytra },
         { Tiles::ItemHorseArmorDiamond, paintItemElytra },
+        { Tiles::IconSpruceDoor, paintSpruceDoorLower },
+        { Tiles::ItemSpruceSign, paintItemSpruceSign },
+        { Tiles::IconBirchDoor, paintBirchDoorLower },
+        { Tiles::ItemBirchSign, paintItemBirchSign },
+        { Tiles::IconJungleDoor, paintJungleDoorLower },
+        { Tiles::ItemJungleSign, paintItemJungleSign },
+        { Tiles::IconAcaciaDoor, paintAcaciaDoorLower },
+        { Tiles::ItemAcaciaSign, paintItemAcaciaSign },
+        { Tiles::IconDarkOakDoor, paintDarkOakDoorLower },
+        { Tiles::ItemDarkOakSign, paintItemDarkOakSign },
         { Tiles::ShulkerBoxTile, paintShulkerBox },
         { Tiles::AncientDebrisTop, paintAncientDebrisTop },
         { Tiles::AncientDebrisSide, paintAncientDebrisSide },
@@ -6494,6 +6625,41 @@ namespace
         { Tiles::DustLine1Off, paintRedstoneDust },
         { Tiles::DustLine1On, paintRedstoneDustLit },
         { Tiles::LeverHandle, paintLever },
+        { Tiles::BirchPlanksTile, paintBirchPlanksTile },
+        { Tiles::OakSaplingTile, paintOakSaplingTile },
+        { Tiles::StrippedOakLogSide, paintStrippedOakLogSide },
+        { Tiles::StrippedOakLogTop, paintStrippedOakLogTop },
+        { Tiles::OakTrapdoorTile, paintOakTrapdoorTile },
+        { Tiles::SpruceSaplingTile, paintSpruceSaplingTile },
+        { Tiles::StrippedSpruceLogSide, paintStrippedSpruceLogSide },
+        { Tiles::StrippedSpruceLogTop, paintStrippedSpruceLogTop },
+        { Tiles::SpruceTrapdoorTile, paintSpruceTrapdoorTile },
+        { Tiles::SpruceDoorLower, paintSpruceDoorLower },
+        { Tiles::SpruceDoorUpper, paintSpruceDoorUpper },
+        { Tiles::BirchSaplingTile, paintBirchSaplingTile },
+        { Tiles::StrippedBirchLogSide, paintStrippedBirchLogSide },
+        { Tiles::StrippedBirchLogTop, paintStrippedBirchLogTop },
+        { Tiles::BirchTrapdoorTile, paintBirchTrapdoorTile },
+        { Tiles::BirchDoorLower, paintBirchDoorLower },
+        { Tiles::BirchDoorUpper, paintBirchDoorUpper },
+        { Tiles::JungleSaplingTile, paintJungleSaplingTile },
+        { Tiles::StrippedJungleLogSide, paintStrippedJungleLogSide },
+        { Tiles::StrippedJungleLogTop, paintStrippedJungleLogTop },
+        { Tiles::JungleTrapdoorTile, paintJungleTrapdoorTile },
+        { Tiles::JungleDoorLower, paintJungleDoorLower },
+        { Tiles::JungleDoorUpper, paintJungleDoorUpper },
+        { Tiles::AcaciaSaplingTile, paintAcaciaSaplingTile },
+        { Tiles::StrippedAcaciaLogSide, paintStrippedAcaciaLogSide },
+        { Tiles::StrippedAcaciaLogTop, paintStrippedAcaciaLogTop },
+        { Tiles::AcaciaTrapdoorTile, paintAcaciaTrapdoorTile },
+        { Tiles::AcaciaDoorLower, paintAcaciaDoorLower },
+        { Tiles::AcaciaDoorUpper, paintAcaciaDoorUpper },
+        { Tiles::DarkOakSaplingTile, paintDarkOakSaplingTile },
+        { Tiles::StrippedDarkOakLogSide, paintStrippedDarkOakLogSide },
+        { Tiles::StrippedDarkOakLogTop, paintStrippedDarkOakLogTop },
+        { Tiles::DarkOakTrapdoorTile, paintDarkOakTrapdoorTile },
+        { Tiles::DarkOakDoorLower, paintDarkOakDoorLower },
+        { Tiles::DarkOakDoorUpper, paintDarkOakDoorUpper },
         { Tiles::BedTop,        paintBedTop },
         { Tiles::LadderTile,    paintLadderTile },
         { Tiles::DoorLower,     paintDoorLower },
@@ -6789,6 +6955,16 @@ namespace
         { Tiles::ItemHorseArmorIron, { "iron_horse_armor", nullptr, nullptr } },
         { Tiles::ItemHorseArmorGold, { "golden_horse_armor", nullptr, nullptr } },
         { Tiles::ItemHorseArmorDiamond, { "diamond_horse_armor", nullptr, nullptr } },
+        { Tiles::IconSpruceDoor, { "spruce_door", nullptr, nullptr } },
+        { Tiles::ItemSpruceSign, { "spruce_sign", nullptr, nullptr } },
+        { Tiles::IconBirchDoor, { "birch_door", nullptr, nullptr } },
+        { Tiles::ItemBirchSign, { "birch_sign", nullptr, nullptr } },
+        { Tiles::IconJungleDoor, { "jungle_door", nullptr, nullptr } },
+        { Tiles::ItemJungleSign, { "jungle_sign", nullptr, nullptr } },
+        { Tiles::IconAcaciaDoor, { "acacia_door", nullptr, nullptr } },
+        { Tiles::ItemAcaciaSign, { "acacia_sign", nullptr, nullptr } },
+        { Tiles::IconDarkOakDoor, { "dark_oak_door", nullptr, nullptr } },
+        { Tiles::ItemDarkOakSign, { "dark_oak_sign", nullptr, nullptr } },
         { Tiles::ItemGhastTear, { "ghast_tear", nullptr, nullptr } },
         { Tiles::ItemDyeFirst +  0, { "white_dye", nullptr, nullptr } },
         { Tiles::ItemDyeFirst +  1, { "orange_dye", nullptr, nullptr } },
@@ -6910,6 +7086,41 @@ namespace
         { Tiles::DustLine1Off, { "redstone_dust_line1", nullptr }, Tinting::RedstoneOff, 0, false },
         { Tiles::DustLine1On, { "redstone_dust_line1", nullptr }, Tinting::RedstoneOn, 0, false },
         { Tiles::LeverHandle, { "lever", nullptr }, Tinting::None, 0, false },
+        { Tiles::BirchPlanksTile, { "birch_planks", "planks_birch", nullptr }, Tinting::None, 0, false },
+        { Tiles::OakSaplingTile, { "oak_sapling", "sapling_oak", nullptr }, Tinting::None, 0, false },
+        { Tiles::StrippedOakLogSide, { "stripped_oak_log", nullptr }, Tinting::None, 0, false },
+        { Tiles::StrippedOakLogTop, { "stripped_oak_log_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::OakTrapdoorTile, { "oak_trapdoor", nullptr }, Tinting::None, 0, false },
+        { Tiles::SpruceSaplingTile, { "spruce_sapling", "sapling_spruce", nullptr }, Tinting::None, 0, false },
+        { Tiles::StrippedSpruceLogSide, { "stripped_spruce_log", nullptr }, Tinting::None, 0, false },
+        { Tiles::StrippedSpruceLogTop, { "stripped_spruce_log_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::SpruceTrapdoorTile, { "spruce_trapdoor", nullptr }, Tinting::None, 0, false },
+        { Tiles::SpruceDoorLower, { "spruce_door_bottom", nullptr }, Tinting::None, 0, false },
+        { Tiles::SpruceDoorUpper, { "spruce_door_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::BirchSaplingTile, { "birch_sapling", "sapling_birch", nullptr }, Tinting::None, 0, false },
+        { Tiles::StrippedBirchLogSide, { "stripped_birch_log", nullptr }, Tinting::None, 0, false },
+        { Tiles::StrippedBirchLogTop, { "stripped_birch_log_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::BirchTrapdoorTile, { "birch_trapdoor", nullptr }, Tinting::None, 0, false },
+        { Tiles::BirchDoorLower, { "birch_door_bottom", nullptr }, Tinting::None, 0, false },
+        { Tiles::BirchDoorUpper, { "birch_door_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::JungleSaplingTile, { "jungle_sapling", "sapling_jungle", nullptr }, Tinting::None, 0, false },
+        { Tiles::StrippedJungleLogSide, { "stripped_jungle_log", nullptr }, Tinting::None, 0, false },
+        { Tiles::StrippedJungleLogTop, { "stripped_jungle_log_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::JungleTrapdoorTile, { "jungle_trapdoor", nullptr }, Tinting::None, 0, false },
+        { Tiles::JungleDoorLower, { "jungle_door_bottom", nullptr }, Tinting::None, 0, false },
+        { Tiles::JungleDoorUpper, { "jungle_door_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::AcaciaSaplingTile, { "acacia_sapling", "sapling_acacia", nullptr }, Tinting::None, 0, false },
+        { Tiles::StrippedAcaciaLogSide, { "stripped_acacia_log", nullptr }, Tinting::None, 0, false },
+        { Tiles::StrippedAcaciaLogTop, { "stripped_acacia_log_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::AcaciaTrapdoorTile, { "acacia_trapdoor", nullptr }, Tinting::None, 0, false },
+        { Tiles::AcaciaDoorLower, { "acacia_door_bottom", nullptr }, Tinting::None, 0, false },
+        { Tiles::AcaciaDoorUpper, { "acacia_door_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::DarkOakSaplingTile, { "dark_oak_sapling", "sapling_roofed_oak", nullptr }, Tinting::None, 0, false },
+        { Tiles::StrippedDarkOakLogSide, { "stripped_dark_oak_log", nullptr }, Tinting::None, 0, false },
+        { Tiles::StrippedDarkOakLogTop, { "stripped_dark_oak_log_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::DarkOakTrapdoorTile, { "dark_oak_trapdoor", nullptr }, Tinting::None, 0, false },
+        { Tiles::DarkOakDoorLower, { "dark_oak_door_bottom", nullptr }, Tinting::None, 0, false },
+        { Tiles::DarkOakDoorUpper, { "dark_oak_door_top", nullptr }, Tinting::None, 0, false },
         { Tiles::FurnaceTop,    { "furnace_top", nullptr },                            Tinting::None,    0,   false },
         { Tiles::FurnaceFront,  { "furnace_front", nullptr },                          Tinting::None,    0,   false },
         { Tiles::FurnaceLit,    { "furnace_front_on", nullptr },                       Tinting::None,    0,   true  },

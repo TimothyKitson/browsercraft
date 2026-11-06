@@ -40,6 +40,7 @@
 #include "Renderer/BookRenderer.h"
 #include "Game/Anvil.h"
 #include "Game/Grindstone.h"
+#include "Game/Saplings.h"
 #include "Game/Shield.h"
 #include "Game/Effects.h"
 #include "Game/Brewing.h"
@@ -207,7 +208,7 @@ namespace
         Inventory birch;
         birch.slot(Inventory::CRAFT_FIRST + 1) = ItemStack{ Blocks::BirchLog, 1 };
         birch.refreshCraftResult();
-        check(birch.slot(Inventory::CRAFT_RESULT).id == Blocks::Planks, "birch log makes planks");
+        check(birch.slot(Inventory::CRAFT_RESULT).id == Blocks::BirchPlanks, "birch log makes birch planks");
 
         // Four sand in a square makes sandstone. The 2x2 grid is the top
         // left of a 3x3 array, so this is cells 0, 1, 3 and 4.
@@ -11865,6 +11866,78 @@ namespace
         check(Grindstone::experienceFor(0, 5u) == 0, "nothing for nothing");
     }
 
+    void testWoodSets()
+    {
+        section("the six woods: doors, trapdoors, signs, saplings, stripped logs");
+
+        for (int wood = 0; wood < 6; ++wood)
+        {
+            const BlockId base = doorBaseOf(wood);
+            const BlockId open = doorPart(base, 2, true, true);
+            check(isDoor(open) && doorWood(open) == wood, "a door knows its wood");
+            check(doorIsTop(open) && doorIsOpen(open) && blockFacing(open) == 2, "and its half, state and facing");
+            const BlockId trap = trapdoorPart(trapdoorBaseOf(wood), 1, true, false);
+            check(isTrapdoor(trap) && trapdoorBase(trap) == trapdoorBaseOf(wood), "a trapdoor knows its wood");
+            check(trapdoorIsTop(trap) && !trapdoorIsOpen(trap) && trapdoorFacing(trap) == 1, "and its state");
+            const BlockId sign = signFacingAs(signBaseOf(wood), 3);
+            check(isSign(sign) && signWood(sign) == wood && signFacing(sign) == 3, "a sign knows its wood");
+            check(blockDrop(sign) == signItemOfWood(wood), "and drops its own sign");
+            check(blockDrop(open) == base, "a door drops a whole door");
+            check(planksFromLog(strippedOf(logOfWood(wood))) == planksOfWood(wood), "stripped logs make their own planks");
+        }
+        check(planksFromLog(Blocks::BirchLog) == Blocks::BirchPlanks, "birch has planks of its own now");
+
+        ItemStack grid[9];
+        for (int i = 0; i < 6; ++i) grid[i] = ItemStack{ Blocks::SprucePlanks, 1 };
+        const CraftOutput trap = Crafting::match(grid, 3);
+        check(trap.id == trapdoorBaseOf(1), "six spruce planks in two rows make spruce trapdoors");
+        ItemStack doors[9];
+        for (int row = 0; row < 3; ++row)
+            for (int col = 0; col < 2; ++col) doors[row * 3 + col] = ItemStack{ Blocks::JunglePlanks, 1 };
+        check(Crafting::match(doors, 3).id == doorBaseOf(3), "and jungle planks make jungle doors");
+
+        struct Plot : Saplings::Cells
+        {
+            std::map<std::tuple<int, int, int>, BlockId> cells;
+            BlockId at(int x, int y, int z) const override
+            {
+                if (y < 64) return Blocks::Grass;
+                const auto found = cells.find({ x, y, z });
+                return found == cells.end() ? Blocks::Air : found->second;
+            }
+            void set(int x, int y, int z, BlockId id) override { cells[{ x, y, z }] = id; }
+        };
+
+        Plot oak;
+        oak.set(0, 64, 0, Blocks::OakSapling);
+        check(Saplings::grow(oak, glm::ivec3(0, 64, 0), 7u), "an oak sapling grows");
+        check(oak.at(0, 64, 0) == Blocks::Log && oak.at(0, 66, 0) == Blocks::Log, "into an oak trunk");
+
+        Plot lone;
+        lone.set(0, 64, 0, Blocks::DarkOakSapling);
+        check(!Saplings::grow(lone, glm::ivec3(0, 64, 0), 7u), "one dark oak sapling never grows");
+        check(lone.at(0, 64, 0) == Blocks::DarkOakSapling, "and is still there");
+
+        Plot four;
+        for (int dx = 0; dx < 2; ++dx)
+            for (int dz = 0; dz < 2; ++dz) four.set(dx, 64, dz, Blocks::DarkOakSapling);
+        check(Saplings::grow(four, glm::ivec3(1, 64, 1), 9u), "four in a square grow");
+        check(four.at(0, 64, 0) == Blocks::DarkOakLog && four.at(1, 65, 1) == Blocks::DarkOakLog,
+              "into a trunk two wide");
+
+        Plot jungle;
+        for (int dx = 0; dx < 2; ++dx)
+            for (int dz = 0; dz < 2; ++dz) jungle.set(dx, 64, dz, Blocks::JungleSapling);
+        check(Saplings::grow(jungle, glm::ivec3(0, 64, 0), 11u), "four jungle saplings grow");
+        check(jungle.at(1, 74, 0) == Blocks::JungleLog, "into a giant at least ten high");
+
+        int saplings = 0;
+        for (uint32_t roll = 0; roll < 2000u; ++roll)
+            if (Saplings::leafDrop(Blocks::Leaves, roll) == Blocks::OakSapling) ++saplings;
+        check(saplings == 100, "oak leaves give a sapling one time in twenty");
+        check(Saplings::leafDrop(Blocks::Stone, 0u) == Blocks::Air, "stone gives none");
+    }
+
     void testGameModes()
     {
         section("adventure and spectator");
@@ -12588,6 +12661,7 @@ int runSelfTest()
     testGameModes();
     testBeaconPowers();
     testGrindstone();
+    testWoodSets();
     testTheTablesTake121sPrices();
 
     std::printf("\n%d checks, %d failed\n", g_checks, g_failures);

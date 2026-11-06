@@ -558,6 +558,29 @@ namespace
         emitBox(snap, lx, y, lz, id, lo, hi, out);
     }
 
+    void emitTrapdoor(const MeshSnapshot& snap, int lx, int y, int lz,
+                      BlockId id, std::vector<float>& out)
+    {
+        constexpr float THICK = 0.1875f;
+        glm::vec3 lo(0.0f), hi(1.0f);
+        if (!trapdoorIsOpen(id))
+        {
+            if (trapdoorIsTop(id)) lo.y = 1.0f - THICK;
+            else hi.y = THICK;
+        }
+        else
+        {
+            switch ((trapdoorFacing(id) + 2) & 3)
+            {
+                case 0: hi.z = THICK; break;
+                case 1: lo.x = 1.0f - THICK; break;
+                case 2: lo.z = 1.0f - THICK; break;
+                default: hi.x = THICK; break;
+            }
+        }
+        emitBox(snap, lx, y, lz, id, lo, hi, out);
+    }
+
     // A fence: a post in the middle of the cell, with an arm reaching
     // towards each neighbour worth joining on to. Two rails per arm,
     // which is what makes a run of fence read as a fence rather than a
@@ -1014,6 +1037,10 @@ void buildChunkMesh(const MeshSnapshot& snapshot, MeshResult& out)
                 else if (isDoor(id))
                 {
                     emitDoor(snapshot, lx, y, lz, id, out.opaqueVertices);
+                }
+                else if (isTrapdoor(id))
+                {
+                    emitTrapdoor(snapshot, lx, y, lz, id, out.opaqueVertices);
                 }
                 else
                 {

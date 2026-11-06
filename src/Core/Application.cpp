@@ -2043,7 +2043,7 @@ bool Application::frame()
             m_startupScreen == "attackhotbar" || m_startupScreen == "bossbars" ||
             m_startupScreen == "gamemode" || m_startupScreen == "spectator" ||
             m_startupScreen == "beaconui" || m_startupScreen == "grindstone" ||
-            m_startupScreen == "grinderror" ||
+            m_startupScreen == "grinderror" || m_startupScreen == "woods" ||
             m_startupScreen == "boat" || m_startupScreen == "rails" ||
             m_startupScreen == "mobs" || m_startupScreen == "golem" ||
             m_startupScreen == "glowmobs" || m_startupScreen == "variants" ||
@@ -2123,6 +2123,7 @@ bool Application::frame()
                                   m_startupScreen != "beaconui" &&
                                   m_startupScreen != "grindstone" &&
                                   m_startupScreen != "grinderror" &&
+                                  m_startupScreen != "woods" &&
                                   m_startupScreen != "boat" &&
                                   m_startupScreen != "rails" &&
                                   m_startupScreen != "mobs" &&
@@ -2492,7 +2493,7 @@ bool Application::frame()
                 m_startupScreen == "attackhotbar" || m_startupScreen == "bossbars" ||
                 m_startupScreen == "gamemode" || m_startupScreen == "spectator" ||
                 m_startupScreen == "beaconui" || m_startupScreen == "grindstone" ||
-                m_startupScreen == "grinderror")
+                m_startupScreen == "grinderror" || m_startupScreen == "woods")
             {
                 m_camera.setOrientation(0.0f, -25.0f);
                 m_camera.addLook(0.0f, 0.0f, 0.0f);
@@ -2534,6 +2535,31 @@ bool Application::frame()
                 }
                 else
                     m_attackIndicator = 1;
+                if (m_startupScreen == "woods")
+                {
+                    m_devAttackStrength = 1.0f;
+                    m_camera.setOrientation(0.0f, 4.0f);
+                    for (int wood = 0; wood < 6; ++wood)
+                    {
+                        const int z = pz - 5 + wood * 2;
+                        m_world->setBlock(px + 8, py, z, static_cast<BlockId>(Blocks::OakSapling + wood));
+                        m_world->setBlock(px + 9, py, z, static_cast<BlockId>(Blocks::StrippedOakLog + wood));
+                        m_world->setBlock(px + 9, py + 1, z, planksOfWood(wood));
+                        m_world->setBlock(px + 10, py, z, doorPart(doorBaseOf(wood), 1, false, wood % 2 == 1));
+                        m_world->setBlock(px + 10, py + 1, z, doorPart(doorBaseOf(wood), 1, true, wood % 2 == 1));
+                        m_world->setBlock(px + 8, py + 2, z, trapdoorPart(trapdoorBaseOf(wood), 3, false, false));
+                        m_world->setBlock(px + 9, py + 2, z, trapdoorPart(trapdoorBaseOf(wood), 3, true, false));
+                        m_world->setBlock(px + 10, py + 2, z, trapdoorPart(trapdoorBaseOf(wood), 1, false, true));
+                        m_world->setBlock(px + 11, py + 1, z, Blocks::Stone);
+                        m_world->setBlock(px + 10, py + 3, z, signFacingAs(signBaseOf(wood), 3));
+                        m_world->setBlock(px + 11, py + 3, z, Blocks::Stone);
+                    }
+                    for (int wood = 0; wood < 6; ++wood)
+                        m_inventory.slot(wood) = ItemStack{ signItemOfWood(wood), 16 };
+                    m_inventory.slot(6) = ItemStack{ doorBaseOf(3), 3 };
+                    m_inventory.slot(7) = ItemStack{ trapdoorBaseOf(5), 2 };
+                    m_inventory.slot(8) = ItemStack{ Blocks::DarkOakSapling, 4 };
+                }
                 if (m_startupScreen == "grindstone" || m_startupScreen == "grinderror")
                 {
                     m_devAttackStrength = 1.0f;
@@ -5726,6 +5752,11 @@ void Application::updateMining(float deltaTime)
                     if (roll % 16 == 0)
                         m_drops.spawnFromBrokenBlock(hit.block, Items::Apple);
                 }
+                const uint32_t saplingRoll = static_cast<uint32_t>(
+                    hit.block.x * 19349663 ^ hit.block.y * 83492791 ^ hit.block.z * 73856093 ^
+                    static_cast<int>(m_elapsedSeconds * 613.0f));
+                const BlockId sapling = Saplings::leafDrop(id, saplingRoll);
+                if (sapling != Blocks::Air) m_drops.spawnFromBrokenBlock(hit.block, sapling);
             }
             else if (Tools::canHarvest(tool, id))
             {
@@ -7893,6 +7924,22 @@ void Application::buildReturnPortal()
 
 // Swinging a door. Both halves move together: a door with its top shut
 // and its bottom open is not a door anyone has ever seen.
+void Application::growSapling(const glm::ivec3& at, uint32_t seed)
+{
+    struct WorldCells : Saplings::Cells
+    {
+        Application* app = nullptr;
+        BlockId at(int x, int y, int z) const override { return app->m_world->getBlock(x, y, z); }
+        void set(int x, int y, int z, BlockId id) override
+        {
+            app->m_world->setBlock(x, y, z, id);
+            app->m_net.onLocalBlockChange(x, y, z, id);
+        }
+    } cells;
+    cells.app = this;
+    Saplings::grow(cells, at, seed);
+}
+
 void Application::swingDoor(const glm::ivec3& block)
 {
     const BlockId here = m_world->getBlock(block.x, block.y, block.z);
@@ -7908,7 +7955,7 @@ void Application::swingDoor(const glm::ivec3& block)
         const int y = lowY + half;
         if (!isDoor(m_world->getBlock(block.x, y, block.z))) continue;
 
-        const BlockId put = doorPart(facing, half == 1, open);
+        const BlockId put = doorPart(doorBase(here), facing, half == 1, open);
         m_world->setBlock(block.x, y, block.z, put);
         m_net.onLocalBlockChange(block.x, y, block.z, put);
     }
@@ -8749,6 +8796,15 @@ void Application::handlePlacement()
                 swingDoor(bench.block);
                 return;
             }
+            if (isTrapdoor(used))
+            {
+                const BlockId flipped = trapdoorPart(trapdoorBase(used), trapdoorFacing(used), trapdoorIsTop(used),
+                                                     !trapdoorIsOpen(used));
+                m_world->setBlock(bench.block.x, bench.block.y, bench.block.z, flipped);
+                m_net.onLocalBlockChange(bench.block.x, bench.block.y, bench.block.z, flipped);
+                m_audio.play(Sound::DigWood, 0.6f, trapdoorIsOpen(flipped) ? 1.2f : 0.9f);
+                return;
+            }
 
             if (isVault(used))
             {
@@ -8857,6 +8913,25 @@ void Application::handlePlacement()
                         m_drops.spawnStack(m_player.position, milk);
                 }
                 m_audio.play(Sound::MobCowSay, 0.5f, 1.1f);
+                return;
+            }
+        }
+    }
+
+    if (Tools::kindOf(stack.id) == Tools::Kind::Axe && modeCanBuild(m_player.mode))
+    {
+        const RaycastHit bark = m_world->raycast(m_camera.position, m_camera.front, REACH_DISTANCE);
+        if (bark.hit)
+        {
+            const BlockId log = m_world->getBlock(bark.block.x, bark.block.y, bark.block.z);
+            const BlockId stripped = strippedOf(log);
+            if (stripped != Blocks::Air)
+            {
+                m_world->setBlock(bark.block.x, bark.block.y, bark.block.z, stripped);
+                m_net.onLocalBlockChange(bark.block.x, bark.block.y, bark.block.z, stripped);
+                m_audio.play(Sound::DigWood, 0.7f, 0.8f);
+                m_heldItem.swing();
+                wearOnSwing(stack.id);
                 return;
             }
         }
@@ -9069,6 +9144,21 @@ void Application::handlePlacement()
     {
         const RaycastHit crop = m_world->raycast(m_camera.position, m_camera.front,
                                                  REACH_DISTANCE);
+        if (crop.hit && isSapling(m_world->getBlock(crop.block.x, crop.block.y, crop.block.z)))
+        {
+            const uint32_t roll = static_cast<uint32_t>(
+                crop.block.x * 73856093 ^ crop.block.y * 19349663 ^ crop.block.z * 83492791 ^
+                static_cast<int>(m_elapsedSeconds * 977.0f));
+            if (roll % 100u < 45u) growSapling(crop.block, roll);
+            m_particles.spawnBlockBreak(crop.block, Blocks::TallGrass);
+            m_audio.play(Sound::Place, 0.5f, 1.5f);
+            if (!m_player.creative())
+            {
+                stack.count -= 1;
+                if (stack.count <= 0) stack.clear();
+            }
+            return;
+        }
         if (crop.hit && isCrop(m_world->getBlock(crop.block.x, crop.block.y, crop.block.z)))
         {
             const BlockId was = m_world->getBlock(crop.block.x, crop.block.y, crop.block.z);
@@ -9221,7 +9311,7 @@ void Application::handlePlacement()
     if (stack.id == Items::Cake) fromItem = Blocks::Cake0;
     // A sign is held as one item and hung four ways, the same as a
     // ladder: which of the four it lands as is worked out below.
-    if (stack.id == Items::Sign) fromItem = Blocks::SignNorth;
+    if (woodOfSignItem(stack.id) >= 0) fromItem = signBaseOf(woodOfSignItem(stack.id));
     if (stack.id == Items::ItemFrame) fromItem = Blocks::FrameNorth;
     if (isItem(stack.id) && fromItem == Blocks::Air) return;
     if (!modeCanBuild(m_player.mode)) return;
@@ -9264,8 +9354,8 @@ void Application::handlePlacement()
                                ? (look.x > 0.0f ? 3 : 1)
                                : (look.z > 0.0f ? 0 : 2);
 
-        const BlockId low = doorPart(facing, false, false);
-        const BlockId high = doorPart(facing, true, false);
+        const BlockId low = doorPart(doorBase(placing), facing, false, false);
+        const BlockId high = doorPart(doorBase(placing), facing, true, false);
 
         m_world->setBlock(target.x, target.y, target.z, low);
         m_world->setBlock(target.x, target.y + 1, target.z, high);
@@ -9326,6 +9416,25 @@ void Application::handlePlacement()
         placing = ladderFacing(facing);
     }
 
+    if (isSapling(placing) && !Saplings::canPlantOn(m_world->getBlock(target.x, target.y - 1, target.z))) return;
+
+    if (isTrapdoor(placing))
+    {
+        const glm::ivec3 n = hit.normal;
+        const glm::vec3 look = m_camera.front;
+        const int lookFacing = (std::fabs(look.x) > std::fabs(look.z)) ? (look.x > 0.0f ? 1 : 3)
+                                                                       : (look.z > 0.0f ? 2 : 0);
+        int facing = (lookFacing + 2) & 3;
+        bool top = n.y < 0;
+        if (n.y == 0)
+        {
+            facing = (n.z < 0) ? 0 : (n.x > 0) ? 1 : (n.z > 0) ? 2 : 3;
+            const glm::vec3 point = m_camera.position + m_camera.front * hit.distance;
+            top = point.y - std::floor(point.y) > 0.5f;
+        }
+        placing = trapdoorPart(trapdoorBase(placing), facing, top, false);
+    }
+
     // A sign hangs the same way, off the same arithmetic.
     if (isSign(placing))
     {
@@ -9333,7 +9442,7 @@ void Application::handlePlacement()
         if (n.y != 0) return;   // nothing to hang it on
 
         const int facing = (n.z > 0) ? 0 : (n.x < 0) ? 1 : (n.z < 0) ? 2 : 3;
-        placing = signFacingAs(facing);
+        placing = signFacingAs(signBase(placing), facing);
     }
 
     if (isFrame(placing))

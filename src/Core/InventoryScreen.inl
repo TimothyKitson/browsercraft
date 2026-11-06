@@ -21,6 +21,12 @@ namespace
         Blocks::Tnt, Blocks::LadderNorth, Blocks::OakFence, Blocks::DoorLowShutNorth,
         Blocks::StoneStairsNorth, Blocks::CobbleStairsNorth,
         Blocks::PlankStairsNorth, Blocks::SandstoneStairsNorth,
+        Blocks::BirchPlanks, Blocks::JunglePlanks, Blocks::AcaciaPlanks,
+        Blocks::StrippedOakLog, Blocks::StrippedSpruceLog, Blocks::StrippedBirchLog,
+        Blocks::StrippedJungleLog, Blocks::StrippedAcaciaLog, Blocks::StrippedDarkOakLog,
+        Blocks::SpruceDoor, Blocks::BirchDoor, Blocks::JungleDoor, Blocks::AcaciaDoor, Blocks::DarkOakDoor,
+        Blocks::OakTrapdoor, Blocks::SpruceTrapdoor, Blocks::BirchTrapdoor,
+        Blocks::JungleTrapdoor, Blocks::AcaciaTrapdoor, Blocks::DarkOakTrapdoor,
     };
 
     const StackId TAB_NATURE[] = {
@@ -29,6 +35,8 @@ namespace
         Blocks::Log, Blocks::BirchLog, Blocks::Cactus, Blocks::Pumpkin,
         Blocks::Sand, Blocks::Snow, Blocks::Ice, Blocks::Clay,
         Blocks::SugarCane,
+        Blocks::OakSapling, Blocks::SpruceSapling, Blocks::BirchSapling,
+        Blocks::JungleSapling, Blocks::AcaciaSapling, Blocks::DarkOakSapling,
     };
 
     const StackId TAB_ORES[] = {
@@ -59,6 +67,7 @@ namespace
         Items::Bread, Items::Steak, Items::CookedPorkchop, Items::CookedChicken,
         Items::CookedMutton,
         Items::Paper, Items::Book, Items::Emerald, Items::EnderPearl, Items::EyeOfEnder,
+        Items::Sign, Items::SpruceSign, Items::BirchSign, Items::JungleSign, Items::AcaciaSign, Items::DarkOakSign,
     };
 
     // The twenty-five tools, their materials, and the two benches you
