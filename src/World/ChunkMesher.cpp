@@ -99,7 +99,7 @@ namespace
     constexpr int CROSS_FACE = 6;
     float tagOf(int face, BlockId id, bool top = false)
     {
-        return static_cast<float>(face + 8 * static_cast<int>(id) + (top ? 8192 : 0));
+        return static_cast<float>(face + 8 * static_cast<int>(id) + (top ? 32768 : 0));
     }
 
     void pushVertex(std::vector<float>& out,

@@ -79,6 +79,7 @@ struct LevelState
         int8_t secondary = -1;
     };
     std::vector<SavedBeacon> beacons;
+    uint16_t itemBase = 4096;
     // One packed word per slot, in the same order as the inventory
     // above. Empty on a level written before enchanting existed, which
     // reads back as nothing enchanted.

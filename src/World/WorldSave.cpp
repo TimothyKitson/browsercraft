@@ -16,6 +16,8 @@ namespace
     // chunk into noise -- the version check rejects it instead and
     // the world is generated again, which is what that check is for.
     constexpr uint16_t FORMAT_VERSION = 3;
+    constexpr uint16_t ITEM_BASE = 4096;
+    constexpr uint16_t FIRST_ITEM_BASE = 1024;
 
     std::string chunkPath(const std::string& dir, ChunkPos pos)
     {
@@ -253,10 +255,13 @@ void WorldSave::saveLevel(const std::string& saveDirectory, const LevelState& st
         write(out, beacon.primary);
         write(out, beacon.secondary);
     }
+
+    write(out, ITEM_BASE);
 }
 
 bool WorldSave::loadLevel(const std::string& saveDirectory, LevelState& out)
 {
+    out.itemBase = FIRST_ITEM_BASE;
     std::ifstream in(levelPath(saveDirectory), std::ios::binary);
     if (!in) return false;
 
@@ -471,7 +476,8 @@ bool WorldSave::loadLevel(const std::string& saveDirectory, LevelState& out)
                                         }
 
                                         uint16_t beaconCount = 0;
-                                        if (framesWhole && read(in, beaconCount))
+                                        bool beaconsWhole = framesWhole && read(in, beaconCount);
+                                        if (beaconsWhole)
                                         {
                                             for (uint16_t i = 0; i < beaconCount; ++i)
                                             {
@@ -479,10 +485,15 @@ bool WorldSave::loadLevel(const std::string& saveDirectory, LevelState& out)
                                                 if (!read(in, beacon.x) || !read(in, beacon.y) || !read(in, beacon.z) ||
                                                     !read(in, beacon.dimension) || !read(in, beacon.primary) ||
                                                     !read(in, beacon.secondary))
+                                                {
+                                                    beaconsWhole = false;
                                                     break;
+                                                }
                                                 out.beacons.push_back(beacon);
                                             }
                                         }
+                                        uint16_t base = 0;
+                                        if (beaconsWhole && read(in, base)) out.itemBase = base;
                                     }
                                 }
                             }
@@ -491,6 +502,24 @@ bool WorldSave::loadLevel(const std::string& saveDirectory, LevelState& out)
                 }
             }
         }
+    }
+    if (out.itemBase != ITEM_BASE)
+    {
+        const uint16_t from = out.itemBase;
+        auto move = [from](uint16_t& id) {
+            if (id >= from) id = static_cast<uint16_t>(id - from + ITEM_BASE);
+        };
+        for (auto& slot : out.inventory) move(slot.first);
+        for (LevelState::SavedFrame& frame : out.frames) move(frame.item);
+        for (LevelState::SavedFurnace& furnace : out.furnaces)
+        {
+            move(furnace.input);
+            move(furnace.fuel);
+            move(furnace.output);
+        }
+        for (LevelState::SavedChest& chest : out.chests)
+            for (auto& slot : chest.slots) move(slot.first);
+        out.itemBase = ITEM_BASE;
     }
     return true;
 }

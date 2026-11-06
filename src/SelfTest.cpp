@@ -10829,6 +10829,31 @@ namespace
             check(back.signs.empty(), "and comes back with none");
             check(back.frames.empty(), "and no frames either");
         }
+
+        {
+            LevelState older;
+            older.seed = 14u;
+            older.inventory.emplace_back(static_cast<uint16_t>(Blocks::Stone), 5);
+            older.inventory.emplace_back(static_cast<uint16_t>(1024 + 7), 1);
+            LevelState::SavedChest chest;
+            chest.slots.emplace_back(static_cast<uint16_t>(1024 + 2), 3);
+            older.chests.push_back(chest);
+            WorldSave::saveLevel(dir, older);
+            const std::string path = dir + "/level.dat";
+            std::error_code ec;
+            const auto size = std::filesystem::file_size(path, ec);
+            if (!ec) std::filesystem::resize_file(path, size - sizeof(uint16_t), ec);
+
+            LevelState back;
+            check(WorldSave::loadLevel(dir, back), "a level from before items moved up still loads");
+            check(back.inventory.size() == 2 && back.inventory[0].first == static_cast<uint16_t>(Blocks::Stone),
+                  "its blocks stay where they were");
+            check(back.inventory.size() == 2 && back.inventory[1].first == static_cast<uint16_t>(Items::FIRST + 7),
+                  "and its items move up with the items");
+            check(back.chests.size() == 1 && back.chests[0].slots.size() == 1 &&
+                      back.chests[0].slots[0].first == static_cast<uint16_t>(Items::FIRST + 2),
+                  "chests included");
+        }
     }
 
     // --- weather ---------------------------------------------------------

@@ -20,8 +20,8 @@ const int MAT_UNDERWATER_PLANT = 16;
 const int MAT_TALL_PLANT = 17;
 
 int tagFace(float tag) { return int(tag + 0.5) & 7; }
-int tagBlock(float tag) { return (int(tag + 0.5) >> 3) & 1023; }
-bool tagTop(float tag) { return int(tag + 0.5) >= 8192; }
+int tagBlock(float tag) { return (int(tag + 0.5) >> 3) & 4095; }
+bool tagTop(float tag) { return int(tag + 0.5) >= 32768; }
 
 float luma(vec3 c) { return dot(c, vec3(0.2126, 0.7152, 0.0722)); }
 

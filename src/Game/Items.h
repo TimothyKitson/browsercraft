@@ -25,7 +25,7 @@ namespace Items
     // the block space. Both moved together: a block id is sixteen bits
     // now, and the items start far enough up that running out again is
     // not something anybody has to think about.
-    constexpr StackId FIRST = 1024;
+    constexpr StackId FIRST = 4096;
 
     enum : StackId
     {
