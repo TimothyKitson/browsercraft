@@ -39,6 +39,7 @@ namespace
         Blocks::WarpedDoor, Blocks::WarpedTrapdoor, Blocks::CrimsonNylium, Blocks::WarpedNylium,
         Blocks::NetherWartBlock, Blocks::WarpedWartBlock, Blocks::Shroomlight,
         Blocks::StoneBricks, Blocks::MossyStoneBricks, Blocks::CrackedStoneBricks, Blocks::ChiseledStoneBricks, Blocks::SmoothStone, Blocks::SmoothStoneSlab, Blocks::StoneBrickSlab, Blocks::PolishedGranite, Blocks::PolishedDiorite, Blocks::PolishedAndesite, Blocks::CobbledDeepslate, Blocks::PolishedDeepslate, Blocks::ChiseledDeepslate, Blocks::CrackedDeepslateBricks, Blocks::CrackedDeepslateTiles, Blocks::CobbledDeepslateSlab, Blocks::PolishedTuff, Blocks::ChiseledTuff, Blocks::ChiseledTuffBricks, Blocks::TuffSlab, Blocks::TuffBrickSlab, Blocks::PolishedBlackstone, Blocks::ChiseledPolishedBlackstone, Blocks::CrackedPolishedBlackstoneBricks, Blocks::PolishedBlackstoneSlab, Blocks::RedNetherBricks, Blocks::CrackedNetherBricks, Blocks::ChiseledNetherBricks, Blocks::NetherBrickSlab,
+        Blocks::QuartzBlock, Blocks::QuartzBricks, Blocks::QuartzPillar, Blocks::ChiseledQuartzBlock, Blocks::QuartzSlab,
     };
 
     const StackId TAB_NATURE[] = {
@@ -57,7 +58,7 @@ namespace
 
     const StackId TAB_ORES[] = {
         Blocks::CoalOre, Blocks::IronOre, Blocks::GoldOre, Blocks::DiamondOre,
-        Blocks::EmeraldOre,
+        Blocks::EmeraldOre, Blocks::NetherQuartzOre,
         Blocks::Stone, Blocks::Cobblestone, Blocks::Gravel, Blocks::Obsidian,
         Blocks::Bedrock,
     };
@@ -82,7 +83,7 @@ namespace
         Items::Feather, Items::Bone, Items::StringItem, Items::Gunpowder, Items::Flint,
         Items::Bread, Items::Steak, Items::CookedPorkchop, Items::CookedChicken,
         Items::CookedMutton,
-        Items::Paper, Items::Book, Items::Emerald, Items::EnderPearl, Items::EyeOfEnder,
+        Items::Paper, Items::Book, Items::Emerald, Items::EnderPearl, Items::EyeOfEnder, Items::NetherQuartz,
         Items::Sign, Items::SpruceSign, Items::BirchSign, Items::JungleSign, Items::AcaciaSign, Items::DarkOakSign,
         Items::CherrySign, Items::MangroveSign, Items::BambooSign, Items::CrimsonSign, Items::WarpedSign,
     };

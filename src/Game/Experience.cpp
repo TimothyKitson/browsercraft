@@ -85,6 +85,7 @@ namespace Experience
         case Blocks::CoalOre:    return { 0, 2 };
         case Blocks::DiamondOre: return { 3, 7 };
         case Blocks::EmeraldOre: return { 3, 7 };
+        case Blocks::NetherQuartzOre: return { 2, 5 };
         default: break;
         }
         return {};

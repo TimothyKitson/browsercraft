@@ -12039,6 +12039,27 @@ namespace
         red[4] = ItemStack{ Items::NetherWart, 1 };
         check(Crafting::match(red, 3).id == Blocks::RedNetherBricks, "wart and nether brick make red nether bricks");
         check(blockMaterial(Blocks::PolishedBlackstone) == Material::Stone, "polished blackstone wants a pickaxe");
+
+        check(blockDrop(Blocks::NetherQuartzOre) == Items::NetherQuartz, "quartz ore gives quartz");
+        check(Experience::forMining(Blocks::NetherQuartzOre).any(), "and experience with it");
+        ItemStack quartz[9];
+        for (int i : { 0, 1, 3, 4 }) quartz[i] = ItemStack{ Items::NetherQuartz, 1 };
+        check(Crafting::match(quartz, 3).id == Blocks::QuartzBlock, "four quartz make a block of it");
+        ItemStack pillar[9];
+        pillar[0] = ItemStack{ Blocks::QuartzBlock, 1 };
+        pillar[3] = ItemStack{ Blocks::QuartzBlock, 1 };
+        check(Crafting::match(pillar, 3).id == Blocks::QuartzPillar, "two stacked make a pillar");
+        {
+            const WorldGen nether(4242u, Dimension::Nether);
+            Chunk chunk(ChunkPos{ 0, 0 });
+            nether.generate(chunk);
+            int ore = 0;
+            for (int y = 0; y < Chunk::SY; ++y)
+                for (int x = 0; x < Chunk::SX; ++x)
+                    for (int z = 0; z < Chunk::SZ; ++z)
+                        if (chunk.getBlock(x, y, z) == Blocks::NetherQuartzOre) ++ore;
+            check(ore > 10, "and the Nether is full of quartz ore");
+        }
     }
 
     void testGameModes()

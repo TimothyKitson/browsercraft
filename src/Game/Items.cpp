@@ -203,6 +203,7 @@ namespace
         { "Bamboo Sign",          Tiles::ItemBambooSign,        16 },
         { "Crimson Sign",         Tiles::ItemCrimsonSign,       16 },
         { "Warped Sign",          Tiles::ItemWarpedSign,        16 },
+        { "Nether Quartz",        Tiles::ItemQuartz,            64 },
     };
 
     static_assert(sizeof(ITEMS) / sizeof(ITEMS[0]) ==
@@ -342,6 +343,7 @@ StackId blockDrop(BlockId id)
         case Blocks::LecternBook: return Blocks::Lectern;
         case Blocks::CoalOre: return Items::Coal;
         case Blocks::DiamondOre: return Items::Diamond;
+        case Blocks::NetherQuartzOre: return Items::NetherQuartz;
         case Blocks::EmeraldOre: return Items::Emerald;
         case Blocks::Glowstone: return Items::GlowstoneDust;
         case Blocks::NetherWart: return Items::NetherWart;

@@ -908,6 +908,12 @@ namespace
         { "Cracked Nether Bricks", CrackedNetherBricksTile, CrackedNetherBricksTile, CrackedNetherBricksTile, true, true, RenderType::Cube, 0, 2.0f },
         { "Chiseled Nether Bricks", ChiseledNetherBricksTile, ChiseledNetherBricksTile, ChiseledNetherBricksTile, true, true, RenderType::Cube, 0, 2.0f },
         { "Nether Brick Slab", NetherBricks, NetherBricks, NetherBricks, true, false, RenderType::Slab, 0, 2.0f },
+        { "Nether Quartz Ore", NetherQuartzOreTile, NetherQuartzOreTile, NetherQuartzOreTile, true, true, RenderType::Cube, 0, 3.0f },
+        { "Block of Quartz", QuartzBlockTop, QuartzBlockBottom, QuartzBlockSide, true, true, RenderType::Cube, 0, 0.8f },
+        { "Quartz Bricks", QuartzBricksTile, QuartzBricksTile, QuartzBricksTile, true, true, RenderType::Cube, 0, 0.8f },
+        { "Quartz Pillar", QuartzPillarTop, QuartzPillarTop, QuartzPillarSide, true, true, RenderType::Cube, 0, 0.8f },
+        { "Chiseled Quartz Block", ChiseledQuartzTop, ChiseledQuartzTop, ChiseledQuartzSide, true, true, RenderType::Cube, 0, 0.8f },
+        { "Quartz Slab", QuartzBlockTop, QuartzBlockTop, QuartzBlockSide, true, false, RenderType::Slab, 0, 2.0f },
     };
 }
 

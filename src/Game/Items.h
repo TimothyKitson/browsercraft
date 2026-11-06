@@ -299,6 +299,7 @@ namespace Items
         BambooSign,
         CrimsonSign,
         WarpedSign,
+        NetherQuartz,
         Count
     };
 }

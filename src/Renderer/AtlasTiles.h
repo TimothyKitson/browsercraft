@@ -305,6 +305,7 @@ namespace Tiles
         BambooMosaicTile, BambooDoorLower, BambooDoorUpper, BambooTrapdoorTile,
         CrimsonStemSide, CrimsonStemTop, StrippedCrimsonStemSide, StrippedCrimsonStemTop, CrimsonPlanksTile, CrimsonNyliumTop, CrimsonNyliumSide, CrimsonFungusTile, CrimsonRootsTile, CrimsonDoorLower, CrimsonDoorUpper, CrimsonTrapdoorTile, WarpedStemSide, WarpedStemTop, StrippedWarpedStemSide, StrippedWarpedStemTop, WarpedPlanksTile, WarpedNyliumTop, WarpedNyliumSide, WarpedFungusTile, WarpedRootsTile, WarpedDoorLower, WarpedDoorUpper, WarpedTrapdoorTile, NetherSproutsTile, NetherWartBlockTile, WarpedWartBlockTile, ShroomlightTile, WeepingVinesTile, WeepingVinesPlantTile, TwistingVinesTile, TwistingVinesPlantTile,
         StoneBricksTile, MossyStoneBricksTile, CrackedStoneBricksTile, ChiseledStoneBricksTile, SmoothStoneTile, SmoothStoneSlabSide, PolishedGraniteTile, PolishedDioriteTile, PolishedAndesiteTile, CobbledDeepslateTile, PolishedDeepslateTile, ChiseledDeepslateTile, CrackedDeepslateBricksTile, CrackedDeepslateTilesTile, PolishedTuffTile, ChiseledTuffSide, ChiseledTuffTop, ChiseledTuffBricksSide, ChiseledTuffBricksTop, BlackstoneTop, PolishedBlackstonePlainTile, ChiseledPolishedBlackstoneTile, CrackedPolishedBlackstoneBricksTile, RedNetherBricksTile, CrackedNetherBricksTile, ChiseledNetherBricksTile,
+        NetherQuartzOreTile, QuartzBlockTop, QuartzBlockBottom, QuartzBlockSide, QuartzBricksTile, QuartzPillarTop, QuartzPillarSide, ChiseledQuartzTop, ChiseledQuartzSide,
 
         TileCount
     };
@@ -494,8 +495,9 @@ namespace Tiles
         IconMangroveDoor, ItemMangroveSign, IconMangrovePropagule,
         IconBambooDoor, ItemBambooSign,
         IconCrimsonDoor, ItemCrimsonSign, IconWarpedDoor, ItemWarpedSign,
+        ItemQuartz,
 
-        ItemTileEnd = ItemWarpedSign + 1
+        ItemTileEnd = ItemQuartz + 1
     };
 
     // Ten progressively more broken overlay tiles for the mining animation.

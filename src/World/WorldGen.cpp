@@ -322,6 +322,12 @@ void WorldGen::generateNether(Chunk& chunk) const
                 break;
             }
 
+            for (int y = 10; y < ROOF - 4; ++y)
+                if (chunk.getBlock(lx, y, lz) == Blocks::Netherrack &&
+                    hashToFloat(hashCoords(wx / 2, y / 2, wz / 2, m_seed + 7901)) < 0.03f &&
+                    hashToFloat(hashCoords(wx, y, wz, m_seed + 7902)) < 0.55f)
+                    chunk.setBlockRaw(lx, y, lz, Blocks::NetherQuartzOre);
+
             // Ancient debris, buried in the rock below the lava and
             // never touching open air. Minecraft hides it the same
             // way: the only way to find it is to dig, which is why

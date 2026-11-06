@@ -3772,6 +3772,39 @@ namespace
     void paintCrackedNetherBricksTile(Tile& t) { paintBricksIn(t, Color{ 44, 22, 26 }, Color{ 22, 11, 14 }); paintCracksOver(t, Color{ 12, 6, 8 }, 883); }
     void paintChiseledNetherBricksTile(Tile& t) { paintChiseledIn(t, Color{ 44, 22, 26 }, 884); }
 
+    void paintNetherQuartzOreTile(Tile& t)
+    {
+        paintNetherrack(t);
+        for (int k = 0; k < 7; ++k)
+        {
+            const int x = 2 + static_cast<int>(hash2(k, 0, 891) * 11.0f), y = 2 + static_cast<int>(hash2(k, 1, 891) * 11.0f);
+            t.set(x, y, Color{ 232, 226, 218 });
+            t.set(x + 1, y, Color{ 214, 206, 196 });
+            t.set(x, y + 1, Color{ 200, 190, 180 });
+        }
+    }
+    void paintQuartzBlockTop(Tile& t) { paintSmoothIn(t, Color{ 236, 230, 223 }, 892); }
+    void paintQuartzBlockBottom(Tile& t) { paintSmoothIn(t, Color{ 230, 224, 216 }, 893); }
+    void paintQuartzBlockSide(Tile& t) { paintSmoothIn(t, Color{ 234, 228, 221 }, 894); }
+    void paintQuartzBricksTile(Tile& t) { paintBricksIn(t, Color{ 236, 230, 223 }, Color{ 200, 192, 184 }); }
+    void paintQuartzPillarTop(Tile& t) { paintRings(t, Color{ 236, 230, 223 }, Color{ 224, 218, 210 }, Color{ 210, 202, 194 }, 895); }
+    void paintQuartzPillarSide(Tile& t)
+    {
+        paintSmoothIn(t, Color{ 234, 228, 221 }, 896);
+        for (int y = 0; y < Tile::N; ++y) { t.set(3, y, Color{ 212, 204, 196 }); t.set(Tile::N - 4, y, Color{ 212, 204, 196 }); }
+    }
+    void paintChiseledQuartzTop(Tile& t) { paintChiseledIn(t, Color{ 234, 228, 221 }, 897); }
+    void paintChiseledQuartzSide(Tile& t) { paintChiseledIn(t, Color{ 232, 226, 219 }, 898); }
+    void paintItemQuartz(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        const int n = Tile::N;
+        for (int y = 3; y < n - 3; ++y)
+            for (int x = 3; x < n - 3; ++x)
+                if (std::abs(x - n / 2) + std::abs(y - n / 2) < 6)
+                    t.set(x, y, shade(Color{ 236, 228, 220 }, static_cast<int>((hash2(x, y, 899) - 0.5f) * 30.0f)));
+    }
+
     void paintItemSign(Tile& t)
     {
         t.fill(Color{ 0, 0, 0, 0 });
@@ -6754,6 +6787,7 @@ namespace
         { Tiles::IconCrimsonDoor, paintCrimsonDoorLower },
         { Tiles::ItemCrimsonSign, paintItemCrimsonSign },
         { Tiles::IconWarpedDoor, paintWarpedDoorLower },
+        { Tiles::ItemQuartz, paintItemQuartz },
         { Tiles::ItemWarpedSign, paintItemWarpedSign },
         { Tiles::ItemBambooSign, paintItemBambooSign },
         { Tiles::ItemMangroveSign, paintItemMangroveSign },
@@ -6918,6 +6952,15 @@ namespace
         { Tiles::DustLine1Off, paintRedstoneDust },
         { Tiles::DustLine1On, paintRedstoneDustLit },
         { Tiles::LeverHandle, paintLever },
+        { Tiles::NetherQuartzOreTile, paintNetherQuartzOreTile },
+        { Tiles::QuartzBlockTop, paintQuartzBlockTop },
+        { Tiles::QuartzBlockBottom, paintQuartzBlockBottom },
+        { Tiles::QuartzBlockSide, paintQuartzBlockSide },
+        { Tiles::QuartzBricksTile, paintQuartzBricksTile },
+        { Tiles::QuartzPillarTop, paintQuartzPillarTop },
+        { Tiles::QuartzPillarSide, paintQuartzPillarSide },
+        { Tiles::ChiseledQuartzTop, paintChiseledQuartzTop },
+        { Tiles::ChiseledQuartzSide, paintChiseledQuartzSide },
         { Tiles::StoneBricksTile, paintStoneBricksTile },
         { Tiles::MossyStoneBricksTile, paintMossyStoneBricksTile },
         { Tiles::CrackedStoneBricksTile, paintCrackedStoneBricksTile },
@@ -7349,6 +7392,7 @@ namespace
         { Tiles::IconCrimsonDoor, { "crimson_door", nullptr, nullptr } },
         { Tiles::ItemCrimsonSign, { "crimson_sign", nullptr, nullptr } },
         { Tiles::IconWarpedDoor, { "warped_door", nullptr, nullptr } },
+        { Tiles::ItemQuartz, { "quartz", nullptr, nullptr } },
         { Tiles::ItemWarpedSign, { "warped_sign", nullptr, nullptr } },
         { Tiles::ItemBambooSign, { "bamboo_sign", nullptr, nullptr } },
         { Tiles::ItemMangroveSign, { "mangrove_sign", nullptr, nullptr } },
@@ -7485,6 +7529,15 @@ namespace
         { Tiles::DustLine1Off, { "redstone_dust_line1", nullptr }, Tinting::RedstoneOff, 0, false },
         { Tiles::DustLine1On, { "redstone_dust_line1", nullptr }, Tinting::RedstoneOn, 0, false },
         { Tiles::LeverHandle, { "lever", nullptr }, Tinting::None, 0, false },
+        { Tiles::NetherQuartzOreTile, { "nether_quartz_ore", nullptr }, Tinting::None, 0, false },
+        { Tiles::QuartzBlockTop, { "quartz_block_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::QuartzBlockBottom, { "quartz_block_bottom", nullptr }, Tinting::None, 0, false },
+        { Tiles::QuartzBlockSide, { "quartz_block_side", nullptr }, Tinting::None, 0, false },
+        { Tiles::QuartzBricksTile, { "quartz_bricks", nullptr }, Tinting::None, 0, false },
+        { Tiles::QuartzPillarTop, { "quartz_pillar_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::QuartzPillarSide, { "quartz_pillar", nullptr }, Tinting::None, 0, false },
+        { Tiles::ChiseledQuartzTop, { "chiseled_quartz_block_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::ChiseledQuartzSide, { "chiseled_quartz_block", nullptr }, Tinting::None, 0, false },
         { Tiles::StoneBricksTile, { "stone_bricks", nullptr }, Tinting::None, 0, false },
         { Tiles::MossyStoneBricksTile, { "mossy_stone_bricks", nullptr }, Tinting::None, 0, false },
         { Tiles::CrackedStoneBricksTile, { "cracked_stone_bricks", nullptr }, Tinting::None, 0, false },
