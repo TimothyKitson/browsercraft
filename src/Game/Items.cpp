@@ -254,6 +254,12 @@ StackId blockDrop(BlockId id)
     // for breaking one either -- you eat it or you lose it.
     if (isCake(id)) return Blocks::Air;
 
+    if (isFurnaceBlock(id)) return furnaceCold(furnaceBase(id));
+    if (id == Blocks::BarrelOpen) return Blocks::Barrel;
+    if (id == Blocks::NetherWart0 || id == Blocks::NetherWart1) return Items::NetherWart;
+    if (isCopperBulb(id)) return Blocks::CopperBulb;
+    if (id == Blocks::SculkCatalystBloom) return Blocks::SculkCatalyst;
+
     if (id == Blocks::CandleLit) return Blocks::Candle;
 
     // However it was hung, what comes back is one sign.
@@ -283,9 +289,6 @@ StackId blockDrop(BlockId id)
 
         // Ore gives up what is in it. Iron and gold stay as ore --
         // they want a furnace, and there is not one yet.
-        case Blocks::FurnaceLit: return Blocks::Furnace;
-        case Blocks::SmokerLit: return Blocks::Smoker;
-        case Blocks::BlastFurnaceLit: return Blocks::BlastFurnace;
 
         // The book on it is given back by the hand that breaks it,
         // the way a furnace gives back what was inside.
@@ -308,7 +311,6 @@ StackId blockDrop(BlockId id)
         // along and the self-test had checked that it was.
         case Blocks::GlowBerries: return Items::GlowBerries;
         case Blocks::CopperOre: return Items::RawCopper;
-        case Blocks::CopperBulbLit: return Blocks::CopperBulb;
 
         // Whatever state a thing was in when you broke it, what
         // comes up is the thing itself.

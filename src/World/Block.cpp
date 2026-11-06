@@ -26,10 +26,10 @@ namespace
         { "Oak Log",      LogTop,        LogTop,         LogSide,        true,  true,  RenderType::Cube,   0,   2.0f },
         { "Oak Leaves",   Leaves,        Leaves,         Leaves,         true,  false, RenderType::Cube,   0,   0.2f },
         { "Glass",        Glass,         Glass,          Glass,          true,  false, RenderType::Cube,   0,   0.3f },
-        { "Sandstone",    SandstoneTop,  SandstoneTop,   SandstoneSide,  true,  true,  RenderType::Cube,   0,   0.8f },
+        { "Sandstone",    SandstoneTop,  SandstoneBottom, SandstoneSide,  true,  true,  RenderType::Cube,   0,   0.8f },
         { "Snow",         SnowTile,      SnowTile,       SnowTile,       true,  true,  RenderType::Cube,   0,   0.3f },
         { "Ice",          Ice,           Ice,            Ice,            true,  false, RenderType::Cube,   0,   0.5f },
-        { "Cactus",       CactusTop,     CactusTop,      CactusSide,     true,  true,  RenderType::Cube,   0,   0.4f },
+        { "Cactus",       CactusTop,     CactusBottom,   CactusSide,     true,  true,  RenderType::Cube,   0,   0.4f },
         { "Bricks",       Bricks,        Bricks,         Bricks,         true,  true,  RenderType::Cube,   0,   2.0f },
         { "Obsidian",     Obsidian,      Obsidian,       Obsidian,       true,  true,  RenderType::Cube,   0,   8.0f },
         { "Tall Grass",   TallGrass,     TallGrass,      TallGrass,      false, false, RenderType::Cross,  0,   0.0f },
@@ -55,8 +55,8 @@ namespace
         // Tilled earth is solid and a shade darker than dirt; the crop
         // standing in it is a cross-shaped plant you can walk through.
         { "Crafting Table", CraftingTop, Planks,     CraftingSide,   true,  true,  RenderType::Cube,   0,   2.5f, CraftingFront },
-        { "Furnace",      FurnaceTop,    FurnaceTop,     FurnaceFront,   true,  true,  RenderType::Cube,   0,   3.5f },
-        { "Furnace",      FurnaceTop,    FurnaceTop,     FurnaceLit,     true,  true,  RenderType::Cube,  13,   3.5f },
+        { "Furnace",      FurnaceTop,    FurnaceTop,     FurnaceSide,    true,  true,  RenderType::Cube,   0,   3.5f, FurnaceFront },
+        { "Furnace",      FurnaceTop,    FurnaceTop,     FurnaceSide,    true,  true,  RenderType::Cube,  13,   3.5f, FurnaceLit },
         { "Chest",        ChestTop,      ChestTop,       ChestFront,     true,  true,  RenderType::Cube,   0,   2.5f },
         { "Bed",          BedTop,        Planks,         BedSide,        true,  true,  RenderType::Cube,   0,   0.2f },
         { "TNT",          TntTop,        TntBottom,      TntSide,        true,  true,  RenderType::Cube,   0,   0.0f },
@@ -113,7 +113,7 @@ namespace
         { "Wheat Crop",   WheatStage7,   WheatStage7,    WheatStage7,    false, false, RenderType::Cross,  0,   0.0f },
         { "Sugar Cane",   SugarCane,     SugarCane,      SugarCane,      false, false, RenderType::Cross,  0,   0.0f },
         { "Bookshelf",    Planks,        Planks,         BookshelfSide,  true,  true,  RenderType::Cube,   0,   1.5f },
-        { "Enchanting Table", EnchantTableTop, Obsidian,   EnchantTableSide, true, false, RenderType::Slab, 7,   5.0f },
+        { "Enchanting Table", EnchantTableTop, EnchantTableBottom,   EnchantTableSide, true, false, RenderType::Slab, 7,   5.0f },
         { "Emerald Ore",  EmeraldOre,    EmeraldOre,     EmeraldOre,     true,  true,  RenderType::Cube,   0,   3.0f },
         { "End Portal Frame", EndFrameTop, EndStone,      EndFrameSide,   true,  false, RenderType::Slab,   1,  -1.0f },
         { "End Portal Frame", EndFrameEye, EndStone,      EndFrameSide,   true,  false, RenderType::Slab,   6,  -1.0f },
@@ -160,11 +160,11 @@ namespace
         { "Redstone Lamp",RedstoneLampLit,RedstoneLampLit,RedstoneLampLit,true, true,  RenderType::Cube,  15,   0.3f },
         { "Block of Redstone",RedstoneBlockTile,RedstoneBlockTile,RedstoneBlockTile,true,true,RenderType::Cube,0,5.0f },
         { "Tuff Bricks",  TuffBricks,    TuffBricks,     TuffBricks,     true,  true,  RenderType::Cube,   0,   1.5f },
-        { "Trial Spawner",TrialSpawnerTop,TrialSpawnerTop,TrialSpawnerSide,true, true,  RenderType::Cube,   3,  -1.0f },
-        { "Trial Spawner",TrialSpawnerTopLit,TrialSpawnerTop,TrialSpawnerSideLit,true,true,RenderType::Cube,8,-1.0f },
-        { "Trial Spawner",TrialSpawnerTop,TrialSpawnerTop,TrialSpawnerSide,true, true,  RenderType::Cube,   0,  -1.0f },
-        { "Vault",        VaultTop,      VaultTop,       VaultSide,      true,  true,  RenderType::Cube,   4,  -1.0f },
-        { "Vault",        VaultTop,      VaultTop,       VaultSideOpen,  true,  true,  RenderType::Cube,   8,  -1.0f },
+        { "Trial Spawner",TrialSpawnerTop,TrialSpawnerBottom,TrialSpawnerSide,true, true,  RenderType::Cube,   3,  -1.0f },
+        { "Trial Spawner",TrialSpawnerTopLit,TrialSpawnerBottom,TrialSpawnerSideLit,true,true,RenderType::Cube,8,-1.0f },
+        { "Trial Spawner",TrialSpawnerTop,TrialSpawnerBottom,TrialSpawnerSide,true, true,  RenderType::Cube,   0,  -1.0f },
+        { "Vault",        VaultTop,      VaultBottom,    VaultSideOff,   true,  true,  RenderType::Cube,   4,  -1.0f, VaultSide },
+        { "Vault",        VaultTop,      VaultBottom,    VaultSideOn,    true,  true,  RenderType::Cube,   8,  -1.0f, VaultSideOpen },
         { "Piston",  PistonTop,     PistonTop,      PistonSide,     true,  true,  RenderType::Cube,   0,   0.5f, PistonFace },
         { "Piston",  PistonTop,     PistonTop,      PistonSide,     true,  true,  RenderType::Cube,   0,   0.5f, PistonFace },
         { "Piston",  PistonTop,     PistonTop,      PistonSide,     true,  true,  RenderType::Cube,   0,   0.5f, PistonFace },
@@ -189,8 +189,8 @@ namespace
         { "Sticky Piston Head",PistonTop, PistonTop,  PistonArm,      true,  true,  RenderType::Cube,   0,   0.5f, StickyPistonFace },
         { "Sticky Piston Head",PistonTop, PistonTop,  PistonArm,      true,  true,  RenderType::Cube,   0,   0.5f, StickyPistonFace },
         { "Sticky Piston Head",PistonTop, PistonTop,  PistonArm,      true,  true,  RenderType::Cube,   0,   0.5f, StickyPistonFace },
-        { "Crafter",      CrafterTop,    CrafterSide,    CrafterSide,    true,  true,  RenderType::Cube,   0,   2.5f },
-        { "Crafter",      CrafterTopLit, CrafterSide,    CrafterSide,    true,  true,  RenderType::Cube,   6,   2.5f },
+        { "Crafter",      CrafterNorth,  CrafterSouth,   CrafterSide,    true,  true,  RenderType::Cube,   0,   2.5f, CrafterTop, CrafterBottom },
+        { "Crafter",      CrafterNorthCrafting, CrafterSouthTriggered, CrafterEastTriggered, true, true, RenderType::Cube, 6, 2.5f, CrafterTopLit, CrafterBottom },
         { "Copper Ore",   CopperOre,     CopperOre,      CopperOre,      true,  true,  RenderType::Cube,   0,   3.0f },
         { "Block of Copper",CopperBlock, CopperBlock,    CopperBlock,    true,  true,  RenderType::Cube,   0,   3.0f },
         { "Exposed Copper",ExposedCopper,ExposedCopper,  ExposedCopper,  true,  true,  RenderType::Cube,   0,   3.0f },
@@ -204,8 +204,8 @@ namespace
         { "Moss Block",   MossTile,      MossTile,       MossTile,       true,  true,  RenderType::Cube,   0,   0.1f },
         { "Azalea Leaves",AzaleaLeavesTile,AzaleaLeavesTile,AzaleaLeavesTile,true,false,RenderType::Cube,   0,   0.2f },
         { "Glow Berries", GlowBerriesTile,GlowBerriesTile,GlowBerriesTile,false, false, RenderType::Cross, 14,   0.0f },
-        { "Ominous Vault",VaultTop,      VaultTop,       OminousVaultSide,true, true,  RenderType::Cube,   6,  -1.0f },
-        { "Ominous Vault",VaultTop,      VaultTop,       OminousVaultSideOpen,true,true,RenderType::Cube,  10,  -1.0f },
+        { "Ominous Vault",VaultTopOminous,VaultBottomOminous,VaultSideOffOminous,true, true,  RenderType::Cube,   6,  -1.0f, OminousVaultSide },
+        { "Ominous Vault",VaultTopOminous,VaultBottomOminous,VaultSideOnOminous,true,true,RenderType::Cube,  10,  -1.0f, OminousVaultSideOpen },
         { "Monster Spawner",SpawnerTile, SpawnerTile,    SpawnerTile,    true,  false, RenderType::Cube,   1,   5.0f },
         { "Prismarine",   PrismarineTile,PrismarineTile, PrismarineTile, true,  true,  RenderType::Cube,   0,   1.5f },
         { "Prismarine Bricks",PrismarineBricksTile,PrismarineBricksTile,PrismarineBricksTile,true,true,RenderType::Cube,0,1.5f },
@@ -230,12 +230,12 @@ namespace
         { "Deepslate Bricks",DeepslateBricksTile,DeepslateBricksTile,DeepslateBricksTile,true,true,RenderType::Cube,0,3.5f },
         { "Deepslate Tiles",DeepslateTilesTile,DeepslateTilesTile,DeepslateTilesTile,true,true,RenderType::Cube,0,3.5f },
         { "Sculk",        SculkTile,     SculkTile,      SculkTile,      true,  true,  RenderType::Cube,   0,   0.2f },
-        { "Sculk Sensor", SculkSensorTop,SculkTile,      SculkSensorSide,true,  true,  RenderType::Cube,   1,   1.5f },
-        { "Sculk Sensor", SculkSensorTopLit,SculkTile,   SculkSensorSide,true,  true,  RenderType::Cube,   6,   1.5f },
-        { "Sculk Shrieker",SculkShriekerTop,SculkTile,   SculkShriekerSide,true,true,  RenderType::Cube,   2,   3.0f },
-        { "Sculk Catalyst",SculkCatalystTop,SculkTile,   SculkCatalystSide,true,true,  RenderType::Cube,   6,   3.0f },
+        { "Sculk Sensor", SculkSensorTop,SculkSensorBottom,SculkSensorSide,true,  true,  RenderType::Cube,   1,   1.5f },
+        { "Sculk Sensor", SculkSensorTopLit,SculkSensorBottom,SculkSensorSide,true,  true,  RenderType::Cube,   6,   1.5f },
+        { "Sculk Shrieker",SculkShriekerTop,SculkShriekerBottom,   SculkShriekerSide,true,true,  RenderType::Cube,   2,   3.0f },
+        { "Sculk Catalyst",SculkCatalystTop,SculkCatalystBottom,   SculkCatalystSide,true,true,  RenderType::Cube,   6,   3.0f },
         { "Soul Lantern", SoulLanternTile,SoulLanternTile,SoulLanternTile,true, true,  RenderType::Cube,  10,   0.3f },
-        { "Reinforced Deepslate",ReinforcedDeepslateTop,ReinforcedDeepslateTop,ReinforcedDeepslateSide,true,true,RenderType::Cube,0,-1.0f },
+        { "Reinforced Deepslate",ReinforcedDeepslateTop,ReinforcedDeepslateBottom,ReinforcedDeepslateSide,true,true,RenderType::Cube,0,-1.0f },
         { "Purpur Block", PurpurTile,    PurpurTile,     PurpurTile,     true,  true,  RenderType::Cube,   0,   1.5f },
         { "Purpur Pillar",PurpurPillarTop,PurpurPillarTop,PurpurPillarSide,true,true,  RenderType::Cube,   0,   1.5f },
         { "End Stone Bricks",EndBricksTile,EndBricksTile,EndBricksTile,  true,  true,  RenderType::Cube,   0,   3.0f },
@@ -259,18 +259,18 @@ namespace
         { "Block of Coal", CoalBlockTile, CoalBlockTile,  CoalBlockTile,  true,  true,  RenderType::Cube,   0,   5.0f },
         { "Note Block",   NoteBlockTile, NoteBlockTile,  NoteBlockTile,  true,  true,  RenderType::Cube,   0,   0.8f },
         { "Note Block",   NoteBlockTile, NoteBlockTile,  NoteBlockTile,  true,  true,  RenderType::Cube,   0,   0.8f },
-        { "Observer",     ObserverTop,   ObserverTop,    ObserverSide,   true,  true,  RenderType::Cube,   0,   3.0f },
-        { "Observer",     ObserverTopLit,ObserverTopLit, ObserverSide,   true,  true,  RenderType::Cube,   0,   3.0f },
+        { "Observer",     ObserverTop,   ObserverBack,   ObserverSide,   true,  true,  RenderType::Cube,   0,   3.0f, ObserverArrow, ObserverArrow },
+        { "Observer",     ObserverTopLit,ObserverBackLit,ObserverSide,   true,  true,  RenderType::Cube,   0,   3.0f, ObserverArrow, ObserverArrow },
         { "Hopper",       HopperTop,     HopperSide,     HopperSide,     true,  false, RenderType::Cube,   0,   3.0f },
-        { "Dropper",      DropperFront,  Cobblestone,   Cobblestone,    true,  true,  RenderType::Cube,   0,   3.5f },
-        { "Dispenser",    DispenserFront,Cobblestone,   Cobblestone,    true,  true,  RenderType::Cube,   0,   3.5f },
+        { "Dropper",      DropperFront,  DispenserSide, DispenserSide,    true,  true,  RenderType::Cube,   0,   3.5f },
+        { "Dispenser",    DispenserFront,DispenserSide, DispenserSide,    true,  true,  RenderType::Cube,   0,   3.5f },
         { "Block of Amethyst",AmethystTile,AmethystTile,  AmethystTile,   true,  true,  RenderType::Cube,   0,   1.5f },
         { "Budding Amethyst",BuddingTile, BuddingTile,    BuddingTile,    true,  true,  RenderType::Cube,   0,   1.5f },
         { "Amethyst Cluster",ClusterTile, ClusterTile,    ClusterTile,    false, false, RenderType::Cross,  5,   1.5f },
         { "Smooth Basalt",SmoothBasaltTile,SmoothBasaltTile,SmoothBasaltTile,true,true,RenderType::Cube,   0,   1.25f },
         { "Lantern",      LanternTile,   LanternTile,    LanternTile,    true,  true,  RenderType::Cube,  15,   0.3f },
-        { "Barrel",       BarrelTop,     BarrelTop,      BarrelSide,     true,  true,  RenderType::Cube,   0,   2.5f },
-        { "Campfire",     CampfireTop,   CampfireLog,    CampfireLog,    true,  false, RenderType::Cube,  15,   2.0f },
+        { "Barrel",       BarrelTop,     BarrelBottom,   BarrelSide,     true,  true,  RenderType::Cube,   0,   2.5f },
+        { "Campfire",     CampfireTop,   CampfireLog,    CampfireLogLit,    true,  false, RenderType::Cube,  15,   2.0f },
         { "Carrot Crop",  CarrotStage0,  CarrotStage0,   CarrotStage0,   false, false, RenderType::Cross,  0,   0.0f },
         { "Carrot Crop",  CarrotStage1,  CarrotStage1,   CarrotStage1,   false, false, RenderType::Cross,  0,   0.0f },
         { "Carrot Crop",  CarrotStage2,  CarrotStage2,   CarrotStage2,   false, false, RenderType::Cross,  0,   0.0f },
@@ -288,10 +288,10 @@ namespace
         { "Potato Crop",  PotatoStage6,  PotatoStage6,   PotatoStage6,   false, false, RenderType::Cross,  0,   0.0f },
         { "Potato Crop",  PotatoStage7,  PotatoStage7,   PotatoStage7,   false, false, RenderType::Cross,  0,   0.0f },
 
-        { "Smoker",       SmokerTop,     SmokerSide,     SmokerFront,    true,  true,  RenderType::Cube,   0,   3.5f },
-        { "Smoker",       SmokerTop,     SmokerSide,     SmokerFrontLit, true,  true,  RenderType::Cube,  13,   3.5f },
-        { "Blast Furnace",BlastFurnaceTop,BlastFurnaceSide,BlastFurnaceFront,true,true,RenderType::Cube,   0,   3.5f },
-        { "Blast Furnace",BlastFurnaceTop,BlastFurnaceSide,BlastFurnaceFrontLit,true,true,RenderType::Cube,13, 3.5f },
+        { "Smoker",       SmokerTop,     SmokerBottom,   SmokerSide,     true,  true,  RenderType::Cube,   0,   3.5f, SmokerFront },
+        { "Smoker",       SmokerTop,     SmokerBottom,   SmokerSide,     true,  true,  RenderType::Cube,  13,   3.5f, SmokerFrontLit },
+        { "Blast Furnace",BlastFurnaceTop,BlastFurnaceTop,BlastFurnaceSide,true,true,RenderType::Cube,   0,   3.5f, BlastFurnaceFront },
+        { "Blast Furnace",BlastFurnaceTop,BlastFurnaceTop,BlastFurnaceSide,true,true,RenderType::Cube,13, 3.5f, BlastFurnaceFrontLit },
 
         { "Composter",    ComposterTop,  ComposterBottom,ComposterSide,  true,  true,  RenderType::Cube,   0,   0.6f },
         { "Composter",    ComposterFill1,ComposterBottom,ComposterSide,  true,  true,  RenderType::Cube,   0,   0.6f },
@@ -395,6 +395,38 @@ namespace
         // You walk into one, so it cannot collide; it is its own
         // light, so the ring of them is visible from the island.
         { "End Gateway", EndGatewayTile, EndGatewayTile, EndGatewayTile, false, false, RenderType::Cube, 15, -1.0f },
+        { "Furnace", FurnaceTop, FurnaceTop, FurnaceSide, true, true, RenderType::Cube, 0, 3.5f, FurnaceFront },
+        { "Furnace", FurnaceTop, FurnaceTop, FurnaceSide, true, true, RenderType::Cube, 0, 3.5f, FurnaceFront },
+        { "Furnace", FurnaceTop, FurnaceTop, FurnaceSide, true, true, RenderType::Cube, 0, 3.5f, FurnaceFront },
+        { "Furnace", FurnaceTop, FurnaceTop, FurnaceSide, true, true, RenderType::Cube, 13, 3.5f, FurnaceLit },
+        { "Furnace", FurnaceTop, FurnaceTop, FurnaceSide, true, true, RenderType::Cube, 13, 3.5f, FurnaceLit },
+        { "Furnace", FurnaceTop, FurnaceTop, FurnaceSide, true, true, RenderType::Cube, 13, 3.5f, FurnaceLit },
+        { "Smoker", SmokerTop, SmokerBottom, SmokerSide, true, true, RenderType::Cube, 0, 3.5f, SmokerFront },
+        { "Smoker", SmokerTop, SmokerBottom, SmokerSide, true, true, RenderType::Cube, 0, 3.5f, SmokerFront },
+        { "Smoker", SmokerTop, SmokerBottom, SmokerSide, true, true, RenderType::Cube, 0, 3.5f, SmokerFront },
+        { "Smoker", SmokerTop, SmokerBottom, SmokerSide, true, true, RenderType::Cube, 13, 3.5f, SmokerFrontLit },
+        { "Smoker", SmokerTop, SmokerBottom, SmokerSide, true, true, RenderType::Cube, 13, 3.5f, SmokerFrontLit },
+        { "Smoker", SmokerTop, SmokerBottom, SmokerSide, true, true, RenderType::Cube, 13, 3.5f, SmokerFrontLit },
+        { "Blast Furnace", BlastFurnaceTop, BlastFurnaceTop, BlastFurnaceSide, true, true, RenderType::Cube, 0, 3.5f, BlastFurnaceFront },
+        { "Blast Furnace", BlastFurnaceTop, BlastFurnaceTop, BlastFurnaceSide, true, true, RenderType::Cube, 0, 3.5f, BlastFurnaceFront },
+        { "Blast Furnace", BlastFurnaceTop, BlastFurnaceTop, BlastFurnaceSide, true, true, RenderType::Cube, 0, 3.5f, BlastFurnaceFront },
+        { "Blast Furnace", BlastFurnaceTop, BlastFurnaceTop, BlastFurnaceSide, true, true, RenderType::Cube, 13, 3.5f, BlastFurnaceFrontLit },
+        { "Blast Furnace", BlastFurnaceTop, BlastFurnaceTop, BlastFurnaceSide, true, true, RenderType::Cube, 13, 3.5f, BlastFurnaceFrontLit },
+        { "Blast Furnace", BlastFurnaceTop, BlastFurnaceTop, BlastFurnaceSide, true, true, RenderType::Cube, 13, 3.5f, BlastFurnaceFrontLit },
+        { "Barrel", BarrelTopOpen, BarrelBottom, BarrelSide, true, true, RenderType::Cube, 0, 2.5f },
+        { "Nether Wart", NetherWart0Tile, NetherWart0Tile, NetherWart0Tile, false, false, RenderType::Cross, 0, 0.0f },
+        { "Nether Wart", NetherWart1Tile, NetherWart1Tile, NetherWart1Tile, false, false, RenderType::Cross, 0, 0.0f },
+        { "Chipped Anvil", AnvilTopChipped, AnvilTopChipped, AnvilSide, true, false, RenderType::Slab, 0, 5.0f },
+        { "Damaged Anvil", AnvilTopDamaged, AnvilTopDamaged, AnvilSide, true, false, RenderType::Slab, 0, 5.0f },
+        { "Copper Bulb", CopperBulbPoweredTile, CopperBulbPoweredTile, CopperBulbPoweredTile, true, true, RenderType::Cube, 0, 3.0f },
+        { "Copper Bulb", CopperBulbLitPoweredTile, CopperBulbLitPoweredTile, CopperBulbLitPoweredTile, true, true, RenderType::Cube, 15, 3.0f },
+        { "Sculk Catalyst", SculkCatalystTopBloom, SculkCatalystBottom, SculkCatalystSideBloom, true, true, RenderType::Cube, 6, 3.0f },
+        { "Vault", VaultTopEjecting, VaultBottom, VaultSideOn, true, true, RenderType::Cube, 8, -1.0f, VaultFrontEjecting },
+        { "Ominous Vault", VaultTopEjectingOminous, VaultBottomOminous, VaultSideOnOminous, true, true, RenderType::Cube, 10, -1.0f, VaultFrontEjectingOminous },
+        { "Trial Spawner", TrialSpawnerTopActiveOminous, TrialSpawnerBottom, TrialSpawnerSideActiveOminous, true, true, RenderType::Cube, 8, -1.0f },
+        { "Trial Spawner", TrialSpawnerTopEjecting, TrialSpawnerBottom, TrialSpawnerSideLit, true, true, RenderType::Cube, 8, -1.0f },
+        { "Trial Spawner", TrialSpawnerTopEjectingOminous, TrialSpawnerBottom, TrialSpawnerSideActiveOminous, true, true, RenderType::Cube, 8, -1.0f },
+        { "Trial Spawner", TrialSpawnerTopInactiveOminous, TrialSpawnerBottom, TrialSpawnerSideInactiveOminous, true, true, RenderType::Cube, 0, -1.0f },
     };
 }
 
@@ -406,6 +438,7 @@ const BlockInfo& blockInfo(BlockId id)
 
 bool isObtainable(BlockId id)
 {
+    if (furnaceFacing(id) != 0) return false;
     switch (id)
     {
         case Blocks::Air:
@@ -416,6 +449,18 @@ bool isObtainable(BlockId id)
         case Blocks::FurnaceLit:   // the burning state of one, not a thing you hold
         case Blocks::SmokerLit:
         case Blocks::BlastFurnaceLit:
+        case Blocks::BarrelOpen:
+        case Blocks::NetherWart0:
+        case Blocks::NetherWart1:
+        case Blocks::CopperBulbPowered:
+        case Blocks::CopperBulbLitPowered:
+        case Blocks::SculkCatalystBloom:
+        case Blocks::VaultEjecting:
+        case Blocks::OminousVaultEjecting:
+        case Blocks::TrialSpawnerActiveOminous:
+        case Blocks::TrialSpawnerEjecting:
+        case Blocks::TrialSpawnerEjectingOminous:
+        case Blocks::TrialSpawnerSpentOminous:
         case Blocks::EndPortalFrameFilled: // a frame with an eye already in it
         case Blocks::TntPrimed:    // likewise: a lit stick is not an item
         // Only one ladder is a thing you hold; the other three are the

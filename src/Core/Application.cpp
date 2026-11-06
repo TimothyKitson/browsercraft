@@ -1931,7 +1931,7 @@ bool Application::frame()
                 m_benchOpen   ? there == Blocks::CraftingTable
               : m_chestOpen   ? (isContainerBlock(there) || isItemHolder(there))
               : m_enchantOpen ? there == Blocks::EnchantingTable
-              : m_anvilOpen   ? there == Blocks::Anvil
+              : m_anvilOpen   ? isAnvil(there)
               : m_brewOpen    ? there == Blocks::BrewingStand
                               : isFurnaceBlock(there);
 
@@ -2022,7 +2022,8 @@ bool Application::frame()
             m_startupScreen == "shipwreck" || m_startupScreen == "monument" ||
             m_startupScreen == "seabed" || m_startupScreen == "reef" ||
             m_startupScreen == "vault" || m_startupScreen == "stronghold" ||
-            m_startupScreen == "rock")
+            m_startupScreen == "rock" ||
+            m_startupScreen == "faces" || m_startupScreen == "backs")
         {
             // Dev aid: open the inventory with something in it, so the
             // screenshot shows a real grid rather than 36 empty boxes.
@@ -2043,6 +2044,8 @@ bool Application::frame()
                                   m_startupScreen != "handitem" &&
                                   m_startupScreen != "xp" &&
                                   m_startupScreen != "shelf" &&
+                                  m_startupScreen != "faces" &&
+                                  m_startupScreen != "backs" &&
                                   m_startupScreen != "enchantblock" &&
                                   m_startupScreen != "villager" &&
                                   m_startupScreen != "endportal" &&
@@ -4063,6 +4066,41 @@ bool Application::frame()
                 m_inventory.add(Items::Paper, 6);
                 m_inventory.add(Items::Book, 3);
                 m_inventory.add(Blocks::Bookshelf, 4);
+            }
+
+            if (m_startupScreen == "faces" || m_startupScreen == "backs")
+            {
+                const bool backs = m_startupScreen == "backs";
+                const int way = backs ? -1 : 1;
+                m_camera.setOrientation(backs ? -90.0f : 90.0f, -14.0f);
+                m_showDebug = false;
+                const int bx = static_cast<int>(std::floor(m_player.position.x));
+                const int by = static_cast<int>(std::floor(m_player.position.y));
+                const int bz = static_cast<int>(std::floor(m_player.position.z));
+                static const BlockId ROWS[5][5] = {
+                    { Blocks::Furnace, Blocks::FurnaceLit, Blocks::Smoker, Blocks::BlastFurnaceLit, Blocks::Observer },
+                    { Blocks::Crafter, Blocks::Dispenser, Blocks::Dropper, Blocks::Barrel, Blocks::BarrelOpen },
+                    { Blocks::Vault, Blocks::OminousVault, Blocks::VaultEjecting, Blocks::TrialSpawnerActiveOminous, Blocks::TrialSpawnerEjecting },
+                    { Blocks::Hopper, Blocks::Cauldron0, Blocks::SculkCatalystBloom, Blocks::SculkShrieker, Blocks::AnvilDamaged },
+                    { Blocks::CopperBulbLitPowered, Blocks::NetherWart1, Blocks::Cactus, Blocks::Sandstone, Blocks::EnchantingTable },
+                };
+                for (int dx = -6; dx <= 6; ++dx)
+                    for (int dy = -1; dy <= 10; ++dy)
+                        for (int d = 1; d <= 16; ++d)
+                            m_world->setBlock(bx + dx, by + dy, bz + way * d, dy < 0 ? Blocks::Stone : Blocks::Air);
+                for (int r = 0; r < 5; ++r)
+                    for (int c = 0; c < 5; ++c)
+                    {
+                        const int x = bx + way * (c * 2 - 4);
+                        const int y = by + r;
+                        const int z = bz + way * (4 + r * 2);
+                        m_world->setBlock(x, y - 1, z, ROWS[r][c] == Blocks::NetherWart1 ? Blocks::SoulSand : Blocks::Stone);
+                        m_world->setBlock(x, y, z, ROWS[r][c]);
+                    }
+                for (int r = 0; r < 5; ++r)
+                    for (int dx = -6; dx <= 6; ++dx)
+                        for (int y = by - 1; y < by + r; ++y)
+                            m_world->setBlock(bx + dx, y, bz + way * (4 + r * 2), Blocks::Stone);
             }
 
             if (m_startupScreen == "xp")
@@ -6861,8 +6899,10 @@ void Application::tickTrialSpawners(float deltaTime)
 
                     if (sent == 0) continue;
 
-                    m_world->setBlock(at.x, at.y, at.z, Blocks::TrialSpawnerActive);
-                    m_net.onLocalBlockChange(at.x, at.y, at.z, Blocks::TrialSpawnerActive);
+                    const BlockId awake = ominous ? Blocks::TrialSpawnerActiveOminous
+                                                  : Blocks::TrialSpawnerActive;
+                    m_world->setBlock(at.x, at.y, at.z, awake);
+                    m_net.onLocalBlockChange(at.x, at.y, at.z, awake);
                     m_trials.push_back(ActiveTrial{ at, 0.0f, ominous });
 
                     m_audio.play(Sound::MobZombieSay, 0.7f, ominous ? 0.45f : 0.6f);
@@ -6880,8 +6920,7 @@ void Application::tickTrialSpawners(float deltaTime)
         const glm::vec3 middle = glm::vec3(trial.at) + glm::vec3(0.5f);
 
         // Somebody broke it, or the world was reloaded under it.
-        if (m_world->getBlock(trial.at.x, trial.at.y, trial.at.z) !=
-            Blocks::TrialSpawnerActive)
+        if (!isTrialSpawnerActive(m_world->getBlock(trial.at.x, trial.at.y, trial.at.z)))
         {
             m_trials[i] = m_trials.back();
             m_trials.pop_back();
@@ -6907,9 +6946,9 @@ void Application::tickTrialSpawners(float deltaTime)
 
         if (anyLeft) { ++i; continue; }
 
-        m_world->setBlock(trial.at.x, trial.at.y, trial.at.z, Blocks::TrialSpawnerSpent);
-        m_net.onLocalBlockChange(trial.at.x, trial.at.y, trial.at.z,
-                                 Blocks::TrialSpawnerSpent);
+        setBlockFor(trial.at,
+                    trial.ominous ? Blocks::TrialSpawnerEjectingOminous : Blocks::TrialSpawnerEjecting,
+                    trial.ominous ? Blocks::TrialSpawnerSpentOminous : Blocks::TrialSpawnerSpent, 1.6f);
 
         for (int k = 0; k < Trial::KEYS_PER_SPAWNER; ++k)
             m_drops.spawn(middle + glm::vec3(0.0f, 1.0f, 0.0f),
@@ -6946,8 +6985,7 @@ void Application::openVault(const glm::ivec3& block)
     }
 
     const BlockId opened = ominous ? Blocks::OminousVaultOpen : Blocks::VaultOpen;
-    m_world->setBlock(block.x, block.y, block.z, opened);
-    m_net.onLocalBlockChange(block.x, block.y, block.z, opened);
+    setBlockFor(block, ominous ? Blocks::OminousVaultEjecting : Blocks::VaultEjecting, opened, 1.6f);
 
     const glm::vec3 out = glm::vec3(block) + glm::vec3(0.5f, 1.2f, 0.5f);
     const std::vector<Trial::Stack> loot =
@@ -7043,18 +7081,18 @@ void Application::settleRedstone(const glm::ivec3& at)
                     const std::array<int, 3> cell = { x, y, z };
                     const bool live = Redstone::poweredAt(cells, x, y, z);
                     const bool wasLive = m_bulbLive.count(cell) > 0;
-                    if (live == wasLive) continue;
-
-                    if (live)
+                    bool lit = copperBulbLit(here);
+                    if (live && !wasLive)
                     {
                         m_bulbLive.insert(cell);
-                        cells.set(x, y, z, here == Blocks::CopperBulb ? Blocks::CopperBulbLit
-                                                                     : Blocks::CopperBulb);
+                        lit = !lit;
                     }
-                    else
+                    else if (!live && wasLive)
                     {
                         m_bulbLive.erase(cell);
                     }
+                    const BlockId want = copperBulbAs(lit, live);
+                    if (want != here) cells.set(x, y, z, want);
                     continue;
                 }
 
@@ -8232,7 +8270,7 @@ void Application::handlePlacement()
                 m_audio.play(Sound::Click, 0.4f);
                 return;
             }
-            if (used == Blocks::Anvil)
+            if (isAnvil(used))
             {
                 openAnvil(bench.block);
                 m_audio.play(Sound::Click, 0.4f);
@@ -8582,6 +8620,25 @@ void Application::handlePlacement()
         }
     }
 
+    if (stack.id == Items::NetherWart)
+    {
+        const RaycastHit soil = m_world->raycast(m_camera.position, m_camera.front, REACH_DISTANCE);
+        if (soil.hit && soil.normal.y > 0 &&
+            m_world->getBlock(soil.block.x, soil.block.y, soil.block.z) == Blocks::SoulSand &&
+            m_world->getBlock(soil.block.x, soil.block.y + 1, soil.block.z) == Blocks::Air)
+        {
+            m_world->setBlock(soil.block.x, soil.block.y + 1, soil.block.z, Blocks::NetherWart0);
+            m_net.onLocalBlockChange(soil.block.x, soil.block.y + 1, soil.block.z, Blocks::NetherWart0);
+            m_audio.playPlace(Blocks::SoulSand);
+            if (!m_player.creative())
+            {
+                stack.count -= 1;
+                if (stack.count <= 0) stack.clear();
+            }
+            return;
+        }
+    }
+
     // Sowing. Seeds till the ground they are used on and plant
     // themselves in one action -- Minecraft wants a hoe first, and there
     // are no tools yet. A carrot and a potato sow themselves the same
@@ -8752,6 +8809,15 @@ void Application::handlePlacement()
                                ? (look.x > 0.0f ? 1 : 3)
                                : (look.z > 0.0f ? 2 : 0);
         placing = pistonBody(facing, pistonSticky(placing), false);
+    }
+
+    if (isFurnaceBlock(placing))
+    {
+        const glm::vec3 look = m_camera.front;
+        const int facing = (std::fabs(look.x) > std::fabs(look.z))
+                               ? (look.x > 0.0f ? 3 : 1)
+                               : (look.z > 0.0f ? 0 : 2);
+        placing = furnaceTurned(placing, facing);
     }
 
     // Stairs face the way you are looking, so you walk up them rather
@@ -9729,7 +9795,7 @@ void Application::tickSpriteParticles(float deltaTime)
                     fx.spawn(Kind::BigSmoke, middle + glm::vec3(fx.random() - 0.5f, 0.2f, fx.random() - 0.5f) * 0.6f,
                              glm::vec3(0.0f, 1.1f, 0.0f), 0.7f, 4.0f);
             }
-            else if (block == Blocks::FurnaceLit || block == Blocks::SmokerLit || block == Blocks::BlastFurnaceLit)
+            else if (isFurnaceBlock(block) && furnaceLit(block) == block)
             {
                 if (roll < 0.4f)
                 {
@@ -9779,10 +9845,10 @@ void Application::tickSpriteParticles(float deltaTime)
                     fx.spawn(m_world->getBlock(x, y + 2, z) == Blocks::Lava ? Kind::DripLava : Kind::DripWater,
                              middle + glm::vec3(0.0f, -0.5f, 0.0f), glm::vec3(0.0f), 0.12f, 1.6f, 9.0f);
             }
-            else if (block == Blocks::TrialSpawnerActive)
+            else if (isTrialSpawnerActive(block))
             {
                 if (roll < 0.5f)
-                    fx.spawn(Kind::TrialFlame, middle + glm::vec3(fx.random() - 0.5f, fx.random() - 0.5f, fx.random() - 0.5f) * 0.9f,
+                    fx.spawn(block == Blocks::TrialSpawnerActiveOminous ? Kind::TrialFlameOminous : Kind::TrialFlame, middle + glm::vec3(fx.random() - 0.5f, fx.random() - 0.5f, fx.random() - 0.5f) * 0.9f,
                              glm::vec3(0.0f, 0.3f, 0.0f), 0.18f, 0.8f);
             }
             else if (block == Blocks::SculkSensorLit)
@@ -9795,7 +9861,7 @@ void Application::tickSpriteParticles(float deltaTime)
                 if (roll < 0.01f)
                     fx.spawn(Kind::Shriek, middle + glm::vec3(0.0f, 0.6f, 0.0f), glm::vec3(0.0f, 0.8f, 0.0f), 0.5f, 1.2f);
             }
-            else if (block == Blocks::SculkCatalyst)
+            else if (isSculkCatalyst(block))
             {
                 if (roll < 0.01f)
                     fx.spawn(Kind::SculkSoul, middle + glm::vec3(0.0f, 0.6f, 0.0f), glm::vec3(0.0f, 0.5f, 0.0f), 0.3f, 1.4f);
@@ -9805,7 +9871,7 @@ void Application::tickSpriteParticles(float deltaTime)
                 if (roll < 0.002f)
                     fx.spawn(Kind::SculkCharge, middle + glm::vec3(0.0f, 0.55f, 0.0f), glm::vec3(0.0f), 0.3f, 0.8f);
             }
-            else if (block == Blocks::VaultOpen || block == Blocks::Vault)
+            else if (isVault(block))
             {
                 if (roll < 0.2f && glm::length(m_player.position - middle) < 5.0f)
                     fx.spawn(Kind::VaultConnection, middle, (m_player.eyePosition() - middle) * 0.8f, 0.15f, 1.2f);
@@ -9852,10 +9918,42 @@ void Application::tickSpriteParticles(float deltaTime)
     }
 }
 
+void Application::setBlockFor(const glm::ivec3& at, BlockId now, BlockId then, float seconds)
+{
+    if (!m_world) return;
+    m_world->setBlock(at.x, at.y, at.z, now);
+    m_net.onLocalBlockChange(at.x, at.y, at.z, now);
+    for (TimedBlock& timed : m_timedBlocks)
+        if (timed.at == at)
+        {
+            timed = TimedBlock{ at, now, then, seconds };
+            return;
+        }
+    m_timedBlocks.push_back(TimedBlock{ at, now, then, seconds });
+}
+
+void Application::tickTimedBlocks(float deltaTime)
+{
+    for (size_t i = 0; i < m_timedBlocks.size();)
+    {
+        TimedBlock& timed = m_timedBlocks[i];
+        timed.left -= deltaTime;
+        if (timed.left > 0.0f) { ++i; continue; }
+        if (m_world->getBlock(timed.at.x, timed.at.y, timed.at.z) == timed.expect)
+        {
+            m_world->setBlock(timed.at.x, timed.at.y, timed.at.z, timed.then);
+            m_net.onLocalBlockChange(timed.at.x, timed.at.y, timed.at.z, timed.then);
+        }
+        m_timedBlocks[i] = m_timedBlocks.back();
+        m_timedBlocks.pop_back();
+    }
+}
+
 void Application::updateWorldAround(float deltaTime)
 {
     if (!m_world || !m_worldReady) return;
     tickSpriteParticles(deltaTime);
+    tickTimedBlocks(deltaTime);
 
     m_growthTimer += deltaTime;
     if (m_growthTimer >= Farming::TICK_INTERVAL)
@@ -9981,6 +10079,19 @@ void Application::updateMobs(float deltaTime)
     // this engine only has blocks.
     for (const EntityManager::Death& death : m_entities.drainDeaths())
     {
+        {
+            const glm::ivec3 centre = glm::ivec3(glm::floor(death.position));
+            for (int dx = -4; dx <= 4; ++dx)
+                for (int dy = -4; dy <= 4; ++dy)
+                    for (int dz = -4; dz <= 4; ++dz)
+                    {
+                        const glm::ivec3 at = centre + glm::ivec3(dx, dy, dz);
+                        if (!isSculkCatalyst(m_world->getBlock(at.x, at.y, at.z))) continue;
+                        setBlockFor(at, Blocks::SculkCatalystBloom, Blocks::SculkCatalyst, 1.5f);
+                        sprites(SpriteParticles::Kind::SculkSoul, glm::vec3(at) + glm::vec3(0.5f, 1.2f, 0.5f), 1,
+                                0.1f, 0.4f, 0.4f, 1.4f);
+                    }
+        }
         sprites(SpriteParticles::Kind::Poof, death.position + glm::vec3(0.0f, 0.5f, 0.0f), 12, 0.5f, 1.2f,
                 0.4f, 0.8f);
         const MobType& type = mobType(death.type);

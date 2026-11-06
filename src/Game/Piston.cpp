@@ -29,7 +29,7 @@ bool Piston::movable(BlockId id)
     // door's other half live outside the block, and moving the block
     // without them loses them.
     if (id == Blocks::Chest || isDoor(id) || id == Blocks::Bed) return false;
-    if (id == Blocks::Furnace || id == Blocks::FurnaceLit) return false;
+    if (isFurnaceBlock(id)) return false;
 
     return true;
 }

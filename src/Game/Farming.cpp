@@ -240,6 +240,17 @@ void Farming::grow(World& world, const glm::vec3& around, uint32_t& seed)
             continue;
         }
 
+        {
+            const BlockId wart = world.getBlock(x, y, z);
+            if (wart == Blocks::NetherWart0 || wart == Blocks::NetherWart1)
+            {
+                if (nextRandom(seed) % 3u == 0u)
+                    world.setBlock(x, y, z, wart == Blocks::NetherWart0 ? Blocks::NetherWart1
+                                                                     : Blocks::NetherWart);
+                continue;
+            }
+        }
+
         // A ripe stem does not grow any further: it puts a melon on
         // the ground beside it, and goes on doing so as long as there
         // is ground beside it to put one on. That is the whole of

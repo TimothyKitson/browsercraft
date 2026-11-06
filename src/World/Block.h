@@ -504,6 +504,23 @@ namespace Blocks
         // Step into one and it puts you down on the far side.
         EndGateway,
 
+        FurnaceTurned,
+        FurnaceTurnedEnd = FurnaceTurned + 18,
+        BarrelOpen = FurnaceTurnedEnd,
+        NetherWart0,
+        NetherWart1,
+        AnvilChipped,
+        AnvilDamaged,
+        CopperBulbPowered,
+        CopperBulbLitPowered,
+        SculkCatalystBloom,
+        VaultEjecting,
+        OminousVaultEjecting,
+        TrialSpawnerActiveOminous,
+        TrialSpawnerEjecting,
+        TrialSpawnerEjectingOminous,
+        TrialSpawnerSpentOminous,
+
         Count
     };
 }
@@ -540,6 +557,7 @@ struct BlockInfo
     // nothing are untouched: -1 means "the side texture", which is
     // what all of them want.
     int tileFront = -1;
+    int tileBack = -1;
 };
 
 const BlockInfo& blockInfo(BlockId id);
@@ -685,7 +703,8 @@ inline bool isDeepDark(BlockId id)
 // reason to build one.
 inline bool isContainerBlock(BlockId id)
 {
-    return id == Blocks::Chest || id == Blocks::Barrel || id == Blocks::ShulkerBox;
+    return id == Blocks::Chest || id == Blocks::Barrel || id == Blocks::BarrelOpen ||
+           id == Blocks::ShulkerBox;
 }
 
 // Wool, in any of its sixteen colours. White is where it always was
@@ -779,7 +798,13 @@ inline bool isCoralBlock(BlockId id)
 inline bool isTrialSpawner(BlockId id)
 {
     return id == Blocks::TrialSpawner || id == Blocks::TrialSpawnerActive ||
-           id == Blocks::TrialSpawnerSpent;
+           id == Blocks::TrialSpawnerSpent || id == Blocks::TrialSpawnerActiveOminous ||
+           id == Blocks::TrialSpawnerEjecting || id == Blocks::TrialSpawnerEjectingOminous ||
+           id == Blocks::TrialSpawnerSpentOminous;
+}
+inline bool isTrialSpawnerActive(BlockId id)
+{
+    return id == Blocks::TrialSpawnerActive || id == Blocks::TrialSpawnerActiveOminous;
 }
 
 // Copper in any of its four stages, which is the set that weathers.
@@ -795,7 +820,29 @@ inline bool isPointedDripstone(BlockId id)
 
 inline bool isCopperBulb(BlockId id)
 {
-    return id == Blocks::CopperBulb || id == Blocks::CopperBulbLit;
+    return id == Blocks::CopperBulb || id == Blocks::CopperBulbLit ||
+           id == Blocks::CopperBulbPowered || id == Blocks::CopperBulbLitPowered;
+}
+inline bool copperBulbLit(BlockId id)
+{
+    return id == Blocks::CopperBulbLit || id == Blocks::CopperBulbLitPowered;
+}
+inline BlockId copperBulbAs(bool lit, bool powered)
+{
+    if (lit) return powered ? Blocks::CopperBulbLitPowered : Blocks::CopperBulbLit;
+    return powered ? Blocks::CopperBulbPowered : Blocks::CopperBulb;
+}
+inline bool isAnvil(BlockId id)
+{
+    return id == Blocks::Anvil || id == Blocks::AnvilChipped || id == Blocks::AnvilDamaged;
+}
+inline bool isNetherWart(BlockId id)
+{
+    return id == Blocks::NetherWart || id == Blocks::NetherWart0 || id == Blocks::NetherWart1;
+}
+inline bool isSculkCatalyst(BlockId id)
+{
+    return id == Blocks::SculkCatalyst || id == Blocks::SculkCatalystBloom;
 }
 
 inline bool isCrafter(BlockId id)
@@ -806,12 +853,14 @@ inline bool isCrafter(BlockId id)
 inline bool isVault(BlockId id)
 {
     return id == Blocks::Vault || id == Blocks::VaultOpen ||
-           id == Blocks::OminousVault || id == Blocks::OminousVaultOpen;
+           id == Blocks::OminousVault || id == Blocks::OminousVaultOpen ||
+           id == Blocks::VaultEjecting || id == Blocks::OminousVaultEjecting;
 }
 
 inline bool isOminousVault(BlockId id)
 {
-    return id == Blocks::OminousVault || id == Blocks::OminousVaultOpen;
+    return id == Blocks::OminousVault || id == Blocks::OminousVaultOpen ||
+           id == Blocks::OminousVaultEjecting;
 }
 
 // Painted on the floor but not a track. Dust is drawn exactly as a rail
@@ -923,6 +972,61 @@ inline float blockOverhang(BlockId id) { return isFence(id) ? 0.5f : 0.0f; }
 
 // Which way a facing block points: 0 north (-z), 1 east (+x), 2 south
 // (+z), 3 west (-x). Meaningless on anything that does not face.
+inline int furnaceSlot(BlockId id)
+{
+    switch (id)
+    {
+        case Blocks::Furnace: return 0;
+        case Blocks::FurnaceLit: return 1;
+        case Blocks::Smoker: return 2;
+        case Blocks::SmokerLit: return 3;
+        case Blocks::BlastFurnace: return 4;
+        case Blocks::BlastFurnaceLit: return 5;
+        default: break;
+    }
+    if (id >= Blocks::FurnaceTurned && id < Blocks::FurnaceTurnedEnd)
+        return (id - Blocks::FurnaceTurned) / 3;
+    return -1;
+}
+inline BlockId furnaceOfSlot(int slot)
+{
+    static const BlockId BASES[6] = { Blocks::Furnace, Blocks::FurnaceLit, Blocks::Smoker,
+                                      Blocks::SmokerLit, Blocks::BlastFurnace, Blocks::BlastFurnaceLit };
+    return BASES[slot < 0 ? 0 : slot % 6];
+}
+inline bool isFurnaceBlock(BlockId id) { return furnaceSlot(id) >= 0; }
+inline int furnaceFacing(BlockId id)
+{
+    if (id >= Blocks::FurnaceTurned && id < Blocks::FurnaceTurnedEnd)
+        return (id - Blocks::FurnaceTurned) % 3 + 1;
+    return 0;
+}
+inline BlockId furnaceBase(BlockId id)
+{
+    const int slot = furnaceSlot(id);
+    return slot < 0 ? id : furnaceOfSlot(slot);
+}
+inline BlockId furnaceTurned(BlockId id, int facing)
+{
+    const int slot = furnaceSlot(id);
+    if (slot < 0) return id;
+    facing &= 3;
+    if (facing == 0) return furnaceOfSlot(slot);
+    return static_cast<BlockId>(Blocks::FurnaceTurned + slot * 3 + facing - 1);
+}
+inline BlockId furnaceLit(BlockId id)
+{
+    const int slot = furnaceSlot(id);
+    if (slot < 0) return id;
+    return furnaceTurned(furnaceOfSlot(slot | 1), furnaceFacing(id));
+}
+inline BlockId furnaceCold(BlockId id)
+{
+    const int slot = furnaceSlot(id);
+    if (slot < 0) return id;
+    return furnaceTurned(furnaceOfSlot(slot & ~1), furnaceFacing(id));
+}
+
 inline int blockFacing(BlockId id)
 {
     if (isLadder(id)) return id - Blocks::LadderNorth;
@@ -931,6 +1035,8 @@ inline int blockFacing(BlockId id)
     if (isStairs(id)) return (id - Blocks::StoneStairsNorth) & 3;
     if (isDoor(id)) return (id - Blocks::DoorLowShutNorth) & 3;
     if (isPiston(id)) return pistonFacing(id);
+    if (isFurnaceBlock(id)) return furnaceFacing(id);
+    if (isVault(id)) return 2;
     return 0;
 }
 
@@ -1038,32 +1144,6 @@ inline BlockId cropAtStage(BlockId id, int stage)
     if (isMelonStem(id)) return static_cast<BlockId>(Blocks::MelonStem0 + stage);
     return id;
 }
-// The three machines that smelt. They are one block as far as
-// everything that opens, ticks or lights one is concerned; which of
-// them it is decides only what it will take and how fast.
-inline bool isFurnaceBlock(BlockId id)
-{
-    return id == Blocks::Furnace || id == Blocks::FurnaceLit ||
-           id == Blocks::Smoker || id == Blocks::SmokerLit ||
-           id == Blocks::BlastFurnace || id == Blocks::BlastFurnaceLit;
-}
-inline BlockId furnaceLit(BlockId id)
-{
-    if (id == Blocks::Furnace || id == Blocks::FurnaceLit) return Blocks::FurnaceLit;
-    if (id == Blocks::Smoker || id == Blocks::SmokerLit) return Blocks::SmokerLit;
-    if (id == Blocks::BlastFurnace || id == Blocks::BlastFurnaceLit)
-        return Blocks::BlastFurnaceLit;
-    return id;
-}
-inline BlockId furnaceCold(BlockId id)
-{
-    if (id == Blocks::Furnace || id == Blocks::FurnaceLit) return Blocks::Furnace;
-    if (id == Blocks::Smoker || id == Blocks::SmokerLit) return Blocks::Smoker;
-    if (id == Blocks::BlastFurnace || id == Blocks::BlastFurnaceLit)
-        return Blocks::BlastFurnace;
-    return id;
-}
-
 // A composter, and how full it is. Eight is full and ready to empty.
 constexpr int COMPOST_FULL = 8;
 inline bool isComposter(BlockId id)

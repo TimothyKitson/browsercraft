@@ -6364,6 +6364,54 @@ namespace
         { Tiles::ItemWheat, paintItemWheat },
         { Tiles::CraftingTop,   paintCraftingTop },
         { Tiles::FurnaceTop,    paintFurnaceTop },
+        { Tiles::FurnaceSide, paintFurnaceTop },
+        { Tiles::SmokerBottom, paintSmokerSide },
+        { Tiles::ObserverBack, paintObserverSide },
+        { Tiles::ObserverBackLit, paintObserverSide },
+        { Tiles::ObserverArrow, paintObserverSide },
+        { Tiles::CrafterNorth, paintCrafterTop },
+        { Tiles::CrafterNorthCrafting, paintCrafterTopLit },
+        { Tiles::CrafterSouth, paintCrafterSide },
+        { Tiles::CrafterSouthTriggered, paintCrafterSide },
+        { Tiles::CrafterEastTriggered, paintCrafterSide },
+        { Tiles::CrafterBottom, paintCrafterSide },
+        { Tiles::BarrelBottom, paintBarrelTop },
+        { Tiles::BarrelTopOpen, paintBarrelTop },
+        { Tiles::EnchantTableBottom, paintObsidian },
+        { Tiles::CactusBottom, paintCactusTop },
+        { Tiles::SandstoneBottom, paintSandstoneTop },
+        { Tiles::CampfireLogLit, paintCampfireLog },
+        { Tiles::ReinforcedDeepslateBottom, paintReinforcedDeepslateTop },
+        { Tiles::TrialSpawnerBottom, paintTrialSpawnerTop },
+        { Tiles::TrialSpawnerTopEjecting, paintTrialSpawnerTopLit },
+        { Tiles::TrialSpawnerTopEjectingOminous, paintTrialSpawnerTopLit },
+        { Tiles::TrialSpawnerTopActiveOminous, paintTrialSpawnerTopLit },
+        { Tiles::TrialSpawnerSideActiveOminous, paintTrialSpawnerSideLit },
+        { Tiles::TrialSpawnerTopInactiveOminous, paintTrialSpawnerTop },
+        { Tiles::TrialSpawnerSideInactiveOminous, paintTrialSpawnerSide },
+        { Tiles::VaultBottom, paintVaultTop },
+        { Tiles::VaultBottomOminous, paintVaultTop },
+        { Tiles::VaultTopOminous, paintVaultTop },
+        { Tiles::VaultTopEjecting, paintVaultTop },
+        { Tiles::VaultTopEjectingOminous, paintVaultTop },
+        { Tiles::VaultFrontEjecting, paintVaultSideOpen },
+        { Tiles::VaultFrontEjectingOminous, paintOminousVaultSideOpen },
+        { Tiles::VaultSideOff, paintVaultSide },
+        { Tiles::VaultSideOn, paintVaultSideOpen },
+        { Tiles::VaultSideOffOminous, paintOminousVaultSide },
+        { Tiles::VaultSideOnOminous, paintOminousVaultSideOpen },
+        { Tiles::SculkSensorBottom, paintSculk },
+        { Tiles::SculkCatalystBottom, paintSculk },
+        { Tiles::SculkCatalystTopBloom, paintSculkCatalystTop },
+        { Tiles::SculkCatalystSideBloom, paintSculkCatalystSide },
+        { Tiles::SculkShriekerBottom, paintSculk },
+        { Tiles::NetherWart0Tile, paintNetherWartTile },
+        { Tiles::NetherWart1Tile, paintNetherWartTile },
+        { Tiles::AnvilTopChipped, paintAnvilTop },
+        { Tiles::AnvilTopDamaged, paintAnvilTop },
+        { Tiles::CopperBulbPoweredTile, paintCopperBulb },
+        { Tiles::CopperBulbLitPoweredTile, paintCopperBulbLit },
+        { Tiles::DispenserSide, paintFurnaceTop },
         { Tiles::BedTop,        paintBedTop },
         { Tiles::LadderTile,    paintLadderTile },
         { Tiles::DoorLower,     paintDoorLower },
@@ -6668,6 +6716,54 @@ namespace
         { Tiles::CraftingTop,   { "crafting_table_top", nullptr },                     Tinting::None,    0,   false },
         { Tiles::CraftingSide,  { "crafting_table_side", nullptr },                    Tinting::None,    0,   false },
         { Tiles::CraftingFront, { "crafting_table_front", nullptr },                   Tinting::None,    0,   false },
+        { Tiles::FurnaceSide, { "furnace_side", nullptr }, Tinting::None, 0, false },
+        { Tiles::SmokerBottom, { "smoker_bottom", nullptr }, Tinting::None, 0, false },
+        { Tiles::ObserverBack, { "observer_back", nullptr }, Tinting::None, 0, false },
+        { Tiles::ObserverBackLit, { "observer_back_on", nullptr }, Tinting::None, 0, false },
+        { Tiles::ObserverArrow, { "observer_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::CrafterNorth, { "crafter_north", nullptr }, Tinting::None, 0, false },
+        { Tiles::CrafterNorthCrafting, { "crafter_north_crafting", nullptr }, Tinting::None, 0, false },
+        { Tiles::CrafterSouth, { "crafter_south", nullptr }, Tinting::None, 0, false },
+        { Tiles::CrafterSouthTriggered, { "crafter_south_triggered", nullptr }, Tinting::None, 0, false },
+        { Tiles::CrafterEastTriggered, { "crafter_east_triggered", nullptr }, Tinting::None, 0, false },
+        { Tiles::CrafterBottom, { "crafter_bottom", nullptr }, Tinting::None, 0, false },
+        { Tiles::BarrelBottom, { "barrel_bottom", nullptr }, Tinting::None, 0, false },
+        { Tiles::BarrelTopOpen, { "barrel_top_open", nullptr }, Tinting::None, 0, false },
+        { Tiles::EnchantTableBottom, { "enchanting_table_bottom", nullptr }, Tinting::None, 0, false },
+        { Tiles::CactusBottom, { "cactus_bottom", nullptr }, Tinting::None, 0, false },
+        { Tiles::SandstoneBottom, { "sandstone_bottom", nullptr }, Tinting::None, 0, false },
+        { Tiles::CampfireLogLit, { "campfire_log_lit", nullptr }, Tinting::None, 0, true  },
+        { Tiles::ReinforcedDeepslateBottom, { "reinforced_deepslate_bottom", nullptr }, Tinting::None, 0, false },
+        { Tiles::TrialSpawnerBottom, { "trial_spawner_bottom", nullptr }, Tinting::None, 0, false },
+        { Tiles::TrialSpawnerTopEjecting, { "trial_spawner_top_ejecting_reward", nullptr }, Tinting::None, 0, false },
+        { Tiles::TrialSpawnerTopEjectingOminous, { "trial_spawner_top_ejecting_reward_ominous", nullptr }, Tinting::None, 0, false },
+        { Tiles::TrialSpawnerTopActiveOminous, { "trial_spawner_top_active_ominous", nullptr }, Tinting::None, 0, false },
+        { Tiles::TrialSpawnerSideActiveOminous, { "trial_spawner_side_active_ominous", nullptr }, Tinting::None, 0, false },
+        { Tiles::TrialSpawnerTopInactiveOminous, { "trial_spawner_top_inactive_ominous", nullptr }, Tinting::None, 0, false },
+        { Tiles::TrialSpawnerSideInactiveOminous, { "trial_spawner_side_inactive_ominous", nullptr }, Tinting::None, 0, false },
+        { Tiles::VaultBottom, { "vault_bottom", nullptr }, Tinting::None, 0, false },
+        { Tiles::VaultBottomOminous, { "vault_bottom_ominous", nullptr }, Tinting::None, 0, false },
+        { Tiles::VaultTopOminous, { "vault_top_ominous", nullptr }, Tinting::None, 0, false },
+        { Tiles::VaultTopEjecting, { "vault_top_ejecting", nullptr }, Tinting::None, 0, false },
+        { Tiles::VaultTopEjectingOminous, { "vault_top_ejecting_ominous", nullptr }, Tinting::None, 0, false },
+        { Tiles::VaultFrontEjecting, { "vault_front_ejecting", nullptr }, Tinting::None, 0, false },
+        { Tiles::VaultFrontEjectingOminous, { "vault_front_ejecting_ominous", nullptr }, Tinting::None, 0, false },
+        { Tiles::VaultSideOff, { "vault_side_off", nullptr }, Tinting::None, 0, false },
+        { Tiles::VaultSideOn, { "vault_side_on", nullptr }, Tinting::None, 0, false },
+        { Tiles::VaultSideOffOminous, { "vault_side_off_ominous", nullptr }, Tinting::None, 0, false },
+        { Tiles::VaultSideOnOminous, { "vault_side_on_ominous", nullptr }, Tinting::None, 0, false },
+        { Tiles::SculkSensorBottom, { "sculk_sensor_bottom", nullptr }, Tinting::None, 0, false },
+        { Tiles::SculkCatalystBottom, { "sculk_catalyst_bottom", nullptr }, Tinting::None, 0, false },
+        { Tiles::SculkCatalystTopBloom, { "sculk_catalyst_top_bloom", nullptr }, Tinting::None, 0, true  },
+        { Tiles::SculkCatalystSideBloom, { "sculk_catalyst_side_bloom", nullptr }, Tinting::None, 0, true  },
+        { Tiles::SculkShriekerBottom, { "sculk_shrieker_bottom", nullptr }, Tinting::None, 0, false },
+        { Tiles::NetherWart0Tile, { "nether_wart_stage0", nullptr }, Tinting::None, 0, false },
+        { Tiles::NetherWart1Tile, { "nether_wart_stage1", nullptr }, Tinting::None, 0, false },
+        { Tiles::AnvilTopChipped, { "chipped_anvil_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::AnvilTopDamaged, { "damaged_anvil_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::CopperBulbPoweredTile, { "copper_bulb_powered", nullptr }, Tinting::None, 0, false },
+        { Tiles::CopperBulbLitPoweredTile, { "copper_bulb_lit_powered", nullptr }, Tinting::None, 0, false },
+        { Tiles::DispenserSide, { "furnace_top", nullptr }, Tinting::None, 0, false },
         { Tiles::FurnaceTop,    { "furnace_top", nullptr },                            Tinting::None,    0,   false },
         { Tiles::FurnaceFront,  { "furnace_front", nullptr },                          Tinting::None,    0,   false },
         { Tiles::FurnaceLit,    { "furnace_front_on", nullptr },                       Tinting::None,    0,   true  },
@@ -6808,8 +6904,8 @@ namespace
         { Tiles::ObserverSide,  { "observer_side", nullptr },                          Tinting::None,    0,   false },
         { Tiles::HopperTop,     { "hopper_top", nullptr },                             Tinting::None,    0,   false },
         { Tiles::HopperSide,    { "hopper_outside", nullptr },                         Tinting::None,    0,   false },
-        { Tiles::DropperFront,  { "dropper_front", nullptr },                          Tinting::None,    0,   false },
-        { Tiles::DispenserFront, { "dispenser_front", nullptr },                       Tinting::None,    0,   false },
+        { Tiles::DropperFront,  { "dropper_front_vertical", "dropper_front", nullptr },                          Tinting::None,    0,   false },
+        { Tiles::DispenserFront, { "dispenser_front_vertical", "dispenser_front", nullptr },                       Tinting::None,    0,   false },
         { Tiles::AmethystTile,  { "amethyst_block", nullptr },                         Tinting::None,    0,   false },
         { Tiles::BuddingTile,   { "budding_amethyst", nullptr },                       Tinting::None,    0,   false },
         { Tiles::ClusterTile,   { "amethyst_cluster", nullptr },                       Tinting::None,    0,   false },
@@ -6955,8 +7051,8 @@ namespace
         { Tiles::PistonBack,    { "piston_bottom", nullptr },                          Tinting::None,    0,   false },
         { Tiles::PistonArm,     { "piston_inner", nullptr },                           Tinting::None,    0,   false },
         { Tiles::CrafterTop,    { "crafter_top", nullptr },                            Tinting::None,    0,   false },
-        { Tiles::CrafterTopLit, { "crafter_top_crafting", nullptr },                   Tinting::None,    0,   false },
-        { Tiles::CrafterSide,   { "crafter_west", "crafter_south", nullptr },          Tinting::None,    0,   false },
+        { Tiles::CrafterTopLit, { "crafter_top_triggered", "crafter_top_crafting", nullptr },                   Tinting::None,    0,   false },
+        { Tiles::CrafterSide,   { "crafter_east", "crafter_west", nullptr },          Tinting::None,    0,   false },
         { Tiles::CopperOre,     { "copper_ore", nullptr },                             Tinting::None,    0,   false },
         { Tiles::CopperBlock,   { "copper_block", nullptr },                           Tinting::None,    0,   false },
         { Tiles::ExposedCopper, { "exposed_copper", nullptr },                         Tinting::None,    0,   false },
@@ -7434,6 +7530,39 @@ Atlas::Atlas()
             pasteImage(side, turnImage(cropImage(bed, 0, 6 * k, 6 * k, 16 * k)), 0, 0);
             blitImage(Tiles::BedSide, scaleNearest(side, tilePixels, tilePixels));
         }
+
+        auto readTile = [&](int tileIndex) {
+            Image out;
+            out.width = tilePixels;
+            out.height = tilePixels;
+            out.rgba.resize(static_cast<size_t>(tilePixels) * tilePixels * 4);
+            const int col = tileIndex % TILES_PER_ROW;
+            const int row = tileIndex / TILES_PER_ROW;
+            for (int y = 0; y < tilePixels; ++y)
+                for (int x = 0; x < tilePixels; ++x)
+                    out.set(x, y, pixels[static_cast<size_t>(row * tilePixels + y) * atlasSize + (col * tilePixels + x)]);
+            return out;
+        };
+        auto squareOf = [&](const Image& image) {
+            return cropImage(image, 0, 0, image.width, std::min(image.width, image.height));
+        };
+        auto underlay = [&](int tileIndex, const char* file) {
+            const Image under = loadPNG(std::string(PACK_DIRECTORY) + "/" + file + ".png");
+            if (!under.valid()) return;
+            Image composed = scaleNearest(squareOf(under), tilePixels, tilePixels);
+            pasteImage(composed, readTile(tileIndex), 0, 0);
+            blitImage(tileIndex, composed);
+        };
+        auto overlay = [&](int tileIndex, const char* file) {
+            const Image over = loadPNG(std::string(PACK_DIRECTORY) + "/" + file + ".png");
+            if (!over.valid()) return;
+            Image composed = readTile(tileIndex);
+            pasteImage(composed, scaleNearest(squareOf(over), tilePixels, tilePixels), 0, 0);
+            blitImage(tileIndex, composed);
+        };
+        underlay(Tiles::HopperTop, "hopper_inside");
+        overlay(Tiles::CauldronTop, "cauldron_top");
+        underlay(Tiles::SculkShriekerTop, "sculk_shrieker_inner_top");
 
         const Image orb = loadPNG("assets/textures/entity/experience_orb.png");
         if (orb.valid())

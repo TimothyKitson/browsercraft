@@ -135,7 +135,9 @@ namespace
 
         const FaceDef& face = FACES[faceIndex];
         const int facing = (face.nz < 0) ? 0 : (face.nx > 0) ? 1 : (face.nz > 0) ? 2 : 3;
-        return (facing == blockFacing(id)) ? info.tileFront : info.tileSide;
+        if (facing == blockFacing(id)) return info.tileFront;
+        if (info.tileBack >= 0 && facing == ((blockFacing(id) + 2) & 3)) return info.tileBack;
+        return info.tileSide;
     }
 
     void emitCubeFaces(const MeshSnapshot& snap, int lx, int y, int lz,

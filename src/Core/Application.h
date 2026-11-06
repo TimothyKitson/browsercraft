@@ -237,6 +237,11 @@ private:
     std::unique_ptr<SpriteParticles> m_sprites;
     float m_ambientClock = 0.0f;
     float m_bubbleClock = 0.0f;
+    struct TimedBlock { glm::ivec3 at; BlockId expect; BlockId then; float left; };
+    std::vector<TimedBlock> m_timedBlocks;
+    void setBlockFor(const glm::ivec3& at, BlockId now, BlockId then, float seconds);
+    void tickTimedBlocks(float deltaTime);
+    uint32_t m_wearSeed = 0x2545F491u;
     bool m_particleDemo = false;
     void tickSpriteParticles(float deltaTime);
     void prepareMobModel();

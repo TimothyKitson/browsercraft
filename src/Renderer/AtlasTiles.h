@@ -272,6 +272,24 @@ namespace Tiles
         RainDrop,
         SnowFlake,
 
+        FurnaceSide, SmokerBottom,
+        ObserverBack, ObserverBackLit, ObserverArrow,
+        CrafterNorth, CrafterNorthCrafting, CrafterSouth, CrafterSouthTriggered,
+        CrafterEastTriggered, CrafterBottom,
+        BarrelBottom, BarrelTopOpen,
+        EnchantTableBottom, CactusBottom, SandstoneBottom, CampfireLogLit, ReinforcedDeepslateBottom,
+        TrialSpawnerBottom, TrialSpawnerTopEjecting, TrialSpawnerTopEjectingOminous,
+        TrialSpawnerTopActiveOminous, TrialSpawnerSideActiveOminous,
+        TrialSpawnerTopInactiveOminous, TrialSpawnerSideInactiveOminous,
+        VaultBottom, VaultBottomOminous, VaultTopOminous, VaultTopEjecting, VaultTopEjectingOminous,
+        VaultFrontEjecting, VaultFrontEjectingOminous,
+        VaultSideOff, VaultSideOn, VaultSideOffOminous, VaultSideOnOminous,
+        SculkSensorBottom, SculkCatalystBottom, SculkCatalystTopBloom, SculkCatalystSideBloom,
+        SculkShriekerBottom,
+        NetherWart0Tile, NetherWart1Tile, AnvilTopChipped, AnvilTopDamaged,
+        CopperBulbPoweredTile, CopperBulbLitPoweredTile,
+        DispenserSide,
+
         TileCount
     };
 

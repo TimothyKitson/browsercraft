@@ -541,7 +541,7 @@ void Application::renderContainerScreen(float w, float h)
     const BlockId chestKind = m_chestOpen && m_world
         ? m_world->getBlock(m_chestBlock.x, m_chestBlock.y, m_chestBlock.z) : Blocks::Air;
     const BlockId furnaceKind = m_furnaceOpen && m_world
-        ? m_world->getBlock(m_furnaceBlock.x, m_furnaceBlock.y, m_furnaceBlock.z) : Blocks::Air;
+        ? furnaceBase(m_world->getBlock(m_furnaceBlock.x, m_furnaceBlock.y, m_furnaceBlock.z)) : Blocks::Air;
     const bool hopper = chestKind == Blocks::Hopper;
     const bool thrower = chestKind == Blocks::Dropper || chestKind == Blocks::Dispenser;
     const bool shulker = chestKind == Blocks::ShulkerBox;
@@ -2615,6 +2615,21 @@ void Application::takeAnvilResult()
     }
 
     m_audio.play(Sound::Click, 0.5f);
+    if (!m_player.creative() && m_world)
+    {
+        m_wearSeed ^= m_wearSeed << 13;
+        m_wearSeed ^= m_wearSeed >> 17;
+        m_wearSeed ^= m_wearSeed << 5;
+        if (m_wearSeed % 100u < 12u)
+        {
+            const BlockId here = m_world->getBlock(m_anvilBlock.x, m_anvilBlock.y, m_anvilBlock.z);
+            const BlockId worn = here == Blocks::Anvil ? Blocks::AnvilChipped
+                               : here == Blocks::AnvilChipped ? Blocks::AnvilDamaged : Blocks::Air;
+            m_world->setBlock(m_anvilBlock.x, m_anvilBlock.y, m_anvilBlock.z, worn);
+            m_net.onLocalBlockChange(m_anvilBlock.x, m_anvilBlock.y, m_anvilBlock.z, worn);
+            m_audio.play(Sound::DigStone, 0.8f, worn == Blocks::Air ? 0.6f : 0.9f);
+        }
+    }
     refreshAnvilResult();
 }
 
@@ -2681,6 +2696,11 @@ void Application::openChest(const glm::ivec3& block)
 {
     m_chestBlock = block;
     m_chestOpen = true;
+    if (m_world && m_world->getBlock(block.x, block.y, block.z) == Blocks::Barrel)
+    {
+        m_world->setBlock(block.x, block.y, block.z, Blocks::BarrelOpen);
+        m_net.onLocalBlockChange(block.x, block.y, block.z, Blocks::BarrelOpen);
+    }
 
     fillVillageChest(block);
 
@@ -2819,6 +2839,11 @@ void Application::stowCrafter()
 void Application::stowChest()
 {
     if (!m_chestOpen) return;
+    if (m_world && m_world->getBlock(m_chestBlock.x, m_chestBlock.y, m_chestBlock.z) == Blocks::BarrelOpen)
+    {
+        m_world->setBlock(m_chestBlock.x, m_chestBlock.y, m_chestBlock.z, Blocks::Barrel);
+        m_net.onLocalBlockChange(m_chestBlock.x, m_chestBlock.y, m_chestBlock.z, Blocks::Barrel);
+    }
 
     Chests::Contents& held = m_chests.at(m_chestBlock);
     for (int i = 0; i < Inventory::CHEST_SLOTS; ++i)

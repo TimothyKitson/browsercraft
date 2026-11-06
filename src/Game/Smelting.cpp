@@ -111,6 +111,7 @@ bool Smelting::suits(Kind kind, StackId input)
 
 Smelting::Kind Smelting::kindOf(BlockId block)
 {
+    block = furnaceBase(block);
     if (block == Blocks::Smoker || block == Blocks::SmokerLit) return Kind::Smoker;
     if (block == Blocks::BlastFurnace || block == Blocks::BlastFurnaceLit)
         return Kind::BlastFurnace;

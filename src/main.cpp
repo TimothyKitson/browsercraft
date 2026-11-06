@@ -767,6 +767,21 @@ namespace
             else if (isPiston(id) || isPistonHead(id))
                                                   why = "a piston mid-stroke";
             else if (id == Blocks::FurnaceLit)    why = "a furnace that is burning";
+            else if (furnaceFacing(id) != 0)      why = "another facing of a crafted block";
+            else if (id == Blocks::BarrelOpen)    why = "a barrel somebody has open";
+            else if (id == Blocks::NetherWart0 || id == Blocks::NetherWart1)
+                                                  why = "nether wart still growing";
+            else if (id == Blocks::AnvilChipped || id == Blocks::AnvilDamaged)
+                                                  why = "an anvil worn down by use";
+            else if (id == Blocks::CopperBulbPowered || id == Blocks::CopperBulbLitPowered)
+                                                  why = "the powered state of a block";
+            else if (id == Blocks::SculkCatalystBloom)
+                                                  why = "a catalyst blooming after a death";
+            else if (id == Blocks::VaultEjecting || id == Blocks::OminousVaultEjecting)
+                                                  why = "a vault giving up its loot";
+            else if (id == Blocks::TrialSpawnerActiveOminous || id == Blocks::TrialSpawnerEjecting ||
+                     id == Blocks::TrialSpawnerEjectingOminous || id == Blocks::TrialSpawnerSpentOminous)
+                                                  why = "a spawner part way through its waves";
             else if (id == Blocks::TntPrimed)     why = "TNT that has been lit";
             else if (id == Blocks::NetherPortal || id == Blocks::EndPortal)
                                                   why = "a portal the player opened";
