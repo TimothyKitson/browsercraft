@@ -95,6 +95,7 @@ private:
 
 public:
     void setTileOverride(int tile) { m_tileOverride = tile; }
+    void renderGlint(Shader& chunkShader, unsigned int glint, const glm::vec2& shift);
 
 private:
 

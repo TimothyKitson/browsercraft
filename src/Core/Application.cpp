@@ -28,6 +28,7 @@
 #include "World/WorldSave.h"
 #include <glm/gtc/matrix_transform.hpp>
 #include <SDL.h>
+#include <stb_image.h>
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
 #include <emscripten/html5.h> // canvas sizing and device pixel ratio
@@ -2141,6 +2142,19 @@ bool Application::frame()
             if (m_startupScreen == "icons")
             {
                 m_inventory.clear();
+                ItemStack shiny;
+                shiny.id = Items::DiamondSword;
+                shiny.count = 1;
+                shiny.enchantments = Enchanting::withLevel(0u, Enchanting::Kind::Sharpness, 3);
+                m_inventory.addStack(shiny);
+                ItemStack helmet;
+                helmet.id = Items::IronHelmet;
+                helmet.count = 1;
+                helmet.enchantments = Enchanting::withLevel(0u, Enchanting::Kind::Protection, 2);
+                m_inventory.slot(Inventory::ARMOR_FIRST) = helmet;
+                ItemStack chestplate = helmet;
+                chestplate.id = Items::DiamondChestplate;
+                m_inventory.slot(Inventory::ARMOR_FIRST + 1) = chestplate;
                 const StackId show[] = {
                     Items::LeatherHelmet, Items::LeatherChestplate, Items::LeatherLeggings, Items::LeatherBoots,
                     Items::GoldHelmet, Items::IronChestplate, Items::DiamondLeggings, Items::DiamondBoots,
@@ -9723,6 +9737,8 @@ void Application::renderHand()
                       // -Wextra objects to.
                       held.empty() ? static_cast<StackId>(Blocks::Air) : held.id,
                       sky, blockLight, m_player.sneaking, m_player.blocking);
+    if (!m_activeShader && !held.empty() && held.enchantments != 0)
+        m_heldItem.renderGlint(m_chunkShader, glintTexture(false), glintShift());
 }
 
 // -------------------------------------------------------------- players ---
@@ -9932,7 +9948,9 @@ void Application::renderPlayers(const glm::mat4& view, const glm::mat4& projecti
         draw(activeSkin(), pose, std::string());
         const ItemStack& chest = m_inventory.slot(Inventory::ARMOR_FIRST + Armour::slotFor(Items::Elytra));
         if (!chest.empty() && chest.id == Items::Elytra)
-            m_playerModel.renderElytra(m_activeShader ? *m_activeShader : m_chunkShader, *m_world, pose);
+            m_playerModel.renderElytra(m_activeShader ? *m_activeShader : m_chunkShader, *m_world, pose,
+                                       (!m_activeShader && chest.enchantments) ? glintTexture(true) : 0,
+                                       glintShift());
     }
 }
 
@@ -11344,7 +11362,7 @@ void Application::renderHud()
                            : m_bowDraw >= 0.65f ? Tiles::BowPulling1 : Tiles::BowPulling0;
         drawItem(slotX, slotY, ITEM_SIZE,
                  stack.id, m_player.creative() ? 0 : stack.count,
-                 glm::vec4(1.0f), stack.damage);
+                 glm::vec4(1.0f), stack.damage, stack.enchantments);
         m_iconOverride = -1;
     }
 
@@ -11358,7 +11376,7 @@ void Application::renderHud()
                 guiWell(barX - 26.0f, h - 20.0f, 18.0f, 18.0f);
             }
             drawItem(barX - 26.0f, h - 19.0f, ITEM_SIZE, offhand.id,
-                     m_player.creative() ? 0 : offhand.count, glm::vec4(1.0f), offhand.damage);
+                     m_player.creative() ? 0 : offhand.count, glm::vec4(1.0f), offhand.damage, offhand.enchantments);
         }
     }
 

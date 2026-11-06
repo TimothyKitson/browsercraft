@@ -253,8 +253,50 @@ bool Application::drawBlockIcon(float x, float y, float size, StackId id,
     return true;
 }
 
+unsigned int Application::glintTexture(bool entity)
+{
+    unsigned int& texture = entity ? m_glintEntity : m_glintItem;
+    if (texture) return texture;
+    int width = 0, height = 0, channels = 0;
+    unsigned char* data = stbi_load(entity ? "assets/textures/misc/enchanted_glint_entity.png"
+                                           : "assets/textures/misc/enchanted_glint_item.png",
+                                    &width, &height, &channels, 4);
+    std::vector<unsigned char> painted;
+    if (!data)
+    {
+        width = height = 16;
+        painted.assign(16 * 16 * 4, 0);
+        for (int i = 0; i < 16 * 16; ++i)
+        {
+            const int x = i % 16, y = i / 16;
+            const unsigned char glow = ((x + y) % 8 < 3) ? 140 : 40;
+            painted[i * 4 + 0] = glow;
+            painted[i * 4 + 1] = static_cast<unsigned char>(glow / 3);
+            painted[i * 4 + 2] = glow;
+            painted[i * 4 + 3] = 255;
+        }
+    }
+    glGenTextures(1, &texture);
+    glBindTexture(GL_TEXTURE_2D, texture);
+    glTexImage2D(GL_TEXTURE_2D, 0, 0x8058, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data ? data : painted.data());
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    if (data) stbi_image_free(data);
+    return texture;
+}
+
+glm::vec2 Application::glintShift() const
+{
+    const double ms = static_cast<double>(SDL_GetTicks()) * 8.0;
+    const float across = static_cast<float>(std::fmod(ms, 110000.0) / 110000.0);
+    const float down = static_cast<float>(std::fmod(ms, 30000.0) / 30000.0);
+    return glm::vec2(-across, down);
+}
+
 void Application::drawItem(float x, float y, float size, StackId id, int count,
-                           const glm::vec4& tint, int damage)
+                           const glm::vec4& tint, int damage, uint32_t enchantments)
 {
     if (id == Blocks::Air) return;
 
@@ -281,6 +323,13 @@ void Application::drawItem(float x, float y, float size, StackId id, int count,
         const TileUV uv = tileUV(tile);
         m_ui.texturedQuad(m_atlas.textureId(), x, y, size, size,
                           uv.u0, uv.vTop, uv.u1, uv.vBottom, tint);
+        if (enchantments != 0)
+        {
+            m_ui.beginGlint(glintTexture(false), x, y, size, size, glintShift());
+            m_ui.texturedQuad(m_atlas.textureId(), x, y, size, size,
+                              uv.u0, uv.vTop, uv.u1, uv.vBottom, tint);
+            m_ui.endGlint();
+        }
     }
 
     // How much of a tool is left, as the bar across the bottom of the
@@ -375,10 +424,10 @@ void Application::drawPlayerFigure(const PlayerSkin& skin, float x1, float y1, f
     pose.headPitch = upDown * 20.0f;
 
     struct Triangle { glm::vec2 corner[3]; glm::vec2 uv[3]; float shade; float depth;
-                      unsigned int texture; glm::vec3 tint; };
+                      unsigned int texture; glm::vec3 tint; bool glint = false; };
     std::vector<Triangle> drawn;
 
-    auto gather = [&](unsigned int texture, const glm::vec3& tint, float nudge) {
+    auto gather = [&](unsigned int texture, const glm::vec3& tint, float nudge, bool glint = false) {
         const std::vector<float>& v = m_dollModel.vertices();
         const int stride = PlayerModel::FLOATS_PER_VERTEX;
         const int triangles = static_cast<int>(v.size()) / (stride * 3);
@@ -407,6 +456,7 @@ void Application::drawPlayerFigure(const PlayerSkin& skin, float x1, float y1, f
             tri.depth = (p0.z + p1.z + p2.z) / 3.0f + nudge;
             tri.texture = texture;
             tri.tint = tint;
+            tri.glint = glint;
             drawn.push_back(tri);
         }
     };
@@ -431,7 +481,8 @@ void Application::drawPlayerFigure(const PlayerSkin& skin, float x1, float y1, f
         if (!image) continue;
         m_dollModel.buildArmour(pose, piece, 1.0f, 0.0f);
         const bool leather = tier == 1;
-        gather(image->texture, leather ? glm::vec3(0.627f, 0.396f, 0.251f) : glm::vec3(1.0f), 0.01f);
+        gather(image->texture, leather ? glm::vec3(0.627f, 0.396f, 0.251f) : glm::vec3(1.0f), 0.01f,
+               worn.enchantments != 0);
         if (leather)
         {
             const GuiImage* overlay = m_gui.image(piece == 3 ? "../models/armor/leather_layer_2_overlay"
@@ -446,7 +497,7 @@ void Application::drawPlayerFigure(const PlayerSkin& skin, float x1, float y1, f
         if (!chest.empty() && chest.id == Items::Elytra && wings)
         {
             m_dollModel.buildElytra(pose, 1.0f, 0.0f);
-            gather(wings->texture, glm::vec3(1.0f), -0.01f);
+            gather(wings->texture, glm::vec3(1.0f), -0.01f, chest.enchantments != 0);
         }
     }
 
@@ -456,6 +507,18 @@ void Application::drawPlayerFigure(const PlayerSkin& skin, float x1, float y1, f
     for (const Triangle& tri : drawn)
         m_ui.texturedTriangle(tri.texture, tri.corner, tri.uv,
                               glm::vec4(tri.tint * tri.shade, 1.0f));
+
+    glm::vec2 lo(1e9f), hi(-1e9f);
+    for (const Triangle& tri : drawn)
+        if (tri.glint)
+            for (const glm::vec2& c : tri.corner) { lo = glm::min(lo, c); hi = glm::max(hi, c); }
+    if (hi.x > lo.x)
+    {
+        m_ui.beginGlint(glintTexture(true), lo.x, lo.y, hi.x - lo.x, hi.y - lo.y, glintShift());
+        for (const Triangle& tri : drawn)
+            if (tri.glint) m_ui.texturedTriangle(tri.texture, tri.corner, tri.uv, glm::vec4(1.0f));
+        m_ui.endGlint();
+    }
 }
 
 void Application::drawCraftArrow(float x, float y, float width, float height, float filled)
@@ -624,13 +687,13 @@ void Application::renderContainerScreen(float w, float h)
     auto drawSlot = [&](int index, float x, float y) {
         well(x, y);
         const ItemStack& stack = m_inventory.slot(index);
-        drawItem(x, y, SLOT, stack.id, stack.count, glm::vec4(1.0f), stack.damage);
+        drawItem(x, y, SLOT, stack.id, stack.count, glm::vec4(1.0f), stack.damage, stack.enchantments);
         slotBox(SlotBox::Kind::Slot, index, x, y);
     };
     auto drawOutputSlot = [&](int index, float x, float y) {
         if (!skin) guiWell(x - 5.0f, y - 5.0f, 26.0f, 26.0f);
         const ItemStack& stack = m_inventory.slot(index);
-        drawItem(x, y, SLOT, stack.id, stack.count, glm::vec4(1.0f), stack.damage);
+        drawItem(x, y, SLOT, stack.id, stack.count, glm::vec4(1.0f), stack.damage, stack.enchantments);
         slotBox(SlotBox::Kind::Slot, index, x, y);
     };
     auto centredTitle = [&](const std::string& text) {
@@ -810,7 +873,7 @@ void Application::renderContainerScreen(float w, float h)
             }
             else
             {
-                drawItem(x, y, SLOT, stack.id, stack.count, glm::vec4(1.0f), stack.damage);
+                drawItem(x, y, SLOT, stack.id, stack.count, glm::vec4(1.0f), stack.damage, stack.enchantments);
             }
 
             slotBox(SlotBox::Kind::Slot, index, x, y);
@@ -829,7 +892,7 @@ void Application::renderContainerScreen(float w, float h)
                 if (!guiSprite("sprites/container/slot/shield", offX, offY, SLOT, SLOT))
                     guiSprite("../item/empty_armor_slot_shield", offX, offY, SLOT, SLOT);
             else
-                drawItem(offX, offY, SLOT, offhand.id, offhand.count, glm::vec4(1.0f), offhand.damage);
+                drawItem(offX, offY, SLOT, offhand.id, offhand.count, glm::vec4(1.0f), offhand.damage, offhand.enchantments);
             slotBox(SlotBox::Kind::Slot, Inventory::OFFHAND, offX, offY);
         }
 
@@ -915,7 +978,7 @@ void Application::renderContainerScreen(float w, float h)
 
             const float resultX = panelX + 220.0f;
             const ItemStack& made = m_inventory.slot(Inventory::TRADE_RESULT);
-            drawItem(resultX, payY, SLOT, made.id, made.count, glm::vec4(1.0f), made.damage);
+            drawItem(resultX, payY, SLOT, made.id, made.count, glm::vec4(1.0f), made.damage, made.enchantments);
             m_slotBoxes.push_back({ SlotBox::Kind::TradeTake, Inventory::TRADE_RESULT,
                                     resultX - 1.0f, payY - 1.0f, PITCH });
 
@@ -958,7 +1021,7 @@ void Application::renderContainerScreen(float w, float h)
                 guiSprite(out ? "sprites/container/villager/trade_arrow_out_of_stock"
                               : "sprites/container/villager/trade_arrow",
                           listX + 55.0f, ry + 5.0f, 10.0f, 9.0f);
-                drawItem(listX + 68.0f, ry + 2.0f, SLOT, offer.give, offer.giveCount, glm::vec4(1.0f));
+                drawItem(listX + 68.0f, ry + 2.0f, SLOT, offer.give, offer.giveCount, glm::vec4(1.0f), 0, offer.giveEnchantments);
 
                 std::string tip = "Give " + std::to_string(offer.wantCount) + " " + displayName(offer.want);
                 if (offer.also != Blocks::Air)
@@ -1060,7 +1123,7 @@ void Application::renderContainerScreen(float w, float h)
             const float resultX = panelX + 130.0f;
             guiWell(resultX - 5.0f, payY - 5.0f, 26.0f, 26.0f);
             const ItemStack& made = m_inventory.slot(Inventory::TRADE_RESULT);
-            drawItem(resultX, payY, SLOT, made.id, made.count, glm::vec4(1.0f), made.damage);
+            drawItem(resultX, payY, SLOT, made.id, made.count, glm::vec4(1.0f), made.damage, made.enchantments);
             m_slotBoxes.push_back({ SlotBox::Kind::TradeTake, Inventory::TRADE_RESULT,
                                     resultX - 1.0f, payY - 1.0f, PITCH });
             if (!chosen)
@@ -1122,7 +1185,7 @@ void Application::renderContainerScreen(float w, float h)
                     drawItem(listX + 20.0f, ry + 1.5f, SLOT, offer.also, offer.alsoCount, tint);
                 if (out) redCross(listX + 41.0f, ry + 3.0f, 12.0f);
                 else drawCraftArrow(listX + 39.0f, ry + 4.0f, 15.0f, 11.0f);
-                drawItem(listX + 60.0f, ry + 1.5f, SLOT, offer.give, offer.giveCount, tint);
+                drawItem(listX + 60.0f, ry + 1.5f, SLOT, offer.give, offer.giveCount, tint, 0, offer.giveEnchantments);
 
                 std::string tip = "Give " + std::to_string(offer.wantCount) + " " + displayName(offer.want);
                 if (offer.also != Blocks::Air)
@@ -1472,7 +1535,7 @@ void Application::renderContainerScreen(float w, float h)
             {
                 const float x = panelX + xs[i];
                 const ItemStack& stack = m_inventory.slot(slots[i]);
-                drawItem(x, ay, SLOT, stack.id, stack.count, glm::vec4(1.0f), stack.damage);
+                drawItem(x, ay, SLOT, stack.id, stack.count, glm::vec4(1.0f), stack.damage, stack.enchantments);
                 slotBox(i == 2 ? SlotBox::Kind::AnvilTake : SlotBox::Kind::Slot, slots[i], x, ay);
             }
 
@@ -1523,7 +1586,7 @@ void Application::renderContainerScreen(float w, float h)
                 if (i == 2) guiWell(x - 5.0f, ay - 5.0f, 26.0f, 26.0f);
                 else well(x, ay);
                 const ItemStack& stack = m_inventory.slot(slots[i]);
-                drawItem(x, ay, SLOT, stack.id, stack.count, glm::vec4(1.0f), stack.damage);
+                drawItem(x, ay, SLOT, stack.id, stack.count, glm::vec4(1.0f), stack.damage, stack.enchantments);
                 slotBox(i == 2 ? SlotBox::Kind::AnvilTake : SlotBox::Kind::Slot, slots[i], x, ay);
             }
 
@@ -1667,7 +1730,7 @@ void Application::renderCreativeScreen(float w, float h)
     auto drawSlot = [&](int index, float x, float y) {
         well(x, y);
         const ItemStack& stack = m_inventory.slot(index);
-        drawItem(x, y, SLOT, stack.id, stack.count, glm::vec4(1.0f), stack.damage);
+        drawItem(x, y, SLOT, stack.id, stack.count, glm::vec4(1.0f), stack.damage, stack.enchantments);
         m_slotBoxes.push_back({ SlotBox::Kind::Slot, index, x - 1.0f, y - 1.0f, PITCH });
     };
 
@@ -1880,7 +1943,7 @@ void Application::renderCreativeScreen(float w, float h)
                 m_ui.texturedQuad(m_gui.texture(ARMOR_GHOSTS[i]), x, y, SLOT, SLOT,
                                   0.0f, 0.0f, 1.0f, 1.0f, glm::vec4(1.0f));
             else
-                drawItem(x, y, SLOT, stack.id, stack.count, glm::vec4(1.0f), stack.damage);
+                drawItem(x, y, SLOT, stack.id, stack.count, glm::vec4(1.0f), stack.damage, stack.enchantments);
             m_slotBoxes.push_back({ SlotBox::Kind::Slot, index, x - 1.0f, y - 1.0f, PITCH });
         }
 
@@ -1893,7 +1956,7 @@ void Application::renderCreativeScreen(float w, float h)
                 if (!guiSprite("sprites/container/slot/shield", offX, offY, SLOT, SLOT))
                     guiSprite("../item/empty_armor_slot_shield", offX, offY, SLOT, SLOT);
             else
-                drawItem(offX, offY, SLOT, offhand.id, offhand.count, glm::vec4(1.0f), offhand.damage);
+                drawItem(offX, offY, SLOT, offhand.id, offhand.count, glm::vec4(1.0f), offhand.damage, offhand.enchantments);
             m_slotBoxes.push_back({ SlotBox::Kind::Slot, Inventory::OFFHAND, offX - 1.0f, offY - 1.0f, PITCH });
         }
 
@@ -2024,7 +2087,7 @@ void Application::finishInventoryScreen()
     const ItemStack& held = m_inventory.cursor();
     if (!held.empty())
         drawItem(mouseX - SLOT * 0.5f, mouseY - SLOT * 0.5f, SLOT,
-                 held.id, held.count, glm::vec4(1.0f), held.damage);
+                 held.id, held.count, glm::vec4(1.0f), held.damage, held.enchantments);
 
     // The client names what is under the cursor only while the cursor
     // is empty: with a stack in hand the tooltip would sit on top of it.

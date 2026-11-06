@@ -7,12 +7,25 @@ in vec3 vLight;
 uniform sampler2D uTexture;
 uniform sampler2D uNormalAtlas;
 uniform int uIconNormals;   // 0 when the pack ships no normal maps
+uniform int uGlint;
+uniform sampler2D uGlintTexture;
+uniform vec4 uGlintRect;
+uniform vec2 uGlintShift;
 
 out vec4 FragColor;
 
 void main()
 {
     vec4 texel = texture(uTexture, vUV);
+    if (uGlint == 1)
+    {
+        if (texel.a < 0.1) discard;
+        vec2 local = (gl_FragCoord.xy - uGlintRect.xy) / max(uGlintRect.zw, vec2(1.0));
+        mat2 turn = mat2(0.9848, 0.1736, -0.1736, 0.9848);
+        vec2 sweep = turn * (local * 0.5) + uGlintShift;
+        FragColor = vec4(texture(uGlintTexture, sweep).rgb * 0.8, 1.0);
+        return;
+    }
     vec4 colour = texel * vColor;
 
     // A block icon's faces carry the direction the light comes from, in

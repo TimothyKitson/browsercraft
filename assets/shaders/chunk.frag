@@ -34,6 +34,10 @@ out vec4 FragColor;
 // tile it landed in. Step outside and the stone picks up the edge of
 // whatever was painted next to it.
 uniform float uAtlasTiles;
+uniform int uGlint;
+uniform sampler2D uGlintTexture;
+uniform vec2 uGlintShift;
+uniform float uGlintScale;
 
 // How deep the relief reads, as a fraction of a block. Small: this is
 // the one knob that turns believable stonework into melted wax.
@@ -136,6 +140,13 @@ void main()
 
     vec4 texel = texture(uAtlas, uv);
     if (texel.a < 0.1) discard; // leaf gaps, plant cut-outs
+    if (uGlint == 1)
+    {
+        mat2 turn = mat2(0.9848, 0.1736, -0.1736, 0.9848);
+        vec2 sweep = turn * (vUV * uGlintScale) + uGlintShift;
+        FragColor = vec4(texture(uGlintTexture, sweep).rgb * 0.75, 1.0);
+        return;
+    }
 
     // Baked voxel lighting: sunlight dims at night, torch light never does.
     float sky = vSkyLight * uDaylight;

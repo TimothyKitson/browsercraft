@@ -631,6 +631,28 @@ void HeldItem::appendShield(const glm::mat4& toWorld, float sky, float blockLigh
 // (0, -90, 25), scale 0.68 -- and then Minecraft's own sprite slab: the
 // sixteen pixels square across the model, a pixel thick about its middle,
 // with its edges between the two faces.
+void HeldItem::renderGlint(Shader& chunkShader, unsigned int glint, const glm::vec2& shift)
+{
+    if (m_vertices.empty() || !glint) return;
+    chunkShader.bind();
+    chunkShader.setInt("uGlint", 1);
+    chunkShader.setInt("uGlintTexture", 5);
+    chunkShader.setVec2("uGlintShift", shift);
+    chunkShader.setFloat("uGlintScale", 6.0f);
+    glActiveTexture(GL_TEXTURE5);
+    glBindTexture(GL_TEXTURE_2D, glint);
+    glActiveTexture(GL_TEXTURE0);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_ONE, GL_ONE);
+    glDepthFunc(GL_LEQUAL);
+    glDepthMask(GL_FALSE);
+    m_mesh.draw(GL_TRIANGLES);
+    glDepthMask(GL_TRUE);
+    glDepthFunc(GL_LESS);
+    glDisable(GL_BLEND);
+    chunkShader.setInt("uGlint", 0);
+}
+
 void HeldItem::appendSprite(const glm::mat4& toWorld, StackId stack, float sky, float blockLight)
 {
     const TileUV uv = tileUV(m_tileOverride >= 0 ? m_tileOverride : atlasTileFor(stack));

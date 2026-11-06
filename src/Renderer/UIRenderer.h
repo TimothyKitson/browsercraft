@@ -82,6 +82,9 @@ public:
     // flat, which is what happens when no pack is installed.
     void setNormalAtlas(unsigned int texture) { m_normalAtlas = texture; }
 
+    void beginGlint(unsigned int glintTexture, float x, float y, float w, float h, const glm::vec2& shift);
+    void endGlint();
+
     void texturedShape(unsigned int texture, const glm::vec2 corner[4],
                        const glm::vec2 uv[4], const glm::vec4& color,
                        const glm::vec3& light = glm::vec3(0.0f));
@@ -112,6 +115,7 @@ private:
     Font m_font;
     unsigned int m_white = 0;
     unsigned int m_normalAtlas = 0;
+    unsigned int m_glintTexture = 0;
     unsigned int m_currentTexture = 0;
     std::vector<float> m_vertices;
     int m_width = 1;

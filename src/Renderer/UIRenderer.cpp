@@ -73,6 +73,7 @@ void UIRenderer::begin(int screenWidth, int screenHeight)
                                 static_cast<float>(m_height), 0.0f));
     m_shader.setInt("uTexture", 0);
     m_shader.setInt("uNormalAtlas", 1);
+    m_shader.setInt("uGlint", 0);
 }
 
 void UIRenderer::setInvert(bool on)
@@ -82,6 +83,30 @@ void UIRenderer::setInvert(bool on)
     m_invert = on;
     if (on) glBlendFunc(GL_ONE_MINUS_DST_COLOR, GL_ONE_MINUS_SRC_COLOR);
     else    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+}
+
+void UIRenderer::beginGlint(unsigned int glintTexture, float x, float y, float w, float h, const glm::vec2& shift)
+{
+    flush();
+    m_glintTexture = glintTexture;
+    m_shader.setInt("uGlint", 1);
+    m_shader.setInt("uGlintTexture", 2);
+    m_shader.setVec4("uGlintRect", glm::vec4(x * m_scale, static_cast<float>(m_height) - (y + h) * m_scale,
+                                             w * m_scale, h * m_scale));
+    m_shader.setVec2("uGlintShift", shift);
+    glActiveTexture(GL_TEXTURE2);
+    glBindTexture(GL_TEXTURE_2D, glintTexture);
+    glActiveTexture(GL_TEXTURE0);
+    glBlendFunc(GL_ONE, GL_ONE);
+}
+
+void UIRenderer::endGlint()
+{
+    flush();
+    m_glintTexture = 0;
+    m_shader.setInt("uGlint", 0);
+    if (m_invert) glBlendFunc(GL_ONE_MINUS_DST_COLOR, GL_ONE_MINUS_SRC_COLOR);
+    else glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 }
 
 void UIRenderer::end()

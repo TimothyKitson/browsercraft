@@ -234,7 +234,8 @@ void PlayerModel::buildElytra(const PlayerPose& pose, float sky, float blockLigh
     BoxMesh::appendAll(m_vertices, wings, frame);
 }
 
-void PlayerModel::renderElytra(Shader& chunkShader, const World& world, const PlayerPose& pose)
+void PlayerModel::renderElytra(Shader& chunkShader, const World& world, const PlayerPose& pose,
+                               unsigned int glint, const glm::vec2& shift)
 {
     if (!m_elytraLoaded)
     {
@@ -270,6 +271,25 @@ void PlayerModel::renderElytra(Shader& chunkShader, const World& world, const Pl
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, m_elytraTexture);
     m_mesh.draw(GL_TRIANGLES);
+    if (glint)
+    {
+        chunkShader.setInt("uGlint", 1);
+        chunkShader.setInt("uGlintTexture", 5);
+        chunkShader.setVec2("uGlintShift", shift);
+        chunkShader.setFloat("uGlintScale", 1.0f);
+        glActiveTexture(GL_TEXTURE5);
+        glBindTexture(GL_TEXTURE_2D, glint);
+        glActiveTexture(GL_TEXTURE0);
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_ONE, GL_ONE);
+        glDepthFunc(GL_LEQUAL);
+        glDepthMask(GL_FALSE);
+        m_mesh.draw(GL_TRIANGLES);
+        glDepthMask(GL_TRUE);
+        glDepthFunc(GL_LESS);
+        glDisable(GL_BLEND);
+        chunkShader.setInt("uGlint", 0);
+    }
     glEnable(GL_CULL_FACE);
 }
 

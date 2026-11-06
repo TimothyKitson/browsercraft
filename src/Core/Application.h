@@ -668,7 +668,11 @@ private:
     bool drawBlockIcon(float x, float y, float size, StackId id, const glm::vec4& tint);
 
     void drawItem(float x, float y, float size, StackId id, int count, const glm::vec4& tint,
-                  int damage = 0);
+                  int damage = 0, uint32_t enchantments = 0);
+    unsigned int m_glintItem = 0;
+    unsigned int m_glintEntity = 0;
+    unsigned int glintTexture(bool entity);
+    glm::vec2 glintShift() const;
     void drawPlayerDoll(const PlayerSkin& skin, float x, float y, float unit);
     // Rebuilds every painted character at the current model type.
     void rebuildSkinLibrary();
