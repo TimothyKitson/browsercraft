@@ -62,6 +62,7 @@ namespace Tools
     // The damage a mob takes from being hit with it. A sword hits
     // hardest, an axe nearly as hard, a bare hand barely at all.
     int attackDamage(StackId tool);
+    float attackSpeed(StackId tool);
 
     // What a mace adds for the fall that lands the blow. Minecraft pays
     // four a block for the first three, two a block for the next five,

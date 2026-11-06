@@ -73,11 +73,12 @@ Everything in the 1.21 textures zip the game doesn't use yet, turned into work. 
     - II. The horse's hearts in place of food while riding.
     - III. The jump bar: charge it, then jump.
     - Left for later: chest slots for donkeys and mules and the llama carpet slot (no donkeys, mules or llama riding yet); the saddle drawn on the horse model goes with item 49.
-17. HUD leftovers
+17. HUD leftovers (done)
     - I. The attack cooldown indicator, on the crosshair and on the hotbar.
     - II. A left-handed option, which moves the offhand slot to the right side.
     - III. The search icon in the creative search box, and the unfocused text field.
     - IV. Boss bar colours and notched styles for other bosses and raids.
+    - Left for later: the creative search tab's compass icon waits for the compass (item 49); the plain text_field sprite gets used once a screen has more than one field (item 78); raids use the red notched bar once raids exist.
 18. Gamemode switcher: the F3+F4 overlay with its slots and selection.
 19. Beacon screen
     - I. Pick primary and secondary powers with the beacon buttons, confirm and cancel.

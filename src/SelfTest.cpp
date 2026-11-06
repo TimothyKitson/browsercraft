@@ -11752,6 +11752,26 @@ namespace
               "and it is its own light, so the ring can be seen from the island");
     }
 
+    void testAttackCooldown()
+    {
+        section("a swing has to recharge, and a weapon sets how fast");
+
+        check(Tools::attackSpeed(Blocks::Air) == 4.0f, "a bare hand is ready four times a second");
+        check(Tools::attackSpeed(Items::DiamondSword) == 1.6f, "a sword 1.6 times");
+        check(Tools::attackSpeed(Items::WoodAxe) < Tools::attackSpeed(Items::DiamondSword),
+              "an axe is slower than a sword");
+        check(Tools::attackSpeed(Items::Mace) < Tools::attackSpeed(Items::WoodAxe), "and a mace slower still");
+
+        Mob pig(MobId::Pig, glm::vec3(0.0f, 64.0f, 0.0f), 11u);
+        const int full = pig.health();
+        check(pig.strike(3, glm::vec3(1.0f, 0.0f, 0.0f)), "a first hit lands");
+        check(pig.health() == full - 3, "for all of it");
+        check(!pig.strike(2, glm::vec3(1.0f, 0.0f, 0.0f)), "a weaker one straight after does nothing");
+        check(pig.health() == full - 3, "and takes nothing");
+        check(pig.strike(5, glm::vec3(1.0f, 0.0f, 0.0f)), "a harder one straight after lands");
+        check(pig.health() == full - 5, "but only for the difference");
+    }
+
     void testArmourSlotsHoldArmour()
     {
         section("the armour slots hold armour and nothing else");
@@ -12430,6 +12450,7 @@ int runSelfTest()
     testInterfaceScale();
     testTheHand();
     testArmourSlotsHoldArmour();
+    testAttackCooldown();
     testTheTablesTake121sPrices();
 
     std::printf("\n%d checks, %d failed\n", g_checks, g_failures);

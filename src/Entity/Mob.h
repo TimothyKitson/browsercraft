@@ -101,6 +101,7 @@ public:
     static bool burnsNow(const MobType& type, float daylight, int skyLight, bool inLiquid);
 
     void damage(int amount, const glm::vec3& fromDirection);
+    bool strike(int amount, const glm::vec3& fromDirection);
     bool alive() const { return m_health > 0; }
     bool finished() const { return m_removeTimer <= 0.0f && !alive(); }
 
@@ -428,6 +429,8 @@ private:
     void steerAroundObstacle(const World& world);
 
     float m_attackTimer = 0.0f;
+    float m_strikeGuard = 0.0f;
+    int m_lastStrike = 0;
     float m_ambientTimer = 0.0f;
     float m_hurtVoiceTimer = 0.0f;
     float m_shootTimer = 0.0f;

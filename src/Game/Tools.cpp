@@ -193,6 +193,30 @@ StackId Tools::upgradeOf(StackId diamond)
     return Blocks::Air;
 }
 
+float Tools::attackSpeed(StackId tool)
+{
+    const Tier tier = tierOf(tool);
+    switch (kindOf(tool))
+    {
+        case Kind::Sword:   return 1.6f;
+        case Kind::Axe:     return tier == Tier::Wood || tier == Tier::Stone ? 0.8f : tier == Tier::Iron ? 0.9f : 1.0f;
+        case Kind::Pickaxe: return 1.2f;
+        case Kind::Shovel:  return 1.0f;
+        case Kind::Hoe:
+            switch (tier)
+            {
+                case Tier::Stone:   return 2.0f;
+                case Tier::Iron:    return 3.0f;
+                case Tier::Diamond:
+                case Tier::Netherite: return 4.0f;
+                default:            return 1.0f;
+            }
+        case Kind::Mace:    return 0.6f;
+        case Kind::Trident: return 1.1f;
+        default:            return 4.0f;
+    }
+}
+
 int Tools::attackDamage(StackId tool)
 {
     const Tier tier = tierOf(tool);

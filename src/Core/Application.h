@@ -111,6 +111,8 @@ enum class MenuAction
     BackToOptions,
     LeaveOptions,
     ToggleSound,
+    CycleAttackIndicator,
+    ToggleMainHand,
     RenderDistanceDown,
     SetRenderDistance,
     RenderDistanceUp
@@ -575,7 +577,13 @@ private:
     glm::ivec3 m_targetBlock{ 0 };
     float m_breakProgress = 0.0f;
     float m_digSoundTimer = 0.0f;
-    float m_attackCooldown = 0.0f;
+    float m_attackTicker = 10.0f;
+    StackId m_attackItem = 0;
+    int m_attackIndicator = 1;
+    float m_devAttackStrength = -1.0f;
+    bool m_leftHanded = false;
+    float attackStrength() const;
+    float attackPeriod() const;
     float m_eatTimer = 0.0f;
     HeldItem m_heldItem;
 
@@ -991,6 +999,9 @@ private:
     void renderPanorama();
     int m_pendingRenderDistance = 8;
     float m_vignette = 0.0f;
+    struct BossBar { std::string name; int colour = 0; int notches = 0; float progress = 1.0f; };
+    std::vector<BossBar> m_devBossBars;
+    void drawBossBar(const BossBar& bar, float x, float y);
     void centredText(const std::string& text, float y, float scale, const glm::vec4& colour);
     void applyMenuAction();
 

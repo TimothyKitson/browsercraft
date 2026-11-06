@@ -719,6 +719,13 @@ void HeldItem::render(Shader& chunkShader, const Camera& camera, const PlayerSki
     eye[1] = glm::vec4(camera.up, 0.0f);
     eye[2] = glm::vec4(camera.front, 0.0f);
     eye[3] = glm::vec4(camera.position, 1.0f);
+    struct Mirror
+    {
+        bool on;
+        explicit Mirror(bool left) : on(left) { if (on) glFrontFace(GL_CW); }
+        ~Mirror() { if (on) glFrontFace(GL_CCW); }
+    } mirror(m_leftHanded);
+    if (m_leftHanded) eye[0] = -eye[0];
 
     // What is drawn is what has finished being raised rather than what
     // the hotbar says: halfway through a swap the old one is still on

@@ -92,9 +92,11 @@ private:
     float m_equip = 1.0f;
     StackId m_shown = Blocks::Air;
     int m_tileOverride = -1;
+    bool m_leftHanded = false;
 
 public:
     void setTileOverride(int tile) { m_tileOverride = tile; }
+    void setLeftHanded(bool left) { m_leftHanded = left; }
     void renderGlint(Shader& chunkShader, unsigned int glint, const glm::vec2& shift);
 
 private:

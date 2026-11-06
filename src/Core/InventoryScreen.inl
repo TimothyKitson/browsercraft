@@ -1930,8 +1930,14 @@ void Application::renderCreativeScreen(float w, float h)
                 m_ui.quad(panelX + 81.0f, panelY + 4.0f, 90.0f, 12.0f, glm::vec4(0.0f, 0.0f, 0.0f, 1.0f));
             }
             const bool caretOn = ((SDL_GetTicks() / 500u) % 2u) == 0u;
-            m_ui.textWithShadow(m_creativeSearch + (caretOn ? "_" : ""), panelX + 83.0f, panelY + 6.0f, 1.0f,
-                                glm::vec4(1.0f));
+            if (m_creativeSearch.empty() && guiSprite("sprites/icon/search", panelX + 81.0f, panelY + 4.0f, 12.0f, 12.0f))
+            {
+                m_ui.text("Search...", panelX + 95.0f, panelY + 6.0f, 1.0f, glm::vec4(0.5f, 0.5f, 0.5f, 1.0f));
+                if (caretOn) m_ui.textWithShadow("_", panelX + 95.0f, panelY + 6.0f, 1.0f, glm::vec4(1.0f));
+            }
+            else
+                m_ui.textWithShadow(m_creativeSearch + (caretOn ? "_" : ""), panelX + 83.0f, panelY + 6.0f, 1.0f,
+                                    glm::vec4(1.0f));
             if (!m_creativeSearch.empty())
             {
                 std::string want = m_creativeSearch;

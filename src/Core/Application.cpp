@@ -60,7 +60,6 @@ namespace
     constexpr float PORTAL_SECONDS = 1.6f;
     // Minecraft lets you reach stone further than you can reach a mob.
     constexpr float ATTACK_REACH = 3.0f;
-    constexpr float ATTACK_INTERVAL = 0.25f;
     constexpr int PUNCH_DAMAGE = 1;         // a bare fist, until there are tools
     constexpr float DAY_LENGTH_SECONDS = 1200.0f; // 20 minutes, like Minecraft
     constexpr float AUTOSAVE_INTERVAL = 60.0f;
@@ -442,6 +441,8 @@ void Application::loadOptions()
         int value = 0;
         if (std::sscanf(line, "shaders=%d", &value) == 1) m_shadersOn = value != 0;
         else if (std::sscanf(line, "pbr=%d", &value) == 1) m_pbrEnabled = value != 0;
+        else if (std::sscanf(line, "attackIndicator=%d", &value) == 1) m_attackIndicator = std::clamp(value, 0, 2);
+        else if (std::sscanf(line, "mainHand=%d", &value) == 1) m_leftHanded = value == 1;
     }
     std::fclose(file);
 }
@@ -452,7 +453,8 @@ void Application::saveOptions()
     std::filesystem::create_directories(m_savePath, ec);
     std::FILE* file = std::fopen((m_savePath + "/options.txt").c_str(), "wb");
     if (!file) return;
-    std::fprintf(file, "shaders=%d\npbr=%d\n", m_shadersOn ? 1 : 0, m_pbrEnabled ? 1 : 0);
+    std::fprintf(file, "shaders=%d\npbr=%d\nattackIndicator=%d\nmainHand=%d\n", m_shadersOn ? 1 : 0,
+                 m_pbrEnabled ? 1 : 0, m_attackIndicator, m_leftHanded ? 1 : 0);
     std::fclose(file);
 #ifdef __EMSCRIPTEN__
     EM_ASM({
@@ -461,6 +463,17 @@ void Application::saveOptions()
         });
     });
 #endif
+}
+
+float Application::attackPeriod() const
+{
+    return 1.0f / Tools::attackSpeed(m_inventory.selected().id);
+}
+
+float Application::attackStrength() const
+{
+    if (m_devAttackStrength >= 0.0f) return m_devAttackStrength;
+    return std::clamp((m_attackTicker + 0.025f) / attackPeriod(), 0.0f, 1.0f);
 }
 
 bool Application::shadersActive()
@@ -2005,6 +2018,8 @@ bool Application::frame()
             m_startupScreen == "shieldup" ||
             m_startupScreen == "wolf" || m_startupScreen == "horse" ||
             m_startupScreen == "horseinv" || m_startupScreen == "horseride" ||
+            m_startupScreen == "attackhud" || m_startupScreen == "attackready" ||
+            m_startupScreen == "attackhotbar" || m_startupScreen == "bossbars" ||
             m_startupScreen == "boat" || m_startupScreen == "rails" ||
             m_startupScreen == "mobs" || m_startupScreen == "golem" ||
             m_startupScreen == "glowmobs" || m_startupScreen == "variants" ||
@@ -2075,6 +2090,10 @@ bool Application::frame()
                                   m_startupScreen != "horse" &&
                                   m_startupScreen != "horseinv" &&
                                   m_startupScreen != "horseride" &&
+                                  m_startupScreen != "attackhud" &&
+                                  m_startupScreen != "attackready" &&
+                                  m_startupScreen != "attackhotbar" &&
+                                  m_startupScreen != "bossbars" &&
                                   m_startupScreen != "boat" &&
                                   m_startupScreen != "rails" &&
                                   m_startupScreen != "mobs" &&
@@ -2440,6 +2459,59 @@ bool Application::frame()
                 m_world->setBlock(px + 10, py, pz + 5, Blocks::EndPortalFrame);
             }
 
+            if (m_startupScreen == "attackhud" || m_startupScreen == "attackready" ||
+                m_startupScreen == "attackhotbar" || m_startupScreen == "bossbars")
+            {
+                m_camera.setOrientation(0.0f, -25.0f);
+                m_camera.addLook(0.0f, 0.0f, 0.0f);
+                const int px = static_cast<int>(std::floor(m_player.position.x));
+                const int py = static_cast<int>(std::floor(m_player.position.y));
+                const int pz = static_cast<int>(std::floor(m_player.position.z));
+                for (int ax = -2; ax <= 10; ++ax)
+                    for (int az = -6; az <= 6; ++az)
+                    {
+                        for (int ay = 0; ay <= 5; ++ay)
+                            m_world->setBlock(px + ax, py + ay, pz + az, Blocks::Air);
+                        m_world->setBlock(px + ax, py - 1, pz + az, Blocks::Grass);
+                    }
+                m_world->setBlock(px + 8, py, pz - 4, Blocks::Bookshelf);
+                m_world->setBlock(px + 8, py, pz + 4, Blocks::DiamondOre);
+                m_world->setBlock(px + 8, py, pz + 2, Blocks::EndPortalFrame);
+
+                m_inventory.selected() = ItemStack{};
+                m_inventory.selected().id = Items::DiamondSword;
+                m_inventory.selected().count = 1;
+                m_attackItem = Items::DiamondSword;
+                if (m_startupScreen == "attackready")
+                {
+                    m_attackTicker = 10.0f;
+                    const glm::vec3 where(static_cast<float>(px) + 2.5f, static_cast<float>(py),
+                                          static_cast<float>(pz) + 0.5f);
+                    m_entities.spawnAt(MobId::Pig, where, *m_world);
+                }
+                else
+                    m_devAttackStrength = 0.55f;
+                if (m_startupScreen == "attackhotbar")
+                {
+                    m_attackIndicator = 2;
+                    m_leftHanded = true;
+                    ItemStack shield;
+                    shield.id = Items::Shield;
+                    shield.count = 1;
+                    m_inventory.slot(Inventory::OFFHAND) = shield;
+                }
+                else
+                    m_attackIndicator = 1;
+                if (m_startupScreen == "bossbars")
+                {
+                    m_devAttackStrength = 1.0f;
+                    m_devBossBars = { { "Ender Dragon", 0, 0, 0.8f }, { "Blue", 1, 6, 0.6f },
+                                      { "Raid", 2, 10, 0.45f }, { "Green", 3, 12, 0.9f },
+                                      { "Yellow", 4, 20, 0.3f }, { "Wither", 5, 0, 1.0f },
+                                      { "White", 6, 10, 0.15f } };
+                }
+            }
+
             if (m_startupScreen == "boat")
             {
                 m_camera.setOrientation(0.0f, -22.0f);
@@ -2556,6 +2628,7 @@ bool Application::frame()
             }
 
             m_freezeMobs = m_startupScreen == "mobs" || m_startupScreen == "golem" ||
+                           m_startupScreen == "attackready" ||
                            m_startupScreen == "glowmobs" || m_startupScreen == "variants" ||
                            m_startupScreen == "nethermobs" ||
                            m_startupScreen == "lairmobs";
@@ -4808,6 +4881,8 @@ void Application::applyMenuAction()
 
         case MenuAction::TogglePbr:     m_pbrEnabled = !m_pbrEnabled; saveOptions(); break;
         case MenuAction::ToggleSound:   m_audio.setMuted(!m_audio.muted()); break;
+        case MenuAction::CycleAttackIndicator: m_attackIndicator = (m_attackIndicator + 1) % 3; saveOptions(); break;
+        case MenuAction::ToggleMainHand: m_leftHanded = !m_leftHanded; saveOptions(); break;
     }
 }
 
@@ -5362,7 +5437,12 @@ void Application::updateMining(float deltaTime)
     // A mob standing between you and the block takes the hit instead.
     // Minecraft's reach is shorter for something living than for stone,
     // so a mob you cannot quite touch does not stop you mining past it.
-    if (m_attackCooldown > 0.0f) m_attackCooldown = std::max(0.0f, m_attackCooldown - deltaTime);
+    m_attackTicker += deltaTime;
+    if (m_inventory.selected().id != m_attackItem)
+    {
+        m_attackItem = m_inventory.selected().id;
+        m_attackTicker = 0.0f;
+    }
 
     if (Mob* target = m_entities.pick(m_camera.position, m_camera.front, ATTACK_REACH))
     {
@@ -5375,8 +5455,12 @@ void Application::updateMining(float deltaTime)
             // One swing per click, not one per frame: mining is a hold,
             // hitting is not.
             if (m_keys.pressed(m_input, Action::Attack)) m_heldItem.swing();
-            if (m_keys.pressed(m_input, Action::Attack) && m_attackCooldown <= 0.0f)
+            if (m_keys.pressed(m_input, Action::Attack))
             {
+                const float strength = attackStrength();
+                m_attackTicker = 0.0f;
+                const bool charged = strength > 0.9f;
+                const bool critical = charged && m_player.velocity.y < -0.5f && !m_player.onGround;
                 // A sword hits hardest, an axe nearly as hard, a bare
                 // hand barely at all.
                 const StackId weapon = m_inventory.selected().id;
@@ -5392,21 +5476,22 @@ void Application::updateMining(float deltaTime)
                                       ? Tools::maceSmashBonus(fallen)
                                       : 0;
 
-                const int blow = std::max(0,
-                    Tools::attackDamage(weapon) +
-                        Enchanting::sharpnessBonus(m_inventory.selected().enchantments) +
-                        Effects::attackBonus(m_player.effects) + smash);
-                target->damage(blow, target->position() - m_player.position);
+                float base = static_cast<float>(Tools::attackDamage(weapon) + Effects::attackBonus(m_player.effects));
+                base *= 0.2f + strength * strength * 0.8f;
+                if (critical) base *= 1.5f;
+                const float bonus = static_cast<float>(Enchanting::sharpnessBonus(m_inventory.selected().enchantments)) * strength;
+                const int blow = std::max(0, static_cast<int>(std::lround(base + bonus)) + smash);
+                target->strike(blow, target->position() - m_player.position);
                 {
                     const glm::vec3 chest = target->position() +
                                             glm::vec3(0.0f, target->type().height * 0.6f, 0.0f);
-                    if (m_player.velocity.y < -0.5f && !m_player.onGround)
+                    if (critical)
                         sprites(SpriteParticles::Kind::Crit, chest, 10, 0.3f, 2.5f, 0.2f, 0.5f);
                     if (m_inventory.selected().enchantments != 0)
                         sprites(SpriteParticles::Kind::EnchantedHit, chest, 8, 0.3f, 2.0f, 0.2f, 0.5f);
                     sprites(SpriteParticles::Kind::Damage, chest, std::clamp(blow / 2, 1, 6), 0.3f, 0.8f,
                             0.22f, 0.7f, 2.0f);
-                    if (Tools::kindOf(weapon) == Tools::Kind::Sword)
+                    if (Tools::kindOf(weapon) == Tools::Kind::Sword && charged)
                         sprites(SpriteParticles::Kind::Sweep,
                                 m_camera.position + m_camera.front * std::min(toMob, 2.2f), 1, 0.0f, 0.0f,
                                 1.6f, 0.35f);
@@ -5424,7 +5509,6 @@ void Application::updateMining(float deltaTime)
                         glm::ivec3(glm::floor(target->position())), Blocks::Stone);
                 }
                 wearOnSwing(weapon);
-                m_attackCooldown = ATTACK_INTERVAL;
             }
 
             m_hasTarget = false;
@@ -5433,6 +5517,7 @@ void Application::updateMining(float deltaTime)
         }
     }
 
+    if (!hit.hit && m_keys.pressed(m_input, Action::Attack)) m_attackTicker = 0.0f;
     if (!hit.hit || !m_keys.down(m_input, Action::Attack))
     {
         m_hasTarget = false;
@@ -9793,6 +9878,7 @@ void Application::renderHand()
                                    ? (m_bowDraw >= 0.9f ? Tiles::BowPulling2
                                       : m_bowDraw >= 0.65f ? Tiles::BowPulling1 : Tiles::BowPulling0)
                                    : -1);
+    m_heldItem.setLeftHanded(m_leftHanded);
     m_heldItem.render(m_activeShader ? *m_activeShader : m_chunkShader, m_camera, skinFor(localAppearance()), m_atlas,
                       // Both arms of the conditional spelled as the same
                       // type: Blocks::Air is an unscoped enumerator and
@@ -11423,6 +11509,26 @@ void Application::renderHud()
         if (guiSprite("sprites/hud/crosshair", std::floor((w - 15.0f) * 0.5f), std::floor((h - 15.0f) * 0.5f),
                       15.0f, 15.0f))
         {
+            if (m_attackIndicator == 1)
+            {
+                const float strength = attackStrength();
+                const float ix = std::floor(w * 0.5f) - 8.0f;
+                const float iy = std::floor(h * 0.5f) - 7.0f + 16.0f;
+                bool ready = false;
+                if (strength >= 1.0f && attackPeriod() > 0.25f)
+                    if (const Mob* aimed = m_entities.pick(m_camera.position, m_camera.front, ATTACK_REACH))
+                        ready = aimed->alive();
+                if (ready)
+                    guiSprite("sprites/hud/crosshair_attack_indicator_full", ix, iy, 16.0f, 16.0f);
+                else if (strength < 1.0f)
+                {
+                    guiSprite("sprites/hud/crosshair_attack_indicator_background", ix, iy, 16.0f, 4.0f);
+                    const float filled = std::floor(strength * 17.0f);
+                    if (filled > 0.0f)
+                        guiSpritePart("sprites/hud/crosshair_attack_indicator_progress", 16.0f, 4.0f, 0.0f, 0.0f,
+                                      ix, iy, filled, 4.0f);
+                }
+            }
             m_ui.setInvert(false);
         }
         else
@@ -11505,13 +11611,31 @@ void Application::renderHud()
         const ItemStack& offhand = m_inventory.slot(Inventory::OFFHAND);
         if (!offhand.empty())
         {
-            if (!guiSprite("sprites/hud/hotbar_offhand_left", barX - 29.0f, h - 23.0f, 29.0f, 24.0f))
+            const float sx = m_leftHanded ? barX + HOTBAR_WIDTH : barX - 29.0f;
+            const float itemX = m_leftHanded ? barX + HOTBAR_WIDTH + 10.0f : barX - 26.0f;
+            if (!guiSprite(m_leftHanded ? "sprites/hud/hotbar_offhand_right" : "sprites/hud/hotbar_offhand_left",
+                           sx, h - 23.0f, 29.0f, 24.0f))
             {
-                guiPanel(barX - 29.0f, h - 23.0f, 22.0f, 23.0f);
-                guiWell(barX - 26.0f, h - 20.0f, 18.0f, 18.0f);
+                guiPanel(m_leftHanded ? sx + 7.0f : sx, h - 23.0f, 22.0f, 23.0f);
+                guiWell(itemX - 1.0f, h - 20.0f, 18.0f, 18.0f);
             }
-            drawItem(barX - 26.0f, h - 19.0f, ITEM_SIZE, offhand.id,
+            drawItem(itemX, h - 19.0f, ITEM_SIZE, offhand.id,
                      m_player.creative() ? 0 : offhand.count, glm::vec4(1.0f), offhand.damage, offhand.enchantments);
+        }
+    }
+
+    if (m_attackIndicator == 2)
+    {
+        const float strength = attackStrength();
+        if (strength < 1.0f)
+        {
+            const float ix = m_leftHanded ? cx - 91.0f - 22.0f : cx + 91.0f + 6.0f;
+            const float iy = h - 20.0f;
+            guiSprite("sprites/hud/hotbar_attack_indicator_background", ix, iy, 18.0f, 18.0f);
+            const float filled = std::floor(strength * 19.0f);
+            if (filled > 0.0f)
+                guiSpritePart("sprites/hud/hotbar_attack_indicator_progress", 18.0f, 18.0f, 0.0f, 18.0f - filled,
+                              ix, iy + 18.0f - filled, 18.0f, filled);
         }
     }
 
@@ -11687,36 +11811,60 @@ void Application::menuBackdrop(float w, float h, float fallbackAlpha)
     guiTiled(footer, 0.0f, h - 33.0f * unit, w, 2.0f * unit, 32.0f * unit);
 }
 
+void Application::drawBossBar(const BossBar& bar, float x, float y)
+{
+    static const char* COLOURS[7] = { "pink", "blue", "red", "green", "yellow", "purple", "white" };
+    static const glm::vec4 FALLBACK[7] = {
+        { 0.93f, 0.35f, 0.82f, 1.0f }, { 0.25f, 0.6f, 0.95f, 1.0f }, { 0.9f, 0.2f, 0.2f, 1.0f },
+        { 0.3f, 0.85f, 0.3f, 1.0f }, { 0.95f, 0.9f, 0.25f, 1.0f }, { 0.55f, 0.2f, 0.85f, 1.0f },
+        { 0.95f, 0.95f, 0.95f, 1.0f } };
+    const int colour = std::clamp(bar.colour, 0, 6);
+    const float progress = std::clamp(bar.progress, 0.0f, 1.0f);
+    const float filled = progress > 0.0f ? std::floor(progress * 181.0f) + 1.0f : 0.0f;
+    const std::string root = "sprites/boss_bar/";
+    const std::string notch = bar.notches > 0 ? root + "notched_" + std::to_string(bar.notches) + "_" : std::string();
+
+    const std::string back = root + COLOURS[colour] + "_background";
+    if (!m_gui.has(back.c_str()))
+    {
+        m_ui.quad(x, y, 182.0f, 5.0f, glm::vec4(0.15f, 0.15f, 0.15f, 0.9f));
+        m_ui.quad(x, y, filled, 5.0f, FALLBACK[colour]);
+    }
+    else
+    {
+        guiSpritePart(back.c_str(), 182.0f, 5.0f, 0.0f, 0.0f, x, y, 182.0f, 5.0f);
+        if (!notch.empty()) guiSpritePart((notch + "background").c_str(), 182.0f, 5.0f, 0.0f, 0.0f, x, y, 182.0f, 5.0f);
+        if (filled > 0.0f)
+        {
+            guiSpritePart((root + COLOURS[colour] + "_progress").c_str(), 182.0f, 5.0f, 0.0f, 0.0f, x, y, filled, 5.0f);
+            if (!notch.empty()) guiSpritePart((notch + "progress").c_str(), 182.0f, 5.0f, 0.0f, 0.0f, x, y, filled, 5.0f);
+        }
+    }
+    m_ui.textWithShadow(bar.name, std::floor(x + 91.0f - UIRenderer::textWidth(bar.name, 1.0f) * 0.5f), y - 9.0f,
+                        1.0f, TEXT_COLOR);
+}
+
 void Application::renderBossBars(float w)
 {
     if (!m_world) return;
-    float y = 12.0f;
+    std::vector<BossBar> bars;
     for (const Mob& mob : m_entities.mobs())
     {
         const MobId id = mob.type().id;
         if (id != MobId::EnderDragon && id != MobId::Wither) continue;
         if (!mob.alive()) continue;
         if (glm::length(mob.position() - m_player.position) > 160.0f) continue;
-
-        const float x = std::floor(w * 0.5f) - 91.0f;
-        const float share = std::clamp(static_cast<float>(mob.health()) /
-                                       static_cast<float>(mob.type().maxHealth), 0.0f, 1.0f);
         const bool dragon = id == MobId::EnderDragon;
-        const char* back = dragon ? "sprites/boss_bar/pink_background" : "sprites/boss_bar/purple_background";
-        const char* fill = dragon ? "sprites/boss_bar/pink_progress" : "sprites/boss_bar/purple_progress";
-        if (!guiSprite(back, x, y, 182.0f, 5.0f))
-        {
-            m_ui.quad(x, y, 182.0f, 5.0f, glm::vec4(0.2f, 0.0f, 0.2f, 0.9f));
-            m_ui.quad(x, y, std::floor(182.0f * share), 5.0f,
-                      dragon ? glm::vec4(0.93f, 0.35f, 0.82f, 1.0f) : glm::vec4(0.55f, 0.20f, 0.85f, 1.0f));
-        }
-        else
-        {
-            guiSpritePart(fill, 182.0f, 5.0f, 0.0f, 0.0f, x, y, std::floor(182.0f * share), 5.0f);
-        }
-        const std::string name = dragon ? "Ender Dragon" : "Wither";
-        m_ui.textWithShadow(name, std::floor(w * 0.5f - UIRenderer::textWidth(name, 1.0f) * 0.5f), y - 9.0f,
-                            1.0f, TEXT_COLOR);
+        bars.push_back({ dragon ? "Ender Dragon" : "Wither", dragon ? 0 : 5, 0,
+                         static_cast<float>(mob.health()) / static_cast<float>(mob.type().maxHealth) });
+    }
+    bars.insert(bars.end(), m_devBossBars.begin(), m_devBossBars.end());
+
+    const float x = std::floor(w * 0.5f) - 91.0f;
+    float y = 12.0f;
+    for (const BossBar& bar : bars)
+    {
+        drawBossBar(bar, x, y);
         y += 19.0f;
     }
 }
@@ -12012,9 +12160,13 @@ void Application::renderMultiplayerScreen()
 
     const float joinWidth = 130.0f;
     const float fieldWidth = panelWidth - joinWidth - 10.0f;
-    roundedQuad(panelX - 3.0f, y - 3.0f, fieldWidth + 6.0f, 52.0f,
-                glm::vec4(0.627f, 0.627f, 0.627f, 1.0f), 5.0f);
-    roundedQuad(panelX, y, fieldWidth, 46.0f, glm::vec4(0.0f, 0.0f, 0.0f, 1.0f), 4.0f);
+    if (!guiNineSlice("sprites/widget/text_field_highlighted", panelX, y, fieldWidth, 46.0f,
+                      static_cast<float>(guiScale()) / m_ui.scale()))
+    {
+        roundedQuad(panelX - 3.0f, y - 3.0f, fieldWidth + 6.0f, 52.0f,
+                    glm::vec4(0.627f, 0.627f, 0.627f, 1.0f), 5.0f);
+        roundedQuad(panelX, y, fieldWidth, 46.0f, glm::vec4(0.0f, 0.0f, 0.0f, 1.0f), 4.0f);
+    }
     const bool caretOn = ((SDL_GetTicks() / 500u) % 2u) == 0u;
     m_ui.textWithShadow(m_addressDraft + (caretOn ? "_" : " "),
                         panelX + 12.0f, y + 15.0f, 2.0f, TEXT_COLOR);
@@ -12062,6 +12214,10 @@ void Application::renderSettingsScreen()
 
     if (menuButton({ buttonX, y, buttonWidth, buttonHeight }, "Controls..."))
         m_pendingAction = MenuAction::GoControls;
+    y += buttonHeight + 14.0f;
+
+    if (menuButton({ buttonX, y, buttonWidth, buttonHeight }, m_leftHanded ? "Main Hand: Left" : "Main Hand: Right"))
+        m_pendingAction = MenuAction::ToggleMainHand;
     y += buttonHeight + 14.0f;
 
     if (m_optionsReturn == Screen::Title)
@@ -12149,6 +12305,12 @@ void Application::renderVideoScreen()
                             : (m_pbrEnabled ? "Fancy Lighting: On" : "Fancy Lighting: Off");
     if (menuButton({ buttonX, y, buttonWidth, buttonHeight }, fancy, m_atlas.hasPbrMaps()))
         m_pendingAction = MenuAction::TogglePbr;
+    y += buttonHeight + 14.0f;
+
+    static const char* INDICATORS[3] = { "Attack Indicator: Off", "Attack Indicator: Crosshair",
+                                         "Attack Indicator: Hotbar" };
+    if (menuButton({ buttonX, y, buttonWidth, buttonHeight }, INDICATORS[m_attackIndicator]))
+        m_pendingAction = MenuAction::CycleAttackIndicator;
     y += buttonHeight + 24.0f;
 
     if (menuButton({ buttonX, y, buttonWidth, 46.0f }, "Done"))

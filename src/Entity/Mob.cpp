@@ -587,6 +587,7 @@ void Mob::burnInSunlight(float deltaTime, const World& world, float daylight)
 void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPosition,
                  float daylight)
 {
+    if (m_strikeGuard > 0.0f) m_strikeGuard = std::max(0.0f, m_strikeGuard - deltaTime);
     const MobType& t = type();
 
     if (m_hurtFlash > 0.0f) m_hurtFlash = std::max(0.0f, m_hurtFlash - deltaTime);
@@ -1012,6 +1013,23 @@ bool Mob::hostileNow(const MobType& t, bool provoked)
 bool Mob::hostileNow() const
 {
     return hostileNow(mobType(m_type), m_provoked);
+}
+
+bool Mob::strike(int amount, const glm::vec3& fromDirection)
+{
+    if (amount <= 0 || !alive()) return false;
+    if (m_strikeGuard > 0.0f)
+    {
+        if (amount <= m_lastStrike) return false;
+        const int extra = amount - m_lastStrike;
+        m_lastStrike = amount;
+        damage(extra, fromDirection);
+        return true;
+    }
+    m_strikeGuard = 0.5f;
+    m_lastStrike = amount;
+    damage(amount, fromDirection);
+    return true;
 }
 
 void Mob::damage(int amount, const glm::vec3& fromDirection)
