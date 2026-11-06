@@ -8,6 +8,15 @@ uniform vec3 uCameraPos;
 uniform float uDayFactor; // 0 = midnight, 1 = noon
 uniform float uTime;      // seconds, for cloud drift
 uniform float uOvercast;  // 0 = clear, 1 = full rain
+uniform int uMoonPhase;
+uniform int uEnd;
+uniform int uHasSun;
+uniform int uHasMoon;
+uniform int uHasClouds;
+uniform sampler2D uSunTex;
+uniform sampler2D uMoonTex;
+uniform sampler2D uCloudTex;
+uniform sampler2D uEndTex;
 
 out vec4 FragColor;
 
@@ -51,6 +60,18 @@ void main()
     vec4 farPoint = uInvViewProj * vec4(vNdc, 1.0, 1.0);
     vec3 dir = normalize(farPoint.xyz / farPoint.w);
 
+    if (uEnd == 1)
+    {
+        vec3 a = abs(dir);
+        vec2 face;
+        if (a.y >= a.x && a.y >= a.z) face = dir.xz / a.y;
+        else if (a.x >= a.z) face = dir.zy / a.x;
+        else face = dir.xy / a.z;
+        vec3 tile = texture(uEndTex, face * 8.0 + 0.5).rgb;
+        FragColor = vec4(tile * (40.0 / 255.0), 1.0);
+        return;
+    }
+
     float height = clamp(dir.y * 0.5 + 0.5, 0.0, 1.0);
 
     vec3 dayZenith = vec3(0.24, 0.48, 0.92);
@@ -90,13 +111,46 @@ void main()
             color += vec3(1.0, 0.98, 0.92) * nightAmount * twinkle;
     }
 
-    // Sun and moon discs.
     float sunDot = dot(dir, uSunDirection);
-    color += vec3(1.0, 0.95, 0.82) * pow(max(sunDot, 0.0), 3000.0) * 12.0 * clearSky;
+    vec3 sideways = normalize(cross(uSunDirection, vec3(0.0, 0.0, 1.0)));
+    vec3 upwards = cross(sideways, uSunDirection);
+    if (uHasSun == 1)
+    {
+        if (sunDot > 0.0)
+        {
+            vec2 local = vec2(dot(dir, sideways), dot(dir, upwards)) / sunDot / 0.3;
+            if (abs(local.x) < 1.0 && abs(local.y) < 1.0)
+            {
+                vec4 sunTexel = texture(uSunTex, local * 0.5 + 0.5);
+                color += sunTexel.rgb * sunTexel.a * clearSky;
+            }
+        }
+    }
+    else
+    {
+        color += vec3(1.0, 0.95, 0.82) * pow(max(sunDot, 0.0), 3000.0) * 12.0 * clearSky;
+    }
     color += vec3(1.0, 0.82, 0.55) * pow(max(sunDot, 0.0), 80.0) * 0.22 * uDayFactor * clearSky;
 
     float moonDot = dot(dir, -uSunDirection);
-    color += vec3(0.88, 0.90, 1.0) * pow(max(moonDot, 0.0), 4000.0) * 9.0 * nightAmount;
+    if (uHasMoon == 1)
+    {
+        if (moonDot > 0.0)
+        {
+            vec2 local = vec2(dot(dir, -sideways), dot(dir, upwards)) / moonDot / 0.2;
+            if (abs(local.x) < 1.0 && abs(local.y) < 1.0)
+            {
+                vec2 cell = vec2(float(uMoonPhase % 4), float(uMoonPhase / 4));
+                vec2 moonUv = (cell + local * 0.5 + 0.5) / vec2(4.0, 2.0);
+                vec4 moonTexel = texture(uMoonTex, moonUv);
+                color += moonTexel.rgb * moonTexel.a * clearSky * (1.0 - uDayFactor * 0.6);
+            }
+        }
+    }
+    else
+    {
+        color += vec3(0.88, 0.90, 1.0) * pow(max(moonDot, 0.0), 4000.0) * 9.0 * nightAmount;
+    }
 
     // A drifting cloud layer, found by intersecting the ray with a plane.
     if (dir.y > 0.015)
@@ -106,14 +160,22 @@ void main()
         if (t > 0.0 && t < 12000.0)
         {
             vec2 cloudPos = (uCameraPos.xz + dir.xz * t) * 0.0016 + vec2(uTime * 0.004, uTime * 0.0015);
-            float density = cloudNoise(cloudPos);
-            // Thicker and lower-contrast as the rain comes in, until
-            // the layer is solid overhead.
-            float coverage = smoothstep(mix(0.52, 0.10, uOvercast),
-                                        mix(0.78, 0.30, uOvercast), density);
+            float coverage;
+            if (uHasClouds == 1)
+            {
+                vec2 world = uCameraPos.xz + dir.xz * t + vec2(uTime * 0.6, 0.0);
+                float cloud = texture(uCloudTex, world / (12.0 * 256.0)).a;
+                coverage = max(step(0.5, cloud), smoothstep(0.3, 0.9, uOvercast) * 0.9);
+            }
+            else
+            {
+                float density = cloudNoise(cloudPos);
+                coverage = smoothstep(mix(0.52, 0.10, uOvercast),
+                                      mix(0.78, 0.30, uOvercast), density);
+            }
             // Fade clouds out towards the horizon so the plane edge is hidden.
             coverage *= smoothstep(0.015, 0.22, dir.y);
-            vec3 cloudColor = mix(vec3(0.58, 0.62, 0.72), vec3(1.0, 0.99, 0.96), uDayFactor);
+            vec3 cloudColor = mix(vec3(0.13, 0.14, 0.19), vec3(1.0, 0.99, 0.96), uDayFactor);
             cloudColor = mix(cloudColor, vec3(1.0, 0.76, 0.55), sunset * 0.6);
             cloudColor = mix(cloudColor,
                              mix(vec3(0.09, 0.10, 0.12), vec3(0.40, 0.42, 0.46), uDayFactor),

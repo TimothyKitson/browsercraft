@@ -440,6 +440,7 @@ private:
     // scenery off, with the sun still low enough to be interesting.
     static constexpr float TITLE_TIME_OF_DAY = 0.38f;
     float m_timeOfDay = TITLE_TIME_OF_DAY;
+    int m_dayNumber = 0;
     float m_elapsedSeconds = 0.0f;
     float m_lastFrameSeconds = 0.016f;
     float m_timeOverride = -1.0f;

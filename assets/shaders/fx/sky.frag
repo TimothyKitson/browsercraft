@@ -11,6 +11,11 @@ uniform vec3 uSkyAmbient;
 uniform float uTime;
 uniform float uRain;
 uniform sampler2D uNoise;
+uniform sampler2D uSunTex;
+uniform sampler2D uMoonTex;
+uniform int uHasSun;
+uniform int uHasMoon;
+uniform int uMoonPhase;
 
 out vec4 FragColor;
 
@@ -89,15 +94,49 @@ void main()
     }
 
     float sunDot = dot(dir, sun);
-    float disc = smoothstep(0.99935, 0.99965, sunDot);
-    disc *= mix(0.72, 1.0, smoothstep(0.99935, 0.99995, sunDot));
     vec3 sunColour = mix(vec3(1.0, 0.45, 0.15), vec3(1.0, 0.93, 0.82), smoothstep(0.0, 0.35, sun.y));
-    colour += sunColour * disc * 28.0 * clear * smoothstep(-0.05, 0.02, dir.y);
+    vec3 sideways = normalize(cross(sun, vec3(0.0, 0.0, 1.0)));
+    vec3 upwards = cross(sideways, sun);
+    float aboveGround = smoothstep(-0.05, 0.02, dir.y);
+    if (uHasSun == 1)
+    {
+        if (sunDot > 0.0)
+        {
+            vec2 local = vec2(dot(dir, sideways), dot(dir, upwards)) / sunDot / 0.3;
+            if (abs(local.x) < 1.0 && abs(local.y) < 1.0)
+            {
+                vec4 texel = texture(uSunTex, local * 0.5 + 0.5);
+                colour += sunColour * texel.rgb * texel.a * 9.0 * clear * aboveGround;
+            }
+        }
+    }
+    else
+    {
+        float disc = smoothstep(0.99935, 0.99965, sunDot);
+        disc *= mix(0.72, 1.0, smoothstep(0.99935, 0.99995, sunDot));
+        colour += sunColour * disc * 28.0 * clear * aboveGround;
+    }
 
     float moonDot = dot(dir, -sun);
-    float moon = smoothstep(0.99950, 0.99975, moonDot);
-    float craters = 0.82 + 0.18 * texture(uNoise, dir.xz * 7.0).r;
-    colour += vec3(0.75, 0.80, 0.92) * moon * craters * 2.4 * clear * smoothstep(-0.05, 0.02, dir.y);
+    if (uHasMoon == 1)
+    {
+        if (moonDot > 0.0)
+        {
+            vec2 local = vec2(dot(dir, -sideways), dot(dir, upwards)) / moonDot / 0.2;
+            if (abs(local.x) < 1.0 && abs(local.y) < 1.0)
+            {
+                vec2 cell = vec2(float(uMoonPhase % 4), float(uMoonPhase / 4));
+                vec4 texel = texture(uMoonTex, (cell + local * 0.5 + 0.5) / vec2(4.0, 2.0));
+                colour += texel.rgb * texel.a * 2.4 * clear * aboveGround;
+            }
+        }
+    }
+    else
+    {
+        float moon = smoothstep(0.99950, 0.99975, moonDot);
+        float craters = 0.82 + 0.18 * texture(uNoise, dir.xz * 7.0).r;
+        colour += vec3(0.75, 0.80, 0.92) * moon * craters * 2.4 * clear * aboveGround;
+    }
 
     vec4 cloud = clouds(dir, sun.y > -0.05 ? sun : -sun);
     colour = mix(colour, cloud.rgb, cloud.a);

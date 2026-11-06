@@ -17,6 +17,7 @@ public:
         float time = 0.0f;
         float rain = 0.0f;
         int dimension = 0;
+        int moonPhase = 0;
         bool underwater = false;
         bool inLava = false;
         float eyeLight = 1.0f;
@@ -106,6 +107,8 @@ private:
     unsigned int m_gradeColour = 0;
     unsigned int m_materials = 0;
     unsigned int m_noise = 0;
+    unsigned int m_sunTexture = 0;
+    unsigned int m_moonTexture = 0;
 
     void build();
     void createTargets(int width, int height);

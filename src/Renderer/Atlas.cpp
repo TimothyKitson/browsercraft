@@ -7340,6 +7340,28 @@ Atlas::Atlas()
             blitImage(Tiles::CrackFirst + stage, scaleNearest(image, tilePixels, tilePixels));
         }
 
+        auto cropImage = [](const Image& source, int x0, int y0, int w, int h) {
+            Image out;
+            out.width = w;
+            out.height = h;
+            out.rgba.resize(static_cast<size_t>(w) * h * 4);
+            for (int y = 0; y < h; ++y)
+                for (int x = 0; x < w; ++x)
+                    for (int c = 0; c < 4; ++c)
+                        out.rgba[(static_cast<size_t>(y) * w + x) * 4 + c] =
+                            source.rgba[(static_cast<size_t>(y0 + y) * source.width + x0 + x) * 4 + c];
+            return out;
+        };
+        const Image rain = loadPNG("assets/textures/environment/rain.png");
+        if (rain.valid() && rain.width >= 4 && rain.height >= rain.width)
+            blitImage(Tiles::RainDrop, scaleNearest(cropImage(rain, 0, 0, rain.width / 4, rain.width), tilePixels, tilePixels));
+        const Image snow = loadPNG("assets/textures/environment/snow.png");
+        if (snow.valid() && snow.width >= 4 && snow.height >= snow.width / 4)
+        {
+            const int cell = snow.width / 4;
+            blitImage(Tiles::SnowFlake, scaleNearest(cropImage(snow, 0, 0, cell, cell), tilePixels, tilePixels));
+        }
+
         m_packCredit = readPackCredit();
         if (!m_packCredit.empty())
             std::printf("Textures: pack credited as \"%s\"\n", m_packCredit.c_str());

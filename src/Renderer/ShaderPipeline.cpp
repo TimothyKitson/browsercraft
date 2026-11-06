@@ -2,6 +2,7 @@
 #include "Core/GLFunctions.h"
 #include "World/Block.h"
 #include <glm/gtc/matrix_transform.hpp>
+#include <stb_image.h>
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
@@ -229,6 +230,24 @@ ShaderPipeline::ShaderPipeline()
         build();
         createMaterials();
         createNoise();
+        for (int which = 0; which < 2; ++which)
+        {
+            int width = 0, height = 0, channels = 0;
+            unsigned char* data = stbi_load(which == 0 ? "assets/textures/environment/sun.png"
+                                                       : "assets/textures/environment/moon_phases.png",
+                                            &width, &height, &channels, 4);
+            if (!data) continue;
+            unsigned int& texture = which == 0 ? m_sunTexture : m_moonTexture;
+            glGenTextures(1, &texture);
+            glBindTexture(GL_TEXTURE_2D, texture);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+            glBindTexture(GL_TEXTURE_2D, 0);
+            stbi_image_free(data);
+        }
         glGenVertexArrays(1, &m_emptyVao);
 
         m_shadowDepth = makeTexture(SHADOW_RESOLUTION, SHADOW_RESOLUTION, GL_DEPTH_COMPONENT24,
@@ -594,8 +613,17 @@ void ShaderPipeline::beginScene()
         m_sky->setVec3("uLightColour", m_lightColour);
         m_sky->setVec3("uSkyAmbient", m_skyAmbient);
         m_sky->setInt("uNoise", 5);
+        m_sky->setInt("uMoonPhase", ((m_frame.moonPhase % 8) + 8) % 8);
+        m_sky->setInt("uHasSun", m_sunTexture ? 1 : 0);
+        m_sky->setInt("uHasMoon", m_moonTexture ? 1 : 0);
+        m_sky->setInt("uSunTex", 6);
+        m_sky->setInt("uMoonTex", 7);
         glActiveTexture(GL_TEXTURE0 + 5);
         glBindTexture(GL_TEXTURE_2D, m_noise);
+        glActiveTexture(GL_TEXTURE0 + 6);
+        glBindTexture(GL_TEXTURE_2D, m_sunTexture);
+        glActiveTexture(GL_TEXTURE0 + 7);
+        glBindTexture(GL_TEXTURE_2D, m_moonTexture);
         glActiveTexture(GL_TEXTURE0);
         drawScreen();
         glDepthMask(GL_TRUE);

@@ -1397,7 +1397,11 @@ bool Application::frame()
         if (playing() && m_net.role() != Net::Role::Guest)
         {
             m_timeOfDay += deltaTime / DAY_LENGTH_SECONDS;
-            if (m_timeOfDay >= 1.0f) m_timeOfDay -= 1.0f;
+            if (m_timeOfDay >= 1.0f)
+            {
+                m_timeOfDay -= 1.0f;
+                ++m_dayNumber;
+            }
         }
         if (m_timeOverride >= 0.0f) m_timeOfDay = m_timeOverride;
 
@@ -1988,6 +1992,7 @@ bool Application::frame()
             m_startupScreen == "enchantblock" || m_startupScreen == "villager" ||
             m_startupScreen == "trade" || m_startupScreen == "endportal" ||
             m_startupScreen == "rain" || m_startupScreen == "storm" ||
+            m_startupScreen == "sky" || m_startupScreen == "moon" ||
             m_startupScreen == "pbr" || m_startupScreen == "anvil" ||
             m_startupScreen == "anvilblock" || m_startupScreen == "brew" ||
             m_startupScreen == "crafter" ||
@@ -2040,6 +2045,8 @@ bool Application::frame()
                                   m_startupScreen != "endportal" &&
                                   m_startupScreen != "rain" &&
                                   m_startupScreen != "storm" &&
+                                  m_startupScreen != "sky" &&
+                                  m_startupScreen != "moon" &&
                                   m_startupScreen != "tnt" &&
                                   m_startupScreen != "pbr" &&
                                   m_startupScreen != "anvilblock" &&
@@ -2161,6 +2168,16 @@ bool Application::frame()
                 // Already fallen rather than just beginning, so the
                 // shot shows weather rather than a sky turning.
                 m_weather.depth = 1.0f;
+            }
+
+            if (m_startupScreen == "sky" || m_startupScreen == "moon")
+            {
+                if (m_startupScreen == "moon") m_dayNumber = 2;
+                glm::vec3 look = sunDirection();
+                if (m_startupScreen == "moon") look = -look;
+                m_camera.yaw = glm::degrees(std::atan2(look.z, look.x));
+                m_camera.pitch = glm::degrees(std::asin(std::clamp(look.y, -1.0f, 1.0f)));
+                m_camera.addLook(0.0f, 0.0f, 0.0f);
             }
 
             if (m_startupScreen == "endportal")
@@ -8955,6 +8972,7 @@ void Application::renderWorldShaded()
     frame.time = m_elapsedSeconds;
     frame.rain = hasSky() ? m_weather.depth : 0.0f;
     frame.dimension = m_dimension == Dimension::Nether ? 1 : m_dimension == Dimension::End ? 2 : 0;
+    frame.moonPhase = m_dayNumber;
     frame.underwater = m_player.isHeadUnderwater(*m_world);
     frame.inLava = m_world->getBlock(ex, ey, ez) == Blocks::Lava;
     frame.eyeSkyLight = eyeSky;
@@ -9082,7 +9100,10 @@ void Application::renderWorld()
     // backdrop already cleared to the right colour.
     if (hasSky())
         m_sky.render(view, projection, camera.position, sun, daylight, m_elapsedSeconds,
-                     m_weather.depth);
+                     m_weather.depth, m_dayNumber);
+    else if (m_dimension == Dimension::End && m_sky.hasEndSky())
+        m_sky.render(view, projection, camera.position, sun, daylight, m_elapsedSeconds,
+                     0.0f, 0, true);
 
     const bool underwater = m_player.isHeadUnderwater(*m_world);
     const glm::vec3 fogColor = hasSky() ? SkyRenderer::horizonColor(daylight, sun,
