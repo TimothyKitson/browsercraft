@@ -259,6 +259,8 @@ namespace Trading
                 buy(Items::Leather, 9, 2),
                 sell(7, Items::LeatherChestplate, 1, 3, 6, Blocks::Air, 0, enchanted(Kind::Protection, 1)),
                 sell(5, Items::LeatherHelmet, 1, 4, 6, Blocks::Air, 0, enchanted(Kind::Protection, 1)),
+                sell(6, Items::LeatherHorseArmor, 1, 3),
+                sell(6, Items::Saddle, 1, 4),
             };
 
         case Profession::Mason:

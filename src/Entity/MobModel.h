@@ -28,6 +28,7 @@ public:
     void build(const MobSkin& skin, const Mob& mob, float sky, float blockLight, int layer = 0,
                float extraInflate = 0.0f);
     const std::vector<float>& vertices() const { return m_vertices; }
+    std::vector<std::pair<unsigned int, std::vector<float>>> figure(const Mob& mob);
 
     // Built on demand and kept; painting one costs well under a
     // millisecond and there are only ever eight.

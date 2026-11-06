@@ -68,10 +68,11 @@ Everything in the 1.21 textures zip the game doesn't use yet, turned into work. 
     - II. The glint on worn enchanted armour (entity glint).
 14. Underwater overlay: the misc/underwater tint when your head is in water. (done)
 15. Player skins: offer the pack's 9 default skins in the character picker, in wide and slim. (done)
-16. Horse riding UI
+16. Horse riding UI (done)
     - I. The horse inventory screen: saddle, armour and chest slots (including the llama armour slot).
     - II. The horse's hearts in place of food while riding.
     - III. The jump bar: charge it, then jump.
+    - Left for later: chest slots for donkeys and mules and the llama carpet slot (no donkeys, mules or llama riding yet); the saddle drawn on the horse model goes with item 49.
 17. HUD leftovers
     - I. The attack cooldown indicator, on the crosshair and on the hotbar.
     - II. A left-handed option, which moves the offhand slot to the right side.

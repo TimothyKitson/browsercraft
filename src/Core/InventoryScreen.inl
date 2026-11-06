@@ -521,6 +521,61 @@ void Application::drawPlayerFigure(const PlayerSkin& skin, float x1, float y1, f
     }
 }
 
+void Application::drawMobFigure(const Mob& mob, float x1, float y1, float x2, float y2, float size)
+{
+    const auto layers = m_mobModel.figure(mob);
+    if (layers.empty()) return;
+
+    const float centreX = (x1 + x2) * 0.5f;
+    const float centreY = (y1 + y2) * 0.5f;
+    const float feetY = centreY + (mob.height() * 0.5f + 0.0625f) * size;
+    const float mouseX = static_cast<float>(m_input.mouseX()) / m_ui.scale();
+    const float across = std::atan((centreX - mouseX) / 40.0f);
+    const float turn = across * glm::radians(20.0f) + glm::radians(35.0f);
+    const float turnCos = std::cos(turn), turnSin = std::sin(turn);
+
+    const float yaw = glm::radians(mob.yaw());
+    const glm::vec3 forward(std::cos(yaw), 0.0f, std::sin(yaw));
+    const glm::vec3 right(-forward.z, 0.0f, forward.x);
+    const glm::vec3 feet = mob.position();
+
+    struct Triangle { glm::vec2 corner[3]; glm::vec2 uv[3]; float shade; float depth; unsigned int texture; };
+    std::vector<Triangle> drawn;
+    for (size_t layer = 0; layer < layers.size(); ++layer)
+    {
+        const std::vector<float>& v = layers[layer].second;
+        const int stride = 9;
+        const size_t triangles = v.size() / (stride * 3);
+        for (size_t t = 0; t < triangles; ++t)
+        {
+            const float* a = &v[t * 3 * stride];
+            glm::vec3 points[3];
+            for (int k = 0; k < 3; ++k)
+            {
+                const glm::vec3 d = glm::vec3(a[k * stride], a[k * stride + 1], a[k * stride + 2]) - feet;
+                const float x = -glm::dot(d, right), z = glm::dot(d, forward);
+                points[k] = glm::vec3(x * turnCos + z * turnSin, d.y, -x * turnSin + z * turnCos);
+            }
+            const glm::vec3 normal = glm::cross(points[1] - points[0], points[2] - points[0]);
+            if (normal.z <= 0.0f) continue;
+            Triangle tri;
+            for (int k = 0; k < 3; ++k)
+            {
+                tri.corner[k] = glm::vec2(centreX + points[k].x * size, feetY - points[k].y * size);
+                tri.uv[k] = glm::vec2(a[k * stride + 3], a[k * stride + 4]);
+            }
+            tri.shade = a[5];
+            tri.depth = (points[0].z + points[1].z + points[2].z) / 3.0f + static_cast<float>(layer) * 0.02f;
+            tri.texture = layers[layer].first;
+            drawn.push_back(tri);
+        }
+    }
+    std::stable_sort(drawn.begin(), drawn.end(),
+                     [](const Triangle& l, const Triangle& r) { return l.depth < r.depth; });
+    for (const Triangle& tri : drawn)
+        m_ui.texturedTriangle(tri.texture, tri.corner, tri.uv, glm::vec4(glm::vec3(tri.shade), 1.0f));
+}
+
 void Application::drawCraftArrow(float x, float y, float width, float height, float filled)
 {
     // The client's arrow: a grey shaft into a head as tall as the arrow,
@@ -608,7 +663,7 @@ void Application::renderInventoryScreen()
     // see what was in it.
     const bool container = m_chestOpen || m_crafterOpen || m_furnaceOpen ||
                            m_inventory.craftSize() >= 3 || m_tradeOpen ||
-                           m_enchantOpen || m_brewOpen || m_anvilOpen;
+                           m_enchantOpen || m_brewOpen || m_anvilOpen || m_horseOpen;
 
     if (m_player.creative() && !container) renderCreativeScreen(w, h);
     else renderContainerScreen(w, h);
@@ -641,6 +696,7 @@ void Application::renderContainerScreen(float w, float h)
         background = hopper ? "container/hopper" : thrower ? "container/dispenser"
                    : shulker ? "container/shulker_box" : "container/generic_54";
     else if (m_crafterOpen) background = "container/crafter";
+    else if (m_horseOpen) background = "container/horse";
     else if (m_tradeOpen) { background = "container/villager"; textureW = 512.0f; }
     else if (m_enchantOpen) background = "container/enchanting_table";
     else if (m_brewOpen) background = "container/brewing_stand";
@@ -723,7 +779,7 @@ void Application::renderContainerScreen(float w, float h)
     // for the same grid.
     const bool plainInventory = !m_chestOpen && !m_crafterOpen &&
                                 !m_furnaceOpen && !bench && !m_tradeOpen &&
-                                !m_enchantOpen && !m_brewOpen && !m_anvilOpen;
+                                !m_enchantOpen && !m_brewOpen && !m_anvilOpen && !m_horseOpen;
 
     // Every screen is headed with the name of what was opened, in the
     // top-left corner, so a barrel says Barrel and a smoker says Smoker.
@@ -735,6 +791,7 @@ void Application::renderContainerScreen(float w, float h)
         else if (m_furnaceOpen && m_world)
             title = displayName(m_world->getBlock(m_furnaceBlock.x, m_furnaceBlock.y, m_furnaceBlock.z));
         else if (m_crafterOpen) title = "Crafter";
+        else if (m_horseOpen) title = "Horse";
         else if (m_brewOpen) title = "Brewing Stand";
         else if (m_anvilOpen) title = "Anvil";
         else if (m_enchantOpen) title = "Enchanting Table";
@@ -785,6 +842,31 @@ void Application::renderContainerScreen(float w, float h)
             for (int column = 0; column < PALETTE_COLUMNS; ++column)
                 drawSlot(Inventory::CHEST_FIRST + row * PALETTE_COLUMNS + column,
                          panelX + 8.0f + column * PITCH, panelY + 18.0f + row * PITCH);
+    }
+
+    if (m_horseOpen)
+    {
+        const float saddleX = panelX + 8.0f, saddleY = panelY + 18.0f;
+        const float armourX = panelX + 8.0f, armourY = panelY + 36.0f;
+        if (!guiSprite("sprites/container/horse/saddle_slot", saddleX - 1.0f, saddleY - 1.0f, PITCH, PITCH))
+            well(saddleX, saddleY);
+        if (!guiSprite("sprites/container/horse/armor_slot", armourX - 1.0f, armourY - 1.0f, PITCH, PITCH))
+            well(armourX, armourY);
+        const ItemStack& saddle = m_inventory.slot(Inventory::HORSE_SADDLE);
+        const ItemStack& armour = m_inventory.slot(Inventory::HORSE_ARMOUR);
+        if (!saddle.empty()) drawItem(saddleX, saddleY, SLOT, saddle.id, saddle.count, glm::vec4(1.0f));
+        if (!armour.empty()) drawItem(armourX, armourY, SLOT, armour.id, armour.count, glm::vec4(1.0f));
+        slotBox(SlotBox::Kind::Slot, Inventory::HORSE_SADDLE, saddleX, saddleY);
+        slotBox(SlotBox::Kind::Slot, Inventory::HORSE_ARMOUR, armourX, armourY);
+        for (Mob& mob : m_entities.mobs())
+            if (mob.typeId() == MobId::Horse && mob.birthSeed() == m_horseSeed && mob.alive())
+            {
+                mob.setSaddled(!saddle.empty() && saddle.id == Items::Saddle);
+                mob.setHorseArmour(!armour.empty() && isHorseArmour(armour.id) ? armour.id : 0);
+                if (!skin) guiWell(panelX + 25.0f, panelY + 17.0f, 54.0f, 54.0f);
+                drawMobFigure(mob, panelX + 26.0f, panelY + 18.0f, panelX + 78.0f, panelY + 70.0f, 17.0f);
+                break;
+            }
     }
 
     // ------------------------------------------ the open crafter ---
@@ -852,7 +934,7 @@ void Application::renderContainerScreen(float w, float h)
         // drawn on all of them, which is how a furnace came to have a
         // man standing in the middle of its fire.
         const bool otherBusiness = m_tradeOpen || m_enchantOpen || m_brewOpen ||
-                                   m_anvilOpen || m_furnaceOpen || bench;
+                                   m_anvilOpen || m_furnaceOpen || bench || m_horseOpen;
 
         // Armour down the left edge, at 8 and 8, a slot apart.
         for (int i = 0; !otherBusiness && i < Inventory::ARMOR_SLOTS; ++i)
@@ -1625,7 +1707,8 @@ void Application::renderContainerScreen(float w, float h)
         // fire between them at 36 and the result off to the right at
         // 116 and 35. The client's own four, and the shape everybody
         // recognises.
-        if (m_furnaceOpen)
+        if (m_horseOpen) {}
+        else if (m_furnaceOpen)
         {
             const Furnaces::State& state = m_furnaces.at(m_furnaceBlock);
 
@@ -2223,8 +2306,44 @@ void Application::handleInventoryClick(int mouseX, int mouseY, bool rightButton,
 // Closing the screen must not swallow anything: the cursor stack and the
 // crafting grid both go back to the player, and whatever will not fit is
 // dropped at their feet.
+void Application::openHorse(Mob& horse)
+{
+    m_horseOpen = true;
+    m_horseSeed = horse.birthSeed();
+    ItemStack saddle;
+    if (horse.saddled()) { saddle.id = Items::Saddle; saddle.count = 1; }
+    m_inventory.slot(Inventory::HORSE_SADDLE) = saddle;
+    ItemStack armour;
+    if (horse.horseArmour()) { armour.id = horse.horseArmour(); armour.count = 1; }
+    m_inventory.slot(Inventory::HORSE_ARMOUR) = armour;
+}
+
+void Application::stowHorse()
+{
+    if (!m_horseOpen) return;
+    m_horseOpen = false;
+    Mob* horse = nullptr;
+    for (Mob& mob : m_entities.mobs())
+        if (mob.typeId() == MobId::Horse && mob.birthSeed() == m_horseSeed && mob.alive()) horse = &mob;
+    ItemStack& saddle = m_inventory.slot(Inventory::HORSE_SADDLE);
+    ItemStack& armour = m_inventory.slot(Inventory::HORSE_ARMOUR);
+    if (horse)
+    {
+        horse->setSaddled(!saddle.empty() && saddle.id == Items::Saddle);
+        horse->setHorseArmour(!armour.empty() && isHorseArmour(armour.id) ? armour.id : 0);
+    }
+    else
+    {
+        if (!saddle.empty() && m_inventory.addStack(saddle) > 0) m_drops.spawn(m_player.position, saddle.id, 1);
+        if (!armour.empty() && m_inventory.addStack(armour) > 0) m_drops.spawn(m_player.position, armour.id, 1);
+    }
+    saddle.clear();
+    armour.clear();
+}
+
 void Application::closeInventory()
 {
+    stowHorse();
     stowChest();
     stowCrafter();
     stowFurnace();

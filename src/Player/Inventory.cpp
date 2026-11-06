@@ -1,6 +1,7 @@
 #include "Inventory.h"
 #include "Game/Armour.h"
 #include "Game/Crafting.h"
+#include "Game/Items.h"
 #include <algorithm>
 
 int Inventory::addStack(const ItemStack& stack)
@@ -371,6 +372,8 @@ bool Inventory::belongsIn(int index, StackId id)
     if (index == ENCHANT_LAPIS) return id == Items::LapisLazuli;
     if (index == BREW_FUEL) return id == Items::BlazePowder;
     if (index == TRADE_RESULT) return false;
+    if (index == HORSE_SADDLE) return id == Items::Saddle;
+    if (index == HORSE_ARMOUR) return isHorseArmour(id);
     if (!isArmourSlot(index)) return true;
     return Armour::slotFor(id) == index - ARMOR_FIRST;
 }

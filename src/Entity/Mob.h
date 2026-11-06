@@ -327,8 +327,13 @@ public:
     }
 
     bool ridden() const { return m_ridden; }
+    bool saddled() const { return m_saddled; }
+    void setSaddled(bool on) { m_saddled = on; }
+    uint16_t horseArmour() const { return m_horseArmour; }
+    void setHorseArmour(uint16_t armour) { m_horseArmour = armour; }
     void setRidden(bool on);
-    void steer(float yawDegrees, bool forward, bool jump);
+    void steer(float yawDegrees, bool forward, bool jump, float jumpPower = 1.0f);
+    bool onGround() const { return m_onGround; }
 
     // Where a rider sits, which is not where the mob stands.
     glm::vec3 saddle() const
@@ -444,6 +449,9 @@ private:
     bool m_ridden = false;
     bool m_steerForward = false;
     bool m_steerJump = false;
+    float m_jumpPower = 1.0f;
+    bool m_saddled = false;
+    uint16_t m_horseArmour = 0;
     float m_railSpeed = 0.0f;
     float m_huntTimer = 0.0f;
     float m_biteTimer = 0.0f;

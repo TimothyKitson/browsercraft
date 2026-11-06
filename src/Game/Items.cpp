@@ -188,6 +188,11 @@ namespace
         { "Cooked Rabbit",        Tiles::ItemCookedRabbit,      64 },
         { "Honeycomb",            Tiles::ItemHoneycomb,         64 },
         { "Snowball",             Tiles::ItemSnowball,          16 },
+        { "Saddle",               Tiles::ItemSaddle,            1 },
+        { "Leather Horse Armor",  Tiles::ItemHorseArmorLeather, 1 },
+        { "Iron Horse Armor",     Tiles::ItemHorseArmorIron,    1 },
+        { "Golden Horse Armor",   Tiles::ItemHorseArmorGold,    1 },
+        { "Diamond Horse Armor",  Tiles::ItemHorseArmorDiamond, 1 },
     };
 
     static_assert(sizeof(ITEMS) / sizeof(ITEMS[0]) ==

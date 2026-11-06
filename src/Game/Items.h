@@ -287,6 +287,11 @@ namespace Items
         // Off a snow block, and what a snow golem throws. Four of
         // them pack back into the block they came from.
         Snowball,
+        Saddle,
+        LeatherHorseArmor,
+        IronHorseArmor,
+        GoldHorseArmor,
+        DiamondHorseArmor,
 
         Count
     };
@@ -322,6 +327,22 @@ const char* displayName(StackId id);
 int atlasTileFor(StackId id);
 int flatIconFor(BlockId id);
 int maxStackOf(StackId id);
+
+inline bool isHorseArmour(StackId id)
+{
+    return id >= Items::LeatherHorseArmor && id <= Items::DiamondHorseArmor;
+}
+inline int horseArmourPoints(StackId id)
+{
+    switch (id)
+    {
+        case Items::LeatherHorseArmor: return 3;
+        case Items::IronHorseArmor: return 5;
+        case Items::GoldHorseArmor: return 7;
+        case Items::DiamondHorseArmor: return 11;
+        default: return 0;
+    }
+}
 
 // A dye, and which of the sixteen colours it is. The dyes are
 // contiguous and in the same order as the wools, so this is

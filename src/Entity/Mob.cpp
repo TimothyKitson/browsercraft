@@ -282,11 +282,12 @@ void Mob::setRidden(bool on)
     m_huntTimer = 0.0f;
 }
 
-void Mob::steer(float yawDegrees, bool forward, bool jump)
+void Mob::steer(float yawDegrees, bool forward, bool jump, float jumpPower)
 {
     m_goalYaw = yawDegrees;
     m_steerForward = forward;
     m_steerJump = jump;
+    m_jumpPower = jumpPower;
 }
 
 void Mob::huntTowards(const glm::vec3& at)
@@ -675,7 +676,7 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
         m_moving = m_steerForward;
 
         // A boat has no legs to push off with, so it does not jump.
-        if (m_steerJump && m_onGround && !t.inanimate) m_velocity.y = RIDDEN_JUMP;
+        if (m_steerJump && m_onGround && !t.inanimate) m_velocity.y = RIDDEN_JUMP * m_jumpPower;
         m_steerJump = false;
     }
     else if (t.inanimate || t.stationary || m_sitting || m_holdTimer > 0.0f)
@@ -1024,6 +1025,8 @@ void Mob::damage(int amount, const glm::vec3& fromDirection)
     if (glm::length(glm::vec3(fromDirection.x, 0.0f, fromDirection.z)) > 0.001f)
         m_provoked = true;
 
+    if (isHorseArmour(m_horseArmour))
+        amount = std::max(1, static_cast<int>(std::lround(amount * (1.0f - horseArmourPoints(m_horseArmour) / 25.0f))));
     m_health = std::max(0, m_health - amount);
     m_hurtFlash = 0.35f;
 

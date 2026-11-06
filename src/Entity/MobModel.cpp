@@ -9,6 +9,7 @@
 #include "Renderer/Shader.h"
 #include "World/World.h"
 #include "Game/Trading.h"
+#include "Game/Items.h"
 #include <string>
 #include <algorithm>
 #include <cstdlib>
@@ -54,6 +55,32 @@ namespace
         if (part == Part::WingLeft) return beat;
         return 0.0f;
     }
+}
+
+std::vector<std::pair<unsigned int, std::vector<float>>> MobModel::figure(const Mob& mob)
+{
+    std::vector<std::pair<unsigned int, std::vector<float>>> layers;
+    const MobSkin& skin = skinFor(mob.typeId());
+    if (!skin.textureId()) return layers;
+    build(skin, mob, 1.0f, 1.0f, 0);
+    unsigned int base = skin.textureId();
+    const std::string path = variantOf(mob);
+    if (!path.empty())
+        if (const unsigned int own = villagerTexture(path.c_str())) base = own;
+    layers.emplace_back(base, m_vertices);
+    if (skin.overlayTextureId())
+    {
+        build(skin, mob, 1.0f, 1.0f, 1);
+        layers.emplace_back(skin.overlayTextureId(), m_vertices);
+    }
+    const std::vector<std::string> coats = coatOverlaysOf(mob);
+    if (!coats.empty())
+    {
+        build(skin, mob, 1.0f, 1.0f, 0, 0.0f);
+        for (const std::string& coat : coats)
+            if (const unsigned int texture = villagerTexture(coat.c_str())) layers.emplace_back(texture, m_vertices);
+    }
+    return layers;
 }
 
 const MobSkin& MobModel::skinFor(MobId id)
@@ -564,6 +591,14 @@ std::vector<std::string> MobModel::coatOverlaysOf(const Mob& mob) const
             static const char* MARKS[] = { "", "white", "whitefield", "whitedots", "blackdots" };
             const char* mark = MARKS[(pick / 7u) % 5u];
             if (*mark) layers.push_back(root + "horse/horse_markings_" + mark + ".png");
+            switch (mob.horseArmour())
+            {
+                case Items::LeatherHorseArmor: layers.push_back(root + "horse/armor/horse_armor_leather.png#A06540"); break;
+                case Items::IronHorseArmor: layers.push_back(root + "horse/armor/horse_armor_iron.png"); break;
+                case Items::GoldHorseArmor: layers.push_back(root + "horse/armor/horse_armor_gold.png"); break;
+                case Items::DiamondHorseArmor: layers.push_back(root + "horse/armor/horse_armor_diamond.png"); break;
+                default: break;
+            }
             break;
         }
         case MobId::Wolf:

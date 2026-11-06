@@ -477,8 +477,9 @@ namespace Tiles
         PotionBottle, PotionLiquid,
         IconOakDoor, IconCampfire, IconCauldron, IconHopper, IconDripstone, IconBamboo,
         ShulkerBulletTile, DragonFireballTile, ItemBrokenElytra,
+        ItemSaddle, ItemHorseArmorLeather, ItemHorseArmorIron, ItemHorseArmorGold, ItemHorseArmorDiamond,
 
-        ItemTileEnd = ItemBrokenElytra + 1
+        ItemTileEnd = ItemHorseArmorDiamond + 1
     };
 
     // Ten progressively more broken overlay tiles for the mining animation.

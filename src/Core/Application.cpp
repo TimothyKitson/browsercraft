@@ -2004,6 +2004,7 @@ bool Application::frame()
             m_startupScreen == "village" || m_startupScreen == "shield" ||
             m_startupScreen == "shieldup" ||
             m_startupScreen == "wolf" || m_startupScreen == "horse" ||
+            m_startupScreen == "horseinv" || m_startupScreen == "horseride" ||
             m_startupScreen == "boat" || m_startupScreen == "rails" ||
             m_startupScreen == "mobs" || m_startupScreen == "golem" ||
             m_startupScreen == "glowmobs" || m_startupScreen == "variants" ||
@@ -2072,6 +2073,8 @@ bool Application::frame()
                                   m_startupScreen != "shieldup" &&
                                   m_startupScreen != "wolf" &&
                                   m_startupScreen != "horse" &&
+                                  m_startupScreen != "horseinv" &&
+                                  m_startupScreen != "horseride" &&
                                   m_startupScreen != "boat" &&
                                   m_startupScreen != "rails" &&
                                   m_startupScreen != "mobs" &&
@@ -2386,7 +2389,7 @@ bool Application::frame()
                 }
             }
 
-            if (m_startupScreen == "horse")
+            if (m_startupScreen == "horse" || m_startupScreen == "horseinv" || m_startupScreen == "horseride")
             {
                 m_camera.setOrientation(0.0f, -6.0f);
                 m_camera.addLook(0.0f, 0.0f, 0.0f);
@@ -2412,10 +2415,25 @@ bool Application::frame()
                                           static_cast<float>(py),
                                           static_cast<float>(pz + (i - 1) * 3) + 0.5f);
                     if (m_entities.spawnAt(MobId::Horse, where, *m_world))
+                    {
                         m_entities.mobs().back().tameWith(Items::Wheat);
+                        m_entities.mobs().back().setSaddled(i != 1);
+                        if (i == 0) m_entities.mobs().back().setHorseArmour(Items::DiamondHorseArmor);
+                        if (i == 2) m_entities.mobs().back().setHorseArmour(Items::GoldHorseArmor);
+                    }
                 }
 
                 m_inventory.add(Items::Wheat, 6);
+                if (m_startupScreen == "horseinv" || m_startupScreen == "horseride")
+                {
+                    for (Mob& mob : m_entities.mobs())
+                        if (mob.typeId() == MobId::Horse) { mob.setRidden(true); break; }
+                    m_inventory.add(Items::Saddle, 1);
+                    m_inventory.add(Items::IronHorseArmor, 1);
+                    if (m_startupScreen == "horseinv")
+                        if (Mob* mount = riddenMob()) { openHorse(*mount); m_inventoryOpen = true; }
+                    m_horseJumpHeld = 0.4f;
+                }
 
                 m_world->setBlock(px + 10, py, pz - 5, Blocks::Bookshelf);
                 m_world->setBlock(px + 10, py, pz,     Blocks::DiamondOre);
@@ -4999,6 +5017,8 @@ void Application::handleEvents()
             // the big one.
             m_inventory.setCraftSize(2);
             m_inventoryOpen = true;
+            if (Mob* mount = riddenMob())
+                if (mount->typeId() == MobId::Horse) openHorse(*mount);
         }
         setMouseCaptured(!m_inventoryOpen);
     }
@@ -5188,9 +5208,30 @@ void Application::updateGameplay(float deltaTime)
     // the ground was and the rider juddered.
     if (Mob* mount = riddenMob())
     {
-        mount->steer(m_camera.yaw,
-                     m_keys.down(m_input, Action::Forward),
-                     m_keys.down(m_input, Action::Jump));
+        const bool jumpHeld = m_keys.down(m_input, Action::Jump);
+        if (mount->typeId() == MobId::Horse)
+        {
+            bool leap = false;
+            float power = 1.0f;
+            if (jumpHeld && mount->onGround())
+            {
+                m_horseJumpHeld += deltaTime;
+            }
+            else if (!jumpHeld && m_horseJumpHeld > 0.0f)
+            {
+                leap = mount->onGround();
+                power = 0.5f + 0.7f * horseJumpStrength();
+                m_horseJumpHeld = 0.0f;
+                if (leap) m_horseJumpCooldown = 0.6f;
+            }
+            if (m_horseJumpCooldown > 0.0f) m_horseJumpCooldown = std::max(0.0f, m_horseJumpCooldown - deltaTime);
+            if (!mount->saddled()) { leap = false; m_horseJumpHeld = 0.0f; }
+        mount->steer(m_camera.yaw, mount->saddled() && m_keys.down(m_input, Action::Forward), leap, power);
+        }
+        else
+        {
+            mount->steer(m_camera.yaw, m_keys.down(m_input, Action::Forward), jumpHeld);
+        }
 
         m_player.position = mount->saddle();
         m_player.velocity = glm::vec3(0.0f);
@@ -8697,6 +8738,28 @@ void Application::handlePlacement()
     // front of you is to be ridden, not fed.
     if (Mob* ride = m_entities.rideable(m_camera.position, m_camera.front, ATTACK_REACH))
     {
+        if (ride->typeId() == MobId::Horse && stack.id == Items::Saddle && !ride->saddled())
+        {
+            ride->setSaddled(true);
+            if (!m_player.creative()) stack.clear();
+            m_audio.play(Sound::DigWool, 0.7f, 1.0f);
+            return;
+        }
+        if (ride->typeId() == MobId::Horse && isHorseArmour(stack.id) && ride->horseArmour() == 0)
+        {
+            ride->setHorseArmour(stack.id);
+            if (!m_player.creative()) stack.clear();
+            m_audio.play(Sound::DigStone, 0.6f, 1.2f);
+            return;
+        }
+        if (ride->typeId() == MobId::Horse && m_player.sneaking)
+        {
+            m_inventory.setCraftSize(2);
+            m_inventoryOpen = true;
+            openHorse(*ride);
+            setMouseCaptured(false);
+            return;
+        }
         ride->setRidden(true);
         m_player.velocity = glm::vec3(0.0f);
         m_audio.play(Sound::Click, 0.5f, 0.9f);
@@ -10985,9 +11048,36 @@ void Application::renderArmour(float x, float y)
     }
 }
 
+float Application::horseJumpStrength() const
+{
+    const float held = m_horseJumpHeld;
+    if (held <= 0.0f) return 0.0f;
+    if (held < 0.5f) return held / 0.5f;
+    return 0.8f + 0.2f / (1.0f + (held - 0.5f) * 20.0f);
+}
+
 void Application::renderFood(float rightX, float y)
 {
     constexpr int FOOD_COUNT = 10;
+
+    if (const Mob* mount = riddenMob())
+    {
+        if (!mount->type().inanimate)
+        {
+            const int health = mount->health();
+            const int hearts = std::min(30, (mount->type().maxHealth + 1) / 2);
+            for (int i = 0; i < hearts; ++i)
+            {
+                const float heartX = rightX - ICON_SIZE - (i % 10) * HEART_PITCH;
+                const float heartY = y - (i / 10) * 10.0f;
+                const int left = health - i * 2;
+                guiSprite("sprites/hud/heart/vehicle_container", heartX, heartY, ICON_SIZE, ICON_SIZE);
+                if (left >= 2) guiSprite("sprites/hud/heart/vehicle_full", heartX, heartY, ICON_SIZE, ICON_SIZE);
+                else if (left == 1) guiSprite("sprites/hud/heart/vehicle_half", heartX, heartY, ICON_SIZE, ICON_SIZE);
+            }
+            return;
+        }
+    }
 
     for (int i = 0; i < FOOD_COUNT; ++i)
     {
@@ -11020,6 +11110,20 @@ void Application::renderExperience(float x, float y, float width)
     // Minecraft's bar is five interface pixels tall and the same
     // hundred and eighty-two across as the hotbar it sits on.
     constexpr float HEIGHT = 5.0f;
+
+    if (const Mob* mount = riddenMob())
+    {
+        if (mount->typeId() == MobId::Horse &&
+            guiSprite("sprites/hud/jump_bar_background", x, y, width, HEIGHT))
+        {
+            if (m_horseJumpCooldown > 0.0f)
+                guiSprite("sprites/hud/jump_bar_cooldown", x, y, width, HEIGHT);
+            else
+                guiSpritePart("sprites/hud/jump_bar_progress", width, HEIGHT, 0.0f, 0.0f,
+                              x, y, std::floor(horseJumpStrength() * (width + 1.0f)), HEIGHT);
+            return;
+        }
+    }
 
     if (guiSprite("sprites/hud/experience_bar_background", x, y, width, HEIGHT))
     {

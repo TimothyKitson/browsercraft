@@ -21,6 +21,10 @@ namespace
         { Items::Diamond,     1, 1 },
         { Blocks::Sandstone,  2, 8 },
         { Items::EnderPearl,  1, 1 },
+        { Items::Saddle,      1, 1 },
+        { Items::IronHorseArmor, 1, 1 },
+        { Items::GoldHorseArmor, 1, 1 },
+        { Items::DiamondHorseArmor, 1, 1 },
     };
 
     // The one everybody walks out of carrying something good, which is
@@ -33,6 +37,10 @@ namespace
         { Blocks::JunglePlanks, 2, 8 },
         { Items::IronIngot,   1, 4 },
         { Items::Arrow,       2, 6 },
+        { Items::Saddle,      1, 1 },
+        { Items::IronHorseArmor, 1, 1 },
+        { Items::GoldHorseArmor, 1, 1 },
+        { Items::DiamondHorseArmor, 1, 1 },
     };
 
     // Somebody was living here: a meal, a fire, and not much else.

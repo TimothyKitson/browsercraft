@@ -250,6 +250,13 @@ private:
     long long m_fluidTicks = 0;
     void tickFluids(float deltaTime);
     void claimJobSites();
+    float m_horseJumpHeld = 0.0f;
+    bool m_horseOpen = false;
+    uint32_t m_horseSeed = 0;
+    void openHorse(Mob& horse);
+    void stowHorse();
+    float m_horseJumpCooldown = 0.0f;
+    float horseJumpStrength() const;
     BeamRenderer m_beams;
     BookRenderer m_books;
     ShadowRenderer m_shadows;
@@ -645,6 +652,7 @@ private:
     // -- 1.21's inventory figure, numbers and all.
     void drawPlayerFigure(const PlayerSkin& skin, float x1, float y1, float x2, float y2,
                           float size);
+    void drawMobFigure(const Mob& mob, float x1, float y1, float x2, float y2, float size);
 
     // The grey arrow between a crafting grid and what it makes, filled
     // white from the left as far as `filled` -- a furnace's progress.

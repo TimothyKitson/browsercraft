@@ -111,7 +111,9 @@ public:
     static constexpr int TRADE_RESULT = TRADE_PAY_B + 1;              // 92
 
     static constexpr int OFFHAND = TRADE_RESULT + 1;                   // 93
-    static constexpr int SLOT_COUNT = OFFHAND + 1;                    // 94
+    static constexpr int HORSE_SADDLE = OFFHAND + 1;                  // 94
+    static constexpr int HORSE_ARMOUR = HORSE_SADDLE + 1;             // 95
+    static constexpr int SLOT_COUNT = HORSE_ARMOUR + 1;               // 96
 
     // The ceiling. What a particular thing actually stacks to comes from
     // maxStackOf(), since items need not agree with blocks.
