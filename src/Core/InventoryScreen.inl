@@ -505,25 +505,52 @@ void Application::renderContainerScreen(float w, float h)
     // 88 and 26 with its result at 144 and 36. Lining up with them is
     // what makes a screenshot of this sit on top of a screenshot of
     // that.
-    // A chest's panel is a row taller than the rest.
+    const bool bench = m_inventory.craftSize() >= 3;
+    const BlockId chestKind = m_chestOpen && m_world
+        ? m_world->getBlock(m_chestBlock.x, m_chestBlock.y, m_chestBlock.z) : Blocks::Air;
+    const BlockId furnaceKind = m_furnaceOpen && m_world
+        ? m_world->getBlock(m_furnaceBlock.x, m_furnaceBlock.y, m_furnaceBlock.z) : Blocks::Air;
+    const bool hopper = chestKind == Blocks::Hopper;
+    const bool thrower = chestKind == Blocks::Dropper || chestKind == Blocks::Dispenser;
+    const bool shulker = chestKind == Blocks::ShulkerBox;
+    const bool bigChest = m_chestOpen && !hopper && !thrower && !shulker;
+
+    const char* background = "container/inventory";
+    float textureW = 256.0f;
+    if (m_chestOpen)
+        background = hopper ? "container/hopper" : thrower ? "container/dispenser"
+                   : shulker ? "container/shulker_box" : "container/generic_54";
+    else if (m_crafterOpen) background = "container/crafter";
+    else if (m_tradeOpen) { background = "container/villager"; textureW = 512.0f; }
+    else if (m_enchantOpen) background = "container/enchanting_table";
+    else if (m_brewOpen) background = "container/brewing_stand";
+    else if (m_anvilOpen) background = "container/anvil";
+    else if (m_furnaceOpen)
+        background = (furnaceKind == Blocks::Smoker || furnaceKind == Blocks::SmokerLit) ? "container/smoker"
+                   : (furnaceKind == Blocks::BlastFurnace || furnaceKind == Blocks::BlastFurnaceLit) ? "container/blast_furnace"
+                   : "container/furnace";
+    else if (bench) background = "container/crafting_table";
+    const bool skin = m_gui.has(background);
+
+    const char* furnaceSprites = "sprites/container/furnace/";
+    if (std::strcmp(background, "container/smoker") == 0) furnaceSprites = "sprites/container/smoker/";
+    if (std::strcmp(background, "container/blast_furnace") == 0) furnaceSprites = "sprites/container/blast_furnace/";
+
     const float PANEL_W = 176.0f;
-    const float PANEL_H = m_chestOpen ? 168.0f : 166.0f;
+    const float PANEL_H = hopper ? 133.0f : bigChest ? 168.0f : 166.0f;
 
     const float TRADE_LIST_W = 100.0f;
     const float panelWidth = m_tradeOpen ? PANEL_W + TRADE_LIST_W : PANEL_W;
     const float panelX = std::floor((w - panelWidth) * 0.5f);
     const float panelY = std::floor((h - PANEL_H) * 0.5f);
+    const float shift = m_tradeOpen && skin ? TRADE_LIST_W : 0.0f;
 
-    // A chest's own rows push the player's down, but not by a whole
-    // row: the client works it out as 103 + (rows - 4) * 18, which for
-    // the three rows a chest has comes to 85, and the hotbar to 143.
-    const float storageY = panelY + (m_chestOpen ? 85.0f : 84.0f);
-    const float hotbarY = panelY + (m_chestOpen ? 143.0f : 142.0f);
+    const float storageY = panelY + (hopper ? 51.0f : bigChest ? 85.0f : 84.0f);
+    const float hotbarY = panelY + (hopper ? 109.0f : bigChest ? 143.0f : 142.0f);
+    const float invX = panelX + 8.0f + shift;
 
-    // One slot, at the item's own top-left the way the client counts
-    // them: the well is the eighteen-pixel box drawn round it.
-    auto well = [this](float x, float y) {
-        guiWell(x - 1.0f, y - 1.0f, PITCH, PITCH);
+    auto well = [this, skin](float x, float y) {
+        if (!skin) guiWell(x - 1.0f, y - 1.0f, PITCH, PITCH);
     };
     auto slotBox = [this](SlotBox::Kind kind, int index, float x, float y) {
         m_slotBoxes.push_back({ kind, index, x - 1.0f, y - 1.0f, PITCH });
@@ -535,13 +562,24 @@ void Application::renderContainerScreen(float w, float h)
         slotBox(SlotBox::Kind::Slot, index, x, y);
     };
     auto drawOutputSlot = [&](int index, float x, float y) {
-        guiWell(x - 5.0f, y - 5.0f, 26.0f, 26.0f);
+        if (!skin) guiWell(x - 5.0f, y - 5.0f, 26.0f, 26.0f);
         const ItemStack& stack = m_inventory.slot(index);
         drawItem(x, y, SLOT, stack.id, stack.count, glm::vec4(1.0f), stack.damage);
         slotBox(SlotBox::Kind::Slot, index, x, y);
     };
+    auto centredTitle = [&](const std::string& text) {
+        return panelX + std::floor((panelWidth - UIRenderer::textWidth(text, 1.0f)) * 0.5f);
+    };
 
-    guiPanel(panelX, panelY, panelWidth, PANEL_H);
+    if (skin && bigChest)
+    {
+        guiBlit(background, panelX, panelY, 0.0f, 0.0f, PANEL_W, 3.0f * PITCH + 17.0f);
+        guiBlit(background, panelX, panelY + 3.0f * PITCH + 17.0f, 0.0f, 126.0f, PANEL_W, 96.0f);
+    }
+    else if (skin)
+        guiBlit(background, panelX, panelY, 0.0f, 0.0f, panelWidth, PANEL_H, textureW, 256.0f);
+    else
+        guiPanel(panelX, panelY, panelWidth, PANEL_H);
 
     // Dark text with no shadow, at the client's own two corners: the
     // container's name eight in and six down, and the word for the
@@ -554,7 +592,6 @@ void Application::renderContainerScreen(float w, float h)
     // which is the difference that actually shows: the flag is set
     // when one is opened in the world and not when a dev screen asks
     // for the same grid.
-    const bool bench = m_inventory.craftSize() >= 3;
     const bool plainInventory = !m_chestOpen && !m_crafterOpen &&
                                 !m_furnaceOpen && !bench && !m_tradeOpen &&
                                 !m_enchantOpen && !m_brewOpen && !m_anvilOpen;
@@ -578,7 +615,14 @@ void Application::renderContainerScreen(float w, float h)
         if (!m_tradeOpen)
         {
             if (title.empty() || title == "Air") title = m_chestOpen ? "Chest" : "Furnace";
-            m_ui.text(title, panelX + 8.0f, panelY + 6.0f, 1.0f, GUI_TEXT);
+            float titleX = panelX + 8.0f;
+            if (skin)
+            {
+                if (bench) titleX = panelX + 29.0f;
+                else if (m_anvilOpen) titleX = panelX + 60.0f;
+                else if (m_furnaceOpen || m_brewOpen || m_crafterOpen || thrower) titleX = centredTitle(title);
+            }
+            m_ui.text(title, titleX, panelY + 6.0f, 1.0f, GUI_TEXT);
         }
     }
 
@@ -587,13 +631,26 @@ void Application::renderContainerScreen(float w, float h)
     // player's own, where it was drawn under the character and the tail
     // of its y poked out below the recess as a stray dash.
     if (!plainInventory)
-        m_ui.text("Inventory", panelX + 8.0f, panelY + PANEL_H - 94.0f, 1.0f, GUI_TEXT);
+        m_ui.text("Inventory", m_tradeOpen && skin ? panelX + 107.0f : panelX + 8.0f,
+                  panelY + PANEL_H - 94.0f, 1.0f, GUI_TEXT);
 
 
     // --------------------------------------------- the open chest ---
     // Three rows of nine, eighteen down from the top of the panel,
     // directly above the player's own rows.
-    if (m_chestOpen)
+    if (m_chestOpen && hopper)
+    {
+        for (int column = 0; column < Hopper::HOPPER_SLOTS; ++column)
+            drawSlot(Inventory::CHEST_FIRST + column, panelX + 44.0f + column * PITCH, panelY + 20.0f);
+    }
+    else if (m_chestOpen && thrower)
+    {
+        for (int row = 0; row < 3; ++row)
+            for (int column = 0; column < 3; ++column)
+                drawSlot(Inventory::CHEST_FIRST + row * 3 + column,
+                         panelX + 62.0f + column * PITCH, panelY + 17.0f + row * PITCH);
+    }
+    else if (m_chestOpen)
     {
         for (int row = 0; row < 3; ++row)
             for (int column = 0; column < PALETTE_COLUMNS; ++column)
@@ -620,8 +677,9 @@ void Application::renderContainerScreen(float w, float h)
                 grid[cell] = m_inventory.slot(index);
                 if (crafterSlotDisabled(cell))
                 {
-                    bevel(sx - 1.0f, sy - 1.0f, PITCH, PITCH, GUI_PANEL, GUI_PANEL_LIGHT,
-                          GUI_PANEL_DARK, 1.0f);
+                    if (!guiSprite("sprites/container/crafter/disabled_slot", sx - 1.0f, sy - 1.0f, PITCH, PITCH))
+                        bevel(sx - 1.0f, sy - 1.0f, PITCH, PITCH, GUI_PANEL, GUI_PANEL_LIGHT,
+                              GUI_PANEL_DARK, 1.0f);
                     addHint(sx - 1.0f, sy - 1.0f, PITCH, PITCH, "Disabled: click to enable");
                 }
                 else if (grid[cell].empty())
@@ -630,16 +688,27 @@ void Application::renderContainerScreen(float w, float h)
 
         const bool powered = m_world->getBlock(m_crafterBlock.x, m_crafterBlock.y,
                                               m_crafterBlock.z) == Blocks::CrafterLit;
-        drawCraftArrow(panelX + 94.0f, panelY + 35.0f, 22.0f, 15.0f);
-        drawItem(panelX + 97.0f, panelY + 16.0f, SLOT, Items::Redstone, 1,
-                 powered ? glm::vec4(1.0f) : glm::vec4(0.35f, 0.35f, 0.35f, 1.0f));
-        addHint(panelX + 96.0f, panelY + 15.0f, PITCH, PITCH,
-                powered ? "Powered" : "Not powered: a redstone pulse crafts once");
+        if (skin)
+        {
+            guiSprite(powered ? "sprites/container/crafter/powered_redstone"
+                              : "sprites/container/crafter/unpowered_redstone",
+                      panelX + 97.0f, panelY + 35.0f, 16.0f, 16.0f);
+            addHint(panelX + 97.0f, panelY + 35.0f, 16.0f, 16.0f,
+                    powered ? "Powered" : "Not powered: a redstone pulse crafts once");
+        }
+        else
+        {
+            drawCraftArrow(panelX + 94.0f, panelY + 35.0f, 22.0f, 15.0f);
+            drawItem(panelX + 97.0f, panelY + 16.0f, SLOT, Items::Redstone, 1,
+                     powered ? glm::vec4(1.0f) : glm::vec4(0.35f, 0.35f, 0.35f, 1.0f));
+            addHint(panelX + 96.0f, panelY + 15.0f, PITCH, PITCH,
+                    powered ? "Powered" : "Not powered: a redstone pulse crafts once");
+        }
         addHint(panelX + 129.0f, panelY + 30.0f, 26.0f, 26.0f, "What the next pulse makes");
 
         const float ox = panelX + 134.0f;
         const float oy = panelY + 35.0f;
-        guiWell(ox - 5.0f, oy - 5.0f, 26.0f, 26.0f);
+        if (!skin) guiWell(ox - 5.0f, oy - 5.0f, 26.0f, 26.0f);
         const CraftOutput next = Crafting::match(grid, 3);
         if (next.valid())
             drawItem(ox, oy, SLOT, next.id, next.count, glm::vec4(1.0f));
@@ -686,9 +755,22 @@ void Application::renderContainerScreen(float w, float h)
         // on 75.
         if (!otherBusiness)
         {
+            const float offX = panelX + 77.0f;
+            const float offY = panelY + 62.0f;
+            well(offX, offY);
+            const ItemStack& offhand = m_inventory.slot(Inventory::OFFHAND);
+            if (offhand.empty())
+                guiSprite("sprites/container/slot/shield", offX, offY, SLOT, SLOT);
+            else
+                drawItem(offX, offY, SLOT, offhand.id, offhand.count, glm::vec4(1.0f), offhand.damage);
+            slotBox(SlotBox::Kind::Slot, Inventory::OFFHAND, offX, offY);
+        }
+
+        if (!otherBusiness)
+        {
             // Thirty to the block, which is the client's scale for this
             // figure, less the sixteenth the player model is shrunk by.
-            guiWell(panelX + 25.0f, panelY + 7.0f, 52.0f, 72.0f);
+            if (!skin) guiWell(panelX + 25.0f, panelY + 7.0f, 52.0f, 72.0f);
             drawPlayerFigure(activeSkin(), panelX + 26.0f, panelY + 8.0f, panelX + 75.0f,
                              panelY + 78.0f, 30.0f);
         }
@@ -696,7 +778,142 @@ void Application::renderContainerScreen(float w, float h)
         // Trading. The villager's rank and progress across the top, the
         // payment slots and what they buy in the middle, and the list of
         // every deal it will make down the right-hand side.
-        if (m_tradeOpen)
+        if (m_tradeOpen && skin)
+        {
+            const std::vector<Trading::Deal> deals = Trading::dealsFor(m_tradeWith);
+            TraderRecord& record = openTrader();
+            const int rank = Trading::rankFor(record.xp);
+            const float mouseX = static_cast<float>(m_input.mouseX()) / m_ui.scale();
+            const float mouseY = static_cast<float>(m_input.mouseY()) / m_ui.scale();
+            const bool chosen = m_tradeSelected >= 0 && m_tradeSelected < static_cast<int>(deals.size());
+
+            const std::string header = std::string(Trading::name(m_tradeWith)) + " - " +
+                                       Trading::rankName(rank);
+            m_ui.text(header, panelX + 49.0f + 138.0f - std::floor(UIRenderer::textWidth(header, 1.0f) * 0.5f),
+                      panelY + 6.0f, 1.0f, GUI_TEXT);
+            const std::string tradesLabel = "Trades";
+            m_ui.text(tradesLabel, panelX + 53.0f - std::floor(UIRenderer::textWidth(tradesLabel, 1.0f) * 0.5f),
+                      panelY + 6.0f, 1.0f, GUI_TEXT);
+
+            const float barX = panelX + 136.0f;
+            const float barY = panelY + 16.0f;
+            guiSprite("sprites/container/villager/experience_bar_background", barX, barY, 102.0f, 5.0f);
+            std::string barTip = "Master: every trade is open";
+            if (rank + 1 < Trading::RANKS)
+            {
+                const int from = Trading::xpForRank(rank);
+                const int to = Trading::xpForRank(rank + 1);
+                const float span = static_cast<float>(to - from);
+                const float done = std::floor(102.0f * std::clamp(static_cast<float>(record.xp - from) / span, 0.0f, 1.0f));
+                guiSpritePart("sprites/container/villager/experience_bar_current", 102.0f, 5.0f, 0.0f, 0.0f,
+                              barX, barY, done, 5.0f);
+                if (chosen)
+                {
+                    const float gain = std::floor(102.0f * static_cast<float>(
+                        deals[static_cast<size_t>(m_tradeSelected)].villagerXp) / span);
+                    guiSpritePart("sprites/container/villager/experience_bar_result", 102.0f, 5.0f, done, 0.0f,
+                                  barX + done, barY, std::min(gain, 102.0f - done), 5.0f);
+                }
+                barTip = "Trades done: " + std::to_string(record.xp - from) + " of " +
+                         std::to_string(to - from) + " to " + Trading::rankName(rank + 1);
+            }
+            else
+            {
+                guiSpritePart("sprites/container/villager/experience_bar_current", 102.0f, 5.0f, 0.0f, 0.0f,
+                              barX, barY, 102.0f, 5.0f);
+            }
+            addHint(barX, barY - 1.0f, 102.0f, 7.0f, barTip);
+
+            const float payY = panelY + 37.0f;
+            drawSlot(Inventory::TRADE_PAY_A, panelX + 136.0f, payY);
+            drawSlot(Inventory::TRADE_PAY_B, panelX + 162.0f, payY);
+            if (chosen)
+            {
+                const Trading::Offer& offer = deals[static_cast<size_t>(m_tradeSelected)].offer;
+                const glm::vec4 ghost(1.0f, 1.0f, 1.0f, 0.3f);
+                if (m_inventory.slot(Inventory::TRADE_PAY_A).empty())
+                    drawItem(panelX + 136.0f, payY, SLOT, offer.want, offer.wantCount, ghost);
+                if (offer.also != Blocks::Air && m_inventory.slot(Inventory::TRADE_PAY_B).empty())
+                    drawItem(panelX + 162.0f, payY, SLOT, offer.also, offer.alsoCount, ghost);
+            }
+
+            const bool soldOut = chosen &&
+                                 record.uses[static_cast<size_t>(m_tradeSelected)] >=
+                                     deals[static_cast<size_t>(m_tradeSelected)].maxUses;
+            if (soldOut)
+            {
+                guiSprite("sprites/container/villager/out_of_stock", panelX + 182.0f, panelY + 35.0f, 28.0f, 21.0f);
+                addHint(panelX + 182.0f, panelY + 35.0f, 28.0f, 21.0f, "Sold out: it restocks soon");
+            }
+
+            const float resultX = panelX + 220.0f;
+            const ItemStack& made = m_inventory.slot(Inventory::TRADE_RESULT);
+            drawItem(resultX, payY, SLOT, made.id, made.count, glm::vec4(1.0f), made.damage);
+            m_slotBoxes.push_back({ SlotBox::Kind::TradeTake, Inventory::TRADE_RESULT,
+                                    resultX - 1.0f, payY - 1.0f, PITCH });
+
+            std::vector<int> open;
+            for (size_t i = 0; i < deals.size(); ++i)
+                if (deals[i].rank <= rank) open.push_back(static_cast<int>(i));
+            const int visibleRows = 7;
+            const int maxScroll = std::max(0, static_cast<int>(open.size()) - visibleRows);
+
+            const float listX = panelX + 5.0f;
+            const float listTop = panelY + 17.0f;
+            const float trackTop = panelY + 18.0f;
+            if (m_draggingScroll && !m_input.isMouseButtonDown(SDL_BUTTON_LEFT)) m_draggingScroll = false;
+            if (m_draggingScroll && maxScroll > 0)
+            {
+                const float along = std::clamp((mouseY - trackTop - 13.5f) / 113.0f, 0.0f, 1.0f);
+                m_tradeScroll = static_cast<int>(std::lround(along * maxScroll));
+            }
+            m_tradeScroll = std::clamp(m_tradeScroll, 0, maxScroll);
+
+            for (int r = 0; r < visibleRows; ++r)
+            {
+                const int at = r + m_tradeScroll;
+                if (at >= static_cast<int>(open.size())) break;
+                const int index = open[static_cast<size_t>(at)];
+                const Trading::Deal& deal = deals[static_cast<size_t>(index)];
+                const Trading::Offer& offer = deal.offer;
+                const float ry = listTop + 20.0f * r;
+                const bool out = record.uses[static_cast<size_t>(index)] >= deal.maxUses;
+                const bool hovered = mouseX >= listX && mouseX < listX + 88.0f &&
+                                     mouseY >= ry && mouseY < ry + 20.0f;
+
+                guiSprite(hovered || index == m_tradeSelected ? "sprites/widget/button_highlighted"
+                                                              : "sprites/widget/button",
+                          listX, ry, 88.0f, 20.0f);
+
+                drawItem(listX + 5.0f, ry + 2.0f, SLOT, offer.want, offer.wantCount, glm::vec4(1.0f));
+                if (offer.also != Blocks::Air)
+                    drawItem(listX + 35.0f, ry + 2.0f, SLOT, offer.also, offer.alsoCount, glm::vec4(1.0f));
+                guiSprite(out ? "sprites/container/villager/trade_arrow_out_of_stock"
+                              : "sprites/container/villager/trade_arrow",
+                          listX + 55.0f, ry + 5.0f, 10.0f, 9.0f);
+                drawItem(listX + 68.0f, ry + 2.0f, SLOT, offer.give, offer.giveCount, glm::vec4(1.0f));
+
+                std::string tip = "Give " + std::to_string(offer.wantCount) + " " + displayName(offer.want);
+                if (offer.also != Blocks::Air)
+                    tip += " and " + std::to_string(offer.alsoCount) + " " + displayName(offer.also);
+                tip += " for " + std::to_string(offer.giveCount) + " " + displayName(offer.give);
+                if (offer.giveEnchantments != 0) tip += " (enchanted)";
+                const int left = deal.maxUses - record.uses[static_cast<size_t>(index)];
+                tip += out ? " - sold out" : " - " + std::to_string(left) + " left";
+                addHint(listX, ry, 88.0f, 20.0f, tip);
+                m_slotBoxes.push_back({ SlotBox::Kind::Trade, index, listX, ry, 20.0f, 88.0f });
+            }
+
+            const float thumbY = maxScroll > 0
+                ? trackTop + std::floor(113.0f * static_cast<float>(m_tradeScroll) / static_cast<float>(maxScroll))
+                : trackTop;
+            guiSprite(maxScroll > 0 ? "sprites/container/villager/scroller"
+                                    : "sprites/container/villager/scroller_disabled",
+                      panelX + 94.0f, thumbY, 6.0f, 27.0f);
+            if (maxScroll > 0)
+                m_slotBoxes.push_back({ SlotBox::Kind::Scroll, 0, panelX + 94.0f, trackTop, 140.0f, 6.0f });
+        }
+        else if (m_tradeOpen)
         {
             const std::vector<Trading::Deal> deals = Trading::dealsFor(m_tradeWith);
             TraderRecord& record = openTrader();
@@ -883,7 +1100,86 @@ void Application::renderContainerScreen(float w, float h)
         // with the middle of the three offers beside them. Each offer
         // shows the level it needs in a green badge, what it puts on the
         // item, and the lapis it takes on the right.
-        if (m_enchantOpen)
+        if (m_enchantOpen && skin)
+        {
+            const float slotY = panelY + 47.0f;
+            drawSlot(Inventory::ENCHANT_SLOT, panelX + 15.0f, slotY);
+            drawSlot(Inventory::ENCHANT_LAPIS, panelX + 35.0f, slotY);
+            if (m_inventory.slot(Inventory::ENCHANT_LAPIS).empty())
+                guiSprite("../item/empty_slot_lapis_lazuli", panelX + 35.0f, slotY, SLOT, SLOT);
+
+            const ItemStack& subject = m_inventory.slot(Inventory::ENCHANT_SLOT);
+            const ItemStack& lapis = m_inventory.slot(Inventory::ENCHANT_LAPIS);
+            const int lapisHeld = lapis.id == Items::LapisLazuli ? lapis.count : 0;
+            const int level = Experience::levelFor(m_player.experience);
+            const float mouseX = static_cast<float>(m_input.mouseX()) / m_ui.scale();
+            const float mouseY = static_cast<float>(m_input.mouseY()) / m_ui.scale();
+
+            static const char* LEVEL_ON[3] = { "sprites/container/enchanting_table/level_1",
+                                               "sprites/container/enchanting_table/level_2",
+                                               "sprites/container/enchanting_table/level_3" };
+            static const char* LEVEL_OFF[3] = { "sprites/container/enchanting_table/level_1_disabled",
+                                                "sprites/container/enchanting_table/level_2_disabled",
+                                                "sprites/container/enchanting_table/level_3_disabled" };
+
+            for (int row = 0; row < 3; ++row)
+            {
+                const float rx = panelX + 60.0f;
+                const float ry = panelY + 14.0f + 19.0f * row;
+                const Enchanting::Offer offer =
+                    Enchanting::offerFor(row, m_enchantShelves, subject.id, m_enchantRoll);
+                if (!offer.valid())
+                {
+                    guiSprite("sprites/container/enchanting_table/enchantment_slot_disabled", rx, ry, 108.0f, 19.0f);
+                    continue;
+                }
+
+                const Enchanting::Price price = Enchanting::priceOf(row);
+                const bool canBuy = Enchanting::affordable(offer, row, level, lapisHeld, m_player.creative());
+                const bool hovered = mouseX >= rx && mouseY >= ry && mouseX < rx + 108.0f && mouseY < ry + 19.0f;
+                const int dots = std::clamp(price.lapis, 1, 3) - 1;
+
+                glm::vec4 nameColour(0.408f, 0.369f, 0.290f, 1.0f);
+                if (!canBuy)
+                {
+                    guiSprite("sprites/container/enchanting_table/enchantment_slot_disabled", rx, ry, 108.0f, 19.0f);
+                    guiSprite(LEVEL_OFF[dots], rx + 1.0f, ry + 1.0f, 16.0f, 16.0f);
+                    nameColour = glm::vec4(0.204f, 0.184f, 0.145f, 1.0f);
+                }
+                else
+                {
+                    guiSprite(hovered ? "sprites/container/enchanting_table/enchantment_slot_highlighted"
+                                      : "sprites/container/enchanting_table/enchantment_slot",
+                              rx, ry, 108.0f, 19.0f);
+                    guiSprite(LEVEL_ON[dots], rx + 1.0f, ry + 1.0f, 16.0f, 16.0f);
+                    if (hovered) nameColour = glm::vec4(1.0f, 1.0f, 0.502f, 1.0f);
+                }
+                m_slotBoxes.push_back({ SlotBox::Kind::Enchant, row, rx, ry, 19.0f, 108.0f });
+
+                std::string what = Enchanting::name(offer.kind);
+                what += " ";
+                what += std::to_string(offer.level);
+                float scale = 1.0f;
+                if (UIRenderer::textWidth(what, 1.0f) > 86.0f)
+                {
+                    const float unit = static_cast<float>(guiScale());
+                    scale = std::max(0.5f, std::floor(unit * 86.0f / UIRenderer::textWidth(what, 1.0f)) / unit);
+                }
+                m_ui.text(what, rx + 20.0f, ry + 2.0f, scale, nameColour);
+
+                const std::string need = std::to_string(offer.cost);
+                m_ui.textWithShadow(need, rx + 20.0f + 86.0f - UIRenderer::textWidth(need, 1.0f), ry + 9.0f, 1.0f,
+                                    canBuy ? glm::vec4(0.502f, 1.0f, 0.125f, 1.0f)
+                                           : glm::vec4(0.251f, 0.498f, 0.063f, 1.0f));
+
+                std::string tip = what + ": needs level " + std::to_string(offer.cost) +
+                                  ", costs " + std::to_string(price.levels) +
+                                  (price.levels == 1 ? " level and " : " levels and ") +
+                                  std::to_string(price.lapis) + " lapis";
+                addHint(rx, ry, 108.0f, 19.0f, tip);
+            }
+        }
+        else if (m_enchantOpen)
         {
             const float slotY = panelY + 34.0f;
             drawSlot(Inventory::ENCHANT_SLOT, panelX + 15.0f, slotY);
@@ -999,7 +1295,36 @@ void Application::renderContainerScreen(float w, float h)
         // The brewing stand. The ingredient goes in at the top and the
         // arrow beside it runs down to the three bottles; the blaze
         // powder that fuels it has its gauge right underneath it.
-        if (m_brewOpen)
+        if (m_brewOpen && skin)
+        {
+            drawSlot(Inventory::BREW_INGREDIENT, panelX + 79.0f, panelY + 17.0f);
+            drawSlot(Inventory::BREW_FUEL, panelX + 17.0f, panelY + 17.0f);
+            const float bottleX[3] = { 56.0f, 79.0f, 102.0f };
+            const float bottleY[3] = { 51.0f, 58.0f, 51.0f };
+            for (int i = 0; i < Inventory::BREW_BOTTLES; ++i)
+                drawSlot(Inventory::BREW_BOTTLE_FIRST + i, panelX + bottleX[i], panelY + bottleY[i]);
+
+            const int fuelPixels = std::clamp((18 * m_brewFuel + Brewing::FUEL_PER_POWDER - 1) /
+                                                  Brewing::FUEL_PER_POWDER, 0, 18);
+            guiSpritePart("sprites/container/brewing_stand/fuel_length", 18.0f, 4.0f, 0.0f, 0.0f,
+                          panelX + 60.0f, panelY + 44.0f, static_cast<float>(fuelPixels), 4.0f);
+            addHint(panelX + 59.0f, panelY + 43.0f, 20.0f, 6.0f,
+                    "Fuel: " + std::to_string(m_brewFuel) + " brews left");
+
+            const float along = std::min(1.0f, m_brewProgress / Brewing::BREW_SECONDS);
+            if (along > 0.0f)
+            {
+                const float filled = std::floor(28.0f * along);
+                guiSpritePart("sprites/container/brewing_stand/brew_progress", 9.0f, 28.0f, 0.0f, 0.0f,
+                              panelX + 97.0f, panelY + 16.0f, 9.0f, filled);
+                static const int BUBBLE[7] = { 29, 24, 20, 16, 11, 6, 0 };
+                const int ticksLeft = static_cast<int>((1.0f - along) * Brewing::BREW_SECONDS * 20.0f);
+                const float shown = static_cast<float>(BUBBLE[(ticksLeft / 2) % 7]);
+                guiSpritePart("sprites/container/brewing_stand/bubbles", 12.0f, 29.0f, 0.0f, 29.0f - shown,
+                              panelX + 63.0f, panelY + 14.0f + 29.0f - shown, 12.0f, shown);
+            }
+        }
+        else if (m_brewOpen)
         {
             drawSlot(Inventory::BREW_INGREDIENT, panelX + 79.0f, panelY + 17.0f);
             drawSlot(Inventory::BREW_FUEL, panelX + 17.0f, panelY + 17.0f);
@@ -1057,7 +1382,60 @@ void Application::renderContainerScreen(float w, float h)
         // The anvil: what is being worked on, plus what is put to it,
         // gives what comes out, with the name of the result over the top
         // and the price underneath.
-        if (m_anvilOpen)
+        if (m_anvilOpen && skin)
+        {
+            const int slots[3] = { Inventory::ANVIL_LEFT, Inventory::ANVIL_RIGHT, Inventory::ANVIL_RESULT };
+            const float xs[3] = { 27.0f, 76.0f, 134.0f };
+            const float ay = panelY + 47.0f;
+            const ItemStack& working = m_inventory.slot(Inventory::ANVIL_LEFT);
+            const ItemStack& adding = m_inventory.slot(Inventory::ANVIL_RIGHT);
+            const ItemStack& made = m_inventory.slot(Inventory::ANVIL_RESULT);
+
+            guiSprite(working.empty() ? "sprites/container/anvil/text_field_disabled"
+                                      : "sprites/container/anvil/text_field",
+                      panelX + 59.0f, panelY + 20.0f, 110.0f, 16.0f);
+            if (!working.empty())
+            {
+                const std::string name = stackName(made.empty() ? working : made);
+                m_ui.textWithShadow(name, panelX + 62.0f, panelY + 24.0f, 1.0f,
+                                    glm::vec4(0.878f, 0.878f, 0.878f, 1.0f));
+            }
+
+            for (int i = 0; i < 3; ++i)
+            {
+                const float x = panelX + xs[i];
+                const ItemStack& stack = m_inventory.slot(slots[i]);
+                drawItem(x, ay, SLOT, stack.id, stack.count, glm::vec4(1.0f), stack.damage);
+                slotBox(i == 2 ? SlotBox::Kind::AnvilTake : SlotBox::Kind::Slot, slots[i], x, ay);
+            }
+
+            if ((!working.empty() || !adding.empty()) && made.empty())
+                guiSprite("sprites/container/anvil/error", panelX + 99.0f, panelY + 45.0f, 28.0f, 21.0f);
+
+            const Anvil::Result result = anvilResult();
+            const int level = Experience::levelFor(m_player.experience);
+            std::string price;
+            glm::vec4 colour(0.502f, 1.0f, 0.125f, 1.0f);
+            if (result.tooExpensive && !m_player.creative())
+            {
+                price = "Too Expensive!";
+                colour = glm::vec4(1.0f, 0.376f, 0.376f, 1.0f);
+            }
+            else if (result.valid)
+            {
+                price = "Enchantment Cost: " + std::to_string(result.levelCost);
+                if (!m_player.creative() && level < result.levelCost)
+                    colour = glm::vec4(1.0f, 0.376f, 0.376f, 1.0f);
+            }
+            if (!price.empty())
+            {
+                const float right = panelX + PANEL_W - 8.0f;
+                const float px = right - UIRenderer::textWidth(price, 1.0f) - 2.0f;
+                m_ui.quad(px - 2.0f, panelY + 67.0f, right - (px - 2.0f), 12.0f, glm::vec4(0.0f, 0.0f, 0.0f, 0.31f));
+                m_ui.textWithShadow(price, px, panelY + 69.0f, 1.0f, colour);
+            }
+        }
+        else if (m_anvilOpen)
         {
             const int slots[3] = { Inventory::ANVIL_LEFT, Inventory::ANVIL_RIGHT,
                                    Inventory::ANVIL_RESULT };
@@ -1129,13 +1507,23 @@ void Application::renderContainerScreen(float w, float h)
             drawSlot(Inventory::FURNACE_INPUT, panelX + 56.0f, panelY + 17.0f);
             drawSlot(Inventory::FURNACE_FUEL, panelX + 56.0f, panelY + 53.0f);
 
-            // The fire between them, burning down as the fuel goes:
-            // fourteen square at 56 and 36.
-            drawFurnaceFlame(panelX + 57.0f, panelY + 36.0f, gauge.burnFraction());
-
-            // The arrow, filling white as the item cooks: twenty-four by
-            // sixteen at 79 and 34.
-            drawCraftArrow(panelX + 79.0f, panelY + 34.0f, 24.0f, 16.0f, gauge.cookFraction());
+            if (skin)
+            {
+                const std::string base(furnaceSprites);
+                if (gauge.burnLeft > 0.0f)
+                {
+                    const float lit = std::ceil(gauge.burnFraction() * 13.0f) + 1.0f;
+                    guiSpritePart((base + "lit_progress").c_str(), 14.0f, 14.0f, 0.0f, 14.0f - lit,
+                                  panelX + 56.0f, panelY + 36.0f + 14.0f - lit, 14.0f, lit);
+                }
+                guiSpritePart((base + "burn_progress").c_str(), 24.0f, 16.0f, 0.0f, 0.0f,
+                              panelX + 79.0f, panelY + 34.0f, std::ceil(gauge.cookFraction() * 24.0f), 16.0f);
+            }
+            else
+            {
+                drawFurnaceFlame(panelX + 57.0f, panelY + 36.0f, gauge.burnFraction());
+                drawCraftArrow(panelX + 79.0f, panelY + 34.0f, 24.0f, 16.0f, gauge.cookFraction());
+            }
 
             drawOutputSlot(Inventory::FURNACE_OUTPUT, panelX + 116.0f, panelY + 35.0f);
         }
@@ -1161,7 +1549,8 @@ void Application::renderContainerScreen(float w, float h)
             // The arrow between the grid and the result: 22 by 15 at 90
             // and 35 on a workbench, and squeezed into the narrower gap
             // the little grid leaves.
-            if (bench) drawCraftArrow(panelX + 90.0f, panelY + 35.0f, 22.0f, 15.0f);
+            if (skin) {}
+            else if (bench) drawCraftArrow(panelX + 90.0f, panelY + 35.0f, 22.0f, 15.0f);
             else drawCraftArrow(panelX + 135.0f, panelY + 29.0f, 16.0f, 13.0f);
             if (bench) drawOutputSlot(Inventory::CRAFT_RESULT, resultX, resultY);
             else drawSlot(Inventory::CRAFT_RESULT, resultX, resultY);
@@ -1178,13 +1567,10 @@ void Application::renderContainerScreen(float w, float h)
     for (int row = 0; row < 3; ++row)
         for (int column = 0; column < PALETTE_COLUMNS; ++column)
             drawSlot(Inventory::HOTBAR_SLOTS + row * PALETTE_COLUMNS + column,
-                     panelX + 8.0f + column * PITCH, storageY + row * PITCH);
+                     invX + column * PITCH, storageY + row * PITCH);
 
-    // --------------------------------- hotbar, always the bottom row ---
-    // No mark on the selected one: a container's copy of the hotbar is
-    // nine more slots, and the client does not single one out.
     for (int i = 0; i < Inventory::HOTBAR_SLOTS; ++i)
-        drawSlot(i, panelX + 8.0f + i * PITCH, hotbarY);
+        drawSlot(i, invX + i * PITCH, hotbarY);
 
 }
 
@@ -1201,9 +1587,12 @@ void Application::renderCreativeScreen(float w, float h)
     const float panelY = std::floor((h - PANEL_H) * 0.5f);
 
     const bool inventoryTab = m_creativeTab == INVENTORY_TAB;
+    const char* background = inventoryTab ? "container/creative_inventory/tab_inventory"
+                                          : "container/creative_inventory/tab_items";
+    const bool skin = m_gui.has(background);
 
-    auto well = [this](float x, float y) {
-        guiWell(x - 1.0f, y - 1.0f, PITCH, PITCH);
+    auto well = [this, skin](float x, float y) {
+        if (!skin) guiWell(x - 1.0f, y - 1.0f, PITCH, PITCH);
     };
     auto drawSlot = [&](int index, float x, float y) {
         well(x, y);
@@ -1238,6 +1627,37 @@ void Application::renderCreativeScreen(float w, float h)
                                                      : place.column * 27.0f);
         const float ty = place.top ? panelY - 28.0f : panelY + PANEL_H - 4.0f;
 
+        if (skin)
+        {
+            static const char* TOP_OPEN[7] = {
+                "sprites/container/creative_inventory/tab_top_selected_1", "sprites/container/creative_inventory/tab_top_selected_2",
+                "sprites/container/creative_inventory/tab_top_selected_3", "sprites/container/creative_inventory/tab_top_selected_4",
+                "sprites/container/creative_inventory/tab_top_selected_5", "sprites/container/creative_inventory/tab_top_selected_6",
+                "sprites/container/creative_inventory/tab_top_selected_7" };
+            static const char* TOP_SHUT[7] = {
+                "sprites/container/creative_inventory/tab_top_unselected_1", "sprites/container/creative_inventory/tab_top_unselected_2",
+                "sprites/container/creative_inventory/tab_top_unselected_3", "sprites/container/creative_inventory/tab_top_unselected_4",
+                "sprites/container/creative_inventory/tab_top_unselected_5", "sprites/container/creative_inventory/tab_top_unselected_6",
+                "sprites/container/creative_inventory/tab_top_unselected_7" };
+            static const char* BOTTOM_OPEN[7] = {
+                "sprites/container/creative_inventory/tab_bottom_selected_1", "sprites/container/creative_inventory/tab_bottom_selected_2",
+                "sprites/container/creative_inventory/tab_bottom_selected_3", "sprites/container/creative_inventory/tab_bottom_selected_4",
+                "sprites/container/creative_inventory/tab_bottom_selected_5", "sprites/container/creative_inventory/tab_bottom_selected_6",
+                "sprites/container/creative_inventory/tab_bottom_selected_7" };
+            static const char* BOTTOM_SHUT[7] = {
+                "sprites/container/creative_inventory/tab_bottom_unselected_1", "sprites/container/creative_inventory/tab_bottom_unselected_2",
+                "sprites/container/creative_inventory/tab_bottom_unselected_3", "sprites/container/creative_inventory/tab_bottom_unselected_4",
+                "sprites/container/creative_inventory/tab_bottom_unselected_5", "sprites/container/creative_inventory/tab_bottom_unselected_6",
+                "sprites/container/creative_inventory/tab_bottom_unselected_7" };
+            const int column = std::clamp(place.column, 0, 6);
+            const char* sprite = place.top ? (open ? TOP_OPEN[column] : TOP_SHUT[column])
+                                           : (open ? BOTTOM_OPEN[column] : BOTTOM_SHUT[column]);
+            guiSprite(sprite, tx, ty, 26.0f, 32.0f);
+            drawItem(tx + 5.0f, ty + (place.top ? 9.0f : 7.0f), SLOT, CREATIVE_TABS[i].icon, 0, glm::vec4(1.0f));
+            m_slotBoxes.push_back({ SlotBox::Kind::Tab, i, tx, ty, 32.0f, 26.0f });
+            return;
+        }
+
         // An outline on the three sides that stand clear of the panel.
         m_ui.quad(tx - 1.0f, place.top ? ty - 1.0f : ty, 28.0f, 33.0f, OUTLINE);
 
@@ -1270,7 +1690,8 @@ void Application::renderCreativeScreen(float w, float h)
     for (int i = 0; i < TAB_COUNT; ++i)
         if (i != m_creativeTab) drawTab(i);
 
-    guiPanel(panelX, panelY, PANEL_W, PANEL_H);
+    if (skin) guiBlit(background, panelX, panelY, 0.0f, 0.0f, PANEL_W, PANEL_H);
+    else guiPanel(panelX, panelY, PANEL_W, PANEL_H);
 
     if (!inventoryTab)
     {
@@ -1308,7 +1729,7 @@ void Application::renderCreativeScreen(float w, float h)
         // is.
         const float trackX = panelX + 174.0f;
         const float trackY = panelY + 17.0f;
-        guiWell(trackX, trackY, 14.0f, 112.0f);
+        if (!skin) guiWell(trackX, trackY, 14.0f, 112.0f);
 
         // Dragged, the thumb follows the cursor down the track and the
         // palette follows the thumb, as the client's does; the wheel
@@ -1328,7 +1749,11 @@ void Application::renderCreativeScreen(float w, float h)
 
         const float along = maxRow > 0 ? static_cast<float>(m_paletteRow) / maxRow : 0.0f;
         const float thumbY = panelY + 18.0f + (112.0f - 17.0f) * along;
-        if (maxRow > 0)
+        if (skin)
+            guiSprite(maxRow > 0 ? "sprites/container/creative_inventory/scroller"
+                                 : "sprites/container/creative_inventory/scroller_disabled",
+                      panelX + 175.0f, std::floor(thumbY), 12.0f, 15.0f);
+        else if (maxRow > 0)
             bevel(trackX + 1.0f, thumbY, 12.0f, 15.0f,
                   GUI_PANEL, GUI_PANEL_LIGHT, GUI_PANEL_DARK, 1.0f);
         else
@@ -1361,9 +1786,21 @@ void Application::renderCreativeScreen(float w, float h)
             m_slotBoxes.push_back({ SlotBox::Kind::Slot, index, x - 1.0f, y - 1.0f, PITCH });
         }
 
+        {
+            const float offX = panelX + 35.0f;
+            const float offY = panelY + 20.0f;
+            well(offX, offY);
+            const ItemStack& offhand = m_inventory.slot(Inventory::OFFHAND);
+            if (offhand.empty())
+                guiSprite("sprites/container/slot/shield", offX, offY, SLOT, SLOT);
+            else
+                drawItem(offX, offY, SLOT, offhand.id, offhand.count, glm::vec4(1.0f), offhand.damage);
+            m_slotBoxes.push_back({ SlotBox::Kind::Slot, Inventory::OFFHAND, offX - 1.0f, offY - 1.0f, PITCH });
+        }
+
         // The character in the box from 73 and 6 to 105 and 49, twenty
         // to a block -- two thirds the size it is on the survival screen.
-        guiWell(panelX + 72.0f, panelY + 5.0f, 34.0f, 45.0f);
+        if (!skin) guiWell(panelX + 72.0f, panelY + 5.0f, 34.0f, 45.0f);
         drawPlayerFigure(activeSkin(), panelX + 73.0f, panelY + 6.0f, panelX + 105.0f,
                          panelY + 49.0f, 20.0f);
 
@@ -1376,7 +1813,7 @@ void Application::renderCreativeScreen(float w, float h)
         const float binX = panelX + 173.0f;
         const float binY = panelY + 112.0f;
         well(binX, binY);
-        m_ui.text("x", binX + 6.0f, binY + 4.0f, 1.0f, glm::vec4(0.55f, 0.20f, 0.20f, 1.0f));
+        if (!skin) m_ui.text("x", binX + 6.0f, binY + 4.0f, 1.0f, glm::vec4(0.55f, 0.20f, 0.20f, 1.0f));
         m_slotBoxes.push_back({ SlotBox::Kind::Destroy, 0, binX - 1.0f, binY - 1.0f, PITCH });
     }
 

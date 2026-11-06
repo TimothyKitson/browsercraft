@@ -20,6 +20,7 @@ enum class Action
     Screenshot, Debug, HideHud, Fullscreen,
     FancyLighting, Mute,
     RenderDistanceDown, RenderDistanceUp,
+    SwapHands,
     Count
 };
 

@@ -896,14 +896,14 @@ void Application::loadLevel()
         m_player.mode = m_gameMode;
         m_inventory.setSelectedSlot(state.selectedSlot);
 
-        for (size_t i = 0; i < state.inventory.size() && i < Inventory::TOTAL_SLOTS; ++i)
+        for (size_t i = 0; i < state.inventory.size() && i <= Inventory::TOTAL_SLOTS; ++i)
         {
-            m_inventory.slot(static_cast<int>(i)).id = state.inventory[i].first;
-            m_inventory.slot(static_cast<int>(i)).count = state.inventory[i].second;
-            m_inventory.slot(static_cast<int>(i)).damage =
-                i < state.damage.size() ? state.damage[i] : 0;
-            m_inventory.slot(static_cast<int>(i)).enchantments =
-                i < state.enchantments.size() ? state.enchantments[i] : 0u;
+            ItemStack& into = m_inventory.slot(i < Inventory::TOTAL_SLOTS ? static_cast<int>(i)
+                                                                         : Inventory::OFFHAND);
+            into.id = state.inventory[i].first;
+            into.count = state.inventory[i].second;
+            into.damage = i < state.damage.size() ? state.damage[i] : 0;
+            into.enchantments = i < state.enchantments.size() ? state.enchantments[i] : 0u;
         }
 
         // Saves made before the stash below kept to the pack could have
@@ -967,9 +967,9 @@ void Application::saveLevel()
     state.selectedSlot = m_inventory.selectedSlot();
     state.spawn = m_spawnPoint;
 
-    for (int i = 0; i < Inventory::TOTAL_SLOTS; ++i)
+    for (int i = 0; i <= Inventory::TOTAL_SLOTS; ++i)
     {
-        const ItemStack& stack = m_inventory.slot(i);
+        const ItemStack& stack = m_inventory.slot(i < Inventory::TOTAL_SLOTS ? i : Inventory::OFFHAND);
         state.inventory.emplace_back(stack.id, static_cast<uint16_t>(std::max(0, stack.count)));
         state.damage.push_back(static_cast<uint16_t>(std::clamp(stack.damage, 0, 65535)));
         state.enchantments.push_back(stack.enchantments);
@@ -1923,7 +1923,7 @@ bool Application::frame()
 
             const bool stillThere =
                 m_benchOpen   ? there == Blocks::CraftingTable
-              : m_chestOpen   ? isContainerBlock(there)
+              : m_chestOpen   ? (isContainerBlock(there) || isItemHolder(there))
               : m_enchantOpen ? there == Blocks::EnchantingTable
               : m_anvilOpen   ? there == Blocks::Anvil
               : m_brewOpen    ? there == Blocks::BrewingStand
@@ -4864,6 +4864,12 @@ void Application::updateGameplay(float deltaTime)
     if (m_keys.pressed(m_input, Action::Fly) && m_player.creative())
         m_player.flying = !m_player.flying;
 
+    if (m_keys.pressed(m_input, Action::SwapHands))
+    {
+        std::swap(m_inventory.selected(), m_inventory.slot(Inventory::OFFHAND));
+        m_audio.play(Sound::Click, 0.3f, 1.2f);
+    }
+
     // --- hotbar selection ---
     for (int i = 0; i < Inventory::HOTBAR_SLOTS; ++i)
         if (m_input.wasKeyPressed(static_cast<SDL_Scancode>(SDL_SCANCODE_1 + i)))
@@ -4968,9 +4974,14 @@ void Application::updateGameplay(float deltaTime)
     updateMining(deltaTime);
     // A shield goes up while Use is held, which is the same button
     // that places and eats -- so holding one takes that button over.
-    m_player.blocking = inGame() && m_inventory.selected().id == Items::Shield &&
-                        (m_keys.down(m_input, Action::Use) ||
-                         m_startupScreen == "shieldup");
+    {
+        const ItemStack& main = m_inventory.selected();
+        const bool offhandShield = m_inventory.slot(Inventory::OFFHAND).id == Items::Shield &&
+                                   (main.empty() || Tools::isTool(main.id));
+        m_player.blocking = inGame() && (main.id == Items::Shield || offhandShield) &&
+                            (m_keys.down(m_input, Action::Use) ||
+                             m_startupScreen == "shieldup");
+    }
 
     handleEating(deltaTime);
     handleDrinking(deltaTime);
@@ -5319,7 +5330,7 @@ void Application::updateMining(float deltaTime)
             // A chest gives back everything in it. Twenty-seven stacks
             // is a lot to drop at once, which is why they come out of
             // the block rather than the player.
-            if (isContainerBlock(id))
+            if (isContainerBlock(id) || isItemHolder(id))
             {
                 if (m_chestOpen && m_chestBlock == hit.block) stowChest();
 
@@ -7030,7 +7041,8 @@ void Application::wearShield(int points)
 {
     if (m_player.creative() || points <= 0) return;
 
-    ItemStack& held = m_inventory.selected();
+    ItemStack& held = m_inventory.selected().id == Items::Shield
+                          ? m_inventory.selected() : m_inventory.slot(Inventory::OFFHAND);
     if (held.id != Items::Shield) return;
 
     const uint32_t roll = static_cast<uint32_t>(held.damage * 2654435761u) ^
@@ -7437,7 +7449,7 @@ void Application::applyBlast(const glm::vec3& at, float radius, int damage)
 
                 // A chest or a furnace gives up what was in it rather
                 // than taking it with it.
-                if (isContainerBlock(block) && m_chests.has(where))
+                if ((isContainerBlock(block) || isItemHolder(block)) && m_chests.has(where))
                 {
                     for (const ItemStack& held : m_chests.at(where))
                         if (!held.empty())
@@ -8079,10 +8091,10 @@ void Application::handlePlacement()
                 m_audio.play(Sound::Click, 0.4f);
                 return;
             }
-            if (isContainerBlock(used))
+            if (isContainerBlock(used) || isItemHolder(used))
             {
                 openChest(bench.block);
-                m_audio.play(Sound::DigWood, 0.5f, 0.8f);
+                m_audio.play(isItemHolder(used) ? Sound::Click : Sound::DigWood, 0.5f, 0.8f);
                 return;
             }
             // An eye set into a frame. Done by using it, like a door,
@@ -9926,6 +9938,36 @@ void Application::renderHearts(float x, float y)
             heartY += static_cast<float>(((tick * 2654435761u) >> (i + 8)) & 1u);
         }
 
+        if (m_gui.has("sprites/hud/heart/full"))
+        {
+            const bool blink = m_player.damageFlash > 0.0f &&
+                               (static_cast<int>(m_elapsedSeconds * 20.0f) / 3) % 2 == 0;
+            const bool poisoned = m_player.effects.has(Effects::Kind::Poison);
+            static const char* CONTAINER[2][2] = {
+                { "sprites/hud/heart/container", "sprites/hud/heart/container_blinking" },
+                { "sprites/hud/heart/container_hardcore", "sprites/hud/heart/container_hardcore_blinking" } };
+            static const char* NORMAL[2][2][2] = {
+                { { "sprites/hud/heart/full", "sprites/hud/heart/full_blinking" },
+                  { "sprites/hud/heart/half", "sprites/hud/heart/half_blinking" } },
+                { { "sprites/hud/heart/hardcore_full", "sprites/hud/heart/hardcore_full_blinking" },
+                  { "sprites/hud/heart/hardcore_half", "sprites/hud/heart/hardcore_half_blinking" } } };
+            static const char* POISON[2][2][2] = {
+                { { "sprites/hud/heart/poisoned_full", "sprites/hud/heart/poisoned_full_blinking" },
+                  { "sprites/hud/heart/poisoned_half", "sprites/hud/heart/poisoned_half_blinking" } },
+                { { "sprites/hud/heart/poisoned_hardcore_full", "sprites/hud/heart/poisoned_hardcore_full_blinking" },
+                  { "sprites/hud/heart/poisoned_hardcore_half", "sprites/hud/heart/poisoned_hardcore_half_blinking" } } };
+            const int hc = hardcore ? 1 : 0;
+            const int bl = blink ? 1 : 0;
+            guiSprite(CONTAINER[hc][bl], heartX, heartY, ICON_SIZE, ICON_SIZE);
+            if (remaining >= 1)
+            {
+                const int half = remaining >= 2 ? 0 : 1;
+                guiSprite(poisoned ? POISON[hc][half][bl] : NORMAL[hc][half][bl],
+                          heartX, heartY, ICON_SIZE, ICON_SIZE);
+            }
+            continue;
+        }
+
         // The empty container always sits underneath, like Minecraft.
         m_ui.texturedQuad(m_gui.texture(emptySprite), heartX, heartY, ICON_SIZE, ICON_SIZE,
                           0.0f, 0.0f, 1.0f, 1.0f, glm::vec4(1.0f));
@@ -10007,11 +10049,19 @@ void Application::renderExperience(float x, float y, float width)
     // hundred and eighty-two across as the hotbar it sits on.
     constexpr float HEIGHT = 5.0f;
 
-    m_ui.quad(x, y, width, HEIGHT, glm::vec4(0.0f, 0.0f, 0.0f, 0.85f));
-    m_ui.quad(x, y + 1.0f, width - 1.0f, HEIGHT - 2.0f, glm::vec4(0.16f, 0.16f, 0.16f, 1.0f));
-    if (fraction > 0.0f)
-        m_ui.quad(x, y + 1.0f, (width - 1.0f) * fraction, HEIGHT - 2.0f,
-                  glm::vec4(0.49f, 0.98f, 0.24f, 1.0f));
+    if (guiSprite("sprites/hud/experience_bar_background", x, y, width, HEIGHT))
+    {
+        guiSpritePart("sprites/hud/experience_bar_progress", width, HEIGHT, 0.0f, 0.0f,
+                      x, y, std::floor(fraction * (width + 1.0f)), HEIGHT);
+    }
+    else
+    {
+        m_ui.quad(x, y, width, HEIGHT, glm::vec4(0.0f, 0.0f, 0.0f, 0.85f));
+        m_ui.quad(x, y + 1.0f, width - 1.0f, HEIGHT - 2.0f, glm::vec4(0.16f, 0.16f, 0.16f, 1.0f));
+        if (fraction > 0.0f)
+            m_ui.quad(x, y + 1.0f, (width - 1.0f) * fraction, HEIGHT - 2.0f,
+                      glm::vec4(0.49f, 0.98f, 0.24f, 1.0f));
+    }
 
     // Level nought is not drawn at all, so an untouched HUD looks the
     // way it did before there was any experience in the game.
@@ -10043,6 +10093,20 @@ void Application::renderAir(float rightX, float y)
     const float share = m_player.air / Player::MAX_AIR_SECONDS;
     const float showing = share * BUBBLE_COUNT;
 
+    if (m_gui.has("sprites/hud/air"))
+    {
+        const int whole = static_cast<int>(std::ceil(std::max(0.0f, m_player.air - 0.1f) /
+                                                     Player::MAX_AIR_SECONDS * BUBBLE_COUNT));
+        const int popping = static_cast<int>(std::ceil(showing)) - whole;
+        for (int i = 0; i < BUBBLE_COUNT; ++i)
+        {
+            const float bubbleX = rightX - ICON_SIZE - i * HEART_PITCH;
+            if (i < whole) guiSprite("sprites/hud/air", bubbleX, y, ICON_SIZE, ICON_SIZE);
+            else if (i < whole + popping) guiSprite("sprites/hud/air_bursting", bubbleX, y, ICON_SIZE, ICON_SIZE);
+        }
+        return;
+    }
+
     for (int i = 0; i < BUBBLE_COUNT; ++i)
     {
         // Filled from the left, so the row empties towards the middle
@@ -10054,6 +10118,40 @@ void Application::renderAir(float rightX, float y)
                   glm::vec4(0.0f, 0.0f, 0.0f, 0.45f));
         m_ui.quad(bubbleX + 2.0f, y + 2.0f, ICON_SIZE - 4.0f, ICON_SIZE - 4.0f,
                   glm::vec4(0.78f, 0.90f, 1.0f, 0.95f));
+    }
+}
+
+void Application::renderEffectIcons(float w)
+{
+    static const char* ICONS[Effects::KIND_COUNT] = {
+        "../mob_effect/speed", "../mob_effect/slowness", "../mob_effect/strength",
+        "../mob_effect/weakness", "../mob_effect/regeneration", "../mob_effect/poison",
+        "../mob_effect/fire_resistance", "../mob_effect/water_breathing",
+        "../mob_effect/night_vision", "../mob_effect/jump_boost", "../mob_effect/bad_omen",
+    };
+    if (!m_gui.has("sprites/hud/effect_background")) return;
+
+    int good = 0;
+    int bad = 0;
+    for (int i = 0; i < Effects::KIND_COUNT; ++i)
+    {
+        const Effects::Kind kind = static_cast<Effects::Kind>(i);
+        if (!m_player.effects.has(kind)) continue;
+        const bool harmful = Effects::isHarmful(kind);
+        const int column = harmful ? ++bad : ++good;
+        const float x = w - 25.0f * static_cast<float>(column);
+        const float y = harmful ? 26.0f : 1.0f;
+        const float left = m_player.effects.secondsLeft(kind);
+        float alpha = 1.0f;
+        if (left <= 10.0f)
+        {
+            const float t = left * 20.0f;
+            alpha = static_cast<int>(t) % 20 < 10 ? 1.0f : 0.25f + 0.75f * (left / 10.0f);
+        }
+        guiSprite(kind == Effects::Kind::BadOmen ? "sprites/hud/effect_background_ambient"
+                                                 : "sprites/hud/effect_background",
+                  x, y, 24.0f, 24.0f);
+        guiSprite(ICONS[i], x + 3.0f, y + 3.0f, 18.0f, 18.0f, glm::vec4(1.0f, 1.0f, 1.0f, alpha));
     }
 }
 
@@ -10202,11 +10300,21 @@ void Application::renderHud()
     {
         m_ui.setInvert(true);
         const glm::vec4 white(1.0f);
+        if (guiSprite("sprites/hud/crosshair", std::floor((w - 15.0f) * 0.5f), std::floor((h - 15.0f) * 0.5f),
+                      15.0f, 15.0f))
+        {
+            m_ui.setInvert(false);
+        }
+        else
+        {
         m_ui.quad(cx - CROSSHAIR_ARM, cy - 0.5f, CROSSHAIR_ARM * 2.0f, 1.0f, white);
         m_ui.quad(cx - 0.5f, cy - CROSSHAIR_ARM, 1.0f, CROSSHAIR_ARM, white);
         m_ui.quad(cx - 0.5f, cy + 0.5f, 1.0f, CROSSHAIR_ARM - 0.5f, white);
         m_ui.setInvert(false);
+        }
     }
+
+    renderEffectIcons(w);
 
     // The hotbar, at Minecraft's own measurements: a hundred and
     // eighty-two across and twenty-two tall, hard against the bottom
@@ -10266,6 +10374,20 @@ void Application::renderHud()
         drawItem(slotX, slotY, ITEM_SIZE,
                  stack.id, m_player.creative() ? 0 : stack.count,
                  glm::vec4(1.0f), stack.damage);
+    }
+
+    {
+        const ItemStack& offhand = m_inventory.slot(Inventory::OFFHAND);
+        if (!offhand.empty())
+        {
+            if (!guiSprite("sprites/hud/hotbar_offhand_left", barX - 29.0f, h - 23.0f, 29.0f, 24.0f))
+            {
+                guiPanel(barX - 29.0f, h - 23.0f, 22.0f, 23.0f);
+                guiWell(barX - 26.0f, h - 20.0f, 18.0f, 18.0f);
+            }
+            drawItem(barX - 26.0f, h - 19.0f, ITEM_SIZE, offhand.id,
+                     m_player.creative() ? 0 : offhand.count, glm::vec4(1.0f), offhand.damage);
+        }
     }
 
     // Hearts are hidden in creative, like Minecraft.
@@ -10378,6 +10500,71 @@ void Application::guiWell(float x, float y, float w, float h)
     bevel(x, y, w, h, GUI_WELL, GUI_WELL_DARK, GUI_PANEL_LIGHT, 1.0f);
 }
 
+bool Application::guiBlit(const char* path, float x, float y, float u, float v, float w, float h,
+                          float texW, float texH, const glm::vec4& tint)
+{
+    const GuiImage* image = m_gui.image(path);
+    if (!image) return false;
+    m_ui.texturedQuad(image->texture, x, y, w, h, u / texW, v / texH, (u + w) / texW, (v + h) / texH, tint);
+    return true;
+}
+
+bool Application::guiSprite(const char* path, float x, float y, float w, float h, const glm::vec4& tint)
+{
+    const GuiImage* image = m_gui.image(path);
+    if (!image) return false;
+    if (image->sliceWidth > 0 && image->borderLeft + image->borderRight > 0)
+        return guiNineSlice(path, x, y, w, h, 1.0f, tint);
+    m_ui.texturedQuad(image->texture, x, y, w, h, 0.0f, 0.0f, 1.0f, 1.0f, tint);
+    return true;
+}
+
+bool Application::guiSpritePart(const char* path, float spriteW, float spriteH, float u, float v,
+                                float x, float y, float w, float h)
+{
+    const GuiImage* image = m_gui.image(path);
+    if (!image) return false;
+    if (w <= 0.0f || h <= 0.0f) return true;
+    m_ui.texturedQuad(image->texture, x, y, w, h, u / spriteW, v / spriteH,
+                      (u + w) / spriteW, (v + h) / spriteH, glm::vec4(1.0f));
+    return true;
+}
+
+bool Application::guiNineSlice(const char* path, float x, float y, float w, float h, float unit,
+                               const glm::vec4& tint)
+{
+    const GuiImage* image = m_gui.image(path);
+    if (!image) return false;
+
+    const float sw = static_cast<float>(image->sliceWidth > 0 ? image->sliceWidth : image->width);
+    const float sh = static_cast<float>(image->sliceHeight > 0 ? image->sliceHeight : image->height);
+    const float bl = static_cast<float>(image->borderLeft);
+    const float bt = static_cast<float>(image->borderTop);
+    const float br = static_cast<float>(image->borderRight);
+    const float bb = static_cast<float>(image->borderBottom);
+
+    const float l = std::min(bl * unit, w * 0.5f);
+    const float r = std::min(br * unit, w * 0.5f);
+    const float t = std::min(bt * unit, h * 0.5f);
+    const float b = std::min(bb * unit, h * 0.5f);
+
+    const float xs[4] = { x, x + l, x + w - r, x + w };
+    const float ys[4] = { y, y + t, y + h - b, y + h };
+    const float us[4] = { 0.0f, bl / sw, (sw - br) / sw, 1.0f };
+    const float vs[4] = { 0.0f, bt / sh, (sh - bb) / sh, 1.0f };
+
+    for (int row = 0; row < 3; ++row)
+        for (int column = 0; column < 3; ++column)
+        {
+            const float qw = xs[column + 1] - xs[column];
+            const float qh = ys[row + 1] - ys[row];
+            if (qw <= 0.0f || qh <= 0.0f) continue;
+            m_ui.texturedQuad(image->texture, xs[column], ys[row], qw, qh,
+                              us[column], vs[row], us[column + 1], vs[row + 1], tint);
+        }
+    return true;
+}
+
 bool Application::menuButton(const Rect& rect, const std::string& label, bool enabled)
 {
     // Menus are hit-tested during drawing, which bypasses the input gate in
@@ -10396,12 +10583,21 @@ bool Application::menuButton(const Rect& rect, const std::string& label, bool en
     const glm::vec4 face = !enabled ? BUTTON_FACE_OFF
                                     : (hovered ? BUTTON_FACE_HOVER : BUTTON_FACE);
 
-    m_ui.quad(rect.x - 3.0f, rect.y - 3.0f, rect.w + 6.0f, rect.h + 6.0f,
-              glm::vec4(0.0f, 0.0f, 0.0f, 0.75f));
-    bevel(rect.x, rect.y, rect.w, rect.h, face, BUTTON_LIGHT, BUTTON_DARK, 2.0f);
+    const float unit = static_cast<float>(guiScale()) / m_ui.scale();
+    const bool packed = guiNineSlice(!enabled ? "sprites/widget/button_disabled"
+                                     : hovered ? "sprites/widget/button_highlighted"
+                                               : "sprites/widget/button",
+                                     rect.x, rect.y, rect.w, rect.h, unit);
+    if (!packed)
+    {
+        m_ui.quad(rect.x - 3.0f, rect.y - 3.0f, rect.w + 6.0f, rect.h + 6.0f,
+                  glm::vec4(0.0f, 0.0f, 0.0f, 0.75f));
+        bevel(rect.x, rect.y, rect.w, rect.h, face, BUTTON_LIGHT, BUTTON_DARK, 2.0f);
+    }
 
     const float scale = PANEL_TEXT;
-    const glm::vec4 textColour = !enabled ? BUTTON_TEXT_OFF
+    const glm::vec4 textColour = packed ? (!enabled ? glm::vec4(0.627f, 0.627f, 0.627f, 1.0f) : TEXT_COLOR)
+                               : !enabled ? BUTTON_TEXT_OFF
                                           : (hovered ? BUTTON_TEXT_HOVER : TEXT_COLOR);
     m_ui.textWithShadow(label,
                         rect.x + rect.w * 0.5f - UIRenderer::textWidth(label, scale) * 0.5f,
@@ -10598,7 +10794,9 @@ void Application::renderMultiplayerScreen()
 
     if (games.empty())
     {
-        bevel(panelX, y, panelWidth, 46.0f, BUTTON_FACE_OFF, BUTTON_LIGHT, BUTTON_DARK, 2.0f);
+        if (!guiNineSlice("sprites/widget/button_disabled", panelX, y, panelWidth, 46.0f,
+                          static_cast<float>(guiScale()) / m_ui.scale()))
+            bevel(panelX, y, panelWidth, 46.0f, BUTTON_FACE_OFF, BUTTON_LIGHT, BUTTON_DARK, 2.0f);
         m_ui.textWithShadow("Searching...", panelX + 14.0f, y + 16.0f, 1.9f, DIM_TEXT);
         y += 58.0f;
     }
@@ -10712,8 +10910,11 @@ void Application::renderVideoScreen()
 
     if (menuButton({ buttonX, y, sideWidth, buttonHeight }, "-"))
         m_pendingAction = MenuAction::RenderDistanceDown;
-    bevel(buttonX + sideWidth + 8.0f, y, buttonWidth - sideWidth * 2.0f - 16.0f, buttonHeight,
-          BUTTON_FACE_OFF, BUTTON_LIGHT, BUTTON_DARK, 2.0f);
+    if (!guiNineSlice("sprites/widget/slider", buttonX + sideWidth + 8.0f, y,
+                      buttonWidth - sideWidth * 2.0f - 16.0f, buttonHeight,
+                      static_cast<float>(guiScale()) / m_ui.scale()))
+        bevel(buttonX + sideWidth + 8.0f, y, buttonWidth - sideWidth * 2.0f - 16.0f, buttonHeight,
+              BUTTON_FACE_OFF, BUTTON_LIGHT, BUTTON_DARK, 2.0f);
     m_ui.textWithShadow(label,
                         buttonX + buttonWidth * 0.5f - UIRenderer::textWidth(label, 2.2f) * 0.5f,
                         y + buttonHeight * 0.5f - UIRenderer::textHeight(2.2f) * 0.5f,
@@ -10926,9 +11127,13 @@ void Application::renderNameEntryScreen()
     m_ui.text("Username", rightX, y, textScale, GUI_TEXT);
     y += label + 6.0f * ui;
 
-    roundedQuad(rightX - 3.0f, y - 3.0f, rightWidth + 6.0f, fieldHeight + 6.0f,
-                glm::vec4(0.627f, 0.627f, 0.627f, 1.0f), 5.0f);
-    roundedQuad(rightX, y, rightWidth, fieldHeight, glm::vec4(0.0f, 0.0f, 0.0f, 1.0f), 4.0f);
+    if (!guiNineSlice("sprites/widget/text_field_highlighted", rightX, y, rightWidth, fieldHeight,
+                      static_cast<float>(guiScale()) / m_ui.scale()))
+    {
+        roundedQuad(rightX - 3.0f, y - 3.0f, rightWidth + 6.0f, fieldHeight + 6.0f,
+                    glm::vec4(0.627f, 0.627f, 0.627f, 1.0f), 5.0f);
+        roundedQuad(rightX, y, rightWidth, fieldHeight, glm::vec4(0.0f, 0.0f, 0.0f, 1.0f), 4.0f);
+    }
 
     const bool caretOn = ((SDL_GetTicks() / 500u) % 2u) == 0u;
     const float nameScale = 2.6f * ui;

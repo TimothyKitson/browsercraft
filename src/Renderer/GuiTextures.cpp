@@ -4,6 +4,8 @@
 #include <vector>
 #include <string>
 #include <cstdio>
+#include <cstring>
+#include <algorithm>
 
 #ifndef GL_RGBA8
 #define GL_RGBA8 0x8058
@@ -127,12 +129,12 @@ GuiTextures::GuiTextures()
     };
 
     const Entry ENTRIES[] = {
-        { GuiSprite::HeartFull,              "heart_full.png",              false, false, false },
-        { GuiSprite::HeartHalf,              "heart_half.png",              true,  false, false },
-        { GuiSprite::HeartContainer,         "heart_container.png",         false, true,  false },
-        { GuiSprite::HeartHardcoreFull,      "heart_hardcore_full.png",     false, false, true  },
-        { GuiSprite::HeartHardcoreHalf,      "heart_hardcore_half.png",     true,  false, true  },
-        { GuiSprite::HeartHardcoreContainer, "heart_hardcore_container.png",false, true,  true  },
+        { GuiSprite::HeartFull,              "sprites/hud/heart/full|heart_full.png",              false, false, false },
+        { GuiSprite::HeartHalf,              "sprites/hud/heart/half|heart_half.png",              true,  false, false },
+        { GuiSprite::HeartContainer,         "sprites/hud/heart/container|heart_container.png",         false, true,  false },
+        { GuiSprite::HeartHardcoreFull,      "sprites/hud/heart/hardcore_full|heart_hardcore_full.png",     false, false, true  },
+        { GuiSprite::HeartHardcoreHalf,      "sprites/hud/heart/hardcore_half|heart_hardcore_half.png",     true,  false, true  },
+        { GuiSprite::HeartHardcoreContainer, "sprites/hud/heart/container_hardcore|heart_hardcore_container.png",false, true,  true  },
     };
 
     for (const Entry& entry : ENTRIES)
@@ -150,9 +152,9 @@ GuiTextures::GuiTextures()
     };
 
     const FoodEntry FOOD[] = {
-        { GuiSprite::FoodFull,      "food_full.png",  false, false },
-        { GuiSprite::FoodHalf,      "food_half.png",  true,  false },
-        { GuiSprite::FoodContainer, "food_empty.png", false, true  },
+        { GuiSprite::FoodFull,      "sprites/hud/food_full|food_full.png",  false, false },
+        { GuiSprite::FoodHalf,      "sprites/hud/food_half|food_half.png",  true,  false },
+        { GuiSprite::FoodContainer, "sprites/hud/food_empty|food_empty.png", false, true  },
     };
 
     for (const FoodEntry& entry : FOOD)
@@ -162,8 +164,8 @@ GuiTextures::GuiTextures()
     }
 
     // No procedural stand-in for these: the HUD falls back to flat panels.
-    loadFromFile(GuiSprite::Hotbar, "hotbar.png");
-    loadFromFile(GuiSprite::HotbarSelection, "hotbar_selection.png");
+    loadFromFile(GuiSprite::Hotbar, "sprites/hud/hotbar|hotbar.png");
+    loadFromFile(GuiSprite::HotbarSelection, "sprites/hud/hotbar_selection|hotbar_selection.png");
 
     // The armour row above the hearts.
     struct PlateEntry
@@ -175,9 +177,9 @@ GuiTextures::GuiTextures()
     };
 
     const PlateEntry PLATES[] = {
-        { GuiSprite::ArmorFull,  "armor_full.png",  false, false },
-        { GuiSprite::ArmorHalf,  "armor_half.png",  true,  false },
-        { GuiSprite::ArmorEmpty, "armor_empty.png", false, true  },
+        { GuiSprite::ArmorFull,  "sprites/hud/armor_full|armor_full.png",  false, false },
+        { GuiSprite::ArmorHalf,  "sprites/hud/armor_half|armor_half.png",  true,  false },
+        { GuiSprite::ArmorEmpty, "sprites/hud/armor_empty|armor_empty.png", false, true  },
     };
 
     for (const PlateEntry& entry : PLATES)
@@ -189,10 +191,10 @@ GuiTextures::GuiTextures()
     // Armour slot ghosts. Vanilla packs name these files, so a pack that
     // has them wins; otherwise the silhouettes above are drawn.
     const char* ARMOR_FILES[4] = {
-        "empty_armor_slot_helmet.png",
-        "empty_armor_slot_chestplate.png",
-        "empty_armor_slot_leggings.png",
-        "empty_armor_slot_boots.png",
+        "sprites/container/slot/helmet|empty_armor_slot_helmet.png",
+        "sprites/container/slot/chestplate|empty_armor_slot_chestplate.png",
+        "sprites/container/slot/leggings|empty_armor_slot_leggings.png",
+        "sprites/container/slot/boots|empty_armor_slot_boots.png",
     };
     for (int piece = 0; piece < 4; ++piece)
     {
@@ -207,14 +209,25 @@ GuiTextures::~GuiTextures()
 {
     for (unsigned int id : m_textures)
         if (id) glDeleteTextures(1, &id);
+    for (auto& entry : m_images)
+        if (entry.second.texture) glDeleteTextures(1, &entry.second.texture);
 }
 
-bool GuiTextures::loadFromFile(GuiSprite sprite, const char* fileName)
+bool GuiTextures::loadFromFile(GuiSprite sprite, const char* fileNames)
 {
-    const std::string path = std::string(GUI_DIRECTORY) + "/" + fileName;
+    const std::string names(fileNames);
+    const size_t bar = names.find('|');
+    const std::string vanilla = bar == std::string::npos ? std::string() : names.substr(0, bar);
+    const std::string flat = bar == std::string::npos ? names : names.substr(bar + 1);
 
     int width = 0, height = 0, channels = 0;
-    unsigned char* data = stbi_load(path.c_str(), &width, &height, &channels, 4);
+    unsigned char* data = nullptr;
+    if (!vanilla.empty())
+    {
+        data = stbi_load((std::string(GUI_DIRECTORY) + "/" + vanilla + ".png").c_str(), &width, &height, &channels, 4);
+    }
+    if (!data)
+        data = stbi_load((std::string(GUI_DIRECTORY) + "/" + flat).c_str(), &width, &height, &channels, 4);
     if (!data) return false;
 
     upload(sprite, data, width, height);
@@ -368,4 +381,136 @@ void GuiTextures::upload(GuiSprite sprite, const unsigned char* rgba, int width,
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, rgba);
     glBindTexture(GL_TEXTURE_2D, 0);
+}
+
+const GuiImage* GuiTextures::image(const std::string& path)
+{
+    auto found = m_images.find(path);
+    if (found != m_images.end()) return found->second.texture ? &found->second : nullptr;
+
+    GuiImage& entry = m_images[path];
+    const std::string file = std::string(GUI_DIRECTORY) + "/" + path + ".png";
+    int width = 0, height = 0, channels = 0;
+    unsigned char* data = stbi_load(file.c_str(), &width, &height, &channels, 4);
+    if (!data) return nullptr;
+
+    std::vector<unsigned char> pixels(data, data + static_cast<size_t>(width) * height * 4);
+    stbi_image_free(data);
+    for (size_t i = 0; i + 3 < pixels.size(); i += 4)
+        if (pixels[i + 3] == 0) pixels[i] = pixels[i + 1] = pixels[i + 2] = 0;
+
+    entry.width = width;
+    entry.height = height;
+    readMeta(file + ".mcmeta", entry);
+
+    if (entry.frames > 1 && height >= width * entry.frames)
+    {
+        height = width;
+        pixels.resize(static_cast<size_t>(width) * height * 4);
+        entry.height = height;
+    }
+
+    int uploadW = width, uploadH = height;
+    while ((uploadW > 1024 || uploadH > 1024) && uploadW % 2 == 0 && uploadH % 2 == 0)
+    {
+        const int halfW = uploadW / 2, halfH = uploadH / 2;
+        std::vector<unsigned char> half(static_cast<size_t>(halfW) * halfH * 4);
+        for (int y = 0; y < halfH; ++y)
+            for (int x = 0; x < halfW; ++x)
+                for (int c = 0; c < 4; ++c)
+                {
+                    int sum = 0;
+                    for (int dy = 0; dy < 2; ++dy)
+                        for (int dx = 0; dx < 2; ++dx)
+                            sum += pixels[((static_cast<size_t>(y) * 2 + dy) * uploadW + x * 2 + dx) * 4 + c];
+                    half[(static_cast<size_t>(y) * halfW + x) * 4 + c] = static_cast<unsigned char>(sum / 4);
+                }
+        pixels.swap(half);
+        uploadW = halfW;
+        uploadH = halfH;
+    }
+
+    const bool smooth = uploadW >= 512 || uploadH >= 512 ||
+                        (entry.sliceWidth > 0 && uploadW > entry.sliceWidth * 2);
+
+    glGenTextures(1, &entry.texture);
+    glBindTexture(GL_TEXTURE_2D, entry.texture);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, uploadW, uploadH, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());
+    if (smooth && entry.width > 256 * 2)
+    {
+        glGenerateMipmap(GL_TEXTURE_2D);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    }
+    else
+    {
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    }
+    glBindTexture(GL_TEXTURE_2D, 0);
+    return &entry;
+}
+
+bool GuiTextures::has(const std::string& path)
+{
+    return image(path) != nullptr;
+}
+
+void GuiTextures::readMeta(const std::string& file, GuiImage& entry)
+{
+    std::FILE* in = std::fopen(file.c_str(), "rb");
+    if (!in) return;
+    std::string text;
+    char buffer[512];
+    size_t got = 0;
+    while ((got = std::fread(buffer, 1, sizeof(buffer), in)) > 0) text.append(buffer, got);
+    std::fclose(in);
+
+    auto number = [&](const char* key, size_t from, int fallback) {
+        const size_t at = text.find(std::string("\"") + key + "\"", from);
+        if (at == std::string::npos) return fallback;
+        const size_t colon = text.find(':', at);
+        if (colon == std::string::npos) return fallback;
+        return std::atoi(text.c_str() + colon + 1);
+    };
+
+    const size_t scaling = text.find("\"scaling\"");
+    if (scaling != std::string::npos)
+    {
+        if (text.find("nine_slice", scaling) != std::string::npos)
+        {
+            entry.sliceWidth = number("width", scaling, 0);
+            entry.sliceHeight = number("height", scaling, 0);
+            const size_t border = text.find("\"border\"", scaling);
+            if (border != std::string::npos)
+            {
+                const size_t colon = text.find(':', border);
+                size_t at = colon + 1;
+                while (at < text.size() && (text[at] == ' ' || text[at] == '\n' || text[at] == '\r' || text[at] == '\t')) ++at;
+                if (at < text.size() && text[at] == '{')
+                {
+                    entry.borderLeft = number("left", at, 0);
+                    entry.borderTop = number("top", at, 0);
+                    entry.borderRight = number("right", at, 0);
+                    entry.borderBottom = number("bottom", at, 0);
+                }
+                else
+                {
+                    const int all = std::atoi(text.c_str() + colon + 1);
+                    entry.borderLeft = entry.borderTop = entry.borderRight = entry.borderBottom = all;
+                }
+            }
+        }
+        else if (text.find("stretch", scaling) == std::string::npos && text.find("tile", scaling) != std::string::npos)
+        {
+            entry.tiled = true;
+            entry.sliceWidth = number("width", scaling, 0);
+            entry.sliceHeight = number("height", scaling, 0);
+        }
+    }
+
+    if (text.find("\"animation\"") != std::string::npos && entry.width > 0)
+        entry.frames = std::max(1, entry.height / entry.width);
 }

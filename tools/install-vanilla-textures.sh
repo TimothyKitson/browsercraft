@@ -6,7 +6,7 @@
 #
 #   tools/install-vanilla-textures.sh ~/Downloads/1.21/textures
 #
-# What goes where: block/ and item/ are the atlas, gui/ is the HUD, and
+# What goes where: block/ and item/ are the atlas, gui/ is every screen and the HUD, and
 # the entity sheets are picked out one at a time, because this engine
 # names its mobs after the species rather than after Mojang's file paths.
 #
@@ -66,7 +66,15 @@ gui gui/sprites/hud/hotbar_selection.png        hotbar_selection.png
 for piece in helmet chestplate leggings boots; do
     gui "item/empty_armor_slot_$piece.png" "empty_armor_slot_$piece.png"
 done
-echo "HUD: $(ls "$root/assets/textures/gui" | wc -l) sprites"
+cp -r "$src/gui/." "$root/assets/textures/gui/"
+echo "GUI: $(find "$root/assets/textures/gui" -name '*.png' | wc -l) files"
+
+for extra in environment particle painting mob_effect misc map font colormap models trims effect entity; do
+    if [ -d "$src/$extra" ]; then
+        rm -rf "$root/assets/textures/$extra"
+        cp -r "$src/$extra" "$root/assets/textures/$extra"
+    fi
+done
 
 # The mobs, one at a time. A species whose sheet is not where this says
 # falls back to the hide the game paints for itself, which is why every

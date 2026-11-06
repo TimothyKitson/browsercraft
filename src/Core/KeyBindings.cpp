@@ -46,6 +46,7 @@ namespace
         { Action::Mute,      "MUTE SOUND",       "mute",      key(SDL_SCANCODE_M) },
         { Action::RenderDistanceDown, "RENDER DISTANCE -", "distdown", key(SDL_SCANCODE_LEFTBRACKET) },
         { Action::RenderDistanceUp,   "RENDER DISTANCE +", "distup",   key(SDL_SCANCODE_RIGHTBRACKET) },
+        { Action::SwapHands, "SWAP ITEM WITH OFFHAND", "swaphands", key(SDL_SCANCODE_X) },
     };
 
     static_assert(sizeof(ENTRIES) / sizeof(ENTRIES[0]) == static_cast<size_t>(Action::Count),

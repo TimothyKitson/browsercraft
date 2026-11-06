@@ -887,6 +887,7 @@ private:
     void renderFood(float rightX, float y);
     void renderExperience(float x, float y, float width);
     void renderAir(float rightX, float y);
+    void renderEffectIcons(float w);
     void renderEatProgress(float cx, float cy);
     void handleEating(float deltaTime);
     void handleDrinking(float deltaTime);
@@ -917,6 +918,15 @@ private:
 
     void guiPanel(float x, float y, float w, float h);
     void guiWell(float x, float y, float w, float h);
+    bool guiBlit(const char* path, float x, float y, float u, float v, float w, float h,
+                 float texW = 256.0f, float texH = 256.0f, const glm::vec4& tint = glm::vec4(1.0f));
+    bool guiSprite(const char* path, float x, float y, float w, float h,
+                   const glm::vec4& tint = glm::vec4(1.0f));
+    bool guiSpritePart(const char* path, float spriteW, float spriteH, float u, float v,
+                       float x, float y, float w, float h);
+    bool guiNineSlice(const char* path, float x, float y, float w, float h, float unit,
+                      const glm::vec4& tint = glm::vec4(1.0f));
+    bool guiHas(const char* path) { return m_gui.has(path); }
     void centredText(const std::string& text, float y, float scale, const glm::vec4& colour);
     void applyMenuAction();
 
