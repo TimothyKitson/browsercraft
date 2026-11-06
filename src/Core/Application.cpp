@@ -9369,7 +9369,6 @@ void Application::renderWorldShaded()
     queueBeams();
     m_beams.render(world);
     m_books.render(world, *m_world);
-    castShadows(view, projection);
     world.bind();
     m_atlas.bind(0, 1, 2);
     renderPlayers(view, projection);
