@@ -81,6 +81,10 @@ namespace
         { "drip_hang", 0, { 0.25f, 0.35f, 1.0f }, false, false, false },
         { "drip_hang", 0, { 1.0f, 0.4f, 0.05f }, false, false, true },
         { "drip_land", 0, { 1.0f, 0.4f, 0.05f }, false, false, true },
+        { "generic_0", 0, { 0.3f, 0.3f, 0.3f }, false, false, false },
+        { "generic_0", 0, { 0.85f, 0.85f, 0.85f }, false, false, false },
+        { "generic_0", 0, { 0.9f, 0.4f, 0.5f }, false, false, false },
+        { "generic_0", 0, { 0.1f, 0.1f, 0.3f }, false, false, false },
     };
     static_assert(sizeof(KINDS) / sizeof(KINDS[0]) == static_cast<size_t>(SpriteParticles::Kind::Count),
                   "one definition per kind");
@@ -124,6 +128,25 @@ void SpriteParticles::buildAtlas()
 
             int width = 0, height = 0, channels = 0;
             unsigned char* data = Packs::load(file.c_str(), &width, &height, &channels, 4);
+            if (!data && kind >= static_cast<int>(Kind::Ash))
+            {
+                const int cellX = (next % ACROSS) * CELL;
+                const int cellY = (next / ACROSS) * CELL;
+                const int from = CELL / 2 - CELL / 8, to = CELL / 2 + CELL / 8;
+                for (int y = from; y < to; ++y)
+                    for (int x = from; x < to; ++x)
+                    {
+                        unsigned char* q = &atlas[(static_cast<size_t>(cellY + y) * SIZE + cellX + x) * 4];
+                        q[0] = static_cast<unsigned char>(255.0f * def.tint.r);
+                        q[1] = static_cast<unsigned char>(255.0f * def.tint.g);
+                        q[2] = static_cast<unsigned char>(255.0f * def.tint.b);
+                        q[3] = 255;
+                    }
+                ++next;
+                ++frames.count;
+                ++found;
+                continue;
+            }
             if (!data) continue;
             const int side = std::min(width, height);
 

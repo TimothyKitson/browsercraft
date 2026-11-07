@@ -330,7 +330,7 @@ namespace
             {
                 const int midX = spot.chunkX * Structures::CHUNK + 8;
                 const int midZ = spot.chunkZ * Structures::CHUNK + 8;
-                if (WorldGen::landmarkSuits(kind, over.biomeAt(midX, midZ)))
+                if (WorldGen::landmarkSuits(kind, over.kindAt(midX, midZ)))
                     blocks = builtAt(over, spot.chunkX, spot.chunkZ, 1,
                                      [](BlockId b) { return b == Blocks::Chest; });
             }
@@ -428,15 +428,14 @@ namespace
             for (int k = 0; k < EntityManager::seaSpeciesCount(); ++k)
                 if (EntityManager::seaSpecies(k) == id) { note("sea"); break; }
 
-            for (int b = 0; b <= static_cast<int>(Biome::Swamp); ++b)
+            for (int b = 0; b < Biomes::COUNT; ++b)
             {
-                const Biome where2 = static_cast<Biome>(b);
                 bool found = false;
-                for (int roll = 0; roll < 64 && !found; ++roll)
+                for (int roll = 0; roll < 200 && !found; ++roll)
                 {
-                    const float r = roll / 64.0f;
-                    if (EntityManager::biomeSpecies(where2, r) == id) found = true;
-                    if (EntityManager::biomeNight(where2, r) == id) found = true;
+                    const float r = static_cast<float>(roll) / 200.0f;
+                    if (EntityManager::pickSpawn(static_cast<Biomes::Kind>(b), Biomes::Group::Creature, r) == id) found = true;
+                    if (EntityManager::pickSpawn(static_cast<Biomes::Kind>(b), Biomes::Group::Monster, r) == id) found = true;
                 }
                 if (found) { note("biome"); break; }
             }

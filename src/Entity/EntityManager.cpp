@@ -24,48 +24,8 @@ namespace
     // The chances are read in order and add up, so a biome's rows
     // must total less than one: whatever is left over is the ordinary
     // livestock, which is most of what you meet anywhere.
-    struct BiomeLife { Biome where; MobId who; float chance; };
-    const BiomeLife BIOME_LIFE[] = {
-        { Biome::Forest,    MobId::Wolf,      0.16f },
-        { Biome::Forest,    MobId::Fox,       0.14f },
-        { Biome::Plains,    MobId::Horse,     0.12f },
-        { Biome::Plains,    MobId::Bee,       0.12f },
-        { Biome::Plains,    MobId::Rabbit,    0.10f },
-        { Biome::Desert,    MobId::Rabbit,    0.34f },
-        { Biome::Snowy,     MobId::PolarBear, 0.16f },
-        { Biome::Snowy,     MobId::Rabbit,    0.18f },
-        { Biome::Mountains, MobId::Goat,      0.30f },
-        { Biome::Mountains, MobId::Llama,     0.16f },
-        { Biome::Savanna,   MobId::Llama,     0.26f },
-        { Biome::Savanna,   MobId::Horse,     0.14f },
-        { Biome::Savanna,   MobId::Armadillo, 0.14f },
-        { Biome::Badlands,  MobId::Armadillo, 0.40f },
-        { Biome::Jungle,    MobId::Panda,     0.18f },
-        { Biome::Jungle,    MobId::Cat,       0.16f },
-        { Biome::Jungle,    MobId::Parrot,    0.16f },
-        { Biome::Desert,    MobId::Camel,     0.16f },
-    };
-    // No breeze. It comes out of a trial spawner and nowhere else,
-    // which is Minecraft's -- it was in this list only while there
-    // were no chambers for it to come out of.
-    const MobId HOSTILE_SPECIES[] = { MobId::Zombie, MobId::Skeleton, MobId::Creeper,
-                                      MobId::Spider, MobId::Enderman,
-                                      MobId::ZombieVillager, MobId::Phantom };
-
-    // And what a particular place has after dark. Same shape as the
-    // daytime table: the rows for a biome are read in order and add
-    // up, and whatever is left over is the ordinary five above.
-    const BiomeLife BIOME_NIGHT[] = {
-        { Biome::Snowy,  MobId::Stray,  0.34f },
-        { Biome::Desert, MobId::Husk,   0.40f },
-        { Biome::Swamp,  MobId::Bogged, 0.34f },
-    };
-
-    // The Nether has its own, and nothing else belongs there: a sheep on
-    // netherrack and a piglin in a meadow are both wrong.
-    const MobId NETHER_SPECIES[] = { MobId::ZombiePigman, MobId::WitherSkeleton,
-                                     MobId::MagmaCube, MobId::Blaze, MobId::Ghast,
-                                     MobId::Piglin, MobId::Hoglin, MobId::Strider };
+    const MobId FORTRESS_SPECIES[] = { MobId::Blaze, MobId::Blaze, MobId::WitherSkeleton, MobId::WitherSkeleton, MobId::ZombiePigman,
+                                       MobId::MagmaCube, MobId::Skeleton };
 
     // Underground, which until now had nothing at all: the spawner
     // only ever looked down from the sky, so the first standable
@@ -89,10 +49,6 @@ namespace
     // to the bottom of the world rather than the first cave you find.
     constexpr int SLIME_CEILING = 40;
 
-    // The End has endermen and nothing else, which is also true of
-    // Minecraft's. The enderman is the one species in two lists: it
-    // belongs to the End and wanders the overworld at night.
-    const MobId END_SPECIES[] = { MobId::Enderman, MobId::Endermite };
 
     // The world as the pathfinder sees it: can a mob of this height
     // stand here, with a floor under it and nothing in the way.
@@ -162,43 +118,100 @@ int EntityManager::surfaceBelow(const World& world, int x, int startY, int z) co
     return -1;
 }
 
+namespace
+{
+    std::vector<MobId> spawnUnion(Dimension dimension, bool creatures, std::initializer_list<MobId> extra)
+    {
+        std::vector<MobId> out;
+        int count = 0;
+        const Biomes::Spawn* rows = Biomes::spawns(count);
+        auto add = [&out](MobId mob) {
+            if (mob != MobId::Count && std::find(out.begin(), out.end(), mob) == out.end()) out.push_back(mob);
+        };
+        for (int i = 0; i < count; ++i)
+        {
+            if (Biomes::dimension(rows[i].kind) != dimension) continue;
+            const bool monster = rows[i].group == static_cast<uint8_t>(Biomes::Group::Monster);
+            const bool creature = rows[i].group == static_cast<uint8_t>(Biomes::Group::Creature);
+            if (monster || (creatures && creature)) add(EntityManager::mobFromId(rows[i].mob));
+        }
+        for (MobId mob : extra) add(mob);
+        return out;
+    }
+
+    const std::vector<MobId>& nightList()
+    {
+        static const std::vector<MobId> LIST = spawnUnion(Dimension::Overworld, false, { MobId::Phantom });
+        return LIST;
+    }
+
+    const std::vector<MobId>& netherList()
+    {
+        static const std::vector<MobId> LIST = spawnUnion(Dimension::Nether, true,
+                                                          { MobId::Blaze, MobId::WitherSkeleton, MobId::Skeleton, MobId::MagmaCube });
+        return LIST;
+    }
+
+    const std::vector<MobId>& endList()
+    {
+        static const std::vector<MobId> LIST = spawnUnion(Dimension::End, false, { MobId::Endermite });
+        return LIST;
+    }
+}
+
 int EntityManager::nightSpeciesCount()
 {
-    return static_cast<int>(std::size(HOSTILE_SPECIES));
+    return static_cast<int>(nightList().size());
 }
 
 MobId EntityManager::nightSpecies(int index)
 {
     const int count = nightSpeciesCount();
-    return HOSTILE_SPECIES[((index % count) + count) % count];
+    return nightList()[static_cast<size_t>(((index % count) + count) % count)];
 }
 
-namespace
+MobId EntityManager::mobFromId(const std::string& id)
 {
-    // The two tables are read the same way, so they are read by the
-    // same function: a biome's rows in order, adding up, and
-    // MobId::Count when the roll runs off the end of them.
-    MobId pickLocal(const BiomeLife* rows, size_t count, Biome where, float roll)
+    const std::string wanted = id.rfind("minecraft:", 0) == 0 ? id.substr(10) : id;
+    for (int m = 0; m < static_cast<int>(MobId::Count); ++m)
     {
-        float seen = 0.0f;
-        for (size_t i = 0; i < count; ++i)
-        {
-            if (rows[i].where != where) continue;
-            seen += rows[i].chance;
-            if (roll < seen) return rows[i].who;
-        }
-        return MobId::Count;
+        std::string name = mobType(static_cast<MobId>(m)).name ? mobType(static_cast<MobId>(m)).name : "";
+        for (char& c : name) c = c == ' ' ? '_' : static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+        if (name == wanted) return static_cast<MobId>(m);
     }
+    return MobId::Count;
 }
 
-MobId EntityManager::biomeSpecies(Biome where, float roll)
+MobId EntityManager::pickSpawn(Biomes::Kind kind, Biomes::Group group, float roll)
 {
-    return pickLocal(BIOME_LIFE, std::size(BIOME_LIFE), where, roll);
-}
-
-MobId EntityManager::biomeNight(Biome where, float roll)
-{
-    return pickLocal(BIOME_NIGHT, std::size(BIOME_NIGHT), where, roll);
+    struct Entry
+    {
+        MobId mob;
+        int weight;
+    };
+    static const std::vector<std::vector<Entry>> TABLE = [] {
+        std::vector<std::vector<Entry>> table(static_cast<size_t>(Biomes::COUNT) * static_cast<size_t>(Biomes::Group::Count));
+        int count = 0;
+        const Biomes::Spawn* rows = Biomes::spawns(count);
+        for (int i = 0; i < count; ++i)
+        {
+            const MobId mob = mobFromId(rows[i].mob);
+            if (mob == MobId::Count || rows[i].weight <= 0) continue;
+            table[static_cast<size_t>(rows[i].kind) * static_cast<size_t>(Biomes::Group::Count) + rows[i].group].push_back({ mob, rows[i].weight });
+        }
+        return table;
+    }();
+    const std::vector<Entry>& entries = TABLE[static_cast<size_t>(kind) * static_cast<size_t>(Biomes::Group::Count) + static_cast<size_t>(group)];
+    int total = 0;
+    for (const Entry& entry : entries) total += entry.weight;
+    if (total <= 0) return MobId::Count;
+    int pick = std::min(total - 1, static_cast<int>(roll * static_cast<float>(total)));
+    for (const Entry& entry : entries)
+    {
+        if (pick < entry.weight) return entry.mob;
+        pick -= entry.weight;
+    }
+    return MobId::Count;
 }
 
 bool EntityManager::glowSquidWater(const World& world, int x, int y, int z)
@@ -247,24 +260,24 @@ MobId EntityManager::caveSpecies(int index)
 
 int EntityManager::netherSpeciesCount()
 {
-    return static_cast<int>(std::size(NETHER_SPECIES));
+    return static_cast<int>(netherList().size());
 }
 
 MobId EntityManager::netherSpecies(int index)
 {
     const int count = netherSpeciesCount();
-    return NETHER_SPECIES[((index % count) + count) % count];
+    return netherList()[static_cast<size_t>(((index % count) + count) % count)];
 }
 
 int EntityManager::endSpeciesCount()
 {
-    return static_cast<int>(std::size(END_SPECIES));
+    return static_cast<int>(endList().size());
 }
 
 MobId EntityManager::endSpecies(int index)
 {
     const int count = endSpeciesCount();
-    return END_SPECIES[((index % count) + count) % count];
+    return endList()[static_cast<size_t>(((index % count) + count) % count)];
 }
 
 bool EntityManager::roomFor(const MobType& type, BlockId block)
@@ -399,22 +412,24 @@ void EntityManager::trySpawnWave(const World& world, const glm::vec3& playerPosi
         MobId species;
         if (m_dimension == Dimension::End)
         {
-            constexpr int END_COUNT = static_cast<int>(std::size(END_SPECIES));
-            species = END_SPECIES[static_cast<int>(random01() * END_COUNT) % END_COUNT];
+            species = random01() < 0.05f ? MobId::Endermite : pickSpawn(world.generator().endKindAt(x, z), Biomes::Group::Monster, random01());
+            if (species == MobId::Count) continue;
+        }
+        else if (m_dimension != Dimension::Overworld && ground == Blocks::NetherBricks)
+        {
+            constexpr int FORTRESS_COUNT = static_cast<int>(std::size(FORTRESS_SPECIES));
+            species = FORTRESS_SPECIES[static_cast<int>(random01() * FORTRESS_COUNT) % FORTRESS_COUNT];
         }
         else if (m_dimension != Dimension::Overworld)
         {
-            constexpr int NETHER_COUNT = static_cast<int>(std::size(NETHER_SPECIES));
-            species = NETHER_SPECIES[static_cast<int>(random01() * NETHER_COUNT) % NETHER_COUNT];
-            const Biome forest = world.generator().netherBiomeAt(x, z);
-            const float pick = random01();
-            if (forest == Biome::CrimsonForest && pick < 0.7f)
-                species = pick < 0.4f ? MobId::Hoglin : MobId::Piglin;
-            else if (forest == Biome::WarpedForest && pick < 0.7f)
-                species = MobId::Enderman;
+            const Biomes::Kind kind = world.generator().netherKindAt(x, z);
+            species = pickSpawn(kind, random01() < 0.2f ? Biomes::Group::Creature : Biomes::Group::Monster, random01());
+            if (species == MobId::Count) species = pickSpawn(kind, Biomes::Group::Monster, random01());
+            if (species == MobId::Count) continue;
         }
         else if (underground)
         {
+            if (world.generator().kindAt(x, y, z) == Biomes::Kind::DeepDark) continue;
             constexpr int CAVE_COUNT = static_cast<int>(std::size(CAVE_SPECIES));
             species = CAVE_SPECIES[static_cast<int>(random01() * CAVE_COUNT) % CAVE_COUNT];
 
@@ -426,17 +441,10 @@ void EntityManager::trySpawnWave(const World& world, const glm::vec3& playerPosi
         {
             // What this place has after dark, if it has anything, and
             // the ordinary five otherwise.
-            const Biome here = world.generator().biomeAt(x, z);
-            if (here == Biome::MushroomFields) continue;
-            const MobId local = biomeNight(here, random01());
-
-            if (local != MobId::Count) species = local;
-            else
-            {
-                constexpr int HOSTILE_COUNT = static_cast<int>(std::size(HOSTILE_SPECIES));
-                species = HOSTILE_SPECIES[static_cast<int>(random01() * HOSTILE_COUNT) %
-                                          HOSTILE_COUNT];
-            }
+            const Biomes::Kind kind = world.generator().kindAt(x, z);
+            species = random01() < 0.03f ? MobId::Phantom : pickSpawn(kind, Biomes::Group::Monster, random01());
+            if (species == MobId::Count) continue;
+            if (species == MobId::Slime && kind != Biomes::Kind::Swamp && kind != Biomes::Kind::MangroveSwamp) continue;
         }
         else
         {
@@ -460,8 +468,10 @@ void EntityManager::trySpawnWave(const World& world, const glm::vec3& playerPosi
                 // Mostly villagers, with the occasional golem on patrol
                 // and some livestock between the houses.
                 const float roll = random01();
+                const bool desert = world.generator().biomeAt(x, z) == Biome::Desert;
                 species = roll < 0.70f  ? MobId::Villager
                         : roll < 0.78f  ? MobId::IronGolem
+                        : roll < 0.84f  ? (desert && roll < 0.81f ? MobId::Camel : MobId::Cat)
                                         : PASSIVE_SPECIES[static_cast<int>(random01() * 4.0f) & 3];
             }
             else
@@ -469,20 +479,11 @@ void EntityManager::trySpawnWave(const World& world, const glm::vec3& playerPosi
                 // What this particular biome has, if it has anything.
                 // Out in the country they are rare enough that meeting
                 // one is an event rather than livestock.
-                const Biome here = world.generator().biomeAt(x, z);
-                const MobId local = biomeSpecies(here, random01());
-
-                if (local != MobId::Count) species = local;
-                else
-                {
-                    // A wandering trader belongs to no biome and no
-                    // village: he turns up where you are, which is
-                    // the whole of what one is.
-                    const float roll = random01();
-                    species = roll < 0.015f ? MobId::WanderingTrader
-                            : roll < 0.035f ? MobId::Villager
-                            : PASSIVE_SPECIES[static_cast<int>(random01() * 4.0f) & 3];
-                }
+                const float roll = random01();
+                species = roll < 0.015f ? MobId::WanderingTrader
+                        : roll < 0.035f ? MobId::Villager
+                                        : pickSpawn(world.generator().kindAt(x, z), Biomes::Group::Creature, random01());
+                if (species == MobId::Count) continue;
             }
         }
 

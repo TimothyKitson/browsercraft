@@ -2428,6 +2428,26 @@ bool WorldGen::landmarkSuits(Landmark kind, Biome biome)
     return false;
 }
 
+bool WorldGen::landmarkSuits(Landmark kind, Biomes::Kind biome)
+{
+    using K = Biomes::Kind;
+    switch (kind)
+    {
+        case Landmark::DesertPyramid: return biome == K::Desert;
+        case Landmark::JungleTemple: return biome == K::Jungle || biome == K::BambooJungle;
+        case Landmark::Igloo: return biome == K::SnowyTaiga || biome == K::SnowyPlains || biome == K::SnowySlopes;
+        case Landmark::SwampHut: return biome == K::Swamp;
+        case Landmark::WoodlandMansion: return biome == K::DarkForest;
+        case Landmark::PillagerOutpost:
+            return biome == K::Desert || biome == K::Plains || biome == K::Savanna || biome == K::SnowyPlains || biome == K::Taiga ||
+                   biome == K::Meadow || biome == K::FrozenPeaks || biome == K::JaggedPeaks || biome == K::StonyPeaks ||
+                   biome == K::SnowySlopes || biome == K::CherryGrove || biome == K::Grove;
+        case Landmark::RuinedPortal: return landmarkSuits(kind, Biomes::family(biome));
+        case Landmark::Count: break;
+    }
+    return false;
+}
+
 // Whether a landmark of this kind can actually stand here.
 //
 // This has to be the one test both the search and the stamp use. When
@@ -2438,7 +2458,7 @@ bool WorldGen::landmarkSuits(Landmark kind, Biome biome)
 // nothing was built is worse than no search.
 bool WorldGen::landmarkStands(Landmark kind, int midX, int midZ) const
 {
-    if (!landmarkSuits(kind, biomeAt(midX, midZ))) return false;
+    if (!landmarkSuits(kind, kindAt(midX, midZ))) return false;
     return surfaceHeight(midX, midZ) > SEA_LEVEL;
 }
 

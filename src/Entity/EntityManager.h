@@ -1,4 +1,5 @@
 #pragma once
+#include "World/Biomes.h"
 #include "Mob.h"
 #include <cstdint>
 #include <vector>
@@ -176,15 +177,8 @@ public:
     static bool glowSquidWater(const World& world, int x, int y, int z);
     static MobId seaSpecies(int index);
 
-    // What a biome has that the next one does not. MobId::Count means
-    // nothing in particular lives here and the usual livestock will
-    // do. A pure function of the biome and one roll in [0, 1), so
-    // --selftest can walk every biome without a world.
-    static MobId biomeSpecies(Biome where, float roll);
-
-    // And the same for the night: what a particular place has after
-    // dark, over and above the five that turn up everywhere.
-    static MobId biomeNight(Biome where, float roll);
+    static MobId mobFromId(const std::string& id);
+    static MobId pickSpawn(Biomes::Kind kind, Biomes::Group group, float roll);
 
     // Whether a mob can be where this block is. One rule in one place,
     // so a test can ask exactly what the spawn asks: water is a wall

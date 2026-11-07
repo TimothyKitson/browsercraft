@@ -19135,6 +19135,11 @@ void Application::tickSpriteParticles(float deltaTime)
     {
         m_ambientClock -= 0.05f;
         const glm::ivec3 centre = glm::ivec3(glm::floor(m_player.position));
+        const Biomes::Info& here = Biomes::info(m_world->generator().kindIn(m_dimension, centre.x, centre.y, centre.z));
+        const std::string dustName = here.particle;
+        const Kind dust = dustName == "ash" ? Kind::Ash : dustName == "white_ash" ? Kind::WhiteAsh
+                        : dustName == "crimson_spore" ? Kind::CrimsonSpore : dustName == "warped_spore" ? Kind::WarpedSpore : Kind::Count;
+        const float dustChance = here.particleChance * 0.5f;
         for (int sample = 0; sample < 667; ++sample)
         {
             const int x = centre.x + static_cast<int>(fx.random() * 16.0f) - static_cast<int>(fx.random() * 16.0f);
@@ -19143,6 +19148,17 @@ void Application::tickSpriteParticles(float deltaTime)
             const BlockId block = m_world->getBlock(x, y, z);
             const glm::vec3 middle(x + 0.5f, y + 0.5f, z + 0.5f);
             const float roll = fx.random();
+
+            if (dust != Kind::Count && block == Blocks::Air && fx.random() < dustChance)
+            {
+                const glm::vec3 at(x + fx.random(), y + fx.random(), z + fx.random());
+                if (dust == Kind::Ash || dust == Kind::WhiteAsh)
+                    fx.spawn(dust, at, glm::vec3((fx.random() - 0.5f) * 0.4f, -0.4f - fx.random() * 0.3f, (fx.random() - 0.5f) * 0.4f),
+                             0.2f + fx.random() * 0.15f, 1.0f + fx.random(), 0.0f);
+                else
+                    fx.spawn(dust, at, glm::vec3((fx.random() - 0.5f) * 0.05f, (fx.random() - 0.5f) * 0.05f, (fx.random() - 0.5f) * 0.05f),
+                             0.15f + fx.random() * 0.15f, 1.0f + fx.random() * 3.0f, 0.0f);
+            }
 
             if (block == Blocks::Torch)
             {

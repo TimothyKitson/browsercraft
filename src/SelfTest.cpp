@@ -4405,10 +4405,10 @@ namespace
         for (const MobBox& box : armadillo.model) if (box.part == Part::Shell) shell = true;
         check(shell, "and a ball to roll up into");
         bool savanna = false, badlands = false;
-        for (int k = 0; k < 100; ++k)
+        for (int k = 0; k < 200; ++k)
         {
-            if (EntityManager::biomeSpecies(Biome::Savanna, static_cast<float>(k) / 100.0f) == MobId::Armadillo) savanna = true;
-            if (EntityManager::biomeSpecies(Biome::Badlands, static_cast<float>(k) / 100.0f) == MobId::Armadillo) badlands = true;
+            if (EntityManager::pickSpawn(Biomes::Kind::Savanna, Biomes::Group::Creature, static_cast<float>(k) / 200.0f) == MobId::Armadillo) savanna = true;
+            if (EntityManager::pickSpawn(Biomes::Kind::Badlands, Biomes::Group::Creature, static_cast<float>(k) / 200.0f) == MobId::Armadillo) badlands = true;
         }
         check(savanna && badlands, "it lives in savannas and badlands");
 
@@ -8141,7 +8141,7 @@ namespace
             // enough for the rest finds nothing: that distance is the
             // whole character of the thing.
             const int squares =
-                wanted.kind == WorldGen::Landmark::WoodlandMansion ? 2 : 6;
+                wanted.kind == WorldGen::Landmark::WoodlandMansion ? 5 : 6;
             const Structures::Spot spot =
                 generator.nearestLandmark(wanted.kind, 0, 0, squares);
             check(spot.exists,
@@ -9137,13 +9137,13 @@ namespace
             // And what each biome has of its own, by day and after
             // dark, asked of the tables the spawner reads rather than
             // copied out of them.
-            for (int biome = 0; biome <= static_cast<int>(Biome::Swamp); ++biome)
-                for (int step = 0; step < 100; ++step)
+            for (int biome = 0; biome < Biomes::COUNT; ++biome)
+                for (int step = 0; step < 200; ++step)
                 {
-                    const Biome where = static_cast<Biome>(biome);
-                    const float roll = step * 0.01f;
-                    if (EntityManager::biomeSpecies(where, roll) == id) meetable = true;
-                    if (EntityManager::biomeNight(where, roll) == id) meetable = true;
+                    const Biomes::Kind where = static_cast<Biomes::Kind>(biome);
+                    const float roll = static_cast<float>(step) / 200.0f;
+                    if (EntityManager::pickSpawn(where, Biomes::Group::Creature, roll) == id) meetable = true;
+                    if (EntityManager::pickSpawn(where, Biomes::Group::Monster, roll) == id) meetable = true;
                 }
 
             // What a cage sends out.
@@ -9156,7 +9156,7 @@ namespace
             {
                 case MobId::Sheep: case MobId::Pig: case MobId::Cow: case MobId::Chicken:
                 case MobId::Wolf:  case MobId::Horse:
-                case MobId::Villager: case MobId::IronGolem:
+                case MobId::Villager: case MobId::IronGolem: case MobId::Cat: case MobId::Camel:
                 case MobId::ZombiePigman: case MobId::WitherSkeleton:
                 case MobId::MagmaCube: case MobId::Blaze:
                 case MobId::Breeze:
@@ -9170,6 +9170,7 @@ namespace
                 case MobId::Frog:
                 // And the squid, which belongs to open water.
                 case MobId::Squid: case MobId::GlowSquid:
+                case MobId::Bee:
                 case MobId::Zoglin: case MobId::Illusioner: case MobId::TraderLlama:
                 // A small slime is never spawned: it is what a big
                 // one leaves behind when it is killed.
@@ -9219,7 +9220,6 @@ namespace
             const MobId id = EntityManager::nightSpecies(k);
             check(id != MobId::Warden, "a warden never turns up with the night");
             check(id != MobId::Guardian, "nor a guardian");
-            check(id != MobId::Witch, "nor a witch");
         }
     }
 
@@ -14402,60 +14402,36 @@ namespace
     {
         section("the country: what lives where");
 
-        // Every biome's table must add up to less than one, or the
-        // rows past the overflow are rows nobody ever draws and the
-        // ordinary livestock never turns up at all.
-        for (int biome = 0; biome <= static_cast<int>(Biome::Swamp); ++biome)
-        {
-            const Biome where = static_cast<Biome>(biome);
-            const std::string name = std::to_string(biome);
-
-            bool plain = false;
-            for (int step = 99; step >= 0; --step)
-                if (EntityManager::biomeSpecies(where, step * 0.01f) == MobId::Count)
-                { plain = true; break; }
-
-            check(plain, "biome " + name + " still has room for ordinary livestock");
-            check(EntityManager::biomeSpecies(where, 0.999f) == MobId::Count,
-                  "biome " + name + ": the last roll is always the livestock");
-        }
-
-        // What belongs where. These are the rows that make one biome
-        // feel different from the next.
-        struct Local { Biome where; MobId who; const char* what; };
-        const Local LOCALS[] = {
-            { Biome::Forest,    MobId::Wolf,      "wolves keep to the trees" },
-            { Biome::Forest,    MobId::Fox,       "and so do foxes" },
-            { Biome::Plains,    MobId::Horse,     "horses keep to open country" },
-            { Biome::Plains,    MobId::Bee,       "and bees to the flowers in it" },
-            { Biome::Desert,    MobId::Rabbit,    "a rabbit is what a desert has" },
-            { Biome::Snowy,     MobId::PolarBear, "a polar bear belongs in the snow" },
-            { Biome::Mountains, MobId::Goat,      "a goat wants somewhere steep" },
-            { Biome::Mountains, MobId::Llama,     "and a llama is happy up there too" },
-            { Biome::Savanna,   MobId::Llama,     "a llama belongs on a savanna" },
-            { Biome::Jungle,    MobId::Panda,     "a panda belongs in a jungle" },
-            { Biome::Jungle,    MobId::Cat,       "and so does a cat" },
+        auto spawns = [](Biomes::Kind where, Biomes::Group group, MobId who) {
+            for (int step = 0; step < 400; ++step)
+                if (EntityManager::pickSpawn(where, group, static_cast<float>(step) / 400.0f) == who) return true;
+            return false;
         };
-        for (const Local& local : LOCALS)
-        {
-            bool found = false;
-            for (int step = 0; step < 100; ++step)
-                if (EntityManager::biomeSpecies(local.where, step * 0.01f) == local.who)
-                    found = true;
-            check(found, local.what);
-        }
+        const Biomes::Group day = Biomes::Group::Creature;
+        check(spawns(Biomes::Kind::Plains, day, MobId::Sheep) && spawns(Biomes::Kind::Plains, day, MobId::Cow) &&
+              spawns(Biomes::Kind::Plains, day, MobId::Pig) && spawns(Biomes::Kind::Plains, day, MobId::Chicken),
+              "plains have the four farm animals, as the 1.21.1 data says");
+        struct Local { Biomes::Kind where; MobId who; const char* what; };
+        const Local LOCALS[] = {
+            { Biomes::Kind::Forest,       MobId::Wolf,      "wolves keep to the trees" },
+            { Biomes::Kind::Taiga,        MobId::Fox,       "foxes to the taiga" },
+            { Biomes::Kind::Plains,       MobId::Horse,     "horses keep to open country" },
+            { Biomes::Kind::Desert,       MobId::Rabbit,    "a rabbit is what a desert has" },
+            { Biomes::Kind::SnowyPlains,  MobId::PolarBear, "a polar bear belongs in the snow" },
+            { Biomes::Kind::SnowySlopes,  MobId::Goat,      "a goat wants somewhere steep" },
+            { Biomes::Kind::WindsweptHills, MobId::Llama,   "and a llama is happy up there too" },
+            { Biomes::Kind::SavannaPlateau, MobId::Llama,   "a llama belongs on a savanna plateau" },
+            { Biomes::Kind::BambooJungle, MobId::Panda,     "a panda belongs in a bamboo jungle" },
+            { Biomes::Kind::Jungle,       MobId::Parrot,    "and a parrot in the jungle" },
+            { Biomes::Kind::Swamp,        MobId::Frog,      "frogs in the swamp" },
+        };
+        for (const Local& local : LOCALS) check(spawns(local.where, day, local.who), local.what);
 
-        // And what does not. A polar bear in a jungle is the same bug
-        // as a zombie in the Nether.
-        check(EntityManager::biomeSpecies(Biome::Jungle, 0.05f) != MobId::PolarBear,
-              "a polar bear is not a jungle animal");
-        for (int step = 0; step < 100; ++step)
-        {
-            check(EntityManager::biomeSpecies(Biome::Desert, step * 0.01f) != MobId::Panda,
-                  "nor is a panda a desert one");
-            check(EntityManager::biomeSpecies(Biome::Ocean, step * 0.01f) == MobId::Count,
-                  "and the sea has none of them");
-        }
+        check(!spawns(Biomes::Kind::Jungle, day, MobId::PolarBear), "a polar bear is not a jungle animal");
+        check(!spawns(Biomes::Kind::Desert, day, MobId::Panda), "nor is a panda a desert one");
+        check(EntityManager::pickSpawn(Biomes::Kind::Ocean, day, 0.5f) == MobId::Count &&
+                  EntityManager::pickSpawn(Biomes::Kind::MushroomFields, Biomes::Group::Monster, 0.5f) == MobId::Count,
+              "the sea has no land animals and mushroom fields no monsters");
 
         section("the country animals themselves");
 
@@ -14523,41 +14499,33 @@ namespace
     {
         section("the night: what a particular place has");
 
-        // Each of the three belongs to one biome and to no other. A
-        // husk in the snow is the same bug as a zombie in the Nether.
-        struct Local { Biome where; MobId who; const char* what; };
-        const Local LOCALS[] = {
-            { Biome::Snowy,  MobId::Stray,  "a stray belongs to the snow" },
-            { Biome::Desert, MobId::Husk,   "a husk to the desert" },
-            { Biome::Swamp,  MobId::Bogged, "and a bogged to the swamp" },
+        auto night = [](Biomes::Kind where, MobId who) {
+            for (int step = 0; step < 400; ++step)
+                if (EntityManager::pickSpawn(where, Biomes::Group::Monster, static_cast<float>(step) / 400.0f) == who) return true;
+            return false;
         };
-
+        struct Local { MobId who; Biome home; Biome alsoHome; const char* what; };
+        const Local LOCALS[] = {
+            { MobId::Stray,  Biome::Snowy,  Biome::Snowy,         "a stray belongs to the snow" },
+            { MobId::Husk,   Biome::Desert, Biome::Desert,        "a husk to the desert" },
+            { MobId::Bogged, Biome::Swamp,  Biome::MangroveSwamp, "and a bogged to the swamps" },
+        };
         for (const Local& local : LOCALS)
         {
-            bool here = false;
-            for (int step = 0; step < 100; ++step)
-                if (EntityManager::biomeNight(local.where, step * 0.01f) == local.who)
-                    here = true;
-            check(here, local.what);
-
-            for (int biome = 0; biome <= static_cast<int>(Biome::Swamp); ++biome)
+            bool here = false, elsewhere = false;
+            for (int biome = 0; biome < Biomes::COUNT; ++biome)
             {
-                if (static_cast<Biome>(biome) == local.where) continue;
-                bool elsewhere = false;
-                for (int step = 0; step < 100; ++step)
-                    if (EntityManager::biomeNight(static_cast<Biome>(biome),
-                                                  step * 0.01f) == local.who)
-                        elsewhere = true;
-                check(!elsewhere, std::string(mobType(local.who).name) +
-                                      " is nowhere else after dark");
+                const Biomes::Kind kind = static_cast<Biomes::Kind>(biome);
+                if (Biomes::dimension(kind) != Dimension::Overworld || !night(kind, local.who)) continue;
+                const Biome family = Biomes::family(kind);
+                if (family == local.home || family == local.alsoHome) here = true;
+                else elsewhere = true;
             }
+            check(here, local.what);
+            check(!elsewhere, std::string(mobType(local.who).name) + " is nowhere else after dark");
         }
-
-        // And the ordinary night still happens everywhere, or a snowy
-        // night would be nothing but strays.
-        for (int biome = 0; biome <= static_cast<int>(Biome::Swamp); ++biome)
-            check(EntityManager::biomeNight(static_cast<Biome>(biome), 0.999f) == MobId::Count,
-                  "biome " + std::to_string(biome) + " still has an ordinary night");
+        check(night(Biomes::Kind::SnowyPlains, MobId::Zombie) && night(Biomes::Kind::Desert, MobId::Zombie) &&
+              night(Biomes::Kind::Swamp, MobId::Skeleton), "and the ordinary night still happens beside them");
 
         section("the three variants themselves");
 

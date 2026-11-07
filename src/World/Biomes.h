@@ -97,6 +97,20 @@ namespace Biomes
         float particleChance;
     };
 
+    enum class Group : uint8_t { Monster, Creature, Ambient, WaterCreature, UndergroundWater, WaterAmbient, Axolotls, Count };
+
+    struct Spawn
+    {
+        Kind kind;
+        uint8_t group;
+        const char* mob;
+        int weight;
+        int minCount;
+        int maxCount;
+    };
+
+    const Spawn* spawns(int& count);
+
     const Info& info(Kind kind);
     Kind fromId(const std::string& id, Kind fallback = Kind::Plains);
     bool known(const std::string& id);

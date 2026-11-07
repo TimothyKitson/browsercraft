@@ -18,7 +18,7 @@ public:
         TrialFlameOminous, Vibration, Shriek, SculkSoul, SculkCharge, SculkChargePop,
         VaultConnection, OminousSpawning, TrialOmen, RaidOmen, Flash, Spark, Glow,
         Soul, SoulFlame, Cherry, Nautilus, Infested, GoldHeart,
-        DripHangWater, DripHangLava, DripLandLava, Count
+        DripHangWater, DripHangLava, DripLandLava, Ash, WhiteAsh, CrimsonSpore, WarpedSpore, Count
     };
 
     SpriteParticles();

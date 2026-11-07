@@ -130,6 +130,7 @@ public:
     // Which grid it goes down on, and whether this biome will have it.
     static const Structures::Grid& landmarkGrid(Landmark kind);
     static bool landmarkSuits(Landmark kind, Biome biome);
+    static bool landmarkSuits(Landmark kind, Biomes::Kind biome);
 
     // Whether one can actually stand at a place: the right land under
     // it and out of the sea. The search and the stamp both read this,
