@@ -456,6 +456,7 @@ namespace Items
         ArmadilloScute,
         WolfArmor,
         GlowInkSac,
+        Painting,
         Count
     };
 }

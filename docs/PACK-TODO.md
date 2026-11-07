@@ -255,11 +255,12 @@ Everything in the 1.21 textures zip the game doesn't use yet, turned into work. 
 
 ## Part 5: decorations that are entities
 
-66. Paintings
+66. Paintings (done)
     - I. Get the geometry right: a frame of the right depth with the back texture behind.
     - II. Paintings are 1x1 up to 4x4 like Minecraft's, and placing one picks the biggest that fits.
     - III. Add all the paintings from the pack.
     - IV. Break and drop like Minecraft, and pop off when the wall goes.
+    - Notes: all fifty of 1.21.1's paintings, at their sizes from one block to four by four, each drawn from the pack's painting/<name>.png (a painted stand-in of the same size without the pack). A painting is a sixteenth of a block deep and sits flat on the wall, with the pack's back.png on its back and round its edges, lit block by block like Minecraft's. Eight sticks round any wool make one; used on the side of a block it hangs the biggest of the forty-six hand-hung paintings that fits there, picked at random among those, with Minecraft's offsets for even sizes, and never over another painting. In creative every variant is in the items tab and the search, and a chosen one hangs only where it fits; its tooltip gives the title, artist and size (Cotan and Paradistrad lose their accents until the font has them, item 85). A punch takes it down and drops it, and it drops by itself when the wall behind goes or something fills the space in front, or in an explosion. They are saved with the level by name.
 67. Armour stands
     - I. Get the geometry and shape right: base, body, arms, head.
     - II. Make it work like an armour stand: wear armour, hold items, swap items with right-click, break in two hits.

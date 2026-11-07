@@ -839,6 +839,10 @@ namespace
                          Items::Stick,   Items::Leather, Items::Stick,
                          Items::Stick,   Items::Stick,   Items::Stick },
           0, Items::ItemFrame, 1 },
+        { false, 3, 3, { Items::Stick,   Items::Stick,   Items::Stick,
+                         Items::Stick,   Blocks::Wool,   Items::Stick,
+                         Items::Stick,   Items::Stick,   Items::Stick },
+          0, Items::Painting, 1 },
 
         // A cake: milk along the top, an egg between two sugars, and
         // wheat under it. Minecraft's, buckets and all -- and the
@@ -1510,8 +1514,28 @@ namespace Crafting
         return out;
     }
 
+    CraftOutput matchPainting(const ItemStack* grid, int size)
+    {
+        CraftOutput out;
+        if (size < 3) return out;
+        for (int i = 0; i < 9; ++i)
+        {
+            const ItemStack& cell = grid[i];
+            if (i == 4)
+            {
+                if (cell.empty() || isItem(cell.id) || !isWool(asBlock(cell.id))) return out;
+            }
+            else if (cell.id != Items::Stick) return out;
+        }
+        out.id = Items::Painting;
+        out.count = 1;
+        return out;
+    }
+
     CraftOutput match(const ItemStack* grid, int size)
     {
+        const CraftOutput painting = matchPainting(grid, size);
+        if (painting.valid()) return painting;
         const CraftOutput tipped = matchTippedArrows(grid, size);
         if (tipped.valid()) return tipped;
         const CraftOutput dyedArmour = matchWolfArmourDye(grid, size);

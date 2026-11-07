@@ -571,6 +571,7 @@ void Application::startWorld(GameMode mode, bool freshWorld)
     m_entities.setDimension(m_dimension);
     m_chests.setDimension(static_cast<int>(m_dimension));
     m_signs.setDimension(static_cast<int>(m_dimension));
+    m_paintings.setDimension(static_cast<int>(m_dimension));
     m_beaconPowers.clear();
     m_frames.setDimension(static_cast<int>(m_dimension));
     m_furnaces.setDimension(static_cast<int>(m_dimension));
@@ -668,6 +669,7 @@ void Application::travelTo(Dimension dimension)
     // overworld still holds what was in it when you come back.
     m_chests.setDimension(static_cast<int>(dimension));
     m_signs.setDimension(static_cast<int>(dimension));
+    m_paintings.setDimension(static_cast<int>(dimension));
     m_frames.setDimension(static_cast<int>(dimension));
     m_furnaces.setDimension(static_cast<int>(dimension));
 
@@ -1027,6 +1029,13 @@ void Application::loadLevel()
                 text[i] = saved.lines[i];
             m_signs.putIn(saved.dimension,
                           glm::ivec3(saved.x, saved.y, saved.z), text);
+        }
+        m_paintings.clear();
+        for (const LevelState::SavedPainting& saved : state.paintings)
+        {
+            const int variant = Paintings::find(saved.variant);
+            if (variant < 0) continue;
+            m_paintings.putIn(saved.dimension, Paintings::Placed{ glm::ivec3(saved.x, saved.y, saved.z), saved.facing & 3, variant });
         }
         for (const LevelState::SavedSignLook& saved : state.signLooks)
         {
@@ -1408,6 +1417,17 @@ void Application::saveLevel()
         for (size_t i = 0; i < saved.lines.size() && i < entry.second.size(); ++i)
             saved.lines[i] = entry.second[i];
         state.signs.push_back(saved);
+    }
+    for (const PaintingStore::Entry& entry : m_paintings.all())
+    {
+        LevelState::SavedPainting saved;
+        saved.x = entry.painting.at.x;
+        saved.y = entry.painting.at.y;
+        saved.z = entry.painting.at.z;
+        saved.dimension = static_cast<uint8_t>(entry.dimension);
+        saved.facing = static_cast<uint8_t>(entry.painting.facing);
+        saved.variant = Paintings::variants()[static_cast<size_t>(entry.painting.variant)].name;
+        state.paintings.push_back(saved);
     }
     for (const auto& entry : m_signs.looks())
     {
@@ -2177,6 +2197,7 @@ bool Application::frame()
             tickPotionClouds(deltaTime);
             tickArmadillos(deltaTime);
             tickFangs(deltaTime);
+            tickPaintings(deltaTime);
             tickGlowSquids(deltaTime);
             tickJukeboxes(deltaTime);
             updatePortal(deltaTime);
@@ -2500,7 +2521,7 @@ bool Application::frame()
             m_startupScreen == "attackhud" || m_startupScreen == "attackready" ||
             m_startupScreen == "attackhotbar" || m_startupScreen == "bossbars" ||
             m_startupScreen == "gamemode" || m_startupScreen == "spectator" ||
-            m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" || m_startupScreen == "leads" || m_startupScreen == "anvilname" || m_startupScreen == "dials" || m_startupScreen == "spyglass" || m_startupScreen == "bundle" || m_startupScreen == "archery" || m_startupScreen == "food" || m_startupScreen == "materials" || m_startupScreen == "tropical" || m_startupScreen == "book" || m_startupScreen == "bookedit" || m_startupScreen == "booktip" || m_startupScreen == "boats" || m_startupScreen == "carts" || m_startupScreen == "fireworks" || m_startupScreen == "jukebox" || m_startupScreen == "potioncloud" || m_startupScreen == "armadillo" || m_startupScreen == "signs" || m_startupScreen == "glowsquid" || m_startupScreen == "fangs" || m_startupScreen == "zoglin" || m_startupScreen == "illusioner" || m_startupScreen == "llamas" ||
+            m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" || m_startupScreen == "leads" || m_startupScreen == "anvilname" || m_startupScreen == "dials" || m_startupScreen == "spyglass" || m_startupScreen == "bundle" || m_startupScreen == "archery" || m_startupScreen == "food" || m_startupScreen == "materials" || m_startupScreen == "tropical" || m_startupScreen == "book" || m_startupScreen == "bookedit" || m_startupScreen == "booktip" || m_startupScreen == "boats" || m_startupScreen == "carts" || m_startupScreen == "fireworks" || m_startupScreen == "jukebox" || m_startupScreen == "potioncloud" || m_startupScreen == "armadillo" || m_startupScreen == "signs" || m_startupScreen == "glowsquid" || m_startupScreen == "fangs" || m_startupScreen == "zoglin" || m_startupScreen == "illusioner" || m_startupScreen == "llamas" || m_startupScreen == "paintings" ||
             m_startupScreen == "grinderror" || m_startupScreen == "woods" ||
             m_startupScreen == "cherry" || m_startupScreen == "mangrove" || m_startupScreen == "fungi" ||
             m_startupScreen == "stones" || m_startupScreen == "colours" || m_startupScreen == "candles" ||
@@ -2646,6 +2667,7 @@ bool Application::frame()
                                   m_startupScreen != "variants" &&
                                   m_startupScreen != "zoo" &&
                                   m_startupScreen != "llamas" &&
+                                  m_startupScreen != "paintings" &&
                                   m_startupScreen != "golem" &&
                                   m_startupScreen != "shulker" &&
                                   m_startupScreen != "nethermobs" &&
@@ -3012,7 +3034,7 @@ bool Application::frame()
             if (m_startupScreen == "attackhud" || m_startupScreen == "attackready" ||
                 m_startupScreen == "attackhotbar" || m_startupScreen == "bossbars" ||
                 m_startupScreen == "gamemode" || m_startupScreen == "spectator" ||
-                m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" || m_startupScreen == "leads" || m_startupScreen == "anvilname" || m_startupScreen == "dials" || m_startupScreen == "spyglass" || m_startupScreen == "bundle" || m_startupScreen == "archery" || m_startupScreen == "food" || m_startupScreen == "materials" || m_startupScreen == "tropical" || m_startupScreen == "book" || m_startupScreen == "bookedit" || m_startupScreen == "booktip" || m_startupScreen == "boats" || m_startupScreen == "carts" || m_startupScreen == "fireworks" || m_startupScreen == "jukebox" || m_startupScreen == "potioncloud" || m_startupScreen == "armadillo" || m_startupScreen == "signs" || m_startupScreen == "glowsquid" || m_startupScreen == "fangs" || m_startupScreen == "zoglin" || m_startupScreen == "illusioner" || m_startupScreen == "llamas" ||
+                m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" || m_startupScreen == "leads" || m_startupScreen == "anvilname" || m_startupScreen == "dials" || m_startupScreen == "spyglass" || m_startupScreen == "bundle" || m_startupScreen == "archery" || m_startupScreen == "food" || m_startupScreen == "materials" || m_startupScreen == "tropical" || m_startupScreen == "book" || m_startupScreen == "bookedit" || m_startupScreen == "booktip" || m_startupScreen == "boats" || m_startupScreen == "carts" || m_startupScreen == "fireworks" || m_startupScreen == "jukebox" || m_startupScreen == "potioncloud" || m_startupScreen == "armadillo" || m_startupScreen == "signs" || m_startupScreen == "glowsquid" || m_startupScreen == "fangs" || m_startupScreen == "zoglin" || m_startupScreen == "illusioner" || m_startupScreen == "llamas" || m_startupScreen == "paintings" ||
                 m_startupScreen == "grinderror" || m_startupScreen == "woods" ||
                 m_startupScreen == "cherry" || m_startupScreen == "mangrove" || m_startupScreen == "fungi" ||
                 m_startupScreen == "stones" || m_startupScreen == "colours" || m_startupScreen == "candles" ||
@@ -3955,6 +3977,32 @@ bool Application::frame()
                         m_player.mode = GameMode::Creative;
                         m_camera.pitch = -6.0f;
                     }
+                    m_camera.addLook(0.0f, 0.0f, 0.0f);
+                }
+                if (m_startupScreen == "paintings")
+                {
+                    m_devAttackStrength = 1.0f;
+                    for (int dx = 1; dx <= 9; ++dx)
+                        for (int dz = -8; dz <= 8; ++dz)
+                        {
+                            m_world->setBlock(px + dx, py - 1, pz + dz, Blocks::Grass);
+                            for (int dy = 0; dy <= 9; ++dy)
+                                m_world->setBlock(px + dx, py + dy, pz + dz, dx == 8 && dy <= 8 ? Blocks::Planks : Blocks::Air);
+                        }
+                    struct Hang { const char* name; int dy, dz; };
+                    const Hang HANGS[] = {
+                        { "pointer", 2, -4 }, { "fighters", 6, -4 }, { "sunflowers", 2, 1 }, { "kebab", 5, 1 },
+                        { "wither", 1, 4 }, { "sunset", 4, 4 }, { "wanderer", 3, 6 }, { "skeleton", 6, 3 },
+                    };
+                    for (const Hang& hang : HANGS)
+                    {
+                        const int variant = Paintings::find(hang.name);
+                        if (variant >= 0) m_paintings.put(Paintings::Placed{ glm::ivec3(px + 7, py + hang.dy, pz + hang.dz), 1, variant });
+                    }
+                    m_inventory.slot(0) = ItemStack{ Items::Painting, 4 };
+                    m_inventory.slot(1) = ItemStack{ Items::Painting, 1, Paintings::find("orb") + 1 };
+                    m_inventory.setSelectedSlot(0);
+                    m_camera.pitch = 14.0f;
                     m_camera.addLook(0.0f, 0.0f, 0.0f);
                 }
                 if (m_startupScreen == "glowsquid")
@@ -7704,6 +7752,15 @@ void Application::updateMining(float deltaTime)
             m_breakProgress = 0.0f;
             return;
         }
+    }
+
+    if (m_keys.pressed(m_input, Action::Attack) && modeCanBuild(m_player.mode) &&
+        hitPainting(hit.hit ? hit.distance : REACH_DISTANCE))
+    {
+        m_heldItem.swing();
+        m_hasTarget = false;
+        m_breakProgress = 0.0f;
+        return;
     }
 
     if (!hit.hit && m_keys.pressed(m_input, Action::Attack)) m_attackTicker = 0.0f;
@@ -11719,6 +11776,103 @@ void Application::tickArmadillos(float deltaTime)
     }
 }
 
+namespace
+{
+    struct PaintingWall : Paintings::Wall
+    {
+        const World* world = nullptr;
+        bool solid(int x, int y, int z) const override { return isSolid(world->getBlock(x, y, z)); }
+        bool open(int x, int y, int z) const override { return !isSolid(world->getBlock(x, y, z)); }
+    };
+}
+
+bool Application::placePainting(ItemStack& stack)
+{
+    const RaycastHit hit = m_world->raycast(m_camera.position, m_camera.front, REACH_DISTANCE);
+    if (!hit.hit) return false;
+    const int facing = Paintings::facingFor(hit.normal);
+    if (facing < 0) return false;
+
+    PaintingWall wall;
+    wall.world = m_world.get();
+    const std::vector<Paintings::Placed> others = m_paintings.here();
+    int variant = -1;
+    if (stack.damage > 0 && stack.damage <= Paintings::count())
+    {
+        const Paintings::Placed wanted{ hit.previous, facing, stack.damage - 1 };
+        bool clash = !Paintings::fits(wanted, wall);
+        for (const Paintings::Placed& other : others)
+            if (Paintings::overlaps(wanted, other)) clash = true;
+        if (!clash) variant = stack.damage - 1;
+    }
+    else
+    {
+        const uint32_t roll = hashCoords(hit.previous.x, hit.previous.y, hit.previous.z,
+                                         static_cast<uint32_t>(m_elapsedSeconds * 1000.0f));
+        variant = Paintings::choose(hit.previous, facing, wall, roll, others);
+    }
+    if (variant < 0) return false;
+
+    m_paintings.put(Paintings::Placed{ hit.previous, facing, variant });
+    m_audio.play(Sound::DigWood, 0.7f, 1.2f);
+    m_heldItem.swing();
+    if (!m_player.creative())
+    {
+        stack.count -= 1;
+        if (stack.count <= 0) stack.clear();
+    }
+    return true;
+}
+
+void Application::dropPainting(const Paintings::Placed& painting, bool drop)
+{
+    if (!m_paintings.remove(painting)) return;
+    const Paintings::Box box = Paintings::bounds(painting);
+    const glm::vec3 centre = (box.min + box.max) * 0.5f + glm::vec3(Paintings::out(painting.facing)) * 0.3f;
+    if (drop) m_drops.spawn(centre, Items::Painting, 1);
+    m_audio.play(Sound::DigWood, 0.8f, 0.8f);
+    m_particles.spawnBlockBreak(glm::ivec3(glm::floor(centre)), Blocks::Planks);
+}
+
+bool Application::hitPainting(float blockDistance)
+{
+    float nearest = blockDistance;
+    bool found = false;
+    Paintings::Placed struck;
+    for (const Paintings::Placed& painting : m_paintings.near(m_camera.position, REACH_DISTANCE + 4.0f))
+    {
+        float distance = 0.0f;
+        if (Paintings::rayHits(Paintings::bounds(painting), m_camera.position, m_camera.front, REACH_DISTANCE, distance) &&
+            distance <= nearest)
+        {
+            nearest = distance;
+            struck = painting;
+            found = true;
+        }
+    }
+    if (!found) return false;
+    dropPainting(struck, !m_player.creative());
+    return true;
+}
+
+void Application::tickPaintings(float deltaTime)
+{
+    m_paintingClock += deltaTime;
+    if (m_paintingClock < 0.5f) return;
+    m_paintingClock = 0.0f;
+    PaintingWall wall;
+    wall.world = m_world.get();
+    for (const Paintings::Placed& painting : m_paintings.near(m_player.position, 48.0f))
+    {
+        bool loaded = true;
+        for (const glm::ivec3& cell : Paintings::cells(painting))
+            if (!m_world->chunkAt(static_cast<int>(std::floor(cell.x / static_cast<float>(Chunk::SX))),
+                                  static_cast<int>(std::floor(cell.z / static_cast<float>(Chunk::SZ)))))
+                loaded = false;
+        if (loaded && !Paintings::fits(painting, wall)) dropPainting(painting, true);
+    }
+}
+
 void Application::conjureFangs(const glm::vec3& caster, const glm::vec3& target, int damage)
 {
     if (!m_world) return;
@@ -11950,6 +12104,13 @@ void Application::applyBlast(const glm::vec3& at, float radius, int damage)
     sprites(SpriteParticles::Kind::Smoke, at, 16, radius * 0.7f, 1.5f, 0.6f, 1.6f, -0.3f);
     m_audio.play(Sound::DigStone, 1.0f, 0.5f);
     m_particles.spawnBlockBreak(glm::ivec3(glm::floor(at)), Blocks::Gravel);
+
+    for (const Paintings::Placed& painting : m_paintings.near(at, radius + 4.0f))
+    {
+        const Paintings::Box box = Paintings::bounds(painting);
+        const glm::vec3 nearest = glm::clamp(at, box.min, box.max);
+        if (glm::length(nearest - at) < radius) dropPainting(painting, true);
+    }
 
     // Blocks first, so anything the blast opens up is already gone when
     // the drops are thrown out into it.
@@ -14634,6 +14795,11 @@ void Application::handlePlacement()
     // ladder: which of the four it lands as is worked out below.
     if (woodOfSignItem(stack.id) >= 0) fromItem = signBaseOf(woodOfSignItem(stack.id));
     if (stack.id == Items::ItemFrame) fromItem = Blocks::FrameNorth;
+    if (stack.id == Items::Painting)
+    {
+        if (modeCanBuild(m_player.mode)) placePainting(stack);
+        return;
+    }
     if (stack.id == Items::TripwireHook) fromItem = hookOf(0, false, false);
     if (stack.id == Items::StringItem) fromItem = Blocks::Tripwire;
     if (isItem(stack.id) && fromItem == Blocks::Air) return;
@@ -15394,6 +15560,7 @@ void Application::renderWorldShaded()
     m_beams.render(world);
     m_books.render(world, *m_world);
     m_fangRenderer.render(world, *m_world, m_fangs, m_fangClock / Fangs::TICK);
+    m_paintingRenderer.render(world, *m_world, m_paintings.near(m_camera.position, 96.0f));
     m_bannerRenderer.render(world, *m_world, nearbyBanners(), m_elapsedSeconds);
     m_fireworkRenderer.render(view, projection, camera.right, camera.up);
     world.bind();
@@ -15531,6 +15698,7 @@ void Application::renderWorld()
     m_beams.render(m_chunkShader);
     m_books.render(m_chunkShader, *m_world);
     m_fangRenderer.render(m_chunkShader, *m_world, m_fangs, m_fangClock / Fangs::TICK);
+    m_paintingRenderer.render(m_chunkShader, *m_world, m_paintings.near(m_camera.position, 96.0f));
     m_bannerRenderer.render(m_chunkShader, *m_world, nearbyBanners(), m_elapsedSeconds);
     m_fireworkRenderer.render(view, projection, camera.right, camera.up);
     castShadows(view, projection);

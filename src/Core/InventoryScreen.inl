@@ -220,7 +220,7 @@ namespace
         Items::DiscFragment, Items::DragonsBreath, Items::Charcoal, Items::ExperienceBottle,
         Items::CodBucket, Items::SalmonBucket, Items::PufferfishBucket, Items::TropicalFishBucket, Items::AxolotlBucket, Items::TadpoleBucket,
         Items::EnchantedBook, Items::WritableBook, Items::WrittenBook, Items::KnowledgeBook,
-        Items::FireworkRocket, Items::FireworkStar, Items::FireCharge, Items::ArmadilloScute, Items::WolfArmor, Items::GlowInkSac,
+        Items::FireworkRocket, Items::FireworkStar, Items::FireCharge, Items::ArmadilloScute, Items::WolfArmor, Items::GlowInkSac, Items::Painting,
         Items::MusicDiscFirst + 0, Items::MusicDiscFirst + 1, Items::MusicDiscFirst + 2, Items::MusicDiscFirst + 3,
         Items::MusicDiscFirst + 4, Items::MusicDiscFirst + 5, Items::MusicDiscFirst + 6, Items::MusicDiscFirst + 7,
         Items::MusicDiscFirst + 8, Items::MusicDiscFirst + 9, Items::MusicDiscFirst + 10, Items::MusicDiscFirst + 11,
@@ -343,6 +343,13 @@ namespace
             return lore;
         }
         if (Discs::discOf(stack.id) >= 0) line(Discs::song(Discs::discOf(stack.id)).title);
+        if (stack.id == Items::Painting && stack.damage > 0 && stack.damage <= Paintings::count())
+        {
+            const Paintings::Variant& v = Paintings::variants()[static_cast<size_t>(stack.damage - 1)];
+            line(v.title);
+            line(v.author);
+            line(std::to_string(v.width) + "x" + std::to_string(v.height));
+        }
         if (stack.id == Items::Potion || stack.id == Items::SplashPotion || stack.id == Items::LingeringPotion)
         {
             const std::vector<Brewing::Dose> doses = Brewing::dosesOf(Brewing::decode(stack.damage));
@@ -2606,6 +2613,19 @@ void Application::renderCreativeScreen(float w, float h)
                         }
                         entries.push_back(form | (damage << 16));
                     }
+        if (eggs)
+            for (int variant = 0; variant < Paintings::count(); ++variant)
+            {
+                if (searchTab && !m_creativeSearch.empty())
+                {
+                    std::string want = m_creativeSearch;
+                    std::string name = std::string("painting ") + Paintings::variants()[static_cast<size_t>(variant)].title;
+                    for (char& c : want) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+                    for (char& c : name) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+                    if (name.find(want) == std::string::npos) continue;
+                }
+                entries.push_back(Items::Painting | ((variant + 1) << 16));
+            }
         count = static_cast<int>(entries.size());
 
         // A tab with more in it than the grid holds scrolls on the wheel.

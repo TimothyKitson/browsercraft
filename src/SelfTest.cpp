@@ -38,6 +38,7 @@
 #include "Game/Cane.h"
 #include "Game/Fluids.h"
 #include "Renderer/BookRenderer.h"
+#include "Renderer/PaintingRenderer.h"
 #include "Game/Anvil.h"
 #include "Game/Archaeology.h"
 #include "Game/Stonecutting.h"
@@ -52,6 +53,7 @@
 #include "Game/Brewing.h"
 #include "Game/Fireworks.h"
 #include "Game/Fangs.h"
+#include "Game/Paintings.h"
 #include "Game/Discs.h"
 #include "World/Village.h"
 #include "Game/VillageLoot.h"
@@ -4563,6 +4565,99 @@ namespace
         Arrow spit;
         spit.kind = Arrows::Kind::Spit;
         check(!spit.flies() && spit.bursts(), "spit arcs like an arrow and splashes rather than sticking");
+    }
+
+    void testPaintings()
+    {
+        section("paintings: every variant, the biggest that fits, and popping off");
+        int placeable = 0, largest = 0;
+        for (const Paintings::Variant& v : Paintings::variants())
+        {
+            if (v.placeable) ++placeable;
+            largest = std::max(largest, v.width * v.height);
+        }
+        check(Paintings::count() == 50 && placeable == 46, "fifty paintings, forty-six of them hung by hand");
+        check(largest == 16 && Paintings::find("pointer") >= 0 &&
+                  Paintings::variants()[static_cast<size_t>(Paintings::find("pointer"))].width == 4,
+              "from one block up to four by four");
+        check(!Paintings::variants()[static_cast<size_t>(Paintings::find("earth"))].placeable, "the four elements are creative only");
+
+        const Paintings::Placed big{ glm::ivec3(0, 10, 0), 0, Paintings::find("pointer") };
+        const std::vector<glm::ivec3> cells = Paintings::cells(big);
+        int minX = 99, maxX = -99, minY = 99, maxY = -99;
+        for (const glm::ivec3& c : cells)
+        {
+            minX = std::min(minX, c.x); maxX = std::max(maxX, c.x);
+            minY = std::min(minY, c.y); maxY = std::max(maxY, c.y);
+        }
+        check(cells.size() == 16 && minX == -1 && maxX == 2 && minY == 9 && maxY == 12, "a four by four reaches one back and two on, as Minecraft offsets it");
+
+        struct TestWall : Paintings::Wall
+        {
+            int width = 1, height = 1;
+            bool solid(int x, int y, int z) const override
+            {
+                return z == -1 && x >= 0 && x < width && y >= 10 && y < 10 + height;
+            }
+            bool open(int x, int y, int z) const override { (void)x; (void)y; return z >= 0; }
+        };
+        TestWall wall;
+        wall.width = 1;
+        wall.height = 1;
+        const int one = Paintings::choose(glm::ivec3(0, 10, 0), 0, wall, 7u);
+        check(one >= 0 && Paintings::variants()[static_cast<size_t>(one)].width == 1 &&
+                  Paintings::variants()[static_cast<size_t>(one)].height == 1,
+              "a one-block wall gets a one-block painting");
+        wall.width = 2;
+        const int wide = Paintings::choose(glm::ivec3(0, 10, 0), 0, wall, 7u);
+        check(wide >= 0 && Paintings::variants()[static_cast<size_t>(wide)].width == 2 &&
+                  Paintings::variants()[static_cast<size_t>(wide)].height == 1,
+              "two across gets one two across");
+        wall.width = 4;
+        wall.height = 4;
+        const int huge = Paintings::choose(glm::ivec3(1, 11, 0), 0, wall, 3u);
+        check(huge >= 0 && Paintings::variants()[static_cast<size_t>(huge)].width * Paintings::variants()[static_cast<size_t>(huge)].height == 16,
+              "a four by four wall gets the biggest there is");
+        std::set<int> picks;
+        for (uint32_t roll = 0; roll < 12; ++roll) picks.insert(Paintings::choose(glm::ivec3(1, 11, 0), 0, wall, roll));
+        check(picks.size() > 1, "picked at random among the biggest");
+        check(!Paintings::fits(Paintings::Placed{ glm::ivec3(1, 11, 0), 0, huge }, TestWall{}), "and it comes down when the wall goes");
+        const std::vector<Paintings::Placed> hung = { Paintings::Placed{ glm::ivec3(1, 11, 0), 0, huge } };
+        check(Paintings::choose(glm::ivec3(0, 10, 0), 0, wall, 1u, hung) < 0 ||
+                  !Paintings::overlaps(Paintings::Placed{ glm::ivec3(0, 10, 0), 0, Paintings::choose(glm::ivec3(0, 10, 0), 0, wall, 1u, hung) }, hung[0]),
+              "and two paintings never overlap");
+
+        const Paintings::Box box = Paintings::bounds(Paintings::Placed{ glm::ivec3(0, 10, 0), 0, Paintings::find("kebab") });
+        check(std::fabs(box.min.z - 0.0f) < 0.001f && std::fabs(box.max.z - 0.0625f) < 0.001f, "a sixteenth deep against the wall");
+        float distance = 0.0f;
+        check(Paintings::rayHits(box, glm::vec3(0.5f, 10.5f, 3.0f), glm::vec3(0.0f, 0.0f, -1.0f), 5.0f, distance) &&
+                  std::fabs(distance - 2.9375f) < 0.01f,
+              "and a punch finds it");
+
+        ItemStack grid[9];
+        for (ItemStack& cell : grid) cell = ItemStack{ Items::Stick, 1 };
+        grid[4] = ItemStack{ static_cast<StackId>(Blocks::WoolOrange + 3), 1 };
+        check(Crafting::match(grid, 3).id == Items::Painting, "eight sticks round any wool make a painting");
+
+        const std::string dir = (std::filesystem::temp_directory_path() / "browsercraft_painting_test").string();
+        std::error_code ec;
+        std::filesystem::remove_all(dir, ec);
+        std::filesystem::create_directories(dir, ec);
+        LevelState level;
+        level.seed = 12u;
+        LevelState::SavedPainting saved;
+        saved.x = 4; saved.y = 70; saved.z = -9; saved.facing = 3; saved.variant = "sunflowers";
+        level.paintings.push_back(saved);
+        WorldSave::saveLevel(dir, level);
+        LevelState back;
+        check(WorldSave::loadLevel(dir, back) && back.paintings.size() == 1 && back.paintings[0].variant == "sunflowers" &&
+                  back.paintings[0].facing == 3 && back.paintings[0].z == -9,
+              "and they are kept with the level");
+        std::filesystem::remove_all(dir, ec);
+
+        int w = 0, h = 0;
+        const std::vector<uint8_t> painted = PaintingRenderer::paintVariant(Paintings::find("skeleton"), w, h);
+        check(w == 64 && h == 48 && painted.size() == static_cast<size_t>(64 * 48 * 4), "and each has a painted stand-in the size of the real one");
     }
 
     void testArchery()
@@ -12528,7 +12623,7 @@ namespace
             std::error_code ec;
             const auto size = std::filesystem::file_size(path, ec);
             if (!ec) std::filesystem::resize_file(path, size - sizeof(uint16_t) - sizeof(uint8_t) - 3 * sizeof(int) - sizeof(uint32_t) - sizeof(int32_t) - 6 * sizeof(uint32_t) -
-                                                        sizeof(uint8_t) - 3 * sizeof(float) - sizeof(int8_t) - sizeof(uint32_t) - 8 * sizeof(uint32_t) - sizeof(uint8_t), ec);
+                                                        sizeof(uint8_t) - 3 * sizeof(float) - sizeof(int8_t) - sizeof(uint32_t) - 9 * sizeof(uint32_t) - sizeof(uint8_t), ec);
 
             LevelState back;
             check(WorldSave::loadLevel(dir, back), "a level from before items moved up still loads");
@@ -15058,6 +15153,7 @@ int runSelfTest()
     testGlowSquid();
     testFangsZoglinIllusioner();
     testPackSheetsAndLlamas();
+    testPaintings();
     testMadeThings();
     testTheEndAndTheSea();
     testPathfinding();

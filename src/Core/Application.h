@@ -32,6 +32,7 @@
 #include "Renderer/BeamRenderer.h"
 #include "Renderer/BookRenderer.h"
 #include "Renderer/FangRenderer.h"
+#include "Renderer/PaintingRenderer.h"
 #include "Renderer/BannerRenderer.h"
 #include "Game/Banners.h"
 #include "Game/Fireworks.h"
@@ -524,6 +525,13 @@ private:
     void conjureFangs(const glm::vec3& caster, const glm::vec3& target, int damage);
     void tickFangs(float deltaTime);
     void tickGlowSquids(float deltaTime);
+    bool placePainting(ItemStack& stack);
+    bool hitPainting(float blockDistance);
+    void tickPaintings(float deltaTime);
+    void dropPainting(const Paintings::Placed& painting, bool drop);
+    PaintingStore m_paintings;
+    PaintingRenderer m_paintingRenderer;
+    float m_paintingClock = 0.0f;
     std::vector<Fangs::Fang> m_fangs;
     FangRenderer m_fangRenderer;
     float m_fangClock = 0.0f;

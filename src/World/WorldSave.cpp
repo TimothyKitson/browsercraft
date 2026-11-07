@@ -437,6 +437,16 @@ void WorldSave::saveLevel(const std::string& saveDirectory, const LevelState& st
         write(out, look.colour);
         write(out, look.glow);
     }
+    write(out, static_cast<uint32_t>(state.paintings.size()));
+    for (const LevelState::SavedPainting& painting : state.paintings)
+    {
+        write(out, painting.x);
+        write(out, painting.y);
+        write(out, painting.z);
+        write(out, painting.dimension);
+        write(out, painting.facing);
+        writeLine(out, painting.variant);
+    }
 }
 
 bool WorldSave::loadLevel(const std::string& saveDirectory, LevelState& out)
@@ -960,14 +970,29 @@ bool WorldSave::loadLevel(const std::string& saveDirectory, LevelState& out)
                                                         out.jukeboxes.push_back(box);
                                                     }
                                                 uint32_t lookCount = 0;
-                                                if (jukeboxesWhole && read(in, lookCount))
+                                                bool looksWhole = jukeboxesWhole && read(in, lookCount);
+                                                if (looksWhole)
                                                     for (uint32_t i = 0; i < lookCount && i < 100000u; ++i)
                                                     {
                                                         LevelState::SavedSignLook look;
                                                         if (!read(in, look.x) || !read(in, look.y) || !read(in, look.z) ||
                                                             !read(in, look.dimension) || !read(in, look.colour) || !read(in, look.glow))
+                                                        {
+                                                            looksWhole = false;
                                                             break;
+                                                        }
                                                         out.signLooks.push_back(look);
+                                                    }
+                                                uint32_t paintingCount = 0;
+                                                if (looksWhole && read(in, paintingCount))
+                                                    for (uint32_t i = 0; i < paintingCount && i < 100000u; ++i)
+                                                    {
+                                                        LevelState::SavedPainting painting;
+                                                        if (!read(in, painting.x) || !read(in, painting.y) || !read(in, painting.z) ||
+                                                            !read(in, painting.dimension) || !read(in, painting.facing) ||
+                                                            !readLine(in, painting.variant))
+                                                            break;
+                                                        out.paintings.push_back(painting);
                                                     }
                                             }
                                         }

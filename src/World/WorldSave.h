@@ -230,6 +230,14 @@ struct LevelState
         uint8_t glow = 0;
     };
     std::vector<SavedSignLook> signLooks;
+    struct SavedPainting
+    {
+        int x = 0, y = 0, z = 0;
+        uint8_t dimension = 0;
+        uint8_t facing = 0;
+        std::string variant;
+    };
+    std::vector<SavedPainting> paintings;
 };
 
 namespace WorldSave

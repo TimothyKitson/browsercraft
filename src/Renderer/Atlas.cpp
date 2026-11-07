@@ -3819,6 +3819,22 @@ namespace
         t.speckle(4, 686);
     }
 
+    void paintItemPainting(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 2; y < 14; ++y)
+            for (int x = 1; x < 15; ++x)
+            {
+                const bool frame = x == 1 || x == 14 || y == 2 || y == 13;
+                if (frame) t.set(x, y, (x + y) % 2 ? Color{ 150, 104, 54 } : Color{ 118, 80, 40 });
+                else if (y < 9) t.set(x, y, Color{ static_cast<uint8_t>(110 + y * 8), static_cast<uint8_t>(160 + y * 6), 220 });
+                else t.set(x, y, (x * 3 + y) % 5 == 0 ? Color{ 70, 120, 50 } : Color{ 92, 150, 64 });
+            }
+        for (int y = 5; y < 9; ++y)
+            for (int x = 8; x < 12; ++x)
+                if ((x - 10) * (x - 10) + (y - 7) * (y - 7) < 4) t.set(x, y, Color{ 250, 220, 90 });
+    }
+
     void paintLlamaSpit(Tile& t)
     {
         t.fill(Color{ 0, 0, 0, 0 });
@@ -9023,6 +9039,7 @@ namespace
         { Tiles::ItemInkSac, paintItemInkSac },
         { Tiles::ItemGlowInkSac, paintItemGlowInkSac },
         { Tiles::LlamaSpitTile, paintLlamaSpit },
+        { Tiles::ItemPainting, paintItemPainting },
         { Tiles::ItemNetheriteScrap, paintItemNetheriteScrap },
         { Tiles::ItemNetheriteIngot, paintItemNetheriteIngot },
         { Tiles::ItemShulkerShell, paintItemShulkerShell },
@@ -9719,6 +9736,7 @@ namespace
         { Tiles::ItemWolfArmor,     { "wolf_armor", nullptr, nullptr } },
         { Tiles::ItemWolfArmorOverlay, { "wolf_armor_overlay", nullptr, nullptr } },
         { Tiles::ItemGlowInkSac,    { "glow_ink_sac", nullptr, nullptr } },
+        { Tiles::ItemPainting,      { "painting", nullptr, nullptr } },
         { Tiles::ItemLingeringPotion, { "lingering_potion", nullptr, nullptr } },
         { Tiles::BowPulling0,       { "bow_pulling_0", nullptr, nullptr } },
         { Tiles::BowPulling1,       { "bow_pulling_1", nullptr, nullptr } },
