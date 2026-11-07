@@ -220,6 +220,7 @@ namespace Enchanting
             return 0;
         }
 
+        if (item == Items::Trident) return 1;
         if (Tools::isTool(item))
         {
             switch (Tools::tierOf(item))
