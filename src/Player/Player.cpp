@@ -104,7 +104,23 @@ void Player::updateVitals(float deltaTime)
     {
         m_exhaustion -= EXHAUSTION_PER_DRAIN;
         if (saturation > 0.0f) saturation = std::max(0.0f, saturation - 1.0f);
-        else hunger = std::max(0, hunger - 1);
+        else if (difficulty > 0) hunger = std::max(0, hunger - 1);
+    }
+
+    if (difficulty <= 0)
+    {
+        m_peacefulHeal += deltaTime;
+        m_peacefulFeed += deltaTime;
+        if (m_peacefulHeal >= 1.0f)
+        {
+            m_peacefulHeal -= 1.0f;
+            if (health > 0 && health < maxHealth()) heal(1);
+        }
+        if (m_peacefulFeed >= 0.5f)
+        {
+            m_peacefulFeed -= 0.5f;
+            if (hunger < MAX_HUNGER) ++hunger;
+        }
     }
 
     if (hunger > 0) m_starveTimer = 0.0f;
@@ -114,7 +130,7 @@ void Player::updateVitals(float deltaTime)
         if (m_starveTimer >= 4.0f)
         {
             m_starveTimer = 0.0f;
-            damage(1);
+            if (health > 10 || difficulty >= 3 || (health > 1 && difficulty == 2)) damage(1);
         }
     }
 

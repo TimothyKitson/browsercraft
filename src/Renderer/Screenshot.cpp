@@ -8,6 +8,7 @@
 #include <filesystem>
 #include <ctime>
 #include <cstdio>
+#include <algorithm>
 
 std::string saveScreenshot(int width, int height, const std::string& directory)
 {
@@ -56,4 +57,35 @@ std::string saveScreenshot(int width, int height, const std::string& directory)
         return {};
 
     return path;
+}
+
+bool saveWorldIcon(int width, int height, const std::string& path)
+{
+    if (width <= 0 || height <= 0) return false;
+    std::vector<unsigned char> pixels(static_cast<size_t>(width) * height * 4);
+    glPixelStorei(GL_PACK_ALIGNMENT, 1);
+    glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());
+    const int side = std::min(width, height);
+    const int left = (width - side) / 2;
+    const int bottom = (height - side) / 2;
+    constexpr int SIZE = 64;
+    std::vector<unsigned char> icon(static_cast<size_t>(SIZE) * SIZE * 3);
+    for (int y = 0; y < SIZE; ++y)
+        for (int x = 0; x < SIZE; ++x)
+        {
+            const int x0 = left + x * side / SIZE, x1 = std::max(x0 + 1, left + (x + 1) * side / SIZE);
+            const int y0 = bottom + (SIZE - 1 - y) * side / SIZE, y1 = std::max(y0 + 1, bottom + (SIZE - y) * side / SIZE);
+            unsigned long sum[3] = { 0, 0, 0 };
+            unsigned long count = 0;
+            for (int sy = y0; sy < y1; ++sy)
+                for (int sx = x0; sx < x1; ++sx)
+                {
+                    const unsigned char* p = pixels.data() + (static_cast<size_t>(sy) * width + sx) * 4;
+                    for (int c = 0; c < 3; ++c) sum[c] += p[c];
+                    ++count;
+                }
+            for (int c = 0; c < 3; ++c)
+                icon[(static_cast<size_t>(y) * SIZE + x) * 3 + c] = static_cast<unsigned char>(sum[c] / std::max(1ul, count));
+        }
+    return stbi_write_png(path.c_str(), SIZE, SIZE, 3, icon.data(), SIZE * 3) != 0;
 }

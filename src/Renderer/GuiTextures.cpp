@@ -389,7 +389,7 @@ const GuiImage* GuiTextures::image(const std::string& path)
     if (found != m_images.end()) return found->second.texture ? &found->second : nullptr;
 
     GuiImage& entry = m_images[path];
-    const std::string file = std::string(GUI_DIRECTORY) + "/" + path + ".png";
+    const std::string file = path.rfind("file:", 0) == 0 ? path.substr(5) : std::string(GUI_DIRECTORY) + "/" + path + ".png";
     int width = 0, height = 0, channels = 0;
     unsigned char* data = stbi_load(file.c_str(), &width, &height, &channels, 4);
     if (!data) return nullptr;
@@ -465,6 +465,14 @@ const GuiImage* GuiTextures::image(const std::string& path)
 bool GuiTextures::has(const std::string& path)
 {
     return image(path) != nullptr;
+}
+
+void GuiTextures::forget(const std::string& path)
+{
+    const auto found = m_images.find(path);
+    if (found == m_images.end()) return;
+    if (found->second.texture) glDeleteTextures(1, &found->second.texture);
+    m_images.erase(found);
 }
 
 void GuiTextures::readMeta(const std::string& file, GuiImage& entry)

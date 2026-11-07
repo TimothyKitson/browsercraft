@@ -85,6 +85,7 @@
 #include "Game/RecipeBook.h"
 #include "Game/Advancements.h"
 #include "Game/Stats.h"
+#include "Game/Worlds.h"
 #include "Game/Golems.h"
 #include "Renderer/Atlas.h"
 #include "Renderer/UIRenderer.h"
@@ -4795,6 +4796,126 @@ namespace
         const auto crafted = bench.takeCrafted();
         check(crafted.size() == 1 && crafted[0].first == Blocks::Planks && crafted[0].second == 4 && bench.takeCrafted().empty(),
               "what comes off the grid is logged for the crafted column");
+    }
+
+    void testWorlds()
+    {
+        section("worlds: the save list, Create World and the world types");
+        check(Worlds::sanitize("My: World?") == "My_ World_" && Worlds::sanitize("a/b.c") == "a_b_c" && Worlds::sanitize("CON") == "_CON_",
+              "folder names lose what a file name cannot hold, as 1.21.1's do");
+        const std::string saves = (std::filesystem::temp_directory_path() / "bc_selftest_saves").string();
+        std::filesystem::remove_all(saves);
+        std::filesystem::create_directories(saves);
+        check(Worlds::uniqueFolder(saves, "   ") == "New World", "a blank name is a New World");
+        Worlds::Meta first;
+        first.name = "Castle";
+        first.lastPlayed = 1000;
+        Worlds::writeMeta(saves + "/" + Worlds::uniqueFolder(saves, "Castle"), first);
+        check(Worlds::uniqueFolder(saves, "Castle") == "Castle (1)", "a taken folder gets a number");
+        Worlds::writeMeta(saves + "/Castle (1)", first);
+        check(Worlds::uniqueFolder(saves, "Castle (1)") == "Castle (2)", "and the number counts on");
+        Worlds::Meta second;
+        second.name = "Beach House";
+        second.lastPlayed = 5000;
+        second.mode = static_cast<int>(GameMode::Creative);
+        second.cheats = true;
+        second.type = Worlds::Type::Flat;
+        second.structures = false;
+        second.bonusChest = true;
+        second.difficulty = Worlds::Difficulty::Peaceful;
+        second.layers = "minecraft:bedrock,3*minecraft:sand";
+        second.biome = "minecraft:desert";
+        Worlds::writeMeta(saves + "/Beach House", second);
+        const std::vector<Worlds::Entry> worlds = Worlds::list(saves);
+        check(worlds.size() == 3 && worlds[0].folder == "Beach House", "the list holds every save, last played first");
+        const Worlds::Meta& read = worlds[0].meta;
+        check(read.name == "Beach House" && read.cheats && read.type == Worlds::Type::Flat && !read.structures && read.bonusChest &&
+              read.difficulty == Worlds::Difficulty::Peaceful && read.layers == second.layers && read.mode == static_cast<int>(GameMode::Creative),
+              "each world's settings are kept beside it");
+        check(Worlds::matches(worlds[0], "beach") && !Worlds::matches(worlds[0], "castle"), "the search box matches names");
+        std::filesystem::remove_all(saves);
+
+        const std::vector<Worlds::Layer> layers = Worlds::parseLayers("minecraft:bedrock,2*minecraft:dirt,grass_block");
+        check(layers.size() == 3 && layers[1].count == 2 && layers[2].block == "minecraft:grass_block" &&
+              Worlds::formatLayers(layers) == "minecraft:bedrock,2*minecraft:dirt,minecraft:grass_block", "superflat layers read and write");
+        std::string presetLayers, presetBiome;
+        check(Worlds::parsePresetCode("minecraft:bedrock,2*minecraft:dirt,minecraft:grass_block;minecraft:plains", presetLayers, presetBiome) &&
+              presetBiome == "minecraft:plains" && !Worlds::parsePresetCode(";minecraft:plains", presetLayers, presetBiome),
+              "a preset code is a layer list and a biome");
+        check(Worlds::flatPresets().size() == 9 && std::string(Worlds::flatPresets()[0].name) == "Classic Flat" &&
+              std::string(Worlds::flatPresets()[8].name) == "The Void", "the nine 1.21.1 superflat presets");
+        check(Worlds::seedFrom("12345", 7) == 12345u && Worlds::seedFrom("", 7) == 7u && Worlds::javaHash("hello") == 99162322 &&
+              Worlds::seedFrom("hello", 7) == static_cast<uint32_t>(99162322), "seeds: numbers as they are, words hashed the way Java hashes them");
+        check(std::string(Worlds::typeName(Worlds::Type::LargeBiomes)) == "Large Biomes" && Worlds::typeFromId("flat") == Worlds::Type::Flat,
+              "the world types carry Mojang's names");
+
+        WorldGen::Options flat;
+        flat.type = WorldGen::Options::Type::Flat;
+        flat.layers = { { Blocks::Bedrock, 1 }, { Blocks::Dirt, 2 }, { Blocks::Grass, 1 } };
+        flat.biome = Biome::Desert;
+        WorldGen flatGen(1234u, Dimension::Overworld, flat);
+        Chunk chunk(ChunkPos{ 3, -2 });
+        flatGen.generate(chunk);
+        check(chunk.getBlock(5, 0, 5) == Blocks::Bedrock && chunk.getBlock(5, 2, 5) == Blocks::Dirt && chunk.getBlock(5, 3, 5) == Blocks::Grass &&
+              chunk.getBlock(5, 4, 5) == Blocks::Air, "a superflat chunk is its layers and nothing else");
+        check(flatGen.surfaceHeight(999, -999) == 3 && flatGen.biomeAt(50, 50) == Biome::Desert, "and is one height and one biome");
+        int sx = 0, sy = 0, sz = 0;
+        flatGen.findSpawn(sx, sy, sz);
+        check(sx == 8 && sz == 8 && sy == 5, "you start above the middle of it");
+        WorldGen::Options empty;
+        empty.type = WorldGen::Options::Type::Flat;
+        empty.layers = { { Blocks::Air, 1 } };
+        WorldGen voidGen(1u, Dimension::Overworld, empty);
+        Chunk origin(ChunkPos{ 0, 0 });
+        voidGen.generate(origin);
+        check(origin.getBlock(8, WorldGen::VOID_PLATFORM_Y, 8) == Blocks::Cobblestone && origin.getBlock(0, WorldGen::VOID_PLATFORM_Y, 0) == Blocks::Stone &&
+              origin.getBlock(8, 0, 8) == Blocks::Air, "the void gets its stone platform");
+        WorldGen::Options single;
+        single.type = WorldGen::Options::Type::SingleBiome;
+        single.biome = Biome::CherryGrove;
+        WorldGen singleGen(99u, Dimension::Overworld, single);
+        check(singleGen.biomeAt(0, 0) == Biome::CherryGrove && singleGen.biomeAt(4000, -9000) == Biome::CherryGrove, "a single biome is everywhere");
+        WorldGen::Options tall;
+        tall.type = WorldGen::Options::Type::Amplified;
+        WorldGen normalGen(77u), tallGen(77u, Dimension::Overworld, tall);
+        int higher = 0, checked = 0;
+        for (int x = -2000; x <= 2000; x += 97)
+            for (int z = -2000; z <= 2000; z += 89)
+            {
+                const int plain = normalGen.surfaceHeight(x, z);
+                if (plain <= WorldGen::SEA_LEVEL + 4) continue;
+                ++checked;
+                if (tallGen.surfaceHeight(x, z) > plain) ++higher;
+            }
+        check(checked > 0 && higher * 10 >= checked * 9, "amplified land stands taller");
+        WorldGen::Options none;
+        none.structures = false;
+        check(!WorldGen(5u, Dimension::Overworld, none).structuresOn() && WorldGen(5u).structuresOn(), "structures can be turned off");
+        check(biomeFromId("minecraft:windswept_hills") == Biome::Mountains && std::string(biomeId(Biome::Snowy)) == "minecraft:snowy_plains",
+              "biomes go by their 1.21.1 ids");
+
+        check(Player::scaledByDifficulty(4, 0) == 0 && Player::scaledByDifficulty(4, 1) == 3 && Player::scaledByDifficulty(4, 2) == 4 &&
+              Player::scaledByDifficulty(4, 3) == 6 && Player::scaledByDifficulty(1, 1) == 1, "mob blows scale with difficulty");
+        Player easy(glm::vec3(0.0f, 70.0f, 0.0f));
+        easy.difficulty = 1;
+        easy.hunger = 0;
+        easy.saturation = 0.0f;
+        easy.health = 10;
+        for (int i = 0; i < 40; ++i) easy.updateVitals(0.5f);
+        check(easy.health == 10, "on easy hunger stops at five hearts");
+        Player hard(glm::vec3(0.0f, 70.0f, 0.0f));
+        hard.difficulty = 3;
+        hard.hunger = 0;
+        hard.saturation = 0.0f;
+        hard.health = 4;
+        for (int i = 0; i < 80; ++i) { hard.updateVitals(0.5f); hard.clearHurtCooldown(); }
+        check(hard.health == 0, "on hard it drains everything");
+        Player calm(glm::vec3(0.0f, 70.0f, 0.0f));
+        calm.difficulty = 0;
+        calm.hunger = 10;
+        calm.health = 10;
+        for (int i = 0; i < 10; ++i) calm.updateVitals(0.5f);
+        check(calm.health > 10 && calm.hunger > 10, "peaceful heals and feeds you");
     }
 
     void testRecipeBook()
@@ -15820,6 +15941,7 @@ int runSelfTest()
     testRecipeBook();
     testAdvancements();
     testStatistics();
+    testWorlds();
     testMadeThings();
     testTheEndAndTheSea();
     testPathfinding();

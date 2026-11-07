@@ -28,6 +28,7 @@
 #include "Game/RecipeBook.h"
 #include "Game/Advancements.h"
 #include "Game/Stats.h"
+#include "Game/Worlds.h"
 #include "Game/Brewing.h"
 #include "World/Signs.h"
 #include "World/Frames.h"
@@ -71,6 +72,7 @@
 #include <memory>
 #include <unordered_map>
 #include <map>
+#include <functional>
 #include "Game/Maps.h"
 #include "Game/Sculk.h"
 #include "Game/Fishing.h"
@@ -90,7 +92,13 @@ enum class Screen
     Playing,
     Paused,
     Dead,
-    Statistics
+    Statistics,
+    CreateWorld,
+    EditWorld,
+    ConfirmDelete,
+    CustomizeFlat,
+    FlatPresets,
+    CustomizeBiome
 };
 
 // Menu buttons are drawn and hit-tested in the same pass, so a click
@@ -135,6 +143,8 @@ enum class MenuAction
     CycleDistortion,
     OpenAdvancements,
     OpenStatistics,
+    PlayWorld,
+    CreateWorldNow,
     ToggleMainHand,
     RenderDistanceDown,
     SetRenderDistance,
@@ -935,7 +945,7 @@ private:
     // Minecraft's tooltip: a near-black box with a purple edge, white
     // text, twelve pixels right of the cursor and twelve up, pulled
     // back on screen if it would run off it.
-    void drawTooltip(const std::string& text, float mouseX, float mouseY);
+    void drawTooltip(const std::string& text, float mouseX, float mouseY, bool plain = false);
     // A block drawn as a cube seen from the corner, the way Minecraft
     // draws one in a slot. Returns false for anything that is not a
     // block with six faces -- an item, a flower, a liquid -- which the
@@ -1414,6 +1424,7 @@ private:
         std::vector<StackId> recipes;
         float age = 0.0f;
         bool sounded = false;
+        std::string systemTitle;
     };
     std::vector<Toast> m_toasts;
     std::set<StackId> m_knownRecipes;
@@ -1462,6 +1473,81 @@ private:
     void renderStatsScreen();
     void saveStats();
     void loadStats();
+    std::string m_configPath = "world";
+    Worlds::Meta m_worldMeta;
+    std::vector<Worlds::Entry> m_worldEntries;
+    struct GuiList
+    {
+        float scroll = 0.0f;
+        bool dragging = false;
+        float grabY = 0.0f;
+        int selected = -1;
+        uint32_t clickTime = 0;
+        int clickIndex = -1;
+        int clicked = -1;
+        bool doubleClicked = false;
+        int hovered = -1;
+    };
+    struct GuiField
+    {
+        std::string text;
+        size_t maxLength = 32;
+        bool focused = false;
+        uint32_t focusTime = 0;
+    };
+    struct CreateWorldState
+    {
+        int tab = 0;
+        int mode = 0;
+        Worlds::Difficulty difficulty = Worlds::Difficulty::Normal;
+        int cheats = -1;
+        Worlds::Type type = Worlds::Type::Default;
+        bool structures = true;
+        bool bonusChest = false;
+        std::string layers = "minecraft:bedrock,2*minecraft:dirt,minecraft:grass_block";
+        std::string flatBiome = "minecraft:plains";
+        std::string biome = "minecraft:plains";
+        bool fromTitle = false;
+    };
+    CreateWorldState m_create;
+    GuiList m_worldList, m_flatList, m_presetList, m_biomeList;
+    GuiField m_worldSearch, m_createName, m_createSeed, m_editName, m_presetField;
+    std::string m_editFolder;
+    std::string m_editNote;
+    std::string m_flatDraft;
+    std::string m_flatBiomeDraft;
+    std::string m_biomeDraft;
+    std::string m_pendingWorldFolder;
+    bool m_iconWanted = false;
+    bool m_bonusChestPending = false;
+    bool m_seedChosen = false;
+    uint32_t m_seedChoice = 0;
+    std::string savesDirectory() const { return m_configPath + "/saves"; }
+    void migrateLegacySave();
+    void refreshWorlds();
+    std::string defaultWorldFolder();
+    void openWorldList();
+    void playWorld(const std::string& folder);
+    void openCreateWorld(const Worlds::Entry* from);
+    void createWorldFromScreen();
+    WorldGen::Options generatorOptions(const Worlds::Meta& meta) const;
+    std::vector<std::pair<BlockId, int>> flatLayers(const std::string& text) const;
+    bool createCheats() const;
+    void placeBonusChest();
+    void writeWorldMeta();
+    bool guiButton(float x, float y, float w, float h, const std::string& label, bool enabled = true);
+    bool guiCycle(float x, float y, float w, const std::string& label, bool enabled = true);
+    void guiField(GuiField& field, float x, float y, float w, float h, const std::string& placeholder = std::string());
+    void guiList(GuiList& list, float top, float height, float rowHeight, float rowWidth, int count, float header,
+                 const std::function<void(int, float, float, bool)>& drawRow);
+    void menuScreenBackdrop(float w, float h);
+    void wrappedTooltip(const std::string& text, float mouseX, float mouseY, float width);
+    void renderCreateWorld();
+    void renderEditWorld();
+    void renderConfirmDelete();
+    void renderCustomizeFlat();
+    void renderFlatPresets();
+    void renderCustomizeBiome();
     Raids::Raid m_raid;
     glm::vec3 m_raidOmenAt{ 0.0f };
     bool m_raidOmenPending = false;

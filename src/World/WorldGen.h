@@ -1,5 +1,8 @@
 #pragma once
 #include "Chunk.h"
+#include <string>
+#include <utility>
+#include <vector>
 #include "Noise.h"
 #include "Village.h"
 #include "TrialChamber.h"
@@ -42,6 +45,17 @@ enum class Biome : uint8_t
 };
 
 const char* biomeName(Biome biome);
+struct WorldGenOptions
+{
+    enum class Type : uint8_t { Default, Flat, LargeBiomes, Amplified, SingleBiome };
+    Type type = Type::Default;
+    bool structures = true;
+    std::vector<std::pair<BlockId, int>> layers;
+    Biome biome = Biome::Plains;
+};
+const char* biomeId(Biome biome);
+const char* biomeTitle(Biome biome);
+Biome biomeFromId(const std::string& id);
 
 // Which froglight a frog that grew up here leaves behind. Minecraft
 // decides it by the climate the tadpole grew up in: warm gives the
@@ -289,7 +303,14 @@ public:
     static constexpr int MINESHAFT_MAX = 44;
     static constexpr int END_ISLAND_LEVEL = 58;
 
-    WorldGen(uint32_t seed, Dimension dimension = Dimension::Overworld);
+    using Options = WorldGenOptions;
+
+    WorldGen(uint32_t seed, Dimension dimension = Dimension::Overworld, Options options = Options{});
+    const Options& options() const { return m_options; }
+    bool flatWorld() const { return m_options.type == Options::Type::Flat && m_dimension == Dimension::Overworld; }
+    bool structuresOn() const { return m_options.structures; }
+    int flatTop() const { return m_flatTop; }
+    static constexpr int VOID_PLATFORM_Y = 64;
 
     Dimension dimension() const { return m_dimension; }
 
@@ -347,6 +368,12 @@ public:
 private:
     uint32_t m_seed;
     Dimension m_dimension;
+    Options m_options;
+    float m_scale = 1.0f;
+    float m_lift = 1.0f;
+    int m_flatTop = 0;
+    bool m_voidPlatform = false;
+    void generateFlat(Chunk& chunk) const;
     Noise m_height;
     Noise m_hills;
     Noise m_mountains;

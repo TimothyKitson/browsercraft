@@ -157,6 +157,14 @@ public:
     bool sneaking = false;
     GameMode mode = GameMode::Survival;
     int health = MAX_HEALTH;
+    int difficulty = 2;
+    static int scaledByDifficulty(int amount, int difficulty)
+    {
+        if (difficulty <= 0) return 0;
+        if (difficulty == 1) return std::min(amount / 2 + 1, amount);
+        if (difficulty >= 3) return amount * 3 / 2;
+        return amount;
+    }
 
     // What is being worn, totted up from the armour slots once a frame.
     // Kept here rather than read from the inventory so that damage() --
@@ -255,6 +263,8 @@ private:
     float m_regenTimer = 0.0f;
     float m_hurtCooldown = 0.0f;
     Tally m_tally;
+    float m_peacefulHeal = 0.0f;
+    float m_peacefulFeed = 0.0f;
     bool m_totemSpent = false;
     int m_silverfishOwed = 0;
     uint32_t m_infestRoll = 0x1F5u;

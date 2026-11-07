@@ -39,7 +39,7 @@ class World
 {
 public:
     World(uint32_t seed, std::string saveDirectory, int renderDistance,
-          Dimension dimension = Dimension::Overworld);
+          Dimension dimension = Dimension::Overworld, WorldGen::Options options = WorldGen::Options{});
     ~World();
 
     World(const World&) = delete;

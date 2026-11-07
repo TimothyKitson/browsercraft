@@ -406,13 +406,13 @@ void Application::flushSaveStorage()
 
 void Application::saveBindings()
 {
-    m_keys.save(m_savePath);
+    m_keys.save(m_configPath);
     flushSaveStorage();
 }
 
 void Application::loadProfile()
 {
-    std::FILE* file = std::fopen((m_savePath + "/profile.txt").c_str(), "rb");
+    std::FILE* file = std::fopen((m_configPath + "/profile.txt").c_str(), "rb");
     if (!file) return;
 
     char buffer[64] = { 0 };
@@ -442,7 +442,7 @@ void Application::loadProfile()
 
 void Application::loadOptions()
 {
-    std::FILE* file = std::fopen((m_savePath + "/options.txt").c_str(), "rb");
+    std::FILE* file = std::fopen((m_configPath + "/options.txt").c_str(), "rb");
     if (!file) return;
     char line[128];
     while (std::fgets(line, sizeof(line), file))
@@ -463,8 +463,8 @@ void Application::loadOptions()
 void Application::saveOptions()
 {
     std::error_code ec;
-    std::filesystem::create_directories(m_savePath, ec);
-    std::FILE* file = std::fopen((m_savePath + "/options.txt").c_str(), "wb");
+    std::filesystem::create_directories(m_configPath, ec);
+    std::FILE* file = std::fopen((m_configPath + "/options.txt").c_str(), "wb");
     if (!file) return;
     int filters = 0;
     for (int k = 0; k < 4; ++k) filters |= m_recipeFilter[k] ? (1 << k) : 0;
@@ -502,9 +502,9 @@ bool Application::shadersActive()
 void Application::saveProfile()
 {
     std::error_code ec;
-    std::filesystem::create_directories(m_savePath, ec);
+    std::filesystem::create_directories(m_configPath, ec);
 
-    std::FILE* file = std::fopen((m_savePath + "/profile.txt").c_str(), "wb");
+    std::FILE* file = std::fopen((m_configPath + "/profile.txt").c_str(), "wb");
     if (!file) return;
     std::fprintf(file, "%s\n%d %d\n", m_playerName.c_str(),
                  m_skinStyle == PlayerSkin::Style::Slim ? 1 : 0, m_skinVariant);
@@ -524,9 +524,24 @@ void Application::saveProfile()
 void Application::startWorld(GameMode mode, bool freshWorld)
 {
     if (freshWorld) deleteSavedWorld();
+    bool brandNew = freshWorld;
+    {
+        std::error_code ec;
+        brandNew = brandNew || !std::filesystem::exists(m_savePath + "/level.dat", ec);
+        m_iconWanted = !std::filesystem::exists(m_savePath + "/icon.png", ec);
+    }
+    if (brandNew) Worlds::writeMeta(m_savePath, m_worldMeta);
+    else
+    {
+        Worlds::Meta meta;
+        if (Worlds::readMeta(m_savePath, meta)) m_worldMeta = meta;
+    }
+    m_bonusChestPending = brandNew && m_worldMeta.bonusChest && !modeIsHardcore(mode);
 
     uint32_t seed = m_hasSeedOverride ? m_seedOverride
-                                      : static_cast<uint32_t>(SDL_GetPerformanceCounter() ^ 0x9E3779B9u);
+                    : m_seedChosen     ? m_seedChoice
+                                       : static_cast<uint32_t>(SDL_GetPerformanceCounter() ^ 0x9E3779B9u);
+    m_seedChosen = false;
     LevelState existing;
     const bool hasSave = !freshWorld && WorldSave::loadLevel(m_savePath, existing);
     if (hasSave && existing.seed != 0) seed = existing.seed;
@@ -571,6 +586,8 @@ void Application::startWorld(GameMode mode, bool freshWorld)
     m_player = Player(glm::vec3(0.0f, 80.0f, 0.0f));
     m_player.mode = m_gameMode;
     m_player.flying = modeIsCreative(m_gameMode);
+    m_player.difficulty = modeIsHardcore(m_gameMode) ? 3 : static_cast<int>(m_worldMeta.difficulty);
+    m_entities.setPeaceful(m_player.difficulty == 0);
 
     m_dimension = m_startupDimension;
 
@@ -588,7 +605,7 @@ void Application::startWorld(GameMode mode, bool freshWorld)
     m_frames.setDimension(static_cast<int>(m_dimension));
     m_furnaces.setDimension(static_cast<int>(m_dimension));
 
-    m_world = std::make_unique<World>(seed, m_savePath, DEFAULT_RENDER_DISTANCE, m_dimension);
+    m_world = std::make_unique<World>(seed, m_savePath, DEFAULT_RENDER_DISTANCE, m_dimension, generatorOptions(m_worldMeta));
     if (m_dimension != Dimension::Overworld)
     {
         // Dev entry straight into another dimension: the overworld
@@ -645,10 +662,17 @@ void Application::startJoinedWorld()
 
     // Scratch directory, wiped on every join: a guest must never touch
     // the local singleplayer save, and nothing here is worth keeping.
-    const std::string guestPath = m_savePath + "_guest";
+    const std::string guestPath = m_configPath + "/guest";
     std::error_code ec;
     std::filesystem::remove_all(guestPath, ec);
-    m_world = std::make_unique<World>(handshake.seed, guestPath, DEFAULT_RENDER_DISTANCE);
+    {
+        std::vector<std::string> lines;
+        std::istringstream in(handshake.generator);
+        std::string line;
+        while (std::getline(in, line)) lines.push_back(line);
+        m_worldMeta = Worlds::parseMeta(lines);
+    }
+    m_world = std::make_unique<World>(handshake.seed, guestPath, DEFAULT_RENDER_DISTANCE, Dimension::Overworld, generatorOptions(m_worldMeta));
 
     m_spawnPoint = handshake.spawn;
     m_camera.position = m_player.eyePosition();
@@ -695,7 +719,7 @@ void Application::travelTo(Dimension dimension)
     m_particles.clear();
 
     m_world = std::make_unique<World>(m_world->seed(), m_savePath,
-                                      DEFAULT_RENDER_DISTANCE, dimension);
+                                      DEFAULT_RENDER_DISTANCE, dimension, generatorOptions(m_worldMeta));
 
     // The Nether is a slab with a ceiling, so the overworld's spawn
     // height would drop you inside bedrock; start mid-slab and let the
@@ -1155,11 +1179,12 @@ void Application::loadLevel()
 
 void Application::saveLevel()
 {
-    if (!m_world) return;
+    if (!m_world || m_menuWorld) return;
     // A guest is a visitor in someone else's world; writing it to this
     // machine's save would overwrite their own singleplayer game.
     if (m_net.role() == Net::Role::Guest) return;
     saveAdvancements();
+    writeWorldMeta();
 
     LevelState state;
     state.seed = m_world->seed();
@@ -1628,14 +1653,89 @@ void Application::run()
     m_automated = m_autoScreenshotDelay > 0.0f;
 
     // Dev aid: --screen opens straight onto a given menu for screenshots.
+    const bool worldMenus = m_startupScreen == "worlds" || m_startupScreen == "createworld" || m_startupScreen == "createworld2" ||
+                            m_startupScreen == "createworld3" || m_startupScreen == "editworld" || m_startupScreen == "deleteworld" ||
+                            m_startupScreen == "superflat" || m_startupScreen == "flatpresets" || m_startupScreen == "biomes" ||
+                            m_startupScreen == "noworlds" || m_startupScreen == "newworld";
     const bool menuOnly = (m_startupScreen == "title" || m_startupScreen == "modes" ||
                            m_startupScreen == "settings" || m_startupScreen == "multiplayer" ||
                            m_startupScreen == "controls" || m_startupScreen == "name" ||
-                           m_startupScreen == "video" || m_startupScreen == "credits");
+                           m_startupScreen == "video" || m_startupScreen == "credits" || worldMenus);
+    migrateLegacySave();
     if (m_startupScreen == "title") m_screen = Screen::Title;
     if (m_startupScreen == "video") m_screen = Screen::VideoSettings;
     if (m_startupScreen == "credits") m_screen = Screen::Credits;
-    if (m_startupScreen == "modes") m_screen = Screen::Singleplayer;
+    if (m_startupScreen == "modes") openWorldList();
+    if (worldMenus)
+    {
+        if (m_startupScreen != "noworlds")
+        {
+            struct Seeded { const char* name; GameMode mode; bool cheats; long long ago; };
+            const Seeded SEEDED[3] = { { "My Survival World", GameMode::Survival, false, 3600000LL },
+                                       { "Creative Build", GameMode::Creative, true, 172800000LL },
+                                       { "Hardcore Run", GameMode::Hardcore, false, 864000000LL } };
+            for (const Seeded& seeded : SEEDED)
+            {
+                Worlds::Meta meta;
+                meta.name = seeded.name;
+                meta.mode = static_cast<int>(seeded.mode);
+                meta.cheats = seeded.cheats;
+                meta.lastPlayed = Worlds::nowMillis() - seeded.ago;
+                const std::string folder = Worlds::uniqueFolder(savesDirectory(), seeded.name);
+                Worlds::writeMeta(savesDirectory() + "/" + folder, meta);
+            }
+        }
+        openWorldList();
+        if (m_startupScreen == "worlds") m_worldList.selected = 0;
+        if (m_startupScreen == "editworld" || m_startupScreen == "deleteworld")
+        {
+            m_editFolder = m_worldEntries.front().folder;
+            m_editNote = m_worldEntries.front().meta.name;
+            m_editName.text = m_editNote;
+            m_editName.focused = true;
+            m_screen = m_startupScreen == "editworld" ? Screen::EditWorld : Screen::ConfirmDelete;
+        }
+        if (m_startupScreen == "createworld" || m_startupScreen == "createworld2" || m_startupScreen == "createworld3" ||
+            m_startupScreen == "superflat" || m_startupScreen == "flatpresets" || m_startupScreen == "biomes")
+        {
+            openCreateWorld(nullptr);
+            m_create.tab = m_startupScreen == "createworld" ? 0 : m_startupScreen == "createworld3" ? 2 : 1;
+            if (m_startupScreen == "createworld2") m_create.type = Worlds::Type::Flat;
+            if (m_startupScreen == "superflat" || m_startupScreen == "flatpresets")
+            {
+                m_create.type = Worlds::Type::Flat;
+                m_flatDraft = Worlds::flatPresets()[4].layers;
+                m_flatBiomeDraft = Worlds::flatPresets()[4].biome;
+                m_screen = Screen::CustomizeFlat;
+                m_flatList.selected = 1;
+                if (m_startupScreen == "flatpresets")
+                {
+                    m_presetField.maxLength = 1230;
+                    m_presetField.text = Worlds::presetCode(m_flatDraft, m_flatBiomeDraft);
+                    m_presetList.selected = 4;
+                    m_screen = Screen::FlatPresets;
+                }
+            }
+            if (m_startupScreen == "biomes")
+            {
+                m_create.type = Worlds::Type::SingleBiome;
+                m_biomeDraft = "minecraft:cherry_grove";
+                m_screen = Screen::CustomizeBiome;
+            }
+        }
+        if (m_startupScreen == "newworld")
+        {
+            openCreateWorld(nullptr);
+            m_createName.text = "Flat: Test?";
+            m_createSeed.text = "hello";
+            m_create.mode = 2;
+            m_create.type = Worlds::Type::Flat;
+            m_create.layers = Worlds::flatPresets()[6].layers;
+            m_create.flatBiome = Worlds::flatPresets()[6].biome;
+            m_create.bonusChest = true;
+            m_pendingAction = MenuAction::CreateWorldNow;
+        }
+    }
     if (m_startupScreen == "settings") m_screen = Screen::Settings;
     if (m_startupScreen == "multiplayer")
     {
@@ -1656,7 +1756,7 @@ void Application::run()
     // before anything else, the way the game asks on first launch.
     loadProfile();
     loadOptions();
-    m_keys.load(m_savePath);
+    m_keys.load(m_configPath);
     if (m_playerName.empty() && !m_automated && m_startupScreen.empty())
         m_screen = Screen::NameEntry;
     m_nameDraft = m_playerName.empty()
@@ -1665,6 +1765,25 @@ void Application::run()
 
     if (!menuOnly && (m_automated || m_startImmediately))
     {
+        m_savePath = savesDirectory() + "/" + defaultWorldFolder();
+        if (!Worlds::readMeta(m_savePath, m_worldMeta)) m_worldMeta = Worlds::Meta{};
+        const std::vector<Worlds::FlatPreset>& presets = Worlds::flatPresets();
+        if (m_startupScreen == "flatworld" || m_startupScreen == "waterworld" || m_startupScreen == "voidworld")
+        {
+            const Worlds::FlatPreset& preset = presets[m_startupScreen == "waterworld" ? 2 : m_startupScreen == "voidworld" ? 8 : 0];
+            m_worldMeta.type = Worlds::Type::Flat;
+            m_worldMeta.layers = preset.layers;
+            m_worldMeta.biome = preset.biome;
+        }
+        if (m_startupScreen == "amplified") m_worldMeta.type = Worlds::Type::Amplified;
+        if (m_startupScreen == "largebiomes") m_worldMeta.type = Worlds::Type::LargeBiomes;
+        if (m_startupScreen == "singlebiome")
+        {
+            m_worldMeta.type = Worlds::Type::SingleBiome;
+            m_worldMeta.biome = "minecraft:cherry_grove";
+        }
+        if (m_startupScreen == "bonuschest") m_worldMeta.bonusChest = true;
+        if (m_startupScreen == "peaceful") m_worldMeta.difficulty = Worlds::Difficulty::Peaceful;
         startWorld(m_startupMode, m_startupScreen == "dead" || m_startupScreen == "hardcore");
     }
     else
@@ -1679,7 +1798,12 @@ void Application::run()
         const std::string host = m_playerName.empty() ? "Host" : m_playerName;
         if (m_net.openToLan(host, m_world->seed(), static_cast<uint8_t>(m_gameMode),
                             m_timeOfDay, m_spawnPoint))
+        {
             m_discovery.startAnnouncing(host + "'s World", m_net.port());
+            std::string generator;
+            for (const std::string& line : Worlds::metaLines(m_worldMeta)) generator += line + "\n";
+            m_net.setGenerator(generator);
+        }
         std::printf("[net] %s\n", m_net.message().c_str());
         std::fflush(stdout);
     }
@@ -1805,6 +1929,7 @@ bool Application::frame()
     {
         // Title panorama: no player, just the camera circling the scenery.
         updateMenuCamera(deltaTime);
+        for (Toast& toast : m_toasts) toast.age += deltaTime;
         m_world->update(m_camera.position);
         m_atlas.update(deltaTime);
     }
@@ -7231,6 +7356,20 @@ bool Application::frame()
             }
         }
         else if (m_startupScreen == "pause") m_screen = Screen::Paused;
+        else if (m_startupScreen == "bonuschest")
+        {
+            const glm::ivec3 feet = glm::ivec3(glm::floor(m_player.position));
+            for (int dx = -7; dx <= 7; ++dx)
+                for (int dz = -7; dz <= 7; ++dz)
+                    for (int dy = -5; dy <= 4; ++dy)
+                        if (m_world->getBlock(feet.x + dx, feet.y + dy, feet.z + dz) == Blocks::Chest)
+                        {
+                            const glm::vec3 to = glm::vec3(feet.x + dx, feet.y + dy, feet.z + dz) + glm::vec3(0.5f) - m_player.eyePosition();
+                            m_camera.yaw = glm::degrees(std::atan2(to.z, to.x));
+                            m_camera.pitch = glm::degrees(std::atan2(to.y, glm::length(glm::vec2(to.x, to.z))));
+                            m_camera.addLook(0.0f, 0.0f, 0.0f);
+                        }
+        }
         else if (m_startupScreen == "stats" || m_startupScreen == "statsitems" || m_startupScreen == "statsmobs")
         {
             using C = Stats::Custom;
@@ -7331,7 +7470,9 @@ void Application::applyMenuAction()
         case MenuAction::None: break;
 
         case MenuAction::ResumeSaved:    startWorld(GameMode::Survival, false); break;
-        case MenuAction::GoSingleplayer: m_screen = Screen::Singleplayer; break;
+        case MenuAction::GoSingleplayer: openWorldList(); break;
+        case MenuAction::PlayWorld: playWorld(m_pendingWorldFolder); break;
+        case MenuAction::CreateWorldNow: createWorldFromScreen(); break;
         case MenuAction::GoMultiplayer:
             m_screen = Screen::Multiplayer;
 #ifndef __EMSCRIPTEN__
@@ -7347,6 +7488,9 @@ void Application::applyMenuAction()
                                 static_cast<uint8_t>(m_gameMode), m_timeOfDay, m_spawnPoint))
             {
                 m_discovery.startAnnouncing(host + "'s World", m_net.port());
+                std::string generator;
+                for (const std::string& line : Worlds::metaLines(m_worldMeta)) generator += line + "\n";
+                m_net.setGenerator(generator);
                 m_audio.play(Sound::Click, 0.6f);
             }
             break;
@@ -7651,6 +7795,27 @@ void Application::handleEvents()
         {
             m_screen = m_optionsReturn;
         }
+        else if (m_screen == Screen::CreateWorld)
+        {
+            if (m_create.fromTitle) m_screen = Screen::Title;
+            else
+            {
+                refreshWorlds();
+                m_screen = Screen::Singleplayer;
+            }
+        }
+        else if (m_screen == Screen::EditWorld || m_screen == Screen::ConfirmDelete)
+        {
+            m_screen = Screen::Singleplayer;
+        }
+        else if (m_screen == Screen::CustomizeFlat || m_screen == Screen::CustomizeBiome)
+        {
+            m_screen = Screen::CreateWorld;
+        }
+        else if (m_screen == Screen::FlatPresets)
+        {
+            m_screen = Screen::CustomizeFlat;
+        }
         else if (m_screen == Screen::Singleplayer || m_screen == Screen::Multiplayer)
         {
             m_screen = Screen::Title;
@@ -7926,6 +8091,7 @@ void Application::waitForSpawnChunk()
         // rather than to the generator's original guess.
         if (placed) m_spawnPoint = m_player.position;
         m_placeOnSurface = false;
+        if (placed && m_bonusChestPending) placeBonusChest();
     }
 
     m_player.velocity = glm::vec3(0.0f);
@@ -13530,7 +13696,8 @@ void Application::applyBlast(const glm::vec3& at, float radius, int damage)
     // Then everything living, the player included.
     const glm::vec3 chest = m_player.position + glm::vec3(0.0f, Player::HEIGHT * 0.5f, 0.0f);
     const float toPlayer = glm::length(chest - at);
-    const int onPlayer = Explosion::damageAt(toPlayer, radius, damage);
+    const int onPlayer = m_blastSource >= 0 ? Player::scaledByDifficulty(Explosion::damageAt(toPlayer, radius, damage), m_player.difficulty)
+                                            : Explosion::damageAt(toPlayer, radius, damage);
 
     if (onPlayer > 0 && m_player.damage(onPlayer))
     {
@@ -13912,7 +14079,7 @@ namespace
                 return true;
             }
 
-            if (player->damage(damage))
+            if (player->damage(Player::scaledByDifficulty(damage, player->difficulty)))
             {
                 ++playerHits;
                 if (shooter >= 0) lastShooter = shooter;
@@ -16785,6 +16952,12 @@ void Application::render()
     const bool panorama = panoramaShowing();
     if (m_world && !panorama) renderWorld();
     else if (!panorama) renderMenuBackdrop(0.0f);
+    if (m_iconWanted && m_world && !m_menuWorld && m_worldReady && m_screen == Screen::Playing && !m_inventoryOpen &&
+        m_readySeconds > 3.0f && m_net.role() != Net::Role::Guest)
+    {
+        m_iconWanted = false;
+        if (saveWorldIcon(m_window.width(), m_window.height(), m_savePath + "/icon.png")) flushSaveStorage();
+    }
 
     // The HUD lights its block icons off the pack's own normal maps,
     // so a cobblestone in the hotbar is the cobblestone underfoot and
@@ -16833,6 +17006,12 @@ void Application::render()
         case Screen::VideoSettings: renderVideoScreen(); break;
         case Screen::Credits:      renderCreditsScreen(); break;
         case Screen::Statistics:   renderStatsScreen(); break;
+        case Screen::CreateWorld:  renderCreateWorld(); break;
+        case Screen::EditWorld:    renderEditWorld(); break;
+        case Screen::ConfirmDelete: renderConfirmDelete(); break;
+        case Screen::CustomizeFlat: renderCustomizeFlat(); break;
+        case Screen::FlatPresets:  renderFlatPresets(); break;
+        case Screen::CustomizeBiome: renderCustomizeBiome(); break;
         case Screen::Controls:     renderControlsScreen(); break;
         case Screen::NameEntry:    renderNameEntryScreen(); break;
         case Screen::Playing:
@@ -16848,7 +17027,7 @@ void Application::render()
             renderDeathScreen();
             break;
     }
-    if (inWorld && m_world) renderToasts();
+    if ((inWorld && m_world) || !inGame()) renderToasts();
 
     m_ui.end();
 }
@@ -19293,7 +19472,7 @@ void Application::updateMobs(float deltaTime)
             continue;
         }
 
-        if (!m_player.damage(strike.damage)) continue;
+        if (!m_player.damage(Player::scaledByDifficulty(strike.damage, m_player.difficulty))) continue;
         if (strike.attacker >= 0)
         {
             m_lastAttacker = strike.attacker;
@@ -21377,61 +21556,6 @@ void Application::renderTitleScreen()
                             footerY, 1.7f, DIM_TEXT);
 }
 
-void Application::renderSingleplayerScreen()
-{
-    const ScopedPanelUnits panel(m_ui, guiScale());
-    const float w = m_ui.canvasWidth();
-    const float h = m_ui.canvasHeight();
-
-    m_ui.quad(0, 0, w, h, glm::vec4(0.0f, 0.0f, 0.0f, 0.45f));
-    centredText("Singleplayer", h * 0.13f, 4.4f, TEXT_COLOR);
-
-    const float buttonWidth = std::min(520.0f, w * 0.72f);
-    const float buttonX = w * 0.5f - buttonWidth * 0.5f;
-    const float buttonHeight = 54.0f;
-    float y = h * 0.26f;
-
-    // Your world is saved automatically, so resuming is just the top entry
-    // rather than a separate button on the home screen.
-    if (saveExists())
-    {
-        if (menuButton({ buttonX, y, buttonWidth, buttonHeight }, "Your Saved World"))
-            m_pendingAction = MenuAction::ResumeSaved;
-        y += buttonHeight + 22.0f;
-    }
-
-    struct ModeEntry { const char* label; MenuAction action; };
-    const ModeEntry MODES[] = {
-        { "Survival", MenuAction::NewSurvival },
-        { "Creative", MenuAction::NewCreative },
-        { "Hardcore", MenuAction::NewHardcore },
-    };
-
-    for (const ModeEntry& mode : MODES)
-    {
-        if (menuButton({ buttonX, y, buttonWidth, buttonHeight }, mode.label))
-            m_pendingAction = mode.action;
-        y += buttonHeight + 14.0f;
-    }
-
-    y += 10.0f;
-
-    // Decided before the world is made, and kept with it. Creative has
-    // the lot anyway, so the toggle only really bites in survival.
-    const std::string cheats = std::string("Allow Cheats: ") + (m_allowCheats ? "ON" : "Off");
-    if (menuButton({ buttonX, y, buttonWidth, 46.0f }, cheats))
-        m_pendingAction = MenuAction::ToggleCheats;
-    y += 46.0f + 8.0f;
-
-    centredText(m_allowCheats ? "/gamemode /time /tp /give /kill /seed"
-                              : "Chat works either way; the commands do not",
-                y, 1.7f, DIM_TEXT);
-    y += 30.0f;
-
-    if (menuButton({ buttonX, y, buttonWidth, 46.0f }, "Back"))
-        m_pendingAction = MenuAction::BackToTitle;
-}
-
 void Application::renderMultiplayerScreen()
 {
     const ScopedPanelUnits panel(m_ui, guiScale());
@@ -22022,6 +22146,7 @@ void Application::renderDeathScreen()
 #include "RecipeBookScreen.inl"
 #include "AdvancementsScreen.inl"
 #include "StatsScreen.inl"
+#include "WorldScreens.inl"
 
 void Application::renderDebugOverlay()
 {

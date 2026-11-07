@@ -54,6 +54,59 @@ const char* biomeName(Biome biome)
     return "Unknown";
 }
 
+namespace
+{
+    struct BiomeKey
+    {
+        Biome biome;
+        const char* id;
+        const char* title;
+    };
+    const BiomeKey BIOME_KEYS[] = {
+        { Biome::Badlands, "minecraft:badlands", "Badlands" },
+        { Biome::Beach, "minecraft:beach", "Beach" },
+        { Biome::CherryGrove, "minecraft:cherry_grove", "Cherry Grove" },
+        { Biome::CrimsonForest, "minecraft:crimson_forest", "Crimson Forest" },
+        { Biome::Desert, "minecraft:desert", "Desert" },
+        { Biome::Forest, "minecraft:forest", "Forest" },
+        { Biome::Jungle, "minecraft:jungle", "Jungle" },
+        { Biome::MangroveSwamp, "minecraft:mangrove_swamp", "Mangrove Swamp" },
+        { Biome::MushroomFields, "minecraft:mushroom_fields", "Mushroom Fields" },
+        { Biome::NetherWastes, "minecraft:nether_wastes", "Nether Wastes" },
+        { Biome::Ocean, "minecraft:ocean", "Ocean" },
+        { Biome::Plains, "minecraft:plains", "Plains" },
+        { Biome::Savanna, "minecraft:savanna", "Savanna" },
+        { Biome::Snowy, "minecraft:snowy_plains", "Snowy Plains" },
+        { Biome::Swamp, "minecraft:swamp", "Swamp" },
+        { Biome::WarpedForest, "minecraft:warped_forest", "Warped Forest" },
+        { Biome::Mountains, "minecraft:windswept_hills", "Windswept Hills" },
+    };
+}
+
+const char* biomeId(Biome biome)
+{
+    for (const BiomeKey& key : BIOME_KEYS)
+        if (key.biome == biome) return key.id;
+    return "minecraft:plains";
+}
+
+const char* biomeTitle(Biome biome)
+{
+    for (const BiomeKey& key : BIOME_KEYS)
+        if (key.biome == biome) return key.title;
+    return "Plains";
+}
+
+Biome biomeFromId(const std::string& id)
+{
+    const std::string full = id.find(':') == std::string::npos ? "minecraft:" + id : id;
+    for (const BiomeKey& key : BIOME_KEYS)
+        if (full == key.id) return key.biome;
+    if (full == "minecraft:deep_ocean" || full == "minecraft:warm_ocean" || full == "minecraft:cold_ocean") return Biome::Ocean;
+    if (full == "minecraft:snowy_tundra" || full == "minecraft:ice_spikes") return Biome::Snowy;
+    return Biome::Plains;
+}
+
 const char* dimensionName(Dimension dimension)
 {
     switch (dimension)
@@ -74,9 +127,10 @@ const char* dimensionFolder(Dimension dimension)
     }
 }
 
-WorldGen::WorldGen(uint32_t seed, Dimension dimension)
+WorldGen::WorldGen(uint32_t seed, Dimension dimension, Options options)
     : m_seed(seed)
     , m_dimension(dimension)
+    , m_options(std::move(options))
     , m_height(seed + 1)
     , m_hills(seed + 2)
     , m_mountains(seed + 3)
@@ -85,22 +139,38 @@ WorldGen::WorldGen(uint32_t seed, Dimension dimension)
     , m_caves(seed + 6)
     , m_caves2(seed + 7)
 {
+    if (m_options.type == Options::Type::LargeBiomes) m_scale = 0.25f;
+    if (m_options.type == Options::Type::Amplified) m_lift = 1.9f;
+    if (m_options.type == Options::Type::Flat)
+    {
+        int top = 0;
+        bool solid = false;
+        for (const auto& [block, count] : m_options.layers)
+        {
+            top += count;
+            solid = solid || block != Blocks::Air;
+        }
+        top = std::min(top, Chunk::SY - 8);
+        m_voidPlatform = !solid;
+        m_flatTop = m_voidPlatform ? VOID_PLATFORM_Y : std::max(0, top - 1);
+    }
 }
 
 float WorldGen::temperatureAt(int x, int z) const
 {
-    return spread(m_temperature.fbm2D(x * 0.0016f + 500.0f, z * 0.0016f - 200.0f, 3), 3.0f);
+    return spread(m_temperature.fbm2D(x * 0.0016f * m_scale + 500.0f, z * 0.0016f * m_scale - 200.0f, 3), 3.0f);
 }
 
 float WorldGen::humidityAt(int x, int z) const
 {
-    return spread(m_humidity.fbm2D(x * 0.0019f - 800.0f, z * 0.0019f + 350.0f, 3), 3.0f);
+    return spread(m_humidity.fbm2D(x * 0.0019f * m_scale - 800.0f, z * 0.0019f * m_scale + 350.0f, 3), 3.0f);
 }
 
 int WorldGen::surfaceHeight(int worldX, int worldZ) const
 {
-    const float fx = static_cast<float>(worldX);
-    const float fz = static_cast<float>(worldZ);
+    if (flatWorld()) return m_flatTop;
+    const float fx = static_cast<float>(worldX) * m_scale;
+    const float fz = static_cast<float>(worldZ) * m_scale;
 
     // Large-scale shape: decides ocean basins vs. continents. Lifted so
     // that rather more of the world is land than sea, the way an
@@ -116,10 +186,9 @@ int WorldGen::surfaceHeight(int worldX, int worldZ) const
     ridges = std::max(0.0f, ridges - 0.55f) / 0.45f;
     float mountainMask = smoothstep(0.10f, 0.70f, continent);
 
-    float height = SEA_LEVEL
-                 + continent * 22.0f
-                 + hills * 8.0f
-                 + mountainMask * ridges * 52.0f;
+    float rise = continent * 22.0f + hills * 8.0f + mountainMask * ridges * 52.0f;
+    if (rise > 0.0f) rise *= m_lift;
+    float height = SEA_LEVEL + rise;
 
     const float island = mushroomIslandAt(worldX, worldZ);
     if (island > 0.0f)
@@ -130,8 +199,8 @@ int WorldGen::surfaceHeight(int worldX, int worldZ) const
 
 float WorldGen::mushroomIslandAt(int worldX, int worldZ) const
 {
-    const float fx = static_cast<float>(worldX);
-    const float fz = static_cast<float>(worldZ);
+    const float fx = static_cast<float>(worldX) * m_scale;
+    const float fz = static_cast<float>(worldZ) * m_scale;
     const float continent = spread(m_height.fbm2D(fx * 0.0013f, fz * 0.0013f, 4), 3.0f) + 0.30f;
     if (continent > -0.18f) return 0.0f;
     const float field = m_hills.fbm2D(fx * 0.0042f + 733.0f, fz * 0.0042f - 211.0f, 2);
@@ -141,6 +210,9 @@ float WorldGen::mushroomIslandAt(int worldX, int worldZ) const
 
 Biome WorldGen::biomeAt(int worldX, int worldZ) const
 {
+    if (m_dimension == Dimension::Overworld &&
+        (m_options.type == Options::Type::Flat || m_options.type == Options::Type::SingleBiome))
+        return m_options.biome;
     int height = surfaceHeight(worldX, worldZ);
     if (height > SEA_LEVEL && mushroomIslandAt(worldX, worldZ) > 0.5f) return Biome::MushroomFields;
     float temperature = temperatureAt(worldX, worldZ);
@@ -199,24 +271,57 @@ void WorldGen::generate(Chunk& chunk) const
             break;
     }
 
+    if (flatWorld())
+    {
+        generateFlat(chunk);
+        return;
+    }
+
+    const bool structures = m_options.structures;
     generateColumns(chunk);
     carveCaves(chunk);
     layDeepslate(chunk);
     placeOres(chunk);
     dressCaves(chunk);
     decorate(chunk);
-    buildVillages(chunk);
-    buildTrialChambers(chunk);
-    buildStrongholds(chunk);
-    buildMineshafts(chunk);
-    buildLandmarks(chunk);
+    if (structures)
+    {
+        buildVillages(chunk);
+        buildTrialChambers(chunk);
+        buildStrongholds(chunk);
+        buildMineshafts(chunk);
+        buildLandmarks(chunk);
+    }
     buildDesertWells(chunk);
     buildGeodes(chunk);
-    buildAncientCities(chunk);
+    if (structures) buildAncientCities(chunk);
     dressSeabed(chunk);
-    buildOceanStructures(chunk);
-    buildOceanRuins(chunk);
-    buildTrailRuins(chunk);
+    if (structures)
+    {
+        buildOceanStructures(chunk);
+        buildOceanRuins(chunk);
+        buildTrailRuins(chunk);
+    }
+}
+
+void WorldGen::generateFlat(Chunk& chunk) const
+{
+    const int baseX = chunk.position().x * Chunk::SX;
+    const int baseZ = chunk.position().z * Chunk::SZ;
+    int y = 0;
+    for (const auto& [block, count] : m_options.layers)
+        for (int i = 0; i < count && y < Chunk::SY - 8; ++i, ++y)
+            if (block != Blocks::Air)
+                for (int lx = 0; lx < Chunk::SX; ++lx)
+                    for (int lz = 0; lz < Chunk::SZ; ++lz) chunk.setBlockRaw(lx, y, lz, block);
+    if (m_voidPlatform)
+        for (int lx = 0; lx < Chunk::SX; ++lx)
+            for (int lz = 0; lz < Chunk::SZ; ++lz)
+            {
+                const int wx = baseX + lx, wz = baseZ + lz;
+                if (wx < 8 - 16 || wx > 8 + 16 || wz < 8 - 16 || wz > 8 + 16) continue;
+                chunk.setBlockRaw(lx, VOID_PLATFORM_Y, lz, wx == 8 && wz == 8 ? Blocks::Cobblestone : Blocks::Stone);
+            }
 }
 
 // A closed cavern system rather than a landscape: solid netherrack between a
@@ -3355,6 +3460,13 @@ bool WorldGen::treeStandsAt(int wx, int wz) const
 
 void WorldGen::findSpawn(int& outX, int& outY, int& outZ) const
 {
+    if (flatWorld())
+    {
+        outX = 8;
+        outY = m_flatTop + 2;
+        outZ = 8;
+        return;
+    }
     // Perlin noise is exactly zero at every lattice point, the origin
     // among them, so the block at 0,0 is the same height in every world
     // ever generated. Spiralling out from there handed every seed an

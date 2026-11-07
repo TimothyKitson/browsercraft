@@ -434,6 +434,7 @@ void Session::handleAsHost(const Packet& packet, World* world)
             welcome.str(m_localName);          // the host, so they can label us
             welcome.u8(m_localLook.variant);
             welcome.u8(m_localLook.slim ? 1 : 0);
+            welcome.str(m_handshake.generator);
             m_transport->send(packet.peer, welcome.bytes());
 
             // Introduce everyone already here, then everyone to them.
@@ -568,6 +569,7 @@ void Session::handleAsGuest(const Packet& packet, World* world)
             Appearance hostLook;
             hostLook.variant = reader.u8();
             hostLook.slim = reader.u8() != 0;
+            m_handshake.generator = reader.str();
 
             if (version != PROTOCOL_VERSION || !reader.ok())
             {

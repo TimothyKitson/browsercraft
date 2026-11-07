@@ -528,9 +528,19 @@ void Application::renderToasts()
                 m_audio.play(Sound::ChallengeComplete, 0.8f, 1.0f);
         }
         const float shown = toast.age < 0.6f ? toast.age / 0.6f : toast.age > 5.0f ? std::max(0.0f, 1.0f - (toast.age - 5.0f) / 0.6f) : 1.0f;
-        const float tx = w - 160.0f * shown;
+        const float wide = toast.systemTitle.empty() ? 160.0f : std::max(160.0f, 30.0f + UIRenderer::textWidth(toast.systemTitle, 1.0f));
+        const float tx = w - wide * shown;
         const float ty = 32.0f * static_cast<float>(slot);
-        if (toast.advancement >= 0)
+        if (!toast.systemTitle.empty())
+        {
+            if (!guiSprite("toast/system", tx, ty, wide, 32.0f))
+            {
+                m_ui.quad(tx, ty, wide, 32.0f, glm::vec4(0.13f, 0.13f, 0.13f, 0.95f));
+                m_ui.quad(tx, ty, 2.0f, 32.0f, glm::vec4(0.5f, 0.5f, 0.5f, 1.0f));
+            }
+            m_ui.text(toast.systemTitle, tx + 18.0f, ty + 12.0f, 1.0f, glm::vec4(1.0f, 1.0f, 0.0f, 1.0f));
+        }
+        else if (toast.advancement >= 0)
         {
             const Advancements::Def& def = Advancements::all()[static_cast<size_t>(toast.advancement)];
             if (!guiSprite("toast/advancement", tx, ty, 160.0f, 32.0f))

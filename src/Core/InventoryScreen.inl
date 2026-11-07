@@ -2950,7 +2950,7 @@ void Application::drawBundleTooltip(const ItemStack& bundle, float mouseX, float
     }
 }
 
-void Application::drawTooltip(const std::string& text, float mouseX, float mouseY)
+void Application::drawTooltip(const std::string& text, float mouseX, float mouseY, bool plain)
 {
     std::vector<std::string> lines;
     {
@@ -2991,7 +2991,7 @@ void Application::drawTooltip(const std::string& text, float mouseX, float mouse
 
     for (size_t i = 0; i < lines.size(); ++i)
         m_ui.textWithShadow(lines[i], x, y + (i == 0 ? 0.0f : 2.0f + 10.0f * static_cast<float>(i)), 1.0f,
-                            i == 0 ? glm::vec4(1.0f) : glm::vec4(0.66f, 0.66f, 0.66f, 1.0f));
+                            i == 0 || plain ? glm::vec4(1.0f) : glm::vec4(0.66f, 0.66f, 0.66f, 1.0f));
 }
 
 const Application::SlotBox* Application::slotBoxAt(int mouseX, int mouseY) const

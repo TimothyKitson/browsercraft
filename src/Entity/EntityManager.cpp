@@ -526,6 +526,7 @@ void EntityManager::trySpawnWave(const World& world, const glm::vec3& playerPosi
             if (!isSolid(ground) || light > HOSTILE_MAX_LIGHT) continue;
         }
         else if (!canSpawnOn(species, ground, light)) continue;
+        if (m_peaceful && mobType(species).spawnClass == SpawnClass::Hostile) continue;
 
         if (!spawnAt(species, mobFeet, world)) continue;
 
@@ -644,6 +645,7 @@ void EntityManager::update(float deltaTime, const World& world,
     m_mobs.erase(
         std::remove_if(m_mobs.begin(), m_mobs.end(), [&](const Mob& mob) {
             if (mob.finished()) return true;
+            if (m_peaceful && mob.typeId() != MobId::EnderDragon && mobType(mob.typeId()).spawnClass == SpawnClass::Hostile) return true;
             const glm::vec3 delta = mob.position() - playerPosition;
             const float keep = (mob.customName().empty() && !mob.leashed() && !mob.persistent()) ? DESPAWN_DISTANCE : DESPAWN_DISTANCE * 3.0f;
             return glm::length(glm::vec3(delta.x, 0.0f, delta.z)) > keep;

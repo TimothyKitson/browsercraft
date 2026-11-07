@@ -69,6 +69,7 @@ public:
 
     const GuiImage* image(const std::string& path);
     bool has(const std::string& path);
+    void forget(const std::string& path);
 
 private:
     std::unordered_map<std::string, GuiImage> m_images;

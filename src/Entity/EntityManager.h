@@ -195,10 +195,13 @@ public:
     // Which world this manager is spawning into. Set when the player
     // travels, so the Nether gets its own and nothing else.
     void setDimension(Dimension dimension) { m_dimension = dimension; }
+    void setPeaceful(bool peaceful) { m_peaceful = peaceful; }
+    bool peaceful() const { return m_peaceful; }
 
 private:
     std::vector<ShedHorn> m_horns;
     bool m_playerHidden = false;
+    bool m_peaceful = false;
     float random01();
     void trySpawnWave(const World& world, const glm::vec3& playerPosition, float daylight);
     int surfaceBelow(const World& world, int x, int startY, int z) const;

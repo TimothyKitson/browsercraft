@@ -59,6 +59,7 @@ namespace Net
         uint8_t gameMode = 0;
         float timeOfDay = 0.3f;
         glm::vec3 spawn{ 0.0f };
+        std::string generator;
     };
 
     // The multiplayer half of "Open to LAN".
@@ -102,6 +103,7 @@ namespace Net
         Status status() const { return m_status; }
         bool active() const { return m_role != Role::Offline; }
         const Handshake& handshake() const { return m_handshake; }
+        void setGenerator(const std::string& generator) { m_handshake.generator = generator; }
         const std::string& message() const { return m_message; }
         uint16_t port() const { return m_port; }
 
