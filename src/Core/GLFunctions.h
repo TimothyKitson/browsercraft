@@ -31,7 +31,9 @@ inline bool LoadGLFunctions() { return true; }
 #endif
 #include <windows.h>
 #endif
+#define glActiveTexture glActiveTextureSystemPrototype
 #include <GL/gl.h>
+#undef glActiveTexture
 #include <cstddef>
 
 typedef char GLchar;
