@@ -95,6 +95,8 @@
 #include "Renderer/UIRenderer.h"
 #include "Renderer/FontPaint.h"
 #include "Renderer/BorderRenderer.h"
+#include "Renderer/ShaderPipeline.h"
+#include <stb_image.h>
 #include "World/WorldBorder.h"
 #include "Core/Utf8.h"
 #include "Entity/HeldItem.h"
@@ -5146,6 +5148,22 @@ namespace
         check(BorderRenderer::build(WorldBorder(), glm::dvec3(8.0, 70.0, 0.0), 128.0, 400.0, 0.0f).empty(), "far from it nothing is drawn");
         check(BorderRenderer::alphaFor(near, 0.0, 0.0, 128.0) < BorderRenderer::alphaFor(near, 9.0, 0.0, 128.0) &&
               BorderRenderer::alphaFor(near, 30.0, 0.0, 128.0) == 1.0f, "it fades in as you near it and is solid outside");
+
+        section("effect/dither: the ordered dither");
+        unsigned char painted[16];
+        ShaderPipeline::paintDither(painted);
+        const int BAYER[16] = { 0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5 };
+        bool bayer = true;
+        for (int i = 0; i < 16; ++i) bayer = bayer && painted[i] == BAYER[i] * 17;
+        check(bayer, "without a pack the 4x4 Bayer matrix is painted, every level from 0 to 15 once");
+        int width = 0, height = 0, channels = 0;
+        if (unsigned char* sheet = Packs::load("assets/textures/effect/dither.png", &width, &height, &channels, 4))
+        {
+            bool same = width == 4 && height == 4;
+            for (int i = 0; same && i < 16; ++i) same = sheet[i * 4] == painted[i];
+            stbi_image_free(sheet);
+            check(same, "and it is the same matrix as the pack's effect/dither.png");
+        }
     }
 
     void testRecipeBook()

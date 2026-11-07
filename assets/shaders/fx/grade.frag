@@ -4,6 +4,7 @@
 in vec2 vUv;
 uniform sampler2D uScene;
 uniform sampler2D uBloom;
+uniform sampler2D uDither;
 uniform float uExposure;
 uniform float uTime;
 uniform float uRain;
@@ -41,6 +42,8 @@ void main()
     float vignette = 1.0 - dot(centre, centre) * 0.42;
     colour *= vignette;
 
-    colour += (ditherNoise(gl_FragCoord.xy) - 0.5) / 255.0;
+    ivec2 cell = ivec2(mod(gl_FragCoord.xy, vec2(textureSize(uDither, 0))));
+    float threshold = (texelFetch(uDither, cell, 0).r * 15.0 + 0.5) / 16.0;
+    colour += (threshold - 0.5) / 255.0;
     FragColor = vec4(clamp(colour, 0.0, 1.0), 1.0);
 }

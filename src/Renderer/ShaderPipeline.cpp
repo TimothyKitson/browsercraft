@@ -231,6 +231,7 @@ ShaderPipeline::ShaderPipeline()
         build();
         createMaterials();
         createNoise();
+        createDither();
         for (int which = 0; which < 2; ++which)
         {
             int width = 0, height = 0, channels = 0;
@@ -277,6 +278,7 @@ ShaderPipeline::~ShaderPipeline()
     if (m_shadowDepth) glDeleteTextures(1, &m_shadowDepth);
     if (m_materials) glDeleteTextures(1, &m_materials);
     if (m_noise) glDeleteTextures(1, &m_noise);
+    if (m_dither) glDeleteTextures(1, &m_dither);
     if (m_emptyVao) glDeleteVertexArrays(1, &m_emptyVao);
 }
 
@@ -361,6 +363,47 @@ void ShaderPipeline::createNoise()
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+}
+
+void ShaderPipeline::paintDither(unsigned char out[16])
+{
+    static const int BASE[2][2] = { { 0, 2 }, { 3, 1 } };
+    for (int y = 0; y < 4; ++y)
+        for (int x = 0; x < 4; ++x)
+            out[y * 4 + x] = static_cast<unsigned char>((4 * BASE[y % 2][x % 2] + BASE[y / 2][x / 2]) * 17);
+}
+
+void ShaderPipeline::createDither()
+{
+    std::vector<unsigned char> pixels;
+    int width = 0, height = 0, channels = 0;
+    unsigned char* data = Packs::load("assets/textures/effect/dither.png", &width, &height, &channels, 4);
+    m_ditherFromPack = data != nullptr;
+    if (data)
+    {
+        pixels.assign(data, data + static_cast<size_t>(width) * static_cast<size_t>(height) * 4);
+        stbi_image_free(data);
+    }
+    else
+    {
+        unsigned char levels[16];
+        paintDither(levels);
+        width = height = 4;
+        pixels.resize(64);
+        for (int i = 0; i < 16; ++i)
+        {
+            pixels[static_cast<size_t>(i * 4)] = pixels[static_cast<size_t>(i * 4 + 1)] = pixels[static_cast<size_t>(i * 4 + 2)] = levels[i];
+            pixels[static_cast<size_t>(i * 4 + 3)] = 255;
+        }
+    }
+    glGenTextures(1, &m_dither);
+    glBindTexture(GL_TEXTURE_2D, m_dither);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glBindTexture(GL_TEXTURE_2D, 0);
 }
 
 void ShaderPipeline::destroyTargets()
@@ -763,6 +806,9 @@ void ShaderPipeline::finish()
     m_grade->setInt("uUnderwater", m_frame.underwater ? 1 : 0);
     m_grade->setInt("uDimension", m_frame.dimension);
     m_grade->setFloat("uRain", m_frame.rain);
+    m_grade->setInt("uDither", 2);
+    glActiveTexture(GL_TEXTURE0 + 2);
+    glBindTexture(GL_TEXTURE_2D, m_dither);
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, m_compositeColour);
     glActiveTexture(GL_TEXTURE0 + 1);

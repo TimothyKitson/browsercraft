@@ -60,6 +60,8 @@ public:
 
     static constexpr float SHADOW_REACH = 96.0f;
     static constexpr int SHADOW_RESOLUTION = 2048;
+    static void paintDither(unsigned char out[16]);
+    bool ditherFromPack() const { return m_ditherFromPack; }
 
 private:
     bool m_ready = false;
@@ -107,6 +109,8 @@ private:
     unsigned int m_gradeColour = 0;
     unsigned int m_materials = 0;
     unsigned int m_noise = 0;
+    unsigned int m_dither = 0;
+    bool m_ditherFromPack = false;
     unsigned int m_sunTexture = 0;
     unsigned int m_moonTexture = 0;
 
@@ -115,6 +119,7 @@ private:
     void destroyTargets();
     void createMaterials();
     void createNoise();
+    void createDither();
     void computeLight();
     void setWorldUniforms(int pass);
     void drawScreen();
