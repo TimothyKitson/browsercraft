@@ -35,6 +35,7 @@
 #include "Renderer/PaintingRenderer.h"
 #include "Renderer/ArmorStandRenderer.h"
 #include "Renderer/SignRenderer.h"
+#include "Renderer/ArmourTextures.h"
 #include "Renderer/BannerRenderer.h"
 #include "Game/Banners.h"
 #include "Game/Fireworks.h"
@@ -539,6 +540,7 @@ private:
     void pushArmorStands(const glm::ivec3& from, int facing, int length);
     std::vector<ArmorStands::Stand> standsHere(float reach) const;
     SignRenderer m_signRenderer;
+    ArmourTextures m_armourTextures;
     void tickSigns(float deltaTime);
     void settleExplorerMaps();
     void drawMapMarks(const Maps::Data& map, int id, float x, float y, float size, bool withPlayer);

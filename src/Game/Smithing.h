@@ -2,6 +2,7 @@
 #include "Items.h"
 #include "Player/Inventory.h"
 #include <cstdint>
+#include <string>
 #include <vector>
 
 namespace Smithing
@@ -29,6 +30,10 @@ namespace Smithing
     uint32_t withTrim(uint32_t enchantments, int pattern, int material);
 
     const char* patternName(int pattern);
+    std::string trimPath(int pattern, bool leggings);
+    std::string palettePath(int material, bool darker);
+    std::string trimIconPath(int slot);
+    bool darkerOn(int material, StackId armour);
     unsigned int materialColour(int material);
 
     std::vector<StackId> everyOutput();

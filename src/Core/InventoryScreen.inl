@@ -644,7 +644,9 @@ void Application::drawItem(float x, float y, float size, StackId id, int count,
             const int piece = Armour::slotFor(id);
             const unsigned int c = Smithing::materialColour(Smithing::trimMaterial(enchantments));
             const glm::vec4 shadeIt(((c >> 16) & 255u) / 255.0f, ((c >> 8) & 255u) / 255.0f, (c & 255u) / 255.0f, 1.0f);
-            if (piece >= 0 && piece < 4) guiSprite(OVERLAYS[piece], x, y, size, size, shadeIt * tint);
+            const unsigned int swapped = m_armourTextures.trimIcon(piece, Smithing::trimMaterial(enchantments));
+            if (swapped) m_ui.texturedQuad(swapped, x, y, size, size, 0.0f, 0.0f, 1.0f, 1.0f, tint);
+            else if (piece >= 0 && piece < 4) guiSprite(OVERLAYS[piece], x, y, size, size, shadeIt * tint);
         }
         if (id == Items::GoatHorn && m_hornCooldown > 0.0f)
         {
@@ -824,13 +826,9 @@ void Application::drawPlayerFigure(const PlayerSkin& skin, float x1, float y1, f
                Enchanting::glints(worn.id, worn.enchantments));
         if (Smithing::trimPattern(worn.enchantments) >= 0)
         {
-            const std::string layer = std::string("../trims/models/armor/") + Smithing::patternName(Smithing::trimPattern(worn.enchantments)) +
-                                      (piece == 3 ? "_leggings" : "");
-            if (const GuiImage* trim = m_gui.image(layer))
-            {
-                const unsigned int c = Smithing::materialColour(Smithing::trimMaterial(worn.enchantments));
-                gather(trim->texture, glm::vec3(((c >> 16) & 255u) / 255.0f, ((c >> 8) & 255u) / 255.0f, (c & 255u) / 255.0f), 0.015f);
-            }
+            const unsigned int swapped = m_armourTextures.trim(Smithing::trimPattern(worn.enchantments), Smithing::trimMaterial(worn.enchantments),
+                                                               worn.id, piece == 3);
+            if (swapped) gather(swapped, glm::vec3(1.0f), 0.015f);
         }
         if (leather)
         {

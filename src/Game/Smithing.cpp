@@ -1,4 +1,5 @@
 #include "Smithing.h"
+#include <algorithm>
 #include "Armour.h"
 #include "Tools.h"
 
@@ -15,6 +16,29 @@ namespace
         0xECECECu, 0xB4684Du, 0xDEB12Du, 0x416EAAu, 0x11A036u,
         0x6EECD2u, 0x443A3Bu, 0x971607u, 0x9A5CC6u, 0xE3D4C4u,
     };
+
+    const char* PALETTES[Smithing::TRIM_MATERIALS] = {
+        "iron", "copper", "gold", "lapis", "emerald", "diamond", "netherite", "redstone", "amethyst", "quartz",
+    };
+
+    const char* ICONS[4] = { "helmet_trim", "chestplate_trim", "leggings_trim", "boots_trim" };
+
+    std::string modelTrimPath(int p, bool leggings)
+    {
+        if (leggings) return "assets/textures/trims/models/armor/" + std::string(PATTERNS[p]) + "_leggings.png";
+        return "assets/textures/trims/models/armor/" + std::string(PATTERNS[p]) + ".png";
+    }
+
+    std::string colourPath(int material, bool darker)
+    {
+        if (darker) return "assets/textures/trims/color_palettes/" + std::string(PALETTES[material]) + "_darker.png";
+        return "assets/textures/trims/color_palettes/" + std::string(PALETTES[material]) + ".png";
+    }
+
+    std::string iconPath(int slot)
+    {
+        return "assets/textures/trims/items/" + std::string(ICONS[slot]) + ".png";
+    }
 
     int maxWear(StackId id)
     {
@@ -57,6 +81,35 @@ uint32_t Smithing::withTrim(uint32_t enchantments, int pattern, int material)
     const uint32_t kept = enchantments & ((1u << TRIM_SHIFT) - 1u);
     if (pattern < 0 || material < 0) return kept;
     return kept | (static_cast<uint32_t>(1 + pattern * TRIM_MATERIALS + material) << TRIM_SHIFT);
+}
+
+std::string Smithing::trimPath(int pattern, bool leggings)
+{
+    return modelTrimPath(std::clamp(pattern, 0, TRIM_PATTERNS - 1), leggings);
+}
+
+std::string Smithing::palettePath(int material, bool darker)
+{
+    if (material < 0 || material >= TRIM_MATERIALS) return "assets/textures/trims/color_palettes/trim_palette.png";
+    return colourPath(material, darker);
+}
+
+std::string Smithing::trimIconPath(int slot)
+{
+    return iconPath(std::clamp(slot, 0, 3));
+}
+
+bool Smithing::darkerOn(int material, StackId armour)
+{
+    if (material < 0 || material >= TRIM_MATERIALS) return false;
+    switch (Armour::tierOf(armour))
+    {
+        case Armour::Tier::Iron: return MATERIALS[material] == Items::IronIngot;
+        case Armour::Tier::Gold: return MATERIALS[material] == Items::GoldIngot;
+        case Armour::Tier::Diamond: return MATERIALS[material] == Items::Diamond;
+        case Armour::Tier::Netherite: return MATERIALS[material] == Items::NetheriteIngot;
+        default: return false;
+    }
 }
 
 const char* Smithing::patternName(int pattern)

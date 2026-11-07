@@ -2,6 +2,7 @@
 #include "Mesh.h"
 #include "Entity/BoxMesh.h"
 #include "Game/ArmorStands.h"
+#include "ArmourTextures.h"
 #include <map>
 #include <string>
 #include <vector>
@@ -26,5 +27,6 @@ private:
     unsigned int m_wood = 0;
     bool m_woodTried = false;
     std::map<std::string, unsigned int> m_armour;
+    ArmourTextures m_textures;
     Mesh m_mesh;
 };

@@ -2560,7 +2560,7 @@ bool Application::frame()
             m_startupScreen == "attackhud" || m_startupScreen == "attackready" ||
             m_startupScreen == "attackhotbar" || m_startupScreen == "bossbars" ||
             m_startupScreen == "gamemode" || m_startupScreen == "spectator" ||
-            m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" || m_startupScreen == "leads" || m_startupScreen == "anvilname" || m_startupScreen == "dials" || m_startupScreen == "spyglass" || m_startupScreen == "bundle" || m_startupScreen == "archery" || m_startupScreen == "food" || m_startupScreen == "materials" || m_startupScreen == "tropical" || m_startupScreen == "book" || m_startupScreen == "bookedit" || m_startupScreen == "booktip" || m_startupScreen == "boats" || m_startupScreen == "carts" || m_startupScreen == "fireworks" || m_startupScreen == "jukebox" || m_startupScreen == "potioncloud" || m_startupScreen == "armadillo" || m_startupScreen == "signs" || m_startupScreen == "glowsquid" || m_startupScreen == "fangs" || m_startupScreen == "zoglin" || m_startupScreen == "illusioner" || m_startupScreen == "llamas" || m_startupScreen == "paintings" || m_startupScreen == "stands" || m_startupScreen == "glowframes" || m_startupScreen == "bannershield" || m_startupScreen == "signkinds" || m_startupScreen == "signedit" || m_startupScreen == "hangingedit" || m_startupScreen == "mapmarks" || m_startupScreen == "explorermap" ||
+            m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" || m_startupScreen == "leads" || m_startupScreen == "anvilname" || m_startupScreen == "dials" || m_startupScreen == "spyglass" || m_startupScreen == "bundle" || m_startupScreen == "archery" || m_startupScreen == "food" || m_startupScreen == "materials" || m_startupScreen == "tropical" || m_startupScreen == "book" || m_startupScreen == "bookedit" || m_startupScreen == "booktip" || m_startupScreen == "boats" || m_startupScreen == "carts" || m_startupScreen == "fireworks" || m_startupScreen == "jukebox" || m_startupScreen == "potioncloud" || m_startupScreen == "armadillo" || m_startupScreen == "signs" || m_startupScreen == "glowsquid" || m_startupScreen == "fangs" || m_startupScreen == "zoglin" || m_startupScreen == "illusioner" || m_startupScreen == "llamas" || m_startupScreen == "paintings" || m_startupScreen == "stands" || m_startupScreen == "glowframes" || m_startupScreen == "bannershield" || m_startupScreen == "signkinds" || m_startupScreen == "signedit" || m_startupScreen == "hangingedit" || m_startupScreen == "mapmarks" || m_startupScreen == "explorermap" || m_startupScreen == "trims" ||
             m_startupScreen == "grinderror" || m_startupScreen == "woods" ||
             m_startupScreen == "cherry" || m_startupScreen == "mangrove" || m_startupScreen == "fungi" ||
             m_startupScreen == "stones" || m_startupScreen == "colours" || m_startupScreen == "candles" ||
@@ -2715,6 +2715,7 @@ bool Application::frame()
                                   m_startupScreen != "hangingedit" &&
                                   m_startupScreen != "mapmarks" &&
                                   m_startupScreen != "explorermap" &&
+                                  m_startupScreen != "trims" &&
                                   m_startupScreen != "golem" &&
                                   m_startupScreen != "shulker" &&
                                   m_startupScreen != "nethermobs" &&
@@ -3081,7 +3082,7 @@ bool Application::frame()
             if (m_startupScreen == "attackhud" || m_startupScreen == "attackready" ||
                 m_startupScreen == "attackhotbar" || m_startupScreen == "bossbars" ||
                 m_startupScreen == "gamemode" || m_startupScreen == "spectator" ||
-                m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" || m_startupScreen == "leads" || m_startupScreen == "anvilname" || m_startupScreen == "dials" || m_startupScreen == "spyglass" || m_startupScreen == "bundle" || m_startupScreen == "archery" || m_startupScreen == "food" || m_startupScreen == "materials" || m_startupScreen == "tropical" || m_startupScreen == "book" || m_startupScreen == "bookedit" || m_startupScreen == "booktip" || m_startupScreen == "boats" || m_startupScreen == "carts" || m_startupScreen == "fireworks" || m_startupScreen == "jukebox" || m_startupScreen == "potioncloud" || m_startupScreen == "armadillo" || m_startupScreen == "signs" || m_startupScreen == "glowsquid" || m_startupScreen == "fangs" || m_startupScreen == "zoglin" || m_startupScreen == "illusioner" || m_startupScreen == "llamas" || m_startupScreen == "paintings" || m_startupScreen == "stands" || m_startupScreen == "glowframes" || m_startupScreen == "bannershield" || m_startupScreen == "signkinds" || m_startupScreen == "signedit" || m_startupScreen == "hangingedit" || m_startupScreen == "mapmarks" || m_startupScreen == "explorermap" ||
+                m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" || m_startupScreen == "leads" || m_startupScreen == "anvilname" || m_startupScreen == "dials" || m_startupScreen == "spyglass" || m_startupScreen == "bundle" || m_startupScreen == "archery" || m_startupScreen == "food" || m_startupScreen == "materials" || m_startupScreen == "tropical" || m_startupScreen == "book" || m_startupScreen == "bookedit" || m_startupScreen == "booktip" || m_startupScreen == "boats" || m_startupScreen == "carts" || m_startupScreen == "fireworks" || m_startupScreen == "jukebox" || m_startupScreen == "potioncloud" || m_startupScreen == "armadillo" || m_startupScreen == "signs" || m_startupScreen == "glowsquid" || m_startupScreen == "fangs" || m_startupScreen == "zoglin" || m_startupScreen == "illusioner" || m_startupScreen == "llamas" || m_startupScreen == "paintings" || m_startupScreen == "stands" || m_startupScreen == "glowframes" || m_startupScreen == "bannershield" || m_startupScreen == "signkinds" || m_startupScreen == "signedit" || m_startupScreen == "hangingedit" || m_startupScreen == "mapmarks" || m_startupScreen == "explorermap" || m_startupScreen == "trims" ||
                 m_startupScreen == "grinderror" || m_startupScreen == "woods" ||
                 m_startupScreen == "cherry" || m_startupScreen == "mangrove" || m_startupScreen == "fungi" ||
                 m_startupScreen == "stones" || m_startupScreen == "colours" || m_startupScreen == "candles" ||
@@ -4024,6 +4025,39 @@ bool Application::frame()
                         m_player.mode = GameMode::Creative;
                         m_camera.pitch = -6.0f;
                     }
+                    m_camera.addLook(0.0f, 0.0f, 0.0f);
+                }
+                if (m_startupScreen == "trims")
+                {
+                    m_devAttackStrength = 1.0f;
+                    for (int dx = -6; dx <= 9; ++dx)
+                        for (int dz = -7; dz <= 7; ++dz)
+                        {
+                            m_world->setBlock(px + dx, py - 1, pz + dz, Blocks::Grass);
+                            for (int dy = 0; dy <= 4; ++dy) m_world->setBlock(px + dx, py + dy, pz + dz, Blocks::Air);
+                        }
+                    auto trimmed = [](StackId id, int pattern, int material) {
+                        return ItemStack{ id, 1, 0, Smithing::withTrim(0u, pattern, material) };
+                    };
+                    auto stand = [&](float dz, std::array<ItemStack, 4> gear) {
+                        ArmorStands::Stand s;
+                        s.feet = glm::vec3(static_cast<float>(px) + 2.5f, static_cast<float>(py), static_cast<float>(pz) + dz);
+                        s.yaw = 0.0f;
+                        for (size_t k = 0; k < gear.size(); ++k) s.gear[k] = gear[k];
+                        m_stands.add(s);
+                    };
+                    stand(-3.0f, { trimmed(Items::IronHelmet, 2, 2), trimmed(Items::IronChestplate, 2, 2), trimmed(Items::IronLeggings, 2, 2), trimmed(Items::IronBoots, 2, 2) });
+                    stand(-1.0f, { trimmed(Items::DiamondHelmet, 1, 5), trimmed(Items::DiamondChestplate, 1, 5), trimmed(Items::DiamondLeggings, 1, 5), trimmed(Items::DiamondBoots, 1, 5) });
+                    stand(1.0f, { trimmed(Items::NetheriteHelmet, 15, 8), trimmed(Items::NetheriteChestplate, 15, 8), trimmed(Items::NetheriteLeggings, 15, 8), trimmed(Items::NetheriteBoots, 15, 8) });
+                    stand(3.0f, { trimmed(Items::GoldHelmet, 3, 3), trimmed(Items::GoldChestplate, 3, 3), trimmed(Items::GoldLeggings, 3, 3), trimmed(Items::GoldBoots, 3, 3) });
+                    m_inventory.slot(Inventory::ARMOR_FIRST + 0) = trimmed(Items::LeatherHelmet, 0, 1);
+                    m_inventory.slot(Inventory::ARMOR_FIRST + 1) = trimmed(Items::IronChestplate, 0, 1);
+                    m_inventory.slot(Inventory::ARMOR_FIRST + 2) = trimmed(Items::ChainmailLeggings, 0, 1);
+                    m_inventory.slot(Inventory::ARMOR_FIRST + 3) = trimmed(Items::DiamondBoots, 0, 1);
+                    m_inventory.slot(0) = trimmed(Items::DiamondChestplate, 16, 6);
+                    m_perspective = Perspective::ThirdFront;
+                    m_camera.yaw = 0.0f;
+                    m_camera.pitch = 10.0f;
                     m_camera.addLook(0.0f, 0.0f, 0.0f);
                 }
                 if (m_startupScreen == "mapmarks" || m_startupScreen == "explorermap")
@@ -17620,6 +17654,22 @@ void Application::renderPlayers(const glm::mat4& view, const glm::mat4& projecti
         pose.fall = (speed > 0.001f && m_player.velocity.y < 0.0f) ? -m_player.velocity.y / speed : 0.0f;
 
         draw(activeSkin(), pose, std::string());
+        Shader& armourShader = m_activeShader ? *m_activeShader : m_chunkShader;
+        for (int slot = 0; slot < Inventory::ARMOR_SLOTS; ++slot)
+        {
+            const ItemStack& worn = m_inventory.slot(Inventory::ARMOR_FIRST + slot);
+            if (worn.empty() || !Armour::isArmour(worn.id)) continue;
+            const int piece = static_cast<int>(Armour::pieceOf(worn.id));
+            const bool leggings = piece == 3;
+            m_playerModel.renderArmour(armourShader, *m_world, pose, piece, m_armourTextures.layer(worn.id, leggings));
+            if (Armour::tierOf(worn.id) == Armour::Tier::Leather)
+                m_playerModel.renderArmour(armourShader, *m_world, pose, piece, m_armourTextures.leatherOverlay(leggings), 0.01f);
+            if (Smithing::trimPattern(worn.enchantments) >= 0)
+                m_playerModel.renderArmour(armourShader, *m_world, pose, piece,
+                                           m_armourTextures.trim(Smithing::trimPattern(worn.enchantments), Smithing::trimMaterial(worn.enchantments),
+                                                                 worn.id, leggings),
+                                           0.02f);
+        }
         const ItemStack& chest = m_inventory.slot(Inventory::ARMOR_FIRST + Armour::slotFor(Items::Elytra));
         if (!chest.empty() && chest.id == Items::Elytra)
             m_playerModel.renderElytra(m_activeShader ? *m_activeShader : m_chunkShader, *m_world, pose,

@@ -148,14 +148,14 @@ void PlayerModel::build(const PlayerSkin& skin, const PlayerPose& pose,
     BoxMesh::appendAll(m_vertices, boxes, frame);
 }
 
-void PlayerModel::buildArmour(const PlayerPose& pose, int piece, float sky, float blockLight)
+void PlayerModel::buildArmour(const PlayerPose& pose, int piece, float sky, float blockLight, float inflateExtra)
 {
     m_vertices.clear();
     std::vector<Box> all;
     buildBoxes(all, 4.0f, false, pose);
 
     std::vector<Box> boxes;
-    const float inflate = piece == 3 ? 0.5f : 1.0f;
+    const float inflate = (piece == 3 ? 0.5f : 1.0f) + inflateExtra;
     auto take = [&](int index) {
         Box box = all[static_cast<size_t>(index)];
         box.inflate = inflate;
@@ -290,6 +290,27 @@ void PlayerModel::renderElytra(Shader& chunkShader, const World& world, const Pl
         glDisable(GL_BLEND);
         chunkShader.setInt("uGlint", 0);
     }
+    glEnable(GL_CULL_FACE);
+}
+
+void PlayerModel::renderArmour(Shader& chunkShader, const World& world, const PlayerPose& pose, int piece,
+                               unsigned int texture, float inflateExtra)
+{
+    if (!texture) return;
+    int lx = static_cast<int>(std::floor(pose.feet.x));
+    int ly = static_cast<int>(std::floor(pose.feet.y + 1.6f));
+    int lz = static_cast<int>(std::floor(pose.feet.z));
+    for (int step = 0; step < 3 && isOpaque(world.getBlock(lx, ly, lz)); ++step) ++ly;
+    buildArmour(pose, piece, static_cast<float>(world.skyLight(lx, ly, lz)) / 15.0f,
+                static_cast<float>(world.blockLightAt(lx, ly, lz)) / 15.0f, inflateExtra);
+    if (m_vertices.empty()) return;
+    m_mesh.upload(m_vertices, CHUNK_LAYOUT, true);
+    chunkShader.bind();
+    chunkShader.setVec3("uChunkOffset", glm::vec3(0.0f));
+    glDisable(GL_CULL_FACE);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, texture);
+    m_mesh.draw(GL_TRIANGLES);
     glEnable(GL_CULL_FACE);
 }
 

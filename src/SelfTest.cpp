@@ -41,6 +41,7 @@
 #include "Renderer/PaintingRenderer.h"
 #include "Renderer/ArmorStandRenderer.h"
 #include "Renderer/SignRenderer.h"
+#include "Renderer/ArmourTextures.h"
 #include "World/ChunkMesher.h"
 #include "Game/Anvil.h"
 #include "Game/Archaeology.h"
@@ -4662,6 +4663,33 @@ namespace
         int w = 0, h = 0;
         const std::vector<uint8_t> painted = PaintingRenderer::paintVariant(Paintings::find("skeleton"), w, h);
         check(w == 64 && h == 48 && painted.size() == static_cast<size_t>(64 * 48 * 4), "and each has a painted stand-in the size of the real one");
+    }
+
+    void testTrimPalettes()
+    {
+        section("armour trims: Mojang's palettes, darker on their own metal");
+        std::vector<uint8_t> key(8 * 4, 255), palette(8 * 4, 255);
+        for (int k = 0; k < 8; ++k)
+        {
+            key[static_cast<size_t>(k * 4)] = key[static_cast<size_t>(k * 4 + 1)] = key[static_cast<size_t>(k * 4 + 2)] = static_cast<uint8_t>(224 - k * 32);
+            palette[static_cast<size_t>(k * 4)] = static_cast<uint8_t>(10 + k);
+            palette[static_cast<size_t>(k * 4 + 1)] = 100;
+            palette[static_cast<size_t>(k * 4 + 2)] = 200;
+        }
+        std::vector<uint8_t> trim = { 224, 224, 224, 255, 0, 0, 0, 255, 130, 126, 129, 255, 50, 50, 50, 0 };
+        check(ArmourTextures::swap(trim, key, palette) && trim[0] == 10 && trim[4] == 17 && trim[8] == 13 && trim[12] == 50,
+              "each grey of a trim takes the matching colour of its material, and clear pixels stay clear");
+        check(Smithing::darkerOn(2, Items::GoldChestplate) && Smithing::darkerOn(0, Items::IronBoots) &&
+                  Smithing::darkerOn(5, Items::DiamondHelmet) && Smithing::darkerOn(6, Items::NetheriteLeggings),
+              "gold on gold, iron on iron, diamond on diamond and netherite on netherite take the darker palette");
+        check(!Smithing::darkerOn(2, Items::IronChestplate) && !Smithing::darkerOn(4, Items::DiamondBoots),
+              "and nothing else does");
+        check(Smithing::trimPath(10, true) == "assets/textures/trims/models/armor/silence_leggings.png" &&
+                  Smithing::palettePath(8, false) == "assets/textures/trims/color_palettes/amethyst.png" &&
+                  Smithing::palettePath(6, true) == "assets/textures/trims/color_palettes/netherite_darker.png" &&
+                  Smithing::palettePath(-1, false) == "assets/textures/trims/color_palettes/trim_palette.png" &&
+                  Smithing::trimIconPath(3) == "assets/textures/trims/items/boots_trim.png",
+              "the trims, their palettes and the icon overlays come from the pack's own files");
     }
 
     void testMapMarks()
@@ -15407,6 +15435,7 @@ int runSelfTest()
     testShieldBanners();
     testSignKinds();
     testMapMarks();
+    testTrimPalettes();
     testMadeThings();
     testTheEndAndTheSea();
     testPathfinding();

@@ -2,6 +2,7 @@
 #include "Core/GLFunctions.h"
 #include "Game/Armour.h"
 #include "Game/Items.h"
+#include "Game/Smithing.h"
 #include "Shader.h"
 #include "World/World.h"
 #include <stb_image.h>
@@ -166,8 +167,7 @@ void ArmorStandRenderer::render(Shader& shader, const World& world, const std::v
     if (stands.empty()) return;
 
     std::vector<float> wood;
-    std::map<std::string, std::vector<float>> layers;
-    std::map<std::string, unsigned int> fallbacks;
+    std::map<unsigned int, std::vector<float>> layered;
 
     for (const ArmorStands::Stand& stand : stands)
     {
@@ -191,13 +191,20 @@ void ArmorStandRenderer::render(Shader& shader, const World& world, const std::v
         {
             const ItemStack& worn = stand.gear[static_cast<size_t>(slot)];
             if (worn.empty() || !Armour::isArmour(worn.id)) continue;
-            const char* tier = tierName(worn.id);
-            if (!tier) continue;
-            const std::string name = std::string(tier) + (slot == ArmorStands::Legs ? "_layer_2" : "_layer_1");
-            static const unsigned int COLOURS[] = { 0xA06540u, 0xF4D23Cu, 0xD8D8D8u, 0x5DECE0u, 0x4A4144u, 0x8C8C8Cu };
-            const int t = static_cast<int>(Armour::tierOf(worn.id));
-            fallbacks[name] = worn.id == Items::TurtleHelmet ? 0x47BF4Au : COLOURS[std::clamp(t - 1, 0, 5)];
-            BoxMesh::appendAll(layers[name], armourBoxes(stand, slot), frame);
+            const bool leggings = slot == ArmorStands::Legs;
+            std::vector<BoxMesh::Box> boxes = armourBoxes(stand, slot);
+            BoxMesh::appendAll(layered[m_textures.layer(worn.id, leggings)], boxes, frame);
+            if (Armour::tierOf(worn.id) == Armour::Tier::Leather)
+            {
+                for (BoxMesh::Box& box : boxes) box.inflate += 0.01f;
+                BoxMesh::appendAll(layered[m_textures.leatherOverlay(leggings)], boxes, frame);
+            }
+            if (Smithing::trimPattern(worn.enchantments) >= 0)
+            {
+                for (BoxMesh::Box& box : boxes) box.inflate += 0.02f;
+                BoxMesh::appendAll(layered[m_textures.trim(Smithing::trimPattern(worn.enchantments), Smithing::trimMaterial(worn.enchantments),
+                                                           worn.id, leggings)], boxes, frame);
+            }
         }
     }
 
@@ -205,6 +212,7 @@ void ArmorStandRenderer::render(Shader& shader, const World& world, const std::v
     shader.setVec3("uChunkOffset", glm::vec3(0.0f));
     glDisable(GL_CULL_FACE);
     draw(woodTexture(), wood);
-    for (const auto& entry : layers) draw(armourTexture(entry.first, fallbacks[entry.first]), entry.second);
+    for (const auto& entry : layered)
+        if (entry.first) draw(entry.first, entry.second);
     glEnable(GL_CULL_FACE);
 }
