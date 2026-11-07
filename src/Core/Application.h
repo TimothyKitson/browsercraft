@@ -29,6 +29,8 @@
 #include "Game/Advancements.h"
 #include "Game/Stats.h"
 #include "Game/Worlds.h"
+#include "Game/Servers.h"
+#include "Net/Ping.h"
 #include "Game/Brewing.h"
 #include "World/Signs.h"
 #include "World/Frames.h"
@@ -98,7 +100,10 @@ enum class Screen
     ConfirmDelete,
     CustomizeFlat,
     FlatPresets,
-    CustomizeBiome
+    CustomizeBiome,
+    EditServer,
+    DirectConnect,
+    Connecting
 };
 
 // Menu buttons are drawn and hit-tested in the same pass, so a click
@@ -1548,6 +1553,21 @@ private:
     void renderCustomizeFlat();
     void renderFlatPresets();
     void renderCustomizeBiome();
+    std::vector<Servers::Entry> m_servers;
+    std::vector<Net::Pinger> m_pings;
+    GuiList m_serverList;
+    GuiField m_serverName, m_serverAddress, m_directAddress;
+    int m_editServer = -1;
+    Servers::Packs m_serverPacks = Servers::Packs::Prompt;
+    bool m_deletingServer = false;
+    std::string m_lastDirect;
+    void saveServers();
+    void refreshPings();
+    void openServerList();
+    void joinAddress(const std::string& address);
+    void renderEditServer();
+    void renderDirectConnect();
+    void renderConnecting();
     Raids::Raid m_raid;
     glm::vec3 m_raidOmenAt{ 0.0f };
     bool m_raidOmenPending = false;

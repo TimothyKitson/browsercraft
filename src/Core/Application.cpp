@@ -1657,15 +1657,49 @@ void Application::run()
                             m_startupScreen == "createworld3" || m_startupScreen == "editworld" || m_startupScreen == "deleteworld" ||
                             m_startupScreen == "superflat" || m_startupScreen == "flatpresets" || m_startupScreen == "biomes" ||
                             m_startupScreen == "noworlds" || m_startupScreen == "newworld";
+    const bool serverMenus = m_startupScreen == "servers" || m_startupScreen == "addserver" || m_startupScreen == "directconnect" ||
+                             m_startupScreen == "connectfail";
     const bool menuOnly = (m_startupScreen == "title" || m_startupScreen == "modes" ||
                            m_startupScreen == "settings" || m_startupScreen == "multiplayer" ||
                            m_startupScreen == "controls" || m_startupScreen == "name" ||
-                           m_startupScreen == "video" || m_startupScreen == "credits" || worldMenus);
+                           m_startupScreen == "video" || m_startupScreen == "credits" || worldMenus || serverMenus);
     migrateLegacySave();
     if (m_startupScreen == "title") m_screen = Screen::Title;
     if (m_startupScreen == "video") m_screen = Screen::VideoSettings;
     if (m_startupScreen == "credits") m_screen = Screen::Credits;
     if (m_startupScreen == "modes") openWorldList();
+    if (serverMenus)
+    {
+        std::vector<Servers::Entry> seeded(3);
+        seeded[0].name = "Local Test";
+        seeded[0].address = "127.0.0.1";
+        seeded[1].name = "Minecraft Server";
+        seeded[1].address = "127.0.0.1:1";
+        seeded[2].name = "Old Friends";
+        seeded[2].address = "no.such.host.invalid";
+        std::error_code ec;
+        std::filesystem::create_directories(m_configPath, ec);
+        Servers::save(m_configPath + "/servers.txt", seeded);
+        openServerList();
+        if (m_startupScreen == "servers") m_serverList.selected = 0;
+        if (m_startupScreen == "addserver")
+        {
+            m_editServer = 0;
+            m_serverName.text = seeded[0].name;
+            m_serverAddress.text = seeded[0].address;
+            m_serverAddress.maxLength = 128;
+            m_serverName.focused = true;
+            m_screen = Screen::EditServer;
+        }
+        if (m_startupScreen == "directconnect")
+        {
+            m_directAddress.text = "192.168.1.20";
+            m_directAddress.maxLength = 128;
+            m_directAddress.focused = true;
+            m_screen = Screen::DirectConnect;
+        }
+        if (m_startupScreen == "connectfail") joinAddress("127.0.0.1:1");
+    }
     if (worldMenus)
     {
         if (m_startupScreen != "noworlds")
@@ -1803,6 +1837,7 @@ void Application::run()
             std::string generator;
             for (const std::string& line : Worlds::metaLines(m_worldMeta)) generator += line + "\n";
             m_net.setGenerator(generator);
+            m_net.setMotd(host + " - " + m_worldMeta.name);
         }
         std::printf("[net] %s\n", m_net.message().c_str());
         std::fflush(stdout);
@@ -7474,10 +7509,7 @@ void Application::applyMenuAction()
         case MenuAction::PlayWorld: playWorld(m_pendingWorldFolder); break;
         case MenuAction::CreateWorldNow: createWorldFromScreen(); break;
         case MenuAction::GoMultiplayer:
-            m_screen = Screen::Multiplayer;
-#ifndef __EMSCRIPTEN__
-            m_discovery.startListening();
-#endif
+            openServerList();
             break;
 
 #ifndef __EMSCRIPTEN__
@@ -7491,6 +7523,7 @@ void Application::applyMenuAction()
                 std::string generator;
                 for (const std::string& line : Worlds::metaLines(m_worldMeta)) generator += line + "\n";
                 m_net.setGenerator(generator);
+                m_net.setMotd(host + " - " + m_worldMeta.name);
                 m_audio.play(Sound::Click, 0.6f);
             }
             break;
@@ -7502,26 +7535,37 @@ void Application::applyMenuAction()
             break;
 
         case MenuAction::JoinTyped:
+        {
             m_joinedWorldBuilt = false;
-            m_net.join(m_addressDraft, Net::DEFAULT_PORT,
-                       m_playerName.empty() ? "Player" : m_playerName);
+            std::string host = m_addressDraft;
+            uint16_t port = Net::DEFAULT_PORT;
+            if (!Net::splitAddress(m_addressDraft, host, port)) host = m_addressDraft;
+            m_net.join(host, port, m_playerName.empty() ? "Player" : m_playerName);
+            m_screen = Screen::Connecting;
             break;
+        }
 
         case MenuAction::JoinDiscovered:
         {
             const std::vector<Net::LanDiscovery::Game>& games = m_discovery.games();
             m_joinedWorldBuilt = false;
             if (m_joinChoice >= 0 && m_joinChoice < static_cast<int>(games.size()))
+            {
                 m_net.join(games[m_joinChoice].address, games[m_joinChoice].port,
                            m_playerName.empty() ? "Player" : m_playerName);
+                m_screen = Screen::Connecting;
+            }
             m_joinChoice = -1;
             break;
         }
 #else
         case MenuAction::OpenToLan:
         case MenuAction::CloseToLan:
-        case MenuAction::JoinTyped:
         case MenuAction::JoinDiscovered:
+            break;
+        case MenuAction::JoinTyped:
+            m_net.join(m_addressDraft, Net::DEFAULT_PORT, m_playerName.empty() ? "Player" : m_playerName);
+            m_screen = Screen::Connecting;
             break;
 #endif
         case MenuAction::GoSettings:
@@ -7738,21 +7782,6 @@ void Application::handleEvents()
     }
 
 #ifndef __EMSCRIPTEN__
-    if (m_screen == Screen::Multiplayer)
-    {
-        // Only what can appear in an IPv4 address, so a stray keypress
-        // cannot produce something the parser will reject.
-        for (char c : m_input.typedText())
-        {
-            if (m_addressDraft.size() >= 21) break;
-            if ((c >= '0' && c <= '9') || c == '.' || c == ':') m_addressDraft.push_back(c);
-        }
-        for (int i = 0; i < m_input.backspaces() && !m_addressDraft.empty(); ++i)
-            m_addressDraft.pop_back();
-
-        if (m_input.wasKeyPressed(SDL_SCANCODE_RETURN) && m_addressDraft.size() >= 7)
-            m_pendingAction = MenuAction::JoinTyped;
-    }
 #endif
 
     if (m_input.wasKeyPressed(SDL_SCANCODE_ESCAPE))
@@ -7804,9 +7833,19 @@ void Application::handleEvents()
                 m_screen = Screen::Singleplayer;
             }
         }
-        else if (m_screen == Screen::EditWorld || m_screen == Screen::ConfirmDelete)
+        else if (m_screen == Screen::EditWorld || (m_screen == Screen::ConfirmDelete && !m_deletingServer))
         {
             m_screen = Screen::Singleplayer;
+        }
+        else if (m_screen == Screen::EditServer || m_screen == Screen::DirectConnect || m_screen == Screen::ConfirmDelete)
+        {
+            m_deletingServer = false;
+            m_screen = Screen::Multiplayer;
+        }
+        else if (m_screen == Screen::Connecting)
+        {
+            m_net.leave();
+            m_screen = Screen::Multiplayer;
         }
         else if (m_screen == Screen::CustomizeFlat || m_screen == Screen::CustomizeBiome)
         {
@@ -17012,6 +17051,9 @@ void Application::render()
         case Screen::CustomizeFlat: renderCustomizeFlat(); break;
         case Screen::FlatPresets:  renderFlatPresets(); break;
         case Screen::CustomizeBiome: renderCustomizeBiome(); break;
+        case Screen::EditServer:   renderEditServer(); break;
+        case Screen::DirectConnect: renderDirectConnect(); break;
+        case Screen::Connecting:   renderConnecting(); break;
         case Screen::Controls:     renderControlsScreen(); break;
         case Screen::NameEntry:    renderNameEntryScreen(); break;
         case Screen::Playing:
@@ -21556,89 +21598,6 @@ void Application::renderTitleScreen()
                             footerY, 1.7f, DIM_TEXT);
 }
 
-void Application::renderMultiplayerScreen()
-{
-    const ScopedPanelUnits panel(m_ui, guiScale());
-    const float w = m_ui.canvasWidth();
-    const float h = m_ui.canvasHeight();
-
-    m_ui.quad(0, 0, w, h, glm::vec4(0.0f, 0.0f, 0.0f, 0.45f));
-    centredText("Multiplayer", h * 0.10f, 4.4f, TEXT_COLOR);
-
-    const float panelWidth = std::min(560.0f, w * 0.78f);
-    const float panelX = w * 0.5f - panelWidth * 0.5f;
-    float y = h * 0.22f;
-
-#ifdef __EMSCRIPTEN__
-    centredText("The browser build cannot open sockets yet.", y, 1.9f, DIM_TEXT);
-    centredText("Play on a LAN from the desktop build for now.", y + 26.0f, 1.9f, DIM_TEXT);
-    y += 80.0f;
-#else
-    // Worlds shouting on the local network. Nothing to type in the
-    // common case: open a world on one machine, see it on the other.
-    const std::vector<Net::LanDiscovery::Game>& games = m_discovery.games();
-
-    m_ui.textWithShadow("Worlds on this Network", panelX, y, 1.9f, DIM_TEXT);
-    y += 28.0f;
-
-    if (games.empty())
-    {
-        if (!guiNineSlice("sprites/widget/button_disabled", panelX, y, panelWidth, 46.0f,
-                          static_cast<float>(guiScale()) / m_ui.scale()))
-            bevel(panelX, y, panelWidth, 46.0f, BUTTON_FACE_OFF, BUTTON_LIGHT, BUTTON_DARK, 2.0f);
-        m_ui.textWithShadow("Searching...", panelX + 14.0f, y + 16.0f, 1.9f, DIM_TEXT);
-        y += 58.0f;
-    }
-    else
-    {
-        for (size_t i = 0; i < games.size() && i < 5; ++i)
-        {
-            const Net::LanDiscovery::Game& game = games[i];
-            const std::string label = game.name + "  -  " + game.address;
-            if (menuButton({ panelX, y, panelWidth, 46.0f }, label))
-            {
-                m_joinChoice = static_cast<int>(i);
-                m_pendingAction = MenuAction::JoinDiscovered;
-            }
-            y += 54.0f;
-        }
-    }
-
-    y += 10.0f;
-    m_ui.textWithShadow("Or Type an Address", panelX, y, 1.9f, DIM_TEXT);
-    y += 28.0f;
-
-    const float joinWidth = 130.0f;
-    const float fieldWidth = panelWidth - joinWidth - 10.0f;
-    if (!guiNineSlice("sprites/widget/text_field_highlighted", panelX, y, fieldWidth, 46.0f,
-                      static_cast<float>(guiScale()) / m_ui.scale()))
-    {
-        roundedQuad(panelX - 3.0f, y - 3.0f, fieldWidth + 6.0f, 52.0f,
-                    glm::vec4(0.627f, 0.627f, 0.627f, 1.0f), 5.0f);
-        roundedQuad(panelX, y, fieldWidth, 46.0f, glm::vec4(0.0f, 0.0f, 0.0f, 1.0f), 4.0f);
-    }
-    const bool caretOn = ((SDL_GetTicks() / 500u) % 2u) == 0u;
-    m_ui.textWithShadow(m_addressDraft + (caretOn ? "_" : " "),
-                        panelX + 12.0f, y + 15.0f, 2.0f, TEXT_COLOR);
-    if (menuButton({ panelX + fieldWidth + 10.0f, y, joinWidth, 46.0f }, "Join",
-                   m_addressDraft.size() >= 7))
-        m_pendingAction = MenuAction::JoinTyped;
-    y += 62.0f;
-#endif
-
-    // Whatever the session is currently doing or complaining about.
-    if (!m_net.message().empty())
-    {
-        const bool failed = m_net.status() == Net::Status::Failed;
-        centredText(m_net.message(), y, 1.9f,
-                    failed ? glm::vec4(1.0f, 0.6f, 0.52f, 1.0f) : DIM_TEXT);
-        y += 34.0f;
-    }
-
-    if (menuButton({ panelX, y + 10.0f, panelWidth, 50.0f }, "Back"))
-        m_pendingAction = MenuAction::BackToTitle;
-}
-
 void Application::renderSettingsScreen()
 {
     const ScopedPanelUnits panel(m_ui, guiScale());
@@ -22147,6 +22106,7 @@ void Application::renderDeathScreen()
 #include "AdvancementsScreen.inl"
 #include "StatsScreen.inl"
 #include "WorldScreens.inl"
+#include "ServerScreens.inl"
 
 void Application::renderDebugOverlay()
 {

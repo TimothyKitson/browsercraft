@@ -21,6 +21,7 @@
 #  include <netinet/in.h>
 #  include <netinet/tcp.h>
 #  include <arpa/inet.h>
+#  include <netdb.h>
 #  include <unistd.h>
 #  include <fcntl.h>
 #  include <errno.h>
@@ -157,9 +158,18 @@ bool SocketTransport::connect(const std::string& address, uint16_t port)
     target.sin_port = htons(port);
     if (inet_pton(AF_INET, address.c_str(), &target.sin_addr) != 1)
     {
-        closeSocket(socket);
-        m_error = address + " is not an address";
-        return false;
+        addrinfo hints{};
+        hints.ai_family = AF_INET;
+        hints.ai_socktype = SOCK_STREAM;
+        addrinfo* found = nullptr;
+        if (getaddrinfo(address.c_str(), nullptr, &hints, &found) != 0 || !found)
+        {
+            closeSocket(socket);
+            m_error = "Can't resolve hostname";
+            return false;
+        }
+        target.sin_addr = reinterpret_cast<sockaddr_in*>(found->ai_addr)->sin_addr;
+        freeaddrinfo(found);
     }
 
     // Connecting before going non-blocking would stall the whole frame on

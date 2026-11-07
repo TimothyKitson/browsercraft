@@ -29,6 +29,7 @@ namespace Net
         Hello = 1,       // name, protocol version
         RequestBlock,    // "I would like to mine/place here"
         Move,            // position and look, several times a second
+        StatusQuery,
 
         // host -> guest
         Welcome = 64,    // seed, game mode, time, your id, spawn point
@@ -40,7 +41,8 @@ namespace Net
         PlayerLeave,
         PlayerMove,      // id + position and look
         TimeSync,        // the host's clock wins
-        Chat
+        Chat,
+        StatusReply
     };
 
     // Which character someone picked, small enough to ride along with the

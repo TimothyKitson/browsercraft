@@ -86,6 +86,9 @@
 #include "Game/Advancements.h"
 #include "Game/Stats.h"
 #include "Game/Worlds.h"
+#include "Game/Servers.h"
+#include "Net/Ping.h"
+#include "Net/Protocol.h"
 #include "Game/Golems.h"
 #include "Renderer/Atlas.h"
 #include "Renderer/UIRenderer.h"
@@ -4916,6 +4919,32 @@ namespace
         calm.health = 10;
         for (int i = 0; i < 10; ++i) calm.updateVitals(0.5f);
         check(calm.health > 10 && calm.hunger > 10, "peaceful heals and feeds you");
+    }
+
+    void testServerList()
+    {
+        section("server list: saved servers, addresses and ping bars");
+        std::vector<Servers::Entry> servers(2);
+        servers[0].name = "Home";
+        servers[0].address = "192.168.1.4";
+        servers[1].name = "Friends";
+        servers[1].address = "play.example.net:25600";
+        servers[1].packs = Servers::Packs::Enabled;
+        const std::vector<Servers::Entry> read = Servers::parse(Servers::lines(servers));
+        check(read.size() == 2 && read[1].name == "Friends" && read[1].address == "play.example.net:25600" &&
+              read[1].packs == Servers::Packs::Enabled && read[0].packs == Servers::Packs::Prompt, "saved servers are kept with their settings");
+        Servers::move(servers, 1, 0);
+        check(servers[0].name == "Friends" && servers[1].name == "Home", "moving a server swaps it with its neighbour");
+        Servers::move(servers, 0, 5);
+        check(servers[0].name == "Friends", "and never past the ends");
+        std::string host;
+        uint16_t port = 0;
+        check(Net::splitAddress("10.0.0.2", host, port) && host == "10.0.0.2" && port == Net::DEFAULT_PORT, "an address without a port uses the default");
+        check(Net::splitAddress(" example.org:25600 ", host, port) && host == "example.org" && port == 25600, "a port after the colon is used");
+        check(!Net::splitAddress("example.org:99999", host, port) && !Net::splitAddress("", host, port) &&
+              !Net::splitAddress("example.org:", host, port), "a bad port or no address is refused");
+        check(Net::pingBars(40) == 5 && Net::pingBars(150) == 4 && Net::pingBars(450) == 3 && Net::pingBars(800) == 2 && Net::pingBars(2000) == 1,
+              "ping bars step down at 150, 300, 600 and 1000 ms, as 1.21.1's do");
     }
 
     void testRecipeBook()
@@ -15942,6 +15971,7 @@ int runSelfTest()
     testAdvancements();
     testStatistics();
     testWorlds();
+    testServerList();
     testMadeThings();
     testTheEndAndTheSea();
     testPathfinding();

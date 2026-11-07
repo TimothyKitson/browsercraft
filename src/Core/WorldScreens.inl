@@ -594,7 +594,7 @@ void Application::renderConfirmDelete()
     const float w = m_ui.canvasWidth();
     const float h = m_ui.canvasHeight();
     menuScreenBackdrop(w, h);
-    const std::string title = "Are you sure you want to delete this world?";
+    const std::string title = m_deletingServer ? "Are you sure you want to remove this server?" : "Are you sure you want to delete this world?";
     const std::vector<std::string> lines = wrapText("'" + m_editNote + "' will be lost forever! (A long time!)", w - 50.0f);
     const float messagesHeight = static_cast<float>(lines.size()) * 9.0f;
     const float titleY = std::clamp(std::floor((h - messagesHeight) / 2.0f) - 29.0f, 10.0f, 80.0f);
@@ -604,6 +604,26 @@ void Application::renderConfirmDelete()
         m_ui.textWithShadow(lines[i], std::floor((w - UIRenderer::textWidth(lines[i], 1.0f)) / 2.0f), messageY + 9.0f * static_cast<float>(i), 1.0f, WORLD_WHITE);
     const float buttonsY = std::clamp(messageY + messagesHeight + 20.0f, std::floor(h / 6.0f) + 96.0f, h - 24.0f);
     const float half = std::floor(w / 2.0f);
+    if (m_deletingServer)
+    {
+        if (guiButton(half - 155.0f, buttonsY, 150.0f, 20.0f, "Delete"))
+        {
+            if (m_editServer >= 0 && m_editServer < static_cast<int>(m_servers.size()))
+                m_servers.erase(m_servers.begin() + m_editServer);
+            saveServers();
+            refreshPings();
+            m_serverList.selected = -1;
+            m_deletingServer = false;
+            m_screen = Screen::Multiplayer;
+        }
+        if (guiButton(half + 5.0f, buttonsY, 150.0f, 20.0f, "Cancel"))
+        {
+            m_deletingServer = false;
+            m_screen = Screen::Multiplayer;
+        }
+        m_ui.setScale(1.0f);
+        return;
+    }
     if (guiButton(half - 155.0f, buttonsY, 150.0f, 20.0f, "Delete"))
     {
         std::error_code ec;

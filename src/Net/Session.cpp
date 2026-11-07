@@ -543,6 +543,18 @@ void Session::handleAsHost(const Packet& packet, World* world)
             break;
         }
 
+        case MessageId::StatusQuery:
+        {
+            Writer reply(MessageId::StatusReply);
+            reply.u32(PROTOCOL_VERSION);
+            reply.str(m_motd.empty() ? m_localName + "'s World" : m_motd);
+            reply.u32(static_cast<uint32_t>(m_players.size() + 1));
+            reply.u32(static_cast<uint32_t>(MAX_PLAYERS));
+            reply.str("0.1");
+            m_transport->send(packet.peer, reply.bytes());
+            break;
+        }
+
         default:
             break;
     }

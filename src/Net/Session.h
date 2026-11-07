@@ -104,6 +104,7 @@ namespace Net
         bool active() const { return m_role != Role::Offline; }
         const Handshake& handshake() const { return m_handshake; }
         void setGenerator(const std::string& generator) { m_handshake.generator = generator; }
+        void setMotd(const std::string& motd) { m_motd = motd; }
         const std::string& message() const { return m_message; }
         uint16_t port() const { return m_port; }
 
@@ -116,6 +117,7 @@ namespace Net
         Status m_status = Status::Idle;
         std::string m_message;
         std::string m_localName;
+        std::string m_motd;
         uint16_t m_port = DEFAULT_PORT;
 
         Handshake m_handshake;
