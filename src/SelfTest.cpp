@@ -83,6 +83,7 @@
 #include "Game/Food.h"
 #include "Game/Raids.h"
 #include "Game/RecipeBook.h"
+#include "Game/Advancements.h"
 #include "Game/Golems.h"
 #include "Renderer/Atlas.h"
 #include "Renderer/UIRenderer.h"
@@ -4669,6 +4670,63 @@ namespace
         int w = 0, h = 0;
         const std::vector<uint8_t> painted = PaintingRenderer::paintVariant(Paintings::find("skeleton"), w, h);
         check(w == 64 && h == 48 && painted.size() == static_cast<size_t>(64 * 48 * 4), "and each has a painted stand-in the size of the real one");
+    }
+
+    void testAdvancements()
+    {
+        section("advancements: 1.21.1's five trees, their rules and their layout");
+        const std::vector<Advancements::Def>& defs = Advancements::all();
+        check(defs.size() == 122, "all 122 advancements of 1.21.1");
+        int roots = 0;
+        bool parents = true, titled = true;
+        std::set<std::string> ids;
+        for (const Advancements::Def& def : defs)
+        {
+            ids.insert(def.id);
+            if (def.parent[0] == '\0') ++roots;
+            else parents = parents && Advancements::indexOf(def.parent) >= 0;
+            titled = titled && def.title[0] != '\0' && def.description[0] != '\0' && !def.criteria.empty();
+        }
+        check(ids.size() == defs.size() && roots == 5, "each has its own id, and there are five roots");
+        check(parents && titled, "every parent exists, and each has a title, a description and something to do");
+        std::string missing;
+        int resolved = 0;
+        for (const Advancements::Def& def : defs)
+        {
+            if (RecipeBook::stackNamed(def.icon) != Blocks::Air) ++resolved;
+            else missing += std::string(def.icon) + " ";
+        }
+        if (!missing.empty()) std::printf("    icons not in the game: %s\n", missing.c_str());
+        check(resolved >= 110, "nearly every icon is an item the game has");
+        const Advancements::Def& stone = defs[static_cast<size_t>(Advancements::indexOf("story/mine_stone"))];
+        check(std::string(stone.title) == "Stone Age" && stone.x == 1.0f && Advancements::rootOf(Advancements::Tab::Story) == 0,
+              "titles are Mojang's and the trees lie as 1.21.1 lays them");
+
+        Advancements::Tracker tracker;
+        check(!tracker.tabVisible(Advancements::Tab::Story), "a new world shows nothing");
+        check(tracker.grant("story/root", "crafting_table") && tracker.done(0), "a crafting table makes the first one");
+        check(!tracker.grant("story/root", "crafting_table"), "and only once");
+        check(tracker.takeNew().size() == 1 && tracker.takeNew().empty(), "it is reported once, for the toast");
+        const int stoneAge = Advancements::indexOf("story/mine_stone");
+        const int upgrade = Advancements::indexOf("story/upgrade_tools");
+        const int iron = Advancements::indexOf("story/smelt_iron");
+        check(tracker.tabVisible(Advancements::Tab::Story) && tracker.visible(stoneAge) && tracker.visible(upgrade) && !tracker.visible(iron),
+              "and opens the tab two steps ahead, as 1.21.1 does");
+        const int hidden = Advancements::indexOf("nether/all_effects");
+        check(defs[static_cast<size_t>(hidden)].hidden && !tracker.visible(hidden), "a hidden one stays hidden until it is done");
+        const int armour = Advancements::indexOf("story/obtain_armor");
+        check(tracker.grant("story/obtain_armor", "iron_boots") && tracker.done(armour), "any one piece of iron armour suits up");
+        const int hunted = Advancements::indexOf("adventure/kill_all_mobs");
+        tracker.grant("adventure/kill_all_mobs", "zombie");
+        tracker.grant("adventure/kill_all_mobs", "creeper");
+        check(tracker.criteriaNeeded(hunted) == 36 && tracker.criteriaDone(hunted) == 2 && !tracker.done(hunted),
+              "Monsters Hunted counts its thirty-six");
+        check(!tracker.grant("adventure/kill_all_mobs", "pig"), "and a pig is not one of them");
+        Advancements::Tracker reloaded;
+        reloaded.load(tracker.lines());
+        check(reloaded.done(0) && reloaded.done(armour) && reloaded.criteriaDone(hunted) == 2 && reloaded.takeNew().empty(),
+              "progress is saved and read back without fresh toasts");
+        check(std::string(Advancements::frameText(Advancements::Frame::Challenge)) == "Challenge Complete!", "challenges announce themselves");
     }
 
     void testRecipeBook()
@@ -15692,6 +15750,7 @@ int runSelfTest()
     testTrimPalettes();
     testNewEffects();
     testRecipeBook();
+    testAdvancements();
     testMadeThings();
     testTheEndAndTheSea();
     testPathfinding();

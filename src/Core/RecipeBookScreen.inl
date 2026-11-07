@@ -36,7 +36,8 @@ std::vector<RecipeBook::Group> Application::bookTabs() const
     {
         bool any = group == RecipeBook::Group::Search;
         for (const RecipeBook::Recipe& recipe : RecipeBook::recipes(book))
-            if (!any && recipe.group == group && (book != RecipeBook::Book::Crafting || RecipeBook::fits(recipe, m_inventory.craftSize())))
+            if (!any && recipe.group == group && m_knownRecipes.count(recipe.result) &&
+                (book != RecipeBook::Book::Crafting || RecipeBook::fits(recipe, m_inventory.craftSize())))
                 any = true;
         if (any) shown.push_back(group);
     }
@@ -51,7 +52,8 @@ std::vector<RecipeBook::Slot> Application::bookSlots() const
     const RecipeBook::Group tab = tabs.empty() ? RecipeBook::Group::Search
                                                : tabs[static_cast<size_t>(std::clamp(m_recipeTab, 0, static_cast<int>(tabs.size()) - 1))];
     return RecipeBook::slots(static_cast<RecipeBook::Book>(kind), tab, m_inventory.craftSize(),
-                             tab == RecipeBook::Group::Search ? m_recipeSearch : std::string(), m_recipeFilter[kind], bookStock());
+                             tab == RecipeBook::Group::Search ? m_recipeSearch : std::string(), m_recipeFilter[kind], bookStock(),
+                             &m_knownRecipes);
 }
 
 bool Application::bookShown(float w) const

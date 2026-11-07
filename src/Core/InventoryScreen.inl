@@ -3206,6 +3206,11 @@ void Application::takeSmithResult(bool toInventory)
     taken.count = 1;
     taken.damage = made.damage;
     taken.enchantments = made.enchantments;
+    if (Smithing::trimPattern(made.enchantments) >= 0 && Smithing::trimPattern(made.enchantments) != Smithing::trimPattern(base.enchantments))
+    {
+        award("adventure/trim_with_any_armor_pattern", "trim_with_any_armor_pattern");
+        award("adventure/trim_with_all_exclusive_armor_patterns", Smithing::patternName(Smithing::trimPattern(made.enchantments)));
+    }
     if (toInventory)
     {
         if (m_inventory.addStack(taken) > 0) return;
@@ -3519,6 +3524,8 @@ void Application::openBeacon(const glm::ivec3& block)
 {
     m_beaconBlock = block;
     m_beaconOpen = true;
+    if (beaconTiers() >= 1) award("nether/create_beacon", "beacon");
+    if (beaconTiers() >= 4) award("nether/create_full_beacon", "beacon");
     m_beaconPrimary = -1;
     m_beaconSecondary = -1;
     const auto chosen = m_beaconPowers.find({ static_cast<int>(m_dimension), block.x, block.y, block.z });
@@ -3780,6 +3787,8 @@ void Application::takeTradeResult(bool all)
             sprites(SpriteParticles::Kind::Happy, trader->position() + glm::vec3(0.0f, 1.9f, 0.0f), 5, 0.5f,
                     0.3f, 0.25f, 1.0f);
         record.xp += deal.villagerXp;
+        award("adventure/trade", "traded");
+        if (m_player.position.y >= static_cast<float>(Chunk::SY) - 2.0f) award("adventure/trade_at_world_height", "trade_at_world_height");
         for (const Mob& mob : m_entities.mobs())
             if (mob.typeId() == MobId::Villager && mob.birthSeed() == m_tradeSeed)
                 record.position = mob.position();
@@ -3951,6 +3960,7 @@ void Application::tickBrewing(float deltaTime)
 
     m_brewProgress += deltaTime;
     if (m_brewProgress < Brewing::BREW_SECONDS) return;
+    award("nether/brew_potion", "potion");
 
     // One ingredient does every bottle at once, as Minecraft's does.
     for (int i = 0; i < Inventory::BREW_BOTTLES; ++i)
@@ -4178,6 +4188,7 @@ void Application::buyEnchantment(int row)
         if (lapis.count <= 0) lapis.clear();
     }
 
+    award("story/enchant_item", "enchanted_item");
     // A fresh roll, so the next three offers are not the same three.
     m_enchantRoll = Enchanting::nextRoll(m_enchantRoll);
     m_audio.play(Sound::Pickup, 0.7f, 0.7f);

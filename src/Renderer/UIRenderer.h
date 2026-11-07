@@ -59,6 +59,8 @@ public:
     // coal without an outline round it.
     void setInvert(bool on);
     void setAdditive(bool on);
+    void setClip(float x, float y, float w, float h);
+    void clearClip();
 
     void quad(float x, float y, float w, float h, const glm::vec4& color);
 

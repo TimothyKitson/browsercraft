@@ -3,6 +3,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <cstdint>
 #include <cmath>
+#include <algorithm>
 
 #ifndef GL_RGBA8
 #define GL_RGBA8 0x8058
@@ -83,6 +84,21 @@ void UIRenderer::setInvert(bool on)
     m_invert = on;
     if (on) glBlendFunc(GL_ONE_MINUS_DST_COLOR, GL_ONE_MINUS_SRC_COLOR);
     else    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+}
+
+void UIRenderer::setClip(float x, float y, float w, float h)
+{
+    flush();
+    glEnable(GL_SCISSOR_TEST);
+    const int left = static_cast<int>(std::floor(x * m_scale));
+    const int bottom = static_cast<int>(std::floor(static_cast<float>(m_height) - (y + h) * m_scale));
+    glScissor(left, bottom, std::max(0, static_cast<int>(std::ceil(w * m_scale))), std::max(0, static_cast<int>(std::ceil(h * m_scale))));
+}
+
+void UIRenderer::clearClip()
+{
+    flush();
+    glDisable(GL_SCISSOR_TEST);
 }
 
 void UIRenderer::setAdditive(bool on)

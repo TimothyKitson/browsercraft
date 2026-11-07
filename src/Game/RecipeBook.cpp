@@ -322,7 +322,7 @@ std::vector<StackId> RecipeBook::fuels()
 }
 
 std::vector<RecipeBook::Slot> RecipeBook::slots(Book book, Group tab, int gridSize, const std::string& search,
-                                                bool craftableOnly, const Stock& stock)
+                                                bool craftableOnly, const Stock& stock, const std::set<StackId>* known)
 {
     std::string wanted = search;
     for (char& c : wanted) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
@@ -334,6 +334,7 @@ std::vector<RecipeBook::Slot> RecipeBook::slots(Book book, Group tab, int gridSi
         const Recipe& recipe = all[static_cast<size_t>(i)];
         if (tab != Group::Search && recipe.group != tab) continue;
         if (book == Book::Crafting && !fits(recipe, gridSize)) continue;
+        if (known && !known->count(recipe.result)) continue;
         if (!wanted.empty())
         {
             std::string name = displayName(recipe.result);
@@ -366,3 +367,35 @@ int RecipeBook::cellIndex(const Recipe& recipe, int cell, int gridSize)
     const int width = std::max(1, recipe.width);
     return (cell / width) * 3 + cell % width;
 }
+
+StackId RecipeBook::stackNamed(const std::string& id)
+{
+    static const std::map<std::string, StackId> NAMES = [] {
+        std::map<std::string, StackId> out;
+        for (int block = 1; block < static_cast<int>(Blocks::Count); ++block)
+            out.emplace(idOf(static_cast<StackId>(block)), static_cast<StackId>(block));
+        for (StackId item = Items::FIRST; item < Items::Count; ++item) out.emplace(idOf(item), item);
+        static const std::pair<const char*, StackId> ALIASES[] = {
+            { "grass_block", Blocks::Grass }, { "oak_planks", Blocks::Planks }, { "crafting_table", Blocks::CraftingTable },
+            { "ender_eye", Items::EyeOfEnder }, { "dragon_breath", Items::DragonsBreath }, { "hay_block", Blocks::HayBale },
+            { "wooden_pickaxe", Items::WoodPickaxe }, { "golden_carrot", Items::GoldenCarrot }, { "potion", Items::Potion },
+            { "map", Items::EmptyMap }, { "cod", Items::RawCod }, { "salmon", Items::RawSalmon }, { "beef", Items::RawBeef },
+            { "porkchop", Items::RawPorkchop }, { "chicken", Items::RawChicken }, { "mutton", Items::RawMutton },
+            { "rabbit", Items::RawRabbit }, { "cooked_beef", Items::Steak }, { "red_bed", static_cast<StackId>(Blocks::BedFirst) },
+            { "oak_boat", Items::Boat }, { "white_banner", static_cast<StackId>(Blocks::BannerFirst) },
+            { "lava_bucket", Items::LavaBucket }, { "water_bucket", Items::WaterBucket }, { "milk_bucket", Items::MilkBucket },
+            { "pufferfish_bucket", Items::PufferfishBucket }, { "axolotl_bucket", Items::AxolotlBucket },
+            { "tropical_fish_bucket", Items::TropicalFishBucket }, { "tadpole_bucket", Items::TadpoleBucket },
+            { "cod_bucket", Items::CodBucket }, { "salmon_bucket", Items::SalmonBucket }, { "dragon_head", Blocks::DragonEgg },
+        };
+        for (const auto& alias : ALIASES) out[alias.first] = alias.second;
+        return out;
+    }();
+    const auto found = NAMES.find(id);
+    if (found != NAMES.end()) return found->second;
+    const std::string tail = "_smithing_template";
+    if (id.size() > tail.size() && id.compare(id.size() - tail.size(), tail.size(), tail) == 0)
+        return stackNamed(id.substr(0, id.size() - tail.size()));
+    return Blocks::Air;
+}
+

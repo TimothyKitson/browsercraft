@@ -21,6 +21,7 @@ enum class Action
     FancyLighting, Mute,
     RenderDistanceDown, RenderDistanceUp,
     SwapHands,
+    Advancements,
     Count
 };
 

@@ -26,6 +26,7 @@
 #include "Game/Anvil.h"
 #include "Game/Raids.h"
 #include "Game/RecipeBook.h"
+#include "Game/Advancements.h"
 #include "Game/Brewing.h"
 #include "World/Signs.h"
 #include "World/Frames.h"
@@ -130,6 +131,7 @@ enum class MenuAction
     ToggleSound,
     CycleAttackIndicator,
     CycleDistortion,
+    OpenAdvancements,
     ToggleMainHand,
     RenderDistanceDown,
     SetRenderDistance,
@@ -1389,6 +1391,46 @@ private:
     };
     std::vector<Leash> m_leashes;
     Mob* mobBySerial(uint32_t serial);
+    Advancements::Tracker m_advancements;
+    bool m_advOpen = false;
+    int m_advTab = -1;
+    float m_advOriginX[Advancements::TAB_COUNT] = {};
+    float m_advOriginY[Advancements::TAB_COUNT] = {};
+    bool m_advPlaced[Advancements::TAB_COUNT] = {};
+    float m_advHoverFade = 0.0f;
+    bool m_advDragging = false;
+    float m_advDragX = 0.0f;
+    float m_advDragY = 0.0f;
+    float m_advCheck = 0.0f;
+    bool m_levitating = false;
+    int m_devAdvHover = -1;
+    float m_levitateFrom = 0.0f;
+    struct Toast
+    {
+        int advancement = -1;
+        std::vector<StackId> recipes;
+        float age = 0.0f;
+        bool sounded = false;
+    };
+    std::vector<Toast> m_toasts;
+    std::set<StackId> m_knownRecipes;
+    bool m_recipesSeeded = false;
+    StackId stackNamed(const std::string& id) const;
+    std::string entityId(MobId id) const;
+    void award(const char* id, const char* criterion);
+    void awardAll(const char* id);
+    bool inventoryHolds(const std::string& items) const;
+    void tickAdvancements(float deltaTime);
+    void unlockRecipes(float deltaTime);
+    float m_recipeClock = 0.0f;
+    void openAdvancements();
+    void closeAdvancements();
+    std::vector<int> advancementTabs() const;
+    void updateAdvancementsInput();
+    void renderAdvancementsScreen();
+    void renderToasts();
+    void saveAdvancements();
+    void loadAdvancements(bool existing);
     Raids::Raid m_raid;
     glm::vec3 m_raidOmenAt{ 0.0f };
     bool m_raidOmenPending = false;

@@ -281,6 +281,9 @@ enum class Sound : uint16_t
     OmenRaid,
     ElderCurse,
     Shriek,
+    ToastIn,
+    ToastOut,
+    ChallengeComplete,
     GoatHornFirst,
     GoatHornLast = GoatHornFirst + 7,
     Count

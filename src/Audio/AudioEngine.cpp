@@ -436,6 +436,9 @@ void AudioEngine::buildSounds()
     loadSingle(Sound::OmenRaid, "event/mob_effect/raid_omen.ogg");
     loadVariants(Sound::ElderCurse, "mob/guardian/curse", 1);
     loadVariants(Sound::Shriek, "block/sculk_shrieker/shriek", 5);
+    loadSingle(Sound::ToastIn, "ui/toast/in.ogg");
+    loadSingle(Sound::ToastOut, "ui/toast/out.ogg");
+    loadSingle(Sound::ChallengeComplete, "ui/toast/challenge_complete.ogg");
 
     auto make = [&](Sound id) -> Synth {
         auto& clips = m_buffers[static_cast<size_t>(id)];
@@ -1845,6 +1848,26 @@ void AudioEngine::buildSounds()
         Synth s = make(Sound::OmenRaid);
         s.addTone(2.0f, 130.0f, 98.0f, 1.0f, 0.26f, false);
         s.addTone(2.0f, 196.0f, 147.0f, 1.0f, 0.14f, false, 0.2f);
+        s.finish(0.5f);
+    }
+    {
+        Synth s = make(Sound::ToastIn);
+        s.addNoise(0.35f, 2200.0f, 6.0f, 0.18f, true, 978);
+        s.addTone(0.3f, 520.0f, 780.0f, 6.0f, 0.06f, false);
+        s.finish(0.35f);
+    }
+    {
+        Synth s = make(Sound::ToastOut);
+        s.addNoise(0.35f, 1800.0f, 6.0f, 0.16f, true, 979);
+        s.addTone(0.3f, 780.0f, 520.0f, 6.0f, 0.05f, false);
+        s.finish(0.35f);
+    }
+    {
+        Synth s = make(Sound::ChallengeComplete);
+        s.addTone(0.25f, 523.0f, 523.0f, 4.0f, 0.2f, false);
+        s.addTone(0.25f, 659.0f, 659.0f, 4.0f, 0.2f, false, 0.18f);
+        s.addTone(0.5f, 784.0f, 784.0f, 2.0f, 0.22f, false, 0.36f);
+        s.addTone(0.9f, 1047.0f, 1047.0f, 1.4f, 0.2f, false, 0.6f);
         s.finish(0.5f);
     }
     {

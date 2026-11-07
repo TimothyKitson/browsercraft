@@ -2,6 +2,7 @@
 #include "Items.h"
 #include "World/Block.h"
 #include <map>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -32,6 +33,7 @@ namespace RecipeBook
     std::vector<StackId> tabIcons(Book book, Group group);
     char mojangGroup(const std::string& id);
     std::string idOf(StackId id);
+    StackId stackNamed(const std::string& id);
     Group craftingGroup(StackId result);
     Group cookingGroup(Book book, StackId result);
     bool fits(const Recipe& recipe, int gridSize);
@@ -48,6 +50,6 @@ namespace RecipeBook
         int craftable = 0;
     };
     std::vector<Slot> slots(Book book, Group tab, int gridSize, const std::string& search, bool craftableOnly,
-                            const Stock& stock);
+                            const Stock& stock, const std::set<StackId>* known = nullptr);
     int cellIndex(const Recipe& recipe, int cell, int gridSize);
 }

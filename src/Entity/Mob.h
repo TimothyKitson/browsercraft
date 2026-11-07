@@ -133,6 +133,15 @@ public:
     bool glowing() const { return m_glowTimer > 0.0f || m_effects.has(Effects::Kind::Glowing); }
     void giveEffect(Effects::Kind kind, int amplifier, float seconds);
     static void setNoticeScale(float scale);
+    void markPlayerHit(int how, float distance)
+    {
+        m_playerHitAge = 0.0f;
+        m_playerHitHow = how;
+        m_playerHitDistance = distance;
+    }
+    bool hitByPlayer() const { return m_playerHitAge < 5.0f; }
+    int playerHitHow() const { return m_playerHitHow; }
+    float playerHitDistance() const { return m_playerHitDistance; }
     static float noticeScale();
     const Effects::Set& effects() const { return m_effects; }
     bool invisible() const { return m_effects.has(Effects::Kind::Invisibility); }
@@ -553,6 +562,9 @@ private:
     float m_glowTimer = 0.0f;
     Effects::Set m_effects;
     int m_silverfish = 0;
+    float m_playerHitAge = 1.0e9f;
+    int m_playerHitHow = 0;
+    float m_playerHitDistance = 0.0f;
     float m_poisonTimer = 0.0f;
     float m_poisonClock = 0.0f;
     float m_slowTimer = 0.0f;

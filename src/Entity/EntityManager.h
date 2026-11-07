@@ -85,6 +85,9 @@ public:
         bool oozing = false;
         bool weaving = false;
         bool windCharged = false;
+        bool byPlayer = false;
+        int how = 0;
+        float distance = 0.0f;
     };
     std::vector<Death> drainDeaths();
 

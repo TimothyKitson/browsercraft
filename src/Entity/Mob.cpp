@@ -617,6 +617,7 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
                  float daylight)
 {
     if (m_strikeGuard > 0.0f) m_strikeGuard = std::max(0.0f, m_strikeGuard - deltaTime);
+    if (m_playerHitAge < 1.0e8f) m_playerHitAge += deltaTime;
     const MobType& t = type();
 
     if (m_hurtFlash > 0.0f) m_hurtFlash = std::max(0.0f, m_hurtFlash - deltaTime);
