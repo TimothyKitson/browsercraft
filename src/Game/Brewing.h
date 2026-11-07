@@ -28,6 +28,7 @@ namespace Brewing
         // What a ghast's tear makes. The only drink in the game that
         // puts hearts back rather than keeping them on.
         Regeneration,
+        Leaping,
 
         Count
     };

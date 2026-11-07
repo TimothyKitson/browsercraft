@@ -603,6 +603,7 @@ namespace Tiles
         ItemSpectralArrow, ItemTippedArrow, ItemTippedArrowHead,
         ItemChainmailFirst, ItemChainmailLast = ItemChainmailFirst + 3,
         ItemFoodFirst, ItemFoodLast = ItemFoodFirst + 11,
+        ItemMaterialFirst, ItemMaterialLast = ItemMaterialFirst + 8,
         ItemCompassFrameFirst, ItemCompassFrameLast = ItemCompassFrameFirst + 31,
         ItemClockFirst, ItemClockLast = ItemClockFirst + 63,
         ItemRecoveryFirst, ItemRecoveryLast = ItemRecoveryFirst + 31,

@@ -1189,8 +1189,8 @@ namespace
             t.arrowRange = 15.0f;
             t.arrowInterval = 3.0f;
 
-            t.drop = Blocks::Prismarine;
-            t.dropCount = 1;
+            t.drop = Items::PrismarineShard;
+            t.dropCount = 2;
 
             t.bodyColour = rgb(92, 148, 140);
             t.headColour = rgb(106, 170, 158);
@@ -2497,6 +2497,8 @@ namespace
 
             t.drop = Items::RawRabbit;
             t.dropCount = 1;
+            t.secondDrop = Items::RabbitHide;
+            t.secondDropCount = 1;
 
             t.bodyColour = rgb(166, 140, 112);
             t.headColour = rgb(186, 162, 134);
@@ -3010,6 +3012,9 @@ namespace
             t.ambientMinSeconds = 4.0f;
             t.ambientMaxSeconds = 12.0f;
 
+            t.drop = Items::PhantomMembrane;
+            t.dropCount = 1;
+
             t.bodyColour = rgb(68, 96, 108);
             t.headColour = rgb(84, 116, 128);
             t.eyeColour = rgb(140, 220, 90);
@@ -3237,9 +3242,9 @@ namespace
             t.arrowRange = 18.0f;
             t.arrowInterval = 3.4f;
 
-            t.drop = Blocks::Prismarine;
-            t.dropCount = 3;
-            t.secondDrop = Blocks::SeaLantern;
+            t.drop = Items::PrismarineShard;
+            t.dropCount = 2;
+            t.secondDrop = Blocks::WetSponge;
             t.secondDropCount = 1;
 
             t.bodyColour = rgb(170, 168, 142);

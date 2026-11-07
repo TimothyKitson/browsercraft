@@ -1878,6 +1878,58 @@ namespace
                 break;
         }
     }
+    void paintMaterialIn(Tile& t, int k)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        auto blob = [&](float cx, float cy, float rx, float ry, Color c, Color edge) {
+            for (int y = 0; y < 16; ++y)
+                for (int x = 0; x < 16; ++x)
+                {
+                    const float dx = (x - cx) / rx, dy = (y - cy) / ry;
+                    const float d = dx * dx + dy * dy;
+                    if (d < 1.0f) t.set(x, y, d > 0.65f ? edge : c);
+                }
+        };
+        auto bottle = [&](Color fill) {
+            for (int y = 2; y < 5; ++y) for (int x = 7; x < 9; ++x) t.set(x, y, Color{ 200, 220, 230 });
+            t.set(6, 2, Color{ 140, 100, 60 }); t.set(9, 2, Color{ 140, 100, 60 });
+            blob(7.5f, 10.0f, 5.0f, 5.0f, fill, Color{ 210, 230, 240 });
+            t.set(5, 8, Color{ 255, 255, 255 });
+        };
+        switch (k)
+        {
+            case 0:
+                for (int y = 3; y < 13; ++y) for (int x = 3 + (y % 2); x < 13 - ((y + 1) % 2); ++x) t.set(x, y, Color{ 170, 130, 95 });
+                for (int x = 3; x < 13; x += 2) t.set(x, 3, Color{ 230, 210, 180 });
+                break;
+            case 1:
+                for (int i = 0; i < 9; ++i) t.set(5 + i / 2, 3 + i, Color{ 200, 170, 120 }), t.set(6 + i / 2, 3 + i, Color{ 170, 140, 100 });
+                blob(10.0f, 12.0f, 3.0f, 2.0f, Color{ 230, 210, 180 }, Color{ 190, 160, 120 });
+                break;
+            case 2:
+                for (int y = 3; y < 13; ++y) for (int x = 2; x < 14; ++x) if (std::abs(x - 8) < (y - 2)) t.set(x, y, (x + y) % 4 ? Color{ 210, 200, 170 } : Color{ 170, 160, 140 });
+                break;
+            case 3:
+                for (int i = 0; i < 10; ++i) for (int w = 0; w < 3; ++w) t.set(4 + i, 12 - i + w - 1, i < 4 ? Color{ 90, 160, 150 } : Color{ 120, 190, 170 });
+                break;
+            case 4:
+                for (int g = 0; g < 4; ++g)
+                {
+                    const int cx = 4 + (g % 2) * 6, cy = 4 + (g / 2) * 6;
+                    blob(static_cast<float>(cx) + 1.0f, static_cast<float>(cy) + 1.0f, 2.5f, 2.5f, Color{ 220, 240, 230 }, Color{ 140, 200, 190 });
+                }
+                break;
+            case 5:
+                for (int y = 4; y < 12; ++y) for (int x = 4; x < 12; ++x) if (x + y < 18) t.set(x, y, (x * y) % 5 ? Color{ 60, 60, 60 } : Color{ 120, 110, 100 });
+                break;
+            case 6: bottle(Color{ 220, 120, 190 }); break;
+            case 7:
+                blob(8.0f, 8.5f, 5.5f, 4.5f, Color{ 50, 44, 40 }, Color{ 30, 26, 24 });
+                t.set(6, 7, Color{ 90, 80, 70 }); t.set(10, 9, Color{ 90, 80, 70 });
+                break;
+            default: bottle(Color{ 160, 230, 90 }); break;
+        }
+    }
     void paintItemEchoShard(Tile& t)
     {
         t.fill(Color{ 0, 0, 0, 0 });
@@ -9762,6 +9814,15 @@ namespace
         { Tiles::ItemFoodFirst + 9, { "spider_eye", nullptr, nullptr } },
         { Tiles::ItemFoodFirst + 10, { "fermented_spider_eye", nullptr, nullptr } },
         { Tiles::ItemFoodFirst + 11, { "poisonous_potato", nullptr, nullptr } },
+        { Tiles::ItemMaterialFirst + 0, { "rabbit_hide", nullptr, nullptr } },
+        { Tiles::ItemMaterialFirst + 1, { "rabbit_foot", nullptr, nullptr } },
+        { Tiles::ItemMaterialFirst + 2, { "phantom_membrane", nullptr, nullptr } },
+        { Tiles::ItemMaterialFirst + 3, { "prismarine_shard", nullptr, nullptr } },
+        { Tiles::ItemMaterialFirst + 4, { "prismarine_crystals", nullptr, nullptr } },
+        { Tiles::ItemMaterialFirst + 5, { "disc_fragment_5", nullptr, nullptr } },
+        { Tiles::ItemMaterialFirst + 6, { "dragon_breath", nullptr, nullptr } },
+        { Tiles::ItemMaterialFirst + 7, { "charcoal", nullptr, nullptr } },
+        { Tiles::ItemMaterialFirst + 8, { "experience_bottle", nullptr, nullptr } },
         { Tiles::ItemCompassFrameFirst + 0, { "compass_00", nullptr, nullptr } },
         { Tiles::ItemCompassFrameFirst + 1, { "compass_01", nullptr, nullptr } },
         { Tiles::ItemCompassFrameFirst + 2, { "compass_02", nullptr, nullptr } },
@@ -11226,6 +11287,12 @@ Atlas::Atlas()
         paintFoodIn(tile, i);
         blitPainted(Tiles::ItemFoodFirst + i, tile);
     }
+    for (int i = 0; i < 9; ++i)
+    {
+        Tile tile;
+        paintMaterialIn(tile, i);
+        blitPainted(Tiles::ItemMaterialFirst + i, tile);
+    }
     for (int i = 0; i < 4; ++i)
     {
         Tile tile;
@@ -11952,7 +12019,9 @@ Atlas::Atlas()
         if (orb.valid())
         {
             const int cell = orb.width / 4;
-            blitImage(Tiles::ExperienceOrb, scaleNearest(cropImage(orb, 2 * cell, cell, cell, cell), tilePixels, tilePixels));
+            Image glowing = scaleNearest(cropImage(orb, 2 * cell, cell, cell, cell), tilePixels, tilePixels);
+            tintImage(glowing, Color{ 190, 255, 26 });
+            blitImage(Tiles::ExperienceOrb, glowing);
         }
 
         const Image arrow = loadPNG("assets/textures/entity/projectiles/arrow.png");
@@ -12326,6 +12395,7 @@ bool Atlas::hasPainter(int tileIndex)
     if (tileIndex >= Tiles::ItemArmourFirst && tileIndex < Tiles::ItemArmourEnd) return true;
     if (tileIndex >= Tiles::ItemChainmailFirst && tileIndex <= Tiles::ItemChainmailLast) return true;
     if (tileIndex >= Tiles::ItemFoodFirst && tileIndex <= Tiles::ItemFoodLast) return true;
+    if (tileIndex >= Tiles::ItemMaterialFirst && tileIndex <= Tiles::ItemMaterialLast) return true;
     if (tileIndex >= Tiles::ConcreteTile && tileIndex <= Tiles::GlazedTileLast &&
         tileIndex != Tiles::TerracottaPlainTile) return true;
     if (tileIndex >= Tiles::StainedGlassTile && tileIndex <= Tiles::StainedGlassTileLast) return true;

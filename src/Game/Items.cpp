@@ -308,6 +308,15 @@ namespace
         { "Spider Eye", Tiles::ItemFoodFirst + 9, 64 },
         { "Fermented Spider Eye", Tiles::ItemFoodFirst + 10, 64 },
         { "Poisonous Potato", Tiles::ItemFoodFirst + 11, 64 },
+        { "Rabbit Hide", Tiles::ItemMaterialFirst + 0, 64 },
+        { "Rabbit's Foot", Tiles::ItemMaterialFirst + 1, 64 },
+        { "Phantom Membrane", Tiles::ItemMaterialFirst + 2, 64 },
+        { "Prismarine Shard", Tiles::ItemMaterialFirst + 3, 64 },
+        { "Prismarine Crystals", Tiles::ItemMaterialFirst + 4, 64 },
+        { "Disc Fragment", Tiles::ItemMaterialFirst + 5, 64 },
+        { "Dragon's Breath", Tiles::ItemMaterialFirst + 6, 64 },
+        { "Charcoal", Tiles::ItemMaterialFirst + 7, 64 },
+        { "Bottle o' Enchanting", Tiles::ItemMaterialFirst + 8, 64 },
     };
 
     static_assert(sizeof(ITEMS) / sizeof(ITEMS[0]) ==
@@ -559,6 +568,7 @@ StackId blockDrop(BlockId id)
         case Blocks::NetherQuartzOre: return Items::NetherQuartz;
         case Blocks::EmeraldOre: return Items::Emerald;
         case Blocks::Glowstone: return Items::GlowstoneDust;
+        case Blocks::SeaLantern: return Items::PrismarineCrystals;
         case Blocks::NetherWart: return Items::NetherWart;
         case Blocks::RedstoneOre: return Items::Redstone;
         case Blocks::LapisOre: return Items::LapisLazuli;

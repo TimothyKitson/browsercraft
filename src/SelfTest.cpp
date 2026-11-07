@@ -3905,6 +3905,72 @@ namespace
         check(poisonous, "now and then a potato comes up poisonous");
     }
 
+    void testMaterials()
+    {
+        section("drops and materials");
+        auto grid = [](std::initializer_list<StackId> cells, ItemStack* out) {
+            int i = 0;
+            for (StackId id : cells) { out[i].clear(); if (id != Blocks::Air) { out[i].id = id; out[i].count = 1; } ++i; }
+            for (; i < 9; ++i) out[i].clear();
+        };
+        const StackId S = Items::PrismarineShard, C = Items::PrismarineCrystals, _ = Blocks::Air;
+        ItemStack g[9];
+        grid({ S, S, _, S, S, _, _, _, _ }, g);
+        check(Crafting::match(g, 3).id == Blocks::Prismarine, "four shards make prismarine");
+        grid({ S, S, S, S, S, S, S, S, S }, g);
+        check(Crafting::match(g, 3).id == Blocks::PrismarineBricks, "nine make prismarine bricks");
+        grid({ S, S, S, S, Items::DyeBlack, S, S, S, S }, g);
+        check(Crafting::match(g, 3).id == Blocks::DarkPrismarine, "eight round a black dye make dark prismarine");
+        grid({ S, C, S, C, C, C, S, C, S }, g);
+        check(Crafting::match(g, 3).id == Blocks::SeaLantern, "shards and crystals make a sea lantern");
+        grid({ Items::RabbitHide, Items::RabbitHide, _, Items::RabbitHide, Items::RabbitHide, _, _, _, _ }, g);
+        check(Crafting::match(g, 3).id == Items::Leather, "four rabbit hides make leather");
+        grid({ Items::Charcoal, _, _, Items::Stick, _, _, _, _, _ }, g);
+        check(Crafting::match(g, 3).id == Blocks::Torch, "charcoal lights a torch like coal");
+        grid({ Items::Charcoal, Items::Charcoal, Items::Charcoal, Items::Charcoal, Items::Charcoal,
+               Items::Charcoal, Items::Charcoal, Items::Charcoal, Items::Charcoal }, g);
+        check(Crafting::match(g, 3).id != Blocks::CoalBlock, "but nine of it are not a block of coal");
+        check(Smelting::resultOf(Blocks::SpruceLog) == Items::Charcoal && Smelting::resultOf(Blocks::StrippedOakLog) == Items::Charcoal,
+              "a log fired is charcoal");
+        check(Smelting::resultOf(Blocks::CrimsonStem) == Blocks::Air, "but a nether stem does not burn down to it");
+        check(Smelting::burnSeconds(Items::Charcoal) == Smelting::burnSeconds(Items::Coal), "and charcoal burns as long as coal");
+        check(blockDrop(Blocks::SeaLantern) == Items::PrismarineCrystals, "a sea lantern breaks into crystals");
+        check(mobType(MobId::Rabbit).secondDrop == Items::RabbitHide, "a rabbit leaves its hide");
+        check(mobType(MobId::Phantom).drop == Items::PhantomMembrane, "a phantom its membrane");
+        check(mobType(MobId::Guardian).drop == Items::PrismarineShard && mobType(MobId::ElderGuardian).secondDrop == Blocks::WetSponge,
+              "guardians shards, and the elder one a wet sponge");
+
+        Anvil::Input wings{ Items::Elytra, 1, 400, 0 };
+        Anvil::Input membrane{ Items::PhantomMembrane, 2, 0, 0 };
+        const Anvil::Result mended = Anvil::combine(wings, membrane);
+        check(mended.valid && mended.damage < 400, "phantom membrane mends an elytra at the anvil");
+        check(Brewing::brew(Brewing::Potion::Awkward, Items::RabbitFoot) == Brewing::Potion::Leaping,
+              "a rabbit's foot brews leaping");
+        Effects::Kind kind = Effects::Kind::Count;
+        int amplifier = 0;
+        float seconds = 0.0f;
+        check(Brewing::effectOf(Brewing::Potion::Leaping, kind, amplifier, seconds) && kind == Effects::Kind::JumpBoost,
+              "which is jump boost");
+
+        bool bottles = false, hides = false;
+        for (const Trading::Deal& d : Trading::dealsFor(Trading::Profession::Cleric))
+            if (d.offer.give == Items::ExperienceBottle && d.rank == 4) bottles = true;
+        for (const Trading::Deal& d : Trading::dealsFor(Trading::Profession::Leatherworker))
+            if (d.offer.want == Items::RabbitHide) hides = true;
+        check(bottles, "a master cleric sells bottles o' enchanting");
+        check(hides, "and a leatherworker buys rabbit hide");
+
+        bool fragment = false;
+        for (int n = 0; n < 60 && !fragment; ++n)
+            for (const StructureLoot::Stack& s : StructureLoot::rollFor(WorldGen::Hoard::AncientCity, n * 7, -40, n * 3, 99))
+                if (s.id == Items::DiscFragment) fragment = true;
+        check(fragment, "disc fragments turn up in ancient cities");
+
+        Arrow bottle;
+        bottle.kind = Arrows::Kind::XpBottle;
+        check(!bottle.flies() && bottle.bursts() && !bottle.shaft(), "a thrown bottle o' enchanting arcs and breaks");
+    }
+
     void testArchery()
     {
         section("the crossbow, and spectral and tipped arrows");
@@ -12726,7 +12792,7 @@ namespace
         check(elder.arrowDamage > guardian.arrowDamage, "and its beam hurts more");
         check(elder.aquatic, "it lives in the water like its smaller cousin");
         check(standsAt(elder) > standsAt(guardian), "and it is drawn bigger");
-        check(elder.secondDrop == Blocks::SeaLantern, "it leaves a sea lantern");
+        check(elder.secondDrop == Blocks::WetSponge, "it leaves a wet sponge");
 
         const MobType& trader = mobType(MobId::WanderingTrader);
         check(trader.spawnClass == SpawnClass::Passive, "a wandering trader fights nobody");
@@ -14383,6 +14449,7 @@ int runSelfTest()
     testFishing();
     testArchery();
     testFoodsThatBite();
+    testMaterials();
     testMadeThings();
     testTheEndAndTheSea();
     testPathfinding();

@@ -37,6 +37,11 @@ StackId Smelting::resultOf(StackId input)
         case Blocks::Cactus:    return Items::DyeGreen;
         case Blocks::Kelp:      return Items::DriedKelp;
         case Items::ChorusFruit: return Items::PoppedChorusFruit;
+        case Blocks::Log: case Blocks::BirchLog: case Blocks::SpruceLog: case Blocks::DarkOakLog:
+        case Blocks::JungleLog: case Blocks::AcaciaLog: case Blocks::CherryLog: case Blocks::MangroveLog:
+        case Blocks::StrippedMangroveLog: case Blocks::StrippedCherryLog:
+        case Blocks::StrippedOakLog: case Blocks::StrippedSpruceLog: case Blocks::StrippedBirchLog:
+        case Blocks::StrippedJungleLog: case Blocks::StrippedAcaciaLog: case Blocks::StrippedDarkOakLog: return Items::Charcoal;
 
         // A wet sponge dried out, which is Minecraft's recipe and the
         // only way to get a dry one. Without it the sponge in a
@@ -87,6 +92,7 @@ float Smelting::burnSeconds(StackId fuel)
     switch (fuel)
     {
         case Items::Coal:        return 80.0f;   // eight items
+        case Items::Charcoal:    return 80.0f;
         case Blocks::CoalOre:    return 80.0f;
         case Items::Stick:       return 5.0f;
         case Blocks::CraftingTable: return 15.0f;

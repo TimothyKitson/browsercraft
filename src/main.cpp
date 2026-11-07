@@ -1008,6 +1008,10 @@ namespace
                 byHand = "an empty map used, or one copied at a cartography table";
             else if (i == static_cast<int>(Items::TideTemplate))
                 byHand = "dropped by an elder guardian now and then";
+            else if (i == static_cast<int>(Items::RabbitFoot))
+                byHand = "dropped by a rabbit one time in ten";
+            else if (i == static_cast<int>(Items::DragonsBreath))
+                byHand = "a glass bottle held in the dragon's breath";
             else if (i >= static_cast<int>(Items::WayfinderTemplate) && i <= static_cast<int>(Items::HostTemplate))
                 byHand = "brushed out of the gravel in trail ruins";
             else if (i >= static_cast<int>(Items::AnglerSherd) && i <= static_cast<int>(Items::SnortSherd))

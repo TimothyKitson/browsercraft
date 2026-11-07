@@ -1054,6 +1054,20 @@ namespace
         { false, 1, 2, { Items::Coal,
                          Items::Stick }, 0, Blocks::Torch, 4 },
 
+        { false, 2, 2, { Items::PrismarineShard, Items::PrismarineShard,
+                         Items::PrismarineShard, Items::PrismarineShard }, 0, Blocks::Prismarine, 1 },
+        { false, 3, 3, { Items::PrismarineShard, Items::PrismarineShard, Items::PrismarineShard,
+                         Items::PrismarineShard, Items::PrismarineShard, Items::PrismarineShard,
+                         Items::PrismarineShard, Items::PrismarineShard, Items::PrismarineShard }, 0, Blocks::PrismarineBricks, 1 },
+        { false, 3, 3, { Items::PrismarineShard, Items::PrismarineShard, Items::PrismarineShard,
+                         Items::PrismarineShard, Items::DyeBlack,        Items::PrismarineShard,
+                         Items::PrismarineShard, Items::PrismarineShard, Items::PrismarineShard }, 0, Blocks::DarkPrismarine, 1 },
+        { false, 3, 3, { Items::PrismarineShard,    Items::PrismarineCrystals, Items::PrismarineShard,
+                         Items::PrismarineCrystals, Items::PrismarineCrystals, Items::PrismarineCrystals,
+                         Items::PrismarineShard,    Items::PrismarineCrystals, Items::PrismarineShard }, 0, Blocks::SeaLantern, 1 },
+        { false, 2, 2, { Items::RabbitHide, Items::RabbitHide,
+                         Items::RabbitHide, Items::RabbitHide }, 0, Items::Leather, 1 },
+
         // Four string makes a block of wool, so a bed does not depend on
         // finding sheep.
         { false, 2, 2, { Items::StringItem, Items::StringItem,
@@ -1203,9 +1217,10 @@ namespace
     // Minecraft a spruce bench is a bench. Written once here rather
     // than by listing every wood in all thirty-odd recipes that take
     // planks, which is how a new wood ends up unable to make anything.
-    bool satisfies(StackId wanted, StackId have)
+    bool satisfies(StackId wanted, StackId have, StackId result)
     {
         if (have == wanted) return true;
+        if (wanted == Items::Coal && have == Items::Charcoal) return result != Blocks::CoalBlock;
         if (!isBlockStack(wanted) || !isBlockStack(have)) return false;
         return isPlanks(asBlock(wanted)) && isPlanks(asBlock(have));
     }
@@ -1244,7 +1259,7 @@ namespace
                 const ItemStack& cell = grid[(y0 + y) * 3 + (x0 + x)];
                 const StackId wanted = recipe.pattern[y * recipe.width + x];
                 if (wanted == _ && !cell.empty()) return false;
-                if (wanted != _ && (cell.empty() || !satisfies(wanted, cell.id))) return false;
+                if (wanted != _ && (cell.empty() || !satisfies(wanted, cell.id, recipe.result))) return false;
             }
 
         return true;
@@ -1263,7 +1278,7 @@ namespace
                 {
                     const int cell = y * 3 + x;
                     if (used[cell]) continue;
-                    if (grid[cell].empty() || !satisfies(recipe.pattern[i], grid[cell].id)) continue;
+                    if (grid[cell].empty() || !satisfies(recipe.pattern[i], grid[cell].id, recipe.result)) continue;
                     used[cell] = true;
                     found = true;
                 }

@@ -236,16 +236,17 @@ namespace Trading
 
         case Profession::Cleric:
             return {
-                buy(Items::GoldIngot, 3, 0, 12),
+                buy(Items::RottenFlesh, 32, 0),
                 sell(1, Items::Redstone, 2, 0),
-                buy(Items::GlassBottle, 9, 1),
+                buy(Items::GoldIngot, 3, 1, 12),
                 sell(1, Items::LapisLazuli, 1, 1),
-                buy(Items::NetherWart, 22, 2),
+                buy(Items::RabbitFoot, 2, 2, 12),
                 sell(4, Blocks::Glowstone, 1, 2),
-                buy(Items::GhastTear, 2, 3, 12),
+                buy(Items::TurtleScute, 4, 3, 12),
+                buy(Items::GlassBottle, 9, 3, 12),
                 sell(5, Items::EnderPearl, 1, 3),
-                buy(Items::BlazePowder, 4, 4, 12),
-                sell(3, Items::GlowstoneDust, 4, 4),
+                buy(Items::NetherWart, 22, 4, 12),
+                sell(3, Items::ExperienceBottle, 1, 4),
             };
 
         case Profession::Fisherman:
@@ -269,7 +270,7 @@ namespace Trading
                 buy(Items::Flint, 26, 1),
                 sell(5, Items::LeatherHelmet, 1, 1),
                 sell(4, Items::LeatherBoots, 1, 1),
-                buy(Items::Leather, 9, 2),
+                buy(Items::RabbitHide, 9, 2, 12),
                 sell(7, Items::LeatherChestplate, 1, 3, 6, Blocks::Air, 0, enchanted(Kind::Protection, 1)),
                 sell(5, Items::LeatherHelmet, 1, 4, 6, Blocks::Air, 0, enchanted(Kind::Protection, 1)),
                 sell(6, Items::LeatherHorseArmor, 1, 3),

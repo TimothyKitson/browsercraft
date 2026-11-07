@@ -404,6 +404,15 @@ namespace Items
         SpiderEye,
         FermentedSpiderEye,
         PoisonousPotato,
+        RabbitHide,
+        RabbitFoot,
+        PhantomMembrane,
+        PrismarineShard,
+        PrismarineCrystals,
+        DiscFragment,
+        DragonsBreath,
+        Charcoal,
+        ExperienceBottle,
         Count
     };
 }

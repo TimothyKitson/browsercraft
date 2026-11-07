@@ -80,6 +80,7 @@ namespace
         { Items::Emerald,     1, 2 },
         { Items::SentryTemplate, 1, 1 },
         { Items::GoatHorn,    1, 1 },
+        { Items::ExperienceBottle, 1, 3 },
     };
 
     // A mansion is somebody's house, and a rich one: it is the
@@ -107,6 +108,7 @@ namespace
         { Items::Leather,     1, 3 },
         { Items::Diamond,     1, 1 },
         { Items::CoastTemplate, 1, 1 },
+        { Items::ExperienceBottle, 1, 1 },
     };
 
     // The best chest in the overworld, and the only one that needs a
@@ -118,6 +120,7 @@ namespace
         { Items::IronIngot,   2, 6 },
         { Items::CookedPorkchop, 1, 4 },
         { Items::Potion,      1, 1 },
+        { Items::PrismarineCrystals, 1, 5 },
     };
 
     // What is behind the dark prismarine. Minecraft keeps eight blocks
@@ -176,6 +179,8 @@ namespace
         { Items::SilenceTemplate, 1, 1 },
         { Items::Lead,        1, 1 },
         { Items::EchoShard,   1, 3 },
+        { Items::ExperienceBottle, 1, 3 },
+        { Items::DiscFragment, 1, 3 },
     };
 
     // A witch's hut. What she brews with, and what she has brewed.
