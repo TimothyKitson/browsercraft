@@ -2157,7 +2157,7 @@ bool Application::frame()
             m_startupScreen == "stones" || m_startupScreen == "colours" || m_startupScreen == "candles" ||
             m_startupScreen == "shulkerboxes" || m_startupScreen == "beds" || m_startupScreen == "chests" ||
             m_startupScreen == "copper" || m_startupScreen == "flowers" || m_startupScreen == "mushrooms" || m_startupScreen == "lush" ||
-            m_startupScreen == "farm" || m_startupScreen == "corals" || m_startupScreen == "ice" || m_startupScreen == "wiring" || m_startupScreen == "utility" ||
+            m_startupScreen == "farm" || m_startupScreen == "corals" || m_startupScreen == "ice" || m_startupScreen == "wiring" || m_startupScreen == "utility" || m_startupScreen == "dig" ||
             m_startupScreen == "boat" || m_startupScreen == "rails" ||
             m_startupScreen == "mobs" || m_startupScreen == "golem" ||
             m_startupScreen == "glowmobs" || m_startupScreen == "variants" ||
@@ -2257,6 +2257,7 @@ bool Application::frame()
                                   m_startupScreen != "ice" &&
                                   m_startupScreen != "wiring" &&
                                   m_startupScreen != "utility" &&
+                                  m_startupScreen != "dig" &&
                                   m_startupScreen != "boat" &&
                                   m_startupScreen != "rails" &&
                                   m_startupScreen != "mobs" &&
@@ -2635,7 +2636,7 @@ bool Application::frame()
                 m_startupScreen == "shulkerboxes" || m_startupScreen == "beds" || m_startupScreen == "chests" ||
                 m_startupScreen == "copper" || m_startupScreen == "flowers" || m_startupScreen == "mushrooms" ||
                 m_startupScreen == "lush" || m_startupScreen == "farm" || m_startupScreen == "corals" || m_startupScreen == "ice" ||
-                m_startupScreen == "wiring" || m_startupScreen == "utility")
+                m_startupScreen == "wiring" || m_startupScreen == "utility" || m_startupScreen == "dig")
             {
                 m_camera.setOrientation(0.0f, -25.0f);
                 m_camera.addLook(0.0f, 0.0f, 0.0f);
@@ -2776,6 +2777,35 @@ bool Application::frame()
                     m_world->setBlock(px + 12, py, pz - 8, Blocks::Bookshelf);
                     m_world->setBlock(px + 12, py, pz + 8, Blocks::DiamondOre);
                     m_world->setBlock(px + 12, py + 1, pz + 8, Blocks::EndPortalFrame);
+                }
+                if (m_startupScreen == "dig")
+                {
+                    m_devAttackStrength = 1.0f;
+                    m_camera.setOrientation(0.0f, -25.0f);
+                    for (int dx = 1; dx <= 14; ++dx)
+                        for (int dz = -8; dz <= 8; ++dz)
+                        {
+                            for (int dy = 0; dy <= 6; ++dy) m_world->setBlock(px + dx, py + dy, pz + dz, Blocks::Air);
+                            m_world->setBlock(px + dx, py - 1, pz + dz, Blocks::Grass);
+                        }
+                    auto put = [&](int dx, int dy, int dz, BlockId id) { m_world->setBlock(px + dx, py + dy, pz + dz, id); };
+                    for (int stage = 0; stage < 4; ++stage)
+                    {
+                        put(4, 0, -6 + stage, suspiciousOf(0, stage));
+                        put(5, 0, -6 + stage, suspiciousOf(3, stage));
+                    }
+                    for (int k = 0; k < 3; ++k) put(4, 0, 1 + k * 2, static_cast<BlockId>(Blocks::SnifferEgg0 + k));
+                    put(4, -1, 1, Blocks::Moss);
+                    put(6, 0, -1, static_cast<BlockId>(Blocks::DecoratedPotFirst + 3));
+                    {
+                        const int sides[4] = { 17, 0, 13, 21 };
+                        m_potSides[{ static_cast<int>(m_dimension), px + 6, py, pz - 1 }] = Archaeology::packPot(sides);
+                    }
+                    m_entities.spawnAt(MobId::Sniffer, glm::vec3(px + 9.5f, static_cast<float>(py), pz + 2.5f), *m_world);
+                    m_entities.spawnAt(MobId::Sniffer, glm::vec3(px + 7.5f, static_cast<float>(py), pz + 5.5f), *m_world, true);
+                    put(14, 0, -8, Blocks::Bookshelf);
+                    put(14, 0, 8, Blocks::DiamondOre);
+                    put(14, 1, 8, Blocks::EndPortalFrame);
                 }
                 if (m_startupScreen == "utility")
                 {
@@ -9067,6 +9097,31 @@ void Application::tickWiring(float deltaTime)
         }
     }
 
+    static float snuffle = 0.0f;
+    snuffle += 0.1f;
+    if (snuffle >= 5.0f)
+    {
+        snuffle = 0.0f;
+        for (Mob& mob : m_entities.mobs())
+        {
+            if (!mob.alive() || mob.typeId() != MobId::Sniffer || mob.baby()) continue;
+            const glm::vec3 p = mob.position();
+            const uint32_t roll = static_cast<uint32_t>(p.x * 73.0f) ^ static_cast<uint32_t>(p.z * 151.0f) ^
+                                  static_cast<uint32_t>(m_elapsedSeconds * 977.0f);
+            if (roll % 24u != 0u) continue;
+            const BlockId ground = m_world->getBlock(static_cast<int>(std::floor(p.x)), static_cast<int>(std::floor(p.y - 0.1f)),
+                                                     static_cast<int>(std::floor(p.z)));
+            const bool diggable = ground == Blocks::Grass || ground == Blocks::Dirt || ground == Blocks::Podzol ||
+                                  ground == Blocks::CoarseDirt || ground == Blocks::RootedDirt || ground == Blocks::Moss ||
+                                  ground == Blocks::Mud || ground == Blocks::MuddyMangroveRoots;
+            if (!diggable) continue;
+            m_drops.spawn(p + glm::vec3(0.0f, 0.4f, 0.0f), (roll >> 8) % 2u ? Items::PitcherPod : Items::TorchflowerSeeds, 1);
+            m_particles.spawnBlockBreak(glm::ivec3(static_cast<int>(std::floor(p.x)), static_cast<int>(std::floor(p.y - 0.1f)),
+                                                   static_cast<int>(std::floor(p.z))), ground);
+            m_audio.play(Sound::MobSnifferSay, 0.5f, 0.7f);
+        }
+    }
+
     for (Mob& mob : m_entities.mobs())
     {
         if (!mob.alive() || !mob.type().ridesRails) continue;
@@ -13289,8 +13344,13 @@ void Application::updateWorldAround(float deltaTime)
         m_growthTimer = 0.0f;
         if (m_net.role() != Net::Role::Guest)
         {
-            std::vector<glm::ivec3> hatched;
-            Farming::grow(*m_world, m_player.position, m_growthSeed, &hatched);
+            std::vector<glm::ivec3> hatched, snifflings;
+            Farming::grow(*m_world, m_player.position, m_growthSeed, &hatched, &snifflings);
+            for (const glm::ivec3& at : snifflings)
+            {
+                m_entities.spawnAt(MobId::Sniffer, glm::vec3(at) + glm::vec3(0.5f, 0.0f, 0.5f), *m_world, true);
+                m_audio.play(Sound::MobSnifferSay, 0.6f, 1.5f);
+            }
             for (const glm::ivec3& at : hatched)
             {
                 m_entities.spawnAt(MobId::Turtle, glm::vec3(at) + glm::vec3(0.5f, 0.0f, 0.5f), *m_world, true);
@@ -13554,6 +13614,17 @@ void Application::updateMobs(float deltaTime)
                         laid = true;
                     }
                 }
+    }
+    for (const glm::vec3& mother : m_entities.drainSnifferNests())
+    {
+        const glm::ivec3 at(static_cast<int>(std::floor(mother.x)), static_cast<int>(std::floor(mother.y)),
+                            static_cast<int>(std::floor(mother.z)));
+        if (m_world->getBlock(at.x, at.y, at.z) == Blocks::Air && isSolid(m_world->getBlock(at.x, at.y - 1, at.z)))
+        {
+            m_world->setBlock(at.x, at.y, at.z, Blocks::SnifferEgg0);
+            m_net.onLocalBlockChange(at.x, at.y, at.z, Blocks::SnifferEgg0);
+        }
+        else m_drops.spawn(mother + glm::vec3(0.0f, 0.3f, 0.0f), Blocks::SnifferEgg0, 1);
     }
     for (const glm::vec3& grown : m_entities.drainGrownTurtles())
         m_drops.spawn(grown + glm::vec3(0.0f, 0.3f, 0.0f), Items::TurtleScute, 1);

@@ -102,6 +102,7 @@ mob iron_golem/iron_golem.png       iron_golem
 mob blaze.png                       blaze
 mob slime/magmacube.png             magmacube
 mob breeze/breeze.png               breeze
+mob sniffer/sniffer.png             sniffer
 
 # 1.21 has no zombie pigman: it was replaced by the zombified piglin,
 # which is a piglin and not a zombie. The body, arms and legs are the

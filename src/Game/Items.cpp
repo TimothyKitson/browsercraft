@@ -285,6 +285,7 @@ int flatIconFor(BlockId id)
     if (id == Blocks::DragonEgg) return Tiles::DragonEggTile;
     if (id == Blocks::HeavyCore) return Tiles::HeavyCoreTile;
     if (isDecoratedPot(id)) return Tiles::PotSideTile;
+    if (isSnifferEgg(id)) return Tiles::ItemSnifferEgg;
     if (isEndRod(id)) return Tiles::EndRodTile;
     if (isDoublePlant(id))
     {
@@ -451,6 +452,7 @@ StackId blockDrop(BlockId id)
     if (isChiseledBookshelf(id)) return shelfOf(2, 0);
     if (isSuspicious(id)) return Blocks::Air;
     if (isDecoratedPot(id)) return static_cast<StackId>(Blocks::DecoratedPotFirst + 2);
+    if (isSnifferEgg(id)) return Blocks::SnifferEgg0;
     if (id == Blocks::ChorusPlant) return Items::ChorusFruit;
 
     // A melon comes apart into slices rather than into a melon, which

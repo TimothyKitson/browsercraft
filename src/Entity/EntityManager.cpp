@@ -901,6 +901,11 @@ void EntityManager::pairOffLovers(const World& world)
                 m_turtleNests.push_back(between);
                 break;
             }
+            if (m_mobs[a].typeId() == MobId::Sniffer)
+            {
+                m_snifferNests.push_back(m_mobs[a].position());
+                break;
+            }
 
             if (static_cast<int>(m_mobs.size()) < MAX_MOBS &&
                 fits(world, mobType(m_mobs[a].typeId()), between))
@@ -944,6 +949,13 @@ std::vector<glm::vec3> EntityManager::drainTurtleNests()
 {
     std::vector<glm::vec3> all;
     all.swap(m_turtleNests);
+    return all;
+}
+
+std::vector<glm::vec3> EntityManager::drainSnifferNests()
+{
+    std::vector<glm::vec3> all;
+    all.swap(m_snifferNests);
     return all;
 }
 

@@ -789,6 +789,15 @@ namespace
             const glm::vec3 c[4] = { glm::vec3(x0, yy, z1), glm::vec3(x1, yy, z1), glm::vec3(x1, yy, z0), glm::vec3(x0, yy, z0) };
             pushQuad(snap, lx, y, lz, id, c, tile, x0 * 16.0f, z0 * 16.0f, x1 * 16.0f, z1 * 16.0f, shade, true, out);
         };
+        if (isSnifferEgg(id))
+        {
+            const int first = Tiles::SnifferEggTileFirst + (id - Blocks::SnifferEgg0) * 6;
+            const PartFace faces[6] = { { first + 1, 0.0f, 0.0f, 12.0f, 16.0f }, { first + 3, 0.0f, 0.0f, 12.0f, 16.0f },
+                                        { first + 4, 0.0f, 0.0f, 14.0f, 12.0f }, { first + 5, 0.0f, 0.0f, 14.0f, 12.0f },
+                                        { first + 2, 0.0f, 0.0f, 14.0f, 16.0f }, { first + 0, 0.0f, 0.0f, 14.0f, 16.0f } };
+            emitPart(snap, lx, y, lz, id, glm::vec3(1.0f, 0.0f, 2.0f) / 16.0f, glm::vec3(15.0f, 16.0f, 14.0f) / 16.0f, faces, out);
+            return;
+        }
         if (isDecoratedPot(id))
         {
             const BlockInfo& info = blockInfo(id);

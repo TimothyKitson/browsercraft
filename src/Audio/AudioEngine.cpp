@@ -387,6 +387,8 @@ void AudioEngine::buildSounds()
                  Sound::MobTraderDeath, "mob/wandering_trader");
     loadMobVoice(Sound::MobCamelSay, Sound::MobCamelHurt,
                  Sound::MobCamelDeath, "mob/camel");
+    loadMobVoice(Sound::MobSnifferSay, Sound::MobSnifferHurt,
+                 Sound::MobSnifferDeath, "mob/sniffer");
     loadMobVoice(Sound::MobParrotSay, Sound::MobParrotHurt,
                  Sound::MobParrotDeath, "mob/parrot");
     loadMobVoice(Sound::MobAllaySay, Sound::MobAllayHurt,
@@ -1489,6 +1491,8 @@ void AudioEngine::buildSounds()
     // last breath off one description each.
     beastVoice(Sound::MobCamelSay, Sound::MobCamelHurt, Sound::MobCamelDeath,
                210.0f, 0.20f, 0.42f, 1171);
+    beastVoice(Sound::MobSnifferSay, Sound::MobSnifferHurt, Sound::MobSnifferDeath,
+               150.0f, 0.24f, 0.50f, 1193);
     beastVoice(Sound::MobTraderSay, Sound::MobTraderHurt, Sound::MobTraderDeath,
                275.0f, 0.12f, 0.24f, 1181);
     beastVoice(Sound::MobParrotSay, Sound::MobParrotHurt, Sound::MobParrotDeath,

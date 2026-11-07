@@ -5675,6 +5675,28 @@ namespace
         }
         for (int x = 2; x < 14; ++x) { t.set(x, 1, ink); t.set(x, 14, ink); }
     }
+    void paintSnifferEggIn(Tile& t, int stage, int face)
+    {
+        t.fill(Color{ 150, 60, 50 });
+        for (int y = 0; y < Tile::N; ++y)
+            for (int x = 0; x < Tile::N; ++x)
+                if (hash2(x / 2, y / 2, 2501 + face) > 0.7f) t.set(x, y, Color{ 90, 140, 70 });
+        for (int c = 0; c < stage * 4; ++c)
+        {
+            const int x = static_cast<int>(hash2(c, face, 2502) * 13.0f), y = static_cast<int>(hash2(face, c, 2503) * 13.0f);
+            for (int k = 0; k < 3; ++k) t.set(x + k, y + (k & 1), Color{ 60, 24, 20 });
+        }
+    }
+    void paintItemSnifferEgg(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 2; y < 15; ++y)
+            for (int x = 3; x < 13; ++x)
+            {
+                const float dx = (x - 7.5f) / 5.0f, dy = (y - 8.5f) / 6.5f;
+                if (dx * dx + dy * dy <= 1.0f) t.set(x, y, hash2(x / 2, y / 2, 2504) > 0.7f ? Color{ 90, 140, 70 } : Color{ 150, 60, 50 });
+            }
+    }
     void paintItemPitcherPlant(Tile& t)
     {
         paintDoubleIn(t, true, Color{ 100, 170, 190 }, 1333);
@@ -8254,6 +8276,7 @@ namespace
         { Tiles::ItemRawGold, paintItemRawGold },
         { Tiles::ItemAmethystShard, paintItemAmethystShard },
         { Tiles::ItemTripwireHook, paintItemTripwireHook },
+        { Tiles::ItemSnifferEgg, paintItemSnifferEgg },
         { Tiles::ItemBrush, paintItemBrush },
         { Tiles::ItemBell, paintItemBell },
         { Tiles::ItemIronNugget, paintItemIronNugget },
@@ -9072,6 +9095,7 @@ namespace
         { Tiles::ItemRawGold, { "raw_gold", nullptr, nullptr } },
         { Tiles::ItemAmethystShard, { "amethyst_shard", nullptr, nullptr } },
         { Tiles::ItemTripwireHook, { "../block/tripwire_hook", nullptr, nullptr } },
+        { Tiles::ItemSnifferEgg, { "sniffer_egg", nullptr, nullptr } },
         { Tiles::ItemBrush, { "brush", nullptr, nullptr } },
         { Tiles::ItemSherdFirst + 0, { "angler_pottery_sherd", nullptr, nullptr } },
         { Tiles::ItemSherdFirst + 1, { "archer_pottery_sherd", nullptr, nullptr } },
@@ -9281,6 +9305,24 @@ namespace
         { Tiles::GlassPaneTopTile, { "glass_pane_top", nullptr }, Tinting::None, 0, false },
         { Tiles::TerracottaPlainTile, { "terracotta", "hardened_clay", nullptr }, Tinting::None, 0, false },
         { Tiles::TintedGlassTile, { "tinted_glass", nullptr }, Tinting::None, 0, false },
+        { Tiles::SnifferEggTileFirst + 0, { "sniffer_egg_not_cracked_north", nullptr }, Tinting::None, 0, false },
+        { Tiles::SnifferEggTileFirst + 1, { "sniffer_egg_not_cracked_east", nullptr }, Tinting::None, 0, false },
+        { Tiles::SnifferEggTileFirst + 2, { "sniffer_egg_not_cracked_south", nullptr }, Tinting::None, 0, false },
+        { Tiles::SnifferEggTileFirst + 3, { "sniffer_egg_not_cracked_west", nullptr }, Tinting::None, 0, false },
+        { Tiles::SnifferEggTileFirst + 4, { "sniffer_egg_not_cracked_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::SnifferEggTileFirst + 5, { "sniffer_egg_not_cracked_bottom", nullptr }, Tinting::None, 0, false },
+        { Tiles::SnifferEggTileFirst + 6, { "sniffer_egg_slightly_cracked_north", nullptr }, Tinting::None, 0, false },
+        { Tiles::SnifferEggTileFirst + 7, { "sniffer_egg_slightly_cracked_east", nullptr }, Tinting::None, 0, false },
+        { Tiles::SnifferEggTileFirst + 8, { "sniffer_egg_slightly_cracked_south", nullptr }, Tinting::None, 0, false },
+        { Tiles::SnifferEggTileFirst + 9, { "sniffer_egg_slightly_cracked_west", nullptr }, Tinting::None, 0, false },
+        { Tiles::SnifferEggTileFirst + 10, { "sniffer_egg_slightly_cracked_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::SnifferEggTileFirst + 11, { "sniffer_egg_slightly_cracked_bottom", nullptr }, Tinting::None, 0, false },
+        { Tiles::SnifferEggTileFirst + 12, { "sniffer_egg_very_cracked_north", nullptr }, Tinting::None, 0, false },
+        { Tiles::SnifferEggTileFirst + 13, { "sniffer_egg_very_cracked_east", nullptr }, Tinting::None, 0, false },
+        { Tiles::SnifferEggTileFirst + 14, { "sniffer_egg_very_cracked_south", nullptr }, Tinting::None, 0, false },
+        { Tiles::SnifferEggTileFirst + 15, { "sniffer_egg_very_cracked_west", nullptr }, Tinting::None, 0, false },
+        { Tiles::SnifferEggTileFirst + 16, { "sniffer_egg_very_cracked_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::SnifferEggTileFirst + 17, { "sniffer_egg_very_cracked_bottom", nullptr }, Tinting::None, 0, false },
         { Tiles::PotBaseTile, { "../entity/decorated_pot/decorated_pot_base", nullptr }, Tinting::None, 0, false },
         { Tiles::PotSideTile, { "../entity/decorated_pot/decorated_pot_side", nullptr }, Tinting::None, 0, false },
         { Tiles::PotPatternFirst + 0, { "../entity/decorated_pot/angler_pottery_pattern", nullptr }, Tinting::None, 0, false },
@@ -10381,6 +10423,13 @@ Atlas::Atlas()
         blitPainted(Tiles::SuspiciousSandTileFirst + stage, sand);
         blitPainted(Tiles::SuspiciousGravelTileFirst + stage, gravel);
     }
+    for (int stage = 0; stage < 3; ++stage)
+        for (int face = 0; face < 6; ++face)
+        {
+            Tile egg;
+            paintSnifferEggIn(egg, stage, face);
+            blitPainted(Tiles::SnifferEggTileFirst + stage * 6 + face, egg);
+        }
     for (int k = 0; k < 23; ++k)
     {
         Tile pattern;
@@ -11316,6 +11365,7 @@ bool Atlas::hasPainter(int tileIndex)
     if (tileIndex >= Tiles::SuspiciousSandTileFirst && tileIndex <= Tiles::SuspiciousGravelTileLast) return true;
     if (tileIndex >= Tiles::ItemSherdFirst && tileIndex <= Tiles::ItemSherdLast) return true;
     if (tileIndex >= Tiles::PotPatternFirst && tileIndex <= Tiles::PotPatternLast) return true;
+    if (tileIndex >= Tiles::SnifferEggTileFirst && tileIndex <= Tiles::SnifferEggTileLast) return true;
     if (tileIndex >= Tiles::CutCopperTile && tileIndex <= Tiles::CopperTrapdoorTileLast) return true;
     if (tileIndex >= Tiles::ItemCopperDoorFirst && tileIndex <= Tiles::ItemCopperDoorLast) return true;
     if (tileIndex >= Tiles::CrackFirst &&

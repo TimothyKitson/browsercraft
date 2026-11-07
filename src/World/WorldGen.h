@@ -382,6 +382,7 @@ private:
     void hangCocoa(Chunk& chunk, int worldX, int ground, int worldZ) const;
     void dressSeabed(Chunk& chunk) const;
     void buildDesertWells(Chunk& chunk) const;
+    void buildOceanRuins(Chunk& chunk) const;
     void buildGeodes(Chunk& chunk) const;
     void buildAncientCities(Chunk& chunk) const;
     void buildEndCities(Chunk& chunk) const;

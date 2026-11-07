@@ -84,7 +84,7 @@ Archaeology::Find Archaeology::roll(int table, int x, int y, int z, uint32_t see
             break;
         case WarmOceanRuin:
             entries = { { sherdOf("angler"), 1 }, { sherdOf("shelter"), 1 }, { sherdOf("snort"), 1 },
-                        { Items::IronAxe, 1 }, { Items::Emerald, 2 }, { Items::Wheat, 2 }, { Items::WoodHoe, 2 },
+                        { Blocks::SnifferEgg0, 1 }, { Items::IronAxe, 1 }, { Items::Emerald, 2 }, { Items::Wheat, 2 }, { Items::WoodHoe, 2 },
                         { Items::Coal, 2 }, { Items::GoldNugget, 2 } };
             break;
         case ColdOceanRuin:

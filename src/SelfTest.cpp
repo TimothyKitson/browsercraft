@@ -607,6 +607,7 @@ namespace
                   type.sheetHeight == 128)) ||
                 (type.sheetWidth == 128 &&
                  (type.sheetHeight == 64 || type.sheetHeight == 128)) ||
+                (type.sheetWidth == 192 && type.sheetHeight == 192) ||
                 (type.sheetWidth == 256 && type.sheetHeight == 256);
             check(shaped, who + " has a sheet the shape Minecraft draws on");
             check(MobSkin::fits(type.model, type.sheetWidth, type.sheetHeight),
@@ -6647,6 +6648,9 @@ namespace
                 // the outpost.
                 case MobId::ElderGuardian:
                 case MobId::Allay:
+                // A sniffer hatches from an egg brushed out of a warm
+                // ocean ruin; nothing spawns one.
+                case MobId::Sniffer:
                 // A wandering trader belongs nowhere, which is why he
                 // turns up anywhere in daylight.
                 case MobId::WanderingTrader:

@@ -222,7 +222,8 @@ bool Farming::coralIsWet(const World& world, int x, int y, int z)
     return false;
 }
 
-void Farming::grow(World& world, const glm::vec3& around, uint32_t& seed, std::vector<glm::ivec3>* hatched)
+void Farming::grow(World& world, const glm::vec3& around, uint32_t& seed, std::vector<glm::ivec3>* hatched,
+                   std::vector<glm::ivec3>* snifflings)
 {
     const int centreX = static_cast<int>(std::floor(around.x));
     const int centreY = static_cast<int>(std::floor(around.y));
@@ -256,6 +257,18 @@ void Farming::grow(World& world, const glm::vec3& around, uint32_t& seed, std::v
             if (isLivingCoral(reef))
             {
                 if (!coralIsWet(world, x, y, z)) world.setBlock(x, y, z, deadCoralOf(reef));
+                continue;
+            }
+            if (isSnifferEgg(reef))
+            {
+                const bool moss = world.getBlock(x, y - 1, z) == Blocks::Moss;
+                if (nextRandom(seed) % (moss ? 11u : 23u) != 0u) continue;
+                if (reef != Blocks::SnifferEgg2) world.setBlock(x, y, z, static_cast<BlockId>(reef + 1));
+                else
+                {
+                    world.setBlock(x, y, z, Blocks::Air);
+                    if (snifflings) snifflings->push_back(glm::ivec3(x, y, z));
+                }
                 continue;
             }
             if (isTurtleEgg(reef))

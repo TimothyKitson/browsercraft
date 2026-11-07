@@ -3444,6 +3444,52 @@ namespace
 
         }
 
+        {
+            // The sniffer: an ancient thing hatched from an egg found in
+            // the warm sea, which noses up seeds nothing else can find.
+            MobType& t = table[static_cast<size_t>(MobId::Sniffer)];
+            t.id = MobId::Sniffer;
+            t.experience = 1;
+            t.voice = Sound::MobSnifferSay;
+            t.hurtVoice = Sound::MobSnifferHurt;
+            t.deathVoice = Sound::MobSnifferDeath;
+            t.name = "Sniffer";
+            t.texture = "sniffer";
+            t.sheetWidth = 192;
+            t.sheetHeight = 192;
+            t.width = 1.9f;
+            t.height = 1.8f;
+            t.modelScale = 1.0f;
+            t.spawnClass = SpawnClass::Passive;
+            t.maxHealth = 14;
+            t.walkSpeed = 1.1f;
+            t.limbSwing = 0.4f;
+            t.voicePitch = 0.6f;
+            t.breedingFood = Items::TorchflowerSeeds;
+
+            t.bodyColour = rgb(150, 54, 44);
+            t.headColour = rgb(170, 70, 56);
+            t.eyeColour = rgb(30, 24, 20);
+            t.pattern = MobType::Pattern::Patches;
+            t.markColour = rgb(90, 140, 70);
+
+            t.model.push_back(mc(Part::Body, 62, 68, 25, 29, 40, -12, -14, -20, 0, 5, 0));
+            t.model.push_back(inflated(mc(Part::Body, 62, 0, 25, 24, 40, -12, -14, -20, 0, 5, 0), 0.5f));
+            t.model.push_back(mc(Part::Body, 87, 68, 25, 0, 40, -12, 12, -20, 0, 5, 0));
+            t.model.push_back(mc(Part::LegFrontRight, 32, 87, 7, 10, 8, -3, -1, -4, -8, 15, -15));
+            t.model.push_back(mc(Part::LegBackRight, 32, 105, 7, 10, 8, -3, -1, -4, -8, 15, 0));
+            t.model.push_back(mc(Part::LegFrontRight, 32, 123, 7, 10, 8, -3, -1, -4, -8, 15, 15));
+            t.model.push_back(mc(Part::LegFrontLeft, 0, 87, 7, 10, 8, -4, -1, -4, 8, 15, -15));
+            t.model.push_back(mc(Part::LegBackLeft, 0, 105, 7, 10, 8, -4, -1, -4, 8, 15, 0));
+            t.model.push_back(mc(Part::LegFrontLeft, 0, 123, 7, 10, 8, -4, -1, -4, 8, 15, 15));
+            t.model.push_back(mc(Part::Head, 8, 15, 13, 18, 11, -6, -8, -12, 0, 12, -19));
+            t.model.push_back(mc(Part::Head, 8, 4, 13, 0, 11, -6, 7, -12, 0, 12, -19));
+            t.model.push_back(mc(Part::Head, 2, 0, 1, 19, 7, 0, 0, -3, 7, 4, -24));
+            t.model.push_back(mc(Part::Head, 48, 0, 1, 19, 7, -1, 0, -3, -7, 4, -24));
+            t.model.push_back(mc(Part::Head, 10, 45, 13, 2, 9, -6, -2, -9, 0, 7, -31));
+            t.model.push_back(mc(Part::Head, 10, 57, 13, 12, 9, -6, -7, -8, 0, 14, -32));
+        }
+
         return table;
     }
 }

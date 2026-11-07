@@ -660,6 +660,7 @@ namespace Blocks
         SuspiciousSandFirst, SuspiciousSandLast = SuspiciousSandFirst + 11,
         SuspiciousGravelFirst, SuspiciousGravelLast = SuspiciousGravelFirst + 11,
         DecoratedPotFirst, DecoratedPotLast = DecoratedPotFirst + 3,
+        SnifferEgg0, SnifferEgg1, SnifferEgg2,
 
         Count
     };
@@ -813,6 +814,7 @@ inline BlockId suspiciousOf(int table, int stage)
     if (table < 3) return static_cast<BlockId>(Blocks::SuspiciousSandFirst + table * 4 + stage);
     return static_cast<BlockId>(Blocks::SuspiciousGravelFirst + (table - 3) * 4 + stage);
 }
+inline bool isSnifferEgg(BlockId id) { return id >= Blocks::SnifferEgg0 && id <= Blocks::SnifferEgg2; }
 inline bool isDecoratedPot(BlockId id) { return id >= Blocks::DecoratedPotFirst && id <= Blocks::DecoratedPotLast; }
 inline bool isTarget(BlockId id) { return id == Blocks::Target || id == Blocks::TargetLit; }
 inline bool isIronDoor(BlockId id) { return id >= Blocks::IronDoorFirst && id <= Blocks::IronDoorLast; }

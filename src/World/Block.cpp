@@ -2210,6 +2210,9 @@ namespace
         { "Decorated Pot", PotBaseTile, PotBaseTile, PotSideTile, true, false, RenderType::Lush, 0, 0.0f },
         { "Decorated Pot", PotBaseTile, PotBaseTile, PotSideTile, true, false, RenderType::Lush, 0, 0.0f },
         { "Decorated Pot", PotBaseTile, PotBaseTile, PotSideTile, true, false, RenderType::Lush, 0, 0.0f },
+        { "Sniffer Egg", SnifferEggTileFirst + 4, SnifferEggTileFirst + 5, SnifferEggTileFirst + 0, true, false, RenderType::Lush, 0, 0.5f },
+        { "Sniffer Egg", SnifferEggTileFirst + 10, SnifferEggTileFirst + 11, SnifferEggTileFirst + 6, true, false, RenderType::Lush, 0, 0.5f },
+        { "Sniffer Egg", SnifferEggTileFirst + 16, SnifferEggTileFirst + 17, SnifferEggTileFirst + 12, true, false, RenderType::Lush, 0, 0.5f },
     };
 }
 
@@ -2312,6 +2315,7 @@ bool isObtainable(BlockId id)
             if (isChiseledBookshelf(id) && id != shelfOf(2, 0)) return false;
             if (isSuspicious(id)) return false;
             if (isDecoratedPot(id) && id != Blocks::DecoratedPotFirst + 2) return false;
+            if (id == Blocks::SnifferEgg1 || id == Blocks::SnifferEgg2) return false;
             if (isBigDripleaf(id) && id != bigDripleafOf(0, DripleafTilt::None)) return false;
             if (isSmallDripleaf(id) && id != smallDripleafOf(0, false)) return false;
             if (isGlowLichen(id) && id != glowLichenOn(0)) return false;
@@ -2552,7 +2556,7 @@ Material blockMaterial(BlockId id)
     if (id == Blocks::DragonEgg) return Material::Plant;
     if (isSuspiciousSand(id)) return Material::Sand;
     if (isSuspiciousGravel(id)) return Material::Dirt;
-    if (isDecoratedPot(id)) return Material::Plant;
+    if (isDecoratedPot(id) || isSnifferEgg(id)) return Material::Plant;
     if (id == Blocks::Cobweb) return Material::Wool;
     if (id == Blocks::SoulTorch || isFire(id)) return Material::Plant;
     if (id == Blocks::SoulCampfire) return Material::Wood;
@@ -2723,6 +2727,7 @@ bool blockOverlaps(BlockId id, int bx, int by, int bz,
     if (id == Blocks::Conduit) return overlaps(0.3125f, 0.3125f, 0.3125f, 0.6875f, 0.6875f, 0.6875f);
     if (id == Blocks::HeavyCore) return overlaps(0.25f, 0.0f, 0.25f, 0.75f, 0.5f, 0.75f);
     if (isDecoratedPot(id)) return overlaps(0.0625f, 0.0f, 0.0625f, 0.9375f, 1.0f, 0.9375f);
+    if (isSnifferEgg(id)) return overlaps(0.0625f, 0.0f, 0.125f, 0.9375f, 1.0f, 0.875f);
     if (id == Blocks::DragonEgg) return overlaps(0.0625f, 0.0f, 0.0625f, 0.9375f, 1.0f, 0.9375f);
     if (isDiode(id)) return overlaps(0.0f, 0.0f, 0.0f, 1.0f, 0.125f, 1.0f);
     if (isDaylightDetector(id)) return overlaps(0.0f, 0.0f, 0.0f, 1.0f, 0.375f, 1.0f);

@@ -379,6 +379,7 @@ namespace Tiles
         SuspiciousSandTileFirst, SuspiciousSandTileLast = SuspiciousSandTileFirst + 3,
         SuspiciousGravelTileFirst, SuspiciousGravelTileLast = SuspiciousGravelTileFirst + 3,
         PotBaseTile, PotSideTile, PotPatternFirst, PotPatternLast = PotPatternFirst + 22,
+        SnifferEggTileFirst, SnifferEggTileLast = SnifferEggTileFirst + 17,
 
         TileCount
     };
@@ -578,9 +579,9 @@ namespace Tiles
         ItemNautilusShell, ItemHeartOfTheSea, ItemTurtleScute, ItemTurtleHelmet, ItemPowderSnowBucket,
         ItemRepeater, ItemComparator, ItemIronDoor, ItemTurtleEggIcon,
         ItemIronNugget, ItemChorusFruit, ItemPoppedChorusFruit, ItemChain, ItemBell,
-        ItemBrush, ItemSherdFirst, ItemSherdLast = ItemSherdFirst + 22,
+        ItemBrush, ItemSherdFirst, ItemSherdLast = ItemSherdFirst + 22, ItemSnifferEgg,
 
-        ItemTileEnd = ItemSherdLast + 1
+        ItemTileEnd = ItemSnifferEgg + 1
     };
 
     // Ten progressively more broken overlay tiles for the mining animation.

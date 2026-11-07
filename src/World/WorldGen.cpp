@@ -215,6 +215,7 @@ void WorldGen::generate(Chunk& chunk) const
     buildAncientCities(chunk);
     dressSeabed(chunk);
     buildOceanStructures(chunk);
+    buildOceanRuins(chunk);
 }
 
 // A closed cavern system rather than a landscape: solid netherrack between a
@@ -2511,6 +2512,44 @@ void WorldGen::buildDesertWells(Chunk& chunk) const
     for (int dx = -1; dx <= 1; ++dx)
         for (int dz = -1; dz <= 1; ++dz)
             put(chunk, midX + dx, ground + 4, midZ + dz, Blocks::Sandstone);
+}
+
+void WorldGen::buildOceanRuins(Chunk& chunk) const
+{
+    constexpr int CELL = 48;
+    const int baseX = chunk.position().x * Chunk::SX;
+    const int baseZ = chunk.position().z * Chunk::SZ;
+    auto cellOf = [](int v) { return v >= 0 ? v / CELL : -((-v + CELL - 1) / CELL); };
+    const int firstCellX = cellOf(baseX - 8), lastCellX = cellOf(baseX + Chunk::SX + 8);
+    const int firstCellZ = cellOf(baseZ - 8), lastCellZ = cellOf(baseZ + Chunk::SZ + 8);
+    for (int cz = firstCellZ; cz <= lastCellZ; ++cz)
+        for (int cx = firstCellX; cx <= lastCellX; ++cx)
+        {
+            if (hashToFloat(hashCoords(cx, 41, cz, m_seed + 9301)) > 0.4f) continue;
+            const int midX = cx * CELL + 8 + static_cast<int>(hashCoords(cx, 42, cz, m_seed + 9302) % static_cast<uint32_t>(CELL - 16));
+            const int midZ = cz * CELL + 8 + static_cast<int>(hashCoords(cx, 43, cz, m_seed + 9303) % static_cast<uint32_t>(CELL - 16));
+            const int floor = surfaceHeight(midX, midZ);
+            if (floor > SEA_LEVEL - 5) continue;
+            const bool warm = reefWater(midX, midZ);
+            const BlockId wall = warm ? Blocks::Sandstone : Blocks::StoneBricks;
+            const BlockId trim = warm ? Blocks::CutSandstone : Blocks::MossyStoneBricks;
+            for (int dx = -2; dx <= 2; ++dx)
+                for (int dz = -2; dz <= 2; ++dz)
+                {
+                    const bool ring = std::abs(dx) == 2 || std::abs(dz) == 2;
+                    put(chunk, midX + dx, floor, midZ + dz, ring ? wall : (warm ? Blocks::Sand : Blocks::Gravel));
+                    if (!ring) continue;
+                    const int tall = 1 + static_cast<int>(hashCoords(midX + dx, 44, midZ + dz, m_seed + 9304) % 3u);
+                    for (int dy = 1; dy <= tall; ++dy)
+                        put(chunk, midX + dx, floor + dy, midZ + dz, dy == tall ? trim : wall);
+                }
+            for (int k = 0; k < 3; ++k)
+            {
+                const int dx = static_cast<int>(hashCoords(midX, 45 + k, midZ, m_seed + 9305) % 3u) - 1;
+                const int dz = static_cast<int>(hashCoords(midX, 48 + k, midZ, m_seed + 9306) % 3u) - 1;
+                put(chunk, midX + dx, floor, midZ + dz, suspiciousOf(warm ? 2 : 5, 0));
+            }
+        }
 }
 
 // Mineshafts go down by the spread rule rather than the grid: a flat

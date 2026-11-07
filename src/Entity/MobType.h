@@ -120,6 +120,7 @@ enum class MobId : uint8_t
     Camel,
     Parrot,
     Allay,
+    Sniffer,
 
     Count
 };

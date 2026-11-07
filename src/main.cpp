@@ -820,6 +820,7 @@ namespace
             else if (id == Blocks::HeavyCore)     why = "a prize from an ominous vault";
             else if (isSuspicious(id))            why = "buried in pyramids, wells and ruins, and dusted by a brush";
             else if (isDecoratedPot(id))          why = "a pot set down facing another way";
+            else if (isSnifferEgg(id))            why = "a sniffer egg cracking as it nears hatching";
             else if (isChiseledBookshelf(id))     why = "a shelf with books in it, or facing another way";
             else if (isAnyCoralWallFan(id))       why = "a coral fan set against another face";
             else if (isBigDripleaf(id) || isBigDripleafStem(id) || isSmallDripleaf(id))
@@ -979,7 +980,7 @@ namespace
             else if (woodOfSignItem(static_cast<StackId>(i)) > 0)
                 byHand = "the sign recipe in that wood's planks";
             else if (i == static_cast<int>(Items::TorchflowerSeeds) || i == static_cast<int>(Items::PitcherPod))
-                byHand = "dug up by a sniffer (the sniffer arrives with item 62)";
+                byHand = "dug up by a sniffer";
             else if (i == static_cast<int>(Items::NautilusShell))
                 byHand = "dropped by a drowned now and then";
             else if (i == static_cast<int>(Items::TurtleScute))
