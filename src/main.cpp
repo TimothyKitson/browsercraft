@@ -504,6 +504,8 @@ namespace
             if (t.shootsFire) note("shoots-fire");
             if (t.shootsWind) note("shoots-wind");
             if (t.throwsPotions) note("throws-potions");
+            if (t.conjuresFangs) note("conjures-fangs");
+            if (t.castsIllusions) note("casts-illusions");
             if (t.breedingFood != Blocks::Air)
                 note(std::string("breeds-on-") + nameOf(t.breedingFood));
             if (Mob::tamingFood(id) != Blocks::Air)

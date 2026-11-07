@@ -51,6 +51,7 @@
 #include "Game/Effects.h"
 #include "Game/Brewing.h"
 #include "Game/Fireworks.h"
+#include "Game/Fangs.h"
 #include "Game/Discs.h"
 #include "World/Village.h"
 #include "Game/VillageLoot.h"
@@ -4192,7 +4193,7 @@ namespace
             const MobId id = static_cast<MobId>(i);
             const bool has = spawnEggColours(id, shell, spots);
             const MobType& type = mobType(id);
-            if (type.inanimate || id == MobId::SlimeSmall || id == MobId::TropicalFishLarge)
+            if (type.inanimate || id == MobId::SlimeSmall || id == MobId::TropicalFishLarge || id == MobId::Illusioner)
             {
                 if (has) apart = false;
                 continue;
@@ -4204,7 +4205,7 @@ namespace
                 looks.insert({ shell, spots });
             }
         }
-        check(apart, "every living mob has an egg, and no boat, cart or half a slime does");
+        check(apart, "every living mob has an egg, and no boat, cart, half a slime or illusioner does");
         check(eggs >= 60, "which is more than sixty eggs");
         unsigned int shell = 0, spots = 0;
         check(spawnEggColours(MobId::Pig, shell, spots) && shell == 0xF0A5A2u && spots == 0xDB635Fu, "a pig's egg is pink with darker spots");
@@ -4464,6 +4465,71 @@ namespace
                   back.signLooks[0].glow == 1 && back.signLooks[0].z == -8,
               "a sign's colour and glow are kept with the level");
         std::filesystem::remove_all(dir, ec);
+    }
+
+    void testFangsZoglinIllusioner()
+    {
+        section("evoker fangs, the zoglin and the illusioner");
+        const glm::vec3 caster(0.0f, 64.0f, 0.0f);
+        const std::vector<Fangs::Spot> line = Fangs::pattern(caster, glm::vec3(10.0f, 64.0f, 0.0f));
+        check(line.size() == 16 && std::fabs(line[0].x - 1.25f) < 0.001f && std::fabs(line[15].x - 20.0f) < 0.001f &&
+                  line[15].warmup == 15,
+              "a far target gets sixteen fangs in a line, a tick apart");
+        const std::vector<Fangs::Spot> rings = Fangs::pattern(caster, glm::vec3(2.0f, 64.0f, 0.0f));
+        int inner = 0, outer = 0;
+        for (const Fangs::Spot& spot : rings)
+        {
+            const float r = std::sqrt(spot.x * spot.x + spot.z * spot.z);
+            if (std::fabs(r - 1.5f) < 0.01f && spot.warmup == 0) ++inner;
+            if (std::fabs(r - 2.5f) < 0.01f && spot.warmup == 3) ++outer;
+        }
+        check(rings.size() == 13 && inner == 5 && outer == 8, "a near one gets a ring of five and a ring of eight");
+
+        Fangs::Fang fang;
+        fang.at = glm::vec3(0.0f, 64.0f, 0.0f);
+        fang.warmup = 2;
+        int ticks = 0, bite = -1, start = -1, gone = -1;
+        while (gone < 0 && ticks < 100)
+        {
+            const int events = Fangs::tick(fang);
+            ++ticks;
+            if (events & Fangs::Started) start = ticks;
+            if (events & Fangs::Bite) bite = ticks;
+            if (events & Fangs::Gone) gone = ticks;
+        }
+        check(start == 3 && bite == 10 && gone == 25, "a fang rises after its warmup, bites eight ticks later and is gone after twenty-two");
+        check(Fangs::bites(fang, glm::vec3(0.5f, 64.0f, 0.2f), 0.3f, 1.8f), "it catches a player standing on it");
+        check(!Fangs::bites(fang, glm::vec3(1.2f, 64.0f, 0.0f), 0.3f, 1.8f), "and not one a step away");
+        check(Fangs::DAMAGE == 6, "for six points of magic");
+
+        const MobType& zoglin = mobType(MobId::Zoglin);
+        check(zoglin.maxHealth == 40 && zoglin.attackDamage == 6 && zoglin.drop == Items::RottenFlesh &&
+                  zoglin.spawnClass == SpawnClass::Hostile && !zoglin.burnsInSunlight,
+              "a zoglin has forty health, hits for six and drops rotten flesh");
+        check(std::string(zoglin.packSheet) == "hoglin/zoglin.png" && zoglin.model.size() == mobType(MobId::Hoglin).model.size(),
+              "on the hoglin's body in its own skin");
+        Mob hoglin(MobId::Hoglin, glm::vec3(0.0f), 2u);
+        hoglin.addZombifyTime(10.0f);
+        hoglin.addZombifyTime(6.0f);
+        check(hoglin.zombifyTime() > EntityManager::ZOMBIFY_SECONDS, "a hoglin out of the Nether turns after fifteen seconds");
+        hoglin.addZombifyTime(-1.0f);
+        check(hoglin.zombifyTime() == 0.0f, "and the count starts again back home");
+
+        const MobType& illusioner = mobType(MobId::Illusioner);
+        check(illusioner.maxHealth == 32 && illusioner.castsIllusions && illusioner.arrowDamage > 0 && !illusioner.conjuresFangs,
+              "an illusioner has thirty-two health and a bow");
+        unsigned int shell = 0, spots = 0;
+        check(!spawnEggColours(MobId::Illusioner, shell, spots), "and no spawn egg, as in 1.21.1");
+        Mob trick(MobId::Illusioner, glm::vec3(0.0f), 4u);
+        check(!trick.illusioned(), "it starts out as one");
+        trick.shuffleMirrors();
+        bool spread = true;
+        for (int k = 0; k < 4; ++k)
+        {
+            const glm::vec3 o = trick.mirrorOffset(k);
+            if (std::fabs(o.x) > 3.0f || std::fabs(o.z) > 3.0f || o.y < 0.0f || o.y > 1.0f) spread = false;
+        }
+        check(spread, "and its copies stand within three blocks of it");
     }
 
     void testArchery()
@@ -7780,6 +7846,7 @@ namespace
                 case MobId::Frog:
                 // And the squid, which belongs to open water.
                 case MobId::Squid: case MobId::GlowSquid:
+                case MobId::Zoglin: case MobId::Illusioner:
                 // A small slime is never spawned: it is what a big
                 // one leaves behind when it is killed.
                 case MobId::SlimeSmall:
@@ -12611,7 +12678,7 @@ namespace
               "a vindicator swings and does not shoot");
         check(vindicator.attackDamage > mobType(MobId::Zombie).attackDamage,
               "and hits harder than a zombie, because of the axe");
-        check(evoker.throwsPotions, "an evoker throws its magic rather than closing");
+        check(evoker.conjuresFangs && !evoker.throwsPotions, "an evoker conjures fangs rather than closing");
         check(evoker.arrowDamage > 0 && evoker.attackDamage == 0,
               "and keeps its distance");
 
@@ -13192,7 +13259,7 @@ namespace
         const MobType& evoker = mobType(MobId::Evoker);
         check(vex.hoverHeight > 0.0f, "a vex flies");
         check(vex.walkSpeed > evoker.walkSpeed * 2.0f, "and it is far faster than its master");
-        check(vex.attackDamage > evoker.arrowDamage, "and hits harder than he throws");
+        check(evoker.arrowDamage > vex.attackDamage, "and his fangs bite harder than it does");
         check(vex.maxHealth < evoker.maxHealth, "but there is less of it");
 
         // Every one of the seven has three voices of its own: this is
@@ -14956,6 +15023,7 @@ int runSelfTest()
     testPotionForms();
     testArmadillo();
     testGlowSquid();
+    testFangsZoglinIllusioner();
     testMadeThings();
     testTheEndAndTheSea();
     testPathfinding();

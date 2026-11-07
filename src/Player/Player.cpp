@@ -441,11 +441,11 @@ bool Player::burn(float deltaTime, bool inLava)
     return false;
 }
 
-bool Player::damage(int amount)
+bool Player::damage(int amount, bool throughArmour)
 {
     if (exempt() || amount <= 0 || m_hurtCooldown > 0.0f) return false;
 
-    amount = Armour::reduce(amount, armourPoints);
+    if (!throughArmour) amount = Armour::reduce(amount, armourPoints);
 
     // Protection takes its slice after the armour has taken its own,
     // which is the order Minecraft applies them in and the reason a

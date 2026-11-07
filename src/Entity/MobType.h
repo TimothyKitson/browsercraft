@@ -129,6 +129,8 @@ enum class MobId : uint8_t
     ChestRaft,
     Armadillo,
     GlowSquid,
+    Zoglin,
+    Illusioner,
 
     Count
 };
@@ -307,6 +309,8 @@ struct MobType
     // Throws splash potions, which is how a witch fights: the damage
     // is not the point, what lands on you is.
     bool throwsPotions = false;
+    bool conjuresFangs = false;
+    bool castsIllusions = false;
     bool shootsWind = false;
     bool shootsBullet = false;
     bool shootsBreath = false;
@@ -354,6 +358,7 @@ struct MobType
     // first -- tools/install-mob-textures.ps1 puts the first in place on
     // your own machine.
     const char* texture = "";
+    const char* packSheet = "";
     const char* overlay = "";       // a second sheet over the top: a sheep's wool
 
     // A block texture out of the resource pack to clothe the model in,

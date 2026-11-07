@@ -429,6 +429,7 @@ namespace
             t.deathVoice = Sound::MobSquidDeath;
             t.name = "Squid";
             t.texture = "squid";
+            t.packSheet = "squid/squid.png";
             t.sheetWidth = 64;
             t.sheetHeight = 32;
             t.width = 2.0625f;
@@ -1631,6 +1632,7 @@ namespace
             t.deathVoice = Sound::MobEvokerDeath;
             t.name = "Evoker";
             t.texture = "evoker";
+            t.packSheet = "illager/evoker.png";
             t.sheetWidth = 64;
             t.sheetHeight = 64;
             t.width = 0.6538f;
@@ -1641,14 +1643,10 @@ namespace
             t.walkSpeed = 1.8f;
             t.limbSwing = 0.4f;
 
-            // It keeps its distance and throws its magic rather than
-            // closing: fangs out of the floor are a thing this engine
-            // has no room for, and a thrown spell carries the same
-            // idea -- stay back, and something lands on you anyway.
-            t.throwsPotions = true;
-            t.arrowDamage = 4;
-            t.arrowRange = 14.0f;
-            t.arrowInterval = 3.0f;
+            t.conjuresFangs = true;
+            t.arrowDamage = 6;
+            t.arrowRange = 12.0f;
+            t.arrowInterval = 5.0f;
 
             t.drop = Items::TotemOfUndying;
             t.dropCount = 1;
@@ -2097,6 +2095,7 @@ namespace
             t.deathVoice = Sound::MobHoglinDeath;
             t.name = "Hoglin";
             t.texture = "hoglin";
+            t.packSheet = "hoglin/hoglin.png";
             t.sheetWidth = 128;
             t.sheetHeight = 64;
             t.width = 1.9961f;
@@ -3602,6 +3601,56 @@ namespace
         }
 
         {
+            MobType& t = table[static_cast<size_t>(MobId::Zoglin)];
+            t = table[static_cast<size_t>(MobId::Hoglin)];
+            t.id = MobId::Zoglin;
+            t.voice = Sound::MobZoglinSay;
+            t.hurtVoice = Sound::MobZoglinHurt;
+            t.deathVoice = Sound::MobZoglinDeath;
+            t.name = "Zoglin";
+            t.texture = "zoglin";
+            t.packSheet = "hoglin/zoglin.png";
+            t.dimension = Dimension::Overworld;
+            t.fireproof = false;
+            t.drop = Items::RottenFlesh;
+            t.dropCount = 2;
+            t.secondDrop = Blocks::Air;
+            t.secondDropCount = 0;
+            t.bodyColour = rgb(198, 110, 98);
+            t.headColour = rgb(214, 130, 116);
+            t.eyeColour = rgb(230, 230, 230);
+            t.markColour = rgb(120, 150, 110);
+        }
+
+        {
+            MobType& t = table[static_cast<size_t>(MobId::Illusioner)];
+            t = table[static_cast<size_t>(MobId::Evoker)];
+            t.id = MobId::Illusioner;
+            t.experience = 5;
+            t.voice = Sound::MobIllusionerSay;
+            t.hurtVoice = Sound::MobIllusionerHurt;
+            t.deathVoice = Sound::MobIllusionerDeath;
+            t.name = "Illusioner";
+            t.texture = "illusioner";
+            t.packSheet = "illager/illusioner.png";
+            t.maxHealth = 32;
+            t.walkSpeed = 1.8f;
+            t.conjuresFangs = false;
+            t.castsIllusions = true;
+            t.arrowDamage = 4;
+            t.arrowRange = 15.0f;
+            t.arrowInterval = 2.0f;
+            t.drop = Blocks::Air;
+            t.dropCount = 0;
+            t.secondDrop = Blocks::Air;
+            t.secondDropCount = 0;
+            t.bodyColour = rgb(56, 84, 140);
+            t.headColour = rgb(150, 156, 152);
+            t.eyeColour = rgb(60, 70, 86);
+            t.model.push_back(inflated(mc(Part::Head, 32, 0, 8, 12, 8, -4, -10, -4, 0, 0, 0), 0.450f));
+        }
+
+        {
             MobType& t = table[static_cast<size_t>(MobId::GlowSquid)];
             t = table[static_cast<size_t>(MobId::Squid)];
             t.id = MobId::GlowSquid;
@@ -3610,6 +3659,7 @@ namespace
             t.deathVoice = Sound::MobGlowSquidDeath;
             t.name = "Glow Squid";
             t.texture = "glow_squid";
+            t.packSheet = "squid/glow_squid.png";
             t.drop = Items::GlowInkSac;
             t.dropCount = 1;
             t.bodyColour = rgb(24, 110, 112);
@@ -3767,6 +3817,7 @@ bool spawnEggColours(MobId id, unsigned int& base, unsigned int& spots)
         case MobId::Drowned: base = 0x8FF1D7u; spots = 0x799C65u; return true;
         case MobId::Squid: base = 0x223B4Du; spots = 0x708899u; return true;
         case MobId::GlowSquid: base = 0x095656u; spots = 0x85F1BCu; return true;
+        case MobId::Zoglin: base = 0xC66E55u; spots = 0xE6E6E6u; return true;
         case MobId::Ghast: base = 0xF9F9F9u; spots = 0xBCBCBCu; return true;
         case MobId::Frog: base = 0xD07444u; spots = 0xFFC77Cu; return true;
         case MobId::Pillager: base = 0x532F36u; spots = 0x959B9Bu; return true;

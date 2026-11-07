@@ -101,6 +101,14 @@ public:
     std::vector<glm::vec3> drainFrogSpawns();
     std::vector<glm::vec3> drainShedScutes();
     std::vector<glm::vec3> drainGrownTadpoles();
+    struct Zombified
+    {
+        glm::vec3 at{ 0.0f };
+        float yaw = 0.0f;
+        bool baby = false;
+    };
+    std::vector<Zombified> drainZombified();
+    static constexpr float ZOMBIFY_SECONDS = 15.0f;
 
     // Where a calf was just born, for the hearts and the sound.
     std::vector<glm::vec3> drainBirths();
@@ -128,6 +136,7 @@ public:
     {
         m_mobs.clear(); m_deaths.clear(); m_births.clear(); m_laidEggs.clear(); m_turtleNests.clear(); m_snifferNests.clear(); m_grownTurtles.clear();
         m_frogMeals.clear(); m_frogSpawns.clear(); m_grownTadpoles.clear(); m_shedScutes.clear();
+        m_zombified.clear();
     }
 
     const std::vector<Mob>& mobs() const { return m_mobs; }
@@ -202,6 +211,7 @@ private:
     std::vector<glm::vec3> m_frogSpawns;
     std::vector<glm::vec3> m_shedScutes;
     std::vector<glm::vec3> m_grownTadpoles;
+    std::vector<Zombified> m_zombified;
     std::vector<glm::vec3> m_births;
     std::vector<glm::vec3> m_turtleNests;
     std::vector<glm::vec3> m_snifferNests;
@@ -217,7 +227,7 @@ private:
 
     // Points every tamed wolf at the nearest hostile and lets it
     // bite when it gets there.
-    void setWolvesOnHostiles(float deltaTime);
+    void setWolvesOnHostiles(float deltaTime, const glm::vec3& playerPosition);
     // Hands routes to the mobs that asked, newest-hungry first and no
     // more than a handful a pass.
     void routeChasers(const World& world, const glm::vec3& playerPosition);

@@ -2175,6 +2175,8 @@ bool Application::frame()
             tickFireworks(deltaTime);
             tickPotionClouds(deltaTime);
             tickArmadillos(deltaTime);
+            tickFangs(deltaTime);
+            tickGlowSquids(deltaTime);
             tickJukeboxes(deltaTime);
             updatePortal(deltaTime);
 
@@ -2497,7 +2499,7 @@ bool Application::frame()
             m_startupScreen == "attackhud" || m_startupScreen == "attackready" ||
             m_startupScreen == "attackhotbar" || m_startupScreen == "bossbars" ||
             m_startupScreen == "gamemode" || m_startupScreen == "spectator" ||
-            m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" || m_startupScreen == "leads" || m_startupScreen == "anvilname" || m_startupScreen == "dials" || m_startupScreen == "spyglass" || m_startupScreen == "bundle" || m_startupScreen == "archery" || m_startupScreen == "food" || m_startupScreen == "materials" || m_startupScreen == "tropical" || m_startupScreen == "book" || m_startupScreen == "bookedit" || m_startupScreen == "booktip" || m_startupScreen == "boats" || m_startupScreen == "carts" || m_startupScreen == "fireworks" || m_startupScreen == "jukebox" || m_startupScreen == "potioncloud" || m_startupScreen == "armadillo" || m_startupScreen == "signs" || m_startupScreen == "glowsquid" ||
+            m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" || m_startupScreen == "leads" || m_startupScreen == "anvilname" || m_startupScreen == "dials" || m_startupScreen == "spyglass" || m_startupScreen == "bundle" || m_startupScreen == "archery" || m_startupScreen == "food" || m_startupScreen == "materials" || m_startupScreen == "tropical" || m_startupScreen == "book" || m_startupScreen == "bookedit" || m_startupScreen == "booktip" || m_startupScreen == "boats" || m_startupScreen == "carts" || m_startupScreen == "fireworks" || m_startupScreen == "jukebox" || m_startupScreen == "potioncloud" || m_startupScreen == "armadillo" || m_startupScreen == "signs" || m_startupScreen == "glowsquid" || m_startupScreen == "fangs" || m_startupScreen == "zoglin" || m_startupScreen == "illusioner" ||
             m_startupScreen == "grinderror" || m_startupScreen == "woods" ||
             m_startupScreen == "cherry" || m_startupScreen == "mangrove" || m_startupScreen == "fungi" ||
             m_startupScreen == "stones" || m_startupScreen == "colours" || m_startupScreen == "candles" ||
@@ -2612,6 +2614,9 @@ bool Application::frame()
                                   m_startupScreen != "armadillo" &&
                                   m_startupScreen != "signs" &&
                                   m_startupScreen != "glowsquid" &&
+                                  m_startupScreen != "fangs" &&
+                                  m_startupScreen != "zoglin" &&
+                                  m_startupScreen != "illusioner" &&
                                   m_startupScreen != "grinderror" &&
                                   m_startupScreen != "woods" &&
                                   m_startupScreen != "cherry" &&
@@ -3004,7 +3009,7 @@ bool Application::frame()
             if (m_startupScreen == "attackhud" || m_startupScreen == "attackready" ||
                 m_startupScreen == "attackhotbar" || m_startupScreen == "bossbars" ||
                 m_startupScreen == "gamemode" || m_startupScreen == "spectator" ||
-                m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" || m_startupScreen == "leads" || m_startupScreen == "anvilname" || m_startupScreen == "dials" || m_startupScreen == "spyglass" || m_startupScreen == "bundle" || m_startupScreen == "archery" || m_startupScreen == "food" || m_startupScreen == "materials" || m_startupScreen == "tropical" || m_startupScreen == "book" || m_startupScreen == "bookedit" || m_startupScreen == "booktip" || m_startupScreen == "boats" || m_startupScreen == "carts" || m_startupScreen == "fireworks" || m_startupScreen == "jukebox" || m_startupScreen == "potioncloud" || m_startupScreen == "armadillo" || m_startupScreen == "signs" || m_startupScreen == "glowsquid" ||
+                m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" || m_startupScreen == "leads" || m_startupScreen == "anvilname" || m_startupScreen == "dials" || m_startupScreen == "spyglass" || m_startupScreen == "bundle" || m_startupScreen == "archery" || m_startupScreen == "food" || m_startupScreen == "materials" || m_startupScreen == "tropical" || m_startupScreen == "book" || m_startupScreen == "bookedit" || m_startupScreen == "booktip" || m_startupScreen == "boats" || m_startupScreen == "carts" || m_startupScreen == "fireworks" || m_startupScreen == "jukebox" || m_startupScreen == "potioncloud" || m_startupScreen == "armadillo" || m_startupScreen == "signs" || m_startupScreen == "glowsquid" || m_startupScreen == "fangs" || m_startupScreen == "zoglin" || m_startupScreen == "illusioner" ||
                 m_startupScreen == "grinderror" || m_startupScreen == "woods" ||
                 m_startupScreen == "cherry" || m_startupScreen == "mangrove" || m_startupScreen == "fungi" ||
                 m_startupScreen == "stones" || m_startupScreen == "colours" || m_startupScreen == "candles" ||
@@ -3894,6 +3899,51 @@ bool Application::frame()
                     m_inventory.slot(4) = ItemStack{ Items::DyeLightBlue, 16 };
                     m_inventory.setSelectedSlot(0);
                     m_camera.pitch = 5.0f;
+                    m_camera.addLook(0.0f, 0.0f, 0.0f);
+                }
+                if (m_startupScreen == "fangs" || m_startupScreen == "zoglin" || m_startupScreen == "illusioner")
+                {
+                    m_devAttackStrength = 1.0f;
+                    for (int dx = 1; dx <= 14; ++dx)
+                        for (int dz = -7; dz <= 7; ++dz)
+                        {
+                            m_world->setBlock(px + dx, py - 1, pz + dz, Blocks::Grass);
+                            for (int dy = 0; dy <= 4; ++dy) m_world->setBlock(px + dx, py + dy, pz + dz, Blocks::Air);
+                        }
+                    auto put = [&](MobId id, float dx, float dz, float yaw) -> Mob* {
+                        if (!m_entities.spawnAt(id, glm::vec3(static_cast<float>(px) + dx, static_cast<float>(py), static_cast<float>(pz) + dz), *m_world))
+                            return nullptr;
+                        Mob& mob = m_entities.mobs().back();
+                        mob.setYaw(yaw);
+                        mob.keepFromDespawning();
+                        return &mob;
+                    };
+                    if (m_startupScreen == "fangs")
+                    {
+                        put(MobId::Evoker, 11.5f, 2.5f, 180.0f);
+                        conjureFangs(glm::vec3(static_cast<float>(px) + 11.5f, static_cast<float>(py), static_cast<float>(pz) + 2.5f),
+                                     glm::vec3(static_cast<float>(px) + 0.5f, static_cast<float>(py), static_cast<float>(pz) + 0.5f), Fangs::DAMAGE);
+                        conjureFangs(glm::vec3(static_cast<float>(px) + 8.5f, static_cast<float>(py), static_cast<float>(pz) - 3.5f),
+                                     glm::vec3(static_cast<float>(px) + 9.5f, static_cast<float>(py), static_cast<float>(pz) - 3.0f), Fangs::DAMAGE);
+                        for (Fangs::Fang& fang : m_fangs) fang.warmup += 24;
+                        m_player.mode = GameMode::Creative;
+                        m_camera.pitch = -18.0f;
+                        m_camera.yaw = 8.0f;
+                    }
+                    else if (m_startupScreen == "zoglin")
+                    {
+                        put(MobId::Zoglin, 6.5f, -2.0f, 90.0f);
+                        put(MobId::Cow, 6.5f, 1.5f, 200.0f);
+                        put(MobId::Hoglin, 9.5f, 3.5f, 180.0f);
+                        if (Mob* young = put(MobId::Zoglin, 4.5f, -4.0f, 60.0f)) (void)young;
+                        m_camera.pitch = -14.0f;
+                    }
+                    else
+                    {
+                        put(MobId::Illusioner, 8.5f, 0.5f, 180.0f);
+                        m_player.mode = GameMode::Creative;
+                        m_camera.pitch = -6.0f;
+                    }
                     m_camera.addLook(0.0f, 0.0f, 0.0f);
                 }
                 if (m_startupScreen == "glowsquid")
@@ -11646,6 +11696,100 @@ void Application::tickArmadillos(float deltaTime)
     }
 }
 
+void Application::conjureFangs(const glm::vec3& caster, const glm::vec3& target, int damage)
+{
+    if (!m_world) return;
+    const float lowest = std::min(target.y, caster.y);
+    const float highest = std::max(target.y, caster.y) + 1.0f;
+    for (const Fangs::Spot& spot : Fangs::pattern(caster, target))
+    {
+        const int x = static_cast<int>(std::floor(spot.x));
+        const int z = static_cast<int>(std::floor(spot.z));
+        int y = static_cast<int>(std::floor(highest));
+        bool found = false;
+        float top = 0.0f;
+        do
+        {
+            const BlockId below = m_world->getBlock(x, y - 1, z);
+            if (isSolid(below) && blockHeight(below) >= 1.0f)
+            {
+                const BlockId here = m_world->getBlock(x, y, z);
+                if (here != Blocks::Air && isSolid(here)) top = blockHeight(here);
+                found = true;
+                break;
+            }
+            --y;
+        } while (y >= static_cast<int>(std::floor(lowest)) - 1);
+        if (!found) continue;
+
+        Fangs::Fang fang;
+        fang.at = glm::vec3(spot.x, static_cast<float>(y) + top, spot.z);
+        fang.yaw = spot.yaw;
+        fang.warmup = spot.warmup;
+        fang.damage = damage;
+        m_fangs.push_back(fang);
+        vibrate(fang.at, 13);
+    }
+}
+
+void Application::tickFangs(float deltaTime)
+{
+    if (m_fangs.empty())
+    {
+        m_fangClock = 0.0f;
+        return;
+    }
+    m_fangClock += deltaTime;
+    while (m_fangClock >= Fangs::TICK)
+    {
+        m_fangClock -= Fangs::TICK;
+        for (Fangs::Fang& fang : m_fangs)
+        {
+            const int events = Fangs::tick(fang);
+            if (events & Fangs::Started)
+            {
+                const float distance = glm::length(fang.at - m_camera.position);
+                if (distance < 24.0f)
+                    m_audio.play(Sound::EvokerFangs, 0.8f * (1.0f - distance / 24.0f), 0.85f + 0.2f * (m_sprites ? m_sprites->random() : 0.5f));
+            }
+            if (events & Fangs::Crits)
+                sprites(SpriteParticles::Kind::Crit, fang.at + glm::vec3(0.0f, 1.0f, 0.0f), 12, 0.3f, 0.45f, 0.12f, 0.6f, 4.0f);
+            if (events & Fangs::Bite)
+            {
+                if (!m_player.exempt() && Fangs::bites(fang, m_player.position, 0.3f, 1.8f) && m_player.damage(fang.damage, true))
+                    m_audio.play(Sound::Hurt, 0.8f);
+                for (Mob& mob : m_entities.mobs())
+                {
+                    if (!mob.alive() || mob.typeId() == MobId::Evoker || mob.typeId() == MobId::Vex || mob.type().inanimate) continue;
+                    if (Fangs::bites(fang, mob.position(), mob.type().width * 0.5f, mob.type().height))
+                        mob.damage(fang.damage, glm::vec3(0.0f));
+                }
+            }
+        }
+        m_fangs.erase(std::remove_if(m_fangs.begin(), m_fangs.end(),
+                                     [](const Fangs::Fang& fang) { return fang.started && fang.ticksLeft < 0; }),
+                      m_fangs.end());
+        if (m_fangs.empty()) break;
+    }
+}
+
+void Application::tickGlowSquids(float deltaTime)
+{
+    m_glowClock += deltaTime;
+    if (m_glowClock < 0.15f) return;
+    m_glowClock = 0.0f;
+    for (const Mob& mob : m_entities.mobs())
+    {
+        if (mob.typeId() != MobId::GlowSquid || !mob.alive()) continue;
+        if (glm::length(mob.position() - m_camera.position) > 24.0f) continue;
+        const MobType& type = mob.type();
+        const glm::vec3 at = mob.position() + glm::vec3((m_sprites ? m_sprites->random() - 0.5f : 0.0f) * type.width * 0.6f,
+                                                        (m_sprites ? m_sprites->random() : 0.5f) * type.height * 0.5f,
+                                                        (m_sprites ? m_sprites->random() - 0.5f : 0.0f) * type.width * 0.6f);
+        sprites(SpriteParticles::Kind::Glow, at, 1, 0.1f, 0.05f, 0.1f, 1.2f);
+    }
+}
+
 void Application::primeTntCart(Mob& cart)
 {
     if (m_cartFuses.count(cart.serial())) return;
@@ -15225,6 +15369,7 @@ void Application::renderWorldShaded()
     queueBeams();
     m_beams.render(world);
     m_books.render(world, *m_world);
+    m_fangRenderer.render(world, *m_world, m_fangs, m_fangClock / Fangs::TICK);
     m_bannerRenderer.render(world, *m_world, nearbyBanners(), m_elapsedSeconds);
     m_fireworkRenderer.render(view, projection, camera.right, camera.up);
     world.bind();
@@ -15361,6 +15506,7 @@ void Application::renderWorld()
     queueBeams();
     m_beams.render(m_chunkShader);
     m_books.render(m_chunkShader, *m_world);
+    m_fangRenderer.render(m_chunkShader, *m_world, m_fangs, m_fangClock / Fangs::TICK);
     m_bannerRenderer.render(m_chunkShader, *m_world, nearbyBanners(), m_elapsedSeconds);
     m_fireworkRenderer.render(view, projection, camera.right, camera.up);
     castShadows(view, projection);
@@ -17374,6 +17520,13 @@ void Application::updateMobs(float deltaTime)
     // decides how many of them actually land.
     for (const MobStrike& strike : m_entities.drainStrikes())
     {
+        if (strike.blindSeconds > 0)
+        {
+            if (!m_player.exempt())
+                Effects::give(m_player.effects, Effects::Kind::Blindness, 0, static_cast<float>(strike.blindSeconds));
+            if (strike.damage <= 0) continue;
+        }
+
         // A raised shield stops a blow outright, but only one that
         // comes at the front of it. Turning to meet what is hitting you
         // is the whole of using one.
@@ -17410,7 +17563,10 @@ void Application::updateMobs(float deltaTime)
     // Arrows loosed by anything that carries a bow, and the charges
     // thrown by anything that does not.
     for (const MobShot& shot : m_entities.drainShots())
-        m_arrows.spawn(shot.from, shot.velocity, shot.damage, false, shot.kind);
+    {
+        if (shot.fangs) conjureFangs(shot.from, shot.target, shot.damage);
+        else m_arrows.spawn(shot.from, shot.velocity, shot.damage, false, shot.kind);
+    }
 
     // What they leave behind. Most species drop nothing yet, because
     // what they ought to drop -- leather, bone, string -- are items, and
@@ -17646,6 +17802,14 @@ void Application::updateMobs(float deltaTime)
                         laid = true;
                     }
                 }
+    }
+    for (const EntityManager::Zombified& turned : m_entities.drainZombified())
+    {
+        if (m_entities.spawnAt(MobId::Zoglin, turned.at, *m_world, turned.baby))
+            m_entities.mobs().back().setYaw(turned.yaw);
+        const float distance = glm::length(turned.at - m_camera.position);
+        if (distance < 32.0f) m_audio.play(Sound::ZoglinConvert, 1.0f - distance / 32.0f, 1.0f);
+        sprites(SpriteParticles::Kind::Poof, turned.at + glm::vec3(0.0f, 0.8f, 0.0f), 10, 0.6f, 0.6f, 0.4f, 0.8f);
     }
     for (const glm::vec3& grown : m_entities.drainGrownTadpoles())
     {

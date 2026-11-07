@@ -518,6 +518,12 @@ void Mob::chooseNewGoal(const glm::vec3& playerPosition)
         return;
     }
 
+    if (m_type == MobId::Zoglin && hunting())
+    {
+        m_chasing = false;
+        return;
+    }
+
     // Yaw is degrees about +y with 0 looking down +x, matching the
     // camera, so a heading is atan2(z, x).
     if (hostileNow() && distance < NOTICE_RANGE && distance > 0.001f)
@@ -615,6 +621,41 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
 
     if (m_hurtFlash > 0.0f) m_hurtFlash = std::max(0.0f, m_hurtFlash - deltaTime);
     if (m_darkTime > 0.0f) m_darkTime = std::max(0.0f, m_darkTime - deltaTime);
+    if (m_mirrorBlend > 0.0f) m_mirrorBlend = std::max(0.0f, m_mirrorBlend - deltaTime);
+    if (m_mirrorCollapse > 0.0f)
+    {
+        m_mirrorCollapse -= deltaTime;
+        if (m_mirrorCollapse <= 0.0f && illusioned()) shuffleMirrors();
+    }
+    if (t.castsIllusions && alive())
+    {
+        if (m_illusionCooldown > 0.0f) m_illusionCooldown = std::max(0.0f, m_illusionCooldown - deltaTime);
+        if (m_illusionTime > 0.0f) m_illusionTime = std::max(0.0f, m_illusionTime - deltaTime);
+        const glm::vec3 eye = m_position + glm::vec3(0.0f, height() * 0.85f, 0.0f);
+        const glm::vec3 aim = playerPosition + glm::vec3(0.0f, 0.9f, 0.0f);
+        const bool engaged = glm::length(aim - eye) < 18.0f && world.hasLineOfSight(eye, aim);
+        if (engaged && m_illusionTime <= 0.0f && m_illusionCooldown <= 0.0f)
+        {
+            m_illusionTime = 60.0f;
+            m_illusionCooldown = 17.0f;
+            for (glm::vec3& offset : m_mirrors[1]) offset = glm::vec3(0.0f);
+            shuffleMirrors();
+            emit(Sound::IllusionerCast, 0.9f, 1.0f);
+        }
+        if (engaged && !m_blindedPlayer)
+        {
+            m_blindDelay -= deltaTime;
+            if (m_blindDelay <= 0.0f)
+            {
+                m_blindedPlayer = true;
+                MobStrike curse;
+                curse.from = m_position;
+                curse.blindSeconds = 20;
+                m_strikes.push_back(curse);
+                emit(Sound::IllusionerCast, 0.9f, 0.8f);
+            }
+        }
+    }
     if (m_hurtVoiceTimer > 0.0f) m_hurtVoiceTimer = std::max(0.0f, m_hurtVoiceTimer - deltaTime);
     if (m_panicTimer > 0.0f) m_panicTimer = std::max(0.0f, m_panicTimer - deltaTime);
     if (m_loveTimer > 0.0f) m_loveTimer = std::max(0.0f, m_loveTimer - deltaTime);
@@ -989,6 +1030,20 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
                 m_laserCharge = 0.0f;
             }
         }
+        else if (t.conjuresFangs)
+        {
+            if (m_shootTimer <= 0.0f && range < t.arrowRange && world.hasLineOfSight(eye, aim))
+            {
+                m_shootTimer = t.arrowInterval;
+                MobShot shot;
+                shot.fangs = true;
+                shot.from = m_position;
+                shot.target = playerPosition;
+                shot.damage = t.arrowDamage;
+                m_shots.push_back(shot);
+                emit(Sound::EvokerCast, 0.8f, 1.0f);
+            }
+        }
         else if (m_shootTimer <= 0.0f && range > 2.5f && range < t.arrowRange &&
             world.hasLineOfSight(eye, aim))
         {
@@ -1088,6 +1143,27 @@ bool Mob::strike(int amount, const glm::vec3& fromDirection)
     return true;
 }
 
+void Mob::shuffleMirrors()
+{
+    for (int j = 0; j < 4; ++j)
+    {
+        m_mirrors[0][j] = m_mirrors[1][j];
+        m_mirrors[1][j] = glm::vec3((-6.0f + static_cast<float>(static_cast<int>(random01() * 13.0f) % 13)) * 0.5f,
+                                    static_cast<float>(std::max(0, static_cast<int>(random01() * 6.0f) % 6 - 4)),
+                                    (-6.0f + static_cast<float>(static_cast<int>(random01() * 13.0f) % 13)) * 0.5f);
+    }
+    m_mirrorBlend = 0.15f;
+    emit(Sound::IllusionerMirror, 0.8f, 1.0f);
+}
+
+glm::vec3 Mob::mirrorOffset(int copy) const
+{
+    const int j = std::clamp(copy, 0, 3);
+    if (m_mirrorBlend <= 0.0f) return m_mirrors[1][j];
+    const float d = std::pow(m_mirrorBlend / 0.15f, 0.25f);
+    return m_mirrors[1][j] * (1.0f - d) + m_mirrors[0][j] * d;
+}
+
 float Mob::glowLight() const
 {
     if (m_type != MobId::GlowSquid) return 0.0f;
@@ -1134,6 +1210,16 @@ void Mob::damage(int amount, const glm::vec3& fromDirection)
     m_health = std::max(0, m_health - amount);
     m_hurtFlash = 0.35f;
     if (m_type == MobId::GlowSquid) m_darkTime = 5.0f;
+    if (illusioned() && m_mirrorCollapse <= 0.0f)
+    {
+        for (int j = 0; j < 4; ++j)
+        {
+            m_mirrors[0][j] = m_mirrors[1][j];
+            m_mirrors[1][j] = glm::vec3(0.0f);
+        }
+        m_mirrorBlend = 0.15f;
+        m_mirrorCollapse = 0.4f;
+    }
 
     // Knocked back and off its feet a little, so a hit reads as a hit.
     // Only when something actually struck it from somewhere, though:

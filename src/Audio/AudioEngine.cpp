@@ -396,6 +396,10 @@ void AudioEngine::buildSounds()
                  Sound::MobTadpoleDeath, "mob/tadpole");
     loadMobVoice(Sound::MobGlowSquidSay, Sound::MobGlowSquidHurt,
                  Sound::MobGlowSquidDeath, "mob/glow_squid");
+    loadMobVoice(Sound::MobZoglinSay, Sound::MobZoglinHurt,
+                 Sound::MobZoglinDeath, "mob/zoglin");
+    loadMobVoice(Sound::MobIllusionerSay, Sound::MobIllusionerHurt,
+                 Sound::MobIllusionerDeath, "mob/illusioner");
     loadMobVoice(Sound::MobArmadilloSay, Sound::MobArmadilloHurt,
                  Sound::MobArmadilloDeath, "mob/armadillo");
     loadMobVoice(Sound::MobParrotSay, Sound::MobParrotHurt,
@@ -419,6 +423,11 @@ void AudioEngine::buildSounds()
     loadSingle(Sound::DyeUse, "item/dye/dye.ogg");
     loadVariants(Sound::InkUse, "item/ink_sac/ink_sac", 4);
     loadVariants(Sound::GlowInkUse, "item/glow_ink_sac/glow_ink_sac", 4);
+    loadSingle(Sound::EvokerFangs, "mob/evocation_illager/fangs.ogg");
+    loadVariants(Sound::EvokerCast, "mob/evocation_illager/prepare_attack", 2);
+    loadVariants(Sound::IllusionerMirror, "mob/illusion_illager/mirror_move", 2);
+    loadSingle(Sound::IllusionerCast, "mob/illusion_illager/prepare_mirror.ogg");
+    loadVariants(Sound::ZoglinConvert, "mob/hoglin/converted", 2);
 
     auto make = [&](Sound id) -> Synth {
         auto& clips = m_buffers[static_cast<size_t>(id)];
@@ -1726,6 +1735,76 @@ void AudioEngine::buildSounds()
         s.addNoise(0.45f, 640.0f, 5.0f, 0.26f, true, 933);
         s.addTone(0.50f, 420.0f, 140.0f, 4.0f, 0.22f, false, 0.06f);
         s.finish(0.52f);
+    }
+    {
+        Synth s = make(Sound::MobZoglinSay);
+        s.addNoise(0.55f, 600.0f, 4.0f, 0.34f, false, 951);
+        s.addTone(0.55f, 120.0f, 92.0f, 4.0f, 0.30f, true);
+        s.addTone(0.40f, 181.0f, 140.0f, 5.0f, 0.14f, true, 0.05f);
+        s.finish(0.58f);
+    }
+    {
+        Synth s = make(Sound::MobZoglinHurt);
+        s.addNoise(0.30f, 900.0f, 9.0f, 0.38f, false, 952);
+        s.addTone(0.30f, 170.0f, 110.0f, 9.0f, 0.30f, true);
+        s.finish(0.60f);
+    }
+    {
+        Synth s = make(Sound::MobZoglinDeath);
+        s.addNoise(0.90f, 500.0f, 2.5f, 0.32f, false, 953);
+        s.addTone(0.90f, 140.0f, 50.0f, 2.5f, 0.30f, true);
+        s.finish(0.60f);
+    }
+    {
+        Synth s = make(Sound::MobIllusionerSay);
+        s.addTone(0.45f, 210.0f, 190.0f, 4.0f, 0.22f, true);
+        s.addTone(0.45f, 316.0f, 300.0f, 4.0f, 0.14f, false, 0.03f);
+        s.addNoise(0.30f, 1200.0f, 8.0f, 0.10f, false, 954);
+        s.finish(0.50f);
+    }
+    {
+        Synth s = make(Sound::MobIllusionerHurt);
+        s.addTone(0.25f, 300.0f, 220.0f, 10.0f, 0.26f, true);
+        s.addNoise(0.20f, 1600.0f, 14.0f, 0.18f, false, 955);
+        s.finish(0.52f);
+    }
+    {
+        Synth s = make(Sound::MobIllusionerDeath);
+        s.addTone(0.80f, 260.0f, 110.0f, 3.0f, 0.24f, true);
+        s.addTone(0.80f, 390.0f, 165.0f, 3.0f, 0.12f, false, 0.05f);
+        s.finish(0.52f);
+    }
+    {
+        Synth s = make(Sound::EvokerFangs);
+        s.addNoise(0.12f, 2600.0f, 30.0f, 0.7f, false, 961);
+        s.addTone(0.18f, 160.0f, 70.0f, 18.0f, 0.4f, true, 0.02f);
+        s.addNoise(0.10f, 3200.0f, 40.0f, 0.5f, true, 962);
+        s.finish(0.6f);
+    }
+    {
+        Synth s = make(Sound::EvokerCast);
+        s.addTone(1.0f, 220.0f, 440.0f, 2.0f, 0.18f, false);
+        s.addTone(1.0f, 330.0f, 660.0f, 2.0f, 0.10f, false, 0.08f);
+        s.addNoise(0.8f, 3000.0f, 3.0f, 0.08f, true, 963);
+        s.finish(0.45f);
+    }
+    {
+        Synth s = make(Sound::IllusionerMirror);
+        s.addTone(0.6f, 880.0f, 440.0f, 4.0f, 0.16f, false);
+        s.addNoise(0.5f, 2400.0f, 5.0f, 0.14f, true, 964);
+        s.finish(0.45f);
+    }
+    {
+        Synth s = make(Sound::IllusionerCast);
+        s.addTone(1.2f, 330.0f, 660.0f, 1.8f, 0.16f, false);
+        s.addTone(1.2f, 495.0f, 990.0f, 1.8f, 0.10f, false, 0.1f);
+        s.finish(0.45f);
+    }
+    {
+        Synth s = make(Sound::ZoglinConvert);
+        s.addNoise(1.2f, 700.0f, 2.0f, 0.30f, false, 965);
+        s.addTone(1.2f, 160.0f, 90.0f, 2.0f, 0.26f, true);
+        s.finish(0.55f);
     }
     {
         Synth s = make(Sound::DyeUse);

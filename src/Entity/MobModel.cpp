@@ -105,7 +105,7 @@ void MobModel::build(const MobSkin& skin, const Mob& mob, float sky, float block
     const MobType& type = mob.type();
 
     BoxMesh::Frame frame;
-    frame.feet = mob.position();
+    frame.feet = mob.position() + m_shift;
     frame.bodyYaw = mob.yaw();
     frame.sky = sky;
     frame.blockLight = blockLight;
@@ -243,6 +243,22 @@ void MobModel::render(Shader& chunkShader, const World& world, const EntityManag
             blockLight *= fade;
 
             build(skin, mob, sky, blockLight, layer);
+            if (mob.illusioned())
+            {
+                std::vector<float> copies;
+                const float time = mob.age();
+                for (int k = 0; k < 4; ++k)
+                {
+                    const float j = static_cast<float>(k);
+                    m_shift = mob.mirrorOffset(k) + glm::vec3(std::cos(j + time * 10.0f) * 0.025f,
+                                                              std::cos(j + time * 15.0f) * 0.0125f,
+                                                              std::cos(j + time * 14.0f) * 0.025f);
+                    build(skin, mob, sky, blockLight, layer);
+                    copies.insert(copies.end(), m_vertices.begin(), m_vertices.end());
+                }
+                m_shift = glm::vec3(0.0f);
+                m_vertices.swap(copies);
+            }
 
             unsigned int own = 0;
             if (layer == 0)

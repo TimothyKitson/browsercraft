@@ -47,4 +47,5 @@ private:
     std::vector<std::unique_ptr<MobSkin>> m_skins;
     Mesh m_mesh;
     std::vector<float> m_vertices;
+    glm::vec3 m_shift{ 0.0f };
 };

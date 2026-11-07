@@ -571,6 +571,15 @@ void EntityManager::update(float deltaTime, const World& world,
             m_grownTadpoles.push_back(mob.position());
             mob.vanish();
         }
+        if (mob.typeId() == MobId::Hoglin && mob.alive())
+        {
+            mob.addZombifyTime(m_dimension == Dimension::Nether ? -1.0f : deltaTime);
+            if (mob.zombifyTime() > ZOMBIFY_SECONDS)
+            {
+                m_zombified.push_back(Zombified{ mob.position(), mob.yaw(), mob.baby() });
+                mob.vanish();
+            }
+        }
     }
 
     // A frog eats a magma cube it can reach. This is the whole reason
@@ -626,7 +635,7 @@ void EntityManager::update(float deltaTime, const World& world,
         }),
         m_mobs.end());
 
-    setWolvesOnHostiles(deltaTime);
+    setWolvesOnHostiles(deltaTime, target);
     courtVillagers(world, deltaTime);
     pairOffLovers(world);
     if (!m_playerHidden) routeChasers(world, playerPosition);
@@ -794,10 +803,39 @@ Mob* EntityManager::rideable(const glm::vec3& origin, const glm::vec3& direction
 // A tamed wolf goes for whatever hostile is nearest. The wolf cannot
 // see the other mobs -- only this can -- so the quarry is picked here
 // and handed to it as a heading.
-void EntityManager::setWolvesOnHostiles(float deltaTime)
+void EntityManager::setWolvesOnHostiles(float deltaTime, const glm::vec3& playerPosition)
 {
     for (size_t i = 0; i < m_mobs.size(); ++i)
     {
+        if (m_mobs[i].typeId() == MobId::Zoglin && m_mobs[i].alive())
+        {
+            const glm::vec3 from = m_mobs[i].position();
+            const glm::vec3 toPlayer = playerPosition - from;
+            float nearest = std::min(Mob::HUNT_RANGE, glm::length(glm::vec3(toPlayer.x, 0.0f, toPlayer.z)));
+            size_t quarry = m_mobs.size();
+            for (size_t j = 0; j < m_mobs.size(); ++j)
+            {
+                if (j == i || !m_mobs[j].alive()) continue;
+                const MobId kind = m_mobs[j].typeId();
+                if (kind == MobId::Zoglin || kind == MobId::Creeper || m_mobs[j].type().inanimate) continue;
+                const glm::vec3 apart = m_mobs[j].position() - from;
+                const float away = glm::length(glm::vec3(apart.x, 0.0f, apart.z));
+                if (away >= nearest) continue;
+                nearest = away;
+                quarry = j;
+            }
+            if (quarry >= m_mobs.size()) continue;
+            m_mobs[i].huntTowards(m_mobs[quarry].position());
+            const MobType& t = m_mobs[i].type();
+            if (nearest <= t.attackReach + t.width * 0.5f && m_mobs[i].tryBite(deltaTime))
+            {
+                const glm::vec3 away = m_mobs[quarry].position() - from;
+                m_mobs[quarry].damage(m_mobs[i].baby() ? std::max(1, t.attackDamage / 2) : t.attackDamage, away);
+                m_mobs[quarry].shove(glm::vec3(0.0f, 4.0f, 0.0f));
+            }
+            continue;
+        }
+
         // A tamed wolf hunts for whoever tamed it. A golem hunts
         // because that is the whole of what a golem is for, and needs
         // nobody's permission.
@@ -1042,6 +1080,13 @@ std::vector<glm::vec3> EntityManager::drainFrogSpawns()
 {
     std::vector<glm::vec3> all;
     all.swap(m_frogSpawns);
+    return all;
+}
+
+std::vector<EntityManager::Zombified> EntityManager::drainZombified()
+{
+    std::vector<Zombified> all;
+    all.swap(m_zombified);
     return all;
 }
 

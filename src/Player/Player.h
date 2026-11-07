@@ -87,7 +87,7 @@ public:
     // without it a mob standing in your face deals its damage once per
     // frame and kills you instantly.
     static constexpr float HURT_IMMUNITY = 0.5f;
-    bool damage(int amount);
+    bool damage(int amount, bool throughArmour = false);
     bool invulnerable() const { return m_hurtCooldown > 0.0f; }
     void heal(int amount);
     void respawn(glm::vec3 feetPosition);

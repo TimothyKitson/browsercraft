@@ -223,7 +223,8 @@ void MobSkin::build(MobId id)
 
     const MobType& type = mobType(id);
 
-    if (*type.texture && loadFile(texturePath(type.texture), m_pixels, m_width, m_height))
+    if ((*type.texture && loadFile(texturePath(type.texture), m_pixels, m_width, m_height)) ||
+        (*type.packSheet && loadFile(std::string("assets/textures/entity/") + type.packSheet, m_pixels, m_width, m_height)))
     {
         m_fromFile = true;
         m_pixelWidth = m_width;

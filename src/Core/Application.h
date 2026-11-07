@@ -31,6 +31,7 @@
 #include "Game/Fluids.h"
 #include "Renderer/BeamRenderer.h"
 #include "Renderer/BookRenderer.h"
+#include "Renderer/FangRenderer.h"
 #include "Renderer/BannerRenderer.h"
 #include "Game/Banners.h"
 #include "Game/Fireworks.h"
@@ -520,6 +521,13 @@ private:
     void splashPotion(const glm::vec3& at, int effect);
     void tickPotionClouds(float deltaTime);
     void tickArmadillos(float deltaTime);
+    void conjureFangs(const glm::vec3& caster, const glm::vec3& target, int damage);
+    void tickFangs(float deltaTime);
+    void tickGlowSquids(float deltaTime);
+    std::vector<Fangs::Fang> m_fangs;
+    FangRenderer m_fangRenderer;
+    float m_fangClock = 0.0f;
+    float m_glowClock = 0.0f;
     void queueFireworks();
     struct ParkedVehicle
     {

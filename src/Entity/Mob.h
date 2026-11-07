@@ -28,6 +28,7 @@ struct MobStrike
 {
     int damage = 0;
     glm::vec3 from{ 0.0f };     // the mob's position, for knockback
+    int blindSeconds = 0;
 };
 
 // A mob going off. Collected like the strikes and the shots, so a mob
@@ -47,6 +48,8 @@ struct MobShot
     glm::vec3 velocity{ 0.0f };
     int damage = 0;
     Arrows::Kind kind = Arrows::Kind::Shaft;   // a charge rather than an arrow
+    bool fangs = false;
+    glm::vec3 target{ 0.0f };
 };
 
 // A living thing: gravity and box collision against the voxel world, plus
@@ -188,6 +191,13 @@ public:
     float hurtFlash() const { return m_hurtFlash; }
     float darkTime() const { return m_darkTime; }
     float glowLight() const;
+    bool illusioned() const { return m_illusionTime > 0.0f; }
+    float illusionTime() const { return m_illusionTime; }
+    glm::vec3 mirrorOffset(int copy) const;
+    void shuffleMirrors();
+    bool blindedPlayer() const { return m_blindedPlayer; }
+    float zombifyTime() const { return m_zombifyTime; }
+    void addZombifyTime(float seconds) { m_zombifyTime = seconds > 0.0f ? m_zombifyTime + seconds : 0.0f; }
     // 0 standing, 1 at walking pace; drives how far the legs swing.
     float gaitAmount() const { return m_gaitAmount; }
     // Radians around the walk cycle.
@@ -547,6 +557,14 @@ private:
     float m_babyTimer = 0.0f;
     float m_hurtFlash = 0.0f;
     float m_darkTime = 0.0f;
+    float m_illusionTime = 0.0f;
+    float m_illusionCooldown = 0.0f;
+    float m_blindDelay = 9.0f;
+    bool m_blindedPlayer = false;
+    float m_mirrorBlend = 0.0f;
+    float m_mirrorCollapse = 0.0f;
+    glm::vec3 m_mirrors[2][4] = {};
+    float m_zombifyTime = 0.0f;
     float m_panicTimer = 0.0f;
     float m_burnTimer = 0.0f;
     float m_burnTick = 0.0f;
