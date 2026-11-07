@@ -2049,7 +2049,7 @@ bool Application::frame()
             m_startupScreen == "cherry" || m_startupScreen == "mangrove" || m_startupScreen == "fungi" ||
             m_startupScreen == "stones" || m_startupScreen == "colours" || m_startupScreen == "candles" ||
             m_startupScreen == "shulkerboxes" || m_startupScreen == "beds" || m_startupScreen == "chests" ||
-            m_startupScreen == "copper" || m_startupScreen == "flowers" || m_startupScreen == "mushrooms" ||
+            m_startupScreen == "copper" || m_startupScreen == "flowers" || m_startupScreen == "mushrooms" || m_startupScreen == "lush" ||
             m_startupScreen == "boat" || m_startupScreen == "rails" ||
             m_startupScreen == "mobs" || m_startupScreen == "golem" ||
             m_startupScreen == "glowmobs" || m_startupScreen == "variants" ||
@@ -2143,6 +2143,7 @@ bool Application::frame()
                                   m_startupScreen != "copper" &&
                                   m_startupScreen != "flowers" &&
                                   m_startupScreen != "mushrooms" &&
+                                  m_startupScreen != "lush" &&
                                   m_startupScreen != "boat" &&
                                   m_startupScreen != "rails" &&
                                   m_startupScreen != "mobs" &&
@@ -2519,7 +2520,8 @@ bool Application::frame()
                 m_startupScreen == "cherry" || m_startupScreen == "mangrove" || m_startupScreen == "fungi" ||
                 m_startupScreen == "stones" || m_startupScreen == "colours" || m_startupScreen == "candles" ||
                 m_startupScreen == "shulkerboxes" || m_startupScreen == "beds" || m_startupScreen == "chests" ||
-                m_startupScreen == "copper" || m_startupScreen == "flowers" || m_startupScreen == "mushrooms")
+                m_startupScreen == "copper" || m_startupScreen == "flowers" || m_startupScreen == "mushrooms" ||
+                m_startupScreen == "lush")
             {
                 m_camera.setOrientation(0.0f, -25.0f);
                 m_camera.addLook(0.0f, 0.0f, 0.0f);
@@ -2616,6 +2618,50 @@ bool Application::frame()
                     m_world->setBlock(px + 16, py, pz - 10, Blocks::Bookshelf);
                     m_world->setBlock(px + 16, py, pz + 10, Blocks::DiamondOre);
                     m_world->setBlock(px + 16, py + 1, pz + 10, Blocks::EndPortalFrame);
+                }
+                if (m_startupScreen == "lush")
+                {
+                    m_devAttackStrength = 1.0f;
+                    m_camera.setOrientation(0.0f, 6.0f);
+                    for (int dx = 1; dx <= 12; ++dx)
+                        for (int dz = -8; dz <= 8; ++dz)
+                        {
+                            for (int dy = 0; dy <= 5; ++dy) m_world->setBlock(px + dx, py + dy, pz + dz, Blocks::Air);
+                            m_world->setBlock(px + dx, py - 1, pz + dz, Blocks::Moss);
+                            if (dx >= 4) m_world->setBlock(px + dx, py + 6, pz + dz, Blocks::Stone);
+                        }
+                    for (int dz = -8; dz <= 8; ++dz)
+                        for (int dy = 0; dy <= 5; ++dy) m_world->setBlock(px + 13, py + dy, pz + dz, Blocks::Stone);
+                    for (int dz = -6; dz <= 6; dz += 2)
+                        for (int k = 0; k < 3 + (dz + 8) % 3; ++k)
+                            m_world->setBlock(px + 9, py + 5 - k, pz + dz, caveVineOf(k == 2 + (dz + 8) % 3, (k + dz) % 2 == 0));
+                    m_world->setBlock(px + 7, py + 5, pz - 3, Blocks::SporeBlossom);
+                    m_world->setBlock(px + 7, py + 5, pz + 3, Blocks::SporeBlossom);
+                    m_world->setBlock(px + 6, py, pz - 5, bigDripleafStemOf(3));
+                    m_world->setBlock(px + 6, py + 1, pz - 5, bigDripleafOf(3, DripleafTilt::None));
+                    m_world->setBlock(px + 6, py, pz - 3, bigDripleafOf(3, DripleafTilt::Partial));
+                    m_world->setBlock(px + 6, py, pz - 1, smallDripleafOf(3, false));
+                    m_world->setBlock(px + 6, py + 1, pz - 1, smallDripleafOf(3, true));
+                    m_world->setBlock(px + 6, py, pz + 1, Blocks::Azalea);
+                    m_world->setBlock(px + 6, py, pz + 3, Blocks::FloweringAzalea);
+                    m_world->setBlock(px + 5, py, pz + 5, Blocks::MossCarpet);
+                    m_world->setBlock(px + 5, py, pz + 6, Blocks::MossCarpet);
+                    m_world->setBlock(px + 4, py, pz + 5, Blocks::PottedAzalea);
+                    for (int dz = -4; dz <= 4; ++dz)
+                        for (int dy = 1; dy <= 4; ++dy)
+                            if ((dz + dy) % 3 != 0) m_world->setBlock(px + 12, py + dy, pz + dz, glowLichenOn(3));
+                    struct WorldCells : Saplings::Cells
+                    {
+                        World* world = nullptr;
+                        BlockId at(int x, int y, int z) const override { return world->getBlock(x, y, z); }
+                        void set(int x, int y, int z, BlockId id) override { world->setBlock(x, y, z, id); }
+                    } cells;
+                    cells.world = m_world.get();
+                    m_world->setBlock(px + 2, py - 1, pz - 6, Blocks::Grass);
+                    Saplings::azaleaTree(cells, glm::ivec3(px + 2, py, pz - 6), 3u, true);
+                    m_world->setBlock(px + 12, py, pz - 8, Blocks::Bookshelf);
+                    m_world->setBlock(px + 12, py, pz + 8, Blocks::DiamondOre);
+                    m_world->setBlock(px + 12, py + 1, pz + 8, Blocks::EndPortalFrame);
                 }
                 if (m_startupScreen == "mushrooms")
                 {
@@ -6300,6 +6346,37 @@ void Application::updateMining(float deltaTime)
                     m_net.onLocalBlockChange(pair.x, pair.y, pair.z, Blocks::Air);
                 }
             }
+            if (isCaveVine(id))
+            {
+                for (int dy = 1; dy < 64; ++dy)
+                {
+                    const BlockId below = m_world->getBlock(hit.block.x, hit.block.y - dy, hit.block.z);
+                    if (!isCaveVine(below)) break;
+                    m_world->setBlock(hit.block.x, hit.block.y - dy, hit.block.z, Blocks::Air);
+                    m_net.onLocalBlockChange(hit.block.x, hit.block.y - dy, hit.block.z, Blocks::Air);
+                    if (caveVineLit(below) && !m_player.creative())
+                        m_drops.spawnFromBrokenBlock(glm::ivec3(hit.block.x, hit.block.y - dy, hit.block.z), Items::GlowBerries, 1);
+                }
+            }
+            if (isBigDripleaf(id) || isBigDripleafStem(id))
+            {
+                for (int dy = 1; dy < 64; ++dy)
+                {
+                    const BlockId over = m_world->getBlock(hit.block.x, hit.block.y + dy, hit.block.z);
+                    if (!isBigDripleaf(over) && !isBigDripleafStem(over)) break;
+                    m_world->setBlock(hit.block.x, hit.block.y + dy, hit.block.z, Blocks::Air);
+                    m_net.onLocalBlockChange(hit.block.x, hit.block.y + dy, hit.block.z, Blocks::Air);
+                }
+            }
+            if (isSmallDripleaf(id))
+            {
+                const glm::ivec3 pair(hit.block.x, hit.block.y + (smallDripleafUpper(id) ? -1 : 1), hit.block.z);
+                if (isSmallDripleaf(m_world->getBlock(pair.x, pair.y, pair.z)))
+                {
+                    m_world->setBlock(pair.x, pair.y, pair.z, Blocks::Air);
+                    m_net.onLocalBlockChange(pair.x, pair.y, pair.z, Blocks::Air);
+                }
+            }
             if (isPotted(id) && !m_player.creative())
                 m_drops.spawnFromBrokenBlock(hit.block, pottedPlant(id), 1);
 
@@ -9476,6 +9553,15 @@ void Application::handlePlacement()
 
             if (isCake(used) && useCake(bench.block, used)) return;
             if (isCandle(used) && useCandle(bench.block, used)) return;
+            if (isCaveVine(used) && caveVineLit(used) && m_inventory.selected().id != Items::BoneMeal)
+            {
+                const BlockId picked = caveVineOf(caveVineHead(used), false);
+                m_world->setBlock(bench.block.x, bench.block.y, bench.block.z, picked);
+                m_net.onLocalBlockChange(bench.block.x, bench.block.y, bench.block.z, picked);
+                m_drops.spawnFromBrokenBlock(bench.block, Items::GlowBerries, 1);
+                m_audio.play(Sound::Pickup, 0.5f, 1.2f);
+                return;
+            }
             if (isFlowerPot(used))
             {
                 ItemStack& held = m_inventory.selected();
@@ -9908,6 +9994,67 @@ void Application::handlePlacement()
                 }
                 used = true;
             }
+            else if (isCaveVine(plant) && !caveVineLit(plant))
+            {
+                put(crop.block, caveVineOf(caveVineHead(plant), true));
+                used = true;
+            }
+            else if (isSmallDripleaf(plant))
+            {
+                const glm::ivec3 base = smallDripleafUpper(plant) ? glm::ivec3(crop.block.x, crop.block.y - 1, crop.block.z) : crop.block;
+                const int facing = dripleafFacing(plant);
+                int height = 2;
+                while (height < 5 && m_world->getBlock(base.x, base.y + height, base.z) == Blocks::Air) ++height;
+                for (int k = 0; k < height - 1; ++k) put(glm::ivec3(base.x, base.y + k, base.z), bigDripleafStemOf(facing));
+                put(glm::ivec3(base.x, base.y + height - 1, base.z), bigDripleafOf(facing, DripleafTilt::None));
+                used = true;
+            }
+            else if (isBigDripleaf(plant) && m_world->getBlock(above.x, above.y, above.z) == Blocks::Air)
+            {
+                put(crop.block, bigDripleafStemOf(dripleafFacing(plant)));
+                put(above, bigDripleafOf(dripleafFacing(plant), DripleafTilt::None));
+                used = true;
+            }
+            else if (isAzaleaBush(plant))
+            {
+                struct WorldCells : Saplings::Cells
+                {
+                    World* world = nullptr;
+                    Net::Session* net = nullptr;
+                    BlockId at(int x, int y, int z) const override { return world->getBlock(x, y, z); }
+                    void set(int x, int y, int z, BlockId id) override
+                    {
+                        world->setBlock(x, y, z, id);
+                        net->onLocalBlockChange(x, y, z, id);
+                    }
+                } cells;
+                cells.world = m_world.get();
+                cells.net = &m_net;
+                const uint32_t roll = static_cast<uint32_t>(crop.block.x * 73856093 ^ crop.block.z * 83492791 ^
+                                                            static_cast<int>(m_elapsedSeconds * 977.0f));
+                if (roll % 100u < 45u)
+                {
+                    m_world->setBlock(crop.block.x, crop.block.y, crop.block.z, Blocks::Air);
+                    if (!Saplings::azaleaTree(cells, crop.block, roll))
+                        m_world->setBlock(crop.block.x, crop.block.y, crop.block.z, plant);
+                }
+                used = true;
+            }
+            else if (isGlowLichen(plant))
+            {
+                static const int D[4][2] = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } };
+                for (const auto& d : D)
+                {
+                    const glm::ivec3 next(crop.block.x + d[0], crop.block.y, crop.block.z + d[1]);
+                    if (m_world->getBlock(next.x, next.y, next.z) != Blocks::Air) continue;
+                    const int face = glowLichenFace(plant);
+                    static const int BACK[6][3] = { { 0, -1, 0 }, { 0, 1, 0 }, { 0, 0, -1 }, { 1, 0, 0 }, { 0, 0, 1 }, { -1, 0, 0 } };
+                    if (!isOpaque(m_world->getBlock(next.x + BACK[face][0], next.y + BACK[face][1], next.z + BACK[face][2]))) continue;
+                    put(next, plant);
+                    used = true;
+                    break;
+                }
+            }
             else if (plant == Blocks::RootedDirt &&
                      m_world->getBlock(crop.block.x, crop.block.y - 1, crop.block.z) == Blocks::Air)
             {
@@ -9990,6 +10137,24 @@ void Application::handlePlacement()
                     stack.count -= 1;
                     if (stack.count <= 0) stack.clear();
                 }
+            }
+            return;
+        }
+    }
+
+    if (stack.id == Items::GlowBerries)
+    {
+        const RaycastHit roof = m_world->raycast(m_camera.position, m_camera.front, REACH_DISTANCE);
+        if (roof.hit && roof.normal.y < 0 && isOpaque(m_world->getBlock(roof.block.x, roof.block.y, roof.block.z)) &&
+            m_world->getBlock(roof.block.x, roof.block.y - 1, roof.block.z) == Blocks::Air)
+        {
+            m_world->setBlock(roof.block.x, roof.block.y - 1, roof.block.z, Blocks::CaveVines);
+            m_net.onLocalBlockChange(roof.block.x, roof.block.y - 1, roof.block.z, Blocks::CaveVines);
+            m_audio.playPlace(Blocks::CaveVines);
+            if (!m_player.creative())
+            {
+                stack.count -= 1;
+                if (stack.count <= 0) stack.clear();
             }
             return;
         }
@@ -10183,6 +10348,42 @@ void Application::handlePlacement()
         WorldCaneBlocks around;
         around.world = m_world.get();
         if (!Cane::canStandAt(around, target.x, target.y, target.z)) return;
+    }
+
+    if (isGlowLichen(placing))
+    {
+        const glm::ivec3 normal = target - hit.block;
+        int face = 0;
+        if (normal.y < 0) face = 1;
+        else if (normal.z > 0) face = 2;
+        else if (normal.x < 0) face = 3;
+        else if (normal.z < 0) face = 4;
+        else if (normal.x > 0) face = 5;
+        if (!isOpaque(m_world->getBlock(hit.block.x, hit.block.y, hit.block.z))) return;
+        placing = glowLichenOn(face);
+    }
+    if (placing == Blocks::SporeBlossom && (target - hit.block).y >= 0) return;
+    if (isBigDripleaf(placing) || isSmallDripleaf(placing))
+    {
+        const glm::vec3 look = m_camera.front;
+        const int lookDir = (std::fabs(look.x) > std::fabs(look.z)) ? (look.x > 0.0f ? 1 : 3) : (look.z > 0.0f ? 2 : 0);
+        const int facing = (lookDir + 2) & 3;
+        if (isBigDripleaf(placing)) placing = bigDripleafOf(facing, DripleafTilt::None);
+        else
+        {
+            if (m_world->getBlock(target.x, target.y + 1, target.z) != Blocks::Air) return;
+            m_world->setBlock(target.x, target.y, target.z, smallDripleafOf(facing, false));
+            m_world->setBlock(target.x, target.y + 1, target.z, smallDripleafOf(facing, true));
+            m_net.onLocalBlockChange(target.x, target.y, target.z, smallDripleafOf(facing, false));
+            m_net.onLocalBlockChange(target.x, target.y + 1, target.z, smallDripleafOf(facing, true));
+            m_audio.playPlace(placing);
+            if (!m_player.creative())
+            {
+                stack.count -= 1;
+                if (stack.count <= 0) stack.clear();
+            }
+            return;
+        }
     }
 
     if (isMushroom(placing))
@@ -11509,6 +11710,56 @@ void Application::setBlockFor(const glm::ivec3& at, BlockId now, BlockId then, f
 
 void Application::tickTimedBlocks(float deltaTime)
 {
+    if (m_world)
+    {
+        const glm::vec3 feet = m_player.position;
+        const glm::ivec3 under(static_cast<int>(std::floor(feet.x)), static_cast<int>(std::floor(feet.y - 0.08f)),
+                               static_cast<int>(std::floor(feet.z)));
+        const BlockId leaf = m_world->getBlock(under.x, under.y, under.z);
+        if (isBigDripleaf(leaf) && dripleafTilt(leaf) == DripleafTilt::None && feet.y - under.y < 1.0f)
+        {
+            bool known = false;
+            for (const auto& entry : m_tiltingLeaves) known = known || entry.first == under;
+            if (!known)
+            {
+                m_tiltingLeaves.emplace_back(under, 0.0f);
+                const BlockId now = bigDripleafOf(dripleafFacing(leaf), DripleafTilt::Unstable);
+                m_world->setBlock(under.x, under.y, under.z, now);
+                m_net.onLocalBlockChange(under.x, under.y, under.z, now);
+            }
+        }
+        for (size_t i = 0; i < m_tiltingLeaves.size();)
+        {
+            auto& entry = m_tiltingLeaves[i];
+            const BlockId here = m_world->getBlock(entry.first.x, entry.first.y, entry.first.z);
+            if (!isBigDripleaf(here))
+            {
+                m_tiltingLeaves[i] = m_tiltingLeaves.back();
+                m_tiltingLeaves.pop_back();
+                continue;
+            }
+            entry.second += deltaTime;
+            DripleafTilt want = DripleafTilt::Unstable;
+            if (entry.second > 0.5f) want = DripleafTilt::Partial;
+            if (entry.second > 1.0f) want = DripleafTilt::Full;
+            if (entry.second > 6.0f) want = DripleafTilt::None;
+            const BlockId now = bigDripleafOf(dripleafFacing(here), want);
+            if (now != here)
+            {
+                m_world->setBlock(entry.first.x, entry.first.y, entry.first.z, now);
+                m_net.onLocalBlockChange(entry.first.x, entry.first.y, entry.first.z, now);
+                if (want == DripleafTilt::Full) m_audio.play(Sound::Place, 0.4f, 0.6f);
+            }
+            if (want == DripleafTilt::None)
+            {
+                m_tiltingLeaves[i] = m_tiltingLeaves.back();
+                m_tiltingLeaves.pop_back();
+                continue;
+            }
+            ++i;
+        }
+    }
+
     for (size_t i = 0; i < m_timedBlocks.size();)
     {
         TimedBlock& timed = m_timedBlocks[i];

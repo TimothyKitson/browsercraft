@@ -344,6 +344,11 @@ namespace Tiles
         FlowerPotTile,
         BrownMushroomTile, RedMushroomTile, BrownMushroomBlockTile, RedMushroomBlockTile, MushroomStemTile, MushroomInsideTile,
         MyceliumTopTile, MyceliumSideTile, PodzolTopTile, PodzolSideTile, CoarseDirtTile, RootedDirtTile, HangingRootsTile,
+        CaveVinesTile, CaveVinesLitTile, CaveVinesPlantTile, SporeBlossomTile, SporeBlossomBaseTile,
+        BigDripleafStemTile, BigDripleafTopTile, BigDripleafSideTile, BigDripleafTipTile,
+        SmallDripleafStemBottomTile, SmallDripleafStemTopTile, SmallDripleafTopTile, SmallDripleafSideTile,
+        AzaleaTopTile, AzaleaSideTile, AzaleaPlantTile, FloweringAzaleaTopTile, FloweringAzaleaSideTile,
+        FloweringAzaleaLeavesTile, GlowLichenTile,
 
         TileCount
     };

@@ -19,4 +19,5 @@ namespace Saplings
     bool hugeFungus(Cells& cells, const glm::ivec3& at, bool warped, uint32_t seed);
     BlockId leafDrop(BlockId leaves, uint32_t roll);
     bool hugeMushroom(Cells& cells, const glm::ivec3& at, bool red, uint32_t seed, bool force = false);
+    bool azaleaTree(Cells& cells, const glm::ivec3& at, uint32_t seed, bool force = false);
 }

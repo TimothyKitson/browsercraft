@@ -152,7 +152,8 @@ Everything in the 1.21 textures zip the game doesn't use yet, turned into work. 
     - Notes: clay balls and bricks came in for the flower pot, so a clay block now breaks into four balls and fires into terracotta. Torchflower seeds and pitcher pods wait for the sniffer (item 62). Wither roses grow where things die near the wither; the wither effect they give on touch comes with item 73. Mushrooms and azaleas get their pots with items 38 and 39.
 38. Ground cover: mushrooms and huge mushrooms, mycelium, podzol, coarse dirt, rooted dirt and hanging roots. (done)
     - Notes: mushroom fields now rise as islands out of deep sea, with mycelium, huge mushrooms and no hostile spawns at night. Podzol patches lie in snowy and jungle ground, coarse dirt in savanna, and rooted dirt with hanging roots in lush cave roofs. Mooshrooms and mycelium spreading are still to do; there is no hoe yet for tilling coarse or rooted dirt.
-39. Lush caves: cave vines with glow berries, spore blossom, big and small dripleaf (big ones tilt when stood on), azalea and flowering azalea, glow lichen.
+39. Lush caves: cave vines with glow berries, spore blossom, big and small dripleaf (big ones tilt when stood on), azalea and flowering azalea, glow lichen. (done)
+    - Notes: moss carpet came along for the cave floors. Azalea trees with rooted dirt now mark lush caves from the surface. Spore blossoms do not shed particles yet, and glow lichen drops itself until shears exist (item 49).
 40. Farm blocks
     - I. Pumpkin stems, attached and unattached, and pumpkin seeds.
     - II. Carved pumpkin and jack o'lantern. Wearing a carved pumpkin shows pumpkinblur.

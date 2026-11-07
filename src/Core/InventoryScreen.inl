@@ -88,6 +88,9 @@ namespace
         Blocks::FlowerPot,
         Blocks::BrownMushroom, Blocks::RedMushroom, Blocks::BrownMushroomBlock, Blocks::RedMushroomBlock, Blocks::MushroomStem,
         Blocks::Mycelium, Blocks::Podzol, Blocks::CoarseDirt, Blocks::RootedDirt, Blocks::HangingRoots,
+        Blocks::Moss, Blocks::MossCarpet, Blocks::Azalea, Blocks::FloweringAzalea, Blocks::AzaleaLeaves,
+        Blocks::FloweringAzaleaLeaves, Blocks::SporeBlossom, Blocks::BigDripleafFirst, Blocks::SmallDripleafFirst,
+        Blocks::GlowLichenFirst,
     };
 
     const StackId TAB_ORES[] = {

@@ -253,6 +253,19 @@ void Farming::grow(World& world, const glm::vec3& around, uint32_t& seed)
         }
 
         {
+            const BlockId vine = world.getBlock(x, y, z);
+            if (caveVineHead(vine))
+            {
+                if (nextRandom(seed) % 6u == 0u && world.getBlock(x, y - 1, z) == Blocks::Air && y > 2)
+                {
+                    world.setBlock(x, y, z, caveVineOf(false, caveVineLit(vine)));
+                    world.setBlock(x, y - 1, z, caveVineOf(true, nextRandom(seed) % 100u < 11u));
+                }
+                continue;
+            }
+        }
+
+        {
             const BlockId spore = world.getBlock(x, y, z);
             if (isMushroom(spore))
             {

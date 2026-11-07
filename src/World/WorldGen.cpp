@@ -742,6 +742,23 @@ void WorldGen::dressCaves(Chunk& chunk) const
 
             const CaveKind kind = caveKindAt(wx, wz);
             const int top = std::min(surfaceHeight(wx, wz) - 3, Chunk::SY - 2);
+            if (kind != CaveKind::Lush && hashToFloat(hashCoords(wx, 2, wz, m_seed + 7705)) < 0.04f)
+            {
+                for (int y = 8; y <= top; ++y)
+                {
+                    if (chunk.getBlock(lx, y, lz) != Blocks::Air) continue;
+                    if (y + 1 < Chunk::SY && isOpaque(chunk.getBlock(lx, y + 1, lz)))
+                    {
+                        chunk.setBlockRaw(lx, y, lz, glowLichenOn(1));
+                        break;
+                    }
+                    if (lx > 0 && isOpaque(chunk.getBlock(lx - 1, y, lz)))
+                    {
+                        chunk.setBlockRaw(lx, y, lz, glowLichenOn(5));
+                        break;
+                    }
+                }
+            }
             if (kind == CaveKind::Plain)
             {
                 if (hashToFloat(hashCoords(wx, 1, wz, m_seed + 7701)) > 0.05f) continue;
@@ -788,8 +805,30 @@ void WorldGen::dressCaves(Chunk& chunk) const
                     // Moss underfoot, azalea overhead, and the berries
                     // that are the only light down here that nobody
                     // had to carry in.
+                    const float pick = hashToFloat(hashCoords(wx, y, wz, m_seed + 7703));
                     if (floor && roll < 0.55f)
+                    {
                         chunk.setBlockRaw(lx, y - 1, lz, Blocks::Moss);
+                        if (pick < 0.18f) chunk.setBlockRaw(lx, y, lz, Blocks::MossCarpet);
+                        else if (pick < 0.22f) chunk.setBlockRaw(lx, y, lz, (wx + wz) % 3 ? Blocks::Azalea : Blocks::FloweringAzalea);
+                        else if (pick < 0.25f) chunk.setBlockRaw(lx, y, lz, Blocks::TallGrass);
+                        else if (pick < 0.27f && chunk.getBlock(lx, y + 1, lz) == Blocks::Air)
+                        {
+                            const int facing = static_cast<int>(pick * 400.0f) & 3;
+                            chunk.setBlockRaw(lx, y, lz, smallDripleafOf(facing, false));
+                            chunk.setBlockRaw(lx, y + 1, lz, smallDripleafOf(facing, true));
+                        }
+                        else if (pick < 0.29f)
+                        {
+                            const int facing = static_cast<int>(pick * 400.0f) & 3;
+                            int stem = 0;
+                            while (stem < 3 && y + stem + 2 < Chunk::SY && chunk.getBlock(lx, y + stem + 1, lz) == Blocks::Air &&
+                                   chunk.getBlock(lx, y + stem + 2, lz) == Blocks::Air)
+                                ++stem;
+                            for (int k = 0; k < stem; ++k) chunk.setBlockRaw(lx, y + k, lz, bigDripleafStemOf(facing));
+                            chunk.setBlockRaw(lx, y + stem, lz, bigDripleafOf(facing, DripleafTilt::None));
+                        }
+                    }
                     if (roof && roll > 0.62f)
                         chunk.setBlockRaw(lx, y + 1, lz, Blocks::AzaleaLeaves);
                     else if (roof && roll > 0.56f)
@@ -800,7 +839,22 @@ void WorldGen::dressCaves(Chunk& chunk) const
                     }
 
                     if (roof && roll > 0.90f)
-                        chunk.setBlockRaw(lx, y, lz, Blocks::GlowBerries);
+                    {
+                        int length = 1 + static_cast<int>(pick * 5.0f);
+                        int k = 0;
+                        for (; k < length && y - k > 1 && chunk.getBlock(lx, y - k, lz) == Blocks::Air; ++k)
+                        {
+                            const bool lit = hashToFloat(hashCoords(wx, y - k, wz, m_seed + 7704)) < 0.35f;
+                            chunk.setBlockRaw(lx, y - k, lz, caveVineOf(false, lit));
+                        }
+                        if (k > 0)
+                        {
+                            const BlockId last = chunk.getBlock(lx, y - k + 1, lz);
+                            chunk.setBlockRaw(lx, y - k + 1, lz, caveVineOf(true, caveVineLit(last)));
+                        }
+                    }
+                    else if (roof && roll > 0.875f && roll <= 0.90f)
+                        chunk.setBlockRaw(lx, y, lz, Blocks::SporeBlossom);
                 }
             }
         }
@@ -2860,6 +2914,32 @@ void WorldGen::decorate(Chunk& chunk) const
             // forest, oak and birch everywhere else.
             const Biome here = biomeAt(wx, wz);
             const float roll = hashToFloat(hashCoords(wx, 8, wz, m_seed + 4243));
+
+            if (caveKindAt(wx, wz) == CaveKind::Lush && (here == Biome::Forest || here == Biome::Plains || here == Biome::Jungle ||
+                                                          here == Biome::Savanna || here == Biome::CherryGrove) &&
+                roll < 0.25f)
+            {
+                struct LocalCells : Saplings::Cells
+                {
+                    Chunk* chunk = nullptr;
+                    int baseX = 0, baseZ = 0;
+                    BlockId at(int x, int y, int z) const override
+                    {
+                        const int lx = x - baseX, lz = z - baseZ;
+                        return Chunk::inBounds(lx, y, lz) ? chunk->getBlock(lx, y, lz) : Blocks::Air;
+                    }
+                    void set(int x, int y, int z, BlockId id) override
+                    {
+                        const int lx = x - baseX, lz = z - baseZ;
+                        if (Chunk::inBounds(lx, y, lz)) chunk->setBlockRaw(lx, y, lz, id);
+                    }
+                } cells;
+                cells.chunk = &chunk;
+                cells.baseX = baseX;
+                cells.baseZ = baseZ;
+                Saplings::azaleaTree(cells, glm::ivec3(wx, surface + 1, wz), hashCoords(wx, 10, wz, m_seed + 4245), true);
+                continue;
+            }
 
             if (here == Biome::MushroomFields)
             {

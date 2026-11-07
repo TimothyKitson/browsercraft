@@ -247,6 +247,7 @@ private:
     float m_bubbleClock = 0.0f;
     struct TimedBlock { glm::ivec3 at; BlockId expect; BlockId then; float left; };
     std::vector<TimedBlock> m_timedBlocks;
+    std::vector<std::pair<glm::ivec3, float>> m_tiltingLeaves;
     std::vector<glm::vec3> m_boltPoints;
     float m_boltLeft = 0.0f;
     void strikeLightning();

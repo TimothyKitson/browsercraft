@@ -247,6 +247,11 @@ int flatIconFor(BlockId id)
         }
     }
     if (isFlowerPot(id)) return Tiles::ItemFlowerPot;
+    if (isBigDripleaf(id)) return Tiles::BigDripleafTopTile;
+    if (isSmallDripleaf(id)) return Tiles::SmallDripleafTopTile;
+    if (isGlowLichen(id)) return Tiles::GlowLichenTile;
+    if (id == Blocks::SporeBlossom) return Tiles::SporeBlossomTile;
+    if (isAzaleaBush(id)) return blockInfo(id).tileSide;
     if (isDoor(id))
     {
         static const int ICONS[WOOD_COUNT] = { Tiles::IconOakDoor, Tiles::IconSpruceDoor, Tiles::IconBirchDoor,
@@ -346,6 +351,10 @@ StackId blockDrop(BlockId id)
     if (id == Blocks::RedMushroomBlock) return Blocks::RedMushroom;
     if (id == Blocks::MushroomStem) return Blocks::Air;
     if (id == Blocks::Mycelium || id == Blocks::Podzol) return Blocks::Dirt;
+    if (isCaveVine(id)) return caveVineLit(id) ? Items::GlowBerries : Blocks::Air;
+    if (isBigDripleaf(id) || isBigDripleafStem(id)) return bigDripleafOf(0, DripleafTilt::None);
+    if (isSmallDripleaf(id)) return smallDripleafOf(0, false);
+    if (isGlowLichen(id)) return glowLichenOn(0);
     if (isEnderChest(id)) return Blocks::Obsidian;
     if (isTrappedChest(id)) return chestOf(1, 2, 0);
     if (isChestFamily(id)) return Blocks::Chest;

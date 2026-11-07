@@ -4820,6 +4820,114 @@ namespace
             for (int y = 0; y < length; ++y) t.set(x + (y % 5 == 4 ? 1 : 0), y, Color{ 160, 118, 84 });
         }
     }
+    void paintVineIn(Tile& t, bool lit, bool head)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 0; y < (head ? 12 : Tile::N); ++y)
+        {
+            t.set(7 + (y / 4) % 2, y, Color{ 74, 112, 42 });
+            if (y % 5 == 2) { t.set(6, y, Color{ 92, 138, 50 }); t.set(9, y, Color{ 92, 138, 50 }); }
+        }
+        if (lit)
+            for (int k = 0; k < 3; ++k)
+            {
+                const int y = 3 + k * 4;
+                t.set(5, y, Color{ 255, 170, 60 }); t.set(10, y + 2, Color{ 255, 190, 80 });
+            }
+    }
+    void paintCaveVinesTile(Tile& t) { paintVineIn(t, false, true); }
+    void paintCaveVinesLitTile(Tile& t) { paintVineIn(t, true, true); }
+    void paintCaveVinesPlantTile(Tile& t) { paintVineIn(t, false, false); }
+    void paintSporeBlossomTile(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 0; y < Tile::N; ++y)
+            for (int x = 0; x < Tile::N; ++x)
+            {
+                const float d = std::sqrt((x - 7.5f) * (x - 7.5f) + (y - 7.5f) * (y - 7.5f));
+                const float a = std::atan2(y - 7.5f, x - 7.5f);
+                if (d < 7.0f && std::cos(a * 4.0f) > 0.2f - d * 0.04f)
+                    t.set(x, y, d < 2.5f ? Color{ 120, 180, 60 } : shade(Color{ 230, 110, 170 }, static_cast<int>((hash2(x, y, 1501) - 0.5f) * 30.0f)));
+            }
+    }
+    void paintSporeBlossomBaseTile(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 4; y < 12; ++y)
+            for (int x = 4; x < 12; ++x) t.set(x, y, shade(Color{ 96, 150, 56 }, static_cast<int>((hash2(x, y, 1502) - 0.5f) * 24.0f)));
+    }
+    void paintBigDripleafStemTile(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 0; y < Tile::N; ++y) { t.set(7, y, Color{ 90, 132, 48 }); t.set(8, y, Color{ 76, 116, 40 }); }
+    }
+    void paintBigDripleafTopTile(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 0; y < Tile::N; ++y)
+            for (int x = 0; x < Tile::N; ++x)
+                if ((x - 7.5f) * (x - 7.5f) + (y - 7.5f) * (y - 7.5f) < 62.0f)
+                    t.set(x, y, (std::abs(x - y) < 1 || std::abs(x + y - 15) < 1) ? Color{ 90, 140, 50 } : shade(Color{ 110, 168, 58 }, static_cast<int>((hash2(x, y, 1503) - 0.5f) * 20.0f)));
+    }
+    void paintBigDripleafSideTile(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int x = 0; x < Tile::N; ++x) { t.set(x, 0, Color{ 96, 150, 52 }); t.set(x, 1, Color{ 82, 130, 46 }); }
+    }
+    void paintBigDripleafTipTile(Tile& t) { paintBigDripleafSideTile(t); }
+    void paintSmallDripleafStemBottomTile(Tile& t) { paintBigDripleafStemTile(t); }
+    void paintSmallDripleafStemTopTile(Tile& t)
+    {
+        paintBigDripleafStemTile(t);
+        for (int y = 0; y < 8; ++y) t.set(7 + y % 2, y, Color{ 0, 0, 0, 0 });
+    }
+    void paintSmallDripleafTopTile(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 2; y < 14; ++y)
+            for (int x = 2; x < 14; ++x)
+                if (std::abs(x - 7.5f) + std::abs(y - 7.5f) < 7.0f) t.set(x, y, shade(Color{ 106, 162, 56 }, static_cast<int>((hash2(x, y, 1504) - 0.5f) * 20.0f)));
+    }
+    void paintSmallDripleafSideTile(Tile& t) { paintBigDripleafSideTile(t); }
+    void paintAzaleaTopIn(Tile& t, bool flowering)
+    {
+        t.fill(Color{ 92, 128, 48 });
+        t.speckle(16, flowering ? 1505 : 1506);
+        if (flowering)
+            for (int k = 0; k < 10; ++k)
+                t.set(static_cast<int>(hash2(k, 0, 1507) * 16.0f), static_cast<int>(hash2(k, 1, 1507) * 16.0f), Color{ 214, 120, 196 });
+    }
+    void paintAzaleaSideIn(Tile& t, bool flowering)
+    {
+        paintAzaleaTopIn(t, flowering);
+        for (int y = 8; y < Tile::N; ++y)
+            for (int x = 0; x < Tile::N; ++x) t.set(x, y, Color{ 0, 0, 0, 0 });
+        for (int x = 0; x < Tile::N; x += 3) t.set(x, 8, Color{ 82, 118, 44 });
+    }
+    void paintAzaleaTopTile(Tile& t) { paintAzaleaTopIn(t, false); }
+    void paintAzaleaSideTile(Tile& t) { paintAzaleaSideIn(t, false); }
+    void paintFloweringAzaleaTopTile(Tile& t) { paintAzaleaTopIn(t, true); }
+    void paintFloweringAzaleaSideTile(Tile& t) { paintAzaleaSideIn(t, true); }
+    void paintAzaleaPlantTile(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 6; y < Tile::N; ++y) t.set(7 + (y % 4 == 0 ? 1 : 0), y, Color{ 110, 86, 52 });
+        for (int k = 0; k < 4; ++k) { t.set(6 - k, 9 - k, Color{ 110, 86, 52 }); t.set(9 + k, 10 - k, Color{ 110, 86, 52 }); }
+    }
+    void paintFloweringAzaleaLeavesTile(Tile& t)
+    {
+        paintAzaleaTopIn(t, true);
+        for (int k = 0; k < 12; ++k)
+            t.set(static_cast<int>(hash2(k, 2, 1508) * 16.0f), static_cast<int>(hash2(k, 3, 1508) * 16.0f), Color{ 0, 0, 0, 0 });
+    }
+    void paintGlowLichenTile(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 0; y < Tile::N; ++y)
+            for (int x = 0; x < Tile::N; ++x)
+                if (hash2(x / 2, y / 2, 1509) > 0.55f)
+                    t.set(x, y, hash2(x, y, 1510) > 0.8f ? Color{ 200, 236, 196 } : Color{ 112, 156, 128 });
+    }
     void paintItemPitcherPlant(Tile& t)
     {
         paintDoubleIn(t, true, Color{ 100, 170, 190 }, 1333);
@@ -7569,6 +7677,26 @@ namespace
         { Tiles::DustLine1Off, paintRedstoneDust },
         { Tiles::DustLine1On, paintRedstoneDustLit },
         { Tiles::LeverHandle, paintLever },
+        { Tiles::CaveVinesTile, paintCaveVinesTile },
+        { Tiles::CaveVinesLitTile, paintCaveVinesLitTile },
+        { Tiles::CaveVinesPlantTile, paintCaveVinesPlantTile },
+        { Tiles::SporeBlossomTile, paintSporeBlossomTile },
+        { Tiles::SporeBlossomBaseTile, paintSporeBlossomBaseTile },
+        { Tiles::BigDripleafStemTile, paintBigDripleafStemTile },
+        { Tiles::BigDripleafTopTile, paintBigDripleafTopTile },
+        { Tiles::BigDripleafSideTile, paintBigDripleafSideTile },
+        { Tiles::BigDripleafTipTile, paintBigDripleafTipTile },
+        { Tiles::SmallDripleafStemBottomTile, paintSmallDripleafStemBottomTile },
+        { Tiles::SmallDripleafStemTopTile, paintSmallDripleafStemTopTile },
+        { Tiles::SmallDripleafTopTile, paintSmallDripleafTopTile },
+        { Tiles::SmallDripleafSideTile, paintSmallDripleafSideTile },
+        { Tiles::AzaleaTopTile, paintAzaleaTopTile },
+        { Tiles::AzaleaSideTile, paintAzaleaSideTile },
+        { Tiles::AzaleaPlantTile, paintAzaleaPlantTile },
+        { Tiles::FloweringAzaleaTopTile, paintFloweringAzaleaTopTile },
+        { Tiles::FloweringAzaleaSideTile, paintFloweringAzaleaSideTile },
+        { Tiles::FloweringAzaleaLeavesTile, paintFloweringAzaleaLeavesTile },
+        { Tiles::GlowLichenTile, paintGlowLichenTile },
         { Tiles::BrownMushroomTile, paintBrownMushroomTile },
         { Tiles::RedMushroomTile, paintRedMushroomTile },
         { Tiles::BrownMushroomBlockTile, paintBrownMushroomBlockTile },
@@ -8257,6 +8385,26 @@ namespace
         { Tiles::GlassPaneTopTile, { "glass_pane_top", nullptr }, Tinting::None, 0, false },
         { Tiles::TerracottaPlainTile, { "terracotta", "hardened_clay", nullptr }, Tinting::None, 0, false },
         { Tiles::TintedGlassTile, { "tinted_glass", nullptr }, Tinting::None, 0, false },
+        { Tiles::CaveVinesTile, { "cave_vines", nullptr }, Tinting::None, 0, false },
+        { Tiles::CaveVinesLitTile, { "cave_vines_lit", nullptr }, Tinting::None, 0, false },
+        { Tiles::CaveVinesPlantTile, { "cave_vines_plant", nullptr }, Tinting::None, 0, false },
+        { Tiles::SporeBlossomTile, { "spore_blossom", nullptr }, Tinting::None, 0, false },
+        { Tiles::SporeBlossomBaseTile, { "spore_blossom_base", nullptr }, Tinting::None, 0, false },
+        { Tiles::BigDripleafStemTile, { "big_dripleaf_stem", nullptr }, Tinting::None, 0, false },
+        { Tiles::BigDripleafTopTile, { "big_dripleaf_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::BigDripleafSideTile, { "big_dripleaf_side", nullptr }, Tinting::None, 0, false },
+        { Tiles::BigDripleafTipTile, { "big_dripleaf_tip", nullptr }, Tinting::None, 0, false },
+        { Tiles::SmallDripleafStemBottomTile, { "small_dripleaf_stem_bottom", nullptr }, Tinting::None, 0, false },
+        { Tiles::SmallDripleafStemTopTile, { "small_dripleaf_stem_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::SmallDripleafTopTile, { "small_dripleaf_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::SmallDripleafSideTile, { "small_dripleaf_side", nullptr }, Tinting::None, 0, false },
+        { Tiles::AzaleaTopTile, { "azalea_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::AzaleaSideTile, { "azalea_side", nullptr }, Tinting::None, 0, false },
+        { Tiles::AzaleaPlantTile, { "azalea_plant", nullptr }, Tinting::None, 0, false },
+        { Tiles::FloweringAzaleaTopTile, { "flowering_azalea_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::FloweringAzaleaSideTile, { "flowering_azalea_side", nullptr }, Tinting::None, 0, false },
+        { Tiles::FloweringAzaleaLeavesTile, { "flowering_azalea_leaves", nullptr }, Tinting::None, 0, false },
+        { Tiles::GlowLichenTile, { "glow_lichen", nullptr }, Tinting::None, 0, false },
         { Tiles::BrownMushroomTile, { "brown_mushroom", nullptr }, Tinting::None, 0, false },
         { Tiles::RedMushroomTile, { "red_mushroom", nullptr }, Tinting::None, 0, false },
         { Tiles::BrownMushroomBlockTile, { "brown_mushroom_block", nullptr }, Tinting::None, 0, false },

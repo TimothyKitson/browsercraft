@@ -365,3 +365,36 @@ bool Saplings::hugeMushroom(Cells& cells, const glm::ivec3& at, bool red, uint32
     }
     return true;
 }
+
+bool Saplings::azaleaTree(Cells& cells, const glm::ivec3& at, uint32_t seed, bool force)
+{
+    const int height = 4 + static_cast<int>(seed % 2u);
+    auto open = [&](int x, int y, int z) {
+        const BlockId here = cells.at(x, y, z);
+        return here == Blocks::Air || isLeaves(here) || isWildPlant(here);
+    };
+    if (!force)
+    {
+        if (!canPlantOn(cells.at(at.x, at.y - 1, at.z))) return false;
+        for (int dy = 1; dy <= height + 1; ++dy)
+            if (!open(at.x, at.y + dy, at.z)) return false;
+    }
+    cells.set(at.x, at.y - 1, at.z, Blocks::RootedDirt);
+    for (int dy = 0; dy < height; ++dy) cells.set(at.x, at.y + dy, at.z, Blocks::Log);
+    uint32_t roll = seed * 2654435761u + 7u;
+    auto next = [&roll]() { roll = roll * 1664525u + 1013904223u; return (roll >> 8) & 0xFFFFu; };
+    for (int dy = height - 2; dy <= height; ++dy)
+    {
+        const int reach = dy == height ? 1 : 2;
+        for (int dx = -reach; dx <= reach; ++dx)
+            for (int dz = -reach; dz <= reach; ++dz)
+            {
+                if (std::abs(dx) == reach && std::abs(dz) == reach && next() % 3u != 0u) continue;
+                const glm::ivec3 p(at.x + dx, at.y + dy, at.z + dz);
+                if (!open(p.x, p.y, p.z)) continue;
+                if (dx == 0 && dz == 0 && dy < height) continue;
+                cells.set(p.x, p.y, p.z, next() % 4u == 0u ? Blocks::FloweringAzaleaLeaves : Blocks::AzaleaLeaves);
+            }
+    }
+    return true;
+}

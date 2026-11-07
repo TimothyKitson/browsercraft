@@ -203,7 +203,7 @@ namespace
         { "Pointed Dripstone",DripstoneSpike,DripstoneSpike,DripstoneSpike,false,false, RenderType::Cross,  0,   0.5f },
         { "Moss Block",   MossTile,      MossTile,       MossTile,       true,  true,  RenderType::Cube,   0,   0.1f },
         { "Azalea Leaves",AzaleaLeavesTile,AzaleaLeavesTile,AzaleaLeavesTile,true,false,RenderType::Cube,   0,   0.2f },
-        { "Glow Berries", GlowBerriesTile,GlowBerriesTile,GlowBerriesTile,false, false, RenderType::Cross, 14,   0.0f },
+        { "Cave Vines",   GlowBerriesTile,GlowBerriesTile,GlowBerriesTile,false, false, RenderType::Cross, 14,   0.0f },
         { "Ominous Vault",VaultTopOminous,VaultBottomOminous,VaultSideOffOminous,true, true,  RenderType::Cube,   6,  -1.0f, OminousVaultSide },
         { "Ominous Vault",VaultTopOminous,VaultBottomOminous,VaultSideOnOminous,true,true,RenderType::Cube,  10,  -1.0f, OminousVaultSideOpen },
         { "Monster Spawner",SpawnerTile, SpawnerTile,    SpawnerTile,    true,  false, RenderType::Cube,   1,   5.0f },
@@ -1797,6 +1797,50 @@ namespace
         { "Coarse Dirt", CoarseDirtTile, CoarseDirtTile, CoarseDirtTile, true, true, RenderType::Cube, 0, 0.5f },
         { "Rooted Dirt", RootedDirtTile, RootedDirtTile, RootedDirtTile, true, true, RenderType::Cube, 0, 0.5f },
         { "Hanging Roots", HangingRootsTile, HangingRootsTile, HangingRootsTile, false, false, RenderType::Cross, 0, 0.0f },
+        { "Cave Vines", CaveVinesTile, CaveVinesTile, CaveVinesTile, false, false, RenderType::Cross, 0, 0.0f },
+        { "Cave Vines", CaveVinesLitTile, CaveVinesLitTile, CaveVinesLitTile, false, false, RenderType::Cross, 14, 0.0f },
+        { "Cave Vines", CaveVinesPlantTile, CaveVinesPlantTile, CaveVinesPlantTile, false, false, RenderType::Cross, 0, 0.0f },
+        { "Spore Blossom", SporeBlossomTile, SporeBlossomBaseTile, SporeBlossomTile, false, false, RenderType::Lush, 0, 0.0f },
+        { "Big Dripleaf", BigDripleafStemTile, BigDripleafStemTile, BigDripleafStemTile, false, false, RenderType::Lush, 0, 0.1f },
+        { "Big Dripleaf", BigDripleafStemTile, BigDripleafStemTile, BigDripleafStemTile, false, false, RenderType::Lush, 0, 0.1f },
+        { "Big Dripleaf", BigDripleafStemTile, BigDripleafStemTile, BigDripleafStemTile, false, false, RenderType::Lush, 0, 0.1f },
+        { "Big Dripleaf", BigDripleafStemTile, BigDripleafStemTile, BigDripleafStemTile, false, false, RenderType::Lush, 0, 0.1f },
+        { "Big Dripleaf", BigDripleafTopTile, BigDripleafStemTile, BigDripleafSideTile, true, false, RenderType::Lush, 0, 0.1f },
+        { "Big Dripleaf", BigDripleafTopTile, BigDripleafStemTile, BigDripleafSideTile, true, false, RenderType::Lush, 0, 0.1f },
+        { "Big Dripleaf", BigDripleafTopTile, BigDripleafStemTile, BigDripleafSideTile, true, false, RenderType::Lush, 0, 0.1f },
+        { "Big Dripleaf", BigDripleafTopTile, BigDripleafStemTile, BigDripleafSideTile, true, false, RenderType::Lush, 0, 0.1f },
+        { "Big Dripleaf", BigDripleafTopTile, BigDripleafStemTile, BigDripleafSideTile, true, false, RenderType::Lush, 0, 0.1f },
+        { "Big Dripleaf", BigDripleafTopTile, BigDripleafStemTile, BigDripleafSideTile, true, false, RenderType::Lush, 0, 0.1f },
+        { "Big Dripleaf", BigDripleafTopTile, BigDripleafStemTile, BigDripleafSideTile, true, false, RenderType::Lush, 0, 0.1f },
+        { "Big Dripleaf", BigDripleafTopTile, BigDripleafStemTile, BigDripleafSideTile, true, false, RenderType::Lush, 0, 0.1f },
+        { "Big Dripleaf", BigDripleafTopTile, BigDripleafStemTile, BigDripleafSideTile, true, false, RenderType::Lush, 0, 0.1f },
+        { "Big Dripleaf", BigDripleafTopTile, BigDripleafStemTile, BigDripleafSideTile, true, false, RenderType::Lush, 0, 0.1f },
+        { "Big Dripleaf", BigDripleafTopTile, BigDripleafStemTile, BigDripleafSideTile, true, false, RenderType::Lush, 0, 0.1f },
+        { "Big Dripleaf", BigDripleafTopTile, BigDripleafStemTile, BigDripleafSideTile, true, false, RenderType::Lush, 0, 0.1f },
+        { "Big Dripleaf", BigDripleafTopTile, BigDripleafStemTile, BigDripleafSideTile, true, false, RenderType::Lush, 0, 0.1f },
+        { "Big Dripleaf", BigDripleafTopTile, BigDripleafStemTile, BigDripleafSideTile, true, false, RenderType::Lush, 0, 0.1f },
+        { "Big Dripleaf", BigDripleafTopTile, BigDripleafStemTile, BigDripleafSideTile, true, false, RenderType::Lush, 0, 0.1f },
+        { "Big Dripleaf", BigDripleafTopTile, BigDripleafStemTile, BigDripleafSideTile, true, false, RenderType::Lush, 0, 0.1f },
+        { "Small Dripleaf", SmallDripleafStemBottomTile, SmallDripleafStemBottomTile, SmallDripleafStemBottomTile, false, false, RenderType::Lush, 0, 0.0f },
+        { "Small Dripleaf", SmallDripleafTopTile, SmallDripleafStemTopTile, SmallDripleafSideTile, false, false, RenderType::Lush, 0, 0.0f },
+        { "Small Dripleaf", SmallDripleafStemBottomTile, SmallDripleafStemBottomTile, SmallDripleafStemBottomTile, false, false, RenderType::Lush, 0, 0.0f },
+        { "Small Dripleaf", SmallDripleafTopTile, SmallDripleafStemTopTile, SmallDripleafSideTile, false, false, RenderType::Lush, 0, 0.0f },
+        { "Small Dripleaf", SmallDripleafStemBottomTile, SmallDripleafStemBottomTile, SmallDripleafStemBottomTile, false, false, RenderType::Lush, 0, 0.0f },
+        { "Small Dripleaf", SmallDripleafTopTile, SmallDripleafStemTopTile, SmallDripleafSideTile, false, false, RenderType::Lush, 0, 0.0f },
+        { "Small Dripleaf", SmallDripleafStemBottomTile, SmallDripleafStemBottomTile, SmallDripleafStemBottomTile, false, false, RenderType::Lush, 0, 0.0f },
+        { "Small Dripleaf", SmallDripleafTopTile, SmallDripleafStemTopTile, SmallDripleafSideTile, false, false, RenderType::Lush, 0, 0.0f },
+        { "Azalea", AzaleaTopTile, AzaleaPlantTile, AzaleaSideTile, true, false, RenderType::Lush, 0, 0.0f },
+        { "Flowering Azalea", FloweringAzaleaTopTile, AzaleaPlantTile, FloweringAzaleaSideTile, true, false, RenderType::Lush, 0, 0.0f },
+        { "Flowering Azalea Leaves", FloweringAzaleaLeavesTile, FloweringAzaleaLeavesTile, FloweringAzaleaLeavesTile, true, false, RenderType::Cube, 0, 0.2f },
+        { "Glow Lichen", GlowLichenTile, GlowLichenTile, GlowLichenTile, false, false, RenderType::Lush, 7, 0.2f },
+        { "Glow Lichen", GlowLichenTile, GlowLichenTile, GlowLichenTile, false, false, RenderType::Lush, 7, 0.2f },
+        { "Glow Lichen", GlowLichenTile, GlowLichenTile, GlowLichenTile, false, false, RenderType::Lush, 7, 0.2f },
+        { "Glow Lichen", GlowLichenTile, GlowLichenTile, GlowLichenTile, false, false, RenderType::Lush, 7, 0.2f },
+        { "Glow Lichen", GlowLichenTile, GlowLichenTile, GlowLichenTile, false, false, RenderType::Lush, 7, 0.2f },
+        { "Glow Lichen", GlowLichenTile, GlowLichenTile, GlowLichenTile, false, false, RenderType::Lush, 7, 0.2f },
+        { "Moss Carpet", MossTile, MossTile, MossTile, false, false, RenderType::Lush, 0, 0.1f },
+        { "Potted Azalea", FlowerPotTile, FlowerPotTile, FlowerPotTile, true, false, RenderType::Pot, 0, 0.0f },
+        { "Potted Flowering Azalea", FlowerPotTile, FlowerPotTile, FlowerPotTile, true, false, RenderType::Pot, 0, 0.0f },
     };
 }
 
@@ -1874,6 +1918,10 @@ bool isObtainable(BlockId id)
             if (id == Blocks::Bed) return false;
             if (isDoublePlant(id) && doublePlantUpper(id)) return false;
             if (isPitcherCrop(id) || isTorchflowerCrop(id) || isPotted(id)) return false;
+            if (isCaveVine(id) || isBigDripleafStem(id) || smallDripleafUpper(id)) return false;
+            if (isBigDripleaf(id) && id != bigDripleafOf(0, DripleafTilt::None)) return false;
+            if (isSmallDripleaf(id) && id != smallDripleafOf(0, false)) return false;
+            if (isGlowLichen(id) && id != glowLichenOn(0)) return false;
             if (isCopperBulb(id) && copperForm(id).state != 0) return false;
             if (isLightningRod(id) && id != lightningRodOf(0, false)) return false;
             if (isChestFamily(id) && id != Blocks::Chest && id != chestOf(chestState(id).kind, 2, 0)) return false;
@@ -2235,6 +2283,9 @@ bool blockOverlaps(BlockId id, int bx, int by, int bz,
 
     if (isColourBed(id)) return overlaps(0.0f, 0.0f, 0.0f, 1.0f, 0.5625f, 1.0f);
     if (isFlowerPot(id)) return overlaps(0.3125f, 0.0f, 0.3125f, 0.6875f, 0.375f, 0.6875f);
+    if (isBigDripleaf(id))
+        return dripleafTilt(id) != DripleafTilt::Full && overlaps(0.0f, 0.6875f, 0.0f, 1.0f, 0.9375f, 1.0f);
+    if (isAzaleaBush(id)) return overlaps(0.0f, 0.5f, 0.0f, 1.0f, 1.0f, 1.0f) || overlaps(0.375f, 0.0f, 0.375f, 0.625f, 0.5f, 0.625f);
     if (isChestFamily(id)) return overlaps(0.0625f, 0.0f, 0.0625f, 0.9375f, 0.875f, 0.9375f);
     if (isLightningRod(id))
     {
@@ -2390,12 +2441,16 @@ namespace
 
 BlockId pottedPlant(BlockId pot)
 {
+    if (pot == Blocks::PottedAzalea) return Blocks::Azalea;
+    if (pot == Blocks::PottedFloweringAzalea) return Blocks::FloweringAzalea;
     if (!isPotted(pot)) return Blocks::Air;
     return POTTABLE[pot - Blocks::PottedFirst];
 }
 
 BlockId pottedOf(BlockId plant)
 {
+    if (plant == Blocks::Azalea) return Blocks::PottedAzalea;
+    if (plant == Blocks::FloweringAzalea) return Blocks::PottedFloweringAzalea;
     for (int i = 0; i < 32; ++i)
         if (POTTABLE[i] == plant) return static_cast<BlockId>(Blocks::PottedFirst + i);
     return Blocks::Air;

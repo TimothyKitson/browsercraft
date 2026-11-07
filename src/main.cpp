@@ -797,6 +797,10 @@ namespace
                                                   why = "a pitcher pod sown and grown";
             else if (id == Blocks::WitherRose)    why = "where something dies near the wither";
             else if (isPotted(id))                why = "a plant set in a flower pot";
+            else if (isCaveVine(id))              why = "a cave vine growing on, with or without berries";
+            else if (isBigDripleaf(id) || isBigDripleafStem(id) || isSmallDripleaf(id))
+                                                  why = "another facing, tilt or half of a dripleaf";
+            else if (isGlowLichen(id))            why = "glow lichen on another face";
             else if (isDoublePlant(id))           why = "the top half of a tall plant, or bone meal on grass or fern";
             else if (id == Blocks::SmokerLit || id == Blocks::BlastFurnaceLit)
                                                   why = "a furnace that is burning";

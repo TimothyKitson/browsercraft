@@ -12019,6 +12019,65 @@ namespace
         check(Saplings::leafDrop(Blocks::Stone, 0u) == Blocks::Air, "stone gives none");
     }
 
+    void testLushPlants()
+    {
+        section("lush cave plants");
+        check(caveVineOf(true, true) == Blocks::CaveVinesLit && caveVineOf(false, true) == Blocks::GlowBerries &&
+                  caveVineOf(false, false) == Blocks::CaveVinesPlant && caveVineOf(true, false) == Blocks::CaveVines,
+              "a cave vine is a head or a stalk, with berries or without");
+        check(blockDrop(Blocks::CaveVinesLit) == Items::GlowBerries && blockDrop(Blocks::CaveVinesPlant) == Blocks::Air,
+              "only a vine with berries gives any");
+        check(blockInfo(Blocks::CaveVinesLit).lightEmission == 14 && blockInfo(Blocks::CaveVines).lightEmission == 0,
+              "and only the berries glow");
+        bool leaves = true;
+        for (int facing = 0; facing < 4; ++facing)
+            for (int tilt = 0; tilt < 4; ++tilt)
+            {
+                const BlockId leaf = bigDripleafOf(facing, static_cast<DripleafTilt>(tilt));
+                if (!isBigDripleaf(leaf) || dripleafFacing(leaf) != facing || static_cast<int>(dripleafTilt(leaf)) != tilt) leaves = false;
+                if (blockDrop(leaf) != bigDripleafOf(0, DripleafTilt::None)) leaves = false;
+            }
+        check(leaves, "a big dripleaf faces four ways and tilts four ways");
+        check(blockOverlaps(bigDripleafOf(1, DripleafTilt::Partial), 0, 0, 0, 0.2f, 0.7f, 0.2f, 0.8f, 0.9f, 0.8f) &&
+                  !blockOverlaps(bigDripleafOf(1, DripleafTilt::Full), 0, 0, 0, 0.2f, 0.7f, 0.2f, 0.8f, 0.9f, 0.8f),
+              "you can stand on a leaf until it tips right over");
+        check(smallDripleafUpper(smallDripleafOf(2, true)) && !smallDripleafUpper(smallDripleafOf(2, false)) &&
+                  dripleafFacing(smallDripleafOf(2, true)) == 2,
+              "a small dripleaf is two blocks");
+        for (int face = 0; face < 6; ++face)
+            check(isGlowLichen(glowLichenOn(face)) && glowLichenFace(glowLichenOn(face)) == face &&
+                      blockInfo(glowLichenOn(face)).lightEmission == 7,
+                  "glow lichen on face " + std::to_string(face) + " glows");
+        check(pottedOf(Blocks::Azalea) == Blocks::PottedAzalea && pottedPlant(Blocks::PottedFloweringAzalea) == Blocks::FloweringAzalea,
+              "azaleas go in pots");
+        struct Plot : Saplings::Cells
+        {
+            std::map<std::tuple<int, int, int>, BlockId> cells;
+            BlockId at(int x, int y, int z) const override
+            {
+                const auto found = cells.find({ x, y, z });
+                if (found != cells.end()) return found->second;
+                return y < 64 ? Blocks::Grass : Blocks::Air;
+            }
+            void set(int x, int y, int z, BlockId id) override { cells[{ x, y, z }] = id; }
+        };
+        Plot plot;
+        check(Saplings::azaleaTree(plot, glm::ivec3(0, 64, 0), 5u), "an azalea grows into a tree");
+        check(plot.at(0, 63, 0) == Blocks::RootedDirt && plot.at(0, 64, 0) == Blocks::Log, "with rooted dirt under its trunk");
+        int flowering = 0, plain = 0;
+        for (const auto& cell : plot.cells)
+        {
+            if (cell.second == Blocks::FloweringAzaleaLeaves) ++flowering;
+            if (cell.second == Blocks::AzaleaLeaves) ++plain;
+        }
+        check(plain > 0 && flowering > 0, "and leaves of both kinds");
+        ItemStack carpet[9];
+        carpet[0] = ItemStack{ Blocks::Moss, 1 };
+        carpet[1] = ItemStack{ Blocks::Moss, 1 };
+        check(Crafting::match(carpet, 3).id == Blocks::MossCarpet && Crafting::match(carpet, 3).count == 3,
+              "two moss make three carpets");
+    }
+
     void testMushrooms()
     {
         section("mushrooms, huge mushrooms and the dirt kinds");
@@ -13384,6 +13443,7 @@ int runSelfTest()
     testCopperSet();
     testPlants();
     testMushrooms();
+    testLushPlants();
     testTheTablesTake121sPrices();
 
     std::printf("\n%d checks, %d failed\n", g_checks, g_failures);

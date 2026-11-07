@@ -603,6 +603,15 @@ namespace Blocks
         PottedFirst, PottedLast = PottedFirst + 31,
         BrownMushroom, RedMushroom, BrownMushroomBlock, RedMushroomBlock, MushroomStem,
         Mycelium, Podzol, CoarseDirt, RootedDirt, HangingRoots,
+        CaveVines, CaveVinesLit, CaveVinesPlant,
+        SporeBlossom,
+        BigDripleafStemFirst, BigDripleafStemLast = BigDripleafStemFirst + 3,
+        BigDripleafFirst, BigDripleafLast = BigDripleafFirst + 15,
+        SmallDripleafFirst, SmallDripleafLast = SmallDripleafFirst + 7,
+        Azalea, FloweringAzalea, FloweringAzaleaLeaves,
+        GlowLichenFirst, GlowLichenLast = GlowLichenFirst + 5,
+        MossCarpet,
+        PottedAzalea, PottedFloweringAzalea,
 
         Count
     };
@@ -627,7 +636,8 @@ enum class RenderType : uint8_t
     Bed,
     Chest,
     Rod,
-    Pot
+    Pot,
+    Lush
 };
 
 struct BlockInfo
@@ -1073,10 +1083,54 @@ inline bool isSmallFlower(BlockId id)
 {
     return id == Blocks::FlowerRed || id == Blocks::FlowerYellow || (id >= Blocks::Allium && id <= Blocks::Torchflower);
 }
-inline bool isPotted(BlockId id) { return id >= Blocks::PottedFirst && id <= Blocks::PottedLast; }
+inline bool isPotted(BlockId id)
+{
+    return (id >= Blocks::PottedFirst && id <= Blocks::PottedLast) || id == Blocks::PottedAzalea ||
+           id == Blocks::PottedFloweringAzalea;
+}
 inline bool isFlowerPot(BlockId id) { return id == Blocks::FlowerPot || isPotted(id); }
 BlockId pottedPlant(BlockId pot);
 BlockId pottedOf(BlockId plant);
+inline bool isCaveVine(BlockId id)
+{
+    return id == Blocks::CaveVines || id == Blocks::CaveVinesLit || id == Blocks::CaveVinesPlant || id == Blocks::GlowBerries;
+}
+inline bool caveVineLit(BlockId id) { return id == Blocks::CaveVinesLit || id == Blocks::GlowBerries; }
+inline bool caveVineHead(BlockId id) { return id == Blocks::CaveVines || id == Blocks::CaveVinesLit; }
+inline BlockId caveVineOf(bool head, bool lit)
+{
+    if (head) return lit ? Blocks::CaveVinesLit : Blocks::CaveVines;
+    return lit ? Blocks::GlowBerries : Blocks::CaveVinesPlant;
+}
+enum class DripleafTilt : uint8_t { None, Unstable, Partial, Full };
+inline bool isBigDripleaf(BlockId id) { return id >= Blocks::BigDripleafFirst && id <= Blocks::BigDripleafLast; }
+inline bool isBigDripleafStem(BlockId id) { return id >= Blocks::BigDripleafStemFirst && id <= Blocks::BigDripleafStemLast; }
+inline bool isSmallDripleaf(BlockId id) { return id >= Blocks::SmallDripleafFirst && id <= Blocks::SmallDripleafLast; }
+inline int dripleafFacing(BlockId id)
+{
+    if (isBigDripleaf(id)) return (id - Blocks::BigDripleafFirst) / 4;
+    if (isBigDripleafStem(id)) return id - Blocks::BigDripleafStemFirst;
+    if (isSmallDripleaf(id)) return (id - Blocks::SmallDripleafFirst) / 2;
+    return 0;
+}
+inline DripleafTilt dripleafTilt(BlockId id)
+{
+    return isBigDripleaf(id) ? static_cast<DripleafTilt>((id - Blocks::BigDripleafFirst) % 4) : DripleafTilt::None;
+}
+inline BlockId bigDripleafOf(int facing, DripleafTilt tilt)
+{
+    return static_cast<BlockId>(Blocks::BigDripleafFirst + (facing & 3) * 4 + static_cast<int>(tilt));
+}
+inline BlockId bigDripleafStemOf(int facing) { return static_cast<BlockId>(Blocks::BigDripleafStemFirst + (facing & 3)); }
+inline bool smallDripleafUpper(BlockId id) { return isSmallDripleaf(id) && (id - Blocks::SmallDripleafFirst) % 2 == 1; }
+inline BlockId smallDripleafOf(int facing, bool upper)
+{
+    return static_cast<BlockId>(Blocks::SmallDripleafFirst + (facing & 3) * 2 + (upper ? 1 : 0));
+}
+inline bool isGlowLichen(BlockId id) { return id >= Blocks::GlowLichenFirst && id <= Blocks::GlowLichenLast; }
+inline int glowLichenFace(BlockId id) { return isGlowLichen(id) ? id - Blocks::GlowLichenFirst : 0; }
+inline BlockId glowLichenOn(int face) { return static_cast<BlockId>(Blocks::GlowLichenFirst + (face < 0 || face > 5 ? 0 : face)); }
+inline bool isAzaleaBush(BlockId id) { return id == Blocks::Azalea || id == Blocks::FloweringAzalea; }
 inline bool isMushroom(BlockId id) { return id == Blocks::BrownMushroom || id == Blocks::RedMushroom; }
 inline bool isMushroomBlock(BlockId id)
 {
@@ -1086,7 +1140,9 @@ inline bool isWildPlant(BlockId id)
 {
     return isSmallFlower(id) || id == Blocks::Fern || id == Blocks::DeadBush || id == Blocks::TallGrass ||
            isDoublePlant(id) || isPitcherCrop(id) || isTorchflowerCrop(id) || isMushroom(id) ||
-           id == Blocks::HangingRoots;
+           id == Blocks::HangingRoots || isCaveVine(id) || id == Blocks::SporeBlossom || isBigDripleaf(id) ||
+           isBigDripleafStem(id) || isSmallDripleaf(id) || isAzaleaBush(id) || isGlowLichen(id) ||
+           id == Blocks::MossCarpet;
 }
 inline bool isEarthy(BlockId id)
 {

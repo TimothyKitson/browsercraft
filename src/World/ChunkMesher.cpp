@@ -750,6 +750,123 @@ namespace
         emitTinyCross(snap, lx, y, lz, id, 0.5f, 0.5f, 0.25f, 1.25f, 0.42f, info.tileSide, 0.0f, 0.0f, 16.0f, 16.0f, out);
     }
 
+    void pushQuad(const MeshSnapshot& snap, int lx, int y, int lz, BlockId id, const glm::vec3 corner[4], int tile,
+                  float u0, float v0, float u1, float v1, float shade, bool twoSided, std::vector<float>& out)
+    {
+        const TileUV uv = tileUV(tile);
+        const float sky = static_cast<float>(snap.skyLight(lx, y, lz)) / 15.0f;
+        const float block = std::max(static_cast<float>(snap.blockLight(lx, y, lz)),
+                                     static_cast<float>(lightEmission(id))) / 15.0f;
+        const glm::vec3 base(static_cast<float>(lx), static_cast<float>(y), static_cast<float>(lz));
+        const float us[4] = { u0, u1, u1, u0 };
+        const float vs[4] = { v1, v1, v0, v0 };
+        float au[4], av[4];
+        for (int c = 0; c < 4; ++c)
+        {
+            au[c] = uv.u0 + (uv.u1 - uv.u0) * (us[c] / 16.0f);
+            av[c] = uv.vTop + (uv.vBottom - uv.vTop) * (vs[c] / 16.0f);
+        }
+        const float tag = tagOf(CROSS_FACE, id);
+        const int front[6] = { 0, 1, 2, 0, 2, 3 };
+        const int back[6] = { 0, 2, 1, 0, 3, 2 };
+        for (int k : front)
+        {
+            const glm::vec3 p = base + corner[k];
+            pushVertex(out, p.x, p.y, p.z, au[k], av[k], shade, sky, block, tag);
+        }
+        if (!twoSided) return;
+        for (int k : back)
+        {
+            const glm::vec3 p = base + corner[k];
+            pushVertex(out, p.x, p.y, p.z, au[k], av[k], shade * 0.8f, sky, block, tag);
+        }
+    }
+
+    void emitLush(const MeshSnapshot& snap, int lx, int y, int lz, BlockId id, std::vector<float>& out)
+    {
+        auto flat = [&](float yy, float x0, float z0, float x1, float z1, int tile, float shade) {
+            const glm::vec3 c[4] = { glm::vec3(x0, yy, z1), glm::vec3(x1, yy, z1), glm::vec3(x1, yy, z0), glm::vec3(x0, yy, z0) };
+            pushQuad(snap, lx, y, lz, id, c, tile, x0 * 16.0f, z0 * 16.0f, x1 * 16.0f, z1 * 16.0f, shade, true, out);
+        };
+        if (id == Blocks::SporeBlossom)
+        {
+            flat(15.9f / 16.0f, 0.0f, 0.0f, 1.0f, 1.0f, Tiles::SporeBlossomBaseTile, 0.8f);
+            flat(13.0f / 16.0f, 0.0f, 0.0f, 1.0f, 1.0f, Tiles::SporeBlossomTile, 0.9f);
+            return;
+        }
+        if (id == Blocks::MossCarpet)
+        {
+            const int moss = blockInfo(id).tileTop;
+            const PartFace faces[6] = { { moss, 0, 15, 16, 16 }, { moss, 0, 15, 16, 16 }, { moss, 0, 0, 16, 16 },
+                                        { moss, 0, 0, 16, 16 }, { moss, 0, 15, 16, 16 }, { moss, 0, 15, 16, 16 } };
+            emitPart(snap, lx, y, lz, id, glm::vec3(0.0f), glm::vec3(1.0f, 1.0f / 16.0f, 1.0f), faces, out);
+            return;
+        }
+        if (isGlowLichen(id))
+        {
+            const int tile = Tiles::GlowLichenTile;
+            const float e = 0.02f;
+            switch (glowLichenFace(id))
+            {
+                case 0: flat(e, 0, 0, 1, 1, tile, 1.0f); break;
+                case 1: flat(1.0f - e, 0, 0, 1, 1, tile, 0.6f); break;
+                case 2: { const glm::vec3 c[4] = { { 1, 0, e }, { 0, 0, e }, { 0, 1, e }, { 1, 1, e } };
+                          pushQuad(snap, lx, y, lz, id, c, tile, 0, 0, 16, 16, 0.86f, true, out); break; }
+                case 3: { const glm::vec3 c[4] = { { 1 - e, 0, 1 }, { 1 - e, 0, 0 }, { 1 - e, 1, 0 }, { 1 - e, 1, 1 } };
+                          pushQuad(snap, lx, y, lz, id, c, tile, 0, 0, 16, 16, 0.72f, true, out); break; }
+                case 4: { const glm::vec3 c[4] = { { 0, 0, 1 - e }, { 1, 0, 1 - e }, { 1, 1, 1 - e }, { 0, 1, 1 - e } };
+                          pushQuad(snap, lx, y, lz, id, c, tile, 0, 0, 16, 16, 0.86f, true, out); break; }
+                default: { const glm::vec3 c[4] = { { e, 0, 0 }, { e, 0, 1 }, { e, 1, 1 }, { e, 1, 0 } };
+                           pushQuad(snap, lx, y, lz, id, c, tile, 0, 0, 16, 16, 0.72f, true, out); break; }
+            }
+            return;
+        }
+        if (isAzaleaBush(id))
+        {
+            const BlockInfo& info = blockInfo(id);
+            const PartFace faces[6] = { { info.tileSide, 0, 0, 16, 16 }, { info.tileSide, 0, 0, 16, 16 },
+                                        { info.tileTop, 0, 0, 16, 16 }, { -1, 0, 0, 0, 0 },
+                                        { info.tileSide, 0, 0, 16, 16 }, { info.tileSide, 0, 0, 16, 16 } };
+            emitPart(snap, lx, y, lz, id, glm::vec3(0.0f), glm::vec3(1.0f), faces, out);
+            emitTinyCross(snap, lx, y, lz, id, 0.5f, 0.5f, 0.0f, 1.0f, 0.5f, Tiles::AzaleaPlantTile, 0, 0, 16, 16, out);
+            return;
+        }
+        if (isBigDripleafStem(id))
+        {
+            emitTinyCross(snap, lx, y, lz, id, 0.5f, 0.5f, 0.0f, 1.0f, 0.35f, Tiles::BigDripleafStemTile, 0, 0, 16, 16, out);
+            return;
+        }
+        if (isSmallDripleaf(id))
+        {
+            const bool upper = smallDripleafUpper(id);
+            emitTinyCross(snap, lx, y, lz, id, 0.5f, 0.5f, 0.0f, upper ? 0.8f : 1.0f, 0.3f,
+                          upper ? Tiles::SmallDripleafStemTopTile : Tiles::SmallDripleafStemBottomTile, 0, 0, 16, upper ? 13.0f : 16.0f, out);
+            if (upper)
+            {
+                flat(13.0f / 16.0f, 0.05f, 0.05f, 0.55f, 0.55f, Tiles::SmallDripleafTopTile, 1.0f);
+                flat(12.0f / 16.0f, 0.45f, 0.45f, 0.95f, 0.95f, Tiles::SmallDripleafTopTile, 1.0f);
+            }
+            return;
+        }
+        if (isBigDripleaf(id))
+        {
+            emitTinyCross(snap, lx, y, lz, id, 0.5f, 0.5f, 0.0f, 15.0f / 16.0f, 0.35f, Tiles::BigDripleafStemTile, 0, 0, 16, 15.0f, out);
+            const DripleafTilt tilt = dripleafTilt(id);
+            const float angle = tilt == DripleafTilt::Partial ? 0.3927f : tilt == DripleafTilt::Full ? 0.7854f : 0.0f;
+            static const int AWAY[4][2] = { { 0, -1 }, { 1, 0 }, { 0, 1 }, { -1, 0 } };
+            const int facing = dripleafFacing(id);
+            const glm::vec2 dir(static_cast<float>(AWAY[facing][0]), static_cast<float>(AWAY[facing][1]));
+            const float top = 15.0f / 16.0f;
+            glm::vec3 c[4] = { { 0, top, 1 }, { 1, top, 1 }, { 1, top, 0 }, { 0, top, 0 } };
+            for (glm::vec3& p : c)
+            {
+                const float along = (p.x - 0.5f) * dir.x + (p.z - 0.5f) * dir.y;
+                if (along > 0.0f) p.y -= std::sin(angle) * along;
+            }
+            pushQuad(snap, lx, y, lz, id, c, Tiles::BigDripleafTopTile, 0, 0, 16, 16, 1.0f, true, out);
+        }
+    }
+
     void emitChest(const MeshSnapshot& snap, int lx, int y, int lz, BlockId id, std::vector<float>& out)
     {
         const ChestState state = chestState(id);
@@ -1355,6 +1472,10 @@ void buildChunkMesh(const MeshSnapshot& snapshot, MeshResult& out)
                 else if (isFlowerPot(id))
                 {
                     emitPot(snapshot, lx, y, lz, id, out.opaqueVertices);
+                }
+                else if (blockInfo(id).render == RenderType::Lush)
+                {
+                    emitLush(snapshot, lx, y, lz, id, out.opaqueVertices);
                 }
                 else if (isDust(id))
                 {
