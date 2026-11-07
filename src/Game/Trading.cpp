@@ -1,4 +1,5 @@
 #include "Trading.h"
+#include "Maps.h"
 #include "World/Block.h"
 #include "Enchanting.h"
 
@@ -225,12 +226,15 @@ namespace Trading
         case Profession::Cartographer:
             return {
                 buy(Items::Paper, 24, 0),
-                sell(7, Items::Book, 3, 0),
-                buy(Blocks::Glass, 11, 1),
-                sell(7, Items::ItemFrame, 1, 2),
-                buy(Items::EyeOfEnder, 1, 3, 6),
-                sell(3, Items::Paper, 18, 3),
-                sell(8, Blocks::Bookshelf, 1, 4),
+                sell(7, Items::EmptyMap, 1, 0),
+                buy(Blocks::GlassPane, 11, 1),
+                sell(13, Items::FilledMap, 1, 1, 12, Items::Compass, 1, static_cast<uint32_t>(Maps::OceanExplorer) << 24),
+                buy(Items::Compass, 1, 2, 12),
+                sell(14, Items::FilledMap, 1, 2, 12, Items::Compass, 1, static_cast<uint32_t>(Maps::WoodlandExplorer) << 24),
+                sell(12, Items::FilledMap, 1, 2, 12, Items::Compass, 1, static_cast<uint32_t>(Maps::TrialExplorer) << 24),
+                sell(7, Items::ItemFrame, 1, 3),
+                sell(3, static_cast<StackId>(Blocks::BannerFirst + 0 * 8), 1, 3),
+                sell(3, static_cast<StackId>(Blocks::BannerFirst + 11 * 8), 1, 3),
                 sell(8, Items::GlobeBannerPattern, 1, 4),
             };
 

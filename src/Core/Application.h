@@ -540,6 +540,12 @@ private:
     std::vector<ArmorStands::Stand> standsHere(float reach) const;
     SignRenderer m_signRenderer;
     void tickSigns(float deltaTime);
+    void settleExplorerMaps();
+    void drawMapMarks(const Maps::Data& map, int id, float x, float y, float size, bool withPlayer);
+    void renderFramedMaps(Shader& shader);
+    std::map<int, unsigned int> m_framedMapTextures;
+    float m_framedMapClock = 0.0f;
+    Mesh m_framedMapMesh;
     float m_signClock = 0.0f;
     ArmorStandStore m_stands;
     ArmorStandRenderer m_standRenderer;

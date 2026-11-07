@@ -2560,7 +2560,7 @@ bool Application::frame()
             m_startupScreen == "attackhud" || m_startupScreen == "attackready" ||
             m_startupScreen == "attackhotbar" || m_startupScreen == "bossbars" ||
             m_startupScreen == "gamemode" || m_startupScreen == "spectator" ||
-            m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" || m_startupScreen == "leads" || m_startupScreen == "anvilname" || m_startupScreen == "dials" || m_startupScreen == "spyglass" || m_startupScreen == "bundle" || m_startupScreen == "archery" || m_startupScreen == "food" || m_startupScreen == "materials" || m_startupScreen == "tropical" || m_startupScreen == "book" || m_startupScreen == "bookedit" || m_startupScreen == "booktip" || m_startupScreen == "boats" || m_startupScreen == "carts" || m_startupScreen == "fireworks" || m_startupScreen == "jukebox" || m_startupScreen == "potioncloud" || m_startupScreen == "armadillo" || m_startupScreen == "signs" || m_startupScreen == "glowsquid" || m_startupScreen == "fangs" || m_startupScreen == "zoglin" || m_startupScreen == "illusioner" || m_startupScreen == "llamas" || m_startupScreen == "paintings" || m_startupScreen == "stands" || m_startupScreen == "glowframes" || m_startupScreen == "bannershield" || m_startupScreen == "signkinds" || m_startupScreen == "signedit" || m_startupScreen == "hangingedit" ||
+            m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" || m_startupScreen == "leads" || m_startupScreen == "anvilname" || m_startupScreen == "dials" || m_startupScreen == "spyglass" || m_startupScreen == "bundle" || m_startupScreen == "archery" || m_startupScreen == "food" || m_startupScreen == "materials" || m_startupScreen == "tropical" || m_startupScreen == "book" || m_startupScreen == "bookedit" || m_startupScreen == "booktip" || m_startupScreen == "boats" || m_startupScreen == "carts" || m_startupScreen == "fireworks" || m_startupScreen == "jukebox" || m_startupScreen == "potioncloud" || m_startupScreen == "armadillo" || m_startupScreen == "signs" || m_startupScreen == "glowsquid" || m_startupScreen == "fangs" || m_startupScreen == "zoglin" || m_startupScreen == "illusioner" || m_startupScreen == "llamas" || m_startupScreen == "paintings" || m_startupScreen == "stands" || m_startupScreen == "glowframes" || m_startupScreen == "bannershield" || m_startupScreen == "signkinds" || m_startupScreen == "signedit" || m_startupScreen == "hangingedit" || m_startupScreen == "mapmarks" || m_startupScreen == "explorermap" ||
             m_startupScreen == "grinderror" || m_startupScreen == "woods" ||
             m_startupScreen == "cherry" || m_startupScreen == "mangrove" || m_startupScreen == "fungi" ||
             m_startupScreen == "stones" || m_startupScreen == "colours" || m_startupScreen == "candles" ||
@@ -2713,6 +2713,8 @@ bool Application::frame()
                                   m_startupScreen != "signkinds" &&
                                   m_startupScreen != "signedit" &&
                                   m_startupScreen != "hangingedit" &&
+                                  m_startupScreen != "mapmarks" &&
+                                  m_startupScreen != "explorermap" &&
                                   m_startupScreen != "golem" &&
                                   m_startupScreen != "shulker" &&
                                   m_startupScreen != "nethermobs" &&
@@ -3079,7 +3081,7 @@ bool Application::frame()
             if (m_startupScreen == "attackhud" || m_startupScreen == "attackready" ||
                 m_startupScreen == "attackhotbar" || m_startupScreen == "bossbars" ||
                 m_startupScreen == "gamemode" || m_startupScreen == "spectator" ||
-                m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" || m_startupScreen == "leads" || m_startupScreen == "anvilname" || m_startupScreen == "dials" || m_startupScreen == "spyglass" || m_startupScreen == "bundle" || m_startupScreen == "archery" || m_startupScreen == "food" || m_startupScreen == "materials" || m_startupScreen == "tropical" || m_startupScreen == "book" || m_startupScreen == "bookedit" || m_startupScreen == "booktip" || m_startupScreen == "boats" || m_startupScreen == "carts" || m_startupScreen == "fireworks" || m_startupScreen == "jukebox" || m_startupScreen == "potioncloud" || m_startupScreen == "armadillo" || m_startupScreen == "signs" || m_startupScreen == "glowsquid" || m_startupScreen == "fangs" || m_startupScreen == "zoglin" || m_startupScreen == "illusioner" || m_startupScreen == "llamas" || m_startupScreen == "paintings" || m_startupScreen == "stands" || m_startupScreen == "glowframes" || m_startupScreen == "bannershield" || m_startupScreen == "signkinds" || m_startupScreen == "signedit" || m_startupScreen == "hangingedit" ||
+                m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" || m_startupScreen == "leads" || m_startupScreen == "anvilname" || m_startupScreen == "dials" || m_startupScreen == "spyglass" || m_startupScreen == "bundle" || m_startupScreen == "archery" || m_startupScreen == "food" || m_startupScreen == "materials" || m_startupScreen == "tropical" || m_startupScreen == "book" || m_startupScreen == "bookedit" || m_startupScreen == "booktip" || m_startupScreen == "boats" || m_startupScreen == "carts" || m_startupScreen == "fireworks" || m_startupScreen == "jukebox" || m_startupScreen == "potioncloud" || m_startupScreen == "armadillo" || m_startupScreen == "signs" || m_startupScreen == "glowsquid" || m_startupScreen == "fangs" || m_startupScreen == "zoglin" || m_startupScreen == "illusioner" || m_startupScreen == "llamas" || m_startupScreen == "paintings" || m_startupScreen == "stands" || m_startupScreen == "glowframes" || m_startupScreen == "bannershield" || m_startupScreen == "signkinds" || m_startupScreen == "signedit" || m_startupScreen == "hangingedit" || m_startupScreen == "mapmarks" || m_startupScreen == "explorermap" ||
                 m_startupScreen == "grinderror" || m_startupScreen == "woods" ||
                 m_startupScreen == "cherry" || m_startupScreen == "mangrove" || m_startupScreen == "fungi" ||
                 m_startupScreen == "stones" || m_startupScreen == "colours" || m_startupScreen == "candles" ||
@@ -4022,6 +4024,42 @@ bool Application::frame()
                         m_player.mode = GameMode::Creative;
                         m_camera.pitch = -6.0f;
                     }
+                    m_camera.addLook(0.0f, 0.0f, 0.0f);
+                }
+                if (m_startupScreen == "mapmarks" || m_startupScreen == "explorermap")
+                {
+                    m_devAttackStrength = 1.0f;
+                    for (int dx = -2; dx <= 9; ++dx)
+                        for (int dz = -7; dz <= 7; ++dz)
+                        {
+                            m_world->setBlock(px + dx, py - 1, pz + dz, Blocks::Grass);
+                            for (int dy = 0; dy <= 4; ++dy)
+                                m_world->setBlock(px + dx, py + dy, pz + dz, dx == 8 && dy <= 3 ? Blocks::Planks : Blocks::Air);
+                        }
+                    if (m_startupScreen == "mapmarks")
+                    {
+                        const int id = m_nextMapId++;
+                        Maps::Data map;
+                        Maps::centreFor(px, pz, 0, map.centreX, map.centreZ);
+                        map.dimension = static_cast<int>(m_dimension);
+                        m_world->setBlock(px + 4, py, pz - 3, static_cast<BlockId>(Blocks::BannerFirst + 14 * 8));
+                        Maps::toggleBanner(map, px + 4, pz - 3, 14);
+                        m_world->setBlock(px + 3, py, pz + 3, static_cast<BlockId>(Blocks::BannerFirst + 11 * 8));
+                        Maps::toggleBanner(map, px + 3, pz + 3, 11);
+                        m_maps[id] = map;
+                        m_dirtyMaps.insert(id);
+                        const glm::ivec3 framed(px + 7, py + 1, pz);
+                        m_world->setBlock(framed.x, framed.y, framed.z, frameFacingAs(1));
+                        m_frames.at(framed) = ItemStack{ Items::FilledMap, 1, id };
+                        m_inventory.slot(0) = ItemStack{ Items::FilledMap, 1, id };
+                    }
+                    else
+                        m_inventory.slot(0) = ItemStack{ Items::FilledMap, 1, 0, static_cast<uint32_t>(Maps::OceanExplorer) << 24 };
+                    m_inventory.slot(1) = ItemStack{ Items::FilledMap, 1, 0, static_cast<uint32_t>(Maps::TrialExplorer) << 24 };
+                    m_inventory.slot(2) = ItemStack{ Items::EmptyMap, 4 };
+                    m_inventory.setSelectedSlot(0);
+                    m_camera.pitch = 0.0f;
+                    m_camera.yaw = 30.0f;
                     m_camera.addLook(0.0f, 0.0f, 0.0f);
                 }
                 if (m_startupScreen == "signkinds" || m_startupScreen == "signedit" || m_startupScreen == "hangingedit")
@@ -8919,9 +8957,182 @@ unsigned int Application::mapColourAt(int x, int z, int& height)
     return 0u;
 }
 
+void Application::settleExplorerMaps()
+{
+    for (int slot = 0; slot <= Inventory::OFFHAND; ++slot)
+    {
+        if (slot >= Inventory::MAIN_SLOTS && slot != Inventory::OFFHAND) continue;
+        ItemStack& stack = m_inventory.slot(slot);
+        if (stack.id != Items::FilledMap || stack.damage != 0) continue;
+        const int kind = static_cast<int>(stack.enchantments >> 24);
+        const int px = static_cast<int>(std::floor(m_player.position.x));
+        const int pz = static_cast<int>(std::floor(m_player.position.z));
+        bool found = false;
+        int tx = px, tz = pz;
+        const WorldGen& gen = m_world->generator();
+        if (kind == Maps::OceanExplorer)
+        {
+            const Structures::Spot spot = gen.nearestMonument(px, pz, 16);
+            if (spot.exists)
+            {
+                found = true;
+                tx = spot.chunkX * Structures::CHUNK + Structures::CHUNK / 2;
+                tz = spot.chunkZ * Structures::CHUNK + Structures::CHUNK / 2;
+            }
+        }
+        else if (kind == Maps::WoodlandExplorer)
+        {
+            const Structures::Spot spot = gen.nearestLandmark(WorldGen::Landmark::WoodlandMansion, px, pz, 16);
+            if (spot.exists)
+            {
+                found = true;
+                tx = spot.chunkX * Structures::CHUNK + Structures::CHUNK / 2;
+                tz = spot.chunkZ * Structures::CHUNK + Structures::CHUNK / 2;
+            }
+        }
+        else if (kind == Maps::TrialExplorer)
+        {
+            const TrialChamber::Site site = gen.nearestChamber(px, pz, 12);
+            if (site.exists)
+            {
+                found = true;
+                tx = site.x;
+                tz = site.z;
+            }
+        }
+        Maps::Data map;
+        map.scale = found ? 2 : 0;
+        map.dimension = static_cast<int>(Dimension::Overworld);
+        map.explorer = found ? kind : 0;
+        Maps::centreFor(tx, tz, map.scale, map.centreX, map.centreZ);
+        if (found) map.decorations.push_back(Maps::Decoration{ static_cast<uint8_t>(Maps::explorerMark(kind)), tx, tz, 8 });
+        const int id = m_nextMapId++;
+        m_maps[id] = map;
+        m_dirtyMaps.insert(id);
+        stack.damage = id;
+        if (!found) stack.enchantments &= 0x00FFFFFFu;
+    }
+}
+
+void Application::drawMapMarks(const Maps::Data& map, int id, float x, float y, float size, bool withPlayer)
+{
+    std::vector<Maps::Placed> marks;
+    for (const Maps::Decoration& d : map.decorations)
+    {
+        const Maps::Placed placed = Maps::place(map, static_cast<float>(d.worldX) + 0.5f, static_cast<float>(d.worldZ) + 0.5f, d.mark, d.rotation);
+        if (placed.shown) marks.push_back(placed);
+    }
+    for (const auto& entry : m_frames.all())
+    {
+        if (entry.first[0] != map.dimension || entry.second.id != Items::FilledMap || entry.second.damage != id) continue;
+        const BlockId block = m_world ? m_world->getBlock(entry.first[1], entry.first[2], entry.first[3]) : Blocks::Air;
+        const Maps::Placed placed = Maps::place(map, static_cast<float>(entry.first[1]) + 0.5f, static_cast<float>(entry.first[3]) + 0.5f,
+                                                Maps::Frame, frameFacing(block) * 4);
+        if (placed.shown) marks.push_back(placed);
+    }
+    if (withPlayer)
+    {
+        const Maps::Placed player = Maps::placePlayer(map, m_player.position.x, m_player.position.z, m_camera.yaw,
+                                                      map.dimension == static_cast<int>(m_dimension));
+        if (player.shown) marks.push_back(player);
+    }
+    const float half = size * 4.0f / static_cast<float>(Maps::SIZE);
+    for (const Maps::Placed& mark : marks)
+    {
+        const glm::vec2 centre(x + mark.x / static_cast<float>(Maps::SIZE) * size, y + mark.z / static_cast<float>(Maps::SIZE) * size);
+        const float angle = glm::radians(static_cast<float>(mark.rotation) * 22.5f);
+        const float c = std::cos(angle), s = std::sin(angle);
+        const glm::vec2 local[4] = { { -half, -half }, { half, -half }, { half, half }, { -half, half } };
+        glm::vec2 corner[4];
+        for (int k = 0; k < 4; ++k)
+            corner[k] = centre + glm::vec2(local[k].x * c - local[k].y * s, local[k].x * s + local[k].y * c);
+        const glm::vec2 uv[4] = { { 0.0f, 1.0f }, { 1.0f, 1.0f }, { 1.0f, 0.0f }, { 0.0f, 0.0f } };
+        if (const GuiImage* image = m_gui.image(Maps::markPath(mark.mark)))
+            m_ui.texturedShape(image->texture, corner, uv, glm::vec4(1.0f));
+        else
+            m_ui.quad(centre.x - half * 0.6f, centre.y - half * 0.6f, half * 1.2f, half * 1.2f,
+                      mark.mark == Maps::Player ? glm::vec4(1.0f) : glm::vec4(0.8f, 0.2f, 0.2f, 1.0f));
+    }
+}
+
+void Application::renderFramedMaps(Shader& shader)
+{
+    if (!m_world) return;
+    struct Shown { glm::ivec3 at; int facing; int id; };
+    std::vector<Shown> shown;
+    for (const Frames::Near& frame : m_frames.near(m_camera.position, 48.0f))
+    {
+        if (frame.held.id != Items::FilledMap || frame.held.damage <= 0) continue;
+        const BlockId block = m_world->getBlock(frame.block.x, frame.block.y, frame.block.z);
+        if (!isFrame(block)) continue;
+        shown.push_back(Shown{ frame.block, frameFacing(block), frame.held.damage });
+    }
+    if (shown.empty()) return;
+
+    const bool refresh = m_elapsedSeconds - m_framedMapClock > 1.0f || m_elapsedSeconds < m_framedMapClock;
+    if (refresh) m_framedMapClock = m_elapsedSeconds;
+
+    static const std::vector<int> LAYOUT = { 3, 2, 1, 1, 1, 1 };
+    shader.bind();
+    shader.setVec3("uChunkOffset", glm::vec3(0.0f));
+    for (const Shown& one : shown)
+    {
+        const Maps::Data* map = mapData(one.id);
+        if (!map) continue;
+        unsigned int& texture = m_framedMapTextures[one.id];
+        const bool fresh = texture == 0;
+        if (fresh)
+        {
+            glGenTextures(1, &texture);
+            glBindTexture(GL_TEXTURE_2D, texture);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        }
+        if (fresh || refresh)
+        {
+            std::vector<uint8_t> pixels = map->rgba;
+            for (size_t i = 0; i < pixels.size(); i += 4)
+                if (pixels[i + 3] == 0)
+                {
+                    pixels[i] = 214; pixels[i + 1] = 190; pixels[i + 2] = 150; pixels[i + 3] = 255;
+                }
+            glBindTexture(GL_TEXTURE_2D, texture);
+            glTexImage2D(GL_TEXTURE_2D, 0, 0x8058, Maps::SIZE, Maps::SIZE, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());
+        }
+
+        static const glm::vec3 OUT[4] = { { 0, 0, 1 }, { -1, 0, 0 }, { 0, 0, -1 }, { 1, 0, 0 } };
+        static const glm::vec3 RIGHT[4] = { { 1, 0, 0 }, { 0, 0, 1 }, { -1, 0, 0 }, { 0, 0, -1 } };
+        const glm::vec3 out = OUT[one.facing & 3];
+        const glm::vec3 right = RIGHT[one.facing & 3];
+        const glm::vec3 up(0.0f, 1.0f, 0.0f);
+        const glm::vec3 centre = glm::vec3(one.at) + glm::vec3(0.5f) - out * (0.5f - 1.0f / 16.0f - 0.004f);
+        const float sky = static_cast<float>(m_world->skyLight(one.at.x, one.at.y, one.at.z)) / 15.0f;
+        const float block = static_cast<float>(m_world->blockLightAt(one.at.x, one.at.y, one.at.z)) / 15.0f;
+        const glm::vec3 corner[4] = { centre - right * 0.5f - up * 0.5f, centre + right * 0.5f - up * 0.5f,
+                                      centre + right * 0.5f + up * 0.5f, centre - right * 0.5f + up * 0.5f };
+        const float u[4] = { 0.0f, 1.0f, 1.0f, 0.0f };
+        const float v[4] = { 1.0f, 1.0f, 0.0f, 0.0f };
+        std::vector<float> vertices;
+        const int order[6] = { 0, 1, 2, 0, 2, 3 };
+        for (int k : order)
+        {
+            vertices.insert(vertices.end(), { corner[k].x, corner[k].y, corner[k].z, u[k], v[k], 0.95f, sky, block, 6.0f });
+        }
+        glDisable(GL_CULL_FACE);
+        m_framedMapMesh.upload(vertices, LAYOUT, true);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, texture);
+        m_framedMapMesh.draw(GL_TRIANGLES);
+        glEnable(GL_CULL_FACE);
+    }
+}
+
 void Application::tickMaps(float deltaTime)
 {
     if (!m_world) return;
+    settleExplorerMaps();
     const ItemStack& held = m_inventory.selected().id == Items::FilledMap ? m_inventory.selected() : m_inventory.slot(Inventory::OFFHAND);
     if (held.id != Items::FilledMap) return;
     Maps::Data* map = mapData(held.damage);
@@ -9001,7 +9212,7 @@ void Application::renderHeldMap(float w, float h)
     mapTextureFor(held.damage);
     const float size = std::min(160.0f, h * 0.45f);
     const float x = w - size - 10.0f, y = h - size - 52.0f;
-    if (!guiSprite("../map/map_background", x, y, size, size))
+    if (!guiSprite("../map/map_background_checkerboard", x, y, size, size) && !guiSprite("../map/map_background", x, y, size, size))
         m_ui.quad(x, y, size, size, glm::vec4(0.86f, 0.78f, 0.6f, 1.0f));
     const float inset = size * 7.0f / 128.0f;
     const float inner = size - inset * 2.0f;
@@ -9012,10 +9223,8 @@ void Application::renderHeldMap(float w, float h)
     const bool off = fx < 0.0f || fx > 1.0f || fz < 0.0f || fz > 1.0f || map->dimension != static_cast<int>(m_dimension);
     fx = std::clamp(fx, 0.0f, 1.0f);
     fz = std::clamp(fz, 0.0f, 1.0f);
-    const float marker = size * 8.0f / 128.0f;
-    const float mx = x + inset + fx * inner - marker * 0.5f, my = y + inset + fz * inner - marker * 0.5f;
-    if (!guiSprite(off ? "../map/decorations/player_off_map" : "../map/decorations/player", mx, my, marker, marker))
-        m_ui.quad(mx, my, marker, marker, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+    (void)off;
+    drawMapMarks(*map, held.damage, x + inset, y + inset, inner, true);
 }
 
 void Application::tickFrost(float deltaTime)
@@ -15167,6 +15376,19 @@ void Application::handlePlacement()
         if (modeCanBuild(m_player.mode)) placePainting(stack);
         return;
     }
+    if (stack.id == Items::FilledMap && stack.damage > 0)
+    {
+        const RaycastHit aimed = m_world->raycast(m_camera.position, m_camera.front, REACH_DISTANCE);
+        const BlockId there = aimed.hit ? m_world->getBlock(aimed.block.x, aimed.block.y, aimed.block.z) : Blocks::Air;
+        if (isBanner(there))
+            if (Maps::Data* map = mapData(stack.damage))
+            {
+                Maps::toggleBanner(*map, aimed.block.x, aimed.block.z, bannerColour(there));
+                m_dirtyMaps.insert(stack.damage);
+                m_heldItem.swing();
+            }
+        return;
+    }
     if (stack.id == Items::ArmorStand)
     {
         if (modeCanBuild(m_player.mode)) placeArmorStand(stack);
@@ -15954,6 +16176,7 @@ void Application::renderWorldShaded()
     m_paintingRenderer.render(world, *m_world, m_paintings.near(m_camera.position, 96.0f));
     m_standRenderer.render(world, *m_world, standsHere(96.0f));
     m_signRenderer.render(world, *m_world, m_world->signsNear(m_camera.position, 64.0f));
+    renderFramedMaps(world);
     m_bannerRenderer.render(world, *m_world, nearbyBanners(), m_elapsedSeconds);
     m_fireworkRenderer.render(view, projection, camera.right, camera.up);
     world.bind();
@@ -16094,6 +16317,7 @@ void Application::renderWorld()
     m_paintingRenderer.render(m_chunkShader, *m_world, m_paintings.near(m_camera.position, 96.0f));
     m_standRenderer.render(m_chunkShader, *m_world, standsHere(96.0f));
     m_signRenderer.render(m_chunkShader, *m_world, m_world->signsNear(m_camera.position, 64.0f));
+    renderFramedMaps(m_chunkShader);
     m_bannerRenderer.render(m_chunkShader, *m_world, nearbyBanners(), m_elapsedSeconds);
     m_fireworkRenderer.render(view, projection, camera.right, camera.up);
     castShadows(view, projection);
@@ -18613,6 +18837,7 @@ void Application::pinFramedItems()
         if (!isFrame(block)) continue;
 
         DroppedItems::Pinned shown;
+        if (frame.held.id == Items::FilledMap && frame.held.damage > 0) continue;
         shown.position = glm::vec3(frame.block) + glm::vec3(0.5f);
         shown.facing = frameFacing(block);
         shown.item = frame.held.id;

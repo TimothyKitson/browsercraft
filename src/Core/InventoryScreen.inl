@@ -310,6 +310,8 @@ namespace
         }
         if (stack.id == Items::SpawnEgg)
             return std::string(mobType(static_cast<MobId>(std::clamp(stack.damage, 0, mobTypeCount() - 1))).name) + " Spawn Egg";
+        if (stack.id == Items::FilledMap && (stack.enchantments >> 24) != 0u)
+            return Maps::explorerName(static_cast<int>(stack.enchantments >> 24));
         if (stack.id == Items::TropicalFishBucket && stack.damage != 0)
         {
             const TropicalFish::Look look = TropicalFish::lookFor(static_cast<uint32_t>(stack.damage), (stack.enchantments & (1u << 25)) != 0u);
@@ -1391,6 +1393,7 @@ void Application::renderContainerScreen(float w, float h)
                     m_ui.quad(px, py, size, size, glm::vec4(0.86f, 0.78f, 0.6f, 1.0f));
                 const unsigned int texture = mapTextureFor(source.damage);
                 m_ui.texturedQuad(texture, px + 3.0f, py + 3.0f, size - 6.0f, size - 6.0f, 0.0f, 0.0f, 1.0f, 1.0f, glm::vec4(1.0f));
+                drawMapMarks(*shown, source.damage, px + 3.0f, py + 3.0f, size - 6.0f, false);
                 if (locking || shown->locked)
                     guiSprite("sprites/container/cartography_table/locked", px + 52.0f, py + 50.0f, 10.0f, 14.0f);
             }
@@ -1749,7 +1752,9 @@ void Application::renderContainerScreen(float w, float h)
                 if (offer.also != Blocks::Air)
                     tip += " and " + std::to_string(offer.alsoCount) + " " + displayName(offer.also);
                 tip += " for " + std::to_string(offer.giveCount) + " " + displayName(offer.give);
-                if (offer.giveEnchantments != 0) tip += " (enchanted)";
+                if (offer.give == Items::FilledMap && offer.giveEnchantments != 0)
+                    tip += std::string(" (") + Maps::explorerName(static_cast<int>(offer.giveEnchantments >> 24)) + ")";
+                else if (offer.giveEnchantments != 0) tip += " (enchanted)";
                 const int left = deal.maxUses - record.uses[static_cast<size_t>(index)];
                 tip += out ? " - sold out" : " - " + std::to_string(left) + " left";
                 addHint(listX, ry, 88.0f, 20.0f, tip);
@@ -1913,7 +1918,9 @@ void Application::renderContainerScreen(float w, float h)
                 if (offer.also != Blocks::Air)
                     tip += " and " + std::to_string(offer.alsoCount) + " " + displayName(offer.also);
                 tip += " for " + std::to_string(offer.giveCount) + " " + displayName(offer.give);
-                if (offer.giveEnchantments != 0)
+                if (offer.give == Items::FilledMap && offer.giveEnchantments != 0)
+                    tip += std::string(" (") + Maps::explorerName(static_cast<int>(offer.giveEnchantments >> 24)) + ")";
+                else if (offer.giveEnchantments != 0)
                     tip += " (enchanted)";
                 const int left = deal.maxUses - record.uses[static_cast<size_t>(index)];
                 tip += out ? " - sold out" : " - " + std::to_string(left) + " left";

@@ -4664,6 +4664,66 @@ namespace
         check(w == 64 && h == 48 && painted.size() == static_cast<size_t>(64 * 48 * 4), "and each has a painted stand-in the size of the real one");
     }
 
+    void testMapMarks()
+    {
+        section("map decorations, explorer maps and maps on walls");
+        bool named = true, present = true;
+        const bool packHere = std::filesystem::exists("assets/textures/map/decorations");
+        for (int mark = 0; mark < Maps::MarkCount; ++mark)
+        {
+            const std::string path = Maps::markPath(mark);
+            if (path.rfind("../map/decorations/", 0) != 0) named = false;
+            if (packHere && !std::filesystem::exists("assets/textures/map/decorations/" + std::string(Maps::markTexture(mark)) + ".png"))
+                present = false;
+        }
+        check(Maps::MarkCount == 35 && named && present, "thirty-five marks, each with its picture in the pack");
+
+        Maps::Data map;
+        map.centreX = 64;
+        map.centreZ = 64;
+        const Maps::Placed middle = Maps::place(map, 64.0f, 64.0f, Maps::RedX, 8);
+        check(middle.shown && std::fabs(middle.x - 64.0f) < 0.01f && std::fabs(middle.z - 64.0f) < 0.01f, "a mark lands where it is in the world");
+        check(Maps::rotationFor(90.0f) == 0 && Maps::rotationFor(180.0f) == 4 && Maps::rotationFor(0.0f) == 12,
+              "the player's arrow turns in sixteenths, nought facing south as in Minecraft");
+        const Maps::Placed near = Maps::placePlayer(map, 300.0f, 64.0f, 90.0f, true);
+        check(near.shown && near.mark == Maps::PlayerOffMap && near.x == 128.0f, "off the edge it waits at the border");
+        const Maps::Placed far = Maps::placePlayer(map, 5000.0f, 64.0f, 90.0f, true);
+        check(!far.shown, "and far off an ordinary map loses you");
+        map.explorer = Maps::OceanExplorer;
+        const Maps::Placed lost = Maps::placePlayer(map, 5000.0f, 64.0f, 90.0f, true);
+        check(lost.shown && lost.mark == Maps::PlayerOffLimits, "where an explorer map keeps you as a dot");
+        check(!Maps::placePlayer(map, 64.0f, 64.0f, 90.0f, false).shown, "and neither shows you from another dimension");
+
+        check(Maps::toggleBanner(map, 70, 70, 14) && map.decorations.size() == 1 && map.decorations[0].mark == Maps::BannerFirst + 14,
+              "using a map on a banner marks it in the banner's colour");
+        check(!Maps::toggleBanner(map, 70, 70, 14) && map.decorations.empty(), "and using it again takes the mark off");
+        check(!Maps::toggleBanner(map, 900, 70, 2) && map.decorations.empty(), "a banner off the map cannot be marked");
+
+        map.decorations.push_back(Maps::Decoration{ Maps::Monument, 100, 30, 8 });
+        const std::string dir = (std::filesystem::temp_directory_path() / "browsercraft_mapmark_test").string();
+        std::error_code ec;
+        std::filesystem::remove_all(dir, ec);
+        std::filesystem::create_directories(dir, ec);
+        check(Maps::save(dir, 3, map), "a map with marks saves");
+        Maps::Data back;
+        check(Maps::load(dir, 3, back) && back.explorer == Maps::OceanExplorer && back.decorations.size() == 1 &&
+                  back.decorations[0].mark == Maps::Monument && back.decorations[0].worldX == 100,
+              "and keeps them");
+        std::filesystem::remove_all(dir, ec);
+
+        int explorers = 0;
+        bool compass = true;
+        for (const Trading::Deal& deal : Trading::dealsFor(Trading::Profession::Cartographer))
+            if (deal.offer.give == Items::FilledMap)
+            {
+                ++explorers;
+                if (deal.offer.also != Items::Compass || (deal.offer.giveEnchantments >> 24) == 0u) compass = false;
+            }
+        check(explorers == 3 && compass, "a cartographer sells the ocean, woodland and trial explorer maps for emeralds and a compass");
+        check(std::string(Maps::explorerName(Maps::TrialExplorer)) == "Trial Explorer Map" && Maps::explorerMark(Maps::WoodlandExplorer) == Maps::Mansion,
+              "each named for what it finds and marking it");
+    }
+
     void testSignKinds()
     {
         section("signs: standing, hanging, on a bracket, and drawn as Mojang's models");
@@ -15346,6 +15406,7 @@ int runSelfTest()
     testArmorStands();
     testShieldBanners();
     testSignKinds();
+    testMapMarks();
     testMadeThings();
     testTheEndAndTheSea();
     testPathfinding();
