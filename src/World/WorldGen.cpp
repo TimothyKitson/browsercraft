@@ -191,11 +191,27 @@ int WorldGen::surfaceHeight(int worldX, int worldZ) const
     if (rise > 0.0f) rise *= m_lift;
     float height = SEA_LEVEL + rise;
 
+    const float river = riverAt(worldX, worldZ) * (1.0f - smoothstep(22.0f, 40.0f, rise));
+    if (river > 0.0f)
+    {
+        const float bed = static_cast<float>(SEA_LEVEL) - 2.0f - river * 3.0f;
+        if (bed < height) height += (bed - height) * std::min(1.0f, river * 1.4f);
+    }
+
     const float island = mushroomIslandAt(worldX, worldZ);
     if (island > 0.0f)
         height = height + (SEA_LEVEL + 3.0f + hills * 2.5f - height) * island;
 
     return std::clamp(static_cast<int>(height), 1, MAX_HEIGHT - 12);
+}
+
+float WorldGen::riverAt(int worldX, int worldZ) const
+{
+    if (flatWorld() || m_dimension != Dimension::Overworld) return 0.0f;
+    const float fx = static_cast<float>(worldX) * m_scale;
+    const float fz = static_cast<float>(worldZ) * m_scale;
+    const float course = std::abs(m_humidity.fbm2D(fx * 0.0012f + 3100.0f, fz * 0.0012f - 1700.0f, 3));
+    return 1.0f - smoothstep(0.0f, 0.022f, course);
 }
 
 float WorldGen::mushroomIslandAt(int worldX, int worldZ) const
@@ -230,6 +246,7 @@ Biome WorldGen::biomeAt(int worldX, int worldZ) const
         temperature > -0.10f && humidity > 0.14f)
         return temperature > 0.30f ? Biome::MangroveSwamp : Biome::Swamp;
 
+    if (height <= SEA_LEVEL + 1 && riverAt(worldX, worldZ) > 0.3f) return Biome::Ocean;
     if (height < SEA_LEVEL - 1) return Biome::Ocean;
     if (height <= SEA_LEVEL) return Biome::Beach;
     if (height > SEA_LEVEL + 34) return Biome::Mountains;
@@ -278,6 +295,8 @@ Biomes::Kind WorldGen::variantOf(Biome family, int worldX, int worldZ, int heigh
     {
         case Biome::Ocean:
         {
+            if (height > SEA_LEVEL - 8 && riverAt(worldX, worldZ) > 0.3f)
+                return freezesAt(worldX, worldZ) ? K::FrozenRiver : K::River;
             const bool deep = height < SEA_LEVEL - 12;
             if (freezesAt(worldX, worldZ)) return deep ? K::DeepFrozenOcean : K::FrozenOcean;
             if (reefWater(worldX, worldZ)) return deep ? K::DeepLukewarmOcean : K::WarmOcean;
@@ -894,6 +913,13 @@ void WorldGen::generateColumns(Chunk& chunk) const
                     switch (biome)
                     {
                         case Biome::Ocean:
+                            if (kind == Biomes::Kind::River || kind == Biomes::Kind::FrozenRiver)
+                            {
+                                if (depth == 0) block = patchNoise > 0.3f ? Blocks::Gravel : patchNoise < -0.35f ? Blocks::Clay : Blocks::Sand;
+                                else if (depth <= 2) block = surface > SEA_LEVEL ? Blocks::Dirt : Blocks::Sand;
+                                if (depth == 0 && surface > SEA_LEVEL) block = Blocks::Grass;
+                                break;
+                            }
                             // Patches of gravel among the sand. Drawn from
                             // smooth noise rather than a per-column coin
                             // flip, which scattered single blocks of gravel

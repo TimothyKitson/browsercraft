@@ -5116,6 +5116,19 @@ namespace
             }
         std::printf("  overworld biomes not found on the surface:%s\n", missing.c_str());
         check(overworld >= 40, "most of the overworld's biomes turn up on the surface of one world");
+        check(seen[static_cast<int>(Biomes::Kind::River)] > 0 && seen[static_cast<int>(Biomes::Kind::FrozenRiver)] > 0, "rivers wind through it, frozen in the cold");
+        bool riverChecked = false, riverWet = false;
+        for (int z = -6000; z <= 6000 && !riverChecked; z += 61)
+            for (int x = -6000; x <= 6000 && !riverChecked; x += 61)
+            {
+                if (generator.kindAt(x, z) != Biomes::Kind::River || generator.surfaceHeight(x, z) >= WorldGen::SEA_LEVEL) continue;
+                Chunk chunk(ChunkPos{ Structures::squareOf(x, Chunk::SX), Structures::squareOf(z, Chunk::SZ) });
+                generator.generate(chunk);
+                const int lx = x - chunk.position().x * Chunk::SX, lz = z - chunk.position().z * Chunk::SZ;
+                riverWet = chunk.getBlock(lx, WorldGen::SEA_LEVEL, lz) == Blocks::Water;
+                riverChecked = true;
+            }
+        check(riverChecked && riverWet, "a river's bed is below sea level with water over it");
         int caves[3] = {};
         for (int z = -3000; z <= 3000; z += 97)
             for (int x = -3000; x <= 3000; x += 97)
