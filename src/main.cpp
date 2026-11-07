@@ -824,6 +824,7 @@ namespace
             else if (isDecoratedPot(id))          why = "a pot set down facing another way";
             else if (isLoom(id))                  why = "a loom set down facing another way";
             else if (isSculkVein(id))             why = "sculk vein on another face";
+            else if (isCreativeOnly(id))          why = "creative only, as in Minecraft";
             else if (isCalibratedSensor(id))      why = "a calibrated sensor facing another way, or one that just heard something";
             else if (isBanner(id))                why = "a banner set down facing another way, or hung on a wall";
             else if (isSnifferEgg(id))            why = "a sniffer egg cracking as it nears hatching";

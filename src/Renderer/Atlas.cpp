@@ -1539,6 +1539,98 @@ namespace
             t.set(x, 12, Color{ 120, 80, 170 });
         }
     }
+    void paintCommandIn(Tile& t, int kind, int part)
+    {
+        static const Color BODY[3] = { Color{ 196, 128, 90 }, Color{ 120, 170, 150 }, Color{ 130, 104, 190 } };
+        const Color body = BODY[std::clamp(kind, 0, 2)];
+        const Color dark{ static_cast<uint8_t>(body.r * 2 / 3), static_cast<uint8_t>(body.g * 2 / 3), static_cast<uint8_t>(body.b * 2 / 3) };
+        t.fill(body);
+        for (int k = 0; k < 16; ++k)
+        {
+            t.set(k, 0, dark); t.set(k, 15, dark); t.set(0, k, dark); t.set(15, k, dark);
+        }
+        if (part == 0)
+        {
+            for (int y = 4; y < 12; ++y) for (int x = 4; x < 12; ++x) t.set(x, y, Color{ 40, 40, 44 });
+            for (int x = 5; x < 9; ++x) t.set(x, 6 + (x - 5) / 2, Color{ 220, 220, 220 });
+            for (int x = 8; x < 11; ++x) t.set(x, 10, Color{ 220, 220, 220 });
+        }
+        else if (part == 1)
+        {
+            for (int y = 5; y < 11; ++y) for (int x = 5; x < 11; ++x) t.set(x, y, dark);
+        }
+        else
+        {
+            const Color arrow = part == 3 ? Color{ 240, 230, 200 } : Color{ 60, 50, 50 };
+            for (int y = 3; y < 13; ++y) t.set(7, y, arrow), t.set(8, y, arrow);
+            for (int k = 0; k < 4; ++k)
+            {
+                t.set(7 - k, 3 + k, arrow);
+                t.set(8 + k, 3 + k, arrow);
+            }
+        }
+    }
+    void paintStructureBlockIn(Tile& t, int mode)
+    {
+        t.fill(Color{ 64, 54, 70 });
+        t.speckle(6, 4501 + mode);
+        for (int k = 0; k < 16; ++k)
+        {
+            t.set(k, 0, Color{ 40, 34, 46 }); t.set(k, 15, Color{ 40, 34, 46 });
+            t.set(0, k, Color{ 40, 34, 46 }); t.set(15, k, Color{ 40, 34, 46 });
+        }
+        static const Color MARK[5] = { Color{ 90, 160, 230 }, Color{ 230, 160, 70 }, Color{ 150, 150, 150 }, Color{ 110, 200, 110 }, Color{ 200, 200, 200 } };
+        const Color mark = MARK[std::clamp(mode, 0, 4)];
+        for (int y = 5; y < 11; ++y) for (int x = 5; x < 11; ++x) if (x == 5 || x == 10 || y == 5 || y == 10) t.set(x, y, mark);
+        t.set(7, 7, mark); t.set(8, 8, mark); t.set(7, 8, mark); t.set(8, 7, mark);
+    }
+    void paintJigsawIn(Tile& t, int part)
+    {
+        t.fill(Color{ 70, 58, 78 });
+        t.speckle(5, 4511 + part);
+        const Color mark = part == 3 ? Color{ 230, 200, 90 } : Color{ 160, 140, 180 };
+        if (part == 0) for (int y = 3; y < 13; ++y) for (int x = 6; x < 10; ++x) t.set(x, y, mark);
+        if (part == 1) for (int y = 6; y < 10; ++y) for (int x = 3; x < 13; ++x) t.set(x, y, mark);
+        if (part == 2) for (int k = 2; k < 14; ++k) t.set(k, 8, mark);
+        if (part == 3) for (int y = 5; y < 11; ++y) for (int x = 5; x < 11; ++x) t.set(x, y, (x == 5 || x == 10 || y == 5) ? mark : Color{ 100, 90, 60 });
+    }
+    void paintJigsawTopTile(Tile& t) { paintJigsawIn(t, 0); }
+    void paintJigsawBottomTile(Tile& t) { paintJigsawIn(t, 1); }
+    void paintJigsawSideTile(Tile& t) { paintJigsawIn(t, 2); }
+    void paintJigsawLockTile(Tile& t) { paintJigsawIn(t, 3); }
+    void paintItemBarrier(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 1; y < 15; ++y)
+            for (int x = 1; x < 15; ++x)
+            {
+                const float r = std::sqrt((x - 7.5f) * (x - 7.5f) + (y - 7.5f) * (y - 7.5f));
+                if (r > 5.5f && r < 7.2f) t.set(x, y, Color{ 220, 30, 30 });
+                if (std::abs(x - y) <= 1 && r < 6.0f) t.set(x, y, Color{ 220, 30, 30 });
+            }
+    }
+    void paintItemStructureVoid(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 4; y < 12; ++y)
+            for (int x = 4; x < 12; ++x)
+                if (x == 4 || x == 11 || y == 4 || y == 11) t.set(x, y, Color{ 120, 200, 230 });
+    }
+    void paintLightIn(Tile& t, int level)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        const uint8_t glow = static_cast<uint8_t>(120 + level * 8);
+        for (int y = 2; y < 11; ++y)
+            for (int x = 4; x < 12; ++x)
+            {
+                const float r = std::sqrt((x - 7.5f) * (x - 7.5f) + (y - 6.0f) * (y - 6.0f));
+                if (r < 4.2f) t.set(x, y, Color{ glow, glow, static_cast<uint8_t>(glow / 3) });
+            }
+        for (int y = 11; y < 14; ++y) for (int x = 6; x < 10; ++x) t.set(x, y, Color{ 150, 150, 160 });
+        for (int b = 0; b < 4; ++b)
+            if (level & (1 << b)) t.set(12 + (b & 1) * 2 - 1, 12 + (b >> 1) * 2, Color{ 255, 255, 255 });
+    }
+
     void paintCalibratedAmethystTile(Tile& t)
     {
         t.fill(Color{ 0, 0, 0, 0 });
@@ -8697,6 +8789,12 @@ namespace
         { Tiles::CalibratedTopTile, paintCalibratedTopTile },
         { Tiles::CalibratedInputTile, paintCalibratedInputTile },
         { Tiles::CalibratedAmethystTile, paintCalibratedAmethystTile },
+        { Tiles::JigsawTopTile, paintJigsawTopTile },
+        { Tiles::JigsawBottomTile, paintJigsawBottomTile },
+        { Tiles::JigsawSideTile, paintJigsawSideTile },
+        { Tiles::JigsawLockTile, paintJigsawLockTile },
+        { Tiles::ItemBarrier, paintItemBarrier },
+        { Tiles::ItemStructureVoid, paintItemStructureVoid },
         { Tiles::SmithingTopTile, paintSmithingTopTile },
         { Tiles::SmithingBottomTile, paintSmithingBottomTile },
         { Tiles::SmithingSideTile, paintSmithingSideTile },
@@ -9345,6 +9443,24 @@ namespace
         { Tiles::ItemBannerPatternFirst + 3, { "piglin_banner_pattern", nullptr, nullptr } },
         { Tiles::ItemBannerPatternFirst + 4, { "flow_banner_pattern", nullptr, nullptr } },
         { Tiles::ItemBannerPatternFirst + 5, { "guster_banner_pattern", nullptr, nullptr } },
+        { Tiles::ItemBarrier, { "barrier", nullptr, nullptr } },
+        { Tiles::ItemStructureVoid, { "structure_void", nullptr, nullptr } },
+        { Tiles::ItemLightFirst + 0, { "light_00", nullptr, nullptr } },
+        { Tiles::ItemLightFirst + 1, { "light_01", nullptr, nullptr } },
+        { Tiles::ItemLightFirst + 2, { "light_02", nullptr, nullptr } },
+        { Tiles::ItemLightFirst + 3, { "light_03", nullptr, nullptr } },
+        { Tiles::ItemLightFirst + 4, { "light_04", nullptr, nullptr } },
+        { Tiles::ItemLightFirst + 5, { "light_05", nullptr, nullptr } },
+        { Tiles::ItemLightFirst + 6, { "light_06", nullptr, nullptr } },
+        { Tiles::ItemLightFirst + 7, { "light_07", nullptr, nullptr } },
+        { Tiles::ItemLightFirst + 8, { "light_08", nullptr, nullptr } },
+        { Tiles::ItemLightFirst + 9, { "light_09", nullptr, nullptr } },
+        { Tiles::ItemLightFirst + 10, { "light_10", nullptr, nullptr } },
+        { Tiles::ItemLightFirst + 11, { "light_11", nullptr, nullptr } },
+        { Tiles::ItemLightFirst + 12, { "light_12", nullptr, nullptr } },
+        { Tiles::ItemLightFirst + 13, { "light_13", nullptr, nullptr } },
+        { Tiles::ItemLightFirst + 14, { "light_14", nullptr, nullptr } },
+        { Tiles::ItemLightFirst + 15, { "light_15", nullptr, nullptr } },
         { Tiles::ItemTemplateFirst, { "netherite_upgrade_smithing_template", nullptr, nullptr } },
         { Tiles::ItemTemplateFirst + 1, { "sentry_armor_trim_smithing_template", nullptr, nullptr } },
         { Tiles::ItemTemplateFirst + 2, { "vex_armor_trim_smithing_template", nullptr, nullptr } },
@@ -9588,6 +9704,27 @@ namespace
         { Tiles::CalibratedTopTile, { "calibrated_sculk_sensor_top", nullptr }, Tinting::None, 0, false },
         { Tiles::CalibratedInputTile, { "calibrated_sculk_sensor_input_side", nullptr }, Tinting::None, 0, false },
         { Tiles::CalibratedAmethystTile, { "calibrated_sculk_sensor_amethyst", nullptr }, Tinting::None, 0, false },
+        { Tiles::CommandTileFirst + 0, { "command_block_front", nullptr }, Tinting::None, 0, false },
+        { Tiles::CommandTileFirst + 1, { "command_block_back", nullptr }, Tinting::None, 0, false },
+        { Tiles::CommandTileFirst + 2, { "command_block_side", nullptr }, Tinting::None, 0, false },
+        { Tiles::CommandTileFirst + 3, { "command_block_conditional", nullptr }, Tinting::None, 0, false },
+        { Tiles::CommandTileFirst + 4, { "chain_command_block_front", nullptr }, Tinting::None, 0, false },
+        { Tiles::CommandTileFirst + 5, { "chain_command_block_back", nullptr }, Tinting::None, 0, false },
+        { Tiles::CommandTileFirst + 6, { "chain_command_block_side", nullptr }, Tinting::None, 0, false },
+        { Tiles::CommandTileFirst + 7, { "chain_command_block_conditional", nullptr }, Tinting::None, 0, false },
+        { Tiles::CommandTileFirst + 8, { "repeating_command_block_front", nullptr }, Tinting::None, 0, false },
+        { Tiles::CommandTileFirst + 9, { "repeating_command_block_back", nullptr }, Tinting::None, 0, false },
+        { Tiles::CommandTileFirst + 10, { "repeating_command_block_side", nullptr }, Tinting::None, 0, false },
+        { Tiles::CommandTileFirst + 11, { "repeating_command_block_conditional", nullptr }, Tinting::None, 0, false },
+        { Tiles::StructureBlockTileFirst + 0, { "structure_block_save", nullptr }, Tinting::None, 0, false },
+        { Tiles::StructureBlockTileFirst + 1, { "structure_block_load", nullptr }, Tinting::None, 0, false },
+        { Tiles::StructureBlockTileFirst + 2, { "structure_block_corner", nullptr }, Tinting::None, 0, false },
+        { Tiles::StructureBlockTileFirst + 3, { "structure_block_data", nullptr }, Tinting::None, 0, false },
+        { Tiles::StructureBlockTileFirst + 4, { "structure_block", nullptr }, Tinting::None, 0, false },
+        { Tiles::JigsawTopTile, { "jigsaw_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::JigsawBottomTile, { "jigsaw_bottom", nullptr }, Tinting::None, 0, false },
+        { Tiles::JigsawSideTile, { "jigsaw_side", nullptr }, Tinting::None, 0, false },
+        { Tiles::JigsawLockTile, { "jigsaw_lock", nullptr }, Tinting::None, 0, false },
         { Tiles::SmithingTopTile, { "smithing_table_top", nullptr }, Tinting::None, 0, false },
         { Tiles::SmithingBottomTile, { "smithing_table_bottom", nullptr }, Tinting::None, 0, false },
         { Tiles::SmithingSideTile, { "smithing_table_side", nullptr }, Tinting::None, 0, false },
@@ -10754,6 +10891,24 @@ Atlas::Atlas()
         paintBannerPatternIn(sheet, k);
         blitPainted(Tiles::ItemBannerPatternFirst + k, sheet);
     }
+    for (int k = 0; k < 12; ++k)
+    {
+        Tile command;
+        paintCommandIn(command, k / 4, k % 4);
+        blitPainted(Tiles::CommandTileFirst + k, command);
+    }
+    for (int k = 0; k < 5; ++k)
+    {
+        Tile structure;
+        paintStructureBlockIn(structure, k);
+        blitPainted(Tiles::StructureBlockTileFirst + k, structure);
+    }
+    for (int k = 0; k < 16; ++k)
+    {
+        Tile light;
+        paintLightIn(light, k);
+        blitPainted(Tiles::ItemLightFirst + k, light);
+    }
     for (int age = 0; age < 4; ++age)
     {
         Tile frost;
@@ -10920,6 +11075,8 @@ Atlas::Atlas()
         {
             Image image = loadFirstAvailable(entry.candidates);
             if (!image.valid()) continue;
+            if (!entry.animated && image.height > image.width && image.width > 0 && image.height % image.width == 0)
+                image = extractFrame(image, 0, image.width);
 
             int frameCount = 1;
             if (entry.animated && image.height > image.width && image.width > 0 &&
@@ -11701,6 +11858,9 @@ bool Atlas::hasPainter(int tileIndex)
     if (tileIndex >= Tiles::ItemTemplateFirst && tileIndex <= Tiles::ItemTemplateLast) return true;
     if (tileIndex >= Tiles::ItemBannerFirst && tileIndex <= Tiles::ItemBannerLast) return true;
     if (tileIndex >= Tiles::ItemBannerPatternFirst && tileIndex <= Tiles::ItemBannerPatternLast) return true;
+    if (tileIndex >= Tiles::CommandTileFirst && tileIndex <= Tiles::CommandTileLast) return true;
+    if (tileIndex >= Tiles::StructureBlockTileFirst && tileIndex <= Tiles::StructureBlockTileLast) return true;
+    if (tileIndex >= Tiles::ItemLightFirst && tileIndex <= Tiles::ItemLightLast) return true;
     if (tileIndex >= Tiles::CutCopperTile && tileIndex <= Tiles::CopperTrapdoorTileLast) return true;
     if (tileIndex >= Tiles::ItemCopperDoorFirst && tileIndex <= Tiles::ItemCopperDoorLast) return true;
     if (tileIndex >= Tiles::CrackFirst &&

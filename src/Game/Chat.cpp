@@ -1,5 +1,7 @@
 #include "Chat.h"
 #include "GameMode.h"
+#include "Entity/MobType.h"
+#include <cmath>
 #include <algorithm>
 #include <cctype>
 #include <cstdlib>
@@ -33,21 +35,53 @@ namespace
     // spaces allowed to be underscores the way Minecraft writes them.
     StackId lookUp(const std::string& wanted)
     {
-        const std::string target = lower(wanted);
+        std::string target = lower(wanted);
+        if (target.rfind("minecraft:", 0) == 0) target = target.substr(10);
 
-        for (int id = 1; id < static_cast<int>(Items::Count); ++id)
-        {
-            const StackId stack = static_cast<StackId>(id);
-            if (!isItem(stack) && stack >= 256) continue;
+        for (int pass = 0; pass < 2; ++pass)
+            for (int id = 1; id < static_cast<int>(Items::Count); ++id)
+            {
+                const StackId stack = static_cast<StackId>(id);
+                if (!isItem(stack) && stack >= static_cast<StackId>(Blocks::Count)) continue;
+                if (pass == 0 && !isItem(stack) && !isObtainable(asBlock(stack))) continue;
 
-            std::string name = lower(displayName(stack));
-            std::replace(name.begin(), name.end(), ' ', '_');
-            if (name == target) return stack;
+                std::string name = lower(displayName(stack));
+                std::replace(name.begin(), name.end(), ' ', '_');
+                if (name == target) return stack;
 
-            std::string spaced = lower(displayName(stack));
-            if (spaced == lower(wanted)) return stack;
-        }
+                std::string spaced = lower(displayName(stack));
+                if (spaced == target) return stack;
+            }
+        const std::string suffix = "_block";
+        if (target.size() > suffix.size() && target.compare(target.size() - suffix.size(), suffix.size(), suffix) == 0)
+            return lookUp("block_of_" + target.substr(0, target.size() - suffix.size()));
         return Blocks::Air;
+    }
+
+    bool coordinate(const std::string& text, float base, float& out)
+    {
+        if (!text.empty() && text[0] == '~')
+        {
+            float offset = 0.0f;
+            if (text.size() > 1 && !number(text.substr(1), offset)) return false;
+            out = base + offset;
+            return true;
+        }
+        return number(text, out);
+    }
+
+    int mobNamed(const std::string& wanted)
+    {
+        std::string target = lower(wanted);
+        if (target.rfind("minecraft:", 0) == 0) target = target.substr(10);
+        for (int m = 0; m < static_cast<int>(MobId::Count); ++m)
+        {
+            std::string name = lower(mobType(static_cast<MobId>(m)).name);
+            if (name == target) return m;
+            std::replace(name.begin(), name.end(), ' ', '_');
+            if (name == target) return m;
+        }
+        return -1;
     }
 
     Chat::Command deny(const std::string& name)
@@ -67,7 +101,12 @@ namespace
     }
 }
 
-Chat::Command Chat::parse(const std::string& line, bool cheats)
+bool Chat::succeeded(const Command& command)
+{
+    return command.kind != Kind::Nothing && command.kind != Kind::Unknown && command.kind != Kind::Denied;
+}
+
+Chat::Command Chat::parse(const std::string& line, bool cheats, const glm::vec3& origin)
 {
     Command out;
 
@@ -96,7 +135,7 @@ Chat::Command Chat::parse(const std::string& line, bool cheats)
     {
         out.kind = Kind::Help;
         out.text = cheats
-            ? "/gamemode /time /tp /give /kill /seed /help"
+            ? "/gamemode /time /tp /give /kill /seed /say /setblock /summon /help"
             : "/help  -  this world was made without cheats, so the rest are off";
         return out;
     }
@@ -155,7 +194,7 @@ Chat::Command Chat::parse(const std::string& line, bool cheats)
         if (words.size() < 4) return fail("/tp <x> <y> <z>");
 
         float x = 0.0f, y = 0.0f, z = 0.0f;
-        if (!number(words[1], x) || !number(words[2], y) || !number(words[3], z))
+        if (!coordinate(words[1], origin.x, x) || !coordinate(words[2], origin.y, y) || !coordinate(words[3], origin.z, z))
             return fail("/tp wants three numbers.");
 
         out.kind = Kind::Teleport;
@@ -192,6 +231,55 @@ Chat::Command Chat::parse(const std::string& line, bool cheats)
         if (!cheats) return deny(name);
         out.kind = Kind::Kill;
         out.text = "Ouch.";
+        return out;
+    }
+
+    if (name == "say")
+    {
+        if (!cheats) return deny(name);
+        if (words.size() < 2) return fail("/say <message>");
+        std::string message;
+        for (size_t i = 1; i < words.size(); ++i) message += (i > 1 ? " " : "") + words[i];
+        out.kind = Kind::Announce;
+        out.text = message.substr(0, MAX_LENGTH);
+        return out;
+    }
+
+    if (name == "setblock")
+    {
+        if (!cheats) return deny(name);
+        if (words.size() < 5) return fail("/setblock <x> <y> <z> <block>");
+        float x = 0.0f, y = 0.0f, z = 0.0f;
+        if (!coordinate(words[1], std::floor(origin.x), x) || !coordinate(words[2], std::floor(origin.y), y) ||
+            !coordinate(words[3], std::floor(origin.z), z))
+            return fail("/setblock wants three numbers.");
+        const std::string wanted = lower(words[4]);
+        const bool air = wanted == "air" || wanted == "minecraft:air";
+        const StackId id = air ? static_cast<StackId>(Blocks::Air) : lookUp(words[4]);
+        if (id == Blocks::Air && !air) return fail("No block called " + words[4] + ".");
+        if (isItem(id)) return fail(words[4] + " is not a block.");
+        out.kind = Kind::SetBlock;
+        out.position = glm::vec3(std::floor(x), std::floor(y), std::floor(z));
+        out.item = id;
+        out.text = "Changed the block at " + std::to_string(static_cast<int>(std::floor(x))) + ", " +
+                   std::to_string(static_cast<int>(std::floor(y))) + ", " + std::to_string(static_cast<int>(std::floor(z))) + ".";
+        return out;
+    }
+
+    if (name == "summon")
+    {
+        if (!cheats) return deny(name);
+        if (words.size() < 2) return fail("/summon <mob> [x] [y] [z]");
+        const int mob = mobNamed(words[1]);
+        if (mob < 0) return fail("No mob called " + words[1] + ".");
+        glm::vec3 at = origin;
+        if (words.size() >= 5 &&
+            (!coordinate(words[2], origin.x, at.x) || !coordinate(words[3], origin.y, at.y) || !coordinate(words[4], origin.z, at.z)))
+            return fail("/summon wants three numbers for where.");
+        out.kind = Kind::Summon;
+        out.mob = mob;
+        out.position = at;
+        out.text = std::string("Summoned a new ") + mobType(static_cast<MobId>(mob)).name + ".";
         return out;
     }
 

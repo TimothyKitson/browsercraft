@@ -200,6 +200,9 @@ namespace
         Blocks::IronBars, Blocks::ChainFirst, Blocks::EndRodFirst, Blocks::Cobweb, Items::IronNugget,
         Blocks::Stonecutter, Blocks::FletchingTable, Blocks::SmithingTable, Blocks::CartographyTable, Blocks::LoomFirst + 2,
         Blocks::CalibratedSensorFirst + 4, Blocks::SculkVeinFirst,
+        Blocks::Sculk, Blocks::SculkSensor, Blocks::SculkShrieker, Blocks::SculkCatalyst,
+        Blocks::CommandBlockFirst + 4, Blocks::CommandBlockFirst + 16, Blocks::CommandBlockFirst + 28,
+        Blocks::StructureBlockFirst, Blocks::JigsawFirst + 2, Blocks::Barrier, Blocks::LightFirst + 15, Blocks::StructureVoid,
         Blocks::SoulTorch, Blocks::SoulCampfire, Blocks::SoulSoil,
         Blocks::MagmaBlock, Blocks::CryingObsidian, Blocks::RespawnAnchor0, Blocks::Lodestone,
         Blocks::BellFirst + 2, Blocks::Jukebox, Blocks::ChiseledBookshelfFirst + 14, Blocks::DragonEgg, Blocks::HeavyCore,
@@ -297,7 +300,8 @@ bool Application::drawBlockIcon(float x, float y, float size, StackId id,
     // Only things that really are a box. A flower is two crossed quads
     // and a liquid has no edges; both read better flat, and Minecraft
     // draws them flat too.
-    if (info.render != RenderType::Cube && info.render != RenderType::Slab && !isAnySculkSensor(block)) return false;
+    if (info.render != RenderType::Cube && info.render != RenderType::Slab && !isAnySculkSensor(block) &&
+        !isCommandBlock(block) && !isJigsaw(block)) return false;
 
     // Minecraft's proportions, scaled to the slot: 14.14 of 16 across.
     const float width = size * (14.142f / 16.0f);

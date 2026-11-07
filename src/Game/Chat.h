@@ -29,6 +29,9 @@ namespace Chat
         Give,
         Kill,
         Seed,
+        Announce,
+        SetBlock,
+        Summon,
     };
 
     struct Command
@@ -41,12 +44,14 @@ namespace Chat
         glm::vec3 position{ 0.0f };
         StackId item = Blocks::Air;
         int count = 1;
+        int mob = -1;
     };
 
     // `cheats` decides whether anything beyond chat and /help is allowed.
     // A command refused for that reason comes back as Denied rather than
     // Unknown, so the player is told which of the two it was.
-    Command parse(const std::string& line, bool cheats);
+    Command parse(const std::string& line, bool cheats, const glm::vec3& origin = glm::vec3(0.0f));
+    bool succeeded(const Command& command);
 
     // One scrolling log. Lines fade out on their own, and are kept so the
     // last few can be shown while the chat line is closed.

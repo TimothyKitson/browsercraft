@@ -1080,6 +1080,49 @@ private:
     void renderChat();
     void updateChatInput();
     void runChatLine(const std::string& line);
+    bool runCommand(const std::string& line, const glm::vec3& origin, bool fromBlock, std::string& output);
+    struct CommandState
+    {
+        std::string command;
+        std::string output;
+        bool alwaysActive = false;
+        bool powered = false;
+        bool success = false;
+    };
+    struct StructureState
+    {
+        std::string name = "structure";
+        glm::ivec3 offset{ 0, 1, 0 };
+        glm::ivec3 size{ 5, 5, 5 };
+    };
+    std::map<std::array<int, 4>, CommandState> m_commands;
+    std::map<std::array<int, 4>, StructureState> m_structures;
+    float m_commandClock = 0.0f;
+    void tickCommandBlocks(float deltaTime);
+    void executeCommandBlock(const glm::ivec3& at, int depth);
+    std::array<int, 4> blockKey(const glm::ivec3& at) const
+    {
+        return { static_cast<int>(m_dimension), at.x, at.y, at.z };
+    }
+    bool m_editorOpen = false;
+    bool m_editorStructure = false;
+    glm::ivec3 m_editorAt{ 0 };
+    std::array<std::string, 3> m_editorFields;
+    int m_editorFocus = 0;
+    int m_editorKind = 0;
+    bool m_editorConditional = false;
+    bool m_editorAlways = false;
+    int m_editorMode = 0;
+    std::string m_editorStatus;
+    void openBlockEditor(const glm::ivec3& at);
+    void closeBlockEditor(bool keep);
+    void updateBlockEditor();
+    void renderBlockEditor();
+    bool saveStructure(const glm::ivec3& at, const StructureState& state, std::string& message);
+    bool loadStructure(const glm::ivec3& at, const StructureState& state, std::string& message);
+    std::vector<glm::ivec3> m_markerSpots;
+    float m_markerScan = 0.0f;
+    void pinCreativeMarkers();
     void renderHearts(float x, float y);
     void renderArmour(float x, float y);
     void renderFood(float rightX, float y);

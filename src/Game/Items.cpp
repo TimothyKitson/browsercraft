@@ -315,6 +315,9 @@ int flatIconFor(BlockId id)
     if (isDecoratedPot(id)) return Tiles::PotSideTile;
     if (isBanner(id)) return Tiles::ItemBannerFirst + bannerColour(id);
     if (isSculkVein(id)) return Tiles::SculkVeinTile;
+    if (id == Blocks::Barrier) return Tiles::ItemBarrier;
+    if (id == Blocks::StructureVoid) return Tiles::ItemStructureVoid;
+    if (isLightBlock(id)) return Tiles::ItemLightFirst + lightBlockLevel(id);
     if (isSnifferEgg(id)) return Tiles::ItemSnifferEgg;
     if (isEndRod(id)) return Tiles::EndRodTile;
     if (isDoublePlant(id))
@@ -485,6 +488,7 @@ StackId blockDrop(BlockId id)
     if (isDecoratedPot(id)) return static_cast<StackId>(Blocks::DecoratedPotFirst + 2);
     if (isLoom(id)) return static_cast<StackId>(Blocks::LoomFirst + 2);
     if (isSculkVein(id)) return Blocks::Air;
+    if (isCreativeOnly(id)) return Blocks::Air;
     if (isCalibratedSensor(id)) return static_cast<StackId>(calibratedOf(2, false));
     if (id == Blocks::SculkSensorLit) return Blocks::SculkSensor;
     if (isBanner(id)) return static_cast<StackId>(bannerOf(bannerColour(id), false, 2));

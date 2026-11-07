@@ -3858,6 +3858,65 @@ namespace
         }
     }
 
+    void testCreativeBlocks()
+    {
+        section("command blocks and the other creative-only blocks");
+        const BlockId chain = commandBlockOf(1, 4, true);
+        check(isCommandBlock(chain) && commandKind(chain) == 1 && commandFacing(chain) == 4 && commandConditional(chain),
+              "a command block knows its kind, its facing and whether it is conditional");
+        check(isCreativeOnly(chain) && isCreativeOnly(Blocks::Barrier) && isCreativeOnly(lightBlockOf(3)) &&
+              isCreativeOnly(Blocks::StructureVoid) && isCreativeOnly(Blocks::JigsawFirst) && isCreativeOnly(Blocks::StructureBlockFirst + 2) &&
+              !isCreativeOnly(Blocks::Stone), "and the creative-only blocks are the ones Minecraft keeps out of survival");
+        check(blockDrop(commandBlockOf(0, 2, false)) == Blocks::Air && blockDrop(Blocks::Barrier) == Blocks::Air,
+              "none of them drops anything");
+        check(isObtainable(commandBlockOf(2, 2, false)) && !isObtainable(commandBlockOf(2, 5, false)) &&
+              isObtainable(lightBlockOf(15)) && !isObtainable(lightBlockOf(4)), "only one form of each is held");
+        check(isSolid(Blocks::Barrier) && !isVisible(Blocks::Barrier), "a barrier stops you and cannot be seen");
+        check(!isSolid(lightBlockOf(9)) && lightEmission(lightBlockOf(9)) == 9 && lightEmission(lightBlockOf(15)) == 15,
+              "a light block is walked through and shines at its level");
+        check(blockInfo(Blocks::Barrier).hardness < 0.0f && blockInfo(commandBlockOf(0, 0, false)).hardness < 0.0f,
+              "and none of them can be mined in survival");
+
+        const Chat::Command say = Chat::parse("/say hello there", true);
+        check(say.kind == Chat::Kind::Announce && say.text == "hello there", "/say announces what follows");
+        const Chat::Command set = Chat::parse("/setblock ~1 ~-2 ~ glowstone", true, glm::vec3(10.5f, 64.2f, -3.7f));
+        check(set.kind == Chat::Kind::SetBlock && set.position == glm::vec3(11.0f, 62.0f, -4.0f) && set.item == Blocks::Glowstone,
+              "/setblock reads ~ as where the command runs from");
+        check(Chat::parse("/setblock 0 70 0 gold_block", true).item == Blocks::GoldBlock, "and Minecraft's own names for blocks");
+        check(Chat::parse("/setblock 0 70 0 air", true).kind == Chat::Kind::SetBlock, "air is a block you can set");
+        check(Chat::parse("/setblock 0 70 0 wheat_seeds", true).kind == Chat::Kind::Unknown, "but an item is not");
+        const Chat::Command summon = Chat::parse("/summon zombie ~ ~1 ~", true, glm::vec3(1.0f, 2.0f, 3.0f));
+        check(summon.kind == Chat::Kind::Summon && summon.mob == static_cast<int>(MobId::Zombie) &&
+              summon.position == glm::vec3(1.0f, 3.0f, 3.0f), "/summon names a mob and where");
+        check(Chat::parse("/give loom", true).kind == Chat::Kind::Give, "and /give finds blocks past the first two hundred and fifty-six");
+        check(Chat::parse("/tp ~ ~10 ~", true, glm::vec3(5.0f, 60.0f, 5.0f)).position == glm::vec3(5.0f, 70.0f, 5.0f),
+              "/tp takes relative coordinates too");
+        check(Chat::succeeded(say) && !Chat::succeeded(Chat::parse("/nonsense", true)), "a command knows whether it worked");
+
+        const std::string dir = (std::filesystem::temp_directory_path() / "browsercraft_command_test").string();
+        std::error_code ec;
+        std::filesystem::remove_all(dir, ec);
+        std::filesystem::create_directories(dir, ec);
+        LevelState level;
+        level.seed = 5u;
+        LevelState::SavedCommand command;
+        command.x = 1; command.y = 2; command.z = 3; command.dimension = 0; command.flags = 3;
+        command.command = "say hi";
+        command.output = "[@] hi";
+        level.commands.push_back(command);
+        LevelState::SavedStructure structure;
+        structure.x = -4; structure.y = 60; structure.z = 9; structure.name = "house";
+        structure.offset[1] = 2; structure.size[0] = 7;
+        level.structures.push_back(structure);
+        WorldSave::saveLevel(dir, level);
+        LevelState back;
+        check(WorldSave::loadLevel(dir, back) && back.commands.size() == 1 && back.commands[0].command == "say hi" &&
+              back.commands[0].output == "[@] hi" && back.commands[0].flags == 3 && back.structures.size() == 1 &&
+              back.structures[0].name == "house" && back.structures[0].offset[1] == 2 && back.structures[0].size[0] == 7,
+              "command blocks and structure blocks keep what was typed into them");
+        std::filesystem::remove_all(dir, ec);
+    }
+
     void testSculkExtras()
     {
         section("sculk veins and the calibrated sensor");
@@ -11575,7 +11634,7 @@ namespace
             const std::string path = dir + "/level.dat";
             std::error_code ec;
             const auto size = std::filesystem::file_size(path, ec);
-            if (!ec) std::filesystem::resize_file(path, size - sizeof(uint16_t) - sizeof(uint8_t) - 3 * sizeof(int) - sizeof(uint32_t) - sizeof(int32_t) - 2 * sizeof(uint32_t), ec);
+            if (!ec) std::filesystem::resize_file(path, size - sizeof(uint16_t) - sizeof(uint8_t) - 3 * sizeof(int) - sizeof(uint32_t) - sizeof(int32_t) - 4 * sizeof(uint32_t), ec);
 
             LevelState back;
             check(WorldSave::loadLevel(dir, back), "a level from before items moved up still loads");
@@ -14089,6 +14148,7 @@ int runSelfTest()
     testMaps();
     testBanners();
     testSculkExtras();
+    testCreativeBlocks();
     testMadeThings();
     testTheEndAndTheSea();
     testPathfinding();

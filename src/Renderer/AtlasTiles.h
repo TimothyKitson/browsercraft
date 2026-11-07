@@ -387,6 +387,9 @@ namespace Tiles
         LoomTopTile, LoomBottomTile, LoomSideTile, LoomFrontTile,
         SculkVeinTile, SculkTendrilTile, SculkTendrilActiveTile,
         CalibratedTopTile, CalibratedInputTile, CalibratedAmethystTile,
+        CommandTileFirst, CommandTileLast = CommandTileFirst + 11,
+        StructureBlockTileFirst, StructureBlockTileLast = StructureBlockTileFirst + 4,
+        JigsawTopTile, JigsawBottomTile, JigsawSideTile, JigsawLockTile,
 
         TileCount
     };
@@ -591,8 +594,9 @@ namespace Tiles
         ItemCompass, ItemEmptyMap, ItemFilledMap,
         ItemBannerFirst, ItemBannerLast = ItemBannerFirst + 15,
         ItemBannerPatternFirst, ItemBannerPatternLast = ItemBannerPatternFirst + 5,
+        ItemBarrier, ItemStructureVoid, ItemLightFirst, ItemLightLast = ItemLightFirst + 15,
 
-        ItemTileEnd = ItemBannerPatternLast + 1
+        ItemTileEnd = ItemLightLast + 1
     };
 
     // Ten progressively more broken overlay tiles for the mining animation.

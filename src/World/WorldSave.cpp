@@ -290,6 +290,28 @@ void WorldSave::saveLevel(const std::string& saveDirectory, const LevelState& st
         write(out, banner.dimension);
         write(out, banner.design);
     }
+    write(out, static_cast<uint32_t>(state.commands.size()));
+    for (const LevelState::SavedCommand& command : state.commands)
+    {
+        write(out, command.x);
+        write(out, command.y);
+        write(out, command.z);
+        write(out, command.dimension);
+        write(out, command.flags);
+        writeLine(out, command.command);
+        writeLine(out, command.output);
+    }
+    write(out, static_cast<uint32_t>(state.structures.size()));
+    for (const LevelState::SavedStructure& structure : state.structures)
+    {
+        write(out, structure.x);
+        write(out, structure.y);
+        write(out, structure.z);
+        write(out, structure.dimension);
+        writeLine(out, structure.name);
+        for (int k = 0; k < 3; ++k) write(out, static_cast<int32_t>(structure.offset[k]));
+        for (int k = 0; k < 3; ++k) write(out, static_cast<int32_t>(structure.size[k]));
+    }
 }
 
 bool WorldSave::loadLevel(const std::string& saveDirectory, LevelState& out)
@@ -568,14 +590,55 @@ bool WorldSave::loadLevel(const std::string& saveDirectory, LevelState& out)
                                                         out.bannerDesigns.push_back(design);
                                                     }
                                                 uint32_t bannerCount = 0;
-                                                if (designsWhole && read(in, bannerCount))
+                                                bool bannersWhole = designsWhole && read(in, bannerCount);
+                                                if (bannersWhole)
                                                     for (uint32_t i = 0; i < bannerCount && i < 1000000u; ++i)
                                                     {
                                                         LevelState::SavedBanner banner;
                                                         if (!read(in, banner.x) || !read(in, banner.y) || !read(in, banner.z) ||
                                                             !read(in, banner.dimension) || !read(in, banner.design))
+                                                        {
+                                                            bannersWhole = false;
                                                             break;
+                                                        }
                                                         out.banners.push_back(banner);
+                                                    }
+                                                uint32_t commandCount = 0;
+                                                bool commandsWhole = bannersWhole && read(in, commandCount);
+                                                if (commandsWhole)
+                                                    for (uint32_t i = 0; i < commandCount && i < 1000000u; ++i)
+                                                    {
+                                                        LevelState::SavedCommand command;
+                                                        if (!read(in, command.x) || !read(in, command.y) || !read(in, command.z) ||
+                                                            !read(in, command.dimension) || !read(in, command.flags) ||
+                                                            !readLine(in, command.command) || !readLine(in, command.output))
+                                                        {
+                                                            commandsWhole = false;
+                                                            break;
+                                                        }
+                                                        out.commands.push_back(command);
+                                                    }
+                                                uint32_t structureCount = 0;
+                                                if (commandsWhole && read(in, structureCount))
+                                                    for (uint32_t i = 0; i < structureCount && i < 1000000u; ++i)
+                                                    {
+                                                        LevelState::SavedStructure structure;
+                                                        bool whole = read(in, structure.x) && read(in, structure.y) && read(in, structure.z) &&
+                                                                     read(in, structure.dimension) && readLine(in, structure.name);
+                                                        for (int k = 0; k < 3 && whole; ++k)
+                                                        {
+                                                            int32_t value = 0;
+                                                            whole = read(in, value);
+                                                            structure.offset[k] = value;
+                                                        }
+                                                        for (int k = 0; k < 3 && whole; ++k)
+                                                        {
+                                                            int32_t value = 0;
+                                                            whole = read(in, value);
+                                                            structure.size[k] = value;
+                                                        }
+                                                        if (!whole) break;
+                                                        out.structures.push_back(structure);
                                                     }
                                             }
                                         }

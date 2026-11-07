@@ -722,7 +722,8 @@ RaycastHit World::raycast(const glm::vec3& origin, const glm::vec3& direction, f
     while (travelled <= maxDistance)
     {
         const BlockId id = getBlock(voxel.x, voxel.y, voxel.z);
-        if (id != Blocks::Air && (stopAtLiquids ? !(isFluid(id) && !isFluidSource(id)) : !isLiquid(id)))
+        if (id != Blocks::Air && (targetLights || !isLightBlock(id)) &&
+            (stopAtLiquids ? !(isFluid(id) && !isFluidSource(id)) : !isLiquid(id)))
         {
             hit.hit = true;
             hit.block = voxel;

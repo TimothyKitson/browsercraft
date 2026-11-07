@@ -43,6 +43,7 @@
 #include <cctype>
 #include <string>
 #include <filesystem>
+#include <fstream>
 
 namespace
 {
@@ -843,6 +844,26 @@ void Application::loadLevel()
         m_bannerAt.clear();
         for (const LevelState::SavedBanner& banner : state.banners)
             m_bannerAt[{ static_cast<int>(banner.dimension), banner.x, banner.y, banner.z }] = banner.design;
+        m_commands.clear();
+        for (const LevelState::SavedCommand& saved : state.commands)
+        {
+            CommandState command;
+            command.command = saved.command;
+            command.output = saved.output;
+            command.alwaysActive = (saved.flags & 1u) != 0;
+            command.success = (saved.flags & 2u) != 0;
+            command.powered = (saved.flags & 4u) != 0;
+            m_commands[{ static_cast<int>(saved.dimension), saved.x, saved.y, saved.z }] = command;
+        }
+        m_structures.clear();
+        for (const LevelState::SavedStructure& saved : state.structures)
+        {
+            StructureState structure;
+            structure.name = saved.name;
+            structure.offset = glm::ivec3(saved.offset[0], saved.offset[1], saved.offset[2]);
+            structure.size = glm::ivec3(saved.size[0], saved.size[1], saved.size[2]);
+            m_structures[{ static_cast<int>(saved.dimension), saved.x, saved.y, saved.z }] = structure;
+        }
 
         m_furnaces.clear();
         for (const LevelState::SavedFurnace& saved : state.furnaces)
@@ -1030,6 +1051,34 @@ void Application::saveLevel()
         std::vector<std::pair<uint8_t, uint8_t>> saved;
         for (const Banners::Layer& layer : design) saved.emplace_back(layer.pattern, layer.colour);
         state.bannerDesigns.push_back(saved);
+    }
+    for (const auto& entry : m_commands)
+    {
+        LevelState::SavedCommand saved;
+        saved.dimension = static_cast<int8_t>(entry.first[0]);
+        saved.x = entry.first[1];
+        saved.y = entry.first[2];
+        saved.z = entry.first[3];
+        saved.flags = static_cast<uint8_t>((entry.second.alwaysActive ? 1u : 0u) | (entry.second.success ? 2u : 0u) |
+                                           (entry.second.powered ? 4u : 0u));
+        saved.command = entry.second.command;
+        saved.output = entry.second.output;
+        state.commands.push_back(saved);
+    }
+    for (const auto& entry : m_structures)
+    {
+        LevelState::SavedStructure saved;
+        saved.dimension = static_cast<int8_t>(entry.first[0]);
+        saved.x = entry.first[1];
+        saved.y = entry.first[2];
+        saved.z = entry.first[3];
+        saved.name = entry.second.name;
+        for (int k = 0; k < 3; ++k)
+        {
+            saved.offset[k] = entry.second.offset[k];
+            saved.size[k] = entry.second.size[k];
+        }
+        state.structures.push_back(saved);
     }
     for (const auto& banner : m_bannerAt)
     {
@@ -1980,6 +2029,7 @@ bool Application::frame()
             tickFrost(deltaTime);
             tickMaps(deltaTime);
             tickVibrations(deltaTime);
+            tickCommandBlocks(deltaTime);
 
             if (m_inventory.slot(Inventory::ARMOR_FIRST).id == Items::TurtleHelmet && !m_player.isHeadUnderwater(*m_world))
                 Effects::give(m_player.effects, Effects::Kind::WaterBreathing, 0, 10.0f);
@@ -2196,7 +2246,7 @@ bool Application::frame()
             m_startupScreen == "attackhud" || m_startupScreen == "attackready" ||
             m_startupScreen == "attackhotbar" || m_startupScreen == "bossbars" ||
             m_startupScreen == "gamemode" || m_startupScreen == "spectator" ||
-            m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" ||
+            m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" ||
             m_startupScreen == "grinderror" || m_startupScreen == "woods" ||
             m_startupScreen == "cherry" || m_startupScreen == "mangrove" || m_startupScreen == "fungi" ||
             m_startupScreen == "stones" || m_startupScreen == "colours" || m_startupScreen == "candles" ||
@@ -2288,6 +2338,8 @@ bool Application::frame()
                                   m_startupScreen != "loom" &&
                                   m_startupScreen != "banners" &&
                                   m_startupScreen != "sculk" &&
+                                  m_startupScreen != "commands" &&
+                                  m_startupScreen != "commandui" &&
                                   m_startupScreen != "grinderror" &&
                                   m_startupScreen != "woods" &&
                                   m_startupScreen != "cherry" &&
@@ -2680,7 +2732,7 @@ bool Application::frame()
             if (m_startupScreen == "attackhud" || m_startupScreen == "attackready" ||
                 m_startupScreen == "attackhotbar" || m_startupScreen == "bossbars" ||
                 m_startupScreen == "gamemode" || m_startupScreen == "spectator" ||
-                m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" ||
+                m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" ||
                 m_startupScreen == "grinderror" || m_startupScreen == "woods" ||
                 m_startupScreen == "cherry" || m_startupScreen == "mangrove" || m_startupScreen == "fungi" ||
                 m_startupScreen == "stones" || m_startupScreen == "colours" || m_startupScreen == "candles" ||
@@ -3418,6 +3470,50 @@ bool Application::frame()
                     m_inventory.slot(6) = ItemStack{ doorBaseOf(3), 3 };
                     m_inventory.slot(7) = ItemStack{ trapdoorBaseOf(5), 2 };
                     m_inventory.slot(8) = ItemStack{ Blocks::DarkOakSapling, 4 };
+                }
+                if (m_startupScreen == "commands" || m_startupScreen == "commandui")
+                {
+                    m_devAttackStrength = 1.0f;
+                    setGameMode(GameMode::Creative);
+                    for (int dx = 2; dx <= 9; ++dx)
+                        for (int dz = -5; dz <= 5; ++dz)
+                            for (int dy = 0; dy < 4; ++dy) m_world->setBlock(px + dx, py + dy, pz + dz, Blocks::Air);
+                    auto command = [&](const glm::ivec3& at, BlockId block, const std::string& line, bool always) {
+                        m_world->setBlock(at.x, at.y, at.z, block);
+                        CommandState state;
+                        state.command = line;
+                        state.alwaysActive = always;
+                        m_commands[blockKey(at)] = state;
+                    };
+                    command(glm::ivec3(px + 4, py, pz - 2), commandBlockOf(0, 1, false), "setblock ~ ~2 ~ glowstone", false);
+                    m_world->setBlock(px + 3, py, pz - 2, Blocks::RedstoneBlock);
+                    command(glm::ivec3(px + 5, py, pz - 2), commandBlockOf(1, 1, false), "say The chain ran", true);
+                    command(glm::ivec3(px + 6, py, pz - 2), commandBlockOf(1, 1, true), "setblock ~ ~1 ~ gold_block", true);
+                    command(glm::ivec3(px + 4, py, pz + 2), commandBlockOf(2, 4, false), "time set day", false);
+                    command(glm::ivec3(px + 6, py, pz + 2), commandBlockOf(0, 3, true), "", false);
+                    for (int m = 0; m < 4; ++m) m_world->setBlock(px + 8, py, pz - 3 + m * 2, static_cast<BlockId>(Blocks::StructureBlockFirst + m));
+                    m_world->setBlock(px + 8, py + 1, pz - 2, static_cast<BlockId>(Blocks::JigsawFirst + 3));
+                    m_world->setBlock(px + 8, py + 1, pz + 2, static_cast<BlockId>(Blocks::JigsawFirst + 4));
+                    for (int dz = -1; dz <= 1; ++dz) m_world->setBlock(px + 3, py + 1, pz + dz, Blocks::Barrier);
+                    m_world->setBlock(px + 5, py + 1, pz + 2, lightBlockOf(15));
+                    m_world->setBlock(px + 5, py + 1, pz, lightBlockOf(7));
+                    m_world->setBlock(px + 7, py + 1, pz, Blocks::StructureVoid);
+                    m_inventory.setSelectedSlot(0);
+                    m_inventory.slot(0) = ItemStack{ Blocks::Barrier, 1 };
+                    m_inventory.slot(1) = ItemStack{ static_cast<StackId>(lightBlockOf(15)), 1 };
+                    m_inventory.slot(2) = ItemStack{ static_cast<StackId>(commandBlockOf(0, 2, false)), 1 };
+                    m_inventory.slot(3) = ItemStack{ static_cast<StackId>(commandBlockOf(1, 2, false)), 1 };
+                    m_inventory.slot(4) = ItemStack{ static_cast<StackId>(commandBlockOf(2, 2, false)), 1 };
+                    m_inventory.slot(5) = ItemStack{ Blocks::StructureBlockFirst, 1 };
+                    m_inventory.slot(6) = ItemStack{ static_cast<StackId>(Blocks::JigsawFirst + 2), 1 };
+                    m_inventory.slot(7) = ItemStack{ Blocks::StructureVoid, 1 };
+                    if (m_startupScreen == "commandui")
+                    {
+                        const glm::ivec3 at(px + 4, py, pz + 2);
+                        m_commands[blockKey(at)].output = "Set the time to 1000";
+                        openBlockEditor(at);
+                        m_editorFields[0] = "say Hello from a command block";
+                    }
                 }
                 if (m_startupScreen == "sculk")
                 {
@@ -6160,7 +6256,9 @@ void Application::handleEvents()
 
     if (m_input.wasKeyPressed(SDL_SCANCODE_ESCAPE))
     {
-        if (m_inventoryOpen)
+        if (m_editorOpen)
+            closeBlockEditor(false);
+        else if (m_inventoryOpen)
         {
             closeInventory();
             setMouseCaptured(true);
@@ -6428,6 +6526,11 @@ void Application::waitForSpawnChunk()
 
 void Application::updateGameplay(float deltaTime)
 {
+    if (m_world)
+    {
+        const ItemStack& held = m_inventory.selected();
+        m_world->targetLights = m_player.creative() && !isItem(held.id) && isLightBlock(asBlock(held.id));
+    }
     updateTraders(deltaTime);
     // Typing comes first and takes everything: no walking, no looking and
     // no mining while the chat line is open.
@@ -6439,6 +6542,8 @@ void Application::updateGameplay(float deltaTime)
     // same reason: W is a letter while a board is open.
     updateSignInput();
     if (m_signOpen) return;
+    updateBlockEditor();
+    if (m_editorOpen) return;
 
     // --- look ---
     // Moving/resizing the window or regaining focus can deliver one huge
@@ -6792,7 +6897,7 @@ void Application::updateMining(float deltaTime)
     // and a block and knows nothing about what has been put on it.
     if (seconds > 0.0f)
         seconds /= Enchanting::digSpeedMultiplier(m_inventory.selected().enchantments) * Effects::digMultiplier(m_player.effects);
-    if (seconds < 0.0f) return; // bedrock and liquids never break
+    if (seconds < 0.0f && !(m_player.creative() && isCreativeOnly(id))) return;
 
     if (m_player.creative() || seconds <= 0.0f)
         m_breakProgress = 1.0f;
@@ -7070,6 +7175,8 @@ void Application::updateMining(float deltaTime)
                         }
                 }
             }
+            if (isCommandBlock(id)) m_commands.erase(blockKey(hit.block));
+            if (isStructureBlock(id)) m_structures.erase(blockKey(hit.block));
             if (isBanner(id))
             {
                 const std::array<int, 4> key = { static_cast<int>(m_dimension), hit.block.x, hit.block.y, hit.block.z };
@@ -11261,6 +11368,20 @@ void Application::handlePlacement()
             if (isCauldron(used) && useCauldron(bench.block, used)) return;
             if (isLectern(used) && useLectern(bench.block, used)) return;
             if (used == Blocks::Grindstone && useGrindstone(bench.block)) return;
+            if ((isCommandBlock(used) || isStructureBlock(used)) && m_player.creative())
+            {
+                openBlockEditor(bench.block);
+                return;
+            }
+            if (isLightBlock(used) && m_player.creative() && !isItem(m_inventory.selected().id) &&
+                isLightBlock(asBlock(m_inventory.selected().id)))
+            {
+                const BlockId next = lightBlockOf((lightBlockLevel(used) + 1) % 16);
+                m_world->setBlock(bench.block.x, bench.block.y, bench.block.z, next);
+                m_net.onLocalBlockChange(bench.block.x, bench.block.y, bench.block.z, next);
+                m_audio.play(Sound::Click, 0.4f, 0.8f + 0.04f * lightBlockLevel(next));
+                return;
+            }
             if (isLoom(used))
             {
                 openLoom(bench.block);
@@ -12124,7 +12245,7 @@ void Application::handlePlacement()
 
     const glm::ivec3 target = hit.previous;
     const BlockId existing = m_world->getBlock(target.x, target.y, target.z);
-    if (existing != Blocks::Air && !isLiquid(existing)) return;
+    if (existing != Blocks::Air && !isLiquid(existing) && !isLightBlock(existing)) return;
 
     // Don't entomb the player in their own block.
     const AABB box = m_player.aabb();
@@ -12145,6 +12266,17 @@ void Application::handlePlacement()
         if (!Cane::canStandAt(around, target.x, target.y, target.z)) return;
     }
 
+    if (isCreativeOnly(placing) && !m_player.creative()) return;
+    if (isCommandBlock(placing) || isJigsaw(placing))
+    {
+        const glm::vec3 look = m_camera.front;
+        const float ax = std::fabs(look.x), ay = std::fabs(look.y), az = std::fabs(look.z);
+        const int toward = (ay > ax && ay > az) ? (look.y > 0.0f ? 4 : 5) : (ax > az) ? (look.x > 0.0f ? 1 : 3) : (look.z > 0.0f ? 2 : 0);
+        static const int OPPOSITE[6] = { 2, 3, 0, 1, 5, 4 };
+        const int facing = OPPOSITE[toward];
+        placing = isCommandBlock(placing) ? commandBlockOf(commandKind(placing), facing, false)
+                                          : static_cast<BlockId>(Blocks::JigsawFirst + facing);
+    }
     if (isCalibratedSensor(placing))
     {
         const glm::vec3 look = m_camera.front;
@@ -12517,6 +12649,13 @@ void Application::handlePlacement()
     m_net.onLocalBlockChange(target.x, target.y, target.z, placing);
     m_audio.playPlace(placing);
     if (isAnySculkSensor(placing)) m_sensorSpots.push_back(target);
+    if (isCommandBlock(placing))
+    {
+        CommandState fresh;
+        fresh.alwaysActive = commandKind(placing) == 1;
+        m_commands[blockKey(target)] = fresh;
+    }
+    if (isStructureBlock(placing)) m_structures[blockKey(target)] = StructureState{};
     vibrate(glm::vec3(target) + glm::vec3(0.5f), 13);
 
     if (isRail(placing)) reshapeRailsAround(target);
@@ -12615,6 +12754,7 @@ void Application::render()
         case Screen::NameEntry:    renderNameEntryScreen(); break;
         case Screen::Playing:
             if (m_inventoryOpen) renderInventoryScreen();
+            else if (m_editorOpen) renderBlockEditor();
             break;
         case Screen::Paused:
             renderPauseMenu();
@@ -13052,19 +13192,58 @@ void Application::updateChatInput()
 
 void Application::runChatLine(const std::string& line)
 {
-    const Chat::Command command = Chat::parse(line, m_allowCheats || m_player.creative());
+    std::string output;
+    runCommand(line, m_player.position, false, output);
+    m_chatLog.add(output);
+}
+
+bool Application::runCommand(const std::string& line, const glm::vec3& origin, bool fromBlock, std::string& output)
+{
+    const Chat::Command command = Chat::parse(line, fromBlock || m_allowCheats || m_player.creative(), origin);
+    output.clear();
 
     switch (command.kind)
     {
         case Chat::Kind::Nothing:
-            return;
+            return false;
 
         case Chat::Kind::Say:
         {
-            const std::string who = m_playerName.empty() ? "You" : m_playerName;
-            m_chatLog.add("<" + who + "> " + command.text);
-            return;
+            const std::string who = fromBlock ? "@" : (m_playerName.empty() ? "You" : m_playerName);
+            output = "<" + who + "> " + command.text;
+            return true;
         }
+
+        case Chat::Kind::Announce:
+        {
+            const std::string who = fromBlock ? "@" : (m_playerName.empty() ? "You" : m_playerName);
+            output = "[" + who + "] " + command.text;
+            return true;
+        }
+
+        case Chat::Kind::SetBlock:
+            if (m_world)
+            {
+                const glm::ivec3 at = glm::ivec3(command.position);
+                if (at.y < 0 || at.y >= Chunk::SY)
+                {
+                    output = "That position is out of the world.";
+                    return false;
+                }
+                const BlockId block = asBlock(command.item);
+                m_world->setBlock(at.x, at.y, at.z, block);
+                m_net.onLocalBlockChange(at.x, at.y, at.z, block);
+                settleRedstone(at);
+            }
+            break;
+
+        case Chat::Kind::Summon:
+            if (!m_world || !m_entities.spawnAt(static_cast<MobId>(command.mob), command.position, *m_world))
+            {
+                output = "There is no room to summon that there.";
+                return false;
+            }
+            break;
 
         case Chat::Kind::GameMode:
             setGameMode(static_cast<GameMode>(command.mode));
@@ -13088,15 +13267,381 @@ void Application::runChatLine(const std::string& line)
             break;
 
         case Chat::Kind::Seed:
-            m_chatLog.add(m_world ? "Seed: " + std::to_string(m_world->seed())
-                                  : std::string("No world loaded."));
-            return;
+            output = m_world ? "Seed: " + std::to_string(m_world->seed()) : std::string("No world loaded.");
+            return m_world != nullptr;
 
         default:
             break;
     }
 
-    m_chatLog.add(command.text);
+    output = command.text;
+    return Chat::succeeded(command);
+}
+
+namespace
+{
+    const glm::ivec3 COMMAND_STEP[6] = { { 0, 0, -1 }, { 1, 0, 0 }, { 0, 0, 1 }, { -1, 0, 0 }, { 0, 1, 0 }, { 0, -1, 0 } };
+
+    bool readTriple(const std::string& text, glm::ivec3& out)
+    {
+        int a = 0, b = 0, c = 0;
+        if (std::sscanf(text.c_str(), "%d %d %d", &a, &b, &c) != 3) return false;
+        out = glm::ivec3(a, b, c);
+        return true;
+    }
+
+    std::string tripleText(const glm::ivec3& v)
+    {
+        return std::to_string(v.x) + " " + std::to_string(v.y) + " " + std::to_string(v.z);
+    }
+
+    std::string cleanName(const std::string& name)
+    {
+        std::string out;
+        for (char c : name)
+        {
+            const char lowered = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+            if ((lowered >= 'a' && lowered <= 'z') || (lowered >= '0' && lowered <= '9') || lowered == '_' || lowered == '-')
+                out.push_back(lowered);
+        }
+        return out.substr(0, 32);
+    }
+}
+
+void Application::tickCommandBlocks(float deltaTime)
+{
+    if (!m_world || m_commands.empty()) return;
+    m_commandClock += deltaTime;
+    if (m_commandClock < 0.05f) return;
+    m_commandClock = std::fmod(m_commandClock, 0.05f);
+
+    WorldCells cells;
+    cells.world = m_world.get();
+    cells.net = &m_net;
+    std::vector<glm::ivec3> starts;
+    for (auto& entry : m_commands)
+    {
+        if (entry.first[0] != static_cast<int>(m_dimension)) continue;
+        const glm::ivec3 at(entry.first[1], entry.first[2], entry.first[3]);
+        if (glm::length(glm::vec3(at) - m_player.position) > 160.0f) continue;
+        const BlockId block = m_world->getBlock(at.x, at.y, at.z);
+        if (!isCommandBlock(block)) continue;
+        const bool active = entry.second.alwaysActive || Redstone::poweredAt(cells, at.x, at.y, at.z);
+        const int kind = commandKind(block);
+        if (kind == 0 && active && !entry.second.powered) starts.push_back(at);
+        if (kind == 2 && active) starts.push_back(at);
+        entry.second.powered = active;
+    }
+    for (const glm::ivec3& at : starts) executeCommandBlock(at, 0);
+}
+
+void Application::executeCommandBlock(const glm::ivec3& at, int depth)
+{
+    if (depth > 64 || !m_world) return;
+    const BlockId block = m_world->getBlock(at.x, at.y, at.z);
+    if (!isCommandBlock(block)) return;
+    auto found = m_commands.find(blockKey(at));
+    if (found == m_commands.end()) return;
+
+    const int facing = commandFacing(block);
+    bool run = true;
+    if (commandConditional(block))
+    {
+        const glm::ivec3 behind = at - COMMAND_STEP[facing];
+        const auto before = m_commands.find(blockKey(behind));
+        run = isCommandBlock(m_world->getBlock(behind.x, behind.y, behind.z)) && before != m_commands.end() &&
+              before->second.success;
+    }
+
+    if (run && !found->second.command.empty())
+    {
+        std::string line = found->second.command;
+        if (line[0] != '/') line = "/" + line;
+        std::string output;
+        const bool success = runCommand(line, glm::vec3(at) + glm::vec3(0.5f), true, output);
+        found = m_commands.find(blockKey(at));
+        if (found == m_commands.end()) return;
+        const bool spoken = output.rfind("<@>", 0) == 0 || output.rfind("[@]", 0) == 0;
+        if (!output.empty() && (commandKind(block) != 2 || output != found->second.output))
+            m_chatLog.add(spoken ? output : "[@: " + output + "]");
+        found->second.success = success;
+        found->second.output = output;
+    }
+    else
+        found->second.success = false;
+
+    const glm::ivec3 next = at + COMMAND_STEP[facing];
+    const BlockId following = m_world->getBlock(next.x, next.y, next.z);
+    if (!isCommandBlock(following) || commandKind(following) != 1) return;
+    const auto chained = m_commands.find(blockKey(next));
+    if (chained == m_commands.end()) return;
+    WorldCells cells;
+    cells.world = m_world.get();
+    cells.net = &m_net;
+    if (chained->second.alwaysActive || Redstone::poweredAt(cells, next.x, next.y, next.z))
+        executeCommandBlock(next, depth + 1);
+}
+
+void Application::openBlockEditor(const glm::ivec3& at)
+{
+    const BlockId block = m_world->getBlock(at.x, at.y, at.z);
+    if (!isCommandBlock(block) && !isStructureBlock(block)) return;
+    m_editorOpen = true;
+    m_editorAt = at;
+    m_editorFocus = 0;
+    m_editorStatus.clear();
+    m_editorStructure = isStructureBlock(block);
+    m_editorFields = { std::string(), std::string(), std::string() };
+    if (m_editorStructure)
+    {
+        const StructureState& state = m_structures[blockKey(at)];
+        m_editorFields[0] = state.name;
+        m_editorFields[1] = tripleText(state.offset);
+        m_editorFields[2] = tripleText(state.size);
+        m_editorMode = structureMode(block);
+    }
+    else
+    {
+        CommandState& state = m_commands[blockKey(at)];
+        m_editorFields[0] = state.command;
+        m_editorStatus = state.output;
+        m_editorKind = commandKind(block);
+        m_editorConditional = commandConditional(block);
+        m_editorAlways = state.alwaysActive;
+    }
+    setMouseCaptured(false);
+}
+
+void Application::closeBlockEditor(bool keep)
+{
+    if (!m_editorOpen) return;
+    m_editorOpen = false;
+    const BlockId block = m_world ? m_world->getBlock(m_editorAt.x, m_editorAt.y, m_editorAt.z) : Blocks::Air;
+    if (keep && m_editorStructure && isStructureBlock(block))
+    {
+        StructureState& state = m_structures[blockKey(m_editorAt)];
+        const std::string name = cleanName(m_editorFields[0]);
+        if (!name.empty()) state.name = name;
+        glm::ivec3 value;
+        if (readTriple(m_editorFields[1], value)) state.offset = glm::clamp(value, glm::ivec3(-48), glm::ivec3(48));
+        if (readTriple(m_editorFields[2], value)) state.size = glm::clamp(value, glm::ivec3(1), glm::ivec3(48));
+        const BlockId now = static_cast<BlockId>(Blocks::StructureBlockFirst + m_editorMode);
+        m_world->setBlock(m_editorAt.x, m_editorAt.y, m_editorAt.z, now);
+        m_net.onLocalBlockChange(m_editorAt.x, m_editorAt.y, m_editorAt.z, now);
+    }
+    else if (keep && !m_editorStructure && isCommandBlock(block))
+    {
+        CommandState& state = m_commands[blockKey(m_editorAt)];
+        if (state.command != m_editorFields[0]) state.output.clear();
+        state.command = m_editorFields[0];
+        state.alwaysActive = m_editorAlways;
+        state.powered = false;
+        const BlockId now = commandBlockOf(m_editorKind, commandFacing(block), m_editorConditional);
+        m_world->setBlock(m_editorAt.x, m_editorAt.y, m_editorAt.z, now);
+        m_net.onLocalBlockChange(m_editorAt.x, m_editorAt.y, m_editorAt.z, now);
+    }
+    if (!m_inventoryOpen) setMouseCaptured(true);
+}
+
+void Application::updateBlockEditor()
+{
+    if (!m_editorOpen) return;
+    const BlockId block = m_world->getBlock(m_editorAt.x, m_editorAt.y, m_editorAt.z);
+    if (!isCommandBlock(block) && !isStructureBlock(block))
+    {
+        m_editorOpen = false;
+        if (!m_inventoryOpen) setMouseCaptured(true);
+        return;
+    }
+    const int fields = m_editorStructure ? 3 : 1;
+    m_editorFocus = std::clamp(m_editorFocus, 0, fields - 1);
+    std::string& field = m_editorFields[static_cast<size_t>(m_editorFocus)];
+    const size_t limit = m_editorStructure ? 32u : 255u;
+    if (m_input.wasKeyPressed(SDL_SCANCODE_BACKSPACE) && !field.empty()) field.pop_back();
+    for (char c : m_input.typedText())
+        if (c >= 32 && field.size() < limit) field.push_back(c);
+    if (m_input.wasKeyPressed(SDL_SCANCODE_TAB)) m_editorFocus = (m_editorFocus + 1) % fields;
+    if (m_input.wasKeyPressed(SDL_SCANCODE_RETURN) || m_input.wasKeyPressed(SDL_SCANCODE_KP_ENTER)) closeBlockEditor(true);
+}
+
+void Application::renderBlockEditor()
+{
+    m_ui.setScale(static_cast<float>(guiScale()) * MENU_UNIT);
+    const float w = m_ui.canvasWidth();
+    const float h = m_ui.canvasHeight();
+    m_ui.quad(0, 0, w, h, glm::vec4(0.0f, 0.0f, 0.0f, 0.62f));
+
+    const float width = std::min(900.0f, w * 0.86f);
+    const float left = (w - width) * 0.5f;
+    const float mouseX = static_cast<float>(m_input.mouseX()) / m_ui.scale();
+    const float mouseY = static_cast<float>(m_input.mouseY()) / m_ui.scale();
+    const bool clicked = !m_automated && m_input.wasMouseButtonPressed(SDL_BUTTON_LEFT);
+
+    auto field = [&](int index, const char* label, float y, bool editable) {
+        m_ui.textWithShadow(label, left, y - 44.0f, PANEL_TEXT, DIM_TEXT);
+        const bool focused = editable && m_editorFocus == index;
+        m_ui.quad(left - 3.0f, y - 3.0f, width + 6.0f, 56.0f, focused ? glm::vec4(1.0f) : glm::vec4(0.63f, 0.63f, 0.63f, 1.0f));
+        m_ui.quad(left, y, width, 50.0f, glm::vec4(0.0f, 0.0f, 0.0f, 1.0f));
+        std::string text = editable ? m_editorFields[static_cast<size_t>(index)] : m_editorStatus;
+        const float room = width - 24.0f;
+        while (!text.empty() && UIRenderer::textWidth(text + "_", PANEL_TEXT) > room) text.erase(text.begin());
+        if (focused && static_cast<int>(m_elapsedSeconds * 2.0f) % 2 == 0) text += "_";
+        m_ui.textWithShadow(text, left + 12.0f, y + 25.0f - UIRenderer::textHeight(PANEL_TEXT) * 0.5f, PANEL_TEXT,
+                            editable ? glm::vec4(0.88f, 0.88f, 0.88f, 1.0f) : DIM_TEXT);
+        if (editable && clicked && mouseX >= left && mouseX <= left + width && mouseY >= y && mouseY <= y + 50.0f)
+            m_editorFocus = index;
+    };
+
+    const float buttonHeight = 50.0f;
+    const float gap = 16.0f;
+    if (!m_editorStructure)
+    {
+        centredText("Set Console Command for Block", h * 0.07f, 2.0f, TEXT_COLOR);
+        field(0, "Console Command", h * 0.20f, true);
+        field(0, "Previous Output", h * 0.36f, false);
+        const float third = (width - gap * 2.0f) / 3.0f;
+        const float y = h * 0.52f;
+        static const char* MODES[3] = { "Impulse", "Chain", "Repeat" };
+        if (menuButton({ left, y, third, buttonHeight }, MODES[m_editorKind])) m_editorKind = (m_editorKind + 1) % 3;
+        if (menuButton({ left + third + gap, y, third, buttonHeight }, m_editorConditional ? "Conditional" : "Unconditional"))
+            m_editorConditional = !m_editorConditional;
+        if (menuButton({ left + (third + gap) * 2.0f, y, third, buttonHeight }, m_editorAlways ? "Always Active" : "Needs Redstone"))
+            m_editorAlways = !m_editorAlways;
+    }
+    else
+    {
+        centredText("Structure Block", h * 0.07f, 2.0f, TEXT_COLOR);
+        field(0, "Structure Name", h * 0.20f, true);
+        field(1, "Relative Position", h * 0.33f, true);
+        field(2, "Structure Size", h * 0.46f, true);
+        const float half = (width - gap) * 0.5f;
+        const float y = h * 0.58f;
+        static const char* MODES[4] = { "Mode: Save", "Mode: Load", "Mode: Corner", "Mode: Data" };
+        if (menuButton({ left, y, half, buttonHeight }, MODES[m_editorMode])) m_editorMode = (m_editorMode + 1) % 4;
+        const bool acts = m_editorMode == 0 || m_editorMode == 1;
+        if (menuButton({ left + half + gap, y, half, buttonHeight }, m_editorMode == 1 ? "LOAD" : "SAVE", acts))
+        {
+            StructureState state = m_structures[blockKey(m_editorAt)];
+            const std::string name = cleanName(m_editorFields[0]);
+            if (!name.empty()) state.name = name;
+            glm::ivec3 value;
+            if (readTriple(m_editorFields[1], value)) state.offset = glm::clamp(value, glm::ivec3(-48), glm::ivec3(48));
+            if (readTriple(m_editorFields[2], value)) state.size = glm::clamp(value, glm::ivec3(1), glm::ivec3(48));
+            if (m_editorMode == 0) saveStructure(m_editorAt, state, m_editorStatus);
+            else loadStructure(m_editorAt, state, m_editorStatus);
+        }
+        if (!m_editorStatus.empty()) centredText(m_editorStatus, y + buttonHeight + 20.0f, PANEL_TEXT, DIM_TEXT);
+    }
+
+    const float half = (width - gap) * 0.5f;
+    const float bottom = h * 0.78f;
+    if (menuButton({ left, bottom, half, buttonHeight }, "Done")) closeBlockEditor(true);
+    else if (menuButton({ left + half + gap, bottom, half, buttonHeight }, "Cancel")) closeBlockEditor(false);
+    m_ui.setScale(1.0f);
+}
+
+bool Application::saveStructure(const glm::ivec3& at, const StructureState& state, std::string& message)
+{
+    if (!m_world || m_savePath.empty())
+    {
+        message = "There is no world to save into.";
+        return false;
+    }
+    std::error_code ec;
+    std::filesystem::create_directories(m_savePath + "/structures", ec);
+    std::ofstream out(m_savePath + "/structures/" + state.name + ".bin", std::ios::binary);
+    if (!out)
+    {
+        message = "Could not write " + state.name + ".";
+        return false;
+    }
+    const int32_t size[3] = { state.size.x, state.size.y, state.size.z };
+    out.write("BCST", 4);
+    out.write(reinterpret_cast<const char*>(size), sizeof(size));
+    const glm::ivec3 origin = at + state.offset;
+    for (int y = 0; y < state.size.y; ++y)
+        for (int z = 0; z < state.size.z; ++z)
+            for (int x = 0; x < state.size.x; ++x)
+            {
+                const BlockId here = m_world->getBlock(origin.x + x, origin.y + y, origin.z + z);
+                const uint16_t stored = here == Blocks::StructureVoid ? 0xFFFFu : static_cast<uint16_t>(here);
+                out.write(reinterpret_cast<const char*>(&stored), sizeof(stored));
+            }
+    message = "Saved " + state.name + ".";
+    return static_cast<bool>(out);
+}
+
+bool Application::loadStructure(const glm::ivec3& at, const StructureState& state, std::string& message)
+{
+    if (!m_world || m_savePath.empty())
+    {
+        message = "There is no world to load into.";
+        return false;
+    }
+    std::ifstream in(m_savePath + "/structures/" + state.name + ".bin", std::ios::binary);
+    char magic[4] = {};
+    int32_t size[3] = {};
+    if (!in || !in.read(magic, 4) || std::string(magic, 4) != "BCST" || !in.read(reinterpret_cast<char*>(size), sizeof(size)) ||
+        size[0] < 1 || size[1] < 1 || size[2] < 1 || size[0] > 48 || size[1] > 48 || size[2] > 48)
+    {
+        message = "No structure called " + state.name + ".";
+        return false;
+    }
+    const glm::ivec3 origin = at + state.offset;
+    for (int y = 0; y < size[1]; ++y)
+        for (int z = 0; z < size[2]; ++z)
+            for (int x = 0; x < size[0]; ++x)
+            {
+                uint16_t stored = 0;
+                if (!in.read(reinterpret_cast<char*>(&stored), sizeof(stored))) break;
+                if (stored == 0xFFFFu || stored >= static_cast<uint16_t>(Blocks::Count)) continue;
+                const glm::ivec3 p = origin + glm::ivec3(x, y, z);
+                if (p == at || p.y < 0 || p.y >= Chunk::SY) continue;
+                m_world->setBlock(p.x, p.y, p.z, static_cast<BlockId>(stored));
+                m_net.onLocalBlockChange(p.x, p.y, p.z, static_cast<BlockId>(stored));
+            }
+    message = "Loaded " + state.name + ".";
+    return true;
+}
+
+void Application::pinCreativeMarkers()
+{
+    if (!m_world || !m_player.creative()) return;
+    const ItemStack& held = m_inventory.selected();
+    const BlockId holding = isItem(held.id) ? static_cast<BlockId>(Blocks::Air) : asBlock(held.id);
+    if (holding != Blocks::Barrier && holding != Blocks::StructureVoid && !isLightBlock(holding)) return;
+    m_markerScan -= 1.0f / 60.0f;
+    if (m_markerScan <= 0.0f)
+    {
+        m_markerScan = 0.5f;
+        m_markerSpots.clear();
+        const glm::ivec3 centre = glm::ivec3(glm::floor(m_player.position));
+        for (int dx = -10; dx <= 10; ++dx)
+            for (int dy = -10; dy <= 10; ++dy)
+                for (int dz = -10; dz <= 10; ++dz)
+                {
+                    const glm::ivec3 at = centre + glm::ivec3(dx, dy, dz);
+                    const BlockId here = m_world->getBlock(at.x, at.y, at.z);
+                    if (here == Blocks::Barrier || here == Blocks::StructureVoid || isLightBlock(here)) m_markerSpots.push_back(at);
+                }
+    }
+    static const int OUT_INDEX[4] = { 2, 3, 0, 1 };
+    for (const glm::ivec3& at : m_markerSpots)
+    {
+        const BlockId here = m_world->getBlock(at.x, at.y, at.z);
+        if (here != Blocks::Barrier && here != Blocks::StructureVoid && !isLightBlock(here)) continue;
+        const glm::vec3 centre = glm::vec3(at) + glm::vec3(0.5f);
+        const glm::vec3 toward = m_camera.position - centre;
+        const int dir = std::fabs(toward.x) > std::fabs(toward.z) ? (toward.x > 0.0f ? 1 : 3) : (toward.z > 0.0f ? 2 : 0);
+        DroppedItems::Pinned shown;
+        shown.position = centre;
+        shown.facing = OUT_INDEX[dir];
+        shown.tile = flatIconFor(here);
+        shown.halfWidth = 0.4f;
+        shown.height = 0.8f;
+        shown.outset = 0.0f;
+        m_drops.pin(shown);
+    }
 }
 
 void Application::renderChat()
@@ -14377,6 +14922,7 @@ void Application::pinFramedItems()
     m_drops.clearPinned();
     if (!m_world) return;
     pinPotPatterns();
+    pinCreativeMarkers();
 
     constexpr float VISIBLE = 32.0f;
 

@@ -666,6 +666,12 @@ namespace Blocks
         BannerFirst, BannerLast = BannerFirst + 127,
         SculkVeinFirst, SculkVeinLast = SculkVeinFirst + 5,
         CalibratedSensorFirst, CalibratedSensorLast = CalibratedSensorFirst + 7,
+        CommandBlockFirst, CommandBlockLast = CommandBlockFirst + 35,
+        StructureBlockFirst, StructureBlockLast = StructureBlockFirst + 3,
+        JigsawFirst, JigsawLast = JigsawFirst + 5,
+        Barrier,
+        LightFirst, LightLast = LightFirst + 15,
+        StructureVoid,
 
         Count
     };
@@ -837,6 +843,28 @@ inline bool isAnySculkSensor(BlockId id)
     return id == Blocks::SculkSensor || id == Blocks::SculkSensorLit || isCalibratedSensor(id);
 }
 inline bool sculkSensorLit(BlockId id) { return id == Blocks::SculkSensorLit || calibratedLit(id); }
+inline bool isCommandBlock(BlockId id) { return id >= Blocks::CommandBlockFirst && id <= Blocks::CommandBlockLast; }
+inline int commandKind(BlockId id) { return isCommandBlock(id) ? (id - Blocks::CommandBlockFirst) / 12 : 0; }
+inline int commandFacing(BlockId id) { return isCommandBlock(id) ? ((id - Blocks::CommandBlockFirst) % 12) / 2 : 0; }
+inline bool commandConditional(BlockId id) { return isCommandBlock(id) && ((id - Blocks::CommandBlockFirst) & 1) != 0; }
+inline BlockId commandBlockOf(int kind, int facing, bool conditional)
+{
+    kind = kind < 0 ? 0 : kind > 2 ? 2 : kind;
+    facing = facing < 0 ? 0 : facing > 5 ? 5 : facing;
+    return static_cast<BlockId>(Blocks::CommandBlockFirst + kind * 12 + facing * 2 + (conditional ? 1 : 0));
+}
+inline bool isStructureBlock(BlockId id) { return id >= Blocks::StructureBlockFirst && id <= Blocks::StructureBlockLast; }
+inline int structureMode(BlockId id) { return isStructureBlock(id) ? id - Blocks::StructureBlockFirst : 0; }
+inline bool isJigsaw(BlockId id) { return id >= Blocks::JigsawFirst && id <= Blocks::JigsawLast; }
+inline int jigsawFacing(BlockId id) { return isJigsaw(id) ? id - Blocks::JigsawFirst : 0; }
+inline bool isLightBlock(BlockId id) { return id >= Blocks::LightFirst && id <= Blocks::LightLast; }
+inline int lightBlockLevel(BlockId id) { return isLightBlock(id) ? id - Blocks::LightFirst : 0; }
+inline BlockId lightBlockOf(int level) { return static_cast<BlockId>(Blocks::LightFirst + (level < 0 ? 0 : level > 15 ? 15 : level)); }
+inline bool isCreativeOnly(BlockId id)
+{
+    return isCommandBlock(id) || isStructureBlock(id) || isJigsaw(id) || isLightBlock(id) ||
+           id == Blocks::Barrier || id == Blocks::StructureVoid;
+}
 inline bool isBanner(BlockId id) { return id >= Blocks::BannerFirst && id <= Blocks::BannerLast; }
 inline int bannerColour(BlockId id) { return isBanner(id) ? (id - Blocks::BannerFirst) / 8 : 0; }
 inline bool bannerOnWall(BlockId id) { return isBanner(id) && ((id - Blocks::BannerFirst) & 4) != 0; }

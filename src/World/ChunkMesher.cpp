@@ -1128,6 +1128,45 @@ namespace
             emitPart(snap, lx, y, lz, id, glm::vec3(0.0f), glm::vec3(1.0f, 1.0f / 16.0f, 1.0f), faces, out);
             return;
         }
+        if (isCommandBlock(id) || isJigsaw(id))
+        {
+            static const int TURN[6][6] = {
+                { 3, 3, 0, 0, 0, 0 }, { 0, 0, 1, 1, 1, 1 }, { 1, 1, 2, 2, 0, 0 },
+                { 0, 0, 3, 3, 3, 3 }, { 0, 0, 0, 0, 0, 0 }, { 2, 2, 0, 0, 2, 2 },
+            };
+            static const int FRONT_FACE[6] = { 5, 0, 4, 1, 2, 3 };
+            const int facing = isCommandBlock(id) ? commandFacing(id) : jigsawFacing(id);
+            const int front = FRONT_FACE[facing];
+            const int back = front ^ 1;
+            int frontTile = 0, backTile = 0, sideTile = 0, lockTile = -1;
+            if (isCommandBlock(id))
+            {
+                const int base = Tiles::CommandTileFirst + commandKind(id) * 4;
+                frontTile = base;
+                backTile = base + 1;
+                sideTile = commandConditional(id) ? base + 3 : base + 2;
+            }
+            else
+            {
+                frontTile = Tiles::JigsawTopTile;
+                backTile = Tiles::JigsawBottomTile;
+                sideTile = Tiles::JigsawSideTile;
+                lockTile = Tiles::JigsawLockTile;
+            }
+            PartFace faces[6];
+            for (int f = 0; f < 6; ++f)
+            {
+                const int tile = f == front ? frontTile : f == back ? backTile : sideTile;
+                faces[f] = PartFace{ tile, 0.0f, 0.0f, 16.0f, 16.0f, TURN[facing][f] };
+            }
+            if (lockTile >= 0)
+            {
+                const int lockFace = facing >= 4 ? 5 : 2;
+                faces[lockFace] = PartFace{ lockTile, 0.0f, 0.0f, 16.0f, 16.0f, facing >= 4 ? 0 : (4 - facing) & 3 };
+            }
+            emitPart(snap, lx, y, lz, id, glm::vec3(0.0f), glm::vec3(1.0f), faces, out);
+            return;
+        }
         if (isAnySculkSensor(id))
         {
             const BlockInfo& info = blockInfo(id);

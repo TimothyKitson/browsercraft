@@ -143,6 +143,24 @@ struct LevelState
         uint16_t design = 0;
     };
     std::vector<SavedBanner> banners;
+    struct SavedCommand
+    {
+        int x = 0, y = 0, z = 0;
+        int8_t dimension = 0;
+        uint8_t flags = 0;
+        std::string command;
+        std::string output;
+    };
+    std::vector<SavedCommand> commands;
+    struct SavedStructure
+    {
+        int x = 0, y = 0, z = 0;
+        int8_t dimension = 0;
+        std::string name;
+        int offset[3] = { 0, 1, 0 };
+        int size[3] = { 5, 5, 5 };
+    };
+    std::vector<SavedStructure> structures;
 };
 
 namespace WorldSave
