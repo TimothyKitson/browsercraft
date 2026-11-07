@@ -5,6 +5,7 @@
 #include "Pathfinder.h"
 #include <cstdint>
 #include <glm/glm.hpp>
+#include <string>
 #include <vector>
 
 class World;
@@ -113,6 +114,15 @@ public:
     // the same for the life of the mob -- a villager's profession, for
     // one, which would otherwise change as it wandered about.
     uint32_t birthSeed() const { return m_birthSeed; }
+    uint32_t serial() const { return m_serial; }
+    const std::string& customName() const { return m_customName; }
+    void setCustomName(const std::string& name) { m_customName = name; }
+    bool leashed() const { return m_leashed; }
+    void setLeashed(bool on) { m_leashed = on; }
+    static bool leashable(const MobType& type)
+    {
+        return !type.inanimate && !type.stationary && type.spawnClass != SpawnClass::Hostile;
+    }
     void setBirthSeed(uint32_t seed) { m_birthSeed = seed; }
 
     // A neutral mob that has been given a reason. Once set it stays
@@ -457,6 +467,9 @@ private:
     bool m_sitting = false;
     float m_holdTimer = 0.0f;
     bool m_ridden = false;
+    uint32_t m_serial = 0;
+    std::string m_customName;
+    bool m_leashed = false;
     float m_rideBoost = 0.0f;
     float m_rideBoostLength = 0.0f;
     bool m_steerForward = false;

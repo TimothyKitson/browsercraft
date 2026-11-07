@@ -1135,8 +1135,7 @@ private:
         float approach = 0.0f;
         float bite = 0.0f;
         float age = 0.0f;
-        int hooked = -1;
-        glm::vec3 hookedAt{ 0.0f };
+        uint32_t hooked = 0;
         uint32_t rolls = 0;
     };
     Bobber m_bobber;
@@ -1146,6 +1145,20 @@ private:
     glm::vec3 rodTip() const;
     bool holdingRod() const;
     void wearHeld(StackId id, int points);
+    std::vector<std::string> m_itemNames;
+    int nameIdOf(const std::string& name);
+    std::string m_anvilName;
+    bool m_anvilNameEdited = false;
+    struct Leash
+    {
+        uint32_t mob = 0;
+        bool toKnot = false;
+        glm::ivec3 knot{ 0 };
+    };
+    std::vector<Leash> m_leashes;
+    Mob* mobBySerial(uint32_t serial);
+    void tickLeashes(float deltaTime);
+    void dropLeash(const Leash& leash, const glm::vec3& at);
     void renderHearts(float x, float y);
     void renderArmour(float x, float y);
     void renderFood(float rightX, float y);

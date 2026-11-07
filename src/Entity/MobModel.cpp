@@ -608,6 +608,12 @@ std::vector<std::string> MobModel::coatOverlaysOf(const Mob& mob) const
         case MobId::Wolf:
             if (mob.tamed()) layers.push_back(root + "wolf/wolf_collar.png#B02E26");
             break;
+        case MobId::Pig:
+            if (mob.saddled()) layers.push_back(root + "pig/pig_saddle.png");
+            break;
+        case MobId::Strider:
+            if (mob.saddled()) layers.push_back(root + "strider/strider_saddle.png");
+            break;
         case MobId::Cat:
             if (mob.tamed()) layers.push_back(root + "cat/cat_collar.png#B02E26");
             break;

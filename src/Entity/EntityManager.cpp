@@ -590,7 +590,8 @@ void EntityManager::update(float deltaTime, const World& world,
         std::remove_if(m_mobs.begin(), m_mobs.end(), [&](const Mob& mob) {
             if (mob.finished()) return true;
             const glm::vec3 delta = mob.position() - playerPosition;
-            return glm::length(glm::vec3(delta.x, 0.0f, delta.z)) > DESPAWN_DISTANCE;
+            const float keep = (mob.customName().empty() && !mob.leashed()) ? DESPAWN_DISTANCE : DESPAWN_DISTANCE * 3.0f;
+            return glm::length(glm::vec3(delta.x, 0.0f, delta.z)) > keep;
         }),
         m_mobs.end());
 

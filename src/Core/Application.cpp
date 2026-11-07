@@ -855,6 +855,7 @@ void Application::loadLevel()
             command.powered = (saved.flags & 4u) != 0;
             m_commands[{ static_cast<int>(saved.dimension), saved.x, saved.y, saved.z }] = command;
         }
+        m_itemNames = state.itemNames;
         m_structures.clear();
         for (const LevelState::SavedStructure& saved : state.structures)
         {
@@ -1065,6 +1066,7 @@ void Application::saveLevel()
         saved.output = entry.second.output;
         state.commands.push_back(saved);
     }
+    state.itemNames = m_itemNames;
     for (const auto& entry : m_structures)
     {
         LevelState::SavedStructure saved;
@@ -2031,6 +2033,7 @@ bool Application::frame()
             tickVibrations(deltaTime);
             tickCommandBlocks(deltaTime);
             tickFishing(deltaTime);
+            tickLeashes(deltaTime);
 
             if (m_inventory.slot(Inventory::ARMOR_FIRST).id == Items::TurtleHelmet && !m_player.isHeadUnderwater(*m_world))
                 Effects::give(m_player.effects, Effects::Kind::WaterBreathing, 0, 10.0f);
@@ -2247,7 +2250,7 @@ bool Application::frame()
             m_startupScreen == "attackhud" || m_startupScreen == "attackready" ||
             m_startupScreen == "attackhotbar" || m_startupScreen == "bossbars" ||
             m_startupScreen == "gamemode" || m_startupScreen == "spectator" ||
-            m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" ||
+            m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" || m_startupScreen == "leads" || m_startupScreen == "anvilname" ||
             m_startupScreen == "grinderror" || m_startupScreen == "woods" ||
             m_startupScreen == "cherry" || m_startupScreen == "mangrove" || m_startupScreen == "fungi" ||
             m_startupScreen == "stones" || m_startupScreen == "colours" || m_startupScreen == "candles" ||
@@ -2342,6 +2345,8 @@ bool Application::frame()
                                   m_startupScreen != "commands" &&
                                   m_startupScreen != "commandui" &&
                                   m_startupScreen != "fishing" &&
+                                  m_startupScreen != "leads" &&
+                                  m_startupScreen != "anvilname" &&
                                   m_startupScreen != "grinderror" &&
                                   m_startupScreen != "woods" &&
                                   m_startupScreen != "cherry" &&
@@ -2734,7 +2739,7 @@ bool Application::frame()
             if (m_startupScreen == "attackhud" || m_startupScreen == "attackready" ||
                 m_startupScreen == "attackhotbar" || m_startupScreen == "bossbars" ||
                 m_startupScreen == "gamemode" || m_startupScreen == "spectator" ||
-                m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" ||
+                m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" || m_startupScreen == "leads" || m_startupScreen == "anvilname" ||
                 m_startupScreen == "grinderror" || m_startupScreen == "woods" ||
                 m_startupScreen == "cherry" || m_startupScreen == "mangrove" || m_startupScreen == "fungi" ||
                 m_startupScreen == "stones" || m_startupScreen == "colours" || m_startupScreen == "candles" ||
@@ -3472,6 +3477,46 @@ bool Application::frame()
                     m_inventory.slot(6) = ItemStack{ doorBaseOf(3), 3 };
                     m_inventory.slot(7) = ItemStack{ trapdoorBaseOf(5), 2 };
                     m_inventory.slot(8) = ItemStack{ Blocks::DarkOakSapling, 4 };
+                }
+                if (m_startupScreen == "leads" || m_startupScreen == "anvilname")
+                {
+                    m_devAttackStrength = 1.0f;
+                    for (int dx = 2; dx <= 10; ++dx)
+                        for (int dz = -5; dz <= 5; ++dz)
+                            for (int dy = 0; dy < 4; ++dy) m_world->setBlock(px + dx, py + dy, pz + dz, Blocks::Air);
+                    m_world->setBlock(px + 7, py, pz + 3, Blocks::OakFence);
+                    auto spawn = [&](MobId id, float x, float z) -> Mob* {
+                        if (!m_entities.spawnAt(id, glm::vec3(px + x, static_cast<float>(py), pz + z), *m_world)) return nullptr;
+                        return &m_entities.mobs().back();
+                    };
+                    if (Mob* pig = spawn(MobId::Pig, 5.5f, -3.5f)) { pig->setSaddled(true); pig->setCustomName("Wilbur"); }
+                    if (Mob* sheep = spawn(MobId::Sheep, 4.5f, 0.5f))
+                    {
+                        sheep->setLeashed(true);
+                        sheep->setCustomName("Shaun");
+                        m_leashes.push_back(Leash{ sheep->serial(), false, glm::ivec3(0) });
+                    }
+                    if (Mob* cow = spawn(MobId::Cow, 8.5f, 1.5f))
+                    {
+                        cow->setLeashed(true);
+                        m_leashes.push_back(Leash{ cow->serial(), true, glm::ivec3(px + 7, py, pz + 3) });
+                    }
+                    if (Mob* strider = spawn(MobId::Strider, 8.5f, -2.0f)) strider->setSaddled(true);
+                    m_inventory.setSelectedSlot(0);
+                    m_inventory.slot(0) = ItemStack{ Items::Lead, 3 };
+                    m_inventory.slot(1) = ItemStack{ Items::NameTag, 2 };
+                    m_inventory.slot(2) = ItemStack{ Items::Saddle, 1 };
+                    if (m_startupScreen == "anvilname")
+                    {
+                        const glm::ivec3 anvil(px + 2, py, pz);
+                        m_world->setBlock(anvil.x, anvil.y, anvil.z, Blocks::Anvil);
+                        openAnvil(anvil);
+                        m_inventory.slot(Inventory::ANVIL_LEFT) = ItemStack{ Items::NameTag, 1 };
+                        m_anvilName = "Shaun";
+                        m_anvilNameEdited = true;
+                        m_player.experience = 200;
+                        refreshAnvilResult();
+                    }
                 }
                 if (m_startupScreen == "fishing")
                 {
@@ -6396,6 +6441,27 @@ void Application::handleEvents()
     else if (m_inventoryOpen && m_player.creative() && m_input.wheelDelta() != 0)
         m_paletteRow -= m_input.wheelDelta();
 
+    const bool naming = m_inventoryOpen && m_anvilOpen && m_inventory.slot(Inventory::ANVIL_LEFT).id == Items::NameTag;
+    if (naming)
+    {
+        bool changed = false;
+        for (char c : m_input.typedText())
+            if (c >= 32 && c < 127 && m_anvilName.size() < 35)
+            {
+                if (!m_anvilNameEdited) m_anvilName.clear();
+                m_anvilNameEdited = true;
+                m_anvilName.push_back(c);
+                changed = true;
+            }
+        for (int i = 0; i < m_input.backspaces() && !m_anvilName.empty(); ++i)
+        {
+            m_anvilName.pop_back();
+            m_anvilNameEdited = true;
+            changed = true;
+        }
+        if (changed) refreshAnvilResult();
+    }
+
     const bool searching = creativeSearching();
     if (searching)
     {
@@ -6409,7 +6475,7 @@ void Application::handleEvents()
             m_creativeSearch.pop_back();
     }
 
-    if (!searching && m_keys.pressed(m_input, Action::Inventory) && (playing() || m_inventoryOpen) &&
+    if (!searching && !naming && m_keys.pressed(m_input, Action::Inventory) && (playing() || m_inventoryOpen) &&
         !m_player.spectator())
     {
         if (m_inventoryOpen)
@@ -11067,6 +11133,41 @@ void Application::handlePlacement()
 
     if (!m_keys.pressed(m_input, Action::Use)) return;
 
+    if (Mob* aimed = m_entities.pick(m_camera.position, m_camera.front, ATTACK_REACH))
+        if (aimed->alive())
+        {
+            ItemStack& held = m_inventory.selected();
+            for (size_t i = 0; i < m_leashes.size(); ++i)
+                if (m_leashes[i].mob == aimed->serial() && !m_leashes[i].toKnot)
+                {
+                    aimed->setLeashed(false);
+                    m_leashes.erase(m_leashes.begin() + static_cast<long>(i));
+                    if (!m_player.creative())
+                    {
+                        ItemStack lead{ Items::Lead, 1 };
+                        if (m_inventory.addStack(lead) > 0) m_drops.spawnStack(m_player.position, lead);
+                    }
+                    m_audio.play(Sound::Click, 0.5f, 0.7f);
+                    return;
+                }
+            if (held.id == Items::Lead && Mob::leashable(aimed->type()) && !aimed->leashed() && !aimed->ridden())
+            {
+                aimed->setLeashed(true);
+                m_leashes.push_back(Leash{ aimed->serial(), false, glm::ivec3(0) });
+                if (!m_player.creative() && --held.count <= 0) held.clear();
+                m_audio.play(Sound::DigWool, 0.6f, 1.2f);
+                return;
+            }
+            if (held.id == Items::NameTag && held.damage > 0 && held.damage <= static_cast<int>(m_itemNames.size()) &&
+                aimed->typeId() != MobId::EnderDragon)
+            {
+                aimed->setCustomName(m_itemNames[static_cast<size_t>(held.damage - 1)]);
+                if (!m_player.creative() && --held.count <= 0) held.clear();
+                m_audio.play(Sound::Click, 0.5f, 1.4f);
+                return;
+            }
+        }
+
     // A bench is opened by using it, whatever is in your hand -- unless
     // you are sneaking, which is how Minecraft lets you place a block
     // against one rather than open it.
@@ -11401,6 +11502,29 @@ void Application::handlePlacement()
             if (isCauldron(used) && useCauldron(bench.block, used)) return;
             if (isLectern(used) && useLectern(bench.block, used)) return;
             if (used == Blocks::Grindstone && useGrindstone(bench.block)) return;
+            if (isFence(used))
+            {
+                bool tied = false;
+                for (Leash& leash : m_leashes)
+                    if (!leash.toKnot)
+                    {
+                        leash.toKnot = true;
+                        leash.knot = bench.block;
+                        tied = true;
+                    }
+                if (!tied)
+                    for (Leash& leash : m_leashes)
+                        if (leash.toKnot && leash.knot == bench.block)
+                        {
+                            leash.toKnot = false;
+                            tied = true;
+                        }
+                if (tied)
+                {
+                    m_audio.play(Sound::DigWool, 0.6f, 1.0f);
+                    return;
+                }
+            }
             if ((isCommandBlock(used) || isStructureBlock(used)) && m_player.creative())
             {
                 openBlockEditor(bench.block);
@@ -13708,6 +13832,81 @@ void Application::pinCreativeMarkers()
     }
 }
 
+Mob* Application::mobBySerial(uint32_t serial)
+{
+    if (serial == 0) return nullptr;
+    for (Mob& mob : m_entities.mobs())
+        if (mob.serial() == serial) return mob.alive() ? &mob : nullptr;
+    return nullptr;
+}
+
+int Application::nameIdOf(const std::string& name)
+{
+    for (size_t i = 0; i < m_itemNames.size(); ++i)
+        if (m_itemNames[i] == name) return static_cast<int>(i) + 1;
+    if (m_itemNames.size() >= 60000u) return 0;
+    m_itemNames.push_back(name);
+    return static_cast<int>(m_itemNames.size());
+}
+
+void Application::dropLeash(const Leash& leash, const glm::vec3& at)
+{
+    (void)leash;
+    if (m_player.creative()) return;
+    m_drops.spawnStack(at, ItemStack{ Items::Lead, 1 });
+}
+
+void Application::tickLeashes(float deltaTime)
+{
+    if (!m_world) return;
+    for (size_t i = 0; i < m_leashes.size();)
+    {
+        const Leash leash = m_leashes[i];
+        Mob* mob = nullptr;
+        glm::vec3 last(0.0f);
+        bool found = false;
+        for (Mob& candidate : m_entities.mobs())
+            if (candidate.serial() == leash.mob)
+            {
+                found = true;
+                last = candidate.position();
+                if (candidate.alive()) mob = &candidate;
+                break;
+            }
+        if (!mob)
+        {
+            if (found) dropLeash(leash, last + glm::vec3(0.0f, 0.5f, 0.0f));
+            m_leashes.erase(m_leashes.begin() + static_cast<long>(i));
+            continue;
+        }
+        if (leash.toKnot && !isFence(m_world->getBlock(leash.knot.x, leash.knot.y, leash.knot.z)))
+        {
+            mob->setLeashed(false);
+            dropLeash(leash, glm::vec3(leash.knot) + glm::vec3(0.5f));
+            m_leashes.erase(m_leashes.begin() + static_cast<long>(i));
+            continue;
+        }
+        const glm::vec3 holder = leash.toKnot ? glm::vec3(leash.knot) + glm::vec3(0.5f, 0.6f, 0.5f)
+                                              : m_player.position + glm::vec3(0.0f, 1.0f, 0.0f);
+        const glm::vec3 neck = mob->position() + glm::vec3(0.0f, mob->type().height * 0.7f, 0.0f);
+        const glm::vec3 gap = holder - neck;
+        const float distance = glm::length(gap);
+        if (distance > 10.0f)
+        {
+            mob->setLeashed(false);
+            dropLeash(leash, neck);
+            m_leashes.erase(m_leashes.begin() + static_cast<long>(i));
+            continue;
+        }
+        if (distance > 3.0f)
+        {
+            const glm::vec3 pull = glm::normalize(glm::vec3(gap.x, 0.0f, gap.z)) * std::min(6.0f, (distance - 3.0f) * 4.0f) * deltaTime;
+            mob->shove(pull + glm::vec3(0.0f, gap.y > 1.5f ? 0.6f * deltaTime * 10.0f : 0.0f, 0.0f));
+        }
+        ++i;
+    }
+}
+
 bool Application::holdingRod() const
 {
     return m_inventory.selected().id == Items::FishingRod || m_inventory.slot(Inventory::OFFHAND).id == Items::FishingRod;
@@ -13759,11 +13958,10 @@ void Application::reelBobber()
 {
     if (!m_bobber.active) return;
     int wear = 0;
-    if (m_bobber.hooked >= 0 && m_bobber.hooked < static_cast<int>(m_entities.mobs().size()))
+    if (Mob* mob = m_bobber.hooked ? mobBySerial(m_bobber.hooked) : nullptr)
     {
-        Mob& mob = m_entities.mobs()[static_cast<size_t>(m_bobber.hooked)];
-        const glm::vec3 pull = (m_player.position - mob.position()) * 0.35f + glm::vec3(0.0f, 2.0f, 0.0f);
-        mob.shove(pull);
+        const glm::vec3 pull = (m_player.position - mob->position()) * 0.35f + glm::vec3(0.0f, 2.0f, 0.0f);
+        mob->shove(pull);
         wear = 3;
     }
     else if (m_bobber.bite > 0.0f && m_bobber.inWater)
@@ -13802,19 +14000,14 @@ void Application::tickFishing(float deltaTime)
     }
     m_bobber.age += deltaTime;
 
-    if (m_bobber.hooked >= 0)
+    if (m_bobber.hooked)
     {
-        if (m_bobber.hooked < static_cast<int>(m_entities.mobs().size()))
+        if (const Mob* mob = mobBySerial(m_bobber.hooked))
         {
-            const Mob& mob = m_entities.mobs()[static_cast<size_t>(m_bobber.hooked)];
-            if (mob.alive() && glm::length(mob.position() - m_bobber.hookedAt) < 3.0f)
-            {
-                m_bobber.hookedAt = mob.position();
-                m_bobber.position = mob.position() + glm::vec3(0.0f, mob.type().height * 0.8f, 0.0f);
-                return;
-            }
+            m_bobber.position = mob->position() + glm::vec3(0.0f, mob->type().height * 0.8f, 0.0f);
+            return;
         }
-        m_bobber.hooked = -1;
+        m_bobber.hooked = 0;
     }
 
     const glm::ivec3 cell = glm::ivec3(glm::floor(m_bobber.position));
@@ -13900,8 +14093,7 @@ void Application::tickFishing(float deltaTime)
         if (std::fabs(feet.x - next.x) < half && std::fabs(feet.z - next.z) < half && next.y >= feet.y - 0.1f &&
             next.y <= feet.y + mob.type().height + 0.1f)
         {
-            m_bobber.hooked = static_cast<int>(i);
-            m_bobber.hookedAt = feet;
+            m_bobber.hooked = mob.serial();
             break;
         }
     }
@@ -14169,6 +14361,24 @@ void Application::renderPlayers(const glm::mat4& view, const glm::mat4& projecti
         pose.sneaking = player.sneaking;
 
         draw(skinFor(player.look), pose, player.name);
+    }
+
+    for (const Mob& mob : m_entities.mobs())
+    {
+        if (!mob.alive() || mob.customName().empty()) continue;
+        const glm::vec3 above = mob.position() + glm::vec3(0.0f, mob.type().height + 0.35f, 0.0f);
+        const float distance = glm::length(above - cameraPosition);
+        if (distance > 16.0f) continue;
+        const glm::vec4 clip = viewProjection * glm::vec4(above, 1.0f);
+        if (clip.w <= 0.05f) continue;
+        const glm::vec3 ndc = glm::vec3(clip) / clip.w;
+        if (ndc.x < -1.3f || ndc.x > 1.3f || ndc.y < -1.3f || ndc.y > 1.3f) continue;
+        Nameplate plate;
+        plate.name = mob.customName();
+        plate.x = (ndc.x * 0.5f + 0.5f) * screenWidth;
+        plate.y = (1.0f - (ndc.y * 0.5f + 0.5f)) * screenHeight;
+        plate.scale = std::clamp(2.2f - distance * 0.06f, 1.2f, 2.2f);
+        m_nameplates.push_back(plate);
     }
 
     // Yourself, once the camera is no longer behind your own eyes. No
@@ -14621,6 +14831,34 @@ void Application::queueBeams()
         const glm::vec3 sky(b.x + 0.5f, top, b.z + 0.5f);
         m_beams.beam(BeamRenderer::Look::Beacon, base, sky, 0.2f, t * 2.0f, t * 0.6f);
         m_beams.beam(BeamRenderer::Look::BeaconHaze, base, sky, 0.25f, t * 1.0f, 0.0f);
+    }
+
+    for (const Leash& leash : m_leashes)
+    {
+        const Mob* mob = nullptr;
+        for (const Mob& candidate : m_entities.mobs())
+            if (candidate.serial() == leash.mob && candidate.alive()) mob = &candidate;
+        if (!mob) continue;
+        const glm::vec3 from = mob->position() + glm::vec3(0.0f, mob->type().height * 0.7f, 0.0f);
+        glm::vec3 to;
+        if (leash.toKnot)
+        {
+            to = glm::vec3(leash.knot) + glm::vec3(0.5f, 0.6f, 0.5f);
+            m_beams.beam(BeamRenderer::Look::Lead, to - glm::vec3(0.0f, 0.12f, 0.0f), to + glm::vec3(0.0f, 0.12f, 0.0f), 0.11f, 0.0f, 0.0f);
+        }
+        else if (m_perspective == Perspective::FirstPerson)
+            to = m_camera.position + m_camera.front * 0.5f + m_camera.right * 0.3f - m_camera.up * 0.35f;
+        else
+            to = m_player.position + glm::vec3(0.0f, 1.0f, 0.0f) + m_camera.right * 0.35f;
+        const float sag = std::min(1.0f, glm::length(to - from) * 0.12f);
+        glm::vec3 last = from;
+        for (int k = 1; k <= 10; ++k)
+        {
+            const float f = static_cast<float>(k) / 10.0f;
+            const glm::vec3 point = from + (to - from) * f - glm::vec3(0.0f, sag * 4.0f * f * (1.0f - f), 0.0f);
+            m_beams.beam(BeamRenderer::Look::Lead, last, point, 0.025f, 0.0f, 0.0f);
+            last = point;
+        }
     }
 
     if (m_bobber.active)

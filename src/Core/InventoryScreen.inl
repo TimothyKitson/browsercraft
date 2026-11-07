@@ -271,8 +271,12 @@ namespace
 
     // What a stack is called in a tooltip. A potion is one item id with
     // the brew in its damage, so its name has to be read out of that.
+    const std::vector<std::string>* g_itemNames = nullptr;
+
     std::string stackName(const ItemStack& stack)
     {
+        if (stack.id == Items::NameTag && g_itemNames && stack.damage > 0 && stack.damage <= static_cast<int>(g_itemNames->size()))
+            return (*g_itemNames)[static_cast<size_t>(stack.damage - 1)];
         if (stack.id == Items::Potion) return Brewing::name(Brewing::fromDamage(stack.damage));
         return displayName(stack.id);
     }
@@ -796,6 +800,7 @@ int Application::creativeInventoryTab()
 
 void Application::renderInventoryScreen()
 {
+    g_itemNames = &m_itemNames;
     // Interface pixels, the same ones the HUD is drawn in, and the same
     // ones the open-source client lays its containers out in.
     m_ui.setScale(static_cast<float>(guiScale()));
@@ -2056,7 +2061,13 @@ void Application::renderContainerScreen(float w, float h)
             guiSprite(working.empty() ? "sprites/container/anvil/text_field_disabled"
                                       : "sprites/container/anvil/text_field",
                       panelX + 59.0f, panelY + 20.0f, 110.0f, 16.0f);
-            if (!working.empty())
+            if (working.id == Items::NameTag)
+            {
+                std::string name = m_anvilNameEdited ? m_anvilName : stackName(working);
+                if (static_cast<int>(m_elapsedSeconds * 2.0f) % 2 == 0) name += "_";
+                m_ui.textWithShadow(name, panelX + 62.0f, panelY + 24.0f, 1.0f, glm::vec4(0.878f, 0.878f, 0.878f, 1.0f));
+            }
+            else if (!working.empty())
             {
                 const std::string name = stackName(made.empty() ? working : made);
                 m_ui.textWithShadow(name, panelX + 62.0f, panelY + 24.0f, 1.0f,
@@ -3629,6 +3640,8 @@ void Application::openAnvil(const glm::ivec3& block)
 {
     m_anvilBlock = block;
     m_anvilOpen = true;
+    m_anvilName.clear();
+    m_anvilNameEdited = false;
     refreshAnvilResult();
 
     m_inventoryOpen = true;
@@ -3663,6 +3676,19 @@ Anvil::Result Application::anvilResult() const
 
     const ItemStack& left = m_inventory.slot(Inventory::ANVIL_LEFT);
     const ItemStack& right = m_inventory.slot(Inventory::ANVIL_RIGHT);
+
+    if (left.id == Items::NameTag && right.empty())
+    {
+        Anvil::Result renamed;
+        const bool fresh = m_anvilNameEdited && !m_anvilName.empty() && m_anvilName != stackName(left);
+        if (!fresh) return renamed;
+        renamed.valid = true;
+        renamed.id = Items::NameTag;
+        renamed.damage = -1;
+        renamed.levelCost = 1;
+        renamed.used = 0;
+        return renamed;
+    }
 
     return Anvil::combine({ left.id, left.count, left.damage, left.enchantments },
                           { right.id, right.count, right.damage, right.enchantments });
@@ -3705,8 +3731,17 @@ void Application::takeAnvilResult()
     taken.count = 1;
     taken.damage = made.damage;
     taken.enchantments = made.enchantments;
+    if (made.id == Items::NameTag && made.damage < 0) taken.damage = nameIdOf(m_anvilName);
     m_inventory.cursor() = taken;
 
+    if (made.id == Items::NameTag && made.damage < 0)
+    {
+        ItemStack& tags = m_inventory.slot(Inventory::ANVIL_LEFT);
+        if (--tags.count <= 0) tags.clear();
+        m_anvilName.clear();
+        m_anvilNameEdited = false;
+    }
+    else
     // The left-hand item is always consumed whole; the right-hand one
     // only by as many as the work actually took.
     m_inventory.slot(Inventory::ANVIL_LEFT).clear();

@@ -161,6 +161,7 @@ struct LevelState
         int size[3] = { 5, 5, 5 };
     };
     std::vector<SavedStructure> structures;
+    std::vector<std::string> itemNames;
 };
 
 namespace WorldSave

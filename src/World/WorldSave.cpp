@@ -312,6 +312,8 @@ void WorldSave::saveLevel(const std::string& saveDirectory, const LevelState& st
         for (int k = 0; k < 3; ++k) write(out, static_cast<int32_t>(structure.offset[k]));
         for (int k = 0; k < 3; ++k) write(out, static_cast<int32_t>(structure.size[k]));
     }
+    write(out, static_cast<uint32_t>(state.itemNames.size()));
+    for (const std::string& name : state.itemNames) writeLine(out, name);
 }
 
 bool WorldSave::loadLevel(const std::string& saveDirectory, LevelState& out)
@@ -619,7 +621,8 @@ bool WorldSave::loadLevel(const std::string& saveDirectory, LevelState& out)
                                                         out.commands.push_back(command);
                                                     }
                                                 uint32_t structureCount = 0;
-                                                if (commandsWhole && read(in, structureCount))
+                                                bool structuresWhole = commandsWhole && read(in, structureCount);
+                                                if (structuresWhole)
                                                     for (uint32_t i = 0; i < structureCount && i < 1000000u; ++i)
                                                     {
                                                         LevelState::SavedStructure structure;
@@ -637,8 +640,20 @@ bool WorldSave::loadLevel(const std::string& saveDirectory, LevelState& out)
                                                             whole = read(in, value);
                                                             structure.size[k] = value;
                                                         }
-                                                        if (!whole) break;
+                                                        if (!whole)
+                                                        {
+                                                            structuresWhole = false;
+                                                            break;
+                                                        }
                                                         out.structures.push_back(structure);
+                                                    }
+                                                uint32_t nameCount = 0;
+                                                if (structuresWhole && read(in, nameCount))
+                                                    for (uint32_t i = 0; i < nameCount && i < 65536u; ++i)
+                                                    {
+                                                        std::string name;
+                                                        if (!readLine(in, name)) break;
+                                                        out.itemNames.push_back(name);
                                                     }
                                             }
                                         }

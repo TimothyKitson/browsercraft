@@ -3907,6 +3907,36 @@ namespace
               Mob::canBeRidden(mobType(MobId::Strider), false, false, true) && !Mob::canBeRidden(mobType(MobId::Pig), false, true, true),
               "a saddled pig or strider can be ridden, a bare one or a piglet cannot");
         check(Food::isEdible(Items::TropicalFish), "tropical fish can be eaten");
+
+        const Mob first(MobId::Sheep, glm::vec3(0.0f), 7u);
+        const Mob second(MobId::Sheep, glm::vec3(0.0f), 7u);
+        check(first.serial() != 0 && first.serial() != second.serial(), "every mob has a number of its own, to hang a lead on");
+        check(Mob::leashable(mobType(MobId::Sheep)) && Mob::leashable(mobType(MobId::Horse)) &&
+              !Mob::leashable(mobType(MobId::Zombie)) && !Mob::leashable(mobType(MobId::Creeper)),
+              "animals take a lead and monsters do not");
+        Mob named(MobId::Pig, glm::vec3(0.0f), 3u);
+        named.setCustomName("Wilbur");
+        check(named.customName() == "Wilbur", "a name tag's name stays on the mob");
+
+        ItemStack rope[9];
+        rope[0].id = Items::StringItem; rope[1].id = Items::StringItem; rope[3].id = Items::StringItem;
+        rope[4].id = Items::Slimeball; rope[8].id = Items::StringItem;
+        for (ItemStack& cell : rope) if (cell.id != Blocks::Air) cell.count = 1;
+        const CraftOutput lead = Crafting::match(rope, 3);
+        check(lead.valid() && lead.id == Items::Lead && lead.count == 2, "four string and a slimeball make two leads");
+
+        const std::string dir = (std::filesystem::temp_directory_path() / "browsercraft_name_test").string();
+        std::error_code ec;
+        std::filesystem::remove_all(dir, ec);
+        std::filesystem::create_directories(dir, ec);
+        LevelState level;
+        level.seed = 6u;
+        level.itemNames = { "Shaun", "Wilbur" };
+        WorldSave::saveLevel(dir, level);
+        LevelState back;
+        check(WorldSave::loadLevel(dir, back) && back.itemNames.size() == 2 && back.itemNames[1] == "Wilbur",
+              "the names written on name tags are kept with the level");
+        std::filesystem::remove_all(dir, ec);
     }
 
     void testCreativeBlocks()
@@ -11687,7 +11717,7 @@ namespace
             const std::string path = dir + "/level.dat";
             std::error_code ec;
             const auto size = std::filesystem::file_size(path, ec);
-            if (!ec) std::filesystem::resize_file(path, size - sizeof(uint16_t) - sizeof(uint8_t) - 3 * sizeof(int) - sizeof(uint32_t) - sizeof(int32_t) - 4 * sizeof(uint32_t), ec);
+            if (!ec) std::filesystem::resize_file(path, size - sizeof(uint16_t) - sizeof(uint8_t) - 3 * sizeof(int) - sizeof(uint32_t) - sizeof(int32_t) - 5 * sizeof(uint32_t), ec);
 
             LevelState back;
             check(WorldSave::loadLevel(dir, back), "a level from before items moved up still loads");

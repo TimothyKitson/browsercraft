@@ -22,6 +22,8 @@ Mob::Mob(MobId type, glm::vec3 feetPosition, uint32_t seed, bool baby)
     , m_rng(seed ? seed : 1u)
     , m_birthSeed(seed ? seed : 1u)
 {
+    static uint32_t nextSerial = 1;
+    m_serial = nextSerial++;
     if (baby) m_babyTimer = BABY_SECONDS;
     const MobType& t = mobType(type);
     m_health = t.maxHealth;
