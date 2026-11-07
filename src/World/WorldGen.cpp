@@ -102,9 +102,8 @@ Biome biomeFromId(const std::string& id)
     const std::string full = id.find(':') == std::string::npos ? "minecraft:" + id : id;
     for (const BiomeKey& key : BIOME_KEYS)
         if (full == key.id) return key.biome;
-    if (full == "minecraft:deep_ocean" || full == "minecraft:warm_ocean" || full == "minecraft:cold_ocean") return Biome::Ocean;
-    if (full == "minecraft:snowy_tundra" || full == "minecraft:ice_spikes") return Biome::Snowy;
-    return Biome::Plains;
+    if (full == "minecraft:snowy_tundra") return Biome::Snowy;
+    return Biomes::family(Biomes::fromId(full));
 }
 
 const char* dimensionName(Dimension dimension)
@@ -249,6 +248,133 @@ Biome WorldGen::biomeAt(int worldX, int worldZ) const
         return Biome::CherryGrove;
     if (humidity > 0.05f) return Biome::Forest;
     return Biome::Plains;
+}
+
+float WorldGen::variantAt(int worldX, int worldZ) const
+{
+    const float fx = static_cast<float>(worldX) * m_scale;
+    const float fz = static_cast<float>(worldZ) * m_scale;
+    return spread(m_hills.fbm2D(fx * 0.0031f + 911.0f, fz * 0.0031f - 407.0f, 3), 2.4f);
+}
+
+Biomes::Kind WorldGen::kindAt(int worldX, int worldZ) const
+{
+    if (m_dimension == Dimension::Nether) return netherKindAt(worldX, worldZ);
+    if (m_dimension == Dimension::End) return endKindAt(worldX, worldZ);
+    if (m_options.type == Options::Type::Flat || m_options.type == Options::Type::SingleBiome) return m_options.kind;
+    return variantOf(biomeAt(worldX, worldZ), worldX, worldZ, surfaceHeight(worldX, worldZ));
+}
+
+Biomes::Kind WorldGen::variantOf(Biome family, int worldX, int worldZ, int height) const
+{
+    using K = Biomes::Kind;
+    if (m_options.type == Options::Type::Flat || m_options.type == Options::Type::SingleBiome) return m_options.kind;
+    const float t = temperatureAt(worldX, worldZ);
+    const float wet = humidityAt(worldX, worldZ);
+    const float v = variantAt(worldX, worldZ);
+    switch (family)
+    {
+        case Biome::Ocean:
+        {
+            const bool deep = height < SEA_LEVEL - 12;
+            if (freezesAt(worldX, worldZ)) return deep ? K::DeepFrozenOcean : K::FrozenOcean;
+            if (reefWater(worldX, worldZ)) return deep ? K::DeepLukewarmOcean : K::WarmOcean;
+            if (t > 0.12f) return deep ? K::DeepLukewarmOcean : K::LukewarmOcean;
+            if (t < SNOW_TEMPERATURE + 0.15f) return deep ? K::DeepColdOcean : K::ColdOcean;
+            return deep ? K::DeepOcean : K::Ocean;
+        }
+        case Biome::Beach:
+            if (t < SNOW_TEMPERATURE) return K::SnowyBeach;
+            if (v > 0.55f) return K::StonyShore;
+            return K::Beach;
+        case Biome::Plains:
+            if (height > SEA_LEVEL + 24) return K::Meadow;
+            if (v > 0.5f) return K::SunflowerPlains;
+            return K::Plains;
+        case Biome::Forest:
+            if (t < SNOW_TEMPERATURE + 0.14f)
+            {
+                if (v > 0.45f) return K::OldGrowthSpruceTaiga;
+                if (v < -0.45f) return K::OldGrowthPineTaiga;
+                return K::Taiga;
+            }
+            if (v < -0.3f) return K::DarkForest;
+            if (v > 0.55f) return K::FlowerForest;
+            if (v > 0.15f) return wet > 0.25f ? K::OldGrowthBirchForest : K::BirchForest;
+            return K::Forest;
+        case Biome::Snowy:
+            if (v > 0.5f) return K::IceSpikes;
+            if (wet > 0.0f) return K::SnowyTaiga;
+            return K::SnowyPlains;
+        case Biome::Mountains:
+            if (height > SEA_LEVEL + 47) return t < 0.0f ? (v > 0.0f ? K::JaggedPeaks : K::FrozenPeaks) : K::StonyPeaks;
+            if (height > SEA_LEVEL + 39 && t < 0.05f) return wet > 0.05f ? K::Grove : K::SnowySlopes;
+            if (t > 0.30f) return K::WindsweptSavanna;
+            if (v > 0.4f) return K::WindsweptGravellyHills;
+            if (wet > 0.1f) return K::WindsweptForest;
+            return K::WindsweptHills;
+        case Biome::Jungle:
+            if (v > 0.45f) return K::BambooJungle;
+            if (wet < 0.28f) return K::SparseJungle;
+            return K::Jungle;
+        case Biome::Savanna:
+            return height > SEA_LEVEL + 18 ? K::SavannaPlateau : K::Savanna;
+        case Biome::Badlands:
+            if (height > SEA_LEVEL + 18) return K::WoodedBadlands;
+            if (v > 0.35f) return K::ErodedBadlands;
+            return K::Badlands;
+        default:
+            return Biomes::kindOf(family);
+    }
+}
+
+Biomes::Kind WorldGen::kindAt(int worldX, int y, int worldZ) const
+{
+    if (m_dimension != Dimension::Overworld || flatWorld()) return kindAt(worldX, worldZ);
+    if (y < surfaceHeight(worldX, worldZ) - 12)
+    {
+        switch (caveKindAt(worldX, worldZ))
+        {
+            case CaveKind::Lush: return Biomes::Kind::LushCaves;
+            case CaveKind::Dripstone: return Biomes::Kind::DripstoneCaves;
+            default:
+                if (y <= CITY_FLOOR + 16) return Biomes::Kind::DeepDark;
+                break;
+        }
+    }
+    return kindAt(worldX, worldZ);
+}
+
+Biomes::Kind WorldGen::netherKindAt(int worldX, int worldZ) const
+{
+    switch (netherBiomeAt(worldX, worldZ))
+    {
+        case Biome::CrimsonForest: return Biomes::Kind::CrimsonForest;
+        case Biome::WarpedForest: return Biomes::Kind::WarpedForest;
+        default: break;
+    }
+    const float valley = m_hills.fbm2D(worldX * 0.0058f - 211.0f, worldZ * 0.0058f + 377.0f, 2);
+    if (valley > 0.2f) return Biomes::Kind::SoulSandValley;
+    if (valley < -0.2f) return Biomes::Kind::BasaltDeltas;
+    return Biomes::Kind::NetherWastes;
+}
+
+Biomes::Kind WorldGen::endKindAt(int worldX, int worldZ) const
+{
+    const float x = static_cast<float>(worldX), z = static_cast<float>(worldZ);
+    if (x * x + z * z <= 1024.0f * 1024.0f) return Biomes::Kind::TheEnd;
+    const float density = m_height.fbm2D(worldX * 0.0055f, worldZ * 0.0055f, 3) - 0.22f;
+    if (density > 0.2f) return Biomes::Kind::EndHighlands;
+    if (density > 0.07f) return Biomes::Kind::EndMidlands;
+    if (density > 0.0f) return Biomes::Kind::EndBarrens;
+    return Biomes::Kind::SmallEndIslands;
+}
+
+Biomes::Kind WorldGen::kindIn(Dimension dimension, int worldX, int y, int worldZ) const
+{
+    if (dimension == Dimension::Nether) return netherKindAt(worldX, worldZ);
+    if (dimension == Dimension::End) return endKindAt(worldX, worldZ);
+    return kindAt(worldX, y, worldZ);
 }
 
 void WorldGen::generate(Chunk& chunk) const
@@ -418,8 +544,54 @@ void WorldGen::generateNether(Chunk& chunk) const
                 }
             }
 
+            const Biomes::Kind netherKind = forest == Biome::NetherWastes ? netherKindAt(wx, wz) : Biomes::kindOf(forest);
+            if (netherKind == Biomes::Kind::SoulSandValley || netherKind == Biomes::Kind::BasaltDeltas)
+            {
+                const bool valley = netherKind == Biomes::Kind::SoulSandValley;
+                for (int y = LAVA_LEVEL + 1; y < ROOF - 3; ++y)
+                {
+                    if (chunk.getBlock(lx, y, lz) != Blocks::Netherrack) continue;
+                    const bool open = chunk.getBlock(lx, y + 1, lz) == Blocks::Air;
+                    const bool under = chunk.getBlock(lx, y - 1, lz) == Blocks::Air;
+                    const bool near = open || under || chunk.getBlock(lx, y + 2, lz) == Blocks::Air;
+                    if (!near) continue;
+                    const float patch = m_hills.fbm2D(wx * 0.09f + 37.0f, (wz + y * 2) * 0.09f - 53.0f, 2);
+                    if (valley)
+                        chunk.setBlockRaw(lx, y, lz, patch > -0.05f ? Blocks::SoulSand : Blocks::SoulSoil);
+                    else if (open && y <= LAVA_LEVEL + 2)
+                        chunk.setBlockRaw(lx, y, lz, Blocks::MagmaBlock);
+                    else
+                        chunk.setBlockRaw(lx, y, lz, patch > 0.12f ? Blocks::Blackstone : Blocks::Basalt);
+                }
+                const float pillar = hashToFloat(hashCoords(wx, 1, wz, m_seed + 7951));
+                if (pillar < (valley ? 0.0025f : 0.012f))
+                {
+                    const int most = valley ? ROOF : 2 + static_cast<int>(hashToFloat(hashCoords(wx, 2, wz, m_seed + 7952)) * 5.0f);
+                    for (int y = LAVA_LEVEL + 2; y < ROOF - 4; ++y)
+                    {
+                        const BlockId below = chunk.getBlock(lx, y - 1, lz);
+                        if (chunk.getBlock(lx, y, lz) != Blocks::Air || below == Blocks::Air || isLiquid(below)) continue;
+                        for (int k = 0; k < most && y + k < ROOF - 4 && chunk.getBlock(lx, y + k, lz) == Blocks::Air; ++k)
+                            chunk.setBlockRaw(lx, y + k, lz, Blocks::Basalt);
+                        break;
+                    }
+                }
+                else if (valley && pillar < 0.006f)
+                {
+                    for (int y = LAVA_LEVEL + 2; y < ROOF - 6; ++y)
+                    {
+                        const BlockId below = chunk.getBlock(lx, y - 1, lz);
+                        if (chunk.getBlock(lx, y, lz) != Blocks::Air || below == Blocks::Air || isLiquid(below)) continue;
+                        const int tall = 2 + static_cast<int>(hashToFloat(hashCoords(wx, 3, wz, m_seed + 7953)) * 4.0f);
+                        for (int k = 0; k < tall && chunk.getBlock(lx, y + k, lz) == Blocks::Air; ++k)
+                            chunk.setBlockRaw(lx, y + k, lz, Blocks::BoneBlock);
+                        break;
+                    }
+                }
+            }
+
             // Soul sand collects in the low flats, glowstone hangs from the roof.
-            for (int y = LAVA_LEVEL + 1; y < ROOF - 3 && forest == Biome::NetherWastes; ++y)
+            for (int y = LAVA_LEVEL + 1; y < ROOF - 3 && netherKind == Biomes::Kind::NetherWastes; ++y)
             {
                 if (chunk.getBlock(lx, y, lz) != Blocks::Netherrack) continue;
                 if (chunk.getBlock(lx, y + 1, lz) != Blocks::Air) continue;
@@ -652,8 +824,16 @@ void WorldGen::generateColumns(Chunk& chunk) const
             const int wz = baseZ + lz;
             const int surface = surfaceHeight(wx, wz);
             const Biome biome = biomeAt(wx, wz);
+            const Biomes::Kind kind = variantOf(biome, wx, wz, surface);
+            const float patchNoise = m_humidity.fbm2D(wx * 0.05f + 61.0f, wz * 0.05f - 17.0f, 2);
+            int spire = 0;
+            if (kind == Biomes::Kind::ErodedBadlands)
+            {
+                const float hoodoo = std::abs(m_hills.fbm2D(wx * 0.045f + 300.0f, wz * 0.045f - 120.0f, 2));
+                if (hoodoo > 0.32f) spire = std::min(18, static_cast<int>((hoodoo - 0.32f) * 70.0f));
+            }
 
-            for (int y = 0; y <= surface; ++y)
+            for (int y = 0; y <= surface + spire; ++y)
             {
                 BlockId block = Blocks::Stone;
 
@@ -664,6 +844,10 @@ void WorldGen::generateColumns(Chunk& chunk) const
                 else if (y <= 2 && hashToFloat(hashCoords(wx, y, wz, m_seed + 99)) < 0.55f)
                 {
                     block = Blocks::Bedrock; // ragged bedrock floor
+                }
+                else if (y > surface)
+                {
+                    block = badlandsBand(wx, y, wz);
                 }
                 else
                 {
@@ -682,6 +866,11 @@ void WorldGen::generateColumns(Chunk& chunk) const
                             break;
 
                         case Biome::Beach:
+                            if (kind == Biomes::Kind::StonyShore)
+                            {
+                                if (depth == 0 && patchNoise > 0.25f) block = Blocks::Gravel;
+                                break;
+                            }
                             if (depth <= 3) block = Blocks::Sand;
                             else if (depth <= 6) block = Blocks::Sandstone;
                             break;
@@ -692,15 +881,27 @@ void WorldGen::generateColumns(Chunk& chunk) const
                             break;
 
                         case Biome::Badlands:
+                            if (kind == Biomes::Kind::WoodedBadlands && y > SEA_LEVEL + 16)
+                            {
+                                if (depth == 0) block = patchNoise > 0.1f ? Blocks::Grass : Blocks::CoarseDirt;
+                                else if (depth <= 2) block = Blocks::Dirt;
+                                else if (depth <= 24) block = badlandsBand(wx, y, wz);
+                                break;
+                            }
                             if (depth <= 0) block = Blocks::RedSand;
                             else if (depth <= 2) block = Blocks::RedSandstone;
                             else if (depth <= 24) block = badlandsBand(wx, y, wz);
                             break;
 
                         case Biome::Snowy:
+                            if (kind == Biomes::Kind::IceSpikes)
+                            {
+                                if (depth == 0) block = Blocks::Snow;
+                                else if (depth <= 4) block = Blocks::Dirt;
+                                break;
+                            }
                             if (depth == 0)
-                                block = m_humidity.fbm2D(wx * 0.05f + 61.0f, wz * 0.05f - 17.0f, 2) > 0.28f
-                                            ? Blocks::Podzol : Blocks::SnowGrass;
+                                block = patchNoise > 0.28f ? Blocks::Podzol : Blocks::SnowGrass;
                             else if (depth <= 4) block = Blocks::Dirt;
                             break;
 
@@ -710,17 +911,39 @@ void WorldGen::generateColumns(Chunk& chunk) const
                             break;
 
                         case Biome::Mountains:
-                            if (y > 96)
+                            switch (kind)
                             {
-                                if (depth == 0) block = Blocks::Snow;
-                            }
-                            else if (depth == 0 && y < SEA_LEVEL + 48)
-                            {
-                                block = Blocks::Grass;
-                            }
-                            else if (depth <= 3 && y < SEA_LEVEL + 46)
-                            {
-                                block = Blocks::Dirt;
+                                case Biomes::Kind::StonyPeaks:
+                                    if (depth <= 3 && std::abs(m_hills.fbm2D(wx * 0.07f, (y * 3 + wz) * 0.07f, 2)) < 0.08f) block = Blocks::Calcite;
+                                    break;
+                                case Biomes::Kind::JaggedPeaks:
+                                case Biomes::Kind::FrozenPeaks:
+                                case Biomes::Kind::SnowySlopes:
+                                    if (depth == 0)
+                                        block = (kind == Biomes::Kind::FrozenPeaks && patchNoise > 0.2f) ? Blocks::PackedIce : Blocks::Snow;
+                                    else if (depth <= 2 && kind != Biomes::Kind::JaggedPeaks) block = Blocks::Snow;
+                                    break;
+                                case Biomes::Kind::Grove:
+                                    if (depth == 0) block = Blocks::SnowGrass;
+                                    else if (depth <= 3) block = Blocks::Dirt;
+                                    break;
+                                case Biomes::Kind::WindsweptGravellyHills:
+                                    if (depth <= 2) block = patchNoise > 0.3f && depth == 0 ? Blocks::Grass : Blocks::Gravel;
+                                    break;
+                                case Biomes::Kind::WindsweptSavanna:
+                                    if (depth == 0) block = patchNoise > 0.25f ? Blocks::CoarseDirt : (patchNoise < -0.3f ? Blocks::Stone : Blocks::Grass);
+                                    else if (depth <= 3) block = Blocks::Dirt;
+                                    break;
+                                default:
+                                    if (y > SEA_LEVEL + 50)
+                                    {
+                                        if (depth == 0) block = Blocks::Snow;
+                                    }
+                                    else if (depth == 0)
+                                        block = patchNoise < -0.35f ? Blocks::Stone : Blocks::Grass;
+                                    else if (depth <= 3)
+                                        block = Blocks::Dirt;
+                                    break;
                             }
                             break;
 
@@ -748,9 +971,12 @@ void WorldGen::generateColumns(Chunk& chunk) const
                             if (depth == 0)
                             {
                                 block = (surface < SEA_LEVEL) ? Blocks::Dirt : Blocks::Grass;
-                                const float patch = m_humidity.fbm2D(wx * 0.05f + 61.0f, wz * 0.05f - 17.0f, 2);
+                                const float patch = patchNoise;
                                 if (surface >= SEA_LEVEL && biome == Biome::Savanna && patch > 0.30f) block = Blocks::CoarseDirt;
-                                if (surface >= SEA_LEVEL && biome == Biome::Jungle && patch > 0.34f) block = Blocks::Podzol;
+                                if (surface >= SEA_LEVEL && biome == Biome::Jungle && patch > (kind == Biomes::Kind::BambooJungle ? 0.0f : 0.34f)) block = Blocks::Podzol;
+                                if (surface >= SEA_LEVEL && (kind == Biomes::Kind::OldGrowthPineTaiga || kind == Biomes::Kind::OldGrowthSpruceTaiga))
+                                    block = patch > 0.2f ? Blocks::Podzol : patch < -0.25f ? Blocks::CoarseDirt : Blocks::Grass;
+                                if (surface >= SEA_LEVEL && kind == Biomes::Kind::Taiga && patch > 0.35f) block = Blocks::Podzol;
                             }
                             else if (depth <= 3) block = Blocks::Dirt;
                             break;
@@ -3195,29 +3421,68 @@ void WorldGen::decorate(Chunk& chunk) const
                 continue;
             }
 
+            const Biomes::Kind variant = variantOf(here, wx, wz, surface);
+            if (variant == Biomes::Kind::DarkForest && roll < 0.08f)
+            {
+                struct LocalCells : Saplings::Cells
+                {
+                    Chunk* chunk = nullptr;
+                    int baseX = 0, baseZ = 0;
+                    BlockId at(int x, int y, int z) const override
+                    {
+                        const int lx = x - baseX, lz = z - baseZ;
+                        return Chunk::inBounds(lx, y, lz) ? chunk->getBlock(lx, y, lz) : Blocks::Air;
+                    }
+                    void set(int x, int y, int z, BlockId id) override
+                    {
+                        const int lx = x - baseX, lz = z - baseZ;
+                        if (Chunk::inBounds(lx, y, lz)) chunk->setBlockRaw(lx, y, lz, id);
+                    }
+                } cells;
+                cells.chunk = &chunk;
+                cells.baseX = baseX;
+                cells.baseZ = baseZ;
+                Saplings::hugeMushroom(cells, glm::ivec3(wx, surface + 1, wz), roll < 0.04f, hashCoords(wx, 9, wz, m_seed + 4246), true);
+                continue;
+            }
+
             TreeKind kind = TreeKind::Oak;
-            if (here == Biome::Jungle)
-                kind = (roll < 0.85f) ? TreeKind::Jungle : TreeKind::Oak;
-            else if (here == Biome::Savanna)
-                kind = TreeKind::Acacia;
-            else if (here == Biome::CherryGrove)
-                kind = TreeKind::Cherry;
-            else if (here == Biome::MangroveSwamp)
-                kind = TreeKind::Mangrove;
-            else if (here == Biome::Snowy || here == Biome::Mountains)
-                kind = (roll < 0.80f) ? TreeKind::Spruce : TreeKind::Oak;
-            else if (here == Biome::Forest)
-                kind = (roll < 0.30f) ? TreeKind::DarkOak
-                     : (roll < 0.55f) ? TreeKind::Birch
-                                      : TreeKind::Oak;
-            else
-                kind = (roll < 0.35f) ? TreeKind::Birch : TreeKind::Oak;
+            switch (variant)
+            {
+                case Biomes::Kind::BirchForest: case Biomes::Kind::OldGrowthBirchForest: kind = TreeKind::Birch; break;
+                case Biomes::Kind::DarkForest: kind = roll < 0.85f ? TreeKind::DarkOak : TreeKind::Oak; break;
+                case Biomes::Kind::FlowerForest: kind = roll < 0.3f ? TreeKind::Birch : TreeKind::Oak; break;
+                case Biomes::Kind::Forest: kind = roll < 0.2f ? TreeKind::Birch : TreeKind::Oak; break;
+                case Biomes::Kind::Taiga: case Biomes::Kind::OldGrowthPineTaiga: case Biomes::Kind::OldGrowthSpruceTaiga:
+                case Biomes::Kind::SnowyTaiga: case Biomes::Kind::Grove:
+                    kind = TreeKind::Spruce;
+                    break;
+                case Biomes::Kind::WindsweptForest: kind = roll < 0.75f ? TreeKind::Spruce : TreeKind::Oak; break;
+                case Biomes::Kind::WindsweptSavanna: case Biomes::Kind::SavannaPlateau: kind = TreeKind::Acacia; break;
+                case Biomes::Kind::WoodedBadlands: kind = TreeKind::Oak; break;
+                case Biomes::Kind::Meadow: kind = roll < 0.5f ? TreeKind::Birch : TreeKind::Oak; break;
+                default:
+                    if (here == Biome::Jungle)
+                        kind = (roll < 0.85f) ? TreeKind::Jungle : TreeKind::Oak;
+                    else if (here == Biome::Savanna)
+                        kind = TreeKind::Acacia;
+                    else if (here == Biome::CherryGrove)
+                        kind = TreeKind::Cherry;
+                    else if (here == Biome::MangroveSwamp)
+                        kind = TreeKind::Mangrove;
+                    else if (here == Biome::Snowy || here == Biome::Mountains)
+                        kind = (roll < 0.80f) ? TreeKind::Spruce : TreeKind::Oak;
+                    else
+                        kind = (roll < 0.35f) ? TreeKind::Birch : TreeKind::Oak;
+                    break;
+            }
 
             buildTree(chunk, wx, surface, wz, kind);
 
             if ((kind == TreeKind::Oak || kind == TreeKind::Birch) &&
                 (here == Biome::Plains || here == Biome::Forest) &&
-                hashToFloat(hashCoords(wx, 31, wz, m_seed + 5171)) < (here == Biome::Plains ? 0.05f : 0.02f))
+                hashToFloat(hashCoords(wx, 31, wz, m_seed + 5171)) <
+                    (variant == Biomes::Kind::Meadow ? 0.5f : variant == Biomes::Kind::FlowerForest ? 0.1f : here == Biome::Plains ? 0.05f : 0.02f))
             {
                 const int trunk = 4 + static_cast<int>(hashToFloat(hashCoords(wx, 0, wz, m_seed + 5150)) * 3.0f) +
                                   (kind == TreeKind::Birch ? 1 : 0);
@@ -3253,6 +3518,7 @@ void WorldGen::decorate(Chunk& chunk) const
 
             const BlockId ground = chunk.getBlock(lx, surface, lz);
             const Biome biome = biomeAt(wx, wz);
+            const Biomes::Kind variant = variantOf(biome, wx, wz, surface);
             const float roll = hashToFloat(hashCoords(wx, 3, wz, m_seed + 777));
 
             if ((biome == Biome::Desert && ground == Blocks::Sand) ||
@@ -3300,11 +3566,20 @@ void WorldGen::decorate(Chunk& chunk) const
                 continue;
             }
 
-            if (biome == Biome::Snowy && (ground == Blocks::SnowGrass || ground == Blocks::Snow) && roll >= 0.004f && roll < 0.0046f)
+            if (variant == Biomes::Kind::IceSpikes && (ground == Blocks::SnowGrass || ground == Blocks::Snow) && roll < 0.012f)
             {
-                const int spire = 4 + static_cast<int>(hashToFloat(hashCoords(wx, 21, wz, m_seed + 6611)) * 6.0f);
+                const float size = hashToFloat(hashCoords(wx, 21, wz, m_seed + 6611));
+                const int spire = 5 + static_cast<int>(size * size * 16.0f);
                 for (int k = 0; k < spire && above + k < Chunk::SY; ++k)
                     chunk.setBlockRaw(lx, above + k, lz, Blocks::PackedIce);
+                continue;
+            }
+
+            if ((variant == Biomes::Kind::OldGrowthPineTaiga || variant == Biomes::Kind::OldGrowthSpruceTaiga) && roll >= 0.6f && roll < 0.6025f)
+            {
+                const int tall = 1 + static_cast<int>(hashToFloat(hashCoords(wx, 22, wz, m_seed + 6612)) * 2.0f);
+                for (int k = 0; k < tall && above + k < Chunk::SY; ++k)
+                    chunk.setBlockRaw(lx, above + k, lz, Blocks::MossyCobblestone);
                 continue;
             }
 
@@ -3349,7 +3624,7 @@ void WorldGen::decorate(Chunk& chunk) const
                 // grove is a dozen of them stacked, so the rate here
                 // is paid for in the jungle's mesh -- already the
                 // heaviest biome in the game before any of it.
-                if (roll < 0.012f)
+                if (roll < (variant == Biomes::Kind::BambooJungle ? 0.07f : 0.012f))
                 {
                     const int canes = 5 + static_cast<int>(
                         hashToFloat(hashCoords(wx, 9, wz, m_seed + 5501)) * 7.0f);
@@ -3372,12 +3647,29 @@ void WorldGen::decorate(Chunk& chunk) const
             }
 
             const float pick = hashToFloat(hashCoords(wx, 13, wz, m_seed + 6011));
-            const bool ferny = biome == Biome::Snowy || biome == Biome::Mountains || biome == Biome::Jungle;
+            const bool ferny = biome == Biome::Snowy || biome == Biome::Mountains || biome == Biome::Jungle || variant == Biomes::Kind::Taiga ||
+                               variant == Biomes::Kind::OldGrowthPineTaiga || variant == Biomes::Kind::OldGrowthSpruceTaiga;
             auto tall = [&](DoublePlant kind) {
                 if (above + 1 >= Chunk::SY) return;
                 chunk.setBlockRaw(lx, above, lz, doublePlantOf(kind, false));
                 chunk.setBlockRaw(lx, above + 1, lz, doublePlantOf(kind, true));
             };
+            if (variant == Biomes::Kind::SunflowerPlains && roll >= 0.2f && roll < 0.23f)
+            {
+                tall(DoublePlant::Sunflower);
+                continue;
+            }
+            if ((variant == Biomes::Kind::FlowerForest || variant == Biomes::Kind::Meadow) && roll >= 0.2f && roll < 0.32f)
+            {
+                static const BlockId MEADOW[6] = { Blocks::Allium, Blocks::AzureBluet, Blocks::Cornflower, Blocks::OxeyeDaisy,
+                                                   Blocks::FlowerYellow, Blocks::FlowerRed };
+                static const BlockId FLOWERS[10] = { Blocks::Allium, Blocks::AzureBluet, Blocks::Cornflower, Blocks::OxeyeDaisy,
+                                                     Blocks::LilyOfTheValley, Blocks::RedTulip, Blocks::OrangeTulip, Blocks::WhiteTulip,
+                                                     Blocks::PinkTulip, Blocks::FlowerYellow };
+                const bool meadow = variant == Biomes::Kind::Meadow;
+                chunk.setBlockRaw(lx, above, lz, meadow ? MEADOW[static_cast<int>(pick * 6.0f) % 6] : FLOWERS[static_cast<int>(pick * 10.0f) % 10]);
+                continue;
+            }
             if (roll < 0.14f)
             {
                 if (pick < 0.06f) tall(ferny ? DoublePlant::LargeFern : DoublePlant::TallGrass);
@@ -3434,7 +3726,34 @@ bool WorldGen::freezesAt(int worldX, int worldZ) const
 bool WorldGen::treeStandsAt(int wx, int wz) const
 {
     float treeChance = 0.0f;
-    switch (biomeAt(wx, wz))
+    const Biome family = biomeAt(wx, wz);
+    using K = Biomes::Kind;
+    switch (family == Biome::Ocean || family == Biome::Beach || family == Biome::Desert ? K::Desert : variantOf(family, wx, wz, surfaceHeight(wx, wz)))
+    {
+        case K::BirchForest: case K::Forest: treeChance = 0.055f; break;
+        case K::OldGrowthBirchForest: treeChance = 0.065f; break;
+        case K::DarkForest: treeChance = 0.11f; break;
+        case K::FlowerForest: treeChance = 0.025f; break;
+        case K::Taiga: treeChance = 0.05f; break;
+        case K::OldGrowthPineTaiga: case K::OldGrowthSpruceTaiga: treeChance = 0.07f; break;
+        case K::Meadow: treeChance = 0.0015f; break;
+        case K::SnowyPlains: treeChance = 0.005f; break;
+        case K::SnowyTaiga: treeChance = 0.05f; break;
+        case K::IceSpikes: treeChance = 0.0f; break;
+        case K::WindsweptForest: case K::Grove: treeChance = 0.04f; break;
+        case K::WindsweptGravellyHills: treeChance = 0.003f; break;
+        case K::SnowySlopes: case K::JaggedPeaks: case K::FrozenPeaks: case K::StonyPeaks: treeChance = 0.0f; break;
+        case K::WindsweptSavanna: treeChance = 0.008f; break;
+        case K::SparseJungle: treeChance = 0.03f; break;
+        case K::BambooJungle: treeChance = 0.035f; break;
+        case K::SavannaPlateau: treeChance = 0.012f; break;
+        case K::WoodedBadlands: treeChance = 0.03f; break;
+        default: treeChance = -1.0f; break;
+    }
+    if (treeChance >= 0.0f)
+        return treeChance > 0.0f && hashToFloat(hashCoords(wx, 7, wz, m_seed + 4242)) < treeChance;
+    treeChance = 0.0f;
+    switch (family)
     {
         case Biome::Forest: treeChance = 0.055f; break;
         case Biome::Plains: treeChance = 0.004f; break;

@@ -1431,7 +1431,7 @@ namespace
             for (int z = -RANGE; z <= RANGE; z += STEP)
             {
                 const int height = generator.surfaceHeight(x, z);
-                biomeCounts[biomeName(generator.biomeAt(x, z))]++;
+                biomeCounts[Biomes::info(generator.kindAt(x, z)).id]++;
                 heightBands[(height / 10) * 10]++;
                 minHeight = std::min(minHeight, height);
                 maxHeight = std::max(maxHeight, height);

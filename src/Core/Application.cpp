@@ -895,7 +895,29 @@ void Application::loadLevel()
             if (site.exists) { atX = site.x; atZ = site.z; found = true; }
         }
 
-        if (found)
+        bool biomeSpot = false;
+        if (!found && Biomes::known(m_startAt))
+        {
+            const Biomes::Kind wanted = Biomes::fromId(m_startAt);
+            for (int ring = 0; ring < 600 && !found; ring += 3)
+                for (int step = 0; step < 24 && !found; ++step)
+                {
+                    const float angle = static_cast<float>(step) * 0.2618f;
+                    const int x = spawnX + static_cast<int>(std::cos(angle) * static_cast<float>(ring * 16));
+                    const int z = spawnZ + static_cast<int>(std::sin(angle) * static_cast<float>(ring * 16));
+                    if (gen.kindIn(m_dimension, x, 200, z) != wanted) continue;
+                    atX = x;
+                    atZ = z;
+                    found = biomeSpot = true;
+                }
+        }
+
+        if (found && biomeSpot)
+        {
+            m_spawnPoint = glm::vec3(atX + 0.5f, static_cast<float>(gen.surfaceHeight(atX, atZ) + 2), atZ + 0.5f);
+            std::printf("[test] starting in %s: %d, %d\n", m_startAt.c_str(), atX, atZ);
+        }
+        else if (found)
         {
             // A few blocks to the south of it, looking at it, rather
             // than inside a wall.
@@ -2845,7 +2867,7 @@ bool Application::frame()
             m_startupScreen == "shulker" ||
             m_startupScreen == "nethermobs" || m_startupScreen == "lairmobs" ||
             m_startupScreen == "jungle" || m_startupScreen == "savanna" ||
-            m_startupScreen == "crimson" || m_startupScreen == "warped" || m_startupScreen == "badlands" ||
+            m_startupScreen == "crimson" || m_startupScreen == "warped" || m_startupScreen == "soulvalley" || m_startupScreen == "deltas" || m_startupScreen == "badlands" ||
             m_startupScreen == "redstone" || m_startupScreen == "chamber" ||
             m_startupScreen == "cave" || m_startupScreen == "dripstone" ||
             m_startupScreen == "mineshaft" || m_startupScreen == "pyramid" ||
@@ -3004,6 +3026,8 @@ bool Application::frame()
                                   m_startupScreen != "jungle" &&
                                   m_startupScreen != "savanna" &&
                                   m_startupScreen != "crimson" &&
+                                  m_startupScreen != "soulvalley" &&
+                                  m_startupScreen != "deltas" &&
                                   m_startupScreen != "warped" &&
                                   m_startupScreen != "badlands" &&
                                   m_startupScreen != "redstone" &&
@@ -6673,9 +6697,13 @@ bool Application::frame()
             // village screen walks to a real village: what is worth
             // looking at is what the generator actually makes, not an
             // arena with six trees planted in it.
-            if ((m_startupScreen == "crimson" || m_startupScreen == "warped") && m_dimension == Dimension::Nether)
+            if ((m_startupScreen == "crimson" || m_startupScreen == "warped" || m_startupScreen == "soulvalley" || m_startupScreen == "deltas") &&
+                m_dimension == Dimension::Nether)
             {
-                const Biome wanted = m_startupScreen == "crimson" ? Biome::CrimsonForest : Biome::WarpedForest;
+                const Biomes::Kind wanted = m_startupScreen == "crimson" ? Biomes::Kind::CrimsonForest
+                                          : m_startupScreen == "warped" ? Biomes::Kind::WarpedForest
+                                          : m_startupScreen == "soulvalley" ? Biomes::Kind::SoulSandValley
+                                                                            : Biomes::Kind::BasaltDeltas;
                 const int fromX = static_cast<int>(m_player.position.x);
                 const int fromZ = static_cast<int>(m_player.position.z);
                 const WorldGen& gen = m_world->generator();
@@ -6687,8 +6715,8 @@ bool Application::frame()
                             const int dx = (side == 0) ? step : (side == 1) ? step : (side == 2) ? -ring : ring;
                             const int dz = (side == 0) ? -ring : (side == 1) ? ring : step;
                             const int x = fromX + dx * 16, z = fromZ + dz * 16;
-                            if (gen.netherBiomeAt(x, z) != wanted || gen.netherBiomeAt(x + 24, z) != wanted ||
-                                gen.netherBiomeAt(x - 24, z) != wanted)
+                            if (gen.netherKindAt(x, z) != wanted || gen.netherKindAt(x + 24, z) != wanted ||
+                                gen.netherKindAt(x - 24, z) != wanted)
                                 continue;
                             m_player.position = glm::vec3(static_cast<float>(x) + 0.5f, 60.0f, static_cast<float>(z) + 0.5f);
                             m_player.velocity = glm::vec3(0.0f);
@@ -22419,14 +22447,8 @@ void Application::renderDebugOverlay()
                       facing, towards, m_camera.yaw, m_camera.pitch);
         left(buffer);
 
-        if (hasSky())
-            std::snprintf(buffer, sizeof(buffer), "Biome: %s",
-                          biomeName(m_world->generator().biomeAt(bx, bz)));
-        else if (m_dimension == Dimension::Nether)
-            std::snprintf(buffer, sizeof(buffer), "Biome: %s",
-                          biomeName(m_world->generator().netherBiomeAt(bx, bz)));
-        else
-            std::snprintf(buffer, sizeof(buffer), "Dimension: %s", dimensionName(m_dimension));
+        std::snprintf(buffer, sizeof(buffer), "Biome: %s",
+                      Biomes::info(m_world->generator().kindIn(m_dimension, bx, by, bz)).id);
         left(buffer);
 
         std::snprintf(buffer, sizeof(buffer), "Light: %d (%d Sky, %d Block)",

@@ -358,13 +358,15 @@ WorldGen::Options Application::generatorOptions(const Worlds::Meta& meta) const
         case Worlds::Type::Flat:
             options.type = WorldGen::Options::Type::Flat;
             options.layers = flatLayers(meta.layers);
-            options.biome = biomeFromId(meta.biome);
+            options.kind = Biomes::fromId(meta.biome);
+            options.biome = Biomes::family(options.kind);
             break;
         case Worlds::Type::LargeBiomes: options.type = WorldGen::Options::Type::LargeBiomes; break;
         case Worlds::Type::Amplified: options.type = WorldGen::Options::Type::Amplified; break;
         case Worlds::Type::SingleBiome:
             options.type = WorldGen::Options::Type::SingleBiome;
-            options.biome = biomeFromId(meta.biome);
+            options.kind = Biomes::fromId(meta.biome);
+            options.biome = Biomes::family(options.kind);
             break;
         default: break;
     }
@@ -993,18 +995,19 @@ void Application::renderCustomizeBiome()
     const float w = m_ui.canvasWidth();
     const float h = m_ui.canvasHeight();
     menuScreenBackdrop(w, h);
-    std::vector<Biome> biomes = { Biome::Badlands, Biome::Beach, Biome::CherryGrove, Biome::CrimsonForest, Biome::Desert, Biome::Forest,
-                                  Biome::Jungle, Biome::MangroveSwamp, Biome::MushroomFields, Biome::NetherWastes, Biome::Ocean,
-                                  Biome::Plains, Biome::Savanna, Biome::Snowy, Biome::Swamp, Biome::WarpedForest, Biome::Mountains };
-    std::sort(biomes.begin(), biomes.end(), [](Biome a, Biome b) { return std::string(biomeTitle(a)) < std::string(biomeTitle(b)); });
+    std::vector<Biomes::Kind> biomes;
+    for (int i = 0; i < Biomes::COUNT; ++i) biomes.push_back(static_cast<Biomes::Kind>(i));
+    std::sort(biomes.begin(), biomes.end(), [](Biomes::Kind a, Biomes::Kind b) {
+        return std::string(Biomes::info(a).title) < std::string(Biomes::info(b).title);
+    });
     if (m_biomeList.selected < 0)
         for (size_t i = 0; i < biomes.size(); ++i)
-            if (biomeId(biomes[i]) == m_biomeDraft) m_biomeList.selected = static_cast<int>(i);
+            if (Biomes::info(biomes[i]).id == m_biomeDraft) m_biomeList.selected = static_cast<int>(i);
     guiList(m_biomeList, 40.0f, std::max(0.0f, h - 77.0f), 16.0f, 220.0f, static_cast<int>(biomes.size()), 0.0f,
             [&](int index, float x, float y, bool) {
-                m_ui.textWithShadow(biomeTitle(biomes[static_cast<size_t>(index)]), x + 5.0f, y + 2.0f, 1.0f, WORLD_WHITE);
+                m_ui.textWithShadow(Biomes::info(biomes[static_cast<size_t>(index)]).title, x + 5.0f, y + 2.0f, 1.0f, WORLD_WHITE);
             });
-    if (m_biomeList.selected >= 0) m_biomeDraft = biomeId(biomes[static_cast<size_t>(m_biomeList.selected)]);
+    if (m_biomeList.selected >= 0) m_biomeDraft = Biomes::info(biomes[static_cast<size_t>(m_biomeList.selected)]).id;
     const std::string title = "Buffet world customization";
     m_ui.textWithShadow(title, std::floor((w - UIRenderer::textWidth(title, 1.0f)) / 2.0f), 8.0f, 1.0f, WORLD_WHITE);
     const std::string prompt = "Please select a biome";

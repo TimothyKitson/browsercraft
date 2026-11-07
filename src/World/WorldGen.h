@@ -10,6 +10,7 @@
 #include "Structures.h"
 
 #include "Dimension.h"
+#include "Biomes.h"
 const char* dimensionFolder(Dimension dimension);
 
 // Which tree is being planted. Spruce grows tall and narrow in the
@@ -52,6 +53,7 @@ struct WorldGenOptions
     bool structures = true;
     std::vector<std::pair<BlockId, int>> layers;
     Biome biome = Biome::Plains;
+    Biomes::Kind kind = Biomes::Kind::Plains;
 };
 const char* biomeId(Biome biome);
 const char* biomeTitle(Biome biome);
@@ -318,6 +320,13 @@ public:
 
     int surfaceHeight(int worldX, int worldZ) const;
     Biome biomeAt(int worldX, int worldZ) const;
+    Biomes::Kind kindAt(int worldX, int worldZ) const;
+    Biomes::Kind kindAt(int worldX, int y, int worldZ) const;
+    Biomes::Kind netherKindAt(int worldX, int worldZ) const;
+    Biomes::Kind endKindAt(int worldX, int worldZ) const;
+    Biomes::Kind kindIn(Dimension dimension, int worldX, int y, int worldZ) const;
+    float variantAt(int worldX, int worldZ) const;
+    Biomes::Kind variantOf(Biome family, int worldX, int worldZ, int height) const;
     static constexpr int TRAIL_RUIN_CELL = 112;
     bool trailRuinIn(int cellX, int cellZ, int& midX, int& midZ) const;
     Biome netherBiomeAt(int worldX, int worldZ) const;

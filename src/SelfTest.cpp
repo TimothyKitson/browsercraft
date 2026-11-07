@@ -5072,6 +5072,105 @@ namespace
               "an offer's runes are three or four words, fixed by the table's seed and the row");
     }
 
+    void testAllBiomes()
+    {
+        section("biomes: all 64 of 1.21.1's");
+        check(Biomes::COUNT == 64, "the game knows every biome in the 1.21.1 data");
+        bool named = true, roundTrip = true;
+        for (int i = 0; i < Biomes::COUNT; ++i)
+        {
+            const Biomes::Kind kind = static_cast<Biomes::Kind>(i);
+            named = named && Biomes::info(kind).title[0] != '\0' && std::string(Biomes::info(kind).id).rfind("minecraft:", 0) == 0;
+            roundTrip = roundTrip && Biomes::fromId(Biomes::info(kind).id) == kind;
+        }
+        check(named && roundTrip, "each has its id and English name, and is found again by its id");
+        check(Biomes::fromId("birch_forest") == Biomes::Kind::BirchForest && biomeFromId("minecraft:birch_forest") == Biome::Forest &&
+              biomeFromId("minecraft:ice_spikes") == Biome::Snowy && !Biomes::known("minecraft:nowhere"), "ids work with or without the namespace");
+        check(Biomes::dimension(Biomes::Kind::SoulSandValley) == Dimension::Nether && Biomes::dimension(Biomes::Kind::EndHighlands) == Dimension::End &&
+              Biomes::dimension(Biomes::Kind::Meadow) == Dimension::Overworld, "and belongs to its dimension");
+        check(Biomes::info(Biomes::Kind::Swamp).water == 0x617B64u && Biomes::info(Biomes::Kind::Badlands).grass == 9470285 &&
+              Biomes::info(Biomes::Kind::DarkForest).grassModifier == 1 && std::string(Biomes::info(Biomes::Kind::BasaltDeltas).particle) == "white_ash" &&
+              Biomes::info(Biomes::Kind::FrozenOcean).frozen && !Biomes::info(Biomes::Kind::Desert).precipitation,
+              "with the climate and colours from the data");
+
+        const WorldGen generator(4242u);
+        int seen[Biomes::COUNT] = {};
+        bool families = true;
+        for (int z = -6000; z <= 6000; z += 61)
+            for (int x = -6000; x <= 6000; x += 61)
+            {
+                const Biomes::Kind kind = generator.kindAt(x, z);
+                ++seen[static_cast<int>(kind)];
+                families = families && Biomes::family(kind) == generator.biomeAt(x, z);
+            }
+        check(families, "a biome always sits inside the broader kind of land the terrain was built for");
+        int overworld = 0;
+        std::string missing;
+        for (int i = 0; i < Biomes::COUNT; ++i)
+            if (Biomes::dimension(static_cast<Biomes::Kind>(i)) == Dimension::Overworld)
+            {
+                if (seen[i] > 0) ++overworld;
+                else missing += std::string(" ") + Biomes::info(static_cast<Biomes::Kind>(i)).id;
+            }
+        std::printf("  overworld biomes not found on the surface:%s\n", missing.c_str());
+        check(overworld >= 40, "most of the overworld's biomes turn up on the surface of one world");
+        int caves[3] = {};
+        for (int z = -3000; z <= 3000; z += 97)
+            for (int x = -3000; x <= 3000; x += 97)
+            {
+                const Biomes::Kind kind = generator.kindAt(x, 10, z);
+                caves[0] += kind == Biomes::Kind::LushCaves;
+                caves[1] += kind == Biomes::Kind::DripstoneCaves;
+                caves[2] += kind == Biomes::Kind::DeepDark;
+            }
+        check(caves[0] > 0 && caves[1] > 0 && caves[2] > 0, "and lush caves, dripstone caves and the deep dark lie underneath");
+
+        const WorldGen nether(4242u, Dimension::Nether);
+        int netherSeen[Biomes::COUNT] = {};
+        for (int z = -2000; z <= 2000; z += 53)
+            for (int x = -2000; x <= 2000; x += 53) ++netherSeen[static_cast<int>(nether.netherKindAt(x, z))];
+        check(netherSeen[static_cast<int>(Biomes::Kind::SoulSandValley)] > 0 && netherSeen[static_cast<int>(Biomes::Kind::BasaltDeltas)] > 0 &&
+              netherSeen[static_cast<int>(Biomes::Kind::NetherWastes)] > 0 && netherSeen[static_cast<int>(Biomes::Kind::CrimsonForest)] > 0 &&
+              netherSeen[static_cast<int>(Biomes::Kind::WarpedForest)] > 0, "the nether has all five of its biomes");
+        auto netherSample = [&](Biomes::Kind wanted, BlockId a, BlockId b) {
+            for (int z = -2000; z <= 2000; z += 53)
+                for (int x = -2000; x <= 2000; x += 53)
+                {
+                    if (nether.netherKindAt(x, z) != wanted) continue;
+                    Chunk chunk(ChunkPos{ Structures::squareOf(x, Chunk::SX), Structures::squareOf(z, Chunk::SZ) });
+                    nether.generate(chunk);
+                    int count = 0;
+                    for (int y = 0; y < Chunk::SY; ++y)
+                        for (int lz = 0; lz < Chunk::SZ; ++lz)
+                            for (int lx = 0; lx < Chunk::SX; ++lx)
+                            {
+                                const BlockId block = chunk.getBlock(lx, y, lz);
+                                if (block == a || block == b) ++count;
+                            }
+                    return count;
+                }
+            return 0;
+        };
+        check(netherSample(Biomes::Kind::SoulSandValley, Blocks::SoulSand, Blocks::SoulSoil) > 200, "a soul sand valley is floored with soul sand and soil");
+        check(netherSample(Biomes::Kind::BasaltDeltas, Blocks::Basalt, Blocks::Blackstone) > 200, "and the basalt deltas with basalt and blackstone");
+
+        const WorldGen end(4242u, Dimension::End);
+        int endSeen[Biomes::COUNT] = {};
+        for (int z = -4000; z <= 4000; z += 101)
+            for (int x = -4000; x <= 4000; x += 101) ++endSeen[static_cast<int>(end.endKindAt(x, z))];
+        check(end.endKindAt(0, 0) == Biomes::Kind::TheEnd && endSeen[static_cast<int>(Biomes::Kind::EndHighlands)] > 0 &&
+              endSeen[static_cast<int>(Biomes::Kind::EndMidlands)] > 0 && endSeen[static_cast<int>(Biomes::Kind::EndBarrens)] > 0 &&
+              endSeen[static_cast<int>(Biomes::Kind::SmallEndIslands)] > 0, "the end is The End in the middle and four kinds of island beyond");
+
+        WorldGen::Options single;
+        single.type = WorldGen::Options::Type::SingleBiome;
+        single.kind = Biomes::Kind::BirchForest;
+        single.biome = Biomes::family(single.kind);
+        const WorldGen birches(4242u, Dimension::Overworld, single);
+        check(birches.kindAt(500, -300) == Biomes::Kind::BirchForest && birches.biomeAt(500, -300) == Biome::Forest,
+              "a single-biome world is that biome everywhere");
+    }
+
     void testWorldBorder()
     {
         section("world border: where it is and what it does");
@@ -9787,15 +9886,17 @@ namespace
                                 {
                                     case Blocks::NetherBricks: ++brick; break;
                                     case Blocks::MonsterSpawner: ++cages; break;
-                                    case Blocks::NetherWart: ++wart; break;
-                                    case Blocks::SoulSand: ++soul; break;
+                                    case Blocks::NetherWart:
+                                        ++wart;
+                                        if (y > 0 && chunk.getBlock(lx, y - 1, lz) == Blocks::SoulSand) ++soul;
+                                        break;
                                     default: break;
                                 }
                 }
 
             check(brick > 300, "a fortress is a lot of nether brick");
             check(cages == 1, "with one cage in the keep");
-            check(wart == 4 && soul == 4, "and wart growing in the corners of it");
+            check(wart == 4 && soul == 4, "and wart growing in the corners of it, on soul sand");
             check(WorldGen::FORTRESS_FLOOR > WorldGen::NETHER_LAVA_LEVEL,
                   "and the whole of it stands clear of the lava");
         }
@@ -16194,6 +16295,7 @@ int runSelfTest()
     testResourcePacks();
     testFonts();
     testWorldBorder();
+    testAllBiomes();
     testMadeThings();
     testTheEndAndTheSea();
     testPathfinding();
