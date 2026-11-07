@@ -828,6 +828,7 @@ namespace
             else if (isCalibratedSensor(id))      why = "a calibrated sensor facing another way, or one that just heard something";
             else if (isBanner(id))                why = "a banner set down facing another way, or hung on a wall";
             else if (isSnifferEgg(id))            why = "a sniffer egg cracking as it nears hatching";
+            else if (id == Blocks::Frogspawn)     why = "laid on still water by frogs fed slimeballs";
             else if (isChiseledBookshelf(id))     why = "a shelf with books in it, or facing another way";
             else if (isAnyCoralWallFan(id))       why = "a coral fan set against another face";
             else if (isBigDripleaf(id) || isBigDripleafStem(id) || isSmallDripleaf(id))
@@ -1008,6 +1009,8 @@ namespace
                 byHand = "an empty map used, or one copied at a cartography table";
             else if (i == static_cast<int>(Items::TideTemplate))
                 byHand = "dropped by an elder guardian now and then";
+            else if (mobInBucket(static_cast<StackId>(i)) != MobId::Count)
+                byHand = "a water bucket used on the creature in it";
             else if (i == static_cast<int>(Items::RabbitFoot))
                 byHand = "dropped by a rabbit one time in ten";
             else if (i == static_cast<int>(Items::DragonsBreath))

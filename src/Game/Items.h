@@ -413,6 +413,12 @@ namespace Items
         DragonsBreath,
         Charcoal,
         ExperienceBottle,
+        CodBucket,
+        SalmonBucket,
+        PufferfishBucket,
+        TropicalFishBucket,
+        AxolotlBucket,
+        TadpoleBucket,
         Count
     };
 }

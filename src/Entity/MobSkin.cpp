@@ -181,6 +181,18 @@ bool MobSkin::fits(const std::vector<MobBox>& boxes, int sheetWidth, int sheetHe
         // six faces round a box. This engine has no plane to draw, so
         // it draws a sliver of a box; the patch it needs is still the
         // plane's.
+        if (box.size.x == 0 || box.size.y == 0 || box.size.z == 0)
+        {
+            for (int face = 0; face < 6; ++face)
+            {
+                int x = 0, y = 0, fw = 0, fh = 0;
+                BoxMesh::facePatch(face, box.u, box.v, box.size.x, box.size.y, box.size.z, x, y, fw, fh);
+                if (fw == 0 || fh == 0) continue;
+                if (x < 0 || y < 0 || x >= sheetWidth || y >= sheetHeight) return false;
+            }
+            continue;
+        }
+
         const bool flat = box.size.x <= 1 || box.size.y <= 1 || box.size.z <= 1;
 
         int w = 2 * (box.size.x + box.size.z);
@@ -269,7 +281,7 @@ bool MobSkin::loadFile(const std::string& path, std::vector<uint8_t>& pixels, in
     // own shapes: a breeze and a bat are on the smallest sheet in the
     // game, a fox on 48x32 and a frog on 48x48, a boat and a witch on
     // one twice an animal's, and the dragon on 256 square.
-    const bool smallSheet = (w == 32 && h == 32);
+    const bool smallSheet = (w == 32 && h == 32) || (w == 16 && h == 16);
     const bool oddSheet = (w == 48 && (h == 32 || h == 48));
     const bool animalSheet = (w == 64 && (h == 32 || h == 64 || h == 128));
     const bool wideSheet = (w == 128 && (h == 64 || h == 128));

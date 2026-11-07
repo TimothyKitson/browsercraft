@@ -292,6 +292,15 @@ namespace
             static const char* CALLS[8] = { "Ponder", "Sing", "Seek", "Feel", "Admire", "Call", "Yearn", "Dream" };
             return std::string("Goat Horn (") + CALLS[std::clamp(stack.damage, 0, 7)] + ")";
         }
+        if (stack.id == Items::TropicalFishBucket && stack.damage != 0)
+        {
+            const TropicalFish::Look look = TropicalFish::lookFor(static_cast<uint32_t>(stack.damage), (stack.enchantments & (1u << 25)) != 0u);
+            const std::string common = TropicalFish::commonName(look);
+            if (!common.empty()) return "Bucket of " + common;
+            std::string colours = Banners::colourName(look.base);
+            if (look.pattern != look.base) colours += std::string("-") + Banners::colourName(look.pattern);
+            return "Bucket of " + colours + " " + TropicalFish::varietyName(look.variety);
+        }
         return displayName(stack.id);
     }
 }

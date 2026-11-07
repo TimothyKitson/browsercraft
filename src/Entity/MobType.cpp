@@ -388,7 +388,7 @@ namespace
             // Magma cream, which is what a magma cube leaves. A frog
             // following the thing its dinner is made of is as close
             // as this gets to Minecraft leading one on a slimeball.
-            t.breedingFood = Items::MagmaCream;
+            t.breedingFood = Items::Slimeball;
 
             t.bodyColour = rgb(140, 170, 92);
             t.headColour = rgb(164, 196, 108);
@@ -3511,6 +3511,90 @@ namespace
             t.model.push_back(mc(Part::Head, 10, 57, 13, 12, 9, -6, -7, -8, 0, 14, -32));
         }
 
+        for (const bool large : { false, true })
+        {
+            MobType& t = table[static_cast<size_t>(large ? MobId::TropicalFishLarge : MobId::TropicalFish)];
+            t.id = large ? MobId::TropicalFishLarge : MobId::TropicalFish;
+            t.experience = 1;
+            t.voice = Sound::MobTropicalFishSay;
+            t.hurtVoice = Sound::MobTropicalFishHurt;
+            t.deathVoice = Sound::MobTropicalFishDeath;
+            t.name = "Tropical Fish";
+            t.texture = large ? "tropical_fish_b" : "tropical_fish_a";
+            t.sheetWidth = 32;
+            t.sheetHeight = 32;
+            t.width = 0.5f;
+            t.height = large ? 0.6f : 0.4f;
+            t.modelScale = 1.0f;
+            t.spawnClass = SpawnClass::Passive;
+            t.maxHealth = 3;
+            t.walkSpeed = 2.4f;
+            t.limbSwing = 0.0f;
+            t.voicePitch = 1.9f;
+            t.aquatic = true;
+            t.hoverHeight = 1.6f;
+
+            t.drop = Items::TropicalFish;
+            t.dropCount = 1;
+
+            t.bodyColour = large ? rgb(90, 140, 220) : rgb(240, 130, 40);
+            t.headColour = large ? rgb(110, 160, 230) : rgb(250, 150, 60);
+            t.eyeColour = rgb(20, 20, 24);
+            t.pattern = MobType::Pattern::Stripes;
+            t.markColour = rgb(240, 240, 236);
+
+            constexpr float EIGHTH = 0.7853982f;
+            if (!large)
+            {
+                t.model.push_back(mc(Part::Body, 0, 0, 2, 3, 6, -1, -1, -3, 0, 21, 0));
+                t.model.push_back(mc(Part::Body, 22, -6, 0, 3, 6, 0, -1, 0, 0, 21, 3));
+                t.model.push_back(turned(mc(Part::WingRight, 2, 16, 2, 2, 0, -2, -1, 0, -1, 22, 0), 0.0f, EIGHTH, 0.0f));
+                t.model.push_back(turned(mc(Part::WingLeft, 2, 12, 2, 2, 0, 0, -1, 0, 1, 22, 0), 0.0f, -EIGHTH, 0.0f));
+                t.model.push_back(mc(Part::Body, 10, -5, 0, 3, 6, 0, -3, 0, 0, 20, -3));
+            }
+            else
+            {
+                t.model.push_back(mc(Part::Body, 0, 20, 2, 6, 6, -1, -3, -3, 0, 17, 0));
+                t.model.push_back(mc(Part::Body, 21, 16, 0, 6, 5, 0, -3, 0, 0, 17, 3));
+                t.model.push_back(turned(mc(Part::WingRight, 2, 16, 2, 2, 0, -2, 0, 0, -1, 18, 0), 0.0f, EIGHTH, 0.0f));
+                t.model.push_back(turned(mc(Part::WingLeft, 2, 12, 2, 2, 0, 0, 0, 0, 1, 18, 0), 0.0f, -EIGHTH, 0.0f));
+                t.model.push_back(mc(Part::Body, 20, 11, 0, 4, 6, 0, -4, 0, 0, 14, -3));
+                t.model.push_back(mc(Part::Body, 20, 21, 0, 4, 6, 0, 0, 0, 0, 20, -3));
+            }
+        }
+
+        {
+            MobType& t = table[static_cast<size_t>(MobId::Tadpole)];
+            t.id = MobId::Tadpole;
+            t.experience = 0;
+            t.voice = Sound::MobTadpoleSay;
+            t.hurtVoice = Sound::MobTadpoleHurt;
+            t.deathVoice = Sound::MobTadpoleDeath;
+            t.name = "Tadpole";
+            t.texture = "tadpole";
+            t.sheetWidth = 16;
+            t.sheetHeight = 16;
+            t.width = 0.4f;
+            t.height = 0.3f;
+            t.modelScale = 1.0f;
+            t.spawnClass = SpawnClass::Passive;
+            t.maxHealth = 6;
+            t.walkSpeed = 1.6f;
+            t.limbSwing = 0.0f;
+            t.voicePitch = 1.8f;
+            t.aquatic = true;
+            t.hoverHeight = 0.6f;
+
+            t.bodyColour = rgb(60, 48, 40);
+            t.headColour = rgb(74, 60, 50);
+            t.eyeColour = rgb(20, 20, 20);
+            t.pattern = MobType::Pattern::Speckled;
+            t.markColour = rgb(40, 32, 26);
+
+            t.model.push_back(mc(Part::Body, 0, 0, 3, 2, 3, -2, -1, 0, 0, 22, -3));
+            t.model.push_back(mc(Part::Body, 0, 0, 0, 2, 7, 0, -1, 0, 0, 22, 0));
+        }
+
         return table;
     }
 }
@@ -3533,6 +3617,115 @@ const MobType& mobType(MobId id)
 }
 
 int mobTypeCount() { return static_cast<int>(MobId::Count); }
+
+StackId bucketFor(MobId id)
+{
+    switch (id)
+    {
+        case MobId::Cod: return Items::CodBucket;
+        case MobId::Salmon: return Items::SalmonBucket;
+        case MobId::Pufferfish: return Items::PufferfishBucket;
+        case MobId::Axolotl: return Items::AxolotlBucket;
+        case MobId::TropicalFish:
+        case MobId::TropicalFishLarge: return Items::TropicalFishBucket;
+        case MobId::Tadpole: return Items::TadpoleBucket;
+        default: return Blocks::Air;
+    }
+}
+
+namespace
+{
+    struct CommonLook
+    {
+        int variety, base, pattern;
+        const char* name;
+    };
+
+    const CommonLook COMMON[22] = {
+        { 7, 1, 7, "Anemone" },
+        { 6, 7, 7, "Black Tang" },
+        { 6, 7, 11, "Blue Tang" },
+        { 11, 0, 7, "Butterflyfish" },
+        { 1, 11, 7, "Cichlid" },
+        { 0, 1, 0, "Clownfish" },
+        { 5, 6, 3, "Cotton Candy Betta" },
+        { 9, 10, 4, "Dottyback" },
+        { 11, 0, 14, "Emperor Red Snapper" },
+        { 5, 0, 4, "Goatfish" },
+        { 8, 0, 7, "Moorish Idol" },
+        { 11, 0, 1, "Ornate Butterflyfish" },
+        { 3, 9, 6, "Parrotfish" },
+        { 4, 5, 3, "Queen Angelfish" },
+        { 10, 14, 0, "Red Cichlid" },
+        { 2, 7, 14, "Red Lipped Blenny" },
+        { 9, 14, 0, "Red Snapper" },
+        { 6, 0, 4, "Threadfin" },
+        { 0, 14, 0, "Tomato Clownfish" },
+        { 1, 7, 0, "Triggerfish" },
+        { 3, 9, 4, "Yellowtail Parrotfish" },
+        { 6, 4, 4, "Yellow Tang" },
+    };
+}
+
+int frogKindOf(uint32_t seed)
+{
+    return static_cast<int>(((seed * 2654435761u) >> 8) % 1000u % 3u);
+}
+
+uint32_t frogSeedOfKind(int kind, uint32_t from)
+{
+    uint32_t seed = from == 0u ? 1u : from;
+    while (frogKindOf(seed) != kind) ++seed;
+    return seed;
+}
+
+bool TropicalFish::large(int variety) { return variety >= 6; }
+
+const char* TropicalFish::varietyName(int variety)
+{
+    static const char* NAMES[12] = { "Kob", "Sunstreak", "Snooper", "Dasher", "Brinely", "Spotty",
+                                     "Flopper", "Stripey", "Glitter", "Blockfish", "Betty", "Clayfish" };
+    return NAMES[std::clamp(variety, 0, 11)];
+}
+
+const char* TropicalFish::commonName(const Look& look)
+{
+    for (const CommonLook& c : COMMON)
+        if (c.variety == look.variety && c.base == look.base && c.pattern == look.pattern) return c.name;
+    return "";
+}
+
+TropicalFish::Look TropicalFish::lookFor(uint32_t seed, bool wantLarge)
+{
+    uint32_t h = seed * 2654435761u ^ 0x5bd1e995u;
+    h ^= h >> 15;
+    h *= 0x27d4eb2du;
+    h ^= h >> 13;
+    Look look;
+    if (h % 10u != 0u)
+    {
+        int matching[22];
+        int count = 0;
+        for (int i = 0; i < 22; ++i)
+            if (large(COMMON[i].variety) == wantLarge) matching[count++] = i;
+        const CommonLook& c = COMMON[matching[(h >> 4) % static_cast<uint32_t>(count)]];
+        look.variety = c.variety;
+        look.base = c.base;
+        look.pattern = c.pattern;
+        return look;
+    }
+    look.variety = static_cast<int>((h >> 4) % 6u) + (wantLarge ? 6 : 0);
+    look.base = static_cast<int>((h >> 8) % 16u);
+    look.pattern = static_cast<int>((h >> 12) % 16u);
+    return look;
+}
+
+MobId mobInBucket(StackId bucket)
+{
+    for (int i = 0; i < mobTypeCount(); ++i)
+        if (bucketFor(static_cast<MobId>(i)) == bucket) return static_cast<MobId>(i);
+    return MobId::Count;
+}
 
 void modelBounds(const MobType& type, float& bottom, float& top)
 {

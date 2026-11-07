@@ -672,6 +672,7 @@ namespace Blocks
         Barrier,
         LightFirst, LightLast = LightFirst + 15,
         StructureVoid,
+        Frogspawn,
 
         Count
     };

@@ -121,6 +121,9 @@ enum class MobId : uint8_t
     Parrot,
     Allay,
     Sniffer,
+    TropicalFish,
+    TropicalFishLarge,
+    Tadpole,
 
     Count
 };
@@ -392,6 +395,25 @@ constexpr float CAGE_RANGE = 12.0f;
 
 const MobType& mobType(MobId id);
 int mobTypeCount();
+StackId bucketFor(MobId id);
+int frogKindOf(uint32_t seed);
+uint32_t frogSeedOfKind(int kind, uint32_t from);
+MobId mobInBucket(StackId bucket);
+
+namespace TropicalFish
+{
+    struct Look
+    {
+        int variety = 0;
+        int base = 0;
+        int pattern = 0;
+    };
+
+    Look lookFor(uint32_t seed, bool large);
+    bool large(int variety);
+    const char* varietyName(int variety);
+    const char* commonName(const Look& look);
+}
 
 // The shulker, which is the one mob in the game that is a block rather
 // than an animal. It is bolted to the grid, it never turns, and the

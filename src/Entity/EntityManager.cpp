@@ -80,7 +80,8 @@ namespace
     // no underground water worth a rule of its own yet.
     const MobId SEA_SPECIES[] = { MobId::Squid, MobId::Cod, MobId::Salmon,
                                   MobId::Pufferfish, MobId::Dolphin,
-                                  MobId::Turtle, MobId::Axolotl };
+                                  MobId::Turtle, MobId::Axolotl,
+                                  MobId::TropicalFish, MobId::TropicalFishLarge };
 
     // How far down a slime will go to, as Minecraft has it: they keep
     // to the bottom of the world rather than the first cave you find.
@@ -557,6 +558,11 @@ void EntityManager::update(float deltaTime, const World& world,
 
         if (mob.takeEggReport()) m_laidEggs.push_back(mob.position());
         if (mob.takeGrowthReport() && mob.typeId() == MobId::Turtle) m_grownTurtles.push_back(mob.position());
+        if (mob.typeId() == MobId::Tadpole && mob.alive() && mob.age() + mob.growthBoost() >= Mob::TADPOLE_SECONDS)
+        {
+            m_grownTadpoles.push_back(mob.position());
+            mob.vanish();
+        }
     }
 
     // A frog eats a magma cube it can reach. This is the whole reason
@@ -607,7 +613,7 @@ void EntityManager::update(float deltaTime, const World& world,
         std::remove_if(m_mobs.begin(), m_mobs.end(), [&](const Mob& mob) {
             if (mob.finished()) return true;
             const glm::vec3 delta = mob.position() - playerPosition;
-            const float keep = (mob.customName().empty() && !mob.leashed()) ? DESPAWN_DISTANCE : DESPAWN_DISTANCE * 3.0f;
+            const float keep = (mob.customName().empty() && !mob.leashed() && !mob.persistent()) ? DESPAWN_DISTANCE : DESPAWN_DISTANCE * 3.0f;
             return glm::length(glm::vec3(delta.x, 0.0f, delta.z)) > keep;
         }),
         m_mobs.end());
@@ -938,6 +944,11 @@ void EntityManager::pairOffLovers(const World& world)
                 m_snifferNests.push_back(m_mobs[a].position());
                 break;
             }
+            if (m_mobs[a].typeId() == MobId::Frog)
+            {
+                m_frogSpawns.push_back(between);
+                break;
+            }
 
             if (static_cast<int>(m_mobs.size()) < MAX_MOBS &&
                 fits(world, mobType(m_mobs[a].typeId()), between))
@@ -1009,6 +1020,20 @@ std::vector<glm::vec3> EntityManager::drainFrogMeals()
 {
     std::vector<glm::vec3> all;
     all.swap(m_frogMeals);
+    return all;
+}
+
+std::vector<glm::vec3> EntityManager::drainFrogSpawns()
+{
+    std::vector<glm::vec3> all;
+    all.swap(m_frogSpawns);
+    return all;
+}
+
+std::vector<glm::vec3> EntityManager::drainGrownTadpoles()
+{
+    std::vector<glm::vec3> all;
+    all.swap(m_grownTadpoles);
     return all;
 }
 

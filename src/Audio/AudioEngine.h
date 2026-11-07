@@ -236,6 +236,12 @@ enum class Sound : uint8_t
     MobSnifferSay,
     MobSnifferHurt,
     MobSnifferDeath,
+    MobTropicalFishSay,
+    MobTropicalFishHurt,
+    MobTropicalFishDeath,
+    MobTadpoleSay,
+    MobTadpoleHurt,
+    MobTadpoleDeath,
     Rain,
     Thunder,
 

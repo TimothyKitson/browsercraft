@@ -57,7 +57,7 @@ namespace Farming
     // Advances a scatter of crops near the player. `seed` is stirred
     // each call so the same columns are not picked every time.
     void grow(World& world, const glm::vec3& around, uint32_t& seed, std::vector<glm::ivec3>* hatched = nullptr,
-              std::vector<glm::ivec3>* snifflings = nullptr);
+              std::vector<glm::ivec3>* snifflings = nullptr, std::vector<glm::ivec3>* tadpoles = nullptr);
 
     bool coralIsWet(const World& world, int x, int y, int z);
 

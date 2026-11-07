@@ -138,6 +138,11 @@ public:
     const std::string& customName() const { return m_customName; }
     void setCustomName(const std::string& name) { m_customName = name; }
     bool leashed() const { return m_leashed; }
+    void keepFromDespawning() { m_persistent = true; }
+    void vanish() { m_health = 0; m_removeTimer = 0.0f; m_deathReported = true; }
+    float growthBoost() const { return m_growthBoost; }
+    static constexpr float TADPOLE_SECONDS = 1200.0f;
+    bool persistent() const { return m_persistent; }
     void setLeashed(bool on) { m_leashed = on; }
     static bool leashable(const MobType& type)
     {
@@ -523,6 +528,8 @@ private:
 
     uint32_t m_rng = 1;
     uint32_t m_birthSeed = 1;
+    bool m_persistent = false;
+    float m_growthBoost = 0.0f;
     bool m_provoked = false;
     std::vector<MobSound> m_sounds;
     std::vector<MobStrike> m_strikes;

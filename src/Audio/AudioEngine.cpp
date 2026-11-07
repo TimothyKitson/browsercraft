@@ -389,6 +389,10 @@ void AudioEngine::buildSounds()
                  Sound::MobCamelDeath, "mob/camel");
     loadMobVoice(Sound::MobSnifferSay, Sound::MobSnifferHurt,
                  Sound::MobSnifferDeath, "mob/sniffer");
+    loadMobVoice(Sound::MobTropicalFishSay, Sound::MobTropicalFishHurt,
+                 Sound::MobTropicalFishDeath, "mob/tropical_fish");
+    loadMobVoice(Sound::MobTadpoleSay, Sound::MobTadpoleHurt,
+                 Sound::MobTadpoleDeath, "mob/tadpole");
     loadMobVoice(Sound::MobParrotSay, Sound::MobParrotHurt,
                  Sound::MobParrotDeath, "mob/parrot");
     loadMobVoice(Sound::MobAllaySay, Sound::MobAllayHurt,
@@ -1371,6 +1375,10 @@ void AudioEngine::buildSounds()
              420.0f, 1500.0f, 991);
     wetVoice(Sound::MobPufferfishSay, Sound::MobPufferfishHurt, Sound::MobPufferfishDeath,
              680.0f, 2400.0f, 1001);
+    wetVoice(Sound::MobTropicalFishSay, Sound::MobTropicalFishHurt, Sound::MobTropicalFishDeath,
+             600.0f, 2100.0f, 1003);
+    wetVoice(Sound::MobTadpoleSay, Sound::MobTadpoleHurt, Sound::MobTadpoleDeath,
+             900.0f, 2800.0f, 1007);
     wetVoice(Sound::MobDolphinSay, Sound::MobDolphinHurt, Sound::MobDolphinDeath,
              1500.0f, 3200.0f, 1011);
     wetVoice(Sound::MobTurtleSay, Sound::MobTurtleHurt, Sound::MobTurtleDeath,

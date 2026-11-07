@@ -2427,6 +2427,7 @@ namespace
         { "Light", ItemLightFirst + 14, ItemLightFirst + 14, ItemLightFirst + 14, false, false, RenderType::None, 14, -1.0f },
         { "Light", ItemLightFirst + 15, ItemLightFirst + 15, ItemLightFirst + 15, false, false, RenderType::None, 15, -1.0f },
         { "Structure Void", ItemStructureVoid, ItemStructureVoid, ItemStructureVoid, false, false, RenderType::None, 0, -1.0f },
+        { "Frogspawn",    FrogspawnTile, FrogspawnTile,  FrogspawnTile,  false, false, RenderType::Flat,   0,   0.0f },
     };
 }
 
@@ -2466,6 +2467,7 @@ bool isObtainable(BlockId id)
         case Blocks::TrialSpawnerSpentOminous:
         case Blocks::EndPortalFrameFilled: // a frame with an eye already in it
         case Blocks::TntPrimed:    // likewise: a lit stick is not an item
+        case Blocks::Frogspawn:
         // Only one ladder is a thing you hold; the other three are the
         // same ladder hung on a different wall.
         case Blocks::LadderEast:

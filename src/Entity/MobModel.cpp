@@ -10,6 +10,8 @@
 #include "World/World.h"
 #include "Game/Trading.h"
 #include "Game/Items.h"
+#include "Game/Banners.h"
+#include <cstdio>
 #include <string>
 #include <algorithm>
 #include <cstdlib>
@@ -566,7 +568,7 @@ std::string MobModel::variantOf(const Mob& mob) const
         case MobId::Frog:
         {
             static const char* KINDS[] = { "temperate", "warm", "cold" };
-            return root + "frog/" + KINDS[pick % 3u] + "_frog.png";
+            return root + "frog/" + KINDS[frogKindOf(mob.birthSeed())] + "_frog.png";
         }
         case MobId::Fox:
         {
@@ -582,6 +584,17 @@ std::string MobModel::variantOf(const Mob& mob) const
         }
         case MobId::Bee:
             return mob.hostileNow() ? root + "bee/bee_angry.png" : std::string();
+        case MobId::Tadpole:
+            return root + "tadpole.png";
+        case MobId::TropicalFish:
+        case MobId::TropicalFishLarge:
+        {
+            const bool large = mob.typeId() == MobId::TropicalFishLarge;
+            const TropicalFish::Look look = TropicalFish::lookFor(mob.birthSeed(), large);
+            char tint[8];
+            std::snprintf(tint, sizeof(tint), "%06X", Banners::dyeRgb(look.base));
+            return root + "fish/tropical_" + (large ? "b" : "a") + ".png#" + tint;
+        }
         default:
             return std::string();
     }
@@ -622,6 +635,17 @@ std::vector<std::string> MobModel::coatOverlaysOf(const Mob& mob) const
         case MobId::Cat:
             if (mob.tamed()) layers.push_back(root + "cat/cat_collar.png#B02E26");
             break;
+        case MobId::TropicalFish:
+        case MobId::TropicalFishLarge:
+        {
+            const bool large = mob.typeId() == MobId::TropicalFishLarge;
+            const TropicalFish::Look look = TropicalFish::lookFor(mob.birthSeed(), large);
+            char tint[8];
+            std::snprintf(tint, sizeof(tint), "%06X", Banners::dyeRgb(look.pattern));
+            layers.push_back(root + "fish/tropical_" + (large ? "b" : "a") + "_pattern_" +
+                             std::to_string(look.variety % 6 + 1) + ".png#" + tint);
+            break;
+        }
         default:
             break;
     }

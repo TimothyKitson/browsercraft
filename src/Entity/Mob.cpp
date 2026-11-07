@@ -335,6 +335,12 @@ bool Mob::tameWith(StackId food)
 bool Mob::feed(StackId food)
 {
     const MobType& t = type();
+    if (t.id == MobId::Tadpole)
+    {
+        if (!alive() || food != Items::Slimeball) return false;
+        m_growthBoost += TADPOLE_SECONDS * 0.1f;
+        return true;
+    }
     if (!alive() || t.breedingFood == Blocks::Air || food != t.breedingFood) return false;
 
     // Feeding a calf hurries it along instead; that is what Minecraft

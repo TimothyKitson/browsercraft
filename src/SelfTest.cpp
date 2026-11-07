@@ -605,6 +605,7 @@ namespace
             // two square: the fox is drawn on 48x32, the frog on
             // 48x48 and the dragon on 256x256.
             const bool shaped =
+                (type.sheetWidth == 16 && type.sheetHeight == 16) ||
                 (type.sheetWidth == 32 && type.sheetHeight == 32) ||
                 (type.sheetWidth == 48 &&
                  (type.sheetHeight == 32 || type.sheetHeight == 48)) ||
@@ -800,6 +801,7 @@ namespace
                 const MobType& x = mobType(static_cast<MobId>(a));
                 const MobType& y = mobType(static_cast<MobId>(b));
                 if (x.inanimate || y.inanimate) continue;
+                if (std::string(x.name) == y.name) continue;
                 if (x.voice == y.voice || x.hurtVoice == y.hurtVoice ||
                     x.deathVoice == y.deathVoice) distinct = false;
             }
@@ -3971,6 +3973,47 @@ namespace
         check(!bottle.flies() && bottle.bursts() && !bottle.shaft(), "a thrown bottle o' enchanting arcs and breaks");
     }
 
+    void testMobBuckets()
+    {
+        section("buckets of fish, axolotls and tadpoles");
+        const MobId CAUGHT[] = { MobId::Cod, MobId::Salmon, MobId::Pufferfish, MobId::Axolotl, MobId::TropicalFish, MobId::Tadpole };
+        bool roundTrip = true;
+        for (MobId id : CAUGHT)
+            if (bucketFor(id) == Blocks::Air || mobInBucket(bucketFor(id)) != id) roundTrip = false;
+        check(roundTrip, "every bucketable creature has its own bucket, and the bucket remembers it");
+        check(bucketFor(MobId::TropicalFishLarge) == Items::TropicalFishBucket, "both shapes of tropical fish share one bucket");
+        check(bucketFor(MobId::Cow) == Blocks::Air && mobInBucket(Items::WaterBucket) == MobId::Count, "a cow does not go in a bucket");
+        check(maxStackOf(Items::AxolotlBucket) == 1, "a bucket of anything stacks to one");
+
+        bool shapesHold = true;
+        int common = 0;
+        for (uint32_t seed = 1; seed <= 400; ++seed)
+        {
+            const TropicalFish::Look small = TropicalFish::lookFor(seed, false);
+            const TropicalFish::Look large = TropicalFish::lookFor(seed, true);
+            if (TropicalFish::large(small.variety) || !TropicalFish::large(large.variety)) shapesHold = false;
+            if (small.base < 0 || small.base > 15 || small.pattern < 0 || small.pattern > 15) shapesHold = false;
+            if (*TropicalFish::commonName(small)) ++common;
+        }
+        check(shapesHold, "a small tropical fish is always one of the six small kinds, and a large one a large");
+        check(common > 300 && common < 400, "and nine in ten are one of Minecraft's twenty-two named fish");
+        TropicalFish::Look clown;
+        clown.variety = 0; clown.base = 1; clown.pattern = 0;
+        check(std::string(TropicalFish::commonName(clown)) == "Clownfish", "an orange and white kob is a clownfish");
+        check(std::string(TropicalFish::varietyName(11)) == "Clayfish", "and the twelfth shape is the clayfish");
+
+        bool kinds = true;
+        for (int kind = 0; kind < 3; ++kind)
+            if (frogKindOf(frogSeedOfKind(kind, 12345u + static_cast<uint32_t>(kind))) != kind) kinds = false;
+        check(kinds, "a tadpole can grow into whichever frog its climate asks for");
+
+        Mob tadpole(MobId::Tadpole, glm::vec3(0.0f), 7u);
+        check(!tadpole.feed(Items::Wheat) && tadpole.feed(Items::Slimeball) && tadpole.growthBoost() > 0.0f,
+              "a slimeball, and nothing else, hurries a tadpole along");
+        check(mobType(MobId::Frog).breedingFood == Items::Slimeball, "and is what brings two frogs together");
+        check(blockDrop(Blocks::Frogspawn) == Blocks::Air && !isObtainable(Blocks::Frogspawn), "frogspawn cannot be picked up");
+    }
+
     void testArchery()
     {
         section("the crossbow, and spectral and tipped arrows");
@@ -5098,8 +5141,8 @@ namespace
         const MobType& frog = mobType(MobId::Frog);
         check(frog.spawnClass == SpawnClass::Passive, "a frog does nobody any harm");
         check(frog.attackDamage == 0, "and does not fight");
-        check(frog.breedingFood == Items::MagmaCream,
-              "it follows the thing its dinner is made of");
+        check(frog.breedingFood == Items::Slimeball,
+              "it follows a slimeball, as Minecraft's does");
         check(frog.walkSpeed > 0.0f, "and it hops about");
 
         // Three lights by the climate, which is Minecraft's rule read
@@ -7304,6 +7347,8 @@ namespace
                 // A sniffer hatches from an egg brushed out of a warm
                 // ocean ruin; nothing spawns one.
                 case MobId::Sniffer:
+                // A tadpole hatches from frogspawn a pair of frogs laid.
+                case MobId::Tadpole:
                 // A wandering trader belongs nowhere, which is why he
                 // turns up anywhere in daylight.
                 case MobId::WanderingTrader:
@@ -11445,7 +11490,7 @@ namespace
         for (int i = 0; i < mobTypeCount(); ++i)
         {
             const MobType& t = mobType(static_cast<MobId>(i));
-            if (t.inanimate) continue;
+            if (t.inanimate || static_cast<MobId>(i) == MobId::TropicalFishLarge) continue;
             if (!voices.insert(static_cast<int>(t.voice)).second) distinct = false;
         }
         check(distinct, "and no two living species share one");
@@ -14450,6 +14495,7 @@ int runSelfTest()
     testArchery();
     testFoodsThatBite();
     testMaterials();
+    testMobBuckets();
     testMadeThings();
     testTheEndAndTheSea();
     testPathfinding();

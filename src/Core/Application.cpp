@@ -2298,7 +2298,7 @@ bool Application::frame()
             m_startupScreen == "attackhud" || m_startupScreen == "attackready" ||
             m_startupScreen == "attackhotbar" || m_startupScreen == "bossbars" ||
             m_startupScreen == "gamemode" || m_startupScreen == "spectator" ||
-            m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" || m_startupScreen == "leads" || m_startupScreen == "anvilname" || m_startupScreen == "dials" || m_startupScreen == "spyglass" || m_startupScreen == "bundle" || m_startupScreen == "archery" || m_startupScreen == "food" || m_startupScreen == "materials" ||
+            m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" || m_startupScreen == "leads" || m_startupScreen == "anvilname" || m_startupScreen == "dials" || m_startupScreen == "spyglass" || m_startupScreen == "bundle" || m_startupScreen == "archery" || m_startupScreen == "food" || m_startupScreen == "materials" || m_startupScreen == "tropical" ||
             m_startupScreen == "grinderror" || m_startupScreen == "woods" ||
             m_startupScreen == "cherry" || m_startupScreen == "mangrove" || m_startupScreen == "fungi" ||
             m_startupScreen == "stones" || m_startupScreen == "colours" || m_startupScreen == "candles" ||
@@ -2401,6 +2401,7 @@ bool Application::frame()
                                   m_startupScreen != "archery" &&
                                   m_startupScreen != "food" &&
                                   m_startupScreen != "materials" &&
+                                  m_startupScreen != "tropical" &&
                                   m_startupScreen != "grinderror" &&
                                   m_startupScreen != "woods" &&
                                   m_startupScreen != "cherry" &&
@@ -2793,7 +2794,7 @@ bool Application::frame()
             if (m_startupScreen == "attackhud" || m_startupScreen == "attackready" ||
                 m_startupScreen == "attackhotbar" || m_startupScreen == "bossbars" ||
                 m_startupScreen == "gamemode" || m_startupScreen == "spectator" ||
-                m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" || m_startupScreen == "leads" || m_startupScreen == "anvilname" || m_startupScreen == "dials" || m_startupScreen == "spyglass" || m_startupScreen == "bundle" || m_startupScreen == "archery" || m_startupScreen == "food" || m_startupScreen == "materials" ||
+                m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" || m_startupScreen == "leads" || m_startupScreen == "anvilname" || m_startupScreen == "dials" || m_startupScreen == "spyglass" || m_startupScreen == "bundle" || m_startupScreen == "archery" || m_startupScreen == "food" || m_startupScreen == "materials" || m_startupScreen == "tropical" ||
                 m_startupScreen == "grinderror" || m_startupScreen == "woods" ||
                 m_startupScreen == "cherry" || m_startupScreen == "mangrove" || m_startupScreen == "fungi" ||
                 m_startupScreen == "stones" || m_startupScreen == "colours" || m_startupScreen == "candles" ||
@@ -3581,6 +3582,44 @@ bool Application::frame()
                     m_inventoryOpen = true;
                     m_inventory.setCraftSize(2);
                     m_devHoverHotbar = 0;
+                }
+                if (m_startupScreen == "tropical")
+                {
+                    m_devAttackStrength = 1.0f;
+                    for (int dx = 1; dx <= 8; ++dx)
+                        for (int dz = -5; dz <= 5; ++dz)
+                            for (int dy = -3; dy <= 2; ++dy)
+                            {
+                                const bool rim = dx == 1 || dx == 8 || dz == -5 || dz == 5 || dy == -3;
+                                const BlockId fill = dy >= 0 ? Blocks::Air : rim ? Blocks::Sand : Blocks::Water;
+                                m_world->setBlock(px + dx, py + dy, pz + dz, fill);
+                            }
+                    for (int k = 0; k < 4; ++k)
+                        m_world->setBlock(px + 3 + (k % 2), py, pz - 3 + k / 2, Blocks::Frogspawn);
+                    m_world->setBlock(px + 6, py, pz + 2, Blocks::LilyPad);
+                    for (int i = 0; i < 10; ++i)
+                    {
+                        const bool large = i % 2 == 1;
+                        const glm::vec3 at(static_cast<float>(px) + 4.5f + static_cast<float>(i % 3) * 1.1f, static_cast<float>(py) - 2.0f,
+                                           static_cast<float>(pz) - 1.5f + static_cast<float>(i) * 0.5f);
+                        if (m_entities.spawnAt(large ? MobId::TropicalFishLarge : MobId::TropicalFish, at, *m_world))
+                            m_entities.mobs().back().setBirthSeed(static_cast<uint32_t>(i * 7919 + 13));
+                    }
+                    for (int i = 0; i < 5; ++i)
+                        m_entities.spawnAt(MobId::Tadpole, glm::vec3(static_cast<float>(px) + 3.0f + static_cast<float>(i) * 0.3f, static_cast<float>(py) - 2.0f,
+                                                                     static_cast<float>(pz) - 2.0f + static_cast<float>(i % 2) * 0.6f), *m_world);
+                    ItemStack caught{ Items::TropicalFishBucket, 1 };
+                    caught.damage = 13;
+                    m_inventory.slot(0) = caught;
+                    m_inventory.slot(1) = ItemStack{ Items::CodBucket, 1 };
+                    m_inventory.slot(2) = ItemStack{ Items::SalmonBucket, 1 };
+                    m_inventory.slot(3) = ItemStack{ Items::PufferfishBucket, 1 };
+                    m_inventory.slot(4) = ItemStack{ Items::AxolotlBucket, 1 };
+                    m_inventory.slot(5) = ItemStack{ Items::TadpoleBucket, 1 };
+                    m_inventory.slot(6) = ItemStack{ Items::Slimeball, 16 };
+                    m_inventory.setSelectedSlot(0);
+                    m_camera.pitch = -38.0f;
+                    m_camera.addLook(0.0f, 0.0f, 0.0f);
                 }
                 if (m_startupScreen == "materials")
                 {
@@ -12250,6 +12289,56 @@ void Application::handlePlacement()
         return;
     }
 
+    if (stack.id == Items::WaterBucket)
+    {
+        if (Mob* caught = m_entities.pick(m_camera.position, m_camera.front, ATTACK_REACH))
+        {
+            const StackId filled = bucketFor(caught->typeId());
+            if (filled != Blocks::Air && caught->alive())
+            {
+                ItemStack bucket{ filled, 1 };
+                bucket.damage = static_cast<int>(caught->birthSeed());
+                if (caught->baby()) bucket.enchantments |= 1u << 24;
+                if (caught->typeId() == MobId::TropicalFishLarge) bucket.enchantments |= 1u << 25;
+                auto& all = m_entities.mobs();
+                all.erase(all.begin() + (caught - all.data()));
+                if (m_player.creative())
+                {
+                    if (m_inventory.addStack(bucket) > 0) m_drops.spawnStack(m_player.position, bucket);
+                }
+                else stack = bucket;
+                m_audio.play(Sound::Pickup, 0.5f, 1.2f);
+                return;
+            }
+        }
+    }
+
+    if (mobInBucket(stack.id) != MobId::Count)
+    {
+        const RaycastHit aim = m_world->raycast(m_camera.position, m_camera.front, REACH_DISTANCE, true);
+        if (!aim.hit) return;
+        const BlockId looking = m_world->getBlock(aim.block.x, aim.block.y, aim.block.z);
+        const glm::ivec3 into = isLiquid(looking) ? aim.block : aim.previous;
+        const BlockId there = m_world->getBlock(into.x, into.y, into.z);
+        if (there != Blocks::Air && !isLiquid(there)) return;
+        if (there != Blocks::Water)
+        {
+            m_world->setBlock(into.x, into.y, into.z, Blocks::Water);
+            m_net.onLocalBlockChange(into.x, into.y, into.z, Blocks::Water);
+        }
+        MobId kind = mobInBucket(stack.id);
+        if (kind == MobId::TropicalFish && (stack.enchantments & (1u << 25))) kind = MobId::TropicalFishLarge;
+        if (m_entities.spawnAt(kind, glm::vec3(into) + glm::vec3(0.5f, 0.1f, 0.5f), *m_world, (stack.enchantments & (1u << 24)) != 0u))
+        {
+            Mob& freed = m_entities.mobs().back();
+            if (stack.damage != 0) freed.setBirthSeed(static_cast<uint32_t>(stack.damage));
+            freed.keepFromDespawning();
+        }
+        if (!m_player.creative()) { stack.id = Items::Bucket; stack.count = 1; stack.damage = 0; stack.enchantments = 0; }
+        m_audio.play(Sound::Place, 0.6f, 0.9f);
+        return;
+    }
+
     // Buckets: fill from a liquid you are looking at, or empty into the
     // space in front of one. The liquids here do not flow, so a bucket
     // places a single block rather than a spreading source.
@@ -15737,8 +15826,13 @@ void Application::updateWorldAround(float deltaTime)
         m_growthTimer = 0.0f;
         if (m_net.role() != Net::Role::Guest)
         {
-            std::vector<glm::ivec3> hatched, snifflings;
-            Farming::grow(*m_world, m_player.position, m_growthSeed, &hatched, &snifflings);
+            std::vector<glm::ivec3> hatched, snifflings, tadpoles;
+            Farming::grow(*m_world, m_player.position, m_growthSeed, &hatched, &snifflings, &tadpoles);
+            for (size_t k = 0; k < tadpoles.size(); ++k)
+            {
+                const glm::vec3 jitter(0.2f * static_cast<float>(k % 3) - 0.2f, 0.0f, 0.2f * static_cast<float>((k / 3) % 3) - 0.2f);
+                m_entities.spawnAt(MobId::Tadpole, glm::vec3(tadpoles[k]) + glm::vec3(0.5f, 0.2f, 0.5f) + jitter, *m_world);
+            }
             for (const glm::ivec3& at : snifflings)
             {
                 m_entities.spawnAt(MobId::Sniffer, glm::vec3(at) + glm::vec3(0.5f, 0.0f, 0.5f), *m_world, true);
@@ -16078,6 +16172,37 @@ void Application::updateMobs(float deltaTime)
     // And a frog that has eaten a magma cube leaves a light. Which of
     // the three depends on the ground it is standing on, which is
     // Minecraft's rule read off the biome rather than off the frog.
+    for (const glm::vec3& mother : m_entities.drainFrogSpawns())
+    {
+        const glm::ivec3 c(static_cast<int>(std::floor(mother.x)), static_cast<int>(std::floor(mother.y)),
+                           static_cast<int>(std::floor(mother.z)));
+        bool laid = false;
+        for (int r = 0; r <= 8 && !laid; ++r)
+            for (int dz = -r; dz <= r && !laid; ++dz)
+                for (int dx = -r; dx <= r && !laid; ++dx)
+                {
+                    if (std::max(std::abs(dx), std::abs(dz)) != r) continue;
+                    for (int dy = -3; dy <= 3 && !laid; ++dy)
+                    {
+                        const int x = c.x + dx, y = c.y + dy, z = c.z + dz;
+                        if (m_world->getBlock(x, y - 1, z) != Blocks::Water || m_world->getBlock(x, y, z) != Blocks::Air) continue;
+                        m_world->setBlock(x, y, z, Blocks::Frogspawn);
+                        m_net.onLocalBlockChange(x, y, z, Blocks::Frogspawn);
+                        m_audio.play(Sound::MobFrogSay, 0.6f, 1.2f);
+                        laid = true;
+                    }
+                }
+    }
+    for (const glm::vec3& grown : m_entities.drainGrownTadpoles())
+    {
+        const BlockId climate = froglightFor(m_world->generator().biomeAt(static_cast<int>(std::floor(grown.x)),
+                                                                         static_cast<int>(std::floor(grown.z))));
+        const int kind = climate == Blocks::PearlescentFroglight ? 1 : climate == Blocks::VerdantFroglight ? 2 : 0;
+        if (m_entities.spawnAt(MobId::Frog, grown, *m_world))
+            m_entities.mobs().back().setBirthSeed(frogSeedOfKind(kind, hashCoords(static_cast<int>(grown.x * 8.0f),
+                                                                                    static_cast<int>(grown.z * 8.0f),
+                                                                                    static_cast<int>(m_elapsedSeconds), 0xF209u)));
+    }
     for (const glm::vec3& meal : m_entities.drainFrogMeals())
     {
         const BlockId light = froglightFor(

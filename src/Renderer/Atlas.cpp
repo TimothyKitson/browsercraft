@@ -1717,6 +1717,20 @@ namespace
         for (int x = 12; x < 15; ++x) { t.set(x, 4, Color{ 120, 200, 190 }); t.set(x, 11, Color{ 120, 200, 190 }); }
         for (int y = 4; y < 12; ++y) t.set(12, y, Color{ 100, 180, 170 });
     }
+    void paintFrogspawnTile(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int k = 0; k < 14; ++k)
+        {
+            const int cx = 2 + static_cast<int>((k * 7u + 3u) % 12u);
+            const int cy = 2 + static_cast<int>((k * 11u + 5u) % 12u);
+            t.set(cx, cy, Color{ 30, 30, 34, 230 });
+            t.set(cx + 1, cy, Color{ 200, 210, 200, 120 });
+            t.set(cx, cy + 1, Color{ 200, 210, 200, 120 });
+            t.set(cx - 1, cy, Color{ 200, 210, 200, 120 });
+            t.set(cx, cy - 1, Color{ 200, 210, 200, 120 });
+        }
+    }
     void paintLeashKnotTile(Tile& t)
     {
         t.fill(Color{ 0, 0, 0, 0 });
@@ -8911,6 +8925,7 @@ namespace
         { Tiles::ItemTippedArrowHead, paintItemTippedArrowHead },
         { Tiles::FishingHookTile, paintFishingHookTile },
         { Tiles::LeashKnotTile, paintLeashKnotTile },
+        { Tiles::FrogspawnTile, paintFrogspawnTile },
         { Tiles::SpectralInFlight, paintSpectralInFlight },
         { Tiles::TippedInFlight, paintTippedInFlight },
         { Tiles::TridentInFlight, paintTridentInFlight },
@@ -9823,6 +9838,12 @@ namespace
         { Tiles::ItemMaterialFirst + 6, { "dragon_breath", nullptr, nullptr } },
         { Tiles::ItemMaterialFirst + 7, { "charcoal", nullptr, nullptr } },
         { Tiles::ItemMaterialFirst + 8, { "experience_bottle", nullptr, nullptr } },
+        { Tiles::ItemMobBucketFirst + 0, { "cod_bucket", nullptr, nullptr } },
+        { Tiles::ItemMobBucketFirst + 1, { "salmon_bucket", nullptr, nullptr } },
+        { Tiles::ItemMobBucketFirst + 2, { "pufferfish_bucket", nullptr, nullptr } },
+        { Tiles::ItemMobBucketFirst + 3, { "tropical_fish_bucket", nullptr, nullptr } },
+        { Tiles::ItemMobBucketFirst + 4, { "axolotl_bucket", nullptr, nullptr } },
+        { Tiles::ItemMobBucketFirst + 5, { "tadpole_bucket", nullptr, nullptr } },
         { Tiles::ItemCompassFrameFirst + 0, { "compass_00", nullptr, nullptr } },
         { Tiles::ItemCompassFrameFirst + 1, { "compass_01", nullptr, nullptr } },
         { Tiles::ItemCompassFrameFirst + 2, { "compass_02", nullptr, nullptr } },
@@ -10232,6 +10253,7 @@ namespace
         { Tiles::JigsawBottomTile, { "jigsaw_bottom", nullptr }, Tinting::None, 0, false },
         { Tiles::JigsawSideTile, { "jigsaw_side", nullptr }, Tinting::None, 0, false },
         { Tiles::JigsawLockTile, { "jigsaw_lock", nullptr }, Tinting::None, 0, false },
+        { Tiles::FrogspawnTile, { "frogspawn", nullptr }, Tinting::None, 0, false },
         { Tiles::FishingHookTile, { "../entity/fishing_hook", nullptr }, Tinting::None, 0, false },
         { Tiles::SmithingTopTile, { "smithing_table_top", nullptr }, Tinting::None, 0, false },
         { Tiles::SmithingBottomTile, { "smithing_table_bottom", nullptr }, Tinting::None, 0, false },
@@ -11292,6 +11314,19 @@ Atlas::Atlas()
         Tile tile;
         paintMaterialIn(tile, i);
         blitPainted(Tiles::ItemMaterialFirst + i, tile);
+    }
+    for (int i = 0; i < 6; ++i)
+    {
+        static const Color CATCH[6] = { Color{ 186, 160, 118 }, Color{ 170, 60, 50 }, Color{ 220, 190, 60 },
+                                        Color{ 240, 120, 40 }, Color{ 240, 160, 200 }, Color{ 70, 50, 40 } };
+        Tile tile;
+        paintBucket(tile, true, Color{ 58, 106, 206 });
+        for (int x = 6; x <= 9; ++x) tile.set(x, 8, CATCH[i]);
+        tile.set(5, 7, CATCH[i]);
+        tile.set(5, 9, CATCH[i]);
+        tile.set(10, 8, CATCH[i]);
+        tile.set(9, 7, Color{ 20, 20, 24 });
+        blitPainted(Tiles::ItemMobBucketFirst + i, tile);
     }
     for (int i = 0; i < 4; ++i)
     {
@@ -12396,6 +12431,7 @@ bool Atlas::hasPainter(int tileIndex)
     if (tileIndex >= Tiles::ItemChainmailFirst && tileIndex <= Tiles::ItemChainmailLast) return true;
     if (tileIndex >= Tiles::ItemFoodFirst && tileIndex <= Tiles::ItemFoodLast) return true;
     if (tileIndex >= Tiles::ItemMaterialFirst && tileIndex <= Tiles::ItemMaterialLast) return true;
+    if (tileIndex >= Tiles::ItemMobBucketFirst && tileIndex <= Tiles::ItemMobBucketLast) return true;
     if (tileIndex >= Tiles::ConcreteTile && tileIndex <= Tiles::GlazedTileLast &&
         tileIndex != Tiles::TerracottaPlainTile) return true;
     if (tileIndex >= Tiles::StainedGlassTile && tileIndex <= Tiles::StainedGlassTileLast) return true;

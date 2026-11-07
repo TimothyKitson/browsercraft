@@ -317,6 +317,12 @@ namespace
         { "Dragon's Breath", Tiles::ItemMaterialFirst + 6, 64 },
         { "Charcoal", Tiles::ItemMaterialFirst + 7, 64 },
         { "Bottle o' Enchanting", Tiles::ItemMaterialFirst + 8, 64 },
+        { "Bucket of Cod", Tiles::ItemMobBucketFirst + 0, 1 },
+        { "Bucket of Salmon", Tiles::ItemMobBucketFirst + 1, 1 },
+        { "Bucket of Pufferfish", Tiles::ItemMobBucketFirst + 2, 1 },
+        { "Bucket of Tropical Fish", Tiles::ItemMobBucketFirst + 3, 1 },
+        { "Bucket of Axolotl", Tiles::ItemMobBucketFirst + 4, 1 },
+        { "Bucket of Tadpole", Tiles::ItemMobBucketFirst + 5, 1 },
     };
 
     static_assert(sizeof(ITEMS) / sizeof(ITEMS[0]) ==
@@ -534,6 +540,7 @@ StackId blockDrop(BlockId id)
     if (isBanner(id)) return static_cast<StackId>(bannerOf(bannerColour(id), false, 2));
     if (isSnifferEgg(id)) return Blocks::SnifferEgg0;
     if (id == Blocks::ChorusPlant) return Items::ChorusFruit;
+    if (id == Blocks::Frogspawn) return Blocks::Air;
 
     // A melon comes apart into slices rather than into a melon, which
     // is Minecraft's and is what makes one worth planting.

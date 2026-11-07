@@ -228,7 +228,7 @@ bool Farming::coralIsWet(const World& world, int x, int y, int z)
 }
 
 void Farming::grow(World& world, const glm::vec3& around, uint32_t& seed, std::vector<glm::ivec3>* hatched,
-                   std::vector<glm::ivec3>* snifflings)
+                   std::vector<glm::ivec3>* snifflings, std::vector<glm::ivec3>* tadpoles)
 {
     const int centreX = static_cast<int>(std::floor(around.x));
     const int centreY = static_cast<int>(std::floor(around.y));
@@ -262,6 +262,22 @@ void Farming::grow(World& world, const glm::vec3& around, uint32_t& seed, std::v
             if (isLivingCoral(reef))
             {
                 if (!coralIsWet(world, x, y, z)) world.setBlock(x, y, z, deadCoralOf(reef));
+                continue;
+            }
+            if (reef == Blocks::Frogspawn)
+            {
+                if (!isWater(world.getBlock(x, y - 1, z)))
+                {
+                    world.setBlock(x, y, z, Blocks::Air);
+                    continue;
+                }
+                if (nextRandom(seed) % 9u != 0u) continue;
+                world.setBlock(x, y, z, Blocks::Air);
+                if (tadpoles)
+                {
+                    const int brood = 2 + static_cast<int>(nextRandom(seed) % 5u);
+                    for (int k = 0; k < brood; ++k) tadpoles->push_back(glm::ivec3(x, y - 1, z));
+                }
                 continue;
             }
             if (isSnifferEgg(reef))
