@@ -165,9 +165,10 @@ Everything in the 1.21 textures zip the game doesn't use yet, turned into work. 
     - II. The conduit and conduit power.
     - III. Turtle eggs that hatch, and the turtle helmet.
     - Notes: coral dies to its grey form when no water touches it; coral blocks break into dead blocks, and fans and plants need silk touch. Bone meal turns seagrass tall, and reefs now grow fans on their tops and sides. A conduit framed by at least sixteen prismarine or sea lantern blocks gives conduit power (water breathing and faster digging) in water or rain, and with the full 42 it strikes hostile mobs nearby; it is drawn as its shell only, without the turning cage and eye. Nautilus shells come from drowned and buried treasure always holds a heart of the sea. Turtles fed seagrass lay eggs on nearby sand, which crack and hatch there and can be trampled; a baby turtle sheds a scute when it grows up, and five scutes make the turtle shell, which gives water breathing on entering water.
-42. Ice and snow
+42. Ice and snow (done)
     - I. Packed ice, blue ice, and frosted ice that melts in stages.
     - II. Powder snow: you sink into it, the outline overlay shows, freezing hearts, and the powder snow bucket.
+    - Notes: every ice is slippery, blue ice most of all; nine ice pack into packed ice and nine of those into blue ice, and frozen seas carry floes of both. Snowy ground grows packed ice spires and powder snow patches. Frost Walker came in as a treasure enchantment (sold on iron boots by armorers) so frosted ice has a source. Leather boots let you stand on powder snow and climb out of it, and any leather piece stops freezing; frozen through, you take a point of damage every two seconds until you get out or catch fire. Mobs do not freeze or slide yet, and there is no powder snow cauldron.
 43. Redstone
     - I. Repeater, comparator and daylight detector.
     - II. Target block, tripwire and tripwire hook.

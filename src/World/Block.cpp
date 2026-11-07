@@ -1997,6 +1997,13 @@ namespace
         { "Turtle Egg", TurtleEggTile, TurtleEggTile, TurtleEggTile, true, false, RenderType::Lush, 0, 0.5f },
         { "Turtle Egg", TurtleEggSlightlyCrackedTile, TurtleEggSlightlyCrackedTile, TurtleEggSlightlyCrackedTile, true, false, RenderType::Lush, 0, 0.5f },
         { "Turtle Egg", TurtleEggVeryCrackedTile, TurtleEggVeryCrackedTile, TurtleEggVeryCrackedTile, true, false, RenderType::Lush, 0, 0.5f },
+        { "Packed Ice", PackedIceTile, PackedIceTile, PackedIceTile, true, true, RenderType::Cube, 0, 0.5f },
+        { "Blue Ice", BlueIceTile, BlueIceTile, BlueIceTile, true, true, RenderType::Cube, 0, 2.8f },
+        { "Frosted Ice", FrostedIceTileFirst, FrostedIceTileFirst, FrostedIceTileFirst, true, false, RenderType::Cube, 0, 0.5f },
+        { "Frosted Ice", FrostedIceTileFirst + 1, FrostedIceTileFirst + 1, FrostedIceTileFirst + 1, true, false, RenderType::Cube, 0, 0.5f },
+        { "Frosted Ice", FrostedIceTileFirst + 2, FrostedIceTileFirst + 2, FrostedIceTileFirst + 2, true, false, RenderType::Cube, 0, 0.5f },
+        { "Frosted Ice", FrostedIceTileFirst + 3, FrostedIceTileFirst + 3, FrostedIceTileFirst + 3, true, false, RenderType::Cube, 0, 0.5f },
+        { "Powder Snow", PowderSnowTile, PowderSnowTile, PowderSnowTile, false, true, RenderType::Cube, 0, 0.25f },
     };
 }
 
@@ -2082,6 +2089,7 @@ bool isObtainable(BlockId id)
             if (id == Blocks::TallSeagrassUpper) return false;
             if (isAnyCoralWallFan(id)) return false;
             if (isTurtleEgg(id) && id != turtleEggOf(1, 0)) return false;
+            if (isFrostedIce(id) || id == Blocks::PowderSnow) return false;
             if (isBigDripleaf(id) && id != bigDripleafOf(0, DripleafTilt::None)) return false;
             if (isSmallDripleaf(id) && id != smallDripleafOf(0, false)) return false;
             if (isGlowLichen(id) && id != glowLichenOn(0)) return false;
@@ -2137,6 +2145,8 @@ const char* blockSoundGroup(BlockId id)
     if (isTallSeagrass(id)) return "grass";
     if (isLivingCoral(id) || isDeadCoralBlock(id) || isDeadCoralPlant(id) || isAnyCoralFan(id) || isAnyCoralWallFan(id)) return "stone";
     if (id == Blocks::Conduit || isTurtleEgg(id)) return "stone";
+    if (id == Blocks::PackedIce || id == Blocks::BlueIce || isFrostedIce(id)) return "stone";
+    if (id == Blocks::PowderSnow) return "snow";
     if (isEarthy(id)) return "gravel";
     if (isFlowerPot(id)) return "stone";
     if (isDoor(id) || isTrapdoor(id)) return "wood";
@@ -2297,6 +2307,8 @@ Material blockMaterial(BlockId id)
     if (id == Blocks::HayBale || id == Blocks::DriedKelpBlock) return Material::Plant;
     if (isCarvedPumpkin(id) || isJackOLantern(id) || isHive(id)) return Material::Wood;
     if (id == Blocks::Conduit) return Material::Glass;
+    if (id == Blocks::PackedIce || id == Blocks::BlueIce || isFrostedIce(id)) return Material::Glass;
+    if (id == Blocks::PowderSnow) return Material::Snow;
     if (isTurtleEgg(id)) return Material::Plant;
     if (id == Blocks::HoneyBlock || id == Blocks::HoneycombBlock) return Material::Wool;
     if (isEarthy(id)) return Material::Dirt;

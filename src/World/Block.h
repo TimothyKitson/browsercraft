@@ -631,6 +631,9 @@ namespace Blocks
         DeadCoralWallFanFirst, DeadCoralWallFanLast = DeadCoralWallFanFirst + 19,
         Conduit,
         TurtleEggFirst, TurtleEggLast = TurtleEggFirst + 11,
+        PackedIce, BlueIce,
+        FrostedIce0, FrostedIce1, FrostedIce2, FrostedIce3,
+        PowderSnow,
 
         Count
     };
@@ -686,6 +689,8 @@ inline bool isOpaque(BlockId id) { return blockInfo(id).opaque; }
 inline bool isSolid(BlockId id) { return blockInfo(id).collides; }
 inline bool isLiquid(BlockId id) { return blockInfo(id).render == RenderType::Liquid; }
 inline bool isWater(BlockId id) { return id == Blocks::Water || (id >= Blocks::WaterFlow1 && id <= Blocks::WaterFalling); }
+inline bool isFrostedIce(BlockId id) { return id >= Blocks::FrostedIce0 && id <= Blocks::FrostedIce3; }
+inline bool isSlippery(BlockId id) { return id == Blocks::Ice || id == Blocks::PackedIce || id == Blocks::BlueIce || isFrostedIce(id); }
 inline bool isLava(BlockId id) { return id == Blocks::Lava || (id >= Blocks::LavaFlow1 && id <= Blocks::LavaFalling); }
 inline bool isFluid(BlockId id) { return isWater(id) || isLava(id); }
 inline bool isFluidSource(BlockId id) { return id == Blocks::Water || id == Blocks::Lava; }

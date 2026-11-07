@@ -5210,6 +5210,51 @@ namespace
                 t.set(x, y, ((x / 3 + y / 3) % 2) ? Color{ 60, 136, 52 } : Color{ 44, 104, 40 });
             }
     }
+    void paintPackedIceTile(Tile& t)
+    {
+        t.fill(Color{ 140, 178, 230 });
+        for (int i = 0; i < 6; ++i)
+        {
+            const int x = static_cast<int>(hash2(i, 0, 1801) * Tile::N), y = static_cast<int>(hash2(i, 1, 1801) * Tile::N);
+            for (int k = 0; k < 6; ++k) t.set((x + k) % Tile::N, (y + k / 3) % Tile::N, Color{ 186, 212, 246 });
+        }
+        t.speckle(6, 1802);
+    }
+    void paintBlueIceTile(Tile& t)
+    {
+        t.fill(Color{ 116, 166, 242 });
+        for (int i = 0; i < 7; ++i)
+        {
+            const int x = static_cast<int>(hash2(i, 0, 1803) * Tile::N), y = static_cast<int>(hash2(i, 1, 1803) * Tile::N);
+            for (int k = 0; k < 5; ++k) t.set((x + k) % Tile::N, (y + (k & 1)) % Tile::N, Color{ 168, 206, 252 });
+        }
+    }
+    void paintFrostedIceIn(Tile& t, int age)
+    {
+        t.fill(Color{ 156, 196, 240, 200 });
+        t.speckle(8, 1804);
+        for (int c = 0; c < age * 4; ++c)
+        {
+            const int x = static_cast<int>(hash2(c, 0, 1805) * Tile::N), y = static_cast<int>(hash2(c, 1, 1805) * Tile::N);
+            for (int k = 0; k < 4; ++k) t.set((x + k) % Tile::N, (y + (k * c) % 3) % Tile::N, Color{ 230, 240, 255, 230 });
+        }
+    }
+    void paintPowderSnowTile(Tile& t)
+    {
+        t.fill(Color{ 246, 250, 252 });
+        for (int y = 0; y < Tile::N; ++y)
+            for (int x = 0; x < Tile::N; ++x)
+                if (hash2(x, y, 1806) > 0.86f) t.set(x, y, Color{ 222, 232, 240 });
+    }
+    void paintItemPowderSnowBucket(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 5; y < 14; ++y)
+            for (int x = 3 + (y - 5) / 4; x < 13 - (y - 5) / 4; ++x)
+                t.set(x, y, (x == 3 + (y - 5) / 4 || x == 12 - (y - 5) / 4 || y == 13) ? Color{ 150, 150, 156 } : Color{ 196, 198, 204 });
+        for (int x = 4; x < 12; ++x) { t.set(x, 5, Color{ 246, 250, 252 }); t.set(x, 6, Color{ 236, 242, 248 }); }
+        for (int x = 4; x < 12; ++x) t.set(x, 2 + (x - 8) * (x - 8) / 8, Color{ 120, 120, 126 });
+    }
     void paintItemPitcherPlant(Tile& t)
     {
         paintDoubleIn(t, true, Color{ 100, 170, 190 }, 1333);
@@ -7789,6 +7834,7 @@ namespace
         { Tiles::ItemRawGold, paintItemRawGold },
         { Tiles::ItemAmethystShard, paintItemAmethystShard },
         { Tiles::ItemTripwireHook, paintItemTripwireHook },
+        { Tiles::ItemPowderSnowBucket, paintItemPowderSnowBucket },
         { Tiles::ItemNautilusShell, paintItemNautilusShell },
         { Tiles::ItemHeartOfTheSea, paintItemHeartOfTheSea },
         { Tiles::ItemTurtleScute, paintItemTurtleScute },
@@ -7968,6 +8014,9 @@ namespace
         { Tiles::DustLine1Off, paintRedstoneDust },
         { Tiles::DustLine1On, paintRedstoneDustLit },
         { Tiles::LeverHandle, paintLever },
+        { Tiles::PackedIceTile, paintPackedIceTile },
+        { Tiles::BlueIceTile, paintBlueIceTile },
+        { Tiles::PowderSnowTile, paintPowderSnowTile },
         { Tiles::TallSeagrassTopTile, paintTallSeagrassTopTile },
         { Tiles::TallSeagrassBottomTile, paintTallSeagrassBottomTile },
         { Tiles::ConduitTile, paintConduitTile },
@@ -8544,6 +8593,7 @@ namespace
         { Tiles::ItemRawGold, { "raw_gold", nullptr, nullptr } },
         { Tiles::ItemAmethystShard, { "amethyst_shard", nullptr, nullptr } },
         { Tiles::ItemTripwireHook, { "../block/tripwire_hook", nullptr, nullptr } },
+        { Tiles::ItemPowderSnowBucket, { "powder_snow_bucket", nullptr, nullptr } },
         { Tiles::ItemNautilusShell, { "nautilus_shell", nullptr, nullptr } },
         { Tiles::ItemHeartOfTheSea, { "heart_of_the_sea", nullptr, nullptr } },
         { Tiles::ItemTurtleScute, { "turtle_scute", nullptr, nullptr } },
@@ -8719,6 +8769,13 @@ namespace
         { Tiles::GlassPaneTopTile, { "glass_pane_top", nullptr }, Tinting::None, 0, false },
         { Tiles::TerracottaPlainTile, { "terracotta", "hardened_clay", nullptr }, Tinting::None, 0, false },
         { Tiles::TintedGlassTile, { "tinted_glass", nullptr }, Tinting::None, 0, false },
+        { Tiles::PackedIceTile, { "packed_ice", nullptr }, Tinting::None, 0, false },
+        { Tiles::BlueIceTile, { "blue_ice", nullptr }, Tinting::None, 0, false },
+        { Tiles::FrostedIceTileFirst, { "frosted_ice_0", nullptr }, Tinting::None, 210, false },
+        { Tiles::FrostedIceTileFirst + 1, { "frosted_ice_1", nullptr }, Tinting::None, 210, false },
+        { Tiles::FrostedIceTileFirst + 2, { "frosted_ice_2", nullptr }, Tinting::None, 210, false },
+        { Tiles::FrostedIceTileFirst + 3, { "frosted_ice_3", nullptr }, Tinting::None, 210, false },
+        { Tiles::PowderSnowTile, { "powder_snow", nullptr }, Tinting::None, 0, false },
         { Tiles::TallSeagrassTopTile, { "tall_seagrass_top", nullptr }, Tinting::None, 0, false },
         { Tiles::TallSeagrassBottomTile, { "tall_seagrass_bottom", nullptr }, Tinting::None, 0, false },
         { Tiles::ConduitTile, { "conduit", nullptr }, Tinting::None, 0, false },
@@ -9706,6 +9763,12 @@ Atlas::Atlas()
         paintSweetBerryIn(bush, stage);
         blitPainted(Tiles::SweetBerryBushTile + stage, bush);
     }
+    for (int age = 0; age < 4; ++age)
+    {
+        Tile frost;
+        paintFrostedIceIn(frost, age);
+        blitPainted(Tiles::FrostedIceTileFirst + age, frost);
+    }
     for (int kind = 0; kind < 5; ++kind)
     {
         Tile fan, deadBlock, deadPlant, deadFan;
@@ -10618,6 +10681,7 @@ bool Atlas::hasPainter(int tileIndex)
     if (tileIndex >= Tiles::ChestTileFirst && tileIndex <= Tiles::ChestTileLast) return true;
     if (tileIndex >= Tiles::SweetBerryBushTile && tileIndex <= Tiles::SweetBerryBushTileLast) return true;
     if (tileIndex >= Tiles::CoralFanTileFirst && tileIndex <= Tiles::DeadCoralFanTileLast) return true;
+    if (tileIndex >= Tiles::FrostedIceTileFirst && tileIndex <= Tiles::FrostedIceTileLast) return true;
     if (tileIndex >= Tiles::CutCopperTile && tileIndex <= Tiles::CopperTrapdoorTileLast) return true;
     if (tileIndex >= Tiles::ItemCopperDoorFirst && tileIndex <= Tiles::ItemCopperDoorLast) return true;
     if (tileIndex >= Tiles::CrackFirst &&

@@ -102,7 +102,7 @@ namespace
         Blocks::DeadCoralFirst + 0, Blocks::DeadCoralFirst + 1, Blocks::DeadCoralFirst + 2, Blocks::DeadCoralFirst + 3, Blocks::DeadCoralFirst + 4,
         Blocks::DeadCoralFanFirst + 0, Blocks::DeadCoralFanFirst + 1, Blocks::DeadCoralFanFirst + 2,
         Blocks::DeadCoralFanFirst + 3, Blocks::DeadCoralFanFirst + 4,
-        Blocks::TurtleEggFirst,
+        Blocks::TurtleEggFirst, Blocks::PackedIce, Blocks::BlueIce,
     };
 
     const StackId TAB_ORES[] = {
@@ -183,7 +183,7 @@ namespace
         Blocks::EndPortalFrame,
         Items::Stick, Items::Coal, Items::Bow, Items::Arrow, Items::Shield, Items::FlintAndSteel, Items::Boat, Items::Minecart,
         Blocks::RailNorthSouth,
-        Items::Bucket, Items::WaterBucket, Items::LavaBucket, Items::Shears,
+        Items::Bucket, Items::WaterBucket, Items::LavaBucket, Items::PowderSnowBucket, Items::Shears,
         Items::IronIngot, Items::GoldIngot, Items::Diamond,
         Items::WoodPickaxe, Items::WoodAxe, Items::WoodShovel, Items::WoodSword, Items::WoodHoe,
         Items::StonePickaxe, Items::StoneAxe, Items::StoneShovel, Items::StoneSword, Items::StoneHoe,

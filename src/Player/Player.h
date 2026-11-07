@@ -139,6 +139,11 @@ public:
     // a blow, which is where it actually stops anything.
     bool blocking = false;
     bool inBerryBush = false;
+    bool inPowderSnow = false;
+    bool powderSnowFirm = false;
+    bool freezeImmune = false;
+    float frozenSeconds = 0.0f;
+    static constexpr float FREEZE_SECONDS = 7.0f;
     bool flying = false;
 
     // In the air on a pair of wings. Minecraft's glide, cut to what a

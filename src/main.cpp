@@ -806,6 +806,7 @@ namespace
             else if (isDeadCoralPlant(id) || isDeadCoralFan(id) || isDeadCoralWallFan(id))
                                                   why = "living coral that dried out out of the water";
             else if (isTurtleEgg(id))             why = "laid on sand by turtles fed seagrass, then cracking";
+            else if (isFrostedIce(id))            why = "water frozen under frost walker boots, melting";
             else if (isAnyCoralWallFan(id))       why = "a coral fan set against another face";
             else if (isBigDripleaf(id) || isBigDripleafStem(id) || isSmallDripleaf(id))
                                                   why = "another facing, tilt or half of a dripleaf";
@@ -969,6 +970,8 @@ namespace
                 byHand = "dropped by a drowned now and then";
             else if (i == static_cast<int>(Items::TurtleScute))
                 byHand = "shed by a baby turtle as it grows up";
+            else if (i == static_cast<int>(Items::PowderSnowBucket))
+                byHand = "a bucket used on powder snow";
 
             if (byHand)
             {

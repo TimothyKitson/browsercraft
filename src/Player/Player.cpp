@@ -174,6 +174,14 @@ bool Player::collides(const World& world, const AABB& box) const
                 // part of the block overlaps the box -- not whether the
                 // cell is occupied at all.
                 const BlockId here = world.getBlock(x, y, z);
+                if (here == Blocks::PowderSnow)
+                {
+                    if (powderSnowFirm && !sneaking && position.y >= static_cast<float>(y + 1) - 0.001f &&
+                        box.min.y < static_cast<float>(y + 1) && box.max.y > static_cast<float>(y) &&
+                        box.max.x > x && box.min.x < x + 1 && box.max.z > z && box.min.z < z + 1)
+                        return true;
+                    continue;
+                }
                 const int links = isPane(here)
                     ? paneLinks([&](int dx, int dz) { return world.getBlock(x + dx, y, z + dz); })
                     : 15;
@@ -596,9 +604,15 @@ void Player::update(float deltaTime, const World& world, const Controls& control
     if (blocking && !flying) targetSpeed *= Shield::RAISED_SPEED;
 
     inBerryBush = false;
+    inPowderSnow = false;
     if (!flying)
     {
         const AABB box = aabb();
+        for (int bx = static_cast<int>(std::floor(box.min.x)); bx <= static_cast<int>(std::floor(box.max.x)); ++bx)
+            for (int by = static_cast<int>(std::floor(box.min.y)); by <= static_cast<int>(std::floor(box.max.y - 0.001f)); ++by)
+                for (int bz = static_cast<int>(std::floor(box.min.z)); bz <= static_cast<int>(std::floor(box.max.z)); ++bz)
+                    if (world.getBlock(bx, by, bz) == Blocks::PowderSnow) inPowderSnow = true;
+        if (inPowderSnow) targetSpeed *= 0.45f;
         for (int bx = static_cast<int>(std::floor(box.min.x)); bx <= static_cast<int>(std::floor(box.max.x)); ++bx)
             for (int by = static_cast<int>(std::floor(box.min.y)); by <= static_cast<int>(std::floor(box.max.y)); ++by)
                 for (int bz = static_cast<int>(std::floor(box.min.z)); bz <= static_cast<int>(std::floor(box.max.z)); ++bz)
@@ -617,6 +631,18 @@ void Player::update(float deltaTime, const World& world, const Controls& control
     else if (inWater) acceleration = WATER_ACCELERATION;
     else if (onGround) acceleration = GROUND_ACCELERATION;
     else acceleration = AIR_ACCELERATION;
+    if (onGround && !flying && !inWater)
+    {
+        const BlockId floorBlock = world.getBlock(static_cast<int>(std::floor(position.x)),
+                                                  static_cast<int>(std::floor(position.y - 0.1f)),
+                                                  static_cast<int>(std::floor(position.z)));
+        if (isSlippery(floorBlock)) acceleration = floorBlock == Blocks::BlueIce ? 0.8f : 1.6f;
+    }
+
+    if (inPowderSnow && !freezeImmune && !spectator() && !creative())
+        frozenSeconds = std::min(FREEZE_SECONDS, frozenSeconds + deltaTime);
+    else
+        frozenSeconds = std::max(0.0f, frozenSeconds - 2.0f * deltaTime);
 
     // A glide steers itself off where you are looking; the walking
     // keys do nothing to it. Done before the blend below so the
@@ -658,6 +684,12 @@ void Player::update(float deltaTime, const World& world, const Controls& control
         if (controls.jumpHeld) velocity.y = SWIM_UP_VELOCITY;
         velocity.y = std::max(velocity.y, WATER_TERMINAL);
         m_falling = false; // water cancels fall damage
+    }
+    else if (inPowderSnow)
+    {
+        if (controls.jumpHeld && powderSnowFirm) velocity.y = 1.8f;
+        else velocity.y = std::max(velocity.y + GRAVITY * deltaTime, -1.0f);
+        m_falling = false;
     }
     else if (climbing)
     {

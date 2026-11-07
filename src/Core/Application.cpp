@@ -1901,6 +1901,27 @@ bool Application::frame()
             // the nearest lake with a blaze behind you.
             if (m_player.isInWater(*m_world)) m_player.douse();
 
+            {
+                bool leather = false;
+                for (int i = 0; i < Inventory::ARMOR_SLOTS; ++i)
+                    if (Armour::tierOf(m_inventory.slot(Inventory::ARMOR_FIRST + i).id) == Armour::Tier::Leather) leather = true;
+                m_player.freezeImmune = leather;
+                m_player.powderSnowFirm = m_inventory.slot(Inventory::ARMOR_FIRST + 3).id == Items::LeatherBoots;
+                if (m_player.inPowderSnow) m_player.douse();
+                if (m_player.onFire()) m_player.frozenSeconds = 0.0f;
+                if (m_player.frozenSeconds >= Player::FREEZE_SECONDS)
+                {
+                    m_freezeSting += deltaTime;
+                    if (m_freezeSting >= 2.0f)
+                    {
+                        m_freezeSting = 0.0f;
+                        if (m_player.damage(1)) m_audio.play(Sound::Hurt, 0.6f, 1.3f);
+                    }
+                }
+                else m_freezeSting = 0.0f;
+            }
+            tickFrost(deltaTime);
+
             if (m_inventory.slot(Inventory::ARMOR_FIRST).id == Items::TurtleHelmet && !m_player.isHeadUnderwater(*m_world))
                 Effects::give(m_player.effects, Effects::Kind::WaterBreathing, 0, 10.0f);
 
@@ -2095,7 +2116,7 @@ bool Application::frame()
             m_startupScreen == "stones" || m_startupScreen == "colours" || m_startupScreen == "candles" ||
             m_startupScreen == "shulkerboxes" || m_startupScreen == "beds" || m_startupScreen == "chests" ||
             m_startupScreen == "copper" || m_startupScreen == "flowers" || m_startupScreen == "mushrooms" || m_startupScreen == "lush" ||
-            m_startupScreen == "farm" || m_startupScreen == "corals" ||
+            m_startupScreen == "farm" || m_startupScreen == "corals" || m_startupScreen == "ice" ||
             m_startupScreen == "boat" || m_startupScreen == "rails" ||
             m_startupScreen == "mobs" || m_startupScreen == "golem" ||
             m_startupScreen == "glowmobs" || m_startupScreen == "variants" ||
@@ -2192,6 +2213,7 @@ bool Application::frame()
                                   m_startupScreen != "lush" &&
                                   m_startupScreen != "farm" &&
                                   m_startupScreen != "corals" &&
+                                  m_startupScreen != "ice" &&
                                   m_startupScreen != "boat" &&
                                   m_startupScreen != "rails" &&
                                   m_startupScreen != "mobs" &&
@@ -2569,7 +2591,7 @@ bool Application::frame()
                 m_startupScreen == "stones" || m_startupScreen == "colours" || m_startupScreen == "candles" ||
                 m_startupScreen == "shulkerboxes" || m_startupScreen == "beds" || m_startupScreen == "chests" ||
                 m_startupScreen == "copper" || m_startupScreen == "flowers" || m_startupScreen == "mushrooms" ||
-                m_startupScreen == "lush" || m_startupScreen == "farm" || m_startupScreen == "corals")
+                m_startupScreen == "lush" || m_startupScreen == "farm" || m_startupScreen == "corals" || m_startupScreen == "ice")
             {
                 m_camera.setOrientation(0.0f, -25.0f);
                 m_camera.addLook(0.0f, 0.0f, 0.0f);
@@ -2710,6 +2732,43 @@ bool Application::frame()
                     m_world->setBlock(px + 12, py, pz - 8, Blocks::Bookshelf);
                     m_world->setBlock(px + 12, py, pz + 8, Blocks::DiamondOre);
                     m_world->setBlock(px + 12, py + 1, pz + 8, Blocks::EndPortalFrame);
+                }
+                if (m_startupScreen == "ice")
+                {
+                    m_devAttackStrength = 1.0f;
+                    m_camera.setOrientation(0.0f, -42.0f);
+                    for (int dx = -1; dx <= 1; ++dx)
+                        for (int dz = -1; dz <= 1; ++dz)
+                            for (int dy = 0; dy <= 6; ++dy) m_world->setBlock(px + dx, py + dy, pz + dz, Blocks::Air);
+                    for (int dy = 0; dy < 4; ++dy) m_world->setBlock(px, py + dy, pz, Blocks::PackedIce);
+                    m_player.position.y = static_cast<float>(py + 4);
+                    for (int dx = 1; dx <= 14; ++dx)
+                        for (int dz = -9; dz <= 9; ++dz)
+                        {
+                            for (int dy = 0; dy <= 8; ++dy) m_world->setBlock(px + dx, py + dy, pz + dz, Blocks::Air);
+                            m_world->setBlock(px + dx, py - 1, pz + dz, Blocks::SnowGrass);
+                            m_world->setBlock(px + dx, py - 2, pz + dz, Blocks::Dirt);
+                        }
+                    for (int dz = -8; dz <= -1; ++dz)
+                        for (int dx = 3; dx <= 9; ++dx)
+                        {
+                            const int band = (dx - 3) / 2;
+                            const BlockId ice = band == 0 ? Blocks::Ice : band == 1 ? Blocks::PackedIce : band == 2 ? Blocks::BlueIce
+                                                                                                       : static_cast<BlockId>(Blocks::FrostedIce0 + (-dz) % 4);
+                            m_world->setBlock(px + dx, py - 1, pz + dz, ice);
+                        }
+                    for (int dz = 1; dz <= 7; ++dz)
+                        for (int dx = 3; dx <= 8; ++dx)
+                        {
+                            m_world->setBlock(px + dx, py - 1, pz + dz, Blocks::PowderSnow);
+                            m_world->setBlock(px + dx, py - 2, pz + dz, Blocks::PowderSnow);
+                        }
+                    for (int k = 0; k < 6; ++k) m_world->setBlock(px + 11, py + k, pz - 3, Blocks::PackedIce);
+                    for (int k = 0; k < 3; ++k) m_world->setBlock(px + 11, py + k, pz - 4, Blocks::PackedIce);
+                    m_world->setBlock(px + 11, py, pz + 3, Blocks::BlueIce);
+                    m_world->setBlock(px + 14, py, pz - 9, Blocks::Bookshelf);
+                    m_world->setBlock(px + 14, py, pz + 9, Blocks::DiamondOre);
+                    m_world->setBlock(px + 14, py + 1, pz + 9, Blocks::EndPortalFrame);
                 }
                 if (m_startupScreen == "corals")
                 {
@@ -6480,6 +6539,11 @@ void Application::updateMining(float deltaTime)
                 }
             }
             if (isRail(id)) reshapeRailsAround(hit.block);
+            if (isFrostedIce(id))
+            {
+                m_world->setBlock(hit.block.x, hit.block.y, hit.block.z, Blocks::Water);
+                m_net.onLocalBlockChange(hit.block.x, hit.block.y, hit.block.z, Blocks::Water);
+            }
             if (id == Blocks::Melon || id == Blocks::Pumpkin) Farming::unhookStemsAround(*m_world, hit.block);
 
             // A piston with its head out is two blocks pretending to
@@ -7167,6 +7231,57 @@ void Application::tickObservers(float deltaTime)
 // nowhere to keep a list, so the only honest way to know where they
 // are is to look. Cheap enough at once a second over the box the
 // player could be standing in range of.
+void Application::tickFrost(float deltaTime)
+{
+    const int walker = Enchanting::levelOf(m_inventory.slot(Inventory::ARMOR_FIRST + 3).enchantments, Enchanting::Kind::FrostWalker);
+    m_frostClock -= deltaTime;
+    if (walker > 0 && m_frostClock <= 0.0f && m_player.onGround && !m_player.isInWater(*m_world) && !m_player.flying)
+    {
+        m_frostClock = 0.1f;
+        const int radius = 2 + walker;
+        const int fx = static_cast<int>(std::floor(m_player.position.x));
+        const int fy = static_cast<int>(std::floor(m_player.position.y - 0.1f));
+        const int fz = static_cast<int>(std::floor(m_player.position.z));
+        for (int dz = -radius; dz <= radius; ++dz)
+            for (int dx = -radius; dx <= radius; ++dx)
+            {
+                if (dx * dx + dz * dz > radius * radius) continue;
+                const int x = fx + dx, z = fz + dz;
+                const BlockId under = m_world->getBlock(x, fy, z);
+                if ((under == Blocks::Water && m_world->getBlock(x, fy + 1, z) == Blocks::Air) || isFrostedIce(under))
+                {
+                    if (under != Blocks::FrostedIce0)
+                    {
+                        m_world->setBlock(x, fy, z, Blocks::FrostedIce0);
+                        m_net.onLocalBlockChange(x, fy, z, Blocks::FrostedIce0);
+                    }
+                    m_frostedIce[{ x, fy, z }] = 1.0f + static_cast<float>((x * 7 + z * 13) & 7) * 0.15f;
+                }
+            }
+    }
+
+    for (auto it = m_frostedIce.begin(); it != m_frostedIce.end(); )
+    {
+        it->second -= deltaTime;
+        if (it->second > 0.0f) { ++it; continue; }
+        const int x = it->first[0], y = it->first[1], z = it->first[2];
+        const BlockId here = m_world->getBlock(x, y, z);
+        if (!isFrostedIce(here)) { it = m_frostedIce.erase(it); continue; }
+        if (here == Blocks::FrostedIce3)
+        {
+            m_world->setBlock(x, y, z, Blocks::Water);
+            m_net.onLocalBlockChange(x, y, z, Blocks::Water);
+            it = m_frostedIce.erase(it);
+            continue;
+        }
+        const BlockId older = static_cast<BlockId>(here + 1);
+        m_world->setBlock(x, y, z, older);
+        m_net.onLocalBlockChange(x, y, z, older);
+        it->second = 1.0f + static_cast<float>((x * 5 + z * 3 + y) & 7) * 0.15f;
+        ++it;
+    }
+}
+
 void Application::tickConduits(float deltaTime)
 {
     if (!m_world) return;
@@ -10034,6 +10149,20 @@ void Application::handlePlacement()
         }
     }
 
+    if (stack.id == Items::PowderSnowBucket)
+    {
+        const RaycastHit drift = m_world->raycast(m_camera.position, m_camera.front, REACH_DISTANCE);
+        if (!drift.hit || !modeCanBuild(m_player.mode)) return;
+        const glm::ivec3 into = drift.previous;
+        const BlockId there = m_world->getBlock(into.x, into.y, into.z);
+        if (there != Blocks::Air && !isLiquid(there)) return;
+        m_world->setBlock(into.x, into.y, into.z, Blocks::PowderSnow);
+        m_net.onLocalBlockChange(into.x, into.y, into.z, Blocks::PowderSnow);
+        if (!m_player.creative()) { stack.id = Items::Bucket; stack.count = 1; }
+        m_audio.playPlace(Blocks::PowderSnow);
+        return;
+    }
+
     // Buckets: fill from a liquid you are looking at, or empty into the
     // space in front of one. The liquids here do not flow, so a bucket
     // places a single block rather than a spreading source.
@@ -10048,6 +10177,16 @@ void Application::handlePlacement()
 
         if (stack.id == Items::Bucket)
         {
+            if (looking == Blocks::PowderSnow)
+            {
+                m_world->setBlock(scoop.block.x, scoop.block.y, scoop.block.z, Blocks::Air);
+                m_net.onLocalBlockChange(scoop.block.x, scoop.block.y, scoop.block.z, Blocks::Air);
+                stack.count -= 1;
+                if (stack.count <= 0) stack.clear();
+                if (m_inventory.add(Items::PowderSnowBucket, 1) > 0) m_drops.spawn(m_player.position, Items::PowderSnowBucket, 1);
+                m_audio.play(Sound::Pickup, 0.5f, 1.2f);
+                return;
+            }
             if (!isFluidSource(looking)) return;
 
             m_world->setBlock(scoop.block.x, scoop.block.y, scoop.block.z, Blocks::Air);
@@ -10097,7 +10236,7 @@ void Application::handlePlacement()
     }
 
     // A piece of armour held in the hand is put on rather than placed.
-    if (Armour::isArmour(stack.id))
+    if (Armour::isArmour(stack.id) && isItem(stack.id))
     {
         if (m_inventory.wear(stack))
         {
@@ -12966,6 +13105,12 @@ void Application::renderHearts(float x, float y)
             const bool blink = m_player.damageFlash > 0.0f &&
                                (static_cast<int>(m_elapsedSeconds * 20.0f) / 3) % 2 == 0;
             const bool poisoned = m_player.effects.has(Effects::Kind::Poison);
+            const bool frozen = m_player.frozenSeconds >= Player::FREEZE_SECONDS;
+            static const char* FROZEN[2][2][2] = {
+                { { "sprites/hud/heart/frozen_full", "sprites/hud/heart/frozen_full_blinking" },
+                  { "sprites/hud/heart/frozen_half", "sprites/hud/heart/frozen_half_blinking" } },
+                { { "sprites/hud/heart/frozen_hardcore_full", "sprites/hud/heart/frozen_hardcore_full_blinking" },
+                  { "sprites/hud/heart/frozen_hardcore_half", "sprites/hud/heart/frozen_hardcore_half_blinking" } } };
             static const char* CONTAINER[2][2] = {
                 { "sprites/hud/heart/container", "sprites/hud/heart/container_blinking" },
                 { "sprites/hud/heart/container_hardcore", "sprites/hud/heart/container_hardcore_blinking" } };
@@ -12985,7 +13130,7 @@ void Application::renderHearts(float x, float y)
             if (remaining >= 1)
             {
                 const int half = remaining >= 2 ? 0 : 1;
-                guiSprite(poisoned ? POISON[hc][half][bl] : NORMAL[hc][half][bl],
+                guiSprite(frozen ? FROZEN[hc][half][bl] : poisoned ? POISON[hc][half][bl] : NORMAL[hc][half][bl],
                           heartX, heartY, ICON_SIZE, ICON_SIZE);
             }
             continue;
@@ -12995,15 +13140,17 @@ void Application::renderHearts(float x, float y)
         m_ui.texturedQuad(m_gui.texture(emptySprite), heartX, heartY, ICON_SIZE, ICON_SIZE,
                           0.0f, 0.0f, 1.0f, 1.0f, glm::vec4(1.0f));
 
+        const glm::vec4 heartTint = m_player.frozenSeconds >= Player::FREEZE_SECONDS ? glm::vec4(0.55f, 0.8f, 1.0f, 1.0f)
+                                                                                      : glm::vec4(1.0f);
         if (remaining >= 2)
         {
             m_ui.texturedQuad(m_gui.texture(fullSprite), heartX, heartY, ICON_SIZE, ICON_SIZE,
-                              0.0f, 0.0f, 1.0f, 1.0f, glm::vec4(1.0f));
+                              0.0f, 0.0f, 1.0f, 1.0f, heartTint);
         }
         else if (remaining == 1)
         {
             m_ui.texturedQuad(m_gui.texture(halfSprite), heartX, heartY, ICON_SIZE, ICON_SIZE,
-                              0.0f, 0.0f, 1.0f, 1.0f, glm::vec4(1.0f));
+                              0.0f, 0.0f, 1.0f, 1.0f, heartTint);
         }
     }
 }
@@ -13388,6 +13535,24 @@ void Application::renderHud()
         m_ui.texturedQuad(m_underwaterTexture, 0.0f, 0.0f, w, h,
                           4.0f * aspect + across, 4.0f + down, across, down,
                           glm::vec4(shine, shine, shine, 0.1f));
+    }
+
+    if (m_world && m_perspective == Perspective::FirstPerson)
+    {
+        const BlockId eye = m_world->getBlock(static_cast<int>(std::floor(m_camera.position.x)),
+                                              static_cast<int>(std::floor(m_camera.position.y)),
+                                              static_cast<int>(std::floor(m_camera.position.z)));
+        const float frost = eye == Blocks::PowderSnow ? 1.0f : m_player.frozenSeconds / Player::FREEZE_SECONDS;
+        if (eye == Blocks::PowderSnow) m_ui.quad(0.0f, 0.0f, w, h, glm::vec4(0.62f, 0.73f, 0.79f, 0.9f));
+        if (frost > 0.0f && !guiSprite("../misc/powder_snow_outline", 0.0f, 0.0f, w, h, glm::vec4(1.0f, 1.0f, 1.0f, frost)))
+        {
+            const float edge = std::min(w, h) * 0.14f;
+            const glm::vec4 rime(0.92f, 0.96f, 1.0f, 0.75f * frost);
+            m_ui.quad(0.0f, 0.0f, w, edge, rime);
+            m_ui.quad(0.0f, h - edge, w, edge, rime);
+            m_ui.quad(0.0f, edge, edge, h - edge * 2.0f, rime);
+            m_ui.quad(w - edge, edge, edge, h - edge * 2.0f, rime);
+        }
     }
 
     if (m_world && m_perspective == Perspective::FirstPerson &&

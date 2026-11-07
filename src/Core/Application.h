@@ -801,6 +801,10 @@ private:
     float m_conduitSweepTimer = 0.0f;
     int m_conduitSweepLayer = 0;
     float m_eggStep = 0.0f;
+    float m_freezeSting = 0.0f;
+    float m_frostClock = 0.0f;
+    std::map<std::array<int, 3>, float> m_frostedIce;
+    void tickFrost(float deltaTime);
     std::map<std::array<int, 4>, std::array<int, 2>> m_beaconPowers;
     bool m_beaconOpen = false;
     bool m_grindOpen = false;

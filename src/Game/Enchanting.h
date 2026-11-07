@@ -30,6 +30,7 @@ namespace Enchanting
         Sharpness,        // hits harder
         Protection,       // takes less
         Power,            // arrows hit harder
+        FrostWalker,
         Count
     };
 
@@ -46,6 +47,7 @@ namespace Enchanting
     // fortune are the odd pair: they do opposite things to the same
     // drop, so nothing may carry both.
     int maxLevel(Kind kind);
+    bool isTreasure(Kind kind);
     const char* name(Kind kind);
 
     // Whether this kind means anything on this item. Efficiency on a

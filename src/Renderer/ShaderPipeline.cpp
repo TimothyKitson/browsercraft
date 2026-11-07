@@ -95,7 +95,7 @@ namespace
         }
 
         if (has(name, "Glass")) { e.material = GLASS; e.smoothness = 235; return e; }
-        if (name == "Ice" || has(name, "Packed Ice") || has(name, "Blue Ice"))
+        if (name == "Ice" || has(name, "Packed Ice") || has(name, "Blue Ice") || has(name, "Frosted Ice"))
         {
             e.material = ICE;
             e.smoothness = 220;

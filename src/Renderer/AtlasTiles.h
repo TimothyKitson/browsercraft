@@ -363,6 +363,7 @@ namespace Tiles
         DeadCoralFanTileFirst, DeadCoralFanTileLast = DeadCoralFanTileFirst + 4,
         ConduitTile,
         TurtleEggTile, TurtleEggSlightlyCrackedTile, TurtleEggVeryCrackedTile,
+        PackedIceTile, BlueIceTile, FrostedIceTileFirst, FrostedIceTileLast = FrostedIceTileFirst + 3, PowderSnowTile,
 
         TileCount
     };
@@ -559,9 +560,9 @@ namespace Tiles
         ItemCopperDoorFirst, ItemCopperDoorLast = ItemCopperDoorFirst + 3,
         ItemTorchflowerSeeds, ItemPitcherPod, ItemClayBall, ItemBrick, ItemFlowerPot, ItemPitcherPlant,
         ItemPumpkinSeeds, ItemShears, ItemHoneyBottle, ItemSweetBerries, ItemDriedKelp,
-        ItemNautilusShell, ItemHeartOfTheSea, ItemTurtleScute, ItemTurtleHelmet,
+        ItemNautilusShell, ItemHeartOfTheSea, ItemTurtleScute, ItemTurtleHelmet, ItemPowderSnowBucket,
 
-        ItemTileEnd = ItemTurtleHelmet + 1
+        ItemTileEnd = ItemPowderSnowBucket + 1
     };
 
     // Ten progressively more broken overlay tiles for the mining animation.

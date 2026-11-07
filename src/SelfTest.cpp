@@ -3583,6 +3583,47 @@ namespace
               "buried treasure always holds a heart of the sea");
     }
 
+    void testIceAndSnow()
+    {
+        section("ice, frost walker and powder snow");
+
+        check(isSlippery(Blocks::Ice) && isSlippery(Blocks::PackedIce) && isSlippery(Blocks::BlueIce) &&
+              isSlippery(Blocks::FrostedIce2) && !isSlippery(Blocks::Snow), "the four ices are slippery and snow is not");
+        check(blockDrop(Blocks::PackedIce) == Blocks::Air && blockDrop(Blocks::BlueIce) == Blocks::Air,
+              "packed and blue ice need silk touch");
+        check(!isObtainable(Blocks::FrostedIce0) && !isObtainable(Blocks::PowderSnow), "frosted ice and powder snow are never carried");
+        check(blockInfo(Blocks::PackedIce).opaque && !blockInfo(Blocks::FrostedIce1).opaque, "packed ice is solid to see, frosted ice is clear");
+        auto nine = [&](StackId what) {
+            ItemStack grid[9];
+            for (ItemStack& cell : grid) { cell.id = what; cell.count = 1; }
+            return Crafting::match(grid, 3);
+        };
+        check(nine(Blocks::Ice).id == Blocks::PackedIce, "nine ice pack into packed ice");
+        check(nine(Blocks::PackedIce).id == Blocks::BlueIce, "and nine packed ice into blue ice");
+
+        using Enchanting::Kind;
+        check(Enchanting::maxLevel(Kind::FrostWalker) == 2 && Enchanting::isTreasure(Kind::FrostWalker), "frost walker goes to two and is treasure");
+        check(Enchanting::appliesTo(Kind::FrostWalker, Items::IronBoots) && !Enchanting::appliesTo(Kind::FrostWalker, Items::IronHelmet),
+              "it goes on boots only");
+        bool neverOffered = true;
+        for (uint32_t roll = 0; roll < 200; ++roll)
+            for (int row = 0; row < 3; ++row)
+                if (Enchanting::offerFor(row, 15, Items::DiamondBoots, roll * 2654435761u).kind == Kind::FrostWalker) neverOffered = false;
+        check(neverOffered, "the table never offers it");
+        bool sold = false;
+        for (const Trading::Deal& deal : Trading::dealsFor(Trading::Profession::Armorer))
+            if (deal.offer.give == Items::IronBoots && Enchanting::has(deal.offer.giveEnchantments, Kind::FrostWalker)) sold = true;
+        check(sold, "an armorer sells frost walker boots");
+        const Enchanting::Set kept = Enchanting::withLevel(Enchanting::withLevel(0u, Kind::Power, 5), Kind::FrostWalker, 2);
+        check(Enchanting::levelOf(kept, Kind::Power) == 5 && Enchanting::levelOf(kept, Kind::FrostWalker) == 2,
+              "and it packs beside the old kinds without disturbing them");
+
+        check(!blockInfo(Blocks::PowderSnow).collides && blockMaterial(Blocks::PowderSnow) == Material::Snow,
+              "powder snow is walked into and dug with a shovel");
+        check(maxStackOf(Items::PowderSnowBucket) == 1, "a powder snow bucket does not stack");
+        check(Player::FREEZE_SECONDS > 0.0f, "freezing takes time");
+    }
+
     // --- the workstations -----------------------------------------------
 
     // A village had a bench and a furnace in it and nothing else
@@ -13533,6 +13574,7 @@ int runSelfTest()
     testMelonAndBamboo();
     testPumpkinsAndBees();
     testOcean();
+    testIceAndSnow();
     testMadeThings();
     testTheEndAndTheSea();
     testPathfinding();

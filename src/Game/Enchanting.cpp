@@ -34,10 +34,13 @@ namespace Enchanting
         case Kind::Sharpness:  return 5;
         case Kind::Protection: return 4;
         case Kind::Power:      return 5;
+        case Kind::FrostWalker: return 2;
         default: break;
         }
         return 0;
     }
+
+    bool isTreasure(Kind kind) { return kind == Kind::FrostWalker; }
 
     const char* name(Kind kind)
     {
@@ -50,6 +53,7 @@ namespace Enchanting
         case Kind::Sharpness:  return "Sharpness";
         case Kind::Protection: return "Protection";
         case Kind::Power:      return "Power";
+        case Kind::FrostWalker: return "Frost Walker";
         default: break;
         }
         return "";
@@ -78,6 +82,7 @@ namespace Enchanting
         case Kind::Sharpness:  return tool == Tools::Kind::Sword || tool == Tools::Kind::Axe;
         case Kind::Protection: return Armour::slotFor(item) >= 0;
         case Kind::Power:      return item == Items::Bow;
+        case Kind::FrostWalker: return Armour::pieceOf(item) == Armour::Piece::Boots;
         default: break;
         }
         return false;
@@ -239,7 +244,7 @@ namespace Enchanting
         for (int i = 0; i < static_cast<int>(Kind::Count); ++i)
         {
             const Kind kind = static_cast<Kind>(i);
-            if (appliesTo(kind, item)) fits.push_back(kind);
+            if (appliesTo(kind, item) && !isTreasure(kind)) fits.push_back(kind);
         }
         if (fits.empty())
         {

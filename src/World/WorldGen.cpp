@@ -655,10 +655,14 @@ void WorldGen::generateColumns(Chunk& chunk) const
             // what the block audit is for, and what it said the moment
             // it was repaired.
             const bool cold = freezesAt(wx, wz);
+            const float floe = cold ? hashToFloat(hashCoords(wx >> 2, 17, wz >> 2, m_seed + 6601)) : 1.0f;
             for (int y = surface + 1; y <= SEA_LEVEL; ++y)
             {
                 const bool freezes = cold && (y == SEA_LEVEL);
-                chunk.setBlockRaw(lx, y, lz, freezes ? Blocks::Ice : Blocks::Water);
+                BlockId ice = Blocks::Ice;
+                if (floe < 0.04f) ice = Blocks::PackedIce;
+                else if (floe < 0.05f) ice = Blocks::BlueIce;
+                chunk.setBlockRaw(lx, y, lz, freezes ? ice : Blocks::Water);
             }
         }
     }
@@ -3069,6 +3073,24 @@ void WorldGen::decorate(Chunk& chunk) const
             {
                 if (roll < 0.03f)
                     chunk.setBlockRaw(lx, above, lz, roll < 0.015f ? Blocks::BrownMushroom : Blocks::RedMushroom);
+                continue;
+            }
+
+            if (biome == Biome::Snowy && (ground == Blocks::SnowGrass || ground == Blocks::Snow) && roll >= 0.004f && roll < 0.0046f)
+            {
+                const int spire = 4 + static_cast<int>(hashToFloat(hashCoords(wx, 21, wz, m_seed + 6611)) * 6.0f);
+                for (int k = 0; k < spire && above + k < Chunk::SY; ++k)
+                    chunk.setBlockRaw(lx, above + k, lz, Blocks::PackedIce);
+                continue;
+            }
+
+            if ((biome == Biome::Snowy || biome == Biome::Mountains) && (ground == Blocks::SnowGrass || ground == Blocks::Snow) &&
+                hashToFloat(hashCoords(wx >> 2, 23, wz >> 2, m_seed + 6613)) < 0.05f &&
+                hashToFloat(hashCoords(wx, 24, wz, m_seed + 6614)) < 0.7f)
+            {
+                chunk.setBlockRaw(lx, above - 1, lz, Blocks::PowderSnow);
+                if (above >= 2 && chunk.getBlock(lx, above - 2, lz) != Blocks::Air)
+                    chunk.setBlockRaw(lx, above - 2, lz, Blocks::PowderSnow);
                 continue;
             }
 

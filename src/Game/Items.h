@@ -317,6 +317,7 @@ namespace Items
         HeartOfTheSea,
         TurtleScute,
         TurtleHelmet,
+        PowderSnowBucket,
         Count
     };
 }

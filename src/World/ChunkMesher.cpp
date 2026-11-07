@@ -52,7 +52,7 @@ namespace
 
     bool usesTransparentPass(BlockId id)
     {
-        return isLiquid(id) || isGlassLike(id) || isPane(id) || id == Blocks::Ice;
+        return isLiquid(id) || isGlassLike(id) || isPane(id) || id == Blocks::Ice || isFrostedIce(id);
     }
 
     // Should the face between `self` and `neighbour` be drawn?
@@ -74,6 +74,7 @@ namespace
         if (isLeaves(self) && isLeaves(neighbour)) return true;
 
         if (neighbour == self) return false;  // hide interior faces of water and glass
+        if ((self == Blocks::Ice || isFrostedIce(self)) && (neighbour == Blocks::Ice || isFrostedIce(neighbour))) return false;
 
         // The sea does not draw a face against what grows in it. Kelp
         // and seagrass stand in the water rather than beside it, and
@@ -292,7 +293,7 @@ namespace
 
             int tile = still.tileSide;
             if (f == 3) tile = still.tileBottom;
-            else if (water && (isLeaves(next) || isGlassLike(next) || isPane(next) || next == Blocks::Ice ||
+            else if (water && (isLeaves(next) || isGlassLike(next) || isPane(next) || next == Blocks::Ice || isFrostedIce(next) ||
                                next == Blocks::SlimeBlock))
                 tile = Tiles::WaterOverlay;
             const TileUV uv = tileUV(tile);
