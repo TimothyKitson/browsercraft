@@ -3819,6 +3819,30 @@ namespace
         t.speckle(4, 686);
     }
 
+    void paintGlowFrameBorder(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 0; y < Tile::N; ++y)
+            for (int x = 0; x < Tile::N; ++x)
+            {
+                const int edge = std::min(std::min(x, Tile::N - 1 - x), std::min(y, Tile::N - 1 - y));
+                if (edge >= 3) continue;
+                t.set(x, y, (edge == 0) ? Color{ 34, 96, 96 } : (edge == 1) ? Color{ 120, 230, 206 } : Color{ 64, 166, 158 });
+            }
+    }
+
+    void paintItemGlowFrame(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 2; y < 14; ++y)
+            for (int x = 2; x < 14; ++x)
+            {
+                const int edge = std::min(std::min(x - 2, 13 - x), std::min(y - 2, 13 - y));
+                if (edge >= 2) t.set(x, y, Color{ 92, 72, 46 });
+                else t.set(x, y, edge == 0 ? Color{ 40, 120, 116 } : Color{ 120, 230, 206 });
+            }
+    }
+
     void paintItemArmorStand(Tile& t)
     {
         t.fill(Color{ 0, 0, 0, 0 });
@@ -9053,6 +9077,8 @@ namespace
         { Tiles::LlamaSpitTile, paintLlamaSpit },
         { Tiles::ItemPainting, paintItemPainting },
         { Tiles::ItemArmorStand, paintItemArmorStand },
+        { Tiles::ItemGlowItemFrame, paintItemGlowFrame },
+        { Tiles::GlowItemFrameTile, paintGlowFrameBorder },
         { Tiles::ItemNetheriteScrap, paintItemNetheriteScrap },
         { Tiles::ItemNetheriteIngot, paintItemNetheriteIngot },
         { Tiles::ItemShulkerShell, paintItemShulkerShell },
@@ -9751,6 +9777,7 @@ namespace
         { Tiles::ItemGlowInkSac,    { "glow_ink_sac", nullptr, nullptr } },
         { Tiles::ItemPainting,      { "painting", nullptr, nullptr } },
         { Tiles::ItemArmorStand,    { "armor_stand", nullptr, nullptr } },
+        { Tiles::ItemGlowItemFrame, { "glow_item_frame", nullptr, nullptr } },
         { Tiles::ItemLingeringPotion, { "lingering_potion", nullptr, nullptr } },
         { Tiles::BowPulling0,       { "bow_pulling_0", nullptr, nullptr } },
         { Tiles::BowPulling1,       { "bow_pulling_1", nullptr, nullptr } },
@@ -11222,6 +11249,7 @@ namespace
         // planks are what it is made of, and the words go over it.
         { Tiles::SignTile,      { "oak_planks", "planks_oak", nullptr },               Tinting::None,    0,   false },
         { Tiles::ItemFrameTile, { "item_frame", nullptr },                             Tinting::None,    0,   false },
+        { Tiles::GlowItemFrameTile, { "glow_item_frame", nullptr },                    Tinting::None,    0,   false },
         { Tiles::ShulkerBoxTile,{ "shulker_box", nullptr },                            Tinting::None,    0,   false },
         { Tiles::WoolFirst +  0, { "orange_wool", nullptr },                       Tinting::None,    0,   false },
         { Tiles::WoolFirst +  1, { "magenta_wool", nullptr },                      Tinting::None,    0,   false },

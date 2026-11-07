@@ -12603,6 +12603,20 @@ namespace
             check(!isSign(frame), "a frame is not a sign");
         }
         check(frameFacingAs(9) == Blocks::FrameWest, "a facing cannot run off the end");
+        for (int facing = 0; facing < 4; ++facing)
+        {
+            const BlockId glowing = frameFacingAs(facing, true);
+            check(isFrame(glowing) && isGlowFrame(glowing) && frameFacing(glowing) == facing && !isGlowFrame(frameFacingAs(facing)),
+                  "a glow item frame hangs four ways like a plain one");
+        }
+        check(blockDrop(Blocks::GlowFrameEast) == Items::GlowItemFrame, "and comes back as a glow item frame");
+        {
+            ItemStack grid[9];
+            for (ItemStack& cell : grid) cell.clear();
+            grid[0] = ItemStack{ Items::ItemFrame, 1 };
+            grid[4] = ItemStack{ Items::GlowInkSac, 1 };
+            check(Crafting::match(grid, 3).id == Items::GlowItemFrame, "an item frame and a glow ink sac make one");
+        }
 
         // The four facings have to agree with the way a wall is faced,
         // or the words and the item stand inside the wall instead of

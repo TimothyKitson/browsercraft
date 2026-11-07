@@ -69,6 +69,7 @@ public:
         float halfWidth = 0.0f;
         float height = 0.0f;
         float outset = 0.46f;
+        bool glow = false;
     };
     void clearPinned() { m_pinned.clear(); m_cargo.clear(); }
     void pin(const Pinned& one) { m_pinned.push_back(one); }

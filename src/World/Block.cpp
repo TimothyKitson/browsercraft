@@ -2428,6 +2428,10 @@ namespace
         { "Light", ItemLightFirst + 15, ItemLightFirst + 15, ItemLightFirst + 15, false, false, RenderType::None, 15, -1.0f },
         { "Structure Void", ItemStructureVoid, ItemStructureVoid, ItemStructureVoid, false, false, RenderType::None, 0, -1.0f },
         { "Frogspawn",    FrogspawnTile, FrogspawnTile,  FrogspawnTile,  false, false, RenderType::Flat,   0,   0.0f },
+        { "Glow Item Frame", GlowItemFrameTile, GlowItemFrameTile, GlowItemFrameTile, false, false, RenderType::Ladder, 0, 0.3f },
+        { "Glow Item Frame", GlowItemFrameTile, GlowItemFrameTile, GlowItemFrameTile, false, false, RenderType::Ladder, 0, 0.3f },
+        { "Glow Item Frame", GlowItemFrameTile, GlowItemFrameTile, GlowItemFrameTile, false, false, RenderType::Ladder, 0, 0.3f },
+        { "Glow Item Frame", GlowItemFrameTile, GlowItemFrameTile, GlowItemFrameTile, false, false, RenderType::Ladder, 0, 0.3f },
     };
 }
 

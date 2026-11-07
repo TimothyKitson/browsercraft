@@ -428,7 +428,7 @@ void DroppedItems::render(Shader& chunkShader, const World& world)
             ++ly;
 
         const float sky = world.skyLight(lx, ly, lz) / 15.0f;
-        const float blockLight =
+        const float blockLight = shown.glow ? 1.0f :
             std::max<float>(world.blockLightAt(lx, ly, lz),
                             (shown.tile >= 0 || isItem(shown.item)) ? 0 : lightEmission(asBlock(shown.item)))
             / 15.0f;

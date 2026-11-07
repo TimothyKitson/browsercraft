@@ -379,6 +379,7 @@ namespace
         { "Glow Ink Sac", Tiles::ItemGlowInkSac, 64 },
         { "Painting", Tiles::ItemPainting, 64 },
         { "Armor Stand", Tiles::ItemArmorStand, 16 },
+        { "Glow Item Frame", Tiles::ItemGlowItemFrame, 64 },
     };
 
     static_assert(sizeof(ITEMS) / sizeof(ITEMS[0]) ==
@@ -557,6 +558,7 @@ StackId blockDrop(BlockId id)
     if (isNylium(id)) return Blocks::Netherrack;
     if (id == Blocks::WeepingVinesPlant) return Blocks::WeepingVines;
     if (id == Blocks::TwistingVinesPlant) return Blocks::TwistingVines;
+    if (isGlowFrame(id)) return Items::GlowItemFrame;
     if (isFrame(id)) return Items::ItemFrame;
 
     if (isAttachedStem(id)) return attachedStemIsPumpkin(id) ? Items::PumpkinSeeds : Items::MelonSeeds;

@@ -1082,6 +1082,7 @@ namespace
         { false, 2, 2, { Items::RabbitHide, Items::RabbitHide,
                          Items::RabbitHide, Items::RabbitHide }, 0, Items::Leather, 1 },
         { true, 0, 0, { Items::Book, Items::InkSac, Items::Feather }, 3, Items::WritableBook, 1 },
+        { true, 0, 0, { Items::ItemFrame, Items::GlowInkSac }, 2, Items::GlowItemFrame, 1 },
         { true, 0, 0, { Items::BlazePowder, Items::Gunpowder, Items::Coal }, 3, Items::FireCharge, 3 },
         { false, 3, 3, { Items::ArmadilloScute, _, _,
                          Items::ArmadilloScute, Items::ArmadilloScute, Items::ArmadilloScute,

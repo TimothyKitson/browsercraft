@@ -458,6 +458,7 @@ namespace Items
         GlowInkSac,
         Painting,
         ArmorStand,
+        GlowItemFrame,
         Count
     };
 }
