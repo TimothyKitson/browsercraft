@@ -247,6 +247,11 @@ int flatIconFor(BlockId id)
     if (isDoor(id) && copperForm(id).family == CopperFamily::Door)
         return Tiles::ItemCopperDoorFirst + copperForm(id).stage;
     if (isLightningRod(id)) return Tiles::LightningRodTile;
+    if (isRepeater(id)) return Tiles::ItemRepeater;
+    if (isComparator(id)) return Tiles::ItemComparator;
+    if (isIronDoor(id)) return Tiles::ItemIronDoor;
+    if (isTurtleEgg(id)) return Tiles::ItemTurtleEggIcon;
+    if (isTripwireHook(id)) return Tiles::ItemTripwireHook;
     if (isDoublePlant(id))
     {
         switch (doublePlantKind(id))
@@ -391,6 +396,15 @@ StackId blockDrop(BlockId id)
     if (isLiveCoralPlant(id) || isDeadCoralPlant(id) || isAnyCoralFan(id) || isAnyCoralWallFan(id)) return Blocks::Air;
     if (isTallSeagrass(id) || isTurtleEgg(id)) return Blocks::Air;
     if (id == Blocks::PackedIce || id == Blocks::BlueIce || isFrostedIce(id) || id == Blocks::PowderSnow) return Blocks::Air;
+    if (isRepeater(id)) return repeaterOf(0, 1, false);
+    if (isComparator(id)) return comparatorOf(0, false, false);
+    if (isDaylightDetector(id)) return Blocks::DaylightDetector;
+    if (isTarget(id)) return Blocks::Target;
+    if (isTripwireHook(id)) return Items::TripwireHook;
+    if (isTripwire(id)) return Items::StringItem;
+    if (isSpecialRail(id)) return specialRailOf(specialRailFamily(id), false, false);
+    if (isIronDoor(id)) return Blocks::IronDoorFirst;
+    if (isIronTrapdoor(id)) return Blocks::IronTrapdoorFirst;
 
     // A melon comes apart into slices rather than into a melon, which
     // is Minecraft's and is what makes one worth planting.

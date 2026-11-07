@@ -1862,6 +1862,7 @@ bool Application::frame()
         if (playing()) tickDragonFight(deltaTime);
         if (playing()) tickBeacons(deltaTime);
         if (playing()) tickConduits(deltaTime);
+        if (playing()) tickWiring(deltaTime);
         if (playing()) tickObservers(deltaTime);
         if (playing()) tickHoppers(deltaTime);
 
@@ -2116,7 +2117,7 @@ bool Application::frame()
             m_startupScreen == "stones" || m_startupScreen == "colours" || m_startupScreen == "candles" ||
             m_startupScreen == "shulkerboxes" || m_startupScreen == "beds" || m_startupScreen == "chests" ||
             m_startupScreen == "copper" || m_startupScreen == "flowers" || m_startupScreen == "mushrooms" || m_startupScreen == "lush" ||
-            m_startupScreen == "farm" || m_startupScreen == "corals" || m_startupScreen == "ice" ||
+            m_startupScreen == "farm" || m_startupScreen == "corals" || m_startupScreen == "ice" || m_startupScreen == "wiring" ||
             m_startupScreen == "boat" || m_startupScreen == "rails" ||
             m_startupScreen == "mobs" || m_startupScreen == "golem" ||
             m_startupScreen == "glowmobs" || m_startupScreen == "variants" ||
@@ -2214,6 +2215,7 @@ bool Application::frame()
                                   m_startupScreen != "farm" &&
                                   m_startupScreen != "corals" &&
                                   m_startupScreen != "ice" &&
+                                  m_startupScreen != "wiring" &&
                                   m_startupScreen != "boat" &&
                                   m_startupScreen != "rails" &&
                                   m_startupScreen != "mobs" &&
@@ -2591,7 +2593,8 @@ bool Application::frame()
                 m_startupScreen == "stones" || m_startupScreen == "colours" || m_startupScreen == "candles" ||
                 m_startupScreen == "shulkerboxes" || m_startupScreen == "beds" || m_startupScreen == "chests" ||
                 m_startupScreen == "copper" || m_startupScreen == "flowers" || m_startupScreen == "mushrooms" ||
-                m_startupScreen == "lush" || m_startupScreen == "farm" || m_startupScreen == "corals" || m_startupScreen == "ice")
+                m_startupScreen == "lush" || m_startupScreen == "farm" || m_startupScreen == "corals" || m_startupScreen == "ice" ||
+                m_startupScreen == "wiring")
             {
                 m_camera.setOrientation(0.0f, -25.0f);
                 m_camera.addLook(0.0f, 0.0f, 0.0f);
@@ -2732,6 +2735,65 @@ bool Application::frame()
                     m_world->setBlock(px + 12, py, pz - 8, Blocks::Bookshelf);
                     m_world->setBlock(px + 12, py, pz + 8, Blocks::DiamondOre);
                     m_world->setBlock(px + 12, py + 1, pz + 8, Blocks::EndPortalFrame);
+                }
+                if (m_startupScreen == "wiring")
+                {
+                    m_devAttackStrength = 1.0f;
+                    m_camera.setOrientation(0.0f, -40.0f);
+                    for (int dx = -1; dx <= 1; ++dx)
+                        for (int dz = -1; dz <= 1; ++dz)
+                            for (int dy = 0; dy <= 6; ++dy) m_world->setBlock(px + dx, py + dy, pz + dz, Blocks::Air);
+                    for (int dy = 0; dy < 3; ++dy) m_world->setBlock(px, py + dy, pz, Blocks::Stone);
+                    m_player.position.y = static_cast<float>(py + 3);
+                    for (int dx = 1; dx <= 13; ++dx)
+                        for (int dz = -8; dz <= 8; ++dz)
+                        {
+                            for (int dy = 0; dy <= 6; ++dy) m_world->setBlock(px + dx, py + dy, pz + dz, Blocks::Air);
+                            m_world->setBlock(px + dx, py - 1, pz + dz, Blocks::SmoothStone);
+                        }
+                    auto put = [&](int dx, int dy, int dz, BlockId id) { m_world->setBlock(px + dx, py + dy, pz + dz, id); };
+                    put(3, 0, -6, Blocks::LeverOn);
+                    put(4, 0, -6, Blocks::RedstoneDust);
+                    put(5, 0, -6, repeaterOf(1, 3, false));
+                    put(6, 0, -6, Blocks::RedstoneDust);
+                    put(7, 0, -6, repeaterOf(1, 1, false));
+                    put(8, 0, -6, Blocks::RedstoneLamp);
+                    put(3, 0, -3, Blocks::Chest);
+                    m_chests.at(glm::ivec3(px + 3, py, pz - 3))[0] = ItemStack{ Items::Diamond, 1 };
+                    put(4, 0, -3, comparatorOf(1, false, false));
+                    m_comparators.insert({ px + 4, py, pz - 3 });
+                    put(5, 0, -3, Blocks::RedstoneDust);
+                    put(6, 0, -3, Blocks::RedstoneLamp);
+                    put(4, 0, 0, Blocks::DaylightDetector);
+                    m_daylightDetectors.insert({ px + 4, py, pz });
+                    put(5, 0, 0, Blocks::RedstoneDust);
+                    put(6, 0, 0, Blocks::RedstoneLamp);
+                    put(4, 0, 2, Blocks::Target);
+                    put(5, 0, 2, Blocks::RedstoneLamp);
+                    put(3, 0, 4, Blocks::Planks);
+                    put(4, 0, 4, hookOf(1, false, false));
+                    for (int dx = 5; dx <= 8; ++dx) put(dx, 0, 4, Blocks::Tripwire);
+                    put(9, 0, 4, hookOf(3, false, false));
+                    put(10, 0, 4, Blocks::Planks);
+                    rewireTripwire(glm::ivec3(px + 6, py, pz + 4));
+                    for (int dx = 3; dx <= 9; ++dx)
+                        put(dx, 0, 7, dx < 6 ? specialRailOf(1, true, false) : dx < 8 ? specialRailOf(2, true, false) : specialRailOf(3, true, false));
+                    put(4, 0, 8, Blocks::RedstoneBlock);
+                    put(9, 0, 8, Blocks::RedstoneBlock);
+                    put(11, 0, -4, doorPart(Blocks::IronDoorFirst, 3, false, false));
+                    put(11, 1, -4, doorPart(Blocks::IronDoorFirst, 3, true, false));
+                    put(11, 0, -3, Blocks::RedstoneBlock);
+                    put(11, 0, -1, doorPart(Blocks::IronDoorFirst, 3, false, false));
+                    put(11, 1, -1, doorPart(Blocks::IronDoorFirst, 3, true, false));
+                    put(11, 0, 1, trapdoorPart(Blocks::IronTrapdoorFirst, 3, false, false));
+                    put(12, 0, 1, Blocks::RedstoneBlock);
+                    put(11, 0, 3, trapdoorPart(Blocks::IronTrapdoorFirst, 3, false, false));
+                    for (const glm::ivec3& spot : { glm::ivec3(4, 0, -6), glm::ivec3(4, 0, -3), glm::ivec3(5, 0, 0), glm::ivec3(5, 0, 7),
+                                                    glm::ivec3(11, 0, -3), glm::ivec3(12, 0, 1) })
+                        settleRedstone(glm::ivec3(px, py, pz) + spot);
+                    put(13, 0, -8, Blocks::Bookshelf);
+                    put(13, 0, 8, Blocks::DiamondOre);
+                    put(13, 1, 8, Blocks::EndPortalFrame);
                 }
                 if (m_startupScreen == "ice")
                 {
@@ -6764,7 +6826,7 @@ void Application::updateMining(float deltaTime)
             if (Redstone::isWire(above) || above == Blocks::RedstoneTorch ||
                 above == Blocks::RedstoneTorchOff || above == Blocks::LeverOff ||
                 above == Blocks::LeverOn || above == Blocks::ButtonOff ||
-                above == Blocks::ButtonOn)
+                above == Blocks::ButtonOn || isDiode(above))
             {
                 m_world->setBlock(over.x, over.y, over.z, Blocks::Air);
                 m_net.onLocalBlockChange(over.x, over.y, over.z, Blocks::Air);
@@ -6776,6 +6838,7 @@ void Application::updateMining(float deltaTime)
         // Whatever that was, the power around it has to be worked out
         // again: a broken wire puts out everything downstream of it.
         settleRedstone(hit.block);
+        if (isTripwireHook(id) || isTripwire(id)) rewireTripwire(hit.block);
 
         // And anything watching that cell has seen a change. Breaking
         // counts as much as placing: an observer that only noticed
@@ -7298,7 +7361,12 @@ void Application::tickConduits(float deltaTime)
         if (y > 0 && y < Chunk::SY)
             for (int z = pz - 24; z <= pz + 24; ++z)
                 for (int x = px - 24; x <= px + 24; ++x)
-                    if (m_world->getBlock(x, y, z) == Blocks::Conduit) m_conduits.insert({ x, y, z });
+                {
+                    const BlockId found = m_world->getBlock(x, y, z);
+                    if (found == Blocks::Conduit) m_conduits.insert({ x, y, z });
+                    else if (isComparator(found)) m_comparators.insert({ x, y, z });
+                    else if (isDaylightDetector(found)) m_daylightDetectors.insert({ x, y, z });
+                }
     }
 
     m_conduitTimer -= deltaTime;
@@ -8505,6 +8573,13 @@ void Application::settleRedstone(const glm::ivec3& at)
                 // plays comes off where it stands, so a row of them
                 // is a row of different notes rather than one note
                 // repeated.
+                if (isDiode(here))
+                {
+                    const bool want = isRepeater(here) ? Redstone::diodeInput(cells, x, y, z) : comparatorWants(glm::ivec3(x, y, z));
+                    if (want != diodeLit(here)) scheduleDiode(glm::ivec3(x, y, z), here, want);
+                    continue;
+                }
+
                 if (isNoteBlock(here))
                 {
                     const std::array<int, 3> cell = { x, y, z };
@@ -8599,6 +8674,183 @@ void Application::settleRedstone(const glm::ivec3& at)
     if (moved) m_audio.play(Sound::DigStone, 0.5f, 1.6f);
 }
 
+void Application::scheduleDiode(const glm::ivec3& at, BlockId now, bool wantLit)
+{
+    const BlockId flipped = isRepeater(now) ? repeaterOf(repeaterOut(now), repeaterDelay(now), wantLit)
+                                            : comparatorOf(comparatorOut(now), comparatorSubtracts(now), wantLit);
+    for (const TimedBlock& timed : m_timedBlocks)
+        if (timed.at == at && timed.expect == now && timed.then == flipped) return;
+    const float delay = isRepeater(now) ? 0.1f * static_cast<float>(repeaterDelay(now)) : 0.1f;
+    setBlockFor(at, now, flipped, delay);
+}
+
+bool Application::containerSignal(const glm::ivec3& at)
+{
+    const BlockId here = m_world->getBlock(at.x, at.y, at.z);
+    if (isComposter(here)) return here != Blocks::Composter0;
+    if (isCauldron(here)) return here != Blocks::Cauldron0;
+    if (isCake(here) || here == Blocks::LecternBook || here == Blocks::EndPortalFrameFilled) return true;
+    if (isHive(here)) return hiveHoney(here) > 0;
+    if (isFurnaceBlock(here))
+    {
+        if (!m_furnaces.has(at)) return false;
+        const Furnaces::State& state = m_furnaces.at(at);
+        return !state.input.empty() || !state.fuel.empty() || !state.output.empty();
+    }
+    if (m_chests.has(at))
+    {
+        for (const ItemStack& stack : m_chests.at(at))
+            if (!stack.empty()) return true;
+    }
+    return false;
+}
+
+bool Application::comparatorWants(const glm::ivec3& at)
+{
+    WorldCells cells;
+    cells.world = m_world.get();
+    const BlockId self = m_world->getBlock(at.x, at.y, at.z);
+    if (!isComparator(self)) return false;
+    static const int DX[4] = { 0, 1, 0, -1 };
+    static const int DZ[4] = { -1, 0, 1, 0 };
+    const int back = (comparatorOut(self) + 2) & 3;
+    const glm::ivec3 rear(at.x + DX[back], at.y, at.z + DZ[back]);
+    bool signal = Redstone::diodeInput(cells, at.x, at.y, at.z) || containerSignal(rear);
+    if (!signal && isOpaque(m_world->getBlock(rear.x, rear.y, rear.z)))
+        signal = containerSignal(glm::ivec3(rear.x + DX[back], rear.y, rear.z + DZ[back]));
+    if (comparatorSubtracts(self)) return signal && !Redstone::diodeSide(cells, at.x, at.y, at.z);
+    return signal;
+}
+
+void Application::rewireTripwire(const glm::ivec3& at)
+{
+    static const int DX[4] = { 0, 1, 0, -1 };
+    static const int DZ[4] = { -1, 0, 1, 0 };
+    for (int axis = 0; axis < 2; ++axis)
+        for (int k = -41; k <= 41; ++k)
+        {
+            const glm::ivec3 cell(at.x + (axis == 0 ? k : 0), at.y, at.z + (axis == 1 ? k : 0));
+            const BlockId hook = m_world->getBlock(cell.x, cell.y, cell.z);
+            if (!isTripwireHook(hook)) continue;
+            const int f = hookFacing(hook);
+            bool attached = false;
+            for (int i = 1; i <= 41; ++i)
+            {
+                const BlockId along = m_world->getBlock(cell.x + DX[f] * i, cell.y, cell.z + DZ[f] * i);
+                if (isTripwire(along)) continue;
+                attached = i >= 2 && isTripwireHook(along) && hookFacing(along) == ((f + 2) & 3);
+                break;
+            }
+            const BlockId want = hookOf(f, attached, hookPowered(hook));
+            if (want != hook)
+            {
+                m_world->setBlock(cell.x, cell.y, cell.z, want);
+                m_net.onLocalBlockChange(cell.x, cell.y, cell.z, want);
+            }
+        }
+}
+
+void Application::tickWiring(float deltaTime)
+{
+    if (!m_world) return;
+    m_wiringClock -= deltaTime;
+    if (m_wiringClock > 0.0f) return;
+    m_wiringClock = 0.1f;
+
+    static const int DX[4] = { 0, 1, 0, -1 };
+    static const int DZ[4] = { -1, 0, 1, 0 };
+
+    std::vector<glm::vec3> feet;
+    feet.push_back(m_player.position);
+    for (const Mob& mob : m_entities.mobs())
+        if (mob.alive()) feet.push_back(mob.position());
+    for (const glm::vec3& f : feet)
+    {
+        const glm::ivec3 cell(static_cast<int>(std::floor(f.x)), static_cast<int>(std::floor(f.y + 0.05f)),
+                              static_cast<int>(std::floor(f.z)));
+        const BlockId wire = m_world->getBlock(cell.x, cell.y, cell.z);
+        if (!isTripwire(wire)) continue;
+        setBlockFor(cell, Blocks::TripwireActive, Blocks::Tripwire, 0.5f);
+        for (int axis = 0; axis < 2; ++axis)
+        {
+            glm::ivec3 ends[2];
+            bool found[2] = { false, false };
+            for (int side = 0; side < 2; ++side)
+            {
+                const int f = axis == 0 ? (side == 0 ? 1 : 3) : (side == 0 ? 2 : 0);
+                for (int i = 1; i <= 41; ++i)
+                {
+                    const glm::ivec3 c(cell.x + DX[f] * i, cell.y, cell.z + DZ[f] * i);
+                    const BlockId along = m_world->getBlock(c.x, c.y, c.z);
+                    if (isTripwire(along)) continue;
+                    if (isTripwireHook(along) && hookFacing(along) == ((f + 2) & 3)) { ends[side] = c; found[side] = true; }
+                    break;
+                }
+            }
+            if (!found[0] || !found[1]) continue;
+            for (const glm::ivec3& end : ends)
+            {
+                const BlockId hook = m_world->getBlock(end.x, end.y, end.z);
+                const bool fresh = !hookPowered(hook);
+                setBlockFor(end, hookOf(hookFacing(hook), true, true), hookOf(hookFacing(hook), true, false), 0.5f);
+                if (fresh)
+                {
+                    settleRedstone(end);
+                    m_audio.play(Sound::Click, 0.5f, 1.4f);
+                }
+            }
+        }
+    }
+
+    for (Mob& mob : m_entities.mobs())
+    {
+        if (!mob.alive() || !mob.type().ridesRails) continue;
+        const glm::vec3 p = mob.position();
+        const glm::ivec3 cell(static_cast<int>(std::floor(p.x)), static_cast<int>(std::floor(p.y + 0.1f)),
+                              static_cast<int>(std::floor(p.z)));
+        const BlockId rail = m_world->getBlock(cell.x, cell.y, cell.z);
+        if (specialRailFamily(rail) == 2)
+        {
+            const bool fresh = !specialRailPowered(rail);
+            setBlockFor(cell, specialRailOf(2, specialRailEastWest(rail), true), specialRailOf(2, specialRailEastWest(rail), false), 0.5f);
+            if (fresh) settleRedstone(cell);
+        }
+        if (specialRailFamily(rail) == 3 && specialRailPowered(rail) && riddenMob() == &mob) dismount();
+    }
+
+    for (auto it = m_comparators.begin(); it != m_comparators.end(); )
+    {
+        const glm::ivec3 at((*it)[0], (*it)[1], (*it)[2]);
+        const BlockId here = m_world->getBlock(at.x, at.y, at.z);
+        if (!isComparator(here)) { it = m_comparators.erase(it); continue; }
+        ++it;
+        const bool want = comparatorWants(at);
+        if (want != comparatorLit(here)) scheduleDiode(at, here, want);
+    }
+
+    m_daylightClock -= 0.1f;
+    if (m_daylightClock <= 0.0f)
+    {
+        m_daylightClock = 1.0f;
+        for (auto it = m_daylightDetectors.begin(); it != m_daylightDetectors.end(); )
+        {
+            const glm::ivec3 at((*it)[0], (*it)[1], (*it)[2]);
+            const BlockId here = m_world->getBlock(at.x, at.y, at.z);
+            if (!isDaylightDetector(here)) { it = m_daylightDetectors.erase(it); continue; }
+            ++it;
+            const float level = hasSky() ? static_cast<float>(m_world->skyLight(at.x, at.y, at.z)) * viewDaylight() : 0.0f;
+            const bool day = level >= 8.0f;
+            const BlockId want = daylightOf(daylightInverted(here), daylightInverted(here) ? !day : day);
+            if (want != here)
+            {
+                m_world->setBlock(at.x, at.y, at.z, want);
+                m_net.onLocalBlockChange(at.x, at.y, at.z, want);
+                settleRedstone(at);
+            }
+        }
+    }
+}
+
 void Application::reshapeRailsAround(const glm::ivec3& at)
 {
     const glm::ivec3 around[5] = {
@@ -8613,6 +8865,18 @@ void Application::reshapeRailsAround(const glm::ivec3& at)
     {
         const BlockId here = m_world->getBlock(cell.x, cell.y, cell.z);
         if (!isRail(here)) continue;
+        if (isSpecialRail(here))
+        {
+            const bool ns = isRail(m_world->getBlock(cell.x, cell.y, cell.z - 1)) || isRail(m_world->getBlock(cell.x, cell.y, cell.z + 1));
+            const bool ew = isRail(m_world->getBlock(cell.x + 1, cell.y, cell.z)) || isRail(m_world->getBlock(cell.x - 1, cell.y, cell.z));
+            const BlockId shaped = specialRailOf(specialRailFamily(here), ew && !ns, specialRailPowered(here));
+            if (shaped != here)
+            {
+                m_world->setBlock(cell.x, cell.y, cell.z, shaped);
+                m_net.onLocalBlockChange(cell.x, cell.y, cell.z, shaped);
+            }
+            continue;
+        }
 
         const BlockId want = railShapeFor(
             isRail(m_world->getBlock(cell.x, cell.y, cell.z - 1)),
@@ -9894,7 +10158,20 @@ void Application::handlePlacement()
             }
             if (isDoor(used))
             {
-                swingDoor(bench.block);
+                if (!isIronDoor(used)) swingDoor(bench.block);
+                return;
+            }
+            if (isIronTrapdoor(used)) return;
+            if (isDiode(used) || isDaylightDetector(used))
+            {
+                BlockId next = used;
+                if (isRepeater(used)) next = repeaterOf(repeaterOut(used), repeaterDelay(used) % 4 + 1, repeaterLit(used));
+                else if (isComparator(used)) next = comparatorOf(comparatorOut(used), !comparatorSubtracts(used), comparatorLit(used));
+                else next = daylightOf(!daylightInverted(used), !daylightLit(used));
+                m_world->setBlock(bench.block.x, bench.block.y, bench.block.z, next);
+                m_net.onLocalBlockChange(bench.block.x, bench.block.y, bench.block.z, next);
+                settleRedstone(bench.block);
+                m_audio.play(Sound::Click, 0.5f, isComparator(next) && comparatorSubtracts(next) ? 1.4f : 1.1f);
                 return;
             }
             if (isTrapdoor(used))
@@ -10779,6 +11056,8 @@ void Application::handlePlacement()
     // ladder: which of the four it lands as is worked out below.
     if (woodOfSignItem(stack.id) >= 0) fromItem = signBaseOf(woodOfSignItem(stack.id));
     if (stack.id == Items::ItemFrame) fromItem = Blocks::FrameNorth;
+    if (stack.id == Items::TripwireHook) fromItem = hookOf(0, false, false);
+    if (stack.id == Items::StringItem) fromItem = Blocks::Tripwire;
     if (isItem(stack.id) && fromItem == Blocks::Air) return;
     if (!modeCanBuild(m_player.mode)) return;
 
@@ -11039,6 +11318,20 @@ void Application::handlePlacement()
         if (placing == Blocks::Seagrass && !isWater(existing)) return;
     }
 
+    if (isDiode(placing))
+    {
+        if (!isSolid(m_world->getBlock(target.x, target.y - 1, target.z))) return;
+        const glm::vec3 look = m_camera.front;
+        const int out = (std::fabs(look.x) > std::fabs(look.z)) ? (look.x > 0.0f ? 1 : 3) : (look.z > 0.0f ? 2 : 0);
+        placing = isRepeater(placing) ? repeaterOf(out, 1, false) : comparatorOf(out, false, false);
+    }
+    if (isTripwireHook(placing))
+    {
+        const glm::ivec3 n = hit.normal;
+        if (n.y != 0) return;
+        placing = hookOf((n.z < 0) ? 0 : (n.x > 0) ? 1 : (n.z > 0) ? 2 : 3, false, false);
+    }
+
     if (isCarvedPumpkin(placing) || isJackOLantern(placing) || isHive(placing))
     {
         const glm::vec3 look = m_camera.front;
@@ -11144,6 +11437,9 @@ void Application::handlePlacement()
         m_beacons.insert({ target.x, target.y, target.z });
     if (placing == Blocks::Conduit)
         m_conduits.insert({ target.x, target.y, target.z });
+    if (isComparator(placing)) m_comparators.insert({ target.x, target.y, target.z });
+    if (isDaylightDetector(placing)) m_daylightDetectors.insert({ target.x, target.y, target.z });
+    if (isTripwireHook(placing) || isTripwire(placing)) rewireTripwire(target);
 
     // A sign is hung and then written on, which is the only order
     // that makes sense: an empty board is not what anybody wanted.
@@ -12289,7 +12585,7 @@ void Application::tickTimedBlocks(float deltaTime)
         {
             m_world->setBlock(timed.at.x, timed.at.y, timed.at.z, timed.then);
             m_net.onLocalBlockChange(timed.at.x, timed.at.y, timed.at.z, timed.then);
-            if (isLightningRod(timed.then)) settleRedstone(timed.at);
+            settleRedstone(timed.at);
         }
         m_timedBlocks[i] = m_timedBlocks.back();
         m_timedBlocks.pop_back();
@@ -12776,6 +13072,15 @@ void Application::updateMobs(float deltaTime)
 
     // A chicken lays an egg every few minutes whether anybody is
     // watching or not, which is what makes a flock worth keeping.
+    for (const glm::ivec3& struck : m_arrows.drainBlockHits())
+    {
+        const BlockId hit = m_world->getBlock(struck.x, struck.y, struck.z);
+        if (!isTarget(hit)) continue;
+        const bool fresh = hit == Blocks::Target;
+        setBlockFor(struck, Blocks::TargetLit, Blocks::Target, 1.0f);
+        if (fresh) settleRedstone(struck);
+    }
+
     for (const glm::vec3& mother : m_entities.drainTurtleNests())
     {
         const glm::ivec3 c(static_cast<int>(std::floor(mother.x)), static_cast<int>(std::floor(mother.y)),

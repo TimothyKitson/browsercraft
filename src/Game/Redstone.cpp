@@ -28,6 +28,8 @@ namespace Redstone
         if (id == Blocks::ObserverLit) return true;
         if (isTrappedChest(id) && chestState(id).open) return true;
         if (lightningRodPowered(id)) return true;
+        if (daylightLit(id) || id == Blocks::TargetLit || hookPowered(id)) return true;
+        if (specialRailFamily(id) == 2 && specialRailPowered(id)) return true;
         return id == Blocks::RedstoneTorch || id == Blocks::RedstoneBlock ||
                id == Blocks::LeverOn || id == Blocks::ButtonOn;
     }
@@ -40,7 +42,8 @@ namespace Redstone
     bool isSink(BlockId id)
     {
         return id == Blocks::RedstoneLamp || id == Blocks::RedstoneLampLit ||
-               isNoteBlock(id) || isDoor(id) || isTrapdoor(id);
+               isNoteBlock(id) || isDoor(id) || isTrapdoor(id) ||
+               specialRailFamily(id) == 1 || specialRailFamily(id) == 3;
     }
 
     BlockId lit(BlockId id)
@@ -49,6 +52,8 @@ namespace Redstone
         if (id == Blocks::RedstoneLamp) return Blocks::RedstoneLampLit;
         if (id == Blocks::NoteBlock) return Blocks::NoteBlockLit;
         if (id == Blocks::Observer) return Blocks::ObserverLit;
+        if (specialRailFamily(id) == 1 || specialRailFamily(id) == 3)
+            return specialRailOf(specialRailFamily(id), specialRailEastWest(id), true);
         if (isDoor(id) && !doorIsOpen(id))
             return doorPart(doorBase(id), blockFacing(id), doorIsTop(id), true);
         if (isTrapdoor(id) && !trapdoorIsOpen(id))
@@ -62,6 +67,8 @@ namespace Redstone
         if (id == Blocks::ObserverLit) return Blocks::Observer;
         if (id == Blocks::RedstoneDustLit) return Blocks::RedstoneDust;
         if (id == Blocks::RedstoneLampLit) return Blocks::RedstoneLamp;
+        if (specialRailFamily(id) == 1 || specialRailFamily(id) == 3)
+            return specialRailOf(specialRailFamily(id), specialRailEastWest(id), false);
         if (isDoor(id) && doorIsOpen(id))
             return doorPart(doorBase(id), blockFacing(id), doorIsTop(id), false);
         if (isTrapdoor(id) && trapdoorIsOpen(id))
@@ -81,21 +88,68 @@ namespace Redstone
         }
     }
 
+    int stepOf(int facing)
+    {
+        switch (facing & 3)
+        {
+            case 0: return 5;
+            case 1: return 0;
+            case 2: return 4;
+            default: return 1;
+        }
+    }
+
     bool carries(const Cells& cells, int x, int y, int z)
     {
-        return isSolid(cells.at(x, y, z)) && !isWire(cells.at(x, y, z)) &&
-               isSource(cells.at(x, y + 1, z));
+        const BlockId self = cells.at(x, y, z);
+        if (!isSolid(self) || isWire(self) || isDiode(self)) return false;
+        if (isSource(cells.at(x, y + 1, z))) return true;
+        for (int k = 0; k < 6; ++k)
+        {
+            if (DY[k] != 0) continue;
+            const BlockId near = cells.at(x + DX[k], y, z + DZ[k]);
+            if (isDiode(near) && diodeLit(near) && stepOf(diodeOut(near)) == (k ^ 1)) return true;
+            if (hookPowered(near) && stepOf(hookFacing(near)) == k) return true;
+        }
+        return false;
+    }
+
+    bool feeds(const Cells& cells, int x, int y, int z, int step)
+    {
+        const BlockId near = cells.at(x, y, z);
+        if (isSource(near)) return true;
+        if (near == Blocks::RedstoneDustLit) return true;
+        if (isDiode(near)) return diodeLit(near) && stepOf(diodeOut(near)) == step;
+        return carries(cells, x, y, z);
     }
 
     bool poweredAt(const Cells& cells, int x, int y, int z)
     {
         for (int k = 0; k < 6; ++k)
+            if (feeds(cells, x + DX[k], y + DY[k], z + DZ[k], k ^ 1)) return true;
+        return false;
+    }
+
+    bool diodeInput(const Cells& cells, int x, int y, int z)
+    {
+        const BlockId self = cells.at(x, y, z);
+        if (!isDiode(self)) return false;
+        const int forward = stepOf(diodeOut(self));
+        const int back = forward ^ 1;
+        return feeds(cells, x + DX[back], y + DY[back], z + DZ[back], forward);
+    }
+
+    bool diodeSide(const Cells& cells, int x, int y, int z)
+    {
+        const BlockId self = cells.at(x, y, z);
+        if (!isDiode(self)) return false;
+        const int forward = stepOf(diodeOut(self));
+        for (int k = 0; k < 6; ++k)
         {
-            const int nx = x + DX[k], ny = y + DY[k], nz = z + DZ[k];
-            const BlockId near = cells.at(nx, ny, nz);
-            if (isSource(near)) return true;
-            if (near == Blocks::RedstoneDustLit) return true;
-            if (carries(cells, nx, ny, nz)) return true;
+            if (DY[k] != 0 || k == forward || k == (forward ^ 1)) continue;
+            const BlockId near = cells.at(x + DX[k], y, z + DZ[k]);
+            if (!isWire(near) && !isDiode(near) && near != Blocks::RedstoneBlock) continue;
+            if (feeds(cells, x + DX[k], y, z + DZ[k], k ^ 1)) return true;
         }
         return false;
     }
@@ -120,11 +174,14 @@ namespace Redstone
                     // lever on a cobble has no dust of its own to
                     // touch, and the cobble is what the line is laid
                     // against.
-                    if (!isSource(cells.at(cx, cy, cz)) && !carries(cells, cx, cy, cz))
+                    const BlockId start = cells.at(cx, cy, cz);
+                    const bool aimed = isDiode(start) && diodeLit(start);
+                    if (!isSource(start) && !aimed && !carries(cells, cx, cy, cz))
                         continue;
 
                     for (int k = 0; k < 6; ++k)
                     {
+                        if (aimed && k != stepOf(diodeOut(start))) continue;
                         const int nx = cx + DX[k], ny = cy + DY[k], nz = cz + DZ[k];
                         const int ox = nx - x, oy = ny - y, oz = nz - z;
                         if (std::abs(ox) > REACH || std::abs(oy) > REACH ||

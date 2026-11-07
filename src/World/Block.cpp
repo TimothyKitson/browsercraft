@@ -2004,6 +2004,122 @@ namespace
         { "Frosted Ice", FrostedIceTileFirst + 2, FrostedIceTileFirst + 2, FrostedIceTileFirst + 2, true, false, RenderType::Cube, 0, 0.5f },
         { "Frosted Ice", FrostedIceTileFirst + 3, FrostedIceTileFirst + 3, FrostedIceTileFirst + 3, true, false, RenderType::Cube, 0, 0.5f },
         { "Powder Snow", PowderSnowTile, PowderSnowTile, PowderSnowTile, false, true, RenderType::Cube, 0, 0.25f },
+        { "Redstone Repeater", RepeaterTile, SmoothStoneTile, SmoothStoneTile, true, false, RenderType::Lush, 0, 0.0f },
+        { "Redstone Repeater", RepeaterOnTile, SmoothStoneTile, SmoothStoneTile, true, false, RenderType::Lush, 0, 0.0f },
+        { "Redstone Repeater", RepeaterTile, SmoothStoneTile, SmoothStoneTile, true, false, RenderType::Lush, 0, 0.0f },
+        { "Redstone Repeater", RepeaterOnTile, SmoothStoneTile, SmoothStoneTile, true, false, RenderType::Lush, 0, 0.0f },
+        { "Redstone Repeater", RepeaterTile, SmoothStoneTile, SmoothStoneTile, true, false, RenderType::Lush, 0, 0.0f },
+        { "Redstone Repeater", RepeaterOnTile, SmoothStoneTile, SmoothStoneTile, true, false, RenderType::Lush, 0, 0.0f },
+        { "Redstone Repeater", RepeaterTile, SmoothStoneTile, SmoothStoneTile, true, false, RenderType::Lush, 0, 0.0f },
+        { "Redstone Repeater", RepeaterOnTile, SmoothStoneTile, SmoothStoneTile, true, false, RenderType::Lush, 0, 0.0f },
+        { "Redstone Repeater", RepeaterTile, SmoothStoneTile, SmoothStoneTile, true, false, RenderType::Lush, 0, 0.0f },
+        { "Redstone Repeater", RepeaterOnTile, SmoothStoneTile, SmoothStoneTile, true, false, RenderType::Lush, 0, 0.0f },
+        { "Redstone Repeater", RepeaterTile, SmoothStoneTile, SmoothStoneTile, true, false, RenderType::Lush, 0, 0.0f },
+        { "Redstone Repeater", RepeaterOnTile, SmoothStoneTile, SmoothStoneTile, true, false, RenderType::Lush, 0, 0.0f },
+        { "Redstone Repeater", RepeaterTile, SmoothStoneTile, SmoothStoneTile, true, false, RenderType::Lush, 0, 0.0f },
+        { "Redstone Repeater", RepeaterOnTile, SmoothStoneTile, SmoothStoneTile, true, false, RenderType::Lush, 0, 0.0f },
+        { "Redstone Repeater", RepeaterTile, SmoothStoneTile, SmoothStoneTile, true, false, RenderType::Lush, 0, 0.0f },
+        { "Redstone Repeater", RepeaterOnTile, SmoothStoneTile, SmoothStoneTile, true, false, RenderType::Lush, 0, 0.0f },
+        { "Redstone Repeater", RepeaterTile, SmoothStoneTile, SmoothStoneTile, true, false, RenderType::Lush, 0, 0.0f },
+        { "Redstone Repeater", RepeaterOnTile, SmoothStoneTile, SmoothStoneTile, true, false, RenderType::Lush, 0, 0.0f },
+        { "Redstone Repeater", RepeaterTile, SmoothStoneTile, SmoothStoneTile, true, false, RenderType::Lush, 0, 0.0f },
+        { "Redstone Repeater", RepeaterOnTile, SmoothStoneTile, SmoothStoneTile, true, false, RenderType::Lush, 0, 0.0f },
+        { "Redstone Repeater", RepeaterTile, SmoothStoneTile, SmoothStoneTile, true, false, RenderType::Lush, 0, 0.0f },
+        { "Redstone Repeater", RepeaterOnTile, SmoothStoneTile, SmoothStoneTile, true, false, RenderType::Lush, 0, 0.0f },
+        { "Redstone Repeater", RepeaterTile, SmoothStoneTile, SmoothStoneTile, true, false, RenderType::Lush, 0, 0.0f },
+        { "Redstone Repeater", RepeaterOnTile, SmoothStoneTile, SmoothStoneTile, true, false, RenderType::Lush, 0, 0.0f },
+        { "Redstone Repeater", RepeaterTile, SmoothStoneTile, SmoothStoneTile, true, false, RenderType::Lush, 0, 0.0f },
+        { "Redstone Repeater", RepeaterOnTile, SmoothStoneTile, SmoothStoneTile, true, false, RenderType::Lush, 0, 0.0f },
+        { "Redstone Repeater", RepeaterTile, SmoothStoneTile, SmoothStoneTile, true, false, RenderType::Lush, 0, 0.0f },
+        { "Redstone Repeater", RepeaterOnTile, SmoothStoneTile, SmoothStoneTile, true, false, RenderType::Lush, 0, 0.0f },
+        { "Redstone Repeater", RepeaterTile, SmoothStoneTile, SmoothStoneTile, true, false, RenderType::Lush, 0, 0.0f },
+        { "Redstone Repeater", RepeaterOnTile, SmoothStoneTile, SmoothStoneTile, true, false, RenderType::Lush, 0, 0.0f },
+        { "Redstone Repeater", RepeaterTile, SmoothStoneTile, SmoothStoneTile, true, false, RenderType::Lush, 0, 0.0f },
+        { "Redstone Repeater", RepeaterOnTile, SmoothStoneTile, SmoothStoneTile, true, false, RenderType::Lush, 0, 0.0f },
+        { "Redstone Comparator", ComparatorTile, SmoothStoneTile, SmoothStoneTile, true, false, RenderType::Lush, 0, 0.0f },
+        { "Redstone Comparator", ComparatorOnTile, SmoothStoneTile, SmoothStoneTile, true, false, RenderType::Lush, 0, 0.0f },
+        { "Redstone Comparator", ComparatorTile, SmoothStoneTile, SmoothStoneTile, true, false, RenderType::Lush, 0, 0.0f },
+        { "Redstone Comparator", ComparatorOnTile, SmoothStoneTile, SmoothStoneTile, true, false, RenderType::Lush, 0, 0.0f },
+        { "Redstone Comparator", ComparatorTile, SmoothStoneTile, SmoothStoneTile, true, false, RenderType::Lush, 0, 0.0f },
+        { "Redstone Comparator", ComparatorOnTile, SmoothStoneTile, SmoothStoneTile, true, false, RenderType::Lush, 0, 0.0f },
+        { "Redstone Comparator", ComparatorTile, SmoothStoneTile, SmoothStoneTile, true, false, RenderType::Lush, 0, 0.0f },
+        { "Redstone Comparator", ComparatorOnTile, SmoothStoneTile, SmoothStoneTile, true, false, RenderType::Lush, 0, 0.0f },
+        { "Redstone Comparator", ComparatorTile, SmoothStoneTile, SmoothStoneTile, true, false, RenderType::Lush, 0, 0.0f },
+        { "Redstone Comparator", ComparatorOnTile, SmoothStoneTile, SmoothStoneTile, true, false, RenderType::Lush, 0, 0.0f },
+        { "Redstone Comparator", ComparatorTile, SmoothStoneTile, SmoothStoneTile, true, false, RenderType::Lush, 0, 0.0f },
+        { "Redstone Comparator", ComparatorOnTile, SmoothStoneTile, SmoothStoneTile, true, false, RenderType::Lush, 0, 0.0f },
+        { "Redstone Comparator", ComparatorTile, SmoothStoneTile, SmoothStoneTile, true, false, RenderType::Lush, 0, 0.0f },
+        { "Redstone Comparator", ComparatorOnTile, SmoothStoneTile, SmoothStoneTile, true, false, RenderType::Lush, 0, 0.0f },
+        { "Redstone Comparator", ComparatorTile, SmoothStoneTile, SmoothStoneTile, true, false, RenderType::Lush, 0, 0.0f },
+        { "Redstone Comparator", ComparatorOnTile, SmoothStoneTile, SmoothStoneTile, true, false, RenderType::Lush, 0, 0.0f },
+        { "Daylight Detector", DaylightTopTile, DaylightSideTile, DaylightSideTile, true, false, RenderType::Lush, 0, 0.2f },
+        { "Daylight Detector", DaylightTopTile, DaylightSideTile, DaylightSideTile, true, false, RenderType::Lush, 0, 0.2f },
+        { "Daylight Detector", DaylightInvertedTopTile, DaylightSideTile, DaylightSideTile, true, false, RenderType::Lush, 0, 0.2f },
+        { "Daylight Detector", DaylightInvertedTopTile, DaylightSideTile, DaylightSideTile, true, false, RenderType::Lush, 0, 0.2f },
+        { "Target", TargetTopTile, TargetTopTile, TargetSideTile, true, true, RenderType::Cube, 0, 0.5f },
+        { "Target", TargetTopTile, TargetTopTile, TargetSideTile, true, true, RenderType::Cube, 0, 0.5f },
+        { "Tripwire Hook", TripwireHookTile, Planks, TripwireHookTile, false, false, RenderType::Lush, 0, 0.0f },
+        { "Tripwire Hook", TripwireHookTile, Planks, TripwireHookTile, false, false, RenderType::Lush, 0, 0.0f },
+        { "Tripwire Hook", TripwireHookTile, Planks, TripwireHookTile, false, false, RenderType::Lush, 0, 0.0f },
+        { "Tripwire Hook", TripwireHookTile, Planks, TripwireHookTile, false, false, RenderType::Lush, 0, 0.0f },
+        { "Tripwire Hook", TripwireHookTile, Planks, TripwireHookTile, false, false, RenderType::Lush, 0, 0.0f },
+        { "Tripwire Hook", TripwireHookTile, Planks, TripwireHookTile, false, false, RenderType::Lush, 0, 0.0f },
+        { "Tripwire Hook", TripwireHookTile, Planks, TripwireHookTile, false, false, RenderType::Lush, 0, 0.0f },
+        { "Tripwire Hook", TripwireHookTile, Planks, TripwireHookTile, false, false, RenderType::Lush, 0, 0.0f },
+        { "Tripwire Hook", TripwireHookTile, Planks, TripwireHookTile, false, false, RenderType::Lush, 0, 0.0f },
+        { "Tripwire Hook", TripwireHookTile, Planks, TripwireHookTile, false, false, RenderType::Lush, 0, 0.0f },
+        { "Tripwire Hook", TripwireHookTile, Planks, TripwireHookTile, false, false, RenderType::Lush, 0, 0.0f },
+        { "Tripwire Hook", TripwireHookTile, Planks, TripwireHookTile, false, false, RenderType::Lush, 0, 0.0f },
+        { "Tripwire Hook", TripwireHookTile, Planks, TripwireHookTile, false, false, RenderType::Lush, 0, 0.0f },
+        { "Tripwire Hook", TripwireHookTile, Planks, TripwireHookTile, false, false, RenderType::Lush, 0, 0.0f },
+        { "Tripwire Hook", TripwireHookTile, Planks, TripwireHookTile, false, false, RenderType::Lush, 0, 0.0f },
+        { "Tripwire Hook", TripwireHookTile, Planks, TripwireHookTile, false, false, RenderType::Lush, 0, 0.0f },
+        { "Tripwire", TripwireTile, TripwireTile, TripwireTile, false, false, RenderType::Lush, 0, 0.0f },
+        { "Tripwire", TripwireTile, TripwireTile, TripwireTile, false, false, RenderType::Lush, 0, 0.0f },
+        { "Powered Rail", PoweredRailTile, PoweredRailTile, PoweredRailTile, false, false, RenderType::Rail, 0, 0.7f },
+        { "Powered Rail", PoweredRailOnTile, PoweredRailOnTile, PoweredRailOnTile, false, false, RenderType::Rail, 0, 0.7f },
+        { "Powered Rail", PoweredRailTile, PoweredRailTile, PoweredRailTile, false, false, RenderType::Rail, 0, 0.7f },
+        { "Powered Rail", PoweredRailOnTile, PoweredRailOnTile, PoweredRailOnTile, false, false, RenderType::Rail, 0, 0.7f },
+        { "Detector Rail", DetectorRailTile, DetectorRailTile, DetectorRailTile, false, false, RenderType::Rail, 0, 0.7f },
+        { "Detector Rail", DetectorRailOnTile, DetectorRailOnTile, DetectorRailOnTile, false, false, RenderType::Rail, 0, 0.7f },
+        { "Detector Rail", DetectorRailTile, DetectorRailTile, DetectorRailTile, false, false, RenderType::Rail, 0, 0.7f },
+        { "Detector Rail", DetectorRailOnTile, DetectorRailOnTile, DetectorRailOnTile, false, false, RenderType::Rail, 0, 0.7f },
+        { "Activator Rail", ActivatorRailTile, ActivatorRailTile, ActivatorRailTile, false, false, RenderType::Rail, 0, 0.7f },
+        { "Activator Rail", ActivatorRailOnTile, ActivatorRailOnTile, ActivatorRailOnTile, false, false, RenderType::Rail, 0, 0.7f },
+        { "Activator Rail", ActivatorRailTile, ActivatorRailTile, ActivatorRailTile, false, false, RenderType::Rail, 0, 0.7f },
+        { "Activator Rail", ActivatorRailOnTile, ActivatorRailOnTile, ActivatorRailOnTile, false, false, RenderType::Rail, 0, 0.7f },
+        { "Iron Door", IronDoorBottomTile, IronDoorBottomTile, IronDoorBottomTile, true, false, RenderType::Door, 0, 5.0f },
+        { "Iron Door", IronDoorBottomTile, IronDoorBottomTile, IronDoorBottomTile, true, false, RenderType::Door, 0, 5.0f },
+        { "Iron Door", IronDoorBottomTile, IronDoorBottomTile, IronDoorBottomTile, true, false, RenderType::Door, 0, 5.0f },
+        { "Iron Door", IronDoorBottomTile, IronDoorBottomTile, IronDoorBottomTile, true, false, RenderType::Door, 0, 5.0f },
+        { "Iron Door", IronDoorBottomTile, IronDoorBottomTile, IronDoorBottomTile, true, false, RenderType::Door, 0, 5.0f },
+        { "Iron Door", IronDoorBottomTile, IronDoorBottomTile, IronDoorBottomTile, true, false, RenderType::Door, 0, 5.0f },
+        { "Iron Door", IronDoorBottomTile, IronDoorBottomTile, IronDoorBottomTile, true, false, RenderType::Door, 0, 5.0f },
+        { "Iron Door", IronDoorBottomTile, IronDoorBottomTile, IronDoorBottomTile, true, false, RenderType::Door, 0, 5.0f },
+        { "Iron Door", IronDoorTopTile, IronDoorTopTile, IronDoorTopTile, true, false, RenderType::Door, 0, 5.0f },
+        { "Iron Door", IronDoorTopTile, IronDoorTopTile, IronDoorTopTile, true, false, RenderType::Door, 0, 5.0f },
+        { "Iron Door", IronDoorTopTile, IronDoorTopTile, IronDoorTopTile, true, false, RenderType::Door, 0, 5.0f },
+        { "Iron Door", IronDoorTopTile, IronDoorTopTile, IronDoorTopTile, true, false, RenderType::Door, 0, 5.0f },
+        { "Iron Door", IronDoorTopTile, IronDoorTopTile, IronDoorTopTile, true, false, RenderType::Door, 0, 5.0f },
+        { "Iron Door", IronDoorTopTile, IronDoorTopTile, IronDoorTopTile, true, false, RenderType::Door, 0, 5.0f },
+        { "Iron Door", IronDoorTopTile, IronDoorTopTile, IronDoorTopTile, true, false, RenderType::Door, 0, 5.0f },
+        { "Iron Door", IronDoorTopTile, IronDoorTopTile, IronDoorTopTile, true, false, RenderType::Door, 0, 5.0f },
+        { "Iron Trapdoor", IronTrapdoorTile, IronTrapdoorTile, IronTrapdoorTile, true, false, RenderType::Trapdoor, 0, 5.0f },
+        { "Iron Trapdoor", IronTrapdoorTile, IronTrapdoorTile, IronTrapdoorTile, true, false, RenderType::Trapdoor, 0, 5.0f },
+        { "Iron Trapdoor", IronTrapdoorTile, IronTrapdoorTile, IronTrapdoorTile, true, false, RenderType::Trapdoor, 0, 5.0f },
+        { "Iron Trapdoor", IronTrapdoorTile, IronTrapdoorTile, IronTrapdoorTile, true, false, RenderType::Trapdoor, 0, 5.0f },
+        { "Iron Trapdoor", IronTrapdoorTile, IronTrapdoorTile, IronTrapdoorTile, true, false, RenderType::Trapdoor, 0, 5.0f },
+        { "Iron Trapdoor", IronTrapdoorTile, IronTrapdoorTile, IronTrapdoorTile, true, false, RenderType::Trapdoor, 0, 5.0f },
+        { "Iron Trapdoor", IronTrapdoorTile, IronTrapdoorTile, IronTrapdoorTile, true, false, RenderType::Trapdoor, 0, 5.0f },
+        { "Iron Trapdoor", IronTrapdoorTile, IronTrapdoorTile, IronTrapdoorTile, true, false, RenderType::Trapdoor, 0, 5.0f },
+        { "Iron Trapdoor", IronTrapdoorTile, IronTrapdoorTile, IronTrapdoorTile, true, false, RenderType::Trapdoor, 0, 5.0f },
+        { "Iron Trapdoor", IronTrapdoorTile, IronTrapdoorTile, IronTrapdoorTile, true, false, RenderType::Trapdoor, 0, 5.0f },
+        { "Iron Trapdoor", IronTrapdoorTile, IronTrapdoorTile, IronTrapdoorTile, true, false, RenderType::Trapdoor, 0, 5.0f },
+        { "Iron Trapdoor", IronTrapdoorTile, IronTrapdoorTile, IronTrapdoorTile, true, false, RenderType::Trapdoor, 0, 5.0f },
+        { "Iron Trapdoor", IronTrapdoorTile, IronTrapdoorTile, IronTrapdoorTile, true, false, RenderType::Trapdoor, 0, 5.0f },
+        { "Iron Trapdoor", IronTrapdoorTile, IronTrapdoorTile, IronTrapdoorTile, true, false, RenderType::Trapdoor, 0, 5.0f },
+        { "Iron Trapdoor", IronTrapdoorTile, IronTrapdoorTile, IronTrapdoorTile, true, false, RenderType::Trapdoor, 0, 5.0f },
+        { "Iron Trapdoor", IronTrapdoorTile, IronTrapdoorTile, IronTrapdoorTile, true, false, RenderType::Trapdoor, 0, 5.0f },
     };
 }
 
@@ -2090,6 +2206,13 @@ bool isObtainable(BlockId id)
             if (isAnyCoralWallFan(id)) return false;
             if (isTurtleEgg(id) && id != turtleEggOf(1, 0)) return false;
             if (isFrostedIce(id) || id == Blocks::PowderSnow) return false;
+            if (isRepeater(id) && id != repeaterOf(0, 1, false)) return false;
+            if (isComparator(id) && id != comparatorOf(0, false, false)) return false;
+            if (isDaylightDetector(id) && id != Blocks::DaylightDetector) return false;
+            if (id == Blocks::TargetLit || isTripwireHook(id) || isTripwire(id)) return false;
+            if (isSpecialRail(id) && id != specialRailOf(specialRailFamily(id), false, false)) return false;
+            if (isIronDoor(id) && id != Blocks::IronDoorFirst) return false;
+            if (isIronTrapdoor(id) && id != Blocks::IronTrapdoorFirst) return false;
             if (isBigDripleaf(id) && id != bigDripleafOf(0, DripleafTilt::None)) return false;
             if (isSmallDripleaf(id) && id != smallDripleafOf(0, false)) return false;
             if (isGlowLichen(id) && id != glowLichenOn(0)) return false;
@@ -2147,6 +2270,10 @@ const char* blockSoundGroup(BlockId id)
     if (id == Blocks::Conduit || isTurtleEgg(id)) return "stone";
     if (id == Blocks::PackedIce || id == Blocks::BlueIce || isFrostedIce(id)) return "stone";
     if (id == Blocks::PowderSnow) return "snow";
+    if (isDiode(id) || isIronDoor(id) || isIronTrapdoor(id) || isSpecialRail(id)) return "stone";
+    if (isDaylightDetector(id) || isTripwireHook(id)) return "wood";
+    if (isTripwire(id)) return "cloth";
+    if (id == Blocks::Target || id == Blocks::TargetLit) return "grass";
     if (isEarthy(id)) return "gravel";
     if (isFlowerPot(id)) return "stone";
     if (isDoor(id) || isTrapdoor(id)) return "wood";
@@ -2309,6 +2436,9 @@ Material blockMaterial(BlockId id)
     if (id == Blocks::Conduit) return Material::Glass;
     if (id == Blocks::PackedIce || id == Blocks::BlueIce || isFrostedIce(id)) return Material::Glass;
     if (id == Blocks::PowderSnow) return Material::Snow;
+    if (isDiode(id) || isTripwireHook(id) || isTripwire(id) || isSpecialRail(id) || isTarget(id)) return Material::Plant;
+    if (isDaylightDetector(id)) return Material::Wood;
+    if (isIronDoor(id) || isIronTrapdoor(id)) return Material::Stone;
     if (isTurtleEgg(id)) return Material::Plant;
     if (id == Blocks::HoneyBlock || id == Blocks::HoneycombBlock) return Material::Wool;
     if (isEarthy(id)) return Material::Dirt;
@@ -2472,6 +2602,8 @@ bool blockOverlaps(BlockId id, int bx, int by, int bz,
     if (isFlowerPot(id)) return overlaps(0.3125f, 0.0f, 0.3125f, 0.6875f, 0.375f, 0.6875f);
     if (id == Blocks::HoneyBlock) return overlaps(0.0625f, 0.0f, 0.0625f, 0.9375f, 0.9375f, 0.9375f);
     if (id == Blocks::Conduit) return overlaps(0.3125f, 0.3125f, 0.3125f, 0.6875f, 0.6875f, 0.6875f);
+    if (isDiode(id)) return overlaps(0.0f, 0.0f, 0.0f, 1.0f, 0.125f, 1.0f);
+    if (isDaylightDetector(id)) return overlaps(0.0f, 0.0f, 0.0f, 1.0f, 0.375f, 1.0f);
     if (isTurtleEgg(id))
         return turtleEggCount(id) == 1 ? overlaps(0.1875f, 0.0f, 0.1875f, 0.75f, 0.4375f, 0.75f)
                                        : overlaps(0.0625f, 0.0f, 0.0625f, 0.9375f, 0.4375f, 0.9375f);

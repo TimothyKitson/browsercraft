@@ -805,6 +805,15 @@ private:
     float m_frostClock = 0.0f;
     std::map<std::array<int, 3>, float> m_frostedIce;
     void tickFrost(float deltaTime);
+    void tickWiring(float deltaTime);
+    void scheduleDiode(const glm::ivec3& at, BlockId now, bool wantLit);
+    bool comparatorWants(const glm::ivec3& at);
+    bool containerSignal(const glm::ivec3& at);
+    void rewireTripwire(const glm::ivec3& at);
+    std::set<std::array<int, 3>> m_comparators;
+    std::set<std::array<int, 3>> m_daylightDetectors;
+    float m_wiringClock = 0.0f;
+    float m_daylightClock = 0.0f;
     std::map<std::array<int, 4>, std::array<int, 2>> m_beaconPowers;
     bool m_beaconOpen = false;
     bool m_grindOpen = false;

@@ -163,11 +163,18 @@ public:
 
     void clear() { m_arrows.clear(); }
     const std::vector<Arrow>& all() const { return m_arrows; }
+    std::vector<glm::ivec3> drainBlockHits()
+    {
+        std::vector<glm::ivec3> all;
+        all.swap(m_blockHits);
+        return all;
+    }
 
     void render(Shader& shader, const Camera& camera, const Atlas& atlas, const World& world);
 
 private:
     std::vector<Arrow> m_arrows;
+    std::vector<glm::ivec3> m_blockHits;
     std::vector<float> m_vertices;
     Mesh m_mesh;
 };

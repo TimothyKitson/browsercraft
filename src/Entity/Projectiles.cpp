@@ -138,6 +138,8 @@ void Projectiles::update(float deltaTime, const Blocks& blocks, Targets& targets
                                static_cast<int>(std::floor(next.y)),
                                static_cast<int>(std::floor(next.z))))
             {
+                m_blockHits.push_back(glm::ivec3(static_cast<int>(std::floor(next.x)), static_cast<int>(std::floor(next.y)),
+                                                 static_cast<int>(std::floor(next.z))));
                 // A charge bursts rather than sticking: nothing is left
                 // in the wall to look at. So does a potion, which is
                 // the whole of what a potion is for.

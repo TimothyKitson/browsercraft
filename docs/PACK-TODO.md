@@ -169,11 +169,12 @@ Everything in the 1.21 textures zip the game doesn't use yet, turned into work. 
     - I. Packed ice, blue ice, and frosted ice that melts in stages.
     - II. Powder snow: you sink into it, the outline overlay shows, freezing hearts, and the powder snow bucket.
     - Notes: every ice is slippery, blue ice most of all; nine ice pack into packed ice and nine of those into blue ice, and frozen seas carry floes of both. Snowy ground grows packed ice spires and powder snow patches. Frost Walker came in as a treasure enchantment (sold on iron boots by armorers) so frosted ice has a source. Leather boots let you stand on powder snow and climb out of it, and any leather piece stops freezing; frozen through, you take a point of damage every two seconds until you get out or catch fire. Mobs do not freeze or slide yet, and there is no powder snow cauldron.
-43. Redstone
+43. Redstone (done)
     - I. Repeater, comparator and daylight detector.
     - II. Target block, tripwire and tripwire hook.
     - III. Powered, detector and activator rails.
     - IV. Iron door, iron trapdoor and wooden trapdoors that open with redstone.
+    - Notes: power is still on or off rather than fifteen strengths, so a comparator compares and subtracts on that basis and reads a container, cauldron, composter, cake, lectern, hive or framed eye as full or empty. Repeaters point power one way after their one to four ticks and drive the block in front; they do not lock yet. Power now also comes from a struck target, a lit daylight detector (inverted by hand), a pulled tripwire hook and a detector rail with a cart on it. Powered rails push and brake carts, activator rails throw the rider out, but powered rails do not pass power down a line. The detector rail recipe takes a stone block until pressure plates exist. Iron doors and trapdoors open only with power.
 44. Utility and decoration
     - I. Iron bars, chain and end rod.
     - II. Soul torch, soul fire, soul campfire and soul soil.

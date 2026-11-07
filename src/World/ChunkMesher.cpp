@@ -789,6 +789,83 @@ namespace
             const glm::vec3 c[4] = { glm::vec3(x0, yy, z1), glm::vec3(x1, yy, z1), glm::vec3(x1, yy, z0), glm::vec3(x0, yy, z0) };
             pushQuad(snap, lx, y, lz, id, c, tile, x0 * 16.0f, z0 * 16.0f, x1 * 16.0f, z1 * 16.0f, shade, true, out);
         };
+        if (isDiode(id))
+        {
+            const BlockInfo& info = blockInfo(id);
+            const int facing = diodeOut(id);
+            const PartFace slabSide{ info.tileSide, 0.0f, 14.0f, 16.0f, 16.0f };
+            const PartFace base[6] = { slabSide, slabSide, { info.tileTop, 0.0f, 0.0f, 16.0f, 16.0f },
+                                       { info.tileSide, 0.0f, 0.0f, 16.0f, 16.0f }, slabSide, slabSide };
+            emitRotated(snap, lx, y, lz, id, facing, 0, 0, 0, 16, 2, 16, base, out);
+            auto torch = [&](float x0, float z0, float height, bool on) {
+                const int tile = on ? Tiles::RedstoneTorch : Tiles::RedstoneTorchOff;
+                const PartFace side{ tile, 7.0f, 6.0f, 9.0f, 6.0f + height };
+                const PartFace faces[6] = { side, side, { tile, 7.0f, 6.0f, 9.0f, 8.0f }, { tile, 7.0f, 13.0f, 9.0f, 15.0f }, side, side };
+                emitRotated(snap, lx, y, lz, id, facing, x0, 2, z0, x0 + 2, 2 + height, z0 + 2, faces, out);
+            };
+            if (isRepeater(id))
+            {
+                torch(7.0f, 2.0f, 5.0f, repeaterLit(id));
+                torch(7.0f, 6.0f + (repeaterDelay(id) - 1) * 2.0f, 5.0f, repeaterLit(id));
+            }
+            else
+            {
+                torch(4.0f, 11.0f, 5.0f, comparatorLit(id));
+                torch(10.0f, 11.0f, 5.0f, comparatorLit(id));
+                torch(7.0f, 2.0f, 2.0f, comparatorSubtracts(id));
+            }
+            return;
+        }
+        if (isDaylightDetector(id))
+        {
+            const BlockInfo& info = blockInfo(id);
+            const PartFace side{ info.tileSide, 0.0f, 10.0f, 16.0f, 16.0f };
+            const PartFace faces[6] = { side, side, { info.tileTop, 0.0f, 0.0f, 16.0f, 16.0f },
+                                        { info.tileSide, 0.0f, 0.0f, 16.0f, 16.0f }, side, side };
+            emitPart(snap, lx, y, lz, id, glm::vec3(0.0f), glm::vec3(1.0f, 6.0f / 16.0f, 1.0f), faces, out);
+            return;
+        }
+        if (isTripwireHook(id))
+        {
+            const BlockInfo& info = blockInfo(id);
+            const int wood = info.tileBottom, hook = info.tileTop, facing = hookFacing(id);
+            const PartFace plateSide{ wood, 6.0f, 7.0f, 10.0f, 15.0f };
+            const PartFace plate[6] = { plateSide, plateSide, { wood, 6.0f, 0.0f, 10.0f, 2.0f }, { wood, 6.0f, 14.0f, 10.0f, 16.0f },
+                                        plateSide, plateSide };
+            emitRotated(snap, lx, y, lz, id, facing, 6, 1, 14, 10, 9, 16, plate, out);
+            const PartFace stickSide{ wood, 7.0f, 9.0f, 9.0f, 11.0f };
+            const PartFace stick[6] = { stickSide, stickSide, { wood, 7.0f, 2.0f, 9.0f, 7.0f }, { wood, 7.0f, 9.0f, 9.0f, 14.0f },
+                                        stickSide, stickSide };
+            emitRotated(snap, lx, y, lz, id, facing, 7.4f, 5.2f, 10, 8.8f, 6.8f, 14, stick, out);
+            const float drop = hookAttached(id) ? 0.0f : 1.0f;
+            const PartFace ringSide{ hook, 5.0f, 3.0f, 11.0f, 4.0f };
+            const PartFace ring[6] = { ringSide, ringSide, { hook, 5.0f, 3.0f, 11.0f, 9.0f }, { hook, 5.0f, 3.0f, 11.0f, 9.0f },
+                                       ringSide, ringSide };
+            emitRotated(snap, lx, y, lz, id, facing, 6.2f, 3.8f + drop, 7.9f, 9.8f, 4.6f + drop, 11.5f, ring, out);
+            return;
+        }
+        if (isTripwire(id))
+        {
+            const int tile = blockInfo(id).tileTop;
+            auto joins = [&](int dx, int dz) {
+                const BlockId n = snap.block(lx + dx, y, lz + dz);
+                return isTripwire(n) || isTripwireHook(n);
+            };
+            const bool alongX = joins(1, 0) || joins(-1, 0);
+            const float h = (isTripwire(id) && id == Blocks::TripwireActive ? 1.0f : 1.5f) / 16.0f;
+            const float a = 7.75f / 16.0f, b = 8.25f / 16.0f;
+            if (alongX)
+            {
+                const glm::vec3 c[4] = { { 0.0f, h, a }, { 1.0f, h, a }, { 1.0f, h, b }, { 0.0f, h, b } };
+                pushQuad(snap, lx, y, lz, id, c, tile, 0.0f, 0.0f, 16.0f, 2.0f, 1.0f, true, out);
+            }
+            else
+            {
+                const glm::vec3 c[4] = { { a, h, 1.0f }, { a, h, 0.0f }, { b, h, 0.0f }, { b, h, 1.0f } };
+                pushQuad(snap, lx, y, lz, id, c, tile, 0.0f, 0.0f, 16.0f, 2.0f, 1.0f, true, out);
+            }
+            return;
+        }
         if (isAnyCoralFan(id))
         {
             const int tile = blockInfo(id).tileSide;
@@ -1252,7 +1329,7 @@ namespace
             case Blocks::RailSouthEast: turn = 1; break;
             case Blocks::RailSouthWest: turn = 2; break;
             case Blocks::RailNorthWest: turn = 3; break;
-            default: break;
+            default: if (isSpecialRail(id) && specialRailEastWest(id)) turn = 1; break;
         }
 
         const float u[4] = { uv.u0, uv.u1, uv.u1, uv.u0 };

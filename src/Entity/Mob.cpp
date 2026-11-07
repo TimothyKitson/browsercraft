@@ -740,6 +740,11 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
             // whether to push, and the track decides where that goes.
             m_railSpeed = railSpeedStep(m_railSpeed, m_ridden && m_steerForward,
                                         currentSpeed(), deltaTime);
+            if (specialRailFamily(rail) == 1)
+            {
+                if (specialRailPowered(rail)) m_railSpeed = std::min(currentSpeed() * 1.6f, m_railSpeed + 9.0f * deltaTime);
+                else m_railSpeed = std::max(0.0f, m_railSpeed - 12.0f * deltaTime);
+            }
             m_moving = m_railSpeed > 0.01f;
         }
     }

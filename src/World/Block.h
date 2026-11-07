@@ -634,6 +634,17 @@ namespace Blocks
         PackedIce, BlueIce,
         FrostedIce0, FrostedIce1, FrostedIce2, FrostedIce3,
         PowderSnow,
+        RepeaterFirst, RepeaterLast = RepeaterFirst + 31,
+        ComparatorFirst, ComparatorLast = ComparatorFirst + 15,
+        DaylightDetector, DaylightDetectorLit, DaylightDetectorInverted, DaylightDetectorInvertedLit,
+        Target, TargetLit,
+        TripwireHookFirst, TripwireHookLast = TripwireHookFirst + 15,
+        Tripwire, TripwireActive,
+        PoweredRailFirst, PoweredRailLast = PoweredRailFirst + 3,
+        DetectorRailFirst, DetectorRailLast = DetectorRailFirst + 3,
+        ActivatorRailFirst, ActivatorRailLast = ActivatorRailFirst + 3,
+        IronDoorFirst, IronDoorLast = IronDoorFirst + 15,
+        IronTrapdoorFirst, IronTrapdoorLast = IronTrapdoorFirst + 15,
 
         Count
     };
@@ -690,6 +701,67 @@ inline bool isSolid(BlockId id) { return blockInfo(id).collides; }
 inline bool isLiquid(BlockId id) { return blockInfo(id).render == RenderType::Liquid; }
 inline bool isWater(BlockId id) { return id == Blocks::Water || (id >= Blocks::WaterFlow1 && id <= Blocks::WaterFalling); }
 inline bool isFrostedIce(BlockId id) { return id >= Blocks::FrostedIce0 && id <= Blocks::FrostedIce3; }
+inline bool isRepeater(BlockId id) { return id >= Blocks::RepeaterFirst && id <= Blocks::RepeaterLast; }
+inline int repeaterOut(BlockId id) { return (id - Blocks::RepeaterFirst) / 8; }
+inline int repeaterDelay(BlockId id) { return ((id - Blocks::RepeaterFirst) % 8) / 2 + 1; }
+inline bool repeaterLit(BlockId id) { return isRepeater(id) && ((id - Blocks::RepeaterFirst) & 1) != 0; }
+inline BlockId repeaterOf(int out, int delay, bool lit)
+{
+    return static_cast<BlockId>(Blocks::RepeaterFirst + (out & 3) * 8 + ((delay < 1 ? 1 : delay > 4 ? 4 : delay) - 1) * 2 + (lit ? 1 : 0));
+}
+inline bool isComparator(BlockId id) { return id >= Blocks::ComparatorFirst && id <= Blocks::ComparatorLast; }
+inline int comparatorOut(BlockId id) { return (id - Blocks::ComparatorFirst) / 4; }
+inline bool comparatorSubtracts(BlockId id) { return isComparator(id) && ((id - Blocks::ComparatorFirst) & 2) != 0; }
+inline bool comparatorLit(BlockId id) { return isComparator(id) && ((id - Blocks::ComparatorFirst) & 1) != 0; }
+inline BlockId comparatorOf(int out, bool subtract, bool lit)
+{
+    return static_cast<BlockId>(Blocks::ComparatorFirst + (out & 3) * 4 + (subtract ? 2 : 0) + (lit ? 1 : 0));
+}
+inline bool isDiode(BlockId id) { return isRepeater(id) || isComparator(id); }
+inline int diodeOut(BlockId id) { return isRepeater(id) ? repeaterOut(id) : comparatorOut(id); }
+inline bool diodeLit(BlockId id) { return repeaterLit(id) || comparatorLit(id); }
+inline bool isDaylightDetector(BlockId id) { return id >= Blocks::DaylightDetector && id <= Blocks::DaylightDetectorInvertedLit; }
+inline bool daylightInverted(BlockId id) { return id == Blocks::DaylightDetectorInverted || id == Blocks::DaylightDetectorInvertedLit; }
+inline bool daylightLit(BlockId id) { return id == Blocks::DaylightDetectorLit || id == Blocks::DaylightDetectorInvertedLit; }
+inline BlockId daylightOf(bool inverted, bool lit)
+{
+    return static_cast<BlockId>(Blocks::DaylightDetector + (inverted ? 2 : 0) + (lit ? 1 : 0));
+}
+inline bool isTripwireHook(BlockId id) { return id >= Blocks::TripwireHookFirst && id <= Blocks::TripwireHookLast; }
+inline int hookFacing(BlockId id) { return (id - Blocks::TripwireHookFirst) / 4; }
+inline bool hookAttached(BlockId id) { return isTripwireHook(id) && ((id - Blocks::TripwireHookFirst) & 2) != 0; }
+inline bool hookPowered(BlockId id) { return isTripwireHook(id) && ((id - Blocks::TripwireHookFirst) & 1) != 0; }
+inline BlockId hookOf(int facing, bool attached, bool powered)
+{
+    return static_cast<BlockId>(Blocks::TripwireHookFirst + (facing & 3) * 4 + (attached ? 2 : 0) + (powered ? 1 : 0));
+}
+inline bool isTripwire(BlockId id) { return id == Blocks::Tripwire || id == Blocks::TripwireActive; }
+inline int specialRailFamily(BlockId id)
+{
+    if (id >= Blocks::PoweredRailFirst && id <= Blocks::PoweredRailLast) return 1;
+    if (id >= Blocks::DetectorRailFirst && id <= Blocks::DetectorRailLast) return 2;
+    if (id >= Blocks::ActivatorRailFirst && id <= Blocks::ActivatorRailLast) return 3;
+    return 0;
+}
+inline bool isSpecialRail(BlockId id) { return specialRailFamily(id) != 0; }
+inline bool specialRailEastWest(BlockId id)
+{
+    static const BlockId FIRST[4] = { 0, Blocks::PoweredRailFirst, Blocks::DetectorRailFirst, Blocks::ActivatorRailFirst };
+    return isSpecialRail(id) && ((id - FIRST[specialRailFamily(id)]) & 2) != 0;
+}
+inline bool specialRailPowered(BlockId id)
+{
+    static const BlockId FIRST[4] = { 0, Blocks::PoweredRailFirst, Blocks::DetectorRailFirst, Blocks::ActivatorRailFirst };
+    return isSpecialRail(id) && ((id - FIRST[specialRailFamily(id)]) & 1) != 0;
+}
+inline BlockId specialRailOf(int family, bool eastWest, bool powered)
+{
+    static const BlockId FIRST[4] = { Blocks::PoweredRailFirst, Blocks::PoweredRailFirst, Blocks::DetectorRailFirst, Blocks::ActivatorRailFirst };
+    return static_cast<BlockId>(FIRST[family & 3] + (eastWest ? 2 : 0) + (powered ? 1 : 0));
+}
+inline bool isTarget(BlockId id) { return id == Blocks::Target || id == Blocks::TargetLit; }
+inline bool isIronDoor(BlockId id) { return id >= Blocks::IronDoorFirst && id <= Blocks::IronDoorLast; }
+inline bool isIronTrapdoor(BlockId id) { return id >= Blocks::IronTrapdoorFirst && id <= Blocks::IronTrapdoorLast; }
 inline bool isSlippery(BlockId id) { return id == Blocks::Ice || id == Blocks::PackedIce || id == Blocks::BlueIce || isFrostedIce(id); }
 inline bool isLava(BlockId id) { return id == Blocks::Lava || (id >= Blocks::LavaFlow1 && id <= Blocks::LavaFalling); }
 inline bool isFluid(BlockId id) { return isWater(id) || isLava(id); }
@@ -1419,7 +1491,9 @@ inline bool railLinks(BlockId rail, int facing)
         case Blocks::RailSouthEast:  return facing == 2 || facing == 1;
         case Blocks::RailSouthWest:  return facing == 2 || facing == 3;
         case Blocks::RailNorthWest:  return facing == 0 || facing == 3;
-        default: return false;
+        default:
+            if (isSpecialRail(rail)) return specialRailEastWest(rail) ? (facing == 1 || facing == 3) : (facing == 0 || facing == 2);
+            return false;
     }
 }
 
@@ -1452,6 +1526,7 @@ inline int doorWood(BlockId id)
 inline BlockId doorBaseOf(int wood) { return woodSet(wood).door; }
 inline BlockId doorBase(BlockId id)
 {
+    if (id >= Blocks::IronDoorFirst && id <= Blocks::IronDoorLast) return Blocks::IronDoorFirst;
     if (id >= Blocks::CopperDoorFirst && id <= Blocks::CopperDoorLast)
         return static_cast<BlockId>(Blocks::CopperDoorFirst + ((id - Blocks::CopperDoorFirst) / 16) * 16);
     return doorBaseOf(doorWood(id));
@@ -1477,6 +1552,7 @@ inline int trapdoorWood(BlockId id)
 }
 inline BlockId trapdoorBase(BlockId id)
 {
+    if (id >= Blocks::IronTrapdoorFirst && id <= Blocks::IronTrapdoorLast) return Blocks::IronTrapdoorFirst;
     if (id >= Blocks::CopperTrapdoorFirst && id <= Blocks::CopperTrapdoorLast)
         return static_cast<BlockId>(Blocks::CopperTrapdoorFirst + ((id - Blocks::CopperTrapdoorFirst) / 16) * 16);
     return trapdoorBaseOf(trapdoorWood(id));
@@ -1744,6 +1820,8 @@ inline int blockFacing(BlockId id)
     if (isJackOLantern(id)) return id - Blocks::JackOLanternFirst;
     if (isHive(id)) return hiveFacing(id);
     if (isAnyCoralWallFan(id)) return coralWallFanFacing(id);
+    if (isDiode(id)) return diodeOut(id);
+    if (isTripwireHook(id)) return hookFacing(id);
     return 0;
 }
 

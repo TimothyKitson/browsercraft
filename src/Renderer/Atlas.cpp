@@ -5255,6 +5255,139 @@ namespace
         for (int x = 4; x < 12; ++x) { t.set(x, 5, Color{ 246, 250, 252 }); t.set(x, 6, Color{ 236, 242, 248 }); }
         for (int x = 4; x < 12; ++x) t.set(x, 2 + (x - 8) * (x - 8) / 8, Color{ 120, 120, 126 });
     }
+    void paintRail(Tile& t);
+    void paintDiodeTopIn(Tile& t, bool on, bool comparator)
+    {
+        t.fill(Color{ 158, 158, 158 });
+        t.speckle(6, 1901);
+        const Color dust = on ? Color{ 250, 40, 20 } : Color{ 110, 18, 12 };
+        for (int z = 1; z < 15; ++z) t.set(8, z, dust);
+        if (comparator)
+        {
+            for (int x = 3; x < 13; ++x) t.set(x, 12, dust);
+            for (int k = 0; k < 3; ++k) { t.set(4 + k, 9 + k, dust); t.set(11 - k, 9 + k, dust); }
+        }
+        else
+            for (int k = 0; k < 4; ++k) { t.set(8 - k, 3 + k, dust); t.set(8 + k, 3 + k, dust); }
+    }
+    void paintRepeaterTile(Tile& t) { paintDiodeTopIn(t, false, false); }
+    void paintRepeaterOnTile(Tile& t) { paintDiodeTopIn(t, true, false); }
+    void paintComparatorTile(Tile& t) { paintDiodeTopIn(t, false, true); }
+    void paintComparatorOnTile(Tile& t) { paintDiodeTopIn(t, true, true); }
+    void paintDaylightTopIn(Tile& t, bool inverted)
+    {
+        t.fill(Color{ 112, 90, 56 });
+        for (int y = 1; y < 15; ++y)
+            for (int x = 1; x < 15; ++x)
+                if (x % 5 != 0 && y % 5 != 0)
+                    t.set(x, y, inverted ? Color{ 52, 70, 110 } : Color{ 196, 214, 228 });
+    }
+    void paintDaylightTopTile(Tile& t) { paintDaylightTopIn(t, false); }
+    void paintDaylightInvertedTopTile(Tile& t) { paintDaylightTopIn(t, true); }
+    void paintDaylightSideTile(Tile& t)
+    {
+        t.fill(Color{ 160, 128, 80 });
+        for (int x = 0; x < Tile::N; ++x) t.set(x, 10, Color{ 120, 94, 58 });
+        t.speckle(6, 1902);
+    }
+    void paintTargetIn(Tile& t, bool side)
+    {
+        t.fill(Color{ 226, 214, 182 });
+        for (int y = 0; y < Tile::N; ++y)
+            for (int x = 0; x < Tile::N; ++x)
+            {
+                const float r = std::sqrt((x - 7.5f) * (x - 7.5f) + (y - 7.5f) * (y - 7.5f));
+                if (static_cast<int>(r) % 4 < 2) t.set(x, y, Color{ 200, 40, 36 });
+                if (side && (y == 0 || y == 15)) t.set(x, y, Color{ 196, 162, 54 });
+            }
+    }
+    void paintTargetTopTile(Tile& t) { paintTargetIn(t, false); }
+    void paintTargetSideTile(Tile& t) { paintTargetIn(t, true); }
+    void paintTripwireHookTile(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int x = 5; x < 11; ++x)
+            for (int y = 3; y < 9; ++y)
+                if (x == 5 || x == 10 || y == 3 || y == 8) t.set(x, y, Color{ 150, 150, 156 });
+    }
+    void paintTripwireTile(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int x = 0; x < Tile::N; ++x) { t.set(x, 0, Color{ 220, 220, 220 }); t.set(x, 1, Color{ 190, 190, 196 }); }
+    }
+    void paintSpecialRailIn(Tile& t, Color metal, bool lit)
+    {
+        paintRail(t);
+        const int n = Tile::N;
+        for (int y = 0; y < n; ++y)
+        {
+            t.set(n / 4, y, metal);
+            t.set(n - n / 4 - 1, y, metal);
+        }
+        const Color core = lit ? Color{ 250, 44, 24 } : Color{ 96, 20, 14 };
+        for (int y = 2; y < n - 2; y += 3) { t.set(n / 2 - 1, y, core); t.set(n / 2, y, core); }
+    }
+    void paintPoweredRailTile(Tile& t) { paintSpecialRailIn(t, Color{ 232, 196, 64 }, false); }
+    void paintPoweredRailOnTile(Tile& t) { paintSpecialRailIn(t, Color{ 232, 196, 64 }, true); }
+    void paintDetectorRailTile(Tile& t) { paintSpecialRailIn(t, Color{ 150, 150, 156 }, false); }
+    void paintDetectorRailOnTile(Tile& t) { paintSpecialRailIn(t, Color{ 150, 150, 156 }, true); }
+    void paintActivatorRailTile(Tile& t) { paintSpecialRailIn(t, Color{ 120, 96, 72 }, false); }
+    void paintActivatorRailOnTile(Tile& t) { paintSpecialRailIn(t, Color{ 120, 96, 72 }, true); }
+    void paintIronPanelIn(Tile& t, int rows)
+    {
+        t.fill(Color{ 196, 196, 200 });
+        for (int k = 0; k < Tile::N; ++k)
+        {
+            t.set(k, 0, Color{ 150, 150, 156 }); t.set(k, Tile::N - 1, Color{ 150, 150, 156 });
+            t.set(0, k, Color{ 150, 150, 156 }); t.set(Tile::N - 1, k, Color{ 150, 150, 156 });
+        }
+        for (int r = 0; r < rows; ++r)
+            for (int x = 3; x < 13; ++x) t.set(x, 3 + r * 5, Color{ 160, 160, 166 });
+        t.set(3, 3, Color{ 120, 120, 126 }); t.set(12, 3, Color{ 120, 120, 126 });
+    }
+    void paintIronDoorTopTile(Tile& t)
+    {
+        paintIronPanelIn(t, 1);
+        for (int y = 6; y < 13; ++y) for (int x = 4; x < 12; ++x) if ((x + y) % 3) t.set(x, y, Color{ 120, 128, 140, 0 });
+    }
+    void paintIronDoorBottomTile(Tile& t) { paintIronPanelIn(t, 3); }
+    void paintIronTrapdoorTile(Tile& t)
+    {
+        paintIronPanelIn(t, 0);
+        for (int y = 3; y < 13; y += 4) for (int x = 3; x < 13; x += 4) { t.set(x, y, Color{ 0, 0, 0, 0 }); t.set(x + 1, y, Color{ 0, 0, 0, 0 }); }
+    }
+    void paintItemRepeater(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 10; y < 14; ++y) for (int x = 1; x < 15; ++x) t.set(x, y, y == 10 ? Color{ 176, 176, 176 } : Color{ 140, 140, 140 });
+        for (int k : { 4, 10 })
+            for (int y = 5; y < 10; ++y) t.set(k, y, y < 7 ? Color{ 250, 50, 30 } : Color{ 110, 80, 50 });
+    }
+    void paintItemComparator(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 10; y < 14; ++y) for (int x = 1; x < 15; ++x) t.set(x, y, y == 10 ? Color{ 176, 176, 176 } : Color{ 140, 140, 140 });
+        for (int k : { 3, 8, 12 })
+            for (int y = (k == 8 ? 7 : 5); y < 10; ++y) t.set(k, y, y < (k == 8 ? 8 : 7) ? Color{ 250, 50, 30 } : Color{ 110, 80, 50 });
+    }
+    void paintItemIronDoor(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 1; y < 15; ++y)
+            for (int x = 4; x < 12; ++x)
+                t.set(x, y, (x == 4 || x == 11 || y == 1 || y == 14) ? Color{ 150, 150, 156 } : (y < 7 && (x + y) % 3 == 0) ? Color{ 110, 116, 126 } : Color{ 200, 200, 204 });
+    }
+    void paintItemTurtleEggIcon(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 3; y < 14; ++y)
+            for (int x = 4; x < 12; ++x)
+            {
+                const float dx = (x - 7.5f) / 4.0f, dy = (y - 8.5f) / 5.5f;
+                if (dx * dx + dy * dy > 1.0f) continue;
+                t.set(x, y, hash2(x, y, 1903) > 0.75f ? Color{ 92, 150, 84 } : Color{ 232, 228, 200 });
+            }
+    }
     void paintItemPitcherPlant(Tile& t)
     {
         paintDoubleIn(t, true, Color{ 100, 170, 190 }, 1333);
@@ -7834,6 +7967,10 @@ namespace
         { Tiles::ItemRawGold, paintItemRawGold },
         { Tiles::ItemAmethystShard, paintItemAmethystShard },
         { Tiles::ItemTripwireHook, paintItemTripwireHook },
+        { Tiles::ItemRepeater, paintItemRepeater },
+        { Tiles::ItemComparator, paintItemComparator },
+        { Tiles::ItemIronDoor, paintItemIronDoor },
+        { Tiles::ItemTurtleEggIcon, paintItemTurtleEggIcon },
         { Tiles::ItemPowderSnowBucket, paintItemPowderSnowBucket },
         { Tiles::ItemNautilusShell, paintItemNautilusShell },
         { Tiles::ItemHeartOfTheSea, paintItemHeartOfTheSea },
@@ -8014,6 +8151,26 @@ namespace
         { Tiles::DustLine1Off, paintRedstoneDust },
         { Tiles::DustLine1On, paintRedstoneDustLit },
         { Tiles::LeverHandle, paintLever },
+        { Tiles::RepeaterTile, paintRepeaterTile },
+        { Tiles::RepeaterOnTile, paintRepeaterOnTile },
+        { Tiles::ComparatorTile, paintComparatorTile },
+        { Tiles::ComparatorOnTile, paintComparatorOnTile },
+        { Tiles::DaylightTopTile, paintDaylightTopTile },
+        { Tiles::DaylightInvertedTopTile, paintDaylightInvertedTopTile },
+        { Tiles::DaylightSideTile, paintDaylightSideTile },
+        { Tiles::TargetTopTile, paintTargetTopTile },
+        { Tiles::TargetSideTile, paintTargetSideTile },
+        { Tiles::TripwireHookTile, paintTripwireHookTile },
+        { Tiles::TripwireTile, paintTripwireTile },
+        { Tiles::PoweredRailTile, paintPoweredRailTile },
+        { Tiles::PoweredRailOnTile, paintPoweredRailOnTile },
+        { Tiles::DetectorRailTile, paintDetectorRailTile },
+        { Tiles::DetectorRailOnTile, paintDetectorRailOnTile },
+        { Tiles::ActivatorRailTile, paintActivatorRailTile },
+        { Tiles::ActivatorRailOnTile, paintActivatorRailOnTile },
+        { Tiles::IronDoorTopTile, paintIronDoorTopTile },
+        { Tiles::IronDoorBottomTile, paintIronDoorBottomTile },
+        { Tiles::IronTrapdoorTile, paintIronTrapdoorTile },
         { Tiles::PackedIceTile, paintPackedIceTile },
         { Tiles::BlueIceTile, paintBlueIceTile },
         { Tiles::PowderSnowTile, paintPowderSnowTile },
@@ -8593,6 +8750,10 @@ namespace
         { Tiles::ItemRawGold, { "raw_gold", nullptr, nullptr } },
         { Tiles::ItemAmethystShard, { "amethyst_shard", nullptr, nullptr } },
         { Tiles::ItemTripwireHook, { "../block/tripwire_hook", nullptr, nullptr } },
+        { Tiles::ItemRepeater, { "repeater", nullptr, nullptr } },
+        { Tiles::ItemComparator, { "comparator", nullptr, nullptr } },
+        { Tiles::ItemIronDoor, { "iron_door", nullptr, nullptr } },
+        { Tiles::ItemTurtleEggIcon, { "turtle_egg", nullptr, nullptr } },
         { Tiles::ItemPowderSnowBucket, { "powder_snow_bucket", nullptr, nullptr } },
         { Tiles::ItemNautilusShell, { "nautilus_shell", nullptr, nullptr } },
         { Tiles::ItemHeartOfTheSea, { "heart_of_the_sea", nullptr, nullptr } },
@@ -8769,6 +8930,26 @@ namespace
         { Tiles::GlassPaneTopTile, { "glass_pane_top", nullptr }, Tinting::None, 0, false },
         { Tiles::TerracottaPlainTile, { "terracotta", "hardened_clay", nullptr }, Tinting::None, 0, false },
         { Tiles::TintedGlassTile, { "tinted_glass", nullptr }, Tinting::None, 0, false },
+        { Tiles::RepeaterTile, { "repeater", nullptr }, Tinting::None, 0, false },
+        { Tiles::RepeaterOnTile, { "repeater_on", nullptr }, Tinting::None, 0, false },
+        { Tiles::ComparatorTile, { "comparator", nullptr }, Tinting::None, 0, false },
+        { Tiles::ComparatorOnTile, { "comparator_on", nullptr }, Tinting::None, 0, false },
+        { Tiles::DaylightTopTile, { "daylight_detector_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::DaylightInvertedTopTile, { "daylight_detector_inverted_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::DaylightSideTile, { "daylight_detector_side", nullptr }, Tinting::None, 0, false },
+        { Tiles::TargetTopTile, { "target_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::TargetSideTile, { "target_side", nullptr }, Tinting::None, 0, false },
+        { Tiles::TripwireHookTile, { "tripwire_hook", nullptr }, Tinting::None, 0, false },
+        { Tiles::TripwireTile, { "tripwire", nullptr }, Tinting::None, 0, false },
+        { Tiles::PoweredRailTile, { "powered_rail", nullptr }, Tinting::None, 0, false },
+        { Tiles::PoweredRailOnTile, { "powered_rail_on", nullptr }, Tinting::None, 0, false },
+        { Tiles::DetectorRailTile, { "detector_rail", nullptr }, Tinting::None, 0, false },
+        { Tiles::DetectorRailOnTile, { "detector_rail_on", nullptr }, Tinting::None, 0, false },
+        { Tiles::ActivatorRailTile, { "activator_rail", nullptr }, Tinting::None, 0, false },
+        { Tiles::ActivatorRailOnTile, { "activator_rail_on", nullptr }, Tinting::None, 0, false },
+        { Tiles::IronDoorTopTile, { "iron_door_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::IronDoorBottomTile, { "iron_door_bottom", nullptr }, Tinting::None, 0, false },
+        { Tiles::IronTrapdoorTile, { "iron_trapdoor", nullptr }, Tinting::None, 0, false },
         { Tiles::PackedIceTile, { "packed_ice", nullptr }, Tinting::None, 0, false },
         { Tiles::BlueIceTile, { "blue_ice", nullptr }, Tinting::None, 0, false },
         { Tiles::FrostedIceTileFirst, { "frosted_ice_0", nullptr }, Tinting::None, 210, false },

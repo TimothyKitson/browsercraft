@@ -3624,6 +3624,112 @@ namespace
         check(Player::FREEZE_SECONDS > 0.0f, "freezing takes time");
     }
 
+    void testWiring()
+    {
+        section("repeaters, comparators, hooks and the new rails");
+
+        struct Grid : Redstone::Cells
+        {
+            std::map<std::array<int, 3>, BlockId> blocks;
+            BlockId at(int x, int y, int z) const override
+            {
+                const auto it = blocks.find({ x, y, z });
+                return it == blocks.end() ? Blocks::Air : it->second;
+            }
+            void set(int x, int y, int z, BlockId b) override { blocks[{ x, y, z }] = b; }
+        };
+
+        bool ids = true;
+        for (int out = 0; out < 4; ++out)
+        {
+            for (int delay = 1; delay <= 4; ++delay)
+                for (bool lit : { false, true })
+                {
+                    const BlockId r = repeaterOf(out, delay, lit);
+                    if (!isRepeater(r) || repeaterOut(r) != out || repeaterDelay(r) != delay || repeaterLit(r) != lit || blockFacing(r) != out)
+                        ids = false;
+                    if (blockDrop(r) != repeaterOf(0, 1, false)) ids = false;
+                }
+            for (bool sub : { false, true })
+                for (bool lit : { false, true })
+                {
+                    const BlockId c = comparatorOf(out, sub, lit);
+                    if (!isComparator(c) || comparatorOut(c) != out || comparatorSubtracts(c) != sub || comparatorLit(c) != lit) ids = false;
+                }
+            for (bool att : { false, true })
+                for (bool pow : { false, true })
+                {
+                    const BlockId h = hookOf(out, att, pow);
+                    if (!isTripwireHook(h) || hookFacing(h) != out || hookAttached(h) != att || hookPowered(h) != pow) ids = false;
+                    if (blockDrop(h) != Items::TripwireHook) ids = false;
+                }
+        }
+        check(ids, "every repeater, comparator and hook knows its facing, setting and state, and breaks back to one item");
+
+        Grid line;
+        line.set(0, 0, 0, Blocks::Stone);
+        line.set(1, 0, 0, Blocks::Stone);
+        line.set(-1, 0, 0, Blocks::Stone);
+        line.set(0, 0, 1, Blocks::Stone);
+        line.set(0, 1, 0, repeaterOf(1, 1, true));
+        line.set(1, 1, 0, Blocks::RedstoneDust);
+        line.set(-1, 1, 0, Blocks::RedstoneDust);
+        line.set(0, 1, 1, Blocks::RedstoneDust);
+        Redstone::update(line, 0, 1, 0);
+        check(line.at(1, 1, 0) == Blocks::RedstoneDustLit, "a lit repeater lights the dust it points at");
+        check(line.at(-1, 1, 0) == Blocks::RedstoneDust && line.at(0, 1, 1) == Blocks::RedstoneDust,
+              "and none behind it or beside it");
+
+        Grid input;
+        input.set(0, 0, 0, repeaterOf(1, 2, false));
+        input.set(-1, 0, 0, Blocks::RedstoneBlock);
+        check(Redstone::diodeInput(input, 0, 0, 0), "a repeater reads the block behind it");
+        input.set(-1, 0, 0, Blocks::Air);
+        input.set(0, 0, 1, Blocks::RedstoneBlock);
+        check(!Redstone::diodeInput(input, 0, 0, 0), "and not one beside it");
+        input.set(0, 0, 0, comparatorOf(1, true, false));
+        check(Redstone::diodeSide(input, 0, 0, 0), "while a comparator feels its side");
+
+        Grid wall;
+        wall.set(0, 0, 0, Blocks::Stone);
+        wall.set(1, 0, 0, hookOf(1, true, true));
+        check(Redstone::carries(wall, 0, 0, 0), "a pulled hook powers the wall it hangs on");
+        wall.set(1, 0, 0, hookOf(1, true, false));
+        check(!Redstone::carries(wall, 0, 0, 0), "and a slack one does not");
+        check(Redstone::isSource(Blocks::TargetLit) && Redstone::isSource(Blocks::DaylightDetectorLit) &&
+              Redstone::isSource(Blocks::DaylightDetectorInvertedLit) && !Redstone::isSource(Blocks::DaylightDetector),
+              "a struck target and a lit daylight detector give power");
+
+        bool rails = true;
+        for (int family = 1; family <= 3; ++family)
+            for (bool ew : { false, true })
+                for (bool lit : { false, true })
+                {
+                    const BlockId rail = specialRailOf(family, ew, lit);
+                    if (!isRail(rail) || specialRailFamily(rail) != family || specialRailEastWest(rail) != ew || specialRailPowered(rail) != lit)
+                        rails = false;
+                    if (railLinks(rail, 1) != ew || railLinks(rail, 0) == ew) rails = false;
+                    if (blockDrop(rail) != specialRailOf(family, false, false)) rails = false;
+                }
+        check(rails, "powered, detector and activator rails run straight either way");
+        check(Redstone::isSink(specialRailOf(1, false, false)) && Redstone::lit(specialRailOf(1, true, false)) == specialRailOf(1, true, true),
+              "a powered rail answers to power");
+        check(Redstone::isSource(specialRailOf(2, false, true)), "and a detector rail with a cart on it gives power");
+
+        check(isDoor(Blocks::IronDoorFirst) && doorBase(Blocks::IronDoorFirst + 9) == Blocks::IronDoorFirst &&
+              Redstone::isSink(Blocks::IronDoorFirst + 3), "an iron door is a door that answers to power");
+        check(isTrapdoor(Blocks::IronTrapdoorFirst) && trapdoorBase(Blocks::IronTrapdoorFirst + 5) == Blocks::IronTrapdoorFirst,
+              "and so is an iron trapdoor");
+        check(!Tools::canHarvest(Blocks::Air, Blocks::IronDoorFirst), "both want a pickaxe");
+
+        const std::vector<StackId> made = Crafting::everyOutput();
+        auto makes = [&](StackId id) { return std::find(made.begin(), made.end(), id) != made.end(); };
+        check(makes(Blocks::RepeaterFirst) && makes(Blocks::ComparatorFirst) && makes(Blocks::DaylightDetector) &&
+              makes(Blocks::Target) && makes(Blocks::PoweredRailFirst) && makes(Blocks::DetectorRailFirst) &&
+              makes(Blocks::ActivatorRailFirst) && makes(Blocks::IronDoorFirst) && makes(Blocks::IronTrapdoorFirst),
+              "every new redstone part has a recipe");
+    }
+
     // --- the workstations -----------------------------------------------
 
     // A village had a bench and a furnace in it and nothing else
@@ -13575,6 +13681,7 @@ int runSelfTest()
     testPumpkinsAndBees();
     testOcean();
     testIceAndSnow();
+    testWiring();
     testMadeThings();
     testTheEndAndTheSea();
     testPathfinding();

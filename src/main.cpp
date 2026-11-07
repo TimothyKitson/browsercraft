@@ -807,6 +807,11 @@ namespace
                                                   why = "living coral that dried out out of the water";
             else if (isTurtleEgg(id))             why = "laid on sand by turtles fed seagrass, then cracking";
             else if (isFrostedIce(id))            why = "water frozen under frost walker boots, melting";
+            else if (isDiode(id))                 why = "a placed one turned, set or lit by power";
+            else if (isDaylightDetector(id))      why = "a placed detector inverted by hand or lit by the sun";
+            else if (id == Blocks::TargetLit)     why = "a target just struck by an arrow";
+            else if (isTripwire(id))              why = "string laid on the ground";
+            else if (isTripwireHook(id))          why = "a tripwire hook hung on a wall";
             else if (isAnyCoralWallFan(id))       why = "a coral fan set against another face";
             else if (isBigDripleaf(id) || isBigDripleafStem(id) || isSmallDripleaf(id))
                                                   why = "another facing, tilt or half of a dripleaf";
