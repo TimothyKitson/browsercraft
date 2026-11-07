@@ -58,6 +58,7 @@ public:
     uint8_t blockLightAt(int x, int y, int z) const;
 
     Chunk* chunkAt(int chunkX, int chunkZ) const;
+    std::vector<glm::ivec3> signsNear(const glm::vec3& around, float reach) const;
     const std::unordered_map<ChunkPos, std::unique_ptr<Chunk>, ChunkPosHash>& chunks() const { return m_chunks; }
 
     // `throughLiquids` false -- the default -- looks past water and lava

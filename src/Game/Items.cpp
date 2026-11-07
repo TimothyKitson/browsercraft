@@ -380,6 +380,17 @@ namespace
         { "Painting", Tiles::ItemPainting, 64 },
         { "Armor Stand", Tiles::ItemArmorStand, 16 },
         { "Glow Item Frame", Tiles::ItemGlowItemFrame, 64 },
+        { "Oak Hanging Sign", Tiles::ItemHangingSignFirst + 0, 16 },
+        { "Spruce Hanging Sign", Tiles::ItemHangingSignFirst + 1, 16 },
+        { "Birch Hanging Sign", Tiles::ItemHangingSignFirst + 2, 16 },
+        { "Jungle Hanging Sign", Tiles::ItemHangingSignFirst + 3, 16 },
+        { "Acacia Hanging Sign", Tiles::ItemHangingSignFirst + 4, 16 },
+        { "Dark Oak Hanging Sign", Tiles::ItemHangingSignFirst + 5, 16 },
+        { "Cherry Hanging Sign", Tiles::ItemHangingSignFirst + 6, 16 },
+        { "Mangrove Hanging Sign", Tiles::ItemHangingSignFirst + 7, 16 },
+        { "Bamboo Hanging Sign", Tiles::ItemHangingSignFirst + 8, 16 },
+        { "Crimson Hanging Sign", Tiles::ItemHangingSignFirst + 9, 16 },
+        { "Warped Hanging Sign", Tiles::ItemHangingSignFirst + 10, 16 },
     };
 
     static_assert(sizeof(ITEMS) / sizeof(ITEMS[0]) ==
@@ -550,6 +561,7 @@ StackId blockDrop(BlockId id)
     if (isCandleCake(id)) return candleOf(candleCakeShade(id), 1, false);
 
     // However it was hung, what comes back is one sign.
+    if (isHangingSign(id)) return hangingSignItemOfWood(signWood(id));
     if (isSign(id)) return signItemOfWood(signWood(id));
     if (isDoor(id)) return doorBase(id);
     if (isTrapdoor(id)) return trapdoorBase(id);

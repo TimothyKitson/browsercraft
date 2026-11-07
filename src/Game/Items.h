@@ -459,6 +459,7 @@ namespace Items
         Painting,
         ArmorStand,
         GlowItemFrame,
+        HangingSignFirst, HangingSignLast = HangingSignFirst + 10,
         Count
     };
 }
@@ -503,6 +504,14 @@ inline StackId signItemOfWood(int wood)
                                      Items::MangroveSign, Items::BambooSign, Items::CrimsonSign,
                                      Items::WarpedSign };
     return SIGNS[wood < 0 || wood >= static_cast<int>(sizeof(SIGNS) / sizeof(SIGNS[0])) ? 0 : wood];
+}
+inline StackId hangingSignItemOfWood(int wood)
+{
+    return static_cast<StackId>(Items::HangingSignFirst + std::clamp(wood, 0, WOOD_COUNT - 1));
+}
+inline int woodOfHangingSignItem(StackId id)
+{
+    return id >= Items::HangingSignFirst && id <= Items::HangingSignLast ? static_cast<int>(id - Items::HangingSignFirst) : -1;
 }
 inline int woodOfSignItem(StackId id)
 {

@@ -2236,6 +2236,7 @@ bool Application::frame()
             tickFangs(deltaTime);
             tickPaintings(deltaTime);
             tickArmorStands(deltaTime);
+            tickSigns(deltaTime);
             tickGlowSquids(deltaTime);
             tickJukeboxes(deltaTime);
             updatePortal(deltaTime);
@@ -2559,7 +2560,7 @@ bool Application::frame()
             m_startupScreen == "attackhud" || m_startupScreen == "attackready" ||
             m_startupScreen == "attackhotbar" || m_startupScreen == "bossbars" ||
             m_startupScreen == "gamemode" || m_startupScreen == "spectator" ||
-            m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" || m_startupScreen == "leads" || m_startupScreen == "anvilname" || m_startupScreen == "dials" || m_startupScreen == "spyglass" || m_startupScreen == "bundle" || m_startupScreen == "archery" || m_startupScreen == "food" || m_startupScreen == "materials" || m_startupScreen == "tropical" || m_startupScreen == "book" || m_startupScreen == "bookedit" || m_startupScreen == "booktip" || m_startupScreen == "boats" || m_startupScreen == "carts" || m_startupScreen == "fireworks" || m_startupScreen == "jukebox" || m_startupScreen == "potioncloud" || m_startupScreen == "armadillo" || m_startupScreen == "signs" || m_startupScreen == "glowsquid" || m_startupScreen == "fangs" || m_startupScreen == "zoglin" || m_startupScreen == "illusioner" || m_startupScreen == "llamas" || m_startupScreen == "paintings" || m_startupScreen == "stands" || m_startupScreen == "glowframes" || m_startupScreen == "bannershield" ||
+            m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" || m_startupScreen == "leads" || m_startupScreen == "anvilname" || m_startupScreen == "dials" || m_startupScreen == "spyglass" || m_startupScreen == "bundle" || m_startupScreen == "archery" || m_startupScreen == "food" || m_startupScreen == "materials" || m_startupScreen == "tropical" || m_startupScreen == "book" || m_startupScreen == "bookedit" || m_startupScreen == "booktip" || m_startupScreen == "boats" || m_startupScreen == "carts" || m_startupScreen == "fireworks" || m_startupScreen == "jukebox" || m_startupScreen == "potioncloud" || m_startupScreen == "armadillo" || m_startupScreen == "signs" || m_startupScreen == "glowsquid" || m_startupScreen == "fangs" || m_startupScreen == "zoglin" || m_startupScreen == "illusioner" || m_startupScreen == "llamas" || m_startupScreen == "paintings" || m_startupScreen == "stands" || m_startupScreen == "glowframes" || m_startupScreen == "bannershield" || m_startupScreen == "signkinds" || m_startupScreen == "signedit" || m_startupScreen == "hangingedit" ||
             m_startupScreen == "grinderror" || m_startupScreen == "woods" ||
             m_startupScreen == "cherry" || m_startupScreen == "mangrove" || m_startupScreen == "fungi" ||
             m_startupScreen == "stones" || m_startupScreen == "colours" || m_startupScreen == "candles" ||
@@ -2709,6 +2710,9 @@ bool Application::frame()
                                   m_startupScreen != "stands" &&
                                   m_startupScreen != "glowframes" &&
                                   m_startupScreen != "bannershield" &&
+                                  m_startupScreen != "signkinds" &&
+                                  m_startupScreen != "signedit" &&
+                                  m_startupScreen != "hangingedit" &&
                                   m_startupScreen != "golem" &&
                                   m_startupScreen != "shulker" &&
                                   m_startupScreen != "nethermobs" &&
@@ -3075,7 +3079,7 @@ bool Application::frame()
             if (m_startupScreen == "attackhud" || m_startupScreen == "attackready" ||
                 m_startupScreen == "attackhotbar" || m_startupScreen == "bossbars" ||
                 m_startupScreen == "gamemode" || m_startupScreen == "spectator" ||
-                m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" || m_startupScreen == "leads" || m_startupScreen == "anvilname" || m_startupScreen == "dials" || m_startupScreen == "spyglass" || m_startupScreen == "bundle" || m_startupScreen == "archery" || m_startupScreen == "food" || m_startupScreen == "materials" || m_startupScreen == "tropical" || m_startupScreen == "book" || m_startupScreen == "bookedit" || m_startupScreen == "booktip" || m_startupScreen == "boats" || m_startupScreen == "carts" || m_startupScreen == "fireworks" || m_startupScreen == "jukebox" || m_startupScreen == "potioncloud" || m_startupScreen == "armadillo" || m_startupScreen == "signs" || m_startupScreen == "glowsquid" || m_startupScreen == "fangs" || m_startupScreen == "zoglin" || m_startupScreen == "illusioner" || m_startupScreen == "llamas" || m_startupScreen == "paintings" || m_startupScreen == "stands" || m_startupScreen == "glowframes" || m_startupScreen == "bannershield" ||
+                m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" || m_startupScreen == "leads" || m_startupScreen == "anvilname" || m_startupScreen == "dials" || m_startupScreen == "spyglass" || m_startupScreen == "bundle" || m_startupScreen == "archery" || m_startupScreen == "food" || m_startupScreen == "materials" || m_startupScreen == "tropical" || m_startupScreen == "book" || m_startupScreen == "bookedit" || m_startupScreen == "booktip" || m_startupScreen == "boats" || m_startupScreen == "carts" || m_startupScreen == "fireworks" || m_startupScreen == "jukebox" || m_startupScreen == "potioncloud" || m_startupScreen == "armadillo" || m_startupScreen == "signs" || m_startupScreen == "glowsquid" || m_startupScreen == "fangs" || m_startupScreen == "zoglin" || m_startupScreen == "illusioner" || m_startupScreen == "llamas" || m_startupScreen == "paintings" || m_startupScreen == "stands" || m_startupScreen == "glowframes" || m_startupScreen == "bannershield" || m_startupScreen == "signkinds" || m_startupScreen == "signedit" || m_startupScreen == "hangingedit" ||
                 m_startupScreen == "grinderror" || m_startupScreen == "woods" ||
                 m_startupScreen == "cherry" || m_startupScreen == "mangrove" || m_startupScreen == "fungi" ||
                 m_startupScreen == "stones" || m_startupScreen == "colours" || m_startupScreen == "candles" ||
@@ -4019,6 +4023,44 @@ bool Application::frame()
                         m_camera.pitch = -6.0f;
                     }
                     m_camera.addLook(0.0f, 0.0f, 0.0f);
+                }
+                if (m_startupScreen == "signkinds" || m_startupScreen == "signedit" || m_startupScreen == "hangingedit")
+                {
+                    m_devAttackStrength = 1.0f;
+                    for (int dx = 1; dx <= 9; ++dx)
+                        for (int dz = -7; dz <= 7; ++dz)
+                        {
+                            m_world->setBlock(px + dx, py - 1, pz + dz, Blocks::Grass);
+                            for (int dy = 0; dy <= 5; ++dy)
+                                m_world->setBlock(px + dx, py + dy, pz + dz, dx == 8 && dy <= 4 ? Blocks::StoneBricks : Blocks::Air);
+                        }
+                    for (int dz = -6; dz <= 6; ++dz) m_world->setBlock(px + 7, py + 4, pz + dz, Blocks::StoneBricks);
+                    struct Board { glm::ivec3 at; BlockId block; Signs::Text text; };
+                    const Board BOARDS[] = {
+                        { { px + 7, py + 1, pz - 5 }, signFacingAs(signBaseOf(0), 1), { "Oak", "wall sign", "", "" } },
+                        { { px + 5, py, pz - 3 }, standingSignOf(6, 4), { "Cherry", "standing", "", "" } },
+                        { { px + 5, py, pz - 1 }, standingSignOf(1, 6), { "Spruce", "turned", "a little", "" } },
+                        { { px + 7, py + 3, pz + 1 }, hangingSignOf(9, 4), { "Crimson", "hanging", "", "" } },
+                        { { px + 7, py + 3, pz + 3 }, hangingSignOf(7, 4), { "Mangrove", "", "", "" } },
+                        { { px + 6, py + 2, pz + 5 }, wallHangingSignOf(10, 1), { "Warped", "bracket", "", "" } },
+                    };
+                    for (const Board& board : BOARDS)
+                    {
+                        m_world->setBlock(board.at.x, board.at.y, board.at.z, board.block);
+                        m_signs.at(board.at) = board.text;
+                    }
+                    m_world->setBlock(px + 6, py + 2, pz + 6, Blocks::StoneBricks);
+                    for (int k = 0; k < 11; ++k) m_inventory.slot(k % 9) = ItemStack{ hangingSignItemOfWood(k), 16 };
+                    m_inventory.slot(0) = ItemStack{ Items::Sign, 16 };
+                    m_inventory.setSelectedSlot(1);
+                    m_camera.pitch = 8.0f;
+                    m_camera.addLook(0.0f, 0.0f, 0.0f);
+                    if (m_startupScreen != "signkinds")
+                    {
+                        const glm::ivec3 at = m_startupScreen == "signedit" ? glm::ivec3(px + 5, py, pz - 3) : glm::ivec3(px + 7, py + 3, pz + 1);
+                        openSign(at);
+                        m_signLine = 2;
+                    }
                 }
                 if (m_startupScreen == "bannershield")
                 {
@@ -12009,6 +12051,43 @@ bool Application::hitArmorStand(float blockDistance)
     return true;
 }
 
+void Application::tickSigns(float deltaTime)
+{
+    m_signClock += deltaTime;
+    if (m_signClock < 0.5f || !m_world) return;
+    m_signClock = 0.0f;
+    for (const glm::ivec3& at : m_world->signsNear(m_player.position, 32.0f))
+    {
+        const BlockId block = m_world->getBlock(at.x, at.y, at.z);
+        if (!isSign(block)) continue;
+        bool held = true;
+        if (isStandingSign(block)) held = isSolid(m_world->getBlock(at.x, at.y - 1, at.z));
+        else if (isCeilingHangingSign(block))
+        {
+            const BlockId above = m_world->getBlock(at.x, at.y + 1, at.z);
+            held = isSolid(above) || isChain(above);
+        }
+        else if (isWallHangingSign(block))
+        {
+            const glm::vec3 forward = SignRenderer::facingVector(block);
+            const glm::ivec3 side(static_cast<int>(std::lround(-forward.z)), 0, static_cast<int>(std::lround(forward.x)));
+            held = isSolid(m_world->getBlock(at.x + side.x, at.y, at.z + side.z)) ||
+                   isSolid(m_world->getBlock(at.x - side.x, at.y, at.z - side.z));
+        }
+        else
+        {
+            const glm::vec3 forward = SignRenderer::facingVector(block);
+            held = isSolid(m_world->getBlock(at.x - static_cast<int>(std::lround(forward.x)), at.y,
+                                             at.z - static_cast<int>(std::lround(forward.z))));
+        }
+        if (held) continue;
+        m_world->setBlock(at.x, at.y, at.z, Blocks::Air);
+        m_net.onLocalBlockChange(at.x, at.y, at.z, Blocks::Air);
+        m_signs.remove(at);
+        m_drops.spawnFromBrokenBlock(at, blockDrop(block));
+    }
+}
+
 void Application::tickArmorStands(float deltaTime)
 {
     for (ArmorStandStore::Entry& entry : m_stands.all())
@@ -15080,6 +15159,7 @@ void Application::handlePlacement()
     // A sign is held as one item and hung four ways, the same as a
     // ladder: which of the four it lands as is worked out below.
     if (woodOfSignItem(stack.id) >= 0) fromItem = signBaseOf(woodOfSignItem(stack.id));
+    if (woodOfHangingSignItem(stack.id) >= 0) fromItem = hangingSignOf(woodOfHangingSignItem(stack.id), 0);
     if (stack.id == Items::ItemFrame) fromItem = Blocks::FrameNorth;
     if (stack.id == Items::GlowItemFrame) fromItem = Blocks::GlowFrameNorth;
     if (stack.id == Items::Painting)
@@ -15508,10 +15588,29 @@ void Application::handlePlacement()
     if (isSign(placing))
     {
         const glm::ivec3 n = hit.normal;
-        if (n.y != 0) return;   // nothing to hang it on
-
-        const int facing = (n.z > 0) ? 0 : (n.x < 0) ? 1 : (n.z < 0) ? 2 : 3;
-        placing = signFacingAs(signBase(placing), facing);
+        const int wood = signWood(placing);
+        const int rotation = static_cast<int>(std::floor((m_camera.yaw - 90.0f + 180.0f) * 16.0f / 360.0f + 0.5f)) & 15;
+        if (isHangingSign(placing))
+        {
+            if (n.y > 0) return;
+            if (n.y < 0) placing = hangingSignOf(wood, rotation);
+            else
+            {
+                const glm::vec3 look = m_camera.front;
+                const int facing = (n.x != 0) ? (look.z > 0.0f ? 2 : 0) : (look.x > 0.0f ? 1 : 3);
+                placing = wallHangingSignOf(wood, facing);
+            }
+        }
+        else
+        {
+            if (n.y < 0) return;
+            if (n.y > 0) placing = standingSignOf(wood, rotation);
+            else
+            {
+                const int facing = (n.z > 0) ? 0 : (n.x < 0) ? 1 : (n.z < 0) ? 2 : 3;
+                placing = signFacingAs(signBase(placing), facing);
+            }
+        }
     }
 
     if (isFrame(placing))
@@ -15854,6 +15953,7 @@ void Application::renderWorldShaded()
     m_fangRenderer.render(world, *m_world, m_fangs, m_fangClock / Fangs::TICK);
     m_paintingRenderer.render(world, *m_world, m_paintings.near(m_camera.position, 96.0f));
     m_standRenderer.render(world, *m_world, standsHere(96.0f));
+    m_signRenderer.render(world, *m_world, m_world->signsNear(m_camera.position, 64.0f));
     m_bannerRenderer.render(world, *m_world, nearbyBanners(), m_elapsedSeconds);
     m_fireworkRenderer.render(view, projection, camera.right, camera.up);
     world.bind();
@@ -15993,6 +16093,7 @@ void Application::renderWorld()
     m_fangRenderer.render(m_chunkShader, *m_world, m_fangs, m_fangClock / Fangs::TICK);
     m_paintingRenderer.render(m_chunkShader, *m_world, m_paintings.near(m_camera.position, 96.0f));
     m_standRenderer.render(m_chunkShader, *m_world, standsHere(96.0f));
+    m_signRenderer.render(m_chunkShader, *m_world, m_world->signsNear(m_camera.position, 64.0f));
     m_bannerRenderer.render(m_chunkShader, *m_world, nearbyBanners(), m_elapsedSeconds);
     m_fireworkRenderer.render(view, projection, camera.right, camera.up);
     castShadows(view, projection);
@@ -18598,7 +18699,8 @@ void Application::updateSignInput()
     }
 
     for (char c : m_input.typedText())
-        if (c >= 32 && line.size() < Signs::MAX_LINE) line.push_back(c);
+        if (c >= 32 && line.size() < (isHangingSign(m_world->getBlock(m_signAt.x, m_signAt.y, m_signAt.z)) ? Signs::MAX_HANGING_LINE : Signs::MAX_LINE))
+            line.push_back(c);
 
     if (m_input.wasKeyPressed(SDL_SCANCODE_RETURN) ||
         m_input.wasKeyPressed(SDL_SCANCODE_KP_ENTER) ||
@@ -18623,22 +18725,12 @@ void Application::collectSignPlates(const glm::mat4& viewProjection,
         const BlockId block = m_world->getBlock(sign.block.x, sign.block.y, sign.block.z);
         if (!isSign(block)) continue;
 
-        // Stand the words just off the face the board is on, so they
-        // read as written on it rather than floating in the block.
-        static const glm::vec3 OUT[] = {
-            {  0.0f, 0.0f,  0.42f }, { -0.42f, 0.0f, 0.0f },
-            {  0.0f, 0.0f, -0.42f }, {  0.42f, 0.0f, 0.0f },
-        };
-        const glm::vec3 middle = glm::vec3(sign.block) + glm::vec3(0.5f) +
-                                 OUT[signFacing(block)];
-
-        // Behind the board is the wall it is nailed to, so a sign is
-        // only read from the side it faces.
-        if (glm::dot(m_camera.position - middle, OUT[signFacing(block)]) <= 0.0f)
+        const glm::vec3 middle = SignRenderer::textAnchor(sign.block, block);
+        if (glm::dot(m_camera.position - middle, SignRenderer::facingVector(block)) <= 0.0f)
             continue;
 
         const float distance = glm::length(middle - m_camera.position);
-        const float scale = std::clamp(2.0f - distance * 0.06f, 0.9f, 1.6f);
+        const float scale = std::clamp(2.0f - distance * 0.06f, 0.9f, 1.6f) * (isHangingSign(block) ? 0.8f : 1.0f);
 
         // Projected once and stacked in pixels, not in world units. A
         // world-space offset shrinks with distance while the letters
@@ -18703,18 +18795,45 @@ void Application::renderSignEditor()
     const float w = static_cast<float>(m_window.width());
     const float h = static_cast<float>(m_window.height());
 
-    const float scale = 3.0f;
-    const float lineHeight = UIRenderer::textHeight(scale) + 8.0f;
-    const float boardHeight = lineHeight * Signs::LINES + 24.0f;
-    const float boardWidth = 420.0f;
-    const float left = (w - boardWidth) * 0.5f;
-    const float top = h * 0.32f;
+    const BlockId block = m_world ? m_world->getBlock(m_signAt.x, m_signAt.y, m_signAt.z) : Blocks::Air;
+    const bool hanging = isHangingSign(block);
+    const int wood = std::max(0, signWood(block));
+    const Signs::Look look = m_signs.look(m_signAt);
+    const unsigned int ink = Signs::shadedRgb(look);
+    const glm::vec4 inkColour(static_cast<float>((ink >> 16) & 0xFFu) / 255.0f, static_cast<float>((ink >> 8) & 0xFFu) / 255.0f,
+                              static_cast<float>(ink & 0xFFu) / 255.0f, 1.0f);
+
+    const float unit = std::max(6.0f, std::floor(std::min(w, h) / 70.0f));
+    const float scale = unit * 0.5f;
+    const float lineHeight = UIRenderer::textHeight(scale) + unit * 0.5f;
 
     m_ui.begin(m_window.width(), m_window.height());
-    m_ui.quad(left - 6.0f, top - 6.0f, boardWidth + 12.0f, boardHeight + 12.0f,
-              glm::vec4(0.0f, 0.0f, 0.0f, 0.65f));
-    m_ui.quad(left, top, boardWidth, boardHeight,
-              glm::vec4(0.42f, 0.33f, 0.21f, 0.95f));
+    m_ui.quad(0.0f, 0.0f, w, h, glm::vec4(0.0f, 0.0f, 0.0f, 0.45f));
+
+    float textTop = 0.0f, boardBottom = 0.0f;
+    if (hanging)
+    {
+        const float size = 16.0f * unit * 4.5f / 2.0f;
+        const float left = (w - size) * 0.5f;
+        const float top = h * 0.5f - size * 0.62f;
+        m_ui.texturedQuad(m_signRenderer.editorBackground(wood), left, top, size, size, 0.0f, 0.0f, 1.0f, 1.0f, glm::vec4(1.0f));
+        textTop = top + size * 0.5f - lineHeight * 2.0f + unit;
+        boardBottom = top + size;
+    }
+    else
+    {
+        const float boardWidth = 24.0f * unit * 1.5f;
+        const float boardHeight = 12.0f * unit * 1.5f;
+        const float left = (w - boardWidth) * 0.5f;
+        const float top = h * 0.5f - boardHeight * 0.75f;
+        const unsigned int sheet = m_signRenderer.sheet(wood, false);
+        m_ui.texturedQuad(sheet, left, top, boardWidth, boardHeight, 2.0f / 64.0f, 2.0f / 32.0f, 26.0f / 64.0f, 14.0f / 32.0f, glm::vec4(1.0f));
+        if (isStandingSign(block))
+            m_ui.texturedQuad(sheet, left + boardWidth * 0.5f - unit * 1.5f, top + boardHeight, unit * 3.0f, unit * 10.0f,
+                              2.0f / 64.0f, 16.0f / 32.0f, 4.0f / 64.0f, 30.0f / 32.0f, glm::vec4(1.0f));
+        textTop = top + boardHeight * 0.5f - lineHeight * 2.0f + unit * 0.4f;
+        boardBottom = top + boardHeight + (isStandingSign(block) ? unit * 10.0f : 0.0f);
+    }
 
     for (int i = 0; i < Signs::LINES; ++i)
     {
@@ -18722,14 +18841,12 @@ void Application::renderSignEditor()
         if (i == m_signLine) line += "_";
 
         const float width = UIRenderer::textWidth(line, scale);
-        m_ui.textWithShadow(line, left + (boardWidth - width) * 0.5f,
-                            top + 12.0f + static_cast<float>(i) * lineHeight,
-                            scale, TEXT_COLOR);
+        m_ui.text(line, (w - width) * 0.5f, textTop + static_cast<float>(i) * lineHeight, scale, inkColour);
     }
 
     const char* help = "Enter for the next line, ESC when it reads right";
     m_ui.textWithShadow(help, (w - UIRenderer::textWidth(help, 1.5f)) * 0.5f,
-                        top + boardHeight + 16.0f, 1.5f, TEXT_COLOR);
+                        boardBottom + 16.0f, 1.5f, TEXT_COLOR);
     m_ui.end();
 }
 

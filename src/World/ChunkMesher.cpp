@@ -1835,6 +1835,7 @@ void buildChunkMesh(const MeshSnapshot& snapshot, MeshResult& out)
     out.pos = snapshot.pos;
     out.opaqueVertices.clear();
     out.transparentVertices.clear();
+    out.signs.clear();
     out.opaqueVertices.reserve(8192);
 
     for (int y = 0; y < Chunk::SY; ++y)
@@ -1844,6 +1845,11 @@ void buildChunkMesh(const MeshSnapshot& snapshot, MeshResult& out)
             for (int lx = 0; lx < Chunk::SX; ++lx)
             {
                 const BlockId id = snapshot.block(lx, y, lz);
+                if (isSign(id))
+                {
+                    out.signs.push_back(glm::ivec3(snapshot.pos.x * Chunk::SX + lx, y, snapshot.pos.z * Chunk::SZ + lz));
+                    continue;
+                }
                 if (!isVisible(id)) continue;
 
                 if (id == Blocks::LeverOff || id == Blocks::LeverOn)

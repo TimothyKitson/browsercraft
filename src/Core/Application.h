@@ -34,6 +34,7 @@
 #include "Renderer/FangRenderer.h"
 #include "Renderer/PaintingRenderer.h"
 #include "Renderer/ArmorStandRenderer.h"
+#include "Renderer/SignRenderer.h"
 #include "Renderer/BannerRenderer.h"
 #include "Game/Banners.h"
 #include "Game/Fireworks.h"
@@ -537,6 +538,9 @@ private:
     void tickArmorStands(float deltaTime);
     void pushArmorStands(const glm::ivec3& from, int facing, int length);
     std::vector<ArmorStands::Stand> standsHere(float reach) const;
+    SignRenderer m_signRenderer;
+    void tickSigns(float deltaTime);
+    float m_signClock = 0.0f;
     ArmorStandStore m_stands;
     ArmorStandRenderer m_standRenderer;
     PaintingStore m_paintings;

@@ -108,6 +108,7 @@ public:
 
     Mesh opaqueMesh;
     Mesh transparentMesh;
+    std::vector<glm::ivec3> signs;
 
 private:
     ChunkPos m_position;

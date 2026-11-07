@@ -59,6 +59,7 @@ struct MeshResult
     ChunkPos pos{};
     std::vector<float> opaqueVertices;
     std::vector<float> transparentVertices;
+    std::vector<glm::ivec3> signs;
 };
 
 // Pure CPU work -- safe to run on a worker thread.

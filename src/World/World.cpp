@@ -602,6 +602,26 @@ void World::queueMeshJobs(const glm::vec3& playerPosition)
     }
 }
 
+std::vector<glm::ivec3> World::signsNear(const glm::vec3& around, float reach) const
+{
+    std::vector<glm::ivec3> out;
+    const int cx = floorDiv(static_cast<int>(std::floor(around.x)), Chunk::SX);
+    const int cz = floorDiv(static_cast<int>(std::floor(around.z)), Chunk::SZ);
+    const int span = static_cast<int>(std::ceil(reach / static_cast<float>(Chunk::SX))) + 1;
+    for (int dz = -span; dz <= span; ++dz)
+        for (int dx = -span; dx <= span; ++dx)
+        {
+            const Chunk* chunk = chunkAt(cx + dx, cz + dz);
+            if (!chunk) continue;
+            for (const glm::ivec3& at : chunk->signs)
+            {
+                const glm::vec3 apart = glm::vec3(at) + glm::vec3(0.5f) - around;
+                if (glm::dot(apart, apart) <= reach * reach) out.push_back(at);
+            }
+        }
+    return out;
+}
+
 void World::uploadCompletedMeshes()
 {
     std::vector<MeshResult> ready;
@@ -623,6 +643,7 @@ void World::uploadCompletedMeshes()
         if (!chunk) continue; // unloaded while the job was running
         chunk->opaqueMesh.upload(result.opaqueVertices, LAYOUT);
         chunk->transparentMesh.upload(result.transparentVertices, LAYOUT);
+        chunk->signs = std::move(result.signs);
     }
 }
 

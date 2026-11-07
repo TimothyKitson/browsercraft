@@ -17,6 +17,7 @@ class Signs
 public:
     static constexpr int LINES = 4;
     static constexpr size_t MAX_LINE = 15;
+    static constexpr size_t MAX_HANGING_LINE = 10;
 
     using Text = std::array<std::string, LINES>;
 

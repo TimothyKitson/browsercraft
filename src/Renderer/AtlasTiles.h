@@ -618,6 +618,7 @@ namespace Tiles
         ItemPainting,
         ItemArmorStand,
         ItemGlowItemFrame, GlowItemFrameTile,
+        ItemHangingSignFirst, ItemHangingSignLast = ItemHangingSignFirst + 10,
         ItemCompassFrameFirst, ItemCompassFrameLast = ItemCompassFrameFirst + 31,
         ItemClockFirst, ItemClockLast = ItemClockFirst + 63,
         ItemRecoveryFirst, ItemRecoveryLast = ItemRecoveryFirst + 31,

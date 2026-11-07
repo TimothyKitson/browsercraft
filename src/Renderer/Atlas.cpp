@@ -9778,6 +9778,17 @@ namespace
         { Tiles::ItemPainting,      { "painting", nullptr, nullptr } },
         { Tiles::ItemArmorStand,    { "armor_stand", nullptr, nullptr } },
         { Tiles::ItemGlowItemFrame, { "glow_item_frame", nullptr, nullptr } },
+        { Tiles::ItemHangingSignFirst + 0, { "oak_hanging_sign", nullptr, nullptr } },
+        { Tiles::ItemHangingSignFirst + 1, { "spruce_hanging_sign", nullptr, nullptr } },
+        { Tiles::ItemHangingSignFirst + 2, { "birch_hanging_sign", nullptr, nullptr } },
+        { Tiles::ItemHangingSignFirst + 3, { "jungle_hanging_sign", nullptr, nullptr } },
+        { Tiles::ItemHangingSignFirst + 4, { "acacia_hanging_sign", nullptr, nullptr } },
+        { Tiles::ItemHangingSignFirst + 5, { "dark_oak_hanging_sign", nullptr, nullptr } },
+        { Tiles::ItemHangingSignFirst + 6, { "cherry_hanging_sign", nullptr, nullptr } },
+        { Tiles::ItemHangingSignFirst + 7, { "mangrove_hanging_sign", nullptr, nullptr } },
+        { Tiles::ItemHangingSignFirst + 8, { "bamboo_hanging_sign", nullptr, nullptr } },
+        { Tiles::ItemHangingSignFirst + 9, { "crimson_hanging_sign", nullptr, nullptr } },
+        { Tiles::ItemHangingSignFirst + 10, { "warped_hanging_sign", nullptr, nullptr } },
         { Tiles::ItemLingeringPotion, { "lingering_potion", nullptr, nullptr } },
         { Tiles::BowPulling0,       { "bow_pulling_0", nullptr, nullptr } },
         { Tiles::BowPulling1,       { "bow_pulling_1", nullptr, nullptr } },
@@ -11487,6 +11498,25 @@ Atlas::Atlas()
             }
         blitPainted(Tiles::ItemArmadilloScute + i, tile);
     }
+    for (int i = 0; i < 11; ++i)
+    {
+        static const Color WOOD[11] = {
+            Color{ 162, 130, 78 }, Color{ 114, 84, 48 }, Color{ 196, 178, 122 }, Color{ 160, 115, 80 }, Color{ 168, 90, 50 },
+            Color{ 66, 43, 20 }, Color{ 226, 178, 172 }, Color{ 117, 54, 48 }, Color{ 194, 174, 82 }, Color{ 101, 48, 70 },
+            Color{ 43, 104, 99 } };
+        Tile tile;
+        tile.fill(Color{ 0, 0, 0, 0 });
+        const Color dark{ static_cast<uint8_t>(WOOD[i].r * 3 / 4), static_cast<uint8_t>(WOOD[i].g * 3 / 4), static_cast<uint8_t>(WOOD[i].b * 3 / 4) };
+        for (int y = 1; y < 6; ++y)
+        {
+            tile.set(4, y, Color{ 90, 90, 100 });
+            tile.set(11, y, Color{ 90, 90, 100 });
+        }
+        for (int y = 6; y < 14; ++y)
+            for (int x = 2; x < 14; ++x)
+                tile.set(x, y, (x == 2 || x == 13 || y == 6 || y == 13) ? dark : WOOD[i]);
+        blitPainted(Tiles::ItemHangingSignFirst + i, tile);
+    }
     for (int i = 0; i < 19; ++i)
     {
         static const Color LABELS[19] = {
@@ -12758,6 +12788,7 @@ bool Atlas::hasPainter(int tileIndex)
     if (tileIndex >= Tiles::ItemSpawnEggFirst && tileIndex <= Tiles::ItemSpawnEggLast) return true;
     if (tileIndex >= Tiles::ItemFireworkFirst && tileIndex <= Tiles::ItemFireworkLast) return true;
     if (tileIndex >= Tiles::ItemDiscFirst && tileIndex <= Tiles::ItemDiscLast) return true;
+    if (tileIndex >= Tiles::ItemHangingSignFirst && tileIndex <= Tiles::ItemHangingSignLast) return true;
     if (tileIndex >= Tiles::ItemArmadilloScute && tileIndex <= Tiles::ItemWolfArmorOverlay) return true;
     if (tileIndex >= Tiles::ConcreteTile && tileIndex <= Tiles::GlazedTileLast &&
         tileIndex != Tiles::TerracottaPlainTile) return true;

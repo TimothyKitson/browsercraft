@@ -1,4 +1,5 @@
 #pragma once
+#include <algorithm>
 #include <cstdint>
 
 // Sixteen bits rather than eight.
@@ -674,6 +675,9 @@ namespace Blocks
         StructureVoid,
         Frogspawn,
         GlowFrameNorth, GlowFrameEast, GlowFrameSouth, GlowFrameWest,
+        StandingSignFirst, StandingSignLast = StandingSignFirst + 175,
+        HangingSignFirst, HangingSignLast = HangingSignFirst + 175,
+        WallHangingSignFirst, WallHangingSignLast = WallHangingSignFirst + 43,
 
         Count
     };
@@ -962,16 +966,52 @@ inline const WoodSet& woodSet(int wood)
     return SETS[wood < 0 || wood >= WOOD_COUNT ? 0 : wood];
 }
 
-inline int signWood(BlockId id)
+inline bool isStandingSign(BlockId id) { return id >= Blocks::StandingSignFirst && id <= Blocks::StandingSignLast; }
+inline bool isCeilingHangingSign(BlockId id) { return id >= Blocks::HangingSignFirst && id <= Blocks::HangingSignLast; }
+inline bool isWallHangingSign(BlockId id) { return id >= Blocks::WallHangingSignFirst && id <= Blocks::WallHangingSignLast; }
+inline bool isHangingSign(BlockId id) { return isCeilingHangingSign(id) || isWallHangingSign(id); }
+inline int wallSignWood(BlockId id)
 {
     for (int wood = 0; wood < WOOD_COUNT; ++wood)
         if (id >= woodSet(wood).sign && id < woodSet(wood).sign + 4) return wood;
     return -1;
 }
+inline bool isWallSign(BlockId id) { return wallSignWood(id) >= 0; }
+inline int signWood(BlockId id)
+{
+    if (isStandingSign(id)) return (id - Blocks::StandingSignFirst) / 16;
+    if (isCeilingHangingSign(id)) return (id - Blocks::HangingSignFirst) / 16;
+    if (isWallHangingSign(id)) return (id - Blocks::WallHangingSignFirst) / 4;
+    return wallSignWood(id);
+}
 inline bool isSign(BlockId id) { return signWood(id) >= 0; }
 inline BlockId signBaseOf(int wood) { return woodSet(wood).sign; }
 inline BlockId signBase(BlockId id) { return signBaseOf(signWood(id)); }
-inline int signFacing(BlockId id) { return isSign(id) ? id - signBase(id) : 0; }
+inline int signRotation(BlockId id)
+{
+    if (isStandingSign(id)) return (id - Blocks::StandingSignFirst) % 16;
+    if (isCeilingHangingSign(id)) return (id - Blocks::HangingSignFirst) % 16;
+    if (isWallHangingSign(id)) return ((id - Blocks::WallHangingSignFirst) % 4) * 4;
+    if (isWallSign(id)) return (id - signBase(id)) * 4;
+    return 0;
+}
+inline int signFacing(BlockId id)
+{
+    if (isWallSign(id)) return id - signBase(id);
+    return isSign(id) ? ((signRotation(id) + 2) / 4) & 3 : 0;
+}
+inline BlockId standingSignOf(int wood, int rotation)
+{
+    return static_cast<BlockId>(Blocks::StandingSignFirst + std::clamp(wood, 0, WOOD_COUNT - 1) * 16 + (rotation & 15));
+}
+inline BlockId hangingSignOf(int wood, int rotation)
+{
+    return static_cast<BlockId>(Blocks::HangingSignFirst + std::clamp(wood, 0, WOOD_COUNT - 1) * 16 + (rotation & 15));
+}
+inline BlockId wallHangingSignOf(int wood, int facing)
+{
+    return static_cast<BlockId>(Blocks::WallHangingSignFirst + std::clamp(wood, 0, WOOD_COUNT - 1) * 4 + (facing & 3));
+}
 inline BlockId signFacingAs(BlockId base, int facing)
 {
     if (facing < 0) facing = 0;

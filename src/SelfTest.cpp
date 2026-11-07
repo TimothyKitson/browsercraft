@@ -40,6 +40,8 @@
 #include "Renderer/BookRenderer.h"
 #include "Renderer/PaintingRenderer.h"
 #include "Renderer/ArmorStandRenderer.h"
+#include "Renderer/SignRenderer.h"
+#include "World/ChunkMesher.h"
 #include "Game/Anvil.h"
 #include "Game/Archaeology.h"
 #include "Game/Stonecutting.h"
@@ -4660,6 +4662,62 @@ namespace
         int w = 0, h = 0;
         const std::vector<uint8_t> painted = PaintingRenderer::paintVariant(Paintings::find("skeleton"), w, h);
         check(w == 64 && h == 48 && painted.size() == static_cast<size_t>(64 * 48 * 4), "and each has a painted stand-in the size of the real one");
+    }
+
+    void testSignKinds()
+    {
+        section("signs: standing, hanging, on a bracket, and drawn as Mojang's models");
+        bool rounds = true;
+        for (int wood = 0; wood < WOOD_COUNT; ++wood)
+            for (int r = 0; r < 16; ++r)
+            {
+                const BlockId standing = standingSignOf(wood, r);
+                const BlockId hanging = hangingSignOf(wood, r);
+                if (!isSign(standing) || !isStandingSign(standing) || signWood(standing) != wood || signRotation(standing) != r) rounds = false;
+                if (!isSign(hanging) || !isCeilingHangingSign(hanging) || signWood(hanging) != wood || signRotation(hanging) != r) rounds = false;
+                if (r < 4)
+                {
+                    const BlockId bracket = wallHangingSignOf(wood, r);
+                    if (!isWallHangingSign(bracket) || signWood(bracket) != wood || signRotation(bracket) != r * 4 || signFacing(bracket) != r)
+                        rounds = false;
+                    const BlockId wall = signFacingAs(signBaseOf(wood), r);
+                    if (!isWallSign(wall) || signRotation(wall) != r * 4) rounds = false;
+                }
+            }
+        check(rounds, "every wood stands sixteen ways, hangs sixteen ways and on a bracket four ways");
+        check(blockDrop(standingSignOf(3, 5)) == signItemOfWood(3) && blockDrop(hangingSignOf(9, 2)) == hangingSignItemOfWood(9) &&
+                  blockDrop(wallHangingSignOf(10, 1)) == hangingSignItemOfWood(10),
+              "a standing sign breaks into a sign and a hanging one into a hanging sign");
+        check(itemInfo(hangingSignItemOfWood(5)).name == std::string("Dark Oak Hanging Sign") && woodOfHangingSignItem(hangingSignItemOfWood(8)) == 8,
+              "eleven hanging sign items, one a wood");
+
+        ItemStack grid[9];
+        for (ItemStack& cell : grid) cell.clear();
+        grid[0] = grid[2] = ItemStack{ static_cast<StackId>(Blocks::ChainFirst), 1 };
+        for (int k = 3; k < 9; ++k) grid[k] = ItemStack{ static_cast<StackId>(Blocks::StrippedCherryLog), 1 };
+        const CraftOutput made = Crafting::match(grid, 3);
+        check(made.id == hangingSignItemOfWood(6) && made.count == 6, "two chains over six stripped logs make six hanging signs");
+
+        check(SignRenderer::boxesFor(standingSignOf(0, 0), false).size() == 2 && SignRenderer::boxesFor(signFacingAs(signBaseOf(0), 0), false).size() == 1,
+              "a standing sign is a board on a post and a wall sign is the board alone");
+        check(SignRenderer::boxesFor(hangingSignOf(0, 0), false).size() == 5 && SignRenderer::boxesFor(hangingSignOf(0, 0), true).size() == 2 &&
+                  SignRenderer::boxesFor(wallHangingSignOf(0, 0), false).size() == 6,
+              "a hanging sign hangs on two pairs of chains, or a V when it hangs from something thin, and a bracket sign has its bar");
+        const glm::vec3 south = SignRenderer::facingVector(standingSignOf(0, 0));
+        const glm::vec3 west = SignRenderer::facingVector(standingSignOf(0, 4));
+        check(south.z > 0.99f && west.x < -0.99f, "rotation nought faces south and four faces west, as in Minecraft");
+        check(SignRenderer::textAnchor(glm::ivec3(0), standingSignOf(0, 0)).y > 0.8f &&
+                  SignRenderer::textAnchor(glm::ivec3(0), hangingSignOf(0, 0)).y < 0.4f,
+              "the words sit on the board, high on a post and low under chains");
+
+        MeshSnapshot snapshot;
+        snapshot.pos = ChunkPos{ 2, -1 };
+        snapshot.blocks[static_cast<size_t>(MeshSnapshot::index(3, 70, 5))] = hangingSignOf(2, 7);
+        snapshot.blocks[static_cast<size_t>(MeshSnapshot::index(4, 70, 5))] = Blocks::Stone;
+        MeshResult result;
+        buildChunkMesh(snapshot, result);
+        check(result.signs.size() == 1 && result.signs[0] == glm::ivec3(2 * Chunk::SX + 3, 70, -1 * Chunk::SZ + 5),
+              "the mesher leaves signs out of the chunk and says where they are");
     }
 
     void testShieldBanners()
@@ -15287,6 +15345,7 @@ int runSelfTest()
     testPaintings();
     testArmorStands();
     testShieldBanners();
+    testSignKinds();
     testMadeThings();
     testTheEndAndTheSea();
     testPathfinding();
