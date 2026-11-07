@@ -368,6 +368,28 @@ void WorldSave::saveLevel(const std::string& saveDirectory, const LevelState& st
         write(out, lectern.stack.damage);
         write(out, lectern.stack.enchantments);
     }
+    write(out, static_cast<uint32_t>(state.vehicles.size()));
+    for (const LevelState::SavedVehicle& vehicle : state.vehicles)
+    {
+        write(out, vehicle.dimension);
+        write(out, vehicle.type);
+        write(out, vehicle.variant);
+        write(out, vehicle.x);
+        write(out, vehicle.y);
+        write(out, vehicle.z);
+        write(out, vehicle.yaw);
+        write(out, vehicle.fuel);
+        writeLine(out, vehicle.command);
+        write(out, static_cast<uint8_t>(vehicle.contents.size()));
+        for (const auto& slot : vehicle.contents)
+        {
+            write(out, slot.first);
+            write(out, slot.second.id);
+            write(out, slot.second.count);
+            write(out, slot.second.damage);
+            write(out, slot.second.enchantments);
+        }
+    }
 }
 
 bool WorldSave::loadLevel(const std::string& saveDirectory, LevelState& out)
@@ -770,7 +792,8 @@ bool WorldSave::loadLevel(const std::string& saveDirectory, LevelState& out)
                                                         out.books.push_back(book);
                                                     }
                                                 uint32_t lecternCount = 0;
-                                                if (booksWhole && read(in, lecternCount))
+                                                bool lecternsWhole = booksWhole && read(in, lecternCount);
+                                                if (lecternsWhole)
                                                     for (uint32_t i = 0; i < lecternCount && i < 100000u; ++i)
                                                     {
                                                         LevelState::SavedLectern lectern;
@@ -778,8 +801,33 @@ bool WorldSave::loadLevel(const std::string& saveDirectory, LevelState& out)
                                                             !read(in, lectern.dimension) || !read(in, lectern.stack.id) ||
                                                             !read(in, lectern.stack.count) || !read(in, lectern.stack.damage) ||
                                                             !read(in, lectern.stack.enchantments))
+                                                        {
+                                                            lecternsWhole = false;
                                                             break;
+                                                        }
                                                         out.lecterns.push_back(lectern);
+                                                    }
+                                                uint32_t vehicleCount = 0;
+                                                if (lecternsWhole && read(in, vehicleCount))
+                                                    for (uint32_t i = 0; i < vehicleCount && i < 100000u; ++i)
+                                                    {
+                                                        LevelState::SavedVehicle vehicle;
+                                                        uint8_t slots = 0;
+                                                        if (!read(in, vehicle.dimension) || !read(in, vehicle.type) || !read(in, vehicle.variant) ||
+                                                            !read(in, vehicle.x) || !read(in, vehicle.y) || !read(in, vehicle.z) ||
+                                                            !read(in, vehicle.yaw) || !read(in, vehicle.fuel) || !readLine(in, vehicle.command) ||
+                                                            !read(in, slots))
+                                                            break;
+                                                        bool whole = true;
+                                                        for (uint8_t k = 0; k < slots && whole; ++k)
+                                                        {
+                                                            std::pair<uint8_t, LevelState::SavedBundleStack> slot;
+                                                            whole = read(in, slot.first) && read(in, slot.second.id) && read(in, slot.second.count) &&
+                                                                    read(in, slot.second.damage) && read(in, slot.second.enchantments);
+                                                            if (whole) vehicle.contents.push_back(slot);
+                                                        }
+                                                        if (!whole) break;
+                                                        out.vehicles.push_back(vehicle);
                                                     }
                                             }
                                         }

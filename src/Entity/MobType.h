@@ -124,6 +124,9 @@ enum class MobId : uint8_t
     TropicalFish,
     TropicalFishLarge,
     Tadpole,
+    ChestBoat,
+    Raft,
+    ChestRaft,
 
     Count
 };
@@ -396,6 +399,10 @@ constexpr float CAGE_RANGE = 12.0f;
 const MobType& mobType(MobId id);
 int mobTypeCount();
 StackId bucketFor(MobId id);
+bool isBoatMob(MobId id);
+bool hasVehicleChest(MobId id, int variant);
+StackId vehicleItemFor(MobId id, int variant);
+const char* boatWoodName(int wood);
 int frogKindOf(uint32_t seed);
 int axolotlVariantOf(uint32_t seed);
 uint16_t bucketSeed(MobId id, uint32_t seed);

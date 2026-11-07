@@ -454,6 +454,35 @@ private:
     Chests m_chests;
     glm::ivec3 m_chestBlock{ 0 };
     bool m_chestOpen = false;
+    int64_t m_chestVehicle = -1;
+    BlockId m_chestVehicleBlock = Blocks::Chest;
+    std::string m_chestVehicleName;
+    std::map<uint32_t, Chests::Contents> m_vehicleChests;
+    std::map<uint32_t, float> m_cartFuel;
+    std::map<uint32_t, glm::vec2> m_cartPush;
+    std::map<uint32_t, float> m_cartFuses;
+    std::map<uint32_t, std::string> m_cartCommands;
+    int64_t m_editorCart = -1;
+    void primeTntCart(Mob& cart);
+    struct ParkedVehicle
+    {
+        int dimension = 0;
+        MobId type = MobId::Boat;
+        int variant = 0;
+        glm::vec3 position{ 0.0f };
+        float yaw = 0.0f;
+        float fuel = 0.0f;
+        std::string command;
+        bool hasContents = false;
+        Chests::Contents contents{};
+    };
+    std::vector<ParkedVehicle> m_parkedVehicles;
+    float m_vehicleClock = 0.0f;
+    ParkedVehicle parkOf(const Mob& vehicle) const;
+    void parkVehicles(bool onlyFar);
+    void unparkVehicles();
+    void tickCarts(float deltaTime);
+    void openVehicleChest(Mob& vehicle);
     bool m_chestDouble = false;
     bool m_chestEnder = false;
     glm::ivec3 m_chestPartner{ 0 };

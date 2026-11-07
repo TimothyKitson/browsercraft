@@ -79,6 +79,8 @@ public:
         // Recorded here rather than looked up later: by the time the
         // death is drained the mob it belonged to may already be gone.
         bool baby = false;
+        int variant = 0;
+        uint32_t serial = 0;
     };
     std::vector<Death> drainDeaths();
 

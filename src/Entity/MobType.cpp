@@ -3563,6 +3563,69 @@ namespace
             }
         }
 
+        for (const MobId kind : { MobId::ChestBoat, MobId::Raft, MobId::ChestRaft })
+        {
+            MobType& t = table[static_cast<size_t>(kind)];
+            const bool chest = kind != MobId::Raft;
+            const bool raft = kind != MobId::ChestBoat;
+            t.id = kind;
+            t.experience = 0;
+            t.voice = Sound::DigWood;
+            t.hurtVoice = Sound::DigWood;
+            t.deathVoice = Sound::DigWood;
+            t.name = kind == MobId::ChestBoat ? "Boat with Chest" : kind == MobId::Raft ? "Raft" : "Raft with Chest";
+            t.texture = kind == MobId::ChestBoat ? "chest_boat" : kind == MobId::Raft ? "raft" : "chest_raft";
+            t.sheetWidth = 128;
+            t.sheetHeight = chest ? 128 : 64;
+            t.blockTexture = raft ? "bamboo_planks" : "oak_planks";
+            t.blockTextureAlt = raft ? "planks_bamboo" : "planks_oak";
+            t.spawnClass = SpawnClass::Passive;
+            t.maxHealth = 4;
+            t.width = 1.4f;
+            t.height = kind == MobId::ChestRaft ? 0.98f : kind == MobId::ChestBoat ? 0.68f : 0.55f;
+            t.walkSpeed = 5.2f;
+            t.rideable = true;
+            t.saddleHeight = raft ? 0.45f : 0.35f;
+            t.inanimate = true;
+            t.floats = true;
+            t.modelYaw = HALF_PI;
+            t.drop = kind == MobId::ChestBoat ? Items::OakChestBoat : kind == MobId::Raft ? Items::BambooRaft : Items::BambooChestRaft;
+            t.dropCount = 1;
+            t.bodyColour = raft ? rgb(194, 173, 80) : rgb(142, 106, 64);
+            t.headColour = t.bodyColour;
+
+            if (!raft)
+            {
+                t.model.push_back(turned(mc(Part::Body, 0, 0, 28, 16, 3,
+                                            -14, -9, -3, 0, 3, 1, BOAT_BASE), HALF_PI));
+                t.model.push_back(turned(mc(Part::Body, 0, 19, 18, 6, 2,
+                                            -9, -7, -1, -14, 4, 0, BOAT_BASE),
+                                         0.0f, HALF_PI * 3.0f));
+                t.model.push_back(turned(mc(Part::Body, 0, 27, 18, 6, 2,
+                                            -9, -7, -1, 14, 4, 0, BOAT_BASE),
+                                         0.0f, HALF_PI));
+                t.model.push_back(turned(mc(Part::Body, 0, 35, 28, 6, 2,
+                                            -14, -7, -1, 0, 4, -8, BOAT_BASE),
+                                         0.0f, HALF_PI * 2.0f));
+                t.model.push_back(mc(Part::Body, 0, 43, 28, 6, 2,
+                                     -14, -7, -1, 0, 4, 8, BOAT_BASE));
+            }
+            else
+            {
+                t.model.push_back(turned(mc(Part::Body, 0, 0, 28, 20, 4,
+                                            -14, -11, -4, 0, -2, 1, BOAT_BASE), HALF_PI));
+                t.model.push_back(turned(mc(Part::Body, 0, 0, 28, 16, 4,
+                                            -14, -9, -8, 0, -2, 1, BOAT_BASE), HALF_PI));
+            }
+            if (chest)
+            {
+                const int lift = raft ? -5 : 0;
+                t.model.push_back(turned(mc(Part::Body, 0, 76, 12, 8, 12, 0, 0, 0, -2, -5 + lift, -6, BOAT_BASE), 0.0f, -HALF_PI));
+                t.model.push_back(turned(mc(Part::Body, 0, 59, 12, 4, 12, 0, 0, 0, -2, -9 + lift, -6, BOAT_BASE), 0.0f, -HALF_PI));
+                t.model.push_back(turned(mc(Part::Body, 0, 59, 2, 4, 1, 0, 0, 0, -1, -6 + lift, -1, BOAT_BASE), 0.0f, -HALF_PI));
+            }
+        }
+
         {
             MobType& t = table[static_cast<size_t>(MobId::Tadpole)];
             t.id = MobId::Tadpole;
@@ -3617,6 +3680,36 @@ const MobType& mobType(MobId id)
 }
 
 int mobTypeCount() { return static_cast<int>(MobId::Count); }
+
+bool isBoatMob(MobId id)
+{
+    return id == MobId::Boat || id == MobId::ChestBoat || id == MobId::Raft || id == MobId::ChestRaft;
+}
+
+bool hasVehicleChest(MobId id, int variant)
+{
+    return id == MobId::ChestBoat || id == MobId::ChestRaft || (id == MobId::Minecart && (variant == 1 || variant == 3));
+}
+
+StackId vehicleItemFor(MobId id, int variant)
+{
+    switch (id)
+    {
+        case MobId::Boat: return boatOfWood(std::clamp(variant, 0, 7), false);
+        case MobId::ChestBoat: return boatOfWood(std::clamp(variant, 0, 7), true);
+        case MobId::Raft: return Items::BambooRaft;
+        case MobId::ChestRaft: return Items::BambooChestRaft;
+        case MobId::Minecart: return variant <= 0 || variant > 5 ? static_cast<StackId>(Items::Minecart)
+                                                                  : static_cast<StackId>(Items::ChestMinecart + variant - 1);
+        default: return Blocks::Air;
+    }
+}
+
+const char* boatWoodName(int wood)
+{
+    static const char* NAMES[BOAT_WOODS] = { "oak", "spruce", "birch", "jungle", "acacia", "dark_oak", "cherry", "mangrove", "bamboo" };
+    return NAMES[std::clamp(wood, 0, BOAT_WOODS - 1)];
+}
 
 StackId bucketFor(MobId id)
 {

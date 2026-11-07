@@ -373,6 +373,11 @@ public:
     void setHorseArmour(uint16_t armour) { m_horseArmour = armour; }
     int shulkerColour() const { return m_shulkerColour; }
     void setShulkerColour(int colour) { m_shulkerColour = (colour >= 0 && colour < 16) ? colour : 16; }
+    int variant() const { return m_variant; }
+    void setYaw(float yaw) { m_yaw = yaw; m_goalYaw = yaw; }
+    void setSelfPush(bool pushing) { m_selfPush = pushing; }
+    float railSpeed() const { return m_railSpeed; }
+    void setVariant(int variant) { m_variant = variant; }
     void setRidden(bool on);
     void steer(float yawDegrees, bool forward, bool jump, float jumpPower = 1.0f);
     bool onGround() const { return m_onGround; }
@@ -448,6 +453,8 @@ private:
     glm::vec3 m_velocity{ 0.0f };
     float m_yaw = 0.0f;
     int m_shulkerColour = 16;
+    int m_variant = 0;
+    bool m_selfPush = false;
     int m_health = 1;
     bool m_onGround = false;
 

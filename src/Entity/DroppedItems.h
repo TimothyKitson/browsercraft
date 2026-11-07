@@ -70,10 +70,20 @@ public:
         float height = 0.0f;
         float outset = 0.46f;
     };
-    void clearPinned() { m_pinned.clear(); }
+    void clearPinned() { m_pinned.clear(); m_cargo.clear(); }
     void pin(const Pinned& one) { m_pinned.push_back(one); }
 
-    void clear() { m_items.clear(); m_pinned.clear(); }
+    struct Cargo
+    {
+        glm::vec3 centre{ 0.0f };
+        float yaw = 0.0f;
+        float size = 0.6f;
+        StackId block = Blocks::Air;
+    };
+    void carry(const Cargo& one) { m_cargo.push_back(one); }
+    std::vector<ItemStack> takeNear(const glm::vec3& at, float radius);
+
+    void clear() { m_items.clear(); m_pinned.clear(); m_cargo.clear(); }
     int count() const { return static_cast<int>(m_items.size()); }
     void positions(std::vector<glm::vec3>& out) const
     {
@@ -96,6 +106,7 @@ private:
 
     std::vector<Item> m_items;
     std::vector<Pinned> m_pinned;
+    std::vector<Cargo> m_cargo;
     Mesh m_mesh;
     std::vector<float> m_vertices;
 

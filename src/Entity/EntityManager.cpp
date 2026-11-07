@@ -554,7 +554,7 @@ void EntityManager::update(float deltaTime, const World& world,
         // Caught here rather than at removal: the corpse lingers, and
         // whatever it drops belongs where it fell, not where it stopped.
         if (mob.takeDeathReport())
-            m_deaths.push_back(Death{ mob.typeId(), mob.position(), mob.baby() });
+            m_deaths.push_back(Death{ mob.typeId(), mob.position(), mob.baby(), mob.variant(), mob.serial() });
 
         if (mob.takeEggReport()) m_laidEggs.push_back(mob.position());
         if (mob.takeGrowthReport() && mob.typeId() == MobId::Turtle) m_grownTurtles.push_back(mob.position());

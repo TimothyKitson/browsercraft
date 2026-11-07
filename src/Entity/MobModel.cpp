@@ -585,6 +585,14 @@ std::string MobModel::variantOf(const Mob& mob) const
             return mob.hostileNow() ? root + "bee/bee_angry.png" : std::string();
         case MobId::Tadpole:
             return root + "tadpole.png";
+        case MobId::Boat:
+            return root + "boat/" + boatWoodName(mob.variant()) + ".png";
+        case MobId::ChestBoat:
+            return root + "chest_boat/" + boatWoodName(mob.variant()) + ".png";
+        case MobId::Raft:
+            return root + "boat/bamboo.png";
+        case MobId::ChestRaft:
+            return root + "chest_boat/bamboo.png";
         case MobId::TropicalFish:
         case MobId::TropicalFishLarge:
         {

@@ -766,8 +766,8 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
 
             // Rolling is the cart's own business: the rider decides
             // whether to push, and the track decides where that goes.
-            m_railSpeed = railSpeedStep(m_railSpeed, m_ridden && m_steerForward,
-                                        currentSpeed(), deltaTime);
+            m_railSpeed = railSpeedStep(m_railSpeed, (m_ridden && m_steerForward) || m_selfPush,
+                                        currentSpeed() * (m_selfPush && !m_ridden ? 0.5f : 1.0f), deltaTime);
             if (specialRailFamily(rail) == 1)
             {
                 if (specialRailPowered(rail)) m_railSpeed = std::min(currentSpeed() * 1.6f, m_railSpeed + 9.0f * deltaTime);

@@ -9848,6 +9848,28 @@ namespace
         { Tiles::ItemBookFirst + 1, { "writable_book", nullptr, nullptr } },
         { Tiles::ItemBookFirst + 2, { "written_book", nullptr, nullptr } },
         { Tiles::ItemBookFirst + 3, { "knowledge_book", nullptr, nullptr } },
+        { Tiles::ItemVehicleFirst + 0, { "spruce_boat", nullptr, nullptr } },
+        { Tiles::ItemVehicleFirst + 1, { "birch_boat", nullptr, nullptr } },
+        { Tiles::ItemVehicleFirst + 2, { "jungle_boat", nullptr, nullptr } },
+        { Tiles::ItemVehicleFirst + 3, { "acacia_boat", nullptr, nullptr } },
+        { Tiles::ItemVehicleFirst + 4, { "dark_oak_boat", nullptr, nullptr } },
+        { Tiles::ItemVehicleFirst + 5, { "cherry_boat", nullptr, nullptr } },
+        { Tiles::ItemVehicleFirst + 6, { "mangrove_boat", nullptr, nullptr } },
+        { Tiles::ItemVehicleFirst + 7, { "bamboo_raft", nullptr, nullptr } },
+        { Tiles::ItemVehicleFirst + 8, { "oak_chest_boat", nullptr, nullptr } },
+        { Tiles::ItemVehicleFirst + 9, { "spruce_chest_boat", nullptr, nullptr } },
+        { Tiles::ItemVehicleFirst + 10, { "birch_chest_boat", nullptr, nullptr } },
+        { Tiles::ItemVehicleFirst + 11, { "jungle_chest_boat", nullptr, nullptr } },
+        { Tiles::ItemVehicleFirst + 12, { "acacia_chest_boat", nullptr, nullptr } },
+        { Tiles::ItemVehicleFirst + 13, { "dark_oak_chest_boat", nullptr, nullptr } },
+        { Tiles::ItemVehicleFirst + 14, { "cherry_chest_boat", nullptr, nullptr } },
+        { Tiles::ItemVehicleFirst + 15, { "mangrove_chest_boat", nullptr, nullptr } },
+        { Tiles::ItemVehicleFirst + 16, { "bamboo_chest_raft", nullptr, nullptr } },
+        { Tiles::ItemVehicleFirst + 17, { "chest_minecart", nullptr, nullptr } },
+        { Tiles::ItemVehicleFirst + 18, { "furnace_minecart", nullptr, nullptr } },
+        { Tiles::ItemVehicleFirst + 19, { "hopper_minecart", nullptr, nullptr } },
+        { Tiles::ItemVehicleFirst + 20, { "tnt_minecart", nullptr, nullptr } },
+        { Tiles::ItemVehicleFirst + 21, { "command_block_minecart", nullptr, nullptr } },
         { Tiles::ItemCompassFrameFirst + 0, { "compass_00", nullptr, nullptr } },
         { Tiles::ItemCompassFrameFirst + 1, { "compass_01", nullptr, nullptr } },
         { Tiles::ItemCompassFrameFirst + 2, { "compass_02", nullptr, nullptr } },
@@ -11319,6 +11341,42 @@ Atlas::Atlas()
         paintMaterialIn(tile, i);
         blitPainted(Tiles::ItemMaterialFirst + i, tile);
     }
+    for (int i = 0; i < 22; ++i)
+    {
+        static const Color WOODS[9] = { Color{ 162, 130, 78 }, Color{ 114, 84, 48 }, Color{ 196, 179, 123 }, Color{ 160, 115, 80 },
+                                        Color{ 168, 90, 50 }, Color{ 66, 43, 20 }, Color{ 226, 178, 172 }, Color{ 117, 54, 48 },
+                                        Color{ 194, 173, 80 } };
+        static const Color CARGO[5] = { Color{ 160, 110, 40 }, Color{ 110, 110, 110 }, Color{ 70, 70, 76 }, Color{ 200, 50, 40 },
+                                        Color{ 190, 140, 90 } };
+        Tile tile;
+        tile.fill(Color{ 0, 0, 0, 0 });
+        if (i < 17)
+        {
+            const int wood = i < 8 ? i + 1 : i - 8;
+            const Color body = WOODS[wood];
+            for (int y = 6; y < 13; ++y)
+            {
+                const int half = 7 - (y - 6) / 2;
+                for (int x = 8 - half; x < 8 + half; ++x)
+                    tile.set(x, y, (y == 6 || x == 8 - half || x == 7 + half) ? shade(body, -36) : y == 12 ? shade(body, -20) : body);
+            }
+            if (i >= 8)
+                for (int y = 2; y < 7; ++y)
+                    for (int x = 5; x < 11; ++x)
+                        tile.set(x, y, (y == 2 || x == 5 || x == 10) ? Color{ 90, 60, 24 } : (y == 4 && (x == 7 || x == 8)) ? Color{ 200, 200, 210 } : Color{ 160, 110, 40 });
+        }
+        else
+        {
+            const Color cargo = CARGO[i - 17];
+            for (int y = 3; y < 8; ++y)
+                for (int x = 4; x < 12; ++x) tile.set(x, y, (y == 3 || x == 4 || x == 11) ? shade(cargo, -40) : cargo);
+            for (int y = 7; y < 13; ++y)
+                for (int x = 2; x < 14; ++x)
+                    tile.set(x, y, (x == 2 || x == 13 || y == 12) ? Color{ 98, 102, 110 } : y == 7 ? Color{ 142, 146, 154 } : Color{ 70, 74, 80 });
+            for (int x : { 4, 11 }) { tile.set(x, 13, Color{ 60, 60, 66 }); tile.set(x, 14, Color{ 60, 60, 66 }); }
+        }
+        blitPainted(Tiles::ItemVehicleFirst + i, tile);
+    }
     for (int i = 0; i < 4; ++i)
     {
         static const Color COVERS[4] = { Color{ 150, 40, 60 }, Color{ 120, 80, 40 }, Color{ 110, 70, 36 }, Color{ 60, 40, 120 } };
@@ -12455,6 +12513,7 @@ bool Atlas::hasPainter(int tileIndex)
     if (tileIndex >= Tiles::ItemMaterialFirst && tileIndex <= Tiles::ItemMaterialLast) return true;
     if (tileIndex >= Tiles::ItemMobBucketFirst && tileIndex <= Tiles::ItemMobBucketLast) return true;
     if (tileIndex >= Tiles::ItemBookFirst && tileIndex <= Tiles::ItemBookLast) return true;
+    if (tileIndex >= Tiles::ItemVehicleFirst && tileIndex <= Tiles::ItemVehicleLast) return true;
     if (tileIndex >= Tiles::ConcreteTile && tileIndex <= Tiles::GlazedTileLast &&
         tileIndex != Tiles::TerracottaPlainTile) return true;
     if (tileIndex >= Tiles::StainedGlassTile && tileIndex <= Tiles::StainedGlassTileLast) return true;

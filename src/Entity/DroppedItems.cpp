@@ -265,7 +265,7 @@ static constexpr float FRAME_SIZE = 0.52f;
 
 void DroppedItems::render(Shader& chunkShader, const World& world)
 {
-    if (m_items.empty() && m_pinned.empty()) return;
+    if (m_items.empty() && m_pinned.empty() && m_cargo.empty()) return;
 
     m_vertices.clear();
     m_vertices.reserve((m_items.size() + m_pinned.size()) * 36 * 9);
@@ -366,6 +366,47 @@ void DroppedItems::render(Shader& chunkShader, const World& world)
     // What is in the frames. Flat against the wall, facing out of
     // it, and still: a framed item that bobbed and span would read as
     // a drop somebody had left on a shelf.
+    for (const Cargo& cargo : m_cargo)
+    {
+        if (cargo.block == Blocks::Air || isItem(cargo.block)) continue;
+        int lx = static_cast<int>(std::floor(cargo.centre.x));
+        int ly = static_cast<int>(std::floor(cargo.centre.y));
+        int lz = static_cast<int>(std::floor(cargo.centre.z));
+        for (int step = 0; step < 3 && isOpaque(world.getBlock(lx, ly, lz)); ++step) ++ly;
+        const float sky = world.skyLight(lx, ly, lz) / 15.0f;
+        const float blockLight = std::max<float>(world.blockLightAt(lx, ly, lz), lightEmission(asBlock(cargo.block))) / 15.0f;
+        const float s = std::sin(cargo.yaw);
+        const float c = std::cos(cargo.yaw);
+        for (int f = 0; f < 6; ++f)
+        {
+            const FaceDef& face = FACES[f];
+            const TileUV uv = tileUV(tileForFace(cargo.block, f));
+            glm::vec3 corners[4];
+            float u[4], v[4];
+            for (int k = 0; k < 4; ++k)
+            {
+                const glm::vec3 local((face.corner[k][0] - 0.5f) * cargo.size, (face.corner[k][1] - 0.5f) * cargo.size,
+                                      (face.corner[k][2] - 0.5f) * cargo.size);
+                corners[k] = cargo.centre + glm::vec3(local.x * c - local.z * s, local.y, local.x * s + local.z * c);
+                u[k] = (face.uv[k][0] == 0.0f) ? uv.u0 : uv.u1;
+                v[k] = (face.uv[k][1] == 0.0f) ? uv.vTop : uv.vBottom;
+            }
+            const int order[6] = { 0, 1, 2, 0, 2, 3 };
+            for (int k : order)
+            {
+                m_vertices.push_back(corners[k].x);
+                m_vertices.push_back(corners[k].y);
+                m_vertices.push_back(corners[k].z);
+                m_vertices.push_back(u[k]);
+                m_vertices.push_back(v[k]);
+                m_vertices.push_back(face.shade);
+                m_vertices.push_back(sky);
+                m_vertices.push_back(blockLight);
+                m_vertices.push_back(6.0f);
+            }
+        }
+    }
+
     for (const Pinned& shown : m_pinned)
     {
         if (shown.item == Blocks::Air && shown.tile < 0) continue;
@@ -427,4 +468,27 @@ void DroppedItems::render(Shader& chunkShader, const World& world)
     chunkShader.bind();
     chunkShader.setVec3("uChunkOffset", glm::vec3(0.0f)); // vertices are already in world space
     m_mesh.draw(GL_TRIANGLES);
+}
+
+std::vector<ItemStack> DroppedItems::takeNear(const glm::vec3& at, float radius)
+{
+    std::vector<ItemStack> taken;
+    for (size_t i = 0; i < m_items.size();)
+    {
+        const Item& item = m_items[i];
+        if (item.age > 0.5f && glm::length(item.position - at) <= radius)
+        {
+            ItemStack stack;
+            stack.id = item.block;
+            stack.count = item.count;
+            stack.damage = item.damage;
+            stack.enchantments = item.enchantments;
+            taken.push_back(stack);
+            m_items[i] = m_items.back();
+            m_items.pop_back();
+            continue;
+        }
+        ++i;
+    }
+    return taken;
 }

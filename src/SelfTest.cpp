@@ -2074,7 +2074,7 @@ namespace
               "while an animal is not clad in anything");
 
         check(maxStackOf(Items::Boat) == 1, "boats do not stack, the same as vanilla");
-        check(std::string(displayName(Items::Boat)) == "Boat", "and it is called one");
+        check(std::string(displayName(Items::Boat)) == "Oak Boat", "and it is called an oak boat, as in Minecraft");
 
         // Five planks, open at the top. The shape matters: a full three
         // by two would be something else.
@@ -4096,6 +4096,85 @@ namespace
               "a written book's title, author and long pages are kept in the level");
         check(back.lecterns.size() == 1 && back.lecterns[0].stack.id == static_cast<uint16_t>(Items::WrittenBook) && back.lecterns[0].z == -9,
               "and so is the book left open on a lectern");
+        std::filesystem::remove_all(dir, ec);
+    }
+
+    void testVehicles()
+    {
+        section("vehicles: boats of every wood, chest boats and the loaded minecarts");
+        ItemStack g[9];
+        for (ItemStack& cell : g) cell.clear();
+        const int cells[5] = { 0, 2, 3, 4, 5 };
+        bool everyWood = true;
+        for (int wood = 0; wood < BOAT_WOODS; ++wood)
+        {
+            for (int c : cells) g[c] = ItemStack{ planksOfWood(wood), 1 };
+            if (Crafting::match(g, 3).id != boatOfWood(wood, false)) everyWood = false;
+        }
+        check(everyWood, "planks of each wood make that wood's boat, and bamboo a raft");
+        for (int c : cells) g[c] = ItemStack{ Blocks::CrimsonPlanks, 1 };
+        check(!Crafting::match(g, 3).valid(), "but nether planks make no boat");
+        for (ItemStack& cell : g) cell.clear();
+        g[0] = ItemStack{ Items::CherryBoat, 1 };
+        g[1] = ItemStack{ Blocks::Chest, 1 };
+        check(Crafting::match(g, 3).id == Items::CherryChestBoat, "a boat and a chest make a boat with a chest");
+        g[0] = ItemStack{ Items::Minecart, 1 };
+        check(Crafting::match(g, 3).id == Items::ChestMinecart, "and a minecart and a chest a minecart with chest");
+        g[1] = ItemStack{ Blocks::Hopper, 1 };
+        check(Crafting::match(g, 3).id == Items::HopperMinecart, "a hopper makes a hopper minecart");
+        g[1] = ItemStack{ Blocks::Tnt, 1 };
+        check(Crafting::match(g, 3).id == Items::TntMinecart, "TNT a minecart with TNT");
+        g[1] = ItemStack{ Blocks::Furnace, 1 };
+        check(Crafting::match(g, 3).id == Items::FurnaceMinecart, "and a furnace a furnace minecart");
+
+        bool roundTrip = true;
+        for (int wood = 0; wood < BOAT_WOODS; ++wood)
+            for (bool chest : { false, true })
+            {
+                const StackId item = boatOfWood(wood, chest);
+                if (boatItemWood(item) != wood || isChestBoatItem(item) != chest || maxStackOf(item) != 1) roundTrip = false;
+                const MobId kind = wood == 8 ? (chest ? MobId::ChestRaft : MobId::Raft) : (chest ? MobId::ChestBoat : MobId::Boat);
+                if (vehicleItemFor(kind, wood) != item) roundTrip = false;
+            }
+        check(roundTrip, "a broken boat gives back the boat it was, wood and chest and all");
+        bool carts = true;
+        for (int kind = 0; kind <= 5; ++kind)
+            if (minecartItemKind(vehicleItemFor(MobId::Minecart, kind)) != kind) carts = false;
+        check(carts, "and a broken minecart the minecart it was");
+        check(hasVehicleChest(MobId::ChestBoat, 3) && hasVehicleChest(MobId::Minecart, 1) && hasVehicleChest(MobId::Minecart, 3) &&
+                  !hasVehicleChest(MobId::Boat, 0) && !hasVehicleChest(MobId::Minecart, 2),
+              "chest boats, chest minecarts and hopper minecarts hold things");
+
+        const std::string dir = (std::filesystem::temp_directory_path() / "bc_selftest_vehicles").string();
+        std::error_code ec;
+        std::filesystem::remove_all(dir, ec);
+        WorldSave::ensureDirectories(dir);
+        LevelState state;
+        state.seed = 6u;
+        LevelState::SavedVehicle boat;
+        boat.dimension = 0;
+        boat.type = static_cast<uint16_t>(MobId::ChestBoat);
+        boat.variant = 6;
+        boat.x = 10.5f; boat.y = 63.0f; boat.z = -4.5f; boat.yaw = 90.0f;
+        LevelState::SavedBundleStack diamonds;
+        diamonds.id = static_cast<uint16_t>(Items::Diamond);
+        diamonds.count = 12;
+        boat.contents.emplace_back(static_cast<uint8_t>(5), diamonds);
+        state.vehicles.push_back(boat);
+        LevelState::SavedVehicle cart;
+        cart.dimension = 1;
+        cart.type = static_cast<uint16_t>(MobId::Minecart);
+        cart.variant = 5;
+        cart.command = "say hello";
+        state.vehicles.push_back(cart);
+        WorldSave::saveLevel(dir, state);
+        LevelState back;
+        check(WorldSave::loadLevel(dir, back) && back.vehicles.size() == 2 && back.vehicles[0].variant == 6 &&
+                  back.vehicles[0].contents.size() == 1 && back.vehicles[0].contents[0].first == 5 &&
+                  back.vehicles[0].contents[0].second.count == 12,
+              "a boat left in the world is kept with its wood and what is in its chest");
+        check(back.vehicles.size() == 2 && back.vehicles[1].dimension == 1 && back.vehicles[1].command == "say hello",
+              "and a cart in the Nether with its command");
         std::filesystem::remove_all(dir, ec);
     }
 
@@ -7355,7 +7434,7 @@ namespace
 
             // Boats and minecarts ride in the mob table because they
             // are entities with models, but nothing spawns them.
-            if (id == MobId::Boat || id == MobId::Minecart) continue;
+            if (isBoatMob(id) || id == MobId::Minecart) continue;
 
             bool meetable = false;
 
@@ -12061,7 +12140,7 @@ namespace
             std::error_code ec;
             const auto size = std::filesystem::file_size(path, ec);
             if (!ec) std::filesystem::resize_file(path, size - sizeof(uint16_t) - sizeof(uint8_t) - 3 * sizeof(int) - sizeof(uint32_t) - sizeof(int32_t) - 6 * sizeof(uint32_t) -
-                                                        sizeof(uint8_t) - 3 * sizeof(float) - sizeof(int8_t) - sizeof(uint32_t) - 2 * sizeof(uint32_t), ec);
+                                                        sizeof(uint8_t) - 3 * sizeof(float) - sizeof(int8_t) - sizeof(uint32_t) - 3 * sizeof(uint32_t), ec);
 
             LevelState back;
             check(WorldSave::loadLevel(dir, back), "a level from before items moved up still loads");
@@ -14582,6 +14661,7 @@ int runSelfTest()
     testMaterials();
     testMobBuckets();
     testBooks();
+    testVehicles();
     testMadeThings();
     testTheEndAndTheSea();
     testPathfinding();

@@ -946,8 +946,8 @@ void Application::renderContainerScreen(float w, float h)
     // what makes a screenshot of this sit on top of a screenshot of
     // that.
     const bool bench = m_inventory.craftSize() >= 3;
-    const BlockId chestKind = m_chestOpen && m_world
-        ? m_world->getBlock(m_chestBlock.x, m_chestBlock.y, m_chestBlock.z) : Blocks::Air;
+    const BlockId chestKind = m_chestOpen && m_chestVehicle >= 0 ? m_chestVehicleBlock
+        : m_chestOpen && m_world ? m_world->getBlock(m_chestBlock.x, m_chestBlock.y, m_chestBlock.z) : Blocks::Air;
     const BlockId furnaceKind = m_furnaceOpen && m_world
         ? furnaceBase(m_world->getBlock(m_furnaceBlock.x, m_furnaceBlock.y, m_furnaceBlock.z)) : Blocks::Air;
     const bool hopper = chestKind == Blocks::Hopper;
@@ -1062,6 +1062,8 @@ void Application::renderContainerScreen(float w, float h)
     {
         std::string title = "Inventory";
         if (m_chestOpen && m_chestDouble) title = "Large Chest";
+        else if (m_chestOpen && m_chestVehicle >= 0)
+            title = m_chestVehicleName;
         else if (m_chestOpen && m_world)
             title = displayName(m_world->getBlock(m_chestBlock.x, m_chestBlock.y, m_chestBlock.z));
         else if (m_furnaceOpen && m_world)
@@ -4002,8 +4004,26 @@ void Application::setTrappedOpen(const glm::ivec3& block, bool open)
     settleRedstone(block);
 }
 
+void Application::openVehicleChest(Mob& vehicle)
+{
+    m_chestOpen = true;
+    m_chestDouble = false;
+    m_chestEnder = false;
+    m_chestVehicle = static_cast<int64_t>(vehicle.serial());
+    m_chestVehicleBlock = vehicle.typeId() == MobId::Minecart && vehicle.variant() == 3 ? static_cast<BlockId>(Blocks::Hopper)
+                                                                                      : static_cast<BlockId>(Blocks::Chest);
+    m_chestVehicleName = displayName(vehicleItemFor(vehicle.typeId(), vehicle.variant()));
+    const Chests::Contents& held = m_vehicleChests[vehicle.serial()];
+    for (int i = 0; i < Inventory::CHEST_SLOTS; ++i)
+        m_inventory.slot(Inventory::CHEST_FIRST + i) = held[i];
+    m_inventoryOpen = true;
+    setMouseCaptured(false);
+    m_audio.play(Sound::DigWood, 0.5f, 1.1f);
+}
+
 void Application::openChest(const glm::ivec3& block)
 {
+    m_chestVehicle = -1;
     vibrate(glm::vec3(block) + glm::vec3(0.5f), 10);
     m_chestBlock = block;
     m_chestOpen = true;
@@ -4188,6 +4208,21 @@ void Application::stowCrafter()
 void Application::stowChest()
 {
     if (!m_chestOpen) return;
+    if (m_chestVehicle >= 0)
+    {
+        Chests::Contents& held = m_vehicleChests[static_cast<uint32_t>(m_chestVehicle)];
+        bool empty = true;
+        for (int i = 0; i < Inventory::CHEST_SLOTS; ++i)
+        {
+            held[i] = m_inventory.slot(Inventory::CHEST_FIRST + i);
+            if (!held[i].empty()) empty = false;
+            m_inventory.slot(Inventory::CHEST_FIRST + i).clear();
+        }
+        if (empty) m_vehicleChests.erase(static_cast<uint32_t>(m_chestVehicle));
+        m_chestVehicle = -1;
+        m_chestOpen = false;
+        return;
+    }
     if (m_world && m_world->getBlock(m_chestBlock.x, m_chestBlock.y, m_chestBlock.z) == Blocks::BarrelOpen)
     {
         m_world->setBlock(m_chestBlock.x, m_chestBlock.y, m_chestBlock.z, Blocks::Barrel);
@@ -4228,7 +4263,12 @@ void Application::stowChest()
 // without the player losing the screen they are working in.
 void Application::syncOpenContainers()
 {
-    if (m_chestOpen)
+    if (m_chestOpen && m_chestVehicle >= 0)
+    {
+        Chests::Contents& held = m_vehicleChests[static_cast<uint32_t>(m_chestVehicle)];
+        for (int i = 0; i < Inventory::CHEST_SLOTS; ++i) held[i] = m_inventory.slot(Inventory::CHEST_FIRST + i);
+    }
+    else if (m_chestOpen)
     {
         Chests::Contents& held = m_chestEnder ? m_chests.ender() : m_chests.at(m_chestBlock);
         for (int i = 0; i < Inventory::CHEST_SLOTS; ++i)

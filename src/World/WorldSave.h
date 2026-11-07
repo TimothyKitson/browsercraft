@@ -188,6 +188,17 @@ struct LevelState
         SavedBundleStack stack;
     };
     std::vector<SavedLectern> lecterns;
+    struct SavedVehicle
+    {
+        int8_t dimension = 0;
+        uint16_t type = 0;
+        int16_t variant = 0;
+        float x = 0.0f, y = 0.0f, z = 0.0f, yaw = 0.0f;
+        float fuel = 0.0f;
+        std::string command;
+        std::vector<std::pair<uint8_t, SavedBundleStack>> contents;
+    };
+    std::vector<SavedVehicle> vehicles;
 };
 
 namespace WorldSave

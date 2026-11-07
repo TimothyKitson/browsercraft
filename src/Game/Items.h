@@ -423,6 +423,28 @@ namespace Items
         WritableBook,
         WrittenBook,
         KnowledgeBook,
+        SpruceBoat,
+        BirchBoat,
+        JungleBoat,
+        AcaciaBoat,
+        DarkOakBoat,
+        CherryBoat,
+        MangroveBoat,
+        BambooRaft,
+        OakChestBoat,
+        SpruceChestBoat,
+        BirchChestBoat,
+        JungleChestBoat,
+        AcaciaChestBoat,
+        DarkOakChestBoat,
+        CherryChestBoat,
+        MangroveChestBoat,
+        BambooChestRaft,
+        ChestMinecart,
+        FurnaceMinecart,
+        HopperMinecart,
+        TntMinecart,
+        CommandBlockMinecart,
         Count
     };
 }
@@ -435,6 +457,31 @@ struct ItemInfo
 };
 
 inline bool isItem(StackId id) { return id >= Items::FIRST && id < Items::Count; }
+
+constexpr int BOAT_WOODS = 9;
+inline StackId boatOfWood(int wood, bool chest)
+{
+    if (wood < 0 || wood >= BOAT_WOODS) return 0;
+    if (chest) return static_cast<StackId>(Items::OakChestBoat + wood);
+    return wood == 0 ? static_cast<StackId>(Items::Boat) : static_cast<StackId>(Items::SpruceBoat + wood - 1);
+}
+inline int boatItemWood(StackId id)
+{
+    if (id == Items::Boat) return 0;
+    if (id >= Items::SpruceBoat && id <= Items::BambooRaft) return static_cast<int>(id - Items::SpruceBoat) + 1;
+    if (id >= Items::OakChestBoat && id <= Items::BambooChestRaft) return static_cast<int>(id - Items::OakChestBoat);
+    return -1;
+}
+inline bool isChestBoatItem(StackId id) { return id >= Items::OakChestBoat && id <= Items::BambooChestRaft; }
+inline bool isMinecartItem(StackId id)
+{
+    return id == Items::Minecart || (id >= Items::ChestMinecart && id <= Items::CommandBlockMinecart);
+}
+inline int minecartItemKind(StackId id)
+{
+    return id == Items::Minecart ? 0 : (id >= Items::ChestMinecart && id <= Items::CommandBlockMinecart)
+                                           ? static_cast<int>(id - Items::ChestMinecart) + 1 : -1;
+}
 inline StackId signItemOfWood(int wood)
 {
     static const StackId SIGNS[] = { Items::Sign, Items::SpruceSign, Items::BirchSign, Items::JungleSign,

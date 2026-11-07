@@ -527,6 +527,12 @@ void Application::startWorld(GameMode mode, bool freshWorld)
     m_rain.clear();
     m_particles.clear();
     m_entities.clear();
+    m_parkedVehicles.clear();
+    m_vehicleChests.clear();
+    m_cartFuel.clear();
+    m_cartPush.clear();
+    m_cartFuses.clear();
+    m_cartCommands.clear();
     m_animation.clear();
     m_nameplates.clear();
     m_inventory.clear();
@@ -633,6 +639,7 @@ void Application::startJoinedWorld()
 void Application::travelTo(Dimension dimension)
 {
     if (!m_world || m_dimension == dimension) return;
+    parkVehicles(false);
 
     // Hand the chunks you changed back to disk before they are thrown
     // away -- otherwise stepping through a portal unbuilds your house.
@@ -858,6 +865,30 @@ void Application::loadLevel()
         m_itemNames = state.itemNames;
         m_bookTexts.clear();
         for (const auto& saved : state.books) m_bookTexts.push_back(BookText{ saved.title, saved.author, saved.pages });
+        m_parkedVehicles.clear();
+        for (const auto& saved : state.vehicles)
+        {
+            if (saved.type >= static_cast<uint16_t>(MobId::Count)) continue;
+            ParkedVehicle parked;
+            parked.dimension = saved.dimension;
+            parked.type = static_cast<MobId>(saved.type);
+            parked.variant = saved.variant;
+            parked.position = glm::vec3(saved.x, saved.y, saved.z);
+            parked.yaw = saved.yaw;
+            parked.fuel = saved.fuel;
+            parked.command = saved.command;
+            for (const auto& slot : saved.contents)
+            {
+                if (slot.first >= Chests::SLOTS) continue;
+                parked.hasContents = true;
+                ItemStack& stack = parked.contents[slot.first];
+                stack.id = static_cast<StackId>(slot.second.id);
+                stack.count = slot.second.count;
+                stack.damage = slot.second.damage;
+                stack.enchantments = slot.second.enchantments;
+            }
+            m_parkedVehicles.push_back(parked);
+        }
         m_lecternBooks.clear();
         for (const auto& saved : state.lecterns)
         {
@@ -1098,6 +1129,37 @@ void Application::saveLevel()
         state.commands.push_back(saved);
     }
     state.itemNames = m_itemNames;
+    {
+        std::vector<ParkedVehicle> all = m_parkedVehicles;
+        for (const Mob& mob : m_entities.mobs())
+            if (mob.alive() && (mob.typeId() == MobId::Minecart || isBoatMob(mob.typeId()))) all.push_back(parkOf(mob));
+        for (const ParkedVehicle& parked : all)
+        {
+            LevelState::SavedVehicle saved;
+            saved.dimension = static_cast<int8_t>(parked.dimension);
+            saved.type = static_cast<uint16_t>(parked.type);
+            saved.variant = static_cast<int16_t>(parked.variant);
+            saved.x = parked.position.x;
+            saved.y = parked.position.y;
+            saved.z = parked.position.z;
+            saved.yaw = parked.yaw;
+            saved.fuel = parked.fuel;
+            saved.command = parked.command;
+            if (parked.hasContents)
+                for (int k = 0; k < Chests::SLOTS; ++k)
+                {
+                    const ItemStack& stack = parked.contents[static_cast<size_t>(k)];
+                    if (stack.empty()) continue;
+                    LevelState::SavedBundleStack one;
+                    one.id = static_cast<uint16_t>(stack.id);
+                    one.count = static_cast<uint8_t>(stack.count);
+                    one.damage = static_cast<uint16_t>(stack.damage);
+                    one.enchantments = stack.enchantments;
+                    saved.contents.emplace_back(static_cast<uint8_t>(k), one);
+                }
+            state.vehicles.push_back(saved);
+        }
+    }
     for (const BookText& book : m_bookTexts) state.books.push_back(LevelState::SavedBook{ book.title, book.author, book.pages });
     for (const auto& entry : m_lecternBooks)
     {
@@ -2011,6 +2073,7 @@ bool Application::frame()
             m_particles.update(deltaTime, *m_world);
             updateArrows(deltaTime);
             updateFuses(deltaTime);
+            tickCarts(deltaTime);
             updatePortal(deltaTime);
 
             // Dev aid: a steady stream, so a screenshot taken at any
@@ -2233,8 +2296,16 @@ bool Application::frame()
                                    : m_anvilOpen    ? m_anvilBlock
                                    : m_brewOpen     ? m_brewBlock
                                                     : m_furnaceBlock;
-            const glm::vec3 middle = glm::vec3(block) + glm::vec3(0.5f);
+            glm::vec3 middle = glm::vec3(block) + glm::vec3(0.5f);
             const BlockId there = m_world->getBlock(block.x, block.y, block.z);
+            bool vehicleThere = false;
+            if (m_chestOpen && m_chestVehicle >= 0)
+                for (const Mob& mob : m_entities.mobs())
+                    if (mob.alive() && static_cast<int64_t>(mob.serial()) == m_chestVehicle)
+                    {
+                        vehicleThere = true;
+                        middle = mob.position();
+                    }
 
             const bool stillThere =
                 m_benchOpen   ? there == Blocks::CraftingTable
@@ -2244,7 +2315,7 @@ bool Application::frame()
               : m_smithOpen   ? there == Blocks::SmithingTable
               : m_cartoOpen   ? there == Blocks::CartographyTable
               : m_loomOpen    ? isLoom(there)
-              : m_chestOpen   ? (isContainerBlock(there) || isItemHolder(there))
+              : m_chestOpen   ? (m_chestVehicle >= 0 ? vehicleThere : (isContainerBlock(there) || isItemHolder(there)))
               : m_enchantOpen ? there == Blocks::EnchantingTable
               : m_anvilOpen   ? isAnvil(there)
               : m_brewOpen    ? there == Blocks::BrewingStand
@@ -2324,7 +2395,7 @@ bool Application::frame()
             m_startupScreen == "attackhud" || m_startupScreen == "attackready" ||
             m_startupScreen == "attackhotbar" || m_startupScreen == "bossbars" ||
             m_startupScreen == "gamemode" || m_startupScreen == "spectator" ||
-            m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" || m_startupScreen == "leads" || m_startupScreen == "anvilname" || m_startupScreen == "dials" || m_startupScreen == "spyglass" || m_startupScreen == "bundle" || m_startupScreen == "archery" || m_startupScreen == "food" || m_startupScreen == "materials" || m_startupScreen == "tropical" || m_startupScreen == "book" || m_startupScreen == "bookedit" || m_startupScreen == "booktip" ||
+            m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" || m_startupScreen == "leads" || m_startupScreen == "anvilname" || m_startupScreen == "dials" || m_startupScreen == "spyglass" || m_startupScreen == "bundle" || m_startupScreen == "archery" || m_startupScreen == "food" || m_startupScreen == "materials" || m_startupScreen == "tropical" || m_startupScreen == "book" || m_startupScreen == "bookedit" || m_startupScreen == "booktip" || m_startupScreen == "boats" || m_startupScreen == "carts" ||
             m_startupScreen == "grinderror" || m_startupScreen == "woods" ||
             m_startupScreen == "cherry" || m_startupScreen == "mangrove" || m_startupScreen == "fungi" ||
             m_startupScreen == "stones" || m_startupScreen == "colours" || m_startupScreen == "candles" ||
@@ -2431,6 +2502,8 @@ bool Application::frame()
                                   m_startupScreen != "book" &&
                                   m_startupScreen != "bookedit" &&
                                   m_startupScreen != "booktip" &&
+                                  m_startupScreen != "boats" &&
+                                  m_startupScreen != "carts" &&
                                   m_startupScreen != "grinderror" &&
                                   m_startupScreen != "woods" &&
                                   m_startupScreen != "cherry" &&
@@ -2823,7 +2896,7 @@ bool Application::frame()
             if (m_startupScreen == "attackhud" || m_startupScreen == "attackready" ||
                 m_startupScreen == "attackhotbar" || m_startupScreen == "bossbars" ||
                 m_startupScreen == "gamemode" || m_startupScreen == "spectator" ||
-                m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" || m_startupScreen == "leads" || m_startupScreen == "anvilname" || m_startupScreen == "dials" || m_startupScreen == "spyglass" || m_startupScreen == "bundle" || m_startupScreen == "archery" || m_startupScreen == "food" || m_startupScreen == "materials" || m_startupScreen == "tropical" || m_startupScreen == "book" || m_startupScreen == "bookedit" || m_startupScreen == "booktip" ||
+                m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" || m_startupScreen == "leads" || m_startupScreen == "anvilname" || m_startupScreen == "dials" || m_startupScreen == "spyglass" || m_startupScreen == "bundle" || m_startupScreen == "archery" || m_startupScreen == "food" || m_startupScreen == "materials" || m_startupScreen == "tropical" || m_startupScreen == "book" || m_startupScreen == "bookedit" || m_startupScreen == "booktip" || m_startupScreen == "boats" || m_startupScreen == "carts" ||
                 m_startupScreen == "grinderror" || m_startupScreen == "woods" ||
                 m_startupScreen == "cherry" || m_startupScreen == "mangrove" || m_startupScreen == "fungi" ||
                 m_startupScreen == "stones" || m_startupScreen == "colours" || m_startupScreen == "candles" ||
@@ -3645,6 +3718,52 @@ bool Application::frame()
                         if (m_startupScreen == "bookedit")
                             m_bookDraft[0] = "A list of things to do:\n- feed the frogs\n- find more ink\n- sign this before Alex reads it";
                     }
+                }
+                if (m_startupScreen == "boats" || m_startupScreen == "carts")
+                {
+                    m_devAttackStrength = 1.0f;
+                    const bool boats = m_startupScreen == "boats";
+                    for (int dx = 2; dx <= 9; ++dx)
+                        for (int dz = -7; dz <= 7; ++dz)
+                        {
+                            for (int dy = 0; dy <= 3; ++dy) m_world->setBlock(px + dx, py + dy, pz + dz, Blocks::Air);
+                            m_world->setBlock(px + dx, py - 1, pz + dz, boats ? (dx == 9 || dz == -7 || dz == 7 ? Blocks::Sand : Blocks::Water)
+                                                                             : Blocks::Stone);
+                            if (boats) m_world->setBlock(px + dx, py - 2, pz + dz, Blocks::Sand);
+                        }
+                    if (boats)
+                    {
+                        for (int i = 0; i < 9; ++i)
+                        {
+                            const bool chest = i % 2 == 1;
+                            const int wood = i;
+                            const MobId kind = wood == 8 ? (chest ? MobId::ChestRaft : MobId::Raft) : (chest ? MobId::ChestBoat : MobId::Boat);
+                            const glm::vec3 at(static_cast<float>(px) + 3.5f + static_cast<float>(i / 3) * 2.2f, static_cast<float>(py) - 0.2f,
+                                               static_cast<float>(pz) - 4.5f + static_cast<float>(i % 3) * 3.2f);
+                            if (m_entities.spawnAt(kind, at, *m_world))
+                            {
+                                m_entities.mobs().back().setVariant(wood);
+                                m_entities.mobs().back().setYaw(90.0f);
+                            }
+                        }
+                        for (int i = 0; i < 9; ++i) m_inventory.slot(i) = ItemStack{ boatOfWood(i, i % 2 == 1), 1 };
+                    }
+                    else
+                    {
+                        for (int r = 0; r < 3; ++r)
+                            for (int dz = -7; dz <= 7; ++dz)
+                                m_world->setBlock(px + 3 + r * 2, py, pz + dz, Blocks::RailNorthSouth);
+                        for (int kind = 0; kind <= 5; ++kind)
+                        {
+                            const glm::vec3 at(static_cast<float>(px) + 3.5f + static_cast<float>(kind % 3) * 2.0f,
+                                               static_cast<float>(py) + Mob::RAIL_LIFT,
+                                               static_cast<float>(pz) - 2.5f + static_cast<float>(kind / 3) * 3.0f);
+                            if (m_entities.spawnAt(MobId::Minecart, at, *m_world)) m_entities.mobs().back().setVariant(kind);
+                        }
+                        for (int i = 0; i < 6; ++i) m_inventory.slot(i) = ItemStack{ vehicleItemFor(MobId::Minecart, i), 1 };
+                    }
+                    m_camera.pitch = -30.0f;
+                    m_camera.addLook(0.0f, 0.0f, 0.0f);
                 }
                 if (m_startupScreen == "tropical")
                 {
@@ -10746,6 +10865,194 @@ void Application::primeTnt(const glm::ivec3& block)
     m_audio.play(Sound::Click, 0.8f, 0.7f);
 }
 
+Application::ParkedVehicle Application::parkOf(const Mob& vehicle) const
+{
+    ParkedVehicle parked;
+    parked.dimension = static_cast<int>(m_dimension);
+    parked.type = vehicle.typeId();
+    parked.variant = vehicle.variant();
+    parked.position = vehicle.position();
+    parked.yaw = vehicle.yaw();
+    const auto fuel = m_cartFuel.find(vehicle.serial());
+    if (fuel != m_cartFuel.end() && vehicle.variant() == 2) parked.fuel = fuel->second;
+    const auto command = m_cartCommands.find(vehicle.serial());
+    if (command != m_cartCommands.end()) parked.command = command->second;
+    const auto chest = m_vehicleChests.find(vehicle.serial());
+    if (chest != m_vehicleChests.end())
+    {
+        parked.hasContents = true;
+        parked.contents = chest->second;
+    }
+    return parked;
+}
+
+void Application::parkVehicles(bool onlyFar)
+{
+    if (m_chestOpen && m_chestVehicle >= 0) syncOpenContainers();
+    auto& mobs = m_entities.mobs();
+    for (size_t i = 0; i < mobs.size();)
+    {
+        const Mob& mob = mobs[i];
+        const bool vehicle = mob.alive() && (mob.typeId() == MobId::Minecart || isBoatMob(mob.typeId()));
+        const glm::vec3 apart = mob.position() - m_player.position;
+        const bool far = glm::length(glm::vec2(apart.x, apart.z)) > 150.0f;
+        if (!vehicle || (onlyFar && (mob.ridden() || !far)) ||
+            (m_chestOpen && m_chestVehicle == static_cast<int64_t>(mob.serial())))
+        {
+            ++i;
+            continue;
+        }
+        m_parkedVehicles.push_back(parkOf(mob));
+        m_vehicleChests.erase(mob.serial());
+        m_cartFuel.erase(mob.serial());
+        m_cartPush.erase(mob.serial());
+        m_cartFuses.erase(mob.serial());
+        m_cartCommands.erase(mob.serial());
+        mobs.erase(mobs.begin() + static_cast<long>(i));
+    }
+}
+
+void Application::unparkVehicles()
+{
+    if (!m_world) return;
+    for (size_t i = 0; i < m_parkedVehicles.size();)
+    {
+        const ParkedVehicle& parked = m_parkedVehicles[i];
+        const glm::vec3 apart = parked.position - m_player.position;
+        if (parked.dimension != static_cast<int>(m_dimension) || glm::length(glm::vec2(apart.x, apart.z)) > 120.0f)
+        {
+            ++i;
+            continue;
+        }
+        const int cx = static_cast<int>(std::floor(parked.position.x / Chunk::SX));
+        const int cz = static_cast<int>(std::floor(parked.position.z / Chunk::SZ));
+        const Chunk* chunk = m_world->chunkAt(cx, cz);
+        if (!chunk || chunk->state.load() != ChunkState::Lit)
+        {
+            ++i;
+            continue;
+        }
+        if (m_entities.spawnAt(parked.type, parked.position, *m_world))
+        {
+            Mob& mob = m_entities.mobs().back();
+            mob.setVariant(parked.variant);
+            mob.setYaw(parked.yaw);
+            mob.keepFromDespawning();
+            if (parked.hasContents) m_vehicleChests[mob.serial()] = parked.contents;
+            if (parked.fuel > 0.0f) m_cartFuel[mob.serial()] = parked.fuel;
+            if (!parked.command.empty()) m_cartCommands[mob.serial()] = parked.command;
+        }
+        else
+        {
+            ItemStack item{ vehicleItemFor(parked.type, parked.variant), 1 };
+            m_drops.spawnStack(parked.position + glm::vec3(0.0f, 0.5f, 0.0f), item);
+            if (parked.hasContents)
+                for (const ItemStack& stack : parked.contents)
+                    if (!stack.empty()) m_drops.spawnStack(parked.position + glm::vec3(0.0f, 0.5f, 0.0f), stack);
+        }
+        m_parkedVehicles.erase(m_parkedVehicles.begin() + static_cast<long>(i));
+    }
+}
+
+void Application::primeTntCart(Mob& cart)
+{
+    if (m_cartFuses.count(cart.serial())) return;
+    m_cartFuses[cart.serial()] = 4.0f;
+    m_audio.play(Sound::Fire, 0.7f, 1.0f);
+}
+
+void Application::tickCarts(float deltaTime)
+{
+    if (!m_world) return;
+    m_vehicleClock += deltaTime;
+    if (m_vehicleClock > 0.5f)
+    {
+        m_vehicleClock = 0.0f;
+        parkVehicles(true);
+        unparkVehicles();
+    }
+    std::vector<std::pair<glm::vec3, float>> blasts;
+    for (Mob& cart : m_entities.mobs())
+    {
+        if (cart.typeId() != MobId::Minecart || !cart.alive()) continue;
+        const uint32_t id = cart.serial();
+        const glm::ivec3 cell = glm::ivec3(glm::floor(cart.position() + glm::vec3(0.0f, 0.1f, 0.0f)));
+        BlockId rail = m_world->getBlock(cell.x, cell.y, cell.z);
+        if (!isRail(rail)) rail = m_world->getBlock(cell.x, cell.y - 1, cell.z);
+        const bool activator = specialRailFamily(rail) == 3 && specialRailPowered(rail);
+
+        if (cart.variant() == 2)
+        {
+            auto fuel = m_cartFuel.find(id);
+            const bool burning = fuel != m_cartFuel.end() && fuel->second > 0.0f;
+            if (burning)
+            {
+                fuel->second = std::max(0.0f, fuel->second - deltaTime);
+                if (cart.railSpeed() < 0.05f)
+                {
+                    const auto push = m_cartPush.find(id);
+                    if (push != m_cartPush.end())
+                        cart.setYaw(glm::degrees(std::atan2(push->second.y, push->second.x)));
+                }
+                if (static_cast<int>(m_elapsedSeconds * 6.0f) % 3 == 0)
+                    sprites(SpriteParticles::Kind::Smoke, cart.position() + glm::vec3(0.0f, 1.1f, 0.0f), 1, 0.1f, 0.4f, 0.2f, 0.8f);
+            }
+            cart.setSelfPush(burning);
+        }
+        if (cart.variant() == 3)
+        {
+            Chests::Contents& held = m_vehicleChests[id];
+            for (ItemStack stack : m_drops.takeNear(cart.position() + glm::vec3(0.0f, 0.5f, 0.0f), 1.0f))
+            {
+                for (int slot = 0; slot < 5 && stack.count > 0; ++slot)
+                {
+                    ItemStack& into = held[static_cast<size_t>(slot)];
+                    if (into.empty()) { into = stack; stack.count = 0; break; }
+                    if (into.sameAs(stack) && into.count < maxStackOf(into.id))
+                    {
+                        const int moved = std::min(stack.count, maxStackOf(into.id) - into.count);
+                        into.count += moved;
+                        stack.count -= moved;
+                    }
+                }
+                if (stack.count > 0) m_drops.spawnStack(cart.position() + glm::vec3(0.0f, 0.8f, 0.0f), stack);
+            }
+            bool empty = true;
+            for (const ItemStack& stack : held) if (!stack.empty()) empty = false;
+            if (empty && !(m_chestOpen && m_chestVehicle == static_cast<int64_t>(id))) m_vehicleChests.erase(id);
+        }
+        if (cart.variant() == 4)
+        {
+            if (activator) primeTntCart(cart);
+            auto fuse = m_cartFuses.find(id);
+            if (fuse != m_cartFuses.end())
+            {
+                fuse->second -= deltaTime;
+                if (fuse->second <= 0.0f)
+                {
+                    const float speed = std::min(5.0f, cart.railSpeed() / 20.0f * 20.0f);
+                    blasts.emplace_back(cart.position() + glm::vec3(0.0f, 0.5f, 0.0f), 4.0f + speed * 0.3f);
+                    cart.vanish();
+                    m_cartFuses.erase(fuse);
+                }
+            }
+        }
+        if (cart.variant() == 5 && activator)
+        {
+            float& wait = m_cartFuel[id];
+            wait -= deltaTime;
+            const auto command = m_cartCommands.find(id);
+            if (wait <= 0.0f && command != m_cartCommands.end() && !command->second.empty())
+            {
+                wait = 0.2f;
+                std::string output;
+                runCommand(command->second, cart.position(), true, output);
+            }
+        }
+    }
+    for (const auto& blast : blasts) applyBlast(blast.first, blast.second, TNT_DAMAGE);
+}
+
 void Application::updateFuses(float deltaTime)
 {
     for (size_t i = 0; i < m_fuses.size();)
@@ -12539,6 +12846,58 @@ void Application::handlePlacement()
                 return;
             }
 
+    if (Mob* vehicle = m_entities.pick(m_camera.position, m_camera.front, ATTACK_REACH))
+        if (vehicle->alive() && (vehicle->typeId() == MobId::Minecart || isBoatMob(vehicle->typeId())))
+        {
+            const int kind = vehicle->variant();
+            if (hasVehicleChest(vehicle->typeId(), kind) && (vehicle->typeId() == MobId::Minecart || m_player.sneaking))
+            {
+                m_inventory.setCraftSize(2);
+                openVehicleChest(*vehicle);
+                return;
+            }
+            if (vehicle->typeId() == MobId::Minecart && kind == 2)
+            {
+                if (stack.id == Items::Coal || stack.id == Items::Charcoal)
+                {
+                    float& fuel = m_cartFuel[vehicle->serial()];
+                    if (fuel < 32000.0f / 20.0f)
+                    {
+                        fuel += 3600.0f / 20.0f;
+                        if (!m_player.creative())
+                        {
+                            stack.count -= 1;
+                            if (stack.count <= 0) stack.clear();
+                        }
+                    }
+                }
+                const glm::vec3 away = vehicle->position() - m_player.position;
+                m_cartPush[vehicle->serial()] = glm::length(glm::vec2(away.x, away.z)) > 0.01f
+                                                   ? glm::normalize(glm::vec2(away.x, away.z)) : glm::vec2(1.0f, 0.0f);
+                m_audio.play(Sound::Click, 0.5f, 0.8f);
+                return;
+            }
+            if (vehicle->typeId() == MobId::Minecart && kind == 4)
+            {
+                if (stack.id == Items::FlintAndSteel) primeTntCart(*vehicle);
+                return;
+            }
+            if (vehicle->typeId() == MobId::Minecart && kind == 5)
+            {
+                if (m_player.creative())
+                {
+                    m_editorOpen = true;
+                    m_editorCart = static_cast<int64_t>(vehicle->serial());
+                    m_editorFocus = 0;
+                    m_editorStructure = false;
+                    m_editorStatus.clear();
+                    m_editorFields = { m_cartCommands[vehicle->serial()], std::string(), std::string() };
+                    setMouseCaptured(false);
+                }
+                return;
+            }
+        }
+
     // Getting on something comes before all of it: a tamed horse in
     // front of you is to be ridden, not fed.
     if (Mob* ride = m_entities.rideable(m_camera.position, m_camera.front, ATTACK_REACH))
@@ -12574,7 +12933,7 @@ void Application::handlePlacement()
     // A boat is set down on the water in front of you, or on the
     // ground if that is what you are looking at -- the same as vanilla,
     // where a boat on land is simply a slow boat.
-    if (stack.id == Items::Boat)
+    if (boatItemWood(stack.id) >= 0)
     {
         const RaycastHit shore = m_world->raycast(m_camera.position, m_camera.front,
                                                   REACH_DISTANCE, true);
@@ -12588,7 +12947,12 @@ void Application::handlePlacement()
         const float lift = isLiquid(looking) ? 0.85f : 0.05f;
         const glm::vec3 where(cell.x + 0.5f, cell.y + lift, cell.z + 0.5f);
 
-        if (!m_entities.spawnAt(MobId::Boat, where, *m_world)) return;
+        const int wood = boatItemWood(stack.id);
+        const bool chest = isChestBoatItem(stack.id);
+        const MobId kind = wood == 8 ? (chest ? MobId::ChestRaft : MobId::Raft) : (chest ? MobId::ChestBoat : MobId::Boat);
+        if (!m_entities.spawnAt(kind, where, *m_world)) return;
+        m_entities.mobs().back().setVariant(wood);
+        m_entities.mobs().back().keepFromDespawning();
 
         if (!m_player.creative())
         {
@@ -12601,7 +12965,7 @@ void Application::handlePlacement()
 
     // A minecart only goes down on a rail, which is the one place it
     // is any use.
-    if (stack.id == Items::Minecart)
+    if (isMinecartItem(stack.id))
     {
         const RaycastHit track = m_world->raycast(m_camera.position, m_camera.front,
                                                   REACH_DISTANCE);
@@ -12615,6 +12979,8 @@ void Application::handlePlacement()
                               static_cast<float>(cell.y) + Mob::RAIL_LIFT,
                               cell.z + 0.5f);
         if (!m_entities.spawnAt(MobId::Minecart, where, *m_world)) return;
+        m_entities.mobs().back().setVariant(minecartItemKind(stack.id));
+        m_entities.mobs().back().keepFromDespawning();
 
         if (!m_player.creative())
         {
@@ -14351,6 +14717,7 @@ void Application::openBlockEditor(const glm::ivec3& at)
     const BlockId block = m_world->getBlock(at.x, at.y, at.z);
     if (!isCommandBlock(block) && !isStructureBlock(block)) return;
     m_editorOpen = true;
+    m_editorCart = -1;
     m_editorAt = at;
     m_editorFocus = 0;
     m_editorStatus.clear();
@@ -14380,6 +14747,13 @@ void Application::closeBlockEditor(bool keep)
 {
     if (!m_editorOpen) return;
     m_editorOpen = false;
+    if (m_editorCart >= 0)
+    {
+        if (keep) m_cartCommands[static_cast<uint32_t>(m_editorCart)] = m_editorFields[0];
+        m_editorCart = -1;
+        if (!m_inventoryOpen) setMouseCaptured(true);
+        return;
+    }
     const BlockId block = m_world ? m_world->getBlock(m_editorAt.x, m_editorAt.y, m_editorAt.z) : Blocks::Air;
     if (keep && m_editorStructure && isStructureBlock(block))
     {
@@ -14411,7 +14785,11 @@ void Application::updateBlockEditor()
 {
     if (!m_editorOpen) return;
     const BlockId block = m_world->getBlock(m_editorAt.x, m_editorAt.y, m_editorAt.z);
-    if (!isCommandBlock(block) && !isStructureBlock(block))
+    bool cartThere = false;
+    if (m_editorCart >= 0)
+        for (const Mob& mob : m_entities.mobs())
+            if (mob.alive() && static_cast<int64_t>(mob.serial()) == m_editorCart) cartThere = true;
+    if (m_editorCart >= 0 ? !cartThere : (!isCommandBlock(block) && !isStructureBlock(block)))
     {
         m_editorOpen = false;
         if (!m_inventoryOpen) setMouseCaptured(true);
@@ -14466,11 +14844,14 @@ void Application::renderBlockEditor()
         const float third = (width - gap * 2.0f) / 3.0f;
         const float y = h * 0.52f;
         static const char* MODES[3] = { "Impulse", "Chain", "Repeat" };
+        if (m_editorCart < 0)
+        {
         if (menuButton({ left, y, third, buttonHeight }, MODES[m_editorKind])) m_editorKind = (m_editorKind + 1) % 3;
         if (menuButton({ left + third + gap, y, third, buttonHeight }, m_editorConditional ? "Conditional" : "Unconditional"))
             m_editorConditional = !m_editorConditional;
         if (menuButton({ left + (third + gap) * 2.0f, y, third, buttonHeight }, m_editorAlways ? "Always Active" : "Needs Redstone"))
             m_editorAlways = !m_editorAlways;
+        }
     }
     else
     {
@@ -16146,8 +16527,31 @@ void Application::updateMobs(float deltaTime)
             }
         }
 
-        for (int i = 0; i < type.dropCount; ++i) m_drops.spawn(where, type.drop, 1);
-        for (int i = 0; i < type.secondDropCount; ++i) m_drops.spawn(where, type.secondDrop, 1);
+        const StackId vehicle = vehicleItemFor(death.type, death.variant);
+        if (vehicle != Blocks::Air)
+        {
+            m_drops.spawn(where, vehicle, 1);
+            auto chest = m_vehicleChests.find(death.serial);
+            if (chest != m_vehicleChests.end())
+            {
+                for (const ItemStack& stack : chest->second)
+                    if (!stack.empty()) m_drops.spawnStack(where, stack);
+                m_vehicleChests.erase(chest);
+            }
+            if (m_chestOpen && m_chestVehicle == static_cast<int64_t>(death.serial))
+            {
+                for (int i = 0; i < Inventory::CHEST_SLOTS; ++i) m_inventory.slot(Inventory::CHEST_FIRST + i).clear();
+                m_chestOpen = false;
+                m_chestVehicle = -1;
+                closeInventory();
+                setMouseCaptured(true);
+            }
+        }
+        else
+        {
+            for (int i = 0; i < type.dropCount; ++i) m_drops.spawn(where, type.drop, 1);
+            for (int i = 0; i < type.secondDropCount; ++i) m_drops.spawn(where, type.secondDrop, 1);
+        }
         {
             const uint32_t luck = hashCoords(static_cast<int>(death.position.x * 8.0f), static_cast<int>(m_elapsedSeconds * 20.0f),
                                              static_cast<int>(death.position.z * 8.0f), 0x7A11u);
@@ -16430,6 +16834,21 @@ void Application::pinFramedItems()
 {
     m_drops.clearPinned();
     if (!m_world) return;
+    for (const Mob& cart : m_entities.mobs())
+    {
+        if (cart.typeId() != MobId::Minecart || cart.variant() <= 0 || cart.variant() > 5) continue;
+        static const BlockId CARGO[6] = { Blocks::Air, Blocks::Chest, Blocks::Furnace, Blocks::Hopper, Blocks::Tnt,
+                                          static_cast<BlockId>(Blocks::CommandBlockFirst + 4) };
+        DroppedItems::Cargo cargo;
+        cargo.block = CARGO[cart.variant()];
+        if (cart.variant() == 2 && m_cartFuel[cart.serial()] > 0.0f) cargo.block = Blocks::FurnaceLit;
+        const auto fuse = m_cartFuses.find(cart.serial());
+        if (fuse != m_cartFuses.end() && static_cast<int>(fuse->second * 4.0f) % 2 == 0) cargo.block = Blocks::Snow;
+        cargo.centre = cart.position() + glm::vec3(0.0f, 0.5f * cart.deathFade(), 0.0f);
+        cargo.yaw = glm::radians(-cart.yaw());
+        cargo.size = 0.6f;
+        m_drops.carry(cargo);
+    }
     pinPotPatterns();
     pinCreativeMarkers();
     if (m_bobber.active)

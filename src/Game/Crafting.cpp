@@ -184,6 +184,10 @@ namespace
         { false, 3, 2, { Items::IronIngot,  _,                 Items::IronIngot,
                          Items::IronIngot,  Items::IronIngot,  Items::IronIngot },
           0, Items::Minecart, 1 },
+        { true, 0, 0, { Items::Minecart, Blocks::Chest }, 2, Items::ChestMinecart, 1 },
+        { true, 0, 0, { Items::Minecart, Blocks::Furnace }, 2, Items::FurnaceMinecart, 1 },
+        { true, 0, 0, { Items::Minecart, Blocks::Hopper }, 2, Items::HopperMinecart, 1 },
+        { true, 0, 0, { Items::Minecart, Blocks::Tnt }, 2, Items::TntMinecart, 1 },
 
         // Rails: six iron down the sides with a stick between them.
         { false, 3, 3, { Items::IronIngot,  _,                 Items::IronIngot,
@@ -1241,6 +1245,7 @@ namespace
                 wood = here;
             }
         if (wood <= 0) return result;
+        if (result == Items::Boat) return wood < BOAT_WOODS ? boatOfWood(wood, false) : static_cast<StackId>(Blocks::Air);
         if (result == Blocks::DoorLowShutNorth) return doorBaseOf(wood);
         if (result == Blocks::OakTrapdoor) return trapdoorBaseOf(wood);
         if (result == Items::Sign) return signItemOfWood(wood);
@@ -1440,8 +1445,30 @@ namespace Crafting
         return out;
     }
 
+    CraftOutput matchChestBoat(const ItemStack* grid, int size)
+    {
+        int wood = -1, chests = 0, others = 0;
+        for (int i = 0; i < 9; ++i)
+        {
+            if (i % 3 >= size || i / 3 >= size) continue;
+            const ItemStack& cell = grid[i];
+            if (cell.empty()) continue;
+            const int boat = boatItemWood(cell.id);
+            if (boat >= 0 && !isChestBoatItem(cell.id) && wood < 0) wood = boat;
+            else if (cell.id == Blocks::Chest) ++chests;
+            else ++others;
+        }
+        CraftOutput out;
+        if (wood < 0 || chests != 1 || others != 0) return out;
+        out.id = boatOfWood(wood, true);
+        out.count = 1;
+        return out;
+    }
+
     CraftOutput match(const ItemStack* grid, int size)
     {
+        const CraftOutput boat = matchChestBoat(grid, size);
+        if (boat.valid()) return boat;
         const CraftOutput stew = matchStew(grid, size);
         if (stew.valid()) return stew;
         const CraftOutput copy = matchBookCopy(grid, size);
@@ -1530,6 +1557,11 @@ std::vector<StackId> Crafting::everyOutput()
     for (const Recipe& recipe : RECIPES) out.push_back(recipe.result);
     out.push_back(static_cast<StackId>(Blocks::DecoratedPotFirst + 2));
     out.push_back(Items::SuspiciousStew);
+    for (int wood = 0; wood < BOAT_WOODS; ++wood)
+    {
+        out.push_back(boatOfWood(wood, false));
+        out.push_back(boatOfWood(wood, true));
+    }
 
     // The sixteen wools a dye makes, which is likewise a rule rather
     // than a table: an audit that could not see it called fifteen of
