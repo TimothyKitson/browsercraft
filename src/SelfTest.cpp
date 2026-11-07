@@ -51,6 +51,7 @@
 #include "Game/Effects.h"
 #include "Game/Brewing.h"
 #include "Game/Fireworks.h"
+#include "Game/Discs.h"
 #include "World/Village.h"
 #include "Game/VillageLoot.h"
 #include "Game/StructureLoot.h"
@@ -4274,6 +4275,34 @@ namespace
               "a longer flight stays up longer");
         check(Fireworks::starColour(starStack) != 0x8A8A8Au, "and a coloured star shows its colour");
         Fireworks::library().clear();
+    }
+
+    void testMusicDiscs()
+    {
+        section("music discs and the jukebox");
+        bool everyDisc = true;
+        for (int d = 0; d < Discs::COUNT; ++d)
+        {
+            const StackId item = Discs::itemOf(d);
+            if (Discs::discOf(item) != d || maxStackOf(item) != 1 || Discs::song(d).seconds < 60.0f) everyDisc = false;
+            if (Discs::song(d).comparator < 1 || Discs::song(d).comparator > 15) everyDisc = false;
+        }
+        check(everyDisc, "nineteen discs, each with its song, its length and its comparator strength");
+        check(std::string(Discs::song(2).key) == "blocks" && Discs::song(2).seconds == 345.0f, "blocks is the longest at 345 seconds");
+        check(Discs::creeperDrops(0) && Discs::creeperDrops(11) && !Discs::creeperDrops(12) && !Discs::creeperDrops(14),
+              "a creeper drops only the twelve old discs");
+        ItemStack g[9];
+        for (ItemStack& cell : g) cell = ItemStack{ Items::DiscFragment, 1 };
+        check(Crafting::match(g, 3).id == Discs::itemOf(13), "nine disc fragments make disc 5");
+        bool relic = false;
+        for (int n = 0; n < 400 && !relic; ++n)
+            relic = Archaeology::roll(Archaeology::TrailRare, n, 30, n * 3, 5u).id == Discs::itemOf(15);
+        check(relic, "and relic is brushed out of trail ruins");
+        bool pigstep = false;
+        for (int n = 0; n < 80 && !pigstep; ++n)
+            for (const StructureLoot::Stack& s : StructureLoot::rollFor(WorldGen::Hoard::Bastion, n * 5, 40, n * 9, 77))
+                if (s.id == Discs::itemOf(14)) pigstep = true;
+        check(pigstep, "pigstep is in a bastion's chests");
     }
 
     void testArchery()
@@ -12238,7 +12267,7 @@ namespace
             std::error_code ec;
             const auto size = std::filesystem::file_size(path, ec);
             if (!ec) std::filesystem::resize_file(path, size - sizeof(uint16_t) - sizeof(uint8_t) - 3 * sizeof(int) - sizeof(uint32_t) - sizeof(int32_t) - 6 * sizeof(uint32_t) -
-                                                        sizeof(uint8_t) - 3 * sizeof(float) - sizeof(int8_t) - sizeof(uint32_t) - 6 * sizeof(uint32_t) - sizeof(uint8_t), ec);
+                                                        sizeof(uint8_t) - 3 * sizeof(float) - sizeof(int8_t) - sizeof(uint32_t) - 7 * sizeof(uint32_t) - sizeof(uint8_t), ec);
 
             LevelState back;
             check(WorldSave::loadLevel(dir, back), "a level from before items moved up still loads");
@@ -14762,6 +14791,7 @@ int runSelfTest()
     testVehicles();
     testSpawnEggs();
     testFireworkCrafting();
+    testMusicDiscs();
     testMadeThings();
     testTheEndAndTheSea();
     testPathfinding();

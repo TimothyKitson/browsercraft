@@ -221,6 +221,7 @@ struct LevelState
     };
     std::vector<SavedRocket> fireworkRockets;
     std::vector<uint16_t> crossbowRockets;
+    std::vector<SavedLectern> jukeboxes;
 };
 
 namespace WorldSave

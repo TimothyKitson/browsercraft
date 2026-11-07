@@ -295,6 +295,11 @@ public:
     // an error anywhere, it just never makes a noise.
     int clipCount(Sound sound) const;
 
+    bool playMusic(const std::string& file, uint32_t tuneSeed, float seconds);
+    void stopMusic();
+    void setMusicVolume(float volume);
+    bool musicPlaying();
+
 private:
     static constexpr int SAMPLE_RATE = 44100;
     static constexpr int MAX_VOICES = 24;
@@ -332,5 +337,22 @@ private:
     std::array<uint32_t, static_cast<size_t>(Sound::Count)> m_lastPlayed{};
     void loadMobVoice(Sound say, Sound hurt, Sound death, const char* folder);
     void mix(float* output, int frames);
+    struct Music
+    {
+        void* stream = nullptr;
+        int channels = 0;
+        int rate = 0;
+        std::vector<float> decoded;
+        long bufferStart = 0;
+        long bufferFrames = 0;
+        double position = 0.0;
+        Clip tune;
+        double tunePosition = 0.0;
+        double secondsLeft = 0.0;
+        float volume = 0.0f;
+        bool active = false;
+    } m_music;
+    void closeMusicStream();
+    void mixMusic(float* output, int frames);
     static void callback(void* userData, uint8_t* stream, int lengthBytes);
 };

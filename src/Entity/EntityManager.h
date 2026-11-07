@@ -81,6 +81,7 @@ public:
         bool baby = false;
         int variant = 0;
         uint32_t serial = 0;
+        bool shotByMob = false;
     };
     std::vector<Death> drainDeaths();
 

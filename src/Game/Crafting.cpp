@@ -1074,6 +1074,9 @@ namespace
                          Items::RabbitHide, Items::RabbitHide }, 0, Items::Leather, 1 },
         { true, 0, 0, { Items::Book, Items::InkSac, Items::Feather }, 3, Items::WritableBook, 1 },
         { true, 0, 0, { Items::BlazePowder, Items::Gunpowder, Items::Coal }, 3, Items::FireCharge, 3 },
+        { false, 3, 3, { Items::DiscFragment, Items::DiscFragment, Items::DiscFragment,
+                         Items::DiscFragment, Items::DiscFragment, Items::DiscFragment,
+                         Items::DiscFragment, Items::DiscFragment, Items::DiscFragment }, 0, Items::MusicDiscFirst + 13, 1 },
 
         // Four string makes a block of wool, so a bed does not depend on
         // finding sheep.

@@ -2,6 +2,7 @@
 #include "World/WorldGen.h"
 #include "World/TrialChamber.h"
 #include "Game/VillageLoot.h"
+#include "Game/Discs.h"
 #include "Renderer/Atlas.h"
 #include "Game/Crafting.h"
 #include "Game/Stonecutting.h"
@@ -1018,6 +1019,10 @@ namespace
                 byHand = "creative only, as in Minecraft";
             else if (i == static_cast<int>(Items::EnchantedBook))
                 byHand = "a book enchanted at the table, fished up, or bought from a librarian";
+            else if (Discs::discOf(static_cast<StackId>(i)) >= 0 && Discs::creeperDrops(Discs::discOf(static_cast<StackId>(i))))
+                byHand = "dropped by a creeper killed by a skeleton's arrow";
+            else if (i == static_cast<int>(Items::MusicDiscFirst + 15))
+                byHand = "brushed out of the gravel in trail ruins";
             else if (i == static_cast<int>(Items::RabbitFoot))
                 byHand = "dropped by a rabbit one time in ten";
             else if (i == static_cast<int>(Items::DragonsBreath))

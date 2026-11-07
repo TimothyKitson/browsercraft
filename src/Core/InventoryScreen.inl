@@ -220,6 +220,12 @@ namespace
         Items::DiscFragment, Items::DragonsBreath, Items::Charcoal, Items::ExperienceBottle,
         Items::CodBucket, Items::SalmonBucket, Items::PufferfishBucket, Items::TropicalFishBucket, Items::AxolotlBucket, Items::TadpoleBucket,
         Items::EnchantedBook, Items::WritableBook, Items::WrittenBook, Items::KnowledgeBook,
+        Items::FireworkRocket, Items::FireworkStar, Items::FireCharge,
+        Items::MusicDiscFirst + 0, Items::MusicDiscFirst + 1, Items::MusicDiscFirst + 2, Items::MusicDiscFirst + 3,
+        Items::MusicDiscFirst + 4, Items::MusicDiscFirst + 5, Items::MusicDiscFirst + 6, Items::MusicDiscFirst + 7,
+        Items::MusicDiscFirst + 8, Items::MusicDiscFirst + 9, Items::MusicDiscFirst + 10, Items::MusicDiscFirst + 11,
+        Items::MusicDiscFirst + 12, Items::MusicDiscFirst + 13, Items::MusicDiscFirst + 14, Items::MusicDiscFirst + 15,
+        Items::MusicDiscFirst + 16, Items::MusicDiscFirst + 17, Items::MusicDiscFirst + 18,
         Items::IronIngot, Items::GoldIngot, Items::Diamond,
         Items::WoodPickaxe, Items::WoodAxe, Items::WoodShovel, Items::WoodSword, Items::WoodHoe,
         Items::StonePickaxe, Items::StoneAxe, Items::StoneShovel, Items::StoneSword, Items::StoneHoe,
@@ -334,6 +340,7 @@ namespace
             line(GENERATIONS[(stack.enchantments >> 24) & 0x3u]);
             return lore;
         }
+        if (Discs::discOf(stack.id) >= 0) line(Discs::song(Discs::discOf(stack.id)).title);
         if (stack.id == Items::FireworkRocket)
             for (const std::string& text : Fireworks::describeRocket(stack)) line(text);
         if (stack.id == Items::FireworkStar)

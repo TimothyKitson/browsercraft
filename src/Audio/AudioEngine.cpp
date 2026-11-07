@@ -157,6 +157,7 @@ AudioEngine::~AudioEngine()
         SDL_CloseAudioDevice(m_device);
         m_device = 0;
     }
+    closeMusicStream();
 }
 
 bool AudioEngine::loadOgg(const std::string& path, Clip& out)
@@ -1795,11 +1796,134 @@ void AudioEngine::playPlace(BlockId block)
     playDig(block, 0.8f);
 }
 
+void AudioEngine::closeMusicStream()
+{
+    if (m_music.stream) stb_vorbis_close(static_cast<stb_vorbis*>(m_music.stream));
+    m_music.stream = nullptr;
+}
+
+bool AudioEngine::playMusic(const std::string& file, uint32_t tuneSeed, float seconds)
+{
+    std::lock_guard<std::mutex> lock(m_mutex);
+    closeMusicStream();
+    m_music = Music{};
+    int error = 0;
+    stb_vorbis* stream = stb_vorbis_open_filename(("assets/sounds/" + file).c_str(), &error, nullptr);
+    if (stream)
+    {
+        const stb_vorbis_info info = stb_vorbis_get_info(stream);
+        m_music.stream = stream;
+        m_music.channels = std::max(1, info.channels);
+        m_music.rate = static_cast<int>(info.sample_rate);
+    }
+    else
+    {
+        Synth synth{ m_music.tune, SAMPLE_RATE };
+        static const float SCALE[8] = { 261.6f, 293.7f, 329.6f, 392.0f, 440.0f, 523.3f, 587.3f, 659.3f };
+        uint32_t x = tuneSeed * 2654435761u + 0x9E3779B9u;
+        const float beat = 0.32f + static_cast<float>(tuneSeed % 5u) * 0.04f;
+        for (int note = 0; note < 32; ++note)
+        {
+            x ^= x << 13;
+            x ^= x >> 17;
+            x ^= x << 5;
+            const float hz = SCALE[x % 8u] * ((x >> 8) % 4u == 0u ? 0.5f : 1.0f);
+            synth.addTone(beat * 1.8f, hz, hz, 3.5f, 0.35f, (tuneSeed & 1u) != 0u, beat * static_cast<float>(note));
+            if (note % 4 == 0) synth.addTone(beat * 3.5f, SCALE[(x >> 4) % 4u] * 0.5f, SCALE[(x >> 4) % 4u] * 0.5f, 1.2f, 0.18f, false,
+                                             beat * static_cast<float>(note));
+        }
+        synth.finish(0.5f);
+    }
+    m_music.secondsLeft = seconds;
+    m_music.active = true;
+    return stream != nullptr;
+}
+
+void AudioEngine::stopMusic()
+{
+    std::lock_guard<std::mutex> lock(m_mutex);
+    closeMusicStream();
+    m_music = Music{};
+}
+
+void AudioEngine::setMusicVolume(float volume)
+{
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_music.volume = std::clamp(volume, 0.0f, 1.0f);
+}
+
+bool AudioEngine::musicPlaying()
+{
+    std::lock_guard<std::mutex> lock(m_mutex);
+    return m_music.active;
+}
+
+void AudioEngine::mixMusic(float* output, int frames)
+{
+    if (!m_music.active) return;
+    const float gain = m_muted ? 0.0f : m_music.volume;
+    m_music.secondsLeft -= static_cast<double>(frames) / SAMPLE_RATE;
+    if (m_music.secondsLeft <= 0.0)
+    {
+        closeMusicStream();
+        m_music.active = false;
+        return;
+    }
+    if (!m_music.stream)
+    {
+        if (m_music.tune.size() < 2) return;
+        for (int i = 0; i < frames; ++i)
+        {
+            const size_t index = static_cast<size_t>(m_music.tunePosition) % (m_music.tune.size() - 1);
+            const float value = m_music.tune[index] * gain;
+            output[i * 2] += value;
+            output[i * 2 + 1] += value;
+            m_music.tunePosition += 1.0;
+        }
+        return;
+    }
+    stb_vorbis* stream = static_cast<stb_vorbis*>(m_music.stream);
+    const int channels = m_music.channels;
+    const double step = static_cast<double>(m_music.rate) / SAMPLE_RATE;
+    for (int i = 0; i < frames; ++i)
+    {
+        long frame = static_cast<long>(m_music.position);
+        while (frame + 1 >= m_music.bufferStart + m_music.bufferFrames)
+        {
+            const long keep = m_music.bufferFrames > 0 ? 1 : 0;
+            std::vector<float> next(static_cast<size_t>((4096 + keep) * channels));
+            if (keep)
+                for (int c = 0; c < channels; ++c)
+                    next[static_cast<size_t>(c)] = m_music.decoded[static_cast<size_t>((m_music.bufferFrames - 1) * channels + c)];
+            const int got = stb_vorbis_get_samples_float_interleaved(stream, channels, next.data() + keep * channels, 4096 * channels);
+            if (got <= 0)
+            {
+                closeMusicStream();
+                m_music.active = false;
+                return;
+            }
+            m_music.bufferStart += m_music.bufferFrames - keep;
+            m_music.bufferFrames = got + keep;
+            next.resize(static_cast<size_t>(m_music.bufferFrames * channels));
+            m_music.decoded.swap(next);
+        }
+        const long local = frame - m_music.bufferStart;
+        const float fraction = static_cast<float>(m_music.position - static_cast<double>(frame));
+        auto at = [&](long f, int c) { return m_music.decoded[static_cast<size_t>(f * channels + std::min(c, channels - 1))]; };
+        const float left = at(local, 0) * (1.0f - fraction) + at(local + 1, 0) * fraction;
+        const float right = at(local, 1) * (1.0f - fraction) + at(local + 1, 1) * fraction;
+        output[i * 2] += left * gain;
+        output[i * 2 + 1] += right * gain;
+        m_music.position += step;
+    }
+}
+
 void AudioEngine::mix(float* output, int frames)
 {
     std::fill(output, output + frames * 2, 0.0f);
 
     std::lock_guard<std::mutex> lock(m_mutex);
+    mixMusic(output, frames);
 
     for (Voice& voice : m_voices)
     {

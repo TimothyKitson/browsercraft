@@ -610,6 +610,7 @@ namespace Tiles
         ItemVehicleFirst, ItemVehicleLast = ItemVehicleFirst + 21,
         ItemSpawnEggFirst, ItemSpawnEggLast = ItemSpawnEggFirst + 99,
         ItemFireworkFirst, ItemFireworkLast = ItemFireworkFirst + 3,
+        ItemDiscFirst, ItemDiscLast = ItemDiscFirst + 18,
         ItemCompassFrameFirst, ItemCompassFrameLast = ItemCompassFrameFirst + 31,
         ItemClockFirst, ItemClockLast = ItemClockFirst + 63,
         ItemRecoveryFirst, ItemRecoveryLast = ItemRecoveryFirst + 31,

@@ -19,13 +19,15 @@ namespace
     const StackId OMINOUS_EXTRAS[] = { Items::Mace, Items::BreezeRod, Items::Diamond,
                                        Items::EnderPearl, Blocks::HeavyCore, Items::FlowSherd,
                                        Items::GusterSherd, Items::ScrapeSherd, Items::FlowTemplate,
-                                       Items::FlowBannerPattern };
+                                       Items::FlowBannerPattern, Items::MusicDiscFirst + 16 };
 
     const Prize PRIZES[] = {
         { Items::IronIngot,    2, 5, 1.00f },
         { Items::Emerald,      1, 3, 0.70f },
         { Items::GoldIngot,    1, 4, 0.60f },
         { Items::Diamond,      1, 2, 0.34f },
+        { Items::MusicDiscFirst + 18, 1, 1, 0.10f },
+        { Items::MusicDiscFirst + 17, 1, 1, 0.08f },
         { Items::EnderPearl,   1, 2, 0.30f },
         { Items::GusterBannerPattern, 1, 1, 0.08f },
         { Items::BoltTemplate, 1, 1, 0.08f },

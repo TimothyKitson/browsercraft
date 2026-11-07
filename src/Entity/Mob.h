@@ -376,6 +376,8 @@ public:
     int variant() const { return m_variant; }
     void setYaw(float yaw) { m_yaw = yaw; m_goalYaw = yaw; }
     void setSelfPush(bool pushing) { m_selfPush = pushing; }
+    void markShotByMob() { m_shotByMob = true; }
+    bool shotByMob() const { return m_shotByMob; }
     float railSpeed() const { return m_railSpeed; }
     void setVariant(int variant) { m_variant = variant; }
     void setRidden(bool on);
@@ -455,6 +457,7 @@ private:
     int m_shulkerColour = 16;
     int m_variant = 0;
     bool m_selfPush = false;
+    bool m_shotByMob = false;
     int m_health = 1;
     bool m_onGround = false;
 

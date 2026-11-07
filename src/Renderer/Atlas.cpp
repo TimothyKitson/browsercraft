@@ -9849,6 +9849,25 @@ namespace
         { Tiles::ItemBookFirst + 1, { "writable_book", nullptr, nullptr } },
         { Tiles::ItemBookFirst + 2, { "written_book", nullptr, nullptr } },
         { Tiles::ItemBookFirst + 3, { "knowledge_book", nullptr, nullptr } },
+        { Tiles::ItemDiscFirst + 0, { "music_disc_13", nullptr, nullptr } },
+        { Tiles::ItemDiscFirst + 1, { "music_disc_cat", nullptr, nullptr } },
+        { Tiles::ItemDiscFirst + 2, { "music_disc_blocks", nullptr, nullptr } },
+        { Tiles::ItemDiscFirst + 3, { "music_disc_chirp", nullptr, nullptr } },
+        { Tiles::ItemDiscFirst + 4, { "music_disc_far", nullptr, nullptr } },
+        { Tiles::ItemDiscFirst + 5, { "music_disc_mall", nullptr, nullptr } },
+        { Tiles::ItemDiscFirst + 6, { "music_disc_mellohi", nullptr, nullptr } },
+        { Tiles::ItemDiscFirst + 7, { "music_disc_stal", nullptr, nullptr } },
+        { Tiles::ItemDiscFirst + 8, { "music_disc_strad", nullptr, nullptr } },
+        { Tiles::ItemDiscFirst + 9, { "music_disc_ward", nullptr, nullptr } },
+        { Tiles::ItemDiscFirst + 10, { "music_disc_11", nullptr, nullptr } },
+        { Tiles::ItemDiscFirst + 11, { "music_disc_wait", nullptr, nullptr } },
+        { Tiles::ItemDiscFirst + 12, { "music_disc_otherside", nullptr, nullptr } },
+        { Tiles::ItemDiscFirst + 13, { "music_disc_5", nullptr, nullptr } },
+        { Tiles::ItemDiscFirst + 14, { "music_disc_pigstep", nullptr, nullptr } },
+        { Tiles::ItemDiscFirst + 15, { "music_disc_relic", nullptr, nullptr } },
+        { Tiles::ItemDiscFirst + 16, { "music_disc_creator", nullptr, nullptr } },
+        { Tiles::ItemDiscFirst + 17, { "music_disc_creator_music_box", nullptr, nullptr } },
+        { Tiles::ItemDiscFirst + 18, { "music_disc_precipice", nullptr, nullptr } },
         { Tiles::ItemFireworkFirst + 0, { "firework_rocket", nullptr, nullptr } },
         { Tiles::ItemFireworkFirst + 1, { "firework_star", nullptr, nullptr } },
         { Tiles::ItemFireworkFirst + 2, { "firework_star_overlay", nullptr, nullptr } },
@@ -11346,6 +11365,25 @@ Atlas::Atlas()
         paintMaterialIn(tile, i);
         blitPainted(Tiles::ItemMaterialFirst + i, tile);
     }
+    for (int i = 0; i < 19; ++i)
+    {
+        static const Color LABELS[19] = {
+            Color{ 230, 230, 230 }, Color{ 120, 200, 60 }, Color{ 220, 90, 40 }, Color{ 200, 40, 40 }, Color{ 140, 210, 80 },
+            Color{ 110, 90, 200 }, Color{ 230, 120, 200 }, Color{ 40, 40, 40 }, Color{ 240, 240, 240 }, Color{ 40, 120, 60 },
+            Color{ 70, 70, 70 }, Color{ 60, 150, 220 }, Color{ 60, 190, 220 }, Color{ 50, 50, 60 }, Color{ 200, 140, 60 },
+            Color{ 100, 180, 170 }, Color{ 230, 180, 60 }, Color{ 200, 160, 90 }, Color{ 160, 100, 60 } };
+        Tile tile;
+        tile.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 1; y < 15; ++y)
+            for (int x = 1; x < 15; ++x)
+            {
+                const float dx = static_cast<float>(x) - 7.5f, dy = static_cast<float>(y) - 7.5f;
+                const float d = dx * dx + dy * dy;
+                if (d > 44.0f) continue;
+                tile.set(x, y, d < 2.0f ? Color{ 20, 20, 20 } : d < 9.0f ? LABELS[i] : (x + y) % 5 == 0 ? Color{ 60, 60, 66 } : Color{ 30, 30, 34 });
+            }
+        blitPainted(Tiles::ItemDiscFirst + i, tile);
+    }
     for (int i = 0; i < 4; ++i)
     {
         Tile tile;
@@ -12591,6 +12629,7 @@ bool Atlas::hasPainter(int tileIndex)
     if (tileIndex >= Tiles::ItemVehicleFirst && tileIndex <= Tiles::ItemVehicleLast) return true;
     if (tileIndex >= Tiles::ItemSpawnEggFirst && tileIndex <= Tiles::ItemSpawnEggLast) return true;
     if (tileIndex >= Tiles::ItemFireworkFirst && tileIndex <= Tiles::ItemFireworkLast) return true;
+    if (tileIndex >= Tiles::ItemDiscFirst && tileIndex <= Tiles::ItemDiscLast) return true;
     if (tileIndex >= Tiles::ConcreteTile && tileIndex <= Tiles::GlazedTileLast &&
         tileIndex != Tiles::TerracottaPlainTile) return true;
     if (tileIndex >= Tiles::StainedGlassTile && tileIndex <= Tiles::StainedGlassTileLast) return true;

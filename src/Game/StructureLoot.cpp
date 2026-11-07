@@ -95,6 +95,8 @@ namespace
         { Items::Bread,       1, 4 },
         { Items::DiamondHoe,  1, 1 },
         { Items::VexTemplate, 1, 1 },
+        { Items::MusicDiscFirst + 0, 1, 1 },
+        { Items::MusicDiscFirst + 1, 1, 1 },
     };
 
     // Somebody's voyage, and what they never got to spend.
@@ -160,6 +162,7 @@ namespace
         { Items::Bread,       1, 3 },
         { Items::IronPickaxe, 1, 1 },
         { Items::EyeTemplate, 1, 1 },
+        { Items::MusicDiscFirst + 12, 1, 1 },
     };
 
     // The deepest chest in the world, and the one with the longest
@@ -181,6 +184,7 @@ namespace
         { Items::EchoShard,   1, 3 },
         { Items::ExperienceBottle, 1, 3 },
         { Items::DiscFragment, 1, 3 },
+        { Items::MusicDiscFirst + 12, 1, 1 },
     };
 
     // A witch's hut. What she brews with, and what she has brewed.
@@ -223,6 +227,7 @@ namespace
         { Items::RibTemplate, 1, 1 },
         { Items::PiglinBannerPattern, 1, 1 },
         { Items::EnchantedGoldenApple, 1, 1 },
+        { Items::MusicDiscFirst + 14, 1, 1 },
     };
 
     // A supply room, which is exactly what it sounds like: what you

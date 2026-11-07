@@ -34,6 +34,7 @@
 #include "Renderer/BannerRenderer.h"
 #include "Game/Banners.h"
 #include "Game/Fireworks.h"
+#include "Game/Discs.h"
 #include "Renderer/FireworkRenderer.h"
 #include "Renderer/ShadowRenderer.h"
 #include "Game/VillageLoot.h"
@@ -513,6 +514,12 @@ private:
     };
     std::vector<ParkedVehicle> m_parkedVehicles;
     std::map<std::array<int, 4>, int> m_cageKinds;
+    std::map<std::array<int, 4>, ItemStack> m_jukeboxes;
+    std::map<std::array<int, 4>, float> m_jukeboxClock;
+    std::array<int, 4> m_jukeboxPlaying{ -99, 0, 0, 0 };
+    bool useJukebox(const glm::ivec3& at);
+    void ejectJukebox(const glm::ivec3& at, bool drop);
+    void tickJukeboxes(float deltaTime);
     float m_vehicleClock = 0.0f;
     ParkedVehicle parkOf(const Mob& vehicle) const;
     void parkVehicles(bool onlyFar);

@@ -449,6 +449,8 @@ namespace Items
         FireworkRocket,
         FireworkStar,
         FireCharge,
+        MusicDiscFirst,
+        MusicDiscLast = MusicDiscFirst + 18,
         Count
     };
 }

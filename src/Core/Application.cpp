@@ -529,6 +529,10 @@ void Application::startWorld(GameMode mode, bool freshWorld)
     m_entities.clear();
     m_parkedVehicles.clear();
     m_cageKinds.clear();
+    m_jukeboxes.clear();
+    m_jukeboxClock.clear();
+    m_audio.stopMusic();
+    m_jukeboxPlaying = { -99, 0, 0, 0 };
     Fireworks::library().clear();
     m_vehicleChests.clear();
     m_cartFuel.clear();
@@ -642,6 +646,8 @@ void Application::travelTo(Dimension dimension)
 {
     if (!m_world || m_dimension == dimension) return;
     parkVehicles(false);
+    m_audio.stopMusic();
+    m_jukeboxPlaying = { -99, 0, 0, 0 };
 
     // Hand the chunks you changed back to disk before they are thrown
     // away -- otherwise stepping through a portal unbuilds your house.
@@ -704,6 +710,8 @@ void Application::quitToTitle()
     m_entities.clear();
     m_animation.clear();
     m_nameplates.clear();
+    m_audio.stopMusic();
+    m_jukeboxPlaying = { -99, 0, 0, 0 };
     m_perspective = Perspective::FirstPerson;
     m_screen = Screen::Title;
     m_inventoryOpen = false;
@@ -886,6 +894,15 @@ void Application::loadLevel()
             for (uint16_t id : saved.explosions) design.explosions.push_back(id);
             Fireworks::library().rockets().push_back(design);
         }
+        m_jukeboxes.clear();
+        m_jukeboxClock.clear();
+        for (const auto& box : state.jukeboxes)
+            if (Discs::discOf(static_cast<StackId>(box.stack.id)) >= 0)
+            {
+                const std::array<int, 4> key{ static_cast<int>(box.dimension), box.x, box.y, box.z };
+                m_jukeboxes[key] = ItemStack{ static_cast<StackId>(box.stack.id), 1 };
+                m_jukeboxClock[key] = 1.0e9f;
+            }
         m_cageKinds.clear();
         for (const auto& cage : state.cages)
             if (cage.mob < static_cast<uint16_t>(MobId::Count))
@@ -1201,6 +1218,17 @@ void Application::saveLevel()
         saved.flight = static_cast<uint8_t>(design.flight);
         for (int id : design.explosions) saved.explosions.push_back(static_cast<uint16_t>(id));
         state.fireworkRockets.push_back(saved);
+    }
+    for (const auto& box : m_jukeboxes)
+    {
+        LevelState::SavedLectern saved;
+        saved.dimension = static_cast<int8_t>(box.first[0]);
+        saved.x = box.first[1];
+        saved.y = box.first[2];
+        saved.z = box.first[3];
+        saved.stack.id = static_cast<uint16_t>(box.second.id);
+        saved.stack.count = 1;
+        state.jukeboxes.push_back(saved);
     }
     for (const auto& cage : m_cageKinds)
         state.cages.push_back(LevelState::SavedCage{ static_cast<int8_t>(cage.first[0]), cage.first[1], cage.first[2], cage.first[3],
@@ -2120,6 +2148,7 @@ bool Application::frame()
             updateFuses(deltaTime);
             tickCarts(deltaTime);
             tickFireworks(deltaTime);
+            tickJukeboxes(deltaTime);
             updatePortal(deltaTime);
 
             // Dev aid: a steady stream, so a screenshot taken at any
@@ -2441,7 +2470,7 @@ bool Application::frame()
             m_startupScreen == "attackhud" || m_startupScreen == "attackready" ||
             m_startupScreen == "attackhotbar" || m_startupScreen == "bossbars" ||
             m_startupScreen == "gamemode" || m_startupScreen == "spectator" ||
-            m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" || m_startupScreen == "leads" || m_startupScreen == "anvilname" || m_startupScreen == "dials" || m_startupScreen == "spyglass" || m_startupScreen == "bundle" || m_startupScreen == "archery" || m_startupScreen == "food" || m_startupScreen == "materials" || m_startupScreen == "tropical" || m_startupScreen == "book" || m_startupScreen == "bookedit" || m_startupScreen == "booktip" || m_startupScreen == "boats" || m_startupScreen == "carts" || m_startupScreen == "fireworks" ||
+            m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" || m_startupScreen == "leads" || m_startupScreen == "anvilname" || m_startupScreen == "dials" || m_startupScreen == "spyglass" || m_startupScreen == "bundle" || m_startupScreen == "archery" || m_startupScreen == "food" || m_startupScreen == "materials" || m_startupScreen == "tropical" || m_startupScreen == "book" || m_startupScreen == "bookedit" || m_startupScreen == "booktip" || m_startupScreen == "boats" || m_startupScreen == "carts" || m_startupScreen == "fireworks" || m_startupScreen == "jukebox" ||
             m_startupScreen == "grinderror" || m_startupScreen == "woods" ||
             m_startupScreen == "cherry" || m_startupScreen == "mangrove" || m_startupScreen == "fungi" ||
             m_startupScreen == "stones" || m_startupScreen == "colours" || m_startupScreen == "candles" ||
@@ -2551,6 +2580,7 @@ bool Application::frame()
                                   m_startupScreen != "boats" &&
                                   m_startupScreen != "carts" &&
                                   m_startupScreen != "fireworks" &&
+                                  m_startupScreen != "jukebox" &&
                                   m_startupScreen != "grinderror" &&
                                   m_startupScreen != "woods" &&
                                   m_startupScreen != "cherry" &&
@@ -2943,7 +2973,7 @@ bool Application::frame()
             if (m_startupScreen == "attackhud" || m_startupScreen == "attackready" ||
                 m_startupScreen == "attackhotbar" || m_startupScreen == "bossbars" ||
                 m_startupScreen == "gamemode" || m_startupScreen == "spectator" ||
-                m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" || m_startupScreen == "leads" || m_startupScreen == "anvilname" || m_startupScreen == "dials" || m_startupScreen == "spyglass" || m_startupScreen == "bundle" || m_startupScreen == "archery" || m_startupScreen == "food" || m_startupScreen == "materials" || m_startupScreen == "tropical" || m_startupScreen == "book" || m_startupScreen == "bookedit" || m_startupScreen == "booktip" || m_startupScreen == "boats" || m_startupScreen == "carts" || m_startupScreen == "fireworks" ||
+                m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" || m_startupScreen == "leads" || m_startupScreen == "anvilname" || m_startupScreen == "dials" || m_startupScreen == "spyglass" || m_startupScreen == "bundle" || m_startupScreen == "archery" || m_startupScreen == "food" || m_startupScreen == "materials" || m_startupScreen == "tropical" || m_startupScreen == "book" || m_startupScreen == "bookedit" || m_startupScreen == "booktip" || m_startupScreen == "boats" || m_startupScreen == "carts" || m_startupScreen == "fireworks" || m_startupScreen == "jukebox" ||
                 m_startupScreen == "grinderror" || m_startupScreen == "woods" ||
                 m_startupScreen == "cherry" || m_startupScreen == "mangrove" || m_startupScreen == "fungi" ||
                 m_startupScreen == "stones" || m_startupScreen == "colours" || m_startupScreen == "candles" ||
@@ -3765,6 +3795,19 @@ bool Application::frame()
                         if (m_startupScreen == "bookedit")
                             m_bookDraft[0] = "A list of things to do:\n- feed the frogs\n- find more ink\n- sign this before Alex reads it";
                     }
+                }
+                if (m_startupScreen == "jukebox")
+                {
+                    m_devAttackStrength = 1.0f;
+                    const glm::ivec3 box(px + 3, py, pz);
+                    m_world->setBlock(box.x, box.y, box.z, Blocks::Jukebox);
+                    for (int i = 0; i < 9; ++i) m_inventory.slot(i) = ItemStack{ Discs::itemOf(i * 2), 1 };
+                    m_inventory.setSelectedSlot(7);
+                    useJukebox(box);
+                    m_inventory.setSelectedSlot(0);
+                    m_inventoryOpen = true;
+                    m_inventory.setCraftSize(2);
+                    m_devHoverHotbar = 0;
                 }
                 if (m_startupScreen == "fireworks")
                 {
@@ -7889,6 +7932,7 @@ void Application::updateMining(float deltaTime)
             // The book off a lectern, which blockDrop cannot say: it
             // gives back one thing and a lectern gives back two.
             if (isMonsterSpawner(id)) m_cageKinds.erase({ static_cast<int>(m_dimension), hit.block.x, hit.block.y, hit.block.z });
+            if (id == Blocks::Jukebox) ejectJukebox(hit.block, true);
             if (id == Blocks::LecternBook)
             {
                 ItemStack resting{ Items::Book, 1 };
@@ -11832,6 +11876,18 @@ namespace
                 return false;
             }
 
+            for (Mob& mob : entities->mobs())
+            {
+                if (!mob.alive() || mob.typeId() != MobId::Creeper) continue;
+                const glm::vec3 base = mob.position();
+                const glm::vec3 apart = point - base;
+                const float half = mob.width() * 0.5f;
+                if (std::abs(apart.x) > half || std::abs(apart.z) > half || apart.y < 0.0f || apart.y > mob.height()) continue;
+                mob.markShotByMob();
+                mob.damage(damage, base - point);
+                return true;
+            }
+
             // A skeleton's arrow, looking for the player.
             const glm::vec3 feet = player->position;
             const glm::vec3 apart = point - feet;
@@ -12371,6 +12427,74 @@ bool Application::useCauldron(const glm::ivec3& at, BlockId block)
 // A lectern holds one book. Like a chest it says nothing from outside
 // about what is in it, because this engine draws cubes and Minecraft's
 // open book is a model.
+bool Application::useJukebox(const glm::ivec3& at)
+{
+    const std::array<int, 4> key{ static_cast<int>(m_dimension), at.x, at.y, at.z };
+    if (m_jukeboxes.count(key))
+    {
+        ejectJukebox(at, true);
+        return true;
+    }
+    ItemStack& held = m_inventory.selected();
+    const int disc = Discs::discOf(held.id);
+    if (disc < 0) return false;
+    m_jukeboxes[key] = ItemStack{ held.id, 1 };
+    m_jukeboxClock[key] = 0.0f;
+    if (!m_player.creative())
+    {
+        held.count -= 1;
+        if (held.count <= 0) held.clear();
+    }
+    m_audio.playMusic(std::string("records/") + Discs::song(disc).key + ".ogg", static_cast<uint32_t>(disc) * 7919u + 17u,
+                      Discs::song(disc).seconds);
+    m_audio.setMusicVolume(1.0f);
+    m_jukeboxPlaying = key;
+    m_chatLog.add(std::string("Now Playing: ") + Discs::song(disc).title);
+    return true;
+}
+
+void Application::ejectJukebox(const glm::ivec3& at, bool drop)
+{
+    const std::array<int, 4> key{ static_cast<int>(m_dimension), at.x, at.y, at.z };
+    auto found = m_jukeboxes.find(key);
+    if (found == m_jukeboxes.end()) return;
+    if (drop) m_drops.spawnStack(glm::vec3(at) + glm::vec3(0.5f, 1.1f, 0.5f), found->second);
+    m_jukeboxes.erase(found);
+    m_jukeboxClock.erase(key);
+    if (m_jukeboxPlaying == key)
+    {
+        m_audio.stopMusic();
+        m_jukeboxPlaying = { -99, 0, 0, 0 };
+    }
+}
+
+void Application::tickJukeboxes(float deltaTime)
+{
+    if (!m_world || m_jukeboxes.empty()) return;
+    for (auto& entry : m_jukeboxes)
+    {
+        const std::array<int, 4>& key = entry.first;
+        if (key[0] != static_cast<int>(m_dimension)) continue;
+        const int disc = Discs::discOf(entry.second.id);
+        float& clock = m_jukeboxClock[key];
+        const float before = clock;
+        clock += deltaTime;
+        if (clock > Discs::song(disc).seconds)
+        {
+            if (m_jukeboxPlaying == key) m_jukeboxPlaying = { -99, 0, 0, 0 };
+            continue;
+        }
+        const glm::vec3 top(static_cast<float>(key[1]) + 0.5f, static_cast<float>(key[2]) + 1.2f, static_cast<float>(key[3]) + 0.5f);
+        if (static_cast<int>(before) != static_cast<int>(clock) && glm::length(top - m_player.position) < 48.0f)
+        {
+            if (!m_sprites) m_sprites = std::make_unique<SpriteParticles>();
+            m_sprites->spawn(SpriteParticles::Kind::Note, top, glm::vec3(0.0f, 0.8f, 0.0f), 0.3f, 0.6f);
+        }
+        if (m_jukeboxPlaying == key)
+            m_audio.setMusicVolume(std::clamp(1.0f - glm::length(top - m_player.position) / 64.0f, 0.0f, 1.0f));
+    }
+}
+
 bool Application::useLectern(const glm::ivec3& at, BlockId block)
 {
     ItemStack& held = m_inventory.selected();
@@ -12816,6 +12940,7 @@ void Application::handlePlacement()
             if (isComposter(used) && useComposter(bench.block, used)) return;
             if (isCauldron(used) && useCauldron(bench.block, used)) return;
             if (isLectern(used) && useLectern(bench.block, used)) return;
+            if (used == Blocks::Jukebox && useJukebox(bench.block)) return;
             if (used == Blocks::Grindstone && useGrindstone(bench.block)) return;
             if (used == Blocks::Lodestone && m_inventory.selected().id == Items::Compass)
             {
@@ -17014,6 +17139,7 @@ void Application::updateMobs(float deltaTime)
                 m_drops.spawnStack(where, slowing);
             }
             if (death.type == MobId::Rabbit && luck % 10u == 0u) m_drops.spawn(where, Items::RabbitFoot, 1);
+            if (death.type == MobId::Creeper && death.shotByMob) m_drops.spawn(where, Discs::itemOf(static_cast<int>((luck >> 5) % 12u)), 1);
             if (death.type == MobId::Guardian || death.type == MobId::ElderGuardian)
             {
                 const uint32_t pool = (luck >> 4) % 5u;

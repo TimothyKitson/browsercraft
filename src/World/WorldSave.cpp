@@ -418,6 +418,15 @@ void WorldSave::saveLevel(const std::string& saveDirectory, const LevelState& st
     }
     write(out, static_cast<uint8_t>(state.crossbowRockets.size()));
     for (uint16_t id : state.crossbowRockets) write(out, id);
+    write(out, static_cast<uint32_t>(state.jukeboxes.size()));
+    for (const LevelState::SavedLectern& box : state.jukeboxes)
+    {
+        write(out, box.x);
+        write(out, box.y);
+        write(out, box.z);
+        write(out, box.dimension);
+        write(out, box.stack.id);
+    }
 }
 
 bool WorldSave::loadLevel(const std::string& saveDirectory, LevelState& out)
@@ -917,12 +926,24 @@ bool WorldSave::loadLevel(const std::string& saveDirectory, LevelState& out)
                                                         out.fireworkRockets.push_back(rocket);
                                                     }
                                                 uint8_t slotCount = 0;
-                                                if (rocketsWhole && read(in, slotCount))
-                                                    for (uint8_t k = 0; k < slotCount && k < 31; ++k)
+                                                bool slotsWhole = rocketsWhole && read(in, slotCount);
+                                                if (slotsWhole)
+                                                    for (uint8_t k = 0; k < slotCount; ++k)
                                                     {
                                                         uint16_t id = 0;
-                                                        if (!read(in, id)) break;
-                                                        out.crossbowRockets.push_back(id);
+                                                        if (!read(in, id)) { slotsWhole = false; break; }
+                                                        if (k < 31) out.crossbowRockets.push_back(id);
+                                                    }
+                                                uint32_t jukeboxCount = 0;
+                                                if (slotsWhole && read(in, jukeboxCount))
+                                                    for (uint32_t i = 0; i < jukeboxCount && i < 100000u; ++i)
+                                                    {
+                                                        LevelState::SavedLectern box;
+                                                        if (!read(in, box.x) || !read(in, box.y) || !read(in, box.z) ||
+                                                            !read(in, box.dimension) || !read(in, box.stack.id))
+                                                            break;
+                                                        box.stack.count = 1;
+                                                        out.jukeboxes.push_back(box);
                                                     }
                                             }
                                         }
