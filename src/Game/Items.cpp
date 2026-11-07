@@ -212,6 +212,11 @@ namespace
         { "Pitcher Pod",          Tiles::ItemPitcherPod,        64 },
         { "Clay Ball",            Tiles::ItemClayBall,          64 },
         { "Brick",                Tiles::ItemBrick,             64 },
+        { "Pumpkin Seeds",        Tiles::ItemPumpkinSeeds,      64 },
+        { "Shears",               Tiles::ItemShears,            1 },
+        { "Honey Bottle",         Tiles::ItemHoneyBottle,       16 },
+        { "Sweet Berries",        Tiles::ItemSweetBerries,      64 },
+        { "Dried Kelp",           Tiles::ItemDriedKelp,         64 },
     };
 
     static_assert(sizeof(ITEMS) / sizeof(ITEMS[0]) ==
@@ -370,6 +375,13 @@ StackId blockDrop(BlockId id)
     if (id == Blocks::WeepingVinesPlant) return Blocks::WeepingVines;
     if (id == Blocks::TwistingVinesPlant) return Blocks::TwistingVines;
     if (isFrame(id)) return Items::ItemFrame;
+
+    if (isAttachedStem(id)) return attachedStemIsPumpkin(id) ? Items::PumpkinSeeds : Items::MelonSeeds;
+    if (isCarvedPumpkin(id)) return static_cast<StackId>(Blocks::CarvedPumpkinFirst + 2);
+    if (isJackOLantern(id)) return static_cast<StackId>(Blocks::JackOLanternFirst + 2);
+    if (isBeehive(id)) return hiveOf(false, 2, 0);
+    if (isBeeNest(id)) return Blocks::Air;
+    if (isSweetBerryBush(id)) return Items::SweetBerries;
 
     // A melon comes apart into slices rather than into a melon, which
     // is Minecraft's and is what makes one worth planting.

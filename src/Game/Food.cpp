@@ -26,6 +26,9 @@ namespace
         // find when you have nothing, and they light the cave on the
         // way to something better.
         { Items::GlowBerries,    { 2, 0.4f } },
+        { Items::SweetBerries,   { 2, 0.4f } },
+        { Items::HoneyBottle,    { 6, 1.2f } },
+        { Items::DriedKelp,      { 1, 0.6f } },
 
         // Minecraft's apple: four hunger and not much behind it. It
         // is what you eat on the way somewhere, which is the whole

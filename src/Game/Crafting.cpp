@@ -443,6 +443,26 @@ namespace
           0, Blocks::Melon, 1 },
 
         { true, 0, 0, { Items::MelonSlice }, 1, Items::MelonSeeds, 1 },
+        { true, 0, 0, { Blocks::Pumpkin }, 1, Items::PumpkinSeeds, 4 },
+        { false, 1, 2, { Blocks::CarvedPumpkinFirst + 2, Blocks::Torch }, 0, Blocks::JackOLanternFirst + 2, 1 },
+        { false, 2, 2, { Blocks::Air, Items::IronIngot, Items::IronIngot, Blocks::Air }, 0, Items::Shears, 1 },
+        { false, 3, 3, { Items::Wheat, Items::Wheat, Items::Wheat, Items::Wheat, Items::Wheat, Items::Wheat,
+                         Items::Wheat, Items::Wheat, Items::Wheat }, 0, Blocks::HayBale, 1 },
+        { true, 0, 0, { Blocks::HayBale }, 1, Items::Wheat, 9 },
+        { false, 3, 3, { Items::BoneMeal, Items::BoneMeal, Items::BoneMeal, Items::BoneMeal, Items::BoneMeal,
+                         Items::BoneMeal, Items::BoneMeal, Items::BoneMeal, Items::BoneMeal }, 0, Blocks::BoneBlock, 1 },
+        { true, 0, 0, { Blocks::BoneBlock }, 1, Items::BoneMeal, 9 },
+        { false, 3, 3, { Items::DriedKelp, Items::DriedKelp, Items::DriedKelp, Items::DriedKelp, Items::DriedKelp,
+                         Items::DriedKelp, Items::DriedKelp, Items::DriedKelp, Items::DriedKelp }, 0, Blocks::DriedKelpBlock, 1 },
+        { true, 0, 0, { Blocks::DriedKelpBlock }, 1, Items::DriedKelp, 9 },
+        { false, 3, 3, { Blocks::Planks, Blocks::Planks, Blocks::Planks,
+                         Items::Honeycomb, Items::Honeycomb, Items::Honeycomb,
+                         Blocks::Planks, Blocks::Planks, Blocks::Planks }, 0, Blocks::BeehiveFirst + 12, 1 },
+        { false, 2, 2, { Items::HoneyBottle, Items::HoneyBottle, Items::HoneyBottle, Items::HoneyBottle }, 0, Blocks::HoneyBlock, 1 },
+        { true, 0, 0, { Blocks::HoneyBlock, Items::GlassBottle, Items::GlassBottle, Items::GlassBottle, Items::GlassBottle },
+          5, Items::HoneyBottle, 4 },
+        { true, 0, 0, { Items::HoneyBottle }, 1, Items::Sugar, 3 },
+        { false, 2, 2, { Items::Honeycomb, Items::Honeycomb, Items::Honeycomb, Items::Honeycomb }, 0, Blocks::HoneycombBlock, 1 },
 
         // Six planks and a stick make three signs, which is
         // Minecraft's and the cheapest way to label anything.
@@ -1190,8 +1210,9 @@ namespace Crafting
         return matchUpgrade(grid, size);
     }
 
-    void consume(ItemStack* grid, int size)
+    int consume(ItemStack* grid, int size)
     {
+        int bottles = 0;
         for (int y = 0; y < size; ++y)
             for (int x = 0; x < size; ++x)
             {
@@ -1212,10 +1233,16 @@ namespace Crafting
                     cell.enchantments = 0;
                     continue;
                 }
+                if (cell.id == Items::HoneyBottle)
+                {
+                    if (cell.count == 1) { cell.id = Items::GlassBottle; continue; }
+                    ++bottles;
+                }
 
                 cell.count -= 1;
                 if (cell.count <= 0) cell.clear();
             }
+        return bottles;
     }
 }
 

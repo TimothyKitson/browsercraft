@@ -595,6 +595,21 @@ void Player::update(float deltaTime, const World& world, const Controls& control
     // simply be worn at all times.
     if (blocking && !flying) targetSpeed *= Shield::RAISED_SPEED;
 
+    inBerryBush = false;
+    if (!flying)
+    {
+        const AABB box = aabb();
+        for (int bx = static_cast<int>(std::floor(box.min.x)); bx <= static_cast<int>(std::floor(box.max.x)); ++bx)
+            for (int by = static_cast<int>(std::floor(box.min.y)); by <= static_cast<int>(std::floor(box.max.y)); ++by)
+                for (int bz = static_cast<int>(std::floor(box.min.z)); bz <= static_cast<int>(std::floor(box.max.z)); ++bz)
+                    if (isSweetBerryBush(world.getBlock(bx, by, bz))) inBerryBush = true;
+        if (inBerryBush) targetSpeed *= 0.35f;
+        const BlockId under = world.getBlock(static_cast<int>(std::floor(position.x)),
+                                             static_cast<int>(std::floor(position.y - 0.1f)),
+                                             static_cast<int>(std::floor(position.z)));
+        if (under == Blocks::HoneyBlock) targetSpeed *= 0.4f;
+    }
+
     const glm::vec3 targetVelocity = controls.wishDirection * targetSpeed;
 
     float acceleration;

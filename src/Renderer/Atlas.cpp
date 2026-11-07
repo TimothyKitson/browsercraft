@@ -4928,6 +4928,174 @@ namespace
                 if (hash2(x / 2, y / 2, 1509) > 0.55f)
                     t.set(x, y, hash2(x, y, 1510) > 0.8f ? Color{ 200, 236, 196 } : Color{ 112, 156, 128 });
     }
+    void paintPumpkinStemYoungTile(Tile& t) { paintMelonStem(t, Color{ 96, 150, 54 }); }
+    void paintPumpkinStemRipeTile(Tile& t) { paintMelonStem(t, Color{ 150, 134, 48 }); }
+    void paintAttachedStemIn(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        const Color vine{ 150, 134, 48 };
+        for (int y = 8; y < Tile::N; ++y) { t.set(7, y, vine); t.set(8, y, shade(vine, -18)); }
+        for (int x = 0; x < 8; ++x) t.set(x, 6 + (x > 3 ? 1 : 0) + (x > 6 ? 1 : 0), vine);
+        t.set(4, 9, Color{ 120, 150, 50 }); t.set(5, 10, Color{ 120, 150, 50 });
+    }
+    void paintAttachedMelonStemTile(Tile& t) { paintAttachedStemIn(t); }
+    void paintAttachedPumpkinStemTile(Tile& t) { paintAttachedStemIn(t); }
+    void paintPumpkinFaceIn(Tile& t, bool lit)
+    {
+        t.fill(Color{ 214, 128, 30 });
+        t.speckle(10, 1601);
+        for (int y = 0; y < Tile::N; ++y)
+            for (int x = 0; x < Tile::N; x += 4) t.set(x, y, Color{ 190, 108, 24 });
+        const Color hole = lit ? Color{ 255, 230, 120 } : Color{ 58, 30, 8 };
+        for (int k = 0; k < 2; ++k)
+            for (int dy = 0; dy < 2; ++dy)
+                for (int dx = 0; dx < 3; ++dx) t.set(3 + k * 7 + dx, 5 + dy, hole);
+        for (int x = 3; x < 13; ++x) t.set(x, 10, hole);
+        for (int x = 4; x < 12; x += 2) t.set(x, 11, hole);
+    }
+    void paintCarvedPumpkinTile(Tile& t) { paintPumpkinFaceIn(t, false); }
+    void paintJackOLanternTile(Tile& t) { paintPumpkinFaceIn(t, true); }
+    void paintHayTopTile(Tile& t)
+    {
+        t.fill(Color{ 196, 162, 54 });
+        t.speckle(16, 1602);
+        for (int k = 0; k < Tile::N; ++k) { t.set(k, 0, Color{ 150, 112, 40 }); t.set(0, k, Color{ 150, 112, 40 }); }
+    }
+    void paintHaySideTile(Tile& t)
+    {
+        t.fill(Color{ 196, 162, 54 });
+        for (int y = 0; y < Tile::N; ++y)
+            for (int x = 0; x < Tile::N; ++x)
+                if (hash2(x, y / 3, 1603) > 0.6f) t.set(x, y, Color{ 220, 186, 70 });
+        for (int x = 0; x < Tile::N; ++x) { t.set(x, 3, Color{ 120, 70, 36 }); t.set(x, 12, Color{ 120, 70, 36 }); }
+    }
+    void paintBoneTopTile(Tile& t)
+    {
+        t.fill(Color{ 226, 222, 200 });
+        for (int y = 3; y < 13; ++y)
+            for (int x = 3; x < 13; ++x)
+                if ((x - 7.5f) * (x - 7.5f) + (y - 7.5f) * (y - 7.5f) < 20.0f) t.set(x, y, Color{ 196, 190, 160 });
+        t.speckle(6, 1604);
+    }
+    void paintBoneSideTile(Tile& t)
+    {
+        t.fill(Color{ 226, 222, 200 });
+        for (int y = 0; y < Tile::N; ++y) { t.set(4, y, Color{ 204, 198, 172 }); t.set(11, y, Color{ 204, 198, 172 }); }
+        t.speckle(6, 1605);
+    }
+    void paintDriedKelpTopTile(Tile& t)
+    {
+        t.fill(Color{ 52, 58, 36 });
+        for (int y = 0; y < Tile::N; ++y)
+            for (int x = 0; x < Tile::N; ++x)
+                if (((x - 7.5f) * (x - 7.5f) + (y - 7.5f) * (y - 7.5f)) < 30.0f && (x + y) % 3 == 0) t.set(x, y, Color{ 70, 78, 44 });
+    }
+    void paintDriedKelpSideTile(Tile& t)
+    {
+        t.fill(Color{ 52, 58, 36 });
+        for (int y = 0; y < Tile::N; ++y)
+            for (int x = 0; x < Tile::N; ++x)
+                if ((x + y * 2) % 5 == 0) t.set(x, y, Color{ 74, 82, 46 });
+        for (int x = 0; x < Tile::N; ++x) t.set(x, 7, Color{ 96, 100, 54 });
+    }
+    void paintDriedKelpBottomTile(Tile& t) { paintDriedKelpTopTile(t); }
+    void paintSweetBerryIn(Tile& t, int stage)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        const int top = stage == 0 ? 10 : 4;
+        for (int y = top; y < Tile::N; ++y)
+            for (int x = 3; x < 13; ++x)
+                if (hash2(x, y, 1606 + stage) > 0.45f) t.set(x, y, shade(Color{ 52, 96, 54 }, static_cast<int>((hash2(x, y, 1607) - 0.5f) * 20.0f)));
+        if (stage >= 2)
+            for (int k = 0; k < (stage == 3 ? 7 : 4); ++k)
+                t.set(4 + static_cast<int>(hash2(k, 0, 1608) * 8.0f), top + 1 + static_cast<int>(hash2(k, 1, 1608) * 8.0f),
+                      stage == 3 ? Color{ 200, 30, 40 } : Color{ 120, 160, 60 });
+    }
+    void paintHiveFrontIn(Tile& t, Color wood, bool honey)
+    {
+        t.fill(wood);
+        t.speckle(10, 1609);
+        for (int y = 9; y < 13; ++y)
+            for (int x = 5; x < 11; ++x) t.set(x, y, Color{ 36, 24, 14 });
+        if (honey)
+            for (int x = 3; x < 13; ++x) for (int y = 2; y < 6; ++y) if ((x + y) % 2) t.set(x, y, Color{ 240, 172, 40 });
+    }
+    void paintBeeNestTopTile(Tile& t) { t.fill(Color{ 214, 172, 80 }); t.speckle(14, 1610); }
+    void paintBeeNestBottomTile(Tile& t) { paintBeeNestTopTile(t); }
+    void paintBeeNestSideTile(Tile& t)
+    {
+        t.fill(Color{ 210, 168, 76 });
+        for (int y = 0; y < Tile::N; y += 4)
+            for (int x = 0; x < Tile::N; ++x) t.set(x, y, Color{ 176, 130, 52 });
+    }
+    void paintBeeNestFrontTile(Tile& t) { paintHiveFrontIn(t, Color{ 210, 168, 76 }, false); }
+    void paintBeeNestFrontHoneyTile(Tile& t) { paintHiveFrontIn(t, Color{ 210, 168, 76 }, true); }
+    void paintBeehiveEndTile(Tile& t)
+    {
+        t.fill(Color{ 186, 144, 84 });
+        for (int k = 0; k < Tile::N; ++k) { t.set(k, 0, Color{ 140, 100, 56 }); t.set(k, Tile::N - 1, Color{ 140, 100, 56 }); }
+        t.speckle(8, 1611);
+    }
+    void paintBeehiveSideTile(Tile& t)
+    {
+        t.fill(Color{ 176, 134, 78 });
+        for (int y = 0; y < Tile::N; y += 5)
+            for (int x = 0; x < Tile::N; ++x) t.set(x, y, Color{ 214, 176, 90 });
+    }
+    void paintBeehiveFrontTile(Tile& t) { paintHiveFrontIn(t, Color{ 176, 134, 78 }, false); }
+    void paintBeehiveFrontHoneyTile(Tile& t) { paintHiveFrontIn(t, Color{ 176, 134, 78 }, true); }
+    void paintHoneyIn(Tile& t, int edge)
+    {
+        t.fill(Color{ 246, 176, 36, 200 });
+        for (int k = 0; k < Tile::N; ++k)
+        {
+            t.set(k, 0, Color{ 220, 140, 20, 230 }); t.set(k, Tile::N - 1, Color{ 220, 140, 20, 230 });
+            t.set(0, k, Color{ 220, 140, 20, 230 }); t.set(Tile::N - 1, k, Color{ 220, 140, 20, 230 });
+        }
+        t.set(4 + edge, 4, Color{ 255, 230, 150, 230 });
+    }
+    void paintHoneyTopTile(Tile& t) { paintHoneyIn(t, 0); }
+    void paintHoneySideTile(Tile& t) { paintHoneyIn(t, 1); }
+    void paintHoneyBottomTile(Tile& t) { paintHoneyIn(t, 2); }
+    void paintHoneycombBlockTile(Tile& t)
+    {
+        t.fill(Color{ 232, 160, 40 });
+        for (int y = 0; y < Tile::N; ++y)
+            for (int x = 0; x < Tile::N; ++x)
+                if ((x + (y / 4) * 2) % 4 == 0 || y % 4 == 0) t.set(x, y, Color{ 196, 120, 24 });
+    }
+    void paintItemPumpkinSeeds(Tile& t) { paintItemSeedsIn(t, Color{ 226, 214, 158 }, 1612); }
+    void paintItemShears(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int k = 0; k < 8; ++k)
+        {
+            t.set(3 + k, 3 + k, Color{ 210, 210, 214 });
+            t.set(12 - k, 3 + k, Color{ 186, 186, 192 });
+        }
+        for (int k = 0; k < 3; ++k) { t.set(2 + k, 12, Color{ 140, 40, 36 }); t.set(11 + k, 12, Color{ 140, 40, 36 }); }
+    }
+    void paintItemHoneyBottle(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 6; y < 14; ++y)
+            for (int x = 5; x < 11; ++x) t.set(x, y, Color{ 244, 172, 36, 230 });
+        for (int y = 3; y < 6; ++y) { t.set(7, y, Color{ 200, 220, 230 }); t.set(8, y, Color{ 200, 220, 230 }); }
+    }
+    void paintItemSweetBerries(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        const int spots[5][2] = { { 5, 8 }, { 8, 6 }, { 9, 10 }, { 6, 11 }, { 11, 8 } };
+        for (const auto& s : spots)
+            for (int dy = 0; dy < 2; ++dy)
+                for (int dx = 0; dx < 2; ++dx) t.set(s[0] + dx, s[1] + dy, Color{ 196, 30, 40 });
+        t.set(8, 4, Color{ 70, 120, 50 }); t.set(8, 5, Color{ 70, 120, 50 });
+    }
+    void paintItemDriedKelp(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 2; y < 14; ++y) for (int x = 6; x < 10; ++x) t.set(x + (y % 4 == 0 ? 1 : 0), y, Color{ 60, 68, 40 });
+    }
     void paintItemPitcherPlant(Tile& t)
     {
         paintDoubleIn(t, true, Color{ 100, 170, 190 }, 1333);
@@ -7507,6 +7675,11 @@ namespace
         { Tiles::ItemRawGold, paintItemRawGold },
         { Tiles::ItemAmethystShard, paintItemAmethystShard },
         { Tiles::ItemTripwireHook, paintItemTripwireHook },
+        { Tiles::ItemPumpkinSeeds, paintItemPumpkinSeeds },
+        { Tiles::ItemShears, paintItemShears },
+        { Tiles::ItemHoneyBottle, paintItemHoneyBottle },
+        { Tiles::ItemSweetBerries, paintItemSweetBerries },
+        { Tiles::ItemDriedKelp, paintItemDriedKelp },
         { Tiles::ItemTorchflowerSeeds, paintItemTorchflowerSeeds },
         { Tiles::ItemPitcherPod, paintItemPitcherPod },
         { Tiles::ItemClayBall, paintItemClayBall },
@@ -7677,6 +7850,32 @@ namespace
         { Tiles::DustLine1Off, paintRedstoneDust },
         { Tiles::DustLine1On, paintRedstoneDustLit },
         { Tiles::LeverHandle, paintLever },
+        { Tiles::PumpkinStemYoungTile, paintPumpkinStemYoungTile },
+        { Tiles::PumpkinStemRipeTile, paintPumpkinStemRipeTile },
+        { Tiles::AttachedMelonStemTile, paintAttachedMelonStemTile },
+        { Tiles::AttachedPumpkinStemTile, paintAttachedPumpkinStemTile },
+        { Tiles::CarvedPumpkinTile, paintCarvedPumpkinTile },
+        { Tiles::JackOLanternTile, paintJackOLanternTile },
+        { Tiles::HayTopTile, paintHayTopTile },
+        { Tiles::HaySideTile, paintHaySideTile },
+        { Tiles::BoneTopTile, paintBoneTopTile },
+        { Tiles::BoneSideTile, paintBoneSideTile },
+        { Tiles::DriedKelpTopTile, paintDriedKelpTopTile },
+        { Tiles::DriedKelpSideTile, paintDriedKelpSideTile },
+        { Tiles::DriedKelpBottomTile, paintDriedKelpBottomTile },
+        { Tiles::BeeNestTopTile, paintBeeNestTopTile },
+        { Tiles::BeeNestBottomTile, paintBeeNestBottomTile },
+        { Tiles::BeeNestSideTile, paintBeeNestSideTile },
+        { Tiles::BeeNestFrontTile, paintBeeNestFrontTile },
+        { Tiles::BeeNestFrontHoneyTile, paintBeeNestFrontHoneyTile },
+        { Tiles::BeehiveEndTile, paintBeehiveEndTile },
+        { Tiles::BeehiveSideTile, paintBeehiveSideTile },
+        { Tiles::BeehiveFrontTile, paintBeehiveFrontTile },
+        { Tiles::BeehiveFrontHoneyTile, paintBeehiveFrontHoneyTile },
+        { Tiles::HoneyTopTile, paintHoneyTopTile },
+        { Tiles::HoneySideTile, paintHoneySideTile },
+        { Tiles::HoneyBottomTile, paintHoneyBottomTile },
+        { Tiles::HoneycombBlockTile, paintHoneycombBlockTile },
         { Tiles::CaveVinesTile, paintCaveVinesTile },
         { Tiles::CaveVinesLitTile, paintCaveVinesLitTile },
         { Tiles::CaveVinesPlantTile, paintCaveVinesPlantTile },
@@ -8052,7 +8251,9 @@ namespace
         Birch,
         Water,
         RedstoneOff,
-        RedstoneOn
+        RedstoneOn,
+        StemYoung,
+        StemRipe
     };
 
     struct PackTile
@@ -8219,6 +8420,11 @@ namespace
         { Tiles::ItemRawGold, { "raw_gold", nullptr, nullptr } },
         { Tiles::ItemAmethystShard, { "amethyst_shard", nullptr, nullptr } },
         { Tiles::ItemTripwireHook, { "../block/tripwire_hook", nullptr, nullptr } },
+        { Tiles::ItemPumpkinSeeds, { "pumpkin_seeds", nullptr, nullptr } },
+        { Tiles::ItemShears, { "shears", nullptr, nullptr } },
+        { Tiles::ItemHoneyBottle, { "honey_bottle", nullptr, nullptr } },
+        { Tiles::ItemSweetBerries, { "sweet_berries", nullptr, nullptr } },
+        { Tiles::ItemDriedKelp, { "dried_kelp", nullptr, nullptr } },
         { Tiles::ItemTorchflowerSeeds, { "torchflower_seeds", nullptr, nullptr } },
         { Tiles::ItemPitcherPod, { "pitcher_pod", nullptr, nullptr } },
         { Tiles::ItemClayBall, { "clay_ball", nullptr, nullptr } },
@@ -8385,6 +8591,36 @@ namespace
         { Tiles::GlassPaneTopTile, { "glass_pane_top", nullptr }, Tinting::None, 0, false },
         { Tiles::TerracottaPlainTile, { "terracotta", "hardened_clay", nullptr }, Tinting::None, 0, false },
         { Tiles::TintedGlassTile, { "tinted_glass", nullptr }, Tinting::None, 0, false },
+        { Tiles::PumpkinStemYoungTile, { "pumpkin_stem", nullptr }, Tinting::StemYoung, 0, false },
+        { Tiles::PumpkinStemRipeTile, { "pumpkin_stem", nullptr }, Tinting::StemRipe, 0, false },
+        { Tiles::AttachedMelonStemTile, { "attached_melon_stem", nullptr }, Tinting::StemRipe, 0, false },
+        { Tiles::AttachedPumpkinStemTile, { "attached_pumpkin_stem", nullptr }, Tinting::StemRipe, 0, false },
+        { Tiles::CarvedPumpkinTile, { "carved_pumpkin", nullptr }, Tinting::None, 0, false },
+        { Tiles::JackOLanternTile, { "jack_o_lantern", nullptr }, Tinting::None, 0, false },
+        { Tiles::HayTopTile, { "hay_block_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::HaySideTile, { "hay_block_side", nullptr }, Tinting::None, 0, false },
+        { Tiles::BoneTopTile, { "bone_block_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::BoneSideTile, { "bone_block_side", nullptr }, Tinting::None, 0, false },
+        { Tiles::DriedKelpTopTile, { "dried_kelp_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::DriedKelpSideTile, { "dried_kelp_side", nullptr }, Tinting::None, 0, false },
+        { Tiles::DriedKelpBottomTile, { "dried_kelp_bottom", nullptr }, Tinting::None, 0, false },
+        { Tiles::BeeNestTopTile, { "bee_nest_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::BeeNestBottomTile, { "bee_nest_bottom", nullptr }, Tinting::None, 0, false },
+        { Tiles::BeeNestSideTile, { "bee_nest_side", nullptr }, Tinting::None, 0, false },
+        { Tiles::BeeNestFrontTile, { "bee_nest_front", nullptr }, Tinting::None, 0, false },
+        { Tiles::BeeNestFrontHoneyTile, { "bee_nest_front_honey", nullptr }, Tinting::None, 0, false },
+        { Tiles::BeehiveEndTile, { "beehive_end", nullptr }, Tinting::None, 0, false },
+        { Tiles::BeehiveSideTile, { "beehive_side", nullptr }, Tinting::None, 0, false },
+        { Tiles::BeehiveFrontTile, { "beehive_front", nullptr }, Tinting::None, 0, false },
+        { Tiles::BeehiveFrontHoneyTile, { "beehive_front_honey", nullptr }, Tinting::None, 0, false },
+        { Tiles::HoneyTopTile, { "honey_block_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::HoneySideTile, { "honey_block_side", nullptr }, Tinting::None, 0, false },
+        { Tiles::HoneyBottomTile, { "honey_block_bottom", nullptr }, Tinting::None, 0, false },
+        { Tiles::HoneycombBlockTile, { "honeycomb_block", nullptr }, Tinting::None, 0, false },
+        { Tiles::SweetBerryBushTile + 0, { "sweet_berry_bush_stage0", nullptr }, Tinting::None, 0, false },
+        { Tiles::SweetBerryBushTile + 1, { "sweet_berry_bush_stage1", nullptr }, Tinting::None, 0, false },
+        { Tiles::SweetBerryBushTile + 2, { "sweet_berry_bush_stage2", nullptr }, Tinting::None, 0, false },
+        { Tiles::SweetBerryBushTile + 3, { "sweet_berry_bush_stage3", nullptr }, Tinting::None, 0, false },
         { Tiles::CaveVinesTile, { "cave_vines", nullptr }, Tinting::None, 0, false },
         { Tiles::CaveVinesLitTile, { "cave_vines_lit", nullptr }, Tinting::None, 0, false },
         { Tiles::CaveVinesPlantTile, { "cave_vines_plant", nullptr }, Tinting::None, 0, false },
@@ -9024,8 +9260,8 @@ namespace
         { Tiles::BeetrootStage7, { "beetroots_stage3", nullptr },                      Tinting::None,    0,   false },
         { Tiles::MelonSide,     { "melon_side", nullptr },                             Tinting::None,    0,   false },
         { Tiles::MelonTop,      { "melon_top", nullptr },                              Tinting::None,    0,   false },
-        { Tiles::MelonStemYoung,{ "melon_stem", nullptr },                             Tinting::None,    0,   false },
-        { Tiles::MelonStemRipe, { "attached_melon_stem", nullptr },                    Tinting::None,    0,   false },
+        { Tiles::MelonStemYoung,{ "melon_stem", nullptr },                             Tinting::StemYoung, 0, false },
+        { Tiles::MelonStemRipe, { "melon_stem", nullptr },                             Tinting::StemRipe, 0, false },
         // The leaves rather than the stalk. Minecraft tiles the stalk
         // texture onto a 2px column and hangs the leaves off it as
         // separate sprites; this engine draws one cross, and a fully
@@ -9163,6 +9399,8 @@ namespace
             case Tinting::Water:   tintImage(image, WATER_TINT); break;
             case Tinting::RedstoneOff: tintImage(image, REDSTONE_OFF_TINT); break;
             case Tinting::RedstoneOn:  tintImage(image, REDSTONE_ON_TINT); break;
+            case Tinting::StemYoung:   tintImage(image, Color{ 96, 200, 40, 255 }); break;
+            case Tinting::StemRipe:    tintImage(image, Color{ 224, 199, 28, 255 }); break;
             default: break;
         }
     }
@@ -9307,6 +9545,12 @@ Atlas::Atlas()
         blitPainted(Tiles::BedSidesTile + i, bedSides);
         blitPainted(Tiles::BedEndsTile + i, bedEnds);
         blitPainted(Tiles::ItemBedFirst + i, bedIcon);
+    }
+    for (int stage = 0; stage < 4; ++stage)
+    {
+        Tile bush;
+        paintSweetBerryIn(bush, stage);
+        blitPainted(Tiles::SweetBerryBushTile + stage, bush);
     }
     for (int stage = 0; stage < 4; ++stage)
     {
@@ -10206,6 +10450,7 @@ bool Atlas::hasPainter(int tileIndex)
     if (tileIndex >= Tiles::BedHeadTopTile && tileIndex <= Tiles::BedEndsTileLast) return true;
     if (tileIndex >= Tiles::ItemBedFirst && tileIndex <= Tiles::ItemBedLast) return true;
     if (tileIndex >= Tiles::ChestTileFirst && tileIndex <= Tiles::ChestTileLast) return true;
+    if (tileIndex >= Tiles::SweetBerryBushTile && tileIndex <= Tiles::SweetBerryBushTileLast) return true;
     if (tileIndex >= Tiles::CutCopperTile && tileIndex <= Tiles::CopperTrapdoorTileLast) return true;
     if (tileIndex >= Tiles::ItemCopperDoorFirst && tileIndex <= Tiles::ItemCopperDoorLast) return true;
     if (tileIndex >= Tiles::CrackFirst &&

@@ -2987,6 +2987,18 @@ void WorldGen::decorate(Chunk& chunk) const
 
             buildTree(chunk, wx, surface, wz, kind);
 
+            if ((kind == TreeKind::Oak || kind == TreeKind::Birch) &&
+                (here == Biome::Plains || here == Biome::Forest) &&
+                hashToFloat(hashCoords(wx, 31, wz, m_seed + 5171)) < (here == Biome::Plains ? 0.05f : 0.02f))
+            {
+                const int trunk = 4 + static_cast<int>(hashToFloat(hashCoords(wx, 0, wz, m_seed + 5150)) * 3.0f) +
+                                  (kind == TreeKind::Birch ? 1 : 0);
+                const int ny = surface + trunk - 3;
+                const int lx = wx - baseX, lz = wz + 1 - baseZ;
+                if (ny > surface && Chunk::inBounds(lx, ny, lz) && chunk.getBlock(lx, ny, lz) == Blocks::Air)
+                    chunk.setBlockRaw(lx, ny, lz, hiveOf(true, 2, 0));
+            }
+
             // Vines off the canopy, which is most of what makes a
             // swamp look like one from the ground. Hung after the
             // tree rather than built into buildTree, so every wood
@@ -3057,6 +3069,13 @@ void WorldGen::decorate(Chunk& chunk) const
             {
                 if (roll < 0.03f)
                     chunk.setBlockRaw(lx, above, lz, roll < 0.015f ? Blocks::BrownMushroom : Blocks::RedMushroom);
+                continue;
+            }
+
+            if ((ground == Blocks::Podzol || (ground == Blocks::Grass || ground == Blocks::SnowGrass) && biome == Biome::Snowy) &&
+                roll >= 0.0f && roll < 0.004f)
+            {
+                chunk.setBlockRaw(lx, above, lz, roll < 0.0025f ? Blocks::SweetBerryBush3 : Blocks::SweetBerryBush2);
                 continue;
             }
 

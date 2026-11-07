@@ -154,11 +154,12 @@ Everything in the 1.21 textures zip the game doesn't use yet, turned into work. 
     - Notes: mushroom fields now rise as islands out of deep sea, with mycelium, huge mushrooms and no hostile spawns at night. Podzol patches lie in snowy and jungle ground, coarse dirt in savanna, and rooted dirt with hanging roots in lush cave roofs. Mooshrooms and mycelium spreading are still to do; there is no hoe yet for tilling coarse or rooted dirt.
 39. Lush caves: cave vines with glow berries, spore blossom, big and small dripleaf (big ones tilt when stood on), azalea and flowering azalea, glow lichen. (done)
     - Notes: moss carpet came along for the cave floors. Azalea trees with rooted dirt now mark lush caves from the surface. Spore blossoms do not shed particles yet, and glow lichen drops itself until shears exist (item 49).
-40. Farm blocks
+40. Farm blocks (done)
     - I. Pumpkin stems, attached and unattached, and pumpkin seeds.
     - II. Carved pumpkin and jack o'lantern. Wearing a carved pumpkin shows pumpkinblur.
     - III. Hay bale, sweet berry bush, dried kelp block, bone block.
     - IV. Bee nest and beehive with honey levels. Honey bottle, honey block and honeycomb block.
+    - Notes: ripe melon and pumpkin stems now bend toward the fruit they grew and straighten when it is taken. Shears arrived early as an item: they carve pumpkins and collect honeycomb, but do not wear out or shear sheep until item 49. Dried kelp came in ahead of item 51 so the kelp block has something to be made from. Sweet berry bushes grow in snowy ground and on podzol, sting and slow you, and berries plant them. Bee nests hang under plains and forest trees; honey builds while bees are within 16 blocks, but bees do not fly into hives yet. Honey blocks slow you; they do not stick to walls or move with pistons yet.
 41. Ocean
     - I. Tall seagrass, coral fans and wall fans, dead corals and coral blocks.
     - II. The conduit and conduit power.

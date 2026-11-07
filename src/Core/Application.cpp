@@ -1900,6 +1900,21 @@ bool Application::frame()
             // the nearest lake with a blaze behind you.
             if (m_player.isInWater(*m_world)) m_player.douse();
 
+            if (m_player.inBerryBush && !m_player.creative())
+            {
+                const glm::vec2 moving(m_player.velocity.x, m_player.velocity.z);
+                const BlockId bush = m_world->getBlock(static_cast<int>(std::floor(m_player.position.x)),
+                                                       static_cast<int>(std::floor(m_player.position.y + 0.2f)),
+                                                       static_cast<int>(std::floor(m_player.position.z)));
+                m_bushSting += deltaTime;
+                if (m_bushSting >= 0.5f && glm::dot(moving, moving) > 0.01f && sweetBerryStage(bush) > 0)
+                {
+                    m_bushSting = 0.0f;
+                    if (m_player.damage(1)) m_audio.play(Sound::Hurt, 0.6f, 1.1f);
+                }
+            }
+            else m_bushSting = 0.0f;
+
             const bool wasAlight = m_player.onFire();
             if (m_player.burn(deltaTime, m_player.isInLava(*m_world) ||
                                          m_player.isInFire(*m_world)))
@@ -2050,6 +2065,7 @@ bool Application::frame()
             m_startupScreen == "stones" || m_startupScreen == "colours" || m_startupScreen == "candles" ||
             m_startupScreen == "shulkerboxes" || m_startupScreen == "beds" || m_startupScreen == "chests" ||
             m_startupScreen == "copper" || m_startupScreen == "flowers" || m_startupScreen == "mushrooms" || m_startupScreen == "lush" ||
+            m_startupScreen == "farm" ||
             m_startupScreen == "boat" || m_startupScreen == "rails" ||
             m_startupScreen == "mobs" || m_startupScreen == "golem" ||
             m_startupScreen == "glowmobs" || m_startupScreen == "variants" ||
@@ -2144,6 +2160,7 @@ bool Application::frame()
                                   m_startupScreen != "flowers" &&
                                   m_startupScreen != "mushrooms" &&
                                   m_startupScreen != "lush" &&
+                                  m_startupScreen != "farm" &&
                                   m_startupScreen != "boat" &&
                                   m_startupScreen != "rails" &&
                                   m_startupScreen != "mobs" &&
@@ -2521,7 +2538,7 @@ bool Application::frame()
                 m_startupScreen == "stones" || m_startupScreen == "colours" || m_startupScreen == "candles" ||
                 m_startupScreen == "shulkerboxes" || m_startupScreen == "beds" || m_startupScreen == "chests" ||
                 m_startupScreen == "copper" || m_startupScreen == "flowers" || m_startupScreen == "mushrooms" ||
-                m_startupScreen == "lush")
+                m_startupScreen == "lush" || m_startupScreen == "farm")
             {
                 m_camera.setOrientation(0.0f, -25.0f);
                 m_camera.addLook(0.0f, 0.0f, 0.0f);
@@ -2662,6 +2679,54 @@ bool Application::frame()
                     m_world->setBlock(px + 12, py, pz - 8, Blocks::Bookshelf);
                     m_world->setBlock(px + 12, py, pz + 8, Blocks::DiamondOre);
                     m_world->setBlock(px + 12, py + 1, pz + 8, Blocks::EndPortalFrame);
+                }
+                if (m_startupScreen == "farm")
+                {
+                    m_devAttackStrength = 1.0f;
+                    m_camera.setOrientation(0.0f, -38.0f);
+                    for (int dx = -1; dx <= 1; ++dx)
+                        for (int dz = -1; dz <= 1; ++dz)
+                            for (int dy = 0; dy <= 5; ++dy) m_world->setBlock(px + dx, py + dy, pz + dz, Blocks::Air);
+                    for (int dy = 0; dy < 3; ++dy) m_world->setBlock(px, py + dy, pz, Blocks::Stone);
+                    m_player.position.y = static_cast<float>(py + 3);
+                    for (int dx = 1; dx <= 14; ++dx)
+                        for (int dz = -9; dz <= 9; ++dz)
+                        {
+                            for (int dy = 0; dy <= 6; ++dy) m_world->setBlock(px + dx, py + dy, pz + dz, Blocks::Air);
+                            m_world->setBlock(px + dx, py - 1, pz + dz, Blocks::Grass);
+                        }
+                    for (int k = 0; k < 8; ++k)
+                    {
+                        m_world->setBlock(px + 3, py - 1, pz - 8 + k, Blocks::Farmland);
+                        m_world->setBlock(px + 3, py, pz - 8 + k, cropAtStage(Blocks::PumpkinStem0, k));
+                        m_world->setBlock(px + 3, py - 1, pz + 1 + k, Blocks::Farmland);
+                        m_world->setBlock(px + 3, py, pz + 1 + k, cropAtStage(Blocks::MelonStem0, k));
+                    }
+                    const struct { int x, z, facing; bool pumpkin; } stems[] = {
+                        { 4, -5, 1, true }, { 5, -3, 2, true }, { 4, 3, 1, false }, { 5, 6, 0, false } };
+                    for (const auto& stem : stems)
+                    {
+                        static const int DX[4] = { 0, 1, 0, -1 };
+                        static const int DZ[4] = { -1, 0, 1, 0 };
+                        m_world->setBlock(px + stem.x, py - 1, pz + stem.z, Blocks::Farmland);
+                        m_world->setBlock(px + stem.x, py, pz + stem.z, attachedStemOf(stem.pumpkin, stem.facing));
+                        m_world->setBlock(px + stem.x + DX[stem.facing], py, pz + stem.z + DZ[stem.facing],
+                                          stem.pumpkin ? Blocks::Pumpkin : Blocks::Melon);
+                    }
+                    for (int k = 0; k < 4; ++k)
+                        m_world->setBlock(px + 8, py, pz - 7 + k * 2, static_cast<BlockId>(Blocks::SweetBerryBush0 + k));
+                    m_world->setBlock(px + 8, py, pz + 1, static_cast<BlockId>(Blocks::CarvedPumpkinFirst + 3));
+                    m_world->setBlock(px + 8, py, pz + 3, static_cast<BlockId>(Blocks::JackOLanternFirst + 3));
+                    m_world->setBlock(px + 8, py, pz + 5, static_cast<BlockId>(Blocks::CarvedPumpkinFirst + 2));
+                    m_world->setBlock(px + 8, py, pz + 7, Blocks::Pumpkin);
+                    const BlockId row[] = { Blocks::HayBale, Blocks::BoneBlock, Blocks::DriedKelpBlock, Blocks::HoneyBlock,
+                                            Blocks::HoneycombBlock, hiveOf(true, 3, 0), hiveOf(true, 3, 5),
+                                            hiveOf(false, 3, 0), hiveOf(false, 3, 5) };
+                    for (int k = 0; k < 9; ++k) m_world->setBlock(px + 11, py, pz - 8 + k * 2, row[k]);
+                    m_world->setBlock(px + 11, py + 1, pz - 8, Blocks::HayBale);
+                    m_world->setBlock(px + 14, py, pz - 9, Blocks::Bookshelf);
+                    m_world->setBlock(px + 14, py, pz + 9, Blocks::DiamondOre);
+                    m_world->setBlock(px + 14, py + 1, pz + 9, Blocks::EndPortalFrame);
                 }
                 if (m_startupScreen == "mushrooms")
                 {
@@ -6234,6 +6299,7 @@ void Application::updateMining(float deltaTime)
                 const Enchanting::Set onTool = m_inventory.selected().enchantments;
                 const bool silk = Enchanting::has(onTool, Enchanting::Kind::SilkTouch);
                 if (silk && drop != Blocks::Air && isObtainable(id)) drop = id;
+                if (silk && isHive(id)) drop = hiveOf(isBeeNest(id), 2, 0);
 
                 int dropped = 1;
 
@@ -6259,6 +6325,11 @@ void Application::updateMining(float deltaTime)
                 if (isMushroomBlock(id) && drop != id)
                     dropped = std::max(0, static_cast<int>(static_cast<uint32_t>(hit.block.x * 73 + hit.block.y * 31 + hit.block.z * 17 +
                                                                                  static_cast<int>(m_elapsedSeconds * 53.0f)) % 8u) - 5);
+                if (isSweetBerryBush(id))
+                    dropped = sweetBerryStage(id) < 2 ? 0
+                                                      : (sweetBerryStage(id) == 3 ? 2 : 1) +
+                                                            static_cast<int>(static_cast<uint32_t>(hit.block.x * 29 + hit.block.z * 13 +
+                                                                                                   static_cast<int>(m_elapsedSeconds * 41.0f)) % 2u);
                 if (id == Blocks::DeadBush) dropped = static_cast<int>(static_cast<uint32_t>(hit.block.x * 31 + hit.block.z * 17 + static_cast<int>(m_elapsedSeconds * 61.0f)) % 3u);
                 if (isDoublePlant(id) && doublePlantUpper(id) && drop == Items::WheatSeeds) dropped = 0;
                 if (isEnderChest(id)) { drop = silk ? chestOf(2, 2, 0) : Blocks::Obsidian; dropped = silk ? 1 : 8; }
@@ -6313,6 +6384,7 @@ void Application::updateMining(float deltaTime)
                 }
             }
             if (isRail(id)) reshapeRailsAround(hit.block);
+            if (id == Blocks::Melon || id == Blocks::Pumpkin) Farming::unhookStemsAround(*m_world, hit.block);
 
             // A piston with its head out is two blocks pretending to
             // be one, so breaking either takes the other with it.
@@ -6656,8 +6728,9 @@ bool Application::fireCrafter(const glm::ivec3& block)
     const CraftOutput made = Crafting::match(grid, 3);
     if (!made.valid()) return false;
 
-    Crafting::consume(grid, 3);
+    const int bottles = Crafting::consume(grid, 3);
     for (int i = 0; i < CRAFTER_SLOTS; ++i) held[i] = grid[i];
+    if (bottles > 0) m_drops.spawn(glm::vec3(block) + glm::vec3(0.5f, 1.2f, 0.5f), Items::GlassBottle, bottles);
 
     // Open in front of the player, the contents have to go back into
     // the slots they are looking at as well.
@@ -9030,8 +9103,11 @@ void Application::handleEating(float deltaTime)
                       Food::POISON_LEVEL, Food::POISON_SECONDS);
     }
 
+    const bool honey = stack.id == Items::HoneyBottle;
+    if (honey) Effects::remove(m_player.effects, Effects::Kind::Poison);
     stack.count -= 1;
     if (stack.count <= 0) stack.clear();
+    if (honey && m_inventory.add(Items::GlassBottle, 1) > 0) m_drops.spawn(m_player.position, Items::GlassBottle, 1);
     m_audio.play(Sound::Pickup, 0.6f, 0.85f);
 }
 
@@ -9560,6 +9636,50 @@ void Application::handlePlacement()
                 m_net.onLocalBlockChange(bench.block.x, bench.block.y, bench.block.z, picked);
                 m_drops.spawnFromBrokenBlock(bench.block, Items::GlowBerries, 1);
                 m_audio.play(Sound::Pickup, 0.5f, 1.2f);
+                return;
+            }
+            if (isSweetBerryBush(used) && sweetBerryStage(used) >= 2 && m_inventory.selected().id != Items::BoneMeal)
+            {
+                const uint32_t roll = static_cast<uint32_t>(bench.block.x * 31 + bench.block.z * 17 +
+                                                            static_cast<int>(m_elapsedSeconds * 59.0f));
+                const int picked = (sweetBerryStage(used) == 3 ? 2 : 1) + static_cast<int>(roll % 2u);
+                m_world->setBlock(bench.block.x, bench.block.y, bench.block.z, Blocks::SweetBerryBush1);
+                m_net.onLocalBlockChange(bench.block.x, bench.block.y, bench.block.z, Blocks::SweetBerryBush1);
+                m_drops.spawnFromBrokenBlock(bench.block, Items::SweetBerries, picked);
+                m_audio.play(Sound::Pickup, 0.5f, 1.2f);
+                return;
+            }
+            if (used == Blocks::Pumpkin && m_inventory.selected().id == Items::Shears)
+            {
+                const glm::ivec3 n = bench.normal;
+                int facing = (n.z < 0) ? 0 : (n.x > 0) ? 1 : (n.z > 0) ? 2 : 3;
+                if (n.y != 0)
+                {
+                    const glm::vec3 look = m_camera.front;
+                    facing = (std::fabs(look.x) > std::fabs(look.z)) ? (look.x > 0.0f ? 3 : 1) : (look.z > 0.0f ? 0 : 2);
+                }
+                const BlockId carved = static_cast<BlockId>(Blocks::CarvedPumpkinFirst + facing);
+                m_world->setBlock(bench.block.x, bench.block.y, bench.block.z, carved);
+                m_net.onLocalBlockChange(bench.block.x, bench.block.y, bench.block.z, carved);
+                m_drops.spawn(glm::vec3(bench.block) + glm::vec3(0.5f) + glm::vec3(n) * 0.65f, Items::PumpkinSeeds, 4);
+                m_audio.play(Sound::DigWood, 0.6f, 1.4f);
+                return;
+            }
+            if (isHive(used) && hiveHoney(used) >= 5 &&
+                (m_inventory.selected().id == Items::Shears || m_inventory.selected().id == Items::GlassBottle))
+            {
+                ItemStack& held = m_inventory.selected();
+                const BlockId emptied = hiveOf(isBeeNest(used), hiveFacing(used), 0);
+                m_world->setBlock(bench.block.x, bench.block.y, bench.block.z, emptied);
+                m_net.onLocalBlockChange(bench.block.x, bench.block.y, bench.block.z, emptied);
+                if (held.id == Items::Shears)
+                    m_drops.spawnFromBrokenBlock(bench.block, Items::Honeycomb, 3);
+                else
+                {
+                    if (!m_player.creative() && --held.count <= 0) held.clear();
+                    if (m_inventory.add(Items::HoneyBottle, 1) > 0) m_drops.spawn(m_player.position, Items::HoneyBottle, 1);
+                }
+                m_audio.play(Sound::Pickup, 0.6f, 0.8f);
                 return;
             }
             if (isFlowerPot(used))
@@ -10160,6 +10280,25 @@ void Application::handlePlacement()
         }
     }
 
+    if (stack.id == Items::SweetBerries)
+    {
+        const RaycastHit soil = m_world->raycast(m_camera.position, m_camera.front, REACH_DISTANCE);
+        if (soil.hit && soil.normal.y > 0 && modeCanBuild(m_player.mode) &&
+            Saplings::canPlantOn(m_world->getBlock(soil.block.x, soil.block.y, soil.block.z)) &&
+            m_world->getBlock(soil.block.x, soil.block.y + 1, soil.block.z) == Blocks::Air)
+        {
+            m_world->setBlock(soil.block.x, soil.block.y + 1, soil.block.z, Blocks::SweetBerryBush0);
+            m_net.onLocalBlockChange(soil.block.x, soil.block.y + 1, soil.block.z, Blocks::SweetBerryBush0);
+            m_audio.playPlace(Blocks::SweetBerryBush0);
+            if (!m_player.creative())
+            {
+                stack.count -= 1;
+                if (stack.count <= 0) stack.clear();
+            }
+            return;
+        }
+    }
+
     if (stack.id == Items::TorchflowerSeeds || stack.id == Items::PitcherPod)
     {
         const RaycastHit soil = m_world->raycast(m_camera.position, m_camera.front, REACH_DISTANCE);
@@ -10530,6 +10669,17 @@ void Application::handlePlacement()
                                ? (look.x > 0.0f ? 3 : 1)
                                : (look.z > 0.0f ? 0 : 2);
         placing = furnaceTurned(placing, facing);
+    }
+
+    if (isCarvedPumpkin(placing) || isJackOLantern(placing) || isHive(placing))
+    {
+        const glm::vec3 look = m_camera.front;
+        const int facing = (std::fabs(look.x) > std::fabs(look.z))
+                               ? (look.x > 0.0f ? 3 : 1)
+                               : (look.z > 0.0f ? 0 : 2);
+        if (isCarvedPumpkin(placing)) placing = static_cast<BlockId>(Blocks::CarvedPumpkinFirst + facing);
+        else if (isJackOLantern(placing)) placing = static_cast<BlockId>(Blocks::JackOLanternFirst + facing);
+        else placing = hiveOf(isBeeNest(placing), facing, 0);
     }
 
     // Stairs face the way you are looking, so you walk up them rather
@@ -12005,6 +12155,7 @@ void Application::updateWorldAround(float deltaTime)
     tickSpriteParticles(deltaTime);
     tickTimedBlocks(deltaTime);
     tickFluids(deltaTime);
+    tickHives(deltaTime);
     tickBreathClouds(deltaTime);
     m_books.update(deltaTime, *m_world, m_player.position);
 
@@ -12027,6 +12178,37 @@ void Application::updateWorldAround(float deltaTime)
     }
 
     updateMobs(deltaTime);
+}
+
+void Application::tickHives(float deltaTime)
+{
+    if (m_net.role() == Net::Role::Guest) return;
+    m_hiveClock += deltaTime;
+    if (m_hiveClock < 30.0f) return;
+    m_hiveClock = 0.0f;
+
+    std::vector<glm::vec3> bees;
+    for (const Mob& mob : m_entities.mobs())
+        if (mob.alive() && mob.typeId() == MobId::Bee) bees.push_back(mob.position());
+    if (bees.empty()) return;
+
+    const glm::ivec3 c(static_cast<int>(std::floor(m_player.position.x)), static_cast<int>(std::floor(m_player.position.y)),
+                       static_cast<int>(std::floor(m_player.position.z)));
+    for (int y = std::max(1, c.y - 16); y <= c.y + 16; ++y)
+        for (int z = c.z - 16; z <= c.z + 16; ++z)
+            for (int x = c.x - 16; x <= c.x + 16; ++x)
+            {
+                const BlockId hive = m_world->getBlock(x, y, z);
+                if (!isHive(hive) || hiveHoney(hive) >= 5) continue;
+                const glm::vec3 at(x + 0.5f, y + 0.5f, z + 0.5f);
+                bool near = false;
+                for (const glm::vec3& b : bees)
+                    if (glm::dot(b - at, b - at) < 256.0f) { near = true; break; }
+                if (!near) continue;
+                const BlockId fuller = hiveOf(isBeeNest(hive), hiveFacing(hive), hiveHoney(hive) + 1);
+                m_world->setBlock(x, y, z, fuller);
+                m_net.onLocalBlockChange(x, y, z, fuller);
+            }
 }
 
 // Rain fills a cauldron that has the sky over it, which is Minecraft's
@@ -12942,6 +13124,23 @@ void Application::renderHud()
         m_ui.texturedQuad(m_underwaterTexture, 0.0f, 0.0f, w, h,
                           4.0f * aspect + across, 4.0f + down, across, down,
                           glm::vec4(shine, shine, shine, 0.1f));
+    }
+
+    if (m_world && m_perspective == Perspective::FirstPerson &&
+        m_inventory.slot(Inventory::ARMOR_FIRST).id == Blocks::CarvedPumpkinFirst + 2)
+    {
+        if (!guiSprite("../misc/pumpkinblur", 0.0f, 0.0f, w, h, glm::vec4(1.0f)))
+        {
+            for (int layer = 0; layer < 2; ++layer)
+            {
+                const float edge = std::min(w, h) * (layer == 0 ? 0.2f : 0.12f);
+                const glm::vec4 rind(0.36f, 0.17f, 0.02f, layer == 0 ? 0.55f : 0.85f);
+                m_ui.quad(0.0f, 0.0f, w, edge, rind);
+                m_ui.quad(0.0f, h - edge, w, edge, rind);
+                m_ui.quad(0.0f, edge, edge * 1.6f, h - edge * 2.0f, rind);
+                m_ui.quad(w - edge * 1.6f, edge, edge * 1.6f, h - edge * 2.0f, rind);
+            }
+        }
     }
 
     if (m_world && hasSky())

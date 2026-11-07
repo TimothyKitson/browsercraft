@@ -3401,6 +3401,116 @@ namespace
               "a stem's last stage is its own last id");
     }
 
+    void testPumpkinsAndBees()
+    {
+        section("pumpkins, hay, berries and bees");
+
+        check(Farming::cropFromSeed(Items::PumpkinSeeds) == Blocks::PumpkinStem0, "pumpkin seeds sow a pumpkin stem");
+        check(isCrop(Blocks::PumpkinStem3) && cropAtStage(Blocks::PumpkinStem0, 7) == Blocks::PumpkinStem7,
+              "and it ripens through eight stages");
+        const Farming::Harvest stem = Farming::harvestOf(Blocks::PumpkinStem7, 0);
+        check(stem.first == Items::PumpkinSeeds && stem.firstCount == 1, "a broken pumpkin stem gives back its seed");
+        bool attached = true;
+        for (int f = 0; f < 4; ++f)
+        {
+            const BlockId p = attachedStemOf(true, f), m = attachedStemOf(false, f);
+            if (!isAttachedStem(p) || !attachedStemIsPumpkin(p) || attachedStemFacing(p) != f) attached = false;
+            if (!isAttachedStem(m) || attachedStemIsPumpkin(m) || attachedStemFacing(m) != f) attached = false;
+            if (isObtainable(p) || isObtainable(m) || isCrop(p)) attached = false;
+        }
+        check(attached, "an attached stem knows its fruit and which way it points, and is never carried");
+        check(blockDrop(attachedStemOf(true, 1)) == Items::PumpkinSeeds && blockDrop(attachedStemOf(false, 3)) == Items::MelonSeeds,
+              "and breaks into the right seed");
+
+        bool faces = true;
+        for (int f = 0; f < 4; ++f)
+        {
+            const BlockId carved = static_cast<BlockId>(Blocks::CarvedPumpkinFirst + f);
+            const BlockId jack = static_cast<BlockId>(Blocks::JackOLanternFirst + f);
+            if (blockFacing(carved) != f || blockFacing(jack) != f) faces = false;
+            if (blockDrop(carved) != Blocks::CarvedPumpkinFirst + 2 || blockDrop(jack) != Blocks::JackOLanternFirst + 2) faces = false;
+            if (isObtainable(carved) != (f == 2) || isObtainable(jack) != (f == 2)) faces = false;
+        }
+        check(faces, "a carved pumpkin and a jack o'lantern turn four ways and come back as one");
+        check(lightEmission(Blocks::JackOLanternFirst) == 15 && lightEmission(Blocks::CarvedPumpkinFirst) == 0,
+              "the lantern shines and the carving does not");
+        check(Armour::slotFor(static_cast<StackId>(Blocks::CarvedPumpkinFirst + 2)) == Armour::slotFor(Items::IronHelmet),
+              "a carved pumpkin is worn on the head");
+        check(Armour::defencePoints(static_cast<StackId>(Blocks::CarvedPumpkinFirst + 2)) == 0, "and stops nothing");
+        check(Inventory::belongsIn(Inventory::ARMOR_FIRST, static_cast<StackId>(Blocks::CarvedPumpkinFirst + 2)),
+              "so the helmet slot takes it");
+
+        ItemStack lantern[9];
+        lantern[0].id = static_cast<StackId>(Blocks::CarvedPumpkinFirst + 2); lantern[0].count = 1;
+        lantern[3].id = Blocks::Torch; lantern[3].count = 1;
+        const CraftOutput jack = Crafting::match(lantern, 2);
+        check(jack.valid() && jack.id == Blocks::JackOLanternFirst + 2, "a carved pumpkin over a torch makes a jack o'lantern");
+
+        ItemStack shears[9];
+        shears[1].id = Items::IronIngot; shears[1].count = 1;
+        shears[3].id = Items::IronIngot; shears[3].count = 1;
+        const CraftOutput cut = Crafting::match(shears, 2);
+        check(cut.valid() && cut.id == Items::Shears, "two iron ingots on a slant make shears");
+        check(maxStackOf(Items::Shears) == 1, "and they do not stack");
+
+        ItemStack seeds[9];
+        seeds[4].id = Blocks::Pumpkin; seeds[4].count = 1;
+        const CraftOutput sown = Crafting::match(seeds, 3);
+        check(sown.valid() && sown.id == Items::PumpkinSeeds && sown.count == 4, "a pumpkin makes four seeds");
+
+        auto nine = [&](StackId what) {
+            ItemStack grid[9];
+            for (ItemStack& cell : grid) { cell.id = what; cell.count = 1; }
+            return Crafting::match(grid, 3);
+        };
+        check(nine(Items::Wheat).id == Blocks::HayBale, "nine wheat bind into a hay bale");
+        check(nine(Items::BoneMeal).id == Blocks::BoneBlock, "nine bone meal pack into a bone block");
+        check(nine(Items::DriedKelp).id == Blocks::DriedKelpBlock, "nine dried kelp press into a block");
+        check(Smelting::resultOf(Blocks::Kelp) == Items::DriedKelp, "kelp dries in a furnace");
+
+        check(Food::isEdible(Items::SweetBerries) && Food::isEdible(Items::HoneyBottle) && Food::isEdible(Items::DriedKelp),
+              "berries, honey and dried kelp are food");
+        check(maxStackOf(Items::HoneyBottle) == 16, "honey bottles stack to sixteen");
+
+        ItemStack honey[9];
+        for (int i : { 0, 1, 3, 4 }) { honey[i].id = Items::HoneyBottle; honey[i].count = 1; }
+        const CraftOutput block = Crafting::match(honey, 2);
+        check(block.valid() && block.id == Blocks::HoneyBlock, "four honey bottles make a honey block");
+        const int extra = Crafting::consume(honey, 2);
+        bool bottles = extra == 0;
+        for (int i : { 0, 1, 3, 4 }) if (honey[i].id != Items::GlassBottle || honey[i].count != 1) bottles = false;
+        check(bottles, "and leave their bottles behind in the grid");
+        check(!blockInfo(Blocks::HoneyBlock).opaque, "honey is see-through");
+
+        bool berries = true;
+        for (int s = 0; s < 4; ++s)
+        {
+            const BlockId bush = static_cast<BlockId>(Blocks::SweetBerryBush0 + s);
+            if (!isSweetBerryBush(bush) || sweetBerryStage(bush) != s || isObtainable(bush)) berries = false;
+            if (blockInfo(bush).collides) berries = false;
+        }
+        check(berries, "a berry bush grows through four stages, and you walk into it rather than onto it");
+
+        bool hives = true;
+        for (int f = 0; f < 4; ++f)
+            for (int h = 0; h < 6; ++h)
+                for (bool nest : { true, false })
+                {
+                    const BlockId hive = hiveOf(nest, f, h);
+                    if (!isHive(hive) || isBeeNest(hive) != nest || hiveFacing(hive) != f || hiveHoney(hive) != h ||
+                        blockFacing(hive) != f) hives = false;
+                }
+        check(hives, "a hive keeps its facing and how much honey is in it");
+        check(blockDrop(hiveOf(false, 3, 5)) == hiveOf(false, 2, 0), "a beehive comes back empty");
+        check(blockDrop(hiveOf(true, 1, 2)) == Blocks::Air, "a bee nest gives nothing without silk touch");
+        check(nine(Blocks::Planks).id != hiveOf(false, 2, 0), "planks alone are not a hive");
+        ItemStack hive[9];
+        for (int i : { 0, 1, 2, 6, 7, 8 }) { hive[i].id = Blocks::Planks; hive[i].count = 1; }
+        for (int i : { 3, 4, 5 }) { hive[i].id = Items::Honeycomb; hive[i].count = 1; }
+        const CraftOutput built = Crafting::match(hive, 3);
+        check(built.valid() && built.id == hiveOf(false, 2, 0), "planks and honeycomb make a beehive");
+    }
+
     // --- the workstations -----------------------------------------------
 
     // A village had a bench and a furnace in it and nothing else
@@ -13349,6 +13459,7 @@ int runSelfTest()
     testRootCrops();
     testWorkstations();
     testMelonAndBamboo();
+    testPumpkinsAndBees();
     testMadeThings();
     testTheEndAndTheSea();
     testPathfinding();

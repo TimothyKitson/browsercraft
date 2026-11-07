@@ -46,14 +46,15 @@ Farming::Harvest Farming::harvestOf(BlockId crop, uint32_t roll)
                        : isCarrot(crop)    ? Items::Carrot
                        : isPotato(crop)    ? Items::Potato
                        : isBeetroot(crop)  ? Items::BeetrootSeeds
+                       : isPumpkinStem(crop) ? Items::PumpkinSeeds
                                            : Items::MelonSeeds;
 
     // A stem is never ripe in the sense the others are: what it grows
     // stands beside it. Broken, it gives back its seed whatever stage
     // it had reached.
-    if (isMelonStem(crop))
+    if (isMelonStem(crop) || isPumpkinStem(crop))
     {
-        out.first = Items::MelonSeeds;
+        out.first = seed;
         out.firstCount = 1;
         return out;
     }
@@ -102,6 +103,7 @@ BlockId Farming::cropFromSeed(StackId held)
         case Items::Potato:        return Blocks::Potato0;
         case Items::BeetrootSeeds: return Blocks::Beetroot0;
         case Items::MelonSeeds:    return Blocks::MelonStem0;
+        case Items::PumpkinSeeds:  return Blocks::PumpkinStem0;
         default:                   return Blocks::Air;
     }
 }
@@ -150,8 +152,9 @@ bool Farming::growMelonBeside(World& world, const glm::ivec3& stem, uint32_t& se
     // Tilled earth under the stem, the same as any other crop.
     if (world.getBlock(stem.x, stem.y - 1, stem.z) != Blocks::Farmland) return false;
 
-    static const int DX[] = { 1, -1, 0, 0 };
-    static const int DZ[] = { 0, 0, 1, -1 };
+    static const int DX[] = { 0, 1, 0, -1 };
+    static const int DZ[] = { -1, 0, 1, 0 };
+    const bool pumpkin = isPumpkinStem(world.getBlock(stem.x, stem.y, stem.z));
 
     // Start somewhere different each time, or every stem in a field
     // would put its melon on the same side and a row of them would
@@ -170,10 +173,32 @@ bool Farming::growMelonBeside(World& world, const glm::ivec3& stem, uint32_t& se
         if (under != Blocks::Grass && under != Blocks::Dirt &&
             under != Blocks::Farmland) continue;
 
-        world.setBlock(x, stem.y, z, Blocks::Melon);
+        world.setBlock(x, stem.y, z, pumpkin ? Blocks::Pumpkin : Blocks::Melon);
+        world.setBlock(stem.x, stem.y, stem.z, attachedStemOf(pumpkin, side));
         return true;
     }
     return false;
+}
+
+bool Farming::unhookStem(World& world, const glm::ivec3& stem)
+{
+    const BlockId here = world.getBlock(stem.x, stem.y, stem.z);
+    if (!isAttachedStem(here)) return false;
+    static const int DX[] = { 0, 1, 0, -1 };
+    static const int DZ[] = { -1, 0, 1, 0 };
+    const int f = attachedStemFacing(here);
+    const BlockId fruit = world.getBlock(stem.x + DX[f], stem.y, stem.z + DZ[f]);
+    const bool pumpkin = attachedStemIsPumpkin(here);
+    if (fruit == (pumpkin ? Blocks::Pumpkin : Blocks::Melon)) return false;
+    world.setBlock(stem.x, stem.y, stem.z, pumpkin ? Blocks::PumpkinStem7 : Blocks::MelonStem7);
+    return true;
+}
+
+void Farming::unhookStemsAround(World& world, const glm::ivec3& fruit)
+{
+    static const int DX[] = { 0, 1, 0, -1 };
+    static const int DZ[] = { -1, 0, 1, 0 };
+    for (int k = 0; k < 4; ++k) unhookStem(world, glm::ivec3(fruit.x + DX[k], fruit.y, fruit.z + DZ[k]));
 }
 
 bool Farming::canGrowAt(const World& world, const glm::ivec3& at)
@@ -348,9 +373,21 @@ void Farming::grow(World& world, const glm::vec3& around, uint32_t& seed)
         // is ground beside it to put one on. That is the whole of
         // what makes a melon different from the four crops.
         const BlockId standing = world.getBlock(x, y, z);
-        if (isMelonStem(standing) && isCropRipe(standing))
+        if ((isMelonStem(standing) || isPumpkinStem(standing)) && isCropRipe(standing))
         {
             growMelonBeside(world, glm::ivec3(x, y, z), seed);
+            continue;
+        }
+        if (isAttachedStem(standing))
+        {
+            unhookStem(world, glm::ivec3(x, y, z));
+            continue;
+        }
+        if (isSweetBerryBush(standing))
+        {
+            if (sweetBerryStage(standing) < 3 && nextRandom(seed) % 5u == 0u &&
+                world.skyLight(x, y + 1, z) >= LIGHT_TO_GROW)
+                world.setBlock(x, y, z, static_cast<BlockId>(standing + 1));
             continue;
         }
 

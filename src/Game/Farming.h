@@ -71,6 +71,9 @@ namespace Farming
     // of them filling in solid.
     bool growMelonBeside(World& world, const glm::ivec3& stem, uint32_t& seed);
 
+    bool unhookStem(World& world, const glm::ivec3& stem);
+    void unhookStemsAround(World& world, const glm::ivec3& fruit);
+
     // Whether this block would grow if it were ticked: a crop, not yet
     // ripe, standing on farmland in enough light.
     bool canGrowAt(const World& world, const glm::ivec3& at);

@@ -258,6 +258,7 @@ private:
     float m_fluidClock = 0.0f;
     long long m_fluidTicks = 0;
     void tickFluids(float deltaTime);
+    void tickHives(float deltaTime);
     void claimJobSites();
     float m_horseJumpHeld = 0.0f;
     bool m_horseOpen = false;
@@ -595,6 +596,8 @@ private:
     float attackStrength() const;
     float attackPeriod() const;
     float m_eatTimer = 0.0f;
+    float m_bushSting = 0.0f;
+    float m_hiveClock = 0.0f;
     HeldItem m_heldItem;
 
     // Set before a world is made and saved with it, the way Minecraft

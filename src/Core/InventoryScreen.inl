@@ -91,6 +91,8 @@ namespace
         Blocks::Moss, Blocks::MossCarpet, Blocks::Azalea, Blocks::FloweringAzalea, Blocks::AzaleaLeaves,
         Blocks::FloweringAzaleaLeaves, Blocks::SporeBlossom, Blocks::BigDripleafFirst, Blocks::SmallDripleafFirst,
         Blocks::GlowLichenFirst,
+        Blocks::CarvedPumpkinFirst + 2, Blocks::HayBale, Blocks::BoneBlock, Blocks::DriedKelpBlock,
+        Blocks::BeeNestFirst + 12, Blocks::BeehiveFirst + 12, Blocks::HoneyBlock, Blocks::HoneycombBlock,
     };
 
     const StackId TAB_ORES[] = {
@@ -106,6 +108,7 @@ namespace
     const StackId TAB_MISC[] = {
         Blocks::Torch, Blocks::Glowstone, Blocks::Water, Blocks::Lava,
         Blocks::Ice, Blocks::Glass, Blocks::Wool, Blocks::Pumpkin,
+        Blocks::JackOLanternFirst + 2,
         Blocks::Bedrock,
         Blocks::CutCopperFirst + 0, Blocks::CutCopperFirst + 1, Blocks::CutCopperFirst + 2, Blocks::CutCopperFirst + 3, Blocks::CutCopperFirst + 4, Blocks::CutCopperFirst + 5, Blocks::CutCopperFirst + 6, Blocks::CutCopperFirst + 7,
         Blocks::ChiseledCopperFirst + 0, Blocks::ChiseledCopperFirst + 1, Blocks::ChiseledCopperFirst + 2, Blocks::ChiseledCopperFirst + 3, Blocks::ChiseledCopperFirst + 4, Blocks::ChiseledCopperFirst + 5, Blocks::ChiseledCopperFirst + 6, Blocks::ChiseledCopperFirst + 7,
@@ -144,6 +147,7 @@ namespace
         Items::CookedMutton,
         Items::Paper, Items::Book, Items::Emerald, Items::EnderPearl, Items::EyeOfEnder, Items::NetherQuartz, Items::AmethystShard, Items::TripwireHook,
         Items::TorchflowerSeeds, Items::PitcherPod, Items::ClayBall, Items::Brick,
+        Items::PumpkinSeeds, Items::SweetBerries, Items::HoneyBottle, Items::DriedKelp, Items::Honeycomb,
         Items::Sign, Items::SpruceSign, Items::BirchSign, Items::JungleSign, Items::AcaciaSign, Items::DarkOakSign,
         Items::CherrySign, Items::MangroveSign, Items::BambooSign, Items::CrimsonSign, Items::WarpedSign,
     };
@@ -167,7 +171,7 @@ namespace
         Blocks::EndPortalFrame,
         Items::Stick, Items::Coal, Items::Bow, Items::Arrow, Items::Shield, Items::FlintAndSteel, Items::Boat, Items::Minecart,
         Blocks::RailNorthSouth,
-        Items::Bucket, Items::WaterBucket, Items::LavaBucket,
+        Items::Bucket, Items::WaterBucket, Items::LavaBucket, Items::Shears,
         Items::IronIngot, Items::GoldIngot, Items::Diamond,
         Items::WoodPickaxe, Items::WoodAxe, Items::WoodShovel, Items::WoodSword, Items::WoodHoe,
         Items::StonePickaxe, Items::StoneAxe, Items::StoneShovel, Items::StoneSword, Items::StoneHoe,

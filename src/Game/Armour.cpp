@@ -1,4 +1,5 @@
 #include "Armour.h"
+#include "../World/Block.h"
 #include <algorithm>
 #include <cmath>
 
@@ -43,6 +44,7 @@ Armour::Piece Armour::pieceOf(StackId id)
     // stops nothing, it is not made of anything, and it is the only
     // thing in the armour slots that is not armour.
     if (id == Items::Elytra) return Piece::Chestplate;
+    if (id == Blocks::CarvedPumpkinFirst + 2) return Piece::Helmet;
 
     // The four netherite pieces are at the end of the item list
     // rather than after the diamond ones, so their offset is taken

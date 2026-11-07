@@ -308,6 +308,11 @@ namespace Items
         PitcherPod,
         ClayBall,
         Brick,
+        PumpkinSeeds,
+        Shears,
+        HoneyBottle,
+        SweetBerries,
+        DriedKelp,
         Count
     };
 }

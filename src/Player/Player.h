@@ -138,6 +138,7 @@ public:
     // down; read by the movement, which slows, and by whoever applies
     // a blow, which is where it actually stops anything.
     bool blocking = false;
+    bool inBerryBush = false;
     bool flying = false;
 
     // In the air on a pair of wings. Minecraft's glide, cut to what a

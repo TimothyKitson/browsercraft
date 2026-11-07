@@ -1841,6 +1841,87 @@ namespace
         { "Moss Carpet", MossTile, MossTile, MossTile, false, false, RenderType::Lush, 0, 0.1f },
         { "Potted Azalea", FlowerPotTile, FlowerPotTile, FlowerPotTile, true, false, RenderType::Pot, 0, 0.0f },
         { "Potted Flowering Azalea", FlowerPotTile, FlowerPotTile, FlowerPotTile, true, false, RenderType::Pot, 0, 0.0f },
+        { "Pumpkin Stem", PumpkinStemYoungTile, PumpkinStemYoungTile, PumpkinStemYoungTile, false, false, RenderType::Cross, 0, 0.0f },
+        { "Pumpkin Stem", PumpkinStemYoungTile, PumpkinStemYoungTile, PumpkinStemYoungTile, false, false, RenderType::Cross, 0, 0.0f },
+        { "Pumpkin Stem", PumpkinStemYoungTile, PumpkinStemYoungTile, PumpkinStemYoungTile, false, false, RenderType::Cross, 0, 0.0f },
+        { "Pumpkin Stem", PumpkinStemYoungTile, PumpkinStemYoungTile, PumpkinStemYoungTile, false, false, RenderType::Cross, 0, 0.0f },
+        { "Pumpkin Stem", PumpkinStemYoungTile, PumpkinStemYoungTile, PumpkinStemYoungTile, false, false, RenderType::Cross, 0, 0.0f },
+        { "Pumpkin Stem", PumpkinStemYoungTile, PumpkinStemYoungTile, PumpkinStemYoungTile, false, false, RenderType::Cross, 0, 0.0f },
+        { "Pumpkin Stem", PumpkinStemRipeTile, PumpkinStemRipeTile, PumpkinStemRipeTile, false, false, RenderType::Cross, 0, 0.0f },
+        { "Pumpkin Stem", PumpkinStemRipeTile, PumpkinStemRipeTile, PumpkinStemRipeTile, false, false, RenderType::Cross, 0, 0.0f },
+        { "Attached Melon Stem", AttachedMelonStemTile, AttachedMelonStemTile, AttachedMelonStemTile, false, false, RenderType::Lush, 0, 0.0f },
+        { "Attached Melon Stem", AttachedMelonStemTile, AttachedMelonStemTile, AttachedMelonStemTile, false, false, RenderType::Lush, 0, 0.0f },
+        { "Attached Melon Stem", AttachedMelonStemTile, AttachedMelonStemTile, AttachedMelonStemTile, false, false, RenderType::Lush, 0, 0.0f },
+        { "Attached Melon Stem", AttachedMelonStemTile, AttachedMelonStemTile, AttachedMelonStemTile, false, false, RenderType::Lush, 0, 0.0f },
+        { "Attached Pumpkin Stem", AttachedPumpkinStemTile, AttachedPumpkinStemTile, AttachedPumpkinStemTile, false, false, RenderType::Lush, 0, 0.0f },
+        { "Attached Pumpkin Stem", AttachedPumpkinStemTile, AttachedPumpkinStemTile, AttachedPumpkinStemTile, false, false, RenderType::Lush, 0, 0.0f },
+        { "Attached Pumpkin Stem", AttachedPumpkinStemTile, AttachedPumpkinStemTile, AttachedPumpkinStemTile, false, false, RenderType::Lush, 0, 0.0f },
+        { "Attached Pumpkin Stem", AttachedPumpkinStemTile, AttachedPumpkinStemTile, AttachedPumpkinStemTile, false, false, RenderType::Lush, 0, 0.0f },
+        { "Carved Pumpkin", PumpkinTop, PumpkinTop, PumpkinSide, true, true, RenderType::Cube, 0, 1.0f, CarvedPumpkinTile },
+        { "Carved Pumpkin", PumpkinTop, PumpkinTop, PumpkinSide, true, true, RenderType::Cube, 0, 1.0f, CarvedPumpkinTile },
+        { "Carved Pumpkin", PumpkinTop, PumpkinTop, PumpkinSide, true, true, RenderType::Cube, 0, 1.0f, CarvedPumpkinTile },
+        { "Carved Pumpkin", PumpkinTop, PumpkinTop, PumpkinSide, true, true, RenderType::Cube, 0, 1.0f, CarvedPumpkinTile },
+        { "Jack o'Lantern", PumpkinTop, PumpkinTop, PumpkinSide, true, true, RenderType::Cube, 15, 1.0f, JackOLanternTile },
+        { "Jack o'Lantern", PumpkinTop, PumpkinTop, PumpkinSide, true, true, RenderType::Cube, 15, 1.0f, JackOLanternTile },
+        { "Jack o'Lantern", PumpkinTop, PumpkinTop, PumpkinSide, true, true, RenderType::Cube, 15, 1.0f, JackOLanternTile },
+        { "Jack o'Lantern", PumpkinTop, PumpkinTop, PumpkinSide, true, true, RenderType::Cube, 15, 1.0f, JackOLanternTile },
+        { "Hay Bale", HayTopTile, HayTopTile, HaySideTile, true, true, RenderType::Cube, 0, 0.5f },
+        { "Bone Block", BoneTopTile, BoneTopTile, BoneSideTile, true, true, RenderType::Cube, 0, 2.0f },
+        { "Dried Kelp Block", DriedKelpTopTile, DriedKelpBottomTile, DriedKelpSideTile, true, true, RenderType::Cube, 0, 0.5f },
+        { "Sweet Berry Bush", SweetBerryBushTile + 0, SweetBerryBushTile + 0, SweetBerryBushTile + 0, false, false, RenderType::Cross, 0, 0.0f },
+        { "Sweet Berry Bush", SweetBerryBushTile + 1, SweetBerryBushTile + 1, SweetBerryBushTile + 1, false, false, RenderType::Cross, 0, 0.0f },
+        { "Sweet Berry Bush", SweetBerryBushTile + 2, SweetBerryBushTile + 2, SweetBerryBushTile + 2, false, false, RenderType::Cross, 0, 0.0f },
+        { "Sweet Berry Bush", SweetBerryBushTile + 3, SweetBerryBushTile + 3, SweetBerryBushTile + 3, false, false, RenderType::Cross, 0, 0.0f },
+        { "Bee Nest", BeeNestTopTile, BeeNestBottomTile, BeeNestSideTile, true, true, RenderType::Cube, 0, 0.3f, BeeNestFrontTile },
+        { "Bee Nest", BeeNestTopTile, BeeNestBottomTile, BeeNestSideTile, true, true, RenderType::Cube, 0, 0.3f, BeeNestFrontTile },
+        { "Bee Nest", BeeNestTopTile, BeeNestBottomTile, BeeNestSideTile, true, true, RenderType::Cube, 0, 0.3f, BeeNestFrontTile },
+        { "Bee Nest", BeeNestTopTile, BeeNestBottomTile, BeeNestSideTile, true, true, RenderType::Cube, 0, 0.3f, BeeNestFrontTile },
+        { "Bee Nest", BeeNestTopTile, BeeNestBottomTile, BeeNestSideTile, true, true, RenderType::Cube, 0, 0.3f, BeeNestFrontTile },
+        { "Bee Nest", BeeNestTopTile, BeeNestBottomTile, BeeNestSideTile, true, true, RenderType::Cube, 0, 0.3f, BeeNestFrontHoneyTile },
+        { "Bee Nest", BeeNestTopTile, BeeNestBottomTile, BeeNestSideTile, true, true, RenderType::Cube, 0, 0.3f, BeeNestFrontTile },
+        { "Bee Nest", BeeNestTopTile, BeeNestBottomTile, BeeNestSideTile, true, true, RenderType::Cube, 0, 0.3f, BeeNestFrontTile },
+        { "Bee Nest", BeeNestTopTile, BeeNestBottomTile, BeeNestSideTile, true, true, RenderType::Cube, 0, 0.3f, BeeNestFrontTile },
+        { "Bee Nest", BeeNestTopTile, BeeNestBottomTile, BeeNestSideTile, true, true, RenderType::Cube, 0, 0.3f, BeeNestFrontTile },
+        { "Bee Nest", BeeNestTopTile, BeeNestBottomTile, BeeNestSideTile, true, true, RenderType::Cube, 0, 0.3f, BeeNestFrontTile },
+        { "Bee Nest", BeeNestTopTile, BeeNestBottomTile, BeeNestSideTile, true, true, RenderType::Cube, 0, 0.3f, BeeNestFrontHoneyTile },
+        { "Bee Nest", BeeNestTopTile, BeeNestBottomTile, BeeNestSideTile, true, true, RenderType::Cube, 0, 0.3f, BeeNestFrontTile },
+        { "Bee Nest", BeeNestTopTile, BeeNestBottomTile, BeeNestSideTile, true, true, RenderType::Cube, 0, 0.3f, BeeNestFrontTile },
+        { "Bee Nest", BeeNestTopTile, BeeNestBottomTile, BeeNestSideTile, true, true, RenderType::Cube, 0, 0.3f, BeeNestFrontTile },
+        { "Bee Nest", BeeNestTopTile, BeeNestBottomTile, BeeNestSideTile, true, true, RenderType::Cube, 0, 0.3f, BeeNestFrontTile },
+        { "Bee Nest", BeeNestTopTile, BeeNestBottomTile, BeeNestSideTile, true, true, RenderType::Cube, 0, 0.3f, BeeNestFrontTile },
+        { "Bee Nest", BeeNestTopTile, BeeNestBottomTile, BeeNestSideTile, true, true, RenderType::Cube, 0, 0.3f, BeeNestFrontHoneyTile },
+        { "Bee Nest", BeeNestTopTile, BeeNestBottomTile, BeeNestSideTile, true, true, RenderType::Cube, 0, 0.3f, BeeNestFrontTile },
+        { "Bee Nest", BeeNestTopTile, BeeNestBottomTile, BeeNestSideTile, true, true, RenderType::Cube, 0, 0.3f, BeeNestFrontTile },
+        { "Bee Nest", BeeNestTopTile, BeeNestBottomTile, BeeNestSideTile, true, true, RenderType::Cube, 0, 0.3f, BeeNestFrontTile },
+        { "Bee Nest", BeeNestTopTile, BeeNestBottomTile, BeeNestSideTile, true, true, RenderType::Cube, 0, 0.3f, BeeNestFrontTile },
+        { "Bee Nest", BeeNestTopTile, BeeNestBottomTile, BeeNestSideTile, true, true, RenderType::Cube, 0, 0.3f, BeeNestFrontTile },
+        { "Bee Nest", BeeNestTopTile, BeeNestBottomTile, BeeNestSideTile, true, true, RenderType::Cube, 0, 0.3f, BeeNestFrontHoneyTile },
+        { "Beehive", BeehiveEndTile, BeehiveEndTile, BeehiveSideTile, true, true, RenderType::Cube, 0, 0.6f, BeehiveFrontTile },
+        { "Beehive", BeehiveEndTile, BeehiveEndTile, BeehiveSideTile, true, true, RenderType::Cube, 0, 0.6f, BeehiveFrontTile },
+        { "Beehive", BeehiveEndTile, BeehiveEndTile, BeehiveSideTile, true, true, RenderType::Cube, 0, 0.6f, BeehiveFrontTile },
+        { "Beehive", BeehiveEndTile, BeehiveEndTile, BeehiveSideTile, true, true, RenderType::Cube, 0, 0.6f, BeehiveFrontTile },
+        { "Beehive", BeehiveEndTile, BeehiveEndTile, BeehiveSideTile, true, true, RenderType::Cube, 0, 0.6f, BeehiveFrontTile },
+        { "Beehive", BeehiveEndTile, BeehiveEndTile, BeehiveSideTile, true, true, RenderType::Cube, 0, 0.6f, BeehiveFrontHoneyTile },
+        { "Beehive", BeehiveEndTile, BeehiveEndTile, BeehiveSideTile, true, true, RenderType::Cube, 0, 0.6f, BeehiveFrontTile },
+        { "Beehive", BeehiveEndTile, BeehiveEndTile, BeehiveSideTile, true, true, RenderType::Cube, 0, 0.6f, BeehiveFrontTile },
+        { "Beehive", BeehiveEndTile, BeehiveEndTile, BeehiveSideTile, true, true, RenderType::Cube, 0, 0.6f, BeehiveFrontTile },
+        { "Beehive", BeehiveEndTile, BeehiveEndTile, BeehiveSideTile, true, true, RenderType::Cube, 0, 0.6f, BeehiveFrontTile },
+        { "Beehive", BeehiveEndTile, BeehiveEndTile, BeehiveSideTile, true, true, RenderType::Cube, 0, 0.6f, BeehiveFrontTile },
+        { "Beehive", BeehiveEndTile, BeehiveEndTile, BeehiveSideTile, true, true, RenderType::Cube, 0, 0.6f, BeehiveFrontHoneyTile },
+        { "Beehive", BeehiveEndTile, BeehiveEndTile, BeehiveSideTile, true, true, RenderType::Cube, 0, 0.6f, BeehiveFrontTile },
+        { "Beehive", BeehiveEndTile, BeehiveEndTile, BeehiveSideTile, true, true, RenderType::Cube, 0, 0.6f, BeehiveFrontTile },
+        { "Beehive", BeehiveEndTile, BeehiveEndTile, BeehiveSideTile, true, true, RenderType::Cube, 0, 0.6f, BeehiveFrontTile },
+        { "Beehive", BeehiveEndTile, BeehiveEndTile, BeehiveSideTile, true, true, RenderType::Cube, 0, 0.6f, BeehiveFrontTile },
+        { "Beehive", BeehiveEndTile, BeehiveEndTile, BeehiveSideTile, true, true, RenderType::Cube, 0, 0.6f, BeehiveFrontTile },
+        { "Beehive", BeehiveEndTile, BeehiveEndTile, BeehiveSideTile, true, true, RenderType::Cube, 0, 0.6f, BeehiveFrontHoneyTile },
+        { "Beehive", BeehiveEndTile, BeehiveEndTile, BeehiveSideTile, true, true, RenderType::Cube, 0, 0.6f, BeehiveFrontTile },
+        { "Beehive", BeehiveEndTile, BeehiveEndTile, BeehiveSideTile, true, true, RenderType::Cube, 0, 0.6f, BeehiveFrontTile },
+        { "Beehive", BeehiveEndTile, BeehiveEndTile, BeehiveSideTile, true, true, RenderType::Cube, 0, 0.6f, BeehiveFrontTile },
+        { "Beehive", BeehiveEndTile, BeehiveEndTile, BeehiveSideTile, true, true, RenderType::Cube, 0, 0.6f, BeehiveFrontTile },
+        { "Beehive", BeehiveEndTile, BeehiveEndTile, BeehiveSideTile, true, true, RenderType::Cube, 0, 0.6f, BeehiveFrontTile },
+        { "Beehive", BeehiveEndTile, BeehiveEndTile, BeehiveSideTile, true, true, RenderType::Cube, 0, 0.6f, BeehiveFrontHoneyTile },
+        { "Honey Block", HoneyTopTile, HoneyBottomTile, HoneySideTile, true, false, RenderType::Cube, 0, 0.0f },
+        { "Honeycomb Block", HoneycombBlockTile, HoneycombBlockTile, HoneycombBlockTile, true, true, RenderType::Cube, 0, 0.6f },
     };
 }
 
@@ -1919,6 +2000,10 @@ bool isObtainable(BlockId id)
             if (isDoublePlant(id) && doublePlantUpper(id)) return false;
             if (isPitcherCrop(id) || isTorchflowerCrop(id) || isPotted(id)) return false;
             if (isCaveVine(id) || isBigDripleafStem(id) || smallDripleafUpper(id)) return false;
+            if (isPumpkinStem(id) || isAttachedStem(id) || isSweetBerryBush(id)) return false;
+            if (isCarvedPumpkin(id) && id != Blocks::CarvedPumpkinFirst + 2) return false;
+            if (isJackOLantern(id) && id != Blocks::JackOLanternFirst + 2) return false;
+            if (isHive(id) && id != hiveOf(isBeeNest(id), 2, 0)) return false;
             if (isBigDripleaf(id) && id != bigDripleafOf(0, DripleafTilt::None)) return false;
             if (isSmallDripleaf(id) && id != smallDripleafOf(0, false)) return false;
             if (isGlowLichen(id) && id != glowLichenOn(0)) return false;
@@ -1968,6 +2053,9 @@ const char* blockSoundGroup(BlockId id)
     if (isCopper(id) || isLightningRod(id)) return "stone";
     if (isWildPlant(id)) return "grass";
     if (isMushroomBlock(id)) return "wood";
+    if (isPumpkinStem(id) || isAttachedStem(id) || isSweetBerryBush(id) || id == Blocks::HayBale || id == Blocks::DriedKelpBlock) return "grass";
+    if (isCarvedPumpkin(id) || isJackOLantern(id) || isHive(id)) return "wood";
+    if (id == Blocks::HoneyBlock || id == Blocks::HoneycombBlock) return "cloth";
     if (isEarthy(id)) return "gravel";
     if (isFlowerPot(id)) return "stone";
     if (isDoor(id) || isTrapdoor(id)) return "wood";
@@ -2124,6 +2212,10 @@ Material blockMaterial(BlockId id)
     if (isCopper(id) || isLightningRod(id)) return Material::Stone;
     if (isWildPlant(id)) return Material::Plant;
     if (isMushroomBlock(id)) return Material::Wood;
+    if (isPumpkinStem(id) || isAttachedStem(id) || isSweetBerryBush(id)) return Material::Plant;
+    if (id == Blocks::HayBale || id == Blocks::DriedKelpBlock) return Material::Plant;
+    if (isCarvedPumpkin(id) || isJackOLantern(id) || isHive(id)) return Material::Wood;
+    if (id == Blocks::HoneyBlock || id == Blocks::HoneycombBlock) return Material::Wool;
     if (isEarthy(id)) return Material::Dirt;
     if (isFlowerPot(id)) return Material::Plant;
     if (isDoor(id) || isTrapdoor(id)) return Material::Wood;
@@ -2283,6 +2375,7 @@ bool blockOverlaps(BlockId id, int bx, int by, int bz,
 
     if (isColourBed(id)) return overlaps(0.0f, 0.0f, 0.0f, 1.0f, 0.5625f, 1.0f);
     if (isFlowerPot(id)) return overlaps(0.3125f, 0.0f, 0.3125f, 0.6875f, 0.375f, 0.6875f);
+    if (id == Blocks::HoneyBlock) return overlaps(0.0625f, 0.0f, 0.0625f, 0.9375f, 0.9375f, 0.9375f);
     if (isBigDripleaf(id))
         return dripleafTilt(id) != DripleafTilt::Full && overlaps(0.0f, 0.6875f, 0.0f, 1.0f, 0.9375f, 1.0f);
     if (isAzaleaBush(id)) return overlaps(0.0f, 0.5f, 0.0f, 1.0f, 1.0f, 1.0f) || overlaps(0.375f, 0.0f, 0.375f, 0.625f, 0.5f, 0.625f);

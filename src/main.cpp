@@ -798,6 +798,11 @@ namespace
             else if (id == Blocks::WitherRose)    why = "where something dies near the wither";
             else if (isPotted(id))                why = "a plant set in a flower pot";
             else if (isCaveVine(id))              why = "a cave vine growing on, with or without berries";
+            else if (isAttachedStem(id))          why = "a ripe stem joined to the fruit it grew";
+            else if (isCarvedPumpkin(id) || isJackOLantern(id))
+                                                  why = "a pumpkin carved with shears, or set down facing another way";
+            else if (isHive(id))                  why = "another facing, or honey building up; nests grow on plains and forest trees";
+            else if (isSweetBerryBush(id))        why = "sweet berries planted and growing";
             else if (isBigDripleaf(id) || isBigDripleafStem(id) || isSmallDripleaf(id))
                                                   why = "another facing, tilt or half of a dripleaf";
             else if (isGlowLichen(id))            why = "glow lichen on another face";
@@ -982,6 +987,7 @@ namespace
         haveItem.insert(static_cast<int>(Items::TorchflowerSeeds));
         haveItem.insert(static_cast<int>(Items::PitcherPod));
         haveItem.insert(static_cast<int>(Blocks::WitherRose));
+        haveItem.insert(static_cast<int>(Blocks::CarvedPumpkinFirst + 2));
         haveItem.insert(static_cast<int>(Blocks::Torchflower));
         haveItem.insert(static_cast<int>(doublePlantOf(DoublePlant::PitcherPlant, false)));
         for (int stage = 1; stage < 4; ++stage)

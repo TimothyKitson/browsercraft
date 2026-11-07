@@ -612,6 +612,16 @@ namespace Blocks
         GlowLichenFirst, GlowLichenLast = GlowLichenFirst + 5,
         MossCarpet,
         PottedAzalea, PottedFloweringAzalea,
+        PumpkinStem0, PumpkinStem1, PumpkinStem2, PumpkinStem3, PumpkinStem4, PumpkinStem5, PumpkinStem6, PumpkinStem7,
+        AttachedMelonStemFirst, AttachedMelonStemLast = AttachedMelonStemFirst + 3,
+        AttachedPumpkinStemFirst, AttachedPumpkinStemLast = AttachedPumpkinStemFirst + 3,
+        CarvedPumpkinFirst, CarvedPumpkinLast = CarvedPumpkinFirst + 3,
+        JackOLanternFirst, JackOLanternLast = JackOLanternFirst + 3,
+        HayBale, BoneBlock, DriedKelpBlock,
+        SweetBerryBush0, SweetBerryBush1, SweetBerryBush2, SweetBerryBush3,
+        BeeNestFirst, BeeNestLast = BeeNestFirst + 23,
+        BeehiveFirst, BeehiveLast = BeehiveFirst + 23,
+        HoneyBlock, HoneycombBlock,
 
         Count
     };
@@ -1620,6 +1630,32 @@ inline BlockId furnaceCold(BlockId id)
     return furnaceTurned(furnaceOfSlot(slot & ~1), furnaceFacing(id));
 }
 
+inline bool isCarvedPumpkin(BlockId id) { return id >= Blocks::CarvedPumpkinFirst && id <= Blocks::CarvedPumpkinLast; }
+inline bool isJackOLantern(BlockId id) { return id >= Blocks::JackOLanternFirst && id <= Blocks::JackOLanternLast; }
+inline bool isSweetBerryBush(BlockId id) { return id >= Blocks::SweetBerryBush0 && id <= Blocks::SweetBerryBush3; }
+inline int sweetBerryStage(BlockId id) { return isSweetBerryBush(id) ? id - Blocks::SweetBerryBush0 : 0; }
+inline bool isBeeNest(BlockId id) { return id >= Blocks::BeeNestFirst && id <= Blocks::BeeNestLast; }
+inline bool isBeehive(BlockId id) { return id >= Blocks::BeehiveFirst && id <= Blocks::BeehiveLast; }
+inline bool isHive(BlockId id) { return isBeeNest(id) || isBeehive(id); }
+inline int hiveHoney(BlockId id)
+{
+    if (isBeeNest(id)) return (id - Blocks::BeeNestFirst) % 6;
+    if (isBeehive(id)) return (id - Blocks::BeehiveFirst) % 6;
+    return 0;
+}
+inline int hiveFacing(BlockId id)
+{
+    if (isBeeNest(id)) return (id - Blocks::BeeNestFirst) / 6;
+    if (isBeehive(id)) return (id - Blocks::BeehiveFirst) / 6;
+    return 0;
+}
+inline BlockId hiveOf(bool nest, int facing, int honey)
+{
+    if (honey < 0) honey = 0;
+    if (honey > 5) honey = 5;
+    return static_cast<BlockId>((nest ? Blocks::BeeNestFirst : Blocks::BeehiveFirst) + (facing & 3) * 6 + honey);
+}
+
 inline int blockFacing(BlockId id)
 {
     if (isLadder(id)) return id - Blocks::LadderNorth;
@@ -1631,6 +1667,9 @@ inline int blockFacing(BlockId id)
     if (isPiston(id)) return pistonFacing(id);
     if (isFurnaceBlock(id)) return furnaceFacing(id);
     if (isVault(id)) return 2;
+    if (isCarvedPumpkin(id)) return id - Blocks::CarvedPumpkinFirst;
+    if (isJackOLantern(id)) return id - Blocks::JackOLanternFirst;
+    if (isHive(id)) return hiveFacing(id);
     return 0;
 }
 
@@ -1705,6 +1744,21 @@ inline bool isMelonStem(BlockId id)
 {
     return id >= Blocks::MelonStem0 && id <= Blocks::MelonStem7;
 }
+inline bool isPumpkinStem(BlockId id) { return id >= Blocks::PumpkinStem0 && id <= Blocks::PumpkinStem7; }
+inline bool isAttachedStem(BlockId id)
+{
+    return (id >= Blocks::AttachedMelonStemFirst && id <= Blocks::AttachedMelonStemLast) ||
+           (id >= Blocks::AttachedPumpkinStemFirst && id <= Blocks::AttachedPumpkinStemLast);
+}
+inline bool attachedStemIsPumpkin(BlockId id) { return id >= Blocks::AttachedPumpkinStemFirst && id <= Blocks::AttachedPumpkinStemLast; }
+inline int attachedStemFacing(BlockId id)
+{
+    return attachedStemIsPumpkin(id) ? id - Blocks::AttachedPumpkinStemFirst : id - Blocks::AttachedMelonStemFirst;
+}
+inline BlockId attachedStemOf(bool pumpkin, int facing)
+{
+    return static_cast<BlockId>((pumpkin ? Blocks::AttachedPumpkinStemFirst : Blocks::AttachedMelonStemFirst) + (facing & 3));
+}
 
 // Any of the three. Everything that treats a crop as a crop -- growing
 // it, harvesting it, bone meal, what it drops -- asks this rather than
@@ -1713,7 +1767,7 @@ inline bool isMelonStem(BlockId id)
 inline bool isCrop(BlockId id)
 {
     return isWheat(id) || isCarrot(id) || isPotato(id) || isBeetroot(id) ||
-           isMelonStem(id);
+           isMelonStem(id) || isPumpkinStem(id);
 }
 
 // Which of the eight stages a crop is at, whichever crop it is.
@@ -1724,6 +1778,7 @@ inline int cropStage(BlockId id)
     if (isPotato(id)) return id - Blocks::Potato0;
     if (isBeetroot(id)) return id - Blocks::Beetroot0;
     if (isMelonStem(id)) return id - Blocks::MelonStem0;
+    if (isPumpkinStem(id)) return id - Blocks::PumpkinStem0;
     return 0;
 }
 
@@ -1737,6 +1792,7 @@ inline BlockId cropAtStage(BlockId id, int stage)
     if (isPotato(id)) return static_cast<BlockId>(Blocks::Potato0 + stage);
     if (isBeetroot(id)) return static_cast<BlockId>(Blocks::Beetroot0 + stage);
     if (isMelonStem(id)) return static_cast<BlockId>(Blocks::MelonStem0 + stage);
+    if (isPumpkinStem(id)) return static_cast<BlockId>(Blocks::PumpkinStem0 + stage);
     return id;
 }
 // A composter, and how full it is. Eight is full and ready to empty.

@@ -349,6 +349,13 @@ namespace Tiles
         SmallDripleafStemBottomTile, SmallDripleafStemTopTile, SmallDripleafTopTile, SmallDripleafSideTile,
         AzaleaTopTile, AzaleaSideTile, AzaleaPlantTile, FloweringAzaleaTopTile, FloweringAzaleaSideTile,
         FloweringAzaleaLeavesTile, GlowLichenTile,
+        PumpkinStemYoungTile, PumpkinStemRipeTile, AttachedMelonStemTile, AttachedPumpkinStemTile,
+        CarvedPumpkinTile, JackOLanternTile, HayTopTile, HaySideTile, BoneTopTile, BoneSideTile,
+        DriedKelpTopTile, DriedKelpSideTile, DriedKelpBottomTile,
+        SweetBerryBushTile, SweetBerryBushTileLast = SweetBerryBushTile + 3,
+        BeeNestTopTile, BeeNestBottomTile, BeeNestSideTile, BeeNestFrontTile, BeeNestFrontHoneyTile,
+        BeehiveEndTile, BeehiveSideTile, BeehiveFrontTile, BeehiveFrontHoneyTile,
+        HoneyTopTile, HoneySideTile, HoneyBottomTile, HoneycombBlockTile,
 
         TileCount
     };
@@ -544,8 +551,9 @@ namespace Tiles
         ItemTripwireHook,
         ItemCopperDoorFirst, ItemCopperDoorLast = ItemCopperDoorFirst + 3,
         ItemTorchflowerSeeds, ItemPitcherPod, ItemClayBall, ItemBrick, ItemFlowerPot, ItemPitcherPlant,
+        ItemPumpkinSeeds, ItemShears, ItemHoneyBottle, ItemSweetBerries, ItemDriedKelp,
 
-        ItemTileEnd = ItemPitcherPlant + 1
+        ItemTileEnd = ItemDriedKelp + 1
     };
 
     // Ten progressively more broken overlay tiles for the mining animation.

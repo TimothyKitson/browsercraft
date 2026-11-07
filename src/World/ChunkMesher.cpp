@@ -788,6 +788,16 @@ namespace
             const glm::vec3 c[4] = { glm::vec3(x0, yy, z1), glm::vec3(x1, yy, z1), glm::vec3(x1, yy, z0), glm::vec3(x0, yy, z0) };
             pushQuad(snap, lx, y, lz, id, c, tile, x0 * 16.0f, z0 * 16.0f, x1 * 16.0f, z1 * 16.0f, shade, true, out);
         };
+        if (isAttachedStem(id))
+        {
+            static const int DX[4] = { 0, 1, 0, -1 };
+            static const int DZ[4] = { -1, 0, 1, 0 };
+            const int f = attachedStemFacing(id);
+            const glm::vec3 mid(0.5f, 0.0f, 0.5f), d(DX[f] * 0.5f, 0.0f, DZ[f] * 0.5f), up(0.0f, 1.0f, 0.0f);
+            const glm::vec3 c[4] = { mid + d, mid - d, mid - d + up, mid + d + up };
+            pushQuad(snap, lx, y, lz, id, c, blockInfo(id).tileSide, 0.0f, 0.0f, 16.0f, 16.0f, 0.9f, true, out);
+            return;
+        }
         if (id == Blocks::SporeBlossom)
         {
             flat(15.9f / 16.0f, 0.0f, 0.0f, 1.0f, 1.0f, Tiles::SporeBlossomBaseTile, 0.8f);
