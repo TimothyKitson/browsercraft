@@ -3859,6 +3859,38 @@ namespace
         }
     }
 
+    void testArchery()
+    {
+        section("the crossbow, and spectral and tipped arrows");
+        const uint32_t sharp = Enchanting::withLevel(0, Enchanting::Kind::Unbreaking, 3);
+        const uint32_t loaded = Crossbows::withLoad(sharp, Crossbows::Tipped, static_cast<int>(Effects::Kind::Slowness));
+        check(Crossbows::loadOf(loaded) == Crossbows::Tipped && Crossbows::effectOf(loaded) == static_cast<int>(Effects::Kind::Slowness) &&
+              Enchanting::levelOf(loaded, Enchanting::Kind::Unbreaking) == 3,
+              "a loaded crossbow keeps what it holds above its enchantments");
+        check(Crossbows::loadOf(Crossbows::withLoad(loaded, Crossbows::Empty)) == Crossbows::Empty &&
+              Enchanting::levelOf(Crossbows::withLoad(loaded, Crossbows::Empty), Enchanting::Kind::Unbreaking) == 3,
+              "and firing it empties it without touching them");
+        check(!Enchanting::glints(Items::Crossbow, Crossbows::withLoad(0, Crossbows::Arrow)), "a loaded crossbow does not glint for being loaded");
+        check(itemDurability(Items::Crossbow) == 465 && itemDurability(Items::Trident) == 250, "a crossbow wears out at 465 uses and a trident at 250");
+        ItemStack grid[9];
+        const StackId parts[9] = { Items::Stick, Items::IronIngot, Items::Stick, Items::StringItem, Items::TripwireHook, Items::StringItem,
+                                   Blocks::Air, Items::Stick, Blocks::Air };
+        for (int i = 0; i < 9; ++i) { grid[i].id = parts[i]; grid[i].count = parts[i] == Blocks::Air ? 0 : 1; }
+        check(Crafting::match(grid, 3).id == Items::Crossbow, "sticks, iron, string and a tripwire hook make a crossbow");
+        ItemStack glow[9];
+        for (int i : { 1, 3, 5, 7 }) { glow[i].id = Items::GlowstoneDust; glow[i].count = 1; }
+        glow[4].id = Items::Arrow; glow[4].count = 1;
+        const CraftOutput spectral = Crafting::match(glow, 3);
+        check(spectral.id == Items::SpectralArrow && spectral.count == 2, "four glowstone dust round an arrow make two spectral arrows");
+        Arrow shaft;
+        shaft.kind = Arrows::Kind::Spectral;
+        check(shaft.shaft() && !shaft.bursts() && !shaft.flies(), "a spectral arrow sticks in what it hits like any arrow");
+        Mob target(MobId::Zombie, glm::vec3(0.0f), 4u);
+        target.afflict(Mob::Affliction::Glowing, 10.0f);
+        target.afflict(Mob::Affliction::Slowness, 5.0f);
+        check(target.glowing() && target.slowed() && !target.poisoned(), "a struck mob glows or is slowed by what was on the arrow");
+    }
+
     void testFishing()
     {
         section("fishing, and the two sticks you steer with");
@@ -14277,6 +14309,7 @@ int runSelfTest()
     testSculkExtras();
     testCreativeBlocks();
     testFishing();
+    testArchery();
     testMadeThings();
     testTheEndAndTheSea();
     testPathfinding();

@@ -390,7 +390,7 @@ namespace Tiles
         CommandTileFirst, CommandTileLast = CommandTileFirst + 11,
         StructureBlockTileFirst, StructureBlockTileLast = StructureBlockTileFirst + 4,
         JigsawTopTile, JigsawBottomTile, JigsawSideTile, JigsawLockTile,
-        FishingHookTile, LeashKnotTile,
+        FishingHookTile, LeashKnotTile, SpectralInFlight, TippedInFlight, TridentInFlight,
 
         TileCount
     };
@@ -599,6 +599,8 @@ namespace Tiles
         ItemFishingRod, ItemFishingRodCast, ItemCarrotOnAStick, ItemWarpedFungusOnAStick, ItemTropicalFish,
         ItemNameTag, ItemLead,
         ItemSpyglass, ItemEchoShard, ItemGoatHorn, ItemBundle, ItemBundleFilled,
+        ItemCrossbow, ItemCrossbowPulling0, ItemCrossbowPulling1, ItemCrossbowPulling2, ItemCrossbowArrow, ItemCrossbowFirework,
+        ItemSpectralArrow, ItemTippedArrow, ItemTippedArrowHead,
         ItemCompassFrameFirst, ItemCompassFrameLast = ItemCompassFrameFirst + 31,
         ItemClockFirst, ItemClockLast = ItemClockFirst + 63,
         ItemRecoveryFirst, ItemRecoveryLast = ItemRecoveryFirst + 31,

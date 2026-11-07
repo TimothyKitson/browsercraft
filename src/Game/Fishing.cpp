@@ -79,13 +79,7 @@ namespace
 
 int Fishing::durabilityOf(StackId id)
 {
-    switch (id)
-    {
-        case Items::FishingRod: return ROD_DURABILITY;
-        case Items::CarrotOnAStick: return CARROT_STICK_DURABILITY;
-        case Items::WarpedFungusOnAStick: return FUNGUS_STICK_DURABILITY;
-        default: return 0;
-    }
+    return itemDurability(id);
 }
 
 Fishing::Catch Fishing::roll(uint32_t seed, bool openWater, bool jungle)

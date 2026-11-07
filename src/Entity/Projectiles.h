@@ -31,7 +31,9 @@ namespace Arrows
                                 // the way, and burns out.
                                 Eye,
                                 Bullet,
-                                Breath };
+                                Breath,
+                                Spectral,
+                                Tipped };
 
     // How far a wind charge's burst reaches, and how hard it pushes at
     // the middle of it. Pure arithmetic over two points, so --selftest
@@ -86,12 +88,15 @@ struct Arrow
     // both fly flat and burst against whatever they hit instead of
     // sticking.
     Arrows::Kind kind = Arrows::Kind::Shaft;
+    int effect = 0;
+
+    bool shaft() const { return kind == Arrows::Kind::Shaft || kind == Arrows::Kind::Spectral || kind == Arrows::Kind::Tipped; }
 
     // "Flies" means flat and self-lit: a thrown charge. A potion is
     // lobbed, so it falls like an arrow and is not one of these.
     bool flies() const
     {
-        return kind != Arrows::Kind::Shaft && kind != Arrows::Kind::Potion;
+        return !shaft() && kind != Arrows::Kind::Potion;
     }
 
     // Whether it breaks on impact rather than sticking in what it hit.
@@ -99,7 +104,7 @@ struct Arrow
     // is both: it arcs like an arrow and breaks like a charge. While
     // the two were one test a thrown potion stuck in the wall like a
     // dart and never went off.
-    bool bursts() const { return kind != Arrows::Kind::Shaft; }
+    bool bursts() const { return !shaft(); }
 
     // Through the ground rather than into it, and hitting nothing on
     // the way: an eye is a signpost, not a weapon.
@@ -116,6 +121,7 @@ public:
     // Return true to say the arrow struck something and should stop.
     struct Targets
     {
+        int effect = 0;
         virtual ~Targets() = default;
 
         // `point` is where the arrow is now; `fromPlayer` says who shot
@@ -152,7 +158,7 @@ public:
     };
 
     void spawn(const glm::vec3& from, const glm::vec3& velocity, int damage, bool fromPlayer,
-               Arrows::Kind kind = Arrows::Kind::Shaft);
+               Arrows::Kind kind = Arrows::Kind::Shaft, int effect = 0);
 
     // Moves every arrow. A block stops one dead; anything living is
     // asked about through `targets`.

@@ -486,7 +486,7 @@ void Mob::moveAxis(const World& world, float delta, int axis)
 
 float Mob::currentSpeed() const
 {
-    float speed = type().walkSpeed * (panicking() ? PANIC_SPEED : 1.0f);
+    float speed = type().walkSpeed * (panicking() ? PANIC_SPEED : 1.0f) * (m_slowTimer > 0.0f ? 0.6f : 1.0f);
     if (m_ridden && type().saddleRide)
     {
         speed *= 1.15f;
@@ -691,6 +691,18 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
     }
 
     if (m_rideBoost > 0.0f) m_rideBoost = std::max(0.0f, m_rideBoost - deltaTime);
+    if (m_glowTimer > 0.0f) m_glowTimer = std::max(0.0f, m_glowTimer - deltaTime);
+    if (m_slowTimer > 0.0f) m_slowTimer = std::max(0.0f, m_slowTimer - deltaTime);
+    if (m_poisonTimer > 0.0f)
+    {
+        m_poisonTimer = std::max(0.0f, m_poisonTimer - deltaTime);
+        m_poisonClock += deltaTime;
+        if (m_poisonClock >= 1.25f)
+        {
+            m_poisonClock = 0.0f;
+            if (m_health > 1 && !type().burnsInSunlight) damage(1, glm::vec3(0.0f));
+        }
+    }
     if (m_ridden)
     {
         // Ridden: it goes where it is pointed and nowhere else. No

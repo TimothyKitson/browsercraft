@@ -289,6 +289,9 @@ namespace
         { "Echo Shard", Tiles::ItemEchoShard, 64 },
         { "Goat Horn", Tiles::ItemGoatHorn, 1 },
         { "Bundle", Tiles::ItemBundle, 1 },
+        { "Crossbow", Tiles::ItemCrossbow, 1 },
+        { "Spectral Arrow", Tiles::ItemSpectralArrow, 64 },
+        { "Tipped Arrow", Tiles::ItemTippedArrow, 64 },
     };
 
     static_assert(sizeof(ITEMS) / sizeof(ITEMS[0]) ==
@@ -576,4 +579,17 @@ StackId blockDrop(BlockId id)
         return pistonSticky(id) ? Blocks::StickyPistonNorth : Blocks::PistonNorth;
 
     return id;
+}
+
+int itemDurability(StackId id)
+{
+    switch (id)
+    {
+        case Items::FishingRod: return 64;
+        case Items::CarrotOnAStick: return 25;
+        case Items::WarpedFungusOnAStick: return 100;
+        case Items::Crossbow: return 465;
+        case Items::Trident: return 250;
+        default: return 0;
+    }
 }

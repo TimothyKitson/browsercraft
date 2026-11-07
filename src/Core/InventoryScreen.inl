@@ -210,6 +210,7 @@ namespace
         Items::Bucket, Items::WaterBucket, Items::LavaBucket, Items::PowderSnowBucket, Items::Shears, Items::Compass, Items::EmptyMap,
         Items::FishingRod, Items::CarrotOnAStick, Items::WarpedFungusOnAStick, Items::NameTag, Items::Lead, Items::TropicalFish,
         Items::Spyglass, Items::Clock, Items::RecoveryCompass, Items::EchoShard, Items::GoatHorn, Items::Bundle,
+        Items::Crossbow, Items::SpectralArrow, Items::TippedArrow,
         Items::IronIngot, Items::GoldIngot, Items::Diamond,
         Items::WoodPickaxe, Items::WoodAxe, Items::WoodShovel, Items::WoodSword, Items::WoodHoe,
         Items::StonePickaxe, Items::StoneAxe, Items::StoneShovel, Items::StoneSword, Items::StoneHoe,
@@ -279,6 +280,8 @@ namespace
         if (stack.id == Items::NameTag && g_itemNames && stack.damage > 0 && stack.damage <= static_cast<int>(g_itemNames->size()))
             return (*g_itemNames)[static_cast<size_t>(stack.damage - 1)];
         if (stack.id == Items::Potion) return Brewing::name(Brewing::fromDamage(stack.damage));
+        if (stack.id == Items::TippedArrow)
+            return std::string("Arrow of ") + Effects::name(static_cast<Effects::Kind>(std::clamp(stack.damage, 0, Effects::KIND_COUNT - 1)));
         if (stack.id == Items::GoatHorn)
         {
             static const char* CALLS[8] = { "Ponder", "Sing", "Seek", "Feel", "Admire", "Call", "Yearn", "Dream" };
@@ -467,6 +470,13 @@ void Application::drawItem(float x, float y, float size, StackId id, int count,
     {
         int tile = m_iconOverride >= 0 ? m_iconOverride : atlasTileFor(id);
         if (id == Items::Bundle && damage > 0 && m_iconOverride < 0) tile = Tiles::ItemBundleFilled;
+        if (id == Items::Crossbow && m_iconOverride < 0)
+        {
+            ItemStack shown;
+            shown.id = id;
+            shown.enchantments = enchantments;
+            if (crossbowIcon(shown, false) >= 0) tile = crossbowIcon(shown, false);
+        }
         if (m_iconOverride < 0)
         {
             ItemStack shown;
@@ -479,6 +489,13 @@ void Application::drawItem(float x, float y, float size, StackId id, int count,
         const TileUV uv = tileUV(tile);
         m_ui.texturedQuad(m_atlas.textureId(), x, y, size, size,
                           uv.u0, uv.vTop, uv.u1, uv.vBottom, tint);
+        if (id == Items::TippedArrow)
+        {
+            const unsigned int c = Effects::colour(static_cast<Effects::Kind>(std::clamp(damage, 0, Effects::KIND_COUNT - 1)));
+            const TileUV headUV = tileUV(Tiles::ItemTippedArrowHead);
+            m_ui.texturedQuad(m_atlas.textureId(), x, y, size, size, headUV.u0, headUV.vTop, headUV.u1, headUV.vBottom,
+                              glm::vec4(((c >> 16) & 255u) / 255.0f, ((c >> 8) & 255u) / 255.0f, (c & 255u) / 255.0f, 1.0f) * tint);
+        }
         if (Smithing::trimPattern(enchantments) >= 0 && Smithing::trimmable(id))
         {
             static const char* OVERLAYS[4] = { "../trims/items/helmet_trim", "../trims/items/chestplate_trim",

@@ -404,6 +404,11 @@ private:
 
     Projectiles m_arrows;
     float m_bowDraw = 0.0f;      // seconds the bow has been held
+    float m_crossbowCharge = 0.0f;
+    bool m_crossbowHeldOver = false;
+    void updateCrossbow(float deltaTime);
+    int crossbowIcon(const ItemStack& stack, bool selected) const;
+    int ammoSlot() const;
     bool m_bowDrawing = false;
     int m_iconOverride = -1;
     bool m_arrowDemo = false;   // dev aid: keep arrows in the air for a screenshot

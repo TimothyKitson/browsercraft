@@ -32,9 +32,10 @@ int Arrows::damageFor(float drawnFraction)
 }
 
 void Projectiles::spawn(const glm::vec3& from, const glm::vec3& velocity,
-                        int damage, bool fromPlayer, Arrows::Kind kind)
+                        int damage, bool fromPlayer, Arrows::Kind kind, int effect)
 {
     Arrow arrow;
+    arrow.effect = effect;
     arrow.position = from;
     arrow.velocity = velocity;
     arrow.damage = damage;
@@ -126,6 +127,7 @@ void Projectiles::update(float deltaTime, const Blocks& blocks, Targets& targets
             // Anything living in the way. Whoever owns the arrows
             // answers this, and an arrow never hits the one who loosed
             // it -- that is what the flag is for.
+            targets.effect = arrow.effect;
             if (targets.strike(next, arrow.damage, arrow.fromPlayer, arrow.kind))
             {
                 if (arrow.bursts()) targets.burst(next, arrow.kind, arrow.fromPlayer);
@@ -199,6 +201,8 @@ void Projectiles::render(Shader& shader, const Camera& camera, const Atlas& atla
     const TileUV potionUV = tileUV(Tiles::ItemPotion);
     const TileUV bulletUV = tileUV(Tiles::ShulkerBulletTile);
     const TileUV breathUV = tileUV(Tiles::DragonFireballTile);
+    const TileUV spectralUV = tileUV(Tiles::SpectralInFlight);
+    const TileUV tippedUV = tileUV(Tiles::TippedInFlight);
     constexpr float LENGTH = 0.62f;
     constexpr float WIDTH = 0.16f;
 
@@ -231,6 +235,8 @@ void Projectiles::render(Shader& shader, const Camera& camera, const Atlas& atla
                         : (arrow.kind == Arrows::Kind::Potion) ? potionUV
                         : (arrow.kind == Arrows::Kind::Bullet) ? bulletUV
                         : (arrow.kind == Arrows::Kind::Breath) ? breathUV
+                        : (arrow.kind == Arrows::Kind::Spectral) ? spectralUV
+                        : (arrow.kind == Arrows::Kind::Tipped) ? tippedUV
                                                              : arrowUV;
         // A potion is drawn as the bottle it is rather than as a
         // shaft, so it is square like a charge without being one.

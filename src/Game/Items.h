@@ -385,6 +385,9 @@ namespace Items
         EchoShard,
         GoatHorn,
         Bundle,
+        Crossbow,
+        SpectralArrow,
+        TippedArrow,
         Count
     };
 }
@@ -467,3 +470,18 @@ inline StackId dyeOfColour(int colour)
 
 // Whether an animal will follow and breed for it.
 bool isBreedingFood(StackId id);
+
+int itemDurability(StackId id);
+
+namespace Crossbows
+{
+    enum Load { Empty = 0, Arrow = 1, Firework = 2, Spectral = 3, Tipped = 4 };
+    constexpr float CHARGE_SECONDS = 1.25f;
+    constexpr float ARROW_SPEED = 52.0f;
+    inline int loadOf(uint32_t enchantments) { return static_cast<int>((enchantments >> 24) & 7u); }
+    inline int effectOf(uint32_t enchantments) { return static_cast<int>((enchantments >> 27) & 31u); }
+    inline uint32_t withLoad(uint32_t enchantments, int load, int effect = 0)
+    {
+        return (enchantments & 0x00FFFFFFu) | (static_cast<uint32_t>(load & 7) << 24) | (static_cast<uint32_t>(effect & 31) << 27);
+    }
+}

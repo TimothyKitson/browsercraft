@@ -71,7 +71,8 @@ namespace Enchanting
         // tool, every piece of armour and the bow.
         case Kind::Unbreaking:
             return Tools::isTool(item) || Armour::slotFor(item) >= 0 || item == Items::Bow || item == Items::FishingRod ||
-                   item == Items::CarrotOnAStick || item == Items::WarpedFungusOnAStick;
+                   item == Items::CarrotOnAStick || item == Items::WarpedFungusOnAStick || item == Items::Crossbow ||
+                   item == Items::Trident;
 
         case Kind::Efficiency: return digs;
 
@@ -178,7 +179,7 @@ namespace Enchanting
             return 0;
         }
 
-        if (item == Items::Bow || item == Items::FishingRod) return 1;
+        if (item == Items::Bow || item == Items::FishingRod || item == Items::Crossbow || item == Items::Trident) return 1;
         return 0;
     }
 

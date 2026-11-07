@@ -996,6 +996,8 @@ namespace
                 byHand = "shed by a baby turtle as it grows up";
             else if (i == static_cast<int>(Items::PowderSnowBucket))
                 byHand = "a bucket used on powder snow";
+            else if (i == static_cast<int>(Items::TippedArrow))
+                byHand = "dropped by strays, as arrows of slowness";
             else if (i == static_cast<int>(Items::TropicalFish))
                 byHand = "caught with a fishing rod";
             else if (i == static_cast<int>(Items::GlobeBannerPattern))

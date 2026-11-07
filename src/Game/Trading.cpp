@@ -180,6 +180,7 @@ namespace Trading
                 buy(Items::StringItem, 14, 2),
                 sell(1, Items::Flint, 10, 2, 12, Blocks::Gravel, 10),
                 sell(5, Items::Arrow, 24, 3),
+                sell(3, Items::Crossbow, 1, 3),
                 sell(4, Items::Bow, 1, 3, 4, Blocks::Air, 0, enchanted(Kind::Power, 1)),
                 buy(Items::Feather, 24, 4),
                 sell(9, Items::Bow, 1, 4, 3, Blocks::Air, 0, enchanted(Kind::Unbreaking, 3)),

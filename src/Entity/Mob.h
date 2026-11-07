@@ -115,6 +115,15 @@ public:
     // one, which would otherwise change as it wandered about.
     uint32_t birthSeed() const { return m_birthSeed; }
     uint32_t serial() const { return m_serial; }
+    enum class Affliction { Glowing, Poison, Slowness };
+    void afflict(Affliction kind, float seconds)
+    {
+        float& timer = kind == Affliction::Glowing ? m_glowTimer : kind == Affliction::Poison ? m_poisonTimer : m_slowTimer;
+        timer = std::max(timer, seconds);
+    }
+    bool glowing() const { return m_glowTimer > 0.0f; }
+    bool slowed() const { return m_slowTimer > 0.0f; }
+    bool poisoned() const { return m_poisonTimer > 0.0f; }
     bool screamingGoat() const { return (m_birthSeed % 50u) == 7u; }
     int hornsLeft() const { return m_horns; }
     void loseHorn() { if (m_horns > 0) --m_horns; }
@@ -478,6 +487,10 @@ private:
     float m_holdTimer = 0.0f;
     bool m_ridden = false;
     uint32_t m_serial = 0;
+    float m_glowTimer = 0.0f;
+    float m_poisonTimer = 0.0f;
+    float m_poisonClock = 0.0f;
+    float m_slowTimer = 0.0f;
     int m_horns = 2;
     float m_ramTimer = 20.0f;
     std::string m_customName;

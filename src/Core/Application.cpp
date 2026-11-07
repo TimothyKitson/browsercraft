@@ -2297,7 +2297,7 @@ bool Application::frame()
             m_startupScreen == "attackhud" || m_startupScreen == "attackready" ||
             m_startupScreen == "attackhotbar" || m_startupScreen == "bossbars" ||
             m_startupScreen == "gamemode" || m_startupScreen == "spectator" ||
-            m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" || m_startupScreen == "leads" || m_startupScreen == "anvilname" || m_startupScreen == "dials" || m_startupScreen == "spyglass" || m_startupScreen == "bundle" ||
+            m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" || m_startupScreen == "leads" || m_startupScreen == "anvilname" || m_startupScreen == "dials" || m_startupScreen == "spyglass" || m_startupScreen == "bundle" || m_startupScreen == "archery" ||
             m_startupScreen == "grinderror" || m_startupScreen == "woods" ||
             m_startupScreen == "cherry" || m_startupScreen == "mangrove" || m_startupScreen == "fungi" ||
             m_startupScreen == "stones" || m_startupScreen == "colours" || m_startupScreen == "candles" ||
@@ -2397,6 +2397,7 @@ bool Application::frame()
                                   m_startupScreen != "dials" &&
                                   m_startupScreen != "spyglass" &&
                                   m_startupScreen != "bundle" &&
+                                  m_startupScreen != "archery" &&
                                   m_startupScreen != "grinderror" &&
                                   m_startupScreen != "woods" &&
                                   m_startupScreen != "cherry" &&
@@ -2789,7 +2790,7 @@ bool Application::frame()
             if (m_startupScreen == "attackhud" || m_startupScreen == "attackready" ||
                 m_startupScreen == "attackhotbar" || m_startupScreen == "bossbars" ||
                 m_startupScreen == "gamemode" || m_startupScreen == "spectator" ||
-                m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" || m_startupScreen == "leads" || m_startupScreen == "anvilname" || m_startupScreen == "dials" || m_startupScreen == "spyglass" || m_startupScreen == "bundle" ||
+                m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" || m_startupScreen == "leads" || m_startupScreen == "anvilname" || m_startupScreen == "dials" || m_startupScreen == "spyglass" || m_startupScreen == "bundle" || m_startupScreen == "archery" ||
                 m_startupScreen == "grinderror" || m_startupScreen == "woods" ||
                 m_startupScreen == "cherry" || m_startupScreen == "mangrove" || m_startupScreen == "fungi" ||
                 m_startupScreen == "stones" || m_startupScreen == "colours" || m_startupScreen == "candles" ||
@@ -3527,6 +3528,28 @@ bool Application::frame()
                     m_inventory.slot(6) = ItemStack{ doorBaseOf(3), 3 };
                     m_inventory.slot(7) = ItemStack{ trapdoorBaseOf(5), 2 };
                     m_inventory.slot(8) = ItemStack{ Blocks::DarkOakSapling, 4 };
+                }
+                if (m_startupScreen == "archery")
+                {
+                    m_devAttackStrength = 1.0f;
+                    m_inventory.setSelectedSlot(0);
+                    ItemStack loaded{ Items::Crossbow, 1 };
+                    loaded.enchantments = Crossbows::withLoad(0, Crossbows::Arrow);
+                    m_inventory.slot(0) = loaded;
+                    m_inventory.slot(1) = ItemStack{ Items::Crossbow, 1 };
+                    ItemStack firework{ Items::Crossbow, 1 };
+                    firework.enchantments = Crossbows::withLoad(0, Crossbows::Firework);
+                    m_inventory.slot(2) = firework;
+                    m_inventory.slot(3) = ItemStack{ Items::Arrow, 32 };
+                    m_inventory.slot(4) = ItemStack{ Items::SpectralArrow, 16 };
+                    ItemStack tipped{ Items::TippedArrow, 8 };
+                    tipped.damage = static_cast<int>(Effects::Kind::Slowness);
+                    m_inventory.slot(5) = tipped;
+                    m_inventory.slot(6) = ItemStack{ Items::Trident, 1 };
+                    for (int k = 0; k < 3; ++k)
+                        m_arrows.spawn(glm::vec3(px + 3.0f, py + 1.6f, pz - 1.0f + k), glm::vec3(10.0f, 3.0f, 0.0f), 2, true,
+                                       k == 0 ? Arrows::Kind::Shaft : k == 1 ? Arrows::Kind::Spectral : Arrows::Kind::Tipped,
+                                       static_cast<int>(Effects::Kind::Poison));
                 }
                 if (m_startupScreen == "bundle")
                 {
@@ -10520,7 +10543,7 @@ void Application::updateBow(float deltaTime)
     {
         // Nothing to loose means nothing to draw, unless you are
         // building, where arrows come from nowhere.
-        if (!m_player.creative() && !m_inventory.has(Items::Arrow))
+        if (!m_player.creative() && ammoSlot() < 0)
         {
             m_bowDrawing = false;
             m_bowDraw = 0.0f;
@@ -10541,16 +10564,100 @@ void Application::updateBow(float deltaTime)
     if (Arrows::worthLoosing(drawn)) looseArrow(drawn);
 }
 
+int Application::ammoSlot() const
+{
+    auto isAmmo = [](StackId id) { return id == Items::Arrow || id == Items::SpectralArrow || id == Items::TippedArrow; };
+    if (isAmmo(m_inventory.slot(Inventory::OFFHAND).id)) return Inventory::OFFHAND;
+    for (int i = 0; i < Inventory::MAIN_SLOTS; ++i)
+        if (isAmmo(m_inventory.slot(i).id)) return i;
+    return -1;
+}
+
+int Application::crossbowIcon(const ItemStack& stack, bool selected) const
+{
+    if (stack.id != Items::Crossbow) return -1;
+    const int load = Crossbows::loadOf(stack.enchantments);
+    if (load == Crossbows::Firework) return Tiles::ItemCrossbowFirework;
+    if (load != Crossbows::Empty) return Tiles::ItemCrossbowArrow;
+    if (selected && m_crossbowCharge > 0.0f)
+    {
+        const float pull = m_crossbowCharge / Crossbows::CHARGE_SECONDS;
+        return pull < 0.58f ? Tiles::ItemCrossbowPulling0 : pull < 1.0f ? Tiles::ItemCrossbowPulling1 : Tiles::ItemCrossbowPulling2;
+    }
+    return -1;
+}
+
+void Application::updateCrossbow(float deltaTime)
+{
+    ItemStack& held = m_inventory.selected();
+    const bool down = inGame() && m_keys.down(m_input, Action::Use);
+    if (!down) m_crossbowHeldOver = false;
+    if (held.id != Items::Crossbow)
+    {
+        m_crossbowCharge = 0.0f;
+        return;
+    }
+    const int load = Crossbows::loadOf(held.enchantments);
+    if (load == Crossbows::Empty)
+    {
+        const int slot = ammoSlot();
+        if (!down || m_crossbowHeldOver || (slot < 0 && !m_player.creative()))
+        {
+            m_crossbowCharge = 0.0f;
+            return;
+        }
+        const float before = m_crossbowCharge;
+        m_crossbowCharge += deltaTime;
+        if (before < 0.3f && m_crossbowCharge >= 0.3f) m_audio.play(Sound::Click, 0.4f, 0.7f);
+        if (m_crossbowCharge < Crossbows::CHARGE_SECONDS) return;
+        int kind = Crossbows::Arrow, effect = 0;
+        if (slot >= 0)
+        {
+            ItemStack& ammo = m_inventory.slot(slot);
+            kind = ammo.id == Items::SpectralArrow ? Crossbows::Spectral : ammo.id == Items::TippedArrow ? Crossbows::Tipped : Crossbows::Arrow;
+            effect = ammo.damage;
+            if (!m_player.creative() && --ammo.count <= 0) ammo.clear();
+        }
+        held.enchantments = Crossbows::withLoad(held.enchantments, kind, effect);
+        m_crossbowCharge = 0.0f;
+        m_crossbowHeldOver = true;
+        m_audio.play(Sound::Click, 0.6f, 1.1f);
+        return;
+    }
+    if (!m_keys.pressed(m_input, Action::Use) || !inGame()) return;
+    const glm::vec3 from = m_camera.position + m_camera.front * 0.4f;
+    const Arrows::Kind kind = load == Crossbows::Spectral ? Arrows::Kind::Spectral
+                            : load == Crossbows::Tipped ? Arrows::Kind::Tipped : Arrows::Kind::Shaft;
+    m_arrows.spawn(from, m_camera.front * Crossbows::ARROW_SPEED, 9, true, kind, Crossbows::effectOf(held.enchantments));
+    held.enchantments = Crossbows::withLoad(held.enchantments, Crossbows::Empty);
+    m_crossbowHeldOver = true;
+    m_heldItem.swing();
+    m_audio.play(Sound::Click, 0.7f, 1.6f);
+    vibrate(m_player.eyePosition(), 3);
+    wearHeld(Items::Crossbow, 1);
+}
+
 void Application::looseArrow(float drawn)
 {
-    if (!m_player.creative() && !m_inventory.take(Items::Arrow)) return;
+    Arrows::Kind kind = Arrows::Kind::Shaft;
+    int effect = 0;
+    const int slot = ammoSlot();
+    if (slot >= 0)
+    {
+        ItemStack& ammo = m_inventory.slot(slot);
+        kind = ammo.id == Items::SpectralArrow ? Arrows::Kind::Spectral : ammo.id == Items::TippedArrow ? Arrows::Kind::Tipped : Arrows::Kind::Shaft;
+        effect = ammo.damage;
+        if (!m_player.creative() && --ammo.count <= 0) ammo.clear();
+    }
+    else if (!m_player.creative())
+        return;
 
     const glm::vec3 from = m_camera.position + m_camera.front * 0.4f;
     m_arrows.spawn(from, m_camera.front * Arrows::speedFor(drawn),
                    Arrows::damageFor(drawn) +
                        Enchanting::powerBonus(m_inventory.selected().enchantments,
                                               Arrows::damageFor(drawn)),
-                   true);
+                   true, kind, effect);
 
     m_heldItem.swing();
     m_audio.play(Sound::Click, 0.5f, 1.4f);
@@ -10579,12 +10686,28 @@ namespace
         // implements.
         bool burning = false;
 
+        Arrows::Kind striking = Arrows::Kind::Shaft;
+
         bool strike(const glm::vec3& point, int damage, bool fromPlayer,
                     Arrows::Kind kind) override
         {
             burning = kind == Arrows::Kind::Fire;
             splash = kind == Arrows::Kind::Potion;
+            striking = kind;
             return strike(point, damage, fromPlayer);
+        }
+
+        void dose(Mob& mob) const
+        {
+            if (striking == Arrows::Kind::Spectral) mob.afflict(Mob::Affliction::Glowing, 10.0f);
+            if (striking != Arrows::Kind::Tipped) return;
+            switch (static_cast<Effects::Kind>(effect))
+            {
+                case Effects::Kind::Poison: mob.afflict(Mob::Affliction::Poison, 5.6f); break;
+                case Effects::Kind::Slowness: mob.afflict(Mob::Affliction::Slowness, 11.0f); break;
+                case Effects::Kind::Regeneration: mob.heal(4); break;
+                default: break;
+            }
         }
 
         // A wind charge does its work here. The shove is round where it
@@ -10674,6 +10797,7 @@ namespace
                     if (apart.y < 0.0f || apart.y > mob.height()) continue;
 
                     mob.damage(damage, feet - point);
+                    dose(mob);
                     return true;
                 }
                 return false;
@@ -10696,6 +10820,8 @@ namespace
             }
 
             if (player->damage(damage)) ++playerHits;
+            if (striking == Arrows::Kind::Tipped && effect >= 0 && effect < Effects::KIND_COUNT)
+                Effects::give(player->effects, static_cast<Effects::Kind>(effect), 0, 11.0f);
 
             // A charge sets them alight whether or not the blow itself
             // landed: the burn is not the hit, and the hurt cooldown
@@ -10744,6 +10870,7 @@ void Application::updateArrows(float deltaTime)
     }
 
     updateBow(deltaTime);
+    updateCrossbow(deltaTime);
 }
 
 void Application::handleBrushing(float deltaTime)
@@ -14460,7 +14587,8 @@ void Application::renderHand()
     const ItemStack& held = m_inventory.selected();
     if (m_scoping) return;
 
-    m_heldItem.setTileOverride(animatedIcon(held) >= 0 ? animatedIcon(held) : m_bowDrawing && held.id == Items::Bow
+    m_heldItem.setTileOverride(crossbowIcon(held, true) >= 0 ? crossbowIcon(held, true) :
+                               animatedIcon(held) >= 0 ? animatedIcon(held) : m_bowDrawing && held.id == Items::Bow
                                    ? (m_bowDraw >= 0.9f ? Tiles::BowPulling2
                                       : m_bowDraw >= 0.65f ? Tiles::BowPulling1 : Tiles::BowPulling0)
                                    : (m_bobber.active && held.id == Items::FishingRod) ? static_cast<int>(Tiles::ItemFishingRodCast) : -1);
@@ -15508,6 +15636,22 @@ void Application::updateMobs(float deltaTime)
 
         for (int i = 0; i < type.dropCount; ++i) m_drops.spawn(where, type.drop, 1);
         for (int i = 0; i < type.secondDropCount; ++i) m_drops.spawn(where, type.secondDrop, 1);
+        {
+            const uint32_t luck = hashCoords(static_cast<int>(death.position.x * 8.0f), static_cast<int>(m_elapsedSeconds * 20.0f),
+                                             static_cast<int>(death.position.z * 8.0f), 0x7A11u);
+            if (death.type == MobId::Stray && luck % 2u == 0u)
+            {
+                ItemStack slowing{ Items::TippedArrow, 1 };
+                slowing.damage = static_cast<int>(Effects::Kind::Slowness);
+                m_drops.spawnStack(where, slowing);
+            }
+            if (death.type == MobId::Pillager && luck % 1000u < 85u)
+            {
+                ItemStack bow{ Items::Crossbow, 1 };
+                bow.damage = static_cast<int>((luck >> 10) % 400u);
+                m_drops.spawnStack(where, bow);
+            }
+        }
 
         // A slime comes apart rather than dying: two small ones where
         // the big one stood. That is the whole of what a slime is, and
@@ -16607,6 +16751,8 @@ void Application::renderHud()
                            : m_bowDraw >= 0.65f ? Tiles::BowPulling1 : Tiles::BowPulling0;
         if (i == m_inventory.selectedSlot() && m_bobber.active && stack.id == Items::FishingRod)
             m_iconOverride = Tiles::ItemFishingRodCast;
+        if (crossbowIcon(stack, i == m_inventory.selectedSlot()) >= 0)
+            m_iconOverride = crossbowIcon(stack, i == m_inventory.selectedSlot());
         drawItem(slotX, slotY, ITEM_SIZE,
                  stack.id, m_player.creative() ? 0 : stack.count,
                  glm::vec4(1.0f), stack.damage, stack.enchantments);

@@ -1700,6 +1700,23 @@ namespace
         for (int y = 12; y < 15; ++y) t.set(8, y, Color{ 110, 110, 110 });
         t.set(7, 14, Color{ 110, 110, 110 });
     }
+    void paintFlightIn(Tile& t, Color head, Color shaft, Color fletch)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int x = 2; x < 13; ++x) { t.set(x, 7, shaft); t.set(x, 8, shaft); }
+        for (int y = 5; y < 11; ++y) { t.set(13, y, head); t.set(14, 7, head); t.set(14, 8, head); }
+        for (int y = 5; y < 11; ++y) { t.set(1, y, fletch); t.set(2, y, fletch); }
+    }
+    void paintSpectralInFlight(Tile& t) { paintFlightIn(t, Color{ 250, 220, 80 }, Color{ 200, 170, 90 }, Color{ 250, 230, 120 }); }
+    void paintTippedInFlight(Tile& t) { paintFlightIn(t, Color{ 120, 200, 140 }, Color{ 160, 120, 68 }, Color{ 228, 228, 224 }); }
+    void paintTridentInFlight(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int x = 0; x < 12; ++x) { t.set(x, 7, Color{ 60, 120, 120 }); t.set(x, 8, Color{ 80, 150, 140 }); }
+        for (int x = 11; x < 16; ++x) { t.set(x, 7, Color{ 120, 200, 190 }); t.set(x, 8, Color{ 120, 200, 190 }); }
+        for (int x = 12; x < 15; ++x) { t.set(x, 4, Color{ 120, 200, 190 }); t.set(x, 11, Color{ 120, 200, 190 }); }
+        for (int y = 4; y < 12; ++y) t.set(12, y, Color{ 100, 180, 170 });
+    }
     void paintLeashKnotTile(Tile& t)
     {
         t.fill(Color{ 0, 0, 0, 0 });
@@ -1773,6 +1790,41 @@ namespace
     }
     void paintItemBundle(Tile& t) { paintBundleIn(t, false); }
     void paintItemBundleFilled(Tile& t) { paintBundleIn(t, true); }
+    void paintCrossbowIn(Tile& t, int stage, int load)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        const Color wood{ 120, 84, 50 }, iron{ 170, 170, 176 }, string{ 230, 230, 230 };
+        for (int k = 0; k < 12; ++k) t.set(2 + k, 13 - k, wood);
+        const int pull = std::clamp(stage, 0, 3);
+        for (int k = 0; k < 6; ++k)
+        {
+            t.set(5 + k, 4 + k / 2 - pull / 2, iron);
+            t.set(4 + k / 2 - pull / 2, 5 + k, iron);
+        }
+        for (int k = 0; k < 6; ++k) t.set(10 - k + pull, 4 + k + pull, string);
+        if (load == 1) for (int k = 0; k < 7; ++k) t.set(5 + k, 10 - k, Color{ 200, 200, 200 });
+        if (load == 2) { for (int k = 0; k < 5; ++k) t.set(6 + k, 9 - k, Color{ 200, 40, 40 }); t.set(11, 4, Color{ 240, 240, 240 }); }
+    }
+    void paintItemCrossbow(Tile& t) { paintCrossbowIn(t, 0, 0); }
+    void paintItemCrossbowPulling0(Tile& t) { paintCrossbowIn(t, 1, 0); }
+    void paintItemCrossbowPulling1(Tile& t) { paintCrossbowIn(t, 2, 0); }
+    void paintItemCrossbowPulling2(Tile& t) { paintCrossbowIn(t, 3, 0); }
+    void paintItemCrossbowArrow(Tile& t) { paintCrossbowIn(t, 3, 1); }
+    void paintItemCrossbowFirework(Tile& t) { paintCrossbowIn(t, 3, 2); }
+    void paintArrowIn(Tile& t, Color head, Color fletch)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int i = 4; i <= 11; ++i) t.set(i, 15 - i, Color{ 160, 120, 68 });
+        for (int dx = -1; dx <= 1; ++dx) for (int dy = -1; dy <= 1; ++dy) if (dx * dy == 0) t.set(12 + dx, 3 + dy, head);
+        for (int dx = -1; dx <= 1; ++dx) for (int dy = -1; dy <= 1; ++dy) if (dx * dy == 0) t.set(3 + dx, 12 + dy, fletch);
+    }
+    void paintItemSpectralArrow(Tile& t) { paintArrowIn(t, Color{ 250, 220, 80 }, Color{ 250, 230, 120 }); }
+    void paintItemTippedArrow(Tile& t) { paintArrowIn(t, Color{ 0, 0, 0, 0 }, Color{ 228, 228, 224 }); }
+    void paintItemTippedArrowHead(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int dx = -1; dx <= 1; ++dx) for (int dy = -1; dy <= 1; ++dy) if (dx * dy == 0) t.set(12 + dx, 3 + dy, Color{ 255, 255, 255 });
+    }
     void paintItemEchoShard(Tile& t)
     {
         t.fill(Color{ 0, 0, 0, 0 });
@@ -8743,8 +8795,20 @@ namespace
         { Tiles::ItemGoatHorn, paintItemGoatHorn },
         { Tiles::ItemBundle, paintItemBundle },
         { Tiles::ItemBundleFilled, paintItemBundleFilled },
+        { Tiles::ItemCrossbow, paintItemCrossbow },
+        { Tiles::ItemCrossbowPulling0, paintItemCrossbowPulling0 },
+        { Tiles::ItemCrossbowPulling1, paintItemCrossbowPulling1 },
+        { Tiles::ItemCrossbowPulling2, paintItemCrossbowPulling2 },
+        { Tiles::ItemCrossbowArrow, paintItemCrossbowArrow },
+        { Tiles::ItemCrossbowFirework, paintItemCrossbowFirework },
+        { Tiles::ItemSpectralArrow, paintItemSpectralArrow },
+        { Tiles::ItemTippedArrow, paintItemTippedArrow },
+        { Tiles::ItemTippedArrowHead, paintItemTippedArrowHead },
         { Tiles::FishingHookTile, paintFishingHookTile },
         { Tiles::LeashKnotTile, paintLeashKnotTile },
+        { Tiles::SpectralInFlight, paintSpectralInFlight },
+        { Tiles::TippedInFlight, paintTippedInFlight },
+        { Tiles::TridentInFlight, paintTridentInFlight },
         { Tiles::ItemCompass, paintItemCompass },
         { Tiles::ItemEmptyMap, paintItemEmptyMap },
         { Tiles::ItemFilledMap, paintItemFilledMap },
@@ -9620,6 +9684,15 @@ namespace
         { Tiles::ItemGoatHorn, { "goat_horn", nullptr, nullptr } },
         { Tiles::ItemBundle, { "bundle", nullptr, nullptr } },
         { Tiles::ItemBundleFilled, { "bundle_filled", nullptr, nullptr } },
+        { Tiles::ItemCrossbow, { "crossbow_standby", nullptr, nullptr } },
+        { Tiles::ItemCrossbowPulling0, { "crossbow_pulling_0", nullptr, nullptr } },
+        { Tiles::ItemCrossbowPulling1, { "crossbow_pulling_1", nullptr, nullptr } },
+        { Tiles::ItemCrossbowPulling2, { "crossbow_pulling_2", nullptr, nullptr } },
+        { Tiles::ItemCrossbowArrow, { "crossbow_arrow", nullptr, nullptr } },
+        { Tiles::ItemCrossbowFirework, { "crossbow_firework", nullptr, nullptr } },
+        { Tiles::ItemSpectralArrow, { "spectral_arrow", nullptr, nullptr } },
+        { Tiles::ItemTippedArrow, { "tipped_arrow_base", nullptr, nullptr } },
+        { Tiles::ItemTippedArrowHead, { "tipped_arrow_head", nullptr, nullptr } },
         { Tiles::ItemCompassFrameFirst + 0, { "compass_00", nullptr, nullptr } },
         { Tiles::ItemCompassFrameFirst + 1, { "compass_01", nullptr, nullptr } },
         { Tiles::ItemCompassFrameFirst + 2, { "compass_02", nullptr, nullptr } },
@@ -11806,6 +11879,17 @@ Atlas::Atlas()
             pasteImage(flight, cropImage(arrow, 0, 0, 16 * k, 5 * k), 0, 6 * k);
             blitImage(Tiles::ArrowInFlight, scaleNearest(flight, tilePixels, tilePixels));
         }
+        const char* FLIGHTS[2] = { "assets/textures/entity/projectiles/spectral_arrow.png", "assets/textures/entity/projectiles/tipped_arrow.png" };
+        const int FLIGHT_TILES[2] = { Tiles::SpectralInFlight, Tiles::TippedInFlight };
+        for (int f = 0; f < 2; ++f)
+        {
+            const Image shaft = loadPNG(FLIGHTS[f]);
+            if (!shaft.valid()) continue;
+            const int k = unit(shaft, 32);
+            Image flight = blankImage(16 * k, 16 * k);
+            pasteImage(flight, cropImage(shaft, 0, 0, 16 * k, 5 * k), 0, 6 * k);
+            blitImage(FLIGHT_TILES[f], scaleNearest(flight, tilePixels, tilePixels));
+        }
 
         const Image portal = loadPNG("assets/textures/entity/end_portal.png");
         if (portal.valid())
@@ -12208,7 +12292,7 @@ std::vector<int> unlinkedTiles()
         Tiles::ButtonOnTile, Tiles::RedstoneDust, Tiles::RedstoneDustLit, Tiles::TntPrimedSide,
         Tiles::ItemShield, Tiles::ExperienceOrb, Tiles::ArrowInFlight, Tiles::RainDrop,
         Tiles::SnowFlake, Tiles::ShulkerBulletTile, Tiles::DragonFireballTile, Tiles::CandleFlameTile,
-        Tiles::LeashKnotTile,
+        Tiles::LeashKnotTile, Tiles::SpectralInFlight, Tiles::TippedInFlight, Tiles::TridentInFlight,
     };
 
     std::vector<int> unlinked;
