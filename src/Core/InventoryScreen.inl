@@ -170,6 +170,9 @@ namespace
         Items::ScrapeSherd, Items::SheafSherd, Items::ShelterSherd, Items::SkullSherd, Items::SnortSherd,
         Items::Sign, Items::SpruceSign, Items::BirchSign, Items::JungleSign, Items::AcaciaSign, Items::DarkOakSign,
         Items::CherrySign, Items::MangroveSign, Items::BambooSign, Items::CrimsonSign, Items::WarpedSign,
+        Blocks::BannerFirst + 2, Blocks::BannerFirst + 10, Blocks::BannerFirst + 18, Blocks::BannerFirst + 26, Blocks::BannerFirst + 34, Blocks::BannerFirst + 42, Blocks::BannerFirst + 50, Blocks::BannerFirst + 58, Blocks::BannerFirst + 66, Blocks::BannerFirst + 74, Blocks::BannerFirst + 82, Blocks::BannerFirst + 90, Blocks::BannerFirst + 98, Blocks::BannerFirst + 106, Blocks::BannerFirst + 114, Blocks::BannerFirst + 122,
+        Items::FlowerBannerPattern, Items::SkullBannerPattern, Items::GlobeBannerPattern, Items::PiglinBannerPattern,
+        Items::FlowBannerPattern, Items::GusterBannerPattern,
     };
 
     // The twenty-five tools, their materials, and the two benches you
@@ -195,7 +198,7 @@ namespace
         Blocks::RepeaterFirst, Blocks::ComparatorFirst, Blocks::DaylightDetector, Blocks::Target, Items::TripwireHook,
         Blocks::IronDoorFirst, Blocks::IronTrapdoorFirst,
         Blocks::IronBars, Blocks::ChainFirst, Blocks::EndRodFirst, Blocks::Cobweb, Items::IronNugget,
-        Blocks::Stonecutter, Blocks::FletchingTable, Blocks::SmithingTable, Blocks::CartographyTable,
+        Blocks::Stonecutter, Blocks::FletchingTable, Blocks::SmithingTable, Blocks::CartographyTable, Blocks::LoomFirst + 2,
         Blocks::SoulTorch, Blocks::SoulCampfire, Blocks::SoulSoil,
         Blocks::MagmaBlock, Blocks::CryingObsidian, Blocks::RespawnAnchor0, Blocks::Lodestone,
         Blocks::BellFirst + 2, Blocks::Jukebox, Blocks::ChiseledBookshelfFirst + 14, Blocks::DragonEgg, Blocks::HeavyCore,
@@ -439,6 +442,10 @@ void Application::drawItem(float x, float y, float size, StackId id, int count,
                           liquid.u0, liquid.vTop, liquid.u1, liquid.vBottom, liquidTint);
         m_ui.texturedQuad(m_atlas.textureId(), x, y, size, size,
                           bottle.u0, bottle.vTop, bottle.u1, bottle.vBottom, tint);
+    }
+    else if (!isItem(id) && isBanner(asBlock(id)) && m_iconOverride < 0)
+    {
+        drawBannerIcon(x, y, size, bannerColour(asBlock(id)), m_bannerLibrary.design(damage), tint);
     }
     else if (!drawBlockIcon(x, y, size, id, tint))
     {
@@ -806,7 +813,7 @@ void Application::renderInventoryScreen()
     // see what was in it.
     const bool container = m_chestOpen || m_crafterOpen || m_furnaceOpen ||
                            m_inventory.craftSize() >= 3 || m_tradeOpen ||
-                           m_enchantOpen || m_brewOpen || m_anvilOpen || m_horseOpen || m_beaconOpen || m_grindOpen || m_cutOpen || m_smithOpen || m_cartoOpen;
+                           m_enchantOpen || m_brewOpen || m_anvilOpen || m_horseOpen || m_beaconOpen || m_grindOpen || m_cutOpen || m_smithOpen || m_cartoOpen || m_loomOpen;
 
     if (m_player.creative() && !container) renderCreativeScreen(w, h);
     else renderContainerScreen(w, h);
@@ -845,6 +852,7 @@ void Application::renderContainerScreen(float w, float h)
     else if (m_cutOpen) background = "container/stonecutter";
     else if (m_smithOpen) background = "container/smithing";
     else if (m_cartoOpen) background = "container/cartography_table";
+    else if (m_loomOpen) background = "container/loom";
     else if (m_tradeOpen) { background = "container/villager"; textureW = 512.0f; }
     else if (m_enchantOpen) background = "container/enchanting_table";
     else if (m_brewOpen) background = "container/brewing_stand";
@@ -928,7 +936,7 @@ void Application::renderContainerScreen(float w, float h)
     // for the same grid.
     const bool plainInventory = !m_chestOpen && !m_crafterOpen &&
                                 !m_furnaceOpen && !bench && !m_tradeOpen &&
-                                !m_enchantOpen && !m_brewOpen && !m_anvilOpen && !m_horseOpen && !m_beaconOpen && !m_grindOpen && !m_cutOpen && !m_smithOpen && !m_cartoOpen;
+                                !m_enchantOpen && !m_brewOpen && !m_anvilOpen && !m_horseOpen && !m_beaconOpen && !m_grindOpen && !m_cutOpen && !m_smithOpen && !m_cartoOpen && !m_loomOpen;
 
     // Every screen is headed with the name of what was opened, in the
     // top-left corner, so a barrel says Barrel and a smoker says Smoker.
@@ -946,6 +954,7 @@ void Application::renderContainerScreen(float w, float h)
         else if (m_cutOpen) title = "Stonecutter";
         else if (m_smithOpen) title = "Upgrade Gear";
         else if (m_cartoOpen) title = "Cartography Table";
+        else if (m_loomOpen) title = "Loom";
         else if (m_brewOpen) title = "Brewing Stand";
         else if (m_anvilOpen) title = "Anvil";
         else if (m_enchantOpen) title = "Enchanting Table";
@@ -1198,6 +1207,67 @@ void Application::renderContainerScreen(float w, float h)
             guiSprite("sprites/container/cartography_table/error", panelX + 35.0f, panelY + 31.0f, 28.0f, 21.0f);
     }
 
+    if (m_loomOpen)
+    {
+        drawSlot(Inventory::LOOM_BANNER, panelX + 13.0f, panelY + 26.0f);
+        drawSlot(Inventory::LOOM_DYE, panelX + 33.0f, panelY + 26.0f);
+        drawSlot(Inventory::LOOM_PATTERN, panelX + 23.0f, panelY + 45.0f);
+        const ItemStack& banner = m_inventory.slot(Inventory::LOOM_BANNER);
+        const ItemStack& dye = m_inventory.slot(Inventory::LOOM_DYE);
+        const ItemStack& patternItem = m_inventory.slot(Inventory::LOOM_PATTERN);
+        if (banner.empty()) guiSprite("sprites/container/loom/banner_slot", panelX + 13.0f, panelY + 26.0f, 16.0f, 16.0f);
+        if (dye.empty()) guiSprite("sprites/container/loom/dye_slot", panelX + 33.0f, panelY + 26.0f, 16.0f, 16.0f);
+        if (patternItem.empty()) guiSprite("sprites/container/loom/pattern_slot", panelX + 23.0f, panelY + 45.0f, 16.0f, 16.0f);
+        if (patternItem.id != m_loomSeen)
+        {
+            m_loomSeen = patternItem.id;
+            m_loomChoice = Banners::isPatternItem(patternItem.id) ? 0 : -1;
+            m_loomScroll = 0;
+        }
+        const std::vector<int> choices = Banners::loomChoices(patternItem.id);
+        const bool full = !banner.empty() && static_cast<int>(m_bannerLibrary.design(banner.damage).size()) >= Banners::MAX_LAYERS;
+        const bool ready = !banner.empty() && !dye.empty() && !full;
+        const int rows = (static_cast<int>(choices.size()) + 3) / 4;
+        m_loomScroll = std::clamp(m_loomScroll, 0, std::max(0, rows - 4));
+        if (ready)
+        {
+            const float mx = static_cast<float>(m_input.mouseX()) / m_ui.scale();
+            const float my = static_cast<float>(m_input.mouseY()) / m_ui.scale();
+            for (int i = 0; i < 16; ++i)
+            {
+                const int index = m_loomScroll * 4 + i;
+                if (index >= static_cast<int>(choices.size())) break;
+                const float bx = panelX + 60.0f + static_cast<float>(i % 4) * 14.0f;
+                const float by = panelY + 13.0f + static_cast<float>(i / 4) * 14.0f;
+                const bool hovered = mx >= bx && mx < bx + 14.0f && my >= by && my < by + 14.0f;
+                const char* sprite = index == m_loomChoice ? "sprites/container/loom/pattern_selected"
+                                   : hovered ? "sprites/container/loom/pattern_highlighted"
+                                             : "sprites/container/loom/pattern";
+                if (!guiSprite(sprite, bx, by, 14.0f, 14.0f))
+                    m_ui.quad(bx, by, 14.0f, 14.0f, index == m_loomChoice ? glm::vec4(0.4f, 0.6f, 0.4f, 1.0f)
+                                                    : hovered ? glm::vec4(0.7f, 0.7f, 0.7f, 1.0f) : glm::vec4(0.55f, 0.55f, 0.55f, 1.0f));
+                Banners::Design one;
+                one.push_back(Banners::Layer{ static_cast<uint8_t>(choices[static_cast<size_t>(index)]), 0 });
+                drawBannerFlag(7, one, bx + 4.0f, by + 2.0f, 5.0f, 10.0f, glm::vec4(1.0f));
+                m_slotBoxes.push_back({ SlotBox::Kind::LoomPattern, index, bx, by, 14.0f, 14.0f });
+            }
+        }
+        if (!guiSprite(ready && rows > 4 ? "sprites/container/loom/scroller" : "sprites/container/loom/scroller_disabled",
+                       panelX + 119.0f, panelY + 13.0f + (rows > 4 ? 41.0f * m_loomScroll / std::max(1, rows - 4) : 0.0f), 12.0f, 15.0f))
+            m_ui.quad(panelX + 119.0f, panelY + 13.0f, 12.0f, 15.0f, glm::vec4(0.75f, 0.75f, 0.75f, 1.0f));
+        const float rx = panelX + 143.0f, ry = panelY + 57.0f;
+        well(rx, ry);
+        Banners::Design next;
+        if (full)
+            guiSprite("sprites/container/loom/error", rx - 5.0f, ry - 5.0f, 26.0f, 26.0f);
+        else if (loomPreview(next))
+        {
+            drawBannerFlag(bannerColour(asBlock(banner.id)), next, panelX + 141.0f, panelY + 8.0f, 20.0f, 40.0f, glm::vec4(1.0f));
+            drawBannerIcon(rx, ry, SLOT, bannerColour(asBlock(banner.id)), next, glm::vec4(1.0f));
+            m_slotBoxes.push_back({ SlotBox::Kind::LoomTake, 0, rx - 1.0f, ry - 1.0f, PITCH });
+        }
+    }
+
     if (m_cutOpen)
     {
         drawSlot(Inventory::CUT_INPUT, panelX + 20.0f, panelY + 33.0f);
@@ -1307,7 +1377,7 @@ void Application::renderContainerScreen(float w, float h)
         // drawn on all of them, which is how a furnace came to have a
         // man standing in the middle of its fire.
         const bool otherBusiness = m_tradeOpen || m_enchantOpen || m_brewOpen ||
-                                   m_anvilOpen || m_furnaceOpen || bench || m_horseOpen || m_beaconOpen || m_grindOpen || m_cutOpen || m_smithOpen || m_cartoOpen;
+                                   m_anvilOpen || m_furnaceOpen || bench || m_horseOpen || m_beaconOpen || m_grindOpen || m_cutOpen || m_smithOpen || m_cartoOpen || m_loomOpen;
 
         // Armour down the left edge, at 8 and 8, a slot apart.
         for (int i = 0; !otherBusiness && i < Inventory::ARMOR_SLOTS; ++i)
@@ -2080,7 +2150,7 @@ void Application::renderContainerScreen(float w, float h)
         // fire between them at 36 and the result off to the right at
         // 116 and 35. The client's own four, and the shape everybody
         // recognises.
-        if (m_horseOpen || m_beaconOpen || m_grindOpen || m_cutOpen || m_smithOpen || m_cartoOpen) {}
+        if (m_horseOpen || m_beaconOpen || m_grindOpen || m_cutOpen || m_smithOpen || m_cartoOpen || m_loomOpen) {}
         else if (m_furnaceOpen)
         {
             const Furnaces::State& state = m_furnaces.at(m_furnaceBlock);
@@ -2674,6 +2744,15 @@ void Application::handleInventoryClick(int mouseX, int mouseY, bool rightButton,
             takeCartoResult(shiftHeld);
             break;
 
+        case SlotBox::Kind::LoomPattern:
+            m_loomChoice = box->index;
+            m_audio.play(Sound::Click, 0.45f, 1.2f);
+            break;
+
+        case SlotBox::Kind::LoomTake:
+            takeLoomResult(shiftHeld);
+            break;
+
         case SlotBox::Kind::BeaconConfirm:
             confirmBeacon();
             break;
@@ -2898,6 +2977,75 @@ void Application::stowCartography()
     }
 }
 
+void Application::drawBannerIcon(float x, float y, float size, int colour, const Banners::Design& design, const glm::vec4& tint)
+{
+    const float px = size / 16.0f;
+    const BannerRenderer::Cell cell = m_bannerRenderer.cellFor(colour, design);
+    const float texel = cell.size / static_cast<float>(Banners::SHEET);
+    m_ui.texturedQuad(m_bannerRenderer.texture(), x + 2.5f * px, y + 0.5f * px, 11.0f * px, 1.5f * px,
+                      cell.u0 + texel * 2.0f, cell.v0 + texel * 44.0f, cell.u0 + texel * 22.0f, cell.v0 + texel * 46.0f, tint);
+    drawBannerFlag(colour, design, x + 4.0f * px, y + 2.0f * px, 8.0f * px, 14.0f * px, tint);
+}
+
+void Application::openLoom(const glm::ivec3& block)
+{
+    m_loomBlock = block;
+    m_loomOpen = true;
+    m_loomChoice = -1;
+    m_loomScroll = 0;
+    m_loomSeen = Blocks::Air;
+    m_inventoryOpen = true;
+    setMouseCaptured(false);
+}
+
+bool Application::loomPreview(Banners::Design& design)
+{
+    const ItemStack& banner = m_inventory.slot(Inventory::LOOM_BANNER);
+    const ItemStack& dye = m_inventory.slot(Inventory::LOOM_DYE);
+    if (banner.empty() || isItem(banner.id) || !isBanner(asBlock(banner.id)) || !isDye(dye.id)) return false;
+    const std::vector<int> choices = Banners::loomChoices(m_inventory.slot(Inventory::LOOM_PATTERN).id);
+    if (m_loomChoice < 0 || m_loomChoice >= static_cast<int>(choices.size())) return false;
+    return Banners::addLayer(m_bannerLibrary.design(banner.damage), choices[static_cast<size_t>(m_loomChoice)], dyeColour(dye.id), design);
+}
+
+void Application::takeLoomResult(bool toInventory)
+{
+    if (!m_loomOpen) return;
+    Banners::Design next;
+    if (!loomPreview(next)) return;
+    if (!toInventory && !m_inventory.cursor().empty()) return;
+    ItemStack& banner = m_inventory.slot(Inventory::LOOM_BANNER);
+    ItemStack& dye = m_inventory.slot(Inventory::LOOM_DYE);
+    ItemStack made;
+    made.id = banner.id;
+    made.count = 1;
+    made.damage = m_bannerLibrary.idOf(next);
+    if (toInventory)
+    {
+        if (m_inventory.addStack(made) > 0) return;
+    }
+    else
+        m_inventory.cursor() = made;
+    if (--banner.count <= 0) banner.clear();
+    if (--dye.count <= 0) dye.clear();
+    m_audio.play(Sound::Click, 0.6f, 0.8f);
+}
+
+void Application::stowLoom()
+{
+    if (!m_loomOpen) return;
+    m_loomOpen = false;
+    for (int slot : { Inventory::LOOM_BANNER, Inventory::LOOM_DYE, Inventory::LOOM_PATTERN })
+    {
+        ItemStack& held = m_inventory.slot(slot);
+        if (held.empty()) continue;
+        ItemStack leftOver = held;
+        leftOver.count = m_inventory.addStack(held);
+        if (leftOver.count > 0) m_drops.spawnStack(m_player.position + glm::vec3(0.0f, 0.6f, 0.0f), leftOver);
+        held.clear();
+    }
+}
+
 void Application::openStonecutter(const glm::ivec3& block)
 {
     m_cutBlock = block;
@@ -2926,7 +3074,7 @@ void Application::takeCutResult(bool toInventory)
             if (m_inventory.addStack(made) > 0) return;
         }
         else if (cursor.empty()) cursor = made;
-        else if (cursor.id == made.id && cursor.count + made.count <= maxStackOf(made.id)) cursor.count += made.count;
+        else if (cursor.sameAs(made) && cursor.count + made.count <= maxStackOf(made.id)) cursor.count += made.count;
         else return;
         if (--input.count <= 0) { input.clear(); break; }
     } while (toInventory);
@@ -3092,6 +3240,7 @@ void Application::closeInventory()
     stowStonecutter();
     stowSmithing();
     stowCartography();
+    stowLoom();
     stowChest();
     stowCrafter();
     stowFurnace();

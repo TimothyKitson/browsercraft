@@ -28,6 +28,10 @@ struct ItemStack
 
     bool empty() const { return count <= 0 || id == Blocks::Air; }
     void clear() { id = Blocks::Air; count = 0; damage = 0; enchantments = 0; }
+    bool sameAs(const ItemStack& other) const
+    {
+        return id == other.id && damage == other.damage && enchantments == other.enchantments;
+    }
 };
 
 // 9 hotbar slots plus 27 storage slots, same shape as Minecraft's, and the
@@ -123,7 +127,10 @@ public:
     static constexpr int SMITH_ADDITION = SMITH_BASE + 1;
     static constexpr int CARTO_MAP = SMITH_ADDITION + 1;
     static constexpr int CARTO_EXTRA = CARTO_MAP + 1;
-    static constexpr int CHEST2_FIRST = CARTO_EXTRA + 1;
+    static constexpr int LOOM_BANNER = CARTO_EXTRA + 1;
+    static constexpr int LOOM_DYE = LOOM_BANNER + 1;
+    static constexpr int LOOM_PATTERN = LOOM_DYE + 1;
+    static constexpr int CHEST2_FIRST = LOOM_PATTERN + 1;
     static constexpr int SLOT_COUNT = CHEST2_FIRST + CHEST_SLOTS;
 
     // The ceiling. What a particular thing actually stacks to comes from

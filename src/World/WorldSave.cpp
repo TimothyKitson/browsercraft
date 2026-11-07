@@ -271,6 +271,25 @@ void WorldSave::saveLevel(const std::string& saveDirectory, const LevelState& st
         write(out, pot.sides);
     }
     write(out, static_cast<int32_t>(state.nextMapId));
+    write(out, static_cast<uint32_t>(state.bannerDesigns.size()));
+    for (const auto& design : state.bannerDesigns)
+    {
+        write(out, static_cast<uint8_t>(design.size()));
+        for (const auto& layer : design)
+        {
+            write(out, layer.first);
+            write(out, layer.second);
+        }
+    }
+    write(out, static_cast<uint32_t>(state.banners.size()));
+    for (const LevelState::SavedBanner& banner : state.banners)
+    {
+        write(out, banner.x);
+        write(out, banner.y);
+        write(out, banner.z);
+        write(out, banner.dimension);
+        write(out, banner.design);
+    }
 }
 
 bool WorldSave::loadLevel(const std::string& saveDirectory, LevelState& out)
@@ -529,7 +548,35 @@ bool WorldSave::loadLevel(const std::string& saveDirectory, LevelState& out)
                                                         out.pots.push_back(pot);
                                                     }
                                                 int32_t nextMap = 0;
-                                                if (potsWhole && read(in, nextMap) && nextMap > 0) out.nextMapId = nextMap;
+                                                const bool mapWhole = potsWhole && read(in, nextMap);
+                                                if (mapWhole && nextMap > 0) out.nextMapId = nextMap;
+                                                uint32_t designCount = 0;
+                                                bool designsWhole = mapWhole && read(in, designCount);
+                                                if (designsWhole)
+                                                    for (uint32_t i = 0; i < designCount && i < 65536u; ++i)
+                                                    {
+                                                        uint8_t layers = 0;
+                                                        if (!read(in, layers)) { designsWhole = false; break; }
+                                                        std::vector<std::pair<uint8_t, uint8_t>> design;
+                                                        for (uint8_t k = 0; k < layers; ++k)
+                                                        {
+                                                            uint8_t pattern = 0, colour = 0;
+                                                            if (!read(in, pattern) || !read(in, colour)) { designsWhole = false; break; }
+                                                            design.emplace_back(pattern, colour);
+                                                        }
+                                                        if (!designsWhole) break;
+                                                        out.bannerDesigns.push_back(design);
+                                                    }
+                                                uint32_t bannerCount = 0;
+                                                if (designsWhole && read(in, bannerCount))
+                                                    for (uint32_t i = 0; i < bannerCount && i < 1000000u; ++i)
+                                                    {
+                                                        LevelState::SavedBanner banner;
+                                                        if (!read(in, banner.x) || !read(in, banner.y) || !read(in, banner.z) ||
+                                                            !read(in, banner.dimension) || !read(in, banner.design))
+                                                            break;
+                                                        out.banners.push_back(banner);
+                                                    }
                                             }
                                         }
                                     }

@@ -822,6 +822,8 @@ namespace
             else if (id == Blocks::HeavyCore)     why = "a prize from an ominous vault";
             else if (isSuspicious(id))            why = "buried in pyramids, wells and ruins, and dusted by a brush";
             else if (isDecoratedPot(id))          why = "a pot set down facing another way";
+            else if (isLoom(id))                  why = "a loom set down facing another way";
+            else if (isBanner(id))                why = "a banner set down facing another way, or hung on a wall";
             else if (isSnifferEgg(id))            why = "a sniffer egg cracking as it nears hatching";
             else if (isChiseledBookshelf(id))     why = "a shelf with books in it, or facing another way";
             else if (isAnyCoralWallFan(id))       why = "a coral fan set against another face";
@@ -991,6 +993,8 @@ namespace
                 byHand = "shed by a baby turtle as it grows up";
             else if (i == static_cast<int>(Items::PowderSnowBucket))
                 byHand = "a bucket used on powder snow";
+            else if (i == static_cast<int>(Items::GlobeBannerPattern))
+                byHand = "sold by a cartographer at master level";
             else if (i == static_cast<int>(Items::FilledMap))
                 byHand = "an empty map used, or one copied at a cartography table";
             else if (i == static_cast<int>(Items::TideTemplate))

@@ -18,7 +18,8 @@ namespace
     // trouble; this pays for the trouble you went looking for.
     const StackId OMINOUS_EXTRAS[] = { Items::Mace, Items::BreezeRod, Items::Diamond,
                                        Items::EnderPearl, Blocks::HeavyCore, Items::FlowSherd,
-                                       Items::GusterSherd, Items::ScrapeSherd, Items::FlowTemplate };
+                                       Items::GusterSherd, Items::ScrapeSherd, Items::FlowTemplate,
+                                       Items::FlowBannerPattern };
 
     const Prize PRIZES[] = {
         { Items::IronIngot,    2, 5, 1.00f },
@@ -26,6 +27,7 @@ namespace
         { Items::GoldIngot,    1, 4, 0.60f },
         { Items::Diamond,      1, 2, 0.34f },
         { Items::EnderPearl,   1, 2, 0.30f },
+        { Items::GusterBannerPattern, 1, 1, 0.08f },
         { Items::BoltTemplate, 1, 1, 0.08f },
         { Items::Book,         1, 1, 0.28f },
         { Items::BlazePowder,  1, 3, 0.26f },

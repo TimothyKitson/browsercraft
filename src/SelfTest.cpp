@@ -43,6 +43,7 @@
 #include "Game/Stonecutting.h"
 #include "Game/Smithing.h"
 #include "Game/Maps.h"
+#include "Game/Banners.h"
 #include "Game/Grindstone.h"
 #include "Game/Saplings.h"
 #include "Game/Shield.h"
@@ -3854,6 +3855,122 @@ namespace
                 }
             check(gravel > 0, "and it is full of suspicious gravel");
         }
+    }
+
+    void testBanners()
+    {
+        section("banners and the loom");
+        bool every = true;
+        for (int p = Banners::SquareBottomLeft; p < Banners::PatternCount; ++p)
+        {
+            int covered = 0;
+            for (int y = 0; y < Banners::CLOTH_H; ++y)
+                for (int x = 0; x < Banners::CLOTH_W; ++x)
+                    if (Banners::coverage(p, x, y) > 0.0f) ++covered;
+            if (covered == 0 || covered >= Banners::CLOTH_W * Banners::CLOTH_H) every = false;
+        }
+        check(every, "every pattern covers some of the cloth and not all of it");
+        check(Banners::coverage(Banners::StripeLeft, 0, 20) > 0.0f && Banners::coverage(Banners::StripeLeft, 19, 20) == 0.0f,
+              "a pale dexter runs down the left as you look at it");
+        check(Banners::coverage(Banners::StripeTop, 10, 0) > 0.0f && Banners::coverage(Banners::StripeTop, 10, 39) == 0.0f,
+              "and a chief across the top");
+
+        check(Banners::loomChoices(Blocks::Air).size() == 34, "the loom offers the thirty-four patterns that need no item");
+        const std::vector<int> flower = Banners::loomChoices(Items::FlowerBannerPattern);
+        check(flower.size() == 1 && flower[0] == Banners::Flower, "and a flower pattern item offers just the flower");
+        check(Banners::itemOfPattern(Banners::Guster) == Items::GusterBannerPattern && Banners::patternOfItem(Items::Paper) < 0,
+              "each pattern item names its pattern");
+
+        Banners::Design design, next;
+        bool grew = true;
+        for (int k = 0; k < Banners::MAX_LAYERS; ++k)
+        {
+            grew = grew && Banners::addLayer(design, Banners::StripeTop + k, k, next);
+            design = next;
+        }
+        check(grew && design.size() == 6, "a banner takes six layers");
+        check(!Banners::addLayer(design, Banners::Circle, 1, next), "and no seventh");
+        check(!Banners::addLayer(Banners::Design{}, Banners::Base, 1, next), "and the field is not a layer of its own");
+
+        Banners::Library library;
+        Banners::Design one{ Banners::Layer{ Banners::Cross, 14 } };
+        Banners::Design two{ Banners::Layer{ Banners::Cross, 11 } };
+        const int a = library.idOf(one), b = library.idOf(two);
+        check(a > 0 && b > 0 && a != b && library.idOf(one) == a, "the same design always gets the same number");
+        check(library.idOf(Banners::Design{}) == 0 && library.design(0).empty(), "and a plain banner is number nought");
+        check(Banners::key(14, one) != Banners::key(0, one), "a red banner and a white one with the same layers look different");
+
+        Banners::Sheets none;
+        std::vector<uint8_t> sheet;
+        Banners::compose(14, Banners::Design{ Banners::Layer{ Banners::StripeLeft, 0 } }, none, sheet);
+        const uint8_t* left = &sheet[static_cast<size_t>((21 * Banners::SHEET + 2) * 4)];
+        const uint8_t* right = &sheet[static_cast<size_t>((21 * Banners::SHEET + 18) * 4)];
+        check(sheet.size() == static_cast<size_t>(Banners::SHEET * Banners::SHEET * 4) && left[0] > 200 && left[2] > 180 &&
+              right[0] > 120 && right[2] < 80, "without a pack the banner is painted: white stripe on a red field");
+
+        ItemStack grid[9];
+        for (int i = 0; i < 6; ++i) { grid[i].id = Blocks::WoolRed; grid[i].count = 1; }
+        grid[7].id = Items::Stick; grid[7].count = 1;
+        const CraftOutput red = Crafting::match(grid, 3);
+        check(red.valid() && red.id == static_cast<StackId>(bannerOf(14, false, 2)), "six red wool over a stick make a red banner");
+        ItemStack frame[9];
+        frame[0].id = Items::StringItem; frame[1].id = Items::StringItem; frame[3].id = Blocks::Planks; frame[4].id = Blocks::Planks;
+        for (ItemStack& cell : frame) if (cell.id != Blocks::Air) cell.count = 1;
+        const CraftOutput loom = Crafting::match(frame, 3);
+        check(loom.valid() && isLoom(asBlock(loom.id)), "two string over two planks make a loom");
+        ItemStack sheetOf[9];
+        sheetOf[0].id = Items::Paper; sheetOf[0].count = 1; sheetOf[4].id = Blocks::OxeyeDaisy; sheetOf[4].count = 1;
+        const CraftOutput charge = Crafting::match(sheetOf, 3);
+        check(charge.valid() && charge.id == Items::FlowerBannerPattern, "paper and an oxeye daisy make the flower pattern");
+
+        Trading::Profession job = Trading::Profession::Nitwit;
+        check(Trading::jobSite(Blocks::LoomFirst + 1, job) && job == Trading::Profession::Shepherd, "a loom is a shepherd's");
+        check(maxStackOf(bannerOf(3, false, 2)) == 16 && maxStackOf(Items::FlowBannerPattern) == 1,
+              "banners stack to sixteen and pattern items do not stack");
+        check(Inventory::belongsIn(Inventory::LOOM_BANNER, bannerOf(3, false, 2)) && !Inventory::belongsIn(Inventory::LOOM_BANNER, Blocks::Wool) &&
+              Inventory::belongsIn(Inventory::LOOM_DYE, Items::DyeRed) && Inventory::belongsIn(Inventory::LOOM_PATTERN, Items::SkullBannerPattern) &&
+              !Inventory::belongsIn(Inventory::LOOM_PATTERN, Items::Paper), "the loom's slots take a banner, a dye and a pattern");
+        check(isObtainable(bannerOf(5, false, 2)) && !isObtainable(bannerOf(5, true, 1)) && !isObtainable(bannerOf(5, false, 0)),
+              "a banner is a thing you hold, and its other facings are not");
+        check(blockDrop(bannerOf(9, true, 3)) == static_cast<StackId>(bannerOf(9, false, 2)), "a wall banner comes down as the banner");
+        check(!isSolid(bannerOf(0, false, 0)), "and you walk through banners");
+
+        Inventory inventory;
+        ItemStack plain{ static_cast<StackId>(bannerOf(14, false, 2)), 1 };
+        ItemStack fancy = plain;
+        fancy.damage = a;
+        inventory.addStack(plain);
+        inventory.addStack(fancy);
+        inventory.addStack(fancy);
+        int plainSlots = 0, fancySlots = 0, fancyCount = 0;
+        for (int i = 0; i < Inventory::MAIN_SLOTS; ++i)
+        {
+            const ItemStack& slot = inventory.slot(i);
+            if (slot.id != plain.id) continue;
+            if (slot.damage == 0) ++plainSlots;
+            else { ++fancySlots; fancyCount += slot.count; }
+        }
+        check(plainSlots == 1 && fancySlots == 1 && fancyCount == 2, "patterned banners stack with their own kind and not with plain ones");
+        inventory.add(plain.id, 3);
+        check(inventory.slot(0).damage == 0 && inventory.slot(0).count == 4 && inventory.slot(1).count == 2,
+              "and plain ones topping up never land on a patterned stack");
+
+        const std::string dir = (std::filesystem::temp_directory_path() / "browsercraft_banner_test").string();
+        std::error_code ec;
+        std::filesystem::remove_all(dir, ec);
+        std::filesystem::create_directories(dir, ec);
+        LevelState level;
+        level.seed = 9u;
+        level.bannerDesigns.push_back({ { static_cast<uint8_t>(Banners::Cross), 14 }, { static_cast<uint8_t>(Banners::Border), 4 } });
+        LevelState::SavedBanner hung;
+        hung.x = 5; hung.y = 70; hung.z = -9; hung.dimension = 1; hung.design = 1;
+        level.banners.push_back(hung);
+        WorldSave::saveLevel(dir, level);
+        LevelState back;
+        check(WorldSave::loadLevel(dir, back) && back.bannerDesigns.size() == 1 && back.bannerDesigns[0].size() == 2 &&
+              back.bannerDesigns[0][1].first == Banners::Border && back.banners.size() == 1 && back.banners[0].z == -9 &&
+              back.banners[0].dimension == 1 && back.banners[0].design == 1, "banner designs and where banners hang are saved");
+        std::filesystem::remove_all(dir, ec);
     }
 
     void testMaps()
@@ -11407,7 +11524,7 @@ namespace
             const std::string path = dir + "/level.dat";
             std::error_code ec;
             const auto size = std::filesystem::file_size(path, ec);
-            if (!ec) std::filesystem::resize_file(path, size - sizeof(uint16_t) - sizeof(uint8_t) - 3 * sizeof(int) - sizeof(uint32_t) - sizeof(int32_t), ec);
+            if (!ec) std::filesystem::resize_file(path, size - sizeof(uint16_t) - sizeof(uint8_t) - 3 * sizeof(int) - sizeof(uint32_t) - sizeof(int32_t) - 2 * sizeof(uint32_t), ec);
 
             LevelState back;
             check(WorldSave::loadLevel(dir, back), "a level from before items moved up still loads");
@@ -13919,6 +14036,7 @@ int runSelfTest()
     testArchaeology();
     testStonecutter();
     testMaps();
+    testBanners();
     testMadeThings();
     testTheEndAndTheSea();
     testPathfinding();

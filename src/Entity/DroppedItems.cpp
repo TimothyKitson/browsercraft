@@ -50,7 +50,7 @@ namespace
     // blocks the mesher draws as crossed quads.
     bool isFlatSprite(StackId id)
     {
-        return isItem(id) || isCross(asBlock(id));
+        return isItem(id) || isCross(asBlock(id)) || isBanner(asBlock(id));
     }
 }
 

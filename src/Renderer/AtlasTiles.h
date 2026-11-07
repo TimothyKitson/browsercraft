@@ -384,6 +384,7 @@ namespace Tiles
         FletchingTopTile, FletchingFrontTile, FletchingSideTile,
         SmithingTopTile, SmithingBottomTile, SmithingSideTile, SmithingFrontTile,
         CartographyTopTile, CartographySide1Tile, CartographySide2Tile, CartographySide3Tile,
+        LoomTopTile, LoomBottomTile, LoomSideTile, LoomFrontTile,
 
         TileCount
     };
@@ -586,8 +587,10 @@ namespace Tiles
         ItemBrush, ItemSherdFirst, ItemSherdLast = ItemSherdFirst + 22, ItemSnifferEgg,
         ItemTemplateFirst, ItemTemplateLast = ItemTemplateFirst + 18,
         ItemCompass, ItemEmptyMap, ItemFilledMap,
+        ItemBannerFirst, ItemBannerLast = ItemBannerFirst + 15,
+        ItemBannerPatternFirst, ItemBannerPatternLast = ItemBannerPatternFirst + 5,
 
-        ItemTileEnd = ItemFilledMap + 1
+        ItemTileEnd = ItemBannerPatternLast + 1
     };
 
     // Ten progressively more broken overlay tiles for the mining animation.

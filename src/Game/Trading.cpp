@@ -42,6 +42,7 @@ namespace Trading
         if (isComposter(block)) { trade = Profession::Farmer; return true; }
         if (isLectern(block)) { trade = Profession::Librarian; return true; }
         if (isCauldron(block)) { trade = Profession::Leatherworker; return true; }
+        if (isLoom(block)) { trade = Profession::Shepherd; return true; }
         switch (furnaceBase(block))
         {
             case Blocks::BlastFurnace: case Blocks::BlastFurnaceLit: trade = Profession::Armorer; return true;
@@ -225,6 +226,7 @@ namespace Trading
                 buy(Items::EyeOfEnder, 1, 3, 6),
                 sell(3, Items::Paper, 18, 3),
                 sell(8, Blocks::Bookshelf, 1, 4),
+                sell(8, Items::GlobeBannerPattern, 1, 4),
             };
 
         case Profession::Cleric:
@@ -298,6 +300,7 @@ namespace Trading
                 sell(3, bedOf(0, 0, false), 1, 2),
                 sell(1, Blocks::WoolMagenta, 1, 3),
                 sell(1, Blocks::WoolYellow, 1, 3),
+                sell(3, static_cast<StackId>(Blocks::BannerFirst + 14 * 8 + 2), 1, 3),
                 sell(2, bedOf(14, 0, false), 1, 4),
             };
 

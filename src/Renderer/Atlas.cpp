@@ -1,5 +1,6 @@
 #include "Atlas.h"
 #include "World/Block.h"
+#include "Game/Banners.h"
 #include "Core/GLFunctions.h"
 
 #define STB_IMAGE_IMPLEMENTATION
@@ -5786,6 +5787,67 @@ namespace
         if (filled) for (int y = 4; y < 12; ++y) for (int x = 4; x < 12; ++x) if (hash2(x / 2, y / 2, 2802) > 0.5f) t.set(x, y, Color{ 110, 150, 80 });
     }
     void paintItemEmptyMap(Tile& t) { paintMapIn(t, false); }
+    void paintLoomWood(Tile& t, int salt)
+    {
+        t.fill(Color{ 152, 116, 74 });
+        t.speckle(5, salt);
+        for (int k = 0; k < Tile::N; ++k)
+        {
+            t.set(k, 0, Color{ 110, 80, 48 });
+            t.set(k, Tile::N - 1, Color{ 110, 80, 48 });
+        }
+    }
+    void paintLoomTopTile(Tile& t)
+    {
+        paintLoomWood(t, 2901);
+        for (int x = 3; x < 13; x += 2)
+            for (int y = 1; y < 15; ++y) t.set(x, y, Color{ 232, 228, 220 });
+    }
+    void paintLoomBottomTile(Tile& t) { paintLoomWood(t, 2902); }
+    void paintLoomSideTile(Tile& t)
+    {
+        paintLoomWood(t, 2903);
+        for (int y = 3; y < 13; ++y) { t.set(2, y, Color{ 96, 70, 40 }); t.set(13, y, Color{ 96, 70, 40 }); }
+        for (int x = 2; x < 14; ++x) t.set(x, 7, Color{ 96, 70, 40 });
+    }
+    void paintLoomFrontTile(Tile& t)
+    {
+        paintLoomWood(t, 2904);
+        for (int y = 3; y < 12; ++y)
+            for (int x = 3; x < 13; ++x)
+                t.set(x, y, ((x + y) & 1) ? Color{ 236, 232, 226 } : Color{ 210, 204, 196 });
+        for (int x = 2; x < 14; ++x) t.set(x, 12, Color{ 96, 70, 40 });
+    }
+    void paintBannerItemIn(Tile& t, int colour)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        const unsigned int rgb = Banners::dyeRgb(colour);
+        const Color cloth{ static_cast<uint8_t>((rgb >> 16) & 255u), static_cast<uint8_t>((rgb >> 8) & 255u), static_cast<uint8_t>(rgb & 255u) };
+        const Color shade{ static_cast<uint8_t>(cloth.r * 3 / 4), static_cast<uint8_t>(cloth.g * 3 / 4), static_cast<uint8_t>(cloth.b * 3 / 4) };
+        for (int x = 3; x < 13; ++x) t.set(x, 1, Color{ 112, 84, 50 });
+        for (int y = 2; y < 15; ++y)
+            for (int x = 4; x < 12; ++x)
+                t.set(x, y, (x == 4 || x == 11 || y == 14) ? shade : cloth);
+        t.set(7, 15, Color{ 112, 84, 50 });
+        t.set(8, 15, Color{ 112, 84, 50 });
+    }
+    void paintBannerPatternIn(Tile& t, int k)
+    {
+        static const int PATTERNS[6] = { Banners::Flower, Banners::Skull, Banners::Globe, Banners::Piglin, Banners::Flow, Banners::Guster };
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 2; y < 14; ++y)
+            for (int x = 2; x < 14; ++x)
+                t.set(x, y, (x == 2 || y == 13) ? Color{ 196, 184, 150 } : Color{ 232, 222, 190 });
+        const int pattern = PATTERNS[std::clamp(k, 0, 5)];
+        for (int y = 0; y < 8; ++y)
+            for (int x = 0; x < 8; ++x)
+            {
+                const int cx = 3 + x * 14 / 8;
+                const int cy = 12 + y * 16 / 8;
+                if (Banners::coverage(pattern, cx, cy) > 0.5f || Banners::coverage(pattern, cx + 1, cy + 1) > 0.5f)
+                    t.set(4 + x, 4 + y, Color{ 80, 64, 50 });
+            }
+    }
     void paintItemFilledMap(Tile& t) { paintMapIn(t, true); }
     void paintItemPitcherPlant(Tile& t)
     {
@@ -8564,6 +8626,10 @@ namespace
         { Tiles::CartographySide1Tile, paintCartographySide1Tile },
         { Tiles::CartographySide2Tile, paintCartographySide2Tile },
         { Tiles::CartographySide3Tile, paintCartographySide3Tile },
+        { Tiles::LoomTopTile, paintLoomTopTile },
+        { Tiles::LoomBottomTile, paintLoomBottomTile },
+        { Tiles::LoomSideTile, paintLoomSideTile },
+        { Tiles::LoomFrontTile, paintLoomFrontTile },
         { Tiles::SmithingTopTile, paintSmithingTopTile },
         { Tiles::SmithingBottomTile, paintSmithingBottomTile },
         { Tiles::SmithingSideTile, paintSmithingSideTile },
@@ -9206,6 +9272,12 @@ namespace
         { Tiles::ItemCompass, { "compass_16", nullptr, nullptr } },
         { Tiles::ItemEmptyMap, { "map", nullptr, nullptr } },
         { Tiles::ItemFilledMap, { "filled_map", nullptr, nullptr } },
+        { Tiles::ItemBannerPatternFirst + 0, { "flower_banner_pattern", nullptr, nullptr } },
+        { Tiles::ItemBannerPatternFirst + 1, { "skull_banner_pattern", nullptr, nullptr } },
+        { Tiles::ItemBannerPatternFirst + 2, { "globe_banner_pattern", nullptr, nullptr } },
+        { Tiles::ItemBannerPatternFirst + 3, { "piglin_banner_pattern", nullptr, nullptr } },
+        { Tiles::ItemBannerPatternFirst + 4, { "flow_banner_pattern", nullptr, nullptr } },
+        { Tiles::ItemBannerPatternFirst + 5, { "guster_banner_pattern", nullptr, nullptr } },
         { Tiles::ItemTemplateFirst, { "netherite_upgrade_smithing_template", nullptr, nullptr } },
         { Tiles::ItemTemplateFirst + 1, { "sentry_armor_trim_smithing_template", nullptr, nullptr } },
         { Tiles::ItemTemplateFirst + 2, { "vex_armor_trim_smithing_template", nullptr, nullptr } },
@@ -9439,6 +9511,10 @@ namespace
         { Tiles::CartographySide1Tile, { "cartography_table_side1", nullptr }, Tinting::None, 0, false },
         { Tiles::CartographySide2Tile, { "cartography_table_side2", nullptr }, Tinting::None, 0, false },
         { Tiles::CartographySide3Tile, { "cartography_table_side3", nullptr }, Tinting::None, 0, false },
+        { Tiles::LoomTopTile, { "loom_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::LoomBottomTile, { "loom_bottom", nullptr }, Tinting::None, 0, false },
+        { Tiles::LoomSideTile, { "loom_side", nullptr }, Tinting::None, 0, false },
+        { Tiles::LoomFrontTile, { "loom_front", nullptr }, Tinting::None, 0, false },
         { Tiles::SmithingTopTile, { "smithing_table_top", nullptr }, Tinting::None, 0, false },
         { Tiles::SmithingBottomTile, { "smithing_table_bottom", nullptr }, Tinting::None, 0, false },
         { Tiles::SmithingSideTile, { "smithing_table_side", nullptr }, Tinting::None, 0, false },
@@ -10593,6 +10669,18 @@ Atlas::Atlas()
         paintSherdIn(shard, k);
         blitPainted(Tiles::ItemSherdFirst + k, shard);
     }
+    for (int k = 0; k < 16; ++k)
+    {
+        Tile banner;
+        paintBannerItemIn(banner, k);
+        blitPainted(Tiles::ItemBannerFirst + k, banner);
+    }
+    for (int k = 0; k < 6; ++k)
+    {
+        Tile sheet;
+        paintBannerPatternIn(sheet, k);
+        blitPainted(Tiles::ItemBannerPatternFirst + k, sheet);
+    }
     for (int age = 0; age < 4; ++age)
     {
         Tile frost;
@@ -11538,6 +11626,8 @@ bool Atlas::hasPainter(int tileIndex)
     if (tileIndex >= Tiles::PotPatternFirst && tileIndex <= Tiles::PotPatternLast) return true;
     if (tileIndex >= Tiles::SnifferEggTileFirst && tileIndex <= Tiles::SnifferEggTileLast) return true;
     if (tileIndex >= Tiles::ItemTemplateFirst && tileIndex <= Tiles::ItemTemplateLast) return true;
+    if (tileIndex >= Tiles::ItemBannerFirst && tileIndex <= Tiles::ItemBannerLast) return true;
+    if (tileIndex >= Tiles::ItemBannerPatternFirst && tileIndex <= Tiles::ItemBannerPatternLast) return true;
     if (tileIndex >= Tiles::CutCopperTile && tileIndex <= Tiles::CopperTrapdoorTileLast) return true;
     if (tileIndex >= Tiles::ItemCopperDoorFirst && tileIndex <= Tiles::ItemCopperDoorLast) return true;
     if (tileIndex >= Tiles::CrackFirst &&

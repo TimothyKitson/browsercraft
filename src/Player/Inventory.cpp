@@ -3,6 +3,7 @@
 #include "Game/Armour.h"
 #include "Game/Crafting.h"
 #include "Game/Items.h"
+#include "Game/Banners.h"
 #include <algorithm>
 
 int Inventory::addStack(const ItemStack& stack)
@@ -15,13 +16,25 @@ int Inventory::addStack(const ItemStack& stack)
     // of the two sets of enchantments lost.
     if (stack.damage != 0 || stack.enchantments != 0 || maxStackOf(stack.id) == 1)
     {
+        int left = stack.count;
+        if (maxStackOf(stack.id) > 1)
+            for (int i = 0; i < MAIN_SLOTS && left > 0; ++i)
+            {
+                ItemStack& slot = m_slots[i];
+                if (slot.empty() || !slot.sameAs(stack) || slot.count >= maxStackOf(stack.id)) continue;
+                const int moved = std::min(left, maxStackOf(stack.id) - slot.count);
+                slot.count += moved;
+                left -= moved;
+            }
+        if (left <= 0) return 0;
         for (int i = 0; i < MAIN_SLOTS; ++i)
         {
             if (!m_slots[i].empty()) continue;
             m_slots[i] = stack;
+            m_slots[i].count = left;
             return 0;
         }
-        return stack.count;
+        return left;
     }
 
     return add(stack.id, stack.count);
@@ -39,7 +52,8 @@ int Inventory::add(StackId id, int count)
             ItemStack& stack = m_slots[i];
             if (count <= 0) break;
 
-            const bool matching = (!stack.empty() && stack.id == id && stack.count < maxStackOf(id));
+            const bool matching = (!stack.empty() && stack.id == id && stack.damage == 0 && stack.enchantments == 0 &&
+                                   stack.count < maxStackOf(id));
             const bool emptySlot = stack.empty();
 
             if ((pass == 0 && matching) || (pass == 1 && emptySlot))
@@ -144,7 +158,7 @@ bool Inventory::takeCraftResult()
     {
         m_cursor = result;
     }
-    else if (m_cursor.id == result.id && m_cursor.count + result.count <= maxStackOf(result.id))
+    else if (m_cursor.sameAs(result) && m_cursor.count + result.count <= maxStackOf(result.id))
     {
         m_cursor.count += result.count;
     }
@@ -174,7 +188,7 @@ int Inventory::findDestination(const ItemStack& stack, int begin, int end) const
 {
     // Topping up a stack you already have beats scattering across empties.
     for (int i = begin; i < end; ++i)
-        if (!m_slots[i].empty() && m_slots[i].id == stack.id && m_slots[i].count < maxStackOf(stack.id))
+        if (!m_slots[i].empty() && m_slots[i].sameAs(stack) && m_slots[i].count < maxStackOf(stack.id))
             return i;
     for (int i = begin; i < end; ++i)
         if (m_slots[i].empty()) return i;
@@ -232,7 +246,7 @@ void Inventory::leftClick(int index)
     // nothing at all.
     if (index == FURNACE_OUTPUT && !m_cursor.empty())
     {
-        if (!target.empty() && target.id == m_cursor.id) mergeInto(target, m_cursor);
+        if (!target.empty() && target.sameAs(m_cursor)) mergeInto(target, m_cursor);
         return;
     }
 
@@ -256,7 +270,7 @@ void Inventory::leftClick(int index)
         return;
     }
 
-    if (target.id == m_cursor.id)
+    if (target.sameAs(m_cursor))
     {
         mergeInto(m_cursor, target);  // leftovers stay on the cursor
         return;
@@ -296,7 +310,7 @@ void Inventory::rightClick(int index)
         return;
     }
 
-    if (target.id == m_cursor.id && target.count < maxStackOf(target.id))
+    if (target.sameAs(m_cursor) && target.count < maxStackOf(target.id))
     {
         target.count += 1;
         m_cursor.count -= 1;
@@ -382,6 +396,9 @@ bool Inventory::belongsIn(int index, StackId id)
     if (index == CUT_INPUT) return !isItem(id);
     if (index == CARTO_MAP) return id == Items::FilledMap;
     if (index == CARTO_EXTRA) return id == Items::Paper || id == Items::EmptyMap || id == Blocks::GlassPane;
+    if (index == LOOM_BANNER) return !isItem(id) && isBanner(asBlock(id));
+    if (index == LOOM_DYE) return isDye(id);
+    if (index == LOOM_PATTERN) return Banners::isPatternItem(id);
     if (index == BEACON_PAYMENT)
         return id == Items::IronIngot || id == Items::GoldIngot || id == Items::Emerald ||
                id == Items::Diamond || id == Items::NetheriteIngot;

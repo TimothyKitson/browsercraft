@@ -322,9 +322,6 @@ namespace Items
         ChorusFruit,
         PoppedChorusFruit,
         Brush,
-        Compass,
-        EmptyMap,
-        FilledMap,
         NetheriteUpgradeTemplate,
         SentryTemplate,
         VexTemplate,
@@ -367,6 +364,15 @@ namespace Items
         ShelterSherd,
         SkullSherd,
         SnortSherd,
+        Compass,
+        EmptyMap,
+        FilledMap,
+        FlowerBannerPattern,
+        SkullBannerPattern,
+        GlobeBannerPattern,
+        PiglinBannerPattern,
+        FlowBannerPattern,
+        GusterBannerPattern,
         Count
     };
 }

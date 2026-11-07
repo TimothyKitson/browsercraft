@@ -31,6 +31,8 @@
 #include "Game/Fluids.h"
 #include "Renderer/BeamRenderer.h"
 #include "Renderer/BookRenderer.h"
+#include "Renderer/BannerRenderer.h"
+#include "Game/Banners.h"
 #include "Renderer/ShadowRenderer.h"
 #include "Game/VillageLoot.h"
 #include "Game/StructureLoot.h"
@@ -270,6 +272,7 @@ private:
     float horseJumpStrength() const;
     BeamRenderer m_beams;
     BookRenderer m_books;
+    BannerRenderer m_bannerRenderer;
     ShadowRenderer m_shadows;
     void castShadows(const glm::mat4& view, const glm::mat4& projection);
     float m_beamClock = 0.0f;
@@ -518,6 +521,20 @@ private:
     void stowCartography();
     void takeCartoResult(bool toInventory);
     ItemStack cartoResult();
+    Banners::Library m_bannerLibrary;
+    std::map<std::array<int, 4>, int> m_bannerAt;
+    std::vector<BannerRenderer::Placed> nearbyBanners();
+    void drawBannerFlag(int colour, const Banners::Design& design, float x, float y, float w, float h, const glm::vec4& tint);
+    bool m_loomOpen = false;
+    glm::ivec3 m_loomBlock{ 0 };
+    int m_loomChoice = -1;
+    int m_loomScroll = 0;
+    StackId m_loomSeen = Blocks::Air;
+    void openLoom(const glm::ivec3& block);
+    void stowLoom();
+    void takeLoomResult(bool toInventory);
+    bool loomPreview(Banners::Design& design);
+    void drawBannerIcon(float x, float y, float size, int colour, const Banners::Design& design, const glm::vec4& tint);
     unsigned int mapTextureFor(int id);
     std::map<std::array<int, 4>, uint32_t> m_potSides;
     void pinPotPatterns();
@@ -1167,7 +1184,7 @@ private:
     // copies of the same geometry, and only one of them ever got fixed.
     struct SlotBox
     {
-        enum class Kind { Slot, Palette, Tab, Enchant, Trade, AnvilTake, Destroy, Scroll, TradeTake, BeaconPower, BeaconConfirm, BeaconCancel, GrindTake, CutRecipe, CutTake, SmithTake, CartoTake };
+        enum class Kind { Slot, Palette, Tab, Enchant, Trade, AnvilTake, Destroy, Scroll, TradeTake, BeaconPower, BeaconConfirm, BeaconCancel, GrindTake, CutRecipe, CutTake, SmithTake, CartoTake, LoomPattern, LoomTake };
         Kind kind = Kind::Slot;
         int index = 0;        // inventory slot, block id, or tab number
         float x = 0.0f, y = 0.0f, size = 0.0f;

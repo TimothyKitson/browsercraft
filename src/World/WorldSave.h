@@ -135,6 +135,14 @@ struct LevelState
     };
     std::vector<SavedPot> pots;
     int nextMapId = 1;
+    std::vector<std::vector<std::pair<uint8_t, uint8_t>>> bannerDesigns;
+    struct SavedBanner
+    {
+        int x = 0, y = 0, z = 0;
+        int8_t dimension = 0;
+        uint16_t design = 0;
+    };
+    std::vector<SavedBanner> banners;
 };
 
 namespace WorldSave

@@ -249,7 +249,7 @@ namespace
 
     bool drawsFlat(StackId id)
     {
-        return isItem(id) || isCross(asBlock(id));
+        return isItem(id) || isCross(asBlock(id)) || isBanner(asBlock(id));
     }
 }
 

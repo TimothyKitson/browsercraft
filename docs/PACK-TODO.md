@@ -189,12 +189,13 @@ Everything in the 1.21 textures zip the game doesn't use yet, turned into work. 
     - III. The sniffer, sniffer eggs, torchflower and pitcher seeds.
     - IV. Trail ruins, from the data zip.
     - Notes: what a brushed block gives follows the 1.21.1 archaeology tables for desert pyramids, desert wells, warm and cold ocean ruins and trail ruins; the armour trim templates and the relic disc from the rare ruin table wait for items 46 and 58. Simple ocean ruins came in so warm-water suspicious sand (and with it the sniffer egg) has somewhere to be. Trail ruins are generated in the same spirit as the real ones rather than from their structure files: buried terracotta, brick and mud brick rooms full of gravel in forests, jungles and snowy woods. Decorated pots keep their patterns in the level save; they do not hold items yet. The sniffer is done here, so item 62 is covered.
-46. New workstations, each a block plus its screen
+46. New workstations, each a block plus its screen (done)
     - I. Loom: banners and patterns.
     - II. Stonecutter: the recipe list.
     - III. Smithing table: netherite upgrade and trims.
     - IV. Cartography table: maps.
     - V. Fletching table: just the block (it's the fletcher's job site).
+    - Notes: stonecutting recipes come from the 1.21.1 data zip. Templates arrived here with their loot (structure chests, trial vaults, archaeology, the elder guardian), so item 59 is partly covered; the rib template sits in bastions because fortresses have no chests yet. Trims show on icons and on the inventory doll but not yet on the player model in the world, and the grindstone leaves them alone. The compass came in as a still icon for the empty map recipe; item 49 makes it point. Maps fill in while held, draw in the corner of the screen and save one file each; the table zooms, copies and locks them. Banners come in all sixteen colours with the 1.21.1 patterns except Mojang's logo; designs are kept in the level save so identical banners still stack, and a water cauldron washes off the top layer. The creeper charge pattern waits for mob heads, and banner tooltips do not list their layers yet.
 47. Sculk extras: calibrated sculk sensor and sculk vein.
 48. Creative-only blocks: command blocks (normal, chain, repeating), structure block, jigsaw, barrier, light block, structure void.
 

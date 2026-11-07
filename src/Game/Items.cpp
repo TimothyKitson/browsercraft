@@ -226,9 +226,6 @@ namespace
         { "Chorus Fruit",         Tiles::ItemChorusFruit,       64 },
         { "Popped Chorus Fruit",  Tiles::ItemPoppedChorusFruit, 64 },
         { "Brush", Tiles::ItemBrush, 1 },
-        { "Compass", Tiles::ItemCompass, 64 },
-        { "Empty Map", Tiles::ItemEmptyMap, 64 },
-        { "Map", Tiles::ItemFilledMap, 1 },
         { "Netherite Upgrade", Tiles::ItemTemplateFirst, 64 },
         { "Sentry Armor Trim", Tiles::ItemTemplateFirst + 1, 64 },
         { "Vex Armor Trim", Tiles::ItemTemplateFirst + 2, 64 },
@@ -271,6 +268,15 @@ namespace
         { "Shelter Pottery Sherd", Tiles::ItemSherdFirst + 20, 64 },
         { "Skull Pottery Sherd", Tiles::ItemSherdFirst + 21, 64 },
         { "Snort Pottery Sherd", Tiles::ItemSherdFirst + 22, 64 },
+        { "Compass", Tiles::ItemCompass, 64 },
+        { "Empty Map", Tiles::ItemEmptyMap, 64 },
+        { "Map", Tiles::ItemFilledMap, 1 },
+        { "Flower Charge Banner Pattern", Tiles::ItemBannerPatternFirst + 0, 1 },
+        { "Skull Charge Banner Pattern", Tiles::ItemBannerPatternFirst + 1, 1 },
+        { "Globe Banner Pattern", Tiles::ItemBannerPatternFirst + 2, 1 },
+        { "Snout Banner Pattern", Tiles::ItemBannerPatternFirst + 3, 1 },
+        { "Flow Banner Pattern", Tiles::ItemBannerPatternFirst + 4, 1 },
+        { "Guster Banner Pattern", Tiles::ItemBannerPatternFirst + 5, 1 },
     };
 
     static_assert(sizeof(ITEMS) / sizeof(ITEMS[0]) ==
@@ -307,6 +313,7 @@ int flatIconFor(BlockId id)
     if (id == Blocks::DragonEgg) return Tiles::DragonEggTile;
     if (id == Blocks::HeavyCore) return Tiles::HeavyCoreTile;
     if (isDecoratedPot(id)) return Tiles::PotSideTile;
+    if (isBanner(id)) return Tiles::ItemBannerFirst + bannerColour(id);
     if (isSnifferEgg(id)) return Tiles::ItemSnifferEgg;
     if (isEndRod(id)) return Tiles::EndRodTile;
     if (isDoublePlant(id))
@@ -370,6 +377,7 @@ int atlasTileFor(StackId id)
 int maxStackOf(StackId id)
 {
     if (isDecoratedPot(asBlock(id)) && !isItem(id)) return 1;
+    if (isBanner(asBlock(id)) && !isItem(id)) return 16;
     return isItem(id) ? itemInfo(id).maxStack : 64;
 }
 
@@ -474,6 +482,8 @@ StackId blockDrop(BlockId id)
     if (isChiseledBookshelf(id)) return shelfOf(2, 0);
     if (isSuspicious(id)) return Blocks::Air;
     if (isDecoratedPot(id)) return static_cast<StackId>(Blocks::DecoratedPotFirst + 2);
+    if (isLoom(id)) return static_cast<StackId>(Blocks::LoomFirst + 2);
+    if (isBanner(id)) return static_cast<StackId>(bannerOf(bannerColour(id), false, 2));
     if (isSnifferEgg(id)) return Blocks::SnifferEgg0;
     if (id == Blocks::ChorusPlant) return Items::ChorusFruit;
 

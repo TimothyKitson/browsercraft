@@ -208,6 +208,7 @@ namespace
         { Items::NetheriteUpgradeTemplate, 1, 1 },
         { Items::SnoutTemplate, 1, 1 },
         { Items::RibTemplate, 1, 1 },
+        { Items::PiglinBannerPattern, 1, 1 },
     };
 
     // A supply room, which is exactly what it sounds like: what you

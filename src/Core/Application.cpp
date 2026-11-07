@@ -833,6 +833,16 @@ void Application::loadLevel()
         m_potSides.clear();
         for (const LevelState::SavedPot& pot : state.pots)
             m_potSides[{ static_cast<int>(pot.dimension), pot.x, pot.y, pot.z }] = pot.sides;
+        m_bannerLibrary.clear();
+        for (const auto& saved : state.bannerDesigns)
+        {
+            Banners::Design design;
+            for (const auto& layer : saved) design.push_back(Banners::Layer{ layer.first, layer.second });
+            m_bannerLibrary.add(design);
+        }
+        m_bannerAt.clear();
+        for (const LevelState::SavedBanner& banner : state.banners)
+            m_bannerAt[{ static_cast<int>(banner.dimension), banner.x, banner.y, banner.z }] = banner.design;
 
         m_furnaces.clear();
         for (const LevelState::SavedFurnace& saved : state.furnaces)
@@ -1014,6 +1024,22 @@ void Application::saveLevel()
         saved.z = pot.first[3];
         saved.sides = pot.second;
         state.pots.push_back(saved);
+    }
+    for (const Banners::Design& design : m_bannerLibrary.all())
+    {
+        std::vector<std::pair<uint8_t, uint8_t>> saved;
+        for (const Banners::Layer& layer : design) saved.emplace_back(layer.pattern, layer.colour);
+        state.bannerDesigns.push_back(saved);
+    }
+    for (const auto& banner : m_bannerAt)
+    {
+        LevelState::SavedBanner saved;
+        saved.dimension = static_cast<int8_t>(banner.first[0]);
+        saved.x = banner.first[1];
+        saved.y = banner.first[2];
+        saved.z = banner.first[3];
+        saved.design = static_cast<uint16_t>(banner.second);
+        state.banners.push_back(saved);
     }
 
     for (int i = 0; i <= Inventory::TOTAL_SLOTS; ++i)
@@ -2067,7 +2093,7 @@ bool Application::frame()
         }
 
         if ((m_benchOpen || m_furnaceOpen || m_chestOpen || m_enchantOpen ||
-             m_anvilOpen || m_brewOpen || m_beaconOpen || m_grindOpen || m_cutOpen || m_smithOpen || m_cartoOpen) && playing())
+             m_anvilOpen || m_brewOpen || m_beaconOpen || m_grindOpen || m_cutOpen || m_smithOpen || m_cartoOpen || m_loomOpen) && playing())
         {
             const glm::ivec3 block = m_benchOpen    ? m_benchBlock
                                    : m_beaconOpen   ? m_beaconBlock
@@ -2075,6 +2101,7 @@ bool Application::frame()
                                    : m_cutOpen      ? m_cutBlock
                                    : m_smithOpen    ? m_smithBlock
                                    : m_cartoOpen    ? m_cartoBlock
+                                   : m_loomOpen     ? m_loomBlock
                                    : m_chestOpen    ? m_chestBlock
                                    : m_enchantOpen  ? m_enchantBlock
                                    : m_anvilOpen    ? m_anvilBlock
@@ -2090,6 +2117,7 @@ bool Application::frame()
               : m_cutOpen     ? there == Blocks::Stonecutter
               : m_smithOpen   ? there == Blocks::SmithingTable
               : m_cartoOpen   ? there == Blocks::CartographyTable
+              : m_loomOpen    ? isLoom(there)
               : m_chestOpen   ? (isContainerBlock(there) || isItemHolder(there))
               : m_enchantOpen ? there == Blocks::EnchantingTable
               : m_anvilOpen   ? isAnvil(there)
@@ -2167,7 +2195,7 @@ bool Application::frame()
             m_startupScreen == "attackhud" || m_startupScreen == "attackready" ||
             m_startupScreen == "attackhotbar" || m_startupScreen == "bossbars" ||
             m_startupScreen == "gamemode" || m_startupScreen == "spectator" ||
-            m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" ||
+            m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" ||
             m_startupScreen == "grinderror" || m_startupScreen == "woods" ||
             m_startupScreen == "cherry" || m_startupScreen == "mangrove" || m_startupScreen == "fungi" ||
             m_startupScreen == "stones" || m_startupScreen == "colours" || m_startupScreen == "candles" ||
@@ -2256,6 +2284,8 @@ bool Application::frame()
                                   m_startupScreen != "stonecutter" &&
                                   m_startupScreen != "smithing" &&
                                   m_startupScreen != "cartography" &&
+                                  m_startupScreen != "loom" &&
+                                  m_startupScreen != "banners" &&
                                   m_startupScreen != "grinderror" &&
                                   m_startupScreen != "woods" &&
                                   m_startupScreen != "cherry" &&
@@ -2648,7 +2678,7 @@ bool Application::frame()
             if (m_startupScreen == "attackhud" || m_startupScreen == "attackready" ||
                 m_startupScreen == "attackhotbar" || m_startupScreen == "bossbars" ||
                 m_startupScreen == "gamemode" || m_startupScreen == "spectator" ||
-                m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" ||
+                m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" ||
                 m_startupScreen == "grinderror" || m_startupScreen == "woods" ||
                 m_startupScreen == "cherry" || m_startupScreen == "mangrove" || m_startupScreen == "fungi" ||
                 m_startupScreen == "stones" || m_startupScreen == "colours" || m_startupScreen == "candles" ||
@@ -3386,6 +3416,67 @@ bool Application::frame()
                     m_inventory.slot(6) = ItemStack{ doorBaseOf(3), 3 };
                     m_inventory.slot(7) = ItemStack{ trapdoorBaseOf(5), 2 };
                     m_inventory.slot(8) = ItemStack{ Blocks::DarkOakSapling, 4 };
+                }
+                if (m_startupScreen == "loom" || m_startupScreen == "banners")
+                {
+                    m_devAttackStrength = 1.0f;
+                    auto design = [&](std::initializer_list<std::pair<int, int>> layers) {
+                        Banners::Design d;
+                        for (const auto& layer : layers) d.push_back(Banners::Layer{ static_cast<uint8_t>(layer.first), static_cast<uint8_t>(layer.second) });
+                        return m_bannerLibrary.idOf(d);
+                    };
+                    const int ids[6] = {
+                        design({ { Banners::StripeLeft, 14 }, { Banners::StripeRight, 11 } }),
+                        design({ { Banners::Cross, 15 }, { Banners::Border, 4 } }),
+                        design({ { Banners::Flower, 0 }, { Banners::TrianglesBottom, 13 } }),
+                        design({ { Banners::Gradient, 10 }, { Banners::Circle, 4 } }),
+                        design({ { Banners::HalfHorizontal, 3 }, { Banners::Rhombus, 0 }, { Banners::CurlyBorder, 15 } }),
+                        design({ { Banners::Bricks, 7 }, { Banners::Skull, 15 } }),
+                    };
+                    const int colours[6] = { 0, 14, 11, 4, 15, 8 };
+                    if (m_startupScreen == "loom")
+                    {
+                        const glm::ivec3 table(px + 2, py, pz);
+                        m_world->setBlock(table.x, table.y, table.z, static_cast<BlockId>(Blocks::LoomFirst + 3));
+                        openLoom(table);
+                        ItemStack plain{ static_cast<StackId>(bannerOf(14, false, 2)), 3 };
+                        plain.damage = ids[0];
+                        m_inventory.slot(Inventory::LOOM_BANNER) = plain;
+                        m_inventory.slot(Inventory::LOOM_DYE) = ItemStack{ Items::DyeYellow, 8 };
+                        m_loomChoice = 9;
+                        m_loomSeen = Blocks::Air;
+                        for (int k = 0; k < 6; ++k)
+                        {
+                            ItemStack shown{ static_cast<StackId>(bannerOf(colours[k], false, 2)), 1 };
+                            shown.damage = ids[k];
+                            m_inventory.slot(k) = shown;
+                        }
+                        m_inventory.slot(6) = ItemStack{ Items::FlowerBannerPattern, 1 };
+                        m_inventory.slot(7) = ItemStack{ Items::GlobeBannerPattern, 1 };
+                        m_inventory.slot(8) = ItemStack{ static_cast<StackId>(bannerOf(0, false, 2)), 16 };
+                    }
+                    else
+                    {
+                        for (int k = 0; k < 6; ++k)
+                        {
+                            const glm::ivec3 at(px + 7, py, pz - 5 + k * 2);
+                            m_world->setBlock(at.x, at.y, at.z, bannerOf(colours[k], false, 3));
+                            m_bannerAt[{ static_cast<int>(m_dimension), at.x, at.y, at.z }] = ids[k];
+                        }
+                        for (int z = -6; z <= 6; ++z)
+                            for (int y = 0; y < 5; ++y) m_world->setBlock(px + 11, py + y, pz + z, Blocks::StoneBricks);
+                        for (int k = 0; k < 5; ++k)
+                        {
+                            const glm::ivec3 at(px + 10, py + 3, pz - 4 + k * 2);
+                            m_world->setBlock(at.x, at.y, at.z, bannerOf((k * 3 + 1) % 16, true, 3));
+                            m_bannerAt[{ static_cast<int>(m_dimension), at.x, at.y, at.z }] = k == 0 ? 0 : ids[k];
+                        }
+                        m_world->setBlock(px + 3, py, pz + 7, static_cast<BlockId>(Blocks::LoomFirst + 3));
+                        m_inventory.setSelectedSlot(0);
+                        ItemStack held{ static_cast<StackId>(bannerOf(14, false, 2)), 1 };
+                        held.damage = ids[1];
+                        m_inventory.slot(0) = held;
+                    }
                 }
                 if (m_startupScreen == "cartography")
                 {
@@ -6146,6 +6237,8 @@ void Application::handleEvents()
         m_tradeScroll -= m_input.wheelDelta();
     else if (m_inventoryOpen && m_cutOpen && m_input.wheelDelta() != 0)
         m_cutScroll -= m_input.wheelDelta();
+    else if (m_inventoryOpen && m_loomOpen && m_input.wheelDelta() != 0)
+        m_loomScroll -= m_input.wheelDelta();
     else if (m_inventoryOpen && m_player.creative() && m_input.wheelDelta() != 0)
         m_paletteRow -= m_input.wheelDelta();
 
@@ -6782,6 +6875,7 @@ void Application::updateMining(float deltaTime)
                 if (id == Blocks::DeadBush) dropped = static_cast<int>(static_cast<uint32_t>(hit.block.x * 31 + hit.block.z * 17 + static_cast<int>(m_elapsedSeconds * 61.0f)) % 3u);
                 if (isDoublePlant(id) && doublePlantUpper(id) && drop == Items::WheatSeeds) dropped = 0;
                 if (isEnderChest(id)) { drop = silk ? chestOf(2, 2, 0) : Blocks::Obsidian; dropped = silk ? 1 : 8; }
+                if (isDecoratedPot(id) || isBanner(id)) drop = Blocks::Air;
                 if (drop != Blocks::Air)
                     m_drops.spawnFromBrokenBlock(hit.block, drop, dropped);
 
@@ -6940,6 +7034,21 @@ void Application::updateMining(float deltaTime)
                             const int sherd = Archaeology::potSide(sides, k);
                             m_drops.spawnFromBrokenBlock(hit.block, sherd >= 0 ? Archaeology::sherd(sherd) : static_cast<StackId>(Items::Brick), 1);
                         }
+                }
+            }
+            if (isBanner(id))
+            {
+                const std::array<int, 4> key = { static_cast<int>(m_dimension), hit.block.x, hit.block.y, hit.block.z };
+                const auto found = m_bannerAt.find(key);
+                const int design = found == m_bannerAt.end() ? 0 : found->second;
+                if (found != m_bannerAt.end()) m_bannerAt.erase(found);
+                if (!m_player.creative())
+                {
+                    ItemStack banner;
+                    banner.id = static_cast<StackId>(bannerOf(bannerColour(id), false, 2));
+                    banner.count = 1;
+                    banner.damage = design;
+                    m_drops.spawnStack(glm::vec3(hit.block) + glm::vec3(0.5f), banner);
                 }
             }
             if (isChiseledBookshelf(id) && shelfBooks(id) > 0 && !m_player.creative())
@@ -10544,6 +10653,24 @@ bool Application::useCauldron(const glm::ivec3& at, BlockId block)
         if (m_inventory.addStack(left) > 0) m_drops.spawnStack(m_player.position, left);
     };
 
+    if (!isItem(held.id) && isBanner(asBlock(held.id)) && held.damage > 0 && level > 0)
+    {
+        Banners::Design design = m_bannerLibrary.design(held.damage);
+        if (!design.empty()) design.pop_back();
+        ItemStack washed = held;
+        washed.count = 1;
+        washed.damage = m_bannerLibrary.idOf(design);
+        if (held.count <= 1) held = washed;
+        else
+        {
+            held.count -= 1;
+            if (m_inventory.addStack(washed) > 0) m_drops.spawnStack(m_player.position, washed);
+        }
+        if (!m_player.creative()) setLevel(level - 1);
+        m_audio.play(Sound::Pickup, 0.5f, 1.3f);
+        return true;
+    }
+
     if (held.id == Items::WaterBucket && level < CAULDRON_FULL)
     {
         setLevel(CAULDRON_FULL);
@@ -10975,6 +11102,12 @@ void Application::handlePlacement()
             if (isCauldron(used) && useCauldron(bench.block, used)) return;
             if (isLectern(used) && useLectern(bench.block, used)) return;
             if (used == Blocks::Grindstone && useGrindstone(bench.block)) return;
+            if (isLoom(used))
+            {
+                openLoom(bench.block);
+                m_audio.play(Sound::Click, 0.4f);
+                return;
+            }
             if (used == Blocks::CartographyTable)
             {
                 openCartography(bench.block);
@@ -12062,6 +12195,26 @@ void Application::handlePlacement()
         if (stack.enchantments != 0)
             m_potSides[{ static_cast<int>(m_dimension), target.x, target.y, target.z }] = stack.enchantments;
     }
+    if (isBanner(placing))
+    {
+        const glm::ivec3 n = hit.normal;
+        if (n.y < 0) return;
+        if (n.y == 0)
+            placing = bannerOf(bannerColour(placing), true, n.z < 0 ? 0 : n.x > 0 ? 1 : n.z > 0 ? 2 : 3);
+        else
+        {
+            const glm::vec3 look = m_camera.front;
+            const int toward = (std::fabs(look.x) > std::fabs(look.z)) ? (look.x > 0.0f ? 1 : 3) : (look.z > 0.0f ? 2 : 0);
+            placing = bannerOf(bannerColour(placing), false, (toward + 2) & 3);
+        }
+        m_bannerAt[{ static_cast<int>(m_dimension), target.x, target.y, target.z }] = stack.damage;
+    }
+    if (isLoom(placing))
+    {
+        const glm::vec3 look = m_camera.front;
+        const int toward = (std::fabs(look.x) > std::fabs(look.z)) ? (look.x > 0.0f ? 1 : 3) : (look.z > 0.0f ? 2 : 0);
+        placing = static_cast<BlockId>(Blocks::LoomFirst + ((toward + 2) & 3));
+    }
     if (isBell(placing) || isChiseledBookshelf(placing))
     {
         const glm::vec3 look = m_camera.front;
@@ -12484,6 +12637,7 @@ void Application::renderWorldShaded()
     queueBeams();
     m_beams.render(world);
     m_books.render(world, *m_world);
+    m_bannerRenderer.render(world, *m_world, nearbyBanners(), m_elapsedSeconds);
     world.bind();
     m_atlas.bind(0, 1, 2);
     renderPlayers(view, projection);
@@ -12617,6 +12771,7 @@ void Application::renderWorld()
     queueBeams();
     m_beams.render(m_chunkShader);
     m_books.render(m_chunkShader, *m_world);
+    m_bannerRenderer.render(m_chunkShader, *m_world, nearbyBanners(), m_elapsedSeconds);
     castShadows(view, projection);
     m_chunkShader.bind();
     m_atlas.bind(0, 1, 2);
@@ -13940,6 +14095,49 @@ bool Application::useFrame(const glm::ivec3& at, BlockId block)
 
     m_audio.play(Sound::Click, 0.5f, 0.8f);
     return true;
+}
+
+std::vector<BannerRenderer::Placed> Application::nearbyBanners()
+{
+    std::vector<BannerRenderer::Placed> out;
+    if (!m_world) return out;
+    for (auto it = m_bannerAt.begin(); it != m_bannerAt.end();)
+    {
+        const std::array<int, 4>& key = it->first;
+        const glm::vec3 centre(key[1] + 0.5f, key[2] + 0.5f, key[3] + 0.5f);
+        if (key[0] != static_cast<int>(m_dimension) || glm::length(centre - m_camera.position) > 72.0f)
+        {
+            ++it;
+            continue;
+        }
+        const BlockId block = m_world->getBlock(key[1], key[2], key[3]);
+        if (!isBanner(block))
+        {
+            const int cx = key[1] >= 0 ? key[1] / Chunk::SX : (key[1] + 1) / Chunk::SX - 1;
+            const int cz = key[3] >= 0 ? key[3] / Chunk::SZ : (key[3] + 1) / Chunk::SZ - 1;
+            const Chunk* chunk = m_world->chunkAt(cx, cz);
+            if (chunk && chunk->state.load() >= ChunkState::Generated) it = m_bannerAt.erase(it);
+            else ++it;
+            continue;
+        }
+        BannerRenderer::Placed placed;
+        placed.at = glm::ivec3(key[1], key[2], key[3]);
+        placed.colour = bannerColour(block);
+        placed.wall = bannerOnWall(block);
+        placed.facing = bannerFacing(block);
+        placed.design = m_bannerLibrary.design(it->second);
+        out.push_back(placed);
+        ++it;
+    }
+    return out;
+}
+
+void Application::drawBannerFlag(int colour, const Banners::Design& design, float x, float y, float w, float h, const glm::vec4& tint)
+{
+    const BannerRenderer::Cell cell = m_bannerRenderer.cellFor(colour, design);
+    const float texel = cell.size / static_cast<float>(Banners::SHEET);
+    m_ui.texturedQuad(m_bannerRenderer.texture(), x, y, w, h, cell.u0 + texel, cell.v0 + texel, cell.u0 + texel * 21.0f,
+                      cell.v0 + texel * 41.0f, tint);
 }
 
 void Application::pinPotPatterns()

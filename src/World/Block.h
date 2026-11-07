@@ -662,6 +662,8 @@ namespace Blocks
         DecoratedPotFirst, DecoratedPotLast = DecoratedPotFirst + 3,
         SnifferEgg0, SnifferEgg1, SnifferEgg2,
         Stonecutter, FletchingTable, SmithingTable, CartographyTable,
+        LoomFirst, LoomLast = LoomFirst + 3,
+        BannerFirst, BannerLast = BannerFirst + 127,
 
         Count
     };
@@ -817,6 +819,16 @@ inline BlockId suspiciousOf(int table, int stage)
 }
 inline bool isSnifferEgg(BlockId id) { return id >= Blocks::SnifferEgg0 && id <= Blocks::SnifferEgg2; }
 inline bool isDecoratedPot(BlockId id) { return id >= Blocks::DecoratedPotFirst && id <= Blocks::DecoratedPotLast; }
+inline bool isLoom(BlockId id) { return id >= Blocks::LoomFirst && id <= Blocks::LoomLast; }
+inline bool isBanner(BlockId id) { return id >= Blocks::BannerFirst && id <= Blocks::BannerLast; }
+inline int bannerColour(BlockId id) { return isBanner(id) ? (id - Blocks::BannerFirst) / 8 : 0; }
+inline bool bannerOnWall(BlockId id) { return isBanner(id) && ((id - Blocks::BannerFirst) & 4) != 0; }
+inline int bannerFacing(BlockId id) { return isBanner(id) ? (id - Blocks::BannerFirst) & 3 : 0; }
+inline BlockId bannerOf(int colour, bool wall, int facing)
+{
+    colour = colour < 0 ? 0 : colour > 15 ? 15 : colour;
+    return static_cast<BlockId>(Blocks::BannerFirst + colour * 8 + (wall ? 4 : 0) + (facing & 3));
+}
 inline bool isTarget(BlockId id) { return id == Blocks::Target || id == Blocks::TargetLit; }
 inline bool isIronDoor(BlockId id) { return id >= Blocks::IronDoorFirst && id <= Blocks::IronDoorLast; }
 inline bool isIronTrapdoor(BlockId id) { return id >= Blocks::IronTrapdoorFirst && id <= Blocks::IronTrapdoorLast; }
@@ -1883,6 +1895,8 @@ inline int blockFacing(BlockId id)
     if (isBell(id)) return id - Blocks::BellFirst;
     if (isChiseledBookshelf(id)) return shelfFacing(id);
     if (isDecoratedPot(id)) return id - Blocks::DecoratedPotFirst;
+    if (isLoom(id)) return id - Blocks::LoomFirst;
+    if (isBanner(id)) return bannerFacing(id);
     return 0;
 }
 
