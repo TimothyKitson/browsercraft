@@ -456,6 +456,12 @@ void Application::loadOptions()
         else if (std::sscanf(line, "recipeBook=%d", &value) == 1) m_recipeOpen = value != 0;
         else if (std::sscanf(line, "recipeFilter=%d", &value) == 1)
             for (int k = 0; k < 4; ++k) m_recipeFilter[k] = ((value >> k) & 1) != 0;
+        else if (std::strncmp(line, "tutorialStep=", 13) == 0)
+        {
+            std::string text(line + 13);
+            while (!text.empty() && (text.back() == '\n' || text.back() == '\r')) text.pop_back();
+            m_tutorialStep = tutorialStepFrom(text);
+        }
         else if (std::strncmp(line, "resourcePacks=", 14) == 0)
         {
             std::string text(line + 14);
@@ -478,6 +484,7 @@ void Application::saveOptions()
                  m_shadersOn ? 1 : 0, m_pbrEnabled ? 1 : 0, m_attackIndicator, m_leftHanded ? 1 : 0, m_distortion,
                  m_recipeOpen ? 1 : 0, filters);
     std::fprintf(file, "resourcePacks=%s\n", Packs::selectionLine(m_packSelection).c_str());
+    std::fprintf(file, "tutorialStep=%s\n", tutorialStepId(m_tutorialStep));
     std::fclose(file);
 #ifdef __EMSCRIPTEN__
     EM_ASM({
@@ -2543,6 +2550,7 @@ bool Application::frame()
             tickRaid(deltaTime);
             tickAdvancements(deltaTime);
             tickStats(deltaTime);
+            tickTutorial(deltaTime);
             unlockRecipes(deltaTime);
             tickCommandBlocks(deltaTime);
             tickFishing(deltaTime);
@@ -7429,6 +7437,26 @@ bool Application::frame()
             }
         }
         else if (m_startupScreen == "pause") m_screen = Screen::Paused;
+        else if (m_startupScreen == "tutorial" || m_startupScreen == "tutorialall")
+        {
+            m_tutorialForced = true;
+            m_tutorialStep = TutorialStep::Movement;
+            m_tutorialTicks = 99;
+            m_tutorialMoved = 22;
+            m_tutorialYaw = m_camera.yaw;
+            m_tutorialPitch = m_camera.pitch;
+            if (m_startupScreen == "tutorialall")
+            {
+                m_tutorialStep = TutorialStep::None;
+                const uint32_t look = addTutorialToast(1, "Look around", "Use your mouse to turn", true);
+                if (Toast* toast = toastBySerial(look)) toast->progress = toast->shownProgress = 0.7f;
+                const uint32_t tree = addTutorialToast(2, "Destroy the tree", "Hold down \x01Left Button\x01", true);
+                if (Toast* toast = toastBySerial(tree)) toast->progress = toast->shownProgress = 0.35f;
+                addTutorialToast(3, "Open your inventory", "Press \x01" "E\x01", false);
+                addTutorialToast(4, "Craft wooden planks", "The recipe book can help", false);
+                addTutorialToast(2, "Find a tree", "Punch it to collect wood", false);
+            }
+        }
         else if (m_startupScreen == "reloadtest")
         {
             m_packSelection.clear();
@@ -22163,6 +22191,7 @@ void Application::renderDeathScreen()
 #include "WorldScreens.inl"
 #include "ServerScreens.inl"
 #include "PackScreen.inl"
+#include "Tutorial.inl"
 #include "Core/Packs.h"
 
 void Application::renderDebugOverlay()

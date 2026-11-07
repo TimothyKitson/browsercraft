@@ -515,7 +515,8 @@ void Application::renderToasts()
     for (size_t i = 0; i < m_toasts.size() && slot < 5;)
     {
         Toast& toast = m_toasts[i];
-        if (toast.age >= 5.6f)
+        const bool tutorial = toast.tutorialIcon >= 0;
+        if ((!tutorial && toast.age >= 5.6f) || (tutorial && toast.hidden && toast.age - toast.hiddenAt >= 0.6f))
         {
             m_toasts.erase(m_toasts.begin() + static_cast<long>(i));
             continue;
@@ -527,11 +528,14 @@ void Application::renderToasts()
             if (toast.advancement >= 0 && Advancements::all()[static_cast<size_t>(toast.advancement)].frame == Advancements::Frame::Challenge)
                 m_audio.play(Sound::ChallengeComplete, 0.8f, 1.0f);
         }
-        const float shown = toast.age < 0.6f ? toast.age / 0.6f : toast.age > 5.0f ? std::max(0.0f, 1.0f - (toast.age - 5.0f) / 0.6f) : 1.0f;
+        const float shown = tutorial ? (toast.hidden ? std::max(0.0f, 1.0f - (toast.age - toast.hiddenAt) / 0.6f) : std::min(1.0f, toast.age / 0.6f))
+                          : toast.age < 0.6f ? toast.age / 0.6f : toast.age > 5.0f ? std::max(0.0f, 1.0f - (toast.age - 5.0f) / 0.6f) : 1.0f;
+        if (tutorial) toast.shownProgress += (toast.progress - toast.shownProgress) * 0.25f;
         const float wide = toast.systemTitle.empty() ? 160.0f : std::max(160.0f, 30.0f + UIRenderer::textWidth(toast.systemTitle, 1.0f));
         const float tx = w - wide * shown;
         const float ty = 32.0f * static_cast<float>(slot);
-        if (!toast.systemTitle.empty())
+        if (tutorial) drawTutorialToast(toast, tx, ty);
+        else if (!toast.systemTitle.empty())
         {
             if (!guiSprite("sprites/toast/system", tx, ty, wide, 32.0f))
             {
@@ -620,6 +624,9 @@ void Application::loadAdvancements(bool existing)
         m_recipesSeeded = true;
     }
     m_toasts.clear();
+    m_tutorialToast = 0;
+    m_tutorialLookToast = 0;
+    m_tutorialTicks = 0;
     loadStats();
 }
 
