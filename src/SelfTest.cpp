@@ -39,6 +39,7 @@
 #include "Game/Fluids.h"
 #include "Renderer/BookRenderer.h"
 #include "Renderer/PaintingRenderer.h"
+#include "Renderer/ArmorStandRenderer.h"
 #include "Game/Anvil.h"
 #include "Game/Archaeology.h"
 #include "Game/Stonecutting.h"
@@ -54,6 +55,7 @@
 #include "Game/Fireworks.h"
 #include "Game/Fangs.h"
 #include "Game/Paintings.h"
+#include "Game/ArmorStands.h"
 #include "Game/Discs.h"
 #include "World/Village.h"
 #include "Game/VillageLoot.h"
@@ -4658,6 +4660,92 @@ namespace
         int w = 0, h = 0;
         const std::vector<uint8_t> painted = PaintingRenderer::paintVariant(Paintings::find("skeleton"), w, h);
         check(w == 64 && h == 48 && painted.size() == static_cast<size_t>(64 * 48 * 4), "and each has a painted stand-in the size of the real one");
+    }
+
+    void testArmorStands()
+    {
+        section("armour stands: dressing, two hits, poses and the model");
+        using namespace ArmorStands;
+        check(preferredSlot(Items::DiamondHelmet) == Head && preferredSlot(Items::IronChestplate) == Chest &&
+                  preferredSlot(Items::GoldLeggings) == Legs && preferredSlot(Items::LeatherBoots) == Feet,
+              "armour goes where it is worn");
+        check(preferredSlot(Items::Elytra) == Chest && preferredSlot(static_cast<StackId>(Blocks::CarvedPumpkinFirst)) == Head &&
+                  preferredSlot(Items::DiamondSword) == MainHand,
+              "an elytra on the back, a pumpkin on the head, anything else in the hand");
+        check(placedYaw(0.0f) == 180.0f && placedYaw(100.0f) == 270.0f && placedYaw(-30.0f) == 135.0f,
+              "it is set down facing whoever placed it, to the nearest eighth of a turn");
+
+        Stand stand;
+        Outcome put = use(stand, ItemStack{ Items::IronHelmet, 1 }, 1.0f, false);
+        check(put.changed && put.hand.empty() && stand.gear[Head].id == Items::IronHelmet, "a helmet goes on its head");
+        put = use(stand, ItemStack{ Items::DiamondChestplate, 3 }, 1.0f, false);
+        check(put.changed && put.hand.count == 2 && stand.gear[Chest].id == Items::DiamondChestplate, "one from a stack goes on");
+        put = use(stand, ItemStack{ Items::IronChestplate, 2 }, 1.0f, false);
+        check(!put.changed && stand.gear[Chest].id == Items::DiamondChestplate, "but a stack will not swap for what is worn");
+        put = use(stand, ItemStack{ Items::IronChestplate, 1 }, 1.0f, false);
+        check(put.changed && put.hand.id == Items::DiamondChestplate && stand.gear[Chest].id == Items::IronChestplate,
+              "a single one swaps for it");
+        check(slotAtHeight(1.8f, stand) == Head && slotAtHeight(1.2f, stand) == Chest && slotAtHeight(0.3f, stand) == MainHand,
+              "an empty hand takes back whatever is where it reaches");
+        put = use(stand, ItemStack{}, 1.8f, false);
+        check(put.changed && put.hand.id == Items::IronHelmet && stand.gear[Head].empty(), "and the helmet comes off");
+        put = use(stand, ItemStack{ Items::GoldHelmet, 5 }, 1.0f, true);
+        check(put.changed && put.hand.count == 5 && stand.gear[Head].id == Items::GoldHelmet, "in creative it is put on without being spent");
+
+        check(!hit(stand, false), "the first blow only rocks it");
+        check(hit(stand, false), "a second straight after breaks it");
+        stand.sinceHit = 1.0f;
+        check(!hit(stand, false), "but not once it has settled");
+        check(hit(stand, true), "and a creative player breaks it at once");
+
+        float distance = 0.0f, height = 0.0f;
+        stand.feet = glm::vec3(0.5f, 64.0f, 0.5f);
+        check(rayHits(stand, glm::vec3(0.5f, 65.6f, -3.0f), glm::vec3(0.0f, 0.0f, 1.0f), 5.0f, distance, height) &&
+                  std::fabs(height - 1.6f) < 0.01f && std::fabs(distance - 3.25f) < 0.01f,
+              "a click finds it and says how high it landed");
+
+        check(poses().size() >= 12 && std::string(poses()[0].name) == "Default" &&
+                  poses()[0].angles.leftArm == glm::vec3(-10.0f, 0.0f, -10.0f) && poses()[0].angles.rightArm == glm::vec3(-15.0f, 0.0f, 10.0f),
+              "it stands in Minecraft's default pose and has a dozen to cycle through");
+
+        Stand plain;
+        const std::vector<BoxMesh::Box> boxes = ArmorStandRenderer::standBoxes(plain);
+        float top = -1e9f, bottom = 1e9f;
+        for (const BoxMesh::Box& box : boxes)
+        {
+            top = std::max(top, box.max.y);
+            bottom = std::min(bottom, box.min.y);
+        }
+        check(boxes.size() == 10 && bottom == 0.0f && top == 30.0f, "its ten pieces run from the base plate to the top of the head");
+        check(ArmorStandRenderer::armourBoxes(plain, Chest).size() == 3 && ArmorStandRenderer::armourBoxes(plain, Legs).size() == 3 &&
+                  ArmorStandRenderer::armourBoxes(plain, Head).size() == 1 && ArmorStandRenderer::armourBoxes(plain, Feet).size() == 2,
+              "and armour is drawn on Mojang's armour model");
+        const glm::vec3 hand = handPosition(plain, true);
+        check(hand.y > 0.5f && hand.y < 1.2f, "an item is held at the end of its arm");
+
+        ItemStack grid[9];
+        for (ItemStack& cell : grid) cell.clear();
+        grid[0] = grid[1] = grid[2] = grid[4] = grid[6] = grid[8] = ItemStack{ Items::Stick, 1 };
+        grid[7] = ItemStack{ static_cast<StackId>(Blocks::SmoothStoneSlab), 1 };
+        check(Crafting::match(grid, 3).id == Items::ArmorStand, "six sticks and a smooth stone slab make one");
+
+        const std::string dir = (std::filesystem::temp_directory_path() / "browsercraft_stand_test").string();
+        std::error_code ec;
+        std::filesystem::remove_all(dir, ec);
+        std::filesystem::create_directories(dir, ec);
+        LevelState level;
+        level.seed = 13u;
+        LevelState::SavedStand saved;
+        saved.x = 3.5f; saved.y = 70.0f; saved.z = -2.5f; saved.yaw = 135.0f; saved.pose = 4;
+        saved.gear[Chest] = LevelState::SavedGear{ static_cast<uint16_t>(Items::DiamondChestplate), 1, 17, 5u };
+        level.stands.push_back(saved);
+        WorldSave::saveLevel(dir, level);
+        LevelState back;
+        check(WorldSave::loadLevel(dir, back) && back.stands.size() == 1 && back.stands[0].yaw == 135.0f && back.stands[0].pose == 4 &&
+                  back.stands[0].gear[Chest].id == static_cast<uint16_t>(Items::DiamondChestplate) && back.stands[0].gear[Chest].damage == 17 &&
+                  back.stands[0].gear[Chest].enchantments == 5u,
+              "and they are kept with the level, dressed and posed");
+        std::filesystem::remove_all(dir, ec);
     }
 
     void testArchery()
@@ -12623,7 +12711,7 @@ namespace
             std::error_code ec;
             const auto size = std::filesystem::file_size(path, ec);
             if (!ec) std::filesystem::resize_file(path, size - sizeof(uint16_t) - sizeof(uint8_t) - 3 * sizeof(int) - sizeof(uint32_t) - sizeof(int32_t) - 6 * sizeof(uint32_t) -
-                                                        sizeof(uint8_t) - 3 * sizeof(float) - sizeof(int8_t) - sizeof(uint32_t) - 9 * sizeof(uint32_t) - sizeof(uint8_t), ec);
+                                                        sizeof(uint8_t) - 3 * sizeof(float) - sizeof(int8_t) - sizeof(uint32_t) - 10 * sizeof(uint32_t) - sizeof(uint8_t), ec);
 
             LevelState back;
             check(WorldSave::loadLevel(dir, back), "a level from before items moved up still loads");
@@ -15154,6 +15242,7 @@ int runSelfTest()
     testFangsZoglinIllusioner();
     testPackSheetsAndLlamas();
     testPaintings();
+    testArmorStands();
     testMadeThings();
     testTheEndAndTheSea();
     testPathfinding();

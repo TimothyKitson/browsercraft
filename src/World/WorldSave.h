@@ -238,6 +238,22 @@ struct LevelState
         std::string variant;
     };
     std::vector<SavedPainting> paintings;
+    struct SavedGear
+    {
+        uint16_t id = 0;
+        uint8_t count = 0;
+        uint16_t damage = 0;
+        uint32_t enchantments = 0;
+    };
+    struct SavedStand
+    {
+        float x = 0.0f, y = 0.0f, z = 0.0f;
+        float yaw = 0.0f;
+        uint8_t dimension = 0;
+        uint8_t pose = 0;
+        std::array<SavedGear, 6> gear{};
+    };
+    std::vector<SavedStand> stands;
 };
 
 namespace WorldSave

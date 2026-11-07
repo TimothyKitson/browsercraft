@@ -378,6 +378,7 @@ namespace
         { "Wolf Armor", Tiles::ItemWolfArmor, 1 },
         { "Glow Ink Sac", Tiles::ItemGlowInkSac, 64 },
         { "Painting", Tiles::ItemPainting, 64 },
+        { "Armor Stand", Tiles::ItemArmorStand, 16 },
     };
 
     static_assert(sizeof(ITEMS) / sizeof(ITEMS[0]) ==

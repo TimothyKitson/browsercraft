@@ -457,6 +457,7 @@ namespace Items
         WolfArmor,
         GlowInkSac,
         Painting,
+        ArmorStand,
         Count
     };
 }

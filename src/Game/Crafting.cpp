@@ -843,6 +843,10 @@ namespace
                          Items::Stick,   Blocks::Wool,   Items::Stick,
                          Items::Stick,   Items::Stick,   Items::Stick },
           0, Items::Painting, 1 },
+        { false, 3, 3, { Items::Stick,   Items::Stick,   Items::Stick,
+                         Blocks::Air,    Items::Stick,   Blocks::Air,
+                         Items::Stick,   Blocks::SmoothStoneSlab, Items::Stick },
+          0, Items::ArmorStand, 1 },
 
         // A cake: milk along the top, an egg between two sugars, and
         // wheat under it. Minecraft's, buckets and all -- and the

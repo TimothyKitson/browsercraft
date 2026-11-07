@@ -3819,6 +3819,18 @@ namespace
         t.speckle(4, 686);
     }
 
+    void paintItemArmorStand(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        const Color wood{ 168, 128, 76 }, dark{ 120, 88, 50 }, stone{ 150, 150, 150 };
+        for (int x = 3; x < 13; ++x) t.set(x, 13, stone), t.set(x, 14, Color{ 110, 110, 110 });
+        for (int y = 2; y < 13; ++y) t.set(7, y, wood), t.set(8, y, dark);
+        for (int x = 4; x < 12; ++x) t.set(x, 5, wood), t.set(x, 9, dark);
+        for (int y = 5; y < 11; ++y) t.set(4, y, dark), t.set(11, y, dark);
+        t.set(7, 1, wood);
+        t.set(8, 1, dark);
+    }
+
     void paintItemPainting(Tile& t)
     {
         t.fill(Color{ 0, 0, 0, 0 });
@@ -9040,6 +9052,7 @@ namespace
         { Tiles::ItemGlowInkSac, paintItemGlowInkSac },
         { Tiles::LlamaSpitTile, paintLlamaSpit },
         { Tiles::ItemPainting, paintItemPainting },
+        { Tiles::ItemArmorStand, paintItemArmorStand },
         { Tiles::ItemNetheriteScrap, paintItemNetheriteScrap },
         { Tiles::ItemNetheriteIngot, paintItemNetheriteIngot },
         { Tiles::ItemShulkerShell, paintItemShulkerShell },
@@ -9737,6 +9750,7 @@ namespace
         { Tiles::ItemWolfArmorOverlay, { "wolf_armor_overlay", nullptr, nullptr } },
         { Tiles::ItemGlowInkSac,    { "glow_ink_sac", nullptr, nullptr } },
         { Tiles::ItemPainting,      { "painting", nullptr, nullptr } },
+        { Tiles::ItemArmorStand,    { "armor_stand", nullptr, nullptr } },
         { Tiles::ItemLingeringPotion, { "lingering_potion", nullptr, nullptr } },
         { Tiles::BowPulling0,       { "bow_pulling_0", nullptr, nullptr } },
         { Tiles::BowPulling1,       { "bow_pulling_1", nullptr, nullptr } },

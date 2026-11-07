@@ -572,6 +572,7 @@ void Application::startWorld(GameMode mode, bool freshWorld)
     m_chests.setDimension(static_cast<int>(m_dimension));
     m_signs.setDimension(static_cast<int>(m_dimension));
     m_paintings.setDimension(static_cast<int>(m_dimension));
+    m_stands.setDimension(static_cast<int>(m_dimension));
     m_beaconPowers.clear();
     m_frames.setDimension(static_cast<int>(m_dimension));
     m_furnaces.setDimension(static_cast<int>(m_dimension));
@@ -670,6 +671,7 @@ void Application::travelTo(Dimension dimension)
     m_chests.setDimension(static_cast<int>(dimension));
     m_signs.setDimension(static_cast<int>(dimension));
     m_paintings.setDimension(static_cast<int>(dimension));
+    m_stands.setDimension(static_cast<int>(dimension));
     m_frames.setDimension(static_cast<int>(dimension));
     m_furnaces.setDimension(static_cast<int>(dimension));
 
@@ -1029,6 +1031,21 @@ void Application::loadLevel()
                 text[i] = saved.lines[i];
             m_signs.putIn(saved.dimension,
                           glm::ivec3(saved.x, saved.y, saved.z), text);
+        }
+        m_stands.clear();
+        for (const LevelState::SavedStand& saved : state.stands)
+        {
+            ArmorStands::Stand stand;
+            stand.feet = glm::vec3(saved.x, saved.y, saved.z);
+            stand.yaw = saved.yaw;
+            stand.pose = std::clamp<int>(saved.pose, 0, static_cast<int>(ArmorStands::poses().size()) - 1);
+            for (size_t k = 0; k < stand.gear.size(); ++k)
+            {
+                const LevelState::SavedGear& gear = saved.gear[k];
+                if (gear.count == 0) continue;
+                stand.gear[k] = ItemStack{ static_cast<StackId>(gear.id), gear.count, gear.damage, gear.enchantments };
+            }
+            m_stands.addIn(saved.dimension, stand);
         }
         m_paintings.clear();
         for (const LevelState::SavedPainting& saved : state.paintings)
@@ -1417,6 +1434,24 @@ void Application::saveLevel()
         for (size_t i = 0; i < saved.lines.size() && i < entry.second.size(); ++i)
             saved.lines[i] = entry.second[i];
         state.signs.push_back(saved);
+    }
+    for (const ArmorStandStore::Entry& entry : m_stands.all())
+    {
+        LevelState::SavedStand saved;
+        saved.x = entry.stand.feet.x;
+        saved.y = entry.stand.feet.y;
+        saved.z = entry.stand.feet.z;
+        saved.yaw = entry.stand.yaw;
+        saved.dimension = static_cast<uint8_t>(entry.dimension);
+        saved.pose = static_cast<uint8_t>(entry.stand.pose);
+        for (size_t k = 0; k < saved.gear.size(); ++k)
+        {
+            const ItemStack& gear = entry.stand.gear[k];
+            if (gear.empty()) continue;
+            saved.gear[k] = LevelState::SavedGear{ static_cast<uint16_t>(gear.id), static_cast<uint8_t>(std::min(gear.count, 255)),
+                                                   static_cast<uint16_t>(std::max(0, gear.damage)), gear.enchantments };
+        }
+        state.stands.push_back(saved);
     }
     for (const PaintingStore::Entry& entry : m_paintings.all())
     {
@@ -2198,6 +2233,7 @@ bool Application::frame()
             tickArmadillos(deltaTime);
             tickFangs(deltaTime);
             tickPaintings(deltaTime);
+            tickArmorStands(deltaTime);
             tickGlowSquids(deltaTime);
             tickJukeboxes(deltaTime);
             updatePortal(deltaTime);
@@ -2521,7 +2557,7 @@ bool Application::frame()
             m_startupScreen == "attackhud" || m_startupScreen == "attackready" ||
             m_startupScreen == "attackhotbar" || m_startupScreen == "bossbars" ||
             m_startupScreen == "gamemode" || m_startupScreen == "spectator" ||
-            m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" || m_startupScreen == "leads" || m_startupScreen == "anvilname" || m_startupScreen == "dials" || m_startupScreen == "spyglass" || m_startupScreen == "bundle" || m_startupScreen == "archery" || m_startupScreen == "food" || m_startupScreen == "materials" || m_startupScreen == "tropical" || m_startupScreen == "book" || m_startupScreen == "bookedit" || m_startupScreen == "booktip" || m_startupScreen == "boats" || m_startupScreen == "carts" || m_startupScreen == "fireworks" || m_startupScreen == "jukebox" || m_startupScreen == "potioncloud" || m_startupScreen == "armadillo" || m_startupScreen == "signs" || m_startupScreen == "glowsquid" || m_startupScreen == "fangs" || m_startupScreen == "zoglin" || m_startupScreen == "illusioner" || m_startupScreen == "llamas" || m_startupScreen == "paintings" ||
+            m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" || m_startupScreen == "leads" || m_startupScreen == "anvilname" || m_startupScreen == "dials" || m_startupScreen == "spyglass" || m_startupScreen == "bundle" || m_startupScreen == "archery" || m_startupScreen == "food" || m_startupScreen == "materials" || m_startupScreen == "tropical" || m_startupScreen == "book" || m_startupScreen == "bookedit" || m_startupScreen == "booktip" || m_startupScreen == "boats" || m_startupScreen == "carts" || m_startupScreen == "fireworks" || m_startupScreen == "jukebox" || m_startupScreen == "potioncloud" || m_startupScreen == "armadillo" || m_startupScreen == "signs" || m_startupScreen == "glowsquid" || m_startupScreen == "fangs" || m_startupScreen == "zoglin" || m_startupScreen == "illusioner" || m_startupScreen == "llamas" || m_startupScreen == "paintings" || m_startupScreen == "stands" ||
             m_startupScreen == "grinderror" || m_startupScreen == "woods" ||
             m_startupScreen == "cherry" || m_startupScreen == "mangrove" || m_startupScreen == "fungi" ||
             m_startupScreen == "stones" || m_startupScreen == "colours" || m_startupScreen == "candles" ||
@@ -2668,6 +2704,7 @@ bool Application::frame()
                                   m_startupScreen != "zoo" &&
                                   m_startupScreen != "llamas" &&
                                   m_startupScreen != "paintings" &&
+                                  m_startupScreen != "stands" &&
                                   m_startupScreen != "golem" &&
                                   m_startupScreen != "shulker" &&
                                   m_startupScreen != "nethermobs" &&
@@ -3034,7 +3071,7 @@ bool Application::frame()
             if (m_startupScreen == "attackhud" || m_startupScreen == "attackready" ||
                 m_startupScreen == "attackhotbar" || m_startupScreen == "bossbars" ||
                 m_startupScreen == "gamemode" || m_startupScreen == "spectator" ||
-                m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" || m_startupScreen == "leads" || m_startupScreen == "anvilname" || m_startupScreen == "dials" || m_startupScreen == "spyglass" || m_startupScreen == "bundle" || m_startupScreen == "archery" || m_startupScreen == "food" || m_startupScreen == "materials" || m_startupScreen == "tropical" || m_startupScreen == "book" || m_startupScreen == "bookedit" || m_startupScreen == "booktip" || m_startupScreen == "boats" || m_startupScreen == "carts" || m_startupScreen == "fireworks" || m_startupScreen == "jukebox" || m_startupScreen == "potioncloud" || m_startupScreen == "armadillo" || m_startupScreen == "signs" || m_startupScreen == "glowsquid" || m_startupScreen == "fangs" || m_startupScreen == "zoglin" || m_startupScreen == "illusioner" || m_startupScreen == "llamas" || m_startupScreen == "paintings" ||
+                m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" || m_startupScreen == "leads" || m_startupScreen == "anvilname" || m_startupScreen == "dials" || m_startupScreen == "spyglass" || m_startupScreen == "bundle" || m_startupScreen == "archery" || m_startupScreen == "food" || m_startupScreen == "materials" || m_startupScreen == "tropical" || m_startupScreen == "book" || m_startupScreen == "bookedit" || m_startupScreen == "booktip" || m_startupScreen == "boats" || m_startupScreen == "carts" || m_startupScreen == "fireworks" || m_startupScreen == "jukebox" || m_startupScreen == "potioncloud" || m_startupScreen == "armadillo" || m_startupScreen == "signs" || m_startupScreen == "glowsquid" || m_startupScreen == "fangs" || m_startupScreen == "zoglin" || m_startupScreen == "illusioner" || m_startupScreen == "llamas" || m_startupScreen == "paintings" || m_startupScreen == "stands" ||
                 m_startupScreen == "grinderror" || m_startupScreen == "woods" ||
                 m_startupScreen == "cherry" || m_startupScreen == "mangrove" || m_startupScreen == "fungi" ||
                 m_startupScreen == "stones" || m_startupScreen == "colours" || m_startupScreen == "candles" ||
@@ -3977,6 +4014,36 @@ bool Application::frame()
                         m_player.mode = GameMode::Creative;
                         m_camera.pitch = -6.0f;
                     }
+                    m_camera.addLook(0.0f, 0.0f, 0.0f);
+                }
+                if (m_startupScreen == "stands")
+                {
+                    m_devAttackStrength = 1.0f;
+                    for (int dx = 1; dx <= 9; ++dx)
+                        for (int dz = -7; dz <= 7; ++dz)
+                        {
+                            m_world->setBlock(px + dx, py - 1, pz + dz, Blocks::Grass);
+                            for (int dy = 0; dy <= 4; ++dy) m_world->setBlock(px + dx, py + dy, pz + dz, Blocks::Air);
+                        }
+                    auto stand = [&](float dz, float yaw, const char* pose, std::array<StackId, 6> gear) {
+                        ArmorStands::Stand s;
+                        s.feet = glm::vec3(static_cast<float>(px) + 5.5f, static_cast<float>(py), static_cast<float>(pz) + dz);
+                        s.yaw = yaw;
+                        for (int k = 0; k < static_cast<int>(ArmorStands::poses().size()); ++k)
+                            if (std::string(ArmorStands::poses()[static_cast<size_t>(k)].name) == pose) s.pose = k;
+                        for (size_t k = 0; k < gear.size(); ++k)
+                            if (gear[k] != Blocks::Air) s.gear[k] = ItemStack{ gear[k], 1 };
+                        m_stands.add(s);
+                    };
+                    stand(-4.5f, 180.0f, "Default", { Items::DiamondHelmet, Items::DiamondChestplate, Items::DiamondLeggings, Items::DiamondBoots, Items::DiamondSword, Blocks::Air });
+                    stand(-2.0f, 180.0f, "Salute", { static_cast<StackId>(Blocks::CarvedPumpkinFirst), Items::IronChestplate, Items::LeatherLeggings, Items::GoldBoots, Blocks::Air, Blocks::Air });
+                    stand(0.5f, 180.0f, "Zombie", { Blocks::Air, Blocks::Air, Blocks::Air, Blocks::Air, Blocks::Air, Blocks::Air });
+                    stand(3.0f, 180.0f, "Cancan A", { Items::NetheriteHelmet, Items::ChainmailChestplate, Blocks::Air, Blocks::Air, static_cast<StackId>(Blocks::Torch), Blocks::Air });
+                    stand(5.5f, 135.0f, "No Pose", { Blocks::Air, Blocks::Air, Blocks::Air, Blocks::Air, Blocks::Air, Blocks::Air });
+                    m_inventory.slot(0) = ItemStack{ Items::ArmorStand, 4 };
+                    m_inventory.setSelectedSlot(0);
+                    m_camera.yaw = 8.0f;
+                    m_camera.pitch = -8.0f;
                     m_camera.addLook(0.0f, 0.0f, 0.0f);
                 }
                 if (m_startupScreen == "paintings")
@@ -7755,7 +7822,7 @@ void Application::updateMining(float deltaTime)
     }
 
     if (m_keys.pressed(m_input, Action::Attack) && modeCanBuild(m_player.mode) &&
-        hitPainting(hit.hit ? hit.distance : REACH_DISTANCE))
+        (hitArmorStand(hit.hit ? hit.distance : REACH_DISTANCE) || hitPainting(hit.hit ? hit.distance : REACH_DISTANCE)))
     {
         m_heldItem.swing();
         m_hasTarget = false;
@@ -10547,8 +10614,11 @@ void Application::settleRedstone(const glm::ivec3& at)
                 const bool powered = Redstone::poweredAt(cells, x, y, z);
                 if (powered == pistonOut(here)) continue;
 
-                moved = powered ? Piston::extend(cells, x, y, z)
-                                : Piston::retract(cells, x, y, z);
+                const int length = powered ? Piston::lineLength(cells, x, y, z, pistonFacing(here)) : -1;
+                const bool shifted = powered ? Piston::extend(cells, x, y, z)
+                                             : Piston::retract(cells, x, y, z);
+                if (shifted && powered && length >= 0) pushArmorStands(glm::ivec3(x, y, z), pistonFacing(here), length + 1);
+                moved = moved || shifted;
             }
 
     if (moved) m_audio.play(Sound::DigStone, 0.5f, 1.6f);
@@ -11786,6 +11856,169 @@ namespace
     };
 }
 
+std::vector<ArmorStands::Stand> Application::standsHere(float reach) const
+{
+    std::vector<ArmorStands::Stand> out;
+    for (const ArmorStandStore::Entry& entry : m_stands.all())
+        if (entry.dimension == m_stands.dimension() && glm::length(entry.stand.feet - m_camera.position) < reach)
+            out.push_back(entry.stand);
+    return out;
+}
+
+bool Application::placeArmorStand(ItemStack& stack)
+{
+    const RaycastHit hit = m_world->raycast(m_camera.position, m_camera.front, REACH_DISTANCE);
+    if (!hit.hit) return false;
+    const glm::ivec3 at = hit.previous;
+    if (isSolid(m_world->getBlock(at.x, at.y, at.z)) || isSolid(m_world->getBlock(at.x, at.y + 1, at.z))) return false;
+    const glm::vec3 feet(static_cast<float>(at.x) + 0.5f, static_cast<float>(at.y), static_cast<float>(at.z) + 0.5f);
+    for (const ArmorStandStore::Entry& entry : m_stands.all())
+        if (entry.dimension == m_stands.dimension() && glm::length(entry.stand.feet - feet) < 0.5f) return false;
+    if (glm::length(glm::vec2(m_player.position.x - feet.x, m_player.position.z - feet.z)) < 0.55f &&
+        m_player.position.y < feet.y + 2.0f && m_player.position.y + 1.8f > feet.y)
+        return false;
+
+    ArmorStands::Stand stand;
+    stand.feet = feet;
+    stand.yaw = ArmorStands::placedYaw(m_camera.yaw);
+    m_stands.add(stand);
+    m_audio.play(Sound::DigWood, 0.7f, 0.9f);
+    m_heldItem.swing();
+    if (!m_player.creative())
+    {
+        stack.count -= 1;
+        if (stack.count <= 0) stack.clear();
+    }
+    return true;
+}
+
+bool Application::useArmorStand()
+{
+    const RaycastHit block = m_world->raycast(m_camera.position, m_camera.front, REACH_DISTANCE);
+    float nearest = block.hit ? block.distance : REACH_DISTANCE;
+    float height = 0.0f;
+    ArmorStands::Stand* found = nullptr;
+    for (ArmorStandStore::Entry& entry : m_stands.all())
+    {
+        if (entry.dimension != m_stands.dimension()) continue;
+        float distance = 0.0f, at = 0.0f;
+        if (ArmorStands::rayHits(entry.stand, m_camera.position, m_camera.front, REACH_DISTANCE, distance, at) && distance <= nearest)
+        {
+            nearest = distance;
+            height = at;
+            found = &entry.stand;
+        }
+    }
+    if (!found) return false;
+
+    ItemStack& held = m_inventory.selected();
+    if (m_player.sneaking && held.empty())
+    {
+        found->pose = (found->pose + 1) % static_cast<int>(ArmorStands::poses().size());
+        m_audio.play(Sound::DigWood, 0.5f, 1.4f);
+        return true;
+    }
+    const ArmorStands::Outcome outcome = ArmorStands::use(*found, held, height, m_player.creative());
+    if (!outcome.changed) return true;
+    held = outcome.hand;
+    m_audio.play(Sound::Pickup, 0.6f, 0.8f);
+    return true;
+}
+
+void Application::breakArmorStand(size_t index, bool drop)
+{
+    std::vector<ArmorStandStore::Entry>& all = m_stands.all();
+    if (index >= all.size()) return;
+    const ArmorStands::Stand stand = all[index].stand;
+    all.erase(all.begin() + static_cast<long>(index));
+    const glm::vec3 middle = stand.feet + glm::vec3(0.0f, 0.8f, 0.0f);
+    if (drop)
+    {
+        m_drops.spawn(middle, Items::ArmorStand, 1);
+        for (const ItemStack& gear : stand.gear)
+            if (!gear.empty()) m_drops.spawnStack(middle, gear);
+    }
+    m_audio.play(Sound::DigWood, 0.9f, 0.7f);
+    m_particles.spawnBlockBreak(glm::ivec3(glm::floor(middle)), Blocks::Planks);
+}
+
+bool Application::hitArmorStand(float blockDistance)
+{
+    float nearest = blockDistance;
+    size_t index = m_stands.all().size();
+    for (size_t i = 0; i < m_stands.all().size(); ++i)
+    {
+        const ArmorStandStore::Entry& entry = m_stands.all()[i];
+        if (entry.dimension != m_stands.dimension()) continue;
+        float distance = 0.0f, height = 0.0f;
+        if (ArmorStands::rayHits(entry.stand, m_camera.position, m_camera.front, REACH_DISTANCE, distance, height) && distance <= nearest)
+        {
+            nearest = distance;
+            index = i;
+        }
+    }
+    if (index >= m_stands.all().size()) return false;
+    ArmorStands::Stand& stand = m_stands.all()[index].stand;
+    if (ArmorStands::hit(stand, m_player.creative())) breakArmorStand(index, !m_player.creative());
+    else m_audio.play(Sound::DigWood, 0.6f, 1.1f);
+    return true;
+}
+
+void Application::tickArmorStands(float deltaTime)
+{
+    for (ArmorStandStore::Entry& entry : m_stands.all())
+    {
+        if (entry.dimension != m_stands.dimension()) continue;
+        ArmorStands::Stand& stand = entry.stand;
+        stand.sinceHit += deltaTime;
+        if (glm::length(stand.feet - m_player.position) > 64.0f) continue;
+        const int bx = static_cast<int>(std::floor(stand.feet.x));
+        const int bz = static_cast<int>(std::floor(stand.feet.z));
+        if (!m_world->chunkAt(static_cast<int>(std::floor(bx / static_cast<float>(Chunk::SX))),
+                              static_cast<int>(std::floor(bz / static_cast<float>(Chunk::SZ)))))
+            continue;
+        const int below = static_cast<int>(std::floor(stand.feet.y - 0.01f));
+        const BlockId under = m_world->getBlock(bx, below, bz);
+        const float top = static_cast<float>(below) + (isSolid(under) ? blockHeight(under) : 0.0f);
+        if (isSolid(under) && stand.feet.y - top < 0.02f)
+        {
+            stand.velocityY = 0.0f;
+            stand.feet.y = std::max(stand.feet.y, top);
+            continue;
+        }
+        stand.velocityY = std::max(stand.velocityY - 32.0f * deltaTime, -78.0f);
+        const float next = stand.feet.y + stand.velocityY * deltaTime;
+        const int landing = static_cast<int>(std::floor(next));
+        const BlockId floor = m_world->getBlock(bx, landing, bz);
+        if (isSolid(floor) && next < static_cast<float>(landing) + blockHeight(floor))
+        {
+            stand.feet.y = static_cast<float>(landing) + blockHeight(floor);
+            stand.velocityY = 0.0f;
+        }
+        else stand.feet.y = std::max(next, -64.0f);
+    }
+}
+
+void Application::pushArmorStands(const glm::ivec3& from, int facing, int length)
+{
+    int dx = 0, dz = 0;
+    Piston::step(facing, dx, dz);
+    for (ArmorStandStore::Entry& entry : m_stands.all())
+    {
+        if (entry.dimension != m_stands.dimension()) continue;
+        ArmorStands::Stand& stand = entry.stand;
+        const glm::ivec3 cell(static_cast<int>(std::floor(stand.feet.x)), static_cast<int>(std::floor(stand.feet.y + 0.01f)),
+                              static_cast<int>(std::floor(stand.feet.z)));
+        if (cell.y != from.y && cell.y != from.y - 1) continue;
+        for (int i = 1; i <= length; ++i)
+            if (cell.x == from.x + dx * i && cell.z == from.z + dz * i)
+            {
+                stand.feet += glm::vec3(static_cast<float>(dx), 0.0f, static_cast<float>(dz));
+                break;
+            }
+    }
+}
+
 bool Application::placePainting(ItemStack& stack)
 {
     const RaycastHit hit = m_world->raycast(m_camera.position, m_camera.front, REACH_DISTANCE);
@@ -12105,6 +12338,12 @@ void Application::applyBlast(const glm::vec3& at, float radius, int damage)
     m_audio.play(Sound::DigStone, 1.0f, 0.5f);
     m_particles.spawnBlockBreak(glm::ivec3(glm::floor(at)), Blocks::Gravel);
 
+    for (size_t i = m_stands.all().size(); i-- > 0;)
+    {
+        const ArmorStandStore::Entry& entry = m_stands.all()[i];
+        if (entry.dimension != m_stands.dimension()) continue;
+        if (glm::length(entry.stand.feet + glm::vec3(0.0f, 1.0f, 0.0f) - at) < radius) breakArmorStand(i, true);
+    }
     for (const Paintings::Placed& painting : m_paintings.near(at, radius + 4.0f))
     {
         const Paintings::Box box = Paintings::bounds(painting);
@@ -13214,6 +13453,8 @@ void Application::handlePlacement()
     }
 
     if (!m_keys.pressed(m_input, Action::Use)) return;
+
+    if (useArmorStand()) return;
 
     if (Mob* aimed = m_entities.pick(m_camera.position, m_camera.front, ATTACK_REACH))
         if (aimed->alive())
@@ -14800,6 +15041,11 @@ void Application::handlePlacement()
         if (modeCanBuild(m_player.mode)) placePainting(stack);
         return;
     }
+    if (stack.id == Items::ArmorStand)
+    {
+        if (modeCanBuild(m_player.mode)) placeArmorStand(stack);
+        return;
+    }
     if (stack.id == Items::TripwireHook) fromItem = hookOf(0, false, false);
     if (stack.id == Items::StringItem) fromItem = Blocks::Tripwire;
     if (isItem(stack.id) && fromItem == Blocks::Air) return;
@@ -15561,6 +15807,7 @@ void Application::renderWorldShaded()
     m_books.render(world, *m_world);
     m_fangRenderer.render(world, *m_world, m_fangs, m_fangClock / Fangs::TICK);
     m_paintingRenderer.render(world, *m_world, m_paintings.near(m_camera.position, 96.0f));
+    m_standRenderer.render(world, *m_world, standsHere(96.0f));
     m_bannerRenderer.render(world, *m_world, nearbyBanners(), m_elapsedSeconds);
     m_fireworkRenderer.render(view, projection, camera.right, camera.up);
     world.bind();
@@ -15699,6 +15946,7 @@ void Application::renderWorld()
     m_books.render(m_chunkShader, *m_world);
     m_fangRenderer.render(m_chunkShader, *m_world, m_fangs, m_fangClock / Fangs::TICK);
     m_paintingRenderer.render(m_chunkShader, *m_world, m_paintings.near(m_camera.position, 96.0f));
+    m_standRenderer.render(m_chunkShader, *m_world, standsHere(96.0f));
     m_bannerRenderer.render(m_chunkShader, *m_world, nearbyBanners(), m_elapsedSeconds);
     m_fireworkRenderer.render(view, projection, camera.right, camera.up);
     castShadows(view, projection);
@@ -18155,6 +18403,39 @@ void Application::pinFramedItems()
     }
     pinPotPatterns();
     pinCreativeMarkers();
+    for (const ArmorStands::Stand& stand : standsHere(32.0f))
+    {
+        const float yaw = glm::radians(stand.yaw);
+        const glm::vec3 side(-std::sin(yaw), 0.0f, std::cos(yaw));
+        static const int OUT_INDEX[4] = { 2, 3, 0, 1 };
+        const int dir = std::fabs(side.x) > std::fabs(side.z) ? (side.x > 0.0f ? 1 : 3) : (side.z > 0.0f ? 2 : 0);
+        for (const bool right : { true, false })
+        {
+            const ItemStack& held = stand.gear[right ? ArmorStands::MainHand : ArmorStands::OffHand];
+            if (held.empty()) continue;
+            DroppedItems::Pinned shown;
+            shown.position = ArmorStands::handPosition(stand, right);
+            shown.facing = OUT_INDEX[dir];
+            shown.item = held.id;
+            shown.outset = 0.0f;
+            m_drops.pin(shown);
+        }
+        const ItemStack& head = stand.gear[ArmorStands::Head];
+        if (!head.empty() && !isItem(head.id))
+        {
+            DroppedItems::Cargo cargo;
+            cargo.block = asBlock(head.id);
+            const int quarter = static_cast<int>(std::lround(stand.yaw / 90.0f));
+            const float rest = stand.yaw - static_cast<float>(quarter) * 90.0f;
+            static const int OUTWARD[4] = { 1, 2, 3, 0 };
+            if (isCarvedPumpkin(cargo.block))
+                cargo.block = static_cast<BlockId>(Blocks::CarvedPumpkinFirst + OUTWARD[((quarter % 4) + 4) % 4]);
+            cargo.centre = ArmorStands::headCentre(stand);
+            cargo.yaw = glm::radians(rest);
+            cargo.size = 0.62f;
+            m_drops.carry(cargo);
+        }
+    }
     if (m_bobber.active)
     {
         const glm::vec3 toward = m_camera.position - m_bobber.position;

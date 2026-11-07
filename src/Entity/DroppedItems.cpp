@@ -43,6 +43,13 @@ namespace
         const BlockInfo& info = blockInfo(asBlock(id));
         if (face == 2) return info.tileTop;
         if (face == 3) return info.tileBottom;
+        if (info.tileFront >= 0)
+        {
+            static const int FACING[6] = { 1, 3, -1, -1, 2, 0 };
+            const int facing = FACING[face];
+            if (facing == blockFacing(asBlock(id))) return info.tileFront;
+            if (info.tileBack >= 0 && facing == ((blockFacing(asBlock(id)) + 2) & 3)) return info.tileBack;
+        }
         return info.tileSide;
     }
 

@@ -33,6 +33,7 @@
 #include "Renderer/BookRenderer.h"
 #include "Renderer/FangRenderer.h"
 #include "Renderer/PaintingRenderer.h"
+#include "Renderer/ArmorStandRenderer.h"
 #include "Renderer/BannerRenderer.h"
 #include "Game/Banners.h"
 #include "Game/Fireworks.h"
@@ -529,6 +530,15 @@ private:
     bool hitPainting(float blockDistance);
     void tickPaintings(float deltaTime);
     void dropPainting(const Paintings::Placed& painting, bool drop);
+    bool placeArmorStand(ItemStack& stack);
+    bool useArmorStand();
+    bool hitArmorStand(float blockDistance);
+    void breakArmorStand(size_t index, bool drop);
+    void tickArmorStands(float deltaTime);
+    void pushArmorStands(const glm::ivec3& from, int facing, int length);
+    std::vector<ArmorStands::Stand> standsHere(float reach) const;
+    ArmorStandStore m_stands;
+    ArmorStandRenderer m_standRenderer;
     PaintingStore m_paintings;
     PaintingRenderer m_paintingRenderer;
     float m_paintingClock = 0.0f;

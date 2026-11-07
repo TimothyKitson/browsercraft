@@ -616,6 +616,7 @@ namespace Tiles
         ItemGlowInkSac,
         LlamaSpitTile,
         ItemPainting,
+        ItemArmorStand,
         ItemCompassFrameFirst, ItemCompassFrameLast = ItemCompassFrameFirst + 31,
         ItemClockFirst, ItemClockLast = ItemClockFirst + 63,
         ItemRecoveryFirst, ItemRecoveryLast = ItemRecoveryFirst + 31,

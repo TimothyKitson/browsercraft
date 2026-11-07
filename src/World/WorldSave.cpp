@@ -447,6 +447,23 @@ void WorldSave::saveLevel(const std::string& saveDirectory, const LevelState& st
         write(out, painting.facing);
         writeLine(out, painting.variant);
     }
+    write(out, static_cast<uint32_t>(state.stands.size()));
+    for (const LevelState::SavedStand& stand : state.stands)
+    {
+        write(out, stand.x);
+        write(out, stand.y);
+        write(out, stand.z);
+        write(out, stand.yaw);
+        write(out, stand.dimension);
+        write(out, stand.pose);
+        for (const LevelState::SavedGear& gear : stand.gear)
+        {
+            write(out, gear.id);
+            write(out, gear.count);
+            write(out, gear.damage);
+            write(out, gear.enchantments);
+        }
+    }
 }
 
 bool WorldSave::loadLevel(const std::string& saveDirectory, LevelState& out)
@@ -984,15 +1001,32 @@ bool WorldSave::loadLevel(const std::string& saveDirectory, LevelState& out)
                                                         out.signLooks.push_back(look);
                                                     }
                                                 uint32_t paintingCount = 0;
-                                                if (looksWhole && read(in, paintingCount))
+                                                bool paintingsWhole = looksWhole && read(in, paintingCount);
+                                                if (paintingsWhole)
                                                     for (uint32_t i = 0; i < paintingCount && i < 100000u; ++i)
                                                     {
                                                         LevelState::SavedPainting painting;
                                                         if (!read(in, painting.x) || !read(in, painting.y) || !read(in, painting.z) ||
                                                             !read(in, painting.dimension) || !read(in, painting.facing) ||
                                                             !readLine(in, painting.variant))
+                                                        {
+                                                            paintingsWhole = false;
                                                             break;
+                                                        }
                                                         out.paintings.push_back(painting);
+                                                    }
+                                                uint32_t standCount = 0;
+                                                if (paintingsWhole && read(in, standCount))
+                                                    for (uint32_t i = 0; i < standCount && i < 100000u; ++i)
+                                                    {
+                                                        LevelState::SavedStand stand;
+                                                        bool whole = read(in, stand.x) && read(in, stand.y) && read(in, stand.z) &&
+                                                                     read(in, stand.yaw) && read(in, stand.dimension) && read(in, stand.pose);
+                                                        for (LevelState::SavedGear& gear : stand.gear)
+                                                            whole = whole && read(in, gear.id) && read(in, gear.count) &&
+                                                                    read(in, gear.damage) && read(in, gear.enchantments);
+                                                        if (!whole) break;
+                                                        out.stands.push_back(stand);
                                                     }
                                             }
                                         }
@@ -1021,6 +1055,8 @@ bool WorldSave::loadLevel(const std::string& saveDirectory, LevelState& out)
         }
         for (LevelState::SavedChest& chest : out.chests)
             for (auto& slot : chest.slots) move(slot.first);
+        for (LevelState::SavedStand& stand : out.stands)
+            for (LevelState::SavedGear& gear : stand.gear) move(gear.id);
         out.itemBase = ITEM_BASE;
     }
     return true;
