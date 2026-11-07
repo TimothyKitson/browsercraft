@@ -158,6 +158,7 @@ public:
     GameMode mode = GameMode::Survival;
     int health = MAX_HEALTH;
     int difficulty = 2;
+    float flySpeedScale = 1.0f;
     static int scaledByDifficulty(int amount, int difficulty)
     {
         if (difficulty <= 0) return 0;

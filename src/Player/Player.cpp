@@ -659,7 +659,7 @@ void Player::update(float deltaTime, const World& world, const Controls& control
 
     // --- choose a target horizontal velocity ---
     float targetSpeed;
-    if (flying) targetSpeed = controls.sprint ? FLY_SPRINT_SPEED : FLY_SPEED;
+    if (flying) targetSpeed = (controls.sprint ? FLY_SPRINT_SPEED : FLY_SPEED) * (spectator() ? flySpeedScale : 1.0f);
     else if (inWater) targetSpeed = SWIM_SPEED * Effects::swimMultiplier(effects);
     else if (sneaking) targetSpeed = SNEAK_SPEED;
     else if (sprinting) targetSpeed = SPRINT_SPEED;

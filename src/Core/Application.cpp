@@ -7457,6 +7457,31 @@ bool Application::frame()
                 addTutorialToast(2, "Find a tree", "Punch it to collect wood", false);
             }
         }
+        else if (m_startupScreen == "spectatormenu" || m_startupScreen == "spectatormob")
+        {
+            setGameMode(GameMode::Spectator);
+            if (m_startupScreen == "spectatormenu")
+            {
+                openSpectatorMenu();
+                m_spectatorSlot = 1;
+                m_spectatorTouched = SDL_GetTicks() + 600000u;
+            }
+            else
+            {
+                const glm::vec3 flat = glm::normalize(glm::vec3(m_camera.front.x, 0.0f, m_camera.front.z));
+                const glm::ivec3 column = glm::ivec3(glm::floor(m_player.position + flat * 5.0f));
+                for (int y = column.y + 6; y > column.y - 10; --y)
+                    if (isSolid(m_world->getBlock(column.x, y - 1, column.z)) && !isSolid(m_world->getBlock(column.x, y, column.z)) &&
+                        !isSolid(m_world->getBlock(column.x, y + 1, column.z)))
+                    {
+                        const size_t before = m_entities.mobs().size();
+                        if (m_entities.spawnAt(MobId::Cow, glm::vec3(column.x + 0.5f, static_cast<float>(y), column.z + 0.5f), *m_world) &&
+                            m_entities.mobs().size() > before)
+                            m_spectatingMob = m_entities.mobs().back().serial();
+                        break;
+                    }
+            }
+        }
         else if (m_startupScreen == "reloadtest")
         {
             m_packSelection.clear();
@@ -8268,10 +8293,16 @@ void Application::updateGameplay(float deltaTime)
     }
 
     // --- hotbar selection ---
-    for (int i = 0; i < Inventory::HOTBAR_SLOTS; ++i)
-        if (m_input.wasKeyPressed(static_cast<SDL_Scancode>(SDL_SCANCODE_1 + i)))
-            m_inventory.setSelectedSlot(i);
-    if (!m_inventoryOpen) m_inventory.scrollSelection(m_input.wheelDelta());
+    if (m_player.spectator()) updateSpectatorInput();
+    else
+    {
+        m_spectatorMenu = false;
+        m_spectatingMob = 0;
+        for (int i = 0; i < Inventory::HOTBAR_SLOTS; ++i)
+            if (m_input.wasKeyPressed(static_cast<SDL_Scancode>(SDL_SCANCODE_1 + i)))
+                m_inventory.setSelectedSlot(i);
+        if (!m_inventoryOpen) m_inventory.scrollSelection(m_input.wheelDelta());
+    }
 
     // --- movement ---
     Player::Controls controls;
@@ -8358,6 +8389,7 @@ void Application::updateGameplay(float deltaTime)
     }
 
     m_camera.position = m_player.eyePosition();
+    followSpectatedMob();
     updateMovementAudio(positionBefore, m_player.jumpedThisUpdate());
     if (m_player.jumpedThisUpdate()) m_stats.add(Stats::Custom::Jump);
 
@@ -17372,6 +17404,7 @@ void Application::renderWorldShaded()
     if (inGame())
     {
         prepareMobModel();
+        m_mobModel.hiddenSerial = m_spectatingMob;
         m_mobModel.render(world, *m_world, m_entities);
     }
     m_atlas.bind(0, 1, 2);
@@ -17520,6 +17553,7 @@ void Application::renderWorld()
     if (inGame())
     {
         prepareMobModel();
+        m_mobModel.hiddenSerial = m_spectatingMob;
         m_mobModel.render(m_chunkShader, *m_world, m_entities);
     }
     m_atlas.bind(0, 1, 2);
@@ -21096,7 +21130,7 @@ void Application::renderHud()
 
     if (m_player.spectator())
     {
-        m_ui.textWithShadow(gameModeName(m_gameMode), 4.0f, h - 11.0f, 1.0f, glm::vec4(0.7f, 0.9f, 1.0f, 0.9f));
+        renderSpectatorMenu(w, h);
         m_ui.setScale(1.0f);
         return;
     }
@@ -22192,6 +22226,7 @@ void Application::renderDeathScreen()
 #include "ServerScreens.inl"
 #include "PackScreen.inl"
 #include "Tutorial.inl"
+#include "Spectator.inl"
 #include "Core/Packs.h"
 
 void Application::renderDebugOverlay()

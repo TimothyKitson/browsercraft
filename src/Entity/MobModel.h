@@ -34,6 +34,7 @@ public:
     // millisecond and there are only ever eight.
     const MobSkin& skinFor(MobId id);
 
+    uint32_t hiddenSerial = 0;
     std::function<int(const Mob&)> professionOf;
     std::function<int(const Mob&)> rankOf;
     ~MobModel();

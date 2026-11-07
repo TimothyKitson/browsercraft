@@ -1473,6 +1473,29 @@ private:
     bool inventoryHas(const std::function<bool(StackId)>& test) const;
     void tickTutorial(float deltaTime);
     void drawTutorialToast(const Toast& toast, float tx, float ty);
+    struct SpectatorCommand
+    {
+        enum class Kind : uint8_t { Blank, TeleportGroup, TeamGroup, Player, PreviousPage, NextPage, Close };
+        Kind kind = Kind::Blank;
+        std::string name;
+        bool enabled = false;
+        uint32_t player = 0;
+    };
+    bool m_spectatorMenu = false;
+    int m_spectatorSlot = -1;
+    int m_spectatorGroup = 0;
+    int m_spectatorPage = 0;
+    uint32_t m_spectatorTouched = 0;
+    uint32_t m_spectatingMob = 0;
+    std::vector<SpectatorCommand> spectatorGroup() const;
+    SpectatorCommand spectatorCommand(int slot) const;
+    void useSpectatorSlot(int slot);
+    void openSpectatorMenu();
+    void closeSpectatorMenu();
+    float spectatorMenuShown() const;
+    void updateSpectatorInput();
+    bool followSpectatedMob();
+    void renderSpectatorMenu(float w, float h);
     std::set<StackId> m_knownRecipes;
     bool m_recipesSeeded = false;
     StackId stackNamed(const std::string& id) const;
