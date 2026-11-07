@@ -41,6 +41,7 @@
 #include "Game/Anvil.h"
 #include "Game/Archaeology.h"
 #include "Game/Stonecutting.h"
+#include "Game/Smithing.h"
 #include "Game/Grindstone.h"
 #include "Game/Saplings.h"
 #include "Game/Shield.h"
@@ -4424,10 +4425,13 @@ namespace
             grid[4].id = Items::NetheriteIngot;
             grid[4].count = 1;
 
-            const CraftOutput made = Crafting::match(grid, 3);
-            check(made.valid(), "a diamond pickaxe and an ingot make something");
+            check(!Crafting::match(grid, 3).valid(), "the crafting grid no longer upgrades: that is the smithing table's");
+            const ItemStack plate{ Items::NetheriteUpgradeTemplate, 1 };
+            const Smithing::Result made = Smithing::combine(plate, grid[0], grid[4]);
+            check(made.valid(), "a template, a diamond pickaxe and an ingot make something");
             check(made.id == Items::NetheritePickaxe, "and what they make is the pickaxe");
-            check(made.count == 1, "one of it");
+            check(!Smithing::combine(ItemStack{ Items::CoastTemplate, 1 }, grid[0], grid[4]).valid(),
+                  "and a trim template does not upgrade it");
             check(made.enchantments == grid[0].enchantments,
                   "with the enchantment still on it");
             check(made.damage > 0, "and still worn");
@@ -4447,14 +4451,22 @@ namespace
         {
             // Two ingots, or anything else in the grid, is not an
             // upgrade: it has to be the tool and the one ingot.
-            ItemStack grid[9];
-            grid[0].id = Items::DiamondSword; grid[0].count = 1;
-            grid[1].id = Items::NetheriteIngot; grid[1].count = 2;
-            check(!Crafting::match(grid, 3).valid(), "two ingots is not an upgrade");
-
-            grid[1].count = 1;
-            grid[2].id = Blocks::Stone; grid[2].count = 1;
-            check(!Crafting::match(grid, 3).valid(), "nor is one with a rock beside it");
+            const ItemStack plate{ Items::NetheriteUpgradeTemplate, 1 };
+            check(!Smithing::combine(plate, ItemStack{ Items::IronSword, 1 }, ItemStack{ Items::NetheriteIngot, 1 }).valid(),
+                  "iron does not upgrade");
+            check(!Smithing::combine(plate, ItemStack{ Items::DiamondSword, 1 }, ItemStack{ Items::GoldIngot, 1 }).valid(),
+                  "and gold is not netherite");
+            ItemStack helmet{ Items::IronHelmet, 1 };
+            helmet.enchantments = Enchanting::withLevel(0, Enchanting::Kind::Protection, 2);
+            const Smithing::Result trimmed = Smithing::combine(ItemStack{ Items::WildTemplate, 1 }, helmet, ItemStack{ Items::Emerald, 1 });
+            check(trimmed.valid() && trimmed.id == Items::IronHelmet && Smithing::trimPattern(trimmed.enchantments) == 2 &&
+                  Smithing::trimMaterial(trimmed.enchantments) == 4, "a wild template and an emerald trim a helmet");
+            check(Enchanting::levelOf(trimmed.enchantments, Enchanting::Kind::Protection) == 2 &&
+                  Enchanting::listOf(trimmed.enchantments).size() == 1, "without touching its enchantments");
+            check(!Smithing::combine(ItemStack{ Items::WildTemplate, 1 }, ItemStack{ Items::IronSword, 1 }, ItemStack{ Items::Emerald, 1 }).valid(),
+                  "a sword cannot be trimmed");
+            check(!Enchanting::glints(static_cast<StackId>(Blocks::DecoratedPotFirst + 2), 5u), "a patterned pot does not glint");
+            check(!Enchanting::glints(Items::IronHelmet, Smithing::withTrim(0, 4, 4)), "nor does a trim alone");
         }
 
         section("the ghast");

@@ -5,6 +5,7 @@
 #include "Entity/PlayerAnimation.h"
 #include "Game/Archaeology.h"
 #include "Game/Stonecutting.h"
+#include "Game/Smithing.h"
 #include "Game/Golems.h"
 #include "Game/Farming.h"
 #include "Game/Fluids.h"
@@ -2058,12 +2059,13 @@ bool Application::frame()
         }
 
         if ((m_benchOpen || m_furnaceOpen || m_chestOpen || m_enchantOpen ||
-             m_anvilOpen || m_brewOpen || m_beaconOpen || m_grindOpen || m_cutOpen) && playing())
+             m_anvilOpen || m_brewOpen || m_beaconOpen || m_grindOpen || m_cutOpen || m_smithOpen) && playing())
         {
             const glm::ivec3 block = m_benchOpen    ? m_benchBlock
                                    : m_beaconOpen   ? m_beaconBlock
                                    : m_grindOpen    ? m_grindBlock
                                    : m_cutOpen      ? m_cutBlock
+                                   : m_smithOpen    ? m_smithBlock
                                    : m_chestOpen    ? m_chestBlock
                                    : m_enchantOpen  ? m_enchantBlock
                                    : m_anvilOpen    ? m_anvilBlock
@@ -2077,6 +2079,7 @@ bool Application::frame()
               : m_beaconOpen  ? there == Blocks::Beacon
               : m_grindOpen   ? there == Blocks::Grindstone
               : m_cutOpen     ? there == Blocks::Stonecutter
+              : m_smithOpen   ? there == Blocks::SmithingTable
               : m_chestOpen   ? (isContainerBlock(there) || isItemHolder(there))
               : m_enchantOpen ? there == Blocks::EnchantingTable
               : m_anvilOpen   ? isAnvil(there)
@@ -2154,7 +2157,7 @@ bool Application::frame()
             m_startupScreen == "attackhud" || m_startupScreen == "attackready" ||
             m_startupScreen == "attackhotbar" || m_startupScreen == "bossbars" ||
             m_startupScreen == "gamemode" || m_startupScreen == "spectator" ||
-            m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" ||
+            m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" ||
             m_startupScreen == "grinderror" || m_startupScreen == "woods" ||
             m_startupScreen == "cherry" || m_startupScreen == "mangrove" || m_startupScreen == "fungi" ||
             m_startupScreen == "stones" || m_startupScreen == "colours" || m_startupScreen == "candles" ||
@@ -2241,6 +2244,7 @@ bool Application::frame()
                                   m_startupScreen != "beaconui" &&
                                   m_startupScreen != "grindstone" &&
                                   m_startupScreen != "stonecutter" &&
+                                  m_startupScreen != "smithing" &&
                                   m_startupScreen != "grinderror" &&
                                   m_startupScreen != "woods" &&
                                   m_startupScreen != "cherry" &&
@@ -2633,7 +2637,7 @@ bool Application::frame()
             if (m_startupScreen == "attackhud" || m_startupScreen == "attackready" ||
                 m_startupScreen == "attackhotbar" || m_startupScreen == "bossbars" ||
                 m_startupScreen == "gamemode" || m_startupScreen == "spectator" ||
-                m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" ||
+                m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" ||
                 m_startupScreen == "grinderror" || m_startupScreen == "woods" ||
                 m_startupScreen == "cherry" || m_startupScreen == "mangrove" || m_startupScreen == "fungi" ||
                 m_startupScreen == "stones" || m_startupScreen == "colours" || m_startupScreen == "candles" ||
@@ -3371,6 +3375,21 @@ bool Application::frame()
                     m_inventory.slot(6) = ItemStack{ doorBaseOf(3), 3 };
                     m_inventory.slot(7) = ItemStack{ trapdoorBaseOf(5), 2 };
                     m_inventory.slot(8) = ItemStack{ Blocks::DarkOakSapling, 4 };
+                }
+                if (m_startupScreen == "smithing")
+                {
+                    m_devAttackStrength = 1.0f;
+                    const glm::ivec3 table(px + 2, py, pz);
+                    m_world->setBlock(table.x, table.y, table.z, Blocks::SmithingTable);
+                    openSmithing(table);
+                    m_inventory.slot(Inventory::SMITH_TEMPLATE) = ItemStack{ Items::CoastTemplate, 1 };
+                    ItemStack chest{ Items::DiamondChestplate, 1 };
+                    chest.enchantments = Enchanting::withLevel(0, Enchanting::Kind::Protection, 3);
+                    m_inventory.slot(Inventory::SMITH_BASE) = chest;
+                    m_inventory.slot(Inventory::SMITH_ADDITION) = ItemStack{ Items::Emerald, 4 };
+                    ItemStack worn{ Items::IronHelmet, 1 };
+                    worn.enchantments = Smithing::withTrim(0, 3, 5);
+                    m_inventory.slot(Inventory::ARMOR_FIRST) = worn;
                 }
                 if (m_startupScreen == "stonecutter")
                 {
@@ -6542,7 +6561,7 @@ void Application::updateMining(float deltaTime)
                                             glm::vec3(0.0f, target->type().height * 0.6f, 0.0f);
                     if (critical)
                         sprites(SpriteParticles::Kind::Crit, chest, 10, 0.3f, 2.5f, 0.2f, 0.5f);
-                    if (m_inventory.selected().enchantments != 0)
+                    if (Enchanting::any(m_inventory.selected().enchantments))
                         sprites(SpriteParticles::Kind::EnchantedHit, chest, 8, 0.3f, 2.0f, 0.2f, 0.5f);
                     sprites(SpriteParticles::Kind::Damage, chest, std::clamp(blow / 2, 1, 6), 0.3f, 0.8f,
                             0.22f, 0.7f, 2.0f);
@@ -10779,6 +10798,12 @@ void Application::handlePlacement()
             if (isCauldron(used) && useCauldron(bench.block, used)) return;
             if (isLectern(used) && useLectern(bench.block, used)) return;
             if (used == Blocks::Grindstone && useGrindstone(bench.block)) return;
+            if (used == Blocks::SmithingTable)
+            {
+                openSmithing(bench.block);
+                m_audio.play(Sound::Click, 0.4f);
+                return;
+            }
             if (used == Blocks::Stonecutter)
             {
                 openStonecutter(bench.block);
@@ -12606,7 +12631,7 @@ void Application::renderHand()
                       // -Wextra objects to.
                       held.empty() ? static_cast<StackId>(Blocks::Air) : held.id,
                       sky, blockLight, m_player.sneaking, m_player.blocking);
-    if (!m_activeShader && !held.empty() && held.enchantments != 0)
+    if (!m_activeShader && !held.empty() && Enchanting::glints(held.id, held.enchantments))
         m_heldItem.renderGlint(m_chunkShader, glintTexture(false), glintShift());
 }
 
@@ -13579,6 +13604,9 @@ void Application::updateMobs(float deltaTime)
         // A drowned carries a trident about one time in eight, which
         // is roughly Minecraft's rate. A chance like this cannot be a
         // drop slot: those always pay.
+        if (death.type == MobId::ElderGuardian &&
+            static_cast<uint32_t>(where.x * 31.0f + where.z * 17.0f + m_elapsedSeconds * 101.0f) % 5u == 0u)
+            m_drops.spawn(where, Items::TideTemplate, 1);
         if (death.type == MobId::Drowned)
         {
             const uint32_t roll = static_cast<uint32_t>(

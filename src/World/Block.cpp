@@ -2215,6 +2215,7 @@ namespace
         { "Sniffer Egg", SnifferEggTileFirst + 16, SnifferEggTileFirst + 17, SnifferEggTileFirst + 12, true, false, RenderType::Lush, 0, 0.5f },
         { "Stonecutter", StonecutterTopTile, StonecutterBottomTile, StonecutterSideTile, true, false, RenderType::Lush, 0, 3.5f },
         { "Fletching Table", FletchingTopTile, Planks, FletchingSideTile, true, true, RenderType::Cube, 0, 2.5f, FletchingFrontTile, FletchingFrontTile },
+        { "Smithing Table", SmithingTopTile, SmithingBottomTile, SmithingSideTile, true, true, RenderType::Cube, 0, 2.5f, SmithingFrontTile, SmithingFrontTile },
     };
 }
 
@@ -2387,7 +2388,7 @@ const char* blockSoundGroup(BlockId id)
     if (isSuspiciousSand(id)) return "sand";
     if (isSuspiciousGravel(id)) return "gravel";
     if (isDecoratedPot(id) || id == Blocks::Stonecutter) return "stone";
-    if (id == Blocks::FletchingTable) return "wood";
+    if (id == Blocks::FletchingTable || id == Blocks::SmithingTable) return "wood";
     if (id == Blocks::Target || id == Blocks::TargetLit) return "grass";
     if (isEarthy(id)) return "gravel";
     if (isFlowerPot(id)) return "stone";
@@ -2560,7 +2561,7 @@ Material blockMaterial(BlockId id)
     if (isSuspiciousSand(id)) return Material::Sand;
     if (isSuspiciousGravel(id)) return Material::Dirt;
     if (isDecoratedPot(id) || isSnifferEgg(id)) return Material::Plant;
-    if (id == Blocks::FletchingTable) return Material::Wood;
+    if (id == Blocks::FletchingTable || id == Blocks::SmithingTable) return Material::Wood;
     if (id == Blocks::Cobweb) return Material::Wool;
     if (id == Blocks::SoulTorch || isFire(id)) return Material::Plant;
     if (id == Blocks::SoulCampfire) return Material::Wood;

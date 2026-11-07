@@ -5733,6 +5733,33 @@ namespace
         for (int x = 0; x < Tile::N; ++x) t.set(x, 10, Color{ 120, 90, 60 });
         t.speckle(6, 2603);
     }
+    void paintSmithingTopTile(Tile& t)
+    {
+        t.fill(Color{ 52, 52, 60 });
+        for (int k = 0; k < Tile::N; ++k) { t.set(k, 0, Color{ 30, 30, 36 }); t.set(k, 15, Color{ 30, 30, 36 }); t.set(0, k, Color{ 30, 30, 36 }); t.set(15, k, Color{ 30, 30, 36 }); }
+        t.speckle(8, 2701);
+    }
+    void paintSmithingBottomTile(Tile& t) { t.fill(Color{ 92, 66, 44 }); t.speckle(8, 2702); }
+    void paintSmithingSideTile(Tile& t)
+    {
+        t.fill(Color{ 92, 66, 44 });
+        for (int x = 0; x < Tile::N; ++x) { t.set(x, 0, Color{ 52, 52, 60 }); t.set(x, 1, Color{ 52, 52, 60 }); }
+        for (int y = 2; y < Tile::N; ++y) { t.set(3, y, Color{ 70, 50, 34 }); t.set(12, y, Color{ 70, 50, 34 }); }
+    }
+    void paintSmithingFrontTile(Tile& t)
+    {
+        paintSmithingSideTile(t);
+        for (int y = 5; y < 11; ++y) for (int x = 5; x < 11; ++x) t.set(x, y, Color{ 150, 150, 156 });
+    }
+    void paintTemplateIn(Tile& t, int k)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 2; y < 14; ++y)
+            for (int x = 3; x < 13; ++x)
+                t.set(x, y, (x == 3 || x == 12 || y == 2 || y == 13) ? Color{ 40, 64, 74 } : Color{ 70, 106, 116 });
+        const Color mark = k == 0 ? Color{ 80, 60, 60 } : Color{ 200, 220, 230 };
+        for (int i = 0; i < 6; ++i) t.set(5 + static_cast<int>(hash2(k, i, 2703) * 6.0f), 4 + static_cast<int>(hash2(i, k, 2704) * 8.0f), mark);
+    }
     void paintItemPitcherPlant(Tile& t)
     {
         paintDoubleIn(t, true, Color{ 100, 170, 190 }, 1333);
@@ -8503,6 +8530,10 @@ namespace
         { Tiles::DustLine1Off, paintRedstoneDust },
         { Tiles::DustLine1On, paintRedstoneDustLit },
         { Tiles::LeverHandle, paintLever },
+        { Tiles::SmithingTopTile, paintSmithingTopTile },
+        { Tiles::SmithingBottomTile, paintSmithingBottomTile },
+        { Tiles::SmithingSideTile, paintSmithingSideTile },
+        { Tiles::SmithingFrontTile, paintSmithingFrontTile },
         { Tiles::StonecutterTopTile, paintStonecutterTopTile },
         { Tiles::StonecutterSideTile, paintStonecutterSideTile },
         { Tiles::StonecutterBottomTile, paintStonecutterBottomTile },
@@ -9138,6 +9169,25 @@ namespace
         { Tiles::ItemRawGold, { "raw_gold", nullptr, nullptr } },
         { Tiles::ItemAmethystShard, { "amethyst_shard", nullptr, nullptr } },
         { Tiles::ItemTripwireHook, { "../block/tripwire_hook", nullptr, nullptr } },
+        { Tiles::ItemTemplateFirst, { "netherite_upgrade_smithing_template", nullptr, nullptr } },
+        { Tiles::ItemTemplateFirst + 1, { "sentry_armor_trim_smithing_template", nullptr, nullptr } },
+        { Tiles::ItemTemplateFirst + 2, { "vex_armor_trim_smithing_template", nullptr, nullptr } },
+        { Tiles::ItemTemplateFirst + 3, { "wild_armor_trim_smithing_template", nullptr, nullptr } },
+        { Tiles::ItemTemplateFirst + 4, { "coast_armor_trim_smithing_template", nullptr, nullptr } },
+        { Tiles::ItemTemplateFirst + 5, { "dune_armor_trim_smithing_template", nullptr, nullptr } },
+        { Tiles::ItemTemplateFirst + 6, { "wayfinder_armor_trim_smithing_template", nullptr, nullptr } },
+        { Tiles::ItemTemplateFirst + 7, { "raiser_armor_trim_smithing_template", nullptr, nullptr } },
+        { Tiles::ItemTemplateFirst + 8, { "shaper_armor_trim_smithing_template", nullptr, nullptr } },
+        { Tiles::ItemTemplateFirst + 9, { "host_armor_trim_smithing_template", nullptr, nullptr } },
+        { Tiles::ItemTemplateFirst + 10, { "ward_armor_trim_smithing_template", nullptr, nullptr } },
+        { Tiles::ItemTemplateFirst + 11, { "silence_armor_trim_smithing_template", nullptr, nullptr } },
+        { Tiles::ItemTemplateFirst + 12, { "tide_armor_trim_smithing_template", nullptr, nullptr } },
+        { Tiles::ItemTemplateFirst + 13, { "snout_armor_trim_smithing_template", nullptr, nullptr } },
+        { Tiles::ItemTemplateFirst + 14, { "rib_armor_trim_smithing_template", nullptr, nullptr } },
+        { Tiles::ItemTemplateFirst + 15, { "eye_armor_trim_smithing_template", nullptr, nullptr } },
+        { Tiles::ItemTemplateFirst + 16, { "spire_armor_trim_smithing_template", nullptr, nullptr } },
+        { Tiles::ItemTemplateFirst + 17, { "flow_armor_trim_smithing_template", nullptr, nullptr } },
+        { Tiles::ItemTemplateFirst + 18, { "bolt_armor_trim_smithing_template", nullptr, nullptr } },
         { Tiles::ItemSnifferEgg, { "sniffer_egg", nullptr, nullptr } },
         { Tiles::ItemBrush, { "brush", nullptr, nullptr } },
         { Tiles::ItemSherdFirst + 0, { "angler_pottery_sherd", nullptr, nullptr } },
@@ -9348,6 +9398,10 @@ namespace
         { Tiles::GlassPaneTopTile, { "glass_pane_top", nullptr }, Tinting::None, 0, false },
         { Tiles::TerracottaPlainTile, { "terracotta", "hardened_clay", nullptr }, Tinting::None, 0, false },
         { Tiles::TintedGlassTile, { "tinted_glass", nullptr }, Tinting::None, 0, false },
+        { Tiles::SmithingTopTile, { "smithing_table_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::SmithingBottomTile, { "smithing_table_bottom", nullptr }, Tinting::None, 0, false },
+        { Tiles::SmithingSideTile, { "smithing_table_side", nullptr }, Tinting::None, 0, false },
+        { Tiles::SmithingFrontTile, { "smithing_table_front", nullptr }, Tinting::None, 0, false },
         { Tiles::StonecutterTopTile, { "stonecutter_top", nullptr }, Tinting::None, 0, true },
         { Tiles::StonecutterSideTile, { "stonecutter_side", nullptr }, Tinting::None, 0, false },
         { Tiles::StonecutterBottomTile, { "stonecutter_bottom", nullptr }, Tinting::None, 0, false },
@@ -10480,6 +10534,12 @@ Atlas::Atlas()
             paintSnifferEggIn(egg, stage, face);
             blitPainted(Tiles::SnifferEggTileFirst + stage * 6 + face, egg);
         }
+    for (int k = 0; k < 19; ++k)
+    {
+        Tile plate;
+        paintTemplateIn(plate, k);
+        blitPainted(Tiles::ItemTemplateFirst + k, plate);
+    }
     for (int k = 0; k < 23; ++k)
     {
         Tile pattern;
@@ -11416,6 +11476,7 @@ bool Atlas::hasPainter(int tileIndex)
     if (tileIndex >= Tiles::ItemSherdFirst && tileIndex <= Tiles::ItemSherdLast) return true;
     if (tileIndex >= Tiles::PotPatternFirst && tileIndex <= Tiles::PotPatternLast) return true;
     if (tileIndex >= Tiles::SnifferEggTileFirst && tileIndex <= Tiles::SnifferEggTileLast) return true;
+    if (tileIndex >= Tiles::ItemTemplateFirst && tileIndex <= Tiles::ItemTemplateLast) return true;
     if (tileIndex >= Tiles::CutCopperTile && tileIndex <= Tiles::CopperTrapdoorTileLast) return true;
     if (tileIndex >= Tiles::ItemCopperDoorFirst && tileIndex <= Tiles::ItemCopperDoorLast) return true;
     if (tileIndex >= Tiles::CrackFirst &&

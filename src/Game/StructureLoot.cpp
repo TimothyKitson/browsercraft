@@ -25,6 +25,7 @@ namespace
         { Items::IronHorseArmor, 1, 1 },
         { Items::GoldHorseArmor, 1, 1 },
         { Items::DiamondHorseArmor, 1, 1 },
+        { Items::DuneTemplate, 1, 1 },
     };
 
     // The one everybody walks out of carrying something good, which is
@@ -41,6 +42,7 @@ namespace
         { Items::IronHorseArmor, 1, 1 },
         { Items::GoldHorseArmor, 1, 1 },
         { Items::DiamondHorseArmor, 1, 1 },
+        { Items::WildTemplate, 1, 1 },
     };
 
     // Somebody was living here: a meal, a fire, and not much else.
@@ -73,6 +75,7 @@ namespace
         { Items::Wheat,       1, 5 },
         { Items::IronIngot,   1, 2 },
         { Items::Emerald,     1, 2 },
+        { Items::SentryTemplate, 1, 1 },
     };
 
     // A mansion is somebody's house, and a rich one: it is the
@@ -86,6 +89,7 @@ namespace
         { Items::Book,        1, 3 },
         { Items::Bread,       1, 4 },
         { Items::DiamondHoe,  1, 1 },
+        { Items::VexTemplate, 1, 1 },
     };
 
     // Somebody's voyage, and what they never got to spend.
@@ -98,6 +102,7 @@ namespace
         { Items::WheatSeeds,  1, 6 },
         { Items::Leather,     1, 3 },
         { Items::Diamond,     1, 1 },
+        { Items::CoastTemplate, 1, 1 },
     };
 
     // The best chest in the overworld, and the only one that needs a
@@ -145,6 +150,7 @@ namespace
         { Items::Diamond,     1, 2 },
         { Items::Bread,       1, 3 },
         { Items::IronPickaxe, 1, 1 },
+        { Items::EyeTemplate, 1, 1 },
     };
 
     // The deepest chest in the world, and the one with the longest
@@ -160,6 +166,8 @@ namespace
         { Items::EnderPearl,  1, 3 },
         { Items::GoldIngot,   2, 6 },
         { Items::Potion,      1, 2 },
+        { Items::WardTemplate, 1, 1 },
+        { Items::SilenceTemplate, 1, 1 },
     };
 
     // A witch's hut. What she brews with, and what she has brewed.
@@ -184,6 +192,7 @@ namespace
         { Blocks::PurpurBlock, 2, 8 },
         { Items::EnderPearl,  2, 5 },
         { Items::GoldIngot,   2, 6 },
+        { Items::SpireTemplate, 1, 1 },
     };
 
     // A bastion, which is gold and nothing but: it is the one place
@@ -196,6 +205,9 @@ namespace
         { Items::Diamond,     1, 2 },
         { Items::MagmaCream,  1, 3 },
         { Blocks::Blackstone, 2, 8 },
+        { Items::NetheriteUpgradeTemplate, 1, 1 },
+        { Items::SnoutTemplate, 1, 1 },
+        { Items::RibTemplate, 1, 1 },
     };
 
     // A supply room, which is exactly what it sounds like: what you

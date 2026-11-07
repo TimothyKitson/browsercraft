@@ -118,7 +118,10 @@ public:
     static constexpr int GRIND_BOTTOM = GRIND_TOP + 1;                // 98
     static constexpr int GRIND_RESULT = GRIND_BOTTOM + 1;             // 99
     static constexpr int CUT_INPUT = GRIND_RESULT + 1;
-    static constexpr int CHEST2_FIRST = CUT_INPUT + 1;
+    static constexpr int SMITH_TEMPLATE = CUT_INPUT + 1;
+    static constexpr int SMITH_BASE = SMITH_TEMPLATE + 1;
+    static constexpr int SMITH_ADDITION = SMITH_BASE + 1;
+    static constexpr int CHEST2_FIRST = SMITH_ADDITION + 1;
     static constexpr int SLOT_COUNT = CHEST2_FIRST + CHEST_SLOTS;
 
     // The ceiling. What a particular thing actually stacks to comes from

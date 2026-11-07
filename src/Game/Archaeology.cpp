@@ -94,7 +94,9 @@ Archaeology::Find Archaeology::roll(int table, int x, int y, int z, uint32_t see
             break;
         case TrailRare:
             entries = { { sherdOf("burn"), 1 }, { sherdOf("danger"), 1 }, { sherdOf("friend"), 1 }, { sherdOf("heart"), 1 },
-                        { sherdOf("heartbreak"), 1 }, { sherdOf("howl"), 1 }, { sherdOf("sheaf"), 1 } };
+                        { sherdOf("heartbreak"), 1 }, { sherdOf("howl"), 1 }, { sherdOf("sheaf"), 1 },
+                        { Items::WayfinderTemplate, 1 }, { Items::RaiserTemplate, 1 }, { Items::ShaperTemplate, 1 },
+                        { Items::HostTemplate, 1 } };
             break;
         default:
             entries = { { Items::Emerald, 2 }, { Items::Wheat, 2 }, { Items::WoodHoe, 2 }, { Blocks::Clay, 2 }, { Items::Brick, 2 },

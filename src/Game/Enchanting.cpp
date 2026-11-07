@@ -112,7 +112,13 @@ namespace Enchanting
     }
 
     bool has(Set set, Kind kind) { return levelOf(set, kind) > 0; }
-    bool any(Set set) { return set != 0u; }
+    bool any(Set set) { return (set & KIND_BITS) != 0u; }
+
+    bool glints(StackId id, Set set)
+    {
+        if (!isItem(id) && isDecoratedPot(asBlock(id))) return false;
+        return (set & KIND_BITS) != 0u;
+    }
 
     int grindHundredths(Set set)
     {

@@ -159,7 +159,11 @@ namespace
         Items::TorchflowerSeeds, Items::PitcherPod, Items::ClayBall, Items::Brick,
         Items::PumpkinSeeds, Items::SweetBerries, Items::HoneyBottle, Items::DriedKelp, Items::Honeycomb,
         Items::NautilusShell, Items::HeartOfTheSea, Items::TurtleScute,
-        Items::ChorusFruit, Items::PoppedChorusFruit, Items::Brush,
+        Items::ChorusFruit, Items::PoppedChorusFruit, Items::Brush, Items::NetheriteUpgradeTemplate,
+        Items::SentryTemplate, Items::VexTemplate, Items::WildTemplate, Items::CoastTemplate, Items::DuneTemplate,
+        Items::WayfinderTemplate, Items::RaiserTemplate, Items::ShaperTemplate, Items::HostTemplate, Items::WardTemplate,
+        Items::SilenceTemplate, Items::TideTemplate, Items::SnoutTemplate, Items::RibTemplate, Items::EyeTemplate,
+        Items::SpireTemplate, Items::FlowTemplate, Items::BoltTemplate,
         Items::AnglerSherd, Items::ArcherSherd, Items::ArmsUpSherd, Items::BladeSherd, Items::BrewerSherd, Items::BurnSherd,
         Items::DangerSherd, Items::ExplorerSherd, Items::FlowSherd, Items::FriendSherd, Items::GusterSherd, Items::HeartSherd,
         Items::HeartbreakSherd, Items::HowlSherd, Items::MinerSherd, Items::MournerSherd, Items::PlentySherd, Items::PrizeSherd,
@@ -191,7 +195,7 @@ namespace
         Blocks::RepeaterFirst, Blocks::ComparatorFirst, Blocks::DaylightDetector, Blocks::Target, Items::TripwireHook,
         Blocks::IronDoorFirst, Blocks::IronTrapdoorFirst,
         Blocks::IronBars, Blocks::ChainFirst, Blocks::EndRodFirst, Blocks::Cobweb, Items::IronNugget,
-        Blocks::Stonecutter, Blocks::FletchingTable,
+        Blocks::Stonecutter, Blocks::FletchingTable, Blocks::SmithingTable,
         Blocks::SoulTorch, Blocks::SoulCampfire, Blocks::SoulSoil,
         Blocks::MagmaBlock, Blocks::CryingObsidian, Blocks::RespawnAnchor0, Blocks::Lodestone,
         Blocks::BellFirst + 2, Blocks::Jukebox, Blocks::ChiseledBookshelfFirst + 14, Blocks::DragonEgg, Blocks::HeavyCore,
@@ -443,7 +447,16 @@ void Application::drawItem(float x, float y, float size, StackId id, int count,
         const TileUV uv = tileUV(tile);
         m_ui.texturedQuad(m_atlas.textureId(), x, y, size, size,
                           uv.u0, uv.vTop, uv.u1, uv.vBottom, tint);
-        if (enchantments != 0)
+        if (Smithing::trimPattern(enchantments) >= 0 && Smithing::trimmable(id))
+        {
+            static const char* OVERLAYS[4] = { "../trims/items/helmet_trim", "../trims/items/chestplate_trim",
+                                               "../trims/items/leggings_trim", "../trims/items/boots_trim" };
+            const int piece = Armour::slotFor(id);
+            const unsigned int c = Smithing::materialColour(Smithing::trimMaterial(enchantments));
+            const glm::vec4 shadeIt(((c >> 16) & 255u) / 255.0f, ((c >> 8) & 255u) / 255.0f, (c & 255u) / 255.0f, 1.0f);
+            if (piece >= 0 && piece < 4) guiSprite(OVERLAYS[piece], x, y, size, size, shadeIt * tint);
+        }
+        if (Enchanting::glints(id, enchantments))
         {
             m_ui.beginGlint(glintTexture(false), x, y, size, size, glintShift());
             m_ui.texturedQuad(m_atlas.textureId(), x, y, size, size,
@@ -602,7 +615,17 @@ void Application::drawPlayerFigure(const PlayerSkin& skin, float x1, float y1, f
         m_dollModel.buildArmour(pose, piece, 1.0f, 0.0f);
         const bool leather = tier == 1;
         gather(image->texture, leather ? glm::vec3(0.627f, 0.396f, 0.251f) : glm::vec3(1.0f), 0.01f,
-               worn.enchantments != 0);
+               Enchanting::glints(worn.id, worn.enchantments));
+        if (Smithing::trimPattern(worn.enchantments) >= 0)
+        {
+            const std::string layer = std::string("../trims/models/armor/") + Smithing::patternName(Smithing::trimPattern(worn.enchantments)) +
+                                      (piece == 3 ? "_leggings" : "");
+            if (const GuiImage* trim = m_gui.image(layer))
+            {
+                const unsigned int c = Smithing::materialColour(Smithing::trimMaterial(worn.enchantments));
+                gather(trim->texture, glm::vec3(((c >> 16) & 255u) / 255.0f, ((c >> 8) & 255u) / 255.0f, (c & 255u) / 255.0f), 0.015f);
+            }
+        }
         if (leather)
         {
             const GuiImage* overlay = m_gui.image(piece == 3 ? "../models/armor/leather_layer_2_overlay"
@@ -617,7 +640,7 @@ void Application::drawPlayerFigure(const PlayerSkin& skin, float x1, float y1, f
         if (!chest.empty() && chest.id == Items::Elytra && wings)
         {
             m_dollModel.buildElytra(pose, 1.0f, 0.0f);
-            gather(wings->texture, glm::vec3(1.0f), -0.01f, chest.enchantments != 0);
+            gather(wings->texture, glm::vec3(1.0f), -0.01f, Enchanting::glints(chest.id, chest.enchantments));
         }
     }
 
@@ -783,7 +806,7 @@ void Application::renderInventoryScreen()
     // see what was in it.
     const bool container = m_chestOpen || m_crafterOpen || m_furnaceOpen ||
                            m_inventory.craftSize() >= 3 || m_tradeOpen ||
-                           m_enchantOpen || m_brewOpen || m_anvilOpen || m_horseOpen || m_beaconOpen || m_grindOpen || m_cutOpen;
+                           m_enchantOpen || m_brewOpen || m_anvilOpen || m_horseOpen || m_beaconOpen || m_grindOpen || m_cutOpen || m_smithOpen;
 
     if (m_player.creative() && !container) renderCreativeScreen(w, h);
     else renderContainerScreen(w, h);
@@ -820,6 +843,7 @@ void Application::renderContainerScreen(float w, float h)
     else if (m_beaconOpen) background = "container/beacon";
     else if (m_grindOpen) background = "container/grindstone";
     else if (m_cutOpen) background = "container/stonecutter";
+    else if (m_smithOpen) background = "container/smithing";
     else if (m_tradeOpen) { background = "container/villager"; textureW = 512.0f; }
     else if (m_enchantOpen) background = "container/enchanting_table";
     else if (m_brewOpen) background = "container/brewing_stand";
@@ -903,7 +927,7 @@ void Application::renderContainerScreen(float w, float h)
     // for the same grid.
     const bool plainInventory = !m_chestOpen && !m_crafterOpen &&
                                 !m_furnaceOpen && !bench && !m_tradeOpen &&
-                                !m_enchantOpen && !m_brewOpen && !m_anvilOpen && !m_horseOpen && !m_beaconOpen && !m_grindOpen && !m_cutOpen;
+                                !m_enchantOpen && !m_brewOpen && !m_anvilOpen && !m_horseOpen && !m_beaconOpen && !m_grindOpen && !m_cutOpen && !m_smithOpen;
 
     // Every screen is headed with the name of what was opened, in the
     // top-left corner, so a barrel says Barrel and a smoker says Smoker.
@@ -919,6 +943,7 @@ void Application::renderContainerScreen(float w, float h)
         else if (m_horseOpen) title = "Horse";
         else if (m_grindOpen) title = "Repair & Disenchant";
         else if (m_cutOpen) title = "Stonecutter";
+        else if (m_smithOpen) title = "Upgrade Gear";
         else if (m_brewOpen) title = "Brewing Stand";
         else if (m_anvilOpen) title = "Anvil";
         else if (m_enchantOpen) title = "Enchanting Table";
@@ -1100,6 +1125,25 @@ void Application::renderContainerScreen(float w, float h)
         }
     }
 
+    if (m_smithOpen)
+    {
+        drawSlot(Inventory::SMITH_TEMPLATE, panelX + 8.0f, panelY + 48.0f);
+        drawSlot(Inventory::SMITH_BASE, panelX + 26.0f, panelY + 48.0f);
+        drawSlot(Inventory::SMITH_ADDITION, panelX + 44.0f, panelY + 48.0f);
+        const Smithing::Result made = Smithing::combine(m_inventory.slot(Inventory::SMITH_TEMPLATE), m_inventory.slot(Inventory::SMITH_BASE),
+                                                        m_inventory.slot(Inventory::SMITH_ADDITION));
+        const float rx = panelX + 98.0f, ry = panelY + 48.0f;
+        well(rx, ry);
+        if (made.valid())
+        {
+            drawItem(rx, ry, SLOT, made.id, 1, glm::vec4(1.0f), made.damage, made.enchantments);
+            m_slotBoxes.push_back({ SlotBox::Kind::SmithTake, 0, rx - 1.0f, ry - 1.0f, PITCH });
+        }
+        else if (!m_inventory.slot(Inventory::SMITH_TEMPLATE).empty() && !m_inventory.slot(Inventory::SMITH_BASE).empty() &&
+                 !m_inventory.slot(Inventory::SMITH_ADDITION).empty())
+            guiSprite("sprites/container/smithing/error", panelX + 65.0f, panelY + 46.0f, 28.0f, 21.0f);
+    }
+
     if (m_cutOpen)
     {
         drawSlot(Inventory::CUT_INPUT, panelX + 20.0f, panelY + 33.0f);
@@ -1209,7 +1253,7 @@ void Application::renderContainerScreen(float w, float h)
         // drawn on all of them, which is how a furnace came to have a
         // man standing in the middle of its fire.
         const bool otherBusiness = m_tradeOpen || m_enchantOpen || m_brewOpen ||
-                                   m_anvilOpen || m_furnaceOpen || bench || m_horseOpen || m_beaconOpen || m_grindOpen || m_cutOpen;
+                                   m_anvilOpen || m_furnaceOpen || bench || m_horseOpen || m_beaconOpen || m_grindOpen || m_cutOpen || m_smithOpen;
 
         // Armour down the left edge, at 8 and 8, a slot apart.
         for (int i = 0; !otherBusiness && i < Inventory::ARMOR_SLOTS; ++i)
@@ -1982,7 +2026,7 @@ void Application::renderContainerScreen(float w, float h)
         // fire between them at 36 and the result off to the right at
         // 116 and 35. The client's own four, and the shape everybody
         // recognises.
-        if (m_horseOpen || m_beaconOpen || m_grindOpen || m_cutOpen) {}
+        if (m_horseOpen || m_beaconOpen || m_grindOpen || m_cutOpen || m_smithOpen) {}
         else if (m_furnaceOpen)
         {
             const Furnaces::State& state = m_furnaces.at(m_furnaceBlock);
@@ -2568,6 +2612,10 @@ void Application::handleInventoryClick(int mouseX, int mouseY, bool rightButton,
             takeCutResult(shiftHeld);
             break;
 
+        case SlotBox::Kind::SmithTake:
+            takeSmithResult(shiftHeld);
+            break;
+
         case SlotBox::Kind::BeaconConfirm:
             confirmBeacon();
             break;
@@ -2646,6 +2694,55 @@ Grindstone::Result Application::grindResult() const
         return in;
     };
     return Grindstone::combine(input(Inventory::GRIND_TOP), input(Inventory::GRIND_BOTTOM));
+}
+
+void Application::openSmithing(const glm::ivec3& block)
+{
+    m_smithBlock = block;
+    m_smithOpen = true;
+    m_inventoryOpen = true;
+    setMouseCaptured(false);
+}
+
+void Application::takeSmithResult(bool toInventory)
+{
+    if (!m_smithOpen) return;
+    ItemStack& pattern = m_inventory.slot(Inventory::SMITH_TEMPLATE);
+    ItemStack& base = m_inventory.slot(Inventory::SMITH_BASE);
+    ItemStack& addition = m_inventory.slot(Inventory::SMITH_ADDITION);
+    const Smithing::Result made = Smithing::combine(pattern, base, addition);
+    if (!made.valid()) return;
+    if (!toInventory && !m_inventory.cursor().empty()) return;
+    ItemStack taken;
+    taken.id = made.id;
+    taken.count = 1;
+    taken.damage = made.damage;
+    taken.enchantments = made.enchantments;
+    if (toInventory)
+    {
+        if (m_inventory.addStack(taken) > 0) return;
+    }
+    else
+        m_inventory.cursor() = taken;
+    if (--pattern.count <= 0) pattern.clear();
+    base.clear();
+    if (--addition.count <= 0) addition.clear();
+    m_audio.play(Sound::DigStone, 0.7f, 0.9f);
+}
+
+void Application::stowSmithing()
+{
+    if (!m_smithOpen) return;
+    m_smithOpen = false;
+    for (int slot : { Inventory::SMITH_TEMPLATE, Inventory::SMITH_BASE, Inventory::SMITH_ADDITION })
+    {
+        ItemStack& held = m_inventory.slot(slot);
+        if (held.empty()) continue;
+        ItemStack leftOver = held;
+        leftOver.count = m_inventory.addStack(held);
+        if (leftOver.count > 0) m_drops.spawnStack(m_player.position + glm::vec3(0.0f, 0.6f, 0.0f), leftOver);
+        held.clear();
+    }
 }
 
 void Application::openStonecutter(const glm::ivec3& block)
@@ -2840,6 +2937,7 @@ void Application::closeInventory()
     stowBeacon();
     stowGrindstone();
     stowStonecutter();
+    stowSmithing();
     stowChest();
     stowCrafter();
     stowFurnace();

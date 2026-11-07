@@ -828,6 +828,11 @@ private:
     bool m_beaconOpen = false;
     bool m_grindOpen = false;
     bool m_cutOpen = false;
+    bool m_smithOpen = false;
+    glm::ivec3 m_smithBlock{ 0 };
+    void openSmithing(const glm::ivec3& block);
+    void stowSmithing();
+    void takeSmithResult(bool toInventory);
     glm::ivec3 m_cutBlock{ 0 };
     int m_cutChoice = -1;
     int m_cutScroll = 0;
@@ -1142,7 +1147,7 @@ private:
     // copies of the same geometry, and only one of them ever got fixed.
     struct SlotBox
     {
-        enum class Kind { Slot, Palette, Tab, Enchant, Trade, AnvilTake, Destroy, Scroll, TradeTake, BeaconPower, BeaconConfirm, BeaconCancel, GrindTake, CutRecipe, CutTake };
+        enum class Kind { Slot, Palette, Tab, Enchant, Trade, AnvilTake, Destroy, Scroll, TradeTake, BeaconPower, BeaconConfirm, BeaconCancel, GrindTake, CutRecipe, CutTake, SmithTake };
         Kind kind = Kind::Slot;
         int index = 0;        // inventory slot, block id, or tab number
         float x = 0.0f, y = 0.0f, size = 0.0f;

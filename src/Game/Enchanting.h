@@ -36,12 +36,15 @@ namespace Enchanting
 
     // Three bits each, so no kind may go past seven.
     constexpr int BITS_PER_KIND = 3;
+    constexpr uint32_t KIND_BITS = (1u << 24) - 1u;
     constexpr int MAX_STORABLE_LEVEL = 7;
 
     using Set = uint32_t;
 
-    static_assert(static_cast<int>(Kind::Count) * BITS_PER_KIND <= 32,
-                  "the enchantment set no longer fits in one word");
+    static_assert(static_cast<int>(Kind::Count) * BITS_PER_KIND <= 24,
+                  "the enchantment set no longer leaves the top byte for a trim");
+
+    bool glints(StackId id, Set set);
 
     // The highest level Minecraft allows of each. Silk touch and
     // fortune are the odd pair: they do opposite things to the same

@@ -55,6 +55,7 @@ namespace Trading
             case Blocks::Grindstone: trade = Profession::Weaponsmith; return true;
             case Blocks::Stonecutter: trade = Profession::Mason; return true;
             case Blocks::FletchingTable: trade = Profession::Fletcher; return true;
+            case Blocks::SmithingTable: trade = Profession::Toolsmith; return true;
             default: return false;
         }
     }

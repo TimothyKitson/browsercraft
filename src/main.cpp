@@ -5,6 +5,7 @@
 #include "Renderer/Atlas.h"
 #include "Game/Crafting.h"
 #include "Game/Stonecutting.h"
+#include "Game/Smithing.h"
 #include "Game/Smelting.h"
 #include "Game/StructureLoot.h"
 #include "Game/Trial.h"
@@ -919,6 +920,7 @@ namespace
         // What a recipe or a furnace makes.
         for (StackId id : Crafting::everyOutput()) haveItem.insert(id);
         for (StackId id : Stonecutting::everyOutput()) haveItem.insert(id);
+        for (StackId id : Smithing::everyOutput()) haveItem.insert(id);
         for (int i = 0; i < static_cast<int>(Items::Count); ++i)
         {
             const StackId fired = Smelting::resultOf(static_cast<StackId>(i));
@@ -989,6 +991,10 @@ namespace
                 byHand = "shed by a baby turtle as it grows up";
             else if (i == static_cast<int>(Items::PowderSnowBucket))
                 byHand = "a bucket used on powder snow";
+            else if (i == static_cast<int>(Items::TideTemplate))
+                byHand = "dropped by an elder guardian now and then";
+            else if (i >= static_cast<int>(Items::WayfinderTemplate) && i <= static_cast<int>(Items::HostTemplate))
+                byHand = "brushed out of the gravel in trail ruins";
             else if (i >= static_cast<int>(Items::AnglerSherd) && i <= static_cast<int>(Items::SnortSherd))
                 byHand = "brushed out of suspicious sand or gravel, or won from a vault";
 
@@ -1023,6 +1029,8 @@ namespace
         haveItem.insert(static_cast<int>(Blocks::HeavyCore));
         haveItem.insert(static_cast<int>(Blocks::DragonEgg));
         for (int k = Items::AnglerSherd; k <= Items::SnortSherd; ++k) haveItem.insert(k);
+        for (int k = Items::WayfinderTemplate; k <= Items::HostTemplate; ++k) haveItem.insert(k);
+        haveItem.insert(static_cast<int>(Items::TideTemplate));
         haveItem.insert(static_cast<int>(Blocks::Torchflower));
         haveItem.insert(static_cast<int>(doublePlantOf(DoublePlant::PitcherPlant, false)));
         for (int stage = 1; stage < 4; ++stage)

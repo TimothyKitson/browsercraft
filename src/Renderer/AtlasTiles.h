@@ -382,6 +382,7 @@ namespace Tiles
         SnifferEggTileFirst, SnifferEggTileLast = SnifferEggTileFirst + 17,
         StonecutterTopTile, StonecutterSideTile, StonecutterBottomTile, StonecutterSawTile,
         FletchingTopTile, FletchingFrontTile, FletchingSideTile,
+        SmithingTopTile, SmithingBottomTile, SmithingSideTile, SmithingFrontTile,
 
         TileCount
     };
@@ -582,8 +583,9 @@ namespace Tiles
         ItemRepeater, ItemComparator, ItemIronDoor, ItemTurtleEggIcon,
         ItemIronNugget, ItemChorusFruit, ItemPoppedChorusFruit, ItemChain, ItemBell,
         ItemBrush, ItemSherdFirst, ItemSherdLast = ItemSherdFirst + 22, ItemSnifferEgg,
+        ItemTemplateFirst, ItemTemplateLast = ItemTemplateFirst + 18,
 
-        ItemTileEnd = ItemSnifferEgg + 1
+        ItemTileEnd = ItemTemplateLast + 1
     };
 
     // Ten progressively more broken overlay tiles for the mining animation.
