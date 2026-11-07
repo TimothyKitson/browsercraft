@@ -56,6 +56,18 @@ public:
     std::vector<MobStrike> drainStrikes();
     std::vector<MobShot> drainShots();
     std::vector<MobBlast> drainBlasts();
+    struct ShedHorn
+    {
+        glm::vec3 at{ 0.0f };
+        int variant = 0;
+    };
+    std::vector<ShedHorn> drainHorns()
+    {
+        std::vector<ShedHorn> out;
+        out.swap(m_horns);
+        return out;
+    }
+    static bool breaksHorn(BlockId block);
 
     // What a mob leaves on the ground, once per death. A corpse lingers
     // before it is dropped, so this has to fire on the frame it dies
@@ -162,6 +174,7 @@ public:
     void setDimension(Dimension dimension) { m_dimension = dimension; }
 
 private:
+    std::vector<ShedHorn> m_horns;
     bool m_playerHidden = false;
     float random01();
     void trySpawnWave(const World& world, const glm::vec3& playerPosition, float daylight);

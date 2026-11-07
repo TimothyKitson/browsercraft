@@ -77,6 +77,7 @@ namespace
         { Items::IronIngot,   1, 2 },
         { Items::Emerald,     1, 2 },
         { Items::SentryTemplate, 1, 1 },
+        { Items::GoatHorn,    1, 1 },
     };
 
     // A mansion is somebody's house, and a rich one: it is the

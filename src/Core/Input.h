@@ -23,6 +23,7 @@ public:
     // Defined out of line: the browser build answers these from the DOM
     // rather than from SDL, whose web backend drifts.
     int mouseX() const;
+    void warp(int x, int y) { m_mouseX = x; m_mouseY = y; }
     int mouseY() const;
     int wheelDelta() const { return m_wheelDelta; }
 

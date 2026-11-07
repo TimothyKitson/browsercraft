@@ -856,6 +856,21 @@ void Application::loadLevel()
             m_commands[{ static_cast<int>(saved.dimension), saved.x, saved.y, saved.z }] = command;
         }
         m_itemNames = state.itemNames;
+        m_bundles.clear();
+        for (const auto& saved : state.bundles)
+        {
+            std::vector<ItemStack> contents;
+            for (const auto& stack : saved)
+            {
+                ItemStack item;
+                item.id = static_cast<StackId>(stack.id);
+                item.count = stack.count;
+                item.damage = stack.damage;
+                item.enchantments = stack.enchantments;
+                contents.push_back(item);
+            }
+            m_bundles.push_back(contents);
+        }
         m_lodestones = state.lodestones;
         m_hasDeathPoint = state.hasDeathPoint;
         m_deathPoint = glm::vec3(state.deathPoint[0], state.deathPoint[1], state.deathPoint[2]);
@@ -1071,6 +1086,20 @@ void Application::saveLevel()
         state.commands.push_back(saved);
     }
     state.itemNames = m_itemNames;
+    for (const std::vector<ItemStack>& contents : m_bundles)
+    {
+        std::vector<LevelState::SavedBundleStack> saved;
+        for (const ItemStack& item : contents)
+        {
+            LevelState::SavedBundleStack stack;
+            stack.id = static_cast<uint16_t>(item.id);
+            stack.count = static_cast<uint8_t>(item.count);
+            stack.damage = static_cast<uint16_t>(item.damage);
+            stack.enchantments = item.enchantments;
+            saved.push_back(stack);
+        }
+        state.bundles.push_back(saved);
+    }
     state.lodestones = m_lodestones;
     state.hasDeathPoint = m_hasDeathPoint;
     state.deathPoint[0] = m_deathPoint.x;
@@ -2268,7 +2297,7 @@ bool Application::frame()
             m_startupScreen == "attackhud" || m_startupScreen == "attackready" ||
             m_startupScreen == "attackhotbar" || m_startupScreen == "bossbars" ||
             m_startupScreen == "gamemode" || m_startupScreen == "spectator" ||
-            m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" || m_startupScreen == "leads" || m_startupScreen == "anvilname" || m_startupScreen == "dials" || m_startupScreen == "spyglass" ||
+            m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" || m_startupScreen == "leads" || m_startupScreen == "anvilname" || m_startupScreen == "dials" || m_startupScreen == "spyglass" || m_startupScreen == "bundle" ||
             m_startupScreen == "grinderror" || m_startupScreen == "woods" ||
             m_startupScreen == "cherry" || m_startupScreen == "mangrove" || m_startupScreen == "fungi" ||
             m_startupScreen == "stones" || m_startupScreen == "colours" || m_startupScreen == "candles" ||
@@ -2367,6 +2396,7 @@ bool Application::frame()
                                   m_startupScreen != "anvilname" &&
                                   m_startupScreen != "dials" &&
                                   m_startupScreen != "spyglass" &&
+                                  m_startupScreen != "bundle" &&
                                   m_startupScreen != "grinderror" &&
                                   m_startupScreen != "woods" &&
                                   m_startupScreen != "cherry" &&
@@ -2759,7 +2789,7 @@ bool Application::frame()
             if (m_startupScreen == "attackhud" || m_startupScreen == "attackready" ||
                 m_startupScreen == "attackhotbar" || m_startupScreen == "bossbars" ||
                 m_startupScreen == "gamemode" || m_startupScreen == "spectator" ||
-                m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" || m_startupScreen == "leads" || m_startupScreen == "anvilname" || m_startupScreen == "dials" || m_startupScreen == "spyglass" ||
+                m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" || m_startupScreen == "leads" || m_startupScreen == "anvilname" || m_startupScreen == "dials" || m_startupScreen == "spyglass" || m_startupScreen == "bundle" ||
                 m_startupScreen == "grinderror" || m_startupScreen == "woods" ||
                 m_startupScreen == "cherry" || m_startupScreen == "mangrove" || m_startupScreen == "fungi" ||
                 m_startupScreen == "stones" || m_startupScreen == "colours" || m_startupScreen == "candles" ||
@@ -3497,6 +3527,25 @@ bool Application::frame()
                     m_inventory.slot(6) = ItemStack{ doorBaseOf(3), 3 };
                     m_inventory.slot(7) = ItemStack{ trapdoorBaseOf(5), 2 };
                     m_inventory.slot(8) = ItemStack{ Blocks::DarkOakSapling, 4 };
+                }
+                if (m_startupScreen == "bundle")
+                {
+                    m_devAttackStrength = 1.0f;
+                    ItemStack bundle{ Items::Bundle, 1 };
+                    bundleInsert(bundle, ItemStack{ Blocks::Dirt, 20 });
+                    bundleInsert(bundle, ItemStack{ Items::EnderPearl, 3 });
+                    bundleInsert(bundle, ItemStack{ Items::Diamond, 5 });
+                    bundleInsert(bundle, ItemStack{ Items::Apple, 7 });
+                    m_inventory.slot(0) = bundle;
+                    m_inventory.slot(1) = ItemStack{ Items::Bundle, 1 };
+                    ItemStack horn{ Items::GoatHorn, 1 };
+                    horn.damage = 5;
+                    m_inventory.slot(2) = horn;
+                    m_hornCooldown = 3.5f;
+                    m_inventory.slot(3) = ItemStack{ Items::Leather, 4 };
+                    m_inventoryOpen = true;
+                    m_inventory.setCraftSize(2);
+                    m_devHoverHotbar = 0;
                 }
                 if (m_startupScreen == "dials" || m_startupScreen == "spyglass")
                 {
@@ -12330,6 +12379,32 @@ void Application::handlePlacement()
     // An eye thrown rather than set: it goes towards the nearest
     // stronghold, through whatever is in the way, and burns out. That
     // is the whole of how a stronghold is found, here and there.
+    if (stack.id == Items::GoatHorn)
+    {
+        if (m_hornCooldown <= 0.0f)
+        {
+            const int variant = std::clamp(stack.damage, 0, 7);
+            m_audio.play(static_cast<Sound>(static_cast<int>(Sound::GoatHornFirst) + variant), 1.0f, 1.0f);
+            m_hornCooldown = 7.0f;
+            vibrate(m_player.eyePosition(), 3);
+        }
+        return;
+    }
+
+    if (stack.id == Items::Bundle)
+    {
+        const glm::vec3 from = m_player.eyePosition() + m_camera.front * 0.6f;
+        bool any = false;
+        for (ItemStack out = bundleTakeLast(stack); !out.empty(); out = bundleTakeLast(stack))
+        {
+            m_drops.spawnStack(from, out);
+            m_drops.flingLast(m_camera.front * 3.0f + glm::vec3(0.0f, 1.5f, 0.0f));
+            any = true;
+        }
+        if (any) m_audio.play(Sound::DigWool, 0.6f, 0.8f);
+        return;
+    }
+
     if (stack.id == Items::FishingRod)
     {
         if (m_bobber.active) reelBobber();
@@ -13899,6 +13974,112 @@ void Application::pinCreativeMarkers()
     }
 }
 
+int Application::itemWeight(const ItemStack& stack) const
+{
+    if (stack.empty()) return 0;
+    if (stack.id == Items::Bundle) return stack.count * (4 + bundleWeight(stack));
+    const int most = std::max(1, maxStackOf(stack.id));
+    return stack.count * (BUNDLE_CAPACITY / most);
+}
+
+const std::vector<ItemStack>* Application::bundleContents(const ItemStack& bundle) const
+{
+    if (bundle.id != Items::Bundle || bundle.damage <= 0 || bundle.damage > static_cast<int>(m_bundles.size())) return nullptr;
+    return &m_bundles[static_cast<size_t>(bundle.damage - 1)];
+}
+
+int Application::bundleWeight(const ItemStack& bundle) const
+{
+    const std::vector<ItemStack>* contents = bundleContents(bundle);
+    if (!contents) return 0;
+    int total = 0;
+    for (const ItemStack& stack : *contents) total += itemWeight(stack);
+    return total;
+}
+
+int Application::bundleInsert(ItemStack& bundle, const ItemStack& adding)
+{
+    if (bundle.id != Items::Bundle || adding.empty() || (adding.id == Items::Bundle && adding.damage == bundle.damage)) return 0;
+    const int each = adding.id == Items::Bundle ? 4 + bundleWeight(adding) : BUNDLE_CAPACITY / std::max(1, maxStackOf(adding.id));
+    const int room = (BUNDLE_CAPACITY - bundleWeight(bundle)) / std::max(1, each);
+    const int moved = std::min(room, adding.count);
+    if (moved <= 0) return 0;
+    if (bundle.damage <= 0 || bundle.damage > static_cast<int>(m_bundles.size()))
+    {
+        m_bundles.emplace_back();
+        bundle.damage = static_cast<int>(m_bundles.size());
+    }
+    std::vector<ItemStack>& contents = m_bundles[static_cast<size_t>(bundle.damage - 1)];
+    int left = moved;
+    for (ItemStack& stack : contents)
+        if (stack.sameAs(adding) && stack.count < maxStackOf(stack.id) && left > 0)
+        {
+            const int take = std::min(left, maxStackOf(stack.id) - stack.count);
+            stack.count += take;
+            left -= take;
+        }
+    if (left > 0)
+    {
+        ItemStack put = adding;
+        put.count = left;
+        contents.push_back(put);
+    }
+    return moved;
+}
+
+ItemStack Application::bundleTakeLast(ItemStack& bundle)
+{
+    ItemStack out;
+    if (bundle.id != Items::Bundle || bundle.damage <= 0 || bundle.damage > static_cast<int>(m_bundles.size())) return out;
+    std::vector<ItemStack>& contents = m_bundles[static_cast<size_t>(bundle.damage - 1)];
+    if (contents.empty()) return out;
+    out = contents.back();
+    contents.pop_back();
+    if (contents.empty()) bundle.damage = 0;
+    return out;
+}
+
+bool Application::bundleClick(int slot)
+{
+    ItemStack& target = m_inventory.slot(slot);
+    ItemStack& cursor = m_inventory.cursor();
+    if (target.id == Items::Bundle)
+    {
+        if (cursor.empty())
+        {
+            ItemStack out = bundleTakeLast(target);
+            if (out.empty()) return false;
+            cursor = out;
+            m_audio.play(Sound::DigWool, 0.5f, 0.9f);
+            return true;
+        }
+        const int moved = bundleInsert(target, cursor);
+        if (moved <= 0) return false;
+        cursor.count -= moved;
+        if (cursor.count <= 0) cursor.clear();
+        m_audio.play(Sound::DigWool, 0.5f, 1.2f);
+        return true;
+    }
+    if (cursor.id == Items::Bundle)
+    {
+        if (target.empty())
+        {
+            ItemStack out = bundleTakeLast(cursor);
+            if (out.empty()) return false;
+            target = out;
+            m_audio.play(Sound::DigWool, 0.5f, 0.9f);
+            return true;
+        }
+        const int moved = bundleInsert(cursor, target);
+        if (moved <= 0) return false;
+        target.count -= moved;
+        if (target.count <= 0) target.clear();
+        m_audio.play(Sound::DigWool, 0.5f, 1.2f);
+        return true;
+    }
+    return false;
+}
+
 int Application::animatedIcon(const ItemStack& stack) const
 {
     if (stack.id != Items::Compass && stack.id != Items::Clock && stack.id != Items::RecoveryCompass) return -1;
@@ -13968,7 +14149,14 @@ void Application::dropLeash(const Leash& leash, const glm::vec3& at)
 
 void Application::tickLeashes(float deltaTime)
 {
+    m_hornCooldown = std::max(0.0f, m_hornCooldown - deltaTime);
     if (!m_world) return;
+    for (const EntityManager::ShedHorn& horn : m_entities.drainHorns())
+    {
+        ItemStack shed{ Items::GoatHorn, 1 };
+        shed.damage = horn.variant;
+        m_drops.spawnStack(horn.at, shed);
+    }
     for (size_t i = 0; i < m_leashes.size();)
     {
         const Leash leash = m_leashes[i];

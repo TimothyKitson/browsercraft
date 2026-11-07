@@ -320,6 +320,18 @@ void WorldSave::saveLevel(const std::string& saveDirectory, const LevelState& st
     write(out, static_cast<uint8_t>(state.hasDeathPoint ? 1 : 0));
     for (int k = 0; k < 3; ++k) write(out, state.deathPoint[k]);
     write(out, state.deathDimension);
+    write(out, static_cast<uint32_t>(state.bundles.size()));
+    for (const auto& bundle : state.bundles)
+    {
+        write(out, static_cast<uint16_t>(bundle.size()));
+        for (const LevelState::SavedBundleStack& stack : bundle)
+        {
+            write(out, stack.id);
+            write(out, stack.count);
+            write(out, stack.damage);
+            write(out, stack.enchantments);
+        }
+    }
 }
 
 bool WorldSave::loadLevel(const std::string& saveDirectory, LevelState& out)
@@ -678,9 +690,27 @@ bool WorldSave::loadLevel(const std::string& saveDirectory, LevelState& out)
                                                         out.lodestones.push_back(stone);
                                                     }
                                                 uint8_t died = 0;
-                                                if (stonesWhole && read(in, died) && read(in, out.deathPoint[0]) &&
-                                                    read(in, out.deathPoint[1]) && read(in, out.deathPoint[2]) && read(in, out.deathDimension))
-                                                    out.hasDeathPoint = died != 0;
+                                                const bool deathWhole = stonesWhole && read(in, died) && read(in, out.deathPoint[0]) &&
+                                                    read(in, out.deathPoint[1]) && read(in, out.deathPoint[2]) && read(in, out.deathDimension);
+                                                if (deathWhole) out.hasDeathPoint = died != 0;
+                                                uint32_t bundleCount = 0;
+                                                if (deathWhole && read(in, bundleCount))
+                                                    for (uint32_t i = 0; i < bundleCount && i < 100000u; ++i)
+                                                    {
+                                                        uint16_t stacks = 0;
+                                                        if (!read(in, stacks)) break;
+                                                        std::vector<LevelState::SavedBundleStack> bundle;
+                                                        bool whole = true;
+                                                        for (uint16_t k = 0; k < stacks && whole; ++k)
+                                                        {
+                                                            LevelState::SavedBundleStack stack;
+                                                            whole = read(in, stack.id) && read(in, stack.count) && read(in, stack.damage) &&
+                                                                    read(in, stack.enchantments);
+                                                            if (whole) bundle.push_back(stack);
+                                                        }
+                                                        if (!whole) break;
+                                                        out.bundles.push_back(bundle);
+                                                    }
                                             }
                                         }
                                     }

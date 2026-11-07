@@ -166,6 +166,14 @@ struct LevelState
     bool hasDeathPoint = false;
     float deathPoint[3] = { 0.0f, 0.0f, 0.0f };
     int8_t deathDimension = 0;
+    struct SavedBundleStack
+    {
+        uint16_t id = 0;
+        uint8_t count = 0;
+        uint16_t damage = 0;
+        uint32_t enchantments = 0;
+    };
+    std::vector<std::vector<SavedBundleStack>> bundles;
 };
 
 namespace WorldSave

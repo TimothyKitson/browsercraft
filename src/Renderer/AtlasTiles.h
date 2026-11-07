@@ -598,7 +598,7 @@ namespace Tiles
         ItemBarrier, ItemStructureVoid, ItemLightFirst, ItemLightLast = ItemLightFirst + 15,
         ItemFishingRod, ItemFishingRodCast, ItemCarrotOnAStick, ItemWarpedFungusOnAStick, ItemTropicalFish,
         ItemNameTag, ItemLead,
-        ItemSpyglass, ItemEchoShard,
+        ItemSpyglass, ItemEchoShard, ItemGoatHorn, ItemBundle, ItemBundleFilled,
         ItemCompassFrameFirst, ItemCompassFrameLast = ItemCompassFrameFirst + 31,
         ItemClockFirst, ItemClockLast = ItemClockFirst + 63,
         ItemRecoveryFirst, ItemRecoveryLast = ItemRecoveryFirst + 31,

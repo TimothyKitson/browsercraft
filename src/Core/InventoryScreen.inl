@@ -209,7 +209,7 @@ namespace
         Blocks::DecoratedPotFirst + 2, Blocks::SnifferEgg0,
         Items::Bucket, Items::WaterBucket, Items::LavaBucket, Items::PowderSnowBucket, Items::Shears, Items::Compass, Items::EmptyMap,
         Items::FishingRod, Items::CarrotOnAStick, Items::WarpedFungusOnAStick, Items::NameTag, Items::Lead, Items::TropicalFish,
-        Items::Spyglass, Items::Clock, Items::RecoveryCompass, Items::EchoShard,
+        Items::Spyglass, Items::Clock, Items::RecoveryCompass, Items::EchoShard, Items::GoatHorn, Items::Bundle,
         Items::IronIngot, Items::GoldIngot, Items::Diamond,
         Items::WoodPickaxe, Items::WoodAxe, Items::WoodShovel, Items::WoodSword, Items::WoodHoe,
         Items::StonePickaxe, Items::StoneAxe, Items::StoneShovel, Items::StoneSword, Items::StoneHoe,
@@ -279,6 +279,11 @@ namespace
         if (stack.id == Items::NameTag && g_itemNames && stack.damage > 0 && stack.damage <= static_cast<int>(g_itemNames->size()))
             return (*g_itemNames)[static_cast<size_t>(stack.damage - 1)];
         if (stack.id == Items::Potion) return Brewing::name(Brewing::fromDamage(stack.damage));
+        if (stack.id == Items::GoatHorn)
+        {
+            static const char* CALLS[8] = { "Ponder", "Sing", "Seek", "Feel", "Admire", "Call", "Yearn", "Dream" };
+            return std::string("Goat Horn (") + CALLS[std::clamp(stack.damage, 0, 7)] + ")";
+        }
         return displayName(stack.id);
     }
 }
@@ -461,6 +466,7 @@ void Application::drawItem(float x, float y, float size, StackId id, int count,
     else if (!drawBlockIcon(x, y, size, id, tint))
     {
         int tile = m_iconOverride >= 0 ? m_iconOverride : atlasTileFor(id);
+        if (id == Items::Bundle && damage > 0 && m_iconOverride < 0) tile = Tiles::ItemBundleFilled;
         if (m_iconOverride < 0)
         {
             ItemStack shown;
@@ -482,6 +488,11 @@ void Application::drawItem(float x, float y, float size, StackId id, int count,
             const glm::vec4 shadeIt(((c >> 16) & 255u) / 255.0f, ((c >> 8) & 255u) / 255.0f, (c & 255u) / 255.0f, 1.0f);
             if (piece >= 0 && piece < 4) guiSprite(OVERLAYS[piece], x, y, size, size, shadeIt * tint);
         }
+        if (id == Items::GoatHorn && m_hornCooldown > 0.0f)
+        {
+            const float part = std::clamp(m_hornCooldown / 7.0f, 0.0f, 1.0f);
+            m_ui.quad(x, y + size * (1.0f - part), size, size * part, glm::vec4(1.0f, 1.0f, 1.0f, 0.5f));
+        }
         if (Enchanting::glints(id, enchantments) || (id == Items::Compass && damage > 0))
         {
             m_ui.beginGlint(glintTexture(false), x, y, size, size, glintShift());
@@ -493,6 +504,16 @@ void Application::drawItem(float x, float y, float size, StackId id, int count,
 
     // How much of a tool is left, as the bar across the bottom of the
     // icon: green when it is new, red by the time it is about to go.
+    if (id == Items::Bundle && damage > 0)
+    {
+        ItemStack bundle;
+        bundle.id = id;
+        bundle.damage = damage;
+        const float full = std::clamp(static_cast<float>(bundleWeight(bundle)) / BUNDLE_CAPACITY, 0.0f, 1.0f);
+        const float px = size / 16.0f;
+        m_ui.quad(x + 2.0f * px, y + 13.0f * px, 13.0f * px, 2.0f * px, glm::vec4(0.0f, 0.0f, 0.0f, 1.0f));
+        m_ui.quad(x + 2.0f * px, y + 13.0f * px, std::max(1.0f, std::round(13.0f * full)) * px, px, glm::vec4(0.4f, 0.4f, 1.0f, 1.0f));
+    }
     int limit = Tools::maxDurability(Tools::tierOf(id));
     if (limit == 0) limit = Fishing::durabilityOf(id);
     if (limit > 0 && damage > 0)
@@ -911,6 +932,9 @@ void Application::renderContainerScreen(float w, float h)
     const float storageY = panelY + (m_beaconOpen ? 137.0f : hopper ? 51.0f : bigChest ? chestRows * 18.0f + 31.0f : 84.0f);
     const float hotbarY = panelY + (m_beaconOpen ? 195.0f : hopper ? 109.0f : bigChest ? chestRows * 18.0f + 89.0f : 142.0f);
     const float invX = panelX + (m_beaconOpen ? 36.0f : 8.0f) + shift;
+    if (m_devHoverHotbar >= 0)
+        m_input.warp(static_cast<int>((invX + static_cast<float>(m_devHoverHotbar) * 18.0f + 8.0f) * m_ui.scale()),
+                     static_cast<int>((hotbarY + 8.0f) * m_ui.scale()));
 
     auto well = [this, skin](float x, float y) {
         if (!skin) guiWell(x - 1.0f, y - 1.0f, PITCH, PITCH);
@@ -2599,6 +2623,7 @@ void Application::finishInventoryScreen()
     // The slot under the cursor washes white, empty or not, which is
     // the client's: 80FFFFFF over the sixteen pixels the item sits in.
     std::string tip;
+    const ItemStack* tipBundle = nullptr;
     if (const SlotBox* box = slotBoxAt(m_input.mouseX(), m_input.mouseY()))
     {
         const glm::vec4 wash(1.0f, 1.0f, 1.0f, 0.5f);
@@ -2612,6 +2637,7 @@ void Application::finishInventoryScreen()
                 highlight();
                 const ItemStack& stack = m_inventory.slot(box->index);
                 if (!stack.empty()) tip = stackName(stack);
+                if (stack.id == Items::Bundle) tipBundle = &stack;
                 break;
             }
             case SlotBox::Kind::Palette:
@@ -2652,6 +2678,35 @@ void Application::finishInventoryScreen()
     // The client names what is under the cursor only while the cursor
     // is empty: with a stack in hand the tooltip would sit on top of it.
     if (!tip.empty() && held.empty()) drawTooltip(tip, mouseX, mouseY);
+    if (held.empty() && tipBundle) drawBundleTooltip(*tipBundle, mouseX, mouseY);
+}
+
+void Application::drawBundleTooltip(const ItemStack& bundle, float mouseX, float mouseY)
+{
+    const std::vector<ItemStack>* contents = bundleContents(bundle);
+    const int count = contents ? static_cast<int>(contents->size()) : 0;
+    const int columns = std::max(2, std::min(4, static_cast<int>(std::ceil(std::sqrt(static_cast<float>(count + 1))))));
+    const int rows = (count + 1 + columns - 1) / columns;
+    const float cell = 18.0f;
+    const float w = columns * cell + 2.0f, h = rows * cell + 2.0f;
+    float x = mouseX + 12.0f;
+    float y = mouseY + 2.0f;
+    if (x + w > m_ui.canvasWidth()) x -= 28.0f + w;
+    if (y + h > m_ui.canvasHeight()) y = m_ui.canvasHeight() - h;
+    m_ui.quad(x - 1.0f, y - 1.0f, w + 2.0f, h + 2.0f, glm::vec4(0.063f, 0.0f, 0.063f, 0.94f));
+    for (int i = 0; i <= count; ++i)
+    {
+        const float cx = x + 1.0f + static_cast<float>(i % columns) * cell;
+        const float cy = y + 1.0f + static_cast<float>(i / columns) * cell;
+        const bool full = i == count && bundleWeight(bundle) >= BUNDLE_CAPACITY;
+        if (!guiSprite(full ? "sprites/container/bundle/blocked_slot" : "sprites/container/bundle/slot", cx, cy, cell, cell))
+            m_ui.quad(cx + 1.0f, cy + 1.0f, cell - 2.0f, cell - 2.0f, glm::vec4(0.55f, 0.55f, 0.55f, 1.0f));
+        if (i < count)
+        {
+            const ItemStack& stack = (*contents)[static_cast<size_t>(i)];
+            drawItem(cx + 1.0f, cy + 1.0f, SLOT, stack.id, stack.count, glm::vec4(1.0f), stack.damage, stack.enchantments);
+        }
+    }
 }
 
 void Application::drawTooltip(const std::string& text, float mouseX, float mouseY)
@@ -2819,6 +2874,7 @@ void Application::handleInventoryClick(int mouseX, int mouseY, bool rightButton,
                 }
             }
             if (shiftHeld) m_inventory.quickMove(box->index);
+            else if (rightButton && bundleClick(box->index)) {}
             else if (rightButton) m_inventory.rightClick(box->index);
             else m_inventory.leftClick(box->index);
             // Any click can change what the grid adds up to, and working
@@ -3984,6 +4040,7 @@ void Application::fillVillageChest(const glm::ivec3& block)
 
         filled[slot].id = loot[i].id;
         filled[slot].count = loot[i].count;
+        if (loot[i].id == Items::GoatHorn) filled[slot].damage = static_cast<int>(where % 4u);
     }
 
     m_chests.put(block, filled);

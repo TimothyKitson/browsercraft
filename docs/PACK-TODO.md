@@ -203,11 +203,12 @@ Everything in the 1.21 textures zip the game doesn't use yet, turned into work. 
 
 ## Part 3: new items
 
-49. Tools and gear
+49. Tools and gear (done)
     - I. Shears, fishing rod with fishing and the hook, carrot and warped fungus on a stick.
     - II. Lead with its knot, name tag and saddle.
     - III. Spyglass with its scope overlay, compass (32 frames), clock (64 frames), recovery compass.
     - IV. Brush, goat horn, and the bundle with its tooltip.
+    - Notes: fishing follows the 1.21.1 fish, junk and treasure tables, though rotten flesh waits for item 51 and there is no Luck of the Sea or Lure yet. Pigs and striders are ridden with a saddle and steered with their stick. Name tags are named at the anvil, where only name tags can be renamed for now, and the names live in the level save; mobs are not saved, so a named or leashed mob is only kept around longer, not across a reload. Lead knots are drawn as a small block of rope rather than Minecraft's knot model. Compasses point to spawn or a bound lodestone; the recovery compass came with echo shards in ancient cities, ahead of item 52. Goats ram every so often and shed a horn when they hit stone, logs, ore or packed ice; one in fifty screams. The bundle uses the 1.21.2 recipe, since 1.21.1 kept it behind an experiment, and its contents are kept in the level like banner designs.
 50. Combat
     - I. Crossbow: pulling, loaded arrow and loaded firework.
     - II. Spectral and tipped arrows, item and entity.

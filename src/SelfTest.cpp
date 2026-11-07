@@ -3961,6 +3961,25 @@ namespace
         ItemStack echo[9];
         for (int i = 0; i < 9; ++i) { echo[i].id = i == 4 ? Items::Compass : Items::EchoShard; echo[i].count = 1; }
         check(Crafting::match(echo, 3).id == Items::RecoveryCompass, "eight echo shards round a compass make a recovery compass");
+
+        ItemStack sack[9];
+        sack[1].id = Items::StringItem; sack[4].id = Items::Leather;
+        for (ItemStack& cell : sack) if (cell.id != Blocks::Air) cell.count = 1;
+        check(Crafting::match(sack, 3).id == Items::Bundle, "string over leather makes a bundle");
+        check(maxStackOf(Items::Bundle) == 1 && maxStackOf(Items::GoatHorn) == 1, "bundles and horns are one to a slot");
+        check(EntityManager::breaksHorn(Blocks::Stone) && EntityManager::breaksHorn(Blocks::Log) && EntityManager::breaksHorn(Blocks::PackedIce) &&
+              !EntityManager::breaksHorn(Blocks::Dirt) && !EntityManager::breaksHorn(Blocks::Air),
+              "a goat sheds a horn ramming stone, logs, ore or packed ice, and not dirt");
+        Mob goat(MobId::Goat, glm::vec3(0.0f), 50u * 3u + 7u);
+        check(goat.screamingGoat() && goat.hornsLeft() == 2, "one goat in fifty screams, and each has two horns to lose");
+        bool fired = false;
+        for (int k = 0; k < 4000 && !fired; ++k) fired = goat.ramReady(0.1f);
+        check(fired, "and every goat rams now and then");
+        bool horn = false;
+        for (int n = 0; n < 60 && !horn; ++n)
+            for (const StructureLoot::Stack& stack : StructureLoot::rollFor(WorldGen::Hoard::PillagerOutpost, n * 7, 50, n * 11, 4242u))
+                if (stack.id == Items::GoatHorn) horn = true;
+        check(horn, "pillager outposts keep goat horns");
     }
 
     void testCreativeBlocks()
@@ -11742,7 +11761,7 @@ namespace
             std::error_code ec;
             const auto size = std::filesystem::file_size(path, ec);
             if (!ec) std::filesystem::resize_file(path, size - sizeof(uint16_t) - sizeof(uint8_t) - 3 * sizeof(int) - sizeof(uint32_t) - sizeof(int32_t) - 6 * sizeof(uint32_t) -
-                                                        sizeof(uint8_t) - 3 * sizeof(float) - sizeof(int8_t), ec);
+                                                        sizeof(uint8_t) - 3 * sizeof(float) - sizeof(int8_t) - sizeof(uint32_t), ec);
 
             LevelState back;
             check(WorldSave::loadLevel(dir, back), "a level from before items moved up still loads");

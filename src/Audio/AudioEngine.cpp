@@ -396,6 +396,12 @@ void AudioEngine::buildSounds()
     loadVariants(Sound::Rain, "weather/rain", 1);
     loadVariants(Sound::Thunder, "weather/thunder", 1);
     loadVariants(Sound::SculkClick, "block/sculk_sensor/sculk_clicking", 6);
+    for (int k = 0; k < 8; ++k)
+    {
+        char file[64];
+        std::snprintf(file, sizeof(file), "item/goat_horn/call%d.ogg", k);
+        loadSingle(static_cast<Sound>(static_cast<int>(Sound::GoatHornFirst) + k), file);
+    }
 
     auto make = [&](Sound id) -> Synth {
         auto& clips = m_buffers[static_cast<size_t>(id)];
@@ -1644,6 +1650,16 @@ void AudioEngine::buildSounds()
         Synth s = make(Sound::MobStep);
         s.addNoise(0.07f, 1100.0f, 50.0f, 1.0f, false, 220);
         s.finish(0.30f);
+    }
+    for (int k = 0; k < 8; ++k)
+    {
+        Synth s = make(static_cast<Sound>(static_cast<int>(Sound::GoatHornFirst) + k));
+        static const float ROOT[8] = { 196.0f, 233.0f, 175.0f, 262.0f, 220.0f, 147.0f, 294.0f, 165.0f };
+        const float root = ROOT[k];
+        s.addTone(2.6f, root, root * (k % 2 ? 0.94f : 1.06f), 0.6f, 0.45f, true);
+        s.addTone(2.6f, root * 2.0f, root * 2.0f, 0.9f, 0.15f);
+        s.addNoise(2.0f, 900.0f, 1.2f, 0.06f, false, 400 + k);
+        s.finish(0.7f);
     }
     {
         Synth s = make(Sound::SculkClick);

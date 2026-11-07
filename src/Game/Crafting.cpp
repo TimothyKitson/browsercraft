@@ -467,6 +467,7 @@ namespace
           Items::FishingRod, 1 },
         { false, 2, 2, { Items::FishingRod, Blocks::Air, Blocks::Air, Items::Carrot }, 0, Items::CarrotOnAStick, 1 },
         { false, 1, 3, { Items::AmethystShard, Items::CopperIngot, Items::CopperIngot }, 0, Items::Spyglass, 1 },
+        { false, 1, 2, { Items::StringItem, Items::Leather }, 0, Items::Bundle, 1 },
         { false, 3, 3, { Blocks::Air, Items::GoldIngot, Blocks::Air, Items::GoldIngot, Items::Redstone, Items::GoldIngot,
                          Blocks::Air, Items::GoldIngot, Blocks::Air }, 0, Items::Clock, 1 },
         { false, 3, 3, { Items::EchoShard, Items::EchoShard, Items::EchoShard, Items::EchoShard, Items::Compass, Items::EchoShard,

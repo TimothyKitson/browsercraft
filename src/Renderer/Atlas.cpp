@@ -1748,6 +1748,31 @@ namespace
                 t.set(3 + k, 12 - k + w, k < 3 ? Color{ 170, 120, 220 } : Color{ 196, 110, 70 });
         t.set(13, 2, Color{ 220, 200, 250 });
     }
+    void paintItemGoatHorn(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int k = 0; k < 11; ++k)
+        {
+            const int x = 3 + k, y = 12 - static_cast<int>(std::sqrt(static_cast<float>(k)) * 3.0f);
+            const int thick = 1 + (10 - k) / 4;
+            for (int w = 0; w < thick; ++w) t.set(x, y + w, k > 8 ? Color{ 120, 110, 100 } : Color{ 196, 186, 168 });
+        }
+    }
+    void paintBundleIn(Tile& t, bool filled)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 5; y < 14; ++y)
+            for (int x = 3; x < 13; ++x)
+            {
+                const float dx = (x - 7.5f) / 5.0f, dy = (y - 9.5f) / 4.5f;
+                if (dx * dx + dy * dy < 1.0f) t.set(x, y, (x + y) % 4 ? Color{ 150, 96, 54 } : Color{ 120, 72, 40 });
+            }
+        for (int x = 6; x < 10; ++x) t.set(x, 4, Color{ 200, 180, 150 });
+        t.set(6, 3, Color{ 200, 180, 150 }); t.set(9, 3, Color{ 200, 180, 150 });
+        if (filled) for (int x = 5; x < 11; ++x) t.set(x, 5, Color{ 90, 160, 220 });
+    }
+    void paintItemBundle(Tile& t) { paintBundleIn(t, false); }
+    void paintItemBundleFilled(Tile& t) { paintBundleIn(t, true); }
     void paintItemEchoShard(Tile& t)
     {
         t.fill(Color{ 0, 0, 0, 0 });
@@ -8715,6 +8740,9 @@ namespace
         { Tiles::ItemLead, paintItemLead },
         { Tiles::ItemSpyglass, paintItemSpyglass },
         { Tiles::ItemEchoShard, paintItemEchoShard },
+        { Tiles::ItemGoatHorn, paintItemGoatHorn },
+        { Tiles::ItemBundle, paintItemBundle },
+        { Tiles::ItemBundleFilled, paintItemBundleFilled },
         { Tiles::FishingHookTile, paintFishingHookTile },
         { Tiles::LeashKnotTile, paintLeashKnotTile },
         { Tiles::ItemCompass, paintItemCompass },
@@ -9589,6 +9617,9 @@ namespace
         { Tiles::ItemLead, { "lead", nullptr, nullptr } },
         { Tiles::ItemSpyglass, { "spyglass", nullptr, nullptr } },
         { Tiles::ItemEchoShard, { "echo_shard", nullptr, nullptr } },
+        { Tiles::ItemGoatHorn, { "goat_horn", nullptr, nullptr } },
+        { Tiles::ItemBundle, { "bundle", nullptr, nullptr } },
+        { Tiles::ItemBundleFilled, { "bundle_filled", nullptr, nullptr } },
         { Tiles::ItemCompassFrameFirst + 0, { "compass_00", nullptr, nullptr } },
         { Tiles::ItemCompassFrameFirst + 1, { "compass_01", nullptr, nullptr } },
         { Tiles::ItemCompassFrameFirst + 2, { "compass_02", nullptr, nullptr } },

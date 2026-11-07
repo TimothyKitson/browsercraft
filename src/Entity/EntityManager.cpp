@@ -584,6 +584,23 @@ void EntityManager::update(float deltaTime, const World& world,
         }
     }
 
+    for (Mob& goat : m_mobs)
+    {
+        if (goat.typeId() != MobId::Goat || !goat.alive() || goat.baby() || goat.ridden()) continue;
+        if (!goat.ramReady(deltaTime)) continue;
+        const float radians = glm::radians(goat.yaw());
+        const glm::vec3 forward(std::cos(radians), 0.0f, std::sin(radians));
+        goat.shove(forward * 7.0f);
+        if (goat.hornsLeft() <= 0) continue;
+        const glm::vec3 ahead = goat.position() + forward * (goat.type().width * 0.5f + 0.9f) + glm::vec3(0.0f, 0.5f, 0.0f);
+        const BlockId struck = world.getBlock(static_cast<int>(std::floor(ahead.x)), static_cast<int>(std::floor(ahead.y)),
+                                              static_cast<int>(std::floor(ahead.z)));
+        if (!breaksHorn(struck)) continue;
+        goat.loseHorn();
+        const int variant = (goat.screamingGoat() ? 4 : 0) + static_cast<int>((goat.birthSeed() >> 3) + static_cast<uint32_t>(goat.hornsLeft())) % 4;
+        m_horns.push_back(ShedHorn{ ahead - forward * 0.7f, variant });
+    }
+
     // Drop anything dead-and-done, or far enough off that nobody will
     // miss it.
     m_mobs.erase(
@@ -690,6 +707,20 @@ std::vector<MobShot> EntityManager::drainShots()
         mob.shots().clear();
     }
     return all;
+}
+
+bool EntityManager::breaksHorn(BlockId block)
+{
+    if (isLog(block)) return true;
+    switch (block)
+    {
+        case Blocks::Stone: case Blocks::Cobblestone: case Blocks::Deepslate: case Blocks::Andesite: case Blocks::Granite:
+        case Blocks::Diorite: case Blocks::Tuff: case Blocks::Calcite: case Blocks::PackedIce:
+        case Blocks::CoalOre: case Blocks::IronOre: case Blocks::GoldOre: case Blocks::CopperOre: case Blocks::EmeraldOre:
+            return true;
+        default:
+            return false;
+    }
 }
 
 std::vector<MobBlast> EntityManager::drainBlasts()

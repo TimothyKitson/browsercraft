@@ -383,6 +383,8 @@ namespace Items
         Clock,
         RecoveryCompass,
         EchoShard,
+        GoatHorn,
+        Bundle,
         Count
     };
 }

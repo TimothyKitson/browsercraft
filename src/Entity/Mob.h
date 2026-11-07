@@ -115,6 +115,16 @@ public:
     // one, which would otherwise change as it wandered about.
     uint32_t birthSeed() const { return m_birthSeed; }
     uint32_t serial() const { return m_serial; }
+    bool screamingGoat() const { return (m_birthSeed % 50u) == 7u; }
+    int hornsLeft() const { return m_horns; }
+    void loseHorn() { if (m_horns > 0) --m_horns; }
+    bool ramReady(float deltaTime)
+    {
+        m_ramTimer -= deltaTime;
+        if (m_ramTimer > 0.0f) return false;
+        m_ramTimer = 30.0f + static_cast<float>((m_birthSeed * 2654435761u + m_serial * 40503u) % 271u);
+        return true;
+    }
     const std::string& customName() const { return m_customName; }
     void setCustomName(const std::string& name) { m_customName = name; }
     bool leashed() const { return m_leashed; }
@@ -468,6 +478,8 @@ private:
     float m_holdTimer = 0.0f;
     bool m_ridden = false;
     uint32_t m_serial = 0;
+    int m_horns = 2;
+    float m_ramTimer = 20.0f;
     std::string m_customName;
     bool m_leashed = false;
     float m_rideBoost = 0.0f;

@@ -287,6 +287,8 @@ namespace
         { "Clock", Tiles::ItemClockFirst, 64 },
         { "Recovery Compass", Tiles::ItemRecoveryFirst + 16, 64 },
         { "Echo Shard", Tiles::ItemEchoShard, 64 },
+        { "Goat Horn", Tiles::ItemGoatHorn, 1 },
+        { "Bundle", Tiles::ItemBundle, 1 },
     };
 
     static_assert(sizeof(ITEMS) / sizeof(ITEMS[0]) ==
