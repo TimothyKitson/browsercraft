@@ -456,6 +456,15 @@ void Application::loadOptions()
         else if (std::sscanf(line, "recipeBook=%d", &value) == 1) m_recipeOpen = value != 0;
         else if (std::sscanf(line, "recipeFilter=%d", &value) == 1)
             for (int k = 0; k < 4; ++k) m_recipeFilter[k] = ((value >> k) & 1) != 0;
+        else if (std::strncmp(line, "textBackground=", 15) == 0) m_textBackground = std::clamp(static_cast<float>(std::atof(line + 15)), 0.0f, 1.0f);
+        else if (std::strncmp(line, "chatOpacity=", 12) == 0) m_chatOpacity = std::clamp(static_cast<float>(std::atof(line + 12)), 0.1f, 1.0f);
+        else if (std::strncmp(line, "fovEffects=", 11) == 0) m_fovEffects = std::clamp(static_cast<float>(std::atof(line + 11)), 0.0f, 1.0f);
+        else if (std::strncmp(line, "darknessPulsing=", 16) == 0) m_darknessPulsing = std::clamp(static_cast<float>(std::atof(line + 16)), 0.0f, 1.0f);
+        else if (std::strncmp(line, "panoramaSpeed=", 14) == 0) m_panoramaSpeed = std::clamp(static_cast<float>(std::atof(line + 14)), 0.0f, 1.0f);
+        else if (std::sscanf(line, "toggleSneak=%d", &value) == 1) m_toggleSneak = value != 0;
+        else if (std::sscanf(line, "toggleSprint=%d", &value) == 1) m_toggleSprint = value != 0;
+        else if (std::sscanf(line, "hideLightning=%d", &value) == 1) m_hideLightning = value != 0;
+        else if (std::sscanf(line, "hideSplash=%d", &value) == 1) m_hideSplash = value != 0;
         else if (std::strncmp(line, "tutorialStep=", 13) == 0)
         {
             std::string text(line + 13);
@@ -485,6 +494,10 @@ void Application::saveOptions()
                  m_recipeOpen ? 1 : 0, filters);
     std::fprintf(file, "resourcePacks=%s\n", Packs::selectionLine(m_packSelection).c_str());
     std::fprintf(file, "tutorialStep=%s\n", tutorialStepId(m_tutorialStep));
+    std::fprintf(file, "textBackground=%.3f\nchatOpacity=%.3f\nfovEffects=%.3f\ndarknessPulsing=%.3f\npanoramaSpeed=%.3f\n",
+                 m_textBackground, m_chatOpacity, m_fovEffects, m_darknessPulsing, m_panoramaSpeed);
+    std::fprintf(file, "toggleSneak=%d\ntoggleSprint=%d\nhideLightning=%d\nhideSplash=%d\n", m_toggleSneak ? 1 : 0,
+                 m_toggleSprint ? 1 : 0, m_hideLightning ? 1 : 0, m_hideSplash ? 1 : 0);
     std::fclose(file);
 #ifdef __EMSCRIPTEN__
     EM_ASM({
@@ -815,7 +828,7 @@ void Application::startMenuWorld()
 void Application::updateMenuCamera(float deltaTime)
 {
     // Orbit the focus point, which reads as the world turning slowly.
-    m_titleSpin += deltaTime * 2.2f; // degrees per second
+    m_titleSpin += deltaTime * 2.2f * m_panoramaSpeed;
     if (m_titleSpin > 360.0f) m_titleSpin -= 360.0f;
 
     // The camera stays put and turns on the spot, which is what
@@ -1646,7 +1659,7 @@ float Application::daylightFactor() const
     // out -- which is Minecraft's rule, and falls out rather than
     // having to be written down anywhere.
     const float weathered = sun * Weather::lightScale(m_weather);
-    return std::clamp(weathered + Weather::flashBoost(m_weather), 0.0f, 1.0f);
+    return std::clamp(weathered + (m_hideLightning ? 0.0f : Weather::flashBoost(m_weather)), 0.0f, 1.0f);
 }
 
 // What the world is lit by as far as the eye is concerned, which is not
@@ -1674,15 +1687,18 @@ void Application::run()
     const bool serverMenus = m_startupScreen == "servers" || m_startupScreen == "addserver" || m_startupScreen == "directconnect" ||
                              m_startupScreen == "connectfail";
     const bool packMenus = m_startupScreen == "packs" || m_startupScreen == "packconfirm";
+    const bool accessMenus = m_startupScreen == "accessibility" || m_startupScreen == "language";
     const bool menuOnly = (m_startupScreen == "title" || m_startupScreen == "modes" ||
                            m_startupScreen == "settings" || m_startupScreen == "multiplayer" ||
                            m_startupScreen == "controls" || m_startupScreen == "name" ||
-                           m_startupScreen == "video" || m_startupScreen == "credits" || worldMenus || serverMenus || packMenus);
+                           m_startupScreen == "video" || m_startupScreen == "credits" || worldMenus || serverMenus || packMenus || accessMenus);
     migrateLegacySave();
     if (m_startupScreen == "title") m_screen = Screen::Title;
     if (m_startupScreen == "video") m_screen = Screen::VideoSettings;
     if (m_startupScreen == "credits") m_screen = Screen::Credits;
     if (m_startupScreen == "modes") openWorldList();
+    if (m_startupScreen == "accessibility") m_screen = Screen::Accessibility;
+    if (m_startupScreen == "language") m_screen = Screen::Language;
     if (packMenus)
     {
         struct Seeded { const char* folder; const char* description; int format; const char* icon; };
@@ -7604,6 +7620,16 @@ void Application::applyMenuAction()
         case MenuAction::GoSingleplayer: openWorldList(); break;
         case MenuAction::PlayWorld: playWorld(m_pendingWorldFolder); break;
         case MenuAction::OpenPacks: openPacks(); break;
+        case MenuAction::OpenAccessibility:
+            m_accessReturn = m_screen;
+            m_accessList = GuiList{};
+            m_screen = Screen::Accessibility;
+            break;
+        case MenuAction::OpenLanguage:
+            m_accessReturn = m_screen;
+            m_languageList = GuiList{};
+            m_screen = Screen::Language;
+            break;
         case MenuAction::CreateWorldNow: createWorldFromScreen(); break;
         case MenuAction::GoMultiplayer:
             openServerList();
@@ -7943,6 +7969,11 @@ void Application::handleEvents()
         {
             m_net.leave();
             m_screen = Screen::Multiplayer;
+        }
+        else if (m_screen == Screen::Accessibility || m_screen == Screen::Language)
+        {
+            saveOptions();
+            m_screen = m_accessReturn;
         }
         else if (m_screen == Screen::Packs)
         {
@@ -8319,8 +8350,10 @@ void Application::updateGameplay(float deltaTime)
     controls.wishDirection = wish;
     controls.jump = m_keys.pressed(m_input, Action::Jump);
     controls.jumpHeld = m_keys.down(m_input, Action::Jump);
-    controls.sprint = m_keys.down(m_input, Action::Sprint);
-    controls.sneak = m_keys.down(m_input, Action::Sneak);
+    if (m_toggleSprint && m_keys.pressed(m_input, Action::Sprint)) m_sprintLatched = !m_sprintLatched;
+    if (m_toggleSneak && m_keys.pressed(m_input, Action::Sneak)) m_sneakLatched = !m_sneakLatched;
+    controls.sprint = m_toggleSprint ? m_sprintLatched : m_keys.down(m_input, Action::Sprint);
+    controls.sneak = m_toggleSneak ? m_sneakLatched : m_keys.down(m_input, Action::Sneak);
     controls.descend = controls.sneak;
     controls.look = m_camera.front;
 
@@ -8428,7 +8461,7 @@ void Application::updateGameplay(float deltaTime)
     m_scopeAmount = std::clamp(m_scopeAmount + (m_scoping ? 6.0f : -10.0f) * deltaTime, 0.0f, 1.0f);
 
     // A little extra field of view while sprinting sells the speed.
-    const float targetFov = m_scoping ? 7.0f : (m_player.sprinting || m_player.gliding) ? 78.0f : 70.0f;
+    const float targetFov = m_scoping ? 7.0f : (m_player.sprinting || m_player.gliding) ? 70.0f + 8.0f * m_fovEffects : 70.0f;
     m_camera.fov += (targetFov - m_camera.fov) * std::clamp(8.0f * deltaTime, 0.0f, 1.0f);
 
     // --- the rest of the world ---
@@ -17164,6 +17197,8 @@ void Application::render()
         case Screen::DirectConnect: renderDirectConnect(); break;
         case Screen::Connecting:   renderConnecting(); break;
         case Screen::Packs:        renderPacks(); break;
+        case Screen::Accessibility: renderAccessibility(); break;
+        case Screen::Language:     renderLanguage(); break;
         case Screen::Controls:     renderControlsScreen(); break;
         case Screen::NameEntry:    renderNameEntryScreen(); break;
         case Screen::Playing:
@@ -18581,9 +18616,9 @@ void Application::renderChat()
         const float y = bottom - (shown - i) * lineHeight;
         m_ui.quad(left - 2.0f, y - 1.0f,
                   UIRenderer::textWidth(line.text, 1.0f) + 4.0f, lineHeight,
-                  glm::vec4(0.0f, 0.0f, 0.0f, 0.35f * fade));
+                  glm::vec4(0.0f, 0.0f, 0.0f, 0.7f * m_textBackground * fade * m_chatOpacity));
         m_ui.textWithShadow(line.text, left, y, 1.0f,
-                            glm::vec4(1.0f, 1.0f, 1.0f, fade));
+                            glm::vec4(1.0f, 1.0f, 1.0f, fade * m_chatOpacity));
     }
 
     if (m_chatOpen)
@@ -20785,7 +20820,7 @@ void Application::renderEffectOverlays(float w, float h)
     }
     if (m_darknessFade > 0.0f)
     {
-        const float pulse = Effects::darknessPulse(m_darknessFade, m_elapsedSeconds);
+        const float pulse = Effects::darknessPulse(m_darknessFade, m_elapsedSeconds) * m_darknessPulsing;
         const float shade = std::clamp(m_darknessFade * 0.3f + pulse, 0.0f, 0.85f);
         m_ui.quad(0.0f, 0.0f, w, h, glm::vec4(0.0f, 0.0f, 0.0f, shade));
     }
@@ -21629,29 +21664,32 @@ void Application::renderTitleScreen()
     // The yellow line beside the logo, pulsing the way Minecraft's does.
     // Picked once per launch rather than per frame, or it would flicker
     // through the whole list sixty times a second.
-    static const char* splash = SPLASHES[SDL_GetTicks() % std::size(SPLASHES)];
-    const float pulse = 1.0f + 0.08f * std::sin(m_elapsedSeconds * 4.0f);
-    float splashScale = 1.9f * pulse;
-
-    // The longer lines ran off the right edge on a narrow window, so the
-    // splash is shrunk to fit and then pulled back on screen.
-    float splashWidth = UIRenderer::textWidth(splash, splashScale);
-    const float splashRoom = w * 0.46f;
-    if (splashWidth > splashRoom)
+    if (!m_hideSplash)
     {
-        splashScale *= splashRoom / splashWidth;
-        splashWidth = splashRoom;
+        static const char* splash = SPLASHES[SDL_GetTicks() % std::size(SPLASHES)];
+        const float pulse = 1.0f + 0.08f * std::sin(m_elapsedSeconds * 4.0f);
+        float splashScale = 1.9f * pulse;
+
+        // The longer lines ran off the right edge on a narrow window, so the
+        // splash is shrunk to fit and then pulled back on screen.
+        float splashWidth = UIRenderer::textWidth(splash, splashScale);
+        const float splashRoom = w * 0.46f;
+        if (splashWidth > splashRoom)
+        {
+            splashScale *= splashRoom / splashWidth;
+            splashWidth = splashRoom;
+        }
+
+        float splashX = w * 0.5f + UIRenderer::textWidth(title, titleScale) * 0.40f;
+        splashX = std::clamp(splashX, 8.0f, w - splashWidth - 10.0f);
+
+        // Tilted up to the right, as in Minecraft. Negative because screen Y
+        // runs downwards, so a negative angle lifts the end of the line.
+        constexpr float SPLASH_TILT = -20.0f * 3.14159265f / 180.0f;
+        m_ui.textWithShadowRotated(splash, splashX,
+                                   titleY + UIRenderer::textHeight(titleScale) * 0.86f,
+                                   splashScale, SPLASH_TILT, glm::vec4(1.0f, 1.0f, 0.31f, 1.0f));
     }
-
-    float splashX = w * 0.5f + UIRenderer::textWidth(title, titleScale) * 0.40f;
-    splashX = std::clamp(splashX, 8.0f, w - splashWidth - 10.0f);
-
-    // Tilted up to the right, as in Minecraft. Negative because screen Y
-    // runs downwards, so a negative angle lifts the end of the line.
-    constexpr float SPLASH_TILT = -20.0f * 3.14159265f / 180.0f;
-    m_ui.textWithShadowRotated(splash, splashX,
-                               titleY + UIRenderer::textHeight(titleScale) * 0.86f,
-                               splashScale, SPLASH_TILT, glm::vec4(1.0f, 1.0f, 0.31f, 1.0f));
 
     const float buttonWidth = std::min(420.0f, w * 0.6f);
     const float buttonX = w * 0.5f - buttonWidth * 0.5f;
@@ -21668,6 +21706,11 @@ void Application::renderTitleScreen()
 
     // Settings and the profile share a row, as they do in Eaglercraft.
     const float halfWidth = buttonWidth * 0.5f - 6.0f;
+    m_titleTip.clear();
+    if (titleIconButton(buttonX - buttonHeight - 12.0f, y, buttonHeight, "sprites/icon/language", "Language..."))
+        m_pendingAction = MenuAction::OpenLanguage;
+    if (titleIconButton(buttonX + buttonWidth + 12.0f, y, buttonHeight, "sprites/icon/accessibility", "Accessibility Settings..."))
+        m_pendingAction = MenuAction::OpenAccessibility;
     if (menuButton({ buttonX, y, halfWidth, buttonHeight }, "Options..."))
         m_pendingAction = MenuAction::GoSettings;
 
@@ -21708,6 +21751,13 @@ void Application::renderTitleScreen()
     if (!credit.empty())
         m_ui.textWithShadow(credit, w - UIRenderer::textWidth(credit, 1.7f) - 10.0f,
                             footerY, 1.7f, DIM_TEXT);
+    if (!m_titleTip.empty())
+    {
+        const float unit = static_cast<float>(guiScale());
+        m_ui.setScale(unit);
+        drawTooltip(m_titleTip, static_cast<float>(m_input.mouseX()) / unit, static_cast<float>(m_input.mouseY()) / unit, true);
+        m_ui.setScale(unit * MENU_UNIT);
+    }
 }
 
 void Application::renderSettingsScreen()
@@ -22227,6 +22277,7 @@ void Application::renderDeathScreen()
 #include "PackScreen.inl"
 #include "Tutorial.inl"
 #include "Spectator.inl"
+#include "AccessibilityScreen.inl"
 #include "Core/Packs.h"
 
 void Application::renderDebugOverlay()

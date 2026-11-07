@@ -105,7 +105,9 @@ enum class Screen
     EditServer,
     DirectConnect,
     Connecting,
-    Packs
+    Packs,
+    Accessibility,
+    Language
 };
 
 // Menu buttons are drawn and hit-tested in the same pass, so a click
@@ -152,6 +154,8 @@ enum class MenuAction
     OpenStatistics,
     PlayWorld,
     OpenPacks,
+    OpenAccessibility,
+    OpenLanguage,
     CreateWorldNow,
     ToggleMainHand,
     RenderDistanceDown,
@@ -1496,6 +1500,24 @@ private:
     void updateSpectatorInput();
     bool followSpectatedMob();
     void renderSpectatorMenu(float w, float h);
+    float m_textBackground = 0.5f;
+    float m_chatOpacity = 1.0f;
+    float m_fovEffects = 1.0f;
+    float m_darknessPulsing = 1.0f;
+    float m_panoramaSpeed = 1.0f;
+    bool m_toggleSneak = false;
+    bool m_toggleSprint = false;
+    bool m_hideLightning = false;
+    bool m_hideSplash = false;
+    bool m_sneakLatched = false;
+    bool m_sprintLatched = false;
+    int m_activeSlider = -1;
+    Screen m_accessReturn = Screen::Title;
+    std::string m_titleTip;
+    bool guiSlider(int id, float x, float y, float w, const std::string& label, float& value);
+    void renderAccessibility();
+    void renderLanguage();
+    bool titleIconButton(float x, float y, float size, const char* icon, const char* tooltip);
     std::set<StackId> m_knownRecipes;
     bool m_recipesSeeded = false;
     StackId stackNamed(const std::string& id) const;
@@ -1580,6 +1602,7 @@ private:
     };
     CreateWorldState m_create;
     GuiList m_worldList, m_flatList, m_presetList, m_biomeList;
+    GuiList m_accessList, m_languageList;
     GuiField m_worldSearch, m_createName, m_createSeed, m_editName, m_presetField;
     std::string m_editFolder;
     std::string m_editNote;
