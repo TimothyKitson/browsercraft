@@ -818,6 +818,10 @@ private:
     int m_distortion = 100;
     float m_nausea = 0.0f;
     float m_darknessFade = 0.0f;
+    int m_heartShown = 20;
+    int m_heartLast = 20;
+    float m_heartCheck = 0.0f;
+    float m_heartJumpEnd = 0.0f;
     float m_devAttackStrength = -1.0f;
     bool m_leftHanded = false;
     float attackStrength() const;

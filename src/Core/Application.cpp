@@ -2582,7 +2582,7 @@ bool Application::frame()
             m_startupScreen == "attackhud" || m_startupScreen == "attackready" ||
             m_startupScreen == "attackhotbar" || m_startupScreen == "bossbars" ||
             m_startupScreen == "gamemode" || m_startupScreen == "spectator" ||
-            m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" || m_startupScreen == "leads" || m_startupScreen == "anvilname" || m_startupScreen == "dials" || m_startupScreen == "spyglass" || m_startupScreen == "bundle" || m_startupScreen == "archery" || m_startupScreen == "food" || m_startupScreen == "materials" || m_startupScreen == "tropical" || m_startupScreen == "book" || m_startupScreen == "bookedit" || m_startupScreen == "booktip" || m_startupScreen == "boats" || m_startupScreen == "carts" || m_startupScreen == "fireworks" || m_startupScreen == "jukebox" || m_startupScreen == "potioncloud" || m_startupScreen == "armadillo" || m_startupScreen == "signs" || m_startupScreen == "glowsquid" || m_startupScreen == "fangs" || m_startupScreen == "zoglin" || m_startupScreen == "illusioner" || m_startupScreen == "llamas" || m_startupScreen == "paintings" || m_startupScreen == "stands" || m_startupScreen == "glowframes" || m_startupScreen == "bannershield" || m_startupScreen == "signkinds" || m_startupScreen == "signedit" || m_startupScreen == "hangingedit" || m_startupScreen == "mapmarks" || m_startupScreen == "explorermap" || m_startupScreen == "trims" || m_startupScreen == "effects" || m_startupScreen == "effectlist" || m_startupScreen == "nausea" || m_startupScreen == "darkness" ||
+            m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" || m_startupScreen == "leads" || m_startupScreen == "anvilname" || m_startupScreen == "dials" || m_startupScreen == "spyglass" || m_startupScreen == "bundle" || m_startupScreen == "archery" || m_startupScreen == "food" || m_startupScreen == "materials" || m_startupScreen == "tropical" || m_startupScreen == "book" || m_startupScreen == "bookedit" || m_startupScreen == "booktip" || m_startupScreen == "boats" || m_startupScreen == "carts" || m_startupScreen == "fireworks" || m_startupScreen == "jukebox" || m_startupScreen == "potioncloud" || m_startupScreen == "armadillo" || m_startupScreen == "signs" || m_startupScreen == "glowsquid" || m_startupScreen == "fangs" || m_startupScreen == "zoglin" || m_startupScreen == "illusioner" || m_startupScreen == "llamas" || m_startupScreen == "paintings" || m_startupScreen == "stands" || m_startupScreen == "glowframes" || m_startupScreen == "bannershield" || m_startupScreen == "signkinds" || m_startupScreen == "signedit" || m_startupScreen == "hangingedit" || m_startupScreen == "mapmarks" || m_startupScreen == "explorermap" || m_startupScreen == "trims" || m_startupScreen == "effects" || m_startupScreen == "effectlist" || m_startupScreen == "nausea" || m_startupScreen == "darkness" || m_startupScreen == "hearts" ||
             m_startupScreen == "grinderror" || m_startupScreen == "woods" ||
             m_startupScreen == "cherry" || m_startupScreen == "mangrove" || m_startupScreen == "fungi" ||
             m_startupScreen == "stones" || m_startupScreen == "colours" || m_startupScreen == "candles" ||
@@ -2741,6 +2741,7 @@ bool Application::frame()
                                   m_startupScreen != "effects" &&
                                   m_startupScreen != "nausea" &&
                                   m_startupScreen != "darkness" &&
+                                  m_startupScreen != "hearts" &&
                                   m_startupScreen != "golem" &&
                                   m_startupScreen != "shulker" &&
                                   m_startupScreen != "nethermobs" &&
@@ -3107,7 +3108,7 @@ bool Application::frame()
             if (m_startupScreen == "attackhud" || m_startupScreen == "attackready" ||
                 m_startupScreen == "attackhotbar" || m_startupScreen == "bossbars" ||
                 m_startupScreen == "gamemode" || m_startupScreen == "spectator" ||
-                m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" || m_startupScreen == "leads" || m_startupScreen == "anvilname" || m_startupScreen == "dials" || m_startupScreen == "spyglass" || m_startupScreen == "bundle" || m_startupScreen == "archery" || m_startupScreen == "food" || m_startupScreen == "materials" || m_startupScreen == "tropical" || m_startupScreen == "book" || m_startupScreen == "bookedit" || m_startupScreen == "booktip" || m_startupScreen == "boats" || m_startupScreen == "carts" || m_startupScreen == "fireworks" || m_startupScreen == "jukebox" || m_startupScreen == "potioncloud" || m_startupScreen == "armadillo" || m_startupScreen == "signs" || m_startupScreen == "glowsquid" || m_startupScreen == "fangs" || m_startupScreen == "zoglin" || m_startupScreen == "illusioner" || m_startupScreen == "llamas" || m_startupScreen == "paintings" || m_startupScreen == "stands" || m_startupScreen == "glowframes" || m_startupScreen == "bannershield" || m_startupScreen == "signkinds" || m_startupScreen == "signedit" || m_startupScreen == "hangingedit" || m_startupScreen == "mapmarks" || m_startupScreen == "explorermap" || m_startupScreen == "trims" || m_startupScreen == "effects" || m_startupScreen == "effectlist" || m_startupScreen == "nausea" || m_startupScreen == "darkness" ||
+                m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" || m_startupScreen == "leads" || m_startupScreen == "anvilname" || m_startupScreen == "dials" || m_startupScreen == "spyglass" || m_startupScreen == "bundle" || m_startupScreen == "archery" || m_startupScreen == "food" || m_startupScreen == "materials" || m_startupScreen == "tropical" || m_startupScreen == "book" || m_startupScreen == "bookedit" || m_startupScreen == "booktip" || m_startupScreen == "boats" || m_startupScreen == "carts" || m_startupScreen == "fireworks" || m_startupScreen == "jukebox" || m_startupScreen == "potioncloud" || m_startupScreen == "armadillo" || m_startupScreen == "signs" || m_startupScreen == "glowsquid" || m_startupScreen == "fangs" || m_startupScreen == "zoglin" || m_startupScreen == "illusioner" || m_startupScreen == "llamas" || m_startupScreen == "paintings" || m_startupScreen == "stands" || m_startupScreen == "glowframes" || m_startupScreen == "bannershield" || m_startupScreen == "signkinds" || m_startupScreen == "signedit" || m_startupScreen == "hangingedit" || m_startupScreen == "mapmarks" || m_startupScreen == "explorermap" || m_startupScreen == "trims" || m_startupScreen == "effects" || m_startupScreen == "effectlist" || m_startupScreen == "nausea" || m_startupScreen == "darkness" || m_startupScreen == "hearts" ||
                 m_startupScreen == "grinderror" || m_startupScreen == "woods" ||
                 m_startupScreen == "cherry" || m_startupScreen == "mangrove" || m_startupScreen == "fungi" ||
                 m_startupScreen == "stones" || m_startupScreen == "colours" || m_startupScreen == "candles" ||
@@ -4086,7 +4087,7 @@ bool Application::frame()
                     m_camera.addLook(0.0f, 0.0f, 0.0f);
                 }
                 if (m_startupScreen == "effects" || m_startupScreen == "effectlist" || m_startupScreen == "nausea" ||
-                    m_startupScreen == "darkness")
+                    m_startupScreen == "darkness" || m_startupScreen == "hearts")
                 {
                     m_devAttackStrength = 1.0f;
                     for (int dx = -4; dx <= 12; ++dx)
@@ -4139,6 +4140,16 @@ bool Application::frame()
                     {
                         Effects::give(m_player.effects, Kind::Darkness, 0, lasting);
                         m_darknessFade = 1.0f;
+                    }
+                    if (m_startupScreen == "hearts")
+                    {
+                        Effects::give(m_player.effects, Kind::Absorption, 1, lasting);
+                        Effects::give(m_player.effects, Kind::Regeneration, 0, lasting);
+                        Effects::give(m_player.effects, Kind::Hunger, 0, lasting);
+                        m_player.absorption = 7;
+                        m_player.health = 15;
+                        m_player.hunger = 13;
+                        m_player.saturation = 0.0f;
                     }
                     m_inventory.slot(0) = ItemStack{ Items::Potion, 1, Brewing::encode(Brewing::Brew{ Brewing::Potion::Healing, false, true }) };
                     m_inventory.slot(1) = ItemStack{ Items::SplashPotion, 1, Brewing::encode(Brewing::Brew{ Brewing::Potion::Invisibility, true, false }) };
@@ -19722,94 +19733,113 @@ void Application::renderNameplates()
 // under them rather than running past its end.
 float Application::renderHearts(float x, float y)
 {
-    const int heartCount = (m_player.maxHealth() + 1) / 2;
-    const int rows = (heartCount + 9) / 10;
-    const float rowHeight = static_cast<float>(std::max(10 - (rows - 2), 3));
-
-    const bool hardcore = modeIsHardcore(m_gameMode);
-    const GuiSprite fullSprite = hardcore ? GuiSprite::HeartHardcoreFull : GuiSprite::HeartFull;
-    const GuiSprite halfSprite = hardcore ? GuiSprite::HeartHardcoreHalf : GuiSprite::HeartHalf;
-    const GuiSprite emptySprite = hardcore ? GuiSprite::HeartHardcoreContainer : GuiSprite::HeartContainer;
-
-    for (int i = 0; i < heartCount; ++i)
+    const int health = m_player.health;
+    const float now = m_elapsedSeconds;
+    if (health < m_heartShown && m_player.damageFlash > 0.0f)
     {
-        const float heartX = x + (i % 10) * HEART_PITCH;
+        m_heartCheck = now;
+        m_heartJumpEnd = now + 1.0f;
+    }
+    else if (health > m_heartShown && m_player.damageFlash > 0.0f)
+    {
+        m_heartCheck = now;
+        m_heartJumpEnd = now + 0.5f;
+    }
+    if (now - m_heartCheck > 1.0f)
+    {
+        m_heartLast = health;
+        m_heartCheck = now;
+    }
+    m_heartShown = health;
+    const int last = m_heartLast;
+    const int ticks = static_cast<int>(now * 20.0f);
+    const bool blinking = m_heartJumpEnd > now && (static_cast<int>((m_heartJumpEnd - now) * 20.0f) / 3) % 2 == 1;
 
-        // Two health points per heart: 20 health == 10 full hearts.
-        const int remaining = m_player.health - i * 2;
+    const int maxHealth = std::max(m_player.maxHealth(), std::max(last, health));
+    const int absorption = m_player.absorption;
+    const int rows = std::max(1, (maxHealth + absorption + 19) / 20);
+    const float rowHeight = static_cast<float>(std::max(10 - (rows - 2), 3));
+    const int regenHeart = m_player.effects.has(Effects::Kind::Regeneration) ? ticks % (maxHealth + 5) : -1;
+    const int hearts = (maxHealth + 1) / 2;
+    const int golden = (absorption + 1) / 2;
+    const bool hardcore = modeIsHardcore(m_gameMode);
+    const int hc = hardcore ? 1 : 0;
 
-        // On the last two hearts the row shakes, which is Minecraft's
-        // own warning and the only one it gives you. Stirred off the
-        // clock rather than kept as state: it is a twitch, and a
-        // twitch nothing else in the game reads is not worth a field.
-        float heartY = y - static_cast<float>(i / 10) * rowHeight;
-        if (m_player.health <= 4)
+    enum Style { Normal = 0, Poisoned, Withered, Frozen, Absorbing, Container };
+    const Style style = m_player.effects.has(Effects::Kind::Poison) ? Poisoned
+                      : m_player.effects.has(Effects::Kind::Wither) ? Withered
+                      : m_player.frozenSeconds >= Player::FREEZE_SECONDS ? Frozen
+                                                                         : Normal;
+
+    static const char* FILLED[5][2][2][2] = {
+        { { { "sprites/hud/heart/full", "sprites/hud/heart/full_blinking" },
+            { "sprites/hud/heart/half", "sprites/hud/heart/half_blinking" } },
+          { { "sprites/hud/heart/hardcore_full", "sprites/hud/heart/hardcore_full_blinking" },
+            { "sprites/hud/heart/hardcore_half", "sprites/hud/heart/hardcore_half_blinking" } } },
+        { { { "sprites/hud/heart/poisoned_full", "sprites/hud/heart/poisoned_full_blinking" },
+            { "sprites/hud/heart/poisoned_half", "sprites/hud/heart/poisoned_half_blinking" } },
+          { { "sprites/hud/heart/poisoned_hardcore_full", "sprites/hud/heart/poisoned_hardcore_full_blinking" },
+            { "sprites/hud/heart/poisoned_hardcore_half", "sprites/hud/heart/poisoned_hardcore_half_blinking" } } },
+        { { { "sprites/hud/heart/withered_full", "sprites/hud/heart/withered_full_blinking" },
+            { "sprites/hud/heart/withered_half", "sprites/hud/heart/withered_half_blinking" } },
+          { { "sprites/hud/heart/withered_hardcore_full", "sprites/hud/heart/withered_hardcore_full_blinking" },
+            { "sprites/hud/heart/withered_hardcore_half", "sprites/hud/heart/withered_hardcore_half_blinking" } } },
+        { { { "sprites/hud/heart/frozen_full", "sprites/hud/heart/frozen_full_blinking" },
+            { "sprites/hud/heart/frozen_half", "sprites/hud/heart/frozen_half_blinking" } },
+          { { "sprites/hud/heart/frozen_hardcore_full", "sprites/hud/heart/frozen_hardcore_full_blinking" },
+            { "sprites/hud/heart/frozen_hardcore_half", "sprites/hud/heart/frozen_hardcore_half_blinking" } } },
+        { { { "sprites/hud/heart/absorbing_full", "sprites/hud/heart/absorbing_full_blinking" },
+            { "sprites/hud/heart/absorbing_half", "sprites/hud/heart/absorbing_half_blinking" } },
+          { { "sprites/hud/heart/absorbing_hardcore_full", "sprites/hud/heart/absorbing_hardcore_full_blinking" },
+            { "sprites/hud/heart/absorbing_hardcore_half", "sprites/hud/heart/absorbing_hardcore_half_blinking" } } } };
+    static const char* CONTAINERS[2][2] = {
+        { "sprites/hud/heart/container", "sprites/hud/heart/container_blinking" },
+        { "sprites/hud/heart/container_hardcore", "sprites/hud/heart/container_hardcore_blinking" } };
+    static const glm::vec3 TINTS[5] = { glm::vec3(1.0f), glm::vec3(0.62f, 0.75f, 0.25f), glm::vec3(0.28f, 0.24f, 0.22f),
+                                        glm::vec3(0.55f, 0.8f, 1.0f), glm::vec3(1.0f, 0.82f, 0.2f) };
+    const bool packed = m_gui.has("sprites/hud/heart/full");
+
+    auto drawHeart = [&](Style kind, float hx, float hy, bool blink, bool half) {
+        const int b = blink ? 1 : 0;
+        if (packed)
         {
-            const uint32_t tick = static_cast<uint32_t>(m_elapsedSeconds * 20.0f);
-            heartY += static_cast<float>(((tick * 2654435761u) >> (i + 8)) & 1u);
+            guiSprite(kind == Container ? CONTAINERS[hc][b] : FILLED[kind][hc][half ? 1 : 0][b], hx, hy, ICON_SIZE, ICON_SIZE);
+            return;
         }
-
-        if (m_gui.has("sprites/hud/heart/full"))
+        if (kind == Container)
         {
-            const bool blink = m_player.damageFlash > 0.0f &&
-                               (static_cast<int>(m_elapsedSeconds * 20.0f) / 3) % 2 == 0;
-            const bool poisoned = m_player.effects.has(Effects::Kind::Poison);
-            const bool withered = m_player.effects.has(Effects::Kind::Wither);
-            const bool frozen = m_player.frozenSeconds >= Player::FREEZE_SECONDS;
-            static const char* WITHERED[2][2][2] = {
-                { { "sprites/hud/heart/withered_full", "sprites/hud/heart/withered_full_blinking" },
-                  { "sprites/hud/heart/withered_half", "sprites/hud/heart/withered_half_blinking" } },
-                { { "sprites/hud/heart/withered_hardcore_full", "sprites/hud/heart/withered_hardcore_full_blinking" },
-                  { "sprites/hud/heart/withered_hardcore_half", "sprites/hud/heart/withered_hardcore_half_blinking" } } };
-            static const char* FROZEN[2][2][2] = {
-                { { "sprites/hud/heart/frozen_full", "sprites/hud/heart/frozen_full_blinking" },
-                  { "sprites/hud/heart/frozen_half", "sprites/hud/heart/frozen_half_blinking" } },
-                { { "sprites/hud/heart/frozen_hardcore_full", "sprites/hud/heart/frozen_hardcore_full_blinking" },
-                  { "sprites/hud/heart/frozen_hardcore_half", "sprites/hud/heart/frozen_hardcore_half_blinking" } } };
-            static const char* CONTAINER[2][2] = {
-                { "sprites/hud/heart/container", "sprites/hud/heart/container_blinking" },
-                { "sprites/hud/heart/container_hardcore", "sprites/hud/heart/container_hardcore_blinking" } };
-            static const char* NORMAL[2][2][2] = {
-                { { "sprites/hud/heart/full", "sprites/hud/heart/full_blinking" },
-                  { "sprites/hud/heart/half", "sprites/hud/heart/half_blinking" } },
-                { { "sprites/hud/heart/hardcore_full", "sprites/hud/heart/hardcore_full_blinking" },
-                  { "sprites/hud/heart/hardcore_half", "sprites/hud/heart/hardcore_half_blinking" } } };
-            static const char* POISON[2][2][2] = {
-                { { "sprites/hud/heart/poisoned_full", "sprites/hud/heart/poisoned_full_blinking" },
-                  { "sprites/hud/heart/poisoned_half", "sprites/hud/heart/poisoned_half_blinking" } },
-                { { "sprites/hud/heart/poisoned_hardcore_full", "sprites/hud/heart/poisoned_hardcore_full_blinking" },
-                  { "sprites/hud/heart/poisoned_hardcore_half", "sprites/hud/heart/poisoned_hardcore_half_blinking" } } };
-            const int hc = hardcore ? 1 : 0;
-            const int bl = blink ? 1 : 0;
-            guiSprite(CONTAINER[hc][bl], heartX, heartY, ICON_SIZE, ICON_SIZE);
-            if (remaining >= 1)
-            {
-                const int half = remaining >= 2 ? 0 : 1;
-                guiSprite(poisoned ? POISON[hc][half][bl] : withered ? WITHERED[hc][half][bl]
-                          : frozen ? FROZEN[hc][half][bl] : NORMAL[hc][half][bl],
-                          heartX, heartY, ICON_SIZE, ICON_SIZE);
-            }
-            continue;
+            const GuiSprite empty = hardcore ? GuiSprite::HeartHardcoreContainer : GuiSprite::HeartContainer;
+            m_ui.texturedQuad(m_gui.texture(empty), hx, hy, ICON_SIZE, ICON_SIZE, 0.0f, 0.0f, 1.0f, 1.0f,
+                              blink ? glm::vec4(1.6f, 1.6f, 1.6f, 1.0f) : glm::vec4(1.0f));
+            return;
         }
+        const GuiSprite sprite = half ? (hardcore ? GuiSprite::HeartHardcoreHalf : GuiSprite::HeartHalf)
+                                      : (hardcore ? GuiSprite::HeartHardcoreFull : GuiSprite::HeartFull);
+        glm::vec3 tint = TINTS[kind];
+        if (blink) tint = glm::mix(tint, glm::vec3(1.0f), 0.55f);
+        m_ui.texturedQuad(m_gui.texture(sprite), hx, hy, ICON_SIZE, ICON_SIZE, 0.0f, 0.0f, 1.0f, 1.0f, glm::vec4(tint, 1.0f));
+    };
 
-        // The empty container always sits underneath, like Minecraft.
-        m_ui.texturedQuad(m_gui.texture(emptySprite), heartX, heartY, ICON_SIZE, ICON_SIZE,
-                          0.0f, 0.0f, 1.0f, 1.0f, glm::vec4(1.0f));
-
-        const glm::vec4 heartTint = m_player.effects.has(Effects::Kind::Poison) ? glm::vec4(0.62f, 0.75f, 0.25f, 1.0f)
-                                  : m_player.effects.has(Effects::Kind::Wither) ? glm::vec4(0.28f, 0.24f, 0.22f, 1.0f)
-                                  : m_player.frozenSeconds >= Player::FREEZE_SECONDS ? glm::vec4(0.55f, 0.8f, 1.0f, 1.0f)
-                                                                                      : glm::vec4(1.0f);
-        if (remaining >= 2)
+    uint32_t shake = static_cast<uint32_t>(ticks) * 312871u;
+    for (int i = hearts + golden - 1; i >= 0; --i)
+    {
+        const float hx = x + static_cast<float>(i % 10) * HEART_PITCH;
+        float hy = y - static_cast<float>(i / 10) * rowHeight;
+        if (last + absorption <= 4)
         {
-            m_ui.texturedQuad(m_gui.texture(fullSprite), heartX, heartY, ICON_SIZE, ICON_SIZE,
-                              0.0f, 0.0f, 1.0f, 1.0f, heartTint);
+            shake = shake * 1664525u + 1013904223u;
+            hy += static_cast<float>((shake >> 16) & 1u);
         }
-        else if (remaining == 1)
+        if (i < hearts && i == regenHeart) hy -= 2.0f;
+        drawHeart(Container, hx, hy, blinking, false);
+        const int point = i * 2;
+        if (i >= hearts)
         {
-            m_ui.texturedQuad(m_gui.texture(halfSprite), heartX, heartY, ICON_SIZE, ICON_SIZE,
-                              0.0f, 0.0f, 1.0f, 1.0f, heartTint);
+            const int extra = point - hearts * 2;
+            if (extra < absorption) drawHeart(style == Withered ? Withered : Absorbing, hx, hy, false, extra + 1 == absorption);
         }
+        if (blinking && point < last) drawHeart(style, hx, hy, true, point + 1 == last);
+        if (point < health) drawHeart(style, hx, hy, false, point + 1 == health);
     }
     return y - static_cast<float>(rows - 1) * rowHeight;
 }
@@ -19873,14 +19903,25 @@ void Application::renderFood(float rightX, float y)
         }
     }
 
+    const int ticks = static_cast<int>(m_elapsedSeconds * 20.0f);
+    const bool trembling = m_player.saturation <= 0.0f && ticks % (m_player.hunger * 3 + 1) == 0;
+    uint32_t tremor = static_cast<uint32_t>(ticks) * 2654435761u;
+    float shiver[FOOD_COUNT];
+    for (int i = 0; i < FOOD_COUNT; ++i)
+    {
+        tremor = tremor * 1664525u + 1013904223u;
+        shiver[i] = trembling ? static_cast<float>(static_cast<int>((tremor >> 16) % 3u) - 1) : 0.0f;
+    }
+
     const bool starving = m_player.effects.has(Effects::Kind::Hunger) && m_gui.has("sprites/hud/food_full_hunger");
     for (int i = 0; i < FOOD_COUNT && starving; ++i)
     {
         const float foodX = rightX - ICON_SIZE - i * HEART_PITCH;
+        const float foodY = y + shiver[i];
         const int remaining = m_player.hunger - i * 2;
-        guiSprite("sprites/hud/food_empty_hunger", foodX, y, ICON_SIZE, ICON_SIZE);
-        if (remaining >= 2) guiSprite("sprites/hud/food_full_hunger", foodX, y, ICON_SIZE, ICON_SIZE);
-        else if (remaining == 1) guiSprite("sprites/hud/food_half_hunger", foodX, y, ICON_SIZE, ICON_SIZE);
+        guiSprite("sprites/hud/food_empty_hunger", foodX, foodY, ICON_SIZE, ICON_SIZE);
+        if (remaining >= 2) guiSprite("sprites/hud/food_full_hunger", foodX, foodY, ICON_SIZE, ICON_SIZE);
+        else if (remaining == 1) guiSprite("sprites/hud/food_half_hunger", foodX, foodY, ICON_SIZE, ICON_SIZE);
     }
     if (starving) return;
     const glm::vec4 sick = m_player.effects.has(Effects::Kind::Hunger) ? glm::vec4(0.55f, 0.75f, 0.4f, 1.0f) : glm::vec4(1.0f);
@@ -19889,19 +19930,20 @@ void Application::renderFood(float rightX, float y)
         // Minecraft fills the right-hand rows from the outside in, so
         // the first drumstick is the one nearest the edge.
         const float foodX = rightX - ICON_SIZE - i * HEART_PITCH;
+        const float foodY = y + shiver[i];
         const int remaining = m_player.hunger - i * 2;
 
-        m_ui.texturedQuad(m_gui.texture(GuiSprite::FoodContainer), foodX, y, ICON_SIZE, ICON_SIZE,
+        m_ui.texturedQuad(m_gui.texture(GuiSprite::FoodContainer), foodX, foodY, ICON_SIZE, ICON_SIZE,
                           0.0f, 0.0f, 1.0f, 1.0f, glm::vec4(1.0f));
 
         if (remaining >= 2)
         {
-            m_ui.texturedQuad(m_gui.texture(GuiSprite::FoodFull), foodX, y, ICON_SIZE, ICON_SIZE,
+            m_ui.texturedQuad(m_gui.texture(GuiSprite::FoodFull), foodX, foodY, ICON_SIZE, ICON_SIZE,
                               0.0f, 0.0f, 1.0f, 1.0f, sick);
         }
         else if (remaining == 1)
         {
-            m_ui.texturedQuad(m_gui.texture(GuiSprite::FoodHalf), foodX, y, ICON_SIZE, ICON_SIZE,
+            m_ui.texturedQuad(m_gui.texture(GuiSprite::FoodHalf), foodX, foodY, ICON_SIZE, ICON_SIZE,
                               0.0f, 0.0f, 1.0f, 1.0f, sick);
         }
     }
@@ -20515,15 +20557,7 @@ void Application::renderHud()
         // at thirty-nine, the armour and the bubbles at forty-nine.
         renderExperience(barX, h - 29.0f, HOTBAR_WIDTH);
         const float heartTop = renderHearts(barX, h - 39.0f);
-        const int golden = m_player.absorption;
-        for (int i = 0; i < (golden + 1) / 2 && i < 10; ++i)
-        {
-            const float gx = barX + i * HEART_PITCH, gy = heartTop - 10.0f;
-            const bool half = golden - i * 2 == 1;
-            if (!guiSprite(half ? "sprites/hud/heart/absorbing_half" : "sprites/hud/heart/absorbing_full", gx, gy, ICON_SIZE, ICON_SIZE))
-                m_ui.quad(gx + 1.0f, gy + 1.0f, half ? 3.5f : 7.0f, 7.0f, glm::vec4(0.95f, 0.8f, 0.15f, 1.0f));
-        }
-        renderArmour(barX, golden > 0 ? heartTop - 20.0f : heartTop - 10.0f);
+        renderArmour(barX, heartTop - 10.0f);
         renderFood(barX + HOTBAR_WIDTH, h - 39.0f);
         renderAir(barX + HOTBAR_WIDTH, h - 49.0f);
         renderEatProgress(cx, cy);
