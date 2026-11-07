@@ -5,6 +5,7 @@
 #include <cmath>
 #include <string>
 #include <algorithm>
+#include "Core/Packs.h"
 
 namespace
 {
@@ -59,7 +60,7 @@ void BeamRenderer::load()
     {
         const Source& source = SOURCES[i];
         int width = 0, height = 0, channels = 0;
-        unsigned char* data = source.path ? stbi_load(source.path, &width, &height, &channels, 4) : nullptr;
+        unsigned char* data = source.path ? Packs::load(source.path, &width, &height, &channels, 4) : nullptr;
         if (!data)
         {
             m_textures[i] = whiteTexture(source.tint);

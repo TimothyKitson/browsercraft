@@ -4,6 +4,7 @@
 #include <stb_image.h>
 #include <algorithm>
 #include <cmath>
+#include "Core/Packs.h"
 
 #ifndef GL_RGBA8
 #define GL_RGBA8 0x8058
@@ -35,7 +36,7 @@ SkyRenderer::~SkyRenderer()
 unsigned int SkyRenderer::loadTexture(const char* path, bool repeat)
 {
     int width = 0, height = 0, channels = 0;
-    unsigned char* data = stbi_load(path, &width, &height, &channels, 4);
+    unsigned char* data = Packs::load(path, &width, &height, &channels, 4);
     if (!data) return 0;
     unsigned int texture = 0;
     glGenTextures(1, &texture);

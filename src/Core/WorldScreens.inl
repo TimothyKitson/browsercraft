@@ -119,9 +119,11 @@ void Application::guiField(GuiField& field, float x, float y, float w, float h, 
 }
 
 void Application::guiList(GuiList& list, float top, float height, float rowHeight, float rowWidth, int count, float header,
-                          const std::function<void(int, float, float, bool)>& drawRow)
+                          const std::function<void(int, float, float, bool)>& drawRow, float listX, float listW)
 {
-    const float w = m_ui.canvasWidth();
+    const bool boxed = listW > 0.0f;
+    const float w = boxed ? listW : m_ui.canvasWidth();
+    const float left = boxed ? listX : 0.0f;
     const float mouseX = static_cast<float>(m_input.mouseX()) / m_ui.scale();
     const float mouseY = static_cast<float>(m_input.mouseY()) / m_ui.scale();
     const bool clicked = !m_automated && m_input.wasMouseButtonPressed(SDL_BUTTON_LEFT);
@@ -131,10 +133,10 @@ void Application::guiList(GuiList& list, float top, float height, float rowHeigh
     const float bottom = top + height;
     const float maxPosition = static_cast<float>(count) * rowHeight + header;
     const float maxScroll = std::max(0.0f, maxPosition - (height - 4.0f));
-    const float boxLeft = std::floor(w / 2.0f) - std::floor(rowWidth / 2.0f);
+    const float boxLeft = left + std::floor(w / 2.0f) - std::floor(rowWidth / 2.0f);
     const float rowLeft = boxLeft + 2.0f;
-    const float scrollbarX = boxLeft + rowWidth + 10.0f;
-    const bool over = mouseY >= top && mouseY <= bottom && mouseX >= 0.0f && mouseX <= w;
+    const float scrollbarX = boxed ? left + w - 6.0f : boxLeft + rowWidth + 10.0f;
+    const bool over = mouseY >= top && mouseY <= bottom && mouseX >= left && mouseX <= left + w;
     if (over && m_input.wheelDelta() != 0 && !m_automated) list.scroll -= static_cast<float>(m_input.wheelDelta()) * rowHeight / 2.0f;
     const float thumbH = maxPosition > 0.0f ? std::clamp(std::floor(height * height / maxPosition), 32.0f, std::max(32.0f, height - 8.0f)) : height;
     if (clicked) list.dragging = over && maxScroll > 0.0f && mouseX >= scrollbarX && mouseX < scrollbarX + 6.0f;
@@ -171,26 +173,27 @@ void Application::guiList(GuiList& list, float top, float height, float rowHeigh
     const char* background = inWorld ? "inworld_menu_list_background" : "menu_list_background";
     if (guiHas(background))
     {
-        m_ui.setClip(0.0f, top, w, height);
-        const float shiftX = std::fmod(w, 32.0f);
+        m_ui.setClip(left, top, w, height);
+        const float shiftX = std::fmod(left + w, 32.0f);
         const float shiftY = std::fmod(bottom + scroll, 32.0f);
         for (float ty = top - shiftY; ty < bottom; ty += 32.0f)
-            for (float tx = -shiftX; tx < w; tx += 32.0f) guiBlit(background, tx, ty, 0.0f, 0.0f, 32.0f, 32.0f, 32.0f, 32.0f);
+            for (float tx = left - shiftX; tx < left + w; tx += 32.0f) guiBlit(background, tx, ty, 0.0f, 0.0f, 32.0f, 32.0f, 32.0f, 32.0f);
         m_ui.clearClip();
     }
     else
-        m_ui.quad(0.0f, top, w, height, glm::vec4(0.0f, 0.0f, 0.0f, 0.35f));
+        m_ui.quad(left, top, w, height, glm::vec4(0.0f, 0.0f, 0.0f, 0.35f));
 
-    m_ui.setClip(0.0f, top, w, height);
+    m_ui.setClip(left, top, w, height);
     for (int i = 0; i < count; ++i)
     {
         const float y = top + 4.0f - scroll + static_cast<float>(i) * rowHeight + header;
         if (y + rowHeight < top || y > bottom) continue;
         if (i == list.selected)
         {
-            const float left = std::floor((w - rowWidth) / 2.0f);
-            m_ui.quad(left, y - 2.0f, rowWidth, rowHeight, glm::vec4(1.0f));
-            m_ui.quad(left + 1.0f, y - 1.0f, rowWidth - 2.0f, rowHeight - 2.0f, glm::vec4(0.0f, 0.0f, 0.0f, 1.0f));
+            const float boxX = boxed && maxScroll > 0.0f ? rowLeft - 2.0f : left + std::floor((w - rowWidth) / 2.0f);
+            const float boxW = boxed && maxScroll > 0.0f ? left + w - 7.0f - boxX : rowWidth;
+            m_ui.quad(boxX, y - 2.0f, boxW, rowHeight, glm::vec4(1.0f));
+            m_ui.quad(boxX + 1.0f, y - 1.0f, boxW - 2.0f, rowHeight - 2.0f, glm::vec4(0.0f, 0.0f, 0.0f, 1.0f));
         }
         drawRow(i, rowLeft, y, i == hovered);
     }
@@ -199,11 +202,11 @@ void Application::guiList(GuiList& list, float top, float height, float rowHeigh
     auto separator = [&](const char* path, float y, bool upper) {
         if (guiHas(path))
         {
-            for (float tx = 0.0f; tx < w; tx += 32.0f) guiBlit(path, tx, y, 0.0f, 0.0f, std::min(32.0f, w - tx), 2.0f, 32.0f, 2.0f);
+            for (float tx = left; tx < left + w; tx += 32.0f) guiBlit(path, tx, y, 0.0f, 0.0f, std::min(32.0f, left + w - tx), 2.0f, 32.0f, 2.0f);
             return;
         }
-        m_ui.quad(0.0f, y, w, 1.0f, upper ? glm::vec4(0.0f, 0.0f, 0.0f, 0.75f) : glm::vec4(1.0f, 1.0f, 1.0f, 0.25f));
-        m_ui.quad(0.0f, y + 1.0f, w, 1.0f, upper ? glm::vec4(1.0f, 1.0f, 1.0f, 0.25f) : glm::vec4(0.0f, 0.0f, 0.0f, 0.75f));
+        m_ui.quad(left, y, w, 1.0f, upper ? glm::vec4(0.0f, 0.0f, 0.0f, 0.75f) : glm::vec4(1.0f, 1.0f, 1.0f, 0.25f));
+        m_ui.quad(left, y + 1.0f, w, 1.0f, upper ? glm::vec4(1.0f, 1.0f, 1.0f, 0.25f) : glm::vec4(0.0f, 0.0f, 0.0f, 0.75f));
     };
     separator(inWorld ? "inworld_header_separator" : "header_separator", top - 2.0f, true);
     separator(inWorld ? "inworld_footer_separator" : "footer_separator", bottom, false);

@@ -16,6 +16,7 @@
 #include <algorithm>
 #include <cstdlib>
 #include <cmath>
+#include "Core/Packs.h"
 
 namespace
 {
@@ -714,7 +715,7 @@ unsigned int MobModel::villagerTexture(const char* path)
     }
 
     int width = 0, height = 0, channels = 0;
-    unsigned char* data = stbi_load(file.c_str(), &width, &height, &channels, 4);
+    unsigned char* data = Packs::load(file.c_str(), &width, &height, &channels, 4);
     unsigned int texture = 0;
     if (data)
     {

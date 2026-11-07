@@ -7,6 +7,7 @@
 #include <cmath>
 #include <cstdint>
 #include <string>
+#include "Core/Packs.h"
 
 namespace
 {
@@ -132,7 +133,7 @@ unsigned int PaintingRenderer::textureFor(int variant)
     const Paintings::Variant& v = Paintings::variants()[i];
     int width = 0, height = 0, channels = 0;
     const std::string path = Paintings::texturePath(variant);
-    unsigned char* data = stbi_load(path.c_str(), &width, &height, &channels, 4);
+    unsigned char* data = Packs::load(path.c_str(), &width, &height, &channels, 4);
     if (data && width > 0 && height > 0 && width * v.height == height * v.width)
         m_textures[i] = upload(data, width, height);
     else
@@ -149,7 +150,7 @@ unsigned int PaintingRenderer::backTexture()
     if (m_backTried) return m_back;
     m_backTried = true;
     int width = 0, height = 0, channels = 0;
-    unsigned char* data = stbi_load("assets/textures/painting/back.png", &width, &height, &channels, 4);
+    unsigned char* data = Packs::load("assets/textures/painting/back.png", &width, &height, &channels, 4);
     if (data && width > 0 && width == height) m_back = upload(data, width, height);
     else
     {

@@ -10,6 +10,7 @@
 #include <stdexcept>
 #include <string>
 #include <vector>
+#include "Core/Packs.h"
 
 namespace
 {
@@ -233,7 +234,7 @@ ShaderPipeline::ShaderPipeline()
         for (int which = 0; which < 2; ++which)
         {
             int width = 0, height = 0, channels = 0;
-            unsigned char* data = stbi_load(which == 0 ? "assets/textures/environment/sun.png"
+            unsigned char* data = Packs::load(which == 0 ? "assets/textures/environment/sun.png"
                                                        : "assets/textures/environment/moon_phases.png",
                                             &width, &height, &channels, 4);
             if (!data) continue;

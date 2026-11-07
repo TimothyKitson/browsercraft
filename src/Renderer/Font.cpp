@@ -4,6 +4,7 @@
 #include <vector>
 #include <algorithm>
 #include <cstdint>
+#include "Core/Packs.h"
 
 #ifndef GL_RGBA8
 #define GL_RGBA8 0x8058
@@ -152,7 +153,7 @@ Font::Font()
     const int glyphCount = LAST_CHAR - FIRST_CHAR + 1;
 
     int sheetW = 0, sheetH = 0, channels = 0;
-    unsigned char* sheet = stbi_load("assets/textures/font/ascii.png", &sheetW, &sheetH, &channels, 4);
+    unsigned char* sheet = Packs::load("assets/textures/font/ascii.png", &sheetW, &sheetH, &channels, 4);
     if (sheet && sheetW >= 128 && sheetW == sheetH)
     {
         const int cell = sheetW / 16;

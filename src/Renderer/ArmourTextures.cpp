@@ -5,6 +5,7 @@
 #include <stb_image.h>
 #include <algorithm>
 #include <cstdlib>
+#include "Core/Packs.h"
 
 ArmourTextures::~ArmourTextures()
 {
@@ -50,7 +51,7 @@ unsigned int ArmourTextures::upload(const std::vector<uint8_t>& rgba, int width,
 bool ArmourTextures::loadRgba(const std::string& path, std::vector<uint8_t>& rgba, int& width, int& height)
 {
     int channels = 0;
-    unsigned char* data = stbi_load(path.c_str(), &width, &height, &channels, 4);
+    unsigned char* data = Packs::load(path.c_str(), &width, &height, &channels, 4);
     if (!data) return false;
     rgba.assign(data, data + static_cast<size_t>(width) * static_cast<size_t>(height) * 4);
     stbi_image_free(data);

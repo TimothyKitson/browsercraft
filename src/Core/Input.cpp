@@ -41,6 +41,7 @@ void Input::beginFrame()
     m_wheelDelta = 0;
     m_resized = false;
     m_typedText.clear();
+    m_dropped.clear();
     m_backspaces = 0;
 }
 
@@ -64,6 +65,14 @@ void Input::processEvent(const SDL_Event& e)
 
         case SDL_TEXTINPUT:
             m_typedText += e.text.text;
+            break;
+
+        case SDL_DROPFILE:
+            if (e.drop.file)
+            {
+                m_dropped.emplace_back(e.drop.file);
+                SDL_free(e.drop.file);
+            }
             break;
 
         case SDL_KEYDOWN:

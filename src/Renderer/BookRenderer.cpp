@@ -7,6 +7,7 @@
 #include <stb_image.h>
 #include <algorithm>
 #include <cmath>
+#include "Core/Packs.h"
 
 namespace
 {
@@ -138,7 +139,7 @@ void BookRenderer::render(Shader& shader, const World& world)
     {
         m_loaded = true;
         int width = 0, height = 0, channels = 0;
-        unsigned char* data = stbi_load("assets/textures/entity/enchanting_table_book.png", &width, &height, &channels, 4);
+        unsigned char* data = Packs::load("assets/textures/entity/enchanting_table_book.png", &width, &height, &channels, 4);
         if (data)
         {
             glGenTextures(1, &m_texture);

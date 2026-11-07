@@ -533,7 +533,7 @@ void Application::renderToasts()
         const float ty = 32.0f * static_cast<float>(slot);
         if (!toast.systemTitle.empty())
         {
-            if (!guiSprite("toast/system", tx, ty, wide, 32.0f))
+            if (!guiSprite("sprites/toast/system", tx, ty, wide, 32.0f))
             {
                 m_ui.quad(tx, ty, wide, 32.0f, glm::vec4(0.13f, 0.13f, 0.13f, 0.95f));
                 m_ui.quad(tx, ty, 2.0f, 32.0f, glm::vec4(0.5f, 0.5f, 0.5f, 1.0f));

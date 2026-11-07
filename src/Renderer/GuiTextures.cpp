@@ -6,6 +6,7 @@
 #include <cstdio>
 #include <cstring>
 #include <algorithm>
+#include "Core/Packs.h"
 
 #ifndef GL_RGBA8
 #define GL_RGBA8 0x8058
@@ -224,10 +225,10 @@ bool GuiTextures::loadFromFile(GuiSprite sprite, const char* fileNames)
     unsigned char* data = nullptr;
     if (!vanilla.empty())
     {
-        data = stbi_load((std::string(GUI_DIRECTORY) + "/" + vanilla + ".png").c_str(), &width, &height, &channels, 4);
+        data = Packs::load((std::string(GUI_DIRECTORY) + "/" + vanilla + ".png").c_str(), &width, &height, &channels, 4);
     }
     if (!data)
-        data = stbi_load((std::string(GUI_DIRECTORY) + "/" + flat).c_str(), &width, &height, &channels, 4);
+        data = Packs::load((std::string(GUI_DIRECTORY) + "/" + flat).c_str(), &width, &height, &channels, 4);
     if (!data) return false;
 
     upload(sprite, data, width, height);
@@ -391,7 +392,7 @@ const GuiImage* GuiTextures::image(const std::string& path)
     GuiImage& entry = m_images[path];
     const std::string file = path.rfind("file:", 0) == 0 ? path.substr(5) : std::string(GUI_DIRECTORY) + "/" + path + ".png";
     int width = 0, height = 0, channels = 0;
-    unsigned char* data = stbi_load(file.c_str(), &width, &height, &channels, 4);
+    unsigned char* data = Packs::load(file.c_str(), &width, &height, &channels, 4);
     if (!data) return nullptr;
 
     std::vector<unsigned char> pixels(data, data + static_cast<size_t>(width) * height * 4);
@@ -477,7 +478,7 @@ void GuiTextures::forget(const std::string& path)
 
 void GuiTextures::readMeta(const std::string& file, GuiImage& entry)
 {
-    std::FILE* in = std::fopen(file.c_str(), "rb");
+    std::FILE* in = std::fopen(Packs::file(file).c_str(), "rb");
     if (!in) return;
     std::string text;
     char buffer[512];

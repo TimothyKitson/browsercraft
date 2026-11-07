@@ -11,6 +11,7 @@
 #include <cstdio>
 #include <string>
 #include <stb_image.h>
+#include "Core/Packs.h"
 
 namespace
 {
@@ -540,7 +541,7 @@ unsigned int HeldItem::lookTexture(int baseColour, const Banners::Design& layers
         m_shieldSheetsLoaded = true;
         auto load = [](const std::string& path, Banners::Sheet& sheet) {
             int w = 0, h = 0, channels = 0;
-            unsigned char* data = stbi_load(path.c_str(), &w, &h, &channels, 4);
+            unsigned char* data = Packs::load(path.c_str(), &w, &h, &channels, 4);
             if (!data) return;
             sheet.width = w;
             sheet.height = h;
@@ -581,8 +582,8 @@ unsigned int HeldItem::shieldTexture()
     m_shieldLookedFor = true;
 
     int w = 0, h = 0, channels = 0;
-    unsigned char* data = stbi_load(SHIELD_TEXTURE, &w, &h, &channels, 4);
-    if (!data) data = stbi_load("assets/textures/entity/shield_base_nopattern.png", &w, &h, &channels, 4);
+    unsigned char* data = Packs::load(SHIELD_TEXTURE, &w, &h, &channels, 4);
+    if (!data) data = Packs::load("assets/textures/entity/shield_base_nopattern.png", &w, &h, &channels, 4);
     if (!data) return 0;
 
     if (w != 64 || h != 64)

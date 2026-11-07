@@ -1,6 +1,7 @@
 #pragma once
 #include <SDL.h>
 #include <string>
+#include <vector>
 #include <unordered_map>
 
 // Keyboard + mouse state for one frame.
@@ -31,6 +32,7 @@ public:
     // is deliberately counted here even though wasKeyPressed() ignores it:
     // holding backspace should keep deleting.
     const std::string& typedText() const { return m_typedText; }
+    const std::vector<std::string>& droppedFiles() const { return m_dropped; }
     int backspaces() const { return m_backspaces; }
 
     // Whatever was pressed this frame, for the rebinding screen. 0 when
@@ -59,6 +61,7 @@ private:
     int m_wheelDelta = 0;
 
     std::string m_typedText;
+    std::vector<std::string> m_dropped;
     int m_backspaces = 0;
 
     bool m_quitRequested = false;

@@ -16,6 +16,7 @@
 #include <iterator>
 #include <cctype>
 #include <cstdlib>
+#include "Core/Packs.h"
 
 #ifndef GL_RGBA8
 #define GL_RGBA8 0x8058
@@ -6567,7 +6568,7 @@ namespace
         Image image;
         int channels = 0;
         // No vertical flip: this atlas is stored top-down, matching PNG order.
-        unsigned char* data = stbi_load(path.c_str(), &image.width, &image.height, &channels, 4);
+        unsigned char* data = Packs::load(path.c_str(), &image.width, &image.height, &channels, 4);
         if (!data)
         {
             image.width = image.height = 0;
@@ -6593,11 +6594,11 @@ namespace
         for (int i = 0; candidates[i] != nullptr; ++i)
         {
             const std::string path = std::string(PACK_DIRECTORY) + "/" + candidates[i] + ".png";
-            std::FILE* png = std::fopen(path.c_str(), "rb");
+            std::FILE* png = std::fopen(Packs::file(path).c_str(), "rb");
             if (!png) continue;
             std::fclose(png);
 
-            std::FILE* file = std::fopen((path + ".mcmeta").c_str(), "rb");
+            std::FILE* file = std::fopen(Packs::file(path + ".mcmeta").c_str(), "rb");
             if (!file) return false;
             std::string text;
             char buffer[4096];
@@ -6654,7 +6655,7 @@ namespace
 
     bool fileExists(const std::string& path)
     {
-        std::FILE* file = std::fopen(path.c_str(), "rb");
+        std::FILE* file = std::fopen(Packs::file(path).c_str(), "rb");
         if (!file) return false;
         std::fclose(file);
         return true;

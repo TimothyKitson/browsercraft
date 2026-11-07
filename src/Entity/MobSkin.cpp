@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <cstdio>
 #include <stb_image.h>
+#include "Core/Packs.h"
 
 namespace
 {
@@ -51,7 +52,7 @@ namespace
         const std::string path = std::string("assets/textures/block/") + name + ".png";
 
         int channels = 0;
-        unsigned char* data = stbi_load(path.c_str(), &out.width, &out.height, &channels, 4);
+        unsigned char* data = Packs::load(path.c_str(), &out.width, &out.height, &channels, 4);
         if (!data) return false;
 
         out.pixels.assign(data, data + static_cast<size_t>(out.width) * out.height * 4);
@@ -274,7 +275,7 @@ void MobSkin::build(MobId id)
 bool MobSkin::loadFile(const std::string& path, std::vector<uint8_t>& pixels, int& w, int& h)
 {
     int channels = 0;
-    unsigned char* data = stbi_load(path.c_str(), &w, &h, &channels, 4);
+    unsigned char* data = Packs::load(path.c_str(), &w, &h, &channels, 4);
     if (!data) return false;
 
     // Anything that is not a mob sheet would map the boxes onto nonsense,

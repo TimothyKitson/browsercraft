@@ -7,6 +7,7 @@
 #include <cmath>
 #include <cstdio>
 #include <string>
+#include "Core/Packs.h"
 
 #ifndef GL_RGBA8
 #define GL_RGBA8 0x8058
@@ -122,7 +123,7 @@ void SpriteParticles::buildAtlas()
             file += ".png";
 
             int width = 0, height = 0, channels = 0;
-            unsigned char* data = stbi_load(file.c_str(), &width, &height, &channels, 4);
+            unsigned char* data = Packs::load(file.c_str(), &width, &height, &channels, 4);
             if (!data) continue;
             const int side = std::min(width, height);
 

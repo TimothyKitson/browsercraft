@@ -444,7 +444,7 @@ void Application::loadOptions()
 {
     std::FILE* file = std::fopen((m_configPath + "/options.txt").c_str(), "rb");
     if (!file) return;
-    char line[128];
+    char line[1024];
     while (std::fgets(line, sizeof(line), file))
     {
         int value = 0;
@@ -456,6 +456,12 @@ void Application::loadOptions()
         else if (std::sscanf(line, "recipeBook=%d", &value) == 1) m_recipeOpen = value != 0;
         else if (std::sscanf(line, "recipeFilter=%d", &value) == 1)
             for (int k = 0; k < 4; ++k) m_recipeFilter[k] = ((value >> k) & 1) != 0;
+        else if (std::strncmp(line, "resourcePacks=", 14) == 0)
+        {
+            std::string text(line + 14);
+            while (!text.empty() && (text.back() == '\n' || text.back() == '\r')) text.pop_back();
+            m_packSelection = Packs::selectionFrom(text);
+        }
     }
     std::fclose(file);
 }
@@ -471,6 +477,7 @@ void Application::saveOptions()
     std::fprintf(file, "shaders=%d\npbr=%d\nattackIndicator=%d\nmainHand=%d\ndistortion=%d\nrecipeBook=%d\nrecipeFilter=%d\n",
                  m_shadersOn ? 1 : 0, m_pbrEnabled ? 1 : 0, m_attackIndicator, m_leftHanded ? 1 : 0, m_distortion,
                  m_recipeOpen ? 1 : 0, filters);
+    std::fprintf(file, "resourcePacks=%s\n", Packs::selectionLine(m_packSelection).c_str());
     std::fclose(file);
 #ifdef __EMSCRIPTEN__
     EM_ASM({
@@ -1659,15 +1666,39 @@ void Application::run()
                             m_startupScreen == "noworlds" || m_startupScreen == "newworld";
     const bool serverMenus = m_startupScreen == "servers" || m_startupScreen == "addserver" || m_startupScreen == "directconnect" ||
                              m_startupScreen == "connectfail";
+    const bool packMenus = m_startupScreen == "packs" || m_startupScreen == "packconfirm";
     const bool menuOnly = (m_startupScreen == "title" || m_startupScreen == "modes" ||
                            m_startupScreen == "settings" || m_startupScreen == "multiplayer" ||
                            m_startupScreen == "controls" || m_startupScreen == "name" ||
-                           m_startupScreen == "video" || m_startupScreen == "credits" || worldMenus || serverMenus);
+                           m_startupScreen == "video" || m_startupScreen == "credits" || worldMenus || serverMenus || packMenus);
     migrateLegacySave();
     if (m_startupScreen == "title") m_screen = Screen::Title;
     if (m_startupScreen == "video") m_screen = Screen::VideoSettings;
     if (m_startupScreen == "credits") m_screen = Screen::Credits;
     if (m_startupScreen == "modes") openWorldList();
+    if (packMenus)
+    {
+        struct Seeded { const char* folder; const char* description; int format; const char* icon; };
+        const Seeded SEEDED[3] = { { "Faithful Edges", "Sharper edges for every block", 34, "block/diamond_ore.png" },
+                                   { "Old Classic", "The look of an older game", 15, nullptr },
+                                   { "Night Sky Plus", "Bigger stars and a softer moon", 34, "block/sculk.png" } };
+        std::error_code ec;
+        for (const Seeded& seeded : SEEDED)
+        {
+            const std::string root = Packs::directory(m_configPath) + "/" + seeded.folder;
+            std::filesystem::create_directories(root, ec);
+            if (std::FILE* meta = std::fopen((root + "/pack.mcmeta").c_str(), "wb"))
+            {
+                std::fprintf(meta, "{\n  \"pack\": {\n    \"pack_format\": %d,\n    \"description\": \"%s\"\n  }\n}\n", seeded.format, seeded.description);
+                std::fclose(meta);
+            }
+            if (seeded.icon) std::filesystem::copy_file(std::string("assets/textures/") + seeded.icon, root + "/pack.png", std::filesystem::copy_options::overwrite_existing, ec);
+        }
+        m_packSelection = { "file/Night Sky Plus" };
+        openPacks();
+        m_packsReturn = Screen::Settings;
+        if (m_startupScreen == "packconfirm") m_packConfirm = 1;
+    }
     if (serverMenus)
     {
         std::vector<Servers::Entry> seeded(3);
@@ -1797,7 +1828,14 @@ void Application::run()
                       ? randomPlayerName(static_cast<uint32_t>(SDL_GetPerformanceCounter()))
                       : m_playerName;
 
-    if (!menuOnly && (m_automated || m_startImmediately))
+    if (!m_resumeFolder.empty())
+    {
+        m_savePath = savesDirectory() + "/" + m_resumeFolder;
+        if (!Worlds::readMeta(m_savePath, m_worldMeta)) m_worldMeta = Worlds::Meta{};
+        startWorld(static_cast<GameMode>(m_worldMeta.mode), false);
+        m_startupScreen = "pause";
+    }
+    else if (!menuOnly && (m_automated || m_startImmediately))
     {
         m_savePath = savesDirectory() + "/" + defaultWorldFolder();
         if (!Worlds::readMeta(m_savePath, m_worldMeta)) m_worldMeta = Worlds::Meta{};
@@ -7391,6 +7429,11 @@ bool Application::frame()
             }
         }
         else if (m_startupScreen == "pause") m_screen = Screen::Paused;
+        else if (m_startupScreen == "reloadtest")
+        {
+            m_packSelection.clear();
+            requestReload();
+        }
         else if (m_startupScreen == "bonuschest")
         {
             const glm::ivec3 feet = glm::ivec3(glm::floor(m_player.position));
@@ -7507,6 +7550,7 @@ void Application::applyMenuAction()
         case MenuAction::ResumeSaved:    startWorld(GameMode::Survival, false); break;
         case MenuAction::GoSingleplayer: openWorldList(); break;
         case MenuAction::PlayWorld: playWorld(m_pendingWorldFolder); break;
+        case MenuAction::OpenPacks: openPacks(); break;
         case MenuAction::CreateWorldNow: createWorldFromScreen(); break;
         case MenuAction::GoMultiplayer:
             openServerList();
@@ -7846,6 +7890,11 @@ void Application::handleEvents()
         {
             m_net.leave();
             m_screen = Screen::Multiplayer;
+        }
+        else if (m_screen == Screen::Packs)
+        {
+            if (m_packConfirm >= 0) m_packConfirm = -1;
+            else applyPacks();
         }
         else if (m_screen == Screen::CustomizeFlat || m_screen == Screen::CustomizeBiome)
         {
@@ -17054,6 +17103,7 @@ void Application::render()
         case Screen::EditServer:   renderEditServer(); break;
         case Screen::DirectConnect: renderDirectConnect(); break;
         case Screen::Connecting:   renderConnecting(); break;
+        case Screen::Packs:        renderPacks(); break;
         case Screen::Controls:     renderControlsScreen(); break;
         case Screen::NameEntry:    renderNameEntryScreen(); break;
         case Screen::Playing:
@@ -20873,7 +20923,7 @@ void Application::renderHud()
         if (!m_underwaterTexture)
         {
             int width = 0, height = 0, channels = 0;
-            unsigned char* data = stbi_load("assets/textures/misc/underwater.png", &width, &height, &channels, 4);
+            unsigned char* data = Packs::load("assets/textures/misc/underwater.png", &width, &height, &channels, 4);
             const unsigned char FLAT[4] = { 40, 60, 120, 255 };
             glGenTextures(1, &m_underwaterTexture);
             glBindTexture(GL_TEXTURE_2D, m_underwaterTexture);
@@ -21621,8 +21671,13 @@ void Application::renderSettingsScreen()
         m_pendingAction = MenuAction::ToggleSound;
     y += buttonHeight + 14.0f;
 
-    if (menuButton({ buttonX, y, buttonWidth, buttonHeight }, "Controls..."))
-        m_pendingAction = MenuAction::GoControls;
+    {
+        const float half = (buttonWidth - 12.0f) * 0.5f;
+        if (menuButton({ buttonX, y, half, buttonHeight }, "Controls..."))
+            m_pendingAction = MenuAction::GoControls;
+        if (menuButton({ buttonX + half + 12.0f, y, half, buttonHeight }, "Resource Packs..."))
+            m_pendingAction = MenuAction::OpenPacks;
+    }
     y += buttonHeight + 14.0f;
 
     if (menuButton({ buttonX, y, buttonWidth, buttonHeight }, m_leftHanded ? "Main Hand: Left" : "Main Hand: Right"))
@@ -22107,6 +22162,8 @@ void Application::renderDeathScreen()
 #include "StatsScreen.inl"
 #include "WorldScreens.inl"
 #include "ServerScreens.inl"
+#include "PackScreen.inl"
+#include "Core/Packs.h"
 
 void Application::renderDebugOverlay()
 {

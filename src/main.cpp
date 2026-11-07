@@ -1,4 +1,5 @@
 #include "Core/Application.h"
+#include "Core/Packs.h"
 #include "World/WorldGen.h"
 #include "World/TrialChamber.h"
 #include "Game/VillageLoot.h"
@@ -1672,6 +1673,10 @@ int main(int argc, char** argv)
 
     try
     {
+        Packs::activateFromOptions("world");
+        std::string resume;
+        bool again = false;
+        {
         Application app(width, height);
         if (!pbr) app.setPbrEnabled(false);
         if (shaders >= 0) app.setShadersEnabled(shaders == 1);
@@ -1702,6 +1707,21 @@ int main(int argc, char** argv)
         else if (joinAddress) app.setJoinOnStart(joinAddress);
         if (autoShotDelay > 0.0f) app.setAutoScreenshot(autoShotDelay);
         app.run();
+        again = app.reloadRequested();
+        resume = app.reloadWorld();
+        }
+        while (again)
+        {
+            Packs::activateFromOptions("world");
+            Application app(width, height);
+            if (!pbr) app.setPbrEnabled(false);
+            if (resume.empty()) app.setStartupScreen("settings");
+            else app.setResumeWorld(resume);
+            if (autoShotDelay > 0.0f) app.setAutoScreenshot(autoShotDelay);
+            app.run();
+            again = app.reloadRequested();
+            resume = app.reloadWorld();
+        }
     }
     catch (const std::exception& e)
     {

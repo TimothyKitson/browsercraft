@@ -5,6 +5,7 @@
 #include <stb_image.h>
 #include <algorithm>
 #include <cmath>
+#include "Core/Packs.h"
 
 namespace
 {
@@ -68,7 +69,7 @@ void ShadowRenderer::render(const glm::mat4& view, const glm::mat4& projection)
         m_loaded = true;
         m_shader = std::make_unique<Shader>("assets/shaders/shadow.vert", "assets/shaders/shadow.frag");
         int width = 0, height = 0, channels = 0;
-        unsigned char* data = stbi_load("assets/textures/misc/shadow.png", &width, &height, &channels, 4);
+        unsigned char* data = Packs::load("assets/textures/misc/shadow.png", &width, &height, &channels, 4);
         std::vector<unsigned char> painted;
         if (!data)
         {

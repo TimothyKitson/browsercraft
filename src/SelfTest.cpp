@@ -89,6 +89,7 @@
 #include "Game/Servers.h"
 #include "Net/Ping.h"
 #include "Net/Protocol.h"
+#include "Core/Packs.h"
 #include "Game/Golems.h"
 #include "Renderer/Atlas.h"
 #include "Renderer/UIRenderer.h"
@@ -4945,6 +4946,30 @@ namespace
               !Net::splitAddress("example.org:", host, port), "a bad port or no address is refused");
         check(Net::pingBars(40) == 5 && Net::pingBars(150) == 4 && Net::pingBars(450) == 3 && Net::pingBars(800) == 2 && Net::pingBars(2000) == 1,
               "ping bars step down at 150, 300, 600 and 1000 ms, as 1.21.1's do");
+    }
+
+    void testResourcePacks()
+    {
+        section("resource packs: reading packs and choosing their files");
+        check(Packs::descriptionFrom("{\"pack\":{\"pack_format\":34,\"description\":\"Shiny blocks\"}}") == "Shiny blocks" &&
+              Packs::formatFrom("{\"pack\":{\"pack_format\":34,\"description\":\"x\"}}") == 34, "a pack's description and format are read");
+        check(Packs::descriptionFrom("{\"pack\":{\"description\":[{\"text\":\"Two \"},{\"text\":\"parts\"}],\"pack_format\":15}}") == "Two parts" &&
+              Packs::descriptionFrom("{\"pack\":{\"description\":\"\u00a7aGreen\"}}").find("Green") != std::string::npos,
+              "text components and colour codes come out as plain text");
+        const std::vector<std::string> picked = Packs::selectionFrom("file/A,file/B Pack");
+        check(picked.size() == 2 && picked[1] == "file/B Pack" && Packs::selectionLine(picked) == "file/A,file/B Pack", "the chosen order is saved and read back");
+        const std::string root = (std::filesystem::temp_directory_path() / "bc_selftest_pack").string();
+        std::filesystem::remove_all(root);
+        std::filesystem::create_directories(root + "/assets/minecraft/textures/block");
+        if (std::FILE* f = std::fopen((root + "/assets/minecraft/textures/block/only_in_pack.png").c_str(), "wb")) { std::fputs("x", f); std::fclose(f); }
+        Packs::setActive({ root });
+        check(Packs::file("assets/textures/block/only_in_pack.png") == root + "/assets/minecraft/textures/block/only_in_pack.png",
+              "a chosen pack's texture is used in place of the game's");
+        check(Packs::file("assets/textures/block/stone.png") == "assets/textures/block/stone.png" &&
+              Packs::file("world/saves/x/icon.png") == "world/saves/x/icon.png", "and anything it lacks falls through to the game");
+        Packs::setActive({});
+        check(Packs::file("assets/textures/block/only_in_pack.png") == "assets/textures/block/only_in_pack.png", "with no packs nothing changes");
+        std::filesystem::remove_all(root);
     }
 
     void testRecipeBook()
@@ -15972,6 +15997,7 @@ int runSelfTest()
     testStatistics();
     testWorlds();
     testServerList();
+    testResourcePacks();
     testMadeThings();
     testTheEndAndTheSea();
     testPathfinding();

@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
+#include "Core/Packs.h"
 
 namespace
 {
@@ -130,7 +131,7 @@ unsigned int ArmorStandRenderer::woodTexture()
     if (m_woodTried) return m_wood;
     m_woodTried = true;
     int width = 0, height = 0, channels = 0;
-    unsigned char* data = stbi_load("assets/textures/entity/armorstand/wood.png", &width, &height, &channels, 4);
+    unsigned char* data = Packs::load("assets/textures/entity/armorstand/wood.png", &width, &height, &channels, 4);
     if (data && width == 64 && height == 64) m_wood = upload(data, width, height);
     else m_wood = painted(64, 64, 166, 128, 78);
     if (data) stbi_image_free(data);
@@ -143,7 +144,7 @@ unsigned int ArmorStandRenderer::armourTexture(const std::string& name, unsigned
     if (found != m_armour.end()) return found->second;
     int width = 0, height = 0, channels = 0;
     const std::string path = "assets/textures/models/armor/" + name + ".png";
-    unsigned char* data = stbi_load(path.c_str(), &width, &height, &channels, 4);
+    unsigned char* data = Packs::load(path.c_str(), &width, &height, &channels, 4);
     unsigned int texture = 0;
     if (data && width > 0 && height > 0) texture = upload(data, width, height);
     else texture = painted(64, 32, static_cast<uint8_t>((fallback >> 16) & 0xFFu), static_cast<uint8_t>((fallback >> 8) & 0xFFu),

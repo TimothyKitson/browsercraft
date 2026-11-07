@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <cstdio>
 #include <iterator>
+#include "Core/Packs.h"
 
 namespace
 {
@@ -198,7 +199,7 @@ void PlayerSkin::build(Style style, int variant)
 bool PlayerSkin::loadFile(const std::string& path)
 {
     int channels = 0;
-    unsigned char* data = stbi_load(path.c_str(), &m_width, &m_height, &channels, 4);
+    unsigned char* data = Packs::load(path.c_str(), &m_width, &m_height, &channels, 4);
     if (!data)
     {
         m_width = 64;

@@ -8,6 +8,7 @@
 #include <cmath>
 #include <algorithm>
 #include <stb_image.h>
+#include "Core/Packs.h"
 
 namespace
 {
@@ -241,7 +242,7 @@ void PlayerModel::renderElytra(Shader& chunkShader, const World& world, const Pl
     {
         m_elytraLoaded = true;
         int width = 0, height = 0, channels = 0;
-        unsigned char* data = stbi_load("assets/textures/entity/elytra.png", &width, &height, &channels, 4);
+        unsigned char* data = Packs::load("assets/textures/entity/elytra.png", &width, &height, &channels, 4);
         if (data)
         {
             glGenTextures(1, &m_elytraTexture);

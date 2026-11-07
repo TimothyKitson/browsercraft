@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
+#include "Core/Packs.h"
 
 namespace
 {
@@ -49,7 +50,7 @@ const char* SignRenderer::woodName(int wood)
 unsigned int SignRenderer::load(const std::string& path, int wood, bool hanging, int width, int height)
 {
     int w = 0, h = 0, channels = 0;
-    unsigned char* data = stbi_load(path.c_str(), &w, &h, &channels, 4);
+    unsigned char* data = Packs::load(path.c_str(), &w, &h, &channels, 4);
     std::vector<uint8_t> painted;
     if (!data || w <= 0 || h <= 0)
     {

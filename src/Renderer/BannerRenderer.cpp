@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <cmath>
 #include <string>
+#include "Core/Packs.h"
 
 namespace
 {
@@ -16,7 +17,7 @@ namespace
     {
         Banners::Sheet sheet;
         int width = 0, height = 0, channels = 0;
-        unsigned char* data = stbi_load(path.c_str(), &width, &height, &channels, 4);
+        unsigned char* data = Packs::load(path.c_str(), &width, &height, &channels, 4);
         if (!data) return sheet;
         if (width >= Banners::SHEET && height >= Banners::SHEET)
         {

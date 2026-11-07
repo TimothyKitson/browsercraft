@@ -31,6 +31,7 @@
 #include "Game/Worlds.h"
 #include "Game/Servers.h"
 #include "Net/Ping.h"
+#include "Core/Packs.h"
 #include "Game/Brewing.h"
 #include "World/Signs.h"
 #include "World/Frames.h"
@@ -103,7 +104,8 @@ enum class Screen
     CustomizeBiome,
     EditServer,
     DirectConnect,
-    Connecting
+    Connecting,
+    Packs
 };
 
 // Menu buttons are drawn and hit-tested in the same pass, so a click
@@ -149,6 +151,7 @@ enum class MenuAction
     OpenAdvancements,
     OpenStatistics,
     PlayWorld,
+    OpenPacks,
     CreateWorldNow,
     ToggleMainHand,
     RenderDistanceDown,
@@ -1544,7 +1547,7 @@ private:
     bool guiCycle(float x, float y, float w, const std::string& label, bool enabled = true);
     void guiField(GuiField& field, float x, float y, float w, float h, const std::string& placeholder = std::string());
     void guiList(GuiList& list, float top, float height, float rowHeight, float rowWidth, int count, float header,
-                 const std::function<void(int, float, float, bool)>& drawRow);
+                 const std::function<void(int, float, float, bool)>& drawRow, float listX = 0.0f, float listW = 0.0f);
     void menuScreenBackdrop(float w, float h);
     void wrappedTooltip(const std::string& text, float mouseX, float mouseY, float width);
     void renderCreateWorld();
@@ -1568,6 +1571,23 @@ private:
     void renderEditServer();
     void renderDirectConnect();
     void renderConnecting();
+    std::vector<std::string> m_packSelection;
+    std::vector<Packs::Info> m_packsAvailable, m_packsSelected;
+    GuiList m_availableList, m_selectedList;
+    int m_packConfirm = -1;
+    Screen m_packsReturn = Screen::Settings;
+    bool m_reloadRequested = false;
+    std::string m_reloadWorld;
+    std::string m_resumeFolder;
+    void openPacks();
+    void applyPacks();
+    void requestReload();
+    void renderPacks();
+public:
+    bool reloadRequested() const { return m_reloadRequested; }
+    const std::string& reloadWorld() const { return m_reloadWorld; }
+    void setResumeWorld(const std::string& folder) { m_resumeFolder = folder; }
+private:
     Raids::Raid m_raid;
     glm::vec3 m_raidOmenAt{ 0.0f };
     bool m_raidOmenPending = false;

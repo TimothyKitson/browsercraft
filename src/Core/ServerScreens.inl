@@ -138,9 +138,8 @@ void Application::renderMultiplayerScreen()
                 m_ui.quad(x, y, 32.0f, 32.0f, glm::vec4(0x90 / 255.0f, 0x90 / 255.0f, 0x90 / 255.0f, 0xA0 / 255.0f));
                 const float l = mouseX - x, m = mouseY - y;
                 const bool canJoin = ping.state == Net::PingResult::State::Online;
-                auto overlay = [&](const char* name, bool lit, int shape) {
-                    const std::string path = std::string("sprites/server_list/") + name + (lit ? "_highlighted" : "");
-                    if (guiSprite(path.c_str(), x, y, 32.0f, 32.0f)) return;
+                auto overlay = [&](const char* plain, const char* bright, bool lit, int shape) {
+                    if (guiSprite(lit ? bright : plain, x, y, 32.0f, 32.0f)) return;
                     const glm::vec4 colour = lit ? glm::vec4(1.0f) : glm::vec4(0.8f, 0.8f, 0.8f, 1.0f);
                     for (int r = 0; r < 5; ++r)
                     {
@@ -149,9 +148,10 @@ void Application::renderMultiplayerScreen()
                         if (shape == 2) m_ui.quad(x + 7.0f - static_cast<float>(r), y + 27.0f - static_cast<float>(r), 1.0f + 2.0f * static_cast<float>(r), 1.0f, colour);
                     }
                 };
-                if (canJoin) overlay("join", l < 32.0f && l > 16.0f, 0);
-                if (index > 0) overlay("move_up", l < 16.0f && m < 16.0f, 1);
-                if (index < saved - 1) overlay("move_down", l < 16.0f && m > 16.0f, 2);
+                if (canJoin) overlay("sprites/server_list/join", "sprites/server_list/join_highlighted", l < 32.0f && l > 16.0f, 0);
+                if (index > 0) overlay("sprites/server_list/move_up", "sprites/server_list/move_up_highlighted", l < 16.0f && m < 16.0f, 1);
+                if (index < saved - 1)
+                    overlay("sprites/server_list/move_down", "sprites/server_list/move_down_highlighted", l < 16.0f && m > 16.0f, 2);
             }
         }
         else if (index == saved)

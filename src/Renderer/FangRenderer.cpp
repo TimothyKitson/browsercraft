@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
+#include "Core/Packs.h"
 
 namespace
 {
@@ -71,7 +72,7 @@ void FangRenderer::load()
 {
     m_loaded = true;
     int width = 0, height = 0, channels = 0;
-    unsigned char* data = stbi_load("assets/textures/entity/illager/evoker_fangs.png", &width, &height, &channels, 4);
+    unsigned char* data = Packs::load("assets/textures/entity/illager/evoker_fangs.png", &width, &height, &channels, 4);
     std::vector<uint8_t> painted;
     if (!data || width != 64 || height != 32)
     {
