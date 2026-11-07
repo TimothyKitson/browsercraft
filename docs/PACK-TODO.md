@@ -183,11 +183,12 @@ Everything in the 1.21 textures zip the game doesn't use yet, turned into work. 
     - V. Bell, and the jukebox with music discs. Chiseled bookshelf. Cobweb.
     - VI. The dragon egg on the dragon's death. Heavy core.
     - Notes: iron nuggets and chorus fruit (with its teleport and popped form) came in early for the chain and end rod recipes. Fire spreads from flint and steel and from other fire, but lava does not start it yet and mobs standing in it do not burn. The respawn anchor is saved with the level and dying without one now always returns you to the overworld. The jukebox is ready but has nothing to play until the discs (item 58); the lodestone has no compass to point yet (item 49). Bells ring when used and are sold by armorers; they do not warn villagers. A chiseled bookshelf fills and empties its six slots in order rather than by the slot clicked, and holds plain books only. The dragon egg sits on a bedrock pillar over the exit portal and jumps away when used, but does not fall. Heavy cores come from ominous vaults.
-45. Archaeology
+45. Archaeology (done)
     - I. Suspicious sand and gravel, and the brush.
     - II. Pottery sherds, and decorated pots with a pattern on each side.
     - III. The sniffer, sniffer eggs, torchflower and pitcher seeds.
     - IV. Trail ruins, from the data zip.
+    - Notes: what a brushed block gives follows the 1.21.1 archaeology tables for desert pyramids, desert wells, warm and cold ocean ruins and trail ruins; the armour trim templates and the relic disc from the rare ruin table wait for items 46 and 58. Simple ocean ruins came in so warm-water suspicious sand (and with it the sniffer egg) has somewhere to be. Trail ruins are generated in the same spirit as the real ones rather than from their structure files: buried terracotta, brick and mud brick rooms full of gravel in forests, jungles and snowy woods. Decorated pots keep their patterns in the level save; they do not hold items yet. The sniffer is done here, so item 62 is covered.
 46. New workstations, each a block plus its screen
     - I. Loom: banners and patterns.
     - II. Stonecutter: the recipe list.
@@ -228,7 +229,7 @@ Everything in the 1.21 textures zip the game doesn't use yet, turned into work. 
 ## Part 4: new mobs
 
 61. Armadillo: rolls up when scared, drops scutes.
-62. Sniffer: digs up seeds, hatches from its egg.
+62. Sniffer: digs up seeds, hatches from its egg. (done with item 45)
 63. Glow squid, which drops glow ink.
 64. Zoglin, illusioner and evoker fangs.
 65. Tadpole and trader llama look right (check they use the pack art), and llama spit.

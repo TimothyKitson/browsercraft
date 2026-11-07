@@ -216,6 +216,7 @@ void WorldGen::generate(Chunk& chunk) const
     dressSeabed(chunk);
     buildOceanStructures(chunk);
     buildOceanRuins(chunk);
+    buildTrailRuins(chunk);
 }
 
 // A closed cavern system rather than a landscape: solid netherrack between a
@@ -2549,6 +2550,57 @@ void WorldGen::buildOceanRuins(Chunk& chunk) const
                 const int dz = static_cast<int>(hashCoords(midX, 48 + k, midZ, m_seed + 9306) % 3u) - 1;
                 put(chunk, midX + dx, floor, midZ + dz, suspiciousOf(warm ? 2 : 5, 0));
             }
+        }
+}
+
+bool WorldGen::trailRuinIn(int cx, int cz, int& midX, int& midZ) const
+{
+    constexpr int CELL = TRAIL_RUIN_CELL;
+    if (hashToFloat(hashCoords(cx, 51, cz, m_seed + 9401)) > 0.55f) return false;
+    midX = cx * CELL + 12 + static_cast<int>(hashCoords(cx, 52, cz, m_seed + 9402) % static_cast<uint32_t>(CELL - 24));
+    midZ = cz * CELL + 12 + static_cast<int>(hashCoords(cx, 53, cz, m_seed + 9403) % static_cast<uint32_t>(CELL - 24));
+    const Biome biome = biomeAt(midX, midZ);
+    if (biome != Biome::Forest && biome != Biome::Jungle && biome != Biome::Snowy) return false;
+    return surfaceHeight(midX, midZ) > SEA_LEVEL + 1;
+}
+
+void WorldGen::buildTrailRuins(Chunk& chunk) const
+{
+    constexpr int CELL = TRAIL_RUIN_CELL;
+    constexpr int HALF = 5;
+    const int baseX = chunk.position().x * Chunk::SX;
+    const int baseZ = chunk.position().z * Chunk::SZ;
+    auto cellOf = [](int v) { return v >= 0 ? v / CELL : -((-v + CELL - 1) / CELL); };
+    for (int cz = cellOf(baseZ - HALF - 1); cz <= cellOf(baseZ + Chunk::SZ + HALF + 1); ++cz)
+        for (int cx = cellOf(baseX - HALF - 1); cx <= cellOf(baseX + Chunk::SX + HALF + 1); ++cx)
+        {
+            int midX = 0, midZ = 0;
+            if (!trailRuinIn(cx, cz, midX, midZ)) continue;
+            const int ground = surfaceHeight(midX, midZ);
+
+            static const BlockId WALLS[6] = { Blocks::MudBricks, Blocks::Bricks, Blocks::Terracotta,
+                                              colourIn(Blocks::TerracottaFirst, 14), colourIn(Blocks::TerracottaFirst, 12),
+                                              colourIn(Blocks::TerracottaFirst, 4) };
+            const int top = ground - 1;
+            const int bottom = top - 6;
+            for (int dx = -HALF; dx <= HALF; ++dx)
+                for (int dz = -HALF; dz <= HALF; ++dz)
+                {
+                    const bool wall = std::abs(dx) == HALF || std::abs(dz) == HALF || (dx == 0 && std::abs(dz) < HALF - 1);
+                    for (int y = bottom; y <= top; ++y)
+                    {
+                        const uint32_t h = hashCoords(midX + dx, y, midZ + dz, m_seed + 9404);
+                        BlockId fill;
+                        if (y == bottom) fill = WALLS[h % 6u];
+                        else if (wall) fill = (h >> 8) % 7u == 0 ? Blocks::Gravel : WALLS[(h >> 4) % 6u];
+                        else fill = (h >> 8) % 3u == 0 ? Blocks::Dirt : Blocks::Gravel;
+                        if (!wall && fill == Blocks::Gravel && (h >> 12) % 9u == 0)
+                            fill = suspiciousOf((h >> 16) % 6u == 0 ? 4 : 3, 0);
+                        put(chunk, midX + dx, y, midZ + dz, fill);
+                    }
+                    if (wall && hashToFloat(hashCoords(midX + dx, 54, midZ + dz, m_seed + 9405)) < 0.3f)
+                        put(chunk, midX + dx, ground, midZ + dz, WALLS[hashCoords(midX + dx, 55, midZ + dz, m_seed + 9406) % 6u]);
+                }
         }
 }
 

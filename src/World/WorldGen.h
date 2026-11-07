@@ -297,6 +297,8 @@ public:
 
     int surfaceHeight(int worldX, int worldZ) const;
     Biome biomeAt(int worldX, int worldZ) const;
+    static constexpr int TRAIL_RUIN_CELL = 112;
+    bool trailRuinIn(int cellX, int cellZ, int& midX, int& midZ) const;
     Biome netherBiomeAt(int worldX, int worldZ) const;
 
     // The nearest village to a place, searching outwards a few squares.
@@ -383,6 +385,7 @@ private:
     void dressSeabed(Chunk& chunk) const;
     void buildDesertWells(Chunk& chunk) const;
     void buildOceanRuins(Chunk& chunk) const;
+    void buildTrailRuins(Chunk& chunk) const;
     void buildGeodes(Chunk& chunk) const;
     void buildAncientCities(Chunk& chunk) const;
     void buildEndCities(Chunk& chunk) const;

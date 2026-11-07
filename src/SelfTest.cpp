@@ -3827,6 +3827,30 @@ namespace
         const std::vector<StackId> made = Crafting::everyOutput();
         check(std::find(made.begin(), made.end(), static_cast<StackId>(Items::Brush)) != made.end() && maxStackOf(Items::Brush) == 1,
               "a brush is made from a feather, copper and a stick, and does not stack");
+
+        const WorldGen generator(2024u);
+        int ruinX = 0, ruinZ = 0;
+        bool found = false;
+        for (int cz = -6; cz <= 6 && !found; ++cz)
+            for (int cx = -6; cx <= 6 && !found; ++cx)
+                found = generator.trailRuinIn(cx, cz, ruinX, ruinZ);
+        check(found, "there is a trail ruin within a few hundred blocks");
+        if (found)
+        {
+            int gravel = 0;
+            for (int dz = -1; dz <= 1; ++dz)
+                for (int dx = -1; dx <= 1; ++dx)
+                {
+                    auto chunkOf = [](int v, int size) { return v >= 0 ? v / size : -((-v + size - 1) / size); };
+                    Chunk chunk(ChunkPos{ chunkOf(ruinX, Chunk::SX) + dx, chunkOf(ruinZ, Chunk::SZ) + dz });
+                    generator.generate(chunk);
+                    for (int y = 0; y < Chunk::SY; ++y)
+                        for (int lz = 0; lz < Chunk::SZ; ++lz)
+                            for (int lx = 0; lx < Chunk::SX; ++lx)
+                                if (isSuspiciousGravel(chunk.getBlock(lx, y, lz))) ++gravel;
+                }
+            check(gravel > 0, "and it is full of suspicious gravel");
+        }
     }
 
     // --- the workstations -----------------------------------------------
