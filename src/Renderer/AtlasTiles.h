@@ -333,6 +333,15 @@ namespace Tiles
         CopperDoorBottomTile, CopperDoorBottomTileLast = CopperDoorBottomTile + 3,
         CopperTrapdoorTile, CopperTrapdoorTileLast = CopperTrapdoorTile + 3,
         LightningRodTile, LightningRodOnTile,
+        AlliumTile, AzureBluetTile, BlueOrchidTile, CornflowerTile, LilyOfTheValleyTile, OxeyeDaisyTile,
+        RedTulipTile, OrangeTulipTile, WhiteTulipTile, PinkTulipTile, WitherRoseTile, TorchflowerTile,
+        FernTile, DeadBushTile, TorchflowerCrop0Tile, TorchflowerCrop1Tile,
+        SunflowerBottomTile, SunflowerTopTile, SunflowerFrontTile, SunflowerBackTile,
+        LilacBottomTile, LilacTopTile, RoseBushBottomTile, RoseBushTopTile, PeonyBottomTile, PeonyTopTile,
+        TallGrassBottomTile, TallGrassTopTile, LargeFernBottomTile, LargeFernTopTile,
+        PitcherBottomTile, PitcherBottomTileLast = PitcherBottomTile + 4,
+        PitcherTopTile, PitcherTopTileLast = PitcherTopTile + 1,
+        FlowerPotTile,
 
         TileCount
     };
@@ -527,8 +536,9 @@ namespace Tiles
         ItemBedFirst, ItemBedLast = ItemBedFirst + 15,
         ItemTripwireHook,
         ItemCopperDoorFirst, ItemCopperDoorLast = ItemCopperDoorFirst + 3,
+        ItemTorchflowerSeeds, ItemPitcherPod, ItemClayBall, ItemBrick, ItemFlowerPot, ItemPitcherPlant,
 
-        ItemTileEnd = ItemCopperDoorLast + 1
+        ItemTileEnd = ItemPitcherPlant + 1
     };
 
     // Ten progressively more broken overlay tiles for the mining animation.

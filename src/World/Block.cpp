@@ -32,9 +32,9 @@ namespace
         { "Cactus",       CactusTop,     CactusBottom,   CactusSide,     true,  true,  RenderType::Cube,   0,   0.4f },
         { "Bricks",       Bricks,        Bricks,         Bricks,         true,  true,  RenderType::Cube,   0,   2.0f },
         { "Obsidian",     Obsidian,      Obsidian,       Obsidian,       true,  true,  RenderType::Cube,   0,   8.0f },
-        { "Tall Grass",   TallGrass,     TallGrass,      TallGrass,      false, false, RenderType::Cross,  0,   0.0f },
-        { "Red Flower",   FlowerRed,     FlowerRed,      FlowerRed,      false, false, RenderType::Cross,  0,   0.0f },
-        { "Yellow Flower",FlowerYellow,  FlowerYellow,   FlowerYellow,   false, false, RenderType::Cross,  0,   0.0f },
+        { "Short Grass",  TallGrass,     TallGrass,      TallGrass,      false, false, RenderType::Cross,  0,   0.0f },
+        { "Poppy",        FlowerRed,     FlowerRed,      FlowerRed,      false, false, RenderType::Cross,  0,   0.0f },
+        { "Dandelion",    FlowerYellow,  FlowerYellow,   FlowerYellow,   false, false, RenderType::Cross,  0,   0.0f },
         { "Mossy Cobble", MossyCobble,   MossyCobble,    MossyCobble,    true,  true,  RenderType::Cube,   0,   1.7f },
         { "Clay",         Clay,          Clay,           Clay,           true,  true,  RenderType::Cube,   0,   0.6f },
         { "Pumpkin",      PumpkinTop,    PumpkinTop,     PumpkinSide,    true,  true,  RenderType::Cube,   0,   1.0f },
@@ -1717,6 +1717,74 @@ namespace
         { "Lightning Rod", LightningRodOnTile, LightningRodOnTile, LightningRodOnTile, true, false, RenderType::Rod, 0, 3.0f },
         { "Lightning Rod", LightningRodTile, LightningRodTile, LightningRodTile, true, false, RenderType::Rod, 0, 3.0f },
         { "Lightning Rod", LightningRodOnTile, LightningRodOnTile, LightningRodOnTile, true, false, RenderType::Rod, 0, 3.0f },
+        { "Allium", AlliumTile, AlliumTile, AlliumTile, false, false, RenderType::Cross, 0, 0.0f },
+        { "Azure Bluet", AzureBluetTile, AzureBluetTile, AzureBluetTile, false, false, RenderType::Cross, 0, 0.0f },
+        { "Blue Orchid", BlueOrchidTile, BlueOrchidTile, BlueOrchidTile, false, false, RenderType::Cross, 0, 0.0f },
+        { "Cornflower", CornflowerTile, CornflowerTile, CornflowerTile, false, false, RenderType::Cross, 0, 0.0f },
+        { "Lily of the Valley", LilyOfTheValleyTile, LilyOfTheValleyTile, LilyOfTheValleyTile, false, false, RenderType::Cross, 0, 0.0f },
+        { "Oxeye Daisy", OxeyeDaisyTile, OxeyeDaisyTile, OxeyeDaisyTile, false, false, RenderType::Cross, 0, 0.0f },
+        { "Red Tulip", RedTulipTile, RedTulipTile, RedTulipTile, false, false, RenderType::Cross, 0, 0.0f },
+        { "Orange Tulip", OrangeTulipTile, OrangeTulipTile, OrangeTulipTile, false, false, RenderType::Cross, 0, 0.0f },
+        { "White Tulip", WhiteTulipTile, WhiteTulipTile, WhiteTulipTile, false, false, RenderType::Cross, 0, 0.0f },
+        { "Pink Tulip", PinkTulipTile, PinkTulipTile, PinkTulipTile, false, false, RenderType::Cross, 0, 0.0f },
+        { "Wither Rose", WitherRoseTile, WitherRoseTile, WitherRoseTile, false, false, RenderType::Cross, 0, 0.0f },
+        { "Torchflower", TorchflowerTile, TorchflowerTile, TorchflowerTile, false, false, RenderType::Cross, 0, 0.0f },
+        { "Fern", FernTile, FernTile, FernTile, false, false, RenderType::Cross, 0, 0.0f },
+        { "Dead Bush", DeadBushTile, DeadBushTile, DeadBushTile, false, false, RenderType::Cross, 0, 0.0f },
+        { "Torchflower Crop", TorchflowerCrop0Tile, TorchflowerCrop0Tile, TorchflowerCrop0Tile, false, false, RenderType::Cross, 0, 0.0f },
+        { "Torchflower Crop", TorchflowerCrop1Tile, TorchflowerCrop1Tile, TorchflowerCrop1Tile, false, false, RenderType::Cross, 0, 0.0f },
+        { "Sunflower", SunflowerBottomTile, SunflowerBottomTile, SunflowerBottomTile, false, false, RenderType::Cross, 0, 0.0f },
+        { "Sunflower", SunflowerTopTile, SunflowerTopTile, SunflowerTopTile, false, false, RenderType::Cross, 0, 0.0f },
+        { "Lilac", LilacBottomTile, LilacBottomTile, LilacBottomTile, false, false, RenderType::Cross, 0, 0.0f },
+        { "Lilac", LilacTopTile, LilacTopTile, LilacTopTile, false, false, RenderType::Cross, 0, 0.0f },
+        { "Rose Bush", RoseBushBottomTile, RoseBushBottomTile, RoseBushBottomTile, false, false, RenderType::Cross, 0, 0.0f },
+        { "Rose Bush", RoseBushTopTile, RoseBushTopTile, RoseBushTopTile, false, false, RenderType::Cross, 0, 0.0f },
+        { "Peony", PeonyBottomTile, PeonyBottomTile, PeonyBottomTile, false, false, RenderType::Cross, 0, 0.0f },
+        { "Peony", PeonyTopTile, PeonyTopTile, PeonyTopTile, false, false, RenderType::Cross, 0, 0.0f },
+        { "Tall Grass", TallGrassBottomTile, TallGrassBottomTile, TallGrassBottomTile, false, false, RenderType::Cross, 0, 0.0f },
+        { "Tall Grass", TallGrassTopTile, TallGrassTopTile, TallGrassTopTile, false, false, RenderType::Cross, 0, 0.0f },
+        { "Large Fern", LargeFernBottomTile, LargeFernBottomTile, LargeFernBottomTile, false, false, RenderType::Cross, 0, 0.0f },
+        { "Large Fern", LargeFernTopTile, LargeFernTopTile, LargeFernTopTile, false, false, RenderType::Cross, 0, 0.0f },
+        { "Pitcher Plant", PitcherBottomTile + 4, PitcherBottomTile + 4, PitcherBottomTile + 4, false, false, RenderType::Cross, 0, 0.0f },
+        { "Pitcher Plant", PitcherTopTile + 1, PitcherTopTile + 1, PitcherTopTile + 1, false, false, RenderType::Cross, 0, 0.0f },
+        { "Pitcher Crop", PitcherBottomTile + 0, PitcherBottomTile + 0, PitcherBottomTile + 0, false, false, RenderType::Cross, 0, 0.0f },
+        { "Pitcher Crop", PitcherBottomTile + 1, PitcherBottomTile + 1, PitcherBottomTile + 1, false, false, RenderType::Cross, 0, 0.0f },
+        { "Pitcher Crop", PitcherBottomTile + 2, PitcherBottomTile + 2, PitcherBottomTile + 2, false, false, RenderType::Cross, 0, 0.0f },
+        { "Pitcher Crop", PitcherBottomTile + 3, PitcherBottomTile + 3, PitcherBottomTile + 3, false, false, RenderType::Cross, 0, 0.0f },
+        { "Pitcher Crop", PitcherBottomTile + 4, PitcherBottomTile + 4, PitcherBottomTile + 4, false, false, RenderType::Cross, 0, 0.0f },
+        { "Pitcher Crop", PitcherTopTile + 0, PitcherTopTile + 0, PitcherTopTile + 0, false, false, RenderType::Cross, 0, 0.0f },
+        { "Pitcher Crop", PitcherTopTile + 1, PitcherTopTile + 1, PitcherTopTile + 1, false, false, RenderType::Cross, 0, 0.0f },
+        { "Flower Pot", FlowerPotTile, FlowerPotTile, FlowerPotTile, true, false, RenderType::Pot, 0, 0.0f },
+        { "Potted Poppy", FlowerPotTile, FlowerPotTile, FlowerPotTile, true, false, RenderType::Pot, 0, 0.0f },
+        { "Potted Dandelion", FlowerPotTile, FlowerPotTile, FlowerPotTile, true, false, RenderType::Pot, 0, 0.0f },
+        { "Potted Allium", FlowerPotTile, FlowerPotTile, FlowerPotTile, true, false, RenderType::Pot, 0, 0.0f },
+        { "Potted Azure Bluet", FlowerPotTile, FlowerPotTile, FlowerPotTile, true, false, RenderType::Pot, 0, 0.0f },
+        { "Potted Blue Orchid", FlowerPotTile, FlowerPotTile, FlowerPotTile, true, false, RenderType::Pot, 0, 0.0f },
+        { "Potted Cornflower", FlowerPotTile, FlowerPotTile, FlowerPotTile, true, false, RenderType::Pot, 0, 0.0f },
+        { "Potted Lily of the Valley", FlowerPotTile, FlowerPotTile, FlowerPotTile, true, false, RenderType::Pot, 0, 0.0f },
+        { "Potted Oxeye Daisy", FlowerPotTile, FlowerPotTile, FlowerPotTile, true, false, RenderType::Pot, 0, 0.0f },
+        { "Potted Red Tulip", FlowerPotTile, FlowerPotTile, FlowerPotTile, true, false, RenderType::Pot, 0, 0.0f },
+        { "Potted Orange Tulip", FlowerPotTile, FlowerPotTile, FlowerPotTile, true, false, RenderType::Pot, 0, 0.0f },
+        { "Potted White Tulip", FlowerPotTile, FlowerPotTile, FlowerPotTile, true, false, RenderType::Pot, 0, 0.0f },
+        { "Potted Pink Tulip", FlowerPotTile, FlowerPotTile, FlowerPotTile, true, false, RenderType::Pot, 0, 0.0f },
+        { "Potted Wither Rose", FlowerPotTile, FlowerPotTile, FlowerPotTile, true, false, RenderType::Pot, 0, 0.0f },
+        { "Potted Torchflower", FlowerPotTile, FlowerPotTile, FlowerPotTile, true, false, RenderType::Pot, 0, 0.0f },
+        { "Potted Fern", FlowerPotTile, FlowerPotTile, FlowerPotTile, true, false, RenderType::Pot, 0, 0.0f },
+        { "Potted Dead Bush", FlowerPotTile, FlowerPotTile, FlowerPotTile, true, false, RenderType::Pot, 0, 0.0f },
+        { "Potted Cactus", FlowerPotTile, FlowerPotTile, FlowerPotTile, true, false, RenderType::Pot, 0, 0.0f },
+        { "Potted Bamboo", FlowerPotTile, FlowerPotTile, FlowerPotTile, true, false, RenderType::Pot, 0, 0.0f },
+        { "Potted Oak Sapling", FlowerPotTile, FlowerPotTile, FlowerPotTile, true, false, RenderType::Pot, 0, 0.0f },
+        { "Potted Spruce Sapling", FlowerPotTile, FlowerPotTile, FlowerPotTile, true, false, RenderType::Pot, 0, 0.0f },
+        { "Potted Birch Sapling", FlowerPotTile, FlowerPotTile, FlowerPotTile, true, false, RenderType::Pot, 0, 0.0f },
+        { "Potted Jungle Sapling", FlowerPotTile, FlowerPotTile, FlowerPotTile, true, false, RenderType::Pot, 0, 0.0f },
+        { "Potted Acacia Sapling", FlowerPotTile, FlowerPotTile, FlowerPotTile, true, false, RenderType::Pot, 0, 0.0f },
+        { "Potted Dark Oak Sapling", FlowerPotTile, FlowerPotTile, FlowerPotTile, true, false, RenderType::Pot, 0, 0.0f },
+        { "Potted Cherry Sapling", FlowerPotTile, FlowerPotTile, FlowerPotTile, true, false, RenderType::Pot, 0, 0.0f },
+        { "Potted Mangrove Propagule", FlowerPotTile, FlowerPotTile, FlowerPotTile, true, false, RenderType::Pot, 0, 0.0f },
+        { "Potted Crimson Fungus", FlowerPotTile, FlowerPotTile, FlowerPotTile, true, false, RenderType::Pot, 0, 0.0f },
+        { "Potted Warped Fungus", FlowerPotTile, FlowerPotTile, FlowerPotTile, true, false, RenderType::Pot, 0, 0.0f },
+        { "Potted Crimson Roots", FlowerPotTile, FlowerPotTile, FlowerPotTile, true, false, RenderType::Pot, 0, 0.0f },
+        { "Potted Warped Roots", FlowerPotTile, FlowerPotTile, FlowerPotTile, true, false, RenderType::Pot, 0, 0.0f },
     };
 }
 
@@ -1792,6 +1860,8 @@ bool isObtainable(BlockId id)
             if (isCandle(id) && (candleCount(id) != 1 || candleLit(id))) return false;
             if (isCandleCake(id)) return false;
             if (id == Blocks::Bed) return false;
+            if (isDoublePlant(id) && doublePlantUpper(id)) return false;
+            if (isPitcherCrop(id) || isTorchflowerCrop(id) || isPotted(id)) return false;
             if (isCopperBulb(id) && copperForm(id).state != 0) return false;
             if (isLightningRod(id) && id != lightningRodOf(0, false)) return false;
             if (isChestFamily(id) && id != Blocks::Chest && id != chestOf(chestState(id).kind, 2, 0)) return false;
@@ -1836,6 +1906,8 @@ const char* blockSoundGroup(BlockId id)
     if (id == Blocks::Bamboo || id == Blocks::Scaffolding) return "wood";
     if (isSign(id) || isFrame(id)) return "wood";
     if (isCopper(id) || isLightningRod(id)) return "stone";
+    if (isWildPlant(id)) return "grass";
+    if (isFlowerPot(id)) return "stone";
     if (isDoor(id) || isTrapdoor(id)) return "wood";
     if (isConcretePowder(id)) return "sand";
     if (isColourBed(id)) return "cloth";
@@ -1988,6 +2060,8 @@ Material blockMaterial(BlockId id)
     if (id == Blocks::SlimeBlock) return Material::Wool;
     if (isSign(id) || isFrame(id)) return Material::Wood;
     if (isCopper(id) || isLightningRod(id)) return Material::Stone;
+    if (isWildPlant(id)) return Material::Plant;
+    if (isFlowerPot(id)) return Material::Plant;
     if (isDoor(id) || isTrapdoor(id)) return Material::Wood;
     if (isConcretePowder(id)) return Material::Sand;
     if (isColourBed(id)) return Material::Wool;
@@ -2144,6 +2218,7 @@ bool blockOverlaps(BlockId id, int bx, int by, int bz,
     }
 
     if (isColourBed(id)) return overlaps(0.0f, 0.0f, 0.0f, 1.0f, 0.5625f, 1.0f);
+    if (isFlowerPot(id)) return overlaps(0.3125f, 0.0f, 0.3125f, 0.6875f, 0.375f, 0.6875f);
     if (isChestFamily(id)) return overlaps(0.0625f, 0.0f, 0.0625f, 0.9375f, 0.875f, 0.9375f);
     if (isLightningRod(id))
     {
@@ -2282,4 +2357,30 @@ BlockId copperBlockOf(CopperFamily family, int stage, bool waxed, int state)
         case CopperFamily::Trapdoor: return static_cast<BlockId>(Blocks::CopperTrapdoorFirst + t * 16 + (state & 15));
         default: return Blocks::Air;
     }
+}
+
+namespace
+{
+    const BlockId POTTABLE[30] = {
+        Blocks::FlowerRed, Blocks::FlowerYellow, Blocks::Allium, Blocks::AzureBluet, Blocks::BlueOrchid,
+        Blocks::Cornflower, Blocks::LilyOfTheValley, Blocks::OxeyeDaisy, Blocks::RedTulip, Blocks::OrangeTulip,
+        Blocks::WhiteTulip, Blocks::PinkTulip, Blocks::WitherRose, Blocks::Torchflower, Blocks::Fern,
+        Blocks::DeadBush, Blocks::Cactus, Blocks::Bamboo, Blocks::OakSapling, Blocks::SpruceSapling,
+        Blocks::BirchSapling, Blocks::JungleSapling, Blocks::AcaciaSapling, Blocks::DarkOakSapling,
+        Blocks::CherrySapling, Blocks::MangrovePropagule, Blocks::CrimsonFungus, Blocks::WarpedFungus,
+        Blocks::CrimsonRoots, Blocks::WarpedRoots,
+    };
+}
+
+BlockId pottedPlant(BlockId pot)
+{
+    if (!isPotted(pot)) return Blocks::Air;
+    return POTTABLE[pot - Blocks::PottedFirst];
+}
+
+BlockId pottedOf(BlockId plant)
+{
+    for (int i = 0; i < 30; ++i)
+        if (POTTABLE[i] == plant) return static_cast<BlockId>(Blocks::PottedFirst + i);
+    return Blocks::Air;
 }

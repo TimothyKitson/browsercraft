@@ -208,6 +208,10 @@ namespace
         { "Raw Gold",             Tiles::ItemRawGold,           64 },
         { "Amethyst Shard",       Tiles::ItemAmethystShard,     64 },
         { "Tripwire Hook",        Tiles::ItemTripwireHook,      64 },
+        { "Torchflower Seeds",    Tiles::ItemTorchflowerSeeds,  64 },
+        { "Pitcher Pod",          Tiles::ItemPitcherPod,        64 },
+        { "Clay Ball",            Tiles::ItemClayBall,          64 },
+        { "Brick",                Tiles::ItemBrick,             64 },
     };
 
     static_assert(sizeof(ITEMS) / sizeof(ITEMS[0]) ==
@@ -233,6 +237,16 @@ int flatIconFor(BlockId id)
     if (isDoor(id) && copperForm(id).family == CopperFamily::Door)
         return Tiles::ItemCopperDoorFirst + copperForm(id).stage;
     if (isLightningRod(id)) return Tiles::LightningRodTile;
+    if (isDoublePlant(id))
+    {
+        switch (doublePlantKind(id))
+        {
+            case DoublePlant::Sunflower: return Tiles::SunflowerFrontTile;
+            case DoublePlant::PitcherPlant: return Tiles::ItemPitcherPlant;
+            default: return blockInfo(doublePlantOf(doublePlantKind(id), true)).tileSide;
+        }
+    }
+    if (isFlowerPot(id)) return Tiles::ItemFlowerPot;
     if (isDoor(id))
     {
         static const int ICONS[WOOD_COUNT] = { Tiles::IconOakDoor, Tiles::IconSpruceDoor, Tiles::IconBirchDoor,
@@ -315,6 +329,19 @@ StackId blockDrop(BlockId id)
 
     if (isCandle(id)) return candleOf(candleShade(id), 1, false);
     if (isBed(id)) return bedOf(bedColour(id), 0, false);
+    if (isDoublePlant(id))
+    {
+        const DoublePlant kind = doublePlantKind(id);
+        if (kind == DoublePlant::TallGrass || kind == DoublePlant::LargeFern) return Items::WheatSeeds;
+        return doublePlantOf(kind, false);
+    }
+    if (isPitcherCrop(id))
+        return pitcherCropStage(id) >= 4 ? doublePlantOf(DoublePlant::PitcherPlant, false) : Items::PitcherPod;
+    if (isTorchflowerCrop(id)) return Items::TorchflowerSeeds;
+    if (isPotted(id)) return Blocks::FlowerPot;
+    if (id == Blocks::Fern) return Items::WheatSeeds;
+    if (id == Blocks::DeadBush) return Items::Stick;
+    if (id == Blocks::Clay) return Items::ClayBall;
     if (isEnderChest(id)) return Blocks::Obsidian;
     if (isTrappedChest(id)) return chestOf(1, 2, 0);
     if (isChestFamily(id)) return Blocks::Chest;

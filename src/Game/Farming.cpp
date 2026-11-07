@@ -231,6 +231,27 @@ void Farming::grow(World& world, const glm::vec3& around, uint32_t& seed)
             }
         }
 
+        {
+            const BlockId sprout = world.getBlock(x, y, z);
+            if (isTorchflowerCrop(sprout) || (isPitcherCrop(sprout) && !pitcherCropUpper(sprout)))
+            {
+                if (world.getBlock(x, y - 1, z) != Blocks::Farmland) continue;
+                if (nextRandom(seed) % 3u != 0u) continue;
+                if (sprout == Blocks::TorchflowerCrop0) world.setBlock(x, y, z, Blocks::TorchflowerCrop1);
+                else if (sprout == Blocks::TorchflowerCrop1) world.setBlock(x, y, z, Blocks::Torchflower);
+                else
+                {
+                    const int stage = pitcherCropStage(sprout);
+                    if (stage >= 4) continue;
+                    const BlockId overhead = world.getBlock(x, y + 1, z);
+                    if (stage + 1 >= 3 && overhead != Blocks::Air && !pitcherCropUpper(overhead)) continue;
+                    world.setBlock(x, y, z, pitcherCropOf(stage + 1, false));
+                    if (stage + 1 >= 3) world.setBlock(x, y + 1, z, pitcherCropOf(stage + 1, true));
+                }
+                continue;
+            }
+        }
+
         if (isFungus(world.getBlock(x, y, z))) continue;
         if (isSapling(world.getBlock(x, y, z)))
         {

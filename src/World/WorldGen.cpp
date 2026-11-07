@@ -2870,6 +2870,8 @@ void WorldGen::decorate(Chunk& chunk) const
                     for (int i = 0; i < cactusHeight && above + i < Chunk::SY; ++i)
                         chunk.setBlockRaw(lx, above + i, lz, Blocks::Cactus);
                 }
+                else if (roll < 0.016f)
+                    chunk.setBlockRaw(lx, above, lz, Blocks::DeadBush);
                 continue;
             }
 
@@ -2931,8 +2933,47 @@ void WorldGen::decorate(Chunk& chunk) const
                 continue;
             }
 
+            const float pick = hashToFloat(hashCoords(wx, 13, wz, m_seed + 6011));
+            const bool ferny = biome == Biome::Snowy || biome == Biome::Mountains || biome == Biome::Jungle;
+            auto tall = [&](DoublePlant kind) {
+                if (above + 1 >= Chunk::SY) return;
+                chunk.setBlockRaw(lx, above, lz, doublePlantOf(kind, false));
+                chunk.setBlockRaw(lx, above + 1, lz, doublePlantOf(kind, true));
+            };
             if (roll < 0.14f)
-                chunk.setBlockRaw(lx, above, lz, Blocks::TallGrass);
+            {
+                if (pick < 0.06f) tall(ferny ? DoublePlant::LargeFern : DoublePlant::TallGrass);
+                else chunk.setBlockRaw(lx, above, lz, (ferny && pick < 0.45f) ? Blocks::Fern : Blocks::TallGrass);
+            }
+            else if (roll >= 0.1695f && roll < 0.182f)
+            {
+                BlockId flower = Blocks::Air;
+                if (biome == Biome::Plains)
+                {
+                    static const BlockId PLAINS[7] = { Blocks::RedTulip, Blocks::OrangeTulip, Blocks::WhiteTulip, Blocks::PinkTulip,
+                                                       Blocks::OxeyeDaisy, Blocks::AzureBluet, Blocks::Cornflower };
+                    flower = PLAINS[static_cast<int>(pick * 7.0f) % 7];
+                }
+                else if (biome == Biome::Forest)
+                {
+                    static const BlockId FOREST[3] = { Blocks::LilyOfTheValley, Blocks::Allium, Blocks::Cornflower };
+                    flower = FOREST[static_cast<int>(pick * 3.0f) % 3];
+                }
+                else if (biome == Biome::Swamp || biome == Biome::MangroveSwamp)
+                    flower = Blocks::BlueOrchid;
+                else if (biome == Biome::Mountains)
+                    flower = pick < 0.5f ? Blocks::Allium : Blocks::AzureBluet;
+                if (flower != Blocks::Air) chunk.setBlockRaw(lx, above, lz, flower);
+            }
+            else if (roll >= 0.182f && roll < 0.188f)
+            {
+                if (biome == Biome::Plains) tall(pick < 0.7f ? DoublePlant::Sunflower : DoublePlant::TallGrass);
+                else if (biome == Biome::Forest)
+                {
+                    static const DoublePlant FOREST[3] = { DoublePlant::Lilac, DoublePlant::RoseBush, DoublePlant::Peony };
+                    tall(FOREST[static_cast<int>(pick * 3.0f) % 3]);
+                }
+            }
             else if (roll < 0.155f)
                 chunk.setBlockRaw(lx, above, lz, Blocks::FlowerRed);
             else if (roll < 0.168f)

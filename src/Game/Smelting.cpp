@@ -29,7 +29,8 @@ StackId Smelting::resultOf(StackId input)
         case Blocks::RedSand: return Blocks::Glass;
         case Blocks::Sandstone: return Blocks::SmoothSandstone;
         case Blocks::RedSandstone: return Blocks::SmoothRedSandstone;
-        case Blocks::Clay:      return Blocks::Bricks;
+        case Blocks::Clay:      return Blocks::Terracotta;
+        case Items::ClayBall:   return Items::Brick;
 
         // A cactus fired is green, which is Minecraft's and the only
         // dye in the game that comes out of a furnace.

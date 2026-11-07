@@ -2049,7 +2049,7 @@ bool Application::frame()
             m_startupScreen == "cherry" || m_startupScreen == "mangrove" || m_startupScreen == "fungi" ||
             m_startupScreen == "stones" || m_startupScreen == "colours" || m_startupScreen == "candles" ||
             m_startupScreen == "shulkerboxes" || m_startupScreen == "beds" || m_startupScreen == "chests" ||
-            m_startupScreen == "copper" ||
+            m_startupScreen == "copper" || m_startupScreen == "flowers" ||
             m_startupScreen == "boat" || m_startupScreen == "rails" ||
             m_startupScreen == "mobs" || m_startupScreen == "golem" ||
             m_startupScreen == "glowmobs" || m_startupScreen == "variants" ||
@@ -2141,6 +2141,7 @@ bool Application::frame()
                                   m_startupScreen != "beds" &&
                                   m_startupScreen != "chests" &&
                                   m_startupScreen != "copper" &&
+                                  m_startupScreen != "flowers" &&
                                   m_startupScreen != "boat" &&
                                   m_startupScreen != "rails" &&
                                   m_startupScreen != "mobs" &&
@@ -2517,7 +2518,7 @@ bool Application::frame()
                 m_startupScreen == "cherry" || m_startupScreen == "mangrove" || m_startupScreen == "fungi" ||
                 m_startupScreen == "stones" || m_startupScreen == "colours" || m_startupScreen == "candles" ||
                 m_startupScreen == "shulkerboxes" || m_startupScreen == "beds" || m_startupScreen == "chests" ||
-                m_startupScreen == "copper")
+                m_startupScreen == "copper" || m_startupScreen == "flowers")
             {
                 m_camera.setOrientation(0.0f, -25.0f);
                 m_camera.addLook(0.0f, 0.0f, 0.0f);
@@ -2614,6 +2615,43 @@ bool Application::frame()
                     m_world->setBlock(px + 16, py, pz - 10, Blocks::Bookshelf);
                     m_world->setBlock(px + 16, py, pz + 10, Blocks::DiamondOre);
                     m_world->setBlock(px + 16, py + 1, pz + 10, Blocks::EndPortalFrame);
+                }
+                if (m_startupScreen == "flowers")
+                {
+                    m_devAttackStrength = 1.0f;
+                    m_camera.setOrientation(0.0f, -16.0f);
+                    for (int dx = 1; dx <= 12; ++dx)
+                        for (int dz = -9; dz <= 9; ++dz)
+                        {
+                            for (int dy = 0; dy <= 5; ++dy) m_world->setBlock(px + dx, py + dy, pz + dz, Blocks::Air);
+                            m_world->setBlock(px + dx, py - 1, pz + dz, Blocks::Grass);
+                        }
+                    const BlockId SMALL[16] = { Blocks::FlowerRed, Blocks::FlowerYellow, Blocks::Allium, Blocks::AzureBluet,
+                                                Blocks::BlueOrchid, Blocks::Cornflower, Blocks::LilyOfTheValley, Blocks::OxeyeDaisy,
+                                                Blocks::RedTulip, Blocks::OrangeTulip, Blocks::WhiteTulip, Blocks::PinkTulip,
+                                                Blocks::WitherRose, Blocks::Torchflower, Blocks::Fern, Blocks::DeadBush };
+                    for (int k = 0; k < 16; ++k) m_world->setBlock(px + 4, py, pz - 8 + k, SMALL[k]);
+                    for (int k = 0; k < static_cast<int>(DoublePlant::Count); ++k)
+                    {
+                        m_world->setBlock(px + 7, py, pz - 7 + k * 2, doublePlantOf(static_cast<DoublePlant>(k), false));
+                        m_world->setBlock(px + 7, py + 1, pz - 7 + k * 2, doublePlantOf(static_cast<DoublePlant>(k), true));
+                    }
+                    for (int k = 0; k < 8; ++k)
+                        m_world->setBlock(px + 3, py, pz - 7 + k * 2, static_cast<BlockId>(Blocks::PottedFirst + k * 4));
+                    m_world->setBlock(px + 3, py, pz + 8, Blocks::FlowerPot);
+                    for (int stage = 0; stage < 5; ++stage)
+                    {
+                        m_world->setBlock(px + 9, py - 1, pz - 3 + stage, Blocks::Farmland);
+                        m_world->setBlock(px + 9, py, pz - 3 + stage, pitcherCropOf(stage, false));
+                        if (stage >= 3) m_world->setBlock(px + 9, py + 1, pz - 3 + stage, pitcherCropOf(stage, true));
+                    }
+                    m_world->setBlock(px + 9, py - 1, pz + 3, Blocks::Farmland);
+                    m_world->setBlock(px + 9, py, pz + 3, Blocks::TorchflowerCrop0);
+                    m_world->setBlock(px + 9, py - 1, pz + 4, Blocks::Farmland);
+                    m_world->setBlock(px + 9, py, pz + 4, Blocks::TorchflowerCrop1);
+                    m_world->setBlock(px + 12, py, pz - 9, Blocks::Bookshelf);
+                    m_world->setBlock(px + 12, py, pz + 9, Blocks::DiamondOre);
+                    m_world->setBlock(px + 12, py + 1, pz + 9, Blocks::EndPortalFrame);
                 }
                 if (m_startupScreen == "copper")
                 {
@@ -6138,6 +6176,9 @@ void Application::updateMining(float deltaTime)
                 }
 
                 if (isCandle(id)) dropped = candleCount(id);
+                if (id == Blocks::Clay && drop == Items::ClayBall) dropped = 4;
+                if (id == Blocks::DeadBush) dropped = static_cast<int>(static_cast<uint32_t>(hit.block.x * 31 + hit.block.z * 17 + static_cast<int>(m_elapsedSeconds * 61.0f)) % 3u);
+                if (isDoublePlant(id) && doublePlantUpper(id) && drop == Items::WheatSeeds) dropped = 0;
                 if (isEnderChest(id)) { drop = silk ? chestOf(2, 2, 0) : Blocks::Obsidian; dropped = silk ? 1 : 8; }
                 if (drop != Blocks::Air)
                     m_drops.spawnFromBrokenBlock(hit.block, drop, dropped);
@@ -6211,6 +6252,20 @@ void Application::updateMining(float deltaTime)
                         m_drops.spawnFromBrokenBlock(other, blockDrop(paired));
                 }
             }
+
+            if (isDoublePlant(id) || (isPitcherCrop(id) && pitcherCropStage(id) >= 3))
+            {
+                const bool upper = isDoublePlant(id) ? doublePlantUpper(id) : pitcherCropUpper(id);
+                const glm::ivec3 pair(hit.block.x, hit.block.y + (upper ? -1 : 1), hit.block.z);
+                const BlockId partner = m_world->getBlock(pair.x, pair.y, pair.z);
+                if ((isDoublePlant(id) && isDoublePlant(partner)) || (isPitcherCrop(id) && isPitcherCrop(partner)))
+                {
+                    m_world->setBlock(pair.x, pair.y, pair.z, Blocks::Air);
+                    m_net.onLocalBlockChange(pair.x, pair.y, pair.z, Blocks::Air);
+                }
+            }
+            if (isPotted(id) && !m_player.creative())
+                m_drops.spawnFromBrokenBlock(hit.block, pottedPlant(id), 1);
 
             if (isStorageChest(id))
             {
@@ -9385,6 +9440,33 @@ void Application::handlePlacement()
 
             if (isCake(used) && useCake(bench.block, used)) return;
             if (isCandle(used) && useCandle(bench.block, used)) return;
+            if (isFlowerPot(used))
+            {
+                ItemStack& held = m_inventory.selected();
+                if (used == Blocks::FlowerPot && !held.empty() && isBlockStack(held.id) &&
+                    pottedOf(asBlock(held.id)) != Blocks::Air)
+                {
+                    const BlockId potted = pottedOf(asBlock(held.id));
+                    m_world->setBlock(bench.block.x, bench.block.y, bench.block.z, potted);
+                    m_net.onLocalBlockChange(bench.block.x, bench.block.y, bench.block.z, potted);
+                    m_audio.playPlace(asBlock(held.id));
+                    if (!m_player.creative())
+                    {
+                        held.count -= 1;
+                        if (held.count <= 0) held.clear();
+                    }
+                    return;
+                }
+                if (isPotted(used) && held.empty())
+                {
+                    held.id = pottedPlant(used);
+                    held.count = 1;
+                    m_world->setBlock(bench.block.x, bench.block.y, bench.block.z, Blocks::FlowerPot);
+                    m_net.onLocalBlockChange(bench.block.x, bench.block.y, bench.block.z, Blocks::FlowerPot);
+                    m_audio.play(Sound::Pickup, 0.5f, 1.1f);
+                    return;
+                }
+            }
             if (isCandleCake(used) && useCandleCake(bench.block, used)) return;
             if (isLog(used) && plantCocoa(bench.previous)) return;
             if (isComposter(used) && useComposter(bench.block, used)) return;
@@ -9739,6 +9821,67 @@ void Application::handlePlacement()
             }
             return;
         }
+        if (crop.hit)
+        {
+            const BlockId plant = m_world->getBlock(crop.block.x, crop.block.y, crop.block.z);
+            bool used = false;
+            auto put = [&](const glm::ivec3& at, BlockId id) {
+                m_world->setBlock(at.x, at.y, at.z, id);
+                m_net.onLocalBlockChange(at.x, at.y, at.z, id);
+            };
+            const glm::ivec3 above(crop.block.x, crop.block.y + 1, crop.block.z);
+            if ((plant == Blocks::TallGrass || plant == Blocks::Fern) &&
+                m_world->getBlock(above.x, above.y, above.z) == Blocks::Air)
+            {
+                const DoublePlant kind = plant == Blocks::Fern ? DoublePlant::LargeFern : DoublePlant::TallGrass;
+                put(crop.block, doublePlantOf(kind, false));
+                put(above, doublePlantOf(kind, true));
+                used = true;
+            }
+            else if (isDoublePlant(plant))
+            {
+                const DoublePlant kind = doublePlantKind(plant);
+                if (kind != DoublePlant::TallGrass && kind != DoublePlant::LargeFern && kind != DoublePlant::PitcherPlant)
+                {
+                    m_drops.spawnFromBrokenBlock(crop.block, doublePlantOf(kind, false), 1);
+                    used = true;
+                }
+            }
+            else if (plant == Blocks::TorchflowerCrop0)
+            {
+                put(crop.block, Blocks::TorchflowerCrop1);
+                used = true;
+            }
+            else if (plant == Blocks::TorchflowerCrop1)
+            {
+                put(crop.block, Blocks::Torchflower);
+                used = true;
+            }
+            else if (isPitcherCrop(plant))
+            {
+                const glm::ivec3 base = pitcherCropUpper(plant) ? glm::ivec3(crop.block.x, crop.block.y - 1, crop.block.z) : crop.block;
+                const int stage = pitcherCropStage(m_world->getBlock(base.x, base.y, base.z));
+                const glm::ivec3 top(base.x, base.y + 1, base.z);
+                const BlockId overhead = m_world->getBlock(top.x, top.y, top.z);
+                if (stage < 4 && (stage + 1 < 3 || overhead == Blocks::Air || pitcherCropUpper(overhead)))
+                {
+                    put(base, pitcherCropOf(stage + 1, false));
+                    if (stage + 1 >= 3) put(top, pitcherCropOf(stage + 1, true));
+                    used = true;
+                }
+            }
+            if (used)
+            {
+                m_particles.spawnBlockBreak(crop.block, Blocks::TallGrass);
+                m_audio.play(Sound::Place, 0.5f, 1.5f);
+                if (!m_player.creative())
+                {
+                    stack.count -= 1;
+                    if (stack.count <= 0) stack.clear();
+                }
+                return;
+            }
+        }
         if (crop.hit && isSapling(m_world->getBlock(crop.block.x, crop.block.y, crop.block.z)))
         {
             const uint32_t roll = static_cast<uint32_t>(
@@ -9783,6 +9926,26 @@ void Application::handlePlacement()
             }
             return;
         }
+    }
+
+    if (stack.id == Items::TorchflowerSeeds || stack.id == Items::PitcherPod)
+    {
+        const RaycastHit soil = m_world->raycast(m_camera.position, m_camera.front, REACH_DISTANCE);
+        if (soil.hit && soil.normal.y > 0 &&
+            m_world->getBlock(soil.block.x, soil.block.y, soil.block.z) == Blocks::Farmland &&
+            m_world->getBlock(soil.block.x, soil.block.y + 1, soil.block.z) == Blocks::Air)
+        {
+            const BlockId sown = stack.id == Items::TorchflowerSeeds ? Blocks::TorchflowerCrop0 : pitcherCropOf(0, false);
+            m_world->setBlock(soil.block.x, soil.block.y + 1, soil.block.z, sown);
+            m_net.onLocalBlockChange(soil.block.x, soil.block.y + 1, soil.block.z, sown);
+            m_audio.playPlace(sown);
+            if (!m_player.creative())
+            {
+                stack.count -= 1;
+                if (stack.count <= 0) stack.clear();
+            }
+        }
+        return;
     }
 
     if (stack.id == Items::NetherWart)
@@ -9953,6 +10116,25 @@ void Application::handlePlacement()
         WorldCaneBlocks around;
         around.world = m_world.get();
         if (!Cane::canStandAt(around, target.x, target.y, target.z)) return;
+    }
+
+    if (isDoublePlant(placing))
+    {
+        const BlockId above = m_world->getBlock(target.x, target.y + 1, target.z);
+        if (above != Blocks::Air) return;
+        const BlockId low = doublePlantOf(doublePlantKind(placing), false);
+        const BlockId high = doublePlantOf(doublePlantKind(placing), true);
+        m_world->setBlock(target.x, target.y, target.z, low);
+        m_world->setBlock(target.x, target.y + 1, target.z, high);
+        m_net.onLocalBlockChange(target.x, target.y, target.z, low);
+        m_net.onLocalBlockChange(target.x, target.y + 1, target.z, high);
+        m_audio.playPlace(low);
+        if (!m_player.creative())
+        {
+            stack.count -= 1;
+            if (stack.count <= 0) stack.clear();
+        }
+        return;
     }
 
     if (isLightningRod(placing))
@@ -11648,6 +11830,20 @@ void Application::updateMobs(float deltaTime)
                 0.4f, 0.8f);
         const MobType& type = mobType(death.type);
         const glm::vec3 where = death.position + glm::vec3(0.0f, type.height * 0.5f, 0.0f);
+        if (death.type != MobId::Wither)
+        {
+            bool witherNear = false;
+            for (const Mob& mob : m_entities.mobs())
+                if (mob.typeId() == MobId::Wither && mob.alive() && glm::length(mob.position() - death.position) < 16.0f)
+                    witherNear = true;
+            const glm::ivec3 feet = glm::ivec3(glm::floor(death.position + glm::vec3(0.0f, 0.1f, 0.0f)));
+            if (witherNear && m_world->getBlock(feet.x, feet.y, feet.z) == Blocks::Air &&
+                isSolid(m_world->getBlock(feet.x, feet.y - 1, feet.z)))
+            {
+                m_world->setBlock(feet.x, feet.y, feet.z, Blocks::WitherRose);
+                m_net.onLocalBlockChange(feet.x, feet.y, feet.z, Blocks::WitherRose);
+            }
+        }
 
         for (int i = 0; i < type.dropCount; ++i) m_drops.spawn(where, type.drop, 1);
         for (int i = 0; i < type.secondDropCount; ++i) m_drops.spawn(where, type.secondDrop, 1);

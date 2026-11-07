@@ -11,6 +11,9 @@ float Composting::chanceOf(StackId id)
         const BlockId block = asBlock(id);
         if (isLeaves(block)) return 0.3f;
         if (isWaterPlant(block)) return 0.3f;
+        if (isSmallFlower(block) || block == Blocks::Fern) return 0.65f;
+        if (isDoublePlant(block)) return doublePlantKind(block) == DoublePlant::TallGrass ? 0.5f : 0.65f;
+        if (block == Blocks::DeadBush) return 0.3f;
 
         switch (block)
         {

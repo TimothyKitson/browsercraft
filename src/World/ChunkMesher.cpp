@@ -704,6 +704,52 @@ namespace
         box(6.0f, 12.0f, 6.0f, 10.0f, 16.0f, 10.0f, 0.0f, 0.0f, 4.0f, 4.0f);
     }
 
+    void emitSunflowerHead(const MeshSnapshot& snap, int lx, int y, int lz, BlockId id, std::vector<float>& out)
+    {
+        const float sky = static_cast<float>(snap.skyLight(lx, y, lz)) / 15.0f;
+        const float block = static_cast<float>(snap.blockLight(lx, y, lz)) / 15.0f;
+        const float x0 = static_cast<float>(lx) + 0.56f, x1 = static_cast<float>(lx) + 0.68f;
+        const float y0 = static_cast<float>(y) + 0.12f, y1 = static_cast<float>(y) + 0.92f;
+        const float z0 = static_cast<float>(lz) + 0.1f, z1 = static_cast<float>(lz) + 0.9f;
+        const TileUV front = tileUV(Tiles::SunflowerFrontTile);
+        const TileUV back = tileUV(Tiles::SunflowerBackTile);
+        const float tag = tagOf(CROSS_FACE, id);
+        pushVertex(out, x1, y0, z0, front.u0, front.vBottom, 0.9f, sky, block, tag);
+        pushVertex(out, x1, y0, z1, front.u1, front.vBottom, 0.9f, sky, block, tag);
+        pushVertex(out, x0, y1, z1, front.u1, front.vTop, 0.9f, sky, block, tag);
+        pushVertex(out, x1, y0, z0, front.u0, front.vBottom, 0.9f, sky, block, tag);
+        pushVertex(out, x0, y1, z1, front.u1, front.vTop, 0.9f, sky, block, tag);
+        pushVertex(out, x0, y1, z0, front.u0, front.vTop, 0.9f, sky, block, tag);
+        pushVertex(out, x1, y0, z1, back.u0, back.vBottom, 0.7f, sky, block, tag);
+        pushVertex(out, x1, y0, z0, back.u1, back.vBottom, 0.7f, sky, block, tag);
+        pushVertex(out, x0, y1, z0, back.u1, back.vTop, 0.7f, sky, block, tag);
+        pushVertex(out, x1, y0, z1, back.u0, back.vBottom, 0.7f, sky, block, tag);
+        pushVertex(out, x0, y1, z0, back.u1, back.vTop, 0.7f, sky, block, tag);
+        pushVertex(out, x0, y1, z1, back.u0, back.vTop, 0.7f, sky, block, tag);
+    }
+
+    void emitPot(const MeshSnapshot& snap, int lx, int y, int lz, BlockId id, std::vector<float>& out)
+    {
+        const int pot = Tiles::FlowerPotTile;
+        const PartFace walls[6] = {
+            { pot, 5.0f, 10.0f, 11.0f, 16.0f }, { pot, 5.0f, 10.0f, 11.0f, 16.0f },
+            { pot, 5.0f, 5.0f, 11.0f, 11.0f }, { pot, 5.0f, 10.0f, 11.0f, 16.0f },
+            { pot, 5.0f, 10.0f, 11.0f, 16.0f }, { pot, 5.0f, 10.0f, 11.0f, 16.0f } };
+        emitPart(snap, lx, y, lz, id, glm::vec3(5.0f, 0.0f, 5.0f) / 16.0f, glm::vec3(11.0f, 6.0f, 11.0f) / 16.0f, walls, out);
+        const BlockId plant = pottedPlant(id);
+        if (plant == Blocks::Air) return;
+        const BlockInfo& info = blockInfo(plant);
+        if (plant == Blocks::Cactus)
+        {
+            PartFace sides[6];
+            for (int k = 0; k < 6; ++k) sides[k] = PartFace{ info.tileSide, 6.0f, 0.0f, 10.0f, 12.0f };
+            sides[2] = PartFace{ info.tileTop, 6.0f, 6.0f, 10.0f, 10.0f };
+            emitPart(snap, lx, y, lz, id, glm::vec3(6.0f, 4.0f, 6.0f) / 16.0f, glm::vec3(10.0f, 16.0f, 10.0f) / 16.0f, sides, out);
+            return;
+        }
+        emitTinyCross(snap, lx, y, lz, id, 0.5f, 0.5f, 0.25f, 1.25f, 0.42f, info.tileSide, 0.0f, 0.0f, 16.0f, 16.0f, out);
+    }
+
     void emitChest(const MeshSnapshot& snap, int lx, int y, int lz, BlockId id, std::vector<float>& out)
     {
         const ChestState state = chestState(id);
@@ -1303,6 +1349,12 @@ void buildChunkMesh(const MeshSnapshot& snapshot, MeshResult& out)
                 else if (isCross(id))
                 {
                     emitCross(snapshot, lx, y, lz, id, out.opaqueVertices);
+                    if (id == doublePlantOf(DoublePlant::Sunflower, true))
+                        emitSunflowerHead(snapshot, lx, y, lz, id, out.opaqueVertices);
+                }
+                else if (isFlowerPot(id))
+                {
+                    emitPot(snapshot, lx, y, lz, id, out.opaqueVertices);
                 }
                 else if (isDust(id))
                 {

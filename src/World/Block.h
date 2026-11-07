@@ -593,6 +593,14 @@ namespace Blocks
         CopperDoorFirst, CopperDoorLast = CopperDoorFirst + 127,
         CopperTrapdoorFirst, CopperTrapdoorLast = CopperTrapdoorFirst + 127,
         LightningRodFirst, LightningRodLast = LightningRodFirst + 11,
+        Allium, AzureBluet, BlueOrchid, Cornflower, LilyOfTheValley, OxeyeDaisy,
+        RedTulip, OrangeTulip, WhiteTulip, PinkTulip, WitherRose, Torchflower,
+        Fern, DeadBush,
+        TorchflowerCrop0, TorchflowerCrop1,
+        DoublePlantFirst, DoublePlantLast = DoublePlantFirst + 13,
+        PitcherCropFirst, PitcherCropLast = PitcherCropFirst + 6,
+        FlowerPot,
+        PottedFirst, PottedLast = PottedFirst + 29,
 
         Count
     };
@@ -616,7 +624,8 @@ enum class RenderType : uint8_t
     Candle,
     Bed,
     Chest,
-    Rod
+    Rod,
+    Pot
 };
 
 struct BlockInfo
@@ -1034,6 +1043,43 @@ inline bool isTrialSpawnerActive(BlockId id)
     return id == Blocks::TrialSpawnerActive || id == Blocks::TrialSpawnerActiveOminous;
 }
 
+enum class DoublePlant : uint8_t { Sunflower, Lilac, RoseBush, Peony, TallGrass, LargeFern, PitcherPlant, Count };
+inline bool isDoublePlant(BlockId id) { return id >= Blocks::DoublePlantFirst && id <= Blocks::DoublePlantLast; }
+inline DoublePlant doublePlantKind(BlockId id) { return static_cast<DoublePlant>((id - Blocks::DoublePlantFirst) / 2); }
+inline bool doublePlantUpper(BlockId id) { return isDoublePlant(id) && (id - Blocks::DoublePlantFirst) % 2 == 1; }
+inline BlockId doublePlantOf(DoublePlant kind, bool upper)
+{
+    return static_cast<BlockId>(Blocks::DoublePlantFirst + static_cast<int>(kind) * 2 + (upper ? 1 : 0));
+}
+inline bool isPitcherCrop(BlockId id) { return id >= Blocks::PitcherCropFirst && id <= Blocks::PitcherCropLast; }
+inline bool pitcherCropUpper(BlockId id) { return isPitcherCrop(id) && id - Blocks::PitcherCropFirst >= 5; }
+inline int pitcherCropStage(BlockId id)
+{
+    if (!isPitcherCrop(id)) return 0;
+    const int k = id - Blocks::PitcherCropFirst;
+    return k < 5 ? k : k - 2;
+}
+inline BlockId pitcherCropOf(int stage, bool upper)
+{
+    if (stage < 0) stage = 0;
+    if (stage > 4) stage = 4;
+    if (upper && stage >= 3) return static_cast<BlockId>(Blocks::PitcherCropFirst + 5 + (stage - 3));
+    return static_cast<BlockId>(Blocks::PitcherCropFirst + stage);
+}
+inline bool isTorchflowerCrop(BlockId id) { return id == Blocks::TorchflowerCrop0 || id == Blocks::TorchflowerCrop1; }
+inline bool isSmallFlower(BlockId id)
+{
+    return id == Blocks::FlowerRed || id == Blocks::FlowerYellow || (id >= Blocks::Allium && id <= Blocks::Torchflower);
+}
+inline bool isPotted(BlockId id) { return id >= Blocks::PottedFirst && id <= Blocks::PottedLast; }
+inline bool isFlowerPot(BlockId id) { return id == Blocks::FlowerPot || isPotted(id); }
+BlockId pottedPlant(BlockId pot);
+BlockId pottedOf(BlockId plant);
+inline bool isWildPlant(BlockId id)
+{
+    return isSmallFlower(id) || id == Blocks::Fern || id == Blocks::DeadBush || id == Blocks::TallGrass ||
+           isDoublePlant(id) || isPitcherCrop(id) || isTorchflowerCrop(id);
+}
 enum class CopperFamily : uint8_t { None, Block, Cut, Chiseled, Grate, Slab, Bulb, Door, Trapdoor };
 struct CopperForm
 {

@@ -777,6 +777,13 @@ namespace
             else if (isColourBed(id))             why = "the head, or another facing, of a bed";
             else if (isChestFamily(id))           why = "another facing, a joined half, or a trapped chest held open";
             else if (isLightningRod(id))          why = "a rod set on another face, or one lightning has just struck";
+            else if (isTorchflowerCrop(id) || id == Blocks::Torchflower)
+                                                  why = "torchflower seeds sown and grown";
+            else if (isPitcherCrop(id) || doublePlantKind(id) == DoublePlant::PitcherPlant)
+                                                  why = "a pitcher pod sown and grown";
+            else if (id == Blocks::WitherRose)    why = "where something dies near the wither";
+            else if (isPotted(id))                why = "a plant set in a flower pot";
+            else if (isDoublePlant(id))           why = "the top half of a tall plant, or bone meal on grass or fern";
             else if (id == Blocks::SmokerLit || id == Blocks::BlastFurnaceLit)
                                                   why = "a furnace that is burning";
             else if (id == Blocks::NoteBlockLit || id == Blocks::ObserverLit)
@@ -929,6 +936,8 @@ namespace
                 byHand = "carried by a drowned about one time in eight";
             else if (woodOfSignItem(static_cast<StackId>(i)) > 0)
                 byHand = "the sign recipe in that wood's planks";
+            else if (i == static_cast<int>(Items::TorchflowerSeeds) || i == static_cast<int>(Items::PitcherPod))
+                byHand = "dug up by a sniffer (the sniffer arrives with item 62)";
 
             if (byHand)
             {
@@ -952,6 +961,11 @@ namespace
         haveItem.insert(static_cast<int>(Items::Trident));
         haveItem.insert(static_cast<int>(Items::WaterBucket));
         haveItem.insert(static_cast<int>(Items::LavaBucket));
+        haveItem.insert(static_cast<int>(Items::TorchflowerSeeds));
+        haveItem.insert(static_cast<int>(Items::PitcherPod));
+        haveItem.insert(static_cast<int>(Blocks::WitherRose));
+        haveItem.insert(static_cast<int>(Blocks::Torchflower));
+        haveItem.insert(static_cast<int>(doublePlantOf(DoublePlant::PitcherPlant, false)));
         for (int stage = 1; stage < 4; ++stage)
             for (CopperFamily family : { CopperFamily::Block, CopperFamily::Cut, CopperFamily::Chiseled, CopperFamily::Grate,
                                          CopperFamily::Slab, CopperFamily::Bulb, CopperFamily::Door, CopperFamily::Trapdoor })

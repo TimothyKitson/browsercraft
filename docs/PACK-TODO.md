@@ -144,11 +144,12 @@ Everything in the 1.21 textures zip the game doesn't use yet, turned into work. 
     - II. Copper bulbs at every stage, lit and powered.
     - III. Waxing with honeycomb, scraping with an axe, and the lightning rod with lightning.
     - Notes: cut copper slabs came along since chiseled copper is made from them; cut copper stairs are still to do. Storms now throw a visible bolt, and rods draw it, give a pulse of power and clean the copper they stand on. Lightning does not start fires or change mobs yet.
-37. Flowers and plants
+37. Flowers and plants (done)
     - I. Allium, azure bluet, blue orchid, cornflower, lily of the valley, oxeye daisy, four tulips, wither rose.
     - II. Torchflower (seeds and crop). Pitcher plant (pod and crop). Pink petals.
     - III. The two-block plants: sunflower, lilac, peony, rose bush, large fern, tall grass.
     - IV. Fern and dead bush. A flower pot that holds every plant.
+    - Notes: clay balls and bricks came in for the flower pot, so a clay block now breaks into four balls and fires into terracotta. Torchflower seeds and pitcher pods wait for the sniffer (item 62). Wither roses grow where things die near the wither; the wither effect they give on touch comes with item 73. Mushrooms and azaleas get their pots with items 38 and 39.
 38. Ground cover: mushrooms and huge mushrooms, mycelium, podzol, coarse dirt, rooted dirt and hanging roots.
 39. Lush caves: cave vines with glow berries, spore blossom, big and small dripleaf (big ones tilt when stood on), azalea and flowering azalea, glow lichen.
 40. Farm blocks

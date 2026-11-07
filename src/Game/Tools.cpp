@@ -47,6 +47,9 @@ namespace
             case Blocks::FlowerRed:
             case Blocks::FlowerYellow:
                 return Tools::Kind::Sword;
+            case Blocks::Fern:
+            case Blocks::DeadBush:
+                return Tools::Kind::Sword;
             default: break;
         }
 

@@ -304,6 +304,10 @@ namespace Items
         RawGold,
         AmethystShard,
         TripwireHook,
+        TorchflowerSeeds,
+        PitcherPod,
+        ClayBall,
+        Brick,
         Count
     };
 }

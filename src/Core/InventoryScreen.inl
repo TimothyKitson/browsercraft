@@ -80,6 +80,12 @@ namespace
         Blocks::MangroveLeaves, Blocks::MangrovePropagule,
         Blocks::CrimsonFungus, Blocks::WarpedFungus, Blocks::CrimsonRoots, Blocks::WarpedRoots,
         Blocks::NetherSprouts, Blocks::WeepingVines, Blocks::TwistingVines,
+        Blocks::Allium, Blocks::AzureBluet, Blocks::BlueOrchid, Blocks::Cornflower, Blocks::LilyOfTheValley,
+        Blocks::OxeyeDaisy, Blocks::RedTulip, Blocks::OrangeTulip, Blocks::WhiteTulip, Blocks::PinkTulip,
+        Blocks::WitherRose, Blocks::Torchflower, Blocks::Fern, Blocks::DeadBush,
+        Blocks::DoublePlantFirst + 0, Blocks::DoublePlantFirst + 2, Blocks::DoublePlantFirst + 4, Blocks::DoublePlantFirst + 6,
+        Blocks::DoublePlantFirst + 8, Blocks::DoublePlantFirst + 10, Blocks::DoublePlantFirst + 12,
+        Blocks::FlowerPot,
     };
 
     const StackId TAB_ORES[] = {
@@ -132,6 +138,7 @@ namespace
         Items::Bread, Items::Steak, Items::CookedPorkchop, Items::CookedChicken,
         Items::CookedMutton,
         Items::Paper, Items::Book, Items::Emerald, Items::EnderPearl, Items::EyeOfEnder, Items::NetherQuartz, Items::AmethystShard, Items::TripwireHook,
+        Items::TorchflowerSeeds, Items::PitcherPod, Items::ClayBall, Items::Brick,
         Items::Sign, Items::SpruceSign, Items::BirchSign, Items::JungleSign, Items::AcaciaSign, Items::DarkOakSign,
         Items::CherrySign, Items::MangroveSign, Items::BambooSign, Items::CrimsonSign, Items::WarpedSign,
     };

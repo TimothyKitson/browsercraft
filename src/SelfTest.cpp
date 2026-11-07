@@ -6063,8 +6063,8 @@ namespace
         // existed with no route into anybody's hands.
         check(Smelting::resultOf(Blocks::WetSponge) == Blocks::Sponge,
               "a wet sponge dries into a dry one, which is Minecraft's recipe");
-        check(Smelting::resultOf(Blocks::Clay) == Blocks::Bricks,
-              "and clay still fires into bricks");
+        check(Smelting::resultOf(Blocks::Clay) == Blocks::Terracotta && Smelting::resultOf(Items::ClayBall) == Items::Brick,
+              "a clay block fires into terracotta and a clay ball into a brick");
 
         // The glow berries are the one the item side of the audit
         // caught. Food.cpp had listed them as edible and this file had
@@ -12019,6 +12019,86 @@ namespace
         check(Saplings::leafDrop(Blocks::Stone, 0u) == Blocks::Air, "stone gives none");
     }
 
+    void testPlants()
+    {
+        section("flowers, tall plants, ferns and flower pots");
+        bool pairs = true;
+        for (int k = 0; k < static_cast<int>(DoublePlant::Count); ++k)
+        {
+            const DoublePlant kind = static_cast<DoublePlant>(k);
+            const BlockId low = doublePlantOf(kind, false), high = doublePlantOf(kind, true);
+            if (!isDoublePlant(low) || !isDoublePlant(high) || doublePlantUpper(low) || !doublePlantUpper(high) ||
+                doublePlantKind(low) != kind || doublePlantKind(high) != kind)
+                pairs = false;
+            if (isObtainable(high)) pairs = false;
+        }
+        check(pairs, "every tall plant is a bottom and a top, and only the bottom is carried");
+        check(blockDrop(doublePlantOf(DoublePlant::Lilac, true)) == doublePlantOf(DoublePlant::Lilac, false),
+              "a lilac broken at the top gives one lilac");
+        check(blockDrop(doublePlantOf(DoublePlant::TallGrass, false)) == Items::WheatSeeds, "tall grass gives seeds");
+        for (int stage = 0; stage < 5; ++stage)
+        {
+            const BlockId crop = pitcherCropOf(stage, false);
+            check(isPitcherCrop(crop) && pitcherCropStage(crop) == stage && !pitcherCropUpper(crop),
+                  "the pitcher crop at stage " + std::to_string(stage));
+            if (stage >= 3)
+                check(pitcherCropUpper(pitcherCropOf(stage, true)) && pitcherCropStage(pitcherCropOf(stage, true)) == stage,
+                      "and its top half");
+        }
+        check(blockDrop(pitcherCropOf(4, false)) == doublePlantOf(DoublePlant::PitcherPlant, false) &&
+                  blockDrop(pitcherCropOf(2, false)) == Items::PitcherPod,
+              "a ripe pitcher crop gives the plant; an unripe one its pod");
+        check(blockDrop(Blocks::TorchflowerCrop1) == Items::TorchflowerSeeds, "a torchflower crop gives its seeds back");
+        bool pots = true;
+        for (BlockId pot = Blocks::PottedFirst; pot <= Blocks::PottedLast; pot = static_cast<BlockId>(pot + 1))
+        {
+            const BlockId plant = pottedPlant(pot);
+            if (plant == Blocks::Air || pottedOf(plant) != pot) pots = false;
+            if (blockDrop(pot) != Blocks::FlowerPot || isObtainable(pot)) pots = false;
+        }
+        check(pots, "every potted plant knows its plant and breaks into a pot");
+        check(pottedOf(Blocks::Stone) == Blocks::Air, "a pot will not take stone");
+        check(pottedOf(Blocks::Cactus) != Blocks::Air && pottedOf(Blocks::Fern) != Blocks::Air &&
+                  pottedOf(Blocks::CherrySapling) != Blocks::Air,
+              "a pot takes cactus, fern and saplings");
+        check(!blockOverlaps(Blocks::FlowerPot, 0, 0, 0, 0.0f, 0.0f, 0.0f, 0.3f, 1.0f, 0.3f) &&
+                  blockOverlaps(Blocks::FlowerPot, 0, 0, 0, 0.4f, 0.1f, 0.4f, 0.6f, 0.2f, 0.6f),
+              "a flower pot is small");
+
+        struct DyeCase { BlockId flower; StackId dye; int count; };
+        const DyeCase CASES[] = {
+            { Blocks::Allium, Items::DyeMagenta, 1 }, { Blocks::AzureBluet, Items::DyeLightGray, 1 },
+            { Blocks::BlueOrchid, Items::DyeLightBlue, 1 }, { Blocks::Cornflower, Items::DyeBlue, 1 },
+            { Blocks::LilyOfTheValley, Items::DyeWhite, 1 }, { Blocks::OxeyeDaisy, Items::DyeLightGray, 1 },
+            { Blocks::RedTulip, Items::DyeRed, 1 }, { Blocks::OrangeTulip, Items::DyeOrange, 1 },
+            { Blocks::WhiteTulip, Items::DyeLightGray, 1 }, { Blocks::PinkTulip, Items::DyePink, 1 },
+            { Blocks::WitherRose, Items::DyeBlack, 1 }, { Blocks::Torchflower, Items::DyeOrange, 1 },
+            { doublePlantOf(DoublePlant::Sunflower, false), Items::DyeYellow, 2 },
+            { doublePlantOf(DoublePlant::Lilac, false), Items::DyeMagenta, 2 },
+            { doublePlantOf(DoublePlant::RoseBush, false), Items::DyeRed, 2 },
+            { doublePlantOf(DoublePlant::Peony, false), Items::DyePink, 2 },
+            { doublePlantOf(DoublePlant::PitcherPlant, false), Items::DyeCyan, 2 },
+        };
+        for (const DyeCase& c : CASES)
+        {
+            ItemStack grid[9];
+            grid[4] = ItemStack{ c.flower, 1 };
+            const CraftOutput made = Crafting::match(grid, 3);
+            check(made.id == c.dye && made.count == c.count, std::string(blockInfo(c.flower).name) + " gives its dye");
+        }
+        ItemStack pot[9];
+        pot[0] = ItemStack{ Items::Brick, 1 };
+        pot[2] = ItemStack{ Items::Brick, 1 };
+        pot[4] = ItemStack{ Items::Brick, 1 };
+        check(Crafting::match(pot, 3).id == Blocks::FlowerPot, "three bricks make a flower pot");
+        check(blockDrop(Blocks::Clay) == Items::ClayBall, "a clay block breaks into clay balls");
+        check(blockMaterial(Blocks::RedTulip) == Material::Plant && blockMaterial(doublePlantOf(DoublePlant::Peony, true)) == Material::Plant,
+              "flowers come away in your hand");
+        check(std::string(blockInfo(Blocks::TallGrass).name) == "Short Grass" &&
+                  std::string(blockInfo(doublePlantOf(DoublePlant::TallGrass, false)).name) == "Tall Grass",
+              "short grass and tall grass have 1.21's names");
+    }
+
     void testCopperSet()
     {
         section("the copper set, waxing and the lightning rod");
@@ -13228,6 +13308,7 @@ int runSelfTest()
     testBeds();
     testChestKinds();
     testCopperSet();
+    testPlants();
     testTheTablesTake121sPrices();
 
     std::printf("\n%d checks, %d failed\n", g_checks, g_failures);

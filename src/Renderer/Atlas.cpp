@@ -4563,6 +4563,170 @@ namespace
 
     void paintFlowerRed(Tile& t) { paintFlower(t, Color{ 198, 52, 52 }, 271); }
     void paintFlowerYellow(Tile& t) { paintFlower(t, Color{ 226, 198, 54 }, 272); }
+    void paintFlowerIn(Tile& t, Color petal, Color centre, int salt, int shape)
+    {
+        paintFlower(t, petal, salt);
+        if (shape == 1)
+            for (int y = 1; y <= 7; ++y)
+                for (int x = 5; x <= 9; ++x)
+                    if (std::abs(x - 7) + std::abs(y - 4) <= 3) t.set(x, y, shade(petal, static_cast<int>((hash2(x, y, salt) - 0.5f) * 28.0f)));
+        if (shape == 2)
+            for (int y = 2; y <= 7; ++y)
+                for (int x = 6; x <= 8; ++x) t.set(x, y, shade(petal, (x - 7) * 18));
+        t.set(7, 4, centre);
+    }
+    void paintAlliumTile(Tile& t) { paintFlowerIn(t, Color{ 178, 102, 206 }, Color{ 206, 140, 228 }, 1301, 1); }
+    void paintAzureBluetTile(Tile& t) { paintFlowerIn(t, Color{ 232, 236, 244 }, Color{ 236, 214, 96 }, 1302, 0); }
+    void paintBlueOrchidTile(Tile& t) { paintFlowerIn(t, Color{ 44, 166, 214 }, Color{ 120, 210, 236 }, 1303, 0); }
+    void paintCornflowerTile(Tile& t) { paintFlowerIn(t, Color{ 72, 104, 216 }, Color{ 40, 64, 160 }, 1304, 1); }
+    void paintLilyOfTheValleyTile(Tile& t) { paintFlowerIn(t, Color{ 244, 244, 240 }, Color{ 220, 230, 210 }, 1305, 2); }
+    void paintOxeyeDaisyTile(Tile& t) { paintFlowerIn(t, Color{ 240, 240, 236 }, Color{ 236, 196, 52 }, 1306, 0); }
+    void paintRedTulipTile(Tile& t) { paintFlowerIn(t, Color{ 214, 46, 40 }, Color{ 180, 30, 30 }, 1307, 2); }
+    void paintOrangeTulipTile(Tile& t) { paintFlowerIn(t, Color{ 236, 128, 36 }, Color{ 210, 96, 24 }, 1308, 2); }
+    void paintWhiteTulipTile(Tile& t) { paintFlowerIn(t, Color{ 236, 240, 236 }, Color{ 210, 220, 210 }, 1309, 2); }
+    void paintPinkTulipTile(Tile& t) { paintFlowerIn(t, Color{ 236, 164, 196 }, Color{ 214, 128, 168 }, 1310, 2); }
+    void paintWitherRoseTile(Tile& t) { paintFlowerIn(t, Color{ 36, 32, 28 }, Color{ 20, 18, 16 }, 1311, 0); }
+    void paintTorchflowerTile(Tile& t) { paintFlowerIn(t, Color{ 240, 140, 40 }, Color{ 250, 220, 90 }, 1312, 1); }
+    void paintFernTile(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 2; y < Tile::N; ++y)
+        {
+            const int reach = (Tile::N - y) / 3 + 1;
+            t.set(7, y, Color{ 92, 140, 60 });
+            for (int k = 1; k <= reach; ++k)
+                if ((y + k) % 2 == 0)
+                {
+                    t.set(7 - k, y - k / 2, Color{ 104, 156, 66 });
+                    t.set(7 + k, y - k / 2, Color{ 96, 148, 62 });
+                }
+        }
+    }
+    void paintDeadBushTile(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        const Color twig{ 124, 86, 44 };
+        for (int y = 6; y < Tile::N; ++y) t.set(7 + (y % 3 == 0 ? 1 : 0), y, twig);
+        for (int k = 0; k < 5; ++k)
+        {
+            t.set(6 - k, 8 - k, twig); t.set(9 + k, 7 - k, twig);
+            t.set(5 - k / 2, 11 - k, shade(twig, -10)); t.set(10 + k / 2, 12 - k, shade(twig, -10));
+        }
+    }
+    void paintTorchflowerCrop0Tile(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 11; y < Tile::N; ++y) t.set(7, y, Color{ 88, 132, 56 });
+        t.set(6, 11, Color{ 120, 160, 60 }); t.set(8, 11, Color{ 120, 160, 60 });
+    }
+    void paintTorchflowerCrop1Tile(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 7; y < Tile::N; ++y) t.set(7, y, Color{ 88, 132, 56 });
+        for (int x = 6; x <= 8; ++x) t.set(x, 6, Color{ 232, 120, 40 });
+        t.set(7, 5, Color{ 240, 160, 60 });
+    }
+    void paintDoubleIn(Tile& t, bool top, Color bloom, int salt)
+    {
+        paintTallGrass(t);
+        if (!top) return;
+        for (int y = 0; y < 8; ++y)
+            for (int x = 3; x < 13; ++x)
+                if (hash2(x, y, salt) > 0.35f && std::abs(x - 8) + y / 2 < 6) t.set(x, y, shade(bloom, static_cast<int>((hash2(x, y, salt + 1) - 0.5f) * 30.0f)));
+    }
+    void paintSunflowerBottomTile(Tile& t) { paintDoubleIn(t, false, Color{ 0, 0, 0 }, 1320); }
+    void paintSunflowerTopTile(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 4; y < Tile::N; ++y) t.set(7, y, Color{ 84, 128, 52 });
+        t.set(6, 9, Color{ 96, 144, 58 }); t.set(8, 12, Color{ 96, 144, 58 });
+    }
+    void paintSunflowerFrontTile(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 0; y < Tile::N; ++y)
+            for (int x = 0; x < Tile::N; ++x)
+            {
+                const float d = std::sqrt((x - 7.5f) * (x - 7.5f) + (y - 7.5f) * (y - 7.5f));
+                if (d < 3.2f) t.set(x, y, shade(Color{ 92, 60, 30 }, static_cast<int>((hash2(x, y, 1321) - 0.5f) * 24.0f)));
+                else if (d < 6.8f) t.set(x, y, shade(Color{ 244, 200, 40 }, static_cast<int>((hash2(x, y, 1322) - 0.5f) * 30.0f)));
+            }
+    }
+    void paintSunflowerBackTile(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 0; y < Tile::N; ++y)
+            for (int x = 0; x < Tile::N; ++x)
+            {
+                const float d = std::sqrt((x - 7.5f) * (x - 7.5f) + (y - 7.5f) * (y - 7.5f));
+                if (d < 6.8f) t.set(x, y, shade(Color{ 106, 150, 58 }, static_cast<int>((hash2(x, y, 1323) - 0.5f) * 24.0f)));
+            }
+    }
+    void paintLilacBottomTile(Tile& t) { paintDoubleIn(t, false, Color{ 0, 0, 0 }, 1324); }
+    void paintLilacTopTile(Tile& t) { paintDoubleIn(t, true, Color{ 196, 150, 210 }, 1325); }
+    void paintRoseBushBottomTile(Tile& t) { paintDoubleIn(t, false, Color{ 0, 0, 0 }, 1326); }
+    void paintRoseBushTopTile(Tile& t) { paintDoubleIn(t, true, Color{ 196, 36, 40 }, 1327); }
+    void paintPeonyBottomTile(Tile& t) { paintDoubleIn(t, false, Color{ 0, 0, 0 }, 1328); }
+    void paintPeonyTopTile(Tile& t) { paintDoubleIn(t, true, Color{ 232, 170, 214 }, 1329); }
+    void paintTallGrassBottomTile(Tile& t) { paintTallGrass(t); }
+    void paintTallGrassTopTile(Tile& t) { paintTallGrass(t); }
+    void paintLargeFernBottomTile(Tile& t) { paintFernTile(t); }
+    void paintLargeFernTopTile(Tile& t) { paintFernTile(t); }
+    void paintFlowerPotTile(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 10; y < Tile::N; ++y)
+            for (int x = 5; x < 11; ++x)
+                t.set(x, y, shade(Color{ 124, 68, 52 }, (y == 10 ? 18 : 0) + static_cast<int>((hash2(x, y, 1330) - 0.5f) * 16.0f)));
+        for (int y = 5; y < 11; ++y)
+            for (int x = 5; x < 11; ++x)
+                t.set(x, y, (x == 5 || x == 10 || y == 5 || y == 10) ? Color{ 110, 60, 46 } : Color{ 86, 60, 40 });
+    }
+    void paintItemSeedsIn(Tile& t, Color seed, int salt)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int k = 0; k < 7; ++k)
+        {
+            const int x = 3 + static_cast<int>(hash2(k, 0, salt) * 9.0f);
+            const int y = 3 + static_cast<int>(hash2(k, 1, salt) * 9.0f);
+            t.set(x, y, seed); t.set(x + 1, y, shade(seed, -20)); t.set(x, y + 1, shade(seed, -30));
+        }
+    }
+    void paintItemTorchflowerSeeds(Tile& t) { paintItemSeedsIn(t, Color{ 120, 156, 70 }, 1331); }
+    void paintItemPitcherPod(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 3; y < 13; ++y)
+            for (int x = 5; x < 11; ++x)
+                if (std::abs(x - 7.5f) < 3.2f - std::abs(y - 8.0f) * 0.3f) t.set(x, y, shade(Color{ 112, 132, 74 }, (x - 7) * 10));
+        t.set(7, 2, Color{ 80, 104, 52 });
+    }
+    void paintItemClayBall(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 4; y < 12; ++y)
+            for (int x = 4; x < 12; ++x)
+                if ((x - 7.5f) * (x - 7.5f) + (y - 7.5f) * (y - 7.5f) < 13.0f) t.set(x, y, shade(Color{ 164, 170, 186 }, (8 - y) * 4));
+    }
+    void paintItemBrick(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 5; y < 11; ++y)
+            for (int x = 2; x < 14; ++x)
+                t.set(x, y, shade(Color{ 160, 82, 60 }, (y == 5 ? 20 : y == 10 ? -24 : 0) + static_cast<int>((hash2(x, y, 1332) - 0.5f) * 16.0f)));
+    }
+    void paintItemFlowerPot(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 6; y < 14; ++y)
+            for (int x = 4; x < 12; ++x)
+                if (x - 4 >= (y - 6) / 4 && 11 - x >= (y - 6) / 4) t.set(x, y, shade(Color{ 124, 68, 52 }, y == 6 ? 18 : 0));
+        for (int x = 5; x < 11; ++x) t.set(x, 7, Color{ 86, 60, 40 });
+    }
+    void paintItemPitcherPlant(Tile& t)
+    {
+        paintDoubleIn(t, true, Color{ 100, 170, 190 }, 1333);
+    }
 
     void paintTorch(Tile& t)
     {
@@ -7138,6 +7302,12 @@ namespace
         { Tiles::ItemRawGold, paintItemRawGold },
         { Tiles::ItemAmethystShard, paintItemAmethystShard },
         { Tiles::ItemTripwireHook, paintItemTripwireHook },
+        { Tiles::ItemTorchflowerSeeds, paintItemTorchflowerSeeds },
+        { Tiles::ItemPitcherPod, paintItemPitcherPod },
+        { Tiles::ItemClayBall, paintItemClayBall },
+        { Tiles::ItemBrick, paintItemBrick },
+        { Tiles::ItemFlowerPot, paintItemFlowerPot },
+        { Tiles::ItemPitcherPlant, paintItemPitcherPlant },
         { Tiles::ItemWarpedSign, paintItemWarpedSign },
         { Tiles::ItemBambooSign, paintItemBambooSign },
         { Tiles::ItemMangroveSign, paintItemMangroveSign },
@@ -7302,6 +7472,44 @@ namespace
         { Tiles::DustLine1Off, paintRedstoneDust },
         { Tiles::DustLine1On, paintRedstoneDustLit },
         { Tiles::LeverHandle, paintLever },
+        { Tiles::AlliumTile, paintAlliumTile },
+        { Tiles::AzureBluetTile, paintAzureBluetTile },
+        { Tiles::BlueOrchidTile, paintBlueOrchidTile },
+        { Tiles::CornflowerTile, paintCornflowerTile },
+        { Tiles::LilyOfTheValleyTile, paintLilyOfTheValleyTile },
+        { Tiles::OxeyeDaisyTile, paintOxeyeDaisyTile },
+        { Tiles::RedTulipTile, paintRedTulipTile },
+        { Tiles::OrangeTulipTile, paintOrangeTulipTile },
+        { Tiles::WhiteTulipTile, paintWhiteTulipTile },
+        { Tiles::PinkTulipTile, paintPinkTulipTile },
+        { Tiles::WitherRoseTile, paintWitherRoseTile },
+        { Tiles::TorchflowerTile, paintTorchflowerTile },
+        { Tiles::FernTile, paintFernTile },
+        { Tiles::DeadBushTile, paintDeadBushTile },
+        { Tiles::TorchflowerCrop0Tile, paintTorchflowerCrop0Tile },
+        { Tiles::TorchflowerCrop1Tile, paintTorchflowerCrop1Tile },
+        { Tiles::SunflowerBottomTile, paintSunflowerBottomTile },
+        { Tiles::SunflowerTopTile, paintSunflowerTopTile },
+        { Tiles::SunflowerFrontTile, paintSunflowerFrontTile },
+        { Tiles::SunflowerBackTile, paintSunflowerBackTile },
+        { Tiles::LilacBottomTile, paintLilacBottomTile },
+        { Tiles::LilacTopTile, paintLilacTopTile },
+        { Tiles::RoseBushBottomTile, paintRoseBushBottomTile },
+        { Tiles::RoseBushTopTile, paintRoseBushTopTile },
+        { Tiles::PeonyBottomTile, paintPeonyBottomTile },
+        { Tiles::PeonyTopTile, paintPeonyTopTile },
+        { Tiles::TallGrassBottomTile, paintTallGrassBottomTile },
+        { Tiles::TallGrassTopTile, paintTallGrassTopTile },
+        { Tiles::LargeFernBottomTile, paintLargeFernBottomTile },
+        { Tiles::LargeFernTopTile, paintLargeFernTopTile },
+        { Tiles::FlowerPotTile, paintFlowerPotTile },
+        { Tiles::PitcherBottomTile + 0, paintTorchflowerCrop0Tile },
+        { Tiles::PitcherBottomTile + 1, paintTorchflowerCrop0Tile },
+        { Tiles::PitcherBottomTile + 2, paintTorchflowerCrop1Tile },
+        { Tiles::PitcherBottomTile + 3, paintTorchflowerCrop1Tile },
+        { Tiles::PitcherBottomTile + 4, paintTorchflowerCrop1Tile },
+        { Tiles::PitcherTopTile, paintItemPitcherPlant },
+        { Tiles::PitcherTopTile + 1, paintItemPitcherPlant },
         { Tiles::CandleFlameTile, paintCandleFlame },
         { Tiles::LightningRodTile, paintLightningRod },
         { Tiles::LightningRodOnTile, paintLightningRodOn },
@@ -7773,6 +7981,12 @@ namespace
         { Tiles::ItemRawGold, { "raw_gold", nullptr, nullptr } },
         { Tiles::ItemAmethystShard, { "amethyst_shard", nullptr, nullptr } },
         { Tiles::ItemTripwireHook, { "../block/tripwire_hook", nullptr, nullptr } },
+        { Tiles::ItemTorchflowerSeeds, { "torchflower_seeds", nullptr, nullptr } },
+        { Tiles::ItemPitcherPod, { "pitcher_pod", nullptr, nullptr } },
+        { Tiles::ItemClayBall, { "clay_ball", nullptr, nullptr } },
+        { Tiles::ItemBrick, { "brick", nullptr, nullptr } },
+        { Tiles::ItemFlowerPot, { "flower_pot", nullptr, nullptr } },
+        { Tiles::ItemPitcherPlant, { "pitcher_plant", nullptr, nullptr } },
         { Tiles::ItemCopperDoorFirst + 0, { "copper_door", nullptr, nullptr } },
         { Tiles::ItemCopperDoorFirst + 1, { "exposed_copper_door", nullptr, nullptr } },
         { Tiles::ItemCopperDoorFirst + 2, { "weathered_copper_door", nullptr, nullptr } },
@@ -7933,6 +8147,44 @@ namespace
         { Tiles::GlassPaneTopTile, { "glass_pane_top", nullptr }, Tinting::None, 0, false },
         { Tiles::TerracottaPlainTile, { "terracotta", "hardened_clay", nullptr }, Tinting::None, 0, false },
         { Tiles::TintedGlassTile, { "tinted_glass", nullptr }, Tinting::None, 0, false },
+        { Tiles::AlliumTile, { "allium", nullptr }, Tinting::None, 0, false },
+        { Tiles::AzureBluetTile, { "azure_bluet", nullptr }, Tinting::None, 0, false },
+        { Tiles::BlueOrchidTile, { "blue_orchid", nullptr }, Tinting::None, 0, false },
+        { Tiles::CornflowerTile, { "cornflower", nullptr }, Tinting::None, 0, false },
+        { Tiles::LilyOfTheValleyTile, { "lily_of_the_valley", nullptr }, Tinting::None, 0, false },
+        { Tiles::OxeyeDaisyTile, { "oxeye_daisy", nullptr }, Tinting::None, 0, false },
+        { Tiles::RedTulipTile, { "red_tulip", nullptr }, Tinting::None, 0, false },
+        { Tiles::OrangeTulipTile, { "orange_tulip", nullptr }, Tinting::None, 0, false },
+        { Tiles::WhiteTulipTile, { "white_tulip", nullptr }, Tinting::None, 0, false },
+        { Tiles::PinkTulipTile, { "pink_tulip", nullptr }, Tinting::None, 0, false },
+        { Tiles::WitherRoseTile, { "wither_rose", nullptr }, Tinting::None, 0, false },
+        { Tiles::TorchflowerTile, { "torchflower", nullptr }, Tinting::None, 0, false },
+        { Tiles::FernTile, { "fern", nullptr }, Tinting::Grass, 0, false },
+        { Tiles::DeadBushTile, { "dead_bush", nullptr }, Tinting::None, 0, false },
+        { Tiles::TorchflowerCrop0Tile, { "torchflower_crop_stage0", nullptr }, Tinting::None, 0, false },
+        { Tiles::TorchflowerCrop1Tile, { "torchflower_crop_stage1", nullptr }, Tinting::None, 0, false },
+        { Tiles::SunflowerBottomTile, { "sunflower_bottom", nullptr }, Tinting::None, 0, false },
+        { Tiles::SunflowerTopTile, { "sunflower_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::SunflowerFrontTile, { "sunflower_front", nullptr }, Tinting::None, 0, false },
+        { Tiles::SunflowerBackTile, { "sunflower_back", nullptr }, Tinting::None, 0, false },
+        { Tiles::LilacBottomTile, { "lilac_bottom", nullptr }, Tinting::None, 0, false },
+        { Tiles::LilacTopTile, { "lilac_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::RoseBushBottomTile, { "rose_bush_bottom", nullptr }, Tinting::None, 0, false },
+        { Tiles::RoseBushTopTile, { "rose_bush_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::PeonyBottomTile, { "peony_bottom", nullptr }, Tinting::None, 0, false },
+        { Tiles::PeonyTopTile, { "peony_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::TallGrassBottomTile, { "tall_grass_bottom", nullptr }, Tinting::Grass, 0, false },
+        { Tiles::TallGrassTopTile, { "tall_grass_top", nullptr }, Tinting::Grass, 0, false },
+        { Tiles::LargeFernBottomTile, { "large_fern_bottom", nullptr }, Tinting::Grass, 0, false },
+        { Tiles::LargeFernTopTile, { "large_fern_top", nullptr }, Tinting::Grass, 0, false },
+        { Tiles::FlowerPotTile, { "flower_pot", nullptr }, Tinting::None, 0, false },
+        { Tiles::PitcherBottomTile + 0, { "pitcher_crop_bottom", nullptr }, Tinting::None, 0, false },
+        { Tiles::PitcherBottomTile + 1, { "pitcher_crop_bottom_stage_1", nullptr }, Tinting::None, 0, false },
+        { Tiles::PitcherBottomTile + 2, { "pitcher_crop_bottom_stage_2", nullptr }, Tinting::None, 0, false },
+        { Tiles::PitcherBottomTile + 3, { "pitcher_crop_bottom_stage_3", nullptr }, Tinting::None, 0, false },
+        { Tiles::PitcherBottomTile + 4, { "pitcher_crop_bottom_stage_4", nullptr }, Tinting::None, 0, false },
+        { Tiles::PitcherTopTile, { "pitcher_crop_top_stage_3", nullptr }, Tinting::None, 0, false },
+        { Tiles::PitcherTopTile + 1, { "pitcher_crop_top_stage_4", nullptr }, Tinting::None, 0, false },
         { Tiles::LightningRodTile, { "lightning_rod", nullptr }, Tinting::None, 0, false },
         { Tiles::LightningRodOnTile, { "lightning_rod_on", nullptr }, Tinting::None, 0, false },
         { Tiles::CutCopperTile + 0, { "cut_copper", nullptr }, Tinting::None, 0, false },
