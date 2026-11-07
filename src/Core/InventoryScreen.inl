@@ -3027,7 +3027,12 @@ void Application::handleInventoryClick(int mouseX, int mouseY, bool rightButton,
     {
         // Clicking outside the panel throws the held stack into the world,
         // which is the only way to get rid of something in survival.
-        if (!m_inventory.cursor().empty()) returnCursorToWorld();
+        if (!m_inventory.cursor().empty())
+        {
+            m_stats.add(Stats::Custom::Drop);
+            m_stats.item(Stats::ItemStat::Dropped, m_inventory.cursor().id, m_inventory.cursor().count);
+            returnCursorToWorld();
+        }
         return;
     }
 
@@ -3186,6 +3191,7 @@ Grindstone::Result Application::grindResult() const
 
 void Application::openSmithing(const glm::ivec3& block)
 {
+    statOpened(m_world ? m_world->getBlock(block.x, block.y, block.z) : Blocks::Air);
     m_smithBlock = block;
     m_smithOpen = true;
     m_inventoryOpen = true;
@@ -3240,6 +3246,7 @@ void Application::stowSmithing()
 
 void Application::openCartography(const glm::ivec3& block)
 {
+    statOpened(m_world ? m_world->getBlock(block.x, block.y, block.z) : Blocks::Air);
     m_cartoBlock = block;
     m_cartoOpen = true;
     m_inventoryOpen = true;
@@ -3345,6 +3352,7 @@ void Application::drawBannerIcon(float x, float y, float size, int colour, const
 
 void Application::openLoom(const glm::ivec3& block)
 {
+    statOpened(m_world ? m_world->getBlock(block.x, block.y, block.z) : Blocks::Air);
     m_loomBlock = block;
     m_loomOpen = true;
     m_loomChoice = -1;
@@ -3404,6 +3412,7 @@ void Application::stowLoom()
 
 void Application::openStonecutter(const glm::ivec3& block)
 {
+    statOpened(m_world ? m_world->getBlock(block.x, block.y, block.z) : Blocks::Air);
     m_cutBlock = block;
     m_cutOpen = true;
     m_cutChoice = -1;
@@ -3451,6 +3460,7 @@ void Application::stowStonecutter()
 
 void Application::openGrindstone(const glm::ivec3& block)
 {
+    statOpened(m_world ? m_world->getBlock(block.x, block.y, block.z) : Blocks::Air);
     m_grindBlock = block;
     m_grindOpen = true;
     m_inventoryOpen = true;
@@ -3522,6 +3532,7 @@ int Application::beaconTiers() const
 
 void Application::openBeacon(const glm::ivec3& block)
 {
+    statOpened(m_world ? m_world->getBlock(block.x, block.y, block.z) : Blocks::Air);
     m_beaconBlock = block;
     m_beaconOpen = true;
     if (beaconTiers() >= 1) award("nether/create_beacon", "beacon");
@@ -3628,6 +3639,7 @@ const Mob* Application::tradingVillager() const
 
 void Application::openTrading(const Mob& villager)
 {
+    m_stats.add(Stats::Custom::TalkedToVillager);
     m_tradeOpen = true;
     m_tradeSelected = -1;
     m_tradeScroll = 0;
@@ -3788,6 +3800,7 @@ void Application::takeTradeResult(bool all)
                     0.3f, 0.25f, 1.0f);
         record.xp += deal.villagerXp;
         award("adventure/trade", "traded");
+    m_stats.add(Stats::Custom::TradedWithVillager);
         if (m_player.position.y >= static_cast<float>(Chunk::SY) - 2.0f) award("adventure/trade_at_world_height", "trade_at_world_height");
         for (const Mob& mob : m_entities.mobs())
             if (mob.typeId() == MobId::Villager && mob.birthSeed() == m_tradeSeed)
@@ -3881,6 +3894,7 @@ void Application::stowEnchantingTable()
 
 void Application::openBrewingStand(const glm::ivec3& block)
 {
+    statOpened(m_world ? m_world->getBlock(block.x, block.y, block.z) : Blocks::Air);
     m_brewBlock = block;
     m_brewOpen = true;
     m_brewProgress = 0.0f;
@@ -3989,6 +4003,7 @@ void Application::tickBrewing(float deltaTime)
 
 void Application::openAnvil(const glm::ivec3& block)
 {
+    statOpened(m_world ? m_world->getBlock(block.x, block.y, block.z) : Blocks::Air);
     m_anvilBlock = block;
     m_anvilOpen = true;
     m_anvilName.clear();
@@ -4189,6 +4204,7 @@ void Application::buyEnchantment(int row)
     }
 
     award("story/enchant_item", "enchanted_item");
+    m_stats.add(Stats::Custom::EnchantItem);
     // A fresh roll, so the next three offers are not the same three.
     m_enchantRoll = Enchanting::nextRoll(m_enchantRoll);
     m_audio.play(Sound::Pickup, 0.7f, 0.7f);
@@ -4196,6 +4212,7 @@ void Application::buyEnchantment(int row)
 
 void Application::openBench(const glm::ivec3& block)
 {
+    statOpened(m_world ? m_world->getBlock(block.x, block.y, block.z) : Blocks::Air);
     m_benchBlock = block;
     m_benchOpen = true;
     m_inventory.setCraftSize(3);
@@ -4235,6 +4252,7 @@ void Application::openVehicleChest(Mob& vehicle)
 
 void Application::openChest(const glm::ivec3& block)
 {
+    statOpened(m_world ? m_world->getBlock(block.x, block.y, block.z) : Blocks::Air);
     m_chestVehicle = -1;
     vibrate(glm::vec3(block) + glm::vec3(0.5f), 10);
     m_chestBlock = block;
@@ -4516,6 +4534,7 @@ void Application::syncOpenContainers()
 
 void Application::openFurnace(const glm::ivec3& block)
 {
+    statOpened(m_world ? m_world->getBlock(block.x, block.y, block.z) : Blocks::Air);
     m_furnaceBlock = block;
     m_furnaceOpen = true;
 

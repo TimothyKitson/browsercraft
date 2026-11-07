@@ -32,10 +32,11 @@ int Arrows::damageFor(float drawnFraction)
 }
 
 void Projectiles::spawn(const glm::vec3& from, const glm::vec3& velocity,
-                        int damage, bool fromPlayer, Arrows::Kind kind, int effect)
+                        int damage, bool fromPlayer, Arrows::Kind kind, int effect, int shooter)
 {
     Arrow arrow;
     arrow.effect = effect;
+    arrow.shooter = shooter;
     arrow.position = from;
     arrow.velocity = velocity;
     arrow.damage = damage;
@@ -128,6 +129,7 @@ void Projectiles::update(float deltaTime, const Blocks& blocks, Targets& targets
             // answers this, and an arrow never hits the one who loosed
             // it -- that is what the flag is for.
             targets.effect = arrow.effect;
+            targets.shooter = arrow.shooter;
             if (targets.strike(next, arrow.damage, arrow.fromPlayer, arrow.kind))
             {
                 if (arrow.bursts()) targets.burst(next, arrow.kind, arrow.fromPlayer);
@@ -142,6 +144,7 @@ void Projectiles::update(float deltaTime, const Blocks& blocks, Targets& targets
             {
                 m_blockHits.push_back(glm::ivec3(static_cast<int>(std::floor(next.x)), static_cast<int>(std::floor(next.y)),
                                                  static_cast<int>(std::floor(next.z))));
+                if (arrow.fromPlayer) m_playerBlockHits += 1;
                 // A charge bursts rather than sticking: nothing is left
                 // in the wall to look at. So does a potion, which is
                 // the whole of what a potion is for.

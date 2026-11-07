@@ -94,6 +94,7 @@ struct Arrow
     // sticking.
     Arrows::Kind kind = Arrows::Kind::Shaft;
     int effect = 0;
+    int shooter = -1;
 
     bool shaft() const
     {
@@ -130,6 +131,7 @@ public:
     struct Targets
     {
         int effect = 0;
+        int shooter = -1;
         virtual ~Targets() = default;
 
         // `point` is where the arrow is now; `fromPlayer` says who shot
@@ -166,7 +168,7 @@ public:
     };
 
     void spawn(const glm::vec3& from, const glm::vec3& velocity, int damage, bool fromPlayer,
-               Arrows::Kind kind = Arrows::Kind::Shaft, int effect = 0);
+               Arrows::Kind kind = Arrows::Kind::Shaft, int effect = 0, int shooter = -1);
 
     // Moves every arrow. A block stops one dead; anything living is
     // asked about through `targets`.
@@ -178,6 +180,12 @@ public:
     void clear() { m_arrows.clear(); }
     void show(const Arrow& visual) { m_visuals.push_back(visual); }
     const std::vector<Arrow>& all() const { return m_arrows; }
+    int takePlayerBlockHits()
+    {
+        const int out = m_playerBlockHits;
+        m_playerBlockHits = 0;
+        return out;
+    }
     std::vector<glm::ivec3> drainBlockHits()
     {
         std::vector<glm::ivec3> all;
@@ -191,6 +199,7 @@ private:
     std::vector<Arrow> m_arrows;
     std::vector<Arrow> m_visuals;
     std::vector<glm::ivec3> m_blockHits;
+    int m_playerBlockHits = 0;
     std::vector<float> m_vertices;
     Mesh m_mesh;
 };

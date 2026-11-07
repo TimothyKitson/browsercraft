@@ -33,6 +33,7 @@ struct MobStrike
     int effect = -1;
     int effectAmplifier = 0;
     float effectSeconds = 0.0f;
+    int attacker = -1;
 };
 
 // A mob going off. Collected like the strikes and the shots, so a mob
@@ -42,6 +43,7 @@ struct MobBlast
     glm::vec3 at{ 0.0f };
     float radius = 0.0f;
     int damage = 0;
+    int source = -1;
 };
 
 // A mob loosing an arrow. Collected like the strikes and the sounds,
@@ -55,6 +57,7 @@ struct MobShot
     bool fangs = false;
     glm::vec3 target{ 0.0f };
     int effect = 0;
+    int shooter = -1;
 };
 
 // A living thing: gravity and box collision against the voxel world, plus

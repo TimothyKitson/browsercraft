@@ -84,6 +84,7 @@
 #include "Game/Raids.h"
 #include "Game/RecipeBook.h"
 #include "Game/Advancements.h"
+#include "Game/Stats.h"
 #include "Game/Golems.h"
 #include "Renderer/Atlas.h"
 #include "Renderer/UIRenderer.h"
@@ -4727,6 +4728,73 @@ namespace
         check(reloaded.done(0) && reloaded.done(armour) && reloaded.criteriaDone(hunted) == 2 && reloaded.takeNew().empty(),
               "progress is saved and read back without fresh toasts");
         check(std::string(Advancements::frameText(Advancements::Frame::Challenge)) == "Challenge Complete!", "challenges announce themselves");
+    }
+
+    void testStatistics()
+    {
+        section("statistics: what is counted and how it reads");
+        using Stats::Custom;
+        using Stats::Format;
+        check(Stats::CUSTOM_COUNT == 75, "the seventy-five general stats of 1.21.1");
+        std::set<std::string> ids;
+        bool named = true;
+        for (int i = 0; i < Stats::CUSTOM_COUNT; ++i)
+        {
+            ids.insert(Stats::id(static_cast<Custom>(i)));
+            named = named && Stats::name(static_cast<Custom>(i))[0] != '\0';
+        }
+        check(ids.size() == static_cast<size_t>(Stats::CUSTOM_COUNT) && named, "each has its own id and a name");
+        check(std::string(Stats::id(Custom::Jump)) == "jump" && std::string(Stats::name(Custom::Jump)) == "Jumps" &&
+              std::string(Stats::name(Custom::WalkOneCm)) == "Distance Walked", "names are Mojang's");
+        check(Stats::format(Custom::PlayTime) == Format::Time && Stats::format(Custom::SprintOneCm) == Format::Distance &&
+              Stats::format(Custom::DamageDealt) == Format::Tenths && Stats::format(Custom::Deaths) == Format::Plain,
+              "each stat reads in its own unit");
+        check(Stats::formatted(Format::Plain, 1234567) == "1,234,567" && Stats::formatted(Format::Plain, 12) == "12",
+              "counts are grouped by thousands");
+        check(Stats::formatted(Format::Time, 20) == "1.00 s" && Stats::formatted(Format::Time, 1200) == "1.00 min" &&
+              Stats::formatted(Format::Time, 114280) == "1.59 h" && Stats::formatted(Format::Time, 20 * 3600 * 24) == "1.00 d",
+              "ticks read as seconds, minutes, hours and days");
+        check(Stats::formatted(Format::Distance, 50) == "50 cm" && Stats::formatted(Format::Distance, 51) == "0.51 m" &&
+              Stats::formatted(Format::Distance, 250000) == "2.50 km", "centimetres step up past half a unit");
+        check(Stats::formatted(Format::Tenths, 3860) == "386.00", "damage is kept in tenths of a point");
+
+        Stats::Book book;
+        book.add(Custom::Jump);
+        book.add(Custom::Jump, 4);
+        book.set(Custom::Deaths, 2);
+        book.item(Stats::ItemStat::Mined, Blocks::Stone, 3);
+        book.item(Stats::ItemStat::Crafted, Items::Stick, 8);
+        book.item(Stats::ItemStat::Dropped, Items::Stick, 0);
+        book.killed(static_cast<int>(MobId::Zombie), 2);
+        book.killedBy(static_cast<int>(MobId::Creeper));
+        check(book.get(Custom::Jump) == 5 && book.get(Custom::Deaths) == 2, "general stats add and set");
+        check(book.count(Stats::ItemStat::Mined, Blocks::Stone) == 3 && book.count(Stats::ItemStat::Crafted, Items::Stick) == 8 &&
+              book.count(Stats::ItemStat::Dropped, Items::Stick) == 0, "item stats are kept per item");
+        check(book.kills(static_cast<int>(MobId::Zombie)) == 2 && book.deathsBy(static_cast<int>(MobId::Creeper)) == 1 &&
+              book.kills(static_cast<int>(MobId::Creeper)) == 0, "kills and deaths are kept per mob");
+        Stats::Book reloaded;
+        reloaded.load(book.lines());
+        check(reloaded.get(Custom::Jump) == 5 && reloaded.count(Stats::ItemStat::Crafted, Items::Stick) == 8 &&
+              reloaded.deathsBy(static_cast<int>(MobId::Creeper)) == 1 && reloaded.items().size() == 2,
+              "the book is saved and read back");
+
+        Player player(glm::vec3(0.0f, 70.0f, 0.0f));
+        player.damage(4, true);
+        Player::Tally tally = player.takeTally();
+        check(tally.taken == 4 && tally.absorbed == 0 && player.takeTally().taken == 0, "a blow is tallied once");
+        player.clearHurtCooldown();
+        player.absorption = 4;
+        player.damage(6, true);
+        tally = player.takeTally();
+        check(tally.absorbed == 4 && tally.taken == 2, "golden hearts are tallied apart from real ones");
+
+        Inventory bench;
+        bench.slot(Inventory::CRAFT_FIRST) = ItemStack{ Blocks::Log, 1 };
+        bench.refreshCraftResult();
+        bench.takeCraftResult();
+        const auto crafted = bench.takeCrafted();
+        check(crafted.size() == 1 && crafted[0].first == Blocks::Planks && crafted[0].second == 4 && bench.takeCrafted().empty(),
+              "what comes off the grid is logged for the crafted column");
     }
 
     void testRecipeBook()
@@ -15751,6 +15819,7 @@ int runSelfTest()
     testNewEffects();
     testRecipeBook();
     testAdvancements();
+    testStatistics();
     testMadeThings();
     testTheEndAndTheSea();
     testPathfinding();

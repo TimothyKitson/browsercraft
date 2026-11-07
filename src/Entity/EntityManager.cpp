@@ -729,6 +729,7 @@ std::vector<MobStrike> EntityManager::drainStrikes()
     for (Mob& mob : m_mobs)
     {
         if (mob.strikes().empty()) continue;
+        for (MobStrike& strike : mob.strikes()) strike.attacker = static_cast<int>(mob.typeId());
         all.insert(all.end(), mob.strikes().begin(), mob.strikes().end());
         mob.strikes().clear();
     }
@@ -741,6 +742,7 @@ std::vector<MobShot> EntityManager::drainShots()
     for (Mob& mob : m_mobs)
     {
         if (mob.shots().empty()) continue;
+        for (MobShot& shot : mob.shots()) shot.shooter = static_cast<int>(mob.typeId());
         all.insert(all.end(), mob.shots().begin(), mob.shots().end());
         mob.shots().clear();
     }
@@ -767,6 +769,7 @@ std::vector<MobBlast> EntityManager::drainBlasts()
     for (Mob& mob : m_mobs)
     {
         if (mob.blasts().empty()) continue;
+        for (MobBlast& blast : mob.blasts()) blast.source = static_cast<int>(mob.typeId());
         all.insert(all.end(), mob.blasts().begin(), mob.blasts().end());
         mob.blasts().clear();
     }

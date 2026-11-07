@@ -47,6 +47,12 @@ public:
 
     void update(float deltaTime, const World& world, const Player& player,
                 Inventory& inventory, AudioEngine& audio);
+    std::vector<std::pair<StackId, int>> takePicked()
+    {
+        std::vector<std::pair<StackId, int>> out;
+        out.swap(m_picked);
+        return out;
+    }
 
     // Rebuilds the geometry each frame: there are only ever a handful of
     // items, and they spin, so a dynamic buffer is simpler than instancing.
@@ -106,6 +112,7 @@ private:
     };
 
     std::vector<Item> m_items;
+    std::vector<std::pair<StackId, int>> m_picked;
     std::vector<Pinned> m_pinned;
     std::vector<Cargo> m_cargo;
     Mesh m_mesh;

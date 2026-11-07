@@ -209,6 +209,18 @@ public:
     // Drops the half second of immunity after a blow. Only --selftest
     // wants this: it lands a run of blows with no clock to wait on.
     void clearHurtCooldown() { m_hurtCooldown = 0.0f; }
+    struct Tally
+    {
+        int taken = 0;
+        int absorbed = 0;
+        int resisted = 0;
+    };
+    Tally takeTally()
+    {
+        const Tally out = m_tally;
+        m_tally = Tally{};
+        return out;
+    }
 
     // What a fall lands on can cancel it outright. Minecraft gives
     // that to the slime block alone, and it is the only thing in the
@@ -242,6 +254,7 @@ private:
     bool m_jumped = false;
     float m_regenTimer = 0.0f;
     float m_hurtCooldown = 0.0f;
+    Tally m_tally;
     bool m_totemSpent = false;
     int m_silverfishOwed = 0;
     uint32_t m_infestRoll = 0x1F5u;

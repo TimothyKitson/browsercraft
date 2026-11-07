@@ -454,6 +454,7 @@ bool Player::damage(int amount, bool throughArmour)
     amount = Enchanting::protectionReduced(protection, amount);
     const int unresisted = amount;
     amount = Effects::resisted(effects, amount);
+    if (unresisted > amount) m_tally.resisted += unresisted - amount;
     if (amount <= 0 && unresisted > 0) return false;
 
     if (absorption > 0)
@@ -461,6 +462,7 @@ bool Player::damage(int amount, bool throughArmour)
         const int soaked = std::min(absorption, amount);
         absorption -= soaked;
         amount -= soaked;
+        m_tally.absorbed += soaked;
         if (amount <= 0)
         {
             m_hurtCooldown = HURT_IMMUNITY;
@@ -469,6 +471,7 @@ bool Player::damage(int amount, bool throughArmour)
         }
     }
 
+    m_tally.taken += amount;
     health = std::max(0, health - amount);
 
     if (effects.has(Effects::Kind::Infested))

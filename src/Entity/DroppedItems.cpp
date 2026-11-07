@@ -155,6 +155,7 @@ void DroppedItems::update(float deltaTime, const World& world, const Player& pla
             const int leftOver = inventory.addStack(picking);
             if (leftOver < item.count)
             {
+                m_picked.emplace_back(item.block, item.count - leftOver);
                 if (!popped)
                 {
                     popped = true;

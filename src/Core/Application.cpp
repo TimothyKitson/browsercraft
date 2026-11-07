@@ -722,6 +722,7 @@ void Application::quitToTitle()
 #endif
     if (m_world && !m_menuWorld)
     {
+        m_stats.add(Stats::Custom::LeaveGame);
         saveLevel();
         m_world.reset();
     }
@@ -2343,6 +2344,7 @@ bool Application::frame()
             tickEffectSources(deltaTime);
             tickRaid(deltaTime);
             tickAdvancements(deltaTime);
+            tickStats(deltaTime);
             unlockRecipes(deltaTime);
             tickCommandBlocks(deltaTime);
             tickFishing(deltaTime);
@@ -2530,6 +2532,11 @@ bool Application::frame()
         if (playing() && m_player.health <= 0)
         {
             award("adventure/root", "killed_by_something");
+            m_stats.add(Stats::Custom::Deaths);
+            m_stats.set(Stats::Custom::TimeSinceDeath, 0);
+            m_stats.set(Stats::Custom::TimeSinceRest, 0);
+            if (m_lastAttacker >= 0 && m_lastAttackerAge < 5.0f) m_stats.killedBy(m_lastAttacker);
+            m_lastAttacker = -1;
             effectDeath(m_player.position, Player::HEIGHT, m_player.effects.has(Effects::Kind::Oozing),
                         m_player.effects.has(Effects::Kind::Weaving), m_player.effects.has(Effects::Kind::WindCharged));
             // Minecraft lets you drop what amounts to seven levels'
@@ -7224,6 +7231,51 @@ bool Application::frame()
             }
         }
         else if (m_startupScreen == "pause") m_screen = Screen::Paused;
+        else if (m_startupScreen == "stats" || m_startupScreen == "statsitems" || m_startupScreen == "statsmobs")
+        {
+            using C = Stats::Custom;
+            using I = Stats::ItemStat;
+            m_stats.clear();
+            const std::pair<C, long long> GENERAL[] = {
+                { C::PlayTime, 114280 }, { C::TotalWorldTime, 118940 }, { C::TimeSinceDeath, 23100 }, { C::TimeSinceRest, 9820 },
+                { C::SneakTime, 1460 }, { C::WalkOneCm, 412550 }, { C::SprintOneCm, 188020 }, { C::CrouchOneCm, 3410 },
+                { C::FallOneCm, 8412 }, { C::ClimbOneCm, 2230 }, { C::WalkOnWaterOneCm, 1220 }, { C::SwimOneCm, 4380 },
+                { C::BoatOneCm, 61200 }, { C::Jump, 1532 }, { C::Deaths, 3 }, { C::MobKills, 47 }, { C::DamageDealt, 3860 },
+                { C::DamageTaken, 1240 }, { C::DamageBlockedByShield, 180 }, { C::FishCaught, 6 }, { C::AnimalsBred, 4 },
+                { C::OpenChest, 58 }, { C::InteractWithCraftingTable, 31 }, { C::InteractWithFurnace, 12 }, { C::Drop, 9 },
+                { C::SleepInBed, 5 }, { C::TalkedToVillager, 6 }, { C::TradedWithVillager, 2 }, { C::LeaveGame, 2 },
+                { C::EatCakeSlice, 3 }, { C::EnchantItem, 1 }, { C::BellRing, 1 } };
+            for (const auto& [stat, value] : GENERAL) m_stats.set(stat, value);
+            const std::tuple<StackId, I, long long> ITEMS[] = {
+                { Blocks::Stone, I::Mined, 412 }, { Blocks::Dirt, I::Mined, 220 }, { Blocks::Grass, I::Mined, 54 },
+                { Blocks::Log, I::Mined, 87 }, { Blocks::CoalOre, I::Mined, 31 }, { Blocks::IronOre, I::Mined, 18 },
+                { Blocks::DiamondOre, I::Mined, 3 }, { Blocks::Sand, I::Mined, 40 }, { Blocks::Planks, I::Crafted, 84 },
+                { Items::Stick, I::Crafted, 40 }, { Blocks::CraftingTable, I::Crafted, 1 }, { Blocks::Furnace, I::Crafted, 1 },
+                { Blocks::Torch, I::Crafted, 64 }, { Items::WoodPickaxe, I::Crafted, 1 }, { Items::StonePickaxe, I::Crafted, 2 },
+                { Items::IronPickaxe, I::Crafted, 1 }, { Items::IronPickaxe, I::Used, 220 }, { Items::StonePickaxe, I::Used, 262 },
+                { Items::WoodPickaxe, I::Used, 59 }, { Items::WoodPickaxe, I::Broken, 1 }, { Items::StonePickaxe, I::Broken, 1 },
+                { Blocks::Cobblestone, I::PickedUp, 398 }, { Blocks::Dirt, I::PickedUp, 214 }, { Blocks::Log, I::PickedUp, 85 },
+                { Items::Coal, I::PickedUp, 31 }, { Items::RawIron, I::PickedUp, 18 }, { Items::Diamond, I::PickedUp, 3 },
+                { Blocks::Dirt, I::Dropped, 64 }, { Blocks::Dirt, I::Used, 41 }, { Blocks::Torch, I::Used, 37 },
+                { Items::Bread, I::Used, 12 }, { Items::IronSword, I::Used, 75 }, { Items::IronSword, I::Crafted, 1 } };
+            for (const auto& [id, stat, value] : ITEMS) m_stats.item(stat, id, value);
+            const std::tuple<MobId, long long, long long> MOBS[] = {
+                { MobId::Zombie, 21, 2 }, { MobId::Skeleton, 12, 0 }, { MobId::Creeper, 6, 1 }, { MobId::Spider, 5, 0 },
+                { MobId::Cow, 3, 0 } };
+            for (const auto& [mob, killed, killedBy] : MOBS)
+            {
+                m_stats.killed(static_cast<int>(mob), killed);
+                if (killedBy > 0) m_stats.killedBy(static_cast<int>(mob), killedBy);
+            }
+            openStatistics();
+            if (m_startupScreen == "statsitems")
+            {
+                m_statsTab = 1;
+                m_statsSort = static_cast<int>(I::PickedUp);
+                m_statsOrder = -1;
+            }
+            if (m_startupScreen == "statsmobs") m_statsTab = 2;
+        }
         else if (m_startupScreen == "dead" || m_startupScreen == "hardcore")
         {
             m_player.health = 0;
@@ -7449,6 +7501,9 @@ void Application::applyMenuAction()
             m_screen = Screen::Playing;
             openAdvancements();
             break;
+        case MenuAction::OpenStatistics:
+            openStatistics();
+            break;
         case MenuAction::CycleDistortion: m_distortion = m_distortion <= 0 ? 100 : m_distortion - 25; saveOptions(); break;
         case MenuAction::ToggleMainHand: m_leftHanded = !m_leftHanded; saveOptions(); break;
     }
@@ -7573,6 +7628,10 @@ void Application::handleEvents()
         {
             m_screen = Screen::Paused;
             setMouseCaptured(false);
+        }
+        else if (m_screen == Screen::Statistics)
+        {
+            m_screen = Screen::Paused;
         }
         else if (m_screen == Screen::Paused)
         {
@@ -7757,6 +7816,8 @@ void Application::handleEvents()
         ItemStack& held = m_inventory.selected();
         if (!held.empty())
         {
+            m_stats.add(Stats::Custom::Drop);
+            m_stats.item(Stats::ItemStat::Dropped, held.id);
             m_drops.spawn(m_player.eyePosition() + m_camera.front * 0.9f, held.id, 1);
             held.count -= 1;
             if (held.count <= 0) held.clear();
@@ -7767,10 +7828,17 @@ void Application::handleEvents()
     {
         const bool shift = m_input.isKeyDown(SDL_SCANCODE_LSHIFT) ||
                            m_input.isKeyDown(SDL_SCANCODE_RSHIFT);
+        const ItemStack smelted = m_inventory.slot(Inventory::FURNACE_OUTPUT);
         if (m_input.wasMouseButtonPressed(SDL_BUTTON_LEFT))
             handleInventoryClick(m_input.mouseX(), m_input.mouseY(), false, shift);
         else if (m_input.wasMouseButtonPressed(SDL_BUTTON_RIGHT))
             handleInventoryClick(m_input.mouseX(), m_input.mouseY(), true, shift);
+        if (m_furnaceOpen && !smelted.empty())
+        {
+            const ItemStack& left = m_inventory.slot(Inventory::FURNACE_OUTPUT);
+            const int taken = left.empty() || left.id != smelted.id ? smelted.count : smelted.count - left.count;
+            if (taken > 0) m_stats.item(Stats::ItemStat::Crafted, smelted.id, taken);
+        }
     }
 
 }
@@ -8009,6 +8077,7 @@ void Application::updateGameplay(float deltaTime)
 
     m_camera.position = m_player.eyePosition();
     updateMovementAudio(positionBefore, m_player.jumpedThisUpdate());
+    if (m_player.jumpedThisUpdate()) m_stats.add(Stats::Custom::Jump);
 
     // Wings wear while they are flying, a second at a time, and stop
     // working when they are done. Minecraft's rate, and the only wear
@@ -8062,11 +8131,19 @@ void Application::updateGameplay(float deltaTime)
                              m_startupScreen == "shieldup");
     }
 
+    const ItemStack mainBefore = m_inventory.selected();
+    const ItemStack offBefore = m_inventory.slot(Inventory::OFFHAND);
+    const int slotBefore = m_inventory.selectedSlot();
     handleEating(deltaTime);
     handleDrinking(deltaTime);
     handleBrushing(deltaTime);
     tickBrewing(deltaTime);
     handlePlacement();
+    if (m_keys.down(m_input, Action::Use) && slotBefore == m_inventory.selectedSlot() && !m_player.creative())
+    {
+        statUsed(mainBefore, m_inventory.selected());
+        statUsed(offBefore, m_inventory.slot(Inventory::OFFHAND));
+    }
     {
         const ItemStack& inHand = m_inventory.selected();
         m_heldItem.update(deltaTime,
@@ -8180,7 +8257,11 @@ void Application::updateMining(float deltaTime)
                 if (critical) base *= 1.5f;
                 const float bonus = static_cast<float>(Enchanting::sharpnessBonus(m_inventory.selected().enchantments)) * strength;
                 const int blow = std::max(0, static_cast<int>(std::lround(base + bonus)) + smash);
-                target->strike(blow, target->position() - m_player.position);
+                if (target->strike(blow, target->position() - m_player.position))
+                {
+                    m_stats.add(Stats::Custom::DamageDealt, static_cast<long long>(blow) * 10);
+                    if (Tools::isTool(weapon) || weapon == Items::Trident) m_stats.item(Stats::ItemStat::Used, weapon);
+                }
                 target->markPlayerHit(0, glm::length(target->position() - m_player.position));
                 {
                     const glm::vec3 chest = target->position() +
@@ -8279,6 +8360,12 @@ void Application::updateMining(float deltaTime)
 
     if (m_breakProgress >= 1.0f)
     {
+        if (!m_player.creative())
+        {
+            m_stats.item(Stats::ItemStat::Mined, statBlockItem(id));
+            const StackId tool = m_inventory.selected().id;
+            if (Tools::isTool(tool) || tool == Items::Shears) m_stats.item(Stats::ItemStat::Used, tool);
+        }
         m_particles.spawnBlockBreak(hit.block, id);
         m_world->setBlock(hit.block.x, hit.block.y, hit.block.z, Blocks::Air);
         m_net.onLocalBlockChange(hit.block.x, hit.block.y, hit.block.z, Blocks::Air);
@@ -10592,6 +10679,7 @@ void Application::updateTrident(float deltaTime)
         thrown.stack.damage += 1;
         if (thrown.stack.damage >= itemDurability(Items::Trident))
         {
+            statBroke(Items::Trident);
             held.clear();
             m_audio.play(Sound::Click, 0.8f, 0.5f);
             return;
@@ -11173,6 +11261,7 @@ void Application::startRaid(const glm::vec3& at, int omenLevel)
         return;
     }
     m_raid = Raids::begin(at, omenLevel, 2);
+    m_stats.add(Stats::Custom::RaidTrigger);
 }
 
 void Application::spawnRaidWave()
@@ -11256,7 +11345,10 @@ void Application::tickRaid(float deltaTime)
         {
             m_raid.status = Raids::Status::Victory;
             if (glm::length(m_player.position - m_raid.centre) <= Raids::BAR_RANGE && !m_player.spectator())
+            {
                 m_player.takeEffect(Effects::Kind::HeroOfTheVillage, m_raid.omenLevel - 1, Effects::HERO_SECONDS);
+                m_stats.add(Stats::Custom::RaidWin);
+            }
         }
     }
     m_raidSteer -= deltaTime;
@@ -11881,6 +11973,7 @@ void Application::wearShield(int points)
     held.damage += points;
     if (held.damage >= Shield::MAX_DURABILITY)
     {
+        statBroke(Items::Shield);
         held.clear();
         m_audio.play(Sound::Click, 0.8f, 0.5f);
     }
@@ -11908,6 +12001,7 @@ void Application::wearArmour(int incoming)
         worn.damage += cost;
         if (worn.damage >= limit)
         {
+            statBroke(worn.id);
             worn.clear();
             m_audio.play(Sound::DigWood, 0.7f, 0.5f);
         }
@@ -11935,6 +12029,7 @@ void Application::wearTool(BlockId brokenBlock)
 
     if (++stack.damage >= limit)
     {
+        statBroke(stack.id);
         stack.clear();
         m_audio.play(Sound::DigWood, 0.8f, 0.55f);
     }
@@ -11956,6 +12051,7 @@ void Application::wearOnSwing(StackId weapon)
     stack.damage += (Tools::kindOf(weapon) == Tools::Kind::Sword) ? 1 : 2;
     if (stack.damage >= limit)
     {
+        statBroke(stack.id);
         stack.clear();
         m_audio.play(Sound::DigWood, 0.8f, 0.55f);
     }
@@ -12234,6 +12330,8 @@ void Application::sleepInBed(const glm::ivec3& block)
         m_player.heal(Player::MAX_HEALTH / 4);
 
     award("adventure/sleep_in_bed", "slept_in_bed");
+    m_stats.add(Stats::Custom::SleepInBed);
+    m_stats.set(Stats::Custom::TimeSinceRest, 0);
     m_chatLog.add("Good morning. Spawn point set.");
     m_audio.play(Sound::DigWool, 0.6f, 0.8f);
 }
@@ -13436,6 +13534,11 @@ void Application::applyBlast(const glm::vec3& at, float radius, int damage)
 
     if (onPlayer > 0 && m_player.damage(onPlayer))
     {
+        if (m_blastSource >= 0)
+        {
+            m_lastAttacker = m_blastSource;
+            m_lastAttackerAge = 0.0f;
+        }
         wearArmour(onPlayer);
         m_audio.play(Sound::Hurt, 0.9f);
 
@@ -13623,6 +13726,8 @@ namespace
         // itself does not carry this: the camera does.
         glm::vec3 facing{ 0.0f };
         int shotsBlocked = 0;
+        int blockedDamage = 0;
+        int lastShooter = -1;
 
         EntityManager* entities = nullptr;
         Player* player = nullptr;
@@ -13803,10 +13908,15 @@ namespace
             if (player->blocking && Shield::covers(facing, feet, point))
             {
                 ++shotsBlocked;
+                blockedDamage += damage;
                 return true;
             }
 
-            if (player->damage(damage)) ++playerHits;
+            if (player->damage(damage))
+            {
+                ++playerHits;
+                if (shooter >= 0) lastShooter = shooter;
+            }
             if (striking == Arrows::Kind::Tipped && effect >= 0)
                 player->takeEffect(Brewing::tippedKind(effect), Brewing::tippedAmplifier(effect), Brewing::tippedSeconds(effect));
             if (striking == Arrows::Kind::Bullet) player->takeEffect(Effects::Kind::Levitation, 0, 10.0f);
@@ -13863,7 +13973,13 @@ void Application::updateArrows(float deltaTime)
     {
         m_audio.play(Sound::Hurt, 0.8f);
         wearArmour(2);
+        if (targets.lastShooter >= 0)
+        {
+            m_lastAttacker = targets.lastShooter;
+            m_lastAttackerAge = 0.0f;
+        }
     }
+    if (targets.blockedDamage > 0) m_stats.add(Stats::Custom::DamageBlockedByShield, static_cast<long long>(targets.blockedDamage) * 10);
 
     if (targets.shotsBlocked > 0)
     {
@@ -13892,7 +14008,11 @@ void Application::handleBrushing(float deltaTime)
                 if (!m_player.creative())
                 {
                     brush.damage += 16;
-                    if (brush.damage >= Archaeology::BRUSH_DURABILITY) brush.clear();
+                    if (brush.damage >= Archaeology::BRUSH_DURABILITY)
+                    {
+                        statBroke(brush.id);
+                        brush.clear();
+                    }
                 }
                 return;
             }
@@ -13926,6 +14046,7 @@ void Application::handleBrushing(float deltaTime)
     m_audio.play(Sound::Pickup, 0.6f, 1.2f);
     if (!m_player.creative() && ++brush.damage >= Archaeology::BRUSH_DURABILITY)
     {
+        statBroke(brush.id);
         brush.clear();
         m_audio.play(Sound::Click, 0.8f, 0.5f);
     }
@@ -14101,6 +14222,7 @@ bool Application::useCake(const glm::ivec3& at, BlockId block)
 
     const FoodValue slice{ 2, 0.4f };
     if (!m_player.eat(slice.hunger, slice.saturation)) return false;
+    m_stats.add(Stats::Custom::EatCakeSlice);
 
     const int eaten = cakeEaten(block) + 1;
     const BlockId now = (eaten >= CAKE_SLICES)
@@ -14186,6 +14308,7 @@ bool Application::useCandleCake(const glm::ivec3& at, BlockId block)
     if (!m_player.canEat() && !m_player.creative()) return false;
     const FoodValue slice{ 2, 0.4f };
     if (!m_player.eat(slice.hunger, slice.saturation)) return false;
+    m_stats.add(Stats::Custom::EatCakeSlice);
     become(Blocks::Cake1);
     if (!m_player.creative()) m_drops.spawnFromBrokenBlock(at, candleOf(shade, 1, false), 1);
     m_audio.play(Sound::Pickup, 0.6f, 0.85f);
@@ -14307,6 +14430,7 @@ bool Application::useCauldron(const glm::ivec3& at, BlockId block)
             if (m_inventory.addStack(washed) > 0) m_drops.spawnStack(m_player.position, washed);
         }
         if (!m_player.creative()) setLevel(level - 1);
+        m_stats.add(Stats::Custom::CleanBanner);
         m_audio.play(Sound::Pickup, 0.5f, 1.3f);
         return true;
     }
@@ -14314,6 +14438,7 @@ bool Application::useCauldron(const glm::ivec3& at, BlockId block)
     if (held.id == Items::WaterBucket && level < CAULDRON_FULL)
     {
         setLevel(CAULDRON_FULL);
+        m_stats.add(Stats::Custom::FillCauldron);
         swapHeld(Items::Bucket);
         m_audio.play(Sound::Pickup, 0.5f, 0.7f);
         return true;
@@ -14322,6 +14447,7 @@ bool Application::useCauldron(const glm::ivec3& at, BlockId block)
     if (held.id == Items::Bucket && level >= CAULDRON_FULL)
     {
         setLevel(0);
+        m_stats.add(Stats::Custom::UseCauldron);
         swapHeld(Items::WaterBucket);
         m_audio.play(Sound::Pickup, 0.5f, 1.0f);
         return true;
@@ -14330,6 +14456,7 @@ bool Application::useCauldron(const glm::ivec3& at, BlockId block)
     if (held.id == Items::GlassBottle && level > 0)
     {
         setLevel(level - 1);
+        m_stats.add(Stats::Custom::UseCauldron);
 
         ItemStack filled;
         filled.id = Items::Potion;
@@ -14363,6 +14490,7 @@ bool Application::useJukebox(const glm::ivec3& at)
     const int disc = Discs::discOf(held.id);
     if (disc < 0) return false;
     m_jukeboxes[key] = ItemStack{ held.id, 1 };
+    m_stats.add(Stats::Custom::PlayRecord);
     m_jukeboxClock[key] = 0.0f;
     if (!m_player.creative())
     {
@@ -14447,6 +14575,7 @@ bool Application::useLectern(const glm::ivec3& at, BlockId block)
         const ItemStack* resting = lecternBookAt(at);
         if (resting && (resting->id == Items::WrittenBook || resting->id == Items::WritableBook))
         {
+            m_stats.add(Stats::Custom::InteractWithLectern);
             openBook(*resting, true, at);
             return true;
         }
@@ -14712,6 +14841,7 @@ void Application::handlePlacement()
             }
             if (isBell(used))
             {
+                m_stats.add(Stats::Custom::BellRing);
                 m_audio.play(Sound::Click, 1.0f, 0.5f);
                 m_audio.play(Sound::DigGlass, 0.5f, 1.8f);
                 const glm::vec3 ring = glm::vec3(bench.block) + glm::vec3(0.5f);
@@ -14853,6 +14983,7 @@ void Application::handlePlacement()
                     m_world->setBlock(bench.block.x, bench.block.y, bench.block.z, potted);
                     m_net.onLocalBlockChange(bench.block.x, bench.block.y, bench.block.z, potted);
                     m_audio.playPlace(asBlock(held.id));
+                    m_stats.add(Stats::Custom::PotFlower);
                     if (!m_player.creative())
                     {
                         held.count -= 1;
@@ -15258,7 +15389,11 @@ void Application::handlePlacement()
             else
             {
                 stack.damage += 1;
-                if (stack.damage >= 64) stack.clear();
+                if (stack.damage >= 64)
+                {
+                    statBroke(stack.id);
+                    stack.clear();
+                }
             }
         }
         return;
@@ -16697,6 +16832,7 @@ void Application::render()
         case Screen::Settings:     renderSettingsScreen(); break;
         case Screen::VideoSettings: renderVideoScreen(); break;
         case Screen::Credits:      renderCreditsScreen(); break;
+        case Screen::Statistics:   renderStatsScreen(); break;
         case Screen::Controls:     renderControlsScreen(); break;
         case Screen::NameEntry:    renderNameEntryScreen(); break;
         case Screen::Playing:
@@ -17911,6 +18047,7 @@ void Application::wearHeld(StackId id, int points)
     }
     if (held.damage >= Fishing::durabilityOf(id))
     {
+        statBroke(id);
         if (id == Items::CarrotOnAStick || id == Items::WarpedFungusOnAStick)
         {
             held.clear();
@@ -17953,6 +18090,7 @@ void Application::reelBobber()
         const bool jungle = m_world->generator().biomeAt(cell.x, cell.z) == Biome::Jungle;
         const uint32_t seed = m_bobber.rolls * 2654435761u + static_cast<uint32_t>(m_elapsedSeconds * 37.0f);
         const Fishing::Catch caught = Fishing::roll(seed, openSky, jungle, Effects::luck(m_player.effects));
+        m_stats.add(Stats::Custom::FishCaught);
         for (const Advancements::Criterion& fish : Advancements::all()[static_cast<size_t>(Advancements::indexOf("husbandry/fishy_business"))].criteria)
             if (stackNamed(fish.name) == caught.stack.id) award("husbandry/fishy_business", fish.name);
         const glm::vec3 from = m_bobber.position + glm::vec3(0.0f, 0.3f, 0.0f);
@@ -19145,6 +19283,7 @@ void Application::updateMobs(float deltaTime)
         {
             wearShield(Shield::WEAR_PER_BLOCK);
             m_audio.play(Sound::Click, 0.7f, 0.7f);
+            m_stats.add(Stats::Custom::DamageBlockedByShield, static_cast<long long>(strike.damage) * 10);
 
             // Shoved back, but unhurt.
             const glm::vec3 off = m_player.position - strike.from;
@@ -19155,6 +19294,11 @@ void Application::updateMobs(float deltaTime)
         }
 
         if (!m_player.damage(strike.damage)) continue;
+        if (strike.attacker >= 0)
+        {
+            m_lastAttacker = strike.attacker;
+            m_lastAttackerAge = 0.0f;
+        }
         if (strike.effect >= 0 && strike.effect < Effects::KIND_COUNT)
             m_player.takeEffect(static_cast<Effects::Kind>(strike.effect), strike.effectAmplifier, strike.effectSeconds);
 
@@ -19170,14 +19314,18 @@ void Application::updateMobs(float deltaTime)
 
     // Anything that went off.
     for (const MobBlast& blast : m_entities.drainBlasts())
+    {
+        m_blastSource = blast.source;
         applyBlast(blast.at, blast.radius, blast.damage);
+        m_blastSource = -1;
+    }
 
     // Arrows loosed by anything that carries a bow, and the charges
     // thrown by anything that does not.
     for (const MobShot& shot : m_entities.drainShots())
     {
         if (shot.fangs) conjureFangs(shot.from, shot.target, shot.damage);
-        else m_arrows.spawn(shot.from, shot.velocity, shot.damage, false, shot.kind, shot.effect);
+        else m_arrows.spawn(shot.from, shot.velocity, shot.damage, false, shot.kind, shot.effect, shot.shooter);
     }
 
     // What they leave behind. Most species drop nothing yet, because
@@ -19190,6 +19338,8 @@ void Application::updateMobs(float deltaTime)
         vibrate(death.position, 15);
         if (death.byPlayer)
         {
+            m_stats.add(Stats::Custom::MobKills);
+            m_stats.killed(static_cast<int>(death.type));
             award("adventure/root", "killed_something");
             const std::string kind = entityId(death.type);
             award("adventure/kill_a_mob", kind.c_str());
@@ -19346,6 +19496,7 @@ void Application::updateMobs(float deltaTime)
             if (mob.baby() && glm::length(mob.position() - born) < 0.6f)
             {
                 award("husbandry/breed_an_animal", "bred");
+                m_stats.add(Stats::Custom::AnimalsBred);
                 award("husbandry/bred_all_animals", entityId(mob.typeId()).c_str());
                 break;
             }
@@ -19356,11 +19507,13 @@ void Application::updateMobs(float deltaTime)
 
     // A chicken lays an egg every few minutes whether anybody is
     // watching or not, which is what makes a flock worth keeping.
+    const bool playerShots = m_arrows.takePlayerBlockHits() > 0;
     for (const glm::ivec3& struck : m_arrows.drainBlockHits())
     {
         vibrate(glm::vec3(struck) + glm::vec3(0.5f), 2);
         const BlockId hit = m_world->getBlock(struck.x, struck.y, struck.z);
         if (!isTarget(hit)) continue;
+        if (playerShots) m_stats.add(Stats::Custom::TargetHit);
         const bool fresh = hit == Blocks::Target;
         setBlockFor(struck, Blocks::TargetLit, Blocks::Target, 1.0f);
         if (fresh) settleRedstone(struck);
@@ -21774,7 +21927,7 @@ void Application::renderPauseMenu()
     centredText("Game Paused", h * 0.12f, 5.0f, TEXT_COLOR);
     centredText(gameModeName(m_gameMode), h * 0.12f + 54.0f, 2.0f, DIM_TEXT);
 
-    const float buttonWidth = std::min(440.0f, w * 0.64f);
+    const float buttonWidth = std::min(204.0f / MENU_UNIT, w * 0.9f);
     const float buttonX = w * 0.5f - buttonWidth * 0.5f;
     const float buttonHeight = 50.0f;
     float y = h * 0.30f;
@@ -21783,8 +21936,14 @@ void Application::renderPauseMenu()
         m_pendingAction = MenuAction::Resume;
     y += buttonHeight + 12.0f;
 
-    if (menuButton({ buttonX, y, buttonWidth, buttonHeight }, "Advancements"))
-        m_pendingAction = MenuAction::OpenAdvancements;
+    {
+        const float gap = 8.0f / MENU_UNIT;
+        const float half = (buttonWidth - gap) * 0.5f;
+        if (menuButton({ buttonX, y, half, buttonHeight }, "Advancements"))
+            m_pendingAction = MenuAction::OpenAdvancements;
+        if (menuButton({ buttonX + half + gap, y, half, buttonHeight }, "Statistics"))
+            m_pendingAction = MenuAction::OpenStatistics;
+    }
     y += buttonHeight + 12.0f;
 
     if (menuButton({ buttonX, y, buttonWidth, buttonHeight }, "Options..."))
@@ -21862,6 +22021,7 @@ void Application::renderDeathScreen()
 #include "BookScreen.inl"
 #include "RecipeBookScreen.inl"
 #include "AdvancementsScreen.inl"
+#include "StatsScreen.inl"
 
 void Application::renderDebugOverlay()
 {

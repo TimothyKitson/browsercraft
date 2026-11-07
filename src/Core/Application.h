@@ -27,6 +27,7 @@
 #include "Game/Raids.h"
 #include "Game/RecipeBook.h"
 #include "Game/Advancements.h"
+#include "Game/Stats.h"
 #include "Game/Brewing.h"
 #include "World/Signs.h"
 #include "World/Frames.h"
@@ -88,7 +89,8 @@ enum class Screen
     Controls,
     Playing,
     Paused,
-    Dead
+    Dead,
+    Statistics
 };
 
 // Menu buttons are drawn and hit-tested in the same pass, so a click
@@ -132,6 +134,7 @@ enum class MenuAction
     CycleAttackIndicator,
     CycleDistortion,
     OpenAdvancements,
+    OpenStatistics,
     ToggleMainHand,
     RenderDistanceDown,
     SetRenderDistance,
@@ -1431,6 +1434,34 @@ private:
     void renderToasts();
     void saveAdvancements();
     void loadAdvancements(bool existing);
+    Stats::Book m_stats;
+    int m_statsTab = 0;
+    float m_statsScroll = 0.0f;
+    bool m_statsScrolling = false;
+    float m_statsGrabY = 0.0f;
+    int m_statsSelected = -1;
+    int m_statsSort = -1;
+    int m_statsOrder = 0;
+    int m_statsPressed = -1;
+    float m_statsClock = 0.0f;
+    float m_statsFall = 0.0f;
+    bool m_statsPlaced = false;
+    glm::vec3 m_statsFrom{ 0.0f };
+    int m_lastAttacker = -1;
+    float m_lastAttackerAge = 0.0f;
+    int m_blastSource = -1;
+    void statBroke(StackId id);
+    StackId statBlockItem(BlockId block) const;
+    void statOpened(BlockId block);
+    void statUsed(const ItemStack& before, const ItemStack& after);
+    void drainStatEvents();
+    void tickStats(float deltaTime);
+    void openStatistics();
+    std::vector<StackId> statItemRows() const;
+    std::vector<int> statMobRows() const;
+    void renderStatsScreen();
+    void saveStats();
+    void loadStats();
     Raids::Raid m_raid;
     glm::vec3 m_raidOmenAt{ 0.0f };
     bool m_raidOmenPending = false;

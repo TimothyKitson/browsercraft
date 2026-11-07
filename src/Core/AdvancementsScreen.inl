@@ -582,6 +582,7 @@ void Application::saveAdvancements()
         for (StackId id : m_knownRecipes) std::fprintf(file, "%d\n", static_cast<int>(id));
         std::fclose(file);
     }
+    saveStats();
 }
 
 void Application::loadAdvancements(bool existing)
@@ -609,6 +610,7 @@ void Application::loadAdvancements(bool existing)
         m_recipesSeeded = true;
     }
     m_toasts.clear();
+    loadStats();
 }
 
 void Application::unlockRecipes(float deltaTime)

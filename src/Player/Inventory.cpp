@@ -167,6 +167,7 @@ bool Inventory::takeCraftResult()
         return false;   // hands full of something else
     }
 
+    m_crafted.emplace_back(result.id, result.count);
     const int bottles = Crafting::consume(&m_slots[CRAFT_FIRST], m_craftSize);
     if (bottles > 0) add(Items::GlassBottle, bottles);
     refreshCraftResult();
@@ -332,6 +333,7 @@ void Inventory::quickMove(int index)
             const ItemStack result = m_slots[CRAFT_RESULT];
             if (findDestination(result, 0, MAIN_SLOTS) < 0) break;
             if (add(result.id, result.count) > 0) break;
+            m_crafted.emplace_back(result.id, result.count);
             const int bottles = Crafting::consume(&m_slots[CRAFT_FIRST], m_craftSize);
             if (bottles > 0) add(Items::GlassBottle, bottles);
             refreshCraftResult();

@@ -196,6 +196,12 @@ public:
     // The grid is addressed as 3x3 even while only the top-left 2x2 is
     // reachable, so opening a bigger grid later changes one number.
     int craftSize() const { return m_craftSize; }
+    std::vector<std::pair<StackId, int>> takeCrafted()
+    {
+        std::vector<std::pair<StackId, int>> out;
+        out.swap(m_crafted);
+        return out;
+    }
     void setCraftSize(int size) { m_craftSize = size; }
     // Recomputes the result slot. Call after anything touches the grid.
     void refreshCraftResult();
@@ -224,6 +230,7 @@ public:
 
 private:
     std::array<ItemStack, SLOT_COUNT> m_slots{};
+    std::vector<std::pair<StackId, int>> m_crafted;
     int m_craftSize = 2;
     ItemStack m_cursor;
     int m_selectedSlot = 0;
