@@ -1020,6 +1020,9 @@ private:
     void drawInventoryEffects(float panelRight, float panelTop, float w);
     void renderEatProgress(float cx, float cy);
     void handleEating(float deltaTime);
+    void handleBrushing(float deltaTime);
+    float m_brushTime = 0.0f;
+    glm::ivec3 m_brushAt{ 0 };
     void handleDrinking(float deltaTime);
 
     // --- simple immediate-mode menu widgets ---

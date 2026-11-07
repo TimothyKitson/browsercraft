@@ -225,6 +225,30 @@ namespace
         { "Iron Nugget",          Tiles::ItemIronNugget,        64 },
         { "Chorus Fruit",         Tiles::ItemChorusFruit,       64 },
         { "Popped Chorus Fruit",  Tiles::ItemPoppedChorusFruit, 64 },
+        { "Brush", Tiles::ItemBrush, 1 },
+        { "Angler Pottery Sherd", Tiles::ItemSherdFirst + 0, 64 },
+        { "Archer Pottery Sherd", Tiles::ItemSherdFirst + 1, 64 },
+        { "Arms Up Pottery Sherd", Tiles::ItemSherdFirst + 2, 64 },
+        { "Blade Pottery Sherd", Tiles::ItemSherdFirst + 3, 64 },
+        { "Brewer Pottery Sherd", Tiles::ItemSherdFirst + 4, 64 },
+        { "Burn Pottery Sherd", Tiles::ItemSherdFirst + 5, 64 },
+        { "Danger Pottery Sherd", Tiles::ItemSherdFirst + 6, 64 },
+        { "Explorer Pottery Sherd", Tiles::ItemSherdFirst + 7, 64 },
+        { "Flow Pottery Sherd", Tiles::ItemSherdFirst + 8, 64 },
+        { "Friend Pottery Sherd", Tiles::ItemSherdFirst + 9, 64 },
+        { "Guster Pottery Sherd", Tiles::ItemSherdFirst + 10, 64 },
+        { "Heart Pottery Sherd", Tiles::ItemSherdFirst + 11, 64 },
+        { "Heartbreak Pottery Sherd", Tiles::ItemSherdFirst + 12, 64 },
+        { "Howl Pottery Sherd", Tiles::ItemSherdFirst + 13, 64 },
+        { "Miner Pottery Sherd", Tiles::ItemSherdFirst + 14, 64 },
+        { "Mourner Pottery Sherd", Tiles::ItemSherdFirst + 15, 64 },
+        { "Plenty Pottery Sherd", Tiles::ItemSherdFirst + 16, 64 },
+        { "Prize Pottery Sherd", Tiles::ItemSherdFirst + 17, 64 },
+        { "Scrape Pottery Sherd", Tiles::ItemSherdFirst + 18, 64 },
+        { "Sheaf Pottery Sherd", Tiles::ItemSherdFirst + 19, 64 },
+        { "Shelter Pottery Sherd", Tiles::ItemSherdFirst + 20, 64 },
+        { "Skull Pottery Sherd", Tiles::ItemSherdFirst + 21, 64 },
+        { "Snort Pottery Sherd", Tiles::ItemSherdFirst + 22, 64 },
     };
 
     static_assert(sizeof(ITEMS) / sizeof(ITEMS[0]) ==
@@ -423,6 +447,7 @@ StackId blockDrop(BlockId id)
     if (isRespawnAnchor(id)) return Blocks::RespawnAnchor0;
     if (isBell(id)) return static_cast<StackId>(Blocks::BellFirst + 2);
     if (isChiseledBookshelf(id)) return shelfOf(2, 0);
+    if (isSuspicious(id)) return Blocks::Air;
     if (id == Blocks::ChorusPlant) return Items::ChorusFruit;
 
     // A melon comes apart into slices rather than into a melon, which

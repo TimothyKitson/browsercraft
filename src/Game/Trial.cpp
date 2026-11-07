@@ -17,7 +17,8 @@ namespace
     // What only an ominous vault has in it. A plain vault pays for the
     // trouble; this pays for the trouble you went looking for.
     const StackId OMINOUS_EXTRAS[] = { Items::Mace, Items::BreezeRod, Items::Diamond,
-                                       Items::EnderPearl, Blocks::HeavyCore };
+                                       Items::EnderPearl, Blocks::HeavyCore, Items::FlowSherd,
+                                       Items::GusterSherd, Items::ScrapeSherd };
 
     const Prize PRIZES[] = {
         { Items::IronIngot,    2, 5, 1.00f },

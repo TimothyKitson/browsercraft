@@ -818,6 +818,7 @@ namespace
             else if (isBell(id))                  why = "a bell hung facing another way";
             else if (id == Blocks::DragonEgg)     why = "left on the exit portal when the dragon dies";
             else if (id == Blocks::HeavyCore)     why = "a prize from an ominous vault";
+            else if (isSuspicious(id))            why = "buried in pyramids, wells and ruins, and dusted by a brush";
             else if (isChiseledBookshelf(id))     why = "a shelf with books in it, or facing another way";
             else if (isAnyCoralWallFan(id))       why = "a coral fan set against another face";
             else if (isBigDripleaf(id) || isBigDripleafStem(id) || isSmallDripleaf(id))
@@ -984,6 +985,8 @@ namespace
                 byHand = "shed by a baby turtle as it grows up";
             else if (i == static_cast<int>(Items::PowderSnowBucket))
                 byHand = "a bucket used on powder snow";
+            else if (i >= static_cast<int>(Items::AnglerSherd) && i <= static_cast<int>(Items::SnortSherd))
+                byHand = "brushed out of suspicious sand or gravel, or won from a vault";
 
             if (byHand)
             {
@@ -1015,6 +1018,7 @@ namespace
         haveItem.insert(static_cast<int>(Items::TurtleScute));
         haveItem.insert(static_cast<int>(Blocks::HeavyCore));
         haveItem.insert(static_cast<int>(Blocks::DragonEgg));
+        for (int k = Items::AnglerSherd; k <= Items::SnortSherd; ++k) haveItem.insert(k);
         haveItem.insert(static_cast<int>(Blocks::Torchflower));
         haveItem.insert(static_cast<int>(doublePlantOf(DoublePlant::PitcherPlant, false)));
         for (int stage = 1; stage < 4; ++stage)

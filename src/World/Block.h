@@ -657,6 +657,8 @@ namespace Blocks
         Jukebox,
         ChiseledBookshelfFirst, ChiseledBookshelfLast = ChiseledBookshelfFirst + 27,
         DragonEgg, HeavyCore,
+        SuspiciousSandFirst, SuspiciousSandLast = SuspiciousSandFirst + 11,
+        SuspiciousGravelFirst, SuspiciousGravelLast = SuspiciousGravelFirst + 11,
 
         Count
     };
@@ -787,6 +789,28 @@ inline int shelfFacing(BlockId id) { return isChiseledBookshelf(id) ? (id - Bloc
 inline BlockId shelfOf(int facing, int books)
 {
     return static_cast<BlockId>(Blocks::ChiseledBookshelfFirst + (facing & 3) * 7 + (books < 0 ? 0 : books > 6 ? 6 : books));
+}
+inline bool isSuspiciousSand(BlockId id) { return id >= Blocks::SuspiciousSandFirst && id <= Blocks::SuspiciousSandLast; }
+inline bool isSuspiciousGravel(BlockId id) { return id >= Blocks::SuspiciousGravelFirst && id <= Blocks::SuspiciousGravelLast; }
+inline bool isSuspicious(BlockId id) { return isSuspiciousSand(id) || isSuspiciousGravel(id); }
+inline int dustStage(BlockId id)
+{
+    if (isSuspiciousSand(id)) return (id - Blocks::SuspiciousSandFirst) % 4;
+    if (isSuspiciousGravel(id)) return (id - Blocks::SuspiciousGravelFirst) % 4;
+    return 0;
+}
+inline int dustTable(BlockId id)
+{
+    if (isSuspiciousSand(id)) return (id - Blocks::SuspiciousSandFirst) / 4;
+    if (isSuspiciousGravel(id)) return 3 + (id - Blocks::SuspiciousGravelFirst) / 4;
+    return 0;
+}
+inline BlockId suspiciousOf(int table, int stage)
+{
+    if (stage < 0) stage = 0;
+    if (stage > 3) stage = 3;
+    if (table < 3) return static_cast<BlockId>(Blocks::SuspiciousSandFirst + table * 4 + stage);
+    return static_cast<BlockId>(Blocks::SuspiciousGravelFirst + (table - 3) * 4 + stage);
 }
 inline bool isTarget(BlockId id) { return id == Blocks::Target || id == Blocks::TargetLit; }
 inline bool isIronDoor(BlockId id) { return id >= Blocks::IronDoorFirst && id <= Blocks::IronDoorLast; }

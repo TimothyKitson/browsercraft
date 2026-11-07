@@ -3,6 +3,7 @@
 #include "GLFunctions.h"
 #include "Renderer/Screenshot.h"
 #include "Entity/PlayerAnimation.h"
+#include "Game/Archaeology.h"
 #include "Game/Golems.h"
 #include "Game/Farming.h"
 #include "Game/Fluids.h"
@@ -6356,6 +6357,7 @@ void Application::updateGameplay(float deltaTime)
 
     handleEating(deltaTime);
     handleDrinking(deltaTime);
+    handleBrushing(deltaTime);
     tickBrewing(deltaTime);
     handlePlacement();
     {
@@ -9870,6 +9872,46 @@ void Application::updateArrows(float deltaTime)
     }
 
     updateBow(deltaTime);
+}
+
+void Application::handleBrushing(float deltaTime)
+{
+    ItemStack& brush = m_inventory.selected();
+    const bool holding = inGame() && m_world && brush.id == Items::Brush && m_keys.down(m_input, Action::Use);
+    if (!holding) { m_brushTime = 0.0f; return; }
+    const RaycastHit hit = m_world->raycast(m_camera.position, m_camera.front, REACH_DISTANCE);
+    if (!hit.hit) { m_brushTime = 0.0f; return; }
+    const BlockId found = m_world->getBlock(hit.block.x, hit.block.y, hit.block.z);
+    if (!isSuspicious(found)) { m_brushTime = 0.0f; return; }
+    if (hit.block != m_brushAt) { m_brushAt = hit.block; m_brushTime = 0.0f; }
+
+    m_brushTime += deltaTime;
+    if (!m_heldItem.swinging()) m_heldItem.swing();
+    if (m_brushTime < Archaeology::SECONDS_PER_STAGE) return;
+    m_brushTime = 0.0f;
+    m_particles.spawnBlockHit(glm::vec3(hit.block) + glm::vec3(0.5f), hit.normal, found);
+    m_audio.playDig(found, 0.4f);
+
+    if (dustStage(found) < 3)
+    {
+        const BlockId dustier = suspiciousOf(dustTable(found), dustStage(found) + 1);
+        m_world->setBlock(hit.block.x, hit.block.y, hit.block.z, dustier);
+        m_net.onLocalBlockChange(hit.block.x, hit.block.y, hit.block.z, dustier);
+        return;
+    }
+
+    const Archaeology::Find find = Archaeology::roll(dustTable(found), hit.block.x, hit.block.y, hit.block.z, m_world->seed());
+    const BlockId bare = Archaeology::settled(found);
+    m_world->setBlock(hit.block.x, hit.block.y, hit.block.z, bare);
+    m_net.onLocalBlockChange(hit.block.x, hit.block.y, hit.block.z, bare);
+    if (find.id != Blocks::Air)
+        m_drops.spawn(glm::vec3(hit.block) + glm::vec3(0.5f) + glm::vec3(hit.normal) * 0.7f, find.id, find.count);
+    m_audio.play(Sound::Pickup, 0.6f, 1.2f);
+    if (!m_player.creative() && ++brush.damage >= Archaeology::BRUSH_DURABILITY)
+    {
+        brush.clear();
+        m_audio.play(Sound::Click, 0.8f, 0.5f);
+    }
 }
 
 void Application::handleEating(float deltaTime)

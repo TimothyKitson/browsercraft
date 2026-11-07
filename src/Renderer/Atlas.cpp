@@ -5627,6 +5627,32 @@ namespace
         }
         t.set(7, 2, Color{ 160, 120, 30 }); t.set(8, 2, Color{ 160, 120, 30 });
     }
+    void paintSuspiciousIn(Tile& t, Color ground, int stage, int salt)
+    {
+        t.fill(ground);
+        t.speckle(18, salt);
+        for (int k = 0; k <= stage; ++k)
+            for (int x = 3; x < 13; ++x)
+                if (hash2(x, k, salt + 1) > 0.5f) t.set(x, 4 + k * 3, shade(ground, -40));
+        for (int y = 6; y < 10; ++y) for (int x = 6; x < 10; ++x) if ((x + y) % 2) t.set(x, y, Color{ 176, 96, 60 });
+    }
+    void paintItemBrush(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int k = 0; k < 7; ++k) t.set(3 + k, 12 - k, Color{ 120, 86, 50 });
+        for (int y = 2; y < 7; ++y) for (int x = 9; x < 14; ++x) if ((x + y) % 2 == 0 || y < 4) t.set(x, y, Color{ 236, 230, 210 });
+        t.set(9, 7, Color{ 196, 110, 70 }); t.set(10, 6, Color{ 196, 110, 70 });
+    }
+    void paintSherdIn(Tile& t, int k)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 3; y < 13; ++y)
+            for (int x = 3; x < 13; ++x)
+                if (x + y > 7 && x + y < 22 && (x - y) < 8 && (y - x) < 8) t.set(x, y, Color{ 160, 84, 56 });
+        const Color mark{ 90, 42, 28 };
+        for (int i = 0; i < 5; ++i)
+            t.set(5 + static_cast<int>(hash2(k, i, 2301) * 6.0f), 5 + static_cast<int>(hash2(i, k, 2302) * 6.0f), mark);
+    }
     void paintItemPitcherPlant(Tile& t)
     {
         paintDoubleIn(t, true, Color{ 100, 170, 190 }, 1333);
@@ -8206,6 +8232,7 @@ namespace
         { Tiles::ItemRawGold, paintItemRawGold },
         { Tiles::ItemAmethystShard, paintItemAmethystShard },
         { Tiles::ItemTripwireHook, paintItemTripwireHook },
+        { Tiles::ItemBrush, paintItemBrush },
         { Tiles::ItemBell, paintItemBell },
         { Tiles::ItemIronNugget, paintItemIronNugget },
         { Tiles::ItemChorusFruit, paintItemChorusFruit },
@@ -9021,6 +9048,30 @@ namespace
         { Tiles::ItemRawGold, { "raw_gold", nullptr, nullptr } },
         { Tiles::ItemAmethystShard, { "amethyst_shard", nullptr, nullptr } },
         { Tiles::ItemTripwireHook, { "../block/tripwire_hook", nullptr, nullptr } },
+        { Tiles::ItemBrush, { "brush", nullptr, nullptr } },
+        { Tiles::ItemSherdFirst + 0, { "angler_pottery_sherd", nullptr, nullptr } },
+        { Tiles::ItemSherdFirst + 1, { "archer_pottery_sherd", nullptr, nullptr } },
+        { Tiles::ItemSherdFirst + 2, { "arms_up_pottery_sherd", nullptr, nullptr } },
+        { Tiles::ItemSherdFirst + 3, { "blade_pottery_sherd", nullptr, nullptr } },
+        { Tiles::ItemSherdFirst + 4, { "brewer_pottery_sherd", nullptr, nullptr } },
+        { Tiles::ItemSherdFirst + 5, { "burn_pottery_sherd", nullptr, nullptr } },
+        { Tiles::ItemSherdFirst + 6, { "danger_pottery_sherd", nullptr, nullptr } },
+        { Tiles::ItemSherdFirst + 7, { "explorer_pottery_sherd", nullptr, nullptr } },
+        { Tiles::ItemSherdFirst + 8, { "flow_pottery_sherd", nullptr, nullptr } },
+        { Tiles::ItemSherdFirst + 9, { "friend_pottery_sherd", nullptr, nullptr } },
+        { Tiles::ItemSherdFirst + 10, { "guster_pottery_sherd", nullptr, nullptr } },
+        { Tiles::ItemSherdFirst + 11, { "heart_pottery_sherd", nullptr, nullptr } },
+        { Tiles::ItemSherdFirst + 12, { "heartbreak_pottery_sherd", nullptr, nullptr } },
+        { Tiles::ItemSherdFirst + 13, { "howl_pottery_sherd", nullptr, nullptr } },
+        { Tiles::ItemSherdFirst + 14, { "miner_pottery_sherd", nullptr, nullptr } },
+        { Tiles::ItemSherdFirst + 15, { "mourner_pottery_sherd", nullptr, nullptr } },
+        { Tiles::ItemSherdFirst + 16, { "plenty_pottery_sherd", nullptr, nullptr } },
+        { Tiles::ItemSherdFirst + 17, { "prize_pottery_sherd", nullptr, nullptr } },
+        { Tiles::ItemSherdFirst + 18, { "scrape_pottery_sherd", nullptr, nullptr } },
+        { Tiles::ItemSherdFirst + 19, { "sheaf_pottery_sherd", nullptr, nullptr } },
+        { Tiles::ItemSherdFirst + 20, { "shelter_pottery_sherd", nullptr, nullptr } },
+        { Tiles::ItemSherdFirst + 21, { "skull_pottery_sherd", nullptr, nullptr } },
+        { Tiles::ItemSherdFirst + 22, { "snort_pottery_sherd", nullptr, nullptr } },
         { Tiles::ItemBell, { "bell", nullptr, nullptr } },
         { Tiles::ItemIronNugget, { "iron_nugget", nullptr, nullptr } },
         { Tiles::ItemChorusFruit, { "chorus_fruit", nullptr, nullptr } },
@@ -9206,6 +9257,14 @@ namespace
         { Tiles::GlassPaneTopTile, { "glass_pane_top", nullptr }, Tinting::None, 0, false },
         { Tiles::TerracottaPlainTile, { "terracotta", "hardened_clay", nullptr }, Tinting::None, 0, false },
         { Tiles::TintedGlassTile, { "tinted_glass", nullptr }, Tinting::None, 0, false },
+        { Tiles::SuspiciousSandTileFirst + 0, { "suspicious_sand_0", nullptr }, Tinting::None, 0, false },
+        { Tiles::SuspiciousSandTileFirst + 1, { "suspicious_sand_1", nullptr }, Tinting::None, 0, false },
+        { Tiles::SuspiciousSandTileFirst + 2, { "suspicious_sand_2", nullptr }, Tinting::None, 0, false },
+        { Tiles::SuspiciousSandTileFirst + 3, { "suspicious_sand_3", nullptr }, Tinting::None, 0, false },
+        { Tiles::SuspiciousGravelTileFirst + 0, { "suspicious_gravel_0", nullptr }, Tinting::None, 0, false },
+        { Tiles::SuspiciousGravelTileFirst + 1, { "suspicious_gravel_1", nullptr }, Tinting::None, 0, false },
+        { Tiles::SuspiciousGravelTileFirst + 2, { "suspicious_gravel_2", nullptr }, Tinting::None, 0, false },
+        { Tiles::SuspiciousGravelTileFirst + 3, { "suspicious_gravel_3", nullptr }, Tinting::None, 0, false },
         { Tiles::BellTopTile, { "bell_top", nullptr }, Tinting::None, 0, false },
         { Tiles::BellSideTile, { "bell_side", nullptr }, Tinting::None, 0, false },
         { Tiles::BellBottomTile, { "bell_bottom", nullptr }, Tinting::None, 0, false },
@@ -10265,6 +10324,20 @@ Atlas::Atlas()
         blitPainted(Tiles::AnchorTopTileFirst + charge, top);
         blitPainted(Tiles::AnchorSideTileFirst + charge, side);
     }
+    for (int stage = 0; stage < 4; ++stage)
+    {
+        Tile sand, gravel;
+        paintSuspiciousIn(sand, Color{ 220, 206, 160 }, stage, 2310);
+        paintSuspiciousIn(gravel, Color{ 136, 130, 126 }, stage, 2311);
+        blitPainted(Tiles::SuspiciousSandTileFirst + stage, sand);
+        blitPainted(Tiles::SuspiciousGravelTileFirst + stage, gravel);
+    }
+    for (int k = 0; k < 23; ++k)
+    {
+        Tile shard;
+        paintSherdIn(shard, k);
+        blitPainted(Tiles::ItemSherdFirst + k, shard);
+    }
     for (int age = 0; age < 4; ++age)
     {
         Tile frost;
@@ -11185,6 +11258,8 @@ bool Atlas::hasPainter(int tileIndex)
     if (tileIndex >= Tiles::CoralFanTileFirst && tileIndex <= Tiles::DeadCoralFanTileLast) return true;
     if (tileIndex >= Tiles::FrostedIceTileFirst && tileIndex <= Tiles::FrostedIceTileLast) return true;
     if (tileIndex >= Tiles::AnchorTopTileFirst && tileIndex <= Tiles::AnchorSideTileLast) return true;
+    if (tileIndex >= Tiles::SuspiciousSandTileFirst && tileIndex <= Tiles::SuspiciousGravelTileLast) return true;
+    if (tileIndex >= Tiles::ItemSherdFirst && tileIndex <= Tiles::ItemSherdLast) return true;
     if (tileIndex >= Tiles::CutCopperTile && tileIndex <= Tiles::CopperTrapdoorTileLast) return true;
     if (tileIndex >= Tiles::ItemCopperDoorFirst && tileIndex <= Tiles::ItemCopperDoorLast) return true;
     if (tileIndex >= Tiles::CrackFirst &&

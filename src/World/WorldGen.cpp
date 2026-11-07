@@ -2183,6 +2183,14 @@ void WorldGen::stampLandmark(Chunk& chunk, Landmark kind, int midX, int midZ) co
             putChests(chunk, Landmark::DesertPyramid, midX, ground, midZ);
             // The thing under the floor. Everybody finds it once.
             put(chunk, midX, ground - 4, midZ, Blocks::Tnt);
+            for (int k = 0; k < 4; ++k)
+            {
+                const int side = static_cast<int>(hashCoords(midX, k, midZ, m_seed + 9201) % 4u);
+                const int along = static_cast<int>(hashCoords(midX, k, midZ, m_seed + 9202) % 5u) - 2;
+                const int dx = side == 0 ? 4 : side == 1 ? -4 : along;
+                const int dz = side == 2 ? 4 : side == 3 ? -4 : along;
+                put(chunk, midX + dx, ground - 2 - static_cast<int>(k % 2), midZ + dz, suspiciousOf(0, 0));
+            }
             break;
         }
 
@@ -2485,6 +2493,12 @@ void WorldGen::buildDesertWells(Chunk& chunk) const
             put(chunk, midX + dx, ground, midZ + dz, Blocks::Sandstone);
 
     put(chunk, midX, ground, midZ, Blocks::Water);
+    put(chunk, midX, ground - 1, midZ, suspiciousOf(1, 0));
+    put(chunk, midX + 1, ground - 1, midZ, Blocks::Sandstone);
+    put(chunk, midX - 1, ground - 1, midZ, Blocks::Sandstone);
+    put(chunk, midX, ground - 1, midZ + 1, Blocks::Sandstone);
+    put(chunk, midX, ground - 1, midZ - 1, Blocks::Sandstone);
+    put(chunk, midX, ground - 2, midZ, Blocks::Sandstone);
 
     for (int dy = 1; dy <= 3; ++dy)
     {

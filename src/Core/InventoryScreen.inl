@@ -159,7 +159,11 @@ namespace
         Items::TorchflowerSeeds, Items::PitcherPod, Items::ClayBall, Items::Brick,
         Items::PumpkinSeeds, Items::SweetBerries, Items::HoneyBottle, Items::DriedKelp, Items::Honeycomb,
         Items::NautilusShell, Items::HeartOfTheSea, Items::TurtleScute,
-        Items::ChorusFruit, Items::PoppedChorusFruit,
+        Items::ChorusFruit, Items::PoppedChorusFruit, Items::Brush,
+        Items::AnglerSherd, Items::ArcherSherd, Items::ArmsUpSherd, Items::BladeSherd, Items::BrewerSherd, Items::BurnSherd,
+        Items::DangerSherd, Items::ExplorerSherd, Items::FlowSherd, Items::FriendSherd, Items::GusterSherd, Items::HeartSherd,
+        Items::HeartbreakSherd, Items::HowlSherd, Items::MinerSherd, Items::MournerSherd, Items::PlentySherd, Items::PrizeSherd,
+        Items::ScrapeSherd, Items::SheafSherd, Items::ShelterSherd, Items::SkullSherd, Items::SnortSherd,
         Items::Sign, Items::SpruceSign, Items::BirchSign, Items::JungleSign, Items::AcaciaSign, Items::DarkOakSign,
         Items::CherrySign, Items::MangroveSign, Items::BambooSign, Items::CrimsonSign, Items::WarpedSign,
     };

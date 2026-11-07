@@ -376,6 +376,8 @@ namespace Tiles
         AnchorBottomTile,
         BellTopTile, BellSideTile, BellBottomTile, JukeboxTopTile, JukeboxSideTile,
         ShelfTopTile, ShelfSideTile, ShelfEmptyTile, ShelfOccupiedTile, DragonEggTile, HeavyCoreTile,
+        SuspiciousSandTileFirst, SuspiciousSandTileLast = SuspiciousSandTileFirst + 3,
+        SuspiciousGravelTileFirst, SuspiciousGravelTileLast = SuspiciousGravelTileFirst + 3,
 
         TileCount
     };
@@ -575,8 +577,9 @@ namespace Tiles
         ItemNautilusShell, ItemHeartOfTheSea, ItemTurtleScute, ItemTurtleHelmet, ItemPowderSnowBucket,
         ItemRepeater, ItemComparator, ItemIronDoor, ItemTurtleEggIcon,
         ItemIronNugget, ItemChorusFruit, ItemPoppedChorusFruit, ItemChain, ItemBell,
+        ItemBrush, ItemSherdFirst, ItemSherdLast = ItemSherdFirst + 22,
 
-        ItemTileEnd = ItemBell + 1
+        ItemTileEnd = ItemSherdLast + 1
     };
 
     // Ten progressively more broken overlay tiles for the mining animation.

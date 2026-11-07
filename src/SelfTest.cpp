@@ -39,6 +39,7 @@
 #include "Game/Fluids.h"
 #include "Renderer/BookRenderer.h"
 #include "Game/Anvil.h"
+#include "Game/Archaeology.h"
 #include "Game/Grindstone.h"
 #include "Game/Saplings.h"
 #include "Game/Shield.h"
@@ -3772,6 +3773,40 @@ namespace
         check(WorldSave::loadLevel(dir, back) && back.hasAnchor && back.anchorX == -12 && back.anchorY == 40 && back.anchorZ == 99,
               "the anchor you set survives a save");
         std::filesystem::remove_all(dir, ec);
+    }
+
+    void testArchaeology()
+    {
+        section("brushes, suspicious sand and sherds");
+        bool dust = true;
+        for (int table = 0; table < Archaeology::TableCount; ++table)
+            for (int stage = 0; stage < 4; ++stage)
+            {
+                const BlockId block = suspiciousOf(table, stage);
+                if (!isSuspicious(block) || dustTable(block) != table || dustStage(block) != stage || isObtainable(block)) dust = false;
+                if (blockDrop(block) != Blocks::Air) dust = false;
+                if (Archaeology::settled(block) != (table < 3 ? Blocks::Sand : Blocks::Gravel)) dust = false;
+            }
+        check(dust, "suspicious sand and gravel keep their loot table and how far they have been dusted");
+        bool sherds = true;
+        for (int k = 0; k < Archaeology::SHERD_COUNT; ++k)
+            if (Archaeology::sherdIndex(Archaeology::sherd(k)) != k || !isItem(Archaeology::sherd(k))) sherds = false;
+        check(sherds, "twenty-three sherds, each its own item");
+        bool finds = true;
+        bool sawSherd[Archaeology::TableCount] = {};
+        for (int table = 0; table < Archaeology::TableCount; ++table)
+            for (int i = 0; i < 200; ++i)
+            {
+                const Archaeology::Find find = Archaeology::roll(table, i * 7, 40, -i * 3, 99u);
+                if (find.id == Blocks::Air || find.count != 1) finds = false;
+                if (Archaeology::sherdIndex(find.id) >= 0) sawSherd[table] = true;
+            }
+        check(finds, "every brushing finds something");
+        check(sawSherd[Archaeology::DesertPyramid] && sawSherd[Archaeology::DesertWell] && sawSherd[Archaeology::TrailRare] &&
+              !sawSherd[Archaeology::TrailCommon], "sherds come from the pyramid, the well and the rare ruins, not the common ones");
+        const std::vector<StackId> made = Crafting::everyOutput();
+        check(std::find(made.begin(), made.end(), static_cast<StackId>(Items::Brush)) != made.end() && maxStackOf(Items::Brush) == 1,
+              "a brush is made from a feather, copper and a stick, and does not stack");
     }
 
     // --- the workstations -----------------------------------------------
@@ -13728,6 +13763,7 @@ int runSelfTest()
     testIceAndSnow();
     testWiring();
     testFireAndSoul();
+    testArchaeology();
     testMadeThings();
     testTheEndAndTheSea();
     testPathfinding();

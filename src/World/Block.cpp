@@ -2182,6 +2182,30 @@ namespace
         { "Chiseled Bookshelf", ShelfTopTile, ShelfTopTile, ShelfSideTile, true, false, RenderType::Lush, 0, 1.5f },
         { "Dragon Egg", DragonEggTile, DragonEggTile, DragonEggTile, true, false, RenderType::Lush, 1, 3.0f },
         { "Heavy Core", HeavyCoreTile, HeavyCoreTile, HeavyCoreTile, true, false, RenderType::Lush, 0, 10.0f },
+        { "Suspicious Sand", SuspiciousSandTileFirst + 0, SuspiciousSandTileFirst + 0, SuspiciousSandTileFirst + 0, true, true, RenderType::Cube, 0, 0.25f },
+        { "Suspicious Sand", SuspiciousSandTileFirst + 1, SuspiciousSandTileFirst + 1, SuspiciousSandTileFirst + 1, true, true, RenderType::Cube, 0, 0.25f },
+        { "Suspicious Sand", SuspiciousSandTileFirst + 2, SuspiciousSandTileFirst + 2, SuspiciousSandTileFirst + 2, true, true, RenderType::Cube, 0, 0.25f },
+        { "Suspicious Sand", SuspiciousSandTileFirst + 3, SuspiciousSandTileFirst + 3, SuspiciousSandTileFirst + 3, true, true, RenderType::Cube, 0, 0.25f },
+        { "Suspicious Sand", SuspiciousSandTileFirst + 0, SuspiciousSandTileFirst + 0, SuspiciousSandTileFirst + 0, true, true, RenderType::Cube, 0, 0.25f },
+        { "Suspicious Sand", SuspiciousSandTileFirst + 1, SuspiciousSandTileFirst + 1, SuspiciousSandTileFirst + 1, true, true, RenderType::Cube, 0, 0.25f },
+        { "Suspicious Sand", SuspiciousSandTileFirst + 2, SuspiciousSandTileFirst + 2, SuspiciousSandTileFirst + 2, true, true, RenderType::Cube, 0, 0.25f },
+        { "Suspicious Sand", SuspiciousSandTileFirst + 3, SuspiciousSandTileFirst + 3, SuspiciousSandTileFirst + 3, true, true, RenderType::Cube, 0, 0.25f },
+        { "Suspicious Sand", SuspiciousSandTileFirst + 0, SuspiciousSandTileFirst + 0, SuspiciousSandTileFirst + 0, true, true, RenderType::Cube, 0, 0.25f },
+        { "Suspicious Sand", SuspiciousSandTileFirst + 1, SuspiciousSandTileFirst + 1, SuspiciousSandTileFirst + 1, true, true, RenderType::Cube, 0, 0.25f },
+        { "Suspicious Sand", SuspiciousSandTileFirst + 2, SuspiciousSandTileFirst + 2, SuspiciousSandTileFirst + 2, true, true, RenderType::Cube, 0, 0.25f },
+        { "Suspicious Sand", SuspiciousSandTileFirst + 3, SuspiciousSandTileFirst + 3, SuspiciousSandTileFirst + 3, true, true, RenderType::Cube, 0, 0.25f },
+        { "Suspicious Gravel", SuspiciousGravelTileFirst + 0, SuspiciousGravelTileFirst + 0, SuspiciousGravelTileFirst + 0, true, true, RenderType::Cube, 0, 0.25f },
+        { "Suspicious Gravel", SuspiciousGravelTileFirst + 1, SuspiciousGravelTileFirst + 1, SuspiciousGravelTileFirst + 1, true, true, RenderType::Cube, 0, 0.25f },
+        { "Suspicious Gravel", SuspiciousGravelTileFirst + 2, SuspiciousGravelTileFirst + 2, SuspiciousGravelTileFirst + 2, true, true, RenderType::Cube, 0, 0.25f },
+        { "Suspicious Gravel", SuspiciousGravelTileFirst + 3, SuspiciousGravelTileFirst + 3, SuspiciousGravelTileFirst + 3, true, true, RenderType::Cube, 0, 0.25f },
+        { "Suspicious Gravel", SuspiciousGravelTileFirst + 0, SuspiciousGravelTileFirst + 0, SuspiciousGravelTileFirst + 0, true, true, RenderType::Cube, 0, 0.25f },
+        { "Suspicious Gravel", SuspiciousGravelTileFirst + 1, SuspiciousGravelTileFirst + 1, SuspiciousGravelTileFirst + 1, true, true, RenderType::Cube, 0, 0.25f },
+        { "Suspicious Gravel", SuspiciousGravelTileFirst + 2, SuspiciousGravelTileFirst + 2, SuspiciousGravelTileFirst + 2, true, true, RenderType::Cube, 0, 0.25f },
+        { "Suspicious Gravel", SuspiciousGravelTileFirst + 3, SuspiciousGravelTileFirst + 3, SuspiciousGravelTileFirst + 3, true, true, RenderType::Cube, 0, 0.25f },
+        { "Suspicious Gravel", SuspiciousGravelTileFirst + 0, SuspiciousGravelTileFirst + 0, SuspiciousGravelTileFirst + 0, true, true, RenderType::Cube, 0, 0.25f },
+        { "Suspicious Gravel", SuspiciousGravelTileFirst + 1, SuspiciousGravelTileFirst + 1, SuspiciousGravelTileFirst + 1, true, true, RenderType::Cube, 0, 0.25f },
+        { "Suspicious Gravel", SuspiciousGravelTileFirst + 2, SuspiciousGravelTileFirst + 2, SuspiciousGravelTileFirst + 2, true, true, RenderType::Cube, 0, 0.25f },
+        { "Suspicious Gravel", SuspiciousGravelTileFirst + 3, SuspiciousGravelTileFirst + 3, SuspiciousGravelTileFirst + 3, true, true, RenderType::Cube, 0, 0.25f },
     };
 }
 
@@ -2282,6 +2306,7 @@ bool isObtainable(BlockId id)
             if (isRespawnAnchor(id) && id != Blocks::RespawnAnchor0) return false;
             if (isBell(id) && id != Blocks::BellFirst + 2) return false;
             if (isChiseledBookshelf(id) && id != shelfOf(2, 0)) return false;
+            if (isSuspicious(id)) return false;
             if (isBigDripleaf(id) && id != bigDripleafOf(0, DripleafTilt::None)) return false;
             if (isSmallDripleaf(id) && id != smallDripleafOf(0, false)) return false;
             if (isGlowLichen(id) && id != glowLichenOn(0)) return false;
@@ -2348,6 +2373,8 @@ const char* blockSoundGroup(BlockId id)
     if (id == Blocks::SoulCampfire) return "wood";
     if (isChiseledBookshelf(id) || id == Blocks::Jukebox) return "wood";
     if (isBell(id) || id == Blocks::HeavyCore || id == Blocks::DragonEgg) return "stone";
+    if (isSuspiciousSand(id)) return "sand";
+    if (isSuspiciousGravel(id)) return "gravel";
     if (id == Blocks::Target || id == Blocks::TargetLit) return "grass";
     if (isEarthy(id)) return "gravel";
     if (isFlowerPot(id)) return "stone";
@@ -2517,6 +2544,8 @@ Material blockMaterial(BlockId id)
     if (isEndRod(id)) return Material::Plant;
     if (isChiseledBookshelf(id) || id == Blocks::Jukebox) return Material::Wood;
     if (id == Blocks::DragonEgg) return Material::Plant;
+    if (isSuspiciousSand(id)) return Material::Sand;
+    if (isSuspiciousGravel(id)) return Material::Dirt;
     if (id == Blocks::Cobweb) return Material::Wool;
     if (id == Blocks::SoulTorch || isFire(id)) return Material::Plant;
     if (id == Blocks::SoulCampfire) return Material::Wood;
