@@ -455,6 +455,8 @@ namespace
 
         { true, 0, 0, { Items::MelonSlice }, 1, Items::MelonSeeds, 1 },
         { true, 0, 0, { Blocks::Pumpkin }, 1, Items::PumpkinSeeds, 4 },
+        { false, 3, 2, { Blocks::Air, Items::IronIngot, Blocks::Air, Blocks::Stone, Blocks::Stone, Blocks::Stone }, 0, Blocks::Stonecutter, 1 },
+        { false, 2, 3, { Items::Flint, Items::Flint, Blocks::Planks, Blocks::Planks, Blocks::Planks, Blocks::Planks }, 0, Blocks::FletchingTable, 1 },
         { false, 1, 3, { Items::Feather, Items::CopperIngot, Items::Stick }, 0, Items::Brush, 1 },
         { false, 3, 3, { Blocks::Planks, Blocks::Planks, Blocks::Planks,
                          Blocks::Planks, Items::Diamond, Blocks::Planks,

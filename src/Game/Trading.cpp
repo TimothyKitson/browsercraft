@@ -53,6 +53,8 @@ namespace Trading
             case Blocks::BrewingStand: trade = Profession::Cleric; return true;
             case Blocks::Barrel: case Blocks::BarrelOpen: trade = Profession::Fisherman; return true;
             case Blocks::Grindstone: trade = Profession::Weaponsmith; return true;
+            case Blocks::Stonecutter: trade = Profession::Mason; return true;
+            case Blocks::FletchingTable: trade = Profession::Fletcher; return true;
             default: return false;
         }
     }

@@ -191,6 +191,7 @@ namespace
         Blocks::RepeaterFirst, Blocks::ComparatorFirst, Blocks::DaylightDetector, Blocks::Target, Items::TripwireHook,
         Blocks::IronDoorFirst, Blocks::IronTrapdoorFirst,
         Blocks::IronBars, Blocks::ChainFirst, Blocks::EndRodFirst, Blocks::Cobweb, Items::IronNugget,
+        Blocks::Stonecutter, Blocks::FletchingTable,
         Blocks::SoulTorch, Blocks::SoulCampfire, Blocks::SoulSoil,
         Blocks::MagmaBlock, Blocks::CryingObsidian, Blocks::RespawnAnchor0, Blocks::Lodestone,
         Blocks::BellFirst + 2, Blocks::Jukebox, Blocks::ChiseledBookshelfFirst + 14, Blocks::DragonEgg, Blocks::HeavyCore,
@@ -782,7 +783,7 @@ void Application::renderInventoryScreen()
     // see what was in it.
     const bool container = m_chestOpen || m_crafterOpen || m_furnaceOpen ||
                            m_inventory.craftSize() >= 3 || m_tradeOpen ||
-                           m_enchantOpen || m_brewOpen || m_anvilOpen || m_horseOpen || m_beaconOpen || m_grindOpen;
+                           m_enchantOpen || m_brewOpen || m_anvilOpen || m_horseOpen || m_beaconOpen || m_grindOpen || m_cutOpen;
 
     if (m_player.creative() && !container) renderCreativeScreen(w, h);
     else renderContainerScreen(w, h);
@@ -818,6 +819,7 @@ void Application::renderContainerScreen(float w, float h)
     else if (m_horseOpen) background = "container/horse";
     else if (m_beaconOpen) background = "container/beacon";
     else if (m_grindOpen) background = "container/grindstone";
+    else if (m_cutOpen) background = "container/stonecutter";
     else if (m_tradeOpen) { background = "container/villager"; textureW = 512.0f; }
     else if (m_enchantOpen) background = "container/enchanting_table";
     else if (m_brewOpen) background = "container/brewing_stand";
@@ -901,7 +903,7 @@ void Application::renderContainerScreen(float w, float h)
     // for the same grid.
     const bool plainInventory = !m_chestOpen && !m_crafterOpen &&
                                 !m_furnaceOpen && !bench && !m_tradeOpen &&
-                                !m_enchantOpen && !m_brewOpen && !m_anvilOpen && !m_horseOpen && !m_beaconOpen && !m_grindOpen;
+                                !m_enchantOpen && !m_brewOpen && !m_anvilOpen && !m_horseOpen && !m_beaconOpen && !m_grindOpen && !m_cutOpen;
 
     // Every screen is headed with the name of what was opened, in the
     // top-left corner, so a barrel says Barrel and a smoker says Smoker.
@@ -916,6 +918,7 @@ void Application::renderContainerScreen(float w, float h)
         else if (m_crafterOpen) title = "Crafter";
         else if (m_horseOpen) title = "Horse";
         else if (m_grindOpen) title = "Repair & Disenchant";
+        else if (m_cutOpen) title = "Stonecutter";
         else if (m_brewOpen) title = "Brewing Stand";
         else if (m_anvilOpen) title = "Anvil";
         else if (m_enchantOpen) title = "Enchanting Table";
@@ -1097,6 +1100,50 @@ void Application::renderContainerScreen(float w, float h)
         }
     }
 
+    if (m_cutOpen)
+    {
+        drawSlot(Inventory::CUT_INPUT, panelX + 20.0f, panelY + 33.0f);
+        const std::vector<Stonecutting::Option> options = Stonecutting::optionsFor(m_inventory.slot(Inventory::CUT_INPUT).id);
+        if (m_inventory.slot(Inventory::CUT_INPUT).id != m_cutSeen)
+        {
+            m_cutSeen = m_inventory.slot(Inventory::CUT_INPUT).id;
+            m_cutChoice = -1;
+            m_cutScroll = 0;
+        }
+        if (m_cutChoice >= static_cast<int>(options.size())) m_cutChoice = -1;
+        const int rows = (static_cast<int>(options.size()) + 3) / 4;
+        m_cutScroll = std::clamp(m_cutScroll, 0, std::max(0, rows - 3));
+        const float mx = static_cast<float>(m_input.mouseX()) / m_ui.scale();
+        const float my = static_cast<float>(m_input.mouseY()) / m_ui.scale();
+        for (int i = 0; i < 12; ++i)
+        {
+            const int index = m_cutScroll * 4 + i;
+            if (index >= static_cast<int>(options.size())) break;
+            const float bx = panelX + 52.0f + static_cast<float>(i % 4) * 16.0f;
+            const float by = panelY + 14.0f + static_cast<float>(i / 4) * 18.0f;
+            const bool hovered = mx >= bx && mx < bx + 16.0f && my >= by && my < by + 18.0f;
+            const char* sprite = index == m_cutChoice ? "sprites/container/stonecutter/recipe_selected"
+                               : hovered ? "sprites/container/stonecutter/recipe_highlighted"
+                                         : "sprites/container/stonecutter/recipe";
+            if (!guiSprite(sprite, bx, by, 16.0f, 18.0f))
+                m_ui.quad(bx, by, 16.0f, 18.0f, index == m_cutChoice ? glm::vec4(0.4f, 0.6f, 0.4f, 1.0f)
+                                                : hovered ? glm::vec4(0.7f, 0.7f, 0.7f, 1.0f) : glm::vec4(0.55f, 0.55f, 0.55f, 1.0f));
+            drawItem(bx, by + 1.0f, 16.0f, options[static_cast<size_t>(index)].result, 0, glm::vec4(1.0f));
+            m_slotBoxes.push_back({ SlotBox::Kind::CutRecipe, index, bx, by, 16.0f, 16.0f });
+        }
+        if (!guiSprite(rows > 3 ? "sprites/container/stonecutter/scroller" : "sprites/container/stonecutter/scroller_disabled",
+                       panelX + 119.0f, panelY + 15.0f + (rows > 3 ? 41.0f * m_cutScroll / std::max(1, rows - 3) : 0.0f), 12.0f, 15.0f))
+            m_ui.quad(panelX + 119.0f, panelY + 15.0f, 12.0f, 15.0f, glm::vec4(0.75f, 0.75f, 0.75f, 1.0f));
+        const float rx = panelX + 143.0f, ry = panelY + 33.0f;
+        well(rx, ry);
+        if (m_cutChoice >= 0 && !m_inventory.slot(Inventory::CUT_INPUT).empty())
+        {
+            const Stonecutting::Option& pick = options[static_cast<size_t>(m_cutChoice)];
+            drawItem(rx, ry, SLOT, pick.result, pick.count, glm::vec4(1.0f));
+            m_slotBoxes.push_back({ SlotBox::Kind::CutTake, 0, rx - 1.0f, ry - 1.0f, PITCH });
+        }
+    }
+
     // ------------------------------------------ the open crafter ---
     // 1.21's: the three by three at 26 and 17, the redstone that says
     // whether it is powered at 97 and 35, and at 134 and 35 what the
@@ -1162,7 +1209,7 @@ void Application::renderContainerScreen(float w, float h)
         // drawn on all of them, which is how a furnace came to have a
         // man standing in the middle of its fire.
         const bool otherBusiness = m_tradeOpen || m_enchantOpen || m_brewOpen ||
-                                   m_anvilOpen || m_furnaceOpen || bench || m_horseOpen || m_beaconOpen || m_grindOpen;
+                                   m_anvilOpen || m_furnaceOpen || bench || m_horseOpen || m_beaconOpen || m_grindOpen || m_cutOpen;
 
         // Armour down the left edge, at 8 and 8, a slot apart.
         for (int i = 0; !otherBusiness && i < Inventory::ARMOR_SLOTS; ++i)
@@ -1935,7 +1982,7 @@ void Application::renderContainerScreen(float w, float h)
         // fire between them at 36 and the result off to the right at
         // 116 and 35. The client's own four, and the shape everybody
         // recognises.
-        if (m_horseOpen || m_beaconOpen || m_grindOpen) {}
+        if (m_horseOpen || m_beaconOpen || m_grindOpen || m_cutOpen) {}
         else if (m_furnaceOpen)
         {
             const Furnaces::State& state = m_furnaces.at(m_furnaceBlock);
@@ -2512,6 +2559,15 @@ void Application::handleInventoryClick(int mouseX, int mouseY, bool rightButton,
             takeGrindResult(shiftHeld);
             break;
 
+        case SlotBox::Kind::CutRecipe:
+            m_cutChoice = box->index;
+            m_audio.play(Sound::Click, 0.45f, 1.2f);
+            break;
+
+        case SlotBox::Kind::CutTake:
+            takeCutResult(shiftHeld);
+            break;
+
         case SlotBox::Kind::BeaconConfirm:
             confirmBeacon();
             break;
@@ -2590,6 +2646,53 @@ Grindstone::Result Application::grindResult() const
         return in;
     };
     return Grindstone::combine(input(Inventory::GRIND_TOP), input(Inventory::GRIND_BOTTOM));
+}
+
+void Application::openStonecutter(const glm::ivec3& block)
+{
+    m_cutBlock = block;
+    m_cutOpen = true;
+    m_cutChoice = -1;
+    m_cutScroll = 0;
+    m_inventoryOpen = true;
+    setMouseCaptured(false);
+}
+
+void Application::takeCutResult(bool toInventory)
+{
+    if (!m_cutOpen) return;
+    ItemStack& input = m_inventory.slot(Inventory::CUT_INPUT);
+    const std::vector<Stonecutting::Option> options = Stonecutting::optionsFor(input.id);
+    if (input.empty() || m_cutChoice < 0 || m_cutChoice >= static_cast<int>(options.size())) return;
+    const Stonecutting::Option& pick = options[static_cast<size_t>(m_cutChoice)];
+    do
+    {
+        ItemStack made;
+        made.id = pick.result;
+        made.count = pick.count;
+        ItemStack& cursor = m_inventory.cursor();
+        if (toInventory)
+        {
+            if (m_inventory.addStack(made) > 0) return;
+        }
+        else if (cursor.empty()) cursor = made;
+        else if (cursor.id == made.id && cursor.count + made.count <= maxStackOf(made.id)) cursor.count += made.count;
+        else return;
+        if (--input.count <= 0) { input.clear(); break; }
+    } while (toInventory);
+    m_audio.play(Sound::DigStone, 0.5f, 1.3f);
+}
+
+void Application::stowStonecutter()
+{
+    if (!m_cutOpen) return;
+    m_cutOpen = false;
+    ItemStack& held = m_inventory.slot(Inventory::CUT_INPUT);
+    if (held.empty()) return;
+    ItemStack leftOver = held;
+    leftOver.count = m_inventory.addStack(held);
+    if (leftOver.count > 0) m_drops.spawnStack(m_player.position + glm::vec3(0.0f, 0.6f, 0.0f), leftOver);
+    held.clear();
 }
 
 void Application::openGrindstone(const glm::ivec3& block)
@@ -2736,6 +2839,7 @@ void Application::closeInventory()
     stowHorse();
     stowBeacon();
     stowGrindstone();
+    stowStonecutter();
     stowChest();
     stowCrafter();
     stowFurnace();

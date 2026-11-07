@@ -2213,6 +2213,8 @@ namespace
         { "Sniffer Egg", SnifferEggTileFirst + 4, SnifferEggTileFirst + 5, SnifferEggTileFirst + 0, true, false, RenderType::Lush, 0, 0.5f },
         { "Sniffer Egg", SnifferEggTileFirst + 10, SnifferEggTileFirst + 11, SnifferEggTileFirst + 6, true, false, RenderType::Lush, 0, 0.5f },
         { "Sniffer Egg", SnifferEggTileFirst + 16, SnifferEggTileFirst + 17, SnifferEggTileFirst + 12, true, false, RenderType::Lush, 0, 0.5f },
+        { "Stonecutter", StonecutterTopTile, StonecutterBottomTile, StonecutterSideTile, true, false, RenderType::Lush, 0, 3.5f },
+        { "Fletching Table", FletchingTopTile, Planks, FletchingSideTile, true, true, RenderType::Cube, 0, 2.5f, FletchingFrontTile, FletchingFrontTile },
     };
 }
 
@@ -2384,7 +2386,8 @@ const char* blockSoundGroup(BlockId id)
     if (isBell(id) || id == Blocks::HeavyCore || id == Blocks::DragonEgg) return "stone";
     if (isSuspiciousSand(id)) return "sand";
     if (isSuspiciousGravel(id)) return "gravel";
-    if (isDecoratedPot(id)) return "stone";
+    if (isDecoratedPot(id) || id == Blocks::Stonecutter) return "stone";
+    if (id == Blocks::FletchingTable) return "wood";
     if (id == Blocks::Target || id == Blocks::TargetLit) return "grass";
     if (isEarthy(id)) return "gravel";
     if (isFlowerPot(id)) return "stone";
@@ -2557,6 +2560,7 @@ Material blockMaterial(BlockId id)
     if (isSuspiciousSand(id)) return Material::Sand;
     if (isSuspiciousGravel(id)) return Material::Dirt;
     if (isDecoratedPot(id) || isSnifferEgg(id)) return Material::Plant;
+    if (id == Blocks::FletchingTable) return Material::Wood;
     if (id == Blocks::Cobweb) return Material::Wool;
     if (id == Blocks::SoulTorch || isFire(id)) return Material::Plant;
     if (id == Blocks::SoulCampfire) return Material::Wood;
@@ -2728,6 +2732,7 @@ bool blockOverlaps(BlockId id, int bx, int by, int bz,
     if (id == Blocks::HeavyCore) return overlaps(0.25f, 0.0f, 0.25f, 0.75f, 0.5f, 0.75f);
     if (isDecoratedPot(id)) return overlaps(0.0625f, 0.0f, 0.0625f, 0.9375f, 1.0f, 0.9375f);
     if (isSnifferEgg(id)) return overlaps(0.0625f, 0.0f, 0.125f, 0.9375f, 1.0f, 0.875f);
+    if (id == Blocks::Stonecutter) return overlaps(0.0f, 0.0f, 0.0f, 1.0f, 0.5625f, 1.0f);
     if (id == Blocks::DragonEgg) return overlaps(0.0625f, 0.0f, 0.0625f, 0.9375f, 1.0f, 0.9375f);
     if (isDiode(id)) return overlaps(0.0f, 0.0f, 0.0f, 1.0f, 0.125f, 1.0f);
     if (isDaylightDetector(id)) return overlaps(0.0f, 0.0f, 0.0f, 1.0f, 0.375f, 1.0f);

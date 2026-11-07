@@ -4,6 +4,7 @@
 #include "Game/VillageLoot.h"
 #include "Renderer/Atlas.h"
 #include "Game/Crafting.h"
+#include "Game/Stonecutting.h"
 #include "Game/Smelting.h"
 #include "Game/StructureLoot.h"
 #include "Game/Trial.h"
@@ -917,6 +918,7 @@ namespace
 
         // What a recipe or a furnace makes.
         for (StackId id : Crafting::everyOutput()) haveItem.insert(id);
+        for (StackId id : Stonecutting::everyOutput()) haveItem.insert(id);
         for (int i = 0; i < static_cast<int>(Items::Count); ++i)
         {
             const StackId fired = Smelting::resultOf(static_cast<StackId>(i));

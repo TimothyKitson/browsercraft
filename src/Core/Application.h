@@ -827,6 +827,14 @@ private:
     std::map<std::array<int, 4>, std::array<int, 2>> m_beaconPowers;
     bool m_beaconOpen = false;
     bool m_grindOpen = false;
+    bool m_cutOpen = false;
+    glm::ivec3 m_cutBlock{ 0 };
+    int m_cutChoice = -1;
+    int m_cutScroll = 0;
+    StackId m_cutSeen = 0;
+    void openStonecutter(const glm::ivec3& block);
+    void stowStonecutter();
+    void takeCutResult(bool toInventory);
     glm::ivec3 m_grindBlock{ 0 };
     uint32_t m_grindRoll = 0x9E3779B9u;
     void openGrindstone(const glm::ivec3& block);
@@ -1134,7 +1142,7 @@ private:
     // copies of the same geometry, and only one of them ever got fixed.
     struct SlotBox
     {
-        enum class Kind { Slot, Palette, Tab, Enchant, Trade, AnvilTake, Destroy, Scroll, TradeTake, BeaconPower, BeaconConfirm, BeaconCancel, GrindTake };
+        enum class Kind { Slot, Palette, Tab, Enchant, Trade, AnvilTake, Destroy, Scroll, TradeTake, BeaconPower, BeaconConfirm, BeaconCancel, GrindTake, CutRecipe, CutTake };
         Kind kind = Kind::Slot;
         int index = 0;        // inventory slot, block id, or tab number
         float x = 0.0f, y = 0.0f, size = 0.0f;

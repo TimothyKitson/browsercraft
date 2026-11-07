@@ -40,6 +40,7 @@
 #include "Renderer/BookRenderer.h"
 #include "Game/Anvil.h"
 #include "Game/Archaeology.h"
+#include "Game/Stonecutting.h"
 #include "Game/Grindstone.h"
 #include "Game/Saplings.h"
 #include "Game/Shield.h"
@@ -3851,6 +3852,31 @@ namespace
                 }
             check(gravel > 0, "and it is full of suspicious gravel");
         }
+    }
+
+    void testStonecutter()
+    {
+        section("the stonecutter and the fletching table");
+        const std::vector<Stonecutting::Option> stone = Stonecutting::optionsFor(Blocks::Stone);
+        bool slab = false, bricks = false;
+        for (const Stonecutting::Option& o : stone)
+        {
+            if (o.result == Blocks::StoneSlab && o.count == 2) slab = true;
+            if (o.result == Blocks::StoneBricks && o.count == 1) bricks = true;
+        }
+        check(slab && bricks, "stone cuts into two slabs or one stone brick");
+        check(Stonecutting::optionsFor(Items::Stick).empty() && Stonecutting::optionsFor(Blocks::Dirt).empty(),
+              "and a stick or dirt cuts into nothing");
+        check(Stonecutting::everyOutput().size() > 50, "the table is the 1.21 data's, as far as the blocks go");
+        Trading::Profession job = Trading::Profession::Nitwit;
+        check(Trading::jobSite(Blocks::Stonecutter, job) && job == Trading::Profession::Mason, "a stonecutter is a mason's");
+        check(Trading::jobSite(Blocks::FletchingTable, job) && job == Trading::Profession::Fletcher, "a fletching table a fletcher's");
+        check(Inventory::belongsIn(Inventory::CUT_INPUT, Blocks::Stone) && !Inventory::belongsIn(Inventory::CUT_INPUT, Items::Stick),
+              "the cutter takes blocks only");
+        const std::vector<StackId> made = Crafting::everyOutput();
+        check(std::find(made.begin(), made.end(), static_cast<StackId>(Blocks::Stonecutter)) != made.end() &&
+              std::find(made.begin(), made.end(), static_cast<StackId>(Blocks::FletchingTable)) != made.end(),
+              "both are crafted");
     }
 
     // --- the workstations -----------------------------------------------
@@ -13811,6 +13837,7 @@ int runSelfTest()
     testWiring();
     testFireAndSoul();
     testArchaeology();
+    testStonecutter();
     testMadeThings();
     testTheEndAndTheSea();
     testPathfinding();

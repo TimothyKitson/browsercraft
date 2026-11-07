@@ -4,6 +4,7 @@
 #include "Renderer/Screenshot.h"
 #include "Entity/PlayerAnimation.h"
 #include "Game/Archaeology.h"
+#include "Game/Stonecutting.h"
 #include "Game/Golems.h"
 #include "Game/Farming.h"
 #include "Game/Fluids.h"
@@ -2057,11 +2058,12 @@ bool Application::frame()
         }
 
         if ((m_benchOpen || m_furnaceOpen || m_chestOpen || m_enchantOpen ||
-             m_anvilOpen || m_brewOpen || m_beaconOpen || m_grindOpen) && playing())
+             m_anvilOpen || m_brewOpen || m_beaconOpen || m_grindOpen || m_cutOpen) && playing())
         {
             const glm::ivec3 block = m_benchOpen    ? m_benchBlock
                                    : m_beaconOpen   ? m_beaconBlock
                                    : m_grindOpen    ? m_grindBlock
+                                   : m_cutOpen      ? m_cutBlock
                                    : m_chestOpen    ? m_chestBlock
                                    : m_enchantOpen  ? m_enchantBlock
                                    : m_anvilOpen    ? m_anvilBlock
@@ -2074,6 +2076,7 @@ bool Application::frame()
                 m_benchOpen   ? there == Blocks::CraftingTable
               : m_beaconOpen  ? there == Blocks::Beacon
               : m_grindOpen   ? there == Blocks::Grindstone
+              : m_cutOpen     ? there == Blocks::Stonecutter
               : m_chestOpen   ? (isContainerBlock(there) || isItemHolder(there))
               : m_enchantOpen ? there == Blocks::EnchantingTable
               : m_anvilOpen   ? isAnvil(there)
@@ -2151,7 +2154,7 @@ bool Application::frame()
             m_startupScreen == "attackhud" || m_startupScreen == "attackready" ||
             m_startupScreen == "attackhotbar" || m_startupScreen == "bossbars" ||
             m_startupScreen == "gamemode" || m_startupScreen == "spectator" ||
-            m_startupScreen == "beaconui" || m_startupScreen == "grindstone" ||
+            m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" ||
             m_startupScreen == "grinderror" || m_startupScreen == "woods" ||
             m_startupScreen == "cherry" || m_startupScreen == "mangrove" || m_startupScreen == "fungi" ||
             m_startupScreen == "stones" || m_startupScreen == "colours" || m_startupScreen == "candles" ||
@@ -2237,6 +2240,7 @@ bool Application::frame()
                                   m_startupScreen != "spectator" &&
                                   m_startupScreen != "beaconui" &&
                                   m_startupScreen != "grindstone" &&
+                                  m_startupScreen != "stonecutter" &&
                                   m_startupScreen != "grinderror" &&
                                   m_startupScreen != "woods" &&
                                   m_startupScreen != "cherry" &&
@@ -2629,7 +2633,7 @@ bool Application::frame()
             if (m_startupScreen == "attackhud" || m_startupScreen == "attackready" ||
                 m_startupScreen == "attackhotbar" || m_startupScreen == "bossbars" ||
                 m_startupScreen == "gamemode" || m_startupScreen == "spectator" ||
-                m_startupScreen == "beaconui" || m_startupScreen == "grindstone" ||
+                m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" ||
                 m_startupScreen == "grinderror" || m_startupScreen == "woods" ||
                 m_startupScreen == "cherry" || m_startupScreen == "mangrove" || m_startupScreen == "fungi" ||
                 m_startupScreen == "stones" || m_startupScreen == "colours" || m_startupScreen == "candles" ||
@@ -3367,6 +3371,16 @@ bool Application::frame()
                     m_inventory.slot(6) = ItemStack{ doorBaseOf(3), 3 };
                     m_inventory.slot(7) = ItemStack{ trapdoorBaseOf(5), 2 };
                     m_inventory.slot(8) = ItemStack{ Blocks::DarkOakSapling, 4 };
+                }
+                if (m_startupScreen == "stonecutter")
+                {
+                    m_devAttackStrength = 1.0f;
+                    const glm::ivec3 saw(px + 2, py, pz);
+                    m_world->setBlock(saw.x, saw.y, saw.z, Blocks::Stonecutter);
+                    openStonecutter(saw);
+                    m_inventory.slot(Inventory::CUT_INPUT) = ItemStack{ Blocks::Stone, 12 };
+                    m_cutSeen = Blocks::Stone;
+                    m_cutChoice = 1;
                 }
                 if (m_startupScreen == "grindstone" || m_startupScreen == "grinderror")
                 {
@@ -6075,6 +6089,8 @@ void Application::handleEvents()
     // five rows the grid shows.
     if (m_inventoryOpen && m_tradeOpen && m_input.wheelDelta() != 0)
         m_tradeScroll -= m_input.wheelDelta();
+    else if (m_inventoryOpen && m_cutOpen && m_input.wheelDelta() != 0)
+        m_cutScroll -= m_input.wheelDelta();
     else if (m_inventoryOpen && m_player.creative() && m_input.wheelDelta() != 0)
         m_paletteRow -= m_input.wheelDelta();
 
@@ -10763,6 +10779,12 @@ void Application::handlePlacement()
             if (isCauldron(used) && useCauldron(bench.block, used)) return;
             if (isLectern(used) && useLectern(bench.block, used)) return;
             if (used == Blocks::Grindstone && useGrindstone(bench.block)) return;
+            if (used == Blocks::Stonecutter)
+            {
+                openStonecutter(bench.block);
+                m_audio.play(Sound::Click, 0.4f);
+                return;
+            }
 
             // A lever stays where you put it; a button lets go on its
             // own a second later, which is the whole difference

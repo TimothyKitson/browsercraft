@@ -661,6 +661,7 @@ namespace Blocks
         SuspiciousGravelFirst, SuspiciousGravelLast = SuspiciousGravelFirst + 11,
         DecoratedPotFirst, DecoratedPotLast = DecoratedPotFirst + 3,
         SnifferEgg0, SnifferEgg1, SnifferEgg2,
+        Stonecutter, FletchingTable,
 
         Count
     };

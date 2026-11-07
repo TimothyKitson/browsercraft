@@ -380,6 +380,8 @@ namespace Tiles
         SuspiciousGravelTileFirst, SuspiciousGravelTileLast = SuspiciousGravelTileFirst + 3,
         PotBaseTile, PotSideTile, PotPatternFirst, PotPatternLast = PotPatternFirst + 22,
         SnifferEggTileFirst, SnifferEggTileLast = SnifferEggTileFirst + 17,
+        StonecutterTopTile, StonecutterSideTile, StonecutterBottomTile, StonecutterSawTile,
+        FletchingTopTile, FletchingFrontTile, FletchingSideTile,
 
         TileCount
     };

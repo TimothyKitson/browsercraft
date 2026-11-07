@@ -379,6 +379,7 @@ bool Inventory::belongsIn(int index, StackId id)
     if (index == HORSE_ARMOUR) return isHorseArmour(id);
     if (index == GRIND_TOP || index == GRIND_BOTTOM) return Anvil::wearsOut(id) || id == Items::Book;
     if (index == GRIND_RESULT) return false;
+    if (index == CUT_INPUT) return !isItem(id);
     if (index == BEACON_PAYMENT)
         return id == Items::IronIngot || id == Items::GoldIngot || id == Items::Emerald ||
                id == Items::Diamond || id == Items::NetheriteIngot;

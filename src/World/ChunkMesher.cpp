@@ -789,6 +789,17 @@ namespace
             const glm::vec3 c[4] = { glm::vec3(x0, yy, z1), glm::vec3(x1, yy, z1), glm::vec3(x1, yy, z0), glm::vec3(x0, yy, z0) };
             pushQuad(snap, lx, y, lz, id, c, tile, x0 * 16.0f, z0 * 16.0f, x1 * 16.0f, z1 * 16.0f, shade, true, out);
         };
+        if (id == Blocks::Stonecutter)
+        {
+            const BlockInfo& info = blockInfo(id);
+            const PartFace side{ info.tileSide, 0.0f, 7.0f, 16.0f, 16.0f };
+            const PartFace faces[6] = { side, side, { info.tileTop, 0.0f, 0.0f, 16.0f, 16.0f }, { info.tileBottom, 0.0f, 0.0f, 16.0f, 16.0f }, side, side };
+            emitPart(snap, lx, y, lz, id, glm::vec3(0.0f), glm::vec3(1.0f, 9.0f / 16.0f, 1.0f), faces, out);
+            const glm::vec3 saw[4] = { { 1.0f / 16.0f, 9.0f / 16.0f, 0.5f }, { 15.0f / 16.0f, 9.0f / 16.0f, 0.5f },
+                                       { 15.0f / 16.0f, 1.0f, 0.5f }, { 1.0f / 16.0f, 1.0f, 0.5f } };
+            pushQuad(snap, lx, y, lz, id, saw, Tiles::StonecutterSawTile, 1.0f, 9.0f, 15.0f, 16.0f, 0.9f, true, out);
+            return;
+        }
         if (isSnifferEgg(id))
         {
             const int first = Tiles::SnifferEggTileFirst + (id - Blocks::SnifferEgg0) * 6;

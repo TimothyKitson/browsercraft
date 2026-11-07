@@ -5697,6 +5697,42 @@ namespace
                 if (dx * dx + dy * dy <= 1.0f) t.set(x, y, hash2(x / 2, y / 2, 2504) > 0.7f ? Color{ 90, 140, 70 } : Color{ 150, 60, 50 });
             }
     }
+    void paintStonecutterTopTile(Tile& t)
+    {
+        t.fill(Color{ 128, 128, 128 });
+        for (int x = 0; x < Tile::N; ++x) t.set(x, 7, Color{ 60, 60, 64 });
+        t.speckle(8, 2601);
+    }
+    void paintStonecutterSideTile(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 7; y < Tile::N; ++y) for (int x = 0; x < Tile::N; ++x) t.set(x, y, y == 7 ? Color{ 150, 150, 150 } : Color{ 120, 120, 120 });
+    }
+    void paintStonecutterBottomTile(Tile& t) { t.fill(Color{ 110, 110, 110 }); t.speckle(8, 2602); }
+    void paintStonecutterSawTile(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 9; y < Tile::N; ++y) for (int x = 1; x < 15; ++x) t.set(x, y, Color{ 190, 190, 196 });
+        for (int x = 1; x < 15; x += 2) t.set(x, 8, Color{ 220, 220, 226 });
+    }
+    void paintFletchingTopTile(Tile& t)
+    {
+        t.fill(Color{ 200, 186, 136 });
+        for (int k = 0; k < Tile::N; ++k) { t.set(k, 0, Color{ 150, 120, 80 }); t.set(k, 15, Color{ 150, 120, 80 }); t.set(0, k, Color{ 150, 120, 80 }); t.set(15, k, Color{ 150, 120, 80 }); }
+        for (int k = 3; k < 13; ++k) t.set(k, k, Color{ 120, 90, 60 });
+    }
+    void paintFletchingFrontTile(Tile& t)
+    {
+        t.fill(Color{ 176, 140, 88 });
+        for (int y = 2; y < 8; ++y) for (int x = 4; x < 12; x += 3) t.set(x, y, Color{ 230, 230, 230 });
+        for (int x = 0; x < Tile::N; ++x) t.set(x, 10, Color{ 120, 90, 60 });
+    }
+    void paintFletchingSideTile(Tile& t)
+    {
+        t.fill(Color{ 176, 140, 88 });
+        for (int x = 0; x < Tile::N; ++x) t.set(x, 10, Color{ 120, 90, 60 });
+        t.speckle(6, 2603);
+    }
     void paintItemPitcherPlant(Tile& t)
     {
         paintDoubleIn(t, true, Color{ 100, 170, 190 }, 1333);
@@ -8467,6 +8503,13 @@ namespace
         { Tiles::DustLine1Off, paintRedstoneDust },
         { Tiles::DustLine1On, paintRedstoneDustLit },
         { Tiles::LeverHandle, paintLever },
+        { Tiles::StonecutterTopTile, paintStonecutterTopTile },
+        { Tiles::StonecutterSideTile, paintStonecutterSideTile },
+        { Tiles::StonecutterBottomTile, paintStonecutterBottomTile },
+        { Tiles::StonecutterSawTile, paintStonecutterSawTile },
+        { Tiles::FletchingTopTile, paintFletchingTopTile },
+        { Tiles::FletchingFrontTile, paintFletchingFrontTile },
+        { Tiles::FletchingSideTile, paintFletchingSideTile },
         { Tiles::PotBaseTile, paintPotBaseTile },
         { Tiles::PotSideTile, paintPotSideTile },
         { Tiles::BellTopTile, paintBellTopTile },
@@ -9305,6 +9348,13 @@ namespace
         { Tiles::GlassPaneTopTile, { "glass_pane_top", nullptr }, Tinting::None, 0, false },
         { Tiles::TerracottaPlainTile, { "terracotta", "hardened_clay", nullptr }, Tinting::None, 0, false },
         { Tiles::TintedGlassTile, { "tinted_glass", nullptr }, Tinting::None, 0, false },
+        { Tiles::StonecutterTopTile, { "stonecutter_top", nullptr }, Tinting::None, 0, true },
+        { Tiles::StonecutterSideTile, { "stonecutter_side", nullptr }, Tinting::None, 0, false },
+        { Tiles::StonecutterBottomTile, { "stonecutter_bottom", nullptr }, Tinting::None, 0, false },
+        { Tiles::StonecutterSawTile, { "stonecutter_saw", nullptr }, Tinting::None, 0, true },
+        { Tiles::FletchingTopTile, { "fletching_table_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::FletchingFrontTile, { "fletching_table_front", nullptr }, Tinting::None, 0, false },
+        { Tiles::FletchingSideTile, { "fletching_table_side", nullptr }, Tinting::None, 0, false },
         { Tiles::SnifferEggTileFirst + 0, { "sniffer_egg_not_cracked_north", nullptr }, Tinting::None, 0, false },
         { Tiles::SnifferEggTileFirst + 1, { "sniffer_egg_not_cracked_east", nullptr }, Tinting::None, 0, false },
         { Tiles::SnifferEggTileFirst + 2, { "sniffer_egg_not_cracked_south", nullptr }, Tinting::None, 0, false },
