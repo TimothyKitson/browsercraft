@@ -529,6 +529,10 @@ void EntityManager::trySpawnWave(const World& world, const glm::vec3& playerPosi
 
         if (!spawnAt(species, mobFeet, world)) continue;
 
+        if (species == MobId::WanderingTrader)
+            for (const float side : { -1.6f, 1.6f })
+                spawnAt(MobId::TraderLlama, mobFeet + glm::vec3(side, 0.0f, 1.2f), world);
+
         // A villager standing in a building takes that building's
         // trade, so the smith is the one who lives in the smithy. One
         // met out in the country has no building to take it from and
@@ -807,6 +811,24 @@ void EntityManager::setWolvesOnHostiles(float deltaTime, const glm::vec3& player
 {
     for (size_t i = 0; i < m_mobs.size(); ++i)
     {
+        if (m_mobs[i].typeId() == MobId::TraderLlama && m_mobs[i].alive() && !m_mobs[i].hostileNow())
+        {
+            const glm::vec3 from = m_mobs[i].position();
+            float nearest = 24.0f;
+            const Mob* trader = nullptr;
+            for (const Mob& other : m_mobs)
+            {
+                if (other.typeId() != MobId::WanderingTrader || !other.alive()) continue;
+                const float away = glm::length(other.position() - from);
+                if (away < nearest)
+                {
+                    nearest = away;
+                    trader = &other;
+                }
+            }
+            if (trader && nearest > 4.0f) m_mobs[i].huntTowards(trader->position());
+            continue;
+        }
         if (m_mobs[i].typeId() == MobId::Zoglin && m_mobs[i].alive())
         {
             const glm::vec3 from = m_mobs[i].position();

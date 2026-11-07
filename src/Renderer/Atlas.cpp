@@ -3819,6 +3819,18 @@ namespace
         t.speckle(4, 686);
     }
 
+    void paintLlamaSpit(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 3; y < 13; ++y)
+            for (int x = 3; x < 13; ++x)
+            {
+                const float dx = (x - 7.5f) / 5.0f, dy = (y - 7.5f) / 5.0f;
+                if (dx * dx + dy * dy > 1.0f || hash2(x, y, 731) > 0.8f) continue;
+                t.set(x, y, (x + y) % 3 == 0 ? Color{ 196, 206, 208 } : Color{ 232, 238, 236 });
+            }
+    }
+
     void paintItemGlowInkSac(Tile& t)
     {
         t.fill(Color{ 0, 0, 0, 0 });
@@ -9010,6 +9022,7 @@ namespace
         { Tiles::ItemLapis, paintItemLapis },
         { Tiles::ItemInkSac, paintItemInkSac },
         { Tiles::ItemGlowInkSac, paintItemGlowInkSac },
+        { Tiles::LlamaSpitTile, paintLlamaSpit },
         { Tiles::ItemNetheriteScrap, paintItemNetheriteScrap },
         { Tiles::ItemNetheriteIngot, paintItemNetheriteIngot },
         { Tiles::ItemShulkerShell, paintItemShulkerShell },
@@ -12273,6 +12286,12 @@ Atlas::Atlas()
             const int k = unit(spark, 64);
             blitImage(Tiles::ShulkerBulletTile, scaleNearest(cropImage(spark, 2 * k, 2 * k, 8 * k, 8 * k), tilePixels, tilePixels));
         }
+        const Image spit = loadPNG("assets/textures/entity/llama/spit.png");
+        if (spit.valid())
+        {
+            const int k = unit(spit, 64);
+            blitImage(Tiles::LlamaSpitTile, scaleNearest(cropImage(spit, 2 * k, 2 * k, 2 * k, 2 * k), tilePixels, tilePixels));
+        }
         const Image dragonBall = loadPNG("assets/textures/entity/enderdragon/dragon_fireball.png");
         if (dragonBall.valid())
             blitImage(Tiles::DragonFireballTile, scaleNearest(squareOf(dragonBall), tilePixels, tilePixels));
@@ -12733,6 +12752,7 @@ std::vector<int> unlinkedTiles()
         Tiles::ItemShield, Tiles::ExperienceOrb, Tiles::ArrowInFlight, Tiles::RainDrop,
         Tiles::SnowFlake, Tiles::ShulkerBulletTile, Tiles::DragonFireballTile, Tiles::CandleFlameTile,
         Tiles::LeashKnotTile, Tiles::SpectralInFlight, Tiles::TippedInFlight, Tiles::TridentInFlight,
+        Tiles::LlamaSpitTile,
     };
 
     std::vector<int> unlinked;

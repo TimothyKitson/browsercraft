@@ -36,7 +36,8 @@ namespace Arrows
                                 Tipped,
                                 Trident,
                                 XpBottle,
-                                Rocket };
+                                Rocket,
+                                Spit };
 
     // How far a wind charge's burst reaches, and how hard it pushes at
     // the middle of it. Pure arithmetic over two points, so --selftest
@@ -102,7 +103,7 @@ struct Arrow
     // lobbed, so it falls like an arrow and is not one of these.
     bool flies() const
     {
-        return !shaft() && kind != Arrows::Kind::Potion && kind != Arrows::Kind::XpBottle;
+        return !shaft() && kind != Arrows::Kind::Potion && kind != Arrows::Kind::XpBottle && kind != Arrows::Kind::Spit;
     }
 
     // Whether it breaks on impact rather than sticking in what it hit.

@@ -805,6 +805,7 @@ namespace
                 const MobType& y = mobType(static_cast<MobId>(b));
                 if (x.inanimate || y.inanimate) continue;
                 if (std::string(x.name) == y.name) continue;
+                if (x.id == MobId::TraderLlama || y.id == MobId::TraderLlama) continue;
                 if (x.voice == y.voice || x.hurtVoice == y.hurtVoice ||
                     x.deathVoice == y.deathVoice) distinct = false;
             }
@@ -4532,6 +4533,38 @@ namespace
         check(spread, "and its copies stand within three blocks of it");
     }
 
+    void testPackSheetsAndLlamas()
+    {
+        section("every mob on its pack sheet, the trader llama and llama spit");
+        bool named = true;
+        bool present = true;
+        const bool packHere = std::filesystem::exists("assets/textures/entity");
+        for (int i = 0; i < mobTypeCount(); ++i)
+        {
+            const MobType& t = mobType(static_cast<MobId>(i));
+            const std::string sheet = t.packSheet;
+            if (sheet.size() < 5 || sheet.substr(sheet.size() - 4) != ".png") named = false;
+            else if (packHere && !std::filesystem::exists("assets/textures/entity/" + sheet)) present = false;
+        }
+        check(named, "every mob names its sheet in the pack");
+        check(present, "and every one of those sheets is in the pack");
+        check(std::string(mobType(MobId::Tadpole).packSheet) == "tadpole/tadpole.png", "the tadpole's is in the tadpole folder");
+
+        const MobType& llama = mobType(MobId::Llama);
+        check(llama.spits && llama.neutral && llama.arrowDamage == 1 && llama.arrowRange == 20.0f && llama.arrowInterval == 2.0f,
+              "a llama spits for one, from twenty blocks, every two seconds, once provoked");
+        check(!Mob::hostileNow(llama, false) && Mob::hostileNow(llama, true), "and only once provoked");
+        const MobType& trader = mobType(MobId::TraderLlama);
+        check(trader.spits && trader.model.size() == llama.model.size() && trader.breedingFood == Blocks::Air,
+              "a trader llama is a llama that cannot be bred");
+        unsigned int shell = 0, spots = 0;
+        check(spawnEggColours(MobId::TraderLlama, shell, spots) && shell == 0xEAA430u && spots == 0x456296u,
+              "with 1.21.1's spawn egg");
+        Arrow spit;
+        spit.kind = Arrows::Kind::Spit;
+        check(!spit.flies() && spit.bursts(), "spit arcs like an arrow and splashes rather than sticking");
+    }
+
     void testArchery()
     {
         section("the crossbow, and spectral and tipped arrows");
@@ -7846,7 +7879,7 @@ namespace
                 case MobId::Frog:
                 // And the squid, which belongs to open water.
                 case MobId::Squid: case MobId::GlowSquid:
-                case MobId::Zoglin: case MobId::Illusioner:
+                case MobId::Zoglin: case MobId::Illusioner: case MobId::TraderLlama:
                 // A small slime is never spawned: it is what a big
                 // one leaves behind when it is killed.
                 case MobId::SlimeSmall:
@@ -12009,7 +12042,7 @@ namespace
         for (int i = 0; i < mobTypeCount(); ++i)
         {
             const MobType& t = mobType(static_cast<MobId>(i));
-            if (t.inanimate || static_cast<MobId>(i) == MobId::TropicalFishLarge) continue;
+            if (t.inanimate || static_cast<MobId>(i) == MobId::TropicalFishLarge || static_cast<MobId>(i) == MobId::TraderLlama) continue;
             if (!voices.insert(static_cast<int>(t.voice)).second) distinct = false;
         }
         check(distinct, "and no two living species share one");
@@ -15024,6 +15057,7 @@ int runSelfTest()
     testArmadillo();
     testGlowSquid();
     testFangsZoglinIllusioner();
+    testPackSheetsAndLlamas();
     testMadeThings();
     testTheEndAndTheSea();
     testPathfinding();

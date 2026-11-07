@@ -1045,7 +1045,7 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
             }
         }
         else if (m_shootTimer <= 0.0f && range > 2.5f && range < t.arrowRange &&
-            world.hasLineOfSight(eye, aim))
+            (!t.spits || hostileNow()) && world.hasLineOfSight(eye, aim))
         {
             m_shootTimer = t.arrowInterval;
 
@@ -1067,11 +1067,13 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
                       : t.shootsBullet ? Arrows::Kind::Bullet
                       : t.shootsBreath ? Arrows::Kind::Breath
                       : t.throwsPotions ? Arrows::Kind::Potion
+                      : t.spits ? Arrows::Kind::Spit
                                      : Arrows::Kind::Shaft;
             m_shots.push_back(shot);
 
-            emit(t.shootsFire ? Sound::Fire : Sound::Click, 0.5f,
-                 t.shootsWind ? 1.6f : 1.2f);
+            if (t.spits) emit(Sound::LlamaSpit, 0.8f, 0.9f + random01() * 0.2f);
+            else emit(t.shootsFire ? Sound::Fire : Sound::Click, 0.5f,
+                      t.shootsWind ? 1.6f : 1.2f);
         }
     }
 

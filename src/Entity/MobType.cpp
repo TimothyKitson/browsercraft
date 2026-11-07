@@ -2771,6 +2771,11 @@ namespace
             t.walkSpeed = 2.2f;
             t.limbSwing = 0.5f;
             t.breedingFood = Items::Wheat;
+            t.neutral = true;
+            t.spits = true;
+            t.arrowDamage = 1;
+            t.arrowRange = 20.0f;
+            t.arrowInterval = 2.0f;
 
             t.drop = Items::Leather;
             t.dropCount = 1;
@@ -3651,6 +3656,17 @@ namespace
         }
 
         {
+            MobType& t = table[static_cast<size_t>(MobId::TraderLlama)];
+            t = table[static_cast<size_t>(MobId::Llama)];
+            t.id = MobId::TraderLlama;
+            t.name = "Trader Llama";
+            t.texture = "trader_llama";
+            t.breedingFood = Blocks::Air;
+            t.bodyColour = rgb(214, 196, 170);
+            t.markColour = rgb(60, 90, 160);
+        }
+
+        {
             MobType& t = table[static_cast<size_t>(MobId::GlowSquid)];
             t = table[static_cast<size_t>(MobId::Squid)];
             t.id = MobId::GlowSquid;
@@ -3763,6 +3779,38 @@ namespace
             t.model.push_back(mc(Part::Body, 0, 0, 0, 2, 7, 0, -1, 0, 0, 22, 0));
         }
 
+        struct Sheet { MobId id; const char* path; };
+        static const Sheet SHEETS[] = {
+            { MobId::Sheep, "sheep/sheep.png" }, { MobId::Pig, "pig/pig.png" }, { MobId::Cow, "cow/cow.png" },
+            { MobId::Chicken, "chicken.png" }, { MobId::Zombie, "zombie/zombie.png" }, { MobId::Skeleton, "skeleton/skeleton.png" },
+            { MobId::Creeper, "creeper/creeper.png" }, { MobId::Spider, "spider/spider.png" }, { MobId::Enderman, "enderman/enderman.png" },
+            { MobId::ZombiePigman, "piglin/zombified_piglin.png" }, { MobId::Villager, "villager/villager.png" }, { MobId::Wolf, "wolf/wolf.png" },
+            { MobId::Horse, "horse/horse_brown.png" }, { MobId::Boat, "boat/oak.png" }, { MobId::Minecart, "minecart.png" },
+            { MobId::IronGolem, "iron_golem/iron_golem.png" }, { MobId::Blaze, "blaze.png" }, { MobId::WitherSkeleton, "skeleton/wither_skeleton.png" },
+            { MobId::MagmaCube, "slime/magmacube.png" }, { MobId::Breeze, "breeze/breeze.png" }, { MobId::Guardian, "guardian.png" },
+            { MobId::Warden, "warden/warden.png" }, { MobId::Witch, "witch.png" }, { MobId::EnderDragon, "enderdragon/dragon.png" },
+            { MobId::Wither, "wither/wither.png" }, { MobId::Shulker, "shulker/shulker.png" }, { MobId::Drowned, "zombie/drowned.png" },
+            { MobId::Ghast, "ghast/ghast.png" }, { MobId::Frog, "frog/temperate_frog.png" }, { MobId::Pillager, "illager/pillager.png" },
+            { MobId::Vindicator, "illager/vindicator.png" }, { MobId::Ravager, "illager/ravager.png" }, { MobId::Slime, "slime/slime.png" },
+            { MobId::SlimeSmall, "slime/slime.png" }, { MobId::Bat, "bat.png" }, { MobId::CaveSpider, "spider/cave_spider.png" },
+            { MobId::Silverfish, "silverfish.png" }, { MobId::Piglin, "piglin/piglin.png" }, { MobId::PiglinBrute, "piglin/piglin_brute.png" },
+            { MobId::Strider, "strider/strider.png" }, { MobId::Cod, "fish/cod.png" }, { MobId::Salmon, "fish/salmon.png" },
+            { MobId::Pufferfish, "fish/pufferfish.png" }, { MobId::Dolphin, "dolphin.png" }, { MobId::Turtle, "turtle/big_sea_turtle.png" },
+            { MobId::Axolotl, "axolotl/axolotl_lucy.png" }, { MobId::Rabbit, "rabbit/brown.png" }, { MobId::Fox, "fox/fox.png" },
+            { MobId::Goat, "goat/goat.png" }, { MobId::Panda, "panda/panda.png" }, { MobId::Bee, "bee/bee.png" },
+            { MobId::Cat, "cat/tabby.png" }, { MobId::Llama, "llama/creamy.png" }, { MobId::PolarBear, "bear/polarbear.png" },
+            { MobId::Stray, "skeleton/stray.png" }, { MobId::Husk, "zombie/husk.png" }, { MobId::Bogged, "skeleton/bogged.png" },
+            { MobId::Phantom, "phantom.png" }, { MobId::ZombieVillager, "zombie_villager/zombie_villager.png" }, { MobId::Endermite, "endermite.png" },
+            { MobId::Vex, "illager/vex.png" }, { MobId::SnowGolem, "snow_golem.png" }, { MobId::ElderGuardian, "guardian_elder.png" },
+            { MobId::WanderingTrader, "wandering_trader.png" }, { MobId::Camel, "camel/camel.png" }, { MobId::Parrot, "parrot/parrot_red_blue.png" },
+            { MobId::Allay, "allay/allay.png" }, { MobId::Sniffer, "sniffer/sniffer.png" }, { MobId::TropicalFish, "fish/tropical_a.png" },
+            { MobId::TropicalFishLarge, "fish/tropical_b.png" }, { MobId::Tadpole, "tadpole/tadpole.png" }, { MobId::ChestBoat, "chest_boat/oak.png" },
+            { MobId::Raft, "boat/bamboo.png" }, { MobId::ChestRaft, "chest_boat/bamboo.png" }, { MobId::Armadillo, "armadillo.png" },
+            { MobId::TraderLlama, "llama/creamy.png" },
+        };
+        for (const Sheet& sheet : SHEETS)
+            if (!*table[static_cast<size_t>(sheet.id)].packSheet) table[static_cast<size_t>(sheet.id)].packSheet = sheet.path;
+
         return table;
     }
 }
@@ -3845,6 +3893,7 @@ bool spawnEggColours(MobId id, unsigned int& base, unsigned int& spots)
         case MobId::Bee: base = 0xEDC343u; spots = 0x43241Bu; return true;
         case MobId::Cat: base = 0xEFC88Eu; spots = 0x957256u; return true;
         case MobId::Llama: base = 0xC09E7Du; spots = 0x995F40u; return true;
+        case MobId::TraderLlama: base = 0xEAA430u; spots = 0x456296u; return true;
         case MobId::PolarBear: base = 0xEEEEDEu; spots = 0xD5D6CDu; return true;
         case MobId::Stray: base = 0x617677u; spots = 0xDDEAEAu; return true;
         case MobId::Husk: base = 0x797061u; spots = 0xE6CC94u; return true;

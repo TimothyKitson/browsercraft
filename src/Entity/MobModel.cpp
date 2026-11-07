@@ -565,6 +565,7 @@ std::string MobModel::variantOf(const Mob& mob) const
             return root + "horse/horse_" + COLOURS[pick % 7u] + ".png";
         }
         case MobId::Llama:
+        case MobId::TraderLlama:
         {
             static const char* COATS[] = { "creamy", "white", "brown", "gray" };
             return root + "llama/" + COATS[pick % 4u] + ".png";
@@ -604,7 +605,7 @@ std::string MobModel::variantOf(const Mob& mob) const
         case MobId::Bee:
             return mob.hostileNow() ? root + "bee/bee_angry.png" : std::string();
         case MobId::Tadpole:
-            return root + "tadpole.png";
+            return root + "tadpole/tadpole.png";
         case MobId::Armadillo:
             return root + "armadillo.png";
         case MobId::Boat:
@@ -677,6 +678,9 @@ std::vector<std::string> MobModel::coatOverlaysOf(const Mob& mob) const
             break;
         case MobId::Cat:
             if (mob.tamed()) layers.push_back(root + "cat/cat_collar.png#B02E26");
+            break;
+        case MobId::TraderLlama:
+            layers.push_back(root + "llama/decor/trader_llama.png");
             break;
         case MobId::TropicalFish:
         case MobId::TropicalFishLarge:

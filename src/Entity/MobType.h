@@ -131,6 +131,7 @@ enum class MobId : uint8_t
     GlowSquid,
     Zoglin,
     Illusioner,
+    TraderLlama,
 
     Count
 };
@@ -311,6 +312,7 @@ struct MobType
     bool throwsPotions = false;
     bool conjuresFangs = false;
     bool castsIllusions = false;
+    bool spits = false;
     bool shootsWind = false;
     bool shootsBullet = false;
     bool shootsBreath = false;

@@ -212,6 +212,7 @@ void Projectiles::render(Shader& shader, const Camera& camera, const Atlas& atla
     const TileUV tridentUV = tileUV(Tiles::TridentInFlight);
     const TileUV xpUV = tileUV(Tiles::ItemMaterialFirst + 8);
     const TileUV rocketUV = tileUV(Tiles::ItemFireworkFirst);
+    const TileUV spitUV = tileUV(Tiles::LlamaSpitTile);
     for (const Arrow& arrow : drawn)
     {
         // Along its flight, or along the way it was last going.
@@ -246,13 +247,15 @@ void Projectiles::render(Shader& shader, const Camera& camera, const Atlas& atla
                         : (arrow.kind == Arrows::Kind::Trident) ? tridentUV
                         : (arrow.kind == Arrows::Kind::XpBottle) ? xpUV
                         : (arrow.kind == Arrows::Kind::Rocket) ? rocketUV
+                        : (arrow.kind == Arrows::Kind::Spit) ? spitUV
                                                              : arrowUV;
         // A potion is drawn as the bottle it is rather than as a
         // shaft, so it is square like a charge without being one.
         const bool bottle = arrow.kind == Arrows::Kind::Potion || arrow.kind == Arrows::Kind::XpBottle || arrow.kind == Arrows::Kind::Rocket;
         const bool trident = arrow.kind == Arrows::Kind::Trident;
-        const float length = trident ? 1.3f : (charge || bottle) ? 0.34f : LENGTH;
-        const float width = trident ? 0.32f : (charge || bottle) ? 0.34f : WIDTH;
+        const bool spit = arrow.kind == Arrows::Kind::Spit;
+        const float length = trident ? 1.3f : spit ? 0.25f : (charge || bottle) ? 0.34f : LENGTH;
+        const float width = trident ? 0.32f : spit ? 0.25f : (charge || bottle) ? 0.34f : WIDTH;
 
         auto push = [&](const glm::vec3& p, float tu, float tv, float shade) {
             m_vertices.push_back(p.x);

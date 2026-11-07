@@ -287,7 +287,8 @@ bool MobSkin::loadFile(const std::string& path, std::vector<uint8_t>& pixels, in
     const bool animalSheet = (w == 64 && (h == 32 || h == 64 || h == 128));
     const bool wideSheet = (w == 128 && (h == 64 || h == 128));
     const bool dragonSheet = (w == 256 && h == 256);
-    if (!smallSheet && !oddSheet && !animalSheet && !wideSheet && !dragonSheet)
+    const bool snifferSheet = (w == 192 && h == 192);
+    if (!smallSheet && !oddSheet && !animalSheet && !wideSheet && !dragonSheet && !snifferSheet)
     {
         std::printf("Mob texture %s ignored: not one of Mojang's sheet shapes, "
                     "got %dx%d\n",

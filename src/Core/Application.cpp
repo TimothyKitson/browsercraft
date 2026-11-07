@@ -1,4 +1,5 @@
 #include "Application.h"
+#include <cstdlib>
 #include "BuildTag.h"
 #include "GLFunctions.h"
 #include "Renderer/Screenshot.h"
@@ -2499,7 +2500,7 @@ bool Application::frame()
             m_startupScreen == "attackhud" || m_startupScreen == "attackready" ||
             m_startupScreen == "attackhotbar" || m_startupScreen == "bossbars" ||
             m_startupScreen == "gamemode" || m_startupScreen == "spectator" ||
-            m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" || m_startupScreen == "leads" || m_startupScreen == "anvilname" || m_startupScreen == "dials" || m_startupScreen == "spyglass" || m_startupScreen == "bundle" || m_startupScreen == "archery" || m_startupScreen == "food" || m_startupScreen == "materials" || m_startupScreen == "tropical" || m_startupScreen == "book" || m_startupScreen == "bookedit" || m_startupScreen == "booktip" || m_startupScreen == "boats" || m_startupScreen == "carts" || m_startupScreen == "fireworks" || m_startupScreen == "jukebox" || m_startupScreen == "potioncloud" || m_startupScreen == "armadillo" || m_startupScreen == "signs" || m_startupScreen == "glowsquid" || m_startupScreen == "fangs" || m_startupScreen == "zoglin" || m_startupScreen == "illusioner" ||
+            m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" || m_startupScreen == "leads" || m_startupScreen == "anvilname" || m_startupScreen == "dials" || m_startupScreen == "spyglass" || m_startupScreen == "bundle" || m_startupScreen == "archery" || m_startupScreen == "food" || m_startupScreen == "materials" || m_startupScreen == "tropical" || m_startupScreen == "book" || m_startupScreen == "bookedit" || m_startupScreen == "booktip" || m_startupScreen == "boats" || m_startupScreen == "carts" || m_startupScreen == "fireworks" || m_startupScreen == "jukebox" || m_startupScreen == "potioncloud" || m_startupScreen == "armadillo" || m_startupScreen == "signs" || m_startupScreen == "glowsquid" || m_startupScreen == "fangs" || m_startupScreen == "zoglin" || m_startupScreen == "illusioner" || m_startupScreen == "llamas" ||
             m_startupScreen == "grinderror" || m_startupScreen == "woods" ||
             m_startupScreen == "cherry" || m_startupScreen == "mangrove" || m_startupScreen == "fungi" ||
             m_startupScreen == "stones" || m_startupScreen == "colours" || m_startupScreen == "candles" ||
@@ -2508,7 +2509,7 @@ bool Application::frame()
             m_startupScreen == "farm" || m_startupScreen == "corals" || m_startupScreen == "ice" || m_startupScreen == "wiring" || m_startupScreen == "utility" || m_startupScreen == "dig" ||
             m_startupScreen == "boat" || m_startupScreen == "rails" ||
             m_startupScreen == "mobs" || m_startupScreen == "golem" ||
-            m_startupScreen == "glowmobs" || m_startupScreen == "variants" ||
+            m_startupScreen == "glowmobs" || m_startupScreen == "variants" || m_startupScreen == "zoo" || m_startupScreen == "llamas" ||
             m_startupScreen == "shulker" ||
             m_startupScreen == "nethermobs" || m_startupScreen == "lairmobs" ||
             m_startupScreen == "jungle" || m_startupScreen == "savanna" ||
@@ -2643,6 +2644,8 @@ bool Application::frame()
                                   m_startupScreen != "mobs" &&
                                   m_startupScreen != "glowmobs" &&
                                   m_startupScreen != "variants" &&
+                                  m_startupScreen != "zoo" &&
+                                  m_startupScreen != "llamas" &&
                                   m_startupScreen != "golem" &&
                                   m_startupScreen != "shulker" &&
                                   m_startupScreen != "nethermobs" &&
@@ -3009,7 +3012,7 @@ bool Application::frame()
             if (m_startupScreen == "attackhud" || m_startupScreen == "attackready" ||
                 m_startupScreen == "attackhotbar" || m_startupScreen == "bossbars" ||
                 m_startupScreen == "gamemode" || m_startupScreen == "spectator" ||
-                m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" || m_startupScreen == "leads" || m_startupScreen == "anvilname" || m_startupScreen == "dials" || m_startupScreen == "spyglass" || m_startupScreen == "bundle" || m_startupScreen == "archery" || m_startupScreen == "food" || m_startupScreen == "materials" || m_startupScreen == "tropical" || m_startupScreen == "book" || m_startupScreen == "bookedit" || m_startupScreen == "booktip" || m_startupScreen == "boats" || m_startupScreen == "carts" || m_startupScreen == "fireworks" || m_startupScreen == "jukebox" || m_startupScreen == "potioncloud" || m_startupScreen == "armadillo" || m_startupScreen == "signs" || m_startupScreen == "glowsquid" || m_startupScreen == "fangs" || m_startupScreen == "zoglin" || m_startupScreen == "illusioner" ||
+                m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" || m_startupScreen == "leads" || m_startupScreen == "anvilname" || m_startupScreen == "dials" || m_startupScreen == "spyglass" || m_startupScreen == "bundle" || m_startupScreen == "archery" || m_startupScreen == "food" || m_startupScreen == "materials" || m_startupScreen == "tropical" || m_startupScreen == "book" || m_startupScreen == "bookedit" || m_startupScreen == "booktip" || m_startupScreen == "boats" || m_startupScreen == "carts" || m_startupScreen == "fireworks" || m_startupScreen == "jukebox" || m_startupScreen == "potioncloud" || m_startupScreen == "armadillo" || m_startupScreen == "signs" || m_startupScreen == "glowsquid" || m_startupScreen == "fangs" || m_startupScreen == "zoglin" || m_startupScreen == "illusioner" || m_startupScreen == "llamas" ||
                 m_startupScreen == "grinderror" || m_startupScreen == "woods" ||
                 m_startupScreen == "cherry" || m_startupScreen == "mangrove" || m_startupScreen == "fungi" ||
                 m_startupScreen == "stones" || m_startupScreen == "colours" || m_startupScreen == "candles" ||
@@ -3901,7 +3904,7 @@ bool Application::frame()
                     m_camera.pitch = 5.0f;
                     m_camera.addLook(0.0f, 0.0f, 0.0f);
                 }
-                if (m_startupScreen == "fangs" || m_startupScreen == "zoglin" || m_startupScreen == "illusioner")
+                if (m_startupScreen == "fangs" || m_startupScreen == "zoglin" || m_startupScreen == "illusioner" || m_startupScreen == "llamas")
                 {
                     m_devAttackStrength = 1.0f;
                     for (int dx = 1; dx <= 14; ++dx)
@@ -3937,6 +3940,14 @@ bool Application::frame()
                         put(MobId::Hoglin, 9.5f, 3.5f, 180.0f);
                         if (Mob* young = put(MobId::Zoglin, 4.5f, -4.0f, 60.0f)) (void)young;
                         m_camera.pitch = -14.0f;
+                    }
+                    else if (m_startupScreen == "llamas")
+                    {
+                        put(MobId::WanderingTrader, 9.5f, 0.5f, 180.0f);
+                        put(MobId::TraderLlama, 9.5f, -2.2f, 180.0f);
+                        put(MobId::TraderLlama, 9.5f, 3.2f, 180.0f);
+                        if (Mob* angry = put(MobId::Llama, 6.5f, -4.5f, 160.0f)) angry->damage(1, glm::vec3(1.0f, 0.0f, -1.0f));
+                        m_camera.pitch = -10.0f;
                     }
                     else
                     {
@@ -4612,11 +4623,11 @@ bool Application::frame()
 
             m_freezeMobs = m_startupScreen == "mobs" || m_startupScreen == "golem" ||
                            m_startupScreen == "attackready" ||
-                           m_startupScreen == "glowmobs" || m_startupScreen == "variants" ||
+                           m_startupScreen == "glowmobs" || m_startupScreen == "variants" || m_startupScreen == "zoo" ||
                            m_startupScreen == "nethermobs" ||
                            m_startupScreen == "lairmobs";
 
-            if (m_startupScreen == "mobs" || m_startupScreen == "glowmobs" || m_startupScreen == "variants")
+            if (m_startupScreen == "mobs" || m_startupScreen == "glowmobs" || m_startupScreen == "variants" || m_startupScreen == "zoo")
             {
                 const bool glowing = m_startupScreen == "glowmobs";
                 const bool varied = m_startupScreen == "variants";
@@ -4667,7 +4678,19 @@ bool Application::frame()
                     MobId::Rabbit, MobId::Parrot, MobId::Fox, MobId::Panda, MobId::Frog,
                 };
                 const MobId* LINEUP_START = glowing ? NIGHT : varied ? VARIED : DAY;
-                const std::vector<MobId> LINEUP(LINEUP_START, LINEUP_START + 10);
+                std::vector<MobId> LINEUP(LINEUP_START, LINEUP_START + 10);
+                if (m_startupScreen == "zoo")
+                {
+                    const char* pageText = std::getenv("ZOO_PAGE");
+                    const int page = pageText ? std::atoi(pageText) : 0;
+                    LINEUP.clear();
+                    int seen = 0;
+                    for (int i = 0; i < mobTypeCount() && static_cast<int>(LINEUP.size()) < 10; ++i)
+                    {
+                        if (mobType(static_cast<MobId>(i)).inanimate) continue;
+                        if (seen++ >= page * 10) LINEUP.push_back(static_cast<MobId>(i));
+                    }
+                }
                 // Two ranks of five, so ten of them fit the arena.
                 int slot = 0;
                 for (MobId id : LINEUP)
@@ -12228,6 +12251,7 @@ namespace
         void burst(const glm::vec3& at, Arrows::Kind kind, bool fromPlayer) override
         {
             (void)fromPlayer;
+            if (kind == Arrows::Kind::Spit) return;
 
             if (kind == Arrows::Kind::Breath)
             {

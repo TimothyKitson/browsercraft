@@ -428,6 +428,7 @@ void AudioEngine::buildSounds()
     loadVariants(Sound::IllusionerMirror, "mob/illusion_illager/mirror_move", 2);
     loadSingle(Sound::IllusionerCast, "mob/illusion_illager/prepare_mirror.ogg");
     loadVariants(Sound::ZoglinConvert, "mob/hoglin/converted", 2);
+    loadVariants(Sound::LlamaSpit, "mob/llama/spit", 2);
 
     auto make = [&](Sound id) -> Synth {
         auto& clips = m_buffers[static_cast<size_t>(id)];
@@ -1805,6 +1806,12 @@ void AudioEngine::buildSounds()
         s.addNoise(1.2f, 700.0f, 2.0f, 0.30f, false, 965);
         s.addTone(1.2f, 160.0f, 90.0f, 2.0f, 0.26f, true);
         s.finish(0.55f);
+    }
+    {
+        Synth s = make(Sound::LlamaSpit);
+        s.addNoise(0.16f, 1800.0f, 20.0f, 0.5f, true, 971);
+        s.addNoise(0.10f, 600.0f, 26.0f, 0.3f, false, 972);
+        s.finish(0.45f);
     }
     {
         Synth s = make(Sound::DyeUse);

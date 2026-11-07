@@ -273,6 +273,7 @@ enum class Sound : uint16_t
     IllusionerMirror,
     IllusionerCast,
     ZoglinConvert,
+    LlamaSpit,
     GoatHornFirst,
     GoatHornLast = GoatHornFirst + 7,
     Count
