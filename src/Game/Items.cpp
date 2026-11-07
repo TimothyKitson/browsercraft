@@ -283,6 +283,10 @@ namespace
         { "Tropical Fish", Tiles::ItemTropicalFish, 64 },
         { "Name Tag", Tiles::ItemNameTag, 64 },
         { "Lead", Tiles::ItemLead, 64 },
+        { "Spyglass", Tiles::ItemSpyglass, 1 },
+        { "Clock", Tiles::ItemClockFirst, 64 },
+        { "Recovery Compass", Tiles::ItemRecoveryFirst + 16, 64 },
+        { "Echo Shard", Tiles::ItemEchoShard, 64 },
     };
 
     static_assert(sizeof(ITEMS) / sizeof(ITEMS[0]) ==

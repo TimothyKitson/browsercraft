@@ -856,6 +856,10 @@ void Application::loadLevel()
             m_commands[{ static_cast<int>(saved.dimension), saved.x, saved.y, saved.z }] = command;
         }
         m_itemNames = state.itemNames;
+        m_lodestones = state.lodestones;
+        m_hasDeathPoint = state.hasDeathPoint;
+        m_deathPoint = glm::vec3(state.deathPoint[0], state.deathPoint[1], state.deathPoint[2]);
+        m_deathDimension = state.deathDimension;
         m_structures.clear();
         for (const LevelState::SavedStructure& saved : state.structures)
         {
@@ -1067,6 +1071,12 @@ void Application::saveLevel()
         state.commands.push_back(saved);
     }
     state.itemNames = m_itemNames;
+    state.lodestones = m_lodestones;
+    state.hasDeathPoint = m_hasDeathPoint;
+    state.deathPoint[0] = m_deathPoint.x;
+    state.deathPoint[1] = m_deathPoint.y;
+    state.deathPoint[2] = m_deathPoint.z;
+    state.deathDimension = static_cast<int8_t>(m_deathDimension);
     for (const auto& entry : m_structures)
     {
         LevelState::SavedStructure saved;
@@ -1526,6 +1536,11 @@ bool Application::frame()
             m_player.update(deltaTime, *m_world, Player::Controls{});
             m_camera.position = m_player.eyePosition();
             updateWorldAround(deltaTime);
+            if (m_devScope)
+            {
+                m_scoping = true;
+                m_camera.fov = 7.0f;
+            }
         }
         else if (playing() && !m_inventoryOpen)
         {
@@ -2198,6 +2213,9 @@ bool Application::frame()
                 m_orbs.spawnValue(m_player.position + glm::vec3(0.0f, 0.6f, 0.0f), dropped);
 
             m_screen = Screen::Dead;
+            m_hasDeathPoint = true;
+            m_deathPoint = m_player.position;
+            m_deathDimension = static_cast<int>(m_dimension);
             m_hardcoreDeath = modeIsHardcore(m_gameMode);
             if (m_inventoryOpen) closeInventory();
             setMouseCaptured(false);
@@ -2250,7 +2268,7 @@ bool Application::frame()
             m_startupScreen == "attackhud" || m_startupScreen == "attackready" ||
             m_startupScreen == "attackhotbar" || m_startupScreen == "bossbars" ||
             m_startupScreen == "gamemode" || m_startupScreen == "spectator" ||
-            m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" || m_startupScreen == "leads" || m_startupScreen == "anvilname" ||
+            m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" || m_startupScreen == "leads" || m_startupScreen == "anvilname" || m_startupScreen == "dials" || m_startupScreen == "spyglass" ||
             m_startupScreen == "grinderror" || m_startupScreen == "woods" ||
             m_startupScreen == "cherry" || m_startupScreen == "mangrove" || m_startupScreen == "fungi" ||
             m_startupScreen == "stones" || m_startupScreen == "colours" || m_startupScreen == "candles" ||
@@ -2347,6 +2365,8 @@ bool Application::frame()
                                   m_startupScreen != "fishing" &&
                                   m_startupScreen != "leads" &&
                                   m_startupScreen != "anvilname" &&
+                                  m_startupScreen != "dials" &&
+                                  m_startupScreen != "spyglass" &&
                                   m_startupScreen != "grinderror" &&
                                   m_startupScreen != "woods" &&
                                   m_startupScreen != "cherry" &&
@@ -2739,7 +2759,7 @@ bool Application::frame()
             if (m_startupScreen == "attackhud" || m_startupScreen == "attackready" ||
                 m_startupScreen == "attackhotbar" || m_startupScreen == "bossbars" ||
                 m_startupScreen == "gamemode" || m_startupScreen == "spectator" ||
-                m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" || m_startupScreen == "leads" || m_startupScreen == "anvilname" ||
+                m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" || m_startupScreen == "leads" || m_startupScreen == "anvilname" || m_startupScreen == "dials" || m_startupScreen == "spyglass" ||
                 m_startupScreen == "grinderror" || m_startupScreen == "woods" ||
                 m_startupScreen == "cherry" || m_startupScreen == "mangrove" || m_startupScreen == "fungi" ||
                 m_startupScreen == "stones" || m_startupScreen == "colours" || m_startupScreen == "candles" ||
@@ -3477,6 +3497,26 @@ bool Application::frame()
                     m_inventory.slot(6) = ItemStack{ doorBaseOf(3), 3 };
                     m_inventory.slot(7) = ItemStack{ trapdoorBaseOf(5), 2 };
                     m_inventory.slot(8) = ItemStack{ Blocks::DarkOakSapling, 4 };
+                }
+                if (m_startupScreen == "dials" || m_startupScreen == "spyglass")
+                {
+                    m_devAttackStrength = 1.0f;
+                    m_spawnPoint = glm::vec3(px + 40.0f, static_cast<float>(py), pz - 40.0f);
+                    m_hasDeathPoint = true;
+                    m_deathPoint = glm::vec3(px - 30.0f, static_cast<float>(py), pz);
+                    m_deathDimension = static_cast<int>(m_dimension);
+                    m_world->setBlock(px + 3, py, pz + 3, Blocks::Lodestone);
+                    m_lodestones.push_back({ static_cast<int>(m_dimension), px + 3, py, pz + 3 });
+                    m_inventory.setSelectedSlot(m_startupScreen == "spyglass" ? 4 : 0);
+                    m_inventory.slot(0) = ItemStack{ Items::Compass, 1 };
+                    ItemStack bound{ Items::Compass, 1 };
+                    bound.damage = static_cast<int>(m_lodestones.size());
+                    m_inventory.slot(1) = bound;
+                    m_inventory.slot(2) = ItemStack{ Items::Clock, 1 };
+                    m_inventory.slot(3) = ItemStack{ Items::RecoveryCompass, 1 };
+                    m_inventory.slot(4) = ItemStack{ Items::Spyglass, 1 };
+                    m_inventory.slot(5) = ItemStack{ Items::EchoShard, 8 };
+                    m_devScope = m_startupScreen == "spyglass";
                 }
                 if (m_startupScreen == "leads" || m_startupScreen == "anvilname")
                 {
@@ -6784,8 +6824,12 @@ void Application::updateGameplay(float deltaTime)
         m_audio.play(m_player.gliding ? Sound::Jump : Sound::Land, 0.5f,
                      m_player.gliding ? 1.4f : 1.0f);
 
+    m_scoping = playing() && !m_inventoryOpen && m_inventory.selected().id == Items::Spyglass &&
+                (m_keys.down(m_input, Action::Use) || m_devScope) && m_perspective == Perspective::FirstPerson;
+    m_scopeAmount = std::clamp(m_scopeAmount + (m_scoping ? 6.0f : -10.0f) * deltaTime, 0.0f, 1.0f);
+
     // A little extra field of view while sprinting sells the speed.
-    const float targetFov = (m_player.sprinting || m_player.gliding) ? 78.0f : 70.0f;
+    const float targetFov = m_scoping ? 7.0f : (m_player.sprinting || m_player.gliding) ? 78.0f : 70.0f;
     m_camera.fov += (targetFov - m_camera.fov) * std::clamp(8.0f * deltaTime, 0.0f, 1.0f);
 
     // --- the rest of the world ---
@@ -11502,6 +11546,29 @@ void Application::handlePlacement()
             if (isCauldron(used) && useCauldron(bench.block, used)) return;
             if (isLectern(used) && useLectern(bench.block, used)) return;
             if (used == Blocks::Grindstone && useGrindstone(bench.block)) return;
+            if (used == Blocks::Lodestone && m_inventory.selected().id == Items::Compass)
+            {
+                const std::array<int, 4> stone = { static_cast<int>(m_dimension), bench.block.x, bench.block.y, bench.block.z };
+                int id = 0;
+                for (size_t i = 0; i < m_lodestones.size() && id == 0; ++i)
+                    if (m_lodestones[i] == stone) id = static_cast<int>(i) + 1;
+                if (id == 0)
+                {
+                    m_lodestones.push_back(stone);
+                    id = static_cast<int>(m_lodestones.size());
+                }
+                ItemStack& held = m_inventory.selected();
+                ItemStack bound{ Items::Compass, 1 };
+                bound.damage = id;
+                if (held.count <= 1) held = bound;
+                else
+                {
+                    --held.count;
+                    if (m_inventory.addStack(bound) > 0) m_drops.spawnStack(m_player.position, bound);
+                }
+                m_audio.play(Sound::Click, 0.6f, 1.6f);
+                return;
+            }
             if (isFence(used))
             {
                 bool tied = false;
@@ -13832,6 +13899,49 @@ void Application::pinCreativeMarkers()
     }
 }
 
+int Application::animatedIcon(const ItemStack& stack) const
+{
+    if (stack.id != Items::Compass && stack.id != Items::Clock && stack.id != Items::RecoveryCompass) return -1;
+    const int dim = static_cast<int>(m_dimension);
+    const int spin = static_cast<int>(m_elapsedSeconds * 23.0f + static_cast<float>(stack.damage) * 7.0f);
+    if (stack.id == Items::Clock)
+    {
+        if (m_dimension != Dimension::Overworld) return Tiles::ItemClockFirst + (spin & 63);
+        float turn = m_timeOfDay - 0.5f;
+        turn -= std::floor(turn);
+        return Tiles::ItemClockFirst + (static_cast<int>(std::round(turn * 64.0f)) & 63);
+    }
+    bool aimed = false;
+    glm::vec3 target(0.0f);
+    if (stack.id == Items::RecoveryCompass)
+    {
+        aimed = m_hasDeathPoint && m_deathDimension == dim;
+        target = m_deathPoint;
+    }
+    else if (stack.damage > 0)
+    {
+        if (stack.damage <= static_cast<int>(m_lodestones.size()))
+        {
+            const std::array<int, 4>& stone = m_lodestones[static_cast<size_t>(stack.damage - 1)];
+            aimed = stone[0] == dim && m_world &&
+                    m_world->getBlock(stone[1], stone[2], stone[3]) == Blocks::Lodestone;
+            target = glm::vec3(stone[1] + 0.5f, stone[2], stone[3] + 0.5f);
+        }
+    }
+    else
+    {
+        aimed = m_dimension == Dimension::Overworld;
+        target = m_spawnPoint;
+    }
+    const int first = stack.id == Items::RecoveryCompass ? Tiles::ItemRecoveryFirst : Tiles::ItemCompassFrameFirst;
+    if (!aimed) return first + (spin & 31);
+    const glm::vec3 gap = target - m_player.position;
+    if (gap.x * gap.x + gap.z * gap.z < 0.25f) return first + (spin & 31);
+    float turn = (glm::degrees(std::atan2(gap.z, gap.x)) - m_camera.yaw) / 360.0f;
+    turn -= std::floor(turn);
+    return first + ((16 + static_cast<int>(std::round(turn * 32.0f))) & 31);
+}
+
 Mob* Application::mobBySerial(uint32_t serial)
 {
     if (serial == 0) return nullptr;
@@ -14160,8 +14270,9 @@ void Application::renderHand()
     const float blockLight = static_cast<float>(m_world->blockLightAt(lx, ly, lz)) / 15.0f;
 
     const ItemStack& held = m_inventory.selected();
+    if (m_scoping) return;
 
-    m_heldItem.setTileOverride(m_bowDrawing && held.id == Items::Bow
+    m_heldItem.setTileOverride(animatedIcon(held) >= 0 ? animatedIcon(held) : m_bowDrawing && held.id == Items::Bow
                                    ? (m_bowDraw >= 0.9f ? Tiles::BowPulling2
                                       : m_bowDraw >= 0.65f ? Tiles::BowPulling1 : Tiles::BowPulling0)
                                    : (m_bobber.active && held.id == Items::FishingRod) ? static_cast<int>(Tiles::ItemFishingRodCast) : -1);
@@ -14173,7 +14284,7 @@ void Application::renderHand()
                       // -Wextra objects to.
                       held.empty() ? static_cast<StackId>(Blocks::Air) : held.id,
                       sky, blockLight, m_player.sneaking, m_player.blocking);
-    if (!m_activeShader && !held.empty() && Enchanting::glints(held.id, held.enchantments))
+    if (!m_activeShader && !held.empty() && (Enchanting::glints(held.id, held.enchantments) || (held.id == Items::Compass && held.damage > 0)))
         m_heldItem.renderGlint(m_chunkShader, glintTexture(false), glintShift());
 }
 
@@ -16145,6 +16256,27 @@ void Application::renderHud()
     }
 
     renderHeldMap(w, h);
+
+    if (m_scoping)
+    {
+        const float side = std::min(w, h) * 1.125f;
+        const float x = (w - side) * 0.5f, y = (h - side) * 0.5f;
+        const glm::vec4 black(0.0f, 0.0f, 0.0f, 1.0f);
+        if (!guiSprite("../misc/spyglass_scope", x, y, side, side))
+        {
+            const int steps = 48;
+            for (int k = 0; k < steps; ++k)
+            {
+                const float t0 = static_cast<float>(k) / steps * 6.2831853f;
+                const float sx = std::cos(t0) * side * 0.45f, sy = std::sin(t0) * side * 0.45f;
+                m_ui.quad(w * 0.5f + sx - side * 0.06f, h * 0.5f + sy - side * 0.06f, side * 0.12f, side * 0.12f, black);
+            }
+        }
+        m_ui.quad(0.0f, 0.0f, w, std::max(0.0f, y), black);
+        m_ui.quad(0.0f, y + side, w, std::max(0.0f, h - y - side), black);
+        m_ui.quad(0.0f, y, std::max(0.0f, x), side, black);
+        m_ui.quad(x + side, y, std::max(0.0f, w - x - side), side, black);
+    }
 
     if (m_world && m_perspective == Perspective::FirstPerson &&
         m_inventory.slot(Inventory::ARMOR_FIRST).id == Blocks::CarvedPumpkinFirst + 2)

@@ -3936,7 +3936,31 @@ namespace
         LevelState back;
         check(WorldSave::loadLevel(dir, back) && back.itemNames.size() == 2 && back.itemNames[1] == "Wilbur",
               "the names written on name tags are kept with the level");
+
+        LevelState pointed;
+        pointed.seed = 8u;
+        pointed.lodestones.push_back({ 0, 12, 64, -7 });
+        pointed.hasDeathPoint = true;
+        pointed.deathPoint[0] = 100.5f; pointed.deathPoint[1] = 40.0f; pointed.deathPoint[2] = -3.5f;
+        pointed.deathDimension = 1;
+        WorldSave::saveLevel(dir, pointed);
+        LevelState again;
+        check(WorldSave::loadLevel(dir, again) && again.lodestones.size() == 1 && again.lodestones[0][3] == -7 && again.hasDeathPoint &&
+              again.deathPoint[0] == 100.5f && again.deathDimension == 1,
+              "lodestones a compass is bound to, and where you last died, are kept too");
         std::filesystem::remove_all(dir, ec);
+
+        ItemStack glass[9];
+        glass[1].id = Items::AmethystShard; glass[4].id = Items::CopperIngot; glass[7].id = Items::CopperIngot;
+        for (ItemStack& cell : glass) if (cell.id != Blocks::Air) cell.count = 1;
+        check(Crafting::match(glass, 3).id == Items::Spyglass, "an amethyst shard over two copper ingots makes a spyglass");
+        ItemStack dial[9];
+        for (int i : { 1, 3, 5, 7 }) { dial[i].id = Items::GoldIngot; dial[i].count = 1; }
+        dial[4].id = Items::Redstone; dial[4].count = 1;
+        check(Crafting::match(dial, 3).id == Items::Clock, "four gold round a redstone makes a clock");
+        ItemStack echo[9];
+        for (int i = 0; i < 9; ++i) { echo[i].id = i == 4 ? Items::Compass : Items::EchoShard; echo[i].count = 1; }
+        check(Crafting::match(echo, 3).id == Items::RecoveryCompass, "eight echo shards round a compass make a recovery compass");
     }
 
     void testCreativeBlocks()
@@ -11717,7 +11741,8 @@ namespace
             const std::string path = dir + "/level.dat";
             std::error_code ec;
             const auto size = std::filesystem::file_size(path, ec);
-            if (!ec) std::filesystem::resize_file(path, size - sizeof(uint16_t) - sizeof(uint8_t) - 3 * sizeof(int) - sizeof(uint32_t) - sizeof(int32_t) - 5 * sizeof(uint32_t), ec);
+            if (!ec) std::filesystem::resize_file(path, size - sizeof(uint16_t) - sizeof(uint8_t) - 3 * sizeof(int) - sizeof(uint32_t) - sizeof(int32_t) - 6 * sizeof(uint32_t) -
+                                                        sizeof(uint8_t) - 3 * sizeof(float) - sizeof(int8_t), ec);
 
             LevelState back;
             check(WorldSave::loadLevel(dir, back), "a level from before items moved up still loads");

@@ -598,8 +598,12 @@ namespace Tiles
         ItemBarrier, ItemStructureVoid, ItemLightFirst, ItemLightLast = ItemLightFirst + 15,
         ItemFishingRod, ItemFishingRodCast, ItemCarrotOnAStick, ItemWarpedFungusOnAStick, ItemTropicalFish,
         ItemNameTag, ItemLead,
+        ItemSpyglass, ItemEchoShard,
+        ItemCompassFrameFirst, ItemCompassFrameLast = ItemCompassFrameFirst + 31,
+        ItemClockFirst, ItemClockLast = ItemClockFirst + 63,
+        ItemRecoveryFirst, ItemRecoveryLast = ItemRecoveryFirst + 31,
 
-        ItemTileEnd = ItemLead + 1
+        ItemTileEnd = ItemRecoveryLast + 1
     };
 
     // Ten progressively more broken overlay tiles for the mining animation.

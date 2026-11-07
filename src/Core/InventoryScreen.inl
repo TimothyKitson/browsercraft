@@ -209,6 +209,7 @@ namespace
         Blocks::DecoratedPotFirst + 2, Blocks::SnifferEgg0,
         Items::Bucket, Items::WaterBucket, Items::LavaBucket, Items::PowderSnowBucket, Items::Shears, Items::Compass, Items::EmptyMap,
         Items::FishingRod, Items::CarrotOnAStick, Items::WarpedFungusOnAStick, Items::NameTag, Items::Lead, Items::TropicalFish,
+        Items::Spyglass, Items::Clock, Items::RecoveryCompass, Items::EchoShard,
         Items::IronIngot, Items::GoldIngot, Items::Diamond,
         Items::WoodPickaxe, Items::WoodAxe, Items::WoodShovel, Items::WoodSword, Items::WoodHoe,
         Items::StonePickaxe, Items::StoneAxe, Items::StoneShovel, Items::StoneSword, Items::StoneHoe,
@@ -460,6 +461,14 @@ void Application::drawItem(float x, float y, float size, StackId id, int count,
     else if (!drawBlockIcon(x, y, size, id, tint))
     {
         int tile = m_iconOverride >= 0 ? m_iconOverride : atlasTileFor(id);
+        if (m_iconOverride < 0)
+        {
+            ItemStack shown;
+            shown.id = id;
+            shown.damage = damage;
+            const int dial = animatedIcon(shown);
+            if (dial >= 0) tile = dial;
+        }
         if (id == Items::Elytra && damage >= Armour::maxDurability(Items::Elytra)) tile = Tiles::ItemBrokenElytra;
         const TileUV uv = tileUV(tile);
         m_ui.texturedQuad(m_atlas.textureId(), x, y, size, size,
@@ -473,7 +482,7 @@ void Application::drawItem(float x, float y, float size, StackId id, int count,
             const glm::vec4 shadeIt(((c >> 16) & 255u) / 255.0f, ((c >> 8) & 255u) / 255.0f, (c & 255u) / 255.0f, 1.0f);
             if (piece >= 0 && piece < 4) guiSprite(OVERLAYS[piece], x, y, size, size, shadeIt * tint);
         }
-        if (Enchanting::glints(id, enchantments))
+        if (Enchanting::glints(id, enchantments) || (id == Items::Compass && damage > 0))
         {
             m_ui.beginGlint(glintTexture(false), x, y, size, size, glintShift());
             m_ui.texturedQuad(m_atlas.textureId(), x, y, size, size,

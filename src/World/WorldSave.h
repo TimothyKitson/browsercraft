@@ -162,6 +162,10 @@ struct LevelState
     };
     std::vector<SavedStructure> structures;
     std::vector<std::string> itemNames;
+    std::vector<std::array<int, 4>> lodestones;
+    bool hasDeathPoint = false;
+    float deathPoint[3] = { 0.0f, 0.0f, 0.0f };
+    int8_t deathDimension = 0;
 };
 
 namespace WorldSave

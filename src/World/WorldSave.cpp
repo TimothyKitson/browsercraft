@@ -314,6 +314,12 @@ void WorldSave::saveLevel(const std::string& saveDirectory, const LevelState& st
     }
     write(out, static_cast<uint32_t>(state.itemNames.size()));
     for (const std::string& name : state.itemNames) writeLine(out, name);
+    write(out, static_cast<uint32_t>(state.lodestones.size()));
+    for (const auto& stone : state.lodestones)
+        for (int k = 0; k < 4; ++k) write(out, static_cast<int32_t>(stone[static_cast<size_t>(k)]));
+    write(out, static_cast<uint8_t>(state.hasDeathPoint ? 1 : 0));
+    for (int k = 0; k < 3; ++k) write(out, state.deathPoint[k]);
+    write(out, state.deathDimension);
 }
 
 bool WorldSave::loadLevel(const std::string& saveDirectory, LevelState& out)
@@ -648,13 +654,33 @@ bool WorldSave::loadLevel(const std::string& saveDirectory, LevelState& out)
                                                         out.structures.push_back(structure);
                                                     }
                                                 uint32_t nameCount = 0;
-                                                if (structuresWhole && read(in, nameCount))
+                                                bool namesWhole = structuresWhole && read(in, nameCount);
+                                                if (namesWhole)
                                                     for (uint32_t i = 0; i < nameCount && i < 65536u; ++i)
                                                     {
                                                         std::string name;
-                                                        if (!readLine(in, name)) break;
+                                                        if (!readLine(in, name)) { namesWhole = false; break; }
                                                         out.itemNames.push_back(name);
                                                     }
+                                                uint32_t stoneCount = 0;
+                                                bool stonesWhole = namesWhole && read(in, stoneCount);
+                                                if (stonesWhole)
+                                                    for (uint32_t i = 0; i < stoneCount && i < 65536u; ++i)
+                                                    {
+                                                        std::array<int, 4> stone{};
+                                                        for (int k = 0; k < 4 && stonesWhole; ++k)
+                                                        {
+                                                            int32_t value = 0;
+                                                            stonesWhole = read(in, value);
+                                                            stone[static_cast<size_t>(k)] = value;
+                                                        }
+                                                        if (!stonesWhole) break;
+                                                        out.lodestones.push_back(stone);
+                                                    }
+                                                uint8_t died = 0;
+                                                if (stonesWhole && read(in, died) && read(in, out.deathPoint[0]) &&
+                                                    read(in, out.deathPoint[1]) && read(in, out.deathPoint[2]) && read(in, out.deathDimension))
+                                                    out.hasDeathPoint = died != 0;
                                             }
                                         }
                                     }

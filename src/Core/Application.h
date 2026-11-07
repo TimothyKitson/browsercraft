@@ -1146,6 +1146,14 @@ private:
     bool holdingRod() const;
     void wearHeld(StackId id, int points);
     std::vector<std::string> m_itemNames;
+    std::vector<std::array<int, 4>> m_lodestones;
+    bool m_hasDeathPoint = false;
+    glm::vec3 m_deathPoint{ 0.0f };
+    int m_deathDimension = 0;
+    bool m_scoping = false;
+    bool m_devScope = false;
+    float m_scopeAmount = 0.0f;
+    int animatedIcon(const ItemStack& stack) const;
     int nameIdOf(const std::string& name);
     std::string m_anvilName;
     bool m_anvilNameEdited = false;

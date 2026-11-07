@@ -172,6 +172,7 @@ namespace
         { Items::WardTemplate, 1, 1 },
         { Items::SilenceTemplate, 1, 1 },
         { Items::Lead,        1, 1 },
+        { Items::EchoShard,   1, 3 },
     };
 
     // A witch's hut. What she brews with, and what she has brewed.

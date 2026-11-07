@@ -379,6 +379,10 @@ namespace Items
         TropicalFish,
         NameTag,
         Lead,
+        Spyglass,
+        Clock,
+        RecoveryCompass,
+        EchoShard,
         Count
     };
 }

@@ -1708,6 +1708,54 @@ namespace
                 t.set(x, y, (x + y) % 2 ? Color{ 140, 100, 60 } : Color{ 104, 72, 44 });
     }
 
+    void paintDialIn(Tile& t, float turn, Color rim, Color face, Color needle, bool clock)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 1; y < 15; ++y)
+            for (int x = 1; x < 15; ++x)
+            {
+                const float d = std::sqrt((x - 7.5f) * (x - 7.5f) + (y - 7.5f) * (y - 7.5f));
+                if (d < 6.6f) t.set(x, y, d > 5.4f ? rim : face);
+            }
+        if (clock)
+        {
+            for (int y = 3; y < 13; ++y)
+                for (int x = 3; x < 13; ++x)
+                {
+                    const float d = std::sqrt((x - 7.5f) * (x - 7.5f) + (y - 7.5f) * (y - 7.5f));
+                    if (d >= 5.0f) continue;
+                    const float angle = std::atan2(x - 7.5f, -(y - 7.5f)) / 6.2831853f - turn;
+                    const float wrapped = angle - std::floor(angle);
+                    t.set(x, y, wrapped < 0.5f ? Color{ 90, 150, 230 } : Color{ 30, 30, 70 });
+                }
+            const float a = -turn * 6.2831853f;
+            t.set(7 + static_cast<int>(std::sin(a) * 3.0f), 7 - static_cast<int>(std::cos(a) * 3.0f), Color{ 250, 230, 60 });
+            t.set(8 - static_cast<int>(std::sin(a) * 3.0f), 8 + static_cast<int>(std::cos(a) * 3.0f), Color{ 230, 230, 240 });
+            return;
+        }
+        const float a = turn * 6.2831853f;
+        for (int k = 1; k <= 4; ++k)
+        {
+            t.set(static_cast<int>(7.5f + std::sin(a) * k + 0.5f), static_cast<int>(7.5f - std::cos(a) * k + 0.5f), needle);
+            t.set(static_cast<int>(7.5f - std::sin(a) * k + 0.5f), static_cast<int>(7.5f + std::cos(a) * k + 0.5f), Color{ 60, 60, 66 });
+        }
+    }
+    void paintItemSpyglass(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int k = 0; k < 11; ++k)
+            for (int w = -1; w <= 1; ++w)
+                t.set(3 + k, 12 - k + w, k < 3 ? Color{ 170, 120, 220 } : Color{ 196, 110, 70 });
+        t.set(13, 2, Color{ 220, 200, 250 });
+    }
+    void paintItemEchoShard(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 3; y < 13; ++y)
+            for (int x = 5; x < 11; ++x)
+                if (std::abs(x - 7.5f) + std::abs(y - 8.0f) * 0.6f < 3.2f) t.set(x, y, (x + y) % 3 ? Color{ 20, 70, 80 } : Color{ 60, 200, 200 });
+    }
+
     void paintCalibratedAmethystTile(Tile& t)
     {
         t.fill(Color{ 0, 0, 0, 0 });
@@ -8665,6 +8713,8 @@ namespace
         { Tiles::ItemTropicalFish, paintItemTropicalFish },
         { Tiles::ItemNameTag, paintItemNameTag },
         { Tiles::ItemLead, paintItemLead },
+        { Tiles::ItemSpyglass, paintItemSpyglass },
+        { Tiles::ItemEchoShard, paintItemEchoShard },
         { Tiles::FishingHookTile, paintFishingHookTile },
         { Tiles::LeashKnotTile, paintLeashKnotTile },
         { Tiles::ItemCompass, paintItemCompass },
@@ -9537,6 +9587,136 @@ namespace
         { Tiles::ItemTropicalFish, { "tropical_fish", nullptr, nullptr } },
         { Tiles::ItemNameTag, { "name_tag", nullptr, nullptr } },
         { Tiles::ItemLead, { "lead", nullptr, nullptr } },
+        { Tiles::ItemSpyglass, { "spyglass", nullptr, nullptr } },
+        { Tiles::ItemEchoShard, { "echo_shard", nullptr, nullptr } },
+        { Tiles::ItemCompassFrameFirst + 0, { "compass_00", nullptr, nullptr } },
+        { Tiles::ItemCompassFrameFirst + 1, { "compass_01", nullptr, nullptr } },
+        { Tiles::ItemCompassFrameFirst + 2, { "compass_02", nullptr, nullptr } },
+        { Tiles::ItemCompassFrameFirst + 3, { "compass_03", nullptr, nullptr } },
+        { Tiles::ItemCompassFrameFirst + 4, { "compass_04", nullptr, nullptr } },
+        { Tiles::ItemCompassFrameFirst + 5, { "compass_05", nullptr, nullptr } },
+        { Tiles::ItemCompassFrameFirst + 6, { "compass_06", nullptr, nullptr } },
+        { Tiles::ItemCompassFrameFirst + 7, { "compass_07", nullptr, nullptr } },
+        { Tiles::ItemCompassFrameFirst + 8, { "compass_08", nullptr, nullptr } },
+        { Tiles::ItemCompassFrameFirst + 9, { "compass_09", nullptr, nullptr } },
+        { Tiles::ItemCompassFrameFirst + 10, { "compass_10", nullptr, nullptr } },
+        { Tiles::ItemCompassFrameFirst + 11, { "compass_11", nullptr, nullptr } },
+        { Tiles::ItemCompassFrameFirst + 12, { "compass_12", nullptr, nullptr } },
+        { Tiles::ItemCompassFrameFirst + 13, { "compass_13", nullptr, nullptr } },
+        { Tiles::ItemCompassFrameFirst + 14, { "compass_14", nullptr, nullptr } },
+        { Tiles::ItemCompassFrameFirst + 15, { "compass_15", nullptr, nullptr } },
+        { Tiles::ItemCompassFrameFirst + 16, { "compass_16", nullptr, nullptr } },
+        { Tiles::ItemCompassFrameFirst + 17, { "compass_17", nullptr, nullptr } },
+        { Tiles::ItemCompassFrameFirst + 18, { "compass_18", nullptr, nullptr } },
+        { Tiles::ItemCompassFrameFirst + 19, { "compass_19", nullptr, nullptr } },
+        { Tiles::ItemCompassFrameFirst + 20, { "compass_20", nullptr, nullptr } },
+        { Tiles::ItemCompassFrameFirst + 21, { "compass_21", nullptr, nullptr } },
+        { Tiles::ItemCompassFrameFirst + 22, { "compass_22", nullptr, nullptr } },
+        { Tiles::ItemCompassFrameFirst + 23, { "compass_23", nullptr, nullptr } },
+        { Tiles::ItemCompassFrameFirst + 24, { "compass_24", nullptr, nullptr } },
+        { Tiles::ItemCompassFrameFirst + 25, { "compass_25", nullptr, nullptr } },
+        { Tiles::ItemCompassFrameFirst + 26, { "compass_26", nullptr, nullptr } },
+        { Tiles::ItemCompassFrameFirst + 27, { "compass_27", nullptr, nullptr } },
+        { Tiles::ItemCompassFrameFirst + 28, { "compass_28", nullptr, nullptr } },
+        { Tiles::ItemCompassFrameFirst + 29, { "compass_29", nullptr, nullptr } },
+        { Tiles::ItemCompassFrameFirst + 30, { "compass_30", nullptr, nullptr } },
+        { Tiles::ItemCompassFrameFirst + 31, { "compass_31", nullptr, nullptr } },
+        { Tiles::ItemClockFirst + 0, { "clock_00", nullptr, nullptr } },
+        { Tiles::ItemClockFirst + 1, { "clock_01", nullptr, nullptr } },
+        { Tiles::ItemClockFirst + 2, { "clock_02", nullptr, nullptr } },
+        { Tiles::ItemClockFirst + 3, { "clock_03", nullptr, nullptr } },
+        { Tiles::ItemClockFirst + 4, { "clock_04", nullptr, nullptr } },
+        { Tiles::ItemClockFirst + 5, { "clock_05", nullptr, nullptr } },
+        { Tiles::ItemClockFirst + 6, { "clock_06", nullptr, nullptr } },
+        { Tiles::ItemClockFirst + 7, { "clock_07", nullptr, nullptr } },
+        { Tiles::ItemClockFirst + 8, { "clock_08", nullptr, nullptr } },
+        { Tiles::ItemClockFirst + 9, { "clock_09", nullptr, nullptr } },
+        { Tiles::ItemClockFirst + 10, { "clock_10", nullptr, nullptr } },
+        { Tiles::ItemClockFirst + 11, { "clock_11", nullptr, nullptr } },
+        { Tiles::ItemClockFirst + 12, { "clock_12", nullptr, nullptr } },
+        { Tiles::ItemClockFirst + 13, { "clock_13", nullptr, nullptr } },
+        { Tiles::ItemClockFirst + 14, { "clock_14", nullptr, nullptr } },
+        { Tiles::ItemClockFirst + 15, { "clock_15", nullptr, nullptr } },
+        { Tiles::ItemClockFirst + 16, { "clock_16", nullptr, nullptr } },
+        { Tiles::ItemClockFirst + 17, { "clock_17", nullptr, nullptr } },
+        { Tiles::ItemClockFirst + 18, { "clock_18", nullptr, nullptr } },
+        { Tiles::ItemClockFirst + 19, { "clock_19", nullptr, nullptr } },
+        { Tiles::ItemClockFirst + 20, { "clock_20", nullptr, nullptr } },
+        { Tiles::ItemClockFirst + 21, { "clock_21", nullptr, nullptr } },
+        { Tiles::ItemClockFirst + 22, { "clock_22", nullptr, nullptr } },
+        { Tiles::ItemClockFirst + 23, { "clock_23", nullptr, nullptr } },
+        { Tiles::ItemClockFirst + 24, { "clock_24", nullptr, nullptr } },
+        { Tiles::ItemClockFirst + 25, { "clock_25", nullptr, nullptr } },
+        { Tiles::ItemClockFirst + 26, { "clock_26", nullptr, nullptr } },
+        { Tiles::ItemClockFirst + 27, { "clock_27", nullptr, nullptr } },
+        { Tiles::ItemClockFirst + 28, { "clock_28", nullptr, nullptr } },
+        { Tiles::ItemClockFirst + 29, { "clock_29", nullptr, nullptr } },
+        { Tiles::ItemClockFirst + 30, { "clock_30", nullptr, nullptr } },
+        { Tiles::ItemClockFirst + 31, { "clock_31", nullptr, nullptr } },
+        { Tiles::ItemClockFirst + 32, { "clock_32", nullptr, nullptr } },
+        { Tiles::ItemClockFirst + 33, { "clock_33", nullptr, nullptr } },
+        { Tiles::ItemClockFirst + 34, { "clock_34", nullptr, nullptr } },
+        { Tiles::ItemClockFirst + 35, { "clock_35", nullptr, nullptr } },
+        { Tiles::ItemClockFirst + 36, { "clock_36", nullptr, nullptr } },
+        { Tiles::ItemClockFirst + 37, { "clock_37", nullptr, nullptr } },
+        { Tiles::ItemClockFirst + 38, { "clock_38", nullptr, nullptr } },
+        { Tiles::ItemClockFirst + 39, { "clock_39", nullptr, nullptr } },
+        { Tiles::ItemClockFirst + 40, { "clock_40", nullptr, nullptr } },
+        { Tiles::ItemClockFirst + 41, { "clock_41", nullptr, nullptr } },
+        { Tiles::ItemClockFirst + 42, { "clock_42", nullptr, nullptr } },
+        { Tiles::ItemClockFirst + 43, { "clock_43", nullptr, nullptr } },
+        { Tiles::ItemClockFirst + 44, { "clock_44", nullptr, nullptr } },
+        { Tiles::ItemClockFirst + 45, { "clock_45", nullptr, nullptr } },
+        { Tiles::ItemClockFirst + 46, { "clock_46", nullptr, nullptr } },
+        { Tiles::ItemClockFirst + 47, { "clock_47", nullptr, nullptr } },
+        { Tiles::ItemClockFirst + 48, { "clock_48", nullptr, nullptr } },
+        { Tiles::ItemClockFirst + 49, { "clock_49", nullptr, nullptr } },
+        { Tiles::ItemClockFirst + 50, { "clock_50", nullptr, nullptr } },
+        { Tiles::ItemClockFirst + 51, { "clock_51", nullptr, nullptr } },
+        { Tiles::ItemClockFirst + 52, { "clock_52", nullptr, nullptr } },
+        { Tiles::ItemClockFirst + 53, { "clock_53", nullptr, nullptr } },
+        { Tiles::ItemClockFirst + 54, { "clock_54", nullptr, nullptr } },
+        { Tiles::ItemClockFirst + 55, { "clock_55", nullptr, nullptr } },
+        { Tiles::ItemClockFirst + 56, { "clock_56", nullptr, nullptr } },
+        { Tiles::ItemClockFirst + 57, { "clock_57", nullptr, nullptr } },
+        { Tiles::ItemClockFirst + 58, { "clock_58", nullptr, nullptr } },
+        { Tiles::ItemClockFirst + 59, { "clock_59", nullptr, nullptr } },
+        { Tiles::ItemClockFirst + 60, { "clock_60", nullptr, nullptr } },
+        { Tiles::ItemClockFirst + 61, { "clock_61", nullptr, nullptr } },
+        { Tiles::ItemClockFirst + 62, { "clock_62", nullptr, nullptr } },
+        { Tiles::ItemClockFirst + 63, { "clock_63", nullptr, nullptr } },
+        { Tiles::ItemRecoveryFirst + 0, { "recovery_compass_00", nullptr, nullptr } },
+        { Tiles::ItemRecoveryFirst + 1, { "recovery_compass_01", nullptr, nullptr } },
+        { Tiles::ItemRecoveryFirst + 2, { "recovery_compass_02", nullptr, nullptr } },
+        { Tiles::ItemRecoveryFirst + 3, { "recovery_compass_03", nullptr, nullptr } },
+        { Tiles::ItemRecoveryFirst + 4, { "recovery_compass_04", nullptr, nullptr } },
+        { Tiles::ItemRecoveryFirst + 5, { "recovery_compass_05", nullptr, nullptr } },
+        { Tiles::ItemRecoveryFirst + 6, { "recovery_compass_06", nullptr, nullptr } },
+        { Tiles::ItemRecoveryFirst + 7, { "recovery_compass_07", nullptr, nullptr } },
+        { Tiles::ItemRecoveryFirst + 8, { "recovery_compass_08", nullptr, nullptr } },
+        { Tiles::ItemRecoveryFirst + 9, { "recovery_compass_09", nullptr, nullptr } },
+        { Tiles::ItemRecoveryFirst + 10, { "recovery_compass_10", nullptr, nullptr } },
+        { Tiles::ItemRecoveryFirst + 11, { "recovery_compass_11", nullptr, nullptr } },
+        { Tiles::ItemRecoveryFirst + 12, { "recovery_compass_12", nullptr, nullptr } },
+        { Tiles::ItemRecoveryFirst + 13, { "recovery_compass_13", nullptr, nullptr } },
+        { Tiles::ItemRecoveryFirst + 14, { "recovery_compass_14", nullptr, nullptr } },
+        { Tiles::ItemRecoveryFirst + 15, { "recovery_compass_15", nullptr, nullptr } },
+        { Tiles::ItemRecoveryFirst + 16, { "recovery_compass_16", nullptr, nullptr } },
+        { Tiles::ItemRecoveryFirst + 17, { "recovery_compass_17", nullptr, nullptr } },
+        { Tiles::ItemRecoveryFirst + 18, { "recovery_compass_18", nullptr, nullptr } },
+        { Tiles::ItemRecoveryFirst + 19, { "recovery_compass_19", nullptr, nullptr } },
+        { Tiles::ItemRecoveryFirst + 20, { "recovery_compass_20", nullptr, nullptr } },
+        { Tiles::ItemRecoveryFirst + 21, { "recovery_compass_21", nullptr, nullptr } },
+        { Tiles::ItemRecoveryFirst + 22, { "recovery_compass_22", nullptr, nullptr } },
+        { Tiles::ItemRecoveryFirst + 23, { "recovery_compass_23", nullptr, nullptr } },
+        { Tiles::ItemRecoveryFirst + 24, { "recovery_compass_24", nullptr, nullptr } },
+        { Tiles::ItemRecoveryFirst + 25, { "recovery_compass_25", nullptr, nullptr } },
+        { Tiles::ItemRecoveryFirst + 26, { "recovery_compass_26", nullptr, nullptr } },
+        { Tiles::ItemRecoveryFirst + 27, { "recovery_compass_27", nullptr, nullptr } },
+        { Tiles::ItemRecoveryFirst + 28, { "recovery_compass_28", nullptr, nullptr } },
+        { Tiles::ItemRecoveryFirst + 29, { "recovery_compass_29", nullptr, nullptr } },
+        { Tiles::ItemRecoveryFirst + 30, { "recovery_compass_30", nullptr, nullptr } },
+        { Tiles::ItemRecoveryFirst + 31, { "recovery_compass_31", nullptr, nullptr } },
         { Tiles::ItemStructureVoid, { "structure_void", nullptr, nullptr } },
         { Tiles::ItemLightFirst + 0, { "light_00", nullptr, nullptr } },
         { Tiles::ItemLightFirst + 1, { "light_01", nullptr, nullptr } },
@@ -11003,6 +11183,20 @@ Atlas::Atlas()
         paintLightIn(light, k);
         blitPainted(Tiles::ItemLightFirst + k, light);
     }
+    for (int k = 0; k < 32; ++k)
+    {
+        Tile compass, recovery;
+        paintDialIn(compass, static_cast<float>(k - 16) / 32.0f, Color{ 150, 150, 156 }, Color{ 220, 220, 210 }, Color{ 200, 30, 30 }, false);
+        paintDialIn(recovery, static_cast<float>(k - 16) / 32.0f, Color{ 40, 90, 100 }, Color{ 30, 50, 60 }, Color{ 90, 230, 230 }, false);
+        blitPainted(Tiles::ItemCompassFrameFirst + k, compass);
+        blitPainted(Tiles::ItemRecoveryFirst + k, recovery);
+    }
+    for (int k = 0; k < 64; ++k)
+    {
+        Tile clock;
+        paintDialIn(clock, static_cast<float>(k) / 64.0f, Color{ 220, 180, 40 }, Color{ 60, 60, 90 }, Color{ 0, 0, 0 }, true);
+        blitPainted(Tiles::ItemClockFirst + k, clock);
+    }
     for (int age = 0; age < 4; ++age)
     {
         Tile frost;
@@ -11955,6 +12149,7 @@ bool Atlas::hasPainter(int tileIndex)
     if (tileIndex >= Tiles::CommandTileFirst && tileIndex <= Tiles::CommandTileLast) return true;
     if (tileIndex >= Tiles::StructureBlockTileFirst && tileIndex <= Tiles::StructureBlockTileLast) return true;
     if (tileIndex >= Tiles::ItemLightFirst && tileIndex <= Tiles::ItemLightLast) return true;
+    if (tileIndex >= Tiles::ItemCompassFrameFirst && tileIndex <= Tiles::ItemRecoveryLast) return true;
     if (tileIndex >= Tiles::CutCopperTile && tileIndex <= Tiles::CopperTrapdoorTileLast) return true;
     if (tileIndex >= Tiles::ItemCopperDoorFirst && tileIndex <= Tiles::ItemCopperDoorLast) return true;
     if (tileIndex >= Tiles::CrackFirst &&
