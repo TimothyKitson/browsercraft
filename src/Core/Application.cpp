@@ -1979,6 +1979,7 @@ bool Application::frame()
             }
             tickFrost(deltaTime);
             tickMaps(deltaTime);
+            tickVibrations(deltaTime);
 
             if (m_inventory.slot(Inventory::ARMOR_FIRST).id == Items::TurtleHelmet && !m_player.isHeadUnderwater(*m_world))
                 Effects::give(m_player.effects, Effects::Kind::WaterBreathing, 0, 10.0f);
@@ -2195,7 +2196,7 @@ bool Application::frame()
             m_startupScreen == "attackhud" || m_startupScreen == "attackready" ||
             m_startupScreen == "attackhotbar" || m_startupScreen == "bossbars" ||
             m_startupScreen == "gamemode" || m_startupScreen == "spectator" ||
-            m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" ||
+            m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" ||
             m_startupScreen == "grinderror" || m_startupScreen == "woods" ||
             m_startupScreen == "cherry" || m_startupScreen == "mangrove" || m_startupScreen == "fungi" ||
             m_startupScreen == "stones" || m_startupScreen == "colours" || m_startupScreen == "candles" ||
@@ -2286,6 +2287,7 @@ bool Application::frame()
                                   m_startupScreen != "cartography" &&
                                   m_startupScreen != "loom" &&
                                   m_startupScreen != "banners" &&
+                                  m_startupScreen != "sculk" &&
                                   m_startupScreen != "grinderror" &&
                                   m_startupScreen != "woods" &&
                                   m_startupScreen != "cherry" &&
@@ -2678,7 +2680,7 @@ bool Application::frame()
             if (m_startupScreen == "attackhud" || m_startupScreen == "attackready" ||
                 m_startupScreen == "attackhotbar" || m_startupScreen == "bossbars" ||
                 m_startupScreen == "gamemode" || m_startupScreen == "spectator" ||
-                m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" ||
+                m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" ||
                 m_startupScreen == "grinderror" || m_startupScreen == "woods" ||
                 m_startupScreen == "cherry" || m_startupScreen == "mangrove" || m_startupScreen == "fungi" ||
                 m_startupScreen == "stones" || m_startupScreen == "colours" || m_startupScreen == "candles" ||
@@ -3416,6 +3418,34 @@ bool Application::frame()
                     m_inventory.slot(6) = ItemStack{ doorBaseOf(3), 3 };
                     m_inventory.slot(7) = ItemStack{ trapdoorBaseOf(5), 2 };
                     m_inventory.slot(8) = ItemStack{ Blocks::DarkOakSapling, 4 };
+                }
+                if (m_startupScreen == "sculk")
+                {
+                    m_devAttackStrength = 1.0f;
+                    for (int dx = 2; dx <= 9; ++dx)
+                        for (int dz = -5; dz <= 5; ++dz)
+                        {
+                            m_world->setBlock(px + dx, py - 1, pz + dz, (dx + dz) % 3 == 0 ? Blocks::Sculk : Blocks::Deepslate);
+                            for (int dy = 0; dy < 3; ++dy) m_world->setBlock(px + dx, py + dy, pz + dz, Blocks::Air);
+                        }
+                    m_world->setBlock(px + 4, py, pz - 4, Blocks::SculkSensor);
+                    setBlockFor(glm::ivec3(px + 4, py, pz - 2), Blocks::SculkSensorLit, Blocks::SculkSensor, 60.0f);
+                    m_world->setBlock(px + 4, py, pz - 1, Blocks::RedstoneLamp);
+                    m_world->setBlock(px + 4, py, pz + 1, calibratedOf(1, false));
+                    setBlockFor(glm::ivec3(px + 4, py, pz + 3), calibratedOf(1, true), calibratedOf(1, false), 60.0f);
+                    m_world->setBlock(px + 4, py, pz + 4, Blocks::RedstoneLamp);
+                    m_world->setBlock(px + 7, py, pz, Blocks::SculkCatalyst);
+                    m_world->setBlock(px + 7, py, pz + 3, Blocks::SculkShrieker);
+                    for (int dz = -5; dz <= 5; dz += 2)
+                        if (m_world->getBlock(px + 6, py - 1, pz + dz) != Blocks::Sculk) m_world->setBlock(px + 6, py, pz + dz, sculkVeinOn(0));
+                    for (int dz = -5; dz <= 5; ++dz)
+                        for (int dy = 0; dy < 3; ++dy) m_world->setBlock(px + 10, py + dy, pz + dz, Blocks::Deepslate);
+                    for (int dz = -4; dz <= 4; dz += 3) m_world->setBlock(px + 9, py + 1, pz + dz, sculkVeinOn(5));
+                    settleRedstone(glm::ivec3(px + 4, py, pz - 2));
+                    settleRedstone(glm::ivec3(px + 4, py, pz + 3));
+                    m_inventory.slot(0) = ItemStack{ static_cast<StackId>(calibratedOf(2, false)), 4 };
+                    m_inventory.slot(1) = ItemStack{ Blocks::SculkSensor, 4 };
+                    m_inventory.slot(2) = ItemStack{ static_cast<StackId>(sculkVeinOn(0)), 16 };
                 }
                 if (m_startupScreen == "loom" || m_startupScreen == "banners")
                 {
@@ -6605,6 +6635,7 @@ void Application::updateMovementAudio(const glm::vec3& positionBefore, bool jump
     {
         m_audio.play(Sound::Land, 0.55f);
         if (ground != Blocks::Air) m_particles.spawnLandingPuff(feet, ground);
+        if (!isWool(ground)) vibrate(m_player.position, 2);
         m_distanceWalked = 0.0f;
     }
     m_wasOnGround = m_player.onGround;
@@ -6620,6 +6651,7 @@ void Application::updateMovementAudio(const glm::vec3& positionBefore, bool jump
         {
             m_distanceWalked = 0.0f;
             m_audio.playStep(ground);
+            if (!m_player.sneaking && !isWool(ground)) vibrate(m_player.position, 1);
         }
     }
 
@@ -6777,6 +6809,7 @@ void Application::updateMining(float deltaTime)
         m_world->setBlock(hit.block.x, hit.block.y, hit.block.z, Blocks::Air);
         m_net.onLocalBlockChange(hit.block.x, hit.block.y, hit.block.z, Blocks::Air);
         m_audio.playDig(id, 0.9f);
+        vibrate(glm::vec3(hit.block) + glm::vec3(0.5f), 12);
 
         // Creative mode mines without producing pickups, like Minecraft.
         if (!m_player.creative())
@@ -6836,6 +6869,7 @@ void Application::updateMining(float deltaTime)
                 if (silk && isAnyCoralWallFan(id))
                     drop = static_cast<StackId>((isDeadCoralWallFan(id) ? Blocks::DeadCoralFanFirst : Blocks::CoralFanFirst) + coralKind(id));
                 if (silk && isTurtleEgg(id)) drop = turtleEggOf(1, 0);
+                if (silk && isSculkVein(id)) drop = sculkVeinOn(0);
                 if (isTallSeagrass(id) && tool == Items::Shears) drop = Blocks::Seagrass;
                 if (id == Blocks::Cobweb)
                     drop = (tool == Items::Shears || silk) ? static_cast<StackId>(Blocks::Cobweb)
@@ -9059,6 +9093,124 @@ void Application::openVault(const glm::ivec3& block)
     m_audio.play(Sound::Pickup, 0.9f, 0.8f);
 }
 
+bool Application::vibrationBlocked(const glm::vec3& from, const glm::vec3& to) const
+{
+    const glm::vec3 span = to - from;
+    const float length = glm::length(span);
+    if (length < 1.0f) return false;
+    const glm::ivec3 start = glm::ivec3(glm::floor(from)), end = glm::ivec3(glm::floor(to));
+    const int steps = static_cast<int>(length * 4.0f);
+    for (int k = 1; k < steps; ++k)
+    {
+        const glm::vec3 p = from + span * (static_cast<float>(k) / static_cast<float>(steps));
+        const glm::ivec3 cell = glm::ivec3(glm::floor(p));
+        if (cell == start || cell == end) continue;
+        if (isWool(m_world->getBlock(cell.x, cell.y, cell.z))) return true;
+    }
+    return false;
+}
+
+bool Application::calibratedHears(const glm::ivec3& at, int frequency)
+{
+    const BlockId self = m_world->getBlock(at.x, at.y, at.z);
+    if (!isCalibratedSensor(self)) return true;
+    static const int DX[4] = { 0, 1, 0, -1 };
+    static const int DZ[4] = { -1, 0, 1, 0 };
+    const int facing = calibratedFacing(self);
+    const glm::ivec3 back(at.x - DX[facing], at.y, at.z - DZ[facing]);
+    WorldCells cells;
+    cells.world = m_world.get();
+    cells.net = &m_net;
+    const int toward = Redstone::stepOf(facing);
+    const bool powered = Redstone::feeds(cells, back.x, back.y, back.z, toward);
+    return !powered || frequency == 15;
+}
+
+void Application::vibrate(const glm::vec3& at, int frequency)
+{
+    if (!m_world || m_sensorSpots.empty()) return;
+    for (const glm::ivec3& sensor : m_sensorSpots)
+    {
+        const BlockId block = m_world->getBlock(sensor.x, sensor.y, sensor.z);
+        if (!isAnySculkSensor(block) || sculkSensorLit(block)) continue;
+        const glm::vec3 centre = glm::vec3(sensor) + glm::vec3(0.5f);
+        const float distance = glm::length(centre - at);
+        const float range = isCalibratedSensor(block) ? 16.0f : 8.0f;
+        if (distance > range || distance < 0.6f) continue;
+        const auto quiet = m_sensorQuiet.find({ sensor.x, sensor.y, sensor.z });
+        if (quiet != m_sensorQuiet.end() && quiet->second > m_vibrationClock) continue;
+        bool queued = false;
+        for (const Vibration& pending : m_vibrations) queued = queued || pending.sensor == sensor;
+        if (queued || vibrationBlocked(at, centre)) continue;
+        m_vibrations.push_back(Vibration{ sensor, m_vibrationClock + distance * 0.05f, frequency });
+    }
+}
+
+void Application::tickVibrations(float deltaTime)
+{
+    if (!m_world) return;
+    m_vibrationClock += deltaTime;
+    m_sensorScan -= deltaTime;
+    if (m_sensorScan <= 0.0f)
+    {
+        m_sensorScan = 2.0f;
+        m_sensorSpots.clear();
+        const glm::ivec3 centre = glm::ivec3(glm::floor(m_player.position));
+        for (int dx = -24; dx <= 24; ++dx)
+            for (int dz = -24; dz <= 24; ++dz)
+                for (int dy = -12; dy <= 12; ++dy)
+                {
+                    const int y = centre.y + dy;
+                    if (y < 0 || y >= Chunk::SY) continue;
+                    if (isAnySculkSensor(m_world->getBlock(centre.x + dx, y, centre.z + dz)))
+                        m_sensorSpots.push_back(glm::ivec3(centre.x + dx, y, centre.z + dz));
+                }
+        for (auto it = m_sensorQuiet.begin(); it != m_sensorQuiet.end();)
+            it = it->second < m_vibrationClock ? m_sensorQuiet.erase(it) : std::next(it);
+    }
+    if (m_sensorSpots.empty())
+    {
+        m_vibrations.clear();
+        return;
+    }
+
+    m_mobVibration -= deltaTime;
+    if (m_mobVibration <= 0.0f)
+    {
+        m_mobVibration = 0.5f;
+        for (const Mob& mob : m_entities.mobs())
+        {
+            if (!mob.alive() || !mob.onGround()) continue;
+            const glm::vec3 v = mob.velocity();
+            if (v.x * v.x + v.z * v.z < 0.25f) continue;
+            if (glm::length(mob.position() - m_player.position) > 40.0f) continue;
+            vibrate(mob.position(), 1);
+        }
+    }
+
+    for (size_t i = 0; i < m_vibrations.size();)
+    {
+        const Vibration heard = m_vibrations[i];
+        if (heard.due > m_vibrationClock)
+        {
+            ++i;
+            continue;
+        }
+        m_vibrations.erase(m_vibrations.begin() + static_cast<long>(i));
+        const BlockId block = m_world->getBlock(heard.sensor.x, heard.sensor.y, heard.sensor.z);
+        if (!isAnySculkSensor(block) || sculkSensorLit(block)) continue;
+        if (!calibratedHears(heard.sensor, heard.frequency)) continue;
+        const bool calibrated = isCalibratedSensor(block);
+        const float active = calibrated ? 0.5f : 1.5f;
+        const BlockId lit = calibrated ? calibratedOf(calibratedFacing(block), true) : static_cast<BlockId>(Blocks::SculkSensorLit);
+        setBlockFor(heard.sensor, lit, block, active);
+        settleRedstone(heard.sensor);
+        m_sensorQuiet[{ heard.sensor.x, heard.sensor.y, heard.sensor.z }] = m_vibrationClock + active + 0.5f;
+        const float near = glm::length(glm::vec3(heard.sensor) + glm::vec3(0.5f) - m_player.position);
+        if (near < 16.0f) m_audio.play(Sound::SculkClick, std::max(0.15f, 0.7f - near * 0.035f), 0.9f + 0.03f * heard.frequency);
+    }
+}
+
 void Application::settleRedstone(const glm::ivec3& at)
 {
     WorldCells cells;
@@ -9965,6 +10117,7 @@ void Application::updateFuses(float deltaTime)
 
 void Application::applyBlast(const glm::vec3& at, float radius, int damage)
 {
+    vibrate(at, 15);
     sprites(SpriteParticles::Kind::Explosion, at, 10 + static_cast<int>(radius * 3.0f), radius * 0.6f, 0.6f,
             radius * 0.8f, 0.9f);
     sprites(SpriteParticles::Kind::Smoke, at, 16, radius * 0.7f, 1.5f, 0.6f, 1.6f, -0.3f);
@@ -10346,6 +10499,7 @@ void Application::handleEating(float deltaTime)
 
     const FoodValue value = Food::valueOf(stack.id);
     if (!m_player.eat(value.hunger, value.saturation)) return;
+    vibrate(m_player.eyePosition(), 8);
 
     // And what it does to you besides filling you. One food does
     // something, and it is the one you should not have eaten.
@@ -10879,7 +11033,11 @@ void Application::handlePlacement()
             }
             if (isDoor(used))
             {
-                if (!isIronDoor(used)) swingDoor(bench.block);
+                if (!isIronDoor(used))
+                {
+                    swingDoor(bench.block);
+                    vibrate(glm::vec3(bench.block) + glm::vec3(0.5f), doorIsOpen(used) ? 9 : 10);
+                }
                 return;
             }
             if (isIronTrapdoor(used)) return;
@@ -10902,6 +11060,7 @@ void Application::handlePlacement()
                 m_world->setBlock(bench.block.x, bench.block.y, bench.block.z, flipped);
                 m_net.onLocalBlockChange(bench.block.x, bench.block.y, bench.block.z, flipped);
                 m_audio.play(Sound::DigWood, 0.6f, trapdoorIsOpen(flipped) ? 1.2f : 0.9f);
+                vibrate(glm::vec3(bench.block) + glm::vec3(0.5f), trapdoorIsOpen(flipped) ? 10 : 9);
                 return;
             }
 
@@ -11138,6 +11297,7 @@ void Application::handlePlacement()
                 m_net.onLocalBlockChange(bench.block.x, bench.block.y, bench.block.z, now);
                 settleRedstone(bench.block);
                 m_audio.play(Sound::Click, 0.6f, now == Blocks::LeverOff ? 0.8f : 1.3f);
+                vibrate(glm::vec3(bench.block) + glm::vec3(0.5f), now == Blocks::LeverOff ? 9 : 10);
 
                 if (now == Blocks::ButtonOn)
                 {
@@ -11985,6 +12145,24 @@ void Application::handlePlacement()
         if (!Cane::canStandAt(around, target.x, target.y, target.z)) return;
     }
 
+    if (isCalibratedSensor(placing))
+    {
+        const glm::vec3 look = m_camera.front;
+        const int toward = (std::fabs(look.x) > std::fabs(look.z)) ? (look.x > 0.0f ? 1 : 3) : (look.z > 0.0f ? 2 : 0);
+        placing = calibratedOf(toward, false);
+    }
+    if (isSculkVein(placing))
+    {
+        const glm::ivec3 normal = target - hit.block;
+        int face = 0;
+        if (normal.y < 0) face = 1;
+        else if (normal.z > 0) face = 2;
+        else if (normal.x < 0) face = 3;
+        else if (normal.z < 0) face = 4;
+        else if (normal.x > 0) face = 5;
+        if (!isOpaque(m_world->getBlock(hit.block.x, hit.block.y, hit.block.z))) return;
+        placing = sculkVeinOn(face);
+    }
     if (isGlowLichen(placing))
     {
         const glm::ivec3 normal = target - hit.block;
@@ -12338,6 +12516,8 @@ void Application::handlePlacement()
     m_world->setBlock(target.x, target.y, target.z, placing);
     m_net.onLocalBlockChange(target.x, target.y, target.z, placing);
     m_audio.playPlace(placing);
+    if (isAnySculkSensor(placing)) m_sensorSpots.push_back(target);
+    vibrate(glm::vec3(target) + glm::vec3(0.5f), 13);
 
     if (isRail(placing)) reshapeRailsAround(target);
     settleRedstone(target);
@@ -13358,7 +13538,7 @@ void Application::tickSpriteParticles(float deltaTime)
                     fx.spawn(block == Blocks::TrialSpawnerActiveOminous ? Kind::TrialFlameOminous : Kind::TrialFlame, middle + glm::vec3(fx.random() - 0.5f, fx.random() - 0.5f, fx.random() - 0.5f) * 0.9f,
                              glm::vec3(0.0f, 0.3f, 0.0f), 0.18f, 0.8f);
             }
-            else if (block == Blocks::SculkSensorLit)
+            else if (sculkSensorLit(block))
             {
                 if (roll < 0.3f)
                     fx.spawn(Kind::Vibration, middle + glm::vec3(0.0f, 0.6f, 0.0f), glm::vec3(0.0f, 0.6f, 0.0f), 0.2f, 0.8f);
@@ -13914,8 +14094,10 @@ void Application::updateMobs(float deltaTime)
     // this engine only has blocks.
     for (const EntityManager::Death& death : m_entities.drainDeaths())
     {
+        vibrate(death.position, 15);
         {
             const glm::ivec3 centre = glm::ivec3(glm::floor(death.position));
+            bool bloomed = false;
             for (int dx = -4; dx <= 4; ++dx)
                 for (int dy = -4; dy <= 4; ++dy)
                     for (int dz = -4; dz <= 4; ++dz)
@@ -13923,9 +14105,27 @@ void Application::updateMobs(float deltaTime)
                         const glm::ivec3 at = centre + glm::ivec3(dx, dy, dz);
                         if (!isSculkCatalyst(m_world->getBlock(at.x, at.y, at.z))) continue;
                         setBlockFor(at, Blocks::SculkCatalystBloom, Blocks::SculkCatalyst, 1.5f);
+                        bloomed = true;
                         sprites(SpriteParticles::Kind::SculkSoul, glm::vec3(at) + glm::vec3(0.5f, 1.2f, 0.5f), 1,
                                 0.1f, 0.4f, 0.4f, 1.4f);
                     }
+            if (bloomed)
+            {
+                struct SpreadCells : Sculk::Cells
+                {
+                    World* world = nullptr;
+                    Net::Session* net = nullptr;
+                    BlockId at(int x, int y, int z) const override { return world->getBlock(x, y, z); }
+                    void set(int x, int y, int z, BlockId block) override
+                    {
+                        world->setBlock(x, y, z, block);
+                        net->onLocalBlockChange(x, y, z, block);
+                    }
+                } cells;
+                cells.world = m_world.get();
+                cells.net = &m_net;
+                Sculk::spread(cells, centre, 6, static_cast<uint32_t>(m_elapsedSeconds * 1000.0f) ^ static_cast<uint32_t>(centre.x * 7919));
+            }
         }
         sprites(SpriteParticles::Kind::Poof, death.position + glm::vec3(0.0f, 0.5f, 0.0f), 12, 0.5f, 1.2f,
                 0.4f, 0.8f);
@@ -13997,6 +14197,7 @@ void Application::updateMobs(float deltaTime)
     // watching or not, which is what makes a flock worth keeping.
     for (const glm::ivec3& struck : m_arrows.drainBlockHits())
     {
+        vibrate(glm::vec3(struck) + glm::vec3(0.5f), 2);
         const BlockId hit = m_world->getBlock(struck.x, struck.y, struck.z);
         if (!isTarget(hit)) continue;
         const bool fresh = hit == Blocks::Target;

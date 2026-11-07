@@ -395,6 +395,7 @@ void AudioEngine::buildSounds()
                  Sound::MobAllayDeath, "mob/allay");
     loadVariants(Sound::Rain, "weather/rain", 1);
     loadVariants(Sound::Thunder, "weather/thunder", 1);
+    loadVariants(Sound::SculkClick, "block/sculk_sensor/sculk_clicking", 6);
 
     auto make = [&](Sound id) -> Synth {
         auto& clips = m_buffers[static_cast<size_t>(id)];
@@ -1643,6 +1644,13 @@ void AudioEngine::buildSounds()
         Synth s = make(Sound::MobStep);
         s.addNoise(0.07f, 1100.0f, 50.0f, 1.0f, false, 220);
         s.finish(0.30f);
+    }
+    {
+        Synth s = make(Sound::SculkClick);
+        s.addNoise(0.05f, 2600.0f, 60.0f, 0.8f, false, 231);
+        s.addTone(0.12f, 180.0f, 140.0f, 20.0f, 0.35f);
+        s.addNoise(0.05f, 2200.0f, 60.0f, 0.6f, false, 232);
+        s.finish(0.40f);
     }
 }
 

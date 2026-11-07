@@ -230,8 +230,8 @@ namespace
         { "Deepslate Bricks",DeepslateBricksTile,DeepslateBricksTile,DeepslateBricksTile,true,true,RenderType::Cube,0,3.5f },
         { "Deepslate Tiles",DeepslateTilesTile,DeepslateTilesTile,DeepslateTilesTile,true,true,RenderType::Cube,0,3.5f },
         { "Sculk",        SculkTile,     SculkTile,      SculkTile,      true,  true,  RenderType::Cube,   0,   0.2f },
-        { "Sculk Sensor", SculkSensorTop,SculkSensorBottom,SculkSensorSide,true,  true,  RenderType::Cube,   1,   1.5f },
-        { "Sculk Sensor", SculkSensorTopLit,SculkSensorBottom,SculkSensorSide,true,  true,  RenderType::Cube,   6,   1.5f },
+        { "Sculk Sensor", SculkSensorTop,SculkSensorBottom,SculkSensorSide,true,  false, RenderType::Lush,   1,   1.5f },
+        { "Sculk Sensor", SculkSensorTopLit,SculkSensorBottom,SculkSensorSide,true,  false, RenderType::Lush,   6,   1.5f },
         { "Sculk Shrieker",SculkShriekerTop,SculkShriekerBottom,   SculkShriekerSide,true,true,  RenderType::Cube,   2,   3.0f },
         { "Sculk Catalyst",SculkCatalystTop,SculkCatalystBottom,   SculkCatalystSide,true,true,  RenderType::Cube,   6,   3.0f },
         { "Soul Lantern", SoulLanternTile,SoulLanternTile,SoulLanternTile,true, true,  RenderType::Cube,  10,   0.3f },
@@ -2349,6 +2349,20 @@ namespace
         { "Black Banner", Planks, Planks, Planks, false, false, RenderType::None, 0, 1.0f },
         { "Black Banner", Planks, Planks, Planks, false, false, RenderType::None, 0, 1.0f },
         { "Black Banner", Planks, Planks, Planks, false, false, RenderType::None, 0, 1.0f },
+        { "Sculk Vein", SculkVeinTile, SculkVeinTile, SculkVeinTile, false, false, RenderType::Lush, 0, 0.2f },
+        { "Sculk Vein", SculkVeinTile, SculkVeinTile, SculkVeinTile, false, false, RenderType::Lush, 0, 0.2f },
+        { "Sculk Vein", SculkVeinTile, SculkVeinTile, SculkVeinTile, false, false, RenderType::Lush, 0, 0.2f },
+        { "Sculk Vein", SculkVeinTile, SculkVeinTile, SculkVeinTile, false, false, RenderType::Lush, 0, 0.2f },
+        { "Sculk Vein", SculkVeinTile, SculkVeinTile, SculkVeinTile, false, false, RenderType::Lush, 0, 0.2f },
+        { "Sculk Vein", SculkVeinTile, SculkVeinTile, SculkVeinTile, false, false, RenderType::Lush, 0, 0.2f },
+        { "Calibrated Sculk Sensor", CalibratedTopTile, SculkSensorBottom, SculkSensorSide, true, false, RenderType::Lush, 1, 1.5f },
+        { "Calibrated Sculk Sensor", CalibratedTopTile, SculkSensorBottom, SculkSensorSide, true, false, RenderType::Lush, 6, 1.5f },
+        { "Calibrated Sculk Sensor", CalibratedTopTile, SculkSensorBottom, SculkSensorSide, true, false, RenderType::Lush, 1, 1.5f },
+        { "Calibrated Sculk Sensor", CalibratedTopTile, SculkSensorBottom, SculkSensorSide, true, false, RenderType::Lush, 6, 1.5f },
+        { "Calibrated Sculk Sensor", CalibratedTopTile, SculkSensorBottom, SculkSensorSide, true, false, RenderType::Lush, 1, 1.5f },
+        { "Calibrated Sculk Sensor", CalibratedTopTile, SculkSensorBottom, SculkSensorSide, true, false, RenderType::Lush, 6, 1.5f },
+        { "Calibrated Sculk Sensor", CalibratedTopTile, SculkSensorBottom, SculkSensorSide, true, false, RenderType::Lush, 1, 1.5f },
+        { "Calibrated Sculk Sensor", CalibratedTopTile, SculkSensorBottom, SculkSensorSide, true, false, RenderType::Lush, 6, 1.5f },
     };
 }
 
@@ -2379,6 +2393,7 @@ bool isObtainable(BlockId id)
         case Blocks::CopperBulbPowered:
         case Blocks::CopperBulbLitPowered:
         case Blocks::SculkCatalystBloom:
+        case Blocks::SculkSensorLit:
         case Blocks::VaultEjecting:
         case Blocks::OminousVaultEjecting:
         case Blocks::TrialSpawnerActiveOminous:
@@ -2452,6 +2467,8 @@ bool isObtainable(BlockId id)
             if (isSuspicious(id)) return false;
             if (isDecoratedPot(id) && id != Blocks::DecoratedPotFirst + 2) return false;
             if (isLoom(id) && id != Blocks::LoomFirst + 2) return false;
+            if (isSculkVein(id) && id != sculkVeinOn(0)) return false;
+            if (isCalibratedSensor(id) && id != calibratedOf(2, false)) return false;
             if (isBanner(id) && id != bannerOf(bannerColour(id), false, 2)) return false;
             if (id == Blocks::SnifferEgg1 || id == Blocks::SnifferEgg2) return false;
             if (isBigDripleaf(id) && id != bigDripleafOf(0, DripleafTilt::None)) return false;
@@ -2869,6 +2886,7 @@ bool blockOverlaps(BlockId id, int bx, int by, int bz,
     if (id == Blocks::Conduit) return overlaps(0.3125f, 0.3125f, 0.3125f, 0.6875f, 0.6875f, 0.6875f);
     if (id == Blocks::HeavyCore) return overlaps(0.25f, 0.0f, 0.25f, 0.75f, 0.5f, 0.75f);
     if (isDecoratedPot(id)) return overlaps(0.0625f, 0.0f, 0.0625f, 0.9375f, 1.0f, 0.9375f);
+    if (isAnySculkSensor(id)) return overlaps(0.0f, 0.0f, 0.0f, 1.0f, 0.5f, 1.0f);
     if (isSnifferEgg(id)) return overlaps(0.0625f, 0.0f, 0.125f, 0.9375f, 1.0f, 0.875f);
     if (id == Blocks::Stonecutter) return overlaps(0.0f, 0.0f, 0.0f, 1.0f, 0.5625f, 1.0f);
     if (id == Blocks::DragonEgg) return overlaps(0.0625f, 0.0f, 0.0625f, 0.9375f, 1.0f, 0.9375f);

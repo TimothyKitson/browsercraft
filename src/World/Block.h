@@ -664,6 +664,8 @@ namespace Blocks
         Stonecutter, FletchingTable, SmithingTable, CartographyTable,
         LoomFirst, LoomLast = LoomFirst + 3,
         BannerFirst, BannerLast = BannerFirst + 127,
+        SculkVeinFirst, SculkVeinLast = SculkVeinFirst + 5,
+        CalibratedSensorFirst, CalibratedSensorLast = CalibratedSensorFirst + 7,
 
         Count
     };
@@ -820,6 +822,21 @@ inline BlockId suspiciousOf(int table, int stage)
 inline bool isSnifferEgg(BlockId id) { return id >= Blocks::SnifferEgg0 && id <= Blocks::SnifferEgg2; }
 inline bool isDecoratedPot(BlockId id) { return id >= Blocks::DecoratedPotFirst && id <= Blocks::DecoratedPotLast; }
 inline bool isLoom(BlockId id) { return id >= Blocks::LoomFirst && id <= Blocks::LoomLast; }
+inline bool isSculkVein(BlockId id) { return id >= Blocks::SculkVeinFirst && id <= Blocks::SculkVeinLast; }
+inline int sculkVeinFace(BlockId id) { return isSculkVein(id) ? id - Blocks::SculkVeinFirst : 0; }
+inline BlockId sculkVeinOn(int face) { return static_cast<BlockId>(Blocks::SculkVeinFirst + (face < 0 || face > 5 ? 0 : face)); }
+inline bool isCalibratedSensor(BlockId id) { return id >= Blocks::CalibratedSensorFirst && id <= Blocks::CalibratedSensorLast; }
+inline bool calibratedLit(BlockId id) { return isCalibratedSensor(id) && ((id - Blocks::CalibratedSensorFirst) & 1) != 0; }
+inline int calibratedFacing(BlockId id) { return isCalibratedSensor(id) ? (id - Blocks::CalibratedSensorFirst) >> 1 : 0; }
+inline BlockId calibratedOf(int facing, bool lit)
+{
+    return static_cast<BlockId>(Blocks::CalibratedSensorFirst + (facing & 3) * 2 + (lit ? 1 : 0));
+}
+inline bool isAnySculkSensor(BlockId id)
+{
+    return id == Blocks::SculkSensor || id == Blocks::SculkSensorLit || isCalibratedSensor(id);
+}
+inline bool sculkSensorLit(BlockId id) { return id == Blocks::SculkSensorLit || calibratedLit(id); }
 inline bool isBanner(BlockId id) { return id >= Blocks::BannerFirst && id <= Blocks::BannerLast; }
 inline int bannerColour(BlockId id) { return isBanner(id) ? (id - Blocks::BannerFirst) / 8 : 0; }
 inline bool bannerOnWall(BlockId id) { return isBanner(id) && ((id - Blocks::BannerFirst) & 4) != 0; }
@@ -1897,6 +1914,7 @@ inline int blockFacing(BlockId id)
     if (isDecoratedPot(id)) return id - Blocks::DecoratedPotFirst;
     if (isLoom(id)) return id - Blocks::LoomFirst;
     if (isBanner(id)) return bannerFacing(id);
+    if (isCalibratedSensor(id)) return calibratedFacing(id);
     return 0;
 }
 
@@ -1917,7 +1935,7 @@ inline BlockId stairsFacing(BlockId stairs, int facing)
 // How tall the block actually stands in its own cell. Everything is a
 // full block but the slabs, and the collision and the mesher both read
 // this rather than each keeping their own list.
-inline float blockHeight(BlockId id) { return isSlab(id) ? 0.5f : 1.0f; }
+inline float blockHeight(BlockId id) { return isSlab(id) || isAnySculkSensor(id) ? 0.5f : 1.0f; }
 
 // Whether the solid part of the block at (bx, by, bz) overlaps the box
 // between the two corners given. Everything fills its whole cell but

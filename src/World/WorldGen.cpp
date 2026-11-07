@@ -4189,6 +4189,13 @@ void WorldGen::stampAncientCity(Chunk& chunk, int midX, int midZ) const
                 put(chunk, wx, floorY + 1, wz, Blocks::SculkShrieker);
             else if (roll < 0.024f)
                 put(chunk, wx, floorY + 1, wz, Blocks::SculkCatalyst);
+            else
+            {
+                const float sculkiness = 1.0f - reach / static_cast<float>(HALF);
+                const bool grown = hashToFloat(hashCoords(wx, floorY, wz, m_seed + 8801)) < 0.25f + sculkiness * 0.5f;
+                if (!grown && hashToFloat(hashCoords(wx, 5, wz, m_seed + 8803)) < 0.3f)
+                    put(chunk, wx, floorY + 1, wz, sculkVeinOn(0));
+            }
         }
 
     // The frame in the middle. Reinforced deepslate, in the shape of a

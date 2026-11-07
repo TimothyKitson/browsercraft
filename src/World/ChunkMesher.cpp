@@ -1128,11 +1128,33 @@ namespace
             emitPart(snap, lx, y, lz, id, glm::vec3(0.0f), glm::vec3(1.0f, 1.0f / 16.0f, 1.0f), faces, out);
             return;
         }
-        if (isGlowLichen(id))
+        if (isAnySculkSensor(id))
         {
-            const int tile = Tiles::GlowLichenTile;
+            const BlockInfo& info = blockInfo(id);
+            const PartFace side{ info.tileSide, 0.0f, 8.0f, 16.0f, 16.0f };
+            PartFace faces[6] = { side, side, { info.tileTop, 0.0f, 0.0f, 16.0f, 16.0f },
+                                  { info.tileBottom, 0.0f, 0.0f, 16.0f, 16.0f }, side, side };
+            if (isCalibratedSensor(id))
+            {
+                static const int BACK[4] = { 4, 1, 5, 0 };
+                faces[BACK[calibratedFacing(id)]] = PartFace{ Tiles::CalibratedInputTile, 0.0f, 8.0f, 16.0f, 16.0f };
+            }
+            emitPart(snap, lx, y, lz, id, glm::vec3(0.0f), glm::vec3(1.0f, 0.5f, 1.0f), faces, out);
+            const int tendril = sculkSensorLit(id) ? Tiles::SculkTendrilActiveTile : Tiles::SculkTendrilTile;
+            static const float CORNERS[4][2] = { { 3.0f, 3.0f }, { 13.0f, 3.0f }, { 13.0f, 13.0f }, { 3.0f, 13.0f } };
+            for (const auto& corner : CORNERS)
+                emitTinyCross(snap, lx, y, lz, id, corner[0] / 16.0f, corner[1] / 16.0f, 0.5f, 1.0f, 0.25f, tendril,
+                              4.0f, 8.0f, 12.0f, 16.0f, out);
+            if (isCalibratedSensor(id))
+                emitTinyCross(snap, lx, y, lz, id, 0.5f, 0.5f, 0.5f, 1.25f, 0.7071f, Tiles::CalibratedAmethystTile,
+                              0.0f, 4.0f, 16.0f, 16.0f, out);
+            return;
+        }
+        if (isGlowLichen(id) || isSculkVein(id))
+        {
+            const int tile = isSculkVein(id) ? Tiles::SculkVeinTile : Tiles::GlowLichenTile;
             const float e = 0.02f;
-            switch (glowLichenFace(id))
+            switch (isSculkVein(id) ? sculkVeinFace(id) : glowLichenFace(id))
             {
                 case 0: flat(e, 0, 0, 1, 1, tile, 1.0f); break;
                 case 1: flat(1.0f - e, 0, 0, 1, 1, tile, 0.6f); break;

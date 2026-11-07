@@ -463,6 +463,8 @@ namespace
                          Items::Paper, Items::Paper, Items::Paper }, 0, Items::EmptyMap, 1 },
         { false, 2, 3, { Items::Paper, Items::Paper, Blocks::Planks, Blocks::Planks, Blocks::Planks, Blocks::Planks }, 0, Blocks::CartographyTable, 1 },
         { false, 2, 2, { Items::StringItem, Items::StringItem, Blocks::Planks, Blocks::Planks }, 0, static_cast<StackId>(Blocks::LoomFirst + 2), 1 },
+        { false, 3, 2, { Blocks::Air, Items::AmethystShard, Blocks::Air, Items::AmethystShard, Blocks::SculkSensor, Items::AmethystShard }, 0,
+          static_cast<StackId>(Blocks::CalibratedSensorFirst + 4), 1 },
         { true, 0, 0, { Items::Paper, Blocks::OxeyeDaisy }, 2, Items::FlowerBannerPattern, 1 },
         { true, 0, 0, { Items::Paper, Blocks::WitherSkull }, 2, Items::SkullBannerPattern, 1 },
         { false, 3, 3, { Blocks::Wool, Blocks::Wool, Blocks::Wool, Blocks::Wool, Blocks::Wool, Blocks::Wool, Blocks::Air, Items::Stick, Blocks::Air }, 0, static_cast<StackId>(Blocks::BannerFirst + 2), 1 },

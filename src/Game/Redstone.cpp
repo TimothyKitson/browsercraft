@@ -29,6 +29,7 @@ namespace Redstone
         if (isTrappedChest(id) && chestState(id).open) return true;
         if (lightningRodPowered(id)) return true;
         if (daylightLit(id) || id == Blocks::TargetLit || hookPowered(id)) return true;
+        if (sculkSensorLit(id)) return true;
         if (specialRailFamily(id) == 2 && specialRailPowered(id)) return true;
         return id == Blocks::RedstoneTorch || id == Blocks::RedstoneBlock ||
                id == Blocks::LeverOn || id == Blocks::ButtonOn;

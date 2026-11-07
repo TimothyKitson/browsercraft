@@ -44,6 +44,7 @@
 #include "Game/Smithing.h"
 #include "Game/Maps.h"
 #include "Game/Banners.h"
+#include "Game/Sculk.h"
 #include "Game/Grindstone.h"
 #include "Game/Saplings.h"
 #include "Game/Shield.h"
@@ -3855,6 +3856,56 @@ namespace
                 }
             check(gravel > 0, "and it is full of suspicious gravel");
         }
+    }
+
+    void testSculkExtras()
+    {
+        section("sculk veins and the calibrated sensor");
+        check(sculkVeinFace(sculkVeinOn(4)) == 4 && isSculkVein(sculkVeinOn(0)) && !isSculkVein(Blocks::Sculk),
+              "a vein knows which face it grows on");
+        check(isObtainable(sculkVeinOn(0)) && !isObtainable(sculkVeinOn(3)), "only the floor vein is a thing you hold");
+        check(blockDrop(sculkVeinOn(2)) == Blocks::Air, "and a vein gives nothing back without silk touch");
+        check(!isSolid(sculkVeinOn(0)), "you walk through veins");
+        check(isCalibratedSensor(calibratedOf(3, true)) && calibratedLit(calibratedOf(3, true)) && calibratedFacing(calibratedOf(3, true)) == 3 &&
+              blockFacing(calibratedOf(1, false)) == 1, "a calibrated sensor faces one way and is lit or not");
+        check(blockDrop(calibratedOf(0, true)) == static_cast<StackId>(calibratedOf(2, false)) && isObtainable(calibratedOf(2, false)) &&
+              !isObtainable(calibratedOf(0, false)), "and comes back as the one you hold");
+        check(blockDrop(Blocks::SculkSensorLit) == Blocks::SculkSensor, "a sensor broken while it rings comes back quiet");
+        check(blockHeight(Blocks::SculkSensor) == 0.5f && blockHeight(calibratedOf(0, false)) == 0.5f,
+              "both sensors are half a block high");
+        check(Redstone::isSource(Blocks::SculkSensorLit) && Redstone::isSource(calibratedOf(2, true)) &&
+              !Redstone::isSource(Blocks::SculkSensor) && !Redstone::isSource(calibratedOf(2, false)),
+              "a sensor powers redstone while it rings and not otherwise");
+
+        ItemStack grid[9];
+        grid[1].id = Items::AmethystShard; grid[3].id = Items::AmethystShard; grid[5].id = Items::AmethystShard;
+        grid[4].id = Blocks::SculkSensor;
+        for (ItemStack& cell : grid) if (cell.id != Blocks::Air) cell.count = 1;
+        const CraftOutput made = Crafting::match(grid, 3);
+        check(made.valid() && isCalibratedSensor(asBlock(made.id)), "three amethyst shards round a sensor calibrate it");
+
+        struct Grid : Sculk::Cells
+        {
+            std::map<std::tuple<int, int, int>, BlockId> cells;
+            BlockId at(int x, int y, int z) const override
+            {
+                const auto found = cells.find({ x, y, z });
+                if (found != cells.end()) return found->second;
+                return y < 10 ? Blocks::Stone : Blocks::Air;
+            }
+            void set(int x, int y, int z, BlockId block) override { cells[{ x, y, z }] = block; }
+        } floor;
+        const int changed = Sculk::spread(floor, glm::ivec3(0, 10, 0), 8, 1234u);
+        int sculk = 0, veins = 0;
+        for (const auto& cell : floor.cells)
+        {
+            if (cell.second == Blocks::Sculk) ++sculk;
+            if (isSculkVein(cell.second)) ++veins;
+        }
+        check(changed > 0 && sculk > 0, "a catalyst's charge turns stone around a death into sculk");
+        check(veins > 0, "and leaves veins creeping out from it");
+        check(Sculk::replaceable(Blocks::Deepslate) && !Sculk::replaceable(Blocks::Obsidian) && !Sculk::replaceable(Blocks::Planks),
+              "sculk takes rock and earth, not obsidian or anything built");
     }
 
     void testBanners()
@@ -14037,6 +14088,7 @@ int runSelfTest()
     testStonecutter();
     testMaps();
     testBanners();
+    testSculkExtras();
     testMadeThings();
     testTheEndAndTheSea();
     testPathfinding();

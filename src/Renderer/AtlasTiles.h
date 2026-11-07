@@ -385,6 +385,8 @@ namespace Tiles
         SmithingTopTile, SmithingBottomTile, SmithingSideTile, SmithingFrontTile,
         CartographyTopTile, CartographySide1Tile, CartographySide2Tile, CartographySide3Tile,
         LoomTopTile, LoomBottomTile, LoomSideTile, LoomFrontTile,
+        SculkVeinTile, SculkTendrilTile, SculkTendrilActiveTile,
+        CalibratedTopTile, CalibratedInputTile, CalibratedAmethystTile,
 
         TileCount
     };

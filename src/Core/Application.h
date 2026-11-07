@@ -60,6 +60,7 @@
 #include <unordered_map>
 #include <map>
 #include "Game/Maps.h"
+#include "Game/Sculk.h"
 
 // Which part of the game is on screen. The world only exists while playing,
 // so the title screen can run before anything has been generated.
@@ -789,6 +790,22 @@ private:
     // whatever it changed. Every place, break and switch goes through
     // this, which is the only way a lamp twelve blocks away knows.
     void settleRedstone(const glm::ivec3& at);
+    struct Vibration
+    {
+        glm::ivec3 sensor{ 0 };
+        float due = 0.0f;
+        int frequency = 0;
+    };
+    std::vector<Vibration> m_vibrations;
+    std::vector<glm::ivec3> m_sensorSpots;
+    std::map<std::array<int, 3>, float> m_sensorQuiet;
+    float m_sensorScan = 0.0f;
+    float m_mobVibration = 0.0f;
+    float m_vibrationClock = 0.0f;
+    void vibrate(const glm::vec3& at, int frequency);
+    void tickVibrations(float deltaTime);
+    bool vibrationBlocked(const glm::vec3& from, const glm::vec3& to) const;
+    bool calibratedHears(const glm::ivec3& at, int frequency);
 
     // Trial spawners with a wave out. One entry while a spawner is
     // fighting you and gone again when it pays up, so a chamber full

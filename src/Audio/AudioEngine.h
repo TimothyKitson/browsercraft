@@ -242,6 +242,7 @@ enum class Sound : uint8_t
     // Fire: a blaze loosing a charge, and the player alight.
     Fire,
     MobStep,
+    SculkClick,
     Count
 };
 

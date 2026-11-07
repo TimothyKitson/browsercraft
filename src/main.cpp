@@ -823,6 +823,8 @@ namespace
             else if (isSuspicious(id))            why = "buried in pyramids, wells and ruins, and dusted by a brush";
             else if (isDecoratedPot(id))          why = "a pot set down facing another way";
             else if (isLoom(id))                  why = "a loom set down facing another way";
+            else if (isSculkVein(id))             why = "sculk vein on another face";
+            else if (isCalibratedSensor(id))      why = "a calibrated sensor facing another way, or one that just heard something";
             else if (isBanner(id))                why = "a banner set down facing another way, or hung on a wall";
             else if (isSnifferEgg(id))            why = "a sniffer egg cracking as it nears hatching";
             else if (isChiseledBookshelf(id))     why = "a shelf with books in it, or facing another way";

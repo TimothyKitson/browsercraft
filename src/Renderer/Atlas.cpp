@@ -1489,6 +1489,67 @@ namespace
 
     void paintSculkSensorSide(Tile& t) { paintSculkMark(t, Color{ 26, 96, 100 }, Color{ 18, 66, 70 }, 413); }
 
+    void paintSculkVeinTile(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int i = 0; i < 70; ++i)
+        {
+            const int x = static_cast<int>(hash2(i, 3, 4411) * 16.0f);
+            const int y = static_cast<int>(hash2(i, 4, 4412) * 16.0f);
+            const bool glow = hash2(i, 5, 4413) > 0.85f;
+            t.set(std::min(x, 15), std::min(y, 15), glow ? Color{ 40, 150, 150 } : Color{ 14, 34, 42 });
+        }
+        for (int k = 0; k < 16; ++k)
+        {
+            t.set(k, 7 + static_cast<int>(std::sin(k * 0.7f) * 2.0f), Color{ 10, 28, 36 });
+            t.set(5 + static_cast<int>(std::cos(k * 0.6f) * 2.0f), k, Color{ 10, 28, 36 });
+        }
+    }
+    void paintTendrilIn(Tile& t, bool active)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        const Color stem = active ? Color{ 90, 210, 205 } : Color{ 24, 92, 98 };
+        const Color tip = active ? Color{ 180, 255, 250 } : Color{ 40, 130, 134 };
+        for (int y = 8; y < 16; ++y)
+        {
+            const int sway = (y < 11) ? 1 : 0;
+            t.set(7 + sway, y, stem);
+            t.set(8 + sway, y, stem);
+        }
+        t.set(8, 8, tip);
+        t.set(9, 9, tip);
+    }
+    void paintSculkTendrilTile(Tile& t) { paintTendrilIn(t, false); }
+    void paintSculkTendrilActiveTile(Tile& t) { paintTendrilIn(t, true); }
+    void paintCalibratedTopTile(Tile& t)
+    {
+        paintSculkSensorTop(t);
+        for (int k = 5; k < 11; ++k)
+        {
+            t.set(k, 7, Color{ 150, 100, 200 });
+            t.set(7, k, Color{ 150, 100, 200 });
+        }
+    }
+    void paintCalibratedInputTile(Tile& t)
+    {
+        paintSculkSensorSide(t);
+        for (int x = 3; x < 13; ++x)
+        {
+            t.set(x, 11, Color{ 170, 120, 220 });
+            t.set(x, 12, Color{ 120, 80, 170 });
+        }
+    }
+    void paintCalibratedAmethystTile(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 4; y < 16; ++y)
+        {
+            const int half = std::max(0, (y - 4) / 3);
+            for (int x = 8 - half - 1; x <= 8 + half; ++x)
+                t.set(x, y, (x + y) % 3 == 0 ? Color{ 214, 170, 250 } : Color{ 150, 100, 200 });
+        }
+    }
+
     void paintSculkShriekerTop(Tile& t)
     {
         paintSculk(t);
@@ -8630,6 +8691,12 @@ namespace
         { Tiles::LoomBottomTile, paintLoomBottomTile },
         { Tiles::LoomSideTile, paintLoomSideTile },
         { Tiles::LoomFrontTile, paintLoomFrontTile },
+        { Tiles::SculkVeinTile, paintSculkVeinTile },
+        { Tiles::SculkTendrilTile, paintSculkTendrilTile },
+        { Tiles::SculkTendrilActiveTile, paintSculkTendrilActiveTile },
+        { Tiles::CalibratedTopTile, paintCalibratedTopTile },
+        { Tiles::CalibratedInputTile, paintCalibratedInputTile },
+        { Tiles::CalibratedAmethystTile, paintCalibratedAmethystTile },
         { Tiles::SmithingTopTile, paintSmithingTopTile },
         { Tiles::SmithingBottomTile, paintSmithingBottomTile },
         { Tiles::SmithingSideTile, paintSmithingSideTile },
@@ -9515,6 +9582,12 @@ namespace
         { Tiles::LoomBottomTile, { "loom_bottom", nullptr }, Tinting::None, 0, false },
         { Tiles::LoomSideTile, { "loom_side", nullptr }, Tinting::None, 0, false },
         { Tiles::LoomFrontTile, { "loom_front", nullptr }, Tinting::None, 0, false },
+        { Tiles::SculkVeinTile, { "sculk_vein", nullptr }, Tinting::None, 0, false },
+        { Tiles::SculkTendrilTile, { "sculk_sensor_tendril_inactive", nullptr }, Tinting::None, 0, false },
+        { Tiles::SculkTendrilActiveTile, { "sculk_sensor_tendril_active", nullptr }, Tinting::None, 0, false },
+        { Tiles::CalibratedTopTile, { "calibrated_sculk_sensor_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::CalibratedInputTile, { "calibrated_sculk_sensor_input_side", nullptr }, Tinting::None, 0, false },
+        { Tiles::CalibratedAmethystTile, { "calibrated_sculk_sensor_amethyst", nullptr }, Tinting::None, 0, false },
         { Tiles::SmithingTopTile, { "smithing_table_top", nullptr }, Tinting::None, 0, false },
         { Tiles::SmithingBottomTile, { "smithing_table_bottom", nullptr }, Tinting::None, 0, false },
         { Tiles::SmithingSideTile, { "smithing_table_side", nullptr }, Tinting::None, 0, false },

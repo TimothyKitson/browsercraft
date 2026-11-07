@@ -199,6 +199,7 @@ namespace
         Blocks::IronDoorFirst, Blocks::IronTrapdoorFirst,
         Blocks::IronBars, Blocks::ChainFirst, Blocks::EndRodFirst, Blocks::Cobweb, Items::IronNugget,
         Blocks::Stonecutter, Blocks::FletchingTable, Blocks::SmithingTable, Blocks::CartographyTable, Blocks::LoomFirst + 2,
+        Blocks::CalibratedSensorFirst + 4, Blocks::SculkVeinFirst,
         Blocks::SoulTorch, Blocks::SoulCampfire, Blocks::SoulSoil,
         Blocks::MagmaBlock, Blocks::CryingObsidian, Blocks::RespawnAnchor0, Blocks::Lodestone,
         Blocks::BellFirst + 2, Blocks::Jukebox, Blocks::ChiseledBookshelfFirst + 14, Blocks::DragonEgg, Blocks::HeavyCore,
@@ -296,7 +297,7 @@ bool Application::drawBlockIcon(float x, float y, float size, StackId id,
     // Only things that really are a box. A flower is two crossed quads
     // and a liquid has no edges; both read better flat, and Minecraft
     // draws them flat too.
-    if (info.render != RenderType::Cube && info.render != RenderType::Slab) return false;
+    if (info.render != RenderType::Cube && info.render != RenderType::Slab && !isAnySculkSensor(block)) return false;
 
     // Minecraft's proportions, scaled to the slot: 14.14 of 16 across.
     const float width = size * (14.142f / 16.0f);
@@ -3813,6 +3814,7 @@ void Application::setTrappedOpen(const glm::ivec3& block, bool open)
 
 void Application::openChest(const glm::ivec3& block)
 {
+    vibrate(glm::vec3(block) + glm::vec3(0.5f), 10);
     m_chestBlock = block;
     m_chestOpen = true;
     m_chestDouble = false;
