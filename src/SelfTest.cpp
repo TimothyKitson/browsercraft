@@ -3984,6 +3984,15 @@ namespace
         check(bucketFor(MobId::TropicalFishLarge) == Items::TropicalFishBucket, "both shapes of tropical fish share one bucket");
         check(bucketFor(MobId::Cow) == Blocks::Air && mobInBucket(Items::WaterBucket) == MobId::Count, "a cow does not go in a bucket");
         check(maxStackOf(Items::AxolotlBucket) == 1, "a bucket of anything stacks to one");
+        bool keepsLook = true;
+        for (uint32_t seed : { 7u, 99991u, 0xDEADBEEFu, 0x80000001u })
+        {
+            if (axolotlVariantOf(bucketSeed(MobId::Axolotl, seed)) != axolotlVariantOf(seed)) keepsLook = false;
+            const TropicalFish::Look before = TropicalFish::lookFor(seed, true);
+            const TropicalFish::Look after = TropicalFish::lookFor(bucketSeed(MobId::TropicalFish, seed), true);
+            if (before.variety != after.variety || before.base != after.base || before.pattern != after.pattern) keepsLook = false;
+        }
+        check(keepsLook, "what comes out of a bucket looks like what went in, even after the bucket is saved");
 
         bool shapesHold = true;
         int common = 0;
@@ -4012,6 +4021,82 @@ namespace
               "a slimeball, and nothing else, hurries a tadpole along");
         check(mobType(MobId::Frog).breedingFood == Items::Slimeball, "and is what brings two frogs together");
         check(blockDrop(Blocks::Frogspawn) == Blocks::Air && !isObtainable(Blocks::Frogspawn), "frogspawn cannot be picked up");
+    }
+
+    void testBooks()
+    {
+        section("books: enchanted, written and copied");
+        ItemStack g[9];
+        auto put = [&](std::initializer_list<ItemStack> cells) {
+            int i = 0;
+            for (const ItemStack& c : cells) g[i++] = c;
+            for (; i < 9; ++i) g[i].clear();
+        };
+        put({ ItemStack{ Items::Book, 1 }, ItemStack{ Items::InkSac, 1 }, ItemStack{ Items::Feather, 1 } });
+        check(Crafting::match(g, 3).id == Items::WritableBook, "a book, an ink sac and a feather make a book and quill");
+
+        ItemStack signed_{ Items::WrittenBook, 1 };
+        signed_.damage = 3;
+        put({ signed_, ItemStack{ Items::WritableBook, 1 }, ItemStack{ Items::WritableBook, 1 } });
+        const CraftOutput copies = Crafting::match(g, 3);
+        check(copies.id == Items::WrittenBook && copies.count == 2 && copies.damage == 3 && ((copies.enchantments >> 24) & 3u) == 1u,
+              "a written book beside two books and quill makes two copies of the original");
+        Crafting::consume(g, 3);
+        check(g[0].id == Items::WrittenBook && g[1].empty() && g[2].empty(), "and the original stays in the grid");
+        ItemStack copyOfCopy = signed_;
+        copyOfCopy.enchantments = 2u << 24;
+        put({ copyOfCopy, ItemStack{ Items::WritableBook, 1 } });
+        check(!Crafting::match(g, 3).valid(), "a copy of a copy cannot be copied again");
+        check(maxStackOf(Items::WrittenBook) == 16 && maxStackOf(Items::WritableBook) == 1 && maxStackOf(Items::EnchantedBook) == 1,
+              "written books stack to sixteen, the others to one");
+        check(Enchanting::glints(Items::WrittenBook, 0) && Enchanting::glints(Items::EnchantedBook, 0), "written and enchanted books shine");
+
+        check(Enchanting::offerFor(0, 15, Items::Book, 77u).valid(), "a plain book can go on the enchanting table");
+        Anvil::Input book{ Items::EnchantedBook, 1, 0, Enchanting::withLevel(0, Enchanting::Kind::Sharpness, 3) };
+        Anvil::Input sword{ Items::DiamondSword, 1, 0, 0 };
+        const Anvil::Result sharpened = Anvil::combine(sword, book);
+        check(sharpened.valid && Enchanting::levelOf(sharpened.enchantments, Enchanting::Kind::Sharpness) == 3,
+              "an enchanted book gives up its enchantment at the anvil");
+        Anvil::Input one{ Items::EnchantedBook, 1, 0, Enchanting::withLevel(0, Enchanting::Kind::Efficiency, 1) };
+        const Anvil::Result merged = Anvil::combine(one, one);
+        check(merged.valid && merged.id == Items::EnchantedBook && Enchanting::levelOf(merged.enchantments, Enchanting::Kind::Efficiency) == 2,
+              "and two books of the same make one of the next level");
+        const Grindstone::Result wiped = Grindstone::combine(book, Anvil::Input{});
+        check(wiped.valid && wiped.id == Items::Book, "a grindstone turns an enchanted book back into a book");
+
+        bool fishedBook = false;
+        for (uint32_t seed = 0; seed < 6000 && !fishedBook; ++seed)
+        {
+            const Fishing::Catch c = Fishing::roll(seed, true, false);
+            if (c.stack.id == Items::EnchantedBook && Enchanting::any(c.stack.enchantments)) fishedBook = true;
+        }
+        check(fishedBook, "a rod can bring up an enchanted book");
+        bool sold = false;
+        for (const Trading::Deal& d : Trading::dealsFor(Trading::Profession::Librarian))
+            if (d.offer.give == Items::EnchantedBook && d.offer.giveEnchantments != 0) sold = true;
+        check(sold, "and a librarian sells them");
+
+        const std::string dir = (std::filesystem::temp_directory_path() / "bc_selftest_books").string();
+        std::error_code ec;
+        std::filesystem::remove_all(dir, ec);
+        WorldSave::ensureDirectories(dir);
+        LevelState state;
+        state.seed = 5u;
+        state.books.push_back(LevelState::SavedBook{ "Notes", "Alex", { "first page", std::string(600, 'x') } });
+        LevelState::SavedLectern lectern;
+        lectern.x = 4; lectern.y = 70; lectern.z = -9;
+        lectern.stack.id = static_cast<uint16_t>(Items::WrittenBook);
+        lectern.stack.count = 1;
+        lectern.stack.damage = 1;
+        state.lecterns.push_back(lectern);
+        WorldSave::saveLevel(dir, state);
+        LevelState back;
+        check(WorldSave::loadLevel(dir, back) && back.books.size() == 1 && back.books[0].title == "Notes" &&
+                  back.books[0].author == "Alex" && back.books[0].pages.size() == 2 && back.books[0].pages[1].size() == 600,
+              "a written book's title, author and long pages are kept in the level");
+        check(back.lecterns.size() == 1 && back.lecterns[0].stack.id == static_cast<uint16_t>(Items::WrittenBook) && back.lecterns[0].z == -9,
+              "and so is the book left open on a lectern");
+        std::filesystem::remove_all(dir, ec);
     }
 
     void testArchery()
@@ -11976,7 +12061,7 @@ namespace
             std::error_code ec;
             const auto size = std::filesystem::file_size(path, ec);
             if (!ec) std::filesystem::resize_file(path, size - sizeof(uint16_t) - sizeof(uint8_t) - 3 * sizeof(int) - sizeof(uint32_t) - sizeof(int32_t) - 6 * sizeof(uint32_t) -
-                                                        sizeof(uint8_t) - 3 * sizeof(float) - sizeof(int8_t) - sizeof(uint32_t), ec);
+                                                        sizeof(uint8_t) - 3 * sizeof(float) - sizeof(int8_t) - sizeof(uint32_t) - 2 * sizeof(uint32_t), ec);
 
             LevelState back;
             check(WorldSave::loadLevel(dir, back), "a level from before items moved up still loads");
@@ -14496,6 +14581,7 @@ int runSelfTest()
     testFoodsThatBite();
     testMaterials();
     testMobBuckets();
+    testBooks();
     testMadeThings();
     testTheEndAndTheSea();
     testPathfinding();

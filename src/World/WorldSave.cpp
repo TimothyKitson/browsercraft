@@ -50,6 +50,22 @@ namespace
         if (length > 0) out.write(text.data(), length);
     }
 
+    void writeText(std::ofstream& out, const std::string& text)
+    {
+        const uint16_t length = static_cast<uint16_t>(text.size() > 4096 ? 4096 : text.size());
+        write(out, length);
+        if (length > 0) out.write(text.data(), length);
+    }
+
+    bool readText(std::ifstream& in, std::string& text)
+    {
+        uint16_t length = 0;
+        if (!read(in, length)) return false;
+        text.assign(length, '\0');
+        if (length > 0) in.read(text.data(), length);
+        return static_cast<bool>(in);
+    }
+
     bool readLine(std::ifstream& in, std::string& text)
     {
         uint8_t length = 0;
@@ -331,6 +347,26 @@ void WorldSave::saveLevel(const std::string& saveDirectory, const LevelState& st
             write(out, stack.damage);
             write(out, stack.enchantments);
         }
+    }
+    write(out, static_cast<uint32_t>(state.books.size()));
+    for (const LevelState::SavedBook& book : state.books)
+    {
+        writeLine(out, book.title);
+        writeLine(out, book.author);
+        write(out, static_cast<uint16_t>(book.pages.size()));
+        for (const std::string& page : book.pages) writeText(out, page);
+    }
+    write(out, static_cast<uint32_t>(state.lecterns.size()));
+    for (const LevelState::SavedLectern& lectern : state.lecterns)
+    {
+        write(out, lectern.x);
+        write(out, lectern.y);
+        write(out, lectern.z);
+        write(out, lectern.dimension);
+        write(out, lectern.stack.id);
+        write(out, lectern.stack.count);
+        write(out, lectern.stack.damage);
+        write(out, lectern.stack.enchantments);
     }
 }
 
@@ -694,11 +730,12 @@ bool WorldSave::loadLevel(const std::string& saveDirectory, LevelState& out)
                                                     read(in, out.deathPoint[1]) && read(in, out.deathPoint[2]) && read(in, out.deathDimension);
                                                 if (deathWhole) out.hasDeathPoint = died != 0;
                                                 uint32_t bundleCount = 0;
-                                                if (deathWhole && read(in, bundleCount))
+                                                bool bundlesWhole = deathWhole && read(in, bundleCount);
+                                                if (bundlesWhole)
                                                     for (uint32_t i = 0; i < bundleCount && i < 100000u; ++i)
                                                     {
                                                         uint16_t stacks = 0;
-                                                        if (!read(in, stacks)) break;
+                                                        if (!read(in, stacks)) { bundlesWhole = false; break; }
                                                         std::vector<LevelState::SavedBundleStack> bundle;
                                                         bool whole = true;
                                                         for (uint16_t k = 0; k < stacks && whole; ++k)
@@ -708,8 +745,41 @@ bool WorldSave::loadLevel(const std::string& saveDirectory, LevelState& out)
                                                                     read(in, stack.enchantments);
                                                             if (whole) bundle.push_back(stack);
                                                         }
-                                                        if (!whole) break;
+                                                        if (!whole) { bundlesWhole = false; break; }
                                                         out.bundles.push_back(bundle);
+                                                    }
+                                                uint32_t bookCount = 0;
+                                                bool booksWhole = bundlesWhole && read(in, bookCount);
+                                                if (booksWhole)
+                                                    for (uint32_t i = 0; i < bookCount && i < 60000u; ++i)
+                                                    {
+                                                        LevelState::SavedBook book;
+                                                        uint16_t pages = 0;
+                                                        if (!readLine(in, book.title) || !readLine(in, book.author) || !read(in, pages))
+                                                        {
+                                                            booksWhole = false;
+                                                            break;
+                                                        }
+                                                        for (uint16_t k = 0; k < pages && booksWhole; ++k)
+                                                        {
+                                                            std::string page;
+                                                            booksWhole = readText(in, page);
+                                                            if (booksWhole) book.pages.push_back(page);
+                                                        }
+                                                        if (!booksWhole) break;
+                                                        out.books.push_back(book);
+                                                    }
+                                                uint32_t lecternCount = 0;
+                                                if (booksWhole && read(in, lecternCount))
+                                                    for (uint32_t i = 0; i < lecternCount && i < 100000u; ++i)
+                                                    {
+                                                        LevelState::SavedLectern lectern;
+                                                        if (!read(in, lectern.x) || !read(in, lectern.y) || !read(in, lectern.z) ||
+                                                            !read(in, lectern.dimension) || !read(in, lectern.stack.id) ||
+                                                            !read(in, lectern.stack.count) || !read(in, lectern.stack.damage) ||
+                                                            !read(in, lectern.stack.enchantments))
+                                                            break;
+                                                        out.lecterns.push_back(lectern);
                                                     }
                                             }
                                         }

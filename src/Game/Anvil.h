@@ -67,7 +67,7 @@ namespace Anvil
     // point of it, and which the anvil empties onto something useful.
     inline bool isEnchantedBook(const Input& in)
     {
-        return in.id == Items::Book && Enchanting::any(in.enchantments);
+        return (in.id == Items::EnchantedBook || in.id == Items::Book) && Enchanting::any(in.enchantments);
     }
 
     // What comes out, and what it costs. An invalid result means the

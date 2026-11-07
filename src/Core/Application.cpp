@@ -856,6 +856,18 @@ void Application::loadLevel()
             m_commands[{ static_cast<int>(saved.dimension), saved.x, saved.y, saved.z }] = command;
         }
         m_itemNames = state.itemNames;
+        m_bookTexts.clear();
+        for (const auto& saved : state.books) m_bookTexts.push_back(BookText{ saved.title, saved.author, saved.pages });
+        m_lecternBooks.clear();
+        for (const auto& saved : state.lecterns)
+        {
+            ItemStack stack;
+            stack.id = static_cast<StackId>(saved.stack.id);
+            stack.count = std::max<int>(1, saved.stack.count);
+            stack.damage = saved.stack.damage;
+            stack.enchantments = saved.stack.enchantments;
+            m_lecternBooks[{ static_cast<int>(saved.dimension), saved.x, saved.y, saved.z }] = stack;
+        }
         m_bundles.clear();
         for (const auto& saved : state.bundles)
         {
@@ -1086,6 +1098,20 @@ void Application::saveLevel()
         state.commands.push_back(saved);
     }
     state.itemNames = m_itemNames;
+    for (const BookText& book : m_bookTexts) state.books.push_back(LevelState::SavedBook{ book.title, book.author, book.pages });
+    for (const auto& entry : m_lecternBooks)
+    {
+        LevelState::SavedLectern saved;
+        saved.dimension = static_cast<int8_t>(entry.first[0]);
+        saved.x = entry.first[1];
+        saved.y = entry.first[2];
+        saved.z = entry.first[3];
+        saved.stack.id = static_cast<uint16_t>(entry.second.id);
+        saved.stack.count = static_cast<uint8_t>(entry.second.count);
+        saved.stack.damage = static_cast<uint16_t>(entry.second.damage);
+        saved.stack.enchantments = entry.second.enchantments;
+        state.lecterns.push_back(saved);
+    }
     for (const std::vector<ItemStack>& contents : m_bundles)
     {
         std::vector<LevelState::SavedBundleStack> saved;
@@ -2298,7 +2324,7 @@ bool Application::frame()
             m_startupScreen == "attackhud" || m_startupScreen == "attackready" ||
             m_startupScreen == "attackhotbar" || m_startupScreen == "bossbars" ||
             m_startupScreen == "gamemode" || m_startupScreen == "spectator" ||
-            m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" || m_startupScreen == "leads" || m_startupScreen == "anvilname" || m_startupScreen == "dials" || m_startupScreen == "spyglass" || m_startupScreen == "bundle" || m_startupScreen == "archery" || m_startupScreen == "food" || m_startupScreen == "materials" || m_startupScreen == "tropical" ||
+            m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" || m_startupScreen == "leads" || m_startupScreen == "anvilname" || m_startupScreen == "dials" || m_startupScreen == "spyglass" || m_startupScreen == "bundle" || m_startupScreen == "archery" || m_startupScreen == "food" || m_startupScreen == "materials" || m_startupScreen == "tropical" || m_startupScreen == "book" || m_startupScreen == "bookedit" || m_startupScreen == "booktip" ||
             m_startupScreen == "grinderror" || m_startupScreen == "woods" ||
             m_startupScreen == "cherry" || m_startupScreen == "mangrove" || m_startupScreen == "fungi" ||
             m_startupScreen == "stones" || m_startupScreen == "colours" || m_startupScreen == "candles" ||
@@ -2402,6 +2428,9 @@ bool Application::frame()
                                   m_startupScreen != "food" &&
                                   m_startupScreen != "materials" &&
                                   m_startupScreen != "tropical" &&
+                                  m_startupScreen != "book" &&
+                                  m_startupScreen != "bookedit" &&
+                                  m_startupScreen != "booktip" &&
                                   m_startupScreen != "grinderror" &&
                                   m_startupScreen != "woods" &&
                                   m_startupScreen != "cherry" &&
@@ -2794,7 +2823,7 @@ bool Application::frame()
             if (m_startupScreen == "attackhud" || m_startupScreen == "attackready" ||
                 m_startupScreen == "attackhotbar" || m_startupScreen == "bossbars" ||
                 m_startupScreen == "gamemode" || m_startupScreen == "spectator" ||
-                m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" || m_startupScreen == "leads" || m_startupScreen == "anvilname" || m_startupScreen == "dials" || m_startupScreen == "spyglass" || m_startupScreen == "bundle" || m_startupScreen == "archery" || m_startupScreen == "food" || m_startupScreen == "materials" || m_startupScreen == "tropical" ||
+                m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" || m_startupScreen == "leads" || m_startupScreen == "anvilname" || m_startupScreen == "dials" || m_startupScreen == "spyglass" || m_startupScreen == "bundle" || m_startupScreen == "archery" || m_startupScreen == "food" || m_startupScreen == "materials" || m_startupScreen == "tropical" || m_startupScreen == "book" || m_startupScreen == "bookedit" || m_startupScreen == "booktip" ||
                 m_startupScreen == "grinderror" || m_startupScreen == "woods" ||
                 m_startupScreen == "cherry" || m_startupScreen == "mangrove" || m_startupScreen == "fungi" ||
                 m_startupScreen == "stones" || m_startupScreen == "colours" || m_startupScreen == "candles" ||
@@ -3582,6 +3611,40 @@ bool Application::frame()
                     m_inventoryOpen = true;
                     m_inventory.setCraftSize(2);
                     m_devHoverHotbar = 0;
+                }
+                if (m_startupScreen == "book" || m_startupScreen == "bookedit" || m_startupScreen == "booktip")
+                {
+                    m_devAttackStrength = 1.0f;
+                    m_bookTexts.push_back(BookText{ "Field Notes", m_playerName.empty() ? std::string("Alex") : m_playerName,
+                                                    { "Day one. Found a village by the river, and a librarian who would not stop talking "
+                                                      "about the price of paper.\n\nThe frogs in the swamp are laying spawn again. Must "
+                                                      "bring a bucket.",
+                                                      "Day two. The tadpoles have turned into frogs. Orange ones, which the cartographer "
+                                                      "says means it is warm here." } });
+                    ItemStack written{ Items::WrittenBook, 1 };
+                    written.damage = static_cast<int>(m_bookTexts.size());
+                    ItemStack quill{ Items::WritableBook, 1 };
+                    ItemStack enchanted{ Items::EnchantedBook, 1 };
+                    enchanted.enchantments = Enchanting::withLevel(Enchanting::withLevel(0, Enchanting::Kind::Efficiency, 4),
+                                                                   Enchanting::Kind::Unbreaking, 3);
+                    m_inventory.slot(0) = m_startupScreen == "booktip" ? enchanted : m_startupScreen == "book" ? written : quill;
+                    m_inventory.slot(1) = written;
+                    m_inventory.slot(2) = quill;
+                    m_inventory.slot(3) = enchanted;
+                    m_inventory.slot(4) = ItemStack{ Items::KnowledgeBook, 1 };
+                    m_inventory.setSelectedSlot(0);
+                    if (m_startupScreen == "booktip")
+                    {
+                        m_inventoryOpen = true;
+                        m_inventory.setCraftSize(2);
+                        m_devHoverHotbar = 0;
+                    }
+                    else
+                    {
+                        openBook(m_inventory.slot(0), false, glm::ivec3(0));
+                        if (m_startupScreen == "bookedit")
+                            m_bookDraft[0] = "A list of things to do:\n- feed the frogs\n- find more ink\n- sign this before Alex reads it";
+                    }
                 }
                 if (m_startupScreen == "tropical")
                 {
@@ -6521,6 +6584,8 @@ void Application::handleEvents()
     {
         if (m_editorOpen)
             closeBlockEditor(false);
+        else if (m_bookOpen)
+            closeBook(true);
         else if (m_inventoryOpen)
         {
             closeInventory();
@@ -6826,6 +6891,8 @@ void Application::updateGameplay(float deltaTime)
     // same reason: W is a letter while a board is open.
     updateSignInput();
     if (m_signOpen) return;
+    updateBookInput();
+    if (m_bookOpen) return;
     updateBlockEditor();
     if (m_editorOpen) return;
 
@@ -7606,7 +7673,12 @@ void Application::updateMining(float deltaTime)
             // The book off a lectern, which blockDrop cannot say: it
             // gives back one thing and a lectern gives back two.
             if (id == Blocks::LecternBook)
-                m_drops.spawnFromBrokenBlock(hit.block, Items::Book);
+            {
+                ItemStack resting{ Items::Book, 1 };
+                if (const ItemStack* stored = lecternBookAt(hit.block)) resting = *stored;
+                m_lecternBooks.erase({ static_cast<int>(m_dimension), hit.block.x, hit.block.y, hit.block.z });
+                m_drops.spawnStack(glm::vec3(hit.block) + glm::vec3(0.5f), resting);
+            }
 
             if (isFurnaceBlock(id))
             {
@@ -11622,10 +11694,13 @@ bool Application::useLectern(const glm::ivec3& at, BlockId block)
 
     if (block == Blocks::Lectern)
     {
-        if (held.empty() || held.id != Items::Book) return false;
+        if (held.empty() || (held.id != Items::WritableBook && held.id != Items::WrittenBook)) return false;
 
         m_world->setBlock(at.x, at.y, at.z, Blocks::LecternBook);
         m_net.onLocalBlockChange(at.x, at.y, at.z, Blocks::LecternBook);
+        ItemStack placed = held;
+        placed.count = 1;
+        m_lecternBooks[{ static_cast<int>(m_dimension), at.x, at.y, at.z }] = placed;
 
         if (!m_player.creative())
         {
@@ -11636,9 +11711,21 @@ bool Application::useLectern(const glm::ivec3& at, BlockId block)
         return true;
     }
 
+    if (!m_bookOpen && !m_keys.down(m_input, Action::Sneak))
+    {
+        const ItemStack* resting = lecternBookAt(at);
+        if (resting && (resting->id == Items::WrittenBook || resting->id == Items::WritableBook))
+        {
+            openBook(*resting, true, at);
+            return true;
+        }
+    }
+
     ItemStack book;
     book.id = Items::Book;
     book.count = 1;
+    if (const ItemStack* resting = lecternBookAt(at)) book = *resting;
+    m_lecternBooks.erase({ static_cast<int>(m_dimension), at.x, at.y, at.z });
     if (m_inventory.addStack(book) > 0) m_drops.spawnStack(m_player.position, book);
 
     m_world->setBlock(at.x, at.y, at.z, Blocks::Lectern);
@@ -12297,7 +12384,7 @@ void Application::handlePlacement()
             if (filled != Blocks::Air && caught->alive())
             {
                 ItemStack bucket{ filled, 1 };
-                bucket.damage = static_cast<int>(caught->birthSeed());
+                bucket.damage = bucketSeed(caught->typeId(), caught->birthSeed());
                 if (caught->baby()) bucket.enchantments |= 1u << 24;
                 if (caught->typeId() == MobId::TropicalFishLarge) bucket.enchantments |= 1u << 25;
                 auto& all = m_entities.mobs();
@@ -12941,6 +13028,20 @@ void Application::handlePlacement()
             wearHeld(stack.id, stack.id == Items::CarrotOnAStick ? Fishing::BOOST_COST : Fishing::FUNGUS_BOOST_COST);
             m_audio.play(Sound::MobPigSay, 0.5f, 1.3f);
         }
+        return;
+    }
+
+    if (stack.id == Items::WritableBook || stack.id == Items::WrittenBook)
+    {
+        openBook(stack, false, glm::ivec3(0));
+        return;
+    }
+
+    if (stack.id == Items::KnowledgeBook)
+    {
+        m_chatLog.add("There is no recipe book here for it to fill in, so it teaches nothing.");
+        if (!m_player.creative()) stack.clear();
+        m_audio.play(Sound::Pickup, 0.5f, 1.4f);
         return;
     }
 
@@ -13616,6 +13717,7 @@ void Application::render()
         case Screen::Playing:
             if (m_inventoryOpen) renderInventoryScreen();
             else if (m_editorOpen) renderBlockEditor();
+            else if (m_bookOpen) renderBookScreen();
             break;
         case Screen::Paused:
             renderPauseMenu();
@@ -18339,6 +18441,7 @@ void Application::renderDeathScreen()
 
 
 #include "InventoryScreen.inl"
+#include "BookScreen.inl"
 
 void Application::renderDebugOverlay()
 {

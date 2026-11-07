@@ -148,13 +148,13 @@ namespace Trading
                 buy(Items::Paper, 24, 0),
                 sell(9, Blocks::Bookshelf, 1, 0),
                 buy(Items::Book, 4, 1, 12),
-                sell(5, Items::Book, 1, 1, 8, Items::Book, 1, enchanted(Kind::Efficiency, 1)),
+                sell(5, Items::EnchantedBook, 1, 1, 8, Items::Book, 1, enchanted(Kind::Efficiency, 1)),
                 buy(Items::InkSac, 5, 2, 12),
                 sell(1, Blocks::Glass, 4, 2),
-                sell(12, Items::Book, 1, 3, 6, Items::Book, 1, enchanted(Kind::Unbreaking, 2)),
+                sell(12, Items::EnchantedBook, 1, 3, 6, Items::Book, 1, enchanted(Kind::Unbreaking, 2)),
                 sell(1, Blocks::Lantern, 1, 3),
                 sell(24, Blocks::EnchantingTable, 1, 4, 4, Items::Book, 1),
-                sell(20, Items::Book, 1, 4, 4, Items::Book, 1, enchanted(Kind::SilkTouch, 1)),
+                sell(20, Items::EnchantedBook, 1, 4, 4, Items::Book, 1, enchanted(Kind::SilkTouch, 1)),
             };
 
         case Profession::Toolsmith:

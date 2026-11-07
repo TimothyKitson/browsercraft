@@ -48,7 +48,7 @@ Grindstone::Result Grindstone::combine(const Anvil::Input& top, const Anvil::Inp
         const Anvil::Input& only = hasTop ? top : bottom;
         if (!Enchanting::any(only.enchantments)) return out;
         out.valid = true;
-        out.id = only.id;
+        out.id = only.id == Items::EnchantedBook ? static_cast<StackId>(Items::Book) : only.id;
         out.count = only.count;
         out.damage = only.damage;
         return out;

@@ -561,9 +561,8 @@ std::string MobModel::variantOf(const Mob& mob) const
         }
         case MobId::Axolotl:
         {
-            if (pick == 0u) return root + "axolotl/axolotl_blue.png";
-            static const char* COLOURS[] = { "lucy", "wild", "gold", "cyan" };
-            return root + "axolotl/axolotl_" + COLOURS[pick % 4u] + ".png";
+            static const char* COLOURS[] = { "lucy", "wild", "gold", "cyan", "blue" };
+            return root + "axolotl/axolotl_" + COLOURS[axolotlVariantOf(mob.birthSeed())] + ".png";
         }
         case MobId::Frog:
         {

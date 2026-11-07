@@ -397,6 +397,8 @@ const MobType& mobType(MobId id);
 int mobTypeCount();
 StackId bucketFor(MobId id);
 int frogKindOf(uint32_t seed);
+int axolotlVariantOf(uint32_t seed);
+uint16_t bucketSeed(MobId id, uint32_t seed);
 uint32_t frogSeedOfKind(int kind, uint32_t from);
 MobId mobInBucket(StackId bucket);
 

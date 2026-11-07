@@ -174,6 +174,20 @@ struct LevelState
         uint32_t enchantments = 0;
     };
     std::vector<std::vector<SavedBundleStack>> bundles;
+    struct SavedBook
+    {
+        std::string title;
+        std::string author;
+        std::vector<std::string> pages;
+    };
+    std::vector<SavedBook> books;
+    struct SavedLectern
+    {
+        int32_t x = 0, y = 0, z = 0;
+        int8_t dimension = 0;
+        SavedBundleStack stack;
+    };
+    std::vector<SavedLectern> lecterns;
 };
 
 namespace WorldSave

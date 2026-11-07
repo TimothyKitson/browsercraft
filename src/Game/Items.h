@@ -419,6 +419,10 @@ namespace Items
         TropicalFishBucket,
         AxolotlBucket,
         TadpoleBucket,
+        EnchantedBook,
+        WritableBook,
+        WrittenBook,
+        KnowledgeBook,
         Count
     };
 }

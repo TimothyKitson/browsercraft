@@ -1067,6 +1067,7 @@ namespace
                          Items::PrismarineShard,    Items::PrismarineCrystals, Items::PrismarineShard }, 0, Blocks::SeaLantern, 1 },
         { false, 2, 2, { Items::RabbitHide, Items::RabbitHide,
                          Items::RabbitHide, Items::RabbitHide }, 0, Items::Leather, 1 },
+        { true, 0, 0, { Items::Book, Items::InkSac, Items::Feather }, 3, Items::WritableBook, 1 },
 
         // Four string makes a block of wool, so a bed does not depend on
         // finding sheep.
@@ -1395,8 +1396,9 @@ namespace Crafting
     CraftOutput matchStew(const ItemStack* grid, int size)
     {
         int brown = 0, red = 0, bowls = 0, flowers = 0, others = 0, flower = -1;
-        for (int i = 0; i < size * size; ++i)
+        for (int i = 0; i < 9; ++i)
         {
+            if (i % 3 >= size || i / 3 >= size) continue;
             const ItemStack& cell = grid[i];
             if (cell.empty()) continue;
             if (cell.id == Blocks::BrownMushroom) ++brown;
@@ -1413,10 +1415,37 @@ namespace Crafting
         return out;
     }
 
+    CraftOutput matchBookCopy(const ItemStack* grid, int size)
+    {
+        const ItemStack* original = nullptr;
+        int quills = 0;
+        bool others = false;
+        for (int i = 0; i < 9; ++i)
+        {
+            if (i % 3 >= size || i / 3 >= size) continue;
+            const ItemStack& cell = grid[i];
+            if (cell.empty()) continue;
+            if (cell.id == Items::WrittenBook && !original) original = &cell;
+            else if (cell.id == Items::WritableBook) ++quills;
+            else others = true;
+        }
+        CraftOutput out;
+        if (!original || quills == 0 || others) return out;
+        const uint32_t generation = (original->enchantments >> 24) & 0x3u;
+        if (generation >= 2u) return out;
+        out.id = Items::WrittenBook;
+        out.count = quills;
+        out.damage = original->damage;
+        out.enchantments = (generation + 1u) << 24;
+        return out;
+    }
+
     CraftOutput match(const ItemStack* grid, int size)
     {
         const CraftOutput stew = matchStew(grid, size);
         if (stew.valid()) return stew;
+        const CraftOutput copy = matchBookCopy(grid, size);
+        if (copy.valid()) return copy;
         for (const Recipe& recipe : RECIPES)
         {
             const bool hit = recipe.shapeless ? matchesShapeless(recipe, grid, size)
@@ -1479,6 +1508,7 @@ namespace Crafting
                     cell.enchantments = 0;
                     continue;
                 }
+                if (cell.id == Items::WrittenBook) continue;
                 if (cell.id == Items::HoneyBottle)
                 {
                     if (cell.count == 1) { cell.id = Items::GlassBottle; continue; }

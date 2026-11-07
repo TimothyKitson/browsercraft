@@ -61,6 +61,7 @@ namespace Enchanting
 
     bool appliesTo(Kind kind, StackId item)
     {
+        if (item == Items::Book || item == Items::EnchantedBook) return kind < Kind::Count;
         const Tools::Kind tool = Tools::kindOf(item);
         const bool digs = tool == Tools::Kind::Pickaxe || tool == Tools::Kind::Axe ||
                           tool == Tools::Kind::Shovel;
@@ -120,7 +121,8 @@ namespace Enchanting
     {
         if (!isItem(id) && isDecoratedPot(asBlock(id))) return false;
         if (id == Items::Trident) return set != 0u;
-        if (id == Items::EnchantedGoldenApple || id == Items::ExperienceBottle) return true;
+        if (id == Items::EnchantedGoldenApple || id == Items::ExperienceBottle || id == Items::EnchantedBook ||
+            id == Items::WrittenBook) return true;
         return (set & KIND_BITS) != 0u;
     }
 
@@ -222,7 +224,7 @@ namespace Enchanting
             return 0;
         }
 
-        if (item == Items::Trident) return 1;
+        if (item == Items::Trident || item == Items::Book) return 1;
         if (Tools::isTool(item))
         {
             switch (Tools::tierOf(item))

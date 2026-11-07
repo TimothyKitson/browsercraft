@@ -606,6 +606,7 @@ namespace Tiles
         ItemFoodFirst, ItemFoodLast = ItemFoodFirst + 11,
         ItemMaterialFirst, ItemMaterialLast = ItemMaterialFirst + 8,
         ItemMobBucketFirst, ItemMobBucketLast = ItemMobBucketFirst + 5,
+        ItemBookFirst, ItemBookLast = ItemBookFirst + 3,
         ItemCompassFrameFirst, ItemCompassFrameLast = ItemCompassFrameFirst + 31,
         ItemClockFirst, ItemClockLast = ItemClockFirst + 63,
         ItemRecoveryFirst, ItemRecoveryLast = ItemRecoveryFirst + 31,

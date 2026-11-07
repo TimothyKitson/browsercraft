@@ -109,6 +109,22 @@ Anvil::Result Anvil::combine(const Input& left, const Input& right)
     if (left.id == Blocks::Air || left.count <= 0) return out;
     if (right.id == Blocks::Air || right.count <= 0) return out;
 
+    if (isEnchantedBook(left) && isEnchantedBook(right))
+    {
+        out.id = Items::EnchantedBook;
+        out.enchantments = left.enchantments;
+        out.used = 1;
+        int cost = 0;
+        bool changed = false;
+        for (const auto& [kind, level] : Enchanting::listOf(right.enchantments))
+            changed |= foldIn(out.enchantments, out.id, kind, level, COST_PER_LEVEL_FROM_BOOK, cost);
+        if (!changed) return out;
+        out.levelCost = cost;
+        out.tooExpensive = cost >= TOO_EXPENSIVE;
+        out.valid = !out.tooExpensive;
+        return out;
+    }
+
     const int max = maxDurability(left.id);
     if (max <= 0) return out;   // nothing the anvil knows how to work on
 

@@ -323,6 +323,10 @@ namespace
         { "Bucket of Tropical Fish", Tiles::ItemMobBucketFirst + 3, 1 },
         { "Bucket of Axolotl", Tiles::ItemMobBucketFirst + 4, 1 },
         { "Bucket of Tadpole", Tiles::ItemMobBucketFirst + 5, 1 },
+        { "Enchanted Book", Tiles::ItemBookFirst + 0, 1 },
+        { "Book and Quill", Tiles::ItemBookFirst + 1, 1 },
+        { "Written Book", Tiles::ItemBookFirst + 2, 16 },
+        { "Knowledge Book", Tiles::ItemBookFirst + 3, 1 },
     };
 
     static_assert(sizeof(ITEMS) / sizeof(ITEMS[0]) ==

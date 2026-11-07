@@ -216,6 +216,10 @@ namespace
         Items::GoldenApple, Items::EnchantedGoldenApple, Items::GoldenCarrot, Items::GlisteringMelon, Items::MushroomStew,
         Items::RabbitStew, Items::SuspiciousStew, Items::PumpkinPie, Items::RottenFlesh, Items::SpiderEye, Items::FermentedSpiderEye,
         Items::PoisonousPotato,
+        Items::RabbitHide, Items::RabbitFoot, Items::PhantomMembrane, Items::PrismarineShard, Items::PrismarineCrystals,
+        Items::DiscFragment, Items::DragonsBreath, Items::Charcoal, Items::ExperienceBottle,
+        Items::CodBucket, Items::SalmonBucket, Items::PufferfishBucket, Items::TropicalFishBucket, Items::AxolotlBucket, Items::TadpoleBucket,
+        Items::EnchantedBook, Items::WritableBook, Items::WrittenBook, Items::KnowledgeBook,
         Items::IronIngot, Items::GoldIngot, Items::Diamond,
         Items::WoodPickaxe, Items::WoodAxe, Items::WoodShovel, Items::WoodSword, Items::WoodHoe,
         Items::StonePickaxe, Items::StoneAxe, Items::StoneShovel, Items::StoneSword, Items::StoneHoe,
@@ -279,6 +283,7 @@ namespace
     // What a stack is called in a tooltip. A potion is one item id with
     // the brew in its damage, so its name has to be read out of that.
     const std::vector<std::string>* g_itemNames = nullptr;
+    const std::vector<Application::BookText>* g_books = nullptr;
 
     std::string stackName(const ItemStack& stack)
     {
@@ -301,7 +306,43 @@ namespace
             if (look.pattern != look.base) colours += std::string("-") + Banners::colourName(look.pattern);
             return "Bucket of " + colours + " " + TropicalFish::varietyName(look.variety);
         }
+        if (stack.id == Items::WrittenBook && g_books && stack.damage > 0 && stack.damage <= static_cast<int>(g_books->size()))
+        {
+            const std::string& title = (*g_books)[static_cast<size_t>(stack.damage - 1)].title;
+            if (!title.empty()) return title;
+        }
         return displayName(stack.id);
+    }
+
+    std::string romanLevel(int level)
+    {
+        static const char* NUMERALS[11] = { "", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X" };
+        return level >= 0 && level <= 10 ? NUMERALS[level] : std::to_string(level);
+    }
+
+    std::string stackLore(const ItemStack& stack)
+    {
+        std::string lore;
+        auto line = [&](const std::string& text) { lore += "\n" + text; };
+        if (stack.id == Items::WrittenBook)
+        {
+            if (g_books && stack.damage > 0 && stack.damage <= static_cast<int>(g_books->size()))
+                line("by " + (*g_books)[static_cast<size_t>(stack.damage - 1)].author);
+            static const char* GENERATIONS[4] = { "Original", "Copy of original", "Copy of a copy", "Tattered" };
+            line(GENERATIONS[(stack.enchantments >> 24) & 0x3u]);
+            return lore;
+        }
+        if (stack.id == Items::Trident)
+            for (int k = 0; k < static_cast<int>(Enchanting::TridentKind::Count); ++k)
+            {
+                const auto kind = static_cast<Enchanting::TridentKind>(k);
+                const int level = Enchanting::tridentLevel(stack.enchantments, kind);
+                if (level > 0)
+                    line(std::string(Enchanting::tridentName(kind)) + (Enchanting::tridentMax(kind) > 1 ? " " + romanLevel(level) : ""));
+            }
+        for (const auto& [kind, level] : Enchanting::listOf(stack.enchantments & Enchanting::KIND_BITS))
+            line(std::string(Enchanting::name(kind)) + (Enchanting::maxLevel(kind) > 1 ? " " + romanLevel(level) : ""));
+        return lore;
     }
 }
 
@@ -862,6 +903,7 @@ int Application::creativeInventoryTab()
 void Application::renderInventoryScreen()
 {
     g_itemNames = &m_itemNames;
+    g_books = &m_bookTexts;
     // Interface pixels, the same ones the HUD is drawn in, and the same
     // ones the open-source client lays its containers out in.
     m_ui.setScale(static_cast<float>(guiScale()));
@@ -2653,7 +2695,7 @@ void Application::finishInventoryScreen()
             {
                 highlight();
                 const ItemStack& stack = m_inventory.slot(box->index);
-                if (!stack.empty()) tip = stackName(stack);
+                if (!stack.empty()) tip = stackName(stack) + stackLore(stack);
                 if (stack.id == Items::Bundle) tipBundle = &stack;
                 break;
             }
@@ -2728,8 +2770,20 @@ void Application::drawBundleTooltip(const ItemStack& bundle, float mouseX, float
 
 void Application::drawTooltip(const std::string& text, float mouseX, float mouseY)
 {
-    const float textWidth = UIRenderer::textWidth(text, 1.0f);
-    const float textHeight = 8.0f;
+    std::vector<std::string> lines;
+    {
+        size_t start = 0;
+        while (true)
+        {
+            const size_t end = text.find('\n', start);
+            lines.push_back(text.substr(start, end == std::string::npos ? std::string::npos : end - start));
+            if (end == std::string::npos) break;
+            start = end + 1;
+        }
+    }
+    float textWidth = 0.0f;
+    for (const std::string& one : lines) textWidth = std::max(textWidth, UIRenderer::textWidth(one, 1.0f));
+    const float textHeight = 8.0f + static_cast<float>(lines.size() - 1) * 10.0f + (lines.size() > 1 ? 2.0f : 0.0f);
 
     float x = mouseX + 12.0f;
     float y = mouseY - 12.0f;
@@ -2753,7 +2807,9 @@ void Application::drawTooltip(const std::string& text, float mouseX, float mouse
     m_ui.quad(x - 3.0f, y - 3.0f, textWidth + 6.0f, 1.0f, rimTop);
     m_ui.quad(x - 3.0f, y + textHeight + 2.0f, textWidth + 6.0f, 1.0f, rimBottom);
 
-    m_ui.textWithShadow(text, x, y, 1.0f, glm::vec4(1.0f));
+    for (size_t i = 0; i < lines.size(); ++i)
+        m_ui.textWithShadow(lines[i], x, y + (i == 0 ? 0.0f : 2.0f + 10.0f * static_cast<float>(i)), 1.0f,
+                            i == 0 ? glm::vec4(1.0f) : glm::vec4(0.66f, 0.66f, 0.66f, 1.0f));
 }
 
 const Application::SlotBox* Application::slotBoxAt(int mouseX, int mouseY) const
@@ -3899,6 +3955,7 @@ void Application::buyEnchantment(int row)
         if (Enchanting::conflicts(already.first, offer.kind)) return;
 
     subject.enchantments = Enchanting::withLevel(subject.enchantments, offer.kind, offer.level);
+    if (subject.id == Items::Book) subject.id = Items::EnchantedBook;
     }
 
     if (!m_player.creative())

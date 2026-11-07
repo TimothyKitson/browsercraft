@@ -3672,6 +3672,24 @@ int frogKindOf(uint32_t seed)
     return static_cast<int>(((seed * 2654435761u) >> 8) % 1000u % 3u);
 }
 
+int axolotlVariantOf(uint32_t seed)
+{
+    const uint32_t pick = ((seed * 2654435761u) >> 8) % 1000u;
+    return pick == 0u ? 4 : static_cast<int>(pick % 4u);
+}
+
+uint16_t bucketSeed(MobId id, uint32_t seed)
+{
+    if (id == MobId::Axolotl)
+    {
+        const int want = axolotlVariantOf(seed);
+        for (uint32_t s = 1; s <= 0xFFFFu; ++s)
+            if (axolotlVariantOf(s) == want) return static_cast<uint16_t>(s);
+    }
+    const uint16_t low = static_cast<uint16_t>(seed & 0xFFFFu);
+    return low == 0 ? 1 : low;
+}
+
 uint32_t frogSeedOfKind(int kind, uint32_t from)
 {
     uint32_t seed = from == 0u ? 1u : from;
@@ -3697,7 +3715,7 @@ const char* TropicalFish::commonName(const Look& look)
 
 TropicalFish::Look TropicalFish::lookFor(uint32_t seed, bool wantLarge)
 {
-    uint32_t h = seed * 2654435761u ^ 0x5bd1e995u;
+    uint32_t h = (seed & 0xFFFFu) * 2654435761u ^ 0x5bd1e995u;
     h ^= h >> 15;
     h *= 0x27d4eb2du;
     h ^= h >> 13;

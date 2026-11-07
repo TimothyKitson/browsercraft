@@ -130,6 +130,13 @@ enum class MenuAction
 class Application
 {
 public:
+    struct BookText
+    {
+        std::string title;
+        std::string author;
+        std::vector<std::string> pages;
+    };
+
     Application(int windowWidth, int windowHeight);
     ~Application();
 
@@ -360,6 +367,19 @@ private:
     glm::ivec3 m_signAt{ 0 };
     Signs::Text m_signDraft;
     int m_signLine = 0;
+
+    std::vector<BookText> m_bookTexts;
+    std::map<std::array<int, 4>, ItemStack> m_lecternBooks;
+    bool m_bookOpen = false;
+    bool m_bookEditing = false;
+    bool m_bookSigning = false;
+    bool m_bookFromLectern = false;
+    int m_bookPage = 0;
+    int m_bookSlot = 0;
+    glm::ivec3 m_bookLectern{ 0 };
+    BookText m_bookShown;
+    std::vector<std::string> m_bookDraft;
+    std::string m_bookTitle;
 
     // Minecraft's F5: your own eyes, behind you, or facing you.
     enum class Perspective { FirstPerson, ThirdBack, ThirdFront };
@@ -1036,6 +1056,13 @@ private:
     // A sign is hung, then written on. The editor is the chat line's
     // machinery over four short lines rather than one long one.
     void openSign(const glm::ivec3& at);
+    const BookText* bookOf(const ItemStack& stack) const;
+    void openBook(const ItemStack& stack, bool fromLectern, const glm::ivec3& lectern);
+    void closeBook(bool keep);
+    void saveBookDraft(bool sign);
+    void updateBookInput();
+    void renderBookScreen();
+    ItemStack* lecternBookAt(const glm::ivec3& at);
     void closeSign();
     void updateSignInput();
     void renderSignEditor();

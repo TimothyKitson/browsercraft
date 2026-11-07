@@ -40,7 +40,7 @@ namespace
         { Items::Saddle, 1, 1 },
         { Items::Bow, 1, 1 },
         { Items::FishingRod, 1, 1 },
-        { Items::Book, 1, 1 },
+        { Items::EnchantedBook, 1, 1 },
         { Items::NautilusShell, 1, 1 },
     };
 
@@ -68,7 +68,7 @@ namespace
         for (int k = 0; k < static_cast<int>(Enchanting::Kind::Count); ++k)
         {
             const Enchanting::Kind kind = static_cast<Enchanting::Kind>(k);
-            if (item == Items::Book ? !Enchanting::isTreasure(kind) : Enchanting::appliesTo(kind, item)) fits.push_back(kind);
+            if (item == Items::EnchantedBook ? !Enchanting::isTreasure(kind) : Enchanting::appliesTo(kind, item)) fits.push_back(kind);
         }
         if (fits.empty()) return 0;
         const Enchanting::Kind kind = fits[static_cast<size_t>(unit(seed, 31) * static_cast<float>(fits.size())) % fits.size()];
@@ -112,7 +112,7 @@ Fishing::Catch Fishing::roll(uint32_t seed, bool openWater, bool jungle)
         out.stack.damage = static_cast<int>(unit(seed, 5) * 0.9f * static_cast<float>(limit));
     }
     if (out.category == Category::Junk && entry->id == Items::Potion) out.stack.damage = Brewing::toDamage(Brewing::Potion::Water);
-    if (out.category == Category::Treasure && (entry->id == Items::Bow || entry->id == Items::FishingRod || entry->id == Items::Book))
+    if (out.category == Category::Treasure && (entry->id == Items::Bow || entry->id == Items::FishingRod || entry->id == Items::EnchantedBook))
     {
         out.stack.enchantments = treasureEnchantment(entry->id, seed);
         if (entry->id == Items::Bow) out.stack.damage = static_cast<int>(unit(seed, 6) * 0.25f * 384.0f);

@@ -9844,6 +9844,10 @@ namespace
         { Tiles::ItemMobBucketFirst + 3, { "tropical_fish_bucket", nullptr, nullptr } },
         { Tiles::ItemMobBucketFirst + 4, { "axolotl_bucket", nullptr, nullptr } },
         { Tiles::ItemMobBucketFirst + 5, { "tadpole_bucket", nullptr, nullptr } },
+        { Tiles::ItemBookFirst + 0, { "enchanted_book", nullptr, nullptr } },
+        { Tiles::ItemBookFirst + 1, { "writable_book", nullptr, nullptr } },
+        { Tiles::ItemBookFirst + 2, { "written_book", nullptr, nullptr } },
+        { Tiles::ItemBookFirst + 3, { "knowledge_book", nullptr, nullptr } },
         { Tiles::ItemCompassFrameFirst + 0, { "compass_00", nullptr, nullptr } },
         { Tiles::ItemCompassFrameFirst + 1, { "compass_01", nullptr, nullptr } },
         { Tiles::ItemCompassFrameFirst + 2, { "compass_02", nullptr, nullptr } },
@@ -11315,6 +11319,24 @@ Atlas::Atlas()
         paintMaterialIn(tile, i);
         blitPainted(Tiles::ItemMaterialFirst + i, tile);
     }
+    for (int i = 0; i < 4; ++i)
+    {
+        static const Color COVERS[4] = { Color{ 150, 40, 60 }, Color{ 120, 80, 40 }, Color{ 110, 70, 36 }, Color{ 60, 40, 120 } };
+        Tile tile;
+        tile.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 2; y < 14; ++y)
+            for (int x = 3; x < 13; ++x)
+            {
+                const bool spine = x < 5;
+                const bool pages = x == 12 || y == 13;
+                tile.set(x, y, pages ? Color{ 236, 230, 210 } : spine ? shade(COVERS[i], -40) : COVERS[i]);
+            }
+        if (i == 0) for (int k = 0; k < 4; ++k) tile.set(7 + k, 5 + k, Color{ 230, 120, 230 });
+        if (i == 1) for (int k = 0; k < 7; ++k) tile.set(13 - k / 2, 2 + k, Color{ 240, 240, 240 });
+        if (i == 2) for (int k = 0; k < 4; ++k) tile.set(6 + k, 6 + (k % 2) * 3, Color{ 220, 200, 120 });
+        if (i == 3) for (int k = 0; k < 3; ++k) tile.set(8, 5 + k * 2, Color{ 250, 220, 90 });
+        blitPainted(Tiles::ItemBookFirst + i, tile);
+    }
     for (int i = 0; i < 6; ++i)
     {
         static const Color CATCH[6] = { Color{ 186, 160, 118 }, Color{ 170, 60, 50 }, Color{ 220, 190, 60 },
@@ -12432,6 +12454,7 @@ bool Atlas::hasPainter(int tileIndex)
     if (tileIndex >= Tiles::ItemFoodFirst && tileIndex <= Tiles::ItemFoodLast) return true;
     if (tileIndex >= Tiles::ItemMaterialFirst && tileIndex <= Tiles::ItemMaterialLast) return true;
     if (tileIndex >= Tiles::ItemMobBucketFirst && tileIndex <= Tiles::ItemMobBucketLast) return true;
+    if (tileIndex >= Tiles::ItemBookFirst && tileIndex <= Tiles::ItemBookLast) return true;
     if (tileIndex >= Tiles::ConcreteTile && tileIndex <= Tiles::GlazedTileLast &&
         tileIndex != Tiles::TerracottaPlainTile) return true;
     if (tileIndex >= Tiles::StainedGlassTile && tileIndex <= Tiles::StainedGlassTileLast) return true;
