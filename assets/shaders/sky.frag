@@ -8,6 +8,7 @@ uniform vec3 uCameraPos;
 uniform float uDayFactor; // 0 = midnight, 1 = noon
 uniform float uTime;      // seconds, for cloud drift
 uniform float uOvercast;  // 0 = clear, 1 = full rain
+uniform vec3 uSkyTint;
 uniform int uMoonPhase;
 uniform int uEnd;
 uniform int uHasSun;
@@ -74,8 +75,9 @@ void main()
 
     float height = clamp(dir.y * 0.5 + 0.5, 0.0, 1.0);
 
-    vec3 dayZenith = vec3(0.24, 0.48, 0.92);
-    vec3 dayHorizon = vec3(0.70, 0.84, 0.98);
+    vec3 tint = dot(uSkyTint, uSkyTint) > 0.0 ? uSkyTint : vec3(1.0);
+    vec3 dayZenith = vec3(0.24, 0.48, 0.92) * tint;
+    vec3 dayHorizon = vec3(0.70, 0.84, 0.98) * mix(vec3(1.0), tint, 0.5);
     vec3 nightZenith = vec3(0.015, 0.025, 0.08);
     vec3 nightHorizon = vec3(0.06, 0.08, 0.17);
 

@@ -1,6 +1,8 @@
 #include "WorldGen.h"
 #include "Game/EndPortal.h"
 #include "Game/Saplings.h"
+#include "BiomeColours.h"
+#include <array>
 #include <algorithm>
 #include <cmath>
 
@@ -368,6 +370,43 @@ Biomes::Kind WorldGen::endKindAt(int worldX, int worldZ) const
     if (density > 0.07f) return Biomes::Kind::EndMidlands;
     if (density > 0.0f) return Biomes::Kind::EndBarrens;
     return Biomes::Kind::SmallEndIslands;
+}
+
+void WorldGen::paintTints(Chunk& chunk) const
+{
+    constexpr int REACH = 2;
+    constexpr int SPAN = Chunk::SX + 2 * REACH;
+    std::array<uint32_t, SPAN * SPAN> grass{}, foliage{}, water{};
+    const int baseX = chunk.position().x * Chunk::SX;
+    const int baseZ = chunk.position().z * Chunk::SZ;
+    for (int dz = 0; dz < SPAN; ++dz)
+        for (int dx = 0; dx < SPAN; ++dx)
+        {
+            const int x = baseX + dx - REACH, z = baseZ + dz - REACH;
+            const Biomes::Kind kind = kindAt(x, z);
+            const size_t at = static_cast<size_t>(dz * SPAN + dx);
+            grass[at] = BiomeColours::grass(kind, x, z);
+            foliage[at] = BiomeColours::foliage(kind);
+            water[at] = BiomeColours::water(kind);
+        }
+    uint32_t window[3][(2 * REACH + 1) * (2 * REACH + 1)];
+    for (int lz = 0; lz < Chunk::SZ; ++lz)
+        for (int lx = 0; lx < Chunk::SX; ++lx)
+        {
+            int n = 0;
+            for (int oz = -REACH; oz <= REACH; ++oz)
+                for (int ox = -REACH; ox <= REACH; ++ox, ++n)
+                {
+                    const size_t at = static_cast<size_t>((lz + REACH + oz) * SPAN + (lx + REACH + ox));
+                    window[0][n] = grass[at];
+                    window[1][n] = foliage[at];
+                    window[2][n] = water[at];
+                }
+            const size_t cell = static_cast<size_t>(lz * Chunk::SX + lx);
+            chunk.grassTint[cell] = BiomeColours::average(window[0], n);
+            chunk.foliageTint[cell] = BiomeColours::average(window[1], n);
+            chunk.waterTint[cell] = BiomeColours::average(window[2], n);
+        }
 }
 
 Biomes::Kind WorldGen::kindIn(Dimension dimension, int worldX, int y, int worldZ) const

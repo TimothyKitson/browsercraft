@@ -2,6 +2,8 @@
 #include "common.glsl"
 
 in vec2 vUV;
+in vec3 vTint;
+in float vTintSelective;
 in float vShade;
 in float vSkyLight;
 in float vBlockLight;
@@ -222,6 +224,8 @@ void main()
     vec2 uv = vUV;
     vec4 texel = texture(uAtlas, uv);
     if (texel.a < 0.1) discard;
+    vec3 biomeTint = vTintSelective > 0.5 ? mix(vec3(1.0), vTint, step(texel.r + 0.02, texel.g)) : vTint;
+    texel.rgb *= biomeTint;
 
     int material = vMaterial;
     bool chunk = vBlock > 0;

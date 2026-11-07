@@ -6,12 +6,15 @@ layout (location = 2) in float aShade;      // face direction * ambient occlusio
 layout (location = 3) in float aSkyLight;   // 0..1
 layout (location = 4) in float aBlockLight; // 0..1
 layout (location = 5) in float aFace;       // face + 8 * block id; faces 0-5, 6 = plant, 7 = turned
+layout (location = 6) in float aTint;
 
 uniform mat4 uView;
 uniform mat4 uProjection;
 uniform vec3 uChunkOffset;
 
 out vec2 vUV;
+out vec3 vTint;
+out float vTintSelective;
 out float vShade;
 out float vSkyLight;
 out float vBlockLight;
@@ -52,6 +55,9 @@ void main()
     gl_Position = uProjection * viewPos;
 
     vUV = aUV;
+    uint packedTint = uint(max(aTint, 0.0) + 0.5);
+    vTint = vec3(float((packedTint >> 14u) & 127u), float((packedTint >> 7u) & 127u), float(packedTint & 127u)) / 64.0;
+    vTintSelective = float((packedTint >> 21u) & 1u);
     vShade = aShade;
     vSkyLight = aSkyLight;
     vBlockLight = aBlockLight;

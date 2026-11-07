@@ -16,6 +16,9 @@ struct MeshSnapshot
     ChunkPos pos{};
     std::vector<BlockId> blocks = std::vector<BlockId>(PX * PY * PZ, Blocks::Air);
     std::vector<uint8_t> light = std::vector<uint8_t>(PX * PY * PZ, 0);
+    std::vector<uint32_t> grass = std::vector<uint32_t>(PX * PZ, 0);
+    std::vector<uint32_t> foliage = std::vector<uint32_t>(PX * PZ, 0);
+    std::vector<uint32_t> water = std::vector<uint32_t>(PX * PZ, 0);
 
     // x and z are chunk-local and may be -1 .. SX (inclusive).
     static int index(int x, int y, int z)

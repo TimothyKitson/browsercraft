@@ -93,6 +93,13 @@ float duskAmount(float sunHeight)
     return smoothstep(-0.22, 0.0, sunHeight) * (1.0 - smoothstep(0.02, 0.38, sunHeight));
 }
 
+uniform vec3 uSkyTint;
+
+vec3 skyTint()
+{
+    return dot(uSkyTint, uSkyTint) > 0.0 ? uSkyTint : vec3(1.0);
+}
+
 vec3 skyRadiance(vec3 dir, vec3 sun, float rain)
 {
     float s = sun.y;
@@ -101,8 +108,8 @@ vec3 skyRadiance(vec3 dir, vec3 sun, float rain)
     float up = clamp(dir.y, 0.0, 1.0);
     float horizon = pow(1.0 - up, 3.5);
 
-    vec3 zenithDay = vec3(0.16, 0.34, 0.86);
-    vec3 horizonDay = vec3(0.60, 0.77, 1.00);
+    vec3 zenithDay = vec3(0.16, 0.34, 0.86) * skyTint();
+    vec3 horizonDay = vec3(0.60, 0.77, 1.00) * mix(vec3(1.0), skyTint(), 0.5);
     vec3 zenithNight = vec3(0.004, 0.007, 0.020);
     vec3 horizonNight = vec3(0.014, 0.022, 0.050);
 

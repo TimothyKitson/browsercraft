@@ -327,6 +327,7 @@ public:
     Biomes::Kind kindIn(Dimension dimension, int worldX, int y, int worldZ) const;
     float variantAt(int worldX, int worldZ) const;
     Biomes::Kind variantOf(Biome family, int worldX, int worldZ, int height) const;
+    void paintTints(Chunk& chunk) const;
     static constexpr int TRAIL_RUIN_CELL = 112;
     bool trailRuinIn(int cellX, int cellZ, int& midX, int& midZ) const;
     Biome netherBiomeAt(int worldX, int worldZ) const;

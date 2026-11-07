@@ -1,3 +1,4 @@
+#include "World/BiomeColours.h"
 #include "Core/Application.h"
 #include "Core/Packs.h"
 #include "World/WorldGen.h"
@@ -1243,7 +1244,7 @@ namespace
                 const size_t floats = mesh.opaqueVertices.size() +
                                       mesh.transparentVertices.size();
                 bytes += floats * sizeof(float);
-                quads += floats / 9 / 6;   // nine floats a vertex, six a quad
+                quads += floats / 10 / 6;
             }
 
             const double meshAvg = meshMs / RUNS;
@@ -1713,6 +1714,7 @@ int main(int argc, char** argv)
         while (again)
         {
             Packs::activateFromOptions("world");
+            BiomeColours::reload();
             Application app(width, height);
             if (!pbr) app.setPbrEnabled(false);
             if (resume.empty()) app.setStartupScreen("settings");

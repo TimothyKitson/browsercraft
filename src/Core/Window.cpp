@@ -38,6 +38,7 @@ Window::Window(const std::string& title, int width, int height)
 
     if (!LoadGLFunctions())
         throw std::runtime_error("Failed to load required OpenGL 3.3 functions.");
+    glVertexAttrib1f(6, 1056832.0f);
 
     std::printf("GPU:      %s\n", glGetString(GL_RENDERER));
     std::printf("OpenGL:   %s\n", glGetString(GL_VERSION));

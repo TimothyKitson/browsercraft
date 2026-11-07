@@ -1,6 +1,7 @@
 #pragma once
 #include "Block.h"
 #include "Renderer/Mesh.h"
+#include <array>
 #include <vector>
 #include <atomic>
 #include <cstdint>
@@ -105,6 +106,10 @@ public:
     bool meshJobActive = false; // a mesher job is in flight
     bool modified = false;      // player edited it, so it must be saved
     bool loadedFromDisk = false;
+
+    std::array<uint32_t, SX * SZ> grassTint{};
+    std::array<uint32_t, SX * SZ> foliageTint{};
+    std::array<uint32_t, SX * SZ> waterTint{};
 
     Mesh opaqueMesh;
     Mesh transparentMesh;

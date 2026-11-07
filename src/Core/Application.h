@@ -325,6 +325,10 @@ private:
     WorldBorder m_border;
     void renderBorder(const glm::mat4& view, const glm::mat4& projection);
     void keepInsideBorder(const glm::vec3& before);
+    glm::vec3 m_biomeSky{ 1.0f };
+    glm::vec3 m_biomeFog{ 0.30f, 0.09f, 0.07f };
+    int m_biomeColourDimension = -1;
+    void updateBiomeColours(float deltaTime);
     BookRenderer m_books;
     BannerRenderer m_bannerRenderer;
     ShadowRenderer m_shadows;

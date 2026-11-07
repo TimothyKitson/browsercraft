@@ -98,6 +98,8 @@
 #include "Renderer/ShaderPipeline.h"
 #include <stb_image.h>
 #include "World/WorldBorder.h"
+#include "World/BiomeColours.h"
+#include "World/ChunkMesher.h"
 #include "Core/Utf8.h"
 #include "Entity/HeldItem.h"
 #include "Audio/AudioEngine.h"
@@ -5169,6 +5171,76 @@ namespace
         const WorldGen birches(4242u, Dimension::Overworld, single);
         check(birches.kindAt(500, -300) == Biomes::Kind::BirchForest && birches.biomeAt(500, -300) == Biome::Forest,
               "a single-biome world is that biome everywhere");
+    }
+
+    void testBiomeColours()
+    {
+        section("biome colours: grass, leaves and water");
+        const uint32_t swampGrass = BiomeColours::grass(Biomes::Kind::Swamp, 10, 20);
+        check(swampGrass == 0x4C763Cu || swampGrass == 0x6A7039u, "swamp grass is one of 1.21.1's two swamp greens");
+        check(BiomeColours::grass(Biomes::Kind::Badlands, 0, 0) == 9470285u && BiomeColours::foliage(Biomes::Kind::Badlands) == 10387789u,
+              "badlands grass and leaves take the data's fixed colours");
+        const uint32_t forest = BiomeColours::grass(Biomes::Kind::Forest, 0, 0);
+        check(BiomeColours::grass(Biomes::Kind::DarkForest, 0, 0) == (((forest & 0xFEFEFEu) + 0x28340Au) >> 1),
+              "dark forest grass is darkened the way 1.21.1 darkens it");
+        check(BiomeColours::water(Biomes::Kind::Swamp) == 0x617B64u && BiomeColours::water(Biomes::Kind::WarmOcean) == 0x43D5EEu &&
+              BiomeColours::water(Biomes::Kind::Plains) == 0x3F76E4u, "water takes each biome's water colour");
+        check(BiomeColours::grass(Biomes::Kind::Plains, 0, 0) == BiomeColours::fromMap(false, 0.8f, 0.4f) &&
+              BiomeColours::grass(Biomes::Kind::Desert, 0, 0) != BiomeColours::grass(Biomes::Kind::Jungle, 0, 0),
+              "other grass comes from the colour map by temperature and rainfall");
+        const uint32_t pair[2] = { 0x000000u, 0xFEFEFEu };
+        check(BiomeColours::average(pair, 2) == 0x7F7F7Fu, "neighbouring columns are averaged");
+
+        WorldGen::Options swampy;
+        swampy.type = WorldGen::Options::Type::SingleBiome;
+        swampy.kind = Biomes::Kind::Swamp;
+        swampy.biome = Biome::Swamp;
+        const WorldGen swampGen(77u, Dimension::Overworld, swampy);
+        Chunk chunk(ChunkPos{ 3, -2 });
+        swampGen.paintTints(chunk);
+        bool allSwamp = true;
+        for (uint32_t water : chunk.waterTint) allSwamp = allSwamp && water == 0x617B64u;
+        check(allSwamp && chunk.foliageTint[0] == 0x6A7039u, "a chunk keeps the blended colours of its columns");
+
+        MeshSnapshot snapshot;
+        snapshot.pos = ChunkPos{ 0, 0 };
+        std::fill(snapshot.grass.begin(), snapshot.grass.end(), BiomeColours::fromMap(false, 0.8f, 0.4f));
+        std::fill(snapshot.foliage.begin(), snapshot.foliage.end(), 0x6A7039u);
+        std::fill(snapshot.water.begin(), snapshot.water.end(), 0x617B64u);
+        snapshot.blocks[static_cast<size_t>(MeshSnapshot::index(5, 60, 5))] = Blocks::Grass;
+        snapshot.blocks[static_cast<size_t>(MeshSnapshot::index(8, 60, 8))] = Blocks::Water;
+        snapshot.blocks[static_cast<size_t>(MeshSnapshot::index(11, 60, 11))] = Blocks::Stone;
+        MeshResult mesh;
+        buildChunkMesh(snapshot, mesh);
+        check(mesh.opaqueVertices.size() % 10 == 0 && mesh.transparentVertices.size() % 10 == 0 && !mesh.transparentVertices.empty(),
+              "every vertex carries its tint as a tenth number");
+        auto unpack = [](float packed, int& r, int& g, int& b, bool& selective) {
+            const uint32_t p = static_cast<uint32_t>(packed);
+            r = static_cast<int>((p >> 14) & 127u);
+            g = static_cast<int>((p >> 7) & 127u);
+            b = static_cast<int>(p & 127u);
+            selective = ((p >> 21) & 1u) != 0;
+        };
+        bool plainGrassTop = false, sideSelective = false, stoneNeutral = true;
+        for (size_t i = 0; i < mesh.opaqueVertices.size(); i += 10)
+        {
+            const int tag = static_cast<int>(mesh.opaqueVertices[i + 8]);
+            const int id = (tag >> 3) & 4095, face = tag & 7;
+            int r = 0, g = 0, b = 0;
+            bool selective = false;
+            unpack(mesh.opaqueVertices[i + 9], r, g, b, selective);
+            if (id == Blocks::Grass && face == 2) plainGrassTop = r == 64 && g == 64 && b == 64 && !selective;
+            if (id == Blocks::Grass && face == 0) sideSelective = selective;
+            if (id == Blocks::Stone) stoneNeutral = stoneNeutral && r == 64 && g == 64 && b == 64 && !selective;
+        }
+        check(plainGrassTop, "plains grass is left as the pack drew it");
+        check(sideSelective, "a grass block's side is tinted only where the grass hangs over the dirt");
+        check(stoneNeutral, "and stone is never tinted");
+        int wr = 0, wg = 0, wb = 0;
+        bool ws = false;
+        unpack(mesh.transparentVertices[9], wr, wg, wb, ws);
+        check(std::abs(wr - static_cast<int>(0x61 * 64 / 0x3F)) <= 1 && std::abs(wg - static_cast<int>(0x7B * 64 / 0x76)) <= 1 &&
+              std::abs(wb - static_cast<int>(0x64 * 64 / 0xE4)) <= 1, "swamp water is turned from the default blue to the swamp's green");
     }
 
     void testWorldBorder()
@@ -16296,6 +16368,7 @@ int runSelfTest()
     testFonts();
     testWorldBorder();
     testAllBiomes();
+    testBiomeColours();
     testMadeThings();
     testTheEndAndTheSea();
     testPathfinding();

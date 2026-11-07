@@ -600,6 +600,7 @@ void ShaderPipeline::setWorldUniforms(int pass)
     s.setVec3("uLightDir", m_lightDirection);
     s.setVec3("uLightColour", m_lightColour);
     s.setVec3("uSkyAmbient", m_skyAmbient);
+    s.setVec3("uSkyTint", m_frame.skyTint);
     s.setFloat("uShadowStrength", m_shadowStrength);
     s.setFloat("uDaylight", m_frame.dimension == 0 ? m_frame.daylight : 0.0f);
     s.setFloat("uAmbient", m_frame.ambient);
@@ -656,6 +657,7 @@ void ShaderPipeline::beginScene()
         m_sky->setFloat("uRain", m_frame.rain);
         m_sky->setVec3("uLightColour", m_lightColour);
         m_sky->setVec3("uSkyAmbient", m_skyAmbient);
+        m_sky->setVec3("uSkyTint", m_frame.skyTint);
         m_sky->setInt("uNoise", 5);
         m_sky->setInt("uMoonPhase", ((m_frame.moonPhase % 8) + 8) % 8);
         m_sky->setInt("uHasSun", m_sunTexture ? 1 : 0);
@@ -739,6 +741,7 @@ void ShaderPipeline::finish()
     m_composite->setVec3("uLightDir", m_lightDirection);
     m_composite->setVec3("uLightColour", m_lightColour);
     m_composite->setVec3("uSkyAmbient", m_skyAmbient);
+    m_composite->setVec3("uSkyTint", m_frame.skyTint);
     m_composite->setVec3("uBackdrop", glm::pow(m_frame.backdrop, glm::vec3(2.2f)));
     m_composite->setFloat("uShadowStrength", m_shadowStrength);
     m_composite->setFloat("uRain", m_frame.rain);

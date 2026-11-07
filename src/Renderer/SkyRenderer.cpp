@@ -93,6 +93,7 @@ void SkyRenderer::render(const glm::mat4& view, const glm::mat4& projection,
     m_shader.setMat4("uInvViewProj", invViewProj);
     m_shader.setVec3("uSunDirection", glm::normalize(sunDirection));
     m_shader.setVec3("uCameraPos", cameraPosition);
+    m_shader.setVec3("uSkyTint", m_tint);
     m_shader.setFloat("uDayFactor", dayFactor);
     m_shader.setFloat("uTime", timeSeconds);
     m_shader.setFloat("uOvercast", std::clamp(overcast, 0.0f, 1.0f));

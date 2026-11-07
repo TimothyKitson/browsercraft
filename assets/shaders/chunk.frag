@@ -1,6 +1,8 @@
 #version 330 core
 
 in vec2 vUV;
+in vec3 vTint;
+in float vTintSelective;
 in float vShade;
 in float vSkyLight;
 in float vBlockLight;
@@ -140,6 +142,8 @@ void main()
 
     vec4 texel = texture(uAtlas, uv);
     if (texel.a < 0.1) discard; // leaf gaps, plant cut-outs
+    vec3 biomeTint = vTintSelective > 0.5 ? mix(vec3(1.0), vTint, step(texel.r + 0.02, texel.g)) : vTint;
+    texel.rgb *= biomeTint;
     if (uGlint == 1)
     {
         mat2 turn = mat2(0.9848, 0.1736, -0.1736, 0.9848);

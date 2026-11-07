@@ -27,6 +27,7 @@ public:
         float nearPlane = 0.05f;
         float farPlane = 1000.0f;
         glm::vec3 backdrop{ 0.0f };
+        glm::vec3 skyTint{ 1.0f };
         bool pbr = false;
         float deltaTime = 0.016f;
     };

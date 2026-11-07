@@ -1,5 +1,6 @@
 #include "World.h"
 #include "WorldSave.h"
+#include "BiomeColours.h"
 #include <algorithm>
 #include <cmath>
 #include <chrono>
@@ -466,6 +467,13 @@ void World::buildSnapshot(const Chunk& chunk, MeshSnapshot& snapshot) const
 
             const int sx = inside ? x : floorMod(baseX + x, Chunk::SX);
             const int sz = inside ? z : floorMod(baseZ + z, Chunk::SZ);
+            const Chunk& colours = source ? *source : chunk;
+            const size_t column = static_cast<size_t>((source ? sz : std::clamp(z, 0, Chunk::SZ - 1)) * Chunk::SX +
+                                                      (source ? sx : std::clamp(x, 0, Chunk::SX - 1)));
+            const size_t cell = static_cast<size_t>((z + MeshSnapshot::PAD) * MeshSnapshot::PX + (x + MeshSnapshot::PAD));
+            snapshot.grass[cell] = colours.grassTint[column];
+            snapshot.foliage[cell] = colours.foliageTint[column];
+            snapshot.water[cell] = colours.waterTint[column];
 
             for (int y = 0; y < Chunk::SY; ++y)
             {
@@ -527,6 +535,7 @@ void World::queueGeneration(const glm::vec3& playerPosition)
                 raw->loadedFromDisk = true;
             else
                 m_generator.generate(*raw);
+            m_generator.paintTints(*raw);
 
             fillSkyColumns(*raw, (m_generator.dimension() == Dimension::Overworld)
                                      ? static_cast<uint8_t>(15) : static_cast<uint8_t>(0));
@@ -635,7 +644,7 @@ void World::uploadCompletedMeshes()
         m_completedMeshes.erase(m_completedMeshes.begin(), m_completedMeshes.begin() + take);
     }
 
-    static const std::vector<int> LAYOUT = { 3, 2, 1, 1, 1, 1 }; // pos, uv, shade, sky, block, tag
+    static const std::vector<int> LAYOUT = { 3, 2, 1, 1, 1, 1, 1 };
 
     for (MeshResult& result : ready)
     {

@@ -1,6 +1,8 @@
 #include "ChunkMesher.h"
 #include "Renderer/Atlas.h"
 #include "Renderer/AtlasTiles.h"
+#include "BiomeColours.h"
+#include <algorithm>
 #include <array>
 #include <cmath>
 
@@ -103,6 +105,72 @@ namespace
         return static_cast<float>(face + 8 * static_cast<int>(id) + (top ? 32768 : 0));
     }
 
+    struct ColumnTint
+    {
+        uint32_t grass = 0;
+        uint32_t foliage = 0;
+        uint32_t water = 0;
+        uint32_t grassBase = 1;
+        uint32_t foliageBase = 1;
+        uint32_t waterBase = 1;
+    };
+    thread_local ColumnTint t_tint;
+    constexpr float NEUTRAL_TINT = 1056832.0f;
+
+    enum TintClass : uint8_t { NO_TINT, GRASS_TINT, FOLIAGE_TINT, WATER_TINT, GRASS_BLOCK };
+
+    const std::vector<uint8_t>& tintClasses()
+    {
+        static const std::vector<uint8_t> TABLE = [] {
+            std::vector<uint8_t> table(static_cast<size_t>(Blocks::Count), NO_TINT);
+            const BlockId grassy[] = { Blocks::TallGrass, Blocks::Fern, Blocks::SugarCane, doublePlantOf(DoublePlant::TallGrass, false),
+                                       doublePlantOf(DoublePlant::TallGrass, true), doublePlantOf(DoublePlant::LargeFern, false),
+                                       doublePlantOf(DoublePlant::LargeFern, true) };
+            for (BlockId id : grassy) table[static_cast<size_t>(id)] = GRASS_TINT;
+            const BlockId leafy[] = { Blocks::Leaves, Blocks::JungleLeaves, Blocks::AcaciaLeaves, Blocks::DarkOakLeaves, Blocks::MangroveLeaves, Blocks::Vine };
+            for (BlockId id : leafy) table[static_cast<size_t>(id)] = FOLIAGE_TINT;
+            for (int id = 0; id < static_cast<int>(Blocks::Count); ++id)
+                if (isWater(static_cast<BlockId>(id))) table[static_cast<size_t>(id)] = WATER_TINT;
+            table[static_cast<size_t>(Blocks::Grass)] = GRASS_BLOCK;
+            return table;
+        }();
+        return TABLE;
+    }
+
+    float packTint(uint32_t colour, uint32_t base, bool selective)
+    {
+        if (colour == 0 || base == 0) return NEUTRAL_TINT;
+        uint32_t packed = selective ? (1u << 21) : 0u;
+        for (int shift = 16, slot = 14; shift >= 0; shift -= 8, slot -= 7)
+        {
+            const float c = static_cast<float>((colour >> shift) & 0xFFu);
+            const float b = std::max(1.0f, static_cast<float>((base >> shift) & 0xFFu));
+            const uint32_t q = static_cast<uint32_t>(std::clamp(c / b * 64.0f + 0.5f, 0.0f, 127.0f));
+            packed |= q << slot;
+        }
+        return static_cast<float>(packed);
+    }
+
+    float tintFor(float tag)
+    {
+        const int value = static_cast<int>(tag);
+        const int face = value & 7;
+        const int id = (value >> 3) & 4095;
+        const std::vector<uint8_t>& table = tintClasses();
+        if (id < 0 || id >= static_cast<int>(table.size())) return NEUTRAL_TINT;
+        switch (table[static_cast<size_t>(id)])
+        {
+            case GRASS_TINT: return packTint(t_tint.grass, t_tint.grassBase, false);
+            case FOLIAGE_TINT: return packTint(t_tint.foliage, t_tint.foliageBase, false);
+            case WATER_TINT: return packTint(t_tint.water, t_tint.waterBase, false);
+            case GRASS_BLOCK:
+                if (face == 2) return packTint(t_tint.grass, t_tint.grassBase, false);
+                if (face == 0 || face == 1 || face == 4 || face == 5) return packTint(t_tint.grass, t_tint.grassBase, true);
+                return NEUTRAL_TINT;
+            default: return NEUTRAL_TINT;
+        }
+    }
+
     void pushVertex(std::vector<float>& out,
                     float x, float y, float z,
                     float u, float v,
@@ -117,6 +185,7 @@ namespace
         out.push_back(sky);
         out.push_back(block);
         out.push_back(tag);
+        out.push_back(tintFor(tag));
     }
 
     int tileForFace(const BlockInfo& info, int faceIndex)
@@ -1837,6 +1906,9 @@ void buildChunkMesh(const MeshSnapshot& snapshot, MeshResult& out)
     out.transparentVertices.clear();
     out.signs.clear();
     out.opaqueVertices.reserve(8192);
+    t_tint.grassBase = BiomeColours::fromMap(false, 0.8f, 0.4f);
+    t_tint.foliageBase = BiomeColours::fromMap(true, 0.8f, 0.4f);
+    t_tint.waterBase = 0x3F76E4u;
 
     for (int y = 0; y < Chunk::SY; ++y)
     {
@@ -1845,6 +1917,10 @@ void buildChunkMesh(const MeshSnapshot& snapshot, MeshResult& out)
             for (int lx = 0; lx < Chunk::SX; ++lx)
             {
                 const BlockId id = snapshot.block(lx, y, lz);
+                const size_t column = static_cast<size_t>((lz + MeshSnapshot::PAD) * MeshSnapshot::PX + (lx + MeshSnapshot::PAD));
+                t_tint.grass = snapshot.grass[column];
+                t_tint.foliage = snapshot.foliage[column];
+                t_tint.water = snapshot.water[column];
                 if (isSign(id))
                 {
                     out.signs.push_back(glm::ivec3(snapshot.pos.x * Chunk::SX + lx, y, snapshot.pos.z * Chunk::SZ + lz));

@@ -18,6 +18,7 @@ public:
                 int moonPhase = 0, bool endSky = false);
     ~SkyRenderer();
     bool hasEndSky() const { return m_endTexture != 0; }
+    void setTint(const glm::vec3& tint) { m_tint = tint; }
 
     // Shared with the chunk shader so distance fog matches the horizon.
     static glm::vec3 horizonColor(float dayFactor, const glm::vec3& sunDirection,
@@ -31,4 +32,5 @@ private:
     unsigned int m_cloudTexture = 0;
     unsigned int m_endTexture = 0;
     static unsigned int loadTexture(const char* path, bool repeat);
+    glm::vec3 m_tint{ 1.0f };
 };

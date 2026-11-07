@@ -31,6 +31,7 @@ PFNGLBUFFERSUBDATAPROC glBufferSubData = nullptr;
 PFNGLDELETEBUFFERSPROC glDeleteBuffers = nullptr;
 PFNGLVERTEXATTRIBPOINTERPROC glVertexAttribPointer = nullptr;
 PFNGLENABLEVERTEXATTRIBARRAYPROC glEnableVertexAttribArray = nullptr;
+PFNGLVERTEXATTRIB1FPROC glVertexAttrib1f = nullptr;
 PFNGLDISABLEVERTEXATTRIBARRAYPROC glDisableVertexAttribArray = nullptr;
 
 PFNGLGETUNIFORMLOCATIONPROC glGetUniformLocation = nullptr;
@@ -97,6 +98,7 @@ bool LoadGLFunctions()
     LOAD(glDeleteBuffers);
     LOAD(glVertexAttribPointer);
     LOAD(glEnableVertexAttribArray);
+    LOAD(glVertexAttrib1f);
     LOAD(glDisableVertexAttribArray);
 
     LOAD(glGetUniformLocation);

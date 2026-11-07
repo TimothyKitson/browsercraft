@@ -1904,6 +1904,11 @@ void Application::run()
             m_worldMeta.type = Worlds::Type::SingleBiome;
             m_worldMeta.biome = "minecraft:cherry_grove";
         }
+        if (m_startupScreen.rfind("single:", 0) == 0 && Biomes::known(m_startupScreen.substr(7)))
+        {
+            m_worldMeta.type = Worlds::Type::SingleBiome;
+            m_worldMeta.biome = Biomes::info(Biomes::fromId(m_startupScreen.substr(7))).id;
+        }
         if (m_startupScreen == "bonuschest") m_worldMeta.bonusChest = true;
         if (m_startupScreen == "peaceful") m_worldMeta.difficulty = Worlds::Difficulty::Peaceful;
         startWorld(m_startupMode, m_startupScreen == "dead" || m_startupScreen == "hardcore");
@@ -17393,7 +17398,7 @@ glm::vec3 Application::dimensionBackdrop() const
 {
     switch (m_dimension)
     {
-        case Dimension::Nether: return glm::vec3(0.30f, 0.09f, 0.07f);
+        case Dimension::Nether: return m_biomeColourDimension == static_cast<int>(Dimension::Nether) ? m_biomeFog : glm::vec3(0.30f, 0.09f, 0.07f);
         case Dimension::End:    return glm::vec3(0.10f, 0.07f, 0.15f);
         default:                return glm::vec3(0.5f, 0.72f, 0.95f);
     }
@@ -17461,6 +17466,7 @@ void Application::renderWorldShaded()
     frame.nearPlane = camera.nearPlane;
     frame.farPlane = camera.farPlane;
     frame.backdrop = dimensionBackdrop();
+    frame.skyTint = m_dimension == Dimension::Overworld ? m_biomeSky : glm::vec3(1.0f);
     frame.pbr = m_pbrEnabled && m_atlas.hasPbrMaps();
     frame.deltaTime = m_lastFrameSeconds;
 
@@ -17623,8 +17629,11 @@ void Application::renderWorld()
     const float gloom = m_darknessFade;
     const float darkReach = viewDistance + (15.0f - viewDistance) * gloom;
     m_chunkShader.setVec3("uFogColor", blind ? glm::vec3(0.0f) : fogColor * (1.0f - gloom));
-    m_chunkShader.setFloat("uFogStart", blind ? 1.5f : gloom > 0.0f ? std::min(viewDistance * 0.55f, darkReach * 0.75f) : viewDistance * 0.55f);
-    m_chunkShader.setFloat("uFogEnd", blind ? 5.0f : gloom > 0.0f ? std::min(viewDistance * 0.95f, darkReach) : viewDistance * 0.95f);
+    const bool thickFog = m_dimension == Dimension::Nether;
+    const float fogStart = thickFog ? viewDistance * 0.05f : viewDistance * 0.55f;
+    const float fogEnd = thickFog ? std::min(viewDistance, 192.0f) * 0.5f : viewDistance * 0.95f;
+    m_chunkShader.setFloat("uFogStart", blind ? 1.5f : gloom > 0.0f ? std::min(fogStart, darkReach * 0.75f) : fogStart);
+    m_chunkShader.setFloat("uFogEnd", blind ? 5.0f : gloom > 0.0f ? std::min(fogEnd, darkReach) : fogEnd);
     m_chunkShader.setInt("uUnderwater", underwater ? 1 : 0);
     m_chunkShader.setVec3("uSunDirection", sun);
     m_chunkShader.setVec3("uCameraPos", camera.position);
@@ -17746,6 +17755,27 @@ void Application::renderBorder(const glm::mat4& view, const glm::mat4& projectio
     const glm::dvec3 eye(m_camera.position);
     const float scroll = static_cast<float>(std::fmod(m_elapsedSeconds, 3.0) / 3.0);
     m_borderRenderer.render(view, projection, m_border, eye, reach, static_cast<double>(m_camera.farPlane), scroll);
+}
+
+void Application::updateBiomeColours(float deltaTime)
+{
+    if (!m_world) return;
+    const int x = static_cast<int>(std::floor(m_camera.position.x));
+    const int y = static_cast<int>(std::floor(m_camera.position.y));
+    const int z = static_cast<int>(std::floor(m_camera.position.z));
+    const Biomes::Info& here = Biomes::info(m_world->generator().kindIn(m_dimension, x, y, z));
+    auto rgb = [](uint32_t c) {
+        return glm::vec3(static_cast<float>((c >> 16) & 0xFFu), static_cast<float>((c >> 8) & 0xFFu), static_cast<float>(c & 0xFFu)) / 255.0f;
+    };
+    const glm::vec3 plains = rgb(Biomes::info(Biomes::Kind::Plains).sky);
+    const glm::vec3 sky = m_dimension == Dimension::Overworld ? rgb(here.sky) / glm::max(plains, glm::vec3(0.01f)) : glm::vec3(1.0f);
+    const glm::vec3 fog = rgb(here.fog);
+    const bool snap = m_biomeColourDimension != static_cast<int>(m_dimension);
+    const float blend = snap ? 1.0f : std::min(1.0f, deltaTime * 0.8f);
+    m_biomeSky += (sky - m_biomeSky) * blend;
+    m_biomeFog += (fog - m_biomeFog) * blend;
+    m_biomeColourDimension = static_cast<int>(m_dimension);
+    m_sky.setTint(m_biomeSky);
 }
 
 void Application::keepInsideBorder(const glm::vec3& before)
@@ -19625,6 +19655,7 @@ void Application::claimJobSites()
 
 void Application::updateWorldAround(float deltaTime)
 {
+    updateBiomeColours(deltaTime);
     if (!m_world || !m_worldReady) return;
     tickSpriteParticles(deltaTime);
     tickTimedBlocks(deltaTime);
