@@ -295,7 +295,9 @@ namespace
     {
         if (stack.id == Items::NameTag && g_itemNames && stack.damage > 0 && stack.damage <= static_cast<int>(g_itemNames->size()))
             return (*g_itemNames)[static_cast<size_t>(stack.damage - 1)];
-        if (stack.id == Items::Potion) return Brewing::name(Brewing::fromDamage(stack.damage));
+        if (stack.id == Items::Potion) return Brewing::fullName(Brewing::decode(stack.damage), Brewing::Form::Drink);
+        if (stack.id == Items::SplashPotion) return Brewing::fullName(Brewing::decode(stack.damage), Brewing::Form::Splash);
+        if (stack.id == Items::LingeringPotion) return Brewing::fullName(Brewing::decode(stack.damage), Brewing::Form::Lingering);
         if (stack.id == Items::TippedArrow)
             return std::string("Arrow of ") + Effects::name(static_cast<Effects::Kind>(std::clamp(stack.damage, 0, Effects::KIND_COUNT - 1)));
         if (stack.id == Items::GoatHorn)
@@ -341,6 +343,17 @@ namespace
             return lore;
         }
         if (Discs::discOf(stack.id) >= 0) line(Discs::song(Discs::discOf(stack.id)).title);
+        if (stack.id == Items::Potion || stack.id == Items::SplashPotion || stack.id == Items::LingeringPotion)
+        {
+            const std::vector<Brewing::Dose> doses = Brewing::dosesOf(Brewing::decode(stack.damage));
+            if (doses.empty()) line("No Effects");
+            for (const Brewing::Dose& dose : doses)
+            {
+                const float seconds = stack.id == Items::LingeringPotion ? dose.seconds * 0.25f : dose.seconds;
+                line(std::string(Effects::name(dose.kind)) + (dose.amplifier > 0 ? " " + romanLevel(dose.amplifier + 1) : "") +
+                     " (" + Brewing::durationText(seconds) + ")");
+            }
+        }
         if (stack.id == Items::FireworkRocket)
             for (const std::string& text : Fireworks::describeRocket(stack)) line(text);
         if (stack.id == Items::FireworkStar)
@@ -526,13 +539,14 @@ void Application::drawItem(float x, float y, float size, StackId id, int count,
     // inside, with the slot's own border the only margin. Shrunk by a
     // pixel a side on top of that, every icon came out a size smaller
     // than the slot it was in.
-    if (id == Items::Potion)
+    if (id == Items::Potion || id == Items::SplashPotion || id == Items::LingeringPotion)
     {
-        const unsigned int rgb = Brewing::colour(Brewing::fromDamage(damage));
+        const unsigned int rgb = Brewing::brewColour(Brewing::decode(damage));
         const glm::vec4 liquidTint(((rgb >> 16) & 0xFF) / 255.0f * tint.r, ((rgb >> 8) & 0xFF) / 255.0f * tint.g,
                                    (rgb & 0xFF) / 255.0f * tint.b, tint.a);
         const TileUV liquid = tileUV(Tiles::PotionLiquid);
-        const TileUV bottle = tileUV(Tiles::PotionBottle);
+        const TileUV bottle = tileUV(id == Items::SplashPotion ? Tiles::ItemSplashPotion
+                                     : id == Items::LingeringPotion ? Tiles::ItemLingeringPotion : Tiles::PotionBottle);
         m_ui.texturedQuad(m_atlas.textureId(), x, y, size, size,
                           liquid.u0, liquid.vTop, liquid.u1, liquid.vBottom, liquidTint);
         m_ui.texturedQuad(m_atlas.textureId(), x, y, size, size,
@@ -2547,7 +2561,9 @@ void Application::renderCreativeScreen(float w, float h)
         static std::vector<int> entries;
         entries.clear();
         for (int i = 0; i < count; ++i)
-            if (items[i] != Items::SpawnEgg) entries.push_back(items[i]);
+            if (items[i] != Items::SpawnEgg && items[i] != Items::Potion && items[i] != Items::SplashPotion &&
+                items[i] != Items::LingeringPotion)
+                entries.push_back(items[i]);
         const bool eggs = m_creativeTab == 4 || searchTab;
         if (eggs)
             for (int mob = 0; mob < mobTypeCount(); ++mob)
@@ -2564,6 +2580,25 @@ void Application::renderCreativeScreen(float w, float h)
                 }
                 entries.push_back(Items::SpawnEgg | (mob << 16));
             }
+        if (eggs)
+            for (const StackId form : { static_cast<StackId>(Items::Potion), static_cast<StackId>(Items::SplashPotion),
+                                        static_cast<StackId>(Items::LingeringPotion) })
+                for (int p = 0; p < static_cast<int>(Brewing::Potion::Count); ++p)
+                    for (int variant = 0; variant < 3; ++variant)
+                    {
+                        Brewing::Brew brew{ static_cast<Brewing::Potion>(p), variant == 1, variant == 2 };
+                        if ((variant == 1 && !Brewing::canExtend(brew.potion)) || (variant == 2 && !Brewing::canStrengthen(brew.potion)))
+                            continue;
+                        const int damage = Brewing::encode(brew);
+                        if (searchTab && !m_creativeSearch.empty())
+                        {
+                            std::string want = m_creativeSearch, name = stackName(ItemStack{ form, 1, damage });
+                            for (char& c : want) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+                            for (char& c : name) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+                            if (name.find(want) == std::string::npos) continue;
+                        }
+                        entries.push_back(form | (damage << 16));
+                    }
         count = static_cast<int>(entries.size());
 
         // A tab with more in it than the grid holds scrolls on the wheel.
@@ -3787,9 +3822,10 @@ void Application::tickBrewing(float deltaTime)
     for (int i = 0; i < Inventory::BREW_BOTTLES; ++i)
     {
         const ItemStack& bottle = m_inventory.slot(Inventory::BREW_BOTTLE_FIRST + i);
-        if (bottle.id != Items::Potion) continue;
-        if (Brewing::brew(Brewing::fromDamage(bottle.damage), ingredient.id) !=
-            Brewing::Potion::Count)
+        if (bottle.id != Items::Potion && bottle.id != Items::SplashPotion && bottle.id != Items::LingeringPotion) continue;
+        Brewing::Brew made;
+        if (Brewing::formChange(bottle.id, ingredient.id) != Blocks::Air ||
+            Brewing::brewWith(Brewing::decode(bottle.damage), ingredient.id, made))
             ++brewable;
     }
 
@@ -3810,13 +3846,17 @@ void Application::tickBrewing(float deltaTime)
     for (int i = 0; i < Inventory::BREW_BOTTLES; ++i)
     {
         ItemStack& bottle = m_inventory.slot(Inventory::BREW_BOTTLE_FIRST + i);
-        if (bottle.id != Items::Potion) continue;
+        if (bottle.id != Items::Potion && bottle.id != Items::SplashPotion && bottle.id != Items::LingeringPotion) continue;
 
-        const Brewing::Potion made =
-            Brewing::brew(Brewing::fromDamage(bottle.damage), ingredient.id);
-        if (made == Brewing::Potion::Count) continue;
-
-        bottle.damage = Brewing::toDamage(made);
+        const StackId reformed = Brewing::formChange(bottle.id, ingredient.id);
+        if (reformed != Blocks::Air)
+        {
+            bottle.id = reformed;
+            continue;
+        }
+        Brewing::Brew made;
+        if (!Brewing::brewWith(Brewing::decode(bottle.damage), ingredient.id, made)) continue;
+        bottle.damage = Brewing::encode(made);
     }
 
     ItemStack& spend = m_inventory.slot(Inventory::BREW_INGREDIENT);

@@ -499,6 +499,22 @@ private:
     void launchFirework(int design, const glm::vec3& at, const glm::vec3& velocity, bool shot, bool boost);
     void burstFirework(const glm::vec3& at, int design);
     void tickFireworks(float deltaTime);
+    struct PotionCloud
+    {
+        glm::vec3 position{ 0.0f };
+        int effect = 0;
+        float age = 0.0f;
+        float radius = 3.0f;
+        float shrunk = 0.0f;
+        float tick = 0.0f;
+        float puff = 0.0f;
+        float playerTouched = -10.0f;
+        uint32_t seed = 0x2545F491u;
+        std::map<uint32_t, float> touched;
+    };
+    std::vector<PotionCloud> m_potionClouds;
+    void splashPotion(const glm::vec3& at, int effect);
+    void tickPotionClouds(float deltaTime);
     void queueFireworks();
     struct ParkedVehicle
     {

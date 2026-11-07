@@ -528,6 +528,9 @@ void Application::startWorld(GameMode mode, bool freshWorld)
     m_particles.clear();
     m_entities.clear();
     m_parkedVehicles.clear();
+    m_potionClouds.clear();
+    m_sparks.clear();
+    m_fireworks.clear();
     m_cageKinds.clear();
     m_jukeboxes.clear();
     m_jukeboxClock.clear();
@@ -646,6 +649,9 @@ void Application::travelTo(Dimension dimension)
 {
     if (!m_world || m_dimension == dimension) return;
     parkVehicles(false);
+    m_potionClouds.clear();
+    m_sparks.clear();
+    m_fireworks.clear();
     m_audio.stopMusic();
     m_jukeboxPlaying = { -99, 0, 0, 0 };
 
@@ -2148,6 +2154,7 @@ bool Application::frame()
             updateFuses(deltaTime);
             tickCarts(deltaTime);
             tickFireworks(deltaTime);
+            tickPotionClouds(deltaTime);
             tickJukeboxes(deltaTime);
             updatePortal(deltaTime);
 
@@ -2452,7 +2459,7 @@ bool Application::frame()
             m_startupScreen == "stairs" || m_startupScreen == "fence" ||
             m_startupScreen == "door" || m_startupScreen == "hand" ||
             m_startupScreen == "handempty" || m_startupScreen == "handitem" ||
-            m_startupScreen == "creativeinv" || m_startupScreen == "creativesearch" || m_startupScreen == "eggs" ||
+            m_startupScreen == "creativeinv" || m_startupScreen == "creativesearch" || m_startupScreen == "eggs" || m_startupScreen == "potions" ||
             m_startupScreen == "xp" ||
             m_startupScreen == "shelf" || m_startupScreen == "enchant" ||
             m_startupScreen == "enchantblock" || m_startupScreen == "villager" ||
@@ -2470,7 +2477,7 @@ bool Application::frame()
             m_startupScreen == "attackhud" || m_startupScreen == "attackready" ||
             m_startupScreen == "attackhotbar" || m_startupScreen == "bossbars" ||
             m_startupScreen == "gamemode" || m_startupScreen == "spectator" ||
-            m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" || m_startupScreen == "leads" || m_startupScreen == "anvilname" || m_startupScreen == "dials" || m_startupScreen == "spyglass" || m_startupScreen == "bundle" || m_startupScreen == "archery" || m_startupScreen == "food" || m_startupScreen == "materials" || m_startupScreen == "tropical" || m_startupScreen == "book" || m_startupScreen == "bookedit" || m_startupScreen == "booktip" || m_startupScreen == "boats" || m_startupScreen == "carts" || m_startupScreen == "fireworks" || m_startupScreen == "jukebox" ||
+            m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" || m_startupScreen == "leads" || m_startupScreen == "anvilname" || m_startupScreen == "dials" || m_startupScreen == "spyglass" || m_startupScreen == "bundle" || m_startupScreen == "archery" || m_startupScreen == "food" || m_startupScreen == "materials" || m_startupScreen == "tropical" || m_startupScreen == "book" || m_startupScreen == "bookedit" || m_startupScreen == "booktip" || m_startupScreen == "boats" || m_startupScreen == "carts" || m_startupScreen == "fireworks" || m_startupScreen == "jukebox" || m_startupScreen == "potioncloud" ||
             m_startupScreen == "grinderror" || m_startupScreen == "woods" ||
             m_startupScreen == "cherry" || m_startupScreen == "mangrove" || m_startupScreen == "fungi" ||
             m_startupScreen == "stones" || m_startupScreen == "colours" || m_startupScreen == "candles" ||
@@ -2581,6 +2588,7 @@ bool Application::frame()
                                   m_startupScreen != "carts" &&
                                   m_startupScreen != "fireworks" &&
                                   m_startupScreen != "jukebox" &&
+                                  m_startupScreen != "potioncloud" &&
                                   m_startupScreen != "grinderror" &&
                                   m_startupScreen != "woods" &&
                                   m_startupScreen != "cherry" &&
@@ -2973,7 +2981,7 @@ bool Application::frame()
             if (m_startupScreen == "attackhud" || m_startupScreen == "attackready" ||
                 m_startupScreen == "attackhotbar" || m_startupScreen == "bossbars" ||
                 m_startupScreen == "gamemode" || m_startupScreen == "spectator" ||
-                m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" || m_startupScreen == "leads" || m_startupScreen == "anvilname" || m_startupScreen == "dials" || m_startupScreen == "spyglass" || m_startupScreen == "bundle" || m_startupScreen == "archery" || m_startupScreen == "food" || m_startupScreen == "materials" || m_startupScreen == "tropical" || m_startupScreen == "book" || m_startupScreen == "bookedit" || m_startupScreen == "booktip" || m_startupScreen == "boats" || m_startupScreen == "carts" || m_startupScreen == "fireworks" || m_startupScreen == "jukebox" ||
+                m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" || m_startupScreen == "leads" || m_startupScreen == "anvilname" || m_startupScreen == "dials" || m_startupScreen == "spyglass" || m_startupScreen == "bundle" || m_startupScreen == "archery" || m_startupScreen == "food" || m_startupScreen == "materials" || m_startupScreen == "tropical" || m_startupScreen == "book" || m_startupScreen == "bookedit" || m_startupScreen == "booktip" || m_startupScreen == "boats" || m_startupScreen == "carts" || m_startupScreen == "fireworks" || m_startupScreen == "jukebox" || m_startupScreen == "potioncloud" ||
                 m_startupScreen == "grinderror" || m_startupScreen == "woods" ||
                 m_startupScreen == "cherry" || m_startupScreen == "mangrove" || m_startupScreen == "fungi" ||
                 m_startupScreen == "stones" || m_startupScreen == "colours" || m_startupScreen == "candles" ||
@@ -3795,6 +3803,26 @@ bool Application::frame()
                         if (m_startupScreen == "bookedit")
                             m_bookDraft[0] = "A list of things to do:\n- feed the frogs\n- find more ink\n- sign this before Alex reads it";
                     }
+                }
+                if (m_startupScreen == "potioncloud")
+                {
+                    m_devAttackStrength = 1.0f;
+                    for (int dx = 2; dx <= 9; ++dx)
+                        for (int dz = -5; dz <= 5; ++dz)
+                        {
+                            m_world->setBlock(px + dx, py - 1, pz + dz, Blocks::Grass);
+                            for (int dy = 0; dy <= 3; ++dy) m_world->setBlock(px + dx, py + dy, pz + dz, Blocks::Air);
+                        }
+                    splashPotion(glm::vec3(static_cast<float>(px) + 5.5f, static_cast<float>(py), static_cast<float>(pz) - 1.5f),
+                                 Brewing::encode(Brewing::Brew{ Brewing::Potion::Poison }) | (1 << 12) | (1 << 13));
+                    splashPotion(glm::vec3(static_cast<float>(px) + 6.5f, static_cast<float>(py), static_cast<float>(pz) + 3.0f),
+                                 Brewing::encode(Brewing::Brew{ Brewing::Potion::Speed }) | (1 << 12) | (1 << 13));
+                    m_inventory.slot(0) = ItemStack{ Items::SplashPotion, 1, Brewing::encode(Brewing::Brew{ Brewing::Potion::Strength, false, true }) };
+                    m_inventory.slot(1) = ItemStack{ Items::LingeringPotion, 1, Brewing::encode(Brewing::Brew{ Brewing::Potion::Poison }) };
+                    m_inventory.slot(2) = ItemStack{ Items::Potion, 1, Brewing::encode(Brewing::Brew{ Brewing::Potion::TurtleMaster }) };
+                    m_inventory.slot(3) = ItemStack{ Items::TippedArrow, 8, static_cast<int>(Effects::Kind::Slowness) };
+                    m_camera.pitch = -30.0f;
+                    m_camera.addLook(0.0f, 0.0f, 0.0f);
                 }
                 if (m_startupScreen == "jukebox")
                 {
@@ -6489,9 +6517,14 @@ bool Application::frame()
             // creative, whatever the saved world was last left in:
             // without it the shot came back as the survival panel.
             if (m_startupScreen == "creative" || m_startupScreen == "creativeinv" ||
-                m_startupScreen == "creativesearch" || m_startupScreen == "eggs")
+                m_startupScreen == "creativesearch" || m_startupScreen == "eggs" || m_startupScreen == "potions")
             {
                 m_player.mode = GameMode::Creative;
+                if (m_startupScreen == "potions")
+                {
+                    m_creativeTab = creativeInventoryTab() - 1;
+                    m_creativeSearch = "potion of";
+                }
                 if (m_startupScreen == "eggs")
                 {
                     m_creativeTab = creativeInventoryTab() - 1;
@@ -11131,6 +11164,126 @@ void Application::burstFirework(const glm::vec3& at, int design)
         m_audio.play(Sound::Hurt, 0.8f);
 }
 
+void Application::splashPotion(const glm::vec3& at, int effect)
+{
+    const Brewing::Brew brew = Brewing::decode(effect & 0xFFF);
+    const bool lingering = (effect & (1 << 12)) != 0;
+    const unsigned int colour = Brewing::brewColour(brew);
+    uint32_t seed = hashCoords(static_cast<int>(at.x * 8.0f), static_cast<int>(at.y * 8.0f), static_cast<int>(at.z * 8.0f),
+                               static_cast<uint32_t>(m_elapsedSeconds * 1000.0f));
+    for (int k = 0; k < 40 && m_sparks.size() < 4000u; ++k)
+    {
+        seed = seed * 1664525u + 1013904223u;
+        const float a = static_cast<float>(seed >> 8 & 1023u) / 1024.0f * 6.2831853f;
+        const float up = static_cast<float>(seed >> 18 & 255u) / 255.0f;
+        FireworkSpark spark;
+        spark.position = at;
+        spark.velocity = glm::vec3(std::cos(a) * 2.5f, 1.0f + up * 2.5f, std::sin(a) * 2.5f);
+        spark.colour = colour;
+        spark.life = 0.6f + up * 0.4f;
+        spark.size = 0.06f;
+        m_sparks.push_back(spark);
+    }
+    m_audio.play(Sound::DigGlass, 0.7f, 1.0f);
+    if (lingering)
+    {
+        PotionCloud cloud;
+        cloud.position = at;
+        cloud.effect = Brewing::encode(brew);
+        m_potionClouds.push_back(cloud);
+        return;
+    }
+    const std::vector<Brewing::Dose> doses = Brewing::dosesOf(brew);
+    const float toPlayer = glm::length(m_player.position + glm::vec3(0.0f, 0.9f, 0.0f) - at);
+    if (toPlayer < 4.0f)
+    {
+        const float share = 1.0f - toPlayer / 4.0f;
+        for (const Brewing::Dose& dose : doses)
+            if (dose.seconds * share >= 1.0f) Effects::give(m_player.effects, dose.kind, dose.amplifier, dose.seconds * share);
+        if (brew.potion == Brewing::Potion::Water) m_player.douse();
+    }
+    for (Mob& mob : m_entities.mobs())
+    {
+        if (!mob.alive()) continue;
+        const float distance = glm::length(mob.position() + glm::vec3(0.0f, mob.height() * 0.5f, 0.0f) - at);
+        if (distance >= 4.0f) continue;
+        const float share = 1.0f - distance / 4.0f;
+        for (const Brewing::Dose& dose : doses)
+        {
+            if (dose.kind == Effects::Kind::Poison) mob.afflict(Mob::Affliction::Poison, dose.seconds * share);
+            if (dose.kind == Effects::Kind::Slowness) mob.afflict(Mob::Affliction::Slowness, dose.seconds * share);
+            if (dose.kind == Effects::Kind::Regeneration) mob.heal(1 + dose.amplifier);
+        }
+    }
+}
+
+void Application::tickPotionClouds(float deltaTime)
+{
+    for (size_t i = 0; i < m_potionClouds.size();)
+    {
+        PotionCloud& cloud = m_potionClouds[i];
+        cloud.age += deltaTime;
+        cloud.radius = std::max(0.0f, 3.0f * (1.0f - cloud.age / 30.0f) - cloud.shrunk);
+        if (cloud.age >= 30.0f || cloud.radius <= 0.2f)
+        {
+            m_potionClouds.erase(m_potionClouds.begin() + static_cast<long>(i));
+            continue;
+        }
+        const Brewing::Brew brew = Brewing::decode(cloud.effect);
+        const unsigned int colour = Brewing::brewColour(brew);
+        cloud.puff += deltaTime;
+        while (cloud.puff >= 0.015f && m_sparks.size() < 4000u)
+        {
+            cloud.puff -= 0.015f;
+            cloud.seed = cloud.seed * 1664525u + 1013904223u;
+            const float a = static_cast<float>(cloud.seed >> 8 & 1023u) / 1024.0f * 6.2831853f;
+            const float r = std::sqrt(static_cast<float>(cloud.seed >> 20 & 1023u) / 1024.0f) * cloud.radius;
+            FireworkSpark spark;
+            spark.position = cloud.position + glm::vec3(std::cos(a) * r, 0.1f, std::sin(a) * r);
+            spark.velocity = glm::vec3(0.0f, 0.3f, 0.0f);
+            spark.colour = colour;
+            spark.life = 1.0f;
+            spark.size = 0.05f;
+            m_sparks.push_back(spark);
+        }
+        cloud.tick += deltaTime;
+        if (cloud.tick < 0.25f || cloud.age < 0.5f)
+        {
+            ++i;
+            continue;
+        }
+        cloud.tick = 0.0f;
+        const std::vector<Brewing::Dose> doses = Brewing::dosesOf(brew);
+        auto inside = [&](const glm::vec3& feet) {
+            const glm::vec2 flat(feet.x - cloud.position.x, feet.z - cloud.position.z);
+            return glm::length(flat) <= cloud.radius && feet.y > cloud.position.y - 1.5f && feet.y < cloud.position.y + 1.5f;
+        };
+        if (inside(m_player.position) && m_elapsedSeconds - cloud.playerTouched >= 1.0f && !doses.empty())
+        {
+            cloud.playerTouched = m_elapsedSeconds;
+            for (const Brewing::Dose& dose : doses)
+                if (dose.seconds * 0.25f >= 1.0f) Effects::give(m_player.effects, dose.kind, dose.amplifier, dose.seconds * 0.25f);
+            cloud.shrunk += 0.5f;
+        }
+        for (Mob& mob : m_entities.mobs())
+        {
+            if (!mob.alive() || !inside(mob.position())) continue;
+            float& last = cloud.touched[mob.serial()];
+            if (last > 0.0f && m_elapsedSeconds - last < 1.0f) continue;
+            last = m_elapsedSeconds;
+            bool took = false;
+            for (const Brewing::Dose& dose : doses)
+            {
+                if (dose.kind == Effects::Kind::Poison) { mob.afflict(Mob::Affliction::Poison, dose.seconds * 0.25f); took = true; }
+                if (dose.kind == Effects::Kind::Slowness) { mob.afflict(Mob::Affliction::Slowness, dose.seconds * 0.25f); took = true; }
+                if (dose.kind == Effects::Kind::Regeneration) { mob.heal(1); took = true; }
+            }
+            if (took) cloud.shrunk += 0.5f;
+        }
+        ++i;
+    }
+}
+
 void Application::tickFireworks(float deltaTime)
 {
     if (!m_world) return;
@@ -11800,6 +11953,12 @@ namespace
                 return;
             }
 
+            if (kind == Arrows::Kind::Potion && (effect & (1 << 13)) != 0)
+            {
+                thrownPotions.emplace_back(at, effect);
+                return;
+            }
+
             if (kind == Arrows::Kind::Potion)
             {
                 bursts.push_back(at);
@@ -11846,6 +12005,7 @@ namespace
         std::vector<glm::vec3> bursts;
         std::vector<glm::vec3> windBursts;
         std::vector<glm::vec3> potionBursts;
+        std::vector<std::pair<glm::vec3, int>> thrownPotions;
         std::vector<glm::vec3> breathBursts;
         std::vector<glm::vec3> xpBursts;
 
@@ -11869,7 +12029,7 @@ namespace
                     if (std::abs(apart.x) > half || std::abs(apart.z) > half) continue;
                     if (apart.y < 0.0f || apart.y > mob.height()) continue;
 
-                    if (striking != Arrows::Kind::XpBottle) mob.damage(damage, feet - point);
+                    if (striking != Arrows::Kind::XpBottle && striking != Arrows::Kind::Potion) mob.damage(damage, feet - point);
                     dose(mob);
                     return true;
                 }
@@ -11934,6 +12094,7 @@ void Application::updateArrows(float deltaTime)
         sprites(SpriteParticles::Kind::Gust, at, 1, 0.0f, 0.0f, 2.2f, 0.6f);
         sprites(SpriteParticles::Kind::SmallGust, at, 6, 0.8f, 1.5f, 0.6f, 0.5f);
     }
+    for (const auto& thrown : targets.thrownPotions) splashPotion(thrown.first, thrown.second);
     for (const glm::vec3& at : targets.potionBursts)
         sprites(SpriteParticles::Kind::Spell, at, 24, 1.2f, 1.5f, 0.25f, 1.2f);
     for (const glm::vec3& at : targets.xpBursts)
@@ -12137,13 +12298,8 @@ void Application::handleDrinking(float deltaTime)
         return;
     }
 
-    const Brewing::Potion potion = Brewing::fromDamage(stack.damage);
-
-    Effects::Kind kind;
-    int amplifier = 0;
-    float seconds = 0.0f;
-    if (Brewing::effectOf(potion, kind, amplifier, seconds))
-        Effects::give(m_player.effects, kind, amplifier, seconds);
+    for (const Brewing::Dose& dose : Brewing::dosesOf(Brewing::decode(stack.damage)))
+        Effects::give(m_player.effects, dose.kind, dose.amplifier, dose.seconds);
 
     // The glass comes back whatever was in it, water included.
     stack.count -= 1;
@@ -13982,6 +14138,20 @@ void Application::handlePlacement()
         m_chatLog.add("There is no recipe book here for it to fill in, so it teaches nothing.");
         if (!m_player.creative()) stack.clear();
         m_audio.play(Sound::Pickup, 0.5f, 1.4f);
+        return;
+    }
+
+    if (stack.id == Items::SplashPotion || stack.id == Items::LingeringPotion)
+    {
+        const glm::vec3 heading = glm::normalize(m_camera.front + glm::vec3(0.0f, 0.2f, 0.0f));
+        const int effect = (stack.damage & 0xFFF) | (stack.id == Items::LingeringPotion ? (1 << 12) : 0) | (1 << 13);
+        m_arrows.spawn(m_player.eyePosition() + heading * 0.6f, heading * 10.0f + m_player.velocity, 0, true, Arrows::Kind::Potion, effect);
+        m_audio.play(Sound::Click, 0.4f, 0.6f);
+        if (!m_player.creative())
+        {
+            stack.count -= 1;
+            if (stack.count <= 0) stack.clear();
+        }
         return;
     }
 

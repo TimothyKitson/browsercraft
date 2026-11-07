@@ -451,6 +451,8 @@ namespace Items
         FireCharge,
         MusicDiscFirst,
         MusicDiscLast = MusicDiscFirst + 18,
+        SplashPotion,
+        LingeringPotion,
         Count
     };
 }

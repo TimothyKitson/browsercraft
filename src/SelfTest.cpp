@@ -1603,10 +1603,10 @@ namespace
         // Water takes nether wart and nothing else.
         check(Brewing::brew(Potion::Water, Items::NetherWart) == Potion::Awkward,
               "water and nether wart make the awkward base");
-        check(Brewing::brew(Potion::Water, Items::Sugar) == Potion::Count,
-              "sugar in water makes nothing");
-        check(Brewing::brew(Potion::Water, Items::BlazePowder) == Potion::Count,
-              "nor does blaze powder");
+        check(Brewing::brew(Potion::Water, Items::Sugar) == Potion::Mundane,
+              "sugar in water makes only a mundane potion");
+        check(Brewing::brew(Potion::Water, Items::BlazePowder) == Potion::Mundane,
+              "and so does blaze powder");
         check(Brewing::brew(Potion::Water, Blocks::Cobblestone) == Potion::Count,
               "nor a handful of cobblestone");
 
@@ -1615,8 +1615,8 @@ namespace
               "sugar makes swiftness");
         check(Brewing::brew(Potion::Awkward, Items::BlazePowder) == Potion::Strength,
               "blaze powder makes strength");
-        check(Brewing::brew(Potion::Awkward, Items::GlowstoneDust) == Potion::NightVision,
-              "glowstone dust makes night vision");
+        check(Brewing::brew(Potion::Awkward, Items::GoldenCarrot) == Potion::NightVision,
+              "a golden carrot makes night vision");
         check(Brewing::brew(Potion::Awkward, Items::NetherWart) == Potion::Count,
               "and a second wart does nothing to it");
 
@@ -4305,6 +4305,67 @@ namespace
         check(pigstep, "pigstep is in a bastion's chests");
     }
 
+    void testPotionForms()
+    {
+        section("potions: every brew, long and strong, splash and lingering");
+        using Brewing::Brew;
+        using Brewing::Potion;
+        Brew out;
+        check(Brewing::brewWith(Brew{ Potion::Awkward }, Items::GoldenCarrot, out) && out.potion == Potion::NightVision,
+              "a golden carrot brews night vision, as in Minecraft");
+        check(Brewing::brewWith(Brew{ Potion::Speed }, Items::GlowstoneDust, out) && out.strong && out.potion == Potion::Speed,
+              "glowstone makes a potion stronger");
+        check(Brewing::brewWith(Brew{ Potion::Speed }, Items::Redstone, out) && out.extended, "and redstone makes it last");
+        check(!Brewing::brewWith(Brew{ Potion::FireResistance }, Items::GlowstoneDust, out), "but fire resistance has no stronger kind");
+        check(Brewing::brewWith(Brew{ Potion::Speed, true, false }, Items::FermentedSpiderEye, out) &&
+                  out.potion == Potion::Slowness && out.extended,
+              "a fermented eye turns long swiftness into long slowness");
+        check(Brewing::brewWith(Brew{ Potion::Water }, Items::FermentedSpiderEye, out) && out.potion == Potion::Weakness,
+              "and water into weakness");
+        check(Brewing::brewWith(Brew{ Potion::Awkward }, Items::SpiderEye, out) && out.potion == Potion::Poison, "a spider eye brews poison");
+        check(Brewing::brewWith(Brew{ Potion::Awkward }, Items::Pufferfish, out) && out.potion == Potion::WaterBreathing,
+              "a pufferfish water breathing");
+        check(Brewing::brewWith(Brew{ Potion::Awkward }, Items::TurtleHelmet, out) && out.potion == Potion::TurtleMaster,
+              "and a turtle shell the turtle master");
+        check(Brewing::brewWith(Brew{ Potion::Water }, Items::Sugar, out) && out.potion == Potion::Mundane, "sugar in water is mundane");
+        check(Brewing::brewWith(Brew{ Potion::Water }, Items::GlowstoneDust, out) && out.potion == Potion::Thick, "glowstone in water is thick");
+
+        const std::vector<Brewing::Dose> strongSpeed = Brewing::dosesOf(Brew{ Potion::Speed, false, true });
+        check(strongSpeed.size() == 1 && strongSpeed[0].amplifier == 1 && strongSpeed[0].seconds == 90.0f, "swiftness II is a minute and a half");
+        const std::vector<Brewing::Dose> longSpeed = Brewing::dosesOf(Brew{ Potion::Speed, true, false });
+        check(longSpeed.size() == 1 && longSpeed[0].seconds == 480.0f, "long swiftness eight minutes");
+        const std::vector<Brewing::Dose> turtle = Brewing::dosesOf(Brew{ Potion::TurtleMaster });
+        check(turtle.size() == 2 && turtle[0].kind == Effects::Kind::Slowness && turtle[0].amplifier == 3 &&
+                  turtle[1].kind == Effects::Kind::Resistance && turtle[1].amplifier == 2,
+              "the turtle master is slowness IV with resistance III");
+        check(Brewing::decode(Brewing::encode(Brew{ Potion::Poison, false, true })).strong &&
+                  Brewing::fromDamage(Brewing::encode(Brew{ Potion::Poison, true, false })) == Potion::Poison,
+              "a stack keeps its potion, length and strength");
+        check(Brewing::decode(static_cast<int>(Potion::Speed)).potion == Potion::Speed, "and an old saved potion still reads");
+        check(Brewing::formChange(Items::Potion, Items::Gunpowder) == Items::SplashPotion &&
+                  Brewing::formChange(Items::SplashPotion, Items::DragonsBreath) == Items::LingeringPotion &&
+                  Brewing::formChange(Items::Potion, Items::DragonsBreath) == Blocks::Air,
+              "gunpowder makes a splash potion and dragon's breath a lingering one");
+        check(Brewing::fullName(Brew{ Potion::Speed }, Brewing::Form::Splash) == "Splash Potion of Swiftness" &&
+                  Brewing::fullName(Brew{ Potion::Water }, Brewing::Form::Lingering) == "Lingering Water Bottle",
+              "and they are called what Minecraft calls them");
+        check(Brewing::brewColour(Brew{ Potion::Water }) == 0x385DC6u &&
+                  Brewing::brewColour(Brew{ Potion::Poison }) != Brewing::brewColour(Brew{ Potion::Speed }),
+              "every brew has its own colour");
+        bool ingredients = true;
+        for (StackId id : { Items::GoldenCarrot, Items::SpiderEye, Items::Pufferfish, Items::TurtleHelmet, Items::Redstone,
+                            Items::FermentedSpiderEye, Items::Gunpowder, Items::DragonsBreath })
+            if (!Brewing::isIngredient(id)) ingredients = false;
+        check(ingredients, "and the stand takes every one of their ingredients");
+
+        ItemStack g[9];
+        for (int i = 0; i < 9; ++i) g[i] = ItemStack{ Items::Arrow, 1 };
+        g[4] = ItemStack{ Items::LingeringPotion, 1, Brewing::encode(Brew{ Potion::Slowness }) };
+        const CraftOutput tipped = Crafting::match(g, 3);
+        check(tipped.id == Items::TippedArrow && tipped.count == 8 && tipped.damage == static_cast<int>(Effects::Kind::Slowness),
+              "eight arrows round a lingering potion make eight tipped arrows");
+    }
+
     void testArchery()
     {
         section("the crossbow, and spectral and tipped arrows");
@@ -5424,8 +5485,8 @@ namespace
                   "for a shorter while than the rest, because it is worth more");
         }
         check(Brewing::brew(Brewing::Potion::Water, Items::GhastTear) ==
-                  Brewing::Potion::Count,
-              "a tear does nothing to plain water");
+                  Brewing::Potion::Mundane,
+              "a tear in plain water is only mundane");
 
         section("frogs and froglights");
 
@@ -14792,6 +14853,7 @@ int runSelfTest()
     testSpawnEggs();
     testFireworkCrafting();
     testMusicDiscs();
+    testPotionForms();
     testMadeThings();
     testTheEndAndTheSea();
     testPathfinding();

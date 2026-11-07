@@ -372,6 +372,8 @@ namespace
         { "Music Disc", Tiles::ItemDiscFirst + 16, 1 },
         { "Music Disc", Tiles::ItemDiscFirst + 17, 1 },
         { "Music Disc", Tiles::ItemDiscFirst + 18, 1 },
+        { "Splash Potion", Tiles::ItemSplashPotion, 1 },
+        { "Lingering Potion", Tiles::ItemLingeringPotion, 1 },
     };
 
     static_assert(sizeof(ITEMS) / sizeof(ITEMS[0]) ==

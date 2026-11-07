@@ -611,6 +611,7 @@ namespace Tiles
         ItemSpawnEggFirst, ItemSpawnEggLast = ItemSpawnEggFirst + 99,
         ItemFireworkFirst, ItemFireworkLast = ItemFireworkFirst + 3,
         ItemDiscFirst, ItemDiscLast = ItemDiscFirst + 18,
+        ItemSplashPotion, ItemLingeringPotion,
         ItemCompassFrameFirst, ItemCompassFrameLast = ItemCompassFrameFirst + 31,
         ItemClockFirst, ItemClockLast = ItemClockFirst + 63,
         ItemRecoveryFirst, ItemRecoveryLast = ItemRecoveryFirst + 31,

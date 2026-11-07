@@ -974,7 +974,8 @@ namespace
             // and a table is all this can read. Each one is named
             // here with what you do to get it.
             const char* byHand = nullptr;
-            if (i == static_cast<int>(Items::Potion))
+            if (i == static_cast<int>(Items::Potion) || i == static_cast<int>(Items::SplashPotion) ||
+                i == static_cast<int>(Items::LingeringPotion))
                 byHand = "brewed at a stand";
             else if (i == static_cast<int>(Items::WaterBucket) ||
                      i == static_cast<int>(Items::LavaBucket))

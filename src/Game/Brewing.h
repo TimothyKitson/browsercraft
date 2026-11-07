@@ -2,6 +2,8 @@
 #include "Effects.h"
 #include "Items.h"
 #include "World/Block.h"
+#include <string>
+#include <vector>
 
 // Brewing: what a stand makes of a bottle and an ingredient.
 //
@@ -29,9 +31,46 @@ namespace Brewing
         // puts hearts back rather than keeping them on.
         Regeneration,
         Leaping,
+        Mundane,
+        Thick,
+        Slowness,
+        Weakness,
+        Poison,
+        WaterBreathing,
+        TurtleMaster,
 
         Count
     };
+
+    enum class Form : int { Drink = 0, Splash, Lingering, Arrow };
+
+    struct Brew
+    {
+        Potion potion = Potion::Water;
+        bool extended = false;
+        bool strong = false;
+    };
+
+    struct Dose
+    {
+        Effects::Kind kind = Effects::Kind::Speed;
+        int amplifier = 0;
+        float seconds = 0.0f;
+    };
+
+    constexpr int EXTENDED_BIT = 1 << 8;
+    constexpr int STRONG_BIT = 1 << 9;
+
+    Brew decode(int damage);
+    int encode(const Brew& brew);
+    bool canExtend(Potion potion);
+    bool canStrengthen(Potion potion);
+    std::vector<Dose> dosesOf(const Brew& brew);
+    std::string fullName(const Brew& brew, Form form);
+    unsigned int brewColour(const Brew& brew);
+    bool brewWith(const Brew& base, StackId ingredient, Brew& out);
+    StackId formChange(StackId bottle, StackId ingredient);
+    std::string durationText(float seconds);
 
     const char* name(Potion potion);
 

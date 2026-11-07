@@ -1,5 +1,6 @@
 #include "Crafting.h"
 #include "Fireworks.h"
+#include "Brewing.h"
 #include "Food.h"
 #include "Archaeology.h"
 #include "Player/Inventory.h"
@@ -1470,8 +1471,24 @@ namespace Crafting
         return out;
     }
 
+    CraftOutput matchTippedArrows(const ItemStack* grid, int size)
+    {
+        CraftOutput out;
+        if (size < 3 || grid[4].id != Items::LingeringPotion) return out;
+        for (int i = 0; i < 9; ++i)
+            if (i != 4 && grid[i].id != Items::Arrow) return out;
+        const std::vector<Brewing::Dose> doses = Brewing::dosesOf(Brewing::decode(grid[4].damage));
+        if (doses.empty()) return out;
+        out.id = Items::TippedArrow;
+        out.count = 8;
+        out.damage = static_cast<int>(doses.front().kind);
+        return out;
+    }
+
     CraftOutput match(const ItemStack* grid, int size)
     {
+        const CraftOutput tipped = matchTippedArrows(grid, size);
+        if (tipped.valid()) return tipped;
         const CraftOutput firework = Fireworks::match(grid, size);
         if (firework.valid()) return firework;
         const CraftOutput boat = matchChestBoat(grid, size);
@@ -1565,6 +1582,7 @@ std::vector<StackId> Crafting::everyOutput()
     out.push_back(static_cast<StackId>(Blocks::DecoratedPotFirst + 2));
     out.push_back(Items::SuspiciousStew);
     out.push_back(Items::FireworkStar);
+    out.push_back(Items::TippedArrow);
     out.push_back(Items::FireworkRocket);
     for (int wood = 0; wood < BOAT_WOODS; ++wood)
     {
