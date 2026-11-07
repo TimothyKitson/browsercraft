@@ -162,6 +162,7 @@ float Tools::breakSeconds(StackId tool, BlockId block)
     // Going at a block that wanted a tool without one is slow, and
     // leaves nothing behind either.
     if (!canHarvest(tool, block)) seconds *= 3.33f;
+    if (block == Blocks::Cobweb && (kindOf(tool) == Kind::Sword || tool == Items::Shears)) seconds /= 15.0f;
 
     return seconds;
 }

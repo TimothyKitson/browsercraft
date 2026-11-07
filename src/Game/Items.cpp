@@ -222,6 +222,9 @@ namespace
         { "Turtle Scute",         Tiles::ItemTurtleScute,       64 },
         { "Turtle Shell",         Tiles::ItemTurtleHelmet,      1 },
         { "Powder Snow Bucket",   Tiles::ItemPowderSnowBucket,  1 },
+        { "Iron Nugget",          Tiles::ItemIronNugget,        64 },
+        { "Chorus Fruit",         Tiles::ItemChorusFruit,       64 },
+        { "Popped Chorus Fruit",  Tiles::ItemPoppedChorusFruit, 64 },
     };
 
     static_assert(sizeof(ITEMS) / sizeof(ITEMS[0]) ==
@@ -252,6 +255,8 @@ int flatIconFor(BlockId id)
     if (isIronDoor(id)) return Tiles::ItemIronDoor;
     if (isTurtleEgg(id)) return Tiles::ItemTurtleEggIcon;
     if (isTripwireHook(id)) return Tiles::ItemTripwireHook;
+    if (isChain(id)) return Tiles::ItemChain;
+    if (isEndRod(id)) return Tiles::EndRodTile;
     if (isDoublePlant(id))
     {
         switch (doublePlantKind(id))
@@ -405,6 +410,10 @@ StackId blockDrop(BlockId id)
     if (isSpecialRail(id)) return specialRailOf(specialRailFamily(id), false, false);
     if (isIronDoor(id)) return Blocks::IronDoorFirst;
     if (isIronTrapdoor(id)) return Blocks::IronTrapdoorFirst;
+    if (isChain(id)) return Blocks::ChainFirst;
+    if (isEndRod(id)) return Blocks::EndRodFirst;
+    if (id == Blocks::Cobweb) return Items::StringItem;
+    if (id == Blocks::ChorusPlant) return Items::ChorusFruit;
 
     // A melon comes apart into slices rather than into a melon, which
     // is Minecraft's and is what makes one worth planting.

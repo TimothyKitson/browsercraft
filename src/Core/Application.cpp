@@ -2117,7 +2117,7 @@ bool Application::frame()
             m_startupScreen == "stones" || m_startupScreen == "colours" || m_startupScreen == "candles" ||
             m_startupScreen == "shulkerboxes" || m_startupScreen == "beds" || m_startupScreen == "chests" ||
             m_startupScreen == "copper" || m_startupScreen == "flowers" || m_startupScreen == "mushrooms" || m_startupScreen == "lush" ||
-            m_startupScreen == "farm" || m_startupScreen == "corals" || m_startupScreen == "ice" || m_startupScreen == "wiring" ||
+            m_startupScreen == "farm" || m_startupScreen == "corals" || m_startupScreen == "ice" || m_startupScreen == "wiring" || m_startupScreen == "utility" ||
             m_startupScreen == "boat" || m_startupScreen == "rails" ||
             m_startupScreen == "mobs" || m_startupScreen == "golem" ||
             m_startupScreen == "glowmobs" || m_startupScreen == "variants" ||
@@ -2216,6 +2216,7 @@ bool Application::frame()
                                   m_startupScreen != "corals" &&
                                   m_startupScreen != "ice" &&
                                   m_startupScreen != "wiring" &&
+                                  m_startupScreen != "utility" &&
                                   m_startupScreen != "boat" &&
                                   m_startupScreen != "rails" &&
                                   m_startupScreen != "mobs" &&
@@ -2594,7 +2595,7 @@ bool Application::frame()
                 m_startupScreen == "shulkerboxes" || m_startupScreen == "beds" || m_startupScreen == "chests" ||
                 m_startupScreen == "copper" || m_startupScreen == "flowers" || m_startupScreen == "mushrooms" ||
                 m_startupScreen == "lush" || m_startupScreen == "farm" || m_startupScreen == "corals" || m_startupScreen == "ice" ||
-                m_startupScreen == "wiring")
+                m_startupScreen == "wiring" || m_startupScreen == "utility")
             {
                 m_camera.setOrientation(0.0f, -25.0f);
                 m_camera.addLook(0.0f, 0.0f, 0.0f);
@@ -2735,6 +2736,35 @@ bool Application::frame()
                     m_world->setBlock(px + 12, py, pz - 8, Blocks::Bookshelf);
                     m_world->setBlock(px + 12, py, pz + 8, Blocks::DiamondOre);
                     m_world->setBlock(px + 12, py + 1, pz + 8, Blocks::EndPortalFrame);
+                }
+                if (m_startupScreen == "utility")
+                {
+                    m_devAttackStrength = 1.0f;
+                    m_camera.setOrientation(0.0f, -30.0f);
+                    for (int dx = -1; dx <= 1; ++dx)
+                        for (int dz = -1; dz <= 1; ++dz)
+                            for (int dy = 0; dy <= 6; ++dy) m_world->setBlock(px + dx, py + dy, pz + dz, Blocks::Air);
+                    for (int dy = 0; dy < 2; ++dy) m_world->setBlock(px, py + dy, pz, Blocks::Stone);
+                    m_player.position.y = static_cast<float>(py + 2);
+                    for (int dx = 1; dx <= 13; ++dx)
+                        for (int dz = -8; dz <= 8; ++dz)
+                        {
+                            for (int dy = 0; dy <= 6; ++dy) m_world->setBlock(px + dx, py + dy, pz + dz, Blocks::Air);
+                            m_world->setBlock(px + dx, py - 1, pz + dz, Blocks::Stone);
+                        }
+                    auto put = [&](int dx, int dy, int dz, BlockId id) { m_world->setBlock(px + dx, py + dy, pz + dz, id); };
+                    for (int dz = -7; dz <= -4; ++dz) { put(4, 0, dz, Blocks::IronBars); put(4, 1, dz, Blocks::IronBars); }
+                    put(4, 0, -3, Blocks::Stone);
+                    for (int dy = 0; dy < 3; ++dy) put(6, 2 - dy, -6, Blocks::ChainFirst);
+                    put(6, 3, -6, Blocks::Stone);
+                    put(6, 1, -4, static_cast<BlockId>(Blocks::ChainFirst + 1));
+                    put(6, 1, -2, static_cast<BlockId>(Blocks::ChainFirst + 2));
+                    for (int f = 0; f < 6; ++f) put(4 + (f % 3) * 2, f < 3 ? 0 : 2, 1 + (f / 3) * 2, static_cast<BlockId>(Blocks::EndRodFirst + f));
+                    put(4, 1, 3, Blocks::Stone);
+                    for (int dz = 5; dz <= 7; ++dz) put(5, 0, dz, Blocks::Cobweb);
+                    put(13, 0, -8, Blocks::Bookshelf);
+                    put(13, 0, 8, Blocks::DiamondOre);
+                    put(13, 1, 8, Blocks::EndPortalFrame);
                 }
                 if (m_startupScreen == "wiring")
                 {
@@ -6515,6 +6545,9 @@ void Application::updateMining(float deltaTime)
                     drop = static_cast<StackId>((isDeadCoralWallFan(id) ? Blocks::DeadCoralFanFirst : Blocks::CoralFanFirst) + coralKind(id));
                 if (silk && isTurtleEgg(id)) drop = turtleEggOf(1, 0);
                 if (isTallSeagrass(id) && tool == Items::Shears) drop = Blocks::Seagrass;
+                if (id == Blocks::Cobweb)
+                    drop = (tool == Items::Shears || silk) ? static_cast<StackId>(Blocks::Cobweb)
+                         : Tools::kindOf(tool) == Tools::Kind::Sword ? static_cast<StackId>(Items::StringItem) : static_cast<StackId>(Blocks::Air);
 
                 int dropped = 1;
 
@@ -9676,6 +9709,28 @@ void Application::handleEating(float deltaTime)
 
     const bool honey = stack.id == Items::HoneyBottle;
     if (honey) Effects::remove(m_player.effects, Effects::Kind::Poison);
+    if (stack.id == Items::ChorusFruit)
+    {
+        const glm::ivec3 from(static_cast<int>(std::floor(m_player.position.x)), static_cast<int>(std::floor(m_player.position.y)),
+                              static_cast<int>(std::floor(m_player.position.z)));
+        uint32_t roll = static_cast<uint32_t>(m_elapsedSeconds * 7919.0f) ^ static_cast<uint32_t>(from.x * 31 + from.z * 17);
+        for (int attempt = 0; attempt < 16; ++attempt)
+        {
+            roll = roll * 1664525u + 1013904223u;
+            const int dx = static_cast<int>((roll >> 8) % 17u) - 8;
+            const int dz = static_cast<int>((roll >> 16) % 17u) - 8;
+            const int dy = static_cast<int>((roll >> 24) % 17u) - 8;
+            const glm::ivec3 to(from.x + dx, from.y + dy, from.z + dz);
+            if (to.y < 1 || to.y >= Chunk::SY - 2) continue;
+            if (!isSolid(m_world->getBlock(to.x, to.y - 1, to.z))) continue;
+            if (isSolid(m_world->getBlock(to.x, to.y, to.z)) || isSolid(m_world->getBlock(to.x, to.y + 1, to.z))) continue;
+            if (isLiquid(m_world->getBlock(to.x, to.y, to.z))) continue;
+            m_player.position = glm::vec3(to.x + 0.5f, static_cast<float>(to.y), to.z + 0.5f);
+            m_player.velocity = glm::vec3(0.0f);
+            m_audio.play(Sound::MobEndermanSay, 0.5f, 1.4f);
+            break;
+        }
+    }
     stack.count -= 1;
     if (stack.count <= 0) stack.clear();
     if (honey && m_inventory.add(Items::GlassBottle, 1) > 0) m_drops.spawn(m_player.position, Items::GlassBottle, 1);
@@ -11324,6 +11379,22 @@ void Application::handlePlacement()
         const glm::vec3 look = m_camera.front;
         const int out = (std::fabs(look.x) > std::fabs(look.z)) ? (look.x > 0.0f ? 1 : 3) : (look.z > 0.0f ? 2 : 0);
         placing = isRepeater(placing) ? repeaterOf(out, 1, false) : comparatorOf(out, false, false);
+    }
+    if (isChain(placing))
+    {
+        const glm::ivec3 n = hit.normal;
+        placing = static_cast<BlockId>(Blocks::ChainFirst + (n.x != 0 ? 1 : n.z != 0 ? 2 : 0));
+    }
+    if (isEndRod(placing))
+    {
+        const glm::ivec3 n = hit.normal;
+        int facing = 0;
+        if (n.y < 0) facing = 1;
+        else if (n.z < 0) facing = 2;
+        else if (n.x > 0) facing = 3;
+        else if (n.z > 0) facing = 4;
+        else if (n.x < 0) facing = 5;
+        placing = static_cast<BlockId>(Blocks::EndRodFirst + facing);
     }
     if (isTripwireHook(placing))
     {

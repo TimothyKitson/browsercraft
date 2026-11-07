@@ -605,6 +605,7 @@ void Player::update(float deltaTime, const World& world, const Controls& control
 
     inBerryBush = false;
     inPowderSnow = false;
+    inCobweb = false;
     if (!flying)
     {
         const AABB box = aabb();
@@ -613,6 +614,11 @@ void Player::update(float deltaTime, const World& world, const Controls& control
                 for (int bz = static_cast<int>(std::floor(box.min.z)); bz <= static_cast<int>(std::floor(box.max.z)); ++bz)
                     if (world.getBlock(bx, by, bz) == Blocks::PowderSnow) inPowderSnow = true;
         if (inPowderSnow) targetSpeed *= 0.45f;
+        for (int bx = static_cast<int>(std::floor(box.min.x)); bx <= static_cast<int>(std::floor(box.max.x)); ++bx)
+            for (int by = static_cast<int>(std::floor(box.min.y)); by <= static_cast<int>(std::floor(box.max.y - 0.001f)); ++by)
+                for (int bz = static_cast<int>(std::floor(box.min.z)); bz <= static_cast<int>(std::floor(box.max.z)); ++bz)
+                    if (world.getBlock(bx, by, bz) == Blocks::Cobweb) inCobweb = true;
+        if (inCobweb) targetSpeed *= 0.25f;
         for (int bx = static_cast<int>(std::floor(box.min.x)); bx <= static_cast<int>(std::floor(box.max.x)); ++bx)
             for (int by = static_cast<int>(std::floor(box.min.y)); by <= static_cast<int>(std::floor(box.max.y)); ++by)
                 for (int bz = static_cast<int>(std::floor(box.min.z)); bz <= static_cast<int>(std::floor(box.max.z)); ++bz)
@@ -684,6 +690,11 @@ void Player::update(float deltaTime, const World& world, const Controls& control
         if (controls.jumpHeld) velocity.y = SWIM_UP_VELOCITY;
         velocity.y = std::max(velocity.y, WATER_TERMINAL);
         m_falling = false; // water cancels fall damage
+    }
+    else if (inCobweb)
+    {
+        velocity.y = controls.jumpHeld ? 0.6f : std::max(velocity.y + GRAVITY * deltaTime * 0.05f, -0.8f);
+        m_falling = false;
     }
     else if (inPowderSnow)
     {

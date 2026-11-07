@@ -369,6 +369,7 @@ namespace Tiles
         TargetTopTile, TargetSideTile, TripwireHookTile, TripwireTile,
         PoweredRailTile, PoweredRailOnTile, DetectorRailTile, DetectorRailOnTile, ActivatorRailTile, ActivatorRailOnTile,
         IronDoorTopTile, IronDoorBottomTile, IronTrapdoorTile,
+        IronBarsTile, ChainTile, EndRodTile, CobwebTile,
 
         TileCount
     };
@@ -567,8 +568,9 @@ namespace Tiles
         ItemPumpkinSeeds, ItemShears, ItemHoneyBottle, ItemSweetBerries, ItemDriedKelp,
         ItemNautilusShell, ItemHeartOfTheSea, ItemTurtleScute, ItemTurtleHelmet, ItemPowderSnowBucket,
         ItemRepeater, ItemComparator, ItemIronDoor, ItemTurtleEggIcon,
+        ItemIronNugget, ItemChorusFruit, ItemPoppedChorusFruit, ItemChain,
 
-        ItemTileEnd = ItemTurtleEggIcon + 1
+        ItemTileEnd = ItemChain + 1
     };
 
     // Ten progressively more broken overlay tiles for the mining animation.

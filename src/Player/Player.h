@@ -140,6 +140,7 @@ public:
     bool blocking = false;
     bool inBerryBush = false;
     bool inPowderSnow = false;
+    bool inCobweb = false;
     bool powderSnowFirm = false;
     bool freezeImmune = false;
     float frozenSeconds = 0.0f;

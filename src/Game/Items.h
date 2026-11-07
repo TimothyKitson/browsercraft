@@ -318,6 +318,9 @@ namespace Items
         TurtleScute,
         TurtleHelmet,
         PowderSnowBucket,
+        IronNugget,
+        ChorusFruit,
+        PoppedChorusFruit,
         Count
     };
 }

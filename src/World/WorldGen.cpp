@@ -2529,6 +2529,8 @@ void WorldGen::buildMineshafts(Chunk& chunk) const
                     const int az = alongX ? z + across : z;
 
                     for (int up = 0; up <= 2; ++up) put(chunk, ax, y + up, az, Blocks::Air);
+                    if (across != 0 && step % 5 != 0 && hashToFloat(hashCoords(ax, y + 31, az, m_seed + SALT)) < 0.08f)
+                        put(chunk, ax, y + 2, az, Blocks::Cobweb);
 
                     // Something underfoot, so a corridor cut through a
                     // cave is still a corridor.

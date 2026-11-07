@@ -29,6 +29,7 @@ namespace
         { Items::SweetBerries,   { 2, 0.4f } },
         { Items::HoneyBottle,    { 6, 1.2f } },
         { Items::DriedKelp,      { 1, 0.6f } },
+        { Items::ChorusFruit,    { 4, 2.4f } },
 
         // Minecraft's apple: four hunger and not much behind it. It
         // is what you eat on the way somewhere, which is the whole

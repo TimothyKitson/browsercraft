@@ -5388,6 +5388,79 @@ namespace
                 t.set(x, y, hash2(x, y, 1903) > 0.75f ? Color{ 92, 150, 84 } : Color{ 232, 228, 200 });
             }
     }
+    void paintIronBarsTile(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 0; y < Tile::N; ++y)
+            for (int x = 1; x < Tile::N; x += 5)
+            {
+                t.set(x, y, Color{ 120, 120, 126 });
+                t.set(x + 1, y, Color{ 176, 176, 182 });
+            }
+        for (int x = 0; x < Tile::N; ++x) { t.set(x, 0, Color{ 150, 150, 156 }); t.set(x, Tile::N - 1, Color{ 150, 150, 156 }); }
+    }
+    void paintChainTile(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 0; y < Tile::N; ++y)
+        {
+            const bool link = (y / 4) % 2 == 0;
+            for (int x = 0; x < 3; ++x)
+                if (link ? (x != 1 || y % 4 == 0 || y % 4 == 3) : x == 1) t.set(x, y, Color{ 64, 70, 84 });
+            for (int x = 3; x < 6; ++x)
+                if (!link ? (x != 4 || y % 4 == 0 || y % 4 == 3) : x == 4) t.set(x, y, Color{ 84, 90, 106 });
+        }
+    }
+    void paintEndRodTile(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 0; y < 15; ++y) { t.set(0, y, Color{ 250, 246, 236 }); t.set(1, y, Color{ 222, 214, 200 }); }
+        for (int y = 0; y < 2; ++y) for (int x = 2; x < 4; ++x) t.set(x, y, Color{ 255, 252, 244 });
+        for (int y = 2; y < 7; ++y) for (int x = 2; x < 6; ++x) t.set(x, y, Color{ 160, 120, 176 });
+    }
+    void paintCobwebTile(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        const Color silk{ 236, 236, 240, 220 };
+        for (int k = 0; k < Tile::N; ++k)
+        {
+            t.set(k, k, silk);
+            t.set(Tile::N - 1 - k, k, silk);
+            t.set(k, 7, silk);
+            t.set(7, k, silk);
+        }
+        for (int r = 3; r < 8; r += 2)
+            for (int a = 0; a < 32; ++a)
+            {
+                const float ang = a * 6.2832f / 32.0f;
+                t.set(7 + static_cast<int>(std::cos(ang) * r), 7 + static_cast<int>(std::sin(ang) * r), silk);
+            }
+    }
+    void paintItemIronNugget(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 6; y < 11; ++y) for (int x = 5; x < 11; ++x) if ((x + y) % 5) t.set(x, y, (x + y) % 3 ? Color{ 210, 210, 214 } : Color{ 160, 160, 166 });
+    }
+    void paintItemChorusFruit(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 4; y < 13; ++y) for (int x = 4; x < 12; ++x)
+            if ((x - 7.5f) * (x - 7.5f) + (y - 8.5f) * (y - 8.5f) < 18.0f) t.set(x, y, (x + y) % 3 ? Color{ 140, 96, 150 } : Color{ 100, 64, 112 });
+    }
+    void paintItemPoppedChorusFruit(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 4; y < 13; ++y) for (int x = 4; x < 12; ++x)
+            if ((x - 7.5f) * (x - 7.5f) + (y - 8.5f) * (y - 8.5f) < 18.0f) t.set(x, y, (x + y) % 3 ? Color{ 214, 176, 216 } : Color{ 176, 130, 186 });
+    }
+    void paintItemChain(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int k = 0; k < 4; ++k)
+            for (int a = 0; a < 3; ++a)
+                for (int b = 0; b < 3; ++b)
+                    if (a != 1 || b != 1) t.set(3 + k * 3 + a, 3 + k * 3 + b, k % 2 ? Color{ 64, 70, 84 } : Color{ 96, 104, 120 });
+    }
     void paintItemPitcherPlant(Tile& t)
     {
         paintDoubleIn(t, true, Color{ 100, 170, 190 }, 1333);
@@ -7967,6 +8040,10 @@ namespace
         { Tiles::ItemRawGold, paintItemRawGold },
         { Tiles::ItemAmethystShard, paintItemAmethystShard },
         { Tiles::ItemTripwireHook, paintItemTripwireHook },
+        { Tiles::ItemIronNugget, paintItemIronNugget },
+        { Tiles::ItemChorusFruit, paintItemChorusFruit },
+        { Tiles::ItemPoppedChorusFruit, paintItemPoppedChorusFruit },
+        { Tiles::ItemChain, paintItemChain },
         { Tiles::ItemRepeater, paintItemRepeater },
         { Tiles::ItemComparator, paintItemComparator },
         { Tiles::ItemIronDoor, paintItemIronDoor },
@@ -8151,6 +8228,10 @@ namespace
         { Tiles::DustLine1Off, paintRedstoneDust },
         { Tiles::DustLine1On, paintRedstoneDustLit },
         { Tiles::LeverHandle, paintLever },
+        { Tiles::IronBarsTile, paintIronBarsTile },
+        { Tiles::ChainTile, paintChainTile },
+        { Tiles::EndRodTile, paintEndRodTile },
+        { Tiles::CobwebTile, paintCobwebTile },
         { Tiles::RepeaterTile, paintRepeaterTile },
         { Tiles::RepeaterOnTile, paintRepeaterOnTile },
         { Tiles::ComparatorTile, paintComparatorTile },
@@ -8750,6 +8831,10 @@ namespace
         { Tiles::ItemRawGold, { "raw_gold", nullptr, nullptr } },
         { Tiles::ItemAmethystShard, { "amethyst_shard", nullptr, nullptr } },
         { Tiles::ItemTripwireHook, { "../block/tripwire_hook", nullptr, nullptr } },
+        { Tiles::ItemIronNugget, { "iron_nugget", nullptr, nullptr } },
+        { Tiles::ItemChorusFruit, { "chorus_fruit", nullptr, nullptr } },
+        { Tiles::ItemPoppedChorusFruit, { "popped_chorus_fruit", nullptr, nullptr } },
+        { Tiles::ItemChain, { "chain", nullptr, nullptr } },
         { Tiles::ItemRepeater, { "repeater", nullptr, nullptr } },
         { Tiles::ItemComparator, { "comparator", nullptr, nullptr } },
         { Tiles::ItemIronDoor, { "iron_door", nullptr, nullptr } },
@@ -8930,6 +9015,10 @@ namespace
         { Tiles::GlassPaneTopTile, { "glass_pane_top", nullptr }, Tinting::None, 0, false },
         { Tiles::TerracottaPlainTile, { "terracotta", "hardened_clay", nullptr }, Tinting::None, 0, false },
         { Tiles::TintedGlassTile, { "tinted_glass", nullptr }, Tinting::None, 0, false },
+        { Tiles::IronBarsTile, { "iron_bars", nullptr }, Tinting::None, 0, false },
+        { Tiles::ChainTile, { "chain", nullptr }, Tinting::None, 0, false },
+        { Tiles::EndRodTile, { "end_rod", nullptr }, Tinting::None, 0, false },
+        { Tiles::CobwebTile, { "cobweb", nullptr }, Tinting::None, 0, false },
         { Tiles::RepeaterTile, { "repeater", nullptr }, Tinting::None, 0, false },
         { Tiles::RepeaterOnTile, { "repeater_on", nullptr }, Tinting::None, 0, false },
         { Tiles::ComparatorTile, { "comparator", nullptr }, Tinting::None, 0, false },

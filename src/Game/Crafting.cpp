@@ -444,6 +444,13 @@ namespace
 
         { true, 0, 0, { Items::MelonSlice }, 1, Items::MelonSeeds, 1 },
         { true, 0, 0, { Blocks::Pumpkin }, 1, Items::PumpkinSeeds, 4 },
+        { false, 3, 2, { Items::IronIngot, Items::IronIngot, Items::IronIngot,
+                         Items::IronIngot, Items::IronIngot, Items::IronIngot }, 0, Blocks::IronBars, 16 },
+        { false, 1, 3, { Items::IronNugget, Items::IronIngot, Items::IronNugget }, 0, Blocks::ChainFirst, 1 },
+        { false, 1, 2, { Items::BlazeRod, Items::PoppedChorusFruit }, 0, Blocks::EndRodFirst, 4 },
+        { true, 0, 0, { Items::IronIngot }, 1, Items::IronNugget, 9 },
+        { false, 3, 3, { Items::IronNugget, Items::IronNugget, Items::IronNugget, Items::IronNugget, Items::IronNugget,
+                         Items::IronNugget, Items::IronNugget, Items::IronNugget, Items::IronNugget }, 0, Items::IronIngot, 1 },
         { false, 3, 2, { Blocks::RedstoneTorch, Items::Redstone, Blocks::RedstoneTorch,
                          Blocks::Stone, Blocks::Stone, Blocks::Stone }, 0, Blocks::RepeaterFirst, 1 },
         { false, 3, 3, { Blocks::Air, Blocks::RedstoneTorch, Blocks::Air,

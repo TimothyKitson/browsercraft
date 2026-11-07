@@ -2120,6 +2120,17 @@ namespace
         { "Iron Trapdoor", IronTrapdoorTile, IronTrapdoorTile, IronTrapdoorTile, true, false, RenderType::Trapdoor, 0, 5.0f },
         { "Iron Trapdoor", IronTrapdoorTile, IronTrapdoorTile, IronTrapdoorTile, true, false, RenderType::Trapdoor, 0, 5.0f },
         { "Iron Trapdoor", IronTrapdoorTile, IronTrapdoorTile, IronTrapdoorTile, true, false, RenderType::Trapdoor, 0, 5.0f },
+        { "Iron Bars", IronBarsTile, IronBarsTile, IronBarsTile, true, false, RenderType::Pane, 0, 5.0f },
+        { "Chain", ChainTile, ChainTile, ChainTile, true, false, RenderType::Lush, 0, 5.0f },
+        { "Chain", ChainTile, ChainTile, ChainTile, true, false, RenderType::Lush, 0, 5.0f },
+        { "Chain", ChainTile, ChainTile, ChainTile, true, false, RenderType::Lush, 0, 5.0f },
+        { "End Rod", EndRodTile, EndRodTile, EndRodTile, true, false, RenderType::Lush, 14, 0.0f },
+        { "End Rod", EndRodTile, EndRodTile, EndRodTile, true, false, RenderType::Lush, 14, 0.0f },
+        { "End Rod", EndRodTile, EndRodTile, EndRodTile, true, false, RenderType::Lush, 14, 0.0f },
+        { "End Rod", EndRodTile, EndRodTile, EndRodTile, true, false, RenderType::Lush, 14, 0.0f },
+        { "End Rod", EndRodTile, EndRodTile, EndRodTile, true, false, RenderType::Lush, 14, 0.0f },
+        { "End Rod", EndRodTile, EndRodTile, EndRodTile, true, false, RenderType::Lush, 14, 0.0f },
+        { "Cobweb", CobwebTile, CobwebTile, CobwebTile, false, false, RenderType::Cross, 0, 4.0f },
     };
 }
 
@@ -2213,6 +2224,9 @@ bool isObtainable(BlockId id)
             if (isSpecialRail(id) && id != specialRailOf(specialRailFamily(id), false, false)) return false;
             if (isIronDoor(id) && id != Blocks::IronDoorFirst) return false;
             if (isIronTrapdoor(id) && id != Blocks::IronTrapdoorFirst) return false;
+            if (isChain(id) && id != Blocks::ChainFirst) return false;
+            if (isEndRod(id) && id != Blocks::EndRodFirst) return false;
+            if (id == Blocks::ChorusPlant) return false;
             if (isBigDripleaf(id) && id != bigDripleafOf(0, DripleafTilt::None)) return false;
             if (isSmallDripleaf(id) && id != smallDripleafOf(0, false)) return false;
             if (isGlowLichen(id) && id != glowLichenOn(0)) return false;
@@ -2273,6 +2287,8 @@ const char* blockSoundGroup(BlockId id)
     if (isDiode(id) || isIronDoor(id) || isIronTrapdoor(id) || isSpecialRail(id)) return "stone";
     if (isDaylightDetector(id) || isTripwireHook(id)) return "wood";
     if (isTripwire(id)) return "cloth";
+    if (id == Blocks::IronBars || isChain(id) || isEndRod(id)) return "stone";
+    if (id == Blocks::Cobweb) return "cloth";
     if (id == Blocks::Target || id == Blocks::TargetLit) return "grass";
     if (isEarthy(id)) return "gravel";
     if (isFlowerPot(id)) return "stone";
@@ -2438,6 +2454,9 @@ Material blockMaterial(BlockId id)
     if (id == Blocks::PowderSnow) return Material::Snow;
     if (isDiode(id) || isTripwireHook(id) || isTripwire(id) || isSpecialRail(id) || isTarget(id)) return Material::Plant;
     if (isDaylightDetector(id)) return Material::Wood;
+    if (id == Blocks::IronBars || isChain(id)) return Material::Stone;
+    if (isEndRod(id)) return Material::Plant;
+    if (id == Blocks::Cobweb) return Material::Wool;
     if (isIronDoor(id) || isIronTrapdoor(id)) return Material::Stone;
     if (isTurtleEgg(id)) return Material::Plant;
     if (id == Blocks::HoneyBlock || id == Blocks::HoneycombBlock) return Material::Wool;
@@ -2604,6 +2623,23 @@ bool blockOverlaps(BlockId id, int bx, int by, int bz,
     if (id == Blocks::Conduit) return overlaps(0.3125f, 0.3125f, 0.3125f, 0.6875f, 0.6875f, 0.6875f);
     if (isDiode(id)) return overlaps(0.0f, 0.0f, 0.0f, 1.0f, 0.125f, 1.0f);
     if (isDaylightDetector(id)) return overlaps(0.0f, 0.0f, 0.0f, 1.0f, 0.375f, 1.0f);
+    if (isChain(id))
+    {
+        constexpr float LO = 0.40625f, HI = 0.59375f;
+        if (chainAxis(id) == 0) return overlaps(LO, 0.0f, LO, HI, 1.0f, HI);
+        if (chainAxis(id) == 1) return overlaps(0.0f, LO, LO, 1.0f, HI, HI);
+        return overlaps(LO, LO, 0.0f, HI, HI, 1.0f);
+    }
+    if (isEndRod(id))
+    {
+        constexpr float LO = 0.375f, HI = 0.625f;
+        switch (endRodFacing(id))
+        {
+            case 0: case 1: return overlaps(LO, 0.0f, LO, HI, 1.0f, HI);
+            case 2: case 4: return overlaps(LO, LO, 0.0f, HI, HI, 1.0f);
+            default: return overlaps(0.0f, LO, LO, 1.0f, HI, HI);
+        }
+    }
     if (isTurtleEgg(id))
         return turtleEggCount(id) == 1 ? overlaps(0.1875f, 0.0f, 0.1875f, 0.75f, 0.4375f, 0.75f)
                                        : overlaps(0.0625f, 0.0f, 0.0625f, 0.9375f, 0.4375f, 0.9375f);

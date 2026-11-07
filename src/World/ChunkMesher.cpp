@@ -789,6 +789,49 @@ namespace
             const glm::vec3 c[4] = { glm::vec3(x0, yy, z1), glm::vec3(x1, yy, z1), glm::vec3(x1, yy, z0), glm::vec3(x0, yy, z0) };
             pushQuad(snap, lx, y, lz, id, c, tile, x0 * 16.0f, z0 * 16.0f, x1 * 16.0f, z1 * 16.0f, shade, true, out);
         };
+        if (isChain(id))
+        {
+            const int tile = blockInfo(id).tileSide;
+            const int axis = chainAxis(id);
+            auto place = [axis](float a, float along, float b) {
+                if (axis == 1) return glm::vec3(along, a, b);
+                if (axis == 2) return glm::vec3(a, b, along);
+                return glm::vec3(a, along, b);
+            };
+            const float d = 1.5f / 16.0f * 0.7071f;
+            for (int k = 0; k < 2; ++k)
+            {
+                const float sx = k == 0 ? d : d, sz = k == 0 ? d : -d;
+                const glm::vec3 c[4] = { place(0.5f - sx, 0.0f, 0.5f - sz), place(0.5f + sx, 0.0f, 0.5f + sz),
+                                         place(0.5f + sx, 1.0f, 0.5f + sz), place(0.5f - sx, 1.0f, 0.5f - sz) };
+                pushQuad(snap, lx, y, lz, id, c, tile, k == 0 ? 0.0f : 3.0f, 0.0f, k == 0 ? 3.0f : 6.0f, 16.0f, 0.9f, true, out);
+            }
+            return;
+        }
+        if (isEndRod(id))
+        {
+            const int tile = blockInfo(id).tileSide;
+            const int f = endRodFacing(id);
+            auto box = [&](float a0, float h0, float b0, float a1, float h1, float b1, const PartFace faces[6]) {
+                if (f == 1) { h0 = 16.0f - h0; h1 = 16.0f - h1; std::swap(h0, h1); }
+                glm::vec3 lo(a0, h0, b0), hi(a1, h1, b1);
+                if (f >= 2)
+                {
+                    const bool towardsMinus = f == 2 || f == 5;
+                    const float n0 = towardsMinus ? 16.0f - h1 : h0, n1 = towardsMinus ? 16.0f - h0 : h1;
+                    if (f == 2 || f == 4) { lo = glm::vec3(a0, b0, n0); hi = glm::vec3(a1, b1, n1); }
+                    else { lo = glm::vec3(n0, a0, b0); hi = glm::vec3(n1, a1, b1); }
+                }
+                emitPart(snap, lx, y, lz, id, lo / 16.0f, hi / 16.0f, faces, out);
+            };
+            const PartFace rodSide{ tile, 0.0f, 0.0f, 2.0f, 15.0f }, rodEnd{ tile, 2.0f, 0.0f, 4.0f, 2.0f };
+            const PartFace baseSide{ tile, 2.0f, 6.0f, 6.0f, 7.0f }, baseEnd{ tile, 2.0f, 2.0f, 6.0f, 6.0f };
+            const PartFace rod[6] = { rodSide, rodSide, rodEnd, rodEnd, rodSide, rodSide };
+            const PartFace base[6] = { baseSide, baseSide, baseEnd, baseEnd, baseSide, baseSide };
+            box(7, 1, 7, 9, 16, 9, rod);
+            box(6, 0, 6, 10, 1, 10, base);
+            return;
+        }
         if (isDiode(id))
         {
             const BlockInfo& info = blockInfo(id);

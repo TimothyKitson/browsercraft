@@ -645,6 +645,10 @@ namespace Blocks
         ActivatorRailFirst, ActivatorRailLast = ActivatorRailFirst + 3,
         IronDoorFirst, IronDoorLast = IronDoorFirst + 15,
         IronTrapdoorFirst, IronTrapdoorLast = IronTrapdoorFirst + 15,
+        IronBars,
+        ChainFirst, ChainLast = ChainFirst + 2,
+        EndRodFirst, EndRodLast = EndRodFirst + 5,
+        Cobweb,
 
         Count
     };
@@ -759,6 +763,10 @@ inline BlockId specialRailOf(int family, bool eastWest, bool powered)
     static const BlockId FIRST[4] = { Blocks::PoweredRailFirst, Blocks::PoweredRailFirst, Blocks::DetectorRailFirst, Blocks::ActivatorRailFirst };
     return static_cast<BlockId>(FIRST[family & 3] + (eastWest ? 2 : 0) + (powered ? 1 : 0));
 }
+inline bool isChain(BlockId id) { return id >= Blocks::ChainFirst && id <= Blocks::ChainLast; }
+inline int chainAxis(BlockId id) { return isChain(id) ? id - Blocks::ChainFirst : 0; }
+inline bool isEndRod(BlockId id) { return id >= Blocks::EndRodFirst && id <= Blocks::EndRodLast; }
+inline int endRodFacing(BlockId id) { return isEndRod(id) ? id - Blocks::EndRodFirst : 0; }
 inline bool isTarget(BlockId id) { return id == Blocks::Target || id == Blocks::TargetLit; }
 inline bool isIronDoor(BlockId id) { return id >= Blocks::IronDoorFirst && id <= Blocks::IronDoorLast; }
 inline bool isIronTrapdoor(BlockId id) { return id >= Blocks::IronTrapdoorFirst && id <= Blocks::IronTrapdoorLast; }
