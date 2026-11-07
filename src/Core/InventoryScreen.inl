@@ -195,12 +195,12 @@ namespace
         Blocks::RepeaterFirst, Blocks::ComparatorFirst, Blocks::DaylightDetector, Blocks::Target, Items::TripwireHook,
         Blocks::IronDoorFirst, Blocks::IronTrapdoorFirst,
         Blocks::IronBars, Blocks::ChainFirst, Blocks::EndRodFirst, Blocks::Cobweb, Items::IronNugget,
-        Blocks::Stonecutter, Blocks::FletchingTable, Blocks::SmithingTable,
+        Blocks::Stonecutter, Blocks::FletchingTable, Blocks::SmithingTable, Blocks::CartographyTable,
         Blocks::SoulTorch, Blocks::SoulCampfire, Blocks::SoulSoil,
         Blocks::MagmaBlock, Blocks::CryingObsidian, Blocks::RespawnAnchor0, Blocks::Lodestone,
         Blocks::BellFirst + 2, Blocks::Jukebox, Blocks::ChiseledBookshelfFirst + 14, Blocks::DragonEgg, Blocks::HeavyCore,
         Blocks::DecoratedPotFirst + 2, Blocks::SnifferEgg0,
-        Items::Bucket, Items::WaterBucket, Items::LavaBucket, Items::PowderSnowBucket, Items::Shears,
+        Items::Bucket, Items::WaterBucket, Items::LavaBucket, Items::PowderSnowBucket, Items::Shears, Items::Compass, Items::EmptyMap,
         Items::IronIngot, Items::GoldIngot, Items::Diamond,
         Items::WoodPickaxe, Items::WoodAxe, Items::WoodShovel, Items::WoodSword, Items::WoodHoe,
         Items::StonePickaxe, Items::StoneAxe, Items::StoneShovel, Items::StoneSword, Items::StoneHoe,
@@ -806,7 +806,7 @@ void Application::renderInventoryScreen()
     // see what was in it.
     const bool container = m_chestOpen || m_crafterOpen || m_furnaceOpen ||
                            m_inventory.craftSize() >= 3 || m_tradeOpen ||
-                           m_enchantOpen || m_brewOpen || m_anvilOpen || m_horseOpen || m_beaconOpen || m_grindOpen || m_cutOpen || m_smithOpen;
+                           m_enchantOpen || m_brewOpen || m_anvilOpen || m_horseOpen || m_beaconOpen || m_grindOpen || m_cutOpen || m_smithOpen || m_cartoOpen;
 
     if (m_player.creative() && !container) renderCreativeScreen(w, h);
     else renderContainerScreen(w, h);
@@ -844,6 +844,7 @@ void Application::renderContainerScreen(float w, float h)
     else if (m_grindOpen) background = "container/grindstone";
     else if (m_cutOpen) background = "container/stonecutter";
     else if (m_smithOpen) background = "container/smithing";
+    else if (m_cartoOpen) background = "container/cartography_table";
     else if (m_tradeOpen) { background = "container/villager"; textureW = 512.0f; }
     else if (m_enchantOpen) background = "container/enchanting_table";
     else if (m_brewOpen) background = "container/brewing_stand";
@@ -927,7 +928,7 @@ void Application::renderContainerScreen(float w, float h)
     // for the same grid.
     const bool plainInventory = !m_chestOpen && !m_crafterOpen &&
                                 !m_furnaceOpen && !bench && !m_tradeOpen &&
-                                !m_enchantOpen && !m_brewOpen && !m_anvilOpen && !m_horseOpen && !m_beaconOpen && !m_grindOpen && !m_cutOpen && !m_smithOpen;
+                                !m_enchantOpen && !m_brewOpen && !m_anvilOpen && !m_horseOpen && !m_beaconOpen && !m_grindOpen && !m_cutOpen && !m_smithOpen && !m_cartoOpen;
 
     // Every screen is headed with the name of what was opened, in the
     // top-left corner, so a barrel says Barrel and a smoker says Smoker.
@@ -944,6 +945,7 @@ void Application::renderContainerScreen(float w, float h)
         else if (m_grindOpen) title = "Repair & Disenchant";
         else if (m_cutOpen) title = "Stonecutter";
         else if (m_smithOpen) title = "Upgrade Gear";
+        else if (m_cartoOpen) title = "Cartography Table";
         else if (m_brewOpen) title = "Brewing Stand";
         else if (m_anvilOpen) title = "Anvil";
         else if (m_enchantOpen) title = "Enchanting Table";
@@ -1144,6 +1146,58 @@ void Application::renderContainerScreen(float w, float h)
             guiSprite("sprites/container/smithing/error", panelX + 65.0f, panelY + 46.0f, 28.0f, 21.0f);
     }
 
+    if (m_cartoOpen)
+    {
+        drawSlot(Inventory::CARTO_MAP, panelX + 15.0f, panelY + 15.0f);
+        drawSlot(Inventory::CARTO_EXTRA, panelX + 15.0f, panelY + 52.0f);
+        const ItemStack made = cartoResult();
+        const float rx = panelX + 145.0f, ry = panelY + 39.0f;
+        well(rx, ry);
+        const ItemStack& source = m_inventory.slot(Inventory::CARTO_MAP);
+        const Maps::Data* shown = source.id == Items::FilledMap ? mapData(source.damage) : nullptr;
+        const float px = panelX + 67.0f, py = panelY + 13.0f, size = 66.0f;
+        if (shown)
+        {
+            const StackId extra = m_inventory.slot(Inventory::CARTO_EXTRA).id;
+            const bool zooming = !made.empty() && extra == Items::Paper;
+            const bool locking = !made.empty() && extra == Blocks::GlassPane;
+            const bool copying = !made.empty() && extra == Items::EmptyMap;
+            if (copying)
+            {
+                if (!guiSprite("sprites/container/cartography_table/duplicated_map", px + 16.0f, py + 16.0f, 50.0f, 50.0f))
+                    m_ui.quad(px + 16.0f, py + 16.0f, 50.0f, 50.0f, glm::vec4(0.86f, 0.78f, 0.6f, 1.0f));
+                if (!guiSprite("sprites/container/cartography_table/duplicated_map", px, py, 50.0f, 50.0f))
+                    m_ui.quad(px, py, 50.0f, 50.0f, glm::vec4(0.9f, 0.82f, 0.64f, 1.0f));
+                const unsigned int texture = mapTextureFor(source.damage);
+                m_ui.texturedQuad(texture, px + 19.0f, py + 19.0f, 44.0f, 44.0f, 0.0f, 0.0f, 1.0f, 1.0f, glm::vec4(1.0f));
+                m_ui.texturedQuad(texture, px + 3.0f, py + 3.0f, 44.0f, 44.0f, 0.0f, 0.0f, 1.0f, 1.0f, glm::vec4(1.0f));
+            }
+            else if (zooming)
+            {
+                if (!guiSprite("sprites/container/cartography_table/scaled_map", px, py, size, size))
+                    m_ui.quad(px, py, size, size, glm::vec4(0.86f, 0.78f, 0.6f, 1.0f));
+                const unsigned int texture = mapTextureFor(source.damage);
+                m_ui.texturedQuad(texture, px + 19.0f, py + 19.0f, 28.0f, 28.0f, 0.0f, 0.0f, 1.0f, 1.0f, glm::vec4(1.0f));
+            }
+            else
+            {
+                if (!guiSprite("sprites/container/cartography_table/map", px, py, size, size))
+                    m_ui.quad(px, py, size, size, glm::vec4(0.86f, 0.78f, 0.6f, 1.0f));
+                const unsigned int texture = mapTextureFor(source.damage);
+                m_ui.texturedQuad(texture, px + 3.0f, py + 3.0f, size - 6.0f, size - 6.0f, 0.0f, 0.0f, 1.0f, 1.0f, glm::vec4(1.0f));
+                if (locking || shown->locked)
+                    guiSprite("sprites/container/cartography_table/locked", px + 52.0f, py + 50.0f, 10.0f, 14.0f);
+            }
+        }
+        if (!made.empty())
+        {
+            drawItem(rx, ry, SLOT, made.id, made.count, glm::vec4(1.0f), made.damage, made.enchantments);
+            m_slotBoxes.push_back({ SlotBox::Kind::CartoTake, 0, rx - 1.0f, ry - 1.0f, PITCH });
+        }
+        else if (shown && !m_inventory.slot(Inventory::CARTO_EXTRA).empty())
+            guiSprite("sprites/container/cartography_table/error", panelX + 35.0f, panelY + 31.0f, 28.0f, 21.0f);
+    }
+
     if (m_cutOpen)
     {
         drawSlot(Inventory::CUT_INPUT, panelX + 20.0f, panelY + 33.0f);
@@ -1253,7 +1307,7 @@ void Application::renderContainerScreen(float w, float h)
         // drawn on all of them, which is how a furnace came to have a
         // man standing in the middle of its fire.
         const bool otherBusiness = m_tradeOpen || m_enchantOpen || m_brewOpen ||
-                                   m_anvilOpen || m_furnaceOpen || bench || m_horseOpen || m_beaconOpen || m_grindOpen || m_cutOpen || m_smithOpen;
+                                   m_anvilOpen || m_furnaceOpen || bench || m_horseOpen || m_beaconOpen || m_grindOpen || m_cutOpen || m_smithOpen || m_cartoOpen;
 
         // Armour down the left edge, at 8 and 8, a slot apart.
         for (int i = 0; !otherBusiness && i < Inventory::ARMOR_SLOTS; ++i)
@@ -2026,7 +2080,7 @@ void Application::renderContainerScreen(float w, float h)
         // fire between them at 36 and the result off to the right at
         // 116 and 35. The client's own four, and the shape everybody
         // recognises.
-        if (m_horseOpen || m_beaconOpen || m_grindOpen || m_cutOpen || m_smithOpen) {}
+        if (m_horseOpen || m_beaconOpen || m_grindOpen || m_cutOpen || m_smithOpen || m_cartoOpen) {}
         else if (m_furnaceOpen)
         {
             const Furnaces::State& state = m_furnaces.at(m_furnaceBlock);
@@ -2616,6 +2670,10 @@ void Application::handleInventoryClick(int mouseX, int mouseY, bool rightButton,
             takeSmithResult(shiftHeld);
             break;
 
+        case SlotBox::Kind::CartoTake:
+            takeCartoResult(shiftHeld);
+            break;
+
         case SlotBox::Kind::BeaconConfirm:
             confirmBeacon();
             break;
@@ -2735,6 +2793,101 @@ void Application::stowSmithing()
     if (!m_smithOpen) return;
     m_smithOpen = false;
     for (int slot : { Inventory::SMITH_TEMPLATE, Inventory::SMITH_BASE, Inventory::SMITH_ADDITION })
+    {
+        ItemStack& held = m_inventory.slot(slot);
+        if (held.empty()) continue;
+        ItemStack leftOver = held;
+        leftOver.count = m_inventory.addStack(held);
+        if (leftOver.count > 0) m_drops.spawnStack(m_player.position + glm::vec3(0.0f, 0.6f, 0.0f), leftOver);
+        held.clear();
+    }
+}
+
+void Application::openCartography(const glm::ivec3& block)
+{
+    m_cartoBlock = block;
+    m_cartoOpen = true;
+    m_inventoryOpen = true;
+    setMouseCaptured(false);
+}
+
+ItemStack Application::cartoResult()
+{
+    ItemStack made;
+    const ItemStack& source = m_inventory.slot(Inventory::CARTO_MAP);
+    const ItemStack& extra = m_inventory.slot(Inventory::CARTO_EXTRA);
+    if (source.id != Items::FilledMap || extra.empty()) return made;
+    const Maps::Data* map = mapData(source.damage);
+    if (!map) return made;
+    if (extra.id == Items::Paper && !map->locked && map->scale < Maps::MAX_SCALE)
+    {
+        made = source;
+        made.count = 1;
+    }
+    else if (extra.id == Items::EmptyMap)
+    {
+        made = source;
+        made.count = 1;
+    }
+    else if (extra.id == Blocks::GlassPane && !map->locked)
+    {
+        made = source;
+        made.count = 1;
+    }
+    return made;
+}
+
+void Application::takeCartoResult(bool toInventory)
+{
+    if (!m_cartoOpen) return;
+    ItemStack made = cartoResult();
+    if (made.empty()) return;
+    if (!toInventory && !m_inventory.cursor().empty()) return;
+    ItemStack& source = m_inventory.slot(Inventory::CARTO_MAP);
+    ItemStack& extra = m_inventory.slot(Inventory::CARTO_EXTRA);
+    const Maps::Data* map = mapData(source.damage);
+    if (!map) return;
+    if (extra.id == Items::Paper || extra.id == Blocks::GlassPane)
+    {
+        Maps::Data fresh;
+        if (extra.id == Items::Paper)
+        {
+            fresh.scale = map->scale + 1;
+            Maps::centreFor(map->centreX, map->centreZ, fresh.scale, fresh.centreX, fresh.centreZ);
+            fresh.dimension = map->dimension;
+        }
+        else
+        {
+            fresh = *map;
+            fresh.locked = true;
+        }
+        const int id = m_nextMapId++;
+        m_maps[id] = fresh;
+        m_dirtyMaps.insert(id);
+        made.damage = id;
+    }
+    if (toInventory)
+    {
+        const int left = m_inventory.addStack(made);
+        if (left > 0)
+        {
+            ItemStack spill = made;
+            spill.count = left;
+            m_drops.spawnStack(m_player.position, spill);
+        }
+    }
+    else
+        m_inventory.cursor() = made;
+    if (extra.id != Items::EmptyMap && --source.count <= 0) source.clear();
+    if (--extra.count <= 0) extra.clear();
+    m_audio.play(Sound::Pickup, 0.5f, 1.2f);
+}
+
+void Application::stowCartography()
+{
+    if (!m_cartoOpen) return;
+    m_cartoOpen = false;
+    for (int slot : { Inventory::CARTO_MAP, Inventory::CARTO_EXTRA })
     {
         ItemStack& held = m_inventory.slot(slot);
         if (held.empty()) continue;
@@ -2938,6 +3091,7 @@ void Application::closeInventory()
     stowGrindstone();
     stowStonecutter();
     stowSmithing();
+    stowCartography();
     stowChest();
     stowCrafter();
     stowFurnace();

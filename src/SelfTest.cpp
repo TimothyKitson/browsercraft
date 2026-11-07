@@ -42,6 +42,7 @@
 #include "Game/Archaeology.h"
 #include "Game/Stonecutting.h"
 #include "Game/Smithing.h"
+#include "Game/Maps.h"
 #include "Game/Grindstone.h"
 #include "Game/Saplings.h"
 #include "Game/Shield.h"
@@ -3853,6 +3854,73 @@ namespace
                 }
             check(gravel > 0, "and it is full of suspicious gravel");
         }
+    }
+
+    void testMaps()
+    {
+        section("maps and the cartography table");
+        int cx = 0, cz = 0;
+        Maps::centreFor(5, -3, 0, cx, cz);
+        check(cx == 0 && cz == 0, "a map drawn near the origin is centred on it");
+        Maps::centreFor(70, 130, 0, cx, cz);
+        check(cx == 128 && cz == 128, "maps tile the world in squares of 128");
+        Maps::centreFor(-70, 0, 1, cx, cz);
+        check(cx == -192 && Maps::span(1) == 256, "a zoomed map covers twice as much from its own grid");
+        check(Maps::shaded(0xFFFFFFu, 0) < Maps::shaded(0xFFFFFFu, 1) && Maps::shaded(0xFFFFFFu, 2) == 0xFFFFFFu,
+              "ground facing north is drawn darker than level ground");
+
+        ItemStack compass[9];
+        compass[1].id = Items::IronIngot; compass[3].id = Items::IronIngot; compass[4].id = Items::Redstone;
+        compass[5].id = Items::IronIngot; compass[7].id = Items::IronIngot;
+        for (ItemStack& s : compass) if (s.id != Blocks::Air) s.count = 1;
+        const CraftOutput needle = Crafting::match(compass, 3);
+        check(needle.valid() && needle.id == Items::Compass, "four iron round a redstone make a compass");
+        ItemStack sheet[9];
+        for (int i = 0; i < 9; ++i) { sheet[i].id = i == 4 ? Items::Compass : Items::Paper; sheet[i].count = 1; }
+        const CraftOutput blank = Crafting::match(sheet, 3);
+        check(blank.valid() && blank.id == Items::EmptyMap, "eight paper round a compass make an empty map");
+        ItemStack desk[9];
+        desk[0].id = Items::Paper; desk[1].id = Items::Paper;
+        for (int i : { 3, 4, 6, 7 }) desk[i].id = Blocks::Planks;
+        for (ItemStack& s : desk) if (s.id != Blocks::Air) s.count = 1;
+        const CraftOutput table = Crafting::match(desk, 3);
+        check(table.valid() && table.id == Blocks::CartographyTable, "two paper over four planks make a cartography table");
+        Trading::Profession job = Trading::Profession::Nitwit;
+        check(Trading::jobSite(Blocks::CartographyTable, job) && job == Trading::Profession::Cartographer,
+              "and the table is a cartographer's");
+        check(maxStackOf(Items::FilledMap) == 1 && maxStackOf(Items::EmptyMap) == 64,
+              "a drawn map is one of a kind and blank ones stack");
+        check(Inventory::belongsIn(Inventory::CARTO_MAP, Items::FilledMap) && !Inventory::belongsIn(Inventory::CARTO_MAP, Items::Paper) &&
+              Inventory::belongsIn(Inventory::CARTO_EXTRA, Blocks::GlassPane) && !Inventory::belongsIn(Inventory::CARTO_EXTRA, Blocks::Stone),
+              "the table's slots take maps and what goes with them");
+
+        const std::string dir = (std::filesystem::temp_directory_path() / "browsercraft_maps_test").string();
+        std::error_code ec;
+        std::filesystem::remove_all(dir, ec);
+        std::filesystem::create_directories(dir, ec);
+        Maps::Data drawn;
+        drawn.centreX = 256;
+        drawn.centreZ = -128;
+        drawn.scale = 2;
+        drawn.dimension = 1;
+        drawn.locked = true;
+        drawn.rgba[0] = 12; drawn.rgba[3] = 255;
+        drawn.rgba[Maps::SIZE * Maps::SIZE * 4 - 1] = 200;
+        check(Maps::save(dir, 7, drawn), "a map saves");
+        Maps::Data back;
+        check(Maps::load(dir, 7, back) && back.centreX == 256 && back.centreZ == -128 && back.scale == 2 && back.dimension == 1 &&
+              back.locked && back.rgba[0] == 12 && back.rgba[3] == 255 && back.rgba[Maps::SIZE * Maps::SIZE * 4 - 1] == 200,
+              "and comes back as it was drawn");
+        Maps::Data none;
+        check(!Maps::load(dir, 8, none), "a map that was never drawn does not load");
+
+        LevelState level;
+        level.seed = 3u;
+        level.nextMapId = 42;
+        WorldSave::saveLevel(dir, level);
+        LevelState read;
+        check(WorldSave::loadLevel(dir, read) && read.nextMapId == 42, "the level remembers which map number comes next");
+        std::filesystem::remove_all(dir, ec);
     }
 
     void testStonecutter()
@@ -11339,7 +11407,7 @@ namespace
             const std::string path = dir + "/level.dat";
             std::error_code ec;
             const auto size = std::filesystem::file_size(path, ec);
-            if (!ec) std::filesystem::resize_file(path, size - sizeof(uint16_t) - sizeof(uint8_t) - 3 * sizeof(int) - sizeof(uint32_t), ec);
+            if (!ec) std::filesystem::resize_file(path, size - sizeof(uint16_t) - sizeof(uint8_t) - 3 * sizeof(int) - sizeof(uint32_t) - sizeof(int32_t), ec);
 
             LevelState back;
             check(WorldSave::loadLevel(dir, back), "a level from before items moved up still loads");
@@ -13850,6 +13918,7 @@ int runSelfTest()
     testFireAndSoul();
     testArchaeology();
     testStonecutter();
+    testMaps();
     testMadeThings();
     testTheEndAndTheSea();
     testPathfinding();

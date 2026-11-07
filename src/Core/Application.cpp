@@ -827,6 +827,9 @@ void Application::loadLevel()
         if (state.hasSpawn) m_spawnPoint = state.spawn;
         m_hasAnchor = state.hasAnchor;
         m_anchor = glm::ivec3(state.anchorX, state.anchorY, state.anchorZ);
+        m_maps.clear();
+        m_dirtyMaps.clear();
+        m_nextMapId = state.nextMapId;
         m_potSides.clear();
         for (const LevelState::SavedPot& pot : state.pots)
             m_potSides[{ static_cast<int>(pot.dimension), pot.x, pot.y, pot.z }] = pot.sides;
@@ -998,6 +1001,10 @@ void Application::saveLevel()
     state.anchorX = m_anchor.x;
     state.anchorY = m_anchor.y;
     state.anchorZ = m_anchor.z;
+    state.nextMapId = m_nextMapId;
+    for (int id : m_dirtyMaps)
+        if (m_maps.count(id)) Maps::save(m_savePath, id, m_maps[id]);
+    m_dirtyMaps.clear();
     for (const auto& pot : m_potSides)
     {
         LevelState::SavedPot saved;
@@ -1945,6 +1952,7 @@ bool Application::frame()
                 else m_freezeSting = 0.0f;
             }
             tickFrost(deltaTime);
+            tickMaps(deltaTime);
 
             if (m_inventory.slot(Inventory::ARMOR_FIRST).id == Items::TurtleHelmet && !m_player.isHeadUnderwater(*m_world))
                 Effects::give(m_player.effects, Effects::Kind::WaterBreathing, 0, 10.0f);
@@ -2059,13 +2067,14 @@ bool Application::frame()
         }
 
         if ((m_benchOpen || m_furnaceOpen || m_chestOpen || m_enchantOpen ||
-             m_anvilOpen || m_brewOpen || m_beaconOpen || m_grindOpen || m_cutOpen || m_smithOpen) && playing())
+             m_anvilOpen || m_brewOpen || m_beaconOpen || m_grindOpen || m_cutOpen || m_smithOpen || m_cartoOpen) && playing())
         {
             const glm::ivec3 block = m_benchOpen    ? m_benchBlock
                                    : m_beaconOpen   ? m_beaconBlock
                                    : m_grindOpen    ? m_grindBlock
                                    : m_cutOpen      ? m_cutBlock
                                    : m_smithOpen    ? m_smithBlock
+                                   : m_cartoOpen    ? m_cartoBlock
                                    : m_chestOpen    ? m_chestBlock
                                    : m_enchantOpen  ? m_enchantBlock
                                    : m_anvilOpen    ? m_anvilBlock
@@ -2080,6 +2089,7 @@ bool Application::frame()
               : m_grindOpen   ? there == Blocks::Grindstone
               : m_cutOpen     ? there == Blocks::Stonecutter
               : m_smithOpen   ? there == Blocks::SmithingTable
+              : m_cartoOpen   ? there == Blocks::CartographyTable
               : m_chestOpen   ? (isContainerBlock(there) || isItemHolder(there))
               : m_enchantOpen ? there == Blocks::EnchantingTable
               : m_anvilOpen   ? isAnvil(there)
@@ -2157,7 +2167,7 @@ bool Application::frame()
             m_startupScreen == "attackhud" || m_startupScreen == "attackready" ||
             m_startupScreen == "attackhotbar" || m_startupScreen == "bossbars" ||
             m_startupScreen == "gamemode" || m_startupScreen == "spectator" ||
-            m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" ||
+            m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" ||
             m_startupScreen == "grinderror" || m_startupScreen == "woods" ||
             m_startupScreen == "cherry" || m_startupScreen == "mangrove" || m_startupScreen == "fungi" ||
             m_startupScreen == "stones" || m_startupScreen == "colours" || m_startupScreen == "candles" ||
@@ -2245,6 +2255,7 @@ bool Application::frame()
                                   m_startupScreen != "grindstone" &&
                                   m_startupScreen != "stonecutter" &&
                                   m_startupScreen != "smithing" &&
+                                  m_startupScreen != "cartography" &&
                                   m_startupScreen != "grinderror" &&
                                   m_startupScreen != "woods" &&
                                   m_startupScreen != "cherry" &&
@@ -2637,7 +2648,7 @@ bool Application::frame()
             if (m_startupScreen == "attackhud" || m_startupScreen == "attackready" ||
                 m_startupScreen == "attackhotbar" || m_startupScreen == "bossbars" ||
                 m_startupScreen == "gamemode" || m_startupScreen == "spectator" ||
-                m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" ||
+                m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" ||
                 m_startupScreen == "grinderror" || m_startupScreen == "woods" ||
                 m_startupScreen == "cherry" || m_startupScreen == "mangrove" || m_startupScreen == "fungi" ||
                 m_startupScreen == "stones" || m_startupScreen == "colours" || m_startupScreen == "candles" ||
@@ -3375,6 +3386,31 @@ bool Application::frame()
                     m_inventory.slot(6) = ItemStack{ doorBaseOf(3), 3 };
                     m_inventory.slot(7) = ItemStack{ trapdoorBaseOf(5), 2 };
                     m_inventory.slot(8) = ItemStack{ Blocks::DarkOakSapling, 4 };
+                }
+                if (m_startupScreen == "cartography")
+                {
+                    m_devAttackStrength = 1.0f;
+                    const glm::ivec3 table(px + 2, py, pz);
+                    m_world->setBlock(table.x, table.y, table.z, Blocks::CartographyTable);
+                    Maps::Data drawn;
+                    Maps::centreFor(px, pz, 0, drawn.centreX, drawn.centreZ);
+                    drawn.dimension = static_cast<int>(m_dimension);
+                    const int id = m_nextMapId++;
+                    m_maps[id] = drawn;
+                    m_inventory.setSelectedSlot(0);
+                    m_inventory.slot(0) = ItemStack{ Items::FilledMap, 1, id };
+                    for (int pass = 0; pass < 140; ++pass)
+                    {
+                        m_mapClock = 0.0f;
+                        tickMaps(0.05f);
+                    }
+                    m_inventory.slot(0).clear();
+                    openCartography(table);
+                    m_inventory.slot(Inventory::CARTO_MAP) = ItemStack{ Items::FilledMap, 1, id };
+                    m_inventory.slot(Inventory::CARTO_EXTRA) = ItemStack{ Items::Paper, 3 };
+                    m_inventory.slot(1) = ItemStack{ Items::EmptyMap, 4 };
+                    m_inventory.slot(2) = ItemStack{ Blocks::GlassPane, 8 };
+                    m_inventory.slot(3) = ItemStack{ Items::Compass, 1 };
                 }
                 if (m_startupScreen == "smithing")
                 {
@@ -7517,6 +7553,147 @@ void Application::tickObservers(float deltaTime)
 // nowhere to keep a list, so the only honest way to know where they
 // are is to look. Cheap enough at once a second over the box the
 // player could be standing in range of.
+Maps::Data* Application::mapData(int id)
+{
+    if (id <= 0) return nullptr;
+    auto found = m_maps.find(id);
+    if (found != m_maps.end()) return &found->second;
+    Maps::Data loaded;
+    if (!Maps::load(m_savePath, id, loaded)) return nullptr;
+    return &(m_maps[id] = loaded);
+}
+
+unsigned int Application::mapColourAt(int x, int z, int& height)
+{
+    const int top = std::min(Chunk::SY - 1, static_cast<int>(m_player.position.y) + 40);
+    const int bottom = std::max(1, static_cast<int>(m_player.position.y) - 60);
+    for (int y = top; y >= bottom; --y)
+    {
+        const BlockId here = m_world->getBlock(x, y, z);
+        if (here == Blocks::Air || !isVisible(here)) continue;
+        height = y;
+        if (isWater(here) || isWaterPlant(here))
+        {
+            int depth = 0;
+            while (depth < 10 && (isWater(m_world->getBlock(x, y - depth - 1, z)) || isWaterPlant(m_world->getBlock(x, y - depth - 1, z)))) ++depth;
+            return Maps::shaded(0x3F76E4u, depth < 2 ? 2 : depth < 5 ? 1 : 0) | 0xFF000000u;
+        }
+        unsigned int colour = m_atlas.averageColour(blockInfo(here).tileTop);
+        const int red = static_cast<int>((colour >> 16) & 255u), green = static_cast<int>((colour >> 8) & 255u), blue = static_cast<int>(colour & 255u);
+        if (std::abs(red - green) < 10 && std::abs(green - blue) < 10 &&
+            (here == Blocks::Grass || isLeaves(here) || here == Blocks::TallGrass || here == Blocks::Fern || here == Blocks::Vine))
+        {
+            const unsigned int tint = isLeaves(here) ? 0x619961u : 0x91BD59u;
+            const unsigned int r = ((colour >> 16) & 255u) * ((tint >> 16) & 255u) / 255u;
+            const unsigned int g = ((colour >> 8) & 255u) * ((tint >> 8) & 255u) / 255u;
+            const unsigned int b = (colour & 255u) * (tint & 255u) / 255u;
+            colour = (r << 16) | (g << 8) | b;
+        }
+        return colour | 0xFF000000u;
+    }
+    height = bottom;
+    return 0u;
+}
+
+void Application::tickMaps(float deltaTime)
+{
+    if (!m_world) return;
+    const ItemStack& held = m_inventory.selected().id == Items::FilledMap ? m_inventory.selected() : m_inventory.slot(Inventory::OFFHAND);
+    if (held.id != Items::FilledMap) return;
+    Maps::Data* map = mapData(held.damage);
+    if (!map || map->locked || map->dimension != static_cast<int>(m_dimension)) return;
+    m_mapClock -= deltaTime;
+    if (m_mapClock > 0.0f) return;
+    m_mapClock = 0.05f;
+
+    const int step = 1 << map->scale;
+    const int left = map->centreX - Maps::SIZE / 2 * step;
+    const int topZ = map->centreZ - Maps::SIZE / 2 * step;
+    const float reach = 72.0f * static_cast<float>(step);
+    bool changed = false;
+    for (int pass = 0; pass < 2; ++pass)
+    {
+        const int row = m_mapRow;
+        m_mapRow = (m_mapRow + 1) % Maps::SIZE;
+        const int z = topZ + row * step + step / 2;
+        if (std::fabs(static_cast<float>(z) - m_player.position.z) > reach) continue;
+        for (int column = 0; column < Maps::SIZE; ++column)
+        {
+            const int x = left + column * step + step / 2;
+            const float dx = static_cast<float>(x) - m_player.position.x, dz = static_cast<float>(z) - m_player.position.z;
+            if (dx * dx + dz * dz > reach * reach) continue;
+            int height = 0, north = 0;
+            unsigned int colour = mapColourAt(x, z, height);
+            if (colour == 0u) continue;
+            mapColourAt(x, z - step, north);
+            if ((colour & 0x00FFFFFFu) != 0x3F76E4u)
+                colour = Maps::shaded(colour, height > north ? 2 : height == north ? 1 : 0) | 0xFF000000u;
+            uint8_t* px = &map->rgba[static_cast<size_t>((row * Maps::SIZE + column) * 4)];
+            px[0] = static_cast<uint8_t>((colour >> 16) & 255u);
+            px[1] = static_cast<uint8_t>((colour >> 8) & 255u);
+            px[2] = static_cast<uint8_t>(colour & 255u);
+            px[3] = 255;
+            changed = true;
+        }
+    }
+    if (changed)
+    {
+        m_dirtyMaps.insert(held.damage);
+        if (m_mapTextureId == held.damage) m_mapTextureStale = true;
+    }
+}
+
+unsigned int Application::mapTextureFor(int id)
+{
+    Maps::Data* map = mapData(id);
+    if (!map) return 0;
+    if (!m_mapTexture)
+    {
+        glGenTextures(1, &m_mapTexture);
+        glBindTexture(GL_TEXTURE_2D, m_mapTexture);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        m_mapTextureStale = true;
+    }
+    if (m_mapTextureStale || m_mapTextureId != id)
+    {
+        glBindTexture(GL_TEXTURE_2D, m_mapTexture);
+        glTexImage2D(GL_TEXTURE_2D, 0, 0x8058, Maps::SIZE, Maps::SIZE, 0, GL_RGBA, GL_UNSIGNED_BYTE, map->rgba.data());
+        m_mapTextureId = id;
+        m_mapTextureStale = false;
+    }
+    return m_mapTexture;
+}
+
+void Application::renderHeldMap(float w, float h)
+{
+    if (!m_world || m_inventoryOpen || m_perspective != Perspective::FirstPerson) return;
+    const ItemStack& held = m_inventory.selected().id == Items::FilledMap ? m_inventory.selected() : m_inventory.slot(Inventory::OFFHAND);
+    if (held.id != Items::FilledMap) return;
+    Maps::Data* map = mapData(held.damage);
+    if (!map) return;
+    mapTextureFor(held.damage);
+    const float size = std::min(160.0f, h * 0.45f);
+    const float x = w - size - 10.0f, y = h - size - 52.0f;
+    if (!guiSprite("../map/map_background", x, y, size, size))
+        m_ui.quad(x, y, size, size, glm::vec4(0.86f, 0.78f, 0.6f, 1.0f));
+    const float inset = size * 7.0f / 128.0f;
+    const float inner = size - inset * 2.0f;
+    m_ui.texturedQuad(m_mapTexture, x + inset, y + inset, inner, inner, 0.0f, 0.0f, 1.0f, 1.0f, glm::vec4(1.0f));
+    const float span = static_cast<float>(Maps::span(map->scale));
+    float fx = (m_player.position.x - (map->centreX - span * 0.5f)) / span;
+    float fz = (m_player.position.z - (map->centreZ - span * 0.5f)) / span;
+    const bool off = fx < 0.0f || fx > 1.0f || fz < 0.0f || fz > 1.0f || map->dimension != static_cast<int>(m_dimension);
+    fx = std::clamp(fx, 0.0f, 1.0f);
+    fz = std::clamp(fz, 0.0f, 1.0f);
+    const float marker = size * 8.0f / 128.0f;
+    const float mx = x + inset + fx * inner - marker * 0.5f, my = y + inset + fz * inner - marker * 0.5f;
+    if (!guiSprite(off ? "../map/decorations/player_off_map" : "../map/decorations/player", mx, my, marker, marker))
+        m_ui.quad(mx, my, marker, marker, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+}
+
 void Application::tickFrost(float deltaTime)
 {
     const int walker = Enchanting::levelOf(m_inventory.slot(Inventory::ARMOR_FIRST + 3).enchantments, Enchanting::Kind::FrostWalker);
@@ -10798,6 +10975,12 @@ void Application::handlePlacement()
             if (isCauldron(used) && useCauldron(bench.block, used)) return;
             if (isLectern(used) && useLectern(bench.block, used)) return;
             if (used == Blocks::Grindstone && useGrindstone(bench.block)) return;
+            if (used == Blocks::CartographyTable)
+            {
+                openCartography(bench.block);
+                m_audio.play(Sound::Click, 0.4f);
+                return;
+            }
             if (used == Blocks::SmithingTable)
             {
                 openSmithing(bench.block);
@@ -11535,6 +11718,30 @@ void Application::handlePlacement()
 
     // The ominous bottle is drunk where you stand. It does nothing to
     // you that you can feel; what it changes is the next chamber.
+    if (stack.id == Items::EmptyMap)
+    {
+        const int id = m_nextMapId++;
+        Maps::Data fresh;
+        Maps::centreFor(static_cast<int>(std::floor(m_player.position.x)), static_cast<int>(std::floor(m_player.position.z)), 0,
+                        fresh.centreX, fresh.centreZ);
+        fresh.dimension = static_cast<int>(m_dimension);
+        m_maps[id] = fresh;
+        m_dirtyMaps.insert(id);
+        ItemStack drawn;
+        drawn.id = Items::FilledMap;
+        drawn.count = 1;
+        drawn.damage = id;
+        if (stack.count <= 1) stack = drawn;
+        else
+        {
+            --stack.count;
+            if (m_inventory.addStack(drawn) > 0) m_drops.spawnStack(m_player.position, drawn);
+        }
+        m_mapTextureStale = true;
+        m_audio.play(Sound::Pickup, 0.6f, 1.1f);
+        return;
+    }
+
     if (stack.id == Items::OminousBottle)
     {
         Effects::give(m_player.effects, Effects::Kind::BadOmen, 0, Trial::OMEN_SECONDS);
@@ -14461,6 +14668,8 @@ void Application::renderHud()
             m_ui.quad(w - edge, edge, edge, h - edge * 2.0f, rime);
         }
     }
+
+    renderHeldMap(w, h);
 
     if (m_world && m_perspective == Perspective::FirstPerson &&
         m_inventory.slot(Inventory::ARMOR_FIRST).id == Blocks::CarvedPumpkinFirst + 2)

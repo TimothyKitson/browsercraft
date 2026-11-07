@@ -270,6 +270,7 @@ void WorldSave::saveLevel(const std::string& saveDirectory, const LevelState& st
         write(out, pot.dimension);
         write(out, pot.sides);
     }
+    write(out, static_cast<int32_t>(state.nextMapId));
 }
 
 bool WorldSave::loadLevel(const std::string& saveDirectory, LevelState& out)
@@ -514,15 +515,21 @@ bool WorldSave::loadLevel(const std::string& saveDirectory, LevelState& out)
                                             {
                                                 out.hasAnchor = anchored != 0;
                                                 uint32_t potCount = 0;
-                                                if (read(in, potCount))
+                                                bool potsWhole = read(in, potCount);
+                                                if (potsWhole)
                                                     for (uint32_t i = 0; i < potCount && i < 1000000u; ++i)
                                                     {
                                                         LevelState::SavedPot pot;
                                                         if (!read(in, pot.x) || !read(in, pot.y) || !read(in, pot.z) ||
                                                             !read(in, pot.dimension) || !read(in, pot.sides))
+                                                        {
+                                                            potsWhole = false;
                                                             break;
+                                                        }
                                                         out.pots.push_back(pot);
                                                     }
+                                                int32_t nextMap = 0;
+                                                if (potsWhole && read(in, nextMap) && nextMap > 0) out.nextMapId = nextMap;
                                             }
                                         }
                                     }

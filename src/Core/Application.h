@@ -57,6 +57,7 @@
 #include <memory>
 #include <unordered_map>
 #include <map>
+#include "Game/Maps.h"
 
 // Which part of the game is on screen. The world only exists while playing,
 // so the title screen can run before anything has been generated.
@@ -499,6 +500,25 @@ private:
     bool m_anchorPending = false;
     glm::ivec3 m_anchor{ 0 };
     float m_magmaSting = 0.0f;
+    std::map<int, Maps::Data> m_maps;
+    std::set<int> m_dirtyMaps;
+    int m_nextMapId = 1;
+    float m_mapClock = 0.0f;
+    int m_mapRow = 0;
+    unsigned int m_mapTexture = 0;
+    int m_mapTextureId = -1;
+    bool m_mapTextureStale = true;
+    Maps::Data* mapData(int id);
+    void tickMaps(float deltaTime);
+    void renderHeldMap(float w, float h);
+    unsigned int mapColourAt(int x, int z, int& height);
+    bool m_cartoOpen = false;
+    glm::ivec3 m_cartoBlock{ 0 };
+    void openCartography(const glm::ivec3& block);
+    void stowCartography();
+    void takeCartoResult(bool toInventory);
+    ItemStack cartoResult();
+    unsigned int mapTextureFor(int id);
     std::map<std::array<int, 4>, uint32_t> m_potSides;
     void pinPotPatterns();
 
@@ -1147,7 +1167,7 @@ private:
     // copies of the same geometry, and only one of them ever got fixed.
     struct SlotBox
     {
-        enum class Kind { Slot, Palette, Tab, Enchant, Trade, AnvilTake, Destroy, Scroll, TradeTake, BeaconPower, BeaconConfirm, BeaconCancel, GrindTake, CutRecipe, CutTake, SmithTake };
+        enum class Kind { Slot, Palette, Tab, Enchant, Trade, AnvilTake, Destroy, Scroll, TradeTake, BeaconPower, BeaconConfirm, BeaconCancel, GrindTake, CutRecipe, CutTake, SmithTake, CartoTake };
         Kind kind = Kind::Slot;
         int index = 0;        // inventory slot, block id, or tab number
         float x = 0.0f, y = 0.0f, size = 0.0f;

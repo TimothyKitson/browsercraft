@@ -383,6 +383,7 @@ namespace Tiles
         StonecutterTopTile, StonecutterSideTile, StonecutterBottomTile, StonecutterSawTile,
         FletchingTopTile, FletchingFrontTile, FletchingSideTile,
         SmithingTopTile, SmithingBottomTile, SmithingSideTile, SmithingFrontTile,
+        CartographyTopTile, CartographySide1Tile, CartographySide2Tile, CartographySide3Tile,
 
         TileCount
     };
@@ -584,8 +585,9 @@ namespace Tiles
         ItemIronNugget, ItemChorusFruit, ItemPoppedChorusFruit, ItemChain, ItemBell,
         ItemBrush, ItemSherdFirst, ItemSherdLast = ItemSherdFirst + 22, ItemSnifferEgg,
         ItemTemplateFirst, ItemTemplateLast = ItemTemplateFirst + 18,
+        ItemCompass, ItemEmptyMap, ItemFilledMap,
 
-        ItemTileEnd = ItemTemplateLast + 1
+        ItemTileEnd = ItemFilledMap + 1
     };
 
     // Ten progressively more broken overlay tiles for the mining animation.

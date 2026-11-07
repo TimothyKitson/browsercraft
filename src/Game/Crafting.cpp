@@ -455,6 +455,13 @@ namespace
 
         { true, 0, 0, { Items::MelonSlice }, 1, Items::MelonSeeds, 1 },
         { true, 0, 0, { Blocks::Pumpkin }, 1, Items::PumpkinSeeds, 4 },
+        { false, 3, 3, { Blocks::Air, Items::IronIngot, Blocks::Air,
+                         Items::IronIngot, Items::Redstone, Items::IronIngot,
+                         Blocks::Air, Items::IronIngot, Blocks::Air }, 0, Items::Compass, 1 },
+        { false, 3, 3, { Items::Paper, Items::Paper, Items::Paper,
+                         Items::Paper, Items::Compass, Items::Paper,
+                         Items::Paper, Items::Paper, Items::Paper }, 0, Items::EmptyMap, 1 },
+        { false, 2, 3, { Items::Paper, Items::Paper, Blocks::Planks, Blocks::Planks, Blocks::Planks, Blocks::Planks }, 0, Blocks::CartographyTable, 1 },
         { false, 3, 3, { Items::Diamond, Items::SentryTemplate, Items::Diamond,
                          Items::Diamond, Blocks::Cobblestone, Items::Diamond,
                          Items::Diamond, Items::Diamond, Items::Diamond }, 0, Items::SentryTemplate, 2 },

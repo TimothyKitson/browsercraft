@@ -991,6 +991,8 @@ namespace
                 byHand = "shed by a baby turtle as it grows up";
             else if (i == static_cast<int>(Items::PowderSnowBucket))
                 byHand = "a bucket used on powder snow";
+            else if (i == static_cast<int>(Items::FilledMap))
+                byHand = "an empty map used, or one copied at a cartography table";
             else if (i == static_cast<int>(Items::TideTemplate))
                 byHand = "dropped by an elder guardian now and then";
             else if (i >= static_cast<int>(Items::WayfinderTemplate) && i <= static_cast<int>(Items::HostTemplate))

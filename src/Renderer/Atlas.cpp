@@ -5760,6 +5760,33 @@ namespace
         const Color mark = k == 0 ? Color{ 80, 60, 60 } : Color{ 200, 220, 230 };
         for (int i = 0; i < 6; ++i) t.set(5 + static_cast<int>(hash2(k, i, 2703) * 6.0f), 4 + static_cast<int>(hash2(i, k, 2704) * 8.0f), mark);
     }
+    void paintCartographyTopTile(Tile& t)
+    {
+        t.fill(Color{ 214, 196, 150 });
+        for (int k = 0; k < Tile::N; ++k) { t.set(k, 0, Color{ 90, 64, 40 }); t.set(k, 15, Color{ 90, 64, 40 }); t.set(0, k, Color{ 90, 64, 40 }); t.set(15, k, Color{ 90, 64, 40 }); }
+        for (int k = 3; k < 13; ++k) { t.set(k, 6, Color{ 120, 160, 90 }); t.set(6, k, Color{ 80, 110, 160 }); }
+    }
+    void paintCartographySide1Tile(Tile& t) { t.fill(Color{ 70, 50, 32 }); for (int y = 3; y < 13; ++y) for (int x = 3; x < 13; ++x) t.set(x, y, Color{ 214, 196, 150 }); }
+    void paintCartographySide2Tile(Tile& t) { t.fill(Color{ 70, 50, 32 }); for (int x = 2; x < 14; ++x) t.set(x, 5, Color{ 214, 196, 150 }); }
+    void paintCartographySide3Tile(Tile& t) { t.fill(Color{ 70, 50, 32 }); t.speckle(6, 2801); }
+    void paintItemCompass(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 2; y < 14; ++y) for (int x = 2; x < 14; ++x)
+        {
+            const float d = std::sqrt((x - 7.5f) * (x - 7.5f) + (y - 7.5f) * (y - 7.5f));
+            if (d < 6.0f) t.set(x, y, d > 4.8f ? Color{ 150, 150, 156 } : Color{ 220, 220, 210 });
+        }
+        for (int k = 0; k < 4; ++k) { t.set(7, 4 + k, Color{ 200, 30, 30 }); t.set(8, 8 + k, Color{ 60, 60, 66 }); }
+    }
+    void paintMapIn(Tile& t, bool filled)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 2; y < 14; ++y) for (int x = 2; x < 14; ++x) t.set(x, y, Color{ 224, 210, 170 });
+        if (filled) for (int y = 4; y < 12; ++y) for (int x = 4; x < 12; ++x) if (hash2(x / 2, y / 2, 2802) > 0.5f) t.set(x, y, Color{ 110, 150, 80 });
+    }
+    void paintItemEmptyMap(Tile& t) { paintMapIn(t, false); }
+    void paintItemFilledMap(Tile& t) { paintMapIn(t, true); }
     void paintItemPitcherPlant(Tile& t)
     {
         paintDoubleIn(t, true, Color{ 100, 170, 190 }, 1333);
@@ -8339,6 +8366,9 @@ namespace
         { Tiles::ItemRawGold, paintItemRawGold },
         { Tiles::ItemAmethystShard, paintItemAmethystShard },
         { Tiles::ItemTripwireHook, paintItemTripwireHook },
+        { Tiles::ItemCompass, paintItemCompass },
+        { Tiles::ItemEmptyMap, paintItemEmptyMap },
+        { Tiles::ItemFilledMap, paintItemFilledMap },
         { Tiles::ItemSnifferEgg, paintItemSnifferEgg },
         { Tiles::ItemBrush, paintItemBrush },
         { Tiles::ItemBell, paintItemBell },
@@ -8530,6 +8560,10 @@ namespace
         { Tiles::DustLine1Off, paintRedstoneDust },
         { Tiles::DustLine1On, paintRedstoneDustLit },
         { Tiles::LeverHandle, paintLever },
+        { Tiles::CartographyTopTile, paintCartographyTopTile },
+        { Tiles::CartographySide1Tile, paintCartographySide1Tile },
+        { Tiles::CartographySide2Tile, paintCartographySide2Tile },
+        { Tiles::CartographySide3Tile, paintCartographySide3Tile },
         { Tiles::SmithingTopTile, paintSmithingTopTile },
         { Tiles::SmithingBottomTile, paintSmithingBottomTile },
         { Tiles::SmithingSideTile, paintSmithingSideTile },
@@ -9169,6 +9203,9 @@ namespace
         { Tiles::ItemRawGold, { "raw_gold", nullptr, nullptr } },
         { Tiles::ItemAmethystShard, { "amethyst_shard", nullptr, nullptr } },
         { Tiles::ItemTripwireHook, { "../block/tripwire_hook", nullptr, nullptr } },
+        { Tiles::ItemCompass, { "compass_16", nullptr, nullptr } },
+        { Tiles::ItemEmptyMap, { "map", nullptr, nullptr } },
+        { Tiles::ItemFilledMap, { "filled_map", nullptr, nullptr } },
         { Tiles::ItemTemplateFirst, { "netherite_upgrade_smithing_template", nullptr, nullptr } },
         { Tiles::ItemTemplateFirst + 1, { "sentry_armor_trim_smithing_template", nullptr, nullptr } },
         { Tiles::ItemTemplateFirst + 2, { "vex_armor_trim_smithing_template", nullptr, nullptr } },
@@ -9398,6 +9435,10 @@ namespace
         { Tiles::GlassPaneTopTile, { "glass_pane_top", nullptr }, Tinting::None, 0, false },
         { Tiles::TerracottaPlainTile, { "terracotta", "hardened_clay", nullptr }, Tinting::None, 0, false },
         { Tiles::TintedGlassTile, { "tinted_glass", nullptr }, Tinting::None, 0, false },
+        { Tiles::CartographyTopTile, { "cartography_table_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::CartographySide1Tile, { "cartography_table_side1", nullptr }, Tinting::None, 0, false },
+        { Tiles::CartographySide2Tile, { "cartography_table_side2", nullptr }, Tinting::None, 0, false },
+        { Tiles::CartographySide3Tile, { "cartography_table_side3", nullptr }, Tinting::None, 0, false },
         { Tiles::SmithingTopTile, { "smithing_table_top", nullptr }, Tinting::None, 0, false },
         { Tiles::SmithingBottomTile, { "smithing_table_bottom", nullptr }, Tinting::None, 0, false },
         { Tiles::SmithingSideTile, { "smithing_table_side", nullptr }, Tinting::None, 0, false },
@@ -11357,6 +11398,26 @@ Atlas::Atlas()
 
     // Only the albedo atlas is alpha-tested, so only it needs its cut-out
     // coverage protecting through the mip chain.
+    {
+        const int tiles = Atlas::TILES_PER_ROW * Atlas::TILES_PER_ROW;
+        m_average.assign(static_cast<size_t>(tiles), 0x808080u);
+        for (int tile = 0; tile < tiles; ++tile)
+        {
+            const int originX = (tile % Atlas::TILES_PER_ROW) * m_tilePixels;
+            const int originY = (tile / Atlas::TILES_PER_ROW) * m_tilePixels;
+            long r = 0, g = 0, b = 0, n = 0;
+            for (int y = 0; y < m_tilePixels; ++y)
+                for (int x = 0; x < m_tilePixels; ++x)
+                {
+                    const Color& c = pixels[static_cast<size_t>(originY + y) * atlasSize + (originX + x)];
+                    if (c.a < 128) continue;
+                    r += c.r; g += c.g; b += c.b; ++n;
+                }
+            if (n > 0)
+                m_average[static_cast<size_t>(tile)] = (static_cast<unsigned int>(r / n) << 16) |
+                                                       (static_cast<unsigned int>(g / n) << 8) | static_cast<unsigned int>(b / n);
+        }
+    }
     createTexture(m_id, pixels, true);
     createTexture(m_normalId, normalPixels, false);
     createTexture(m_specularId, specularPixels, false);

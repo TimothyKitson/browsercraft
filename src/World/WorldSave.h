@@ -134,6 +134,7 @@ struct LevelState
         uint32_t sides = 0;
     };
     std::vector<SavedPot> pots;
+    int nextMapId = 1;
 };
 
 namespace WorldSave

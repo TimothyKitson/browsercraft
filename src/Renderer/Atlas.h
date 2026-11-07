@@ -89,6 +89,10 @@ public:
     unsigned int normalTextureId() const { return m_normalId; }
 
     int tilePixels() const { return m_tilePixels; }
+    unsigned int averageColour(int tile) const
+    {
+        return tile >= 0 && tile < static_cast<int>(m_average.size()) ? m_average[static_cast<size_t>(tile)] : 0x808080u;
+    }
     int loadedFromPack() const { return m_loadedFromPack; }
     // Whoever made the installed pack, read from assets/textures/CREDIT.txt.
     // Empty when no pack is installed or the pack came with no credit.
@@ -136,6 +140,7 @@ private:
         std::vector<uint8_t> frames; // frameCount * tilePixels * tilePixels * 4
     };
 
+    std::vector<unsigned int> m_average;
     unsigned int m_id = 0;         // albedo
     unsigned int m_normalId = 0;   // LabPBR _n: normal XY, AO, height
     unsigned int m_specularId = 0; // LabPBR _s: smoothness, F0, porosity, emission

@@ -56,6 +56,7 @@ namespace Trading
             case Blocks::Stonecutter: trade = Profession::Mason; return true;
             case Blocks::FletchingTable: trade = Profession::Fletcher; return true;
             case Blocks::SmithingTable: trade = Profession::Toolsmith; return true;
+            case Blocks::CartographyTable: trade = Profession::Cartographer; return true;
             default: return false;
         }
     }

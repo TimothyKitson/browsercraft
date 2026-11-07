@@ -280,7 +280,7 @@ void Inventory::rightClick(int index)
         if (target.empty()) return;
         // The larger half comes with you, as in Minecraft.
         const int taken = (target.count + 1) / 2;
-        m_cursor.id = target.id;
+        m_cursor = target;
         m_cursor.count = taken;
         target.count -= taken;
         if (target.count <= 0) target.clear();
@@ -289,7 +289,7 @@ void Inventory::rightClick(int index)
 
     if (target.empty())
     {
-        target.id = m_cursor.id;
+        target = m_cursor;
         target.count = 1;
         m_cursor.count -= 1;
         if (m_cursor.count <= 0) m_cursor.clear();
@@ -380,6 +380,8 @@ bool Inventory::belongsIn(int index, StackId id)
     if (index == GRIND_TOP || index == GRIND_BOTTOM) return Anvil::wearsOut(id) || id == Items::Book;
     if (index == GRIND_RESULT) return false;
     if (index == CUT_INPUT) return !isItem(id);
+    if (index == CARTO_MAP) return id == Items::FilledMap;
+    if (index == CARTO_EXTRA) return id == Items::Paper || id == Items::EmptyMap || id == Blocks::GlassPane;
     if (index == BEACON_PAYMENT)
         return id == Items::IronIngot || id == Items::GoldIngot || id == Items::Emerald ||
                id == Items::Diamond || id == Items::NetheriteIngot;
