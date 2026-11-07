@@ -274,6 +274,13 @@ enum class Sound : uint16_t
     IllusionerCast,
     ZoglinConvert,
     LlamaSpit,
+    WindBurst,
+    RaidHorn,
+    OmenBad,
+    OmenTrial,
+    OmenRaid,
+    ElderCurse,
+    Shriek,
     GoatHornFirst,
     GoatHornLast = GoatHornFirst + 7,
     Count

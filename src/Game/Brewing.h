@@ -38,6 +38,15 @@ namespace Brewing
         Poison,
         WaterBreathing,
         TurtleMaster,
+        Invisibility,
+        Healing,
+        Harming,
+        SlowFalling,
+        Luck,
+        WindCharged,
+        Weaving,
+        Oozing,
+        Infested,
 
         Count
     };
@@ -73,6 +82,13 @@ namespace Brewing
     std::string durationText(float seconds);
 
     const char* name(Potion potion);
+
+    int tippedDamage(Effects::Kind kind, int amplifier);
+    Effects::Kind tippedKind(int damage);
+    int tippedAmplifier(int damage);
+    std::string tippedName(int damage);
+    float tippedSeconds(int damage);
+    constexpr float ARROW_SHARE = 0.125f;
 
     // Encoding to and from the stack's damage field.
     inline int toDamage(Potion potion) { return static_cast<int>(potion); }

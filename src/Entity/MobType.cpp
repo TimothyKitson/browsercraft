@@ -1487,6 +1487,7 @@ namespace
             t.arrowDamage = 5;
             t.arrowRange = 24.0f;
             t.arrowInterval = 1.1f;
+            t.shootsSkull = true;
 
             t.drop = Items::NetherStar;
             t.dropCount = 1;
@@ -4146,5 +4147,18 @@ namespace Shulker
         const float swing = -1.0f + std::sin(turn);
         const float fourth = swing * swing * swing * swing;
         return fourth * 2.0f * HALF_PI * 0.125f;
+    }
+}
+
+bool isUndead(MobId id)
+{
+    switch (id)
+    {
+        case MobId::Zombie: case MobId::Skeleton: case MobId::ZombiePigman: case MobId::WitherSkeleton:
+        case MobId::Wither: case MobId::Drowned: case MobId::Stray: case MobId::Husk: case MobId::Bogged:
+        case MobId::Phantom: case MobId::ZombieVillager: case MobId::Zoglin:
+            return true;
+        default:
+            return false;
     }
 }

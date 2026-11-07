@@ -450,6 +450,7 @@ void Application::loadOptions()
         else if (std::sscanf(line, "pbr=%d", &value) == 1) m_pbrEnabled = value != 0;
         else if (std::sscanf(line, "attackIndicator=%d", &value) == 1) m_attackIndicator = std::clamp(value, 0, 2);
         else if (std::sscanf(line, "mainHand=%d", &value) == 1) m_leftHanded = value == 1;
+        else if (std::sscanf(line, "distortion=%d", &value) == 1) m_distortion = std::clamp(value, 0, 100);
     }
     std::fclose(file);
 }
@@ -460,8 +461,8 @@ void Application::saveOptions()
     std::filesystem::create_directories(m_savePath, ec);
     std::FILE* file = std::fopen((m_savePath + "/options.txt").c_str(), "wb");
     if (!file) return;
-    std::fprintf(file, "shaders=%d\npbr=%d\nattackIndicator=%d\nmainHand=%d\n", m_shadersOn ? 1 : 0,
-                 m_pbrEnabled ? 1 : 0, m_attackIndicator, m_leftHanded ? 1 : 0);
+    std::fprintf(file, "shaders=%d\npbr=%d\nattackIndicator=%d\nmainHand=%d\ndistortion=%d\n", m_shadersOn ? 1 : 0,
+                 m_pbrEnabled ? 1 : 0, m_attackIndicator, m_leftHanded ? 1 : 0, m_distortion);
     std::fclose(file);
 #ifdef __EMSCRIPTEN__
     EM_ASM({
@@ -2329,6 +2330,8 @@ bool Application::frame()
             tickFrost(deltaTime);
             tickMaps(deltaTime);
             tickVibrations(deltaTime);
+            tickEffectSources(deltaTime);
+            tickRaid(deltaTime);
             tickCommandBlocks(deltaTime);
             tickFishing(deltaTime);
             tickLeashes(deltaTime);
@@ -2408,6 +2411,20 @@ bool Application::frame()
             const int before = m_player.health;
             if (m_player.updateEffects(deltaTime) && m_player.health < before)
                 m_audio.play(Sound::Hurt, 0.5f, 1.2f);
+            if (m_player.effects.has(Effects::Kind::Nausea) && m_player.effects.secondsLeft(Effects::Kind::Nausea) > 3.0f)
+                m_nausea = std::min(1.0f, m_nausea + 0.13333f * deltaTime);
+            else
+                m_nausea = std::max(0.0f, m_nausea - 1.0f * deltaTime);
+            const bool dark = m_player.effects.has(Effects::Kind::Darkness) &&
+                              m_player.effects.secondsLeft(Effects::Kind::Darkness) > Effects::DARKNESS_FADE_SECONDS;
+            m_darknessFade = std::clamp(m_darknessFade + (dark ? 1.0f : -1.0f) * deltaTime / Effects::DARKNESS_FADE_SECONDS, 0.0f, 1.0f);
+        }
+
+        {
+            int worn = 0;
+            for (int slot = 0; slot < Inventory::ARMOR_SLOTS; ++slot)
+                if (!m_inventory.slot(Inventory::ARMOR_FIRST + slot).empty()) ++worn;
+            Mob::setNoticeScale(Effects::detectionScale(m_player.effects, worn));
         }
 
         // What is worn decides what a blow costs, and it can change
@@ -2493,9 +2510,14 @@ bool Application::frame()
             }
         }
 
+        if (const int silverfish = m_player.takeSilverfish())
+            spawnSilverfish(m_player.position + glm::vec3(0.0f, 0.9f, 0.0f), silverfish);
+
         // Death handling.
         if (playing() && m_player.health <= 0)
         {
+            effectDeath(m_player.position, Player::HEIGHT, m_player.effects.has(Effects::Kind::Oozing),
+                        m_player.effects.has(Effects::Kind::Weaving), m_player.effects.has(Effects::Kind::WindCharged));
             // Minecraft lets you drop what amounts to seven levels'
             // worth and keeps the rest, so dying deep into the curve
             // costs far more than dying early. respawn() clears the
@@ -2560,7 +2582,7 @@ bool Application::frame()
             m_startupScreen == "attackhud" || m_startupScreen == "attackready" ||
             m_startupScreen == "attackhotbar" || m_startupScreen == "bossbars" ||
             m_startupScreen == "gamemode" || m_startupScreen == "spectator" ||
-            m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" || m_startupScreen == "leads" || m_startupScreen == "anvilname" || m_startupScreen == "dials" || m_startupScreen == "spyglass" || m_startupScreen == "bundle" || m_startupScreen == "archery" || m_startupScreen == "food" || m_startupScreen == "materials" || m_startupScreen == "tropical" || m_startupScreen == "book" || m_startupScreen == "bookedit" || m_startupScreen == "booktip" || m_startupScreen == "boats" || m_startupScreen == "carts" || m_startupScreen == "fireworks" || m_startupScreen == "jukebox" || m_startupScreen == "potioncloud" || m_startupScreen == "armadillo" || m_startupScreen == "signs" || m_startupScreen == "glowsquid" || m_startupScreen == "fangs" || m_startupScreen == "zoglin" || m_startupScreen == "illusioner" || m_startupScreen == "llamas" || m_startupScreen == "paintings" || m_startupScreen == "stands" || m_startupScreen == "glowframes" || m_startupScreen == "bannershield" || m_startupScreen == "signkinds" || m_startupScreen == "signedit" || m_startupScreen == "hangingedit" || m_startupScreen == "mapmarks" || m_startupScreen == "explorermap" || m_startupScreen == "trims" ||
+            m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" || m_startupScreen == "leads" || m_startupScreen == "anvilname" || m_startupScreen == "dials" || m_startupScreen == "spyglass" || m_startupScreen == "bundle" || m_startupScreen == "archery" || m_startupScreen == "food" || m_startupScreen == "materials" || m_startupScreen == "tropical" || m_startupScreen == "book" || m_startupScreen == "bookedit" || m_startupScreen == "booktip" || m_startupScreen == "boats" || m_startupScreen == "carts" || m_startupScreen == "fireworks" || m_startupScreen == "jukebox" || m_startupScreen == "potioncloud" || m_startupScreen == "armadillo" || m_startupScreen == "signs" || m_startupScreen == "glowsquid" || m_startupScreen == "fangs" || m_startupScreen == "zoglin" || m_startupScreen == "illusioner" || m_startupScreen == "llamas" || m_startupScreen == "paintings" || m_startupScreen == "stands" || m_startupScreen == "glowframes" || m_startupScreen == "bannershield" || m_startupScreen == "signkinds" || m_startupScreen == "signedit" || m_startupScreen == "hangingedit" || m_startupScreen == "mapmarks" || m_startupScreen == "explorermap" || m_startupScreen == "trims" || m_startupScreen == "effects" || m_startupScreen == "effectlist" || m_startupScreen == "nausea" || m_startupScreen == "darkness" ||
             m_startupScreen == "grinderror" || m_startupScreen == "woods" ||
             m_startupScreen == "cherry" || m_startupScreen == "mangrove" || m_startupScreen == "fungi" ||
             m_startupScreen == "stones" || m_startupScreen == "colours" || m_startupScreen == "candles" ||
@@ -2716,6 +2738,9 @@ bool Application::frame()
                                   m_startupScreen != "mapmarks" &&
                                   m_startupScreen != "explorermap" &&
                                   m_startupScreen != "trims" &&
+                                  m_startupScreen != "effects" &&
+                                  m_startupScreen != "nausea" &&
+                                  m_startupScreen != "darkness" &&
                                   m_startupScreen != "golem" &&
                                   m_startupScreen != "shulker" &&
                                   m_startupScreen != "nethermobs" &&
@@ -3082,7 +3107,7 @@ bool Application::frame()
             if (m_startupScreen == "attackhud" || m_startupScreen == "attackready" ||
                 m_startupScreen == "attackhotbar" || m_startupScreen == "bossbars" ||
                 m_startupScreen == "gamemode" || m_startupScreen == "spectator" ||
-                m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" || m_startupScreen == "leads" || m_startupScreen == "anvilname" || m_startupScreen == "dials" || m_startupScreen == "spyglass" || m_startupScreen == "bundle" || m_startupScreen == "archery" || m_startupScreen == "food" || m_startupScreen == "materials" || m_startupScreen == "tropical" || m_startupScreen == "book" || m_startupScreen == "bookedit" || m_startupScreen == "booktip" || m_startupScreen == "boats" || m_startupScreen == "carts" || m_startupScreen == "fireworks" || m_startupScreen == "jukebox" || m_startupScreen == "potioncloud" || m_startupScreen == "armadillo" || m_startupScreen == "signs" || m_startupScreen == "glowsquid" || m_startupScreen == "fangs" || m_startupScreen == "zoglin" || m_startupScreen == "illusioner" || m_startupScreen == "llamas" || m_startupScreen == "paintings" || m_startupScreen == "stands" || m_startupScreen == "glowframes" || m_startupScreen == "bannershield" || m_startupScreen == "signkinds" || m_startupScreen == "signedit" || m_startupScreen == "hangingedit" || m_startupScreen == "mapmarks" || m_startupScreen == "explorermap" || m_startupScreen == "trims" ||
+                m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" || m_startupScreen == "leads" || m_startupScreen == "anvilname" || m_startupScreen == "dials" || m_startupScreen == "spyglass" || m_startupScreen == "bundle" || m_startupScreen == "archery" || m_startupScreen == "food" || m_startupScreen == "materials" || m_startupScreen == "tropical" || m_startupScreen == "book" || m_startupScreen == "bookedit" || m_startupScreen == "booktip" || m_startupScreen == "boats" || m_startupScreen == "carts" || m_startupScreen == "fireworks" || m_startupScreen == "jukebox" || m_startupScreen == "potioncloud" || m_startupScreen == "armadillo" || m_startupScreen == "signs" || m_startupScreen == "glowsquid" || m_startupScreen == "fangs" || m_startupScreen == "zoglin" || m_startupScreen == "illusioner" || m_startupScreen == "llamas" || m_startupScreen == "paintings" || m_startupScreen == "stands" || m_startupScreen == "glowframes" || m_startupScreen == "bannershield" || m_startupScreen == "signkinds" || m_startupScreen == "signedit" || m_startupScreen == "hangingedit" || m_startupScreen == "mapmarks" || m_startupScreen == "explorermap" || m_startupScreen == "trims" || m_startupScreen == "effects" || m_startupScreen == "effectlist" || m_startupScreen == "nausea" || m_startupScreen == "darkness" ||
                 m_startupScreen == "grinderror" || m_startupScreen == "woods" ||
                 m_startupScreen == "cherry" || m_startupScreen == "mangrove" || m_startupScreen == "fungi" ||
                 m_startupScreen == "stones" || m_startupScreen == "colours" || m_startupScreen == "candles" ||
@@ -4058,6 +4083,73 @@ bool Application::frame()
                     m_perspective = Perspective::ThirdFront;
                     m_camera.yaw = 0.0f;
                     m_camera.pitch = 10.0f;
+                    m_camera.addLook(0.0f, 0.0f, 0.0f);
+                }
+                if (m_startupScreen == "effects" || m_startupScreen == "effectlist" || m_startupScreen == "nausea" ||
+                    m_startupScreen == "darkness")
+                {
+                    m_devAttackStrength = 1.0f;
+                    for (int dx = -4; dx <= 12; ++dx)
+                        for (int dz = -8; dz <= 8; ++dz)
+                        {
+                            m_world->setBlock(px + dx, py - 1, pz + dz, Blocks::Grass);
+                            for (int dy = 0; dy <= 5; ++dy) m_world->setBlock(px + dx, py + dy, pz + dz, Blocks::Air);
+                        }
+                    m_world->setBlock(px + 7, py, pz - 2, Blocks::Bookshelf);
+                    m_world->setBlock(px + 7, py, pz, Blocks::DiamondOre);
+                    m_world->setBlock(px + 7, py, pz + 2, Blocks::EndPortalFrame);
+                    m_world->setBlock(px + 4, py, pz + 3, Blocks::WitherRose);
+                    m_world->setBlock(px + 5, py, pz - 3, Blocks::Cobweb);
+                    using Effects::Kind;
+                    const float lasting = 900.0f;
+                    if (m_startupScreen == "effectlist")
+                        for (Kind kind : { Kind::HeroOfTheVillage, Kind::SlowFalling, Kind::MiningFatigue, Kind::Wither, Kind::TrialOmen })
+                            Effects::give(m_player.effects, kind, kind == Kind::MiningFatigue ? 2 : 0, kind == Kind::Wither ? 30.0f : lasting);
+                    if (m_startupScreen == "effects")
+                    {
+                        for (Kind kind : { Kind::Speed, Kind::Haste, Kind::Strength, Kind::JumpBoost, Kind::Resistance,
+                                           Kind::FireResistance, Kind::WaterBreathing, Kind::NightVision, Kind::DolphinsGrace,
+                                           Kind::HeroOfTheVillage, Kind::Luck, Kind::Invisibility, Kind::Wither, Kind::MiningFatigue,
+                                           Kind::Glowing, Kind::TrialOmen, Kind::Infested, Kind::Oozing, Kind::Weaving,
+                                           Kind::WindCharged, Kind::BadLuck })
+                            Effects::give(m_player.effects, kind, kind == Kind::MiningFatigue ? 2 : 0, lasting);
+                        Effects::give(m_player.effects, Kind::HealthBoost, 1, lasting);
+                        m_player.health = 21;
+                        m_player.hunger = 17;
+                        for (int k = 0; k < 2; ++k)
+                            m_entities.spawnAt(MobId::Villager, glm::vec3(static_cast<float>(px) + 9.5f, static_cast<float>(py),
+                                                                          static_cast<float>(pz) - 4.5f + 9.0f * static_cast<float>(k)),
+                                               *m_world);
+                        m_raid = Raids::begin(m_player.position, 2, 2);
+                        m_raid.preRaid = 6.0f;
+                    }
+                    if (m_startupScreen == "effectlist")
+                    {
+                        m_inventoryOpen = true;
+                        m_inventory.setCraftSize(2);
+                    }
+                    if (m_startupScreen == "nausea")
+                    {
+                        Effects::give(m_player.effects, Kind::Nausea, 0, lasting);
+                        Effects::give(m_player.effects, Kind::Levitation, 0, 1.0f);
+                        m_nausea = 1.0f;
+                        m_distortion = 0;
+                    }
+                    if (m_startupScreen == "darkness")
+                    {
+                        Effects::give(m_player.effects, Kind::Darkness, 0, lasting);
+                        m_darknessFade = 1.0f;
+                    }
+                    m_inventory.slot(0) = ItemStack{ Items::Potion, 1, Brewing::encode(Brewing::Brew{ Brewing::Potion::Healing, false, true }) };
+                    m_inventory.slot(1) = ItemStack{ Items::SplashPotion, 1, Brewing::encode(Brewing::Brew{ Brewing::Potion::Invisibility, true, false }) };
+                    m_inventory.slot(2) = ItemStack{ Items::LingeringPotion, 1, Brewing::encode(Brewing::Brew{ Brewing::Potion::SlowFalling }) };
+                    m_inventory.slot(3) = ItemStack{ Items::Potion, 1, Brewing::encode(Brewing::Brew{ Brewing::Potion::WindCharged }) };
+                    m_inventory.slot(4) = ItemStack{ Items::Potion, 1, Brewing::encode(Brewing::Brew{ Brewing::Potion::Weaving }) };
+                    m_inventory.slot(5) = ItemStack{ Items::Potion, 1, Brewing::encode(Brewing::Brew{ Brewing::Potion::Oozing }) };
+                    m_inventory.slot(6) = ItemStack{ Items::Potion, 1, Brewing::encode(Brewing::Brew{ Brewing::Potion::Infested }) };
+                    m_inventory.slot(7) = ItemStack{ Items::SplashPotion, 1, Brewing::encode(Brewing::Brew{ Brewing::Potion::Harming }) };
+                    m_inventory.slot(8) = ItemStack{ Items::TippedArrow, 8, Brewing::tippedDamage(Effects::Kind::Luck, 0) };
+                    m_camera.pitch = -8.0f;
                     m_camera.addLook(0.0f, 0.0f, 0.0f);
                 }
                 if (m_startupScreen == "mapmarks" || m_startupScreen == "explorermap")
@@ -7235,6 +7327,7 @@ void Application::applyMenuAction()
         case MenuAction::TogglePbr:     m_pbrEnabled = !m_pbrEnabled; saveOptions(); break;
         case MenuAction::ToggleSound:   m_audio.setMuted(!m_audio.muted()); break;
         case MenuAction::CycleAttackIndicator: m_attackIndicator = (m_attackIndicator + 1) % 3; saveOptions(); break;
+        case MenuAction::CycleDistortion: m_distortion = m_distortion <= 0 ? 100 : m_distortion - 25; saveOptions(); break;
         case MenuAction::ToggleMainHand: m_leftHanded = !m_leftHanded; saveOptions(); break;
     }
 }
@@ -10581,9 +10674,18 @@ void Application::tickTrialSpawners(float deltaTime)
                                                    m_player.position);
                     if (away > Trial::WAKE_RANGE) continue;
 
+                    if (m_player.effects.has(Effects::Kind::BadOmen) && !m_player.exempt())
+                    {
+                        const int level = m_player.effects.amplifier(Effects::Kind::BadOmen);
+                        Effects::remove(m_player.effects, Effects::Kind::BadOmen);
+                        m_player.takeEffect(Effects::Kind::TrialOmen, level,
+                                            Effects::TRIAL_OMEN_SECONDS * static_cast<float>(level + 1));
+                        m_audio.play(Sound::OmenTrial, 0.9f, 1.0f);
+                    }
+
                     // An omen on the player makes this one ominous:
                     // more of them, and a key worth more at the end.
-                    const bool ominous = m_player.effects.has(Effects::Kind::BadOmen);
+                    const bool ominous = m_player.effects.has(Effects::Kind::TrialOmen);
                     const int wave = Trial::waveSize(ominous);
 
                     // Out they come, in a ring round the spawner so
@@ -10751,7 +10853,7 @@ void Application::vibrate(const glm::vec3& at, int frequency)
         bool queued = false;
         for (const Vibration& pending : m_vibrations) queued = queued || pending.sensor == sensor;
         if (queued || vibrationBlocked(at, centre)) continue;
-        m_vibrations.push_back(Vibration{ sensor, m_vibrationClock + distance * 0.05f, frequency });
+        m_vibrations.push_back(Vibration{ sensor, m_vibrationClock + distance * 0.05f, frequency, at });
     }
 }
 
@@ -10817,6 +10919,308 @@ void Application::tickVibrations(float deltaTime)
         m_sensorQuiet[{ heard.sensor.x, heard.sensor.y, heard.sensor.z }] = m_vibrationClock + active + 0.5f;
         const float near = glm::length(glm::vec3(heard.sensor) + glm::vec3(0.5f) - m_player.position);
         if (near < 16.0f) m_audio.play(Sound::SculkClick, std::max(0.15f, 0.7f - near * 0.035f), 0.9f + 0.03f * heard.frequency);
+        if (glm::length(heard.from - m_player.position) < 2.5f) shriekNear(heard.sensor);
+    }
+}
+
+bool Application::insideAncientCity(const glm::vec3& at) const
+{
+    if (!m_world || m_dimension != Dimension::Overworld) return false;
+    const int px = static_cast<int>(std::floor(at.x));
+    const int py = static_cast<int>(std::floor(at.y));
+    const int pz = static_cast<int>(std::floor(at.z));
+    if (py < WorldGen::CITY_FLOOR - 4 || py > WorldGen::CITY_FLOOR + WorldGen::CITY_TALL) return false;
+    const Structures::Spot spot = m_world->generator().nearestAncientCity(px, pz, 1);
+    if (!spot.exists) return false;
+    const int dx = px - (spot.chunkX * Structures::CHUNK + Structures::CHUNK / 2);
+    const int dz = pz - (spot.chunkZ * Structures::CHUNK + Structures::CHUNK / 2);
+    return dx * dx + dz * dz < WorldGen::CITY_HALF * WorldGen::CITY_HALF;
+}
+
+void Application::shriekNear(const glm::ivec3& sensor)
+{
+    if (!m_world || m_shriekCooldown > 0.0f) return;
+    for (int r = 1; r <= 8; ++r)
+        for (int dx = -r; dx <= r; ++dx)
+            for (int dy = -r; dy <= r; ++dy)
+                for (int dz = -r; dz <= r; ++dz)
+                {
+                    if (std::max({ std::abs(dx), std::abs(dy), std::abs(dz) }) != r) continue;
+                    const glm::ivec3 at = sensor + glm::ivec3(dx, dy, dz);
+                    if (m_world->getBlock(at.x, at.y, at.z) != Blocks::SculkShrieker) continue;
+                    shriek(at);
+                    return;
+                }
+}
+
+void Application::shriek(const glm::ivec3& at)
+{
+    if (!m_world || m_shriekCooldown > 0.0f || m_player.spectator()) return;
+    m_shriekCooldown = 10.0f;
+    const glm::vec3 middle = glm::vec3(at) + glm::vec3(0.5f, 0.6f, 0.5f);
+    for (int ring = 0; ring < 4; ++ring)
+        sprites(SpriteParticles::Kind::Shriek, middle + glm::vec3(0.0f, 0.3f * static_cast<float>(ring), 0.0f), 1,
+                0.0f, 0.6f + 0.2f * static_cast<float>(ring), 0.5f, 1.4f);
+    const float away = glm::length(middle - m_player.position);
+    m_audio.play(Sound::Shriek, std::clamp(1.2f - away * 0.02f, 0.2f, 1.0f), 1.0f);
+    vibrate(middle, 15);
+    if (!insideAncientCity(middle) || m_player.exempt()) return;
+    m_warningLevel = std::min(4, m_warningLevel + 1);
+    m_warningDecay = 600.0f;
+    if (away <= 40.0f && m_player.effects.secondsLeft(Effects::Kind::Darkness) < 10.0f)
+        m_player.takeEffect(Effects::Kind::Darkness, 0, 13.0f);
+    if (m_warningLevel < 4)
+    {
+        m_audio.play(Sound::MobWardenSay, 0.5f + 0.15f * static_cast<float>(m_warningLevel), 0.6f + 0.1f * static_cast<float>(m_warningLevel));
+        return;
+    }
+    for (const Mob& mob : m_entities.mobs())
+        if (mob.alive() && mob.typeId() == MobId::Warden && glm::length(mob.position() - middle) < 48.0f) return;
+    for (int attempt = 0; attempt < 20; ++attempt)
+    {
+        const int ox = static_cast<int>(hashCoords(at.x, attempt, at.z, 0x5A1Du) % 11u) - 5;
+        const int oz = static_cast<int>(hashCoords(at.z, attempt, at.x, 0x5A2Du) % 11u) - 5;
+        for (int oy = 6; oy >= -6; --oy)
+        {
+            const glm::ivec3 feet = at + glm::ivec3(ox, oy, oz);
+            if (!isSolid(m_world->getBlock(feet.x, feet.y - 1, feet.z))) continue;
+            bool room = true;
+            for (int h = 0; h < 3 && room; ++h)
+                if (m_world->getBlock(feet.x, feet.y + h, feet.z) != Blocks::Air) room = false;
+            if (!room) continue;
+            if (m_entities.spawnAt(MobId::Warden, glm::vec3(feet) + glm::vec3(0.5f, 0.0f, 0.5f), *m_world))
+            {
+                m_warningLevel = 0;
+                return;
+            }
+        }
+    }
+}
+
+int Application::villagersNear(const glm::vec3& at, float radius) const
+{
+    int count = 0;
+    for (const Mob& mob : m_entities.mobs())
+        if (mob.alive() && mob.typeId() == MobId::Villager && glm::length(mob.position() - at) <= radius) ++count;
+    return count;
+}
+
+std::vector<Trading::Deal> Application::tradeDeals() const
+{
+    std::vector<Trading::Deal> deals = Trading::dealsFor(m_tradeWith);
+    if (m_player.effects.has(Effects::Kind::HeroOfTheVillage))
+    {
+        const int level = m_player.effects.amplifier(Effects::Kind::HeroOfTheVillage);
+        for (Trading::Deal& deal : deals) deal.offer.wantCount = Raids::heroPrice(deal.offer.wantCount, level);
+    }
+    return deals;
+}
+
+void Application::startRaid(const glm::vec3& at, int omenLevel)
+{
+    if (m_raid.active && !m_raid.finished() && glm::length(m_raid.centre - at) < Raids::BAR_RANGE)
+    {
+        Raids::addOmen(m_raid, omenLevel);
+        return;
+    }
+    m_raid = Raids::begin(at, omenLevel, 2);
+}
+
+void Application::spawnRaidWave()
+{
+    if (!m_world) return;
+    const int wave = m_raid.spawned + 1;
+    const bool extra = wave > m_raid.waves;
+    const uint32_t seed = hashCoords(static_cast<int>(m_raid.centre.x), wave, static_cast<int>(m_raid.centre.z), 0x4A1Du);
+    const std::vector<MobId> party = Raids::party(wave, m_raid.waves, 2, extra, seed);
+    glm::vec3 spot = m_raid.centre;
+    for (int attempt = 0; attempt < 8; ++attempt)
+    {
+        const float angle = static_cast<float>((seed >> 4) % 360u + static_cast<uint32_t>(attempt) * 45u) * 0.01745329f;
+        const int x = static_cast<int>(std::floor(m_raid.centre.x + std::cos(angle) * Raids::SPAWN_DISTANCE));
+        const int z = static_cast<int>(std::floor(m_raid.centre.z + std::sin(angle) * Raids::SPAWN_DISTANCE));
+        int y = std::min(Chunk::SY - 3, static_cast<int>(m_raid.centre.y) + 24);
+        while (y > 1 && !isSolid(m_world->getBlock(x, y - 1, z))) --y;
+        if (isFluid(m_world->getBlock(x, y, z)) || isFluid(m_world->getBlock(x, y - 1, z))) continue;
+        if (m_world->getBlock(x, y, z) != Blocks::Air || m_world->getBlock(x, y + 1, z) != Blocks::Air) continue;
+        spot = glm::vec3(static_cast<float>(x) + 0.5f, static_cast<float>(y), static_cast<float>(z) + 0.5f);
+        break;
+    }
+    int placed = 0;
+    for (MobId type : party)
+    {
+        const glm::vec3 offset(static_cast<float>(placed % 3) - 1.0f, 0.0f, static_cast<float>((placed / 3) % 3) - 1.0f);
+        if (!m_entities.spawnAt(type, spot + offset * 1.2f, *m_world) && !m_entities.spawnAt(type, spot, *m_world)) continue;
+        Mob& mob = m_entities.mobs().back();
+        mob.keepFromDespawning();
+        mob.provoke();
+        m_raid.raiders.push_back(mob.serial());
+        m_raid.totalHealth += static_cast<float>(mob.type().maxHealth);
+        ++placed;
+    }
+    ++m_raid.spawned;
+    m_raid.started = true;
+    const float away = glm::length(spot - m_player.position);
+    m_audio.play(Sound::RaidHorn, std::clamp(1.0f - away / 160.0f, 0.35f, 1.0f), 1.0f);
+}
+
+void Application::tickRaid(float deltaTime)
+{
+    if (!m_raid.active || !m_world) return;
+    if (m_raid.finished())
+    {
+        m_raid.finish += deltaTime;
+        if (m_raid.finish >= Raids::FINISH_SECONDS) m_raid = Raids::Raid{};
+        return;
+    }
+    m_raid.elapsed += deltaTime;
+    if (m_raid.elapsed >= Raids::MAX_SECONDS || m_dimension != Dimension::Overworld)
+    {
+        m_raid = Raids::Raid{};
+        return;
+    }
+    if (villagersNear(m_raid.centre, Raids::VILLAGE_RADIUS * 2.0f) == 0)
+    {
+        if (m_raid.spawned > 0) m_raid.status = Raids::Status::Loss;
+        else m_raid = Raids::Raid{};
+        return;
+    }
+    m_raid.raiders.erase(std::remove_if(m_raid.raiders.begin(), m_raid.raiders.end(), [&](uint32_t serial) {
+                             const Mob* mob = mobBySerial(serial);
+                             return !mob || !mob->alive();
+                         }),
+                         m_raid.raiders.end());
+    const bool clear = m_raid.raiders.empty();
+    if (clear && m_raid.moreGroups())
+    {
+        m_raid.preRaid -= deltaTime;
+        if (m_raid.preRaid <= 0.0f)
+        {
+            spawnRaidWave();
+            m_raid.preRaid = Raids::PRE_RAID_SECONDS;
+        }
+    }
+    if (m_raid.started && clear && !m_raid.moreGroups())
+    {
+        m_raid.postRaid += deltaTime;
+        if (m_raid.postRaid >= Raids::VICTORY_DELAY)
+        {
+            m_raid.status = Raids::Status::Victory;
+            if (glm::length(m_player.position - m_raid.centre) <= Raids::BAR_RANGE && !m_player.spectator())
+                m_player.takeEffect(Effects::Kind::HeroOfTheVillage, m_raid.omenLevel - 1, Effects::HERO_SECONDS);
+        }
+    }
+    m_raidSteer -= deltaTime;
+    if (m_raidSteer <= 0.0f)
+    {
+        m_raidSteer = 0.5f;
+        const bool playerNear = glm::length(m_player.position - m_raid.centre) <= 48.0f;
+        for (uint32_t serial : m_raid.raiders)
+            if (Mob* mob = mobBySerial(serial))
+            {
+                const glm::vec3 target = playerNear ? m_player.position : m_raid.centre;
+                if (glm::length(mob->position() - m_player.position) > 12.0f) mob->huntTowards(target);
+            }
+    }
+}
+
+void Application::tickEffectSources(float deltaTime)
+{
+    if (!m_world) return;
+    if (m_shriekCooldown > 0.0f) m_shriekCooldown = std::max(0.0f, m_shriekCooldown - deltaTime);
+    if (m_warningLevel > 0)
+    {
+        m_warningDecay -= deltaTime;
+        if (m_warningDecay <= 0.0f)
+        {
+            --m_warningLevel;
+            m_warningDecay = 600.0f;
+        }
+    }
+    if (m_elderCurseShow > 0.0f) m_elderCurseShow = std::max(0.0f, m_elderCurseShow - deltaTime);
+
+    const glm::ivec3 under = glm::ivec3(glm::floor(m_player.position - glm::vec3(0.0f, 0.2f, 0.0f)));
+    if (m_player.onGround && !m_player.sneaking && m_world->getBlock(under.x, under.y, under.z) == Blocks::SculkShrieker)
+    {
+        if (under != m_lastShriekStep) shriek(under);
+        m_lastShriekStep = under;
+    }
+    else
+        m_lastShriekStep = glm::ivec3(-99999);
+
+    m_wardenDarkClock += deltaTime;
+    if (m_wardenDarkClock >= 6.0f)
+    {
+        m_wardenDarkClock = 0.0f;
+        for (const Mob& mob : m_entities.mobs())
+            if (mob.alive() && mob.typeId() == MobId::Warden && glm::length(mob.position() - m_player.position) <= 20.0f)
+            {
+                if (m_player.effects.secondsLeft(Effects::Kind::Darkness) < 10.0f)
+                    m_player.takeEffect(Effects::Kind::Darkness, 0, 13.0f);
+                break;
+            }
+    }
+
+    m_elderCurseClock += deltaTime;
+    if (m_elderCurseClock >= 60.0f)
+    {
+        m_elderCurseClock = 0.0f;
+        for (const Mob& mob : m_entities.mobs())
+        {
+            if (!mob.alive() || mob.typeId() != MobId::ElderGuardian) continue;
+            if (glm::length(mob.position() - m_player.position) > 50.0f || m_player.exempt()) continue;
+            const Effects::Set& on = m_player.effects;
+            if (on.amplifier(Effects::Kind::MiningFatigue) >= 2 && on.secondsLeft(Effects::Kind::MiningFatigue) >= 60.0f) break;
+            m_player.takeEffect(Effects::Kind::MiningFatigue, 2, 300.0f);
+            m_elderCurseShow = 1.5f;
+            m_audio.play(Sound::ElderCurse, 0.9f, 1.0f);
+            break;
+        }
+    }
+
+    if (m_player.sprinting && m_player.isInWater(*m_world))
+        for (const Mob& mob : m_entities.mobs())
+            if (mob.alive() && mob.typeId() == MobId::Dolphin && glm::length(mob.position() - m_player.position) <= 8.0f)
+            {
+                m_player.takeEffect(Effects::Kind::DolphinsGrace, 0, 5.0f);
+                break;
+            }
+
+    if (m_player.effects.has(Effects::Kind::BadOmen) && !m_player.exempt() && m_dimension == Dimension::Overworld &&
+        villagersNear(m_player.position, Raids::VILLAGE_RADIUS) > 0 &&
+        (!m_raid.active || m_raid.finished() || m_raid.omenLevel < Raids::MAX_OMEN))
+    {
+        const int level = m_player.effects.amplifier(Effects::Kind::BadOmen);
+        Effects::remove(m_player.effects, Effects::Kind::BadOmen);
+        m_player.takeEffect(Effects::Kind::RaidOmen, level, Effects::RAID_OMEN_SECONDS);
+        m_raidOmenAt = m_player.position;
+        m_raidOmenPending = true;
+        m_raidOmenLevel = level + 1;
+        m_raidOmenEnds = m_elapsedSeconds + Effects::RAID_OMEN_SECONDS;
+        m_audio.play(Sound::OmenRaid, 0.9f, 1.0f);
+    }
+    if (m_raidOmenPending && m_player.effects.has(Effects::Kind::RaidOmen))
+        m_raidOmenEnds = m_elapsedSeconds + m_player.effects.secondsLeft(Effects::Kind::RaidOmen);
+    if (m_raidOmenPending && !m_player.effects.has(Effects::Kind::RaidOmen))
+    {
+        m_raidOmenPending = false;
+        if (m_elapsedSeconds >= m_raidOmenEnds - 0.5f && m_player.health > 0) startRaid(m_raidOmenAt, m_raidOmenLevel);
+    }
+
+    m_roseClock += deltaTime;
+    if (m_roseClock >= 0.25f)
+    {
+        m_roseClock = 0.0f;
+        const glm::ivec3 feet = glm::ivec3(glm::floor(m_player.position + glm::vec3(0.0f, 0.1f, 0.0f)));
+        if (m_world->getBlock(feet.x, feet.y, feet.z) == Blocks::WitherRose ||
+            m_world->getBlock(feet.x, feet.y + 1, feet.z) == Blocks::WitherRose)
+            m_player.takeEffect(Effects::Kind::Wither, 0, 2.0f);
+        for (Mob& mob : m_entities.mobs())
+        {
+            if (!mob.alive()) continue;
+            const glm::ivec3 at = glm::ivec3(glm::floor(mob.position() + glm::vec3(0.0f, 0.1f, 0.0f)));
+            if (m_world->getBlock(at.x, at.y, at.z) == Blocks::WitherRose) mob.giveEffect(Effects::Kind::Wither, 0, 2.0f);
+        }
     }
 }
 
@@ -11820,6 +12224,106 @@ void Application::burstFirework(const glm::vec3& at, int design)
         m_audio.play(Sound::Hurt, 0.8f);
 }
 
+namespace
+{
+    void doseMob(Mob& mob, Effects::Kind kind, int amplifier, float seconds, float strength)
+    {
+        if (!mob.alive()) return;
+        const bool undead = isUndead(mob.typeId());
+        if (Effects::isInstant(kind))
+        {
+            const int amount = Effects::instantAmount(kind, amplifier, strength);
+            if (amount <= 0) return;
+            if ((kind == Effects::Kind::InstantHealth) != undead) mob.heal(amount);
+            else mob.damage(amount, glm::vec3(0.0f));
+            return;
+        }
+        if (seconds < 1.0f) return;
+        switch (kind)
+        {
+            case Effects::Kind::Poison:
+                if (!undead) mob.afflict(Mob::Affliction::Poison, seconds);
+                return;
+            case Effects::Kind::Slowness: mob.afflict(Mob::Affliction::Slowness, seconds); return;
+            case Effects::Kind::Glowing: mob.afflict(Mob::Affliction::Glowing, seconds); return;
+            default: mob.giveEffect(kind, amplifier, seconds); return;
+        }
+    }
+}
+
+void Application::windBurst(const glm::vec3& at)
+{
+    sprites(SpriteParticles::Kind::Gust, at, 1, 0.0f, 0.0f, 2.2f, 0.6f);
+    sprites(SpriteParticles::Kind::SmallGust, at, 6, 0.8f, 1.5f, 0.6f, 0.5f);
+    m_audio.play(Sound::WindBurst, 0.9f, 0.9f + static_cast<float>(hashCoords(static_cast<int>(at.x * 4.0f), 0, static_cast<int>(at.z * 4.0f), 0xB1u) % 20u) * 0.01f);
+    const glm::vec3 push = Arrows::windImpulse(at, m_player.position);
+    if (glm::length(push) > 0.0f && !m_player.spectator())
+    {
+        m_player.velocity += push;
+        m_player.clearFall();
+    }
+    for (Mob& mob : m_entities.mobs())
+    {
+        if (!mob.alive()) continue;
+        const glm::vec3 shove = Arrows::windImpulse(at, mob.position());
+        if (glm::length(shove) > 0.0f) mob.shove(shove);
+    }
+}
+
+void Application::spawnSilverfish(const glm::vec3& at, int count)
+{
+    if (!m_world) return;
+    for (int k = 0; k < count; ++k)
+        m_entities.spawnAt(MobId::Silverfish, at + glm::vec3((k % 2 == 0 ? 0.3f : -0.3f), 0.0f, (k / 2 == 0 ? 0.2f : -0.2f)), *m_world);
+    if (count > 0) m_audio.play(Sound::MobSilverfishHurt, 0.8f, 1.0f);
+}
+
+void Application::effectDeath(const glm::vec3& at, float height, bool oozing, bool weaving, bool windCharged)
+{
+    if (!m_world) return;
+    uint32_t roll = hashCoords(static_cast<int>(std::floor(at.x * 8.0f)), static_cast<int>(std::floor(at.y * 8.0f)),
+                               static_cast<int>(std::floor(at.z * 8.0f)), static_cast<uint32_t>(m_elapsedSeconds * 20.0f));
+    auto next = [&]() {
+        roll = roll * 1664525u + 1013904223u;
+        return roll >> 8;
+    };
+    if (oozing)
+    {
+        int crowd = 0;
+        for (const Mob& mob : m_entities.mobs())
+            if (mob.alive() && (mob.typeId() == MobId::Slime || mob.typeId() == MobId::SlimeSmall) &&
+                glm::length(mob.position() - at) < 2.5f)
+                ++crowd;
+        const int count = std::clamp(24 - crowd, 0, 2);
+        for (int k = 0; k < count; ++k)
+            m_entities.spawnAt(MobId::Slime, at + glm::vec3(k == 0 ? -0.4f : 0.4f, 0.5f, k == 0 ? 0.3f : -0.3f), *m_world);
+    }
+    if (weaving)
+    {
+        const glm::ivec3 feet = glm::ivec3(glm::floor(at + glm::vec3(0.0f, 0.2f, 0.0f)));
+        const int wanted = 2 + static_cast<int>(next() % 2u);
+        std::vector<glm::ivec3> placed;
+        for (int attempt = 0; attempt < 15 && static_cast<int>(placed.size()) < wanted; ++attempt)
+        {
+            const uint32_t r = next();
+            const glm::ivec3 cell = feet + glm::ivec3(static_cast<int>(r % 3u) - 1, static_cast<int>((r >> 4) % 3u) - 1,
+                                                      static_cast<int>((r >> 8) % 3u) - 1);
+            if (std::find(placed.begin(), placed.end(), cell) != placed.end()) continue;
+            if (m_world->getBlock(cell.x, cell.y, cell.z) != Blocks::Air) continue;
+            const BlockId below = m_world->getBlock(cell.x, cell.y - 1, cell.z);
+            if (!isSolid(below) || !isOpaque(below)) continue;
+            placed.push_back(cell);
+        }
+        for (const glm::ivec3& cell : placed)
+        {
+            m_world->setBlock(cell.x, cell.y, cell.z, Blocks::Cobweb);
+            m_net.onLocalBlockChange(cell.x, cell.y, cell.z, Blocks::Cobweb);
+            sprites(SpriteParticles::Kind::Poof, glm::vec3(cell) + glm::vec3(0.5f), 6, 0.4f, 0.4f, 0.12f, 0.6f);
+        }
+    }
+    if (windCharged) windBurst(at + glm::vec3(0.0f, height * 0.5f, 0.0f));
+}
+
 void Application::splashPotion(const glm::vec3& at, int effect)
 {
     const Brewing::Brew brew = Brewing::decode(effect & 0xFFF);
@@ -11855,7 +12359,10 @@ void Application::splashPotion(const glm::vec3& at, int effect)
     {
         const float share = 1.0f - toPlayer / 4.0f;
         for (const Brewing::Dose& dose : doses)
-            if (dose.seconds * share >= 1.0f) Effects::give(m_player.effects, dose.kind, dose.amplifier, dose.seconds * share);
+        {
+            if (Effects::isInstant(dose.kind)) m_player.takeEffect(dose.kind, dose.amplifier, dose.seconds, share);
+            else if (dose.seconds * share >= 1.0f) m_player.takeEffect(dose.kind, dose.amplifier, dose.seconds * share);
+        }
         if (brew.potion == Brewing::Potion::Water) m_player.douse();
     }
     for (Mob& mob : m_entities.mobs())
@@ -11865,11 +12372,7 @@ void Application::splashPotion(const glm::vec3& at, int effect)
         if (distance >= 4.0f) continue;
         const float share = 1.0f - distance / 4.0f;
         for (const Brewing::Dose& dose : doses)
-        {
-            if (dose.kind == Effects::Kind::Poison) mob.afflict(Mob::Affliction::Poison, dose.seconds * share);
-            if (dose.kind == Effects::Kind::Slowness) mob.afflict(Mob::Affliction::Slowness, dose.seconds * share);
-            if (dose.kind == Effects::Kind::Regeneration) mob.heal(1 + dose.amplifier);
-        }
+            doseMob(mob, dose.kind, dose.amplifier, Effects::isInstant(dose.kind) ? dose.seconds : dose.seconds * share, share);
     }
 }
 
@@ -11918,7 +12421,10 @@ void Application::tickPotionClouds(float deltaTime)
         {
             cloud.playerTouched = m_elapsedSeconds;
             for (const Brewing::Dose& dose : doses)
-                if (dose.seconds * 0.25f >= 1.0f) Effects::give(m_player.effects, dose.kind, dose.amplifier, dose.seconds * 0.25f);
+            {
+                if (Effects::isInstant(dose.kind)) m_player.takeEffect(dose.kind, dose.amplifier, dose.seconds, 0.5f);
+                else if (dose.seconds * 0.25f >= 1.0f) m_player.takeEffect(dose.kind, dose.amplifier, dose.seconds * 0.25f);
+            }
             cloud.shrunk += 0.5f;
         }
         for (Mob& mob : m_entities.mobs())
@@ -11927,14 +12433,9 @@ void Application::tickPotionClouds(float deltaTime)
             float& last = cloud.touched[mob.serial()];
             if (last > 0.0f && m_elapsedSeconds - last < 1.0f) continue;
             last = m_elapsedSeconds;
-            bool took = false;
             for (const Brewing::Dose& dose : doses)
-            {
-                if (dose.kind == Effects::Kind::Poison) { mob.afflict(Mob::Affliction::Poison, dose.seconds * 0.25f); took = true; }
-                if (dose.kind == Effects::Kind::Slowness) { mob.afflict(Mob::Affliction::Slowness, dose.seconds * 0.25f); took = true; }
-                if (dose.kind == Effects::Kind::Regeneration) { mob.heal(1); took = true; }
-            }
-            if (took) cloud.shrunk += 0.5f;
+                doseMob(mob, dose.kind, dose.amplifier, Effects::isInstant(dose.kind) ? dose.seconds : dose.seconds * 0.25f, 0.5f);
+            if (!doses.empty()) cloud.shrunk += 0.5f;
         }
         ++i;
     }
@@ -12998,13 +13499,7 @@ namespace
         {
             if (striking == Arrows::Kind::Spectral) mob.afflict(Mob::Affliction::Glowing, 10.0f);
             if (striking != Arrows::Kind::Tipped) return;
-            switch (static_cast<Effects::Kind>(effect))
-            {
-                case Effects::Kind::Poison: mob.afflict(Mob::Affliction::Poison, 5.6f); break;
-                case Effects::Kind::Slowness: mob.afflict(Mob::Affliction::Slowness, 11.0f); break;
-                case Effects::Kind::Regeneration: mob.heal(4); break;
-                default: break;
-            }
+            doseMob(mob, Brewing::tippedKind(effect), Brewing::tippedAmplifier(effect), Brewing::tippedSeconds(effect), 1.0f);
         }
 
         // A wind charge does its work here. The shove is round where it
@@ -13049,10 +13544,18 @@ namespace
                     // Closer to the middle of it, the longer it lasts
                     // -- which is Minecraft's rule for a splash.
                     const float share = 1.0f - reach / SPLASH_RADIUS;
-                    Effects::give(player->effects, Effects::Kind::Poison, 0,
-                                  4.0f + share * 6.0f);
-                    Effects::give(player->effects, Effects::Kind::Slowness, 0,
-                                  3.0f + share * 5.0f);
+                    const Effects::Set& on = player->effects;
+                    const bool far = (effect & 1) != 0;
+                    const bool close = (effect & 2) != 0;
+                    const uint32_t roll = static_cast<uint32_t>(at.x * 977.0f + at.z * 131.0f + at.y * 53.0f);
+                    if (far && !on.has(Effects::Kind::Slowness))
+                        player->takeEffect(Effects::Kind::Slowness, 0, 90.0f * share);
+                    else if (player->health >= 8 && !on.has(Effects::Kind::Poison))
+                        player->takeEffect(Effects::Kind::Poison, 0, 45.0f * share);
+                    else if (close && !on.has(Effects::Kind::Weakness) && roll % 4u == 0u)
+                        player->takeEffect(Effects::Kind::Weakness, 0, 90.0f * share);
+                    else
+                        player->takeEffect(Effects::Kind::InstantDamage, 0, Effects::INSTANT_SECONDS, share);
                 }
                 return;
             }
@@ -13144,8 +13647,10 @@ namespace
             }
 
             if (player->damage(damage)) ++playerHits;
-            if (striking == Arrows::Kind::Tipped && effect >= 0 && effect < Effects::KIND_COUNT)
-                Effects::give(player->effects, static_cast<Effects::Kind>(effect), 0, 11.0f);
+            if (striking == Arrows::Kind::Tipped && effect >= 0)
+                player->takeEffect(Brewing::tippedKind(effect), Brewing::tippedAmplifier(effect), Brewing::tippedSeconds(effect));
+            if (striking == Arrows::Kind::Bullet) player->takeEffect(Effects::Kind::Levitation, 0, 10.0f);
+            if (striking == Arrows::Kind::Skull) player->takeEffect(Effects::Kind::Wither, 0, 10.0f);
 
             // A charge sets them alight whether or not the blow itself
             // landed: the burn is not the hit, and the hurt cooldown
@@ -13323,6 +13828,8 @@ void Application::handleEating(float deltaTime)
     {
         Effects::give(m_player.effects, Effects::Kind::Poison,
                       Food::POISON_LEVEL, Food::POISON_SECONDS);
+        Effects::give(m_player.effects, Effects::Kind::Hunger, 2, 15.0f);
+        Effects::give(m_player.effects, Effects::Kind::Nausea, 0, 15.0f);
     }
 
     const bool honey = stack.id == Items::HoneyBottle;
@@ -13392,7 +13899,7 @@ void Application::handleDrinking(float deltaTime)
     }
 
     for (const Brewing::Dose& dose : Brewing::dosesOf(Brewing::decode(stack.damage)))
-        Effects::give(m_player.effects, dose.kind, dose.amplifier, dose.seconds);
+        m_player.takeEffect(dose.kind, dose.amplifier, dose.seconds);
 
     // The glass comes back whatever was in it, water included.
     stack.count -= 1;
@@ -14039,6 +14546,10 @@ void Application::handlePlacement()
             {
                 m_audio.play(Sound::Click, 1.0f, 0.5f);
                 m_audio.play(Sound::DigGlass, 0.5f, 1.8f);
+                const glm::vec3 ring = glm::vec3(bench.block) + glm::vec3(0.5f);
+                for (Mob& mob : m_entities.mobs())
+                    if (mob.alive() && Raids::isRaider(mob.typeId()) && glm::length(mob.position() - ring) <= 48.0f)
+                        mob.afflict(Mob::Affliction::Glowing, 3.0f);
                 return;
             }
             if (isChiseledBookshelf(used))
@@ -15362,8 +15873,8 @@ void Application::handlePlacement()
 
     if (stack.id == Items::OminousBottle)
     {
-        Effects::give(m_player.effects, Effects::Kind::BadOmen, 0, Trial::OMEN_SECONDS);
-        m_audio.play(Sound::MobEndermanSay, 0.6f, 0.6f);
+        Effects::give(m_player.effects, Effects::Kind::BadOmen, std::clamp(stack.damage, 0, 4), Trial::OMEN_SECONDS);
+        m_audio.play(Sound::OmenBad, 0.8f, 1.0f);
 
         if (!m_player.creative())
         {
@@ -16115,11 +16626,28 @@ float Application::dimensionAmbient() const
     }
 }
 
+glm::mat4 Application::worldProjection(const Camera& camera) const
+{
+    glm::mat4 projection = camera.projectionMatrix(m_window.aspect());
+    const float scale = static_cast<float>(m_distortion) / 100.0f;
+    const float intensity = m_nausea * scale * scale;
+    if (intensity <= 0.0f) return projection;
+    const float speed = m_player.effects.has(Effects::Kind::Nausea) ? 7.0f : 20.0f;
+    float squash = 5.0f / (intensity * intensity + 5.0f) - intensity * 0.04f;
+    squash *= squash;
+    const glm::vec3 axis(0.0f, 0.70710678f, 0.70710678f);
+    const float turn = m_elapsedSeconds * 20.0f * speed * 0.01745329f;
+    projection = glm::rotate(projection, turn, axis);
+    projection = glm::scale(projection, glm::vec3(1.0f / squash, 1.0f, 1.0f));
+    projection = glm::rotate(projection, -turn, axis);
+    return projection;
+}
+
 void Application::renderWorldShaded()
 {
     const Camera camera = viewCamera();
     const glm::mat4 view = camera.viewMatrix();
-    const glm::mat4 projection = camera.projectionMatrix(m_window.aspect());
+    const glm::mat4 projection = worldProjection(camera);
 
     const glm::vec3 eye = camera.position;
     const int ex = static_cast<int>(std::floor(eye.x));
@@ -16275,7 +16803,7 @@ void Application::renderWorld()
     const Camera camera = viewCamera();
 
     const glm::mat4 view = camera.viewMatrix();
-    const glm::mat4 projection = camera.projectionMatrix(m_window.aspect());
+    const glm::mat4 projection = worldProjection(camera);
     const float daylight = viewDaylight();
     const glm::vec3 sun = sunDirection();
 
@@ -16304,9 +16832,11 @@ void Application::renderWorld()
     m_chunkShader.setFloat("uDaylight", hasSky() ? daylight : 0.0f);
     m_chunkShader.setFloat("uAmbient", dimensionAmbient());
     const bool blind = m_player.effects.has(Effects::Kind::Blindness);
-    m_chunkShader.setVec3("uFogColor", blind ? glm::vec3(0.0f) : fogColor);
-    m_chunkShader.setFloat("uFogStart", blind ? 1.5f : viewDistance * 0.55f);
-    m_chunkShader.setFloat("uFogEnd", blind ? 5.0f : viewDistance * 0.95f);
+    const float gloom = m_darknessFade;
+    const float darkReach = viewDistance + (15.0f - viewDistance) * gloom;
+    m_chunkShader.setVec3("uFogColor", blind ? glm::vec3(0.0f) : fogColor * (1.0f - gloom));
+    m_chunkShader.setFloat("uFogStart", blind ? 1.5f : gloom > 0.0f ? std::min(viewDistance * 0.55f, darkReach * 0.75f) : viewDistance * 0.55f);
+    m_chunkShader.setFloat("uFogEnd", blind ? 5.0f : gloom > 0.0f ? std::min(viewDistance * 0.95f, darkReach) : viewDistance * 0.95f);
     m_chunkShader.setInt("uUnderwater", underwater ? 1 : 0);
     m_chunkShader.setVec3("uSunDirection", sun);
     m_chunkShader.setVec3("uCameraPos", camera.position);
@@ -16497,6 +17027,20 @@ bool Application::runCommand(const std::string& line, const glm::vec3& origin, b
                 m_net.onLocalBlockChange(at.x, at.y, at.z, block);
                 settleRedstone(at);
             }
+            break;
+
+        case Chat::Kind::EffectGive:
+        {
+            const Effects::Kind kind = static_cast<Effects::Kind>(command.effect);
+            if (Effects::isInstant(kind)) m_player.takeEffect(kind, command.amplifier, command.seconds);
+            else Effects::give(m_player.effects, kind, command.amplifier, command.seconds);
+            break;
+        }
+
+        case Chat::Kind::EffectClear:
+            if (command.effect < 0) Effects::clear(m_player.effects);
+            else Effects::remove(m_player.effects, static_cast<Effects::Kind>(command.effect));
+            m_raidOmenPending = false;
             break;
 
         case Chat::Kind::Summon:
@@ -17218,7 +17762,7 @@ void Application::reelBobber()
             if (isOpaque(m_world->getBlock(cell.x, y, cell.z))) openSky = false;
         const bool jungle = m_world->generator().biomeAt(cell.x, cell.z) == Biome::Jungle;
         const uint32_t seed = m_bobber.rolls * 2654435761u + static_cast<uint32_t>(m_elapsedSeconds * 37.0f);
-        const Fishing::Catch caught = Fishing::roll(seed, openSky, jungle);
+        const Fishing::Catch caught = Fishing::roll(seed, openSky, jungle, Effects::luck(m_player.effects));
         const glm::vec3 from = m_bobber.position + glm::vec3(0.0f, 0.3f, 0.0f);
         const glm::vec3 to = m_player.position + glm::vec3(0.0f, 1.0f, 0.0f);
         const glm::vec3 gap = to - from;
@@ -17653,7 +18197,7 @@ void Application::renderPlayers(const glm::mat4& view, const glm::mat4& projecti
         const float speed = glm::length(m_player.velocity);
         pose.fall = (speed > 0.001f && m_player.velocity.y < 0.0f) ? -m_player.velocity.y / speed : 0.0f;
 
-        draw(activeSkin(), pose, std::string());
+        if (!m_player.effects.has(Effects::Kind::Invisibility)) draw(activeSkin(), pose, std::string());
         Shader& armourShader = m_activeShader ? *m_activeShader : m_chunkShader;
         for (int slot = 0; slot < Inventory::ARMOR_SLOTS; ++slot)
         {
@@ -17873,11 +18417,18 @@ void Application::tickSpriteParticles(float deltaTime)
 
         if (m_player.effects.any() && fx.random() < 0.35f)
         {
-            const bool omen = m_player.effects.has(Effects::Kind::BadOmen);
+            const bool trialOmen = m_player.effects.has(Effects::Kind::TrialOmen);
+            const bool raidOmen = m_player.effects.has(Effects::Kind::RaidOmen);
+            const bool infested = m_player.effects.has(Effects::Kind::Infested);
             const glm::vec3 around = m_player.position +
                                      glm::vec3(fx.random() - 0.5f, fx.random() * 1.8f, fx.random() - 0.5f) * 1.2f;
-            fx.spawn(omen && fx.random() < 0.5f ? Kind::TrialOmen : Kind::Effect, around,
-                     glm::vec3(0.0f, 0.4f, 0.0f), 0.15f, 1.2f);
+            const float pick = fx.random();
+            const Kind kind = trialOmen && pick < 0.5f ? Kind::TrialOmen
+                            : raidOmen && pick < 0.5f ? Kind::RaidOmen
+                            : infested && pick < 0.5f ? Kind::Infested
+                                                      : Kind::Effect;
+            if (!m_player.effects.has(Effects::Kind::Invisibility) || pick < 0.15f)
+                fx.spawn(kind, around, glm::vec3(0.0f, 0.4f, 0.0f), 0.15f, 1.2f);
         }
     }
 
@@ -18412,6 +18963,8 @@ void Application::updateMobs(float deltaTime)
         }
 
         if (!m_player.damage(strike.damage)) continue;
+        if (strike.effect >= 0 && strike.effect < Effects::KIND_COUNT)
+            m_player.takeEffect(static_cast<Effects::Kind>(strike.effect), strike.effectAmplifier, strike.effectSeconds);
 
         wearArmour(strike.damage);
         m_audio.play(Sound::Hurt, 0.8f);
@@ -18432,15 +18985,20 @@ void Application::updateMobs(float deltaTime)
     for (const MobShot& shot : m_entities.drainShots())
     {
         if (shot.fangs) conjureFangs(shot.from, shot.target, shot.damage);
-        else m_arrows.spawn(shot.from, shot.velocity, shot.damage, false, shot.kind);
+        else m_arrows.spawn(shot.from, shot.velocity, shot.damage, false, shot.kind, shot.effect);
     }
 
     // What they leave behind. Most species drop nothing yet, because
     // what they ought to drop -- leather, bone, string -- are items, and
     // this engine only has blocks.
+    for (const auto& [at, count] : m_entities.drainInfestations()) spawnSilverfish(at, count);
+
     for (const EntityManager::Death& death : m_entities.drainDeaths())
     {
         vibrate(death.position, 15);
+        if (death.oozing || death.weaving || death.windCharged)
+            effectDeath(death.position, mobType(death.type).height * mobType(death.type).modelScale, death.oozing,
+                        death.weaving, death.windCharged);
         {
             const glm::ivec3 centre = glm::ivec3(glm::floor(death.position));
             bool bloomed = false;
@@ -19162,18 +19720,20 @@ void Application::renderNameplates()
 // apart, so each one overlaps the last by a pixel. That overlap is why
 // ten of them come to eighty-one across and line up with the hotbar
 // under them rather than running past its end.
-void Application::renderHearts(float x, float y)
+float Application::renderHearts(float x, float y)
 {
-    constexpr int HEART_COUNT = 10;
+    const int heartCount = (m_player.maxHealth() + 1) / 2;
+    const int rows = (heartCount + 9) / 10;
+    const float rowHeight = static_cast<float>(std::max(10 - (rows - 2), 3));
 
     const bool hardcore = modeIsHardcore(m_gameMode);
     const GuiSprite fullSprite = hardcore ? GuiSprite::HeartHardcoreFull : GuiSprite::HeartFull;
     const GuiSprite halfSprite = hardcore ? GuiSprite::HeartHardcoreHalf : GuiSprite::HeartHalf;
     const GuiSprite emptySprite = hardcore ? GuiSprite::HeartHardcoreContainer : GuiSprite::HeartContainer;
 
-    for (int i = 0; i < HEART_COUNT; ++i)
+    for (int i = 0; i < heartCount; ++i)
     {
-        const float heartX = x + i * HEART_PITCH;
+        const float heartX = x + (i % 10) * HEART_PITCH;
 
         // Two health points per heart: 20 health == 10 full hearts.
         const int remaining = m_player.health - i * 2;
@@ -19182,7 +19742,7 @@ void Application::renderHearts(float x, float y)
         // own warning and the only one it gives you. Stirred off the
         // clock rather than kept as state: it is a twitch, and a
         // twitch nothing else in the game reads is not worth a field.
-        float heartY = y;
+        float heartY = y - static_cast<float>(i / 10) * rowHeight;
         if (m_player.health <= 4)
         {
             const uint32_t tick = static_cast<uint32_t>(m_elapsedSeconds * 20.0f);
@@ -19194,7 +19754,13 @@ void Application::renderHearts(float x, float y)
             const bool blink = m_player.damageFlash > 0.0f &&
                                (static_cast<int>(m_elapsedSeconds * 20.0f) / 3) % 2 == 0;
             const bool poisoned = m_player.effects.has(Effects::Kind::Poison);
+            const bool withered = m_player.effects.has(Effects::Kind::Wither);
             const bool frozen = m_player.frozenSeconds >= Player::FREEZE_SECONDS;
+            static const char* WITHERED[2][2][2] = {
+                { { "sprites/hud/heart/withered_full", "sprites/hud/heart/withered_full_blinking" },
+                  { "sprites/hud/heart/withered_half", "sprites/hud/heart/withered_half_blinking" } },
+                { { "sprites/hud/heart/withered_hardcore_full", "sprites/hud/heart/withered_hardcore_full_blinking" },
+                  { "sprites/hud/heart/withered_hardcore_half", "sprites/hud/heart/withered_hardcore_half_blinking" } } };
             static const char* FROZEN[2][2][2] = {
                 { { "sprites/hud/heart/frozen_full", "sprites/hud/heart/frozen_full_blinking" },
                   { "sprites/hud/heart/frozen_half", "sprites/hud/heart/frozen_half_blinking" } },
@@ -19219,7 +19785,8 @@ void Application::renderHearts(float x, float y)
             if (remaining >= 1)
             {
                 const int half = remaining >= 2 ? 0 : 1;
-                guiSprite(frozen ? FROZEN[hc][half][bl] : poisoned ? POISON[hc][half][bl] : NORMAL[hc][half][bl],
+                guiSprite(poisoned ? POISON[hc][half][bl] : withered ? WITHERED[hc][half][bl]
+                          : frozen ? FROZEN[hc][half][bl] : NORMAL[hc][half][bl],
                           heartX, heartY, ICON_SIZE, ICON_SIZE);
             }
             continue;
@@ -19229,7 +19796,9 @@ void Application::renderHearts(float x, float y)
         m_ui.texturedQuad(m_gui.texture(emptySprite), heartX, heartY, ICON_SIZE, ICON_SIZE,
                           0.0f, 0.0f, 1.0f, 1.0f, glm::vec4(1.0f));
 
-        const glm::vec4 heartTint = m_player.frozenSeconds >= Player::FREEZE_SECONDS ? glm::vec4(0.55f, 0.8f, 1.0f, 1.0f)
+        const glm::vec4 heartTint = m_player.effects.has(Effects::Kind::Poison) ? glm::vec4(0.62f, 0.75f, 0.25f, 1.0f)
+                                  : m_player.effects.has(Effects::Kind::Wither) ? glm::vec4(0.28f, 0.24f, 0.22f, 1.0f)
+                                  : m_player.frozenSeconds >= Player::FREEZE_SECONDS ? glm::vec4(0.55f, 0.8f, 1.0f, 1.0f)
                                                                                       : glm::vec4(1.0f);
         if (remaining >= 2)
         {
@@ -19242,6 +19811,7 @@ void Application::renderHearts(float x, float y)
                               0.0f, 0.0f, 1.0f, 1.0f, heartTint);
         }
     }
+    return y - static_cast<float>(rows - 1) * rowHeight;
 }
 
 // The armour row, above the hearts, in the same half-and-whole steps the
@@ -19432,9 +20002,86 @@ void Application::renderAir(float rightX, float y)
     }
 }
 
+void Application::renderElderCurse(float w, float h)
+{
+    if (m_elderCurseShow <= 0.0f) return;
+    const float progress = 1.0f - m_elderCurseShow / 1.5f;
+    const float alpha = 0.05f + 0.5f * std::sin(progress * 3.14159265f);
+    const float side = std::min(w, h) * (0.55f + 0.25f * progress);
+    const float x = (w - side) * 0.5f;
+    const float y = (h - side) * 0.5f - side * 0.05f;
+    const GuiImage* sheet = m_gui.image("../entity/guardian_elder");
+    if (sheet && sheet->width >= 64 && sheet->height >= 64)
+    {
+        const float px = side / 12.0f;
+        m_ui.texturedQuad(sheet->texture, x, y, side, side, 16.0f / 64.0f, 16.0f / 64.0f, 28.0f / 64.0f, 28.0f / 64.0f,
+                          glm::vec4(1.0f, 1.0f, 1.0f, alpha));
+        m_ui.texturedQuad(sheet->texture, x + px * 5.0f, y + px * 5.0f, px * 2.0f, px * 2.0f, 9.0f / 64.0f, 1.0f / 64.0f,
+                          11.0f / 64.0f, 3.0f / 64.0f, glm::vec4(1.0f, 1.0f, 1.0f, alpha));
+        return;
+    }
+    const float px = side / 12.0f;
+    m_ui.quad(x, y, side, side, glm::vec4(0.66f, 0.68f, 0.62f, alpha));
+    m_ui.quad(x + px, y + px, side - px * 2.0f, side - px * 2.0f, glm::vec4(0.55f, 0.6f, 0.56f, alpha));
+    m_ui.quad(x + px * 4.0f, y + px * 4.0f, px * 4.0f, px * 4.0f, glm::vec4(0.9f, 0.88f, 0.8f, alpha));
+    m_ui.quad(x + px * 5.0f, y + px * 5.0f, px * 2.0f, px * 2.0f, glm::vec4(0.85f, 0.45f, 0.15f, alpha));
+}
+
+void Application::renderEffectOverlays(float w, float h)
+{
+    if (!m_world) return;
+    renderElderCurse(w, h);
+    const float scale = static_cast<float>(m_distortion) / 100.0f;
+    if (m_nausea > 0.0f && m_player.effects.has(Effects::Kind::Nausea) && scale < 1.0f)
+    {
+        const float strength = m_nausea * (1.0f - scale);
+        const float grow = 2.0f - strength;
+        const float ow = w * grow, oh = h * grow;
+        const float ox = (w - ow) * 0.5f, oy = (h - oh) * 0.5f;
+        const glm::vec4 tint(0.2f * strength, 0.4f * strength, 0.2f * strength, 1.0f);
+        m_ui.setAdditive(true);
+        if (!guiSprite("../misc/nausea", ox, oy, ow, oh, tint))
+        {
+            for (int ring = 0; ring < 6; ++ring)
+            {
+                const float inset = static_cast<float>(ring) * std::min(ow, oh) * 0.07f;
+                const float swirl = 0.5f + 0.5f * std::sin(m_elapsedSeconds * 2.0f + static_cast<float>(ring));
+                const glm::vec4 band(tint.r * 0.35f * swirl, tint.g * 0.35f * swirl, tint.b * 0.35f * swirl, 1.0f);
+                m_ui.quad(ox + inset, oy + inset, ow - inset * 2.0f, std::min(oh - inset * 2.0f, oh * 0.06f), band);
+                m_ui.quad(ox + inset, oy + oh - inset - oh * 0.06f, ow - inset * 2.0f, oh * 0.06f, band);
+                m_ui.quad(ox + inset, oy + inset, ow * 0.06f, oh - inset * 2.0f, band);
+                m_ui.quad(ox + ow - inset - ow * 0.06f, oy + inset, ow * 0.06f, oh - inset * 2.0f, band);
+            }
+        }
+        m_ui.setAdditive(false);
+    }
+    if (m_darknessFade > 0.0f)
+    {
+        const float pulse = Effects::darknessPulse(m_darknessFade, m_elapsedSeconds);
+        const float shade = std::clamp(m_darknessFade * 0.3f + pulse, 0.0f, 0.85f);
+        m_ui.quad(0.0f, 0.0f, w, h, glm::vec4(0.0f, 0.0f, 0.0f, shade));
+    }
+}
+
+void Application::effectIcon(Effects::Kind kind, float x, float y, float size, float alpha)
+{
+    if (guiSprite(Effects::icon(kind), x, y, size, size, glm::vec4(1.0f, 1.0f, 1.0f, alpha))) return;
+    const unsigned int c = Effects::colour(kind);
+    const glm::vec3 rgb(((c >> 16) & 255u) / 255.0f, ((c >> 8) & 255u) / 255.0f, (c & 255u) / 255.0f);
+    const float unit = size / 18.0f;
+    m_ui.quad(x + 3.0f * unit, y + 2.0f * unit, 12.0f * unit, 14.0f * unit, glm::vec4(0.08f, 0.08f, 0.1f, alpha));
+    m_ui.quad(x + 2.0f * unit, y + 3.0f * unit, 14.0f * unit, 12.0f * unit, glm::vec4(0.08f, 0.08f, 0.1f, alpha));
+    m_ui.quad(x + 4.0f * unit, y + 3.0f * unit, 10.0f * unit, 12.0f * unit, glm::vec4(rgb, alpha));
+    m_ui.quad(x + 3.0f * unit, y + 4.0f * unit, 12.0f * unit, 10.0f * unit, glm::vec4(rgb, alpha));
+    m_ui.quad(x + 5.0f * unit, y + 5.0f * unit, 3.0f * unit, 3.0f * unit,
+              glm::vec4(glm::min(rgb + glm::vec3(0.35f), glm::vec3(1.0f)), alpha));
+    if (Effects::isHarmful(kind) && !Effects::isNeutral(kind))
+        m_ui.quad(x + 8.0f * unit, y + 8.0f * unit, 4.0f * unit, 4.0f * unit, glm::vec4(rgb * 0.45f, alpha));
+}
+
 void Application::renderEffectIcons(float w)
 {
-    if (!m_gui.has("sprites/hud/effect_background")) return;
+    const bool packed = m_gui.has("sprites/hud/effect_background");
 
     int good = 0;
     int bad = 0;
@@ -19453,10 +20100,16 @@ void Application::renderEffectIcons(float w)
             const float t = left * 20.0f;
             alpha = static_cast<int>(t) % 20 < 10 ? 1.0f : 0.25f + 0.75f * (left / 10.0f);
         }
-        guiSprite(kind == Effects::Kind::BadOmen ? "sprites/hud/effect_background_ambient"
-                                                 : "sprites/hud/effect_background",
-                  x, y, 24.0f, 24.0f);
-        guiSprite(Effects::icon(static_cast<Effects::Kind>(i)), x + 3.0f, y + 3.0f, 18.0f, 18.0f, glm::vec4(1.0f, 1.0f, 1.0f, alpha));
+        if (packed)
+            guiSprite(kind == Effects::Kind::BadOmen ? "sprites/hud/effect_background_ambient"
+                                                     : "sprites/hud/effect_background",
+                      x, y, 24.0f, 24.0f);
+        else
+        {
+            m_ui.quad(x, y, 24.0f, 24.0f, glm::vec4(0.06f, 0.06f, 0.08f, 0.75f));
+            m_ui.quad(x + 1.0f, y + 1.0f, 22.0f, 22.0f, glm::vec4(0.22f, 0.22f, 0.26f, 0.75f));
+        }
+        effectIcon(kind, x + 3.0f, y + 3.0f, 18.0f, alpha);
     }
 }
 
@@ -19688,6 +20341,8 @@ void Application::renderHud()
         }
     }
 
+    renderEffectOverlays(w, h);
+
     if (m_world && hasSky())
     {
         const int ex = static_cast<int>(std::floor(m_camera.position.x));
@@ -19859,16 +20514,16 @@ void Application::renderHud()
         // the experience bar at twenty-nine, the hearts and the hunger
         // at thirty-nine, the armour and the bubbles at forty-nine.
         renderExperience(barX, h - 29.0f, HOTBAR_WIDTH);
-        renderHearts(barX, h - 39.0f);
+        const float heartTop = renderHearts(barX, h - 39.0f);
         const int golden = m_player.absorption;
         for (int i = 0; i < (golden + 1) / 2 && i < 10; ++i)
         {
-            const float gx = barX + i * HEART_PITCH, gy = h - 49.0f;
+            const float gx = barX + i * HEART_PITCH, gy = heartTop - 10.0f;
             const bool half = golden - i * 2 == 1;
             if (!guiSprite(half ? "sprites/hud/heart/absorbing_half" : "sprites/hud/heart/absorbing_full", gx, gy, ICON_SIZE, ICON_SIZE))
                 m_ui.quad(gx + 1.0f, gy + 1.0f, half ? 3.5f : 7.0f, 7.0f, glm::vec4(0.95f, 0.8f, 0.15f, 1.0f));
         }
-        renderArmour(barX, golden > 0 ? h - 59.0f : h - 49.0f);
+        renderArmour(barX, golden > 0 ? heartTop - 20.0f : heartTop - 10.0f);
         renderFood(barX + HOTBAR_WIDTH, h - 39.0f);
         renderAir(barX + HOTBAR_WIDTH, h - 49.0f);
         renderEatProgress(cx, cy);
@@ -20128,6 +20783,19 @@ void Application::renderBossBars(float w)
         const bool dragon = id == MobId::EnderDragon;
         bars.push_back({ dragon ? "Ender Dragon" : "Wither", dragon ? 0 : 5, 0,
                          static_cast<float>(mob.health()) / static_cast<float>(mob.type().maxHealth) });
+    }
+    if (m_raid.active && glm::length(m_player.position - m_raid.centre) <= Raids::BAR_RANGE)
+    {
+        float health = 0.0f;
+        for (uint32_t serial : m_raid.raiders)
+            if (Mob* mob = mobBySerial(serial)) health += static_cast<float>(mob->health());
+        float progress = 0.0f;
+        if (m_raid.status == Raids::Status::Ongoing)
+            progress = m_raid.raiders.empty() ? (m_raid.moreGroups() ? 1.0f - m_raid.preRaid / Raids::PRE_RAID_SECONDS : 0.0f)
+                                              : (m_raid.totalHealth > 0.0f ? health / m_raid.totalHealth : 0.0f);
+        else if (m_raid.status == Raids::Status::Loss)
+            progress = m_raid.totalHealth > 0.0f ? health / m_raid.totalHealth : 0.0f;
+        bars.push_back({ Raids::barName(m_raid, static_cast<int>(m_raid.raiders.size())), 2, 10, progress });
     }
     bars.insert(bars.end(), m_devBossBars.begin(), m_devBossBars.end());
 
@@ -20582,6 +21250,11 @@ void Application::renderVideoScreen()
                                          "Attack Indicator: Hotbar" };
     if (menuButton({ buttonX, y, buttonWidth, buttonHeight }, INDICATORS[m_attackIndicator]))
         m_pendingAction = MenuAction::CycleAttackIndicator;
+    y += buttonHeight + 14.0f;
+
+    const std::string distortion = m_distortion <= 0 ? "Distortion Effects: OFF" : "Distortion Effects: " + std::to_string(m_distortion) + "%";
+    if (menuButton({ buttonX, y, buttonWidth, buttonHeight }, distortion))
+        m_pendingAction = MenuAction::CycleDistortion;
     y += buttonHeight + 24.0f;
 
     if (menuButton({ buttonX, y, buttonWidth, 46.0f }, "Done"))

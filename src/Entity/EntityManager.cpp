@@ -566,7 +566,15 @@ void EntityManager::update(float deltaTime, const World& world,
         // Caught here rather than at removal: the corpse lingers, and
         // whatever it drops belongs where it fell, not where it stopped.
         if (mob.takeDeathReport())
-            m_deaths.push_back(Death{ mob.typeId(), mob.position(), mob.baby(), mob.variant(), mob.serial(), mob.shotByMob() });
+        {
+            Death death{ mob.typeId(), mob.position(), mob.baby(), mob.variant(), mob.serial(), mob.shotByMob() };
+            death.oozing = mob.effects().has(Effects::Kind::Oozing);
+            death.weaving = mob.effects().has(Effects::Kind::Weaving);
+            death.windCharged = mob.effects().has(Effects::Kind::WindCharged);
+            m_deaths.push_back(death);
+        }
+        if (const int silverfish = mob.takeSilverfish())
+            m_infestations.emplace_back(mob.position() + glm::vec3(0.0f, mob.height() * 0.5f, 0.0f), silverfish);
 
         if (mob.takeEggReport()) (mob.typeId() == MobId::Armadillo ? m_shedScutes : m_laidEggs).push_back(mob.position());
         if (mob.takeGrowthReport() && mob.typeId() == MobId::Turtle) m_grownTurtles.push_back(mob.position());
@@ -1081,6 +1089,13 @@ std::vector<glm::vec3> EntityManager::drainLaidEggs()
 {
     std::vector<glm::vec3> all;
     all.swap(m_laidEggs);
+    return all;
+}
+
+std::vector<std::pair<glm::vec3, int>> EntityManager::drainInfestations()
+{
+    std::vector<std::pair<glm::vec3, int>> all;
+    all.swap(m_infestations);
     return all;
 }
 

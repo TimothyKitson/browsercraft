@@ -85,6 +85,15 @@ void UIRenderer::setInvert(bool on)
     else    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 }
 
+void UIRenderer::setAdditive(bool on)
+{
+    if (on == m_additive) return;
+    flush();
+    m_additive = on;
+    if (on) glBlendFunc(GL_ONE, GL_ONE);
+    else    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+}
+
 void UIRenderer::beginGlint(unsigned int glintTexture, float x, float y, float w, float h, const glm::vec2& shift)
 {
     flush();

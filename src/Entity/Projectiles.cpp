@@ -213,6 +213,7 @@ void Projectiles::render(Shader& shader, const Camera& camera, const Atlas& atla
     const TileUV xpUV = tileUV(Tiles::ItemMaterialFirst + 8);
     const TileUV rocketUV = tileUV(Tiles::ItemFireworkFirst);
     const TileUV spitUV = tileUV(Tiles::LlamaSpitTile);
+    const TileUV skullUV = tileUV(Tiles::WitherSkullTile);
     for (const Arrow& arrow : drawn)
     {
         // Along its flight, or along the way it was last going.
@@ -248,6 +249,7 @@ void Projectiles::render(Shader& shader, const Camera& camera, const Atlas& atla
                         : (arrow.kind == Arrows::Kind::XpBottle) ? xpUV
                         : (arrow.kind == Arrows::Kind::Rocket) ? rocketUV
                         : (arrow.kind == Arrows::Kind::Spit) ? spitUV
+                        : (arrow.kind == Arrows::Kind::Skull) ? skullUV
                                                              : arrowUV;
         // A potion is drawn as the bottle it is rather than as a
         // shaft, so it is square like a charge without being one.

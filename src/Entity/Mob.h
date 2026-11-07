@@ -2,6 +2,7 @@
 #include <algorithm>
 #include "MobType.h"
 #include "Projectiles.h"
+#include "Game/Effects.h"
 #include "Pathfinder.h"
 #include <cstdint>
 #include <glm/glm.hpp>
@@ -29,6 +30,9 @@ struct MobStrike
     int damage = 0;
     glm::vec3 from{ 0.0f };     // the mob's position, for knockback
     int blindSeconds = 0;
+    int effect = -1;
+    int effectAmplifier = 0;
+    float effectSeconds = 0.0f;
 };
 
 // A mob going off. Collected like the strikes and the shots, so a mob
@@ -50,6 +54,7 @@ struct MobShot
     Arrows::Kind kind = Arrows::Kind::Shaft;   // a charge rather than an arrow
     bool fangs = false;
     glm::vec3 target{ 0.0f };
+    int effect = 0;
 };
 
 // A living thing: gravity and box collision against the voxel world, plus
@@ -125,7 +130,18 @@ public:
         float& timer = kind == Affliction::Glowing ? m_glowTimer : kind == Affliction::Poison ? m_poisonTimer : m_slowTimer;
         timer = std::max(timer, seconds);
     }
-    bool glowing() const { return m_glowTimer > 0.0f; }
+    bool glowing() const { return m_glowTimer > 0.0f || m_effects.has(Effects::Kind::Glowing); }
+    void giveEffect(Effects::Kind kind, int amplifier, float seconds);
+    static void setNoticeScale(float scale);
+    static float noticeScale();
+    const Effects::Set& effects() const { return m_effects; }
+    bool invisible() const { return m_effects.has(Effects::Kind::Invisibility); }
+    int takeSilverfish()
+    {
+        const int count = m_silverfish;
+        m_silverfish = 0;
+        return count;
+    }
     bool slowed() const { return m_slowTimer > 0.0f; }
     bool poisoned() const { return m_poisonTimer > 0.0f; }
     bool screamingGoat() const { return (m_birthSeed % 50u) == 7u; }
@@ -535,6 +551,8 @@ private:
     bool m_ridden = false;
     uint32_t m_serial = 0;
     float m_glowTimer = 0.0f;
+    Effects::Set m_effects;
+    int m_silverfish = 0;
     float m_poisonTimer = 0.0f;
     float m_poisonClock = 0.0f;
     float m_slowTimer = 0.0f;

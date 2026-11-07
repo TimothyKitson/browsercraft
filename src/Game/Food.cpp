@@ -113,7 +113,7 @@ Food::StewEffect Food::stewEffect(int flower)
         { Effects::Kind::Regeneration, 7.0f },
         { Effects::Kind::NightVision, 5.0f },
         { Effects::Kind::Weakness, 7.0f },
-        { Effects::Kind::Poison, 7.0f },
+        { Effects::Kind::Wither, 7.0f },
         { Effects::Kind::NightVision, 5.0f },
     };
     const int count = static_cast<int>(sizeof(EFFECTS) / sizeof(EFFECTS[0]));

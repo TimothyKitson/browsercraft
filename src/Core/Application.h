@@ -24,6 +24,7 @@
 #include "Entity/ExperienceOrbs.h"
 #include "Entity/Rain.h"
 #include "Game/Anvil.h"
+#include "Game/Raids.h"
 #include "Game/Brewing.h"
 #include "World/Signs.h"
 #include "World/Frames.h"
@@ -127,6 +128,7 @@ enum class MenuAction
     LeaveOptions,
     ToggleSound,
     CycleAttackIndicator,
+    CycleDistortion,
     ToggleMainHand,
     RenderDistanceDown,
     SetRenderDistance,
@@ -523,6 +525,9 @@ private:
     };
     std::vector<PotionCloud> m_potionClouds;
     void splashPotion(const glm::vec3& at, int effect);
+    void effectDeath(const glm::vec3& at, float height, bool oozing, bool weaving, bool windCharged);
+    void windBurst(const glm::vec3& at);
+    void spawnSilverfish(const glm::vec3& at, int count);
     void tickPotionClouds(float deltaTime);
     void tickArmadillos(float deltaTime);
     void conjureFangs(const glm::vec3& caster, const glm::vec3& target, int damage);
@@ -810,6 +815,9 @@ private:
     float m_attackTicker = 10.0f;
     StackId m_attackItem = 0;
     int m_attackIndicator = 1;
+    int m_distortion = 100;
+    float m_nausea = 0.0f;
+    float m_darknessFade = 0.0f;
     float m_devAttackStrength = -1.0f;
     bool m_leftHanded = false;
     float attackStrength() const;
@@ -880,6 +888,8 @@ private:
     // put so that mining, placing and the selection outline keep working
     // from the player's eyes whatever the view is set to.
     Camera viewCamera() const;
+    glm::mat4 worldProjection(const Camera& camera) const;
+    void renderEffectOverlays(float w, float h);
     void renderPauseMenu();
     void renderDeathScreen();
     void renderInventoryScreen();
@@ -971,7 +981,21 @@ private:
         glm::ivec3 sensor{ 0 };
         float due = 0.0f;
         int frequency = 0;
+        glm::vec3 from{ 0.0f };
     };
+    float m_shriekCooldown = 0.0f;
+    int m_warningLevel = 0;
+    float m_warningDecay = 0.0f;
+    float m_elderCurseClock = 0.0f;
+    float m_elderCurseShow = 0.0f;
+    float m_wardenDarkClock = 0.0f;
+    float m_roseClock = 0.0f;
+    glm::ivec3 m_lastShriekStep{ -99999 };
+    void tickEffectSources(float deltaTime);
+    void shriekNear(const glm::ivec3& sensor);
+    void shriek(const glm::ivec3& at);
+    bool insideAncientCity(const glm::vec3& at) const;
+    void renderElderCurse(float w, float h);
     std::vector<Vibration> m_vibrations;
     std::vector<glm::ivec3> m_sensorSpots;
     std::map<std::array<int, 3>, float> m_sensorQuiet;
@@ -1360,9 +1384,21 @@ private:
     };
     std::vector<Leash> m_leashes;
     Mob* mobBySerial(uint32_t serial);
+    Raids::Raid m_raid;
+    glm::vec3 m_raidOmenAt{ 0.0f };
+    bool m_raidOmenPending = false;
+    int m_raidOmenLevel = 1;
+    float m_raidOmenEnds = 0.0f;
+    float m_raidSteer = 0.0f;
+    void tickRaid(float deltaTime);
+    void startRaid(const glm::vec3& at, int omenLevel);
+    void spawnRaidWave();
+    int villagersNear(const glm::vec3& at, float radius) const;
+    std::vector<Trading::Deal> tradeDeals() const;
     void tickLeashes(float deltaTime);
     void dropLeash(const Leash& leash, const glm::vec3& at);
-    void renderHearts(float x, float y);
+    float renderHearts(float x, float y);
+    void effectIcon(Effects::Kind kind, float x, float y, float size, float alpha);
     void renderArmour(float x, float y);
     void renderFood(float rightX, float y);
     void renderExperience(float x, float y, float width);

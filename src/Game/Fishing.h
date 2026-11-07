@@ -20,7 +20,7 @@ namespace Fishing
     constexpr int FUNGUS_BOOST_COST = 1;
 
     int durabilityOf(StackId id);
-    Catch roll(uint32_t seed, bool openWater, bool jungle);
+    Catch roll(uint32_t seed, bool openWater, bool jungle, int luck = 0);
     float waitSeconds(uint32_t seed, bool openSky, bool raining);
     float approachSeconds(uint32_t seed);
     float biteSeconds(uint32_t seed);

@@ -25,9 +25,9 @@ namespace Trial
 
     // What an ominous spawner sends instead, and how long the bottle
     // that makes one lasts. Minecraft's bad omen runs for a hundred
-    // seconds, which is about as long as it takes to climb down.
+    // minutes.
     constexpr int OMINOUS_WAVE_SIZE = 5;
-    constexpr float OMEN_SECONDS = 100.0f;
+    constexpr float OMEN_SECONDS = 6000.0f;
     constexpr float SETTLE_SECONDS = 2.0f;
 
     // What one spawner is worth. Minecraft pays a key a spawner, and

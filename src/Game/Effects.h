@@ -1,5 +1,6 @@
 #pragma once
 #include <cstddef>
+#include <string>
 
 // Status effects: what a potion leaves behind once it is drunk.
 //
@@ -40,6 +41,27 @@ namespace Effects
         Hunger,
         Saturation,
         Blindness,
+        Darkness,
+        DolphinsGrace,
+        Glowing,
+        HealthBoost,
+        HeroOfTheVillage,
+        Infested,
+        InstantHealth,
+        InstantDamage,
+        Invisibility,
+        Levitation,
+        Luck,
+        BadLuck,
+        MiningFatigue,
+        Nausea,
+        Oozing,
+        RaidOmen,
+        SlowFalling,
+        TrialOmen,
+        Weaving,
+        WindCharged,
+        Wither,
 
         Count
     };
@@ -48,7 +70,13 @@ namespace Effects
 
     const char* name(Kind kind);
     const char* icon(Kind kind);
+    const char* id(Kind kind);
+    bool fromId(const std::string& text, Kind& kind);
     unsigned int colour(Kind kind);
+    bool isBeneficial(Kind kind);
+    bool isNeutral(Kind kind);
+    bool isInstant(Kind kind);
+    std::string levelText(int amplifier);
 
     // Whether the effect is one you would rather not have. The milk
     // bucket does not exist yet, but the distinction is also what
@@ -88,6 +116,13 @@ namespace Effects
     // Minecraft's pulse rates, halved for each step of the amplifier.
     constexpr float REGEN_INTERVAL = 2.5f;
     constexpr float POISON_INTERVAL = 1.25f;
+    constexpr float WITHER_INTERVAL = 2.0f;
+    constexpr float INSTANT_SECONDS = 0.05f;
+    constexpr float HERO_SECONDS = 2400.0f;
+    constexpr float RAID_OMEN_SECONDS = 30.0f;
+    constexpr float TRIAL_OMEN_SECONDS = 900.0f;
+    constexpr float DARKNESS_FADE_SECONDS = 1.1f;
+    constexpr float INFESTED_CHANCE = 0.1f;
 
     // What one step of the clock produced. Pulses rather than a rate,
     // because that is how the player actually sees them: hearts going
@@ -97,6 +132,9 @@ namespace Effects
         int healPulses = 0;
         int poisonPulses = 0;
         int feedPulses = 0;
+        int witherPulses = 0;
+        int instantHeal = 0;
+        int instantHarm = 0;
         float exhaustion = 0.0f;
     };
 
@@ -126,4 +164,14 @@ namespace Effects
     // The least daylight the world is allowed to look like while night
     // vision is up. 0 when it is not running.
     float nightVisionFloor(const Set& set);
+
+    int maxHealthBonus(const Set& set);
+    float levitationSpeed(const Set& set);
+    bool fallsSlowly(const Set& set);
+    float swimMultiplier(const Set& set);
+    int luck(const Set& set);
+    float detectionScale(const Set& set, int armourPieces);
+    float cobwebDrag(const Set& set);
+    float darknessPulse(float fade, float seconds);
+    int instantAmount(Kind kind, int amplifier, float proximity);
 }

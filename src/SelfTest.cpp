@@ -81,6 +81,7 @@
 #include "Game/Chat.h"
 #include "Game/Fishing.h"
 #include "Game/Food.h"
+#include "Game/Raids.h"
 #include "Game/Golems.h"
 #include "Renderer/Atlas.h"
 #include "Renderer/UIRenderer.h"
@@ -1639,7 +1640,8 @@ namespace
         check(Brewing::isIngredient(Items::Sugar), "sugar is an ingredient");
         check(Brewing::isIngredient(Items::NetherWart), "so is wart");
         check(!Brewing::isIngredient(Items::Potion), "a potion is not");
-        check(!Brewing::isIngredient(Blocks::Stone), "nor is a block of stone");
+        check(!Brewing::isIngredient(Blocks::Dirt), "nor is a block of dirt");
+        check(Brewing::isIngredient(Blocks::Stone), "but stone is, for infestation");
 
         // Damage encoding: a potion rides in the stack's damage field.
         for (int i = 0; i < static_cast<int>(Potion::Count); ++i)
@@ -1835,14 +1837,17 @@ namespace
 
         // Every kind has a name and a side.
         int harmful = 0;
+        int neutral = 0;
         for (int i = 0; i < Effects::KIND_COUNT; ++i)
         {
             const Kind kind = static_cast<Kind>(i);
             check(Effects::name(kind)[0] != '\0',
                   std::string("effect ") + std::to_string(i) + " has a name");
             if (Effects::isHarmful(kind)) ++harmful;
+            if (Effects::isNeutral(kind)) ++neutral;
         }
-        check(harmful == 6, "six of them are ones you would rather not have");
+        check(harmful == 20, "twenty of them are ones you would rather not have");
+        check(neutral == 4, "and four of those are neither good nor bad");
         check(Effects::isHarmful(Kind::BadOmen),
               "bad omen among them, though it is the only one that does nothing to you");
     }
@@ -4663,6 +4668,185 @@ namespace
         int w = 0, h = 0;
         const std::vector<uint8_t> painted = PaintingRenderer::paintVariant(Paintings::find("skeleton"), w, h);
         check(w == 64 && h == 48 && painted.size() == static_cast<size_t>(64 * 48 * 4), "and each has a painted stand-in the size of the real one");
+    }
+
+    void testNewEffects()
+    {
+        section("status effects: the rest of 1.21.1's, the brews and the sources");
+        using Effects::Kind;
+
+        bool named = true, roundTrip = true, icons = true;
+        for (int i = 0; i < Effects::KIND_COUNT; ++i)
+        {
+            const Kind kind = static_cast<Kind>(i);
+            Kind back = Kind::Speed;
+            named = named && Effects::name(kind)[0] != '\0';
+            roundTrip = roundTrip && Effects::fromId(Effects::id(kind), back) && back == kind;
+            icons = icons && std::string(Effects::icon(kind)) == std::string("../mob_effect/") + Effects::id(kind);
+        }
+        check(Effects::KIND_COUNT == 39, "thirty-nine effects in all, as in 1.21.1");
+        check(named && roundTrip, "each has a name and comes back from its id");
+        check(icons, "and its icon is the pack's mob_effect picture of the same name");
+        Kind found = Kind::Speed;
+        check(Effects::fromId("minecraft:unluck", found) && found == Kind::BadLuck && !Effects::fromId("flying", found),
+              "ids read with or without the namespace, and nonsense is refused");
+        check(Effects::colour(Kind::Wither) == 0x736156 && Effects::colour(Kind::Darkness) == 0x292721 &&
+                  Effects::colour(Kind::TrialOmen) == 0x16A6A6,
+              "colours are Mojang's");
+        check(Effects::isNeutral(Kind::Glowing) && Effects::isNeutral(Kind::RaidOmen) && Effects::isBeneficial(Kind::SlowFalling) &&
+                  Effects::isHarmful(Kind::Levitation) && !Effects::isBeneficial(Kind::Infested),
+              "and each sits on the side Minecraft puts it");
+
+        {
+            Effects::Set set;
+            Effects::give(set, Kind::InstantHealth, 0, Effects::INSTANT_SECONDS);
+            Effects::give(set, Kind::InstantHealth, 0, Effects::INSTANT_SECONDS);
+            Effects::Tick tick = Effects::step(set, 0.05f);
+            check(tick.instantHeal == 8 && !set.has(Kind::InstantHealth), "two healing splashes in one moment heal twice, then are gone");
+            Effects::give(set, Kind::InstantDamage, 1, Effects::INSTANT_SECONDS);
+            tick = Effects::step(set, 0.05f);
+            check(tick.instantHarm == 12, "harming II does twelve");
+            check(Effects::instantAmount(Kind::InstantHealth, 0, 0.5f) == 2, "and half a splash heals half");
+        }
+        {
+            Effects::Set set;
+            Effects::give(set, Kind::Wither, 0, 10.0f);
+            int pulses = 0;
+            for (int i = 0; i < 100; ++i) pulses += Effects::step(set, 0.05f).witherPulses;
+            check(pulses == 2, "wither bites once every two seconds");
+            Effects::give(set, Kind::Wither, 1, 10.0f);
+            pulses = 0;
+            for (int i = 0; i < 100; ++i) pulses += Effects::step(set, 0.05f).witherPulses;
+            check(pulses == 5, "and twice as often a level up");
+        }
+        {
+            Effects::Set set;
+            Effects::give(set, Kind::MiningFatigue, 2, 300.0f);
+            check(std::fabs(Effects::digMultiplier(set) - 0.0027f) < 0.0001f, "mining fatigue III leaves digging at a crawl");
+            Effects::give(set, Kind::Levitation, 1, 10.0f);
+            check(Effects::levitationSpeed(set) == 2.0f, "levitation II lifts two blocks a second");
+            Effects::give(set, Kind::Luck, 0, 300.0f);
+            Effects::give(set, Kind::BadLuck, 1, 300.0f);
+            check(Effects::luck(set) == -1, "luck and bad luck cancel");
+            check(Effects::detectionScale(set, 4) == 1.0f, "a visible player is seen as far as ever");
+            Effects::give(set, Kind::Invisibility, 0, 180.0f);
+            check(std::fabs(Effects::detectionScale(set, 0) - 0.07f) < 0.001f && std::fabs(Effects::detectionScale(set, 4) - 0.7f) < 0.001f,
+                  "an invisible one is seen at a fourteenth of the range, more for armour worn");
+            check(Effects::cobwebDrag(set) == 0.25f, "a cobweb holds you at a quarter");
+            Effects::give(set, Kind::Weaving, 0, 180.0f);
+            check(Effects::cobwebDrag(set) == 0.5f, "and at half while weaving");
+            check(std::fabs(Effects::darknessPulse(1.0f, 0.0f) - 0.45f) < 0.001f && Effects::darknessPulse(0.0f, 1.0f) == 0.0f,
+                  "darkness throbs as deep as Minecraft's and only while it is on");
+        }
+        {
+            Player p(glm::vec3(0.0f, 70.0f, 0.0f));
+            p.health = 10;
+            p.takeEffect(Kind::InstantHealth, 0, Effects::INSTANT_SECONDS);
+            check(p.health == 14, "a potion of healing puts back two hearts");
+            Effects::give(p.effects, Kind::HealthBoost, 0, 5.0f);
+            check(p.maxHealth() == 24, "health boost adds two hearts");
+            p.heal(40);
+            check(p.health == 24, "which can be filled");
+            for (int i = 0; i < 120; ++i) p.updateEffects(0.05f);
+            check(p.maxHealth() == 20 && p.health == 20, "and are taken away again when it ends");
+            Effects::give(p.effects, Kind::Wither, 0, 10.0f);
+            for (int i = 0; i < 45; ++i) p.updateEffects(0.05f);
+            check(p.health < 20, "wither eats into health");
+            Player q(glm::vec3(0.0f, 70.0f, 0.0f));
+            q.health = 1;
+            Effects::give(q.effects, Kind::Wither, 0, 10.0f);
+            for (int i = 0; i < 45; ++i) q.updateEffects(0.05f);
+            check(q.health == 0, "and unlike poison it can kill");
+        }
+
+        using Brewing::Potion;
+        using Brewing::Brew;
+        Brew out;
+        check(Brewing::brew(Potion::Awkward, Items::GlisteringMelon) == Potion::Healing &&
+                  Brewing::brew(Potion::Awkward, Items::PhantomMembrane) == Potion::SlowFalling &&
+                  Brewing::brew(Potion::Awkward, Items::BreezeRod) == Potion::WindCharged &&
+                  Brewing::brew(Potion::Awkward, Blocks::SlimeBlock) == Potion::Oozing &&
+                  Brewing::brew(Potion::Awkward, Blocks::Stone) == Potion::Infested &&
+                  Brewing::brew(Potion::Awkward, Blocks::Cobweb) == Potion::Weaving,
+              "the awkward base takes 1.21.1's six new ingredients");
+        check(Brewing::brew(Potion::Water, Items::BreezeRod) == Potion::Mundane &&
+                  Brewing::brew(Potion::Water, Items::PhantomMembrane) == Potion::Count,
+              "water makes mundane of the 1.21 four but nothing of a membrane");
+        check(Brewing::brewWith(Brew{ Potion::NightVision, true, false }, Items::FermentedSpiderEye, out) &&
+                  out.potion == Potion::Invisibility && out.extended,
+              "a spider eye spoils long night vision into long invisibility");
+        check(Brewing::brewWith(Brew{ Potion::Healing, false, true }, Items::FermentedSpiderEye, out) &&
+                  out.potion == Potion::Harming && out.strong,
+              "and healing II into harming II");
+        check(Brewing::brewWith(Brew{ Potion::Poison, true, false }, Items::FermentedSpiderEye, out) &&
+                  out.potion == Potion::Harming && !out.extended,
+              "and poison into harming");
+        check(Brewing::canExtend(Potion::SlowFalling) && Brewing::canStrengthen(Potion::Harming) &&
+                  !Brewing::canExtend(Potion::Oozing) && !Brewing::canStrengthen(Potion::Luck),
+              "redstone and glowstone take where they do in 1.21.1");
+        check(std::string(Brewing::name(Potion::Infested)) == "Potion of Infestation" &&
+                  Brewing::fullName(Brew{ Potion::WindCharged }, Brewing::Form::Splash) == "Splash Potion of Wind Charging",
+              "and the brews carry Minecraft's names");
+        const int tipped = Brewing::tippedDamage(Kind::InstantHealth, 1);
+        check(Brewing::tippedKind(tipped) == Kind::InstantHealth && Brewing::tippedAmplifier(tipped) == 1 &&
+                  Brewing::tippedName(tipped) == "Arrow of Healing",
+              "a tipped arrow keeps its level and is named for the brew");
+        check(std::fabs(Brewing::tippedSeconds(Brewing::tippedDamage(Kind::Slowness, 0)) - 11.25f) < 0.01f,
+              "and lasts an eighth of the drink");
+        check(Food::stewEffect(Food::stewFlower(Blocks::WitherRose)).kind == Kind::Wither,
+              "a wither rose in a stew withers");
+
+        check(isUndead(MobId::Zombie) && isUndead(MobId::Phantom) && !isUndead(MobId::Cow) && !isUndead(MobId::Creeper),
+              "the undead are the ones healing hurts");
+        {
+            Mob skeleton(MobId::WitherSkeleton, glm::vec3(0.0f, 64.0f, 0.0f), 5u);
+            skeleton.giveEffect(Kind::Wither, 0, 10.0f);
+            Mob pig(MobId::Pig, glm::vec3(0.0f, 64.0f, 0.0f), 6u);
+            pig.giveEffect(Kind::Invisibility, 0, 30.0f);
+            pig.giveEffect(Kind::Oozing, 0, 30.0f);
+            check(!skeleton.effects().has(Kind::Wither), "a wither skeleton shrugs off wither");
+            check(pig.invisible() && pig.effects().has(Kind::Oozing), "and anything else carries what it is given");
+        }
+
+        check(Raids::waveCount(1) == 3 && Raids::waveCount(2) == 5 && Raids::waveCount(3) == 7, "a raid has three, five or seven waves");
+        bool firstWave = true;
+        for (uint32_t seed = 0; seed < 64; ++seed)
+        {
+            const std::vector<MobId> party = Raids::party(1, 5, 2, false, seed);
+            const int pillagers = static_cast<int>(std::count(party.begin(), party.end(), MobId::Pillager));
+            firstWave = firstWave && pillagers >= 4 && pillagers <= 5 &&
+                        std::count(party.begin(), party.end(), MobId::Ravager) == 0 &&
+                        std::count(party.begin(), party.end(), MobId::Evoker) == 0;
+        }
+        check(firstWave, "the first wave is four or five pillagers and a vindicator at most");
+        const std::vector<MobId> third = Raids::party(3, 5, 2, false, 7u);
+        check(std::count(third.begin(), third.end(), MobId::Ravager) == 1, "the third brings a ravager");
+        const std::vector<MobId> bonus = Raids::party(6, 5, 2, true, 7u);
+        check(std::count(bonus.begin(), bonus.end(), MobId::Evoker) == 1, "and a bonus wave is the last wave again");
+        check(Raids::heroPrice(10, 0) == 7 && Raids::heroPrice(1, 0) == 1 && Raids::heroPrice(32, 4) == 15,
+              "a hero pays less, never nothing");
+        Raids::Raid raid = Raids::begin(glm::vec3(0.0f), 2, 2);
+        check(raid.groups() == 6, "an omen above the first adds a wave");
+        Raids::addOmen(raid, 9);
+        check(raid.omenLevel == Raids::MAX_OMEN, "and the omen tops out at five");
+        check(Raids::barName(raid, 2) == "Raid - Raiders Remaining: 2" && Raids::barName(raid, 5) == "Raid", "the bar counts down the last two");
+        raid.status = Raids::Status::Victory;
+        check(Raids::barName(raid, 0) == "Raid - Victory", "and says how it went");
+
+        const Chat::Command give = Chat::parse("/effect give @s minecraft:levitation 12 1", true);
+        check(give.kind == Chat::Kind::EffectGive && give.effect == static_cast<int>(Kind::Levitation) && give.amplifier == 1 &&
+                  give.seconds == 12.0f,
+              "/effect gives any of them by name");
+        check(Chat::parse("/effect clear", true).kind == Chat::Kind::EffectClear && !Chat::succeeded(Chat::parse("/effect give @s floating", true)),
+              "clears them, and refuses ones that do not exist");
+
+        int plain = 0, lucky = 0;
+        for (uint32_t seed = 0; seed < 4000; ++seed)
+        {
+            if (Fishing::roll(seed, true, false).category == Fishing::Category::Treasure) ++plain;
+            if (Fishing::roll(seed, true, false, 3).category == Fishing::Category::Treasure) ++lucky;
+        }
+        check(lucky > plain, "luck brings up more treasure");
     }
 
     void testTrimPalettes()
@@ -15436,6 +15620,7 @@ int runSelfTest()
     testSignKinds();
     testMapMarks();
     testTrimPalettes();
+    testNewEffects();
     testMadeThings();
     testTheEndAndTheSea();
     testPathfinding();

@@ -32,6 +32,8 @@ namespace Chat
         Announce,
         SetBlock,
         Summon,
+        EffectGive,
+        EffectClear,
     };
 
     struct Command
@@ -45,6 +47,9 @@ namespace Chat
         StackId item = Blocks::Air;
         int count = 1;
         int mob = -1;
+        int effect = -1;
+        int amplifier = 0;
+        float seconds = 0.0f;
     };
 
     // `cheats` decides whether anything beyond chat and /help is allowed.

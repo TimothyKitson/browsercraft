@@ -82,6 +82,9 @@ public:
         int variant = 0;
         uint32_t serial = 0;
         bool shotByMob = false;
+        bool oozing = false;
+        bool weaving = false;
+        bool windCharged = false;
     };
     std::vector<Death> drainDeaths();
 
@@ -98,6 +101,7 @@ public:
     // the time this is drained; what is left is the light, and the
     // caller is the one that knows which colour the ground makes it.
     std::vector<glm::vec3> drainFrogMeals();
+    std::vector<std::pair<glm::vec3, int>> drainInfestations();
     std::vector<glm::vec3> drainFrogSpawns();
     std::vector<glm::vec3> drainShedScutes();
     std::vector<glm::vec3> drainGrownTadpoles();
@@ -208,6 +212,7 @@ private:
     std::vector<Death> m_deaths;
     std::vector<glm::vec3> m_laidEggs;
     std::vector<glm::vec3> m_frogMeals;
+    std::vector<std::pair<glm::vec3, int>> m_infestations;
     std::vector<glm::vec3> m_frogSpawns;
     std::vector<glm::vec3> m_shedScutes;
     std::vector<glm::vec3> m_grownTadpoles;

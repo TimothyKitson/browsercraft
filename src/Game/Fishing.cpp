@@ -82,11 +82,12 @@ int Fishing::durabilityOf(StackId id)
     return itemDurability(id);
 }
 
-Fishing::Catch Fishing::roll(uint32_t seed, bool openWater, bool jungle)
+Fishing::Catch Fishing::roll(uint32_t seed, bool openWater, bool jungle, int luck)
 {
     Catch out;
     const float which = unit(seed, 1);
-    const int junk = 10, treasure = openWater ? 5 : 0, fish = 85;
+    const int junk = std::max(0, 10 - 2 * luck), treasure = openWater ? std::max(0, 5 + 2 * luck) : 0,
+              fish = std::max(0, 85 - luck);
     const float total = static_cast<float>(junk + treasure + fish);
     const Entry* entry = nullptr;
     if (which * total < static_cast<float>(fish))

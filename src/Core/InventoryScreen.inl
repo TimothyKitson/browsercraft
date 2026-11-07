@@ -302,7 +302,7 @@ namespace
         if (stack.id == Items::SplashPotion) return Brewing::fullName(Brewing::decode(stack.damage), Brewing::Form::Splash);
         if (stack.id == Items::LingeringPotion) return Brewing::fullName(Brewing::decode(stack.damage), Brewing::Form::Lingering);
         if (stack.id == Items::TippedArrow)
-            return std::string("Arrow of ") + Effects::name(static_cast<Effects::Kind>(std::clamp(stack.damage, 0, Effects::KIND_COUNT - 1)));
+            return Brewing::tippedName(stack.damage);
         if (stack.id == Items::GoatHorn)
         {
             static const char* CALLS[8] = { "Ponder", "Sing", "Seek", "Feel", "Admire", "Call", "Yearn", "Dream" };
@@ -372,8 +372,16 @@ namespace
             {
                 const float seconds = stack.id == Items::LingeringPotion ? dose.seconds * 0.25f : dose.seconds;
                 line(std::string(Effects::name(dose.kind)) + (dose.amplifier > 0 ? " " + romanLevel(dose.amplifier + 1) : "") +
-                     " (" + Brewing::durationText(seconds) + ")");
+                     (Effects::isInstant(dose.kind) ? std::string() : " (" + Brewing::durationText(seconds) + ")"));
             }
+        }
+        if (stack.id == Items::TippedArrow)
+        {
+            const Effects::Kind kind = Brewing::tippedKind(stack.damage);
+            const int amplifier = Brewing::tippedAmplifier(stack.damage);
+            const float seconds = Brewing::tippedSeconds(stack.damage);
+            line(std::string(Effects::name(kind)) + (amplifier > 0 ? " " + romanLevel(amplifier + 1) : "") +
+                 (Effects::isInstant(kind) ? std::string() : " (" + Brewing::durationText(seconds) + ")"));
         }
         if (stack.id == Items::FireworkRocket)
             for (const std::string& text : Fireworks::describeRocket(stack)) line(text);
@@ -632,7 +640,7 @@ void Application::drawItem(float x, float y, float size, StackId id, int count,
         }
         if (id == Items::TippedArrow)
         {
-            const unsigned int c = Effects::colour(static_cast<Effects::Kind>(std::clamp(damage, 0, Effects::KIND_COUNT - 1)));
+            const unsigned int c = Effects::colour(Brewing::tippedKind(damage));
             const TileUV headUV = tileUV(Tiles::ItemTippedArrowHead);
             m_ui.texturedQuad(m_atlas.textureId(), x, y, size, size, headUV.u0, headUV.vTop, headUV.u1, headUV.vBottom,
                               glm::vec4(((c >> 16) & 255u) / 255.0f, ((c >> 8) & 255u) / 255.0f, (c & 255u) / 255.0f, 1.0f) * tint);
@@ -1633,7 +1641,7 @@ void Application::renderContainerScreen(float w, float h)
         // every deal it will make down the right-hand side.
         if (m_tradeOpen && skin)
         {
-            const std::vector<Trading::Deal> deals = Trading::dealsFor(m_tradeWith);
+            const std::vector<Trading::Deal> deals = tradeDeals();
             TraderRecord& record = openTrader();
             const int rank = Trading::rankFor(record.xp);
             const float mouseX = static_cast<float>(m_input.mouseX()) / m_ui.scale();
@@ -1770,7 +1778,7 @@ void Application::renderContainerScreen(float w, float h)
         }
         else if (m_tradeOpen)
         {
-            const std::vector<Trading::Deal> deals = Trading::dealsFor(m_tradeWith);
+            const std::vector<Trading::Deal> deals = tradeDeals();
             TraderRecord& record = openTrader();
             const int rank = Trading::rankFor(record.xp);
             const float mouseX = static_cast<float>(m_input.mouseX()) / m_ui.scale();
@@ -2647,6 +2655,29 @@ void Application::renderCreativeScreen(float w, float h)
                         entries.push_back(form | (damage << 16));
                     }
         if (eggs)
+        {
+            std::vector<int> arrows;
+            for (int p = 0; p < static_cast<int>(Brewing::Potion::Count); ++p)
+                for (int variant = 0; variant < 2; ++variant)
+                {
+                    const Brewing::Brew brew{ static_cast<Brewing::Potion>(p), false, variant == 1 };
+                    if (variant == 1 && !Brewing::canStrengthen(brew.potion)) continue;
+                    const std::vector<Brewing::Dose> doses = Brewing::dosesOf(brew);
+                    if (doses.empty()) continue;
+                    const int damage = Brewing::tippedDamage(doses.front().kind, doses.front().amplifier);
+                    if (std::find(arrows.begin(), arrows.end(), damage) != arrows.end()) continue;
+                    arrows.push_back(damage);
+                    if (searchTab && !m_creativeSearch.empty())
+                    {
+                        std::string want = m_creativeSearch, name = stackName(ItemStack{ Items::TippedArrow, 1, damage });
+                        for (char& c : want) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+                        for (char& c : name) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+                        if (name.find(want) == std::string::npos) continue;
+                    }
+                    entries.push_back(static_cast<int>(Items::TippedArrow) | (damage << 16));
+                }
+        }
+        if (eggs)
             for (int variant = 0; variant < Paintings::count(); ++variant)
             {
                 if (searchTab && !m_creativeSearch.empty())
@@ -2786,8 +2817,6 @@ void Application::renderCreativeScreen(float w, float h)
 
 void Application::drawInventoryEffects(float panelRight, float panelTop, float w)
 {
-    static const char* NUMERALS[6] = { "", " II", " III", " IV", " V", " VI" };
-
     std::vector<int> running;
     for (int i = 0; i < Effects::KIND_COUNT; ++i)
         if (m_player.effects.has(static_cast<Effects::Kind>(i))) running.push_back(i);
@@ -2806,12 +2835,12 @@ void Application::drawInventoryEffects(float panelRight, float panelTop, float w
         const bool drew = wide ? guiSprite("sprites/container/inventory/effect_background_large", x, y, 120.0f, 32.0f)
                                : guiSprite("sprites/container/inventory/effect_background_small", x, y, 32.0f, 32.0f);
         if (!drew) guiPanel(x, y, wide ? 120.0f : 32.0f, 32.0f);
-        guiSprite(Effects::icon(static_cast<Effects::Kind>(i)), x + (wide ? 6.0f : 7.0f), y + 7.0f, 18.0f, 18.0f);
+        effectIcon(kind, x + (wide ? 6.0f : 7.0f), y + 7.0f, 18.0f, 1.0f);
         if (wide)
         {
-            const int amplifier = std::clamp(m_player.effects.amplifier(kind), 0, 5);
-            m_ui.textWithShadow(std::string(Effects::name(kind)) + NUMERALS[amplifier], x + 28.0f, y + 6.0f,
-                                1.0f, glm::vec4(1.0f));
+            const int amplifier = m_player.effects.amplifier(kind);
+            m_ui.textWithShadow(std::string(Effects::name(kind)) + (amplifier > 0 ? " " + Effects::levelText(amplifier) : std::string()),
+                                x + 28.0f, y + 6.0f, 1.0f, glm::vec4(1.0f));
             const int seconds = static_cast<int>(std::ceil(m_player.effects.secondsLeft(kind)));
             char clock[16];
             std::snprintf(clock, sizeof(clock), "%d:%02d", seconds / 60, seconds % 60);
@@ -3598,7 +3627,7 @@ Application::TraderRecord& Application::openTrader()
         record.profession = static_cast<int>(m_tradeWith);
         record.dimension = static_cast<int>(m_dimension);
     }
-    const size_t deals = Trading::dealsFor(m_tradeWith).size();
+    const size_t deals = tradeDeals().size();
     if (record.uses.size() != deals) record.uses.resize(deals, 0);
     return record;
 }
@@ -3608,7 +3637,7 @@ Application::TraderRecord& Application::openTrader()
 // the same deal can be struck again and again by taking the result.
 void Application::selectTrade(int deal)
 {
-    const std::vector<Trading::Deal> deals = Trading::dealsFor(m_tradeWith);
+    const std::vector<Trading::Deal> deals = tradeDeals();
     if (deal < 0 || deal >= static_cast<int>(deals.size())) return;
     m_tradeSelected = deal;
 
@@ -3658,7 +3687,7 @@ void Application::refreshTradeResult()
     result.clear();
     if (!m_tradeOpen) return;
 
-    const std::vector<Trading::Deal> deals = Trading::dealsFor(m_tradeWith);
+    const std::vector<Trading::Deal> deals = tradeDeals();
     TraderRecord& record = openTrader();
     const int rank = Trading::rankFor(record.xp);
     const ItemStack& payA = m_inventory.slot(Inventory::TRADE_PAY_A);
@@ -3711,7 +3740,7 @@ void Application::takeTradeResult(bool all)
             else cursor.count += made.count;
         }
 
-        const std::vector<Trading::Deal> deals = Trading::dealsFor(m_tradeWith);
+        const std::vector<Trading::Deal> deals = tradeDeals();
         const Trading::Deal& deal = deals[static_cast<size_t>(m_tradeSelected)];
         ItemStack& payA = m_inventory.slot(Inventory::TRADE_PAY_A);
         ItemStack& payB = m_inventory.slot(Inventory::TRADE_PAY_B);

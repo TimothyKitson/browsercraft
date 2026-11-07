@@ -37,7 +37,8 @@ namespace Arrows
                                 Trident,
                                 XpBottle,
                                 Rocket,
-                                Spit };
+                                Spit,
+                                Skull };
 
     // How far a wind charge's burst reaches, and how hard it pushes at
     // the middle of it. Pure arithmetic over two points, so --selftest

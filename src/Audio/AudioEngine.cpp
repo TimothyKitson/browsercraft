@@ -429,6 +429,13 @@ void AudioEngine::buildSounds()
     loadSingle(Sound::IllusionerCast, "mob/illusion_illager/prepare_mirror.ogg");
     loadVariants(Sound::ZoglinConvert, "mob/hoglin/converted", 2);
     loadVariants(Sound::LlamaSpit, "mob/llama/spit", 2);
+    loadVariants(Sound::WindBurst, "mob/breeze/wind_burst", 3);
+    loadVariants(Sound::RaidHorn, "event/raid/raidhorn_0", 4);
+    loadSingle(Sound::OmenBad, "event/mob_effect/bad_omen.ogg");
+    loadSingle(Sound::OmenTrial, "event/mob_effect/trial_omen.ogg");
+    loadSingle(Sound::OmenRaid, "event/mob_effect/raid_omen.ogg");
+    loadVariants(Sound::ElderCurse, "mob/guardian/curse", 1);
+    loadVariants(Sound::Shriek, "block/sculk_shrieker/shriek", 5);
 
     auto make = [&](Sound id) -> Synth {
         auto& clips = m_buffers[static_cast<size_t>(id)];
@@ -1806,6 +1813,53 @@ void AudioEngine::buildSounds()
         s.addNoise(1.2f, 700.0f, 2.0f, 0.30f, false, 965);
         s.addTone(1.2f, 160.0f, 90.0f, 2.0f, 0.26f, true);
         s.finish(0.55f);
+    }
+    {
+        Synth s = make(Sound::WindBurst);
+        s.addNoise(0.5f, 900.0f, 6.0f, 0.55f, false, 973);
+        s.addNoise(0.3f, 2400.0f, 9.0f, 0.3f, true, 974);
+        s.addTone(0.4f, 120.0f, 60.0f, 6.0f, 0.25f, true);
+        s.finish(0.55f);
+    }
+    {
+        Synth s = make(Sound::RaidHorn);
+        s.addTone(3.2f, 98.0f, 92.0f, 0.6f, 0.3f, false);
+        s.addTone(3.2f, 147.0f, 139.0f, 0.6f, 0.18f, false, 0.05f);
+        s.addTone(3.2f, 196.0f, 185.0f, 0.6f, 0.08f, false, 0.1f);
+        s.finish(0.6f);
+    }
+    {
+        Synth s = make(Sound::OmenBad);
+        s.addTone(2.0f, 110.0f, 82.0f, 1.0f, 0.28f, false);
+        s.addTone(2.0f, 165.0f, 123.0f, 1.0f, 0.14f, false, 0.2f);
+        s.addNoise(1.6f, 400.0f, 1.5f, 0.08f, false, 975);
+        s.finish(0.5f);
+    }
+    {
+        Synth s = make(Sound::OmenTrial);
+        s.addTone(2.0f, 220.0f, 330.0f, 1.0f, 0.2f, false);
+        s.addTone(2.0f, 330.0f, 495.0f, 1.0f, 0.12f, false, 0.15f);
+        s.finish(0.5f);
+    }
+    {
+        Synth s = make(Sound::OmenRaid);
+        s.addTone(2.0f, 130.0f, 98.0f, 1.0f, 0.26f, false);
+        s.addTone(2.0f, 196.0f, 147.0f, 1.0f, 0.14f, false, 0.2f);
+        s.finish(0.5f);
+    }
+    {
+        Synth s = make(Sound::Shriek);
+        s.addTone(1.8f, 520.0f, 1240.0f, 1.2f, 0.22f, false);
+        s.addTone(1.8f, 780.0f, 1660.0f, 1.2f, 0.12f, false, 0.06f);
+        s.addNoise(1.6f, 3200.0f, 1.8f, 0.16f, true, 977);
+        s.finish(0.55f);
+    }
+    {
+        Synth s = make(Sound::ElderCurse);
+        s.addTone(1.6f, 440.0f, 220.0f, 1.5f, 0.22f, false);
+        s.addTone(1.6f, 660.0f, 330.0f, 1.5f, 0.14f, false, 0.1f);
+        s.addNoise(1.4f, 1800.0f, 2.0f, 0.12f, true, 976);
+        s.finish(0.5f);
     }
     {
         Synth s = make(Sound::LlamaSpit);

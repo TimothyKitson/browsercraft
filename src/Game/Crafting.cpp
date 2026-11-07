@@ -1527,7 +1527,7 @@ namespace Crafting
         if (doses.empty()) return out;
         out.id = Items::TippedArrow;
         out.count = 8;
-        out.damage = static_cast<int>(doses.front().kind);
+        out.damage = Brewing::tippedDamage(doses.front().kind, doses.front().amplifier);
         return out;
     }
 

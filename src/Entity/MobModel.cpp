@@ -213,7 +213,7 @@ void MobModel::render(Shader& chunkShader, const World& world, const EntityManag
 
         for (const Mob& mob : entities.mobs())
         {
-            if (mob.typeId() != id) continue;
+            if (mob.typeId() != id || mob.invisible()) continue;
 
             // One light sample per mob, taken at its middle and nudged
             // clear of anything solid -- read inside its own body, or

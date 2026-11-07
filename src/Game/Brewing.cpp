@@ -21,15 +21,60 @@ const char* Brewing::name(Potion potion)
         case Potion::Poison:      return "Potion of Poison";
         case Potion::WaterBreathing: return "Potion of Water Breathing";
         case Potion::TurtleMaster: return "Potion of the Turtle Master";
+        case Potion::Invisibility: return "Potion of Invisibility";
+        case Potion::Healing:     return "Potion of Healing";
+        case Potion::Harming:     return "Potion of Harming";
+        case Potion::SlowFalling: return "Potion of Slow Falling";
+        case Potion::Luck:        return "Potion of Luck";
+        case Potion::WindCharged: return "Potion of Wind Charging";
+        case Potion::Weaving:     return "Potion of Weaving";
+        case Potion::Oozing:      return "Potion of Oozing";
+        case Potion::Infested:    return "Potion of Infestation";
         case Potion::Count:       break;
     }
     return "Potion";
 }
 
+int Brewing::tippedDamage(Effects::Kind kind, int amplifier)
+{
+    return (static_cast<int>(kind) & 0xFF) | (std::clamp(amplifier, 0, 255) << 8);
+}
+
+Effects::Kind Brewing::tippedKind(int damage)
+{
+    return static_cast<Effects::Kind>(std::clamp(damage & 0xFF, 0, Effects::KIND_COUNT - 1));
+}
+
+int Brewing::tippedAmplifier(int damage) { return damage < 0 ? 0 : (damage >> 8) & 0xFF; }
+
+std::string Brewing::tippedName(int damage)
+{
+    const Effects::Kind kind = tippedKind(damage);
+    for (int p = 0; p < static_cast<int>(Potion::Count); ++p)
+    {
+        const Brew brew{ static_cast<Potion>(p), false, false };
+        const std::vector<Dose> doses = dosesOf(brew);
+        if (!doses.empty() && doses.front().kind == kind) return fullName(brew, Form::Arrow);
+    }
+    return std::string("Arrow of ") + Effects::name(kind);
+}
+
+float Brewing::tippedSeconds(int damage)
+{
+    const Effects::Kind kind = tippedKind(damage);
+    if (Effects::isInstant(kind)) return Effects::INSTANT_SECONDS;
+    for (int p = 0; p < static_cast<int>(Potion::Count); ++p)
+    {
+        const std::vector<Dose> doses = dosesOf(Brew{ static_cast<Potion>(p), false, false });
+        if (!doses.empty() && doses.front().kind == kind) return doses.front().seconds * ARROW_SHARE;
+    }
+    return 11.0f;
+}
+
 Brewing::Potion Brewing::fromDamage(int damage)
 {
     const int potion = damage & 0xFF;
-    if (damage < 0 || potion >= static_cast<int>(Potion::Count)) return Potion::Water;
+    if (damage < 0 || damage >= (1 << 10) || potion >= static_cast<int>(Potion::Count)) return Potion::Water;
     return static_cast<Potion>(potion);
 }
 
@@ -55,6 +100,7 @@ bool Brewing::canExtend(Potion potion)
         case Potion::Speed: case Potion::Slowness: case Potion::Strength: case Potion::Weakness:
         case Potion::NightVision: case Potion::FireResistance: case Potion::Regeneration: case Potion::Leaping:
         case Potion::Poison: case Potion::WaterBreathing: case Potion::TurtleMaster:
+        case Potion::Invisibility: case Potion::SlowFalling:
             return true;
         default:
             return false;
@@ -67,6 +113,7 @@ bool Brewing::canStrengthen(Potion potion)
     {
         case Potion::Speed: case Potion::Slowness: case Potion::Strength: case Potion::Regeneration:
         case Potion::Leaping: case Potion::Poison: case Potion::TurtleMaster:
+        case Potion::Healing: case Potion::Harming:
             return true;
         default:
             return false;
@@ -95,6 +142,19 @@ std::vector<Brewing::Dose> Brewing::dosesOf(const Brew& brew)
         case Potion::Leaping: add(Effects::Kind::JumpBoost, 180.0f, 480.0f, 90.0f, 1); break;
         case Potion::Poison: add(Effects::Kind::Poison, 45.0f, 90.0f, 21.6f, 1); break;
         case Potion::WaterBreathing: add(Effects::Kind::WaterBreathing, 180.0f, 480.0f, 180.0f, 0); break;
+        case Potion::Invisibility: add(Effects::Kind::Invisibility, 180.0f, 480.0f, 180.0f, 0); break;
+        case Potion::Healing:
+            add(Effects::Kind::InstantHealth, Effects::INSTANT_SECONDS, Effects::INSTANT_SECONDS, Effects::INSTANT_SECONDS, 1);
+            break;
+        case Potion::Harming:
+            add(Effects::Kind::InstantDamage, Effects::INSTANT_SECONDS, Effects::INSTANT_SECONDS, Effects::INSTANT_SECONDS, 1);
+            break;
+        case Potion::SlowFalling: add(Effects::Kind::SlowFalling, 90.0f, 240.0f, 90.0f, 0); break;
+        case Potion::Luck: add(Effects::Kind::Luck, 300.0f, 300.0f, 300.0f, 0); break;
+        case Potion::WindCharged: add(Effects::Kind::WindCharged, 180.0f, 180.0f, 180.0f, 0); break;
+        case Potion::Weaving: add(Effects::Kind::Weaving, 180.0f, 180.0f, 180.0f, 0); break;
+        case Potion::Oozing: add(Effects::Kind::Oozing, 180.0f, 180.0f, 180.0f, 0); break;
+        case Potion::Infested: add(Effects::Kind::Infested, 180.0f, 180.0f, 180.0f, 0); break;
         case Potion::TurtleMaster:
             add(Effects::Kind::Slowness, 20.0f, 40.0f, 20.0f, 5);
             add(Effects::Kind::Resistance, 20.0f, 40.0f, 20.0f, 3);
@@ -169,6 +229,16 @@ bool Brewing::brewWith(const Brew& base, StackId ingredient, Brew& out)
             out.potion = Potion::Slowness;
             return true;
         }
+        if (base.potion == Potion::NightVision)
+        {
+            out.potion = Potion::Invisibility;
+            return true;
+        }
+        if (base.potion == Potion::Healing || base.potion == Potion::Poison)
+        {
+            out = Brew{ Potion::Harming, false, base.strong };
+            return true;
+        }
         return false;
     }
     if (base.extended || base.strong) return false;
@@ -227,6 +297,24 @@ bool Brewing::effectOf(Potion potion, Effects::Kind& kind, int& amplifier, float
             kind = Effects::Kind::WaterBreathing; amplifier = 0; seconds = 180.0f; return true;
         case Potion::TurtleMaster:
             kind = Effects::Kind::Resistance; amplifier = 2; seconds = 20.0f; return true;
+        case Potion::Invisibility:
+            kind = Effects::Kind::Invisibility; amplifier = 0; seconds = 180.0f; return true;
+        case Potion::Healing:
+            kind = Effects::Kind::InstantHealth; amplifier = 0; seconds = Effects::INSTANT_SECONDS; return true;
+        case Potion::Harming:
+            kind = Effects::Kind::InstantDamage; amplifier = 0; seconds = Effects::INSTANT_SECONDS; return true;
+        case Potion::SlowFalling:
+            kind = Effects::Kind::SlowFalling; amplifier = 0; seconds = 90.0f; return true;
+        case Potion::Luck:
+            kind = Effects::Kind::Luck; amplifier = 0; seconds = 300.0f; return true;
+        case Potion::WindCharged:
+            kind = Effects::Kind::WindCharged; amplifier = 0; seconds = 180.0f; return true;
+        case Potion::Weaving:
+            kind = Effects::Kind::Weaving; amplifier = 0; seconds = 180.0f; return true;
+        case Potion::Oozing:
+            kind = Effects::Kind::Oozing; amplifier = 0; seconds = 180.0f; return true;
+        case Potion::Infested:
+            kind = Effects::Kind::Infested; amplifier = 0; seconds = 180.0f; return true;
         case Potion::Mundane:
         case Potion::Thick:
 
@@ -254,7 +342,8 @@ Brewing::Potion Brewing::brew(Potion base, StackId ingredient)
         if (ingredient == Items::GlowstoneDust) return Potion::Thick;
         if (ingredient == Items::Redstone || ingredient == Items::GlisteringMelon || ingredient == Items::GhastTear ||
             ingredient == Items::RabbitFoot || ingredient == Items::BlazePowder || ingredient == Items::SpiderEye ||
-            ingredient == Items::Sugar || ingredient == Items::MagmaCream)
+            ingredient == Items::Sugar || ingredient == Items::MagmaCream || ingredient == Items::BreezeRod ||
+            ingredient == Blocks::SlimeBlock || ingredient == Blocks::Stone || ingredient == Blocks::Cobweb)
             return Potion::Mundane;
         if (ingredient == Items::FermentedSpiderEye) return Potion::Weakness;
         return Potion::Count;
@@ -273,6 +362,12 @@ Brewing::Potion Brewing::brew(Potion base, StackId ingredient)
         case Items::MagmaCream:    return Potion::FireResistance;
         case Items::GhastTear:     return Potion::Regeneration;
         case Items::RabbitFoot:    return Potion::Leaping;
+        case Items::GlisteringMelon: return Potion::Healing;
+        case Items::PhantomMembrane: return Potion::SlowFalling;
+        case Items::BreezeRod:     return Potion::WindCharged;
+        case Blocks::SlimeBlock:   return Potion::Oozing;
+        case Blocks::Stone:        return Potion::Infested;
+        case Blocks::Cobweb:       return Potion::Weaving;
         default:                   return Potion::Count;
     }
 }
@@ -284,5 +379,6 @@ bool Brewing::isIngredient(StackId id)
            id == Items::MagmaCream || id == Items::GhastTear || id == Items::RabbitFoot ||
            id == Items::GoldenCarrot || id == Items::SpiderEye || id == Items::Pufferfish || id == Items::TurtleHelmet ||
            id == Items::Redstone || id == Items::FermentedSpiderEye || id == Items::GlisteringMelon ||
-           id == Items::Gunpowder || id == Items::DragonsBreath;
+           id == Items::Gunpowder || id == Items::DragonsBreath || id == Items::PhantomMembrane ||
+           id == Items::BreezeRod || id == Blocks::SlimeBlock || id == Blocks::Stone || id == Blocks::Cobweb;
 }

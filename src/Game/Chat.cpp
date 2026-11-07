@@ -1,4 +1,5 @@
 #include "Chat.h"
+#include "Effects.h"
 #include "GameMode.h"
 #include "Entity/MobType.h"
 #include <cmath>
@@ -135,7 +136,7 @@ Chat::Command Chat::parse(const std::string& line, bool cheats, const glm::vec3&
     {
         out.kind = Kind::Help;
         out.text = cheats
-            ? "/gamemode /time /tp /give /kill /seed /say /setblock /summon /help"
+            ? "/gamemode /time /tp /give /kill /seed /say /setblock /summon /effect /help"
             : "/help  -  this world was made without cheats, so the rest are off";
         return out;
     }
@@ -280,6 +281,54 @@ Chat::Command Chat::parse(const std::string& line, bool cheats, const glm::vec3&
         out.mob = mob;
         out.position = at;
         out.text = std::string("Summoned a new ") + mobType(static_cast<MobId>(mob)).name + ".";
+        return out;
+    }
+
+    if (name == "effect")
+    {
+        if (!cheats) return deny(name);
+        if (words.size() < 2) return fail("/effect give <effect> [seconds] [amplifier] or /effect clear [effect]");
+        const std::string action = lower(words[1]);
+        size_t next = 2;
+        if (next < words.size() && !words[next].empty() && words[next][0] == '@')
+            ++next;
+        else if (next + 1 < words.size())
+        {
+            Effects::Kind probe;
+            if (!Effects::fromId(lower(words[next]), probe) && Effects::fromId(lower(words[next + 1]), probe)) ++next;
+        }
+        if (action == "clear")
+        {
+            out.kind = Kind::EffectClear;
+            if (next < words.size())
+            {
+                Effects::Kind kind;
+                if (!Effects::fromId(lower(words[next]), kind)) return fail("No effect called " + words[next] + ".");
+                out.effect = static_cast<int>(kind);
+                out.text = std::string("Removed ") + Effects::name(kind) + ".";
+            }
+            else
+                out.text = "Removed every effect.";
+            return out;
+        }
+        if (action != "give" || next >= words.size()) return fail("/effect give <effect> [seconds] [amplifier]");
+        Effects::Kind kind;
+        if (!Effects::fromId(lower(words[next]), kind)) return fail("No effect called " + words[next] + ".");
+        float seconds = Effects::isInstant(kind) ? Effects::INSTANT_SECONDS : 30.0f;
+        if (next + 1 < words.size())
+        {
+            if (lower(words[next + 1]) == "infinite") seconds = 1000000.0f;
+            else if (!number(words[next + 1], seconds) || seconds < 1.0f) return fail("/effect wants a number of seconds.");
+            seconds = std::min(seconds, 1000000.0f);
+        }
+        float amplifier = 0.0f;
+        if (next + 2 < words.size() && (!number(words[next + 2], amplifier) || amplifier < 0.0f || amplifier > 255.0f))
+            return fail("/effect wants an amplifier from 0 to 255.");
+        out.kind = Kind::EffectGive;
+        out.effect = static_cast<int>(kind);
+        out.amplifier = static_cast<int>(amplifier);
+        out.seconds = seconds;
+        out.text = std::string("Applied ") + Effects::name(kind) + ".";
         return out;
     }
 

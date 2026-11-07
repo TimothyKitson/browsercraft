@@ -315,6 +315,7 @@ struct MobType
     bool spits = false;
     bool shootsWind = false;
     bool shootsBullet = false;
+    bool shootsSkull = false;
     bool shootsBreath = false;
     bool laser = false;
 
@@ -407,6 +408,7 @@ constexpr float CAGE_INTERVAL = 6.0f;
 constexpr float CAGE_RANGE = 12.0f;
 
 const MobType& mobType(MobId id);
+bool isUndead(MobId id);
 int mobTypeCount();
 StackId bucketFor(MobId id);
 bool isBoatMob(MobId id);

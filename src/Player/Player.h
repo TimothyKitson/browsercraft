@@ -90,6 +90,8 @@ public:
     bool damage(int amount, bool throughArmour = false);
     bool invulnerable() const { return m_hurtCooldown > 0.0f; }
     void heal(int amount);
+    int maxHealth() const { return MAX_HEALTH + Effects::maxHealthBonus(effects); }
+    void takeEffect(Effects::Kind kind, int amplifier, float seconds, float strength = 1.0f);
     void respawn(glm::vec3 feetPosition);
 
     static constexpr int MAX_HUNGER = 20;
@@ -218,6 +220,7 @@ public:
     // owns taking the totem out of the inventory and making a noise
     // about it; damage() only knows that it was spent.
     bool takeTotemSpent() { const bool spent = m_totemSpent; m_totemSpent = false; return spent; }
+    int takeSilverfish() { const int count = m_silverfishOwed; m_silverfishOwed = 0; return count; }
     float damageFlash = 0.0f; // seconds remaining on the red hurt overlay
 
     // Start the fall again from here. A wind charge that throws you
@@ -240,6 +243,8 @@ private:
     float m_regenTimer = 0.0f;
     float m_hurtCooldown = 0.0f;
     bool m_totemSpent = false;
+    int m_silverfishOwed = 0;
+    uint32_t m_infestRoll = 0x1F5u;
     float m_exhaustion = 0.0f;
     float m_starveTimer = 0.0f;
     float m_drownTimer = 0.0f;

@@ -47,6 +47,7 @@ namespace
     constexpr float JUMP_VELOCITY = 8.6f;   // ~1.25 blocks, like Minecraft
     constexpr float SWIM_UP_VELOCITY = 3.4f;
     constexpr float TERMINAL_VELOCITY = -78.0f;
+    constexpr float SLOW_FALL_TERMINAL = -9.8f;
     constexpr float WATER_TERMINAL = -6.0f;
 
     constexpr float GROUND_ACCELERATION = 14.0f;
@@ -123,7 +124,7 @@ void Player::updateVitals(float deltaTime)
 void Player::regenerate(float deltaTime)
 {
     const bool wellFed = exempt() || hunger >= REGEN_HUNGER;
-    if (health > 0 && health < MAX_HEALTH && damageFlash <= 0.0f && wellFed)
+    if (health > 0 && health < maxHealth() && damageFlash <= 0.0f && wellFed)
     {
         m_regenTimer += deltaTime;
         if (m_regenTimer >= 4.0f)
@@ -470,6 +471,13 @@ bool Player::damage(int amount, bool throughArmour)
 
     health = std::max(0, health - amount);
 
+    if (effects.has(Effects::Kind::Infested))
+    {
+        m_infestRoll = m_infestRoll * 1664525u + 1013904223u;
+        if (static_cast<float>((m_infestRoll >> 8) % 1000u) < Effects::INFESTED_CHANCE * 1000.0f)
+            m_silverfishOwed += 1 + static_cast<int>((m_infestRoll >> 20) & 1u);
+    }
+
     // The totem: the one second chance in the game. Minecraft leaves
     // you on a single heart with regeneration running and the totem
     // gone, and that is the whole of it -- it cannot be saved for
@@ -492,7 +500,21 @@ bool Player::damage(int amount, bool throughArmour)
 
 void Player::heal(int amount)
 {
-    health = std::min(MAX_HEALTH, health + amount);
+    health = std::min(maxHealth(), health + amount);
+}
+
+void Player::takeEffect(Effects::Kind kind, int amplifier, float seconds, float strength)
+{
+    if (Effects::isInstant(kind))
+    {
+        const int amount = Effects::instantAmount(kind, amplifier, strength);
+        if (amount <= 0 || health <= 0) return;
+        if (kind == Effects::Kind::InstantHealth) heal(amount);
+        else damage(amount, true);
+        return;
+    }
+    if (exempt() && Effects::isHarmful(kind) && !Effects::isNeutral(kind)) return;
+    Effects::give(effects, kind, amplifier, seconds);
 }
 
 // Drowning ignores the half-second of mercy that follows an ordinary
@@ -508,15 +530,20 @@ bool Player::updateEffects(float deltaTime)
 
     const Effects::Tick tick = Effects::step(effects, deltaTime);
     if (!effects.has(Effects::Kind::Absorption)) absorption = 0;
+    const int healthBefore = health;
+    health = std::min(health, maxHealth());
+    if (tick.instantHeal > 0) heal(tick.instantHeal);
+    if (tick.instantHarm > 0) damage(tick.instantHarm, true);
+    for (int pulse = 0; pulse < tick.witherPulses && health > 0; ++pulse) damage(1, true);
     if (tick.exhaustion > 0.0f) addExhaustion(tick.exhaustion);
     if (tick.feedPulses > 0)
     {
         hunger = std::min(MAX_HUNGER, hunger + tick.feedPulses);
         saturation = std::min(static_cast<float>(hunger), saturation + 2.0f * static_cast<float>(tick.feedPulses));
     }
-    if (tick.healPulses == 0 && tick.poisonPulses == 0) return false;
+    if (tick.healPulses == 0 && tick.poisonPulses == 0) return health != healthBefore;
 
-    const int before = health;
+    const int before = healthBefore;
 
     if (tick.healPulses > 0) heal(tick.healPulses);
     if (tick.poisonPulses > 0 && !exempt())
@@ -614,7 +641,7 @@ void Player::update(float deltaTime, const World& world, const Controls& control
     // --- choose a target horizontal velocity ---
     float targetSpeed;
     if (flying) targetSpeed = controls.sprint ? FLY_SPRINT_SPEED : FLY_SPEED;
-    else if (inWater) targetSpeed = SWIM_SPEED;
+    else if (inWater) targetSpeed = SWIM_SPEED * Effects::swimMultiplier(effects);
     else if (sneaking) targetSpeed = SNEAK_SPEED;
     else if (sprinting) targetSpeed = SPRINT_SPEED;
     else targetSpeed = WALK_SPEED;
@@ -642,7 +669,7 @@ void Player::update(float deltaTime, const World& world, const Controls& control
             for (int by = static_cast<int>(std::floor(box.min.y)); by <= static_cast<int>(std::floor(box.max.y - 0.001f)); ++by)
                 for (int bz = static_cast<int>(std::floor(box.min.z)); bz <= static_cast<int>(std::floor(box.max.z)); ++bz)
                     if (world.getBlock(bx, by, bz) == Blocks::Cobweb) inCobweb = true;
-        if (inCobweb) targetSpeed *= 0.25f;
+        if (inCobweb) targetSpeed *= Effects::cobwebDrag(effects);
         for (int bx = static_cast<int>(std::floor(box.min.x)); bx <= static_cast<int>(std::floor(box.max.x)); ++bx)
             for (int by = static_cast<int>(std::floor(box.min.y)); by <= static_cast<int>(std::floor(box.max.y)); ++by)
                 for (int bz = static_cast<int>(std::floor(box.min.z)); bz <= static_cast<int>(std::floor(box.max.z)); ++bz)
@@ -717,7 +744,8 @@ void Player::update(float deltaTime, const World& world, const Controls& control
     }
     else if (inCobweb)
     {
-        velocity.y = controls.jumpHeld ? 0.6f : std::max(velocity.y + GRAVITY * deltaTime * 0.05f, -0.8f);
+        const float web = effects.has(Effects::Kind::Weaving) ? 5.0f : 1.0f;
+        velocity.y = controls.jumpHeld ? 0.6f * web : std::max(velocity.y + GRAVITY * deltaTime * 0.05f * web, -0.8f * web);
         m_falling = false;
     }
     else if (inPowderSnow)
@@ -740,8 +768,24 @@ void Player::update(float deltaTime, const World& world, const Controls& control
     else
     {
         const bool wasOnGround = onGround;
-        velocity.y += GRAVITY * deltaTime;
-        velocity.y = std::max(velocity.y, TERMINAL_VELOCITY);
+        const float rise = Effects::levitationSpeed(effects);
+        if (rise > 0.0f)
+        {
+            velocity.y += (rise - velocity.y) * (1.0f - std::pow(0.8f, deltaTime * 20.0f));
+            m_falling = false;
+            m_fallStartY = position.y;
+        }
+        else if (Effects::fallsSlowly(effects) && velocity.y <= 0.0f)
+        {
+            velocity.y = std::max(velocity.y + GRAVITY * 0.125f * deltaTime, SLOW_FALL_TERMINAL);
+            m_falling = false;
+            m_fallStartY = position.y;
+        }
+        else
+        {
+            velocity.y += GRAVITY * deltaTime;
+            velocity.y = std::max(velocity.y, TERMINAL_VELOCITY);
+        }
 
         // Held rather than pressed, so holding the key bunny-hops the way
         // Minecraft does instead of jumping once and stopping.

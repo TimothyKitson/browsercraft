@@ -526,7 +526,7 @@ void Mob::chooseNewGoal(const glm::vec3& playerPosition)
 
     // Yaw is degrees about +y with 0 looking down +x, matching the
     // camera, so a heading is atan2(z, x).
-    if (hostileNow() && distance < NOTICE_RANGE && distance > 0.001f)
+    if (hostileNow() && distance < NOTICE_RANGE * noticeScale() && distance > 0.001f)
     {
         m_goalYaw = glm::degrees(std::atan2(toPlayer.z, toPlayer.x));
         m_moving = true;
@@ -752,6 +752,21 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
             if (m_health > 1 && !type().burnsInSunlight) damage(1, glm::vec3(0.0f));
         }
     }
+    if (m_effects.any())
+    {
+        const Effects::Tick fx = Effects::step(m_effects, deltaTime);
+        if (alive())
+        {
+            const bool undead = isUndead(m_type);
+            const int mend = undead ? fx.instantHarm : fx.instantHeal;
+            const int hurt = undead ? fx.instantHeal : fx.instantHarm;
+            if (mend > 0) heal(mend);
+            if (hurt > 0) damage(hurt, glm::vec3(0.0f));
+            if (fx.healPulses > 0) heal(fx.healPulses);
+            if (fx.witherPulses > 0 && m_type != MobId::Wither && m_type != MobId::WitherSkeleton)
+                damage(fx.witherPulses, glm::vec3(0.0f));
+        }
+    }
     if (m_ridden)
     {
         // Ridden: it goes where it is pointed and nowhere else. No
@@ -877,7 +892,15 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
                           hoverAboveGround(world, deltaTime);
     if (onRail) m_velocity.y = 0.0f;
     else if (!afloat && !hovering)
-        m_velocity.y = verticalStep(m_velocity.y, m_position.y, 0.0f, false, deltaTime);
+    {
+        const float rise = Effects::levitationSpeed(m_effects);
+        if (rise > 0.0f)
+            m_velocity.y += (rise - m_velocity.y) * (1.0f - std::pow(0.8f, deltaTime * 20.0f));
+        else if (Effects::fallsSlowly(m_effects) && m_velocity.y <= 0.0f)
+            m_velocity.y = std::max(m_velocity.y + GRAVITY * 0.125f * deltaTime, -9.8f);
+        else
+            m_velocity.y = verticalStep(m_velocity.y, m_position.y, 0.0f, false, deltaTime);
+    }
 
     const bool wasOnGround = m_onGround;
     m_onGround = false;
@@ -946,6 +969,26 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
             MobStrike strike;
             strike.damage = t.attackDamage;
             strike.from = m_position;
+            if (m_type == MobId::WitherSkeleton)
+            {
+                strike.effect = static_cast<int>(Effects::Kind::Wither);
+                strike.effectSeconds = 10.0f;
+            }
+            else if (m_type == MobId::Husk)
+            {
+                strike.effect = static_cast<int>(Effects::Kind::Hunger);
+                strike.effectSeconds = 7.0f;
+            }
+            else if (m_type == MobId::CaveSpider)
+            {
+                strike.effect = static_cast<int>(Effects::Kind::Poison);
+                strike.effectSeconds = 7.0f;
+            }
+            else if (m_type == MobId::Bee)
+            {
+                strike.effect = static_cast<int>(Effects::Kind::Poison);
+                strike.effectSeconds = 10.0f;
+            }
             m_strikes.push_back(strike);
             m_attackTimer = t.attackInterval;
         }
@@ -1005,7 +1048,7 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
         const glm::vec3 eye = m_position + glm::vec3(0.0f, height() * 0.85f, 0.0f);
         const glm::vec3 aim = playerPosition + glm::vec3(0.0f, 0.9f, 0.0f);
         const glm::vec3 toPlayer = aim - eye;
-        const float range = glm::length(toPlayer);
+        const float range = glm::length(toPlayer) / noticeScale();
 
         if (t.laser)
         {
@@ -1053,7 +1096,7 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
             // rather than always falling short. A fire charge does not
             // drop, so it is aimed straight at what it is thrown at.
             const glm::vec3 flat = glm::normalize(toPlayer);
-            const bool charge = t.shootsFire || t.shootsWind || t.shootsBullet || t.shootsBreath;
+            const bool charge = t.shootsFire || t.shootsWind || t.shootsBullet || t.shootsBreath || t.shootsSkull;
             const float lift = charge ? 0.0f
                                       : std::clamp(range * 0.018f, 0.0f, 0.35f);
             const glm::vec3 heading = glm::normalize(flat + glm::vec3(0.0f, lift, 0.0f));
@@ -1062,10 +1105,12 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
             shot.from = eye + heading * 0.5f;
             shot.velocity = heading * (t.shootsBullet ? 7.0f : charge ? 16.0f : 28.0f);
             shot.damage = t.arrowDamage;
+            if (t.throwsPotions) shot.effect = range >= 8.0f ? 1 : range <= 3.0f ? 2 : 0;
             shot.kind = t.shootsFire ? Arrows::Kind::Fire
                       : t.shootsWind ? Arrows::Kind::Wind
                       : t.shootsBullet ? Arrows::Kind::Bullet
                       : t.shootsBreath ? Arrows::Kind::Breath
+                      : t.shootsSkull ? Arrows::Kind::Skull
                       : t.throwsPotions ? Arrows::Kind::Potion
                       : t.spits ? Arrows::Kind::Spit
                                      : Arrows::Kind::Shaft;
@@ -1212,6 +1257,8 @@ void Mob::damage(int amount, const glm::vec3& fromDirection)
     m_health = std::max(0, m_health - amount);
     m_hurtFlash = 0.35f;
     if (m_type == MobId::GlowSquid) m_darkTime = 5.0f;
+    if (m_effects.has(Effects::Kind::Infested) && random01() <= Effects::INFESTED_CHANCE)
+        m_silverfish += random01() < 0.5f ? 1 : 2;
     if (illusioned() && m_mirrorCollapse <= 0.0f)
     {
         for (int j = 0; j < 4; ++j)
@@ -1260,3 +1307,20 @@ void Mob::heal(int amount)
     if (amount <= 0 || m_health <= 0) return;
     m_health = std::min(m_health + amount, mobType(m_type).maxHealth);
 }
+
+void Mob::giveEffect(Effects::Kind kind, int amplifier, float seconds)
+{
+    if (!alive()) return;
+    if ((kind == Effects::Kind::Wither && (m_type == MobId::Wither || m_type == MobId::WitherSkeleton)) ||
+        ((kind == Effects::Kind::Poison || kind == Effects::Kind::Regeneration) && isUndead(m_type)))
+        return;
+    Effects::give(m_effects, kind, amplifier, seconds);
+}
+
+namespace
+{
+    float g_noticeScale = 1.0f;
+}
+
+void Mob::setNoticeScale(float scale) { g_noticeScale = std::clamp(scale, 0.05f, 1.0f); }
+float Mob::noticeScale() { return g_noticeScale; }
