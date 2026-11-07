@@ -75,6 +75,8 @@ public:
     // bird was standing, not where it has wandered to by the time
     // anybody asks.
     std::vector<glm::vec3> drainLaidEggs();
+    std::vector<glm::vec3> drainTurtleNests();
+    std::vector<glm::vec3> drainGrownTurtles();
 
     // Where a frog has just eaten a magma cube. The cube is gone by
     // the time this is drained; what is left is the light, and the
@@ -105,7 +107,7 @@ public:
     bool spawnAt(MobId type, glm::vec3 feetPosition, const World& world, bool baby = false);
     void clear()
     {
-        m_mobs.clear(); m_deaths.clear(); m_births.clear(); m_laidEggs.clear();
+        m_mobs.clear(); m_deaths.clear(); m_births.clear(); m_laidEggs.clear(); m_turtleNests.clear(); m_grownTurtles.clear();
         m_frogMeals.clear();
     }
 
@@ -177,6 +179,8 @@ private:
     std::vector<glm::vec3> m_laidEggs;
     std::vector<glm::vec3> m_frogMeals;
     std::vector<glm::vec3> m_births;
+    std::vector<glm::vec3> m_turtleNests;
+    std::vector<glm::vec3> m_grownTurtles;
     void pairOffLovers(const World& world);
 
     // Villagers pair off on their own, counted against the village's

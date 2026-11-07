@@ -788,6 +788,74 @@ namespace
             const glm::vec3 c[4] = { glm::vec3(x0, yy, z1), glm::vec3(x1, yy, z1), glm::vec3(x1, yy, z0), glm::vec3(x0, yy, z0) };
             pushQuad(snap, lx, y, lz, id, c, tile, x0 * 16.0f, z0 * 16.0f, x1 * 16.0f, z1 * 16.0f, shade, true, out);
         };
+        if (isAnyCoralFan(id))
+        {
+            const int tile = blockInfo(id).tileSide;
+            const float reach = 0.85f, lift = 0.383f, spread = 0.924f;
+            static const int DX[4] = { 1, -1, 0, 0 };
+            static const int DZ[4] = { 0, 0, 1, -1 };
+            const glm::vec3 hinge(0.5f, 0.01f, 0.5f);
+            for (int k = 0; k < 4; ++k)
+            {
+                const glm::vec3 d(static_cast<float>(DX[k]), 0.0f, static_cast<float>(DZ[k]));
+                const glm::vec3 side(-d.z * 0.5f, 0.0f, d.x * 0.5f);
+                const glm::vec3 tip = hinge + d * (spread * reach) + glm::vec3(0.0f, lift * reach, 0.0f);
+                const glm::vec3 c[4] = { hinge - side, hinge + side, tip + side, tip - side };
+                pushQuad(snap, lx, y, lz, id, c, tile, 0.0f, 0.0f, 16.0f, 16.0f, 0.9f, true, out);
+            }
+            return;
+        }
+        if (isAnyCoralWallFan(id))
+        {
+            const int tile = blockInfo(id).tileSide;
+            const int f = coralWallFanFacing(id);
+            auto turn = [f](glm::vec3 p) {
+                switch (f)
+                {
+                    case 1: return glm::vec3(1.0f - p.z, p.y, p.x);
+                    case 2: return glm::vec3(1.0f - p.x, p.y, 1.0f - p.z);
+                    case 3: return glm::vec3(p.z, p.y, 1.0f - p.x);
+                    default: return p;
+                }
+            };
+            const float reach = 0.875f;
+            for (int k = 0; k < 2; ++k)
+            {
+                const float tilt = (k == 0 ? 0.383f : -0.383f) * reach;
+                const glm::vec3 h0(0.0f, 0.5f, 0.9375f), h1(1.0f, 0.5f, 0.9375f);
+                const glm::vec3 t0 = h0 + glm::vec3(0.0f, tilt, -0.924f * reach), t1 = h1 + glm::vec3(0.0f, tilt, -0.924f * reach);
+                const glm::vec3 c[4] = { turn(h0), turn(h1), turn(t1), turn(t0) };
+                pushQuad(snap, lx, y, lz, id, c, tile, 0.0f, 0.0f, 16.0f, 16.0f, 0.9f, true, out);
+            }
+            return;
+        }
+        if (id == Blocks::Conduit)
+        {
+            const PartFace shell{ Tiles::ConduitTile, 2.0f, 2.0f, 14.0f, 14.0f };
+            const PartFace faces[6] = { shell, shell, shell, shell, shell, shell };
+            emitPart(snap, lx, y, lz, id, glm::vec3(5.0f) / 16.0f, glm::vec3(11.0f) / 16.0f, faces, out);
+            return;
+        }
+        if (isTurtleEgg(id))
+        {
+            struct Egg { float x0, y1, z0, x1, z1; float tu0, tv0, tu1, tv1, su0, sv0, su1, sv1; };
+            static const Egg EGGS[4] = {
+                { 5, 7, 4, 9, 8, 0, 0, 4, 4, 1, 4, 5, 11 },
+                { 1, 5, 7, 5, 11, 6, 7, 10, 11, 10, 10, 14, 15 },
+                { 11, 4, 7, 14, 10, 5, 0, 8, 3, 8, 3, 11, 7 },
+                { 6, 4, 9, 10, 13, 0, 11, 4, 15, 4, 11, 8, 15 },
+            };
+            const int tile = blockInfo(id).tileSide;
+            for (int e = 0; e < turtleEggCount(id); ++e)
+            {
+                const Egg& g = EGGS[e];
+                const PartFace side{ tile, g.su0, g.sv0, g.su1, g.sv1 };
+                const PartFace top{ tile, g.tu0, g.tv0, g.tu1, g.tv1 };
+                const PartFace faces[6] = { side, side, top, top, side, side };
+                emitPart(snap, lx, y, lz, id, glm::vec3(g.x0, 0.0f, g.z0) / 16.0f, glm::vec3(g.x1, g.y1, g.z1) / 16.0f, faces, out);
+            }
+            return;
+        }
         if (isAttachedStem(id))
         {
             static const int DX[4] = { 0, 1, 0, -1 };

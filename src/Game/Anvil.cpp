@@ -80,6 +80,7 @@ StackId Anvil::repairMaterial(StackId item)
         case Tools::Tier::None:    break;
     }
 
+    if (item == Items::TurtleHelmet) return Items::TurtleScute;
     switch (Armour::tierOf(item))
     {
         case Armour::Tier::Leather: return Items::Leather;
@@ -96,7 +97,7 @@ int Anvil::maxDurability(StackId item)
 {
     if (item == Items::Shield) return Shield::MAX_DURABILITY;
     if (Tools::isTool(item)) return Tools::maxDurability(Tools::tierOf(item));
-    if (Armour::tierOf(item) != Armour::Tier::None) return Armour::maxDurability(item);
+    if (Armour::tierOf(item) != Armour::Tier::None || item == Items::TurtleHelmet) return Armour::maxDurability(item);
     return 0;
 }
 

@@ -3885,15 +3885,31 @@ void WorldGen::dressSeabed(Chunk& chunk) const
                     put(chunk, wx, floorY + 1 + k, wz, CORALS[which]);
 
                 const float crown = hashToFloat(hashCoords(wx, 4, wz, m_seed + 7704));
-                if (crown < 0.55f)
+                if (crown < 0.35f)
                     put(chunk, wx, floorY + 1 + room, wz, FANS[which]);
+                else if (crown < 0.55f)
+                    put(chunk, wx, floorY + 1 + room, wz, static_cast<BlockId>(Blocks::CoralFanFirst + which));
                 else if (crown < 0.68f)
                     put(chunk, wx, floorY + 1 + room, wz, Blocks::SeaPickle);
+
+                static const int SIDE[4][2] = { { 0, -1 }, { 1, 0 }, { 0, 1 }, { -1, 0 } };
+                const int side = static_cast<int>(hashCoords(wx, 8, wz, m_seed + 7708) % 4u);
+                const int fx = wx + SIDE[side][0] - chunk.position().x * Chunk::SX;
+                const int fz = wz + SIDE[side][1] - chunk.position().z * Chunk::SZ;
+                const int fanY = floorY + room;
+                if (hashToFloat(hashCoords(wx, 9, wz, m_seed + 7709)) < 0.4f && Chunk::inBounds(fx, fanY, fz) &&
+                    isWater(chunk.getBlock(fx, fanY, fz)))
+                    chunk.setBlockRaw(fx, fanY, fz, coralWallFanOf(false, which, side));
                 continue;
             }
 
             // And seagrass, which is most of what is down there.
-            if (roll < 0.26f)
+            if (roll < 0.03f && depth >= 3)
+            {
+                put(chunk, wx, floorY + 1, wz, Blocks::TallSeagrassLower);
+                put(chunk, wx, floorY + 2, wz, Blocks::TallSeagrassUpper);
+            }
+            else if (roll < 0.26f)
                 put(chunk, wx, floorY + 1, wz, Blocks::Seagrass);
         }
 }

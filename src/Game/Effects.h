@@ -35,6 +35,7 @@ namespace Effects
         BadOmen,
         Haste,
         Resistance,
+        ConduitPower,
 
         Count
     };

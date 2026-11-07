@@ -444,6 +444,11 @@ namespace
 
         { true, 0, 0, { Items::MelonSlice }, 1, Items::MelonSeeds, 1 },
         { true, 0, 0, { Blocks::Pumpkin }, 1, Items::PumpkinSeeds, 4 },
+        { false, 3, 3, { Items::NautilusShell, Items::NautilusShell, Items::NautilusShell,
+                         Items::NautilusShell, Items::HeartOfTheSea, Items::NautilusShell,
+                         Items::NautilusShell, Items::NautilusShell, Items::NautilusShell }, 0, Blocks::Conduit, 1 },
+        { false, 3, 2, { Items::TurtleScute, Items::TurtleScute, Items::TurtleScute,
+                         Items::TurtleScute, Blocks::Air, Items::TurtleScute }, 0, Items::TurtleHelmet, 1 },
         { false, 1, 2, { Blocks::CarvedPumpkinFirst + 2, Blocks::Torch }, 0, Blocks::JackOLanternFirst + 2, 1 },
         { false, 2, 2, { Blocks::Air, Items::IronIngot, Items::IronIngot, Blocks::Air }, 0, Items::Shears, 1 },
         { false, 3, 3, { Items::Wheat, Items::Wheat, Items::Wheat, Items::Wheat, Items::Wheat, Items::Wheat,

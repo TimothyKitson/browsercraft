@@ -340,6 +340,7 @@ bool Mob::feed(StackId food)
     if (baby())
     {
         m_babyTimer = std::max(0.0f, m_babyTimer - BABY_SECONDS * 0.1f);
+        if (m_babyTimer <= 0.0f) m_grewUp = true;
         return true;
     }
 
@@ -379,6 +380,13 @@ bool Mob::takeDeathReport()
 {
     if (alive() || m_deathReported) return false;
     m_deathReported = true;
+    return true;
+}
+
+bool Mob::takeGrowthReport()
+{
+    if (!m_grewUp) return false;
+    m_grewUp = false;
     return true;
 }
 
@@ -597,7 +605,11 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
     if (m_breedTimer > 0.0f) m_breedTimer = std::max(0.0f, m_breedTimer - deltaTime);
     if (m_huntTimer > 0.0f) m_huntTimer = std::max(0.0f, m_huntTimer - deltaTime);
     if (m_biteTimer > 0.0f) m_biteTimer = std::max(0.0f, m_biteTimer - deltaTime);
-    if (m_babyTimer > 0.0f) m_babyTimer = std::max(0.0f, m_babyTimer - deltaTime);
+    if (m_babyTimer > 0.0f)
+    {
+        m_babyTimer = std::max(0.0f, m_babyTimer - deltaTime);
+        if (m_babyTimer <= 0.0f) m_grewUp = true;
+    }
     if (m_holdTimer > 0.0f) m_holdTimer = std::max(0.0f, m_holdTimer - deltaTime);
     m_age += deltaTime;
     m_lastRange = glm::length(playerPosition - m_position);

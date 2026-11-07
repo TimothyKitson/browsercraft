@@ -214,7 +214,15 @@ bool Farming::canGrowAt(const World& world, const glm::ivec3& at)
     return light >= LIGHT_TO_GROW;
 }
 
-void Farming::grow(World& world, const glm::vec3& around, uint32_t& seed)
+bool Farming::coralIsWet(const World& world, int x, int y, int z)
+{
+    static const int AROUND[6][3] = { { 1, 0, 0 }, { -1, 0, 0 }, { 0, 1, 0 }, { 0, -1, 0 }, { 0, 0, 1 }, { 0, 0, -1 } };
+    for (const auto& d : AROUND)
+        if (isWater(world.getBlock(x + d[0], y + d[1], z + d[2]))) return true;
+    return false;
+}
+
+void Farming::grow(World& world, const glm::vec3& around, uint32_t& seed, std::vector<glm::ivec3>* hatched)
 {
     const int centreX = static_cast<int>(std::floor(around.x));
     const int centreY = static_cast<int>(std::floor(around.y));
@@ -241,6 +249,28 @@ void Farming::grow(World& world, const glm::vec3& around, uint32_t& seed)
             if (Cane::canGrowAt(around, x, y, z))
                 world.setBlock(x, y + 1, z, Blocks::SugarCane);
             continue;
+        }
+
+        {
+            const BlockId reef = world.getBlock(x, y, z);
+            if (isLivingCoral(reef))
+            {
+                if (!coralIsWet(world, x, y, z)) world.setBlock(x, y, z, deadCoralOf(reef));
+                continue;
+            }
+            if (isTurtleEgg(reef))
+            {
+                if (world.getBlock(x, y - 1, z) != Blocks::Sand || nextRandom(seed) % 3u != 0u) continue;
+                if (turtleEggHatch(reef) < 2)
+                    world.setBlock(x, y, z, turtleEggOf(turtleEggCount(reef), turtleEggHatch(reef) + 1));
+                else
+                {
+                    world.setBlock(x, y, z, Blocks::Air);
+                    if (hatched)
+                        for (int k = 0; k < turtleEggCount(reef); ++k) hatched->push_back(glm::ivec3(x, y, z));
+                }
+                continue;
+            }
         }
 
         // Cocoa, which ripens where it hangs. Three stages rather

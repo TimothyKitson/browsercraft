@@ -556,6 +556,7 @@ void EntityManager::update(float deltaTime, const World& world,
             m_deaths.push_back(Death{ mob.typeId(), mob.position(), mob.baby() });
 
         if (mob.takeEggReport()) m_laidEggs.push_back(mob.position());
+        if (mob.takeGrowthReport() && mob.typeId() == MobId::Turtle) m_grownTurtles.push_back(mob.position());
     }
 
     // A frog eats a magma cube it can reach. This is the whole reason
@@ -895,6 +896,12 @@ void EntityManager::pairOffLovers(const World& world)
             m_mobs[a].onBred();
             m_mobs[b].onBred();
 
+            if (m_mobs[a].typeId() == MobId::Turtle)
+            {
+                m_turtleNests.push_back(between);
+                break;
+            }
+
             if (static_cast<int>(m_mobs.size()) < MAX_MOBS &&
                 fits(world, mobType(m_mobs[a].typeId()), between))
             {
@@ -930,6 +937,20 @@ std::vector<EntityManager::Death> EntityManager::drainDeaths()
 {
     std::vector<Death> all;
     all.swap(m_deaths);
+    return all;
+}
+
+std::vector<glm::vec3> EntityManager::drainTurtleNests()
+{
+    std::vector<glm::vec3> all;
+    all.swap(m_turtleNests);
+    return all;
+}
+
+std::vector<glm::vec3> EntityManager::drainGrownTurtles()
+{
+    std::vector<glm::vec3> all;
+    all.swap(m_grownTurtles);
     return all;
 }
 

@@ -2387,7 +2387,7 @@ namespace
             // rather than hanging in the water the way a fish does.
             t.aquatic = true;
 
-            t.breedingFood = Items::WheatSeeds;
+            t.breedingFood = Blocks::Seagrass;
 
             t.drop = Blocks::Seagrass;
             t.dropCount = 1;

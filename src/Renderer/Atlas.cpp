@@ -5096,6 +5096,120 @@ namespace
         t.fill(Color{ 0, 0, 0, 0 });
         for (int y = 2; y < 14; ++y) for (int x = 6; x < 10; ++x) t.set(x + (y % 4 == 0 ? 1 : 0), y, Color{ 60, 68, 40 });
     }
+    void paintTallSeagrassIn(Tile& t, bool top)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int blade = 0; blade < 5; ++blade)
+        {
+            const int x = 2 + blade * 3;
+            const int from = top ? 3 + static_cast<int>(hash2(blade, 0, 1701) * 6.0f) : 0;
+            for (int y = from; y < Tile::N; ++y)
+            {
+                const int sway = static_cast<int>(std::sin((y + blade * 5) * 0.5f) * 1.2f);
+                const Color leaf = shade(Color{ 52, 128, 60 }, static_cast<int>((hash2(blade, y, 1702) - 0.5f) * 30.0f));
+                t.set(x + sway, y, leaf);
+                if (y % 3 == 0) t.set(x + sway + 1, y, shade(leaf, -16));
+            }
+        }
+    }
+    void paintTallSeagrassTopTile(Tile& t) { paintTallSeagrassIn(t, true); }
+    void paintTallSeagrassBottomTile(Tile& t) { paintTallSeagrassIn(t, false); }
+    const Color CORAL_LIVE[5] = { Color{ 58, 104, 224 }, Color{ 220, 110, 170 }, Color{ 186, 40, 184 },
+                                  Color{ 192, 44, 52 }, Color{ 232, 216, 96 } };
+    Color deadCoral(int kind)
+    {
+        const Color c = CORAL_LIVE[kind];
+        const int grey = (c.r + c.g + c.b) / 3;
+        return Color{ static_cast<uint8_t>((grey * 3 + 128) / 4), static_cast<uint8_t>((grey * 3 + 122) / 4),
+                      static_cast<uint8_t>((grey * 3 + 116) / 4) };
+    }
+    void paintCoralFanShapeIn(Tile& t, Color body, int salt)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int ray = 0; ray < 9; ++ray)
+        {
+            const float angle = 3.14159f * (0.12f + 0.76f * static_cast<float>(ray) / 8.0f);
+            const int reach = 6 + static_cast<int>(hash2(ray, 0, salt) * 3.0f);
+            for (int k = 0; k <= reach; ++k)
+            {
+                const int x = 8 + static_cast<int>(std::cos(angle) * k);
+                const int y = 15 - static_cast<int>(std::sin(angle) * k);
+                t.set(x, y, k > reach - 2 ? shade(body, 22) : body);
+            }
+        }
+        t.set(8, 15, shade(body, -30)); t.set(7, 15, shade(body, -30));
+    }
+    void paintConduitTile(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 2; y < 14; ++y)
+            for (int x = 2; x < 14; ++x)
+            {
+                const float dx = x - 7.5f, dy = y - 7.5f;
+                const float swirl = std::atan2(dy, dx) * 2.0f + std::sqrt(dx * dx + dy * dy) * 0.9f;
+                t.set(x, y, std::sin(swirl) > 0.2f ? Color{ 196, 170, 132 } : Color{ 150, 116, 84 });
+            }
+        for (int k = 2; k < 14; ++k)
+        {
+            t.set(k, 2, Color{ 120, 92, 66 }); t.set(k, 13, Color{ 120, 92, 66 });
+            t.set(2, k, Color{ 120, 92, 66 }); t.set(13, k, Color{ 120, 92, 66 });
+        }
+    }
+    void paintTurtleEggIn(Tile& t, int cracks)
+    {
+        t.fill(Color{ 230, 226, 196 });
+        for (int y = 0; y < Tile::N; ++y)
+            for (int x = 0; x < Tile::N; ++x)
+                if (hash2(x, y, 1703) > 0.8f) t.set(x, y, Color{ 92, 150, 84 });
+        for (int c = 0; c < cracks * 3; ++c)
+        {
+            int x = static_cast<int>(hash2(c, 0, 1704) * 15.0f), y = static_cast<int>(hash2(c, 1, 1704) * 15.0f);
+            for (int k = 0; k < 3; ++k) t.set((x + k) % Tile::N, (y + (k & 1)) % Tile::N, Color{ 70, 60, 48 });
+        }
+    }
+    void paintTurtleEggTile(Tile& t) { paintTurtleEggIn(t, 0); }
+    void paintTurtleEggSlightlyCrackedTile(Tile& t) { paintTurtleEggIn(t, 1); }
+    void paintTurtleEggVeryCrackedTile(Tile& t) { paintTurtleEggIn(t, 3); }
+    void paintItemNautilusShell(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 2; y < 14; ++y)
+            for (int x = 2; x < 14; ++x)
+            {
+                const float dx = x - 7.5f, dy = y - 7.5f, r = std::sqrt(dx * dx + dy * dy);
+                if (r > 6.0f) continue;
+                const float spiral = std::atan2(dy, dx) + r * 1.1f;
+                t.set(x, y, std::sin(spiral * 2.0f) > 0.0f ? Color{ 236, 222, 196 } : Color{ 176, 112, 72 });
+            }
+    }
+    void paintItemHeartOfTheSea(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 3; y < 13; ++y)
+            for (int x = 3; x < 13; ++x)
+            {
+                const float dx = x - 7.5f, dy = y - 7.5f, r = std::sqrt(dx * dx + dy * dy);
+                if (r > 5.0f) continue;
+                t.set(x, y, r < 2.0f ? Color{ 140, 240, 250 } : r < 3.6f ? Color{ 40, 150, 210 } : Color{ 20, 70, 130 });
+            }
+    }
+    void paintItemTurtleScute(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 4; y < 12; ++y)
+            for (int x = 3 + (y > 9 ? 2 : 0); x < 13 - (y > 9 ? 2 : 0); ++x)
+                t.set(x, y, ((x + y) % 4 == 0) ? Color{ 46, 110, 40 } : Color{ 70, 150, 60 });
+    }
+    void paintItemTurtleHelmet(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 3; y < 13; ++y)
+            for (int x = 2; x < 14; ++x)
+            {
+                if (y > 8 && x > 4 && x < 11) continue;
+                t.set(x, y, ((x / 3 + y / 3) % 2) ? Color{ 60, 136, 52 } : Color{ 44, 104, 40 });
+            }
+    }
     void paintItemPitcherPlant(Tile& t)
     {
         paintDoubleIn(t, true, Color{ 100, 170, 190 }, 1333);
@@ -7675,6 +7789,10 @@ namespace
         { Tiles::ItemRawGold, paintItemRawGold },
         { Tiles::ItemAmethystShard, paintItemAmethystShard },
         { Tiles::ItemTripwireHook, paintItemTripwireHook },
+        { Tiles::ItemNautilusShell, paintItemNautilusShell },
+        { Tiles::ItemHeartOfTheSea, paintItemHeartOfTheSea },
+        { Tiles::ItemTurtleScute, paintItemTurtleScute },
+        { Tiles::ItemTurtleHelmet, paintItemTurtleHelmet },
         { Tiles::ItemPumpkinSeeds, paintItemPumpkinSeeds },
         { Tiles::ItemShears, paintItemShears },
         { Tiles::ItemHoneyBottle, paintItemHoneyBottle },
@@ -7850,6 +7968,12 @@ namespace
         { Tiles::DustLine1Off, paintRedstoneDust },
         { Tiles::DustLine1On, paintRedstoneDustLit },
         { Tiles::LeverHandle, paintLever },
+        { Tiles::TallSeagrassTopTile, paintTallSeagrassTopTile },
+        { Tiles::TallSeagrassBottomTile, paintTallSeagrassBottomTile },
+        { Tiles::ConduitTile, paintConduitTile },
+        { Tiles::TurtleEggTile, paintTurtleEggTile },
+        { Tiles::TurtleEggSlightlyCrackedTile, paintTurtleEggSlightlyCrackedTile },
+        { Tiles::TurtleEggVeryCrackedTile, paintTurtleEggVeryCrackedTile },
         { Tiles::PumpkinStemYoungTile, paintPumpkinStemYoungTile },
         { Tiles::PumpkinStemRipeTile, paintPumpkinStemRipeTile },
         { Tiles::AttachedMelonStemTile, paintAttachedMelonStemTile },
@@ -8420,6 +8544,10 @@ namespace
         { Tiles::ItemRawGold, { "raw_gold", nullptr, nullptr } },
         { Tiles::ItemAmethystShard, { "amethyst_shard", nullptr, nullptr } },
         { Tiles::ItemTripwireHook, { "../block/tripwire_hook", nullptr, nullptr } },
+        { Tiles::ItemNautilusShell, { "nautilus_shell", nullptr, nullptr } },
+        { Tiles::ItemHeartOfTheSea, { "heart_of_the_sea", nullptr, nullptr } },
+        { Tiles::ItemTurtleScute, { "turtle_scute", nullptr, nullptr } },
+        { Tiles::ItemTurtleHelmet, { "turtle_helmet", nullptr, nullptr } },
         { Tiles::ItemPumpkinSeeds, { "pumpkin_seeds", nullptr, nullptr } },
         { Tiles::ItemShears, { "shears", nullptr, nullptr } },
         { Tiles::ItemHoneyBottle, { "honey_bottle", nullptr, nullptr } },
@@ -8591,6 +8719,32 @@ namespace
         { Tiles::GlassPaneTopTile, { "glass_pane_top", nullptr }, Tinting::None, 0, false },
         { Tiles::TerracottaPlainTile, { "terracotta", "hardened_clay", nullptr }, Tinting::None, 0, false },
         { Tiles::TintedGlassTile, { "tinted_glass", nullptr }, Tinting::None, 0, false },
+        { Tiles::TallSeagrassTopTile, { "tall_seagrass_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::TallSeagrassBottomTile, { "tall_seagrass_bottom", nullptr }, Tinting::None, 0, false },
+        { Tiles::ConduitTile, { "conduit", nullptr }, Tinting::None, 0, false },
+        { Tiles::TurtleEggTile, { "turtle_egg", nullptr }, Tinting::None, 0, false },
+        { Tiles::TurtleEggSlightlyCrackedTile, { "turtle_egg_slightly_cracked", nullptr }, Tinting::None, 0, false },
+        { Tiles::TurtleEggVeryCrackedTile, { "turtle_egg_very_cracked", nullptr }, Tinting::None, 0, false },
+        { Tiles::CoralFanTileFirst + 0, { "tube_coral_fan", nullptr }, Tinting::None, 0, false },
+        { Tiles::DeadCoralBlockTileFirst + 0, { "dead_tube_coral_block", nullptr }, Tinting::None, 0, false },
+        { Tiles::DeadCoralTileFirst + 0, { "dead_tube_coral", nullptr }, Tinting::None, 0, false },
+        { Tiles::DeadCoralFanTileFirst + 0, { "dead_tube_coral_fan", nullptr }, Tinting::None, 0, false },
+        { Tiles::CoralFanTileFirst + 1, { "brain_coral_fan", nullptr }, Tinting::None, 0, false },
+        { Tiles::DeadCoralBlockTileFirst + 1, { "dead_brain_coral_block", nullptr }, Tinting::None, 0, false },
+        { Tiles::DeadCoralTileFirst + 1, { "dead_brain_coral", nullptr }, Tinting::None, 0, false },
+        { Tiles::DeadCoralFanTileFirst + 1, { "dead_brain_coral_fan", nullptr }, Tinting::None, 0, false },
+        { Tiles::CoralFanTileFirst + 2, { "bubble_coral_fan", nullptr }, Tinting::None, 0, false },
+        { Tiles::DeadCoralBlockTileFirst + 2, { "dead_bubble_coral_block", nullptr }, Tinting::None, 0, false },
+        { Tiles::DeadCoralTileFirst + 2, { "dead_bubble_coral", nullptr }, Tinting::None, 0, false },
+        { Tiles::DeadCoralFanTileFirst + 2, { "dead_bubble_coral_fan", nullptr }, Tinting::None, 0, false },
+        { Tiles::CoralFanTileFirst + 3, { "fire_coral_fan", nullptr }, Tinting::None, 0, false },
+        { Tiles::DeadCoralBlockTileFirst + 3, { "dead_fire_coral_block", nullptr }, Tinting::None, 0, false },
+        { Tiles::DeadCoralTileFirst + 3, { "dead_fire_coral", nullptr }, Tinting::None, 0, false },
+        { Tiles::DeadCoralFanTileFirst + 3, { "dead_fire_coral_fan", nullptr }, Tinting::None, 0, false },
+        { Tiles::CoralFanTileFirst + 4, { "horn_coral_fan", nullptr }, Tinting::None, 0, false },
+        { Tiles::DeadCoralBlockTileFirst + 4, { "dead_horn_coral_block", nullptr }, Tinting::None, 0, false },
+        { Tiles::DeadCoralTileFirst + 4, { "dead_horn_coral", nullptr }, Tinting::None, 0, false },
+        { Tiles::DeadCoralFanTileFirst + 4, { "dead_horn_coral_fan", nullptr }, Tinting::None, 0, false },
         { Tiles::PumpkinStemYoungTile, { "pumpkin_stem", nullptr }, Tinting::StemYoung, 0, false },
         { Tiles::PumpkinStemRipeTile, { "pumpkin_stem", nullptr }, Tinting::StemRipe, 0, false },
         { Tiles::AttachedMelonStemTile, { "attached_melon_stem", nullptr }, Tinting::StemRipe, 0, false },
@@ -9552,6 +9706,18 @@ Atlas::Atlas()
         paintSweetBerryIn(bush, stage);
         blitPainted(Tiles::SweetBerryBushTile + stage, bush);
     }
+    for (int kind = 0; kind < 5; ++kind)
+    {
+        Tile fan, deadBlock, deadPlant, deadFan;
+        paintCoralFanShapeIn(fan, CORAL_LIVE[kind], 1710 + kind);
+        paintCoralBlockIn(deadBlock, deadCoral(kind), 1720 + kind);
+        paintCoralFanIn(deadPlant, deadCoral(kind), 1730 + kind);
+        paintCoralFanShapeIn(deadFan, deadCoral(kind), 1740 + kind);
+        blitPainted(Tiles::CoralFanTileFirst + kind, fan);
+        blitPainted(Tiles::DeadCoralBlockTileFirst + kind, deadBlock);
+        blitPainted(Tiles::DeadCoralTileFirst + kind, deadPlant);
+        blitPainted(Tiles::DeadCoralFanTileFirst + kind, deadFan);
+    }
     for (int stage = 0; stage < 4; ++stage)
     {
         Tile cut, chiseled, grate, top, bottom, trap, icon;
@@ -10451,6 +10617,7 @@ bool Atlas::hasPainter(int tileIndex)
     if (tileIndex >= Tiles::ItemBedFirst && tileIndex <= Tiles::ItemBedLast) return true;
     if (tileIndex >= Tiles::ChestTileFirst && tileIndex <= Tiles::ChestTileLast) return true;
     if (tileIndex >= Tiles::SweetBerryBushTile && tileIndex <= Tiles::SweetBerryBushTileLast) return true;
+    if (tileIndex >= Tiles::CoralFanTileFirst && tileIndex <= Tiles::DeadCoralFanTileLast) return true;
     if (tileIndex >= Tiles::CutCopperTile && tileIndex <= Tiles::CopperTrapdoorTileLast) return true;
     if (tileIndex >= Tiles::ItemCopperDoorFirst && tileIndex <= Tiles::ItemCopperDoorLast) return true;
     if (tileIndex >= Tiles::CrackFirst &&

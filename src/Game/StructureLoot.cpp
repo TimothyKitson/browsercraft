@@ -271,7 +271,7 @@ StructureLoot::Stack StructureLoot::centrepiece(WorldGen::Hoard hoard,
         case WorldGen::Hoard::PillagerOutpost: out.id = Items::Arrow;     out.count = 8; break;
         case WorldGen::Hoard::WoodlandMansion: out.id = Items::Emerald;   out.count = 4; break;
         case WorldGen::Hoard::Shipwreck:       out.id = Items::Emerald;   out.count = 2; break;
-        case WorldGen::Hoard::BuriedTreasure:  out.id = Items::Diamond;   out.count = 2; break;
+        case WorldGen::Hoard::BuriedTreasure:  out.id = Items::HeartOfTheSea; out.count = 1; break;
         case WorldGen::Hoard::Monument:        out.id = Items::GoldIngot; out.count = 8; break;
         case WorldGen::Hoard::Mineshaft:       out.id = Blocks::RailEastWest; out.count = 6; break;
         case WorldGen::Hoard::Stronghold:      out.id = Items::Book;      out.count = 2; break;

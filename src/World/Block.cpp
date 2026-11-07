@@ -1922,6 +1922,81 @@ namespace
         { "Beehive", BeehiveEndTile, BeehiveEndTile, BeehiveSideTile, true, true, RenderType::Cube, 0, 0.6f, BeehiveFrontHoneyTile },
         { "Honey Block", HoneyTopTile, HoneyBottomTile, HoneySideTile, true, false, RenderType::Cube, 0, 0.0f },
         { "Honeycomb Block", HoneycombBlockTile, HoneycombBlockTile, HoneycombBlockTile, true, true, RenderType::Cube, 0, 0.6f },
+        { "Tall Seagrass", TallSeagrassBottomTile, TallSeagrassBottomTile, TallSeagrassBottomTile, false, false, RenderType::Cross, 0, 0.0f },
+        { "Tall Seagrass", TallSeagrassTopTile, TallSeagrassTopTile, TallSeagrassTopTile, false, false, RenderType::Cross, 0, 0.0f },
+        { "Tube Coral Fan", CoralFanTileFirst + 0, CoralFanTileFirst + 0, CoralFanTileFirst + 0, false, false, RenderType::Lush, 0, 0.0f },
+        { "Brain Coral Fan", CoralFanTileFirst + 1, CoralFanTileFirst + 1, CoralFanTileFirst + 1, false, false, RenderType::Lush, 0, 0.0f },
+        { "Bubble Coral Fan", CoralFanTileFirst + 2, CoralFanTileFirst + 2, CoralFanTileFirst + 2, false, false, RenderType::Lush, 0, 0.0f },
+        { "Fire Coral Fan", CoralFanTileFirst + 3, CoralFanTileFirst + 3, CoralFanTileFirst + 3, false, false, RenderType::Lush, 0, 0.0f },
+        { "Horn Coral Fan", CoralFanTileFirst + 4, CoralFanTileFirst + 4, CoralFanTileFirst + 4, false, false, RenderType::Lush, 0, 0.0f },
+        { "Tube Coral Wall Fan", CoralFanTileFirst + 0, CoralFanTileFirst + 0, CoralFanTileFirst + 0, false, false, RenderType::Lush, 0, 0.0f },
+        { "Tube Coral Wall Fan", CoralFanTileFirst + 0, CoralFanTileFirst + 0, CoralFanTileFirst + 0, false, false, RenderType::Lush, 0, 0.0f },
+        { "Tube Coral Wall Fan", CoralFanTileFirst + 0, CoralFanTileFirst + 0, CoralFanTileFirst + 0, false, false, RenderType::Lush, 0, 0.0f },
+        { "Tube Coral Wall Fan", CoralFanTileFirst + 0, CoralFanTileFirst + 0, CoralFanTileFirst + 0, false, false, RenderType::Lush, 0, 0.0f },
+        { "Brain Coral Wall Fan", CoralFanTileFirst + 1, CoralFanTileFirst + 1, CoralFanTileFirst + 1, false, false, RenderType::Lush, 0, 0.0f },
+        { "Brain Coral Wall Fan", CoralFanTileFirst + 1, CoralFanTileFirst + 1, CoralFanTileFirst + 1, false, false, RenderType::Lush, 0, 0.0f },
+        { "Brain Coral Wall Fan", CoralFanTileFirst + 1, CoralFanTileFirst + 1, CoralFanTileFirst + 1, false, false, RenderType::Lush, 0, 0.0f },
+        { "Brain Coral Wall Fan", CoralFanTileFirst + 1, CoralFanTileFirst + 1, CoralFanTileFirst + 1, false, false, RenderType::Lush, 0, 0.0f },
+        { "Bubble Coral Wall Fan", CoralFanTileFirst + 2, CoralFanTileFirst + 2, CoralFanTileFirst + 2, false, false, RenderType::Lush, 0, 0.0f },
+        { "Bubble Coral Wall Fan", CoralFanTileFirst + 2, CoralFanTileFirst + 2, CoralFanTileFirst + 2, false, false, RenderType::Lush, 0, 0.0f },
+        { "Bubble Coral Wall Fan", CoralFanTileFirst + 2, CoralFanTileFirst + 2, CoralFanTileFirst + 2, false, false, RenderType::Lush, 0, 0.0f },
+        { "Bubble Coral Wall Fan", CoralFanTileFirst + 2, CoralFanTileFirst + 2, CoralFanTileFirst + 2, false, false, RenderType::Lush, 0, 0.0f },
+        { "Fire Coral Wall Fan", CoralFanTileFirst + 3, CoralFanTileFirst + 3, CoralFanTileFirst + 3, false, false, RenderType::Lush, 0, 0.0f },
+        { "Fire Coral Wall Fan", CoralFanTileFirst + 3, CoralFanTileFirst + 3, CoralFanTileFirst + 3, false, false, RenderType::Lush, 0, 0.0f },
+        { "Fire Coral Wall Fan", CoralFanTileFirst + 3, CoralFanTileFirst + 3, CoralFanTileFirst + 3, false, false, RenderType::Lush, 0, 0.0f },
+        { "Fire Coral Wall Fan", CoralFanTileFirst + 3, CoralFanTileFirst + 3, CoralFanTileFirst + 3, false, false, RenderType::Lush, 0, 0.0f },
+        { "Horn Coral Wall Fan", CoralFanTileFirst + 4, CoralFanTileFirst + 4, CoralFanTileFirst + 4, false, false, RenderType::Lush, 0, 0.0f },
+        { "Horn Coral Wall Fan", CoralFanTileFirst + 4, CoralFanTileFirst + 4, CoralFanTileFirst + 4, false, false, RenderType::Lush, 0, 0.0f },
+        { "Horn Coral Wall Fan", CoralFanTileFirst + 4, CoralFanTileFirst + 4, CoralFanTileFirst + 4, false, false, RenderType::Lush, 0, 0.0f },
+        { "Horn Coral Wall Fan", CoralFanTileFirst + 4, CoralFanTileFirst + 4, CoralFanTileFirst + 4, false, false, RenderType::Lush, 0, 0.0f },
+        { "Dead Tube Coral Block", DeadCoralBlockTileFirst + 0, DeadCoralBlockTileFirst + 0, DeadCoralBlockTileFirst + 0, true, true, RenderType::Cube, 0, 1.5f },
+        { "Dead Brain Coral Block", DeadCoralBlockTileFirst + 1, DeadCoralBlockTileFirst + 1, DeadCoralBlockTileFirst + 1, true, true, RenderType::Cube, 0, 1.5f },
+        { "Dead Bubble Coral Block", DeadCoralBlockTileFirst + 2, DeadCoralBlockTileFirst + 2, DeadCoralBlockTileFirst + 2, true, true, RenderType::Cube, 0, 1.5f },
+        { "Dead Fire Coral Block", DeadCoralBlockTileFirst + 3, DeadCoralBlockTileFirst + 3, DeadCoralBlockTileFirst + 3, true, true, RenderType::Cube, 0, 1.5f },
+        { "Dead Horn Coral Block", DeadCoralBlockTileFirst + 4, DeadCoralBlockTileFirst + 4, DeadCoralBlockTileFirst + 4, true, true, RenderType::Cube, 0, 1.5f },
+        { "Dead Tube Coral", DeadCoralTileFirst + 0, DeadCoralTileFirst + 0, DeadCoralTileFirst + 0, false, false, RenderType::Cross, 0, 0.0f },
+        { "Dead Brain Coral", DeadCoralTileFirst + 1, DeadCoralTileFirst + 1, DeadCoralTileFirst + 1, false, false, RenderType::Cross, 0, 0.0f },
+        { "Dead Bubble Coral", DeadCoralTileFirst + 2, DeadCoralTileFirst + 2, DeadCoralTileFirst + 2, false, false, RenderType::Cross, 0, 0.0f },
+        { "Dead Fire Coral", DeadCoralTileFirst + 3, DeadCoralTileFirst + 3, DeadCoralTileFirst + 3, false, false, RenderType::Cross, 0, 0.0f },
+        { "Dead Horn Coral", DeadCoralTileFirst + 4, DeadCoralTileFirst + 4, DeadCoralTileFirst + 4, false, false, RenderType::Cross, 0, 0.0f },
+        { "Dead Tube Coral Fan", DeadCoralFanTileFirst + 0, DeadCoralFanTileFirst + 0, DeadCoralFanTileFirst + 0, false, false, RenderType::Lush, 0, 0.0f },
+        { "Dead Brain Coral Fan", DeadCoralFanTileFirst + 1, DeadCoralFanTileFirst + 1, DeadCoralFanTileFirst + 1, false, false, RenderType::Lush, 0, 0.0f },
+        { "Dead Bubble Coral Fan", DeadCoralFanTileFirst + 2, DeadCoralFanTileFirst + 2, DeadCoralFanTileFirst + 2, false, false, RenderType::Lush, 0, 0.0f },
+        { "Dead Fire Coral Fan", DeadCoralFanTileFirst + 3, DeadCoralFanTileFirst + 3, DeadCoralFanTileFirst + 3, false, false, RenderType::Lush, 0, 0.0f },
+        { "Dead Horn Coral Fan", DeadCoralFanTileFirst + 4, DeadCoralFanTileFirst + 4, DeadCoralFanTileFirst + 4, false, false, RenderType::Lush, 0, 0.0f },
+        { "Dead Tube Coral Wall Fan", DeadCoralFanTileFirst + 0, DeadCoralFanTileFirst + 0, DeadCoralFanTileFirst + 0, false, false, RenderType::Lush, 0, 0.0f },
+        { "Dead Tube Coral Wall Fan", DeadCoralFanTileFirst + 0, DeadCoralFanTileFirst + 0, DeadCoralFanTileFirst + 0, false, false, RenderType::Lush, 0, 0.0f },
+        { "Dead Tube Coral Wall Fan", DeadCoralFanTileFirst + 0, DeadCoralFanTileFirst + 0, DeadCoralFanTileFirst + 0, false, false, RenderType::Lush, 0, 0.0f },
+        { "Dead Tube Coral Wall Fan", DeadCoralFanTileFirst + 0, DeadCoralFanTileFirst + 0, DeadCoralFanTileFirst + 0, false, false, RenderType::Lush, 0, 0.0f },
+        { "Dead Brain Coral Wall Fan", DeadCoralFanTileFirst + 1, DeadCoralFanTileFirst + 1, DeadCoralFanTileFirst + 1, false, false, RenderType::Lush, 0, 0.0f },
+        { "Dead Brain Coral Wall Fan", DeadCoralFanTileFirst + 1, DeadCoralFanTileFirst + 1, DeadCoralFanTileFirst + 1, false, false, RenderType::Lush, 0, 0.0f },
+        { "Dead Brain Coral Wall Fan", DeadCoralFanTileFirst + 1, DeadCoralFanTileFirst + 1, DeadCoralFanTileFirst + 1, false, false, RenderType::Lush, 0, 0.0f },
+        { "Dead Brain Coral Wall Fan", DeadCoralFanTileFirst + 1, DeadCoralFanTileFirst + 1, DeadCoralFanTileFirst + 1, false, false, RenderType::Lush, 0, 0.0f },
+        { "Dead Bubble Coral Wall Fan", DeadCoralFanTileFirst + 2, DeadCoralFanTileFirst + 2, DeadCoralFanTileFirst + 2, false, false, RenderType::Lush, 0, 0.0f },
+        { "Dead Bubble Coral Wall Fan", DeadCoralFanTileFirst + 2, DeadCoralFanTileFirst + 2, DeadCoralFanTileFirst + 2, false, false, RenderType::Lush, 0, 0.0f },
+        { "Dead Bubble Coral Wall Fan", DeadCoralFanTileFirst + 2, DeadCoralFanTileFirst + 2, DeadCoralFanTileFirst + 2, false, false, RenderType::Lush, 0, 0.0f },
+        { "Dead Bubble Coral Wall Fan", DeadCoralFanTileFirst + 2, DeadCoralFanTileFirst + 2, DeadCoralFanTileFirst + 2, false, false, RenderType::Lush, 0, 0.0f },
+        { "Dead Fire Coral Wall Fan", DeadCoralFanTileFirst + 3, DeadCoralFanTileFirst + 3, DeadCoralFanTileFirst + 3, false, false, RenderType::Lush, 0, 0.0f },
+        { "Dead Fire Coral Wall Fan", DeadCoralFanTileFirst + 3, DeadCoralFanTileFirst + 3, DeadCoralFanTileFirst + 3, false, false, RenderType::Lush, 0, 0.0f },
+        { "Dead Fire Coral Wall Fan", DeadCoralFanTileFirst + 3, DeadCoralFanTileFirst + 3, DeadCoralFanTileFirst + 3, false, false, RenderType::Lush, 0, 0.0f },
+        { "Dead Fire Coral Wall Fan", DeadCoralFanTileFirst + 3, DeadCoralFanTileFirst + 3, DeadCoralFanTileFirst + 3, false, false, RenderType::Lush, 0, 0.0f },
+        { "Dead Horn Coral Wall Fan", DeadCoralFanTileFirst + 4, DeadCoralFanTileFirst + 4, DeadCoralFanTileFirst + 4, false, false, RenderType::Lush, 0, 0.0f },
+        { "Dead Horn Coral Wall Fan", DeadCoralFanTileFirst + 4, DeadCoralFanTileFirst + 4, DeadCoralFanTileFirst + 4, false, false, RenderType::Lush, 0, 0.0f },
+        { "Dead Horn Coral Wall Fan", DeadCoralFanTileFirst + 4, DeadCoralFanTileFirst + 4, DeadCoralFanTileFirst + 4, false, false, RenderType::Lush, 0, 0.0f },
+        { "Dead Horn Coral Wall Fan", DeadCoralFanTileFirst + 4, DeadCoralFanTileFirst + 4, DeadCoralFanTileFirst + 4, false, false, RenderType::Lush, 0, 0.0f },
+        { "Conduit", ConduitTile, ConduitTile, ConduitTile, true, false, RenderType::Lush, 15, 3.0f },
+        { "Turtle Egg", TurtleEggTile, TurtleEggTile, TurtleEggTile, true, false, RenderType::Lush, 0, 0.5f },
+        { "Turtle Egg", TurtleEggSlightlyCrackedTile, TurtleEggSlightlyCrackedTile, TurtleEggSlightlyCrackedTile, true, false, RenderType::Lush, 0, 0.5f },
+        { "Turtle Egg", TurtleEggVeryCrackedTile, TurtleEggVeryCrackedTile, TurtleEggVeryCrackedTile, true, false, RenderType::Lush, 0, 0.5f },
+        { "Turtle Egg", TurtleEggTile, TurtleEggTile, TurtleEggTile, true, false, RenderType::Lush, 0, 0.5f },
+        { "Turtle Egg", TurtleEggSlightlyCrackedTile, TurtleEggSlightlyCrackedTile, TurtleEggSlightlyCrackedTile, true, false, RenderType::Lush, 0, 0.5f },
+        { "Turtle Egg", TurtleEggVeryCrackedTile, TurtleEggVeryCrackedTile, TurtleEggVeryCrackedTile, true, false, RenderType::Lush, 0, 0.5f },
+        { "Turtle Egg", TurtleEggTile, TurtleEggTile, TurtleEggTile, true, false, RenderType::Lush, 0, 0.5f },
+        { "Turtle Egg", TurtleEggSlightlyCrackedTile, TurtleEggSlightlyCrackedTile, TurtleEggSlightlyCrackedTile, true, false, RenderType::Lush, 0, 0.5f },
+        { "Turtle Egg", TurtleEggVeryCrackedTile, TurtleEggVeryCrackedTile, TurtleEggVeryCrackedTile, true, false, RenderType::Lush, 0, 0.5f },
+        { "Turtle Egg", TurtleEggTile, TurtleEggTile, TurtleEggTile, true, false, RenderType::Lush, 0, 0.5f },
+        { "Turtle Egg", TurtleEggSlightlyCrackedTile, TurtleEggSlightlyCrackedTile, TurtleEggSlightlyCrackedTile, true, false, RenderType::Lush, 0, 0.5f },
+        { "Turtle Egg", TurtleEggVeryCrackedTile, TurtleEggVeryCrackedTile, TurtleEggVeryCrackedTile, true, false, RenderType::Lush, 0, 0.5f },
     };
 }
 
@@ -2004,6 +2079,9 @@ bool isObtainable(BlockId id)
             if (isCarvedPumpkin(id) && id != Blocks::CarvedPumpkinFirst + 2) return false;
             if (isJackOLantern(id) && id != Blocks::JackOLanternFirst + 2) return false;
             if (isHive(id) && id != hiveOf(isBeeNest(id), 2, 0)) return false;
+            if (id == Blocks::TallSeagrassUpper) return false;
+            if (isAnyCoralWallFan(id)) return false;
+            if (isTurtleEgg(id) && id != turtleEggOf(1, 0)) return false;
             if (isBigDripleaf(id) && id != bigDripleafOf(0, DripleafTilt::None)) return false;
             if (isSmallDripleaf(id) && id != smallDripleafOf(0, false)) return false;
             if (isGlowLichen(id) && id != glowLichenOn(0)) return false;
@@ -2056,6 +2134,9 @@ const char* blockSoundGroup(BlockId id)
     if (isPumpkinStem(id) || isAttachedStem(id) || isSweetBerryBush(id) || id == Blocks::HayBale || id == Blocks::DriedKelpBlock) return "grass";
     if (isCarvedPumpkin(id) || isJackOLantern(id) || isHive(id)) return "wood";
     if (id == Blocks::HoneyBlock || id == Blocks::HoneycombBlock) return "cloth";
+    if (isTallSeagrass(id)) return "grass";
+    if (isLivingCoral(id) || isDeadCoralBlock(id) || isDeadCoralPlant(id) || isAnyCoralFan(id) || isAnyCoralWallFan(id)) return "stone";
+    if (id == Blocks::Conduit || isTurtleEgg(id)) return "stone";
     if (isEarthy(id)) return "gravel";
     if (isFlowerPot(id)) return "stone";
     if (isDoor(id) || isTrapdoor(id)) return "wood";
@@ -2215,6 +2296,8 @@ Material blockMaterial(BlockId id)
     if (isPumpkinStem(id) || isAttachedStem(id) || isSweetBerryBush(id)) return Material::Plant;
     if (id == Blocks::HayBale || id == Blocks::DriedKelpBlock) return Material::Plant;
     if (isCarvedPumpkin(id) || isJackOLantern(id) || isHive(id)) return Material::Wood;
+    if (id == Blocks::Conduit) return Material::Glass;
+    if (isTurtleEgg(id)) return Material::Plant;
     if (id == Blocks::HoneyBlock || id == Blocks::HoneycombBlock) return Material::Wool;
     if (isEarthy(id)) return Material::Dirt;
     if (isFlowerPot(id)) return Material::Plant;
@@ -2376,6 +2459,10 @@ bool blockOverlaps(BlockId id, int bx, int by, int bz,
     if (isColourBed(id)) return overlaps(0.0f, 0.0f, 0.0f, 1.0f, 0.5625f, 1.0f);
     if (isFlowerPot(id)) return overlaps(0.3125f, 0.0f, 0.3125f, 0.6875f, 0.375f, 0.6875f);
     if (id == Blocks::HoneyBlock) return overlaps(0.0625f, 0.0f, 0.0625f, 0.9375f, 0.9375f, 0.9375f);
+    if (id == Blocks::Conduit) return overlaps(0.3125f, 0.3125f, 0.3125f, 0.6875f, 0.6875f, 0.6875f);
+    if (isTurtleEgg(id))
+        return turtleEggCount(id) == 1 ? overlaps(0.1875f, 0.0f, 0.1875f, 0.75f, 0.4375f, 0.75f)
+                                       : overlaps(0.0625f, 0.0f, 0.0625f, 0.9375f, 0.4375f, 0.9375f);
     if (isBigDripleaf(id))
         return dripleafTilt(id) != DripleafTilt::Full && overlaps(0.0f, 0.6875f, 0.0f, 1.0f, 0.9375f, 1.0f);
     if (isAzaleaBush(id)) return overlaps(0.0f, 0.5f, 0.0f, 1.0f, 1.0f, 1.0f) || overlaps(0.375f, 0.0f, 0.375f, 0.625f, 0.5f, 0.625f);

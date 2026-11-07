@@ -803,6 +803,10 @@ namespace
                                                   why = "a pumpkin carved with shears, or set down facing another way";
             else if (isHive(id))                  why = "another facing, or honey building up; nests grow on plains and forest trees";
             else if (isSweetBerryBush(id))        why = "sweet berries planted and growing";
+            else if (isDeadCoralPlant(id) || isDeadCoralFan(id) || isDeadCoralWallFan(id))
+                                                  why = "living coral that dried out out of the water";
+            else if (isTurtleEgg(id))             why = "laid on sand by turtles fed seagrass, then cracking";
+            else if (isAnyCoralWallFan(id))       why = "a coral fan set against another face";
             else if (isBigDripleaf(id) || isBigDripleafStem(id) || isSmallDripleaf(id))
                                                   why = "another facing, tilt or half of a dripleaf";
             else if (isGlowLichen(id))            why = "glow lichen on another face";
@@ -961,6 +965,10 @@ namespace
                 byHand = "the sign recipe in that wood's planks";
             else if (i == static_cast<int>(Items::TorchflowerSeeds) || i == static_cast<int>(Items::PitcherPod))
                 byHand = "dug up by a sniffer (the sniffer arrives with item 62)";
+            else if (i == static_cast<int>(Items::NautilusShell))
+                byHand = "dropped by a drowned now and then";
+            else if (i == static_cast<int>(Items::TurtleScute))
+                byHand = "shed by a baby turtle as it grows up";
 
             if (byHand)
             {
@@ -988,6 +996,8 @@ namespace
         haveItem.insert(static_cast<int>(Items::PitcherPod));
         haveItem.insert(static_cast<int>(Blocks::WitherRose));
         haveItem.insert(static_cast<int>(Blocks::CarvedPumpkinFirst + 2));
+        haveItem.insert(static_cast<int>(Items::NautilusShell));
+        haveItem.insert(static_cast<int>(Items::TurtleScute));
         haveItem.insert(static_cast<int>(Blocks::Torchflower));
         haveItem.insert(static_cast<int>(doublePlantOf(DoublePlant::PitcherPlant, false)));
         for (int stage = 1; stage < 4; ++stage)

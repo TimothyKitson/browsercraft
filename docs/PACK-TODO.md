@@ -160,10 +160,11 @@ Everything in the 1.21 textures zip the game doesn't use yet, turned into work. 
     - III. Hay bale, sweet berry bush, dried kelp block, bone block.
     - IV. Bee nest and beehive with honey levels. Honey bottle, honey block and honeycomb block.
     - Notes: ripe melon and pumpkin stems now bend toward the fruit they grew and straighten when it is taken. Shears arrived early as an item: they carve pumpkins and collect honeycomb, but do not wear out or shear sheep until item 49. Dried kelp came in ahead of item 51 so the kelp block has something to be made from. Sweet berry bushes grow in snowy ground and on podzol, sting and slow you, and berries plant them. Bee nests hang under plains and forest trees; honey builds while bees are within 16 blocks, but bees do not fly into hives yet. Honey blocks slow you; they do not stick to walls or move with pistons yet.
-41. Ocean
+41. Ocean (done)
     - I. Tall seagrass, coral fans and wall fans, dead corals and coral blocks.
     - II. The conduit and conduit power.
     - III. Turtle eggs that hatch, and the turtle helmet.
+    - Notes: coral dies to its grey form when no water touches it; coral blocks break into dead blocks, and fans and plants need silk touch. Bone meal turns seagrass tall, and reefs now grow fans on their tops and sides. A conduit framed by at least sixteen prismarine or sea lantern blocks gives conduit power (water breathing and faster digging) in water or rain, and with the full 42 it strikes hostile mobs nearby; it is drawn as its shell only, without the turning cage and eye. Nautilus shells come from drowned and buried treasure always holds a heart of the sea. Turtles fed seagrass lay eggs on nearby sand, which crack and hatch there and can be trampled; a baby turtle sheds a scute when it grows up, and five scutes make the turtle shell, which gives water breathing on entering water.
 42. Ice and snow
     - I. Packed ice, blue ice, and frosted ice that melts in stages.
     - II. Powder snow: you sink into it, the outline overlay shows, freezing hearts, and the powder snow bucket.

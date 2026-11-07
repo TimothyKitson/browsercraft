@@ -217,6 +217,10 @@ namespace
         { "Honey Bottle",         Tiles::ItemHoneyBottle,       16 },
         { "Sweet Berries",        Tiles::ItemSweetBerries,      64 },
         { "Dried Kelp",           Tiles::ItemDriedKelp,         64 },
+        { "Nautilus Shell",       Tiles::ItemNautilusShell,     64 },
+        { "Heart of the Sea",     Tiles::ItemHeartOfTheSea,     64 },
+        { "Turtle Scute",         Tiles::ItemTurtleScute,       64 },
+        { "Turtle Shell",         Tiles::ItemTurtleHelmet,      1 },
     };
 
     static_assert(sizeof(ITEMS) / sizeof(ITEMS[0]) ==
@@ -382,6 +386,9 @@ StackId blockDrop(BlockId id)
     if (isBeehive(id)) return hiveOf(false, 2, 0);
     if (isBeeNest(id)) return Blocks::Air;
     if (isSweetBerryBush(id)) return Items::SweetBerries;
+    if (isCoralBlock(id)) return static_cast<StackId>(Blocks::DeadCoralBlockFirst + coralKind(id));
+    if (isLiveCoralPlant(id) || isDeadCoralPlant(id) || isAnyCoralFan(id) || isAnyCoralWallFan(id)) return Blocks::Air;
+    if (isTallSeagrass(id) || isTurtleEgg(id)) return Blocks::Air;
 
     // A melon comes apart into slices rather than into a melon, which
     // is Minecraft's and is what makes one worth planting.

@@ -189,6 +189,7 @@ public:
     static constexpr float WITHER_SPAWN_SECONDS = 11.0f;
     static constexpr float WITHER_SPAWN_BLAST = 7.0f;
     bool takeEggReport();
+    bool takeGrowthReport();
 
     // --- breeding ---
     //
@@ -471,6 +472,7 @@ private:
     float m_removeTimer = 0.6f;
     bool m_deathReported = false;
     float m_eggTimer = EGG_SECONDS;
+    bool m_grewUp = false;
     bool m_eggReady = false;
     float m_peek = 0.0f;
     float m_age = 0.0f;

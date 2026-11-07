@@ -313,6 +313,10 @@ namespace Items
         HoneyBottle,
         SweetBerries,
         DriedKelp,
+        NautilusShell,
+        HeartOfTheSea,
+        TurtleScute,
+        TurtleHelmet,
         Count
     };
 }

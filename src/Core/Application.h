@@ -786,6 +786,7 @@ private:
     // rather than remembered: a beacon is a block, and a block has
     // nowhere to keep a list.
     void tickBeacons(float deltaTime);
+    void tickConduits(float deltaTime);
     float m_beaconTimer = 0.0f;
 
     // Where the beacons are. Kept rather than swept: looking for them
@@ -795,6 +796,11 @@ private:
     // placed it -- so watching place and break is exact, not a
     // guess.
     std::set<std::array<int, 3>> m_beacons;
+    std::set<std::array<int, 3>> m_conduits;
+    float m_conduitTimer = 0.0f;
+    float m_conduitSweepTimer = 0.0f;
+    int m_conduitSweepLayer = 0;
+    float m_eggStep = 0.0f;
     std::map<std::array<int, 4>, std::array<int, 2>> m_beaconPowers;
     bool m_beaconOpen = false;
     bool m_grindOpen = false;

@@ -93,6 +93,16 @@ namespace
         Blocks::GlowLichenFirst,
         Blocks::CarvedPumpkinFirst + 2, Blocks::HayBale, Blocks::BoneBlock, Blocks::DriedKelpBlock,
         Blocks::BeeNestFirst + 12, Blocks::BeehiveFirst + 12, Blocks::HoneyBlock, Blocks::HoneycombBlock,
+        Blocks::Seagrass, Blocks::SeaPickle, Blocks::Kelp,
+        Blocks::TubeCoralBlock, Blocks::BrainCoralBlock, Blocks::BubbleCoralBlock, Blocks::FireCoralBlock, Blocks::HornCoralBlock,
+        Blocks::TubeCoral, Blocks::BrainCoral, Blocks::BubbleCoral, Blocks::FireCoral, Blocks::HornCoral,
+        Blocks::CoralFanFirst + 0, Blocks::CoralFanFirst + 1, Blocks::CoralFanFirst + 2, Blocks::CoralFanFirst + 3, Blocks::CoralFanFirst + 4,
+        Blocks::DeadCoralBlockFirst + 0, Blocks::DeadCoralBlockFirst + 1, Blocks::DeadCoralBlockFirst + 2,
+        Blocks::DeadCoralBlockFirst + 3, Blocks::DeadCoralBlockFirst + 4,
+        Blocks::DeadCoralFirst + 0, Blocks::DeadCoralFirst + 1, Blocks::DeadCoralFirst + 2, Blocks::DeadCoralFirst + 3, Blocks::DeadCoralFirst + 4,
+        Blocks::DeadCoralFanFirst + 0, Blocks::DeadCoralFanFirst + 1, Blocks::DeadCoralFanFirst + 2,
+        Blocks::DeadCoralFanFirst + 3, Blocks::DeadCoralFanFirst + 4,
+        Blocks::TurtleEggFirst,
     };
 
     const StackId TAB_ORES[] = {
@@ -108,7 +118,7 @@ namespace
     const StackId TAB_MISC[] = {
         Blocks::Torch, Blocks::Glowstone, Blocks::Water, Blocks::Lava,
         Blocks::Ice, Blocks::Glass, Blocks::Wool, Blocks::Pumpkin,
-        Blocks::JackOLanternFirst + 2,
+        Blocks::JackOLanternFirst + 2, Blocks::Conduit, Blocks::SeaLantern,
         Blocks::Bedrock,
         Blocks::CutCopperFirst + 0, Blocks::CutCopperFirst + 1, Blocks::CutCopperFirst + 2, Blocks::CutCopperFirst + 3, Blocks::CutCopperFirst + 4, Blocks::CutCopperFirst + 5, Blocks::CutCopperFirst + 6, Blocks::CutCopperFirst + 7,
         Blocks::ChiseledCopperFirst + 0, Blocks::ChiseledCopperFirst + 1, Blocks::ChiseledCopperFirst + 2, Blocks::ChiseledCopperFirst + 3, Blocks::ChiseledCopperFirst + 4, Blocks::ChiseledCopperFirst + 5, Blocks::ChiseledCopperFirst + 6, Blocks::ChiseledCopperFirst + 7,
@@ -148,6 +158,7 @@ namespace
         Items::Paper, Items::Book, Items::Emerald, Items::EnderPearl, Items::EyeOfEnder, Items::NetherQuartz, Items::AmethystShard, Items::TripwireHook,
         Items::TorchflowerSeeds, Items::PitcherPod, Items::ClayBall, Items::Brick,
         Items::PumpkinSeeds, Items::SweetBerries, Items::HoneyBottle, Items::DriedKelp, Items::Honeycomb,
+        Items::NautilusShell, Items::HeartOfTheSea, Items::TurtleScute,
         Items::Sign, Items::SpruceSign, Items::BirchSign, Items::JungleSign, Items::AcaciaSign, Items::DarkOakSign,
         Items::CherrySign, Items::MangroveSign, Items::BambooSign, Items::CrimsonSign, Items::WarpedSign,
     };
@@ -159,6 +170,7 @@ namespace
         Items::GoldHelmet, Items::GoldChestplate, Items::GoldLeggings, Items::GoldBoots,
         Items::IronHelmet, Items::IronChestplate, Items::IronLeggings, Items::IronBoots,
         Items::DiamondHelmet, Items::DiamondChestplate, Items::DiamondLeggings, Items::DiamondBoots,
+        Items::TurtleHelmet,
     };
 
     const StackId TAB_TOOLS[] = {
@@ -984,7 +996,7 @@ void Application::renderContainerScreen(float w, float h)
             "../mob_effect/weakness", "../mob_effect/regeneration", "../mob_effect/poison",
             "../mob_effect/fire_resistance", "../mob_effect/water_breathing",
             "../mob_effect/night_vision", "../mob_effect/jump_boost", "../mob_effect/bad_omen",
-            "../mob_effect/haste", "../mob_effect/resistance",
+            "../mob_effect/haste", "../mob_effect/resistance", "../mob_effect/conduit_power",
         };
         const glm::vec4 label(0.878f, 0.878f, 0.878f, 1.0f);
         const std::string primaryLabel = "Primary Power";
@@ -2288,7 +2300,7 @@ void Application::drawInventoryEffects(float panelRight, float panelTop, float w
         "../mob_effect/weakness", "../mob_effect/regeneration", "../mob_effect/poison",
         "../mob_effect/fire_resistance", "../mob_effect/water_breathing",
         "../mob_effect/night_vision", "../mob_effect/jump_boost", "../mob_effect/bad_omen",
-        "../mob_effect/haste", "../mob_effect/resistance",
+        "../mob_effect/haste", "../mob_effect/resistance", "../mob_effect/conduit_power",
     };
     static const char* NUMERALS[6] = { "", " II", " III", " IV", " V", " VI" };
 

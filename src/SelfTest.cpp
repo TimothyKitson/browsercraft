@@ -3511,6 +3511,78 @@ namespace
         check(built.valid() && built.id == hiveOf(false, 2, 0), "planks and honeycomb make a beehive");
     }
 
+    void testOcean()
+    {
+        section("corals, the conduit and turtles");
+
+        bool corals = true;
+        for (int kind = 0; kind < 5; ++kind)
+        {
+            const BlockId block = static_cast<BlockId>(Blocks::TubeCoralBlock + kind);
+            const BlockId plant = static_cast<BlockId>(Blocks::TubeCoral + kind);
+            const BlockId fan = static_cast<BlockId>(Blocks::CoralFanFirst + kind);
+            if (coralKind(block) != kind || coralKind(plant) != kind || coralKind(fan) != kind) corals = false;
+            if (deadCoralOf(block) != Blocks::DeadCoralBlockFirst + kind) corals = false;
+            if (deadCoralOf(plant) != Blocks::DeadCoralFirst + kind) corals = false;
+            if (deadCoralOf(fan) != Blocks::DeadCoralFanFirst + kind) corals = false;
+            if (!isLivingCoral(block) || isLivingCoral(deadCoralOf(block))) corals = false;
+            if (blockDrop(block) != Blocks::DeadCoralBlockFirst + kind) corals = false;
+            if (blockDrop(plant) != Blocks::Air || blockDrop(fan) != Blocks::Air) corals = false;
+            if (blockDrop(deadCoralOf(block)) != deadCoralOf(block)) corals = false;
+            for (int f = 0; f < 4; ++f)
+            {
+                const BlockId wall = coralWallFanOf(false, kind, f);
+                if (!isCoralWallFan(wall) || coralKind(wall) != kind || blockFacing(wall) != f || isObtainable(wall)) corals = false;
+                if (deadCoralOf(wall) != coralWallFanOf(true, kind, f) || !isDeadCoralWallFan(deadCoralOf(wall))) corals = false;
+                if (!isWaterPlant(wall) || !isWaterPlant(deadCoralOf(wall))) corals = false;
+            }
+            if (!isWaterPlant(fan) || !isWaterPlant(deadCoralOf(plant)) || isWaterPlant(block)) corals = false;
+            if (blockInfo(fan).collides || !blockInfo(block).collides) corals = false;
+        }
+        check(corals, "every coral has a kind, a dead form and four wall fans, and blocks break into dead blocks");
+        check(isWaterPlant(Blocks::TallSeagrassLower) && isWaterPlant(Blocks::TallSeagrassUpper), "tall seagrass stands in water");
+        check(!isObtainable(Blocks::TallSeagrassUpper) && blockDrop(Blocks::TallSeagrassLower) == Blocks::Air,
+              "and needs shears to take");
+
+        bool eggs = true;
+        for (int count = 1; count <= 4; ++count)
+            for (int hatch = 0; hatch < 3; ++hatch)
+            {
+                const BlockId egg = turtleEggOf(count, hatch);
+                if (!isTurtleEgg(egg) || turtleEggCount(egg) != count || turtleEggHatch(egg) != hatch) eggs = false;
+                if (isObtainable(egg) != (count == 1 && hatch == 0)) eggs = false;
+                if (blockDrop(egg) != Blocks::Air) eggs = false;
+            }
+        check(eggs, "a clutch holds one to four eggs at three stages of cracking, and breaks to nothing without silk");
+        check(blockOverlaps(turtleEggOf(2, 0), 0, 0, 0, 0.4f, 0.1f, 0.4f, 0.6f, 0.3f, 0.6f, 0) &&
+              !blockOverlaps(turtleEggOf(2, 0), 0, 0, 0, 0.4f, 0.6f, 0.4f, 0.6f, 0.9f, 0.6f, 0),
+              "eggs are low enough to step onto");
+        check(mobType(MobId::Turtle).breedingFood == Blocks::Seagrass, "turtles are bred with seagrass");
+
+        ItemStack ring[9];
+        for (int i = 0; i < 9; ++i) { ring[i].id = i == 4 ? Items::HeartOfTheSea : Items::NautilusShell; ring[i].count = 1; }
+        const CraftOutput conduit = Crafting::match(ring, 3);
+        check(conduit.valid() && conduit.id == Blocks::Conduit, "eight nautilus shells round a heart of the sea make a conduit");
+        check(lightEmission(Blocks::Conduit) == 15 && !blockInfo(Blocks::Conduit).opaque, "a conduit shines and is small");
+        check(Tools::canHarvest(Blocks::Air, Blocks::Conduit), "and comes away in the hand");
+
+        ItemStack shell[9];
+        for (int i : { 0, 1, 2, 3, 5 }) { shell[i].id = Items::TurtleScute; shell[i].count = 1; }
+        const CraftOutput helmet = Crafting::match(shell, 3);
+        check(helmet.valid() && helmet.id == Items::TurtleHelmet, "five scutes make a turtle shell");
+        check(Armour::slotFor(Items::TurtleHelmet) == Armour::slotFor(Items::IronHelmet), "worn on the head");
+        check(Armour::defencePoints(Items::TurtleHelmet) == 2 && Armour::maxDurability(Items::TurtleHelmet) == 275,
+              "with two points of armour and the iron helmet's wear");
+        check(Anvil::repairMaterial(Items::TurtleHelmet) == Items::TurtleScute, "and mended with a scute");
+
+        Effects::Set power;
+        Effects::give(power, Effects::Kind::ConduitPower, 0, 13.0f);
+        check(Effects::breathesWater(power), "conduit power lets you breathe under water");
+        check(Effects::digMultiplier(power) > 1.0f, "and dig faster");
+        check(StructureLoot::centrepiece(WorldGen::Hoard::BuriedTreasure, 0, 40, 0, 7u).id == Items::HeartOfTheSea,
+              "buried treasure always holds a heart of the sea");
+    }
+
     // --- the workstations -----------------------------------------------
 
     // A village had a bench and a furnace in it and nothing else
@@ -13460,6 +13532,7 @@ int runSelfTest()
     testWorkstations();
     testMelonAndBamboo();
     testPumpkinsAndBees();
+    testOcean();
     testMadeThings();
     testTheEndAndTheSea();
     testPathfinding();

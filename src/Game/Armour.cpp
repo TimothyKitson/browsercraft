@@ -45,6 +45,7 @@ Armour::Piece Armour::pieceOf(StackId id)
     // thing in the armour slots that is not armour.
     if (id == Items::Elytra) return Piece::Chestplate;
     if (id == Blocks::CarvedPumpkinFirst + 2) return Piece::Helmet;
+    if (id == Items::TurtleHelmet) return Piece::Helmet;
 
     // The four netherite pieces are at the end of the item list
     // rather than after the diamond ones, so their offset is taken
@@ -75,6 +76,7 @@ int Armour::slotFor(StackId id)
 
 int Armour::defencePoints(StackId id)
 {
+    if (id == Items::TurtleHelmet) return 2;
     if (!inArmourRange(id)) return 0;
     const int tier = static_cast<int>(tierOf(id)) - 1;
     const int piece = static_cast<int>(pieceOf(id)) - 1;
@@ -86,6 +88,7 @@ int Armour::maxDurability(StackId id)
     // Minecraft's: four hundred and thirty-two seconds of flight, and
     // it wears while gliding rather than while being hit.
     if (id == Items::Elytra) return 432;
+    if (id == Items::TurtleHelmet) return 275;
 
     if (!inArmourRange(id)) return 0;
     const int tier = static_cast<int>(tierOf(id)) - 1;

@@ -622,6 +622,15 @@ namespace Blocks
         BeeNestFirst, BeeNestLast = BeeNestFirst + 23,
         BeehiveFirst, BeehiveLast = BeehiveFirst + 23,
         HoneyBlock, HoneycombBlock,
+        TallSeagrassLower, TallSeagrassUpper,
+        CoralFanFirst, CoralFanLast = CoralFanFirst + 4,
+        CoralWallFanFirst, CoralWallFanLast = CoralWallFanFirst + 19,
+        DeadCoralBlockFirst, DeadCoralBlockLast = DeadCoralBlockFirst + 4,
+        DeadCoralFirst, DeadCoralLast = DeadCoralFirst + 4,
+        DeadCoralFanFirst, DeadCoralFanLast = DeadCoralFanFirst + 4,
+        DeadCoralWallFanFirst, DeadCoralWallFanLast = DeadCoralWallFanFirst + 19,
+        Conduit,
+        TurtleEggFirst, TurtleEggLast = TurtleEggFirst + 11,
 
         Count
     };
@@ -858,11 +867,42 @@ inline bool isMonsterSpawner(BlockId id) { return id == Blocks::MonsterSpawner; 
 // every blade of seagrass in it, which would put a glassy box round
 // each one; the player needs it so swimming through kelp does not read
 // as coming up for air.
+inline bool isTallSeagrass(BlockId id) { return id == Blocks::TallSeagrassLower || id == Blocks::TallSeagrassUpper; }
+inline bool isLiveCoralPlant(BlockId id) { return id >= Blocks::TubeCoral && id <= Blocks::HornCoral; }
+inline bool isCoralFan(BlockId id) { return id >= Blocks::CoralFanFirst && id <= Blocks::CoralFanLast; }
+inline bool isCoralWallFan(BlockId id) { return id >= Blocks::CoralWallFanFirst && id <= Blocks::CoralWallFanLast; }
+inline bool isDeadCoralBlock(BlockId id) { return id >= Blocks::DeadCoralBlockFirst && id <= Blocks::DeadCoralBlockLast; }
+inline bool isDeadCoralPlant(BlockId id) { return id >= Blocks::DeadCoralFirst && id <= Blocks::DeadCoralLast; }
+inline bool isDeadCoralFan(BlockId id) { return id >= Blocks::DeadCoralFanFirst && id <= Blocks::DeadCoralFanLast; }
+inline bool isDeadCoralWallFan(BlockId id) { return id >= Blocks::DeadCoralWallFanFirst && id <= Blocks::DeadCoralWallFanLast; }
+inline bool isAnyCoralFan(BlockId id) { return isCoralFan(id) || isDeadCoralFan(id); }
+inline bool isAnyCoralWallFan(BlockId id) { return isCoralWallFan(id) || isDeadCoralWallFan(id); }
+inline int coralWallFanFacing(BlockId id)
+{
+    if (isCoralWallFan(id)) return (id - Blocks::CoralWallFanFirst) & 3;
+    if (isDeadCoralWallFan(id)) return (id - Blocks::DeadCoralWallFanFirst) & 3;
+    return 0;
+}
+inline BlockId coralWallFanOf(bool dead, int kind, int facing)
+{
+    return static_cast<BlockId>((dead ? Blocks::DeadCoralWallFanFirst : Blocks::CoralWallFanFirst) + kind * 4 + (facing & 3));
+}
+inline bool isTurtleEgg(BlockId id) { return id >= Blocks::TurtleEggFirst && id <= Blocks::TurtleEggLast; }
+inline int turtleEggCount(BlockId id) { return isTurtleEgg(id) ? (id - Blocks::TurtleEggFirst) / 3 + 1 : 0; }
+inline int turtleEggHatch(BlockId id) { return isTurtleEgg(id) ? (id - Blocks::TurtleEggFirst) % 3 : 0; }
+inline BlockId turtleEggOf(int count, int hatch)
+{
+    if (count < 1) count = 1;
+    if (count > 4) count = 4;
+    return static_cast<BlockId>(Blocks::TurtleEggFirst + (count - 1) * 3 + (hatch < 0 ? 0 : hatch > 2 ? 2 : hatch));
+}
+
 inline bool isWaterPlant(BlockId id)
 {
     return id == Blocks::Kelp || id == Blocks::KelpTop ||
            id == Blocks::Seagrass || id == Blocks::SeaPickle ||
-           (id >= Blocks::TubeCoral && id <= Blocks::HornCoral);
+           isTallSeagrass(id) || isLiveCoralPlant(id) || isCoralFan(id) || isCoralWallFan(id) ||
+           isDeadCoralPlant(id) || isDeadCoralFan(id) || isDeadCoralWallFan(id);
 }
 
 // Whether this is one of the deep dark's blocks. The city is built of
@@ -1049,6 +1089,34 @@ inline bool isSculkSensor(BlockId id)
 inline bool isCoralBlock(BlockId id)
 {
     return id >= Blocks::TubeCoralBlock && id <= Blocks::HornCoralBlock;
+}
+
+inline int coralKind(BlockId id)
+{
+    if (isCoralBlock(id)) return id - Blocks::TubeCoralBlock;
+    if (isLiveCoralPlant(id)) return id - Blocks::TubeCoral;
+    if (isCoralFan(id)) return id - Blocks::CoralFanFirst;
+    if (isCoralWallFan(id)) return (id - Blocks::CoralWallFanFirst) / 4;
+    if (isDeadCoralBlock(id)) return id - Blocks::DeadCoralBlockFirst;
+    if (isDeadCoralPlant(id)) return id - Blocks::DeadCoralFirst;
+    if (isDeadCoralFan(id)) return id - Blocks::DeadCoralFanFirst;
+    if (isDeadCoralWallFan(id)) return (id - Blocks::DeadCoralWallFanFirst) / 4;
+    return -1;
+}
+
+inline bool isLivingCoral(BlockId id)
+{
+    return isCoralBlock(id) || isLiveCoralPlant(id) || isCoralFan(id) || isCoralWallFan(id);
+}
+
+inline BlockId deadCoralOf(BlockId id)
+{
+    const int kind = coralKind(id);
+    if (isCoralBlock(id)) return static_cast<BlockId>(Blocks::DeadCoralBlockFirst + kind);
+    if (isLiveCoralPlant(id)) return static_cast<BlockId>(Blocks::DeadCoralFirst + kind);
+    if (isCoralFan(id)) return static_cast<BlockId>(Blocks::DeadCoralFanFirst + kind);
+    if (isCoralWallFan(id)) return coralWallFanOf(true, kind, coralWallFanFacing(id));
+    return id;
 }
 
 // A trial spawner in any of its three states: waiting, with its wave
@@ -1670,6 +1738,7 @@ inline int blockFacing(BlockId id)
     if (isCarvedPumpkin(id)) return id - Blocks::CarvedPumpkinFirst;
     if (isJackOLantern(id)) return id - Blocks::JackOLanternFirst;
     if (isHive(id)) return hiveFacing(id);
+    if (isAnyCoralWallFan(id)) return coralWallFanFacing(id);
     return 0;
 }
 

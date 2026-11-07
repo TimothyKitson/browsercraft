@@ -356,6 +356,13 @@ namespace Tiles
         BeeNestTopTile, BeeNestBottomTile, BeeNestSideTile, BeeNestFrontTile, BeeNestFrontHoneyTile,
         BeehiveEndTile, BeehiveSideTile, BeehiveFrontTile, BeehiveFrontHoneyTile,
         HoneyTopTile, HoneySideTile, HoneyBottomTile, HoneycombBlockTile,
+        TallSeagrassTopTile, TallSeagrassBottomTile,
+        CoralFanTileFirst, CoralFanTileLast = CoralFanTileFirst + 4,
+        DeadCoralBlockTileFirst, DeadCoralBlockTileLast = DeadCoralBlockTileFirst + 4,
+        DeadCoralTileFirst, DeadCoralTileLast = DeadCoralTileFirst + 4,
+        DeadCoralFanTileFirst, DeadCoralFanTileLast = DeadCoralFanTileFirst + 4,
+        ConduitTile,
+        TurtleEggTile, TurtleEggSlightlyCrackedTile, TurtleEggVeryCrackedTile,
 
         TileCount
     };
@@ -552,8 +559,9 @@ namespace Tiles
         ItemCopperDoorFirst, ItemCopperDoorLast = ItemCopperDoorFirst + 3,
         ItemTorchflowerSeeds, ItemPitcherPod, ItemClayBall, ItemBrick, ItemFlowerPot, ItemPitcherPlant,
         ItemPumpkinSeeds, ItemShears, ItemHoneyBottle, ItemSweetBerries, ItemDriedKelp,
+        ItemNautilusShell, ItemHeartOfTheSea, ItemTurtleScute, ItemTurtleHelmet,
 
-        ItemTileEnd = ItemDriedKelp + 1
+        ItemTileEnd = ItemTurtleHelmet + 1
     };
 
     // Ten progressively more broken overlay tiles for the mining animation.

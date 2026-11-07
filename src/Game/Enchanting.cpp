@@ -138,6 +138,7 @@ namespace Enchanting
         // Armour is asked about first. It is not a tool, so Tools::
         // tierOf would call every piece of it Tier::None and hand the
         // whole wardrobe the same answer.
+        if (item == Items::TurtleHelmet) return 9;
         if (Armour::isArmour(item))
         {
             switch (Armour::tierOf(item))

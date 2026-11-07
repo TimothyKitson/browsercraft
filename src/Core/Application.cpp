@@ -1861,6 +1861,7 @@ bool Application::frame()
         if (playing()) tickStructureLairs(deltaTime);
         if (playing()) tickDragonFight(deltaTime);
         if (playing()) tickBeacons(deltaTime);
+        if (playing()) tickConduits(deltaTime);
         if (playing()) tickObservers(deltaTime);
         if (playing()) tickHoppers(deltaTime);
 
@@ -1899,6 +1900,35 @@ bool Application::frame()
             // Water puts it out, which is the whole reason to run for
             // the nearest lake with a blaze behind you.
             if (m_player.isInWater(*m_world)) m_player.douse();
+
+            if (m_inventory.slot(Inventory::ARMOR_FIRST).id == Items::TurtleHelmet && !m_player.isHeadUnderwater(*m_world))
+                Effects::give(m_player.effects, Effects::Kind::WaterBreathing, 0, 10.0f);
+
+            {
+                const int fx = static_cast<int>(std::floor(m_player.position.x));
+                const int fy = static_cast<int>(std::floor(m_player.position.y + 0.1f));
+                const int fz = static_cast<int>(std::floor(m_player.position.z));
+                const BlockId nest = m_world->getBlock(fx, fy, fz);
+                if (isTurtleEgg(nest) && !m_player.sneaking && m_player.onGround)
+                {
+                    m_eggStep += deltaTime;
+                    if (m_eggStep >= 1.0f)
+                    {
+                        m_eggStep = 0.0f;
+                        const uint32_t roll = static_cast<uint32_t>(m_elapsedSeconds * 977.0f) ^ static_cast<uint32_t>(fx * 31 + fz * 17);
+                        if (roll % 3u == 0u)
+                        {
+                            const BlockId left = turtleEggCount(nest) > 1 ? turtleEggOf(turtleEggCount(nest) - 1, turtleEggHatch(nest))
+                                                                         : static_cast<BlockId>(Blocks::Air);
+                            m_world->setBlock(fx, fy, fz, left);
+                            m_net.onLocalBlockChange(fx, fy, fz, left);
+                            m_particles.spawnBlockBreak(glm::ivec3(fx, fy, fz), nest);
+                            m_audio.playDig(nest, 0.7f);
+                        }
+                    }
+                }
+                else m_eggStep = 0.0f;
+            }
 
             if (m_player.inBerryBush && !m_player.creative())
             {
@@ -2065,7 +2095,7 @@ bool Application::frame()
             m_startupScreen == "stones" || m_startupScreen == "colours" || m_startupScreen == "candles" ||
             m_startupScreen == "shulkerboxes" || m_startupScreen == "beds" || m_startupScreen == "chests" ||
             m_startupScreen == "copper" || m_startupScreen == "flowers" || m_startupScreen == "mushrooms" || m_startupScreen == "lush" ||
-            m_startupScreen == "farm" ||
+            m_startupScreen == "farm" || m_startupScreen == "corals" ||
             m_startupScreen == "boat" || m_startupScreen == "rails" ||
             m_startupScreen == "mobs" || m_startupScreen == "golem" ||
             m_startupScreen == "glowmobs" || m_startupScreen == "variants" ||
@@ -2161,6 +2191,7 @@ bool Application::frame()
                                   m_startupScreen != "mushrooms" &&
                                   m_startupScreen != "lush" &&
                                   m_startupScreen != "farm" &&
+                                  m_startupScreen != "corals" &&
                                   m_startupScreen != "boat" &&
                                   m_startupScreen != "rails" &&
                                   m_startupScreen != "mobs" &&
@@ -2538,7 +2569,7 @@ bool Application::frame()
                 m_startupScreen == "stones" || m_startupScreen == "colours" || m_startupScreen == "candles" ||
                 m_startupScreen == "shulkerboxes" || m_startupScreen == "beds" || m_startupScreen == "chests" ||
                 m_startupScreen == "copper" || m_startupScreen == "flowers" || m_startupScreen == "mushrooms" ||
-                m_startupScreen == "lush" || m_startupScreen == "farm")
+                m_startupScreen == "lush" || m_startupScreen == "farm" || m_startupScreen == "corals")
             {
                 m_camera.setOrientation(0.0f, -25.0f);
                 m_camera.addLook(0.0f, 0.0f, 0.0f);
@@ -2679,6 +2710,64 @@ bool Application::frame()
                     m_world->setBlock(px + 12, py, pz - 8, Blocks::Bookshelf);
                     m_world->setBlock(px + 12, py, pz + 8, Blocks::DiamondOre);
                     m_world->setBlock(px + 12, py + 1, pz + 8, Blocks::EndPortalFrame);
+                }
+                if (m_startupScreen == "corals")
+                {
+                    m_devAttackStrength = 1.0f;
+                    m_camera.setOrientation(0.0f, -12.0f);
+                    for (int dx = -2; dx <= 15; ++dx)
+                        for (int dz = -9; dz <= 9; ++dz)
+                        {
+                            for (int dy = -7; dy <= 6; ++dy) m_world->setBlock(px + dx, py + dy, pz + dz, Blocks::Air);
+                            const bool pool = dx >= 4 && dx <= 13 && dz >= -8 && dz <= 8;
+                            const bool room = dx <= 2 && dz >= -8 && dz <= 8;
+                            m_world->setBlock(px + dx, py - 7, pz + dz, Blocks::Sand);
+                            for (int dy = -6; dy <= -1; ++dy)
+                            {
+                                BlockId fill = Blocks::Sand;
+                                if (pool && dy >= -5) fill = Blocks::Water;
+                                else if (dx == 3 && dz >= -8 && dz <= 8 && dy >= -5) fill = Blocks::Glass;
+                                else if (room && dy >= -4) fill = Blocks::Air;
+                                m_world->setBlock(px + dx, py + dy, pz + dz, fill);
+                            }
+                        }
+                    m_player.position = glm::vec3(px + 0.5f, static_cast<float>(py - 4), pz + 0.5f);
+                    for (int dz = -7; dz <= -1; dz += 2)
+                    {
+                        const int kind = (dz + 7) / 2 % 5;
+                        m_world->setBlock(px + 6, py - 5, pz + dz, static_cast<BlockId>(Blocks::TubeCoralBlock + kind));
+                        m_world->setBlock(px + 6, py - 4, pz + dz, static_cast<BlockId>(Blocks::CoralFanFirst + kind));
+                        m_world->setBlock(px + 5, py - 5, pz + dz, coralWallFanOf(false, kind, 3));
+                        m_world->setBlock(px + 8, py - 5, pz + dz, static_cast<BlockId>(Blocks::TubeCoral + kind));
+                    }
+                    m_world->setBlock(px + 7, py - 5, pz - 4, Blocks::HornCoralBlock);
+                    m_world->setBlock(px + 7, py - 4, pz - 4, Blocks::HornCoral);
+                    m_world->setBlock(px + 8, py - 5, pz - 4, coralWallFanOf(false, 4, 1));
+                    for (int dz = 1; dz <= 3; ++dz)
+                    {
+                        m_world->setBlock(px + 5, py - 5, pz + dz, Blocks::TallSeagrassLower);
+                        m_world->setBlock(px + 5, py - 4, pz + dz, Blocks::TallSeagrassUpper);
+                        m_world->setBlock(px + 6, py - 5, pz + dz, Blocks::Seagrass);
+                    }
+                    const glm::ivec3 core(px + 10, py - 3, pz + 5);
+                    m_world->setBlock(core.x, core.y, core.z, Blocks::Conduit);
+                    m_conduits.insert({ core.x, core.y, core.z });
+                    for (int dz = -2; dz <= 2; ++dz)
+                        for (int dx = -2; dx <= 2; ++dx)
+                            if (std::abs(dx) == 2 || std::abs(dz) == 2)
+                                m_world->setBlock(core.x + dx, core.y, core.z + dz,
+                                                  (dx + dz) % 2 ? Blocks::Prismarine : Blocks::PrismarineBricks);
+                    for (int k = 0; k < 4; ++k)
+                    {
+                        m_world->setBlock(px + 2, py - 4, pz - 7 + k * 2, turtleEggOf(k + 1, k % 3));
+                        m_world->setBlock(px + 2, py - 4, pz + 1 + k * 2, static_cast<BlockId>(Blocks::DeadCoralFanFirst + k));
+                        m_world->setBlock(px + 1, py - 4, pz + 2 + k * 2, coralWallFanOf(true, k, 0));
+                        m_world->setBlock(px + 1, py - 4, pz + 3 + k * 2, static_cast<BlockId>(Blocks::DeadCoralBlockFirst + k));
+                    }
+                    m_world->setBlock(px + 15, py, pz - 9, Blocks::Bookshelf);
+                    m_world->setBlock(px + 2, py - 3, pz - 8, Blocks::Bookshelf);
+                    m_world->setBlock(px + 2, py - 3, pz + 8, Blocks::DiamondOre);
+                    m_world->setBlock(px + 2, py - 2, pz + 8, Blocks::EndPortalFrame);
                 }
                 if (m_startupScreen == "farm")
                 {
@@ -6300,6 +6389,11 @@ void Application::updateMining(float deltaTime)
                 const bool silk = Enchanting::has(onTool, Enchanting::Kind::SilkTouch);
                 if (silk && drop != Blocks::Air && isObtainable(id)) drop = id;
                 if (silk && isHive(id)) drop = hiveOf(isBeeNest(id), 2, 0);
+                if (silk && (isLiveCoralPlant(id) || isDeadCoralPlant(id) || isAnyCoralFan(id))) drop = id;
+                if (silk && isAnyCoralWallFan(id))
+                    drop = static_cast<StackId>((isDeadCoralWallFan(id) ? Blocks::DeadCoralFanFirst : Blocks::CoralFanFirst) + coralKind(id));
+                if (silk && isTurtleEgg(id)) drop = turtleEggOf(1, 0);
+                if (isTallSeagrass(id) && tool == Items::Shears) drop = Blocks::Seagrass;
 
                 int dropped = 1;
 
@@ -6325,6 +6419,8 @@ void Application::updateMining(float deltaTime)
                 if (isMushroomBlock(id) && drop != id)
                     dropped = std::max(0, static_cast<int>(static_cast<uint32_t>(hit.block.x * 73 + hit.block.y * 31 + hit.block.z * 17 +
                                                                                  static_cast<int>(m_elapsedSeconds * 53.0f)) % 8u) - 5);
+                if (silk && isTurtleEgg(id)) dropped = turtleEggCount(id);
+                if (isTallSeagrass(id) && drop == Blocks::Seagrass) dropped = 2;
                 if (isSweetBerryBush(id))
                     dropped = sweetBerryStage(id) < 2 ? 0
                                                       : (sweetBerryStage(id) == 3 ? 2 : 1) +
@@ -6439,6 +6535,20 @@ void Application::updateMining(float deltaTime)
                     m_world->setBlock(hit.block.x, hit.block.y + dy, hit.block.z, Blocks::Air);
                     m_net.onLocalBlockChange(hit.block.x, hit.block.y + dy, hit.block.z, Blocks::Air);
                 }
+            }
+            if (isTallSeagrass(id))
+            {
+                const glm::ivec3 pair(hit.block.x, hit.block.y + (id == Blocks::TallSeagrassUpper ? -1 : 1), hit.block.z);
+                if (isTallSeagrass(m_world->getBlock(pair.x, pair.y, pair.z)))
+                {
+                    m_world->setBlock(pair.x, pair.y, pair.z, Blocks::Water);
+                    m_net.onLocalBlockChange(pair.x, pair.y, pair.z, Blocks::Water);
+                }
+            }
+            if (isWaterPlant(id) && Farming::coralIsWet(*m_world, hit.block.x, hit.block.y, hit.block.z))
+            {
+                m_world->setBlock(hit.block.x, hit.block.y, hit.block.z, Blocks::Water);
+                m_net.onLocalBlockChange(hit.block.x, hit.block.y, hit.block.z, Blocks::Water);
             }
             if (isSmallDripleaf(id))
             {
@@ -7057,6 +7167,88 @@ void Application::tickObservers(float deltaTime)
 // nowhere to keep a list, so the only honest way to know where they
 // are is to look. Cheap enough at once a second over the box the
 // player could be standing in range of.
+void Application::tickConduits(float deltaTime)
+{
+    if (!m_world) return;
+    const int px = static_cast<int>(std::floor(m_player.position.x));
+    const int py = static_cast<int>(std::floor(m_player.position.y));
+    const int pz = static_cast<int>(std::floor(m_player.position.z));
+
+    m_conduitSweepTimer -= deltaTime;
+    if (m_conduitSweepTimer <= 0.0f)
+    {
+        m_conduitSweepTimer = 0.25f;
+        m_conduitSweepLayer = (m_conduitSweepLayer + 1) % 25;
+        const int y = py - 12 + m_conduitSweepLayer;
+        if (y > 0 && y < Chunk::SY)
+            for (int z = pz - 24; z <= pz + 24; ++z)
+                for (int x = px - 24; x <= px + 24; ++x)
+                    if (m_world->getBlock(x, y, z) == Blocks::Conduit) m_conduits.insert({ x, y, z });
+    }
+
+    m_conduitTimer -= deltaTime;
+    if (m_conduitTimer > 0.0f) return;
+    m_conduitTimer = 2.0f;
+
+    const bool wet = m_player.isInWater(*m_world) ||
+                     (hasSky() && m_weather.depth > 0.2f && !m_snowing && m_world->skyLight(px, py + 1, pz) >= 15);
+    for (auto it = m_conduits.begin(); it != m_conduits.end(); )
+    {
+        const int cx = (*it)[0], cy = (*it)[1], cz = (*it)[2];
+        if (m_world->getBlock(cx, cy, cz) != Blocks::Conduit)
+        {
+            it = m_conduits.erase(it);
+            continue;
+        }
+        ++it;
+
+        bool flooded = true;
+        for (int dy = -1; dy <= 1 && flooded; ++dy)
+            for (int dz = -1; dz <= 1 && flooded; ++dz)
+                for (int dx = -1; dx <= 1 && flooded; ++dx)
+                    if ((dx || dy || dz) && !isWater(m_world->getBlock(cx + dx, cy + dy, cz + dz))) flooded = false;
+        if (!flooded) continue;
+
+        int frames = 0;
+        for (int dy = -2; dy <= 2; ++dy)
+            for (int dz = -2; dz <= 2; ++dz)
+                for (int dx = -2; dx <= 2; ++dx)
+                {
+                    const int ax = std::abs(dx), ay = std::abs(dy), az = std::abs(dz);
+                    const bool ring = (dx == 0 && (ay == 2 || az == 2)) || (dy == 0 && (ax == 2 || az == 2)) ||
+                                      (dz == 0 && (ax == 2 || ay == 2));
+                    if (!ring || (ax < 2 && ay < 2 && az < 2)) continue;
+                    const BlockId frame = m_world->getBlock(cx + dx, cy + dy, cz + dz);
+                    if (frame == Blocks::Prismarine || frame == Blocks::PrismarineBricks ||
+                        frame == Blocks::DarkPrismarine || frame == Blocks::SeaLantern)
+                        ++frames;
+                }
+        if (frames < 16) continue;
+
+        const float range = static_cast<float>(frames / 7 * 16);
+        const glm::vec3 centre(cx + 0.5f, cy + 0.5f, cz + 0.5f);
+        if (wet && glm::length(m_player.position - centre) <= range)
+            Effects::give(m_player.effects, Effects::Kind::ConduitPower, 0, 13.0f);
+
+        if (frames >= 42)
+        {
+            Mob* prey = nullptr;
+            float nearest = 8.0f;
+            for (Mob& mob : m_entities.mobs())
+            {
+                if (!mob.alive() || mob.type().spawnClass != SpawnClass::Hostile) continue;
+                const float far = glm::length(mob.position() - centre);
+                if (far < nearest) { nearest = far; prey = &mob; }
+            }
+            if (prey)
+            {
+                prey->strike(4, glm::normalize(prey->position() - centre + glm::vec3(0.0f, 0.01f, 0.0f)));
+                m_audio.play(Sound::Click, 0.6f, 0.6f);
+            }
+        }
+    }
+}
+
 void Application::tickBeacons(float deltaTime)
 {
     if (!m_world) return;
@@ -10072,7 +10264,13 @@ void Application::handlePlacement()
                 m_net.onLocalBlockChange(at.x, at.y, at.z, id);
             };
             const glm::ivec3 above(crop.block.x, crop.block.y + 1, crop.block.z);
-            if ((plant == Blocks::TallGrass || plant == Blocks::Fern) &&
+            if (plant == Blocks::Seagrass && isWater(m_world->getBlock(above.x, above.y, above.z)))
+            {
+                put(crop.block, Blocks::TallSeagrassLower);
+                put(above, Blocks::TallSeagrassUpper);
+                used = true;
+            }
+            else if ((plant == Blocks::TallGrass || plant == Blocks::Fern) &&
                 m_world->getBlock(above.x, above.y, above.z) == Blocks::Air)
             {
                 const DoublePlant kind = plant == Blocks::Fern ? DoublePlant::LargeFern : DoublePlant::TallGrass;
@@ -10448,6 +10646,24 @@ void Application::handlePlacement()
     const RaycastHit hit = m_world->raycast(m_camera.position, m_camera.front, REACH_DISTANCE);
     if (!hit.hit) return;
 
+    if (stack.id == turtleEggOf(1, 0))
+    {
+        const BlockId there = m_world->getBlock(hit.block.x, hit.block.y, hit.block.z);
+        if (isTurtleEgg(there) && turtleEggCount(there) < 4)
+        {
+            const BlockId more = turtleEggOf(turtleEggCount(there) + 1, turtleEggHatch(there));
+            m_world->setBlock(hit.block.x, hit.block.y, hit.block.z, more);
+            m_net.onLocalBlockChange(hit.block.x, hit.block.y, hit.block.z, more);
+            m_audio.playPlace(more);
+            if (!m_player.creative())
+            {
+                stack.count -= 1;
+                if (stack.count <= 0) stack.clear();
+            }
+            return;
+        }
+    }
+
     if (stack.id == Blocks::PinkPetals1)
     {
         const BlockId there = m_world->getBlock(hit.block.x, hit.block.y, hit.block.z);
@@ -10671,6 +10887,19 @@ void Application::handlePlacement()
         placing = furnaceTurned(placing, facing);
     }
 
+    if (isLiveCoralPlant(placing) || isDeadCoralPlant(placing) || isAnyCoralFan(placing) || placing == Blocks::Seagrass)
+    {
+        const glm::ivec3 n = hit.normal;
+        if (isAnyCoralFan(placing) && n.y == 0)
+        {
+            const int facing = (n.z < 0) ? 0 : (n.x > 0) ? 1 : (n.z > 0) ? 2 : 3;
+            placing = coralWallFanOf(isDeadCoralFan(placing), coralKind(placing), facing);
+        }
+        else if (n.y <= 0 || !isSolid(m_world->getBlock(target.x, target.y - 1, target.z)))
+            return;
+        if (placing == Blocks::Seagrass && !isWater(existing)) return;
+    }
+
     if (isCarvedPumpkin(placing) || isJackOLantern(placing) || isHive(placing))
     {
         const glm::vec3 look = m_camera.front;
@@ -10774,6 +11003,8 @@ void Application::handlePlacement()
 
     if (placing == Blocks::Beacon)
         m_beacons.insert({ target.x, target.y, target.z });
+    if (placing == Blocks::Conduit)
+        m_conduits.insert({ target.x, target.y, target.z });
 
     // A sign is hung and then written on, which is the only order
     // that makes sense: an empty board is not what anybody wanted.
@@ -12172,7 +12403,13 @@ void Application::updateWorldAround(float deltaTime)
         m_growthTimer = 0.0f;
         if (m_net.role() != Net::Role::Guest)
         {
-            Farming::grow(*m_world, m_player.position, m_growthSeed);
+            std::vector<glm::ivec3> hatched;
+            Farming::grow(*m_world, m_player.position, m_growthSeed, &hatched);
+            for (const glm::ivec3& at : hatched)
+            {
+                m_entities.spawnAt(MobId::Turtle, glm::vec3(at) + glm::vec3(0.5f, 0.0f, 0.5f), *m_world, true);
+                m_audio.play(Sound::MobTurtleSay, 0.6f, 1.6f);
+            }
             if (m_weather.depth > 0.2f && !m_snowing) fillCauldronsInRain();
         }
     }
@@ -12381,6 +12618,7 @@ void Application::updateMobs(float deltaTime)
                 static_cast<int>(where.z) * 19349663 ^
                 static_cast<int>(m_elapsedSeconds * 311.0f));
             if (roll % 8 == 0) m_drops.spawn(where, Items::Trident, 1);
+            else if ((roll >> 4) % 12 == 0) m_drops.spawn(where, Items::NautilusShell, 1);
         }
 
         // A baby is worth nothing, the way it is in Minecraft -- else
@@ -12399,6 +12637,32 @@ void Application::updateMobs(float deltaTime)
 
     // A chicken lays an egg every few minutes whether anybody is
     // watching or not, which is what makes a flock worth keeping.
+    for (const glm::vec3& mother : m_entities.drainTurtleNests())
+    {
+        const glm::ivec3 c(static_cast<int>(std::floor(mother.x)), static_cast<int>(std::floor(mother.y)),
+                           static_cast<int>(std::floor(mother.z)));
+        bool laid = false;
+        for (int r = 0; r <= 6 && !laid; ++r)
+            for (int dz = -r; dz <= r && !laid; ++dz)
+                for (int dx = -r; dx <= r && !laid; ++dx)
+                {
+                    if (std::max(std::abs(dx), std::abs(dz)) != r) continue;
+                    for (int dy = -3; dy <= 3 && !laid; ++dy)
+                    {
+                        const int x = c.x + dx, y = c.y + dy, z = c.z + dz;
+                        if (m_world->getBlock(x, y - 1, z) != Blocks::Sand || m_world->getBlock(x, y, z) != Blocks::Air) continue;
+                        const BlockId clutch = turtleEggOf(1 + static_cast<int>(static_cast<uint32_t>(x * 31 + z * 17 +
+                                                                                                      static_cast<int>(m_elapsedSeconds)) % 4u), 0);
+                        m_world->setBlock(x, y, z, clutch);
+                        m_net.onLocalBlockChange(x, y, z, clutch);
+                        m_audio.playPlace(clutch);
+                        laid = true;
+                    }
+                }
+    }
+    for (const glm::vec3& grown : m_entities.drainGrownTurtles())
+        m_drops.spawn(grown + glm::vec3(0.0f, 0.3f, 0.0f), Items::TurtleScute, 1);
+
     for (const glm::vec3& nest : m_entities.drainLaidEggs())
     {
         m_drops.spawn(nest + glm::vec3(0.0f, 0.3f, 0.0f), Items::Egg, 1);
@@ -12928,7 +13192,7 @@ void Application::renderEffectIcons(float w)
         "../mob_effect/weakness", "../mob_effect/regeneration", "../mob_effect/poison",
         "../mob_effect/fire_resistance", "../mob_effect/water_breathing",
         "../mob_effect/night_vision", "../mob_effect/jump_boost", "../mob_effect/bad_omen",
-        "../mob_effect/haste", "../mob_effect/resistance",
+        "../mob_effect/haste", "../mob_effect/resistance", "../mob_effect/conduit_power",
     };
     if (!m_gui.has("sprites/hud/effect_background")) return;
 

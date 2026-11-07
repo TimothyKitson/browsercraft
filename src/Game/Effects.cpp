@@ -24,6 +24,7 @@ unsigned int Effects::colour(Kind kind)
         case Kind::BadOmen: return 0x0B6138;
         case Kind::Haste: return 0xD9C043;
         case Kind::Resistance: return 0x9146F0;
+        case Kind::ConduitPower: return 0x1DC2D1;
         default: return 0x385DC6;
     }
 }
@@ -45,6 +46,7 @@ const char* Effects::name(Kind kind)
         case Kind::BadOmen:        return "Bad Omen";
         case Kind::Haste:          return "Haste";
         case Kind::Resistance:     return "Resistance";
+        case Kind::ConduitPower:   return "Conduit Power";
         case Kind::Count:          break;
     }
     return "";
@@ -184,8 +186,9 @@ bool Effects::fireImmune(const Set& set) { return set.has(Kind::FireResistance);
 
 float Effects::digMultiplier(const Set& set)
 {
-    if (!set.has(Kind::Haste)) return 1.0f;
-    return 1.0f + 0.20f * static_cast<float>(set.amplifier(Kind::Haste) + 1);
+    const int level = std::max(set.amplifier(Kind::Haste), set.amplifier(Kind::ConduitPower));
+    if (level < 0) return 1.0f;
+    return 1.0f + 0.20f * static_cast<float>(level + 1);
 }
 
 int Effects::resisted(const Set& set, int amount)
@@ -194,7 +197,7 @@ int Effects::resisted(const Set& set, int amount)
     const float kept = std::max(0.0f, 1.0f - 0.20f * static_cast<float>(set.amplifier(Kind::Resistance) + 1));
     return static_cast<int>(std::lround(static_cast<float>(amount) * kept));
 }
-bool Effects::breathesWater(const Set& set) { return set.has(Kind::WaterBreathing); }
+bool Effects::breathesWater(const Set& set) { return set.has(Kind::WaterBreathing) || set.has(Kind::ConduitPower); }
 
 float Effects::nightVisionFloor(const Set& set)
 {
