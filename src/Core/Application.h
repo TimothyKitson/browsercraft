@@ -805,6 +805,10 @@ private:
     float m_frostClock = 0.0f;
     std::map<std::array<int, 3>, float> m_frostedIce;
     void tickFrost(float deltaTime);
+    void tickFire(float deltaTime);
+    bool lightFire(const glm::ivec3& at);
+    std::set<std::array<int, 3>> m_fires;
+    float m_fireClock = 0.0f;
     void tickWiring(float deltaTime);
     void scheduleDiode(const glm::ivec3& at, BlockId now, bool wantLit);
     bool comparatorWants(const glm::ivec3& at);

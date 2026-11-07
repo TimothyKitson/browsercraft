@@ -417,6 +417,16 @@ namespace
                          Items::Stick,   Items::Coal,   Items::Stick,
                          Blocks::Log,    Blocks::Log,   Blocks::Log },
           0, Blocks::Campfire, 1 },
+        { false, 3, 3, { Blocks::Air,    Items::Stick,  Blocks::Air,
+                         Items::Stick,   Blocks::SoulSoil, Items::Stick,
+                         Blocks::Log,    Blocks::Log,   Blocks::Log },
+          0, Blocks::SoulCampfire, 1 },
+        { false, 3, 3, { Blocks::Air,    Items::Stick,  Blocks::Air,
+                         Items::Stick,   Blocks::SoulSand, Items::Stick,
+                         Blocks::Log,    Blocks::Log,   Blocks::Log },
+          0, Blocks::SoulCampfire, 1 },
+        { false, 1, 3, { Items::Coal, Items::Stick, Blocks::SoulSoil }, 0, Blocks::SoulTorch, 4 },
+        { false, 1, 3, { Items::Coal, Items::Stick, Blocks::SoulSand }, 0, Blocks::SoulTorch, 4 },
 
         // A bone ground up makes three meal, which is Minecraft's.
         { true, 0, 0, { Items::Bone }, 1, Items::BoneMeal, 3 },

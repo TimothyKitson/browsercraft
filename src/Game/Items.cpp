@@ -288,6 +288,7 @@ int flatIconFor(BlockId id)
     if (isBed(id)) return Tiles::ItemBedFirst + bedColour(id);
     if (id == Blocks::MangrovePropagule || id == Blocks::MangrovePropaguleHanging) return Tiles::IconMangrovePropagule;
     if (id == Blocks::Campfire) return Tiles::IconCampfire;
+    if (id == Blocks::SoulCampfire) return Tiles::SoulCampfireTop;
     if (isCauldron(id)) return Tiles::IconCauldron;
     if (id == Blocks::Hopper) return Tiles::IconHopper;
     if (isPointedDripstone(id)) return Tiles::IconDripstone;
@@ -413,6 +414,8 @@ StackId blockDrop(BlockId id)
     if (isChain(id)) return Blocks::ChainFirst;
     if (isEndRod(id)) return Blocks::EndRodFirst;
     if (id == Blocks::Cobweb) return Items::StringItem;
+    if (isFire(id)) return Blocks::Air;
+    if (id == Blocks::SoulCampfire) return Blocks::SoulSoil;
     if (id == Blocks::ChorusPlant) return Items::ChorusFruit;
 
     // A melon comes apart into slices rather than into a melon, which

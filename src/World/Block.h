@@ -649,6 +649,8 @@ namespace Blocks
         ChainFirst, ChainLast = ChainFirst + 2,
         EndRodFirst, EndRodLast = EndRodFirst + 5,
         Cobweb,
+        SoulTorch, SoulCampfire, SoulSoil,
+        Fire0, Fire1, Fire2, Fire3, SoulFire,
 
         Count
     };
@@ -767,6 +769,8 @@ inline bool isChain(BlockId id) { return id >= Blocks::ChainFirst && id <= Block
 inline int chainAxis(BlockId id) { return isChain(id) ? id - Blocks::ChainFirst : 0; }
 inline bool isEndRod(BlockId id) { return id >= Blocks::EndRodFirst && id <= Blocks::EndRodLast; }
 inline int endRodFacing(BlockId id) { return isEndRod(id) ? id - Blocks::EndRodFirst : 0; }
+inline bool isFire(BlockId id) { return (id >= Blocks::Fire0 && id <= Blocks::Fire3) || id == Blocks::SoulFire; }
+inline bool isCampfire(BlockId id) { return id == Blocks::Campfire || id == Blocks::SoulCampfire; }
 inline bool isTarget(BlockId id) { return id == Blocks::Target || id == Blocks::TargetLit; }
 inline bool isIronDoor(BlockId id) { return id >= Blocks::IronDoorFirst && id <= Blocks::IronDoorLast; }
 inline bool isIronTrapdoor(BlockId id) { return id >= Blocks::IronTrapdoorFirst && id <= Blocks::IronTrapdoorLast; }
@@ -2027,3 +2031,19 @@ inline bool isCropRipe(BlockId id)
     return isCrop(id) && cropStage(id) == WHEAT_STAGES - 1;
 }
 inline BlockId wheatAtStage(int stage) { return static_cast<BlockId>(Blocks::Wheat0 + (stage < 0 ? 0 : (stage > WHEAT_STAGES - 1 ? WHEAT_STAGES - 1 : stage))); }
+
+inline bool isFlammable(BlockId id)
+{
+    if (isLog(id) || isPlanks(id) || isLeaves(id) || isWool(id)) return true;
+    if (isDoublePlant(id) || isHive(id) || isComposter(id)) return true;
+    if (id >= Blocks::PlankStairsNorth && id <= Blocks::PlankStairsWest) return true;
+    switch (id)
+    {
+        case Blocks::Bookshelf: case Blocks::HayBale: case Blocks::TallGrass: case Blocks::Fern:
+        case Blocks::DeadBush: case Blocks::Vine: case Blocks::PlankSlab: case Blocks::OakFence:
+        case Blocks::Tnt: case Blocks::Target: case Blocks::DriedKelpBlock: case Blocks::Scaffolding:
+            return true;
+        default:
+            return false;
+    }
+}

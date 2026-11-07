@@ -370,6 +370,7 @@ namespace Tiles
         PoweredRailTile, PoweredRailOnTile, DetectorRailTile, DetectorRailOnTile, ActivatorRailTile, ActivatorRailOnTile,
         IronDoorTopTile, IronDoorBottomTile, IronTrapdoorTile,
         IronBarsTile, ChainTile, EndRodTile, CobwebTile,
+        SoulTorchTile, SoulCampfireTop, SoulCampfireLogLit, SoulSoilTile, FireTile, FireAltTile, SoulFireTile,
 
         TileCount
     };

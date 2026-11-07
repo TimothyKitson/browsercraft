@@ -187,6 +187,7 @@ namespace
         Blocks::RepeaterFirst, Blocks::ComparatorFirst, Blocks::DaylightDetector, Blocks::Target, Items::TripwireHook,
         Blocks::IronDoorFirst, Blocks::IronTrapdoorFirst,
         Blocks::IronBars, Blocks::ChainFirst, Blocks::EndRodFirst, Blocks::Cobweb, Items::IronNugget,
+        Blocks::SoulTorch, Blocks::SoulCampfire, Blocks::SoulSoil,
         Items::Bucket, Items::WaterBucket, Items::LavaBucket, Items::PowderSnowBucket, Items::Shears,
         Items::IronIngot, Items::GoldIngot, Items::Diamond,
         Items::WoodPickaxe, Items::WoodAxe, Items::WoodShovel, Items::WoodSword, Items::WoodHoe,

@@ -2131,6 +2131,14 @@ namespace
         { "End Rod", EndRodTile, EndRodTile, EndRodTile, true, false, RenderType::Lush, 14, 0.0f },
         { "End Rod", EndRodTile, EndRodTile, EndRodTile, true, false, RenderType::Lush, 14, 0.0f },
         { "Cobweb", CobwebTile, CobwebTile, CobwebTile, false, false, RenderType::Cross, 0, 4.0f },
+        { "Soul Torch", SoulTorchTile, SoulTorchTile, SoulTorchTile, false, false, RenderType::Cross, 10, 0.0f },
+        { "Soul Campfire", SoulCampfireTop, CampfireLog, SoulCampfireLogLit, true, false, RenderType::Cube, 10, 2.0f },
+        { "Soul Soil", SoulSoilTile, SoulSoilTile, SoulSoilTile, true, true, RenderType::Cube, 0, 0.5f },
+        { "Fire", FireTile, FireAltTile, FireTile, false, false, RenderType::Lush, 15, 0.0f },
+        { "Fire", FireTile, FireAltTile, FireTile, false, false, RenderType::Lush, 15, 0.0f },
+        { "Fire", FireTile, FireAltTile, FireTile, false, false, RenderType::Lush, 15, 0.0f },
+        { "Fire", FireTile, FireAltTile, FireTile, false, false, RenderType::Lush, 15, 0.0f },
+        { "Soul Fire", SoulFireTile, SoulFireTile, SoulFireTile, false, false, RenderType::Lush, 10, 0.0f },
     };
 }
 
@@ -2227,6 +2235,7 @@ bool isObtainable(BlockId id)
             if (isChain(id) && id != Blocks::ChainFirst) return false;
             if (isEndRod(id) && id != Blocks::EndRodFirst) return false;
             if (id == Blocks::ChorusPlant) return false;
+            if (isFire(id)) return false;
             if (isBigDripleaf(id) && id != bigDripleafOf(0, DripleafTilt::None)) return false;
             if (isSmallDripleaf(id) && id != smallDripleafOf(0, false)) return false;
             if (isGlowLichen(id) && id != glowLichenOn(0)) return false;
@@ -2289,6 +2298,8 @@ const char* blockSoundGroup(BlockId id)
     if (isTripwire(id)) return "cloth";
     if (id == Blocks::IronBars || isChain(id) || isEndRod(id)) return "stone";
     if (id == Blocks::Cobweb) return "cloth";
+    if (id == Blocks::SoulSoil) return "sand";
+    if (id == Blocks::SoulCampfire) return "wood";
     if (id == Blocks::Target || id == Blocks::TargetLit) return "grass";
     if (isEarthy(id)) return "gravel";
     if (isFlowerPot(id)) return "stone";
@@ -2457,6 +2468,9 @@ Material blockMaterial(BlockId id)
     if (id == Blocks::IronBars || isChain(id)) return Material::Stone;
     if (isEndRod(id)) return Material::Plant;
     if (id == Blocks::Cobweb) return Material::Wool;
+    if (id == Blocks::SoulTorch || isFire(id)) return Material::Plant;
+    if (id == Blocks::SoulCampfire) return Material::Wood;
+    if (id == Blocks::SoulSoil) return Material::Sand;
     if (isIronDoor(id) || isIronTrapdoor(id)) return Material::Stone;
     if (isTurtleEgg(id)) return Material::Plant;
     if (id == Blocks::HoneyBlock || id == Blocks::HoneycombBlock) return Material::Wool;

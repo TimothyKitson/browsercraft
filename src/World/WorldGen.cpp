@@ -317,6 +317,12 @@ void WorldGen::generateNether(Chunk& chunk) const
                 if (chunk.getBlock(lx, y, lz) != Blocks::Netherrack) continue;
                 if (chunk.getBlock(lx, y + 1, lz) != Blocks::Air) continue;
 
+                if (y < LAVA_LEVEL + 9 && hashToFloat(hashCoords(wx, y, wz, m_seed + 72)) >= 0.22f &&
+                    hashToFloat(hashCoords(wx >> 3, y >> 2, wz >> 3, m_seed + 73)) < 0.3f)
+                {
+                    chunk.setBlockRaw(lx, y, lz, Blocks::SoulSoil);
+                    continue;
+                }
                 if (y < LAVA_LEVEL + 9 &&
                     hashToFloat(hashCoords(wx, y, wz, m_seed + 72)) < 0.22f)
                 {

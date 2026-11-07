@@ -5461,6 +5461,58 @@ namespace
                 for (int b = 0; b < 3; ++b)
                     if (a != 1 || b != 1) t.set(3 + k * 3 + a, 3 + k * 3 + b, k % 2 ? Color{ 64, 70, 84 } : Color{ 96, 104, 120 });
     }
+    void paintSoulFlameIn(Tile& t, int salt, bool soul)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int x = 0; x < Tile::N; ++x)
+        {
+            const int top = 2 + static_cast<int>(hash2(x, 0, salt) * 8.0f);
+            for (int y = top; y < Tile::N; ++y)
+            {
+                const float heat = static_cast<float>(y - top) / static_cast<float>(Tile::N - top);
+                const Color c = soul ? (heat > 0.6f ? Color{ 180, 250, 255 } : heat > 0.3f ? Color{ 80, 210, 230 } : Color{ 40, 130, 170 })
+                                     : (heat > 0.6f ? Color{ 255, 236, 140 } : heat > 0.3f ? Color{ 250, 160, 40 } : Color{ 220, 80, 20 });
+                if (hash2(x, y, salt + 1) > 0.18f) t.set(x, y, c);
+            }
+        }
+    }
+    void paintFireTile(Tile& t) { paintSoulFlameIn(t, 2001, false); }
+    void paintFireAltTile(Tile& t) { paintSoulFlameIn(t, 2003, false); }
+    void paintSoulFireTile(Tile& t) { paintSoulFlameIn(t, 2005, true); }
+    void paintSoulTorchTile(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 6; y < Tile::N; ++y) { t.set(7, y, Color{ 122, 90, 52 }); t.set(8, y, Color{ 98, 72, 42 }); }
+        for (int y = 3; y <= 6; ++y)
+            for (int x = 6; x <= 9; ++x)
+            {
+                const float d = std::sqrt((x - 7.5f) * (x - 7.5f) + (y - 5.0f) * (y - 5.0f));
+                if (d <= 2.2f) t.set(x, y, Color{ 80, 210, 230 });
+                if (d <= 1.1f) t.set(x, y, Color{ 200, 250, 255 });
+            }
+    }
+    void paintSoulCampfireTop(Tile& t)
+    {
+        t.fill(Color{ 70, 52, 34 });
+        for (int y = 3; y < 13; ++y) for (int x = 3; x < 13; ++x)
+            if (hash2(x, y, 2007) > 0.4f) t.set(x, y, hash2(x, y, 2008) > 0.5f ? Color{ 80, 210, 230 } : Color{ 40, 130, 170 });
+    }
+    void paintSoulCampfireLogLit(Tile& t)
+    {
+        t.fill(Color{ 90, 68, 42 });
+        for (int y = 0; y < Tile::N; y += 4) for (int x = 0; x < Tile::N; ++x) t.set(x, y, Color{ 64, 48, 30 });
+        for (int x = 2; x < 14; x += 3) t.set(x, 7, Color{ 80, 210, 230 });
+    }
+    void paintSoulSoilTile(Tile& t)
+    {
+        t.fill(Color{ 78, 60, 48 });
+        t.speckle(20, 2009);
+        for (int i = 0; i < 6; ++i)
+        {
+            const int x = static_cast<int>(hash2(i, 0, 2010) * 14.0f), y = static_cast<int>(hash2(i, 1, 2010) * 14.0f);
+            t.set(x, y, Color{ 58, 44, 36 }); t.set(x + 1, y, Color{ 58, 44, 36 });
+        }
+    }
     void paintItemPitcherPlant(Tile& t)
     {
         paintDoubleIn(t, true, Color{ 100, 170, 190 }, 1333);
@@ -8228,6 +8280,13 @@ namespace
         { Tiles::DustLine1Off, paintRedstoneDust },
         { Tiles::DustLine1On, paintRedstoneDustLit },
         { Tiles::LeverHandle, paintLever },
+        { Tiles::FireTile, paintFireTile },
+        { Tiles::FireAltTile, paintFireAltTile },
+        { Tiles::SoulFireTile, paintSoulFireTile },
+        { Tiles::SoulTorchTile, paintSoulTorchTile },
+        { Tiles::SoulCampfireTop, paintSoulCampfireTop },
+        { Tiles::SoulCampfireLogLit, paintSoulCampfireLogLit },
+        { Tiles::SoulSoilTile, paintSoulSoilTile },
         { Tiles::IronBarsTile, paintIronBarsTile },
         { Tiles::ChainTile, paintChainTile },
         { Tiles::EndRodTile, paintEndRodTile },
@@ -9015,6 +9074,13 @@ namespace
         { Tiles::GlassPaneTopTile, { "glass_pane_top", nullptr }, Tinting::None, 0, false },
         { Tiles::TerracottaPlainTile, { "terracotta", "hardened_clay", nullptr }, Tinting::None, 0, false },
         { Tiles::TintedGlassTile, { "tinted_glass", nullptr }, Tinting::None, 0, false },
+        { Tiles::FireTile, { "fire_0", nullptr }, Tinting::None, 0, true },
+        { Tiles::FireAltTile, { "fire_1", nullptr }, Tinting::None, 0, true },
+        { Tiles::SoulFireTile, { "soul_fire_0", nullptr }, Tinting::None, 0, true },
+        { Tiles::SoulTorchTile, { "soul_torch", nullptr }, Tinting::None, 0, false },
+        { Tiles::SoulCampfireTop, { "soul_campfire_fire", nullptr }, Tinting::None, 0, false },
+        { Tiles::SoulCampfireLogLit, { "soul_campfire_log_lit", nullptr }, Tinting::None, 0, true },
+        { Tiles::SoulSoilTile, { "soul_soil", nullptr }, Tinting::None, 0, false },
         { Tiles::IronBarsTile, { "iron_bars", nullptr }, Tinting::None, 0, false },
         { Tiles::ChainTile, { "chain", nullptr }, Tinting::None, 0, false },
         { Tiles::EndRodTile, { "end_rod", nullptr }, Tinting::None, 0, false },

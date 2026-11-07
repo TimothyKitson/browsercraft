@@ -377,7 +377,11 @@ bool Player::isInFire(const World& world) const
 
     for (int x = minX; x <= maxX; ++x)
         for (int z = minZ; z <= maxZ; ++z)
-            if (world.getBlock(x, footY, z) == Blocks::Campfire) return true;
+        {
+            const BlockId here = world.getBlock(x, footY, z);
+            if (isCampfire(here) || isFire(here)) return true;
+            if (isFire(world.getBlock(x, footY + 1, z))) return true;
+        }
 
     return false;
 }

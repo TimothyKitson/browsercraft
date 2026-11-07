@@ -789,6 +789,24 @@ namespace
             const glm::vec3 c[4] = { glm::vec3(x0, yy, z1), glm::vec3(x1, yy, z1), glm::vec3(x1, yy, z0), glm::vec3(x0, yy, z0) };
             pushQuad(snap, lx, y, lz, id, c, tile, x0 * 16.0f, z0 * 16.0f, x1 * 16.0f, z1 * 16.0f, shade, true, out);
         };
+        if (isFire(id))
+        {
+            const BlockInfo& info = blockInfo(id);
+            const float lean = 0.3f, h = 1.25f;
+            const glm::vec3 walls[4][4] = {
+                { { 0.0f, 0.0f, 0.02f }, { 1.0f, 0.0f, 0.02f }, { 1.0f, h, lean }, { 0.0f, h, lean } },
+                { { 1.0f, 0.0f, 0.98f }, { 0.0f, 0.0f, 0.98f }, { 0.0f, h, 1.0f - lean }, { 1.0f, h, 1.0f - lean } },
+                { { 0.02f, 0.0f, 1.0f }, { 0.02f, 0.0f, 0.0f }, { lean, h, 0.0f }, { lean, h, 1.0f } },
+                { { 0.98f, 0.0f, 0.0f }, { 0.98f, 0.0f, 1.0f }, { 1.0f - lean, h, 1.0f }, { 1.0f - lean, h, 0.0f } },
+            };
+            for (int k = 0; k < 4; ++k)
+                pushQuad(snap, lx, y, lz, id, walls[k], k < 2 ? info.tileTop : info.tileBottom, 0.0f, 0.0f, 16.0f, 16.0f, 1.0f, true, out);
+            const glm::vec3 crossA[4] = { { 0.0f, 0.0f, 0.0f }, { 1.0f, 0.0f, 1.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 1.0f, 0.0f } };
+            const glm::vec3 crossB[4] = { { 1.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 1.0f, 1.0f }, { 1.0f, 1.0f, 0.0f } };
+            pushQuad(snap, lx, y, lz, id, crossA, info.tileTop, 0.0f, 0.0f, 16.0f, 16.0f, 1.0f, true, out);
+            pushQuad(snap, lx, y, lz, id, crossB, info.tileBottom, 0.0f, 0.0f, 16.0f, 16.0f, 1.0f, true, out);
+            return;
+        }
         if (isChain(id))
         {
             const int tile = blockInfo(id).tileSide;

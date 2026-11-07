@@ -813,6 +813,7 @@ namespace
             else if (isTripwire(id))              why = "string laid on the ground";
             else if (isTripwireHook(id))          why = "a tripwire hook hung on a wall";
             else if (isChain(id) || isEndRod(id)) why = "set along another axis or facing";
+            else if (isFire(id))                  why = "lit with flint and steel, or spreading and burning down";
             else if (isAnyCoralWallFan(id))       why = "a coral fan set against another face";
             else if (isBigDripleaf(id) || isBigDripleafStem(id) || isSmallDripleaf(id))
                                                   why = "another facing, tilt or half of a dripleaf";

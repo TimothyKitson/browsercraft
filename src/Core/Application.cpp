@@ -1863,6 +1863,7 @@ bool Application::frame()
         if (playing()) tickBeacons(deltaTime);
         if (playing()) tickConduits(deltaTime);
         if (playing()) tickWiring(deltaTime);
+        if (playing()) tickFire(deltaTime);
         if (playing()) tickObservers(deltaTime);
         if (playing()) tickHoppers(deltaTime);
 
@@ -2762,6 +2763,16 @@ bool Application::frame()
                     for (int f = 0; f < 6; ++f) put(4 + (f % 3) * 2, f < 3 ? 0 : 2, 1 + (f / 3) * 2, static_cast<BlockId>(Blocks::EndRodFirst + f));
                     put(4, 1, 3, Blocks::Stone);
                     for (int dz = 5; dz <= 7; ++dz) put(5, 0, dz, Blocks::Cobweb);
+                    put(8, 0, -7, Blocks::SoulTorch);
+                    put(8, 0, -5, Blocks::SoulCampfire);
+                    put(8, 0, -3, Blocks::Campfire);
+                    put(8, -1, -1, Blocks::SoulSoil);
+                    put(8, 0, -1, Blocks::SoulFire);
+                    put(8, -1, 1, Blocks::Netherrack);
+                    put(8, 0, 1, Blocks::Fire0);
+                    for (int dz = 4; dz <= 7; ++dz) { put(10, 0, dz, Blocks::Planks); put(11, 0, dz, Blocks::Log); }
+                    lightFire(glm::ivec3(px + 9, py, pz + 5));
+                    lightFire(glm::ivec3(px + 10, py + 1, pz + 6));
                     put(13, 0, -8, Blocks::Bookshelf);
                     put(13, 0, 8, Blocks::DiamondOre);
                     put(13, 1, 8, Blocks::EndPortalFrame);
@@ -7399,6 +7410,7 @@ void Application::tickConduits(float deltaTime)
                     if (found == Blocks::Conduit) m_conduits.insert({ x, y, z });
                     else if (isComparator(found)) m_comparators.insert({ x, y, z });
                     else if (isDaylightDetector(found)) m_daylightDetectors.insert({ x, y, z });
+                    else if (isFire(found) && m_fires.size() < 512) m_fires.insert({ x, y, z });
                 }
     }
 
@@ -8781,6 +8793,105 @@ void Application::rewireTripwire(const glm::ivec3& at)
                 m_net.onLocalBlockChange(cell.x, cell.y, cell.z, want);
             }
         }
+}
+
+bool Application::lightFire(const glm::ivec3& at)
+{
+    if (m_world->getBlock(at.x, at.y, at.z) != Blocks::Air) return false;
+    const BlockId below = m_world->getBlock(at.x, at.y - 1, at.z);
+    bool fuel = isSolid(below);
+    static const int AROUND[6][3] = { { 1, 0, 0 }, { -1, 0, 0 }, { 0, 1, 0 }, { 0, -1, 0 }, { 0, 0, 1 }, { 0, 0, -1 } };
+    for (const auto& d : AROUND)
+        if (isFlammable(m_world->getBlock(at.x + d[0], at.y + d[1], at.z + d[2]))) fuel = true;
+    if (!fuel) return false;
+    const BlockId flame = (below == Blocks::SoulSand || below == Blocks::SoulSoil) ? Blocks::SoulFire : Blocks::Fire0;
+    m_world->setBlock(at.x, at.y, at.z, flame);
+    m_net.onLocalBlockChange(at.x, at.y, at.z, flame);
+    if (m_fires.size() < 512) m_fires.insert({ at.x, at.y, at.z });
+    return true;
+}
+
+void Application::tickFire(float deltaTime)
+{
+    if (!m_world || m_net.role() == Net::Role::Guest) return;
+    m_fireClock -= deltaTime;
+    if (m_fireClock > 0.0f) return;
+    m_fireClock = 0.25f;
+
+    static const int AROUND[6][3] = { { 1, 0, 0 }, { -1, 0, 0 }, { 0, 1, 0 }, { 0, -1, 0 }, { 0, 0, 1 }, { 0, 0, -1 } };
+    const std::vector<std::array<int, 3>> burning(m_fires.begin(), m_fires.end());
+    uint32_t roll = static_cast<uint32_t>(m_elapsedSeconds * 6151.0f) | 1u;
+    auto next = [&roll]() { roll ^= roll << 13; roll ^= roll >> 17; roll ^= roll << 5; return roll; };
+    auto put = [&](int x, int y, int z, BlockId id) {
+        m_world->setBlock(x, y, z, id);
+        m_net.onLocalBlockChange(x, y, z, id);
+    };
+
+    for (const auto& cell : burning)
+    {
+        const int x = cell[0], y = cell[1], z = cell[2];
+        const BlockId here = m_world->getBlock(x, y, z);
+        if (!isFire(here)) { m_fires.erase(cell); continue; }
+
+        const BlockId below = m_world->getBlock(x, y - 1, z);
+        const bool soulGround = below == Blocks::SoulSand || below == Blocks::SoulSoil;
+        if (here == Blocks::SoulFire)
+        {
+            if (!soulGround) { put(x, y, z, Blocks::Air); m_fires.erase(cell); }
+            continue;
+        }
+        const bool endless = below == Blocks::Netherrack;
+
+        if (!endless && hasSky() && m_weather.depth > 0.2f && !m_snowing && m_world->skyLight(x, y, z) >= 15 && next() % 3u == 0u)
+        {
+            put(x, y, z, Blocks::Air);
+            m_fires.erase(cell);
+            continue;
+        }
+
+        bool fuel = false;
+        for (const auto& d : AROUND)
+        {
+            const int nx = x + d[0], ny = y + d[1], nz = z + d[2];
+            const BlockId near = m_world->getBlock(nx, ny, nz);
+            if (!isFlammable(near)) continue;
+            fuel = true;
+            if (next() % 10u != 0u) continue;
+            if (near == Blocks::Tnt) { primeTnt(glm::ivec3(nx, ny, nz)); continue; }
+            put(nx, ny, nz, Blocks::Fire0);
+            if (m_fires.size() < 512) m_fires.insert({ nx, ny, nz });
+        }
+
+        for (int tries = 0; tries < 2; ++tries)
+        {
+            const uint32_t r = next();
+            const glm::ivec3 spot(x + static_cast<int>(r % 3u) - 1, y + static_cast<int>((r >> 4) % 4u) - 1, z + static_cast<int>((r >> 8) % 3u) - 1);
+            if ((r >> 12) % 8u != 0u) continue;
+            bool beside = false;
+            for (const auto& d : AROUND)
+                if (isFlammable(m_world->getBlock(spot.x + d[0], spot.y + d[1], spot.z + d[2]))) beside = true;
+            if (beside) lightFire(spot);
+        }
+
+        if (endless) continue;
+        if (!fuel && !isSolid(below))
+        {
+            put(x, y, z, Blocks::Air);
+            m_fires.erase(cell);
+            continue;
+        }
+        if (next() % 3u != 0u) continue;
+        if (here == Blocks::Fire3)
+        {
+            if (!fuel || next() % 2u == 0u)
+            {
+                put(x, y, z, Blocks::Air);
+                m_fires.erase(cell);
+            }
+            continue;
+        }
+        put(x, y, z, static_cast<BlockId>(here + 1));
+    }
 }
 
 void Application::tickWiring(float deltaTime)
@@ -10552,11 +10663,22 @@ void Application::handlePlacement()
         return;
     }
 
-    // Flint and steel lights a portal, and nothing else yet.
     if (stack.id == Items::FlintAndSteel)
     {
         const RaycastHit spark = m_world->raycast(m_camera.position, m_camera.front, REACH_DISTANCE);
-        if (spark.hit && lightPortal(spark.previous))
+        bool struck = false;
+        if (spark.hit && lightPortal(spark.previous)) struck = true;
+        else if (spark.hit && m_world->getBlock(spark.block.x, spark.block.y, spark.block.z) == Blocks::Tnt)
+        {
+            primeTnt(spark.block);
+            struck = true;
+        }
+        else if (spark.hit && modeCanBuild(m_player.mode) && lightFire(spark.previous))
+        {
+            m_audio.play(Sound::Fire, 0.6f, 1.2f);
+            struck = true;
+        }
+        if (struck)
         {
             if (!m_player.creative())
             {

@@ -3730,6 +3730,28 @@ namespace
               "every new redstone part has a recipe");
     }
 
+    void testFireAndSoul()
+    {
+        section("fire, soul fire and the soul blocks");
+        check(isFire(Blocks::Fire0) && isFire(Blocks::Fire3) && isFire(Blocks::SoulFire) && !isFire(Blocks::Campfire),
+              "four ages of fire and soul fire");
+        check(!isObtainable(Blocks::Fire2) && blockDrop(Blocks::Fire1) == Blocks::Air && !blockInfo(Blocks::Fire0).collides,
+              "fire is walked into, never carried");
+        check(lightEmission(Blocks::Fire0) == 15 && lightEmission(Blocks::SoulFire) == 10 && lightEmission(Blocks::SoulTorch) == 10,
+              "soul light is dimmer");
+        check(isFlammable(Blocks::Planks) && isFlammable(Blocks::Log) && isFlammable(Blocks::Wool) && isFlammable(Blocks::Leaves) &&
+              !isFlammable(Blocks::Stone) && !isFlammable(Blocks::Glass), "wood, wool and leaves burn and stone does not");
+        check(isCampfire(Blocks::SoulCampfire) && blockDrop(Blocks::SoulCampfire) == Blocks::SoulSoil, "a soul campfire breaks into soul soil");
+        const std::vector<StackId> made = Crafting::everyOutput();
+        auto makes = [&](StackId id) { return std::find(made.begin(), made.end(), id) != made.end(); };
+        check(makes(Blocks::SoulTorch) && makes(Blocks::SoulCampfire) && makes(Blocks::IronBars) && makes(Blocks::ChainFirst) &&
+              makes(Blocks::EndRodFirst) && makes(Items::IronNugget), "the soul lights, bars, chain, rod and nuggets are made");
+        check(Smelting::resultOf(Items::ChorusFruit) == Items::PoppedChorusFruit, "chorus fruit pops in a furnace");
+        check(blockDrop(Blocks::Cobweb) == Items::StringItem && !blockInfo(Blocks::Cobweb).collides, "a cobweb is walked into and cut for string");
+        check(Tools::breakSeconds(Items::IronSword, Blocks::Cobweb) < Tools::breakSeconds(Blocks::Air, Blocks::Cobweb) / 4.0f,
+              "and a sword goes through it quickly");
+    }
+
     // --- the workstations -----------------------------------------------
 
     // A village had a bench and a furnace in it and nothing else
@@ -13682,6 +13704,7 @@ int runSelfTest()
     testOcean();
     testIceAndSnow();
     testWiring();
+    testFireAndSoul();
     testMadeThings();
     testTheEndAndTheSea();
     testPathfinding();
