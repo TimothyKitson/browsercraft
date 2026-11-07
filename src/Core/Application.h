@@ -107,7 +107,8 @@ enum class Screen
     Connecting,
     Packs,
     Accessibility,
-    Language
+    Language,
+    LockDifficulty
 };
 
 // Menu buttons are drawn and hit-tested in the same pass, so a click
@@ -1518,6 +1519,10 @@ private:
     void renderAccessibility();
     void renderLanguage();
     bool titleIconButton(float x, float y, float size, const char* icon, const char* tooltip);
+    bool m_bindingCaptured = false;
+    void setDifficulty(Worlds::Difficulty difficulty);
+    bool lockButton(float x, float y, float size, bool locked, bool enabled);
+    void renderLockConfirm();
     std::set<StackId> m_knownRecipes;
     bool m_recipesSeeded = false;
     StackId stackNamed(const std::string& id) const;
@@ -1602,7 +1607,7 @@ private:
     };
     CreateWorldState m_create;
     GuiList m_worldList, m_flatList, m_presetList, m_biomeList;
-    GuiList m_accessList, m_languageList;
+    GuiList m_accessList, m_languageList, m_controlsList;
     GuiField m_worldSearch, m_createName, m_createSeed, m_editName, m_presetField;
     std::string m_editFolder;
     std::string m_editNote;

@@ -25,6 +25,7 @@ namespace Worlds
         bool structures = true;
         bool bonusChest = false;
         Difficulty difficulty = Difficulty::Normal;
+        bool difficultyLocked = false;
         std::string layers = "minecraft:bedrock,2*minecraft:dirt,minecraft:grass_block";
         std::string biome = "minecraft:plains";
     };

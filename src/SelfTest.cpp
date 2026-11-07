@@ -4827,6 +4827,7 @@ namespace
         second.structures = false;
         second.bonusChest = true;
         second.difficulty = Worlds::Difficulty::Peaceful;
+        second.difficultyLocked = true;
         second.layers = "minecraft:bedrock,3*minecraft:sand";
         second.biome = "minecraft:desert";
         Worlds::writeMeta(saves + "/Beach House", second);
@@ -4834,7 +4835,8 @@ namespace
         check(worlds.size() == 3 && worlds[0].folder == "Beach House", "the list holds every save, last played first");
         const Worlds::Meta& read = worlds[0].meta;
         check(read.name == "Beach House" && read.cheats && read.type == Worlds::Type::Flat && !read.structures && read.bonusChest &&
-              read.difficulty == Worlds::Difficulty::Peaceful && read.layers == second.layers && read.mode == static_cast<int>(GameMode::Creative),
+              read.difficulty == Worlds::Difficulty::Peaceful && read.difficultyLocked && read.layers == second.layers &&
+                  read.mode == static_cast<int>(GameMode::Creative),
               "each world's settings are kept beside it");
         check(Worlds::matches(worlds[0], "beach") && !Worlds::matches(worlds[0], "castle"), "the search box matches names");
         std::filesystem::remove_all(saves);

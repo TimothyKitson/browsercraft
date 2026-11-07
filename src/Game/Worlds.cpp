@@ -84,6 +84,7 @@ std::vector<std::string> Worlds::metaLines(const Meta& meta)
              "structures=" + std::string(meta.structures ? "1" : "0"),
              "bonusChest=" + std::string(meta.bonusChest ? "1" : "0"),
              "difficulty=" + std::to_string(static_cast<int>(meta.difficulty)),
+             "difficultyLocked=" + std::string(meta.difficultyLocked ? "1" : "0"),
              "layers=" + meta.layers,
              "biome=" + meta.biome };
 }
@@ -105,6 +106,7 @@ Worlds::Meta Worlds::parseMeta(const std::vector<std::string>& lines)
         else if (key == "structures") meta.structures = value != "0";
         else if (key == "bonusChest") meta.bonusChest = value == "1";
         else if (key == "difficulty") meta.difficulty = static_cast<Difficulty>(std::clamp(std::atoi(value.c_str()), 0, 3));
+        else if (key == "difficultyLocked") meta.difficultyLocked = value == "1";
         else if (key == "layers") meta.layers = value;
         else if (key == "biome") meta.biome = value;
     }

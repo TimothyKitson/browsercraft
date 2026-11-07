@@ -7498,6 +7498,12 @@ bool Application::frame()
                     }
             }
         }
+        else if (m_startupScreen == "optionsworld" || m_startupScreen == "lockdifficulty")
+        {
+            m_optionsReturn = Screen::Paused;
+            setMouseCaptured(false);
+            m_screen = m_startupScreen == "optionsworld" ? Screen::Settings : Screen::LockDifficulty;
+        }
         else if (m_startupScreen == "reloadtest")
         {
             m_packSelection.clear();
@@ -7872,6 +7878,7 @@ void Application::handleEvents()
             // Escape clears the binding; anything else becomes it. The
             // whole frame is swallowed either way, so the key being
             // bound cannot also trigger whatever it is bound to.
+            m_bindingCaptured = true;
             if (m_input.wasKeyPressed(SDL_SCANCODE_ESCAPE))
             {
                 m_keys.setBinding(m_rebinding, Binding{ false, 0 });
@@ -7969,6 +7976,10 @@ void Application::handleEvents()
         {
             m_net.leave();
             m_screen = Screen::Multiplayer;
+        }
+        else if (m_screen == Screen::LockDifficulty)
+        {
+            m_screen = Screen::Settings;
         }
         else if (m_screen == Screen::Accessibility || m_screen == Screen::Language)
         {
@@ -17199,6 +17210,7 @@ void Application::render()
         case Screen::Packs:        renderPacks(); break;
         case Screen::Accessibility: renderAccessibility(); break;
         case Screen::Language:     renderLanguage(); break;
+        case Screen::LockDifficulty: renderLockConfirm(); break;
         case Screen::Controls:     renderControlsScreen(); break;
         case Screen::NameEntry:    renderNameEntryScreen(); break;
         case Screen::Playing:
@@ -21772,16 +21784,35 @@ void Application::renderSettingsScreen()
     const float buttonWidth = std::min(520.0f, w * 0.72f);
     const float buttonX = w * 0.5f - buttonWidth * 0.5f;
     const float buttonHeight = 52.0f;
-    float y = h * 0.28f;
+    const bool worldRow = m_optionsReturn == Screen::Paused && m_world && !m_menuWorld;
+    const float gap = worldRow ? 8.0f : 14.0f;
+    float y = h * (worldRow ? 0.21f : 0.28f);
+
+    if (worldRow)
+    {
+        const bool hardcore = modeIsHardcore(m_gameMode);
+        const Worlds::Difficulty shown = hardcore ? Worlds::Difficulty::Hard : m_worldMeta.difficulty;
+        const bool locked = hardcore || m_worldMeta.difficultyLocked;
+        const float lockSize = buttonHeight;
+        const float difficultyWidth = buttonWidth - lockSize - 8.0f;
+        if (menuButton({ buttonX, y, difficultyWidth, buttonHeight }, std::string("Difficulty: ") + Worlds::difficultyName(shown), !locked && m_net.role() != Net::Role::Guest))
+        {
+            setDifficulty(static_cast<Worlds::Difficulty>((static_cast<int>(m_worldMeta.difficulty) + 1) % 4));
+            m_audio.play(Sound::Click, 0.45f);
+        }
+        if (lockButton(buttonX + difficultyWidth + 8.0f, y, lockSize, locked, !locked && m_net.role() != Net::Role::Guest))
+            m_screen = Screen::LockDifficulty;
+        y += buttonHeight + gap;
+    }
 
     if (menuButton({ buttonX, y, buttonWidth, buttonHeight }, "Video Settings..."))
         m_pendingAction = MenuAction::GoVideoSettings;
-    y += buttonHeight + 14.0f;
+    y += buttonHeight + gap;
 
     if (menuButton({ buttonX, y, buttonWidth, buttonHeight },
                    m_audio.muted() ? "Sound: Off" : "Sound: On"))
         m_pendingAction = MenuAction::ToggleSound;
-    y += buttonHeight + 14.0f;
+    y += buttonHeight + gap;
 
     {
         const float half = (buttonWidth - 12.0f) * 0.5f;
@@ -21790,23 +21821,23 @@ void Application::renderSettingsScreen()
         if (menuButton({ buttonX + half + 12.0f, y, half, buttonHeight }, "Resource Packs..."))
             m_pendingAction = MenuAction::OpenPacks;
     }
-    y += buttonHeight + 14.0f;
+    y += buttonHeight + gap;
 
     if (menuButton({ buttonX, y, buttonWidth, buttonHeight }, m_leftHanded ? "Main Hand: Left" : "Main Hand: Right"))
         m_pendingAction = MenuAction::ToggleMainHand;
-    y += buttonHeight + 14.0f;
+    y += buttonHeight + gap;
 
     if (m_optionsReturn == Screen::Title)
     {
         if (menuButton({ buttonX, y, buttonWidth, buttonHeight },
                        m_playerName.empty() ? "Set Name" : ("Name: " + m_playerName)))
             m_pendingAction = MenuAction::GoNameEntry;
-        y += buttonHeight + 14.0f;
+        y += buttonHeight + gap;
     }
 
     if (menuButton({ buttonX, y, buttonWidth, buttonHeight }, "Credits..."))
         m_pendingAction = MenuAction::GoCredits;
-    y += buttonHeight + 24.0f;
+    y += buttonHeight + gap + 10.0f;
 
     if (menuButton({ buttonX, y, buttonWidth, 46.0f }, "Done"))
         m_pendingAction = MenuAction::LeaveOptions;
@@ -21936,85 +21967,6 @@ void Application::renderCreditsScreen()
     if (menuButton({ w * 0.5f - buttonWidth * 0.5f, std::max(y + 20.0f, h * 0.80f), buttonWidth, 46.0f },
                    "Done"))
         m_pendingAction = MenuAction::BackToOptions;
-}
-
-void Application::renderControlsScreen()
-{
-    const ScopedPanelUnits panel(m_ui, guiScale());
-    const float w = m_ui.canvasWidth();
-    const float h = m_ui.canvasHeight();
-
-    menuBackdrop(w, h, 0.62f);
-    centredText("Controls", h * 0.05f, 3.6f, TEXT_COLOR);
-
-    const int rowCount = static_cast<int>(Action::Count);
-    const int rows = (rowCount + 1) / 2;
-
-    // Two columns, shrunk to fit a short window the same way the profile
-    // screen does -- twenty-one rows do not fit a laptop otherwise.
-    constexpr float ROW_H = 30.0f;
-    const float headingSpace = h * 0.05f + UIRenderer::textHeight(3.6f) + 20.0f;
-    const float footerSpace = 110.0f;
-    const float available = h - headingSpace - footerSpace;
-    const float ui = std::clamp(available / (rows * ROW_H), 0.6f, 1.0f);
-
-    const float rowHeight = ROW_H * ui;
-    const float scale = 1.8f * ui;
-    const float columnWidth = std::min(430.0f, w * 0.46f);
-    const float leftX = w * 0.5f - columnWidth - 10.0f;
-    const float rightX = w * 0.5f + 10.0f;
-    const float top = headingSpace;
-
-    const float mouseX = static_cast<float>(m_input.mouseX());
-    const float mouseY = static_cast<float>(m_input.mouseY());
-    m_controlsHover = -1;
-
-    for (int i = 0; i < rowCount; ++i)
-    {
-        const Action action = static_cast<Action>(i);
-        const bool leftColumn = i < rows;
-        const float x = leftColumn ? leftX : rightX;
-        const float y = top + (leftColumn ? i : i - rows) * rowHeight;
-
-        const bool hovered = mouseX >= x && mouseX < x + columnWidth &&
-                             mouseY >= y && mouseY < y + rowHeight - 3.0f;
-        if (hovered) m_controlsHover = i;
-
-        const bool listening = (m_rebinding == action);
-        const bool clash = m_keys.conflicts(action);
-
-        roundedQuad(x, y, columnWidth, rowHeight - 3.0f,
-                    listening ? glm::vec4(0.36f, 0.40f, 0.52f, 0.95f)
-                              : (hovered ? glm::vec4(0.22f, 0.23f, 0.27f, 0.85f)
-                                         : glm::vec4(0.12f, 0.13f, 0.16f, 0.70f)),
-                    4.0f);
-
-        m_ui.textWithShadow(KeyBindings::name(action), x + 10.0f,
-                            y + rowHeight * 0.5f - UIRenderer::textHeight(scale) * 0.5f - 1.5f,
-                            scale, TEXT_COLOR);
-
-        // Listening shows "> ... <" the way Minecraft does, and a key
-        // used twice turns red so the clash is obvious.
-        const std::string bound = listening ? "> PRESS A KEY <"
-                                            : KeyBindings::describe(m_keys.binding(action));
-        const glm::vec4 colour = listening ? glm::vec4(1.0f, 1.0f, 0.62f, 1.0f)
-                                           : (clash ? glm::vec4(1.0f, 0.46f, 0.42f, 1.0f)
-                                                    : glm::vec4(1.0f, 0.92f, 0.62f, 1.0f));
-        m_ui.textWithShadow(bound,
-                            x + columnWidth - UIRenderer::textWidth(bound, scale) - 10.0f,
-                            y + rowHeight * 0.5f - UIRenderer::textHeight(scale) * 0.5f - 1.5f,
-                            scale, colour);
-    }
-
-    const float footerY = top + rows * rowHeight + 14.0f;
-
-    const float buttonWidth = std::min(260.0f, w * 0.3f);
-    if (menuButton({ w * 0.5f - buttonWidth - 6.0f, footerY + 24.0f, buttonWidth, 44.0f },
-                   "Reset Defaults"))
-        m_pendingAction = MenuAction::ResetBindings;
-
-    if (menuButton({ w * 0.5f + 6.0f, footerY + 24.0f, buttonWidth, 44.0f }, "Done"))
-        m_pendingAction = MenuAction::GoSettings;
 }
 
 void Application::renderNameEntryScreen()
@@ -22278,6 +22230,7 @@ void Application::renderDeathScreen()
 #include "Tutorial.inl"
 #include "Spectator.inl"
 #include "AccessibilityScreen.inl"
+#include "ControlsScreen.inl"
 #include "Core/Packs.h"
 
 void Application::renderDebugOverlay()
