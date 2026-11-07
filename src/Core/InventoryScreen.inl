@@ -182,7 +182,9 @@ namespace
         Items::GoldHelmet, Items::GoldChestplate, Items::GoldLeggings, Items::GoldBoots,
         Items::IronHelmet, Items::IronChestplate, Items::IronLeggings, Items::IronBoots,
         Items::DiamondHelmet, Items::DiamondChestplate, Items::DiamondLeggings, Items::DiamondBoots,
+        Items::ChainmailHelmet, Items::ChainmailChestplate, Items::ChainmailLeggings, Items::ChainmailBoots,
         Items::TurtleHelmet,
+        Items::LeatherHorseArmor, Items::IronHorseArmor, Items::GoldHorseArmor, Items::DiamondHorseArmor,
     };
 
     const StackId TAB_TOOLS[] = {
@@ -662,19 +664,19 @@ void Application::drawPlayerFigure(const PlayerSkin& skin, float x1, float y1, f
     m_dollModel.build(skin, pose, 1.0f, 0.0f);
     gather(skin.textureId(), glm::vec3(1.0f), 0.0f);
 
-    static const char* LAYER_ONE[6] = { nullptr, "../models/armor/leather_layer_1", "../models/armor/gold_layer_1",
+    static const char* LAYER_ONE[7] = { nullptr, "../models/armor/leather_layer_1", "../models/armor/gold_layer_1",
                                         "../models/armor/iron_layer_1", "../models/armor/diamond_layer_1",
-                                        "../models/armor/netherite_layer_1" };
-    static const char* LAYER_TWO[6] = { nullptr, "../models/armor/leather_layer_2", "../models/armor/gold_layer_2",
+                                        "../models/armor/netherite_layer_1", "../models/armor/chainmail_layer_1" };
+    static const char* LAYER_TWO[7] = { nullptr, "../models/armor/leather_layer_2", "../models/armor/gold_layer_2",
                                         "../models/armor/iron_layer_2", "../models/armor/diamond_layer_2",
-                                        "../models/armor/netherite_layer_2" };
+                                        "../models/armor/netherite_layer_2", "../models/armor/chainmail_layer_2" };
     for (int slot = 0; slot < Inventory::ARMOR_SLOTS; ++slot)
     {
         const ItemStack& worn = m_inventory.slot(Inventory::ARMOR_FIRST + slot);
         if (worn.empty()) continue;
         const int tier = static_cast<int>(Armour::tierOf(worn.id));
         const int piece = static_cast<int>(Armour::pieceOf(worn.id));
-        if (tier <= 0 || tier > 5 || piece <= 0) continue;
+        if (tier <= 0 || tier > 6 || piece <= 0) continue;
         const GuiImage* image = m_gui.image(piece == 3 ? LAYER_TWO[tier] : LAYER_ONE[tier]);
         if (!image) continue;
         m_dollModel.buildArmour(pose, piece, 1.0f, 0.0f);

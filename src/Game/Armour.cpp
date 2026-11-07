@@ -12,15 +12,20 @@ namespace
         return id >= Items::NetheriteHelmet && id <= Items::NetheriteBoots;
     }
 
+    bool inChainmailRange(StackId id)
+    {
+        return id >= Items::ChainmailHelmet && id <= Items::ChainmailBoots;
+    }
+
     bool inArmourRange(StackId id)
     {
         return (id >= Items::LeatherHelmet && id <= Items::DiamondBoots) ||
-               inNetheriteRange(id);
+               inNetheriteRange(id) || inChainmailRange(id);
     }
 
     // Points per piece, by tier then piece: helmet, chestplate, leggings,
     // boots. These are Minecraft's own numbers.
-    const int POINTS[5][PIECES_PER_TIER] = {
+    const int POINTS[6][PIECES_PER_TIER] = {
         { 1, 3, 2, 1 },   // leather:  7
         { 2, 5, 3, 1 },   // gold:    11
         { 2, 6, 5, 2 },   // iron:    15
@@ -29,12 +34,13 @@ namespace
         // Minecraft either -- it is armour that does not wear out and
         // does not burn, and that is the whole of what it buys.
         { 3, 8, 6, 3 },   // netherite: 20
+        { 2, 5, 4, 1 },   // chainmail: 12
     };
 
     // How many hits each tier takes, as a multiplier on the piece's own
     // base. Minecraft gives each piece a different figure; these are
     // close enough that the ordering a player actually feels is right.
-    const int DURABILITY[5] = { 80, 112, 240, 528, 666 };
+    const int DURABILITY[6] = { 80, 112, 240, 528, 666, 240 };
     const float PIECE_SHARE[PIECES_PER_TIER] = { 0.69f, 1.0f, 0.94f, 0.81f };
 }
 
@@ -52,6 +58,8 @@ Armour::Piece Armour::pieceOf(StackId id)
     // from their own start.
     if (inNetheriteRange(id))
         return static_cast<Piece>((id - Items::NetheriteHelmet) + 1);
+    if (inChainmailRange(id))
+        return static_cast<Piece>((id - Items::ChainmailHelmet) + 1);
 
     if (!inArmourRange(id)) return Piece::None;
     const int offset = (id - Items::LeatherHelmet) % PIECES_PER_TIER;
@@ -61,6 +69,7 @@ Armour::Piece Armour::pieceOf(StackId id)
 Armour::Tier Armour::tierOf(StackId id)
 {
     if (inNetheriteRange(id)) return Tier::Netherite;
+    if (inChainmailRange(id)) return Tier::Chainmail;
 
     if (!inArmourRange(id)) return Tier::None;
     const int step = (id - Items::LeatherHelmet) / PIECES_PER_TIER;

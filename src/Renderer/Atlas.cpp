@@ -9693,6 +9693,10 @@ namespace
         { Tiles::ItemSpectralArrow, { "spectral_arrow", nullptr, nullptr } },
         { Tiles::ItemTippedArrow, { "tipped_arrow_base", nullptr, nullptr } },
         { Tiles::ItemTippedArrowHead, { "tipped_arrow_head", nullptr, nullptr } },
+        { Tiles::ItemChainmailFirst + 0, { "chainmail_helmet", nullptr, nullptr } },
+        { Tiles::ItemChainmailFirst + 1, { "chainmail_chestplate", nullptr, nullptr } },
+        { Tiles::ItemChainmailFirst + 2, { "chainmail_leggings", nullptr, nullptr } },
+        { Tiles::ItemChainmailFirst + 3, { "chainmail_boots", nullptr, nullptr } },
         { Tiles::ItemCompassFrameFirst + 0, { "compass_00", nullptr, nullptr } },
         { Tiles::ItemCompassFrameFirst + 1, { "compass_01", nullptr, nullptr } },
         { Tiles::ItemCompassFrameFirst + 2, { "compass_02", nullptr, nullptr } },
@@ -11151,6 +11155,15 @@ Atlas::Atlas()
         paintArmourTile(tile, i % 4, i / 4);
         blitPainted(Tiles::ItemArmourFirst + i, tile);
     }
+    for (int i = 0; i < 4; ++i)
+    {
+        Tile tile;
+        paintArmourTile(tile, i, 2);
+        for (int y = 0; y < Tile::N; ++y)
+            for (int x = 0; x < Tile::N; ++x)
+                if (tile.get(x, y).a > 0 && (x + y) % 2 == 0) tile.set(x, y, Color{ 60, 60, 66 });
+        blitPainted(Tiles::ItemChainmailFirst + i, tile);
+    }
 
     // The ninth metal. Netherite's tools and armour sit at the end of
     // the item list rather than after the diamond ones, so they are
@@ -12240,6 +12253,7 @@ bool Atlas::hasPainter(int tileIndex)
     if (tileIndex >= Tiles::WoolFirst && tileIndex < Tiles::WoolEnd) return true;
     if (tileIndex >= Tiles::ItemDyeFirst && tileIndex < Tiles::ItemDyeEnd) return true;
     if (tileIndex >= Tiles::ItemArmourFirst && tileIndex < Tiles::ItemArmourEnd) return true;
+    if (tileIndex >= Tiles::ItemChainmailFirst && tileIndex <= Tiles::ItemChainmailLast) return true;
     if (tileIndex >= Tiles::ConcreteTile && tileIndex <= Tiles::GlazedTileLast &&
         tileIndex != Tiles::TerracottaPlainTile) return true;
     if (tileIndex >= Tiles::StainedGlassTile && tileIndex <= Tiles::StainedGlassTileLast) return true;

@@ -3574,6 +3574,8 @@ bool Application::frame()
                     m_inventory.slot(2) = horn;
                     m_hornCooldown = 3.5f;
                     m_inventory.slot(3) = ItemStack{ Items::Leather, 4 };
+                    for (int piece = 0; piece < 4; ++piece)
+                        m_inventory.slot(Inventory::ARMOR_FIRST + piece) = ItemStack{ static_cast<StackId>(Items::ChainmailHelmet + piece), 1 };
                     m_inventoryOpen = true;
                     m_inventory.setCraftSize(2);
                     m_devHoverHotbar = 0;

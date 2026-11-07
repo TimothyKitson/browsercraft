@@ -10,7 +10,7 @@ namespace Armour
 {
     // In the order the slots run down the side of the inventory.
     enum class Piece { None, Helmet, Chestplate, Leggings, Boots };
-    enum class Tier { None, Leather, Gold, Iron, Diamond, Netherite };
+    enum class Tier { None, Leather, Gold, Iron, Diamond, Netherite, Chainmail };
 
     Piece pieceOf(StackId id);
     Tier tierOf(StackId id);

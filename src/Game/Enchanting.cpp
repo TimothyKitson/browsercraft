@@ -214,6 +214,7 @@ namespace Enchanting
             case Armour::Tier::Leather: return 15;
             case Armour::Tier::Gold:    return 25;
             case Armour::Tier::Iron:    return 9;
+            case Armour::Tier::Chainmail: return 12;
             case Armour::Tier::Diamond: return 10;
             default: break;
             }

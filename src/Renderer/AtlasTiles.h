@@ -601,6 +601,7 @@ namespace Tiles
         ItemSpyglass, ItemEchoShard, ItemGoatHorn, ItemBundle, ItemBundleFilled,
         ItemCrossbow, ItemCrossbowPulling0, ItemCrossbowPulling1, ItemCrossbowPulling2, ItemCrossbowArrow, ItemCrossbowFirework,
         ItemSpectralArrow, ItemTippedArrow, ItemTippedArrowHead,
+        ItemChainmailFirst, ItemChainmailLast = ItemChainmailFirst + 3,
         ItemCompassFrameFirst, ItemCompassFrameLast = ItemCompassFrameFirst + 31,
         ItemClockFirst, ItemClockLast = ItemClockFirst + 63,
         ItemRecoveryFirst, ItemRecoveryLast = ItemRecoveryFirst + 31,

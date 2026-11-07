@@ -209,12 +209,13 @@ Everything in the 1.21 textures zip the game doesn't use yet, turned into work. 
     - III. Spyglass with its scope overlay, compass (32 frames), clock (64 frames), recovery compass.
     - IV. Brush, goat horn, and the bundle with its tooltip.
     - Notes: fishing follows the 1.21.1 fish, junk and treasure tables, though rotten flesh waits for item 51 and there is no Luck of the Sea or Lure yet. Pigs and striders are ridden with a saddle and steered with their stick. Name tags are named at the anvil, where only name tags can be renamed for now, and the names live in the level save; mobs are not saved, so a named or leashed mob is only kept around longer, not across a reload. Lead knots are drawn as a small block of rope rather than Minecraft's knot model. Compasses point to spawn or a bound lodestone; the recovery compass came with echo shards in ancient cities, ahead of item 52. Goats ram every so often and shed a horn when they hit stone, logs, ore or packed ice; one in fifty screams. The bundle uses the 1.21.2 recipe, since 1.21.1 kept it behind an experiment, and its contents are kept in the level like banner designs.
-50. Combat
+50. Combat (done)
     - I. Crossbow: pulling, loaded arrow and loaded firework.
     - II. Spectral and tipped arrows, item and entity.
     - III. Throwable trident with riptide.
     - IV. Chainmail armour with its layers.
     - V. Horse armour (4 kinds), wolf armour, armadillo scute.
+    - Notes: the crossbow's loaded-firework icon is in, but loading a firework waits for rockets in item 57. Tipped arrows carry an effect rather than a potion, since only a handful of brews exist before item 60; strays drop arrows of slowness, and crafting them from lingering potions comes with item 60. Mobs can now glow, be slowed and be poisoned; glowing is drawn as full brightness rather than an outline. Trident enchantments are kept above the usual ones in the stack and come from the enchanting table, not books. Chainmail has no recipe, as in Minecraft, and is sold by armorers; armour still only shows on the inventory doll, not on the player in the world. The four horse armours were already in. Wolf armour and the armadillo scute go with the armadillo in item 61.
 51. Food
     - I. Golden apple (absorption hearts), golden carrot, glistering melon.
     - II. Mushroom stew, rabbit stew, suspicious stew, pumpkin pie.
@@ -232,7 +233,7 @@ Everything in the 1.21 textures zip the game doesn't use yet, turned into work. 
 
 ## Part 4: new mobs
 
-61. Armadillo: rolls up when scared, drops scutes.
+61. Armadillo: rolls up when scared, drops scutes. Wolf armour (from scutes) comes with it.
 62. Sniffer: digs up seeds, hatches from its egg. (done with item 45)
 63. Glow squid, which drops glow ink.
 64. Zoglin, illusioner and evoker fangs.

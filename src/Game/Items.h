@@ -388,6 +388,10 @@ namespace Items
         Crossbow,
         SpectralArrow,
         TippedArrow,
+        ChainmailHelmet,
+        ChainmailChestplate,
+        ChainmailLeggings,
+        ChainmailBoots,
         Count
     };
 }

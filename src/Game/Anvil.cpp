@@ -85,6 +85,7 @@ StackId Anvil::repairMaterial(StackId item)
     {
         case Armour::Tier::Leather: return Items::Leather;
         case Armour::Tier::Iron:    return Items::IronIngot;
+        case Armour::Tier::Chainmail: return Items::IronIngot;
         case Armour::Tier::Gold:    return Items::GoldIngot;
         case Armour::Tier::Diamond: return Items::Diamond;
         case Armour::Tier::None:    break;

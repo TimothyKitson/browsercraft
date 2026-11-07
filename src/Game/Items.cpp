@@ -292,6 +292,10 @@ namespace
         { "Crossbow", Tiles::ItemCrossbow, 1 },
         { "Spectral Arrow", Tiles::ItemSpectralArrow, 64 },
         { "Tipped Arrow", Tiles::ItemTippedArrow, 64 },
+        { "Chainmail Helmet", Tiles::ItemChainmailFirst + 0, 1 },
+        { "Chainmail Chestplate", Tiles::ItemChainmailFirst + 1, 1 },
+        { "Chainmail Leggings", Tiles::ItemChainmailFirst + 2, 1 },
+        { "Chainmail Boots", Tiles::ItemChainmailFirst + 3, 1 },
     };
 
     static_assert(sizeof(ITEMS) / sizeof(ITEMS[0]) ==

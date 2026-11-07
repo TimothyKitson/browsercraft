@@ -3903,6 +3903,18 @@ namespace
             for (int row = 0; row < 3; ++row)
                 if (Enchanting::offerFor(row, 15, Items::Trident, roll).special >= 0) offered = true;
         check(offered, "the enchanting table offers trident enchantments for a trident");
+
+        check(Armour::tierOf(Items::ChainmailChestplate) == Armour::Tier::Chainmail &&
+              Armour::pieceOf(Items::ChainmailBoots) == Armour::Piece::Boots && Armour::slotFor(Items::ChainmailHelmet) == 0,
+              "chainmail is armour of its own, worn where its piece goes");
+        int chain = 0;
+        for (StackId piece = Items::ChainmailHelmet; piece <= Items::ChainmailBoots; ++piece) chain += Armour::defencePoints(piece);
+        check(chain == 12 && Armour::maxDurability(Items::ChainmailChestplate) == 240, "and gives twelve points, wearing like iron");
+        check(Enchanting::enchantability(Items::ChainmailLeggings) == 12, "it takes enchantments a little better than iron");
+        bool sold = false;
+        for (const Trading::Offer& offer : Trading::offersFor(Trading::Profession::Armorer))
+            if (offer.give == Items::ChainmailChestplate) sold = true;
+        check(sold, "armorers sell it");
     }
 
     void testFishing()
