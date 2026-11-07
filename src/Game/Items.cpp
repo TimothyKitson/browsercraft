@@ -349,6 +349,7 @@ namespace
         { "Minecart with Hopper", Tiles::ItemVehicleFirst + 19, 1 },
         { "Minecart with TNT", Tiles::ItemVehicleFirst + 20, 1 },
         { "Minecart with Command Block", Tiles::ItemVehicleFirst + 21, 1 },
+        { "Spawn Egg", Tiles::ItemSpawnEggFirst, 64 },
     };
 
     static_assert(sizeof(ITEMS) / sizeof(ITEMS[0]) ==

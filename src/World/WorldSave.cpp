@@ -390,6 +390,15 @@ void WorldSave::saveLevel(const std::string& saveDirectory, const LevelState& st
             write(out, slot.second.enchantments);
         }
     }
+    write(out, static_cast<uint32_t>(state.cages.size()));
+    for (const LevelState::SavedCage& cage : state.cages)
+    {
+        write(out, cage.dimension);
+        write(out, cage.x);
+        write(out, cage.y);
+        write(out, cage.z);
+        write(out, cage.mob);
+    }
 }
 
 bool WorldSave::loadLevel(const std::string& saveDirectory, LevelState& out)
@@ -808,7 +817,8 @@ bool WorldSave::loadLevel(const std::string& saveDirectory, LevelState& out)
                                                         out.lecterns.push_back(lectern);
                                                     }
                                                 uint32_t vehicleCount = 0;
-                                                if (lecternsWhole && read(in, vehicleCount))
+                                                bool vehiclesWhole = lecternsWhole && read(in, vehicleCount);
+                                                if (vehiclesWhole)
                                                     for (uint32_t i = 0; i < vehicleCount && i < 100000u; ++i)
                                                     {
                                                         LevelState::SavedVehicle vehicle;
@@ -817,7 +827,10 @@ bool WorldSave::loadLevel(const std::string& saveDirectory, LevelState& out)
                                                             !read(in, vehicle.x) || !read(in, vehicle.y) || !read(in, vehicle.z) ||
                                                             !read(in, vehicle.yaw) || !read(in, vehicle.fuel) || !readLine(in, vehicle.command) ||
                                                             !read(in, slots))
+                                                        {
+                                                            vehiclesWhole = false;
                                                             break;
+                                                        }
                                                         bool whole = true;
                                                         for (uint8_t k = 0; k < slots && whole; ++k)
                                                         {
@@ -826,8 +839,18 @@ bool WorldSave::loadLevel(const std::string& saveDirectory, LevelState& out)
                                                                     read(in, slot.second.damage) && read(in, slot.second.enchantments);
                                                             if (whole) vehicle.contents.push_back(slot);
                                                         }
-                                                        if (!whole) break;
+                                                        if (!whole) { vehiclesWhole = false; break; }
                                                         out.vehicles.push_back(vehicle);
+                                                    }
+                                                uint32_t cageCount = 0;
+                                                if (vehiclesWhole && read(in, cageCount))
+                                                    for (uint32_t i = 0; i < cageCount && i < 100000u; ++i)
+                                                    {
+                                                        LevelState::SavedCage cage;
+                                                        if (!read(in, cage.dimension) || !read(in, cage.x) || !read(in, cage.y) ||
+                                                            !read(in, cage.z) || !read(in, cage.mob))
+                                                            break;
+                                                        out.cages.push_back(cage);
                                                     }
                                             }
                                         }

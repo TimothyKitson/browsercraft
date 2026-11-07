@@ -1013,7 +1013,8 @@ namespace
                 byHand = "a water bucket used on the creature in it";
             else if (i == static_cast<int>(Items::WrittenBook))
                 byHand = "a book and quill signed, or a signed one copied";
-            else if (i == static_cast<int>(Items::KnowledgeBook) || i == static_cast<int>(Items::CommandBlockMinecart))
+            else if (i == static_cast<int>(Items::KnowledgeBook) || i == static_cast<int>(Items::CommandBlockMinecart) ||
+                     i == static_cast<int>(Items::SpawnEgg))
                 byHand = "creative only, as in Minecraft";
             else if (i == static_cast<int>(Items::EnchantedBook))
                 byHand = "a book enchanted at the table, fished up, or bought from a librarian";

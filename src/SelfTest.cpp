@@ -4178,6 +4178,39 @@ namespace
         std::filesystem::remove_all(dir, ec);
     }
 
+    void testSpawnEggs()
+    {
+        section("spawn eggs");
+        int eggs = 0;
+        bool apart = true;
+        std::set<std::pair<unsigned int, unsigned int>> looks;
+        for (int i = 0; i < mobTypeCount(); ++i)
+        {
+            unsigned int shell = 0, spots = 0;
+            const MobId id = static_cast<MobId>(i);
+            const bool has = spawnEggColours(id, shell, spots);
+            const MobType& type = mobType(id);
+            if (type.inanimate || id == MobId::SlimeSmall || id == MobId::TropicalFishLarge)
+            {
+                if (has) apart = false;
+                continue;
+            }
+            if (!has) apart = false;
+            else
+            {
+                ++eggs;
+                looks.insert({ shell, spots });
+            }
+        }
+        check(apart, "every living mob has an egg, and no boat, cart or half a slime does");
+        check(eggs >= 60, "which is more than sixty eggs");
+        unsigned int shell = 0, spots = 0;
+        check(spawnEggColours(MobId::Pig, shell, spots) && shell == 0xF0A5A2u && spots == 0xDB635Fu, "a pig's egg is pink with darker spots");
+        check(spawnEggColours(MobId::Creeper, shell, spots) && shell == 0x0DA70Bu && spots == 0u, "and a creeper's green with black");
+        check(maxStackOf(Items::SpawnEgg) == 64, "eggs stack to sixty-four");
+        check(Tiles::ItemSpawnEggFirst + mobTypeCount() <= Tiles::ItemSpawnEggLast + 1, "and every mob has a tile to be drawn with");
+    }
+
     void testArchery()
     {
         section("the crossbow, and spectral and tipped arrows");
@@ -12140,7 +12173,7 @@ namespace
             std::error_code ec;
             const auto size = std::filesystem::file_size(path, ec);
             if (!ec) std::filesystem::resize_file(path, size - sizeof(uint16_t) - sizeof(uint8_t) - 3 * sizeof(int) - sizeof(uint32_t) - sizeof(int32_t) - 6 * sizeof(uint32_t) -
-                                                        sizeof(uint8_t) - 3 * sizeof(float) - sizeof(int8_t) - sizeof(uint32_t) - 3 * sizeof(uint32_t), ec);
+                                                        sizeof(uint8_t) - 3 * sizeof(float) - sizeof(int8_t) - sizeof(uint32_t) - 4 * sizeof(uint32_t), ec);
 
             LevelState back;
             check(WorldSave::loadLevel(dir, back), "a level from before items moved up still loads");
@@ -14662,6 +14695,7 @@ int runSelfTest()
     testMobBuckets();
     testBooks();
     testVehicles();
+    testSpawnEggs();
     testMadeThings();
     testTheEndAndTheSea();
     testPathfinding();

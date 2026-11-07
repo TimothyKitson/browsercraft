@@ -477,6 +477,7 @@ private:
         Chests::Contents contents{};
     };
     std::vector<ParkedVehicle> m_parkedVehicles;
+    std::map<std::array<int, 4>, int> m_cageKinds;
     float m_vehicleClock = 0.0f;
     ParkedVehicle parkOf(const Mob& vehicle) const;
     void parkVehicles(bool onlyFar);
@@ -1086,6 +1087,7 @@ private:
     // machinery over four short lines rather than one long one.
     void openSign(const glm::ivec3& at);
     const BookText* bookOf(const ItemStack& stack) const;
+    std::string itemLabel(const ItemStack& stack) const;
     void openBook(const ItemStack& stack, bool fromLectern, const glm::ivec3& lectern);
     void closeBook(bool keep);
     void saveBookDraft(bool sign);

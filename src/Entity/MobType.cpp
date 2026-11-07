@@ -3681,6 +3681,85 @@ const MobType& mobType(MobId id)
 
 int mobTypeCount() { return static_cast<int>(MobId::Count); }
 
+bool spawnEggColours(MobId id, unsigned int& base, unsigned int& spots)
+{
+    switch (id)
+    {
+        case MobId::Sheep: base = 0xE7E7E7u; spots = 0xFFB5B5u; return true;
+        case MobId::Pig: base = 0xF0A5A2u; spots = 0xDB635Fu; return true;
+        case MobId::Cow: base = 0x443626u; spots = 0xA1A1A1u; return true;
+        case MobId::Chicken: base = 0xA1A1A1u; spots = 0xFF0000u; return true;
+        case MobId::Zombie: base = 0x00AFAFu; spots = 0x799C65u; return true;
+        case MobId::Skeleton: base = 0xC1C1C1u; spots = 0x494949u; return true;
+        case MobId::Creeper: base = 0x0DA70Bu; spots = 0x000000u; return true;
+        case MobId::Spider: base = 0x342D27u; spots = 0xA80E0Eu; return true;
+        case MobId::Enderman: base = 0x161616u; spots = 0x000000u; return true;
+        case MobId::ZombiePigman: base = 0xEA9393u; spots = 0x4C7129u; return true;
+        case MobId::Villager: base = 0x563C33u; spots = 0xBD8B72u; return true;
+        case MobId::Wolf: base = 0xD7D3D3u; spots = 0xCEAF96u; return true;
+        case MobId::Horse: base = 0xC09E7Du; spots = 0xEEE500u; return true;
+        case MobId::IronGolem: base = 0xDBCDC2u; spots = 0x74A332u; return true;
+        case MobId::Blaze: base = 0xF6B201u; spots = 0xFFF87Eu; return true;
+        case MobId::WitherSkeleton: base = 0x141414u; spots = 0x474D4Du; return true;
+        case MobId::MagmaCube: base = 0x340000u; spots = 0xFCFC00u; return true;
+        case MobId::Breeze: base = 0xAF94DFu; spots = 0x9166DFu; return true;
+        case MobId::Guardian: base = 0x5A8272u; spots = 0xF17D30u; return true;
+        case MobId::Warden: base = 0x0F4649u; spots = 0x39D6E0u; return true;
+        case MobId::Witch: base = 0x340000u; spots = 0x51A03Eu; return true;
+        case MobId::EnderDragon: base = 0x1C1C1Cu; spots = 0xE079FAu; return true;
+        case MobId::Wither: base = 0x141414u; spots = 0x4D72A0u; return true;
+        case MobId::Shulker: base = 0x946794u; spots = 0x4D3852u; return true;
+        case MobId::Drowned: base = 0x8FF1D7u; spots = 0x799C65u; return true;
+        case MobId::Squid: base = 0x223B4Du; spots = 0x708899u; return true;
+        case MobId::Ghast: base = 0xF9F9F9u; spots = 0xBCBCBCu; return true;
+        case MobId::Frog: base = 0xD07444u; spots = 0xFFC77Cu; return true;
+        case MobId::Pillager: base = 0x532F36u; spots = 0x959B9Bu; return true;
+        case MobId::Vindicator: base = 0x959B9Bu; spots = 0x275E61u; return true;
+        case MobId::Evoker: base = 0x959B9Bu; spots = 0x1E1C1Au; return true;
+        case MobId::Ravager: base = 0x757470u; spots = 0x5B5049u; return true;
+        case MobId::Slime: base = 0x51A03Eu; spots = 0x7EBF6Eu; return true;
+        case MobId::Bat: base = 0x4C3E30u; spots = 0x0F0F0Fu; return true;
+        case MobId::CaveSpider: base = 0x0C424Eu; spots = 0xA80E0Eu; return true;
+        case MobId::Silverfish: base = 0x6E6E6Eu; spots = 0x303030u; return true;
+        case MobId::Piglin: base = 0x995F40u; spots = 0xF9F3A4u; return true;
+        case MobId::PiglinBrute: base = 0x592A10u; spots = 0xF9F3A4u; return true;
+        case MobId::Hoglin: base = 0xC66E55u; spots = 0x5F6464u; return true;
+        case MobId::Strider: base = 0x9C3436u; spots = 0x4D494Du; return true;
+        case MobId::Cod: base = 0xC1A76Au; spots = 0xE5C48Bu; return true;
+        case MobId::Salmon: base = 0xA00F10u; spots = 0x0E8474u; return true;
+        case MobId::Pufferfish: base = 0xF6B201u; spots = 0x37C3F2u; return true;
+        case MobId::Dolphin: base = 0x223B4Du; spots = 0xF9F9F9u; return true;
+        case MobId::Turtle: base = 0xE7E7E7u; spots = 0x00AFAFu; return true;
+        case MobId::Axolotl: base = 0xFBC1E3u; spots = 0xA62D74u; return true;
+        case MobId::Rabbit: base = 0x995F40u; spots = 0x734831u; return true;
+        case MobId::Fox: base = 0xD5B69Fu; spots = 0xCC6920u; return true;
+        case MobId::Goat: base = 0xA5947Cu; spots = 0x55493Eu; return true;
+        case MobId::Panda: base = 0xE7E7E7u; spots = 0x1B1B22u; return true;
+        case MobId::Bee: base = 0xEDC343u; spots = 0x43241Bu; return true;
+        case MobId::Cat: base = 0xEFC88Eu; spots = 0x957256u; return true;
+        case MobId::Llama: base = 0xC09E7Du; spots = 0x995F40u; return true;
+        case MobId::PolarBear: base = 0xEEEEDEu; spots = 0xD5D6CDu; return true;
+        case MobId::Stray: base = 0x617677u; spots = 0xDDEAEAu; return true;
+        case MobId::Husk: base = 0x797061u; spots = 0xE6CC94u; return true;
+        case MobId::Bogged: base = 0x8A9C72u; spots = 0x314D1Bu; return true;
+        case MobId::Phantom: base = 0x43518Au; spots = 0x88FF00u; return true;
+        case MobId::ZombieVillager: base = 0x563C33u; spots = 0x799C65u; return true;
+        case MobId::Endermite: base = 0x161616u; spots = 0x6E6E6Eu; return true;
+        case MobId::Vex: base = 0x7A90A4u; spots = 0xE8EDF1u; return true;
+        case MobId::SnowGolem: base = 0xD9F2F2u; spots = 0x81A4A4u; return true;
+        case MobId::ElderGuardian: base = 0xCECCBAu; spots = 0x747693u; return true;
+        case MobId::WanderingTrader: base = 0x456296u; spots = 0xEAA430u; return true;
+        case MobId::Camel: base = 0xFCC369u; spots = 0xCB9337u; return true;
+        case MobId::Parrot: base = 0x0DA70Bu; spots = 0xFF0000u; return true;
+        case MobId::Allay: base = 0x00DAFFu; spots = 0x00ADFFu; return true;
+        case MobId::Sniffer: base = 0x871E09u; spots = 0x25AB70u; return true;
+        case MobId::TropicalFish: base = 0xEF6915u; spots = 0xFFF9EFu; return true;
+        case MobId::Tadpole: base = 0x6D533Du; spots = 0x160A00u; return true;
+        default: break;
+    }
+    return false;
+}
+
 bool isBoatMob(MobId id)
 {
     return id == MobId::Boat || id == MobId::ChestBoat || id == MobId::Raft || id == MobId::ChestRaft;

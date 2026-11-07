@@ -1,6 +1,7 @@
 #include "Atlas.h"
 #include "World/Block.h"
 #include "Game/Banners.h"
+#include "Entity/MobType.h"
 #include "Core/GLFunctions.h"
 
 #define STB_IMAGE_IMPLEMENTATION
@@ -11341,6 +11342,26 @@ Atlas::Atlas()
         paintMaterialIn(tile, i);
         blitPainted(Tiles::ItemMaterialFirst + i, tile);
     }
+    for (int i = 0; i <= Tiles::ItemSpawnEggLast - Tiles::ItemSpawnEggFirst; ++i)
+    {
+        unsigned int base = 0xA0A0A0u, spots = 0x505050u;
+        if (i < static_cast<int>(MobId::Count)) spawnEggColours(static_cast<MobId>(i), base, spots);
+        const Color shell{ static_cast<uint8_t>(base >> 16), static_cast<uint8_t>(base >> 8), static_cast<uint8_t>(base) };
+        const Color spot{ static_cast<uint8_t>(spots >> 16), static_cast<uint8_t>(spots >> 8), static_cast<uint8_t>(spots) };
+        Tile tile;
+        tile.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 2; y < 15; ++y)
+            for (int x = 3; x < 13; ++x)
+            {
+                const float dx = (static_cast<float>(x) - 7.5f) / 4.6f;
+                const float dy = (static_cast<float>(y) - 9.0f) / (y < 9 ? 6.8f : 5.6f);
+                const float d = dx * dx + dy * dy;
+                if (d >= 1.0f) continue;
+                const bool speck = ((x * 7 + y * 13) % 11) < 2;
+                tile.set(x, y, d > 0.8f ? shade(shell, -45) : speck ? spot : shell);
+            }
+        blitPainted(Tiles::ItemSpawnEggFirst + i, tile);
+    }
     for (int i = 0; i < 22; ++i)
     {
         static const Color WOODS[9] = { Color{ 162, 130, 78 }, Color{ 114, 84, 48 }, Color{ 196, 179, 123 }, Color{ 160, 115, 80 },
@@ -12130,6 +12151,21 @@ Atlas::Atlas()
         if (dragonBall.valid())
             blitImage(Tiles::DragonFireballTile, scaleNearest(squareOf(dragonBall), tilePixels, tilePixels));
 
+        const Image egg = loadPNG("assets/textures/item/spawn_egg.png");
+        const Image eggSpots = loadPNG("assets/textures/item/spawn_egg_overlay.png");
+        if (egg.valid() && eggSpots.valid())
+            for (int i = 0; i < static_cast<int>(MobId::Count) && i <= Tiles::ItemSpawnEggLast - Tiles::ItemSpawnEggFirst; ++i)
+            {
+                unsigned int base = 0, spots = 0;
+                if (!spawnEggColours(static_cast<MobId>(i), base, spots)) continue;
+                Image shellImage = scaleNearest(squareOf(egg), tilePixels, tilePixels);
+                Image spotImage = scaleNearest(squareOf(eggSpots), tilePixels, tilePixels);
+                tintImage(shellImage, Color{ static_cast<uint8_t>(base >> 16), static_cast<uint8_t>(base >> 8), static_cast<uint8_t>(base) });
+                tintImage(spotImage, Color{ static_cast<uint8_t>(spots >> 16), static_cast<uint8_t>(spots >> 8), static_cast<uint8_t>(spots) });
+                compositeOver(shellImage, spotImage);
+                blitImage(Tiles::ItemSpawnEggFirst + i, shellImage);
+            }
+
         const Image orb = loadPNG("assets/textures/entity/experience_orb.png");
         if (orb.valid())
         {
@@ -12514,6 +12550,7 @@ bool Atlas::hasPainter(int tileIndex)
     if (tileIndex >= Tiles::ItemMobBucketFirst && tileIndex <= Tiles::ItemMobBucketLast) return true;
     if (tileIndex >= Tiles::ItemBookFirst && tileIndex <= Tiles::ItemBookLast) return true;
     if (tileIndex >= Tiles::ItemVehicleFirst && tileIndex <= Tiles::ItemVehicleLast) return true;
+    if (tileIndex >= Tiles::ItemSpawnEggFirst && tileIndex <= Tiles::ItemSpawnEggLast) return true;
     if (tileIndex >= Tiles::ConcreteTile && tileIndex <= Tiles::GlazedTileLast &&
         tileIndex != Tiles::TerracottaPlainTile) return true;
     if (tileIndex >= Tiles::StainedGlassTile && tileIndex <= Tiles::StainedGlassTileLast) return true;

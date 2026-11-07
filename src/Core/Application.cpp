@@ -528,6 +528,7 @@ void Application::startWorld(GameMode mode, bool freshWorld)
     m_particles.clear();
     m_entities.clear();
     m_parkedVehicles.clear();
+    m_cageKinds.clear();
     m_vehicleChests.clear();
     m_cartFuel.clear();
     m_cartPush.clear();
@@ -865,6 +866,10 @@ void Application::loadLevel()
         m_itemNames = state.itemNames;
         m_bookTexts.clear();
         for (const auto& saved : state.books) m_bookTexts.push_back(BookText{ saved.title, saved.author, saved.pages });
+        m_cageKinds.clear();
+        for (const auto& cage : state.cages)
+            if (cage.mob < static_cast<uint16_t>(MobId::Count))
+                m_cageKinds[{ static_cast<int>(cage.dimension), cage.x, cage.y, cage.z }] = cage.mob;
         m_parkedVehicles.clear();
         for (const auto& saved : state.vehicles)
         {
@@ -1160,6 +1165,9 @@ void Application::saveLevel()
             state.vehicles.push_back(saved);
         }
     }
+    for (const auto& cage : m_cageKinds)
+        state.cages.push_back(LevelState::SavedCage{ static_cast<int8_t>(cage.first[0]), cage.first[1], cage.first[2], cage.first[3],
+                                                     static_cast<uint16_t>(cage.second) });
     for (const BookText& book : m_bookTexts) state.books.push_back(LevelState::SavedBook{ book.title, book.author, book.pages });
     for (const auto& entry : m_lecternBooks)
     {
@@ -2377,7 +2385,7 @@ bool Application::frame()
             m_startupScreen == "stairs" || m_startupScreen == "fence" ||
             m_startupScreen == "door" || m_startupScreen == "hand" ||
             m_startupScreen == "handempty" || m_startupScreen == "handitem" ||
-            m_startupScreen == "creativeinv" || m_startupScreen == "creativesearch" ||
+            m_startupScreen == "creativeinv" || m_startupScreen == "creativesearch" || m_startupScreen == "eggs" ||
             m_startupScreen == "xp" ||
             m_startupScreen == "shelf" || m_startupScreen == "enchant" ||
             m_startupScreen == "enchantblock" || m_startupScreen == "villager" ||
@@ -6357,9 +6365,17 @@ bool Application::frame()
             // creative, whatever the saved world was last left in:
             // without it the shot came back as the survival panel.
             if (m_startupScreen == "creative" || m_startupScreen == "creativeinv" ||
-                m_startupScreen == "creativesearch")
+                m_startupScreen == "creativesearch" || m_startupScreen == "eggs")
             {
                 m_player.mode = GameMode::Creative;
+                if (m_startupScreen == "eggs")
+                {
+                    m_creativeTab = creativeInventoryTab() - 1;
+                    m_creativeSearch = "spawn egg";
+                    const MobId SHOWN[9] = { MobId::Pig, MobId::Creeper, MobId::Axolotl, MobId::Sniffer, MobId::Warden,
+                                             MobId::Allay, MobId::Frog, MobId::Bee, MobId::Camel };
+                    for (int i = 0; i < 9; ++i) m_inventory.slot(i) = ItemStack{ Items::SpawnEgg, 64, static_cast<int>(SHOWN[i]) };
+                }
                 if (m_startupScreen == "creativeinv") m_creativeTab = creativeInventoryTab();
                 if (m_startupScreen == "creativesearch")
                 {
@@ -7791,6 +7807,7 @@ void Application::updateMining(float deltaTime)
 
             // The book off a lectern, which blockDrop cannot say: it
             // gives back one thing and a lectern gives back two.
+            if (isMonsterSpawner(id)) m_cageKinds.erase({ static_cast<int>(m_dimension), hit.block.x, hit.block.y, hit.block.z });
             if (id == Blocks::LecternBook)
             {
                 ItemStack resting{ Items::Book, 1 };
@@ -8003,7 +8020,6 @@ void Application::tickMonsterCages(float deltaTime)
     if (m_cageTimer > 0.0f) return;
     m_cageTimer = CAGE_INTERVAL;
 
-    const MobId species = cageSpecies(m_dimension);
     const glm::ivec3 middle(glm::floor(m_player.position));
     const int reach = static_cast<int>(CAGE_RANGE);
 
@@ -8013,6 +8029,8 @@ void Application::tickMonsterCages(float deltaTime)
             {
                 const glm::ivec3 at(middle.x + dx, middle.y + dy, middle.z + dz);
                 if (!isMonsterSpawner(m_world->getBlock(at.x, at.y, at.z))) continue;
+                const auto chosen = m_cageKinds.find({ static_cast<int>(m_dimension), at.x, at.y, at.z });
+                const MobId species = chosen != m_cageKinds.end() ? static_cast<MobId>(chosen->second) : cageSpecies(m_dimension);
 
                 const glm::vec3 centre = glm::vec3(at) + glm::vec3(0.5f);
                 if (glm::length(centre - m_player.position) > CAGE_RANGE) continue;
@@ -13397,6 +13415,47 @@ void Application::handlePlacement()
         return;
     }
 
+    if (stack.id == Items::SpawnEgg)
+    {
+        const MobId kind = static_cast<MobId>(std::clamp(stack.damage, 0, mobTypeCount() - 1));
+        unsigned int shell = 0, spots = 0;
+        if (!spawnEggColours(kind, shell, spots)) return;
+        bool spawned = false;
+        if (Mob* target = m_entities.pick(m_camera.position, m_camera.front, ATTACK_REACH))
+            if (target->alive() && target->typeId() == kind && !target->baby() && target->type().breedingFood != Blocks::Air)
+                spawned = m_entities.spawnAt(kind, target->position(), *m_world, true);
+        if (!spawned)
+        {
+            const RaycastHit hit = m_world->raycast(m_camera.position, m_camera.front, REACH_DISTANCE, true);
+            if (!hit.hit) return;
+            const BlockId looking = m_world->getBlock(hit.block.x, hit.block.y, hit.block.z);
+            if (isMonsterSpawner(looking))
+            {
+                m_cageKinds[{ static_cast<int>(m_dimension), hit.block.x, hit.block.y, hit.block.z }] = static_cast<int>(kind);
+                if (!m_player.creative())
+                {
+                    stack.count -= 1;
+                    if (stack.count <= 0) stack.clear();
+                }
+                m_audio.play(Sound::Click, 0.5f, 1.2f);
+                return;
+            }
+            const glm::ivec3 cell = isLiquid(looking) ? hit.block : hit.previous;
+            MobId placed = kind;
+            if (kind == MobId::TropicalFish && static_cast<int>(m_elapsedSeconds * 10.0f) % 2 == 1) placed = MobId::TropicalFishLarge;
+            spawned = m_entities.spawnAt(placed, glm::vec3(cell) + glm::vec3(0.5f, 0.0f, 0.5f), *m_world);
+            if (spawned && mobType(placed).spawnClass == SpawnClass::Passive) m_entities.mobs().back().keepFromDespawning();
+        }
+        if (!spawned) return;
+        if (!m_player.creative())
+        {
+            stack.count -= 1;
+            if (stack.count <= 0) stack.clear();
+        }
+        m_audio.play(Sound::Place, 0.5f, 1.1f);
+        return;
+    }
+
     if (stack.id == Items::WritableBook || stack.id == Items::WrittenBook)
     {
         openBook(stack, false, glm::ivec3(0));
@@ -15097,6 +15156,7 @@ bool Application::bundleClick(int slot)
 
 int Application::animatedIcon(const ItemStack& stack) const
 {
+    if (stack.id == Items::SpawnEgg) return Tiles::ItemSpawnEggFirst + std::clamp(stack.damage, 0, Tiles::ItemSpawnEggLast - Tiles::ItemSpawnEggFirst);
     if (stack.id != Items::Compass && stack.id != Items::Clock && stack.id != Items::RecoveryCompass) return -1;
     const int dim = static_cast<int>(m_dimension);
     const int spin = static_cast<int>(m_elapsedSeconds * 23.0f + static_cast<float>(stack.damage) * 7.0f);
@@ -17791,7 +17851,7 @@ void Application::renderHud()
     const ItemStack& held = m_inventory.selected();
     if (!held.empty())
     {
-        const std::string name = displayName(held.id);
+        const std::string name = itemLabel(held);
         m_ui.textWithShadow(name, cx - UIRenderer::textWidth(name, 1.0f) * 0.5f,
                             h - 59.0f, 1.0f, TEXT_COLOR);
     }

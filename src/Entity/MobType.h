@@ -400,6 +400,7 @@ const MobType& mobType(MobId id);
 int mobTypeCount();
 StackId bucketFor(MobId id);
 bool isBoatMob(MobId id);
+bool spawnEggColours(MobId id, unsigned int& base, unsigned int& spots);
 bool hasVehicleChest(MobId id, int variant);
 StackId vehicleItemFor(MobId id, int variant);
 const char* boatWoodName(int wood);

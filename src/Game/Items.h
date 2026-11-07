@@ -445,6 +445,7 @@ namespace Items
         HopperMinecart,
         TntMinecart,
         CommandBlockMinecart,
+        SpawnEgg,
         Count
     };
 }

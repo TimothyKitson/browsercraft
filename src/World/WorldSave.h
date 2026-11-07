@@ -199,6 +199,13 @@ struct LevelState
         std::vector<std::pair<uint8_t, SavedBundleStack>> contents;
     };
     std::vector<SavedVehicle> vehicles;
+    struct SavedCage
+    {
+        int8_t dimension = 0;
+        int32_t x = 0, y = 0, z = 0;
+        uint16_t mob = 0;
+    };
+    std::vector<SavedCage> cages;
 };
 
 namespace WorldSave

@@ -297,6 +297,8 @@ namespace
             static const char* CALLS[8] = { "Ponder", "Sing", "Seek", "Feel", "Admire", "Call", "Yearn", "Dream" };
             return std::string("Goat Horn (") + CALLS[std::clamp(stack.damage, 0, 7)] + ")";
         }
+        if (stack.id == Items::SpawnEgg)
+            return std::string(mobType(static_cast<MobId>(std::clamp(stack.damage, 0, mobTypeCount() - 1))).name) + " Spawn Egg";
         if (stack.id == Items::TropicalFishBucket && stack.damage != 0)
         {
             const TropicalFish::Look look = TropicalFish::lookFor(static_cast<uint32_t>(stack.damage), (stack.enchantments & (1u << 25)) != 0u);
@@ -344,6 +346,13 @@ namespace
             line(std::string(Enchanting::name(kind)) + (Enchanting::maxLevel(kind) > 1 ? " " + romanLevel(level) : ""));
         return lore;
     }
+}
+
+std::string Application::itemLabel(const ItemStack& stack) const
+{
+    g_itemNames = &m_itemNames;
+    g_books = &m_bookTexts;
+    return stackName(stack);
 }
 
 // A cube seen from above and to one side: the top face as a rhombus,
@@ -2516,6 +2525,28 @@ void Application::renderCreativeScreen(float w, float h)
             }
         }
 
+        static std::vector<int> entries;
+        entries.clear();
+        for (int i = 0; i < count; ++i)
+            if (items[i] != Items::SpawnEgg) entries.push_back(items[i]);
+        const bool eggs = m_creativeTab == 4 || searchTab;
+        if (eggs)
+            for (int mob = 0; mob < mobTypeCount(); ++mob)
+            {
+                unsigned int shell = 0, spots = 0;
+                if (!spawnEggColours(static_cast<MobId>(mob), shell, spots)) continue;
+                const ItemStack egg{ Items::SpawnEgg, 1, mob };
+                if (searchTab && !m_creativeSearch.empty())
+                {
+                    std::string want = m_creativeSearch, name = stackName(egg);
+                    for (char& c : want) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+                    for (char& c : name) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+                    if (name.find(want) == std::string::npos) continue;
+                }
+                entries.push_back(Items::SpawnEgg | (mob << 16));
+            }
+        count = static_cast<int>(entries.size());
+
         // A tab with more in it than the grid holds scrolls on the wheel.
         const int rows = (count + PALETTE_COLUMNS - 1) / PALETTE_COLUMNS;
         const int maxRow = std::max(0, rows - PALETTE_ROWS);
@@ -2530,8 +2561,8 @@ void Application::renderCreativeScreen(float w, float h)
 
                 const int cell = (row + m_paletteRow) * PALETTE_COLUMNS + column;
                 if (cell >= count) continue;
-                drawItem(x, y, SLOT, items[cell], 0, glm::vec4(1.0f));
-                m_slotBoxes.push_back({ SlotBox::Kind::Palette, items[cell],
+                drawItem(x, y, SLOT, static_cast<StackId>(entries[cell] & 0xFFFF), 0, glm::vec4(1.0f), entries[cell] >> 16);
+                m_slotBoxes.push_back({ SlotBox::Kind::Palette, entries[cell],
                                         x - 1.0f, y - 1.0f, PITCH });
             }
 
@@ -2703,7 +2734,7 @@ void Application::finishInventoryScreen()
             }
             case SlotBox::Kind::Palette:
                 highlight();
-                tip = displayName(static_cast<StackId>(box->index));
+                tip = stackName(ItemStack{ static_cast<StackId>(box->index & 0xFFFF), 1, box->index >> 16 });
                 break;
             case SlotBox::Kind::Scroll:
             m_draggingScroll = true;
@@ -2849,7 +2880,8 @@ void Application::handleInventoryClick(int mouseX, int mouseY, bool rightButton,
             break;
 
         case SlotBox::Kind::Palette:
-            m_inventory.takeFromPalette(static_cast<BlockId>(box->index));
+            m_inventory.takeFromPalette(static_cast<BlockId>(box->index & 0xFFFF));
+            if (!m_inventory.cursor().empty()) m_inventory.cursor().damage = box->index >> 16;
             m_audio.play(Sound::Click, 0.4f);
             break;
 
