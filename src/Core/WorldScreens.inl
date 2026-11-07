@@ -86,9 +86,8 @@ void Application::guiField(GuiField& field, float x, float y, float w, float h, 
     }
     if (field.focused)
     {
-        for (char c : m_input.typedText())
-            if (field.text.size() < field.maxLength && static_cast<unsigned char>(c) >= 32 && c != 127) field.text.push_back(c);
-        for (int i = 0; i < m_input.backspaces() && !field.text.empty(); ++i) field.text.pop_back();
+        Utf8::type(field.text, m_input.typedText(), field.maxLength);
+        for (int i = 0; i < m_input.backspaces() && !field.text.empty(); ++i) Utf8::popBack(field.text);
     }
     if (!guiNineSlice(field.focused ? "sprites/widget/text_field_highlighted" : "sprites/widget/text_field", x, y, w, h, 1.0f))
     {
@@ -100,8 +99,8 @@ void Application::guiField(GuiField& field, float x, float y, float w, float h, 
     std::string shown = field.text;
     while (!shown.empty() && UIRenderer::textWidth(shown, 1.0f) > w - 8.0f)
     {
-        if (field.focused) shown.erase(0, 1);
-        else shown.pop_back();
+        if (field.focused) Utf8::popFront(shown);
+        else Utf8::popBack(shown);
     }
     float end = tx;
     if (!shown.empty())

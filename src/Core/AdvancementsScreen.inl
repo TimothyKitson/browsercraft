@@ -555,7 +555,7 @@ void Application::renderToasts()
             const glm::vec4 heading = def.frame == Advancements::Frame::Challenge ? glm::vec4(1.0f, 0.533f, 1.0f, 1.0f) : glm::vec4(1.0f, 1.0f, 0.0f, 1.0f);
             m_ui.text(Advancements::frameText(def.frame), tx + 30.0f, ty + 7.0f, 1.0f, heading);
             std::string title = def.title;
-            while (UIRenderer::textWidth(title, 1.0f) > 125.0f && title.size() > 3) title.pop_back();
+            while (UIRenderer::textWidth(title, 1.0f) > 125.0f && title.size() > 3) Utf8::popBack(title);
             m_ui.text(title, tx + 30.0f, ty + 18.0f, 1.0f, glm::vec4(1.0f));
             drawItem(tx + 8.0f, ty + 8.0f, SLOT, stackNamed(def.icon), 1, glm::vec4(1.0f));
         }

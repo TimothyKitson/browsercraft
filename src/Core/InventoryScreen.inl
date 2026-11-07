@@ -2029,23 +2029,27 @@ void Application::renderContainerScreen(float w, float h)
                 std::string what = offer.special >= 0 ? Enchanting::tridentName(static_cast<Enchanting::TridentKind>(offer.special)) : Enchanting::name(offer.kind);
                 what += " ";
                 what += std::to_string(offer.level);
-                float scale = 1.0f;
-                if (UIRenderer::textWidth(what, 1.0f) > 86.0f)
-                {
-                    const float unit = static_cast<float>(guiScale());
-                    scale = std::max(0.5f, std::floor(unit * 86.0f / UIRenderer::textWidth(what, 1.0f)) / unit);
-                }
-                m_ui.text(what, rx + 20.0f, ry + 2.0f, scale, nameColour);
 
                 const std::string need = std::to_string(offer.cost);
+                const float room = 86.0f - std::floor(Font::width(need));
+                const std::string runes = UIRenderer::trimToWidth(Enchanting::phrase(m_enchantRoll, row), room, FontFace::Galactic);
+                m_ui.text(runes, rx + 20.0f, ry + 2.0f, 1.0f, nameColour, FontFace::Galactic);
                 m_ui.textWithShadow(need, rx + 20.0f + 86.0f - UIRenderer::textWidth(need, 1.0f), ry + 9.0f, 1.0f,
                                     canBuy ? glm::vec4(0.502f, 1.0f, 0.125f, 1.0f)
                                            : glm::vec4(0.251f, 0.498f, 0.063f, 1.0f));
 
-                std::string tip = what + ": needs level " + std::to_string(offer.cost) +
-                                  ", costs " + std::to_string(price.levels) +
-                                  (price.levels == 1 ? " level and " : " levels and ") +
-                                  std::to_string(price.lapis) + " lapis";
+                std::string tip = what + " . . . ?";
+                if (!m_player.creative())
+                {
+                    tip += "\n";
+                    if (level < offer.cost)
+                        tip += "\nLevel Requirement: " + std::to_string(offer.cost);
+                    else
+                    {
+                        tip += price.lapis == 1 ? "\n1 Lapis Lazuli" : "\n" + std::to_string(price.lapis) + " Lapis Lazuli";
+                        tip += price.levels == 1 ? "\n1 Enchantment Level" : "\n" + std::to_string(price.levels) + " Enchantment Levels";
+                    }
+                }
                 addHint(rx, ry, 108.0f, 19.0f, tip);
             }
         }

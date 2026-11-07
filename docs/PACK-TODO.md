@@ -319,10 +319,11 @@ Everything in the 1.21 textures zip the game doesn't use yet, turned into work. 
 
 ## Part 8: text
 
-85. Fonts
+85. Fonts (done)
     - I. Accented and other non-Latin characters in chat and on signs.
     - II. The galactic alphabet (ascii_sga) on enchanting offers, like Minecraft.
     - III. Illager runes (asciillager).
+    - Notes: text is UTF-8 everywhere now. The font is built the way 1.21.1 builds its default font: the pack's nonlatin_european, accented and ascii sheets in that order with 1.21.1's character maps, each glyph as wide as its ink plus one, scaled by its sheet's height and placed by its ascent, so accented capitals reach above the line as they do in the game, a space is four wide and anything no sheet has is 1.21.1's missing box. That covers Latin with every accent, Cyrillic, Greek, Armenian, Hebrew, the runic letters and the rest of those sheets. Chat, standing and hanging signs, books, the anvil, the creative and recipe searches, the world and server fields and the command block editor all take those letters, and backspace removes a whole letter. The enchanting table shows each offer as three or four words in the galactic alphabet from ascii_sga, cut to fit beside the level number like 1.21.1's, with the enchantment named in the tooltip ("Efficiency 2 . . . ?") followed by the lapis and level cost, or the level requirement. The galactic alphabet and the illager runes (asciillager) can be shown in chat with /tellraw and a text component's font ("minecraft:alt", "minecraft:illageralt"), which is the only way 1.21.1 shows the runes; text, extra and font are read and other fields are ignored. Without a pack every sheet is painted: ASCII as before, over 750 accented letters built from the plain letter and its mark, hand-drawn Cyrillic and Greek letters and extra Latin ones (ß, æ, œ, ø, ł, đ, þ and others), and generated runes for the two alphabets. The "fonts" dev scene shows signs and chat in several scripts. Still to come: Unifont (the uniform font, and Force Unicode Font in Font Settings, which stays greyed), the Japanese glyph variants, bold and italic, and colour in /tellraw.
 
 ## Part 9: world
 

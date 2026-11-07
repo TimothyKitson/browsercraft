@@ -429,3 +429,32 @@ bool Enchanting::affordable(const Offer& offer, int row, int playerLevel, int la
     if (creative) return true;
     return playerLevel >= offer.cost && lapis >= priceOf(row).lapis;
 }
+
+std::string Enchanting::phrase(uint32_t seed, int row)
+{
+    static const char* WORDS[] = {
+        "arcane", "ember", "veil", "lumen", "quill", "gale", "frost", "bloom", "aether", "glimmer",
+        "hollow", "drift", "spark", "tide", "stone", "ash", "dusk", "dawn", "mire", "wisp",
+        "thorn", "vapor", "rift", "echo", "lore", "sigil", "bind", "weave", "kindle", "shroud",
+        "grove", "ward", "orbit", "zephyr", "quartz", "nimbus", "fable", "cinder", "brine", "loam",
+        "hearth", "spindle", "marrow", "lantern", "riddle", "hush", "gleam", "verdant", "keel", "omen",
+        "wane", "wax", "knot", "rook", "fen", "crest", "dirge", "sable", "tallow", "umber",
+    };
+    constexpr uint32_t COUNT = sizeof(WORDS) / sizeof(WORDS[0]);
+    uint32_t state = seed * 2654435761u + static_cast<uint32_t>(row + 1) * 40503u + 0x6A09E667u;
+    auto next = [&state]() {
+        state ^= state << 13;
+        state ^= state >> 17;
+        state ^= state << 5;
+        return state;
+    };
+    for (int i = 0; i < 3; ++i) next();
+    const int words = 3 + static_cast<int>(next() % 2u);
+    std::string out;
+    for (int i = 0; i < words; ++i)
+    {
+        if (i) out += ' ';
+        out += WORDS[next() % COUNT];
+    }
+    return out;
+}

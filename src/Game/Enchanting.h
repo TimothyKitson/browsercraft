@@ -2,6 +2,7 @@
 #include "Items.h"
 #include "World/Block.h"
 #include <cstdint>
+#include <string>
 #include <vector>
 
 // Enchantments: what can be put on a thing, what it costs, and what it
@@ -92,6 +93,7 @@ namespace Enchanting
     Set withTrident(Set set, TridentKind kind, int level);
     int tridentMax(TridentKind kind);
     const char* tridentName(TridentKind kind);
+    std::string phrase(uint32_t seed, int row);
     bool tridentConflicts(Set set, TridentKind kind);
 
     struct Offer

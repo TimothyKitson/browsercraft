@@ -98,15 +98,16 @@ public:
     void texturedTriangle(unsigned int texture, const glm::vec2 corner[3],
                           const glm::vec2 uv[3], const glm::vec4& color);
 
-    void text(const std::string& value, float x, float y, float scale, const glm::vec4& color);
-    void textWithShadow(const std::string& value, float x, float y, float scale, const glm::vec4& color);
+    void text(const std::string& value, float x, float y, float scale, const glm::vec4& color, FontFace face = FontFace::Default);
+    void textWithShadow(const std::string& value, float x, float y, float scale, const glm::vec4& color, FontFace face = FontFace::Default);
     // Same, but tilted about the middle of the line. Minecraft's splash
     // text is the only thing that needs it, and it needs it badly: the
     // tilt is most of what makes it read as a splash rather than a
     // caption.
     void textWithShadowRotated(const std::string& value, float x, float y, float scale,
                                float radians, const glm::vec4& color);
-    static float textWidth(const std::string& value, float scale);
+    static float textWidth(const std::string& value, float scale, FontFace face = FontFace::Default);
+    static std::string trimToWidth(const std::string& value, float width, FontFace face = FontFace::Default);
     static float textHeight(float scale) { return Font::GLYPH_H * scale; }
 
     unsigned int fontTexture() const { return m_font.textureId(); }

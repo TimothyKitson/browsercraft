@@ -1,10 +1,14 @@
 #include "Font.h"
+#include "FontPaint.h"
 #include "Core/GLFunctions.h"
-#include <stb_image.h>
-#include <vector>
-#include <algorithm>
-#include <cstdint>
 #include "Core/Packs.h"
+#include "Core/Utf8.h"
+#include <stb_image.h>
+#include <algorithm>
+#include <cmath>
+#include <unordered_map>
+#include <unordered_set>
+#include <vector>
 
 #ifndef GL_RGBA8
 #define GL_RGBA8 0x8058
@@ -12,217 +16,242 @@
 
 namespace
 {
-    // One byte a column, bit 0 the top row. Six columns a glyph, eight
-    // rows deep: a capital fills rows 0 to 6 and sits on the baseline,
-    // and a tail -- the one on a g or a y -- drops into row 7.
-    const uint8_t GLYPHS[Font::LAST_CHAR - Font::FIRST_CHAR + 1][Font::GLYPH_W] = {
-        { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // space
-        { 0x5F, 0x00, 0x00, 0x00, 0x00, 0x00 }, // !
-        { 0x03, 0x00, 0x03, 0x00, 0x00, 0x00 }, // "
-        { 0x14, 0x7F, 0x14, 0x7F, 0x14, 0x00 }, // #
-        { 0x24, 0x2A, 0x7F, 0x2A, 0x12, 0x00 }, // $
-        { 0x13, 0x0B, 0x14, 0x32, 0x21, 0x00 }, // %
-        { 0x3A, 0x4D, 0x45, 0x5A, 0x20, 0x00 }, // &
-        { 0x03, 0x00, 0x00, 0x00, 0x00, 0x00 }, // '
-        { 0x3E, 0x41, 0x00, 0x00, 0x00, 0x00 }, // (
-        { 0x41, 0x3E, 0x00, 0x00, 0x00, 0x00 }, // )
-        { 0x2A, 0x1C, 0x3E, 0x1C, 0x2A, 0x00 }, // *
-        { 0x08, 0x08, 0x3E, 0x08, 0x08, 0x00 }, // +
-        { 0x80, 0x40, 0x00, 0x00, 0x00, 0x00 }, // ,
-        { 0x08, 0x08, 0x08, 0x08, 0x08, 0x00 }, // -
-        { 0x40, 0x00, 0x00, 0x00, 0x00, 0x00 }, // .
-        { 0x60, 0x10, 0x08, 0x04, 0x03, 0x00 }, // /
-        { 0x3E, 0x51, 0x49, 0x45, 0x3E, 0x00 }, // 0
-        { 0x00, 0x42, 0x7F, 0x40, 0x00, 0x00 }, // 1
-        { 0x62, 0x51, 0x49, 0x49, 0x46, 0x00 }, // 2
-        { 0x21, 0x41, 0x45, 0x4B, 0x31, 0x00 }, // 3
-        { 0x18, 0x14, 0x12, 0x7F, 0x10, 0x00 }, // 4
-        { 0x27, 0x45, 0x45, 0x45, 0x39, 0x00 }, // 5
-        { 0x3C, 0x4A, 0x49, 0x49, 0x30, 0x00 }, // 6
-        { 0x01, 0x71, 0x09, 0x05, 0x03, 0x00 }, // 7
-        { 0x36, 0x49, 0x49, 0x49, 0x36, 0x00 }, // 8
-        { 0x06, 0x49, 0x49, 0x29, 0x1E, 0x00 }, // 9
-        { 0x24, 0x00, 0x00, 0x00, 0x00, 0x00 }, // :
-        { 0x40, 0x3F, 0x00, 0x00, 0x00, 0x00 }, // ;
-        { 0x10, 0x28, 0x44, 0x00, 0x00, 0x00 }, // <
-        { 0x14, 0x14, 0x14, 0x14, 0x14, 0x00 }, // =
-        { 0x44, 0x28, 0x10, 0x00, 0x00, 0x00 }, // >
-        { 0x02, 0x01, 0x59, 0x09, 0x06, 0x00 }, // ?
-        { 0x3E, 0x41, 0x5D, 0x55, 0x59, 0x1E }, // @
-        { 0x7E, 0x09, 0x09, 0x09, 0x7E, 0x00 }, // A
-        { 0x7F, 0x49, 0x49, 0x49, 0x36, 0x00 }, // B
-        { 0x3E, 0x41, 0x41, 0x41, 0x41, 0x00 }, // C
-        { 0x7F, 0x41, 0x41, 0x22, 0x1C, 0x00 }, // D
-        { 0x7F, 0x49, 0x49, 0x49, 0x41, 0x00 }, // E
-        { 0x7F, 0x09, 0x09, 0x09, 0x01, 0x00 }, // F
-        { 0x3E, 0x41, 0x41, 0x49, 0x39, 0x00 }, // G
-        { 0x7F, 0x08, 0x08, 0x08, 0x7F, 0x00 }, // H
-        { 0x41, 0x7F, 0x41, 0x00, 0x00, 0x00 }, // I
-        { 0x30, 0x40, 0x40, 0x40, 0x3F, 0x00 }, // J
-        { 0x7F, 0x08, 0x14, 0x22, 0x41, 0x00 }, // K
-        { 0x7F, 0x40, 0x40, 0x40, 0x40, 0x00 }, // L
-        { 0x7F, 0x02, 0x0C, 0x02, 0x7F, 0x00 }, // M
-        { 0x7F, 0x06, 0x08, 0x30, 0x7F, 0x00 }, // N
-        { 0x3E, 0x41, 0x41, 0x41, 0x3E, 0x00 }, // O
-        { 0x7F, 0x09, 0x09, 0x09, 0x06, 0x00 }, // P
-        { 0x3E, 0x41, 0x51, 0x21, 0x5E, 0x00 }, // Q
-        { 0x7F, 0x09, 0x19, 0x29, 0x46, 0x00 }, // R
-        { 0x46, 0x49, 0x49, 0x49, 0x31, 0x00 }, // S
-        { 0x01, 0x01, 0x7F, 0x01, 0x01, 0x00 }, // T
-        { 0x3F, 0x40, 0x40, 0x40, 0x3F, 0x00 }, // U
-        { 0x1F, 0x20, 0x40, 0x20, 0x1F, 0x00 }, // V
-        { 0x3F, 0x40, 0x38, 0x40, 0x3F, 0x00 }, // W
-        { 0x63, 0x14, 0x08, 0x14, 0x63, 0x00 }, // X
-        { 0x03, 0x04, 0x78, 0x04, 0x03, 0x00 }, // Y
-        { 0x61, 0x51, 0x49, 0x45, 0x43, 0x00 }, // Z
-        { 0x7F, 0x41, 0x41, 0x00, 0x00, 0x00 }, // [
-        { 0x03, 0x04, 0x08, 0x10, 0x60, 0x00 }, // backslash
-        { 0x41, 0x41, 0x7F, 0x00, 0x00, 0x00 }, // ]
-        { 0x04, 0x02, 0x01, 0x02, 0x04, 0x00 }, // ^
-        { 0x80, 0x80, 0x80, 0x80, 0x80, 0x00 }, // _
-        { 0x01, 0x02, 0x00, 0x00, 0x00, 0x00 }, // `
-        { 0x24, 0x54, 0x54, 0x54, 0x78, 0x00 }, // a
-        { 0x7F, 0x48, 0x48, 0x48, 0x30, 0x00 }, // b
-        { 0x38, 0x44, 0x44, 0x44, 0x44, 0x00 }, // c
-        { 0x30, 0x48, 0x48, 0x48, 0x7F, 0x00 }, // d
-        { 0x38, 0x54, 0x54, 0x54, 0x58, 0x00 }, // e
-        { 0x04, 0x7E, 0x05, 0x05, 0x00, 0x00 }, // f
-        { 0x98, 0xA4, 0xA4, 0xA4, 0x7C, 0x00 }, // g
-        { 0x7F, 0x08, 0x08, 0x08, 0x70, 0x00 }, // h
-        { 0x7D, 0x00, 0x00, 0x00, 0x00, 0x00 }, // i
-        { 0x20, 0x40, 0x40, 0x40, 0x3D, 0x00 }, // j
-        { 0x7F, 0x10, 0x28, 0x44, 0x00, 0x00 }, // k
-        { 0x7F, 0x00, 0x00, 0x00, 0x00, 0x00 }, // l
-        { 0x7C, 0x04, 0x78, 0x04, 0x78, 0x00 }, // m
-        { 0x7C, 0x04, 0x04, 0x04, 0x78, 0x00 }, // n
-        { 0x38, 0x44, 0x44, 0x44, 0x38, 0x00 }, // o
-        { 0xFC, 0x24, 0x24, 0x24, 0x18, 0x00 }, // p
-        { 0x18, 0x24, 0x24, 0x24, 0xFC, 0x00 }, // q
-        { 0x7C, 0x08, 0x04, 0x04, 0x04, 0x00 }, // r
-        { 0x48, 0x54, 0x54, 0x54, 0x24, 0x00 }, // s
-        { 0x3F, 0x44, 0x44, 0x00, 0x00, 0x00 }, // t
-        { 0x3C, 0x40, 0x40, 0x40, 0x7C, 0x00 }, // u
-        { 0x1C, 0x20, 0x40, 0x20, 0x1C, 0x00 }, // v
-        { 0x3C, 0x40, 0x30, 0x40, 0x3C, 0x00 }, // w
-        { 0x44, 0x28, 0x10, 0x28, 0x44, 0x00 }, // x
-        { 0x9C, 0xA0, 0xA0, 0xA0, 0x7C, 0x00 }, // y
-        { 0x44, 0x64, 0x54, 0x4C, 0x44, 0x00 }, // z
-        { 0x08, 0x3E, 0x41, 0x41, 0x00, 0x00 }, // {
-        { 0x7F, 0x00, 0x00, 0x00, 0x00, 0x00 }, // |
-        { 0x41, 0x41, 0x3E, 0x08, 0x00, 0x00 }, // }
-        { 0x08, 0x04, 0x04, 0x08, 0x0C, 0x00 }, // ~
+    constexpr int FACES = static_cast<int>(FontFace::Count);
+
+    struct Cell
+    {
+        int face = 0;
+        uint32_t codepoint = 0;
+        int w = 0;
+        int h = 0;
+        float scale = 1.0f;
+        int top = 0;
+        int measured = 0;
+        int x = 0;
+        int y = 0;
+        std::vector<uint8_t> rgba;
     };
 
-    bool g_fromPack = false;
-    int g_packWidth[128] = {};
-
-    const uint8_t* columnsFor(char c)
+    struct Atlas
     {
-        const int index = static_cast<unsigned char>(c);
-        if (index < Font::FIRST_CHAR || index > Font::LAST_CHAR) return nullptr;
-        return GLYPHS[index - Font::FIRST_CHAR];
+        bool built = false;
+        int w = 1;
+        int h = 1;
+        std::vector<uint8_t> rgba;
+        std::unordered_map<uint32_t, Glyph> glyphs[FACES];
+        int painted[FACES] = {};
+        Glyph missing;
+    };
+
+    Atlas& atlas()
+    {
+        static Atlas instance;
+        return instance;
+    }
+
+    Cell paintedCell(int face, uint32_t codepoint, const FontPaint::Bitmap& bitmap)
+    {
+        Cell cell;
+        cell.face = face;
+        cell.codepoint = codepoint;
+        cell.w = bitmap.w;
+        cell.h = bitmap.h;
+        cell.top = bitmap.top;
+        cell.measured = bitmap.inkWidth();
+        cell.rgba.assign(static_cast<size_t>(cell.w * cell.h * 4), 0);
+        for (int y = 0; y < cell.h; ++y)
+            for (int x = 0; x < cell.w; ++x)
+                if (bitmap.at(x, y))
+                {
+                    uint8_t* p = &cell.rgba[static_cast<size_t>((y * cell.w + x) * 4)];
+                    p[0] = p[1] = p[2] = p[3] = 255;
+                }
+        return cell;
+    }
+
+    void build(Atlas& a)
+    {
+        a = Atlas();
+        std::vector<Cell> cells;
+        std::unordered_set<uint64_t> seen;
+        auto key = [](int face, uint32_t codepoint) { return (static_cast<uint64_t>(face) << 32) | codepoint; };
+
+        for (const FontMaps::Sheet& sheet : FontMaps::sheets())
+        {
+            const int face = static_cast<int>(sheet.face);
+            int iw = 0, ih = 0, channels = 0;
+            unsigned char* image = Packs::load(sheet.file, &iw, &ih, &channels, 4);
+            const int cw = image ? iw / 16 : 0;
+            const int ch = image ? ih / sheet.rows : 0;
+            const bool usable = cw > 0 && ch > 0;
+            for (int row = 0; row < sheet.rows; ++row)
+                for (int col = 0; col < 16; ++col)
+                {
+                    const uint32_t codepoint = sheet.chars[row * 16 + col];
+                    if (!codepoint || seen.count(key(face, codepoint))) continue;
+                    if (usable)
+                    {
+                        Cell cell;
+                        cell.face = face;
+                        cell.codepoint = codepoint;
+                        cell.w = cw;
+                        cell.h = ch;
+                        cell.scale = static_cast<float>(sheet.height) / static_cast<float>(ch);
+                        cell.top = 7 - sheet.ascent;
+                        cell.rgba.assign(static_cast<size_t>(cw * ch * 4), 0);
+                        for (int y = 0; y < ch; ++y)
+                            for (int x = 0; x < cw; ++x)
+                            {
+                                const size_t from = (static_cast<size_t>(row * ch + y) * static_cast<size_t>(iw) + static_cast<size_t>(col * cw + x)) * 4;
+                                std::copy(image + from, image + from + 4, &cell.rgba[static_cast<size_t>((y * cw + x) * 4)]);
+                                if (image[from + 3] != 0) cell.measured = std::max(cell.measured, x + 1);
+                            }
+                        cells.push_back(std::move(cell));
+                    }
+                    else
+                    {
+                        FontPaint::Bitmap bitmap;
+                        if (!FontPaint::paint(sheet.face, codepoint, bitmap)) continue;
+                        cells.push_back(paintedCell(face, codepoint, bitmap));
+                        ++a.painted[face];
+                    }
+                    seen.insert(key(face, codepoint));
+                }
+            if (image) stbi_image_free(image);
+        }
+
+        FontPaint::Bitmap box;
+        FontPaint::missing(box);
+        cells.push_back(paintedCell(-1, 0, box));
+
+        long long area = 0;
+        int widest = 1;
+        for (const Cell& cell : cells)
+        {
+            area += static_cast<long long>(cell.w + 1) * (cell.h + 1);
+            widest = std::max(widest, cell.w + 1);
+        }
+        int width = 256;
+        while (width < 8192 && (static_cast<long long>(width) * width < area * 5 / 4 || width < widest)) width *= 2;
+
+        int x = 0, y = 0, rowHeight = 0;
+        for (Cell& cell : cells)
+        {
+            if (x + cell.w + 1 > width)
+            {
+                x = 0;
+                y += rowHeight;
+                rowHeight = 0;
+            }
+            cell.x = x;
+            cell.y = y;
+            x += cell.w + 1;
+            rowHeight = std::max(rowHeight, cell.h + 1);
+        }
+        a.w = width;
+        a.h = std::max(1, y + rowHeight);
+        a.rgba.assign(static_cast<size_t>(a.w) * static_cast<size_t>(a.h) * 4, 0);
+
+        for (const Cell& cell : cells)
+        {
+            for (int row = 0; row < cell.h; ++row)
+                std::copy(cell.rgba.begin() + static_cast<long>(row * cell.w * 4), cell.rgba.begin() + static_cast<long>((row + 1) * cell.w * 4),
+                          a.rgba.begin() + static_cast<long>((static_cast<size_t>(cell.y + row) * static_cast<size_t>(a.w) + static_cast<size_t>(cell.x)) * 4));
+            Glyph glyph;
+            glyph.u0 = static_cast<float>(cell.x) / static_cast<float>(a.w);
+            glyph.v0 = static_cast<float>(cell.y) / static_cast<float>(a.h);
+            glyph.u1 = static_cast<float>(cell.x + cell.measured) / static_cast<float>(a.w);
+            glyph.v1 = static_cast<float>(cell.y + cell.h) / static_cast<float>(a.h);
+            glyph.width = static_cast<float>(cell.measured) * cell.scale;
+            glyph.height = static_cast<float>(cell.h) * cell.scale;
+            glyph.top = static_cast<float>(cell.top);
+            glyph.advance = static_cast<float>(static_cast<int>(0.5f + static_cast<float>(cell.measured) * cell.scale) + 1);
+            glyph.ink = cell.measured > 0;
+            if (cell.face < 0)
+                a.missing = glyph;
+            else
+                a.glyphs[cell.face][cell.codepoint] = glyph;
+        }
+
+        for (int face = 0; face < FACES; ++face)
+        {
+            Glyph space;
+            space.advance = static_cast<float>(Font::SPACE_ADVANCE);
+            a.glyphs[face][' '] = space;
+            a.glyphs[face][0x200C] = Glyph();
+        }
+        a.built = true;
+    }
+
+    Atlas& ready()
+    {
+        Atlas& a = atlas();
+        if (!a.built) build(a);
+        return a;
     }
 }
 
-int Font::widthOf(char c)
+void Font::rebuild()
 {
-    if (c == ' ') return SPACE_WIDTH;
-    if (g_fromPack)
+    build(atlas());
+}
+
+const Glyph& Font::glyph(char32_t codepoint, FontFace face)
+{
+    static const Glyph CONTROL;
+    if (codepoint < 32) return CONTROL;
+    const Atlas& a = ready();
+    const auto& map = a.glyphs[std::clamp(static_cast<int>(face), 0, FACES - 1)];
+    const auto found = map.find(static_cast<uint32_t>(codepoint));
+    return found != map.end() ? found->second : a.missing;
+}
+
+bool Font::has(char32_t codepoint, FontFace face)
+{
+    const Atlas& a = ready();
+    return a.glyphs[std::clamp(static_cast<int>(face), 0, FACES - 1)].count(static_cast<uint32_t>(codepoint)) != 0;
+}
+
+float Font::width(const std::string& utf8, FontFace face)
+{
+    float total = 0.0f;
+    size_t at = 0;
+    while (at < utf8.size())
     {
-        const int index = static_cast<unsigned char>(c);
-        if (index < FIRST_CHAR || index > LAST_CHAR) return SPACE_WIDTH;
-        return g_packWidth[index] > 0 ? g_packWidth[index] : SPACE_WIDTH;
+        const char32_t c = Utf8::next(utf8, at);
+        if (isFontSwitch(c))
+            face = static_cast<FontFace>(c - FONT_SWITCH);
+        else
+            total += advanceOf(c, face);
     }
+    return total;
+}
 
-    const uint8_t* columns = columnsFor(c);
-    if (!columns) return SPACE_WIDTH;
+int Font::glyphCount(FontFace face)
+{
+    return static_cast<int>(ready().glyphs[std::clamp(static_cast<int>(face), 0, FACES - 1)].size());
+}
 
-    // Measured, not declared: the width is however far the drawing
-    // reaches, which is exactly how Mojang reads it off the sheet.
-    for (int column = GLYPH_W; column > 0; --column)
-        if (columns[column - 1] != 0) return column;
-
-    return SPACE_WIDTH;
+int Font::paintedCount(FontFace face)
+{
+    return ready().painted[std::clamp(static_cast<int>(face), 0, FACES - 1)];
 }
 
 Font::Font()
 {
-    struct Pixel { uint8_t r, g, b, a; };
-    std::vector<Pixel> pixels(TEX_W * TEX_H, Pixel{ 255, 255, 255, 0 });
-
-    const int glyphCount = LAST_CHAR - FIRST_CHAR + 1;
-
-    int sheetW = 0, sheetH = 0, channels = 0;
-    unsigned char* sheet = Packs::load("assets/textures/font/ascii.png", &sheetW, &sheetH, &channels, 4);
-    if (sheet && sheetW >= 128 && sheetW == sheetH)
-    {
-        const int cell = sheetW / 16;
-        const int step = cell / 8;
-        for (int g = 0; g < glyphCount; ++g)
-        {
-            const int code = FIRST_CHAR + g;
-            const int cellX = (g % COLUMNS) * CELL_W;
-            const int cellY = (g / COLUMNS) * CELL_H;
-            int width = 0;
-            for (int row = 0; row < 8; ++row)
-                for (int col = 0; col < 8; ++col)
-                {
-                    const int sx = (code % 16) * cell + col * step;
-                    const int sy = (code / 16) * cell + row * step;
-                    const unsigned char alpha = sheet[(static_cast<size_t>(sy) * sheetW + sx) * 4 + 3];
-                    if (alpha < 128) continue;
-                    pixels[(cellY + row) * TEX_W + (cellX + col)] = Pixel{ 255, 255, 255, 255 };
-                    width = std::max(width, col + 1);
-                }
-            g_packWidth[code] = width;
-        }
-        g_fromPack = true;
-    }
-    if (sheet) stbi_image_free(sheet);
-
-    for (int g = 0; g < glyphCount && !g_fromPack; ++g)
-    {
-        const int cellX = (g % COLUMNS) * CELL_W;
-        const int cellY = (g / COLUMNS) * CELL_H;
-
-        for (int col = 0; col < GLYPH_W; ++col)
-        {
-            const uint8_t bits = GLYPHS[g][col];
-            for (int row = 0; row < GLYPH_H; ++row)
-            {
-                if (!(bits & (1u << row))) continue;
-                pixels[(cellY + row) * TEX_W + (cellX + col)] = Pixel{ 255, 255, 255, 255 };
-            }
-        }
-    }
-
+    rebuild();
+    const Atlas& a = atlas();
     glGenTextures(1, &m_id);
     glBindTexture(GL_TEXTURE_2D, m_id);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, TEX_W, TEX_H, 0, GL_RGBA, GL_UNSIGNED_BYTE,
-                 pixels.data());
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, a.w, a.h, 0, GL_RGBA, GL_UNSIGNED_BYTE, a.rgba.data());
     glBindTexture(GL_TEXTURE_2D, 0);
 }
 
 Font::~Font()
 {
     if (m_id) glDeleteTextures(1, &m_id);
-}
-
-void Font::glyphUV(char c, float& u0, float& v0, float& u1, float& v1)
-{
-    int index = static_cast<unsigned char>(c);
-    if (index < FIRST_CHAR || index > LAST_CHAR) index = FIRST_CHAR;
-
-    const int g = index - FIRST_CHAR;
-    const int cellX = (g % COLUMNS) * CELL_W;
-    const int cellY = (g / COLUMNS) * CELL_H;
-
-    u0 = static_cast<float>(cellX) / TEX_W;
-    v0 = static_cast<float>(cellY) / TEX_H;
-    u1 = static_cast<float>(cellX + widthOf(c)) / TEX_W;
-    v1 = static_cast<float>(cellY + GLYPH_H) / TEX_H;
 }

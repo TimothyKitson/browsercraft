@@ -2,6 +2,8 @@
 #include "Effects.h"
 #include "GameMode.h"
 #include "Entity/MobType.h"
+#include "Core/Utf8.h"
+#include "Renderer/FontMaps.h"
 #include <cmath>
 #include <algorithm>
 #include <cctype>
@@ -85,6 +87,227 @@ namespace
         return -1;
     }
 
+    struct ComponentReader
+    {
+        const std::string& json;
+        size_t at = 0;
+        std::string out;
+        FontFace written = FontFace::Default;
+
+        void space()
+        {
+            while (at < json.size() && std::isspace(static_cast<unsigned char>(json[at]))) ++at;
+        }
+
+        bool literal(const char* word)
+        {
+            const size_t length = std::char_traits<char>::length(word);
+            if (json.compare(at, length, word) != 0) return false;
+            at += length;
+            return true;
+        }
+
+        bool hex(char32_t& value)
+        {
+            if (at + 4 > json.size()) return false;
+            value = 0;
+            for (int i = 0; i < 4; ++i)
+            {
+                const char c = json[at++];
+                value <<= 4;
+                if (c >= '0' && c <= '9') value |= static_cast<char32_t>(c - '0');
+                else if (c >= 'a' && c <= 'f') value |= static_cast<char32_t>(c - 'a' + 10);
+                else if (c >= 'A' && c <= 'F') value |= static_cast<char32_t>(c - 'A' + 10);
+                else return false;
+            }
+            return true;
+        }
+
+        bool string(std::string& value)
+        {
+            space();
+            if (at >= json.size() || json[at] != '"') return false;
+            ++at;
+            value.clear();
+            while (at < json.size())
+            {
+                const char c = json[at++];
+                if (c == '"') return true;
+                if (c != '\\')
+                {
+                    value.push_back(c);
+                    continue;
+                }
+                if (at >= json.size()) return false;
+                const char e = json[at++];
+                switch (e)
+                {
+                    case 'n': value.push_back('\n'); break;
+                    case 't': value.push_back('\t'); break;
+                    case 'b': case 'f': case 'r': break;
+                    case 'u':
+                    {
+                        char32_t c32 = 0;
+                        if (!hex(c32)) return false;
+                        if (c32 >= 0xD800 && c32 < 0xDC00 && json.compare(at, 2, "\\u") == 0)
+                        {
+                            at += 2;
+                            char32_t low = 0;
+                            if (!hex(low)) return false;
+                            c32 = 0x10000 + ((c32 - 0xD800) << 10) + (low - 0xDC00);
+                        }
+                        Utf8::append(value, c32);
+                        break;
+                    }
+                    default: value.push_back(e); break;
+                }
+            }
+            return false;
+        }
+
+        static FontFace faceNamed(std::string name)
+        {
+            if (name.rfind("minecraft:", 0) == 0) name = name.substr(10);
+            if (name == "alt") return FontFace::Galactic;
+            if (name == "illageralt") return FontFace::Illager;
+            return FontFace::Default;
+        }
+
+        void emit(const std::string& text, FontFace face)
+        {
+            if (text.empty()) return;
+            if (face != written)
+            {
+                Utf8::append(out, FONT_SWITCH + static_cast<char32_t>(face));
+                written = face;
+            }
+            for (char32_t c : Utf8::decode(text))
+                if (c != '\n' && !isFontSwitch(c)) Utf8::append(out, c);
+        }
+
+        bool scalar(std::string& text)
+        {
+            space();
+            const size_t start = at;
+            if (literal("true") || literal("false")) { text = json.substr(start, at - start); return true; }
+            while (at < json.size() && (std::isdigit(static_cast<unsigned char>(json[at])) || json[at] == '-' || json[at] == '.' || json[at] == 'e' || json[at] == 'E' || json[at] == '+')) ++at;
+            text = json.substr(start, at - start);
+            return at > start;
+        }
+
+        bool skip()
+        {
+            space();
+            if (at >= json.size()) return false;
+            if (json[at] == '"') { std::string ignored; return string(ignored); }
+            if (json[at] == '{' || json[at] == '[')
+            {
+                const char close = json[at] == '{' ? '}' : ']';
+                ++at;
+                space();
+                if (at < json.size() && json[at] == close) { ++at; return true; }
+                while (true)
+                {
+                    if (close == '}')
+                    {
+                        std::string key;
+                        if (!string(key)) return false;
+                        space();
+                        if (at >= json.size() || json[at++] != ':') return false;
+                    }
+                    if (!skip()) return false;
+                    space();
+                    if (at < json.size() && json[at] == ',') { ++at; continue; }
+                    if (at < json.size() && json[at] == close) { ++at; return true; }
+                    return false;
+                }
+            }
+            std::string ignored;
+            return scalar(ignored) || literal("null");
+        }
+
+        bool component(FontFace face, int depth)
+        {
+            if (depth > 16) return false;
+            space();
+            if (at >= json.size()) return false;
+            const char c = json[at];
+            if (c == '"')
+            {
+                std::string text;
+                if (!string(text)) return false;
+                emit(text, face);
+                return true;
+            }
+            if (c == '[')
+            {
+                ++at;
+                space();
+                if (at < json.size() && json[at] == ']') { ++at; return true; }
+                while (true)
+                {
+                    if (!component(face, depth + 1)) return false;
+                    space();
+                    if (at < json.size() && json[at] == ',') { ++at; continue; }
+                    if (at < json.size() && json[at] == ']') { ++at; return true; }
+                    return false;
+                }
+            }
+            if (c == '{')
+            {
+                ++at;
+                std::string text;
+                size_t extraAt = std::string::npos;
+                FontFace own = face;
+                space();
+                if (at < json.size() && json[at] == '}') { ++at; return true; }
+                while (true)
+                {
+                    std::string key;
+                    if (!string(key)) return false;
+                    space();
+                    if (at >= json.size() || json[at++] != ':') return false;
+                    space();
+                    if (key == "text")
+                    {
+                        if (at < json.size() && json[at] == '"') { if (!string(text)) return false; }
+                        else if (!scalar(text)) return false;
+                    }
+                    else if (key == "font")
+                    {
+                        std::string name;
+                        if (!string(name)) return false;
+                        own = faceNamed(name);
+                    }
+                    else if (key == "extra")
+                    {
+                        extraAt = at;
+                        if (!skip()) return false;
+                    }
+                    else if (!skip())
+                        return false;
+                    space();
+                    if (at < json.size() && json[at] == ',') { ++at; continue; }
+                    if (at < json.size() && json[at] == '}') { ++at; break; }
+                    return false;
+                }
+                emit(text, own);
+                if (extraAt != std::string::npos)
+                {
+                    const size_t after = at;
+                    at = extraAt;
+                    if (!component(own, depth + 1)) return false;
+                    at = after;
+                }
+                return true;
+            }
+            std::string text;
+            if (!scalar(text)) return false;
+            emit(text, face);
+            return true;
+        }
+    };
+
     Chat::Command deny(const std::string& name)
     {
         Chat::Command c;
@@ -100,6 +323,16 @@ namespace
         c.text = message;
         return c;
     }
+}
+
+bool Chat::textComponent(const std::string& json, std::string& out)
+{
+    ComponentReader reader{ json };
+    if (!reader.component(FontFace::Default, 0)) return false;
+    reader.space();
+    if (reader.at != json.size()) return false;
+    out = reader.out;
+    return true;
 }
 
 bool Chat::succeeded(const Command& command)
@@ -122,7 +355,7 @@ Chat::Command Chat::parse(const std::string& line, bool cheats, const glm::vec3&
     if (trimmed[0] != '/')
     {
         out.kind = Kind::Say;
-        out.text = trimmed.substr(0, MAX_LENGTH);
+        out.text = Utf8::prefix(trimmed, MAX_LENGTH);
         return out;
     }
 
@@ -136,7 +369,7 @@ Chat::Command Chat::parse(const std::string& line, bool cheats, const glm::vec3&
     {
         out.kind = Kind::Help;
         out.text = cheats
-            ? "/gamemode /time /tp /give /kill /seed /say /setblock /summon /effect /help"
+            ? "/gamemode /time /tp /give /kill /seed /say /tellraw /setblock /summon /effect /help"
             : "/help  -  this world was made without cheats, so the rest are off";
         return out;
     }
@@ -242,7 +475,21 @@ Chat::Command Chat::parse(const std::string& line, bool cheats, const glm::vec3&
         std::string message;
         for (size_t i = 1; i < words.size(); ++i) message += (i > 1 ? " " : "") + words[i];
         out.kind = Kind::Announce;
-        out.text = message.substr(0, MAX_LENGTH);
+        out.text = Utf8::prefix(message, MAX_LENGTH);
+        return out;
+    }
+
+    if (name == "tellraw")
+    {
+        if (!cheats) return deny(name);
+        if (words.size() < 3) return fail("/tellraw <targets> <message>");
+        const size_t afterName = trimmed.find(words[0]) + words[0].size();
+        const size_t targetAt = trimmed.find(words[1], afterName);
+        const std::string json = trimmed.substr(targetAt + words[1].size());
+        std::string text;
+        if (!textComponent(json, text)) return fail("That message isn't valid text. Try /tellraw @a {\"text\":\"Hello\"}");
+        out.kind = Kind::Tellraw;
+        out.text = text;
         return out;
     }
 

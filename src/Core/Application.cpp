@@ -1,6 +1,7 @@
 #include "Application.h"
 #include <cstdlib>
 #include "BuildTag.h"
+#include "Utf8.h"
 #include "GLFunctions.h"
 #include "Renderer/Screenshot.h"
 #include "Entity/PlayerAnimation.h"
@@ -2827,7 +2828,7 @@ bool Application::frame()
             m_startupScreen == "attackhud" || m_startupScreen == "attackready" ||
             m_startupScreen == "attackhotbar" || m_startupScreen == "bossbars" ||
             m_startupScreen == "gamemode" || m_startupScreen == "spectator" ||
-            m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" || m_startupScreen == "leads" || m_startupScreen == "anvilname" || m_startupScreen == "dials" || m_startupScreen == "spyglass" || m_startupScreen == "bundle" || m_startupScreen == "archery" || m_startupScreen == "food" || m_startupScreen == "materials" || m_startupScreen == "tropical" || m_startupScreen == "book" || m_startupScreen == "bookedit" || m_startupScreen == "booktip" || m_startupScreen == "boats" || m_startupScreen == "carts" || m_startupScreen == "fireworks" || m_startupScreen == "jukebox" || m_startupScreen == "potioncloud" || m_startupScreen == "armadillo" || m_startupScreen == "signs" || m_startupScreen == "glowsquid" || m_startupScreen == "fangs" || m_startupScreen == "zoglin" || m_startupScreen == "illusioner" || m_startupScreen == "llamas" || m_startupScreen == "paintings" || m_startupScreen == "stands" || m_startupScreen == "glowframes" || m_startupScreen == "bannershield" || m_startupScreen == "signkinds" || m_startupScreen == "signedit" || m_startupScreen == "hangingedit" || m_startupScreen == "mapmarks" || m_startupScreen == "explorermap" || m_startupScreen == "trims" || m_startupScreen == "effects" || m_startupScreen == "effectlist" || m_startupScreen == "nausea" || m_startupScreen == "darkness" || m_startupScreen == "hearts" || m_startupScreen == "advancements" || m_startupScreen == "advtoast" ||
+            m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" || m_startupScreen == "leads" || m_startupScreen == "anvilname" || m_startupScreen == "dials" || m_startupScreen == "spyglass" || m_startupScreen == "bundle" || m_startupScreen == "archery" || m_startupScreen == "food" || m_startupScreen == "materials" || m_startupScreen == "tropical" || m_startupScreen == "book" || m_startupScreen == "bookedit" || m_startupScreen == "booktip" || m_startupScreen == "boats" || m_startupScreen == "carts" || m_startupScreen == "fireworks" || m_startupScreen == "jukebox" || m_startupScreen == "potioncloud" || m_startupScreen == "armadillo" || m_startupScreen == "signs" || m_startupScreen == "fonts" || m_startupScreen == "glowsquid" || m_startupScreen == "fangs" || m_startupScreen == "zoglin" || m_startupScreen == "illusioner" || m_startupScreen == "llamas" || m_startupScreen == "paintings" || m_startupScreen == "stands" || m_startupScreen == "glowframes" || m_startupScreen == "bannershield" || m_startupScreen == "signkinds" || m_startupScreen == "signedit" || m_startupScreen == "hangingedit" || m_startupScreen == "mapmarks" || m_startupScreen == "explorermap" || m_startupScreen == "trims" || m_startupScreen == "effects" || m_startupScreen == "effectlist" || m_startupScreen == "nausea" || m_startupScreen == "darkness" || m_startupScreen == "hearts" || m_startupScreen == "advancements" || m_startupScreen == "advtoast" ||
             m_startupScreen == "grinderror" || m_startupScreen == "woods" ||
             m_startupScreen == "cherry" || m_startupScreen == "mangrove" || m_startupScreen == "fungi" ||
             m_startupScreen == "stones" || m_startupScreen == "colours" || m_startupScreen == "candles" ||
@@ -2941,6 +2942,7 @@ bool Application::frame()
                                   m_startupScreen != "potioncloud" &&
                                   m_startupScreen != "armadillo" &&
                                   m_startupScreen != "signs" &&
+                                  m_startupScreen != "fonts" &&
                                   m_startupScreen != "glowsquid" &&
                                   m_startupScreen != "fangs" &&
                                   m_startupScreen != "zoglin" &&
@@ -3355,7 +3357,7 @@ bool Application::frame()
             if (m_startupScreen == "attackhud" || m_startupScreen == "attackready" ||
                 m_startupScreen == "attackhotbar" || m_startupScreen == "bossbars" ||
                 m_startupScreen == "gamemode" || m_startupScreen == "spectator" ||
-                m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" || m_startupScreen == "leads" || m_startupScreen == "anvilname" || m_startupScreen == "dials" || m_startupScreen == "spyglass" || m_startupScreen == "bundle" || m_startupScreen == "archery" || m_startupScreen == "food" || m_startupScreen == "materials" || m_startupScreen == "tropical" || m_startupScreen == "book" || m_startupScreen == "bookedit" || m_startupScreen == "booktip" || m_startupScreen == "boats" || m_startupScreen == "carts" || m_startupScreen == "fireworks" || m_startupScreen == "jukebox" || m_startupScreen == "potioncloud" || m_startupScreen == "armadillo" || m_startupScreen == "signs" || m_startupScreen == "glowsquid" || m_startupScreen == "fangs" || m_startupScreen == "zoglin" || m_startupScreen == "illusioner" || m_startupScreen == "llamas" || m_startupScreen == "paintings" || m_startupScreen == "stands" || m_startupScreen == "glowframes" || m_startupScreen == "bannershield" || m_startupScreen == "signkinds" || m_startupScreen == "signedit" || m_startupScreen == "hangingedit" || m_startupScreen == "mapmarks" || m_startupScreen == "explorermap" || m_startupScreen == "trims" || m_startupScreen == "effects" || m_startupScreen == "effectlist" || m_startupScreen == "nausea" || m_startupScreen == "darkness" || m_startupScreen == "hearts" || m_startupScreen == "advancements" || m_startupScreen == "advtoast" ||
+                m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" || m_startupScreen == "leads" || m_startupScreen == "anvilname" || m_startupScreen == "dials" || m_startupScreen == "spyglass" || m_startupScreen == "bundle" || m_startupScreen == "archery" || m_startupScreen == "food" || m_startupScreen == "materials" || m_startupScreen == "tropical" || m_startupScreen == "book" || m_startupScreen == "bookedit" || m_startupScreen == "booktip" || m_startupScreen == "boats" || m_startupScreen == "carts" || m_startupScreen == "fireworks" || m_startupScreen == "jukebox" || m_startupScreen == "potioncloud" || m_startupScreen == "armadillo" || m_startupScreen == "signs" || m_startupScreen == "fonts" || m_startupScreen == "glowsquid" || m_startupScreen == "fangs" || m_startupScreen == "zoglin" || m_startupScreen == "illusioner" || m_startupScreen == "llamas" || m_startupScreen == "paintings" || m_startupScreen == "stands" || m_startupScreen == "glowframes" || m_startupScreen == "bannershield" || m_startupScreen == "signkinds" || m_startupScreen == "signedit" || m_startupScreen == "hangingedit" || m_startupScreen == "mapmarks" || m_startupScreen == "explorermap" || m_startupScreen == "trims" || m_startupScreen == "effects" || m_startupScreen == "effectlist" || m_startupScreen == "nausea" || m_startupScreen == "darkness" || m_startupScreen == "hearts" || m_startupScreen == "advancements" || m_startupScreen == "advtoast" ||
                 m_startupScreen == "grinderror" || m_startupScreen == "woods" ||
                 m_startupScreen == "cherry" || m_startupScreen == "mangrove" || m_startupScreen == "fungi" ||
                 m_startupScreen == "stones" || m_startupScreen == "colours" || m_startupScreen == "candles" ||
@@ -4209,7 +4211,7 @@ bool Application::frame()
                     m_camera.pitch = -25.0f;
                     m_camera.addLook(0.0f, 0.0f, 0.0f);
                 }
-                if (m_startupScreen == "signs")
+                if (m_startupScreen == "signs" || m_startupScreen == "fonts")
                 {
                     m_devAttackStrength = 1.0f;
                     m_timeOfDay = 0.0f;
@@ -4231,12 +4233,38 @@ bool Application::frame()
                         { 1, 1, { "Glowing", "cyan", "", "" }, { 9, true } },
                         { 3, 1, { "Glowing", "yellow", "", "" }, { 4, true } },
                     };
-                    for (const Board& board : BOARDS)
+                    const Board WORDS[] = {
+                        { -3, 2, { "Ça va?", "Ñandú", "", "" }, { 15, false } },
+                        { -1, 2, { "Größe", "Äpfel", "", "" }, { 14, false } },
+                        { 1, 2, { "Привет", "мир", "", "" }, { 5, false } },
+                        { 3, 2, { "Γειά σου", "κόσμε", "", "" }, { 3, false } },
+                        { -3, 1, { "Żółć", "łódź", "", "" }, { 15, true } },
+                        { -1, 1, { "Čeština", "ěščřž", "", "" }, { 14, true } },
+                        { 1, 1, { "Ålesund", "Ærø Øst", "", "" }, { 9, true } },
+                        { 3, 1, { "Ελλάδα", "Україна", "", "" }, { 4, true } },
+                    };
+                    for (const Board& board : (m_startupScreen == "fonts" ? WORDS : BOARDS))
                     {
                         const glm::ivec3 at(px + 5, py + board.dy, pz + board.dz);
                         m_world->setBlock(at.x, at.y, at.z, signFacingAs(1));
                         m_signs.at(at) = board.text;
                         m_signs.setLook(at, board.look);
+                    }
+                    if (m_startupScreen == "fonts")
+                    {
+                        m_timeOfDay = 0.5f;
+                        m_showDebug = false;
+                        m_chatLog.add("<You> Grüße aus München! Ça va? ¿Qué tal?");
+                        m_chatLog.add("<You> Привет! Γειά σου! Żółć, łódź, ěščřž, Ærø");
+                        const char* RAW[] = {
+                            "[\"Galactic: \",{\"text\":\"the enchanting table\",\"font\":\"alt\"}]",
+                            "{\"text\":\"Illager: \",\"extra\":[{\"text\":\"raid at dawn\",\"font\":\"minecraft:illageralt\"}]}",
+                        };
+                        for (const char* raw : RAW)
+                        {
+                            std::string line;
+                            if (Chat::textComponent(raw, line)) m_chatLog.add(line);
+                        }
                     }
                     m_inventory.slot(0) = ItemStack{ Items::GlowInkSac, 16 };
                     m_inventory.slot(1) = ItemStack{ Items::InkSac, 16 };
@@ -7844,9 +7872,6 @@ void Application::handleEvents()
 
     if (m_screen == Screen::NameEntry)
     {
-        // The font only has ASCII 32..95, and Minecraft-style names are
-        // letters, digits and underscores anyway, so everything else is
-        // dropped rather than drawn as a blank.
         for (char c : m_input.typedText())
         {
             if (static_cast<int>(m_nameDraft.size()) >= MAX_NAME_LENGTH) break;
@@ -8087,17 +8112,21 @@ void Application::handleEvents()
     if (naming)
     {
         bool changed = false;
-        for (char c : m_input.typedText())
-            if (c >= 32 && c < 127 && m_anvilName.size() < 35)
+        if (!m_input.typedText().empty() && !m_anvilNameEdited)
+        {
+            std::string typed;
+            if (Utf8::type(typed, m_input.typedText(), 35))
             {
-                if (!m_anvilNameEdited) m_anvilName.clear();
+                m_anvilName = typed;
                 m_anvilNameEdited = true;
-                m_anvilName.push_back(c);
                 changed = true;
             }
+        }
+        else if (Utf8::type(m_anvilName, m_input.typedText(), 35))
+            changed = true;
         for (int i = 0; i < m_input.backspaces() && !m_anvilName.empty(); ++i)
         {
-            m_anvilName.pop_back();
+            Utf8::popBack(m_anvilName);
             m_anvilNameEdited = true;
             changed = true;
         }
@@ -8107,29 +8136,19 @@ void Application::handleEvents()
     if (m_recipeSearching && (!m_inventoryOpen || bookKind() < 0 || !m_recipeOpen)) m_recipeSearching = false;
     if (m_recipeSearching)
     {
-        for (char c : m_input.typedText())
-            if (c >= 32 && c < 127 && m_recipeSearch.size() < 50)
-            {
-                m_recipeSearch.push_back(c);
-                m_recipePage = 0;
-            }
+        if (Utf8::type(m_recipeSearch, m_input.typedText(), 50)) m_recipePage = 0;
         for (int i = 0; i < m_input.backspaces() && !m_recipeSearch.empty(); ++i)
         {
-            m_recipeSearch.pop_back();
+            Utf8::popBack(m_recipeSearch);
             m_recipePage = 0;
         }
     }
     const bool searching = creativeSearching() || m_recipeSearching;
     if (creativeSearching())
     {
-        for (char c : m_input.typedText())
-            if (c >= 32 && c < 127 && m_creativeSearch.size() < 40)
-            {
-                m_creativeSearch.push_back(c);
-                m_paletteRow = 0;
-            }
+        if (Utf8::type(m_creativeSearch, m_input.typedText(), 40)) m_paletteRow = 0;
         for (int i = 0; i < m_input.backspaces() && !m_creativeSearch.empty(); ++i)
-            m_creativeSearch.pop_back();
+            Utf8::popBack(m_creativeSearch);
     }
 
     if (!searching && !naming && !m_inventoryOpen && !m_advOpen && playing() && m_world && m_keys.pressed(m_input, Action::Advancements))
@@ -17674,10 +17693,9 @@ void Application::updateChatInput()
     }
 
     if (m_input.wasKeyPressed(SDL_SCANCODE_BACKSPACE) && !m_chatDraft.empty())
-        m_chatDraft.pop_back();
+        Utf8::popBack(m_chatDraft);
 
-    for (char c : m_input.typedText())
-        if (c >= 32 && m_chatDraft.size() < Chat::MAX_LENGTH) m_chatDraft.push_back(c);
+    Utf8::type(m_chatDraft, m_input.typedText(), Chat::MAX_LENGTH);
 
     if (m_input.wasKeyPressed(SDL_SCANCODE_RETURN) || m_input.wasKeyPressed(SDL_SCANCODE_KP_ENTER))
     {
@@ -17718,6 +17736,10 @@ bool Application::runCommand(const std::string& line, const glm::vec3& origin, b
             output = "[" + who + "] " + command.text;
             return true;
         }
+
+        case Chat::Kind::Tellraw:
+            output = command.text;
+            return true;
 
         case Chat::Kind::SetBlock:
             if (m_world)
@@ -17981,9 +18003,8 @@ void Application::updateBlockEditor()
     m_editorFocus = std::clamp(m_editorFocus, 0, fields - 1);
     std::string& field = m_editorFields[static_cast<size_t>(m_editorFocus)];
     const size_t limit = m_editorStructure ? 32u : 255u;
-    if (m_input.wasKeyPressed(SDL_SCANCODE_BACKSPACE) && !field.empty()) field.pop_back();
-    for (char c : m_input.typedText())
-        if (c >= 32 && field.size() < limit) field.push_back(c);
+    if (m_input.wasKeyPressed(SDL_SCANCODE_BACKSPACE) && !field.empty()) Utf8::popBack(field);
+    Utf8::type(field, m_input.typedText(), limit);
     if (m_input.wasKeyPressed(SDL_SCANCODE_TAB)) m_editorFocus = (m_editorFocus + 1) % fields;
     if (m_input.wasKeyPressed(SDL_SCANCODE_RETURN) || m_input.wasKeyPressed(SDL_SCANCODE_KP_ENTER)) closeBlockEditor(true);
 }
@@ -20271,13 +20292,12 @@ void Application::updateSignInput()
 
     if (m_input.wasKeyPressed(SDL_SCANCODE_BACKSPACE))
     {
-        if (!line.empty()) line.pop_back();
+        if (!line.empty()) Utf8::popBack(line);
         else if (m_signLine > 0) --m_signLine;
     }
 
-    for (char c : m_input.typedText())
-        if (c >= 32 && line.size() < (isHangingSign(m_world->getBlock(m_signAt.x, m_signAt.y, m_signAt.z)) ? Signs::MAX_HANGING_LINE : Signs::MAX_LINE))
-            line.push_back(c);
+    Utf8::type(line, m_input.typedText(),
+               static_cast<size_t>(isHangingSign(m_world->getBlock(m_signAt.x, m_signAt.y, m_signAt.z)) ? Signs::MAX_HANGING_LINE : Signs::MAX_LINE));
 
     if (m_input.wasKeyPressed(SDL_SCANCODE_RETURN) ||
         m_input.wasKeyPressed(SDL_SCANCODE_KP_ENTER) ||

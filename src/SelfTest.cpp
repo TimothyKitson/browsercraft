@@ -93,6 +93,8 @@
 #include "Game/Golems.h"
 #include "Renderer/Atlas.h"
 #include "Renderer/UIRenderer.h"
+#include "Renderer/FontPaint.h"
+#include "Core/Utf8.h"
 #include "Entity/HeldItem.h"
 #include "Audio/AudioEngine.h"
 #include "Player/Player.h"
@@ -4972,6 +4974,98 @@ namespace
         Packs::setActive({});
         check(Packs::file("assets/textures/block/only_in_pack.png") == "assets/textures/block/only_in_pack.png", "with no packs nothing changes");
         std::filesystem::remove_all(root);
+    }
+
+    void testFonts()
+    {
+        section("fonts: UTF-8 text");
+        check(Utf8::length("Gr\u00fc\u00dfe") == 5 && Utf8::decode("\u0416")[0] == 0x416 && Utf8::encode(U"\u00e9") == "\u00e9",
+              "text is read and written as UTF-8");
+        std::string word = "ca\u00e9";
+        Utf8::popBack(word);
+        check(word == "ca", "backspace takes a whole letter, not half of one");
+        word = "\u00e9t\u00e9";
+        Utf8::popFront(word);
+        check(word == "t\u00e9", "and so does trimming from the front");
+        check(Utf8::decode(std::string("a\xC3")).back() == Utf8::REPLACEMENT, "a broken sequence reads as a replacement character");
+        std::string typed;
+        check(Utf8::type(typed, "\u00e7a\x01\u00a7\uE001\u0416", 10) && typed == "\u00e7a\u0416",
+              "typing keeps letters from every script and drops control characters, the section sign and font marks");
+        typed.clear();
+        Utf8::type(typed, "\u00e9\u00e9\u00e9\u00e9", 3);
+        check(Utf8::length(typed) == 3, "a field's limit counts letters, not bytes");
+        std::string longLine;
+        for (int i = 0; i < 150; ++i) longLine += "\u00e9";
+        const Chat::Command said = Chat::parse(longLine, false);
+        check(Utf8::length(said.text) == Chat::MAX_LENGTH && Utf8::decode(said.text).back() == 0xE9, "chat is cut to its length on a letter boundary");
+
+        section("fonts: the glyph sheets");
+        check(Font::has(0xE9) && Font::has(0xC9) && Font::has(0x416) && Font::has(0x3A9) && Font::has(0x142),
+              "accented, Cyrillic and Greek letters all have glyphs");
+        check(Font::advanceOf(' ') == 4.0f && Font::advanceOf(0x200C) == 0.0f, "a space is four wide and a zero-width non-joiner nothing");
+        const Glyph& missing = Font::glyph(0x4E2D);
+        check(!Font::has(0x4E2D) && missing.ink && missing.advance == 6.0f, "a character no sheet has is drawn as 1.21.1's missing box, six wide");
+        check(Font::glyph(0xC9).top < 0.0f && Font::glyph('E').top == 0.0f, "an accented capital reaches above the line, as on the accented sheet");
+        check(Font::has('a', FontFace::Galactic) && Font::has('Z', FontFace::Galactic) && !Font::has('1', FontFace::Galactic),
+              "the galactic alphabet has letters only");
+        check(Font::has('a', FontFace::Illager) && Font::has('7', FontFace::Illager) && Font::advanceOf(' ', FontFace::Illager) == 4.0f,
+              "the illager runes have letters, digits and the space");
+        check(UIRenderer::textWidth("abc", 1.0f, FontFace::Galactic) == Font::width("abc", FontFace::Galactic) - 1.0f,
+              "text in another font is measured in that font");
+        std::string marked;
+        Utf8::append(marked, FONT_SWITCH + static_cast<char32_t>(FontFace::Galactic));
+        marked += "abc";
+        check(UIRenderer::textWidth(marked, 1.0f) == UIRenderer::textWidth("abc", 1.0f, FontFace::Galactic),
+              "a font mark in the text switches the font from there on");
+        const std::string trimmed = UIRenderer::trimToWidth("the elder words", 20.0f, FontFace::Galactic);
+        check(!trimmed.empty() && Font::width(trimmed, FontFace::Galactic) <= 20.0f &&
+              Font::width(UIRenderer::trimToWidth("the elder words", 20.0f, FontFace::Galactic) + "w", FontFace::Galactic) > 20.0f,
+              "trimming keeps as much as fits and no more");
+
+        section("fonts: painted when no pack has them");
+        FontPaint::Bitmap e, eAcute, eCap, eCapAcute, zhe, omega, rune1, rune2, box;
+        check(FontPaint::paint(FontFace::Default, 'e', e) && FontPaint::paint(FontFace::Default, 0xE9, eAcute) &&
+              eAcute.inkWidth() == e.inkWidth() && eAcute.top == 0, "a lower-case accent sits in the space above the letter");
+        check(FontPaint::paint(FontFace::Default, 'E', eCap) && FontPaint::paint(FontFace::Default, 0xC9, eCapAcute) &&
+              eCapAcute.top < 0 && eCapAcute.h > eCap.h, "a capital's accent is drawn above the line, so the capital stays full height");
+        FontPaint::Bitmap iAcute, ringA;
+        check(FontPaint::paint(FontFace::Default, 0xED, iAcute) && !iAcute.at(0, -iAcute.top), "an accented i loses its dot");
+        check(FontPaint::paint(FontFace::Default, 0x416, zhe) && FontPaint::paint(FontFace::Default, 0x3A9, omega) &&
+              zhe.inkWidth() == 5 && omega.inkWidth() == 5, "Cyrillic and Greek letters are painted");
+        check(FontPaint::paint(FontFace::Default, 0xE7, ringA) && ringA.h > 8, "a mark below hangs under the letter");
+        check(!FontPaint::paint(FontFace::Default, 0x4E2D, box), "and a character with no painting is left to the missing box");
+        int painted = 0, total = 0;
+        for (const FontMaps::Sheet& sheet : FontMaps::sheets())
+            for (int i = 0; i < sheet.rows * 16; ++i)
+            {
+                if (!sheet.chars[i]) continue;
+                ++total;
+                FontPaint::Bitmap any;
+                if (FontPaint::paint(sheet.face, sheet.chars[i], any)) ++painted;
+            }
+        check(total > 2000 && painted > 1000, "over a thousand of the sheets' characters can be painted");
+        check(FontPaint::paint(FontFace::Galactic, 'a', rune1) && FontPaint::paint(FontFace::Galactic, 'b', rune2) && rune1.ink != rune2.ink &&
+              FontPaint::paint(FontFace::Galactic, 'A', box) && box.ink == rune1.ink, "painted runes differ by letter and ignore case");
+        FontPaint::Bitmap illager;
+        check(FontPaint::paint(FontFace::Illager, 'a', illager) && illager.ink != rune1.ink, "and the illager runes are not the galactic ones");
+
+        section("fonts: /tellraw and the enchanting table");
+        std::string out;
+        check(Chat::textComponent("{\"text\":\"hi\",\"font\":\"minecraft:alt\"}", out) && Utf8::decode(out) == std::u32string(U"\uE001hi"),
+              "a component's font is kept with its text");
+        check(Chat::textComponent("[\"a \",{\"text\":\"b\",\"font\":\"illageralt\",\"extra\":[\"c\",{\"text\":\"d\",\"font\":\"default\"}]}]", out) &&
+              Utf8::decode(out) == std::u32string(U"a \uE002bc\uE000d"), "children take their parent's font unless they name one");
+        check(Chat::textComponent("\"plain \\u00e9\"", out) && out == "plain \u00e9" && Chat::textComponent("[1,true]", out) && out == "1true",
+              "plain strings, escapes, numbers and booleans are text too");
+        check(!Chat::textComponent("{\"text\":}", out) && !Chat::textComponent("{\"text\":\"x\"} junk", out), "broken JSON is refused");
+        const Chat::Command raw = Chat::parse("/tellraw @a {\"text\":\"Hello  there\",\"font\":\"alt\"}", true);
+        check(raw.kind == Chat::Kind::Tellraw && Utf8::decode(raw.text) == std::u32string(U"\uE001Hello  there"), "/tellraw prints its message as given");
+        check(Chat::parse("/tellraw @a \"x\"", false).kind == Chat::Kind::Denied && Chat::parse("/tellraw @a", true).kind == Chat::Kind::Unknown,
+              "and needs cheats and a message");
+        const std::string phrase = Enchanting::phrase(1234u, 0);
+        const size_t spaces = static_cast<size_t>(std::count(phrase.begin(), phrase.end(), ' '));
+        check(phrase == Enchanting::phrase(1234u, 0) && phrase != Enchanting::phrase(1234u, 1) && spaces >= 2 && spaces <= 3,
+              "an offer's runes are three or four words, fixed by the table's seed and the row");
     }
 
     void testRecipeBook()
@@ -16000,6 +16094,7 @@ int runSelfTest()
     testWorlds();
     testServerList();
     testResourcePacks();
+    testFonts();
     testMadeThings();
     testTheEndAndTheSea();
     testPathfinding();

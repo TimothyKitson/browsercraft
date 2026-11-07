@@ -4,7 +4,7 @@ namespace
     {
         if (UIRenderer::textWidth(name, 1.0f) <= 157.0f) return name;
         std::string out = name;
-        while (!out.empty() && UIRenderer::textWidth(out + "...", 1.0f) > 157.0f) out.pop_back();
+        while (!out.empty() && UIRenderer::textWidth(out + "...", 1.0f) > 157.0f) Utf8::popBack(out);
         return out + "...";
     }
 }

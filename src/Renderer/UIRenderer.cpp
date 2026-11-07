@@ -1,5 +1,6 @@
 #include "UIRenderer.h"
 #include "Core/GLFunctions.h"
+#include "Core/Utf8.h"
 #include <glm/gtc/matrix_transform.hpp>
 #include <cstdint>
 #include <cmath>
@@ -280,31 +281,31 @@ void UIRenderer::texturedShape(unsigned int texture, const glm::vec2 corner[4],
     }
 }
 
-void UIRenderer::text(const std::string& value, float x, float y, float scale, const glm::vec4& color)
+void UIRenderer::text(const std::string& value, float x, float y, float scale, const glm::vec4& color, FontFace face)
 {
     useTexture(m_font.textureId());
-
-    // Each glyph is drawn its own width and the next one starts one
-    // clear column later, which is what makes the text proportional
-    // rather than a grid: "ill" is narrow and "WWW" is wide.
     float cursor = x;
-    for (char c : value)
+    size_t at = 0;
+    while (at < value.size())
     {
-        if (c != ' ')
+        const char32_t c = Utf8::next(value, at);
+        if (isFontSwitch(c))
         {
-            float u0, v0, u1, v1;
-            Font::glyphUV(c, u0, v0, u1, v1);
-            pushQuad(cursor, y, Font::widthOf(c) * scale, Font::GLYPH_H * scale,
-                     u0, v0, u1, v1, color);
+            face = static_cast<FontFace>(c - FONT_SWITCH);
+            continue;
         }
-        cursor += Font::advanceOf(c) * scale;
+        const Glyph& glyph = Font::glyph(c, face);
+        if (glyph.ink)
+            pushQuad(cursor, y + glyph.top * scale, glyph.width * scale, glyph.height * scale,
+                     glyph.u0, glyph.v0, glyph.u1, glyph.v1, color);
+        cursor += glyph.advance * scale;
     }
 }
 
-void UIRenderer::textWithShadow(const std::string& value, float x, float y, float scale, const glm::vec4& color)
+void UIRenderer::textWithShadow(const std::string& value, float x, float y, float scale, const glm::vec4& color, FontFace face)
 {
-    text(value, x + scale, y + scale, scale, glm::vec4(0.0f, 0.0f, 0.0f, color.a * 0.65f));
-    text(value, x, y, scale, color);
+    text(value, x + scale, y + scale, scale, glm::vec4(0.0f, 0.0f, 0.0f, color.a * 0.65f), face);
+    text(value, x, y, scale, color, face);
 }
 
 void UIRenderer::setRotation(float radians, float pivotX, float pivotY)
@@ -324,16 +325,34 @@ void UIRenderer::textWithShadowRotated(const std::string& value, float x, float 
     clearRotation();
 }
 
-float UIRenderer::textWidth(const std::string& value, float scale)
+float UIRenderer::textWidth(const std::string& value, float scale, FontFace face)
 {
     if (value.empty()) return 0.0f;
 
-    float width = 0.0f;
-    for (char c : value) width += Font::advanceOf(c) * scale;
+    const float width = Font::width(value, face) * scale;
 
     // The trailing clear column after the last glyph is not part of
     // the text: counted in, every centred line sits half a pixel left.
     return width - scale;
+}
+
+std::string UIRenderer::trimToWidth(const std::string& value, float width, FontFace face)
+{
+    float used = 0.0f;
+    size_t at = 0;
+    while (at < value.size())
+    {
+        const size_t start = at;
+        const char32_t c = Utf8::next(value, at);
+        if (isFontSwitch(c))
+        {
+            face = static_cast<FontFace>(c - FONT_SWITCH);
+            continue;
+        }
+        used += Font::advanceOf(c, face);
+        if (used > width) return value.substr(0, start);
+    }
+    return value;
 }
 
 void UIRenderer::texturedTriangle(unsigned int texture, const glm::vec2 corner[3],

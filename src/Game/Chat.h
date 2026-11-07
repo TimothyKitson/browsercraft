@@ -34,6 +34,7 @@ namespace Chat
         Summon,
         EffectGive,
         EffectClear,
+        Tellraw,
     };
 
     struct Command
@@ -57,6 +58,7 @@ namespace Chat
     // Unknown, so the player is told which of the two it was.
     Command parse(const std::string& line, bool cheats, const glm::vec3& origin = glm::vec3(0.0f));
     bool succeeded(const Command& command);
+    bool textComponent(const std::string& json, std::string& out);
 
     // One scrolling log. Lines fade out on their own, and are kept so the
     // last few can be shown while the chat line is closed.
