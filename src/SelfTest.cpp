@@ -3750,6 +3750,28 @@ namespace
         check(blockDrop(Blocks::Cobweb) == Items::StringItem && !blockInfo(Blocks::Cobweb).collides, "a cobweb is walked into and cut for string");
         check(Tools::breakSeconds(Items::IronSword, Blocks::Cobweb) < Tools::breakSeconds(Blocks::Air, Blocks::Cobweb) / 4.0f,
               "and a sword goes through it quickly");
+        bool anchors = true;
+        const int LIGHT[5] = { 0, 3, 7, 11, 15 };
+        for (int c = 0; c < 5; ++c)
+            if (anchorCharge(anchorOf(c)) != c || lightEmission(anchorOf(c)) != LIGHT[c] || blockDrop(anchorOf(c)) != Blocks::RespawnAnchor0)
+                anchors = false;
+        check(anchors, "a respawn anchor holds four charges and glows brighter with each");
+        check(!Tools::canHarvest(Items::IronPickaxe, Blocks::CryingObsidian) && Tools::canHarvest(Items::DiamondPickaxe, Blocks::CryingObsidian),
+              "crying obsidian wants a diamond pickaxe");
+        check(lightEmission(Blocks::MagmaBlock) == 3 && lightEmission(Blocks::CryingObsidian) == 10, "magma glows dimly and crying obsidian brighter");
+        check(makes(Blocks::MagmaBlock) && makes(Blocks::RespawnAnchor0) && makes(Blocks::Lodestone), "magma, the anchor and the lodestone are made");
+        LevelState saved;
+        saved.hasAnchor = true;
+        saved.anchorX = -12; saved.anchorY = 40; saved.anchorZ = 99;
+        const std::string dir = (std::filesystem::temp_directory_path() / "bc_selftest_anchor").string();
+        std::error_code ec;
+        std::filesystem::remove_all(dir, ec);
+        WorldSave::ensureDirectories(dir);
+        WorldSave::saveLevel(dir, saved);
+        LevelState back;
+        check(WorldSave::loadLevel(dir, back) && back.hasAnchor && back.anchorX == -12 && back.anchorY == 40 && back.anchorZ == 99,
+              "the anchor you set survives a save");
+        std::filesystem::remove_all(dir, ec);
     }
 
     // --- the workstations -----------------------------------------------
@@ -5548,7 +5570,8 @@ namespace
                             for (int lx = 0; lx < Chunk::SX; ++lx)
                             {
                                 const BlockId block = chunk.getBlock(lx, y, lz);
-                                if (block == wanted.block) ++material;
+                                if (block == wanted.block ||
+                                    (wanted.block == Blocks::Obsidian && block == Blocks::CryingObsidian)) ++material;
                                 if (block == Blocks::Chest) ++chests;
                             }
                 }
@@ -11196,7 +11219,7 @@ namespace
             const std::string path = dir + "/level.dat";
             std::error_code ec;
             const auto size = std::filesystem::file_size(path, ec);
-            if (!ec) std::filesystem::resize_file(path, size - sizeof(uint16_t), ec);
+            if (!ec) std::filesystem::resize_file(path, size - sizeof(uint16_t) - sizeof(uint8_t) - 3 * sizeof(int), ec);
 
             LevelState back;
             check(WorldSave::loadLevel(dir, back), "a level from before items moved up still loads");

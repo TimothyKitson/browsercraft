@@ -5513,6 +5513,51 @@ namespace
             t.set(x, y, Color{ 58, 44, 36 }); t.set(x + 1, y, Color{ 58, 44, 36 });
         }
     }
+    void paintMagmaTile(Tile& t)
+    {
+        t.fill(Color{ 90, 30, 14 });
+        for (int y = 0; y < Tile::N; ++y)
+            for (int x = 0; x < Tile::N; ++x)
+            {
+                const float h = hash2(x / 2, y / 2, 2101);
+                if (h > 0.62f) t.set(x, y, h > 0.85f ? Color{ 255, 190, 60 } : Color{ 220, 100, 30 });
+            }
+    }
+    void paintCryingObsidianTile(Tile& t)
+    {
+        t.fill(Color{ 22, 12, 36 });
+        t.speckle(14, 2102);
+        for (int i = 0; i < 7; ++i)
+        {
+            const int x = static_cast<int>(hash2(i, 0, 2103) * 15.0f), y = static_cast<int>(hash2(i, 1, 2103) * 13.0f);
+            t.set(x, y, Color{ 150, 40, 230 }); t.set(x, y + 1, Color{ 110, 30, 190 });
+        }
+    }
+    void paintLodestoneTopTile(Tile& t)
+    {
+        t.fill(Color{ 150, 150, 154 });
+        for (int y = 4; y < 12; ++y) for (int x = 4; x < 12; ++x) t.set(x, y, (x == 4 || x == 11 || y == 4 || y == 11) ? Color{ 60, 60, 66 } : Color{ 110, 110, 116 });
+    }
+    void paintLodestoneSideTile(Tile& t)
+    {
+        t.fill(Color{ 150, 150, 154 });
+        for (int x = 0; x < Tile::N; ++x) { t.set(x, 3, Color{ 90, 90, 96 }); t.set(x, 12, Color{ 90, 90, 96 }); }
+        t.speckle(6, 2104);
+    }
+    void paintAnchorTopIn(Tile& t, int charge)
+    {
+        t.fill(Color{ 30, 20, 44 });
+        for (int y = 3; y < 13; ++y) for (int x = 3; x < 13; ++x)
+            t.set(x, y, charge > 0 ? Color{ 150, 60, 230 } : Color{ 50, 34, 70 });
+    }
+    void paintAnchorSideIn(Tile& t, int charge)
+    {
+        t.fill(Color{ 26, 16, 38 });
+        t.speckle(10, 2105);
+        for (int k = 0; k < 4; ++k)
+            for (int y = 11; y < 14; ++y) t.set(3 + k * 3, y, k < charge ? Color{ 255, 210, 90 } : Color{ 60, 46, 30 });
+    }
+    void paintAnchorBottomTile(Tile& t) { t.fill(Color{ 26, 16, 38 }); t.speckle(10, 2106); }
     void paintItemPitcherPlant(Tile& t)
     {
         paintDoubleIn(t, true, Color{ 100, 170, 190 }, 1333);
@@ -8280,6 +8325,11 @@ namespace
         { Tiles::DustLine1Off, paintRedstoneDust },
         { Tiles::DustLine1On, paintRedstoneDustLit },
         { Tiles::LeverHandle, paintLever },
+        { Tiles::MagmaTile, paintMagmaTile },
+        { Tiles::CryingObsidianTile, paintCryingObsidianTile },
+        { Tiles::LodestoneTopTile, paintLodestoneTopTile },
+        { Tiles::LodestoneSideTile, paintLodestoneSideTile },
+        { Tiles::AnchorBottomTile, paintAnchorBottomTile },
         { Tiles::FireTile, paintFireTile },
         { Tiles::FireAltTile, paintFireAltTile },
         { Tiles::SoulFireTile, paintSoulFireTile },
@@ -9074,6 +9124,21 @@ namespace
         { Tiles::GlassPaneTopTile, { "glass_pane_top", nullptr }, Tinting::None, 0, false },
         { Tiles::TerracottaPlainTile, { "terracotta", "hardened_clay", nullptr }, Tinting::None, 0, false },
         { Tiles::TintedGlassTile, { "tinted_glass", nullptr }, Tinting::None, 0, false },
+        { Tiles::MagmaTile, { "magma", nullptr }, Tinting::None, 0, true },
+        { Tiles::CryingObsidianTile, { "crying_obsidian", nullptr }, Tinting::None, 0, false },
+        { Tiles::LodestoneTopTile, { "lodestone_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::LodestoneSideTile, { "lodestone_side", nullptr }, Tinting::None, 0, false },
+        { Tiles::AnchorBottomTile, { "respawn_anchor_bottom", nullptr }, Tinting::None, 0, false },
+        { Tiles::AnchorTopTileFirst, { "respawn_anchor_top_off", nullptr }, Tinting::None, 0, false },
+        { Tiles::AnchorTopTileFirst + 1, { "respawn_anchor_top", nullptr }, Tinting::None, 0, true },
+        { Tiles::AnchorTopTileFirst + 2, { "respawn_anchor_top", nullptr }, Tinting::None, 0, true },
+        { Tiles::AnchorTopTileFirst + 3, { "respawn_anchor_top", nullptr }, Tinting::None, 0, true },
+        { Tiles::AnchorTopTileFirst + 4, { "respawn_anchor_top", nullptr }, Tinting::None, 0, true },
+        { Tiles::AnchorSideTileFirst + 0, { "respawn_anchor_side0", nullptr }, Tinting::None, 0, false },
+        { Tiles::AnchorSideTileFirst + 1, { "respawn_anchor_side1", nullptr }, Tinting::None, 0, false },
+        { Tiles::AnchorSideTileFirst + 2, { "respawn_anchor_side2", nullptr }, Tinting::None, 0, false },
+        { Tiles::AnchorSideTileFirst + 3, { "respawn_anchor_side3", nullptr }, Tinting::None, 0, false },
+        { Tiles::AnchorSideTileFirst + 4, { "respawn_anchor_side4", nullptr }, Tinting::None, 0, false },
         { Tiles::FireTile, { "fire_0", nullptr }, Tinting::None, 0, true },
         { Tiles::FireAltTile, { "fire_1", nullptr }, Tinting::None, 0, true },
         { Tiles::SoulFireTile, { "soul_fire_0", nullptr }, Tinting::None, 0, true },
@@ -10099,6 +10164,14 @@ Atlas::Atlas()
         paintSweetBerryIn(bush, stage);
         blitPainted(Tiles::SweetBerryBushTile + stage, bush);
     }
+    for (int charge = 0; charge < 5; ++charge)
+    {
+        Tile top, side;
+        paintAnchorTopIn(top, charge);
+        paintAnchorSideIn(side, charge);
+        blitPainted(Tiles::AnchorTopTileFirst + charge, top);
+        blitPainted(Tiles::AnchorSideTileFirst + charge, side);
+    }
     for (int age = 0; age < 4; ++age)
     {
         Tile frost;
@@ -11018,6 +11091,7 @@ bool Atlas::hasPainter(int tileIndex)
     if (tileIndex >= Tiles::SweetBerryBushTile && tileIndex <= Tiles::SweetBerryBushTileLast) return true;
     if (tileIndex >= Tiles::CoralFanTileFirst && tileIndex <= Tiles::DeadCoralFanTileLast) return true;
     if (tileIndex >= Tiles::FrostedIceTileFirst && tileIndex <= Tiles::FrostedIceTileLast) return true;
+    if (tileIndex >= Tiles::AnchorTopTileFirst && tileIndex <= Tiles::AnchorSideTileLast) return true;
     if (tileIndex >= Tiles::CutCopperTile && tileIndex <= Tiles::CopperTrapdoorTileLast) return true;
     if (tileIndex >= Tiles::ItemCopperDoorFirst && tileIndex <= Tiles::ItemCopperDoorLast) return true;
     if (tileIndex >= Tiles::CrackFirst &&

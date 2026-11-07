@@ -257,6 +257,10 @@ void WorldSave::saveLevel(const std::string& saveDirectory, const LevelState& st
     }
 
     write(out, ITEM_BASE);
+    write(out, static_cast<uint8_t>(state.hasAnchor ? 1 : 0));
+    write(out, state.anchorX);
+    write(out, state.anchorY);
+    write(out, state.anchorZ);
 }
 
 bool WorldSave::loadLevel(const std::string& saveDirectory, LevelState& out)
@@ -493,7 +497,13 @@ bool WorldSave::loadLevel(const std::string& saveDirectory, LevelState& out)
                                             }
                                         }
                                         uint16_t base = 0;
-                                        if (beaconsWhole && read(in, base)) out.itemBase = base;
+                                        if (beaconsWhole && read(in, base))
+                                        {
+                                            out.itemBase = base;
+                                            uint8_t anchored = 0;
+                                            if (read(in, anchored) && read(in, out.anchorX) && read(in, out.anchorY) && read(in, out.anchorZ))
+                                                out.hasAnchor = anchored != 0;
+                                        }
                                     }
                                 }
                             }

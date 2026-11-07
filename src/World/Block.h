@@ -651,6 +651,8 @@ namespace Blocks
         Cobweb,
         SoulTorch, SoulCampfire, SoulSoil,
         Fire0, Fire1, Fire2, Fire3, SoulFire,
+        MagmaBlock, CryingObsidian, Lodestone,
+        RespawnAnchor0, RespawnAnchor1, RespawnAnchor2, RespawnAnchor3, RespawnAnchor4,
 
         Count
     };
@@ -771,6 +773,9 @@ inline bool isEndRod(BlockId id) { return id >= Blocks::EndRodFirst && id <= Blo
 inline int endRodFacing(BlockId id) { return isEndRod(id) ? id - Blocks::EndRodFirst : 0; }
 inline bool isFire(BlockId id) { return (id >= Blocks::Fire0 && id <= Blocks::Fire3) || id == Blocks::SoulFire; }
 inline bool isCampfire(BlockId id) { return id == Blocks::Campfire || id == Blocks::SoulCampfire; }
+inline bool isRespawnAnchor(BlockId id) { return id >= Blocks::RespawnAnchor0 && id <= Blocks::RespawnAnchor4; }
+inline int anchorCharge(BlockId id) { return isRespawnAnchor(id) ? id - Blocks::RespawnAnchor0 : 0; }
+inline BlockId anchorOf(int charge) { return static_cast<BlockId>(Blocks::RespawnAnchor0 + (charge < 0 ? 0 : charge > 4 ? 4 : charge)); }
 inline bool isTarget(BlockId id) { return id == Blocks::Target || id == Blocks::TargetLit; }
 inline bool isIronDoor(BlockId id) { return id >= Blocks::IronDoorFirst && id <= Blocks::IronDoorLast; }
 inline bool isIronTrapdoor(BlockId id) { return id >= Blocks::IronTrapdoorFirst && id <= Blocks::IronTrapdoorLast; }

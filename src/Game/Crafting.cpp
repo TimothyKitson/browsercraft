@@ -454,6 +454,13 @@ namespace
 
         { true, 0, 0, { Items::MelonSlice }, 1, Items::MelonSeeds, 1 },
         { true, 0, 0, { Blocks::Pumpkin }, 1, Items::PumpkinSeeds, 4 },
+        { false, 2, 2, { Items::MagmaCream, Items::MagmaCream, Items::MagmaCream, Items::MagmaCream }, 0, Blocks::MagmaBlock, 1 },
+        { false, 3, 3, { Blocks::CryingObsidian, Blocks::CryingObsidian, Blocks::CryingObsidian,
+                         Blocks::Glowstone, Blocks::Glowstone, Blocks::Glowstone,
+                         Blocks::CryingObsidian, Blocks::CryingObsidian, Blocks::CryingObsidian }, 0, Blocks::RespawnAnchor0, 1 },
+        { false, 3, 3, { Blocks::ChiseledStoneBricks, Blocks::ChiseledStoneBricks, Blocks::ChiseledStoneBricks,
+                         Blocks::ChiseledStoneBricks, Items::NetheriteIngot, Blocks::ChiseledStoneBricks,
+                         Blocks::ChiseledStoneBricks, Blocks::ChiseledStoneBricks, Blocks::ChiseledStoneBricks }, 0, Blocks::Lodestone, 1 },
         { false, 3, 2, { Items::IronIngot, Items::IronIngot, Items::IronIngot,
                          Items::IronIngot, Items::IronIngot, Items::IronIngot }, 0, Blocks::IronBars, 16 },
         { false, 1, 3, { Items::IronNugget, Items::IronIngot, Items::IronNugget }, 0, Blocks::ChainFirst, 1 },

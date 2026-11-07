@@ -416,6 +416,7 @@ StackId blockDrop(BlockId id)
     if (id == Blocks::Cobweb) return Items::StringItem;
     if (isFire(id)) return Blocks::Air;
     if (id == Blocks::SoulCampfire) return Blocks::SoulSoil;
+    if (isRespawnAnchor(id)) return Blocks::RespawnAnchor0;
     if (id == Blocks::ChorusPlant) return Items::ChorusFruit;
 
     // A melon comes apart into slices rather than into a melon, which

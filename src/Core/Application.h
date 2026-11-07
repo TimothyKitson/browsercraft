@@ -495,6 +495,10 @@ private:
 
     std::string m_savePath = "world";
     glm::vec3 m_spawnPoint{ 0.0f };
+    bool m_hasAnchor = false;
+    bool m_anchorPending = false;
+    glm::ivec3 m_anchor{ 0 };
+    float m_magmaSting = 0.0f;
 
     // 0 = midnight, 0.5 = noon. Mid-morning: bright enough to show the
     // scenery off, with the sun still low enough to be interesting.

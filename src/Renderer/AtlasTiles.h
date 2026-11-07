@@ -371,6 +371,9 @@ namespace Tiles
         IronDoorTopTile, IronDoorBottomTile, IronTrapdoorTile,
         IronBarsTile, ChainTile, EndRodTile, CobwebTile,
         SoulTorchTile, SoulCampfireTop, SoulCampfireLogLit, SoulSoilTile, FireTile, FireAltTile, SoulFireTile,
+        MagmaTile, CryingObsidianTile, LodestoneTopTile, LodestoneSideTile,
+        AnchorTopTileFirst, AnchorTopTileLast = AnchorTopTileFirst + 4, AnchorSideTileFirst, AnchorSideTileLast = AnchorSideTileFirst + 4,
+        AnchorBottomTile,
 
         TileCount
     };

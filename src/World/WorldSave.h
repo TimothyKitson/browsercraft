@@ -123,6 +123,9 @@ struct LevelState
     // saved at all, which means fall back to asking the generator.
     glm::vec3 spawn{ 0.0f };
     bool hasSpawn = false;
+
+    bool hasAnchor = false;
+    int anchorX = 0, anchorY = 0, anchorZ = 0;
 };
 
 namespace WorldSave

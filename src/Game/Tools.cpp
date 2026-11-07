@@ -120,6 +120,9 @@ int Tools::requiredLevel(BlockId block)
         // you trip over on the way down.
         case Blocks::AncientDebris: return 4;
         case Blocks::NetheriteBlock: return 4;
+        case Blocks::CryingObsidian: return 4;
+        case Blocks::RespawnAnchor0: case Blocks::RespawnAnchor1: case Blocks::RespawnAnchor2:
+        case Blocks::RespawnAnchor3: case Blocks::RespawnAnchor4: return 4;
         case Blocks::DiamondOre: return 3;
         case Blocks::EmeraldOre: return 3;
         case Blocks::GoldOre:

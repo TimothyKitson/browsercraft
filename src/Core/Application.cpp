@@ -822,6 +822,8 @@ void Application::loadLevel()
         // generator would pick today. Without this, loading a world and
         // then dying dropped you somewhere you had never been.
         if (state.hasSpawn) m_spawnPoint = state.spawn;
+        m_hasAnchor = state.hasAnchor;
+        m_anchor = glm::ivec3(state.anchorX, state.anchorY, state.anchorZ);
 
         m_furnaces.clear();
         for (const LevelState::SavedFurnace& saved : state.furnaces)
@@ -986,6 +988,10 @@ void Application::saveLevel()
     state.dead = m_hardcoreDeath;
     state.selectedSlot = m_inventory.selectedSlot();
     state.spawn = m_spawnPoint;
+    state.hasAnchor = m_hasAnchor;
+    state.anchorX = m_anchor.x;
+    state.anchorY = m_anchor.y;
+    state.anchorZ = m_anchor.z;
 
     for (int i = 0; i <= Inventory::TOTAL_SLOTS; ++i)
     {
@@ -1953,6 +1959,25 @@ bool Application::frame()
                 else m_eggStep = 0.0f;
             }
 
+            {
+                const BlockId floorBlock = m_world->getBlock(static_cast<int>(std::floor(m_player.position.x)),
+                                                             static_cast<int>(std::floor(m_player.position.y - 0.1f)),
+                                                             static_cast<int>(std::floor(m_player.position.z)));
+                const bool walker = Enchanting::levelOf(m_inventory.slot(Inventory::ARMOR_FIRST + 3).enchantments,
+                                                        Enchanting::Kind::FrostWalker) > 0;
+                if (floorBlock == Blocks::MagmaBlock && m_player.onGround && !m_player.sneaking && !walker &&
+                    !Effects::fireImmune(m_player.effects) && !m_player.creative())
+                {
+                    m_magmaSting += deltaTime;
+                    if (m_magmaSting >= 0.5f)
+                    {
+                        m_magmaSting = 0.0f;
+                        if (m_player.damage(1)) m_audio.play(Sound::Hurt, 0.6f, 0.9f);
+                    }
+                }
+                else m_magmaSting = 0.0f;
+            }
+
             if (m_player.inBerryBush && !m_player.creative())
             {
                 const glm::vec2 moving(m_player.velocity.x, m_player.velocity.z);
@@ -2773,6 +2798,10 @@ bool Application::frame()
                     for (int dz = 4; dz <= 7; ++dz) { put(10, 0, dz, Blocks::Planks); put(11, 0, dz, Blocks::Log); }
                     lightFire(glm::ivec3(px + 9, py, pz + 5));
                     lightFire(glm::ivec3(px + 10, py + 1, pz + 6));
+                    put(2, -1, -7, Blocks::MagmaBlock);
+                    put(2, 0, -5, Blocks::CryingObsidian);
+                    put(2, 0, -3, Blocks::Lodestone);
+                    for (int c = 0; c < 5; ++c) put(12, 0, -7 + c * 2, anchorOf(c));
                     put(13, 0, -8, Blocks::Bookshelf);
                     put(13, 0, 8, Blocks::DiamondOre);
                     put(13, 1, 8, Blocks::EndPortalFrame);
@@ -5742,7 +5771,19 @@ void Application::applyMenuAction()
         case MenuAction::QuitGame:      m_running = false; break;
 
         case MenuAction::Respawn:
-            m_player.respawn(m_spawnPoint);
+            if (m_hasAnchor)
+            {
+                if (m_dimension != Dimension::Nether) travelTo(Dimension::Nether);
+                m_player.respawn(glm::vec3(m_anchor) + glm::vec3(0.5f, 1.0f, 0.5f));
+                m_placeOnSurface = false;
+                m_worldReady = false;
+                m_anchorPending = true;
+            }
+            else
+            {
+                if (m_dimension != Dimension::Overworld) travelTo(Dimension::Overworld);
+                m_player.respawn(m_spawnPoint);
+            }
             m_previousHealth = m_player.health;
             m_screen = Screen::Playing;
             setMouseCaptured(true);
@@ -6050,6 +6091,26 @@ void Application::waitForSpawnChunk()
 
     const Chunk* chunk = m_world->chunkAt(chunkX, chunkZ);
     if (!chunk || chunk->state.load() != ChunkState::Lit) return;
+
+    if (m_anchorPending)
+    {
+        m_anchorPending = false;
+        const BlockId anchor = m_world->getBlock(m_anchor.x, m_anchor.y, m_anchor.z);
+        if (isRespawnAnchor(anchor) && anchorCharge(anchor) > 0)
+        {
+            const BlockId spent = anchorOf(anchorCharge(anchor) - 1);
+            m_world->setBlock(m_anchor.x, m_anchor.y, m_anchor.z, spent);
+            m_net.onLocalBlockChange(m_anchor.x, m_anchor.y, m_anchor.z, spent);
+            m_player.position = glm::vec3(m_anchor) + glm::vec3(0.5f, 1.0f, 0.5f);
+        }
+        else
+        {
+            m_hasAnchor = false;
+            m_chatLog.add("Your respawn anchor was missing or out of charge.");
+            travelTo(Dimension::Overworld);
+            return;
+        }
+    }
 
     if (m_placeOnSurface)
     {
@@ -8840,7 +8901,7 @@ void Application::tickFire(float deltaTime)
             if (!soulGround) { put(x, y, z, Blocks::Air); m_fires.erase(cell); }
             continue;
         }
-        const bool endless = below == Blocks::Netherrack;
+        const bool endless = below == Blocks::Netherrack || below == Blocks::MagmaBlock;
 
         if (!endless && hasSky() && m_weather.depth > 0.2f && !m_snowing && m_world->skyLight(x, y, z) >= 15 && next() % 3u == 0u)
         {
@@ -10387,6 +10448,37 @@ void Application::handlePlacement()
                 m_drops.spawnFromBrokenBlock(bench.block, Items::GlowBerries, 1);
                 m_audio.play(Sound::Pickup, 0.5f, 1.2f);
                 return;
+            }
+            if (isRespawnAnchor(used))
+            {
+                ItemStack& held = m_inventory.selected();
+                const int charge = anchorCharge(used);
+                if (held.id == Blocks::Glowstone && charge < 4)
+                {
+                    const BlockId fuller = anchorOf(charge + 1);
+                    m_world->setBlock(bench.block.x, bench.block.y, bench.block.z, fuller);
+                    m_net.onLocalBlockChange(bench.block.x, bench.block.y, bench.block.z, fuller);
+                    if (!m_player.creative() && --held.count <= 0) held.clear();
+                    m_audio.play(Sound::Click, 0.7f, 0.6f + 0.15f * charge);
+                    return;
+                }
+                if (charge > 0)
+                {
+                    if (m_dimension == Dimension::Nether)
+                    {
+                        m_hasAnchor = true;
+                        m_anchor = bench.block;
+                        m_chatLog.add("Respawn point set.");
+                        m_audio.play(Sound::Click, 0.8f, 0.5f);
+                    }
+                    else
+                    {
+                        m_world->setBlock(bench.block.x, bench.block.y, bench.block.z, Blocks::Air);
+                        m_net.onLocalBlockChange(bench.block.x, bench.block.y, bench.block.z, Blocks::Air);
+                        applyBlast(glm::vec3(bench.block) + glm::vec3(0.5f), 5.0f, 10);
+                    }
+                    return;
+                }
             }
             if (isSweetBerryBush(used) && sweetBerryStage(used) >= 2 && m_inventory.selected().id != Items::BoneMeal)
             {

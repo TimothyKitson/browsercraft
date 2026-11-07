@@ -317,6 +317,11 @@ void WorldGen::generateNether(Chunk& chunk) const
                 if (chunk.getBlock(lx, y, lz) != Blocks::Netherrack) continue;
                 if (chunk.getBlock(lx, y + 1, lz) != Blocks::Air) continue;
 
+                if (y <= LAVA_LEVEL + 2 && hashToFloat(hashCoords(wx, y, wz, m_seed + 74)) < 0.35f)
+                {
+                    chunk.setBlockRaw(lx, y, lz, Blocks::MagmaBlock);
+                    continue;
+                }
                 if (y < LAVA_LEVEL + 9 && hashToFloat(hashCoords(wx, y, wz, m_seed + 72)) >= 0.22f &&
                     hashToFloat(hashCoords(wx >> 3, y >> 2, wz >> 3, m_seed + 73)) < 0.3f)
                 {
@@ -2239,7 +2244,8 @@ void WorldGen::stampLandmark(Chunk& chunk, Landmark kind, int midX, int midZ) co
                     if (!frame) continue;
                     if (hashToFloat(hashCoords(midX + dx, dy, midZ, m_seed + 9100)) < 0.3f)
                         continue;
-                    put(chunk, midX + dx, ground + dy, midZ, Blocks::Obsidian);
+                    put(chunk, midX + dx, ground + dy, midZ,
+                        hashToFloat(hashCoords(midX + dx, dy, midZ, m_seed + 9102)) < 0.25f ? Blocks::CryingObsidian : Blocks::Obsidian);
                 }
 
             for (int dx = -4; dx <= 4; ++dx)

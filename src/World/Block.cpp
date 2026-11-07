@@ -2139,6 +2139,14 @@ namespace
         { "Fire", FireTile, FireAltTile, FireTile, false, false, RenderType::Lush, 15, 0.0f },
         { "Fire", FireTile, FireAltTile, FireTile, false, false, RenderType::Lush, 15, 0.0f },
         { "Soul Fire", SoulFireTile, SoulFireTile, SoulFireTile, false, false, RenderType::Lush, 10, 0.0f },
+        { "Magma Block", MagmaTile, MagmaTile, MagmaTile, true, true, RenderType::Cube, 3, 0.5f },
+        { "Crying Obsidian", CryingObsidianTile, CryingObsidianTile, CryingObsidianTile, true, true, RenderType::Cube, 10, 50.0f },
+        { "Lodestone", LodestoneTopTile, LodestoneTopTile, LodestoneSideTile, true, true, RenderType::Cube, 0, 3.5f },
+        { "Respawn Anchor", AnchorTopTileFirst + 0, AnchorBottomTile, AnchorSideTileFirst + 0, true, true, RenderType::Cube, 0, 50.0f },
+        { "Respawn Anchor", AnchorTopTileFirst + 1, AnchorBottomTile, AnchorSideTileFirst + 1, true, true, RenderType::Cube, 3, 50.0f },
+        { "Respawn Anchor", AnchorTopTileFirst + 2, AnchorBottomTile, AnchorSideTileFirst + 2, true, true, RenderType::Cube, 7, 50.0f },
+        { "Respawn Anchor", AnchorTopTileFirst + 3, AnchorBottomTile, AnchorSideTileFirst + 3, true, true, RenderType::Cube, 11, 50.0f },
+        { "Respawn Anchor", AnchorTopTileFirst + 4, AnchorBottomTile, AnchorSideTileFirst + 4, true, true, RenderType::Cube, 15, 50.0f },
     };
 }
 
@@ -2236,6 +2244,7 @@ bool isObtainable(BlockId id)
             if (isEndRod(id) && id != Blocks::EndRodFirst) return false;
             if (id == Blocks::ChorusPlant) return false;
             if (isFire(id)) return false;
+            if (isRespawnAnchor(id) && id != Blocks::RespawnAnchor0) return false;
             if (isBigDripleaf(id) && id != bigDripleafOf(0, DripleafTilt::None)) return false;
             if (isSmallDripleaf(id) && id != smallDripleafOf(0, false)) return false;
             if (isGlowLichen(id) && id != glowLichenOn(0)) return false;
