@@ -51,7 +51,7 @@ void BannerRenderer::ensureLoaded()
     m_sheets.frame = loadSheet("assets/textures/entity/banner_base.png");
     for (int p = 0; p < Banners::PatternCount; ++p)
         m_sheets.patterns[static_cast<size_t>(p)] =
-            loadSheet(std::string("assets/textures/entity/banner/") + Banners::textureName(p) + ".png");
+            loadSheet(Banners::bannerTexture(p));
 }
 
 unsigned int BannerRenderer::texture()

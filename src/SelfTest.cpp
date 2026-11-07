@@ -4662,6 +4662,35 @@ namespace
         check(w == 64 && h == 48 && painted.size() == static_cast<size_t>(64 * 48 * 4), "and each has a painted stand-in the size of the real one");
     }
 
+    void testShieldBanners()
+    {
+        section("banner patterns on shields");
+        Banners::Library library;
+        Banners::Library* before = Banners::active();
+        Banners::setActive(&library);
+        Banners::Design design;
+        design.push_back(Banners::Layer{ Banners::Cross, 0 });
+        const int designId = library.idOf(design);
+        ItemStack grid[9];
+        for (ItemStack& cell : grid) cell.clear();
+        grid[0] = ItemStack{ Items::Shield, 1, 40, Enchanting::withLevel(0, Enchanting::Kind::Unbreaking, 2) };
+        grid[4] = ItemStack{ static_cast<StackId>(Blocks::BannerFirst + 14 * 8), 1, designId };
+        const CraftOutput shield = Crafting::match(grid, 3);
+        check(shield.id == Items::Shield && shield.damage == 40 &&
+                  Enchanting::levelOf(shield.enchantments, Enchanting::Kind::Unbreaking) == 2 && (shield.enchantments >> 24) != 0u,
+              "a shield and a banner make the shield with that banner on it, wear and enchantments kept");
+        const Banners::Design look = library.design(static_cast<int>(shield.enchantments >> 24));
+        check(look.size() == 2 && look[0].pattern == Banners::Base && look[0].colour == 14 && look[1].pattern == Banners::Cross,
+              "it carries the banner's colour and every layer");
+        check(!Enchanting::glints(Items::Shield, shield.enchantments & 0xFF000000u), "and does not shine for it");
+        grid[0] = ItemStack{ Items::Shield, 1, 40, shield.enchantments };
+        check(!Crafting::match(grid, 3).valid(), "a shield that already has one takes no second");
+        check(Banners::shieldTexture(Banners::Creeper) == "assets/textures/entity/shield/creeper.png" &&
+                  Banners::bannerTexture(Banners::Creeper) == "assets/textures/entity/banner/creeper.png",
+              "shields and banners draw their patterns from the pack's own sheets");
+        Banners::setActive(before);
+    }
+
     void testArmorStands()
     {
         section("armour stands: dressing, two hits, poses and the model");
@@ -15257,6 +15286,7 @@ int runSelfTest()
     testPackSheetsAndLlamas();
     testPaintings();
     testArmorStands();
+    testShieldBanners();
     testMadeThings();
     testTheEndAndTheSea();
     testPathfinding();

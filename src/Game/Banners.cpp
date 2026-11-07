@@ -55,6 +55,15 @@ namespace
         { "guster", "Guster" },
     };
 
+    std::string packPath(bool shield, int pattern)
+    {
+        const char* name = pattern >= 0 && pattern < Banners::PatternCount ? INFO[pattern].texture : "base";
+        if (shield) return "assets/textures/entity/shield/" + std::string(name) + ".png";
+        return "assets/textures/entity/banner/" + std::string(name) + ".png";
+    }
+
+    Banners::Library* g_active = nullptr;
+
     const char* COLOUR_NAMES[16] = {
         "White", "Orange", "Magenta", "Light Blue", "Yellow", "Lime", "Pink", "Gray",
         "Light Gray", "Cyan", "Purple", "Blue", "Brown", "Green", "Red", "Black",
@@ -136,6 +145,26 @@ namespace
             px[0] = px[1] = px[2] = px[3] = 0;
         }
     }
+}
+
+std::string Banners::bannerTexture(int pattern)
+{
+    return packPath(false, pattern);
+}
+
+std::string Banners::shieldTexture(int pattern)
+{
+    return packPath(true, pattern);
+}
+
+void Banners::setActive(Library* library)
+{
+    g_active = library;
+}
+
+Banners::Library* Banners::active()
+{
+    return g_active;
 }
 
 const char* Banners::textureName(int pattern)

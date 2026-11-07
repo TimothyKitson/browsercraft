@@ -527,6 +527,51 @@ void HeldItem::appendBlock(const glm::mat4& toWorld, StackId stack, float sky, f
     }
 }
 
+unsigned int HeldItem::shieldLookTexture()
+{
+    const unsigned int look = lookTexture(m_lookColour, m_lookLayers);
+    return look ? look : shieldTexture();
+}
+
+unsigned int HeldItem::lookTexture(int baseColour, const Banners::Design& layers)
+{
+    if (!m_shieldSheetsLoaded)
+    {
+        m_shieldSheetsLoaded = true;
+        auto load = [](const std::string& path, Banners::Sheet& sheet) {
+            int w = 0, h = 0, channels = 0;
+            unsigned char* data = stbi_load(path.c_str(), &w, &h, &channels, 4);
+            if (!data) return;
+            sheet.width = w;
+            sheet.height = h;
+            sheet.rgba.assign(data, data + static_cast<size_t>(w) * static_cast<size_t>(h) * 4);
+            stbi_image_free(data);
+        };
+        load("assets/textures/entity/shield_base.png", m_shieldSheets.frame);
+        for (int p = 0; p < Banners::PatternCount; ++p)
+            load(Banners::shieldTexture(p), m_shieldSheets.patterns[static_cast<size_t>(p)]);
+    }
+    if (!m_shieldSheets.frame.loaded() || m_shieldSheets.frame.width != Banners::SHEET) return 0;
+
+    const std::string key = Banners::key(baseColour, layers);
+    const auto found = m_shieldLooks.find(key);
+    if (found != m_shieldLooks.end()) return found->second;
+
+    std::vector<uint8_t> pixels;
+    Banners::compose(baseColour, layers, m_shieldSheets, pixels);
+    unsigned int texture = 0;
+    glGenTextures(1, &texture);
+    glBindTexture(GL_TEXTURE_2D, texture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, Banners::SHEET, Banners::SHEET, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    m_shieldLooks[key] = texture;
+    return texture;
+}
+
 unsigned int HeldItem::shieldTexture()
 {
     // Looked for once. Without the sheet the shield falls back to its
@@ -537,6 +582,7 @@ unsigned int HeldItem::shieldTexture()
 
     int w = 0, h = 0, channels = 0;
     unsigned char* data = stbi_load(SHIELD_TEXTURE, &w, &h, &channels, 4);
+    if (!data) data = stbi_load("assets/textures/entity/shield_base_nopattern.png", &w, &h, &channels, 4);
     if (!data) return 0;
 
     if (w != 64 || h != 64)
@@ -782,7 +828,7 @@ void HeldItem::render(Shader& chunkShader, const Camera& camera, const PlayerSki
         appendShield(panel, sky, blockLight);
         m_mesh.upload(m_vertices, CHUNK_LAYOUT, true);
         glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, shieldTexture());
+        glBindTexture(GL_TEXTURE_2D, m_hasLook ? shieldLookTexture() : shieldTexture());
         m_mesh.draw(GL_TRIANGLES);
 
         atlas.bind(0, 1, 2);

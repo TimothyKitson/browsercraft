@@ -1,4 +1,7 @@
 #pragma once
+#include "Game/Banners.h"
+#include <map>
+#include <string>
 #include "Renderer/Mesh.h"
 #include "Game/Items.h"
 #include <glm/glm.hpp>
@@ -96,6 +99,14 @@ private:
 
 public:
     void setTileOverride(int tile) { m_tileOverride = tile; }
+    void setShieldLook(int baseColour, const Banners::Design& layers)
+    {
+        m_hasLook = true;
+        m_lookColour = baseColour;
+        m_lookLayers = layers;
+    }
+    void clearShieldLook() { m_hasLook = false; }
+    unsigned int lookTexture(int baseColour, const Banners::Design& layers);
     void setLeftHanded(bool left) { m_leftHanded = left; }
     void renderGlint(Shader& chunkShader, unsigned int glint, const glm::vec2& shift);
 
@@ -119,4 +130,11 @@ private:
 
     unsigned int m_shieldTexture = 0;
     bool m_shieldLookedFor = false;
+    unsigned int shieldLookTexture();
+    bool m_hasLook = false;
+    int m_lookColour = 0;
+    Banners::Design m_lookLayers;
+    Banners::Sheets m_shieldSheets;
+    bool m_shieldSheetsLoaded = false;
+    std::map<std::string, unsigned int> m_shieldLooks;
 };

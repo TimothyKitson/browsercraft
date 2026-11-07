@@ -37,6 +37,8 @@ namespace Banners
     using Design = std::vector<Layer>;
 
     const char* textureName(int pattern);
+    std::string bannerTexture(int pattern);
+    std::string shieldTexture(int pattern);
     const char* patternName(int pattern);
     const char* colourName(int colour);
     unsigned int dyeRgb(int colour);
@@ -81,4 +83,7 @@ namespace Banners
     };
 
     void compose(int baseColour, const Design& design, const Sheets& sheets, std::vector<uint8_t>& out);
+
+    void setActive(Library* library);
+    Library* active();
 }

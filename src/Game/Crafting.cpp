@@ -7,6 +7,7 @@
 #include "Items.h"
 #include "Tools.h"
 #include "Armour.h"
+#include "Banners.h"
 #include <algorithm>
 
 namespace
@@ -1537,8 +1538,40 @@ namespace Crafting
         return out;
     }
 
+    CraftOutput matchShieldBanner(const ItemStack* grid, int size)
+    {
+        CraftOutput out;
+        const ItemStack* shield = nullptr;
+        const ItemStack* banner = nullptr;
+        for (int i = 0; i < 9; ++i)
+        {
+            if (i % 3 >= size || i / 3 >= size) continue;
+            const ItemStack& cell = grid[i];
+            if (cell.empty()) continue;
+            if (cell.id == Items::Shield && !shield) shield = &cell;
+            else if (!isItem(cell.id) && isBanner(asBlock(cell.id)) && !banner) banner = &cell;
+            else return out;
+        }
+        if (!shield || !banner || (shield->enchantments >> 24) != 0u) return out;
+        Banners::Library* library = Banners::active();
+        if (!library) return out;
+        Banners::Design look;
+        look.push_back(Banners::Layer{ Banners::Base, static_cast<uint8_t>(bannerColour(asBlock(banner->id))) });
+        const Banners::Design layers = library->design(banner->damage);
+        look.insert(look.end(), layers.begin(), layers.end());
+        const int id = library->idOf(look);
+        if (id <= 0 || id > 255) return out;
+        out.id = Items::Shield;
+        out.count = 1;
+        out.damage = shield->damage;
+        out.enchantments = (shield->enchantments & 0x00FFFFFFu) | (static_cast<uint32_t>(id) << 24);
+        return out;
+    }
+
     CraftOutput match(const ItemStack* grid, int size)
     {
+        const CraftOutput shielded = matchShieldBanner(grid, size);
+        if (shielded.valid()) return shielded;
         const CraftOutput painting = matchPainting(grid, size);
         if (painting.valid()) return painting;
         const CraftOutput tipped = matchTippedArrows(grid, size);

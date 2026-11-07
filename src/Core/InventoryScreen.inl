@@ -343,6 +343,15 @@ namespace
             return lore;
         }
         if (Discs::discOf(stack.id) >= 0) line(Discs::song(Discs::discOf(stack.id)).title);
+        if (stack.id == Items::Shield && (stack.enchantments >> 24) != 0u && Banners::active())
+        {
+            const Banners::Design look = Banners::active()->design(static_cast<int>(stack.enchantments >> 24));
+            for (size_t k = 1; k < look.size(); ++k)
+                line(std::string(Banners::colourName(look[k].colour)) + " " + Banners::patternName(look[k].pattern));
+        }
+        if (!isItem(stack.id) && isBanner(asBlock(stack.id)) && stack.damage > 0 && Banners::active())
+            for (const Banners::Layer& layer : Banners::active()->design(stack.damage))
+                line(std::string(Banners::colourName(layer.colour)) + " " + Banners::patternName(layer.pattern));
         if (stack.id == Items::Painting && stack.damage > 0 && stack.damage <= Paintings::count())
         {
             const Paintings::Variant& v = Paintings::variants()[static_cast<size_t>(stack.damage - 1)];
@@ -537,6 +546,14 @@ glm::vec2 Application::glintShift() const
     return glm::vec2(-across, down);
 }
 
+unsigned int Application::shieldFace(StackId id, uint32_t enchantments)
+{
+    if (id != Items::Shield || (enchantments >> 24) == 0u || m_iconOverride >= 0) return 0;
+    const Banners::Design look = m_bannerLibrary.design(static_cast<int>(enchantments >> 24));
+    if (look.empty()) return 0;
+    return m_heldItem.lookTexture(look[0].colour, Banners::Design(look.begin() + 1, look.end()));
+}
+
 void Application::drawItem(float x, float y, float size, StackId id, int count,
                            const glm::vec4& tint, int damage, uint32_t enchantments)
 {
@@ -562,6 +579,14 @@ void Application::drawItem(float x, float y, float size, StackId id, int count,
     else if (!isItem(id) && isBanner(asBlock(id)) && m_iconOverride < 0)
     {
         drawBannerIcon(x, y, size, bannerColour(asBlock(id)), m_bannerLibrary.design(damage), tint);
+    }
+    else if (const unsigned int face = shieldFace(id, enchantments))
+    {
+        const float px = size / 16.0f;
+        const float tall = 14.0f * px;
+        const float wide = tall * 12.0f / 22.0f;
+        m_ui.texturedQuad(face, x + (size - wide) * 0.5f, y + px, wide, tall,
+                          1.0f / 64.0f, 1.0f / 64.0f, 13.0f / 64.0f, 23.0f / 64.0f, tint);
     }
     else if (!drawBlockIcon(x, y, size, id, tint))
     {
