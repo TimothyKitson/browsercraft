@@ -1873,7 +1873,7 @@ void Application::renderContainerScreen(float w, float h)
                 }
                 m_slotBoxes.push_back({ SlotBox::Kind::Enchant, row, rx, ry, 19.0f, 108.0f });
 
-                std::string what = Enchanting::name(offer.kind);
+                std::string what = offer.special >= 0 ? Enchanting::tridentName(static_cast<Enchanting::TridentKind>(offer.special)) : Enchanting::name(offer.kind);
                 what += " ";
                 what += std::to_string(offer.level);
                 float scale = 1.0f;
@@ -1979,7 +1979,7 @@ void Application::renderContainerScreen(float w, float h)
                 drawItem(lapisX, ry + 1.0f, SLOT, Items::LapisLazuli, price.lapis,
                          glm::vec4(1.0f, 1.0f, 1.0f, canBuy ? 1.0f : 0.5f));
 
-                std::string what = Enchanting::name(offer.kind);
+                std::string what = offer.special >= 0 ? Enchanting::tridentName(static_cast<Enchanting::TridentKind>(offer.special)) : Enchanting::name(offer.kind);
                 what += " ";
                 what += std::to_string(offer.level);
                 const float room = lapisX - (rx + 21.0f) - 2.0f;
@@ -3882,6 +3882,15 @@ void Application::buyEnchantment(int row)
     if (!Enchanting::affordable(offer, row, level, lapisHeld, m_player.creative())) return;
     const Enchanting::Price price = Enchanting::priceOf(row);
 
+    if (offer.special >= 0)
+    {
+        const Enchanting::TridentKind kind = static_cast<Enchanting::TridentKind>(offer.special);
+        if (Enchanting::tridentLevel(subject.enchantments, kind) >= offer.level) return;
+        if (Enchanting::tridentConflicts(subject.enchantments, kind)) return;
+        subject.enchantments = Enchanting::withTrident(subject.enchantments, kind, offer.level);
+    }
+    else
+    {
     // Already on it, and no better: nothing to sell.
     if (Enchanting::levelOf(subject.enchantments, offer.kind) >= offer.level) return;
 
@@ -3890,6 +3899,7 @@ void Application::buyEnchantment(int row)
         if (Enchanting::conflicts(already.first, offer.kind)) return;
 
     subject.enchantments = Enchanting::withLevel(subject.enchantments, offer.kind, offer.level);
+    }
 
     if (!m_player.creative())
     {

@@ -119,7 +119,62 @@ namespace Enchanting
     bool glints(StackId id, Set set)
     {
         if (!isItem(id) && isDecoratedPot(asBlock(id))) return false;
+        if (id == Items::Trident) return set != 0u;
         return (set & KIND_BITS) != 0u;
+    }
+
+    namespace
+    {
+        const int TRIDENT_SHIFT[4] = { 24, 26, 28, 29 };
+        const uint32_t TRIDENT_MASK[4] = { 3u, 3u, 1u, 7u };
+    }
+
+    int tridentLevel(Set set, TridentKind kind)
+    {
+        const int k = static_cast<int>(kind);
+        if (k < 0 || k >= 4) return 0;
+        return static_cast<int>((set >> TRIDENT_SHIFT[k]) & TRIDENT_MASK[k]);
+    }
+
+    Set withTrident(Set set, TridentKind kind, int level)
+    {
+        const int k = static_cast<int>(kind);
+        if (k < 0 || k >= 4) return set;
+        const uint32_t clamped = static_cast<uint32_t>(std::clamp(level, 0, tridentMax(kind)));
+        return (set & ~(TRIDENT_MASK[k] << TRIDENT_SHIFT[k])) | (clamped << TRIDENT_SHIFT[k]);
+    }
+
+    int tridentMax(TridentKind kind)
+    {
+        switch (kind)
+        {
+            case TridentKind::Loyalty: return 3;
+            case TridentKind::Riptide: return 3;
+            case TridentKind::Channeling: return 1;
+            case TridentKind::Impaling: return 5;
+            default: return 0;
+        }
+    }
+
+    const char* tridentName(TridentKind kind)
+    {
+        switch (kind)
+        {
+            case TridentKind::Loyalty: return "Loyalty";
+            case TridentKind::Riptide: return "Riptide";
+            case TridentKind::Channeling: return "Channeling";
+            case TridentKind::Impaling: return "Impaling";
+            default: return "";
+        }
+    }
+
+    bool tridentConflicts(Set set, TridentKind kind)
+    {
+        if (kind == TridentKind::Riptide)
+            return tridentLevel(set, TridentKind::Loyalty) > 0 || tridentLevel(set, TridentKind::Channeling) > 0;
+        if (kind == TridentKind::Loyalty || kind == TridentKind::Channeling)
+            return tridentLevel(set, TridentKind::Riptide) > 0;
+        return false;
     }
 
     int grindHundredths(Set set)
@@ -245,6 +300,25 @@ namespace Enchanting
 
         offer.cost = costForRow(row, shelves, roll);
         if (offer.cost <= 0) return offer;
+
+        if (item == Items::Trident)
+        {
+            int order[5] = { -1, 0, 1, 2, 3 };
+            for (int i = 4; i > 0; --i) std::swap(order[i], order[stir(roll, static_cast<uint32_t>(i) + 40u) % static_cast<uint32_t>(i + 1)]);
+            const int pick = order[row % 5];
+            const int reach = (offer.cost * (1 + enchantability(item) / 8)) / 12;
+            if (pick < 0)
+            {
+                offer.kind = Kind::Unbreaking;
+                offer.level = std::clamp(1 + reach, 1, maxLevel(Kind::Unbreaking));
+            }
+            else
+            {
+                offer.special = pick;
+                offer.level = std::clamp(1 + reach, 1, tridentMax(static_cast<TridentKind>(pick)));
+            }
+            return offer;
+        }
 
         // Everything that could go on this item, so the pick is made
         // from what fits rather than rolled and thrown away.

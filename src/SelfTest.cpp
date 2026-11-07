@@ -3889,6 +3889,20 @@ namespace
         target.afflict(Mob::Affliction::Glowing, 10.0f);
         target.afflict(Mob::Affliction::Slowness, 5.0f);
         check(target.glowing() && target.slowed() && !target.poisoned(), "a struck mob glows or is slowed by what was on the arrow");
+
+        uint32_t trident = Enchanting::withTrident(0, Enchanting::TridentKind::Loyalty, 3);
+        trident = Enchanting::withTrident(trident, Enchanting::TridentKind::Impaling, 5);
+        check(Enchanting::tridentLevel(trident, Enchanting::TridentKind::Loyalty) == 3 &&
+              Enchanting::tridentLevel(trident, Enchanting::TridentKind::Impaling) == 5 &&
+              Enchanting::tridentLevel(trident, Enchanting::TridentKind::Riptide) == 0, "a trident keeps its own enchantments apart");
+        check(Enchanting::tridentConflicts(trident, Enchanting::TridentKind::Riptide) &&
+              !Enchanting::tridentConflicts(trident, Enchanting::TridentKind::Channeling), "and riptide will not go with loyalty");
+        check(Enchanting::glints(Items::Trident, trident) && !Enchanting::glints(Items::Trident, 0), "an enchanted trident glints");
+        bool offered = false;
+        for (uint32_t roll = 1; roll < 200 && !offered; ++roll)
+            for (int row = 0; row < 3; ++row)
+                if (Enchanting::offerFor(row, 15, Items::Trident, roll).special >= 0) offered = true;
+        check(offered, "the enchanting table offers trident enchantments for a trident");
     }
 
     void testFishing()

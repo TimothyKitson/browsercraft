@@ -190,9 +190,12 @@ void Projectiles::render(Shader& shader, const Camera& camera, const Atlas& atla
                          const World& world)
 {
     (void)atlas;
-    if (m_arrows.empty()) return;
+    if (m_arrows.empty() && m_visuals.empty()) return;
 
     m_vertices.clear();
+    std::vector<Arrow> drawn = m_arrows;
+    drawn.insert(drawn.end(), m_visuals.begin(), m_visuals.end());
+    m_visuals.clear();
 
     const TileUV arrowUV = tileUV(Tiles::ArrowInFlight);
     const TileUV fireUV = tileUV(Tiles::FireCharge);
@@ -206,7 +209,8 @@ void Projectiles::render(Shader& shader, const Camera& camera, const Atlas& atla
     constexpr float LENGTH = 0.62f;
     constexpr float WIDTH = 0.16f;
 
-    for (const Arrow& arrow : m_arrows)
+    const TileUV tridentUV = tileUV(Tiles::TridentInFlight);
+    for (const Arrow& arrow : drawn)
     {
         // Along its flight, or along the way it was last going.
         glm::vec3 along = arrow.velocity;
@@ -237,12 +241,14 @@ void Projectiles::render(Shader& shader, const Camera& camera, const Atlas& atla
                         : (arrow.kind == Arrows::Kind::Breath) ? breathUV
                         : (arrow.kind == Arrows::Kind::Spectral) ? spectralUV
                         : (arrow.kind == Arrows::Kind::Tipped) ? tippedUV
+                        : (arrow.kind == Arrows::Kind::Trident) ? tridentUV
                                                              : arrowUV;
         // A potion is drawn as the bottle it is rather than as a
         // shaft, so it is square like a charge without being one.
         const bool bottle = arrow.kind == Arrows::Kind::Potion;
-        const float length = (charge || bottle) ? 0.34f : LENGTH;
-        const float width = (charge || bottle) ? 0.34f : WIDTH;
+        const bool trident = arrow.kind == Arrows::Kind::Trident;
+        const float length = trident ? 1.3f : (charge || bottle) ? 0.34f : LENGTH;
+        const float width = trident ? 0.32f : (charge || bottle) ? 0.34f : WIDTH;
 
         auto push = [&](const glm::vec3& p, float tu, float tv, float shade) {
             m_vertices.push_back(p.x);

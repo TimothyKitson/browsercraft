@@ -2078,6 +2078,7 @@ bool Application::frame()
             tickCommandBlocks(deltaTime);
             tickFishing(deltaTime);
             tickLeashes(deltaTime);
+            tickTridents(deltaTime);
 
             if (m_inventory.slot(Inventory::ARMOR_FIRST).id == Items::TurtleHelmet && !m_player.isHeadUnderwater(*m_world))
                 Effects::give(m_player.effects, Effects::Kind::WaterBreathing, 0, 10.0f);
@@ -3545,7 +3546,14 @@ bool Application::frame()
                     ItemStack tipped{ Items::TippedArrow, 8 };
                     tipped.damage = static_cast<int>(Effects::Kind::Slowness);
                     m_inventory.slot(5) = tipped;
-                    m_inventory.slot(6) = ItemStack{ Items::Trident, 1 };
+                    ItemStack loyal{ Items::Trident, 1 };
+                    loyal.enchantments = Enchanting::withTrident(0, Enchanting::TridentKind::Loyalty, 3);
+                    m_inventory.slot(6) = loyal;
+                    ThrownTrident flying;
+                    flying.position = glm::vec3(px + 4.0f, py + 2.2f, pz + 1.5f);
+                    flying.velocity = glm::vec3(9.0f, 7.0f, -1.0f);
+                    flying.stack = ItemStack{ Items::Trident, 1 };
+                    m_tridents.push_back(flying);
                     for (int k = 0; k < 3; ++k)
                         m_arrows.spawn(glm::vec3(px + 3.0f, py + 1.6f, pz - 1.0f + k), glm::vec3(10.0f, 3.0f, 0.0f), 2, true,
                                        k == 0 ? Arrows::Kind::Shaft : k == 1 ? Arrows::Kind::Spectral : Arrows::Kind::Tipped,
@@ -9172,6 +9180,187 @@ void Application::setCopper(const glm::ivec3& at, BlockId now)
     m_net.onLocalBlockChange(other.x, other.y, other.z, matched);
 }
 
+void Application::boltAt(const glm::vec3& strike)
+{
+    uint32_t roll = static_cast<uint32_t>(m_elapsedSeconds * 1000.0f) * 2654435761u;
+    auto next = [&roll]() {
+        roll = roll * 1664525u + 1013904223u;
+        return static_cast<float>((roll >> 8) & 0xFFFF) / 65535.0f;
+    };
+    m_boltPoints.clear();
+    glm::vec3 at = strike;
+    m_boltPoints.push_back(at);
+    for (int k = 0; k < 14; ++k)
+    {
+        at += glm::vec3((next() - 0.5f) * 2.4f, 6.0f + next() * 4.0f, (next() - 0.5f) * 2.4f);
+        m_boltPoints.push_back(at);
+    }
+    m_boltLeft = Weather::FLASH_SECONDS;
+    m_audio.play(Sound::Thunder, 0.9f, 1.0f);
+    for (Mob& mob : m_entities.mobs())
+        if (mob.alive() && glm::length(mob.position() - strike) < 2.5f)
+        {
+            mob.damage(5, glm::vec3(0.0f));
+            mob.ignite(8.0f);
+        }
+}
+
+bool Application::inWaterOrRain() const
+{
+    if (!m_world) return false;
+    const glm::ivec3 feet = glm::ivec3(glm::floor(m_player.position));
+    if (isWater(m_world->getBlock(feet.x, feet.y, feet.z)) || isWater(m_world->getBlock(feet.x, feet.y + 1, feet.z))) return true;
+    return m_weather.depth > 0.3f && !m_snowing && hasSky() && m_world->skyLight(feet.x, feet.y + 1, feet.z) >= 15;
+}
+
+void Application::updateTrident(float deltaTime)
+{
+    ItemStack& held = m_inventory.selected();
+    const bool down = inGame() && m_keys.down(m_input, Action::Use);
+    if (held.id != Items::Trident)
+    {
+        m_tridentCharge = 0.0f;
+        return;
+    }
+    const int riptide = Enchanting::tridentLevel(held.enchantments, Enchanting::TridentKind::Riptide);
+    if (down)
+    {
+        if (riptide == 0 || inWaterOrRain()) m_tridentCharge += deltaTime;
+        return;
+    }
+    if (m_tridentCharge < 0.5f)
+    {
+        m_tridentCharge = 0.0f;
+        return;
+    }
+    m_tridentCharge = 0.0f;
+    if (riptide > 0)
+    {
+        if (!inWaterOrRain()) return;
+        m_player.velocity = m_camera.front * (12.0f + 7.0f * static_cast<float>(riptide));
+        m_player.onGround = false;
+        m_riptideSpin = 1.0f;
+        m_audio.play(Sound::Jump, 0.8f, 0.7f + 0.1f * riptide);
+        wearHeld(Items::Trident, 1);
+        return;
+    }
+    ThrownTrident thrown;
+    thrown.position = m_camera.position + m_camera.front * 0.6f;
+    thrown.velocity = m_camera.front * 50.0f;
+    thrown.stack = held;
+    thrown.stack.count = 1;
+    thrown.slot = m_inventory.selectedSlot();
+    if (!m_player.creative())
+    {
+        thrown.stack.damage += 1;
+        if (thrown.stack.damage >= itemDurability(Items::Trident))
+        {
+            held.clear();
+            m_audio.play(Sound::Click, 0.8f, 0.5f);
+            return;
+        }
+        held.clear();
+    }
+    m_tridents.push_back(thrown);
+    m_heldItem.swing();
+    m_audio.play(Sound::Click, 0.7f, 0.6f);
+    vibrate(m_player.eyePosition(), 3);
+}
+
+void Application::tickTridents(float deltaTime)
+{
+    if (m_riptideSpin > 0.0f)
+    {
+        m_riptideSpin = std::max(0.0f, m_riptideSpin - deltaTime);
+        for (Mob& mob : m_entities.mobs())
+            if (mob.alive() && glm::length(mob.position() - m_player.position) < 1.8f)
+            {
+                mob.damage(8, mob.position() - m_player.position);
+                m_riptideSpin = 0.0f;
+            }
+    }
+    if (!m_world) return;
+    for (size_t i = 0; i < m_tridents.size();)
+    {
+        ThrownTrident& t = m_tridents[i];
+        t.age += deltaTime;
+        const int loyalty = Enchanting::tridentLevel(t.stack.enchantments, Enchanting::TridentKind::Loyalty);
+        const glm::vec3 chest = m_player.position + glm::vec3(0.0f, 1.2f, 0.0f);
+        if (t.returning)
+        {
+            const glm::vec3 gap = chest - t.position;
+            const float distance = glm::length(gap);
+            t.velocity = gap / std::max(distance, 0.001f) * (12.0f + 6.0f * static_cast<float>(loyalty));
+            t.position += t.velocity * deltaTime;
+        }
+        else if (!t.stuck)
+        {
+            t.velocity.y -= 20.0f * deltaTime;
+            t.velocity *= std::pow(0.82f, deltaTime);
+            const glm::vec3 next = t.position + t.velocity * deltaTime;
+            const glm::ivec3 cell = glm::ivec3(glm::floor(next));
+            const BlockId there = m_world->getBlock(cell.x, cell.y, cell.z);
+            if (isWater(there)) t.velocity *= std::pow(0.4f, deltaTime);
+            if (isSolid(there))
+            {
+                t.stuck = true;
+                t.velocity = glm::normalize(t.velocity + glm::vec3(0.0001f));
+                m_audio.play(Sound::DigStone, 0.5f, 1.4f);
+            }
+            else
+                t.position = next;
+            for (Mob& mob : m_entities.mobs())
+            {
+                if (!mob.alive() || t.struck || t.age < 0.05f) continue;
+                const glm::vec3 feet = mob.position();
+                const float half = mob.width() * 0.5f + 0.2f;
+                if (std::fabs(feet.x - t.position.x) > half || std::fabs(feet.z - t.position.z) > half) continue;
+                if (t.position.y < feet.y - 0.2f || t.position.y > feet.y + mob.height() + 0.2f) continue;
+                const int impaling = Enchanting::tridentLevel(t.stack.enchantments, Enchanting::TridentKind::Impaling);
+                const int bonus = mob.type().aquatic ? static_cast<int>(std::ceil(2.5f * static_cast<float>(impaling))) : 0;
+                mob.damage(8 + bonus, t.velocity);
+                t.struck = true;
+                t.velocity = glm::vec3(-t.velocity.x * 0.1f, 2.0f, -t.velocity.z * 0.1f);
+                m_audio.play(Sound::Hurt, 0.6f, 1.2f);
+                const glm::ivec3 top = glm::ivec3(glm::floor(feet));
+                if (Enchanting::tridentLevel(t.stack.enchantments, Enchanting::TridentKind::Channeling) > 0 &&
+                    m_weather.kind == Weather::Kind::Storm && m_world->skyLight(top.x, top.y + 1, top.z) >= 15)
+                    boltAt(feet);
+                break;
+            }
+        }
+        if (loyalty > 0 && !t.returning && (t.stuck || t.struck || t.age > 4.0f || t.position.y < -10.0f))
+            t.returning = true;
+
+        Arrow visual;
+        visual.position = t.position;
+        visual.velocity = t.velocity;
+        visual.kind = Arrows::Kind::Trident;
+        visual.stuck = t.stuck;
+        m_arrows.show(visual);
+
+        const bool near = glm::length(chest - t.position) < (t.returning ? 1.2f : 1.6f);
+        if (near && (t.stuck || t.returning || t.age > 1.0f))
+        {
+            if (!m_player.creative())
+            {
+                ItemStack& home = m_inventory.slot(t.slot);
+                if (home.empty()) home = t.stack;
+                else if (m_inventory.addStack(t.stack) > 0) m_drops.spawnStack(m_player.position, t.stack);
+            }
+            m_audio.play(Sound::Pickup, 0.5f, 1.0f);
+            m_tridents.erase(m_tridents.begin() + static_cast<long>(i));
+            continue;
+        }
+        if (t.position.y < -64.0f || (!t.stuck && t.age > 60.0f))
+        {
+            m_tridents.erase(m_tridents.begin() + static_cast<long>(i));
+            continue;
+        }
+        ++i;
+    }
+}
+
 void Application::strikeLightning()
 {
     if (!m_world) return;
@@ -10871,6 +11060,7 @@ void Application::updateArrows(float deltaTime)
 
     updateBow(deltaTime);
     updateCrossbow(deltaTime);
+    updateTrident(deltaTime);
 }
 
 void Application::handleBrushing(float deltaTime)

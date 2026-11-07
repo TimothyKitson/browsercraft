@@ -83,6 +83,7 @@ public:
     // Set while the sun is burning it: the renderer tints it, and it is
     // losing health once a second until it finds shade or dies.
     bool burning() const { return m_burnTimer > 0.0f; }
+    void ignite(float seconds) { if (!type().fireproof) m_burnTimer = std::max(m_burnTimer, seconds); }
 
     // Hurt an animal and it bolts rather than ambles: twice its walking
     // pace, for long enough to actually get away from you.

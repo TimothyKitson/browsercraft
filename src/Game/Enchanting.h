@@ -87,11 +87,19 @@ namespace Enchanting
     // this roll. Minecraft draws one number and derives all three from
     // it, so they move together: a table with no shelves never offers
     // anything worth having in any row.
+    enum class TridentKind : int { Loyalty, Riptide, Channeling, Impaling, Count };
+    int tridentLevel(Set set, TridentKind kind);
+    Set withTrident(Set set, TridentKind kind, int level);
+    int tridentMax(TridentKind kind);
+    const char* tridentName(TridentKind kind);
+    bool tridentConflicts(Set set, TridentKind kind);
+
     struct Offer
     {
         int cost = 0;        // levels it takes to buy
         Kind kind = Kind::Efficiency;
         int level = 0;       // of that enchantment
+        int special = -1;
         bool valid() const { return cost > 0 && level > 0; }
     };
 

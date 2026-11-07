@@ -407,6 +407,24 @@ private:
     float m_crossbowCharge = 0.0f;
     bool m_crossbowHeldOver = false;
     void updateCrossbow(float deltaTime);
+    struct ThrownTrident
+    {
+        glm::vec3 position{ 0.0f };
+        glm::vec3 velocity{ 0.0f };
+        ItemStack stack;
+        bool stuck = false;
+        bool returning = false;
+        bool struck = false;
+        float age = 0.0f;
+        int slot = 0;
+    };
+    std::vector<ThrownTrident> m_tridents;
+    float m_tridentCharge = 0.0f;
+    float m_riptideSpin = 0.0f;
+    void updateTrident(float deltaTime);
+    void tickTridents(float deltaTime);
+    void boltAt(const glm::vec3& strike);
+    bool inWaterOrRain() const;
     int crossbowIcon(const ItemStack& stack, bool selected) const;
     int ammoSlot() const;
     bool m_bowDrawing = false;

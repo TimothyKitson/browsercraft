@@ -33,7 +33,8 @@ namespace Arrows
                                 Bullet,
                                 Breath,
                                 Spectral,
-                                Tipped };
+                                Tipped,
+                                Trident };
 
     // How far a wind charge's burst reaches, and how hard it pushes at
     // the middle of it. Pure arithmetic over two points, so --selftest
@@ -90,7 +91,10 @@ struct Arrow
     Arrows::Kind kind = Arrows::Kind::Shaft;
     int effect = 0;
 
-    bool shaft() const { return kind == Arrows::Kind::Shaft || kind == Arrows::Kind::Spectral || kind == Arrows::Kind::Tipped; }
+    bool shaft() const
+    {
+        return kind == Arrows::Kind::Shaft || kind == Arrows::Kind::Spectral || kind == Arrows::Kind::Tipped || kind == Arrows::Kind::Trident;
+    }
 
     // "Flies" means flat and self-lit: a thrown charge. A potion is
     // lobbed, so it falls like an arrow and is not one of these.
@@ -168,6 +172,7 @@ public:
     void update(float deltaTime, const World& world, Targets& targets);
 
     void clear() { m_arrows.clear(); }
+    void show(const Arrow& visual) { m_visuals.push_back(visual); }
     const std::vector<Arrow>& all() const { return m_arrows; }
     std::vector<glm::ivec3> drainBlockHits()
     {
@@ -180,6 +185,7 @@ public:
 
 private:
     std::vector<Arrow> m_arrows;
+    std::vector<Arrow> m_visuals;
     std::vector<glm::ivec3> m_blockHits;
     std::vector<float> m_vertices;
     Mesh m_mesh;
