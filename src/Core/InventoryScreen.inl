@@ -213,6 +213,9 @@ namespace
         Items::FishingRod, Items::CarrotOnAStick, Items::WarpedFungusOnAStick, Items::NameTag, Items::Lead, Items::TropicalFish,
         Items::Spyglass, Items::Clock, Items::RecoveryCompass, Items::EchoShard, Items::GoatHorn, Items::Bundle,
         Items::Crossbow, Items::SpectralArrow, Items::TippedArrow,
+        Items::GoldenApple, Items::EnchantedGoldenApple, Items::GoldenCarrot, Items::GlisteringMelon, Items::MushroomStew,
+        Items::RabbitStew, Items::SuspiciousStew, Items::PumpkinPie, Items::RottenFlesh, Items::SpiderEye, Items::FermentedSpiderEye,
+        Items::PoisonousPotato,
         Items::IronIngot, Items::GoldIngot, Items::Diamond,
         Items::WoodPickaxe, Items::WoodAxe, Items::WoodShovel, Items::WoodSword, Items::WoodHoe,
         Items::StonePickaxe, Items::StoneAxe, Items::StoneShovel, Items::StoneSword, Items::StoneHoe,
@@ -1106,13 +1109,6 @@ void Application::renderContainerScreen(float w, float h)
         const int tiers = beaconTiers();
         const float mouseX = static_cast<float>(m_input.mouseX()) / m_ui.scale();
         const float mouseY = static_cast<float>(m_input.mouseY()) / m_ui.scale();
-        static const char* ICONS[Effects::KIND_COUNT] = {
-            "../mob_effect/speed", "../mob_effect/slowness", "../mob_effect/strength",
-            "../mob_effect/weakness", "../mob_effect/regeneration", "../mob_effect/poison",
-            "../mob_effect/fire_resistance", "../mob_effect/water_breathing",
-            "../mob_effect/night_vision", "../mob_effect/jump_boost", "../mob_effect/bad_omen",
-            "../mob_effect/haste", "../mob_effect/resistance", "../mob_effect/conduit_power",
-        };
         const glm::vec4 label(0.878f, 0.878f, 0.878f, 1.0f);
         const std::string primaryLabel = "Primary Power";
         const std::string secondaryLabel = "Secondary Power";
@@ -1146,7 +1142,7 @@ void Application::renderContainerScreen(float w, float h)
                 const int power = static_cast<int>(powers[k]);
                 button(panelX + 76.0f + static_cast<float>(k) * 24.0f - std::floor(width * 0.5f),
                        panelY + 22.0f + static_cast<float>(tier) * 25.0f, tiers > tier, m_beaconPrimary == power,
-                       ICONS[power], static_cast<int>(SlotBox::Kind::BeaconPower), power,
+                       Effects::icon(static_cast<Effects::Kind>(power)), static_cast<int>(SlotBox::Kind::BeaconPower), power,
                        Effects::name(powers[k]));
             }
         }
@@ -1156,10 +1152,10 @@ void Application::renderContainerScreen(float w, float h)
             const int regen = static_cast<int>(Effects::Kind::Regeneration);
             const bool open = tiers >= Beacon::MAX_TIERS && m_beaconPrimary >= 0;
             button(panelX + 167.0f - std::floor(width * 0.5f), panelY + 47.0f, open, m_beaconSecondary == regen,
-                   ICONS[regen], static_cast<int>(SlotBox::Kind::BeaconPower), 100 + regen, "Regeneration");
+                   Effects::icon(static_cast<Effects::Kind>(regen)), static_cast<int>(SlotBox::Kind::BeaconPower), 100 + regen, "Regeneration");
             if (m_beaconPrimary >= 0)
                 button(panelX + 167.0f + 24.0f - std::floor(width * 0.5f), panelY + 47.0f, open,
-                       m_beaconSecondary == m_beaconPrimary, ICONS[m_beaconPrimary],
+                       m_beaconSecondary == m_beaconPrimary, Effects::icon(static_cast<Effects::Kind>(m_beaconPrimary)),
                        static_cast<int>(SlotBox::Kind::BeaconPower), 100 + m_beaconPrimary,
                        std::string(Effects::name(static_cast<Effects::Kind>(m_beaconPrimary))) + " II");
         }
@@ -2592,13 +2588,6 @@ void Application::renderCreativeScreen(float w, float h)
 
 void Application::drawInventoryEffects(float panelRight, float panelTop, float w)
 {
-    static const char* ICONS[Effects::KIND_COUNT] = {
-        "../mob_effect/speed", "../mob_effect/slowness", "../mob_effect/strength",
-        "../mob_effect/weakness", "../mob_effect/regeneration", "../mob_effect/poison",
-        "../mob_effect/fire_resistance", "../mob_effect/water_breathing",
-        "../mob_effect/night_vision", "../mob_effect/jump_boost", "../mob_effect/bad_omen",
-        "../mob_effect/haste", "../mob_effect/resistance", "../mob_effect/conduit_power",
-    };
     static const char* NUMERALS[6] = { "", " II", " III", " IV", " V", " VI" };
 
     std::vector<int> running;
@@ -2619,7 +2608,7 @@ void Application::drawInventoryEffects(float panelRight, float panelTop, float w
         const bool drew = wide ? guiSprite("sprites/container/inventory/effect_background_large", x, y, 120.0f, 32.0f)
                                : guiSprite("sprites/container/inventory/effect_background_small", x, y, 32.0f, 32.0f);
         if (!drew) guiPanel(x, y, wide ? 120.0f : 32.0f, 32.0f);
-        guiSprite(ICONS[i], x + (wide ? 6.0f : 7.0f), y + 7.0f, 18.0f, 18.0f);
+        guiSprite(Effects::icon(static_cast<Effects::Kind>(i)), x + (wide ? 6.0f : 7.0f), y + 7.0f, 18.0f, 18.0f);
         if (wide)
         {
             const int amplifier = std::clamp(m_player.effects.amplifier(kind), 0, 5);

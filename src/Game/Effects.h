@@ -36,6 +36,10 @@ namespace Effects
         Haste,
         Resistance,
         ConduitPower,
+        Absorption,
+        Hunger,
+        Saturation,
+        Blindness,
 
         Count
     };
@@ -43,6 +47,7 @@ namespace Effects
     constexpr int KIND_COUNT = static_cast<int>(Kind::Count);
 
     const char* name(Kind kind);
+    const char* icon(Kind kind);
     unsigned int colour(Kind kind);
 
     // Whether the effect is one you would rather not have. The milk
@@ -91,6 +96,8 @@ namespace Effects
     {
         int healPulses = 0;
         int poisonPulses = 0;
+        int feedPulses = 0;
+        float exhaustion = 0.0f;
     };
 
     // Runs every effect's clock down. Poison must never be the thing

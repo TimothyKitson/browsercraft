@@ -124,7 +124,7 @@ public:
     bool breathe(float deltaTime, bool headUnderwater);
 
     void addExhaustion(float amount);
-    bool eat(int hungerPoints, float saturationPoints);
+    bool eat(int hungerPoints, float saturationPoints, bool always = false);
     bool canEat() const { return hunger < MAX_HUNGER; }
 
     // Hunger, healing and starvation. Called by update, and separately
@@ -174,6 +174,7 @@ public:
     // blow was fatal and spend the totem instead.
     bool holdingTotem = false;
     int hunger = MAX_HUNGER;
+    int absorption = 0;
     float saturation = 5.0f;
 
     // Experience, as one running total rather than a level and a bar:

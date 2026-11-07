@@ -120,6 +120,7 @@ namespace Enchanting
     {
         if (!isItem(id) && isDecoratedPot(asBlock(id))) return false;
         if (id == Items::Trident) return set != 0u;
+        if (id == Items::EnchantedGoldenApple) return true;
         return (set & KIND_BITS) != 0u;
     }
 

@@ -2298,7 +2298,7 @@ bool Application::frame()
             m_startupScreen == "attackhud" || m_startupScreen == "attackready" ||
             m_startupScreen == "attackhotbar" || m_startupScreen == "bossbars" ||
             m_startupScreen == "gamemode" || m_startupScreen == "spectator" ||
-            m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" || m_startupScreen == "leads" || m_startupScreen == "anvilname" || m_startupScreen == "dials" || m_startupScreen == "spyglass" || m_startupScreen == "bundle" || m_startupScreen == "archery" ||
+            m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" || m_startupScreen == "leads" || m_startupScreen == "anvilname" || m_startupScreen == "dials" || m_startupScreen == "spyglass" || m_startupScreen == "bundle" || m_startupScreen == "archery" || m_startupScreen == "food" ||
             m_startupScreen == "grinderror" || m_startupScreen == "woods" ||
             m_startupScreen == "cherry" || m_startupScreen == "mangrove" || m_startupScreen == "fungi" ||
             m_startupScreen == "stones" || m_startupScreen == "colours" || m_startupScreen == "candles" ||
@@ -2399,6 +2399,7 @@ bool Application::frame()
                                   m_startupScreen != "spyglass" &&
                                   m_startupScreen != "bundle" &&
                                   m_startupScreen != "archery" &&
+                                  m_startupScreen != "food" &&
                                   m_startupScreen != "grinderror" &&
                                   m_startupScreen != "woods" &&
                                   m_startupScreen != "cherry" &&
@@ -2791,7 +2792,7 @@ bool Application::frame()
             if (m_startupScreen == "attackhud" || m_startupScreen == "attackready" ||
                 m_startupScreen == "attackhotbar" || m_startupScreen == "bossbars" ||
                 m_startupScreen == "gamemode" || m_startupScreen == "spectator" ||
-                m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" || m_startupScreen == "leads" || m_startupScreen == "anvilname" || m_startupScreen == "dials" || m_startupScreen == "spyglass" || m_startupScreen == "bundle" || m_startupScreen == "archery" ||
+                m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" || m_startupScreen == "leads" || m_startupScreen == "anvilname" || m_startupScreen == "dials" || m_startupScreen == "spyglass" || m_startupScreen == "bundle" || m_startupScreen == "archery" || m_startupScreen == "food" ||
                 m_startupScreen == "grinderror" || m_startupScreen == "woods" ||
                 m_startupScreen == "cherry" || m_startupScreen == "mangrove" || m_startupScreen == "fungi" ||
                 m_startupScreen == "stones" || m_startupScreen == "colours" || m_startupScreen == "candles" ||
@@ -3579,6 +3580,21 @@ bool Application::frame()
                     m_inventoryOpen = true;
                     m_inventory.setCraftSize(2);
                     m_devHoverHotbar = 0;
+                }
+                if (m_startupScreen == "food")
+                {
+                    m_devAttackStrength = 1.0f;
+                    const StackId FOODS[] = { Items::GoldenApple, Items::EnchantedGoldenApple, Items::GoldenCarrot,
+                                              Items::GlisteringMelon, Items::SuspiciousStew, Items::RabbitStew,
+                                              Items::PumpkinPie, Items::RottenFlesh, Items::FermentedSpiderEye };
+                    for (int i = 0; i < 9; ++i) m_inventory.slot(i) = ItemStack{ FOODS[i], i < 4 || i == 6 || i == 7 ? 12 : 1 };
+                    m_inventory.setSelectedSlot(1);
+                    Effects::give(m_player.effects, Effects::Kind::Absorption, 3, 120.0f);
+                    Effects::give(m_player.effects, Effects::Kind::Hunger, 0, 30.0f);
+                    m_player.absorption = 16;
+                    m_player.hunger = 13;
+                    m_player.health = 17;
+                    m_player.armourPoints = 7;
                 }
                 if (m_startupScreen == "dials" || m_startupScreen == "spyglass")
                 {
@@ -11111,13 +11127,55 @@ void Application::handleEating(float deltaTime)
     const bool holding = inGame() && !m_player.creative() && m_keys.down(m_input, Action::Use);
 
     const Food::Bite bite = Food::chew(holding && !stack.empty(), stack.id,
-                                       m_player.canEat(), m_eatTimer, deltaTime);
+                                       m_player.canEat() || Food::alwaysEdible(stack.id), m_eatTimer, deltaTime);
     m_eatTimer = bite.timer;
     if (!bite.swallowed) return;
 
     const FoodValue value = Food::valueOf(stack.id);
-    if (!m_player.eat(value.hunger, value.saturation)) return;
+    if (!m_player.eat(value.hunger, value.saturation, Food::alwaysEdible(stack.id))) return;
     vibrate(m_player.eyePosition(), 8);
+
+    const uint32_t chance = static_cast<uint32_t>(m_elapsedSeconds * 7919.0f) % 100u;
+    switch (stack.id)
+    {
+        case Items::GoldenApple:
+            Effects::give(m_player.effects, Effects::Kind::Regeneration, 1, 5.0f);
+            Effects::give(m_player.effects, Effects::Kind::Absorption, 0, 120.0f);
+            m_player.absorption = std::max(m_player.absorption, 4);
+            break;
+        case Items::EnchantedGoldenApple:
+            Effects::give(m_player.effects, Effects::Kind::Regeneration, 1, 20.0f);
+            Effects::give(m_player.effects, Effects::Kind::Absorption, 3, 120.0f);
+            Effects::give(m_player.effects, Effects::Kind::Resistance, 0, 300.0f);
+            Effects::give(m_player.effects, Effects::Kind::FireResistance, 0, 300.0f);
+            m_player.absorption = std::max(m_player.absorption, 16);
+            break;
+        case Items::RottenFlesh:
+            if (chance < 80u) Effects::give(m_player.effects, Effects::Kind::Hunger, 0, 30.0f);
+            break;
+        case Items::SpiderEye:
+            Effects::give(m_player.effects, Effects::Kind::Poison, 0, 5.0f);
+            break;
+        case Items::PoisonousPotato:
+            if (chance < 60u) Effects::give(m_player.effects, Effects::Kind::Poison, 0, 5.0f);
+            break;
+        case Items::SuspiciousStew:
+        {
+            const Food::StewEffect effect = Food::stewEffect(stack.damage);
+            Effects::give(m_player.effects, effect.kind, 0, effect.seconds);
+            break;
+        }
+        default:
+            break;
+    }
+    if (Food::leavesBowl(stack.id))
+    {
+        stack.clear();
+        stack.id = Items::Bowl;
+        stack.count = 1;
+        m_audio.play(Sound::Pickup, 0.6f, 0.85f);
+        return;
+    }
 
     // And what it does to you besides filling you. One food does
     // something, and it is the one you should not have eaten.
@@ -13697,9 +13755,10 @@ void Application::renderWorld()
     m_chunkShader.setInt("uSpecularAtlas", 2);
     m_chunkShader.setFloat("uDaylight", hasSky() ? daylight : 0.0f);
     m_chunkShader.setFloat("uAmbient", dimensionAmbient());
-    m_chunkShader.setVec3("uFogColor", fogColor);
-    m_chunkShader.setFloat("uFogStart", viewDistance * 0.55f);
-    m_chunkShader.setFloat("uFogEnd", viewDistance * 0.95f);
+    const bool blind = m_player.effects.has(Effects::Kind::Blindness);
+    m_chunkShader.setVec3("uFogColor", blind ? glm::vec3(0.0f) : fogColor);
+    m_chunkShader.setFloat("uFogStart", blind ? 1.5f : viewDistance * 0.55f);
+    m_chunkShader.setFloat("uFogEnd", blind ? 5.0f : viewDistance * 0.95f);
     m_chunkShader.setInt("uUnderwater", underwater ? 1 : 0);
     m_chunkShader.setVec3("uSunDirection", sun);
     m_chunkShader.setVec3("uCameraPos", camera.position);
@@ -16438,6 +16497,17 @@ void Application::renderFood(float rightX, float y)
         }
     }
 
+    const bool starving = m_player.effects.has(Effects::Kind::Hunger) && m_gui.has("sprites/hud/food_full_hunger");
+    for (int i = 0; i < FOOD_COUNT && starving; ++i)
+    {
+        const float foodX = rightX - ICON_SIZE - i * HEART_PITCH;
+        const int remaining = m_player.hunger - i * 2;
+        guiSprite("sprites/hud/food_empty_hunger", foodX, y, ICON_SIZE, ICON_SIZE);
+        if (remaining >= 2) guiSprite("sprites/hud/food_full_hunger", foodX, y, ICON_SIZE, ICON_SIZE);
+        else if (remaining == 1) guiSprite("sprites/hud/food_half_hunger", foodX, y, ICON_SIZE, ICON_SIZE);
+    }
+    if (starving) return;
+    const glm::vec4 sick = m_player.effects.has(Effects::Kind::Hunger) ? glm::vec4(0.55f, 0.75f, 0.4f, 1.0f) : glm::vec4(1.0f);
     for (int i = 0; i < FOOD_COUNT; ++i)
     {
         // Minecraft fills the right-hand rows from the outside in, so
@@ -16451,12 +16521,12 @@ void Application::renderFood(float rightX, float y)
         if (remaining >= 2)
         {
             m_ui.texturedQuad(m_gui.texture(GuiSprite::FoodFull), foodX, y, ICON_SIZE, ICON_SIZE,
-                              0.0f, 0.0f, 1.0f, 1.0f, glm::vec4(1.0f));
+                              0.0f, 0.0f, 1.0f, 1.0f, sick);
         }
         else if (remaining == 1)
         {
             m_ui.texturedQuad(m_gui.texture(GuiSprite::FoodHalf), foodX, y, ICON_SIZE, ICON_SIZE,
-                              0.0f, 0.0f, 1.0f, 1.0f, glm::vec4(1.0f));
+                              0.0f, 0.0f, 1.0f, 1.0f, sick);
         }
     }
 }
@@ -16558,13 +16628,6 @@ void Application::renderAir(float rightX, float y)
 
 void Application::renderEffectIcons(float w)
 {
-    static const char* ICONS[Effects::KIND_COUNT] = {
-        "../mob_effect/speed", "../mob_effect/slowness", "../mob_effect/strength",
-        "../mob_effect/weakness", "../mob_effect/regeneration", "../mob_effect/poison",
-        "../mob_effect/fire_resistance", "../mob_effect/water_breathing",
-        "../mob_effect/night_vision", "../mob_effect/jump_boost", "../mob_effect/bad_omen",
-        "../mob_effect/haste", "../mob_effect/resistance", "../mob_effect/conduit_power",
-    };
     if (!m_gui.has("sprites/hud/effect_background")) return;
 
     int good = 0;
@@ -16587,7 +16650,7 @@ void Application::renderEffectIcons(float w)
         guiSprite(kind == Effects::Kind::BadOmen ? "sprites/hud/effect_background_ambient"
                                                  : "sprites/hud/effect_background",
                   x, y, 24.0f, 24.0f);
-        guiSprite(ICONS[i], x + 3.0f, y + 3.0f, 18.0f, 18.0f, glm::vec4(1.0f, 1.0f, 1.0f, alpha));
+        guiSprite(Effects::icon(static_cast<Effects::Kind>(i)), x + 3.0f, y + 3.0f, 18.0f, 18.0f, glm::vec4(1.0f, 1.0f, 1.0f, alpha));
     }
 }
 
@@ -16991,7 +17054,15 @@ void Application::renderHud()
         // at thirty-nine, the armour and the bubbles at forty-nine.
         renderExperience(barX, h - 29.0f, HOTBAR_WIDTH);
         renderHearts(barX, h - 39.0f);
-        renderArmour(barX, h - 49.0f);
+        const int golden = m_player.absorption;
+        for (int i = 0; i < (golden + 1) / 2 && i < 10; ++i)
+        {
+            const float gx = barX + i * HEART_PITCH, gy = h - 49.0f;
+            const bool half = golden - i * 2 == 1;
+            if (!guiSprite(half ? "sprites/hud/heart/absorbing_half" : "sprites/hud/heart/absorbing_full", gx, gy, ICON_SIZE, ICON_SIZE))
+                m_ui.quad(gx + 1.0f, gy + 1.0f, half ? 3.5f : 7.0f, 7.0f, glm::vec4(0.95f, 0.8f, 0.15f, 1.0f));
+        }
+        renderArmour(barX, golden > 0 ? h - 59.0f : h - 49.0f);
         renderFood(barX + HOTBAR_WIDTH, h - 39.0f);
         renderAir(barX + HOTBAR_WIDTH, h - 49.0f);
         renderEatProgress(cx, cy);

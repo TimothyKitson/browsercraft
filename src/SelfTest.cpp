@@ -1829,7 +1829,7 @@ namespace
                   std::string("effect ") + std::to_string(i) + " has a name");
             if (Effects::isHarmful(kind)) ++harmful;
         }
-        check(harmful == 4, "four of them are ones you would rather not have");
+        check(harmful == 6, "six of them are ones you would rather not have");
         check(Effects::isHarmful(Kind::BadOmen),
               "bad omen among them, though it is the only one that does nothing to you");
     }
@@ -3126,8 +3126,8 @@ namespace
             { MobId::Sheep,    Items::RawMutton,    Blocks::Wool },
             { MobId::Skeleton, Items::Bone,         Blocks::Air },
             { MobId::Creeper,  Items::Gunpowder,    Blocks::Air },
-            { MobId::Spider,   Items::StringItem,   Blocks::Air },
-            { MobId::Zombie,   Blocks::Air,         Blocks::Air },
+            { MobId::Spider,   Items::StringItem,   Items::SpiderEye },
+            { MobId::Zombie,   Items::RottenFlesh,  Blocks::Air },
         };
 
         for (const Expected& e : DROPS)
@@ -3287,7 +3287,7 @@ namespace
                     cropAtStage(FIRST[c], 7), roll);
                 if (ripe.first != seed) alwaysPays = false;
                 if (ripe.firstCount < 2 || ripe.firstCount > 5) alwaysPays = false;
-                if (ripe.secondCount != 0) alwaysPays = false;
+                if (ripe.secondCount != 0 && ripe.second != Items::PoisonousPotato) alwaysPays = false;
             }
             check(alwaysPays, std::string("a ripe ") + NAMES[c] + " pays two to five of itself");
         }
@@ -3857,6 +3857,52 @@ namespace
                 }
             check(gravel > 0, "and it is full of suspicious gravel");
         }
+    }
+
+    void testFoodsThatBite()
+    {
+        section("golden food, stews and the foods that bite back");
+        check(Food::isEdible(Items::GoldenApple) && Food::alwaysEdible(Items::GoldenApple) && Food::alwaysEdible(Items::EnchantedGoldenApple) &&
+              !Food::alwaysEdible(Items::Bread), "a golden apple can be eaten on a full stomach and bread cannot");
+        check(Food::valueOf(Items::RabbitStew).hunger == 10 && Food::valueOf(Items::GoldenCarrot).hunger == 6 &&
+              Food::valueOf(Items::PumpkinPie).hunger == 8, "stews and pies fill as much as Minecraft's");
+        check(Food::leavesBowl(Items::MushroomStew) && Food::leavesBowl(Items::BeetrootSoup) && !Food::leavesBowl(Items::Bread),
+              "a stew gives its bowl back");
+        check(Food::stewEffect(Food::stewFlower(Blocks::AzureBluet)).kind == Effects::Kind::Blindness &&
+              Food::stewEffect(Food::stewFlower(Blocks::OxeyeDaisy)).kind == Effects::Kind::Regeneration,
+              "a suspicious stew does what its flower does");
+
+        ItemStack stew[9];
+        stew[0].id = Blocks::BrownMushroom; stew[1].id = Blocks::RedMushroom; stew[2].id = Items::Bowl; stew[3].id = Blocks::Cornflower;
+        for (ItemStack& cell : stew) if (cell.id != Blocks::Air) cell.count = 1;
+        const CraftOutput sus = Crafting::match(stew, 3);
+        check(sus.valid() && sus.id == Items::SuspiciousStew && sus.damage == Food::stewFlower(Blocks::Cornflower),
+              "both mushrooms, a bowl and a flower make a suspicious stew that remembers the flower");
+        stew[3].clear();
+        check(Crafting::match(stew, 3).id == Items::MushroomStew, "and without the flower, mushroom stew");
+        ItemStack apple[9];
+        for (int i = 0; i < 9; ++i) { apple[i].id = i == 4 ? Items::Apple : Items::GoldIngot; apple[i].count = 1; }
+        check(Crafting::match(apple, 3).id == Items::GoldenApple, "eight gold ingots round an apple make a golden apple");
+
+        Player eater(glm::vec3(0.0f));
+        eater.health = 20;
+        Effects::give(eater.effects, Effects::Kind::Absorption, 0, 120.0f);
+        eater.absorption = 4;
+        eater.damage(3);
+        check(eater.health == 20 && eater.absorption == 1, "absorption hearts take a blow before your own do");
+        Player starving(glm::vec3(0.0f));
+        starving.mode = GameMode::Survival;
+        starving.saturation = 0.0f;
+        Effects::give(starving.effects, Effects::Kind::Hunger, 0, 60.0f);
+        const int before = starving.hunger;
+        for (int i = 0; i < 600; ++i) { starving.updateEffects(0.1f); starving.updateVitals(0.0f); }
+        check(starving.hunger < before, "hunger makes you hungry");
+        check(mobType(MobId::Zombie).drop == Items::RottenFlesh && mobType(MobId::Spider).secondDrop == Items::SpiderEye,
+              "zombies drop rotten flesh and spiders their eyes");
+        bool poisonous = false;
+        for (uint32_t roll = 0; roll < 400 && !poisonous; ++roll)
+            poisonous = Farming::harvestOf(static_cast<BlockId>(Blocks::Potato0 + 7), roll).second == Items::PoisonousPotato;
+        check(poisonous, "now and then a potato comes up poisonous");
     }
 
     void testArchery()
@@ -14336,6 +14382,7 @@ int runSelfTest()
     testCreativeBlocks();
     testFishing();
     testArchery();
+    testFoodsThatBite();
     testMadeThings();
     testTheEndAndTheSea();
     testPathfinding();

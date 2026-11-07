@@ -1,4 +1,5 @@
 #include "Crafting.h"
+#include "Food.h"
 #include "Archaeology.h"
 #include "Player/Inventory.h"
 #include "Items.h"
@@ -468,6 +469,17 @@ namespace
         { false, 2, 2, { Items::FishingRod, Blocks::Air, Blocks::Air, Items::Carrot }, 0, Items::CarrotOnAStick, 1 },
         { false, 1, 3, { Items::AmethystShard, Items::CopperIngot, Items::CopperIngot }, 0, Items::Spyglass, 1 },
         { false, 1, 2, { Items::StringItem, Items::Leather }, 0, Items::Bundle, 1 },
+        { false, 3, 3, { Items::GoldIngot, Items::GoldIngot, Items::GoldIngot, Items::GoldIngot, Items::Apple, Items::GoldIngot,
+                         Items::GoldIngot, Items::GoldIngot, Items::GoldIngot }, 0, Items::GoldenApple, 1 },
+        { false, 3, 3, { Items::GoldNugget, Items::GoldNugget, Items::GoldNugget, Items::GoldNugget, Items::Carrot, Items::GoldNugget,
+                         Items::GoldNugget, Items::GoldNugget, Items::GoldNugget }, 0, Items::GoldenCarrot, 1 },
+        { false, 3, 3, { Items::GoldNugget, Items::GoldNugget, Items::GoldNugget, Items::GoldNugget, Items::MelonSlice, Items::GoldNugget,
+                         Items::GoldNugget, Items::GoldNugget, Items::GoldNugget }, 0, Items::GlisteringMelon, 1 },
+        { true, 0, 0, { Blocks::BrownMushroom, Blocks::RedMushroom, Items::Bowl }, 3, Items::MushroomStew, 1 },
+        { true, 0, 0, { Items::CookedRabbit, Items::Carrot, Items::BakedPotato, Blocks::BrownMushroom, Items::Bowl }, 5, Items::RabbitStew, 1 },
+        { true, 0, 0, { Items::CookedRabbit, Items::Carrot, Items::BakedPotato, Blocks::RedMushroom, Items::Bowl }, 5, Items::RabbitStew, 1 },
+        { true, 0, 0, { Blocks::Pumpkin, Items::Sugar, Items::Egg }, 3, Items::PumpkinPie, 1 },
+        { true, 0, 0, { Items::SpiderEye, Blocks::BrownMushroom, Items::Sugar }, 3, Items::FermentedSpiderEye, 1 },
         { false, 3, 3, { Items::Stick, Items::IronIngot, Items::Stick, Items::StringItem, Items::TripwireHook, Items::StringItem,
                          Blocks::Air, Items::Stick, Blocks::Air }, 0, Items::Crossbow, 1 },
         { false, 3, 3, { Blocks::Air, Items::GlowstoneDust, Blocks::Air, Items::GlowstoneDust, Items::Arrow, Items::GlowstoneDust,
@@ -1365,8 +1377,31 @@ namespace Crafting
         return out;
     }
 
+    CraftOutput matchStew(const ItemStack* grid, int size)
+    {
+        int brown = 0, red = 0, bowls = 0, flowers = 0, others = 0, flower = -1;
+        for (int i = 0; i < size * size; ++i)
+        {
+            const ItemStack& cell = grid[i];
+            if (cell.empty()) continue;
+            if (cell.id == Blocks::BrownMushroom) ++brown;
+            else if (cell.id == Blocks::RedMushroom) ++red;
+            else if (cell.id == Items::Bowl) ++bowls;
+            else if (!isItem(cell.id) && Food::stewFlower(cell.id) >= 0) { ++flowers; flower = Food::stewFlower(cell.id); }
+            else ++others;
+        }
+        CraftOutput out;
+        if (brown != 1 || red != 1 || bowls != 1 || flowers != 1 || others != 0) return out;
+        out.id = Items::SuspiciousStew;
+        out.count = 1;
+        out.damage = flower;
+        return out;
+    }
+
     CraftOutput match(const ItemStack* grid, int size)
     {
+        const CraftOutput stew = matchStew(grid, size);
+        if (stew.valid()) return stew;
         for (const Recipe& recipe : RECIPES)
         {
             const bool hit = recipe.shapeless ? matchesShapeless(recipe, grid, size)
@@ -1449,6 +1484,7 @@ std::vector<StackId> Crafting::everyOutput()
     out.reserve(std::size(RECIPES) + 9);
     for (const Recipe& recipe : RECIPES) out.push_back(recipe.result);
     out.push_back(static_cast<StackId>(Blocks::DecoratedPotFirst + 2));
+    out.push_back(Items::SuspiciousStew);
 
     // The sixteen wools a dye makes, which is likewise a rule rather
     // than a table: an audit that could not see it called fifteen of

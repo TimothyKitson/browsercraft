@@ -1825,6 +1825,59 @@ namespace
         t.fill(Color{ 0, 0, 0, 0 });
         for (int dx = -1; dx <= 1; ++dx) for (int dy = -1; dy <= 1; ++dy) if (dx * dy == 0) t.set(12 + dx, 3 + dy, Color{ 255, 255, 255 });
     }
+    void paintFoodIn(Tile& t, int k)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        auto blob = [&](float cx, float cy, float rx, float ry, Color c, Color edge) {
+            for (int y = 0; y < 16; ++y)
+                for (int x = 0; x < 16; ++x)
+                {
+                    const float dx = (x - cx) / rx, dy = (y - cy) / ry;
+                    const float d = dx * dx + dy * dy;
+                    if (d < 1.0f) t.set(x, y, d > 0.65f ? edge : c);
+                }
+        };
+        const Color gold{ 250, 210, 60 }, goldEdge{ 200, 150, 30 };
+        switch (k)
+        {
+            case 0: case 1:
+                blob(7.5f, 9.0f, 5.0f, 5.0f, gold, goldEdge);
+                for (int y = 2; y < 5; ++y) t.set(8, y, Color{ 100, 70, 40 });
+                t.set(9, 3, Color{ 80, 160, 60 }); t.set(10, 3, Color{ 80, 160, 60 });
+                if (k == 1) for (int i = 0; i < 6; ++i) t.set(5 + i, 7 + (i % 3), Color{ 255, 140, 255 });
+                break;
+            case 2:
+                for (int i = 0; i < 10; ++i) for (int w = 0; w < 3 - i / 4; ++w) t.set(4 + i, 12 - i + w, gold);
+                t.set(13, 3, Color{ 80, 160, 60 }); t.set(14, 2, Color{ 80, 160, 60 });
+                break;
+            case 3:
+                for (int y = 4; y < 14; ++y) for (int x = 3; x < 13; ++x) if (x + y > 12 && x + y < 22) t.set(x, y, (x + y) % 3 ? Color{ 230, 60, 60 } : gold);
+                break;
+            case 4: case 5: case 6:
+            {
+                const Color soup = k == 4 ? Color{ 170, 110, 70 } : k == 5 ? Color{ 160, 90, 50 } : Color{ 150, 120, 80 };
+                for (int y = 8; y < 14; ++y) for (int x = 2 + (y - 8) / 2; x < 14 - (y - 8) / 2; ++x) t.set(x, y, Color{ 120, 84, 50 });
+                for (int x = 3; x < 13; ++x) t.set(x, 8, soup), t.set(x, 7, soup);
+                if (k == 6) { t.set(6, 7, Color{ 230, 220, 80 }); t.set(9, 8, Color{ 90, 160, 220 }); }
+                break;
+            }
+            case 7:
+                for (int y = 7; y < 13; ++y) for (int x = 2; x < 14; ++x) t.set(x, y, y == 7 ? Color{ 220, 150, 70 } : Color{ 200, 130, 60 });
+                for (int x = 2; x < 14; x += 3) t.set(x, 7, Color{ 250, 220, 160 });
+                break;
+            case 8:
+                blob(8.0f, 8.0f, 5.5f, 4.0f, Color{ 150, 110, 80 }, Color{ 110, 80, 60 });
+                t.set(6, 7, Color{ 90, 140, 60 }); t.set(10, 9, Color{ 90, 140, 60 });
+                break;
+            case 9: case 10:
+                blob(8.0f, 8.0f, 4.5f, 4.5f, k == 9 ? Color{ 160, 30, 50 } : Color{ 120, 60, 40 }, Color{ 90, 20, 30 });
+                t.set(7, 7, Color{ 250, 250, 250 }); t.set(9, 9, Color{ 20, 20, 20 });
+                break;
+            default:
+                blob(8.0f, 8.5f, 5.0f, 4.0f, Color{ 160, 170, 80 }, Color{ 110, 120, 50 });
+                break;
+        }
+    }
     void paintItemEchoShard(Tile& t)
     {
         t.fill(Color{ 0, 0, 0, 0 });
@@ -9697,6 +9750,18 @@ namespace
         { Tiles::ItemChainmailFirst + 1, { "chainmail_chestplate", nullptr, nullptr } },
         { Tiles::ItemChainmailFirst + 2, { "chainmail_leggings", nullptr, nullptr } },
         { Tiles::ItemChainmailFirst + 3, { "chainmail_boots", nullptr, nullptr } },
+        { Tiles::ItemFoodFirst + 0, { "golden_apple", nullptr, nullptr } },
+        { Tiles::ItemFoodFirst + 1, { "golden_apple", nullptr, nullptr } },
+        { Tiles::ItemFoodFirst + 2, { "golden_carrot", nullptr, nullptr } },
+        { Tiles::ItemFoodFirst + 3, { "glistering_melon_slice", nullptr, nullptr } },
+        { Tiles::ItemFoodFirst + 4, { "mushroom_stew", nullptr, nullptr } },
+        { Tiles::ItemFoodFirst + 5, { "rabbit_stew", nullptr, nullptr } },
+        { Tiles::ItemFoodFirst + 6, { "suspicious_stew", nullptr, nullptr } },
+        { Tiles::ItemFoodFirst + 7, { "pumpkin_pie", nullptr, nullptr } },
+        { Tiles::ItemFoodFirst + 8, { "rotten_flesh", nullptr, nullptr } },
+        { Tiles::ItemFoodFirst + 9, { "spider_eye", nullptr, nullptr } },
+        { Tiles::ItemFoodFirst + 10, { "fermented_spider_eye", nullptr, nullptr } },
+        { Tiles::ItemFoodFirst + 11, { "poisonous_potato", nullptr, nullptr } },
         { Tiles::ItemCompassFrameFirst + 0, { "compass_00", nullptr, nullptr } },
         { Tiles::ItemCompassFrameFirst + 1, { "compass_01", nullptr, nullptr } },
         { Tiles::ItemCompassFrameFirst + 2, { "compass_02", nullptr, nullptr } },
@@ -11155,6 +11220,12 @@ Atlas::Atlas()
         paintArmourTile(tile, i % 4, i / 4);
         blitPainted(Tiles::ItemArmourFirst + i, tile);
     }
+    for (int i = 0; i < 12; ++i)
+    {
+        Tile tile;
+        paintFoodIn(tile, i);
+        blitPainted(Tiles::ItemFoodFirst + i, tile);
+    }
     for (int i = 0; i < 4; ++i)
     {
         Tile tile;
@@ -12254,6 +12325,7 @@ bool Atlas::hasPainter(int tileIndex)
     if (tileIndex >= Tiles::ItemDyeFirst && tileIndex < Tiles::ItemDyeEnd) return true;
     if (tileIndex >= Tiles::ItemArmourFirst && tileIndex < Tiles::ItemArmourEnd) return true;
     if (tileIndex >= Tiles::ItemChainmailFirst && tileIndex <= Tiles::ItemChainmailLast) return true;
+    if (tileIndex >= Tiles::ItemFoodFirst && tileIndex <= Tiles::ItemFoodLast) return true;
     if (tileIndex >= Tiles::ConcreteTile && tileIndex <= Tiles::GlazedTileLast &&
         tileIndex != Tiles::TerracottaPlainTile) return true;
     if (tileIndex >= Tiles::StainedGlassTile && tileIndex <= Tiles::StainedGlassTileLast) return true;

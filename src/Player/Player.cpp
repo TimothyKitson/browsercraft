@@ -78,9 +78,9 @@ void Player::addExhaustion(float amount)
     m_exhaustion += amount;
 }
 
-bool Player::eat(int hungerPoints, float saturationPoints)
+bool Player::eat(int hungerPoints, float saturationPoints, bool always)
 {
-    if (!canEat()) return false;
+    if (!canEat() && !always) return false;
 
     hunger = std::min(MAX_HUNGER, hunger + hungerPoints);
     saturation = std::min(static_cast<float>(hunger), saturation + saturationPoints);
@@ -455,6 +455,19 @@ bool Player::damage(int amount)
     amount = Effects::resisted(effects, amount);
     if (amount <= 0 && unresisted > 0) return false;
 
+    if (absorption > 0)
+    {
+        const int soaked = std::min(absorption, amount);
+        absorption -= soaked;
+        amount -= soaked;
+        if (amount <= 0)
+        {
+            m_hurtCooldown = HURT_IMMUNITY;
+            damageFlash = 0.4f;
+            return true;
+        }
+    }
+
     health = std::max(0, health - amount);
 
     // The totem: the one second chance in the game. Minecraft leaves
@@ -494,6 +507,13 @@ bool Player::updateEffects(float deltaTime)
     if (health <= 0) { Effects::clear(effects); return false; }
 
     const Effects::Tick tick = Effects::step(effects, deltaTime);
+    if (!effects.has(Effects::Kind::Absorption)) absorption = 0;
+    if (tick.exhaustion > 0.0f) addExhaustion(tick.exhaustion);
+    if (tick.feedPulses > 0)
+    {
+        hunger = std::min(MAX_HUNGER, hunger + tick.feedPulses);
+        saturation = std::min(static_cast<float>(hunger), saturation + 2.0f * static_cast<float>(tick.feedPulses));
+    }
     if (tick.healPulses == 0 && tick.poisonPulses == 0) return false;
 
     const int before = health;

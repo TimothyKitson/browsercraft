@@ -1,5 +1,6 @@
 #pragma once
 #include "Items.h"
+#include "Effects.h"
 
 struct FoodValue
 {
@@ -18,6 +19,15 @@ namespace Food
     // Whether swallowing it makes you ill. Whoever applies the bite
     // owns the effect; this only says which food deserves one.
     bool poisons(StackId id);
+    bool alwaysEdible(StackId id);
+    bool leavesBowl(StackId id);
+    struct StewEffect
+    {
+        Effects::Kind kind;
+        float seconds;
+    };
+    StewEffect stewEffect(int flower);
+    int stewFlower(StackId flower);
 
     // How long the poison lasts, in seconds, and how strong. Minecraft
     // gives a pufferfish poison for a quarter of a minute.

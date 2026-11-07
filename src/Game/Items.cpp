@@ -296,6 +296,18 @@ namespace
         { "Chainmail Chestplate", Tiles::ItemChainmailFirst + 1, 1 },
         { "Chainmail Leggings", Tiles::ItemChainmailFirst + 2, 1 },
         { "Chainmail Boots", Tiles::ItemChainmailFirst + 3, 1 },
+        { "Golden Apple", Tiles::ItemFoodFirst + 0, 64 },
+        { "Enchanted Golden Apple", Tiles::ItemFoodFirst + 1, 64 },
+        { "Golden Carrot", Tiles::ItemFoodFirst + 2, 64 },
+        { "Glistering Melon Slice", Tiles::ItemFoodFirst + 3, 64 },
+        { "Mushroom Stew", Tiles::ItemFoodFirst + 4, 1 },
+        { "Rabbit Stew", Tiles::ItemFoodFirst + 5, 1 },
+        { "Suspicious Stew", Tiles::ItemFoodFirst + 6, 1 },
+        { "Pumpkin Pie", Tiles::ItemFoodFirst + 7, 64 },
+        { "Rotten Flesh", Tiles::ItemFoodFirst + 8, 64 },
+        { "Spider Eye", Tiles::ItemFoodFirst + 9, 64 },
+        { "Fermented Spider Eye", Tiles::ItemFoodFirst + 10, 64 },
+        { "Poisonous Potato", Tiles::ItemFoodFirst + 11, 64 },
     };
 
     static_assert(sizeof(ITEMS) / sizeof(ITEMS[0]) ==

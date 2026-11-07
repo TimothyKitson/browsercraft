@@ -25,8 +25,39 @@ unsigned int Effects::colour(Kind kind)
         case Kind::Haste: return 0xD9C043;
         case Kind::Resistance: return 0x9146F0;
         case Kind::ConduitPower: return 0x1DC2D1;
+        case Kind::Absorption: return 0x2552A5;
+        case Kind::Hunger: return 0x587653;
+        case Kind::Saturation: return 0xF82423;
+        case Kind::Blindness: return 0x1F1F23;
         default: return 0x385DC6;
     }
+}
+
+const char* Effects::icon(Kind kind)
+{
+    switch (kind)
+    {
+        case Kind::Speed:          return "../mob_effect/speed";
+        case Kind::Slowness:       return "../mob_effect/slowness";
+        case Kind::Strength:       return "../mob_effect/strength";
+        case Kind::Weakness:       return "../mob_effect/weakness";
+        case Kind::Regeneration:   return "../mob_effect/regeneration";
+        case Kind::Poison:         return "../mob_effect/poison";
+        case Kind::FireResistance: return "../mob_effect/fire_resistance";
+        case Kind::WaterBreathing: return "../mob_effect/water_breathing";
+        case Kind::NightVision:    return "../mob_effect/night_vision";
+        case Kind::JumpBoost:      return "../mob_effect/jump_boost";
+        case Kind::BadOmen:        return "../mob_effect/bad_omen";
+        case Kind::Haste:          return "../mob_effect/haste";
+        case Kind::Resistance:     return "../mob_effect/resistance";
+        case Kind::ConduitPower:   return "../mob_effect/conduit_power";
+        case Kind::Absorption:     return "../mob_effect/absorption";
+        case Kind::Hunger:         return "../mob_effect/hunger";
+        case Kind::Saturation:     return "../mob_effect/saturation";
+        case Kind::Blindness:      return "../mob_effect/blindness";
+        case Kind::Count:          break;
+    }
+    return "../mob_effect/speed";
 }
 
 const char* Effects::name(Kind kind)
@@ -47,6 +78,10 @@ const char* Effects::name(Kind kind)
         case Kind::Haste:          return "Haste";
         case Kind::Resistance:     return "Resistance";
         case Kind::ConduitPower:   return "Conduit Power";
+        case Kind::Absorption:     return "Absorption";
+        case Kind::Hunger:         return "Hunger";
+        case Kind::Saturation:     return "Saturation";
+        case Kind::Blindness:      return "Blindness";
         case Kind::Count:          break;
     }
     return "";
@@ -58,7 +93,7 @@ bool Effects::isHarmful(Kind kind)
     // because of what it is for and because the UI should paint it the
     // colour of trouble.
     return kind == Kind::Slowness || kind == Kind::Weakness ||
-           kind == Kind::Poison || kind == Kind::BadOmen;
+           kind == Kind::Poison || kind == Kind::BadOmen || kind == Kind::Hunger || kind == Kind::Blindness;
 }
 
 bool Effects::Set::has(Kind kind) const
@@ -147,6 +182,17 @@ Effects::Tick Effects::step(Set& set, float deltaTime)
                 slot.pulseClock -= interval;
                 if (kind == Kind::Regeneration) ++tick.healPulses;
                 else ++tick.poisonPulses;
+            }
+        }
+
+        if (kind == Kind::Hunger) tick.exhaustion += 0.1f * static_cast<float>(slot.amplifier + 1) * alive;
+        if (kind == Kind::Saturation)
+        {
+            slot.pulseClock += alive;
+            while (slot.pulseClock >= 0.05f)
+            {
+                slot.pulseClock -= 0.05f;
+                tick.feedPulses += slot.amplifier + 1;
             }
         }
 

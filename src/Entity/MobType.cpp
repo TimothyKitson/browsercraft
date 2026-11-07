@@ -242,6 +242,8 @@ namespace
         }
         {
             MobType& t = table[static_cast<size_t>(MobId::Zombie)];
+            t.drop = Items::RottenFlesh;
+            t.dropCount = 1;
             t.id = MobId::Zombie;
             t.experience = 5;
             t.voice = Sound::MobZombieSay;
@@ -322,6 +324,8 @@ namespace
             // Everything about it is the zombie's but the colour and
             // what it is carrying.
             MobType& t = table[static_cast<size_t>(MobId::Drowned)];
+            t.drop = Items::RottenFlesh;
+            t.dropCount = 1;
             t.id = MobId::Drowned;
             t.experience = 5;
             t.voice = Sound::MobDrownedSay;
@@ -585,6 +589,8 @@ namespace
         }
         {
             MobType& t = table[static_cast<size_t>(MobId::Spider)];
+            t.secondDrop = Items::SpiderEye;
+            t.secondDropCount = 1;
             t.id = MobId::Spider;
             t.experience = 5;
             t.voice = Sound::MobSpiderSay;
@@ -1859,6 +1865,8 @@ namespace
             // The cave spider: a spider at half the size with poison in
             // it. The mineshafts have been empty since they were dug.
             MobType& t = table[static_cast<size_t>(MobId::CaveSpider)];
+            t.secondDrop = Items::SpiderEye;
+            t.secondDropCount = 1;
             t.id = MobId::CaveSpider;
             t.experience = 5;
             t.voice = Sound::MobCaveSpiderSay;
@@ -2883,6 +2891,8 @@ namespace
             // which is the whole of what makes a desert dangerous by
             // day as well as by night.
             MobType& t = table[static_cast<size_t>(MobId::Husk)];
+            t.drop = Items::RottenFlesh;
+            t.dropCount = 1;
             t.id = MobId::Husk;
             t.experience = 5;
             t.voice = Sound::MobHuskSay;
@@ -3021,6 +3031,8 @@ namespace
             // A villager that did not get away. It is worth nothing
             // and it is the one monster that is somebody.
             MobType& t = table[static_cast<size_t>(MobId::ZombieVillager)];
+            t.drop = Items::RottenFlesh;
+            t.dropCount = 1;
             t.id = MobId::ZombieVillager;
             t.experience = 5;
             t.voice = Sound::MobZombieVillagerSay;

@@ -27,6 +27,8 @@ namespace
         { Items::DiamondHorseArmor, 1, 1 },
         { Items::DuneTemplate, 1, 1 },
         { Items::NameTag, 1, 1 },
+        { Items::EnchantedGoldenApple, 1, 1 },
+        { Items::GoldenApple, 1, 1 },
     };
 
     // The one everybody walks out of carrying something good, which is
@@ -215,6 +217,7 @@ namespace
         { Items::SnoutTemplate, 1, 1 },
         { Items::RibTemplate, 1, 1 },
         { Items::PiglinBannerPattern, 1, 1 },
+        { Items::EnchantedGoldenApple, 1, 1 },
     };
 
     // A supply room, which is exactly what it sounds like: what you

@@ -602,6 +602,7 @@ namespace Tiles
         ItemCrossbow, ItemCrossbowPulling0, ItemCrossbowPulling1, ItemCrossbowPulling2, ItemCrossbowArrow, ItemCrossbowFirework,
         ItemSpectralArrow, ItemTippedArrow, ItemTippedArrowHead,
         ItemChainmailFirst, ItemChainmailLast = ItemChainmailFirst + 3,
+        ItemFoodFirst, ItemFoodLast = ItemFoodFirst + 11,
         ItemCompassFrameFirst, ItemCompassFrameLast = ItemCompassFrameFirst + 31,
         ItemClockFirst, ItemClockLast = ItemClockFirst + 63,
         ItemRecoveryFirst, ItemRecoveryLast = ItemRecoveryFirst + 31,

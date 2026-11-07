@@ -91,6 +91,11 @@ Farming::Harvest Farming::harvestOf(BlockId crop, uint32_t roll)
     // field grow from one carrot.
     out.first = seed;
     out.firstCount = 2 + static_cast<int>(roll % 4u);
+    if (isPotato(crop) && ((roll * 2654435761u) >> 20) % 50u == 0u)
+    {
+        out.second = Items::PoisonousPotato;
+        out.secondCount = 1;
+    }
     return out;
 }
 

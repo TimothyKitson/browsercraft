@@ -392,6 +392,18 @@ namespace Items
         ChainmailChestplate,
         ChainmailLeggings,
         ChainmailBoots,
+        GoldenApple,
+        EnchantedGoldenApple,
+        GoldenCarrot,
+        GlisteringMelon,
+        MushroomStew,
+        RabbitStew,
+        SuspiciousStew,
+        PumpkinPie,
+        RottenFlesh,
+        SpiderEye,
+        FermentedSpiderEye,
+        PoisonousPotato,
         Count
     };
 }
