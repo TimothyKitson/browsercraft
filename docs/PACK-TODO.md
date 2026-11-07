@@ -327,7 +327,8 @@ Everything in the 1.21 textures zip the game doesn't use yet, turned into work. 
 
 ## Part 9: world
 
-86. A world border, shown with the forcefield texture.
+86. A world border, shown with the forcefield texture. (done)
+    - Notes: every world now has 1.21.1's world border, 59,999,968 blocks wide around 0, 0 until /worldborder changes it. /worldborder set and add (each with an optional time in seconds to move it smoothly), center (~ works), damage amount, damage buffer, warning distance, warning time and get all work with 1.21.1's messages and limits, need cheats, and are saved with the world; a border part way through moving carries on after loading. Within render distance it is drawn with the pack's forcefield texture the way 1.21.1 draws it: added on top of the scene, scrolling, two stripes to a block, fading in as you get near and full strength outside, blue when still, green when growing and red when shrinking. It walls the player in (spectators pass through), hurts anyone more than the buffer outside it by 0.2 a block through armour, stops blocks being placed or broken past it, and turns the screen edges red from the warning distance in (further while it is closing in), as 1.21.1's vignette does. Without a pack the forcefield is painted as diagonal stripes. The "border" and "bordershrink" dev scenes show it. Still to come: mobs and thrown things are not stopped by it, and a LAN guest gets the border as it was when they joined but not later changes.
 87. Find out what effect/dither is for, and use it.
 88. Biomes from the data zip (it has 74, the game has 10). Many items above need theirs: cherry grove, mangrove swamp, nether forests, and the rest.
 

@@ -616,6 +616,8 @@ void Application::startWorld(GameMode mode, bool freshWorld)
     m_player.flying = modeIsCreative(m_gameMode);
     m_player.difficulty = modeIsHardcore(m_gameMode) ? 3 : static_cast<int>(m_worldMeta.difficulty);
     m_entities.setPeaceful(m_player.difficulty == 0);
+    m_border = WorldBorder();
+    if (!m_worldMeta.border.empty()) m_border.load(m_worldMeta.border);
 
     m_dimension = m_startupDimension;
 
@@ -700,6 +702,8 @@ void Application::startJoinedWorld()
         while (std::getline(in, line)) lines.push_back(line);
         m_worldMeta = Worlds::parseMeta(lines);
     }
+    m_border = WorldBorder();
+    if (!m_worldMeta.border.empty()) m_border.load(m_worldMeta.border);
     m_world = std::make_unique<World>(handshake.seed, guestPath, DEFAULT_RENDER_DISTANCE, Dimension::Overworld, generatorOptions(m_worldMeta));
 
     m_spawnPoint = handshake.spawn;
@@ -2828,7 +2832,7 @@ bool Application::frame()
             m_startupScreen == "attackhud" || m_startupScreen == "attackready" ||
             m_startupScreen == "attackhotbar" || m_startupScreen == "bossbars" ||
             m_startupScreen == "gamemode" || m_startupScreen == "spectator" ||
-            m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" || m_startupScreen == "leads" || m_startupScreen == "anvilname" || m_startupScreen == "dials" || m_startupScreen == "spyglass" || m_startupScreen == "bundle" || m_startupScreen == "archery" || m_startupScreen == "food" || m_startupScreen == "materials" || m_startupScreen == "tropical" || m_startupScreen == "book" || m_startupScreen == "bookedit" || m_startupScreen == "booktip" || m_startupScreen == "boats" || m_startupScreen == "carts" || m_startupScreen == "fireworks" || m_startupScreen == "jukebox" || m_startupScreen == "potioncloud" || m_startupScreen == "armadillo" || m_startupScreen == "signs" || m_startupScreen == "fonts" || m_startupScreen == "glowsquid" || m_startupScreen == "fangs" || m_startupScreen == "zoglin" || m_startupScreen == "illusioner" || m_startupScreen == "llamas" || m_startupScreen == "paintings" || m_startupScreen == "stands" || m_startupScreen == "glowframes" || m_startupScreen == "bannershield" || m_startupScreen == "signkinds" || m_startupScreen == "signedit" || m_startupScreen == "hangingedit" || m_startupScreen == "mapmarks" || m_startupScreen == "explorermap" || m_startupScreen == "trims" || m_startupScreen == "effects" || m_startupScreen == "effectlist" || m_startupScreen == "nausea" || m_startupScreen == "darkness" || m_startupScreen == "hearts" || m_startupScreen == "advancements" || m_startupScreen == "advtoast" ||
+            m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" || m_startupScreen == "leads" || m_startupScreen == "anvilname" || m_startupScreen == "dials" || m_startupScreen == "spyglass" || m_startupScreen == "bundle" || m_startupScreen == "archery" || m_startupScreen == "food" || m_startupScreen == "materials" || m_startupScreen == "tropical" || m_startupScreen == "book" || m_startupScreen == "bookedit" || m_startupScreen == "booktip" || m_startupScreen == "boats" || m_startupScreen == "carts" || m_startupScreen == "fireworks" || m_startupScreen == "jukebox" || m_startupScreen == "potioncloud" || m_startupScreen == "armadillo" || m_startupScreen == "signs" || m_startupScreen == "fonts" || m_startupScreen == "border" || m_startupScreen == "bordershrink" || m_startupScreen == "glowsquid" || m_startupScreen == "fangs" || m_startupScreen == "zoglin" || m_startupScreen == "illusioner" || m_startupScreen == "llamas" || m_startupScreen == "paintings" || m_startupScreen == "stands" || m_startupScreen == "glowframes" || m_startupScreen == "bannershield" || m_startupScreen == "signkinds" || m_startupScreen == "signedit" || m_startupScreen == "hangingedit" || m_startupScreen == "mapmarks" || m_startupScreen == "explorermap" || m_startupScreen == "trims" || m_startupScreen == "effects" || m_startupScreen == "effectlist" || m_startupScreen == "nausea" || m_startupScreen == "darkness" || m_startupScreen == "hearts" || m_startupScreen == "advancements" || m_startupScreen == "advtoast" ||
             m_startupScreen == "grinderror" || m_startupScreen == "woods" ||
             m_startupScreen == "cherry" || m_startupScreen == "mangrove" || m_startupScreen == "fungi" ||
             m_startupScreen == "stones" || m_startupScreen == "colours" || m_startupScreen == "candles" ||
@@ -2943,6 +2947,8 @@ bool Application::frame()
                                   m_startupScreen != "armadillo" &&
                                   m_startupScreen != "signs" &&
                                   m_startupScreen != "fonts" &&
+                                  m_startupScreen != "border" &&
+                                  m_startupScreen != "bordershrink" &&
                                   m_startupScreen != "glowsquid" &&
                                   m_startupScreen != "fangs" &&
                                   m_startupScreen != "zoglin" &&
@@ -3357,7 +3363,7 @@ bool Application::frame()
             if (m_startupScreen == "attackhud" || m_startupScreen == "attackready" ||
                 m_startupScreen == "attackhotbar" || m_startupScreen == "bossbars" ||
                 m_startupScreen == "gamemode" || m_startupScreen == "spectator" ||
-                m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" || m_startupScreen == "leads" || m_startupScreen == "anvilname" || m_startupScreen == "dials" || m_startupScreen == "spyglass" || m_startupScreen == "bundle" || m_startupScreen == "archery" || m_startupScreen == "food" || m_startupScreen == "materials" || m_startupScreen == "tropical" || m_startupScreen == "book" || m_startupScreen == "bookedit" || m_startupScreen == "booktip" || m_startupScreen == "boats" || m_startupScreen == "carts" || m_startupScreen == "fireworks" || m_startupScreen == "jukebox" || m_startupScreen == "potioncloud" || m_startupScreen == "armadillo" || m_startupScreen == "signs" || m_startupScreen == "fonts" || m_startupScreen == "glowsquid" || m_startupScreen == "fangs" || m_startupScreen == "zoglin" || m_startupScreen == "illusioner" || m_startupScreen == "llamas" || m_startupScreen == "paintings" || m_startupScreen == "stands" || m_startupScreen == "glowframes" || m_startupScreen == "bannershield" || m_startupScreen == "signkinds" || m_startupScreen == "signedit" || m_startupScreen == "hangingedit" || m_startupScreen == "mapmarks" || m_startupScreen == "explorermap" || m_startupScreen == "trims" || m_startupScreen == "effects" || m_startupScreen == "effectlist" || m_startupScreen == "nausea" || m_startupScreen == "darkness" || m_startupScreen == "hearts" || m_startupScreen == "advancements" || m_startupScreen == "advtoast" ||
+                m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" || m_startupScreen == "leads" || m_startupScreen == "anvilname" || m_startupScreen == "dials" || m_startupScreen == "spyglass" || m_startupScreen == "bundle" || m_startupScreen == "archery" || m_startupScreen == "food" || m_startupScreen == "materials" || m_startupScreen == "tropical" || m_startupScreen == "book" || m_startupScreen == "bookedit" || m_startupScreen == "booktip" || m_startupScreen == "boats" || m_startupScreen == "carts" || m_startupScreen == "fireworks" || m_startupScreen == "jukebox" || m_startupScreen == "potioncloud" || m_startupScreen == "armadillo" || m_startupScreen == "signs" || m_startupScreen == "fonts" || m_startupScreen == "border" || m_startupScreen == "bordershrink" || m_startupScreen == "glowsquid" || m_startupScreen == "fangs" || m_startupScreen == "zoglin" || m_startupScreen == "illusioner" || m_startupScreen == "llamas" || m_startupScreen == "paintings" || m_startupScreen == "stands" || m_startupScreen == "glowframes" || m_startupScreen == "bannershield" || m_startupScreen == "signkinds" || m_startupScreen == "signedit" || m_startupScreen == "hangingedit" || m_startupScreen == "mapmarks" || m_startupScreen == "explorermap" || m_startupScreen == "trims" || m_startupScreen == "effects" || m_startupScreen == "effectlist" || m_startupScreen == "nausea" || m_startupScreen == "darkness" || m_startupScreen == "hearts" || m_startupScreen == "advancements" || m_startupScreen == "advtoast" ||
                 m_startupScreen == "grinderror" || m_startupScreen == "woods" ||
                 m_startupScreen == "cherry" || m_startupScreen == "mangrove" || m_startupScreen == "fungi" ||
                 m_startupScreen == "stones" || m_startupScreen == "colours" || m_startupScreen == "candles" ||
@@ -4273,6 +4279,27 @@ bool Application::frame()
                     m_inventory.slot(4) = ItemStack{ Items::DyeLightBlue, 16 };
                     m_inventory.setSelectedSlot(0);
                     m_camera.pitch = 5.0f;
+                    m_camera.addLook(0.0f, 0.0f, 0.0f);
+                }
+                if (m_startupScreen == "border" || m_startupScreen == "bordershrink")
+                {
+                    m_timeOfDay = 0.5f;
+                    m_showDebug = false;
+                    for (int dx = -10; dx <= 10; ++dx)
+                        for (int dz = -10; dz <= 10; ++dz)
+                        {
+                            m_world->setBlock(px + dx, py - 1, pz + dz, Blocks::Grass);
+                            for (int dy = 0; dy <= 8; ++dy) m_world->setBlock(px + dx, py + dy, pz + dz, Blocks::Air);
+                        }
+                    m_world->setBlock(px + 3, py, pz - 2, Blocks::Bookshelf);
+                    m_world->setBlock(px + 3, py, pz, Blocks::DiamondOre);
+                    m_world->setBlock(px + 3, py, pz + 2, Blocks::EndPortalFrame);
+                    m_border.setCenter(static_cast<double>(px) + 0.5, static_cast<double>(pz) + 0.5);
+                    if (m_startupScreen == "border")
+                        m_border.setSize(9.0);
+                    else
+                        m_border.lerpTo(30.0, 9.0, 600.0);
+                    m_camera.pitch = 0.0f;
                     m_camera.addLook(0.0f, 0.0f, 0.0f);
                 }
                 if (m_startupScreen == "fangs" || m_startupScreen == "zoglin" || m_startupScreen == "illusioner" || m_startupScreen == "llamas")
@@ -8449,6 +8476,13 @@ void Application::updateGameplay(float deltaTime)
     else
     {
         m_player.update(deltaTime, *m_world, controls);
+        keepInsideBorder(positionBefore);
+    }
+    m_border.update(deltaTime);
+    if (!m_player.spectator())
+    {
+        const float hurt = m_border.damageFor(m_player.position.x, m_player.position.z);
+        if (hurt > 0.0f) m_player.damage(static_cast<int>(hurt), true);
     }
 
     m_camera.position = m_player.eyePosition();
@@ -8685,7 +8719,7 @@ void Application::updateMining(float deltaTime)
     }
 
     if (!hit.hit && m_keys.pressed(m_input, Action::Attack)) m_attackTicker = 0.0f;
-    if (!hit.hit || !m_keys.down(m_input, Action::Attack) || !modeCanBuild(m_player.mode))
+    if (!hit.hit || !m_keys.down(m_input, Action::Attack) || !modeCanBuild(m_player.mode) || !m_border.containsBlock(hit.block.x, hit.block.z))
     {
         m_hasTarget = false;
         m_breakProgress = 0.0f;
@@ -16685,6 +16719,7 @@ void Application::handlePlacement()
     }
 
     const glm::ivec3 target = hit.previous;
+    if (!m_border.containsBlock(target.x, target.z)) return;
     const BlockId existing = m_world->getBlock(target.x, target.y, target.z);
     if (existing != Blocks::Air && !isLiquid(existing) && !isLightBlock(existing)) return;
 
@@ -17501,6 +17536,7 @@ void Application::renderWorldShaded()
         world.setVec3("uChunkOffset", entry.chunk->worldOrigin());
         entry.chunk->transparentMesh.draw(GL_TRIANGLES);
     }
+    renderBorder(view, projection);
     m_fx->endTransparent();
 
     m_fx->beginHand();
@@ -17670,8 +17706,37 @@ void Application::renderWorld()
     glEnable(GL_CULL_FACE);
     glDepthMask(GL_TRUE);
     glDisable(GL_BLEND);
+    renderBorder(view, projection);
 
     renderHand();
+}
+
+void Application::renderBorder(const glm::mat4& view, const glm::mat4& projection)
+{
+    if (!m_world || m_menuWorld) return;
+    const double reach = static_cast<double>(m_world->renderDistance()) * 16.0;
+    const glm::dvec3 eye(m_camera.position);
+    const float scroll = static_cast<float>(std::fmod(m_elapsedSeconds, 3.0) / 3.0);
+    m_borderRenderer.render(view, projection, m_border, eye, reach, static_cast<double>(m_camera.farPlane), scroll);
+}
+
+void Application::keepInsideBorder(const glm::vec3& before)
+{
+    if (m_player.spectator() || !m_border.blocks(before.x, before.z, Player::WIDTH) || !m_border.contains(before.x, before.z)) return;
+    const double half = Player::WIDTH * 0.5;
+    const double west = m_border.west() + half, east = m_border.east() - half;
+    const double north = m_border.north() + half, south = m_border.south() - half;
+    glm::vec3& at = m_player.position;
+    if (west <= east)
+    {
+        if (at.x < west && at.x < before.x) { at.x = static_cast<float>(std::min(static_cast<double>(before.x), west)); m_player.velocity.x = 0.0f; }
+        if (at.x > east && at.x > before.x) { at.x = static_cast<float>(std::max(static_cast<double>(before.x), east)); m_player.velocity.x = 0.0f; }
+    }
+    if (north <= south)
+    {
+        if (at.z < north && at.z < before.z) { at.z = static_cast<float>(std::min(static_cast<double>(before.z), north)); m_player.velocity.z = 0.0f; }
+        if (at.z > south && at.z > before.z) { at.z = static_cast<float>(std::max(static_cast<double>(before.z), south)); m_player.velocity.z = 0.0f; }
+    }
 }
 
 void Application::updateChatInput()
@@ -17740,6 +17805,13 @@ bool Application::runCommand(const std::string& line, const glm::vec3& origin, b
         case Chat::Kind::Tellraw:
             output = command.text;
             return true;
+
+        case Chat::Kind::WorldBorder:
+        {
+            const bool changed = Chat::applyWorldBorder(command, m_border, output);
+            if (changed && command.sub != "get") writeWorldMeta();
+            return changed;
+        }
 
         case Chat::Kind::SetBlock:
             if (m_world)
@@ -21138,7 +21210,22 @@ void Application::renderHud()
 
     renderEffectOverlays(w, h);
 
-    if (m_world && hasSky())
+    const float borderWarning = m_world && !m_menuWorld ? m_border.warning(m_player.position.x, m_player.position.z) : 0.0f;
+    if (borderWarning > 0.0f)
+    {
+        m_ui.setRedOnly(true);
+        if (!guiSprite("../misc/vignette", 0.0f, 0.0f, w, h, glm::vec4(1.0f, 1.0f, 1.0f, borderWarning)))
+        {
+            const float edge = std::min(w, h) * 0.3f;
+            const glm::vec4 dark(0.0f, 0.0f, 0.0f, borderWarning);
+            const glm::vec4 clear(0.0f, 0.0f, 0.0f, 0.0f);
+            m_ui.gradient(0.0f, 0.0f, w, edge, dark, clear);
+            m_ui.gradient(0.0f, h - edge, w, edge, clear, dark);
+            m_ui.quad(0.0f, 0.0f, w, h, glm::vec4(0.0f, 0.0f, 0.0f, borderWarning * 0.35f));
+        }
+        m_ui.setRedOnly(false);
+    }
+    else if (m_world && hasSky())
     {
         const int ex = static_cast<int>(std::floor(m_camera.position.x));
         const int ey = static_cast<int>(std::floor(m_camera.position.y));

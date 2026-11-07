@@ -5,6 +5,7 @@
 #include "Core/Utf8.h"
 #include "Renderer/FontMaps.h"
 #include <cmath>
+#include <cstdio>
 #include <algorithm>
 #include <cctype>
 #include <cstdlib>
@@ -335,6 +336,88 @@ bool Chat::textComponent(const std::string& json, std::string& out)
     return true;
 }
 
+bool Chat::applyWorldBorder(const Command& command, WorldBorder& border, std::string& message)
+{
+    char buffer[160];
+    auto say = [&](const char* format, auto... values) {
+        std::snprintf(buffer, sizeof(buffer), format, values...);
+        message = buffer;
+    };
+    const std::string& sub = command.sub;
+    if (sub == "get")
+    {
+        say("The world border is currently %.0f block(s) wide", border.size());
+        return true;
+    }
+    if (sub == "set" || sub == "add")
+    {
+        const double current = border.size();
+        const double distance = sub == "add" ? current + command.value : command.value;
+        const long long seconds = static_cast<long long>(command.seconds);
+        if (current == distance) { message = "Nothing changed. The world border is already that size"; return false; }
+        if (distance < 1.0) { message = "World border cannot be smaller than 1 block wide"; return false; }
+        if (distance > WorldBorder::MAX_SIZE) { say("World border cannot be bigger than %.0f blocks wide", WorldBorder::MAX_SIZE); return false; }
+        if (seconds > 0)
+        {
+            border.lerpTo(current, distance, static_cast<double>(seconds));
+            if (distance > current) say("Growing the world border to %.1f blocks wide over %lld seconds", distance, seconds);
+            else say("Shrinking the world border to %.1f block(s) wide over %lld second(s)", distance, seconds);
+        }
+        else
+        {
+            border.setSize(distance);
+            say("Set the world border to %.1f block(s) wide", distance);
+        }
+        return true;
+    }
+    if (sub == "center")
+    {
+        if (border.centerX() == command.value && border.centerZ() == command.value2)
+        {
+            message = "Nothing changed. The world border is already centered there";
+            return false;
+        }
+        if (std::abs(command.value) > WorldBorder::MAX_CENTER || std::abs(command.value2) > WorldBorder::MAX_CENTER)
+        {
+            say("World border cannot be further out than %.0f blocks", WorldBorder::MAX_CENTER);
+            return false;
+        }
+        border.setCenter(command.value, command.value2);
+        say("Set the center of the world border to %.2f, %.2f", command.value, command.value2);
+        return true;
+    }
+    if (sub == "damage amount")
+    {
+        if (border.damagePerBlock == command.value) { message = "Nothing changed. The world border damage is already that amount"; return false; }
+        border.damagePerBlock = command.value;
+        say("Set the world border damage to %.2f per block each second", command.value);
+        return true;
+    }
+    if (sub == "damage buffer")
+    {
+        if (border.safeZone == command.value) { message = "Nothing changed. The world border damage buffer is already that distance"; return false; }
+        border.safeZone = command.value;
+        say("Set the world border damage buffer to %.2f block(s)", command.value);
+        return true;
+    }
+    if (sub == "warning distance")
+    {
+        if (border.warningBlocks == static_cast<int>(command.value)) { message = "Nothing changed. The world border warning is already that distance"; return false; }
+        border.warningBlocks = static_cast<int>(command.value);
+        say("Set the world border warning distance to %d block(s)", border.warningBlocks);
+        return true;
+    }
+    if (sub == "warning time")
+    {
+        if (border.warningTime == static_cast<int>(command.value)) { message = "Nothing changed. The world border warning is already that amount of time"; return false; }
+        border.warningTime = static_cast<int>(command.value);
+        say("Set the world border warning time to %d second(s)", border.warningTime);
+        return true;
+    }
+    message = "/worldborder <add|set|center|damage|get|warning> ...";
+    return false;
+}
+
 bool Chat::succeeded(const Command& command)
 {
     return command.kind != Kind::Nothing && command.kind != Kind::Unknown && command.kind != Kind::Denied;
@@ -369,7 +452,7 @@ Chat::Command Chat::parse(const std::string& line, bool cheats, const glm::vec3&
     {
         out.kind = Kind::Help;
         out.text = cheats
-            ? "/gamemode /time /tp /give /kill /seed /say /tellraw /setblock /summon /effect /help"
+            ? "/gamemode /time /tp /give /kill /seed /say /tellraw /setblock /summon /effect /worldborder /help"
             : "/help  -  this world was made without cheats, so the rest are off";
         return out;
     }
@@ -477,6 +560,66 @@ Chat::Command Chat::parse(const std::string& line, bool cheats, const glm::vec3&
         out.kind = Kind::Announce;
         out.text = Utf8::prefix(message, MAX_LENGTH);
         return out;
+    }
+
+    if (name == "worldborder")
+    {
+        if (!cheats) return deny(name);
+        const std::string usage = "/worldborder <add|set|center|damage|get|warning> ...";
+        if (words.size() < 2) return fail(usage);
+        const std::string sub = lower(words[1]);
+        out.kind = Kind::WorldBorder;
+        out.sub = sub;
+        auto whole = [](const std::string& text, int& value) {
+            char* end = nullptr;
+            const long parsed = std::strtol(text.c_str(), &end, 10);
+            if (end == text.c_str() || *end || parsed < 0 || parsed > 2147483647L) return false;
+            value = static_cast<int>(parsed);
+            return true;
+        };
+        if (sub == "get") return out;
+        if (sub == "set" || sub == "add")
+        {
+            float distance = 0.0f;
+            if (words.size() < 3 || words.size() > 4 || !number(words[2], distance) || std::abs(distance) > WorldBorder::MAX_SIZE)
+                return fail("/worldborder " + sub + " <distance> [time]");
+            int time = 0;
+            if (words.size() == 4 && !whole(words[3], time)) return fail("/worldborder " + sub + " <distance> [time]");
+            out.value = std::stod(words[2]);
+            out.seconds = static_cast<float>(time);
+            return out;
+        }
+        if (sub == "center")
+        {
+            float x = 0.0f, z = 0.0f;
+            if (words.size() != 4 || !coordinate(words[2], origin.x, x) || !coordinate(words[3], origin.z, z))
+                return fail("/worldborder center <x> <z>");
+            out.value = x;
+            out.value2 = z;
+            return out;
+        }
+        if (sub == "damage" || sub == "warning")
+        {
+            const std::string what = words.size() > 2 ? lower(words[2]) : std::string();
+            const bool damage = sub == "damage";
+            if (words.size() != 4 || (damage ? (what != "amount" && what != "buffer") : (what != "distance" && what != "time")))
+                return fail(damage ? "/worldborder damage <amount|buffer> <value>" : "/worldborder warning <distance|time> <value>");
+            out.sub = sub + " " + what;
+            if (damage)
+            {
+                float amount = 0.0f;
+                if (!number(words[3], amount) || amount < 0.0f) return fail("/worldborder damage " + what + " <value>");
+                out.value = amount;
+            }
+            else
+            {
+                int amount = 0;
+                if (!whole(words[3], amount)) return fail("/worldborder warning " + what + " <value>");
+                out.value = amount;
+            }
+            return out;
+        }
+        return fail(usage);
     }
 
     if (name == "tellraw")

@@ -94,6 +94,8 @@
 #include "Renderer/Atlas.h"
 #include "Renderer/UIRenderer.h"
 #include "Renderer/FontPaint.h"
+#include "Renderer/BorderRenderer.h"
+#include "World/WorldBorder.h"
 #include "Core/Utf8.h"
 #include "Entity/HeldItem.h"
 #include "Audio/AudioEngine.h"
@@ -5066,6 +5068,84 @@ namespace
         const size_t spaces = static_cast<size_t>(std::count(phrase.begin(), phrase.end(), ' '));
         check(phrase == Enchanting::phrase(1234u, 0) && phrase != Enchanting::phrase(1234u, 1) && spaces >= 2 && spaces <= 3,
               "an offer's runes are three or four words, fixed by the table's seed and the row");
+    }
+
+    void testWorldBorder()
+    {
+        section("world border: where it is and what it does");
+        WorldBorder border;
+        check(border.size() == 59999968.0 && border.east() == 29999984.0 && border.west() == -29999984.0 && border.isDefault(),
+              "a new world's border is 59,999,968 blocks wide around 0, 0");
+        check(border.color() == 0x20A0FFu && border.stage() == WorldBorder::Stage::Stationary, "and still, so drawn blue");
+        border.setCenter(100.5, -20.5);
+        border.setSize(10.0);
+        check(border.west() == 95.5 && border.east() == 105.5 && border.north() == -25.5 && border.south() == -15.5, "its four sides are half its size from the centre");
+        check(border.distanceInside(100.5, -20.5) == 5.0 && border.distanceInside(104.5, -20.5) == 1.0 && border.distanceInside(110.5, -20.5) == -5.0,
+              "distance inside is to the nearest side, and negative outside");
+        check(border.containsBlock(96, -25) && !border.containsBlock(95, -25) && border.containsBlock(105, -16) && !border.containsBlock(106, -16),
+              "a block counts as inside by its corner, as in 1.21.1");
+        check(border.damageFor(100.5, -20.5) == 0.0f && border.damageFor(110.0, -20.5) == 0.0f && border.damageFor(120.5, -20.5) == 2.0f &&
+              border.damageFor(111.0, -20.5) == 1.0f, "no hurt within the five-block buffer, then 0.2 a block past it, at least 1");
+        check(border.warning(100.5, -20.5) == 0.0f && std::abs(border.warning(104.5, -20.5) - 0.8f) < 1e-5f && border.warning(110.0, -20.5) == 1.0f,
+              "the red warning starts five blocks in and is full at the wall");
+        border.lerpTo(10.0, 4.0, 6.0);
+        check(border.stage() == WorldBorder::Stage::Shrinking && border.color() == 0xFF3030u, "a shrinking border is red");
+        border.update(3.0);
+        check(std::abs(border.size() - 7.0) < 1e-9 && border.target() == 4.0 && std::abs(border.secondsLeft() - 3.0) < 1e-9, "and moves evenly over its time");
+        border.update(5.0);
+        check(border.size() == 4.0 && border.stage() == WorldBorder::Stage::Stationary, "then stops where it was going");
+        border.lerpTo(4.0, 8.0, 2.0);
+        check(border.color() == 0x40FF80u, "a growing border is green");
+        border.damagePerBlock = 0.5;
+        border.warningBlocks = 7;
+        WorldBorder copy;
+        check(copy.load(border.save()) && copy.size() == border.size() && copy.target() == 8.0 && copy.centerX() == 100.5 &&
+              copy.damagePerBlock == 0.5 && copy.warningBlocks == 7 && copy.stage() == WorldBorder::Stage::Growing, "it is saved with the world, mid-move included");
+        check(!copy.load("1,2,3") && !copy.load("a,b,c,d,e,f,g,h,i"), "and a damaged line is refused");
+        check(border.blocks(100.5, -20.5, 0.6) == false && border.blocks(103.0, -20.5, 0.6), "it only walls in what is up against it");
+
+        section("world border: /worldborder");
+        WorldBorder live;
+        std::string message;
+        Chat::Command set = Chat::parse("/worldborder set 100", true);
+        check(set.kind == Chat::Kind::WorldBorder && Chat::applyWorldBorder(set, live, message) && live.size() == 100.0 &&
+              message == "Set the world border to 100.0 block(s) wide", "/worldborder set changes the size at once");
+        check(!Chat::applyWorldBorder(set, live, message) && message == "Nothing changed. The world border is already that size", "and says when nothing changed");
+        check(!Chat::applyWorldBorder(Chat::parse("/worldborder set 0.5", true), live, message) && message == "World border cannot be smaller than 1 block wide",
+              "it cannot be under a block wide");
+        check(Chat::applyWorldBorder(Chat::parse("/worldborder add -40 20", true), live, message) && live.target() == 60.0 &&
+              message == "Shrinking the world border to 60.0 block(s) wide over 20 second(s)", "add with a time shrinks it over that time");
+        check(Chat::applyWorldBorder(Chat::parse("/worldborder add 40 10", true), live, message) &&
+              message.rfind("Growing the world border to ", 0) == 0, "or grows it");
+        Chat::Command centre = Chat::parse("/worldborder center ~5 ~-3", true, glm::vec3(10.0f, 64.0f, 20.0f));
+        check(Chat::applyWorldBorder(centre, live, message) && live.centerX() == 15.0 && live.centerZ() == 17.0 &&
+              message == "Set the center of the world border to 15.00, 17.00", "center takes coordinates, ~ included");
+        check(!Chat::applyWorldBorder(Chat::parse("/worldborder center 40000000 0", true), live, message) &&
+              message == "World border cannot be further out than 29999984 blocks", "but not past the edge of the world");
+        check(Chat::applyWorldBorder(Chat::parse("/worldborder damage amount 1", true), live, message) && live.damagePerBlock == 1.0 &&
+              Chat::applyWorldBorder(Chat::parse("/worldborder damage buffer 2", true), live, message) && live.safeZone == 2.0 &&
+              Chat::applyWorldBorder(Chat::parse("/worldborder warning distance 9", true), live, message) && live.warningBlocks == 9 &&
+              Chat::applyWorldBorder(Chat::parse("/worldborder warning time 30", true), live, message) && live.warningTime == 30 &&
+              message == "Set the world border warning time to 30 second(s)", "damage and warning settings are changed one by one");
+        live.setSize(250.0);
+        check(Chat::applyWorldBorder(Chat::parse("/worldborder get", true), live, message) && message == "The world border is currently 250 block(s) wide",
+              "get reports the width");
+        check(Chat::parse("/worldborder set 5", false).kind == Chat::Kind::Denied && Chat::parse("/worldborder", true).kind == Chat::Kind::Unknown &&
+              Chat::parse("/worldborder set x", true).kind == Chat::Kind::Unknown && Chat::parse("/worldborder warning size 3", true).kind == Chat::Kind::Unknown,
+              "it needs cheats and well-formed arguments");
+
+        section("world border: drawn with the forcefield");
+        WorldBorder near;
+        near.setSize(20.0);
+        const std::vector<float> wall = BorderRenderer::build(near, glm::dvec3(8.0, 70.0, 0.0), 128.0, 400.0, 0.0f);
+        check(!wall.empty() && wall.size() % 30 == 0, "near the border its sides are built as quads");
+        bool onSides = true;
+        for (size_t i = 0; i < wall.size(); i += 5)
+            onSides = onSides && (std::abs(wall[i]) == 10.0f || std::abs(wall[i + 2]) == 10.0f);
+        check(onSides, "every vertex lies on one of the four sides");
+        check(BorderRenderer::build(WorldBorder(), glm::dvec3(8.0, 70.0, 0.0), 128.0, 400.0, 0.0f).empty(), "far from it nothing is drawn");
+        check(BorderRenderer::alphaFor(near, 0.0, 0.0, 128.0) < BorderRenderer::alphaFor(near, 9.0, 0.0, 128.0) &&
+              BorderRenderer::alphaFor(near, 30.0, 0.0, 128.0) == 1.0f, "it fades in as you near it and is solid outside");
     }
 
     void testRecipeBook()
@@ -16095,6 +16175,7 @@ int runSelfTest()
     testServerList();
     testResourcePacks();
     testFonts();
+    testWorldBorder();
     testMadeThings();
     testTheEndAndTheSea();
     testPathfinding();

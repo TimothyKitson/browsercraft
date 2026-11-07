@@ -58,6 +58,7 @@ public:
     // drawn this way, and it is why it stays legible on snow and on
     // coal without an outline round it.
     void setInvert(bool on);
+    void setRedOnly(bool on);
     void setAdditive(bool on);
     void setClip(float x, float y, float w, float h);
     void clearClip();
@@ -127,6 +128,7 @@ private:
 
     float m_scale = 1.0f;
     bool m_invert = false;
+    bool m_redOnly = false;
     bool m_additive = false;
     float m_rotation = 0.0f;
     float m_pivotX = 0.0f;

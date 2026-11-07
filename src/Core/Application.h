@@ -38,6 +38,8 @@
 #include "Game/Shield.h"
 #include "Game/Fluids.h"
 #include "Renderer/BeamRenderer.h"
+#include "Renderer/BorderRenderer.h"
+#include "World/WorldBorder.h"
 #include "Renderer/BookRenderer.h"
 #include "Renderer/FangRenderer.h"
 #include "Renderer/PaintingRenderer.h"
@@ -319,6 +321,10 @@ private:
     float m_horseJumpCooldown = 0.0f;
     float horseJumpStrength() const;
     BeamRenderer m_beams;
+    BorderRenderer m_borderRenderer;
+    WorldBorder m_border;
+    void renderBorder(const glm::mat4& view, const glm::mat4& projection);
+    void keepInsideBorder(const glm::vec3& before);
     BookRenderer m_books;
     BannerRenderer m_bannerRenderer;
     ShadowRenderer m_shadows;

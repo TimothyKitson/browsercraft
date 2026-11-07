@@ -377,6 +377,7 @@ void Application::writeWorldMeta()
     m_worldMeta.lastPlayed = Worlds::nowMillis();
     m_worldMeta.mode = static_cast<int>(m_gameMode);
     m_worldMeta.cheats = m_allowCheats;
+    m_worldMeta.border = m_border.isDefault() ? std::string() : m_border.save();
     Worlds::writeMeta(m_savePath, m_worldMeta);
 }
 

@@ -1,5 +1,6 @@
 #pragma once
 #include "Items.h"
+#include "World/WorldBorder.h"
 #include <glm/glm.hpp>
 #include <string>
 #include <vector>
@@ -35,6 +36,7 @@ namespace Chat
         EffectGive,
         EffectClear,
         Tellraw,
+        WorldBorder,
     };
 
     struct Command
@@ -51,6 +53,9 @@ namespace Chat
         int effect = -1;
         int amplifier = 0;
         float seconds = 0.0f;
+        std::string sub;
+        double value = 0.0;
+        double value2 = 0.0;
     };
 
     // `cheats` decides whether anything beyond chat and /help is allowed.
@@ -59,6 +64,7 @@ namespace Chat
     Command parse(const std::string& line, bool cheats, const glm::vec3& origin = glm::vec3(0.0f));
     bool succeeded(const Command& command);
     bool textComponent(const std::string& json, std::string& out);
+    bool applyWorldBorder(const Command& command, WorldBorder& border, std::string& message);
 
     // One scrolling log. Lines fade out on their own, and are kept so the
     // last few can be shown while the chat line is closed.

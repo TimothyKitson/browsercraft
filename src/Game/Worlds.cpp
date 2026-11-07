@@ -76,17 +76,19 @@ const char* Worlds::difficultyInfo(Difficulty difficulty)
 
 std::vector<std::string> Worlds::metaLines(const Meta& meta)
 {
-    return { "name=" + meta.name,
-             "lastPlayed=" + std::to_string(meta.lastPlayed),
-             "mode=" + std::to_string(meta.mode),
-             "cheats=" + std::string(meta.cheats ? "1" : "0"),
-             "type=" + std::string(typeId(meta.type)),
-             "structures=" + std::string(meta.structures ? "1" : "0"),
-             "bonusChest=" + std::string(meta.bonusChest ? "1" : "0"),
-             "difficulty=" + std::to_string(static_cast<int>(meta.difficulty)),
-             "difficultyLocked=" + std::string(meta.difficultyLocked ? "1" : "0"),
-             "layers=" + meta.layers,
-             "biome=" + meta.biome };
+    std::vector<std::string> lines = { "name=" + meta.name,
+                                       "lastPlayed=" + std::to_string(meta.lastPlayed),
+                                       "mode=" + std::to_string(meta.mode),
+                                       "cheats=" + std::string(meta.cheats ? "1" : "0"),
+                                       "type=" + std::string(typeId(meta.type)),
+                                       "structures=" + std::string(meta.structures ? "1" : "0"),
+                                       "bonusChest=" + std::string(meta.bonusChest ? "1" : "0"),
+                                       "difficulty=" + std::to_string(static_cast<int>(meta.difficulty)),
+                                       "difficultyLocked=" + std::string(meta.difficultyLocked ? "1" : "0"),
+                                       "layers=" + meta.layers,
+                                       "biome=" + meta.biome };
+    if (!meta.border.empty()) lines.push_back("border=" + meta.border);
+    return lines;
 }
 
 Worlds::Meta Worlds::parseMeta(const std::vector<std::string>& lines)
@@ -109,6 +111,7 @@ Worlds::Meta Worlds::parseMeta(const std::vector<std::string>& lines)
         else if (key == "difficultyLocked") meta.difficultyLocked = value == "1";
         else if (key == "layers") meta.layers = value;
         else if (key == "biome") meta.biome = value;
+        else if (key == "border") meta.border = value;
     }
     return meta;
 }

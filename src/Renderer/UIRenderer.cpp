@@ -87,6 +87,15 @@ void UIRenderer::setInvert(bool on)
     else    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 }
 
+void UIRenderer::setRedOnly(bool on)
+{
+    if (on == m_redOnly) return;
+    flush();
+    m_redOnly = on;
+    if (on) glColorMask(GL_FALSE, GL_TRUE, GL_TRUE, GL_FALSE);
+    else glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+}
+
 void UIRenderer::setClip(float x, float y, float w, float h)
 {
     flush();
@@ -139,6 +148,7 @@ void UIRenderer::end()
 {
     flush();
     setInvert(false);
+    setRedOnly(false);
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_CULL_FACE);
     glDisable(GL_BLEND);
