@@ -292,7 +292,8 @@ Everything in the 1.21 textures zip the game doesn't use yet, turned into work. 
 
 ## Part 7: screens and menus
 
-75. Recipe book: crafting and furnace books, filters, tabs, and the ghost recipe in the grid.
+75. Recipe book: crafting and furnace books, filters, tabs, and the ghost recipe in the grid. (done)
+    - Notes: the green book button sits where 1.21.1 puts it on the inventory, the crafting table and the furnace, smoker and blast furnace, and opening it slides the screen right with the book beside it, drawn from the pack's recipe_book art: the search box, the craftable filter ("Showing Craftable", "Showing Smeltable" and the rest), the tabs with 1.21.1's icons (all, building blocks, redstone, equipment and miscellaneous for crafting; food, blocks and miscellaneous for the furnaces, only what each one cooks), twenty results a page on green or red slots, and the page arrows. Every recipe the game makes is in it, filed under the tab 1.21.1 files it under (the categories come from Mojang's recipe data, with the same rules for the families it generates), with the wood and dye families sharing one slot that cycles through them; right-clicking such a slot opens the alternatives, each shown as a little grid of its ingredients. Clicking a recipe you can make lays the ingredients into the grid from your inventory, one set at a time or as many as a stack allows with shift; clicking one you cannot shows the ghost recipe in red until you touch the grid, fuel and all in a furnace. The book remembers whether it was open and how each filter was set. On a screen too narrow for both it covers the inventory, as 1.21.1's does. Every recipe is known from the start: unlocking recipes, and the toast that announces them, come with the advancements and toasts in item 76.
 76. Advancements: the screen with its tabs, frames and backgrounds, plus toasts when you earn one.
 77. Statistics screen.
 78. Worlds

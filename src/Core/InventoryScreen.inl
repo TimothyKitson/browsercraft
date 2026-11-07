@@ -1037,6 +1037,11 @@ void Application::renderContainerScreen(float w, float h)
     // 88 and 26 with its result at 144 and 36. Lining up with them is
     // what makes a screenshot of this sit on top of a screenshot of
     // that.
+    if (bookShown(w) && w < 379.0f)
+    {
+        renderRecipeBook(w, h, std::floor((w - 176.0f) * 0.5f));
+        return;
+    }
     const bool bench = m_inventory.craftSize() >= 3;
     const BlockId chestKind = m_chestOpen && m_chestVehicle >= 0 ? m_chestVehicleBlock
         : m_chestOpen && m_world ? m_world->getBlock(m_chestBlock.x, m_chestBlock.y, m_chestBlock.z) : Blocks::Air;
@@ -1090,7 +1095,7 @@ void Application::renderContainerScreen(float w, float h)
 
     const float TRADE_LIST_W = 100.0f;
     const float panelWidth = m_tradeOpen ? PANEL_W + TRADE_LIST_W : PANEL_W;
-    const float panelX = std::floor((w - panelWidth) * 0.5f);
+    const float panelX = bookPanelLeft(w, panelWidth);
     const float panelY = std::floor((h - PANEL_H) * 0.5f);
     const float shift = m_tradeOpen && skin ? TRADE_LIST_W : 0.0f;
 
@@ -2443,8 +2448,9 @@ void Application::renderContainerScreen(float w, float h)
     for (int i = 0; i < Inventory::HOTBAR_SLOTS; ++i)
         drawSlot(i, invX + i * PITCH, hotbarY);
 
-    if (plainInventory) drawInventoryEffects(panelX + panelWidth, panelY, w);
-
+    if (plainInventory && !bookShown(w)) drawInventoryEffects(panelX + panelWidth, panelY, w);
+    drawGhostRecipe(panelX, panelY);
+    renderRecipeBook(w, h, panelX);
 }
 
 void Application::renderCreativeScreen(float w, float h)
@@ -3006,6 +3012,17 @@ const Application::SlotBox* Application::slotBoxAt(int mouseX, int mouseY) const
 void Application::handleInventoryClick(int mouseX, int mouseY, bool rightButton, bool shiftHeld)
 {
     const SlotBox* box = slotBoxAt(mouseX, mouseY);
+    if (m_recipeAltSlot >= 0 && (!box || box->kind != SlotBox::Kind::BookAlt))
+    {
+        m_recipeAltSlot = -1;
+        return;
+    }
+    if (box && box->kind != SlotBox::Kind::BookSearch) m_recipeSearching = false;
+    if (box && box->kind >= SlotBox::Kind::BookToggle)
+    {
+        bookClick(*box, rightButton, shiftHeld);
+        return;
+    }
     if (!box)
     {
         // Clicking outside the panel throws the held stack into the world,
@@ -3105,6 +3122,7 @@ void Application::handleInventoryClick(int mouseX, int mouseY, bool rightButton,
             break;
 
         case SlotBox::Kind::Slot:
+            m_recipeGhost = -1;
             if (m_crafterOpen && box->index >= Inventory::CHEST_FIRST &&
                 box->index < Inventory::CHEST_FIRST + CRAFTER_SLOTS)
             {
@@ -3567,6 +3585,9 @@ void Application::stowHorse()
 
 void Application::closeInventory()
 {
+    m_recipeGhost = -1;
+    m_recipeAltSlot = -1;
+    m_recipeSearching = false;
     stowHorse();
     stowBeacon();
     stowGrindstone();

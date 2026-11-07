@@ -25,6 +25,7 @@
 #include "Entity/Rain.h"
 #include "Game/Anvil.h"
 #include "Game/Raids.h"
+#include "Game/RecipeBook.h"
 #include "Game/Brewing.h"
 #include "World/Signs.h"
 #include "World/Frames.h"
@@ -1523,7 +1524,8 @@ private:
     // copies of the same geometry, and only one of them ever got fixed.
     struct SlotBox
     {
-        enum class Kind { Slot, Palette, Tab, Enchant, Trade, AnvilTake, Destroy, Scroll, TradeTake, BeaconPower, BeaconConfirm, BeaconCancel, GrindTake, CutRecipe, CutTake, SmithTake, CartoTake, LoomPattern, LoomTake };
+        enum class Kind { Slot, Palette, Tab, Enchant, Trade, AnvilTake, Destroy, Scroll, TradeTake, BeaconPower, BeaconConfirm, BeaconCancel, GrindTake, CutRecipe, CutTake, SmithTake, CartoTake, LoomPattern, LoomTake,
+                          BookToggle, BookTab, BookFilter, BookPage, BookResult, BookSearch, BookAlt };
         Kind kind = Kind::Slot;
         int index = 0;        // inventory slot, block id, or tab number
         float x = 0.0f, y = 0.0f, size = 0.0f;
@@ -1550,6 +1552,28 @@ private:
         m_hintBoxes.push_back({ x, y, w, h, text });
     }
     std::vector<SlotBox> m_slotBoxes;
+    bool m_recipeOpen = false;
+    bool m_recipeFilter[4] = { false, false, false, false };
+    int m_recipeTab = 0;
+    int m_recipePage = 0;
+    std::string m_recipeSearch;
+    bool m_recipeSearching = false;
+    int m_recipeGhost = -1;
+    int m_recipeGhostBook = -1;
+    int m_recipeAltSlot = -1;
+    float m_recipeAltX = 0.0f;
+    float m_recipeAltY = 0.0f;
+    int bookKind() const;
+    RecipeBook::Stock bookStock() const;
+    std::vector<RecipeBook::Group> bookTabs() const;
+    std::vector<RecipeBook::Slot> bookSlots() const;
+    bool bookShown(float w) const;
+    float bookPanelLeft(float w, float panelWidth) const;
+    void takeForBook(StackId id, int count);
+    void bookChoose(int index, bool all);
+    void bookClick(const SlotBox& box, bool rightButton, bool shiftHeld);
+    void renderRecipeBook(float w, float h, float panelX);
+    void drawGhostRecipe(float panelX, float panelY);
     int m_creativeTab = 0;
     std::string m_creativeSearch;
     bool creativeSearching() const;

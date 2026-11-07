@@ -1749,3 +1749,20 @@ std::vector<StackId> Crafting::everyIngredient()
     }
     return out;
 }
+
+int Crafting::tableSize() { return static_cast<int>(std::size(RECIPES)); }
+
+Crafting::TableRecipe Crafting::tableRecipe(int index)
+{
+    TableRecipe out;
+    if (index < 0 || index >= tableSize()) return out;
+    const Recipe& recipe = RECIPES[index];
+    out.shapeless = recipe.shapeless;
+    out.width = recipe.width;
+    out.height = recipe.height;
+    for (int i = 0; i < 9; ++i) out.pattern[i] = recipe.pattern[i];
+    out.inputCount = recipe.inputCount;
+    out.result = recipe.result;
+    out.resultCount = recipe.resultCount;
+    return out;
+}

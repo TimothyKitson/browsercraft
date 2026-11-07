@@ -43,4 +43,16 @@ namespace Crafting
     // audit: a recipe whose inputs nobody can get is as dead as an
     // item nothing makes, and reads exactly the same from the table.
     std::vector<StackId> everyIngredient();
+
+    struct TableRecipe
+    {
+        bool shapeless = false;
+        int width = 0, height = 0;
+        StackId pattern[9] = {};
+        int inputCount = 0;
+        StackId result = 0;
+        int resultCount = 0;
+    };
+    int tableSize();
+    TableRecipe tableRecipe(int index);
 }

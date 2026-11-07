@@ -82,6 +82,7 @@
 #include "Game/Fishing.h"
 #include "Game/Food.h"
 #include "Game/Raids.h"
+#include "Game/RecipeBook.h"
 #include "Game/Golems.h"
 #include "Renderer/Atlas.h"
 #include "Renderer/UIRenderer.h"
@@ -4668,6 +4669,75 @@ namespace
         int w = 0, h = 0;
         const std::vector<uint8_t> painted = PaintingRenderer::paintVariant(Paintings::find("skeleton"), w, h);
         check(w == 64 && h == 48 && painted.size() == static_cast<size_t>(64 * 48 * 4), "and each has a painted stand-in the size of the real one");
+    }
+
+    void testRecipeBook()
+    {
+        section("recipe book: the crafting and furnace books");
+        using RecipeBook::Book;
+        using RecipeBook::Group;
+        const std::vector<RecipeBook::Recipe>& crafting = RecipeBook::recipes(Book::Crafting);
+        check(crafting.size() > 500, "the crafting book holds every recipe in the table and the families");
+        int doors = 0;
+        int doorFamily = -1;
+        for (const RecipeBook::Recipe& recipe : crafting)
+            if (recipe.result == doorBaseOf(1) || recipe.result == Blocks::DoorLowShutNorth)
+            {
+                ++doors;
+                if (doorFamily < 0) doorFamily = recipe.family;
+                else check(recipe.family == doorFamily, "wooden doors share one slot");
+            }
+        check(doors >= 2, "a door for each wood");
+
+        RecipeBook::Stock stock;
+        stock[Blocks::Planks] = 12;
+        const RecipeBook::Recipe* table = nullptr;
+        for (const RecipeBook::Recipe& recipe : crafting)
+            if (recipe.result == Blocks::CraftingTable) table = &recipe;
+        check(table && RecipeBook::timesCraftable(*table, stock, 64) == 3, "twelve planks make three crafting tables");
+        RecipeBook::Stock mixed;
+        mixed[Blocks::Planks] = 3;
+        mixed[Blocks::SprucePlanks] = 2;
+        std::vector<StackId> picks;
+        check(table && RecipeBook::allocate(*table, mixed, 1, picks), "and any mix of planks makes one");
+        check(table && RecipeBook::fits(*table, 2) && RecipeBook::cellIndex(*table, 3, 2) == 4, "it fits the little grid, laid out from the corner");
+
+        bool furnaceFits = true;
+        for (const RecipeBook::Recipe& recipe : crafting)
+            if (recipe.result == Blocks::Furnace) furnaceFits = RecipeBook::fits(recipe, 2);
+        check(!furnaceFits, "a furnace needs the big grid");
+
+        check(RecipeBook::craftingGroup(Items::IronAxe) == Group::Equipment && RecipeBook::craftingGroup(Blocks::PistonNorth) == Group::Redstone &&
+                  RecipeBook::craftingGroup(Blocks::StoneBricks) == Group::Building && RecipeBook::craftingGroup(Items::Bread) == Group::Misc &&
+                  RecipeBook::craftingGroup(doorBaseOf(2)) == Group::Redstone,
+              "each recipe sits on the tab 1.21.1 puts it on");
+        check(RecipeBook::tabs(Book::Crafting).size() == 5 && RecipeBook::tabs(Book::Furnace).size() == 4 &&
+                  RecipeBook::tabs(Book::BlastFurnace).size() == 3 && RecipeBook::tabs(Book::Smoker).size() == 2,
+              "with the tabs each book has");
+
+        bool iron = false, beef = false, glass = false, smokerOnlyFood = true, blastNoFood = true;
+        for (const RecipeBook::Recipe& recipe : RecipeBook::recipes(Book::Furnace))
+        {
+            if (recipe.result == Items::IronIngot && recipe.group == Group::Misc) iron = true;
+            if (recipe.result == Items::Steak && recipe.group == Group::Food) beef = true;
+            if (recipe.result == Blocks::Glass && recipe.group == Group::Blocks) glass = true;
+        }
+        for (const RecipeBook::Recipe& recipe : RecipeBook::recipes(Book::Smoker)) smokerOnlyFood = smokerOnlyFood && recipe.group == Group::Food;
+        for (const RecipeBook::Recipe& recipe : RecipeBook::recipes(Book::BlastFurnace)) blastNoFood = blastNoFood && recipe.group != Group::Food;
+        check(iron && beef && glass, "the furnace book sorts into food, blocks and the rest");
+        check(smokerOnlyFood && blastNoFood, "a smoker's book is all food and a blast furnace's none");
+
+        RecipeBook::Stock some;
+        some[Blocks::Log] = 1;
+        const std::vector<RecipeBook::Slot> craftable = RecipeBook::slots(Book::Crafting, Group::Search, 2, "", true, some);
+        bool onlyPlanks = !craftable.empty();
+        for (const RecipeBook::Slot& slot : craftable)
+            for (int index : slot.recipes) onlyPlanks = onlyPlanks && isPlanks(asBlock(crafting[static_cast<size_t>(index)].result));
+        check(onlyPlanks, "with one log, the craftable filter shows only planks");
+        const std::vector<RecipeBook::Slot> searched = RecipeBook::slots(Book::Crafting, Group::Search, 3, "crafting table", false, some);
+        check(searched.size() == 1, "and the search finds a recipe by name");
+        check(RecipeBook::mojangGroup("bow") == 'E' && RecipeBook::mojangGroup("oak_planks") == 'B' && RecipeBook::mojangGroup("nothing") == 0,
+              "the categories are 1.21.1's own");
     }
 
     void testNewEffects()
@@ -15621,6 +15691,7 @@ int runSelfTest()
     testMapMarks();
     testTrimPalettes();
     testNewEffects();
+    testRecipeBook();
     testMadeThings();
     testTheEndAndTheSea();
     testPathfinding();

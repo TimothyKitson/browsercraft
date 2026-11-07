@@ -451,6 +451,9 @@ void Application::loadOptions()
         else if (std::sscanf(line, "attackIndicator=%d", &value) == 1) m_attackIndicator = std::clamp(value, 0, 2);
         else if (std::sscanf(line, "mainHand=%d", &value) == 1) m_leftHanded = value == 1;
         else if (std::sscanf(line, "distortion=%d", &value) == 1) m_distortion = std::clamp(value, 0, 100);
+        else if (std::sscanf(line, "recipeBook=%d", &value) == 1) m_recipeOpen = value != 0;
+        else if (std::sscanf(line, "recipeFilter=%d", &value) == 1)
+            for (int k = 0; k < 4; ++k) m_recipeFilter[k] = ((value >> k) & 1) != 0;
     }
     std::fclose(file);
 }
@@ -461,8 +464,11 @@ void Application::saveOptions()
     std::filesystem::create_directories(m_savePath, ec);
     std::FILE* file = std::fopen((m_savePath + "/options.txt").c_str(), "wb");
     if (!file) return;
-    std::fprintf(file, "shaders=%d\npbr=%d\nattackIndicator=%d\nmainHand=%d\ndistortion=%d\n", m_shadersOn ? 1 : 0,
-                 m_pbrEnabled ? 1 : 0, m_attackIndicator, m_leftHanded ? 1 : 0, m_distortion);
+    int filters = 0;
+    for (int k = 0; k < 4; ++k) filters |= m_recipeFilter[k] ? (1 << k) : 0;
+    std::fprintf(file, "shaders=%d\npbr=%d\nattackIndicator=%d\nmainHand=%d\ndistortion=%d\nrecipeBook=%d\nrecipeFilter=%d\n",
+                 m_shadersOn ? 1 : 0, m_pbrEnabled ? 1 : 0, m_attackIndicator, m_leftHanded ? 1 : 0, m_distortion,
+                 m_recipeOpen ? 1 : 0, filters);
     std::fclose(file);
 #ifdef __EMSCRIPTEN__
     EM_ASM({
@@ -2554,6 +2560,8 @@ bool Application::frame()
     {
         if (m_startupScreen == "inventory" || m_startupScreen == "creative" ||
             m_startupScreen == "bench" || m_startupScreen == "tools" ||
+            m_startupScreen == "recipebook" || m_startupScreen == "recipebench" ||
+            m_startupScreen == "recipefurnace" || m_startupScreen == "recipealt" ||
             m_startupScreen == "furnace" || m_startupScreen == "furnaceblock" ||
             m_startupScreen == "chest" || m_startupScreen == "largechest" || m_startupScreen == "armour" ||
             m_startupScreen == "armourhud" || m_startupScreen == "bed" ||
@@ -7085,6 +7093,71 @@ bool Application::frame()
             // A screenshot of the bench wants the big grid showing.
             if (m_startupScreen == "bench") m_inventory.setCraftSize(3);
 
+            if (m_startupScreen == "recipebook" || m_startupScreen == "recipebench" ||
+                m_startupScreen == "recipefurnace" || m_startupScreen == "recipealt")
+            {
+                m_recipeOpen = true;
+                m_recipeFilter[0] = false;
+                m_inventory.clear();
+                m_inventory.add(Blocks::Log, 6);
+                m_inventory.add(Blocks::SprucePlanks, 24);
+                m_inventory.add(Blocks::Planks, 12);
+                m_inventory.add(Items::Stick, 16);
+                m_inventory.add(Blocks::Cobblestone, 40);
+                m_inventory.add(Items::IronIngot, 7);
+                m_inventory.add(Items::Coal, 9);
+                m_inventory.add(static_cast<StackId>(woolOfColour(0)), 3);
+                m_inventory.add(Items::RawIron, 5);
+                m_inventory.add(Items::RawBeef, 4);
+                m_inventory.add(Blocks::Sand, 10);
+                if (m_startupScreen != "recipebook" && m_startupScreen != "recipefurnace") m_inventory.setCraftSize(3);
+                const std::vector<RecipeBook::Recipe>& list = RecipeBook::recipes(RecipeBook::Book::Crafting);
+                if (m_startupScreen == "recipebench")
+                    for (size_t i = 0; i < list.size(); ++i)
+                        if (list[i].result == Blocks::PistonNorth)
+                        {
+                            m_recipeGhost = static_cast<int>(i);
+                            m_recipeGhostBook = 0;
+                            break;
+                        }
+                if (m_startupScreen == "recipealt")
+                {
+                    m_recipeSearch = "door";
+                    m_recipeTab = 0;
+                    std::vector<ItemStack> held;
+                    for (int i = 0; i < Inventory::MAIN_SLOTS; ++i) held.push_back(m_inventory.slot(i));
+                    const std::vector<RecipeBook::Slot> found =
+                        RecipeBook::slots(RecipeBook::Book::Crafting, RecipeBook::Group::Search, 3, m_recipeSearch, false,
+                                          RecipeBook::stockOf(held.data(), static_cast<int>(held.size())));
+                    m_recipeAltSlot = 0;
+                    for (size_t k = 0; k < found.size(); ++k)
+                        if (found[k].recipes.size() > 1)
+                        {
+                            m_recipeAltSlot = static_cast<int>(k);
+                            break;
+                        }
+                    const float uw = static_cast<float>(m_window.width()) / static_cast<float>(guiScale());
+                    const float uh = static_cast<float>(m_window.height()) / static_cast<float>(guiScale());
+                    m_recipeAltX = std::floor((uw - 147.0f) * 0.5f) - (uw >= 379.0f ? 86.0f : 0.0f) + 11.0f +
+                                   25.0f * static_cast<float>(m_recipeAltSlot % 5);
+                    m_recipeAltY = std::floor((uh - 166.0f) * 0.5f) + 31.0f + 25.0f * static_cast<float>((m_recipeAltSlot % 20) / 5);
+                }
+                if (m_startupScreen == "recipefurnace")
+                {
+                    const glm::vec3 ahead = m_player.position + m_camera.front * 3.0f;
+                    const glm::ivec3 where(static_cast<int>(std::floor(ahead.x)), static_cast<int>(std::floor(m_player.position.y)),
+                                           static_cast<int>(std::floor(ahead.z)));
+                    m_world->setBlock(where.x, where.y, where.z, Blocks::Furnace);
+                    openFurnace(where);
+                    for (size_t i = 0; i < RecipeBook::recipes(RecipeBook::Book::Furnace).size(); ++i)
+                        if (RecipeBook::recipes(RecipeBook::Book::Furnace)[i].result == Blocks::Glass)
+                        {
+                            m_recipeGhost = static_cast<int>(i);
+                            m_recipeGhostBook = static_cast<int>(RecipeBook::Book::Furnace);
+                        }
+                }
+            }
+
             // And one of the creative palette wants the player in
             // creative, whatever the saved world was last left in:
             // without it the shot came back as the survival panel.
@@ -7584,8 +7657,23 @@ void Application::handleEvents()
         if (changed) refreshAnvilResult();
     }
 
-    const bool searching = creativeSearching();
-    if (searching)
+    if (m_recipeSearching && (!m_inventoryOpen || bookKind() < 0 || !m_recipeOpen)) m_recipeSearching = false;
+    if (m_recipeSearching)
+    {
+        for (char c : m_input.typedText())
+            if (c >= 32 && c < 127 && m_recipeSearch.size() < 50)
+            {
+                m_recipeSearch.push_back(c);
+                m_recipePage = 0;
+            }
+        for (int i = 0; i < m_input.backspaces() && !m_recipeSearch.empty(); ++i)
+        {
+            m_recipeSearch.pop_back();
+            m_recipePage = 0;
+        }
+    }
+    const bool searching = creativeSearching() || m_recipeSearching;
+    if (creativeSearching())
     {
         for (char c : m_input.typedText())
             if (c >= 32 && c < 127 && m_creativeSearch.size() < 40)
@@ -21656,6 +21744,7 @@ void Application::renderDeathScreen()
 
 #include "InventoryScreen.inl"
 #include "BookScreen.inl"
+#include "RecipeBookScreen.inl"
 
 void Application::renderDebugOverlay()
 {
