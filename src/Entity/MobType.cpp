@@ -166,6 +166,9 @@ namespace
             t.voicePitch = 1.25f;
             t.drop = Items::RawPorkchop;
             t.dropCount = 2;
+            t.rideable = true;
+            t.saddleRide = true;
+            t.saddleHeight = 0.62f;
             t.bodyColour = rgb(238, 145, 145);
             t.headColour = rgb(238, 145, 145);
             t.model.push_back(mc(Part::Head, 0, 0, 8, 8, 8, -4, -4, -8, 0, 12, -6));
@@ -2157,6 +2160,7 @@ namespace
             t.limbSwing = 0.7f;
 
             t.rideable = true;
+            t.saddleRide = true;
             t.saddleHeight = 1.6f;
 
             t.drop = Items::StringItem;

@@ -69,6 +69,7 @@
 #include "Entity/EntityManager.h"
 #include "Entity/Pathfinder.h"
 #include "Game/Chat.h"
+#include "Game/Fishing.h"
 #include "Game/Food.h"
 #include "Game/Golems.h"
 #include "Renderer/Atlas.h"
@@ -1968,7 +1969,7 @@ namespace
             const MobType& t = mobType(static_cast<MobId>(i));
             if (t.rideable && !t.inanimate) ++rideable;
         }
-        check(rideable == 3, "it, the strider and the camel are the three you can get on");
+        check(rideable == 4, "it, the strider, the camel and a saddled pig are the four you can get on");
         check(mobType(MobId::Strider).rideable, "the strider is one of the others");
         check(mobType(MobId::Camel).rideable, "and the camel is the third");
 
@@ -3856,6 +3857,56 @@ namespace
                 }
             check(gravel > 0, "and it is full of suspicious gravel");
         }
+    }
+
+    void testFishing()
+    {
+        section("fishing, and the two sticks you steer with");
+        int fish = 0, junk = 0, treasure = 0, bamboo = 0, closedTreasure = 0;
+        for (uint32_t seed = 0; seed < 4000; ++seed)
+        {
+            const Fishing::Catch c = Fishing::roll(seed, true, false);
+            if (c.category == Fishing::Category::Fish) ++fish;
+            if (c.category == Fishing::Category::Junk) ++junk;
+            if (c.category == Fishing::Category::Treasure) ++treasure;
+            if (c.stack.id == Blocks::Bamboo) ++bamboo;
+            if (Fishing::roll(seed, false, false).category == Fishing::Category::Treasure) ++closedTreasure;
+        }
+        check(fish > 3200 && fish < 3600 && junk > 280 && junk < 520 && treasure > 120 && treasure < 300,
+              "most of what bites is fish, a tenth is junk and a twentieth treasure");
+        check(bamboo == 0 && closedTreasure == 0, "bamboo only comes up in a jungle, and treasure only under open sky");
+        bool jungleBamboo = false;
+        for (uint32_t seed = 0; seed < 4000 && !jungleBamboo; ++seed) jungleBamboo = Fishing::roll(seed, true, true).stack.id == Blocks::Bamboo;
+        check(jungleBamboo, "where it does come up");
+        bool enchanted = true;
+        for (uint32_t seed = 0; seed < 4000; ++seed)
+        {
+            const Fishing::Catch c = Fishing::roll(seed, true, false);
+            if (c.category == Fishing::Category::Treasure && (c.stack.id == Items::Bow || c.stack.id == Items::Book))
+                enchanted = enchanted && c.stack.enchantments != 0;
+        }
+        check(enchanted, "and a bow or a book fished up is always enchanted");
+        const float wait = Fishing::waitSeconds(9, true, false);
+        check(wait >= 5.0f && wait <= 30.0f && Fishing::waitSeconds(9, false, false) > wait, "a bite takes longer under a roof");
+
+        ItemStack grid[9];
+        grid[2].id = Items::Stick; grid[4].id = Items::Stick; grid[6].id = Items::Stick;
+        grid[5].id = Items::StringItem; grid[8].id = Items::StringItem;
+        for (ItemStack& cell : grid) if (cell.id != Blocks::Air) cell.count = 1;
+        const CraftOutput rod = Crafting::match(grid, 3);
+        check(rod.valid() && rod.id == Items::FishingRod, "three sticks and two string make a fishing rod");
+        ItemStack bait[9];
+        bait[0].id = Items::FishingRod; bait[0].count = 1;
+        bait[4].id = Items::Carrot; bait[4].count = 1;
+        const CraftOutput carrot = Crafting::match(bait, 3);
+        check(carrot.valid() && carrot.id == Items::CarrotOnAStick, "a rod over a carrot makes a carrot on a stick");
+        check(Fishing::durabilityOf(Items::FishingRod) == 64 && Fishing::durabilityOf(Items::CarrotOnAStick) == 25 &&
+              Fishing::durabilityOf(Items::WarpedFungusOnAStick) == 100, "and they wear out at Minecraft's rates");
+        check(Enchanting::appliesTo(Enchanting::Kind::Unbreaking, Items::FishingRod), "unbreaking goes on a rod");
+        check(Mob::canBeRidden(mobType(MobId::Pig), false, false, true) && !Mob::canBeRidden(mobType(MobId::Pig), false, false, false) &&
+              Mob::canBeRidden(mobType(MobId::Strider), false, false, true) && !Mob::canBeRidden(mobType(MobId::Pig), false, true, true),
+              "a saddled pig or strider can be ridden, a bare one or a piglet cannot");
+        check(Food::isEdible(Items::TropicalFish), "tropical fish can be eaten");
     }
 
     void testCreativeBlocks()
@@ -6897,6 +6948,8 @@ namespace
                 if (made == id) obtainable = true;
             for (int k = 0; k < static_cast<int>(Items::Count) && !obtainable; ++k)
                 if (Smelting::resultOf(static_cast<StackId>(k)) == id) obtainable = true;
+            for (uint32_t seed = 0; seed < 2000 && !obtainable; ++seed)
+                if (Fishing::roll(seed, true, true).stack.id == id) obtainable = true;
 
             // And what is in a chest somewhere. This was missing, and
             // the apple found it: its other route is a chance drop off
@@ -14149,6 +14202,7 @@ int runSelfTest()
     testBanners();
     testSculkExtras();
     testCreativeBlocks();
+    testFishing();
     testMadeThings();
     testTheEndAndTheSea();
     testPathfinding();

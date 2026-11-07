@@ -20,6 +20,8 @@ public:
         GuardianFull,
         Ray,
         Lightning,
+        Line,
+        Lead,
         Count
     };
 

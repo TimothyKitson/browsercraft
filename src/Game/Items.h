@@ -373,6 +373,12 @@ namespace Items
         PiglinBannerPattern,
         FlowBannerPattern,
         GusterBannerPattern,
+        FishingRod,
+        CarrotOnAStick,
+        WarpedFungusOnAStick,
+        TropicalFish,
+        NameTag,
+        Lead,
         Count
     };
 }

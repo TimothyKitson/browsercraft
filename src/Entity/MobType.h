@@ -253,6 +253,7 @@ struct MobType
     // the rider sits above its feet, which is what the camera is put
     // at: a rider's eyes are not the mob's eyes.
     bool rideable = false;
+    bool saddleRide = false;
     float saddleHeight = 1.0f;
 
     // Not alive. A boat has no wits to wander with, makes no noise of

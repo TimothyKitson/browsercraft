@@ -322,11 +322,14 @@ public:
     // has no idea a player exists and should not learn.
     // Who may be got on. A horse has to be tamed and grown first; a
     // boat belongs to whoever finds it, and nothing else is transport.
-    static bool canBeRidden(const MobType& type, bool tamed, bool baby)
+    static bool canBeRidden(const MobType& type, bool tamed, bool baby, bool saddled = false)
     {
         if (!type.rideable || baby) return false;
+        if (type.saddleRide) return saddled;
         return type.inanimate || tamed;
     }
+    void boostRide(float seconds) { m_rideBoost = seconds; m_rideBoostLength = seconds; }
+    bool rideBoosted() const { return m_rideBoost > 0.0f; }
 
     bool ridden() const { return m_ridden; }
     bool saddled() const { return m_saddled; }
@@ -454,6 +457,8 @@ private:
     bool m_sitting = false;
     float m_holdTimer = 0.0f;
     bool m_ridden = false;
+    float m_rideBoost = 0.0f;
+    float m_rideBoostLength = 0.0f;
     bool m_steerForward = false;
     bool m_steerJump = false;
     float m_jumpPower = 1.0f;

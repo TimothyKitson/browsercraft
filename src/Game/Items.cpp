@@ -277,6 +277,12 @@ namespace
         { "Snout Banner Pattern", Tiles::ItemBannerPatternFirst + 3, 1 },
         { "Flow Banner Pattern", Tiles::ItemBannerPatternFirst + 4, 1 },
         { "Guster Banner Pattern", Tiles::ItemBannerPatternFirst + 5, 1 },
+        { "Fishing Rod", Tiles::ItemFishingRod, 1 },
+        { "Carrot on a Stick", Tiles::ItemCarrotOnAStick, 1 },
+        { "Warped Fungus on a Stick", Tiles::ItemWarpedFungusOnAStick, 1 },
+        { "Tropical Fish", Tiles::ItemTropicalFish, 64 },
+        { "Name Tag", Tiles::ItemNameTag, 64 },
+        { "Lead", Tiles::ItemLead, 64 },
     };
 
     static_assert(sizeof(ITEMS) / sizeof(ITEMS[0]) ==

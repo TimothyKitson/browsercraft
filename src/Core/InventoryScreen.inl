@@ -208,6 +208,7 @@ namespace
         Blocks::BellFirst + 2, Blocks::Jukebox, Blocks::ChiseledBookshelfFirst + 14, Blocks::DragonEgg, Blocks::HeavyCore,
         Blocks::DecoratedPotFirst + 2, Blocks::SnifferEgg0,
         Items::Bucket, Items::WaterBucket, Items::LavaBucket, Items::PowderSnowBucket, Items::Shears, Items::Compass, Items::EmptyMap,
+        Items::FishingRod, Items::CarrotOnAStick, Items::WarpedFungusOnAStick, Items::NameTag, Items::Lead, Items::TropicalFish,
         Items::IronIngot, Items::GoldIngot, Items::Diamond,
         Items::WoodPickaxe, Items::WoodAxe, Items::WoodShovel, Items::WoodSword, Items::WoodHoe,
         Items::StonePickaxe, Items::StoneAxe, Items::StoneShovel, Items::StoneSword, Items::StoneHoe,
@@ -479,7 +480,8 @@ void Application::drawItem(float x, float y, float size, StackId id, int count,
 
     // How much of a tool is left, as the bar across the bottom of the
     // icon: green when it is new, red by the time it is about to go.
-    const int limit = Tools::maxDurability(Tools::tierOf(id));
+    int limit = Tools::maxDurability(Tools::tierOf(id));
+    if (limit == 0) limit = Fishing::durabilityOf(id);
     if (limit > 0 && damage > 0)
     {
         // The client's bar: a black strip 13 by 2 at 2 and 13, and the

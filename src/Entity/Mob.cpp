@@ -484,7 +484,14 @@ void Mob::moveAxis(const World& world, float delta, int axis)
 
 float Mob::currentSpeed() const
 {
-    return type().walkSpeed * (panicking() ? PANIC_SPEED : 1.0f);
+    float speed = type().walkSpeed * (panicking() ? PANIC_SPEED : 1.0f);
+    if (m_ridden && type().saddleRide)
+    {
+        speed *= 1.15f;
+        if (m_rideBoost > 0.0f && m_rideBoostLength > 0.0f)
+            speed *= 1.0f + 1.15f * std::sin(3.14159265f * m_rideBoost / m_rideBoostLength);
+    }
+    return speed;
 }
 
 void Mob::chooseNewGoal(const glm::vec3& playerPosition)
@@ -681,6 +688,7 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
         m_path.clear();
     }
 
+    if (m_rideBoost > 0.0f) m_rideBoost = std::max(0.0f, m_rideBoost - deltaTime);
     if (m_ridden)
     {
         // Ridden: it goes where it is pointed and nowhere else. No

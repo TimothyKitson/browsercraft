@@ -390,6 +390,7 @@ namespace Tiles
         CommandTileFirst, CommandTileLast = CommandTileFirst + 11,
         StructureBlockTileFirst, StructureBlockTileLast = StructureBlockTileFirst + 4,
         JigsawTopTile, JigsawBottomTile, JigsawSideTile, JigsawLockTile,
+        FishingHookTile, LeashKnotTile,
 
         TileCount
     };
@@ -595,8 +596,10 @@ namespace Tiles
         ItemBannerFirst, ItemBannerLast = ItemBannerFirst + 15,
         ItemBannerPatternFirst, ItemBannerPatternLast = ItemBannerPatternFirst + 5,
         ItemBarrier, ItemStructureVoid, ItemLightFirst, ItemLightLast = ItemLightFirst + 15,
+        ItemFishingRod, ItemFishingRodCast, ItemCarrotOnAStick, ItemWarpedFungusOnAStick, ItemTropicalFish,
+        ItemNameTag, ItemLead,
 
-        ItemTileEnd = ItemLightLast + 1
+        ItemTileEnd = ItemLead + 1
     };
 
     // Ten progressively more broken overlay tiles for the mining animation.

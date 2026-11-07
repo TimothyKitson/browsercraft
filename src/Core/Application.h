@@ -61,6 +61,7 @@
 #include <map>
 #include "Game/Maps.h"
 #include "Game/Sculk.h"
+#include "Game/Fishing.h"
 
 // Which part of the game is on screen. The world only exists while playing,
 // so the title screen can run before anything has been generated.
@@ -1123,6 +1124,28 @@ private:
     std::vector<glm::ivec3> m_markerSpots;
     float m_markerScan = 0.0f;
     void pinCreativeMarkers();
+    struct Bobber
+    {
+        bool active = false;
+        glm::vec3 position{ 0.0f };
+        glm::vec3 velocity{ 0.0f };
+        bool inWater = false;
+        bool stuck = false;
+        float wait = -1.0f;
+        float approach = 0.0f;
+        float bite = 0.0f;
+        float age = 0.0f;
+        int hooked = -1;
+        glm::vec3 hookedAt{ 0.0f };
+        uint32_t rolls = 0;
+    };
+    Bobber m_bobber;
+    void castBobber();
+    void reelBobber();
+    void tickFishing(float deltaTime);
+    glm::vec3 rodTip() const;
+    bool holdingRod() const;
+    void wearHeld(StackId id, int points);
     void renderHearts(float x, float y);
     void renderArmour(float x, float y);
     void renderFood(float rightX, float y);

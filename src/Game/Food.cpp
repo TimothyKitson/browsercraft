@@ -64,6 +64,7 @@ namespace
         { Items::RawSalmon,      { 2, 0.4f } },
         { Items::CookedSalmon,   { 6, 9.6f } },
         { Items::Pufferfish,     { 1, 0.2f } },
+        { Items::TropicalFish,   { 1, 0.2f } },
 
         // Rabbit. Minecraft's is worth a little less than pork and a
         // rabbit is a good deal harder to catch.

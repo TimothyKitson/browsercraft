@@ -1631,6 +1631,83 @@ namespace
             if (level & (1 << b)) t.set(12 + (b & 1) * 2 - 1, 12 + (b >> 1) * 2, Color{ 255, 255, 255 });
     }
 
+    void paintRodIn(Tile& t, bool cast, Color bait, bool fungus)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int k = 0; k < 12; ++k) t.set(2 + k, 13 - k, Color{ 110, 80, 44 });
+        for (int k = 0; k < 11; ++k) t.set(3 + k, 13 - k, Color{ 140, 104, 60 });
+        if (bait.a == 0)
+        {
+            if (!cast) for (int y = 2; y < 13; ++y) t.set(13, y, Color{ 220, 220, 220 });
+            else for (int y = 2; y < 6; ++y) t.set(13, y, Color{ 220, 220, 220 });
+            if (!cast) { t.set(12, 13, Color{ 120, 120, 120 }); t.set(13, 13, Color{ 120, 120, 120 }); }
+        }
+        else
+        {
+            for (int y = 2; y < 9; ++y) t.set(13, y, Color{ 220, 220, 220 });
+            for (int y = 9; y < 14; ++y)
+                for (int x = 12; x < 15; ++x)
+                    if (!fungus || y < 12) t.set(x, y, (x + y) % 3 == 0 ? Color{ static_cast<uint8_t>(bait.r * 3 / 4), static_cast<uint8_t>(bait.g * 3 / 4), static_cast<uint8_t>(bait.b * 3 / 4) } : bait);
+            if (fungus) { t.set(13, 12, Color{ 200, 120, 60 }); t.set(13, 13, Color{ 200, 120, 60 }); }
+        }
+    }
+    void paintItemFishingRod(Tile& t) { paintRodIn(t, false, Color{ 0, 0, 0, 0 }, false); }
+    void paintItemFishingRodCast(Tile& t) { paintRodIn(t, true, Color{ 0, 0, 0, 0 }, false); }
+    void paintItemCarrotOnAStick(Tile& t) { paintRodIn(t, false, Color{ 240, 140, 30 }, false); }
+    void paintItemWarpedFungusOnAStick(Tile& t) { paintRodIn(t, false, Color{ 30, 160, 150 }, true); }
+    void paintItemTropicalFish(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 4; y < 12; ++y)
+            for (int x = 3; x < 13; ++x)
+            {
+                const float dx = (x - 7.5f) / 5.0f, dy = (y - 7.5f) / 3.6f;
+                if (dx * dx + dy * dy < 1.0f) t.set(x, y, (x / 2) % 2 ? Color{ 240, 120, 40 } : Color{ 245, 240, 230 });
+            }
+        for (int y = 5; y < 11; ++y) t.set(13, y, Color{ 240, 120, 40 });
+        t.set(5, 7, Color{ 20, 20, 20 });
+    }
+    void paintItemNameTag(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 5; y < 11; ++y)
+            for (int x = 3; x < 14; ++x)
+                if (!(x == 3 && (y == 5 || y == 10))) t.set(x, y, (y == 5 || y == 10) ? Color{ 170, 150, 120 } : Color{ 220, 200, 160 });
+        t.set(5, 7, Color{ 80, 70, 60 }); t.set(5, 8, Color{ 80, 70, 60 });
+        for (int k = 0; k < 3; ++k) t.set(2 - k / 2, 6 - k, Color{ 200, 200, 200 });
+    }
+    void paintItemLead(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int a = 0; a < 40; ++a)
+        {
+            const float angle = a * 0.157f;
+            const int x = 8 + static_cast<int>(std::cos(angle) * 5.0f);
+            const int y = 7 + static_cast<int>(std::sin(angle) * 4.0f);
+            t.set(x, y, a % 4 < 2 ? Color{ 140, 100, 60 } : Color{ 96, 66, 40 });
+        }
+        for (int k = 0; k < 4; ++k) t.set(12 + k / 2, 11 + k, Color{ 120, 84, 50 });
+    }
+    void paintFishingHookTile(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 4; y < 12; ++y)
+            for (int x = 5; x < 11; ++x)
+            {
+                const float dx = (x - 7.5f) / 3.0f, dy = (y - 7.5f) / 3.5f;
+                if (dx * dx + dy * dy < 1.0f) t.set(x, y, y < 8 ? Color{ 200, 40, 40 } : Color{ 235, 235, 235 });
+            }
+        for (int y = 12; y < 15; ++y) t.set(8, y, Color{ 110, 110, 110 });
+        t.set(7, 14, Color{ 110, 110, 110 });
+    }
+    void paintLeashKnotTile(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 5; y < 11; ++y)
+            for (int x = 5; x < 11; ++x)
+                t.set(x, y, (x + y) % 2 ? Color{ 140, 100, 60 } : Color{ 104, 72, 44 });
+    }
+
     void paintCalibratedAmethystTile(Tile& t)
     {
         t.fill(Color{ 0, 0, 0, 0 });
@@ -8581,6 +8658,15 @@ namespace
         { Tiles::ItemRawGold, paintItemRawGold },
         { Tiles::ItemAmethystShard, paintItemAmethystShard },
         { Tiles::ItemTripwireHook, paintItemTripwireHook },
+        { Tiles::ItemFishingRod, paintItemFishingRod },
+        { Tiles::ItemFishingRodCast, paintItemFishingRodCast },
+        { Tiles::ItemCarrotOnAStick, paintItemCarrotOnAStick },
+        { Tiles::ItemWarpedFungusOnAStick, paintItemWarpedFungusOnAStick },
+        { Tiles::ItemTropicalFish, paintItemTropicalFish },
+        { Tiles::ItemNameTag, paintItemNameTag },
+        { Tiles::ItemLead, paintItemLead },
+        { Tiles::FishingHookTile, paintFishingHookTile },
+        { Tiles::LeashKnotTile, paintLeashKnotTile },
         { Tiles::ItemCompass, paintItemCompass },
         { Tiles::ItemEmptyMap, paintItemEmptyMap },
         { Tiles::ItemFilledMap, paintItemFilledMap },
@@ -9444,6 +9530,13 @@ namespace
         { Tiles::ItemBannerPatternFirst + 4, { "flow_banner_pattern", nullptr, nullptr } },
         { Tiles::ItemBannerPatternFirst + 5, { "guster_banner_pattern", nullptr, nullptr } },
         { Tiles::ItemBarrier, { "barrier", nullptr, nullptr } },
+        { Tiles::ItemFishingRod, { "fishing_rod", nullptr, nullptr } },
+        { Tiles::ItemFishingRodCast, { "fishing_rod_cast", nullptr, nullptr } },
+        { Tiles::ItemCarrotOnAStick, { "carrot_on_a_stick", nullptr, nullptr } },
+        { Tiles::ItemWarpedFungusOnAStick, { "warped_fungus_on_a_stick", nullptr, nullptr } },
+        { Tiles::ItemTropicalFish, { "tropical_fish", nullptr, nullptr } },
+        { Tiles::ItemNameTag, { "name_tag", nullptr, nullptr } },
+        { Tiles::ItemLead, { "lead", nullptr, nullptr } },
         { Tiles::ItemStructureVoid, { "structure_void", nullptr, nullptr } },
         { Tiles::ItemLightFirst + 0, { "light_00", nullptr, nullptr } },
         { Tiles::ItemLightFirst + 1, { "light_01", nullptr, nullptr } },
@@ -9725,6 +9818,7 @@ namespace
         { Tiles::JigsawBottomTile, { "jigsaw_bottom", nullptr }, Tinting::None, 0, false },
         { Tiles::JigsawSideTile, { "jigsaw_side", nullptr }, Tinting::None, 0, false },
         { Tiles::JigsawLockTile, { "jigsaw_lock", nullptr }, Tinting::None, 0, false },
+        { Tiles::FishingHookTile, { "../entity/fishing_hook", nullptr }, Tinting::None, 0, false },
         { Tiles::SmithingTopTile, { "smithing_table_top", nullptr }, Tinting::None, 0, false },
         { Tiles::SmithingBottomTile, { "smithing_table_bottom", nullptr }, Tinting::None, 0, false },
         { Tiles::SmithingSideTile, { "smithing_table_side", nullptr }, Tinting::None, 0, false },
@@ -11888,6 +11982,7 @@ std::vector<int> unlinkedTiles()
         Tiles::ButtonOnTile, Tiles::RedstoneDust, Tiles::RedstoneDustLit, Tiles::TntPrimedSide,
         Tiles::ItemShield, Tiles::ExperienceOrb, Tiles::ArrowInFlight, Tiles::RainDrop,
         Tiles::SnowFlake, Tiles::ShulkerBulletTile, Tiles::DragonFireballTile, Tiles::CandleFlameTile,
+        Tiles::LeashKnotTile,
     };
 
     std::vector<int> unlinked;

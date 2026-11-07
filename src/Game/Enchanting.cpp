@@ -70,7 +70,8 @@ namespace Enchanting
         // Unbreaking goes on anything that wears out, which is every
         // tool, every piece of armour and the bow.
         case Kind::Unbreaking:
-            return Tools::isTool(item) || Armour::slotFor(item) >= 0 || item == Items::Bow;
+            return Tools::isTool(item) || Armour::slotFor(item) >= 0 || item == Items::Bow || item == Items::FishingRod ||
+                   item == Items::CarrotOnAStick || item == Items::WarpedFungusOnAStick;
 
         case Kind::Efficiency: return digs;
 
@@ -177,7 +178,7 @@ namespace Enchanting
             return 0;
         }
 
-        if (item == Items::Bow) return 1;
+        if (item == Items::Bow || item == Items::FishingRod) return 1;
         return 0;
     }
 

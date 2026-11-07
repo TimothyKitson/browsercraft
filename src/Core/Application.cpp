@@ -2030,6 +2030,7 @@ bool Application::frame()
             tickMaps(deltaTime);
             tickVibrations(deltaTime);
             tickCommandBlocks(deltaTime);
+            tickFishing(deltaTime);
 
             if (m_inventory.slot(Inventory::ARMOR_FIRST).id == Items::TurtleHelmet && !m_player.isHeadUnderwater(*m_world))
                 Effects::give(m_player.effects, Effects::Kind::WaterBreathing, 0, 10.0f);
@@ -2246,7 +2247,7 @@ bool Application::frame()
             m_startupScreen == "attackhud" || m_startupScreen == "attackready" ||
             m_startupScreen == "attackhotbar" || m_startupScreen == "bossbars" ||
             m_startupScreen == "gamemode" || m_startupScreen == "spectator" ||
-            m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" ||
+            m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" ||
             m_startupScreen == "grinderror" || m_startupScreen == "woods" ||
             m_startupScreen == "cherry" || m_startupScreen == "mangrove" || m_startupScreen == "fungi" ||
             m_startupScreen == "stones" || m_startupScreen == "colours" || m_startupScreen == "candles" ||
@@ -2340,6 +2341,7 @@ bool Application::frame()
                                   m_startupScreen != "sculk" &&
                                   m_startupScreen != "commands" &&
                                   m_startupScreen != "commandui" &&
+                                  m_startupScreen != "fishing" &&
                                   m_startupScreen != "grinderror" &&
                                   m_startupScreen != "woods" &&
                                   m_startupScreen != "cherry" &&
@@ -2732,7 +2734,7 @@ bool Application::frame()
             if (m_startupScreen == "attackhud" || m_startupScreen == "attackready" ||
                 m_startupScreen == "attackhotbar" || m_startupScreen == "bossbars" ||
                 m_startupScreen == "gamemode" || m_startupScreen == "spectator" ||
-                m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" ||
+                m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" ||
                 m_startupScreen == "grinderror" || m_startupScreen == "woods" ||
                 m_startupScreen == "cherry" || m_startupScreen == "mangrove" || m_startupScreen == "fungi" ||
                 m_startupScreen == "stones" || m_startupScreen == "colours" || m_startupScreen == "candles" ||
@@ -3470,6 +3472,30 @@ bool Application::frame()
                     m_inventory.slot(6) = ItemStack{ doorBaseOf(3), 3 };
                     m_inventory.slot(7) = ItemStack{ trapdoorBaseOf(5), 2 };
                     m_inventory.slot(8) = ItemStack{ Blocks::DarkOakSapling, 4 };
+                }
+                if (m_startupScreen == "fishing")
+                {
+                    m_devAttackStrength = 1.0f;
+                    for (int dx = 2; dx <= 12; ++dx)
+                        for (int dz = -5; dz <= 5; ++dz)
+                        {
+                            for (int dy = 0; dy < 4; ++dy) m_world->setBlock(px + dx, py + dy, pz + dz, Blocks::Air);
+                            const bool pond = dx >= 4 && dx <= 11 && dz >= -4 && dz <= 4;
+                            m_world->setBlock(px + dx, py - 1, pz + dz, pond ? Blocks::Water : Blocks::Grass);
+                            m_world->setBlock(px + dx, py - 2, pz + dz, pond ? Blocks::Water : Blocks::Dirt);
+                            m_world->setBlock(px + dx, py - 3, pz + dz, Blocks::Sand);
+                        }
+                    m_world->setBlock(px + 6, py - 1, pz + 3, Blocks::LilyPad);
+                    m_inventory.setSelectedSlot(0);
+                    m_inventory.slot(0) = ItemStack{ Items::FishingRod, 1 };
+                    m_inventory.slot(1) = ItemStack{ Items::CarrotOnAStick, 1 };
+                    m_inventory.slot(2) = ItemStack{ Items::WarpedFungusOnAStick, 1 };
+                    m_inventory.slot(3) = ItemStack{ Items::TropicalFish, 3 };
+                    m_inventory.slot(4) = ItemStack{ Items::NameTag, 1 };
+                    m_inventory.slot(5) = ItemStack{ Items::Lead, 2 };
+                    m_entities.spawnAt(MobId::Pig, glm::vec3(px + 3.5f, static_cast<float>(py), pz - 4.5f), *m_world);
+                    if (!m_entities.mobs().empty()) m_entities.mobs().back().setSaddled(true);
+                    castBobber();
                 }
                 if (m_startupScreen == "commands" || m_startupScreen == "commandui")
                 {
@@ -6633,6 +6659,13 @@ void Application::updateGameplay(float deltaTime)
             if (m_horseJumpCooldown > 0.0f) m_horseJumpCooldown = std::max(0.0f, m_horseJumpCooldown - deltaTime);
             if (!mount->saddled()) { leap = false; m_horseJumpHeld = 0.0f; }
         mount->steer(m_camera.yaw, mount->saddled() && m_keys.down(m_input, Action::Forward), leap, power);
+        }
+        else if (mount->type().saddleRide)
+        {
+            const StackId stick = mount->typeId() == MobId::Pig ? static_cast<StackId>(Items::CarrotOnAStick)
+                                                                : static_cast<StackId>(Items::WarpedFungusOnAStick);
+            const bool steering = m_inventory.selected().id == stick || m_inventory.slot(Inventory::OFFHAND).id == stick;
+            mount->steer(m_camera.yaw, steering, false);
         }
         else
         {
@@ -11651,6 +11684,16 @@ void Application::handlePlacement()
         return;
     }
 
+    if (stack.id == Items::Saddle)
+        if (Mob* target = m_entities.pick(m_camera.position, m_camera.front, ATTACK_REACH))
+            if (target->alive() && target->type().saddleRide && !target->baby() && !target->saddled())
+            {
+                target->setSaddled(true);
+                if (!m_player.creative()) stack.clear();
+                m_audio.play(Sound::DigWool, 0.7f, 1.0f);
+                return;
+            }
+
     // Getting on something comes before all of it: a tamed horse in
     // front of you is to be ridden, not fed.
     if (Mob* ride = m_entities.rideable(m_camera.position, m_camera.front, ATTACK_REACH))
@@ -12096,6 +12139,27 @@ void Application::handlePlacement()
     // An eye thrown rather than set: it goes towards the nearest
     // stronghold, through whatever is in the way, and burns out. That
     // is the whole of how a stronghold is found, here and there.
+    if (stack.id == Items::FishingRod)
+    {
+        if (m_bobber.active) reelBobber();
+        else castBobber();
+        m_heldItem.swing();
+        return;
+    }
+
+    if (stack.id == Items::CarrotOnAStick || stack.id == Items::WarpedFungusOnAStick)
+    {
+        Mob* mount = riddenMob();
+        const MobId wants = stack.id == Items::CarrotOnAStick ? MobId::Pig : MobId::Strider;
+        if (mount && mount->typeId() == wants && !mount->rideBoosted())
+        {
+            mount->boostRide(stack.id == Items::CarrotOnAStick ? 2.0f : 2.5f);
+            wearHeld(stack.id, stack.id == Items::CarrotOnAStick ? Fishing::BOOST_COST : Fishing::FUNGUS_BOOST_COST);
+            m_audio.play(Sound::MobPigSay, 0.5f, 1.3f);
+        }
+        return;
+    }
+
     if (stack.id == Items::EyeOfEnder)
     {
         const Stronghold::Site hold =
@@ -13644,6 +13708,205 @@ void Application::pinCreativeMarkers()
     }
 }
 
+bool Application::holdingRod() const
+{
+    return m_inventory.selected().id == Items::FishingRod || m_inventory.slot(Inventory::OFFHAND).id == Items::FishingRod;
+}
+
+glm::vec3 Application::rodTip() const
+{
+    if (m_perspective == Perspective::FirstPerson)
+        return m_camera.position + m_camera.front * 0.8f + m_camera.right * 0.72f + m_camera.up * 0.14f;
+    return m_player.position + glm::vec3(0.0f, 1.55f, 0.0f) + m_camera.front * 1.1f + m_camera.right * 0.35f;
+}
+
+void Application::wearHeld(StackId id, int points)
+{
+    if (m_player.creative() || points <= 0) return;
+    ItemStack& held = m_inventory.selected().id == id ? m_inventory.selected() : m_inventory.slot(Inventory::OFFHAND);
+    if (held.id != id) return;
+    for (int k = 0; k < points; ++k)
+    {
+        const uint32_t roll = static_cast<uint32_t>(held.damage * 2654435761u) ^ static_cast<uint32_t>(m_elapsedSeconds * 977.0f + k * 31);
+        if (Enchanting::wearsThisTime(held.enchantments, roll)) ++held.damage;
+    }
+    if (held.damage >= Fishing::durabilityOf(id))
+    {
+        if (id == Items::CarrotOnAStick || id == Items::WarpedFungusOnAStick)
+        {
+            held.clear();
+            held.id = Items::FishingRod;
+            held.count = 1;
+        }
+        else
+            held.clear();
+        m_audio.play(Sound::Click, 0.8f, 0.5f);
+    }
+}
+
+void Application::castBobber()
+{
+    m_bobber = Bobber{};
+    m_bobber.active = true;
+    m_bobber.position = rodTip();
+    m_bobber.velocity = m_camera.front * 11.0f + glm::vec3(0.0f, 2.5f, 0.0f);
+    m_bobber.rolls = static_cast<uint32_t>(m_elapsedSeconds * 1000.0f) ^ static_cast<uint32_t>(m_player.position.x * 131.0f);
+    m_audio.play(Sound::Click, 0.5f, 0.6f);
+    vibrate(m_player.eyePosition(), 3);
+}
+
+void Application::reelBobber()
+{
+    if (!m_bobber.active) return;
+    int wear = 0;
+    if (m_bobber.hooked >= 0 && m_bobber.hooked < static_cast<int>(m_entities.mobs().size()))
+    {
+        Mob& mob = m_entities.mobs()[static_cast<size_t>(m_bobber.hooked)];
+        const glm::vec3 pull = (m_player.position - mob.position()) * 0.35f + glm::vec3(0.0f, 2.0f, 0.0f);
+        mob.shove(pull);
+        wear = 3;
+    }
+    else if (m_bobber.bite > 0.0f && m_bobber.inWater)
+    {
+        const glm::ivec3 cell = glm::ivec3(glm::floor(m_bobber.position));
+        bool openSky = true;
+        for (int y = cell.y + 1; y < Chunk::SY && openSky; ++y)
+            if (isOpaque(m_world->getBlock(cell.x, y, cell.z))) openSky = false;
+        const bool jungle = m_world->generator().biomeAt(cell.x, cell.z) == Biome::Jungle;
+        const uint32_t seed = m_bobber.rolls * 2654435761u + static_cast<uint32_t>(m_elapsedSeconds * 37.0f);
+        const Fishing::Catch caught = Fishing::roll(seed, openSky, jungle);
+        const glm::vec3 from = m_bobber.position + glm::vec3(0.0f, 0.3f, 0.0f);
+        const glm::vec3 to = m_player.position + glm::vec3(0.0f, 1.0f, 0.0f);
+        const glm::vec3 gap = to - from;
+        const float flat = std::sqrt(gap.x * gap.x + gap.z * gap.z);
+        m_drops.spawnStack(from, caught.stack);
+        m_drops.flingLast(glm::vec3(gap.x * 2.0f, gap.y * 2.0f + std::sqrt(std::max(0.0f, flat)) * 1.6f + 2.0f, gap.z * 2.0f));
+        m_orbs.spawnValue(m_player.position + glm::vec3(0.0f, 0.5f, 0.0f), Fishing::experienceFor(seed));
+        m_audio.play(Sound::Pickup, 0.6f, 1.2f);
+        wear = 1;
+    }
+    else if (m_bobber.stuck)
+        wear = 2;
+    m_bobber = Bobber{};
+    if (wear > 0) wearHeld(Items::FishingRod, wear);
+    m_audio.play(Sound::Click, 0.4f, 0.9f);
+}
+
+void Application::tickFishing(float deltaTime)
+{
+    if (!m_bobber.active || !m_world) return;
+    if (!holdingRod() || glm::length(m_bobber.position - m_player.position) > 32.0f)
+    {
+        m_bobber = Bobber{};
+        return;
+    }
+    m_bobber.age += deltaTime;
+
+    if (m_bobber.hooked >= 0)
+    {
+        if (m_bobber.hooked < static_cast<int>(m_entities.mobs().size()))
+        {
+            const Mob& mob = m_entities.mobs()[static_cast<size_t>(m_bobber.hooked)];
+            if (mob.alive() && glm::length(mob.position() - m_bobber.hookedAt) < 3.0f)
+            {
+                m_bobber.hookedAt = mob.position();
+                m_bobber.position = mob.position() + glm::vec3(0.0f, mob.type().height * 0.8f, 0.0f);
+                return;
+            }
+        }
+        m_bobber.hooked = -1;
+    }
+
+    const glm::ivec3 cell = glm::ivec3(glm::floor(m_bobber.position));
+    const BlockId here = m_world->getBlock(cell.x, cell.y, cell.z);
+    m_bobber.inWater = isWater(here);
+
+    if (m_bobber.inWater)
+    {
+        int top = cell.y;
+        while (top < Chunk::SY - 1 && isWater(m_world->getBlock(cell.x, top + 1, cell.z))) ++top;
+        const float surface = static_cast<float>(top) + 0.88f;
+        const float dip = m_bobber.bite > 0.0f ? -0.25f : 0.0f;
+        const float target = surface + dip + 0.03f * std::sin(m_bobber.age * 3.0f);
+        m_bobber.velocity.x *= std::pow(0.05f, deltaTime);
+        m_bobber.velocity.z *= std::pow(0.05f, deltaTime);
+        m_bobber.velocity.y = (target - m_bobber.position.y) * 6.0f;
+        m_bobber.position += m_bobber.velocity * deltaTime;
+
+        if (std::fabs(m_bobber.position.y - surface) < 0.4f)
+        {
+            bool openSky = true;
+            for (int y = top + 1; y < Chunk::SY && openSky; ++y)
+                if (isOpaque(m_world->getBlock(cell.x, y, cell.z))) openSky = false;
+            const uint32_t seed = m_bobber.rolls++ * 2246822519u + static_cast<uint32_t>(cell.x * 31 + cell.z * 17);
+            if (m_bobber.wait < 0.0f && m_bobber.approach <= 0.0f && m_bobber.bite <= 0.0f)
+                m_bobber.wait = Fishing::waitSeconds(seed, openSky, m_weather.depth > 0.3f);
+            if (m_bobber.wait > 0.0f)
+            {
+                m_bobber.wait -= deltaTime;
+                if (m_bobber.wait <= 0.0f) { m_bobber.wait = 0.0f; m_bobber.approach = Fishing::approachSeconds(seed); }
+            }
+            else if (m_bobber.approach > 0.0f)
+            {
+                m_bobber.approach -= deltaTime;
+                const float angle = static_cast<float>(seed % 628u) * 0.01f;
+                const float reach = 0.4f + m_bobber.approach * 1.2f;
+                sprites(SpriteParticles::Kind::Bubble, glm::vec3(m_bobber.position.x + std::cos(angle) * reach, surface,
+                                                                  m_bobber.position.z + std::sin(angle) * reach),
+                        1, 0.05f, 0.2f, 0.12f, 0.4f);
+                if (m_bobber.approach <= 0.0f)
+                {
+                    m_bobber.approach = 0.0f;
+                    m_bobber.bite = Fishing::biteSeconds(seed);
+                    sprites(SpriteParticles::Kind::Splash, glm::vec3(m_bobber.position.x, surface, m_bobber.position.z), 8, 0.2f, 1.2f, 0.15f, 0.5f, 6.0f);
+                    m_audio.play(Sound::Pickup, 0.35f, 0.6f);
+                    vibrate(m_bobber.position, 2);
+                }
+            }
+            else if (m_bobber.bite > 0.0f)
+            {
+                m_bobber.bite -= deltaTime;
+                if (m_bobber.bite <= 0.0f)
+                {
+                    m_bobber.bite = 0.0f;
+                    m_bobber.wait = -1.0f;
+                }
+            }
+        }
+        return;
+    }
+
+    if (m_bobber.stuck) return;
+    m_bobber.velocity.y -= 12.0f * deltaTime;
+    m_bobber.velocity *= std::pow(0.2f, deltaTime);
+    const glm::vec3 next = m_bobber.position + m_bobber.velocity * deltaTime;
+    const glm::ivec3 into = glm::ivec3(glm::floor(next));
+    const BlockId ahead = m_world->getBlock(into.x, into.y, into.z);
+    if (isSolid(ahead))
+    {
+        m_bobber.stuck = true;
+        m_bobber.velocity = glm::vec3(0.0f);
+        return;
+    }
+    m_bobber.position = next;
+
+    const std::vector<Mob>& mobs = m_entities.mobs();
+    for (size_t i = 0; i < mobs.size(); ++i)
+    {
+        const Mob& mob = mobs[i];
+        if (!mob.alive() || m_bobber.age < 0.15f) continue;
+        const glm::vec3 feet = mob.position();
+        const float half = mob.type().width * 0.5f + 0.15f;
+        if (std::fabs(feet.x - next.x) < half && std::fabs(feet.z - next.z) < half && next.y >= feet.y - 0.1f &&
+            next.y <= feet.y + mob.type().height + 0.1f)
+        {
+            m_bobber.hooked = static_cast<int>(i);
+            m_bobber.hookedAt = feet;
+            break;
+        }
+    }
+}
+
 void Application::renderChat()
 {
     // Minecraft's chat: nine interface pixels to a line, two in from
@@ -13709,7 +13972,7 @@ void Application::renderHand()
     m_heldItem.setTileOverride(m_bowDrawing && held.id == Items::Bow
                                    ? (m_bowDraw >= 0.9f ? Tiles::BowPulling2
                                       : m_bowDraw >= 0.65f ? Tiles::BowPulling1 : Tiles::BowPulling0)
-                                   : -1);
+                                   : (m_bobber.active && held.id == Items::FishingRod) ? static_cast<int>(Tiles::ItemFishingRodCast) : -1);
     m_heldItem.setLeftHanded(m_leftHanded);
     m_heldItem.render(m_activeShader ? *m_activeShader : m_chunkShader, m_camera, skinFor(localAppearance()), m_atlas,
                       // Both arms of the conditional spelled as the same
@@ -14360,6 +14623,21 @@ void Application::queueBeams()
         m_beams.beam(BeamRenderer::Look::BeaconHaze, base, sky, 0.25f, t * 1.0f, 0.0f);
     }
 
+    if (m_bobber.active)
+    {
+        const glm::vec3 from = rodTip();
+        const glm::vec3 to = m_bobber.position + glm::vec3(0.0f, 0.12f, 0.0f);
+        const float sag = std::min(1.2f, glm::length(to - from) * 0.06f) * (m_bobber.inWater || m_bobber.stuck ? 1.0f : 0.3f);
+        glm::vec3 last = from;
+        for (int k = 1; k <= 12; ++k)
+        {
+            const float f = static_cast<float>(k) / 12.0f;
+            const glm::vec3 point = from + (to - from) * f - glm::vec3(0.0f, sag * 4.0f * f * (1.0f - f), 0.0f);
+            m_beams.beam(BeamRenderer::Look::Line, last, point, 0.008f, 0.0f, 0.0f);
+            last = point;
+        }
+    }
+
     if (m_boltLeft > 0.0f)
         for (size_t k = 0; k + 1 < m_boltPoints.size(); ++k)
             m_beams.beam(BeamRenderer::Look::Lightning, m_boltPoints[k], m_boltPoints[k + 1], 0.09f, 0.0f, 0.0f);
@@ -14923,6 +15201,20 @@ void Application::pinFramedItems()
     if (!m_world) return;
     pinPotPatterns();
     pinCreativeMarkers();
+    if (m_bobber.active)
+    {
+        const glm::vec3 toward = m_camera.position - m_bobber.position;
+        static const int OUT_INDEX[4] = { 2, 3, 0, 1 };
+        const int dir = std::fabs(toward.x) > std::fabs(toward.z) ? (toward.x > 0.0f ? 1 : 3) : (toward.z > 0.0f ? 2 : 0);
+        DroppedItems::Pinned hook;
+        hook.position = m_bobber.position;
+        hook.facing = OUT_INDEX[dir];
+        hook.tile = Tiles::FishingHookTile;
+        hook.halfWidth = 0.13f;
+        hook.height = 0.26f;
+        hook.outset = 0.0f;
+        m_drops.pin(hook);
+    }
 
     constexpr float VISIBLE = 32.0f;
 
@@ -15755,6 +16047,8 @@ void Application::renderHud()
         if (i == m_inventory.selectedSlot() && m_bowDrawing && stack.id == Items::Bow)
             m_iconOverride = m_bowDraw >= 0.9f ? Tiles::BowPulling2
                            : m_bowDraw >= 0.65f ? Tiles::BowPulling1 : Tiles::BowPulling0;
+        if (i == m_inventory.selectedSlot() && m_bobber.active && stack.id == Items::FishingRod)
+            m_iconOverride = Tiles::ItemFishingRodCast;
         drawItem(slotX, slotY, ITEM_SIZE,
                  stack.id, m_player.creative() ? 0 : stack.count,
                  glm::vec4(1.0f), stack.damage, stack.enchantments);

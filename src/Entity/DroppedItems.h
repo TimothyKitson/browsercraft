@@ -39,6 +39,10 @@ public:
     // its enchantments, and spawn() above would hand back a brand new
     // unenchanted one when you walked over it.
     void spawnStack(const glm::vec3& position, const ItemStack& stack);
+    void flingLast(const glm::vec3& velocity)
+    {
+        if (!m_items.empty()) m_items.back().velocity = velocity;
+    }
     void spawnFromBrokenBlock(const glm::ivec3& blockPosition, StackId drop, int count = 1);
 
     void update(float deltaTime, const World& world, const Player& player,

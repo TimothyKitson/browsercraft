@@ -26,6 +26,7 @@ namespace
         { Items::GoldHorseArmor, 1, 1 },
         { Items::DiamondHorseArmor, 1, 1 },
         { Items::DuneTemplate, 1, 1 },
+        { Items::NameTag, 1, 1 },
     };
 
     // The one everybody walks out of carrying something good, which is
@@ -138,6 +139,8 @@ namespace
         { Blocks::Torch,      2, 6 },
         { Items::Bread,       1, 3 },
         { Items::StringItem,  1, 4 },
+        { Items::NameTag,     1, 1 },
+        { Items::Lead,        1, 1 },
     };
 
     // A stronghold is a library with a portal in it, so its store room
@@ -168,6 +171,7 @@ namespace
         { Items::Potion,      1, 2 },
         { Items::WardTemplate, 1, 1 },
         { Items::SilenceTemplate, 1, 1 },
+        { Items::Lead,        1, 1 },
     };
 
     // A witch's hut. What she brews with, and what she has brewed.

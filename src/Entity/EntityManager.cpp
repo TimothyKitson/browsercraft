@@ -740,7 +740,7 @@ Mob* EntityManager::rideable(const glm::vec3& origin, const glm::vec3& direction
 {
     Mob* target = pick(origin, direction, maxDistance);
     if (!target || !target->alive()) return nullptr;
-    if (!Mob::canBeRidden(target->type(), target->tamed(), target->baby()))
+    if (!Mob::canBeRidden(target->type(), target->tamed(), target->baby(), target->saddled()))
         return nullptr;
     return target;
 }

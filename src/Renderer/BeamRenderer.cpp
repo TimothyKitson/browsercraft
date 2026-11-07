@@ -28,11 +28,14 @@ namespace
         { "assets/textures/entity/guardian_beam.png", 0xFFE040, 1.0f },
         { "assets/textures/entity/beacon_beam.png", 0xE8C8FF, 0.6f },
         { nullptr, 0xFFFFFF, 1.0f },
+        { nullptr, 0x262626, 1.0f },
+        { nullptr, 0x6E4C2E, 1.0f },
     };
 
-    unsigned int whiteTexture()
+    unsigned int whiteTexture(unsigned int tint)
     {
-        static const unsigned char WHITE[4] = { 255, 255, 255, 255 };
+        const unsigned char WHITE[4] = { static_cast<unsigned char>((tint >> 16) & 255u), static_cast<unsigned char>((tint >> 8) & 255u),
+                                         static_cast<unsigned char>(tint & 255u), 255 };
         unsigned int texture = 0;
         glGenTextures(1, &texture);
         glBindTexture(GL_TEXTURE_2D, texture);
@@ -59,7 +62,7 @@ void BeamRenderer::load()
         unsigned char* data = source.path ? stbi_load(source.path, &width, &height, &channels, 4) : nullptr;
         if (!data)
         {
-            m_textures[i] = whiteTexture();
+            m_textures[i] = whiteTexture(source.tint);
             continue;
         }
         const unsigned int r = (source.tint >> 16) & 0xFF, g = (source.tint >> 8) & 0xFF, b = source.tint & 0xFF;
