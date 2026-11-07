@@ -242,6 +242,9 @@ enum class Sound : uint8_t
     MobTadpoleSay,
     MobTadpoleHurt,
     MobTadpoleDeath,
+    MobArmadilloSay,
+    MobArmadilloHurt,
+    MobArmadilloDeath,
     Rain,
     Thunder,
 

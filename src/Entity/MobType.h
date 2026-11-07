@@ -127,6 +127,7 @@ enum class MobId : uint8_t
     ChestBoat,
     Raft,
     ChestRaft,
+    Armadillo,
 
     Count
 };
@@ -153,6 +154,7 @@ enum class Part : uint8_t
     LegBackRight,
     WingLeft,
     WingRight,
+    Shell,
     Count
 };
 

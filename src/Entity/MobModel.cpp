@@ -148,6 +148,8 @@ void MobModel::build(const MobSkin& skin, const Mob& mob, float sky, float block
     for (const MobBox& source : skin.boxes())
     {
         if (source.layer != layer) continue;
+        if (source.part == Part::Shell && !mob.rolled()) continue;
+        if (mob.typeId() == MobId::Armadillo && mob.rolled() && source.part != Part::Shell) continue;
 
         BoxMesh::Box box;
         box.min = glm::vec3(source.origin);
@@ -585,6 +587,8 @@ std::string MobModel::variantOf(const Mob& mob) const
             return mob.hostileNow() ? root + "bee/bee_angry.png" : std::string();
         case MobId::Tadpole:
             return root + "tadpole.png";
+        case MobId::Armadillo:
+            return root + "armadillo.png";
         case MobId::Boat:
             return root + "boat/" + boatWoodName(mob.variant()) + ".png";
         case MobId::ChestBoat:
@@ -632,6 +636,20 @@ std::vector<std::string> MobModel::coatOverlaysOf(const Mob& mob) const
         }
         case MobId::Wolf:
             if (mob.tamed()) layers.push_back(root + "wolf/wolf_collar.png#B02E26");
+            if (mob.horseArmour() == Items::WolfArmor)
+            {
+                layers.push_back(root + "wolf/wolf_armor.png");
+                if (mob.armourDye() >= 0)
+                {
+                    char tint[8];
+                    std::snprintf(tint, sizeof(tint), "%06X", Banners::dyeRgb(mob.armourDye()));
+                    layers.push_back(root + "wolf/wolf_armor_overlay.png#" + tint);
+                }
+                const float left = 1.0f - static_cast<float>(mob.armourWear()) / 64.0f;
+                if (left < 0.32f) layers.push_back(root + "wolf/wolf_armor_crackiness_high.png");
+                else if (left < 0.69f) layers.push_back(root + "wolf/wolf_armor_crackiness_medium.png");
+                else if (left < 0.95f) layers.push_back(root + "wolf/wolf_armor_crackiness_low.png");
+            }
             break;
         case MobId::Pig:
             if (mob.saddled()) layers.push_back(root + "pig/pig_saddle.png");

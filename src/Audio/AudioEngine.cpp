@@ -394,6 +394,8 @@ void AudioEngine::buildSounds()
                  Sound::MobTropicalFishDeath, "mob/tropical_fish");
     loadMobVoice(Sound::MobTadpoleSay, Sound::MobTadpoleHurt,
                  Sound::MobTadpoleDeath, "mob/tadpole");
+    loadMobVoice(Sound::MobArmadilloSay, Sound::MobArmadilloHurt,
+                 Sound::MobArmadilloDeath, "mob/armadillo");
     loadMobVoice(Sound::MobParrotSay, Sound::MobParrotHurt,
                  Sound::MobParrotDeath, "mob/parrot");
     loadMobVoice(Sound::MobAllaySay, Sound::MobAllayHurt,
@@ -1514,6 +1516,8 @@ void AudioEngine::buildSounds()
                210.0f, 0.20f, 0.42f, 1171);
     beastVoice(Sound::MobSnifferSay, Sound::MobSnifferHurt, Sound::MobSnifferDeath,
                150.0f, 0.24f, 0.50f, 1193);
+    beastVoice(Sound::MobArmadilloSay, Sound::MobArmadilloHurt, Sound::MobArmadilloDeath,
+               420.0f, 0.30f, 0.22f, 1201);
     beastVoice(Sound::MobTraderSay, Sound::MobTraderHurt, Sound::MobTraderDeath,
                275.0f, 0.12f, 0.24f, 1181);
     beastVoice(Sound::MobParrotSay, Sound::MobParrotHurt, Sound::MobParrotDeath,

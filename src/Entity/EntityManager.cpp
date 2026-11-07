@@ -38,6 +38,8 @@ namespace
         { Biome::Mountains, MobId::Llama,     0.16f },
         { Biome::Savanna,   MobId::Llama,     0.26f },
         { Biome::Savanna,   MobId::Horse,     0.14f },
+        { Biome::Savanna,   MobId::Armadillo, 0.14f },
+        { Biome::Badlands,  MobId::Armadillo, 0.40f },
         { Biome::Jungle,    MobId::Panda,     0.18f },
         { Biome::Jungle,    MobId::Cat,       0.16f },
         { Biome::Jungle,    MobId::Parrot,    0.16f },
@@ -133,7 +135,7 @@ bool EntityManager::canSpawnOn(MobId type, BlockId ground, int light)
     // Animals want daylight and something growing underfoot, which is
     // what keeps them out of caves and off the bare stone of a mountain.
     return light >= PASSIVE_MIN_LIGHT &&
-           (ground == Blocks::Grass || ground == Blocks::SnowGrass || ground == Blocks::Sand);
+           (ground == Blocks::Grass || ground == Blocks::SnowGrass || ground == Blocks::Sand || ground == Blocks::RedSand);
 }
 
 float EntityManager::random01()
@@ -556,7 +558,7 @@ void EntityManager::update(float deltaTime, const World& world,
         if (mob.takeDeathReport())
             m_deaths.push_back(Death{ mob.typeId(), mob.position(), mob.baby(), mob.variant(), mob.serial(), mob.shotByMob() });
 
-        if (mob.takeEggReport()) m_laidEggs.push_back(mob.position());
+        if (mob.takeEggReport()) (mob.typeId() == MobId::Armadillo ? m_shedScutes : m_laidEggs).push_back(mob.position());
         if (mob.takeGrowthReport() && mob.typeId() == MobId::Turtle) m_grownTurtles.push_back(mob.position());
         if (mob.typeId() == MobId::Tadpole && mob.alive() && mob.age() + mob.growthBoost() >= Mob::TADPOLE_SECONDS)
         {
@@ -1020,6 +1022,13 @@ std::vector<glm::vec3> EntityManager::drainFrogMeals()
 {
     std::vector<glm::vec3> all;
     all.swap(m_frogMeals);
+    return all;
+}
+
+std::vector<glm::vec3> EntityManager::drainShedScutes()
+{
+    std::vector<glm::vec3> all;
+    all.swap(m_shedScutes);
     return all;
 }
 

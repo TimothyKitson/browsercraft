@@ -243,7 +243,8 @@ Everything in the 1.21 textures zip the game doesn't use yet, turned into work. 
 
 ## Part 4: new mobs
 
-61. Armadillo: rolls up when scared, drops scutes. Wolf armour (from scutes) comes with it.
+61. Armadillo: rolls up when scared, drops scutes. Wolf armour (from scutes) comes with it. (done)
+    - Notes: the armadillo is on Mojang's model with the pack's art, lives in savannas and badlands, breeds on spider eyes, and rolls into its ball when a player sprints or rides near it, when the undead come close, or when it is hit; rolled up it does not move and takes half of a blow less one. It sheds a scute every five to ten minutes, and a brush takes one off it for sixteen points of wear. Six scutes make wolf armour, which the owner puts on a tamed wolf; it takes every blow until its sixty-four points run out, shows the pack's cracks as it wears, is mended a scute at a time, comes off with shears, and takes a dye in the grid. Wolf armour and its colour are kept only as long as the wolf is, since mobs are not saved yet, and dyeing takes one dye rather than mixing several.
 62. Sniffer: digs up seeds, hatches from its egg. (done with item 45)
 63. Glow squid, which drops glow ink. Glow ink sac item and glowing sign text (moved here from item 52).
 64. Zoglin, illusioner and evoker fangs.

@@ -515,6 +515,7 @@ private:
     std::vector<PotionCloud> m_potionClouds;
     void splashPotion(const glm::vec3& at, int effect);
     void tickPotionClouds(float deltaTime);
+    void tickArmadillos(float deltaTime);
     void queueFireworks();
     struct ParkedVehicle
     {

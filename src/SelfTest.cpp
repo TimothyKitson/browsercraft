@@ -4366,6 +4366,52 @@ namespace
               "eight arrows round a lingering potion make eight tipped arrows");
     }
 
+    void testArmadillo()
+    {
+        section("the armadillo, its scutes and wolf armour");
+        const MobType& armadillo = mobType(MobId::Armadillo);
+        check(armadillo.breedingFood == Items::SpiderEye && armadillo.maxHealth == 12, "an armadillo has twelve health and loves spider eyes");
+        bool shell = false;
+        for (const MobBox& box : armadillo.model) if (box.part == Part::Shell) shell = true;
+        check(shell, "and a ball to roll up into");
+        bool savanna = false, badlands = false;
+        for (int k = 0; k < 100; ++k)
+        {
+            if (EntityManager::biomeSpecies(Biome::Savanna, static_cast<float>(k) / 100.0f) == MobId::Armadillo) savanna = true;
+            if (EntityManager::biomeSpecies(Biome::Badlands, static_cast<float>(k) / 100.0f) == MobId::Armadillo) badlands = true;
+        }
+        check(savanna && badlands, "it lives in savannas and badlands");
+
+        Mob ball(MobId::Armadillo, glm::vec3(0.0f), 3u);
+        const int full = ball.health();
+        ball.damage(2, glm::vec3(1.0f, 0.0f, 0.0f));
+        check(ball.rolled() && ball.health() == full - 2, "a hit makes it roll up");
+        ball.damage(5, glm::vec3(1.0f, 0.0f, 0.0f));
+        check(ball.health() == full - 4, "and rolled up it takes half of a blow less one");
+
+        Mob wolf(MobId::Wolf, glm::vec3(0.0f), 5u);
+        wolf.setHorseArmour(Items::WolfArmor);
+        const int before = wolf.health();
+        wolf.damage(6, glm::vec3(1.0f, 0.0f, 0.0f));
+        check(wolf.health() == before && wolf.armourWear() == 6, "wolf armour takes the whole blow");
+        wolf.damage(60, glm::vec3(1.0f, 0.0f, 0.0f));
+        check(wolf.horseArmour() == 0 && wolf.takeArmourBreak(), "until it breaks");
+
+        ItemStack g[9];
+        const int cells[6] = { 0, 3, 4, 5, 6, 8 };
+        for (ItemStack& cell : g) cell.clear();
+        for (int c : cells) g[c] = ItemStack{ Items::ArmadilloScute, 1 };
+        check(Crafting::match(g, 3).id == Items::WolfArmor, "six scutes make wolf armour");
+        for (ItemStack& cell : g) cell.clear();
+        g[0] = ItemStack{ Items::WolfArmor, 1, 10 };
+        g[1] = ItemStack{ Items::DyeBlue, 1 };
+        const CraftOutput dyed = Crafting::match(g, 3);
+        check(dyed.id == Items::WolfArmor && dyed.damage == 10 && ((dyed.enchantments >> 24) & 0x1Fu) == static_cast<uint32_t>(Items::DyeBlue - Items::DyeWhite + 1),
+              "and a dye colours it, keeping its wear");
+        check(!Enchanting::glints(Items::WolfArmor, dyed.enchantments), "without making it shine");
+        check(itemDurability(Items::WolfArmor) == 64, "it lasts sixty-four points");
+    }
+
     void testArchery()
     {
         section("the crossbow, and spectral and tipped arrows");
@@ -14854,6 +14900,7 @@ int runSelfTest()
     testFireworkCrafting();
     testMusicDiscs();
     testPotionForms();
+    testArmadillo();
     testMadeThings();
     testTheEndAndTheSea();
     testPathfinding();

@@ -2155,6 +2155,7 @@ bool Application::frame()
             tickCarts(deltaTime);
             tickFireworks(deltaTime);
             tickPotionClouds(deltaTime);
+            tickArmadillos(deltaTime);
             tickJukeboxes(deltaTime);
             updatePortal(deltaTime);
 
@@ -2477,7 +2478,7 @@ bool Application::frame()
             m_startupScreen == "attackhud" || m_startupScreen == "attackready" ||
             m_startupScreen == "attackhotbar" || m_startupScreen == "bossbars" ||
             m_startupScreen == "gamemode" || m_startupScreen == "spectator" ||
-            m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" || m_startupScreen == "leads" || m_startupScreen == "anvilname" || m_startupScreen == "dials" || m_startupScreen == "spyglass" || m_startupScreen == "bundle" || m_startupScreen == "archery" || m_startupScreen == "food" || m_startupScreen == "materials" || m_startupScreen == "tropical" || m_startupScreen == "book" || m_startupScreen == "bookedit" || m_startupScreen == "booktip" || m_startupScreen == "boats" || m_startupScreen == "carts" || m_startupScreen == "fireworks" || m_startupScreen == "jukebox" || m_startupScreen == "potioncloud" ||
+            m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" || m_startupScreen == "leads" || m_startupScreen == "anvilname" || m_startupScreen == "dials" || m_startupScreen == "spyglass" || m_startupScreen == "bundle" || m_startupScreen == "archery" || m_startupScreen == "food" || m_startupScreen == "materials" || m_startupScreen == "tropical" || m_startupScreen == "book" || m_startupScreen == "bookedit" || m_startupScreen == "booktip" || m_startupScreen == "boats" || m_startupScreen == "carts" || m_startupScreen == "fireworks" || m_startupScreen == "jukebox" || m_startupScreen == "potioncloud" || m_startupScreen == "armadillo" ||
             m_startupScreen == "grinderror" || m_startupScreen == "woods" ||
             m_startupScreen == "cherry" || m_startupScreen == "mangrove" || m_startupScreen == "fungi" ||
             m_startupScreen == "stones" || m_startupScreen == "colours" || m_startupScreen == "candles" ||
@@ -2589,6 +2590,7 @@ bool Application::frame()
                                   m_startupScreen != "fireworks" &&
                                   m_startupScreen != "jukebox" &&
                                   m_startupScreen != "potioncloud" &&
+                                  m_startupScreen != "armadillo" &&
                                   m_startupScreen != "grinderror" &&
                                   m_startupScreen != "woods" &&
                                   m_startupScreen != "cherry" &&
@@ -2981,7 +2983,7 @@ bool Application::frame()
             if (m_startupScreen == "attackhud" || m_startupScreen == "attackready" ||
                 m_startupScreen == "attackhotbar" || m_startupScreen == "bossbars" ||
                 m_startupScreen == "gamemode" || m_startupScreen == "spectator" ||
-                m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" || m_startupScreen == "leads" || m_startupScreen == "anvilname" || m_startupScreen == "dials" || m_startupScreen == "spyglass" || m_startupScreen == "bundle" || m_startupScreen == "archery" || m_startupScreen == "food" || m_startupScreen == "materials" || m_startupScreen == "tropical" || m_startupScreen == "book" || m_startupScreen == "bookedit" || m_startupScreen == "booktip" || m_startupScreen == "boats" || m_startupScreen == "carts" || m_startupScreen == "fireworks" || m_startupScreen == "jukebox" || m_startupScreen == "potioncloud" ||
+                m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" || m_startupScreen == "leads" || m_startupScreen == "anvilname" || m_startupScreen == "dials" || m_startupScreen == "spyglass" || m_startupScreen == "bundle" || m_startupScreen == "archery" || m_startupScreen == "food" || m_startupScreen == "materials" || m_startupScreen == "tropical" || m_startupScreen == "book" || m_startupScreen == "bookedit" || m_startupScreen == "booktip" || m_startupScreen == "boats" || m_startupScreen == "carts" || m_startupScreen == "fireworks" || m_startupScreen == "jukebox" || m_startupScreen == "potioncloud" || m_startupScreen == "armadillo" ||
                 m_startupScreen == "grinderror" || m_startupScreen == "woods" ||
                 m_startupScreen == "cherry" || m_startupScreen == "mangrove" || m_startupScreen == "fungi" ||
                 m_startupScreen == "stones" || m_startupScreen == "colours" || m_startupScreen == "candles" ||
@@ -3803,6 +3805,37 @@ bool Application::frame()
                         if (m_startupScreen == "bookedit")
                             m_bookDraft[0] = "A list of things to do:\n- feed the frogs\n- find more ink\n- sign this before Alex reads it";
                     }
+                }
+                if (m_startupScreen == "armadillo")
+                {
+                    m_devAttackStrength = 1.0f;
+                    for (int dx = 1; dx <= 7; ++dx)
+                        for (int dz = -4; dz <= 4; ++dz)
+                        {
+                            m_world->setBlock(px + dx, py - 1, pz + dz, Blocks::Grass);
+                            for (int dy = 0; dy <= 3; ++dy) m_world->setBlock(px + dx, py + dy, pz + dz, Blocks::Air);
+                        }
+                    if (m_entities.spawnAt(MobId::Armadillo, glm::vec3(static_cast<float>(px) + 3.5f, static_cast<float>(py), static_cast<float>(pz) - 1.5f), *m_world))
+                        m_entities.mobs().back().setYaw(200.0f);
+                    if (m_entities.spawnAt(MobId::Armadillo, glm::vec3(static_cast<float>(px) + 3.5f, static_cast<float>(py), static_cast<float>(pz) + 1.0f), *m_world))
+                        m_entities.mobs().back().scare(60.0f);
+                    if (m_entities.spawnAt(MobId::Wolf, glm::vec3(static_cast<float>(px) + 5.0f, static_cast<float>(py), static_cast<float>(pz) + 0.0f), *m_world))
+                    {
+                        Mob& wolf = m_entities.mobs().back();
+                        wolf.tameWith(Items::Bone);
+                        wolf.setHorseArmour(Items::WolfArmor);
+                        wolf.setArmourDye(11);
+                        wolf.setArmourWear(30);
+                        wolf.setYaw(180.0f);
+                    }
+                    m_inventory.slot(0) = ItemStack{ Items::ArmadilloScute, 12 };
+                    m_inventory.slot(1) = ItemStack{ Items::WolfArmor, 1 };
+                    ItemStack dyed{ Items::WolfArmor, 1 };
+                    dyed.enchantments = 15u << 24;
+                    m_inventory.slot(2) = dyed;
+                    m_inventory.slot(3) = ItemStack{ Items::Brush, 1 };
+                    m_camera.pitch = -25.0f;
+                    m_camera.addLook(0.0f, 0.0f, 0.0f);
                 }
                 if (m_startupScreen == "potioncloud")
                 {
@@ -11502,6 +11535,24 @@ void Application::unparkVehicles()
     }
 }
 
+void Application::tickArmadillos(float deltaTime)
+{
+    (void)deltaTime;
+    const bool riding = riddenMob() != nullptr;
+    for (Mob& mob : m_entities.mobs())
+    {
+        if (mob.typeId() == MobId::Wolf && mob.takeArmourBreak()) m_audio.play(Sound::DigStone, 0.8f, 0.6f);
+        if (mob.typeId() != MobId::Armadillo || !mob.alive()) continue;
+        bool threat = !m_player.spectator() && (m_player.sprinting || riding) &&
+                      glm::length(mob.position() - m_player.position) < 7.0f;
+        for (const Mob& other : m_entities.mobs())
+            if (!threat && other.alive() && other.type().burnsInSunlight && glm::length(other.position() - mob.position()) < 7.0f)
+                threat = true;
+        if (threat) mob.scare(3.0f);
+        if (mob.takeRollReport()) m_audio.play(Sound::MobArmadilloHurt, 0.5f, 0.8f);
+    }
+}
+
 void Application::primeTntCart(Mob& cart)
 {
     if (m_cartFuses.count(cart.serial())) return;
@@ -12133,6 +12184,20 @@ void Application::handleBrushing(float deltaTime)
     ItemStack& brush = m_inventory.selected();
     const bool holding = inGame() && m_world && brush.id == Items::Brush && m_keys.down(m_input, Action::Use);
     if (!holding) { m_brushTime = 0.0f; return; }
+    if (m_keys.pressed(m_input, Action::Use))
+        if (Mob* shell = m_entities.pick(m_camera.position, m_camera.front, ATTACK_REACH))
+            if (shell->alive() && shell->typeId() == MobId::Armadillo && !shell->baby())
+            {
+                m_drops.spawn(shell->position() + glm::vec3(0.0f, 0.5f, 0.0f), Items::ArmadilloScute, 1);
+                m_audio.play(Sound::MobArmadilloSay, 0.6f, 1.3f);
+                m_heldItem.swing();
+                if (!m_player.creative())
+                {
+                    brush.damage += 16;
+                    if (brush.damage >= Archaeology::BRUSH_DURABILITY) brush.clear();
+                }
+                return;
+            }
     const RaycastHit hit = m_world->raycast(m_camera.position, m_camera.front, REACH_DISTANCE);
     if (!hit.hit) { m_brushTime = 0.0f; return; }
     const BlockId found = m_world->getBlock(hit.block.x, hit.block.y, hit.block.z);
@@ -13497,6 +13562,41 @@ void Application::handlePlacement()
         m_audio.play(Sound::Click, 0.4f, told->sitting() ? 0.8f : 1.2f);
         return;
     }
+
+    if (stack.id == Items::WolfArmor || stack.id == Items::Shears || stack.id == Items::ArmadilloScute)
+        if (Mob* wolf = m_entities.pick(m_camera.position, m_camera.front, ATTACK_REACH))
+            if (wolf->alive() && wolf->typeId() == MobId::Wolf && wolf->tamed() && !wolf->baby())
+            {
+                const bool wearing = wolf->horseArmour() == Items::WolfArmor;
+                if (stack.id == Items::WolfArmor && !wearing)
+                {
+                    wolf->setHorseArmour(Items::WolfArmor);
+                    wolf->setArmourWear(stack.damage);
+                    const int dye = static_cast<int>((stack.enchantments >> 24) & 0x1Fu) - 1;
+                    wolf->setArmourDye(dye);
+                    if (!m_player.creative()) stack.clear();
+                    m_audio.play(Sound::DigStone, 0.6f, 1.3f);
+                    return;
+                }
+                if (stack.id == Items::Shears && wearing)
+                {
+                    ItemStack armour{ Items::WolfArmor, 1, wolf->armourWear() };
+                    if (wolf->armourDye() >= 0) armour.enchantments = static_cast<uint32_t>(wolf->armourDye() + 1) << 24;
+                    wolf->setHorseArmour(0);
+                    wolf->setArmourWear(0);
+                    wolf->setArmourDye(-1);
+                    m_drops.spawnStack(wolf->position() + glm::vec3(0.0f, 0.6f, 0.0f), armour);
+                    m_audio.play(Sound::DigWool, 0.6f, 1.2f);
+                    return;
+                }
+                if (stack.id == Items::ArmadilloScute && wearing && wolf->armourWear() > 0)
+                {
+                    wolf->setArmourWear(std::max(0, wolf->armourWear() - 8));
+                    if (!m_player.creative() && --stack.count <= 0) stack.clear();
+                    m_audio.play(Sound::DigStone, 0.5f, 1.5f);
+                    return;
+                }
+            }
 
     if (stack.id == Items::Saddle)
         if (Mob* target = m_entities.pick(m_camera.position, m_camera.front, ATTACK_REACH))
@@ -17417,6 +17517,11 @@ void Application::updateMobs(float deltaTime)
     for (const glm::vec3& grown : m_entities.drainGrownTurtles())
         m_drops.spawn(grown + glm::vec3(0.0f, 0.3f, 0.0f), Items::TurtleScute, 1);
 
+    for (const glm::vec3& shed : m_entities.drainShedScutes())
+    {
+        m_drops.spawn(shed + glm::vec3(0.0f, 0.3f, 0.0f), Items::ArmadilloScute, 1);
+        m_audio.play(Sound::MobArmadilloHurt, 0.4f, 1.4f);
+    }
     for (const glm::vec3& nest : m_entities.drainLaidEggs())
     {
         m_drops.spawn(nest + glm::vec3(0.0f, 0.3f, 0.0f), Items::Egg, 1);

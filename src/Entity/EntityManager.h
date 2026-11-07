@@ -99,6 +99,7 @@ public:
     // caller is the one that knows which colour the ground makes it.
     std::vector<glm::vec3> drainFrogMeals();
     std::vector<glm::vec3> drainFrogSpawns();
+    std::vector<glm::vec3> drainShedScutes();
     std::vector<glm::vec3> drainGrownTadpoles();
 
     // Where a calf was just born, for the hearts and the sound.
@@ -126,7 +127,7 @@ public:
     void clear()
     {
         m_mobs.clear(); m_deaths.clear(); m_births.clear(); m_laidEggs.clear(); m_turtleNests.clear(); m_snifferNests.clear(); m_grownTurtles.clear();
-        m_frogMeals.clear(); m_frogSpawns.clear(); m_grownTadpoles.clear();
+        m_frogMeals.clear(); m_frogSpawns.clear(); m_grownTadpoles.clear(); m_shedScutes.clear();
     }
 
     const std::vector<Mob>& mobs() const { return m_mobs; }
@@ -198,6 +199,7 @@ private:
     std::vector<glm::vec3> m_laidEggs;
     std::vector<glm::vec3> m_frogMeals;
     std::vector<glm::vec3> m_frogSpawns;
+    std::vector<glm::vec3> m_shedScutes;
     std::vector<glm::vec3> m_grownTadpoles;
     std::vector<glm::vec3> m_births;
     std::vector<glm::vec3> m_turtleNests;

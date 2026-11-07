@@ -1024,6 +1024,8 @@ namespace
                 byHand = "dropped by a creeper killed by a skeleton's arrow";
             else if (i == static_cast<int>(Items::MusicDiscFirst + 15))
                 byHand = "brushed out of the gravel in trail ruins";
+            else if (i == static_cast<int>(Items::ArmadilloScute))
+                byHand = "shed by armadillos every few minutes, or brushed off one";
             else if (i == static_cast<int>(Items::RabbitFoot))
                 byHand = "dropped by a rabbit one time in ten";
             else if (i == static_cast<int>(Items::DragonsBreath))
@@ -1061,6 +1063,7 @@ namespace
         haveItem.insert(static_cast<int>(Blocks::CarvedPumpkinFirst + 2));
         haveItem.insert(static_cast<int>(Items::NautilusShell));
         haveItem.insert(static_cast<int>(Items::TurtleScute));
+        haveItem.insert(static_cast<int>(Items::ArmadilloScute));
         haveItem.insert(static_cast<int>(Blocks::HeavyCore));
         haveItem.insert(static_cast<int>(Blocks::DragonEgg));
         for (int k = Items::AnglerSherd; k <= Items::SnortSherd; ++k) haveItem.insert(k);

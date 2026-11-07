@@ -377,6 +377,19 @@ public:
     void setYaw(float yaw) { m_yaw = yaw; m_goalYaw = yaw; }
     void setSelfPush(bool pushing) { m_selfPush = pushing; }
     void markShotByMob() { m_shotByMob = true; }
+    bool rolled() const { return m_rolled; }
+    void scare(float seconds)
+    {
+        if (!m_rolled) m_rolledJustNow = true;
+        m_rolled = true;
+        m_rollHold = std::max(m_rollHold, seconds);
+    }
+    bool takeRollReport() { const bool was = m_rolledJustNow; m_rolledJustNow = false; return was; }
+    int armourWear() const { return m_armourWear; }
+    void setArmourWear(int wear) { m_armourWear = wear; }
+    int armourDye() const { return m_armourDye; }
+    void setArmourDye(int dye) { m_armourDye = dye; }
+    bool takeArmourBreak() { const bool was = m_armourBroke; m_armourBroke = false; return was; }
     bool shotByMob() const { return m_shotByMob; }
     float railSpeed() const { return m_railSpeed; }
     void setVariant(int variant) { m_variant = variant; }
@@ -458,6 +471,12 @@ private:
     int m_variant = 0;
     bool m_selfPush = false;
     bool m_shotByMob = false;
+    bool m_rolled = false;
+    bool m_rolledJustNow = false;
+    float m_rollHold = 0.0f;
+    int m_armourWear = 0;
+    int m_armourDye = -1;
+    bool m_armourBroke = false;
     int m_health = 1;
     bool m_onGround = false;
 

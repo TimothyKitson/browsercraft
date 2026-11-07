@@ -9684,6 +9684,9 @@ namespace
         { Tiles::PotionBottle,      { "potion", "potion_bottle_drinkable", nullptr } },
         { Tiles::PotionLiquid,      { "potion_overlay", nullptr, nullptr } },
         { Tiles::ItemSplashPotion,  { "splash_potion", nullptr, nullptr } },
+        { Tiles::ItemArmadilloScute, { "armadillo_scute", nullptr, nullptr } },
+        { Tiles::ItemWolfArmor,     { "wolf_armor", nullptr, nullptr } },
+        { Tiles::ItemWolfArmorOverlay, { "wolf_armor_overlay", nullptr, nullptr } },
         { Tiles::ItemLingeringPotion, { "lingering_potion", nullptr, nullptr } },
         { Tiles::BowPulling0,       { "bow_pulling_0", nullptr, nullptr } },
         { Tiles::BowPulling1,       { "bow_pulling_1", nullptr, nullptr } },
@@ -11369,6 +11372,29 @@ Atlas::Atlas()
         paintMaterialIn(tile, i);
         blitPainted(Tiles::ItemMaterialFirst + i, tile);
     }
+    for (int i = 0; i < 3; ++i)
+    {
+        Tile tile;
+        tile.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 3; y < 13; ++y)
+            for (int x = 3; x < 13; ++x)
+            {
+                if (i == 0)
+                {
+                    const float dx = static_cast<float>(x) - 7.5f, dy = static_cast<float>(y) - 8.0f;
+                    if (dx * dx / 20.0f + dy * dy / 12.0f > 1.0f) continue;
+                    tile.set(x, y, (x + y) % 3 == 0 ? Color{ 150, 100, 90 } : Color{ 190, 130, 120 });
+                }
+                else
+                {
+                    const bool body = y > 5 && y < 11 && x > 3 && x < 12;
+                    const bool collar = y == 5 && x > 3 && x < 8;
+                    if (!body && !collar) continue;
+                    tile.set(x, y, i == 1 ? ((x + y) % 4 == 0 ? Color{ 120, 90, 80 } : Color{ 170, 120, 110 }) : Color{ 255, 255, 255 });
+                }
+            }
+        blitPainted(Tiles::ItemArmadilloScute + i, tile);
+    }
     for (int i = 0; i < 19; ++i)
     {
         static const Color LABELS[19] = {
@@ -12634,6 +12660,7 @@ bool Atlas::hasPainter(int tileIndex)
     if (tileIndex >= Tiles::ItemSpawnEggFirst && tileIndex <= Tiles::ItemSpawnEggLast) return true;
     if (tileIndex >= Tiles::ItemFireworkFirst && tileIndex <= Tiles::ItemFireworkLast) return true;
     if (tileIndex >= Tiles::ItemDiscFirst && tileIndex <= Tiles::ItemDiscLast) return true;
+    if (tileIndex >= Tiles::ItemArmadilloScute && tileIndex <= Tiles::ItemWolfArmorOverlay) return true;
     if (tileIndex >= Tiles::ConcreteTile && tileIndex <= Tiles::GlazedTileLast &&
         tileIndex != Tiles::TerracottaPlainTile) return true;
     if (tileIndex >= Tiles::StainedGlassTile && tileIndex <= Tiles::StainedGlassTileLast) return true;

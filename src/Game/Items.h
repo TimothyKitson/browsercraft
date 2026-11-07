@@ -453,6 +453,8 @@ namespace Items
         MusicDiscLast = MusicDiscFirst + 18,
         SplashPotion,
         LingeringPotion,
+        ArmadilloScute,
+        WolfArmor,
         Count
     };
 }

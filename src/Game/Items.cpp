@@ -374,6 +374,8 @@ namespace
         { "Music Disc", Tiles::ItemDiscFirst + 18, 1 },
         { "Splash Potion", Tiles::ItemSplashPotion, 1 },
         { "Lingering Potion", Tiles::ItemLingeringPotion, 1 },
+        { "Armadillo Scute", Tiles::ItemArmadilloScute, 64 },
+        { "Wolf Armor", Tiles::ItemWolfArmor, 1 },
     };
 
     static_assert(sizeof(ITEMS) / sizeof(ITEMS[0]) ==
@@ -674,6 +676,7 @@ int itemDurability(StackId id)
         case Items::WarpedFungusOnAStick: return 100;
         case Items::Crossbow: return 465;
         case Items::Trident: return 250;
+        case Items::WolfArmor: return 64;
         default: return 0;
     }
 }

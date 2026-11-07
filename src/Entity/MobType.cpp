@@ -3563,6 +3563,44 @@ namespace
             }
         }
 
+        {
+            MobType& t = table[static_cast<size_t>(MobId::Armadillo)];
+            t.id = MobId::Armadillo;
+            t.experience = 1;
+            t.voice = Sound::MobArmadilloSay;
+            t.hurtVoice = Sound::MobArmadilloHurt;
+            t.deathVoice = Sound::MobArmadilloDeath;
+            t.name = "Armadillo";
+            t.texture = "armadillo";
+            t.sheetWidth = 64;
+            t.sheetHeight = 64;
+            t.width = 0.7f;
+            t.height = 0.65f;
+            t.modelScale = 1.0f;
+            t.spawnClass = SpawnClass::Passive;
+            t.maxHealth = 12;
+            t.walkSpeed = 1.4f;
+            t.limbSwing = 0.9f;
+            t.voicePitch = 1.0f;
+            t.breedingFood = Items::SpiderEye;
+            t.bodyColour = rgb(176, 112, 104);
+            t.headColour = rgb(196, 140, 128);
+            t.eyeColour = rgb(30, 20, 20);
+            t.pattern = MobType::Pattern::Stripes;
+            t.markColour = rgb(140, 84, 78);
+            t.model.push_back(inflated(mc(Part::Body, 0, 20, 8, 8, 12, -4, -7, -10, 0, 21, 4), 0.3f));
+            t.model.push_back(mc(Part::Body, 0, 40, 8, 8, 12, -4, -7, -10, 0, 21, 4));
+            t.model.push_back(turned(mc(Part::Body, 44, 53, 1, 6, 1, -1, 0, 0, 0, 18, 5), 0.5061f));
+            t.model.push_back(turned(mc(Part::Head, 43, 15, 3, 5, 2, -2, -1, -1, 0, 19, -7), -0.3927f));
+            t.model.push_back(turned(mc(Part::Head, 43, 10, 2, 5, 1, -2, -3, 0, -2, 18, -8), 0.1886f, -0.3864f, -0.0718f));
+            t.model.push_back(turned(mc(Part::Head, 47, 10, 2, 5, 1, 0, -3, 0, 2, 18, -8), 0.1886f, 0.3864f, 0.0718f));
+            t.model.push_back(mc(Part::LegBackRight, 51, 31, 2, 3, 2, -1, 0, -1, -2, 21, 4));
+            t.model.push_back(mc(Part::LegBackLeft, 42, 31, 2, 3, 2, -1, 0, -1, 2, 21, 4));
+            t.model.push_back(mc(Part::LegFrontRight, 51, 43, 2, 3, 2, -1, 0, -1, -2, 21, -4));
+            t.model.push_back(mc(Part::LegFrontLeft, 42, 43, 2, 3, 2, -1, 0, -1, 2, 21, -4));
+            t.model.push_back(mc(Part::Shell, 0, 0, 10, 10, 10, -5, -10, -6, 0, 24, 0));
+        }
+
         for (const MobId kind : { MobId::ChestBoat, MobId::Raft, MobId::ChestRaft })
         {
             MobType& t = table[static_cast<size_t>(kind)];
@@ -3755,6 +3793,7 @@ bool spawnEggColours(MobId id, unsigned int& base, unsigned int& spots)
         case MobId::Sniffer: base = 0x871E09u; spots = 0x25AB70u; return true;
         case MobId::TropicalFish: base = 0xEF6915u; spots = 0xFFF9EFu; return true;
         case MobId::Tadpole: base = 0x6D533Du; spots = 0x160A00u; return true;
+        case MobId::Armadillo: base = 0xAD716Du; spots = 0x824848u; return true;
         default: break;
     }
     return false;

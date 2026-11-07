@@ -612,6 +612,7 @@ namespace Tiles
         ItemFireworkFirst, ItemFireworkLast = ItemFireworkFirst + 3,
         ItemDiscFirst, ItemDiscLast = ItemDiscFirst + 18,
         ItemSplashPotion, ItemLingeringPotion,
+        ItemArmadilloScute, ItemWolfArmor, ItemWolfArmorOverlay,
         ItemCompassFrameFirst, ItemCompassFrameLast = ItemCompassFrameFirst + 31,
         ItemClockFirst, ItemClockLast = ItemClockFirst + 63,
         ItemRecoveryFirst, ItemRecoveryLast = ItemRecoveryFirst + 31,

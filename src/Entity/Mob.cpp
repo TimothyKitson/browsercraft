@@ -661,12 +661,13 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
     // A grown chicken lays an egg every few minutes. The clock runs
     // whether anybody is watching or not, which is why a flock left
     // alone is worth coming back to.
-    if (m_type == MobId::Chicken && alive() && !baby())
+    if ((m_type == MobId::Chicken || m_type == MobId::Armadillo) && alive() && !baby())
     {
         m_eggTimer -= deltaTime;
         if (m_eggTimer <= 0.0f)
         {
-            m_eggTimer = EGG_SECONDS;
+            m_eggTimer = m_type == MobId::Armadillo ? 300.0f + static_cast<float>((m_birthSeed + static_cast<uint32_t>(m_age)) % 300u)
+                                                    : EGG_SECONDS;
             m_eggReady = true;
         }
     }
@@ -780,7 +781,16 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
     // Turn towards the goal heading the short way round. A shulker
     // never does: it is fixed to the block the way a chest is, and one
     // that swivelled to watch you would read as a creature.
-    if (t.stationary)
+    if (m_rolled)
+    {
+        m_rollHold -= deltaTime;
+        if (m_rollHold <= 0.0f) m_rolled = false;
+        m_goalYaw = m_yaw;
+        m_moving = false;
+        m_velocity.x = 0.0f;
+        m_velocity.z = 0.0f;
+    }
+    else if (t.stationary)
     {
         m_goalYaw = m_yaw;
         m_velocity.x = 0.0f;
@@ -1087,6 +1097,30 @@ void Mob::damage(int amount, const glm::vec3& fromDirection)
     // anyone it could go after.
     if (glm::length(glm::vec3(fromDirection.x, 0.0f, fromDirection.z)) > 0.001f)
         m_provoked = true;
+
+    if (m_type == MobId::Wolf && m_horseArmour == Items::WolfArmor)
+    {
+        m_armourWear += amount;
+        m_hurtFlash = 0.35f;
+        if (m_armourWear >= 64)
+        {
+            m_horseArmour = 0;
+            m_armourWear = 0;
+            m_armourDye = -1;
+            m_armourBroke = true;
+        }
+        return;
+    }
+    if (m_type == MobId::Armadillo)
+    {
+        if (m_rolled) amount = (amount - 1) / 2;
+        scare(4.0f);
+        if (amount <= 0)
+        {
+            m_hurtFlash = 0.2f;
+            return;
+        }
+    }
 
     if (isHorseArmour(m_horseArmour))
         amount = std::max(1, static_cast<int>(std::lround(amount * (1.0f - horseArmourPoints(m_horseArmour) / 25.0f))));

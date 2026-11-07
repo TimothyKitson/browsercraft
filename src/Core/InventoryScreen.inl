@@ -220,7 +220,7 @@ namespace
         Items::DiscFragment, Items::DragonsBreath, Items::Charcoal, Items::ExperienceBottle,
         Items::CodBucket, Items::SalmonBucket, Items::PufferfishBucket, Items::TropicalFishBucket, Items::AxolotlBucket, Items::TadpoleBucket,
         Items::EnchantedBook, Items::WritableBook, Items::WrittenBook, Items::KnowledgeBook,
-        Items::FireworkRocket, Items::FireworkStar, Items::FireCharge,
+        Items::FireworkRocket, Items::FireworkStar, Items::FireCharge, Items::ArmadilloScute, Items::WolfArmor,
         Items::MusicDiscFirst + 0, Items::MusicDiscFirst + 1, Items::MusicDiscFirst + 2, Items::MusicDiscFirst + 3,
         Items::MusicDiscFirst + 4, Items::MusicDiscFirst + 5, Items::MusicDiscFirst + 6, Items::MusicDiscFirst + 7,
         Items::MusicDiscFirst + 8, Items::MusicDiscFirst + 9, Items::MusicDiscFirst + 10, Items::MusicDiscFirst + 11,
@@ -579,6 +579,13 @@ void Application::drawItem(float x, float y, float size, StackId id, int count,
         const TileUV uv = tileUV(tile);
         m_ui.texturedQuad(m_atlas.textureId(), x, y, size, size,
                           uv.u0, uv.vTop, uv.u1, uv.vBottom, tint);
+        if (id == Items::WolfArmor && ((enchantments >> 24) & 0x1Fu) != 0u)
+        {
+            const unsigned int c = Banners::dyeRgb(static_cast<int>((enchantments >> 24) & 0x1Fu) - 1);
+            const TileUV dyeUV = tileUV(Tiles::ItemWolfArmorOverlay);
+            m_ui.texturedQuad(m_atlas.textureId(), x, y, size, size, dyeUV.u0, dyeUV.vTop, dyeUV.u1, dyeUV.vBottom,
+                              glm::vec4(((c >> 16) & 255u) / 255.0f, ((c >> 8) & 255u) / 255.0f, (c & 255u) / 255.0f, 1.0f) * tint);
+        }
         if (id == Items::FireworkStar)
         {
             const unsigned int c = Fireworks::starColour(ItemStack{ id, 1, damage });
