@@ -427,6 +427,16 @@ void WorldSave::saveLevel(const std::string& saveDirectory, const LevelState& st
         write(out, box.dimension);
         write(out, box.stack.id);
     }
+    write(out, static_cast<uint32_t>(state.signLooks.size()));
+    for (const LevelState::SavedSignLook& look : state.signLooks)
+    {
+        write(out, look.x);
+        write(out, look.y);
+        write(out, look.z);
+        write(out, look.dimension);
+        write(out, look.colour);
+        write(out, look.glow);
+    }
 }
 
 bool WorldSave::loadLevel(const std::string& saveDirectory, LevelState& out)
@@ -935,15 +945,29 @@ bool WorldSave::loadLevel(const std::string& saveDirectory, LevelState& out)
                                                         if (k < 31) out.crossbowRockets.push_back(id);
                                                     }
                                                 uint32_t jukeboxCount = 0;
-                                                if (slotsWhole && read(in, jukeboxCount))
+                                                bool jukeboxesWhole = slotsWhole && read(in, jukeboxCount);
+                                                if (jukeboxesWhole)
                                                     for (uint32_t i = 0; i < jukeboxCount && i < 100000u; ++i)
                                                     {
                                                         LevelState::SavedLectern box;
                                                         if (!read(in, box.x) || !read(in, box.y) || !read(in, box.z) ||
                                                             !read(in, box.dimension) || !read(in, box.stack.id))
+                                                        {
+                                                            jukeboxesWhole = false;
                                                             break;
+                                                        }
                                                         box.stack.count = 1;
                                                         out.jukeboxes.push_back(box);
+                                                    }
+                                                uint32_t lookCount = 0;
+                                                if (jukeboxesWhole && read(in, lookCount))
+                                                    for (uint32_t i = 0; i < lookCount && i < 100000u; ++i)
+                                                    {
+                                                        LevelState::SavedSignLook look;
+                                                        if (!read(in, look.x) || !read(in, look.y) || !read(in, look.z) ||
+                                                            !read(in, look.dimension) || !read(in, look.colour) || !read(in, look.glow))
+                                                            break;
+                                                        out.signLooks.push_back(look);
                                                     }
                                             }
                                         }

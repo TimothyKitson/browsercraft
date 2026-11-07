@@ -222,6 +222,14 @@ struct LevelState
     std::vector<SavedRocket> fireworkRockets;
     std::vector<uint16_t> crossbowRockets;
     std::vector<SavedLectern> jukeboxes;
+    struct SavedSignLook
+    {
+        int x = 0, y = 0, z = 0;
+        uint8_t dimension = 0;
+        uint8_t colour = 15;
+        uint8_t glow = 0;
+    };
+    std::vector<SavedSignLook> signLooks;
 };
 
 namespace WorldSave

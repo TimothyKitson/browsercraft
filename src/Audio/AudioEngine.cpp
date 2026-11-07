@@ -394,6 +394,8 @@ void AudioEngine::buildSounds()
                  Sound::MobTropicalFishDeath, "mob/tropical_fish");
     loadMobVoice(Sound::MobTadpoleSay, Sound::MobTadpoleHurt,
                  Sound::MobTadpoleDeath, "mob/tadpole");
+    loadMobVoice(Sound::MobGlowSquidSay, Sound::MobGlowSquidHurt,
+                 Sound::MobGlowSquidDeath, "mob/glow_squid");
     loadMobVoice(Sound::MobArmadilloSay, Sound::MobArmadilloHurt,
                  Sound::MobArmadilloDeath, "mob/armadillo");
     loadMobVoice(Sound::MobParrotSay, Sound::MobParrotHurt,
@@ -414,6 +416,9 @@ void AudioEngine::buildSounds()
     loadVariants(Sound::FireworkBlast, "fireworks/blast", 1);
     loadVariants(Sound::FireworkLargeBlast, "fireworks/largeblast", 1);
     loadVariants(Sound::FireworkTwinkle, "fireworks/twinkle", 1);
+    loadSingle(Sound::DyeUse, "item/dye/dye.ogg");
+    loadVariants(Sound::InkUse, "item/ink_sac/ink_sac", 4);
+    loadVariants(Sound::GlowInkUse, "item/glow_ink_sac/glow_ink_sac", 4);
 
     auto make = [&](Sound id) -> Synth {
         auto& clips = m_buffers[static_cast<size_t>(id)];
@@ -1703,6 +1708,41 @@ void AudioEngine::buildSounds()
         s.addNoise(1.3f, 600.0f, 2.8f, 1.0f, false, 261);
         s.addTone(0.8f, 70.0f, 30.0f, 4.0f, 0.5f);
         s.finish(0.85f);
+    }
+    {
+        Synth s = make(Sound::MobGlowSquidSay);
+        s.addNoise(0.20f, 900.0f, 12.0f, 0.22f, true, 931);
+        s.addTone(0.30f, 520.0f, 610.0f, 6.0f, 0.14f, false, 0.08f);
+        s.finish(0.44f);
+    }
+    {
+        Synth s = make(Sound::MobGlowSquidHurt);
+        s.addNoise(0.16f, 1300.0f, 18.0f, 0.30f, false, 932);
+        s.addTone(0.18f, 380.0f, 240.0f, 14.0f, 0.24f, true);
+        s.finish(0.50f);
+    }
+    {
+        Synth s = make(Sound::MobGlowSquidDeath);
+        s.addNoise(0.45f, 640.0f, 5.0f, 0.26f, true, 933);
+        s.addTone(0.50f, 420.0f, 140.0f, 4.0f, 0.22f, false, 0.06f);
+        s.finish(0.52f);
+    }
+    {
+        Synth s = make(Sound::DyeUse);
+        s.addNoise(0.14f, 1400.0f, 22.0f, 0.4f, true, 941);
+        s.finish(0.40f);
+    }
+    {
+        Synth s = make(Sound::InkUse);
+        s.addNoise(0.18f, 800.0f, 16.0f, 0.45f, true, 942);
+        s.addTone(0.12f, 210.0f, 150.0f, 18.0f, 0.2f, true);
+        s.finish(0.42f);
+    }
+    {
+        Synth s = make(Sound::GlowInkUse);
+        s.addNoise(0.18f, 900.0f, 16.0f, 0.4f, true, 943);
+        s.addTone(0.6f, 1800.0f, 2100.0f, 4.0f, 0.12f, false, 0.12f);
+        s.finish(0.42f);
     }
     {
         Synth s = make(Sound::FireworkTwinkle);

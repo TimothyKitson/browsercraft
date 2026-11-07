@@ -614,6 +614,7 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
     const MobType& t = type();
 
     if (m_hurtFlash > 0.0f) m_hurtFlash = std::max(0.0f, m_hurtFlash - deltaTime);
+    if (m_darkTime > 0.0f) m_darkTime = std::max(0.0f, m_darkTime - deltaTime);
     if (m_hurtVoiceTimer > 0.0f) m_hurtVoiceTimer = std::max(0.0f, m_hurtVoiceTimer - deltaTime);
     if (m_panicTimer > 0.0f) m_panicTimer = std::max(0.0f, m_panicTimer - deltaTime);
     if (m_loveTimer > 0.0f) m_loveTimer = std::max(0.0f, m_loveTimer - deltaTime);
@@ -1087,6 +1088,12 @@ bool Mob::strike(int amount, const glm::vec3& fromDirection)
     return true;
 }
 
+float Mob::glowLight() const
+{
+    if (m_type != MobId::GlowSquid) return 0.0f;
+    return std::clamp(1.0f - m_darkTime / 0.5f, 0.0f, 1.0f);
+}
+
 void Mob::damage(int amount, const glm::vec3& fromDirection)
 {
     if (amount <= 0 || !alive() || m_spawnPhase > 0.0f) return;
@@ -1126,6 +1133,7 @@ void Mob::damage(int amount, const glm::vec3& fromDirection)
         amount = std::max(1, static_cast<int>(std::lround(amount * (1.0f - horseArmourPoints(m_horseArmour) / 25.0f))));
     m_health = std::max(0, m_health - amount);
     m_hurtFlash = 0.35f;
+    if (m_type == MobId::GlowSquid) m_darkTime = 5.0f;
 
     // Knocked back and off its feet a little, so a hit reads as a hit.
     // Only when something actually struck it from somewhere, though:

@@ -128,6 +128,7 @@ enum class MobId : uint8_t
     Raft,
     ChestRaft,
     Armadillo,
+    GlowSquid,
 
     Count
 };

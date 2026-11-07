@@ -1027,6 +1027,13 @@ void Application::loadLevel()
             m_signs.putIn(saved.dimension,
                           glm::ivec3(saved.x, saved.y, saved.z), text);
         }
+        for (const LevelState::SavedSignLook& saved : state.signLooks)
+        {
+            Signs::Look look;
+            look.colour = static_cast<uint8_t>(std::min<int>(saved.colour, 15));
+            look.glow = saved.glow != 0;
+            m_signs.lookIn(saved.dimension, glm::ivec3(saved.x, saved.y, saved.z), look);
+        }
 
         m_beaconPowers.clear();
         for (const LevelState::SavedBeacon& saved : state.beacons)
@@ -1400,6 +1407,18 @@ void Application::saveLevel()
         for (size_t i = 0; i < saved.lines.size() && i < entry.second.size(); ++i)
             saved.lines[i] = entry.second[i];
         state.signs.push_back(saved);
+    }
+    for (const auto& entry : m_signs.looks())
+    {
+        if (m_signs.all().find(entry.first) == m_signs.all().end()) continue;
+        LevelState::SavedSignLook saved;
+        saved.dimension = static_cast<uint8_t>(entry.first[0]);
+        saved.x = entry.first[1];
+        saved.y = entry.first[2];
+        saved.z = entry.first[3];
+        saved.colour = entry.second.colour;
+        saved.glow = entry.second.glow ? 1 : 0;
+        state.signLooks.push_back(saved);
     }
 
     for (const auto& entry : m_frames.all())
@@ -2478,7 +2497,7 @@ bool Application::frame()
             m_startupScreen == "attackhud" || m_startupScreen == "attackready" ||
             m_startupScreen == "attackhotbar" || m_startupScreen == "bossbars" ||
             m_startupScreen == "gamemode" || m_startupScreen == "spectator" ||
-            m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" || m_startupScreen == "leads" || m_startupScreen == "anvilname" || m_startupScreen == "dials" || m_startupScreen == "spyglass" || m_startupScreen == "bundle" || m_startupScreen == "archery" || m_startupScreen == "food" || m_startupScreen == "materials" || m_startupScreen == "tropical" || m_startupScreen == "book" || m_startupScreen == "bookedit" || m_startupScreen == "booktip" || m_startupScreen == "boats" || m_startupScreen == "carts" || m_startupScreen == "fireworks" || m_startupScreen == "jukebox" || m_startupScreen == "potioncloud" || m_startupScreen == "armadillo" ||
+            m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" || m_startupScreen == "leads" || m_startupScreen == "anvilname" || m_startupScreen == "dials" || m_startupScreen == "spyglass" || m_startupScreen == "bundle" || m_startupScreen == "archery" || m_startupScreen == "food" || m_startupScreen == "materials" || m_startupScreen == "tropical" || m_startupScreen == "book" || m_startupScreen == "bookedit" || m_startupScreen == "booktip" || m_startupScreen == "boats" || m_startupScreen == "carts" || m_startupScreen == "fireworks" || m_startupScreen == "jukebox" || m_startupScreen == "potioncloud" || m_startupScreen == "armadillo" || m_startupScreen == "signs" || m_startupScreen == "glowsquid" ||
             m_startupScreen == "grinderror" || m_startupScreen == "woods" ||
             m_startupScreen == "cherry" || m_startupScreen == "mangrove" || m_startupScreen == "fungi" ||
             m_startupScreen == "stones" || m_startupScreen == "colours" || m_startupScreen == "candles" ||
@@ -2591,6 +2610,8 @@ bool Application::frame()
                                   m_startupScreen != "jukebox" &&
                                   m_startupScreen != "potioncloud" &&
                                   m_startupScreen != "armadillo" &&
+                                  m_startupScreen != "signs" &&
+                                  m_startupScreen != "glowsquid" &&
                                   m_startupScreen != "grinderror" &&
                                   m_startupScreen != "woods" &&
                                   m_startupScreen != "cherry" &&
@@ -2983,7 +3004,7 @@ bool Application::frame()
             if (m_startupScreen == "attackhud" || m_startupScreen == "attackready" ||
                 m_startupScreen == "attackhotbar" || m_startupScreen == "bossbars" ||
                 m_startupScreen == "gamemode" || m_startupScreen == "spectator" ||
-                m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" || m_startupScreen == "leads" || m_startupScreen == "anvilname" || m_startupScreen == "dials" || m_startupScreen == "spyglass" || m_startupScreen == "bundle" || m_startupScreen == "archery" || m_startupScreen == "food" || m_startupScreen == "materials" || m_startupScreen == "tropical" || m_startupScreen == "book" || m_startupScreen == "bookedit" || m_startupScreen == "booktip" || m_startupScreen == "boats" || m_startupScreen == "carts" || m_startupScreen == "fireworks" || m_startupScreen == "jukebox" || m_startupScreen == "potioncloud" || m_startupScreen == "armadillo" ||
+                m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" || m_startupScreen == "leads" || m_startupScreen == "anvilname" || m_startupScreen == "dials" || m_startupScreen == "spyglass" || m_startupScreen == "bundle" || m_startupScreen == "archery" || m_startupScreen == "food" || m_startupScreen == "materials" || m_startupScreen == "tropical" || m_startupScreen == "book" || m_startupScreen == "bookedit" || m_startupScreen == "booktip" || m_startupScreen == "boats" || m_startupScreen == "carts" || m_startupScreen == "fireworks" || m_startupScreen == "jukebox" || m_startupScreen == "potioncloud" || m_startupScreen == "armadillo" || m_startupScreen == "signs" || m_startupScreen == "glowsquid" ||
                 m_startupScreen == "grinderror" || m_startupScreen == "woods" ||
                 m_startupScreen == "cherry" || m_startupScreen == "mangrove" || m_startupScreen == "fungi" ||
                 m_startupScreen == "stones" || m_startupScreen == "colours" || m_startupScreen == "candles" ||
@@ -3835,6 +3856,74 @@ bool Application::frame()
                     m_inventory.slot(2) = dyed;
                     m_inventory.slot(3) = ItemStack{ Items::Brush, 1 };
                     m_camera.pitch = -25.0f;
+                    m_camera.addLook(0.0f, 0.0f, 0.0f);
+                }
+                if (m_startupScreen == "signs")
+                {
+                    m_devAttackStrength = 1.0f;
+                    m_timeOfDay = 0.0f;
+                    for (int dx = 1; dx <= 6; ++dx)
+                        for (int dz = -5; dz <= 5; ++dz)
+                        {
+                            m_world->setBlock(px + dx, py - 1, pz + dz, Blocks::Grass);
+                            for (int dy = 0; dy <= 3; ++dy)
+                                m_world->setBlock(px + dx, py + dy, pz + dz, dx == 6 ? Blocks::Planks : Blocks::Air);
+                        }
+                    struct Board { int dz, dy; Signs::Text text; Signs::Look look; };
+                    const Board BOARDS[] = {
+                        { -3, 2, { "Plain", "black text", "", "" }, { 15, false } },
+                        { -1, 2, { "Dyed", "red", "", "" }, { 14, false } },
+                        { 1, 2, { "Dyed", "lime", "", "" }, { 5, false } },
+                        { 3, 2, { "Dyed", "light blue", "", "" }, { 3, false } },
+                        { -3, 1, { "Glowing", "black ink", "", "" }, { 15, true } },
+                        { -1, 1, { "Glowing", "red", "", "" }, { 14, true } },
+                        { 1, 1, { "Glowing", "cyan", "", "" }, { 9, true } },
+                        { 3, 1, { "Glowing", "yellow", "", "" }, { 4, true } },
+                    };
+                    for (const Board& board : BOARDS)
+                    {
+                        const glm::ivec3 at(px + 5, py + board.dy, pz + board.dz);
+                        m_world->setBlock(at.x, at.y, at.z, signFacingAs(1));
+                        m_signs.at(at) = board.text;
+                        m_signs.setLook(at, board.look);
+                    }
+                    m_inventory.slot(0) = ItemStack{ Items::GlowInkSac, 16 };
+                    m_inventory.slot(1) = ItemStack{ Items::InkSac, 16 };
+                    m_inventory.slot(2) = ItemStack{ Items::DyeRed, 16 };
+                    m_inventory.slot(3) = ItemStack{ Items::DyeLime, 16 };
+                    m_inventory.slot(4) = ItemStack{ Items::DyeLightBlue, 16 };
+                    m_inventory.setSelectedSlot(0);
+                    m_camera.pitch = 5.0f;
+                    m_camera.addLook(0.0f, 0.0f, 0.0f);
+                }
+                if (m_startupScreen == "glowsquid")
+                {
+                    m_devAttackStrength = 1.0f;
+                    m_timeOfDay = 0.0f;
+                    for (int dx = 1; dx <= 9; ++dx)
+                        for (int dz = -5; dz <= 5; ++dz)
+                            for (int dy = -5; dy <= 2; ++dy)
+                            {
+                                const bool rim = dx == 1 || dx == 9 || dz == -5 || dz == 5 || dy == -5;
+                                const BlockId fill = dy >= 0 ? Blocks::Air : rim ? Blocks::Stone : Blocks::Water;
+                                m_world->setBlock(px + dx, py + dy, pz + dz, fill);
+                            }
+                    for (int i = 0; i < 4; ++i)
+                    {
+                        const glm::vec3 at(static_cast<float>(px) + 4.5f + static_cast<float>(i % 2) * 1.2f, static_cast<float>(py) - 3.0f,
+                                           static_cast<float>(pz) - 2.4f + static_cast<float>(i) * 1.6f);
+                        if (m_entities.spawnAt(i == 0 ? MobId::Squid : MobId::GlowSquid, at, *m_world))
+                        {
+                            m_entities.mobs().back().setYaw(static_cast<float>(i) * 70.0f);
+                            if (i == 3) m_entities.mobs().back().damage(1, glm::vec3(0.0f));
+                        }
+                    }
+                    m_inventory.slot(0) = ItemStack{ Items::GlowInkSac, 3 };
+                    m_inventory.slot(1) = ItemStack{ Items::InkSac, 2 };
+                    m_inventory.slot(2) = ItemStack{ Items::SpawnEgg, 1, static_cast<int>(MobId::GlowSquid) };
+                    m_inventory.slot(3) = ItemStack{ Items::SpawnEgg, 1, static_cast<int>(MobId::Squid) };
+                    m_inventory.setSelectedSlot(0);
+                    m_camera.pitch = -42.0f;
                     m_camera.addLook(0.0f, 0.0f, 0.0f);
                 }
                 if (m_startupScreen == "potioncloud")
@@ -9552,6 +9641,7 @@ void Application::tickStructureLairs(float deltaTime)
         for (const Mob& mob : m_entities.mobs())
         {
             if (!mob.alive()) continue;
+            if (mob.typeId() == MobId::GlowSquid) { ++already; continue; }
             for (int k = 0; k < EntityManager::seaSpeciesCount(); ++k)
                 if (mob.typeId() == EntityManager::seaSpecies(k)) { ++already; break; }
         }
@@ -9581,8 +9671,11 @@ void Application::tickStructureLairs(float deltaTime)
                 // every four seconds.
                 const int which = (x * 73856093 ^ z * 19349663 ^ y * 83492791) &
                                   0x7FFFFFFF;
-                const MobId species =
+                MobId species =
                     EntityManager::seaSpecies(which % EntityManager::seaSpeciesCount());
+                if (EntityManager::glowSquidWater(*m_world, x, y, z) &&
+                    (species == MobId::Squid || (which / 11) % 3 == 0))
+                    species = MobId::GlowSquid;
 
                 if (m_entities.spawnAt(species, feet, *m_world)) return;
             }
@@ -12983,6 +13076,8 @@ void Application::handlePlacement()
             // block, so a composter you have nothing for is still
             // something to build against.
             if (isFrame(used) && useFrame(bench.block, used)) return;
+
+            if (isSign(used) && useOnSign(bench.block)) return;
 
             // A sign already hung is written on again by using it.
             if (isSign(used))
@@ -17749,6 +17844,31 @@ void Application::openSign(const glm::ivec3& at)
     setMouseCaptured(false);
 }
 
+bool Application::useOnSign(const glm::ivec3& at)
+{
+    ItemStack& held = m_inventory.selected();
+    const bool dye = isDye(held.id);
+    if (!dye && held.id != Items::InkSac && held.id != Items::GlowInkSac) return false;
+
+    const Signs::Text* text = m_signs.find(at);
+    if (!text || Signs::blank(*text)) return false;
+
+    const Signs::Look before = m_signs.look(at);
+    Signs::Look look = before;
+    if (dye) look.colour = static_cast<uint8_t>(dyeColour(held.id));
+    else look.glow = held.id == Items::GlowInkSac;
+    if (look.colour == before.colour && look.glow == before.glow) return false;
+
+    m_signs.setLook(at, look);
+    m_audio.play(dye ? Sound::DyeUse : look.glow ? Sound::GlowInkUse : Sound::InkUse, 0.8f);
+    if (!m_player.creative())
+    {
+        held.count -= 1;
+        if (held.count <= 0) held.clear();
+    }
+    return true;
+}
+
 void Application::closeSign()
 {
     if (!m_signOpen) return;
@@ -17851,6 +17971,15 @@ void Application::collectSignPlates(const glm::mat4& viewProjection,
             if (!line.empty()) ++written;
         if (written == 0) continue;
 
+        const Signs::Look look = m_signs.look(sign.block);
+        auto rgbOf = [](unsigned int rgb) {
+            return glm::vec3(static_cast<float>((rgb >> 16) & 0xFFu), static_cast<float>((rgb >> 8) & 0xFFu),
+                             static_cast<float>(rgb & 0xFFu)) / 255.0f;
+        };
+        const glm::ivec3& at = sign.block;
+        const float light = std::max(static_cast<float>(m_world->blockLightAt(at.x, at.y, at.z)),
+                                     static_cast<float>(m_world->skyLight(at.x, at.y, at.z)) * viewDaylight()) / 15.0f;
+
         int drawn = 0;
         for (int i = 0; i < Signs::LINES; ++i)
         {
@@ -17862,6 +17991,15 @@ void Application::collectSignPlates(const glm::mat4& viewProjection,
             plate.y = y + (static_cast<float>(drawn) -
                            static_cast<float>(written - 1) * 0.5f) * step;
             plate.scale = scale;
+            plate.sign = true;
+            plate.glow = look.glow;
+            if (look.glow)
+            {
+                plate.fill = rgbOf(Signs::textRgb(look.colour));
+                plate.edge = rgbOf(Signs::shadedRgb(look));
+            }
+            else
+                plate.fill = rgbOf(Signs::shadedRgb(look)) * (0.25f + 0.75f * light);
             m_nameplates.push_back(plate);
             ++drawn;
         }
@@ -17913,6 +18051,21 @@ void Application::renderNameplates()
         const float height = UIRenderer::textHeight(plate.scale);
         const float x = plate.x - width * 0.5f;
         const float y = plate.y - height;
+
+        if (plate.sign)
+        {
+            if (plate.glow)
+            {
+                const float d = std::max(1.0f, std::round(plate.scale));
+                for (int oy = -1; oy <= 1; ++oy)
+                    for (int ox = -1; ox <= 1; ++ox)
+                        if (ox != 0 || oy != 0)
+                            m_ui.text(plate.name, x + static_cast<float>(ox) * d, y + static_cast<float>(oy) * d,
+                                      plate.scale, glm::vec4(plate.edge, 1.0f));
+            }
+            m_ui.text(plate.name, x, y, plate.scale, glm::vec4(plate.fill, 1.0f));
+            continue;
+        }
 
         m_ui.quad(x - 4.0f, y - 3.0f, width + 8.0f, height + 6.0f,
                   glm::vec4(0.0f, 0.0f, 0.0f, 0.35f));

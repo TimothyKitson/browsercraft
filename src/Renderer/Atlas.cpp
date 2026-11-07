@@ -3819,6 +3819,23 @@ namespace
         t.speckle(4, 686);
     }
 
+    void paintItemGlowInkSac(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 4; y < 14; ++y)
+            for (int x = 3; x < 13; ++x)
+            {
+                const float dx = (x - 7.5f) / 4.6f;
+                const float dy = (y - 9.0f) / 5.0f;
+                const float r = dx * dx + dy * dy;
+                if (r > 1.0f) continue;
+                t.set(x, y, (dx + dy < -0.4f) ? Color{ 150, 255, 226 }
+                          : r < 0.35f       ? Color{ 64, 212, 186 }
+                                            : Color{ 22, 120, 116 });
+            }
+        t.speckle(4, 687);
+    }
+
     void paintItemNetheriteScrap(Tile& t)
     {
         t.fill(Color{ 0, 0, 0, 0 });
@@ -8992,6 +9009,7 @@ namespace
         { Tiles::LapisBlockTile, paintLapisBlock },
         { Tiles::ItemLapis, paintItemLapis },
         { Tiles::ItemInkSac, paintItemInkSac },
+        { Tiles::ItemGlowInkSac, paintItemGlowInkSac },
         { Tiles::ItemNetheriteScrap, paintItemNetheriteScrap },
         { Tiles::ItemNetheriteIngot, paintItemNetheriteIngot },
         { Tiles::ItemShulkerShell, paintItemShulkerShell },
@@ -9687,6 +9705,7 @@ namespace
         { Tiles::ItemArmadilloScute, { "armadillo_scute", nullptr, nullptr } },
         { Tiles::ItemWolfArmor,     { "wolf_armor", nullptr, nullptr } },
         { Tiles::ItemWolfArmorOverlay, { "wolf_armor_overlay", nullptr, nullptr } },
+        { Tiles::ItemGlowInkSac,    { "glow_ink_sac", nullptr, nullptr } },
         { Tiles::ItemLingeringPotion, { "lingering_potion", nullptr, nullptr } },
         { Tiles::BowPulling0,       { "bow_pulling_0", nullptr, nullptr } },
         { Tiles::BowPulling1,       { "bow_pulling_1", nullptr, nullptr } },

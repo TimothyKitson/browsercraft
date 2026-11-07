@@ -6,7 +6,7 @@
 #include <mutex>
 #include <cstdint>
 
-enum class Sound : uint8_t
+enum class Sound : uint16_t
 {
     DigStone,
     DigDirt,
@@ -245,6 +245,9 @@ enum class Sound : uint8_t
     MobArmadilloSay,
     MobArmadilloHurt,
     MobArmadilloDeath,
+    MobGlowSquidSay,
+    MobGlowSquidHurt,
+    MobGlowSquidDeath,
     Rain,
     Thunder,
 
@@ -256,6 +259,9 @@ enum class Sound : uint8_t
     FireworkBlast,
     FireworkLargeBlast,
     FireworkTwinkle,
+    DyeUse,
+    InkUse,
+    GlowInkUse,
     GoatHornFirst,
     GoatHornLast = GoatHornFirst + 7,
     Count

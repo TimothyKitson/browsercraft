@@ -201,6 +201,12 @@ MobId EntityManager::biomeNight(Biome where, float roll)
     return pickLocal(BIOME_NIGHT, std::size(BIOME_NIGHT), where, roll);
 }
 
+bool EntityManager::glowSquidWater(const World& world, int x, int y, int z)
+{
+    return isWater(world.getBlock(x, y, z)) && world.skyLight(x, y, z) == 0 &&
+           world.blockLightAt(x, y, z) == 0;
+}
+
 int EntityManager::seaSpeciesCount()
 {
     return static_cast<int>(std::size(SEA_SPECIES));

@@ -186,6 +186,8 @@ public:
 
     // Non-zero while flashing from a hit.
     float hurtFlash() const { return m_hurtFlash; }
+    float darkTime() const { return m_darkTime; }
+    float glowLight() const;
     // 0 standing, 1 at walking pace; drives how far the legs swing.
     float gaitAmount() const { return m_gaitAmount; }
     // Radians around the walk cycle.
@@ -544,6 +546,7 @@ private:
     float m_breedTimer = 0.0f;
     float m_babyTimer = 0.0f;
     float m_hurtFlash = 0.0f;
+    float m_darkTime = 0.0f;
     float m_panicTimer = 0.0f;
     float m_burnTimer = 0.0f;
     float m_burnTick = 0.0f;

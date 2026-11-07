@@ -3601,6 +3601,23 @@ namespace
             t.model.push_back(mc(Part::Shell, 0, 0, 10, 10, 10, -5, -10, -6, 0, 24, 0));
         }
 
+        {
+            MobType& t = table[static_cast<size_t>(MobId::GlowSquid)];
+            t = table[static_cast<size_t>(MobId::Squid)];
+            t.id = MobId::GlowSquid;
+            t.voice = Sound::MobGlowSquidSay;
+            t.hurtVoice = Sound::MobGlowSquidHurt;
+            t.deathVoice = Sound::MobGlowSquidDeath;
+            t.name = "Glow Squid";
+            t.texture = "glow_squid";
+            t.drop = Items::GlowInkSac;
+            t.dropCount = 1;
+            t.bodyColour = rgb(24, 110, 112);
+            t.headColour = rgb(44, 150, 146);
+            t.eyeColour = rgb(200, 255, 236);
+            t.markColour = rgb(96, 226, 200);
+        }
+
         for (const MobId kind : { MobId::ChestBoat, MobId::Raft, MobId::ChestRaft })
         {
             MobType& t = table[static_cast<size_t>(kind)];
@@ -3749,6 +3766,7 @@ bool spawnEggColours(MobId id, unsigned int& base, unsigned int& spots)
         case MobId::Shulker: base = 0x946794u; spots = 0x4D3852u; return true;
         case MobId::Drowned: base = 0x8FF1D7u; spots = 0x799C65u; return true;
         case MobId::Squid: base = 0x223B4Du; spots = 0x708899u; return true;
+        case MobId::GlowSquid: base = 0x095656u; spots = 0x85F1BCu; return true;
         case MobId::Ghast: base = 0xF9F9F9u; spots = 0xBCBCBCu; return true;
         case MobId::Frog: base = 0xD07444u; spots = 0xFFC77Cu; return true;
         case MobId::Pillager: base = 0x532F36u; spots = 0x959B9Bu; return true;

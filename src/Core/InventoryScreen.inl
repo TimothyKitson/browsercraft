@@ -220,7 +220,7 @@ namespace
         Items::DiscFragment, Items::DragonsBreath, Items::Charcoal, Items::ExperienceBottle,
         Items::CodBucket, Items::SalmonBucket, Items::PufferfishBucket, Items::TropicalFishBucket, Items::AxolotlBucket, Items::TadpoleBucket,
         Items::EnchantedBook, Items::WritableBook, Items::WrittenBook, Items::KnowledgeBook,
-        Items::FireworkRocket, Items::FireworkStar, Items::FireCharge, Items::ArmadilloScute, Items::WolfArmor,
+        Items::FireworkRocket, Items::FireworkStar, Items::FireCharge, Items::ArmadilloScute, Items::WolfArmor, Items::GlowInkSac,
         Items::MusicDiscFirst + 0, Items::MusicDiscFirst + 1, Items::MusicDiscFirst + 2, Items::MusicDiscFirst + 3,
         Items::MusicDiscFirst + 4, Items::MusicDiscFirst + 5, Items::MusicDiscFirst + 6, Items::MusicDiscFirst + 7,
         Items::MusicDiscFirst + 8, Items::MusicDiscFirst + 9, Items::MusicDiscFirst + 10, Items::MusicDiscFirst + 11,

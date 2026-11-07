@@ -4412,6 +4412,60 @@ namespace
         check(itemDurability(Items::WolfArmor) == 64, "it lasts sixty-four points");
     }
 
+    void testGlowSquid()
+    {
+        section("the glow squid, its ink, and signs that glow");
+        const MobType& glow = mobType(MobId::GlowSquid);
+        const MobType& squid = mobType(MobId::Squid);
+        check(glow.drop == Items::GlowInkSac && squid.drop == Items::InkSac, "a glow squid drops glow ink where a squid drops ink");
+        check(glow.aquatic && glow.hoverHeight > 0.0f && glow.model.size() == squid.model.size(), "and swims on the squid's body");
+        check(std::string(glow.texture) == "glow_squid", "wearing its own skin");
+        unsigned int shell = 0, spots = 0;
+        check(spawnEggColours(MobId::GlowSquid, shell, spots) && shell == 0x095656u && spots == 0x85F1BCu, "with its own spawn egg");
+
+        Mob lit(MobId::GlowSquid, glm::vec3(0.0f), 5u);
+        check(lit.glowLight() >= 1.0f, "it lights itself");
+        lit.damage(1, glm::vec3(0.0f));
+        check(lit.glowLight() <= 0.0f && lit.darkTime() >= 4.9f, "and goes dark for five seconds when hurt");
+        Mob plain(MobId::Squid, glm::vec3(0.0f), 5u);
+        check(plain.glowLight() <= 0.0f, "an ordinary squid gives no light");
+
+        Signs signs;
+        const glm::ivec3 at(4, 70, -2);
+        signs.at(at) = Signs::Text{ "Hello", "", "", "" };
+        check(Signs::plain(signs.look(at)) && signs.look(at).colour == 15, "a sign starts with plain black text");
+        signs.setLook(at, Signs::Look{ 14, true });
+        check(signs.look(at).colour == 14 && signs.look(at).glow, "dye and glow ink change how it reads");
+        check(Signs::textRgb(14) == 0xFF0000u && Signs::shadedRgb(Signs::Look{ 14, false }) == 0x660000u,
+              "red text is drawn at four tenths until it glows");
+        check(Signs::shadedRgb(Signs::Look{ 15, true }) == 0xF0EBCCu, "glowing black ink is outlined in pale cream");
+        signs.setLook(at, Signs::Look{});
+        check(signs.looks().empty(), "plain text keeps no row");
+        signs.setLook(at, Signs::Look{ 3, false });
+        signs.remove(at);
+        check(signs.looks().empty(), "and a sign taken down forgets its colour");
+
+        const std::string dir = (std::filesystem::temp_directory_path() / "browsercraft_signlook_test").string();
+        std::error_code ec;
+        std::filesystem::remove_all(dir, ec);
+        std::filesystem::create_directories(dir, ec);
+        LevelState level;
+        level.seed = 9u;
+        LevelState::SavedSign sign;
+        sign.x = 3; sign.y = 65; sign.z = -8;
+        sign.lines[0] = "Glow";
+        level.signs.push_back(sign);
+        LevelState::SavedSignLook look;
+        look.x = 3; look.y = 65; look.z = -8; look.colour = 9; look.glow = 1;
+        level.signLooks.push_back(look);
+        WorldSave::saveLevel(dir, level);
+        LevelState back;
+        check(WorldSave::loadLevel(dir, back) && back.signLooks.size() == 1 && back.signLooks[0].colour == 9 &&
+                  back.signLooks[0].glow == 1 && back.signLooks[0].z == -8,
+              "a sign's colour and glow are kept with the level");
+        std::filesystem::remove_all(dir, ec);
+    }
+
     void testArchery()
     {
         section("the crossbow, and spectral and tipped arrows");
@@ -7725,7 +7779,7 @@ namespace
                 // there by hand rather than by the night spawner.
                 case MobId::Frog:
                 // And the squid, which belongs to open water.
-                case MobId::Squid:
+                case MobId::Squid: case MobId::GlowSquid:
                 // A small slime is never spawned: it is what a big
                 // one leaves behind when it is killed.
                 case MobId::SlimeSmall:
@@ -12374,7 +12428,7 @@ namespace
             std::error_code ec;
             const auto size = std::filesystem::file_size(path, ec);
             if (!ec) std::filesystem::resize_file(path, size - sizeof(uint16_t) - sizeof(uint8_t) - 3 * sizeof(int) - sizeof(uint32_t) - sizeof(int32_t) - 6 * sizeof(uint32_t) -
-                                                        sizeof(uint8_t) - 3 * sizeof(float) - sizeof(int8_t) - sizeof(uint32_t) - 7 * sizeof(uint32_t) - sizeof(uint8_t), ec);
+                                                        sizeof(uint8_t) - 3 * sizeof(float) - sizeof(int8_t) - sizeof(uint32_t) - 8 * sizeof(uint32_t) - sizeof(uint8_t), ec);
 
             LevelState back;
             check(WorldSave::loadLevel(dir, back), "a level from before items moved up still loads");
@@ -14901,6 +14955,7 @@ int runSelfTest()
     testMusicDiscs();
     testPotionForms();
     testArmadillo();
+    testGlowSquid();
     testMadeThings();
     testTheEndAndTheSea();
     testPathfinding();

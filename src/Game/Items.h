@@ -455,6 +455,7 @@ namespace Items
         LingeringPotion,
         ArmadilloScute,
         WolfArmor,
+        GlowInkSac,
         Count
     };
 }

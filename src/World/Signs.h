@@ -1,6 +1,7 @@
 #pragma once
 #include <glm/glm.hpp>
 #include <array>
+#include <cstdint>
 #include <map>
 #include <string>
 #include <vector>
@@ -30,7 +31,22 @@ public:
     const Text* find(const glm::ivec3& block) const;
 
     void remove(const glm::ivec3& block);
-    void clear() { m_signs.clear(); }
+    void clear() { m_signs.clear(); m_looks.clear(); }
+
+    struct Look
+    {
+        uint8_t colour = 15;
+        bool glow = false;
+    };
+    static constexpr uint8_t PLAIN_COLOUR = 15;
+    static bool plain(const Look& look) { return look.colour == PLAIN_COLOUR && !look.glow; }
+    Look look(const glm::ivec3& block) const;
+    void setLook(const glm::ivec3& block, const Look& look);
+    const std::map<std::array<int, 4>, Look>& looks() const { return m_looks; }
+    void lookIn(int dimension, const glm::ivec3& block, const Look& look);
+
+    static unsigned int textRgb(int colour);
+    static unsigned int shadedRgb(const Look& look);
 
     // For saving. The order is stable, which keeps the file diffable.
     const std::map<std::array<int, 4>, Text>& all() const { return m_signs; }
@@ -58,4 +74,5 @@ private:
 
     int m_dimension = 0;
     std::map<std::array<int, 4>, Text> m_signs;
+    std::map<std::array<int, 4>, Look> m_looks;
 };

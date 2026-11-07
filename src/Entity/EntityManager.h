@@ -157,6 +157,7 @@ public:
     // way the drowned and the guardian are, because the ordinary
     // spawner wants somewhere to stand and the sea has nowhere.
     static int seaSpeciesCount();
+    static bool glowSquidWater(const World& world, int x, int y, int z);
     static MobId seaSpecies(int index);
 
     // What a biome has that the next one does not. MobId::Count means

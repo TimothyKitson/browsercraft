@@ -613,6 +613,7 @@ namespace Tiles
         ItemDiscFirst, ItemDiscLast = ItemDiscFirst + 18,
         ItemSplashPotion, ItemLingeringPotion,
         ItemArmadilloScute, ItemWolfArmor, ItemWolfArmorOverlay,
+        ItemGlowInkSac,
         ItemCompassFrameFirst, ItemCompassFrameLast = ItemCompassFrameFirst + 31,
         ItemClockFirst, ItemClockLast = ItemClockFirst + 63,
         ItemRecoveryFirst, ItemRecoveryLast = ItemRecoveryFirst + 31,

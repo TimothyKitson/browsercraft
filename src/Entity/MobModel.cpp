@@ -236,6 +236,8 @@ void MobModel::render(Shader& chunkShader, const World& world, const EntityManag
                 sky = 1.0f;
                 blockLight = 1.0f;
             }
+            const float selfLit = mob.glowLight();
+            if (selfLit > 0.0f) blockLight = selfLit >= 1.0f ? 1.0f : std::max(blockLight, selfLit);
             const float fade = mob.deathFade();
             sky *= fade;
             blockLight *= fade;

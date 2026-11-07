@@ -376,6 +376,7 @@ namespace
         { "Lingering Potion", Tiles::ItemLingeringPotion, 1 },
         { "Armadillo Scute", Tiles::ItemArmadilloScute, 64 },
         { "Wolf Armor", Tiles::ItemWolfArmor, 1 },
+        { "Glow Ink Sac", Tiles::ItemGlowInkSac, 64 },
     };
 
     static_assert(sizeof(ITEMS) / sizeof(ITEMS[0]) ==

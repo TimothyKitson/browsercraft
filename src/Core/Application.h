@@ -357,6 +357,10 @@ private:
         std::string name;
         float x = 0.0f, y = 0.0f;
         float scale = 1.0f;
+        bool sign = false;
+        bool glow = false;
+        glm::vec3 fill{ 1.0f };
+        glm::vec3 edge{ 0.0f };
     };
     std::vector<Nameplate> m_nameplates;
 
@@ -1145,6 +1149,7 @@ private:
     // A sign is hung, then written on. The editor is the chat line's
     // machinery over four short lines rather than one long one.
     void openSign(const glm::ivec3& at);
+    bool useOnSign(const glm::ivec3& at);
     const BookText* bookOf(const ItemStack& stack) const;
     std::string itemLabel(const ItemStack& stack) const;
     void openBook(const ItemStack& stack, bool fromLectern, const glm::ivec3& lectern);
