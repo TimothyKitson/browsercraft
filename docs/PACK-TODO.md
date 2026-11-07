@@ -175,13 +175,14 @@ Everything in the 1.21 textures zip the game doesn't use yet, turned into work. 
     - III. Powered, detector and activator rails.
     - IV. Iron door, iron trapdoor and wooden trapdoors that open with redstone.
     - Notes: power is still on or off rather than fifteen strengths, so a comparator compares and subtracts on that basis and reads a container, cauldron, composter, cake, lectern, hive or framed eye as full or empty. Repeaters point power one way after their one to four ticks and drive the block in front; they do not lock yet. Power now also comes from a struck target, a lit daylight detector (inverted by hand), a pulled tripwire hook and a detector rail with a cart on it. Powered rails push and brake carts, activator rails throw the rider out, but powered rails do not pass power down a line. The detector rail recipe takes a stone block until pressure plates exist. Iron doors and trapdoors open only with power.
-44. Utility and decoration
+44. Utility and decoration (done)
     - I. Iron bars, chain and end rod.
     - II. Soul torch, soul fire, soul campfire and soul soil.
     - III. Fire as a block that spreads, burns out and lights things (fire_0 and fire_1).
     - IV. Magma block, crying obsidian, respawn anchor (charges 0 to 4) and lodestone.
     - V. Bell, and the jukebox with music discs. Chiseled bookshelf. Cobweb.
     - VI. The dragon egg on the dragon's death. Heavy core.
+    - Notes: iron nuggets and chorus fruit (with its teleport and popped form) came in early for the chain and end rod recipes. Fire spreads from flint and steel and from other fire, but lava does not start it yet and mobs standing in it do not burn. The respawn anchor is saved with the level and dying without one now always returns you to the overworld. The jukebox is ready but has nothing to play until the discs (item 58); the lodestone has no compass to point yet (item 49). Bells ring when used and are sold by armorers; they do not warn villagers. A chiseled bookshelf fills and empties its six slots in order rather than by the slot clicked, and holds plain books only. The dragon egg sits on a bedrock pillar over the exit portal and jumps away when used, but does not fall. Heavy cores come from ominous vaults.
 45. Archaeology
     - I. Suspicious sand and gravel, and the brush.
     - II. Pottery sherds, and decorated pots with a pattern on each side.

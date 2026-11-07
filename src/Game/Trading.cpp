@@ -194,6 +194,7 @@ namespace Trading
                 sell(14, Items::DiamondLeggings, 1, 4, 3, Blocks::Air, 0, enchanted(Kind::Protection, 2)),
                 sell(16, Items::DiamondChestplate, 1, 4, 3, Blocks::Air, 0, enchanted(Kind::Protection, 2)),
                 sell(12, Items::IronBoots, 1, 3, 3, Blocks::Air, 0, enchanted(Kind::FrostWalker, 1)),
+                sell(36, Blocks::BellFirst + 2, 1, 2, 3),
             };
 
         case Profession::Butcher:

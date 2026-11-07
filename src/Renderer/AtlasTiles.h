@@ -374,6 +374,8 @@ namespace Tiles
         MagmaTile, CryingObsidianTile, LodestoneTopTile, LodestoneSideTile,
         AnchorTopTileFirst, AnchorTopTileLast = AnchorTopTileFirst + 4, AnchorSideTileFirst, AnchorSideTileLast = AnchorSideTileFirst + 4,
         AnchorBottomTile,
+        BellTopTile, BellSideTile, BellBottomTile, JukeboxTopTile, JukeboxSideTile,
+        ShelfTopTile, ShelfSideTile, ShelfEmptyTile, ShelfOccupiedTile, DragonEggTile, HeavyCoreTile,
 
         TileCount
     };
@@ -572,9 +574,9 @@ namespace Tiles
         ItemPumpkinSeeds, ItemShears, ItemHoneyBottle, ItemSweetBerries, ItemDriedKelp,
         ItemNautilusShell, ItemHeartOfTheSea, ItemTurtleScute, ItemTurtleHelmet, ItemPowderSnowBucket,
         ItemRepeater, ItemComparator, ItemIronDoor, ItemTurtleEggIcon,
-        ItemIronNugget, ItemChorusFruit, ItemPoppedChorusFruit, ItemChain,
+        ItemIronNugget, ItemChorusFruit, ItemPoppedChorusFruit, ItemChain, ItemBell,
 
-        ItemTileEnd = ItemChain + 1
+        ItemTileEnd = ItemBell + 1
     };
 
     // Ten progressively more broken overlay tiles for the mining animation.

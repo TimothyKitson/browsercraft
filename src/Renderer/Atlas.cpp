@@ -5558,6 +5558,75 @@ namespace
             for (int y = 11; y < 14; ++y) t.set(3 + k * 3, y, k < charge ? Color{ 255, 210, 90 } : Color{ 60, 46, 30 });
     }
     void paintAnchorBottomTile(Tile& t) { t.fill(Color{ 26, 16, 38 }); t.speckle(10, 2106); }
+    void paintBellIn(Tile& t, int salt)
+    {
+        t.fill(Color{ 214, 170, 50 });
+        for (int y = 0; y < Tile::N; ++y)
+            for (int x = 0; x < Tile::N; ++x)
+                if (hash2(x, y, salt) > 0.82f) t.set(x, y, Color{ 250, 214, 90 });
+        for (int x = 0; x < Tile::N; ++x) t.set(x, 12, Color{ 160, 120, 30 });
+    }
+    void paintBellTopTile(Tile& t) { paintBellIn(t, 2201); }
+    void paintBellSideTile(Tile& t) { paintBellIn(t, 2202); }
+    void paintBellBottomTile(Tile& t) { paintBellIn(t, 2203); }
+    void paintJukeboxTopTile(Tile& t)
+    {
+        t.fill(Color{ 112, 74, 50 });
+        for (int y = 3; y < 13; ++y) for (int x = 3; x < 13; ++x) t.set(x, y, Color{ 40, 28, 22 });
+        for (int x = 4; x < 12; ++x) t.set(x, 8, Color{ 20, 14, 12 });
+    }
+    void paintJukeboxSideTile(Tile& t)
+    {
+        t.fill(Color{ 112, 74, 50 });
+        for (int k = 0; k < Tile::N; ++k) { t.set(k, 0, Color{ 84, 56, 36 }); t.set(k, 15, Color{ 84, 56, 36 }); t.set(0, k, Color{ 84, 56, 36 }); t.set(15, k, Color{ 84, 56, 36 }); }
+        t.speckle(8, 2204);
+    }
+    void paintShelfTopTile(Tile& t) { t.fill(Color{ 168, 132, 84 }); for (int x = 0; x < Tile::N; x += 4) for (int y = 0; y < Tile::N; ++y) t.set(x, y, Color{ 140, 108, 66 }); }
+    void paintShelfSideTile(Tile& t)
+    {
+        t.fill(Color{ 168, 132, 84 });
+        for (int x = 0; x < Tile::N; ++x) { t.set(x, 0, Color{ 120, 92, 56 }); t.set(x, 7, Color{ 120, 92, 56 }); t.set(x, 8, Color{ 120, 92, 56 }); t.set(x, 15, Color{ 120, 92, 56 }); }
+    }
+    void paintShelfIn(Tile& t, bool books)
+    {
+        t.fill(Color{ 150, 116, 72 });
+        for (int x = 0; x < Tile::N; ++x) { t.set(x, 0, Color{ 110, 84, 50 }); t.set(x, 7, Color{ 110, 84, 50 }); t.set(x, 8, Color{ 110, 84, 50 }); t.set(x, 15, Color{ 110, 84, 50 }); }
+        for (int x : { 0, 5, 6, 10, 11, 15 }) for (int y = 0; y < Tile::N; ++y) t.set(x, y, Color{ 110, 84, 50 });
+        for (int y = 1; y < 15; ++y)
+        {
+            if (y == 7 || y == 8) continue;
+            for (int x = 1; x < 15; ++x)
+            {
+                if (x == 5 || x == 6 || x == 10 || x == 11) continue;
+                if (!books) { t.set(x, y, Color{ 46, 32, 22 }); continue; }
+                static const Color SPINES[4] = { Color{ 160, 40, 36 }, Color{ 40, 80, 150 }, Color{ 60, 120, 50 }, Color{ 190, 150, 60 } };
+                t.set(x, y, SPINES[(x / 2 + (y > 8 ? 1 : 0)) % 4]);
+            }
+        }
+    }
+    void paintShelfEmptyTile(Tile& t) { paintShelfIn(t, false); }
+    void paintShelfOccupiedTile(Tile& t) { paintShelfIn(t, true); }
+    void paintDragonEggTile(Tile& t)
+    {
+        t.fill(Color{ 22, 10, 30 });
+        for (int y = 0; y < Tile::N; ++y) for (int x = 0; x < Tile::N; ++x) if (hash2(x, y, 2205) > 0.8f) t.set(x, y, Color{ 120, 40, 160 });
+    }
+    void paintHeavyCoreTile(Tile& t)
+    {
+        t.fill(Color{ 70, 72, 78 });
+        for (int y = 0; y < Tile::N; ++y) for (int x = 0; x < Tile::N; ++x)
+            if ((x % 8 == 0) || (y % 8 == 0) || hash2(x, y, 2206) > 0.85f) t.set(x, y, Color{ 44, 46, 52 });
+    }
+    void paintItemBell(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 3; y < 13; ++y)
+        {
+            const int half = 2 + (y - 3) / 3;
+            for (int x = 8 - half; x < 8 + half; ++x) t.set(x, y, y == 12 ? Color{ 160, 120, 30 } : Color{ 230, 186, 60 });
+        }
+        t.set(7, 2, Color{ 160, 120, 30 }); t.set(8, 2, Color{ 160, 120, 30 });
+    }
     void paintItemPitcherPlant(Tile& t)
     {
         paintDoubleIn(t, true, Color{ 100, 170, 190 }, 1333);
@@ -8137,6 +8206,7 @@ namespace
         { Tiles::ItemRawGold, paintItemRawGold },
         { Tiles::ItemAmethystShard, paintItemAmethystShard },
         { Tiles::ItemTripwireHook, paintItemTripwireHook },
+        { Tiles::ItemBell, paintItemBell },
         { Tiles::ItemIronNugget, paintItemIronNugget },
         { Tiles::ItemChorusFruit, paintItemChorusFruit },
         { Tiles::ItemPoppedChorusFruit, paintItemPoppedChorusFruit },
@@ -8325,6 +8395,17 @@ namespace
         { Tiles::DustLine1Off, paintRedstoneDust },
         { Tiles::DustLine1On, paintRedstoneDustLit },
         { Tiles::LeverHandle, paintLever },
+        { Tiles::BellTopTile, paintBellTopTile },
+        { Tiles::BellSideTile, paintBellSideTile },
+        { Tiles::BellBottomTile, paintBellBottomTile },
+        { Tiles::JukeboxTopTile, paintJukeboxTopTile },
+        { Tiles::JukeboxSideTile, paintJukeboxSideTile },
+        { Tiles::ShelfTopTile, paintShelfTopTile },
+        { Tiles::ShelfSideTile, paintShelfSideTile },
+        { Tiles::ShelfEmptyTile, paintShelfEmptyTile },
+        { Tiles::ShelfOccupiedTile, paintShelfOccupiedTile },
+        { Tiles::DragonEggTile, paintDragonEggTile },
+        { Tiles::HeavyCoreTile, paintHeavyCoreTile },
         { Tiles::MagmaTile, paintMagmaTile },
         { Tiles::CryingObsidianTile, paintCryingObsidianTile },
         { Tiles::LodestoneTopTile, paintLodestoneTopTile },
@@ -8940,6 +9021,7 @@ namespace
         { Tiles::ItemRawGold, { "raw_gold", nullptr, nullptr } },
         { Tiles::ItemAmethystShard, { "amethyst_shard", nullptr, nullptr } },
         { Tiles::ItemTripwireHook, { "../block/tripwire_hook", nullptr, nullptr } },
+        { Tiles::ItemBell, { "bell", nullptr, nullptr } },
         { Tiles::ItemIronNugget, { "iron_nugget", nullptr, nullptr } },
         { Tiles::ItemChorusFruit, { "chorus_fruit", nullptr, nullptr } },
         { Tiles::ItemPoppedChorusFruit, { "popped_chorus_fruit", nullptr, nullptr } },
@@ -9124,6 +9206,17 @@ namespace
         { Tiles::GlassPaneTopTile, { "glass_pane_top", nullptr }, Tinting::None, 0, false },
         { Tiles::TerracottaPlainTile, { "terracotta", "hardened_clay", nullptr }, Tinting::None, 0, false },
         { Tiles::TintedGlassTile, { "tinted_glass", nullptr }, Tinting::None, 0, false },
+        { Tiles::BellTopTile, { "bell_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::BellSideTile, { "bell_side", nullptr }, Tinting::None, 0, false },
+        { Tiles::BellBottomTile, { "bell_bottom", nullptr }, Tinting::None, 0, false },
+        { Tiles::JukeboxTopTile, { "jukebox_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::JukeboxSideTile, { "jukebox_side", nullptr }, Tinting::None, 0, false },
+        { Tiles::ShelfTopTile, { "chiseled_bookshelf_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::ShelfSideTile, { "chiseled_bookshelf_side", nullptr }, Tinting::None, 0, false },
+        { Tiles::ShelfEmptyTile, { "chiseled_bookshelf_empty", nullptr }, Tinting::None, 0, false },
+        { Tiles::ShelfOccupiedTile, { "chiseled_bookshelf_occupied", nullptr }, Tinting::None, 0, false },
+        { Tiles::DragonEggTile, { "dragon_egg", nullptr }, Tinting::None, 0, false },
+        { Tiles::HeavyCoreTile, { "heavy_core", nullptr }, Tinting::None, 0, false },
         { Tiles::MagmaTile, { "magma", nullptr }, Tinting::None, 0, true },
         { Tiles::CryingObsidianTile, { "crying_obsidian", nullptr }, Tinting::None, 0, false },
         { Tiles::LodestoneTopTile, { "lodestone_top", nullptr }, Tinting::None, 0, false },

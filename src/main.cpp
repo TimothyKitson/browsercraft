@@ -815,6 +815,10 @@ namespace
             else if (isChain(id) || isEndRod(id)) why = "set along another axis or facing";
             else if (isFire(id))                  why = "lit with flint and steel, or spreading and burning down";
             else if (isRespawnAnchor(id))         why = "an anchor charged with glowstone";
+            else if (isBell(id))                  why = "a bell hung facing another way";
+            else if (id == Blocks::DragonEgg)     why = "left on the exit portal when the dragon dies";
+            else if (id == Blocks::HeavyCore)     why = "a prize from an ominous vault";
+            else if (isChiseledBookshelf(id))     why = "a shelf with books in it, or facing another way";
             else if (isAnyCoralWallFan(id))       why = "a coral fan set against another face";
             else if (isBigDripleaf(id) || isBigDripleafStem(id) || isSmallDripleaf(id))
                                                   why = "another facing, tilt or half of a dripleaf";
@@ -1009,6 +1013,8 @@ namespace
         haveItem.insert(static_cast<int>(Blocks::CarvedPumpkinFirst + 2));
         haveItem.insert(static_cast<int>(Items::NautilusShell));
         haveItem.insert(static_cast<int>(Items::TurtleScute));
+        haveItem.insert(static_cast<int>(Blocks::HeavyCore));
+        haveItem.insert(static_cast<int>(Blocks::DragonEgg));
         haveItem.insert(static_cast<int>(Blocks::Torchflower));
         haveItem.insert(static_cast<int>(doublePlantOf(DoublePlant::PitcherPlant, false)));
         for (int stage = 1; stage < 4; ++stage)

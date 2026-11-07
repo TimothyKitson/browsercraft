@@ -653,6 +653,10 @@ namespace Blocks
         Fire0, Fire1, Fire2, Fire3, SoulFire,
         MagmaBlock, CryingObsidian, Lodestone,
         RespawnAnchor0, RespawnAnchor1, RespawnAnchor2, RespawnAnchor3, RespawnAnchor4,
+        BellFirst, BellLast = BellFirst + 3,
+        Jukebox,
+        ChiseledBookshelfFirst, ChiseledBookshelfLast = ChiseledBookshelfFirst + 27,
+        DragonEgg, HeavyCore,
 
         Count
     };
@@ -776,6 +780,14 @@ inline bool isCampfire(BlockId id) { return id == Blocks::Campfire || id == Bloc
 inline bool isRespawnAnchor(BlockId id) { return id >= Blocks::RespawnAnchor0 && id <= Blocks::RespawnAnchor4; }
 inline int anchorCharge(BlockId id) { return isRespawnAnchor(id) ? id - Blocks::RespawnAnchor0 : 0; }
 inline BlockId anchorOf(int charge) { return static_cast<BlockId>(Blocks::RespawnAnchor0 + (charge < 0 ? 0 : charge > 4 ? 4 : charge)); }
+inline bool isBell(BlockId id) { return id >= Blocks::BellFirst && id <= Blocks::BellLast; }
+inline bool isChiseledBookshelf(BlockId id) { return id >= Blocks::ChiseledBookshelfFirst && id <= Blocks::ChiseledBookshelfLast; }
+inline int shelfBooks(BlockId id) { return isChiseledBookshelf(id) ? (id - Blocks::ChiseledBookshelfFirst) % 7 : 0; }
+inline int shelfFacing(BlockId id) { return isChiseledBookshelf(id) ? (id - Blocks::ChiseledBookshelfFirst) / 7 : 0; }
+inline BlockId shelfOf(int facing, int books)
+{
+    return static_cast<BlockId>(Blocks::ChiseledBookshelfFirst + (facing & 3) * 7 + (books < 0 ? 0 : books > 6 ? 6 : books));
+}
 inline bool isTarget(BlockId id) { return id == Blocks::Target || id == Blocks::TargetLit; }
 inline bool isIronDoor(BlockId id) { return id >= Blocks::IronDoorFirst && id <= Blocks::IronDoorLast; }
 inline bool isIronTrapdoor(BlockId id) { return id >= Blocks::IronTrapdoorFirst && id <= Blocks::IronTrapdoorLast; }
@@ -1839,6 +1851,8 @@ inline int blockFacing(BlockId id)
     if (isAnyCoralWallFan(id)) return coralWallFanFacing(id);
     if (isDiode(id)) return diodeOut(id);
     if (isTripwireHook(id)) return hookFacing(id);
+    if (isBell(id)) return id - Blocks::BellFirst;
+    if (isChiseledBookshelf(id)) return shelfFacing(id);
     return 0;
 }
 

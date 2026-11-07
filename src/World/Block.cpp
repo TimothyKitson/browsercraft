@@ -2147,6 +2147,41 @@ namespace
         { "Respawn Anchor", AnchorTopTileFirst + 2, AnchorBottomTile, AnchorSideTileFirst + 2, true, true, RenderType::Cube, 7, 50.0f },
         { "Respawn Anchor", AnchorTopTileFirst + 3, AnchorBottomTile, AnchorSideTileFirst + 3, true, true, RenderType::Cube, 11, 50.0f },
         { "Respawn Anchor", AnchorTopTileFirst + 4, AnchorBottomTile, AnchorSideTileFirst + 4, true, true, RenderType::Cube, 15, 50.0f },
+        { "Bell", BellTopTile, BellBottomTile, BellSideTile, true, false, RenderType::Lush, 0, 5.0f },
+        { "Bell", BellTopTile, BellBottomTile, BellSideTile, true, false, RenderType::Lush, 0, 5.0f },
+        { "Bell", BellTopTile, BellBottomTile, BellSideTile, true, false, RenderType::Lush, 0, 5.0f },
+        { "Bell", BellTopTile, BellBottomTile, BellSideTile, true, false, RenderType::Lush, 0, 5.0f },
+        { "Jukebox", JukeboxTopTile, JukeboxSideTile, JukeboxSideTile, true, true, RenderType::Cube, 0, 2.0f },
+        { "Chiseled Bookshelf", ShelfTopTile, ShelfTopTile, ShelfSideTile, true, false, RenderType::Lush, 0, 1.5f },
+        { "Chiseled Bookshelf", ShelfTopTile, ShelfTopTile, ShelfSideTile, true, false, RenderType::Lush, 0, 1.5f },
+        { "Chiseled Bookshelf", ShelfTopTile, ShelfTopTile, ShelfSideTile, true, false, RenderType::Lush, 0, 1.5f },
+        { "Chiseled Bookshelf", ShelfTopTile, ShelfTopTile, ShelfSideTile, true, false, RenderType::Lush, 0, 1.5f },
+        { "Chiseled Bookshelf", ShelfTopTile, ShelfTopTile, ShelfSideTile, true, false, RenderType::Lush, 0, 1.5f },
+        { "Chiseled Bookshelf", ShelfTopTile, ShelfTopTile, ShelfSideTile, true, false, RenderType::Lush, 0, 1.5f },
+        { "Chiseled Bookshelf", ShelfTopTile, ShelfTopTile, ShelfSideTile, true, false, RenderType::Lush, 0, 1.5f },
+        { "Chiseled Bookshelf", ShelfTopTile, ShelfTopTile, ShelfSideTile, true, false, RenderType::Lush, 0, 1.5f },
+        { "Chiseled Bookshelf", ShelfTopTile, ShelfTopTile, ShelfSideTile, true, false, RenderType::Lush, 0, 1.5f },
+        { "Chiseled Bookshelf", ShelfTopTile, ShelfTopTile, ShelfSideTile, true, false, RenderType::Lush, 0, 1.5f },
+        { "Chiseled Bookshelf", ShelfTopTile, ShelfTopTile, ShelfSideTile, true, false, RenderType::Lush, 0, 1.5f },
+        { "Chiseled Bookshelf", ShelfTopTile, ShelfTopTile, ShelfSideTile, true, false, RenderType::Lush, 0, 1.5f },
+        { "Chiseled Bookshelf", ShelfTopTile, ShelfTopTile, ShelfSideTile, true, false, RenderType::Lush, 0, 1.5f },
+        { "Chiseled Bookshelf", ShelfTopTile, ShelfTopTile, ShelfSideTile, true, false, RenderType::Lush, 0, 1.5f },
+        { "Chiseled Bookshelf", ShelfTopTile, ShelfTopTile, ShelfSideTile, true, false, RenderType::Lush, 0, 1.5f },
+        { "Chiseled Bookshelf", ShelfTopTile, ShelfTopTile, ShelfSideTile, true, false, RenderType::Lush, 0, 1.5f },
+        { "Chiseled Bookshelf", ShelfTopTile, ShelfTopTile, ShelfSideTile, true, false, RenderType::Lush, 0, 1.5f },
+        { "Chiseled Bookshelf", ShelfTopTile, ShelfTopTile, ShelfSideTile, true, false, RenderType::Lush, 0, 1.5f },
+        { "Chiseled Bookshelf", ShelfTopTile, ShelfTopTile, ShelfSideTile, true, false, RenderType::Lush, 0, 1.5f },
+        { "Chiseled Bookshelf", ShelfTopTile, ShelfTopTile, ShelfSideTile, true, false, RenderType::Lush, 0, 1.5f },
+        { "Chiseled Bookshelf", ShelfTopTile, ShelfTopTile, ShelfSideTile, true, false, RenderType::Lush, 0, 1.5f },
+        { "Chiseled Bookshelf", ShelfTopTile, ShelfTopTile, ShelfSideTile, true, false, RenderType::Lush, 0, 1.5f },
+        { "Chiseled Bookshelf", ShelfTopTile, ShelfTopTile, ShelfSideTile, true, false, RenderType::Lush, 0, 1.5f },
+        { "Chiseled Bookshelf", ShelfTopTile, ShelfTopTile, ShelfSideTile, true, false, RenderType::Lush, 0, 1.5f },
+        { "Chiseled Bookshelf", ShelfTopTile, ShelfTopTile, ShelfSideTile, true, false, RenderType::Lush, 0, 1.5f },
+        { "Chiseled Bookshelf", ShelfTopTile, ShelfTopTile, ShelfSideTile, true, false, RenderType::Lush, 0, 1.5f },
+        { "Chiseled Bookshelf", ShelfTopTile, ShelfTopTile, ShelfSideTile, true, false, RenderType::Lush, 0, 1.5f },
+        { "Chiseled Bookshelf", ShelfTopTile, ShelfTopTile, ShelfSideTile, true, false, RenderType::Lush, 0, 1.5f },
+        { "Dragon Egg", DragonEggTile, DragonEggTile, DragonEggTile, true, false, RenderType::Lush, 1, 3.0f },
+        { "Heavy Core", HeavyCoreTile, HeavyCoreTile, HeavyCoreTile, true, false, RenderType::Lush, 0, 10.0f },
     };
 }
 
@@ -2245,6 +2280,8 @@ bool isObtainable(BlockId id)
             if (id == Blocks::ChorusPlant) return false;
             if (isFire(id)) return false;
             if (isRespawnAnchor(id) && id != Blocks::RespawnAnchor0) return false;
+            if (isBell(id) && id != Blocks::BellFirst + 2) return false;
+            if (isChiseledBookshelf(id) && id != shelfOf(2, 0)) return false;
             if (isBigDripleaf(id) && id != bigDripleafOf(0, DripleafTilt::None)) return false;
             if (isSmallDripleaf(id) && id != smallDripleafOf(0, false)) return false;
             if (isGlowLichen(id) && id != glowLichenOn(0)) return false;
@@ -2309,6 +2346,8 @@ const char* blockSoundGroup(BlockId id)
     if (id == Blocks::Cobweb) return "cloth";
     if (id == Blocks::SoulSoil) return "sand";
     if (id == Blocks::SoulCampfire) return "wood";
+    if (isChiseledBookshelf(id) || id == Blocks::Jukebox) return "wood";
+    if (isBell(id) || id == Blocks::HeavyCore || id == Blocks::DragonEgg) return "stone";
     if (id == Blocks::Target || id == Blocks::TargetLit) return "grass";
     if (isEarthy(id)) return "gravel";
     if (isFlowerPot(id)) return "stone";
@@ -2476,6 +2515,8 @@ Material blockMaterial(BlockId id)
     if (isDaylightDetector(id)) return Material::Wood;
     if (id == Blocks::IronBars || isChain(id)) return Material::Stone;
     if (isEndRod(id)) return Material::Plant;
+    if (isChiseledBookshelf(id) || id == Blocks::Jukebox) return Material::Wood;
+    if (id == Blocks::DragonEgg) return Material::Plant;
     if (id == Blocks::Cobweb) return Material::Wool;
     if (id == Blocks::SoulTorch || isFire(id)) return Material::Plant;
     if (id == Blocks::SoulCampfire) return Material::Wood;
@@ -2644,6 +2685,8 @@ bool blockOverlaps(BlockId id, int bx, int by, int bz,
     if (isFlowerPot(id)) return overlaps(0.3125f, 0.0f, 0.3125f, 0.6875f, 0.375f, 0.6875f);
     if (id == Blocks::HoneyBlock) return overlaps(0.0625f, 0.0f, 0.0625f, 0.9375f, 0.9375f, 0.9375f);
     if (id == Blocks::Conduit) return overlaps(0.3125f, 0.3125f, 0.3125f, 0.6875f, 0.6875f, 0.6875f);
+    if (id == Blocks::HeavyCore) return overlaps(0.25f, 0.0f, 0.25f, 0.75f, 0.5f, 0.75f);
+    if (id == Blocks::DragonEgg) return overlaps(0.0625f, 0.0f, 0.0625f, 0.9375f, 1.0f, 0.9375f);
     if (isDiode(id)) return overlaps(0.0f, 0.0f, 0.0f, 1.0f, 0.125f, 1.0f);
     if (isDaylightDetector(id)) return overlaps(0.0f, 0.0f, 0.0f, 1.0f, 0.375f, 1.0f);
     if (isChain(id))

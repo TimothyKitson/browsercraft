@@ -454,6 +454,12 @@ namespace
 
         { true, 0, 0, { Items::MelonSlice }, 1, Items::MelonSeeds, 1 },
         { true, 0, 0, { Blocks::Pumpkin }, 1, Items::PumpkinSeeds, 4 },
+        { false, 3, 3, { Blocks::Planks, Blocks::Planks, Blocks::Planks,
+                         Blocks::Planks, Items::Diamond, Blocks::Planks,
+                         Blocks::Planks, Blocks::Planks, Blocks::Planks }, 0, Blocks::Jukebox, 1 },
+        { false, 3, 3, { Blocks::Planks, Blocks::Planks, Blocks::Planks,
+                         Blocks::PlankSlab, Blocks::PlankSlab, Blocks::PlankSlab,
+                         Blocks::Planks, Blocks::Planks, Blocks::Planks }, 0, Blocks::ChiseledBookshelfFirst + 14, 1 },
         { false, 2, 2, { Items::MagmaCream, Items::MagmaCream, Items::MagmaCream, Items::MagmaCream }, 0, Blocks::MagmaBlock, 1 },
         { false, 3, 3, { Blocks::CryingObsidian, Blocks::CryingObsidian, Blocks::CryingObsidian,
                          Blocks::Glowstone, Blocks::Glowstone, Blocks::Glowstone,

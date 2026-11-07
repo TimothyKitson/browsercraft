@@ -256,6 +256,10 @@ int flatIconFor(BlockId id)
     if (isTurtleEgg(id)) return Tiles::ItemTurtleEggIcon;
     if (isTripwireHook(id)) return Tiles::ItemTripwireHook;
     if (isChain(id)) return Tiles::ItemChain;
+    if (isBell(id)) return Tiles::ItemBell;
+    if (isChiseledBookshelf(id)) return Tiles::ShelfOccupiedTile;
+    if (id == Blocks::DragonEgg) return Tiles::DragonEggTile;
+    if (id == Blocks::HeavyCore) return Tiles::HeavyCoreTile;
     if (isEndRod(id)) return Tiles::EndRodTile;
     if (isDoublePlant(id))
     {
@@ -417,6 +421,8 @@ StackId blockDrop(BlockId id)
     if (isFire(id)) return Blocks::Air;
     if (id == Blocks::SoulCampfire) return Blocks::SoulSoil;
     if (isRespawnAnchor(id)) return Blocks::RespawnAnchor0;
+    if (isBell(id)) return static_cast<StackId>(Blocks::BellFirst + 2);
+    if (isChiseledBookshelf(id)) return shelfOf(2, 0);
     if (id == Blocks::ChorusPlant) return Items::ChorusFruit;
 
     // A melon comes apart into slices rather than into a melon, which

@@ -789,6 +789,70 @@ namespace
             const glm::vec3 c[4] = { glm::vec3(x0, yy, z1), glm::vec3(x1, yy, z1), glm::vec3(x1, yy, z0), glm::vec3(x0, yy, z0) };
             pushQuad(snap, lx, y, lz, id, c, tile, x0 * 16.0f, z0 * 16.0f, x1 * 16.0f, z1 * 16.0f, shade, true, out);
         };
+        if (isBell(id))
+        {
+            const BlockInfo& info = blockInfo(id);
+            const int facing = id - Blocks::BellFirst;
+            const PartFace bar{ Tiles::DarkOakPlanks, 2.0f, 2.0f, 14.0f, 4.0f };
+            const PartFace bars[6] = { bar, bar, bar, bar, bar, bar };
+            emitRotated(snap, lx, y, lz, id, facing, 2, 13, 7, 14, 15, 9, bars, out);
+            const PartFace post{ Tiles::Stone, 0.0f, 1.0f, 4.0f, 16.0f }, cap{ Tiles::Stone, 0.0f, 0.0f, 2.0f, 4.0f };
+            const PartFace posts[6] = { post, post, cap, cap, post, post };
+            emitRotated(snap, lx, y, lz, id, facing, 0, 0, 6, 2, 16, 10, posts, out);
+            emitRotated(snap, lx, y, lz, id, facing, 14, 0, 6, 16, 16, 10, posts, out);
+            const PartFace side{ info.tileSide, 0.0f, 0.0f, 16.0f, 16.0f };
+            const PartFace body[6] = { side, side, { info.tileTop, 0.0f, 0.0f, 16.0f, 16.0f }, { info.tileBottom, 0.0f, 0.0f, 16.0f, 16.0f }, side, side };
+            emitRotated(snap, lx, y, lz, id, facing, 5, 6, 5, 11, 12, 11, body, out);
+            emitRotated(snap, lx, y, lz, id, facing, 4, 4, 4, 12, 6, 12, body, out);
+            emitRotated(snap, lx, y, lz, id, facing, 7, 12, 7, 9, 13, 9, body, out);
+            return;
+        }
+        if (isChiseledBookshelf(id))
+        {
+            const BlockInfo& info = blockInfo(id);
+            const int facing = shelfFacing(id);
+            const PartFace side{ info.tileSide, 0.0f, 0.0f, 16.0f, 16.0f }, top{ info.tileTop, 0.0f, 0.0f, 16.0f, 16.0f };
+            const PartFace shell[6] = { side, side, top, top, side, { -1, 0.0f, 0.0f, 0.0f, 0.0f } };
+            emitRotated(snap, lx, y, lz, id, facing, 0, 0, 0, 16, 16, 16, shell, out);
+            struct Slot { float x0, x1, y0, y1, u0, u1, v0, v1; };
+            static const Slot SLOTS[6] = {
+                { 10, 16, 8, 16, 0, 6, 0, 8 }, { 5, 10, 8, 16, 6, 11, 0, 8 }, { 0, 5, 8, 16, 11, 16, 0, 8 },
+                { 10, 16, 0, 8, 0, 6, 8, 16 }, { 5, 10, 0, 8, 6, 11, 8, 16 }, { 0, 5, 0, 8, 11, 16, 8, 16 },
+            };
+            for (int i = 0; i < 6; ++i)
+            {
+                const Slot& s = SLOTS[i];
+                const int tile = i < shelfBooks(id) ? Tiles::ShelfOccupiedTile : Tiles::ShelfEmptyTile;
+                const PartFace face{ tile, s.u0, s.v0, s.u1, s.v1 };
+                PartFace faces[6];
+                for (PartFace& f : faces) f = PartFace{ -1, 0.0f, 0.0f, 0.0f, 0.0f };
+                faces[5] = face;
+                emitRotated(snap, lx, y, lz, id, facing, s.x0, s.y0, 0, s.x1, s.y1, 0, faces, out);
+            }
+            return;
+        }
+        if (id == Blocks::DragonEgg)
+        {
+            const int tile = blockInfo(id).tileSide;
+            struct Layer { float lo, y0, hi, y1; };
+            static const Layer LAYERS[8] = { { 6, 15, 10, 16 }, { 5, 14, 11, 15 }, { 5, 13, 11, 14 }, { 3, 11, 13, 13 },
+                                             { 2, 8, 14, 11 }, { 1, 3, 15, 8 }, { 2, 1, 14, 3 }, { 3, 0, 13, 1 } };
+            for (const Layer& l : LAYERS)
+            {
+                const PartFace side{ tile, l.lo, 16.0f - l.y1, l.hi, 16.0f - l.y0 }, flat{ tile, l.lo, l.lo, l.hi, l.hi };
+                const PartFace faces[6] = { side, side, flat, flat, side, side };
+                emitPart(snap, lx, y, lz, id, glm::vec3(l.lo, l.y0, l.lo) / 16.0f, glm::vec3(l.hi, l.y1, l.hi) / 16.0f, faces, out);
+            }
+            return;
+        }
+        if (id == Blocks::HeavyCore)
+        {
+            const int tile = blockInfo(id).tileSide;
+            const PartFace side{ tile, 0.0f, 8.0f, 8.0f, 16.0f };
+            const PartFace faces[6] = { side, side, { tile, 0.0f, 0.0f, 8.0f, 8.0f }, { tile, 8.0f, 0.0f, 16.0f, 8.0f }, side, side };
+            emitPart(snap, lx, y, lz, id, glm::vec3(0.25f, 0.0f, 0.25f), glm::vec3(0.75f, 0.5f, 0.75f), faces, out);
+            return;
+        }
         if (isFire(id))
         {
             const BlockInfo& info = blockInfo(id);

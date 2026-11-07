@@ -2802,6 +2802,11 @@ bool Application::frame()
                     put(2, 0, -5, Blocks::CryingObsidian);
                     put(2, 0, -3, Blocks::Lodestone);
                     for (int c = 0; c < 5; ++c) put(12, 0, -7 + c * 2, anchorOf(c));
+                    put(10, 0, -7, static_cast<BlockId>(Blocks::BellFirst + 0));
+                    put(10, 0, -5, Blocks::Jukebox);
+                    for (int k = 0; k < 4; ++k) put(11, 0, -3 + k, shelfOf(3, k * 2));
+                    put(10, 0, 0, Blocks::DragonEgg);
+                    put(10, 0, 2, Blocks::HeavyCore);
                     put(13, 0, -8, Blocks::Bookshelf);
                     put(13, 0, 8, Blocks::DiamondOre);
                     put(13, 1, 8, Blocks::EndPortalFrame);
@@ -6790,6 +6795,8 @@ void Application::updateMining(float deltaTime)
                     m_net.onLocalBlockChange(pair.x, pair.y, pair.z, Blocks::Air);
                 }
             }
+            if (isChiseledBookshelf(id) && shelfBooks(id) > 0 && !m_player.creative())
+                m_drops.spawnFromBrokenBlock(hit.block, Items::Book, shelfBooks(id));
             if (isPotted(id) && !m_player.creative())
                 m_drops.spawnFromBrokenBlock(hit.block, pottedPlant(id), 1);
 
@@ -7692,6 +7699,12 @@ void Application::openExitPortal()
             // a hole somebody cut in the floor.
             if (rim) m_world->setBlock(dx, top + 1, dz, Blocks::EndCrystalBase);
         }
+
+    if (m_world->getBlock(0, top + 1, 0) != Blocks::Bedrock)
+    {
+        for (int dy = 0; dy <= 3; ++dy) m_world->setBlock(0, top + dy, 0, Blocks::Bedrock);
+        m_world->setBlock(0, top + 4, 0, Blocks::DragonEgg);
+    }
 }
 
 // A pumpkin put down on the right body makes a golem: two snow blocks
@@ -8797,6 +8810,7 @@ bool Application::containerSignal(const glm::ivec3& at)
     if (isCauldron(here)) return here != Blocks::Cauldron0;
     if (isCake(here) || here == Blocks::LecternBook || here == Blocks::EndPortalFrameFilled) return true;
     if (isHive(here)) return hiveHoney(here) > 0;
+    if (isChiseledBookshelf(here)) return shelfBooks(here) > 0;
     if (isFurnaceBlock(here))
     {
         if (!m_furnaces.has(at)) return false;
@@ -10449,6 +10463,57 @@ void Application::handlePlacement()
                 m_audio.play(Sound::Pickup, 0.5f, 1.2f);
                 return;
             }
+            if (isBell(used))
+            {
+                m_audio.play(Sound::Click, 1.0f, 0.5f);
+                m_audio.play(Sound::DigGlass, 0.5f, 1.8f);
+                return;
+            }
+            if (isChiseledBookshelf(used))
+            {
+                ItemStack& held = m_inventory.selected();
+                const int books = shelfBooks(used);
+                BlockId next = used;
+                if (held.id == Items::Book && books < 6)
+                {
+                    next = shelfOf(shelfFacing(used), books + 1);
+                    if (!m_player.creative() && --held.count <= 0) held.clear();
+                }
+                else if (books > 0)
+                {
+                    next = shelfOf(shelfFacing(used), books - 1);
+                    if (m_inventory.add(Items::Book, 1) > 0) m_drops.spawn(m_player.position, Items::Book, 1);
+                }
+                if (next != used)
+                {
+                    m_world->setBlock(bench.block.x, bench.block.y, bench.block.z, next);
+                    m_net.onLocalBlockChange(bench.block.x, bench.block.y, bench.block.z, next);
+                    settleRedstone(bench.block);
+                    m_audio.play(Sound::DigWood, 0.5f, 1.3f);
+                    return;
+                }
+            }
+            if (used == Blocks::DragonEgg)
+            {
+                uint32_t roll = static_cast<uint32_t>(m_elapsedSeconds * 4099.0f) | 1u;
+                for (int attempt = 0; attempt < 64; ++attempt)
+                {
+                    roll = roll * 1664525u + 1013904223u;
+                    const glm::ivec3 to(bench.block.x + static_cast<int>((roll >> 8) % 31u) - 15,
+                                        bench.block.y + static_cast<int>((roll >> 16) % 15u) - 7,
+                                        bench.block.z + static_cast<int>((roll >> 24) % 31u) - 15);
+                    if (to.y < 1 || m_world->getBlock(to.x, to.y, to.z) != Blocks::Air) continue;
+                    if (!isSolid(m_world->getBlock(to.x, to.y - 1, to.z))) continue;
+                    m_world->setBlock(bench.block.x, bench.block.y, bench.block.z, Blocks::Air);
+                    m_net.onLocalBlockChange(bench.block.x, bench.block.y, bench.block.z, Blocks::Air);
+                    m_world->setBlock(to.x, to.y, to.z, Blocks::DragonEgg);
+                    m_net.onLocalBlockChange(to.x, to.y, to.z, Blocks::DragonEgg);
+                    sprites(SpriteParticles::Kind::Glitter, glm::vec3(bench.block) + glm::vec3(0.5f), 20, 0.5f, 1.0f, 0.2f, 1.0f, 1.0f);
+                    m_audio.play(Sound::MobEndermanSay, 0.5f, 1.6f);
+                    break;
+                }
+                return;
+            }
             if (isRespawnAnchor(used))
             {
                 ItemStack& held = m_inventory.selected();
@@ -11593,6 +11658,13 @@ void Application::handlePlacement()
         const glm::vec3 look = m_camera.front;
         const int out = (std::fabs(look.x) > std::fabs(look.z)) ? (look.x > 0.0f ? 1 : 3) : (look.z > 0.0f ? 2 : 0);
         placing = isRepeater(placing) ? repeaterOf(out, 1, false) : comparatorOf(out, false, false);
+    }
+    if (isBell(placing) || isChiseledBookshelf(placing))
+    {
+        const glm::vec3 look = m_camera.front;
+        const int toward = (std::fabs(look.x) > std::fabs(look.z)) ? (look.x > 0.0f ? 1 : 3) : (look.z > 0.0f ? 2 : 0);
+        if (isBell(placing)) placing = static_cast<BlockId>(Blocks::BellFirst + toward);
+        else placing = shelfOf((toward + 2) & 3, 0);
     }
     if (isChain(placing))
     {
