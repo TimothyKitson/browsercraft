@@ -5653,6 +5653,28 @@ namespace
         for (int i = 0; i < 5; ++i)
             t.set(5 + static_cast<int>(hash2(k, i, 2301) * 6.0f), 5 + static_cast<int>(hash2(i, k, 2302) * 6.0f), mark);
     }
+    void paintPotBaseTile(Tile& t)
+    {
+        t.fill(Color{ 150, 80, 56 });
+        for (int y = 0; y < Tile::N; ++y) for (int x = 0; x < Tile::N; ++x) if (hash2(x, y, 2401) > 0.85f) t.set(x, y, Color{ 126, 64, 44 });
+    }
+    void paintPotSideTile(Tile& t)
+    {
+        t.fill(Color{ 156, 84, 58 });
+        for (int x = 0; x < Tile::N; ++x) { t.set(x, 0, Color{ 120, 60, 42 }); t.set(x, 15, Color{ 120, 60, 42 }); }
+        t.speckle(6, 2402);
+    }
+    void paintPotPatternIn(Tile& t, int k)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        const Color ink{ 60, 28, 20 };
+        for (int i = 0; i < 9; ++i)
+        {
+            const int x = 3 + static_cast<int>(hash2(k, i, 2403) * 10.0f), y = 3 + static_cast<int>(hash2(i, k, 2404) * 10.0f);
+            t.set(x, y, ink); t.set(x + 1, y, ink);
+        }
+        for (int x = 2; x < 14; ++x) { t.set(x, 1, ink); t.set(x, 14, ink); }
+    }
     void paintItemPitcherPlant(Tile& t)
     {
         paintDoubleIn(t, true, Color{ 100, 170, 190 }, 1333);
@@ -8422,6 +8444,8 @@ namespace
         { Tiles::DustLine1Off, paintRedstoneDust },
         { Tiles::DustLine1On, paintRedstoneDustLit },
         { Tiles::LeverHandle, paintLever },
+        { Tiles::PotBaseTile, paintPotBaseTile },
+        { Tiles::PotSideTile, paintPotSideTile },
         { Tiles::BellTopTile, paintBellTopTile },
         { Tiles::BellSideTile, paintBellSideTile },
         { Tiles::BellBottomTile, paintBellBottomTile },
@@ -9257,6 +9281,31 @@ namespace
         { Tiles::GlassPaneTopTile, { "glass_pane_top", nullptr }, Tinting::None, 0, false },
         { Tiles::TerracottaPlainTile, { "terracotta", "hardened_clay", nullptr }, Tinting::None, 0, false },
         { Tiles::TintedGlassTile, { "tinted_glass", nullptr }, Tinting::None, 0, false },
+        { Tiles::PotBaseTile, { "../entity/decorated_pot/decorated_pot_base", nullptr }, Tinting::None, 0, false },
+        { Tiles::PotSideTile, { "../entity/decorated_pot/decorated_pot_side", nullptr }, Tinting::None, 0, false },
+        { Tiles::PotPatternFirst + 0, { "../entity/decorated_pot/angler_pottery_pattern", nullptr }, Tinting::None, 0, false },
+        { Tiles::PotPatternFirst + 1, { "../entity/decorated_pot/archer_pottery_pattern", nullptr }, Tinting::None, 0, false },
+        { Tiles::PotPatternFirst + 2, { "../entity/decorated_pot/arms_up_pottery_pattern", nullptr }, Tinting::None, 0, false },
+        { Tiles::PotPatternFirst + 3, { "../entity/decorated_pot/blade_pottery_pattern", nullptr }, Tinting::None, 0, false },
+        { Tiles::PotPatternFirst + 4, { "../entity/decorated_pot/brewer_pottery_pattern", nullptr }, Tinting::None, 0, false },
+        { Tiles::PotPatternFirst + 5, { "../entity/decorated_pot/burn_pottery_pattern", nullptr }, Tinting::None, 0, false },
+        { Tiles::PotPatternFirst + 6, { "../entity/decorated_pot/danger_pottery_pattern", nullptr }, Tinting::None, 0, false },
+        { Tiles::PotPatternFirst + 7, { "../entity/decorated_pot/explorer_pottery_pattern", nullptr }, Tinting::None, 0, false },
+        { Tiles::PotPatternFirst + 8, { "../entity/decorated_pot/flow_pottery_pattern", nullptr }, Tinting::None, 0, false },
+        { Tiles::PotPatternFirst + 9, { "../entity/decorated_pot/friend_pottery_pattern", nullptr }, Tinting::None, 0, false },
+        { Tiles::PotPatternFirst + 10, { "../entity/decorated_pot/guster_pottery_pattern", nullptr }, Tinting::None, 0, false },
+        { Tiles::PotPatternFirst + 11, { "../entity/decorated_pot/heart_pottery_pattern", nullptr }, Tinting::None, 0, false },
+        { Tiles::PotPatternFirst + 12, { "../entity/decorated_pot/heartbreak_pottery_pattern", nullptr }, Tinting::None, 0, false },
+        { Tiles::PotPatternFirst + 13, { "../entity/decorated_pot/howl_pottery_pattern", nullptr }, Tinting::None, 0, false },
+        { Tiles::PotPatternFirst + 14, { "../entity/decorated_pot/miner_pottery_pattern", nullptr }, Tinting::None, 0, false },
+        { Tiles::PotPatternFirst + 15, { "../entity/decorated_pot/mourner_pottery_pattern", nullptr }, Tinting::None, 0, false },
+        { Tiles::PotPatternFirst + 16, { "../entity/decorated_pot/plenty_pottery_pattern", nullptr }, Tinting::None, 0, false },
+        { Tiles::PotPatternFirst + 17, { "../entity/decorated_pot/prize_pottery_pattern", nullptr }, Tinting::None, 0, false },
+        { Tiles::PotPatternFirst + 18, { "../entity/decorated_pot/scrape_pottery_pattern", nullptr }, Tinting::None, 0, false },
+        { Tiles::PotPatternFirst + 19, { "../entity/decorated_pot/sheaf_pottery_pattern", nullptr }, Tinting::None, 0, false },
+        { Tiles::PotPatternFirst + 20, { "../entity/decorated_pot/shelter_pottery_pattern", nullptr }, Tinting::None, 0, false },
+        { Tiles::PotPatternFirst + 21, { "../entity/decorated_pot/skull_pottery_pattern", nullptr }, Tinting::None, 0, false },
+        { Tiles::PotPatternFirst + 22, { "../entity/decorated_pot/snort_pottery_pattern", nullptr }, Tinting::None, 0, false },
         { Tiles::SuspiciousSandTileFirst + 0, { "suspicious_sand_0", nullptr }, Tinting::None, 0, false },
         { Tiles::SuspiciousSandTileFirst + 1, { "suspicious_sand_1", nullptr }, Tinting::None, 0, false },
         { Tiles::SuspiciousSandTileFirst + 2, { "suspicious_sand_2", nullptr }, Tinting::None, 0, false },
@@ -10334,6 +10383,12 @@ Atlas::Atlas()
     }
     for (int k = 0; k < 23; ++k)
     {
+        Tile pattern;
+        paintPotPatternIn(pattern, k);
+        blitPainted(Tiles::PotPatternFirst + k, pattern);
+    }
+    for (int k = 0; k < 23; ++k)
+    {
         Tile shard;
         paintSherdIn(shard, k);
         blitPainted(Tiles::ItemSherdFirst + k, shard);
@@ -11260,6 +11315,7 @@ bool Atlas::hasPainter(int tileIndex)
     if (tileIndex >= Tiles::AnchorTopTileFirst && tileIndex <= Tiles::AnchorSideTileLast) return true;
     if (tileIndex >= Tiles::SuspiciousSandTileFirst && tileIndex <= Tiles::SuspiciousGravelTileLast) return true;
     if (tileIndex >= Tiles::ItemSherdFirst && tileIndex <= Tiles::ItemSherdLast) return true;
+    if (tileIndex >= Tiles::PotPatternFirst && tileIndex <= Tiles::PotPatternLast) return true;
     if (tileIndex >= Tiles::CutCopperTile && tileIndex <= Tiles::CopperTrapdoorTileLast) return true;
     if (tileIndex >= Tiles::ItemCopperDoorFirst && tileIndex <= Tiles::ItemCopperDoorLast) return true;
     if (tileIndex >= Tiles::CrackFirst &&

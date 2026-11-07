@@ -499,6 +499,8 @@ private:
     bool m_anchorPending = false;
     glm::ivec3 m_anchor{ 0 };
     float m_magmaSting = 0.0f;
+    std::map<std::array<int, 4>, uint32_t> m_potSides;
+    void pinPotPatterns();
 
     // 0 = midnight, 0.5 = noon. Mid-morning: bright enough to show the
     // scenery off, with the sun still low enough to be interesting.

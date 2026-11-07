@@ -789,6 +789,31 @@ namespace
             const glm::vec3 c[4] = { glm::vec3(x0, yy, z1), glm::vec3(x1, yy, z1), glm::vec3(x1, yy, z0), glm::vec3(x0, yy, z0) };
             pushQuad(snap, lx, y, lz, id, c, tile, x0 * 16.0f, z0 * 16.0f, x1 * 16.0f, z1 * 16.0f, shade, true, out);
         };
+        if (isDecoratedPot(id))
+        {
+            const BlockInfo& info = blockInfo(id);
+            const int base = info.tileTop, side = info.tileSide;
+            const float lo = 1.0f / 16.0f, hi = 15.0f / 16.0f;
+            const glm::vec3 walls[4][4] = {
+                { { hi, 0.0f, lo }, { lo, 0.0f, lo }, { lo, 1.0f, lo }, { hi, 1.0f, lo } },
+                { { hi, 0.0f, hi }, { hi, 0.0f, lo }, { hi, 1.0f, lo }, { hi, 1.0f, hi } },
+                { { lo, 0.0f, hi }, { hi, 0.0f, hi }, { hi, 1.0f, hi }, { lo, 1.0f, hi } },
+                { { lo, 0.0f, lo }, { lo, 0.0f, hi }, { lo, 1.0f, hi }, { lo, 1.0f, lo } },
+            };
+            for (int k = 0; k < 4; ++k)
+                pushQuad(snap, lx, y, lz, id, walls[k], side, 1.0f, 0.0f, 15.0f, 16.0f, k % 2 ? 0.8f : 0.9f, false, out);
+            const glm::vec3 top[4] = { { lo, 1.0f, hi }, { hi, 1.0f, hi }, { hi, 1.0f, lo }, { lo, 1.0f, lo } };
+            pushQuad(snap, lx, y, lz, id, top, base, 0.0f, 6.5f, 7.0f, 13.5f, 1.0f, false, out);
+            const glm::vec3 bottom[4] = { { lo, 0.0f, lo }, { hi, 0.0f, lo }, { hi, 0.0f, hi }, { lo, 0.0f, hi } };
+            pushQuad(snap, lx, y, lz, id, bottom, base, 7.0f, 6.5f, 14.0f, 13.5f, 0.5f, false, out);
+            const PartFace neckSide{ base, 4.0f, 4.0f, 8.0f, 5.5f }, neckTop{ base, 4.0f, 0.0f, 8.0f, 4.0f };
+            const PartFace neck[6] = { neckSide, neckSide, neckTop, neckTop, neckSide, neckSide };
+            emitPart(snap, lx, y, lz, id, glm::vec3(4.0f, 17.0f, 4.0f) / 16.0f, glm::vec3(12.0f, 20.0f, 12.0f) / 16.0f, neck, out);
+            const PartFace lipSide{ base, 3.0f, 5.5f, 6.0f, 6.0f }, lipTop{ base, 3.0f, 2.5f, 6.0f, 5.5f };
+            const PartFace lip[6] = { lipSide, lipSide, lipTop, lipTop, lipSide, lipSide };
+            emitPart(snap, lx, y, lz, id, glm::vec3(5.0f, 16.0f, 5.0f) / 16.0f, glm::vec3(11.0f, 17.0f, 11.0f) / 16.0f, lip, out);
+            return;
+        }
         if (isBell(id))
         {
             const BlockInfo& info = blockInfo(id);

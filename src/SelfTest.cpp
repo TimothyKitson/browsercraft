@@ -3772,6 +3772,25 @@ namespace
         LevelState back;
         check(WorldSave::loadLevel(dir, back) && back.hasAnchor && back.anchorX == -12 && back.anchorY == 40 && back.anchorZ == 99,
               "the anchor you set survives a save");
+        LevelState potted;
+        LevelState::SavedPot pot;
+        pot.x = 5; pot.y = 64; pot.z = -7; pot.dimension = 1;
+        const int sides[4] = { -1, 4, 9, 22 };
+        pot.sides = Archaeology::packPot(sides);
+        potted.pots.push_back(pot);
+        WorldSave::saveLevel(dir, potted);
+        LevelState potBack;
+        check(WorldSave::loadLevel(dir, potBack) && potBack.pots.size() == 1 && potBack.pots[0].sides == pot.sides &&
+              potBack.pots[0].dimension == 1 && Archaeology::potSide(potBack.pots[0].sides, 0) == -1 &&
+              Archaeology::potSide(potBack.pots[0].sides, 3) == 22, "a decorated pot keeps its four sides through a save");
+        ItemStack ring[9];
+        ring[1].id = Items::Brick; ring[3].id = Items::SkullSherd; ring[5].id = Items::Brick; ring[7].id = Items::ArcherSherd;
+        for (int i : { 1, 3, 5, 7 }) ring[i].count = 1;
+        const CraftOutput potMade = Crafting::match(ring, 3);
+        check(potMade.valid() && potMade.id == Blocks::DecoratedPotFirst + 2 && Archaeology::potSide(potMade.enchantments, 1) == 21 &&
+              Archaeology::potSide(potMade.enchantments, 3) == 1 && Archaeology::potSide(potMade.enchantments, 0) == -1,
+              "four bricks or sherds in a ring make a pot carrying them");
+        check(maxStackOf(static_cast<StackId>(Blocks::DecoratedPotFirst + 2)) == 1, "and pots do not stack");
         std::filesystem::remove_all(dir, ec);
     }
 
@@ -11254,7 +11273,7 @@ namespace
             const std::string path = dir + "/level.dat";
             std::error_code ec;
             const auto size = std::filesystem::file_size(path, ec);
-            if (!ec) std::filesystem::resize_file(path, size - sizeof(uint16_t) - sizeof(uint8_t) - 3 * sizeof(int), ec);
+            if (!ec) std::filesystem::resize_file(path, size - sizeof(uint16_t) - sizeof(uint8_t) - 3 * sizeof(int) - sizeof(uint32_t), ec);
 
             LevelState back;
             check(WorldSave::loadLevel(dir, back), "a level from before items moved up still loads");

@@ -368,10 +368,10 @@ void DroppedItems::render(Shader& chunkShader, const World& world)
     // a drop somebody had left on a shelf.
     for (const Pinned& shown : m_pinned)
     {
-        if (shown.item == Blocks::Air) continue;
+        if (shown.item == Blocks::Air && shown.tile < 0) continue;
 
         const glm::vec3 out = wallOut(shown.facing);
-        const glm::vec3 centre = shown.position + out * 0.46f;
+        const glm::vec3 centre = shown.position + out * shown.outset;
 
         int lx = static_cast<int>(std::floor(centre.x));
         int ly = static_cast<int>(std::floor(centre.y));
@@ -382,7 +382,7 @@ void DroppedItems::render(Shader& chunkShader, const World& world)
         const float sky = world.skyLight(lx, ly, lz) / 15.0f;
         const float blockLight =
             std::max<float>(world.blockLightAt(lx, ly, lz),
-                            isItem(shown.item) ? 0 : lightEmission(asBlock(shown.item)))
+                            (shown.tile >= 0 || isItem(shown.item)) ? 0 : lightEmission(asBlock(shown.item)))
             / 15.0f;
 
         auto pushPinned = [&](const glm::vec3& p, float tu, float tv, float shade) {
@@ -399,11 +399,13 @@ void DroppedItems::render(Shader& chunkShader, const World& world)
 
         // Across the wall, which is the horizontal perpendicular to
         // the way the frame looks.
-        const glm::vec3 across = glm::vec3(-out.z, 0.0f, out.x) * (FRAME_SIZE * 0.5f);
-        const glm::vec3 up(0.0f, FRAME_SIZE, 0.0f);
-        const glm::vec3 foot = centre - glm::vec3(0.0f, FRAME_SIZE * 0.5f, 0.0f);
+        const float half = shown.tile >= 0 ? shown.halfWidth : FRAME_SIZE * 0.5f;
+        const float tall = shown.tile >= 0 ? shown.height : FRAME_SIZE;
+        const glm::vec3 across = glm::vec3(-out.z, 0.0f, out.x) * half;
+        const glm::vec3 up(0.0f, tall, 0.0f);
+        const glm::vec3 foot = centre - glm::vec3(0.0f, tall * 0.5f, 0.0f);
 
-        const TileUV uv = tileUV(atlasTileFor(shown.item));
+        const TileUV uv = tileUV(shown.tile >= 0 ? shown.tile : atlasTileFor(shown.item));
         const glm::vec3 corner[4] = {
             foot - across, foot + across, foot + across + up, foot - across + up
         };

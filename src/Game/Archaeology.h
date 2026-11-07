@@ -32,4 +32,7 @@ namespace Archaeology
     Find roll(int table, int x, int y, int z, uint32_t seed);
 
     BlockId settled(BlockId suspicious);
+
+    uint32_t packPot(const int sides[4]);
+    int potSide(uint32_t packed, int side);
 }

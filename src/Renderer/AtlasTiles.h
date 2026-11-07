@@ -378,6 +378,7 @@ namespace Tiles
         ShelfTopTile, ShelfSideTile, ShelfEmptyTile, ShelfOccupiedTile, DragonEggTile, HeavyCoreTile,
         SuspiciousSandTileFirst, SuspiciousSandTileLast = SuspiciousSandTileFirst + 3,
         SuspiciousGravelTileFirst, SuspiciousGravelTileLast = SuspiciousGravelTileFirst + 3,
+        PotBaseTile, PotSideTile, PotPatternFirst, PotPatternLast = PotPatternFirst + 22,
 
         TileCount
     };

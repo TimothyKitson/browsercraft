@@ -126,6 +126,14 @@ struct LevelState
 
     bool hasAnchor = false;
     int anchorX = 0, anchorY = 0, anchorZ = 0;
+
+    struct SavedPot
+    {
+        int x = 0, y = 0, z = 0;
+        int8_t dimension = 0;
+        uint32_t sides = 0;
+    };
+    std::vector<SavedPot> pots;
 };
 
 namespace WorldSave

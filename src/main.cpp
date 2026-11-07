@@ -819,6 +819,7 @@ namespace
             else if (id == Blocks::DragonEgg)     why = "left on the exit portal when the dragon dies";
             else if (id == Blocks::HeavyCore)     why = "a prize from an ominous vault";
             else if (isSuspicious(id))            why = "buried in pyramids, wells and ruins, and dusted by a brush";
+            else if (isDecoratedPot(id))          why = "a pot set down facing another way";
             else if (isChiseledBookshelf(id))     why = "a shelf with books in it, or facing another way";
             else if (isAnyCoralWallFan(id))       why = "a coral fan set against another face";
             else if (isBigDripleaf(id) || isBigDripleafStem(id) || isSmallDripleaf(id))

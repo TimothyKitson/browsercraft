@@ -1,4 +1,5 @@
 #include "Crafting.h"
+#include "Archaeology.h"
 #include "Player/Inventory.h"
 #include "Items.h"
 #include "Tools.h"
@@ -1270,6 +1271,32 @@ namespace Crafting
         const CraftOutput dyed = matchDyeing(grid, size);
         if (dyed.valid()) return dyed;
 
+        if (size == 3)
+        {
+            bool pot = true;
+            int sides[4] = { -1, -1, -1, -1 };
+            static const int RING[4] = { 1, 3, 5, 7 };
+            for (int i = 0; i < 9; ++i)
+            {
+                const ItemStack& cell = grid[i];
+                const int slot = i == 1 ? 0 : i == 3 ? 1 : i == 5 ? 2 : i == 7 ? 3 : -1;
+                if (slot < 0) { if (!cell.empty()) pot = false; continue; }
+                if (cell.empty()) { pot = false; continue; }
+                if (cell.id == Items::Brick) sides[slot] = -1;
+                else if (Archaeology::sherdIndex(cell.id) >= 0) sides[slot] = Archaeology::sherdIndex(cell.id);
+                else pot = false;
+            }
+            (void)RING;
+            if (pot)
+            {
+                CraftOutput out;
+                out.id = static_cast<StackId>(Blocks::DecoratedPotFirst + 2);
+                out.count = 1;
+                out.enchantments = Archaeology::packPot(sides);
+                return out;
+            }
+        }
+
         return matchUpgrade(grid, size);
     }
 
@@ -1315,6 +1342,7 @@ std::vector<StackId> Crafting::everyOutput()
     std::vector<StackId> out;
     out.reserve(std::size(RECIPES) + 9);
     for (const Recipe& recipe : RECIPES) out.push_back(recipe.result);
+    out.push_back(static_cast<StackId>(Blocks::DecoratedPotFirst + 2));
 
     // The sixteen wools a dye makes, which is likewise a rule rather
     // than a table: an audit that could not see it called fifteen of

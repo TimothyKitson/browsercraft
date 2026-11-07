@@ -284,6 +284,7 @@ int flatIconFor(BlockId id)
     if (isChiseledBookshelf(id)) return Tiles::ShelfOccupiedTile;
     if (id == Blocks::DragonEgg) return Tiles::DragonEggTile;
     if (id == Blocks::HeavyCore) return Tiles::HeavyCoreTile;
+    if (isDecoratedPot(id)) return Tiles::PotSideTile;
     if (isEndRod(id)) return Tiles::EndRodTile;
     if (isDoublePlant(id))
     {
@@ -345,6 +346,7 @@ int atlasTileFor(StackId id)
 
 int maxStackOf(StackId id)
 {
+    if (isDecoratedPot(asBlock(id)) && !isItem(id)) return 1;
     return isItem(id) ? itemInfo(id).maxStack : 64;
 }
 
@@ -448,6 +450,7 @@ StackId blockDrop(BlockId id)
     if (isBell(id)) return static_cast<StackId>(Blocks::BellFirst + 2);
     if (isChiseledBookshelf(id)) return shelfOf(2, 0);
     if (isSuspicious(id)) return Blocks::Air;
+    if (isDecoratedPot(id)) return static_cast<StackId>(Blocks::DecoratedPotFirst + 2);
     if (id == Blocks::ChorusPlant) return Items::ChorusFruit;
 
     // A melon comes apart into slices rather than into a melon, which

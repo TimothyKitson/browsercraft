@@ -2206,6 +2206,10 @@ namespace
         { "Suspicious Gravel", SuspiciousGravelTileFirst + 1, SuspiciousGravelTileFirst + 1, SuspiciousGravelTileFirst + 1, true, true, RenderType::Cube, 0, 0.25f },
         { "Suspicious Gravel", SuspiciousGravelTileFirst + 2, SuspiciousGravelTileFirst + 2, SuspiciousGravelTileFirst + 2, true, true, RenderType::Cube, 0, 0.25f },
         { "Suspicious Gravel", SuspiciousGravelTileFirst + 3, SuspiciousGravelTileFirst + 3, SuspiciousGravelTileFirst + 3, true, true, RenderType::Cube, 0, 0.25f },
+        { "Decorated Pot", PotBaseTile, PotBaseTile, PotSideTile, true, false, RenderType::Lush, 0, 0.0f },
+        { "Decorated Pot", PotBaseTile, PotBaseTile, PotSideTile, true, false, RenderType::Lush, 0, 0.0f },
+        { "Decorated Pot", PotBaseTile, PotBaseTile, PotSideTile, true, false, RenderType::Lush, 0, 0.0f },
+        { "Decorated Pot", PotBaseTile, PotBaseTile, PotSideTile, true, false, RenderType::Lush, 0, 0.0f },
     };
 }
 
@@ -2307,6 +2311,7 @@ bool isObtainable(BlockId id)
             if (isBell(id) && id != Blocks::BellFirst + 2) return false;
             if (isChiseledBookshelf(id) && id != shelfOf(2, 0)) return false;
             if (isSuspicious(id)) return false;
+            if (isDecoratedPot(id) && id != Blocks::DecoratedPotFirst + 2) return false;
             if (isBigDripleaf(id) && id != bigDripleafOf(0, DripleafTilt::None)) return false;
             if (isSmallDripleaf(id) && id != smallDripleafOf(0, false)) return false;
             if (isGlowLichen(id) && id != glowLichenOn(0)) return false;
@@ -2375,6 +2380,7 @@ const char* blockSoundGroup(BlockId id)
     if (isBell(id) || id == Blocks::HeavyCore || id == Blocks::DragonEgg) return "stone";
     if (isSuspiciousSand(id)) return "sand";
     if (isSuspiciousGravel(id)) return "gravel";
+    if (isDecoratedPot(id)) return "stone";
     if (id == Blocks::Target || id == Blocks::TargetLit) return "grass";
     if (isEarthy(id)) return "gravel";
     if (isFlowerPot(id)) return "stone";
@@ -2546,6 +2552,7 @@ Material blockMaterial(BlockId id)
     if (id == Blocks::DragonEgg) return Material::Plant;
     if (isSuspiciousSand(id)) return Material::Sand;
     if (isSuspiciousGravel(id)) return Material::Dirt;
+    if (isDecoratedPot(id)) return Material::Plant;
     if (id == Blocks::Cobweb) return Material::Wool;
     if (id == Blocks::SoulTorch || isFire(id)) return Material::Plant;
     if (id == Blocks::SoulCampfire) return Material::Wood;
@@ -2715,6 +2722,7 @@ bool blockOverlaps(BlockId id, int bx, int by, int bz,
     if (id == Blocks::HoneyBlock) return overlaps(0.0625f, 0.0f, 0.0625f, 0.9375f, 0.9375f, 0.9375f);
     if (id == Blocks::Conduit) return overlaps(0.3125f, 0.3125f, 0.3125f, 0.6875f, 0.6875f, 0.6875f);
     if (id == Blocks::HeavyCore) return overlaps(0.25f, 0.0f, 0.25f, 0.75f, 0.5f, 0.75f);
+    if (isDecoratedPot(id)) return overlaps(0.0625f, 0.0f, 0.0625f, 0.9375f, 1.0f, 0.9375f);
     if (id == Blocks::DragonEgg) return overlaps(0.0625f, 0.0f, 0.0625f, 0.9375f, 1.0f, 0.9375f);
     if (isDiode(id)) return overlaps(0.0f, 0.0f, 0.0f, 1.0f, 0.125f, 1.0f);
     if (isDaylightDetector(id)) return overlaps(0.0f, 0.0f, 0.0f, 1.0f, 0.375f, 1.0f);

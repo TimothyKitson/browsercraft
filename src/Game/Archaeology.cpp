@@ -122,6 +122,22 @@ Archaeology::Find Archaeology::roll(int table, int x, int y, int z, uint32_t see
     return Find{ entries.back().id, 1 };
 }
 
+uint32_t Archaeology::packPot(const int sides[4])
+{
+    uint32_t packed = 0;
+    for (int k = 0; k < 4; ++k)
+    {
+        const int value = sides[k] < 0 || sides[k] >= SHERD_COUNT ? 0 : sides[k] + 1;
+        packed |= static_cast<uint32_t>(value) << (k * 5);
+    }
+    return packed;
+}
+
+int Archaeology::potSide(uint32_t packed, int side)
+{
+    return static_cast<int>((packed >> (side * 5)) & 31u) - 1;
+}
+
 BlockId Archaeology::settled(BlockId suspicious)
 {
     if (isSuspiciousSand(suspicious)) return Blocks::Sand;

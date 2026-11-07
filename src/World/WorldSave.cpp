@@ -261,6 +261,15 @@ void WorldSave::saveLevel(const std::string& saveDirectory, const LevelState& st
     write(out, state.anchorX);
     write(out, state.anchorY);
     write(out, state.anchorZ);
+    write(out, static_cast<uint32_t>(state.pots.size()));
+    for (const LevelState::SavedPot& pot : state.pots)
+    {
+        write(out, pot.x);
+        write(out, pot.y);
+        write(out, pot.z);
+        write(out, pot.dimension);
+        write(out, pot.sides);
+    }
 }
 
 bool WorldSave::loadLevel(const std::string& saveDirectory, LevelState& out)
@@ -502,7 +511,19 @@ bool WorldSave::loadLevel(const std::string& saveDirectory, LevelState& out)
                                             out.itemBase = base;
                                             uint8_t anchored = 0;
                                             if (read(in, anchored) && read(in, out.anchorX) && read(in, out.anchorY) && read(in, out.anchorZ))
+                                            {
                                                 out.hasAnchor = anchored != 0;
+                                                uint32_t potCount = 0;
+                                                if (read(in, potCount))
+                                                    for (uint32_t i = 0; i < potCount && i < 1000000u; ++i)
+                                                    {
+                                                        LevelState::SavedPot pot;
+                                                        if (!read(in, pot.x) || !read(in, pot.y) || !read(in, pot.z) ||
+                                                            !read(in, pot.dimension) || !read(in, pot.sides))
+                                                            break;
+                                                        out.pots.push_back(pot);
+                                                    }
+                                            }
                                         }
                                     }
                                 }

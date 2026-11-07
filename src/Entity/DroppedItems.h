@@ -61,6 +61,10 @@ public:
         glm::vec3 position{ 0.0f };   // the middle of the frame's block
         int facing = 0;               // the ladder's four
         StackId item = Blocks::Air;
+        int tile = -1;
+        float halfWidth = 0.0f;
+        float height = 0.0f;
+        float outset = 0.46f;
     };
     void clearPinned() { m_pinned.clear(); }
     void pin(const Pinned& one) { m_pinned.push_back(one); }

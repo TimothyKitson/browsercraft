@@ -659,6 +659,7 @@ namespace Blocks
         DragonEgg, HeavyCore,
         SuspiciousSandFirst, SuspiciousSandLast = SuspiciousSandFirst + 11,
         SuspiciousGravelFirst, SuspiciousGravelLast = SuspiciousGravelFirst + 11,
+        DecoratedPotFirst, DecoratedPotLast = DecoratedPotFirst + 3,
 
         Count
     };
@@ -812,6 +813,7 @@ inline BlockId suspiciousOf(int table, int stage)
     if (table < 3) return static_cast<BlockId>(Blocks::SuspiciousSandFirst + table * 4 + stage);
     return static_cast<BlockId>(Blocks::SuspiciousGravelFirst + (table - 3) * 4 + stage);
 }
+inline bool isDecoratedPot(BlockId id) { return id >= Blocks::DecoratedPotFirst && id <= Blocks::DecoratedPotLast; }
 inline bool isTarget(BlockId id) { return id == Blocks::Target || id == Blocks::TargetLit; }
 inline bool isIronDoor(BlockId id) { return id >= Blocks::IronDoorFirst && id <= Blocks::IronDoorLast; }
 inline bool isIronTrapdoor(BlockId id) { return id >= Blocks::IronTrapdoorFirst && id <= Blocks::IronTrapdoorLast; }
@@ -1877,6 +1879,7 @@ inline int blockFacing(BlockId id)
     if (isTripwireHook(id)) return hookFacing(id);
     if (isBell(id)) return id - Blocks::BellFirst;
     if (isChiseledBookshelf(id)) return shelfFacing(id);
+    if (isDecoratedPot(id)) return id - Blocks::DecoratedPotFirst;
     return 0;
 }
 

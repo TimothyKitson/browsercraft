@@ -825,6 +825,9 @@ void Application::loadLevel()
         if (state.hasSpawn) m_spawnPoint = state.spawn;
         m_hasAnchor = state.hasAnchor;
         m_anchor = glm::ivec3(state.anchorX, state.anchorY, state.anchorZ);
+        m_potSides.clear();
+        for (const LevelState::SavedPot& pot : state.pots)
+            m_potSides[{ static_cast<int>(pot.dimension), pot.x, pot.y, pot.z }] = pot.sides;
 
         m_furnaces.clear();
         for (const LevelState::SavedFurnace& saved : state.furnaces)
@@ -993,6 +996,16 @@ void Application::saveLevel()
     state.anchorX = m_anchor.x;
     state.anchorY = m_anchor.y;
     state.anchorZ = m_anchor.z;
+    for (const auto& pot : m_potSides)
+    {
+        LevelState::SavedPot saved;
+        saved.dimension = static_cast<int8_t>(pot.first[0]);
+        saved.x = pot.first[1];
+        saved.y = pot.first[2];
+        saved.z = pot.first[3];
+        saved.sides = pot.second;
+        state.pots.push_back(saved);
+    }
 
     for (int i = 0; i <= Inventory::TOTAL_SLOTS; ++i)
     {
@@ -2808,6 +2821,12 @@ bool Application::frame()
                     for (int k = 0; k < 4; ++k) put(11, 0, -3 + k, shelfOf(3, k * 2));
                     put(10, 0, 0, Blocks::DragonEgg);
                     put(10, 0, 2, Blocks::HeavyCore);
+                    put(10, 0, 4, static_cast<BlockId>(Blocks::DecoratedPotFirst + 3));
+                    put(12, 0, 4, static_cast<BlockId>(Blocks::DecoratedPotFirst + 3));
+                    {
+                        const int sides[4] = { 3, 7, 11, 21 };
+                        m_potSides[{ static_cast<int>(m_dimension), px + 12, py, pz + 4 }] = Archaeology::packPot(sides);
+                    }
                     put(13, 0, -8, Blocks::Bookshelf);
                     put(13, 0, 8, Blocks::DiamondOre);
                     put(13, 1, 8, Blocks::EndPortalFrame);
@@ -6795,6 +6814,31 @@ void Application::updateMining(float deltaTime)
                 {
                     m_world->setBlock(pair.x, pair.y, pair.z, Blocks::Air);
                     m_net.onLocalBlockChange(pair.x, pair.y, pair.z, Blocks::Air);
+                }
+            }
+            if (isDecoratedPot(id))
+            {
+                const std::array<int, 4> key = { static_cast<int>(m_dimension), hit.block.x, hit.block.y, hit.block.z };
+                const auto found = m_potSides.find(key);
+                const uint32_t sides = found == m_potSides.end() ? 0u : found->second;
+                if (found != m_potSides.end()) m_potSides.erase(found);
+                if (!m_player.creative())
+                {
+                    const bool intact = tool == Blocks::Air || Enchanting::has(m_inventory.selected().enchantments, Enchanting::Kind::SilkTouch);
+                    if (intact)
+                    {
+                        ItemStack pot;
+                        pot.id = static_cast<StackId>(Blocks::DecoratedPotFirst + 2);
+                        pot.count = 1;
+                        pot.enchantments = sides;
+                        m_drops.spawnStack(glm::vec3(hit.block) + glm::vec3(0.5f), pot);
+                    }
+                    else
+                        for (int k = 0; k < 4; ++k)
+                        {
+                            const int sherd = Archaeology::potSide(sides, k);
+                            m_drops.spawnFromBrokenBlock(hit.block, sherd >= 0 ? Archaeology::sherd(sherd) : static_cast<StackId>(Items::Brick), 1);
+                        }
                 }
             }
             if (isChiseledBookshelf(id) && shelfBooks(id) > 0 && !m_player.creative())
@@ -11701,6 +11745,14 @@ void Application::handlePlacement()
         const int out = (std::fabs(look.x) > std::fabs(look.z)) ? (look.x > 0.0f ? 1 : 3) : (look.z > 0.0f ? 2 : 0);
         placing = isRepeater(placing) ? repeaterOf(out, 1, false) : comparatorOf(out, false, false);
     }
+    if (isDecoratedPot(placing))
+    {
+        const glm::vec3 look = m_camera.front;
+        const int toward = (std::fabs(look.x) > std::fabs(look.z)) ? (look.x > 0.0f ? 1 : 3) : (look.z > 0.0f ? 2 : 0);
+        placing = static_cast<BlockId>(Blocks::DecoratedPotFirst + ((toward + 2) & 3));
+        if (stack.enchantments != 0)
+            m_potSides[{ static_cast<int>(m_dimension), target.x, target.y, target.z }] = stack.enchantments;
+    }
     if (isBell(placing) || isChiseledBookshelf(placing))
     {
         const glm::vec3 look = m_camera.front;
@@ -13562,12 +13614,42 @@ bool Application::useFrame(const glm::ivec3& at, BlockId block)
     return true;
 }
 
+void Application::pinPotPatterns()
+{
+    if (!m_world) return;
+    static const int OUT_INDEX[4] = { 2, 3, 0, 1 };
+    for (const auto& pot : m_potSides)
+    {
+        if (pot.first[0] != static_cast<int>(m_dimension)) continue;
+        const glm::vec3 centre(pot.first[1] + 0.5f, pot.first[2] + 0.5f, pot.first[3] + 0.5f);
+        if (glm::length(centre - m_camera.position) > 32.0f) continue;
+        const BlockId block = m_world->getBlock(pot.first[1], pot.first[2], pot.first[3]);
+        if (!isDecoratedPot(block)) continue;
+        const int front = blockFacing(block);
+        const int dirs[4] = { (front + 2) & 3, (front + 1) & 3, (front + 3) & 3, front };
+        for (int k = 0; k < 4; ++k)
+        {
+            const int sherd = Archaeology::potSide(pot.second, k);
+            if (sherd < 0) continue;
+            DroppedItems::Pinned shown;
+            shown.position = centre;
+            shown.facing = OUT_INDEX[dirs[k]];
+            shown.tile = Tiles::PotPatternFirst + sherd;
+            shown.halfWidth = 7.0f / 16.0f;
+            shown.height = 1.0f;
+            shown.outset = 7.0f / 16.0f + 0.004f;
+            m_drops.pin(shown);
+        }
+    }
+}
+
 // Every frame near enough to see, handed to the one pass that draws
 // an item standing in the world.
 void Application::pinFramedItems()
 {
     m_drops.clearPinned();
     if (!m_world) return;
+    pinPotPatterns();
 
     constexpr float VISIBLE = 32.0f;
 
