@@ -399,6 +399,25 @@ void WorldSave::saveLevel(const std::string& saveDirectory, const LevelState& st
         write(out, cage.z);
         write(out, cage.mob);
     }
+    write(out, static_cast<uint32_t>(state.fireworkStars.size()));
+    for (const LevelState::SavedExplosion& star : state.fireworkStars)
+    {
+        write(out, star.shape);
+        write(out, star.flags);
+        write(out, static_cast<uint8_t>(star.colours.size()));
+        for (uint8_t c : star.colours) write(out, c);
+        write(out, static_cast<uint8_t>(star.fades.size()));
+        for (uint8_t c : star.fades) write(out, c);
+    }
+    write(out, static_cast<uint32_t>(state.fireworkRockets.size()));
+    for (const LevelState::SavedRocket& rocket : state.fireworkRockets)
+    {
+        write(out, rocket.flight);
+        write(out, static_cast<uint8_t>(rocket.explosions.size()));
+        for (uint16_t id : rocket.explosions) write(out, id);
+    }
+    write(out, static_cast<uint8_t>(state.crossbowRockets.size()));
+    for (uint16_t id : state.crossbowRockets) write(out, id);
 }
 
 bool WorldSave::loadLevel(const std::string& saveDirectory, LevelState& out)
@@ -843,14 +862,67 @@ bool WorldSave::loadLevel(const std::string& saveDirectory, LevelState& out)
                                                         out.vehicles.push_back(vehicle);
                                                     }
                                                 uint32_t cageCount = 0;
-                                                if (vehiclesWhole && read(in, cageCount))
+                                                bool cagesWhole = vehiclesWhole && read(in, cageCount);
+                                                if (cagesWhole)
                                                     for (uint32_t i = 0; i < cageCount && i < 100000u; ++i)
                                                     {
                                                         LevelState::SavedCage cage;
                                                         if (!read(in, cage.dimension) || !read(in, cage.x) || !read(in, cage.y) ||
                                                             !read(in, cage.z) || !read(in, cage.mob))
+                                                        {
+                                                            cagesWhole = false;
                                                             break;
+                                                        }
                                                         out.cages.push_back(cage);
+                                                    }
+                                                uint32_t starCount = 0;
+                                                bool starsWhole = cagesWhole && read(in, starCount);
+                                                if (starsWhole)
+                                                    for (uint32_t i = 0; i < starCount && i < 60000u && starsWhole; ++i)
+                                                    {
+                                                        LevelState::SavedExplosion star;
+                                                        uint8_t colours = 0, fades = 0;
+                                                        starsWhole = read(in, star.shape) && read(in, star.flags) && read(in, colours);
+                                                        for (uint8_t k = 0; k < colours && starsWhole; ++k)
+                                                        {
+                                                            uint8_t c = 0;
+                                                            starsWhole = read(in, c);
+                                                            star.colours.push_back(c);
+                                                        }
+                                                        starsWhole = starsWhole && read(in, fades);
+                                                        for (uint8_t k = 0; k < fades && starsWhole; ++k)
+                                                        {
+                                                            uint8_t c = 0;
+                                                            starsWhole = read(in, c);
+                                                            star.fades.push_back(c);
+                                                        }
+                                                        if (starsWhole) out.fireworkStars.push_back(star);
+                                                    }
+                                                uint32_t rocketCount = 0;
+                                                bool rocketsWhole = starsWhole && read(in, rocketCount);
+                                                if (rocketsWhole)
+                                                    for (uint32_t i = 0; i < rocketCount && i < 60000u; ++i)
+                                                    {
+                                                        LevelState::SavedRocket rocket;
+                                                        uint8_t stars = 0;
+                                                        if (!read(in, rocket.flight) || !read(in, stars)) { rocketsWhole = false; break; }
+                                                        bool whole = true;
+                                                        for (uint8_t k = 0; k < stars && whole; ++k)
+                                                        {
+                                                            uint16_t id = 0;
+                                                            whole = read(in, id);
+                                                            rocket.explosions.push_back(id);
+                                                        }
+                                                        if (!whole) { rocketsWhole = false; break; }
+                                                        out.fireworkRockets.push_back(rocket);
+                                                    }
+                                                uint8_t slotCount = 0;
+                                                if (rocketsWhole && read(in, slotCount))
+                                                    for (uint8_t k = 0; k < slotCount && k < 31; ++k)
+                                                    {
+                                                        uint16_t id = 0;
+                                                        if (!read(in, id)) break;
+                                                        out.crossbowRockets.push_back(id);
                                                     }
                                             }
                                         }

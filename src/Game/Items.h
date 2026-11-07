@@ -446,6 +446,9 @@ namespace Items
         TntMinecart,
         CommandBlockMinecart,
         SpawnEgg,
+        FireworkRocket,
+        FireworkStar,
+        FireCharge,
         Count
     };
 }

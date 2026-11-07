@@ -334,6 +334,11 @@ namespace
             line(GENERATIONS[(stack.enchantments >> 24) & 0x3u]);
             return lore;
         }
+        if (stack.id == Items::FireworkRocket)
+            for (const std::string& text : Fireworks::describeRocket(stack)) line(text);
+        if (stack.id == Items::FireworkStar)
+            if (const Fireworks::Explosion* explosion = Fireworks::library().explosionAt(stack.damage))
+                for (const std::string& text : Fireworks::describeStar(*explosion)) line(text);
         if (stack.id == Items::Trident)
             for (int k = 0; k < static_cast<int>(Enchanting::TridentKind::Count); ++k)
             {
@@ -553,6 +558,13 @@ void Application::drawItem(float x, float y, float size, StackId id, int count,
         const TileUV uv = tileUV(tile);
         m_ui.texturedQuad(m_atlas.textureId(), x, y, size, size,
                           uv.u0, uv.vTop, uv.u1, uv.vBottom, tint);
+        if (id == Items::FireworkStar)
+        {
+            const unsigned int c = Fireworks::starColour(ItemStack{ id, 1, damage });
+            const TileUV spotUV = tileUV(Tiles::ItemFireworkFirst + 2);
+            m_ui.texturedQuad(m_atlas.textureId(), x, y, size, size, spotUV.u0, spotUV.vTop, spotUV.u1, spotUV.vBottom,
+                              glm::vec4(((c >> 16) & 255u) / 255.0f, ((c >> 8) & 255u) / 255.0f, (c & 255u) / 255.0f, 1.0f) * tint);
+        }
         if (id == Items::TippedArrow)
         {
             const unsigned int c = Effects::colour(static_cast<Effects::Kind>(std::clamp(damage, 0, Effects::KIND_COUNT - 1)));

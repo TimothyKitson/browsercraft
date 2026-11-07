@@ -529,6 +529,7 @@ void Application::startWorld(GameMode mode, bool freshWorld)
     m_entities.clear();
     m_parkedVehicles.clear();
     m_cageKinds.clear();
+    Fireworks::library().clear();
     m_vehicleChests.clear();
     m_cartFuel.clear();
     m_cartPush.clear();
@@ -866,6 +867,25 @@ void Application::loadLevel()
         m_itemNames = state.itemNames;
         m_bookTexts.clear();
         for (const auto& saved : state.books) m_bookTexts.push_back(BookText{ saved.title, saved.author, saved.pages });
+        Fireworks::library().clear();
+        for (const auto& saved : state.fireworkStars)
+        {
+            Fireworks::Explosion design;
+            design.shape = static_cast<Fireworks::Shape>(std::min<int>(saved.shape, static_cast<int>(Fireworks::Shape::Count) - 1));
+            design.trail = (saved.flags & 1u) != 0;
+            design.twinkle = (saved.flags & 2u) != 0;
+            for (uint8_t c : saved.colours) design.colours.push_back(c);
+            for (uint8_t c : saved.fades) design.fades.push_back(c);
+            Fireworks::library().explosions().push_back(design);
+        }
+        for (uint16_t id : state.crossbowRockets) Fireworks::library().crossbowSlots().push_back(id);
+        for (const auto& saved : state.fireworkRockets)
+        {
+            Fireworks::Rocket design;
+            design.flight = saved.flight;
+            for (uint16_t id : saved.explosions) design.explosions.push_back(id);
+            Fireworks::library().rockets().push_back(design);
+        }
         m_cageKinds.clear();
         for (const auto& cage : state.cages)
             if (cage.mob < static_cast<uint16_t>(MobId::Count))
@@ -1164,6 +1184,23 @@ void Application::saveLevel()
                 }
             state.vehicles.push_back(saved);
         }
+    }
+    for (const Fireworks::Explosion& design : Fireworks::library().explosions())
+    {
+        LevelState::SavedExplosion saved;
+        saved.shape = static_cast<uint8_t>(design.shape);
+        saved.flags = static_cast<uint8_t>((design.trail ? 1u : 0u) | (design.twinkle ? 2u : 0u));
+        for (int c : design.colours) saved.colours.push_back(static_cast<uint8_t>(c));
+        for (int c : design.fades) saved.fades.push_back(static_cast<uint8_t>(c));
+        state.fireworkStars.push_back(saved);
+    }
+    for (int id : Fireworks::library().crossbowSlots()) state.crossbowRockets.push_back(static_cast<uint16_t>(id));
+    for (const Fireworks::Rocket& design : Fireworks::library().rockets())
+    {
+        LevelState::SavedRocket saved;
+        saved.flight = static_cast<uint8_t>(design.flight);
+        for (int id : design.explosions) saved.explosions.push_back(static_cast<uint16_t>(id));
+        state.fireworkRockets.push_back(saved);
     }
     for (const auto& cage : m_cageKinds)
         state.cages.push_back(LevelState::SavedCage{ static_cast<int8_t>(cage.first[0]), cage.first[1], cage.first[2], cage.first[3],
@@ -2082,6 +2119,7 @@ bool Application::frame()
             updateArrows(deltaTime);
             updateFuses(deltaTime);
             tickCarts(deltaTime);
+            tickFireworks(deltaTime);
             updatePortal(deltaTime);
 
             // Dev aid: a steady stream, so a screenshot taken at any
@@ -2403,7 +2441,7 @@ bool Application::frame()
             m_startupScreen == "attackhud" || m_startupScreen == "attackready" ||
             m_startupScreen == "attackhotbar" || m_startupScreen == "bossbars" ||
             m_startupScreen == "gamemode" || m_startupScreen == "spectator" ||
-            m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" || m_startupScreen == "leads" || m_startupScreen == "anvilname" || m_startupScreen == "dials" || m_startupScreen == "spyglass" || m_startupScreen == "bundle" || m_startupScreen == "archery" || m_startupScreen == "food" || m_startupScreen == "materials" || m_startupScreen == "tropical" || m_startupScreen == "book" || m_startupScreen == "bookedit" || m_startupScreen == "booktip" || m_startupScreen == "boats" || m_startupScreen == "carts" ||
+            m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" || m_startupScreen == "leads" || m_startupScreen == "anvilname" || m_startupScreen == "dials" || m_startupScreen == "spyglass" || m_startupScreen == "bundle" || m_startupScreen == "archery" || m_startupScreen == "food" || m_startupScreen == "materials" || m_startupScreen == "tropical" || m_startupScreen == "book" || m_startupScreen == "bookedit" || m_startupScreen == "booktip" || m_startupScreen == "boats" || m_startupScreen == "carts" || m_startupScreen == "fireworks" ||
             m_startupScreen == "grinderror" || m_startupScreen == "woods" ||
             m_startupScreen == "cherry" || m_startupScreen == "mangrove" || m_startupScreen == "fungi" ||
             m_startupScreen == "stones" || m_startupScreen == "colours" || m_startupScreen == "candles" ||
@@ -2512,6 +2550,7 @@ bool Application::frame()
                                   m_startupScreen != "booktip" &&
                                   m_startupScreen != "boats" &&
                                   m_startupScreen != "carts" &&
+                                  m_startupScreen != "fireworks" &&
                                   m_startupScreen != "grinderror" &&
                                   m_startupScreen != "woods" &&
                                   m_startupScreen != "cherry" &&
@@ -2904,7 +2943,7 @@ bool Application::frame()
             if (m_startupScreen == "attackhud" || m_startupScreen == "attackready" ||
                 m_startupScreen == "attackhotbar" || m_startupScreen == "bossbars" ||
                 m_startupScreen == "gamemode" || m_startupScreen == "spectator" ||
-                m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" || m_startupScreen == "leads" || m_startupScreen == "anvilname" || m_startupScreen == "dials" || m_startupScreen == "spyglass" || m_startupScreen == "bundle" || m_startupScreen == "archery" || m_startupScreen == "food" || m_startupScreen == "materials" || m_startupScreen == "tropical" || m_startupScreen == "book" || m_startupScreen == "bookedit" || m_startupScreen == "booktip" || m_startupScreen == "boats" || m_startupScreen == "carts" ||
+                m_startupScreen == "beaconui" || m_startupScreen == "grindstone" || m_startupScreen == "stonecutter" || m_startupScreen == "smithing" || m_startupScreen == "cartography" || m_startupScreen == "loom" || m_startupScreen == "banners" || m_startupScreen == "sculk" || m_startupScreen == "commands" || m_startupScreen == "commandui" || m_startupScreen == "fishing" || m_startupScreen == "leads" || m_startupScreen == "anvilname" || m_startupScreen == "dials" || m_startupScreen == "spyglass" || m_startupScreen == "bundle" || m_startupScreen == "archery" || m_startupScreen == "food" || m_startupScreen == "materials" || m_startupScreen == "tropical" || m_startupScreen == "book" || m_startupScreen == "bookedit" || m_startupScreen == "booktip" || m_startupScreen == "boats" || m_startupScreen == "carts" || m_startupScreen == "fireworks" ||
                 m_startupScreen == "grinderror" || m_startupScreen == "woods" ||
                 m_startupScreen == "cherry" || m_startupScreen == "mangrove" || m_startupScreen == "fungi" ||
                 m_startupScreen == "stones" || m_startupScreen == "colours" || m_startupScreen == "candles" ||
@@ -3726,6 +3765,48 @@ bool Application::frame()
                         if (m_startupScreen == "bookedit")
                             m_bookDraft[0] = "A list of things to do:\n- feed the frogs\n- find more ink\n- sign this before Alex reads it";
                     }
+                }
+                if (m_startupScreen == "fireworks")
+                {
+                    m_devAttackStrength = 1.0f;
+                    m_timeOfDay = 0.0f;
+                    const int SHAPES[5] = { 0, 1, 2, 4, 0 };
+                    const int COLOURS[5][2] = { { 14, 4 }, { 3, 0 }, { 5, 13 }, { 1, 4 }, { 10, 6 } };
+                    std::vector<int> stars;
+                    for (int k = 0; k < 5; ++k)
+                    {
+                        Fireworks::Explosion design;
+                        design.shape = static_cast<Fireworks::Shape>(SHAPES[k]);
+                        design.colours = { COLOURS[k][0], COLOURS[k][1] };
+                        design.trail = k == 1;
+                        design.twinkle = k == 4;
+                        if (k == 2) design.fades = { 0 };
+                        stars.push_back(Fireworks::library().explosion(design));
+                    }
+                    for (int k = 0; k < 5; ++k)
+                    {
+                        Fireworks::Rocket rocket;
+                        rocket.flight = 1;
+                        rocket.explosions = { stars[static_cast<size_t>(k)] };
+                        const int id = Fireworks::library().rocket(rocket);
+                        launchFirework(id, glm::vec3(static_cast<float>(px) + 18.0f + static_cast<float>(k % 2) * 4.0f, static_cast<float>(py) + 12.0f,
+                                                     static_cast<float>(pz) - 12.0f + static_cast<float>(k) * 6.0f),
+                                       glm::vec3(0.0f, 1.0f, 0.0f), false, false);
+                        m_fireworks.back().life = 0.9f + static_cast<float>(k) * 0.12f;
+                    }
+                    Fireworks::Rocket shown;
+                    shown.flight = 2;
+                    shown.explosions = { stars[1] };
+                    m_inventory.slot(0) = ItemStack{ Items::FireworkRocket, 16, Fireworks::library().rocket(shown) };
+                    m_inventory.slot(1) = ItemStack{ Items::FireworkStar, 1, stars[0] };
+                    m_inventory.slot(2) = ItemStack{ Items::FireworkStar, 1, stars[1] };
+                    m_inventory.slot(3) = ItemStack{ Items::FireworkStar, 1, stars[2] };
+                    m_inventory.slot(4) = ItemStack{ Items::FireCharge, 8 };
+                    ItemStack loaded{ Items::Crossbow, 1 };
+                    loaded.enchantments = Crossbows::withLoad(0, Crossbows::Firework, Fireworks::library().crossbowSlot(m_inventory.slot(0).damage));
+                    m_inventory.slot(5) = loaded;
+                    m_camera.pitch = 22.0f;
+                    m_camera.addLook(0.0f, 0.0f, 0.0f);
                 }
                 if (m_startupScreen == "boats" || m_startupScreen == "carts")
                 {
@@ -10883,6 +10964,258 @@ void Application::primeTnt(const glm::ivec3& block)
     m_audio.play(Sound::Click, 0.8f, 0.7f);
 }
 
+void Application::launchFirework(int design, const glm::vec3& at, const glm::vec3& velocity, bool shot, bool boost)
+{
+    FireworkFlight flight;
+    flight.position = at;
+    flight.velocity = velocity;
+    flight.design = design;
+    flight.shot = shot;
+    flight.boost = boost;
+    const Fireworks::Rocket* rocket = Fireworks::library().rocketAt(design);
+    const uint32_t roll = hashCoords(static_cast<int>(at.x * 16.0f), static_cast<int>(at.y * 16.0f),
+                                     static_cast<int>(m_elapsedSeconds * 20.0f), 0xF1E0u);
+    flight.life = Fireworks::lifetimeSeconds(rocket ? rocket->flight : 1, roll);
+    m_fireworks.push_back(flight);
+    m_audio.play(Sound::FireworkLaunch, 0.8f, 1.0f);
+}
+
+void Application::burstFirework(const glm::vec3& at, int design)
+{
+    const Fireworks::Rocket* rocket = Fireworks::library().rocketAt(design);
+    if (!rocket || rocket->explosions.empty()) return;
+    uint32_t seed = hashCoords(static_cast<int>(at.x * 8.0f), static_cast<int>(at.y * 8.0f), static_cast<int>(at.z * 8.0f),
+                               static_cast<uint32_t>(m_elapsedSeconds * 1000.0f));
+    auto random = [&]() {
+        seed ^= seed << 13;
+        seed ^= seed >> 17;
+        seed ^= seed << 5;
+        return static_cast<float>(seed & 0xFFFFFFu) / 16777216.0f;
+    };
+    auto gaussian = [&]() { return (random() + random() + random() - 1.5f) * 1.4f; };
+    bool large = false, twinkle = false;
+    for (int id : rocket->explosions)
+    {
+        const Fireworks::Explosion* explosion = Fireworks::library().explosionAt(id);
+        if (!explosion || explosion->colours.empty()) continue;
+        large = large || explosion->shape == Fireworks::Shape::LargeBall;
+        twinkle = twinkle || explosion->twinkle;
+        auto add = [&](const glm::vec3& perTick) {
+            if (m_sparks.size() > 4000u) return;
+            FireworkSpark spark;
+            spark.position = at;
+            spark.velocity = perTick * 20.0f;
+            spark.colour = Fireworks::fireworkRgb(explosion->colours[static_cast<size_t>(random() * static_cast<float>(explosion->colours.size())) %
+                                                                     explosion->colours.size()]);
+            if (!explosion->fades.empty())
+            {
+                spark.fades = true;
+                spark.fade = Fireworks::fireworkRgb(explosion->fades[static_cast<size_t>(random() * static_cast<float>(explosion->fades.size())) %
+                                                                    explosion->fades.size()]);
+            }
+            spark.trail = explosion->trail;
+            spark.twinkle = explosion->twinkle;
+            spark.life = (48.0f + random() * 12.0f) / 20.0f;
+            spark.size = 0.08f + random() * 0.05f;
+            m_sparks.push_back(spark);
+        };
+        auto ball = [&](float speed, int size) {
+            for (int i = -size; i <= size; ++i)
+                for (int j = -size; j <= size; ++j)
+                    for (int k = -size; k <= size; ++k)
+                    {
+                        const float d = static_cast<float>(j) + (random() - random()) * 0.5f;
+                        const float e = static_cast<float>(i) + (random() - random()) * 0.5f;
+                        const float f = static_cast<float>(k) + (random() - random()) * 0.5f;
+                        const float g = std::sqrt(d * d + e * e + f * f) / static_cast<float>(size) + random() * 0.05f;
+                        add(glm::vec3(d / g, e / g, f / g) * speed);
+                        if (i != -size && i != size && j != -size && j != size) k += size * 2 - 1;
+                    }
+        };
+        switch (explosion->shape)
+        {
+            case Fireworks::Shape::SmallBall: ball(0.25f, 2); break;
+            case Fireworks::Shape::LargeBall: ball(0.5f, 4); break;
+            case Fireworks::Shape::Star:
+            case Fireworks::Shape::Creeper:
+            {
+                static const float STAR[6][2] = { { 0.0f, 1.0f }, { 0.3455f, 0.309f }, { 0.9511f, 0.309f },
+                                                  { 0.3796f, -0.1265f }, { 0.6122f, -0.8041f }, { 0.0f, -0.3592f } };
+                const float spin = random() * 3.14159265f;
+                for (int copy = 0; copy < 3; ++copy)
+                {
+                    const float angle = spin + static_cast<float>(copy) * 3.14159265f * 0.34f;
+                    const float c = std::cos(angle), s = std::sin(angle);
+                    for (int side = -1; side <= 1; side += 2)
+                        for (int p = 0; p < 5; ++p)
+                            for (int step = 0; step < 4; ++step)
+                            {
+                                const float t = static_cast<float>(step) / 4.0f;
+                                const float x = (STAR[p][0] + (STAR[p + 1][0] - STAR[p][0]) * t) * static_cast<float>(side);
+                                const float y = STAR[p][1] + (STAR[p + 1][1] - STAR[p][1]) * t;
+                                add(glm::vec3(x * c, y, x * s) * 0.5f);
+                            }
+                }
+                break;
+            }
+            case Fireworks::Shape::Burst:
+            {
+                const float dx = gaussian() * 0.05f, dz = gaussian() * 0.05f;
+                for (int n = 0; n < 70; ++n)
+                    add(glm::vec3(gaussian() * 0.15f + dx, random() * 0.5f, gaussian() * 0.15f + dz));
+                break;
+            }
+            case Fireworks::Shape::Count: break;
+        }
+    }
+    if (!m_sprites) m_sprites = std::make_unique<SpriteParticles>();
+    m_sprites->spawn(SpriteParticles::Kind::Flash, at, glm::vec3(0.0f), 3.0f, 0.2f);
+    m_audio.play(large ? Sound::FireworkLargeBlast : Sound::FireworkBlast, 1.0f, 0.95f + random() * 0.1f);
+    if (twinkle) m_twinkles.emplace_back(at, 1.5f);
+
+    const int strength = 5 + 2 * static_cast<int>(rocket->explosions.size());
+    for (Mob& mob : m_entities.mobs())
+    {
+        if (!mob.alive()) continue;
+        const float distance = glm::length(mob.position() + glm::vec3(0.0f, mob.height() * 0.5f, 0.0f) - at);
+        if (distance > 5.0f) continue;
+        mob.damage(std::max(1, static_cast<int>(static_cast<float>(strength) * std::sqrt((5.0f - distance) / 5.0f))), mob.position() - at);
+    }
+    const float toPlayer = glm::length(m_player.position + glm::vec3(0.0f, 0.9f, 0.0f) - at);
+    if (toPlayer <= 5.0f && !m_player.creative() &&
+        m_player.damage(std::max(1, static_cast<int>(static_cast<float>(strength) * std::sqrt((5.0f - toPlayer) / 5.0f)))))
+        m_audio.play(Sound::Hurt, 0.8f);
+}
+
+void Application::tickFireworks(float deltaTime)
+{
+    if (!m_world) return;
+    queueFireworks();
+    for (size_t i = 0; i < m_twinkles.size();)
+    {
+        m_twinkles[i].second -= deltaTime;
+        if (m_twinkles[i].second <= 0.0f)
+        {
+            m_audio.play(Sound::FireworkTwinkle, 0.8f, 1.0f);
+            m_twinkles.erase(m_twinkles.begin() + static_cast<long>(i));
+            continue;
+        }
+        ++i;
+    }
+
+    for (size_t i = 0; i < m_fireworks.size();)
+    {
+        FireworkFlight& flight = m_fireworks[i];
+        flight.age += deltaTime;
+        flight.tick += deltaTime;
+        bool burst = flight.age >= flight.life;
+        while (flight.tick >= 0.05f && !burst)
+        {
+            flight.tick -= 0.05f;
+            if (flight.boost)
+            {
+                if (!m_player.gliding) { burst = true; break; }
+                const glm::vec3 look = m_camera.front;
+                glm::vec3 perTick = m_player.velocity / 20.0f;
+                perTick += look * 0.1f + (look * 1.5f - perTick) * 0.5f;
+                m_player.velocity = perTick * 20.0f;
+                flight.position = m_player.position + glm::vec3(0.0f, 0.4f, 0.0f);
+            }
+            else if (!flight.shot)
+            {
+                flight.velocity.x *= 1.15f;
+                flight.velocity.z *= 1.15f;
+                flight.velocity.y += 0.04f * 20.0f;
+            }
+            FireworkSpark trail;
+            trail.position = flight.position;
+            trail.velocity = glm::vec3(0.0f, -1.0f, 0.0f) - flight.velocity * 0.05f;
+            trail.colour = 0xFFF0C0u;
+            trail.life = 0.35f;
+            trail.size = 0.04f;
+            if (m_sparks.size() < 4000u) m_sparks.push_back(trail);
+        }
+        if (!flight.boost)
+        {
+            const glm::vec3 next = flight.position + flight.velocity * deltaTime;
+            const glm::ivec3 cell = glm::ivec3(glm::floor(next));
+            if (isSolid(m_world->getBlock(cell.x, cell.y, cell.z))) burst = true;
+            else flight.position = next;
+            if (flight.shot)
+                for (const Mob& mob : m_entities.mobs())
+                    if (mob.alive() && glm::length(mob.position() + glm::vec3(0.0f, mob.height() * 0.5f, 0.0f) - flight.position) <
+                                           std::max(0.6f, mob.width()))
+                        burst = true;
+        }
+        if (burst)
+        {
+            const glm::vec3 at = flight.position;
+            const int design = flight.design;
+            m_fireworks.erase(m_fireworks.begin() + static_cast<long>(i));
+            burstFirework(at, design);
+            continue;
+        }
+        ++i;
+    }
+
+    const float damping = std::pow(0.91f, deltaTime * 20.0f);
+    const size_t live = m_sparks.size();
+    for (size_t i = 0; i < live; ++i)
+    {
+        FireworkSpark& spark = m_sparks[i];
+        spark.age += deltaTime;
+        spark.velocity *= damping;
+        spark.velocity.y -= 1.6f * deltaTime;
+        spark.position += spark.velocity * deltaTime;
+        spark.tick += deltaTime;
+        if (spark.trail && spark.age < spark.life * 0.5f && spark.tick >= 0.1f && m_sparks.size() < 4000u)
+        {
+            spark.tick = 0.0f;
+            FireworkSpark echo;
+            echo.position = spark.position;
+            echo.colour = spark.colour;
+            echo.fade = spark.fade;
+            echo.fades = spark.fades;
+            echo.twinkle = spark.twinkle;
+            echo.life = spark.life * 0.5f;
+            echo.size = spark.size * 0.8f;
+            m_sparks.push_back(echo);
+        }
+    }
+    m_sparks.erase(std::remove_if(m_sparks.begin(), m_sparks.end(), [](const FireworkSpark& s) { return s.age >= s.life; }),
+                   m_sparks.end());
+}
+
+void Application::queueFireworks()
+{
+    for (const FireworkFlight& flight : m_fireworks)
+    {
+        if (flight.boost) continue;
+        Arrow visual;
+        visual.position = flight.position;
+        visual.velocity = glm::length(flight.velocity) > 0.01f ? flight.velocity : glm::vec3(0.0f, 1.0f, 0.0f);
+        visual.kind = Arrows::Kind::Rocket;
+        m_arrows.show(visual);
+    }
+    for (const FireworkSpark& spark : m_sparks)
+    {
+        const float part = spark.age / spark.life;
+        unsigned int colour = spark.colour;
+        if (spark.fades && part > 0.5f)
+        {
+            const float mix = std::min(1.0f, (part - 0.5f) * 4.0f);
+            auto channel = [&](int shift) {
+                const float a = static_cast<float>((spark.colour >> shift) & 255u);
+                const float b = static_cast<float>((spark.fade >> shift) & 255u);
+                return static_cast<unsigned int>(a + (b - a) * mix) << shift;
+            };
+            colour = channel(16) | channel(8) | channel(0);
+        }
+        if (spark.twinkle && part > 0.33f && static_cast<int>(spark.age * 10.0f) % 2 == 0) continue;
+        m_fireworkRenderer.spark(spark.position, spark.size, colour, 1.0f - std::max(0.0f, part - 0.7f) / 0.3f);
+    }
+}
+
 Application::ParkedVehicle Application::parkOf(const Mob& vehicle) const
 {
     ParkedVehicle parked;
@@ -11265,6 +11598,21 @@ void Application::updateCrossbow(float deltaTime)
     if (load == Crossbows::Empty)
     {
         const int slot = ammoSlot();
+        ItemStack& offhand = m_inventory.slot(Inventory::OFFHAND);
+        const bool rocket = offhand.id == Items::FireworkRocket && offhand.count > 0;
+        if (rocket && down && !m_crossbowHeldOver)
+        {
+            const float before = m_crossbowCharge;
+            m_crossbowCharge += deltaTime;
+            if (before < 0.3f && m_crossbowCharge >= 0.3f) m_audio.play(Sound::Click, 0.4f, 0.7f);
+            if (m_crossbowCharge < Crossbows::CHARGE_SECONDS) return;
+            held.enchantments = Crossbows::withLoad(held.enchantments, Crossbows::Firework, Fireworks::library().crossbowSlot(offhand.damage));
+            if (!m_player.creative() && --offhand.count <= 0) offhand.clear();
+            m_crossbowCharge = 0.0f;
+            m_crossbowHeldOver = true;
+            m_audio.play(Sound::Click, 0.6f, 1.1f);
+            return;
+        }
         if (!down || m_crossbowHeldOver || (slot < 0 && !m_player.creative()))
         {
             m_crossbowCharge = 0.0f;
@@ -11290,6 +11638,16 @@ void Application::updateCrossbow(float deltaTime)
     }
     if (!m_keys.pressed(m_input, Action::Use) || !inGame()) return;
     const glm::vec3 from = m_camera.position + m_camera.front * 0.4f;
+    if (load == Crossbows::Firework)
+    {
+        launchFirework(Fireworks::library().crossbowRocket(Crossbows::effectOf(held.enchantments)), from, m_camera.front * 32.0f, true, false);
+        held.enchantments = Crossbows::withLoad(held.enchantments, Crossbows::Empty);
+        m_crossbowHeldOver = true;
+        m_heldItem.swing();
+        vibrate(m_player.eyePosition(), 3);
+        wearHeld(Items::Crossbow, 3);
+        return;
+    }
     const Arrows::Kind kind = load == Crossbows::Spectral ? Arrows::Kind::Spectral
                             : load == Crossbows::Tipped ? Arrows::Kind::Tipped : Arrows::Kind::Shaft;
     m_arrows.spawn(from, m_camera.front * Crossbows::ARROW_SPEED, 9, true, kind, Crossbows::effectOf(held.enchantments));
@@ -12808,7 +13166,7 @@ void Application::handlePlacement()
         return;
     }
 
-    if (stack.id == Items::FlintAndSteel)
+    if (stack.id == Items::FlintAndSteel || stack.id == Items::FireCharge)
     {
         const RaycastHit spark = m_world->raycast(m_camera.position, m_camera.front, REACH_DISTANCE);
         bool struck = false;
@@ -12823,9 +13181,14 @@ void Application::handlePlacement()
             m_audio.play(Sound::Fire, 0.6f, 1.2f);
             struck = true;
         }
-        if (struck)
+        if (struck && !m_player.creative())
         {
-            if (!m_player.creative())
+            if (stack.id == Items::FireCharge)
+            {
+                stack.count -= 1;
+                if (stack.count <= 0) stack.clear();
+            }
+            else
             {
                 stack.damage += 1;
                 if (stack.damage >= 64) stack.clear();
@@ -13411,6 +13774,33 @@ void Application::handlePlacement()
             mount->boostRide(stack.id == Items::CarrotOnAStick ? 2.0f : 2.5f);
             wearHeld(stack.id, stack.id == Items::CarrotOnAStick ? Fishing::BOOST_COST : Fishing::FUNGUS_BOOST_COST);
             m_audio.play(Sound::MobPigSay, 0.5f, 1.3f);
+        }
+        return;
+    }
+
+    if (stack.id == Items::FireworkRocket)
+    {
+        bool launched = false;
+        if (m_player.gliding)
+        {
+            launchFirework(stack.damage, m_player.position, glm::vec3(0.0f), false, true);
+            launched = true;
+        }
+        else
+        {
+            const RaycastHit pad = m_world->raycast(m_camera.position, m_camera.front, REACH_DISTANCE);
+            if (pad.hit)
+            {
+                const uint32_t roll = hashCoords(pad.previous.x, pad.previous.y, pad.previous.z, static_cast<uint32_t>(m_elapsedSeconds * 100.0f));
+                const glm::vec3 drift(static_cast<float>(roll % 9u) / 400.0f - 0.01f, 1.0f, static_cast<float>((roll >> 8) % 9u) / 400.0f - 0.01f);
+                launchFirework(stack.damage, glm::vec3(pad.previous) + glm::vec3(0.5f, 0.1f, 0.5f), drift, false, false);
+                launched = true;
+            }
+        }
+        if (launched && !m_player.creative())
+        {
+            stack.count -= 1;
+            if (stack.count <= 0) stack.clear();
         }
         return;
     }
@@ -14346,6 +14736,7 @@ void Application::renderWorldShaded()
     m_beams.render(world);
     m_books.render(world, *m_world);
     m_bannerRenderer.render(world, *m_world, nearbyBanners(), m_elapsedSeconds);
+    m_fireworkRenderer.render(view, projection, camera.right, camera.up);
     world.bind();
     m_atlas.bind(0, 1, 2);
     renderPlayers(view, projection);
@@ -14481,6 +14872,7 @@ void Application::renderWorld()
     m_beams.render(m_chunkShader);
     m_books.render(m_chunkShader, *m_world);
     m_bannerRenderer.render(m_chunkShader, *m_world, nearbyBanners(), m_elapsedSeconds);
+    m_fireworkRenderer.render(view, projection, camera.right, camera.up);
     castShadows(view, projection);
     m_chunkShader.bind();
     m_atlas.bind(0, 1, 2);

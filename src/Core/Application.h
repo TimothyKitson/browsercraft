@@ -33,6 +33,8 @@
 #include "Renderer/BookRenderer.h"
 #include "Renderer/BannerRenderer.h"
 #include "Game/Banners.h"
+#include "Game/Fireworks.h"
+#include "Renderer/FireworkRenderer.h"
 #include "Renderer/ShadowRenderer.h"
 #include "Game/VillageLoot.h"
 #include "Game/StructureLoot.h"
@@ -464,6 +466,39 @@ private:
     std::map<uint32_t, std::string> m_cartCommands;
     int64_t m_editorCart = -1;
     void primeTntCart(Mob& cart);
+    struct FireworkFlight
+    {
+        glm::vec3 position{ 0.0f };
+        glm::vec3 velocity{ 0.0f };
+        float age = 0.0f;
+        float life = 1.0f;
+        float tick = 0.0f;
+        int design = 0;
+        bool shot = false;
+        bool boost = false;
+    };
+    struct FireworkSpark
+    {
+        glm::vec3 position{ 0.0f };
+        glm::vec3 velocity{ 0.0f };
+        unsigned int colour = 0xFFFFFFu;
+        unsigned int fade = 0xFFFFFFu;
+        bool fades = false;
+        bool trail = false;
+        bool twinkle = false;
+        float age = 0.0f;
+        float life = 2.5f;
+        float tick = 0.0f;
+        float size = 0.06f;
+    };
+    std::vector<FireworkFlight> m_fireworks;
+    std::vector<FireworkSpark> m_sparks;
+    std::vector<std::pair<glm::vec3, float>> m_twinkles;
+    FireworkRenderer m_fireworkRenderer;
+    void launchFirework(int design, const glm::vec3& at, const glm::vec3& velocity, bool shot, bool boost);
+    void burstFirework(const glm::vec3& at, int design);
+    void tickFireworks(float deltaTime);
+    void queueFireworks();
     struct ParkedVehicle
     {
         int dimension = 0;

@@ -350,6 +350,9 @@ namespace
         { "Minecart with TNT", Tiles::ItemVehicleFirst + 20, 1 },
         { "Minecart with Command Block", Tiles::ItemVehicleFirst + 21, 1 },
         { "Spawn Egg", Tiles::ItemSpawnEggFirst, 64 },
+        { "Firework Rocket", Tiles::ItemFireworkFirst + 0, 64 },
+        { "Firework Star", Tiles::ItemFireworkFirst + 1, 64 },
+        { "Fire Charge", Tiles::ItemFireworkFirst + 3, 64 },
     };
 
     static_assert(sizeof(ITEMS) / sizeof(ITEMS[0]) ==

@@ -9849,6 +9849,10 @@ namespace
         { Tiles::ItemBookFirst + 1, { "writable_book", nullptr, nullptr } },
         { Tiles::ItemBookFirst + 2, { "written_book", nullptr, nullptr } },
         { Tiles::ItemBookFirst + 3, { "knowledge_book", nullptr, nullptr } },
+        { Tiles::ItemFireworkFirst + 0, { "firework_rocket", nullptr, nullptr } },
+        { Tiles::ItemFireworkFirst + 1, { "firework_star", nullptr, nullptr } },
+        { Tiles::ItemFireworkFirst + 2, { "firework_star_overlay", nullptr, nullptr } },
+        { Tiles::ItemFireworkFirst + 3, { "fire_charge", nullptr, nullptr } },
         { Tiles::ItemVehicleFirst + 0, { "spruce_boat", nullptr, nullptr } },
         { Tiles::ItemVehicleFirst + 1, { "birch_boat", nullptr, nullptr } },
         { Tiles::ItemVehicleFirst + 2, { "jungle_boat", nullptr, nullptr } },
@@ -11342,6 +11346,41 @@ Atlas::Atlas()
         paintMaterialIn(tile, i);
         blitPainted(Tiles::ItemMaterialFirst + i, tile);
     }
+    for (int i = 0; i < 4; ++i)
+    {
+        Tile tile;
+        tile.fill(Color{ 0, 0, 0, 0 });
+        if (i == 0)
+        {
+            for (int y = 4; y < 13; ++y)
+                for (int x = 6; x < 10; ++x) tile.set(x, y, (y + x) % 4 == 0 ? Color{ 230, 220, 200 } : Color{ 200, 40, 40 });
+            for (int x = 6; x < 10; ++x) tile.set(x, 3, Color{ 120, 120, 120 });
+            for (int y = 13; y < 16; ++y) tile.set(8, y, Color{ 130, 100, 60 });
+        }
+        else if (i == 1 || i == 2)
+        {
+            for (int y = 3; y < 13; ++y)
+                for (int x = 3; x < 13; ++x)
+                {
+                    const float dx = static_cast<float>(x) - 7.5f, dy = static_cast<float>(y) - 7.5f;
+                    if (dx * dx + dy * dy > 20.0f) continue;
+                    if (i == 1) tile.set(x, y, (dx * dx + dy * dy > 14.0f) ? Color{ 60, 60, 60 } : Color{ 90, 90, 90 });
+                    else if (dx * dx + dy * dy < 14.0f && (x + y) % 2 == 0) tile.set(x, y, Color{ 255, 255, 255 });
+                }
+        }
+        else
+        {
+            for (int y = 3; y < 13; ++y)
+                for (int x = 3; x < 13; ++x)
+                {
+                    const float dx = static_cast<float>(x) - 7.5f, dy = static_cast<float>(y) - 7.5f;
+                    const float d = dx * dx + dy * dy;
+                    if (d > 22.0f) continue;
+                    tile.set(x, y, d > 14.0f ? Color{ 60, 30, 20 } : (x * 3 + y) % 5 == 0 ? Color{ 255, 200, 60 } : Color{ 210, 90, 30 });
+                }
+        }
+        blitPainted(Tiles::ItemFireworkFirst + i, tile);
+    }
     for (int i = 0; i <= Tiles::ItemSpawnEggLast - Tiles::ItemSpawnEggFirst; ++i)
     {
         unsigned int base = 0xA0A0A0u, spots = 0x505050u;
@@ -12551,6 +12590,7 @@ bool Atlas::hasPainter(int tileIndex)
     if (tileIndex >= Tiles::ItemBookFirst && tileIndex <= Tiles::ItemBookLast) return true;
     if (tileIndex >= Tiles::ItemVehicleFirst && tileIndex <= Tiles::ItemVehicleLast) return true;
     if (tileIndex >= Tiles::ItemSpawnEggFirst && tileIndex <= Tiles::ItemSpawnEggLast) return true;
+    if (tileIndex >= Tiles::ItemFireworkFirst && tileIndex <= Tiles::ItemFireworkLast) return true;
     if (tileIndex >= Tiles::ConcreteTile && tileIndex <= Tiles::GlazedTileLast &&
         tileIndex != Tiles::TerracottaPlainTile) return true;
     if (tileIndex >= Tiles::StainedGlassTile && tileIndex <= Tiles::StainedGlassTileLast) return true;

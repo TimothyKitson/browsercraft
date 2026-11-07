@@ -1,4 +1,5 @@
 #include "Crafting.h"
+#include "Fireworks.h"
 #include "Food.h"
 #include "Archaeology.h"
 #include "Player/Inventory.h"
@@ -1072,6 +1073,7 @@ namespace
         { false, 2, 2, { Items::RabbitHide, Items::RabbitHide,
                          Items::RabbitHide, Items::RabbitHide }, 0, Items::Leather, 1 },
         { true, 0, 0, { Items::Book, Items::InkSac, Items::Feather }, 3, Items::WritableBook, 1 },
+        { true, 0, 0, { Items::BlazePowder, Items::Gunpowder, Items::Coal }, 3, Items::FireCharge, 3 },
 
         // Four string makes a block of wool, so a bed does not depend on
         // finding sheep.
@@ -1467,6 +1469,8 @@ namespace Crafting
 
     CraftOutput match(const ItemStack* grid, int size)
     {
+        const CraftOutput firework = Fireworks::match(grid, size);
+        if (firework.valid()) return firework;
         const CraftOutput boat = matchChestBoat(grid, size);
         if (boat.valid()) return boat;
         const CraftOutput stew = matchStew(grid, size);
@@ -1557,6 +1561,8 @@ std::vector<StackId> Crafting::everyOutput()
     for (const Recipe& recipe : RECIPES) out.push_back(recipe.result);
     out.push_back(static_cast<StackId>(Blocks::DecoratedPotFirst + 2));
     out.push_back(Items::SuspiciousStew);
+    out.push_back(Items::FireworkStar);
+    out.push_back(Items::FireworkRocket);
     for (int wood = 0; wood < BOAT_WOODS; ++wood)
     {
         out.push_back(boatOfWood(wood, false));

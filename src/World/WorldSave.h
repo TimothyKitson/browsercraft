@@ -206,6 +206,21 @@ struct LevelState
         uint16_t mob = 0;
     };
     std::vector<SavedCage> cages;
+    struct SavedExplosion
+    {
+        uint8_t shape = 0;
+        uint8_t flags = 0;
+        std::vector<uint8_t> colours;
+        std::vector<uint8_t> fades;
+    };
+    std::vector<SavedExplosion> fireworkStars;
+    struct SavedRocket
+    {
+        uint8_t flight = 1;
+        std::vector<uint16_t> explosions;
+    };
+    std::vector<SavedRocket> fireworkRockets;
+    std::vector<uint16_t> crossbowRockets;
 };
 
 namespace WorldSave

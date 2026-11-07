@@ -50,6 +50,7 @@
 #include "Game/Shield.h"
 #include "Game/Effects.h"
 #include "Game/Brewing.h"
+#include "Game/Fireworks.h"
 #include "World/Village.h"
 #include "Game/VillageLoot.h"
 #include "Game/StructureLoot.h"
@@ -4209,6 +4210,70 @@ namespace
         check(spawnEggColours(MobId::Creeper, shell, spots) && shell == 0x0DA70Bu && spots == 0u, "and a creeper's green with black");
         check(maxStackOf(Items::SpawnEgg) == 64, "eggs stack to sixty-four");
         check(Tiles::ItemSpawnEggFirst + mobTypeCount() <= Tiles::ItemSpawnEggLast + 1, "and every mob has a tile to be drawn with");
+    }
+
+    void testFireworkCrafting()
+    {
+        section("fireworks: stars, fades and rockets");
+        Fireworks::library().clear();
+        ItemStack g[9];
+        auto put = [&](std::initializer_list<StackId> cells) {
+            int i = 0;
+            for (StackId id : cells) { g[i].clear(); if (id != Blocks::Air) { g[i].id = id; g[i].count = 1; } ++i; }
+            for (; i < 9; ++i) g[i].clear();
+        };
+        put({ Items::Gunpowder, Items::DyeRed });
+        const CraftOutput plain = Crafting::match(g, 3);
+        check(plain.id == Items::FireworkStar && plain.count == 1, "gunpowder and a dye make a firework star");
+        const Fireworks::Explosion* red = Fireworks::library().explosionAt(plain.damage);
+        check(red && red->shape == Fireworks::Shape::SmallBall && red->colours.size() == 1 && red->colours[0] == 14,
+              "a small red ball");
+        check(Crafting::match(g, 3).damage == plain.damage, "and making it again does not fill the level with copies");
+        put({ Items::Gunpowder, Items::DyeBlue, Items::DyeYellow, Items::GoldNugget, Items::Diamond, Items::GlowstoneDust });
+        const CraftOutput fancy = Crafting::match(g, 3);
+        const Fireworks::Explosion* star = Fireworks::library().explosionAt(fancy.damage);
+        check(star && star->shape == Fireworks::Shape::Star && star->colours.size() == 2 && star->trail && star->twinkle,
+              "a gold nugget shapes a star, a diamond adds a trail and glowstone a twinkle");
+        put({ Items::Gunpowder, Items::DyeBlue, Items::FireCharge });
+        check(Fireworks::library().explosionAt(Crafting::match(g, 3).damage)->shape == Fireworks::Shape::LargeBall,
+              "a fire charge makes it a large ball");
+        put({ Items::Gunpowder, Items::DyeBlue, Items::Feather });
+        check(Fireworks::library().explosionAt(Crafting::match(g, 3).damage)->shape == Fireworks::Shape::Burst, "and a feather a burst");
+        put({ Items::Gunpowder, Items::DyeBlue, Items::Feather, Items::GoldNugget });
+        check(!Crafting::match(g, 3).valid(), "but not two shapes at once");
+        put({ Items::Gunpowder });
+        check(!Crafting::match(g, 3).valid(), "and not with no colour");
+
+        ItemStack starStack{ Items::FireworkStar, 1, fancy.damage };
+        g[0] = starStack;
+        g[1] = ItemStack{ Items::DyeWhite, 1 };
+        for (int i = 2; i < 9; ++i) g[i].clear();
+        const CraftOutput faded = Crafting::match(g, 3);
+        const Fireworks::Explosion* fading = Fireworks::library().explosionAt(faded.damage);
+        check(faded.id == Items::FireworkStar && fading && fading->fades.size() == 1 && fading->fades[0] == 0 && fading->trail,
+              "a star and a dye give it a colour to fade to, keeping the rest");
+
+        g[0] = ItemStack{ Items::Paper, 1 };
+        g[1] = ItemStack{ Items::Gunpowder, 1 };
+        g[2] = ItemStack{ Items::Gunpowder, 1 };
+        g[3] = starStack;
+        for (int i = 4; i < 9; ++i) g[i].clear();
+        const CraftOutput rocket = Crafting::match(g, 3);
+        const Fireworks::Rocket* design = Fireworks::library().rocketAt(rocket.damage);
+        check(rocket.id == Items::FireworkRocket && rocket.count == 3 && design && design->flight == 2 &&
+                  design->explosions.size() == 1,
+              "paper, two gunpowder and a star make three rockets of flight two");
+        g[3].clear();
+        g[4] = ItemStack{ Items::Gunpowder, 1 };
+        g[5] = ItemStack{ Items::Gunpowder, 1 };
+        check(!Crafting::match(g, 3).valid(), "four gunpowder is too much for one rocket");
+        put({ Items::BlazePowder, Items::Gunpowder, Items::Charcoal });
+        check(Crafting::match(g, 3).id == Items::FireCharge && Crafting::match(g, 3).count == 3,
+              "blaze powder, gunpowder and charcoal make three fire charges");
+        check(Fireworks::lifetimeSeconds(1, 0u) >= 1.0f && Fireworks::lifetimeSeconds(3, 0xFFFFFFFFu) > Fireworks::lifetimeSeconds(1, 0u),
+              "a longer flight stays up longer");
+        check(Fireworks::starColour(starStack) != 0x8A8A8Au, "and a coloured star shows its colour");
+        Fireworks::library().clear();
     }
 
     void testArchery()
@@ -12173,7 +12238,7 @@ namespace
             std::error_code ec;
             const auto size = std::filesystem::file_size(path, ec);
             if (!ec) std::filesystem::resize_file(path, size - sizeof(uint16_t) - sizeof(uint8_t) - 3 * sizeof(int) - sizeof(uint32_t) - sizeof(int32_t) - 6 * sizeof(uint32_t) -
-                                                        sizeof(uint8_t) - 3 * sizeof(float) - sizeof(int8_t) - sizeof(uint32_t) - 4 * sizeof(uint32_t), ec);
+                                                        sizeof(uint8_t) - 3 * sizeof(float) - sizeof(int8_t) - sizeof(uint32_t) - 6 * sizeof(uint32_t) - sizeof(uint8_t), ec);
 
             LevelState back;
             check(WorldSave::loadLevel(dir, back), "a level from before items moved up still loads");
@@ -14696,6 +14761,7 @@ int runSelfTest()
     testBooks();
     testVehicles();
     testSpawnEggs();
+    testFireworkCrafting();
     testMadeThings();
     testTheEndAndTheSea();
     testPathfinding();

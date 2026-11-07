@@ -211,6 +211,7 @@ void Projectiles::render(Shader& shader, const Camera& camera, const Atlas& atla
 
     const TileUV tridentUV = tileUV(Tiles::TridentInFlight);
     const TileUV xpUV = tileUV(Tiles::ItemMaterialFirst + 8);
+    const TileUV rocketUV = tileUV(Tiles::ItemFireworkFirst);
     for (const Arrow& arrow : drawn)
     {
         // Along its flight, or along the way it was last going.
@@ -244,10 +245,11 @@ void Projectiles::render(Shader& shader, const Camera& camera, const Atlas& atla
                         : (arrow.kind == Arrows::Kind::Tipped) ? tippedUV
                         : (arrow.kind == Arrows::Kind::Trident) ? tridentUV
                         : (arrow.kind == Arrows::Kind::XpBottle) ? xpUV
+                        : (arrow.kind == Arrows::Kind::Rocket) ? rocketUV
                                                              : arrowUV;
         // A potion is drawn as the bottle it is rather than as a
         // shaft, so it is square like a charge without being one.
-        const bool bottle = arrow.kind == Arrows::Kind::Potion || arrow.kind == Arrows::Kind::XpBottle;
+        const bool bottle = arrow.kind == Arrows::Kind::Potion || arrow.kind == Arrows::Kind::XpBottle || arrow.kind == Arrows::Kind::Rocket;
         const bool trident = arrow.kind == Arrows::Kind::Trident;
         const float length = trident ? 1.3f : (charge || bottle) ? 0.34f : LENGTH;
         const float width = trident ? 0.32f : (charge || bottle) ? 0.34f : WIDTH;

@@ -407,6 +407,11 @@ void AudioEngine::buildSounds()
         loadSingle(static_cast<Sound>(static_cast<int>(Sound::GoatHornFirst) + k), file);
     }
 
+    loadVariants(Sound::FireworkLaunch, "fireworks/launch", 1);
+    loadVariants(Sound::FireworkBlast, "fireworks/blast", 1);
+    loadVariants(Sound::FireworkLargeBlast, "fireworks/largeblast", 1);
+    loadVariants(Sound::FireworkTwinkle, "fireworks/twinkle", 1);
+
     auto make = [&](Sound id) -> Synth {
         auto& clips = m_buffers[static_cast<size_t>(id)];
         // Anything that came from a file keeps it; only the gaps get
@@ -1675,6 +1680,31 @@ void AudioEngine::buildSounds()
         s.addTone(0.12f, 180.0f, 140.0f, 20.0f, 0.35f);
         s.addNoise(0.05f, 2200.0f, 60.0f, 0.6f, false, 232);
         s.finish(0.40f);
+    }
+    {
+        Synth s = make(Sound::FireworkLaunch);
+        s.addNoise(0.9f, 3200.0f, 2.6f, 0.55f, true, 241);
+        s.addTone(0.9f, 300.0f, 900.0f, 2.0f, 0.12f);
+        s.finish(0.45f);
+    }
+    {
+        Synth s = make(Sound::FireworkBlast);
+        s.addNoise(0.7f, 900.0f, 5.0f, 0.9f, false, 251);
+        s.addTone(0.4f, 90.0f, 40.0f, 7.0f, 0.4f);
+        s.finish(0.8f);
+    }
+    {
+        Synth s = make(Sound::FireworkLargeBlast);
+        s.addNoise(1.3f, 600.0f, 2.8f, 1.0f, false, 261);
+        s.addTone(0.8f, 70.0f, 30.0f, 4.0f, 0.5f);
+        s.finish(0.85f);
+    }
+    {
+        Synth s = make(Sound::FireworkTwinkle);
+        for (int k = 0; k < 6; ++k)
+            s.addNoise(0.06f, 5200.0f, 40.0f, 0.5f, true, static_cast<uint32_t>(271 + k));
+        s.addTone(1.2f, 2400.0f, 2200.0f, 3.0f, 0.15f, false, 0.1f);
+        s.finish(0.4f);
     }
 }
 

@@ -249,6 +249,10 @@ enum class Sound : uint8_t
     Fire,
     MobStep,
     SculkClick,
+    FireworkLaunch,
+    FireworkBlast,
+    FireworkLargeBlast,
+    FireworkTwinkle,
     GoatHornFirst,
     GoatHornLast = GoatHornFirst + 7,
     Count
