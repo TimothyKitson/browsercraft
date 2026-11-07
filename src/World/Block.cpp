@@ -1785,6 +1785,18 @@ namespace
         { "Potted Warped Fungus", FlowerPotTile, FlowerPotTile, FlowerPotTile, true, false, RenderType::Pot, 0, 0.0f },
         { "Potted Crimson Roots", FlowerPotTile, FlowerPotTile, FlowerPotTile, true, false, RenderType::Pot, 0, 0.0f },
         { "Potted Warped Roots", FlowerPotTile, FlowerPotTile, FlowerPotTile, true, false, RenderType::Pot, 0, 0.0f },
+        { "Potted Brown Mushroom", FlowerPotTile, FlowerPotTile, FlowerPotTile, true, false, RenderType::Pot, 0, 0.0f },
+        { "Potted Red Mushroom", FlowerPotTile, FlowerPotTile, FlowerPotTile, true, false, RenderType::Pot, 0, 0.0f },
+        { "Brown Mushroom", BrownMushroomTile, BrownMushroomTile, BrownMushroomTile, false, false, RenderType::Cross, 1, 0.0f },
+        { "Red Mushroom", RedMushroomTile, RedMushroomTile, RedMushroomTile, false, false, RenderType::Cross, 0, 0.0f },
+        { "Brown Mushroom Block", BrownMushroomBlockTile, MushroomInsideTile, BrownMushroomBlockTile, true, true, RenderType::Cube, 0, 0.2f },
+        { "Red Mushroom Block", RedMushroomBlockTile, MushroomInsideTile, RedMushroomBlockTile, true, true, RenderType::Cube, 0, 0.2f },
+        { "Mushroom Stem", MushroomInsideTile, MushroomInsideTile, MushroomStemTile, true, true, RenderType::Cube, 0, 0.2f },
+        { "Mycelium", MyceliumTopTile, Dirt, MyceliumSideTile, true, true, RenderType::Cube, 0, 0.6f },
+        { "Podzol", PodzolTopTile, Dirt, PodzolSideTile, true, true, RenderType::Cube, 0, 0.5f },
+        { "Coarse Dirt", CoarseDirtTile, CoarseDirtTile, CoarseDirtTile, true, true, RenderType::Cube, 0, 0.5f },
+        { "Rooted Dirt", RootedDirtTile, RootedDirtTile, RootedDirtTile, true, true, RenderType::Cube, 0, 0.5f },
+        { "Hanging Roots", HangingRootsTile, HangingRootsTile, HangingRootsTile, false, false, RenderType::Cross, 0, 0.0f },
     };
 }
 
@@ -1907,6 +1919,8 @@ const char* blockSoundGroup(BlockId id)
     if (isSign(id) || isFrame(id)) return "wood";
     if (isCopper(id) || isLightningRod(id)) return "stone";
     if (isWildPlant(id)) return "grass";
+    if (isMushroomBlock(id)) return "wood";
+    if (isEarthy(id)) return "gravel";
     if (isFlowerPot(id)) return "stone";
     if (isDoor(id) || isTrapdoor(id)) return "wood";
     if (isConcretePowder(id)) return "sand";
@@ -2061,6 +2075,8 @@ Material blockMaterial(BlockId id)
     if (isSign(id) || isFrame(id)) return Material::Wood;
     if (isCopper(id) || isLightningRod(id)) return Material::Stone;
     if (isWildPlant(id)) return Material::Plant;
+    if (isMushroomBlock(id)) return Material::Wood;
+    if (isEarthy(id)) return Material::Dirt;
     if (isFlowerPot(id)) return Material::Plant;
     if (isDoor(id) || isTrapdoor(id)) return Material::Wood;
     if (isConcretePowder(id)) return Material::Sand;
@@ -2361,14 +2377,14 @@ BlockId copperBlockOf(CopperFamily family, int stage, bool waxed, int state)
 
 namespace
 {
-    const BlockId POTTABLE[30] = {
+    const BlockId POTTABLE[32] = {
         Blocks::FlowerRed, Blocks::FlowerYellow, Blocks::Allium, Blocks::AzureBluet, Blocks::BlueOrchid,
         Blocks::Cornflower, Blocks::LilyOfTheValley, Blocks::OxeyeDaisy, Blocks::RedTulip, Blocks::OrangeTulip,
         Blocks::WhiteTulip, Blocks::PinkTulip, Blocks::WitherRose, Blocks::Torchflower, Blocks::Fern,
         Blocks::DeadBush, Blocks::Cactus, Blocks::Bamboo, Blocks::OakSapling, Blocks::SpruceSapling,
         Blocks::BirchSapling, Blocks::JungleSapling, Blocks::AcaciaSapling, Blocks::DarkOakSapling,
         Blocks::CherrySapling, Blocks::MangrovePropagule, Blocks::CrimsonFungus, Blocks::WarpedFungus,
-        Blocks::CrimsonRoots, Blocks::WarpedRoots,
+        Blocks::CrimsonRoots, Blocks::WarpedRoots, Blocks::BrownMushroom, Blocks::RedMushroom,
     };
 }
 
@@ -2380,7 +2396,7 @@ BlockId pottedPlant(BlockId pot)
 
 BlockId pottedOf(BlockId plant)
 {
-    for (int i = 0; i < 30; ++i)
+    for (int i = 0; i < 32; ++i)
         if (POTTABLE[i] == plant) return static_cast<BlockId>(Blocks::PottedFirst + i);
     return Blocks::Air;
 }

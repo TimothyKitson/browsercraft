@@ -342,6 +342,8 @@ namespace Tiles
         PitcherBottomTile, PitcherBottomTileLast = PitcherBottomTile + 4,
         PitcherTopTile, PitcherTopTileLast = PitcherTopTile + 1,
         FlowerPotTile,
+        BrownMushroomTile, RedMushroomTile, BrownMushroomBlockTile, RedMushroomBlockTile, MushroomStemTile, MushroomInsideTile,
+        MyceliumTopTile, MyceliumSideTile, PodzolTopTile, PodzolSideTile, CoarseDirtTile, RootedDirtTile, HangingRootsTile,
 
         TileCount
     };

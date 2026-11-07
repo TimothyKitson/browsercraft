@@ -649,6 +649,20 @@ namespace
         }
 
         {
+            bool found = false;
+            for (int ring = 0; ring < 400 && !found; ring += 2)
+                for (int step = 0; step < 32 && !found; ++step)
+                {
+                    const float angle = step * 0.19635f;
+                    const int cx = static_cast<int>(std::cos(angle) * ring);
+                    const int cz = static_cast<int>(std::sin(angle) * ring);
+                    if (over.biomeAt(cx * Chunk::SX + 8, cz * Chunk::SZ + 8) != Biome::MushroomFields) continue;
+                    sweep(over, cx, cz, 3);
+                    found = true;
+                }
+        }
+
+        {
             int sx = 0, sz = 0;
             Structures::nearestStronghold(0, 0, seed, sx, sz);
             sweep(over, sx / Structures::CHUNK, sz / Structures::CHUNK, 2);

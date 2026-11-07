@@ -12019,6 +12019,80 @@ namespace
         check(Saplings::leafDrop(Blocks::Stone, 0u) == Blocks::Air, "stone gives none");
     }
 
+    void testMushrooms()
+    {
+        section("mushrooms, huge mushrooms and the dirt kinds");
+        struct Plot : Saplings::Cells
+        {
+            std::map<std::tuple<int, int, int>, BlockId> cells;
+            BlockId at(int x, int y, int z) const override
+            {
+                const auto found = cells.find({ x, y, z });
+                if (found != cells.end()) return found->second;
+                return y < 64 ? Blocks::Mycelium : Blocks::Air;
+            }
+            void set(int x, int y, int z, BlockId id) override { cells[{ x, y, z }] = id; }
+        };
+        {
+            Plot red;
+            check(Saplings::hugeMushroom(red, glm::ivec3(0, 64, 0), true, 3u), "a red mushroom grows huge on mycelium");
+            check(red.at(0, 64, 0) == Blocks::MushroomStem && red.at(0, 66, 0) == Blocks::MushroomStem, "on a stem");
+            int caps = 0;
+            for (const auto& cell : red.cells) if (cell.second == Blocks::RedMushroomBlock) ++caps;
+            check(caps > 20, "under a dome of red cap");
+        }
+        {
+            Plot brown;
+            check(Saplings::hugeMushroom(brown, glm::ivec3(0, 64, 0), false, 4u), "a brown one grows too");
+            int caps = 0;
+            for (const auto& cell : brown.cells) if (cell.second == Blocks::BrownMushroomBlock) ++caps;
+            check(caps == 45, "with a flat cap seven wide and its corners cut");
+        }
+        {
+            Plot cramped;
+            cramped.set(0, 67, 0, Blocks::Stone);
+            check(!Saplings::hugeMushroom(cramped, glm::ivec3(0, 64, 0), true, 3u), "but not under a roof");
+        }
+        {
+            Plot stone;
+            stone.set(0, 63, 0, Blocks::Stone);
+            check(!Saplings::hugeMushroom(stone, glm::ivec3(0, 64, 0), false, 3u), "nor on bare stone");
+        }
+        check(blockDrop(Blocks::BrownMushroomBlock) == Blocks::BrownMushroom && blockDrop(Blocks::MushroomStem) == Blocks::Air,
+              "a cap gives mushrooms and a stem gives nothing");
+        check(blockDrop(Blocks::Mycelium) == Blocks::Dirt && blockDrop(Blocks::Podzol) == Blocks::Dirt &&
+                  blockDrop(Blocks::CoarseDirt) == Blocks::CoarseDirt && blockDrop(Blocks::RootedDirt) == Blocks::RootedDirt,
+              "mycelium and podzol break to dirt; coarse and rooted dirt keep themselves");
+        check(blockInfo(Blocks::BrownMushroom).lightEmission == 1, "a brown mushroom glows a little");
+        check(blockMaterial(Blocks::RedMushroomBlock) == Material::Wood && blockMaterial(Blocks::Podzol) == Material::Dirt,
+              "caps want an axe and podzol a shovel");
+        check(pottedOf(Blocks::RedMushroom) != Blocks::Air && pottedOf(Blocks::BrownMushroom) != Blocks::Air,
+              "mushrooms go in pots");
+        ItemStack coarse[9];
+        coarse[0] = ItemStack{ Blocks::Dirt, 1 };
+        coarse[1] = ItemStack{ Blocks::Gravel, 1 };
+        coarse[3] = ItemStack{ Blocks::Gravel, 1 };
+        coarse[4] = ItemStack{ Blocks::Dirt, 1 };
+        check(Crafting::match(coarse, 3).id == Blocks::CoarseDirt && Crafting::match(coarse, 3).count == 4,
+              "dirt and gravel make coarse dirt");
+        {
+            const WorldGen generator(4242u);
+            bool found = false;
+            for (int ring = 0; ring < 400 && !found; ring += 2)
+                for (int step = 0; step < 32 && !found; ++step)
+                {
+                    const float angle = step * 0.19635f;
+                    const int x = static_cast<int>(std::cos(angle) * ring) * 16 + 8;
+                    const int z = static_cast<int>(std::sin(angle) * ring) * 16 + 8;
+                    if (generator.biomeAt(x, z) == Biome::MushroomFields)
+                    {
+                        found = generator.surfaceHeight(x, z) > WorldGen::SEA_LEVEL;
+                    }
+                }
+            check(found, "mushroom fields rise out of the sea somewhere");
+        }
+    }
+
     void testPlants()
     {
         section("flowers, tall plants, ferns and flower pots");
@@ -13309,6 +13383,7 @@ int runSelfTest()
     testChestKinds();
     testCopperSet();
     testPlants();
+    testMushrooms();
     testTheTablesTake121sPrices();
 
     std::printf("\n%d checks, %d failed\n", g_checks, g_failures);

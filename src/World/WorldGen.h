@@ -37,7 +37,8 @@ enum class Biome : uint8_t
     Badlands,
     NetherWastes,
     CrimsonForest,
-    WarpedForest
+    WarpedForest,
+    MushroomFields
 };
 
 const char* biomeName(Biome biome);
@@ -357,6 +358,7 @@ private:
 
     void generateColumns(Chunk& chunk) const;
     BlockId badlandsBand(int wx, int y, int wz) const;
+    float mushroomIslandAt(int worldX, int worldZ) const;
 
     // Villages. Each is wider than a chunk, so every chunk it reaches
     // into lays out the whole thing and stamps only its own part --

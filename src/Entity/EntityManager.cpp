@@ -418,6 +418,7 @@ void EntityManager::trySpawnWave(const World& world, const glm::vec3& playerPosi
             // What this place has after dark, if it has anything, and
             // the ordinary five otherwise.
             const Biome here = world.generator().biomeAt(x, z);
+            if (here == Biome::MushroomFields) continue;
             const MobId local = biomeNight(here, random01());
 
             if (local != MobId::Count) species = local;

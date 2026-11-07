@@ -34,6 +34,7 @@ const char* biomeName(Biome biome)
     switch (biome)
     {
         case Biome::Ocean: return "Ocean";
+        case Biome::MushroomFields: return "Mushroom Fields";
         case Biome::Beach: return "Beach";
         case Biome::Plains: return "Plains";
         case Biome::Forest: return "Forest";
@@ -120,12 +121,28 @@ int WorldGen::surfaceHeight(int worldX, int worldZ) const
                  + hills * 8.0f
                  + mountainMask * ridges * 52.0f;
 
+    const float island = mushroomIslandAt(worldX, worldZ);
+    if (island > 0.0f)
+        height = height + (SEA_LEVEL + 3.0f + hills * 2.5f - height) * island;
+
     return std::clamp(static_cast<int>(height), 1, MAX_HEIGHT - 12);
+}
+
+float WorldGen::mushroomIslandAt(int worldX, int worldZ) const
+{
+    const float fx = static_cast<float>(worldX);
+    const float fz = static_cast<float>(worldZ);
+    const float continent = spread(m_height.fbm2D(fx * 0.0013f, fz * 0.0013f, 4), 3.0f) + 0.30f;
+    if (continent > -0.18f) return 0.0f;
+    const float field = m_hills.fbm2D(fx * 0.0042f + 733.0f, fz * 0.0042f - 211.0f, 2);
+    const float t = smoothstep(0.30f, 0.42f, field);
+    return t * smoothstep(-0.18f, -0.28f, continent);
 }
 
 Biome WorldGen::biomeAt(int worldX, int worldZ) const
 {
     int height = surfaceHeight(worldX, worldZ);
+    if (height > SEA_LEVEL && mushroomIslandAt(worldX, worldZ) > 0.5f) return Biome::MushroomFields;
     float temperature = temperatureAt(worldX, worldZ);
     float humidity = humidityAt(worldX, worldZ);
 
@@ -563,8 +580,15 @@ void WorldGen::generateColumns(Chunk& chunk) const
                             break;
 
                         case Biome::Snowy:
-                            if (depth == 0) block = Blocks::SnowGrass;
+                            if (depth == 0)
+                                block = m_humidity.fbm2D(wx * 0.05f + 61.0f, wz * 0.05f - 17.0f, 2) > 0.28f
+                                            ? Blocks::Podzol : Blocks::SnowGrass;
                             else if (depth <= 4) block = Blocks::Dirt;
+                            break;
+
+                        case Biome::MushroomFields:
+                            if (depth == 0) block = Blocks::Mycelium;
+                            else if (depth <= 3) block = Blocks::Dirt;
                             break;
 
                         case Biome::Mountains:
@@ -603,7 +627,13 @@ void WorldGen::generateColumns(Chunk& chunk) const
                         case Biome::Jungle:
                         case Biome::Savanna:
                         default:
-                            if (depth == 0) block = (surface < SEA_LEVEL) ? Blocks::Dirt : Blocks::Grass;
+                            if (depth == 0)
+                            {
+                                block = (surface < SEA_LEVEL) ? Blocks::Dirt : Blocks::Grass;
+                                const float patch = m_humidity.fbm2D(wx * 0.05f + 61.0f, wz * 0.05f - 17.0f, 2);
+                                if (surface >= SEA_LEVEL && biome == Biome::Savanna && patch > 0.30f) block = Blocks::CoarseDirt;
+                                if (surface >= SEA_LEVEL && biome == Biome::Jungle && patch > 0.34f) block = Blocks::Podzol;
+                            }
                             else if (depth <= 3) block = Blocks::Dirt;
                             break;
                     }
@@ -711,9 +741,21 @@ void WorldGen::dressCaves(Chunk& chunk) const
             const int wz = baseZ + lz;
 
             const CaveKind kind = caveKindAt(wx, wz);
-            if (kind == CaveKind::Plain) continue;
-
             const int top = std::min(surfaceHeight(wx, wz) - 3, Chunk::SY - 2);
+            if (kind == CaveKind::Plain)
+            {
+                if (hashToFloat(hashCoords(wx, 1, wz, m_seed + 7701)) > 0.05f) continue;
+                for (int y = 8; y <= top; ++y)
+                {
+                    if (chunk.getBlock(lx, y, lz) != Blocks::Air) continue;
+                    const BlockId under = chunk.getBlock(lx, y - 1, lz);
+                    if (!isOpaque(under) || under == Blocks::Bedrock) continue;
+                    if (hashToFloat(hashCoords(wx, y, wz, m_seed + 7702)) < 0.25f)
+                        chunk.setBlockRaw(lx, y, lz, (wx + y + wz) % 2 ? Blocks::BrownMushroom : Blocks::RedMushroom);
+                    break;
+                }
+                continue;
+            }
 
             for (int y = 5; y <= top; ++y)
             {
@@ -750,6 +792,12 @@ void WorldGen::dressCaves(Chunk& chunk) const
                         chunk.setBlockRaw(lx, y - 1, lz, Blocks::Moss);
                     if (roof && roll > 0.62f)
                         chunk.setBlockRaw(lx, y + 1, lz, Blocks::AzaleaLeaves);
+                    else if (roof && roll > 0.56f)
+                    {
+                        chunk.setBlockRaw(lx, y + 1, lz, Blocks::RootedDirt);
+                        chunk.setBlockRaw(lx, y, lz, Blocks::HangingRoots);
+                        continue;
+                    }
 
                     if (roof && roll > 0.90f)
                         chunk.setBlockRaw(lx, y, lz, Blocks::GlowBerries);
@@ -2813,6 +2861,32 @@ void WorldGen::decorate(Chunk& chunk) const
             const Biome here = biomeAt(wx, wz);
             const float roll = hashToFloat(hashCoords(wx, 8, wz, m_seed + 4243));
 
+            if (here == Biome::MushroomFields)
+            {
+                struct LocalCells : Saplings::Cells
+                {
+                    Chunk* chunk = nullptr;
+                    int baseX = 0, baseZ = 0;
+                    BlockId at(int x, int y, int z) const override
+                    {
+                        const int lx = x - baseX, lz = z - baseZ;
+                        return Chunk::inBounds(lx, y, lz) ? chunk->getBlock(lx, y, lz) : Blocks::Air;
+                    }
+                    void set(int x, int y, int z, BlockId id) override
+                    {
+                        const int lx = x - baseX, lz = z - baseZ;
+                        if (Chunk::inBounds(lx, y, lz)) chunk->setBlockRaw(lx, y, lz, id);
+                    }
+                } cells;
+                cells.chunk = &chunk;
+                cells.baseX = baseX;
+                cells.baseZ = baseZ;
+                if (roll < 0.35f)
+                    Saplings::hugeMushroom(cells, glm::ivec3(wx, surface + 1, wz), roll < 0.17f,
+                                           hashCoords(wx, 9, wz, m_seed + 4244), true);
+                continue;
+            }
+
             TreeKind kind = TreeKind::Oak;
             if (here == Biome::Jungle)
                 kind = (roll < 0.85f) ? TreeKind::Jungle : TreeKind::Oak;
@@ -2899,7 +2973,26 @@ void WorldGen::decorate(Chunk& chunk) const
                 }
             }
 
+            if (biome == Biome::MushroomFields && ground == Blocks::Mycelium)
+            {
+                if (roll < 0.03f)
+                    chunk.setBlockRaw(lx, above, lz, roll < 0.015f ? Blocks::BrownMushroom : Blocks::RedMushroom);
+                continue;
+            }
+
+            if ((ground == Blocks::Podzol || ground == Blocks::CoarseDirt) && roll < 0.08f)
+            {
+                chunk.setBlockRaw(lx, above, lz, ground == Blocks::Podzol ? Blocks::Fern : Blocks::TallGrass);
+                continue;
+            }
+
             if (ground != Blocks::Grass && ground != Blocks::SnowGrass) continue;
+
+            if ((biome == Biome::Swamp || biome == Biome::Snowy || biome == Biome::Forest) && roll >= 0.188f && roll < 0.1905f)
+            {
+                chunk.setBlockRaw(lx, above, lz, roll < 0.1892f ? Blocks::BrownMushroom : Blocks::RedMushroom);
+                continue;
+            }
 
             // A jungle has two things nowhere else does: bamboo in
             // groves, and melons lying on the floor. Both are what
@@ -3012,6 +3105,7 @@ bool WorldGen::treeStandsAt(int wx, int wz) const
         case Biome::Swamp: treeChance = 0.020f; break;
         case Biome::CherryGrove: treeChance = 0.016f; break;
         case Biome::MangroveSwamp: treeChance = 0.045f; break;
+        case Biome::MushroomFields: treeChance = 0.012f; break;
         default: break;
     }
     if (treeChance <= 0.0f) return false;

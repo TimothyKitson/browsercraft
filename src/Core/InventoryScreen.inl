@@ -86,6 +86,8 @@ namespace
         Blocks::DoublePlantFirst + 0, Blocks::DoublePlantFirst + 2, Blocks::DoublePlantFirst + 4, Blocks::DoublePlantFirst + 6,
         Blocks::DoublePlantFirst + 8, Blocks::DoublePlantFirst + 10, Blocks::DoublePlantFirst + 12,
         Blocks::FlowerPot,
+        Blocks::BrownMushroom, Blocks::RedMushroom, Blocks::BrownMushroomBlock, Blocks::RedMushroomBlock, Blocks::MushroomStem,
+        Blocks::Mycelium, Blocks::Podzol, Blocks::CoarseDirt, Blocks::RootedDirt, Blocks::HangingRoots,
     };
 
     const StackId TAB_ORES[] = {

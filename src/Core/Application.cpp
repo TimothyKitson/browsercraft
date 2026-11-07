@@ -2049,7 +2049,7 @@ bool Application::frame()
             m_startupScreen == "cherry" || m_startupScreen == "mangrove" || m_startupScreen == "fungi" ||
             m_startupScreen == "stones" || m_startupScreen == "colours" || m_startupScreen == "candles" ||
             m_startupScreen == "shulkerboxes" || m_startupScreen == "beds" || m_startupScreen == "chests" ||
-            m_startupScreen == "copper" || m_startupScreen == "flowers" ||
+            m_startupScreen == "copper" || m_startupScreen == "flowers" || m_startupScreen == "mushrooms" ||
             m_startupScreen == "boat" || m_startupScreen == "rails" ||
             m_startupScreen == "mobs" || m_startupScreen == "golem" ||
             m_startupScreen == "glowmobs" || m_startupScreen == "variants" ||
@@ -2142,6 +2142,7 @@ bool Application::frame()
                                   m_startupScreen != "chests" &&
                                   m_startupScreen != "copper" &&
                                   m_startupScreen != "flowers" &&
+                                  m_startupScreen != "mushrooms" &&
                                   m_startupScreen != "boat" &&
                                   m_startupScreen != "rails" &&
                                   m_startupScreen != "mobs" &&
@@ -2518,7 +2519,7 @@ bool Application::frame()
                 m_startupScreen == "cherry" || m_startupScreen == "mangrove" || m_startupScreen == "fungi" ||
                 m_startupScreen == "stones" || m_startupScreen == "colours" || m_startupScreen == "candles" ||
                 m_startupScreen == "shulkerboxes" || m_startupScreen == "beds" || m_startupScreen == "chests" ||
-                m_startupScreen == "copper" || m_startupScreen == "flowers")
+                m_startupScreen == "copper" || m_startupScreen == "flowers" || m_startupScreen == "mushrooms")
             {
                 m_camera.setOrientation(0.0f, -25.0f);
                 m_camera.addLook(0.0f, 0.0f, 0.0f);
@@ -2612,6 +2613,38 @@ bool Application::frame()
                     m_world->setBlock(px + 7, py + 1, pz - 1, Blocks::GlassPane);
                     m_world->setBlock(px + 10, py, pz - 6, colourIn(Blocks::ConcretePowderFirst, 11));
                     m_world->setBlock(px + 10, py, pz - 5, Blocks::Water);
+                    m_world->setBlock(px + 16, py, pz - 10, Blocks::Bookshelf);
+                    m_world->setBlock(px + 16, py, pz + 10, Blocks::DiamondOre);
+                    m_world->setBlock(px + 16, py + 1, pz + 10, Blocks::EndPortalFrame);
+                }
+                if (m_startupScreen == "mushrooms")
+                {
+                    m_devAttackStrength = 1.0f;
+                    m_camera.setOrientation(0.0f, 4.0f);
+                    for (int dx = 1; dx <= 16; ++dx)
+                        for (int dz = -10; dz <= 10; ++dz)
+                        {
+                            for (int dy = 0; dy <= 12; ++dy) m_world->setBlock(px + dx, py + dy, pz + dz, Blocks::Air);
+                            m_world->setBlock(px + dx, py - 1, pz + dz, dz < -4 ? Blocks::Podzol : dz < 2 ? Blocks::Mycelium : Blocks::CoarseDirt);
+                        }
+                    struct WorldCells : Saplings::Cells
+                    {
+                        World* world = nullptr;
+                        BlockId at(int x, int y, int z) const override { return world->getBlock(x, y, z); }
+                        void set(int x, int y, int z, BlockId id) override { world->setBlock(x, y, z, id); }
+                    } cells;
+                    cells.world = m_world.get();
+                    Saplings::hugeMushroom(cells, glm::ivec3(px + 12, py, pz - 4), true, 2u);
+                    Saplings::hugeMushroom(cells, glm::ivec3(px + 12, py, pz + 5), false, 1u);
+                    m_world->setBlock(px + 5, py, pz - 2, Blocks::BrownMushroom);
+                    m_world->setBlock(px + 5, py, pz, Blocks::RedMushroom);
+                    m_world->setBlock(px + 4, py, pz + 2, pottedOf(Blocks::RedMushroom));
+                    m_world->setBlock(px + 4, py, pz + 3, pottedOf(Blocks::BrownMushroom));
+                    for (int dz = -1; dz <= 1; ++dz)
+                    {
+                        m_world->setBlock(px + 7, py + 3, pz + dz, Blocks::RootedDirt);
+                        m_world->setBlock(px + 7, py + 2, pz + dz, Blocks::HangingRoots);
+                    }
                     m_world->setBlock(px + 16, py, pz - 10, Blocks::Bookshelf);
                     m_world->setBlock(px + 16, py, pz + 10, Blocks::DiamondOre);
                     m_world->setBlock(px + 16, py + 1, pz + 10, Blocks::EndPortalFrame);
@@ -6177,6 +6210,9 @@ void Application::updateMining(float deltaTime)
 
                 if (isCandle(id)) dropped = candleCount(id);
                 if (id == Blocks::Clay && drop == Items::ClayBall) dropped = 4;
+                if (isMushroomBlock(id) && drop != id)
+                    dropped = std::max(0, static_cast<int>(static_cast<uint32_t>(hit.block.x * 73 + hit.block.y * 31 + hit.block.z * 17 +
+                                                                                 static_cast<int>(m_elapsedSeconds * 53.0f)) % 8u) - 5);
                 if (id == Blocks::DeadBush) dropped = static_cast<int>(static_cast<uint32_t>(hit.block.x * 31 + hit.block.z * 17 + static_cast<int>(m_elapsedSeconds * 61.0f)) % 3u);
                 if (isDoublePlant(id) && doublePlantUpper(id) && drop == Items::WheatSeeds) dropped = 0;
                 if (isEnderChest(id)) { drop = silk ? chestOf(2, 2, 0) : Blocks::Obsidian; dropped = silk ? 1 : 8; }
@@ -9847,6 +9883,37 @@ void Application::handlePlacement()
                     used = true;
                 }
             }
+            else if (isMushroom(plant))
+            {
+                const uint32_t roll = static_cast<uint32_t>(crop.block.x * 73856093 ^ crop.block.z * 83492791 ^
+                                                            static_cast<int>(m_elapsedSeconds * 977.0f));
+                if (roll % 100u < 40u)
+                {
+                    struct WorldCells : Saplings::Cells
+                    {
+                        World* world = nullptr;
+                        Net::Session* net = nullptr;
+                        BlockId at(int x, int y, int z) const override { return world->getBlock(x, y, z); }
+                        void set(int x, int y, int z, BlockId id) override
+                        {
+                            world->setBlock(x, y, z, id);
+                            net->onLocalBlockChange(x, y, z, id);
+                        }
+                    } cells;
+                    cells.world = m_world.get();
+                    cells.net = &m_net;
+                    m_world->setBlock(crop.block.x, crop.block.y, crop.block.z, Blocks::Air);
+                    if (!Saplings::hugeMushroom(cells, crop.block, plant == Blocks::RedMushroom, roll))
+                        m_world->setBlock(crop.block.x, crop.block.y, crop.block.z, plant);
+                }
+                used = true;
+            }
+            else if (plant == Blocks::RootedDirt &&
+                     m_world->getBlock(crop.block.x, crop.block.y - 1, crop.block.z) == Blocks::Air)
+            {
+                put(glm::ivec3(crop.block.x, crop.block.y - 1, crop.block.z), Blocks::HangingRoots);
+                used = true;
+            }
             else if (plant == Blocks::TorchflowerCrop0)
             {
                 put(crop.block, Blocks::TorchflowerCrop1);
@@ -10116,6 +10183,15 @@ void Application::handlePlacement()
         WorldCaneBlocks around;
         around.world = m_world.get();
         if (!Cane::canStandAt(around, target.x, target.y, target.z)) return;
+    }
+
+    if (isMushroom(placing))
+    {
+        const BlockId ground = m_world->getBlock(target.x, target.y - 1, target.z);
+        const int light = std::max<int>(m_world->skyLight(target.x, target.y, target.z),
+                                        m_world->blockLightAt(target.x, target.y, target.z));
+        if (!isOpaque(ground)) return;
+        if (ground != Blocks::Mycelium && ground != Blocks::Podzol && light > 12) return;
     }
 
     if (isDoublePlant(placing))

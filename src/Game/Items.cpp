@@ -342,6 +342,10 @@ StackId blockDrop(BlockId id)
     if (id == Blocks::Fern) return Items::WheatSeeds;
     if (id == Blocks::DeadBush) return Items::Stick;
     if (id == Blocks::Clay) return Items::ClayBall;
+    if (id == Blocks::BrownMushroomBlock) return Blocks::BrownMushroom;
+    if (id == Blocks::RedMushroomBlock) return Blocks::RedMushroom;
+    if (id == Blocks::MushroomStem) return Blocks::Air;
+    if (id == Blocks::Mycelium || id == Blocks::Podzol) return Blocks::Dirt;
     if (isEnderChest(id)) return Blocks::Obsidian;
     if (isTrappedChest(id)) return chestOf(1, 2, 0);
     if (isChestFamily(id)) return Blocks::Chest;

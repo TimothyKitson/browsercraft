@@ -252,6 +252,29 @@ void Farming::grow(World& world, const glm::vec3& around, uint32_t& seed)
             }
         }
 
+        {
+            const BlockId spore = world.getBlock(x, y, z);
+            if (isMushroom(spore))
+            {
+                if (nextRandom(seed) % 25u != 0u) continue;
+                const int light = std::max<int>(world.skyLight(x, y, z), world.blockLightAt(x, y, z));
+                if (light > 12) continue;
+                int near = 0;
+                for (int dx = -4; dx <= 4; ++dx)
+                    for (int dy = -1; dy <= 1; ++dy)
+                        for (int dz = -4; dz <= 4; ++dz)
+                            if (isMushroom(world.getBlock(x + dx, y + dy, z + dz))) ++near;
+                if (near >= 5) continue;
+                const int nx = x + static_cast<int>(nextRandom(seed) % 3u) - 1;
+                const int ny = y + static_cast<int>(nextRandom(seed) % 3u) - 1;
+                const int nz = z + static_cast<int>(nextRandom(seed) % 3u) - 1;
+                if (world.getBlock(nx, ny, nz) == Blocks::Air && isOpaque(world.getBlock(nx, ny - 1, nz)) &&
+                    std::max<int>(world.skyLight(nx, ny, nz), world.blockLightAt(nx, ny, nz)) <= 12)
+                    world.setBlock(nx, ny, nz, spore);
+                continue;
+            }
+        }
+
         if (isFungus(world.getBlock(x, y, z))) continue;
         if (isSapling(world.getBlock(x, y, z)))
         {

@@ -322,3 +322,46 @@ BlockId Saplings::leafDrop(BlockId leaves, uint32_t roll)
     if (roll % chance == 0u) return static_cast<BlockId>(Blocks::OakSapling + wood);
     return Blocks::Air;
 }
+
+bool Saplings::hugeMushroom(Cells& cells, const glm::ivec3& at, bool red, uint32_t seed, bool force)
+{
+    const BlockId ground = cells.at(at.x, at.y - 1, at.z);
+    if (!force && ground != Blocks::Mycelium && ground != Blocks::Podzol && ground != Blocks::Dirt &&
+        ground != Blocks::Grass && ground != Blocks::CoarseDirt && ground != Blocks::RootedDirt)
+        return false;
+    const int height = 4 + static_cast<int>(seed % 3u) + (red ? 0 : 1);
+    const int reach = red ? 2 : 3;
+    auto clear = [&](int x, int y, int z) {
+        const BlockId here = cells.at(x, y, z);
+        return here == Blocks::Air || isLeaves(here) || isWildPlant(here);
+    };
+    for (int dy = 1; dy <= height && !force; ++dy)
+        if (!clear(at.x, at.y + dy, at.z)) return false;
+    for (int dx = -reach; dx <= reach && !force; ++dx)
+        for (int dz = -reach; dz <= reach; ++dz)
+            for (int dy = red ? height - 3 : height; dy <= height; ++dy)
+                if (!clear(at.x + dx, at.y + dy, at.z + dz)) return false;
+
+    for (int dy = 0; dy < height; ++dy) cells.set(at.x, at.y + dy, at.z, Blocks::MushroomStem);
+    const BlockId cap = red ? Blocks::RedMushroomBlock : Blocks::BrownMushroomBlock;
+    if (red)
+    {
+        for (int dx = -1; dx <= 1; ++dx)
+            for (int dz = -1; dz <= 1; ++dz) cells.set(at.x + dx, at.y + height, at.z + dz, cap);
+        for (int dy = height - 3; dy < height; ++dy)
+            for (int dx = -2; dx <= 2; ++dx)
+                for (int dz = -2; dz <= 2; ++dz)
+                {
+                    const bool rim = std::abs(dx) == 2 || std::abs(dz) == 2;
+                    const bool corner = std::abs(dx) == 2 && std::abs(dz) == 2;
+                    if (rim && !corner) cells.set(at.x + dx, at.y + dy, at.z + dz, cap);
+                }
+    }
+    else
+    {
+        for (int dx = -3; dx <= 3; ++dx)
+            for (int dz = -3; dz <= 3; ++dz)
+                if (!(std::abs(dx) == 3 && std::abs(dz) == 3)) cells.set(at.x + dx, at.y + height, at.z + dz, cap);
+    }
+    return true;
+}

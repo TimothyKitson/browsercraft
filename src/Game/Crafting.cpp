@@ -495,6 +495,7 @@ namespace
         { false, 3, 2, { Items::Brick, _, Items::Brick, _, Items::Brick, _ }, 0, Blocks::FlowerPot, 1 },
         { false, 2, 2, { Items::Brick, Items::Brick, Items::Brick, Items::Brick }, 0, Blocks::Bricks, 1 },
         { false, 2, 2, { Items::ClayBall, Items::ClayBall, Items::ClayBall, Items::ClayBall }, 0, Blocks::Clay, 1 },
+        { false, 2, 2, { Blocks::Dirt, Blocks::Gravel, Blocks::Gravel, Blocks::Dirt }, 0, Blocks::CoarseDirt, 4 },
         { true, 0, 0, { Items::LapisLazuli }, 1, Items::DyeBlue,   1 },
         { true, 0, 0, { Items::InkSac },      1, Items::DyeBlack,  1 },
         { true, 0, 0, { Items::CocoaBeans },  1, Items::DyeBrown,  1 },

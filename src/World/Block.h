@@ -600,7 +600,9 @@ namespace Blocks
         DoublePlantFirst, DoublePlantLast = DoublePlantFirst + 13,
         PitcherCropFirst, PitcherCropLast = PitcherCropFirst + 6,
         FlowerPot,
-        PottedFirst, PottedLast = PottedFirst + 29,
+        PottedFirst, PottedLast = PottedFirst + 31,
+        BrownMushroom, RedMushroom, BrownMushroomBlock, RedMushroomBlock, MushroomStem,
+        Mycelium, Podzol, CoarseDirt, RootedDirt, HangingRoots,
 
         Count
     };
@@ -1075,10 +1077,20 @@ inline bool isPotted(BlockId id) { return id >= Blocks::PottedFirst && id <= Blo
 inline bool isFlowerPot(BlockId id) { return id == Blocks::FlowerPot || isPotted(id); }
 BlockId pottedPlant(BlockId pot);
 BlockId pottedOf(BlockId plant);
+inline bool isMushroom(BlockId id) { return id == Blocks::BrownMushroom || id == Blocks::RedMushroom; }
+inline bool isMushroomBlock(BlockId id)
+{
+    return id == Blocks::BrownMushroomBlock || id == Blocks::RedMushroomBlock || id == Blocks::MushroomStem;
+}
 inline bool isWildPlant(BlockId id)
 {
     return isSmallFlower(id) || id == Blocks::Fern || id == Blocks::DeadBush || id == Blocks::TallGrass ||
-           isDoublePlant(id) || isPitcherCrop(id) || isTorchflowerCrop(id);
+           isDoublePlant(id) || isPitcherCrop(id) || isTorchflowerCrop(id) || isMushroom(id) ||
+           id == Blocks::HangingRoots;
+}
+inline bool isEarthy(BlockId id)
+{
+    return id == Blocks::Mycelium || id == Blocks::Podzol || id == Blocks::CoarseDirt || id == Blocks::RootedDirt;
 }
 enum class CopperFamily : uint8_t { None, Block, Cut, Chiseled, Grate, Slab, Bulb, Door, Trapdoor };
 struct CopperForm

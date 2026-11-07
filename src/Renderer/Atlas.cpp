@@ -4723,6 +4723,103 @@ namespace
                 if (x - 4 >= (y - 6) / 4 && 11 - x >= (y - 6) / 4) t.set(x, y, shade(Color{ 124, 68, 52 }, y == 6 ? 18 : 0));
         for (int x = 5; x < 11; ++x) t.set(x, 7, Color{ 86, 60, 40 });
     }
+    void paintMushroomIn(Tile& t, Color cap, bool spotted)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 9; y < 15; ++y)
+            for (int x = 7; x < 9; ++x) t.set(x, y, Color{ 216, 206, 186 });
+        for (int y = 5; y < 10; ++y)
+            for (int x = 4; x < 12; ++x)
+                if (std::abs(x - 7.5f) < 4.0f - (9 - y) * 0.45f) t.set(x, y, shade(cap, (x < 7 ? 14 : -6)));
+        if (spotted)
+        {
+            t.set(6, 6, Color{ 240, 236, 228 });
+            t.set(9, 7, Color{ 240, 236, 228 });
+        }
+    }
+    void paintBrownMushroomTile(Tile& t) { paintMushroomIn(t, Color{ 150, 112, 82 }, false); }
+    void paintRedMushroomTile(Tile& t) { paintMushroomIn(t, Color{ 198, 40, 36 }, true); }
+    void paintBrownMushroomBlockTile(Tile& t)
+    {
+        t.fill(Color{ 150, 112, 82 });
+        t.speckle(10, 1401);
+    }
+    void paintRedMushroomBlockTile(Tile& t)
+    {
+        t.fill(Color{ 196, 40, 36 });
+        t.speckle(8, 1402);
+        for (int k = 0; k < 6; ++k)
+        {
+            const int x = 1 + static_cast<int>(hash2(k, 0, 1403) * 12.0f);
+            const int y = 1 + static_cast<int>(hash2(k, 1, 1403) * 12.0f);
+            for (int d = 0; d < 4; ++d) t.set(x + d % 2, y + d / 2, Color{ 236, 230, 220 });
+        }
+    }
+    void paintMushroomStemTile(Tile& t)
+    {
+        t.fill(Color{ 214, 206, 188 });
+        for (int y = 0; y < Tile::N; ++y)
+            for (int x = 0; x < Tile::N; ++x)
+                if (x % 4 == 1) t.set(x, y, shade(Color{ 214, 206, 188 }, -14));
+        t.speckle(6, 1404);
+    }
+    void paintMushroomInsideTile(Tile& t)
+    {
+        t.fill(Color{ 202, 170, 120 });
+        for (int y = 0; y < Tile::N; y += 3)
+            for (int x = (y / 3) % 2; x < Tile::N; x += 3) t.set(x, y, Color{ 170, 138, 96 });
+    }
+    void paintMyceliumTopTile(Tile& t)
+    {
+        t.fill(Color{ 112, 96, 112 });
+        t.speckle(12, 1405);
+        for (int k = 0; k < 18; ++k)
+            t.set(static_cast<int>(hash2(k, 0, 1406) * 16.0f), static_cast<int>(hash2(k, 1, 1406) * 16.0f), Color{ 150, 138, 150 });
+    }
+    void paintMyceliumSideTile(Tile& t)
+    {
+        paintDirt(t);
+        for (int x = 0; x < Tile::N; ++x)
+            for (int y = 0; y < 3 + (x * 7 % 3); ++y) t.set(x, y, shade(Color{ 112, 96, 112 }, static_cast<int>((hash2(x, y, 1407) - 0.5f) * 20.0f)));
+    }
+    void paintPodzolTopTile(Tile& t)
+    {
+        t.fill(Color{ 92, 64, 30 });
+        t.speckle(14, 1408);
+        for (int k = 0; k < 20; ++k)
+            t.set(static_cast<int>(hash2(k, 0, 1409) * 16.0f), static_cast<int>(hash2(k, 1, 1409) * 16.0f), Color{ 120, 86, 40 });
+    }
+    void paintPodzolSideTile(Tile& t)
+    {
+        paintDirt(t);
+        for (int x = 0; x < Tile::N; ++x)
+            for (int y = 0; y < 3 + (x * 5 % 2); ++y) t.set(x, y, shade(Color{ 92, 64, 30 }, static_cast<int>((hash2(x, y, 1410) - 0.5f) * 20.0f)));
+    }
+    void paintCoarseDirtTile(Tile& t)
+    {
+        paintDirt(t);
+        for (int k = 0; k < 40; ++k)
+            t.set(static_cast<int>(hash2(k, 0, 1411) * 16.0f), static_cast<int>(hash2(k, 1, 1411) * 16.0f), Color{ 96, 72, 52 });
+    }
+    void paintRootedDirtTile(Tile& t)
+    {
+        paintDirt(t);
+        for (int k = 0; k < 5; ++k)
+        {
+            int x = static_cast<int>(hash2(k, 0, 1412) * 16.0f), y = static_cast<int>(hash2(k, 1, 1412) * 16.0f);
+            for (int s = 0; s < 5; ++s) t.set((x + s) % Tile::N, (y + s / 2) % Tile::N, Color{ 150, 108, 76 });
+        }
+    }
+    void paintHangingRootsTile(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int k = 0; k < 6; ++k)
+        {
+            const int x = 2 + k * 2;
+            const int length = 6 + static_cast<int>(hash2(k, 0, 1413) * 8.0f);
+            for (int y = 0; y < length; ++y) t.set(x + (y % 5 == 4 ? 1 : 0), y, Color{ 160, 118, 84 });
+        }
+    }
     void paintItemPitcherPlant(Tile& t)
     {
         paintDoubleIn(t, true, Color{ 100, 170, 190 }, 1333);
@@ -7472,6 +7569,19 @@ namespace
         { Tiles::DustLine1Off, paintRedstoneDust },
         { Tiles::DustLine1On, paintRedstoneDustLit },
         { Tiles::LeverHandle, paintLever },
+        { Tiles::BrownMushroomTile, paintBrownMushroomTile },
+        { Tiles::RedMushroomTile, paintRedMushroomTile },
+        { Tiles::BrownMushroomBlockTile, paintBrownMushroomBlockTile },
+        { Tiles::RedMushroomBlockTile, paintRedMushroomBlockTile },
+        { Tiles::MushroomStemTile, paintMushroomStemTile },
+        { Tiles::MushroomInsideTile, paintMushroomInsideTile },
+        { Tiles::MyceliumTopTile, paintMyceliumTopTile },
+        { Tiles::MyceliumSideTile, paintMyceliumSideTile },
+        { Tiles::PodzolTopTile, paintPodzolTopTile },
+        { Tiles::PodzolSideTile, paintPodzolSideTile },
+        { Tiles::CoarseDirtTile, paintCoarseDirtTile },
+        { Tiles::RootedDirtTile, paintRootedDirtTile },
+        { Tiles::HangingRootsTile, paintHangingRootsTile },
         { Tiles::AlliumTile, paintAlliumTile },
         { Tiles::AzureBluetTile, paintAzureBluetTile },
         { Tiles::BlueOrchidTile, paintBlueOrchidTile },
@@ -8147,6 +8257,19 @@ namespace
         { Tiles::GlassPaneTopTile, { "glass_pane_top", nullptr }, Tinting::None, 0, false },
         { Tiles::TerracottaPlainTile, { "terracotta", "hardened_clay", nullptr }, Tinting::None, 0, false },
         { Tiles::TintedGlassTile, { "tinted_glass", nullptr }, Tinting::None, 0, false },
+        { Tiles::BrownMushroomTile, { "brown_mushroom", nullptr }, Tinting::None, 0, false },
+        { Tiles::RedMushroomTile, { "red_mushroom", nullptr }, Tinting::None, 0, false },
+        { Tiles::BrownMushroomBlockTile, { "brown_mushroom_block", nullptr }, Tinting::None, 0, false },
+        { Tiles::RedMushroomBlockTile, { "red_mushroom_block", nullptr }, Tinting::None, 0, false },
+        { Tiles::MushroomStemTile, { "mushroom_stem", nullptr }, Tinting::None, 0, false },
+        { Tiles::MushroomInsideTile, { "mushroom_block_inside", nullptr }, Tinting::None, 0, false },
+        { Tiles::MyceliumTopTile, { "mycelium_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::MyceliumSideTile, { "mycelium_side", nullptr }, Tinting::None, 0, false },
+        { Tiles::PodzolTopTile, { "podzol_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::PodzolSideTile, { "podzol_side", nullptr }, Tinting::None, 0, false },
+        { Tiles::CoarseDirtTile, { "coarse_dirt", nullptr }, Tinting::None, 0, false },
+        { Tiles::RootedDirtTile, { "rooted_dirt", nullptr }, Tinting::None, 0, false },
+        { Tiles::HangingRootsTile, { "hanging_roots", nullptr }, Tinting::None, 0, false },
         { Tiles::AlliumTile, { "allium", nullptr }, Tinting::None, 0, false },
         { Tiles::AzureBluetTile, { "azure_bluet", nullptr }, Tinting::None, 0, false },
         { Tiles::BlueOrchidTile, { "blue_orchid", nullptr }, Tinting::None, 0, false },
