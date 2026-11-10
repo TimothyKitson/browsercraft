@@ -486,6 +486,27 @@ void WorldGen::generate(Chunk& chunk) const
         buildOceanRuins(chunk);
         buildTrailRuins(chunk);
     }
+    coverInSnow(chunk);
+}
+
+void WorldGen::coverInSnow(Chunk& chunk) const
+{
+    const int baseX = chunk.position().x * Chunk::SX;
+    const int baseZ = chunk.position().z * Chunk::SZ;
+    for (int lz = 0; lz < Chunk::SZ; ++lz)
+        for (int lx = 0; lx < Chunk::SX; ++lx)
+        {
+            const int wx = baseX + lx, wz = baseZ + lz;
+            if (!freezesAt(wx, wz)) continue;
+            int top = Chunk::SY - 2;
+            while (top > 0 && chunk.getBlock(lx, top, lz) == Blocks::Air) --top;
+            if (top <= 0) continue;
+            const BlockId surface = chunk.getBlock(lx, top, lz);
+            if (surface == Blocks::Water) { chunk.setBlockRaw(lx, top, lz, Blocks::Ice); continue; }
+            if (!snowCanRestOn(surface) || chunk.getBlock(lx, top + 1, lz) != Blocks::Air) continue;
+            chunk.setBlockRaw(lx, top + 1, lz, snowLayerOf(1));
+            if (surface == Blocks::Grass) chunk.setBlockRaw(lx, top, lz, Blocks::SnowGrass);
+        }
 }
 
 void WorldGen::generateFlat(Chunk& chunk) const

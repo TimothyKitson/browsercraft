@@ -3295,6 +3295,9 @@ bool Application::frame()
                 m_world->setBlock(bx + 6, by + 2, bz + 2, plateOf(2, false));
                 m_world->setBlock(bx + 4, by, bz + 3, plateOf(7, true));
                 m_world->setBlock(bx + 3, by, bz + 3, buttonOf(9, 0, 1, false));
+                for (int n = 1; n <= 8; ++n) m_world->setBlock(bx - 5 + n, by, bz + 4, snowLayerOf(n));
+                m_world->setBlock(bx - 5, by, bz + 4, Blocks::SnowGrass);
+                m_world->setBlock(bx - 5, by + 1, bz + 4, snowLayerOf(1));
                 m_player.position = glm::vec3(bx + 0.5f, by + 4.0f, bz + 0.5f) - m_camera.front * 9.0f;
                 m_player.position.y = static_cast<float>(by) + 4.0f;
                 for (int dx = -1; dx <= 1; ++dx)
@@ -9106,6 +9109,14 @@ void Application::updateMining(float deltaTime)
                 if (isDoublePlant(id) && doublePlantUpper(id) && drop == Items::WheatSeeds) dropped = 0;
                 if (isEnderChest(id)) { drop = silk ? chestOf(2, 2, 0) : Blocks::Obsidian; dropped = silk ? 1 : 8; }
                 if (isDecoratedPot(id) || isBanner(id)) drop = Blocks::Air;
+                if (id == Blocks::Snow && drop == Items::Snowball) dropped = 4;
+                if (isSnowLayer(id))
+                {
+                    const int layers = snowLayers(id);
+                    drop = !silk ? static_cast<StackId>(Items::Snowball)
+                         : layers == 8 ? static_cast<StackId>(Blocks::Snow) : static_cast<StackId>(Blocks::SnowLayerFirst);
+                    dropped = silk && layers == 8 ? 1 : layers;
+                }
                 if (drop != Blocks::Air)
                     m_drops.spawnFromBrokenBlock(hit.block, drop, dropped);
 
@@ -9436,12 +9447,23 @@ void Application::updateMining(float deltaTime)
                 if (supportDirection(above) != k) continue;
                 m_world->setBlock(over.x, over.y, over.z, Blocks::Air);
                 m_net.onLocalBlockChange(over.x, over.y, over.z, Blocks::Air);
-                if (!m_player.creative())
+                if (!m_player.creative() && !isSnowLayer(above))
                     m_drops.spawnFromBrokenBlock(over, blockDrop(above));
             }
         }
 
         checkFalling(hit.block + glm::ivec3(0, 1, 0));
+        if (id == Blocks::Ice && !m_player.creative() && m_dimension != Dimension::Nether &&
+            !Enchanting::has(m_inventory.selected().enchantments, Enchanting::Kind::SilkTouch))
+        {
+            const BlockId under = m_world->getBlock(hit.block.x, hit.block.y - 1, hit.block.z);
+            if (isSolid(under) || isLiquid(under))
+            {
+                m_world->setBlock(hit.block.x, hit.block.y, hit.block.z, Blocks::Water);
+                m_net.onLocalBlockChange(hit.block.x, hit.block.y, hit.block.z, Blocks::Water);
+            }
+        }
+        if (isSnowLayer(id)) unsnowGrass(hit.block + glm::ivec3(0, -1, 0));
 
         // Whatever that was, the power around it has to be worked out
         // again: a broken wire puts out everything downstream of it.
@@ -17042,6 +17064,31 @@ void Application::handlePlacement()
         }
     }
 
+    if (isBlockStack(stack.id) && asBlock(stack.id) == Blocks::SnowLayerFirst)
+    {
+        const AABB body = m_player.aabb();
+        auto deepen = [&](const glm::ivec3& at) {
+            const BlockId there = m_world->getBlock(at.x, at.y, at.z);
+            if (!isSnowLayer(there) || snowLayers(there) >= 8 || !m_border.containsBlock(at.x, at.z)) return false;
+            const BlockId deeper = snowLayerOf(snowLayers(there) + 1);
+            const float top = static_cast<float>(at.y) + static_cast<float>(snowLayers(there)) / 8.0f;
+            if (body.max.x > at.x && body.min.x < at.x + 1 && body.max.z > at.z && body.min.z < at.z + 1 &&
+                body.min.y < top && body.max.y > at.y)
+                return false;
+            m_world->setBlock(at.x, at.y, at.z, deeper);
+            m_net.onLocalBlockChange(at.x, at.y, at.z, deeper);
+            m_audio.playPlace(deeper);
+            if (!m_player.creative())
+            {
+                stack.count -= 1;
+                if (stack.count <= 0) stack.clear();
+            }
+            return true;
+        };
+        if (deepen(hit.block)) return;
+        if (deepen(hit.previous)) return;
+    }
+
     if (isBlockStack(stack.id) && isSlabBlock(asBlock(stack.id)))
     {
         const int material = slabMaterial(asBlock(stack.id));
@@ -17070,10 +17117,14 @@ void Application::handlePlacement()
         if (merge(hit.previous, -1)) return;
     }
 
-    const glm::ivec3 target = hit.previous;
+    auto replaceable = [](BlockId cell) {
+        return cell == Blocks::TallGrass || cell == Blocks::Fern || cell == Blocks::DeadBush || cell == snowLayerOf(1);
+    };
+    const BlockId clicked = m_world->getBlock(hit.block.x, hit.block.y, hit.block.z);
+    const glm::ivec3 target = replaceable(clicked) ? hit.block : hit.previous;
     if (!m_border.containsBlock(target.x, target.z)) return;
     const BlockId existing = m_world->getBlock(target.x, target.y, target.z);
-    if (existing != Blocks::Air && !isLiquid(existing) && !isLightBlock(existing)) return;
+    if (existing != Blocks::Air && !isLiquid(existing) && !isLightBlock(existing) && !replaceable(existing)) return;
 
     // Don't entomb the player in their own block.
     const AABB box = m_player.aabb();
@@ -17529,11 +17580,14 @@ void Application::handlePlacement()
         !isSolid(m_world->getBlock(target.x, target.y - 1, target.z)))
         return;
     if (isCarpet(placing) && m_world->getBlock(target.x, target.y - 1, target.z) == Blocks::Air) return;
+    if (isSnowLayer(placing) && !snowCanRestOn(m_world->getBlock(target.x, target.y - 1, target.z))) return;
 
     m_world->setBlock(target.x, target.y, target.z, placing);
     m_net.onLocalBlockChange(target.x, target.y, target.z, placing);
     m_audio.playPlace(placing);
     checkFalling(target);
+    if (isSnowLayer(placing)) snowGrass(target + glm::ivec3(0, -1, 0));
+    else unsnowGrass(target + glm::ivec3(0, -1, 0));
     if (isAnySculkSensor(placing)) m_sensorSpots.push_back(target);
     if (isCommandBlock(placing))
     {
@@ -20096,6 +20150,7 @@ void Application::updateWorldAround(float deltaTime)
                 m_audio.play(Sound::MobTurtleSay, 0.6f, 1.6f);
             }
             if (m_weather.depth > 0.2f && !m_snowing) fillCauldronsInRain();
+            tickColdAndThaw();
         }
     }
 
@@ -20165,6 +20220,92 @@ void Application::fillCauldronsInRain()
         const BlockId now = cauldronAt(cauldronLevel(here) + 1);
         m_world->setBlock(x, y, z, now);
         m_net.onLocalBlockChange(x, y, z, now);
+    }
+}
+
+void Application::snowGrass(const glm::ivec3& at)
+{
+    if (m_world->getBlock(at.x, at.y, at.z) != Blocks::Grass) return;
+    m_world->setBlock(at.x, at.y, at.z, Blocks::SnowGrass);
+    m_net.onLocalBlockChange(at.x, at.y, at.z, Blocks::SnowGrass);
+}
+
+void Application::unsnowGrass(const glm::ivec3& at)
+{
+    if (m_world->getBlock(at.x, at.y, at.z) != Blocks::SnowGrass) return;
+    const BlockId over = m_world->getBlock(at.x, at.y + 1, at.z);
+    if (isSnowLayer(over) || over == Blocks::Snow || over == Blocks::PowderSnow) return;
+    m_world->setBlock(at.x, at.y, at.z, Blocks::Grass);
+    m_net.onLocalBlockChange(at.x, at.y, at.z, Blocks::Grass);
+}
+
+void Application::tickColdAndThaw()
+{
+    if (m_dimension != Dimension::Overworld) return;
+    const int cx = static_cast<int>(std::floor(m_player.position.x));
+    const int cy = static_cast<int>(std::floor(m_player.position.y));
+    const int cz = static_cast<int>(std::floor(m_player.position.z));
+    constexpr int REACH = 32;
+    const int deepest = std::clamp(m_rules.value(GameRules::Rule::SnowAccumulationHeight), 0, 8);
+    auto roll = [&]() {
+        m_growthSeed ^= m_growthSeed << 13;
+        m_growthSeed ^= m_growthSeed >> 17;
+        m_growthSeed ^= m_growthSeed << 5;
+        return m_growthSeed;
+    };
+    auto put = [&](int x, int y, int z, BlockId block) {
+        m_world->setBlock(x, y, z, block);
+        m_net.onLocalBlockChange(x, y, z, block);
+    };
+    for (int i = 0; i < 12; ++i)
+    {
+        const uint32_t r = roll();
+        const int x = cx + static_cast<int>(r % (REACH * 2u)) - REACH;
+        const int z = cz + static_cast<int>((r >> 8) % (REACH * 2u)) - REACH;
+        int top = Chunk::SY - 1;
+        while (top > 0 && m_world->getBlock(x, top, z) == Blocks::Air) --top;
+        if (top <= 0 || top >= Chunk::SY - 1) continue;
+        if (!m_world->generator().freezesAt(x, z)) continue;
+        const BlockId surface = m_world->getBlock(x, top, z);
+        if (surface == Blocks::Water && m_world->blockLightAt(x, top + 1, z) < 10)
+        {
+            put(x, top, z, Blocks::Ice);
+            continue;
+        }
+        if (m_weather.depth <= 0.2f || m_world->blockLightAt(x, top + 1, z) >= 10) continue;
+        if (isSnowLayer(surface))
+        {
+            if (snowLayers(surface) < deepest) put(x, top, z, snowLayerOf(snowLayers(surface) + 1));
+            continue;
+        }
+        if (deepest > 0 && snowCanRestOn(surface))
+        {
+            put(x, top + 1, z, snowLayerOf(1));
+            snowGrass(glm::ivec3(x, top, z));
+        }
+    }
+    for (int i = 0; i < 48; ++i)
+    {
+        const uint32_t r = roll();
+        const int x = cx + static_cast<int>(r % 32u) - 16;
+        const int z = cz + static_cast<int>((r >> 8) % 32u) - 16;
+        const int y = cy + static_cast<int>((r >> 16) % 17u) - 8;
+        if (y < 1 || y >= Chunk::SY - 1) continue;
+        const BlockId here = m_world->getBlock(x, y, z);
+        if (here != Blocks::Ice && !isSnowLayer(here)) continue;
+        int light = m_world->blockLightAt(x, y, z);
+        if (here == Blocks::Ice)
+        {
+            static const int DX[6] = { 1, -1, 0, 0, 0, 0 }, DY[6] = { 0, 0, 1, -1, 0, 0 }, DZ[6] = { 0, 0, 0, 0, 1, -1 };
+            for (int k = 0; k < 6; ++k) light = std::max(light, static_cast<int>(m_world->blockLightAt(x + DX[k], y + DY[k], z + DZ[k])));
+        }
+        if (light <= 11) continue;
+        if (here == Blocks::Ice) put(x, y, z, Blocks::Water);
+        else
+        {
+            put(x, y, z, Blocks::Air);
+            unsnowGrass(glm::ivec3(x, y - 1, z));
+        }
     }
 }
 

@@ -7522,12 +7522,14 @@ namespace
 
             // Whatever wants a tool wants a pickaxe, and the best
             // pickaxe in the game must be able to get it.
-            check(blockMaterial(id) == Material::Stone, who + ": only stone wants a tool");
-            check(canHarvest(Items::DiamondPickaxe, id), who + ": diamond gets all of it");
+            const bool snowy = blockMaterial(id) == Material::Snow;
+            const StackId best = snowy ? static_cast<StackId>(Items::DiamondShovel) : static_cast<StackId>(Items::DiamondPickaxe);
+            check(blockMaterial(id) == Material::Stone || snowy, who + ": only stone and snow want a tool");
+            check(canHarvest(best, id), who + ": diamond gets all of it");
             check(!canHarvest(Blocks::Air, id), who + ": a bare hand gets none");
 
             // And the right tool is always quicker than the wrong one.
-            check(breakSeconds(Items::DiamondPickaxe, id) < breakSeconds(Blocks::Air, id),
+            check(breakSeconds(best, id) < breakSeconds(Blocks::Air, id),
                   who + " is quicker with it");
         }
 
@@ -7538,7 +7540,7 @@ namespace
         // which block rather than just a count.
         const BlockId SOFT[] = {
             Blocks::BirchLog, Blocks::BirchLeaves, Blocks::Gravel, Blocks::Clay,
-            Blocks::Snow, Blocks::SnowGrass, Blocks::TallGrass, Blocks::FlowerRed,
+            Blocks::SnowGrass, Blocks::TallGrass, Blocks::FlowerRed,
             Blocks::FlowerYellow, Blocks::Cactus, Blocks::Pumpkin, Blocks::Wool,
             Blocks::Glass, Blocks::Ice, Blocks::SoulSand, Blocks::CraftingTable,
             // A bed is cloth and a stick of TNT is paper: neither wants
@@ -13587,6 +13589,63 @@ namespace
     }
 
 
+    void testSnowLayers()
+    {
+        section("snow layers: one to eight deep, stacked by hand, laid by snowfall");
+        check(snowLayers(snowLayerOf(3)) == 3 && snowLayerOf(0) == Blocks::SnowLayerFirst && snowLayerOf(9) == Blocks::SnowLayerLast,
+              "eight depths, one id each");
+        check(!isSolid(snowLayerOf(1)) && isSolid(snowLayerOf(2)) && !blockInfo(snowLayerOf(7)).opaque && blockInfo(snowLayerOf(8)).opaque,
+              "a single layer is walked through, eight are a full cube");
+        check(blockOverlaps(snowLayerOf(4), 0, 0, 0, 0.2f, 0.3f, 0.2f, 0.8f, 1.2f, 0.8f, 0) &&
+              !blockOverlaps(snowLayerOf(4), 0, 0, 0, 0.2f, 0.4f, 0.2f, 0.8f, 1.2f, 0.8f, 0),
+              "and four stand three eighths of a block high, as Minecraft's collision has it");
+        check(snowCanRestOn(Blocks::Stone) && snowCanRestOn(Blocks::Leaves) && snowCanRestOn(snowLayerOf(8)) &&
+              !snowCanRestOn(Blocks::Ice) && !snowCanRestOn(Blocks::PackedIce) && !snowCanRestOn(snowLayerOf(3)) && !snowCanRestOn(Blocks::Air),
+              "snow settles on full blocks and leaves but not on ice or shallow snow");
+        check(supportDirection(snowLayerOf(5)) == 0, "and goes when the block under it goes");
+        check(Tools::canHarvest(Items::WoodShovel, snowLayerOf(2)) && !Tools::canHarvest(Blocks::Air, snowLayerOf(2)) &&
+              !Tools::canHarvest(Blocks::Air, Blocks::Snow), "only a shovel gets anything out of snow");
+        check(blockDrop(snowLayerOf(6)) == Items::Snowball, "a layer breaks into snowballs");
+        check(RecipeBook::idOf(static_cast<StackId>(Blocks::SnowLayerFirst)) == "snow" && RecipeBook::idOf(Blocks::Snow) == "snow_block" &&
+              RecipeBook::stackNamed("snow") == static_cast<StackId>(Blocks::SnowLayerFirst),
+              "the layer is 1.21.1's snow and the full block its snow_block");
+        ItemStack row[9];
+        for (int i : { 0, 1, 2 }) { row[i].id = Blocks::Snow; row[i].count = 1; }
+        const CraftOutput layers = Crafting::match(row, 3);
+        check(layers.valid() && layers.id == static_cast<StackId>(Blocks::SnowLayerFirst) && layers.count == 6,
+              "three snow blocks in a row make six layers");
+
+        const WorldGen generator(2024u);
+        bool cold = false;
+        int coldX = 0, coldZ = 0;
+        for (int cz = -40; cz <= 40 && !cold; cz += 2)
+            for (int cx = -40; cx <= 40 && !cold; cx += 2)
+                if (generator.freezesAt(cx * 16 + 8, cz * 16 + 8) && generator.surfaceHeight(cx * 16 + 8, cz * 16 + 8) > WorldGen::SEA_LEVEL)
+                {
+                    cold = true;
+                    coldX = cx;
+                    coldZ = cz;
+                }
+        check(cold, "there is cold land near the origin of a test world");
+        if (cold)
+        {
+            Chunk chunk(ChunkPos{ coldX, coldZ });
+            generator.generate(chunk);
+            int covered = 0, columns = 0;
+            for (int lz = 0; lz < Chunk::SZ; ++lz)
+                for (int lx = 0; lx < Chunk::SX; ++lx)
+                {
+                    if (!generator.freezesAt(coldX * 16 + lx, coldZ * 16 + lz)) continue;
+                    ++columns;
+                    int top = Chunk::SY - 1;
+                    while (top > 0 && chunk.getBlock(lx, top, lz) == Blocks::Air) --top;
+                    const BlockId at = chunk.getBlock(lx, top, lz);
+                    if (isSnowLayer(at) || at == Blocks::Ice || at == Blocks::PackedIce || at == Blocks::Snow) ++covered;
+                }
+            check(columns > 0 && covered * 10 >= columns * 7, "a cold chunk comes out with snow lying on top of it");
+        }
+    }
+
     void testGameRules()
     {
         section("game rules: all 51, saved per world and set with /gamerule");
@@ -16736,6 +16795,7 @@ int runSelfTest()
     testSwitchesAndPlates();
     testFallingBlocks();
     testGameRules();
+    testSnowLayers();
     testDrowning();
     testQuickMoveKeepsMetadata();
     testContainersPerDimension();

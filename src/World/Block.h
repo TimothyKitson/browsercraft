@@ -698,6 +698,7 @@ namespace Blocks
         PlateRunFirst, PlateRunLast = PlateRunFirst + 29,
         WallTorchFirst, WallTorchLast = WallTorchFirst + 15,
         LeverRunFirst, LeverRunLast = LeverRunFirst + 23,
+        SnowLayerFirst, SnowLayerLast = SnowLayerFirst + 7,
         ExtCount
     };
 }
@@ -794,6 +795,13 @@ BlockId shapeBase(BlockId id);
 int shapeWood(BlockId id);
 inline bool isShapeFamily(BlockId id) { return shapeBase(id) != 0; }
 inline bool isCarpet(BlockId id) { return id >= Blocks::CarpetFirst && id <= Blocks::CarpetLast; }
+inline bool isSnowLayer(BlockId id) { return id >= Blocks::SnowLayerFirst && id <= Blocks::SnowLayerLast; }
+inline int snowLayers(BlockId id) { return isSnowLayer(id) ? id - Blocks::SnowLayerFirst + 1 : 0; }
+inline BlockId snowLayerOf(int layers)
+{
+    return static_cast<BlockId>(Blocks::SnowLayerFirst + (layers < 1 ? 0 : layers > 8 ? 7 : layers - 1));
+}
+bool snowCanRestOn(BlockId below);
 constexpr int BUTTON_MATERIALS = 13;
 constexpr int PLATE_MATERIALS = 15;
 inline bool isFamilyButton(BlockId id) { return id >= Blocks::ButtonRunFirst && id <= Blocks::ButtonRunLast; }

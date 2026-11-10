@@ -493,6 +493,7 @@ private:
     void dressCaves(Chunk& chunk) const;
     void placeOres(Chunk& chunk) const;
     void decorate(Chunk& chunk) const;
+    void coverInSnow(Chunk& chunk) const;
 
     void generateNether(Chunk& chunk) const;
     void generateEnd(Chunk& chunk) const;

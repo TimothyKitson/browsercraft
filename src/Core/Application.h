@@ -1298,6 +1298,9 @@ private:
 
     // Rain raises a cauldron that has the sky over it.
     void fillCauldronsInRain();
+    void tickColdAndThaw();
+    void snowGrass(const glm::ivec3& at);
+    void unsnowGrass(const glm::ivec3& at);
     // Looks for a completed ring of eyed frames round a frame that was
     // just filled, and opens the portal inside it if there is one.
     void lightEndPortalAround(const glm::ivec3& frame);

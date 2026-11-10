@@ -820,6 +820,7 @@ namespace
         { false, 2, 2, { Items::Snowball, Items::Snowball,
                          Items::Snowball, Items::Snowball },
           0, Blocks::Snow, 1 },
+        { false, 3, 1, { Blocks::Snow, Blocks::Snow, Blocks::Snow }, 0, static_cast<StackId>(Blocks::SnowLayerFirst), 6 },
 
         // Cobblestone and a vine. Minecraft's recipe, and the only
         // way to mossy cobble that does not involve finding a village

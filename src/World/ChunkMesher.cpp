@@ -1189,6 +1189,16 @@ namespace
             flat(13.0f / 16.0f, 0.0f, 0.0f, 1.0f, 1.0f, Tiles::SporeBlossomTile, 0.9f);
             return;
         }
+        if (isSnowLayer(id))
+        {
+            const int layers = snowLayers(id);
+            const int snow = blockInfo(id).tileTop;
+            const int v = 16 - 2 * layers;
+            const PartFace faces[6] = { { snow, 0, v, 16, 16 }, { snow, 0, v, 16, 16 }, { snow, 0, 0, 16, 16 },
+                                        { snow, 0, 0, 16, 16 }, { snow, 0, v, 16, 16 }, { snow, 0, v, 16, 16 } };
+            emitPart(snap, lx, y, lz, id, glm::vec3(0.0f), glm::vec3(1.0f, static_cast<float>(layers) / 8.0f, 1.0f), faces, out);
+            return;
+        }
         if (id == Blocks::MossCarpet || isCarpet(id))
         {
             const int moss = blockInfo(id).tileTop;

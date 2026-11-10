@@ -541,6 +541,7 @@ StackId blockDrop(BlockId id)
     if (isSlabBlock(id)) return slabOf(slabMaterial(id), 0);
     if (isFenceGate(id)) return gateOf(gateWood(id), false, 0);
     if (isInfested(id)) return Blocks::Air;
+    if (isSnowLayer(id)) return Items::Snowball;
     if (isFamilyButton(id)) return buttonItem(buttonMaterial(id));
     if (isPlate(id)) return plateOf(plateMaterial(id), false);
     if (isWallTorch(id))

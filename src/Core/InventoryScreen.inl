@@ -72,7 +72,7 @@ namespace
         Blocks::Grass, Blocks::SnowGrass, Blocks::Dirt, Blocks::TallGrass,
         Blocks::FlowerRed, Blocks::FlowerYellow, Blocks::Leaves, Blocks::BirchLeaves,
         Blocks::Log, Blocks::BirchLog, Blocks::Cactus, Blocks::Pumpkin,
-        Blocks::Sand, Blocks::Snow, Blocks::Ice, Blocks::Clay,
+        Blocks::Sand, Blocks::Snow, static_cast<StackId>(Blocks::SnowLayerFirst), Blocks::Ice, Blocks::Clay,
         Blocks::SugarCane,
         Blocks::OakSapling, Blocks::SpruceSapling, Blocks::BirchSapling,
         Blocks::JungleSapling, Blocks::AcaciaSapling, Blocks::DarkOakSapling,

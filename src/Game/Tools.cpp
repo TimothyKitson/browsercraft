@@ -132,8 +132,10 @@ int Tools::requiredLevel(BlockId block)
         case Blocks::LapisOre:   return 2;   // stone, like iron
         case Blocks::RawIronBlock: return 2;
         case Blocks::RawGoldBlock: return 2;
+        case Blocks::Snow: return 1;
         default: break;
     }
+    if (isSnowLayer(block)) return 1;
 
     // Everything else made of stone wants a pickaxe of some sort; the
     // softer materials want nothing in particular.

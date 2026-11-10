@@ -28,7 +28,7 @@ namespace
         { "Oak Leaves",   Leaves,        Leaves,         Leaves,         true,  false, RenderType::Cube,   0,   0.2f },
         { "Glass",        Glass,         Glass,          Glass,          true,  false, RenderType::Cube,   0,   0.3f },
         { "Sandstone",    SandstoneTop,  SandstoneBottom, SandstoneSide,  true,  true,  RenderType::Cube,   0,   0.8f },
-        { "Snow",         SnowTile,      SnowTile,       SnowTile,       true,  true,  RenderType::Cube,   0,   0.3f },
+        { "Snow Block",   SnowTile,      SnowTile,       SnowTile,       true,  true,  RenderType::Cube,   0,   0.3f },
         { "Ice",          Ice,           Ice,            Ice,            true,  false, RenderType::Cube,   0,   0.5f },
         { "Cactus",       CactusTop,     CactusBottom,   CactusSide,     true,  true,  RenderType::Cube,   0,   0.4f },
         { "Bricks",       Bricks,        Bricks,         Bricks,         true,  true,  RenderType::Cube,   0,   2.0f },
@@ -3973,6 +3973,14 @@ namespace
         { "Lever", LeverOnTile, LeverOnTile, LeverOnTile, false, false, RenderType::Lever, 0, 0.5f },
         { "Lever", LeverTile, LeverTile, LeverTile, false, false, RenderType::Lever, 0, 0.5f },
         { "Lever", LeverOnTile, LeverOnTile, LeverOnTile, false, false, RenderType::Lever, 0, 0.5f },
+        { "Snow", SnowTile, SnowTile, SnowTile, false, false, RenderType::Lush, 0, 0.1f },
+        { "Snow", SnowTile, SnowTile, SnowTile, true, false, RenderType::Lush, 0, 0.1f },
+        { "Snow", SnowTile, SnowTile, SnowTile, true, false, RenderType::Lush, 0, 0.1f },
+        { "Snow", SnowTile, SnowTile, SnowTile, true, false, RenderType::Lush, 0, 0.1f },
+        { "Snow", SnowTile, SnowTile, SnowTile, true, false, RenderType::Lush, 0, 0.1f },
+        { "Snow", SnowTile, SnowTile, SnowTile, true, false, RenderType::Lush, 0, 0.1f },
+        { "Snow", SnowTile, SnowTile, SnowTile, true, false, RenderType::Lush, 0, 0.1f },
+        { "Snow", SnowTile, SnowTile, SnowTile, true, true, RenderType::Lush, 0, 0.1f },
     };
 
     static_assert(sizeof(EXT_TABLE) / sizeof(EXT_TABLE[0]) == static_cast<size_t>(Blocks::ExtCount - Blocks::ExtFirst),
@@ -4302,12 +4310,19 @@ BlockId plateMaterialBase(int material)
     }
 }
 
+bool snowCanRestOn(BlockId below)
+{
+    if (below == Blocks::Ice || below == Blocks::PackedIce || below == Blocks::Barrier) return false;
+    if (below == Blocks::SoulSand || below == Blocks::HoneyBlock || below == snowLayerOf(8)) return true;
+    return isSolid(below) && blockInfo(below).render == RenderType::Cube;
+}
+
 int supportDirection(BlockId id)
 {
     if (isFamilyButton(id)) return buttonFace(id) == 0 ? 0 : buttonFace(id) == 2 ? 1 : supportFromFacing(buttonFacing(id));
     if (isFamilyLever(id)) return leverFace(id) == 0 ? 0 : leverFace(id) == 2 ? 1 : supportFromFacing(leverFacing(id));
     if (isWallTorch(id)) return supportFromFacing(wallTorchFacing(id));
-    if (isPlate(id) || isCarpet(id)) return 0;
+    if (isPlate(id) || isCarpet(id) || isSnowLayer(id)) return 0;
     switch (id)
     {
         case Blocks::Torch: case Blocks::SoulTorch: case Blocks::RedstoneTorch: case Blocks::RedstoneTorchOff:
@@ -4491,6 +4506,7 @@ const char* blockSoundGroup(BlockId id)
 {
     if (isFluid(id)) return nullptr;
     if (isCarpet(id)) return "wool";
+    if (isSnowLayer(id)) return "snow";
     if (isInfested(id)) return blockSoundGroup(infestedBase(id));
     if (const BlockId base = shapeBase(id); base != Blocks::Air && base != id) return blockSoundGroup(base);
     // By family, so a wood added later sounds like wood rather than
@@ -4641,6 +4657,7 @@ Material blockMaterial(BlockId id)
 {
     if (isCrop(id)) return Material::Plant;
     if (isCarpet(id)) return Material::Wool;
+    if (isSnowLayer(id)) return Material::Snow;
     if (isInfested(id)) return blockMaterial(infestedBase(id));
     if (const BlockId base = shapeBase(id); base != Blocks::Air && base != id) return blockMaterial(base);
 
@@ -4868,6 +4885,7 @@ bool blockOverlaps(BlockId id, int bx, int by, int bz,
     }
 
     if (isColourBed(id)) return overlaps(0.0f, 0.0f, 0.0f, 1.0f, 0.5625f, 1.0f);
+    if (isSnowLayer(id)) return overlaps(0.0f, 0.0f, 0.0f, 1.0f, static_cast<float>(snowLayers(id) - 1) / 8.0f, 1.0f);
     if (isFlowerPot(id)) return overlaps(0.3125f, 0.0f, 0.3125f, 0.6875f, 0.375f, 0.6875f);
     if (id == Blocks::HoneyBlock) return overlaps(0.0625f, 0.0f, 0.0625f, 0.9375f, 0.9375f, 0.9375f);
     if (id == Blocks::Conduit) return overlaps(0.3125f, 0.3125f, 0.3125f, 0.6875f, 0.6875f, 0.6875f);
