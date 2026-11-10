@@ -469,7 +469,7 @@ int flatIconFor(BlockId id)
     if (id == Blocks::MangrovePropagule || id == Blocks::MangrovePropaguleHanging) return Tiles::IconMangrovePropagule;
     if (id == Blocks::Campfire) return Tiles::IconCampfire;
     if (id == Blocks::SoulCampfire) return Tiles::SoulCampfireTop;
-    if (isCauldron(id)) return Tiles::IconCauldron;
+    if (isAnyCauldron(id)) return Tiles::IconCauldron;
     if (id == Blocks::Hopper) return Tiles::IconHopper;
     if (isPointedDripstone(id)) return Tiles::IconDripstone;
     if (id == Blocks::Bamboo) return Tiles::IconBamboo;
@@ -635,7 +635,7 @@ StackId blockDrop(BlockId id)
     // A composter and a cauldron come up empty however full they were,
     // which is Minecraft's: what was in them is not yours.
     if (isComposter(id)) return Blocks::Composter0;
-    if (isCauldron(id)) return Blocks::Cauldron0;
+    if (isAnyCauldron(id)) return Blocks::Cauldron0;
 
     switch (id)
     {

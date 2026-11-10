@@ -798,6 +798,7 @@ namespace
             // The ones that keep what they are holding in their id.
             else if (isComposter(id))             why = "a composter with something rotting in it";
             else if (isCauldron(id))              why = "a cauldron with water in it";
+            else if (isAnyCauldron(id))           why = "a cauldron with lava or powder snow in it";
             else if (isCake(id))                  why = "a cake set down and eaten from";
             else if (id == Blocks::LecternBook)   why = "a lectern with a book on it";
             else if (isCandle(id))                why = "candles set down together, or lit";

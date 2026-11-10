@@ -13626,6 +13626,12 @@ namespace
                     coldX = cx;
                     coldZ = cz;
                 }
+        check(isAnyCauldron(Blocks::LavaCauldron) && isAnyCauldron(powderCauldronAt(2)) && !isCauldron(Blocks::LavaCauldron) &&
+              powderCauldronLevel(powderCauldronAt(9)) == CAULDRON_FULL && powderCauldronAt(0) == Blocks::Cauldron0,
+              "a cauldron holds lava, or powder snow at three depths");
+        check(blockInfo(Blocks::LavaCauldron).lightEmission == 15 && blockDrop(Blocks::LavaCauldron) == Blocks::Cauldron0 &&
+              blockDrop(powderCauldronAt(1)) == Blocks::Cauldron0 && !isObtainable(Blocks::LavaCauldron),
+              "lava in a cauldron glows, and breaking either gives back the empty cauldron");
         check(cold, "there is cold land near the origin of a test world");
         if (cold)
         {

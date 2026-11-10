@@ -42,7 +42,7 @@ namespace Trading
     {
         if (isComposter(block)) { trade = Profession::Farmer; return true; }
         if (isLectern(block)) { trade = Profession::Librarian; return true; }
-        if (isCauldron(block)) { trade = Profession::Leatherworker; return true; }
+        if (isAnyCauldron(block)) { trade = Profession::Leatherworker; return true; }
         if (isLoom(block)) { trade = Profession::Shepherd; return true; }
         switch (furnaceBase(block))
         {

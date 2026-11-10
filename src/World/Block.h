@@ -699,6 +699,8 @@ namespace Blocks
         WallTorchFirst, WallTorchLast = WallTorchFirst + 15,
         LeverRunFirst, LeverRunLast = LeverRunFirst + 23,
         SnowLayerFirst, SnowLayerLast = SnowLayerFirst + 7,
+        LavaCauldron,
+        PowderCauldronFirst, PowderCauldronLast = PowderCauldronFirst + 2,
         ExtCount
     };
 }
@@ -2413,6 +2415,14 @@ inline BlockId cauldronAt(int level)
     if (level > CAULDRON_FULL) level = CAULDRON_FULL;
     return static_cast<BlockId>(Blocks::Cauldron0 + level);
 }
+inline bool isPowderCauldron(BlockId id) { return id >= Blocks::PowderCauldronFirst && id <= Blocks::PowderCauldronLast; }
+inline int powderCauldronLevel(BlockId id) { return isPowderCauldron(id) ? id - Blocks::PowderCauldronFirst + 1 : 0; }
+inline BlockId powderCauldronAt(int level)
+{
+    if (level <= 0) return Blocks::Cauldron0;
+    return static_cast<BlockId>(Blocks::PowderCauldronFirst + (level > CAULDRON_FULL ? CAULDRON_FULL : level) - 1);
+}
+inline bool isAnyCauldron(BlockId id) { return isCauldron(id) || id == Blocks::LavaCauldron || isPowderCauldron(id); }
 
 // Grown as far as it goes, whichever crop it is.
 inline bool isCropRipe(BlockId id)

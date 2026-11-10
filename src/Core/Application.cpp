@@ -12266,7 +12266,7 @@ bool Application::containerSignal(const glm::ivec3& at)
 {
     const BlockId here = m_world->getBlock(at.x, at.y, at.z);
     if (isComposter(here)) return here != Blocks::Composter0;
-    if (isCauldron(here)) return here != Blocks::Cauldron0;
+    if (isAnyCauldron(here)) return here != Blocks::Cauldron0;
     if (isCake(here) || here == Blocks::LecternBook || here == Blocks::EndPortalFrameFilled) return true;
     if (isHive(here)) return hiveHoney(here) > 0;
     if (isChiseledBookshelf(here)) return shelfBooks(here) > 0;
@@ -15102,15 +15102,18 @@ bool Application::useComposter(const glm::ivec3& at, BlockId block)
 bool Application::useCauldron(const glm::ivec3& at, BlockId block)
 {
     const int level = cauldronLevel(block);
+    const bool water = isCauldron(block);
+    const bool lava = block == Blocks::LavaCauldron;
+    const int powder = powderCauldronLevel(block);
     ItemStack& held = m_inventory.selected();
     if (held.empty()) return false;
 
-    auto setLevel = [&](int to)
+    auto setBlockTo = [&](BlockId now)
     {
-        const BlockId now = cauldronAt(to);
         m_world->setBlock(at.x, at.y, at.z, now);
         m_net.onLocalBlockChange(at.x, at.y, at.z, now);
     };
+    auto setLevel = [&](int to) { setBlockTo(cauldronAt(to)); };
 
     auto swapHeld = [&](StackId becomes)
     {
@@ -15142,7 +15145,69 @@ bool Application::useCauldron(const glm::ivec3& at, BlockId block)
         return true;
     }
 
-    if (held.id == Items::WaterBucket && level < CAULDRON_FULL)
+    if (held.id == Items::LavaBucket && !lava)
+    {
+        setBlockTo(Blocks::LavaCauldron);
+        m_stats.add(Stats::Custom::FillCauldron);
+        swapHeld(Items::Bucket);
+        m_audio.play(Sound::Pickup, 0.5f, 0.6f);
+        return true;
+    }
+
+    if (held.id == Items::PowderSnowBucket && powder < CAULDRON_FULL)
+    {
+        setBlockTo(powderCauldronAt(CAULDRON_FULL));
+        m_stats.add(Stats::Custom::FillCauldron);
+        swapHeld(Items::Bucket);
+        m_audio.playPlace(Blocks::PowderSnow);
+        return true;
+    }
+
+    if (held.id == Items::Bucket && lava)
+    {
+        setLevel(0);
+        m_stats.add(Stats::Custom::UseCauldron);
+        swapHeld(Items::LavaBucket);
+        m_audio.play(Sound::Pickup, 0.5f, 0.6f);
+        return true;
+    }
+
+    if (held.id == Items::Bucket && powder >= CAULDRON_FULL)
+    {
+        setLevel(0);
+        m_stats.add(Stats::Custom::UseCauldron);
+        swapHeld(Items::PowderSnowBucket);
+        m_audio.playDig(Blocks::PowderSnow, 0.7f);
+        return true;
+    }
+
+    if (held.id == Items::Potion && held.damage == Brewing::toDamage(Brewing::Potion::Water) && water && level < CAULDRON_FULL)
+    {
+        setLevel(level + 1);
+        m_stats.add(Stats::Custom::UseCauldron);
+        swapHeld(Items::GlassBottle);
+        m_audio.play(Sound::Pickup, 0.5f, 0.9f);
+        return true;
+    }
+
+    if (!isItem(held.id) && isShulkerBox(asBlock(held.id)) && asBlock(held.id) != Blocks::ShulkerBox && level > 0)
+    {
+        ItemStack plain = held;
+        plain.id = Blocks::ShulkerBox;
+        plain.count = 1;
+        if (held.count <= 1) held = plain;
+        else
+        {
+            held.count -= 1;
+            if (m_inventory.addStack(plain) > 0) m_drops.spawnStack(m_player.position, plain);
+        }
+        if (!m_player.creative()) setLevel(level - 1);
+        m_stats.add(Stats::Custom::CleanShulkerBox);
+        m_audio.play(Sound::Pickup, 0.5f, 1.3f);
+        return true;
+    }
+
+    if (held.id == Items::WaterBucket && (!water || level < CAULDRON_FULL))
     {
         setLevel(CAULDRON_FULL);
         m_stats.add(Stats::Custom::FillCauldron);
@@ -15724,7 +15789,7 @@ void Application::handlePlacement()
             if (isCandleCake(used) && useCandleCake(bench.block, used)) return;
             if (isLog(used) && plantCocoa(bench.previous)) return;
             if (isComposter(used) && useComposter(bench.block, used)) return;
-            if (isCauldron(used) && useCauldron(bench.block, used)) return;
+            if (isAnyCauldron(used) && useCauldron(bench.block, used)) return;
             if (isLectern(used) && useLectern(bench.block, used)) return;
             if (used == Blocks::Jukebox && useJukebox(bench.block)) return;
             if (used == Blocks::Grindstone && useGrindstone(bench.block)) return;
@@ -20149,7 +20214,7 @@ void Application::updateWorldAround(float deltaTime)
                 m_entities.spawnAt(MobId::Turtle, glm::vec3(at) + glm::vec3(0.5f, 0.0f, 0.5f), *m_world, true);
                 m_audio.play(Sound::MobTurtleSay, 0.6f, 1.6f);
             }
-            if (m_weather.depth > 0.2f && !m_snowing) fillCauldronsInRain();
+            if (m_weather.depth > 0.2f) fillCauldronsInRain();
             tickColdAndThaw();
         }
     }
@@ -20214,10 +20279,19 @@ void Application::fillCauldronsInRain()
         if (y < 1) continue;
 
         const BlockId here = m_world->getBlock(x, y, z);
-        if (!isCauldron(here) || here == Blocks::Cauldron3) continue;
-        if (m_world->skyLight(x, y + 1, z) < 15) continue;   // something is over it
-
-        const BlockId now = cauldronAt(cauldronLevel(here) + 1);
+        if (m_world->skyLight(x, y + 1, z) < 15) continue;
+        BlockId now = here;
+        if (m_snowing && m_world->generator().freezesAt(x, z))
+        {
+            if (here != Blocks::Cauldron0 && !isPowderCauldron(here)) continue;
+            if (powderCauldronLevel(here) >= CAULDRON_FULL) continue;
+            now = powderCauldronAt(powderCauldronLevel(here) + 1);
+        }
+        else
+        {
+            if (!isCauldron(here) || here == Blocks::Cauldron3) continue;
+            now = cauldronAt(cauldronLevel(here) + 1);
+        }
         m_world->setBlock(x, y, z, now);
         m_net.onLocalBlockChange(x, y, z, now);
     }

@@ -3981,6 +3981,10 @@ namespace
         { "Snow", SnowTile, SnowTile, SnowTile, true, false, RenderType::Lush, 0, 0.1f },
         { "Snow", SnowTile, SnowTile, SnowTile, true, false, RenderType::Lush, 0, 0.1f },
         { "Snow", SnowTile, SnowTile, SnowTile, true, true, RenderType::Lush, 0, 0.1f },
+        { "Lava Cauldron", Lava, CauldronBottom, CauldronSide, true, true, RenderType::Cube, 15, 2.0f },
+        { "Powder Snow Cauldron", PowderSnowTile, CauldronBottom, CauldronSide, true, true, RenderType::Cube, 0, 2.0f },
+        { "Powder Snow Cauldron", PowderSnowTile, CauldronBottom, CauldronSide, true, true, RenderType::Cube, 0, 2.0f },
+        { "Powder Snow Cauldron", PowderSnowTile, CauldronBottom, CauldronSide, true, true, RenderType::Cube, 0, 2.0f },
     };
 
     static_assert(sizeof(EXT_TABLE) / sizeof(EXT_TABLE[0]) == static_cast<size_t>(Blocks::ExtCount - Blocks::ExtFirst),
@@ -4479,7 +4483,7 @@ bool isObtainable(BlockId id)
             // thing in your hand.
             if (isSign(id)) return false;
             if (isFrame(id)) return false;
-            if (isCauldron(id) && id != Blocks::Cauldron0) return false;
+            if (isAnyCauldron(id) && id != Blocks::Cauldron0) return false;
 
             // Likewise for stairs: one of each four is the thing you
             // hold, the rest are it turned round.
@@ -4741,7 +4745,7 @@ Material blockMaterial(BlockId id)
         id == Blocks::Shroomlight) return Material::Plant;
     if (id == Blocks::MangroveRoots || id == Blocks::BambooMosaic || id == Blocks::BambooSlab) return Material::Wood;
     if (id == Blocks::MuddyMangroveRoots || id == Blocks::PackedMud) return Material::Dirt;
-    if (isCauldron(id)) return Material::Stone;
+    if (isAnyCauldron(id)) return Material::Stone;
     if (isFurnaceBlock(id)) return Material::Stone;
 
     switch (id)
