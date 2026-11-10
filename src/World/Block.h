@@ -694,6 +694,10 @@ namespace Blocks
         WoodBlockFirst, WoodBlockLast = WoodBlockFirst + 19,
         InfestedFirst, InfestedLast = InfestedFirst + 6,
         PolishedBasalt,
+        ButtonRunFirst, ButtonRunLast = ButtonRunFirst + 311,
+        PlateRunFirst, PlateRunLast = PlateRunFirst + 29,
+        WallTorchFirst, WallTorchLast = WallTorchFirst + 15,
+        LeverRunFirst, LeverRunLast = LeverRunFirst + 23,
         ExtCount
     };
 }
@@ -724,7 +728,11 @@ enum class RenderType : uint8_t
     Lush,
     SlabTop,
     Gate,
-    Wall
+    Wall,
+    Button,
+    Plate,
+    WallTorch,
+    Lever
 };
 
 struct BlockInfo
@@ -786,6 +794,59 @@ BlockId shapeBase(BlockId id);
 int shapeWood(BlockId id);
 inline bool isShapeFamily(BlockId id) { return shapeBase(id) != 0; }
 inline bool isCarpet(BlockId id) { return id >= Blocks::CarpetFirst && id <= Blocks::CarpetLast; }
+constexpr int BUTTON_MATERIALS = 13;
+constexpr int PLATE_MATERIALS = 15;
+inline bool isFamilyButton(BlockId id) { return id >= Blocks::ButtonRunFirst && id <= Blocks::ButtonRunLast; }
+inline int buttonMaterial(BlockId id) { return isFamilyButton(id) ? (id - Blocks::ButtonRunFirst) / 24 : 0; }
+inline int buttonFace(BlockId id) { return isFamilyButton(id) ? ((id - Blocks::ButtonRunFirst) % 24) / 8 : 0; }
+inline int buttonFacing(BlockId id) { return isFamilyButton(id) ? ((id - Blocks::ButtonRunFirst) % 8) / 2 : 0; }
+inline bool buttonPowered(BlockId id) { return isFamilyButton(id) ? ((id - Blocks::ButtonRunFirst) & 1) != 0 : id == Blocks::ButtonOn; }
+inline BlockId buttonOf(int material, int face, int facing, bool powered)
+{
+    if (material < 0 || material >= BUTTON_MATERIALS) material = 0;
+    if (face < 0 || face > 2) face = 0;
+    return static_cast<BlockId>(Blocks::ButtonRunFirst + material * 24 + face * 8 + (facing & 3) * 2 + (powered ? 1 : 0));
+}
+inline bool isAnyButton(BlockId id) { return isFamilyButton(id) || id == Blocks::ButtonOff || id == Blocks::ButtonOn; }
+inline float buttonSeconds(BlockId id) { return buttonMaterial(id) >= 2 ? 1.5f : 1.0f; }
+inline BlockId buttonItem(int material)
+{
+    return material <= 0 ? static_cast<BlockId>(Blocks::ButtonOff) : buttonOf(material, 0, 0, false);
+}
+inline bool isPlate(BlockId id) { return id >= Blocks::PlateRunFirst && id <= Blocks::PlateRunLast; }
+inline int plateMaterial(BlockId id) { return isPlate(id) ? (id - Blocks::PlateRunFirst) / 2 : -1; }
+inline bool platePowered(BlockId id) { return isPlate(id) && ((id - Blocks::PlateRunFirst) & 1) != 0; }
+inline BlockId plateOf(int material, bool powered)
+{
+    if (material < 0 || material >= PLATE_MATERIALS) material = 0;
+    return static_cast<BlockId>(Blocks::PlateRunFirst + material * 2 + (powered ? 1 : 0));
+}
+inline bool plateFeelsItems(BlockId id) { return plateMaterial(id) >= 2; }
+inline bool isWallTorch(BlockId id) { return id >= Blocks::WallTorchFirst && id <= Blocks::WallTorchLast; }
+inline int wallTorchKind(BlockId id) { return (id - Blocks::WallTorchFirst) / 4; }
+inline int wallTorchFacing(BlockId id) { return (id - Blocks::WallTorchFirst) & 3; }
+inline BlockId wallTorchOf(int kind, int facing)
+{
+    return static_cast<BlockId>(Blocks::WallTorchFirst + (kind & 3) * 4 + (facing & 3));
+}
+inline bool isFamilyLever(BlockId id) { return id >= Blocks::LeverRunFirst && id <= Blocks::LeverRunLast; }
+inline bool isLeverBlock(BlockId id) { return isFamilyLever(id) || id == Blocks::LeverOff || id == Blocks::LeverOn; }
+inline int leverFace(BlockId id) { return isFamilyLever(id) ? (id - Blocks::LeverRunFirst) / 8 : 0; }
+inline int leverFacing(BlockId id) { return isFamilyLever(id) ? ((id - Blocks::LeverRunFirst) % 8) / 2 : 0; }
+inline bool leverOn(BlockId id) { return isFamilyLever(id) ? ((id - Blocks::LeverRunFirst) & 1) != 0 : id == Blocks::LeverOn; }
+inline BlockId leverOf(int face, int facing, bool on)
+{
+    if (face < 0 || face > 2) face = 0;
+    return static_cast<BlockId>(Blocks::LeverRunFirst + face * 8 + (facing & 3) * 2 + (on ? 1 : 0));
+}
+inline int supportFromFacing(int facing)
+{
+    static const int SUPPORT[4] = { 4, 5, 2, 3 };
+    return SUPPORT[facing & 3];
+}
+int supportDirection(BlockId id);
+BlockId buttonMaterialBase(int material);
+BlockId plateMaterialBase(int material);
 inline bool isWoodBlock(BlockId id) { return id >= Blocks::WoodBlockFirst && id <= Blocks::WoodBlockLast; }
 inline bool isStrippedWoodBlock(BlockId id) { return isWoodBlock(id) && id - Blocks::WoodBlockFirst >= 10; }
 int woodBlockWood(BlockId id);

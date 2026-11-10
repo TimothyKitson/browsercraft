@@ -541,6 +541,14 @@ StackId blockDrop(BlockId id)
     if (isSlabBlock(id)) return slabOf(slabMaterial(id), 0);
     if (isFenceGate(id)) return gateOf(gateWood(id), false, 0);
     if (isInfested(id)) return Blocks::Air;
+    if (isFamilyButton(id)) return buttonItem(buttonMaterial(id));
+    if (isPlate(id)) return plateOf(plateMaterial(id), false);
+    if (isWallTorch(id))
+    {
+        static const BlockId TORCHES[4] = { Blocks::Torch, Blocks::SoulTorch, Blocks::RedstoneTorch, Blocks::RedstoneTorch };
+        return TORCHES[wallTorchKind(id)];
+    }
+    if (isFamilyLever(id)) return Blocks::LeverOff;
     if (isDoublePlant(id))
     {
         const DoublePlant kind = doublePlantKind(id);

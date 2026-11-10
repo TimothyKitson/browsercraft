@@ -300,6 +300,8 @@ namespace
                 for (int i = 0; i < 20; ++i) list.push_back(static_cast<StackId>(Blocks::WoodBlockFirst + i));
                 for (int i = 0; i < 7; ++i) list.push_back(static_cast<StackId>(Blocks::InfestedFirst + i));
                 list.push_back(Blocks::PolishedBasalt);
+                for (int m = 1; m < BUTTON_MATERIALS; ++m) list.push_back(buttonItem(m));
+                for (int m = 0; m < PLATE_MATERIALS; ++m) list.push_back(plateOf(m, false));
                 return list;
             }();
             items = building.data();

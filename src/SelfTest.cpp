@@ -13475,6 +13475,79 @@ namespace
               "four basalt polish into four");
     }
 
+
+    void testSwitchesAndPlates()
+    {
+        section("redstone: buttons, pressure plates, wall torches and levers on walls");
+        bool buttons = true;
+        for (int m = 0; m < BUTTON_MATERIALS; ++m)
+            for (int face = 0; face < 3; ++face)
+                for (int f = 0; f < 4; ++f)
+                    for (int on = 0; on < 2; ++on)
+                    {
+                        const BlockId id = buttonOf(m, face, f, on != 0);
+                        if (!isFamilyButton(id) || buttonMaterial(id) != m || buttonFace(id) != face || buttonFacing(id) != f ||
+                            buttonPowered(id) != (on != 0))
+                            buttons = false;
+                        if (Redstone::isSource(id) != (on != 0)) buttons = false;
+                        if (blockDrop(id) != buttonItem(m)) buttons = false;
+                        const int support = supportDirection(id);
+                        if (face == 0 ? support != 0 : face == 2 ? support != 1 : support != supportFromFacing(f)) buttons = false;
+                    }
+        check(buttons, "thirteen kinds of button on floors, walls and ceilings, powering only while pressed");
+        check(buttonSeconds(buttonOf(0, 1, 0, false)) == 1.0f && buttonSeconds(buttonOf(5, 1, 0, false)) == 1.5f,
+              "a stone button holds for a second and a wooden one for a second and a half");
+        check(blockDrop(buttonOf(0, 1, 2, true)) == Blocks::ButtonOff, "and a stone one comes back as the stone button");
+
+        bool plates = true;
+        for (int m = 0; m < PLATE_MATERIALS; ++m)
+        {
+            if (plateMaterial(plateOf(m, true)) != m || !platePowered(plateOf(m, true)) || platePowered(plateOf(m, false))) plates = false;
+            if (!Redstone::isSource(plateOf(m, true)) || Redstone::isSource(plateOf(m, false))) plates = false;
+            if (blockDrop(plateOf(m, true)) != plateOf(m, false) || supportDirection(plateOf(m, false)) != 0) plates = false;
+        }
+        check(plates, "fifteen pressure plates that power while something stands on them");
+        check(!plateFeelsItems(plateOf(0, false)) && !plateFeelsItems(plateOf(1, false)) && plateFeelsItems(plateOf(2, false)) &&
+              plateFeelsItems(plateOf(6, false)), "stone ones feel only creatures; weighted and wooden ones feel items too");
+        check(blockMaterial(plateOf(3, false)) == Material::Stone && blockMaterial(plateOf(5, false)) == Material::Wood,
+              "the heavy plate wants a pickaxe and a wooden one an axe");
+
+        bool torches = true;
+        for (int kind = 0; kind < 4; ++kind)
+            for (int f = 0; f < 4; ++f)
+            {
+                const BlockId id = wallTorchOf(kind, f);
+                if (!isWallTorch(id) || wallTorchKind(id) != kind || wallTorchFacing(id) != f) torches = false;
+                if (supportDirection(id) != supportFromFacing(f)) torches = false;
+            }
+        check(torches, "torches, soul torches and redstone torches hang on all four walls");
+        check(blockDrop(wallTorchOf(0, 2)) == Blocks::Torch && blockDrop(wallTorchOf(1, 0)) == Blocks::SoulTorch &&
+              blockDrop(wallTorchOf(2, 1)) == Blocks::RedstoneTorch, "and break back into the torch you held");
+        check(lightEmission(wallTorchOf(0, 0)) == 14 && Redstone::isSource(wallTorchOf(2, 3)),
+              "a wall torch lights as a torch does and a redstone one powers");
+
+        bool levers = true;
+        for (int face = 0; face < 3; ++face)
+            for (int f = 0; f < 4; ++f)
+            {
+                const BlockId off = leverOf(face, f, false), on = leverOf(face, f, true);
+                if (leverOn(off) || !leverOn(on) || leverFace(on) != face || leverFacing(on) != f) levers = false;
+                if (Redstone::isSource(off) || !Redstone::isSource(on) || blockDrop(on) != Blocks::LeverOff) levers = false;
+            }
+        check(levers, "levers on floors, walls and ceilings");
+        check(supportDirection(Blocks::Torch) == 0 && supportDirection(Blocks::Stone) < 0, "a floor torch rests on what is under it");
+
+        ItemStack grid[9];
+        for (ItemStack& cell : grid) cell = ItemStack{};
+        grid[4] = ItemStack{ Blocks::SprucePlanks, 1 };
+        check(Crafting::match(grid, 3).id == buttonOf(3, 0, 0, false), "one spruce plank makes a spruce button");
+        grid[4] = ItemStack{};
+        grid[0] = grid[1] = ItemStack{ Blocks::BirchPlanks, 1 };
+        check(Crafting::match(grid, 3).id == plateOf(6, false), "two birch planks make a birch plate");
+        grid[0] = grid[1] = ItemStack{ Items::GoldIngot, 1 };
+        check(Crafting::match(grid, 3).id == plateOf(2, false), "and two gold ingots the light weighted one");
+    }
+
     void testEverySoundHasANoise()
     {
         section("sounds: every sound makes a noise");
@@ -16594,6 +16667,7 @@ int runSelfTest()
     testEverySoundHasANoise();
     testShapeFamilies();
     testCarpetsWoodAndInfested();
+    testSwitchesAndPlates();
     testDrowning();
     testQuickMoveKeepsMetadata();
     testContainersPerDimension();

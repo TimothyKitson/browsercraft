@@ -30,6 +30,8 @@ namespace Redstone
         if (lightningRodPowered(id)) return true;
         if (daylightLit(id) || id == Blocks::TargetLit || hookPowered(id)) return true;
         if (sculkSensorLit(id)) return true;
+        if (buttonPowered(id) || platePowered(id) || (isFamilyLever(id) && leverOn(id))) return true;
+        if (isWallTorch(id) && wallTorchKind(id) == 2) return true;
         if (specialRailFamily(id) == 2 && specialRailPowered(id)) return true;
         return id == Blocks::RedstoneTorch || id == Blocks::RedstoneBlock ||
                id == Blocks::LeverOn || id == Blocks::ButtonOn;

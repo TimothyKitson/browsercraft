@@ -1712,7 +1712,8 @@ namespace
         return isDust(id) || id == Blocks::RedstoneTorch || id == Blocks::RedstoneTorchOff ||
                id == Blocks::LeverOff || id == Blocks::LeverOn || id == Blocks::ButtonOff ||
                id == Blocks::ButtonOn || id == Blocks::RedstoneBlock || id == Blocks::Observer ||
-               id == Blocks::ObserverLit;
+               id == Blocks::ObserverLit || isFamilyButton(id) || isPlate(id) || isFamilyLever(id) ||
+               (isWallTorch(id) && wallTorchKind(id) >= 2);
     }
 
     void emitDust(const MeshSnapshot& snap, int lx, int y, int lz, BlockId id, std::vector<float>& out)
@@ -1852,8 +1853,94 @@ namespace
         }
     }
 
+    void reorient(std::vector<float>& out, size_t start, int lx, int y, int lz, int face, int facing)
+    {
+        for (size_t i = start; i + 10 <= out.size(); i += 10)
+        {
+            const float x = out[i] - static_cast<float>(lx);
+            const float h = out[i + 1] - static_cast<float>(y);
+            const float z = out[i + 2] - static_cast<float>(lz);
+            float nx = x, ny = h, nz = z;
+            if (face == 1)
+            {
+                switch (facing & 3)
+                {
+                    case 0: nx = x; ny = z; nz = 1.0f - h; break;
+                    case 1: nx = h; ny = z; nz = x; break;
+                    case 2: nx = 1.0f - x; ny = z; nz = h; break;
+                    default: nx = 1.0f - h; ny = z; nz = 1.0f - x; break;
+                }
+            }
+            else
+            {
+                switch (facing & 3)
+                {
+                    case 1: nx = z; nz = 1.0f - x; break;
+                    case 2: nx = 1.0f - x; nz = 1.0f - z; break;
+                    case 3: nx = 1.0f - z; nz = x; break;
+                    default: break;
+                }
+                if (face == 2)
+                {
+                    ny = 1.0f - ny;
+                    nz = 1.0f - nz;
+                }
+            }
+            out[i] = nx + static_cast<float>(lx);
+            out[i + 1] = ny + static_cast<float>(y);
+            out[i + 2] = nz + static_cast<float>(lz);
+        }
+    }
+
+    void emitButton(const MeshSnapshot& snap, int lx, int y, int lz, BlockId id, std::vector<float>& out)
+    {
+        const size_t start = out.size();
+        const float depth = buttonPowered(id) ? 1.0f / 16.0f : 2.0f / 16.0f;
+        emitBox(snap, lx, y, lz, id, glm::vec3(5.0f / 16.0f, 0.0f, 6.0f / 16.0f), glm::vec3(11.0f / 16.0f, depth, 10.0f / 16.0f), out);
+        reorient(out, start, lx, y, lz, buttonFace(id), buttonFacing(id));
+    }
+
+    void emitPlate(const MeshSnapshot& snap, int lx, int y, int lz, BlockId id, std::vector<float>& out)
+    {
+        const float height = platePowered(id) ? 0.5f / 16.0f : 1.0f / 16.0f;
+        emitBox(snap, lx, y, lz, id, glm::vec3(1.0f / 16.0f, 0.0f, 1.0f / 16.0f), glm::vec3(15.0f / 16.0f, height, 15.0f / 16.0f), out);
+    }
+
+    void emitWallTorch(const MeshSnapshot& snap, int lx, int y, int lz, BlockId id, std::vector<float>& out)
+    {
+        static const int DX[4] = { 0, 1, 0, -1 };
+        static const int DZ[4] = { -1, 0, 1, 0 };
+        const int facing = wallTorchFacing(id);
+        const glm::vec3 away(static_cast<float>(DX[facing]), 0.0f, static_cast<float>(DZ[facing]));
+        const TileUV uv = tileUV(blockInfo(id).tileSide);
+        const float sky = static_cast<float>(snap.skyLight(lx, y, lz)) / 15.0f;
+        const float block = std::max(static_cast<float>(snap.blockLight(lx, y, lz)), static_cast<float>(lightEmission(id))) / 15.0f;
+        const glm::vec3 base(static_cast<float>(lx), static_cast<float>(y), static_cast<float>(lz));
+        auto place = [&](float px, float py, float pz) {
+            const float lean = 0.3125f - 0.25f * py;
+            return base + glm::vec3(px, py + 0.1875f, pz) - away * lean;
+        };
+        const float inset = 0.146f;
+        const float quads[2][4] = { { inset, inset, 1.0f - inset, 1.0f - inset }, { inset, 1.0f - inset, 1.0f - inset, inset } };
+        for (const auto& q : quads)
+            for (int side = 0; side < 2; ++side)
+            {
+                const float ax = side == 0 ? q[0] : q[2], az = side == 0 ? q[1] : q[3];
+                const float bx = side == 0 ? q[2] : q[0], bz = side == 0 ? q[3] : q[1];
+                const glm::vec3 p0 = place(ax, 0.0f, az), p1 = place(bx, 0.0f, bz);
+                const glm::vec3 p2 = place(bx, 1.0f, bz), p3 = place(ax, 1.0f, az);
+                pushVertex(out, p0.x, p0.y, p0.z, uv.u0, uv.vBottom, 0.95f, sky, block, tagOf(CROSS_FACE, id));
+                pushVertex(out, p1.x, p1.y, p1.z, uv.u1, uv.vBottom, 0.95f, sky, block, tagOf(CROSS_FACE, id));
+                pushVertex(out, p2.x, p2.y, p2.z, uv.u1, uv.vTop, 0.95f, sky, block, tagOf(CROSS_FACE, id, true));
+                pushVertex(out, p0.x, p0.y, p0.z, uv.u0, uv.vBottom, 0.95f, sky, block, tagOf(CROSS_FACE, id));
+                pushVertex(out, p2.x, p2.y, p2.z, uv.u1, uv.vTop, 0.95f, sky, block, tagOf(CROSS_FACE, id, true));
+                pushVertex(out, p3.x, p3.y, p3.z, uv.u0, uv.vTop, 0.95f, sky, block, tagOf(CROSS_FACE, id, true));
+            }
+    }
+
     void emitLever(const MeshSnapshot& snap, int lx, int y, int lz, BlockId id, std::vector<float>& out)
     {
+        const size_t start = out.size();
         const float sky = static_cast<float>(snap.skyLight(lx, y, lz)) / 15.0f;
         const float block = static_cast<float>(snap.blockLight(lx, y, lz)) / 15.0f;
         const glm::vec3 cell(static_cast<float>(lx), static_cast<float>(y), static_cast<float>(lz));
@@ -1866,8 +1953,9 @@ namespace
         emitPart(out, cell, glm::vec3(5.0f, 0.0f, 4.0f), glm::vec3(11.0f, 3.0f, 12.0f), Tiles::Cobblestone,
                  BASE_UV, 0.0f, glm::vec3(0.0f), sky, block, id, false);
         emitPart(out, cell, glm::vec3(7.0f, 1.0f, 7.0f), glm::vec3(9.0f, 11.0f, 9.0f), Tiles::LeverHandle,
-                 HANDLE_UV, id == Blocks::LeverOn ? 45.0f : -45.0f, glm::vec3(8.0f, 1.0f, 8.0f),
+                 HANDLE_UV, leverOn(id) ? 45.0f : -45.0f, glm::vec3(8.0f, 1.0f, 8.0f),
                  sky, block, id, true);
+        if (isFamilyLever(id)) reorient(out, start, lx, y, lz, leverFace(id), leverFacing(id));
     }
 
     int dripstoneTile(const MeshSnapshot& snap, int x, int y, int z, BlockId id)
@@ -1990,9 +2078,21 @@ void buildChunkMesh(const MeshSnapshot& snapshot, MeshResult& out)
                 }
                 if (!isVisible(id)) continue;
 
-                if (id == Blocks::LeverOff || id == Blocks::LeverOn)
+                if (isLeverBlock(id))
                 {
                     emitLever(snapshot, lx, y, lz, id, out.opaqueVertices);
+                }
+                else if (isFamilyButton(id))
+                {
+                    emitButton(snapshot, lx, y, lz, id, out.opaqueVertices);
+                }
+                else if (isPlate(id))
+                {
+                    emitPlate(snapshot, lx, y, lz, id, out.opaqueVertices);
+                }
+                else if (isWallTorch(id))
+                {
+                    emitWallTorch(snapshot, lx, y, lz, id, out.opaqueVertices);
                 }
                 else if (isCross(id))
                 {

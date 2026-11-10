@@ -785,6 +785,9 @@ namespace
             else if (isFenceGate(id))             why = "another facing, or the gate swung open";
             else if (slabMaterial(id) == PETRIFIED_SLAB) why = "creative only, as in Minecraft";
             else if (isInfested(id))              why = "creative only, as in Minecraft";
+            else if (isFamilyButton(id) || isPlate(id) || isFamilyLever(id))
+                                                  why = "set on a wall or ceiling, turned, or pressed";
+            else if (isWallTorch(id))             why = "a torch set against a wall";
 
             // A crop is sown, not set down, and the eight ids it
             // spans are the eight stages of it growing.

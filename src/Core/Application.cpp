@@ -2541,6 +2541,21 @@ bool Application::frame()
         if (playing()) tickObservers(deltaTime);
         if (playing()) tickHoppers(deltaTime);
 
+        for (size_t i = 0; i < m_pressedButtons.size();)
+        {
+            m_pressedButtons[i].second -= deltaTime;
+            if (m_pressedButtons[i].second > 0.0f) { ++i; continue; }
+            const glm::ivec3 at = m_pressedButtons[i].first;
+            m_pressedButtons.erase(m_pressedButtons.begin() + static_cast<long>(i));
+            const BlockId there = m_world ? m_world->getBlock(at.x, at.y, at.z) : static_cast<BlockId>(Blocks::Air);
+            if (isFamilyButton(there) && buttonPowered(there))
+            {
+                setPowered(at, buttonOf(buttonMaterial(there), buttonFace(there), buttonFacing(there), false));
+                m_audio.play(Sound::Click, 0.5f, 0.8f);
+            }
+        }
+        if (playing() && m_world) tickPlates(deltaTime);
+
         // A pressed button lets go on its own, and everything it was
         // powering goes out with it.
         if (m_buttonTimer > 0.0f)
@@ -3212,6 +3227,15 @@ bool Application::frame()
                 for (int c = 0; c < 8; ++c) m_world->setBlock(bx - 4 + c, by, bz + 3, static_cast<BlockId>(Blocks::CarpetFirst + c * 2));
                 for (int i = 0; i < 5; ++i) m_world->setBlock(bx - 6, by, bz - 3 + i, static_cast<BlockId>(Blocks::WoodBlockFirst + i * 2));
                 m_world->setBlock(bx - 6, by + 1, bz, Blocks::PolishedBasalt);
+                m_world->setBlock(bx + 6, by, bz + 2, Blocks::Stone);
+                m_world->setBlock(bx + 6, by + 1, bz + 2, Blocks::Stone);
+                m_world->setBlock(bx + 6, by, bz + 3, buttonOf(4, 1, 2, false));
+                m_world->setBlock(bx + 6, by + 1, bz + 3, wallTorchOf(0, 2));
+                m_world->setBlock(bx + 5, by + 1, bz + 2, leverOf(1, 3, true));
+                m_world->setBlock(bx + 5, by, bz + 2, wallTorchOf(1, 3));
+                m_world->setBlock(bx + 6, by + 2, bz + 2, plateOf(2, false));
+                m_world->setBlock(bx + 4, by, bz + 3, plateOf(7, true));
+                m_world->setBlock(bx + 3, by, bz + 3, buttonOf(9, 0, 1, false));
                 m_player.position = glm::vec3(bx + 0.5f, by + 4.0f, bz + 0.5f) - m_camera.front * 9.0f;
                 m_player.position.y = static_cast<float>(by) + 4.0f;
                 for (int dx = -1; dx <= 1; ++dx)
@@ -9332,13 +9356,12 @@ void Application::updateMining(float deltaTime)
         // does -- in creative as well, where nothing drops but the
         // thing still cannot be left hanging in the air.
         {
-            const glm::ivec3 over(hit.block.x, hit.block.y + 1, hit.block.z);
-            const BlockId above = m_world->getBlock(over.x, over.y, over.z);
-            if (Redstone::isWire(above) || above == Blocks::RedstoneTorch ||
-                above == Blocks::RedstoneTorchOff || above == Blocks::LeverOff ||
-                above == Blocks::LeverOn || above == Blocks::ButtonOff ||
-                above == Blocks::ButtonOn || isDiode(above))
+            static const glm::ivec3 TOWARD[6] = { { 0, -1, 0 }, { 0, 1, 0 }, { 0, 0, -1 }, { 1, 0, 0 }, { 0, 0, 1 }, { -1, 0, 0 } };
+            for (int k = 0; k < 6; ++k)
             {
+                const glm::ivec3 over = hit.block - TOWARD[k];
+                const BlockId above = m_world->getBlock(over.x, over.y, over.z);
+                if (supportDirection(above) != k) continue;
                 m_world->setBlock(over.x, over.y, over.z, Blocks::Air);
                 m_net.onLocalBlockChange(over.x, over.y, over.z, Blocks::Air);
                 if (!m_player.creative())
@@ -15644,6 +15667,25 @@ void Application::handlePlacement()
             // A lever stays where you put it; a button lets go on its
             // own a second later, which is the whole difference
             // between the two.
+            if (isFamilyButton(used))
+            {
+                if (!buttonPowered(used))
+                {
+                    setPowered(bench.block, buttonOf(buttonMaterial(used), buttonFace(used), buttonFacing(used), true));
+                    m_pressedButtons.emplace_back(bench.block, buttonSeconds(used));
+                    m_audio.play(Sound::Click, 0.6f, 1.3f);
+                    vibrate(glm::vec3(bench.block) + glm::vec3(0.5f), 10);
+                }
+                return;
+            }
+            if (isFamilyLever(used))
+            {
+                const BlockId thrown = leverOf(leverFace(used), leverFacing(used), !leverOn(used));
+                setPowered(bench.block, thrown);
+                m_audio.play(Sound::Click, 0.6f, leverOn(thrown) ? 1.3f : 0.8f);
+                vibrate(glm::vec3(bench.block) + glm::vec3(0.5f), leverOn(thrown) ? 10 : 9);
+                return;
+            }
             if (used == Blocks::LeverOff || used == Blocks::LeverOn ||
                 used == Blocks::ButtonOff)
             {
@@ -17311,7 +17353,30 @@ void Application::handlePlacement()
 
     // So is dust, and so are the switches and the torches: all of them
     // want something under them to sit on.
-    if ((isFlat(placing) || Redstone::isSource(placing) ||
+    const bool torchItem = placing == Blocks::Torch || placing == Blocks::SoulTorch || placing == Blocks::RedstoneTorch;
+    if (placing == Blocks::ButtonOff || isFamilyButton(placing) || placing == Blocks::LeverOff ||
+        (torchItem && hit.normal.y == 0))
+    {
+        const glm::ivec3 n = hit.normal;
+        const glm::vec3 look = m_camera.front;
+        const int toward = (std::fabs(look.x) > std::fabs(look.z)) ? (look.x > 0.0f ? 1 : 3) : (look.z > 0.0f ? 2 : 0);
+        const int facing = n.y != 0 ? toward : (n.z < 0 ? 0 : n.x > 0 ? 1 : n.z > 0 ? 2 : 3);
+        const int mount = n.y > 0 ? 0 : n.y < 0 ? 2 : 1;
+        if (torchItem)
+            placing = wallTorchOf(placing == Blocks::Torch ? 0 : placing == Blocks::SoulTorch ? 1 : 2, facing);
+        else if (placing == Blocks::LeverOff)
+            placing = leverOf(mount, facing, false);
+        else
+            placing = buttonOf(placing == Blocks::ButtonOff ? 0 : buttonMaterial(placing), mount, facing, false);
+    }
+    if (isFamilyButton(placing) || isFamilyLever(placing) || isWallTorch(placing) || isPlate(placing))
+    {
+        static const glm::ivec3 TOWARD[6] = { { 0, -1, 0 }, { 0, 1, 0 }, { 0, 0, -1 }, { 1, 0, 0 }, { 0, 0, 1 }, { -1, 0, 0 } };
+        const glm::ivec3 rest = target + TOWARD[supportDirection(placing)];
+        if (!isSolid(m_world->getBlock(rest.x, rest.y, rest.z))) return;
+    }
+    if (!isWallTorch(placing) &&
+        (isFlat(placing) || Redstone::isSource(placing) ||
          placing == Blocks::RedstoneTorch || placing == Blocks::LeverOff ||
          placing == Blocks::ButtonOff) &&
         !isSolid(m_world->getBlock(target.x, target.y - 1, target.z)))
@@ -22717,4 +22782,59 @@ void Application::renderDebugOverlay()
                         m_ui.canvasHeight() - lineStep - 2.0f, scale, DIM_TEXT);
 
     m_ui.setScale(1.0f);
+}
+
+void Application::setPowered(const glm::ivec3& at, BlockId block)
+{
+    m_world->setBlock(at.x, at.y, at.z, block);
+    m_net.onLocalBlockChange(at.x, at.y, at.z, block);
+    settleRedstone(at);
+}
+
+void Application::tickPlates(float deltaTime)
+{
+    std::vector<std::pair<glm::vec3, bool>> standing;
+    if (!m_player.spectator()) standing.emplace_back(m_player.position, false);
+    for (const Mob& mob : m_entities.mobs())
+        if (mob.alive()) standing.emplace_back(mob.position(), false);
+    std::vector<glm::vec3> items;
+    m_drops.positions(items);
+    for (const glm::vec3& item : items) standing.emplace_back(item, true);
+
+    for (const auto& [where, item] : standing)
+    {
+        const glm::ivec3 cell(static_cast<int>(std::floor(where.x)), static_cast<int>(std::floor(where.y + 0.05f)),
+                              static_cast<int>(std::floor(where.z)));
+        const BlockId plate = m_world->getBlock(cell.x, cell.y, cell.z);
+        if (!isPlate(plate) || (item && !plateFeelsItems(plate))) continue;
+        const float hold = plateMaterial(plate) == 2 || plateMaterial(plate) == 3 ? 0.5f : 1.0f;
+        bool known = false;
+        for (auto& down : m_platesDown)
+            if (down.first == cell)
+            {
+                down.second = hold;
+                known = true;
+            }
+        if (!known) m_platesDown.emplace_back(cell, hold);
+        if (!platePowered(plate))
+        {
+            setPowered(cell, plateOf(plateMaterial(plate), true));
+            m_audio.play(Sound::Click, 0.4f, 0.6f);
+            vibrate(glm::vec3(cell) + glm::vec3(0.5f), 10);
+        }
+    }
+
+    for (size_t i = 0; i < m_platesDown.size();)
+    {
+        m_platesDown[i].second -= deltaTime;
+        if (m_platesDown[i].second > 0.0f) { ++i; continue; }
+        const glm::ivec3 at = m_platesDown[i].first;
+        m_platesDown.erase(m_platesDown.begin() + static_cast<long>(i));
+        const BlockId plate = m_world->getBlock(at.x, at.y, at.z);
+        if (platePowered(plate))
+        {
+            setPowered(at, plateOf(plateMaterial(plate), false));
+            m_audio.play(Sound::Click, 0.4f, 0.5f);
+        }
+    }
 }

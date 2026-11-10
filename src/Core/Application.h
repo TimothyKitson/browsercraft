@@ -1206,6 +1206,10 @@ private:
     // this game can press two.
     glm::ivec3 m_buttonAt{ 0, 0, 0 };
     float m_buttonTimer = 0.0f;
+    std::vector<std::pair<glm::ivec3, float>> m_pressedButtons;
+    std::vector<std::pair<glm::ivec3, float>> m_platesDown;
+    void tickPlates(float deltaTime);
+    void setPowered(const glm::ivec3& at, BlockId block);
     void dismount();
     void wearOnSwing(StackId weapon);
     void openBench(const glm::ivec3& block);

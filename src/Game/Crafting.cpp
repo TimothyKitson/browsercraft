@@ -1271,6 +1271,13 @@ namespace
         { false, 3, 3, { Blocks::NetherBricks, _, _, Blocks::NetherBricks, Blocks::NetherBricks, _, Blocks::NetherBricks, Blocks::NetherBricks, Blocks::NetherBricks }, 0, stairsOf(7, false, 0), 4 },
         { false, 3, 2, { Blocks::NetherBricks, Blocks::NetherBricks, Blocks::NetherBricks, Blocks::NetherBricks, Blocks::NetherBricks, Blocks::NetherBricks }, 0, static_cast<StackId>(Blocks::WallRunFirst + 9), 6 },
         { false, 3, 2, { Items::Stick, Blocks::Planks, Items::Stick, Items::Stick, Blocks::Planks, Items::Stick }, 0, gateOf(0, false, 0), 1 },
+        { false, 2, 1, { Items::IronIngot, Items::IronIngot }, 0, plateOf(3, false), 1 },
+        { false, 2, 1, { Items::GoldIngot, Items::GoldIngot }, 0, plateOf(2, false), 1 },
+        { false, 2, 1, { Blocks::Planks, Blocks::Planks }, 0, plateOf(4, false), 1 },
+        { false, 2, 1, { Blocks::PolishedBlackstone, Blocks::PolishedBlackstone }, 0, plateOf(1, false), 1 },
+        { false, 2, 1, { Blocks::Stone, Blocks::Stone }, 0, plateOf(0, false), 1 },
+        { true, 0, 0, { Blocks::Planks }, 1, buttonOf(2, 0, 0, false), 1 },
+        { true, 0, 0, { Blocks::PolishedBlackstone }, 1, buttonOf(1, 0, 0, false), 1 },
         { false, 2, 2, { Blocks::AcaciaLog, Blocks::AcaciaLog, Blocks::AcaciaLog, Blocks::AcaciaLog }, 0, static_cast<StackId>(Blocks::WoodBlockFirst + 4), 3 },
         { false, 2, 2, { Blocks::BirchLog, Blocks::BirchLog, Blocks::BirchLog, Blocks::BirchLog }, 0, static_cast<StackId>(Blocks::WoodBlockFirst + 2), 3 },
         { false, 2, 1, { Blocks::WoolBlack, Blocks::WoolBlack }, 0, static_cast<StackId>(Blocks::CarpetFirst + 15), 3 },
@@ -1445,6 +1452,8 @@ namespace
                 if (stairsMaterialWood(m) == wood) return stairsOf(m, false, 0);
         if (result == Blocks::OakFence) return fenceOfWood(wood);
         if (result == gateOf(0, false, 0)) return gateOf(wood, false, 0);
+        if (result == buttonOf(2, 0, 0, false)) return buttonOf(2 + wood, 0, 0, false);
+        if (result == plateOf(4, false)) return plateOf(4 + wood, false);
         return result;
     }
 
@@ -1860,6 +1869,8 @@ std::vector<StackId> Crafting::everyOutput()
     {
         out.push_back(fenceOfWood(wood));
         out.push_back(gateOf(wood, false, 0));
+        out.push_back(buttonOf(2 + wood, 0, 0, false));
+        out.push_back(plateOf(4 + wood, false));
     }
     for (int m = 0; m < STAIRS_MATERIALS; ++m)
         if (stairsMaterialWood(m) >= 0) out.push_back(stairsOf(m, false, 0));
