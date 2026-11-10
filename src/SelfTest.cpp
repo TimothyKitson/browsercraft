@@ -7498,7 +7498,7 @@ namespace
         // tool has to be one a pickaxe is the tool for.
         int needTool = 0, byHand = 0;
 
-        for (BlockId id = 1; id < Blocks::Count; ++id)
+        for (int id = 1; isBlockId(id); id = nextBlockId(id))
         {
             if (!isObtainable(id)) continue;
             if (blockInfo(id).hardness < 0.0f) continue;   // never breaks
@@ -9050,7 +9050,7 @@ namespace
             if (!Food::isEdible(id)) continue;
 
             bool obtainable = false;
-            for (int b = 0; b < static_cast<int>(Blocks::Count) && !obtainable; ++b)
+            for (int b = 0; isBlockId(b) && !obtainable; b = nextBlockId(b))
             {
                 const BlockId block = static_cast<BlockId>(b);
                 if (blockDrop(block) == id) obtainable = true;
@@ -13241,7 +13241,7 @@ namespace
         // atlas leaves it transparent and the block is simply invisible
         // in the world. So it has to be swept for.
         std::vector<std::string> unpainted;
-        for (int id = 1; id < Blocks::Count; ++id)   // Air draws nothing
+        for (int id = 1; isBlockId(id); id = nextBlockId(id))   // Air draws nothing
         {
             const BlockInfo& info = blockInfo(static_cast<BlockId>(id));
             if (info.render == RenderType::None) continue;
@@ -13289,12 +13289,132 @@ namespace
 
         // And every block, or the name shown over the hotbar is blank.
         bool blockNames = true;
-        for (int id = 1; id < Blocks::Count; ++id)
+        for (int id = 1; isBlockId(id); id = nextBlockId(id))
         {
             const BlockInfo& info = blockInfo(static_cast<BlockId>(id));
             if (!info.name || !*info.name) blockNames = false;
         }
         check(blockNames, "every block has a name");
+    }
+
+
+    void testShapeFamilies()
+    {
+        section("blocks: the second id range and the shape families");
+        check(Blocks::ExtFirst > static_cast<int>(Items::Count), "the second block range starts above the items");
+        check(Blocks::ExtCount <= 65535, "and still fits a sixteen bit id");
+        check(isBlockId(Blocks::Stone) && isBlockId(Blocks::SmoothQuartz) && !isBlockId(Items::Stick) && !isBlockId(Blocks::Count),
+              "both ranges are block ids and nothing between them is");
+        check(isBlockStack(Blocks::SmoothQuartz) && !isItem(Blocks::SmoothQuartz), "a block from the second range is a block in a slot");
+        check(std::string(blockInfo(Blocks::SmoothQuartz).name) == "Smooth Quartz Block", "and has its own row");
+        check(nextBlockId(Blocks::Count - 1) == Blocks::ExtFirst, "walking the ids steps from one range to the next");
+
+        bool stairsRound = true, stairsNamed = true;
+        for (int m = 0; m < STAIRS_MATERIALS; ++m)
+            for (int top = 0; top < 2; ++top)
+                for (int f = 0; f < 4; ++f)
+                {
+                    const BlockId id = stairsOf(m, top != 0, f);
+                    if (!isStairs(id) || stairsMaterial(id) != m || stairsUpsideDown(id) != (top != 0) || blockFacing(id) != f)
+                        stairsRound = false;
+                    if (stairsFacing(id, (f + 1) & 3) != stairsOf(m, top != 0, (f + 1) & 3)) stairsRound = false;
+                    if (std::string(blockInfo(id).name).find("Stairs") == std::string::npos) stairsNamed = false;
+                    if (blockDrop(id) != stairsOf(m, false, 0)) stairsRound = false;
+                }
+        check(stairsRound, "every flight of stairs knows its material, half and facing, and drops the one you hold");
+        check(stairsNamed, "and is called stairs");
+        check(stairsOf(0, false, 2) == Blocks::StoneStairsSouth && stairsOf(2, false, 0) == Blocks::PlankStairsNorth,
+              "the four old materials keep the ids their saves hold");
+        check(STAIRS_MATERIALS == 56, "all 56 kinds of stairs in 1.21.1 exist");
+
+        bool slabsRound = true;
+        for (int m = 0; m < SLAB_MATERIALS; ++m)
+            for (int half = 0; half < 3; ++half)
+            {
+                const BlockId id = slabOf(m, half);
+                if (slabMaterial(id) != m || slabHalf(id) != half) slabsRound = false;
+                if (blockDrop(id) != slabOf(m, 0)) slabsRound = false;
+                if ((half == 1) != isTopSlab(id)) slabsRound = false;
+                if ((half == 2) != blockInfo(id).opaque) slabsRound = false;
+            }
+        check(slabsRound, "every slab has a bottom, a top and a doubled form, and each drops the slab");
+        check(SLAB_MATERIALS == 60, "all 60 kinds of slab in 1.21.1 exist");
+        check(slabOf(0, 0) == Blocks::StoneSlab && slabOf(2, 0) == Blocks::PlankSlab && slabMaterial(Blocks::EnchantingTable) < 0,
+              "the old slabs keep their ids and a half-height table is not a slab");
+
+        bool gatesRound = true;
+        for (int w = 0; w < WOOD_COUNT; ++w)
+            for (int open = 0; open < 2; ++open)
+                for (int f = 0; f < 4; ++f)
+                {
+                    const BlockId id = gateOf(w, open != 0, f);
+                    if (!isFenceGate(id) || gateWood(id) != w || gateOpen(id) != (open != 0) || gateFacing(id) != f) gatesRound = false;
+                    if (blockDrop(id) != gateOf(w, false, 0)) gatesRound = false;
+                }
+        check(gatesRound, "a gate of every wood swings both ways and drops shut");
+        check(!blockOverlaps(gateOf(0, true, 0), 0, 0, 0, 0.1f, 0.1f, 0.1f, 0.9f, 1.4f, 0.9f), "an open gate lets you through");
+        check(blockOverlaps(gateOf(0, false, 0), 0, 0, 0, 0.1f, 0.1f, 0.1f, 0.9f, 1.4f, 0.9f), "a shut one does not");
+
+        bool fences = true;
+        for (int w = 0; w < WOOD_COUNT; ++w)
+            if (!isFence(fenceOfWood(w)) || fenceWood(fenceOfWood(w)) != w || shapeBase(fenceOfWood(w)) != planksOfWood(w)) fences = false;
+        check(fences, "a fence of every wood, made of that wood");
+        check(!fenceJoins(fenceOfWood(1), Blocks::FenceRunLast) && fenceJoins(fenceOfWood(1), fenceOfWood(3)),
+              "wooden fences join each other but not the nether brick one");
+        check(WALL_MATERIALS == 25 && isWall(Blocks::WallRunFirst) && shapeBase(Blocks::WallRunFirst) == Blocks::Cobblestone,
+              "all 25 walls exist, the first of cobblestone");
+
+        auto at = [](const std::map<std::pair<int, int>, BlockId>& cells) {
+            return [&cells](int dx, int dz) {
+                const auto found = cells.find({ dx, dz });
+                return found == cells.end() ? static_cast<BlockId>(Blocks::Air) : found->second;
+            };
+        };
+        const BlockId north = stairsOf(STAIRS_OLD, false, 0);
+        std::map<std::pair<int, int>, BlockId> alone;
+        check(stairsQuadrantsAt(north, at(alone)) == stairsSideQuadrants(2), "a lone flight is straight, its step at the back");
+        std::map<std::pair<int, int>, BlockId> outer{ { { 0, 1 }, stairsOf(STAIRS_OLD, false, 3) } };
+        check(stairsQuadrantsAt(north, at(outer)) == 8, "with a turned flight behind it, it is an outer corner");
+        std::map<std::pair<int, int>, BlockId> inner{ { { 0, -1 }, stairsOf(STAIRS_OLD, false, 3) } };
+        check(stairsQuadrantsAt(north, at(inner)) == (12 | 2), "and with one in front, an inner corner");
+        std::map<std::pair<int, int>, BlockId> mixed{ { { 0, 1 }, stairsOf(STAIRS_OLD, true, 3) } };
+        check(stairsQuadrantsAt(north, at(mixed)) == stairsSideQuadrants(2), "upside-down stairs do not bend upright ones");
+
+        bool based = true;
+        for (int id = Blocks::ExtFirst; id < Blocks::ExtCount; ++id)
+        {
+            const BlockId b = static_cast<BlockId>(id);
+            if (b == Blocks::SmoothQuartz) continue;
+            if (shapeBase(b) == Blocks::Air) based = false;
+            if (blockMaterial(b) != blockMaterial(shapeBase(b)) && slabMaterial(b) != PETRIFIED_SLAB) based = false;
+        }
+        check(based, "every shape in the second range is made of a real block and sounds and mines like it");
+        check(blockMaterial(slabOf(PETRIFIED_SLAB, 0)) == Material::Stone && !isFlammable(slabOf(PETRIFIED_SLAB, 0)),
+              "the petrified oak slab is stone that looks like oak");
+        check(isFlammable(fenceOfWood(4)) && isFlammable(stairsOf(STAIRS_OLD + 4, false, 0)) && !isFlammable(Blocks::WallRunFirst),
+              "wooden shapes burn and stone ones do not");
+
+        int made = 0, cut = 0;
+        const std::vector<StackId> outputs = Crafting::everyOutput();
+        const std::vector<StackId> cuts = Stonecutting::everyOutput();
+        for (int m = 0; m < STAIRS_MATERIALS; ++m)
+            if (std::find(outputs.begin(), outputs.end(), stairsOf(m, false, 0)) != outputs.end()) ++made;
+        check(made == STAIRS_MATERIALS, "every kind of stairs can be crafted");
+        for (int m = 0; m < WALL_MATERIALS; ++m)
+            if (std::find(cuts.begin(), cuts.end(), static_cast<StackId>(Blocks::WallRunFirst + m)) != cuts.end()) ++cut;
+        check(cut == WALL_MATERIALS, "and every wall comes off a stonecutter");
+
+        ItemStack grid[9];
+        for (int i = 0; i < 9; ++i) grid[i] = ItemStack{};
+        grid[0] = grid[1] = grid[2] = ItemStack{ Blocks::SprucePlanks, 1 };
+        check(Crafting::match(grid, 3).id == slabOf(SLAB_OLD + 3, 0), "three spruce planks in a row make spruce slabs");
+        grid[0] = grid[2] = ItemStack{ Items::Stick, 1 };
+        grid[1] = ItemStack{ Blocks::CherryPlanks, 1 };
+        grid[3] = grid[5] = ItemStack{ Items::Stick, 1 };
+        grid[4] = ItemStack{ Blocks::CherryPlanks, 1 };
+        check(Crafting::match(grid, 3).id == gateOf(6, false, 0), "and sticks round cherry planks make a cherry gate");
+        check(Smelting::burnSeconds(slabOf(SLAB_OLD + 3, 0)) > 0.0f && Smelting::burnSeconds(Blocks::WallRunFirst) == 0.0f,
+              "a wooden slab is fuel and a wall is not");
     }
 
     void testEverySoundHasANoise()
@@ -16414,6 +16534,7 @@ int runSelfTest()
     testWeather();
     testEveryBlockHasAPicture();
     testEverySoundHasANoise();
+    testShapeFamilies();
     testDrowning();
     testQuickMoveKeepsMetadata();
     testContainersPerDimension();

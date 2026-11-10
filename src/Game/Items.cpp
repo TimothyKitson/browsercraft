@@ -15,6 +15,9 @@
 static_assert(static_cast<unsigned long long>(Items::FIRST) >
                   static_cast<unsigned long long>(Blocks::Count),
               "the blocks have reached Items::FIRST; raise it");
+static_assert(static_cast<unsigned long long>(Items::Count) <=
+                  static_cast<unsigned long long>(Blocks::ExtFirst),
+              "the items have reached the second block range");
 
 namespace
 {
@@ -534,6 +537,9 @@ StackId blockDrop(BlockId id)
 
     if (isCandle(id)) return candleOf(candleShade(id), 1, false);
     if (isBed(id)) return bedOf(bedColour(id), 0, false);
+    if (isStairs(id)) return stairsOf(stairsMaterial(id), false, 0);
+    if (isSlabBlock(id)) return slabOf(slabMaterial(id), 0);
+    if (isFenceGate(id)) return gateOf(gateWood(id), false, 0);
     if (isDoublePlant(id))
     {
         const DoublePlant kind = doublePlantKind(id);

@@ -1,4 +1,5 @@
 #include "Block.h"
+#include <algorithm>
 #include <string>
 #include "Renderer/AtlasTiles.h"
 
@@ -2829,12 +2830,1025 @@ namespace
         { "Warped Hanging Sign", WarpedPlanksTile, WarpedPlanksTile, WarpedPlanksTile, false, false, RenderType::None, 0, 1.0f },
         { "Warped Hanging Sign", WarpedPlanksTile, WarpedPlanksTile, WarpedPlanksTile, false, false, RenderType::None, 0, 1.0f },
     };
+
+    const BlockInfo EXT_TABLE[] = {
+        { "Brick Stairs", Bricks, Bricks, Bricks, true, false, RenderType::Stairs, 0, 2.0f },
+        { "Brick Stairs", Bricks, Bricks, Bricks, true, false, RenderType::Stairs, 0, 2.0f },
+        { "Brick Stairs", Bricks, Bricks, Bricks, true, false, RenderType::Stairs, 0, 2.0f },
+        { "Brick Stairs", Bricks, Bricks, Bricks, true, false, RenderType::Stairs, 0, 2.0f },
+        { "Brick Stairs", Bricks, Bricks, Bricks, true, false, RenderType::Stairs, 0, 2.0f },
+        { "Brick Stairs", Bricks, Bricks, Bricks, true, false, RenderType::Stairs, 0, 2.0f },
+        { "Brick Stairs", Bricks, Bricks, Bricks, true, false, RenderType::Stairs, 0, 2.0f },
+        { "Brick Stairs", Bricks, Bricks, Bricks, true, false, RenderType::Stairs, 0, 2.0f },
+        { "Stone Brick Stairs", StoneBricksTile, StoneBricksTile, StoneBricksTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Stone Brick Stairs", StoneBricksTile, StoneBricksTile, StoneBricksTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Stone Brick Stairs", StoneBricksTile, StoneBricksTile, StoneBricksTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Stone Brick Stairs", StoneBricksTile, StoneBricksTile, StoneBricksTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Stone Brick Stairs", StoneBricksTile, StoneBricksTile, StoneBricksTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Stone Brick Stairs", StoneBricksTile, StoneBricksTile, StoneBricksTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Stone Brick Stairs", StoneBricksTile, StoneBricksTile, StoneBricksTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Stone Brick Stairs", StoneBricksTile, StoneBricksTile, StoneBricksTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Mud Brick Stairs", MudBricksTile, MudBricksTile, MudBricksTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Mud Brick Stairs", MudBricksTile, MudBricksTile, MudBricksTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Mud Brick Stairs", MudBricksTile, MudBricksTile, MudBricksTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Mud Brick Stairs", MudBricksTile, MudBricksTile, MudBricksTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Mud Brick Stairs", MudBricksTile, MudBricksTile, MudBricksTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Mud Brick Stairs", MudBricksTile, MudBricksTile, MudBricksTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Mud Brick Stairs", MudBricksTile, MudBricksTile, MudBricksTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Mud Brick Stairs", MudBricksTile, MudBricksTile, MudBricksTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Nether Brick Stairs", NetherBricks, NetherBricks, NetherBricks, true, false, RenderType::Stairs, 0, 2.0f },
+        { "Nether Brick Stairs", NetherBricks, NetherBricks, NetherBricks, true, false, RenderType::Stairs, 0, 2.0f },
+        { "Nether Brick Stairs", NetherBricks, NetherBricks, NetherBricks, true, false, RenderType::Stairs, 0, 2.0f },
+        { "Nether Brick Stairs", NetherBricks, NetherBricks, NetherBricks, true, false, RenderType::Stairs, 0, 2.0f },
+        { "Nether Brick Stairs", NetherBricks, NetherBricks, NetherBricks, true, false, RenderType::Stairs, 0, 2.0f },
+        { "Nether Brick Stairs", NetherBricks, NetherBricks, NetherBricks, true, false, RenderType::Stairs, 0, 2.0f },
+        { "Nether Brick Stairs", NetherBricks, NetherBricks, NetherBricks, true, false, RenderType::Stairs, 0, 2.0f },
+        { "Nether Brick Stairs", NetherBricks, NetherBricks, NetherBricks, true, false, RenderType::Stairs, 0, 2.0f },
+        { "Spruce Stairs", SprucePlanks, SprucePlanks, SprucePlanks, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Spruce Stairs", SprucePlanks, SprucePlanks, SprucePlanks, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Spruce Stairs", SprucePlanks, SprucePlanks, SprucePlanks, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Spruce Stairs", SprucePlanks, SprucePlanks, SprucePlanks, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Spruce Stairs", SprucePlanks, SprucePlanks, SprucePlanks, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Spruce Stairs", SprucePlanks, SprucePlanks, SprucePlanks, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Spruce Stairs", SprucePlanks, SprucePlanks, SprucePlanks, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Spruce Stairs", SprucePlanks, SprucePlanks, SprucePlanks, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Birch Stairs", BirchPlanksTile, BirchPlanksTile, BirchPlanksTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Birch Stairs", BirchPlanksTile, BirchPlanksTile, BirchPlanksTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Birch Stairs", BirchPlanksTile, BirchPlanksTile, BirchPlanksTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Birch Stairs", BirchPlanksTile, BirchPlanksTile, BirchPlanksTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Birch Stairs", BirchPlanksTile, BirchPlanksTile, BirchPlanksTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Birch Stairs", BirchPlanksTile, BirchPlanksTile, BirchPlanksTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Birch Stairs", BirchPlanksTile, BirchPlanksTile, BirchPlanksTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Birch Stairs", BirchPlanksTile, BirchPlanksTile, BirchPlanksTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Jungle Stairs", JunglePlanks, JunglePlanks, JunglePlanks, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Jungle Stairs", JunglePlanks, JunglePlanks, JunglePlanks, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Jungle Stairs", JunglePlanks, JunglePlanks, JunglePlanks, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Jungle Stairs", JunglePlanks, JunglePlanks, JunglePlanks, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Jungle Stairs", JunglePlanks, JunglePlanks, JunglePlanks, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Jungle Stairs", JunglePlanks, JunglePlanks, JunglePlanks, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Jungle Stairs", JunglePlanks, JunglePlanks, JunglePlanks, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Jungle Stairs", JunglePlanks, JunglePlanks, JunglePlanks, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Quartz Stairs", QuartzBlockTop, QuartzBlockBottom, QuartzBlockSide, true, false, RenderType::Stairs, 0, 0.8f },
+        { "Quartz Stairs", QuartzBlockTop, QuartzBlockBottom, QuartzBlockSide, true, false, RenderType::Stairs, 0, 0.8f },
+        { "Quartz Stairs", QuartzBlockTop, QuartzBlockBottom, QuartzBlockSide, true, false, RenderType::Stairs, 0, 0.8f },
+        { "Quartz Stairs", QuartzBlockTop, QuartzBlockBottom, QuartzBlockSide, true, false, RenderType::Stairs, 0, 0.8f },
+        { "Quartz Stairs", QuartzBlockTop, QuartzBlockBottom, QuartzBlockSide, true, false, RenderType::Stairs, 0, 0.8f },
+        { "Quartz Stairs", QuartzBlockTop, QuartzBlockBottom, QuartzBlockSide, true, false, RenderType::Stairs, 0, 0.8f },
+        { "Quartz Stairs", QuartzBlockTop, QuartzBlockBottom, QuartzBlockSide, true, false, RenderType::Stairs, 0, 0.8f },
+        { "Quartz Stairs", QuartzBlockTop, QuartzBlockBottom, QuartzBlockSide, true, false, RenderType::Stairs, 0, 0.8f },
+        { "Acacia Stairs", AcaciaPlanks, AcaciaPlanks, AcaciaPlanks, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Acacia Stairs", AcaciaPlanks, AcaciaPlanks, AcaciaPlanks, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Acacia Stairs", AcaciaPlanks, AcaciaPlanks, AcaciaPlanks, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Acacia Stairs", AcaciaPlanks, AcaciaPlanks, AcaciaPlanks, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Acacia Stairs", AcaciaPlanks, AcaciaPlanks, AcaciaPlanks, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Acacia Stairs", AcaciaPlanks, AcaciaPlanks, AcaciaPlanks, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Acacia Stairs", AcaciaPlanks, AcaciaPlanks, AcaciaPlanks, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Acacia Stairs", AcaciaPlanks, AcaciaPlanks, AcaciaPlanks, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Cherry Stairs", CherryPlanksTile, CherryPlanksTile, CherryPlanksTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Cherry Stairs", CherryPlanksTile, CherryPlanksTile, CherryPlanksTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Cherry Stairs", CherryPlanksTile, CherryPlanksTile, CherryPlanksTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Cherry Stairs", CherryPlanksTile, CherryPlanksTile, CherryPlanksTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Cherry Stairs", CherryPlanksTile, CherryPlanksTile, CherryPlanksTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Cherry Stairs", CherryPlanksTile, CherryPlanksTile, CherryPlanksTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Cherry Stairs", CherryPlanksTile, CherryPlanksTile, CherryPlanksTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Cherry Stairs", CherryPlanksTile, CherryPlanksTile, CherryPlanksTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Dark Oak Stairs", DarkOakPlanks, DarkOakPlanks, DarkOakPlanks, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Dark Oak Stairs", DarkOakPlanks, DarkOakPlanks, DarkOakPlanks, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Dark Oak Stairs", DarkOakPlanks, DarkOakPlanks, DarkOakPlanks, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Dark Oak Stairs", DarkOakPlanks, DarkOakPlanks, DarkOakPlanks, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Dark Oak Stairs", DarkOakPlanks, DarkOakPlanks, DarkOakPlanks, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Dark Oak Stairs", DarkOakPlanks, DarkOakPlanks, DarkOakPlanks, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Dark Oak Stairs", DarkOakPlanks, DarkOakPlanks, DarkOakPlanks, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Dark Oak Stairs", DarkOakPlanks, DarkOakPlanks, DarkOakPlanks, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Mangrove Stairs", MangrovePlanksTile, MangrovePlanksTile, MangrovePlanksTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Mangrove Stairs", MangrovePlanksTile, MangrovePlanksTile, MangrovePlanksTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Mangrove Stairs", MangrovePlanksTile, MangrovePlanksTile, MangrovePlanksTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Mangrove Stairs", MangrovePlanksTile, MangrovePlanksTile, MangrovePlanksTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Mangrove Stairs", MangrovePlanksTile, MangrovePlanksTile, MangrovePlanksTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Mangrove Stairs", MangrovePlanksTile, MangrovePlanksTile, MangrovePlanksTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Mangrove Stairs", MangrovePlanksTile, MangrovePlanksTile, MangrovePlanksTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Mangrove Stairs", MangrovePlanksTile, MangrovePlanksTile, MangrovePlanksTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Bamboo Stairs", BambooPlanksTile, BambooPlanksTile, BambooPlanksTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Bamboo Stairs", BambooPlanksTile, BambooPlanksTile, BambooPlanksTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Bamboo Stairs", BambooPlanksTile, BambooPlanksTile, BambooPlanksTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Bamboo Stairs", BambooPlanksTile, BambooPlanksTile, BambooPlanksTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Bamboo Stairs", BambooPlanksTile, BambooPlanksTile, BambooPlanksTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Bamboo Stairs", BambooPlanksTile, BambooPlanksTile, BambooPlanksTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Bamboo Stairs", BambooPlanksTile, BambooPlanksTile, BambooPlanksTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Bamboo Stairs", BambooPlanksTile, BambooPlanksTile, BambooPlanksTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Bamboo Mosaic Stairs", BambooMosaicTile, BambooMosaicTile, BambooMosaicTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Bamboo Mosaic Stairs", BambooMosaicTile, BambooMosaicTile, BambooMosaicTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Bamboo Mosaic Stairs", BambooMosaicTile, BambooMosaicTile, BambooMosaicTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Bamboo Mosaic Stairs", BambooMosaicTile, BambooMosaicTile, BambooMosaicTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Bamboo Mosaic Stairs", BambooMosaicTile, BambooMosaicTile, BambooMosaicTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Bamboo Mosaic Stairs", BambooMosaicTile, BambooMosaicTile, BambooMosaicTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Bamboo Mosaic Stairs", BambooMosaicTile, BambooMosaicTile, BambooMosaicTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Bamboo Mosaic Stairs", BambooMosaicTile, BambooMosaicTile, BambooMosaicTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Prismarine Stairs", PrismarineTile, PrismarineTile, PrismarineTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Prismarine Stairs", PrismarineTile, PrismarineTile, PrismarineTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Prismarine Stairs", PrismarineTile, PrismarineTile, PrismarineTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Prismarine Stairs", PrismarineTile, PrismarineTile, PrismarineTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Prismarine Stairs", PrismarineTile, PrismarineTile, PrismarineTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Prismarine Stairs", PrismarineTile, PrismarineTile, PrismarineTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Prismarine Stairs", PrismarineTile, PrismarineTile, PrismarineTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Prismarine Stairs", PrismarineTile, PrismarineTile, PrismarineTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Prismarine Brick Stairs", PrismarineBricksTile, PrismarineBricksTile, PrismarineBricksTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Prismarine Brick Stairs", PrismarineBricksTile, PrismarineBricksTile, PrismarineBricksTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Prismarine Brick Stairs", PrismarineBricksTile, PrismarineBricksTile, PrismarineBricksTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Prismarine Brick Stairs", PrismarineBricksTile, PrismarineBricksTile, PrismarineBricksTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Prismarine Brick Stairs", PrismarineBricksTile, PrismarineBricksTile, PrismarineBricksTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Prismarine Brick Stairs", PrismarineBricksTile, PrismarineBricksTile, PrismarineBricksTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Prismarine Brick Stairs", PrismarineBricksTile, PrismarineBricksTile, PrismarineBricksTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Prismarine Brick Stairs", PrismarineBricksTile, PrismarineBricksTile, PrismarineBricksTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Dark Prismarine Stairs", DarkPrismarineTile, DarkPrismarineTile, DarkPrismarineTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Dark Prismarine Stairs", DarkPrismarineTile, DarkPrismarineTile, DarkPrismarineTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Dark Prismarine Stairs", DarkPrismarineTile, DarkPrismarineTile, DarkPrismarineTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Dark Prismarine Stairs", DarkPrismarineTile, DarkPrismarineTile, DarkPrismarineTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Dark Prismarine Stairs", DarkPrismarineTile, DarkPrismarineTile, DarkPrismarineTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Dark Prismarine Stairs", DarkPrismarineTile, DarkPrismarineTile, DarkPrismarineTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Dark Prismarine Stairs", DarkPrismarineTile, DarkPrismarineTile, DarkPrismarineTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Dark Prismarine Stairs", DarkPrismarineTile, DarkPrismarineTile, DarkPrismarineTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Red Sandstone Stairs", RedSandstoneTop, RedSandstoneBottom, RedSandstoneSide, true, false, RenderType::Stairs, 0, 0.8f },
+        { "Red Sandstone Stairs", RedSandstoneTop, RedSandstoneBottom, RedSandstoneSide, true, false, RenderType::Stairs, 0, 0.8f },
+        { "Red Sandstone Stairs", RedSandstoneTop, RedSandstoneBottom, RedSandstoneSide, true, false, RenderType::Stairs, 0, 0.8f },
+        { "Red Sandstone Stairs", RedSandstoneTop, RedSandstoneBottom, RedSandstoneSide, true, false, RenderType::Stairs, 0, 0.8f },
+        { "Red Sandstone Stairs", RedSandstoneTop, RedSandstoneBottom, RedSandstoneSide, true, false, RenderType::Stairs, 0, 0.8f },
+        { "Red Sandstone Stairs", RedSandstoneTop, RedSandstoneBottom, RedSandstoneSide, true, false, RenderType::Stairs, 0, 0.8f },
+        { "Red Sandstone Stairs", RedSandstoneTop, RedSandstoneBottom, RedSandstoneSide, true, false, RenderType::Stairs, 0, 0.8f },
+        { "Red Sandstone Stairs", RedSandstoneTop, RedSandstoneBottom, RedSandstoneSide, true, false, RenderType::Stairs, 0, 0.8f },
+        { "Purpur Stairs", PurpurTile, PurpurTile, PurpurTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Purpur Stairs", PurpurTile, PurpurTile, PurpurTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Purpur Stairs", PurpurTile, PurpurTile, PurpurTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Purpur Stairs", PurpurTile, PurpurTile, PurpurTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Purpur Stairs", PurpurTile, PurpurTile, PurpurTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Purpur Stairs", PurpurTile, PurpurTile, PurpurTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Purpur Stairs", PurpurTile, PurpurTile, PurpurTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Purpur Stairs", PurpurTile, PurpurTile, PurpurTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Polished Granite Stairs", PolishedGraniteTile, PolishedGraniteTile, PolishedGraniteTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Polished Granite Stairs", PolishedGraniteTile, PolishedGraniteTile, PolishedGraniteTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Polished Granite Stairs", PolishedGraniteTile, PolishedGraniteTile, PolishedGraniteTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Polished Granite Stairs", PolishedGraniteTile, PolishedGraniteTile, PolishedGraniteTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Polished Granite Stairs", PolishedGraniteTile, PolishedGraniteTile, PolishedGraniteTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Polished Granite Stairs", PolishedGraniteTile, PolishedGraniteTile, PolishedGraniteTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Polished Granite Stairs", PolishedGraniteTile, PolishedGraniteTile, PolishedGraniteTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Polished Granite Stairs", PolishedGraniteTile, PolishedGraniteTile, PolishedGraniteTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Smooth Red Sandstone Stairs", RedSandstoneTop, RedSandstoneTop, RedSandstoneTop, true, false, RenderType::Stairs, 0, 2.0f },
+        { "Smooth Red Sandstone Stairs", RedSandstoneTop, RedSandstoneTop, RedSandstoneTop, true, false, RenderType::Stairs, 0, 2.0f },
+        { "Smooth Red Sandstone Stairs", RedSandstoneTop, RedSandstoneTop, RedSandstoneTop, true, false, RenderType::Stairs, 0, 2.0f },
+        { "Smooth Red Sandstone Stairs", RedSandstoneTop, RedSandstoneTop, RedSandstoneTop, true, false, RenderType::Stairs, 0, 2.0f },
+        { "Smooth Red Sandstone Stairs", RedSandstoneTop, RedSandstoneTop, RedSandstoneTop, true, false, RenderType::Stairs, 0, 2.0f },
+        { "Smooth Red Sandstone Stairs", RedSandstoneTop, RedSandstoneTop, RedSandstoneTop, true, false, RenderType::Stairs, 0, 2.0f },
+        { "Smooth Red Sandstone Stairs", RedSandstoneTop, RedSandstoneTop, RedSandstoneTop, true, false, RenderType::Stairs, 0, 2.0f },
+        { "Smooth Red Sandstone Stairs", RedSandstoneTop, RedSandstoneTop, RedSandstoneTop, true, false, RenderType::Stairs, 0, 2.0f },
+        { "Mossy Stone Brick Stairs", MossyStoneBricksTile, MossyStoneBricksTile, MossyStoneBricksTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Mossy Stone Brick Stairs", MossyStoneBricksTile, MossyStoneBricksTile, MossyStoneBricksTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Mossy Stone Brick Stairs", MossyStoneBricksTile, MossyStoneBricksTile, MossyStoneBricksTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Mossy Stone Brick Stairs", MossyStoneBricksTile, MossyStoneBricksTile, MossyStoneBricksTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Mossy Stone Brick Stairs", MossyStoneBricksTile, MossyStoneBricksTile, MossyStoneBricksTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Mossy Stone Brick Stairs", MossyStoneBricksTile, MossyStoneBricksTile, MossyStoneBricksTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Mossy Stone Brick Stairs", MossyStoneBricksTile, MossyStoneBricksTile, MossyStoneBricksTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Mossy Stone Brick Stairs", MossyStoneBricksTile, MossyStoneBricksTile, MossyStoneBricksTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Polished Diorite Stairs", PolishedDioriteTile, PolishedDioriteTile, PolishedDioriteTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Polished Diorite Stairs", PolishedDioriteTile, PolishedDioriteTile, PolishedDioriteTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Polished Diorite Stairs", PolishedDioriteTile, PolishedDioriteTile, PolishedDioriteTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Polished Diorite Stairs", PolishedDioriteTile, PolishedDioriteTile, PolishedDioriteTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Polished Diorite Stairs", PolishedDioriteTile, PolishedDioriteTile, PolishedDioriteTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Polished Diorite Stairs", PolishedDioriteTile, PolishedDioriteTile, PolishedDioriteTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Polished Diorite Stairs", PolishedDioriteTile, PolishedDioriteTile, PolishedDioriteTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Polished Diorite Stairs", PolishedDioriteTile, PolishedDioriteTile, PolishedDioriteTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Mossy Cobblestone Stairs", MossyCobble, MossyCobble, MossyCobble, true, false, RenderType::Stairs, 0, 1.7f },
+        { "Mossy Cobblestone Stairs", MossyCobble, MossyCobble, MossyCobble, true, false, RenderType::Stairs, 0, 1.7f },
+        { "Mossy Cobblestone Stairs", MossyCobble, MossyCobble, MossyCobble, true, false, RenderType::Stairs, 0, 1.7f },
+        { "Mossy Cobblestone Stairs", MossyCobble, MossyCobble, MossyCobble, true, false, RenderType::Stairs, 0, 1.7f },
+        { "Mossy Cobblestone Stairs", MossyCobble, MossyCobble, MossyCobble, true, false, RenderType::Stairs, 0, 1.7f },
+        { "Mossy Cobblestone Stairs", MossyCobble, MossyCobble, MossyCobble, true, false, RenderType::Stairs, 0, 1.7f },
+        { "Mossy Cobblestone Stairs", MossyCobble, MossyCobble, MossyCobble, true, false, RenderType::Stairs, 0, 1.7f },
+        { "Mossy Cobblestone Stairs", MossyCobble, MossyCobble, MossyCobble, true, false, RenderType::Stairs, 0, 1.7f },
+        { "End Stone Brick Stairs", EndBricksTile, EndBricksTile, EndBricksTile, true, false, RenderType::Stairs, 0, 3.0f },
+        { "End Stone Brick Stairs", EndBricksTile, EndBricksTile, EndBricksTile, true, false, RenderType::Stairs, 0, 3.0f },
+        { "End Stone Brick Stairs", EndBricksTile, EndBricksTile, EndBricksTile, true, false, RenderType::Stairs, 0, 3.0f },
+        { "End Stone Brick Stairs", EndBricksTile, EndBricksTile, EndBricksTile, true, false, RenderType::Stairs, 0, 3.0f },
+        { "End Stone Brick Stairs", EndBricksTile, EndBricksTile, EndBricksTile, true, false, RenderType::Stairs, 0, 3.0f },
+        { "End Stone Brick Stairs", EndBricksTile, EndBricksTile, EndBricksTile, true, false, RenderType::Stairs, 0, 3.0f },
+        { "End Stone Brick Stairs", EndBricksTile, EndBricksTile, EndBricksTile, true, false, RenderType::Stairs, 0, 3.0f },
+        { "End Stone Brick Stairs", EndBricksTile, EndBricksTile, EndBricksTile, true, false, RenderType::Stairs, 0, 3.0f },
+        { "Smooth Sandstone Stairs", SandstoneTop, SandstoneTop, SandstoneTop, true, false, RenderType::Stairs, 0, 2.0f },
+        { "Smooth Sandstone Stairs", SandstoneTop, SandstoneTop, SandstoneTop, true, false, RenderType::Stairs, 0, 2.0f },
+        { "Smooth Sandstone Stairs", SandstoneTop, SandstoneTop, SandstoneTop, true, false, RenderType::Stairs, 0, 2.0f },
+        { "Smooth Sandstone Stairs", SandstoneTop, SandstoneTop, SandstoneTop, true, false, RenderType::Stairs, 0, 2.0f },
+        { "Smooth Sandstone Stairs", SandstoneTop, SandstoneTop, SandstoneTop, true, false, RenderType::Stairs, 0, 2.0f },
+        { "Smooth Sandstone Stairs", SandstoneTop, SandstoneTop, SandstoneTop, true, false, RenderType::Stairs, 0, 2.0f },
+        { "Smooth Sandstone Stairs", SandstoneTop, SandstoneTop, SandstoneTop, true, false, RenderType::Stairs, 0, 2.0f },
+        { "Smooth Sandstone Stairs", SandstoneTop, SandstoneTop, SandstoneTop, true, false, RenderType::Stairs, 0, 2.0f },
+        { "Smooth Quartz Stairs", QuartzBlockBottom, QuartzBlockBottom, QuartzBlockBottom, true, false, RenderType::Stairs, 0, 2.0f },
+        { "Smooth Quartz Stairs", QuartzBlockBottom, QuartzBlockBottom, QuartzBlockBottom, true, false, RenderType::Stairs, 0, 2.0f },
+        { "Smooth Quartz Stairs", QuartzBlockBottom, QuartzBlockBottom, QuartzBlockBottom, true, false, RenderType::Stairs, 0, 2.0f },
+        { "Smooth Quartz Stairs", QuartzBlockBottom, QuartzBlockBottom, QuartzBlockBottom, true, false, RenderType::Stairs, 0, 2.0f },
+        { "Smooth Quartz Stairs", QuartzBlockBottom, QuartzBlockBottom, QuartzBlockBottom, true, false, RenderType::Stairs, 0, 2.0f },
+        { "Smooth Quartz Stairs", QuartzBlockBottom, QuartzBlockBottom, QuartzBlockBottom, true, false, RenderType::Stairs, 0, 2.0f },
+        { "Smooth Quartz Stairs", QuartzBlockBottom, QuartzBlockBottom, QuartzBlockBottom, true, false, RenderType::Stairs, 0, 2.0f },
+        { "Smooth Quartz Stairs", QuartzBlockBottom, QuartzBlockBottom, QuartzBlockBottom, true, false, RenderType::Stairs, 0, 2.0f },
+        { "Granite Stairs", Granite, Granite, Granite, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Granite Stairs", Granite, Granite, Granite, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Granite Stairs", Granite, Granite, Granite, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Granite Stairs", Granite, Granite, Granite, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Granite Stairs", Granite, Granite, Granite, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Granite Stairs", Granite, Granite, Granite, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Granite Stairs", Granite, Granite, Granite, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Granite Stairs", Granite, Granite, Granite, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Andesite Stairs", Andesite, Andesite, Andesite, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Andesite Stairs", Andesite, Andesite, Andesite, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Andesite Stairs", Andesite, Andesite, Andesite, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Andesite Stairs", Andesite, Andesite, Andesite, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Andesite Stairs", Andesite, Andesite, Andesite, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Andesite Stairs", Andesite, Andesite, Andesite, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Andesite Stairs", Andesite, Andesite, Andesite, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Andesite Stairs", Andesite, Andesite, Andesite, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Red Nether Brick Stairs", RedNetherBricksTile, RedNetherBricksTile, RedNetherBricksTile, true, false, RenderType::Stairs, 0, 2.0f },
+        { "Red Nether Brick Stairs", RedNetherBricksTile, RedNetherBricksTile, RedNetherBricksTile, true, false, RenderType::Stairs, 0, 2.0f },
+        { "Red Nether Brick Stairs", RedNetherBricksTile, RedNetherBricksTile, RedNetherBricksTile, true, false, RenderType::Stairs, 0, 2.0f },
+        { "Red Nether Brick Stairs", RedNetherBricksTile, RedNetherBricksTile, RedNetherBricksTile, true, false, RenderType::Stairs, 0, 2.0f },
+        { "Red Nether Brick Stairs", RedNetherBricksTile, RedNetherBricksTile, RedNetherBricksTile, true, false, RenderType::Stairs, 0, 2.0f },
+        { "Red Nether Brick Stairs", RedNetherBricksTile, RedNetherBricksTile, RedNetherBricksTile, true, false, RenderType::Stairs, 0, 2.0f },
+        { "Red Nether Brick Stairs", RedNetherBricksTile, RedNetherBricksTile, RedNetherBricksTile, true, false, RenderType::Stairs, 0, 2.0f },
+        { "Red Nether Brick Stairs", RedNetherBricksTile, RedNetherBricksTile, RedNetherBricksTile, true, false, RenderType::Stairs, 0, 2.0f },
+        { "Polished Andesite Stairs", PolishedAndesiteTile, PolishedAndesiteTile, PolishedAndesiteTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Polished Andesite Stairs", PolishedAndesiteTile, PolishedAndesiteTile, PolishedAndesiteTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Polished Andesite Stairs", PolishedAndesiteTile, PolishedAndesiteTile, PolishedAndesiteTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Polished Andesite Stairs", PolishedAndesiteTile, PolishedAndesiteTile, PolishedAndesiteTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Polished Andesite Stairs", PolishedAndesiteTile, PolishedAndesiteTile, PolishedAndesiteTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Polished Andesite Stairs", PolishedAndesiteTile, PolishedAndesiteTile, PolishedAndesiteTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Polished Andesite Stairs", PolishedAndesiteTile, PolishedAndesiteTile, PolishedAndesiteTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Polished Andesite Stairs", PolishedAndesiteTile, PolishedAndesiteTile, PolishedAndesiteTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Diorite Stairs", Diorite, Diorite, Diorite, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Diorite Stairs", Diorite, Diorite, Diorite, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Diorite Stairs", Diorite, Diorite, Diorite, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Diorite Stairs", Diorite, Diorite, Diorite, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Diorite Stairs", Diorite, Diorite, Diorite, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Diorite Stairs", Diorite, Diorite, Diorite, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Diorite Stairs", Diorite, Diorite, Diorite, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Diorite Stairs", Diorite, Diorite, Diorite, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Crimson Stairs", CrimsonPlanksTile, CrimsonPlanksTile, CrimsonPlanksTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Crimson Stairs", CrimsonPlanksTile, CrimsonPlanksTile, CrimsonPlanksTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Crimson Stairs", CrimsonPlanksTile, CrimsonPlanksTile, CrimsonPlanksTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Crimson Stairs", CrimsonPlanksTile, CrimsonPlanksTile, CrimsonPlanksTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Crimson Stairs", CrimsonPlanksTile, CrimsonPlanksTile, CrimsonPlanksTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Crimson Stairs", CrimsonPlanksTile, CrimsonPlanksTile, CrimsonPlanksTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Crimson Stairs", CrimsonPlanksTile, CrimsonPlanksTile, CrimsonPlanksTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Crimson Stairs", CrimsonPlanksTile, CrimsonPlanksTile, CrimsonPlanksTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Warped Stairs", WarpedPlanksTile, WarpedPlanksTile, WarpedPlanksTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Warped Stairs", WarpedPlanksTile, WarpedPlanksTile, WarpedPlanksTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Warped Stairs", WarpedPlanksTile, WarpedPlanksTile, WarpedPlanksTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Warped Stairs", WarpedPlanksTile, WarpedPlanksTile, WarpedPlanksTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Warped Stairs", WarpedPlanksTile, WarpedPlanksTile, WarpedPlanksTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Warped Stairs", WarpedPlanksTile, WarpedPlanksTile, WarpedPlanksTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Warped Stairs", WarpedPlanksTile, WarpedPlanksTile, WarpedPlanksTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Warped Stairs", WarpedPlanksTile, WarpedPlanksTile, WarpedPlanksTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Blackstone Stairs", BlackstoneTop, BlackstoneTop, BlackstoneTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Blackstone Stairs", BlackstoneTop, BlackstoneTop, BlackstoneTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Blackstone Stairs", BlackstoneTop, BlackstoneTop, BlackstoneTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Blackstone Stairs", BlackstoneTop, BlackstoneTop, BlackstoneTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Blackstone Stairs", BlackstoneTop, BlackstoneTop, BlackstoneTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Blackstone Stairs", BlackstoneTop, BlackstoneTop, BlackstoneTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Blackstone Stairs", BlackstoneTop, BlackstoneTop, BlackstoneTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Blackstone Stairs", BlackstoneTop, BlackstoneTop, BlackstoneTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Polished Blackstone Brick Stairs", PolishedBlackstoneTile, PolishedBlackstoneTile, PolishedBlackstoneTile, true, false, RenderType::Stairs, 0, 2.0f },
+        { "Polished Blackstone Brick Stairs", PolishedBlackstoneTile, PolishedBlackstoneTile, PolishedBlackstoneTile, true, false, RenderType::Stairs, 0, 2.0f },
+        { "Polished Blackstone Brick Stairs", PolishedBlackstoneTile, PolishedBlackstoneTile, PolishedBlackstoneTile, true, false, RenderType::Stairs, 0, 2.0f },
+        { "Polished Blackstone Brick Stairs", PolishedBlackstoneTile, PolishedBlackstoneTile, PolishedBlackstoneTile, true, false, RenderType::Stairs, 0, 2.0f },
+        { "Polished Blackstone Brick Stairs", PolishedBlackstoneTile, PolishedBlackstoneTile, PolishedBlackstoneTile, true, false, RenderType::Stairs, 0, 2.0f },
+        { "Polished Blackstone Brick Stairs", PolishedBlackstoneTile, PolishedBlackstoneTile, PolishedBlackstoneTile, true, false, RenderType::Stairs, 0, 2.0f },
+        { "Polished Blackstone Brick Stairs", PolishedBlackstoneTile, PolishedBlackstoneTile, PolishedBlackstoneTile, true, false, RenderType::Stairs, 0, 2.0f },
+        { "Polished Blackstone Brick Stairs", PolishedBlackstoneTile, PolishedBlackstoneTile, PolishedBlackstoneTile, true, false, RenderType::Stairs, 0, 2.0f },
+        { "Polished Blackstone Stairs", PolishedBlackstonePlainTile, PolishedBlackstonePlainTile, PolishedBlackstonePlainTile, true, false, RenderType::Stairs, 0, 2.0f },
+        { "Polished Blackstone Stairs", PolishedBlackstonePlainTile, PolishedBlackstonePlainTile, PolishedBlackstonePlainTile, true, false, RenderType::Stairs, 0, 2.0f },
+        { "Polished Blackstone Stairs", PolishedBlackstonePlainTile, PolishedBlackstonePlainTile, PolishedBlackstonePlainTile, true, false, RenderType::Stairs, 0, 2.0f },
+        { "Polished Blackstone Stairs", PolishedBlackstonePlainTile, PolishedBlackstonePlainTile, PolishedBlackstonePlainTile, true, false, RenderType::Stairs, 0, 2.0f },
+        { "Polished Blackstone Stairs", PolishedBlackstonePlainTile, PolishedBlackstonePlainTile, PolishedBlackstonePlainTile, true, false, RenderType::Stairs, 0, 2.0f },
+        { "Polished Blackstone Stairs", PolishedBlackstonePlainTile, PolishedBlackstonePlainTile, PolishedBlackstonePlainTile, true, false, RenderType::Stairs, 0, 2.0f },
+        { "Polished Blackstone Stairs", PolishedBlackstonePlainTile, PolishedBlackstonePlainTile, PolishedBlackstonePlainTile, true, false, RenderType::Stairs, 0, 2.0f },
+        { "Polished Blackstone Stairs", PolishedBlackstonePlainTile, PolishedBlackstonePlainTile, PolishedBlackstonePlainTile, true, false, RenderType::Stairs, 0, 2.0f },
+        { "Tuff Stairs", Tuff, Tuff, Tuff, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Tuff Stairs", Tuff, Tuff, Tuff, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Tuff Stairs", Tuff, Tuff, Tuff, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Tuff Stairs", Tuff, Tuff, Tuff, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Tuff Stairs", Tuff, Tuff, Tuff, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Tuff Stairs", Tuff, Tuff, Tuff, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Tuff Stairs", Tuff, Tuff, Tuff, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Tuff Stairs", Tuff, Tuff, Tuff, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Polished Tuff Stairs", PolishedTuffTile, PolishedTuffTile, PolishedTuffTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Polished Tuff Stairs", PolishedTuffTile, PolishedTuffTile, PolishedTuffTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Polished Tuff Stairs", PolishedTuffTile, PolishedTuffTile, PolishedTuffTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Polished Tuff Stairs", PolishedTuffTile, PolishedTuffTile, PolishedTuffTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Polished Tuff Stairs", PolishedTuffTile, PolishedTuffTile, PolishedTuffTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Polished Tuff Stairs", PolishedTuffTile, PolishedTuffTile, PolishedTuffTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Polished Tuff Stairs", PolishedTuffTile, PolishedTuffTile, PolishedTuffTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Polished Tuff Stairs", PolishedTuffTile, PolishedTuffTile, PolishedTuffTile, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Tuff Brick Stairs", TuffBricks, TuffBricks, TuffBricks, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Tuff Brick Stairs", TuffBricks, TuffBricks, TuffBricks, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Tuff Brick Stairs", TuffBricks, TuffBricks, TuffBricks, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Tuff Brick Stairs", TuffBricks, TuffBricks, TuffBricks, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Tuff Brick Stairs", TuffBricks, TuffBricks, TuffBricks, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Tuff Brick Stairs", TuffBricks, TuffBricks, TuffBricks, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Tuff Brick Stairs", TuffBricks, TuffBricks, TuffBricks, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Tuff Brick Stairs", TuffBricks, TuffBricks, TuffBricks, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Cut Copper Stairs", CutCopperTile + 0, CutCopperTile + 0, CutCopperTile + 0, true, false, RenderType::Stairs, 0, 3.0f },
+        { "Cut Copper Stairs", CutCopperTile + 0, CutCopperTile + 0, CutCopperTile + 0, true, false, RenderType::Stairs, 0, 3.0f },
+        { "Cut Copper Stairs", CutCopperTile + 0, CutCopperTile + 0, CutCopperTile + 0, true, false, RenderType::Stairs, 0, 3.0f },
+        { "Cut Copper Stairs", CutCopperTile + 0, CutCopperTile + 0, CutCopperTile + 0, true, false, RenderType::Stairs, 0, 3.0f },
+        { "Cut Copper Stairs", CutCopperTile + 0, CutCopperTile + 0, CutCopperTile + 0, true, false, RenderType::Stairs, 0, 3.0f },
+        { "Cut Copper Stairs", CutCopperTile + 0, CutCopperTile + 0, CutCopperTile + 0, true, false, RenderType::Stairs, 0, 3.0f },
+        { "Cut Copper Stairs", CutCopperTile + 0, CutCopperTile + 0, CutCopperTile + 0, true, false, RenderType::Stairs, 0, 3.0f },
+        { "Cut Copper Stairs", CutCopperTile + 0, CutCopperTile + 0, CutCopperTile + 0, true, false, RenderType::Stairs, 0, 3.0f },
+        { "Exposed Cut Copper Stairs", CutCopperTile + 1, CutCopperTile + 1, CutCopperTile + 1, true, false, RenderType::Stairs, 0, 3.0f },
+        { "Exposed Cut Copper Stairs", CutCopperTile + 1, CutCopperTile + 1, CutCopperTile + 1, true, false, RenderType::Stairs, 0, 3.0f },
+        { "Exposed Cut Copper Stairs", CutCopperTile + 1, CutCopperTile + 1, CutCopperTile + 1, true, false, RenderType::Stairs, 0, 3.0f },
+        { "Exposed Cut Copper Stairs", CutCopperTile + 1, CutCopperTile + 1, CutCopperTile + 1, true, false, RenderType::Stairs, 0, 3.0f },
+        { "Exposed Cut Copper Stairs", CutCopperTile + 1, CutCopperTile + 1, CutCopperTile + 1, true, false, RenderType::Stairs, 0, 3.0f },
+        { "Exposed Cut Copper Stairs", CutCopperTile + 1, CutCopperTile + 1, CutCopperTile + 1, true, false, RenderType::Stairs, 0, 3.0f },
+        { "Exposed Cut Copper Stairs", CutCopperTile + 1, CutCopperTile + 1, CutCopperTile + 1, true, false, RenderType::Stairs, 0, 3.0f },
+        { "Exposed Cut Copper Stairs", CutCopperTile + 1, CutCopperTile + 1, CutCopperTile + 1, true, false, RenderType::Stairs, 0, 3.0f },
+        { "Weathered Cut Copper Stairs", CutCopperTile + 2, CutCopperTile + 2, CutCopperTile + 2, true, false, RenderType::Stairs, 0, 3.0f },
+        { "Weathered Cut Copper Stairs", CutCopperTile + 2, CutCopperTile + 2, CutCopperTile + 2, true, false, RenderType::Stairs, 0, 3.0f },
+        { "Weathered Cut Copper Stairs", CutCopperTile + 2, CutCopperTile + 2, CutCopperTile + 2, true, false, RenderType::Stairs, 0, 3.0f },
+        { "Weathered Cut Copper Stairs", CutCopperTile + 2, CutCopperTile + 2, CutCopperTile + 2, true, false, RenderType::Stairs, 0, 3.0f },
+        { "Weathered Cut Copper Stairs", CutCopperTile + 2, CutCopperTile + 2, CutCopperTile + 2, true, false, RenderType::Stairs, 0, 3.0f },
+        { "Weathered Cut Copper Stairs", CutCopperTile + 2, CutCopperTile + 2, CutCopperTile + 2, true, false, RenderType::Stairs, 0, 3.0f },
+        { "Weathered Cut Copper Stairs", CutCopperTile + 2, CutCopperTile + 2, CutCopperTile + 2, true, false, RenderType::Stairs, 0, 3.0f },
+        { "Weathered Cut Copper Stairs", CutCopperTile + 2, CutCopperTile + 2, CutCopperTile + 2, true, false, RenderType::Stairs, 0, 3.0f },
+        { "Oxidized Cut Copper Stairs", CutCopperTile + 3, CutCopperTile + 3, CutCopperTile + 3, true, false, RenderType::Stairs, 0, 3.0f },
+        { "Oxidized Cut Copper Stairs", CutCopperTile + 3, CutCopperTile + 3, CutCopperTile + 3, true, false, RenderType::Stairs, 0, 3.0f },
+        { "Oxidized Cut Copper Stairs", CutCopperTile + 3, CutCopperTile + 3, CutCopperTile + 3, true, false, RenderType::Stairs, 0, 3.0f },
+        { "Oxidized Cut Copper Stairs", CutCopperTile + 3, CutCopperTile + 3, CutCopperTile + 3, true, false, RenderType::Stairs, 0, 3.0f },
+        { "Oxidized Cut Copper Stairs", CutCopperTile + 3, CutCopperTile + 3, CutCopperTile + 3, true, false, RenderType::Stairs, 0, 3.0f },
+        { "Oxidized Cut Copper Stairs", CutCopperTile + 3, CutCopperTile + 3, CutCopperTile + 3, true, false, RenderType::Stairs, 0, 3.0f },
+        { "Oxidized Cut Copper Stairs", CutCopperTile + 3, CutCopperTile + 3, CutCopperTile + 3, true, false, RenderType::Stairs, 0, 3.0f },
+        { "Oxidized Cut Copper Stairs", CutCopperTile + 3, CutCopperTile + 3, CutCopperTile + 3, true, false, RenderType::Stairs, 0, 3.0f },
+        { "Waxed Cut Copper Stairs", CutCopperTile + 0, CutCopperTile + 0, CutCopperTile + 0, true, false, RenderType::Stairs, 0, 3.0f },
+        { "Waxed Cut Copper Stairs", CutCopperTile + 0, CutCopperTile + 0, CutCopperTile + 0, true, false, RenderType::Stairs, 0, 3.0f },
+        { "Waxed Cut Copper Stairs", CutCopperTile + 0, CutCopperTile + 0, CutCopperTile + 0, true, false, RenderType::Stairs, 0, 3.0f },
+        { "Waxed Cut Copper Stairs", CutCopperTile + 0, CutCopperTile + 0, CutCopperTile + 0, true, false, RenderType::Stairs, 0, 3.0f },
+        { "Waxed Cut Copper Stairs", CutCopperTile + 0, CutCopperTile + 0, CutCopperTile + 0, true, false, RenderType::Stairs, 0, 3.0f },
+        { "Waxed Cut Copper Stairs", CutCopperTile + 0, CutCopperTile + 0, CutCopperTile + 0, true, false, RenderType::Stairs, 0, 3.0f },
+        { "Waxed Cut Copper Stairs", CutCopperTile + 0, CutCopperTile + 0, CutCopperTile + 0, true, false, RenderType::Stairs, 0, 3.0f },
+        { "Waxed Cut Copper Stairs", CutCopperTile + 0, CutCopperTile + 0, CutCopperTile + 0, true, false, RenderType::Stairs, 0, 3.0f },
+        { "Waxed Exposed Cut Copper Stairs", CutCopperTile + 1, CutCopperTile + 1, CutCopperTile + 1, true, false, RenderType::Stairs, 0, 3.0f },
+        { "Waxed Exposed Cut Copper Stairs", CutCopperTile + 1, CutCopperTile + 1, CutCopperTile + 1, true, false, RenderType::Stairs, 0, 3.0f },
+        { "Waxed Exposed Cut Copper Stairs", CutCopperTile + 1, CutCopperTile + 1, CutCopperTile + 1, true, false, RenderType::Stairs, 0, 3.0f },
+        { "Waxed Exposed Cut Copper Stairs", CutCopperTile + 1, CutCopperTile + 1, CutCopperTile + 1, true, false, RenderType::Stairs, 0, 3.0f },
+        { "Waxed Exposed Cut Copper Stairs", CutCopperTile + 1, CutCopperTile + 1, CutCopperTile + 1, true, false, RenderType::Stairs, 0, 3.0f },
+        { "Waxed Exposed Cut Copper Stairs", CutCopperTile + 1, CutCopperTile + 1, CutCopperTile + 1, true, false, RenderType::Stairs, 0, 3.0f },
+        { "Waxed Exposed Cut Copper Stairs", CutCopperTile + 1, CutCopperTile + 1, CutCopperTile + 1, true, false, RenderType::Stairs, 0, 3.0f },
+        { "Waxed Exposed Cut Copper Stairs", CutCopperTile + 1, CutCopperTile + 1, CutCopperTile + 1, true, false, RenderType::Stairs, 0, 3.0f },
+        { "Waxed Weathered Cut Copper Stairs", CutCopperTile + 2, CutCopperTile + 2, CutCopperTile + 2, true, false, RenderType::Stairs, 0, 3.0f },
+        { "Waxed Weathered Cut Copper Stairs", CutCopperTile + 2, CutCopperTile + 2, CutCopperTile + 2, true, false, RenderType::Stairs, 0, 3.0f },
+        { "Waxed Weathered Cut Copper Stairs", CutCopperTile + 2, CutCopperTile + 2, CutCopperTile + 2, true, false, RenderType::Stairs, 0, 3.0f },
+        { "Waxed Weathered Cut Copper Stairs", CutCopperTile + 2, CutCopperTile + 2, CutCopperTile + 2, true, false, RenderType::Stairs, 0, 3.0f },
+        { "Waxed Weathered Cut Copper Stairs", CutCopperTile + 2, CutCopperTile + 2, CutCopperTile + 2, true, false, RenderType::Stairs, 0, 3.0f },
+        { "Waxed Weathered Cut Copper Stairs", CutCopperTile + 2, CutCopperTile + 2, CutCopperTile + 2, true, false, RenderType::Stairs, 0, 3.0f },
+        { "Waxed Weathered Cut Copper Stairs", CutCopperTile + 2, CutCopperTile + 2, CutCopperTile + 2, true, false, RenderType::Stairs, 0, 3.0f },
+        { "Waxed Weathered Cut Copper Stairs", CutCopperTile + 2, CutCopperTile + 2, CutCopperTile + 2, true, false, RenderType::Stairs, 0, 3.0f },
+        { "Waxed Oxidized Cut Copper Stairs", CutCopperTile + 3, CutCopperTile + 3, CutCopperTile + 3, true, false, RenderType::Stairs, 0, 3.0f },
+        { "Waxed Oxidized Cut Copper Stairs", CutCopperTile + 3, CutCopperTile + 3, CutCopperTile + 3, true, false, RenderType::Stairs, 0, 3.0f },
+        { "Waxed Oxidized Cut Copper Stairs", CutCopperTile + 3, CutCopperTile + 3, CutCopperTile + 3, true, false, RenderType::Stairs, 0, 3.0f },
+        { "Waxed Oxidized Cut Copper Stairs", CutCopperTile + 3, CutCopperTile + 3, CutCopperTile + 3, true, false, RenderType::Stairs, 0, 3.0f },
+        { "Waxed Oxidized Cut Copper Stairs", CutCopperTile + 3, CutCopperTile + 3, CutCopperTile + 3, true, false, RenderType::Stairs, 0, 3.0f },
+        { "Waxed Oxidized Cut Copper Stairs", CutCopperTile + 3, CutCopperTile + 3, CutCopperTile + 3, true, false, RenderType::Stairs, 0, 3.0f },
+        { "Waxed Oxidized Cut Copper Stairs", CutCopperTile + 3, CutCopperTile + 3, CutCopperTile + 3, true, false, RenderType::Stairs, 0, 3.0f },
+        { "Waxed Oxidized Cut Copper Stairs", CutCopperTile + 3, CutCopperTile + 3, CutCopperTile + 3, true, false, RenderType::Stairs, 0, 3.0f },
+        { "Cobbled Deepslate Stairs", CobbledDeepslateTile, CobbledDeepslateTile, CobbledDeepslateTile, true, false, RenderType::Stairs, 0, 3.5f },
+        { "Cobbled Deepslate Stairs", CobbledDeepslateTile, CobbledDeepslateTile, CobbledDeepslateTile, true, false, RenderType::Stairs, 0, 3.5f },
+        { "Cobbled Deepslate Stairs", CobbledDeepslateTile, CobbledDeepslateTile, CobbledDeepslateTile, true, false, RenderType::Stairs, 0, 3.5f },
+        { "Cobbled Deepslate Stairs", CobbledDeepslateTile, CobbledDeepslateTile, CobbledDeepslateTile, true, false, RenderType::Stairs, 0, 3.5f },
+        { "Cobbled Deepslate Stairs", CobbledDeepslateTile, CobbledDeepslateTile, CobbledDeepslateTile, true, false, RenderType::Stairs, 0, 3.5f },
+        { "Cobbled Deepslate Stairs", CobbledDeepslateTile, CobbledDeepslateTile, CobbledDeepslateTile, true, false, RenderType::Stairs, 0, 3.5f },
+        { "Cobbled Deepslate Stairs", CobbledDeepslateTile, CobbledDeepslateTile, CobbledDeepslateTile, true, false, RenderType::Stairs, 0, 3.5f },
+        { "Cobbled Deepslate Stairs", CobbledDeepslateTile, CobbledDeepslateTile, CobbledDeepslateTile, true, false, RenderType::Stairs, 0, 3.5f },
+        { "Polished Deepslate Stairs", PolishedDeepslateTile, PolishedDeepslateTile, PolishedDeepslateTile, true, false, RenderType::Stairs, 0, 3.5f },
+        { "Polished Deepslate Stairs", PolishedDeepslateTile, PolishedDeepslateTile, PolishedDeepslateTile, true, false, RenderType::Stairs, 0, 3.5f },
+        { "Polished Deepslate Stairs", PolishedDeepslateTile, PolishedDeepslateTile, PolishedDeepslateTile, true, false, RenderType::Stairs, 0, 3.5f },
+        { "Polished Deepslate Stairs", PolishedDeepslateTile, PolishedDeepslateTile, PolishedDeepslateTile, true, false, RenderType::Stairs, 0, 3.5f },
+        { "Polished Deepslate Stairs", PolishedDeepslateTile, PolishedDeepslateTile, PolishedDeepslateTile, true, false, RenderType::Stairs, 0, 3.5f },
+        { "Polished Deepslate Stairs", PolishedDeepslateTile, PolishedDeepslateTile, PolishedDeepslateTile, true, false, RenderType::Stairs, 0, 3.5f },
+        { "Polished Deepslate Stairs", PolishedDeepslateTile, PolishedDeepslateTile, PolishedDeepslateTile, true, false, RenderType::Stairs, 0, 3.5f },
+        { "Polished Deepslate Stairs", PolishedDeepslateTile, PolishedDeepslateTile, PolishedDeepslateTile, true, false, RenderType::Stairs, 0, 3.5f },
+        { "Deepslate Tile Stairs", DeepslateTilesTile, DeepslateTilesTile, DeepslateTilesTile, true, false, RenderType::Stairs, 0, 3.5f },
+        { "Deepslate Tile Stairs", DeepslateTilesTile, DeepslateTilesTile, DeepslateTilesTile, true, false, RenderType::Stairs, 0, 3.5f },
+        { "Deepslate Tile Stairs", DeepslateTilesTile, DeepslateTilesTile, DeepslateTilesTile, true, false, RenderType::Stairs, 0, 3.5f },
+        { "Deepslate Tile Stairs", DeepslateTilesTile, DeepslateTilesTile, DeepslateTilesTile, true, false, RenderType::Stairs, 0, 3.5f },
+        { "Deepslate Tile Stairs", DeepslateTilesTile, DeepslateTilesTile, DeepslateTilesTile, true, false, RenderType::Stairs, 0, 3.5f },
+        { "Deepslate Tile Stairs", DeepslateTilesTile, DeepslateTilesTile, DeepslateTilesTile, true, false, RenderType::Stairs, 0, 3.5f },
+        { "Deepslate Tile Stairs", DeepslateTilesTile, DeepslateTilesTile, DeepslateTilesTile, true, false, RenderType::Stairs, 0, 3.5f },
+        { "Deepslate Tile Stairs", DeepslateTilesTile, DeepslateTilesTile, DeepslateTilesTile, true, false, RenderType::Stairs, 0, 3.5f },
+        { "Deepslate Brick Stairs", DeepslateBricksTile, DeepslateBricksTile, DeepslateBricksTile, true, false, RenderType::Stairs, 0, 3.5f },
+        { "Deepslate Brick Stairs", DeepslateBricksTile, DeepslateBricksTile, DeepslateBricksTile, true, false, RenderType::Stairs, 0, 3.5f },
+        { "Deepslate Brick Stairs", DeepslateBricksTile, DeepslateBricksTile, DeepslateBricksTile, true, false, RenderType::Stairs, 0, 3.5f },
+        { "Deepslate Brick Stairs", DeepslateBricksTile, DeepslateBricksTile, DeepslateBricksTile, true, false, RenderType::Stairs, 0, 3.5f },
+        { "Deepslate Brick Stairs", DeepslateBricksTile, DeepslateBricksTile, DeepslateBricksTile, true, false, RenderType::Stairs, 0, 3.5f },
+        { "Deepslate Brick Stairs", DeepslateBricksTile, DeepslateBricksTile, DeepslateBricksTile, true, false, RenderType::Stairs, 0, 3.5f },
+        { "Deepslate Brick Stairs", DeepslateBricksTile, DeepslateBricksTile, DeepslateBricksTile, true, false, RenderType::Stairs, 0, 3.5f },
+        { "Deepslate Brick Stairs", DeepslateBricksTile, DeepslateBricksTile, DeepslateBricksTile, true, false, RenderType::Stairs, 0, 3.5f },
+        { "Stone Stairs", Stone, Stone, Stone, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Stone Stairs", Stone, Stone, Stone, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Stone Stairs", Stone, Stone, Stone, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Stone Stairs", Stone, Stone, Stone, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Cobblestone Stairs", Cobblestone, Cobblestone, Cobblestone, true, false, RenderType::Stairs, 0, 1.7f },
+        { "Cobblestone Stairs", Cobblestone, Cobblestone, Cobblestone, true, false, RenderType::Stairs, 0, 1.7f },
+        { "Cobblestone Stairs", Cobblestone, Cobblestone, Cobblestone, true, false, RenderType::Stairs, 0, 1.7f },
+        { "Cobblestone Stairs", Cobblestone, Cobblestone, Cobblestone, true, false, RenderType::Stairs, 0, 1.7f },
+        { "Oak Stairs", Planks, Planks, Planks, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Oak Stairs", Planks, Planks, Planks, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Oak Stairs", Planks, Planks, Planks, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Oak Stairs", Planks, Planks, Planks, true, false, RenderType::Stairs, 0, 1.5f },
+        { "Sandstone Stairs", SandstoneTop, SandstoneBottom, SandstoneSide, true, false, RenderType::Stairs, 0, 0.8f },
+        { "Sandstone Stairs", SandstoneTop, SandstoneBottom, SandstoneSide, true, false, RenderType::Stairs, 0, 0.8f },
+        { "Sandstone Stairs", SandstoneTop, SandstoneBottom, SandstoneSide, true, false, RenderType::Stairs, 0, 0.8f },
+        { "Sandstone Stairs", SandstoneTop, SandstoneBottom, SandstoneSide, true, false, RenderType::Stairs, 0, 0.8f },
+        { "Prismarine Slab", PrismarineTile, PrismarineTile, PrismarineTile, true, false, RenderType::Slab, 0, 1.5f },
+        { "Prismarine Slab", PrismarineTile, PrismarineTile, PrismarineTile, true, false, RenderType::SlabTop, 0, 1.5f },
+        { "Prismarine Slab", PrismarineTile, PrismarineTile, PrismarineTile, true, true, RenderType::Cube, 0, 1.5f },
+        { "Prismarine Brick Slab", PrismarineBricksTile, PrismarineBricksTile, PrismarineBricksTile, true, false, RenderType::Slab, 0, 1.5f },
+        { "Prismarine Brick Slab", PrismarineBricksTile, PrismarineBricksTile, PrismarineBricksTile, true, false, RenderType::SlabTop, 0, 1.5f },
+        { "Prismarine Brick Slab", PrismarineBricksTile, PrismarineBricksTile, PrismarineBricksTile, true, true, RenderType::Cube, 0, 1.5f },
+        { "Dark Prismarine Slab", DarkPrismarineTile, DarkPrismarineTile, DarkPrismarineTile, true, false, RenderType::Slab, 0, 1.5f },
+        { "Dark Prismarine Slab", DarkPrismarineTile, DarkPrismarineTile, DarkPrismarineTile, true, false, RenderType::SlabTop, 0, 1.5f },
+        { "Dark Prismarine Slab", DarkPrismarineTile, DarkPrismarineTile, DarkPrismarineTile, true, true, RenderType::Cube, 0, 1.5f },
+        { "Spruce Slab", SprucePlanks, SprucePlanks, SprucePlanks, true, false, RenderType::Slab, 0, 1.5f },
+        { "Spruce Slab", SprucePlanks, SprucePlanks, SprucePlanks, true, false, RenderType::SlabTop, 0, 1.5f },
+        { "Spruce Slab", SprucePlanks, SprucePlanks, SprucePlanks, true, true, RenderType::Cube, 0, 1.5f },
+        { "Birch Slab", BirchPlanksTile, BirchPlanksTile, BirchPlanksTile, true, false, RenderType::Slab, 0, 1.5f },
+        { "Birch Slab", BirchPlanksTile, BirchPlanksTile, BirchPlanksTile, true, false, RenderType::SlabTop, 0, 1.5f },
+        { "Birch Slab", BirchPlanksTile, BirchPlanksTile, BirchPlanksTile, true, true, RenderType::Cube, 0, 1.5f },
+        { "Jungle Slab", JunglePlanks, JunglePlanks, JunglePlanks, true, false, RenderType::Slab, 0, 1.5f },
+        { "Jungle Slab", JunglePlanks, JunglePlanks, JunglePlanks, true, false, RenderType::SlabTop, 0, 1.5f },
+        { "Jungle Slab", JunglePlanks, JunglePlanks, JunglePlanks, true, true, RenderType::Cube, 0, 1.5f },
+        { "Acacia Slab", AcaciaPlanks, AcaciaPlanks, AcaciaPlanks, true, false, RenderType::Slab, 0, 1.5f },
+        { "Acacia Slab", AcaciaPlanks, AcaciaPlanks, AcaciaPlanks, true, false, RenderType::SlabTop, 0, 1.5f },
+        { "Acacia Slab", AcaciaPlanks, AcaciaPlanks, AcaciaPlanks, true, true, RenderType::Cube, 0, 1.5f },
+        { "Cherry Slab", CherryPlanksTile, CherryPlanksTile, CherryPlanksTile, true, false, RenderType::Slab, 0, 1.5f },
+        { "Cherry Slab", CherryPlanksTile, CherryPlanksTile, CherryPlanksTile, true, false, RenderType::SlabTop, 0, 1.5f },
+        { "Cherry Slab", CherryPlanksTile, CherryPlanksTile, CherryPlanksTile, true, true, RenderType::Cube, 0, 1.5f },
+        { "Dark Oak Slab", DarkOakPlanks, DarkOakPlanks, DarkOakPlanks, true, false, RenderType::Slab, 0, 1.5f },
+        { "Dark Oak Slab", DarkOakPlanks, DarkOakPlanks, DarkOakPlanks, true, false, RenderType::SlabTop, 0, 1.5f },
+        { "Dark Oak Slab", DarkOakPlanks, DarkOakPlanks, DarkOakPlanks, true, true, RenderType::Cube, 0, 1.5f },
+        { "Mangrove Slab", MangrovePlanksTile, MangrovePlanksTile, MangrovePlanksTile, true, false, RenderType::Slab, 0, 1.5f },
+        { "Mangrove Slab", MangrovePlanksTile, MangrovePlanksTile, MangrovePlanksTile, true, false, RenderType::SlabTop, 0, 1.5f },
+        { "Mangrove Slab", MangrovePlanksTile, MangrovePlanksTile, MangrovePlanksTile, true, true, RenderType::Cube, 0, 1.5f },
+        { "Bamboo Mosaic Slab", BambooMosaicTile, BambooMosaicTile, BambooMosaicTile, true, false, RenderType::Slab, 0, 1.5f },
+        { "Bamboo Mosaic Slab", BambooMosaicTile, BambooMosaicTile, BambooMosaicTile, true, false, RenderType::SlabTop, 0, 1.5f },
+        { "Bamboo Mosaic Slab", BambooMosaicTile, BambooMosaicTile, BambooMosaicTile, true, true, RenderType::Cube, 0, 1.5f },
+        { "Cut Sandstone Slab", SandstoneTop, SandstoneTop, CutSandstoneTile, true, false, RenderType::Slab, 0, 0.8f },
+        { "Cut Sandstone Slab", SandstoneTop, SandstoneTop, CutSandstoneTile, true, false, RenderType::SlabTop, 0, 0.8f },
+        { "Cut Sandstone Slab", SandstoneTop, SandstoneTop, CutSandstoneTile, true, true, RenderType::Cube, 0, 0.8f },
+        { "Petrified Oak Slab", Planks, Planks, Planks, true, false, RenderType::Slab, 0, 1.5f },
+        { "Petrified Oak Slab", Planks, Planks, Planks, true, false, RenderType::SlabTop, 0, 1.5f },
+        { "Petrified Oak Slab", Planks, Planks, Planks, true, true, RenderType::Cube, 0, 1.5f },
+        { "Brick Slab", Bricks, Bricks, Bricks, true, false, RenderType::Slab, 0, 2.0f },
+        { "Brick Slab", Bricks, Bricks, Bricks, true, false, RenderType::SlabTop, 0, 2.0f },
+        { "Brick Slab", Bricks, Bricks, Bricks, true, true, RenderType::Cube, 0, 2.0f },
+        { "Mud Brick Slab", MudBricksTile, MudBricksTile, MudBricksTile, true, false, RenderType::Slab, 0, 1.5f },
+        { "Mud Brick Slab", MudBricksTile, MudBricksTile, MudBricksTile, true, false, RenderType::SlabTop, 0, 1.5f },
+        { "Mud Brick Slab", MudBricksTile, MudBricksTile, MudBricksTile, true, true, RenderType::Cube, 0, 1.5f },
+        { "Cut Red Sandstone Slab", RedSandstoneTop, RedSandstoneTop, CutRedSandstoneTile, true, false, RenderType::Slab, 0, 0.8f },
+        { "Cut Red Sandstone Slab", RedSandstoneTop, RedSandstoneTop, CutRedSandstoneTile, true, false, RenderType::SlabTop, 0, 0.8f },
+        { "Cut Red Sandstone Slab", RedSandstoneTop, RedSandstoneTop, CutRedSandstoneTile, true, true, RenderType::Cube, 0, 0.8f },
+        { "Purpur Slab", PurpurTile, PurpurTile, PurpurTile, true, false, RenderType::Slab, 0, 1.5f },
+        { "Purpur Slab", PurpurTile, PurpurTile, PurpurTile, true, false, RenderType::SlabTop, 0, 1.5f },
+        { "Purpur Slab", PurpurTile, PurpurTile, PurpurTile, true, true, RenderType::Cube, 0, 1.5f },
+        { "Polished Granite Slab", PolishedGraniteTile, PolishedGraniteTile, PolishedGraniteTile, true, false, RenderType::Slab, 0, 1.5f },
+        { "Polished Granite Slab", PolishedGraniteTile, PolishedGraniteTile, PolishedGraniteTile, true, false, RenderType::SlabTop, 0, 1.5f },
+        { "Polished Granite Slab", PolishedGraniteTile, PolishedGraniteTile, PolishedGraniteTile, true, true, RenderType::Cube, 0, 1.5f },
+        { "Smooth Red Sandstone Slab", RedSandstoneTop, RedSandstoneTop, RedSandstoneTop, true, false, RenderType::Slab, 0, 2.0f },
+        { "Smooth Red Sandstone Slab", RedSandstoneTop, RedSandstoneTop, RedSandstoneTop, true, false, RenderType::SlabTop, 0, 2.0f },
+        { "Smooth Red Sandstone Slab", RedSandstoneTop, RedSandstoneTop, RedSandstoneTop, true, true, RenderType::Cube, 0, 2.0f },
+        { "Mossy Stone Brick Slab", MossyStoneBricksTile, MossyStoneBricksTile, MossyStoneBricksTile, true, false, RenderType::Slab, 0, 1.5f },
+        { "Mossy Stone Brick Slab", MossyStoneBricksTile, MossyStoneBricksTile, MossyStoneBricksTile, true, false, RenderType::SlabTop, 0, 1.5f },
+        { "Mossy Stone Brick Slab", MossyStoneBricksTile, MossyStoneBricksTile, MossyStoneBricksTile, true, true, RenderType::Cube, 0, 1.5f },
+        { "Polished Diorite Slab", PolishedDioriteTile, PolishedDioriteTile, PolishedDioriteTile, true, false, RenderType::Slab, 0, 1.5f },
+        { "Polished Diorite Slab", PolishedDioriteTile, PolishedDioriteTile, PolishedDioriteTile, true, false, RenderType::SlabTop, 0, 1.5f },
+        { "Polished Diorite Slab", PolishedDioriteTile, PolishedDioriteTile, PolishedDioriteTile, true, true, RenderType::Cube, 0, 1.5f },
+        { "Mossy Cobblestone Slab", MossyCobble, MossyCobble, MossyCobble, true, false, RenderType::Slab, 0, 1.7f },
+        { "Mossy Cobblestone Slab", MossyCobble, MossyCobble, MossyCobble, true, false, RenderType::SlabTop, 0, 1.7f },
+        { "Mossy Cobblestone Slab", MossyCobble, MossyCobble, MossyCobble, true, true, RenderType::Cube, 0, 1.7f },
+        { "End Stone Brick Slab", EndBricksTile, EndBricksTile, EndBricksTile, true, false, RenderType::Slab, 0, 3.0f },
+        { "End Stone Brick Slab", EndBricksTile, EndBricksTile, EndBricksTile, true, false, RenderType::SlabTop, 0, 3.0f },
+        { "End Stone Brick Slab", EndBricksTile, EndBricksTile, EndBricksTile, true, true, RenderType::Cube, 0, 3.0f },
+        { "Smooth Sandstone Slab", SandstoneTop, SandstoneTop, SandstoneTop, true, false, RenderType::Slab, 0, 2.0f },
+        { "Smooth Sandstone Slab", SandstoneTop, SandstoneTop, SandstoneTop, true, false, RenderType::SlabTop, 0, 2.0f },
+        { "Smooth Sandstone Slab", SandstoneTop, SandstoneTop, SandstoneTop, true, true, RenderType::Cube, 0, 2.0f },
+        { "Smooth Quartz Slab", QuartzBlockBottom, QuartzBlockBottom, QuartzBlockBottom, true, false, RenderType::Slab, 0, 2.0f },
+        { "Smooth Quartz Slab", QuartzBlockBottom, QuartzBlockBottom, QuartzBlockBottom, true, false, RenderType::SlabTop, 0, 2.0f },
+        { "Smooth Quartz Slab", QuartzBlockBottom, QuartzBlockBottom, QuartzBlockBottom, true, true, RenderType::Cube, 0, 2.0f },
+        { "Granite Slab", Granite, Granite, Granite, true, false, RenderType::Slab, 0, 1.5f },
+        { "Granite Slab", Granite, Granite, Granite, true, false, RenderType::SlabTop, 0, 1.5f },
+        { "Granite Slab", Granite, Granite, Granite, true, true, RenderType::Cube, 0, 1.5f },
+        { "Andesite Slab", Andesite, Andesite, Andesite, true, false, RenderType::Slab, 0, 1.5f },
+        { "Andesite Slab", Andesite, Andesite, Andesite, true, false, RenderType::SlabTop, 0, 1.5f },
+        { "Andesite Slab", Andesite, Andesite, Andesite, true, true, RenderType::Cube, 0, 1.5f },
+        { "Red Nether Brick Slab", RedNetherBricksTile, RedNetherBricksTile, RedNetherBricksTile, true, false, RenderType::Slab, 0, 2.0f },
+        { "Red Nether Brick Slab", RedNetherBricksTile, RedNetherBricksTile, RedNetherBricksTile, true, false, RenderType::SlabTop, 0, 2.0f },
+        { "Red Nether Brick Slab", RedNetherBricksTile, RedNetherBricksTile, RedNetherBricksTile, true, true, RenderType::Cube, 0, 2.0f },
+        { "Polished Andesite Slab", PolishedAndesiteTile, PolishedAndesiteTile, PolishedAndesiteTile, true, false, RenderType::Slab, 0, 1.5f },
+        { "Polished Andesite Slab", PolishedAndesiteTile, PolishedAndesiteTile, PolishedAndesiteTile, true, false, RenderType::SlabTop, 0, 1.5f },
+        { "Polished Andesite Slab", PolishedAndesiteTile, PolishedAndesiteTile, PolishedAndesiteTile, true, true, RenderType::Cube, 0, 1.5f },
+        { "Diorite Slab", Diorite, Diorite, Diorite, true, false, RenderType::Slab, 0, 1.5f },
+        { "Diorite Slab", Diorite, Diorite, Diorite, true, false, RenderType::SlabTop, 0, 1.5f },
+        { "Diorite Slab", Diorite, Diorite, Diorite, true, true, RenderType::Cube, 0, 1.5f },
+        { "Crimson Slab", CrimsonPlanksTile, CrimsonPlanksTile, CrimsonPlanksTile, true, false, RenderType::Slab, 0, 1.5f },
+        { "Crimson Slab", CrimsonPlanksTile, CrimsonPlanksTile, CrimsonPlanksTile, true, false, RenderType::SlabTop, 0, 1.5f },
+        { "Crimson Slab", CrimsonPlanksTile, CrimsonPlanksTile, CrimsonPlanksTile, true, true, RenderType::Cube, 0, 1.5f },
+        { "Warped Slab", WarpedPlanksTile, WarpedPlanksTile, WarpedPlanksTile, true, false, RenderType::Slab, 0, 1.5f },
+        { "Warped Slab", WarpedPlanksTile, WarpedPlanksTile, WarpedPlanksTile, true, false, RenderType::SlabTop, 0, 1.5f },
+        { "Warped Slab", WarpedPlanksTile, WarpedPlanksTile, WarpedPlanksTile, true, true, RenderType::Cube, 0, 1.5f },
+        { "Blackstone Slab", BlackstoneTop, BlackstoneTop, BlackstoneTile, true, false, RenderType::Slab, 0, 1.5f },
+        { "Blackstone Slab", BlackstoneTop, BlackstoneTop, BlackstoneTile, true, false, RenderType::SlabTop, 0, 1.5f },
+        { "Blackstone Slab", BlackstoneTop, BlackstoneTop, BlackstoneTile, true, true, RenderType::Cube, 0, 1.5f },
+        { "Polished Blackstone Brick Slab", PolishedBlackstoneTile, PolishedBlackstoneTile, PolishedBlackstoneTile, true, false, RenderType::Slab, 0, 2.0f },
+        { "Polished Blackstone Brick Slab", PolishedBlackstoneTile, PolishedBlackstoneTile, PolishedBlackstoneTile, true, false, RenderType::SlabTop, 0, 2.0f },
+        { "Polished Blackstone Brick Slab", PolishedBlackstoneTile, PolishedBlackstoneTile, PolishedBlackstoneTile, true, true, RenderType::Cube, 0, 2.0f },
+        { "Polished Tuff Slab", PolishedTuffTile, PolishedTuffTile, PolishedTuffTile, true, false, RenderType::Slab, 0, 1.5f },
+        { "Polished Tuff Slab", PolishedTuffTile, PolishedTuffTile, PolishedTuffTile, true, false, RenderType::SlabTop, 0, 1.5f },
+        { "Polished Tuff Slab", PolishedTuffTile, PolishedTuffTile, PolishedTuffTile, true, true, RenderType::Cube, 0, 1.5f },
+        { "Polished Deepslate Slab", PolishedDeepslateTile, PolishedDeepslateTile, PolishedDeepslateTile, true, false, RenderType::Slab, 0, 3.5f },
+        { "Polished Deepslate Slab", PolishedDeepslateTile, PolishedDeepslateTile, PolishedDeepslateTile, true, false, RenderType::SlabTop, 0, 3.5f },
+        { "Polished Deepslate Slab", PolishedDeepslateTile, PolishedDeepslateTile, PolishedDeepslateTile, true, true, RenderType::Cube, 0, 3.5f },
+        { "Deepslate Tile Slab", DeepslateTilesTile, DeepslateTilesTile, DeepslateTilesTile, true, false, RenderType::Slab, 0, 3.5f },
+        { "Deepslate Tile Slab", DeepslateTilesTile, DeepslateTilesTile, DeepslateTilesTile, true, false, RenderType::SlabTop, 0, 3.5f },
+        { "Deepslate Tile Slab", DeepslateTilesTile, DeepslateTilesTile, DeepslateTilesTile, true, true, RenderType::Cube, 0, 3.5f },
+        { "Deepslate Brick Slab", DeepslateBricksTile, DeepslateBricksTile, DeepslateBricksTile, true, false, RenderType::Slab, 0, 3.5f },
+        { "Deepslate Brick Slab", DeepslateBricksTile, DeepslateBricksTile, DeepslateBricksTile, true, false, RenderType::SlabTop, 0, 3.5f },
+        { "Deepslate Brick Slab", DeepslateBricksTile, DeepslateBricksTile, DeepslateBricksTile, true, true, RenderType::Cube, 0, 3.5f },
+        { "Stone Slab", Stone, Stone, Stone, true, false, RenderType::SlabTop, 0, 1.5f },
+        { "Stone Slab", Stone, Stone, Stone, true, true, RenderType::Cube, 0, 1.5f },
+        { "Cobblestone Slab", Cobblestone, Cobblestone, Cobblestone, true, false, RenderType::SlabTop, 0, 1.7f },
+        { "Cobblestone Slab", Cobblestone, Cobblestone, Cobblestone, true, true, RenderType::Cube, 0, 1.7f },
+        { "Oak Slab", Planks, Planks, Planks, true, false, RenderType::SlabTop, 0, 1.5f },
+        { "Oak Slab", Planks, Planks, Planks, true, true, RenderType::Cube, 0, 1.5f },
+        { "Sandstone Slab", SandstoneTop, SandstoneTop, SandstoneSide, true, false, RenderType::SlabTop, 0, 0.8f },
+        { "Sandstone Slab", SandstoneTop, SandstoneTop, SandstoneSide, true, true, RenderType::Cube, 0, 0.8f },
+        { "Bamboo Slab", BambooPlanksTile, BambooPlanksTile, BambooPlanksTile, true, false, RenderType::SlabTop, 0, 1.5f },
+        { "Bamboo Slab", BambooPlanksTile, BambooPlanksTile, BambooPlanksTile, true, true, RenderType::Cube, 0, 1.5f },
+        { "Smooth Stone Slab", SmoothStoneTile, SmoothStoneTile, SmoothStoneSlabSide, true, false, RenderType::SlabTop, 0, 2.0f },
+        { "Smooth Stone Slab", SmoothStoneTile, SmoothStoneTile, SmoothStoneSlabSide, true, true, RenderType::Cube, 0, 2.0f },
+        { "Stone Brick Slab", StoneBricksTile, StoneBricksTile, StoneBricksTile, true, false, RenderType::SlabTop, 0, 2.0f },
+        { "Stone Brick Slab", StoneBricksTile, StoneBricksTile, StoneBricksTile, true, true, RenderType::Cube, 0, 2.0f },
+        { "Cobbled Deepslate Slab", CobbledDeepslateTile, CobbledDeepslateTile, CobbledDeepslateTile, true, false, RenderType::SlabTop, 0, 3.5f },
+        { "Cobbled Deepslate Slab", CobbledDeepslateTile, CobbledDeepslateTile, CobbledDeepslateTile, true, true, RenderType::Cube, 0, 3.5f },
+        { "Tuff Slab", Tuff, Tuff, Tuff, true, false, RenderType::SlabTop, 0, 1.5f },
+        { "Tuff Slab", Tuff, Tuff, Tuff, true, true, RenderType::Cube, 0, 1.5f },
+        { "Tuff Brick Slab", TuffBricks, TuffBricks, TuffBricks, true, false, RenderType::SlabTop, 0, 1.5f },
+        { "Tuff Brick Slab", TuffBricks, TuffBricks, TuffBricks, true, true, RenderType::Cube, 0, 1.5f },
+        { "Polished Blackstone Slab", PolishedBlackstonePlainTile, PolishedBlackstonePlainTile, PolishedBlackstonePlainTile, true, false, RenderType::SlabTop, 0, 2.0f },
+        { "Polished Blackstone Slab", PolishedBlackstonePlainTile, PolishedBlackstonePlainTile, PolishedBlackstonePlainTile, true, true, RenderType::Cube, 0, 2.0f },
+        { "Nether Brick Slab", NetherBricks, NetherBricks, NetherBricks, true, false, RenderType::SlabTop, 0, 2.0f },
+        { "Nether Brick Slab", NetherBricks, NetherBricks, NetherBricks, true, true, RenderType::Cube, 0, 2.0f },
+        { "Quartz Slab", QuartzBlockTop, QuartzBlockTop, QuartzBlockSide, true, false, RenderType::SlabTop, 0, 2.0f },
+        { "Quartz Slab", QuartzBlockTop, QuartzBlockTop, QuartzBlockSide, true, true, RenderType::Cube, 0, 2.0f },
+        { "Red Sandstone Slab", RedSandstoneTop, RedSandstoneBottom, RedSandstoneSide, true, false, RenderType::SlabTop, 0, 2.0f },
+        { "Red Sandstone Slab", RedSandstoneTop, RedSandstoneBottom, RedSandstoneSide, true, true, RenderType::Cube, 0, 2.0f },
+        { "Cut Copper Slab", CutCopperTile + 0, CutCopperTile + 0, CutCopperTile + 0, true, false, RenderType::SlabTop, 0, 3.0f },
+        { "Cut Copper Slab", CutCopperTile + 0, CutCopperTile + 0, CutCopperTile + 0, true, true, RenderType::Cube, 0, 3.0f },
+        { "Exposed Cut Copper Slab", CutCopperTile + 1, CutCopperTile + 1, CutCopperTile + 1, true, false, RenderType::SlabTop, 0, 3.0f },
+        { "Exposed Cut Copper Slab", CutCopperTile + 1, CutCopperTile + 1, CutCopperTile + 1, true, true, RenderType::Cube, 0, 3.0f },
+        { "Weathered Cut Copper Slab", CutCopperTile + 2, CutCopperTile + 2, CutCopperTile + 2, true, false, RenderType::SlabTop, 0, 3.0f },
+        { "Weathered Cut Copper Slab", CutCopperTile + 2, CutCopperTile + 2, CutCopperTile + 2, true, true, RenderType::Cube, 0, 3.0f },
+        { "Oxidized Cut Copper Slab", CutCopperTile + 3, CutCopperTile + 3, CutCopperTile + 3, true, false, RenderType::SlabTop, 0, 3.0f },
+        { "Oxidized Cut Copper Slab", CutCopperTile + 3, CutCopperTile + 3, CutCopperTile + 3, true, true, RenderType::Cube, 0, 3.0f },
+        { "Waxed Cut Copper Slab", CutCopperTile + 0, CutCopperTile + 0, CutCopperTile + 0, true, false, RenderType::SlabTop, 0, 3.0f },
+        { "Waxed Cut Copper Slab", CutCopperTile + 0, CutCopperTile + 0, CutCopperTile + 0, true, true, RenderType::Cube, 0, 3.0f },
+        { "Waxed Exposed Cut Copper Slab", CutCopperTile + 1, CutCopperTile + 1, CutCopperTile + 1, true, false, RenderType::SlabTop, 0, 3.0f },
+        { "Waxed Exposed Cut Copper Slab", CutCopperTile + 1, CutCopperTile + 1, CutCopperTile + 1, true, true, RenderType::Cube, 0, 3.0f },
+        { "Waxed Weathered Cut Copper Slab", CutCopperTile + 2, CutCopperTile + 2, CutCopperTile + 2, true, false, RenderType::SlabTop, 0, 3.0f },
+        { "Waxed Weathered Cut Copper Slab", CutCopperTile + 2, CutCopperTile + 2, CutCopperTile + 2, true, true, RenderType::Cube, 0, 3.0f },
+        { "Waxed Oxidized Cut Copper Slab", CutCopperTile + 3, CutCopperTile + 3, CutCopperTile + 3, true, false, RenderType::SlabTop, 0, 3.0f },
+        { "Waxed Oxidized Cut Copper Slab", CutCopperTile + 3, CutCopperTile + 3, CutCopperTile + 3, true, true, RenderType::Cube, 0, 3.0f },
+        { "Spruce Fence", SprucePlanks, SprucePlanks, SprucePlanks, true, false, RenderType::Fence, 0, 1.5f },
+        { "Birch Fence", BirchPlanksTile, BirchPlanksTile, BirchPlanksTile, true, false, RenderType::Fence, 0, 1.5f },
+        { "Jungle Fence", JunglePlanks, JunglePlanks, JunglePlanks, true, false, RenderType::Fence, 0, 1.5f },
+        { "Acacia Fence", AcaciaPlanks, AcaciaPlanks, AcaciaPlanks, true, false, RenderType::Fence, 0, 1.5f },
+        { "Dark Oak Fence", DarkOakPlanks, DarkOakPlanks, DarkOakPlanks, true, false, RenderType::Fence, 0, 1.5f },
+        { "Cherry Fence", CherryPlanksTile, CherryPlanksTile, CherryPlanksTile, true, false, RenderType::Fence, 0, 1.5f },
+        { "Mangrove Fence", MangrovePlanksTile, MangrovePlanksTile, MangrovePlanksTile, true, false, RenderType::Fence, 0, 1.5f },
+        { "Bamboo Fence", BambooPlanksTile, BambooPlanksTile, BambooPlanksTile, true, false, RenderType::Fence, 0, 1.5f },
+        { "Crimson Fence", CrimsonPlanksTile, CrimsonPlanksTile, CrimsonPlanksTile, true, false, RenderType::Fence, 0, 1.5f },
+        { "Warped Fence", WarpedPlanksTile, WarpedPlanksTile, WarpedPlanksTile, true, false, RenderType::Fence, 0, 1.5f },
+        { "Nether Brick Fence", NetherBricks, NetherBricks, NetherBricks, true, false, RenderType::Fence, 0, 2.0f },
+        { "Oak Fence Gate", Planks, Planks, Planks, true, false, RenderType::Gate, 0, 1.5f },
+        { "Oak Fence Gate", Planks, Planks, Planks, true, false, RenderType::Gate, 0, 1.5f },
+        { "Oak Fence Gate", Planks, Planks, Planks, true, false, RenderType::Gate, 0, 1.5f },
+        { "Oak Fence Gate", Planks, Planks, Planks, true, false, RenderType::Gate, 0, 1.5f },
+        { "Oak Fence Gate", Planks, Planks, Planks, true, false, RenderType::Gate, 0, 1.5f },
+        { "Oak Fence Gate", Planks, Planks, Planks, true, false, RenderType::Gate, 0, 1.5f },
+        { "Oak Fence Gate", Planks, Planks, Planks, true, false, RenderType::Gate, 0, 1.5f },
+        { "Oak Fence Gate", Planks, Planks, Planks, true, false, RenderType::Gate, 0, 1.5f },
+        { "Spruce Fence Gate", SprucePlanks, SprucePlanks, SprucePlanks, true, false, RenderType::Gate, 0, 1.5f },
+        { "Spruce Fence Gate", SprucePlanks, SprucePlanks, SprucePlanks, true, false, RenderType::Gate, 0, 1.5f },
+        { "Spruce Fence Gate", SprucePlanks, SprucePlanks, SprucePlanks, true, false, RenderType::Gate, 0, 1.5f },
+        { "Spruce Fence Gate", SprucePlanks, SprucePlanks, SprucePlanks, true, false, RenderType::Gate, 0, 1.5f },
+        { "Spruce Fence Gate", SprucePlanks, SprucePlanks, SprucePlanks, true, false, RenderType::Gate, 0, 1.5f },
+        { "Spruce Fence Gate", SprucePlanks, SprucePlanks, SprucePlanks, true, false, RenderType::Gate, 0, 1.5f },
+        { "Spruce Fence Gate", SprucePlanks, SprucePlanks, SprucePlanks, true, false, RenderType::Gate, 0, 1.5f },
+        { "Spruce Fence Gate", SprucePlanks, SprucePlanks, SprucePlanks, true, false, RenderType::Gate, 0, 1.5f },
+        { "Birch Fence Gate", BirchPlanksTile, BirchPlanksTile, BirchPlanksTile, true, false, RenderType::Gate, 0, 1.5f },
+        { "Birch Fence Gate", BirchPlanksTile, BirchPlanksTile, BirchPlanksTile, true, false, RenderType::Gate, 0, 1.5f },
+        { "Birch Fence Gate", BirchPlanksTile, BirchPlanksTile, BirchPlanksTile, true, false, RenderType::Gate, 0, 1.5f },
+        { "Birch Fence Gate", BirchPlanksTile, BirchPlanksTile, BirchPlanksTile, true, false, RenderType::Gate, 0, 1.5f },
+        { "Birch Fence Gate", BirchPlanksTile, BirchPlanksTile, BirchPlanksTile, true, false, RenderType::Gate, 0, 1.5f },
+        { "Birch Fence Gate", BirchPlanksTile, BirchPlanksTile, BirchPlanksTile, true, false, RenderType::Gate, 0, 1.5f },
+        { "Birch Fence Gate", BirchPlanksTile, BirchPlanksTile, BirchPlanksTile, true, false, RenderType::Gate, 0, 1.5f },
+        { "Birch Fence Gate", BirchPlanksTile, BirchPlanksTile, BirchPlanksTile, true, false, RenderType::Gate, 0, 1.5f },
+        { "Jungle Fence Gate", JunglePlanks, JunglePlanks, JunglePlanks, true, false, RenderType::Gate, 0, 1.5f },
+        { "Jungle Fence Gate", JunglePlanks, JunglePlanks, JunglePlanks, true, false, RenderType::Gate, 0, 1.5f },
+        { "Jungle Fence Gate", JunglePlanks, JunglePlanks, JunglePlanks, true, false, RenderType::Gate, 0, 1.5f },
+        { "Jungle Fence Gate", JunglePlanks, JunglePlanks, JunglePlanks, true, false, RenderType::Gate, 0, 1.5f },
+        { "Jungle Fence Gate", JunglePlanks, JunglePlanks, JunglePlanks, true, false, RenderType::Gate, 0, 1.5f },
+        { "Jungle Fence Gate", JunglePlanks, JunglePlanks, JunglePlanks, true, false, RenderType::Gate, 0, 1.5f },
+        { "Jungle Fence Gate", JunglePlanks, JunglePlanks, JunglePlanks, true, false, RenderType::Gate, 0, 1.5f },
+        { "Jungle Fence Gate", JunglePlanks, JunglePlanks, JunglePlanks, true, false, RenderType::Gate, 0, 1.5f },
+        { "Acacia Fence Gate", AcaciaPlanks, AcaciaPlanks, AcaciaPlanks, true, false, RenderType::Gate, 0, 1.5f },
+        { "Acacia Fence Gate", AcaciaPlanks, AcaciaPlanks, AcaciaPlanks, true, false, RenderType::Gate, 0, 1.5f },
+        { "Acacia Fence Gate", AcaciaPlanks, AcaciaPlanks, AcaciaPlanks, true, false, RenderType::Gate, 0, 1.5f },
+        { "Acacia Fence Gate", AcaciaPlanks, AcaciaPlanks, AcaciaPlanks, true, false, RenderType::Gate, 0, 1.5f },
+        { "Acacia Fence Gate", AcaciaPlanks, AcaciaPlanks, AcaciaPlanks, true, false, RenderType::Gate, 0, 1.5f },
+        { "Acacia Fence Gate", AcaciaPlanks, AcaciaPlanks, AcaciaPlanks, true, false, RenderType::Gate, 0, 1.5f },
+        { "Acacia Fence Gate", AcaciaPlanks, AcaciaPlanks, AcaciaPlanks, true, false, RenderType::Gate, 0, 1.5f },
+        { "Acacia Fence Gate", AcaciaPlanks, AcaciaPlanks, AcaciaPlanks, true, false, RenderType::Gate, 0, 1.5f },
+        { "Dark Oak Fence Gate", DarkOakPlanks, DarkOakPlanks, DarkOakPlanks, true, false, RenderType::Gate, 0, 1.5f },
+        { "Dark Oak Fence Gate", DarkOakPlanks, DarkOakPlanks, DarkOakPlanks, true, false, RenderType::Gate, 0, 1.5f },
+        { "Dark Oak Fence Gate", DarkOakPlanks, DarkOakPlanks, DarkOakPlanks, true, false, RenderType::Gate, 0, 1.5f },
+        { "Dark Oak Fence Gate", DarkOakPlanks, DarkOakPlanks, DarkOakPlanks, true, false, RenderType::Gate, 0, 1.5f },
+        { "Dark Oak Fence Gate", DarkOakPlanks, DarkOakPlanks, DarkOakPlanks, true, false, RenderType::Gate, 0, 1.5f },
+        { "Dark Oak Fence Gate", DarkOakPlanks, DarkOakPlanks, DarkOakPlanks, true, false, RenderType::Gate, 0, 1.5f },
+        { "Dark Oak Fence Gate", DarkOakPlanks, DarkOakPlanks, DarkOakPlanks, true, false, RenderType::Gate, 0, 1.5f },
+        { "Dark Oak Fence Gate", DarkOakPlanks, DarkOakPlanks, DarkOakPlanks, true, false, RenderType::Gate, 0, 1.5f },
+        { "Cherry Fence Gate", CherryPlanksTile, CherryPlanksTile, CherryPlanksTile, true, false, RenderType::Gate, 0, 1.5f },
+        { "Cherry Fence Gate", CherryPlanksTile, CherryPlanksTile, CherryPlanksTile, true, false, RenderType::Gate, 0, 1.5f },
+        { "Cherry Fence Gate", CherryPlanksTile, CherryPlanksTile, CherryPlanksTile, true, false, RenderType::Gate, 0, 1.5f },
+        { "Cherry Fence Gate", CherryPlanksTile, CherryPlanksTile, CherryPlanksTile, true, false, RenderType::Gate, 0, 1.5f },
+        { "Cherry Fence Gate", CherryPlanksTile, CherryPlanksTile, CherryPlanksTile, true, false, RenderType::Gate, 0, 1.5f },
+        { "Cherry Fence Gate", CherryPlanksTile, CherryPlanksTile, CherryPlanksTile, true, false, RenderType::Gate, 0, 1.5f },
+        { "Cherry Fence Gate", CherryPlanksTile, CherryPlanksTile, CherryPlanksTile, true, false, RenderType::Gate, 0, 1.5f },
+        { "Cherry Fence Gate", CherryPlanksTile, CherryPlanksTile, CherryPlanksTile, true, false, RenderType::Gate, 0, 1.5f },
+        { "Mangrove Fence Gate", MangrovePlanksTile, MangrovePlanksTile, MangrovePlanksTile, true, false, RenderType::Gate, 0, 1.5f },
+        { "Mangrove Fence Gate", MangrovePlanksTile, MangrovePlanksTile, MangrovePlanksTile, true, false, RenderType::Gate, 0, 1.5f },
+        { "Mangrove Fence Gate", MangrovePlanksTile, MangrovePlanksTile, MangrovePlanksTile, true, false, RenderType::Gate, 0, 1.5f },
+        { "Mangrove Fence Gate", MangrovePlanksTile, MangrovePlanksTile, MangrovePlanksTile, true, false, RenderType::Gate, 0, 1.5f },
+        { "Mangrove Fence Gate", MangrovePlanksTile, MangrovePlanksTile, MangrovePlanksTile, true, false, RenderType::Gate, 0, 1.5f },
+        { "Mangrove Fence Gate", MangrovePlanksTile, MangrovePlanksTile, MangrovePlanksTile, true, false, RenderType::Gate, 0, 1.5f },
+        { "Mangrove Fence Gate", MangrovePlanksTile, MangrovePlanksTile, MangrovePlanksTile, true, false, RenderType::Gate, 0, 1.5f },
+        { "Mangrove Fence Gate", MangrovePlanksTile, MangrovePlanksTile, MangrovePlanksTile, true, false, RenderType::Gate, 0, 1.5f },
+        { "Bamboo Fence Gate", BambooPlanksTile, BambooPlanksTile, BambooPlanksTile, true, false, RenderType::Gate, 0, 1.5f },
+        { "Bamboo Fence Gate", BambooPlanksTile, BambooPlanksTile, BambooPlanksTile, true, false, RenderType::Gate, 0, 1.5f },
+        { "Bamboo Fence Gate", BambooPlanksTile, BambooPlanksTile, BambooPlanksTile, true, false, RenderType::Gate, 0, 1.5f },
+        { "Bamboo Fence Gate", BambooPlanksTile, BambooPlanksTile, BambooPlanksTile, true, false, RenderType::Gate, 0, 1.5f },
+        { "Bamboo Fence Gate", BambooPlanksTile, BambooPlanksTile, BambooPlanksTile, true, false, RenderType::Gate, 0, 1.5f },
+        { "Bamboo Fence Gate", BambooPlanksTile, BambooPlanksTile, BambooPlanksTile, true, false, RenderType::Gate, 0, 1.5f },
+        { "Bamboo Fence Gate", BambooPlanksTile, BambooPlanksTile, BambooPlanksTile, true, false, RenderType::Gate, 0, 1.5f },
+        { "Bamboo Fence Gate", BambooPlanksTile, BambooPlanksTile, BambooPlanksTile, true, false, RenderType::Gate, 0, 1.5f },
+        { "Crimson Fence Gate", CrimsonPlanksTile, CrimsonPlanksTile, CrimsonPlanksTile, true, false, RenderType::Gate, 0, 1.5f },
+        { "Crimson Fence Gate", CrimsonPlanksTile, CrimsonPlanksTile, CrimsonPlanksTile, true, false, RenderType::Gate, 0, 1.5f },
+        { "Crimson Fence Gate", CrimsonPlanksTile, CrimsonPlanksTile, CrimsonPlanksTile, true, false, RenderType::Gate, 0, 1.5f },
+        { "Crimson Fence Gate", CrimsonPlanksTile, CrimsonPlanksTile, CrimsonPlanksTile, true, false, RenderType::Gate, 0, 1.5f },
+        { "Crimson Fence Gate", CrimsonPlanksTile, CrimsonPlanksTile, CrimsonPlanksTile, true, false, RenderType::Gate, 0, 1.5f },
+        { "Crimson Fence Gate", CrimsonPlanksTile, CrimsonPlanksTile, CrimsonPlanksTile, true, false, RenderType::Gate, 0, 1.5f },
+        { "Crimson Fence Gate", CrimsonPlanksTile, CrimsonPlanksTile, CrimsonPlanksTile, true, false, RenderType::Gate, 0, 1.5f },
+        { "Crimson Fence Gate", CrimsonPlanksTile, CrimsonPlanksTile, CrimsonPlanksTile, true, false, RenderType::Gate, 0, 1.5f },
+        { "Warped Fence Gate", WarpedPlanksTile, WarpedPlanksTile, WarpedPlanksTile, true, false, RenderType::Gate, 0, 1.5f },
+        { "Warped Fence Gate", WarpedPlanksTile, WarpedPlanksTile, WarpedPlanksTile, true, false, RenderType::Gate, 0, 1.5f },
+        { "Warped Fence Gate", WarpedPlanksTile, WarpedPlanksTile, WarpedPlanksTile, true, false, RenderType::Gate, 0, 1.5f },
+        { "Warped Fence Gate", WarpedPlanksTile, WarpedPlanksTile, WarpedPlanksTile, true, false, RenderType::Gate, 0, 1.5f },
+        { "Warped Fence Gate", WarpedPlanksTile, WarpedPlanksTile, WarpedPlanksTile, true, false, RenderType::Gate, 0, 1.5f },
+        { "Warped Fence Gate", WarpedPlanksTile, WarpedPlanksTile, WarpedPlanksTile, true, false, RenderType::Gate, 0, 1.5f },
+        { "Warped Fence Gate", WarpedPlanksTile, WarpedPlanksTile, WarpedPlanksTile, true, false, RenderType::Gate, 0, 1.5f },
+        { "Warped Fence Gate", WarpedPlanksTile, WarpedPlanksTile, WarpedPlanksTile, true, false, RenderType::Gate, 0, 1.5f },
+        { "Cobblestone Wall", Cobblestone, Cobblestone, Cobblestone, true, false, RenderType::Wall, 0, 1.7f },
+        { "Mossy Cobblestone Wall", MossyCobble, MossyCobble, MossyCobble, true, false, RenderType::Wall, 0, 1.7f },
+        { "Brick Wall", Bricks, Bricks, Bricks, true, false, RenderType::Wall, 0, 2.0f },
+        { "Prismarine Wall", PrismarineTile, PrismarineTile, PrismarineTile, true, false, RenderType::Wall, 0, 1.5f },
+        { "Red Sandstone Wall", RedSandstoneTop, RedSandstoneBottom, RedSandstoneSide, true, false, RenderType::Wall, 0, 0.8f },
+        { "Mossy Stone Brick Wall", MossyStoneBricksTile, MossyStoneBricksTile, MossyStoneBricksTile, true, false, RenderType::Wall, 0, 1.5f },
+        { "Granite Wall", Granite, Granite, Granite, true, false, RenderType::Wall, 0, 1.5f },
+        { "Stone Brick Wall", StoneBricksTile, StoneBricksTile, StoneBricksTile, true, false, RenderType::Wall, 0, 1.5f },
+        { "Mud Brick Wall", MudBricksTile, MudBricksTile, MudBricksTile, true, false, RenderType::Wall, 0, 1.5f },
+        { "Nether Brick Wall", NetherBricks, NetherBricks, NetherBricks, true, false, RenderType::Wall, 0, 2.0f },
+        { "Andesite Wall", Andesite, Andesite, Andesite, true, false, RenderType::Wall, 0, 1.5f },
+        { "Red Nether Brick Wall", RedNetherBricksTile, RedNetherBricksTile, RedNetherBricksTile, true, false, RenderType::Wall, 0, 2.0f },
+        { "Sandstone Wall", SandstoneTop, SandstoneBottom, SandstoneSide, true, false, RenderType::Wall, 0, 0.8f },
+        { "End Stone Brick Wall", EndBricksTile, EndBricksTile, EndBricksTile, true, false, RenderType::Wall, 0, 3.0f },
+        { "Diorite Wall", Diorite, Diorite, Diorite, true, false, RenderType::Wall, 0, 1.5f },
+        { "Blackstone Wall", BlackstoneTop, BlackstoneTop, BlackstoneTile, true, false, RenderType::Wall, 0, 1.5f },
+        { "Polished Blackstone Brick Wall", PolishedBlackstoneTile, PolishedBlackstoneTile, PolishedBlackstoneTile, true, false, RenderType::Wall, 0, 2.0f },
+        { "Polished Blackstone Wall", PolishedBlackstonePlainTile, PolishedBlackstonePlainTile, PolishedBlackstonePlainTile, true, false, RenderType::Wall, 0, 2.0f },
+        { "Tuff Wall", Tuff, Tuff, Tuff, true, false, RenderType::Wall, 0, 1.5f },
+        { "Polished Tuff Wall", PolishedTuffTile, PolishedTuffTile, PolishedTuffTile, true, false, RenderType::Wall, 0, 1.5f },
+        { "Tuff Brick Wall", TuffBricks, TuffBricks, TuffBricks, true, false, RenderType::Wall, 0, 1.5f },
+        { "Cobbled Deepslate Wall", CobbledDeepslateTile, CobbledDeepslateTile, CobbledDeepslateTile, true, false, RenderType::Wall, 0, 3.5f },
+        { "Polished Deepslate Wall", PolishedDeepslateTile, PolishedDeepslateTile, PolishedDeepslateTile, true, false, RenderType::Wall, 0, 3.5f },
+        { "Deepslate Tile Wall", DeepslateTilesTile, DeepslateTilesTile, DeepslateTilesTile, true, false, RenderType::Wall, 0, 3.5f },
+        { "Deepslate Brick Wall", DeepslateBricksTile, DeepslateBricksTile, DeepslateBricksTile, true, false, RenderType::Wall, 0, 3.5f },
+        { "Smooth Quartz Block", QuartzBlockBottom, QuartzBlockBottom, QuartzBlockBottom, true, true, RenderType::Cube, 0, 2.0f },
+    };
+
+    static_assert(sizeof(EXT_TABLE) / sizeof(EXT_TABLE[0]) == static_cast<size_t>(Blocks::ExtCount - Blocks::ExtFirst),
+                  "every block in the second range needs a row in EXT_TABLE");
+
+    const BlockId STAIRS_BASE[STAIRS_MATERIALS] = {
+        Blocks::Stone,
+        Blocks::Cobblestone,
+        Blocks::Planks,
+        Blocks::Sandstone,
+        Blocks::Bricks,
+        Blocks::StoneBricks,
+        Blocks::MudBricks,
+        Blocks::NetherBricks,
+        Blocks::SprucePlanks,
+        Blocks::BirchPlanks,
+        Blocks::JunglePlanks,
+        Blocks::QuartzBlock,
+        Blocks::AcaciaPlanks,
+        Blocks::CherryPlanks,
+        Blocks::DarkOakPlanks,
+        Blocks::MangrovePlanks,
+        Blocks::BambooPlanks,
+        Blocks::BambooMosaic,
+        Blocks::Prismarine,
+        Blocks::PrismarineBricks,
+        Blocks::DarkPrismarine,
+        Blocks::RedSandstone,
+        Blocks::PurpurBlock,
+        Blocks::PolishedGranite,
+        Blocks::SmoothRedSandstone,
+        Blocks::MossyStoneBricks,
+        Blocks::PolishedDiorite,
+        Blocks::MossyCobblestone,
+        Blocks::EndStoneBricks,
+        Blocks::SmoothSandstone,
+        Blocks::SmoothQuartz,
+        Blocks::Granite,
+        Blocks::Andesite,
+        Blocks::RedNetherBricks,
+        Blocks::PolishedAndesite,
+        Blocks::Diorite,
+        Blocks::CrimsonPlanks,
+        Blocks::WarpedPlanks,
+        Blocks::Blackstone,
+        Blocks::PolishedBlackstoneBricks,
+        Blocks::PolishedBlackstone,
+        Blocks::Tuff,
+        Blocks::PolishedTuff,
+        Blocks::TuffBricks,
+        static_cast<BlockId>(Blocks::CutCopperFirst + 0),
+        static_cast<BlockId>(Blocks::CutCopperFirst + 1),
+        static_cast<BlockId>(Blocks::CutCopperFirst + 2),
+        static_cast<BlockId>(Blocks::CutCopperFirst + 3),
+        static_cast<BlockId>(Blocks::CutCopperFirst + 4),
+        static_cast<BlockId>(Blocks::CutCopperFirst + 5),
+        static_cast<BlockId>(Blocks::CutCopperFirst + 6),
+        static_cast<BlockId>(Blocks::CutCopperFirst + 7),
+        Blocks::CobbledDeepslate,
+        Blocks::PolishedDeepslate,
+        Blocks::DeepslateTiles,
+        Blocks::DeepslateBricks,
+    };
+    const signed char STAIRS_WOOD[STAIRS_MATERIALS] = { -1, -1, 0, -1, -1, -1, -1, -1, 1, 2, 3, -1, 4, 6, 5, 7, 8, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 9, 10, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 };
+    const BlockId SLAB_BOTTOM_OLD[SLAB_OLD] = {
+        Blocks::StoneSlab,
+        Blocks::CobblestoneSlab,
+        Blocks::PlankSlab,
+        Blocks::SandstoneSlab,
+        Blocks::BambooSlab,
+        Blocks::SmoothStoneSlab,
+        Blocks::StoneBrickSlab,
+        Blocks::CobbledDeepslateSlab,
+        Blocks::TuffSlab,
+        Blocks::TuffBrickSlab,
+        Blocks::PolishedBlackstoneSlab,
+        Blocks::NetherBrickSlab,
+        Blocks::QuartzSlab,
+        Blocks::RedSandstoneSlab,
+        static_cast<BlockId>(Blocks::CutCopperSlabFirst + 0),
+        static_cast<BlockId>(Blocks::CutCopperSlabFirst + 1),
+        static_cast<BlockId>(Blocks::CutCopperSlabFirst + 2),
+        static_cast<BlockId>(Blocks::CutCopperSlabFirst + 3),
+        static_cast<BlockId>(Blocks::CutCopperSlabFirst + 4),
+        static_cast<BlockId>(Blocks::CutCopperSlabFirst + 5),
+        static_cast<BlockId>(Blocks::CutCopperSlabFirst + 6),
+        static_cast<BlockId>(Blocks::CutCopperSlabFirst + 7),
+    };
+    const BlockId SLAB_BASE[SLAB_MATERIALS] = {
+        Blocks::Stone,
+        Blocks::Cobblestone,
+        Blocks::Planks,
+        Blocks::Sandstone,
+        Blocks::BambooPlanks,
+        Blocks::SmoothStone,
+        Blocks::StoneBricks,
+        Blocks::CobbledDeepslate,
+        Blocks::Tuff,
+        Blocks::TuffBricks,
+        Blocks::PolishedBlackstone,
+        Blocks::NetherBricks,
+        Blocks::QuartzBlock,
+        Blocks::RedSandstone,
+        static_cast<BlockId>(Blocks::CutCopperFirst + 0),
+        static_cast<BlockId>(Blocks::CutCopperFirst + 1),
+        static_cast<BlockId>(Blocks::CutCopperFirst + 2),
+        static_cast<BlockId>(Blocks::CutCopperFirst + 3),
+        static_cast<BlockId>(Blocks::CutCopperFirst + 4),
+        static_cast<BlockId>(Blocks::CutCopperFirst + 5),
+        static_cast<BlockId>(Blocks::CutCopperFirst + 6),
+        static_cast<BlockId>(Blocks::CutCopperFirst + 7),
+        Blocks::Prismarine,
+        Blocks::PrismarineBricks,
+        Blocks::DarkPrismarine,
+        Blocks::SprucePlanks,
+        Blocks::BirchPlanks,
+        Blocks::JunglePlanks,
+        Blocks::AcaciaPlanks,
+        Blocks::CherryPlanks,
+        Blocks::DarkOakPlanks,
+        Blocks::MangrovePlanks,
+        Blocks::BambooMosaic,
+        Blocks::CutSandstone,
+        Blocks::Stone,
+        Blocks::Bricks,
+        Blocks::MudBricks,
+        Blocks::CutRedSandstone,
+        Blocks::PurpurBlock,
+        Blocks::PolishedGranite,
+        Blocks::SmoothRedSandstone,
+        Blocks::MossyStoneBricks,
+        Blocks::PolishedDiorite,
+        Blocks::MossyCobblestone,
+        Blocks::EndStoneBricks,
+        Blocks::SmoothSandstone,
+        Blocks::SmoothQuartz,
+        Blocks::Granite,
+        Blocks::Andesite,
+        Blocks::RedNetherBricks,
+        Blocks::PolishedAndesite,
+        Blocks::Diorite,
+        Blocks::CrimsonPlanks,
+        Blocks::WarpedPlanks,
+        Blocks::Blackstone,
+        Blocks::PolishedBlackstoneBricks,
+        Blocks::PolishedTuff,
+        Blocks::PolishedDeepslate,
+        Blocks::DeepslateTiles,
+        Blocks::DeepslateBricks,
+    };
+    const signed char SLAB_WOOD[SLAB_MATERIALS] = { -1, -1, 0, -1, 8, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 1, 2, 3, 4, 6, 5, 7, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 9, 10, -1, -1, -1, -1, -1, -1 };
+    const BlockId WALL_BASE[WALL_MATERIALS] = {
+        Blocks::Cobblestone,
+        Blocks::MossyCobblestone,
+        Blocks::Bricks,
+        Blocks::Prismarine,
+        Blocks::RedSandstone,
+        Blocks::MossyStoneBricks,
+        Blocks::Granite,
+        Blocks::StoneBricks,
+        Blocks::MudBricks,
+        Blocks::NetherBricks,
+        Blocks::Andesite,
+        Blocks::RedNetherBricks,
+        Blocks::Sandstone,
+        Blocks::EndStoneBricks,
+        Blocks::Diorite,
+        Blocks::Blackstone,
+        Blocks::PolishedBlackstoneBricks,
+        Blocks::PolishedBlackstone,
+        Blocks::Tuff,
+        Blocks::PolishedTuff,
+        Blocks::TuffBricks,
+        Blocks::CobbledDeepslate,
+        Blocks::PolishedDeepslate,
+        Blocks::DeepslateTiles,
+        Blocks::DeepslateBricks,
+    };
 }
 
 const BlockInfo& blockInfo(BlockId id)
 {
-    if (id >= Blocks::Count) return TABLE[Blocks::Air];
-    return TABLE[id];
+    if (id < Blocks::Count) return TABLE[id];
+    if (id >= Blocks::ExtFirst && id < Blocks::ExtCount) return EXT_TABLE[id - Blocks::ExtFirst];
+    return TABLE[Blocks::Air];
+}
+
+int stairsMaterial(BlockId id)
+{
+    if (id >= Blocks::StoneStairsNorth && id <= Blocks::SandstoneStairsWest) return (id - Blocks::StoneStairsNorth) / 4;
+    if (id >= Blocks::StairsTopFirst && id <= Blocks::StairsTopLast) return (id - Blocks::StairsTopFirst) / 4;
+    if (id >= Blocks::StairsRunFirst && id <= Blocks::StairsRunLast) return STAIRS_OLD + (id - Blocks::StairsRunFirst) / 8;
+    return -1;
+}
+
+bool stairsUpsideDown(BlockId id)
+{
+    if (id >= Blocks::StairsTopFirst && id <= Blocks::StairsTopLast) return true;
+    if (id >= Blocks::StairsRunFirst && id <= Blocks::StairsRunLast) return (((id - Blocks::StairsRunFirst) / 4) & 1) != 0;
+    return false;
+}
+
+int stairsFacingOf(BlockId id)
+{
+    if (id >= Blocks::StoneStairsNorth && id <= Blocks::SandstoneStairsWest) return (id - Blocks::StoneStairsNorth) & 3;
+    if (id >= Blocks::StairsTopFirst && id <= Blocks::StairsTopLast) return (id - Blocks::StairsTopFirst) & 3;
+    if (id >= Blocks::StairsRunFirst && id <= Blocks::StairsRunLast) return (id - Blocks::StairsRunFirst) & 3;
+    return 0;
+}
+
+BlockId stairsOf(int material, bool upsideDown, int facing)
+{
+    if (material < 0 || material >= STAIRS_MATERIALS) material = 0;
+    facing &= 3;
+    if (material < STAIRS_OLD)
+        return static_cast<BlockId>((upsideDown ? Blocks::StairsTopFirst : Blocks::StoneStairsNorth) + material * 4 + facing);
+    return static_cast<BlockId>(Blocks::StairsRunFirst + (material - STAIRS_OLD) * 8 + (upsideDown ? 4 : 0) + facing);
+}
+
+BlockId stairsMaterialBase(int material)
+{
+    return material >= 0 && material < STAIRS_MATERIALS ? STAIRS_BASE[material] : static_cast<BlockId>(Blocks::Air);
+}
+
+int stairsMaterialWood(int material)
+{
+    return material >= 0 && material < STAIRS_MATERIALS ? STAIRS_WOOD[material] : -1;
+}
+
+int slabMaterial(BlockId id)
+{
+    if (id >= Blocks::SlabRunFirst && id <= Blocks::SlabRunLast) return SLAB_OLD + (id - Blocks::SlabRunFirst) / 3;
+    if (id >= Blocks::SlabExtraFirst && id <= Blocks::SlabExtraLast) return (id - Blocks::SlabExtraFirst) / 2;
+    if (blockInfo(id).render != RenderType::Slab) return -1;
+    for (int m = 0; m < SLAB_OLD; ++m)
+        if (SLAB_BOTTOM_OLD[m] == id) return m;
+    return -1;
+}
+
+int slabHalf(BlockId id)
+{
+    if (id >= Blocks::SlabRunFirst && id <= Blocks::SlabRunLast) return (id - Blocks::SlabRunFirst) % 3;
+    if (id >= Blocks::SlabExtraFirst && id <= Blocks::SlabExtraLast) return 1 + (id - Blocks::SlabExtraFirst) % 2;
+    return slabMaterial(id) >= 0 ? 0 : -1;
+}
+
+BlockId slabOf(int material, int half)
+{
+    if (material < 0 || material >= SLAB_MATERIALS) material = 0;
+    if (half < 0 || half > 2) half = 0;
+    if (material < SLAB_OLD)
+        return half == 0 ? SLAB_BOTTOM_OLD[material]
+                         : static_cast<BlockId>(Blocks::SlabExtraFirst + material * 2 + half - 1);
+    return static_cast<BlockId>(Blocks::SlabRunFirst + (material - SLAB_OLD) * 3 + half);
+}
+
+BlockId slabMaterialBase(int material)
+{
+    return material >= 0 && material < SLAB_MATERIALS ? SLAB_BASE[material] : static_cast<BlockId>(Blocks::Air);
+}
+
+int slabMaterialWood(int material)
+{
+    return material >= 0 && material < SLAB_MATERIALS ? SLAB_WOOD[material] : -1;
+}
+
+BlockId wallMaterialBase(int material)
+{
+    return material >= 0 && material < WALL_MATERIALS ? WALL_BASE[material] : static_cast<BlockId>(Blocks::Air);
+}
+
+BlockId fenceOfWood(int wood)
+{
+    if (wood <= 0 || wood >= WOOD_COUNT) return Blocks::OakFence;
+    return static_cast<BlockId>(Blocks::FenceRunFirst + wood - 1);
+}
+
+int fenceWood(BlockId id)
+{
+    if (id == Blocks::OakFence) return 0;
+    if (id >= Blocks::FenceRunFirst && id < Blocks::FenceRunLast) return id - Blocks::FenceRunFirst + 1;
+    return -1;
+}
+
+BlockId shapeBase(BlockId id)
+{
+    if (isStairs(id)) return stairsMaterialBase(stairsMaterial(id));
+    if (const int slab = slabMaterial(id); slab >= 0) return slabMaterialBase(slab);
+    if (isWall(id)) return wallMaterialBase(wallMaterial(id));
+    if (isFenceGate(id)) return planksOfWood(gateWood(id));
+    if (id == Blocks::FenceRunLast) return Blocks::NetherBricks;
+    if (isFence(id)) return planksOfWood(std::max(0, fenceWood(id)));
+    return Blocks::Air;
+}
+
+int shapeWood(BlockId id)
+{
+    if (isStairs(id)) return stairsMaterialWood(stairsMaterial(id));
+    if (const int slab = slabMaterial(id); slab >= 0) return slabMaterialWood(slab);
+    if (isFenceGate(id)) return gateWood(id);
+    if (isFence(id)) return fenceWood(id);
+    return -1;
 }
 
 bool isObtainable(BlockId id)
@@ -2962,7 +3976,9 @@ bool isObtainable(BlockId id)
 
             // Likewise for stairs: one of each four is the thing you
             // hold, the rest are it turned round.
-            if (isStairs(id) && blockFacing(id) != 0) return false;
+            if (isStairs(id) && (blockFacing(id) != 0 || stairsUpsideDown(id))) return false;
+            if (isSlabBlock(id) && slabHalf(id) != 0) return false;
+            if (isFenceGate(id) && id != gateOf(gateWood(id), false, 0)) return false;
 
             // A door is held as one item and placed as two blocks, so
             // only the shut lower north half is a thing in your hand.
@@ -2972,13 +3988,14 @@ bool isObtainable(BlockId id)
             if (id == Blocks::MangrovePropaguleHanging) return false;
             if (id == Blocks::WeepingVinesPlant || id == Blocks::TwistingVinesPlant) return false;
 
-            return id < Blocks::Count;
+            return isBlockId(id);
     }
 }
 
 const char* blockSoundGroup(BlockId id)
 {
     if (isFluid(id)) return nullptr;
+    if (const BlockId base = shapeBase(id); base != Blocks::Air && base != id) return blockSoundGroup(base);
     // By family, so a wood added later sounds like wood rather than
     // like whatever the default happens to be.
     if (isLeaves(id)) return "grass";
@@ -3126,6 +4143,7 @@ int blockStepVariants(const char* group)
 Material blockMaterial(BlockId id)
 {
     if (isCrop(id)) return Material::Plant;
+    if (const BlockId base = shapeBase(id); base != Blocks::Air && base != id) return blockMaterial(base);
 
     // Asked of the family, so a wood added later is wood and its leaves
     // are leaves without anyone having to remember this function. Named
@@ -3414,29 +4432,42 @@ bool blockOverlaps(BlockId id, int bx, int by, int bz,
         return false;
     }
 
-    if (isFence(id))
+    if (isFence(id) || isWall(id))
     {
-        // The post, standing half a block proud of its own cell so it
-        // cannot be stepped over. The arms are thin enough not to be
-        // worth colliding against on their own.
-        return overlaps(0.375f, 0.0f, 0.375f, 0.625f, 1.5f, 0.625f);
+        const float post = isWall(id) ? 0.25f : 0.375f;
+        const float arm = isWall(id) ? 0.3125f : 0.375f;
+        if (overlaps(post, 0.0f, post, 1.0f - post, 1.5f, 1.0f - post)) return true;
+        if (links == 15 && !isWall(id)) return false;
+        if ((links & 1) && overlaps(arm, 0.0f, 0.0f, 1.0f - arm, 1.5f, post)) return true;
+        if ((links & 2) && overlaps(arm, 0.0f, 1.0f - post, 1.0f - arm, 1.5f, 1.0f)) return true;
+        if ((links & 4) && overlaps(0.0f, 0.0f, arm, post, 1.5f, 1.0f - arm)) return true;
+        if ((links & 8) && overlaps(1.0f - post, 0.0f, arm, 1.0f, 1.5f, 1.0f - arm)) return true;
+        return false;
     }
+
+    if (isFenceGate(id))
+    {
+        if (gateOpen(id)) return false;
+        if ((gateFacing(id) & 1) == 0) return overlaps(0.0f, 0.0f, 0.375f, 1.0f, 1.5f, 0.625f);
+        return overlaps(0.375f, 0.0f, 0.0f, 0.625f, 1.5f, 1.0f);
+    }
+
+    if (isTopSlab(id)) return overlaps(0.0f, 0.5f, 0.0f, 1.0f, 1.0f, 1.0f);
 
     if (isStairs(id))
     {
-        // The bottom half of the cell, and a step on the back half of
-        // the top of it.
-        if (overlaps(0.0f, 0.0f, 0.0f, 1.0f, 0.5f, 1.0f)) return true;
-
-        float loX = 0.0f, loZ = 0.0f, hiX = 1.0f, hiZ = 1.0f;
-        switch (blockFacing(id))
+        const bool top = stairsUpsideDown(id);
+        if (top ? overlaps(0.0f, 0.5f, 0.0f, 1.0f, 1.0f, 1.0f) : overlaps(0.0f, 0.0f, 0.0f, 1.0f, 0.5f, 1.0f)) return true;
+        const int quadrants = (links & 0x100) ? (links >> 4) & 15 : stairsSideQuadrants(stairsBack(id));
+        const float loY = top ? 0.0f : 0.5f;
+        for (int q = 0; q < 4; ++q)
         {
-            case 0: loZ = 0.5f; break;
-            case 1: hiX = 0.5f; break;
-            case 2: hiZ = 0.5f; break;
-            default: loX = 0.5f; break;
+            if (!(quadrants & (1 << q))) continue;
+            const float x0 = (q & 1) ? 0.5f : 0.0f;
+            const float z0 = (q & 2) ? 0.5f : 0.0f;
+            if (overlaps(x0, loY, z0, x0 + 0.5f, loY + 0.5f, z0 + 0.5f)) return true;
         }
-        return overlaps(loX, 0.5f, loZ, hiX, 1.0f, hiZ);
+        return false;
     }
 
     return overlaps(0.0f, 0.0f, 0.0f, 1.0f, blockHeight(id), 1.0f);

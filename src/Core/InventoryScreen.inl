@@ -268,7 +268,7 @@ namespace
     {
         static const std::vector<StackId> everything = []() {
             std::vector<StackId> list;
-            for (BlockId id = 1; id < Blocks::Count; ++id)
+            for (int id = 1; isBlockId(id); id = nextBlockId(id))
                 if (isObtainable(id)) list.push_back(id);
             for (StackId id = Items::FIRST; id < Items::Count; ++id)
                 list.push_back(id);
@@ -283,6 +283,23 @@ namespace
         {
             items = allStacks().data();
             count = static_cast<int>(allStacks().size());
+            return;
+        }
+        if (tab == 0)
+        {
+            static const std::vector<StackId> building = []() {
+                std::vector<StackId> list(std::begin(TAB_BUILDING), std::end(TAB_BUILDING));
+                for (int m = STAIRS_OLD; m < STAIRS_MATERIALS; ++m) list.push_back(stairsOf(m, false, 0));
+                for (int m = SLAB_OLD; m < SLAB_MATERIALS; ++m) list.push_back(slabOf(m, 0));
+                for (int w = 1; w < WOOD_COUNT; ++w) list.push_back(fenceOfWood(w));
+                list.push_back(static_cast<StackId>(Blocks::FenceRunLast));
+                for (int w = 0; w < WOOD_COUNT; ++w) list.push_back(gateOf(w, false, 0));
+                for (int m = 0; m < WALL_MATERIALS; ++m) list.push_back(static_cast<StackId>(Blocks::WallRunFirst + m));
+                list.push_back(Blocks::SmoothQuartz);
+                return list;
+            }();
+            items = building.data();
+            count = static_cast<int>(building.size());
             return;
         }
         items = CREATIVE_TABS[tab].items;

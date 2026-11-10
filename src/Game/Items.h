@@ -520,7 +520,7 @@ inline int woodOfSignItem(StackId id)
     return -1;
 }
 // Everything below the items is a block, Air included.
-inline bool isBlockStack(StackId id) { return id < Items::FIRST; }
+inline bool isBlockStack(StackId id) { return id < Items::FIRST || (id >= Blocks::ExtFirst && id < Blocks::ExtCount); }
 // Only call this once isBlockStack has said yes.
 inline BlockId asBlock(StackId id) { return static_cast<BlockId>(id); }
 

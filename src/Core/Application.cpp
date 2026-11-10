@@ -2848,7 +2848,7 @@ bool Application::frame()
             m_startupScreen == "boom" || m_startupScreen == "tnt" ||
             m_startupScreen == "portal" || m_startupScreen == "nether" ||
             m_startupScreen == "bucket" || m_startupScreen == "ladder" ||
-            m_startupScreen == "stairs" || m_startupScreen == "fence" ||
+            m_startupScreen == "stairs" || m_startupScreen == "fence" || m_startupScreen == "shapes" ||
             m_startupScreen == "door" || m_startupScreen == "hand" ||
             m_startupScreen == "handempty" || m_startupScreen == "handitem" ||
             m_startupScreen == "creativeinv" || m_startupScreen == "creativesearch" || m_startupScreen == "eggs" || m_startupScreen == "potions" ||
@@ -2916,6 +2916,7 @@ bool Application::frame()
                                   m_startupScreen != "boom" &&
                                   m_startupScreen != "ladder" &&
                                   m_startupScreen != "stairs" &&
+                                  m_startupScreen != "shapes" &&
                                   m_startupScreen != "fence" &&
                                   m_startupScreen != "door" &&
                                   m_startupScreen != "hand" &&
@@ -3171,6 +3172,53 @@ bool Application::frame()
                 for (int f = 0; f < 4; ++f)
                     m_world->setBlock(bx + f - 1, by, bz + 2,
                                       stairsFacing(Blocks::CobbleStairsNorth, f));
+            }
+
+            if (m_startupScreen == "shapes")
+            {
+                m_player.position.y = 112.0f;
+                m_camera.pitch = -24.0f;
+                m_camera.addLook(0.0f, 0.0f, 0.0f);
+                const glm::vec3 ahead = m_player.position + m_camera.front * 7.0f;
+                const int bx = static_cast<int>(std::floor(ahead.x));
+                const int by = static_cast<int>(std::floor(m_player.position.y));
+                const int bz = static_cast<int>(std::floor(ahead.z));
+                for (int dx = -16; dx <= 16; ++dx)
+                    for (int dz = -16; dz <= 16; ++dz)
+                    {
+                        m_world->setBlock(bx + dx, by - 1, bz + dz, Blocks::SmoothStone);
+                        for (int dy = 0; dy < 12; ++dy) m_world->setBlock(bx + dx, by + dy, bz + dz, Blocks::Air);
+                    }
+                const int granite = STAIRS_OLD + 27;
+                m_world->setBlock(bx - 5, by, bz - 2, stairsOf(granite, false, 0));
+                m_world->setBlock(bx - 4, by, bz - 2, stairsOf(granite, false, 0));
+                m_world->setBlock(bx - 3, by, bz - 2, stairsOf(granite, false, 3));
+                m_world->setBlock(bx - 3, by, bz - 1, stairsOf(granite, false, 3));
+                m_world->setBlock(bx - 5, by + 1, bz + 1, stairsOf(STAIRS_OLD + 1, true, 2));
+                m_world->setBlock(bx - 4, by + 1, bz + 1, stairsOf(STAIRS_OLD + 1, true, 2));
+                m_world->setBlock(bx - 2, by, bz + 1, slabOf(SLAB_OLD + 25, 0));
+                m_world->setBlock(bx - 1, by, bz + 1, slabOf(SLAB_OLD + 25, 1));
+                m_world->setBlock(bx, by, bz + 1, slabOf(SLAB_OLD + 25, 2));
+                m_world->setBlock(bx + 1, by, bz + 1, slabOf(SLAB_OLD + 3, 0));
+                for (int i = 0; i < 4; ++i) m_world->setBlock(bx - 1 + i, by, bz - 3, fenceOfWood(6));
+                m_world->setBlock(bx + 3, by, bz - 3, gateOf(6, false, 0));
+                m_world->setBlock(bx + 4, by, bz - 3, fenceOfWood(6));
+                m_world->setBlock(bx + 4, by, bz - 2, gateOf(9, true, 1));
+                for (int i = 0; i < 4; ++i) m_world->setBlock(bx + 2 + i, by, bz, static_cast<BlockId>(Blocks::WallRunFirst + 7));
+                m_world->setBlock(bx + 5, by, bz + 1, static_cast<BlockId>(Blocks::WallRunFirst + 7));
+                m_world->setBlock(bx + 5, by + 1, bz + 1, static_cast<BlockId>(Blocks::WallRunFirst + 7));
+                m_world->setBlock(bx + 2, by, bz + 2, Blocks::SmoothQuartz);
+                m_world->setBlock(bx + 3, by, bz + 2, static_cast<BlockId>(Blocks::FenceRunLast));
+                m_player.position = glm::vec3(bx + 0.5f, by + 4.0f, bz + 0.5f) - m_camera.front * 9.0f;
+                m_player.position.y = static_cast<float>(by) + 4.0f;
+                for (int dx = -1; dx <= 1; ++dx)
+                    for (int dz = -1; dz <= 1; ++dz)
+                        m_world->setBlock(static_cast<int>(std::floor(m_player.position.x)) + dx, by + 3,
+                                          static_cast<int>(std::floor(m_player.position.z)) + dz, Blocks::Glass);
+                m_player.velocity = glm::vec3(0.0f);
+                m_player.clearFall();
+                m_camera.pitch = -30.0f;
+                m_camera.addLook(0.0f, 0.0f, 0.0f);
             }
 
             if (m_startupScreen == "rain" || m_startupScreen == "storm")
@@ -8931,6 +8979,8 @@ void Application::updateMining(float deltaTime)
                 }
 
                 if (isCandle(id)) dropped = candleCount(id);
+                if (isSlabBlock(id)) dropped = slabHalf(id) == 2 ? 2 : 1;
+                if (isShapeFamily(id) && !silk) dropped = isSlabBlock(id) && slabHalf(id) == 2 ? 2 : 1;
                 if (id == Blocks::Clay && drop == Items::ClayBall) dropped = 4;
                 if ((id == Blocks::SeaLantern && drop == Items::PrismarineCrystals) || (id == Blocks::Glowstone && drop == Items::GlowstoneDust))
                 {
@@ -15252,6 +15302,19 @@ void Application::handlePlacement()
                 return;
             }
             if (isIronTrapdoor(used)) return;
+            if (isFenceGate(used))
+            {
+                const glm::vec3 look = m_camera.front;
+                const int toward = (std::fabs(look.x) > std::fabs(look.z)) ? (look.x > 0.0f ? 1 : 3) : (look.z > 0.0f ? 2 : 0);
+                int facing = gateFacing(used);
+                if (!gateOpen(used) && toward == ((facing + 2) & 3)) facing = toward;
+                const BlockId swung = gateOf(gateWood(used), !gateOpen(used), facing);
+                m_world->setBlock(bench.block.x, bench.block.y, bench.block.z, swung);
+                m_net.onLocalBlockChange(bench.block.x, bench.block.y, bench.block.z, swung);
+                m_audio.play(Sound::DigWood, 0.6f, gateOpen(swung) ? 1.2f : 0.9f);
+                vibrate(glm::vec3(bench.block) + glm::vec3(0.5f), gateOpen(swung) ? 10 : 9);
+                return;
+            }
             if (isDiode(used) || isDaylightDetector(used))
             {
                 BlockId next = used;
@@ -16782,6 +16845,34 @@ void Application::handlePlacement()
         }
     }
 
+    if (isBlockStack(stack.id) && isSlabBlock(asBlock(stack.id)))
+    {
+        const int material = slabMaterial(asBlock(stack.id));
+        const AABB body = m_player.aabb();
+        auto merge = [&](const glm::ivec3& at, int wantedHalf) {
+            const BlockId there = m_world->getBlock(at.x, at.y, at.z);
+            if (slabMaterial(there) != material || slabHalf(there) == 2) return false;
+            if (wantedHalf >= 0 && slabHalf(there) != wantedHalf) return false;
+            if (!m_border.containsBlock(at.x, at.z)) return false;
+            if (body.max.x > at.x && body.min.x < at.x + 1 && body.max.y > at.y && body.min.y < at.y + 1 &&
+                body.max.z > at.z && body.min.z < at.z + 1)
+                return false;
+            const BlockId full = slabOf(material, 2);
+            m_world->setBlock(at.x, at.y, at.z, full);
+            m_net.onLocalBlockChange(at.x, at.y, at.z, full);
+            m_audio.playPlace(full);
+            if (!m_player.creative())
+            {
+                stack.count -= 1;
+                if (stack.count <= 0) stack.clear();
+            }
+            return true;
+        };
+        if (hit.normal.y > 0 && merge(hit.block, 0)) return;
+        if (hit.normal.y < 0 && merge(hit.block, 1)) return;
+        if (merge(hit.previous, -1)) return;
+    }
+
     const glm::ivec3 target = hit.previous;
     if (!m_border.containsBlock(target.x, target.z)) return;
     const BlockId existing = m_world->getBlock(target.x, target.y, target.z);
@@ -17115,7 +17206,21 @@ void Application::handlePlacement()
         const int facing = (std::fabs(look.x) > std::fabs(look.z))
                                ? (look.x > 0.0f ? 3 : 1)    // walking east, step faces west
                                : (look.z > 0.0f ? 0 : 2);
-        placing = stairsFacing(placing, facing);
+        const glm::vec3 point = m_camera.position + m_camera.front * hit.distance;
+        const bool top = hit.normal.y < 0 || (hit.normal.y == 0 && point.y - std::floor(point.y) > 0.5f);
+        placing = stairsOf(stairsMaterial(placing), top, facing);
+    }
+    if (isSlabBlock(placing))
+    {
+        const glm::vec3 point = m_camera.position + m_camera.front * hit.distance;
+        const bool top = hit.normal.y < 0 || (hit.normal.y == 0 && point.y - std::floor(point.y) > 0.5f);
+        placing = slabOf(slabMaterial(placing), top ? 1 : 0);
+    }
+    if (isFenceGate(placing))
+    {
+        const glm::vec3 look = m_camera.front;
+        const int toward = (std::fabs(look.x) > std::fabs(look.z)) ? (look.x > 0.0f ? 1 : 3) : (look.z > 0.0f ? 2 : 0);
+        placing = gateOf(gateWood(placing), false, toward);
     }
 
     // A ladder hangs on whichever wall you aimed at, so the id it is
@@ -18314,7 +18419,7 @@ bool Application::loadStructure(const glm::ivec3& at, const StructureState& stat
             {
                 uint16_t stored = 0;
                 if (!in.read(reinterpret_cast<char*>(&stored), sizeof(stored))) break;
-                if (stored == 0xFFFFu || stored >= static_cast<uint16_t>(Blocks::Count)) continue;
+                if (stored == 0xFFFFu || !isBlockId(stored)) continue;
                 const glm::ivec3 p = origin + glm::ivec3(x, y, z);
                 if (p == at || p.y < 0 || p.y >= Chunk::SY) continue;
                 m_world->setBlock(p.x, p.y, p.z, static_cast<BlockId>(stored));

@@ -735,7 +735,7 @@ namespace
         const std::vector<StackId> outputs = Crafting::everyOutput();
 
         std::vector<StackId> made = outputs;
-        for (int b = 0; b < static_cast<int>(Blocks::Count); ++b)
+        for (int b = 0; isBlockId(b); b = nextBlockId(b))
             made.push_back(static_cast<StackId>(b));
 
         for (StackId id : made)
@@ -761,7 +761,7 @@ namespace
         std::printf("  %-26s %s\n", "-----------", "------------------");
 
         int unexplained = 0;
-        for (int b = 1; b < static_cast<int>(Blocks::Count); ++b)
+        for (int b = 1; isBlockId(b); b = nextBlockId(b))
         {
             const BlockId id = static_cast<BlockId>(b);
             if (reachable.count(b)) continue;
@@ -780,6 +780,10 @@ namespace
             else if (isLadder(id) || isStairs(id) || isRail(id) ||
                      isSign(id) || isFrame(id))
                                                   why = "another facing of a crafted block";
+            else if (isSlabBlock(id) && slabHalf(id) != 0)
+                                                  why = "a slab set in the top half, or two set together";
+            else if (isFenceGate(id))             why = "another facing, or the gate swung open";
+            else if (slabMaterial(id) == PETRIFIED_SLAB) why = "creative only, as in Minecraft";
 
             // A crop is sown, not set down, and the eight ids it
             // spans are the eight stages of it growing.
@@ -900,7 +904,7 @@ namespace
         std::set<int> haveItem;
 
         // What falls out of a block you can get.
-        for (int b = 0; b < static_cast<int>(Blocks::Count); ++b)
+        for (int b = 0; isBlockId(b); b = nextBlockId(b))
             if (reachable.count(b))
             {
                 const StackId drop = blockDrop(static_cast<BlockId>(b));
@@ -936,7 +940,7 @@ namespace
             const StackId fired = Smelting::resultOf(static_cast<StackId>(i));
             if (fired != Blocks::Air) haveItem.insert(fired);
         }
-        for (int b = 0; b < static_cast<int>(Blocks::Count); ++b)
+        for (int b = 0; isBlockId(b); b = nextBlockId(b))
         {
             const StackId fired = Smelting::resultOf(static_cast<StackId>(b));
             if (fired != Blocks::Air) haveItem.insert(fired);

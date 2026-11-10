@@ -679,9 +679,23 @@ namespace Blocks
         HangingSignFirst, HangingSignLast = HangingSignFirst + 175,
         WallHangingSignFirst, WallHangingSignLast = WallHangingSignFirst + 43,
 
-        Count
+        Count,
+
+        ExtFirst = 8192,
+        StairsRunFirst = ExtFirst, StairsRunLast = StairsRunFirst + 415,
+        StairsTopFirst, StairsTopLast = StairsTopFirst + 15,
+        SlabRunFirst, SlabRunLast = SlabRunFirst + 113,
+        SlabExtraFirst, SlabExtraLast = SlabExtraFirst + 43,
+        FenceRunFirst, FenceRunLast = FenceRunFirst + 10,
+        FenceGateFirst, FenceGateLast = FenceGateFirst + 87,
+        WallRunFirst, WallRunLast = WallRunFirst + 24,
+        SmoothQuartz,
+        ExtCount
     };
 }
+
+inline bool isBlockId(int id) { return (id >= 0 && id < Blocks::Count) || (id >= Blocks::ExtFirst && id < Blocks::ExtCount); }
+inline int nextBlockId(int id) { return id + 1 == Blocks::Count ? Blocks::ExtFirst : id + 1; }
 
 enum class RenderType : uint8_t
 {
@@ -703,7 +717,10 @@ enum class RenderType : uint8_t
     Chest,
     Rod,
     Pot,
-    Lush
+    Lush,
+    SlabTop,
+    Gate,
+    Wall
 };
 
 struct BlockInfo
@@ -727,6 +744,54 @@ struct BlockInfo
 };
 
 const BlockInfo& blockInfo(BlockId id);
+
+constexpr int STAIRS_MATERIALS = 56;
+constexpr int SLAB_OLD = 22;
+constexpr int SLAB_MATERIALS = 60;
+constexpr int WALL_MATERIALS = 25;
+constexpr int STAIRS_OLD = 4;
+constexpr int PETRIFIED_SLAB = SLAB_OLD + 12;
+int stairsMaterial(BlockId id);
+bool stairsUpsideDown(BlockId id);
+int stairsFacingOf(BlockId id);
+BlockId stairsOf(int material, bool upsideDown, int facing);
+BlockId stairsMaterialBase(int material);
+int stairsMaterialWood(int material);
+int slabMaterial(BlockId id);
+int slabHalf(BlockId id);
+BlockId slabOf(int material, int half);
+BlockId slabMaterialBase(int material);
+int slabMaterialWood(int material);
+inline bool isSlabBlock(BlockId id) { return slabMaterial(id) >= 0; }
+inline bool isTopSlab(BlockId id) { return blockInfo(id).render == RenderType::SlabTop; }
+inline bool isFenceGate(BlockId id) { return id >= Blocks::FenceGateFirst && id <= Blocks::FenceGateLast; }
+inline int gateWood(BlockId id) { return (id - Blocks::FenceGateFirst) / 8; }
+inline bool gateOpen(BlockId id) { return isFenceGate(id) && ((id - Blocks::FenceGateFirst) & 4) != 0; }
+inline int gateFacing(BlockId id) { return (id - Blocks::FenceGateFirst) & 3; }
+inline BlockId gateOf(int wood, bool open, int facing)
+{
+    if (wood < 0 || wood > 10) wood = 0;
+    return static_cast<BlockId>(Blocks::FenceGateFirst + wood * 8 + (open ? 4 : 0) + (facing & 3));
+}
+inline bool isWall(BlockId id) { return id >= Blocks::WallRunFirst && id <= Blocks::WallRunLast; }
+BlockId wallMaterialBase(int material);
+inline int wallMaterial(BlockId id) { return isWall(id) ? id - Blocks::WallRunFirst : -1; }
+BlockId fenceOfWood(int wood);
+int fenceWood(BlockId id);
+BlockId shapeBase(BlockId id);
+int shapeWood(BlockId id);
+inline bool isShapeFamily(BlockId id) { return shapeBase(id) != 0; }
+inline BlockId shaderStandIn(BlockId id)
+{
+    for (int hop = 0; hop < 3 && id >= Blocks::Count; ++hop)
+    {
+        if (id == Blocks::SmoothQuartz) return Blocks::QuartzBlock;
+        const BlockId base = shapeBase(id);
+        if (base == 0) return Blocks::Stone;
+        id = base;
+    }
+    return id >= Blocks::Count ? static_cast<BlockId>(Blocks::Stone) : id;
+}
 
 inline bool isAir(BlockId id) { return id == Blocks::Air; }
 inline bool isOpaque(BlockId id) { return blockInfo(id).opaque; }
@@ -1866,6 +1931,77 @@ int paneLinks(At at)
     if (paneJoins(at(1, 0))) links |= 8;
     return links;
 }
+
+inline int stairsBack(BlockId id) { return (stairsFacingOf(id) + 2) & 3; }
+inline int stairsSideQuadrants(int direction)
+{
+    static const int SIDES[4] = { 3, 10, 12, 5 };
+    return SIDES[direction & 3];
+}
+template <typename At>
+int stairsQuadrantsAt(BlockId id, At at)
+{
+    static const int DX[4] = { 0, 1, 0, -1 };
+    static const int DZ[4] = { -1, 0, 1, 0 };
+    const int back = stairsBack(id);
+    const bool top = stairsUpsideDown(id);
+    auto matching = [&](BlockId other) { return isStairs(other) && stairsUpsideDown(other) == top; };
+    auto different = [&](int direction) {
+        const BlockId other = at(DX[direction], DZ[direction]);
+        return !isStairs(other) || stairsBack(other) != back || stairsUpsideDown(other) != top;
+    };
+    const BlockId behind = at(DX[back], DZ[back]);
+    if (matching(behind))
+    {
+        const int turn = stairsBack(behind);
+        if ((turn & 1) != (back & 1) && different((turn + 2) & 3))
+            return stairsSideQuadrants(back) & stairsSideQuadrants(turn);
+    }
+    const int front = (back + 2) & 3;
+    const BlockId ahead = at(DX[front], DZ[front]);
+    if (matching(ahead))
+    {
+        const int turn = stairsBack(ahead);
+        if ((turn & 1) != (back & 1) && different(turn))
+            return stairsSideQuadrants(back) | (stairsSideQuadrants(front) & stairsSideQuadrants(turn));
+    }
+    return stairsSideQuadrants(back);
+}
+inline bool fenceJoins(BlockId self, BlockId other)
+{
+    if (isFence(other)) return (fenceWood(self) >= 0) == (fenceWood(other) >= 0);
+    if (isFenceGate(other)) return fenceWood(self) >= 0;
+    return blockInfo(other).opaque && blockInfo(other).render == RenderType::Cube;
+}
+inline bool wallJoins(BlockId other)
+{
+    return isWall(other) || isFenceGate(other) || blockInfo(other).render == RenderType::Pane ||
+           (blockInfo(other).opaque && blockInfo(other).render == RenderType::Cube);
+}
+template <typename At>
+int shapeLinks(BlockId id, At at)
+{
+    if (isPane(id)) return paneLinks(at);
+    if (isStairs(id)) return 0x100 | (stairsQuadrantsAt(id, at) << 4);
+    int links = 0;
+    if (isFence(id))
+    {
+        if (fenceJoins(id, at(0, -1))) links |= 1;
+        if (fenceJoins(id, at(0, 1))) links |= 2;
+        if (fenceJoins(id, at(-1, 0))) links |= 4;
+        if (fenceJoins(id, at(1, 0))) links |= 8;
+        return links;
+    }
+    if (isWall(id))
+    {
+        if (wallJoins(at(0, -1))) links |= 1;
+        if (wallJoins(at(0, 1))) links |= 2;
+        if (wallJoins(at(-1, 0))) links |= 4;
+        if (wallJoins(at(1, 0))) links |= 8;
+        return links;
+    }
+    return 15;
+}
 inline int runColour(BlockId id, BlockId first) { return inRun(id, first) ? id - first : 0; }
 inline BlockId colourIn(BlockId first, int colour)
 {
@@ -1975,7 +2111,8 @@ inline int blockFacing(BlockId id)
     if (isLadder(id)) return id - Blocks::LadderNorth;
     if (isSign(id)) return signFacing(id);
     if (isFrame(id)) return frameFacing(id);
-    if (isStairs(id)) return (id - Blocks::StoneStairsNorth) & 3;
+    if (isStairs(id)) return stairsFacingOf(id);
+    if (isFenceGate(id)) return gateFacing(id);
     if (isDoor(id)) return (id - doorBase(id)) & 3;
     if (isTrapdoor(id)) return trapdoorFacing(id);
     if (isPiston(id)) return pistonFacing(id);
@@ -2006,8 +2143,7 @@ inline BlockId ladderFacing(int facing)
 inline BlockId stairsFacing(BlockId stairs, int facing)
 {
     if (!isStairs(stairs)) return stairs;
-    const int base = ((stairs - Blocks::StoneStairsNorth) & ~3) + Blocks::StoneStairsNorth;
-    return static_cast<BlockId>(base + (facing & 3));
+    return stairsOf(stairsMaterial(stairs), stairsUpsideDown(stairs), facing);
 }
 
 // How tall the block actually stands in its own cell. Everything is a
@@ -2195,7 +2331,7 @@ inline bool isFlammable(BlockId id)
 {
     if (isLog(id) || isPlanks(id) || isLeaves(id) || isWool(id)) return true;
     if (isDoublePlant(id) || isHive(id) || isComposter(id)) return true;
-    if (id >= Blocks::PlankStairsNorth && id <= Blocks::PlankStairsWest) return true;
+    if (shapeWood(id) >= 0) return true;
     switch (id)
     {
         case Blocks::Bookshelf: case Blocks::HayBale: case Blocks::TallGrass: case Blocks::Fern:

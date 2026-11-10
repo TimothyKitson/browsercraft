@@ -199,9 +199,7 @@ bool Player::collides(const World& world, const AABB& box) const
                         return true;
                     continue;
                 }
-                const int links = isPane(here)
-                    ? paneLinks([&](int dx, int dz) { return world.getBlock(x + dx, y, z + dz); })
-                    : 15;
+                const int links = shapeLinks(here, [&](int dx, int dz) { return world.getBlock(x + dx, y, z + dz); });
                 if (blockOverlaps(here, x, y, z,
                                   box.min.x, box.min.y, box.min.z,
                                   box.max.x, box.max.y, box.max.z, links))

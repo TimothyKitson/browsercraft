@@ -66,7 +66,7 @@ namespace
         // Two slabs side by side each show the face between them: one is
         // not hidden by the other the way two full blocks would be, and
         // hiding it would leave a hole through a slab floor.
-        if (isSlab(self) || isSlab(neighbour)) return true;
+        if (isSlab(self) || isSlab(neighbour) || isTopSlab(self) || isTopSlab(neighbour)) return true;
 
         // Leaves are the exception to hiding the inside of a volume. A
         // canopy meshed as a hollow shell is one layer of cut-out tiles
@@ -102,7 +102,7 @@ namespace
     constexpr int CROSS_FACE = 6;
     float tagOf(int face, BlockId id, bool top = false)
     {
-        return static_cast<float>(face + 8 * static_cast<int>(id) + (top ? 32768 : 0));
+        return static_cast<float>(face + 8 * static_cast<int>(shaderStandIn(id)) + (top ? 32768 : 0));
     }
 
     struct ColumnTint
@@ -122,14 +122,14 @@ namespace
     const std::vector<uint8_t>& tintClasses()
     {
         static const std::vector<uint8_t> TABLE = [] {
-            std::vector<uint8_t> table(static_cast<size_t>(Blocks::Count), NO_TINT);
+            std::vector<uint8_t> table(static_cast<size_t>(Blocks::ExtCount), NO_TINT);
             const BlockId grassy[] = { Blocks::TallGrass, Blocks::Fern, Blocks::SugarCane, doublePlantOf(DoublePlant::TallGrass, false),
                                        doublePlantOf(DoublePlant::TallGrass, true), doublePlantOf(DoublePlant::LargeFern, false),
                                        doublePlantOf(DoublePlant::LargeFern, true) };
             for (BlockId id : grassy) table[static_cast<size_t>(id)] = GRASS_TINT;
             const BlockId leafy[] = { Blocks::Leaves, Blocks::JungleLeaves, Blocks::AcaciaLeaves, Blocks::DarkOakLeaves, Blocks::MangroveLeaves, Blocks::Vine };
             for (BlockId id : leafy) table[static_cast<size_t>(id)] = FOLIAGE_TINT;
-            for (int id = 0; id < static_cast<int>(Blocks::Count); ++id)
+            for (int id = 0; isBlockId(id); id = nextBlockId(id))
                 if (isWater(static_cast<BlockId>(id))) table[static_cast<size_t>(id)] = WATER_TINT;
             table[static_cast<size_t>(Blocks::Grass)] = GRASS_BLOCK;
             return table;
@@ -1410,20 +1410,87 @@ namespace
     void emitStairs(const MeshSnapshot& snap, int lx, int y, int lz,
                     BlockId id, std::vector<float>& out)
     {
-        emitBox(snap, lx, y, lz, id, glm::vec3(0.0f), glm::vec3(1.0f, 0.5f, 1.0f), out);
+        const bool top = stairsUpsideDown(id);
+        const float slabLo = top ? 0.5f : 0.0f;
+        const float stepLo = top ? 0.0f : 0.5f;
+        emitBox(snap, lx, y, lz, id, glm::vec3(0.0f, slabLo, 0.0f), glm::vec3(1.0f, slabLo + 0.5f, 1.0f), out);
 
-        glm::vec3 lo(0.0f, 0.5f, 0.0f);
-        glm::vec3 hi(1.0f, 1.0f, 1.0f);
-
-        switch (blockFacing(id))
+        const int quadrants = stairsQuadrantsAt(id, [&](int dx, int dz) { return snap.block(lx + dx, y, lz + dz); });
+        for (int side = 0; side < 4; ++side)
+            if (quadrants == stairsSideQuadrants(side))
+            {
+                glm::vec3 lo(0.0f, stepLo, 0.0f), hi(1.0f, stepLo + 0.5f, 1.0f);
+                if (side == 0) hi.z = 0.5f;
+                else if (side == 1) lo.x = 0.5f;
+                else if (side == 2) lo.z = 0.5f;
+                else hi.x = 0.5f;
+                emitBox(snap, lx, y, lz, id, lo, hi, out);
+                return;
+            }
+        for (int q = 0; q < 4; ++q)
         {
-            case 0: lo.z = 0.5f; break;   // faces north, step at the south end
-            case 1: hi.x = 0.5f; break;   // faces east, step at the west end
-            case 2: hi.z = 0.5f; break;   // faces south, step at the north end
-            default: lo.x = 0.5f; break;  // faces west, step at the east end
+            if (!(quadrants & (1 << q))) continue;
+            const float x0 = (q & 1) ? 0.5f : 0.0f;
+            const float z0 = (q & 2) ? 0.5f : 0.0f;
+            emitBox(snap, lx, y, lz, id, glm::vec3(x0, stepLo, z0), glm::vec3(x0 + 0.5f, stepLo + 0.5f, z0 + 0.5f), out);
         }
+    }
 
-        emitBox(snap, lx, y, lz, id, lo, hi, out);
+    void emitGate(const MeshSnapshot& snap, int lx, int y, int lz, BlockId id, std::vector<float>& out)
+    {
+        const int facing = gateFacing(id);
+        const bool across = (facing & 1) == 0;
+        const bool flip = facing == 0 || facing == 3;
+        auto box = [&](float x0, float y0, float z0, float x1, float y1, float z1) {
+            if (flip)
+            {
+                const float a = 16.0f - z1, b = 16.0f - z0;
+                z0 = a;
+                z1 = b;
+            }
+            glm::vec3 lo(x0, y0, z0), hi(x1, y1, z1);
+            if (!across)
+            {
+                lo = glm::vec3(z0, y0, x0);
+                hi = glm::vec3(z1, y1, x1);
+            }
+            emitBox(snap, lx, y, lz, id, lo / 16.0f, hi / 16.0f, out);
+        };
+        box(0, 5, 7, 2, 16, 9);
+        box(14, 5, 7, 16, 16, 9);
+        if (!gateOpen(id))
+        {
+            box(6, 6, 7, 8, 15, 9);
+            box(8, 6, 7, 10, 15, 9);
+            box(2, 6, 7, 6, 9, 9);
+            box(2, 12, 7, 6, 15, 9);
+            box(10, 6, 7, 14, 9, 9);
+            box(10, 12, 7, 14, 15, 9);
+        }
+        else
+        {
+            box(0, 6, 13, 2, 15, 15);
+            box(0, 6, 9, 2, 9, 13);
+            box(0, 12, 9, 2, 15, 13);
+            box(14, 6, 13, 16, 15, 15);
+            box(14, 6, 9, 16, 9, 13);
+            box(14, 12, 9, 16, 15, 13);
+        }
+    }
+
+    void emitWall(const MeshSnapshot& snap, int lx, int y, int lz, BlockId id, std::vector<float>& out)
+    {
+        const int links = shapeLinks(id, [&](int dx, int dz) { return snap.block(lx + dx, y, lz + dz); });
+        const BlockId above = snap.block(lx, y + 1, lz);
+        const bool straight = links == 3 || links == 12;
+        const bool tall = isWall(above) || (blockInfo(above).opaque && isSolid(above));
+        if (!straight || links == 0 || isWall(above))
+            emitBox(snap, lx, y, lz, id, glm::vec3(0.25f, 0.0f, 0.25f), glm::vec3(0.75f, 1.0f, 0.75f), out);
+        const float height = tall ? 1.0f : 0.875f;
+        if (links & 1) emitBox(snap, lx, y, lz, id, glm::vec3(0.3125f, 0.0f, 0.0f), glm::vec3(0.6875f, height, 0.5f), out);
+        if (links & 2) emitBox(snap, lx, y, lz, id, glm::vec3(0.3125f, 0.0f, 0.5f), glm::vec3(0.6875f, height, 1.0f), out);
+        if (links & 4) emitBox(snap, lx, y, lz, id, glm::vec3(0.0f, 0.0f, 0.3125f), glm::vec3(0.5f, height, 0.6875f), out);
+        if (links & 8) emitBox(snap, lx, y, lz, id, glm::vec3(0.5f, 0.0f, 0.3125f), glm::vec3(1.0f, height, 0.6875f), out);
     }
 
     // A door: a thin slab on one edge of its cell. Shut, it lies across
@@ -1484,14 +1551,9 @@ namespace
         constexpr float RAIL_LO = 0.4375f, RAIL_HI = 0.5625f;
 
         emitBox(snap, lx, y, lz, id, glm::vec3(POST_LO, 0.0f, POST_LO),
-                glm::vec3(POST_HI, 1.5f, POST_HI), out);
+                glm::vec3(POST_HI, 1.0f, POST_HI), out);
 
-        // Anything solid is worth joining on to, which is what lets a
-        // fence meet a wall without leaving a gap.
-        auto joins = [&](int dx, int dz) {
-            const BlockId other = snap.block(lx + dx, y, lz + dz);
-            return isFence(other) || isOpaque(other);
-        };
+        auto joins = [&](int dx, int dz) { return fenceJoins(id, snap.block(lx + dx, y, lz + dz)); };
 
         // The two rails of an arm, at the heights Minecraft puts them.
         const float railY[2][2] = { { 0.375f, 0.5625f }, { 0.8125f, 1.0f } };
@@ -1969,6 +2031,18 @@ void buildChunkMesh(const MeshSnapshot& snapshot, MeshResult& out)
                 else if (isStairs(id))
                 {
                     emitStairs(snapshot, lx, y, lz, id, out.opaqueVertices);
+                }
+                else if (isTopSlab(id))
+                {
+                    emitBox(snapshot, lx, y, lz, id, glm::vec3(0.0f, 0.5f, 0.0f), glm::vec3(1.0f), out.opaqueVertices);
+                }
+                else if (isFenceGate(id))
+                {
+                    emitGate(snapshot, lx, y, lz, id, out.opaqueVertices);
+                }
+                else if (isWall(id))
+                {
+                    emitWall(snapshot, lx, y, lz, id, out.opaqueVertices);
                 }
                 else if (isFence(id))
                 {

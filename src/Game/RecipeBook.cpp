@@ -161,7 +161,7 @@ namespace
             recipe.group = RecipeBook::cookingGroup(book, result);
             out.push_back(recipe);
         };
-        for (int block = 1; block < static_cast<int>(Blocks::Count); ++block) consider(static_cast<StackId>(block));
+        for (int block = 1; isBlockId(block); block = nextBlockId(block)) consider(static_cast<StackId>(block));
         for (StackId item = Items::FIRST; item < Items::Count; ++item) consider(item);
         return out;
     }
@@ -314,7 +314,7 @@ int RecipeBook::timesCraftable(const Recipe& recipe, const Stock& stock, int lim
 std::vector<StackId> RecipeBook::fuels()
 {
     std::vector<StackId> out;
-    for (int block = 1; block < static_cast<int>(Blocks::Count); ++block)
+    for (int block = 1; isBlockId(block); block = nextBlockId(block))
         if (Smelting::isFuel(static_cast<StackId>(block))) out.push_back(static_cast<StackId>(block));
     for (StackId item = Items::FIRST; item < Items::Count; ++item)
         if (Smelting::isFuel(item)) out.push_back(item);
@@ -372,7 +372,7 @@ StackId RecipeBook::stackNamed(const std::string& id)
 {
     static const std::map<std::string, StackId> NAMES = [] {
         std::map<std::string, StackId> out;
-        for (int block = 1; block < static_cast<int>(Blocks::Count); ++block)
+        for (int block = 1; isBlockId(block); block = nextBlockId(block))
             out.emplace(idOf(static_cast<StackId>(block)), static_cast<StackId>(block));
         for (StackId item = Items::FIRST; item < Items::Count; ++item) out.emplace(idOf(item), item);
         static const std::pair<const char*, StackId> ALIASES[] = {

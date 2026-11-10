@@ -42,11 +42,12 @@ namespace
         std::string target = lower(wanted);
         if (target.rfind("minecraft:", 0) == 0) target = target.substr(10);
 
+        std::vector<StackId> stacks;
+        for (int id = 1; isBlockId(id); id = nextBlockId(id)) stacks.push_back(static_cast<StackId>(id));
+        for (int id = Items::FIRST; id < static_cast<int>(Items::Count); ++id) stacks.push_back(static_cast<StackId>(id));
         for (int pass = 0; pass < 2; ++pass)
-            for (int id = 1; id < static_cast<int>(Items::Count); ++id)
+            for (const StackId stack : stacks)
             {
-                const StackId stack = static_cast<StackId>(id);
-                if (!isItem(stack) && stack >= static_cast<StackId>(Blocks::Count)) continue;
                 if (pass == 0 && !isItem(stack) && !isObtainable(asBlock(stack))) continue;
 
                 std::string name = lower(displayName(stack));

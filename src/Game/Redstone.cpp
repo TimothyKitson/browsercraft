@@ -43,7 +43,7 @@ namespace Redstone
     bool isSink(BlockId id)
     {
         return id == Blocks::RedstoneLamp || id == Blocks::RedstoneLampLit ||
-               isNoteBlock(id) || isDoor(id) || isTrapdoor(id) ||
+               isNoteBlock(id) || isDoor(id) || isTrapdoor(id) || isFenceGate(id) ||
                specialRailFamily(id) == 1 || specialRailFamily(id) == 3;
     }
 
@@ -59,6 +59,7 @@ namespace Redstone
             return doorPart(doorBase(id), blockFacing(id), doorIsTop(id), true);
         if (isTrapdoor(id) && !trapdoorIsOpen(id))
             return trapdoorPart(trapdoorBase(id), trapdoorFacing(id), trapdoorIsTop(id), true);
+        if (isFenceGate(id) && !gateOpen(id)) return gateOf(gateWood(id), true, gateFacing(id));
         return id;
     }
 
@@ -74,6 +75,7 @@ namespace Redstone
             return doorPart(doorBase(id), blockFacing(id), doorIsTop(id), false);
         if (isTrapdoor(id) && trapdoorIsOpen(id))
             return trapdoorPart(trapdoorBase(id), trapdoorFacing(id), trapdoorIsTop(id), false);
+        if (isFenceGate(id) && gateOpen(id)) return gateOf(gateWood(id), false, gateFacing(id));
         return id;
     }
 

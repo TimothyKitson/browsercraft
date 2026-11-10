@@ -1223,6 +1223,107 @@ namespace
         { false, 1, 3, { Items::Diamond, Items::Stick, Items::Stick }, 0, Items::DiamondShovel, 1 },
         { false, 1, 3, { Items::Diamond, Items::Diamond, Items::Stick }, 0, Items::DiamondSword, 1 },
         { false, 2, 3, { Items::Diamond, Items::Diamond, _, Items::Stick, _, Items::Stick }, 0, Items::DiamondHoe, 1 },
+        { false, 3, 1, { Blocks::Andesite, Blocks::Andesite, Blocks::Andesite }, 0, slabOf(48, 0), 6 },
+        { false, 3, 3, { Blocks::Andesite, _, _, Blocks::Andesite, Blocks::Andesite, _, Blocks::Andesite, Blocks::Andesite, Blocks::Andesite }, 0, stairsOf(32, false, 0), 4 },
+        { false, 3, 2, { Blocks::Andesite, Blocks::Andesite, Blocks::Andesite, Blocks::Andesite, Blocks::Andesite, Blocks::Andesite }, 0, static_cast<StackId>(Blocks::WallRunFirst + 10), 6 },
+        { false, 3, 1, { Blocks::BambooMosaic, Blocks::BambooMosaic, Blocks::BambooMosaic }, 0, slabOf(32, 0), 6 },
+        { false, 3, 3, { Blocks::BambooMosaic, _, _, Blocks::BambooMosaic, Blocks::BambooMosaic, _, Blocks::BambooMosaic, Blocks::BambooMosaic, Blocks::BambooMosaic }, 0, stairsOf(17, false, 0), 4 },
+        { false, 3, 1, { Blocks::Blackstone, Blocks::Blackstone, Blocks::Blackstone }, 0, slabOf(54, 0), 6 },
+        { false, 3, 3, { Blocks::Blackstone, _, _, Blocks::Blackstone, Blocks::Blackstone, _, Blocks::Blackstone, Blocks::Blackstone, Blocks::Blackstone }, 0, stairsOf(38, false, 0), 4 },
+        { false, 3, 2, { Blocks::Blackstone, Blocks::Blackstone, Blocks::Blackstone, Blocks::Blackstone, Blocks::Blackstone, Blocks::Blackstone }, 0, static_cast<StackId>(Blocks::WallRunFirst + 15), 6 },
+        { false, 3, 1, { Blocks::Bricks, Blocks::Bricks, Blocks::Bricks }, 0, slabOf(35, 0), 6 },
+        { false, 3, 3, { Blocks::Bricks, _, _, Blocks::Bricks, Blocks::Bricks, _, Blocks::Bricks, Blocks::Bricks, Blocks::Bricks }, 0, stairsOf(4, false, 0), 4 },
+        { false, 3, 2, { Blocks::Bricks, Blocks::Bricks, Blocks::Bricks, Blocks::Bricks, Blocks::Bricks, Blocks::Bricks }, 0, static_cast<StackId>(Blocks::WallRunFirst + 2), 6 },
+        { false, 3, 3, { Blocks::CobbledDeepslate, _, _, Blocks::CobbledDeepslate, Blocks::CobbledDeepslate, _, Blocks::CobbledDeepslate, Blocks::CobbledDeepslate, Blocks::CobbledDeepslate }, 0, stairsOf(52, false, 0), 4 },
+        { false, 3, 2, { Blocks::CobbledDeepslate, Blocks::CobbledDeepslate, Blocks::CobbledDeepslate, Blocks::CobbledDeepslate, Blocks::CobbledDeepslate, Blocks::CobbledDeepslate }, 0, static_cast<StackId>(Blocks::WallRunFirst + 21), 6 },
+        { false, 3, 2, { Blocks::Cobblestone, Blocks::Cobblestone, Blocks::Cobblestone, Blocks::Cobblestone, Blocks::Cobblestone, Blocks::Cobblestone }, 0, static_cast<StackId>(Blocks::WallRunFirst + 0), 6 },
+        { false, 3, 3, { Blocks::CutCopperFirst, _, _, Blocks::CutCopperFirst, Blocks::CutCopperFirst, _, Blocks::CutCopperFirst, Blocks::CutCopperFirst, Blocks::CutCopperFirst }, 0, stairsOf(44, false, 0), 4 },
+        { false, 3, 1, { Blocks::CutRedSandstone, Blocks::CutRedSandstone, Blocks::CutRedSandstone }, 0, slabOf(37, 0), 6 },
+        { false, 3, 1, { Blocks::CutSandstone, Blocks::CutSandstone, Blocks::CutSandstone }, 0, slabOf(33, 0), 6 },
+        { false, 3, 1, { Blocks::DarkPrismarine, Blocks::DarkPrismarine, Blocks::DarkPrismarine }, 0, slabOf(24, 0), 6 },
+        { false, 3, 3, { Blocks::DarkPrismarine, _, _, Blocks::DarkPrismarine, Blocks::DarkPrismarine, _, Blocks::DarkPrismarine, Blocks::DarkPrismarine, Blocks::DarkPrismarine }, 0, stairsOf(20, false, 0), 4 },
+        { false, 3, 1, { Blocks::DeepslateBricks, Blocks::DeepslateBricks, Blocks::DeepslateBricks }, 0, slabOf(59, 0), 6 },
+        { false, 3, 3, { Blocks::DeepslateBricks, _, _, Blocks::DeepslateBricks, Blocks::DeepslateBricks, _, Blocks::DeepslateBricks, Blocks::DeepslateBricks, Blocks::DeepslateBricks }, 0, stairsOf(55, false, 0), 4 },
+        { false, 3, 2, { Blocks::DeepslateBricks, Blocks::DeepslateBricks, Blocks::DeepslateBricks, Blocks::DeepslateBricks, Blocks::DeepslateBricks, Blocks::DeepslateBricks }, 0, static_cast<StackId>(Blocks::WallRunFirst + 24), 6 },
+        { false, 3, 1, { Blocks::DeepslateTiles, Blocks::DeepslateTiles, Blocks::DeepslateTiles }, 0, slabOf(58, 0), 6 },
+        { false, 3, 3, { Blocks::DeepslateTiles, _, _, Blocks::DeepslateTiles, Blocks::DeepslateTiles, _, Blocks::DeepslateTiles, Blocks::DeepslateTiles, Blocks::DeepslateTiles }, 0, stairsOf(54, false, 0), 4 },
+        { false, 3, 2, { Blocks::DeepslateTiles, Blocks::DeepslateTiles, Blocks::DeepslateTiles, Blocks::DeepslateTiles, Blocks::DeepslateTiles, Blocks::DeepslateTiles }, 0, static_cast<StackId>(Blocks::WallRunFirst + 23), 6 },
+        { false, 3, 1, { Blocks::Diorite, Blocks::Diorite, Blocks::Diorite }, 0, slabOf(51, 0), 6 },
+        { false, 3, 3, { Blocks::Diorite, _, _, Blocks::Diorite, Blocks::Diorite, _, Blocks::Diorite, Blocks::Diorite, Blocks::Diorite }, 0, stairsOf(35, false, 0), 4 },
+        { false, 3, 2, { Blocks::Diorite, Blocks::Diorite, Blocks::Diorite, Blocks::Diorite, Blocks::Diorite, Blocks::Diorite }, 0, static_cast<StackId>(Blocks::WallRunFirst + 14), 6 },
+        { false, 3, 1, { Blocks::EndStoneBricks, Blocks::EndStoneBricks, Blocks::EndStoneBricks }, 0, slabOf(44, 0), 6 },
+        { false, 3, 3, { Blocks::EndStoneBricks, _, _, Blocks::EndStoneBricks, Blocks::EndStoneBricks, _, Blocks::EndStoneBricks, Blocks::EndStoneBricks, Blocks::EndStoneBricks }, 0, stairsOf(28, false, 0), 4 },
+        { false, 3, 2, { Blocks::EndStoneBricks, Blocks::EndStoneBricks, Blocks::EndStoneBricks, Blocks::EndStoneBricks, Blocks::EndStoneBricks, Blocks::EndStoneBricks }, 0, static_cast<StackId>(Blocks::WallRunFirst + 13), 6 },
+        { false, 3, 3, { static_cast<StackId>(Blocks::CutCopperFirst + 1), _, _, static_cast<StackId>(Blocks::CutCopperFirst + 1), static_cast<StackId>(Blocks::CutCopperFirst + 1), _, static_cast<StackId>(Blocks::CutCopperFirst + 1), static_cast<StackId>(Blocks::CutCopperFirst + 1), static_cast<StackId>(Blocks::CutCopperFirst + 1) }, 0, stairsOf(45, false, 0), 4 },
+        { false, 3, 1, { Blocks::Granite, Blocks::Granite, Blocks::Granite }, 0, slabOf(47, 0), 6 },
+        { false, 3, 3, { Blocks::Granite, _, _, Blocks::Granite, Blocks::Granite, _, Blocks::Granite, Blocks::Granite, Blocks::Granite }, 0, stairsOf(31, false, 0), 4 },
+        { false, 3, 2, { Blocks::Granite, Blocks::Granite, Blocks::Granite, Blocks::Granite, Blocks::Granite, Blocks::Granite }, 0, static_cast<StackId>(Blocks::WallRunFirst + 6), 6 },
+        { false, 3, 1, { Blocks::MossyCobblestone, Blocks::MossyCobblestone, Blocks::MossyCobblestone }, 0, slabOf(43, 0), 6 },
+        { false, 3, 3, { Blocks::MossyCobblestone, _, _, Blocks::MossyCobblestone, Blocks::MossyCobblestone, _, Blocks::MossyCobblestone, Blocks::MossyCobblestone, Blocks::MossyCobblestone }, 0, stairsOf(27, false, 0), 4 },
+        { false, 3, 2, { Blocks::MossyCobblestone, Blocks::MossyCobblestone, Blocks::MossyCobblestone, Blocks::MossyCobblestone, Blocks::MossyCobblestone, Blocks::MossyCobblestone }, 0, static_cast<StackId>(Blocks::WallRunFirst + 1), 6 },
+        { false, 3, 1, { Blocks::MossyStoneBricks, Blocks::MossyStoneBricks, Blocks::MossyStoneBricks }, 0, slabOf(41, 0), 6 },
+        { false, 3, 3, { Blocks::MossyStoneBricks, _, _, Blocks::MossyStoneBricks, Blocks::MossyStoneBricks, _, Blocks::MossyStoneBricks, Blocks::MossyStoneBricks, Blocks::MossyStoneBricks }, 0, stairsOf(25, false, 0), 4 },
+        { false, 3, 2, { Blocks::MossyStoneBricks, Blocks::MossyStoneBricks, Blocks::MossyStoneBricks, Blocks::MossyStoneBricks, Blocks::MossyStoneBricks, Blocks::MossyStoneBricks }, 0, static_cast<StackId>(Blocks::WallRunFirst + 5), 6 },
+        { false, 3, 1, { Blocks::MudBricks, Blocks::MudBricks, Blocks::MudBricks }, 0, slabOf(36, 0), 6 },
+        { false, 3, 3, { Blocks::MudBricks, _, _, Blocks::MudBricks, Blocks::MudBricks, _, Blocks::MudBricks, Blocks::MudBricks, Blocks::MudBricks }, 0, stairsOf(6, false, 0), 4 },
+        { false, 3, 2, { Blocks::MudBricks, Blocks::MudBricks, Blocks::MudBricks, Blocks::MudBricks, Blocks::MudBricks, Blocks::MudBricks }, 0, static_cast<StackId>(Blocks::WallRunFirst + 8), 6 },
+        { false, 3, 2, { Blocks::NetherBricks, Items::NetherBrick, Blocks::NetherBricks, Blocks::NetherBricks, Items::NetherBrick, Blocks::NetherBricks }, 0, static_cast<StackId>(Blocks::FenceRunLast), 6 },
+        { false, 3, 3, { Blocks::NetherBricks, _, _, Blocks::NetherBricks, Blocks::NetherBricks, _, Blocks::NetherBricks, Blocks::NetherBricks, Blocks::NetherBricks }, 0, stairsOf(7, false, 0), 4 },
+        { false, 3, 2, { Blocks::NetherBricks, Blocks::NetherBricks, Blocks::NetherBricks, Blocks::NetherBricks, Blocks::NetherBricks, Blocks::NetherBricks }, 0, static_cast<StackId>(Blocks::WallRunFirst + 9), 6 },
+        { false, 3, 2, { Items::Stick, Blocks::Planks, Items::Stick, Items::Stick, Blocks::Planks, Items::Stick }, 0, gateOf(0, false, 0), 1 },
+        { false, 3, 3, { static_cast<StackId>(Blocks::CutCopperFirst + 3), _, _, static_cast<StackId>(Blocks::CutCopperFirst + 3), static_cast<StackId>(Blocks::CutCopperFirst + 3), _, static_cast<StackId>(Blocks::CutCopperFirst + 3), static_cast<StackId>(Blocks::CutCopperFirst + 3), static_cast<StackId>(Blocks::CutCopperFirst + 3) }, 0, stairsOf(47, false, 0), 4 },
+        { false, 3, 1, { Blocks::PolishedAndesite, Blocks::PolishedAndesite, Blocks::PolishedAndesite }, 0, slabOf(50, 0), 6 },
+        { false, 3, 3, { Blocks::PolishedAndesite, _, _, Blocks::PolishedAndesite, Blocks::PolishedAndesite, _, Blocks::PolishedAndesite, Blocks::PolishedAndesite, Blocks::PolishedAndesite }, 0, stairsOf(34, false, 0), 4 },
+        { false, 3, 1, { Blocks::PolishedBlackstoneBricks, Blocks::PolishedBlackstoneBricks, Blocks::PolishedBlackstoneBricks }, 0, slabOf(55, 0), 6 },
+        { false, 3, 3, { Blocks::PolishedBlackstoneBricks, _, _, Blocks::PolishedBlackstoneBricks, Blocks::PolishedBlackstoneBricks, _, Blocks::PolishedBlackstoneBricks, Blocks::PolishedBlackstoneBricks, Blocks::PolishedBlackstoneBricks }, 0, stairsOf(39, false, 0), 4 },
+        { false, 3, 2, { Blocks::PolishedBlackstoneBricks, Blocks::PolishedBlackstoneBricks, Blocks::PolishedBlackstoneBricks, Blocks::PolishedBlackstoneBricks, Blocks::PolishedBlackstoneBricks, Blocks::PolishedBlackstoneBricks }, 0, static_cast<StackId>(Blocks::WallRunFirst + 16), 6 },
+        { false, 3, 3, { Blocks::PolishedBlackstone, _, _, Blocks::PolishedBlackstone, Blocks::PolishedBlackstone, _, Blocks::PolishedBlackstone, Blocks::PolishedBlackstone, Blocks::PolishedBlackstone }, 0, stairsOf(40, false, 0), 4 },
+        { false, 3, 2, { Blocks::PolishedBlackstone, Blocks::PolishedBlackstone, Blocks::PolishedBlackstone, Blocks::PolishedBlackstone, Blocks::PolishedBlackstone, Blocks::PolishedBlackstone }, 0, static_cast<StackId>(Blocks::WallRunFirst + 17), 6 },
+        { false, 3, 1, { Blocks::PolishedDeepslate, Blocks::PolishedDeepslate, Blocks::PolishedDeepslate }, 0, slabOf(57, 0), 6 },
+        { false, 3, 3, { Blocks::PolishedDeepslate, _, _, Blocks::PolishedDeepslate, Blocks::PolishedDeepslate, _, Blocks::PolishedDeepslate, Blocks::PolishedDeepslate, Blocks::PolishedDeepslate }, 0, stairsOf(53, false, 0), 4 },
+        { false, 3, 2, { Blocks::PolishedDeepslate, Blocks::PolishedDeepslate, Blocks::PolishedDeepslate, Blocks::PolishedDeepslate, Blocks::PolishedDeepslate, Blocks::PolishedDeepslate }, 0, static_cast<StackId>(Blocks::WallRunFirst + 22), 6 },
+        { false, 3, 1, { Blocks::PolishedDiorite, Blocks::PolishedDiorite, Blocks::PolishedDiorite }, 0, slabOf(42, 0), 6 },
+        { false, 3, 3, { Blocks::PolishedDiorite, _, _, Blocks::PolishedDiorite, Blocks::PolishedDiorite, _, Blocks::PolishedDiorite, Blocks::PolishedDiorite, Blocks::PolishedDiorite }, 0, stairsOf(26, false, 0), 4 },
+        { false, 3, 1, { Blocks::PolishedGranite, Blocks::PolishedGranite, Blocks::PolishedGranite }, 0, slabOf(39, 0), 6 },
+        { false, 3, 3, { Blocks::PolishedGranite, _, _, Blocks::PolishedGranite, Blocks::PolishedGranite, _, Blocks::PolishedGranite, Blocks::PolishedGranite, Blocks::PolishedGranite }, 0, stairsOf(23, false, 0), 4 },
+        { false, 3, 1, { Blocks::PolishedTuff, Blocks::PolishedTuff, Blocks::PolishedTuff }, 0, slabOf(56, 0), 6 },
+        { false, 3, 3, { Blocks::PolishedTuff, _, _, Blocks::PolishedTuff, Blocks::PolishedTuff, _, Blocks::PolishedTuff, Blocks::PolishedTuff, Blocks::PolishedTuff }, 0, stairsOf(42, false, 0), 4 },
+        { false, 3, 2, { Blocks::PolishedTuff, Blocks::PolishedTuff, Blocks::PolishedTuff, Blocks::PolishedTuff, Blocks::PolishedTuff, Blocks::PolishedTuff }, 0, static_cast<StackId>(Blocks::WallRunFirst + 19), 6 },
+        { false, 3, 1, { Blocks::PrismarineBricks, Blocks::PrismarineBricks, Blocks::PrismarineBricks }, 0, slabOf(23, 0), 6 },
+        { false, 3, 3, { Blocks::PrismarineBricks, _, _, Blocks::PrismarineBricks, Blocks::PrismarineBricks, _, Blocks::PrismarineBricks, Blocks::PrismarineBricks, Blocks::PrismarineBricks }, 0, stairsOf(19, false, 0), 4 },
+        { false, 3, 1, { Blocks::Prismarine, Blocks::Prismarine, Blocks::Prismarine }, 0, slabOf(22, 0), 6 },
+        { false, 3, 3, { Blocks::Prismarine, _, _, Blocks::Prismarine, Blocks::Prismarine, _, Blocks::Prismarine, Blocks::Prismarine, Blocks::Prismarine }, 0, stairsOf(18, false, 0), 4 },
+        { false, 3, 2, { Blocks::Prismarine, Blocks::Prismarine, Blocks::Prismarine, Blocks::Prismarine, Blocks::Prismarine, Blocks::Prismarine }, 0, static_cast<StackId>(Blocks::WallRunFirst + 3), 6 },
+        { false, 3, 1, { Blocks::PurpurBlock, Blocks::PurpurBlock, Blocks::PurpurBlock }, 0, slabOf(38, 0), 6 },
+        { false, 3, 3, { Blocks::PurpurBlock, _, _, Blocks::PurpurBlock, Blocks::PurpurBlock, _, Blocks::PurpurBlock, Blocks::PurpurBlock, Blocks::PurpurBlock }, 0, stairsOf(22, false, 0), 4 },
+        { false, 3, 3, { Blocks::ChiseledQuartzBlock, _, _, Blocks::ChiseledQuartzBlock, Blocks::ChiseledQuartzBlock, _, Blocks::ChiseledQuartzBlock, Blocks::ChiseledQuartzBlock, Blocks::ChiseledQuartzBlock }, 0, stairsOf(11, false, 0), 4 },
+        { false, 3, 1, { Blocks::RedNetherBricks, Blocks::RedNetherBricks, Blocks::RedNetherBricks }, 0, slabOf(49, 0), 6 },
+        { false, 3, 3, { Blocks::RedNetherBricks, _, _, Blocks::RedNetherBricks, Blocks::RedNetherBricks, _, Blocks::RedNetherBricks, Blocks::RedNetherBricks, Blocks::RedNetherBricks }, 0, stairsOf(33, false, 0), 4 },
+        { false, 3, 2, { Blocks::RedNetherBricks, Blocks::RedNetherBricks, Blocks::RedNetherBricks, Blocks::RedNetherBricks, Blocks::RedNetherBricks, Blocks::RedNetherBricks }, 0, static_cast<StackId>(Blocks::WallRunFirst + 11), 6 },
+        { false, 3, 3, { Blocks::RedSandstone, _, _, Blocks::RedSandstone, Blocks::RedSandstone, _, Blocks::RedSandstone, Blocks::RedSandstone, Blocks::RedSandstone }, 0, stairsOf(21, false, 0), 4 },
+        { false, 3, 2, { Blocks::RedSandstone, Blocks::RedSandstone, Blocks::RedSandstone, Blocks::RedSandstone, Blocks::RedSandstone, Blocks::RedSandstone }, 0, static_cast<StackId>(Blocks::WallRunFirst + 4), 6 },
+        { false, 3, 2, { Blocks::Sandstone, Blocks::Sandstone, Blocks::Sandstone, Blocks::Sandstone, Blocks::Sandstone, Blocks::Sandstone }, 0, static_cast<StackId>(Blocks::WallRunFirst + 12), 6 },
+        { false, 3, 1, { Blocks::SmoothQuartz, Blocks::SmoothQuartz, Blocks::SmoothQuartz }, 0, slabOf(46, 0), 6 },
+        { false, 3, 3, { Blocks::SmoothQuartz, _, _, Blocks::SmoothQuartz, Blocks::SmoothQuartz, _, Blocks::SmoothQuartz, Blocks::SmoothQuartz, Blocks::SmoothQuartz }, 0, stairsOf(30, false, 0), 4 },
+        { false, 3, 1, { Blocks::SmoothRedSandstone, Blocks::SmoothRedSandstone, Blocks::SmoothRedSandstone }, 0, slabOf(40, 0), 6 },
+        { false, 3, 3, { Blocks::SmoothRedSandstone, _, _, Blocks::SmoothRedSandstone, Blocks::SmoothRedSandstone, _, Blocks::SmoothRedSandstone, Blocks::SmoothRedSandstone, Blocks::SmoothRedSandstone }, 0, stairsOf(24, false, 0), 4 },
+        { false, 3, 1, { Blocks::SmoothSandstone, Blocks::SmoothSandstone, Blocks::SmoothSandstone }, 0, slabOf(45, 0), 6 },
+        { false, 3, 3, { Blocks::SmoothSandstone, _, _, Blocks::SmoothSandstone, Blocks::SmoothSandstone, _, Blocks::SmoothSandstone, Blocks::SmoothSandstone, Blocks::SmoothSandstone }, 0, stairsOf(29, false, 0), 4 },
+        { false, 3, 3, { Blocks::StoneBricks, _, _, Blocks::StoneBricks, Blocks::StoneBricks, _, Blocks::StoneBricks, Blocks::StoneBricks, Blocks::StoneBricks }, 0, stairsOf(5, false, 0), 4 },
+        { false, 3, 2, { Blocks::StoneBricks, Blocks::StoneBricks, Blocks::StoneBricks, Blocks::StoneBricks, Blocks::StoneBricks, Blocks::StoneBricks }, 0, static_cast<StackId>(Blocks::WallRunFirst + 7), 6 },
+        { false, 3, 3, { Blocks::TuffBricks, _, _, Blocks::TuffBricks, Blocks::TuffBricks, _, Blocks::TuffBricks, Blocks::TuffBricks, Blocks::TuffBricks }, 0, stairsOf(43, false, 0), 4 },
+        { false, 3, 2, { Blocks::TuffBricks, Blocks::TuffBricks, Blocks::TuffBricks, Blocks::TuffBricks, Blocks::TuffBricks, Blocks::TuffBricks }, 0, static_cast<StackId>(Blocks::WallRunFirst + 20), 6 },
+        { false, 3, 3, { Blocks::Tuff, _, _, Blocks::Tuff, Blocks::Tuff, _, Blocks::Tuff, Blocks::Tuff, Blocks::Tuff }, 0, stairsOf(41, false, 0), 4 },
+        { false, 3, 2, { Blocks::Tuff, Blocks::Tuff, Blocks::Tuff, Blocks::Tuff, Blocks::Tuff, Blocks::Tuff }, 0, static_cast<StackId>(Blocks::WallRunFirst + 18), 6 },
+        { false, 3, 3, { static_cast<StackId>(Blocks::CutCopperFirst + 4), _, _, static_cast<StackId>(Blocks::CutCopperFirst + 4), static_cast<StackId>(Blocks::CutCopperFirst + 4), _, static_cast<StackId>(Blocks::CutCopperFirst + 4), static_cast<StackId>(Blocks::CutCopperFirst + 4), static_cast<StackId>(Blocks::CutCopperFirst + 4) }, 0, stairsOf(48, false, 0), 4 },
+        { false, 3, 3, { static_cast<StackId>(Blocks::CutCopperFirst + 5), _, _, static_cast<StackId>(Blocks::CutCopperFirst + 5), static_cast<StackId>(Blocks::CutCopperFirst + 5), _, static_cast<StackId>(Blocks::CutCopperFirst + 5), static_cast<StackId>(Blocks::CutCopperFirst + 5), static_cast<StackId>(Blocks::CutCopperFirst + 5) }, 0, stairsOf(49, false, 0), 4 },
+        { false, 3, 3, { Blocks::CutCopperLast, _, _, Blocks::CutCopperLast, Blocks::CutCopperLast, _, Blocks::CutCopperLast, Blocks::CutCopperLast, Blocks::CutCopperLast }, 0, stairsOf(51, false, 0), 4 },
+        { false, 3, 3, { static_cast<StackId>(Blocks::CutCopperFirst + 6), _, _, static_cast<StackId>(Blocks::CutCopperFirst + 6), static_cast<StackId>(Blocks::CutCopperFirst + 6), _, static_cast<StackId>(Blocks::CutCopperFirst + 6), static_cast<StackId>(Blocks::CutCopperFirst + 6), static_cast<StackId>(Blocks::CutCopperFirst + 6) }, 0, stairsOf(50, false, 0), 4 },
+        { false, 3, 3, { static_cast<StackId>(Blocks::CutCopperFirst + 2), _, _, static_cast<StackId>(Blocks::CutCopperFirst + 2), static_cast<StackId>(Blocks::CutCopperFirst + 2), _, static_cast<StackId>(Blocks::CutCopperFirst + 2), static_cast<StackId>(Blocks::CutCopperFirst + 2), static_cast<StackId>(Blocks::CutCopperFirst + 2) }, 0, stairsOf(46, false, 0), 4 },
+        { true, 0, 0, { stairsOf(44, false, 0), Items::Honeycomb }, 2, stairsOf(48, false, 0), 1 },
+        { true, 0, 0, { stairsOf(45, false, 0), Items::Honeycomb }, 2, stairsOf(49, false, 0), 1 },
+        { true, 0, 0, { stairsOf(47, false, 0), Items::Honeycomb }, 2, stairsOf(51, false, 0), 1 },
+        { true, 0, 0, { stairsOf(46, false, 0), Items::Honeycomb }, 2, stairsOf(50, false, 0), 1 },
     };
 
     // Shrinks the used area of the grid down to its bounding box, so a
@@ -1279,7 +1380,14 @@ namespace
         if (result == Blocks::DoorLowShutNorth) return doorBaseOf(wood);
         if (result == Blocks::OakTrapdoor) return trapdoorBaseOf(wood);
         if (result == Items::Sign) return signItemOfWood(wood);
-        if (result == Blocks::PlankSlab && wood == 8) return Blocks::BambooSlab;
+        if (result == Blocks::PlankSlab)
+            for (int m = 0; m < SLAB_MATERIALS; ++m)
+                if (slabMaterialWood(m) == wood) return slabOf(m, 0);
+        if (result == Blocks::PlankStairsNorth)
+            for (int m = 0; m < STAIRS_MATERIALS; ++m)
+                if (stairsMaterialWood(m) == wood) return stairsOf(m, false, 0);
+        if (result == Blocks::OakFence) return fenceOfWood(wood);
+        if (result == gateOf(0, false, 0)) return gateOf(wood, false, 0);
         return result;
     }
 
@@ -1689,6 +1797,15 @@ std::vector<StackId> Crafting::everyOutput()
         out.push_back(boatOfWood(wood, false));
         out.push_back(boatOfWood(wood, true));
     }
+    for (int wood = 0; wood < WOOD_COUNT; ++wood)
+    {
+        out.push_back(fenceOfWood(wood));
+        out.push_back(gateOf(wood, false, 0));
+    }
+    for (int m = 0; m < STAIRS_MATERIALS; ++m)
+        if (stairsMaterialWood(m) >= 0) out.push_back(stairsOf(m, false, 0));
+    for (int m = 0; m < SLAB_MATERIALS; ++m)
+        if (slabMaterialWood(m) >= 0) out.push_back(slabOf(m, 0));
 
     // The sixteen wools a dye makes, which is likewise a rule rather
     // than a table: an audit that could not see it called fifteen of

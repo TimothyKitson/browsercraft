@@ -38,6 +38,7 @@ namespace
     Tools::Kind toolFor(BlockId block)
     {
         if (isCrop(block)) return Tools::Kind::None;
+        if (const BlockId base = shapeBase(block); base != Blocks::Air && base != block) return toolFor(base);
 
         if (isLeaves(block)) return Tools::Kind::Sword;
 
@@ -111,6 +112,7 @@ int Tools::harvestLevel(Tier tier)
 int Tools::requiredLevel(BlockId block)
 {
     block = oreBase(block);
+    if (const BlockId base = shapeBase(block); base != Blocks::Air && base != block) return requiredLevel(base);
     switch (block)
     {
         case Blocks::Obsidian:   return 4;
