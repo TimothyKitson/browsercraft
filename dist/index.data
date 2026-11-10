@@ -1,6 +1,38 @@
 #version 330 core
 
 in vec2 vUV;
+
+uniform sampler2D uTexture;
+uniform vec4 uColor;
+
+out vec4 FragColor;
+
+void main()
+{
+    vec4 color = texture(uTexture, vUV);
+    if (color.a == 0.0) discard;
+    FragColor = color * uColor;
+}
+#version 330 core
+
+layout (location = 0) in vec3 aPos;
+layout (location = 1) in vec2 aUV;
+
+uniform mat4 uView;
+uniform mat4 uProjection;
+
+out vec2 vUV;
+
+void main()
+{
+    vUV = aUV;
+    gl_Position = uProjection * uView * vec4(aPos, 1.0);
+}
+#version 330 core
+
+in vec2 vUV;
+in vec3 vTint;
+in float vTintSelective;
 in float vShade;
 in float vSkyLight;
 in float vBlockLight;
@@ -33,7 +65,11 @@ out vec4 FragColor;
 // The atlas is a grid of tiles, so a UV may only be moved within the
 // tile it landed in. Step outside and the stone picks up the edge of
 // whatever was painted next to it.
-const float ATLAS_TILES = 16.0;
+uniform float uAtlasTiles;
+uniform int uGlint;
+uniform sampler2D uGlintTexture;
+uniform vec2 uGlintShift;
+uniform float uGlintScale;
 
 // How deep the relief reads, as a fraction of a block. Small: this is
 // the one knob that turns believable stonework into melted wax.
@@ -45,8 +81,8 @@ const float PARALLAX_DEPTH = 0.075;
 // each other as you walk past, which no amount of shading can fake.
 vec2 parallaxUV(vec2 uv, vec3 viewTangent)
 {
-    vec2 tile = floor(uv * ATLAS_TILES);
-    vec2 within = uv * ATLAS_TILES - tile;
+    vec2 tile = floor(uv * uAtlasTiles);
+    vec2 within = uv * uAtlasTiles - tile;
 
     // More steps edge-on, where the ray crosses more of the height
     // field and a coarse march shows up as banding.
@@ -60,13 +96,13 @@ vec2 parallaxUV(vec2 uv, vec3 viewTangent)
 
     float depth = 0.0;
     vec2 at = within;
-    float surface = 1.0 - textureLod(uNormalAtlas, (tile + fract(at)) / ATLAS_TILES, 0.0).a;
+    float surface = 1.0 - textureLod(uNormalAtlas, (tile + fract(at)) / uAtlasTiles, 0.0).a;
 
     for (int i = 0; i < 32; ++i)
     {
         if (depth >= surface) break;
         at -= step;
-        surface = 1.0 - textureLod(uNormalAtlas, (tile + fract(at)) / ATLAS_TILES, 0.0).a;
+        surface = 1.0 - textureLod(uNormalAtlas, (tile + fract(at)) / uAtlasTiles, 0.0).a;
         depth += layerDepth;
     }
 
@@ -76,13 +112,13 @@ vec2 parallaxUV(vec2 uv, vec3 viewTangent)
     vec2 before = at + step;
     float after = surface - depth;
     float priorSurface = 1.0 - textureLod(uNormalAtlas,
-                                          (tile + fract(before)) / ATLAS_TILES, 0.0).a;
+                                          (tile + fract(before)) / uAtlasTiles, 0.0).a;
     float prior = priorSurface - depth + layerDepth;
 
     float blend = after / max(after - prior, 0.0001);
     at = mix(at, before, clamp(blend, 0.0, 1.0));
 
-    return (tile + fract(at)) / ATLAS_TILES;
+    return (tile + fract(at)) / uAtlasTiles;
 }
 
 void main()
@@ -136,6 +172,15 @@ void main()
 
     vec4 texel = texture(uAtlas, uv);
     if (texel.a < 0.1) discard; // leaf gaps, plant cut-outs
+    vec3 biomeTint = vTintSelective > 0.5 ? mix(vec3(1.0), vTint, step(texel.r + 0.02, texel.g)) : vTint;
+    texel.rgb *= biomeTint;
+    if (uGlint == 1)
+    {
+        mat2 turn = mat2(0.9848, 0.1736, -0.1736, 0.9848);
+        vec2 sweep = turn * (vUV * uGlintScale) + uGlintShift;
+        FragColor = vec4(texture(uGlintTexture, sweep).rgb * 0.75, 1.0);
+        return;
+    }
 
     // Baked voxel lighting: sunlight dims at night, torch light never does.
     float sky = vSkyLight * uDaylight;
@@ -240,12 +285,15 @@ layout (location = 2) in float aShade;      // face direction * ambient occlusio
 layout (location = 3) in float aSkyLight;   // 0..1
 layout (location = 4) in float aBlockLight; // 0..1
 layout (location = 5) in float aFace;       // face + 8 * block id; faces 0-5, 6 = plant, 7 = turned
+layout (location = 6) in float aTint;
 
 uniform mat4 uView;
 uniform mat4 uProjection;
 uniform vec3 uChunkOffset;
 
 out vec2 vUV;
+out vec3 vTint;
+out float vTintSelective;
 out float vShade;
 out float vSkyLight;
 out float vBlockLight;
@@ -286,6 +334,9 @@ void main()
     gl_Position = uProjection * viewPos;
 
     vUV = aUV;
+    uint packedTint = uint(max(aTint, 0.0) + 0.5);
+    vTint = vec3(float((packedTint >> 14u) & 127u), float((packedTint >> 7u) & 127u), float(packedTint & 127u)) / 64.0;
+    vTintSelective = float((packedTint >> 21u) & 1u);
     vShade = aShade;
     vSkyLight = aSkyLight;
     vBlockLight = aBlockLight;
@@ -392,8 +443,8 @@ const int MAT_UNDERWATER_PLANT = 16;
 const int MAT_TALL_PLANT = 17;
 
 int tagFace(float tag) { return int(tag + 0.5) & 7; }
-int tagBlock(float tag) { return (int(tag + 0.5) >> 3) & 1023; }
-bool tagTop(float tag) { return int(tag + 0.5) >= 8192; }
+int tagBlock(float tag) { return (int(tag + 0.5) >> 3) & 4095; }
+bool tagTop(float tag) { return int(tag + 0.5) >= 32768; }
 
 float luma(vec3 c) { return dot(c, vec3(0.2126, 0.7152, 0.0722)); }
 
@@ -465,6 +516,13 @@ float duskAmount(float sunHeight)
     return smoothstep(-0.22, 0.0, sunHeight) * (1.0 - smoothstep(0.02, 0.38, sunHeight));
 }
 
+uniform vec3 uSkyTint;
+
+vec3 skyTint()
+{
+    return dot(uSkyTint, uSkyTint) > 0.0 ? uSkyTint : vec3(1.0);
+}
+
 vec3 skyRadiance(vec3 dir, vec3 sun, float rain)
 {
     float s = sun.y;
@@ -473,8 +531,8 @@ vec3 skyRadiance(vec3 dir, vec3 sun, float rain)
     float up = clamp(dir.y, 0.0, 1.0);
     float horizon = pow(1.0 - up, 3.5);
 
-    vec3 zenithDay = vec3(0.16, 0.34, 0.86);
-    vec3 horizonDay = vec3(0.60, 0.77, 1.00);
+    vec3 zenithDay = vec3(0.16, 0.34, 0.86) * skyTint();
+    vec3 horizonDay = vec3(0.60, 0.77, 1.00) * mix(vec3(1.0), skyTint(), 0.5);
     vec3 zenithNight = vec3(0.004, 0.007, 0.020);
     vec3 horizonNight = vec3(0.014, 0.022, 0.050);
 
@@ -633,6 +691,7 @@ void main()
 in vec2 vUv;
 uniform sampler2D uScene;
 uniform sampler2D uBloom;
+uniform sampler2D uDither;
 uniform float uExposure;
 uniform float uTime;
 uniform float uRain;
@@ -670,7 +729,9 @@ void main()
     float vignette = 1.0 - dot(centre, centre) * 0.42;
     colour *= vignette;
 
-    colour += (ditherNoise(gl_FragCoord.xy) - 0.5) / 255.0;
+    ivec2 cell = ivec2(mod(gl_FragCoord.xy, vec2(textureSize(uDither, 0))));
+    float threshold = (texelFetch(uDither, cell, 0).r * 15.0 + 0.5) / 16.0;
+    colour += (threshold - 0.5) / 255.0;
     FragColor = vec4(clamp(colour, 0.0, 1.0), 1.0);
 }
 #version 330 core
@@ -738,6 +799,11 @@ uniform vec3 uSkyAmbient;
 uniform float uTime;
 uniform float uRain;
 uniform sampler2D uNoise;
+uniform sampler2D uSunTex;
+uniform sampler2D uMoonTex;
+uniform int uHasSun;
+uniform int uHasMoon;
+uniform int uMoonPhase;
 
 out vec4 FragColor;
 
@@ -816,15 +882,49 @@ void main()
     }
 
     float sunDot = dot(dir, sun);
-    float disc = smoothstep(0.99935, 0.99965, sunDot);
-    disc *= mix(0.72, 1.0, smoothstep(0.99935, 0.99995, sunDot));
     vec3 sunColour = mix(vec3(1.0, 0.45, 0.15), vec3(1.0, 0.93, 0.82), smoothstep(0.0, 0.35, sun.y));
-    colour += sunColour * disc * 28.0 * clear * smoothstep(-0.05, 0.02, dir.y);
+    vec3 sideways = normalize(cross(sun, vec3(0.0, 0.0, 1.0)));
+    vec3 upwards = cross(sideways, sun);
+    float aboveGround = smoothstep(-0.05, 0.02, dir.y);
+    if (uHasSun == 1)
+    {
+        if (sunDot > 0.0)
+        {
+            vec2 local = vec2(dot(dir, sideways), dot(dir, upwards)) / sunDot / 0.3;
+            if (abs(local.x) < 1.0 && abs(local.y) < 1.0)
+            {
+                vec4 texel = texture(uSunTex, local * 0.5 + 0.5);
+                colour += sunColour * texel.rgb * texel.a * 9.0 * clear * aboveGround;
+            }
+        }
+    }
+    else
+    {
+        float disc = smoothstep(0.99935, 0.99965, sunDot);
+        disc *= mix(0.72, 1.0, smoothstep(0.99935, 0.99995, sunDot));
+        colour += sunColour * disc * 28.0 * clear * aboveGround;
+    }
 
     float moonDot = dot(dir, -sun);
-    float moon = smoothstep(0.99950, 0.99975, moonDot);
-    float craters = 0.82 + 0.18 * texture(uNoise, dir.xz * 7.0).r;
-    colour += vec3(0.75, 0.80, 0.92) * moon * craters * 2.4 * clear * smoothstep(-0.05, 0.02, dir.y);
+    if (uHasMoon == 1)
+    {
+        if (moonDot > 0.0)
+        {
+            vec2 local = vec2(dot(dir, -sideways), dot(dir, upwards)) / moonDot / 0.2;
+            if (abs(local.x) < 1.0 && abs(local.y) < 1.0)
+            {
+                vec2 cell = vec2(float(uMoonPhase % 4), float(uMoonPhase / 4));
+                vec4 texel = texture(uMoonTex, (cell + local * 0.5 + 0.5) / vec2(4.0, 2.0));
+                colour += texel.rgb * texel.a * 2.4 * clear * aboveGround;
+            }
+        }
+    }
+    else
+    {
+        float moon = smoothstep(0.99950, 0.99975, moonDot);
+        float craters = 0.82 + 0.18 * texture(uNoise, dir.xz * 7.0).r;
+        colour += vec3(0.75, 0.80, 0.92) * moon * craters * 2.4 * clear * aboveGround;
+    }
 
     vec4 cloud = clouds(dir, sun.y > -0.05 ? sun : -sun);
     colour = mix(colour, cloud.rgb, cloud.a);
@@ -873,6 +973,8 @@ void main()
 #include "common.glsl"
 
 in vec2 vUV;
+in vec3 vTint;
+in float vTintSelective;
 in float vShade;
 in float vSkyLight;
 in float vBlockLight;
@@ -1093,6 +1195,8 @@ void main()
     vec2 uv = vUV;
     vec4 texel = texture(uAtlas, uv);
     if (texel.a < 0.1) discard;
+    vec3 biomeTint = vTintSelective > 0.5 ? mix(vec3(1.0), vTint, step(texel.r + 0.02, texel.g)) : vTint;
+    texel.rgb *= biomeTint;
 
     int material = vMaterial;
     bool chunk = vBlock > 0;
@@ -1271,6 +1375,7 @@ layout (location = 2) in float aShade;
 layout (location = 3) in float aSkyLight;
 layout (location = 4) in float aBlockLight;
 layout (location = 5) in float aFace;
+layout (location = 6) in float aTint;
 
 uniform mat4 uView;
 uniform mat4 uProjection;
@@ -1280,6 +1385,8 @@ uniform float uTime;
 uniform float uRain;
 
 out vec2 vUV;
+out vec3 vTint;
+out float vTintSelective;
 out float vShade;
 out float vSkyLight;
 out float vBlockLight;
@@ -1292,6 +1399,9 @@ flat out vec4 vInfo;
 
 void main()
 {
+    uint packedTint = uint(max(aTint, 0.0) + 0.5);
+    vTint = vec3(float((packedTint >> 14u) & 127u), float((packedTint >> 7u) & 127u), float(packedTint & 127u)) / 64.0;
+    vTintSelective = float((packedTint >> 21u) & 1u);
     int face = tagFace(aFace);
     int block = tagBlock(aFace);
     vec4 info = texelFetch(uMaterials, ivec2(block, 0), 0);
@@ -1337,6 +1447,39 @@ void main()
 }
 #version 330 core
 
+uniform sampler2D uTexture;
+
+in vec2 vUV;
+in float vAlpha;
+
+out vec4 FragColor;
+
+void main()
+{
+    float a = texture(uTexture, vUV).a * vAlpha;
+    if (a < 0.004) discard;
+    FragColor = vec4(0.0, 0.0, 0.0, a);
+}
+#version 330 core
+
+layout (location = 0) in vec3 aPos;
+layout (location = 1) in vec2 aUV;
+layout (location = 2) in float aAlpha;
+
+uniform mat4 uView;
+uniform mat4 uProjection;
+
+out vec2 vUV;
+out float vAlpha;
+
+void main()
+{
+    vUV = aUV;
+    vAlpha = aAlpha;
+    gl_Position = uProjection * uView * vec4(aPos, 1.0);
+}
+#version 330 core
+
 in vec2 vNdc;
 
 uniform mat4 uInvViewProj;
@@ -1345,6 +1488,16 @@ uniform vec3 uCameraPos;
 uniform float uDayFactor; // 0 = midnight, 1 = noon
 uniform float uTime;      // seconds, for cloud drift
 uniform float uOvercast;  // 0 = clear, 1 = full rain
+uniform vec3 uSkyTint;
+uniform int uMoonPhase;
+uniform int uEnd;
+uniform int uHasSun;
+uniform int uHasMoon;
+uniform int uHasClouds;
+uniform sampler2D uSunTex;
+uniform sampler2D uMoonTex;
+uniform sampler2D uCloudTex;
+uniform sampler2D uEndTex;
 
 out vec4 FragColor;
 
@@ -1388,10 +1541,23 @@ void main()
     vec4 farPoint = uInvViewProj * vec4(vNdc, 1.0, 1.0);
     vec3 dir = normalize(farPoint.xyz / farPoint.w);
 
+    if (uEnd == 1)
+    {
+        vec3 a = abs(dir);
+        vec2 face;
+        if (a.y >= a.x && a.y >= a.z) face = dir.xz / a.y;
+        else if (a.x >= a.z) face = dir.zy / a.x;
+        else face = dir.xy / a.z;
+        vec3 tile = texture(uEndTex, face * 8.0 + 0.5).rgb;
+        FragColor = vec4(tile * (40.0 / 255.0), 1.0);
+        return;
+    }
+
     float height = clamp(dir.y * 0.5 + 0.5, 0.0, 1.0);
 
-    vec3 dayZenith = vec3(0.24, 0.48, 0.92);
-    vec3 dayHorizon = vec3(0.70, 0.84, 0.98);
+    vec3 tint = dot(uSkyTint, uSkyTint) > 0.0 ? uSkyTint : vec3(1.0);
+    vec3 dayZenith = vec3(0.24, 0.48, 0.92) * tint;
+    vec3 dayHorizon = vec3(0.70, 0.84, 0.98) * mix(vec3(1.0), tint, 0.5);
     vec3 nightZenith = vec3(0.015, 0.025, 0.08);
     vec3 nightHorizon = vec3(0.06, 0.08, 0.17);
 
@@ -1427,13 +1593,46 @@ void main()
             color += vec3(1.0, 0.98, 0.92) * nightAmount * twinkle;
     }
 
-    // Sun and moon discs.
     float sunDot = dot(dir, uSunDirection);
-    color += vec3(1.0, 0.95, 0.82) * pow(max(sunDot, 0.0), 3000.0) * 12.0 * clearSky;
+    vec3 sideways = normalize(cross(uSunDirection, vec3(0.0, 0.0, 1.0)));
+    vec3 upwards = cross(sideways, uSunDirection);
+    if (uHasSun == 1)
+    {
+        if (sunDot > 0.0)
+        {
+            vec2 local = vec2(dot(dir, sideways), dot(dir, upwards)) / sunDot / 0.3;
+            if (abs(local.x) < 1.0 && abs(local.y) < 1.0)
+            {
+                vec4 sunTexel = texture(uSunTex, local * 0.5 + 0.5);
+                color += sunTexel.rgb * sunTexel.a * clearSky;
+            }
+        }
+    }
+    else
+    {
+        color += vec3(1.0, 0.95, 0.82) * pow(max(sunDot, 0.0), 3000.0) * 12.0 * clearSky;
+    }
     color += vec3(1.0, 0.82, 0.55) * pow(max(sunDot, 0.0), 80.0) * 0.22 * uDayFactor * clearSky;
 
     float moonDot = dot(dir, -uSunDirection);
-    color += vec3(0.88, 0.90, 1.0) * pow(max(moonDot, 0.0), 4000.0) * 9.0 * nightAmount;
+    if (uHasMoon == 1)
+    {
+        if (moonDot > 0.0)
+        {
+            vec2 local = vec2(dot(dir, -sideways), dot(dir, upwards)) / moonDot / 0.2;
+            if (abs(local.x) < 1.0 && abs(local.y) < 1.0)
+            {
+                vec2 cell = vec2(float(uMoonPhase % 4), float(uMoonPhase / 4));
+                vec2 moonUv = (cell + local * 0.5 + 0.5) / vec2(4.0, 2.0);
+                vec4 moonTexel = texture(uMoonTex, moonUv);
+                color += moonTexel.rgb * moonTexel.a * clearSky * (1.0 - uDayFactor * 0.6);
+            }
+        }
+    }
+    else
+    {
+        color += vec3(0.88, 0.90, 1.0) * pow(max(moonDot, 0.0), 4000.0) * 9.0 * nightAmount;
+    }
 
     // A drifting cloud layer, found by intersecting the ray with a plane.
     if (dir.y > 0.015)
@@ -1443,14 +1642,22 @@ void main()
         if (t > 0.0 && t < 12000.0)
         {
             vec2 cloudPos = (uCameraPos.xz + dir.xz * t) * 0.0016 + vec2(uTime * 0.004, uTime * 0.0015);
-            float density = cloudNoise(cloudPos);
-            // Thicker and lower-contrast as the rain comes in, until
-            // the layer is solid overhead.
-            float coverage = smoothstep(mix(0.52, 0.10, uOvercast),
-                                        mix(0.78, 0.30, uOvercast), density);
+            float coverage;
+            if (uHasClouds == 1)
+            {
+                vec2 world = uCameraPos.xz + dir.xz * t + vec2(uTime * 0.6, 0.0);
+                float cloud = texture(uCloudTex, world / (12.0 * 256.0)).a;
+                coverage = max(step(0.5, cloud), smoothstep(0.3, 0.9, uOvercast) * 0.9);
+            }
+            else
+            {
+                float density = cloudNoise(cloudPos);
+                coverage = smoothstep(mix(0.52, 0.10, uOvercast),
+                                      mix(0.78, 0.30, uOvercast), density);
+            }
             // Fade clouds out towards the horizon so the plane edge is hidden.
             coverage *= smoothstep(0.015, 0.22, dir.y);
-            vec3 cloudColor = mix(vec3(0.58, 0.62, 0.72), vec3(1.0, 0.99, 0.96), uDayFactor);
+            vec3 cloudColor = mix(vec3(0.13, 0.14, 0.19), vec3(1.0, 0.99, 0.96), uDayFactor);
             cloudColor = mix(cloudColor, vec3(1.0, 0.76, 0.55), sunset * 0.6);
             cloudColor = mix(cloudColor,
                              mix(vec3(0.09, 0.10, 0.12), vec3(0.40, 0.42, 0.46), uDayFactor),
@@ -1481,12 +1688,25 @@ in vec3 vLight;
 uniform sampler2D uTexture;
 uniform sampler2D uNormalAtlas;
 uniform int uIconNormals;   // 0 when the pack ships no normal maps
+uniform int uGlint;
+uniform sampler2D uGlintTexture;
+uniform vec4 uGlintRect;
+uniform vec2 uGlintShift;
 
 out vec4 FragColor;
 
 void main()
 {
     vec4 texel = texture(uTexture, vUV);
+    if (uGlint == 1)
+    {
+        if (texel.a < 0.1) discard;
+        vec2 local = (gl_FragCoord.xy - uGlintRect.xy) / max(uGlintRect.zw, vec2(1.0));
+        mat2 turn = mat2(0.9848, 0.1736, -0.1736, 0.9848);
+        vec2 sweep = turn * (local * 0.5) + uGlintShift;
+        FragColor = vec4(texture(uGlintTexture, sweep).rgb * 0.8, 1.0);
+        return;
+    }
     vec4 colour = texel * vColor;
 
     // A block icon's faces carry the direction the light comes from, in
