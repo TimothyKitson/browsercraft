@@ -1395,6 +1395,28 @@ void WorldGen::placeOres(Chunk& chunk) const
             }
         }
     }
+
+    if (m_dimension != Dimension::Overworld) return;
+    const Biomes::Kind here = kindAt(baseX + 8, baseZ + 8);
+    if (here != Biomes::Kind::WindsweptHills && here != Biomes::Kind::WindsweptGravellyHills &&
+        here != Biomes::Kind::WindsweptForest)
+        return;
+    for (int seam = 0; seam < 14; ++seam)
+    {
+        const uint32_t h = hashCoords(baseX, seam, baseZ, m_seed + 1021);
+        const int lx = static_cast<int>(h & 15u);
+        const int lz = static_cast<int>((h >> 4) & 15u);
+        const int y = 1 + static_cast<int>((h >> 8) % 63u);
+        for (int i = 0; i < 9; ++i)
+        {
+            const uint32_t g = hashCoords(baseX + seam, y + i, baseZ - i, m_seed + 1022);
+            const int px = lx + static_cast<int>(g % 3u) - 1;
+            const int py = y + static_cast<int>((g >> 4) % 3u) - 1;
+            const int pz = lz + static_cast<int>((g >> 8) % 3u) - 1;
+            const BlockId host = chunk.getBlock(px, py, pz);
+            if (host == Blocks::Stone || host == Blocks::Deepslate) chunk.setBlockRaw(px, py, pz, infestedOf(host));
+        }
+    }
 }
 
 void WorldGen::buildTree(Chunk& chunk, int worldX, int surfaceY, int worldZ, TreeKind kind) const
@@ -3241,7 +3263,14 @@ void WorldGen::stampStrongholdRoom(Chunk& chunk, const Stronghold::Site& site,
     for (int x = room.x - 1; x <= room.x + room.width; ++x)
         for (int z = room.z - 1; z <= room.z + room.depth; ++z)
             for (int y = floor; y <= ceiling; ++y)
-                put(chunk, x, y, z, Blocks::Cobblestone);
+            {
+                const float roll = hashToFloat(hashCoords(x, y, z, m_seed + 3307));
+                const BlockId brick = roll < 0.2f ? Blocks::CrackedStoneBricks
+                                    : roll < 0.5f ? Blocks::MossyStoneBricks
+                                    : roll < 0.55f ? infestedOf(Blocks::StoneBricks)
+                                    : Blocks::StoneBricks;
+                put(chunk, x, y, z, brick);
+            }
 
     for (int x = room.x; x < room.x + room.width; ++x)
         for (int z = room.z; z < room.z + room.depth; ++z)

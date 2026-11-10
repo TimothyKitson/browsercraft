@@ -784,6 +784,7 @@ namespace
                                                   why = "a slab set in the top half, or two set together";
             else if (isFenceGate(id))             why = "another facing, or the gate swung open";
             else if (slabMaterial(id) == PETRIFIED_SLAB) why = "creative only, as in Minecraft";
+            else if (isInfested(id))              why = "creative only, as in Minecraft";
 
             // A crop is sown, not set down, and the eight ids it
             // spans are the eight stages of it growing.

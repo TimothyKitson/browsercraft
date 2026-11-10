@@ -1271,6 +1271,63 @@ namespace
         { false, 3, 3, { Blocks::NetherBricks, _, _, Blocks::NetherBricks, Blocks::NetherBricks, _, Blocks::NetherBricks, Blocks::NetherBricks, Blocks::NetherBricks }, 0, stairsOf(7, false, 0), 4 },
         { false, 3, 2, { Blocks::NetherBricks, Blocks::NetherBricks, Blocks::NetherBricks, Blocks::NetherBricks, Blocks::NetherBricks, Blocks::NetherBricks }, 0, static_cast<StackId>(Blocks::WallRunFirst + 9), 6 },
         { false, 3, 2, { Items::Stick, Blocks::Planks, Items::Stick, Items::Stick, Blocks::Planks, Items::Stick }, 0, gateOf(0, false, 0), 1 },
+        { false, 2, 2, { Blocks::AcaciaLog, Blocks::AcaciaLog, Blocks::AcaciaLog, Blocks::AcaciaLog }, 0, static_cast<StackId>(Blocks::WoodBlockFirst + 4), 3 },
+        { false, 2, 2, { Blocks::BirchLog, Blocks::BirchLog, Blocks::BirchLog, Blocks::BirchLog }, 0, static_cast<StackId>(Blocks::WoodBlockFirst + 2), 3 },
+        { false, 2, 1, { Blocks::WoolBlack, Blocks::WoolBlack }, 0, static_cast<StackId>(Blocks::CarpetFirst + 15), 3 },
+        { false, 2, 1, { Blocks::WoolBlue, Blocks::WoolBlue }, 0, static_cast<StackId>(Blocks::CarpetFirst + 11), 3 },
+        { false, 2, 1, { Blocks::WoolBrown, Blocks::WoolBrown }, 0, static_cast<StackId>(Blocks::CarpetFirst + 12), 3 },
+        { false, 2, 2, { Blocks::CherryLog, Blocks::CherryLog, Blocks::CherryLog, Blocks::CherryLog }, 0, static_cast<StackId>(Blocks::WoodBlockFirst + 6), 3 },
+        { false, 2, 2, { Blocks::CrimsonStem, Blocks::CrimsonStem, Blocks::CrimsonStem, Blocks::CrimsonStem }, 0, static_cast<StackId>(Blocks::WoodBlockFirst + 8), 3 },
+        { false, 2, 1, { Blocks::WoolCyan, Blocks::WoolCyan }, 0, static_cast<StackId>(Blocks::CarpetFirst + 9), 3 },
+        { false, 2, 2, { Blocks::DarkOakLog, Blocks::DarkOakLog, Blocks::DarkOakLog, Blocks::DarkOakLog }, 0, static_cast<StackId>(Blocks::WoodBlockFirst + 5), 3 },
+        { false, 2, 1, { Blocks::WoolGray, Blocks::WoolGray }, 0, static_cast<StackId>(Blocks::CarpetFirst + 7), 3 },
+        { false, 2, 1, { Blocks::WoolGreen, Blocks::WoolGreen }, 0, static_cast<StackId>(Blocks::CarpetFirst + 13), 3 },
+        { false, 2, 2, { Blocks::JungleLog, Blocks::JungleLog, Blocks::JungleLog, Blocks::JungleLog }, 0, static_cast<StackId>(Blocks::WoodBlockFirst + 3), 3 },
+        { false, 2, 1, { Blocks::WoolLightBlue, Blocks::WoolLightBlue }, 0, static_cast<StackId>(Blocks::CarpetFirst + 3), 3 },
+        { false, 2, 1, { Blocks::WoolLightGray, Blocks::WoolLightGray }, 0, static_cast<StackId>(Blocks::CarpetFirst + 8), 3 },
+        { false, 2, 1, { Blocks::WoolLime, Blocks::WoolLime }, 0, static_cast<StackId>(Blocks::CarpetFirst + 5), 3 },
+        { false, 2, 1, { Blocks::WoolMagenta, Blocks::WoolMagenta }, 0, static_cast<StackId>(Blocks::CarpetFirst + 2), 3 },
+        { false, 2, 2, { Blocks::MangroveLog, Blocks::MangroveLog, Blocks::MangroveLog, Blocks::MangroveLog }, 0, static_cast<StackId>(Blocks::WoodBlockFirst + 7), 3 },
+        { false, 2, 2, { Blocks::Log, Blocks::Log, Blocks::Log, Blocks::Log }, 0, static_cast<StackId>(Blocks::WoodBlockFirst + 0), 3 },
+        { false, 2, 1, { Blocks::WoolOrange, Blocks::WoolOrange }, 0, static_cast<StackId>(Blocks::CarpetFirst + 1), 3 },
+        { false, 2, 1, { Blocks::WoolPink, Blocks::WoolPink }, 0, static_cast<StackId>(Blocks::CarpetFirst + 6), 3 },
+        { false, 2, 2, { Blocks::Basalt, Blocks::Basalt, Blocks::Basalt, Blocks::Basalt }, 0, Blocks::PolishedBasalt, 4 },
+        { false, 2, 1, { Blocks::WoolPurple, Blocks::WoolPurple }, 0, static_cast<StackId>(Blocks::CarpetFirst + 10), 3 },
+        { false, 2, 1, { Blocks::WoolRed, Blocks::WoolRed }, 0, static_cast<StackId>(Blocks::CarpetFirst + 14), 3 },
+        { false, 2, 2, { Blocks::SpruceLog, Blocks::SpruceLog, Blocks::SpruceLog, Blocks::SpruceLog }, 0, static_cast<StackId>(Blocks::WoodBlockFirst + 1), 3 },
+        { false, 2, 2, { Blocks::StrippedAcaciaLog, Blocks::StrippedAcaciaLog, Blocks::StrippedAcaciaLog, Blocks::StrippedAcaciaLog }, 0, static_cast<StackId>(Blocks::WoodBlockFirst + 14), 3 },
+        { false, 2, 2, { Blocks::StrippedBirchLog, Blocks::StrippedBirchLog, Blocks::StrippedBirchLog, Blocks::StrippedBirchLog }, 0, static_cast<StackId>(Blocks::WoodBlockFirst + 12), 3 },
+        { false, 2, 2, { Blocks::StrippedCherryLog, Blocks::StrippedCherryLog, Blocks::StrippedCherryLog, Blocks::StrippedCherryLog }, 0, static_cast<StackId>(Blocks::WoodBlockFirst + 16), 3 },
+        { false, 2, 2, { Blocks::StrippedCrimsonStem, Blocks::StrippedCrimsonStem, Blocks::StrippedCrimsonStem, Blocks::StrippedCrimsonStem }, 0, static_cast<StackId>(Blocks::WoodBlockFirst + 18), 3 },
+        { false, 2, 2, { Blocks::StrippedDarkOakLog, Blocks::StrippedDarkOakLog, Blocks::StrippedDarkOakLog, Blocks::StrippedDarkOakLog }, 0, static_cast<StackId>(Blocks::WoodBlockFirst + 15), 3 },
+        { false, 2, 2, { Blocks::StrippedJungleLog, Blocks::StrippedJungleLog, Blocks::StrippedJungleLog, Blocks::StrippedJungleLog }, 0, static_cast<StackId>(Blocks::WoodBlockFirst + 13), 3 },
+        { false, 2, 2, { Blocks::StrippedMangroveLog, Blocks::StrippedMangroveLog, Blocks::StrippedMangroveLog, Blocks::StrippedMangroveLog }, 0, static_cast<StackId>(Blocks::WoodBlockFirst + 17), 3 },
+        { false, 2, 2, { Blocks::StrippedOakLog, Blocks::StrippedOakLog, Blocks::StrippedOakLog, Blocks::StrippedOakLog }, 0, static_cast<StackId>(Blocks::WoodBlockFirst + 10), 3 },
+        { false, 2, 2, { Blocks::StrippedSpruceLog, Blocks::StrippedSpruceLog, Blocks::StrippedSpruceLog, Blocks::StrippedSpruceLog }, 0, static_cast<StackId>(Blocks::WoodBlockFirst + 11), 3 },
+        { false, 2, 2, { Blocks::StrippedWarpedStem, Blocks::StrippedWarpedStem, Blocks::StrippedWarpedStem, Blocks::StrippedWarpedStem }, 0, static_cast<StackId>(Blocks::WoodBlockFirst + 19), 3 },
+        { false, 2, 2, { Blocks::WarpedStem, Blocks::WarpedStem, Blocks::WarpedStem, Blocks::WarpedStem }, 0, static_cast<StackId>(Blocks::WoodBlockFirst + 9), 3 },
+        { false, 2, 1, { Blocks::WoolYellow, Blocks::WoolYellow }, 0, static_cast<StackId>(Blocks::CarpetFirst + 4), 3 },
+        { false, 2, 1, { Blocks::Wool, Blocks::Wool }, 0, static_cast<StackId>(Blocks::CarpetFirst + 0), 3 },
+        { true, 0, 0, { static_cast<StackId>(Blocks::WoodBlockFirst + 0) }, 1, planksFromLog(static_cast<BlockId>(Blocks::WoodBlockFirst + 0)), 4 },
+        { true, 0, 0, { static_cast<StackId>(Blocks::WoodBlockFirst + 1) }, 1, planksFromLog(static_cast<BlockId>(Blocks::WoodBlockFirst + 1)), 4 },
+        { true, 0, 0, { static_cast<StackId>(Blocks::WoodBlockFirst + 2) }, 1, planksFromLog(static_cast<BlockId>(Blocks::WoodBlockFirst + 2)), 4 },
+        { true, 0, 0, { static_cast<StackId>(Blocks::WoodBlockFirst + 3) }, 1, planksFromLog(static_cast<BlockId>(Blocks::WoodBlockFirst + 3)), 4 },
+        { true, 0, 0, { static_cast<StackId>(Blocks::WoodBlockFirst + 4) }, 1, planksFromLog(static_cast<BlockId>(Blocks::WoodBlockFirst + 4)), 4 },
+        { true, 0, 0, { static_cast<StackId>(Blocks::WoodBlockFirst + 5) }, 1, planksFromLog(static_cast<BlockId>(Blocks::WoodBlockFirst + 5)), 4 },
+        { true, 0, 0, { static_cast<StackId>(Blocks::WoodBlockFirst + 6) }, 1, planksFromLog(static_cast<BlockId>(Blocks::WoodBlockFirst + 6)), 4 },
+        { true, 0, 0, { static_cast<StackId>(Blocks::WoodBlockFirst + 7) }, 1, planksFromLog(static_cast<BlockId>(Blocks::WoodBlockFirst + 7)), 4 },
+        { true, 0, 0, { static_cast<StackId>(Blocks::WoodBlockFirst + 8) }, 1, planksFromLog(static_cast<BlockId>(Blocks::WoodBlockFirst + 8)), 4 },
+        { true, 0, 0, { static_cast<StackId>(Blocks::WoodBlockFirst + 9) }, 1, planksFromLog(static_cast<BlockId>(Blocks::WoodBlockFirst + 9)), 4 },
+        { true, 0, 0, { static_cast<StackId>(Blocks::WoodBlockFirst + 10) }, 1, planksFromLog(static_cast<BlockId>(Blocks::WoodBlockFirst + 10)), 4 },
+        { true, 0, 0, { static_cast<StackId>(Blocks::WoodBlockFirst + 11) }, 1, planksFromLog(static_cast<BlockId>(Blocks::WoodBlockFirst + 11)), 4 },
+        { true, 0, 0, { static_cast<StackId>(Blocks::WoodBlockFirst + 12) }, 1, planksFromLog(static_cast<BlockId>(Blocks::WoodBlockFirst + 12)), 4 },
+        { true, 0, 0, { static_cast<StackId>(Blocks::WoodBlockFirst + 13) }, 1, planksFromLog(static_cast<BlockId>(Blocks::WoodBlockFirst + 13)), 4 },
+        { true, 0, 0, { static_cast<StackId>(Blocks::WoodBlockFirst + 14) }, 1, planksFromLog(static_cast<BlockId>(Blocks::WoodBlockFirst + 14)), 4 },
+        { true, 0, 0, { static_cast<StackId>(Blocks::WoodBlockFirst + 15) }, 1, planksFromLog(static_cast<BlockId>(Blocks::WoodBlockFirst + 15)), 4 },
+        { true, 0, 0, { static_cast<StackId>(Blocks::WoodBlockFirst + 16) }, 1, planksFromLog(static_cast<BlockId>(Blocks::WoodBlockFirst + 16)), 4 },
+        { true, 0, 0, { static_cast<StackId>(Blocks::WoodBlockFirst + 17) }, 1, planksFromLog(static_cast<BlockId>(Blocks::WoodBlockFirst + 17)), 4 },
+        { true, 0, 0, { static_cast<StackId>(Blocks::WoodBlockFirst + 18) }, 1, planksFromLog(static_cast<BlockId>(Blocks::WoodBlockFirst + 18)), 4 },
+        { true, 0, 0, { static_cast<StackId>(Blocks::WoodBlockFirst + 19) }, 1, planksFromLog(static_cast<BlockId>(Blocks::WoodBlockFirst + 19)), 4 },
         { false, 3, 3, { static_cast<StackId>(Blocks::CutCopperFirst + 3), _, _, static_cast<StackId>(Blocks::CutCopperFirst + 3), static_cast<StackId>(Blocks::CutCopperFirst + 3), _, static_cast<StackId>(Blocks::CutCopperFirst + 3), static_cast<StackId>(Blocks::CutCopperFirst + 3), static_cast<StackId>(Blocks::CutCopperFirst + 3) }, 0, stairsOf(47, false, 0), 4 },
         { false, 3, 1, { Blocks::PolishedAndesite, Blocks::PolishedAndesite, Blocks::PolishedAndesite }, 0, slabOf(50, 0), 6 },
         { false, 3, 3, { Blocks::PolishedAndesite, _, _, Blocks::PolishedAndesite, Blocks::PolishedAndesite, _, Blocks::PolishedAndesite, Blocks::PolishedAndesite, Blocks::PolishedAndesite }, 0, stairsOf(34, false, 0), 4 },
@@ -1494,7 +1551,7 @@ namespace Crafting
     // the same order: a dye's colour is the wool it makes.
     CraftOutput matchDyeing(const ItemStack* grid, int size)
     {
-        int wools = 0, terracotta = 0, glass = 0, panes = 0, sand = 0, gravel = 0, candles = 0, boxes = 0;
+        int wools = 0, carpets = 0, terracotta = 0, glass = 0, panes = 0, sand = 0, gravel = 0, candles = 0, boxes = 0;
         int dyes = 0;
         int colour = 0;
         int others = 0;
@@ -1509,6 +1566,7 @@ namespace Crafting
                 if (!isBlockStack(cell.id)) { ++others; continue; }
                 const BlockId block = asBlock(cell.id);
                 if (isWool(block)) ++wools;
+                else if (isCarpet(block)) ++carpets;
                 else if (block == Blocks::Terracotta) ++terracotta;
                 else if (block == Blocks::Glass) ++glass;
                 else if (block == Blocks::GlassPane) ++panes;
@@ -1521,12 +1579,13 @@ namespace Crafting
 
         if (dyes != 1 || others > 0) return CraftOutput{};
 
-        const int families = (wools > 0) + (terracotta > 0) + (glass > 0) + (panes > 0) + (candles > 0) + (boxes > 0) +
+        const int families = (wools > 0) + (carpets > 0) + (terracotta > 0) + (glass > 0) + (panes > 0) + (candles > 0) + (boxes > 0) +
                              ((sand > 0 || gravel > 0) ? 1 : 0);
         if (families != 1) return CraftOutput{};
 
         CraftOutput out;
         if (wools >= 1 && wools <= 8) { out.id = woolOfColour(colour); out.count = wools; }
+        else if (carpets == 8) { out.id = colourIn(Blocks::CarpetFirst, colour); out.count = 8; }
         else if (terracotta == 8) { out.id = colourIn(Blocks::TerracottaFirst, colour); out.count = 8; }
         else if (glass == 8) { out.id = colourIn(Blocks::StainedGlassFirst, colour); out.count = 8; }
         else if (panes == 8) { out.id = colourIn(Blocks::StainedGlassPaneFirst, colour); out.count = 8; }
@@ -1813,6 +1872,7 @@ std::vector<StackId> Crafting::everyOutput()
     for (int colour = 0; colour < DYE_COLOURS; ++colour)
     {
         out.push_back(woolOfColour(colour));
+        out.push_back(colourIn(Blocks::CarpetFirst, colour));
         out.push_back(colourIn(Blocks::TerracottaFirst, colour));
         out.push_back(colourIn(Blocks::StainedGlassFirst, colour));
         out.push_back(colourIn(Blocks::StainedGlassPaneFirst, colour));

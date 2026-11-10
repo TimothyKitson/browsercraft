@@ -116,6 +116,7 @@ namespace
         { copperBlockOf(CopperFamily::Block, 2, false), copperBlockOf(CopperFamily::Slab, 2, false), 8 },
         { copperBlockOf(CopperFamily::Cut, 2, false), copperBlockOf(CopperFamily::Slab, 2, false), 2 },
         { Blocks::Andesite, slabOf(48, 0), 2 },
+        { Blocks::Basalt, Blocks::PolishedBasalt, 1 },
         { Blocks::Andesite, stairsOf(32, false, 0), 1 },
         { Blocks::Andesite, static_cast<StackId>(Blocks::WallRunFirst + 10), 1 },
         { Blocks::Blackstone, slabOf(54, 0), 2 },

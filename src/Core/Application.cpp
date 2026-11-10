@@ -3209,6 +3209,9 @@ bool Application::frame()
                 m_world->setBlock(bx + 5, by + 1, bz + 1, static_cast<BlockId>(Blocks::WallRunFirst + 7));
                 m_world->setBlock(bx + 2, by, bz + 2, Blocks::SmoothQuartz);
                 m_world->setBlock(bx + 3, by, bz + 2, static_cast<BlockId>(Blocks::FenceRunLast));
+                for (int c = 0; c < 8; ++c) m_world->setBlock(bx - 4 + c, by, bz + 3, static_cast<BlockId>(Blocks::CarpetFirst + c * 2));
+                for (int i = 0; i < 5; ++i) m_world->setBlock(bx - 6, by, bz - 3 + i, static_cast<BlockId>(Blocks::WoodBlockFirst + i * 2));
+                m_world->setBlock(bx - 6, by + 1, bz, Blocks::PolishedBasalt);
                 m_player.position = glm::vec3(bx + 0.5f, by + 4.0f, bz + 0.5f) - m_camera.front * 9.0f;
                 m_player.position.y = static_cast<float>(by) + 4.0f;
                 for (int dx = -1; dx <= 1; ++dx)
@@ -8895,6 +8898,10 @@ void Application::updateMining(float deltaTime)
         m_audio.playDig(id, 0.9f);
         vibrate(glm::vec3(hit.block) + glm::vec3(0.5f), 12);
 
+        if (!m_player.creative() && isInfested(id) &&
+            !Enchanting::has(m_inventory.selected().enchantments, Enchanting::Kind::SilkTouch))
+            spawnSilverfish(glm::vec3(hit.block) + glm::vec3(0.5f, 0.0f, 0.5f), 1);
+
         // Creative mode mines without producing pickups, like Minecraft.
         if (!m_player.creative())
         {
@@ -8954,6 +8961,7 @@ void Application::updateMining(float deltaTime)
                     drop = static_cast<StackId>((isDeadCoralWallFan(id) ? Blocks::DeadCoralFanFirst : Blocks::CoralFanFirst) + coralKind(id));
                 if (silk && isTurtleEgg(id)) drop = turtleEggOf(1, 0);
                 if (silk && isSculkVein(id)) drop = sculkVeinOn(0);
+                if (isInfested(id)) drop = silk ? static_cast<StackId>(infestedBase(id)) : static_cast<StackId>(Blocks::Air);
                 if (isTallSeagrass(id) && tool == Items::Shears) drop = Blocks::Seagrass;
                 if (id == Blocks::Cobweb)
                     drop = (tool == Items::Shears || silk) ? static_cast<StackId>(Blocks::Cobweb)
@@ -17308,6 +17316,7 @@ void Application::handlePlacement()
          placing == Blocks::ButtonOff) &&
         !isSolid(m_world->getBlock(target.x, target.y - 1, target.z)))
         return;
+    if (isCarpet(placing) && m_world->getBlock(target.x, target.y - 1, target.z) == Blocks::Air) return;
 
     m_world->setBlock(target.x, target.y, target.z, placing);
     m_net.onLocalBlockChange(target.x, target.y, target.z, placing);

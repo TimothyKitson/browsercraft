@@ -392,6 +392,7 @@ namespace Tiles
         JigsawTopTile, JigsawBottomTile, JigsawSideTile, JigsawLockTile,
         FishingHookTile, LeashKnotTile, SpectralInFlight, TippedInFlight, TridentInFlight,
         FrogspawnTile,
+        PolishedBasaltTop, PolishedBasaltSide,
 
         TileCount
     };

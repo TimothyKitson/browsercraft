@@ -296,6 +296,10 @@ namespace
                 for (int w = 0; w < WOOD_COUNT; ++w) list.push_back(gateOf(w, false, 0));
                 for (int m = 0; m < WALL_MATERIALS; ++m) list.push_back(static_cast<StackId>(Blocks::WallRunFirst + m));
                 list.push_back(Blocks::SmoothQuartz);
+                for (int c = 0; c < 16; ++c) list.push_back(static_cast<StackId>(Blocks::CarpetFirst + c));
+                for (int i = 0; i < 20; ++i) list.push_back(static_cast<StackId>(Blocks::WoodBlockFirst + i));
+                for (int i = 0; i < 7; ++i) list.push_back(static_cast<StackId>(Blocks::InfestedFirst + i));
+                list.push_back(Blocks::PolishedBasalt);
                 return list;
             }();
             items = building.data();

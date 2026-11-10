@@ -1189,7 +1189,7 @@ namespace
             flat(13.0f / 16.0f, 0.0f, 0.0f, 1.0f, 1.0f, Tiles::SporeBlossomTile, 0.9f);
             return;
         }
-        if (id == Blocks::MossCarpet)
+        if (id == Blocks::MossCarpet || isCarpet(id))
         {
             const int moss = blockInfo(id).tileTop;
             const PartFace faces[6] = { { moss, 0, 15, 16, 16 }, { moss, 0, 15, 16, 16 }, { moss, 0, 0, 16, 16 },

@@ -88,6 +88,7 @@ float Smelting::burnSeconds(StackId fuel)
         const BlockId block = asBlock(fuel);
         if (isLog(block) || isPlanks(block)) return 15.0f;
         if (shapeWood(block) >= 0) return isSlabBlock(block) ? 7.5f : 15.0f;
+        if (isCarpet(block)) return 3.35f;
         if (isLeaves(block)) return 5.0f;
     }
 

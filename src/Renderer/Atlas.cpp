@@ -2177,6 +2177,30 @@ namespace
         t.speckle(5, 450);
     }
 
+    void paintPolishedBasaltTop(Tile& t)
+    {
+        t.fill(Color{ 88, 86, 92 });
+        for (int y = 0; y < Tile::N; ++y)
+            for (int x = 0; x < Tile::N; ++x)
+            {
+                const int ring = std::max(std::abs(2 * x - Tile::N + 1), std::abs(2 * y - Tile::N + 1)) * 4 / Tile::N;
+                t.set(x, y, shade(Color{ 88, 86, 92 }, (ring & 1) ? -10 : 6));
+            }
+        t.speckle(4, 455);
+    }
+
+    void paintPolishedBasaltSide(Tile& t)
+    {
+        t.fill(Color{ 78, 76, 82 });
+        for (int x = 0; x < Tile::N; ++x)
+        {
+            const int delta = (x * 4 / Tile::N) % 2 == 0 ? 6 : -6;
+            for (int y = 0; y < Tile::N; ++y)
+                t.set(x, y, shade(Color{ 80, 78, 86 }, delta + static_cast<int>((hash2(x, y / 4, 456) - 0.5f) * 8.0f)));
+        }
+        t.speckle(3, 457);
+    }
+
     void paintBasaltSide(Tile& t)
     {
         t.fill(Color{ 66, 64, 70 });
@@ -8877,6 +8901,8 @@ namespace
         { Tiles::GildedBlackstoneTile, paintGildedBlackstone },
         { Tiles::BasaltTop, paintBasaltTop },
         { Tiles::BasaltSide, paintBasaltSide },
+        { Tiles::PolishedBasaltTop, paintPolishedBasaltTop },
+        { Tiles::PolishedBasaltSide, paintPolishedBasaltSide },
         { Tiles::LilyPadTile, paintLilyPad },
         { Tiles::VineTile, paintVine },
         { Tiles::MudTile, paintMud },
@@ -11134,6 +11160,8 @@ namespace
         { Tiles::GildedBlackstoneTile, { "gilded_blackstone", nullptr },               Tinting::None,    0,   false },
         { Tiles::BasaltTop,     { "basalt_top", nullptr },                             Tinting::None,    0,   false },
         { Tiles::BasaltSide,    { "basalt_side", nullptr },                            Tinting::None,    0,   false },
+        { Tiles::PolishedBasaltTop, { "polished_basalt_top", nullptr },                Tinting::None,    0,   false },
+        { Tiles::PolishedBasaltSide, { "polished_basalt_side", nullptr },              Tinting::None,    0,   false },
         { Tiles::LilyPadTile,   { "lily_pad", nullptr },                               Tinting::Foliage, 0,   false },
         { Tiles::VineTile,      { "vine", nullptr },                                   Tinting::Foliage, 0,   false },
         { Tiles::MudTile,       { "mud", nullptr },                                    Tinting::None,    0,   false },

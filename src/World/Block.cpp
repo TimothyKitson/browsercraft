@@ -3547,6 +3547,50 @@ namespace
         { "Deepslate Tile Wall", DeepslateTilesTile, DeepslateTilesTile, DeepslateTilesTile, true, false, RenderType::Wall, 0, 3.5f },
         { "Deepslate Brick Wall", DeepslateBricksTile, DeepslateBricksTile, DeepslateBricksTile, true, false, RenderType::Wall, 0, 3.5f },
         { "Smooth Quartz Block", QuartzBlockBottom, QuartzBlockBottom, QuartzBlockBottom, true, true, RenderType::Cube, 0, 2.0f },
+        { "White Carpet", Wool, Wool, Wool, false, false, RenderType::Lush, 0, 0.1f },
+        { "Orange Carpet", WoolFirst + 0, WoolFirst + 0, WoolFirst + 0, false, false, RenderType::Lush, 0, 0.1f },
+        { "Magenta Carpet", WoolFirst + 1, WoolFirst + 1, WoolFirst + 1, false, false, RenderType::Lush, 0, 0.1f },
+        { "Light Blue Carpet", WoolFirst + 2, WoolFirst + 2, WoolFirst + 2, false, false, RenderType::Lush, 0, 0.1f },
+        { "Yellow Carpet", WoolFirst + 3, WoolFirst + 3, WoolFirst + 3, false, false, RenderType::Lush, 0, 0.1f },
+        { "Lime Carpet", WoolFirst + 4, WoolFirst + 4, WoolFirst + 4, false, false, RenderType::Lush, 0, 0.1f },
+        { "Pink Carpet", WoolFirst + 5, WoolFirst + 5, WoolFirst + 5, false, false, RenderType::Lush, 0, 0.1f },
+        { "Gray Carpet", WoolFirst + 6, WoolFirst + 6, WoolFirst + 6, false, false, RenderType::Lush, 0, 0.1f },
+        { "Light Gray Carpet", WoolFirst + 7, WoolFirst + 7, WoolFirst + 7, false, false, RenderType::Lush, 0, 0.1f },
+        { "Cyan Carpet", WoolFirst + 8, WoolFirst + 8, WoolFirst + 8, false, false, RenderType::Lush, 0, 0.1f },
+        { "Purple Carpet", WoolFirst + 9, WoolFirst + 9, WoolFirst + 9, false, false, RenderType::Lush, 0, 0.1f },
+        { "Blue Carpet", WoolFirst + 10, WoolFirst + 10, WoolFirst + 10, false, false, RenderType::Lush, 0, 0.1f },
+        { "Brown Carpet", WoolFirst + 11, WoolFirst + 11, WoolFirst + 11, false, false, RenderType::Lush, 0, 0.1f },
+        { "Green Carpet", WoolFirst + 12, WoolFirst + 12, WoolFirst + 12, false, false, RenderType::Lush, 0, 0.1f },
+        { "Red Carpet", WoolFirst + 13, WoolFirst + 13, WoolFirst + 13, false, false, RenderType::Lush, 0, 0.1f },
+        { "Black Carpet", WoolFirst + 14, WoolFirst + 14, WoolFirst + 14, false, false, RenderType::Lush, 0, 0.1f },
+        { "Oak Wood", LogSide, LogSide, LogSide, true, true, RenderType::Cube, 0, 2.0f },
+        { "Spruce Wood", SpruceLogSide, SpruceLogSide, SpruceLogSide, true, true, RenderType::Cube, 0, 2.0f },
+        { "Birch Wood", BirchLogSide, BirchLogSide, BirchLogSide, true, true, RenderType::Cube, 0, 2.0f },
+        { "Jungle Wood", JungleLogSide, JungleLogSide, JungleLogSide, true, true, RenderType::Cube, 0, 2.0f },
+        { "Acacia Wood", AcaciaLogSide, AcaciaLogSide, AcaciaLogSide, true, true, RenderType::Cube, 0, 2.0f },
+        { "Dark Oak Wood", DarkOakLogSide, DarkOakLogSide, DarkOakLogSide, true, true, RenderType::Cube, 0, 2.0f },
+        { "Cherry Wood", CherryLogSide, CherryLogSide, CherryLogSide, true, true, RenderType::Cube, 0, 2.0f },
+        { "Mangrove Wood", MangroveLogSide, MangroveLogSide, MangroveLogSide, true, true, RenderType::Cube, 0, 2.0f },
+        { "Crimson Hyphae", CrimsonStemSide, CrimsonStemSide, CrimsonStemSide, true, true, RenderType::Cube, 0, 2.0f },
+        { "Warped Hyphae", WarpedStemSide, WarpedStemSide, WarpedStemSide, true, true, RenderType::Cube, 0, 2.0f },
+        { "Stripped Oak Wood", StrippedOakLogSide, StrippedOakLogSide, StrippedOakLogSide, true, true, RenderType::Cube, 0, 2.0f },
+        { "Stripped Spruce Wood", StrippedSpruceLogSide, StrippedSpruceLogSide, StrippedSpruceLogSide, true, true, RenderType::Cube, 0, 2.0f },
+        { "Stripped Birch Wood", StrippedBirchLogSide, StrippedBirchLogSide, StrippedBirchLogSide, true, true, RenderType::Cube, 0, 2.0f },
+        { "Stripped Jungle Wood", StrippedJungleLogSide, StrippedJungleLogSide, StrippedJungleLogSide, true, true, RenderType::Cube, 0, 2.0f },
+        { "Stripped Acacia Wood", StrippedAcaciaLogSide, StrippedAcaciaLogSide, StrippedAcaciaLogSide, true, true, RenderType::Cube, 0, 2.0f },
+        { "Stripped Dark Oak Wood", StrippedDarkOakLogSide, StrippedDarkOakLogSide, StrippedDarkOakLogSide, true, true, RenderType::Cube, 0, 2.0f },
+        { "Stripped Cherry Wood", StrippedCherryLogSide, StrippedCherryLogSide, StrippedCherryLogSide, true, true, RenderType::Cube, 0, 2.0f },
+        { "Stripped Mangrove Wood", StrippedMangroveLogSide, StrippedMangroveLogSide, StrippedMangroveLogSide, true, true, RenderType::Cube, 0, 2.0f },
+        { "Stripped Crimson Hyphae", StrippedCrimsonStemSide, StrippedCrimsonStemSide, StrippedCrimsonStemSide, true, true, RenderType::Cube, 0, 2.0f },
+        { "Stripped Warped Hyphae", StrippedWarpedStemSide, StrippedWarpedStemSide, StrippedWarpedStemSide, true, true, RenderType::Cube, 0, 2.0f },
+        { "Infested Stone", Stone, Stone, Stone, true, true, RenderType::Cube, 0, 0.75f },
+        { "Infested Cobblestone", Cobblestone, Cobblestone, Cobblestone, true, true, RenderType::Cube, 0, 0.85f },
+        { "Infested Stone Bricks", StoneBricksTile, StoneBricksTile, StoneBricksTile, true, true, RenderType::Cube, 0, 0.75f },
+        { "Infested Mossy Stone Bricks", MossyStoneBricksTile, MossyStoneBricksTile, MossyStoneBricksTile, true, true, RenderType::Cube, 0, 0.75f },
+        { "Infested Cracked Stone Bricks", CrackedStoneBricksTile, CrackedStoneBricksTile, CrackedStoneBricksTile, true, true, RenderType::Cube, 0, 0.75f },
+        { "Infested Chiseled Stone Bricks", ChiseledStoneBricksTile, ChiseledStoneBricksTile, ChiseledStoneBricksTile, true, true, RenderType::Cube, 0, 0.75f },
+        { "Infested Deepslate", DeepslateTop, DeepslateTop, Deepslate, true, true, RenderType::Cube, 0, 1.5f },
+        { "Polished Basalt", PolishedBasaltTop, PolishedBasaltTop, PolishedBasaltSide, true, true, RenderType::Cube, 0, 1.25f },
     };
 
     static_assert(sizeof(EXT_TABLE) / sizeof(EXT_TABLE[0]) == static_cast<size_t>(Blocks::ExtCount - Blocks::ExtFirst),
@@ -3698,6 +3742,8 @@ namespace
         Blocks::DeepslateBricks,
     };
     const signed char SLAB_WOOD[SLAB_MATERIALS] = { -1, -1, 0, -1, 8, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 1, 2, 3, 4, 6, 5, 7, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 9, 10, -1, -1, -1, -1, -1, -1 };
+    const BlockId INFESTED_BASE[7] = { Blocks::Stone, Blocks::Cobblestone, Blocks::StoneBricks, Blocks::MossyStoneBricks, Blocks::CrackedStoneBricks, Blocks::ChiseledStoneBricks, Blocks::Deepslate };
+    const signed char WOOD_BLOCK_WOOD[10] = { 0, 1, 2, 3, 4, 5, 6, 7, 9, 10 };
     const BlockId WALL_BASE[WALL_MATERIALS] = {
         Blocks::Cobblestone,
         Blocks::MossyCobblestone,
@@ -3829,6 +3875,30 @@ int fenceWood(BlockId id)
     if (id == Blocks::OakFence) return 0;
     if (id >= Blocks::FenceRunFirst && id < Blocks::FenceRunLast) return id - Blocks::FenceRunFirst + 1;
     return -1;
+}
+
+int woodBlockWood(BlockId id)
+{
+    return isWoodBlock(id) ? WOOD_BLOCK_WOOD[(id - Blocks::WoodBlockFirst) % 10] : -1;
+}
+
+BlockId woodBlockOf(int wood, bool stripped)
+{
+    for (int i = 0; i < 10; ++i)
+        if (WOOD_BLOCK_WOOD[i] == wood) return static_cast<BlockId>(Blocks::WoodBlockFirst + i + (stripped ? 10 : 0));
+    return Blocks::Air;
+}
+
+BlockId infestedBase(BlockId id)
+{
+    return isInfested(id) ? INFESTED_BASE[id - Blocks::InfestedFirst] : static_cast<BlockId>(Blocks::Air);
+}
+
+BlockId infestedOf(BlockId base)
+{
+    for (int i = 0; i < 7; ++i)
+        if (INFESTED_BASE[i] == base) return static_cast<BlockId>(Blocks::InfestedFirst + i);
+    return Blocks::Air;
 }
 
 BlockId shapeBase(BlockId id)
@@ -3995,6 +4065,8 @@ bool isObtainable(BlockId id)
 const char* blockSoundGroup(BlockId id)
 {
     if (isFluid(id)) return nullptr;
+    if (isCarpet(id)) return "wool";
+    if (isInfested(id)) return blockSoundGroup(infestedBase(id));
     if (const BlockId base = shapeBase(id); base != Blocks::Air && base != id) return blockSoundGroup(base);
     // By family, so a wood added later sounds like wood rather than
     // like whatever the default happens to be.
@@ -4143,6 +4215,8 @@ int blockStepVariants(const char* group)
 Material blockMaterial(BlockId id)
 {
     if (isCrop(id)) return Material::Plant;
+    if (isCarpet(id)) return Material::Wool;
+    if (isInfested(id)) return blockMaterial(infestedBase(id));
     if (const BlockId base = shapeBase(id); base != Blocks::Air && base != id) return blockMaterial(base);
 
     // Asked of the family, so a wood added later is wood and its leaves

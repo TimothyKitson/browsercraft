@@ -13384,7 +13384,7 @@ namespace
         for (int id = Blocks::ExtFirst; id < Blocks::ExtCount; ++id)
         {
             const BlockId b = static_cast<BlockId>(id);
-            if (b == Blocks::SmoothQuartz) continue;
+            if (!isStairs(b) && !isSlabBlock(b) && !isFence(b) && !isFenceGate(b) && !isWall(b)) continue;
             if (shapeBase(b) == Blocks::Air) based = false;
             if (blockMaterial(b) != blockMaterial(shapeBase(b)) && slabMaterial(b) != PETRIFIED_SLAB) based = false;
         }
@@ -13415,6 +13415,64 @@ namespace
         check(Crafting::match(grid, 3).id == gateOf(6, false, 0), "and sticks round cherry planks make a cherry gate");
         check(Smelting::burnSeconds(slabOf(SLAB_OLD + 3, 0)) > 0.0f && Smelting::burnSeconds(Blocks::WallRunFirst) == 0.0f,
               "a wooden slab is fuel and a wall is not");
+    }
+
+
+    void testCarpetsWoodAndInfested()
+    {
+        section("blocks: carpets, wood and hyphae, infested stone, polished basalt");
+        ItemStack grid[9];
+        auto clear = [&grid]() { for (ItemStack& cell : grid) cell = ItemStack{}; };
+
+        bool carpets = true;
+        for (int c = 0; c < 16; ++c)
+        {
+            const BlockId carpet = static_cast<BlockId>(Blocks::CarpetFirst + c);
+            if (!isCarpet(carpet) || blockMaterial(carpet) != Material::Wool || !isFlammable(carpet) || isSolid(carpet)) carpets = false;
+            clear();
+            grid[0] = grid[1] = ItemStack{ woolOfColour(c), 1 };
+            const CraftOutput made = Crafting::match(grid, 3);
+            if (made.id != carpet || made.count != 3) carpets = false;
+        }
+        check(carpets, "a carpet of every colour, two wool making three");
+        clear();
+        for (int i = 0; i < 8; ++i) grid[i] = ItemStack{ static_cast<StackId>(Blocks::CarpetFirst), 1 };
+        grid[8] = ItemStack{ Items::DyeBlue, 1 };
+        check(Crafting::match(grid, 3).id == colourIn(Blocks::CarpetFirst, 11) && Crafting::match(grid, 3).count == 8,
+              "and eight carpets round a dye take its colour");
+
+        bool wood = true;
+        for (int i = 0; i < 20; ++i)
+        {
+            const BlockId block = static_cast<BlockId>(Blocks::WoodBlockFirst + i);
+            const int kind = woodBlockWood(block);
+            if (!isLog(block) || blockMaterial(block) != Material::Wood) wood = false;
+            if (planksFromLog(block) != planksOfWood(kind)) wood = false;
+            if (i < 10 && strippedOf(block) != woodBlockOf(kind, true)) wood = false;
+            if (i >= 10 && (!isStrippedLog(block) || strippedOf(block) != Blocks::Air)) wood = false;
+            clear();
+            grid[0] = grid[1] = grid[3] = grid[4] = ItemStack{ i < 10 ? logOfWood(kind) : woodSet(kind).stripped, 1 };
+            if (Crafting::match(grid, 3).id != block || Crafting::match(grid, 3).count != 3) wood = false;
+            clear();
+            grid[4] = ItemStack{ block, 1 };
+            if (Crafting::match(grid, 3).id != planksOfWood(kind) || Crafting::match(grid, 3).count != 4) wood = false;
+        }
+        check(wood, "wood and hyphae of every tree: four logs make three, an axe strips them and they saw into planks");
+
+        bool infested = true;
+        for (int i = 0; i < 7; ++i)
+        {
+            const BlockId block = static_cast<BlockId>(Blocks::InfestedFirst + i);
+            if (infestedOf(infestedBase(block)) != block || blockDrop(block) != Blocks::Air) infested = false;
+            if (blockMaterial(block) != Material::Stone) infested = false;
+            if (blockInfo(block).hardness >= blockInfo(infestedBase(block)).hardness) infested = false;
+        }
+        check(infested, "seven infested blocks that look like stone, break faster and drop nothing");
+
+        clear();
+        grid[0] = grid[1] = grid[3] = grid[4] = ItemStack{ Blocks::Basalt, 1 };
+        check(Crafting::match(grid, 3).id == Blocks::PolishedBasalt && Crafting::match(grid, 3).count == 4,
+              "four basalt polish into four");
     }
 
     void testEverySoundHasANoise()
@@ -16535,6 +16593,7 @@ int runSelfTest()
     testEveryBlockHasAPicture();
     testEverySoundHasANoise();
     testShapeFamilies();
+    testCarpetsWoodAndInfested();
     testDrowning();
     testQuickMoveKeepsMetadata();
     testContainersPerDimension();

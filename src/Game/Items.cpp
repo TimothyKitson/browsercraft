@@ -540,6 +540,7 @@ StackId blockDrop(BlockId id)
     if (isStairs(id)) return stairsOf(stairsMaterial(id), false, 0);
     if (isSlabBlock(id)) return slabOf(slabMaterial(id), 0);
     if (isFenceGate(id)) return gateOf(gateWood(id), false, 0);
+    if (isInfested(id)) return Blocks::Air;
     if (isDoublePlant(id))
     {
         const DoublePlant kind = doublePlantKind(id);

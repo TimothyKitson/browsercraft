@@ -690,6 +690,10 @@ namespace Blocks
         FenceGateFirst, FenceGateLast = FenceGateFirst + 87,
         WallRunFirst, WallRunLast = WallRunFirst + 24,
         SmoothQuartz,
+        CarpetFirst, CarpetLast = CarpetFirst + 15,
+        WoodBlockFirst, WoodBlockLast = WoodBlockFirst + 19,
+        InfestedFirst, InfestedLast = InfestedFirst + 6,
+        PolishedBasalt,
         ExtCount
     };
 }
@@ -781,6 +785,14 @@ int fenceWood(BlockId id);
 BlockId shapeBase(BlockId id);
 int shapeWood(BlockId id);
 inline bool isShapeFamily(BlockId id) { return shapeBase(id) != 0; }
+inline bool isCarpet(BlockId id) { return id >= Blocks::CarpetFirst && id <= Blocks::CarpetLast; }
+inline bool isWoodBlock(BlockId id) { return id >= Blocks::WoodBlockFirst && id <= Blocks::WoodBlockLast; }
+inline bool isStrippedWoodBlock(BlockId id) { return isWoodBlock(id) && id - Blocks::WoodBlockFirst >= 10; }
+int woodBlockWood(BlockId id);
+BlockId woodBlockOf(int wood, bool stripped);
+inline bool isInfested(BlockId id) { return id >= Blocks::InfestedFirst && id <= Blocks::InfestedLast; }
+BlockId infestedBase(BlockId id);
+BlockId infestedOf(BlockId base);
 inline BlockId shaderStandIn(BlockId id)
 {
     for (int hop = 0; hop < 3 && id >= Blocks::Count; ++hop)
@@ -1527,7 +1539,7 @@ inline bool isWildPlant(BlockId id)
            isDoublePlant(id) || isPitcherCrop(id) || isTorchflowerCrop(id) || isMushroom(id) ||
            id == Blocks::HangingRoots || isCaveVine(id) || id == Blocks::SporeBlossom || isBigDripleaf(id) ||
            isBigDripleafStem(id) || isSmallDripleaf(id) || isAzaleaBush(id) || isGlowLichen(id) ||
-           id == Blocks::MossCarpet;
+           id == Blocks::MossCarpet || isCarpet(id);
 }
 inline bool isEarthy(BlockId id)
 {
@@ -1667,7 +1679,7 @@ inline bool isPlanks(BlockId id)
 
 inline bool isLog(BlockId id)
 {
-    return id == Blocks::Log || id == Blocks::BirchLog ||
+    return isWoodBlock(id) || id == Blocks::Log || id == Blocks::BirchLog ||
            id == Blocks::SpruceLog || id == Blocks::DarkOakLog ||
            id == Blocks::JungleLog || id == Blocks::AcaciaLog || id == Blocks::CherryLog ||
            id == Blocks::MangroveLog || id == Blocks::StrippedMangroveLog ||
@@ -1680,6 +1692,7 @@ inline bool isLog(BlockId id)
 // The planks a log breaks down into.
 inline BlockId planksFromLog(BlockId log)
 {
+    if (isWoodBlock(log)) return woodSet(woodBlockWood(log)).planks;
     if (log == Blocks::CherryLog || log == Blocks::StrippedCherryLog) return Blocks::CherryPlanks;
     if (log == Blocks::MangroveLog || log == Blocks::StrippedMangroveLog) return Blocks::MangrovePlanks;
     if (log == Blocks::BambooBlock || log == Blocks::StrippedBambooBlock) return Blocks::BambooPlanks;
@@ -1805,6 +1818,7 @@ inline int saplingWood(BlockId id)
 inline bool isSapling(BlockId id) { return saplingWood(id) >= 0; }
 inline bool isStrippedLog(BlockId id)
 {
+    if (isStrippedWoodBlock(id)) return true;
     for (int wood = 0; wood < WOOD_COUNT; ++wood)
         if (woodSet(wood).stripped == id) return true;
     return false;
@@ -1827,6 +1841,7 @@ inline int woodOfLeaves(BlockId id)
 }
 inline BlockId strippedOf(BlockId log)
 {
+    if (isWoodBlock(log)) return isStrippedWoodBlock(log) ? static_cast<BlockId>(Blocks::Air) : woodBlockOf(woodBlockWood(log), true);
     for (int wood = 0; wood < WOOD_COUNT; ++wood)
         if (woodSet(wood).log == log) return woodSet(wood).stripped;
     return Blocks::Air;
@@ -2329,7 +2344,7 @@ inline BlockId wheatAtStage(int stage) { return static_cast<BlockId>(Blocks::Whe
 
 inline bool isFlammable(BlockId id)
 {
-    if (isLog(id) || isPlanks(id) || isLeaves(id) || isWool(id)) return true;
+    if (isLog(id) || isPlanks(id) || isLeaves(id) || isWool(id) || isCarpet(id)) return true;
     if (isDoublePlant(id) || isHive(id) || isComposter(id)) return true;
     if (shapeWood(id) >= 0) return true;
     switch (id)
