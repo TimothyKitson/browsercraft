@@ -1,6 +1,6 @@
 # What Browsercraft does not have, against Minecraft 1.21.1
 
-Checked on 2026-11-10 against the 1.21.1 registries, data files and decompiled client source. Seven passes read the game's code one area at a time and wrote down what is missing and what is only partly there. A second pass then took each of those entries and tried to find the thing in the code after all; each section says how far that got. This replaces the list from early October, which about forty finished to-do items had made wrong.
+Checked on 2026-11-10 against the 1.21.1 registries, data files and decompiled client source. Seven passes read the game's code one area at a time and wrote down what is missing and what is only partly there. A second pass then took every one of those entries and tried to find the thing in the code after all. It found nothing that exists after all, and corrected thirteen entries; the corrections are written on the entries. This replaces the list from early October, which about forty finished to-do items had made wrong.
 
 Names in `code type` are Minecraft's ids. "small / medium / large job" is a rough size: data only, a new shape or a slice of a system, a whole new system.
 
@@ -20,7 +20,7 @@ Names in `code type` are Minecraft's ids. "small / medium / large job" is a roug
 | Container screens | 25 | 21 | 4, all chest sizes no block opens |
 | Game rules | 51 | 0 | 51 |
 | Gameplay commands | 61 | 13 | 48 |
-| Advancements | 122 | 122, of which 37 cannot be earned | 0 |
+| Advancements | 122 | 122, of which 36 cannot be earned | 0 |
 | Crafting recipes | 887 | 656 | 231 |
 | Stonecutting recipes | 250 | 102 | 148 |
 | Smithing upgrades | 9 | 9 | 0 |
@@ -28,7 +28,7 @@ Names in `code type` are Minecraft's ids. "small / medium / large job" is a roug
 | Particle types | 109 | about 54 | about 55 |
 | Sound events | 1603 | about 300 | about 1300 |
 
-Complete sets: paintings (50), music discs (19), armour trims (18 patterns, 10 materials), pot patterns (24), goat horns (8), cat, wolf and frog variants, all 16 colours of every dyed block that exists. Banner patterns are 42 of 43.
+Complete sets: paintings (50), music discs (19), armour trims (18 patterns, 10 materials), pot patterns (24), goat horns (8), cat, wolf and frog variants, all 16 colours of every dyed block that exists. Banner patterns: 42 of 43 exist and 40 can be made at the loom.
 
 ## The short version
 
@@ -38,7 +38,7 @@ Complete sets: paintings (50), music discs (19), armour trims (18 patterns, 10 m
 4. **Things you throw.** Snowballs, eggs and ender pearls exist as items but cannot be thrown.
 5. **Rules and commands.** 12 of 42 enchantments, and the place they are stored is full. No game rules at all. 13 of 61 gameplay commands, with cut-down syntax. No attributes, no death messages, no scoreboard, teams, titles or data packs. You keep your items when you die.
 6. **The world.** It is 128 blocks tall, not 384. One cave system, no ravines, aquifers, dungeons, lava lakes, springs or fossils. Every structure except buried treasure is a hand-built stand-in, because there is no jigsaw or template system. No `/locate`.
-7. **Data.** 37 of the 122 advancements can never be earned. 370 recipes make something that does not exist yet. No campfire cooking. The wandering trader sells nothing. Chest loot uses 16 short tables in place of 61.
+7. **Data.** 36 of the 122 advancements can never be earned. 370 recipes make something that does not exist yet. No campfire cooking. The wandering trader sells nothing. Chest loot uses 16 short tables in place of 61, and End city and bastion chests are empty.
 8. **Screens and sound.** About 14 of 73 options can be set (no FOV, GUI scale, brightness or volume sliders). No music, no ambient sound, 9 block sound materials in place of about 100. No tab list, subtitles or chat history.
 
 ## Blocks and items
@@ -355,7 +355,7 @@ Second check: all 35 entries below were looked for again in the code; 2 needed a
 
 All 122 advancements of 1.21.1 are defined with the right criteria, but 37 can never be granted because nothing fires their trigger, three more (Adventuring Time 15 of 53 biomes, Hot Tourist Destinations 3 of 5, Two by Two 17 of 25 animals) can never complete, and none of the 23 XP rewards is paid. All 75 custom stats are named and 67 are tracked for real; 8 never change (player kills, two damage-dealt splits, clean armor, clean shulker box, play and tune note block, campfire); the six per-item kinds and killed / killed-by all count. Recipes: 656 of 887 crafting, 102 of 250 stonecutting and all 9 smithing upgrades work; 370 recipes have no result block because whole shape families are absent (most stairs, slabs, all walls, carpets, pressure plates, fence gates, wood variants of fence and button, wood blocks); 10 existing results have no crafting recipe, about 21 alternative recipes and 31 smelting inputs are absent, campfire cooking does not exist, and about 11 recipes use different ingredients (mace, observer, anvil, lantern and others). Of the 14 special recipes 9 work, map cloning and extending work only at the cartography table, and armor dye, banner duplicate and repair item are absent. Tag-based recipes honour only planks and coals; stone tools, furnace, campfire, smoker and slab recipes take one hard-coded item. Loot: chests use 16 short hand-written tables with no weights, enchanted items or maps, bastion and End city chests look to be never filled, piglin bartering, cat gifts, hero of the village gifts and panda sneezes are absent, and mob drops are fixed one or two stacks with no Looting. All 46 potions, splash and lingering forms are reachable; tipped arrows keep only the first effect. All 13 professions and 5 levels trade from fixed lists, but the wandering trader has no trades and dyed armour, suspicious stew, tipped arrow and random enchanted book offers are absent.
 
-Second check: 8 of the 27 entries below were looked for again in the code; the rest have had one pass only.
+Second check: all 27 entries below were looked for again in the code; 2 needed a correction, noted on the entry.
 
 ### Not in the game (14)
 
@@ -374,6 +374,10 @@ Second check: 8 of the 27 entries below were looked for again in the code; the r
 - **10 crafting recipes whose result exists in the game but nothing crafts it** (10, small job). `andesite (worldgen only)`, `diorite (worldgen only)`, `granite (worldgen only)`, `dripstone_block (worldgen, mason trade)`, `end_crystal (worldgen only, so the dragon cannot be respawned)`, `end_stone_bricks (stonecutter and worldgen only)`, `glowstone from 4 dust (worldgen, cleric trade)`, `purpur_block from popped chorus fruit (worldgen, end city loot)`, `purpur_pillar (stonecutter only)`, `soul_lantern (worldgen only)`
 - **8 custom stats are names only: nothing increments them** (8, small job). `player_kills`, `damage_dealt_absorbed`, `damage_dealt_resisted`, `clean_armor`, `clean_shulker_box`, `play_noteblock`, `tune_noteblock`, `interact_with_campfire`
 
+### Also not in the game, found on the second check (1)
+
+- **Advancement husbandry/plant_seed: torchflower seeds award a criterion name that does not exist**. Application.cpp:16436 passes RecipeBook::idOf(stack.id) for seeds other than wheat/pumpkin/melon/beetroot, i.e. 'torchflower_seeds', while the criterion is named 'torchflower' (AdvancementData.cpp:100). Harmless only because any one criterion completes it; not verified what grant() does with an unknown name.
+
 ### Partly there (13)
 
 - **Adventuring Time can never complete: only 15 of 53 biome criteria are ever awarded**. Works: plains, desert, forest, swamp, jungle, savanna, badlands, snowy_plains, ocean, beach, windswept_hills, mushroom_fields, cherry_grove, mangrove_swamp and deep_dark are awarded. Lacks: The other 38 biome criteria (taiga, birch_forest, dark_forest, river, meadow, peaks, ocean variants, dripstone_caves, lush_caves...) are never awarded because the check uses the coarse Biome enum.
@@ -390,6 +394,17 @@ Second check: 8 of the 27 entries below were looked for again in the code; the r
 - **Crafting recipes whose ingredients differ from 1.21.1**. Works: The result is craftable. Lacks: mace = breeze rod + iron ingot (vanilla heavy core + breeze rod); observer uses a diamond instead of quartz; anvil 7 ingots (vanilla 3 iron blocks + 4 ingots); lantern 8 iron ingots (vanilla nuggets); blast furnace takes stone not smooth stone; smithing table 3 planks (vanilla 4); crafter takes a piston not a dropper; detector rail takes stone not a stone pressure plate; copper trapdoor 4 ingots -> 1 (vanilla 6 -> 2); brewing stand takes blaze powder not a blaze rod; sticky piston also accepts magma cream.
 - **Vault reward tables are one simplified list**. Works: Vaults pay 13 possible prizes (iron, emerald, gold, diamond, 2 discs, ender pearl, guster pattern, bolt trim, book, blaze powder, redstone, ominous bottle); ominous vaults double counts and add one extra (mace, heavy core, breeze rod, flow trim/pattern, sherds, creator disc). Lacks: The common/rare/unique tiers; arrows and tipped arrows, wind charges, honey bottles, trident, shield, crossbow, enchanted books (riptide, loyalty, channeling, impaling, mending, wind burst, density, breach), enchanted iron/diamond gear, golden carrot, enchanted golden apple, emerald/diamond/iron blocks. The mace itself drops from ominous vaults instead of being crafted from the heavy core.
 
+### Less there than the first pass said (1)
+
+- **Structure chest loot for 16 hoard kinds (... end city, bastion ...)**. Tables exist for all 16 but End city and bastion chests are never filled: fillVillageChest returns outside the Overworld (src/Core/InventoryScreen.inl:4346) and is the only caller of StructureLoot::rollFor. A player gets loot from 14 kinds at most; the auditor's own partial entry loot-nether-end-chests-empty says the same.
+
+### Settled on the second check (4)
+
+- Bastion and End city chests opening empty: could a filled chest come from another path? No. hoardAt() and StructureLoot::rollFor() are called only from Application::fillVillageChest (InventoryScreen.inl:4358-4359), which returns at line 4346 outside the Overworld. The other callers are in main.cpp (offline tools). So they do open empty.
+- Per-item 'used' stat: does it cover placement, food and throwables? statUsed (StatsScreen.inl:62) compares the main-hand and offhand stack before and after the whole use handler (Application.cpp:8619-8620) and counts when the count drops, damage rises or the item changes. So placing, eating, throwing and tool wear in survival count; uses that leave the stack unchanged (creative mode, bow with infinity etc.) do not.
+- Village chest kinds: absent loot tables or absent buildings? Absent buildings. Village::Kind has only Home, Blacksmith, Library, Butcher (+ Lamp, Farm) in src/World/Village.h:47-61 and no biome variants, so the 12 other village chest tables have no house to sit in.
+- Do a monster room, nether fortress or ocean ruin place any container? No chest: WorldGen::landmarkChests (WorldGen.cpp:2540-2564) gives chests only to pyramid, jungle temple, igloo, ruined portal, outpost, mansion, swamp hut; Hoard enum has no dungeon, fortress or ocean ruin; grep for dungeon in WorldGen.cpp finds one comment (3086). Whether the structures themselves exist is the worldgen area's call (Landmark has NetherFortress, OceanRuins, TrailRuins entries).
+
 ### Not settled (6)
 
 - Crafting ingredient accuracy was machine-checked for only 357 of the 734 crafting rows; rows written with 'First + n' offsets or static_cast (dyed blocks, beds, banners, candles, copper variants, signs) were not parsed, so wrong ingredients may remain there.
@@ -403,7 +418,7 @@ Second check: 8 of the 27 entries below were looked for again in the code; the r
 
 Client audit (screens, HUD, options, effects, sound). Container screens: 21 of the 25 handler types work (every one a vanilla block opens, recipe book included); only the unused 9x1/9x2/9x4/9x5 chest sizes are absent, the horse screen has no donkey/mule/llama chest or carpet slots, creative has 9 tabs instead of 14 with no Saved Hotbars, the structure block editor lacks rotation/mirror/integrity/entities, and there is no jigsaw editor. Menus: title, world list, create/edit world, multiplayer, resource packs, key binds, accessibility, pause, advancements, statistics, death, sign, book and command block screens exist; 9 option sub-screens are missing (music and sounds, mouse, controls, chat, skin parts, online, font, telemetry, credits and attribution), the Game Rules / Experiments / Data Packs buttons are dead, and only about 14 of the 73 vanilla options are settable (no FOV, GUI scale, brightness, volumes, sensitivity, vsync, clouds, particles, view bobbing and so on). HUD: hotbar, all heart kinds, armour, food, air, XP, mount hearts, jump bar, boss bars, effect icons, crosshair, overlays and four toast kinds are present; missing are the tab player list, scoreboard sidebar, titles and action bar, subtitles, the nether portal overlay, sleeping screen and death messages, and chat has no history, scrollback, clickable text or command suggestions; F3 has only its left column and no charts or F3+key toggles besides F4. Particles: about 54 of 109 types have an emitter; 56 ids in 8 families are missing (fluid, honey, tear and spore drips, dust, item crumbs, smoke variants, bubble columns and ink, and kinds that are loaded but never spawned). Collections: paintings 50/50, discs 19/19, trims 18+10, pot patterns 24/24, goat horns 8/8, banner patterns 42/43 (no mojang; creeper has no pattern item so it cannot be applied). Sound: roughly 300 of 1603 sound events have their own sound; there is no background music (31), no ambient loops (22), 9 block materials instead of about 100 block sound groups, no note block instruments, and most actions reuse a generic click. Rendering: smooth lighting, AO, sky bodies, biome tint blending, animated textures, weather, shadows, crack overlay, glint, leads, name plates, banners, maps, third person, screenshots, pack switching and an own shader pipeline are present; missing or partial are view bobbing, hurt tilt, an FOV setting, 3D clouds, the glowing outline and first-person eat/bow/trident animations.
 
-Second check: not done for this section; the entries below have had one pass only.
+Second check: all 52 entries below were looked for again in the code; every one held.
 
 ### Not in the game (32)
 
@@ -440,6 +455,14 @@ Second check: not done for this section; the entries below have had one pass onl
 - **Nether portal overlay (purple swirl growing while standing in a portal) and its nausea-style warp** (small job). `portal overlay`
 - **Debug Mode world type (hold Alt while cycling World Type) and world-preset entries from data packs** (small job). `debug_all_block_states`
 
+### Also not in the game, found on the second check (5)
+
+- **Offhand item is not drawn in first person**. Single HeldItem m_heldItem (src/Core/Application.h:871) updated and rendered from m_inventory.selected() only (Application.cpp:8623-8625, :18855-18870). No second hand model for Inventory::OFFHAND.
+- **Inventory mouse and key shortcuts: drag to spread a stack over slots, double-click to gather, number keys to swap a hovered slot with the hotbar, Q to drop the hovered slot**. handleInventoryClick(mouseX, mouseY, rightButton, shiftHeld) is the only slot handler (InventoryScreen.inl:3016); grep drag|Drag in InventoryScreen.inl: scroll bar only; doubleClick only in WorldScreens.inl; Action::Drop needs !m_inventoryOpen (Application.cpp:8271); number keys only select the hotbar slot (:8454).
+- **Block animations: chest, ender chest and shulker box lids do not open, bell does not swing**. Chest is a static chunk mesh (World/Block.cpp:60 RenderType::Chest), Shulker Box a Cube (:367); grep -rniE 'lid|lidAngle|openness' in Core/Application.cpp, Renderer, ChunkMesher: none; bell use at Application.cpp:15318-15323 only plays two sounds and counts the stat; grep bellSwing|ringing: 0.
+- **Item use cooldown: no cooldown on ender pearls or chorus fruit and no white cooldown sweep over the hotbar icon**. grep -rnE 'cooldown_overlay|itemCooldown|cooldownFor|Cooldowns' src: 0; cooldown members in Application.h are horse jump, gateway, shrieker, goat horn only; no EnderPearl line mentions a timer.
+- **Multiplayer chat notices: '<name> joined the game', '<name> left the game' and death messages**. grep -rnE 'joined the game|left the game|has joined|has left|was slain|fell from' src/Core src/Net src/Player: comments only.
+
 ### Partly there (20)
 
 - **Lectern screen**. Works: Book on lectern opens the book screen with page turning, Done and Take Book (BookScreen.inl:287-295); book saved with world. Lacks: No lectern container sync of page for other players, no redstone pulse on page turn, no comparator output by page (no Lectern reference in any redstone code).
@@ -463,6 +486,19 @@ Second check: not done for this section; the entries below have had one pass onl
 - **Glowing effect / spectral arrow outline**. Works: A glowing mob is drawn at full brightness (MobModel.cpp:235-239). Lacks: The coloured outline visible through walls (team colour), and the spectator 'highlight players' key.
 - **Item tooltips**. Works: Name plus lore lines for enchantments, potion effects with duration, banner layers, painting size, written book author and generation, goat horn call, bundle contents (InventoryScreen.inl:338-405, drawBundleTooltip). Lacks: Attribute lines (When in Main Hand: Attack Damage / Attack Speed, armour, toughness), rarity name colours, durability and item id in advanced tooltips (F3+H), trim / disc / firework description lines not verified.
 
+### Less there than the first pass said (1)
+
+- **Banner patterns: 42 of 43 in the loom and on shields (all but mojang)**. The loom reaches 40: 34 free patterns (Banners.h FREE_FIRST..FREE_LAST) plus 6 item patterns (Banners.cpp:83-90). Creeper Charge is in the enum but has no item, so no player can apply it; the auditor's own missing entry says the same.
+
+### Settled on the second check (6)
+
+- Do bone meal and the composter show happy_villager / composter particles? No. Kind::Happy has three spawn sites, all villager related (Application.cpp:19166, 19706; InventoryScreen.inl:3803). Bone meal uses block-break debris.
+- Are sounds attenuated by distance or panned? Volume only, and only where the call site computes it (for example Application.cpp:11633 sculk click, :13754 evoker fangs, :20189 zoglin convert, mob voices via drainSounds at :19847). AudioEngine::play(Sound, volume, pitch) takes no position, so there is no stereo panning or directional audio.
+- Is the offhand item drawn in first person? No. There is one HeldItem (Application.h:871) and it is fed only m_inventory.selected() (Application.cpp:8623-8625 update, :18855-18870 render). An offhand torch, map, shield or totem is not shown in first person. Saved as extra_missing.
+- Low-health heart shake, regeneration wave, hotbar pick-up pop animation? Absent. Hearts only blink after a health change (m_heartJumpEnd, Application.cpp:20684-20699). grep for shake|jitter|wobble|regen wave|heartWave|popTime|pickupPop|popAnim in src/Core, Renderer, Entity finds nothing relevant.
+- Join/leave and death chat messages in multiplayer? Absent. grep 'joined the game|left the game|has joined|has left' over src/Core and src/Net finds only comments; no death message text exists either (see menu-death).
+- Glint on dropped items, mob armour, armour stands, item frames? Not settled in full. renderGlint/glintTexture are used for the held item (Application.cpp:18878), worn chest/elytra (:19123) and inventory icons (InventoryScreen.inl:666), all skipped while shaders are on. I found no glint call in DroppedItems, MobModel or ArmorStandRenderer by name, but did not read those files.
+
 ### Not settled (5)
 
 - Particles: bone meal and composter use (happy_villager / composter particles on crops) looked absent (Kind::Happy is spawned only for villagers and trades) but I did not read the bone meal code path; spit is an Arrows::Kind projectile, not a particle; dragon_breath is drawn with Portal sprites (Application.cpp ~19522), firework with FireworkRenderer, totem_of_undying with Glitter (~2714), fishing wake with Bubble/Splash (~18740).
@@ -475,7 +511,7 @@ Second check: not done for this section; the entries below have had one pass onl
 
 Read all 88 items of PACK-TODO.md and checked about 125 put-off notes against the source: 77 are still open (73 saved as missing, 4 as partial) and the rest were finished by later items; 32 of the finished ones are listed under present with file:line. The biggest open notes are: mobs are not saved with the world, redstone has no 0-15 signal strength, six mobs named in the biome data do not exist (ocelot, donkey, mule, mooshroom, skeleton and zombie horse), stairs/slabs/fences/gates/buttons/plates exist only for oak, there are no pressure plates, mob heads or dyed carpets, no game rules, no background music or ambient sound, and 36 of the 122 advancements can never be earned because nothing awards them. Smaller ones a player would notice: no zombie villager curing, no leather dyeing, shears do not shear sheep or wear out, hoes do nothing, decorated pots and shulker boxes do not keep items, lightning starts no fire and changes no mob, no action bar, anvil renames only name tags. MISSING-1.21.1.md listed 1,374 ids; about 1,090 are now done (all 39 effects, all 24 potions, all 64 biomes, every container screen, nearly all items) and about 285 are still missing, saved as ten groups: 16 carpets, 83 wood-set blocks, 95 stone stairs/slabs/walls and infested blocks, 12 heads, 8 plates/cauldrons/bubble column, 9 items, 17 entities (thrown ender pearl, snowball and egg, falling blocks, giant, spawner minecart, display entities), 30 of 42 enchantments, 9 structure variants and 6 entity models. README.md is far out of date (it still says 35 blocks and seven biomes); the limits in it that are still true are the 128-block world height (missing) and the browser build having no multiplayer, no pack folders and no worker threads (partial). The unsure points are mainly wall torches, falling blocks, which potion effects act on mobs, and whether text goes through translation keys. Things PACK-TODO marks as not planned on purpose (Realms, social and reporting screens, Mojang branding) were left out of missing.
 
-Second check: 10 of the 89 entries below were looked for again in the code; the rest have had one pass only.
+Second check: all 89 entries below were looked for again in the code; 3 needed a correction, noted on the entry.
 
 ### Not in the game (84)
 
@@ -495,7 +531,7 @@ Second check: 10 of the 89 entries below were looked for again in the code; the 
 - **33: shulker boxes keeping their contents as an item (and the tooltip listing them)** (17, medium job). `shulker_box`, `*_shulker_box`
 - **7/16/65: llama carpets (16 decor layers), llama carpet slot, llama chests and leading/riding** (16, medium job). `llama/decor/*.png`
 - **43: pressure plates (stone, wood, weighted, polished blackstone); detector rail recipe uses stone instead** (15, medium job). `stone_pressure_plate`, `oak_pressure_plate`, `spruce_pressure_plate`, `birch_pressure_plate`, `jungle_pressure_plate`, `acacia_pressure_plate`, `dark_oak_pressure_plate`, `cherry_pressure_plate`, `mangrove_pressure_plate`, `bamboo_pressure_plate`, `crimson_pressure_plate`, `warped_pressure_plate`, `light_weighted_pressure_plate`, `heavy_weighted_pressure_plate`, `polished_blackstone_pressure_plate`
-- **83: options that do not exist: subtitles, auto-jump, chat line spacing, chat delay, notification time, view bobbing, damage tilt, glint speed and strength, narrator, high contrast, other languages** (12, medium job). `subtitles`, `auto-jump`, `chat line spacing`, `chat delay`, `notification time`, `view bobbing`, `damage tilt`, `glint speed`, `glint strength`, `narrator`, `high contrast`, `languages other than en_us`
+- **83: options that do not exist: subtitles, auto-jump, chat line spacing, chat delay, notification time, view bobbing, damage tilt, glint speed and strength, narrator, high contrast, other languages** (12, medium job). `subtitles`, `auto-jump`, `chat line spacing`, `chat delay`, `notification time`, `view bobbing`, `damage tilt`, `glint speed`, `glint strength`, `narrator`, `high contrast`, `languages other than en_us` Second check: Right that none of these work, but Narrator and High Contrast are not absent rows: both are drawn as disabled buttons ('Narrator: Not Available', 'High Contrast: OFF'). Subtitles, auto-jump, chat spacing/delay, notification time, view bobbing, damage tilt and glint options have no row at all.
 - **MISSING doc / Heads and skulls: every head but the wither skeleton skull** (12, medium job). `skeleton_skull`, `skeleton_wall_skull`, `wither_skeleton_wall_skull`, `zombie_head`, `zombie_wall_head`, `player_head`, `player_wall_head`, `creeper_head`, `creeper_wall_head`, `dragon_head`, `dragon_wall_head`, `piglin_head`, `piglin_wall_head`
 - **46/57/59: mob heads (skeleton, zombie, creeper, piglin, dragon, player) and what waits on them: creeper charge banner pattern item, creeper-shaped firework, charged-creeper head drops** (10, medium job). `skeleton_skull`, `zombie_head`, `creeper_head`, `piglin_head`, `dragon_head`, `player_head`, `creeper_banner_pattern`, `firework star creeper shape`, `mojang_banner_pattern (left out on purpose)`, `wall heads`
 - **MISSING doc / Structures: badlands mineshafts, beached shipwrecks, taiga village style, ruined portal variants** (9, medium job). `mineshaft_mesa`, `shipwreck_beached`, `village_taiga`, `ruined_portal_desert`, `ruined_portal_jungle`, `ruined_portal_swamp`, `ruined_portal_mountain`, `ruined_portal_ocean`, `ruined_portal_nether`
@@ -552,17 +588,21 @@ Second check: 10 of the 89 entries below were looked for again in the code; the 
 - **46: nether fortress chests (rib trim template sits in bastions instead)** (small job). `chests/nether_bridge`
 - **49: lead knot on a fence drawn as Mojang's knot model (it is a small painted block)** (small job). `leash_knot`
 - **54: knowledge book teaching recipes (it is used up with a chat note)** (small job). `knowledge_book`
-- **54: enchanted books and enchanted gear in structure chest loot (chests hold plain books)** (small job). `enchant_randomly loot function`, `enchant_with_levels`
+- **54: enchanted books and enchanted gear in structure chest loot (chests hold plain books)** (small job). `enchant_randomly loot function`, `enchant_with_levels` Second check: Right for structure and village chests, but enchanted books are not unobtainable: librarians sell three (Efficiency I, Unbreaking II, Silk Touch I) and fishing treasure gives enchanted books, bows and rods.
 - **57: firework sparks drawn from the pack's spark sprites (drawn as glowing squares)** (small job). `particle/spark_0..7`
 - **58: action bar text above the hotbar (Now Playing, bed messages, 'You can only sleep at night' and other overlay messages go to chat)** (small job). `action bar overlay`
 - **61: mixing several dyes into one colour for wolf armour (and leather); one dye sets the colour** (small job). `dyed_color mixing`
 - **73: villagers throwing gifts to the Hero of the Village** (small job). `gameplay/hero_of_the_village/* loot tables (13)`
-- **73: the ambient (beacon/conduit) frame round effect icons in the HUD and inventory effect list** (small job). `effect_background_ambient`
+- **73: the ambient (beacon/conduit) frame round effect icons in the HUD and inventory effect list** (small job). `effect_background_ambient` Second check: The auditor's evidence is wrong: the ambient HUD frame sprite IS drawn, but only for Bad Omen. What is missing is an ambient flag on effects so beacon and conduit effects get that frame.
 - **77/78/83: blur behind in-world screens and the blurred panorama behind menus (Menu Background Blurriness setting)** (small job). `menu blur`
 - **88: underwater fog colour per biome** (small job). `water_fog_color`
 - **81: bundle tutorial toast (social interactions tutorial is left out on purpose)** (small job). `tutorial.bundleInsert`
 - **53/88: sea creatures spawning by biome (tropical fish and pufferfish in warm oceans, salmon in cold oceans and rivers, dolphins not in frozen seas, drowned in rivers)** (small job). `water_creature / water_ambient spawn lists`
 - **76: Two by Two cannot be completed (needs donkey, mule, ocelot, mooshroom); Zombie Doctor, Voluntary Exile and the other 36 listed above stay locked** (small job). `husbandry/bred_all_animals`
+
+### Also not in the game, found on the second check (1)
+
+- **Potion effects that do nothing to mobs: Speed, Slowness, Strength, Weakness, Resistance, Fire Resistance (stored on the mob but never read)**. Entity/Mob.cpp reads m_effects only at :758 (Effects::step ticking damage/heal), :897-900 (levitation, slow falling), :1261 (infested); Mob.h:136,150 glowing, invisibility. No Effects:: speed/damage/resistance call takes a mob's set, so a splash of Slowness or Weakness changes nothing.
 
 ### Partly there (5)
 
@@ -571,6 +611,20 @@ Second check: 10 of the 89 entries below were looked for again in the code; the 
 - **48: structure block corner and data modes; jigsaw block editor and generation**. Works: Save and load modes work up to 48 cubed (Application.cpp:18240-18250); structure void honoured. Lacks: Corner mode size detection, data mode markers, the jigsaw block's screen (pool, name, target, joint) and anything generating from jigsaw pools.
 - **17: creative search tab icon is a book, not the compass; the tab set is the game's own, not 1.21.1's**. Works: Nine tabs with search and the survival inventory tab, drawn on the pack's tab sprites (Core/InventoryScreen.inl:241-251, 2518). Lacks: Compass icon on Search; 1.21.1's tabs (Colored Blocks, Natural Blocks, Functional Blocks, Redstone Blocks, Tools & Utilities, Combat, Food & Drinks, Ingredients, Spawn Eggs, Operator Utilities) and Saved Hotbars.
 - **README/79/80: browser build limits**. Works: Compiles to WebAssembly, saves worlds to IndexedDB (Core/Application.cpp:402, 544). Lacks: Multiplayer (no sockets: Net/SocketTransport.cpp is compiled out under __EMSCRIPTEN__), resource pack folders, worker threads (chunk work runs on a per-frame budget), full-resolution textures.
+
+### Less there than the first pass said (1)
+
+- **36: lightning hurts and ignites mobs near the strike**. Only half true. The cited code (Core/Application.cpp:11082-11104) is boltAt, whose single caller is a Channeling trident hit in a storm (:11230). Weather lightning runs strikeLightning (:11266, called at :1653), which powers a rod, cleans copper and draws the bolt but damages and ignites nothing.
+
+### Settled on the second check (7)
+
+- 60: which potion effects actually act on mobs? Only some. Mob.cpp:758 Effects::step applies the ticking ones (poison, wither, regeneration, instant health/harm); :897-900 levitation and slow falling; :1261 infested; Mob.h:136,150 glowing and invisibility; oozing/weaving/wind charged on death. Speed, slowness, strength, weakness, resistance and fire resistance are stored but never read for mobs (no Effects:: call with m_effects for them in Entity/).
+- Wall torches: do torches lean on walls? No. Torch, Soul Torch and Redstone Torch are single RenderType::Cross blocks (World/Block.cpp:42,153-154,2134) with no facing state in Block.h; the blocks area already carries this as wall-torches-3 / floor-only-attachables.
+- Falling blocks (sand, gravel, concrete powder, anvil, dragon egg)? Confirmed absent: grep -E 'falling|Falling|isGravity|fallsDown' over src finds only fluids and Slow Falling; concrete powder only hardens (Game/Fluids.cpp:251-256). Already claimed as gravity-blocks / falling-block in other areas.
+- 33/35: shulker box and chest lid animation, shulker boxes keeping contents? Read the break path: World/Block.h:1241 puts shulker boxes in isContainerBlock and Core/Application.cpp:9203-9214 drops every stack and deletes the record, so contents are not kept. No lid/open-amount state exists anywhere (grep lidAngle|openAmount|ChestRenderer: 0).
+- 83: does text go through translation keys? No. There is no lang loader or key lookup (grep -i 'lang/|en_us|translat' over src: only the Language screen's warning string, Core/AccessibilityScreen.inl:124); all UI strings are English literals in the code, so other languages are a large job, not data.
+- Villages: do the palettes amount to 1.21.1's village sets? No. World/WorldGen.cpp:1578-1720 paletteFor only swaps wall/roof/post blocks for Desert, Snowy, Swamp, Savanna, Jungle, Forest and a default on one shared house builder; nothing is built from the plains/desert/savanna/snowy/taiga piece sets (no .nbt or pool reader in src).
+- Not planned on purpose (PACK-TODO lines 344-347): should the new to-do list carry them? Not a code question. The code agrees they are absent (grep realms|social|report|demo over Core/: no screens), and other areas already list two of them as missing (menu-social, banner-pattern-mojang-creeper), so the final list should mark those two as intentional rather than drop or double-count them.
 
 ### Not settled (7)
 
