@@ -2544,6 +2544,7 @@ bool Application::frame()
         if (playing()) tickObservers(deltaTime);
         if (playing()) tickHoppers(deltaTime);
 
+        if (m_pearlCooldown > 0.0f) m_pearlCooldown -= deltaTime;
         for (size_t i = 0; i < m_pressedButtons.size();)
         {
             m_pressedButtons[i].second -= deltaTime;
@@ -14345,6 +14346,11 @@ namespace
                 xpBursts.push_back(at);
                 return;
             }
+            if (kind == Arrows::Kind::Snowball || kind == Arrows::Kind::Egg || kind == Arrows::Kind::Pearl)
+            {
+                thrownBursts.emplace_back(at, kind);
+                return;
+            }
 
             if (kind == Arrows::Kind::Potion && (effect & (1 << 13)) != 0)
             {
@@ -14409,6 +14415,7 @@ namespace
         std::vector<std::pair<glm::vec3, int>> thrownPotions;
         std::vector<glm::vec3> breathBursts;
         std::vector<glm::vec3> xpBursts;
+        std::vector<std::pair<glm::vec3, Arrows::Kind>> thrownBursts;
 
         // How far a thrown potion reaches. Minecraft's is four blocks
         // at full strength, tailing off to nothing.
@@ -14432,7 +14439,14 @@ namespace
                     if (std::abs(apart.x) > half || std::abs(apart.z) > half) continue;
                     if (apart.y < 0.0f || apart.y > mob.height()) continue;
 
-                    if (striking != Arrows::Kind::XpBottle && striking != Arrows::Kind::Potion)
+                    const bool soft = striking == Arrows::Kind::Snowball || striking == Arrows::Kind::Egg || striking == Arrows::Kind::Pearl;
+                    if (soft)
+                    {
+                        const int hurt = striking == Arrows::Kind::Snowball && mob.typeId() == MobId::Blaze ? 3 : 0;
+                        mob.damage(hurt, feet - point);
+                        mob.markPlayerHit(1, glm::length(feet - player->position));
+                    }
+                    else if (striking != Arrows::Kind::XpBottle && striking != Arrows::Kind::Potion)
                     {
                         mob.damage(damage, feet - point);
                         mob.markPlayerHit(striking == Arrows::Kind::Trident ? 3 : 1, glm::length(feet - player->position));
@@ -14520,6 +14534,42 @@ void Application::updateArrows(float deltaTime)
         m_orbs.spawnValue(at + glm::vec3(0.0f, 0.3f, 0.0f), 3 + static_cast<int>(roll % 5u) + static_cast<int>((roll >> 8) % 5u));
         sprites(SpriteParticles::Kind::Spell, at, 20, 1.0f, 1.4f, 0.22f, 1.0f);
         m_audio.play(Sound::DigGlass, 0.6f, 1.0f);
+    }
+    for (const auto& [at, kind] : targets.thrownBursts)
+    {
+        const uint32_t roll = hashCoords(static_cast<int>(at.x * 16.0f), static_cast<int>(at.z * 16.0f),
+                                         static_cast<int>(m_elapsedSeconds * 20.0f), 0x5E66u);
+        if (kind == Arrows::Kind::Snowball)
+        {
+            sprites(SpriteParticles::Kind::Poof, at, 8, 0.4f, 0.8f, 0.12f, 0.5f);
+        }
+        else if (kind == Arrows::Kind::Egg)
+        {
+            sprites(SpriteParticles::Kind::Poof, at, 6, 0.3f, 0.6f, 0.1f, 0.4f);
+            if (roll % 8u == 0u)
+            {
+                const int chicks = (roll >> 8) % 32u == 0u ? 4 : 1;
+                for (int k = 0; k < chicks; ++k)
+                    m_entities.spawnAt(MobId::Chicken, at + glm::vec3(0.15f * static_cast<float>(k), 0.0f, 0.0f), *m_world, true);
+            }
+        }
+        else
+        {
+            glm::vec3 land = at;
+            for (int lift = 0; lift < 3 && (isSolid(m_world->getBlock(static_cast<int>(std::floor(land.x)), static_cast<int>(std::floor(land.y)),
+                                                                     static_cast<int>(std::floor(land.z)))) ||
+                                            isSolid(m_world->getBlock(static_cast<int>(std::floor(land.x)), static_cast<int>(std::floor(land.y)) + 1,
+                                                                     static_cast<int>(std::floor(land.z))))); ++lift)
+                land.y = std::floor(land.y) + 1.0f;
+            sprites(SpriteParticles::Kind::Portal, m_player.position + glm::vec3(0.0f, 1.0f, 0.0f), 24, 0.6f, 1.2f, 0.18f, 1.0f);
+            m_player.position = land;
+            m_player.velocity = glm::vec3(0.0f);
+            m_player.clearFall();
+            sprites(SpriteParticles::Kind::Portal, land + glm::vec3(0.0f, 1.0f, 0.0f), 24, 0.6f, 1.2f, 0.18f, 1.0f);
+            if (!m_player.creative() && m_player.damage(5, true)) m_audio.play(Sound::Hurt, 0.6f, 1.0f);
+            m_audio.play(Sound::MobEndermanSay, 0.8f, 1.4f);
+            if (roll % 20u == 0u) m_entities.spawnAt(MobId::Endermite, land, *m_world);
+        }
     }
     for (const glm::vec3& at : targets.breathBursts)
     {
@@ -16714,6 +16764,25 @@ void Application::handlePlacement()
         }
         return;
     }
+
+    if (stack.id == Items::Snowball || stack.id == Items::Egg || (stack.id == Items::EnderPearl && m_pearlCooldown <= 0.0f))
+    {
+        const glm::vec3 heading = glm::normalize(m_camera.front + glm::vec3(0.0f, 0.1f, 0.0f));
+        const Arrows::Kind kind = stack.id == Items::Snowball ? Arrows::Kind::Snowball
+                                : stack.id == Items::Egg ? Arrows::Kind::Egg : Arrows::Kind::Pearl;
+        m_arrows.spawn(m_player.eyePosition() + heading * 0.6f, heading * 22.0f + m_player.velocity, 0, true, kind);
+        m_audio.play(Sound::Click, 0.4f, 0.5f);
+        m_stats.item(Stats::ItemStat::Used, stack.id);
+        if (stack.id == Items::EnderPearl) m_pearlCooldown = 1.0f;
+        m_heldItem.swing();
+        if (!m_player.creative())
+        {
+            stack.count -= 1;
+            if (stack.count <= 0) stack.clear();
+        }
+        return;
+    }
+    if (stack.id == Items::EnderPearl) return;
 
     if (stack.id == Items::ExperienceBottle)
     {

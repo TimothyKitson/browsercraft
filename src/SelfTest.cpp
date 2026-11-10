@@ -13572,6 +13572,16 @@ namespace
               "and with nothing under it, it comes down to the bottom of the world");
         std::error_code gone;
         std::filesystem::remove_all("selftest-falling", gone);
+
+        section("items: snowballs, eggs and ender pearls are thrown");
+        bool thrown = true;
+        for (Arrows::Kind kind : { Arrows::Kind::Snowball, Arrows::Kind::Egg, Arrows::Kind::Pearl })
+        {
+            Arrow arrow;
+            arrow.kind = kind;
+            if (arrow.shaft() || arrow.flies() || !arrow.bursts() || arrow.ghost()) thrown = false;
+        }
+        check(thrown, "all three are lobbed and break where they land");
     }
 
     void testEverySoundHasANoise()

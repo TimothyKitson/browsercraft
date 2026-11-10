@@ -214,6 +214,9 @@ void Projectiles::render(Shader& shader, const Camera& camera, const Atlas& atla
 
     const TileUV tridentUV = tileUV(Tiles::TridentInFlight);
     const TileUV xpUV = tileUV(Tiles::ItemMaterialFirst + 8);
+    const TileUV snowballUV = tileUV(Tiles::ItemSnowball);
+    const TileUV eggUV = tileUV(Tiles::ItemEgg);
+    const TileUV pearlUV = tileUV(Tiles::ItemEnderPearl);
     const TileUV rocketUV = tileUV(Tiles::ItemFireworkFirst);
     const TileUV spitUV = tileUV(Tiles::LlamaSpitTile);
     const TileUV skullUV = tileUV(Tiles::WitherSkullTile);
@@ -253,10 +256,14 @@ void Projectiles::render(Shader& shader, const Camera& camera, const Atlas& atla
                         : (arrow.kind == Arrows::Kind::Rocket) ? rocketUV
                         : (arrow.kind == Arrows::Kind::Spit) ? spitUV
                         : (arrow.kind == Arrows::Kind::Skull) ? skullUV
+                        : (arrow.kind == Arrows::Kind::Snowball) ? snowballUV
+                        : (arrow.kind == Arrows::Kind::Egg) ? eggUV
+                        : (arrow.kind == Arrows::Kind::Pearl) ? pearlUV
                                                              : arrowUV;
         // A potion is drawn as the bottle it is rather than as a
         // shaft, so it is square like a charge without being one.
-        const bool bottle = arrow.kind == Arrows::Kind::Potion || arrow.kind == Arrows::Kind::XpBottle || arrow.kind == Arrows::Kind::Rocket;
+        const bool bottle = arrow.kind == Arrows::Kind::Potion || arrow.kind == Arrows::Kind::XpBottle || arrow.kind == Arrows::Kind::Rocket ||
+                            arrow.kind == Arrows::Kind::Snowball || arrow.kind == Arrows::Kind::Egg || arrow.kind == Arrows::Kind::Pearl;
         const bool trident = arrow.kind == Arrows::Kind::Trident;
         const bool spit = arrow.kind == Arrows::Kind::Spit;
         const float length = trident ? 1.3f : spit ? 0.25f : (charge || bottle) ? 0.34f : LENGTH;
