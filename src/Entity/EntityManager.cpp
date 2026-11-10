@@ -442,7 +442,7 @@ void EntityManager::trySpawnWave(const World& world, const glm::vec3& playerPosi
             // What this place has after dark, if it has anything, and
             // the ordinary five otherwise.
             const Biomes::Kind kind = world.generator().kindAt(x, z);
-            species = random01() < 0.03f ? MobId::Phantom : pickSpawn(kind, Biomes::Group::Monster, random01());
+            species = random01() < 0.03f && m_insomnia ? MobId::Phantom : pickSpawn(kind, Biomes::Group::Monster, random01());
             if (species == MobId::Count) continue;
             if (species == MobId::Slime && kind != Biomes::Kind::Swamp && kind != Biomes::Kind::MangroveSwamp) continue;
         }
@@ -480,7 +480,7 @@ void EntityManager::trySpawnWave(const World& world, const glm::vec3& playerPosi
                 // Out in the country they are rare enough that meeting
                 // one is an event rather than livestock.
                 const float roll = random01();
-                species = roll < 0.015f ? MobId::WanderingTrader
+                species = roll < 0.015f && m_traders ? MobId::WanderingTrader
                         : roll < 0.035f ? MobId::Villager
                                         : pickSpawn(world.generator().kindAt(x, z), Biomes::Group::Creature, random01());
                 if (species == MobId::Count) continue;
@@ -662,7 +662,7 @@ void EntityManager::update(float deltaTime, const World& world,
     if (m_spawnTimer <= 0.0f)
     {
         m_spawnTimer = SPAWN_INTERVAL;
-        trySpawnWave(world, playerPosition, daylight);
+        if (m_naturalSpawning) trySpawnWave(world, playerPosition, daylight);
     }
 }
 

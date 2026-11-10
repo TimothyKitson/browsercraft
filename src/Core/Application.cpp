@@ -854,6 +854,16 @@ void Application::loadLevel()
 {
     LevelState state;
     const bool loaded = WorldSave::loadLevel(m_savePath, state);
+    m_rules.reset();
+    {
+        std::ifstream rules(m_savePath + "/gamerules.txt");
+        if (rules)
+        {
+            std::stringstream text;
+            text << rules.rdbuf();
+            m_rules.load(text.str());
+        }
+    }
 
     int spawnX = 0, spawnY = 80, spawnZ = 0;
     m_world->generator().findSpawn(spawnX, spawnY, spawnZ);
@@ -1242,6 +1252,10 @@ void Application::saveLevel()
     // A guest is a visitor in someone else's world; writing it to this
     // machine's save would overwrite their own singleplayer game.
     if (m_net.role() == Net::Role::Guest) return;
+    {
+        std::ofstream rules(m_savePath + "/gamerules.txt");
+        if (rules) rules << m_rules.save();
+    }
     saveAdvancements();
     writeWorldMeta();
 
@@ -1643,7 +1657,7 @@ void Application::updateWeather(float deltaTime)
         return;
     }
 
-    if (Weather::step(m_weather, deltaTime, m_weatherSeed))
+    if (m_rules.on(GameRules::Rule::DoWeatherCycle) && Weather::step(m_weather, deltaTime, m_weatherSeed))
     {
         // The flash is already in the sky by the time this returns; the
         // thunder is what the player hears a moment later. Playing them
@@ -1715,7 +1729,7 @@ void Application::run()
     const bool worldMenus = m_startupScreen == "worlds" || m_startupScreen == "createworld" || m_startupScreen == "createworld2" ||
                             m_startupScreen == "createworld3" || m_startupScreen == "editworld" || m_startupScreen == "deleteworld" ||
                             m_startupScreen == "superflat" || m_startupScreen == "flatpresets" || m_startupScreen == "biomes" ||
-                            m_startupScreen == "noworlds" || m_startupScreen == "newworld";
+                            m_startupScreen == "noworlds" || m_startupScreen == "newworld" || m_startupScreen == "gamerules";
     const bool serverMenus = m_startupScreen == "servers" || m_startupScreen == "addserver" || m_startupScreen == "directconnect" ||
                              m_startupScreen == "connectfail";
     const bool packMenus = m_startupScreen == "packs" || m_startupScreen == "packconfirm";
@@ -1814,6 +1828,18 @@ void Application::run()
             m_editName.text = m_editNote;
             m_editName.focused = true;
             m_screen = m_startupScreen == "editworld" ? Screen::EditWorld : Screen::ConfirmDelete;
+        }
+        if (m_startupScreen == "gamerules")
+        {
+            openCreateWorld(nullptr);
+            m_create.tab = 2;
+            m_rulesDraft = m_create.rules;
+            for (int i = 0; i < GameRules::COUNT; ++i)
+            {
+                m_ruleFields[i].text = std::to_string(m_rulesDraft.value(static_cast<GameRules::Rule>(i)));
+                m_ruleFields[i].maxLength = 8;
+            }
+            m_screen = Screen::GameRules;
         }
         if (m_startupScreen == "createworld" || m_startupScreen == "createworld2" || m_startupScreen == "createworld3" ||
             m_startupScreen == "superflat" || m_startupScreen == "flatpresets" || m_startupScreen == "biomes")
@@ -2087,12 +2113,16 @@ bool Application::frame()
         }
         else if (playing() && !m_inventoryOpen)
         {
+            m_player.naturalRegeneration = m_rules.on(GameRules::Rule::NaturalRegeneration);
+            m_player.fallHurts = m_rules.on(GameRules::Rule::FallDamage);
+            m_player.drowningHurts = m_rules.on(GameRules::Rule::DrowningDamage);
+            m_player.fireHurts = m_rules.on(GameRules::Rule::FireDamage);
             updateGameplay(deltaTime);
         }
 
         // The clock only runs while you're actually playing -- and on a
         // guest it is the host's clock, delivered by TimeSync.
-        if (playing() && m_net.role() != Net::Role::Guest)
+        if (playing() && m_net.role() != Net::Role::Guest && m_rules.on(GameRules::Rule::DoDaylightCycle))
         {
             m_timeOfDay += deltaTime / DAY_LENGTH_SECONDS;
             if (m_timeOfDay >= 1.0f)
@@ -2610,7 +2640,8 @@ bool Application::frame()
                     if (m_freezeSting >= 2.0f)
                     {
                         m_freezeSting = 0.0f;
-                        if (m_player.damage(1)) m_audio.play(Sound::Hurt, 0.6f, 1.3f);
+                        m_player.cause = "freeze";
+                        if (m_rules.on(GameRules::Rule::FreezeDamage) && m_player.damage(1)) m_audio.play(Sound::Hurt, 0.6f, 1.3f);
                     }
                 }
                 else m_freezeSting = 0.0f;
@@ -2671,7 +2702,8 @@ bool Application::frame()
                     if (m_magmaSting >= 0.5f)
                     {
                         m_magmaSting = 0.0f;
-                        if (m_player.damage(1)) m_audio.play(Sound::Hurt, 0.6f, 0.9f);
+                        m_player.cause = "hotFloor";
+                        if (m_rules.on(GameRules::Rule::FireDamage) && m_player.damage(1)) m_audio.play(Sound::Hurt, 0.6f, 0.9f);
                     }
                 }
                 else m_magmaSting = 0.0f;
@@ -2687,6 +2719,7 @@ bool Application::frame()
                 if (m_bushSting >= 0.5f && glm::dot(moving, moving) > 0.01f && sweetBerryStage(bush) > 0)
                 {
                     m_bushSting = 0.0f;
+                    m_player.cause = "sweetBerryBush";
                     if (m_player.damage(1)) m_audio.play(Sound::Hurt, 0.6f, 1.1f);
                 }
             }
@@ -2814,14 +2847,35 @@ bool Application::frame()
             m_stats.set(Stats::Custom::TimeSinceDeath, 0);
             m_stats.set(Stats::Custom::TimeSinceRest, 0);
             if (m_lastAttacker >= 0 && m_lastAttackerAge < 5.0f) m_stats.killedBy(m_lastAttacker);
+            m_deathMessage = deathMessageFor();
+            if (m_rules.on(GameRules::Rule::ShowDeathMessages)) m_chatLog.add(m_deathMessage);
             m_lastAttacker = -1;
+            m_player.cause = "generic";
+            if (!m_rules.on(GameRules::Rule::KeepInventory) && !m_player.creative() && !m_player.spectator())
+            {
+                for (int i = 0; i < Inventory::TOTAL_SLOTS; ++i)
+                {
+                    ItemStack& stack = m_inventory.slot(i);
+                    if (stack.empty()) continue;
+                    m_drops.spawnStack(m_player.position + glm::vec3(0.0f, 0.8f, 0.0f), stack);
+                    m_drops.flingLast(glm::vec3(std::sin(static_cast<float>(i) * 2.4f) * 2.0f, 2.5f,
+                                                std::cos(static_cast<float>(i) * 2.4f) * 2.0f));
+                    stack.clear();
+                }
+                ItemStack& offhand = m_inventory.slot(Inventory::OFFHAND);
+                if (!offhand.empty())
+                {
+                    m_drops.spawnStack(m_player.position + glm::vec3(0.0f, 0.8f, 0.0f), offhand);
+                    offhand.clear();
+                }
+            }
             effectDeath(m_player.position, Player::HEIGHT, m_player.effects.has(Effects::Kind::Oozing),
                         m_player.effects.has(Effects::Kind::Weaving), m_player.effects.has(Effects::Kind::WindCharged));
             // Minecraft lets you drop what amounts to seven levels'
             // worth and keeps the rest, so dying deep into the curve
             // costs far more than dying early. respawn() clears the
             // total, so this has to happen first.
-            const int dropped = std::min(7 * Experience::levelFor(m_player.experience), 100);
+            const int dropped = m_rules.on(GameRules::Rule::KeepInventory) ? 0 : std::min(7 * Experience::levelFor(m_player.experience), 100);
             if (dropped > 0)
                 m_orbs.spawnValue(m_player.position + glm::vec3(0.0f, 0.6f, 0.0f), dropped);
 
@@ -2830,6 +2884,7 @@ bool Application::frame()
             m_deathPoint = m_player.position;
             m_deathDimension = static_cast<int>(m_dimension);
             m_hardcoreDeath = modeIsHardcore(m_gameMode);
+            if (m_rules.on(GameRules::Rule::DoImmediateRespawn) && !m_hardcoreDeath) m_pendingAction = MenuAction::Respawn;
             if (m_inventoryOpen) closeInventory();
             closeSign();
             closeBlockEditor(false);
@@ -7955,6 +8010,8 @@ void Application::applyMenuAction()
         case MenuAction::QuitGame:      m_running = false; break;
 
         case MenuAction::Respawn:
+        {
+            const int keptExperience = m_rules.on(GameRules::Rule::KeepInventory) ? m_player.experience : 0;
             if (m_hasAnchor)
             {
                 if (m_dimension != Dimension::Nether) travelTo(Dimension::Nether);
@@ -7968,10 +8025,13 @@ void Application::applyMenuAction()
                 if (m_dimension != Dimension::Overworld) travelTo(Dimension::Overworld);
                 m_player.respawn(m_spawnPoint);
             }
+            m_player.experience = keptExperience;
+            m_deathMessage.clear();
             m_previousHealth = m_player.health;
             m_screen = Screen::Playing;
             setMouseCaptured(true);
             break;
+        }
 
         case MenuAction::DeleteWorld:
             // Hardcore: the run is over, the world goes with it.
@@ -8143,6 +8203,10 @@ void Application::handleEvents()
         else if (m_screen == Screen::Settings)
         {
             m_screen = m_optionsReturn;
+        }
+        else if (m_screen == Screen::GameRules)
+        {
+            m_screen = Screen::CreateWorld;
         }
         else if (m_screen == Screen::CreateWorld)
         {
@@ -8625,7 +8689,11 @@ void Application::updateGameplay(float deltaTime)
     if (!m_player.spectator())
     {
         const float hurt = m_border.damageFor(m_player.position.x, m_player.position.z);
-        if (hurt > 0.0f) m_player.damage(static_cast<int>(hurt), true);
+        if (hurt > 0.0f)
+        {
+            m_player.cause = "outsideBorder";
+            m_player.damage(static_cast<int>(hurt), true);
+        }
     }
 
     m_camera.position = m_player.eyePosition();
@@ -8931,7 +8999,7 @@ void Application::updateMining(float deltaTime)
             spawnSilverfish(glm::vec3(hit.block) + glm::vec3(0.5f, 0.0f, 0.5f), 1);
 
         // Creative mode mines without producing pickups, like Minecraft.
-        if (!m_player.creative())
+        if (!m_player.creative() && m_rules.on(GameRules::Rule::DoTileDrops))
         {
             if (isCrop(id))
             {
@@ -11817,6 +11885,7 @@ std::vector<Trading::Deal> Application::tradeDeals() const
 
 void Application::startRaid(const glm::vec3& at, int omenLevel)
 {
+    if (m_rules.on(GameRules::Rule::DisableRaids)) return;
     if (m_raid.active && !m_raid.finished() && glm::length(m_raid.centre - at) < Raids::BAR_RANGE)
     {
         Raids::addOmen(m_raid, omenLevel);
@@ -12256,7 +12325,7 @@ bool Application::lightFire(const glm::ivec3& at)
 
 void Application::tickFire(float deltaTime)
 {
-    if (!m_world || m_net.role() == Net::Role::Guest) return;
+    if (!m_world || m_net.role() == Net::Role::Guest || !m_rules.on(GameRules::Rule::DoFireTick)) return;
     m_fireClock -= deltaTime;
     if (m_fireClock > 0.0f) return;
     m_fireClock = 0.25f;
@@ -13029,6 +13098,7 @@ void Application::burstFirework(const glm::vec3& at, int design)
         mob.damage(std::max(1, static_cast<int>(static_cast<float>(strength) * std::sqrt((5.0f - distance) / 5.0f))), mob.position() - at);
     }
     const float toPlayer = glm::length(m_player.position + glm::vec3(0.0f, 0.9f, 0.0f) - at);
+    if (toPlayer <= 5.0f && !m_player.creative()) m_player.cause = "explosion";
     if (toPlayer <= 5.0f && !m_player.creative() &&
         m_player.damage(std::max(1, static_cast<int>(static_cast<float>(strength) * std::sqrt((5.0f - toPlayer) / 5.0f)))))
         m_audio.play(Sound::Hurt, 0.8f);
@@ -14056,6 +14126,7 @@ void Application::applyBlast(const glm::vec3& at, float radius, int damage)
                 }
 
                 if (!Explosion::destroys(block, distance, radius)) continue;
+                if (m_blastSource >= 0 && !m_rules.on(GameRules::Rule::MobGriefing)) continue;
 
                 // A chest or a furnace gives up what was in it rather
                 // than taking it with it.
@@ -14101,6 +14172,7 @@ void Application::applyBlast(const glm::vec3& at, float radius, int damage)
         {
             m_lastAttacker = m_blastSource;
             m_lastAttackerAge = 0.0f;
+            m_lastAttackKind = 2;
         }
         wearArmour(onPlayer);
         m_audio.play(Sound::Hurt, 0.9f);
@@ -14589,6 +14661,7 @@ void Application::updateArrows(float deltaTime)
         {
             m_lastAttacker = targets.lastShooter;
             m_lastAttackerAge = 0.0f;
+            m_lastAttackKind = 1;
         }
     }
     if (targets.blockedDamage > 0) m_stats.add(Stats::Custom::DamageBlockedByShield, static_cast<long long>(targets.blockedDamage) * 10);
@@ -17568,6 +17641,7 @@ void Application::render()
         case Screen::Credits:      renderCreditsScreen(); break;
         case Screen::Statistics:   renderStatsScreen(); break;
         case Screen::CreateWorld:  renderCreateWorld(); break;
+        case Screen::GameRules:    renderGameRules(); break;
         case Screen::EditWorld:    renderEditWorld(); break;
         case Screen::ConfirmDelete: renderConfirmDelete(); break;
         case Screen::CustomizeFlat: renderCustomizeFlat(); break;
@@ -18128,8 +18202,9 @@ void Application::updateChatInput()
 void Application::runChatLine(const std::string& line)
 {
     std::string output;
-    runCommand(line, m_player.position, false, output);
-    m_chatLog.add(output);
+    const bool command = !line.empty() && line[0] == '/';
+    const bool worked = runCommand(line, m_player.position, false, output);
+    if (!command || !worked || m_rules.on(GameRules::Rule::SendCommandFeedback)) m_chatLog.add(output);
 }
 
 bool Application::runCommand(const std::string& line, const glm::vec3& origin, bool fromBlock, std::string& output)
@@ -18223,7 +18298,21 @@ bool Application::runCommand(const std::string& line, const glm::vec3& origin, b
             break;
 
         case Chat::Kind::Kill:
+            m_player.cause = "kill";
             m_player.health = 0;
+            break;
+
+        case Chat::Kind::GameRuleQuery:
+        {
+            const GameRules::Rule rule = static_cast<GameRules::Rule>(command.mob);
+            const GameRules::Info& info = GameRules::info(rule);
+            output = std::string("Gamerule ") + info.name + " is currently set to: " +
+                     (info.flag ? (m_rules.on(rule) ? "true" : "false") : std::to_string(m_rules.value(rule)));
+            return true;
+        }
+
+        case Chat::Kind::GameRuleSet:
+            m_rules.set(static_cast<GameRules::Rule>(command.mob), command.count);
             break;
 
         case Chat::Kind::Seed:
@@ -19983,7 +20072,7 @@ void Application::updateWorldAround(float deltaTime)
         if (m_net.role() != Net::Role::Guest) claimJobSites();
     }
 
-    m_growthTimer += deltaTime;
+    m_growthTimer += deltaTime * static_cast<float>(std::max(0, m_rules.value(GameRules::Rule::RandomTickSpeed))) / 3.0f;
     if (m_growthTimer >= Farming::TICK_INTERVAL)
     {
         m_growthTimer = 0.0f;
@@ -20093,6 +20182,8 @@ void Application::updateMobs(float deltaTime)
     // is still there when the shutter goes.
     const float mobTime = m_freezeMobs ? 0.0f : deltaTime;
     m_entities.setPlayerHidden(m_player.spectator());
+    m_entities.setNaturalSpawning(m_rules.on(GameRules::Rule::DoMobSpawning));
+    m_entities.setSpawnRules(m_rules.on(GameRules::Rule::DoInsomnia), m_rules.on(GameRules::Rule::DoTraderSpawning));
     m_entities.update(mobTime, *m_world, m_player.position, daylightFactor());
     m_entities.noticeStares(*m_world, m_camera.position, m_camera.front);
 
@@ -20142,6 +20233,7 @@ void Application::updateMobs(float deltaTime)
         {
             m_lastAttacker = strike.attacker;
             m_lastAttackerAge = 0.0f;
+            m_lastAttackKind = 0;
         }
         if (strike.effect >= 0 && strike.effect < Effects::KIND_COUNT)
             m_player.takeEffect(static_cast<Effects::Kind>(strike.effect), strike.effectAmplifier, strike.effectSeconds);
@@ -20267,7 +20359,7 @@ void Application::updateMobs(float deltaTime)
                 setMouseCaptured(true);
             }
         }
-        else
+        else if (m_rules.on(GameRules::Rule::DoMobLoot))
         {
             for (int i = 0; i < type.dropCount; ++i) m_drops.spawn(where, type.drop, 1);
             for (int i = 0; i < type.secondDropCount; ++i) m_drops.spawn(where, type.secondDrop, 1);
@@ -22670,8 +22762,10 @@ void Application::renderDeathScreen()
     m_ui.quad(0, 0, w, h, hardcore ? glm::vec4(0.28f, 0.0f, 0.0f, 0.70f)
                                    : glm::vec4(0.40f, 0.0f, 0.0f, 0.50f));
 
-    centredText(hardcore ? "Game Over" : "You Died", h * 0.26f, 6.5f,
+    centredText(hardcore ? "Game Over!" : "You Died!", h * 0.26f, 6.5f,
                 glm::vec4(1.0f, 0.82f, 0.82f, 1.0f));
+    if (!m_deathMessage.empty()) centredText(m_deathMessage, h * 0.36f, 2.0f, glm::vec4(1.0f));
+    centredText("Score: " + std::to_string(m_player.experience), h * 0.41f, 2.0f, glm::vec4(1.0f, 1.0f, 0.33f, 1.0f));
 
     const float buttonWidth = std::min(440.0f, w * 0.64f);
     const float buttonX = w * 0.5f - buttonWidth * 0.5f;
@@ -22760,18 +22854,21 @@ void Application::renderDebugOverlay()
         left("");
     }
 
-    std::snprintf(buffer, sizeof(buffer), "XYZ: %.3f / %.5f / %.3f", p.x, p.y, p.z);
-    left(buffer);
-
-    std::snprintf(buffer, sizeof(buffer), "Block: %d %d %d", bx, by, bz);
-    left(buffer);
+    const bool reduced = m_rules.on(GameRules::Rule::ReducedDebugInfo);
+    if (!reduced)
+    {
+        std::snprintf(buffer, sizeof(buffer), "XYZ: %.3f / %.5f / %.3f", p.x, p.y, p.z);
+        left(buffer);
+        std::snprintf(buffer, sizeof(buffer), "Block: %d %d %d", bx, by, bz);
+        left(buffer);
+    }
 
     if (!minimal)
     {
         std::snprintf(buffer, sizeof(buffer), "Chunk: %d %d %d in %d %d",
                       World::floorMod(bx, Chunk::SX), by, World::floorMod(bz, Chunk::SZ),
                       World::floorDiv(bx, Chunk::SX), World::floorDiv(bz, Chunk::SZ));
-        left(buffer);
+        if (!reduced) left(buffer);
 
         // Which way you are looking, named the way Minecraft names it.
         const glm::vec3 f = m_camera.front;
@@ -22961,5 +23058,31 @@ void Application::landFalling(const DroppedItems::Landing& landing)
         }
     }
     checkFalling(at + glm::ivec3(0, 1, 0));
+}
+
+std::string Application::deathMessageFor() const
+{
+    const std::string who = m_playerName.empty() ? std::string("Player") : m_playerName;
+    if (m_lastAttacker >= 0 && m_lastAttackerAge < 5.0f)
+    {
+        const std::string by = mobType(static_cast<MobId>(m_lastAttacker)).name;
+        if (m_lastAttackKind == 1) return who + " was shot by " + by;
+        if (m_lastAttackKind == 2) return who + " was blown up by " + by;
+        return who + " was slain by " + by;
+    }
+    const std::string cause = m_player.cause ? m_player.cause : "generic";
+    if (cause == "fall") return who + " hit the ground too hard";
+    if (cause == "drown") return who + " drowned";
+    if (cause == "onFire") return who + " burned to death";
+    if (cause == "lava") return who + " tried to swim in lava";
+    if (cause == "starve") return who + " starved to death";
+    if (cause == "freeze") return who + " froze to death";
+    if (cause == "hotFloor") return who + " discovered the floor was lava";
+    if (cause == "sweetBerryBush") return who + " was poked to death by a sweet berry bush";
+    if (cause == "outsideBorder") return who + " left the confines of this world";
+    if (cause == "explosion") return who + " blew up";
+    if (cause == "outOfWorld") return who + " fell out of the world";
+    if (cause == "kill") return who + " was killed";
+    return who + " died";
 }
 

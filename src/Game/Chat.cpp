@@ -3,6 +3,7 @@
 #include "GameMode.h"
 #include "Entity/MobType.h"
 #include "Core/Utf8.h"
+#include "GameRules.h"
 #include "Renderer/FontMaps.h"
 #include <cmath>
 #include <cstdio>
@@ -453,7 +454,7 @@ Chat::Command Chat::parse(const std::string& line, bool cheats, const glm::vec3&
     {
         out.kind = Kind::Help;
         out.text = cheats
-            ? "/gamemode /time /tp /give /kill /seed /say /tellraw /setblock /summon /effect /worldborder /help"
+            ? "/gamemode /time /tp /give /kill /seed /say /tellraw /setblock /summon /effect /worldborder /gamerule /help"
             : "/help  -  this world was made without cheats, so the rest are off";
         return out;
     }
@@ -720,6 +721,38 @@ Chat::Command Chat::parse(const std::string& line, bool cheats, const glm::vec3&
         out.amplifier = static_cast<int>(amplifier);
         out.seconds = seconds;
         out.text = std::string("Applied ") + Effects::name(kind) + ".";
+        return out;
+    }
+
+    if (name == "gamerule")
+    {
+        if (!cheats) return deny(name);
+        if (words.size() < 2) return fail("/gamerule wants the name of a rule.");
+        GameRules::Rule rule;
+        if (!GameRules::find(words[1], rule)) return fail("Incorrect argument for command: " + words[1]);
+        out.mob = static_cast<int>(rule);
+        if (words.size() < 3)
+        {
+            out.kind = Kind::GameRuleQuery;
+            return out;
+        }
+        const GameRules::Info& info = GameRules::info(rule);
+        int value = 0;
+        if (info.flag)
+        {
+            const std::string word = lower(words[2]);
+            if (word != "true" && word != "false") return fail("Invalid boolean, expected 'true' or 'false' but found '" + words[2] + "'");
+            value = word == "true" ? 1 : 0;
+        }
+        else
+        {
+            float amount = 0.0f;
+            if (!number(words[2], amount)) return fail("Invalid integer '" + words[2] + "'");
+            value = static_cast<int>(amount);
+        }
+        out.kind = Kind::GameRuleSet;
+        out.count = value;
+        out.text = std::string("Gamerule ") + info.name + " is now set to: " + (info.flag ? (value ? "true" : "false") : std::to_string(value));
         return out;
     }
 

@@ -179,7 +179,7 @@ void Application::tickAdvancements(float deltaTime)
             toast.advancement = index;
             m_toasts.push_back(toast);
         }
-        if (def.toast)
+        if (def.toast && m_rules.on(GameRules::Rule::AnnounceAdvancements))
         {
             const char* verb = def.frame == Advancements::Frame::Challenge ? " has completed the challenge ["
                              : def.frame == Advancements::Frame::Goal ? " has reached the goal [" : " has made the advancement [";

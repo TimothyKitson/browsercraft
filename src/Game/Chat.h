@@ -37,6 +37,8 @@ namespace Chat
         EffectClear,
         Tellraw,
         WorldBorder,
+        GameRuleQuery,
+        GameRuleSet,
     };
 
     struct Command

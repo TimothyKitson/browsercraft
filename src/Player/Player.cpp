@@ -114,7 +114,7 @@ void Player::updateVitals(float deltaTime)
         if (m_peacefulHeal >= 1.0f)
         {
             m_peacefulHeal -= 1.0f;
-            if (health > 0 && health < maxHealth()) heal(1);
+            if (naturalRegeneration && health > 0 && health < maxHealth()) heal(1);
         }
         if (m_peacefulFeed >= 0.5f)
         {
@@ -130,7 +130,11 @@ void Player::updateVitals(float deltaTime)
         if (m_starveTimer >= 4.0f)
         {
             m_starveTimer = 0.0f;
-            if (health > 10 || difficulty >= 3 || (health > 1 && difficulty == 2)) damage(1);
+            if (health > 10 || difficulty >= 3 || (health > 1 && difficulty == 2))
+            {
+                cause = "starve";
+                damage(1);
+            }
         }
     }
 
@@ -139,6 +143,7 @@ void Player::updateVitals(float deltaTime)
 
 void Player::regenerate(float deltaTime)
 {
+    if (!naturalRegeneration) return;
     const bool wellFed = exempt() || hunger >= REGEN_HUNGER;
     if (health > 0 && health < maxHealth() && damageFlash <= 0.0f && wellFed)
     {
@@ -288,7 +293,7 @@ bool Player::stepUp(const World& world, const glm::vec3& blocked)
 
 void Player::applyFallDamage(const World& world, float landingY)
 {
-    if (exempt() || flying) return;
+    if (exempt() || flying || !fallHurts) return;
 
     const float fallDistance = m_fallStartY - landingY;
     if (fallDistance <= SAFE_FALL_DISTANCE) return;
@@ -299,6 +304,7 @@ void Player::applyFallDamage(const World& world, float landingY)
     const int z = static_cast<int>(std::floor(position.z));
     if (breaksFall(world.getBlock(x, y, z))) return;
 
+    cause = "fall";
     damage(static_cast<int>(std::floor(fallDistance - SAFE_FALL_DISTANCE)));
 }
 
@@ -409,7 +415,7 @@ void Player::ignite(float seconds)
 
 bool Player::burn(float deltaTime, bool inLava)
 {
-    if (exempt() || health <= 0 || Effects::fireImmune(effects))
+    if (exempt() || health <= 0 || Effects::fireImmune(effects) || !fireHurts)
     {
         m_burnTimer = 0.0f;
         m_fireSeconds = 0.0f;
@@ -437,6 +443,7 @@ bool Player::burn(float deltaTime, bool inLava)
         if (m_fireTimer >= FIRE_INTERVAL)
         {
             m_fireTimer -= FIRE_INTERVAL;
+            cause = "onFire";
             return damage(FIRE_DAMAGE);
         }
         return false;
@@ -450,6 +457,7 @@ bool Player::burn(float deltaTime, bool inLava)
     if (first || m_burnTimer >= LAVA_INTERVAL)
     {
         if (!first) m_burnTimer -= LAVA_INTERVAL;
+        cause = "lava";
         return damage(LAVA_DAMAGE);
     }
 
@@ -594,8 +602,14 @@ bool Player::breathe(float deltaTime, bool headUnderwater)
         return false;
     }
 
+    if (!drowningHurts)
+    {
+        m_drownTimer = 0.0f;
+        return false;
+    }
     m_drownTimer += deltaTime;
     if (m_drownTimer < DROWN_INTERVAL) return false;
+    cause = "drown";
 
     m_drownTimer -= DROWN_INTERVAL;
     health = std::max(0, health - DROWN_DAMAGE);

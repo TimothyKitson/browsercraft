@@ -145,6 +145,11 @@ public:
     bool inCobweb = false;
     bool powderSnowFirm = false;
     bool freezeImmune = false;
+    const char* cause = "generic";
+    bool naturalRegeneration = true;
+    bool fallHurts = true;
+    bool drowningHurts = true;
+    bool fireHurts = true;
     float frozenSeconds = 0.0f;
     static constexpr float FREEZE_SECONDS = 7.0f;
     bool flying = false;

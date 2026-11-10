@@ -6,6 +6,8 @@
 
 #include "Player/Inventory.h"
 #include "Game/Crafting.h"
+#include "Game/GameRules.h"
+#include "Game/Chat.h"
 #include "Entity/DroppedItems.h"
 #include "World/World.h"
 #include "Game/Beacon.h"
@@ -13584,6 +13586,34 @@ namespace
         check(thrown, "all three are lobbed and break where they land");
     }
 
+
+    void testGameRules()
+    {
+        section("game rules: all 51, saved per world and set with /gamerule");
+        check(GameRules::COUNT == 51, "all 51 rules of 1.21.1 exist");
+        GameRules::Set rules;
+        check(rules.isDefault() && !rules.on(GameRules::Rule::KeepInventory) && rules.on(GameRules::Rule::DoDaylightCycle) &&
+              rules.value(GameRules::Rule::RandomTickSpeed) == 3 && rules.value(GameRules::Rule::SpawnRadius) == 10 &&
+              rules.value(GameRules::Rule::PlayersSleepingPercentage) == 100, "with Minecraft's defaults");
+        GameRules::Rule found;
+        check(GameRules::find("keepInventory", found) && found == GameRules::Rule::KeepInventory && !GameRules::find("keepinventory", found),
+              "found by their exact names");
+        rules.set(GameRules::Rule::KeepInventory, 1);
+        rules.set(GameRules::Rule::RandomTickSpeed, 40);
+        GameRules::Set back;
+        back.load(rules.save());
+        check(back.on(GameRules::Rule::KeepInventory) && back.value(GameRules::Rule::RandomTickSpeed) == 40 && !back.isDefault(),
+              "and come back from a save as they were");
+        const Chat::Command set = Chat::parse("/gamerule keepInventory true", true);
+        check(set.kind == Chat::Kind::GameRuleSet && set.mob == static_cast<int>(GameRules::Rule::KeepInventory) && set.count == 1,
+              "/gamerule sets a rule");
+        const Chat::Command ask = Chat::parse("/gamerule randomTickSpeed", true);
+        check(ask.kind == Chat::Kind::GameRuleQuery, "and with no value says what it is");
+        check(Chat::parse("/gamerule keepInventory maybe", true).kind == Chat::Kind::Unknown &&
+              Chat::parse("/gamerule nonsense true", true).kind == Chat::Kind::Unknown, "and refuses a bad value or name");
+        check(Chat::parse("/gamerule keepInventory true", false).kind == Chat::Kind::Denied, "it is a cheat");
+    }
+
     void testEverySoundHasANoise()
     {
         section("sounds: every sound makes a noise");
@@ -16705,6 +16735,7 @@ int runSelfTest()
     testCarpetsWoodAndInfested();
     testSwitchesAndPlates();
     testFallingBlocks();
+    testGameRules();
     testDrowning();
     testQuickMoveKeepsMetadata();
     testContainersPerDimension();

@@ -190,12 +190,17 @@ public:
     // travels, so the Nether gets its own and nothing else.
     void setDimension(Dimension dimension) { m_dimension = dimension; }
     void setPeaceful(bool peaceful) { m_peaceful = peaceful; }
+    void setNaturalSpawning(bool on) { m_naturalSpawning = on; }
+    void setSpawnRules(bool insomnia, bool traders) { m_insomnia = insomnia; m_traders = traders; }
     bool peaceful() const { return m_peaceful; }
 
 private:
     std::vector<ShedHorn> m_horns;
     bool m_playerHidden = false;
     bool m_peaceful = false;
+    bool m_naturalSpawning = true;
+    bool m_insomnia = true;
+    bool m_traders = true;
     float random01();
     void trySpawnWave(const World& world, const glm::vec3& playerPosition, float daylight);
     int surfaceBelow(const World& world, int x, int startY, int z) const;

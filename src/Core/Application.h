@@ -61,6 +61,7 @@
 #include "Entity/PlayerModel.h"
 #include "Entity/HeldItem.h"
 #include "Game/Chat.h"
+#include "Game/GameRules.h"
 #include "Game/Beacon.h"
 #include "Game/Grindstone.h"
 #include "Game/Saplings.h"
@@ -110,7 +111,8 @@ enum class Screen
     Packs,
     Accessibility,
     Language,
-    LockDifficulty
+    LockDifficulty,
+    GameRules
 };
 
 // Menu buttons are drawn and hit-tested in the same pass, so a click
@@ -875,6 +877,10 @@ private:
     bool m_allowCheats = false;
 
     Chat::Log m_chatLog;
+    GameRules::Set m_rules;
+    std::string m_deathMessage;
+    std::string deathMessageFor() const;
+    int m_lastAttackKind = 0;
     bool m_chatOpen = false;
     std::string m_chatDraft;
     float m_growthTimer = 0.0f;
@@ -1621,8 +1627,13 @@ private:
         std::string flatBiome = "minecraft:plains";
         std::string biome = "minecraft:plains";
         bool fromTitle = false;
+        GameRules::Set rules;
     };
     CreateWorldState m_create;
+    GameRules::Set m_rulesDraft;
+    GuiField m_ruleFields[GameRules::COUNT];
+    float m_rulesScroll = 0.0f;
+    void renderGameRules();
     GuiList m_worldList, m_flatList, m_presetList, m_biomeList;
     GuiList m_accessList, m_languageList, m_controlsList;
     GuiField m_worldSearch, m_createName, m_createSeed, m_editName, m_presetField;

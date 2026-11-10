@@ -408,6 +408,10 @@ void Application::createWorldFromScreen()
         meta.biome = m_create.biome;
     meta.lastPlayed = Worlds::nowMillis();
     Worlds::writeMeta(m_savePath, meta);
+    {
+        std::ofstream rules(m_savePath + "/gamerules.txt");
+        if (rules) rules << m_create.rules.save();
+    }
     m_worldMeta = meta;
     m_allowCheats = meta.cheats;
     const uint32_t random = static_cast<uint32_t>(SDL_GetPerformanceCounter() ^ 0x9E3779B9u);
@@ -867,7 +871,18 @@ void Application::renderCreateWorld()
         const float gridH = 76.0f;
         const float gx = std::floor((w - 210.0f) / 2.0f);
         const float gy = areaTop + std::floor((areaH - gridH) / 6.0f);
-        guiButton(gx, gy, 210.0f, 20.0f, "Game Rules", false);
+        if (guiButton(gx, gy, 210.0f, 20.0f, "Game Rules"))
+        {
+            m_rulesDraft = m_create.rules;
+            m_rulesScroll = 0.0f;
+            for (int i = 0; i < GameRules::COUNT; ++i)
+            {
+                m_ruleFields[i].text = std::to_string(m_rulesDraft.value(static_cast<GameRules::Rule>(i)));
+                m_ruleFields[i].maxLength = 8;
+                m_ruleFields[i].focused = false;
+            }
+            m_screen = Screen::GameRules;
+        }
         guiButton(gx, gy + 28.0f, 210.0f, 20.0f, "Experiments", false);
         guiButton(gx, gy + 56.0f, 210.0f, 20.0f, "Data Packs", false);
     }
@@ -888,6 +903,82 @@ void Application::renderCreateWorld()
         }
     }
     if (!tip.empty()) wrappedTooltip(tip, mouseX, mouseY, tipWidth);
+    m_ui.setScale(1.0f);
+}
+
+void Application::renderGameRules()
+{
+    const float unit = static_cast<float>(guiScale());
+    m_ui.setScale(unit);
+    const float w = m_ui.canvasWidth();
+    const float h = m_ui.canvasHeight();
+    menuScreenBackdrop(w, h);
+    const float mouseX = static_cast<float>(m_input.mouseX()) / unit;
+    const float mouseY = static_cast<float>(m_input.mouseY()) / unit;
+    const std::string title = "Edit Game Rules";
+    m_ui.textWithShadow(title, std::floor((w - UIRenderer::textWidth(title, 1.0f)) / 2.0f), 13.0f, 1.0f, WORLD_WHITE);
+
+    struct Row { int rule; GameRules::Category category; };
+    std::vector<Row> rows;
+    for (int c = 0; c <= static_cast<int>(GameRules::Category::Misc); ++c)
+    {
+        const GameRules::Category category = static_cast<GameRules::Category>(c);
+        rows.push_back({ -1, category });
+        for (int i = 0; i < GameRules::COUNT; ++i)
+            if (GameRules::info(static_cast<GameRules::Rule>(i)).category == category) rows.push_back({ i, category });
+    }
+
+    const float top = 33.0f;
+    const float bottom = h - 36.0f;
+    const float rowH = 24.0f;
+    const float maxScroll = std::max(0.0f, static_cast<float>(rows.size()) * rowH - (bottom - top));
+    if (!m_automated) m_rulesScroll -= static_cast<float>(m_input.wheelDelta()) * rowH;
+    m_rulesScroll = std::clamp(m_rulesScroll, 0.0f, maxScroll);
+    const float left = std::floor(w / 2.0f - 155.0f);
+    std::string tip;
+    m_ui.setClip(0.0f, top, w, bottom - top);
+    for (size_t r = 0; r < rows.size(); ++r)
+    {
+        const float y = top + 4.0f + static_cast<float>(r) * rowH - m_rulesScroll;
+        if (y + rowH < top || y > bottom) continue;
+        const Row& row = rows[r];
+        if (row.rule < 0)
+        {
+            const std::string heading = GameRules::categoryTitle(row.category);
+            m_ui.textWithShadow(heading, std::floor((w - UIRenderer::textWidth(heading, 1.0f)) / 2.0f), y + 6.0f, 1.0f,
+                                glm::vec4(1.0f, 1.0f, 0.33f, 1.0f));
+            continue;
+        }
+        const GameRules::Rule rule = static_cast<GameRules::Rule>(row.rule);
+        const GameRules::Info& info = GameRules::info(rule);
+        m_ui.textWithShadow(info.title, left, y + 6.0f, 1.0f, WORLD_WHITE);
+        const float controlX = left + 310.0f - 44.0f;
+        if (mouseX >= left && mouseX < controlX && mouseY >= y && mouseY < y + 20.0f && mouseY >= top && mouseY < bottom)
+            tip = info.name;
+        if (info.flag)
+        {
+            if (guiButton(controlX, y, 44.0f, 20.0f, m_rulesDraft.on(rule) ? "ON" : "OFF") && mouseY >= top && mouseY < bottom)
+                m_rulesDraft.set(rule, m_rulesDraft.on(rule) ? 0 : 1);
+        }
+        else
+        {
+            GuiField& field = m_ruleFields[row.rule];
+            guiField(field, controlX, y, 44.0f, 20.0f);
+            if (!field.text.empty() && field.text.find_first_not_of("-0123456789") == std::string::npos)
+                m_rulesDraft.set(rule, std::atoi(field.text.c_str()));
+        }
+    }
+    m_ui.clearClip();
+
+    const float footerX = std::floor((w - 308.0f) / 2.0f);
+    const float footerY = h - 27.0f;
+    if (guiButton(footerX, footerY, 150.0f, 20.0f, "Done"))
+    {
+        m_create.rules = m_rulesDraft;
+        m_screen = Screen::CreateWorld;
+    }
+    if (guiButton(footerX + 158.0f, footerY, 150.0f, 20.0f, "Cancel")) m_screen = Screen::CreateWorld;
+    if (!tip.empty() && !m_automated) wrappedTooltip(tip, mouseX, mouseY, 200.0f);
     m_ui.setScale(1.0f);
 }
 
