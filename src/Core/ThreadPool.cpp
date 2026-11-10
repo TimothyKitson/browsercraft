@@ -31,6 +31,11 @@ void ThreadPool::runPending(double budgetMilliseconds)
     }
 }
 
+void ThreadPool::discardPending()
+{
+    m_jobs = {};
+}
+
 #else
 
 ThreadPool::ThreadPool(unsigned int threadCount)

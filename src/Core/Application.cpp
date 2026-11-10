@@ -48,6 +48,7 @@
 #include <string>
 #include <filesystem>
 #include <fstream>
+#include <sstream>
 
 namespace
 {
@@ -782,6 +783,8 @@ void Application::quitToTitle()
         saveLevel();
         m_world.reset();
     }
+    m_chatOpen = m_signOpen = m_bookOpen = m_advOpen = m_editorOpen = false;
+    m_chatDraft.clear();
     m_drops.clear();
     m_orbs.clear();
     m_rain.clear();
@@ -792,6 +795,8 @@ void Application::quitToTitle()
     m_audio.stopMusic();
     m_jukeboxPlaying = { -99, 0, 0, 0 };
     m_perspective = Perspective::FirstPerson;
+    hideTutorialToast(m_tutorialToast);
+    hideTutorialToast(m_tutorialLookToast);
     m_screen = Screen::Title;
     m_inventoryOpen = false;
     m_timeOfDay = TITLE_TIME_OF_DAY;
@@ -2807,6 +2812,11 @@ bool Application::frame()
             m_deathDimension = static_cast<int>(m_dimension);
             m_hardcoreDeath = modeIsHardcore(m_gameMode);
             if (m_inventoryOpen) closeInventory();
+            closeSign();
+            closeBlockEditor(false);
+            closeBook(true);
+            m_advOpen = false;
+            m_advDragging = false;
             setMouseCaptured(false);
         }
 
@@ -7930,6 +7940,14 @@ void Application::handleEvents()
 
     if (m_automated) return; // automated runs ignore keyboard and mouse entirely
 
+    m_keys.setTyping(typingText());
+    m_fieldTyping = false;
+    if (m_chatOpen && (!playing() || m_inventoryOpen))
+    {
+        m_chatOpen = false;
+        m_chatDraft.clear();
+    }
+
     if (m_screen == Screen::NameEntry)
     {
         for (char c : m_input.typedText())
@@ -8001,7 +8019,15 @@ void Application::handleEvents()
 
     if (m_input.wasKeyPressed(SDL_SCANCODE_ESCAPE))
     {
-        if (m_editorOpen)
+        if (m_chatOpen && playing())
+        {
+            m_chatOpen = false;
+            m_chatDraft.clear();
+            setMouseCaptured(true);
+        }
+        else if (m_signOpen && playing() && !m_inventoryOpen)
+            closeSign();
+        else if (m_editorOpen)
             closeBlockEditor(false);
         else if (m_advOpen)
             closeAdvancements();
@@ -8211,10 +8237,14 @@ void Application::handleEvents()
             Utf8::popBack(m_creativeSearch);
     }
 
-    if (!searching && !naming && !m_inventoryOpen && !m_advOpen && playing() && m_world && m_keys.pressed(m_input, Action::Advancements))
-        openAdvancements();
-    else if (!searching && !naming && m_keys.pressed(m_input, Action::Inventory) && (playing() || m_inventoryOpen) &&
-        !m_player.spectator())
+    if (!searching && !naming && !m_inventoryOpen && playing() && (m_advOpen || !overlayOpen()) &&
+        m_keys.pressed(m_input, Action::Advancements))
+    {
+        if (m_advOpen) closeAdvancements();
+        else openAdvancements();
+    }
+    else if (!searching && !naming && m_keys.pressed(m_input, Action::Inventory) &&
+        ((playing() && !overlayOpen()) || m_inventoryOpen) && !m_player.spectator())
     {
         if (m_inventoryOpen)
         {
@@ -8238,7 +8268,7 @@ void Application::handleEvents()
         m_world->setRenderDistance(m_world->renderDistance() + 1);
 
     // Throwing the held stack on the ground, the way Q does in Minecraft.
-    if (m_keys.pressed(m_input, Action::Drop) && playing() && !m_inventoryOpen)
+    if (m_keys.pressed(m_input, Action::Drop) && playing() && !m_inventoryOpen && !overlayOpen())
     {
         ItemStack& held = m_inventory.selected();
         if (!held.empty())
@@ -8388,6 +8418,7 @@ void Application::updateGameplay(float deltaTime)
     if (m_advOpen) return;
     updateBlockEditor();
     if (m_editorOpen) return;
+    if (m_keys.typing()) return;
 
     // --- look ---
     // Moving/resizing the window or regaining focus can deliver one huge
@@ -17269,11 +17300,8 @@ void Application::render()
     // panel.
     const bool inWorld = m_screen == Screen::Playing || m_screen == Screen::Paused ||
                          m_screen == Screen::Dead;
-    if (inWorld && !m_hudHidden)
-    {
-        renderHud();
-        renderChat();
-    }
+    if (inWorld && !m_hudHidden) renderHud();
+    if (inWorld && (!m_hudHidden || m_chatOpen)) renderChat();
     if (inWorld && m_showDebug && m_world) renderDebugOverlay();
 
     switch (m_screen)
@@ -17797,14 +17825,26 @@ void Application::keepInsideBorder(const glm::vec3& before)
     }
 }
 
+bool Application::typingText() const
+{
+    if (m_fieldTyping) return true;
+    if (!m_world) return false;
+    if (m_inventoryOpen)
+        return m_recipeSearching || creativeSearching() ||
+               (m_anvilOpen && m_inventory.slot(Inventory::ANVIL_LEFT).id == Items::NameTag);
+    return playing() && (m_chatOpen || m_signOpen || m_editorOpen || (m_bookOpen && m_bookEditing));
+}
+
 void Application::updateChatInput()
 {
     if (!playing() || m_inventoryOpen) { m_chatOpen = false; return; }
 
     if (!m_chatOpen)
     {
+        if (overlayOpen()) return;
         if (m_keys.pressed(m_input, Action::Chat)) { m_chatOpen = true; m_chatDraft.clear(); }
         else if (m_keys.pressed(m_input, Action::SlashCommand)) { m_chatOpen = true; m_chatDraft = "/"; }
+        if (m_chatOpen) setMouseCaptured(false);
         return;
     }
 
@@ -17812,10 +17852,11 @@ void Application::updateChatInput()
     {
         m_chatOpen = false;
         m_chatDraft.clear();
+        setMouseCaptured(true);
         return;
     }
 
-    if (m_input.wasKeyPressed(SDL_SCANCODE_BACKSPACE) && !m_chatDraft.empty())
+    for (int i = 0; i < m_input.backspaces() && !m_chatDraft.empty(); ++i)
         Utf8::popBack(m_chatDraft);
 
     Utf8::type(m_chatDraft, m_input.typedText(), Chat::MAX_LENGTH);
@@ -17825,6 +17866,7 @@ void Application::updateChatInput()
         const std::string line = m_chatDraft;
         m_chatOpen = false;
         m_chatDraft.clear();
+        setMouseCaptured(true);
         runChatLine(line);
     }
 }
@@ -18133,7 +18175,7 @@ void Application::updateBlockEditor()
     m_editorFocus = std::clamp(m_editorFocus, 0, fields - 1);
     std::string& field = m_editorFields[static_cast<size_t>(m_editorFocus)];
     const size_t limit = m_editorStructure ? 32u : 255u;
-    if (m_input.wasKeyPressed(SDL_SCANCODE_BACKSPACE) && !field.empty()) Utf8::popBack(field);
+    for (int i = 0; i < m_input.backspaces() && !field.empty(); ++i) Utf8::popBack(field);
     Utf8::type(field, m_input.typedText(), limit);
     if (m_input.wasKeyPressed(SDL_SCANCODE_TAB)) m_editorFocus = (m_editorFocus + 1) % fields;
     if (m_input.wasKeyPressed(SDL_SCANCODE_RETURN) || m_input.wasKeyPressed(SDL_SCANCODE_KP_ENTER)) closeBlockEditor(true);
@@ -20435,13 +20477,14 @@ void Application::updateSignInput()
 
     if (m_input.wasKeyPressed(SDL_SCANCODE_ESCAPE)) { closeSign(); return; }
 
-    std::string& line = m_signDraft[static_cast<size_t>(m_signLine)];
-
-    if (m_input.wasKeyPressed(SDL_SCANCODE_BACKSPACE))
+    for (int i = 0; i < m_input.backspaces(); ++i)
     {
-        if (!line.empty()) Utf8::popBack(line);
+        std::string& current = m_signDraft[static_cast<size_t>(m_signLine)];
+        if (!current.empty()) Utf8::popBack(current);
         else if (m_signLine > 0) --m_signLine;
     }
+
+    std::string& line = m_signDraft[static_cast<size_t>(m_signLine)];
 
     Utf8::type(line, m_input.typedText(),
                static_cast<size_t>(isHangingSign(m_world->getBlock(m_signAt.x, m_signAt.y, m_signAt.z)) ? Signs::MAX_HANGING_LINE : Signs::MAX_LINE));

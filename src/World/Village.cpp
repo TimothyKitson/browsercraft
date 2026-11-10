@@ -1,6 +1,7 @@
 #include "Village.h"
 #include "Noise.h"
 #include <algorithm>
+#include <cstdlib>
 
 namespace
 {

@@ -182,7 +182,12 @@
 
   // Don't let the browser scroll or quick-find while playing.
   window.addEventListener('keydown', function (e) {
-    if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' ','/',"'"].includes(e.key)) {
+    if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) {
+      if (document.pointerLockElement) e.preventDefault();
+    }
+  }, { passive: false });
+  window.addEventListener('keypress', function (e) {
+    if ([' ','/',"'"].includes(e.key)) {
       if (document.pointerLockElement) e.preventDefault();
     }
   }, { passive: false });

@@ -34,6 +34,10 @@ public:
     // out. No-op when worker threads are doing the work.
     void runPending(double budgetMilliseconds);
 
+#ifdef __EMSCRIPTEN__
+    void discardPending();
+#endif
+
 private:
 #ifdef __EMSCRIPTEN__
     std::queue<std::function<void()>> m_jobs;

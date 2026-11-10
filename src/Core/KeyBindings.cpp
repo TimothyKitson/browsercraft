@@ -18,6 +18,12 @@ namespace
     Binding key(SDL_Scancode code) { return Binding{ false, static_cast<int>(code) }; }
     Binding mouse(int button) { return Binding{ true, button }; }
 
+    bool functionKey(int code)
+    {
+        return (code >= SDL_SCANCODE_F1 && code <= SDL_SCANCODE_F12) ||
+               (code >= SDL_SCANCODE_F13 && code <= SDL_SCANCODE_F24);
+    }
+
     // Minecraft's defaults, with three additions at the bottom that
     // Minecraft keeps in Options rather than on a key. They are bound
     // here because this game has no options for them yet.
@@ -80,6 +86,7 @@ bool KeyBindings::down(const Input& input, Action action) const
 {
     const Binding& b = m_bindings[index(action)];
     if (!b.valid()) return false;
+    if (m_typing && !b.mouse && !functionKey(b.code)) return false;
     return b.mouse ? input.isMouseButtonDown(static_cast<Uint8>(b.code))
                    : input.isKeyDown(static_cast<SDL_Scancode>(b.code));
 }
@@ -88,6 +95,7 @@ bool KeyBindings::pressed(const Input& input, Action action) const
 {
     const Binding& b = m_bindings[index(action)];
     if (!b.valid()) return false;
+    if (m_typing && !b.mouse && !functionKey(b.code)) return false;
     return b.mouse ? input.wasMouseButtonPressed(static_cast<Uint8>(b.code))
                    : input.wasKeyPressed(static_cast<SDL_Scancode>(b.code));
 }

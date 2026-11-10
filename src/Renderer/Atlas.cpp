@@ -11860,7 +11860,7 @@ Atlas::Atlas()
             {
                 Tile bulb;
                 const bool lit = (st & 1) != 0;
-                paintCopperBulbIn(bulb, lit ? Color{ 255, 226 - stage * 20, 150 } : Color{ 92, 74, 58 }, FRAME[stage]);
+                paintCopperBulbIn(bulb, lit ? Color{ 255, static_cast<uint8_t>(226 - stage * 20), 150 } : Color{ 92, 74, 58 }, FRAME[stage]);
                 if (st & 2) bulb.set(7, 7, Color{ 220, 40, 30 });
                 blitPainted(Tiles::CopperBulbStageTile + (stage - 1) * 4 + st, bulb);
             }

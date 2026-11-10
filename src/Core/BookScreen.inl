@@ -148,7 +148,7 @@ void Application::updateBookInput()
 
     if (m_bookSigning)
     {
-        if (m_input.wasKeyPressed(SDL_SCANCODE_BACKSPACE) && !m_bookTitle.empty()) Utf8::popBack(m_bookTitle);
+        for (int i = 0; i < m_input.backspaces() && !m_bookTitle.empty(); ++i) Utf8::popBack(m_bookTitle);
         Utf8::type(m_bookTitle, m_input.typedText(), BOOK_TITLE_CHARS);
         if ((m_input.wasKeyPressed(SDL_SCANCODE_RETURN) || m_input.wasKeyPressed(SDL_SCANCODE_KP_ENTER)) && !m_bookTitle.empty())
         {
@@ -162,7 +162,7 @@ void Application::updateBookInput()
 
     m_bookPage = std::clamp(m_bookPage, 0, static_cast<int>(m_bookDraft.size()) - 1);
     std::string& page = m_bookDraft[static_cast<size_t>(m_bookPage)];
-    if (m_input.wasKeyPressed(SDL_SCANCODE_BACKSPACE) && !page.empty()) Utf8::popBack(page);
+    for (int i = 0; i < m_input.backspaces() && !page.empty(); ++i) Utf8::popBack(page);
     for (char32_t c : Utf8::decode(m_input.typedText()))
     {
         if (!Utf8::typeable(c)) continue;

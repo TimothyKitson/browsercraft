@@ -1,5 +1,6 @@
 #include "FontPaint.h"
 #include <algorithm>
+#include <cstdlib>
 #include <cstring>
 
 namespace FontPaint

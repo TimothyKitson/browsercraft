@@ -215,7 +215,7 @@ std::vector<int> Application::advancementTabs() const
 void Application::updateAdvancementsInput()
 {
     if (!m_advOpen) return;
-    if (m_input.wasKeyPressed(SDL_SCANCODE_ESCAPE) || m_keys.pressed(m_input, Action::Advancements))
+    if (m_input.wasKeyPressed(SDL_SCANCODE_ESCAPE))
     {
         closeAdvancements();
         return;

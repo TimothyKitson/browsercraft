@@ -86,6 +86,7 @@ void Application::guiField(GuiField& field, float x, float y, float w, float h, 
     }
     if (field.focused)
     {
+        m_fieldTyping = true;
         Utf8::type(field.text, m_input.typedText(), field.maxLength);
         for (int i = 0; i < m_input.backspaces() && !field.text.empty(); ++i) Utf8::popBack(field.text);
     }

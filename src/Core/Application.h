@@ -1767,6 +1767,9 @@ private:
     void setMouseCaptured(bool captured);
     bool playing() const { return m_screen == Screen::Playing; }
     bool uiHasFocus() const { return m_screen != Screen::Playing || m_inventoryOpen || m_chatOpen; }
+    bool overlayOpen() const { return m_chatOpen || m_signOpen || m_bookOpen || m_advOpen || m_editorOpen; }
+    bool typingText() const;
+    bool m_fieldTyping = false;
 
     glm::vec3 sunDirection() const;
     float daylightFactor() const;

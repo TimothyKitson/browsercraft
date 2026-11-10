@@ -71,9 +71,14 @@ World::World(uint32_t seed, std::string saveDirectory, int renderDistance, Dimen
 
 World::~World()
 {
+#ifdef __EMSCRIPTEN__
+    m_pool.discardPending();
+    m_activeJobs.store(0);
+#else
     // Let in-flight generation/mesh jobs finish before chunks disappear.
     while (m_activeJobs.load() > 0)
         std::this_thread::sleep_for(std::chrono::milliseconds(2));
+#endif
     saveAll();
 }
 

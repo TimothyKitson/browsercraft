@@ -45,6 +45,9 @@ public:
     bool down(const Input& input, Action action) const;
     bool pressed(const Input& input, Action action) const;
 
+    void setTyping(bool typing) { m_typing = typing; }
+    bool typing() const { return m_typing; }
+
     const Binding& binding(Action action) const { return m_bindings[index(action)]; }
     void setBinding(Action action, const Binding& binding);
     void resetToDefaults();
@@ -66,4 +69,5 @@ private:
     static size_t index(Action action) { return static_cast<size_t>(action); }
 
     std::array<Binding, COUNT> m_bindings{};
+    bool m_typing = false;
 };

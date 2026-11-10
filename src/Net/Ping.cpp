@@ -1,6 +1,7 @@
 #include "Ping.h"
 #include "Protocol.h"
 #include <cctype>
+#include <cstdlib>
 #include <chrono>
 #include <thread>
 #ifndef __EMSCRIPTEN__
