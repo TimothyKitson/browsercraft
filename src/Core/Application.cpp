@@ -2487,6 +2487,9 @@ bool Application::frame()
         if (playing())
         {
             m_drops.update(deltaTime, *m_world, m_player, m_inventory, m_audio);
+            std::vector<DroppedItems::Landing> landed;
+            m_drops.updateFalling(deltaTime, *m_world, landed);
+            for (const DroppedItems::Landing& landing : landed) landFalling(landing);
 
             // Orbs report what they were worth rather than touching the
             // player, so the one place experience is ever added stays
@@ -9368,6 +9371,8 @@ void Application::updateMining(float deltaTime)
                     m_drops.spawnFromBrokenBlock(over, blockDrop(above));
             }
         }
+
+        checkFalling(hit.block + glm::ivec3(0, 1, 0));
 
         // Whatever that was, the power around it has to be worked out
         // again: a broken wire puts out everything downstream of it.
@@ -17386,6 +17391,7 @@ void Application::handlePlacement()
     m_world->setBlock(target.x, target.y, target.z, placing);
     m_net.onLocalBlockChange(target.x, target.y, target.z, placing);
     m_audio.playPlace(placing);
+    checkFalling(target);
     if (isAnySculkSensor(placing)) m_sensorSpots.push_back(target);
     if (isCommandBlock(placing))
     {
@@ -22838,3 +22844,53 @@ void Application::tickPlates(float deltaTime)
         }
     }
 }
+
+void Application::checkFalling(const glm::ivec3& at)
+{
+    if (!m_world || m_net.role() == Net::Role::Guest) return;
+    for (int y = at.y; y < Chunk::SY; ++y)
+    {
+        const BlockId block = m_world->getBlock(at.x, y, at.z);
+        if (!fallsByGravity(block)) return;
+        if (!canFallThrough(m_world->getBlock(at.x, y - 1, at.z))) return;
+        m_world->setBlock(at.x, y, at.z, Blocks::Air);
+        m_net.onLocalBlockChange(at.x, y, at.z, Blocks::Air);
+        m_drops.spawnFalling(glm::ivec3(at.x, y, at.z), block);
+    }
+}
+
+void Application::landFalling(const DroppedItems::Landing& landing)
+{
+    const glm::ivec3 at = landing.cell;
+    BlockId block = landing.block;
+    if (at.y < 0 || at.y >= Chunk::SY) return;
+    const BlockId there = m_world->getBlock(at.x, at.y, at.z);
+    if (!canFallThrough(there))
+    {
+        if (!isSuspicious(block)) m_drops.spawnFromBrokenBlock(at, blockDrop(block));
+        return;
+    }
+    if (isConcretePowder(block))
+    {
+        bool wet = isWater(there);
+        static const glm::ivec3 SIDES[5] = { { 1, 0, 0 }, { -1, 0, 0 }, { 0, 0, 1 }, { 0, 0, -1 }, { 0, 1, 0 } };
+        for (const glm::ivec3& side : SIDES)
+            if (isWater(m_world->getBlock(at.x + side.x, at.y + side.y, at.z + side.z))) wet = true;
+        if (wet) block = colourIn(Blocks::ConcreteFirst, runColour(block, Blocks::ConcretePowderFirst));
+    }
+    m_world->setBlock(at.x, at.y, at.z, block);
+    m_net.onLocalBlockChange(at.x, at.y, at.z, block);
+    m_audio.playPlace(block);
+    if (isAnvil(block) && landing.fallen > 1.0f)
+    {
+        const AABB body = m_player.aabb();
+        if (body.max.x > at.x && body.min.x < at.x + 1 && body.max.z > at.z && body.min.z < at.z + 1 &&
+            body.max.y > at.y && body.min.y < at.y + 1.5f && !m_player.creative())
+        {
+            const int hurt = std::min(40, static_cast<int>((landing.fallen - 1.0f) * 2.0f));
+            if (hurt > 0 && m_player.damage(hurt)) m_audio.play(Sound::Hurt, 0.7f, 1.0f);
+        }
+    }
+    checkFalling(at + glm::ivec3(0, 1, 0));
+}
+

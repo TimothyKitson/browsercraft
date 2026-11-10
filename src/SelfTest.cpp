@@ -6,6 +6,8 @@
 
 #include "Player/Inventory.h"
 #include "Game/Crafting.h"
+#include "Entity/DroppedItems.h"
+#include "World/World.h"
 #include "Game/Beacon.h"
 #include "Game/Hopper.h"
 #include "Game/Redstone.h"
@@ -13548,6 +13550,30 @@ namespace
         check(Crafting::match(grid, 3).id == plateOf(2, false), "and two gold ingots the light weighted one");
     }
 
+
+    void testFallingBlocks()
+    {
+        section("blocks: sand, gravel, concrete powder and anvils fall");
+        check(fallsByGravity(Blocks::Sand) && fallsByGravity(Blocks::Gravel) && fallsByGravity(Blocks::RedSand) &&
+              fallsByGravity(Blocks::ConcretePowderFirst + 4) && fallsByGravity(Blocks::Anvil) && fallsByGravity(Blocks::DragonEgg),
+              "the blocks Minecraft lets fall do");
+        check(!fallsByGravity(Blocks::Stone) && !fallsByGravity(Blocks::Dirt) && !fallsByGravity(Blocks::Sandstone),
+              "and stone, dirt and sandstone stay where they are");
+        check(canFallThrough(Blocks::Air) && canFallThrough(Blocks::Water) && canFallThrough(Blocks::TallGrass) &&
+              !canFallThrough(Blocks::Stone) && !canFallThrough(Blocks::Torch), "they fall through air, water and grass, not stone");
+
+        World world(42, "selftest-falling", 2, Dimension::Overworld);
+        DroppedItems drops;
+        drops.spawnFalling(glm::ivec3(0, 120, 0), Blocks::Sand);
+        check(drops.fallingCount() == 1, "a block let go is in the air");
+        std::vector<DroppedItems::Landing> landed;
+        for (int frame = 0; frame < 400 && landed.empty(); ++frame) drops.updateFalling(0.05f, world, landed);
+        check(landed.size() == 1 && landed[0].block == Blocks::Sand && landed[0].cell.y <= 0 && drops.fallingCount() == 0,
+              "and with nothing under it, it comes down to the bottom of the world");
+        std::error_code gone;
+        std::filesystem::remove_all("selftest-falling", gone);
+    }
+
     void testEverySoundHasANoise()
     {
         section("sounds: every sound makes a noise");
@@ -16668,6 +16694,7 @@ int runSelfTest()
     testShapeFamilies();
     testCarpetsWoodAndInfested();
     testSwitchesAndPlates();
+    testFallingBlocks();
     testDrowning();
     testQuickMoveKeepsMetadata();
     testContainersPerDimension();

@@ -2248,6 +2248,16 @@ inline bool isLeaves(BlockId id)
 }
 inline bool isVisible(BlockId id) { return blockInfo(id).render != RenderType::None; }
 inline uint8_t lightEmission(BlockId id) { return blockInfo(id).lightEmission; }
+inline bool fallsByGravity(BlockId id)
+{
+    return id == Blocks::Sand || id == Blocks::RedSand || id == Blocks::Gravel || isConcretePowder(id) ||
+           isAnvil(id) || id == Blocks::DragonEgg || isSuspicious(id);
+}
+inline bool canFallThrough(BlockId id)
+{
+    return id == Blocks::Air || isLiquid(id) || isFire(id) || id == Blocks::TallGrass || id == Blocks::Fern ||
+           id == Blocks::DeadBush || id == Blocks::Seagrass || isTallSeagrass(id) || isLightBlock(id);
+}
 
 // Blocks the player can pick up / place. Used by the creative palette.
 bool isObtainable(BlockId id);

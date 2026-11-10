@@ -45,6 +45,16 @@ public:
     }
     void spawnFromBrokenBlock(const glm::ivec3& blockPosition, StackId drop, int count = 1);
 
+    struct Landing
+    {
+        glm::ivec3 cell{ 0 };
+        BlockId block = Blocks::Air;
+        float fallen = 0.0f;
+    };
+    void spawnFalling(const glm::ivec3& at, BlockId block);
+    void updateFalling(float deltaTime, const World& world, std::vector<Landing>& landed);
+    int fallingCount() const { return static_cast<int>(m_falling.size()); }
+
     void update(float deltaTime, const World& world, const Player& player,
                 Inventory& inventory, AudioEngine& audio);
     std::vector<std::pair<StackId, int>> takePicked()
@@ -90,7 +100,7 @@ public:
     void carry(const Cargo& one) { m_cargo.push_back(one); }
     std::vector<ItemStack> takeNear(const glm::vec3& at, float radius);
 
-    void clear() { m_items.clear(); m_pinned.clear(); m_cargo.clear(); }
+    void clear() { m_items.clear(); m_pinned.clear(); m_cargo.clear(); m_falling.clear(); }
     int count() const { return static_cast<int>(m_items.size()); }
     void positions(std::vector<glm::vec3>& out) const
     {
@@ -112,6 +122,14 @@ private:
     };
 
     std::vector<Item> m_items;
+    struct Falling
+    {
+        glm::vec3 position{ 0.0f };
+        float speed = 0.0f;
+        float startY = 0.0f;
+        BlockId block = Blocks::Air;
+    };
+    std::vector<Falling> m_falling;
     std::vector<std::pair<StackId, int>> m_picked;
     std::vector<Pinned> m_pinned;
     std::vector<Cargo> m_cargo;

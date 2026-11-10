@@ -95,6 +95,46 @@ void DroppedItems::spawnStack(const glm::vec3& position, const ItemStack& stack)
     m_items.back().enchantments = stack.enchantments;
 }
 
+void DroppedItems::spawnFalling(const glm::ivec3& at, BlockId block)
+{
+    Falling falling;
+    falling.position = glm::vec3(at);
+    falling.startY = static_cast<float>(at.y);
+    falling.block = block;
+    m_falling.push_back(falling);
+}
+
+void DroppedItems::updateFalling(float deltaTime, const World& world, std::vector<Landing>& landed)
+{
+    for (size_t i = 0; i < m_falling.size();)
+    {
+        Falling& falling = m_falling[i];
+        falling.speed = std::max(falling.speed - 32.0f * deltaTime, -40.0f);
+        const float next = falling.position.y + falling.speed * deltaTime;
+        const int x = static_cast<int>(std::floor(falling.position.x + 0.5f));
+        const int z = static_cast<int>(std::floor(falling.position.z + 0.5f));
+        int stop = -1000;
+        for (int y = static_cast<int>(std::floor(falling.position.y)); y >= static_cast<int>(std::floor(next)); --y)
+            if (y < 0 || !canFallThrough(world.getBlock(x, y, z)))
+            {
+                stop = y + 1;
+                break;
+            }
+        if (stop == -1000)
+        {
+            falling.position.y = next;
+            ++i;
+            continue;
+        }
+        Landing landing;
+        landing.cell = glm::ivec3(x, stop, z);
+        landing.block = falling.block;
+        landing.fallen = falling.startY - static_cast<float>(stop);
+        landed.push_back(landing);
+        m_falling.erase(m_falling.begin() + static_cast<long>(i));
+    }
+}
+
 void DroppedItems::spawnFromBrokenBlock(const glm::ivec3& blockPosition, StackId drop, int count)
 {
     spawn(glm::vec3(blockPosition) + glm::vec3(0.5f), drop, count);
@@ -273,10 +313,38 @@ static constexpr float FRAME_SIZE = 0.52f;
 
 void DroppedItems::render(Shader& chunkShader, const World& world)
 {
-    if (m_items.empty() && m_pinned.empty() && m_cargo.empty()) return;
+    if (m_items.empty() && m_pinned.empty() && m_cargo.empty() && m_falling.empty()) return;
 
     m_vertices.clear();
     m_vertices.reserve((m_items.size() + m_pinned.size()) * 36 * 9);
+
+    for (const Falling& falling : m_falling)
+    {
+        const int lx = static_cast<int>(std::floor(falling.position.x + 0.5f));
+        const int ly = static_cast<int>(std::floor(falling.position.y + 0.5f));
+        const int lz = static_cast<int>(std::floor(falling.position.z + 0.5f));
+        const float sky = world.skyLight(lx, ly, lz) / 15.0f;
+        const float blockLight = static_cast<float>(world.blockLightAt(lx, ly, lz)) / 15.0f;
+        for (int f = 0; f < 6; ++f)
+        {
+            const FaceDef& face = FACES[f];
+            const TileUV uv = tileUV(tileForFace(falling.block, f));
+            const int order[6] = { 0, 1, 2, 0, 2, 3 };
+            for (int k : order)
+            {
+                const glm::vec3 p = falling.position + glm::vec3(face.corner[k][0], face.corner[k][1], face.corner[k][2]);
+                m_vertices.push_back(p.x);
+                m_vertices.push_back(p.y);
+                m_vertices.push_back(p.z);
+                m_vertices.push_back(face.uv[k][0] == 0.0f ? uv.u0 : uv.u1);
+                m_vertices.push_back(face.uv[k][1] == 0.0f ? uv.vTop : uv.vBottom);
+                m_vertices.push_back(face.shade);
+                m_vertices.push_back(sky);
+                m_vertices.push_back(blockLight);
+                m_vertices.push_back(6.0f);
+            }
+        }
+    }
 
 
     const float half = SIZE * 0.5f;

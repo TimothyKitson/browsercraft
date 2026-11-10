@@ -1209,6 +1209,8 @@ private:
     std::vector<std::pair<glm::ivec3, float>> m_pressedButtons;
     std::vector<std::pair<glm::ivec3, float>> m_platesDown;
     void tickPlates(float deltaTime);
+    void checkFalling(const glm::ivec3& at);
+    void landFalling(const DroppedItems::Landing& landing);
     void setPowered(const glm::ivec3& at, BlockId block);
     void dismount();
     void wearOnSwing(StackId weapon);
