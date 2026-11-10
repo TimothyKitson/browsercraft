@@ -816,3 +816,17 @@ bool World::hasLineOfSight(const glm::vec3& from, const glm::vec3& to) const
     }
     return true;
 }
+
+int World::bubbleColumnAt(int x, int y, int z) const
+{
+    if (getBlock(x, y, z) != Blocks::Water) return 0;
+    for (int below = y - 1; below > 0 && y - below < Chunk::SY; --below)
+    {
+        const BlockId here = getBlock(x, below, z);
+        if (here == Blocks::Water) continue;
+        if (here == Blocks::SoulSand) return 1;
+        if (here == Blocks::MagmaBlock) return -1;
+        return 0;
+    }
+    return 0;
+}

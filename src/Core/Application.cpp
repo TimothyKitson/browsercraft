@@ -3298,6 +3298,19 @@ bool Application::frame()
                 for (int n = 1; n <= 8; ++n) m_world->setBlock(bx - 5 + n, by, bz + 4, snowLayerOf(n));
                 m_world->setBlock(bx - 5, by, bz + 4, Blocks::SnowGrass);
                 m_world->setBlock(bx - 5, by + 1, bz + 4, snowLayerOf(1));
+                m_world->setBlock(bx + 7, by - 1, bz - 1, Blocks::SoulSand);
+                m_world->setBlock(bx + 7, by - 1, bz - 3, Blocks::MagmaBlock);
+                for (int h = 0; h < 3; ++h)
+                {
+                    m_world->setBlock(bx + 7, by + h, bz - 1, Blocks::Water);
+                    m_world->setBlock(bx + 7, by + h, bz - 3, Blocks::Water);
+                    for (int dz : { -4, -2, 0 })
+                    {
+                        m_world->setBlock(bx + 7, by + h, bz + dz, Blocks::Glass);
+                        m_world->setBlock(bx + 8, by + h, bz + dz + 1, Blocks::Glass);
+                        m_world->setBlock(bx + 6, by + h, bz + dz + 1, Blocks::Glass);
+                    }
+                }
                 m_player.position = glm::vec3(bx + 0.5f, by + 4.0f, bz + 0.5f) - m_camera.front * 9.0f;
                 m_player.position.y = static_cast<float>(by) + 4.0f;
                 for (int dx = -1; dx <= 1; ++dx)
@@ -19662,6 +19675,29 @@ void Application::tickSpriteParticles(float deltaTime)
                 else
                     fx.spawn(dust, at, glm::vec3((fx.random() - 0.5f) * 0.05f, (fx.random() - 0.5f) * 0.05f, (fx.random() - 0.5f) * 0.05f),
                              0.15f + fx.random() * 0.15f, 1.0f + fx.random() * 3.0f, 0.0f);
+            }
+
+            if ((block == Blocks::SoulSand || block == Blocks::MagmaBlock) && m_world->getBlock(x, y + 1, z) == Blocks::Water)
+            {
+                int height = 1;
+                while (height < 32 && m_world->getBlock(x, y + 1 + height, z) == Blocks::Water) ++height;
+                const bool up = block == Blocks::SoulSand;
+                for (int k = 0; k < 3; ++k)
+                {
+                    const float h = fx.random() * static_cast<float>(height);
+                    const glm::vec3 at(x + 0.2f + fx.random() * 0.6f, y + 1.0f + h, z + 0.2f + fx.random() * 0.6f);
+                    const float speed = up ? 3.0f + fx.random() * 2.0f : -(2.0f + fx.random() * 1.5f);
+                    const float room = up ? static_cast<float>(height) - h : h;
+                    fx.spawn(Kind::Bubble, at, glm::vec3(0.0f, speed, 0.0f), 0.1f + fx.random() * 0.06f,
+                             std::max(0.1f, room / std::fabs(speed)));
+                }
+                if (roll < 0.25f)
+                {
+                    const glm::vec3 top(x + 0.2f + fx.random() * 0.6f, y + 1.0f + static_cast<float>(height), z + 0.2f + fx.random() * 0.6f);
+                    if (up) fx.spawn(Kind::BubblePop, top, glm::vec3(0.0f, 0.2f, 0.0f), 0.14f, 0.4f);
+                    else fx.spawn(Kind::Bubble, top - glm::vec3(0.0f, 0.05f, 0.0f),
+                                  glm::vec3((fx.random() - 0.5f) * 1.2f, -0.3f, (fx.random() - 0.5f) * 1.2f), 0.1f, 0.6f);
+                }
             }
 
             if (block == Blocks::Torch)

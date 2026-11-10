@@ -48,6 +48,7 @@ public:
     void update(const glm::vec3& playerPosition);
 
     BlockId getBlock(int x, int y, int z) const;
+    int bubbleColumnAt(int x, int y, int z) const;
     // Player-driven edit: updates light, flags neighbours for remeshing and
     // marks the chunk as needing a save.
     void setBlock(int x, int y, int z, BlockId id);

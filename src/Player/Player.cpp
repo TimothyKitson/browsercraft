@@ -771,6 +771,10 @@ void Player::update(float deltaTime, const World& world, const Controls& control
         velocity.y += WATER_GRAVITY * deltaTime;
         if (controls.jumpHeld) velocity.y = SWIM_UP_VELOCITY;
         velocity.y = std::max(velocity.y, WATER_TERMINAL);
+        const int bubbles = world.bubbleColumnAt(static_cast<int>(std::floor(position.x)), static_cast<int>(std::floor(position.y + 0.1f)),
+                                                 static_cast<int>(std::floor(position.z)));
+        if (bubbles > 0) velocity.y = std::min(std::max(velocity.y, 0.0f) + 40.0f * deltaTime, 10.0f);
+        else if (bubbles < 0) velocity.y = std::max(std::min(velocity.y, 0.0f) - 14.0f * deltaTime, -6.0f);
         m_falling = false; // water cancels fall damage
     }
     else if (inCobweb)
