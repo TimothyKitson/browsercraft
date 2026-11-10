@@ -393,6 +393,7 @@ namespace Tiles
         FishingHookTile, LeashKnotTile, SpectralInFlight, TippedInFlight, TridentInFlight,
         FrogspawnTile,
         PolishedBasaltTop, PolishedBasaltSide,
+        HeadTileFirst, HeadTileLast = HeadTileFirst + 44,
 
         TileCount
     };

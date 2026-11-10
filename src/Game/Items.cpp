@@ -470,6 +470,7 @@ int flatIconFor(BlockId id)
     if (id == Blocks::Campfire) return Tiles::IconCampfire;
     if (id == Blocks::SoulCampfire) return Tiles::SoulCampfireTop;
     if (isAnyCauldron(id)) return Tiles::IconCauldron;
+    if (isHead(id)) return Tiles::HeadTileFirst + headKind(id) * 6 + 3;
     if (id == Blocks::Hopper) return Tiles::IconHopper;
     if (isPointedDripstone(id)) return Tiles::IconDripstone;
     if (id == Blocks::Bamboo) return Tiles::IconBamboo;
@@ -542,6 +543,7 @@ StackId blockDrop(BlockId id)
     if (isFenceGate(id)) return gateOf(gateWood(id), false, 0);
     if (isInfested(id)) return Blocks::Air;
     if (isSnowLayer(id)) return Items::Snowball;
+    if (isHead(id)) return headKind(id) == 1 ? Blocks::WitherSkull : headOf(headKind(id), false, 0);
     if (isFamilyButton(id)) return buttonItem(buttonMaterial(id));
     if (isPlate(id)) return plateOf(plateMaterial(id), false);
     if (isWallTorch(id))

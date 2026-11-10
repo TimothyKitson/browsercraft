@@ -13652,6 +13652,26 @@ namespace
         }
     }
 
+    void testHeads()
+    {
+        section("mob heads: seven kinds, sixteen turns on the floor and four on a wall");
+        check(headKind(headOf(4, false, 9)) == 4 && headRotation(headOf(4, false, 9)) == 9 && !headOnWall(headOf(4, false, 9)),
+              "a creeper head set down at the ninth turn");
+        check(headOnWall(headOf(2, true, 3)) && headFacing(headOf(2, true, 3)) == 3 && headKind(headOf(2, true, 3)) == 2,
+              "a zombie head on a wall faces one of four ways");
+        check(blockDrop(headOf(1, true, 2)) == Blocks::WitherSkull && isWitherSkullBlock(headOf(1, false, 5)) &&
+              blockDrop(headOf(0, false, 7)) == static_cast<StackId>(headOf(0, false, 0)),
+              "every turn breaks back into the one item, the wither's into its old skull");
+        check(blockOverlaps(headOf(0, false, 3), 0, 0, 0, 0.4f, 0.1f, 0.4f, 0.6f, 0.4f, 0.6f, 0) &&
+              !blockOverlaps(headOf(0, false, 3), 0, 0, 0, 0.4f, 0.6f, 0.4f, 0.6f, 0.9f, 0.6f, 0) &&
+              blockOverlaps(headOf(0, true, 0), 0, 0, 0, 0.4f, 0.4f, 0.9f, 0.6f, 0.6f, 0.95f, 0) &&
+              !blockOverlaps(headOf(0, true, 0), 0, 0, 0, 0.4f, 0.4f, 0.05f, 0.6f, 0.6f, 0.2f, 0),
+              "a skull is half a block high on the floor and hangs against the wall it is set on");
+        check(Armour::pieceOf(static_cast<StackId>(headOf(3, false, 0))) == Armour::Piece::Helmet &&
+              Armour::pieceOf(Blocks::WitherSkull) == Armour::Piece::Helmet, "a head is worn as a helmet");
+        check(Tools::canHarvest(Blocks::Air, headOf(5, false, 0)), "and comes off by hand");
+    }
+
     void testGameRules()
     {
         section("game rules: all 51, saved per world and set with /gamerule");
@@ -16802,6 +16822,7 @@ int runSelfTest()
     testFallingBlocks();
     testGameRules();
     testSnowLayers();
+    testHeads();
     testDrowning();
     testQuickMoveKeepsMetadata();
     testContainersPerDimension();

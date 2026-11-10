@@ -52,6 +52,7 @@ Armour::Piece Armour::pieceOf(StackId id)
     if (id == Items::Elytra) return Piece::Chestplate;
     if (id == Blocks::CarvedPumpkinFirst + 2) return Piece::Helmet;
     if (id == Items::TurtleHelmet) return Piece::Helmet;
+    if (id == Blocks::WitherSkull || (isBlockStack(id) && isHead(asBlock(id)))) return Piece::Helmet;
 
     // The four netherite pieces are at the end of the item list
     // rather than after the diamond ones, so their offset is taken

@@ -136,6 +136,7 @@ int Tools::requiredLevel(BlockId block)
         default: break;
     }
     if (isSnowLayer(block)) return 1;
+    if (isHead(block) || block == Blocks::WitherSkull) return 0;
 
     // Everything else made of stone wants a pickaxe of some sort; the
     // softer materials want nothing in particular.

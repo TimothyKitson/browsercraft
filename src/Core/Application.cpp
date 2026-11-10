@@ -3298,6 +3298,13 @@ bool Application::frame()
                 for (int n = 1; n <= 8; ++n) m_world->setBlock(bx - 5 + n, by, bz + 4, snowLayerOf(n));
                 m_world->setBlock(bx - 5, by, bz + 4, Blocks::SnowGrass);
                 m_world->setBlock(bx - 5, by + 1, bz + 4, snowLayerOf(1));
+                {
+                    const int turns[HEAD_KINDS] = { 0, 1, 0, 15, 0, 0, 2 };
+                    for (int k = 0; k < HEAD_KINDS; ++k) m_world->setBlock(bx - 2 + k, by, bz - 1, headOf(k, false, turns[k]));
+                    m_world->setBlock(bx - 6, by, bz + 2, Blocks::Stone);
+                    m_world->setBlock(bx - 6, by, bz + 3, headOf(4, true, 2));
+                    m_world->setBlock(bx - 6, by + 1, bz + 2, headOf(6, true, 2));
+                }
                 m_world->setBlock(bx + 7, by - 1, bz - 1, Blocks::SoulSand);
                 m_world->setBlock(bx + 7, by - 1, bz - 3, Blocks::MagmaBlock);
                 for (int h = 0; h < 3; ++h)
@@ -10491,7 +10498,7 @@ void Application::tryRaiseWither(const glm::ivec3& skull)
             // Three skulls across the top.
             bool heads = true;
             for (int i = -1; i <= 1; ++i)
-                if (at(stepX * i, 0, stepZ * i) != Blocks::WitherSkull) heads = false;
+                if (!isWitherSkullBlock(at(stepX * i, 0, stepZ * i))) heads = false;
             if (!heads) continue;
 
             // Three soul sand under them, and two more below the
@@ -17542,6 +17549,19 @@ void Application::handlePlacement()
         const bool top = hit.normal.y < 0 || (hit.normal.y == 0 && point.y - std::floor(point.y) > 0.5f);
         placing = slabOf(slabMaterial(placing), top ? 1 : 0);
     }
+    if (placing == Blocks::WitherSkull || isHead(placing))
+    {
+        const glm::ivec3 n = hit.normal;
+        const int kind = headKind(placing);
+        if (n.y == 0)
+            placing = headOf(kind, true, n.z < 0 ? 0 : n.x > 0 ? 1 : n.z > 0 ? 2 : 3);
+        else
+        {
+            const float fx = -m_camera.front.x, fz = -m_camera.front.z;
+            const float turn = std::atan2(-fx, fz) / glm::radians(22.5f);
+            placing = headOf(kind, false, static_cast<int>(std::lround(turn)) & 15);
+        }
+    }
     if (isFenceGate(placing))
     {
         const glm::vec3 look = m_camera.front;
@@ -17680,7 +17700,7 @@ void Application::handlePlacement()
     settleRedstone(target);
 
     // The two blocks in the game whose placing can build something.
-    if (placing == Blocks::WitherSkull) tryRaiseWither(target);
+    if (isWitherSkullBlock(placing)) tryRaiseWither(target);
     if (Golems::isTrigger(placing)) tryRaiseGolem(target);
 
     if (placing == Blocks::Beacon)

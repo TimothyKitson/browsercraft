@@ -701,6 +701,7 @@ namespace Blocks
         SnowLayerFirst, SnowLayerLast = SnowLayerFirst + 7,
         LavaCauldron,
         PowderCauldronFirst, PowderCauldronLast = PowderCauldronFirst + 2,
+        HeadRunFirst, HeadRunLast = HeadRunFirst + 139,
         ExtCount
     };
 }
@@ -735,7 +736,8 @@ enum class RenderType : uint8_t
     Button,
     Plate,
     WallTorch,
-    Lever
+    Lever,
+    Head
 };
 
 struct BlockInfo
@@ -797,6 +799,17 @@ BlockId shapeBase(BlockId id);
 int shapeWood(BlockId id);
 inline bool isShapeFamily(BlockId id) { return shapeBase(id) != 0; }
 inline bool isCarpet(BlockId id) { return id >= Blocks::CarpetFirst && id <= Blocks::CarpetLast; }
+constexpr int HEAD_KINDS = 7;
+inline bool isHead(BlockId id) { return id >= Blocks::HeadRunFirst && id <= Blocks::HeadRunLast; }
+inline int headKind(BlockId id) { return isHead(id) ? (id - Blocks::HeadRunFirst) / 20 : id == Blocks::WitherSkull ? 1 : -1; }
+inline bool headOnWall(BlockId id) { return isHead(id) && (id - Blocks::HeadRunFirst) % 20 >= 16; }
+inline int headRotation(BlockId id) { return isHead(id) && !headOnWall(id) ? (id - Blocks::HeadRunFirst) % 20 : 0; }
+inline int headFacing(BlockId id) { return headOnWall(id) ? (id - Blocks::HeadRunFirst) % 20 - 16 : 0; }
+inline BlockId headOf(int kind, bool wall, int turn)
+{
+    return static_cast<BlockId>(Blocks::HeadRunFirst + kind * 20 + (wall ? 16 + (turn & 3) : (turn & 15)));
+}
+inline bool isWitherSkullBlock(BlockId id) { return id == Blocks::WitherSkull || (isHead(id) && headKind(id) == 1); }
 inline bool isSnowLayer(BlockId id) { return id >= Blocks::SnowLayerFirst && id <= Blocks::SnowLayerLast; }
 inline int snowLayers(BlockId id) { return isSnowLayer(id) ? id - Blocks::SnowLayerFirst + 1 : 0; }
 inline BlockId snowLayerOf(int layers)

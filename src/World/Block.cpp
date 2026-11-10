@@ -3985,6 +3985,146 @@ namespace
         { "Powder Snow Cauldron", PowderSnowTile, CauldronBottom, CauldronSide, true, true, RenderType::Cube, 0, 2.0f },
         { "Powder Snow Cauldron", PowderSnowTile, CauldronBottom, CauldronSide, true, true, RenderType::Cube, 0, 2.0f },
         { "Powder Snow Cauldron", PowderSnowTile, CauldronBottom, CauldronSide, true, true, RenderType::Cube, 0, 2.0f },
+        { "Skeleton Skull", HeadTileFirst + 0, HeadTileFirst + 1, HeadTileFirst + 3, true, false, RenderType::Head, 0, 1.0f },
+        { "Skeleton Skull", HeadTileFirst + 0, HeadTileFirst + 1, HeadTileFirst + 3, true, false, RenderType::Head, 0, 1.0f },
+        { "Skeleton Skull", HeadTileFirst + 0, HeadTileFirst + 1, HeadTileFirst + 3, true, false, RenderType::Head, 0, 1.0f },
+        { "Skeleton Skull", HeadTileFirst + 0, HeadTileFirst + 1, HeadTileFirst + 3, true, false, RenderType::Head, 0, 1.0f },
+        { "Skeleton Skull", HeadTileFirst + 0, HeadTileFirst + 1, HeadTileFirst + 3, true, false, RenderType::Head, 0, 1.0f },
+        { "Skeleton Skull", HeadTileFirst + 0, HeadTileFirst + 1, HeadTileFirst + 3, true, false, RenderType::Head, 0, 1.0f },
+        { "Skeleton Skull", HeadTileFirst + 0, HeadTileFirst + 1, HeadTileFirst + 3, true, false, RenderType::Head, 0, 1.0f },
+        { "Skeleton Skull", HeadTileFirst + 0, HeadTileFirst + 1, HeadTileFirst + 3, true, false, RenderType::Head, 0, 1.0f },
+        { "Skeleton Skull", HeadTileFirst + 0, HeadTileFirst + 1, HeadTileFirst + 3, true, false, RenderType::Head, 0, 1.0f },
+        { "Skeleton Skull", HeadTileFirst + 0, HeadTileFirst + 1, HeadTileFirst + 3, true, false, RenderType::Head, 0, 1.0f },
+        { "Skeleton Skull", HeadTileFirst + 0, HeadTileFirst + 1, HeadTileFirst + 3, true, false, RenderType::Head, 0, 1.0f },
+        { "Skeleton Skull", HeadTileFirst + 0, HeadTileFirst + 1, HeadTileFirst + 3, true, false, RenderType::Head, 0, 1.0f },
+        { "Skeleton Skull", HeadTileFirst + 0, HeadTileFirst + 1, HeadTileFirst + 3, true, false, RenderType::Head, 0, 1.0f },
+        { "Skeleton Skull", HeadTileFirst + 0, HeadTileFirst + 1, HeadTileFirst + 3, true, false, RenderType::Head, 0, 1.0f },
+        { "Skeleton Skull", HeadTileFirst + 0, HeadTileFirst + 1, HeadTileFirst + 3, true, false, RenderType::Head, 0, 1.0f },
+        { "Skeleton Skull", HeadTileFirst + 0, HeadTileFirst + 1, HeadTileFirst + 3, true, false, RenderType::Head, 0, 1.0f },
+        { "Skeleton Skull", HeadTileFirst + 0, HeadTileFirst + 1, HeadTileFirst + 3, true, false, RenderType::Head, 0, 1.0f },
+        { "Skeleton Skull", HeadTileFirst + 0, HeadTileFirst + 1, HeadTileFirst + 3, true, false, RenderType::Head, 0, 1.0f },
+        { "Skeleton Skull", HeadTileFirst + 0, HeadTileFirst + 1, HeadTileFirst + 3, true, false, RenderType::Head, 0, 1.0f },
+        { "Skeleton Skull", HeadTileFirst + 0, HeadTileFirst + 1, HeadTileFirst + 3, true, false, RenderType::Head, 0, 1.0f },
+        { "Wither Skeleton Skull", HeadTileFirst + 6, HeadTileFirst + 7, HeadTileFirst + 9, true, false, RenderType::Head, 0, 1.0f },
+        { "Wither Skeleton Skull", HeadTileFirst + 6, HeadTileFirst + 7, HeadTileFirst + 9, true, false, RenderType::Head, 0, 1.0f },
+        { "Wither Skeleton Skull", HeadTileFirst + 6, HeadTileFirst + 7, HeadTileFirst + 9, true, false, RenderType::Head, 0, 1.0f },
+        { "Wither Skeleton Skull", HeadTileFirst + 6, HeadTileFirst + 7, HeadTileFirst + 9, true, false, RenderType::Head, 0, 1.0f },
+        { "Wither Skeleton Skull", HeadTileFirst + 6, HeadTileFirst + 7, HeadTileFirst + 9, true, false, RenderType::Head, 0, 1.0f },
+        { "Wither Skeleton Skull", HeadTileFirst + 6, HeadTileFirst + 7, HeadTileFirst + 9, true, false, RenderType::Head, 0, 1.0f },
+        { "Wither Skeleton Skull", HeadTileFirst + 6, HeadTileFirst + 7, HeadTileFirst + 9, true, false, RenderType::Head, 0, 1.0f },
+        { "Wither Skeleton Skull", HeadTileFirst + 6, HeadTileFirst + 7, HeadTileFirst + 9, true, false, RenderType::Head, 0, 1.0f },
+        { "Wither Skeleton Skull", HeadTileFirst + 6, HeadTileFirst + 7, HeadTileFirst + 9, true, false, RenderType::Head, 0, 1.0f },
+        { "Wither Skeleton Skull", HeadTileFirst + 6, HeadTileFirst + 7, HeadTileFirst + 9, true, false, RenderType::Head, 0, 1.0f },
+        { "Wither Skeleton Skull", HeadTileFirst + 6, HeadTileFirst + 7, HeadTileFirst + 9, true, false, RenderType::Head, 0, 1.0f },
+        { "Wither Skeleton Skull", HeadTileFirst + 6, HeadTileFirst + 7, HeadTileFirst + 9, true, false, RenderType::Head, 0, 1.0f },
+        { "Wither Skeleton Skull", HeadTileFirst + 6, HeadTileFirst + 7, HeadTileFirst + 9, true, false, RenderType::Head, 0, 1.0f },
+        { "Wither Skeleton Skull", HeadTileFirst + 6, HeadTileFirst + 7, HeadTileFirst + 9, true, false, RenderType::Head, 0, 1.0f },
+        { "Wither Skeleton Skull", HeadTileFirst + 6, HeadTileFirst + 7, HeadTileFirst + 9, true, false, RenderType::Head, 0, 1.0f },
+        { "Wither Skeleton Skull", HeadTileFirst + 6, HeadTileFirst + 7, HeadTileFirst + 9, true, false, RenderType::Head, 0, 1.0f },
+        { "Wither Skeleton Skull", HeadTileFirst + 6, HeadTileFirst + 7, HeadTileFirst + 9, true, false, RenderType::Head, 0, 1.0f },
+        { "Wither Skeleton Skull", HeadTileFirst + 6, HeadTileFirst + 7, HeadTileFirst + 9, true, false, RenderType::Head, 0, 1.0f },
+        { "Wither Skeleton Skull", HeadTileFirst + 6, HeadTileFirst + 7, HeadTileFirst + 9, true, false, RenderType::Head, 0, 1.0f },
+        { "Wither Skeleton Skull", HeadTileFirst + 6, HeadTileFirst + 7, HeadTileFirst + 9, true, false, RenderType::Head, 0, 1.0f },
+        { "Zombie Head", HeadTileFirst + 12, HeadTileFirst + 13, HeadTileFirst + 15, true, false, RenderType::Head, 0, 1.0f },
+        { "Zombie Head", HeadTileFirst + 12, HeadTileFirst + 13, HeadTileFirst + 15, true, false, RenderType::Head, 0, 1.0f },
+        { "Zombie Head", HeadTileFirst + 12, HeadTileFirst + 13, HeadTileFirst + 15, true, false, RenderType::Head, 0, 1.0f },
+        { "Zombie Head", HeadTileFirst + 12, HeadTileFirst + 13, HeadTileFirst + 15, true, false, RenderType::Head, 0, 1.0f },
+        { "Zombie Head", HeadTileFirst + 12, HeadTileFirst + 13, HeadTileFirst + 15, true, false, RenderType::Head, 0, 1.0f },
+        { "Zombie Head", HeadTileFirst + 12, HeadTileFirst + 13, HeadTileFirst + 15, true, false, RenderType::Head, 0, 1.0f },
+        { "Zombie Head", HeadTileFirst + 12, HeadTileFirst + 13, HeadTileFirst + 15, true, false, RenderType::Head, 0, 1.0f },
+        { "Zombie Head", HeadTileFirst + 12, HeadTileFirst + 13, HeadTileFirst + 15, true, false, RenderType::Head, 0, 1.0f },
+        { "Zombie Head", HeadTileFirst + 12, HeadTileFirst + 13, HeadTileFirst + 15, true, false, RenderType::Head, 0, 1.0f },
+        { "Zombie Head", HeadTileFirst + 12, HeadTileFirst + 13, HeadTileFirst + 15, true, false, RenderType::Head, 0, 1.0f },
+        { "Zombie Head", HeadTileFirst + 12, HeadTileFirst + 13, HeadTileFirst + 15, true, false, RenderType::Head, 0, 1.0f },
+        { "Zombie Head", HeadTileFirst + 12, HeadTileFirst + 13, HeadTileFirst + 15, true, false, RenderType::Head, 0, 1.0f },
+        { "Zombie Head", HeadTileFirst + 12, HeadTileFirst + 13, HeadTileFirst + 15, true, false, RenderType::Head, 0, 1.0f },
+        { "Zombie Head", HeadTileFirst + 12, HeadTileFirst + 13, HeadTileFirst + 15, true, false, RenderType::Head, 0, 1.0f },
+        { "Zombie Head", HeadTileFirst + 12, HeadTileFirst + 13, HeadTileFirst + 15, true, false, RenderType::Head, 0, 1.0f },
+        { "Zombie Head", HeadTileFirst + 12, HeadTileFirst + 13, HeadTileFirst + 15, true, false, RenderType::Head, 0, 1.0f },
+        { "Zombie Head", HeadTileFirst + 12, HeadTileFirst + 13, HeadTileFirst + 15, true, false, RenderType::Head, 0, 1.0f },
+        { "Zombie Head", HeadTileFirst + 12, HeadTileFirst + 13, HeadTileFirst + 15, true, false, RenderType::Head, 0, 1.0f },
+        { "Zombie Head", HeadTileFirst + 12, HeadTileFirst + 13, HeadTileFirst + 15, true, false, RenderType::Head, 0, 1.0f },
+        { "Zombie Head", HeadTileFirst + 12, HeadTileFirst + 13, HeadTileFirst + 15, true, false, RenderType::Head, 0, 1.0f },
+        { "Player Head", HeadTileFirst + 18, HeadTileFirst + 19, HeadTileFirst + 21, true, false, RenderType::Head, 0, 1.0f },
+        { "Player Head", HeadTileFirst + 18, HeadTileFirst + 19, HeadTileFirst + 21, true, false, RenderType::Head, 0, 1.0f },
+        { "Player Head", HeadTileFirst + 18, HeadTileFirst + 19, HeadTileFirst + 21, true, false, RenderType::Head, 0, 1.0f },
+        { "Player Head", HeadTileFirst + 18, HeadTileFirst + 19, HeadTileFirst + 21, true, false, RenderType::Head, 0, 1.0f },
+        { "Player Head", HeadTileFirst + 18, HeadTileFirst + 19, HeadTileFirst + 21, true, false, RenderType::Head, 0, 1.0f },
+        { "Player Head", HeadTileFirst + 18, HeadTileFirst + 19, HeadTileFirst + 21, true, false, RenderType::Head, 0, 1.0f },
+        { "Player Head", HeadTileFirst + 18, HeadTileFirst + 19, HeadTileFirst + 21, true, false, RenderType::Head, 0, 1.0f },
+        { "Player Head", HeadTileFirst + 18, HeadTileFirst + 19, HeadTileFirst + 21, true, false, RenderType::Head, 0, 1.0f },
+        { "Player Head", HeadTileFirst + 18, HeadTileFirst + 19, HeadTileFirst + 21, true, false, RenderType::Head, 0, 1.0f },
+        { "Player Head", HeadTileFirst + 18, HeadTileFirst + 19, HeadTileFirst + 21, true, false, RenderType::Head, 0, 1.0f },
+        { "Player Head", HeadTileFirst + 18, HeadTileFirst + 19, HeadTileFirst + 21, true, false, RenderType::Head, 0, 1.0f },
+        { "Player Head", HeadTileFirst + 18, HeadTileFirst + 19, HeadTileFirst + 21, true, false, RenderType::Head, 0, 1.0f },
+        { "Player Head", HeadTileFirst + 18, HeadTileFirst + 19, HeadTileFirst + 21, true, false, RenderType::Head, 0, 1.0f },
+        { "Player Head", HeadTileFirst + 18, HeadTileFirst + 19, HeadTileFirst + 21, true, false, RenderType::Head, 0, 1.0f },
+        { "Player Head", HeadTileFirst + 18, HeadTileFirst + 19, HeadTileFirst + 21, true, false, RenderType::Head, 0, 1.0f },
+        { "Player Head", HeadTileFirst + 18, HeadTileFirst + 19, HeadTileFirst + 21, true, false, RenderType::Head, 0, 1.0f },
+        { "Player Head", HeadTileFirst + 18, HeadTileFirst + 19, HeadTileFirst + 21, true, false, RenderType::Head, 0, 1.0f },
+        { "Player Head", HeadTileFirst + 18, HeadTileFirst + 19, HeadTileFirst + 21, true, false, RenderType::Head, 0, 1.0f },
+        { "Player Head", HeadTileFirst + 18, HeadTileFirst + 19, HeadTileFirst + 21, true, false, RenderType::Head, 0, 1.0f },
+        { "Player Head", HeadTileFirst + 18, HeadTileFirst + 19, HeadTileFirst + 21, true, false, RenderType::Head, 0, 1.0f },
+        { "Creeper Head", HeadTileFirst + 24, HeadTileFirst + 25, HeadTileFirst + 27, true, false, RenderType::Head, 0, 1.0f },
+        { "Creeper Head", HeadTileFirst + 24, HeadTileFirst + 25, HeadTileFirst + 27, true, false, RenderType::Head, 0, 1.0f },
+        { "Creeper Head", HeadTileFirst + 24, HeadTileFirst + 25, HeadTileFirst + 27, true, false, RenderType::Head, 0, 1.0f },
+        { "Creeper Head", HeadTileFirst + 24, HeadTileFirst + 25, HeadTileFirst + 27, true, false, RenderType::Head, 0, 1.0f },
+        { "Creeper Head", HeadTileFirst + 24, HeadTileFirst + 25, HeadTileFirst + 27, true, false, RenderType::Head, 0, 1.0f },
+        { "Creeper Head", HeadTileFirst + 24, HeadTileFirst + 25, HeadTileFirst + 27, true, false, RenderType::Head, 0, 1.0f },
+        { "Creeper Head", HeadTileFirst + 24, HeadTileFirst + 25, HeadTileFirst + 27, true, false, RenderType::Head, 0, 1.0f },
+        { "Creeper Head", HeadTileFirst + 24, HeadTileFirst + 25, HeadTileFirst + 27, true, false, RenderType::Head, 0, 1.0f },
+        { "Creeper Head", HeadTileFirst + 24, HeadTileFirst + 25, HeadTileFirst + 27, true, false, RenderType::Head, 0, 1.0f },
+        { "Creeper Head", HeadTileFirst + 24, HeadTileFirst + 25, HeadTileFirst + 27, true, false, RenderType::Head, 0, 1.0f },
+        { "Creeper Head", HeadTileFirst + 24, HeadTileFirst + 25, HeadTileFirst + 27, true, false, RenderType::Head, 0, 1.0f },
+        { "Creeper Head", HeadTileFirst + 24, HeadTileFirst + 25, HeadTileFirst + 27, true, false, RenderType::Head, 0, 1.0f },
+        { "Creeper Head", HeadTileFirst + 24, HeadTileFirst + 25, HeadTileFirst + 27, true, false, RenderType::Head, 0, 1.0f },
+        { "Creeper Head", HeadTileFirst + 24, HeadTileFirst + 25, HeadTileFirst + 27, true, false, RenderType::Head, 0, 1.0f },
+        { "Creeper Head", HeadTileFirst + 24, HeadTileFirst + 25, HeadTileFirst + 27, true, false, RenderType::Head, 0, 1.0f },
+        { "Creeper Head", HeadTileFirst + 24, HeadTileFirst + 25, HeadTileFirst + 27, true, false, RenderType::Head, 0, 1.0f },
+        { "Creeper Head", HeadTileFirst + 24, HeadTileFirst + 25, HeadTileFirst + 27, true, false, RenderType::Head, 0, 1.0f },
+        { "Creeper Head", HeadTileFirst + 24, HeadTileFirst + 25, HeadTileFirst + 27, true, false, RenderType::Head, 0, 1.0f },
+        { "Creeper Head", HeadTileFirst + 24, HeadTileFirst + 25, HeadTileFirst + 27, true, false, RenderType::Head, 0, 1.0f },
+        { "Creeper Head", HeadTileFirst + 24, HeadTileFirst + 25, HeadTileFirst + 27, true, false, RenderType::Head, 0, 1.0f },
+        { "Dragon Head", HeadTileFirst + 30, HeadTileFirst + 31, HeadTileFirst + 33, true, false, RenderType::Head, 0, 1.0f },
+        { "Dragon Head", HeadTileFirst + 30, HeadTileFirst + 31, HeadTileFirst + 33, true, false, RenderType::Head, 0, 1.0f },
+        { "Dragon Head", HeadTileFirst + 30, HeadTileFirst + 31, HeadTileFirst + 33, true, false, RenderType::Head, 0, 1.0f },
+        { "Dragon Head", HeadTileFirst + 30, HeadTileFirst + 31, HeadTileFirst + 33, true, false, RenderType::Head, 0, 1.0f },
+        { "Dragon Head", HeadTileFirst + 30, HeadTileFirst + 31, HeadTileFirst + 33, true, false, RenderType::Head, 0, 1.0f },
+        { "Dragon Head", HeadTileFirst + 30, HeadTileFirst + 31, HeadTileFirst + 33, true, false, RenderType::Head, 0, 1.0f },
+        { "Dragon Head", HeadTileFirst + 30, HeadTileFirst + 31, HeadTileFirst + 33, true, false, RenderType::Head, 0, 1.0f },
+        { "Dragon Head", HeadTileFirst + 30, HeadTileFirst + 31, HeadTileFirst + 33, true, false, RenderType::Head, 0, 1.0f },
+        { "Dragon Head", HeadTileFirst + 30, HeadTileFirst + 31, HeadTileFirst + 33, true, false, RenderType::Head, 0, 1.0f },
+        { "Dragon Head", HeadTileFirst + 30, HeadTileFirst + 31, HeadTileFirst + 33, true, false, RenderType::Head, 0, 1.0f },
+        { "Dragon Head", HeadTileFirst + 30, HeadTileFirst + 31, HeadTileFirst + 33, true, false, RenderType::Head, 0, 1.0f },
+        { "Dragon Head", HeadTileFirst + 30, HeadTileFirst + 31, HeadTileFirst + 33, true, false, RenderType::Head, 0, 1.0f },
+        { "Dragon Head", HeadTileFirst + 30, HeadTileFirst + 31, HeadTileFirst + 33, true, false, RenderType::Head, 0, 1.0f },
+        { "Dragon Head", HeadTileFirst + 30, HeadTileFirst + 31, HeadTileFirst + 33, true, false, RenderType::Head, 0, 1.0f },
+        { "Dragon Head", HeadTileFirst + 30, HeadTileFirst + 31, HeadTileFirst + 33, true, false, RenderType::Head, 0, 1.0f },
+        { "Dragon Head", HeadTileFirst + 30, HeadTileFirst + 31, HeadTileFirst + 33, true, false, RenderType::Head, 0, 1.0f },
+        { "Dragon Head", HeadTileFirst + 30, HeadTileFirst + 31, HeadTileFirst + 33, true, false, RenderType::Head, 0, 1.0f },
+        { "Dragon Head", HeadTileFirst + 30, HeadTileFirst + 31, HeadTileFirst + 33, true, false, RenderType::Head, 0, 1.0f },
+        { "Dragon Head", HeadTileFirst + 30, HeadTileFirst + 31, HeadTileFirst + 33, true, false, RenderType::Head, 0, 1.0f },
+        { "Dragon Head", HeadTileFirst + 30, HeadTileFirst + 31, HeadTileFirst + 33, true, false, RenderType::Head, 0, 1.0f },
+        { "Piglin Head", HeadTileFirst + 36, HeadTileFirst + 37, HeadTileFirst + 39, true, false, RenderType::Head, 0, 1.0f },
+        { "Piglin Head", HeadTileFirst + 36, HeadTileFirst + 37, HeadTileFirst + 39, true, false, RenderType::Head, 0, 1.0f },
+        { "Piglin Head", HeadTileFirst + 36, HeadTileFirst + 37, HeadTileFirst + 39, true, false, RenderType::Head, 0, 1.0f },
+        { "Piglin Head", HeadTileFirst + 36, HeadTileFirst + 37, HeadTileFirst + 39, true, false, RenderType::Head, 0, 1.0f },
+        { "Piglin Head", HeadTileFirst + 36, HeadTileFirst + 37, HeadTileFirst + 39, true, false, RenderType::Head, 0, 1.0f },
+        { "Piglin Head", HeadTileFirst + 36, HeadTileFirst + 37, HeadTileFirst + 39, true, false, RenderType::Head, 0, 1.0f },
+        { "Piglin Head", HeadTileFirst + 36, HeadTileFirst + 37, HeadTileFirst + 39, true, false, RenderType::Head, 0, 1.0f },
+        { "Piglin Head", HeadTileFirst + 36, HeadTileFirst + 37, HeadTileFirst + 39, true, false, RenderType::Head, 0, 1.0f },
+        { "Piglin Head", HeadTileFirst + 36, HeadTileFirst + 37, HeadTileFirst + 39, true, false, RenderType::Head, 0, 1.0f },
+        { "Piglin Head", HeadTileFirst + 36, HeadTileFirst + 37, HeadTileFirst + 39, true, false, RenderType::Head, 0, 1.0f },
+        { "Piglin Head", HeadTileFirst + 36, HeadTileFirst + 37, HeadTileFirst + 39, true, false, RenderType::Head, 0, 1.0f },
+        { "Piglin Head", HeadTileFirst + 36, HeadTileFirst + 37, HeadTileFirst + 39, true, false, RenderType::Head, 0, 1.0f },
+        { "Piglin Head", HeadTileFirst + 36, HeadTileFirst + 37, HeadTileFirst + 39, true, false, RenderType::Head, 0, 1.0f },
+        { "Piglin Head", HeadTileFirst + 36, HeadTileFirst + 37, HeadTileFirst + 39, true, false, RenderType::Head, 0, 1.0f },
+        { "Piglin Head", HeadTileFirst + 36, HeadTileFirst + 37, HeadTileFirst + 39, true, false, RenderType::Head, 0, 1.0f },
+        { "Piglin Head", HeadTileFirst + 36, HeadTileFirst + 37, HeadTileFirst + 39, true, false, RenderType::Head, 0, 1.0f },
+        { "Piglin Head", HeadTileFirst + 36, HeadTileFirst + 37, HeadTileFirst + 39, true, false, RenderType::Head, 0, 1.0f },
+        { "Piglin Head", HeadTileFirst + 36, HeadTileFirst + 37, HeadTileFirst + 39, true, false, RenderType::Head, 0, 1.0f },
+        { "Piglin Head", HeadTileFirst + 36, HeadTileFirst + 37, HeadTileFirst + 39, true, false, RenderType::Head, 0, 1.0f },
+        { "Piglin Head", HeadTileFirst + 36, HeadTileFirst + 37, HeadTileFirst + 39, true, false, RenderType::Head, 0, 1.0f },
     };
 
     static_assert(sizeof(EXT_TABLE) / sizeof(EXT_TABLE[0]) == static_cast<size_t>(Blocks::ExtCount - Blocks::ExtFirst),
@@ -4484,6 +4624,7 @@ bool isObtainable(BlockId id)
             if (isSign(id)) return false;
             if (isFrame(id)) return false;
             if (isAnyCauldron(id) && id != Blocks::Cauldron0) return false;
+            if (isHead(id)) return false;
 
             // Likewise for stairs: one of each four is the thing you
             // hold, the rest are it turned round.
@@ -4511,6 +4652,7 @@ const char* blockSoundGroup(BlockId id)
     if (isFluid(id)) return nullptr;
     if (isCarpet(id)) return "wool";
     if (isSnowLayer(id)) return "snow";
+    if (isHead(id)) return blockSoundGroup(Blocks::WitherSkull);
     if (isInfested(id)) return blockSoundGroup(infestedBase(id));
     if (const BlockId base = shapeBase(id); base != Blocks::Air && base != id) return blockSoundGroup(base);
     // By family, so a wood added later sounds like wood rather than
@@ -4662,6 +4804,7 @@ Material blockMaterial(BlockId id)
     if (isCrop(id)) return Material::Plant;
     if (isCarpet(id)) return Material::Wool;
     if (isSnowLayer(id)) return Material::Snow;
+    if (isHead(id)) return blockMaterial(Blocks::WitherSkull);
     if (isInfested(id)) return blockMaterial(infestedBase(id));
     if (const BlockId base = shapeBase(id); base != Blocks::Air && base != id) return blockMaterial(base);
 
@@ -4890,6 +5033,16 @@ bool blockOverlaps(BlockId id, int bx, int by, int bz,
 
     if (isColourBed(id)) return overlaps(0.0f, 0.0f, 0.0f, 1.0f, 0.5625f, 1.0f);
     if (isSnowLayer(id)) return overlaps(0.0f, 0.0f, 0.0f, 1.0f, static_cast<float>(snowLayers(id) - 1) / 8.0f, 1.0f);
+    if (isHead(id))
+    {
+        const float half = headKind(id) == 6 ? 0.3125f : 0.25f;
+        if (!headOnWall(id)) return overlaps(0.5f - half, 0.0f, 0.5f - half, 0.5f + half, 0.5f, 0.5f + half);
+        static const float DX[4] = { 0.0f, -1.0f, 0.0f, 1.0f }, DZ[4] = { 1.0f, 0.0f, -1.0f, 0.0f };
+        const int f = headFacing(id);
+        const float cx = 0.5f + DX[f] * 0.25f, cz = 0.5f + DZ[f] * 0.25f;
+        const float hx = DX[f] != 0.0f ? 0.25f : half, hz = DZ[f] != 0.0f ? 0.25f : half;
+        return overlaps(cx - hx, 0.25f, cz - hz, cx + hx, 0.75f, cz + hz);
+    }
     if (isFlowerPot(id)) return overlaps(0.3125f, 0.0f, 0.3125f, 0.6875f, 0.375f, 0.6875f);
     if (id == Blocks::HoneyBlock) return overlaps(0.0625f, 0.0f, 0.0625f, 0.9375f, 0.9375f, 0.9375f);
     if (id == Blocks::Conduit) return overlaps(0.3125f, 0.3125f, 0.3125f, 0.6875f, 0.6875f, 0.6875f);

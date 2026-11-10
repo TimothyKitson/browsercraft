@@ -2284,6 +2284,62 @@ namespace
     // The skull you build a wither out of. Charcoal-grey bone with
     // two sockets, which is the whole of how you know it from an
     // ordinary skeleton's.
+    void paintHeadFace(Tile& t, int index)
+    {
+        static const Color SKIN[7] = { { 198, 198, 192 }, { 50, 52, 54 }, { 76, 126, 68 }, { 184, 136, 102 },
+                                       { 86, 172, 76 }, { 32, 30, 36 }, { 220, 148, 138 } };
+        static const Color HAIR[7] = { { 168, 168, 162 }, { 38, 40, 42 }, { 56, 102, 50 }, { 72, 50, 30 },
+                                       { 70, 150, 62 }, { 22, 20, 26 }, { 198, 126, 116 } };
+        const int u = Tile::N / 8;
+        auto rect = [&](int x0, int y0, int w, int h, Color c) {
+            for (int y = y0 * u; y < (y0 + h) * u; ++y)
+                for (int x = x0 * u; x < (x0 + w) * u; ++x) t.set(x, y, c);
+        };
+        if (index >= HEAD_KINDS * 6)
+        {
+            const int extra = index - HEAD_KINDS * 6;
+            t.fill(extra == 0 ? SKIN[6] : SKIN[5]);
+            t.speckle(3, 760 + extra);
+            if (extra == 0)
+            {
+                rect(1, 3, 2, 2, Color{ 120, 60, 60 });
+                rect(5, 3, 2, 2, Color{ 120, 60, 60 });
+            }
+            return;
+        }
+        const int kind = index / 6, face = index % 6;
+        t.fill(SKIN[kind]);
+        t.speckle(3, 700 + index);
+        if (kind == 3 && face != 3) t.fill(HAIR[kind]);
+        if (kind == 3 && face == 3) rect(0, 0, 8, 2, HAIR[kind]);
+        if (kind == 3 && (face == 2 || face == 4)) rect(0, 2, 8, 6, SKIN[kind]);
+        if (face != 3) return;
+        const Color dark{ 18, 18, 20 };
+        switch (kind)
+        {
+            case 0: case 1:
+                rect(1, 3, 2, 2, dark); rect(5, 3, 2, 2, dark); rect(3, 5, 2, 1, dark); rect(1, 6, 6, 1, shade(SKIN[kind], -40));
+                break;
+            case 2:
+                rect(1, 3, 2, 1, dark); rect(5, 3, 2, 1, dark); rect(3, 5, 2, 1, shade(SKIN[kind], -30));
+                break;
+            case 3:
+                rect(1, 4, 2, 1, Color{ 240, 240, 240 }); rect(5, 4, 2, 1, Color{ 240, 240, 240 });
+                rect(2, 4, 1, 1, Color{ 60, 70, 160 }); rect(5, 4, 1, 1, Color{ 60, 70, 160 });
+                rect(3, 6, 2, 1, Color{ 110, 64, 50 });
+                break;
+            case 4:
+                rect(1, 2, 2, 2, dark); rect(5, 2, 2, 2, dark); rect(3, 4, 2, 3, dark); rect(2, 5, 1, 3, dark); rect(5, 5, 1, 3, dark);
+                break;
+            case 5:
+                rect(1, 3, 2, 1, Color{ 200, 90, 230 }); rect(5, 3, 2, 1, Color{ 200, 90, 230 });
+                break;
+            default:
+                rect(1, 3, 2, 1, dark); rect(5, 3, 2, 1, dark);
+                break;
+        }
+    }
+
     void paintWitherSkull(Tile& t)
     {
         t.fill(Color{ 46, 46, 46 });
@@ -11820,6 +11876,12 @@ Atlas::Atlas()
         paintCommandIn(command, k / 4, k % 4);
         blitPainted(Tiles::CommandTileFirst + k, command);
     }
+    for (int k = 0; k <= Tiles::HeadTileLast - Tiles::HeadTileFirst; ++k)
+    {
+        Tile head;
+        paintHeadFace(head, k);
+        blitPainted(Tiles::HeadTileFirst + k, head);
+    }
     for (int k = 0; k < 5; ++k)
     {
         Tile structure;
@@ -12484,6 +12546,46 @@ Atlas::Atlas()
             blitImage(Tiles::EndCrystalTile, scaleNearest(face, tilePixels, tilePixels));
         }
 
+        {
+            struct HeadSheet { const char* path; int width; int u, v, w, h, d; bool hat; };
+            static const HeadSheet SHEETS[HEAD_KINDS] = {
+                { "assets/textures/entity/skeleton/skeleton.png", 64, 0, 0, 8, 8, 8, false },
+                { "assets/textures/entity/skeleton/wither_skeleton.png", 64, 0, 0, 8, 8, 8, false },
+                { "assets/textures/entity/zombie/zombie.png", 64, 0, 0, 8, 8, 8, true },
+                { "assets/textures/entity/player/wide/steve.png", 64, 0, 0, 8, 8, 8, true },
+                { "assets/textures/entity/creeper/creeper.png", 64, 0, 0, 8, 8, 8, false },
+                { "assets/textures/entity/enderdragon/dragon.png", 256, 112, 30, 16, 16, 16, false },
+                { "assets/textures/entity/piglin/piglin.png", 64, 0, 0, 10, 8, 8, false },
+            };
+            for (int kind = 0; kind < HEAD_KINDS; ++kind)
+            {
+                const HeadSheet& s = SHEETS[kind];
+                const Image sheet = loadPNG(s.path);
+                if (!sheet.valid()) continue;
+                const int k = unit(sheet, s.width);
+                if ((s.u + 2 * s.d + 2 * s.w) * k > sheet.width || (s.v + s.d + s.h) * k > sheet.height) continue;
+                const int rect[6][4] = {
+                    { s.u + s.d, s.v, s.w, s.d }, { s.u + s.d + s.w, s.v, s.w, s.d }, { s.u, s.v + s.d, s.d, s.h },
+                    { s.u + s.d, s.v + s.d, s.w, s.h }, { s.u + s.d + s.w, s.v + s.d, s.d, s.h }, { s.u + 2 * s.d + s.w, s.v + s.d, s.w, s.h },
+                };
+                for (int face = 0; face < 6; ++face)
+                {
+                    Image part = cropImage(sheet, rect[face][0] * k, rect[face][1] * k, rect[face][2] * k, rect[face][3] * k);
+                    if (s.hat && sheet.height >= 16 * k)
+                        pasteImage(part, cropImage(sheet, (rect[face][0] + 32) * k, rect[face][1] * k, rect[face][2] * k, rect[face][3] * k), 0, 0);
+                    if (face == 0) part = turnImage(turnImage(part));
+                    blitImage(Tiles::HeadTileFirst + kind * 6 + face, scaleNearest(part, tilePixels, tilePixels));
+                }
+                if (kind == 6) blitImage(Tiles::HeadTileFirst + HEAD_KINDS * 6, scaleNearest(cropImage(sheet, 32 * k, 2 * k, 4 * k, 4 * k), tilePixels, tilePixels));
+                if (kind == 5)
+                {
+                    blitImage(Tiles::HeadTileFirst + HEAD_KINDS * 6 + 1,
+                              scaleNearest(turnImage(turnImage(cropImage(sheet, 192 * k, 44 * k, 12 * k, 16 * k))), tilePixels, tilePixels));
+                    blitImage(Tiles::HeadTileFirst + HEAD_KINDS * 6 + 2, scaleNearest(cropImage(sheet, 192 * k, 60 * k, 12 * k, 5 * k), tilePixels, tilePixels));
+                }
+            }
+        }
+
         const Image witherHead = loadPNG("assets/textures/entity/skeleton/wither_skeleton.png");
         if (witherHead.valid())
         {
@@ -12841,6 +12943,7 @@ bool Atlas::hasPainter(int tileIndex)
     if (tileIndex >= Tiles::ItemBannerFirst && tileIndex <= Tiles::ItemBannerLast) return true;
     if (tileIndex >= Tiles::ItemBannerPatternFirst && tileIndex <= Tiles::ItemBannerPatternLast) return true;
     if (tileIndex >= Tiles::CommandTileFirst && tileIndex <= Tiles::CommandTileLast) return true;
+    if (tileIndex >= Tiles::HeadTileFirst && tileIndex <= Tiles::HeadTileLast) return true;
     if (tileIndex >= Tiles::StructureBlockTileFirst && tileIndex <= Tiles::StructureBlockTileLast) return true;
     if (tileIndex >= Tiles::ItemLightFirst && tileIndex <= Tiles::ItemLightLast) return true;
     if (tileIndex >= Tiles::ItemCompassFrameFirst && tileIndex <= Tiles::ItemRecoveryLast) return true;

@@ -1902,6 +1902,63 @@ namespace
         }
     }
 
+    void emitHead(const MeshSnapshot& snap, int lx, int y, int lz, BlockId id, std::vector<float>& out)
+    {
+        const int kind = headKind(id);
+        const bool wall = headOnWall(id);
+        const int t = Tiles::HeadTileFirst + kind * 6;
+        const int extra = Tiles::HeadTileFirst + HEAD_KINDS * 6;
+        const PartFace faces[6] = { { t + 2, 0, 0, 16, 16, 0, true }, { t + 4, 0, 0, 16, 16 }, { t + 0, 0, 0, 16, 16 },
+                                    { t + 1, 0, 0, 16, 16 }, { t + 5, 0, 0, 16, 16 }, { t + 3, 0, 0, 16, 16, 0, true } };
+        const PartFace snout[6] = { { extra, 0, 0, 16, 16 }, { extra, 0, 0, 16, 16 }, { extra, 0, 0, 16, 16 },
+                                    { extra, 0, 0, 16, 16 }, { extra, 0, 0, 16, 16 }, { extra, 0, 0, 16, 16 } };
+        const PartFace lip[6] = { { extra + 2, 0, 0, 16, 16 }, { extra + 2, 0, 0, 16, 16 }, { extra + 1, 0, 0, 16, 16 },
+                                  { extra + 2, 0, 0, 16, 16 }, { extra + 2, 0, 0, 16, 16 }, { extra + 2, 0, 0, 16, 16 } };
+        const size_t start = out.size();
+        auto box = [&](float x0, float y0, float z0, float x1, float y1, float z1, const PartFace* f) {
+            emitPart(snap, lx, y, lz, id, glm::vec3(x0, y0, z0) / 16.0f, glm::vec3(x1, y1, z1) / 16.0f, f, out);
+        };
+        const float lift = wall ? 4.0f : 0.0f;
+        if (kind == 5)
+        {
+            const float base = wall ? 2.0f : 0.0f;
+            const float back = wall ? 16.0f : 15.0f;
+            box(2.0f, base, back - 12.0f, 14.0f, base + 12.0f, back, faces);
+            box(3.5f, base + 3.0f, back - 22.5f, 12.5f, base + 6.75f, back - 10.5f, lip);
+        }
+        else if (kind == 6)
+        {
+            const float back = wall ? 16.0f : 12.0f;
+            box(3.0f, lift, back - 8.0f, 13.0f, lift + 8.0f, back, faces);
+            box(6.0f, lift, back - 9.0f, 10.0f, lift + 4.0f, back - 8.0f, snout);
+        }
+        else
+        {
+            const float back = wall ? 16.0f : 12.0f;
+            box(4.0f, lift, back - 8.0f, 12.0f, lift + 8.0f, back, faces);
+        }
+        float fx = 0.0f, fz = -1.0f;
+        if (wall)
+        {
+            static const float AX[4] = { 0.0f, 1.0f, 0.0f, -1.0f }, AZ[4] = { -1.0f, 0.0f, 1.0f, 0.0f };
+            fx = AX[headFacing(id)];
+            fz = AZ[headFacing(id)];
+        }
+        else
+        {
+            const float a = glm::radians(static_cast<float>(headRotation(id)) * 22.5f);
+            fx = -std::sin(a);
+            fz = std::cos(a);
+        }
+        const float s = fx, c = -fz;
+        for (size_t i = start; i + 10 <= out.size(); i += 10)
+        {
+            const float dx = out[i] - static_cast<float>(lx) - 0.5f, dz = out[i + 2] - static_cast<float>(lz) - 0.5f;
+            out[i] = static_cast<float>(lx) + 0.5f + dx * c - dz * s;
+            out[i + 2] = static_cast<float>(lz) + 0.5f + dx * s + dz * c;
+        }
+    }
+
     void emitButton(const MeshSnapshot& snap, int lx, int y, int lz, BlockId id, std::vector<float>& out)
     {
         const size_t start = out.size();
@@ -2091,6 +2148,10 @@ void buildChunkMesh(const MeshSnapshot& snapshot, MeshResult& out)
                 if (isLeverBlock(id))
                 {
                     emitLever(snapshot, lx, y, lz, id, out.opaqueVertices);
+                }
+                else if (isHead(id))
+                {
+                    emitHead(snapshot, lx, y, lz, id, out.opaqueVertices);
                 }
                 else if (isFamilyButton(id))
                 {
