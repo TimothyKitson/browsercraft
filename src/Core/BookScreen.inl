@@ -128,7 +128,7 @@ void Application::closeBook(bool keep)
 void Application::updateBookInput()
 {
     if (!m_bookOpen) return;
-    if (m_bookFromLectern && m_world->getBlock(m_bookLectern.x, m_bookLectern.y, m_bookLectern.z) != Blocks::LecternBook)
+    if (m_bookFromLectern && !lecternHasBook(m_world->getBlock(m_bookLectern.x, m_bookLectern.y, m_bookLectern.z)))
     {
         closeBook(false);
         return;
@@ -291,7 +291,7 @@ void Application::renderBookScreen()
         {
             const glm::ivec3 at = m_bookLectern;
             closeBook(false);
-            useLectern(at, Blocks::LecternBook);
+            useLectern(at, m_world->getBlock(at.x, at.y, at.z));
         }
     }
     else if (menuButton({ middle - 100.0f * u, buttonY, 200.0f * u, buttonH }, "Done"))

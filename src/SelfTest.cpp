@@ -9938,6 +9938,34 @@ namespace
                   Redstone::isSource(observerFacingTo(0, true)) && !Redstone::isSource(observerFacingTo(0, false)),
                   "a turned observer lights and goes out facing the same way");
             check(Hopper::slotsOf(Blocks::DecoratedPotFirst) == 1, "a hopper can fill a decorated pot");
+            check(Hopper::slotsOf(barrelWith(0, false)) == 27 && Hopper::slotsOf(Blocks::ShulkerBox) == 27, "and a barrel or a shulker box");
+            turns = true;
+            for (int wear = 0; wear < 3; ++wear)
+                for (bool alongX : { false, true })
+                    turns = turns && isAnvil(anvilOf(wear, alongX)) && anvilWear(anvilOf(wear, alongX)) == wear &&
+                            anvilAlongX(anvilOf(wear, alongX)) == alongX && blockDrop(anvilOf(wear, alongX)) == blockDrop(anvilOf(wear, false));
+            check(turns && anvilOf(3, true) == Blocks::Air, "an anvil turned either way keeps its wear and breaks past the last");
+            turns = true;
+            for (int face = 0; face < 3; ++face)
+                for (int facing = 0; facing < 4; ++facing)
+                    turns = turns && isGrindstone(grindstoneOf(face, facing)) && grindstoneFace(grindstoneOf(face, facing)) == face &&
+                            grindstoneFacing(grindstoneOf(face, facing)) == facing && blockDrop(grindstoneOf(face, facing)) == static_cast<StackId>(Blocks::Grindstone);
+            check(turns, "a grindstone stands, hangs or sits on a wall facing any way");
+            turns = true;
+            for (int facing = 0; facing < 4; ++facing)
+                for (bool book : { false, true })
+                    turns = turns && isLectern(lecternWith(facing, book)) && lecternFacing(lecternWith(facing, book)) == facing &&
+                            lecternHasBook(lecternWith(facing, book)) == book && blockDrop(lecternWith(facing, book)) == static_cast<StackId>(Blocks::Lectern);
+            check(turns, "a lectern faces any way with or without its book");
+            turns = true;
+            for (int facing = 0; facing < 6; ++facing)
+                for (bool open : { false, true })
+                    turns = turns && isBarrel(barrelWith(facing, open)) && barrelFacing(barrelWith(facing, open)) == facing &&
+                            barrelOpen(barrelWith(facing, open)) == open && isContainerBlock(barrelWith(facing, open)) &&
+                            blockDrop(barrelWith(facing, open)) == static_cast<StackId>(Blocks::Barrel);
+            check(turns, "a barrel faces any of six ways, open or shut");
+            check(isStonecutter(Blocks::StonecutterTurned) && blockDrop(Blocks::StonecutterTurned) == static_cast<StackId>(Blocks::Stonecutter),
+                  "a turned stonecutter is still a stonecutter");
             check(shelfMask(shelfOf(1, 3)) == 7 && shelfBooks(shelfOf(1, 3)) == 3 && shelfFacing(shelfOf(1, 3)) == 1,
                   "an old bookshelf reads as its first slots filled");
             check(isChiseledBookshelf(shelfWith(2, 0b101010)) && shelfMask(shelfWith(2, 0b101010)) == 0b101010 &&

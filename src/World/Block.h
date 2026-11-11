@@ -714,6 +714,11 @@ namespace Blocks
         PistonVertFirst, PistonVertLast = PistonVertFirst + 11,
         RailSlopeFirst, RailSlopeLast = RailSlopeFirst + 27,
         ShelfMaskFirst, ShelfMaskLast = ShelfMaskFirst + 255,
+        AnvilTurnFirst, AnvilTurnLast = AnvilTurnFirst + 2,
+        StonecutterTurned,
+        GrindstoneTurnFirst, GrindstoneTurnLast = GrindstoneTurnFirst + 11,
+        LecternTurnFirst, LecternTurnLast = LecternTurnFirst + 7,
+        BarrelTurnFirst, BarrelTurnLast = BarrelTurnFirst + 11,
         ExtCount
     };
 }
@@ -1492,7 +1497,7 @@ inline int shulkerBoxColour(BlockId id)
 }
 inline bool isContainerBlock(BlockId id)
 {
-    return isStorageChest(id) || id == Blocks::Barrel || id == Blocks::BarrelOpen ||
+    return isStorageChest(id) || id == Blocks::Barrel || id == Blocks::BarrelOpen || (id >= Blocks::BarrelTurnFirst && id <= Blocks::BarrelTurnLast) ||
            isShulkerBox(id);
 }
 inline const char* colourFileName(int colour)
@@ -1794,7 +1799,39 @@ inline BlockId copperBulbWith(BlockId id, bool lit, bool powered)
 }
 inline bool isAnvil(BlockId id)
 {
-    return id == Blocks::Anvil || id == Blocks::AnvilChipped || id == Blocks::AnvilDamaged;
+    return id == Blocks::Anvil || id == Blocks::AnvilChipped || id == Blocks::AnvilDamaged ||
+           (id >= Blocks::AnvilTurnFirst && id <= Blocks::AnvilTurnLast);
+}
+inline int anvilWear(BlockId id)
+{
+    if (id >= Blocks::AnvilTurnFirst && id <= Blocks::AnvilTurnLast) return id - Blocks::AnvilTurnFirst;
+    return id == Blocks::AnvilChipped ? 1 : id == Blocks::AnvilDamaged ? 2 : 0;
+}
+inline bool anvilAlongX(BlockId id) { return id >= Blocks::AnvilTurnFirst && id <= Blocks::AnvilTurnLast; }
+inline BlockId anvilOf(int wear, bool alongX)
+{
+    if (wear < 0 || wear > 2) return Blocks::Air;
+    if (alongX) return static_cast<BlockId>(Blocks::AnvilTurnFirst + wear);
+    return wear == 0 ? Blocks::Anvil : wear == 1 ? Blocks::AnvilChipped : Blocks::AnvilDamaged;
+}
+inline bool isStonecutter(BlockId id) { return id == Blocks::Stonecutter || id == Blocks::StonecutterTurned; }
+inline bool isGrindstone(BlockId id) { return id == Blocks::Grindstone || (id >= Blocks::GrindstoneTurnFirst && id <= Blocks::GrindstoneTurnLast); }
+inline int grindstoneFacing(BlockId id) { return id >= Blocks::GrindstoneTurnFirst && id <= Blocks::GrindstoneTurnLast ? (id - Blocks::GrindstoneTurnFirst) % 4 : 0; }
+inline int grindstoneFace(BlockId id) { return id >= Blocks::GrindstoneTurnFirst && id <= Blocks::GrindstoneTurnLast ? (id - Blocks::GrindstoneTurnFirst) / 4 : 0; }
+inline BlockId grindstoneOf(int face, int facing)
+{
+    return static_cast<BlockId>(Blocks::GrindstoneTurnFirst + (face < 0 ? 0 : face > 2 ? 2 : face) * 4 + (facing & 3));
+}
+inline bool isBarrel(BlockId id) { return id == Blocks::Barrel || id == Blocks::BarrelOpen || (id >= Blocks::BarrelTurnFirst && id <= Blocks::BarrelTurnLast); }
+inline bool barrelOpen(BlockId id)
+{
+    return id == Blocks::BarrelOpen || (id >= Blocks::BarrelTurnFirst && id <= Blocks::BarrelTurnLast && ((id - Blocks::BarrelTurnFirst) & 1) != 0);
+}
+inline int barrelFacing(BlockId id) { return id >= Blocks::BarrelTurnFirst && id <= Blocks::BarrelTurnLast ? (id - Blocks::BarrelTurnFirst) / 2 : 4; }
+inline BlockId barrelWith(int facing, bool open)
+{
+    if (facing < 0 || facing > 5) facing = 4;
+    return static_cast<BlockId>(Blocks::BarrelTurnFirst + facing * 2 + (open ? 1 : 0));
 }
 inline bool isNetherWart(BlockId id)
 {
@@ -2509,7 +2546,19 @@ inline int cakeEaten(BlockId id) { return isCake(id) ? id - Blocks::Cake0 : 0; }
 // Minecraft's book is a model rather than a texture.
 inline bool isLectern(BlockId id)
 {
-    return id == Blocks::Lectern || id == Blocks::LecternBook;
+    return id == Blocks::Lectern || id == Blocks::LecternBook || (id >= Blocks::LecternTurnFirst && id <= Blocks::LecternTurnLast);
+}
+inline bool lecternHasBook(BlockId id)
+{
+    return id == Blocks::LecternBook || (id >= Blocks::LecternTurnFirst && id <= Blocks::LecternTurnLast && ((id - Blocks::LecternTurnFirst) & 1) != 0);
+}
+inline int lecternFacing(BlockId id)
+{
+    return id >= Blocks::LecternTurnFirst && id <= Blocks::LecternTurnLast ? (id - Blocks::LecternTurnFirst) / 2 : 0;
+}
+inline BlockId lecternWith(int facing, bool book)
+{
+    return static_cast<BlockId>(Blocks::LecternTurnFirst + (facing & 3) * 2 + (book ? 1 : 0));
 }
 
 // A cauldron, and how much water is in it. Three is full.

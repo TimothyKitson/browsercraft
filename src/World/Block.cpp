@@ -304,9 +304,9 @@ namespace
         { "Composter",    ComposterFill3,ComposterBottom,ComposterSide,  true,  false,  RenderType::Cube,   0,   0.6f },
         { "Composter",    ComposterReady,ComposterBottom,ComposterSide,  true,  false,  RenderType::Cube,   0,   0.6f },
 
-        { "Grindstone",   GrindstonePivot,GrindstonePivot,GrindstoneSide,true,  true,  RenderType::Cube,   0,   2.0f },
-        { "Lectern",      LecternTop,    LecternBase,    LecternSide,    true,  true,  RenderType::Cube,   0,   2.5f },
-        { "Lectern",      LecternTopBook,LecternBase,    LecternSide,    true,  true,  RenderType::Cube,   0,   2.5f },
+        { "Grindstone",   GrindstonePivot,GrindstonePivot,GrindstoneSide,true,  false, RenderType::Cube,   0,   2.0f },
+        { "Lectern",      LecternTop,    LecternBase,    LecternSide,    true,  false, RenderType::Cube,   0,   2.5f },
+        { "Lectern",      LecternTopBook,LecternBase,    LecternSide,    true,  false, RenderType::Cube,   0,   2.5f },
 
         { "Cauldron",     CauldronTop,   CauldronBottom, CauldronSide,   true,  false,  RenderType::Cube,   0,   2.0f },
         { "Cauldron",     CauldronWater1,CauldronBottom, CauldronSide,   true,  false,  RenderType::Cube,   0,   2.0f },
@@ -4569,6 +4569,42 @@ namespace
         { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
         { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
         { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
     };
 
     static_assert(sizeof(EXT_TABLE) / sizeof(EXT_TABLE[0]) == static_cast<size_t>(Blocks::ExtCount - Blocks::ExtFirst),
@@ -4817,6 +4853,11 @@ BlockId axisBase(BlockId id)
     }
     if (id >= Blocks::ShelfMaskFirst && id <= Blocks::ShelfMaskLast)
         return static_cast<BlockId>(Blocks::ChiseledBookshelfFirst + (id - Blocks::ShelfMaskFirst) / 64 * 7);
+    if (id >= Blocks::AnvilTurnFirst && id <= Blocks::AnvilTurnLast) return anvilOf(id - Blocks::AnvilTurnFirst, false);
+    if (id == Blocks::StonecutterTurned) return Blocks::Stonecutter;
+    if (id >= Blocks::GrindstoneTurnFirst && id <= Blocks::GrindstoneTurnLast) return Blocks::Grindstone;
+    if (id >= Blocks::LecternTurnFirst && id <= Blocks::LecternTurnLast) return lecternHasBook(id) ? Blocks::LecternBook : Blocks::Lectern;
+    if (id >= Blocks::BarrelTurnFirst && id <= Blocks::BarrelTurnLast) return barrelOpen(id) ? Blocks::BarrelOpen : Blocks::Barrel;
     return id;
 }
 
@@ -4860,7 +4901,7 @@ const BlockInfo& blockInfo(BlockId id)
 {
     if (id < Blocks::Count) return TABLE[id];
     if ((id >= Blocks::AxisRunFirst && id <= Blocks::AxisRunLast) || (id >= Blocks::GlazedTurnFirst && id <= Blocks::GlazedTurnLast) ||
-        (id >= Blocks::HopperSideFirst && id <= Blocks::HopperSideLast) || (id >= Blocks::ThrowerTurnFirst && id <= Blocks::ShelfMaskLast))
+        (id >= Blocks::HopperSideFirst && id <= Blocks::HopperSideLast) || (id >= Blocks::ThrowerTurnFirst && id <= Blocks::BarrelTurnLast))
         return blockInfo(axisBase(id));
     if (id >= Blocks::ExtFirst && id < Blocks::ExtCount) return EXT_TABLE[id - Blocks::ExtFirst];
     return TABLE[Blocks::Air];

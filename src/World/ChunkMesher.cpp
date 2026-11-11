@@ -201,6 +201,16 @@ namespace
     // with the mesher's face order.
     int tileForFace(const BlockInfo& info, int faceIndex, BlockId id)
     {
+        if (isBarrel(id))
+        {
+            static const int BARREL_DIR[6] = { 1, 3, 4, 5, 2, 0 };
+            const int f = barrelFacing(id);
+            const int dir = BARREL_DIR[faceIndex];
+            const int opposite = f < 4 ? (f + 2) % 4 : 9 - f;
+            if (dir == f) return info.tileTop;
+            if (dir == opposite) return info.tileBottom;
+            return info.tileSide;
+        }
         if (isPiston(id))
         {
             static const int PISTON_DIR[6] = { 1, 3, 4, 5, 2, 0 };
@@ -912,14 +922,16 @@ namespace
             const glm::vec3 c[4] = { glm::vec3(x0, yy, z1), glm::vec3(x1, yy, z1), glm::vec3(x1, yy, z0), glm::vec3(x0, yy, z0) };
             pushQuad(snap, lx, y, lz, id, c, tile, x0 * 16.0f, z0 * 16.0f, x1 * 16.0f, z1 * 16.0f, shade, true, out);
         };
-        if (id == Blocks::Stonecutter)
+        if (isStonecutter(id))
         {
             const BlockInfo& info = blockInfo(id);
             const PartFace side{ info.tileSide, 0.0f, 7.0f, 16.0f, 16.0f };
             const PartFace faces[6] = { side, side, { info.tileTop, 0.0f, 0.0f, 16.0f, 16.0f }, { info.tileBottom, 0.0f, 0.0f, 16.0f, 16.0f }, side, side };
             emitPart(snap, lx, y, lz, id, glm::vec3(0.0f), glm::vec3(1.0f, 9.0f / 16.0f, 1.0f), faces, out);
-            const glm::vec3 saw[4] = { { 1.0f / 16.0f, 9.0f / 16.0f, 0.5f }, { 15.0f / 16.0f, 9.0f / 16.0f, 0.5f },
-                                       { 15.0f / 16.0f, 1.0f, 0.5f }, { 1.0f / 16.0f, 1.0f, 0.5f } };
+            glm::vec3 saw[4] = { { 1.0f / 16.0f, 9.0f / 16.0f, 0.5f }, { 15.0f / 16.0f, 9.0f / 16.0f, 0.5f },
+                                 { 15.0f / 16.0f, 1.0f, 0.5f }, { 1.0f / 16.0f, 1.0f, 0.5f } };
+            if (id == Blocks::StonecutterTurned)
+                for (glm::vec3& corner : saw) std::swap(corner.x, corner.z);
             pushQuad(snap, lx, y, lz, id, saw, Tiles::StonecutterSawTile, 1.0f, 9.0f, 15.0f, 16.0f, 0.9f, true, out);
             return;
         }
@@ -1988,10 +2000,68 @@ namespace
         if (isAnvil(id))
         {
             const int body = info.tileSide;
-            box(2, 0, 2, 14, 4, 14, body, body, body);
-            box(4, 4, 3, 12, 5, 13, body, body, body);
-            box(6, 5, 4, 10, 10, 12, body, body, body);
-            box(3, 10, 0, 13, 16, 16, info.tileTop, body, body);
+            const bool turn = anvilAlongX(id);
+            auto part = [&](float x0, float y0, float z0, float x1, float y1, float z1, int top) {
+                if (turn) box(z0, y0, x0, z1, y1, x1, top, body, body);
+                else box(x0, y0, z0, x1, y1, z1, top, body, body);
+            };
+            part(2, 0, 2, 14, 4, 14, body);
+            part(4, 4, 3, 12, 5, 13, body);
+            part(6, 5, 4, 10, 10, 12, body);
+            part(3, 10, 0, 13, 16, 16, info.tileTop);
+            return;
+        }
+        if (isLectern(id))
+        {
+            const int f = lecternFacing(id);
+            const PartFace plate{ Tiles::LecternBase, 0.0f, 0.0f, 16.0f, 16.0f };
+            const PartFace base[6] = { { Tiles::LecternSide, 0.0f, 14.0f, 16.0f, 16.0f }, { Tiles::LecternSide, 0.0f, 14.0f, 16.0f, 16.0f }, plate, plate,
+                                       { Tiles::LecternSide, 0.0f, 14.0f, 16.0f, 16.0f }, { Tiles::LecternSide, 0.0f, 14.0f, 16.0f, 16.0f } };
+            emitRotated(snap, lx, y, lz, id, f, 0, 0, 0, 16, 2, 16, base, out);
+            const PartFace front{ Tiles::LecternFront, 4.0f, 3.0f, 12.0f, 14.0f };
+            const PartFace post[6] = { { Tiles::LecternSide, 4.0f, 3.0f, 12.0f, 14.0f }, { Tiles::LecternSide, 4.0f, 3.0f, 12.0f, 14.0f }, plate, plate,
+                                       { Tiles::LecternSide, 4.0f, 3.0f, 12.0f, 14.0f }, front };
+            emitRotated(snap, lx, y, lz, id, f, 4, 2, 4, 12, 13, 12, post, out);
+            const PartFace desk[6] = { { Tiles::LecternSide, 1.0f, 0.0f, 15.0f, 3.0f }, { Tiles::LecternSide, 1.0f, 0.0f, 15.0f, 3.0f },
+                                       { lecternHasBook(id) ? Tiles::LecternTopBook : Tiles::LecternTop, 0.0f, 1.0f, 16.0f, 15.0f }, plate,
+                                       { Tiles::LecternSide, 0.0f, 0.0f, 16.0f, 3.0f }, { Tiles::LecternSide, 0.0f, 0.0f, 16.0f, 3.0f } };
+            emitRotated(snap, lx, y, lz, id, f, 0, 13, 1, 16, 16, 15, desk, out);
+            return;
+        }
+        if (isGrindstone(id))
+        {
+            const int f = grindstoneFacing(id);
+            const int face = grindstoneFace(id);
+            auto part = [&](float x0, float y0, float z0, float x1, float y1, float z1, const PartFace local[6]) {
+                PartFace turned[6];
+                for (int k = 0; k < 6; ++k) turned[k] = local[k];
+                if (face == 1)
+                {
+                    turned[5] = local[2]; turned[4] = local[3]; turned[2] = local[4]; turned[3] = local[5];
+                    emitRotated(snap, lx, y, lz, id, f, x0, z0, 16.0f - y1, x1, z1, 16.0f - y0, turned, out);
+                }
+                else if (face == 2)
+                {
+                    turned[2] = local[3]; turned[3] = local[2];
+                    emitRotated(snap, lx, y, lz, id, f, x0, 16.0f - y1, z0, x1, 16.0f - y0, z1, turned, out);
+                }
+                else emitRotated(snap, lx, y, lz, id, f, x0, y0, z0, x1, y1, z1, turned, out);
+            };
+            const PartFace round{ Tiles::GrindstoneFace, 0.0f, 0.0f, 8.0f, 12.0f };
+            const PartFace flat{ Tiles::GrindstoneFace, 0.0f, 0.0f, 8.0f, 12.0f };
+            const PartFace wheelSide{ Tiles::GrindstoneSide, 2.0f, 0.0f, 14.0f, 12.0f };
+            const PartFace wheel[6] = { wheelSide, wheelSide, flat, flat, round, round };
+            part(4, 4, 2, 12, 16, 14, wheel);
+            const PartFace pivotFace{ Tiles::GrindstonePivot, 0.0f, 0.0f, 8.0f, 7.0f };
+            const PartFace pivot[6] = { pivotFace, pivotFace, { Tiles::GrindstonePivot, 0.0f, 0.0f, 2.0f, 8.0f }, { Tiles::GrindstonePivot, 0.0f, 0.0f, 2.0f, 8.0f },
+                                        { Tiles::GrindstonePivot, 0.0f, 0.0f, 2.0f, 7.0f }, { Tiles::GrindstonePivot, 0.0f, 0.0f, 2.0f, 7.0f } };
+            part(2, 6, 4, 4, 13, 12, pivot);
+            part(12, 6, 4, 14, 13, 12, pivot);
+            const PartFace bark{ Tiles::DarkOakLogSide, 6.0f, 9.0f, 10.0f, 16.0f };
+            const PartFace stump{ Tiles::DarkOakLogSide, 0.0f, 0.0f, 2.0f, 4.0f };
+            const PartFace leg[6] = { bark, bark, stump, stump, { Tiles::DarkOakLogSide, 0.0f, 9.0f, 2.0f, 16.0f }, { Tiles::DarkOakLogSide, 0.0f, 9.0f, 2.0f, 16.0f } };
+            part(2, 0, 6, 4, 7, 10, leg);
+            part(12, 0, 6, 14, 7, 10, leg);
             return;
         }
         if (id == Blocks::EnchantingTable)
@@ -2422,7 +2492,7 @@ void buildChunkMesh(const MeshSnapshot& snapshot, MeshResult& out)
                 {
                     emitCactus(snapshot, lx, y, lz, id, out.opaqueVertices);
                 }
-                else if (isAnvil(id) || id == Blocks::EnchantingTable || id == Blocks::EndPortalFrame ||
+                else if (isAnvil(id) || id == Blocks::EnchantingTable || id == Blocks::EndPortalFrame || isLectern(id) || isGrindstone(id) ||
                          id == Blocks::EndPortalFrameFilled || isHopper(id) || isComposter(id) || id == Blocks::BrewingStand)
                 {
                     emitWorkBlock(snapshot, lx, y, lz, id, out.opaqueVertices);

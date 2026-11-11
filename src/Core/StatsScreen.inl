@@ -36,7 +36,7 @@ void Application::statOpened(BlockId block)
     if (isShulkerBox(block)) stat = C::OpenShulkerBox;
     else if (isEnderChest(block)) stat = C::OpenEnderchest;
     else if (isTrappedChest(block)) stat = C::TriggerTrappedChest;
-    else if (block == Blocks::Barrel || block == Blocks::BarrelOpen) stat = C::OpenBarrel;
+    else if (isBarrel(block)) stat = C::OpenBarrel;
     else if (isHopper(block)) stat = C::InspectHopper;
     else if (isDropper(block)) stat = C::InspectDropper;
     else if (isDispenser(block)) stat = C::InspectDispenser;
@@ -48,14 +48,14 @@ void Application::statOpened(BlockId block)
     }
     else if (block == Blocks::CraftingTable) stat = C::InteractWithCraftingTable;
     else if (isAnvil(block)) stat = C::InteractWithAnvil;
-    else if (block == Blocks::Grindstone) stat = C::InteractWithGrindstone;
-    else if (block == Blocks::Stonecutter) stat = C::InteractWithStonecutter;
+    else if (isGrindstone(block)) stat = C::InteractWithGrindstone;
+    else if (isStonecutter(block)) stat = C::InteractWithStonecutter;
     else if (block == Blocks::SmithingTable) stat = C::InteractWithSmithingTable;
     else if (block == Blocks::CartographyTable) stat = C::InteractWithCartographyTable;
     else if (isLoom(block)) stat = C::InteractWithLoom;
     else if (block == Blocks::BrewingStand) stat = C::InteractWithBrewingstand;
     else if (block == Blocks::Beacon) stat = C::InteractWithBeacon;
-    else if (block == Blocks::Lectern || block == Blocks::LecternBook) stat = C::InteractWithLectern;
+    else if (isLectern(block)) stat = C::InteractWithLectern;
     if (stat != C::Count) m_stats.add(stat);
 }
 

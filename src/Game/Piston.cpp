@@ -140,7 +140,7 @@ bool Piston::movable(BlockId id)
     if (pistonOut(id) || isPistonHead(id)) return false;
     if (isChestFamily(id) || isDoor(id) || isBed(id) || isFurnaceBlock(id)) return false;
     if (isContainerBlock(id) || isShulkerBox(id) || isHopper(id) || isDispenser(id) || isDropper(id)) return false;
-    if (id == Blocks::Barrel || id == Blocks::BarrelOpen || id == Blocks::Obsidian || id == Blocks::CryingObsidian ||
+    if (isBarrel(id) || isLectern(id) || id == Blocks::Obsidian || id == Blocks::CryingObsidian ||
         isRespawnAnchor(id) || id == Blocks::ReinforcedDeepslate || id == Blocks::EndPortalFrame || id == Blocks::EnchantingTable ||
         id == Blocks::Beacon || id == Blocks::Jukebox || id == Blocks::Lectern || id == Blocks::BrewingStand || id == Blocks::Conduit ||
         id == Blocks::MonsterSpawner || id == Blocks::SculkShrieker || id == Blocks::SculkCatalyst || id == Blocks::SculkCatalystBloom ||

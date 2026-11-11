@@ -45,6 +45,9 @@ namespace Trading
         if (isLectern(block)) { trade = Profession::Librarian; return true; }
         if (isAnyCauldron(block)) { trade = Profession::Leatherworker; return true; }
         if (isLoom(block)) { trade = Profession::Shepherd; return true; }
+        if (isBarrel(block)) { trade = Profession::Fisherman; return true; }
+        if (isGrindstone(block)) { trade = Profession::Weaponsmith; return true; }
+        if (isStonecutter(block)) { trade = Profession::Mason; return true; }
         switch (furnaceBase(block))
         {
             case Blocks::BlastFurnace: case Blocks::BlastFurnaceLit: trade = Profession::Armorer; return true;
@@ -54,9 +57,6 @@ namespace Trading
         switch (block)
         {
             case Blocks::BrewingStand: trade = Profession::Cleric; return true;
-            case Blocks::Barrel: case Blocks::BarrelOpen: trade = Profession::Fisherman; return true;
-            case Blocks::Grindstone: trade = Profession::Weaponsmith; return true;
-            case Blocks::Stonecutter: trade = Profession::Mason; return true;
             case Blocks::FletchingTable: trade = Profession::Fletcher; return true;
             case Blocks::SmithingTable: trade = Profession::Toolsmith; return true;
             case Blocks::CartographyTable: trade = Profession::Cartographer; return true;

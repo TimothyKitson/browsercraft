@@ -4216,8 +4216,7 @@ void Application::takeAnvilResult()
         if (m_wearSeed % 100u < 12u)
         {
             const BlockId here = m_world->getBlock(m_anvilBlock.x, m_anvilBlock.y, m_anvilBlock.z);
-            const BlockId worn = here == Blocks::Anvil ? Blocks::AnvilChipped
-                               : here == Blocks::AnvilChipped ? Blocks::AnvilDamaged : Blocks::Air;
+            const BlockId worn = isAnvil(here) ? anvilOf(anvilWear(here) + 1, anvilAlongX(here)) : Blocks::Air;
             m_world->setBlock(m_anvilBlock.x, m_anvilBlock.y, m_anvilBlock.z, worn);
             m_net.onLocalBlockChange(m_anvilBlock.x, m_anvilBlock.y, m_anvilBlock.z, worn);
             m_audio.play(Sound::DigStone, 0.8f, worn == Blocks::Air ? 0.6f : 0.9f);
@@ -4339,10 +4338,11 @@ void Application::openChest(const glm::ivec3& block)
     m_chestDouble = false;
     m_chestEnder = false;
     const BlockId here = m_world ? m_world->getBlock(block.x, block.y, block.z) : Blocks::Air;
-    if (here == Blocks::Barrel)
+    if (isBarrel(here) && !barrelOpen(here))
     {
-        m_world->setBlock(block.x, block.y, block.z, Blocks::BarrelOpen);
-        m_net.onLocalBlockChange(block.x, block.y, block.z, Blocks::BarrelOpen);
+        const BlockId opened = barrelWith(barrelFacing(here), true);
+        m_world->setBlock(block.x, block.y, block.z, opened);
+        m_net.onLocalBlockChange(block.x, block.y, block.z, opened);
     }
 
     if (isEnderChest(here))
@@ -4532,10 +4532,11 @@ void Application::stowChest()
         m_chestOpen = false;
         return;
     }
-    if (m_world && m_world->getBlock(m_chestBlock.x, m_chestBlock.y, m_chestBlock.z) == Blocks::BarrelOpen)
+    if (m_world && barrelOpen(m_world->getBlock(m_chestBlock.x, m_chestBlock.y, m_chestBlock.z)))
     {
-        m_world->setBlock(m_chestBlock.x, m_chestBlock.y, m_chestBlock.z, Blocks::Barrel);
-        m_net.onLocalBlockChange(m_chestBlock.x, m_chestBlock.y, m_chestBlock.z, Blocks::Barrel);
+        const BlockId shut = barrelWith(barrelFacing(m_world->getBlock(m_chestBlock.x, m_chestBlock.y, m_chestBlock.z)), false);
+        m_world->setBlock(m_chestBlock.x, m_chestBlock.y, m_chestBlock.z, shut);
+        m_net.onLocalBlockChange(m_chestBlock.x, m_chestBlock.y, m_chestBlock.z, shut);
     }
 
     Chests::Contents& held = m_chestEnder ? m_chests.ender() : m_chests.at(m_chestBlock);

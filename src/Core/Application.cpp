@@ -3098,8 +3098,8 @@ bool Application::frame()
             const bool stillThere =
                 m_benchOpen   ? there == Blocks::CraftingTable
               : m_beaconOpen  ? there == Blocks::Beacon
-              : m_grindOpen   ? there == Blocks::Grindstone
-              : m_cutOpen     ? there == Blocks::Stonecutter
+              : m_grindOpen   ? isGrindstone(there)
+              : m_cutOpen     ? isStonecutter(there)
               : m_smithOpen   ? there == Blocks::SmithingTable
               : m_cartoOpen   ? there == Blocks::CartographyTable
               : m_loomOpen    ? isLoom(there)
@@ -3239,7 +3239,7 @@ bool Application::frame()
             m_startupScreen == "shulkerboxes" || m_startupScreen == "beds" || m_startupScreen == "chests" ||
             m_startupScreen == "copper" || m_startupScreen == "flowers" || m_startupScreen == "mushrooms" || m_startupScreen == "lush" ||
             m_startupScreen == "farm" || m_startupScreen == "corals" || m_startupScreen == "ice" || m_startupScreen == "wiring" || m_startupScreen == "utility" || m_startupScreen == "dig" ||
-            m_startupScreen == "boat" || m_startupScreen == "rails" || m_startupScreen == "railhill" ||
+            m_startupScreen == "boat" || m_startupScreen == "rails" || m_startupScreen == "railhill" || m_startupScreen == "turned" ||
             m_startupScreen == "mobs" || m_startupScreen == "golem" ||
             m_startupScreen == "glowmobs" || m_startupScreen == "variants" || m_startupScreen == "zoo" || m_startupScreen == "llamas" ||
             m_startupScreen == "shulker" ||
@@ -3291,6 +3291,7 @@ bool Application::frame()
                                   m_startupScreen != "backs" &&
                                   m_startupScreen != "throwers" &&
                                   m_startupScreen != "railhill" &&
+                                  m_startupScreen != "turned" &&
                                   m_startupScreen != "flow" &&
                                   m_startupScreen != "buds" &&
                                   m_startupScreen != "beam" &&
@@ -7757,6 +7758,35 @@ bool Application::frame()
                     m_world->setBlock(bx - 6, top(d) + 1, bz + d, Blocks::Leaves);
             }
 
+            if (m_startupScreen == "turned")
+            {
+                m_camera.setOrientation(90.0f, -22.0f);
+                m_showDebug = false;
+                const int bx = static_cast<int>(std::floor(m_player.position.x));
+                const int by = static_cast<int>(std::floor(m_player.position.y));
+                const int bz = static_cast<int>(std::floor(m_player.position.z));
+                for (int dx = -9; dx <= 9; ++dx)
+                    for (int dy = -1; dy <= 8; ++dy)
+                        for (int d = 1; d <= 14; ++d)
+                            m_world->setBlock(bx + dx, by + dy, bz + d, dy < 0 ? Blocks::Stone : Blocks::Air);
+                const BlockId front[6] = { anvilOf(0, false), anvilOf(1, true), Blocks::Stonecutter, Blocks::StonecutterTurned,
+                                           lecternWith(0, true), lecternWith(1, false) };
+                for (int k = 0; k < 6; ++k)
+                {
+                    const int x = bx + 5 - k * 2;
+                    m_world->setBlock(x, by, bz + 4, front[k]);
+                    m_world->setBlock(x, by, bz + 10, barrelWith(k, k % 2 == 1));
+                }
+                m_world->setBlock(bx + 4, by, bz + 7, grindstoneOf(0, 0));
+                m_world->setBlock(bx + 2, by, bz + 7, grindstoneOf(0, 1));
+                m_world->setBlock(bx, by + 1, bz + 7, grindstoneOf(1, 0));
+                m_world->setBlock(bx, by + 1, bz + 8, Blocks::Planks);
+                m_world->setBlock(bx - 2, by + 1, bz + 7, grindstoneOf(2, 0));
+                m_world->setBlock(bx - 2, by + 2, bz + 7, Blocks::Planks);
+                m_world->setBlock(bx - 4, by + 1, bz + 7, grindstoneOf(1, 3));
+                m_world->setBlock(bx - 3, by + 1, bz + 7, Blocks::Planks);
+            }
+
             if (m_startupScreen == "throwers")
             {
                 m_camera.setOrientation(90.0f, -24.0f);
@@ -10110,7 +10140,7 @@ void Application::updateMining(float deltaTime)
             // gives back one thing and a lectern gives back two.
             if (isMonsterSpawner(id)) m_cageKinds.erase({ static_cast<int>(m_dimension), hit.block.x, hit.block.y, hit.block.z });
             if (id == Blocks::Jukebox) ejectJukebox(hit.block, true);
-            if (id == Blocks::LecternBook)
+            if (lecternHasBook(id))
             {
                 ItemStack resting{ Items::Book, 1 };
                 if (const ItemStack* stored = lecternBookAt(hit.block)) resting = *stored;
@@ -13295,7 +13325,7 @@ bool Application::containerSignal(const glm::ivec3& at)
     const BlockId here = m_world->getBlock(at.x, at.y, at.z);
     if (isComposter(here)) return here != Blocks::Composter0;
     if (isAnyCauldron(here)) return here != Blocks::Cauldron0;
-    if (isCake(here) || here == Blocks::LecternBook || here == Blocks::EndPortalFrameFilled) return true;
+    if (isCake(here) || lecternHasBook(here) || here == Blocks::EndPortalFrameFilled) return true;
     if (isHive(here)) return hiveHoney(here) > 0;
     if (isChiseledBookshelf(here)) return shelfBooks(here) > 0;
     if (isDecoratedPot(here)) return m_chests.has(at) && !m_chests.at(at)[0].empty();
@@ -16648,12 +16678,13 @@ bool Application::useLectern(const glm::ivec3& at, BlockId block)
 {
     ItemStack& held = m_inventory.selected();
 
-    if (block == Blocks::Lectern)
+    if (!lecternHasBook(block))
     {
         if (held.empty() || (held.id != Items::WritableBook && held.id != Items::WrittenBook)) return false;
 
-        m_world->setBlock(at.x, at.y, at.z, Blocks::LecternBook);
-        m_net.onLocalBlockChange(at.x, at.y, at.z, Blocks::LecternBook);
+        const BlockId filled = lecternWith(lecternFacing(block), true);
+        m_world->setBlock(at.x, at.y, at.z, filled);
+        m_net.onLocalBlockChange(at.x, at.y, at.z, filled);
         ItemStack placed = held;
         placed.count = 1;
         m_lecternBooks[{ static_cast<int>(m_dimension), at.x, at.y, at.z }] = placed;
@@ -16685,8 +16716,9 @@ bool Application::useLectern(const glm::ivec3& at, BlockId block)
     m_lecternBooks.erase({ static_cast<int>(m_dimension), at.x, at.y, at.z });
     if (m_inventory.addStack(book) > 0) m_drops.spawnStack(m_player.position, book);
 
-    m_world->setBlock(at.x, at.y, at.z, Blocks::Lectern);
-    m_net.onLocalBlockChange(at.x, at.y, at.z, Blocks::Lectern);
+    const BlockId bare = lecternWith(lecternFacing(block), false);
+    m_world->setBlock(at.x, at.y, at.z, bare);
+    m_net.onLocalBlockChange(at.x, at.y, at.z, bare);
     m_audio.play(Sound::DigWood, 0.5f, 0.9f);
     return true;
 }
@@ -17158,7 +17190,7 @@ void Application::handlePlacement()
             if (isAnyCauldron(used) && useCauldron(bench.block, used)) return;
             if (isLectern(used) && useLectern(bench.block, used)) return;
             if (used == Blocks::Jukebox && useJukebox(bench.block)) return;
-            if (used == Blocks::Grindstone && useGrindstone(bench.block)) return;
+            if (isGrindstone(used) && useGrindstone(bench.block)) return;
             if (used == Blocks::Lodestone && m_inventory.selected().id == Items::Compass)
             {
                 award("nether/use_lodestone", "use_lodestone");
@@ -17238,7 +17270,7 @@ void Application::handlePlacement()
                 m_audio.play(Sound::Click, 0.4f);
                 return;
             }
-            if (used == Blocks::Stonecutter)
+            if (isStonecutter(used))
             {
                 openStonecutter(bench.block);
                 m_audio.play(Sound::Click, 0.4f);
@@ -19049,6 +19081,24 @@ void Application::handlePlacement()
 
         const int facing = (n.z > 0) ? 0 : (n.x < 0) ? 1 : (n.z < 0) ? 2 : 3;
         placing = ladderFacing(facing);
+    }
+
+    if (isAnvil(placing) || isStonecutter(placing) || isLectern(placing) || isBarrel(placing) || isGrindstone(placing))
+    {
+        const glm::vec3 look = m_camera.front;
+        const int toward = (std::fabs(look.x) > std::fabs(look.z)) ? (look.x > 0.0f ? 1 : 3) : (look.z > 0.0f ? 2 : 0);
+        const int back = (toward + 2) & 3;
+        if (isAnvil(placing)) placing = anvilOf(anvilWear(placing), toward == 0 || toward == 2);
+        else if (isStonecutter(placing)) placing = (toward == 1 || toward == 3) ? Blocks::StonecutterTurned : Blocks::Stonecutter;
+        else if (isLectern(placing)) placing = lecternWith(back, false);
+        else if (isBarrel(placing)) placing = barrelWith(look.y < -0.7f ? 4 : look.y > 0.7f ? 5 : back, false);
+        else
+        {
+            const int wall = hit.normal.z < 0 ? 0 : hit.normal.x > 0 ? 1 : hit.normal.z > 0 ? 2 : 3;
+            if (hit.normal.y > 0) placing = grindstoneOf(0, toward);
+            else if (hit.normal.y < 0) placing = grindstoneOf(2, toward);
+            else placing = grindstoneOf(1, wall);
+        }
     }
 
     if (placing == Blocks::Dispenser || placing == Blocks::Dropper || placing == Blocks::Observer)

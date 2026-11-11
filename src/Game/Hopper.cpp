@@ -6,6 +6,7 @@ int Hopper::slotsOf(BlockId id)
     if (isDropper(id) || isDispenser(id)) return THROWER_SLOTS;
     if (isStorageChest(id)) return 27;
     if (isDecoratedPot(id)) return 1;
+    if (isBarrel(id) || isShulkerBox(id)) return 27;
     return 0;
 }
 
