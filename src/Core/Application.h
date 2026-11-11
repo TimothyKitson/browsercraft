@@ -125,6 +125,15 @@ enum class Screen
 enum class MenuAction
 {
     None,
+    CycleFov,
+    CycleBrightness,
+    CycleGuiScale,
+    ToggleBobbing,
+    CycleMaxFps,
+    ToggleVsync,
+    CycleVolume,
+    CycleSensitivity,
+    ToggleInvertMouse,
     GoSingleplayer,
     ToggleCheats,
     GoMultiplayer,
@@ -1871,6 +1880,16 @@ private:
     // 0 is automatic, which is Minecraft's default and takes the
     // largest scale the window will hold; 1 to 4 pin it.
     int m_guiScaleSetting = 0;
+    int m_fovSetting = 70;
+    float m_brightness = 0.5f;
+    bool m_viewBobbing = true;
+    float m_bobPhase = 0.0f;
+    float m_mouseSensitivity = 1.0f;
+    bool m_invertMouse = false;
+    float m_masterVolume = 1.0f;
+    int m_maxFps = 0;
+    bool m_vsync = true;
+    uint32_t m_frameStartTicks = 0;
 
     void guiPanel(float x, float y, float w, float h);
     void guiWell(float x, float y, float w, float h);

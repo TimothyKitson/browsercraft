@@ -1998,7 +1998,7 @@ void AudioEngine::play(Sound sound, float volume, float pitch)
         voice.buffer = &clip;
         voice.position = 0.0;
         voice.step = std::clamp(static_cast<double>(pitch), 0.25, 4.0);
-        voice.volume = std::clamp(volume, 0.0f, 1.0f);
+        voice.volume = std::clamp(volume * m_master, 0.0f, 1.0f);
         return;
     }
 }

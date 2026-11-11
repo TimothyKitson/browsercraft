@@ -465,6 +465,15 @@ void Application::loadOptions()
         else if (std::strncmp(line, "darknessPulsing=", 16) == 0) m_darknessPulsing = std::clamp(static_cast<float>(std::atof(line + 16)), 0.0f, 1.0f);
         else if (std::strncmp(line, "panoramaSpeed=", 14) == 0) m_panoramaSpeed = std::clamp(static_cast<float>(std::atof(line + 14)), 0.0f, 1.0f);
         else if (std::sscanf(line, "toggleSneak=%d", &value) == 1) m_toggleSneak = value != 0;
+        else if (std::sscanf(line, "fov=%d", &value) == 1) m_fovSetting = std::clamp(value, 30, 110);
+        else if (std::strncmp(line, "gamma=", 6) == 0) m_brightness = std::clamp(static_cast<float>(std::atof(line + 6)), 0.0f, 1.0f);
+        else if (std::sscanf(line, "guiScale=%d", &value) == 1) m_guiScaleSetting = std::clamp(value, 0, 6);
+        else if (std::sscanf(line, "bobView=%d", &value) == 1) m_viewBobbing = value != 0;
+        else if (std::strncmp(line, "mouseSensitivity=", 17) == 0) m_mouseSensitivity = std::clamp(static_cast<float>(std::atof(line + 17)), 0.1f, 3.0f);
+        else if (std::sscanf(line, "invertYMouse=%d", &value) == 1) m_invertMouse = value != 0;
+        else if (std::strncmp(line, "soundCategory_master=", 21) == 0) m_masterVolume = std::clamp(static_cast<float>(std::atof(line + 21)), 0.0f, 1.0f);
+        else if (std::sscanf(line, "maxFps=%d", &value) == 1) m_maxFps = std::clamp(value, 0, 260);
+        else if (std::sscanf(line, "enableVsync=%d", &value) == 1) m_vsync = value != 0;
         else if (std::sscanf(line, "toggleSprint=%d", &value) == 1) m_toggleSprint = value != 0;
         else if (std::sscanf(line, "hideLightning=%d", &value) == 1) m_hideLightning = value != 0;
         else if (std::sscanf(line, "hideSplash=%d", &value) == 1) m_hideSplash = value != 0;
@@ -501,6 +510,9 @@ void Application::saveOptions()
                  m_textBackground, m_chatOpacity, m_fovEffects, m_darknessPulsing, m_panoramaSpeed);
     std::fprintf(file, "toggleSneak=%d\ntoggleSprint=%d\nhideLightning=%d\nhideSplash=%d\n", m_toggleSneak ? 1 : 0,
                  m_toggleSprint ? 1 : 0, m_hideLightning ? 1 : 0, m_hideSplash ? 1 : 0);
+    std::fprintf(file, "fov=%d\ngamma=%.3f\nguiScale=%d\nbobView=%d\nmouseSensitivity=%.3f\ninvertYMouse=%d\nsoundCategory_master=%.3f\nmaxFps=%d\nenableVsync=%d\n",
+                 m_fovSetting, m_brightness, m_guiScaleSetting, m_viewBobbing ? 1 : 0, m_mouseSensitivity, m_invertMouse ? 1 : 0,
+                 m_masterVolume, m_maxFps, m_vsync ? 1 : 0);
     std::fclose(file);
 #ifdef __EMSCRIPTEN__
     EM_ASM({
@@ -2067,6 +2079,8 @@ void Application::run()
     // before anything else, the way the game asks on first launch.
     loadProfile();
     loadOptions();
+    m_audio.setMasterVolume(m_masterVolume);
+    if (!m_vsync) SDL_GL_SetSwapInterval(0);
     m_keys.load(m_configPath);
     if (m_playerName.empty() && !m_automated && m_startupScreen.empty())
         m_screen = Screen::NameEntry;
@@ -8529,6 +8543,13 @@ bool Application::frame()
     }
 
     m_window.swapBuffers();
+    if (m_maxFps > 0 && !m_automated)
+    {
+        const uint32_t budget = 1000u / static_cast<uint32_t>(m_maxFps);
+        const uint32_t spent = SDL_GetTicks() - m_frameStartTicks;
+        if (spent < budget) SDL_Delay(budget - spent);
+    }
+    m_frameStartTicks = SDL_GetTicks();
     return m_running;
 }
 
@@ -8752,6 +8773,23 @@ void Application::applyMenuAction()
             openStatistics();
             break;
         case MenuAction::CycleDistortion: m_distortion = m_distortion <= 0 ? 100 : m_distortion - 25; saveOptions(); break;
+        case MenuAction::CycleFov: m_fovSetting = m_fovSetting >= 110 ? 30 : m_fovSetting + 10; saveOptions(); break;
+        case MenuAction::CycleBrightness: m_brightness = m_brightness >= 0.99f ? 0.0f : std::min(1.0f, m_brightness + 0.25f); saveOptions(); break;
+        case MenuAction::CycleGuiScale: m_guiScaleSetting = (m_guiScaleSetting + 1) % 5; saveOptions(); break;
+        case MenuAction::ToggleBobbing: m_viewBobbing = !m_viewBobbing; saveOptions(); break;
+        case MenuAction::CycleMaxFps:
+        {
+            static const int STEPS[5] = { 30, 60, 120, 144, 0 };
+            int next = 0;
+            for (int k = 0; k < 5; ++k) if (STEPS[k] == m_maxFps) next = (k + 1) % 5;
+            m_maxFps = STEPS[next];
+            saveOptions();
+            break;
+        }
+        case MenuAction::ToggleVsync: m_vsync = !m_vsync; SDL_GL_SetSwapInterval(m_vsync ? 1 : 0); saveOptions(); break;
+        case MenuAction::CycleVolume: m_masterVolume = m_masterVolume <= 0.01f ? 1.0f : std::max(0.0f, m_masterVolume - 0.1f); m_audio.setMasterVolume(m_masterVolume); saveOptions(); break;
+        case MenuAction::CycleSensitivity: m_mouseSensitivity = m_mouseSensitivity >= 1.99f ? 0.25f : m_mouseSensitivity + 0.25f; saveOptions(); break;
+        case MenuAction::ToggleInvertMouse: m_invertMouse = !m_invertMouse; saveOptions(); break;
         case MenuAction::ToggleMainHand: m_leftHanded = !m_leftHanded; saveOptions(); break;
     }
 }
@@ -9287,7 +9325,7 @@ void Application::updateGameplay(float deltaTime)
         lookX = 0.0f;
         lookY = 0.0f;
     }
-    m_camera.addLook(lookX, lookY, MOUSE_SENSITIVITY);
+    m_camera.addLook(lookX, m_invertMouse ? -lookY : lookY, MOUSE_SENSITIVITY * m_mouseSensitivity);
 
     // Flight is a creative-mode privilege.
     if (m_keys.pressed(m_input, Action::Fly) && m_player.creative() && !m_player.spectator())
@@ -9427,6 +9465,18 @@ void Application::updateGameplay(float deltaTime)
     }
 
     m_camera.position = m_player.eyePosition();
+    {
+        const glm::vec3 moved = m_player.position - positionBefore;
+        const float stride = glm::length(glm::vec2(moved.x, moved.z));
+        const bool walking = m_player.onGround && !m_player.flying && stride > 0.0005f && stride < 1.0f;
+        m_bobPhase = walking ? m_bobPhase + stride * 3.2f : m_bobPhase * std::max(0.0f, 1.0f - 6.0f * deltaTime);
+        if (m_viewBobbing && m_perspective == Perspective::FirstPerson && !m_scoping)
+        {
+            const float yaw = glm::radians(m_camera.yaw);
+            const glm::vec3 side(-std::sin(yaw), 0.0f, std::cos(yaw));
+            m_camera.position += side * (std::sin(m_bobPhase) * 0.035f) + glm::vec3(0.0f, -std::fabs(std::cos(m_bobPhase)) * 0.05f, 0.0f);
+        }
+    }
     followSpectatedMob();
     updateMovementAudio(positionBefore, m_player.jumpedThisUpdate());
     if (m_player.jumpedThisUpdate()) m_stats.add(Stats::Custom::Jump);
@@ -9466,7 +9516,8 @@ void Application::updateGameplay(float deltaTime)
     m_scopeAmount = std::clamp(m_scopeAmount + (m_scoping ? 6.0f : -10.0f) * deltaTime, 0.0f, 1.0f);
 
     // A little extra field of view while sprinting sells the speed.
-    const float targetFov = m_scoping ? 7.0f : (m_player.sprinting || m_player.gliding) ? 70.0f + 8.0f * m_fovEffects : 70.0f;
+    const float baseFov = static_cast<float>(m_fovSetting);
+    const float targetFov = m_scoping ? 7.0f : (m_player.sprinting || m_player.gliding) ? baseFov + 8.0f * m_fovEffects : baseFov;
     m_camera.fov += (targetFov - m_camera.fov) * std::clamp(8.0f * deltaTime, 0.0f, 1.0f);
 
     // --- the rest of the world ---
@@ -20051,6 +20102,7 @@ void Application::renderWorld()
     m_chunkShader.setInt("uSpecularAtlas", 2);
     m_chunkShader.setFloat("uDaylight", hasSky() ? daylight : 0.0f);
     m_chunkShader.setFloat("uAmbient", dimensionAmbient());
+    m_chunkShader.setFloat("uGamma", m_brightness);
     const bool blind = m_player.effects.has(Effects::Kind::Blindness);
     const float gloom = m_darknessFade;
     const float darkReach = viewDistance + (15.0f - viewDistance) * gloom;
@@ -26015,10 +26067,21 @@ void Application::renderSettingsScreen()
         m_pendingAction = MenuAction::GoVideoSettings;
     y += buttonHeight + gap;
 
-    if (menuButton({ buttonX, y, buttonWidth, buttonHeight },
-                   m_audio.muted() ? "Sound: Off" : "Sound: On"))
-        m_pendingAction = MenuAction::ToggleSound;
-    y += buttonHeight + gap;
+    {
+        const float half = (buttonWidth - 12.0f) * 0.5f;
+        if (menuButton({ buttonX, y, half, buttonHeight }, m_audio.muted() ? "Sound: Off" : "Sound: On"))
+            m_pendingAction = MenuAction::ToggleSound;
+        const int volume = static_cast<int>(std::lround(m_masterVolume * 100.0f));
+        if (menuButton({ buttonX + half + 12.0f, y, half, buttonHeight }, "Volume: " + std::to_string(volume) + "%"))
+            m_pendingAction = MenuAction::CycleVolume;
+        y += buttonHeight + gap;
+        const int sense = static_cast<int>(std::lround(m_mouseSensitivity * 100.0f));
+        if (menuButton({ buttonX, y, half, buttonHeight }, "Sensitivity: " + std::to_string(sense) + "%"))
+            m_pendingAction = MenuAction::CycleSensitivity;
+        if (menuButton({ buttonX + half + 12.0f, y, half, buttonHeight }, m_invertMouse ? "Invert Mouse: ON" : "Invert Mouse: OFF"))
+            m_pendingAction = MenuAction::ToggleInvertMouse;
+        y += buttonHeight + gap;
+    }
 
     {
         const float half = (buttonWidth - 12.0f) * 0.5f;
@@ -26120,16 +26183,25 @@ void Application::renderVideoScreen()
         m_pendingAction = MenuAction::TogglePbr;
     y += buttonHeight + 14.0f;
 
-    static const char* INDICATORS[3] = { "Attack Indicator: Off", "Attack Indicator: Crosshair",
-                                         "Attack Indicator: Hotbar" };
-    if (menuButton({ buttonX, y, buttonWidth, buttonHeight }, INDICATORS[m_attackIndicator]))
-        m_pendingAction = MenuAction::CycleAttackIndicator;
-    y += buttonHeight + 14.0f;
-
-    const std::string distortion = m_distortion <= 0 ? "Distortion Effects: OFF" : "Distortion Effects: " + std::to_string(m_distortion) + "%";
-    if (menuButton({ buttonX, y, buttonWidth, buttonHeight }, distortion))
-        m_pendingAction = MenuAction::CycleDistortion;
-    y += buttonHeight + 24.0f;
+    static const char* INDICATORS[3] = { "Attack: Off", "Attack: Crosshair", "Attack: Hotbar" };
+    const float half = (buttonWidth - 12.0f) * 0.5f;
+    const float row = buttonHeight + 10.0f;
+    auto pair = [&](const std::string& left, MenuAction leftAction, const std::string& right, MenuAction rightAction) {
+        if (menuButton({ buttonX, y, half, buttonHeight }, left)) m_pendingAction = leftAction;
+        if (menuButton({ buttonX + half + 12.0f, y, half, buttonHeight }, right)) m_pendingAction = rightAction;
+        y += row;
+    };
+    const std::string distortion = m_distortion <= 0 ? "Distortion: OFF" : "Distortion: " + std::to_string(m_distortion) + "%";
+    pair(INDICATORS[m_attackIndicator], MenuAction::CycleAttackIndicator, distortion, MenuAction::CycleDistortion);
+    const std::string fov = m_fovSetting == 70 ? "FOV: Normal" : m_fovSetting >= 110 ? "FOV: Quake Pro" : "FOV: " + std::to_string(m_fovSetting);
+    const int bright = static_cast<int>(std::lround(m_brightness * 100.0f));
+    const std::string brightness = bright <= 0 ? "Brightness: Moody" : bright >= 100 ? "Brightness: Bright" : "Brightness: " + std::to_string(bright) + "%";
+    pair(fov, MenuAction::CycleFov, brightness, MenuAction::CycleBrightness);
+    const std::string scale = m_guiScaleSetting == 0 ? "GUI Scale: Auto" : "GUI Scale: " + std::to_string(m_guiScaleSetting);
+    pair(scale, MenuAction::CycleGuiScale, m_viewBobbing ? "View Bobbing: ON" : "View Bobbing: OFF", MenuAction::ToggleBobbing);
+    const std::string fps = m_maxFps <= 0 ? "Max FPS: Unlimited" : "Max FPS: " + std::to_string(m_maxFps);
+    pair(fps, MenuAction::CycleMaxFps, m_vsync ? "VSync: ON" : "VSync: OFF", MenuAction::ToggleVsync);
+    y += 10.0f;
 
     if (menuButton({ buttonX, y, buttonWidth, 46.0f }, "Done"))
         m_pendingAction = MenuAction::BackToOptions;

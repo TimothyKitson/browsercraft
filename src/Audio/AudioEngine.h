@@ -334,6 +334,7 @@ public:
     void playPlace(BlockId block);
 
     void setMuted(bool muted) { m_muted = muted; }
+    void setMasterVolume(float volume) { m_master = volume < 0.0f ? 0.0f : volume > 1.0f ? 1.0f : volume; }
     bool muted() const { return m_muted; }
     bool available() const { return m_device != 0; }
 
@@ -362,6 +363,7 @@ private:
 
     unsigned int m_device = 0;
     bool m_muted = false;
+    float m_master = 1.0f;
     using Clip = std::vector<float>;
     std::array<std::vector<Clip>, static_cast<size_t>(Sound::Count)> m_buffers;
     int m_loadedFromFiles = 0;

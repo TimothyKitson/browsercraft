@@ -29,6 +29,7 @@ uniform int uPbrEnabled;
 // Light floor for a world with no sun. The Nether is lit well above
 // pitch black even where nothing is burning.
 uniform float uAmbient;
+uniform float uGamma;
 
 out vec4 FragColor;
 
@@ -155,6 +156,7 @@ void main()
     // Baked voxel lighting: sunlight dims at night, torch light never does.
     float sky = vSkyLight * uDaylight;
     float level = max(sky, vBlockLight);
+    level = mix(level, 1.0 - pow(1.0 - level, 3.0), clamp(uGamma, 0.0, 1.0) * 0.6);
     float brightness = mix(uAmbient, 1.0, level);
 
     vec3 albedo = texel.rgb;
