@@ -22205,7 +22205,9 @@ void Application::renderHand()
 
 void Application::liftLid(const glm::ivec3& at)
 {
-    if (!m_world || !isChestFamily(m_world->getBlock(at.x, at.y, at.z))) return;
+    if (!m_world) return;
+    const BlockId here = m_world->getBlock(at.x, at.y, at.z);
+    if (!isChestFamily(here) && !isShulkerBox(here)) return;
     Lid& lid = m_lids[{ at.x, at.y, at.z }];
     lid.target = true;
     lid.linger = 0.0f;
@@ -22267,7 +22269,8 @@ void Application::updateLids(float deltaTime)
     {
         const auto& [x, y, z] = it->first;
         Lid& lid = it->second;
-        const bool gone = !isChestFamily(m_world->getBlock(x, y, z));
+        const BlockId here = m_world->getBlock(x, y, z);
+        const bool gone = !isChestFamily(here) && !isShulkerBox(here);
         const float before = lid.open;
         lid.open = std::clamp(lid.open + (lid.target && !gone ? deltaTime : -deltaTime) * 2.0f, 0.0f, 1.0f);
         if (lid.target && !gone && !lid.lifted)
@@ -22317,6 +22320,14 @@ void Application::renderLids(Shader& shader)
     {
         const auto& [x, y, z] = at;
         const BlockId id = m_world->getBlock(x, y, z);
+        if (isShulkerBox(id))
+        {
+            const float sky = static_cast<float>(m_world->skyLight(x, y + 1, z)) / 15.0f;
+            const float block = static_cast<float>(m_world->blockLightAt(x, y + 1, z)) / 15.0f;
+            appendShulkerLid(id, glm::vec3(static_cast<float>(x), static_cast<float>(y), static_cast<float>(z)), lid.open, sky, block,
+                             m_lidVertices);
+            continue;
+        }
         if (!isChestFamily(id)) continue;
         const float sky = static_cast<float>(m_world->skyLight(x, y, z)) / 15.0f;
         const float block = static_cast<float>(m_world->blockLightAt(x, y, z)) / 15.0f;

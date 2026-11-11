@@ -2584,6 +2584,31 @@ void appendChestLid(BlockId id, const glm::vec3& cell, float lift, float sky, fl
     }
 }
 
+void appendShulkerLid(BlockId id, const glm::vec3& cell, float lift, float sky, float block, std::vector<float>& out)
+{
+    static const MeshSnapshot empty;
+    if (!isShulkerBox(id)) return;
+    const BlockInfo& info = blockInfo(id);
+    const PartFace side{ info.tileSide, 0.0f, 0.0f, 16.0f, 8.0f };
+    const PartFace faces[6] = { side, side, { info.tileTop, 0.0f, 0.0f, 16.0f, 16.0f }, { info.tileBottom, 0.0f, 0.0f, 16.0f, 16.0f },
+                                side, side };
+    std::vector<float> local;
+    emitPart(empty, 0, 1, 0, id, glm::vec3(0.0f, 0.5f, 0.0f), glm::vec3(1.0f), faces, local);
+    const float angle = lift * 4.712389f;
+    const float c = std::cos(angle), s = std::sin(angle);
+    constexpr size_t STRIDE = 10;
+    for (size_t i = 0; i + STRIDE <= local.size(); i += STRIDE)
+    {
+        const float x = local[i] - 0.5f, z = local[i + 2] - 0.5f;
+        out.push_back(cell.x + 0.5f + x * c - z * s);
+        out.push_back(cell.y + local[i + 1] - 1.0f + lift * 0.5f);
+        out.push_back(cell.z + 0.5f + x * s + z * c);
+        for (size_t k = 3; k < STRIDE; ++k) out.push_back(local[i + k]);
+        out[out.size() - STRIDE + 6] = sky;
+        out[out.size() - STRIDE + 7] = block;
+    }
+}
+
 void appendBellBody(BlockId id, const glm::vec3& cell, float swingX, float swingZ, float sky, float block, std::vector<float>& out)
 {
     static const MeshSnapshot empty;
@@ -2637,6 +2662,23 @@ void buildChunkMesh(const MeshSnapshot& snapshot, MeshResult& out)
                 }
                 if (!isVisible(id)) continue;
 
+                if (isShulkerBox(id) && lidLifted(snapshot.pos.x * Chunk::SX + lx, y, snapshot.pos.z * Chunk::SZ + lz))
+                {
+                    const BlockInfo& info = blockInfo(id);
+                    const PartFace side{ info.tileSide, 0.0f, 8.0f, 16.0f, 16.0f };
+                    const PartFace faces[6] = { side, side, { info.tileBottom, 0.0f, 0.0f, 16.0f, 16.0f },
+                                                { info.tileBottom, 0.0f, 0.0f, 16.0f, 16.0f }, side, side };
+                    const size_t from = out.opaqueVertices.size();
+                    emitPart(snapshot, lx, y, lz, id, glm::vec3(0.0f), glm::vec3(1.0f, 0.5f, 1.0f), faces, out.opaqueVertices);
+                    const float sky = static_cast<float>(snapshot.skyLight(lx, y + 1, lz)) / 15.0f;
+                    const float glow = static_cast<float>(snapshot.blockLight(lx, y + 1, lz)) / 15.0f;
+                    for (size_t v = from; v + 10 <= out.opaqueVertices.size(); v += 10)
+                    {
+                        out.opaqueVertices[v + 6] = sky;
+                        out.opaqueVertices[v + 7] = glow;
+                    }
+                    continue;
+                }
                 if (isLeverBlock(id))
                 {
                     emitLever(snapshot, lx, y, lz, id, out.opaqueVertices);

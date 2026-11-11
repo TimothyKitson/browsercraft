@@ -264,6 +264,16 @@ namespace
         swungZ /= static_cast<float>(std::max<size_t>(1, swung.size() / 10));
         check(!still.empty() && std::fabs(stillLow - 4.0f / 16.0f) < 0.001f, "a bell hangs with its lip four pixels up");
         check(swungZ > 0.53f, "and a ring pushed south swings it south");
+        std::vector<float> shulker;
+        appendShulkerLid(Blocks::ShulkerBox, glm::vec3(0.0f), 1.0f, 1.0f, 0.0f, shulker);
+        float shulkerLow = 99.0f, shulkerHigh = -99.0f;
+        for (size_t i = 1; i < shulker.size(); i += 10)
+        {
+            shulkerLow = std::min(shulkerLow, shulker[i]);
+            shulkerHigh = std::max(shulkerHigh, shulker[i]);
+        }
+        check(!shulker.empty() && std::fabs(shulkerLow - 1.0f) < 0.001f && std::fabs(shulkerHigh - 1.5f) < 0.001f,
+              "an open shulker box lifts its lid half a block");
         setLidLifted(1, 2, 3, true);
         check(lidLifted(1, 2, 3) && !lidLifted(1, 2, 4), "a lifted lid is remembered by its cell");
         clearLiftedLids();
