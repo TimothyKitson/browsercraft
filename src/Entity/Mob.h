@@ -611,6 +611,10 @@ private:
     float m_mirrorCollapse = 0.0f;
     glm::vec3 m_mirrors[2][4] = {};
     float m_zombifyTime = 0.0f;
+    float m_fallTopY = 0.0f;
+    float m_air = 15.0f;
+    float m_hazardTimer = 0.0f;
+    bool m_fallTracked = false;
     float m_panicTimer = 0.0f;
     float m_burnTimer = 0.0f;
     float m_burnTick = 0.0f;

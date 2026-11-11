@@ -940,6 +940,48 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
     // is going to get.
     if (afloat || onRail || hovering) m_onGround = true;
 
+    if (!t.inanimate && alive())
+    {
+        const MobId k = m_type;
+        const bool flier = t.hoverHeight > 0.0f || hovering || k == MobId::Bat || k == MobId::Bee || k == MobId::Parrot ||
+                           k == MobId::Phantom || k == MobId::Ghast || k == MobId::Blaze || k == MobId::Vex || k == MobId::Allay ||
+                           k == MobId::Wither || k == MobId::EnderDragon;
+        const bool lands = !(k == MobId::Chicken || k == MobId::Cat || k == MobId::Ocelot || k == MobId::IronGolem ||
+                             k == MobId::Slime || k == MobId::SlimeSmall || k == MobId::MagmaCube || k == MobId::Shulker || k == MobId::Giant);
+        if (!m_fallTracked || afloat || onRail || flier || t.aquatic) m_fallTopY = m_position.y;
+        m_fallTracked = true;
+        if (!wasOnGround && m_onGround && lands && !flier && !t.aquatic)
+        {
+            const float fell = m_fallTopY - m_position.y;
+            if (fell > 3.0f) damage(static_cast<int>(fell - 3.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+        }
+        if (m_onGround) m_fallTopY = m_position.y;
+        else m_fallTopY = std::max(m_fallTopY, m_position.y);
+
+        const int bx = static_cast<int>(std::floor(m_position.x)), bz = static_cast<int>(std::floor(m_position.z));
+        const BlockId feet = world.getBlock(bx, static_cast<int>(std::floor(m_position.y + 0.1f)), bz);
+        const BlockId eye = world.getBlock(bx, static_cast<int>(std::floor(m_position.y + height() * 0.85f)), bz);
+        const bool undead = k == MobId::Zombie || k == MobId::Husk || k == MobId::Drowned || k == MobId::ZombieVillager ||
+                            k == MobId::ZombiePigman || k == MobId::Skeleton || k == MobId::Stray || k == MobId::WitherSkeleton ||
+                            k == MobId::Bogged || k == MobId::Zoglin || k == MobId::SkeletonHorse || k == MobId::ZombieHorse ||
+                            k == MobId::Giant || k == MobId::IronGolem || k == MobId::Turtle || k == MobId::Frog ||
+                            k == MobId::Axolotl || k == MobId::Tadpole || flier;
+        if (!t.aquatic && !undead && isWater(eye)) m_air -= deltaTime;
+        else m_air = 15.0f;
+        m_hazardTimer += deltaTime;
+        if (m_hazardTimer >= 0.5f)
+        {
+            m_hazardTimer = 0.0f;
+            if (m_air <= 0.0f) damage(1, glm::vec3(0.0f));
+            if (isLava(feet) && !t.fireproof)
+            {
+                ignite(15.0f);
+                damage(2, glm::vec3(0.0f, 0.5f, 0.0f));
+            }
+            if (isOpaque(eye) && isSolid(eye) && !flier) damage(1, glm::vec3(0.0f));
+        }
+    }
+
     // Blocked flat against something. Turning until the way is clear is
     // what stops a mob grinding into the same wall for as long as it can
     // see you; a random new heading only worked by accident.
