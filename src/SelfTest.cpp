@@ -225,6 +225,42 @@ namespace
         check(inventory.slot(0).count == 32, "and comes back to the hotbar");
     }
 
+    void testChestLids()
+    {
+        section("chest lids open");
+        auto highest = [](const std::vector<float>& v) {
+            float top = -1.0f;
+            for (size_t i = 1; i < v.size(); i += 10) top = std::max(top, v[i]);
+            return top;
+        };
+        auto towards = [](const std::vector<float>& v, int axis) {
+            float lo = 99.0f, hi = -99.0f;
+            for (size_t i = static_cast<size_t>(axis); i < v.size(); i += 10)
+            {
+                lo = std::min(lo, v[i]);
+                hi = std::max(hi, v[i]);
+            }
+            return std::make_pair(lo, hi);
+        };
+        std::vector<float> shut, open;
+        appendChestLid(chestOf(0, 0, 0), glm::vec3(0.0f), 0.0f, 1.0f, 0.0f, shut);
+        appendChestLid(chestOf(0, 0, 0), glm::vec3(0.0f), 1.0f, 1.0f, 0.0f, open);
+        check(!shut.empty() && std::fabs(highest(shut) - 14.0f / 16.0f) < 0.001f, "a shut lid sits fourteen pixels up");
+        check(std::fabs(highest(open) - 24.0f / 16.0f) < 0.01f, "an open lid stands up from its hinge at the back, latch on top");
+        check(towards(open, 2).first > 13.0f / 16.0f - 0.01f, "and leans over the back of the chest, away from its front");
+        std::vector<float> east;
+        appendChestLid(chestOf(0, 1, 0), glm::vec3(0.0f), 1.0f, 1.0f, 0.0f, east);
+        check(towards(east, 0).second < 3.0f / 16.0f + 0.01f, "a chest facing east hinges on its west side");
+        std::vector<float> lit;
+        appendChestLid(chestOf(2, 0, 0), glm::vec3(5.0f, 6.0f, 7.0f), 0.5f, 0.25f, 0.75f, lit);
+        check(!lit.empty() && lit[6] == 0.25f && lit[7] == 0.75f && lit[0] >= 5.0f && lit[0] <= 6.0f,
+              "an ender chest lid is placed at its cell and lit by it");
+        setLidLifted(1, 2, 3, true);
+        check(lidLifted(1, 2, 3) && !lidLifted(1, 2, 4), "a lifted lid is remembered by its cell");
+        clearLiftedLids();
+        check(!lidLifted(1, 2, 3), "and forgotten when the world goes");
+    }
+
     void testInventoryShortcuts()
     {
         section("inventory: drag, double-click, number keys and Q");
@@ -17429,6 +17465,7 @@ int runSelfTest()
     testClicks();
     testQuickMove();
     testInventoryShortcuts();
+    testChestLids();
     testCrafting();
     testKeyBindings();
     testPlayerAnimation();

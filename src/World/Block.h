@@ -1531,6 +1531,9 @@ inline bool chestPartnerStep(BlockId id, int& dx, int& dz)
 }
 void setChristmasChests(bool on);
 bool christmasChests();
+void setLidLifted(int x, int y, int z, bool lifted);
+bool lidLifted(int x, int y, int z);
+void clearLiftedLids();
 inline bool isShulkerBox(BlockId id)
 {
     return id == Blocks::ShulkerBox || (id >= Blocks::ShulkerBoxFirst && id <= Blocks::ShulkerBoxLast);

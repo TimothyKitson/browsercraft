@@ -1415,6 +1415,17 @@ namespace
         const float x1 = half == 1 ? 16.0f : 15.0f;
         const float z0 = 1.0f, z1 = 15.0f, top = 14.0f;
         PartFace faces[6];
+        if (lidLifted(snap.pos.x * Chunk::SX + lx, y, snap.pos.z * Chunk::SZ + lz))
+        {
+            faces[0] = PartFace{ half == 1 ? -1 : base + 2, 16.0f - z0, 6.0f, 16.0f - z1, 16.0f };
+            faces[1] = PartFace{ half == 2 ? -1 : base + 2, z0, 6.0f, z1, 16.0f };
+            faces[2] = PartFace{ base + 4, 16.0f - x0, 16.0f - z0, 16.0f - x1, 16.0f - z1 };
+            faces[3] = PartFace{ base + 4, x0, z0, x1, z1 };
+            faces[4] = PartFace{ base + 3, x0, 6.0f, x1, 16.0f };
+            faces[5] = PartFace{ base + 1, 16.0f - x0, 6.0f, 16.0f - x1, 16.0f };
+            emitRotated(snap, lx, y, lz, id, state.facing, x0, 0.0f, z0, x1, 10.0f, z1, faces, out);
+            return;
+        }
         faces[0] = PartFace{ half == 1 ? -1 : base + 2, 16.0f - z0, 2.0f, 16.0f - z1, 16.0f };
         faces[1] = PartFace{ half == 2 ? -1 : base + 2, z0, 2.0f, z1, 16.0f };
         faces[2] = PartFace{ base + 0, 16.0f - x0, 16.0f - z0, 16.0f - x1, 16.0f - z1 };
@@ -2511,6 +2522,58 @@ namespace
                 pushVertex(out, p3.x, p3.y, p3.z, uv.u0, uv.vTop, shade, sky, block, tagOf(CROSS_FACE, id, true));
             }
         }
+    }
+}
+
+void appendChestLid(BlockId id, const glm::vec3& cell, float lift, float sky, float block, std::vector<float>& out)
+{
+    static const MeshSnapshot empty;
+    const ChestState state = chestState(id);
+    const int set = state.kind == 2 ? 3 : (christmasChests() ? 2 : state.kind);
+    const int half = state.kind == 2 ? 0 : state.half;
+    const int base = Tiles::ChestTileFirst + (set * 3 + half) * 5;
+    const float x0 = half == 2 ? 0.0f : 1.0f;
+    const float x1 = half == 1 ? 16.0f : 15.0f;
+    const float z0 = 1.0f, z1 = 15.0f;
+    std::vector<float> local;
+    PartFace faces[6];
+    faces[0] = PartFace{ half == 1 ? -1 : base + 2, 16.0f - z0, 2.0f, 16.0f - z1, 7.0f };
+    faces[1] = PartFace{ half == 2 ? -1 : base + 2, z0, 2.0f, z1, 7.0f };
+    faces[2] = PartFace{ base + 0, 16.0f - x0, 16.0f - z0, 16.0f - x1, 16.0f - z1 };
+    faces[3] = PartFace{ base + 4, x0, z0, x1, z1 };
+    faces[4] = PartFace{ base + 3, x0, 2.0f, x1, 7.0f };
+    faces[5] = PartFace{ base + 1, 16.0f - x0, 2.0f, 16.0f - x1, 7.0f };
+    emitRotated(empty, 0, 0, 0, id, 0, x0, 9.0f, z0, x1, 14.0f, z1, faces, local);
+    const float latchX0 = half == 0 ? 7.0f : (half == 1 ? 15.0f : 0.0f);
+    const float latchX1 = half == 0 ? 9.0f : (half == 1 ? 16.0f : 1.0f);
+    PartFace latch[6];
+    for (int k = 0; k < 6; ++k) latch[k] = PartFace{ base + 1, 0.0f, 0.0f, 2.0f, 2.0f };
+    if (half == 1) latch[0].tile = -1;
+    if (half == 2) latch[1].tile = -1;
+    emitRotated(empty, 0, 0, 0, id, 0, latchX0, 7.0f, 0.0f, latchX1, 11.0f, z0, latch, local);
+
+    const float angle = (1.0f - (1.0f - lift) * (1.0f - lift) * (1.0f - lift)) * 1.5707963f;
+    const float c = std::cos(angle), s = std::sin(angle);
+    const glm::vec3 pivot(0.0f, 9.0f / 16.0f, 15.0f / 16.0f);
+    constexpr size_t STRIDE = 10;
+    for (size_t i = 0; i + STRIDE <= local.size(); i += STRIDE)
+    {
+        const glm::vec3 q = glm::vec3(local[i], local[i + 1], local[i + 2]) - pivot;
+        const glm::vec3 p = pivot + glm::vec3(q.x, q.y * c - q.z * s, q.y * s + q.z * c);
+        float wx = p.x, wz = p.z;
+        switch (state.facing & 3)
+        {
+            case 1: wx = 1.0f - p.z; wz = p.x; break;
+            case 2: wx = 1.0f - p.x; wz = 1.0f - p.z; break;
+            case 3: wx = p.z; wz = 1.0f - p.x; break;
+            default: break;
+        }
+        out.push_back(cell.x + wx);
+        out.push_back(cell.y + p.y);
+        out.push_back(cell.z + wz);
+        for (size_t k = 3; k < STRIDE; ++k) out.push_back(local[i + k]);
+        out[out.size() - STRIDE + 6] = sky;
+        out[out.size() - STRIDE + 7] = block;
     }
 }
 

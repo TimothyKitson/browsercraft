@@ -19,6 +19,7 @@
 #include "Game/Enchanting.h"
 #include "Game/Composting.h"
 #include "World/WallFacing.h"
+#include "World/ChunkMesher.h"
 #include "Game/EndPortal.h"
 #include "Core/Packs.h"
 #include "Game/Redstone.h"
@@ -806,6 +807,8 @@ void Application::quitToTitle()
         saveLevel();
         m_world.reset();
     }
+    m_lids.clear();
+    clearLiftedLids();
     m_chatOpen = m_signOpen = m_bookOpen = m_advOpen = m_editorOpen = false;
     m_chatDraft.clear();
     m_drops.clear();
@@ -8754,6 +8757,8 @@ void Application::applyMenuAction()
         case MenuAction::DeleteWorld:
             // Hardcore: the run is over, the world goes with it.
             m_world.reset();
+            m_lids.clear();
+            clearLiftedLids();
             deleteSavedWorld();
             m_drops.clear();
             m_orbs.clear();
@@ -20011,6 +20016,7 @@ void Application::renderWorldShaded()
     queueBeams();
     m_beams.render(world);
     m_books.render(world, *m_world);
+    renderLids(world);
     m_fangRenderer.render(world, *m_world, m_fangs, m_fangClock / Fangs::TICK);
     m_paintingRenderer.render(world, *m_world, m_paintings.near(m_camera.position, 96.0f));
     m_standRenderer.render(world, *m_world, standsHere(96.0f));
@@ -20161,6 +20167,7 @@ void Application::renderWorld()
     queueBeams();
     m_beams.render(m_chunkShader);
     m_books.render(m_chunkShader, *m_world);
+    renderLids(m_chunkShader);
     m_fangRenderer.render(m_chunkShader, *m_world, m_fangs, m_fangClock / Fangs::TICK);
     m_paintingRenderer.render(m_chunkShader, *m_world, m_paintings.near(m_camera.position, 96.0f));
     m_standRenderer.render(m_chunkShader, *m_world, standsHere(96.0f));
@@ -22193,6 +22200,82 @@ void Application::renderHand()
         m_offhandItem.renderGlint(m_chunkShader, glintTexture(false), glintShift());
 }
 
+void Application::liftLid(const glm::ivec3& at)
+{
+    if (!m_world || !isChestFamily(m_world->getBlock(at.x, at.y, at.z))) return;
+    Lid& lid = m_lids[{ at.x, at.y, at.z }];
+    lid.target = true;
+    lid.linger = 0.0f;
+}
+
+void Application::lowerLids()
+{
+    for (auto& [at, lid] : m_lids)
+        lid.target = false;
+}
+
+void Application::updateLids(float deltaTime)
+{
+    if (!m_world) return;
+    for (auto it = m_lids.begin(); it != m_lids.end();)
+    {
+        const auto& [x, y, z] = it->first;
+        Lid& lid = it->second;
+        const bool gone = !isChestFamily(m_world->getBlock(x, y, z));
+        const float before = lid.open;
+        lid.open = std::clamp(lid.open + (lid.target && !gone ? deltaTime : -deltaTime) * 2.0f, 0.0f, 1.0f);
+        if (lid.target && !gone && !lid.lifted)
+        {
+            lid.lifted = true;
+            setLidLifted(x, y, z, true);
+            m_world->remeshChunk(World::floorDiv(x, Chunk::SX), World::floorDiv(z, Chunk::SZ));
+        }
+        if (before > 0.6f && lid.open <= 0.6f && !lid.target && !gone) m_audio.play(Sound::DigWood, 0.4f, 1.0f);
+        if ((lid.open <= 0.0f && !lid.target) || gone)
+        {
+            if (lid.lifted)
+            {
+                lid.lifted = false;
+                setLidLifted(x, y, z, false);
+                m_world->remeshChunk(World::floorDiv(x, Chunk::SX), World::floorDiv(z, Chunk::SZ));
+                lid.linger = gone ? 0.0f : 0.15f;
+            }
+            lid.linger -= deltaTime;
+            if (lid.linger <= 0.0f)
+            {
+                it = m_lids.erase(it);
+                continue;
+            }
+        }
+        ++it;
+    }
+}
+
+void Application::renderLids(Shader& shader)
+{
+    if (m_lids.empty() || !m_world) return;
+    m_lidVertices.clear();
+    for (const auto& [at, lid] : m_lids)
+    {
+        const auto& [x, y, z] = at;
+        const BlockId id = m_world->getBlock(x, y, z);
+        if (!isChestFamily(id)) continue;
+        const float sky = static_cast<float>(m_world->skyLight(x, y, z)) / 15.0f;
+        const float block = static_cast<float>(m_world->blockLightAt(x, y, z)) / 15.0f;
+        appendChestLid(id, glm::vec3(static_cast<float>(x), static_cast<float>(y), static_cast<float>(z)), lid.open, sky, block,
+                       m_lidVertices);
+    }
+    if (m_lidVertices.empty()) return;
+    static const std::vector<int> LAYOUT = { 3, 2, 1, 1, 1, 1, 1 };
+    shader.bind();
+    shader.setVec3("uChunkOffset", glm::vec3(0.0f));
+    m_atlas.bind(0, 1, 2);
+    glDisable(GL_CULL_FACE);
+    m_lidMesh.upload(m_lidVertices, LAYOUT, true);
+    m_lidMesh.draw(GL_TRIANGLES);
+    glEnable(GL_CULL_FACE);
+}
+
 // -------------------------------------------------------------- players ---
 
 Camera Application::viewCamera() const
@@ -23066,6 +23149,7 @@ void Application::updateWorldAround(float deltaTime)
     tickHives(deltaTime);
     tickBreathClouds(deltaTime);
     m_books.update(deltaTime, *m_world, m_player.position);
+    updateLids(deltaTime);
 
     m_jobSiteTimer += deltaTime;
     if (m_jobSiteTimer >= 2.0f)

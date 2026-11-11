@@ -1,3 +1,6 @@
+#include <tuple>
+#include <set>
+#include <mutex>
 #include "Block.h"
 #include <algorithm>
 #include <string>
@@ -6212,6 +6215,31 @@ namespace
 
 void setChristmasChests(bool on) { g_christmasChests = on; }
 bool christmasChests() { return g_christmasChests; }
+
+namespace
+{
+    std::mutex g_lidMutex;
+    std::set<std::tuple<int, int, int>> g_liftedLids;
+}
+
+void setLidLifted(int x, int y, int z, bool lifted)
+{
+    std::lock_guard<std::mutex> lock(g_lidMutex);
+    if (lifted) g_liftedLids.insert({ x, y, z });
+    else g_liftedLids.erase({ x, y, z });
+}
+
+bool lidLifted(int x, int y, int z)
+{
+    std::lock_guard<std::mutex> lock(g_lidMutex);
+    return !g_liftedLids.empty() && g_liftedLids.count({ x, y, z }) != 0;
+}
+
+void clearLiftedLids()
+{
+    std::lock_guard<std::mutex> lock(g_lidMutex);
+    g_liftedLids.clear();
+}
 
 CopperForm copperForm(BlockId id)
 {

@@ -3811,6 +3811,7 @@ void Application::stowHorse()
 
 void Application::closeInventory()
 {
+    lowerLids();
     m_dragging = false;
     m_dragSlots.clear();
     m_recipeGhost = -1;
@@ -4506,6 +4507,7 @@ void Application::openChest(const glm::ivec3& block)
 
     if (isEnderChest(here))
     {
+        liftLid(block);
         m_chestEnder = true;
         const Chests::Contents& held = m_chests.ender();
         for (int i = 0; i < Inventory::CHEST_SLOTS; ++i)
@@ -4531,6 +4533,8 @@ void Application::openChest(const glm::ivec3& block)
 
     fillVillageChest(m_chestBlock);
     setTrappedOpen(m_chestBlock, true);
+    liftLid(m_chestBlock);
+    if (m_chestDouble) liftLid(m_chestPartner);
 
     const Chests::Contents& held = m_chests.at(m_chestBlock);
     for (int i = 0; i < Inventory::CHEST_SLOTS; ++i)

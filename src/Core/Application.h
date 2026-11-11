@@ -80,6 +80,7 @@
 #include <memory>
 #include <unordered_map>
 #include <map>
+#include <tuple>
 #include <functional>
 #include "Game/Maps.h"
 #include "Game/Sculk.h"
@@ -344,6 +345,20 @@ private:
     int m_biomeColourDimension = -1;
     void updateBiomeColours(float deltaTime);
     BookRenderer m_books;
+    struct Lid
+    {
+        float open = 0.0f;
+        float linger = 0.0f;
+        bool target = false;
+        bool lifted = false;
+    };
+    std::map<std::tuple<int, int, int>, Lid> m_lids;
+    Mesh m_lidMesh;
+    std::vector<float> m_lidVertices;
+    void liftLid(const glm::ivec3& at);
+    void lowerLids();
+    void updateLids(float deltaTime);
+    void renderLids(Shader& shader);
     BannerRenderer m_bannerRenderer;
     ShadowRenderer m_shadows;
     void castShadows(const glm::mat4& view, const glm::mat4& projection);

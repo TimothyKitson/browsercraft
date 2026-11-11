@@ -67,3 +67,4 @@ struct MeshResult
 
 // Pure CPU work -- safe to run on a worker thread.
 void buildChunkMesh(const MeshSnapshot& snapshot, MeshResult& out);
+void appendChestLid(BlockId id, const glm::vec3& cell, float lift, float sky, float block, std::vector<float>& out);
