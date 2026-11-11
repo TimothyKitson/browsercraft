@@ -57,6 +57,7 @@ namespace Chat
         Enchant,
         Locate,
         Damage,
+        ScoreboardCommand,
     };
 
     struct Command
@@ -78,6 +79,7 @@ namespace Chat
         double value2 = 0.0;
         glm::vec3 position2{ 0.0f };
         glm::vec3 position3{ 0.0f };
+        std::vector<std::string> args;
     };
 
     // `cheats` decides whether anything beyond chat and /help is allowed.

@@ -456,7 +456,7 @@ Chat::Command Chat::parse(const std::string& line, bool cheats, const glm::vec3&
     {
         out.kind = Kind::Help;
         out.text = cheats
-            ? "/gamemode /time /tp /give /kill /seed /say /me /msg /list /tellraw /title /setblock /fill /clone /summon /effect /enchant /xp /clear /weather /difficulty /defaultgamemode /setworldspawn /spawnpoint /locate /damage /worldborder /gamerule /help"
+            ? "/gamemode /time /tp /give /kill /seed /say /me /msg /list /tellraw /title /setblock /fill /clone /summon /effect /enchant /xp /clear /weather /difficulty /defaultgamemode /setworldspawn /spawnpoint /locate /damage /scoreboard /team /tag /trigger /worldborder /gamerule /help"
             : "/help  -  this world was made without cheats, so the rest are off";
         return out;
     }
@@ -949,6 +949,14 @@ Chat::Command Chat::parse(const std::string& line, bool cheats, const glm::vec3&
             if (out.text.rfind("minecraft:", 0) == 0) out.text = out.text.substr(10);
             return out;
         }
+        if (name == "scoreboard" || name == "team" || name == "tag" || name == "trigger")
+        {
+            if (!cheats && name != "trigger") return deny(name);
+            out.kind = Kind::ScoreboardCommand;
+            out.sub = name;
+            out.args.assign(words.begin() + 1, words.end());
+            return out;
+        }
         if (name == "damage")
         {
             if (!cheats) return deny(name);
@@ -1039,7 +1047,8 @@ std::vector<std::string> Chat::suggest(const std::string& draft)
     static const std::vector<std::string> COMMANDS = {
         "clear", "clone", "damage", "defaultgamemode", "difficulty", "effect", "enchant", "experience", "fill", "gamemode",
         "gamerule", "give", "help", "kill", "list", "locate", "me", "msg", "say", "seed", "setblock", "setworldspawn",
-        "spawnpoint", "summon", "tell", "tellraw", "time", "title", "tp", "w", "weather", "worldborder", "xp" };
+        "spawnpoint", "summon", "tell", "tellraw", "time", "title", "tp", "w", "weather", "worldborder", "xp",
+        "scoreboard", "team", "tag", "trigger" };
     static std::vector<std::string> items, blocks, mobs, effects, enchants, rules, biomes;
     if (items.empty())
     {
@@ -1111,6 +1120,14 @@ std::vector<std::string> Chat::suggest(const std::string& draft)
     else if (name == "gamerule" && index == 2) use({ "false", "true" });
     else if (name == "title" && index == 2) use({ "actionbar", "clear", "reset", "subtitle", "title" });
     else if (name == "worldborder" && index == 1) use({ "add", "center", "damage", "get", "set", "warning" });
+    else if (name == "scoreboard" && index == 1) use({ "objectives", "players" });
+    else if (name == "scoreboard" && index == 2 && sub == "objectives") use({ "add", "list", "modify", "remove", "setdisplay" });
+    else if (name == "scoreboard" && index == 2 && sub == "players") use({ "add", "enable", "get", "list", "operation", "remove", "reset", "set" });
+    else if (name == "scoreboard" && index == 4 && words.size() > 2 && lower(words[2]) == "add") use({ "air", "armor", "deathCount", "dummy", "food", "health", "level", "playerKillCount", "totalKillCount", "trigger", "xp" });
+    else if (name == "scoreboard" && index == 3 && words.size() > 2 && lower(words[2]) == "setdisplay") use({ "below_name", "list", "sidebar" });
+    else if (name == "team" && index == 1) use({ "add", "empty", "join", "leave", "list", "modify", "remove" });
+    else if (name == "team" && index == 3 && sub == "modify") use({ "collisionRule", "color", "deathMessageVisibility", "displayName", "friendlyFire", "nametagVisibility", "prefix", "seeFriendlyInvisibles", "suffix" });
+    else if (name == "tag" && index == 2) use({ "add", "list", "remove" });
     if (!pool) return out;
     std::string bare = word;
     if (bare.rfind("minecraft:", 0) == 0) bare = bare.substr(10);

@@ -62,6 +62,7 @@
 #include "Entity/HeldItem.h"
 #include "Game/Chat.h"
 #include "Game/GameRules.h"
+#include "Game/Scoreboard.h"
 #include "Game/Beacon.h"
 #include "Game/Grindstone.h"
 #include "Game/Saplings.h"
@@ -112,7 +113,8 @@ enum class Screen
     Accessibility,
     Language,
     LockDifficulty,
-    GameRules
+    GameRules,
+    EndPoem
 };
 
 // Menu buttons are drawn and hit-tested in the same pass, so a click
@@ -884,11 +886,19 @@ private:
     uint32_t m_titleShownAt = 0;
     uint32_t m_actionbarShownAt = 0;
     void renderTitles();
+    void renderEndPoem();
+    std::vector<std::string> endPoemLines() const;
+    float m_poemScroll = 0.0f;
+    uint32_t m_poemClock = 0;
+    bool m_seenEndPoem = false;
     const char* m_blastCause = "explosion";
     void dropStalactites(const glm::ivec3& from);
     void crushUnder(const glm::ivec3& at, int hurt, const char* cause);
     bool locateFor(const std::string& kind, const std::string& what, std::string& output);
     GameRules::Set m_rules;
+    Scoreboard m_scoreboard;
+    std::string scoreHolder() const { return m_playerName.empty() ? std::string("Player") : m_playerName; }
+    void renderSidebar();
     std::string m_deathMessage;
     std::string deathMessageFor() const;
     int m_lastAttackKind = 0;

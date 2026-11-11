@@ -68,6 +68,7 @@
 #include "Game/VillageLoot.h"
 #include "Game/StructureLoot.h"
 #include "Game/Enchanting.h"
+#include "Game/Scoreboard.h"
 #include "Game/Trading.h"
 #include "Game/EndPortal.h"
 #include "Game/Weather.h"
@@ -5294,6 +5295,48 @@ namespace
               copy.damagePerBlock == 0.5 && copy.warningBlocks == 7 && copy.stage() == WorldBorder::Stage::Growing, "it is saved with the world, mid-move included");
         check(!copy.load("1,2,3") && !copy.load("a,b,c,d,e,f,g,h,i"), "and a damaged line is refused");
         check(border.blocks(100.5, -20.5, 0.6) == false && border.blocks(103.0, -20.5, 0.6), "it only walls in what is up against it");
+
+        section("scoreboard: objectives, scores, teams, tags and triggers");
+        {
+            Scoreboard board;
+            std::string said;
+            auto run = [&](const std::string& line) {
+                const Chat::Command command = Chat::parse(line, true);
+                return command.kind == Chat::Kind::ScoreboardCommand && board.command(command.sub, command.args, "Alex", said);
+            };
+            check(run("/scoreboard objectives add kills totalKillCount \"Mob Kills\"") && board.objective("kills") &&
+                  board.objective("kills")->displayName == "Mob Kills", "an objective is made with its criterion and display name");
+            check(!run("/scoreboard objectives add kills dummy"), "and a second of the same name is refused");
+            check(!run("/scoreboard objectives add bad nonsense"), "as is a criterion that does not exist");
+            check(run("/scoreboard objectives add points dummy") && run("/scoreboard players set @s points 5") && board.score("points", "Alex") == 5,
+                  "scores are set on yourself");
+            check(run("/scoreboard players add #pool points 7") && run("/scoreboard players operation @s points += #pool points") &&
+                  board.score("points", "Alex") == 12, "fake players hold numbers and operations combine them");
+            check(run("/scoreboard players operation @s points %= #pool points") && board.score("points", "Alex") == 5, "modulo works like Minecraft's");
+            board.addToCriterion("totalKillCount", "Alex", 3);
+            check(board.score("kills", "Alex") == 3, "kill counts go up by themselves");
+            check(run("/scoreboard objectives setdisplay sidebar points") && board.sidebar().size() == 1 && board.sidebar()[0].first == "Alex",
+                  "the sidebar shows real holders and hides the #fake ones");
+            check(run("/scoreboard objectives add hp health") && !run("/scoreboard players set @s hp 3"), "health is read-only");
+            Scoreboard::Live live;
+            live.health = 13;
+            board.refreshLive("Alex", live);
+            check(board.score("hp", "Alex") == 13, "and follows the player");
+            check(run("/team add red") && run("/team modify red prefix [R] ") && run("/team join red @s") && board.teamOf("Alex") &&
+                  board.teamOf("Alex")->prefix == "[R]", "teams take members and a prefix");
+            check(run("/team leave @s") && !board.teamOf("Alex"), "and let them go");
+            check(run("/tag @s add builder") && board.tagged("builder") && !run("/tag @s add builder") && run("/tag @s remove builder") &&
+                  !board.tagged("builder"), "tags go on and come off");
+            check(run("/scoreboard objectives add vote trigger") && !run("/trigger vote") && run("/scoreboard players enable @s vote") &&
+                  run("/trigger vote add 4") && board.score("vote", "Alex") == 4 && !run("/trigger vote"),
+                  "a trigger fires once each time it is enabled");
+            Scoreboard copy;
+            copy.load(board.save());
+            check(copy.score("points", "Alex") == 5 && copy.score("points", "#pool") == 7 && copy.displayed("sidebar") &&
+                  copy.objective("kills")->displayName == "Mob Kills", "everything is saved with the world");
+            check(Chat::parse("/scoreboard objectives list", false).kind == Chat::Kind::Denied && Chat::parse("/trigger vote", false).kind == Chat::Kind::ScoreboardCommand,
+                  "/scoreboard is a cheat but /trigger is for everyone");
+        }
 
         section("chat: the rest of the vanilla commands");
         {

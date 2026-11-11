@@ -20,6 +20,7 @@
 #include "Game/Composting.h"
 #include "World/WallFacing.h"
 #include "Game/EndPortal.h"
+#include "Core/Packs.h"
 #include "Game/Redstone.h"
 #include "Game/Trial.h"
 #include "Game/Piston.h"
@@ -900,6 +901,13 @@ void Application::loadLevel()
             m_shulkerStore.push_back(inside);
         }
     }
+    m_seenEndPoem = std::filesystem::exists(m_savePath + "/seen_credits.txt");
+    {
+        std::ifstream board(m_savePath + "/scoreboard.txt");
+        std::stringstream text;
+        if (board) text << board.rdbuf();
+        m_scoreboard.load(text.str());
+    }
     m_noteTunes.clear();
     {
         std::ifstream notes(m_savePath + "/notes.txt");
@@ -1336,6 +1344,15 @@ void Application::saveLevel()
                 for (const ItemStack& one : inside) boxes << one.id << ' ' << one.count << ' ' << one.damage << ' ' << one.enchantments << ' ';
                 boxes << '\n';
             }
+    }
+    {
+        std::ofstream board(m_savePath + "/scoreboard.txt");
+        if (board) board << m_scoreboard.save();
+    }
+    if (m_seenEndPoem)
+    {
+        std::ofstream seen(m_savePath + "/seen_credits.txt");
+        if (seen) seen << "1\n";
     }
     {
         std::ofstream notes(m_savePath + "/notes.txt");
@@ -2948,6 +2965,16 @@ bool Application::frame()
         // between one blow and the next.
         m_player.armourPoints = armourPoints();
         m_player.protection = armourProtection();
+        {
+            Scoreboard::Live live;
+            live.health = m_player.health;
+            live.food = m_player.hunger;
+            live.air = static_cast<int>(m_player.air * 20.0f);
+            live.armor = m_player.armourPoints;
+            live.level = Experience::levelFor(m_player.experience);
+            live.xp = m_player.experience;
+            m_scoreboard.refreshLive(scoreHolder(), live);
+        }
         m_inventory.bindingHolds = !m_player.creative();
         for (int i = 0; i < Inventory::ARMOR_SLOTS; ++i)
             m_player.armourEnchants[static_cast<size_t>(i)] = m_inventory.slot(Inventory::ARMOR_FIRST + i).empty() ? 0u : m_inventory.slot(Inventory::ARMOR_FIRST + i).enchantments;
@@ -3038,6 +3065,7 @@ bool Application::frame()
         if (playing() && m_player.health <= 0)
         {
             award("adventure/root", "killed_by_something");
+            m_scoreboard.addToCriterion("deathCount", scoreHolder(), 1);
             m_stats.add(Stats::Custom::Deaths);
             m_stats.set(Stats::Custom::TimeSinceDeath, 0);
             m_stats.set(Stats::Custom::TimeSinceRest, 0);
@@ -3179,7 +3207,7 @@ bool Application::frame()
             m_startupScreen == "faces" || m_startupScreen == "backs" ||
             m_startupScreen == "flow" || m_startupScreen == "buds" ||
             m_startupScreen == "icons" || m_startupScreen == "beam" ||
-            m_startupScreen == "elytra" || m_startupScreen == "elytradoll" || m_startupScreen == "crawl" || m_startupScreen == "chatopen")
+            m_startupScreen == "elytra" || m_startupScreen == "elytradoll" || m_startupScreen == "crawl" || m_startupScreen == "chatopen" || m_startupScreen == "endpoem")
         {
             // Dev aid: open the inventory with something in it, so the
             // screenshot shows a real grid rather than 36 empty boxes.
@@ -3209,6 +3237,7 @@ bool Application::frame()
                                   m_startupScreen != "elytra" &&
                                   m_startupScreen != "crawl" &&
                                   m_startupScreen != "chatopen" &&
+                                  m_startupScreen != "endpoem" &&
                                   m_startupScreen != "enchantblock" &&
                                   m_startupScreen != "villager" &&
                                   m_startupScreen != "endportal" &&
@@ -5445,7 +5474,9 @@ bool Application::frame()
                         const char* lines[] = { "/fill ~6 ~ ~-5 ~9 ~2 ~-4 stone_bricks outline", "/clone ~6 ~ ~-5 ~9 ~2 ~-4 ~6 ~ ~4",
                                                 "/title @s subtitle {\"text\":\"A subtitle under it\"}",
                                                 "/title @s title {\"text\":\"Commands\"}", "/title @s actionbar The action bar",
-                                                "/locate structure village", "/locate biome forest", "/xp add @s 7 levels", "/me checks the map" };
+                                                "/locate structure village", "/locate biome forest", "/xp add @s 7 levels", "/me checks the map",
+                                                "/scoreboard objectives add kills dummy \"Kills\"", "/scoreboard objectives setdisplay sidebar kills",
+                                                "/scoreboard players set Steve kills 4", "/scoreboard players set Alex kills 9", "/scoreboard players set @s kills 6" };
                         for (const char* line : lines)
                         {
                             std::string said;
@@ -7459,6 +7490,13 @@ bool Application::frame()
                     m_showDebug = false;
                     m_camera.setOrientation(m_camera.yaw, 10.0f);
                 }
+            }
+
+            if (m_startupScreen == "endpoem")
+            {
+                m_screen = Screen::EndPoem;
+                m_poemScroll = 330.0f;
+                m_poemClock = SDL_GetTicks();
             }
 
             if (m_startupScreen == "chatopen")
@@ -13309,6 +13347,14 @@ void Application::updatePortal(float deltaTime)
         }
 
         travelTo(Dimension::Overworld);
+        if (!m_seenEndPoem && !m_automated)
+        {
+            m_seenEndPoem = true;
+            m_poemScroll = 0.0f;
+            m_poemClock = SDL_GetTicks();
+            m_screen = Screen::EndPoem;
+            setMouseCaptured(false);
+        }
         if (m_hasEndHome)
         {
             // Back where you left, and a step clear of the portal, or
@@ -18552,6 +18598,7 @@ void Application::render()
                          m_screen == Screen::Dead;
     if (inWorld && !m_hudHidden) renderHud();
     if (inWorld && !m_hudHidden) renderTitles();
+    if (inWorld && !m_hudHidden) renderSidebar();
     if (inWorld && (!m_hudHidden || m_chatOpen)) renderChat();
     if (inWorld && m_showDebug && m_world) renderDebugOverlay();
 
@@ -18566,6 +18613,7 @@ void Application::render()
         case Screen::Statistics:   renderStatsScreen(); break;
         case Screen::CreateWorld:  renderCreateWorld(); break;
         case Screen::GameRules:    renderGameRules(); break;
+        case Screen::EndPoem:      renderEndPoem(); break;
         case Screen::EditWorld:    renderEditWorld(); break;
         case Screen::ConfirmDelete: renderConfirmDelete(); break;
         case Screen::CustomizeFlat: renderCustomizeFlat(); break;
@@ -19187,7 +19235,8 @@ bool Application::runCommand(const std::string& line, const glm::vec3& origin, b
 
         case Chat::Kind::Say:
         {
-            const std::string who = fromBlock ? "@" : (m_playerName.empty() ? "You" : m_playerName);
+            std::string who = fromBlock ? "@" : (m_playerName.empty() ? "You" : m_playerName);
+            if (const Scoreboard::Team* team = fromBlock ? nullptr : m_scoreboard.teamOf(scoreHolder())) who = team->prefix + who + team->suffix;
             output = "<" + who + "> " + command.text;
             return true;
         }
@@ -19559,6 +19608,9 @@ bool Application::runCommand(const std::string& line, const glm::vec3& origin, b
             return true;
         }
 
+        case Chat::Kind::ScoreboardCommand:
+            return m_scoreboard.command(command.sub, command.args, scoreHolder(), output);
+
         case Chat::Kind::Seed:
             output = m_world ? "Seed: " + std::to_string(m_world->seed()) : std::string("No world loaded.");
             return m_world != nullptr;
@@ -19687,6 +19739,35 @@ bool Application::locateFor(const std::string& kind, const std::string& what, st
     const int distance = static_cast<int>(std::round(std::sqrt(static_cast<double>(fx - px) * (fx - px) + static_cast<double>(fz - pz) * (fz - pz))));
     output = "The nearest " + shown + " is at [" + std::to_string(fx) + ", ~, " + std::to_string(fz) + "] (" + std::to_string(distance) + " blocks away)";
     return true;
+}
+
+void Application::renderSidebar()
+{
+    const Scoreboard::Objective* shown = m_scoreboard.displayed("sidebar");
+    if (!shown) return;
+    const std::vector<std::pair<std::string, int>> rows = m_scoreboard.sidebar();
+    m_ui.setScale(static_cast<float>(guiScale()));
+    const float w = m_ui.canvasWidth();
+    const float h = m_ui.canvasHeight();
+    float width = UIRenderer::textWidth(shown->displayName, 1.0f);
+    for (const auto& [holder, value] : rows)
+        width = std::max(width, UIRenderer::textWidth(holder + ": " + std::to_string(value), 1.0f) + 6.0f);
+    const float lineHeight = 9.0f;
+    const float height = lineHeight * static_cast<float>(rows.size() + 1);
+    const float left = w - width - 3.0f;
+    const float top = h * 0.5f - height * 0.5f;
+    m_ui.quad(left - 2.0f, top - 1.0f, width + 4.0f, lineHeight, glm::vec4(0.0f, 0.0f, 0.0f, 0.4f));
+    m_ui.quad(left - 2.0f, top - 1.0f + lineHeight, width + 4.0f, height - lineHeight, glm::vec4(0.0f, 0.0f, 0.0f, 0.3f));
+    m_ui.textWithShadow(shown->displayName, left + (width - UIRenderer::textWidth(shown->displayName, 1.0f)) * 0.5f, top, 1.0f, TEXT_COLOR);
+    float y = top + lineHeight;
+    for (const auto& [holder, value] : rows)
+    {
+        m_ui.textWithShadow(holder, left, y, 1.0f, glm::vec4(0.66f, 0.66f, 0.66f, 1.0f));
+        const std::string number = std::to_string(value);
+        m_ui.textWithShadow(number, left + width - UIRenderer::textWidth(number, 1.0f), y, 1.0f, glm::vec4(1.0f, 0.33f, 0.33f, 1.0f));
+        y += lineHeight;
+    }
+    m_ui.setScale(1.0f);
 }
 
 void Application::renderTitles()
@@ -22166,6 +22247,7 @@ void Application::updateMobs(float deltaTime)
         vibrate(death.position, 15);
         if (death.byPlayer)
         {
+            m_scoreboard.addToCriterion("totalKillCount", scoreHolder(), 1);
             m_stats.add(Stats::Custom::MobKills);
             m_stats.killed(static_cast<int>(death.type));
             award("adventure/root", "killed_something");
@@ -24432,6 +24514,98 @@ void Application::renderVideoScreen()
 
     if (menuButton({ buttonX, y, buttonWidth, 46.0f }, "Done"))
         m_pendingAction = MenuAction::BackToOptions;
+}
+
+std::vector<std::string> Application::endPoemLines() const
+{
+    std::vector<std::string> lines;
+    const std::string who = m_playerName.empty() ? std::string("Player") : m_playerName;
+    std::vector<std::string> candidates;
+    for (const std::string& root : Packs::active()) candidates.push_back(root + "/assets/minecraft/texts/end.txt");
+    candidates.push_back("assets/texts/end.txt");
+    for (const std::string& path : candidates)
+    {
+        std::ifstream in(path);
+        if (!in) continue;
+        std::string row;
+        while (std::getline(in, row))
+        {
+            if (!row.empty() && row.back() == '\r') row.pop_back();
+            std::string clean;
+            for (size_t i = 0; i < row.size(); ++i)
+            {
+                if (static_cast<unsigned char>(row[i]) == 0xC2 && i + 2 < row.size() && static_cast<unsigned char>(row[i + 1]) == 0xA7) { i += 2; continue; }
+                clean += row[i];
+            }
+            for (size_t at = clean.find("PLAYERNAME"); at != std::string::npos; at = clean.find("PLAYERNAME", at + who.size()))
+                clean.replace(at, 10, who);
+            lines.push_back(clean);
+        }
+        if (!lines.empty()) break;
+    }
+    if (lines.empty())
+    {
+        for (const char* row : {
+                 "The dragon is gone, and the island is quiet.",
+                 "",
+                 "",
+                 "",
+                 "Out of a hole in the ground with a wooden pick,",
+                 "past the night and the things that walk in it,",
+                 "through the fire under the world and back,",
+                 "following eyes that knew the way better than you did.",
+                 "",
+                 "None of it was written down for you.",
+                 "You built the road as you walked it.",
+                 "",
+                 "The world is still out there, as wide as it ever was.",
+                 "It will keep whatever you leave in it.",
+                 "",
+                 "Go home. Build something. Light a torch.",
+                 "The game is not over. It never was." })
+            lines.emplace_back(row);
+        lines[2] = "You came a long way to get here, " + who + ".";
+    }
+    lines.emplace_back("");
+    lines.emplace_back("");
+    lines.emplace_back("Browsercraft");
+    lines.emplace_back("Made with C++, SDL2, OpenGL and GLM, and Emscripten for the browser.");
+    const std::string& pack = m_atlas.packCredit();
+    lines.emplace_back(pack.empty() ? "No texture pack installed." : pack);
+    lines.emplace_back("");
+    lines.emplace_back("Thanks for playing.");
+    return lines;
+}
+
+void Application::renderEndPoem()
+{
+    const ScopedPanelUnits panel(m_ui, guiScale());
+    const float w = m_ui.canvasWidth();
+    const float h = m_ui.canvasHeight();
+    m_ui.quad(0, 0, w, h, glm::vec4(0.0f, 0.0f, 0.0f, 1.0f));
+    const uint32_t now = SDL_GetTicks();
+    const float seconds = std::min(0.25f, (now - m_poemClock) / 1000.0f);
+    m_poemClock = now;
+    const bool hurry = m_input.isKeyDown(SDL_SCANCODE_SPACE);
+    m_poemScroll += seconds * (hurry ? 120.0f : 30.0f);
+
+    const std::vector<std::string> lines = endPoemLines();
+    const float lineHeight = 24.0f;
+    float y = h - m_poemScroll;
+    for (const std::string& line : lines)
+    {
+        if (y > -lineHeight && y < h && !line.empty())
+        {
+            const bool title = line == "Browsercraft";
+            centredText(line, y, title ? 2.6f : 1.8f, title ? glm::vec4(1.0f, 1.0f, 0.62f, 1.0f) : TEXT_COLOR);
+        }
+        y += lineHeight;
+    }
+    if (y < 0.0f || m_input.wasKeyPressed(SDL_SCANCODE_ESCAPE))
+    {
+        m_screen = Screen::Playing;
+        setMouseCaptured(true);
+    }
 }
 
 void Application::renderCreditsScreen()
