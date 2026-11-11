@@ -30,6 +30,7 @@ uniform int uPbrEnabled;
 // pitch black even where nothing is burning.
 uniform float uAmbient;
 uniform float uGamma;
+uniform float uNightVision;
 
 out vec4 FragColor;
 
@@ -157,6 +158,7 @@ void main()
     float sky = vSkyLight * uDaylight;
     float level = max(sky, vBlockLight);
     level = mix(level, 1.0 - pow(1.0 - level, 3.0), clamp(uGamma, 0.0, 1.0) * 0.6);
+    level = mix(level, 1.0, clamp(uNightVision, 0.0, 1.0));
     float brightness = mix(uAmbient, 1.0, level);
 
     vec3 albedo = texel.rgb;

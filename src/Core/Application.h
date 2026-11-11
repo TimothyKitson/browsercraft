@@ -361,6 +361,7 @@ private:
     bool m_advancedTooltips = false;
     void renderDebugLines(const glm::mat4& view, const glm::mat4& projection);
     std::set<uint32_t> m_inked;
+    float nightVisionLevel() const;
     void renderEntityShadows(const glm::mat4& view, const glm::mat4& projection);
     WorldBorder m_border;
     void renderBorder(const glm::mat4& view, const glm::mat4& projection);

@@ -33,6 +33,7 @@ uniform vec3 uSkyAmbient;
 uniform float uShadowStrength;
 uniform float uDaylight;
 uniform float uAmbient;
+uniform float uNightVision;
 uniform float uRain;
 uniform float uTime;
 uniform int uDimension;
@@ -337,6 +338,7 @@ void main()
     vec3 floorLight = vec3(0.006, 0.007, 0.011) * (1.0 - sky);
     if (uDimension == 1) floorLight = uSkyAmbient * 0.22 + vec3(0.02, 0.008, 0.004);
     if (uDimension == 2) floorLight = uSkyAmbient * 0.20;
+    floorLight = max(floorLight, vec3(0.62) * clamp(uNightVision, 0.0, 1.0));
 
     vec3 light = direct + (ambient + (torchLight + floorLight) * (0.55 + 0.45 * faceLight)) * ao;
     vec3 colour = albedo * light;

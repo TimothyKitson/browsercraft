@@ -21,6 +21,7 @@ public:
         bool underwater = false;
         bool inLava = false;
         float eyeLight = 1.0f;
+        float nightVision = 0.0f;
         float eyeSkyLight = 1.0f;
         float renderDistance = 128.0f;
         float ambient = 0.07f;

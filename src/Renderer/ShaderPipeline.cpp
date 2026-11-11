@@ -604,6 +604,7 @@ void ShaderPipeline::setWorldUniforms(int pass)
     s.setFloat("uShadowStrength", m_shadowStrength);
     s.setFloat("uDaylight", m_frame.dimension == 0 ? m_frame.daylight : 0.0f);
     s.setFloat("uAmbient", m_frame.ambient);
+    s.setFloat("uNightVision", m_frame.nightVision);
     s.setFloat("uRain", m_frame.rain);
     s.setFloat("uTime", m_frame.time);
     s.setInt("uDimension", m_frame.dimension);

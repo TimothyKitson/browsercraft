@@ -20153,7 +20153,8 @@ void Application::renderWorldShaded()
     frame.underwater = m_player.isHeadUnderwater(*m_world);
     frame.inLava = isLava(m_world->getBlock(ex, ey, ez));
     frame.eyeSkyLight = eyeSky;
-    frame.eyeLight = std::max(eyeSky * std::max(viewDaylight(), 0.25f), eyeBlock * 0.8f);
+    frame.nightVision = nightVisionLevel();
+    frame.eyeLight = std::max({ eyeSky * std::max(viewDaylight(), 0.25f), eyeBlock * 0.8f, frame.nightVision * 0.8f });
     frame.renderDistance = static_cast<float>(m_world->renderDistance() * Chunk::SX);
     frame.ambient = dimensionAmbient();
     frame.nearPlane = camera.nearPlane;
@@ -20321,6 +20322,7 @@ void Application::renderWorld()
     m_chunkShader.setFloat("uDaylight", hasSky() ? daylight : 0.0f);
     m_chunkShader.setFloat("uAmbient", dimensionAmbient());
     m_chunkShader.setFloat("uGamma", m_brightness);
+    m_chunkShader.setFloat("uNightVision", nightVisionLevel());
     const bool blind = m_player.effects.has(Effects::Kind::Blindness);
     const float gloom = m_darknessFade;
     const float darkReach = viewDistance + (15.0f - viewDistance) * gloom;
@@ -20447,6 +20449,14 @@ void Application::renderWorld()
     renderBorder(view, projection);
 
     renderHand();
+}
+
+float Application::nightVisionLevel() const
+{
+    if (!m_player.effects.has(Effects::Kind::NightVision)) return 0.0f;
+    const float left = m_player.effects.secondsLeft(Effects::Kind::NightVision);
+    if (left <= 0.0f) return 0.0f;
+    return left > 10.0f ? 1.0f : 0.7f + 0.3f * std::sin(left * 4.0f * 3.14159265f);
 }
 
 void Application::renderEntityShadows(const glm::mat4& view, const glm::mat4& projection)
