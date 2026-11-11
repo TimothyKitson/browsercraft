@@ -888,6 +888,10 @@ private:
     void renderTitles();
     float m_gearPickupClock = 0.0f;
     void mobsPickUpGear();
+    void barterWith(Mob& piglin);
+    void tickPiglins();
+    void tickMobGriefing();
+    std::map<uint32_t, float> m_doorBreaking;
     void renderMobGear(Shader& shader);
     PlayerPose gearPose(const Mob& mob) const;
     float m_shieldRaise = 0.0f;

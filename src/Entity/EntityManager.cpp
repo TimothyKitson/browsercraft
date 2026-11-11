@@ -936,7 +936,11 @@ void EntityManager::setWolvesOnHostiles(float deltaTime, const glm::vec3& player
 
         {
             const MobId hunter = m_mobs[i].typeId();
+            const bool johnny = hunter == MobId::Vindicator && m_mobs[i].customName() == "Johnny";
             auto preys = [&](MobId prey) {
+                if (johnny)
+                    return prey != MobId::Vindicator && prey != MobId::Pillager && prey != MobId::Evoker && prey != MobId::Illusioner &&
+                           prey != MobId::Vex && prey != MobId::Ravager && prey != MobId::Witch && prey != MobId::Ghast;
                 switch (hunter)
                 {
                     case MobId::Zombie: case MobId::Husk: case MobId::Drowned: case MobId::ZombieVillager:

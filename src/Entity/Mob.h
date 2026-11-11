@@ -157,6 +157,10 @@ public:
     void dress(int difficulty);
     static bool humanoid(MobId id);
     static void setGearDifficulty(int difficulty);
+    static void setPlayerWearsGold(bool gold);
+    bool admiring() const { return m_admire > 0.0f; }
+    void admire(uint16_t item) { m_gear[OffHand] = item; m_gearSure[OffHand] = false; m_admire = 6.0f; m_bartered = false; }
+    bool takeBarter() { const bool done = m_bartered; m_bartered = false; return done; }
     static int naturalArmour(MobId id)
     {
         switch (id)
@@ -199,6 +203,7 @@ public:
     }
     const std::string& customName() const { return m_customName; }
     void setCustomName(const std::string& name) { m_customName = name; }
+    void setBaby(bool young) { m_babyTimer = young ? BABY_SECONDS : 0.0f; }
     bool leashed() const { return m_leashed; }
     void keepFromDespawning() { m_persistent = true; }
     void vanish() { m_health = 0; m_removeTimer = 0.0f; m_deathReported = true; }
@@ -620,6 +625,9 @@ private:
     std::array<bool, 6> m_gearSure{};
     bool m_dressed = false;
     bool m_canPickUp = false;
+    float m_admire = 0.0f;
+    bool m_bartered = false;
+    float m_tridentTimer = 0.0f;
     int m_silverfish = 0;
     float m_playerHitAge = 1.0e9f;
     int m_playerHitHow = 0;

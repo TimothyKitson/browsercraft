@@ -9,6 +9,7 @@
 namespace
 {
     int g_gearDifficulty = 2;
+    bool g_playerGold = false;
     int g_gearDifficultyFor() { return g_gearDifficulty; }
 }
 #include <cmath>
@@ -1069,7 +1070,8 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
     // as its reach does.
     if (m_attackTimer > 0.0f) m_attackTimer = std::max(0.0f, m_attackTimer - deltaTime);
 
-    if (t.attackDamage > 0 && m_attackTimer <= 0.0f)
+    const int baseAttack = (m_type == MobId::Rabbit && m_variant == 99) ? 8 : t.attackDamage;
+    if (baseAttack > 0 && m_attackTimer <= 0.0f)
     {
         const glm::vec3 toPlayer = playerPosition - m_position;
         const float flat = glm::length(glm::vec3(toPlayer.x, 0.0f, toPlayer.z));
@@ -1079,7 +1081,7 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
         if (flat < reach && levelWith)
         {
             MobStrike strike;
-            strike.damage = t.attackDamage;
+            strike.damage = baseAttack;
             if (m_gear[MainHand] != 0 && Tools::isTool(m_gear[MainHand]))
                 strike.damage += std::max(0, Tools::attackDamage(m_gear[MainHand]) - 1);
             strike.from = m_position;
@@ -1149,6 +1151,42 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
                 m_removeTimer = DEATH_SECONDS;
                 return;
             }
+        }
+    }
+
+    if (m_admire > 0.0f)
+    {
+        m_admire -= deltaTime;
+        m_moving = false;
+        if (m_admire <= 0.0f)
+        {
+            m_admire = 0.0f;
+            if (m_gear[OffHand] == Items::GoldIngot)
+            {
+                m_gear[OffHand] = 0;
+                m_bartered = true;
+            }
+        }
+    }
+
+    if (m_type == MobId::Drowned && m_gear[MainHand] == Items::Trident && hostileNow())
+    {
+        m_tridentTimer = std::max(0.0f, m_tridentTimer - deltaTime);
+        const glm::vec3 eye = m_position + glm::vec3(0.0f, height() * 0.85f, 0.0f);
+        const glm::vec3 aim = playerPosition + glm::vec3(0.0f, 0.9f, 0.0f);
+        const float range = glm::length(aim - eye) / noticeScale();
+        if (m_tridentTimer <= 0.0f && range > 3.0f && range < 16.0f && world.hasLineOfSight(eye, aim))
+        {
+            m_tridentTimer = 3.0f;
+            const glm::vec3 heading = glm::normalize(glm::normalize(aim - eye) + glm::vec3(0.0f, std::clamp(range * 0.012f, 0.0f, 0.25f), 0.0f));
+            MobShot shot;
+            shot.from = eye + heading * 0.5f;
+            shot.velocity = heading * 24.0f;
+            shot.damage = 8;
+            shot.kind = Arrows::Kind::Trident;
+            shot.shooter = static_cast<int>(m_type);
+            m_shots.push_back(shot);
+            emit(Sound::Click, 0.6f, 0.7f);
         }
     }
 
@@ -1285,6 +1323,8 @@ bool Mob::hostileNow(const MobType& t, bool provoked)
 
 bool Mob::hostileNow() const
 {
+    if ((m_type == MobId::Piglin && (g_playerGold || m_admire > 0.0f)) && !m_provoked) return false;
+    if (m_type == MobId::Rabbit && m_variant == 99) return true;
     return hostileNow(mobType(m_type), m_provoked);
 }
 
@@ -1472,6 +1512,7 @@ namespace
 }
 
 void Mob::setGearDifficulty(int difficulty) { g_gearDifficulty = difficulty; }
+void Mob::setPlayerWearsGold(bool gold) { g_playerGold = gold; }
 
 bool Mob::humanoid(MobId id)
 {

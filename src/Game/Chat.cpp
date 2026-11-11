@@ -675,6 +675,7 @@ Chat::Command Chat::parse(const std::string& line, bool cheats, const glm::vec3&
         out.kind = Kind::Summon;
         out.mob = mob;
         out.position = at;
+        for (size_t k = words.size() >= 5 ? 5 : 2; k < words.size(); ++k) out.sub += (out.sub.empty() ? "" : " ") + words[k];
         out.text = std::string("Summoned a new ") + mobType(static_cast<MobId>(mob)).name + ".";
         return out;
     }

@@ -7572,6 +7572,16 @@ bool Application::frame()
                     mob.setGear(Mob::Legs, one.legs);
                     mob.setGear(Mob::Feet, one.feet);
                 }
+                if (m_entities.spawnAt(MobId::Enderman, glm::vec3(px + 11.5f, 112.0f, pz - 3.5f), *m_world))
+                {
+                    m_entities.mobs().back().setYaw(180.0f);
+                    m_entities.mobs().back().setGear(Mob::MainHand, Blocks::Grass, true);
+                }
+                if (m_entities.spawnAt(MobId::Rabbit, glm::vec3(px + 5.5f, 112.0f, pz + 1.5f), *m_world))
+                {
+                    m_entities.mobs().back().setVariant(99);
+                    m_entities.mobs().back().setYaw(180.0f);
+                }
             }
 
             if (m_startupScreen == "sleeping")
@@ -16242,6 +16252,13 @@ void Application::handlePlacement()
         if (aimed->alive())
         {
             ItemStack& held = m_inventory.selected();
+            if (aimed->typeId() == MobId::Piglin && held.id == Items::GoldIngot && !aimed->admiring() && !aimed->baby())
+            {
+                aimed->admire(Items::GoldIngot);
+                if (!m_player.creative() && --held.count <= 0) held.clear();
+                m_heldItem.swing();
+                return;
+            }
             for (size_t i = 0; i < m_leashes.size(); ++i)
                 if (m_leashes[i].mob == aimed->serial() && !m_leashes[i].toKnot)
                 {
@@ -19507,6 +19524,24 @@ bool Application::runCommand(const std::string& line, const glm::vec3& origin, b
                 output = "There is no room to summon that there.";
                 return false;
             }
+            if (!command.sub.empty())
+            {
+                Mob& made = m_entities.mobs().back();
+                const std::string& tags = command.sub;
+                if (tags.find("RabbitType:99") != std::string::npos) made.setVariant(99);
+                const size_t named = tags.find("CustomName:");
+                if (named != std::string::npos)
+                {
+                    const size_t open = tags.find('"', named);
+                    const size_t textKey = tags.find("text", named);
+                    size_t from = textKey != std::string::npos ? tags.find('"', tags.find(':', textKey) + 1) : open;
+                    const size_t close = from == std::string::npos ? from : tags.find_first_of("\"'", from + 1);
+                    if (from != std::string::npos && close != std::string::npos) made.setCustomName(tags.substr(from + 1, close - from - 1));
+                }
+                if (tags.find("IsBaby:1") != std::string::npos || tags.find("Age:-") != std::string::npos) made.setBaby(true);
+                if (tags.find("NoAI:1") != std::string::npos) made.keepFromDespawning();
+                if (tags.find("PersistenceRequired:1") != std::string::npos) made.keepFromDespawning();
+            }
             break;
 
         case Chat::Kind::GameMode:
@@ -19980,6 +20015,179 @@ float Application::worldTimeScale(float deltaTime)
     return step;
 }
 
+void Application::tickMobGriefing()
+{
+    if (!m_world || !m_rules.on(GameRules::Rule::MobGriefing) || m_net.role() == Net::Role::Guest) return;
+    const bool hard = m_worldMeta.difficulty == Worlds::Difficulty::Hard;
+    auto put = [&](const glm::ivec3& at, BlockId block) {
+        m_world->setBlock(at.x, at.y, at.z, block);
+        m_net.onLocalBlockChange(at.x, at.y, at.z, block);
+    };
+    auto holdable = [](BlockId b) {
+        return b == Blocks::Grass || b == Blocks::Dirt || b == Blocks::Sand || b == Blocks::RedSand || b == Blocks::Gravel || isSmallFlower(b) ||
+               b == Blocks::Pumpkin || b == Blocks::Melon || b == Blocks::Clay || b == Blocks::Mycelium || b == Blocks::Netherrack ||
+               b == Blocks::CrimsonNylium || b == Blocks::WarpedNylium || b == Blocks::Tnt || b == Blocks::BrownMushroom || b == Blocks::RedMushroom;
+    };
+    for (Mob& mob : m_entities.mobs())
+    {
+        if (!mob.alive()) continue;
+        const MobId id = mob.typeId();
+        const glm::ivec3 feet = glm::ivec3(glm::floor(mob.position() + glm::vec3(0.0f, 0.1f, 0.0f)));
+        const uint32_t roll = hashCoords(feet.x, feet.z, static_cast<int>(mob.serial()), static_cast<uint32_t>(m_elapsedSeconds * 2.0f));
+        const BlockId here = m_world->getBlock(feet.x, feet.y, feet.z);
+        if ((id == MobId::Zombie || id == MobId::Husk || id == MobId::ZombieVillager || id == MobId::Drowned) && isTurtleEgg(here) && roll % 6u == 0u)
+        {
+            const int count = turtleEggCount(here);
+            put(feet, count > 1 ? turtleEggOf(count - 1, turtleEggHatch(here)) : Blocks::Air);
+            m_audio.playDig(Blocks::Snow, 0.5f);
+        }
+        if ((id == MobId::Zombie || id == MobId::Husk || id == MobId::ZombieVillager) && hard && mob.hostileNow())
+        {
+            bool atDoor = false;
+            for (const glm::ivec3& side : { glm::ivec3(1, 0, 0), glm::ivec3(-1, 0, 0), glm::ivec3(0, 0, 1), glm::ivec3(0, 0, -1) })
+            {
+                const glm::ivec3 cell = feet + side;
+                const BlockId door = m_world->getBlock(cell.x, cell.y, cell.z);
+                if (!isDoor(door) || isIronDoor(door)) continue;
+                atDoor = true;
+                float& progress = m_doorBreaking[mob.serial()];
+                progress += 0.5f;
+                if (static_cast<int>(progress * 2.0f) % 4 == 0) m_audio.play(Sound::DigWood, 0.7f, 0.6f);
+                if (progress >= 12.0f)
+                {
+                    const int low = doorIsTop(door) ? cell.y - 1 : cell.y;
+                    m_particles.spawnBlockBreak(glm::ivec3(cell.x, low, cell.z), door);
+                    put(glm::ivec3(cell.x, low, cell.z), Blocks::Air);
+                    put(glm::ivec3(cell.x, low + 1, cell.z), Blocks::Air);
+                    m_doorBreaking.erase(mob.serial());
+                }
+                break;
+            }
+            if (!atDoor) m_doorBreaking.erase(mob.serial());
+        }
+        if (id == MobId::Ravager)
+        {
+            const int half = static_cast<int>(std::ceil(mob.width() * 0.5f));
+            for (int dx = -half; dx <= half; ++dx)
+                for (int dz = -half; dz <= half; ++dz)
+                    for (int dy = 0; dy <= 2; ++dy)
+                    {
+                        const glm::ivec3 cell = feet + glm::ivec3(dx, dy, dz);
+                        const BlockId b = m_world->getBlock(cell.x, cell.y, cell.z);
+                        if (!isLeaves(b) && !isCrop(b)) continue;
+                        m_particles.spawnBlockBreak(cell, b);
+                        put(cell, Blocks::Air);
+                        if (m_rules.on(GameRules::Rule::DoTileDrops) && isCrop(b)) m_drops.spawnFromBrokenBlock(cell, blockDrop(b));
+                    }
+        }
+        if (id == MobId::Rabbit && isCarrot(here) && cropStage(here) >= 7 && roll % 8u == 0u)
+            put(feet, cropStage(here) > 1 ? cropAtStage(here, cropStage(here) - 1) : Blocks::Air);
+        if (id == MobId::Fox && roll % 6u == 0u)
+            for (const glm::ivec3& side : { glm::ivec3(0, 0, 0), glm::ivec3(1, 0, 0), glm::ivec3(-1, 0, 0), glm::ivec3(0, 0, 1), glm::ivec3(0, 0, -1) })
+            {
+                const glm::ivec3 cell = feet + side;
+                const BlockId bush = m_world->getBlock(cell.x, cell.y, cell.z);
+                if (!isSweetBerryBush(bush) || sweetBerryStage(bush) < 2) continue;
+                put(cell, Blocks::SweetBerryBush1);
+                m_audio.play(Sound::DigPlant, 0.5f, 1.2f);
+                break;
+            }
+        if (id == MobId::Silverfish && !mob.hostileNow() && roll % 40u == 0u)
+            for (const glm::ivec3& side : { glm::ivec3(1, 0, 0), glm::ivec3(-1, 0, 0), glm::ivec3(0, 0, 1), glm::ivec3(0, 0, -1), glm::ivec3(0, -1, 0) })
+            {
+                const glm::ivec3 cell = feet + side;
+                const BlockId stone = m_world->getBlock(cell.x, cell.y, cell.z);
+                const BlockId hidden = infestedOf(stone);
+                if (hidden == Blocks::Air || hidden == stone) continue;
+                put(cell, hidden);
+                mob.vanish();
+                break;
+            }
+        if (id == MobId::Enderman)
+        {
+            const uint16_t carried = mob.gear(Mob::MainHand);
+            if (carried == 0 && roll % 20u == 0u)
+            {
+                const glm::ivec3 cell = feet + glm::ivec3(static_cast<int>(roll >> 4) % 5 - 2, static_cast<int>(roll >> 8) % 3 - 1, static_cast<int>(roll >> 12) % 5 - 2);
+                const BlockId b = m_world->getBlock(cell.x, cell.y, cell.z);
+                if (holdable(b))
+                {
+                    put(cell, Blocks::Air);
+                    mob.setGear(Mob::MainHand, b == Blocks::Grass ? static_cast<uint16_t>(Blocks::Dirt) : static_cast<uint16_t>(b), true);
+                }
+            }
+            else if (carried != 0 && roll % 33u == 0u)
+            {
+                const glm::ivec3 cell = feet + glm::ivec3(static_cast<int>(roll >> 4) % 3 - 1, 0, static_cast<int>(roll >> 12) % 3 - 1);
+                if (m_world->getBlock(cell.x, cell.y, cell.z) == Blocks::Air && isSolid(m_world->getBlock(cell.x, cell.y - 1, cell.z)))
+                {
+                    put(cell, static_cast<BlockId>(carried));
+                    mob.setGear(Mob::MainHand, 0);
+                }
+            }
+        }
+    }
+}
+
+void Application::barterWith(Mob& piglin)
+{
+    struct Barter { StackId item; int weight; int lo; int hi; };
+    static const Barter TABLE[] = {
+        { Items::EnchantedBook, 5, 1, 1 }, { Items::IronBoots, 8, 1, 1 }, { Items::Potion, 8, 1, 1 }, { Items::SplashPotion, 8, 1, 1 },
+        { Items::Potion, 10, 1, 1 }, { Items::IronNugget, 10, 10, 36 }, { Items::EnderPearl, 10, 2, 4 }, { Items::StringItem, 20, 3, 9 },
+        { Items::NetherQuartz, 20, 5, 12 }, { Blocks::Obsidian, 40, 1, 1 }, { Blocks::CryingObsidian, 40, 1, 3 },
+        { Items::FireCharge, 40, 1, 1 }, { Items::Leather, 40, 2, 4 }, { Blocks::SoulSand, 40, 2, 8 }, { Items::NetherBrick, 40, 2, 8 },
+        { Items::SpectralArrow, 40, 6, 12 }, { Blocks::Gravel, 40, 8, 16 }, { Blocks::Blackstone, 40, 8, 16 },
+    };
+    int total = 0;
+    for (const Barter& b : TABLE) total += b.weight;
+    uint32_t roll = hashCoords(static_cast<int>(piglin.position().x * 8.0f), static_cast<int>(m_elapsedSeconds * 20.0f),
+                               static_cast<int>(piglin.position().z * 8.0f), 0xBA27u);
+    int pick = static_cast<int>(roll % static_cast<uint32_t>(total));
+    const Barter* chosen = &TABLE[0];
+    for (const Barter& b : TABLE)
+    {
+        if (pick < b.weight) { chosen = &b; break; }
+        pick -= b.weight;
+    }
+    ItemStack loot{ chosen->item, chosen->lo + static_cast<int>((roll >> 12) % static_cast<uint32_t>(chosen->hi - chosen->lo + 1)) };
+    const size_t index = static_cast<size_t>(chosen - TABLE);
+    if (index == 0) loot.enchantments = Enchanting::withLevel(0u, Enchanting::Kind::SoulSpeed, 1 + static_cast<int>((roll >> 20) % 3u));
+    if (index == 1) loot.enchantments = Enchanting::withLevel(0u, Enchanting::Kind::SoulSpeed, 1 + static_cast<int>((roll >> 20) % 3u));
+    if (index == 2 || index == 3) loot.damage = static_cast<int>(Effects::Kind::FireResistance);
+    m_drops.spawnStack(piglin.position() + glm::vec3(0.0f, 0.8f, 0.0f), loot);
+    award("nether/distract_piglin", "distract_piglin");
+}
+
+void Application::tickPiglins()
+{
+    bool gold = false;
+    for (int i = 0; i < Inventory::ARMOR_SLOTS; ++i)
+    {
+        const ItemStack& worn = m_inventory.slot(Inventory::ARMOR_FIRST + i);
+        if (!worn.empty() && Armour::isArmour(worn.id) && Armour::tierOf(worn.id) == Armour::Tier::Gold) gold = true;
+    }
+    Mob::setPlayerWearsGold(gold);
+    std::vector<glm::vec3> angry;
+    for (Mob& mob : m_entities.mobs())
+    {
+        if (!mob.alive()) continue;
+        if (mob.typeId() == MobId::Piglin && mob.takeBarter()) barterWith(mob);
+        if (mob.typeId() == MobId::ZombiePigman && mob.provoked() && mob.hitByPlayer()) angry.push_back(mob.position());
+    }
+    if (!angry.empty())
+        for (Mob& mob : m_entities.mobs())
+        {
+            if (!mob.alive() || mob.typeId() != MobId::ZombiePigman || mob.provoked()) continue;
+            for (const glm::vec3& at : angry)
+                if (glm::length(mob.position() - at) <= 32.0f)
+                {
+                    mob.provoke();
+                    break;
+                }
+        }
+}
+
 void Application::mobsPickUpGear()
 {
     if (!m_rules.on(GameRules::Rule::MobGriefing)) return;
@@ -20004,6 +20212,12 @@ void Application::mobsPickUpGear()
                 const uint16_t held = mob.gear(slot);
                 const bool ranged = held == Items::Bow || held == Items::Crossbow;
                 better = held == 0 || (!ranged && Tools::attackDamage(stack.id) > Tools::attackDamage(held));
+            }
+            if (mob.typeId() == MobId::Piglin && stack.id == Items::GoldIngot && !mob.admiring() && !mob.baby())
+            {
+                mob.admire(Items::GoldIngot);
+                if (--stack.count > 0) m_drops.spawnStack(reach, stack);
+                continue;
             }
             if (slot >= 0 && better)
             {
@@ -22415,11 +22629,13 @@ void Application::updateMobs(float deltaTime)
     m_entities.setSpawnRules(m_rules.on(GameRules::Rule::DoInsomnia), m_rules.on(GameRules::Rule::DoTraderSpawning));
     m_entities.update(mobTime, *m_world, m_player.position, daylightFactor());
     m_entities.noticeStares(*m_world, m_camera.position, m_camera.front);
+    tickPiglins();
     m_gearPickupClock += mobTime;
     if (m_gearPickupClock >= 0.5f)
     {
         m_gearPickupClock = 0.0f;
         mobsPickUpGear();
+        tickMobGriefing();
     }
 
     // Distance alone decides how loud a mob is. There is no panning here
@@ -23030,6 +23246,17 @@ void Application::pinFramedItems()
     {
         if (!mob.alive() || mob.gear(Mob::MainHand) == 0 || mob.serial() == m_spectatingMob) continue;
         if (glm::length(mob.position() - m_camera.position) > 32.0f) continue;
+        if (mob.typeId() == MobId::Enderman)
+        {
+            const float turn = glm::radians(mob.yaw());
+            DroppedItems::Cargo cargo;
+            cargo.block = static_cast<BlockId>(mob.gear(Mob::MainHand));
+            cargo.centre = mob.position() + glm::vec3(std::cos(turn), 0.0f, std::sin(turn)) * 0.35f + glm::vec3(0.0f, mob.height() * 0.55f, 0.0f);
+            cargo.yaw = glm::radians(-mob.yaw());
+            cargo.size = 0.45f;
+            m_drops.carry(cargo);
+            continue;
+        }
         const PlayerPose pose = gearPose(mob);
         const float yaw = glm::radians(pose.bodyYaw);
         const glm::vec3 forward(std::cos(yaw), 0.0f, std::sin(yaw));

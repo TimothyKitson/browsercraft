@@ -597,6 +597,7 @@ std::string MobModel::variantOf(const Mob& mob) const
         {
             static const char* COATS[] = { "brown", "white", "black", "white_splotched", "gold", "salt" };
             if (mob.customName() == "Toast") return root + "rabbit/toast.png";
+            if (mob.variant() == 99) return root + "rabbit/caerbannog.png";
             return root + "rabbit/" + COATS[pick % 6u] + ".png";
         }
         case MobId::Parrot:
