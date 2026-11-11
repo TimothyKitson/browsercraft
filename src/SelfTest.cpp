@@ -226,6 +226,41 @@ namespace
         check(inventory.slot(0).count == 32, "and comes back to the hotbar");
     }
 
+    void testBigTrees()
+    {
+        section("big trees");
+        struct Grid : Saplings::Cells
+        {
+            std::map<std::tuple<int, int, int>, BlockId> blocks;
+            BlockId at(int x, int y, int z) const override
+            {
+                const auto found = blocks.find({ x, y, z });
+                return found == blocks.end() ? (y <= 0 ? static_cast<BlockId>(Blocks::Grass) : static_cast<BlockId>(Blocks::Air)) : found->second;
+            }
+            void set(int x, int y, int z, BlockId id) override { blocks[{ x, y, z }] = id; }
+            int count(BlockId id) const
+            {
+                int n = 0;
+                for (const auto& [at, block] : blocks) n += block == id ? 1 : 0;
+                return n;
+            }
+        };
+        Grid spruce;
+        check(Saplings::bigTree(spruce, glm::ivec3(0, 1, 0), 1, 77u, true), "a mega spruce grows");
+        check(spruce.at(0, 1, 0) == logOfWood(1) && spruce.at(1, 1, 1) == logOfWood(1) && spruce.at(0, 14, 1) == logOfWood(1),
+              "on a two-by-two trunk at least fourteen tall");
+        check(spruce.count(leavesOfWood(1)) > 60, "under a cone of needles");
+        Grid dark;
+        check(Saplings::bigTree(dark, glm::ivec3(0, 1, 0), 5, 91u, true) && dark.at(1, 1, 0) == logOfWood(5),
+              "a dark oak stands on four logs");
+        Grid oak;
+        check(Saplings::fancyOak(oak, glm::ivec3(0, 1, 0), 123u, true), "a fancy oak grows");
+        int offTrunk = 0;
+        for (const auto& [at, block] : oak.blocks)
+            if (block == logOfWood(0) && (std::get<0>(at) != 0 || std::get<2>(at) != 0)) ++offTrunk;
+        check(offTrunk >= 2 && oak.count(leavesOfWood(0)) > 40, "with branches off its trunk and balls of leaves");
+    }
+
     void testDripKinds()
     {
         section("drips fall and land as their own liquid");
@@ -17520,6 +17555,7 @@ int runSelfTest()
     testChestLids();
     testSoundCategories();
     testDripKinds();
+    testBigTrees();
     testCrafting();
     testKeyBindings();
     testPlayerAnimation();

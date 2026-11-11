@@ -147,13 +147,38 @@ namespace
         return true;
     }
 
-    bool big(Saplings::Cells& cells, const glm::ivec3& corner, int wood, uint32_t& seed)
+    bool big(Saplings::Cells& cells, const glm::ivec3& corner, int wood, uint32_t& seed, bool force = false)
     {
         const BlockId log = logOfWood(wood);
         const BlockId leaves = leavesOfWood(wood);
         const bool jungle = wood == 3;
-        const int height = jungle ? 12 + static_cast<int>(next(seed) % 8u) : 6 + static_cast<int>(next(seed) % 3u);
-        if (!columnClear(cells, corner.x, corner.y, corner.z, height + 2, 2)) return false;
+        const bool spruce = wood == 1;
+        const int height = jungle ? 12 + static_cast<int>(next(seed) % 8u)
+                         : spruce ? 14 + static_cast<int>(next(seed) % 8u)
+                                  : 6 + static_cast<int>(next(seed) % 3u);
+        if (!force && !columnClear(cells, corner.x, corner.y, corner.z, height + 2, 2)) return false;
+        if (spruce)
+        {
+            for (int i = 0; i < height; ++i)
+                for (int dx = 0; dx < 2; ++dx)
+                    for (int dz = 0; dz < 2; ++dz)
+                        cells.set(corner.x + dx, corner.y + i, corner.z + dz, log);
+            const int top = corner.y + height;
+            const int crown = height * 2 / 3;
+            for (int layer = 0; layer < crown; ++layer)
+            {
+                const int y = top - layer;
+                const int radius = std::min(4, 1 + layer / 3 - (layer % 3 == 2 ? 1 : 0));
+                for (int dx = -radius; dx <= radius + 1; ++dx)
+                    for (int dz = -radius; dz <= radius + 1; ++dz)
+                    {
+                        const float ox = static_cast<float>(dx) - 0.5f, oz = static_cast<float>(dz) - 0.5f;
+                        if (ox * ox + oz * oz > static_cast<float>(radius * radius) + 0.8f) continue;
+                        leaf(cells, corner.x + dx, y, corner.z + dz, leaves);
+                    }
+            }
+            return true;
+        }
 
         for (int i = 0; i < height; ++i)
             for (int dx = 0; dx < 2; ++dx)
@@ -204,6 +229,49 @@ bool Saplings::canPlantOn(BlockId ground)
 }
 
 bool Saplings::needsSquare(int wood) { return wood == 5; }
+
+bool Saplings::bigTree(Cells& cells, const glm::ivec3& corner, int wood, uint32_t seed, bool force)
+{
+    if (seed == 0) seed = 0x9E3779B9u;
+    return big(cells, corner, wood, seed, force);
+}
+
+bool Saplings::fancyOak(Cells& cells, const glm::ivec3& at, uint32_t seed, bool force)
+{
+    if (seed == 0) seed = 0x51F1A7u;
+    const BlockId log = logOfWood(0);
+    const BlockId leaves = leavesOfWood(0);
+    const int height = 6 + static_cast<int>(next(seed) % 6u);
+    if (!force && !columnClear(cells, at.x, at.y, at.z, height + 3, 1)) return false;
+    for (int i = 0; i < height; ++i) cells.set(at.x, at.y + i, at.z, log);
+    auto ball = [&](int cx, int cy, int cz) {
+        for (int dy = 0; dy < 4; ++dy)
+        {
+            const int radius = dy == 0 || dy == 3 ? 2 : 3;
+            blob(cells, cx, cy + dy, cz, radius - (dy == 3 ? 1 : 0), leaves, seed, true);
+        }
+    };
+    const int top = at.y + height - 1;
+    ball(at.x, top - 1, at.z);
+    const int branches = 2 + static_cast<int>(next(seed) % 3u);
+    static const int WAYS[8][2] = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 }, { 1, 1 }, { -1, -1 }, { 1, -1 }, { -1, 1 } };
+    for (int b = 0; b < branches; ++b)
+    {
+        const int way = static_cast<int>(next(seed) % 8u);
+        const int from = at.y + height / 2 + static_cast<int>(next(seed) % static_cast<uint32_t>(std::max(1, height / 2 - 1)));
+        const int length = 2 + static_cast<int>(next(seed) % 3u);
+        int x = at.x, y = from, z = at.z;
+        for (int k = 1; k <= length; ++k)
+        {
+            x = at.x + WAYS[way][0] * k;
+            z = at.z + WAYS[way][1] * k;
+            y = from + k / 2;
+            cells.set(x, y, z, log);
+        }
+        ball(x, y, z);
+    }
+    return true;
+}
 
 bool Saplings::hugeFungus(Cells& cells, const glm::ivec3& at, bool warped, uint32_t seed)
 {

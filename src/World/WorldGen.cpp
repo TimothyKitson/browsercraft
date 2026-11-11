@@ -3500,9 +3500,9 @@ void WorldGen::decorate(Chunk& chunk) const
     // we can look at columns just outside this chunk and draw the parts of
     // their canopies that overhang into it. That keeps trees seamless
     // across chunk borders without any cross-chunk writes.
-    for (int wx = baseX - 3; wx < baseX + Chunk::SX + 3; ++wx)
+    for (int wx = baseX - 6; wx < baseX + Chunk::SX + 6; ++wx)
     {
-        for (int wz = baseZ - 3; wz < baseZ + Chunk::SZ + 3; ++wz)
+        for (int wz = baseZ - 6; wz < baseZ + Chunk::SZ + 6; ++wz)
         {
             if (!treeStandsAt(wx, wz)) continue;
 
@@ -3624,6 +3624,39 @@ void WorldGen::decorate(Chunk& chunk) const
                     break;
             }
 
+            const float shape = hashToFloat(hashCoords(wx, 11, wz, m_seed + 4247));
+            const bool megaJungle = kind == TreeKind::Jungle && shape < 0.18f;
+            const bool squareDarkOak = kind == TreeKind::DarkOak;
+            const bool megaSpruce = kind == TreeKind::Spruce && shape < 0.4f &&
+                                    (variant == Biomes::Kind::OldGrowthPineTaiga || variant == Biomes::Kind::OldGrowthSpruceTaiga);
+            const bool fancy = kind == TreeKind::Oak && shape < 0.1f &&
+                               (variant == Biomes::Kind::Forest || variant == Biomes::Kind::FlowerForest || here == Biome::Plains);
+            if (megaJungle || squareDarkOak || megaSpruce || fancy)
+            {
+                struct LocalCells : Saplings::Cells
+                {
+                    Chunk* chunk = nullptr;
+                    int baseX = 0, baseZ = 0;
+                    BlockId at(int x, int y, int z) const override
+                    {
+                        const int lx = x - baseX, lz = z - baseZ;
+                        return Chunk::inBounds(lx, y, lz) ? chunk->getBlock(lx, y, lz) : Blocks::Air;
+                    }
+                    void set(int x, int y, int z, BlockId id) override
+                    {
+                        const int lx = x - baseX, lz = z - baseZ;
+                        if (Chunk::inBounds(lx, y, lz)) chunk->setBlockRaw(lx, y, lz, id);
+                    }
+                } cells;
+                cells.chunk = &chunk;
+                cells.baseX = baseX;
+                cells.baseZ = baseZ;
+                const uint32_t treeSeed = hashCoords(wx, 12, wz, m_seed + 4248) | 1u;
+                if (fancy) Saplings::fancyOak(cells, glm::ivec3(wx, surface + 1, wz), treeSeed, true);
+                else Saplings::bigTree(cells, glm::ivec3(wx, surface + 1, wz), megaJungle ? 3 : megaSpruce ? 1 : 5, treeSeed, true);
+                continue;
+            }
+            if (std::abs(wx - (baseX + Chunk::SX / 2)) > Chunk::SX / 2 + 3 || std::abs(wz - (baseZ + Chunk::SZ / 2)) > Chunk::SZ / 2 + 3) continue;
             buildTree(chunk, wx, surface, wz, kind);
 
             if ((kind == TreeKind::Oak || kind == TreeKind::Birch) &&
