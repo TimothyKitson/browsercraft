@@ -120,6 +120,9 @@ public:
     void outpostCage(int midX, int midZ, int& cageX, int& cageZ, bool& golem) const;
     static int outpostBanners(int out[8][4]);
     static void endShip(int midX, int midZ, int ground, int& sx, int& sz, int& deck);
+    bool fortressIn(int squareX, int squareZ, int& midX, int& midZ, int& turn) const;
+    static void fortressTurn(int turn, int u, int v, int& dx, int& dz);
+    static int fortressChests(glm::ivec3 out[3]);
 
     // What kind of thing a chest found standing in the world belongs
     // to. Worked out from where it is rather than stored, like
@@ -146,9 +149,12 @@ public:
         TrialChamber,
         Dungeon,
         TrapDispenser,
+        Fortress,
+        StrongholdLibrary,
     };
 
     Hoard hoardAt(int x, int y, int z) const;
+    static bool strongholdChest(const Stronghold::Site& site, const Stronghold::Room& room, int& x, int& y, int& z, Hoard& hoard);
     bool dungeonIn(int chunkX, int chunkZ, int& x, int& y, int& z) const;
     int dungeonCage(int x, int y, int z) const;
 

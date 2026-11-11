@@ -3342,7 +3342,7 @@ bool Application::frame()
             m_startupScreen == "dragon" ||
             m_startupScreen == "wither" ||
             m_startupScreen == "geode" ||
-            m_startupScreen == "city" || m_startupScreen == "bastion" ||
+            m_startupScreen == "city" || m_startupScreen == "bastion" || m_startupScreen == "fortress" ||
             m_startupScreen == "endcity" ||
             m_startupScreen == "shipwreck" || m_startupScreen == "monument" ||
             m_startupScreen == "seabed" || m_startupScreen == "reef" ||
@@ -3525,6 +3525,7 @@ bool Application::frame()
                                   m_startupScreen != "geode" &&
                                   m_startupScreen != "city" &&
                                   m_startupScreen != "bastion" &&
+                                  m_startupScreen != "fortress" &&
                                   m_startupScreen != "endcity" &&
                                   m_startupScreen != "well" &&
                                   m_startupScreen != "shipwreck" &&
@@ -6359,6 +6360,30 @@ bool Application::frame()
                     std::fflush(stdout);
                 }
 
+                m_player.mode = GameMode::Creative;
+                m_player.health = Player::MAX_HEALTH;
+            }
+
+            if (m_startupScreen == "fortress" && m_dimension == Dimension::Nether)
+            {
+                const WorldGen& gen = m_world->generator();
+                int midX = 0, midZ = 0, turn = 0;
+                bool found = false;
+                for (int ring = 0; ring < 8 && !found; ++ring)
+                    for (int sz = -ring; sz <= ring && !found; ++sz)
+                        for (int sx = -ring; sx <= ring && !found; ++sx)
+                            if (std::max(std::abs(sx), std::abs(sz)) == ring) found = gen.fortressIn(sx, sz, midX, midZ, turn);
+                if (found)
+                {
+                    m_player.position = glm::vec3(midX + 16.5f, static_cast<float>(WorldGen::FORTRESS_FLOOR + 16), midZ + 16.5f);
+                    m_player.velocity = glm::vec3(0.0f);
+                    m_player.flying = true;
+                    m_placeOnSurface = false;
+                    m_camera.setOrientation(-135.0f, -32.0f);
+                    m_camera.addLook(0.0f, 0.0f, 0.0f);
+                    std::printf("Fortress at %d, %d turned %d\n", midX, midZ, turn);
+                    std::fflush(stdout);
+                }
                 m_player.mode = GameMode::Creative;
                 m_player.health = Player::MAX_HEALTH;
             }
@@ -10745,7 +10770,7 @@ void Application::tickMonsterCages(float deltaTime)
                 if (!isMonsterSpawner(m_world->getBlock(at.x, at.y, at.z))) continue;
                 const auto chosen = m_cageKinds.find({ static_cast<int>(m_dimension), at.x, at.y, at.z });
                 const int dungeonKind = chosen == m_cageKinds.end() ? m_world->generator().dungeonCage(at.x, at.y, at.z) : -1;
-                static const MobId DUNGEON_KINDS[4] = { MobId::Zombie, MobId::Skeleton, MobId::Spider, MobId::CaveSpider };
+                static const MobId DUNGEON_KINDS[5] = { MobId::Zombie, MobId::Skeleton, MobId::Spider, MobId::CaveSpider, MobId::Silverfish };
                 const MobId species = chosen != m_cageKinds.end() ? static_cast<MobId>(chosen->second)
                                     : dungeonKind >= 0 ? DUNGEON_KINDS[dungeonKind] : cageSpecies(m_dimension);
 
@@ -27104,7 +27129,6 @@ std::vector<std::string> Application::endPoemLines() const
     std::vector<std::string> lines;
     const std::string who = m_playerName.empty() ? std::string("Player") : m_playerName;
     std::vector<std::string> candidates;
-    for (const std::string& root : Packs::active()) candidates.push_back(root + "/assets/minecraft/texts/end.txt");
     candidates.push_back("assets/texts/end.txt");
     for (const std::string& path : candidates)
     {
@@ -27114,15 +27138,9 @@ std::vector<std::string> Application::endPoemLines() const
         while (std::getline(in, row))
         {
             if (!row.empty() && row.back() == '\r') row.pop_back();
-            std::string clean;
-            for (size_t i = 0; i < row.size(); ++i)
-            {
-                if (static_cast<unsigned char>(row[i]) == 0xC2 && i + 2 < row.size() && static_cast<unsigned char>(row[i + 1]) == 0xA7) { i += 2; continue; }
-                clean += row[i];
-            }
-            for (size_t at = clean.find("PLAYERNAME"); at != std::string::npos; at = clean.find("PLAYERNAME", at + who.size()))
-                clean.replace(at, 10, who);
-            lines.push_back(clean);
+            for (size_t at = row.find("PLAYERNAME"); at != std::string::npos; at = row.find("PLAYERNAME", at + who.size()))
+                row.replace(at, 10, who);
+            lines.push_back(row);
         }
         if (!lines.empty()) break;
     }
@@ -27133,19 +27151,52 @@ std::vector<std::string> Application::endPoemLines() const
                  "",
                  "",
                  "",
-                 "Out of a hole in the ground with a wooden pick,",
-                 "past the night and the things that walk in it,",
-                 "through the fire under the world and back,",
-                 "following eyes that knew the way better than you did.",
+                 "It started with nothing in your hands.",
+                 "A tree, because it was the nearest thing.",
+                 "A hole in a hillside, because the sun was going down.",
                  "",
-                 "None of it was written down for you.",
-                 "You built the road as you walked it.",
+                 "You did not know then what the dark was for.",
+                 "You learned it the way everyone does:",
+                 "by standing in it once, and not doing that again.",
                  "",
-                 "The world is still out there, as wide as it ever was.",
-                 "It will keep whatever you leave in it.",
+                 "After that came the small victories nobody saw.",
+                 "The first door that closed behind you.",
+                 "The first torch at the bottom of a long stair.",
+                 "The first field that came up green without being asked twice.",
                  "",
-                 "Go home. Build something. Light a torch.",
-                 "The game is not over. It never was." })
+                 "Then the deep places.",
+                 "Stone that turned to something darker under your pick,",
+                 "and a sound in the walls that was only water,",
+                 "until the day it was not.",
+                 "",
+                 "You went down into the fire under the world",
+                 "and came back with more than you carried in.",
+                 "You followed an eye across a sky it understood better than you did,",
+                 "and it led you to a room that had been waiting.",
+                 "",
+                 "None of this was written down anywhere.",
+                 "There was no road. You were the road.",
+                 "Every bridge behind you is one you laid a block at a time,",
+                 "with nothing under it but the last block you trusted.",
+                 "",
+                 "And here is the part that is easy to miss, standing at the end of it:",
+                 "nothing out there got smaller while you were away.",
+                 "The hills you never climbed are still unclimbed.",
+                 "The sea has an edge you have not seen.",
+                 "Somewhere a village is trading turnips, entirely unaware of you.",
+                 "",
+                 "The world does not need saving twice.",
+                 "It needs someone to come home to it,",
+                 "to fix the fence the creeper took,",
+                 "to finish the roof, to plant the second row,",
+                 "to build the thing that has been half a plan since the first night.",
+                 "",
+                 "So go home.",
+                 "Light a torch in a window.",
+                 "Sleep, and let the morning find you where you left yourself.",
+                 "",
+                 "The game is not over. It never was.",
+                 "It was only waiting for you to look up." })
             lines.emplace_back(row);
         lines[2] = "You came a long way to get here, " + who + ".";
     }

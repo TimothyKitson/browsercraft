@@ -4628,13 +4628,13 @@ std::vector<VillageLoot::Stack> Application::villageChestLoot(const glm::ivec3& 
 void Application::fillVillageChest(const glm::ivec3& block)
 {
     if (!m_world) return;
-    if (m_dimension != Dimension::Overworld) return;
 
     // Already known, so it has been opened before -- or the player
     // built it. Either way it is not ours to fill.
     if (m_chests.has(block)) return;
 
-    std::vector<VillageLoot::Stack> loot = villageChestLoot(block);
+    std::vector<VillageLoot::Stack> loot;
+    if (m_dimension == Dimension::Overworld) loot = villageChestLoot(block);
 
     if (loot.empty())
     {

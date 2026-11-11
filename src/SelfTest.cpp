@@ -10832,35 +10832,69 @@ namespace
         // not do: this is the one structure in the other dimension.
         {
             const WorldGen nether(SEED, Dimension::Nether);
-            const Structures::Spot spot =
-                Structures::inSquare(Structures::NETHER_FORTRESS, 0, 0, SEED);
+            int midX = 0, midZ = 0, turn = 0;
+            bool found = false;
+            for (int sz = 0; sz < 6 && !found; ++sz)
+                for (int sx = 0; sx < 6 && !found; ++sx)
+                    found = nether.fortressIn(sx, sz, midX, midZ, turn);
+            check(found, "a fortress is found to look at");
 
-            int brick = 0, cages = 0, wart = 0, soul = 0;
-            for (int cz = spot.chunkZ - 1; cz <= spot.chunkZ + 1; ++cz)
-                for (int cx = spot.chunkX - 1; cx <= spot.chunkX + 1; ++cx)
+            const int homeX = Structures::squareOf(midX, Chunk::SX);
+            const int homeZ = Structures::squareOf(midZ, Chunk::SZ);
+            int brick = 0, cages = 0, wart = 0, soul = 0, fences = 0, stairs = 0, lava = 0;
+            std::map<std::pair<int, int>, std::unique_ptr<Chunk>> chunks;
+            for (int cz = homeZ - 3; cz <= homeZ + 3; ++cz)
+                for (int cx = homeX - 3; cx <= homeX + 3; ++cx)
                 {
-                    Chunk chunk(ChunkPos{ cx, cz });
-                    nether.generate(chunk);
+                    auto& chunk = chunks[{ cx, cz }];
+                    chunk = std::make_unique<Chunk>(ChunkPos{ cx, cz });
+                    nether.generate(*chunk);
 
-                    for (int y = WorldGen::FORTRESS_FLOOR - 1;
-                         y <= WorldGen::FORTRESS_FLOOR + 6 && y < Chunk::SY; ++y)
+                    for (int y = WorldGen::FORTRESS_FLOOR - 7;
+                         y <= WorldGen::FORTRESS_FLOOR + 9 && y < Chunk::SY; ++y)
                         for (int lz = 0; lz < Chunk::SZ; ++lz)
                             for (int lx = 0; lx < Chunk::SX; ++lx)
-                                switch (chunk.getBlock(lx, y, lz))
+                            {
+                                const BlockId here = chunk->getBlock(lx, y, lz);
+                                if (here == Blocks::NetherBricks) ++brick;
+                                else if (here == Blocks::MonsterSpawner) ++cages;
+                                else if (here == Blocks::FenceRunLast) ++fences;
+                                else if (isStairs(here) && stairsMaterial(here) == 7) ++stairs;
+                                else if (here == Blocks::Lava && y > WorldGen::FORTRESS_FLOOR) ++lava;
+                                else if (here == Blocks::NetherWart)
                                 {
-                                    case Blocks::NetherBricks: ++brick; break;
-                                    case Blocks::MonsterSpawner: ++cages; break;
-                                    case Blocks::NetherWart:
-                                        ++wart;
-                                        if (y > 0 && chunk.getBlock(lx, y - 1, lz) == Blocks::SoulSand) ++soul;
-                                        break;
-                                    default: break;
+                                    ++wart;
+                                    if (chunk->getBlock(lx, y - 1, lz) == Blocks::SoulSand) ++soul;
                                 }
+                            }
                 }
 
-            check(brick > 300, "a fortress is a lot of nether brick");
-            check(cages == 1, "with one cage in the keep");
-            check(wart == 4 && soul == 4, "and wart growing in the corners of it, on soul sand");
+            check(brick > 3000, "a fortress is a lot of nether brick");
+            check(cages == 2, "with two blaze cages, one on each platform");
+            check(wart >= 30 && soul == wart, "wart growing in its keep, on soul sand");
+            check(fences > 60 && stairs >= 9, "fence rails and windows, and stairs up to the cage");
+            check(lava >= 1, "and a lava well");
+
+            glm::ivec3 spots[3];
+            const int many = WorldGen::fortressChests(spots);
+            int chests = 0;
+            for (int i = 0; i < many; ++i)
+            {
+                int dx = 0, dz = 0;
+                WorldGen::fortressTurn(turn, spots[i].x, spots[i].z, dx, dz);
+                const int x = midX + dx, z = midZ + dz, y = WorldGen::FORTRESS_FLOOR + spots[i].y;
+                const int cx = Structures::squareOf(x, Chunk::SX), cz = Structures::squareOf(z, Chunk::SZ);
+                const auto chunk = chunks.find({ cx, cz });
+                if (chunk != chunks.end() && chunk->second->getBlock(x - cx * Chunk::SX, y, z - cz * Chunk::SZ) == Blocks::Chest &&
+                    nether.hoardAt(x, y, z) == WorldGen::Hoard::Fortress)
+                    ++chests;
+            }
+            check(many == 3 && chests == 3, "and three chests on the fortress table");
+            bool saddle = false;
+            for (int n = 0; n < 60 && !saddle; ++n)
+                for (const StructureLoot::Stack& stack : StructureLoot::rollFor(WorldGen::Hoard::Fortress, n * 5, 40, n * 3, SEED))
+                    if (stack.id == Items::Saddle) saddle = true;
+            check(saddle, "where a saddle can turn up");
             check(WorldGen::FORTRESS_FLOOR > WorldGen::NETHER_LAVA_LEVEL,
                   "and the whole of it stands clear of the lava");
         }
@@ -11075,7 +11109,7 @@ namespace
             const WorldGen generator(SEED);
             const Stronghold::Site site = generator.nearestStronghold(0, 0);
 
-            int frames = 0, filled = 0, lava = 0, shelves = 0;
+            int frames = 0, filled = 0, lava = 0, shelves = 0, cages = 0, bars = 0, water = 0, barrels = 0, chests = 0;
             const int chunkX = (site.x >= 0 ? site.x : site.x - Chunk::SX + 1) / Chunk::SX;
             const int chunkZ = (site.z >= 0 ? site.z : site.z - Chunk::SZ + 1) / Chunk::SZ;
 
@@ -11085,17 +11119,28 @@ namespace
                     Chunk chunk(ChunkPos{ cx, cz });
                     generator.generate(chunk);
 
-                    for (int y = site.y - 2; y <= site.y + Stronghold::HEADROOM; ++y)
+                    for (int y = site.y - 7; y <= site.y + Stronghold::HEADROOM; ++y)
                         for (int lz = 0; lz < Chunk::SZ; ++lz)
                             for (int lx = 0; lx < Chunk::SX; ++lx)
                             {
                                 if (y < 0 || y >= Chunk::SY) continue;
+                                const int wx = cx * Chunk::SX + lx, wz = cz * Chunk::SZ + lz;
+                                if (std::abs(wx - site.x) > Stronghold::MAX_RADIUS || std::abs(wz - site.z) > Stronghold::MAX_RADIUS) continue;
                                 switch (chunk.getBlock(lx, y, lz))
                                 {
                                     case Blocks::EndPortalFrame: ++frames; break;
                                     case Blocks::EndPortalFrameFilled: ++filled; break;
-                                    case Blocks::Lava: ++lava; break;
+                                    case Blocks::Lava: if (y >= site.y - 1) ++lava; break;
                                     case Blocks::Bookshelf: ++shelves; break;
+                                    case Blocks::MonsterSpawner: if (y == site.y) ++cages; break;
+                                    case Blocks::IronBars: ++bars; break;
+                                    case Blocks::Water: if (y >= site.y) ++water; break;
+                                    case Blocks::Barrel: ++barrels; break;
+                                    case Blocks::Chest:
+                                        if (generator.hoardAt(wx, y, wz) == WorldGen::Hoard::Stronghold ||
+                                            generator.hoardAt(wx, y, wz) == WorldGen::Hoard::StrongholdLibrary)
+                                            ++chests;
+                                        break;
                                     default: break;
                                 }
                             }
@@ -11106,7 +11151,26 @@ namespace
             check(filled < EndPortal::FRAME_COUNT,
                   "and never arrives finished, or there would be nothing to do");
             check(lava > 0, "with lava under the ring, which is Minecraft's");
-            check(shelves > 0, "and a library somewhere in it");
+            check(shelves > 100, "and two libraries walled with shelves");
+            check(cages == 1 && generator.dungeonCage(site.x + 3, site.y, site.z + 3) == 4, "a silverfish cage in the portal room");
+            check(bars > 20, "prison cells behind iron bars");
+            check(water >= 9, "a fountain room");
+            check(barrels >= 3, "store rooms with barrels");
+            int planned = 0, corridors = 0;
+            for (const Stronghold::Room& room : Stronghold::plan(site, SEED))
+            {
+                int cx = 0, cy = 0, cz = 0;
+                WorldGen::Hoard hoard = WorldGen::Hoard::None;
+                if (WorldGen::strongholdChest(site, room, cx, cy, cz, hoard)) ++planned;
+                if (room.kind == Stronghold::Kind::Corridor) ++corridors;
+            }
+            check(planned == 6 && chests == planned, "and every chest in it knows which table it is on");
+            check(corridors == 12, "with corridors between the rooms");
+            bool tome = false;
+            for (int n = 0; n < 40 && !tome; ++n)
+                for (const StructureLoot::Stack& stack : StructureLoot::rollFor(WorldGen::Hoard::StrongholdLibrary, n * 3, 20, n * 7, SEED))
+                    if (stack.id == Items::EnchantedBook) tome = true;
+            check(tome, "and a library chest can hold an enchanted book");
         }
     }
 

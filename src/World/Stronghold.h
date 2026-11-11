@@ -17,7 +17,7 @@
 namespace Stronghold
 {
     constexpr int ROOM = 9;      // a room and the wall round it
-    constexpr int GRID = 3;      // rooms across
+    constexpr int GRID = 5;      // rooms across
     constexpr int MAX_RADIUS = (ROOM * GRID) / 2 + 2;
     constexpr int HEADROOM = 5;
 
@@ -53,6 +53,10 @@ namespace Stronghold
         Store,
         // Floor, walls, and whatever wandered in.
         Hall,
+        Fountain,
+        Cells,
+        Stairs,
+        Corridor,
     };
 
     const char* name(Kind kind);

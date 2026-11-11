@@ -490,13 +490,13 @@ void WorldGen::generate(Chunk& chunk) const
     {
         buildVillages(chunk);
         buildTrialChambers(chunk);
-        buildStrongholds(chunk);
         buildMineshafts(chunk);
         buildLandmarks(chunk);
     }
     buildDesertWells(chunk);
     buildGeodes(chunk);
     if (structures) buildAncientCities(chunk);
+    if (structures) buildStrongholds(chunk);
     dressSeabed(chunk);
     growCoralReefs(chunk);
     placeSeaMagma(chunk);
@@ -675,15 +675,60 @@ void WorldGen::generateNether(Chunk& chunk) const
                         break;
                     }
                 }
-                else if (valley && pillar < 0.006f)
+                else if (valley && pillar < 0.006f && lx >= 4 && lx <= 11 && lz >= 4 && lz <= 11)
                 {
-                    for (int y = LAVA_LEVEL + 2; y < ROOF - 6; ++y)
+                    for (int y = LAVA_LEVEL + 2; y < ROOF - 8; ++y)
                     {
                         const BlockId below = chunk.getBlock(lx, y - 1, lz);
                         if (chunk.getBlock(lx, y, lz) != Blocks::Air || below == Blocks::Air || isLiquid(below)) continue;
-                        const int tall = 2 + static_cast<int>(hashToFloat(hashCoords(wx, 3, wz, m_seed + 7953)) * 4.0f);
-                        for (int k = 0; k < tall && chunk.getBlock(lx, y + k, lz) == Blocks::Air; ++k)
-                            chunk.setBlockRaw(lx, y + k, lz, Blocks::BoneBlock);
+                        const uint32_t roll = hashCoords(wx, 3, wz, m_seed + 7953);
+                        const int kind = static_cast<int>(roll % 3u);
+                        const bool alongX = ((roll >> 4) & 1u) != 0;
+                        const BlockId lying = withAxis(Blocks::BoneBlock, alongX ? 1 : 2);
+                        const BlockId across = withAxis(Blocks::BoneBlock, alongX ? 2 : 1);
+                        auto bone = [&](int along, int dy, int side, BlockId block) {
+                            const int bx = lx + (alongX ? along : side), bz = lz + (alongX ? side : along);
+                            if (!Chunk::inBounds(bx, y + dy, bz)) return;
+                            const BlockId there = chunk.getBlock(bx, y + dy, bz);
+                            if (there == Blocks::Air || there == Blocks::SoulSand || there == Blocks::SoulSoil) chunk.setBlockRaw(bx, y + dy, bz, block);
+                        };
+                        if (kind == 0)
+                        {
+                            for (int a = -4; a <= 4; ++a) bone(a, 3, 0, lying);
+                            for (int a = -3; a <= 3; a += 2)
+                                for (int side = -1; side <= 1; side += 2)
+                                {
+                                    bone(a, 3, side, across);
+                                    bone(a, 2, side * 2, Blocks::BoneBlock);
+                                    bone(a, 1, side * 2, Blocks::BoneBlock);
+                                    if (((roll >> (8 + (a + 3))) & 1u) != 0) bone(a, 0, side * 2, Blocks::BoneBlock);
+                                }
+                        }
+                        else if (kind == 1)
+                        {
+                            for (int a = -4; a <= 3; ++a)
+                            {
+                                bone(a, 0, 0, lying);
+                                if ((a & 1) == 0) bone(a, 1, 0, Blocks::BoneBlock);
+                            }
+                            bone(4, 0, 0, Blocks::BoneBlock);
+                            bone(4, 1, 0, Blocks::BoneBlock);
+                            bone(4, 2, 0, lying);
+                        }
+                        else
+                        {
+                            for (int a = -1; a <= 2; ++a)
+                                for (int side = -1; side <= 1; ++side)
+                                    for (int dy = 0; dy <= 2; ++dy)
+                                    {
+                                        const bool shell = a == -1 || a == 2 || std::abs(side) == 1 || dy == 2;
+                                        const bool eye = a == 2 && dy == 1 && side != 0;
+                                        const bool jaw = a == 2 && dy == 0 && side == 0;
+                                        if (shell && !eye && !jaw) bone(a, dy, side, Blocks::BoneBlock);
+                                    }
+                            bone(-2, 0, 0, lying);
+                            bone(-3, 0, 0, lying);
+                        }
                         break;
                     }
                 }
@@ -3384,13 +3429,13 @@ void WorldGen::stampSwampHut(Chunk& chunk, int midX, int midZ, int ground) const
     put(chunk, midX + 1, floorY + 1, midZ + HALF, spruceFence);
     for (int dx = -HALF - 1; dx <= HALF + 1; ++dx)
     {
-        put(chunk, midX + dx, floorY + WALL, midZ - HALF - 1, stairsOf(8, false, 2));
-        put(chunk, midX + dx, floorY + WALL, midZ + HALF + 1, stairsOf(8, false, 0));
+        put(chunk, midX + dx, floorY + WALL, midZ - HALF - 1, stairsOf(8, false, 0));
+        put(chunk, midX + dx, floorY + WALL, midZ + HALF + 1, stairsOf(8, false, 2));
     }
     for (int dz = -HALF; dz <= HALF; ++dz)
     {
-        put(chunk, midX - HALF - 1, floorY + WALL, midZ + dz, stairsOf(8, false, 1));
-        put(chunk, midX + HALF + 1, floorY + WALL, midZ + dz, stairsOf(8, false, 3));
+        put(chunk, midX - HALF - 1, floorY + WALL, midZ + dz, stairsOf(8, false, 3));
+        put(chunk, midX + HALF + 1, floorY + WALL, midZ + dz, stairsOf(8, false, 1));
     }
     putChests(chunk, Landmark::SwampHut, midX, floorY - STILTS, midZ);
 }
@@ -3668,90 +3713,242 @@ void WorldGen::buildMineshafts(Chunk& chunk) const
 // A fortress: two walkways crossing over the lava with a keep where
 // they meet, all of it nether brick, and a blaze cage in the keep --
 // which is where blazes come from and the only reason to go.
+bool WorldGen::fortressIn(int squareX, int squareZ, int& midX, int& midZ, int& turn) const
+{
+    const Structures::Spot spot = Structures::inSquare(Structures::NETHER_FORTRESS, squareX, squareZ, m_seed);
+    if (bastionWins(spot.chunkX, spot.chunkZ)) return false;
+    midX = spot.chunkX * Structures::CHUNK + Structures::CHUNK / 2;
+    midZ = spot.chunkZ * Structures::CHUNK + Structures::CHUNK / 2;
+    turn = static_cast<int>(hashCoords(spot.chunkX, 31, spot.chunkZ, m_seed + 6611) & 3u);
+    return true;
+}
+
+void WorldGen::fortressTurn(int turn, int u, int v, int& dx, int& dz)
+{
+    switch (turn & 3)
+    {
+        case 0: dx = u; dz = v; break;
+        case 1: dx = -v; dz = u; break;
+        case 2: dx = -u; dz = -v; break;
+        default: dx = v; dz = -u; break;
+    }
+}
+
+int WorldGen::fortressChests(glm::ivec3 out[3])
+{
+    out[0] = glm::ivec3(-38, 1, 6);
+    out[1] = glm::ivec3(3, 1, 36);
+    out[2] = glm::ivec3(2, -5, -20);
+    return 3;
+}
+
 void WorldGen::buildNetherFortresses(Chunk& chunk) const
 {
-    const int baseX = chunk.position().x * Chunk::SX;
-    const int baseZ = chunk.position().z * Chunk::SZ;
-
-    constexpr int ARM = 34;      // how far a walkway runs from the middle
-    constexpr int WIDTH = 2;     // half the walkway's width
-    constexpr int KEEP = 7;      // half the keep
-
+    constexpr int REACH = 42;
     const int chunkX = chunk.position().x;
     const int chunkZ = chunk.position().z;
+    const int reachChunks = REACH / Chunk::SX + 1;
+    const int spacing = Structures::NETHER_FORTRESS.spacing;
+    const BlockId brick = Blocks::NetherBricks;
+    const BlockId fence = Blocks::FenceRunLast;
 
-    // Every square whose fortress could reach into this chunk.
-    const int reachChunks = (ARM + KEEP) / Chunk::SX + 1;
-    for (int sz = Structures::squareOf(chunkZ - reachChunks,
-                                       Structures::NETHER_FORTRESS.spacing);
-         sz <= Structures::squareOf(chunkZ + reachChunks,
-                                    Structures::NETHER_FORTRESS.spacing); ++sz)
-        for (int sx = Structures::squareOf(chunkX - reachChunks,
-                                           Structures::NETHER_FORTRESS.spacing);
-             sx <= Structures::squareOf(chunkX + reachChunks,
-                                        Structures::NETHER_FORTRESS.spacing); ++sx)
+    for (int sz = Structures::squareOf(chunkZ - reachChunks, spacing); sz <= Structures::squareOf(chunkZ + reachChunks, spacing); ++sz)
+        for (int sx = Structures::squareOf(chunkX - reachChunks, spacing); sx <= Structures::squareOf(chunkX + reachChunks, spacing); ++sx)
         {
-            const Structures::Spot spot =
-                Structures::inSquare(Structures::NETHER_FORTRESS, sx, sz, m_seed);
+            int midX = 0, midZ = 0, turn = 0;
+            if (!fortressIn(sx, sz, midX, midZ, turn)) continue;
+            if (std::abs(midX - (chunkX * Chunk::SX + 8)) > REACH + 10 || std::abs(midZ - (chunkZ * Chunk::SZ + 8)) > REACH + 10) continue;
+            const int F = FORTRESS_FLOOR;
+            const int deep = NETHER_LAVA_LEVEL - 4;
 
-            const int midX = spot.chunkX * Structures::CHUNK + Structures::CHUNK / 2;
-            const int midZ = spot.chunkZ * Structures::CHUNK + Structures::CHUNK / 2;
-            const int floor = FORTRESS_FLOOR;
-
-            auto walkway = [&](int x, int z) {
-                // Deck, and a rail of brick either side of it so you
-                // can see where the edge is before you find it.
-                put(chunk, x, floor, z, Blocks::NetherBricks);
-                put(chunk, x, floor + 1, z, Blocks::Air);
-                put(chunk, x, floor + 2, z, Blocks::Air);
+            auto P = [&](int u, int y, int v, BlockId block) {
+                int dx = 0, dz = 0;
+                fortressTurn(turn, u, v, dx, dz);
+                put(chunk, midX + dx, y, midZ + dz, block);
+            };
+            auto at = [&](bool alongU, int a, int c, int y, BlockId block) {
+                if (alongU) P(a, y, c, block);
+                else P(c, y, a, block);
+            };
+            auto pier = [&](bool alongU, int a, int from) {
+                for (int da = -1; da <= 1; ++da)
+                    for (int c = -2; c <= 2; ++c)
+                        for (int y = from; y >= deep; --y) at(alongU, a + da, c, y, brick);
+                for (int d = 1; d <= 3; ++d)
+                    for (int side = -1; side <= 1; side += 2)
+                        for (int c = -2; c <= 2; ++c)
+                            for (int y = from; y >= from - (3 - d); --y) at(alongU, a + side * (1 + d), c, y, brick);
+            };
+            auto bridge = [&](bool alongU, int a0, int a1) {
+                const int step = a1 >= a0 ? 1 : -1;
+                for (int a = a0, n = 0; a != a1 + step; a += step, ++n)
+                {
+                    for (int c = -2; c <= 2; ++c)
+                    {
+                        at(alongU, a, c, F, brick);
+                        for (int y = F + 1; y <= F + 5; ++y) at(alongU, a, c, y, Blocks::Air);
+                    }
+                    for (int c = -2; c <= 2; c += 4) at(alongU, a, c, F + 1, n % 4 == 2 ? fence : brick);
+                    if (n % 12 == 6) pier(alongU, a, F - 1);
+                }
+            };
+            auto corridor = [&](bool alongU, int a0, int a1, int fy) {
+                const int step = a1 >= a0 ? 1 : -1;
+                for (int a = a0, n = 0; a != a1 + step; a += step, ++n)
+                {
+                    for (int c = -2; c <= 2; ++c)
+                    {
+                        at(alongU, a, c, fy, brick);
+                        at(alongU, a, c, fy + 5, brick);
+                        for (int y = fy + 1; y <= fy + 4; ++y)
+                        {
+                            const bool wall = std::abs(c) == 2;
+                            const bool window = wall && n % 3 == 1 && (y == fy + 2 || y == fy + 3);
+                            at(alongU, a, c, y, !wall ? Blocks::Air : window ? fence : brick);
+                        }
+                    }
+                    if (n % 12 == 6) pier(alongU, a, fy - 1);
+                }
+            };
+            auto room = [&](int uc, int vc, int hu, int hv, int fy, int tall) {
+                for (int u = uc - hu; u <= uc + hu; ++u)
+                    for (int v = vc - hv; v <= vc + hv; ++v)
+                        for (int y = fy; y <= fy + tall; ++y)
+                        {
+                            const bool wallU = std::abs(u - uc) == hu, wallV = std::abs(v - vc) == hv;
+                            const bool shell = wallU || wallV || y == fy || y == fy + tall;
+                            const int run = wallU ? v - vc : u - uc;
+                            const bool window = (wallU != wallV) && (y == fy + 2 || y == fy + 3) && std::abs(run) % 3 == 0 && run != 0;
+                            P(u, y, v, !shell ? Blocks::Air : window ? fence : brick);
+                        }
+                for (int u = uc - 1; u <= uc + 1; ++u)
+                    for (int v = vc - 1; v <= vc + 1; ++v)
+                        for (int y = fy - 1; y >= deep; --y) P(u, y, v, brick);
+            };
+            auto door = [&](int u, int v, int fy) {
+                for (int y = fy + 1; y <= fy + 3; ++y) P(u, y, v, Blocks::Air);
             };
 
-            for (int along = -ARM; along <= ARM; ++along)
-                for (int across = -WIDTH; across <= WIDTH; ++across)
+            for (int u = -5; u <= 5; ++u)
+                for (int v = -5; v <= 5; ++v)
                 {
-                    walkway(midX + along, midZ + across);
-                    walkway(midX + across, midZ + along);
+                    P(u, F, v, brick);
+                    for (int y = F + 1; y <= F + 5; ++y) P(u, y, v, Blocks::Air);
+                    const int ring = std::max(std::abs(u), std::abs(v));
+                    const int open = std::min(std::abs(u), std::abs(v));
+                    if (ring == 5 && open > 1) P(u, F + 1, v, (std::abs(u) == 5 && std::abs(v) == 5) ? brick : fence);
+                    if (std::abs(u) == 5 && std::abs(v) == 5) P(u, F + 2, v, brick);
+                    if (ring <= 2)
+                        for (int y = F - 1; y >= deep; --y) P(u, y, v, brick);
+                    else if (ring <= 4)
+                        for (int y = F - 1; y >= F - (5 - ring); --y) P(u, y, v, brick);
+                }
 
-                    if (std::abs(across) == WIDTH)
+            bridge(true, 6, 28);
+            bridge(true, -6, -24);
+            bridge(false, 6, 16);
+            bridge(false, -6, -14);
+
+            for (int a = 0; a <= 8; ++a)
+                for (int c = -3; c <= 3; ++c)
+                {
+                    const int u = 29 + a;
+                    const int h = a <= 1 ? 0 : a == 2 ? 1 : a == 3 ? 2 : 3;
+                    for (int y = F + 1; y <= F + 9; ++y) P(u, y, c, Blocks::Air);
+                    for (int y = F - 1; y <= F + h; ++y) P(u, y, c, brick);
+                    if (a >= 2 && a <= 4 && std::abs(c) <= 1) P(u, F + h, c, stairsOf(7, false, 3 + turn));
+                    if (a >= 2 && a <= 4 && std::abs(c) >= 2) P(u, F + h + 1, c, brick);
+                    if (a <= 1 && std::abs(c) == 3) P(u, F + 1, c, brick);
+                    if (a >= 5 && (std::abs(c) == 3 || a == 8)) P(u, F + 4, c, fence);
+                    if (a >= 5 && a <= 7 && std::abs(c) <= 1)
+                        for (int y = F - 2; y >= deep; --y) P(u, y, c, brick);
+                }
+            P(36, F + 4, 0, Blocks::MonsterSpawner);
+
+            room(-32, 0, 7, 7, F, 8);
+            door(-25, -1, F); door(-25, 0, F); door(-25, 1, F);
+            for (int v = -6; v <= 6; ++v)
+                for (int u = -38; u <= -36; ++u)
+                {
+                    if (v == 0 || (u == -38 && v == 6)) continue;
+                    P(u, F, v, Blocks::SoulSand);
+                    P(u, F + 1, v, Blocks::NetherWart);
+                }
+            for (int v = -6; v <= 6; v += 12)
+                for (int u = -34; u <= -28; ++u)
+                {
+                    P(u, F, v, Blocks::SoulSand);
+                    P(u, F + 1, v, Blocks::NetherWart);
+                }
+            for (int k = 0; k < 4; ++k)
+                for (int y = F + 1; y <= F + 7; ++y)
+                    P(-32 + (k & 1 ? 3 : -3), y, (k & 2 ? 3 : -3), y == F + 4 ? fence : brick);
+
+            corridor(false, 17, 28, F);
+            room(0, 33, 4, 4, F, 7);
+            door(-1, 29, F); door(0, 29, F); door(1, 29, F);
+            door(-4, 33, F); door(4, 33, F);
+            for (int u = -1; u <= 1; ++u)
+                for (int v = 32; v <= 34; ++v)
+                    P(u, F + 1, v, (u == 0 && v == 33) ? Blocks::Lava : brick);
+            P(0, F + 7, 33, Blocks::Lava);
+            for (int side = -1; side <= 1; side += 2)
+                for (int a = 0; a <= 4; ++a)
+                    for (int c = -2; c <= 2; ++c)
                     {
-                        put(chunk, midX + along, floor + 1, midZ + across,
-                            Blocks::NetherBricks);
-                        put(chunk, midX + across, floor + 1, midZ + along,
-                            Blocks::NetherBricks);
+                        const int u = side * (5 + a);
+                        P(u, F, 33 + c, brick);
+                        for (int y = F + 1; y <= F + 4; ++y) P(u, y, 33 + c, Blocks::Air);
+                        if (std::abs(c) == 2 || a == 4) P(u, F + 1, 33 + c, fence);
                     }
-                }
 
-            // The keep: a walled room where the two cross, roofed, with
-            // the cage in the middle of it.
-            for (int dx = -KEEP; dx <= KEEP; ++dx)
-                for (int dz = -KEEP; dz <= KEEP; ++dz)
+            room(0, -18, 3, 3, F - 6, 12);
+            door(-1, -15, F); door(0, -15, F); door(1, -15, F);
+            for (int u = -2; u <= 2; ++u)
+                for (int v = -20; v <= -16; ++v)
+                    if (std::max(std::abs(u), std::abs(v + 18)) == 2 && !(v == -16 && u >= 1)) P(u, F, v, Blocks::Air);
+            for (int v = -16; v <= -16; ++v)
+                for (int u = -2; u <= 2; ++u) P(u, F, v, brick);
+            {
+                const int ring[16][2] = { { -2, -16 }, { -2, -17 }, { -2, -18 }, { -2, -19 }, { -2, -20 }, { -1, -20 }, { 0, -20 }, { 1, -20 },
+                                          { 2, -20 }, { 2, -19 }, { 2, -18 }, { 2, -17 }, { 2, -16 }, { 1, -16 }, { 0, -16 }, { -1, -16 } };
+                for (int i = 0; i < 6; ++i)
                 {
-                    const bool wall = std::abs(dx) == KEEP || std::abs(dz) == KEEP;
-                    for (int dy = 0; dy <= 5; ++dy)
-                    {
-                        const bool roof = (dy == 5);
-                        const bool solid = wall || roof || dy == 0;
-                        const bool doorway = wall && std::abs(dx) <= 1 && dy >= 1 && dy <= 2;
-                        const bool doorwayZ = wall && std::abs(dz) <= 1 && dy >= 1 && dy <= 2;
-
-                        put(chunk, midX + dx, floor + dy, midZ + dz,
-                            (solid && !(doorway || doorwayZ)) ? Blocks::NetherBricks
-                                                              : Blocks::Air);
-                    }
+                    const int y = F - 1 - i;
+                    P(ring[1 + i][0], y, ring[1 + i][1], brick);
+                    for (int below = y - 1; below > F - 6; --below) P(ring[1 + i][0], below, ring[1 + i][1], brick);
                 }
-
-            put(chunk, midX, floor + 1, midZ, Blocks::MonsterSpawner);
-
-            // Nether wart on soul sand in the corners, which is what a
-            // fortress is really worth: brewing starts here.
-            for (int cx = -1; cx <= 1; cx += 2)
-                for (int cz = -1; cz <= 1; cz += 2)
+                for (int u = -1; u <= 1; ++u)
+                    for (int v = -19; v <= -17; ++v) P(u, F, v, brick);
+                for (int u = -1; u <= 1; ++u)
+                    for (int v = -19; v <= -17; ++v)
+                        for (int y = F - 5; y <= F - 1; ++y) P(u, y, v, brick);
+            }
+            door(1, -21, F - 6); door(2, -21, F - 6);
+            for (int v = -22; v >= -30; --v)
+                for (int c = 0; c <= 3; ++c)
                 {
-                    const int wx = midX + cx * (KEEP - 2);
-                    const int wz = midZ + cz * (KEEP - 2);
-                    put(chunk, wx, floor, wz, Blocks::SoulSand);
-                    put(chunk, wx, floor + 1, wz, Blocks::NetherWart);
+                    P(c, F - 6, v, brick);
+                    P(c, F - 1, v, brick);
+                    for (int y = F - 5; y <= F - 2; ++y)
+                        P(c, y, v, (c == 0 || c == 3) ? (((-v) % 3 == 1 && (y == F - 4 || y == F - 3)) ? fence : brick) : Blocks::Air);
                 }
+            for (int u = -2; u <= 5; ++u)
+                for (int v = -38; v <= -31; ++v)
+                {
+                    P(u, F - 6, v, brick);
+                    for (int y = F - 5; y <= F + 1; ++y) P(u, y, v, Blocks::Air);
+                    if (u == -2 || u == 5 || v == -38) P(u, F - 5, v, fence);
+                    if (u >= 0 && u <= 3 && v >= -36 && v <= -33)
+                        for (int y = F - 7; y >= deep; --y) P(u, y, v, brick);
+                }
+            P(1, F - 5, -36, brick);
+            P(2, F - 5, -36, brick);
+            P(1, F - 4, -36, Blocks::MonsterSpawner);
+
+            glm::ivec3 chests[3];
+            const int many = fortressChests(chests);
+            for (int i = 0; i < many; ++i) P(chests[i].x, F + chests[i].y, chests[i].z, Blocks::Chest);
         }
 }
 
@@ -3820,37 +4017,54 @@ void WorldGen::stampStrongholdRoom(Chunk& chunk, const Stronghold::Site& site,
                 put(chunk, x, y, z, brick);
             }
 
-    for (int x = room.x; x < room.x + room.width; ++x)
-        for (int z = room.z; z < room.z + room.depth; ++z)
-            for (int y = site.y; y < ceiling; ++y)
-                put(chunk, x, y, z, Blocks::Air);
-
     constexpr int HALF = GRID / 2;
     const int midX = room.x + room.width / 2;
     const int midZ = room.z + room.depth / 2;
+    auto brickAt = [&](int x, int y, int z) {
+        const float roll = hashToFloat(hashCoords(x, y, z, m_seed + 3307));
+        return roll < 0.2f ? static_cast<BlockId>(Blocks::CrackedStoneBricks) : roll < 0.5f ? static_cast<BlockId>(Blocks::MossyStoneBricks)
+                                                                              : static_cast<BlockId>(Blocks::StoneBricks);
+    };
 
+    const bool west = room.gx > -HALF, east = room.gx < HALF, north = room.gz > -HALF, south = room.gz < HALF;
     auto doorway = [&](int x, int z, bool alongX) {
         for (int step = -1; step <= 1; ++step)
             for (int y = site.y; y <= site.y + 2; ++y)
                 put(chunk, alongX ? x : x + step, y, alongX ? z + step : z, Blocks::Air);
     };
 
-    if (room.gx > -HALF) doorway(room.x - 1, midZ, true);
-    if (room.gx < HALF)  doorway(room.x + room.width, midZ, true);
-    if (room.gz > -HALF) doorway(midX, room.z - 1, false);
-    if (room.gz < HALF)  doorway(midX, room.z + room.depth, false);
+    if (room.kind == Kind::Corridor)
+    {
+        for (int a = -3; a <= 3; ++a)
+            for (int c = -1; c <= 1; ++c)
+                for (int y = site.y; y <= site.y + 2; ++y)
+                {
+                    if ((a < 0 && west) || (a > 0 && east) || std::abs(a) <= 1) put(chunk, midX + a, y, midZ + c, Blocks::Air);
+                    if ((a < 0 && north) || (a > 0 && south) || std::abs(a) <= 1) put(chunk, midX + c, y, midZ + a, Blocks::Air);
+                }
+        if (hashToFloat(hashCoords(midX, 5, midZ, m_seed + 3311)) < 0.5f)
+            put(chunk, midX, site.y + 3, midZ, Blocks::Cobweb);
+    }
+    else
+    {
+        for (int x = room.x; x < room.x + room.width; ++x)
+            for (int z = room.z; z < room.z + room.depth; ++z)
+                for (int y = site.y; y < ceiling; ++y)
+                    put(chunk, x, y, z, Blocks::Air);
+        for (int cx = 0; cx < 2; ++cx)
+            for (int cz = 0; cz < 2; ++cz)
+                put(chunk, room.x + (cx ? room.width - 1 : 0), site.y + 2, room.z + (cz ? room.depth - 1 : 0), wallTorchOf(0, cx ? 3 : 1));
+    }
 
-    for (int cx = 0; cx < 2; ++cx)
-        for (int cz = 0; cz < 2; ++cz)
-            put(chunk, room.x + (cx ? room.width - 1 : 0), site.y + HEADROOM - 1,
-                room.z + (cz ? room.depth - 1 : 0), Blocks::Torch);
+    if (west) doorway(room.x - 1, midZ, true);
+    if (east) doorway(room.x + room.width, midZ, true);
+    if (north) doorway(midX, room.z - 1, false);
+    if (south) doorway(midX, room.z + room.depth, false);
 
     switch (room.kind)
     {
         case Kind::Portal:
         {
-            // Lava under the ring, which is Minecraft's, and the
-            // twelve frames round the three by three above it.
             for (int dx = -2; dx <= 2; ++dx)
                 for (int dz = -2; dz <= 2; ++dz)
                     put(chunk, midX + dx, site.y - 1, midZ + dz, Blocks::Lava);
@@ -3865,25 +4079,129 @@ void WorldGen::stampStrongholdRoom(Chunk& chunk, const Stronghold::Site& site,
                                           : Blocks::EndPortalFrame;
                 put(chunk, midX + offsets[i][0], site.y, midZ + offsets[i][1], frame);
             }
+            put(chunk, midX + 3, site.y, midZ + 3, Blocks::MonsterSpawner);
+            for (int side = -1; side <= 1; side += 2)
+                for (int along = -2; along <= 2; along += 4)
+                {
+                    put(chunk, midX + side * 4, site.y + 1, midZ + along, Blocks::IronBars);
+                    put(chunk, midX + along, site.y + 1, midZ + side * 4, Blocks::IronBars);
+                }
             break;
         }
 
         case Kind::Library:
-            for (int dx = -2; dx <= 2; ++dx)
-                for (int dy = 0; dy < 2; ++dy)
+        {
+            for (int x = room.x; x < room.x + room.width; ++x)
+                for (int z = room.z; z < room.z + room.depth; ++z)
                 {
-                    put(chunk, midX + dx, site.y + dy, room.z, Blocks::Bookshelf);
-                    put(chunk, midX + dx, site.y + dy, room.z + room.depth - 1,
-                        Blocks::Bookshelf);
+                    put(chunk, x, site.y - 1, z, Blocks::Planks);
+                    const bool edgeX = x == room.x || x == room.x + room.width - 1;
+                    const bool edgeZ = z == room.z || z == room.z + room.depth - 1;
+                    if (!edgeX && !edgeZ) continue;
+                    const bool doorX = edgeX && std::abs(z - midZ) <= 1 && (x == room.x ? west : east);
+                    const bool doorZ = edgeZ && std::abs(x - midX) <= 1 && (z == room.z ? north : south);
+                    if (doorX || doorZ) continue;
+                    for (int dy = 0; dy < 3; ++dy) put(chunk, x, site.y + dy, z, Blocks::Bookshelf);
                 }
+            put(chunk, room.x + 1, site.y, room.z + 1, Blocks::Chest);
+            put(chunk, room.x + 1, site.y + 4, room.z + room.depth - 2, Blocks::Cobweb);
+            put(chunk, room.x + room.width - 2, site.y + 4, room.z + 1, Blocks::Cobweb);
+            put(chunk, midX, site.y + 4, midZ, Blocks::OakFence);
+            put(chunk, midX, site.y + 3, midZ, Blocks::OakFence);
+            for (int k = 0; k < 4; ++k)
+            {
+                const int kx = midX + (k == 0 ? 1 : k == 1 ? -1 : 0), kz = midZ + (k == 2 ? 1 : k == 3 ? -1 : 0);
+                put(chunk, kx, site.y + 3, kz, Blocks::OakFence);
+                put(chunk, kx, site.y + 4, kz, Blocks::Torch);
+            }
             break;
+        }
 
         case Kind::Store:
             put(chunk, midX, site.y, midZ, Blocks::Chest);
+            put(chunk, room.x, site.y, room.z, Blocks::Barrel);
+            put(chunk, room.x + room.width - 1, site.y, room.z + room.depth - 1, Blocks::Barrel);
+            put(chunk, room.x + room.width - 1, site.y + 1, room.z + room.depth - 1, Blocks::Barrel);
+            put(chunk, room.x, site.y + 4, room.z + room.depth - 1, Blocks::Cobweb);
             break;
 
-        case Kind::Hall:
+        case Kind::Fountain:
+            for (int dx = -2; dx <= 2; ++dx)
+                for (int dz = -2; dz <= 2; ++dz)
+                {
+                    const int ring = std::max(std::abs(dx), std::abs(dz));
+                    if (ring == 2) put(chunk, midX + dx, site.y, midZ + dz, Blocks::StoneBricks);
+                    else if (ring == 1) put(chunk, midX + dx, site.y, midZ + dz, Blocks::Water);
+                }
+            for (int dy = 0; dy <= 1; ++dy) put(chunk, midX, site.y + dy, midZ, Blocks::ChiseledStoneBricks);
+            put(chunk, midX, site.y + 2, midZ, Blocks::Water);
             break;
+
+        case Kind::Cells:
+            for (int x = room.x; x < room.x + room.width; ++x)
+            {
+                const int slot = x - room.x;
+                for (int y = site.y; y < ceiling; ++y)
+                {
+                    const bool gate = (slot == 1 || slot == 3 || slot == 5) && y <= site.y + 1;
+                    if (!gate) put(chunk, x, y, room.z + 2, y <= site.y + 2 ? static_cast<BlockId>(Blocks::IronBars) : brickAt(x, y, room.z + 2));
+                    if (slot == 2 || slot == 4)
+                        for (int z = room.z; z <= room.z + 1; ++z) put(chunk, x, y, z, brickAt(x, y, z));
+                }
+            }
+            break;
+
+        case Kind::Stairs:
+        {
+            const int low = site.y - 6;
+            for (int x = room.x - 1; x <= room.x + room.width; ++x)
+                for (int z = room.z - 1; z <= room.z + room.depth; ++z)
+                    for (int y = low - 1; y < floor; ++y)
+                    {
+                        const bool inside = x >= room.x && x < room.x + room.width && z >= room.z && z < room.z + room.depth && y >= low;
+                        put(chunk, x, y, z, inside ? static_cast<BlockId>(Blocks::Air) : brickAt(x, y, z));
+                    }
+            static const int RING[8][2] = { { 1, -1 }, { 1, 0 }, { 1, 1 }, { 0, 1 }, { -1, 1 }, { -1, 0 }, { -1, -1 }, { 0, -1 } };
+            for (int y = low; y <= site.y + 2; ++y) put(chunk, midX, y, midZ, Blocks::StoneBricks);
+            for (int i = 0; i < 6; ++i)
+            {
+                const int x = midX + RING[i][0], z = midZ + RING[i][1];
+                const int top = site.y - 1 - i;
+                for (int y = low; y <= top; ++y) put(chunk, x, y, z, Blocks::StoneBricks);
+                for (int y = top + 1; y <= site.y + 2; ++y) put(chunk, x, y, z, Blocks::Air);
+            }
+            for (int i = 6; i < 8; ++i)
+                put(chunk, midX + RING[i][0], site.y - 1, midZ + RING[i][1], Blocks::StoneBricks);
+            put(chunk, midX, low, midZ + 3, Blocks::Chest);
+            put(chunk, room.x, low + 2, room.z, wallTorchOf(0, 1));
+            put(chunk, room.x + room.width - 1, low + 2, room.z + room.depth - 1, wallTorchOf(0, 3));
+            break;
+        }
+
+        case Kind::Hall:
+            for (int cx = 0; cx < 2; ++cx)
+                for (int cz = 0; cz < 2; ++cz)
+                    for (int y = site.y; y < ceiling; ++y)
+                        put(chunk, room.x + (cx ? room.width - 2 : 1), y, room.z + (cz ? room.depth - 2 : 1),
+                            y == site.y + 2 ? static_cast<BlockId>(Blocks::ChiseledStoneBricks) : static_cast<BlockId>(Blocks::StoneBricks));
+            break;
+
+        case Kind::Corridor:
+            break;
+    }
+}
+
+bool WorldGen::strongholdChest(const Stronghold::Site& site, const Stronghold::Room& room, int& x, int& y, int& z, Hoard& hoard)
+{
+    using namespace Stronghold;
+    const int midX = room.x + room.width / 2;
+    const int midZ = room.z + room.depth / 2;
+    switch (room.kind)
+    {
+        case Kind::Store:   x = midX; y = site.y; z = midZ; hoard = Hoard::Stronghold; return true;
+        case Kind::Library: x = room.x + 1; y = site.y; z = room.z + 1; hoard = Hoard::StrongholdLibrary; return true;
+        case Kind::Stairs:  x = midX; y = site.y - 6; z = midZ + 3; hoard = Hoard::Stronghold; return true;
+        default: return false;
     }
 }
 
@@ -4873,6 +5191,11 @@ int WorldGen::dungeonCage(int x, int y, int z) const
     const int cz = static_cast<int>(std::floor(static_cast<float>(z) / Chunk::SZ));
     if (!dungeonIn(cx, cz, ox, oy, oz) || ox != x || oy != y || oz != z)
     {
+        if (m_dimension == Dimension::Overworld)
+        {
+            const Stronghold::Site site = Stronghold::touching(x, z, x, z, m_seed);
+            if (site.exists && x == site.x + 3 && y == site.y && z == site.z + 3) return 4;
+        }
         for (int dz = -5; dz <= 5; ++dz)
             for (int dx = -5; dx <= 5; ++dx)
             {
@@ -5596,6 +5919,27 @@ WorldGen::Hoard WorldGen::hoardAt(int x, int y, int z) const
 
     if (m_dimension == Dimension::Nether)
     {
+        const int spacing = Structures::NETHER_FORTRESS.spacing;
+        const int hereX = Structures::squareOf(Structures::squareOf(x, Structures::CHUNK), spacing);
+        const int hereZ = Structures::squareOf(Structures::squareOf(z, Structures::CHUNK), spacing);
+        for (int sz = hereZ - 1; sz <= hereZ + 1; ++sz)
+            for (int sx = hereX - 1; sx <= hereX + 1; ++sx)
+            {
+                int fx = 0, fz = 0, turn = 0;
+                if (!fortressIn(sx, sz, fx, fz, turn)) continue;
+                glm::ivec3 chests[3];
+                const int many = fortressChests(chests);
+                for (int i = 0; i < many; ++i)
+                {
+                    int dx = 0, dz = 0;
+                    fortressTurn(turn, chests[i].x, chests[i].z, dx, dz);
+                    if (x == fx + dx && z == fz + dz && y == FORTRESS_FLOOR + chests[i].y) return Hoard::Fortress;
+                }
+            }
+    }
+
+    if (m_dimension == Dimension::Nether)
+    {
         int midX = 0, midZ = 0;
         const int cx = static_cast<int>(std::floor(static_cast<float>(x - 3) / Chunk::SX));
         const int cz = static_cast<int>(std::floor(static_cast<float>(z - 1) / Chunk::SZ));
@@ -5704,14 +6048,15 @@ WorldGen::Hoard WorldGen::hoardAt(int x, int y, int z) const
         }
     }
 
-    // A stronghold's store room.
     {
         const Stronghold::Site site = Stronghold::touching(x, z, x, z, m_seed);
-        if (site.exists && y == site.y)
+        if (site.exists)
             for (const Stronghold::Room& room : Stronghold::plan(site, m_seed))
-                if (room.kind == Stronghold::Kind::Store &&
-                    x == room.x + room.width / 2 && z == room.z + room.depth / 2)
-                    return Hoard::Stronghold;
+            {
+                int cx = 0, cy = 0, cz = 0;
+                Hoard hoard = Hoard::None;
+                if (strongholdChest(site, room, cx, cy, cz, hoard) && cx == x && cy == y && cz == z) return hoard;
+            }
     }
 
     // A trial chamber's supply room.

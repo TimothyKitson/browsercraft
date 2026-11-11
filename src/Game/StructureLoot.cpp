@@ -249,6 +249,29 @@ namespace
 
     // A supply room, which is exactly what it sounds like: what you
     // want in your hands before the next spawner starts.
+    const Entry LIBRARY[] = {
+        { Items::Book,    1, 3 },
+        { Items::Paper,   2, 7 },
+        { Items::EmptyMap, 1, 1 },
+        { Items::Compass, 1, 1 },
+        { Items::EnchantedBook, 1, 1 },
+    };
+
+    const Entry FORTRESS[] = {
+        { Items::Diamond, 1, 3 },
+        { Items::IronIngot, 1, 5 },
+        { Items::GoldIngot, 1, 3 },
+        { Items::GoldSword, 1, 1 },
+        { Items::GoldChestplate, 1, 1 },
+        { Items::FlintAndSteel, 1, 1 },
+        { Items::NetherWart, 3, 7 },
+        { Items::Saddle, 1, 1 },
+        { Items::GoldHorseArmor, 1, 1 },
+        { Items::IronHorseArmor, 1, 1 },
+        { Items::DiamondHorseArmor, 1, 1 },
+        { Blocks::Obsidian, 2, 4 },
+    };
+
     const Entry TRAP[] = {
         { Items::Arrow, 2, 7 },
     };
@@ -308,6 +331,10 @@ namespace
                 return { SUPPLY, static_cast<int>(std::size(SUPPLY)) };
             case WorldGen::Hoard::TrapDispenser:
                 return { TRAP, static_cast<int>(std::size(TRAP)) };
+            case WorldGen::Hoard::Fortress:
+                return { FORTRESS, static_cast<int>(std::size(FORTRESS)) };
+            case WorldGen::Hoard::StrongholdLibrary:
+                return { LIBRARY, static_cast<int>(std::size(LIBRARY)) };
             case WorldGen::Hoard::None:
                 break;
         }
@@ -339,6 +366,8 @@ StructureLoot::Stack StructureLoot::centrepiece(WorldGen::Hoard hoard,
         case WorldGen::Hoard::AncientCity:     out.id = Items::Diamond;   out.count = 3; break;
         case WorldGen::Hoard::TrialChamber:    out.id = Items::Arrow;     out.count = 8; break;
         case WorldGen::Hoard::TrapDispenser:   out.id = Items::Arrow;     out.count = 5; break;
+        case WorldGen::Hoard::Fortress:        out.id = Items::GoldIngot; out.count = 2; break;
+        case WorldGen::Hoard::StrongholdLibrary: out.id = Items::Book;    out.count = 3; break;
         case WorldGen::Hoard::None:            return out;
     }
 

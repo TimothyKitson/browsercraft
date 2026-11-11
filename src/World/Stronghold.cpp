@@ -66,6 +66,10 @@ const char* Stronghold::name(Kind kind)
         case Kind::Portal:  return "Portal room";
         case Kind::Library: return "Library";
         case Kind::Store:   return "Store room";
+        case Kind::Fountain: return "Fountain room";
+        case Kind::Cells:   return "Prison cells";
+        case Kind::Stairs:  return "Stairwell";
+        case Kind::Corridor: return "Corridor";
         case Kind::Hall:    break;
     }
     return "Hall";
@@ -89,18 +93,22 @@ std::vector<Stronghold::Room> Stronghold::plan(const Site& site, uint32_t seed)
             room.x = site.x + gx * ROOM - room.width / 2;
             room.z = site.z + gz * ROOM - room.depth / 2;
 
-            // The portal is in the middle, because it is the thing the
-            // stronghold is for and the thing you should walk into
-            // rather than hunt for. A library in one corner, stores in
-            // the others, halls between.
-            const bool middle = (gx == 0 && gz == 0);
-            const bool corner = (gx != 0 && gz != 0);
-            const float roll =
-                hashToFloat(hashCoords(site.x + gx, 18, site.z + gz, seed + 66002));
-
-            room.kind = middle ? Kind::Portal
-                      : corner ? (roll < 0.34f ? Kind::Library : Kind::Store)
-                               : Kind::Hall;
+            static const Kind LAYOUT[GRID][GRID] = {
+                { Kind::Library,  Kind::Corridor, Kind::Store,    Kind::Corridor, Kind::Cells },
+                { Kind::Corridor, Kind::Fountain, Kind::Corridor, Kind::Hall,     Kind::Corridor },
+                { Kind::Stairs,   Kind::Corridor, Kind::Portal,   Kind::Corridor, Kind::Store },
+                { Kind::Corridor, Kind::Hall,     Kind::Corridor, Kind::Cells,    Kind::Corridor },
+                { Kind::Store,    Kind::Corridor, Kind::Hall,     Kind::Corridor, Kind::Library },
+            };
+            const int turn = static_cast<int>(hashCoords(site.x, 18, site.z, seed + 66002) & 3u);
+            int rx = gx, rz = gz;
+            for (int i = 0; i < turn; ++i)
+            {
+                const int was = rx;
+                rx = -rz;
+                rz = was;
+            }
+            room.kind = LAYOUT[rz + HALF][rx + HALF];
 
             rooms.push_back(room);
         }
