@@ -242,6 +242,15 @@ void Player::moveAxis(const World& world, float delta, int axis, bool preventLed
         {
             if (axis == 1 && move < 0.0f)
             {
+                const BlockId landing = world.getBlock(static_cast<int>(std::floor(position.x)), static_cast<int>(std::floor(next.y)),
+                                                       static_cast<int>(std::floor(position.z)));
+                if (landing == Blocks::SlimeBlock && !sneaking && velocity.y < -2.0f)
+                {
+                    m_falling = false;
+                    velocity.y = -velocity.y * 0.95f;
+                    onGround = false;
+                    return;
+                }
                 if (m_falling) applyFallDamage(world, position.y);
                 onGround = true;
                 m_falling = false;
@@ -302,7 +311,20 @@ void Player::applyFallDamage(const World& world, float landingY)
     const int x = static_cast<int>(std::floor(position.x));
     const int y = static_cast<int>(std::floor(landingY - 0.1f));
     const int z = static_cast<int>(std::floor(position.z));
-    if (breaksFall(world.getBlock(x, y, z))) return;
+    const BlockId landed = world.getBlock(x, y, z);
+    if (breaksFall(landed)) return;
+    if (landed == Blocks::HayBale || axisBase(landed) == Blocks::HayBale)
+    {
+        cause = "fall";
+        damage(static_cast<int>(std::floor((fallDistance - SAFE_FALL_DISTANCE) * 0.2f)));
+        return;
+    }
+    if (landed == Blocks::DripstoneUp)
+    {
+        cause = "stalagmite";
+        damage(static_cast<int>(std::floor((fallDistance + 2.0f - SAFE_FALL_DISTANCE) * 2.0f)));
+        return;
+    }
 
     cause = "fall";
     damage(static_cast<int>(std::floor(fallDistance - SAFE_FALL_DISTANCE)));
@@ -709,7 +731,7 @@ void Player::update(float deltaTime, const World& world, const Controls& control
         const BlockId under = world.getBlock(static_cast<int>(std::floor(position.x)),
                                              static_cast<int>(std::floor(position.y - 0.1f)),
                                              static_cast<int>(std::floor(position.z)));
-        if (under == Blocks::HoneyBlock) targetSpeed *= 0.4f;
+        if (under == Blocks::HoneyBlock || under == Blocks::SoulSand) targetSpeed *= 0.4f;
     }
 
     const glm::vec3 targetVelocity = controls.wishDirection * targetSpeed;
@@ -764,6 +786,22 @@ void Player::update(float deltaTime, const World& world, const Controls& control
         if (controls.descend) verticalTarget -= targetSpeed;
         velocity.y += (verticalTarget - velocity.y) * std::clamp(16.0f * deltaTime, 0.0f, 1.0f);
         onGround = false;
+        m_falling = false;
+    }
+    else if (!onGround && velocity.y < -1.0f && [&] {
+                 const AABB box = aabb();
+                 for (int by = static_cast<int>(std::floor(box.min.y)); by <= static_cast<int>(std::floor(box.max.y - 0.001f)); ++by)
+                 {
+                     const int x0 = static_cast<int>(std::floor(box.min.x - 0.07f)), x1 = static_cast<int>(std::floor(box.max.x + 0.07f));
+                     const int z0 = static_cast<int>(std::floor(box.min.z - 0.07f)), z1 = static_cast<int>(std::floor(box.max.z + 0.07f));
+                     for (int bx = x0; bx <= x1; ++bx)
+                         for (int bz = z0; bz <= z1; ++bz)
+                             if (world.getBlock(bx, by, bz) == Blocks::HoneyBlock) return true;
+                 }
+                 return false;
+             }())
+    {
+        velocity.y = -1.0f;
         m_falling = false;
     }
     else if (inWater)
@@ -827,6 +865,9 @@ void Player::update(float deltaTime, const World& world, const Controls& control
         if (controls.jumpHeld && wasOnGround)
         {
             velocity.y = JUMP_VELOCITY * Effects::jumpMultiplier(effects);
+            if (world.getBlock(static_cast<int>(std::floor(position.x)), static_cast<int>(std::floor(position.y - 0.1f)),
+                               static_cast<int>(std::floor(position.z))) == Blocks::HoneyBlock)
+                velocity.y *= 0.5f;
             m_jumped = true;
             m_falling = true;
             m_fallStartY = position.y;

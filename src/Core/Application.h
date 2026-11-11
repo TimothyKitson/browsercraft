@@ -1305,6 +1305,7 @@ private:
     void snowGrass(const glm::ivec3& at);
     void turnWithDebugStick(const glm::ivec3& at, int step);
     bool leafHeld(const glm::ivec3& leaf) const;
+    void soakSponge(const glm::ivec3& at);
     void tickLeafDecay(float deltaTime);
     std::set<std::array<int, 4>> m_placedLeaves;
     std::vector<std::pair<glm::ivec3, float>> m_leafDecay;

@@ -17945,6 +17945,14 @@ void Application::handlePlacement()
             }
         }
     }
+    if (placing == Blocks::Sponge) soakSponge(target);
+    if (placing == Blocks::WetSponge && m_dimension == Dimension::Nether)
+    {
+        m_world->setBlock(target.x, target.y, target.z, Blocks::Sponge);
+        m_net.onLocalBlockChange(target.x, target.y, target.z, Blocks::Sponge);
+        m_audio.play(Sound::Fire, 0.6f, 1.6f);
+        m_sprites->burst(SpriteParticles::Kind::Poof, glm::vec3(target) + glm::vec3(0.5f, 1.0f, 0.5f), 8, 0.4f, 0.6f, 0.3f, 1.0f);
+    }
     if (isSnowLayer(placing)) snowGrass(target + glm::ivec3(0, -1, 0));
     else unsnowGrass(target + glm::ivec3(0, -1, 0));
     if (isAnySculkSensor(placing)) m_sensorSpots.push_back(target);
@@ -20679,6 +20687,31 @@ void Application::tickLeafDecay(float deltaTime)
         if (sapling != Blocks::Air) m_drops.spawnFromBrokenBlock(at, sapling);
         if ((roll >> 11) % 50u == 0u) m_drops.spawnFromBrokenBlock(at, Items::Stick, 1 + static_cast<int>((roll >> 17) % 2u));
     }
+}
+
+void Application::soakSponge(const glm::ivec3& at)
+{
+    std::vector<std::pair<glm::ivec3, int>> open{ { at, 0 } };
+    std::set<std::array<int, 3>> seen{ { at.x, at.y, at.z } };
+    int soaked = 0;
+    static const int D[6][3] = { { 1, 0, 0 }, { -1, 0, 0 }, { 0, 1, 0 }, { 0, -1, 0 }, { 0, 0, 1 }, { 0, 0, -1 } };
+    for (size_t i = 0; i < open.size() && soaked < 65; ++i)
+        for (const auto& d : D)
+        {
+            const glm::ivec3 next(open[i].first.x + d[0], open[i].first.y + d[1], open[i].first.z + d[2]);
+            if (!seen.insert({ next.x, next.y, next.z }).second) continue;
+            const BlockId there = m_world->getBlock(next.x, next.y, next.z);
+            const bool wet = isWater(there) || there == Blocks::Seagrass || isTallSeagrass(there) || there == Blocks::Kelp || there == Blocks::KelpTop;
+            if (!wet) continue;
+            m_world->setBlock(next.x, next.y, next.z, Blocks::Air);
+            m_net.onLocalBlockChange(next.x, next.y, next.z, Blocks::Air);
+            if (++soaked >= 65) break;
+            if (open[i].second + 1 < 7) open.push_back({ next, open[i].second + 1 });
+        }
+    if (soaked == 0) return;
+    m_world->setBlock(at.x, at.y, at.z, Blocks::WetSponge);
+    m_net.onLocalBlockChange(at.x, at.y, at.z, Blocks::WetSponge);
+    m_audio.play(Sound::DigWool, 0.6f, 0.8f);
 }
 
 void Application::turnWithDebugStick(const glm::ivec3& at, int step)
@@ -23709,6 +23742,7 @@ std::string Application::deathMessageFor() const
     if (cause == "kill") return who + " was killed";
     if (cause == "lightningBolt") return who + " was struck by lightning";
     if (cause == "cactus") return who + " was pricked to death";
+    if (cause == "stalagmite") return who + " was impaled on a stalagmite";
     return who + " died";
 }
 
