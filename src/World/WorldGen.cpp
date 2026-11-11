@@ -442,6 +442,7 @@ void WorldGen::generate(Chunk& chunk) const
         case Dimension::Nether:
             generateNether(chunk);
             dressNether(chunk);
+            shapeBasaltDeltas(chunk);
             buildNetherRuinedPortal(chunk);
             buildNetherFortresses(chunk);
             buildBastions(chunk);
@@ -4834,6 +4835,58 @@ void WorldGen::growCoralReefs(Chunk& chunk) const
                 const int fx = at.x + SIDE[side][0] - baseX, fz = at.z + SIDE[side][1] - baseZ;
                 if (next() % 5u == 0u && Chunk::inBounds(fx, at.y, fz) && isWater(chunk.getBlock(fx, at.y, fz)))
                     chunk.setBlockRaw(fx, at.y, fz, coralWallFanOf(false, which, side));
+            }
+        }
+}
+
+void WorldGen::shapeBasaltDeltas(Chunk& chunk) const
+{
+    const int baseX = chunk.position().x * Chunk::SX;
+    const int baseZ = chunk.position().z * Chunk::SZ;
+    auto nearest = [&](int wx, int wz, uint32_t salt, float chance, float minR, float spanR, float& radius, float& distance, uint32_t& seed) {
+        distance = 1e9f;
+        for (int cx = (wx >> 3) - 1; cx <= (wx >> 3) + 1; ++cx)
+            for (int cz = (wz >> 3) - 1; cz <= (wz >> 3) + 1; ++cz)
+            {
+                const uint32_t h = hashCoords(cx, 0, cz, m_seed + salt);
+                if (hashToFloat(h) >= chance) continue;
+                const float px = static_cast<float>(cx * 8) + hashToFloat(h * 2654435761u) * 8.0f;
+                const float pz = static_cast<float>(cz * 8) + hashToFloat(h * 40503u + 3u) * 8.0f;
+                const float r = minR + hashToFloat(h ^ 0x5bd1e995u) * spanR;
+                const float d = std::sqrt((wx + 0.5f - px) * (wx + 0.5f - px) + (wz + 0.5f - pz) * (wz + 0.5f - pz));
+                if (d - r < distance - radius || distance > 1e8f)
+                {
+                    distance = d;
+                    radius = r;
+                    seed = h;
+                }
+            }
+    };
+    for (int lx = 0; lx < Chunk::SX; ++lx)
+        for (int lz = 0; lz < Chunk::SZ; ++lz)
+        {
+            const int wx = baseX + lx, wz = baseZ + lz;
+            if (netherKindAt(wx, wz) != Biomes::Kind::BasaltDeltas) continue;
+            float poolRadius = 0.0f, poolDistance = 1e9f, columnRadius = 0.0f, columnDistance = 1e9f;
+            uint32_t poolSeed = 0, columnSeed = 0;
+            nearest(wx, wz, 7961, 0.45f, 1.5f, 2.5f, poolRadius, poolDistance, poolSeed);
+            nearest(wx, wz, 7971, 0.2f, 2.0f, 3.0f, columnRadius, columnDistance, columnSeed);
+            for (int y = NETHER_LAVA_LEVEL + 1; y < 114; ++y)
+            {
+                const BlockId floor = chunk.getBlock(lx, y, lz);
+                if (!isSolid(floor) || chunk.getBlock(lx, y + 1, lz) != Blocks::Air) continue;
+                if (poolDistance < poolRadius && isSolid(chunk.getBlock(lx, y - 1, lz)))
+                    chunk.setBlockRaw(lx, y, lz, Blocks::Lava);
+                else if (poolDistance < poolRadius + 1.0f)
+                    chunk.setBlockRaw(lx, y, lz, Blocks::MagmaBlock);
+                else if (columnDistance < columnRadius && hashToFloat(hashCoords(wx, y, wz, m_seed + 7972)) < 0.65f)
+                {
+                    const bool large = (columnSeed >> 24) % 3u == 0u;
+                    const float fall = 1.0f - columnDistance / columnRadius;
+                    const int tall = 1 + static_cast<int>(fall * (large ? 9.0f : 3.0f) * (0.6f + hashToFloat(hashCoords(wx, y + 1, wz, m_seed + 7973)) * 0.4f));
+                    for (int k = 1; k <= tall && y + k < 116 && chunk.getBlock(lx, y + k, lz) == Blocks::Air; ++k)
+                        chunk.setBlockRaw(lx, y + k, lz, Blocks::Basalt);
+                }
             }
         }
 }
