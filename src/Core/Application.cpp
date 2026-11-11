@@ -15759,6 +15759,15 @@ void Application::handlePlacement()
                     m_audio.play(Sound::Click, 0.5f, 0.7f);
                     return;
                 }
+            if (aimed->typeId() == MobId::ZombieVillager && held.id == Items::GoldenApple && !aimed->curing() &&
+                aimed->effects().has(Effects::Kind::Weakness))
+            {
+                aimed->startCure(180.0f + static_cast<float>(((m_growthSeed = m_growthSeed * 1664525u + 1013904223u) >> 8) % 120u));
+                if (!m_player.creative() && --held.count <= 0) held.clear();
+                m_audio.play(Sound::MobZombieSay, 0.8f, 1.6f);
+                m_heldItem.swing();
+                return;
+            }
             if (aimed->typeId() == MobId::Sheep && !aimed->baby() && held.id == Items::Shears && !aimed->sheared())
             {
                 const int wool = 1 + static_cast<int>((m_growthSeed = m_growthSeed * 1664525u + 1013904223u) >> 8) % 3;

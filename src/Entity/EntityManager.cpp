@@ -590,6 +590,13 @@ void EntityManager::update(float deltaTime, const World& world,
             m_grownTadpoles.push_back(mob.position());
             mob.vanish();
         }
+        if (mob.typeId() == MobId::ZombieVillager && mob.alive() && mob.cureDone(deltaTime))
+        {
+            Zombified cured{ mob.position(), mob.yaw(), mob.baby() };
+            cured.into = MobId::Villager;
+            m_zombified.push_back(cured);
+            mob.vanish();
+        }
         if (mob.typeId() == MobId::WanderingTrader && mob.alive() && mob.age() > 2400.0f && mob.customName().empty() && !mob.leashed())
             mob.vanish();
         if (mob.typeId() == MobId::Hoglin && mob.alive())
