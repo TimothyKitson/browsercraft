@@ -10770,7 +10770,7 @@ void Application::tickMonsterCages(float deltaTime)
                 if (!isMonsterSpawner(m_world->getBlock(at.x, at.y, at.z))) continue;
                 const auto chosen = m_cageKinds.find({ static_cast<int>(m_dimension), at.x, at.y, at.z });
                 const int dungeonKind = chosen == m_cageKinds.end() ? m_world->generator().dungeonCage(at.x, at.y, at.z) : -1;
-                static const MobId DUNGEON_KINDS[5] = { MobId::Zombie, MobId::Skeleton, MobId::Spider, MobId::CaveSpider, MobId::Silverfish };
+                static const MobId DUNGEON_KINDS[6] = { MobId::Zombie, MobId::Skeleton, MobId::Spider, MobId::CaveSpider, MobId::Silverfish, MobId::MagmaCube };
                 const MobId species = chosen != m_cageKinds.end() ? static_cast<MobId>(chosen->second)
                                     : dungeonKind >= 0 ? DUNGEON_KINDS[dungeonKind] : cageSpecies(m_dimension);
 

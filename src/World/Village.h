@@ -58,12 +58,24 @@ namespace Village
         // A fenced field of wheat with a water channel down it. Not a
         // house: nobody lives in it, so it has no bed and no chest.
         Farm,
+
+        Fletcher,
+        Mason,
+        Cartographer,
+        Tannery,
+        Shepherd,
+        Fisher,
+        Church,
+        Toolsmith,
+        Meeting,
+        Pen,
     };
 
     inline bool isHouse(Kind kind)
     {
         return kind == Kind::Home || kind == Kind::Blacksmith ||
-               kind == Kind::Library || kind == Kind::Butcher;
+               kind == Kind::Library || kind == Kind::Butcher ||
+               (kind >= Kind::Fletcher && kind <= Kind::Toolsmith);
     }
 
     const char* name(Kind kind);

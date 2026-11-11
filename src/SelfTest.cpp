@@ -568,6 +568,69 @@ namespace
             }
         }
 
+        {
+            int meetings = 0, trades = 0, pens = 0, sites = 0;
+            bool kinds[32] = {};
+            for (int rz = -6; rz <= 6; ++rz)
+                for (int rx = -6; rx <= 6; ++rx)
+                {
+                    const Village::Site site = Village::siteFor(rx, rz, 2024u);
+                    if (!site.exists) continue;
+                    ++sites;
+                    for (const Village::Building& b : Village::plan(site, 2024u))
+                    {
+                        kinds[static_cast<int>(b.kind)] = true;
+                        if (b.kind == Village::Kind::Meeting) ++meetings;
+                        if (b.kind == Village::Kind::Pen) ++pens;
+                        if (b.kind >= Village::Kind::Fletcher && b.kind <= Village::Kind::Toolsmith) ++trades;
+                    }
+                }
+            int distinct = 0;
+            for (int k = static_cast<int>(Village::Kind::Fletcher); k <= static_cast<int>(Village::Kind::Toolsmith); ++k)
+                if (kinds[k]) ++distinct;
+            check(sites > 0 && meetings == sites, "every village has a bell at its meeting point");
+            check(distinct == 8 && trades > sites, "villages hold fletchers, masons, cartographers, tanners, shepherds, fishers, clerics and toolsmiths");
+            check(pens > 0, "and animal pens");
+            check(Village::isHouse(Village::Kind::Mason) && !Village::isHouse(Village::Kind::Pen) && !Village::isHouse(Village::Kind::Meeting),
+                  "a job house is a house; a pen and a meeting point are not");
+            check(!VillageLoot::rollFor(Village::Kind::Toolsmith, 3, 70, 3, 2024u).empty(), "and a job house's chest is filled");
+        }
+
+        {
+            const WorldGen nether(2024u, Dimension::Nether);
+            bool seenKind[4] = {};
+            int checked = 0, chestsOk = 0, chestsAll = 0;
+            for (int sz = -14; sz <= 14 && checked < 40; ++sz)
+                for (int sx = -14; sx <= 14 && checked < 40; ++sx)
+                {
+                    const Structures::Spot spot = Structures::inSquare(Structures::BASTION, sx, sz, 2024u);
+                    if (!nether.bastionWins(spot.chunkX, spot.chunkZ)) continue;
+                    const int bx = spot.chunkX * Structures::CHUNK + Structures::CHUNK / 2, bz = spot.chunkZ * Structures::CHUNK + Structures::CHUNK / 2;
+                    const int kind = nether.bastionKind(bx, bz);
+                    seenKind[kind] = true;
+                    if (checked >= 3) { ++checked; continue; }
+                    ++checked;
+                    Probe probe{ nether, {} };
+                    glm::ivec3 chests[6];
+                    const int many = WorldGen::bastionChests(kind, chests);
+                    for (int i = 0; i < many; ++i)
+                    {
+                        ++chestsAll;
+                        const int x = bx + chests[i].x, y = WorldGen::NETHER_LAVA_LEVEL + 6 + chests[i].y, z = bz + chests[i].z;
+                        if (probe.at(x, y, z) == Blocks::Chest && nether.hoardAt(x, y, z) != WorldGen::Hoard::None) ++chestsOk;
+                    }
+                }
+            int kinds = 0;
+            for (bool k : seenKind) kinds += k ? 1 : 0;
+            check(kinds == 4, "bastions come as treasure rooms, bridges, housing and hoglin stables");
+            check(chestsAll > 0 && chestsOk == chestsAll, "and every bastion chest knows its table");
+            bool netherite = false;
+            for (int n = 0; n < 40 && !netherite; ++n)
+                for (const StructureLoot::Stack& stack : StructureLoot::rollFor(WorldGen::Hoard::BastionTreasure, n, 40, n * 5, 2024u))
+                    if (stack.id == Items::NetheriteIngot) netherite = true;
+            check(netherite, "the treasure room can hold netherite");
+        }
+
         const WorldGen end(4242u, Dimension::End);
         const Structures::Spot spot = end.nearestEndCity(0, 0, 40);
         if (spot.exists)
@@ -1834,7 +1897,7 @@ namespace
         {
             const bool coversMiddle = site.x >= b.x && site.x < b.x + b.width &&
                                       site.z >= b.z && site.z < b.z + b.depth;
-            check(!coversMiddle, "nothing is built on the middle of the village");
+            check(!coversMiddle || b.kind == Village::Kind::Meeting, "nothing but the open bell canopy stands on the middle of the village");
         }
 
         // Every frontage stands the same step back from its street,
@@ -9463,7 +9526,7 @@ namespace
         check(catalysts > 0, "and the thing that spread it all");
         check(lanterns > 0, "lit well enough to see it by");
         check(frame >= 12, "and the frame in the middle that goes nowhere");
-        check(chests == 2, "two chests, which is what the walk down is for");
+        check(chests == 6, "six chests, two by the frame and one in each of the four houses");
         check(aboveTheOres == 0, "and none of it anywhere near the surface");
 
         // The chests know what they belong to.
@@ -9529,10 +9592,12 @@ namespace
 
                 check(blackstone > 500, "a bastion is a great deal of blackstone");
                 check(gilded > 0, "with the gold in it that is the reason to go");
-                check(chests >= 2, "and chests worth the trip");
+                check(chests >= 1, "and chests worth the trip");
 
-                check(nether.hoardAt(midX - 4, WorldGen::NETHER_LAVA_LEVEL + 7, midZ + 4) ==
-                          WorldGen::Hoard::Bastion,
+                glm::ivec3 spots[6];
+                const int many = WorldGen::bastionChests(nether.bastionKind(midX, midZ), spots);
+                check(many > 0 && nether.hoardAt(midX + spots[0].x, WorldGen::NETHER_LAVA_LEVEL + 6 + spots[0].y, midZ + spots[0].z) !=
+                          WorldGen::Hoard::None,
                       "a bastion chest knows what it belongs to");
             }
         }

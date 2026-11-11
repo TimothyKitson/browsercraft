@@ -84,7 +84,16 @@ std::vector<Village::Building> Village::plan(const Site& site, uint32_t seed)
             // which read as a shed in the middle of the square; the
             // paved square the paths lay there says "middle of the
             // village" better than a building did.
-            if (gx == 0 && gz == 0) continue;
+            if (gx == 0 && gz == 0)
+            {
+                Building meeting;
+                meeting.kind = Kind::Meeting;
+                meeting.width = meeting.depth = 1;
+                meeting.x = site.x;
+                meeting.z = site.z;
+                out.push_back(meeting);
+                continue;
+            }
 
             const uint32_t roll = hashCoords(site.x + gx, 7, site.z + gz, seed + 55010);
             if (hashToFloat(roll) >= HOUSE_CHANCE)
@@ -116,6 +125,17 @@ std::vector<Village::Building> Village::plan(const Site& site, uint32_t seed)
                     lamp.x = site.x + gx * PLOT;
                     lamp.z = site.z + gz * PLOT;
                     out.push_back(lamp);
+                }
+                else if (spare < 0.85f)
+                {
+                    Building pen;
+                    pen.kind = Kind::Pen;
+                    pen.width = 7;
+                    pen.depth = 7;
+                    if (std::abs(gx) >= std::abs(gz)) pen.facing = (gx > 0) ? 3 : 1;
+                    else                              pen.facing = (gz > 0) ? 0 : 2;
+                    placeInPlot(site, gx, gz, pen);
+                    out.push_back(pen);
                 }
                 continue;
             }
@@ -193,8 +213,15 @@ std::vector<Village::Building> Village::plan(const Site& site, uint32_t seed)
     for (size_t index : houses)
     {
         if (out[index].kind != Kind::Home) continue;
-        if (hashToFloat(hashCoords(out[index].x, 25, out[index].z, seed + 55024)) < 0.25f)
+        const float trade = hashToFloat(hashCoords(out[index].x, 25, out[index].z, seed + 55024));
+        if (trade < 0.25f)
             out[index].kind = Kind::Butcher;
+        else if (trade < 0.70f)
+        {
+            static const Kind TRADES[8] = { Kind::Fletcher, Kind::Mason, Kind::Cartographer, Kind::Tannery,
+                                            Kind::Shepherd, Kind::Fisher, Kind::Church, Kind::Toolsmith };
+            out[index].kind = TRADES[hashCoords(out[index].x, 26, out[index].z, seed + 55025) % 8u];
+        }
     }
 
     return out;
@@ -209,6 +236,16 @@ const char* Village::name(Kind kind)
         case Kind::Library:    return "Library";
         case Kind::Butcher:    return "Butcher";
         case Kind::Lamp:       return "Lamp";
+        case Kind::Fletcher:   return "Fletcher";
+        case Kind::Mason:      return "Mason";
+        case Kind::Cartographer: return "Cartographer";
+        case Kind::Tannery:    return "Tannery";
+        case Kind::Shepherd:   return "Shepherd";
+        case Kind::Fisher:     return "Fisher";
+        case Kind::Church:     return "Church";
+        case Kind::Toolsmith:  return "Toolsmith";
+        case Kind::Meeting:    return "Meeting point";
+        case Kind::Pen:        return "Animal pen";
         case Kind::Farm:       return "Farm";
     }
     return "";

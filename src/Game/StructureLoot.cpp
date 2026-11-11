@@ -269,6 +269,74 @@ namespace
 
     // A bastion, which is gold and nothing but: it is the one place
     // in the Nether worth raiding and the only reason to go.
+    const Entry BASTION_TREASURE[] = {
+        { Items::NetheriteIngot, 1, 1 },
+        { Blocks::AncientDebris, 1, 2 },
+        { Items::NetheriteScrap, 1, 2 },
+        { Items::DiamondSword, 1, 1 },
+        { Items::DiamondChestplate, 1, 1 },
+        { Items::DiamondHelmet, 1, 1 },
+        { Items::DiamondLeggings, 1, 1 },
+        { Items::DiamondBoots, 1, 1 },
+        { Items::Diamond, 2, 6 },
+        { Items::EnchantedGoldenApple, 1, 1 },
+        { Items::SpectralArrow, 12, 25 },
+        { Blocks::GoldBlock, 2, 5 },
+        { Blocks::IronBlock, 2, 5 },
+        { Items::GoldIngot, 3, 9 },
+        { Blocks::CryingObsidian, 3, 5 },
+        { Items::NetherQuartz, 8, 23 },
+        { Items::MagmaCream, 2, 8 },
+        { Items::SnoutTemplate, 1, 1 },
+        { Items::NetheriteUpgradeTemplate, 1, 1 },
+    };
+
+    const Entry BASTION_BRIDGE[] = {
+        { Blocks::Lodestone, 1, 1 },
+        { Items::Crossbow, 1, 1 },
+        { Items::SpectralArrow, 10, 28 },
+        { Blocks::GildedBlackstone, 8, 12 },
+        { Blocks::CryingObsidian, 3, 8 },
+        { Blocks::GoldBlock, 1, 1 },
+        { Items::GoldIngot, 4, 9 },
+        { Items::IronIngot, 4, 9 },
+        { Items::GoldSword, 1, 1 },
+        { Items::GoldChestplate, 1, 1 },
+        { Items::GoldHelmet, 1, 1 },
+        { Items::GoldLeggings, 1, 1 },
+        { Items::GoldBoots, 1, 1 },
+        { Items::GoldAxe, 1, 1 },
+        { Items::StringItem, 1, 6 },
+        { Items::Leather, 1, 3 },
+        { Items::Arrow, 5, 17 },
+        { Items::SnoutTemplate, 1, 1 },
+        { Items::NetheriteUpgradeTemplate, 1, 1 },
+    };
+
+    const Entry BASTION_STABLE[] = {
+        { Items::DiamondShovel, 1, 1 },
+        { Items::DiamondPickaxe, 1, 1 },
+        { Items::NetheriteScrap, 1, 1 },
+        { Blocks::AncientDebris, 1, 2 },
+        { Items::Saddle, 1, 1 },
+        { Blocks::GoldBlock, 2, 4 },
+        { Items::GoldenCarrot, 8, 17 },
+        { Items::GoldenApple, 1, 1 },
+        { Items::GoldAxe, 1, 1 },
+        { Blocks::CryingObsidian, 1, 5 },
+        { Blocks::Glowstone, 3, 6 },
+        { Blocks::GildedBlackstone, 2, 5 },
+        { Blocks::SoulSand, 2, 7 },
+        { Blocks::CrimsonNylium, 2, 7 },
+        { Items::Leather, 1, 3 },
+        { Items::Arrow, 5, 17 },
+        { Items::StringItem, 3, 8 },
+        { Items::RawPorkchop, 2, 5 },
+        { Items::CookedPorkchop, 2, 5 },
+        { Items::SnoutTemplate, 1, 1 },
+        { Items::NetheriteUpgradeTemplate, 1, 1 },
+    };
+
     const Entry BASTION[] = {
         { Items::GoldIngot,   4, 12 },
         { Blocks::GildedBlackstone, 1, 4 },
@@ -373,6 +441,12 @@ namespace
                 return { FORTRESS, static_cast<int>(std::size(FORTRESS)) };
             case WorldGen::Hoard::StrongholdLibrary:
                 return { LIBRARY, static_cast<int>(std::size(LIBRARY)) };
+            case WorldGen::Hoard::BastionTreasure:
+                return { BASTION_TREASURE, static_cast<int>(std::size(BASTION_TREASURE)) };
+            case WorldGen::Hoard::BastionBridge:
+                return { BASTION_BRIDGE, static_cast<int>(std::size(BASTION_BRIDGE)) };
+            case WorldGen::Hoard::BastionStable:
+                return { BASTION_STABLE, static_cast<int>(std::size(BASTION_STABLE)) };
             case WorldGen::Hoard::OceanRuin:
                 return { OCEAN_RUIN, static_cast<int>(std::size(OCEAN_RUIN)) };
             case WorldGen::Hoard::ShipwreckSupply:
@@ -414,6 +488,9 @@ StructureLoot::Stack StructureLoot::centrepiece(WorldGen::Hoard hoard,
         case WorldGen::Hoard::StrongholdLibrary: out.id = Items::Book;    out.count = 3; break;
         case WorldGen::Hoard::ShipwreckSupply: out.id = Items::Wheat;     out.count = 9; break;
         case WorldGen::Hoard::OceanRuin:       out.id = Items::Coal;      out.count = 2; break;
+        case WorldGen::Hoard::BastionTreasure: out.id = Items::NetheriteIngot; out.count = 1; break;
+        case WorldGen::Hoard::BastionBridge:   out.id = Items::GoldIngot; out.count = 6; break;
+        case WorldGen::Hoard::BastionStable:   out.id = Items::GoldenCarrot; out.count = 9; break;
         case WorldGen::Hoard::ShipwreckMap:    out.id = Items::FilledMap; out.count = 1; return out;
         case WorldGen::Hoard::None:            return out;
     }

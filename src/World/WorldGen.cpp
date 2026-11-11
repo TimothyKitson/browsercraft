@@ -1836,16 +1836,13 @@ WorldGen::Palette WorldGen::paletteFor(Biome biome) const
             break;
 
         case Biome::Snowy:
-            // Pale birch walls with dark corners. Cobblestone roofs
-            // over cobblestone courses made the houses read as one
-            // grey mass with the snow behind them.
-            palette.wall = Blocks::BirchLog;
-            palette.footing = Blocks::Cobblestone;
-            palette.corner = Blocks::Log;
-            palette.floor = Blocks::Planks;
-            palette.roof = Blocks::Planks;
-            palette.roofStairs = Blocks::PlankStairsNorth;
-            palette.post = Blocks::BirchLog;
+            palette.wall = Blocks::Snow;
+            palette.footing = Blocks::Diorite;
+            palette.corner = Blocks::StrippedSpruceLog;
+            palette.floor = Blocks::SprucePlanks;
+            palette.roof = Blocks::SprucePlanks;
+            palette.roofStairs = stairsOf(8, false, 0);
+            palette.post = Blocks::StrippedSpruceLog;
             break;
 
         case Biome::Swamp:
@@ -1953,6 +1950,41 @@ void WorldGen::stampBuilding(Chunk& chunk, const Village::Building& building,
         for (int y = ground + 1; y <= ground + 3; ++y)
             put(chunk, x0, y, z0, palette.post);
         put(chunk, x0, ground + 4, z0, Blocks::Torch);
+        return;
+    }
+
+    if (building.kind == Village::Kind::Meeting)
+    {
+        const int y = surfaceHeight(x0, z0);
+        for (int dx = -2; dx <= 2; ++dx)
+            for (int dz = -2; dz <= 2; ++dz)
+            {
+                const bool corner = std::abs(dx) == 2 && std::abs(dz) == 2;
+                put(chunk, x0 + dx, y, z0 + dz, palette.footing);
+                for (int dy = 1; dy <= 3; ++dy) put(chunk, x0 + dx, y + dy, z0 + dz, corner ? palette.post : static_cast<BlockId>(Blocks::Air));
+                put(chunk, x0 + dx, y + 4, z0 + dz, palette.roof);
+            }
+        put(chunk, x0, y + 3, z0, Blocks::BellFirst);
+        return;
+    }
+
+    if (building.kind == Village::Kind::Pen)
+    {
+        const BlockId rail = palette.wall == Blocks::Sandstone ? fenceOfWood(4) : palette.wall == Blocks::SprucePlanks ? fenceOfWood(1) : static_cast<BlockId>(Blocks::OakFence);
+        for (int x = x0; x <= x1; ++x)
+            for (int z = z0; z <= z1; ++z)
+            {
+                const int y = surfaceHeight(x, z);
+                for (int dy = 1; dy <= 3; ++dy) put(chunk, x, y + dy, z, Blocks::Air);
+                const bool rim = (x == x0 || x == x1 || z == z0 || z == z1);
+                if (!rim) continue;
+                const bool gate = (building.facing == 0 && z == z0 && x == (x0 + x1) / 2) || (building.facing == 2 && z == z1 && x == (x0 + x1) / 2) ||
+                                  (building.facing == 1 && x == x1 && z == (z0 + z1) / 2) || (building.facing == 3 && x == x0 && z == (z0 + z1) / 2);
+                put(chunk, x, y + 1, z, gate ? gateOf(0, false, building.facing & 3) : rail);
+            }
+        put(chunk, x0 + 1, surfaceHeight(x0 + 1, z0 + 1) + 1, z0 + 1, Blocks::HayBale);
+        put(chunk, x0 + 2, surfaceHeight(x0 + 2, z0 + 1) + 1, z0 + 1, Blocks::HayBale);
+        put(chunk, x1 - 1, surfaceHeight(x1 - 1, z1 - 1) + 1, z1 - 1, Blocks::Cauldron3);
         return;
     }
 
@@ -2274,6 +2306,36 @@ void WorldGen::stampInterior(Chunk& chunk, const Village::Building& building, in
             break;
         }
 
+        case Village::Kind::Fletcher:
+        case Village::Kind::Mason:
+        case Village::Kind::Cartographer:
+        case Village::Kind::Tannery:
+        case Village::Kind::Shepherd:
+        case Village::Kind::Fisher:
+        case Village::Kind::Church:
+        case Village::Kind::Toolsmith:
+        {
+            BlockId job = Blocks::FletchingTable, extra = Blocks::Barrel;
+            switch (building.kind)
+            {
+                case Village::Kind::Mason:        job = Blocks::Stonecutter; extra = Blocks::Cobblestone; break;
+                case Village::Kind::Cartographer: job = Blocks::CartographyTable; extra = Blocks::Bookshelf; break;
+                case Village::Kind::Tannery:      job = Blocks::Cauldron3; extra = Blocks::Cauldron0; break;
+                case Village::Kind::Shepherd:     job = Blocks::LoomFirst; extra = Blocks::Wool; break;
+                case Village::Kind::Fisher:       job = Blocks::Barrel; extra = Blocks::Barrel; break;
+                case Village::Kind::Church:       job = Blocks::BrewingStand; extra = Blocks::LecternBook; break;
+                case Village::Kind::Toolsmith:    job = Blocks::SmithingTable; extra = Blocks::Grindstone; break;
+                default: break;
+            }
+            nextCorner(cx, cz);
+            put(chunk, cx, ground + 1, cz, job);
+            nextCorner(cx, cz);
+            put(chunk, cx, ground + 1, cz, Blocks::Chest);
+            nextCorner(cx, cz);
+            put(chunk, cx, ground + 1, cz, extra);
+            break;
+        }
+
         default:
         {
             nextCorner(cx, cz);
@@ -2521,10 +2583,24 @@ void WorldGen::stampChamberRoom(Chunk& chunk, const TrialChamber::Site& site,
 
     // Lined, then hollowed. Cutting the room first and lining it after
     // would leave the lining inside the room.
+    const BlockId grate = copperBlockOf(CopperFamily::Grate, 0, true);
+    const BlockId cut = copperBlockOf(CopperFamily::Cut, 0, true);
+    const BlockId chiseled = copperBlockOf(CopperFamily::Chiseled, 0, true);
+    const BlockId bulb = copperBlockOf(CopperFamily::Bulb, 0, true, 1);
     for (int x = room.x - 1; x <= room.x + room.width; ++x)
         for (int z = room.z - 1; z <= room.z + room.depth; ++z)
             for (int y = floor; y <= ceiling; ++y)
-                put(chunk, x, y, z, Blocks::TuffBricks);
+            {
+                const bool edgeX = x == room.x - 1 || x == room.x + room.width;
+                const bool edgeZ = z == room.z - 1 || z == room.z + room.depth;
+                BlockId block = Blocks::TuffBricks;
+                if (y == floor) block = ((x + z) & 1) ? static_cast<BlockId>(Blocks::PolishedTuff) : cut;
+                else if (y == ceiling) block = ((x + z) % 3 == 0) ? grate : static_cast<BlockId>(Blocks::TuffBricks);
+                else if (edgeX && edgeZ) block = Blocks::ChiseledTuff;
+                else if (y == site.y + 2) block = ((x + z) % 4 == 0) ? chiseled : static_cast<BlockId>(Blocks::ChiseledTuffBricks);
+                else if (y == site.y + 3 && ((x + z) % 5 == 0)) block = grate;
+                put(chunk, x, y, z, block);
+            }
 
     for (int x = room.x; x < room.x + room.width; ++x)
         for (int z = room.z; z < room.z + room.depth; ++z)
@@ -2552,12 +2628,21 @@ void WorldGen::stampChamberRoom(Chunk& chunk, const TrialChamber::Site& site,
     for (int cx = 0; cx < 2; ++cx)
         for (int cz = 0; cz < 2; ++cz)
             put(chunk, room.x + (cx ? room.width - 1 : 0), site.y + HEADROOM - 1,
-                room.z + (cz ? room.depth - 1 : 0), Blocks::Glowstone);
+                room.z + (cz ? room.depth - 1 : 0), bulb);
 
     switch (room.kind)
     {
         case Kind::Spawner:
+            for (int dx = -1; dx <= 1; ++dx)
+                for (int dz = -1; dz <= 1; ++dz) put(chunk, midX + dx, site.y - 1, midZ + dz, chiseled);
             put(chunk, midX, site.y, midZ, Blocks::TrialSpawner);
+            put(chunk, room.x, site.y, room.z, static_cast<BlockId>(Blocks::DecoratedPotFirst));
+            put(chunk, room.x + room.width - 1, site.y, room.z + room.depth - 1, static_cast<BlockId>(Blocks::DecoratedPotFirst));
+            if (room.gx != 0)
+            {
+                put(chunk, room.x + 1, site.y + 2, room.z - 1, dispenserFacingTo(2));
+                put(chunk, room.x + room.width - 2, site.y + 2, room.z + room.depth, dispenserFacingTo(0));
+            }
             break;
 
         case Kind::Vault:
@@ -3098,29 +3183,45 @@ void WorldGen::stampLandmark(Chunk& chunk, Landmark kind, int midX, int midZ) co
 
         case Landmark::RuinedPortal:
         {
-            // A frame with pieces missing, standing in a scatter of
-            // netherrack. The gaps are the whole character of it: you
-            // know what it is and you know it does not work.
-            for (int dx = -2; dx <= 2; ++dx)
-                for (int dy = 0; dy <= 4; ++dy)
+            const Biome biome = biomeAt(midX, midZ);
+            const uint32_t roll = hashCoords(midX, 9099, midZ, m_seed + 9099);
+            const bool giant = (roll % 20u) == 0;
+            const int wide = giant ? 4 : 2;
+            const int tall = giant ? 10 : 4;
+            const int sink = biome == Biome::Desert ? 3 : biome == Biome::Swamp ? 2 : 0;
+            const int baseY = ground - sink;
+            const bool mossy = biome == Biome::Jungle || biome == Biome::Swamp;
+            const BlockId paving = biome == Biome::Desert ? static_cast<BlockId>(Blocks::Sandstone) : mossy ? static_cast<BlockId>(Blocks::MossyCobblestone) : static_cast<BlockId>(Blocks::StoneBricks);
+
+            for (int dx = -wide; dx <= wide; ++dx)
+                for (int dy = 0; dy <= tall; ++dy)
                 {
-                    const bool frame = std::abs(dx) == 2 || dy == 0 || dy == 4;
+                    const bool frame = std::abs(dx) == wide || dy == 0 || dy == tall;
                     if (!frame) continue;
                     if (hashToFloat(hashCoords(midX + dx, dy, midZ, m_seed + 9100)) < 0.3f)
                         continue;
-                    put(chunk, midX + dx, ground + dy, midZ,
+                    put(chunk, midX + dx, baseY + dy, midZ,
                         hashToFloat(hashCoords(midX + dx, dy, midZ, m_seed + 9102)) < 0.25f ? Blocks::CryingObsidian : Blocks::Obsidian);
+                    if (mossy && hashToFloat(hashCoords(midX + dx, dy, midZ, m_seed + 9104)) < 0.35f && dy > 0)
+                        put(chunk, midX + dx, baseY + dy, midZ - 1, Blocks::Vine);
                 }
 
-            for (int dx = -4; dx <= 4; ++dx)
-                for (int dz = -4; dz <= 4; ++dz)
+            const int spread = giant ? 8 : 4;
+            for (int dx = -spread; dx <= spread; ++dx)
+                for (int dz = -spread; dz <= spread; ++dz)
                 {
-                    if (hashToFloat(hashCoords(midX + dx, 1, midZ + dz, m_seed + 9101)) > 0.35f)
-                        continue;
+                    const float scatter = hashToFloat(hashCoords(midX + dx, 1, midZ + dz, m_seed + 9101));
+                    if (scatter > 0.45f) continue;
                     const int y = surfaceHeight(midX + dx, midZ + dz);
                     const float pick = hashToFloat(hashCoords(midX + dx, 2, midZ + dz, m_seed + 9103));
-                    put(chunk, midX + dx, y, midZ + dz, sunken ? (pick < 0.4f ? Blocks::MagmaBlock : Blocks::Gravel) : Blocks::Netherrack);
+                    BlockId block = Blocks::Netherrack;
+                    if (sunken) block = pick < 0.4f ? Blocks::MagmaBlock : Blocks::Gravel;
+                    else if (pick < 0.12f) block = Blocks::MagmaBlock;
+                    else if (pick < 0.35f) block = paving;
+                    else if (pick < 0.40f && std::abs(dx) > 1) block = Blocks::Lava;
+                    put(chunk, midX + dx, y, midZ + dz, block);
                 }
+            if (!sunken) put(chunk, midX - 2, surfaceHeight(midX - 2, midZ + 2), midZ + 2, Blocks::GoldBlock);
 
             putChests(chunk, Landmark::RuinedPortal, midX, ground, midZ);
             break;
@@ -3754,8 +3855,9 @@ void WorldGen::buildTrailRuins(Chunk& chunk) const
     const int baseX = chunk.position().x * Chunk::SX;
     const int baseZ = chunk.position().z * Chunk::SZ;
     auto cellOf = [](int v) { return v >= 0 ? v / CELL : -((-v + CELL - 1) / CELL); };
-    for (int cz = cellOf(baseZ - HALF - 1); cz <= cellOf(baseZ + Chunk::SZ + HALF + 1); ++cz)
-        for (int cx = cellOf(baseX - HALF - 1); cx <= cellOf(baseX + Chunk::SX + HALF + 1); ++cx)
+    constexpr int REACH = HALF + 9;
+    for (int cz = cellOf(baseZ - REACH); cz <= cellOf(baseZ + Chunk::SZ + REACH); ++cz)
+        for (int cx = cellOf(baseX - REACH); cx <= cellOf(baseX + Chunk::SX + REACH); ++cx)
         {
             int midX = 0, midZ = 0;
             if (!trailRuinIn(cx, cz, midX, midZ)) continue;
@@ -3783,6 +3885,35 @@ void WorldGen::buildTrailRuins(Chunk& chunk) const
                     }
                     if (wall && hashToFloat(hashCoords(midX + dx, 54, midZ + dz, m_seed + 9405)) < 0.3f)
                         put(chunk, midX + dx, ground, midZ + dz, WALLS[hashCoords(midX + dx, 55, midZ + dz, m_seed + 9406) % 6u]);
+                    if (!wall && (std::abs(dx) + std::abs(dz)) % 4 == 1 && std::abs(dx) < HALF - 1 && std::abs(dz) < HALF - 1)
+                        put(chunk, midX + dx, bottom, midZ + dz, glazedOf(static_cast<BlockId>(Blocks::GlazedTerracottaFirst + static_cast<int>(hashCoords(midX, 56, midZ, m_seed + 9407) % 16u)),
+                                                                           static_cast<int>((dx + dz) & 3)));
+                }
+
+            const int tx = midX + HALF - 2, tz = midZ - HALF + 2;
+            for (int dx = -1; dx <= 1; ++dx)
+                for (int dz = -1; dz <= 1; ++dz)
+                    for (int y = bottom; y <= ground + 3; ++y)
+                    {
+                        const bool shell = std::abs(dx) == 1 || std::abs(dz) == 1;
+                        const uint32_t h = hashCoords(tx + dx, y, tz + dz, m_seed + 9408);
+                        const bool pane = shell && (dx == 0 || dz == 0) && y > ground && y % 2 == 0;
+                        BlockId block = shell ? WALLS[h % 6u] : (y <= top ? static_cast<BlockId>(Blocks::Gravel) : static_cast<BlockId>(Blocks::Air));
+                        if (pane) block = static_cast<BlockId>(Blocks::StainedGlassPaneFirst + static_cast<int>(h % 16u));
+                        if (y > ground && (h >> 8) % 5u == 0 && !pane) block = Blocks::Air;
+                        put(chunk, tx + dx, y, tz + dz, block);
+                    }
+            for (int k = 0; k < 2; ++k)
+            {
+                const int px = midX - 2 + k * 4, pz = midZ + 2;
+                put(chunk, px, bottom + 1, pz, static_cast<BlockId>(Blocks::DecoratedPotFirst));
+            }
+            for (int road = HALF + 1; road <= HALF + 8; ++road)
+                for (int c = -1; c <= 1; ++c)
+                {
+                    const uint32_t h = hashCoords(midX - road, 57, midZ + c, m_seed + 9409);
+                    put(chunk, midX - road, top, midZ + c, h % 3u == 0 ? static_cast<BlockId>(Blocks::Gravel) : h % 3u == 1 ? static_cast<BlockId>(Blocks::MudBricks) : static_cast<BlockId>(Blocks::PackedMud));
+                    if ((h >> 4) % 11u == 0) put(chunk, midX - road, top, midZ + c, suspiciousOf(3, 0));
                 }
         }
 }
@@ -4457,7 +4588,18 @@ void WorldGen::buildVillages(Chunk& chunk) const
             // One palette for the whole village, from the biome at its
             // middle: a village with half its houses in sandstone and
             // half in oak would read as two villages that collided.
-            const Palette palette = paletteFor(biomeAt(site.x, site.z));
+            Palette palette = paletteFor(biomeAt(site.x, site.z));
+            const Biomes::Kind exact = kindAt(site.x, site.z);
+            if (exact == Biomes::Kind::Taiga || exact == Biomes::Kind::OldGrowthPineTaiga || exact == Biomes::Kind::OldGrowthSpruceTaiga)
+            {
+                palette.wall = Blocks::SprucePlanks;
+                palette.footing = Blocks::Cobblestone;
+                palette.corner = Blocks::SpruceLog;
+                palette.floor = Blocks::SprucePlanks;
+                palette.roof = Blocks::SprucePlanks;
+                palette.roofStairs = stairsOf(8, false, 0);
+                palette.post = Blocks::SpruceLog;
+            }
 
             layPaths(chunk, site, clearX0, clearZ0, clearX1, clearZ1);
 
@@ -5453,6 +5595,17 @@ int WorldGen::dungeonCage(int x, int y, int z) const
     const int cz = static_cast<int>(std::floor(static_cast<float>(z) / Chunk::SZ));
     if (!dungeonIn(cx, cz, ox, oy, oz) || ox != x || oy != y || oz != z)
     {
+        if (m_dimension == Dimension::Nether)
+        {
+            const Structures::Spot spot = nearestBastion(x, z, 1);
+            if (spot.exists)
+            {
+                const int midX = spot.chunkX * Structures::CHUNK + Structures::CHUNK / 2;
+                const int midZ = spot.chunkZ * Structures::CHUNK + Structures::CHUNK / 2;
+                if (bastionKind(midX, midZ) == 0 && y == NETHER_LAVA_LEVEL + 7 && z == midZ && std::abs(x - midX) == 4) return 5;
+            }
+            return -1;
+        }
         if (m_dimension == Dimension::Overworld)
         {
             const Stronghold::Site site = Stronghold::touching(x, z, x, z, m_seed);
@@ -6264,8 +6417,10 @@ WorldGen::Hoard WorldGen::hoardAt(int x, int y, int z) const
         {
             const int midX = spot.chunkX * Structures::CHUNK + Structures::CHUNK / 2;
             const int midZ = spot.chunkZ * Structures::CHUNK + Structures::CHUNK / 2;
-            if ((x == midX - 6 && z == midZ + 6) || (x == midX + 6 && z == midZ - 6))
-                return Hoard::AncientCity;
+            glm::ivec3 chests[6];
+            const int many = cityChests(chests);
+            for (int i = 0; i < many; ++i)
+                if (x == midX + chests[i].x && z == midZ + chests[i].z) return Hoard::AncientCity;
         }
     }
 
@@ -6290,12 +6445,16 @@ WorldGen::Hoard WorldGen::hoardAt(int x, int y, int z) const
 
     {
         const Structures::Spot spot = nearestBastion(x, z, 1);
-        if (spot.exists && y == NETHER_LAVA_LEVEL + 7)
+        if (spot.exists)
         {
             const int midX = spot.chunkX * Structures::CHUNK + Structures::CHUNK / 2;
             const int midZ = spot.chunkZ * Structures::CHUNK + Structures::CHUNK / 2;
-            if ((x == midX - 4 && z == midZ + 4) || (x == midX + 4 && z == midZ - 4))
-                return Hoard::Bastion;
+            const int kind = bastionKind(midX, midZ);
+            glm::ivec3 chests[6];
+            const int many = bastionChests(kind, chests);
+            static const Hoard KINDS[4] = { Hoard::BastionTreasure, Hoard::BastionBridge, Hoard::Bastion, Hoard::BastionStable };
+            for (int i = 0; i < many; ++i)
+                if (x == midX + chests[i].x && z == midZ + chests[i].z && y == NETHER_LAVA_LEVEL + 6 + chests[i].y) return KINDS[kind];
         }
     }
 
@@ -6624,8 +6783,82 @@ void WorldGen::stampAncientCity(Chunk& chunk, int midX, int midZ) const
         }
 
     // And the chests it is worth the walk down for.
-    put(chunk, midX - 6, floorY + 1, midZ + 6, Blocks::Chest);
-    put(chunk, midX + 6, floorY + 1, midZ - 6, Blocks::Chest);
+    for (int a = -HALF + 2; a <= HALF - 2; ++a)
+        for (int c = -2; c <= 2; ++c)
+        {
+            if (std::abs(a) <= 3) continue;
+            const BlockId wool = std::abs(c) == 2 ? static_cast<BlockId>(Blocks::WoolGray) : static_cast<BlockId>(Blocks::WoolLightBlue);
+            put(chunk, midX + a, floorY, midZ + c, wool);
+            put(chunk, midX + c, floorY, midZ + a, wool);
+            for (int dy = 1; dy <= 3; ++dy)
+            {
+                put(chunk, midX + a, floorY + dy, midZ + c, Blocks::Air);
+                put(chunk, midX + c, floorY + dy, midZ + a, Blocks::Air);
+            }
+        }
+    for (int dx = -4; dx <= 4; ++dx)
+        for (int dz = -2; dz <= 2; ++dz)
+            put(chunk, midX + dx, floorY, midZ + dz, (std::abs(dx) == 4 || std::abs(dz) == 2) ? Blocks::ChiseledDeepslate : Blocks::PolishedDeepslate);
+
+    for (int hut = 0; hut < 4; ++hut)
+    {
+        const int sx = (hut & 1) ? 1 : -1, sz = (hut & 2) ? 1 : -1;
+        const int cx = midX + sx * 11, cz = midZ + sz * 11;
+        for (int dx = -3; dx <= 3; ++dx)
+            for (int dz = -3; dz <= 3; ++dz)
+                for (int dy = 0; dy <= 5; ++dy)
+                {
+                    const bool wall = std::abs(dx) == 3 || std::abs(dz) == 3;
+                    const bool door = dz == -sz * 3 && dx == 0 && dy >= 1 && dy <= 2;
+                    const bool window = wall && !door && dy == 3 && (std::abs(dx) + std::abs(dz)) % 2 == 1 && std::abs(dx) != std::abs(dz);
+                    const float wear = hashToFloat(hashCoords(cx + dx, floorY + dy, cz + dz, m_seed + 8804));
+                    BlockId block = Blocks::Air;
+                    if (dy == 0) block = hut == 1 ? static_cast<BlockId>(Blocks::BlueIce) : static_cast<BlockId>(Blocks::DeepslateTiles);
+                    else if (dy == 5) block = wear < 0.2f ? static_cast<BlockId>(Blocks::CrackedDeepslateTiles) : static_cast<BlockId>(Blocks::DeepslateTiles);
+                    else if (window) block = Blocks::Air;
+                    else if (wall && !door) block = wear < 0.25f ? static_cast<BlockId>(Blocks::CrackedDeepslateBricks) : static_cast<BlockId>(Blocks::DeepslateBricks);
+                    else if (hut == 1 && !door && (std::abs(dx) == 2 || std::abs(dz) == 2) && dy <= 3) block = Blocks::PackedIce;
+                    put(chunk, cx + dx, floorY + dy, cz + dz, block);
+                }
+        put(chunk, cx - 1, floorY + 1, cz + sz, Blocks::CandleLit);
+        put(chunk, cx + 1, floorY + 1, cz + sz * 2, Blocks::CandleLit);
+        put(chunk, cx + sx, floorY + 1, cz - sz, headOf(0, false, static_cast<int>(hashCoords(cx, 7, cz, m_seed + 8805) % 16u)));
+        if (hut == 2)
+        {
+            put(chunk, cx - 1, floorY + 1, cz, Blocks::RedstoneLamp);
+            put(chunk, cx - 1, floorY + 2, cz, Blocks::RedstoneDust);
+            put(chunk, cx - 2, floorY + 1, cz, Blocks::SculkSensor);
+        }
+        put(chunk, cx, floorY + 4, cz, Blocks::SoulLantern);
+    }
+
+    for (int k = 0; k < 24; ++k)
+    {
+        const float angle = static_cast<float>(k) * 0.2618f;
+        const int r = 15 + static_cast<int>(hashCoords(midX, k, midZ, m_seed + 8806) % 3u);
+        const int x = midX + static_cast<int>(std::cos(angle) * r), z = midZ + static_cast<int>(std::sin(angle) * r);
+        if (std::abs(x - midX) <= 2 || std::abs(z - midZ) <= 2) continue;
+        const int tall = 1 + static_cast<int>(hashCoords(x, 9, z, m_seed + 8807) % 4u);
+        for (int dy = 1; dy <= tall; ++dy) put(chunk, x, floorY + dy, z, (dy == tall) ? static_cast<BlockId>(Blocks::DeepslateTiles) : static_cast<BlockId>(Blocks::DeepslateBricks));
+        if (k % 5 == 0) put(chunk, x, floorY + tall + 1, z, Blocks::CandleLit);
+    }
+
+    glm::ivec3 chests[6];
+    const int many = cityChests(chests);
+    for (int i = 0; i < many; ++i) put(chunk, midX + chests[i].x, floorY + chests[i].y, midZ + chests[i].z, Blocks::Chest);
+}
+
+int WorldGen::cityChests(glm::ivec3 out[6])
+{
+    out[0] = glm::ivec3(-6, 1, 6);
+    out[1] = glm::ivec3(6, 1, -6);
+    int n = 2;
+    for (int hut = 0; hut < 4; ++hut)
+    {
+        const int sx = (hut & 1) ? 1 : -1, sz = (hut & 2) ? 1 : -1;
+        out[n++] = glm::ivec3(sx * 11 + (hut == 1 ? 0 : sx * 2), 1, sz * 11 + (hut == 1 ? 0 : sz));
+    }
+    return n;
 }
 
 // ---------------------------------------------------------------------
@@ -6755,7 +6988,8 @@ void WorldGen::stampEndCity(Chunk& chunk, int midX, int midZ, int ground) const
 
                 BlockId block = Blocks::Air;
                 if (corner) block = Blocks::PurpurPillar;
-                else if (door || window) block = Blocks::Air;
+                else if (door) block = Blocks::Air;
+                else if (window) block = static_cast<BlockId>(Blocks::StainedGlassFirst + 2);
                 else if (wall) block = Blocks::PurpurBlock;
                 else if (floor) block = Blocks::EndStoneBricks;
 
@@ -6768,6 +7002,48 @@ void WorldGen::stampEndCity(Chunk& chunk, int midX, int midZ, int ground) const
         put(chunk, midX + HALF - 1, ground + 1 + dy, midZ + HALF - 1, Blocks::LadderNorth);
 
     put(chunk, midX - 2, ground + 2 + STOREY * 3, midZ + 2, Blocks::Chest);
+    put(chunk, midX + 2, ground + 2 + STOREY * 3, midZ - 2, chestOf(2, 0, 0));
+    for (int cx = -1; cx <= 1; cx += 2)
+        for (int cz = -1; cz <= 1; cz += 2)
+            put(chunk, midX + cx * (HALF + 1), ground + 2 + TALL, midZ + cz * (HALF + 1), Blocks::EndRodFirst);
+    for (int dx = -HALF - 1; dx <= HALF + 1; ++dx)
+    {
+        put(chunk, midX + dx, ground + 1 + TALL + 1, midZ - HALF - 2, stairsOf(22, false, 2));
+        put(chunk, midX + dx, ground + 1 + TALL + 1, midZ + HALF + 2, stairsOf(22, false, 0));
+    }
+    for (int side = -1; side <= 1; side += 2)
+        put(chunk, midX + side * 2, ground + STOREY + 3, midZ - HALF - 1, bannerOf(2, true, 0));
+
+    constexpr int SIDE_X = -15, SIDE_HALF = 3, SIDE_TALL = 16;
+    for (int dy = 0; dy <= SIDE_TALL; ++dy)
+        for (int dx = -SIDE_HALF; dx <= SIDE_HALF; ++dx)
+            for (int dz = -SIDE_HALF; dz <= SIDE_HALF; ++dz)
+            {
+                const bool wall = std::abs(dx) == SIDE_HALF || std::abs(dz) == SIDE_HALF;
+                const bool corner = std::abs(dx) == SIDE_HALF && std::abs(dz) == SIDE_HALF;
+                const bool floor = dy == 0 || dy == SIDE_TALL || dy == 8;
+                const bool window = wall && !corner && (dy % 8 == 4) && (std::abs(dx) + std::abs(dz)) % 2 == 0;
+                BlockId block = Blocks::Air;
+                if (corner) block = Blocks::PurpurPillar;
+                else if (window) block = static_cast<BlockId>(Blocks::StainedGlassFirst + 2);
+                else if (wall || floor) block = floor && !wall ? static_cast<BlockId>(Blocks::EndStoneBricks) : static_cast<BlockId>(Blocks::PurpurBlock);
+                put(chunk, midX + SIDE_X + dx, ground + 1 + dy, midZ + dz, block);
+            }
+    for (int dy = 1; dy < SIDE_TALL; ++dy) put(chunk, midX + SIDE_X + SIDE_HALF - 1, ground + 1 + dy, midZ + SIDE_HALF - 1, Blocks::LadderNorth);
+    const int bridgeY = ground + 1 + 14;
+    for (int x = midX + SIDE_X + SIDE_HALF; x <= midX - HALF; ++x)
+        for (int dz = -1; dz <= 1; ++dz)
+        {
+            put(chunk, x, bridgeY, midZ + dz, Blocks::PurpurBlock);
+            for (int dy = 1; dy <= 2; ++dy) put(chunk, x, bridgeY + dy, midZ + dz, Blocks::Air);
+            if (std::abs(dz) == 1) put(chunk, x, bridgeY + 1, midZ + dz, slabOf(38, 0));
+        }
+    put(chunk, midX + (SIDE_X + SIDE_HALF - HALF) / 2, bridgeY - 1, midZ, Blocks::EndRodFirst);
+    for (int dy = 1; dy <= 2; ++dy)
+    {
+        put(chunk, midX - HALF, bridgeY + dy, midZ, Blocks::Air);
+        put(chunk, midX + SIDE_X + SIDE_HALF, bridgeY + dy, midZ, Blocks::Air);
+    }
 
     int sx = 0, sz = 0, deck = 0;
     endShip(midX, midZ, ground, sx, sz, deck);
@@ -6934,8 +7210,157 @@ void WorldGen::stampBastion(Chunk& chunk, int midX, int midZ) const
             for (int y = base - 1; y > NETHER_LAVA_LEVEL - 4; --y)
                 put(chunk, midX + dx, y, midZ + dz, Blocks::Blackstone);
 
-    put(chunk, midX - 4, base + 1, midZ + 4, Blocks::Chest);
-    put(chunk, midX + 4, base + 1, midZ - 4, Blocks::Chest);
+    const int kind = bastionKind(midX, midZ);
+    auto brick = [&](int x, int y, int z) {
+        const float roll = hashToFloat(hashCoords(x, y, z, m_seed + 6603));
+        return roll < 0.25f ? static_cast<BlockId>(Blocks::CrackedPolishedBlackstoneBricks)
+             : roll < 0.32f ? static_cast<BlockId>(Blocks::GildedBlackstone)
+             : roll < 0.45f ? static_cast<BlockId>(Blocks::Blackstone) : static_cast<BlockId>(Blocks::PolishedBlackstoneBricks);
+    };
+    auto box = [&](int x0, int z0, int x1, int z1, int y0, int y1, bool hollow) {
+        for (int x = x0; x <= x1; ++x)
+            for (int z = z0; z <= z1; ++z)
+                for (int y = y0; y <= y1; ++y)
+                {
+                    const bool shell = x == x0 || x == x1 || z == z0 || z == z1 || y == y0 || y == y1;
+                    put(chunk, midX + x, base + y, midZ + z, (!hollow || shell) ? brick(midX + x, base + y, midZ + z) : static_cast<BlockId>(Blocks::Air));
+                }
+    };
+    auto hang = [&](int x, int z, int top, int length, BlockId lamp) {
+        for (int i = 0; i < length; ++i) put(chunk, midX + x, base + top - i, midZ + z, static_cast<BlockId>(Blocks::ChainFirst + 1));
+        put(chunk, midX + x, base + top - length, midZ + z, lamp);
+    };
+    for (int dx = -HALF; dx <= HALF; ++dx)
+        for (int dz = -HALF; dz <= HALF; ++dz)
+            if (std::max(std::abs(dx), std::abs(dz)) == HALF)
+                for (int dy = 1; dy < TALL; ++dy) put(chunk, midX + dx, base + dy, midZ + dz, brick(midX + dx, base + dy, midZ + dz));
+    for (int dx = -HALF + 1; dx <= HALF - 1; ++dx)
+        for (int dz = -HALF + 1; dz <= HALF - 1; ++dz)
+            put(chunk, midX + dx, base + 1, midZ + dz, Blocks::Air);
+    for (int dy = 1; dy <= 3; ++dy)
+        for (int dx = -1; dx <= 1; ++dx) put(chunk, midX + dx, base + dy, midZ - HALF, Blocks::Air);
+
+    if (kind == 0)
+    {
+        for (int dx = -HALF + 1; dx <= HALF - 1; ++dx)
+            for (int dz = -HALF + 1; dz <= HALF - 1; ++dz)
+                if (std::max(std::abs(dx), std::abs(dz)) > 6) put(chunk, midX + dx, base, midZ + dz, Blocks::Lava);
+        box(-6, -6, 6, 6, 0, 10, true);
+        for (int dx = -5; dx <= 5; ++dx)
+            for (int dz = -5; dz <= 5; ++dz)
+                put(chunk, midX + dx, base, midZ + dz, (std::abs(dx) + std::abs(dz)) % 3 == 0 ? static_cast<BlockId>(Blocks::MagmaBlock) : brick(midX + dx, base, midZ + dz));
+        for (int dy = 1; dy <= 3; ++dy)
+            for (int dx = -1; dx <= 1; ++dx) put(chunk, midX + dx, base + dy, midZ - 6, Blocks::Air);
+        for (int dz = -HALF + 1; dz <= -7; ++dz)
+            for (int dx = -1; dx <= 1; ++dx) put(chunk, midX + dx, base, midZ + dz, brick(midX + dx, base, midZ + dz));
+        for (int dy = 1; dy <= 4; ++dy)
+            for (int dx = -1; dx <= 1; ++dx)
+                for (int dz = -1; dz <= 1; ++dz)
+                    put(chunk, midX + dx, base + dy, midZ + dz, (dy == 4 && dx == 0 && dz == 0) ? static_cast<BlockId>(Blocks::GoldBlock) : brick(midX + dx, base + dy, midZ + dz));
+        put(chunk, midX, base + 5, midZ, Blocks::Chest);
+        for (int k = 0; k < 4; ++k)
+        {
+            const int gx = (k & 1) ? 4 : -4, gz = (k & 2) ? 4 : -4;
+            put(chunk, midX + gx, base + 1, midZ + gz, Blocks::GoldBlock);
+        }
+        put(chunk, midX + 4, base + 1, midZ, Blocks::MonsterSpawner);
+        put(chunk, midX - 4, base + 1, midZ, Blocks::MonsterSpawner);
+        hang(-3, 3, 9, 3, Blocks::SoulLantern);
+        hang(3, -3, 9, 3, Blocks::SoulLantern);
+    }
+    else if (kind == 1)
+    {
+        for (int dx = -HALF + 1; dx <= HALF - 1; ++dx)
+            for (int dz = -HALF + 1; dz <= HALF - 1; ++dz)
+                put(chunk, midX + dx, base, midZ + dz, std::abs(dz) <= 2 ? brick(midX + dx, base, midZ + dz) : static_cast<BlockId>(Blocks::Lava));
+        box(-12, -5, -6, 5, 0, 12, true);
+        box(6, -5, 12, 5, 0, 12, true);
+        for (int dx = -5; dx <= 5; ++dx)
+            for (int dz = -2; dz <= 2; ++dz)
+            {
+                put(chunk, midX + dx, base + 6, midZ + dz, brick(midX + dx, base + 6, midZ + dz));
+                if (std::abs(dz) == 2) put(chunk, midX + dx, base + 7, midZ + dz, Blocks::PolishedBlackstoneBricks);
+                if (std::abs(dx) % 4 == 1 && std::abs(dz) == 0)
+                    for (int y = base + 1; y <= base + 5; ++y) put(chunk, midX + dx, y, midZ + dz, Blocks::PolishedBlackstone);
+            }
+        for (int side = -1; side <= 1; side += 2)
+            for (int dy = 7; dy <= 9; ++dy)
+                for (int dz = -1; dz <= 1; ++dz) put(chunk, midX + side * 6, base + dy, midZ + dz, Blocks::Air);
+        for (int side = -1; side <= 1; side += 2)
+            for (int step = 0; step < 6; ++step)
+                for (int dz = -1; dz <= 1; ++dz)
+                    put(chunk, midX + side * (11 - step), base + step, midZ + dz + (side > 0 ? 3 : -3), Blocks::PolishedBlackstone);
+        put(chunk, midX, base + 7, midZ, Blocks::Chest);
+        hang(-9, 0, 11, 2, Blocks::Lantern);
+        hang(9, 0, 11, 2, Blocks::Lantern);
+    }
+    else if (kind == 2)
+    {
+        for (int row = 0; row < 2; ++row)
+            for (int col = 0; col < 3; ++col)
+            {
+                const int x0 = -11 + col * 8, z0 = row == 0 ? -10 : 3;
+                box(x0, z0, x0 + 6, z0 + 6, 0, 5, true);
+                for (int dy = 1; dy <= 2; ++dy) put(chunk, midX + x0 + 3, base + dy, midZ + (row == 0 ? z0 + 6 : z0), Blocks::Air);
+                put(chunk, midX + x0 + 1, base + 1, midZ + z0 + 1, Blocks::Chest);
+                hang(x0 + 3, z0 + 3, 4, 1, Blocks::SoulLantern);
+                if ((row + col) % 2 == 0) put(chunk, midX + x0 + 5, base + 1, midZ + z0 + 5, Blocks::GoldBlock);
+            }
+        for (int dx = -11; dx <= 11; ++dx)
+            for (int dz = -3; dz <= 2; ++dz) put(chunk, midX + dx, base, midZ + dz, Blocks::PolishedBlackstone);
+    }
+    else
+    {
+        for (int dx = -HALF + 1; dx <= HALF - 1; ++dx)
+            for (int dz = -HALF + 1; dz <= HALF - 1; ++dz)
+                put(chunk, midX + dx, base, midZ + dz, hashToFloat(hashCoords(midX + dx, 3, midZ + dz, m_seed + 6604)) < 0.5f ? Blocks::SoulSand : Blocks::CrimsonNylium);
+        for (int stall = 0; stall < 4; ++stall)
+        {
+            const int x0 = -11 + stall * 6;
+            for (int dz = 4; dz <= 11; ++dz)
+                for (int dy = 1; dy <= 4; ++dy)
+                {
+                    put(chunk, midX + x0, base + dy, midZ + dz, (dy <= 2 && dz == 4) ? static_cast<BlockId>(Blocks::Air) : brick(midX + x0, base + dy, midZ + dz));
+                    if (dy == 4)
+                        for (int dx = 0; dx <= 5; ++dx) put(chunk, midX + x0 + dx, base + dy, midZ + dz, brick(midX + x0 + dx, base + dy, midZ + dz));
+                }
+            put(chunk, midX + x0 + 3, base + 1, midZ + 10, Blocks::HayBale);
+        }
+        for (int step = 0; step < 6; ++step)
+            for (int dz = -11; dz <= -9; ++dz)
+                for (int dy = 0; dy <= step; ++dy) put(chunk, midX + 5 + step, base + dy, midZ + dz, Blocks::PolishedBlackstone);
+        for (int dx = -11; dx <= 11; ++dx)
+            for (int dz = -11; dz <= -9; ++dz)
+                if (dx > 10) put(chunk, midX + dx, base + 6, midZ + dz, Blocks::PolishedBlackstone);
+        put(chunk, midX - 10, base + 1, midZ - 10, Blocks::Chest);
+        put(chunk, midX + 11, base + 7, midZ - 10, Blocks::Chest);
+    }
+}
+
+int WorldGen::bastionKind(int midX, int midZ) const
+{
+    return static_cast<int>(hashCoords(midX, 61, midZ, m_seed + 6605) % 4u);
+}
+
+int WorldGen::bastionChests(int kind, glm::ivec3 out[6])
+{
+    switch (kind)
+    {
+        case 0: out[0] = glm::ivec3(0, 5, 0); return 1;
+        case 1: out[0] = glm::ivec3(0, 7, 0); return 1;
+        case 2:
+        {
+            int n = 0;
+            for (int row = 0; row < 2; ++row)
+                for (int col = 0; col < 3; ++col)
+                    out[n++] = glm::ivec3(-11 + col * 8 + 1, 1, (row == 0 ? -10 : 3) + 1);
+            return n;
+        }
+        default:
+            out[0] = glm::ivec3(-10, 1, -10);
+            out[1] = glm::ivec3(11, 7, -10);
+            return 2;
+    }
 }
 
 // ---------------------------------------------------------------------

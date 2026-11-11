@@ -120,6 +120,9 @@ public:
     void outpostCage(int midX, int midZ, int& cageX, int& cageZ, bool& golem) const;
     static int outpostBanners(int out[8][4]);
     int mansionShift(int midX, int midZ) const;
+    int bastionKind(int midX, int midZ) const;
+    static int bastionChests(int kind, glm::ivec3 out[6]);
+    static int cityChests(glm::ivec3 out[6]);
     bool mansionCage(int midX, int midZ, int& x, int& y, int& z) const;
     static void endShip(int midX, int midZ, int ground, int& sx, int& sz, int& deck);
     bool fortressIn(int squareX, int squareZ, int& midX, int& midZ, int& turn) const;
@@ -156,6 +159,9 @@ public:
         ShipwreckSupply,
         ShipwreckMap,
         OceanRuin,
+        BastionTreasure,
+        BastionBridge,
+        BastionStable,
     };
 
     Hoard hoardAt(int x, int y, int z) const;

@@ -94,7 +94,16 @@ namespace
             case Village::Kind::Butcher:
                 return { BUTCHER, static_cast<int>(std::size(BUTCHER)) };
             case Village::Kind::Home:
+            case Village::Kind::Fletcher:
+            case Village::Kind::Mason:
+            case Village::Kind::Cartographer:
+            case Village::Kind::Tannery:
+            case Village::Kind::Shepherd:
+            case Village::Kind::Fisher:
+            case Village::Kind::Church:
                 return { HOME, static_cast<int>(std::size(HOME)) };
+            case Village::Kind::Toolsmith:
+                return { SMITH, static_cast<int>(std::size(SMITH)) };
             default:
                 return { nullptr, 0 };
         }
