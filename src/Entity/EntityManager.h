@@ -94,7 +94,10 @@ public:
         std::array<bool, 6> gearSure{};
         int how = 0;
         float distance = 0.0f;
+        bool captain = false;
     };
+    bool spawnPatrol(const World& world, const glm::vec3& playerPosition);
+    void spawnJockey(MobId rider, MobId mount, const glm::vec3& feet, const World& world, bool babyRider);
     std::vector<Death> drainDeaths();
     std::vector<glm::vec3> drainGrazes() { std::vector<glm::vec3> out; out.swap(m_grazes); return out; }
 
@@ -210,6 +213,7 @@ private:
     bool m_insomnia = true;
     bool m_traders = true;
     float random01();
+    float m_golemTimer = 5.0f;
     void trySpawnWave(const World& world, const glm::vec3& playerPosition, float daylight);
     int surfaceBelow(const World& world, int x, int startY, int z) const;
 

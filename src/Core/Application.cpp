@@ -3239,7 +3239,7 @@ bool Application::frame()
             m_startupScreen == "shulkerboxes" || m_startupScreen == "beds" || m_startupScreen == "chests" ||
             m_startupScreen == "copper" || m_startupScreen == "flowers" || m_startupScreen == "mushrooms" || m_startupScreen == "lush" ||
             m_startupScreen == "farm" || m_startupScreen == "corals" || m_startupScreen == "ice" || m_startupScreen == "wiring" || m_startupScreen == "utility" || m_startupScreen == "dig" ||
-            m_startupScreen == "boat" || m_startupScreen == "rails" || m_startupScreen == "railhill" || m_startupScreen == "turned" ||
+            m_startupScreen == "boat" || m_startupScreen == "rails" || m_startupScreen == "railhill" || m_startupScreen == "turned" || m_startupScreen == "jockeys" ||
             m_startupScreen == "mobs" || m_startupScreen == "golem" ||
             m_startupScreen == "glowmobs" || m_startupScreen == "variants" || m_startupScreen == "zoo" || m_startupScreen == "llamas" ||
             m_startupScreen == "shulker" ||
@@ -3292,6 +3292,7 @@ bool Application::frame()
                                   m_startupScreen != "throwers" &&
                                   m_startupScreen != "railhill" &&
                                   m_startupScreen != "turned" &&
+                                  m_startupScreen != "jockeys" &&
                                   m_startupScreen != "flow" &&
                                   m_startupScreen != "buds" &&
                                   m_startupScreen != "beam" &&
@@ -7756,6 +7757,30 @@ bool Application::frame()
                     m_world->setBlock(bx, top(d) + 1, bz + d, Blocks::Glass);
                 for (int d = 9; d <= 14; ++d)
                     m_world->setBlock(bx - 6, top(d) + 1, bz + d, Blocks::Leaves);
+            }
+
+            if (m_startupScreen == "jockeys")
+            {
+                m_camera.setOrientation(90.0f, -12.0f);
+                m_showDebug = false;
+                m_freezeMobs = true;
+                const int bx = static_cast<int>(std::floor(m_player.position.x));
+                const int by = static_cast<int>(std::floor(m_player.position.y));
+                const int bz = static_cast<int>(std::floor(m_player.position.z));
+                for (int dx = -9; dx <= 9; ++dx)
+                    for (int dy = -1; dy <= 8; ++dy)
+                        for (int d = 1; d <= 14; ++d)
+                            m_world->setBlock(bx + dx, by + dy, bz + d, dy < 0 ? Blocks::Grass : Blocks::Air);
+                m_entities.spawnJockey(MobId::Zombie, MobId::Chicken, glm::vec3(bx + 3.5f, static_cast<float>(by), bz + 5.5f), *m_world, true);
+                m_entities.spawnJockey(MobId::Skeleton, MobId::Spider, glm::vec3(bx - 1.5f, static_cast<float>(by), bz + 6.5f), *m_world, false);
+                if (m_entities.spawnAt(MobId::Pillager, glm::vec3(bx - 4.5f, static_cast<float>(by), bz + 5.5f), *m_world))
+                {
+                    m_entities.mobs().back().dress(2);
+                    m_entities.mobs().back().setCaptain(true);
+                }
+                for (int x = -6; x <= 8; ++x) m_world->setBlock(bx + x, by, bz + 10, Blocks::RailEastWest);
+                if (m_entities.spawnAt(MobId::Minecart, glm::vec3(bx + 1.5f, by + Mob::RAIL_LIFT, bz + 10.5f), *m_world))
+                    m_entities.mobs().back().setVariant(6);
             }
 
             if (m_startupScreen == "turned")
@@ -15357,6 +15382,22 @@ void Application::tickCarts(float deltaTime)
                 }
             }
         }
+        if (cart.variant() == 6)
+        {
+            float& wait = m_cartFuel[id];
+            wait -= deltaTime;
+            if (wait <= 0.0f)
+            {
+                wait = 10.0f + static_cast<float>(hashCoords(static_cast<int>(id), static_cast<int>(m_elapsedSeconds), 6, 0x5EA7u) % 30u);
+                if (glm::length(cart.position() - m_player.position) < 16.0f && !m_entities.peaceful())
+                {
+                    static const MobId KINDS[3] = { MobId::Zombie, MobId::Skeleton, MobId::Spider };
+                    const uint32_t roll = hashCoords(static_cast<int>(id), static_cast<int>(m_elapsedSeconds * 10.0f), 9, 0x5EA8u);
+                    const glm::vec3 spot = cart.position() + glm::vec3(static_cast<float>(roll % 5u) - 2.0f, 0.0f, static_cast<float>((roll >> 4) % 5u) - 2.0f);
+                    if (m_entities.spawnAt(KINDS[roll % 3u], spot, *m_world)) m_particles.spawnBlockBreak(glm::ivec3(spot), Blocks::MonsterSpawner);
+                }
+            }
+        }
         if (cart.variant() == 5 && activator)
         {
             float& wait = m_cartFuel[id];
@@ -20189,6 +20230,8 @@ bool Application::runCommand(const std::string& line, const glm::vec3& origin, b
                 Mob& made = m_entities.mobs().back();
                 const std::string& tags = command.sub;
                 if (tags.find("RabbitType:99") != std::string::npos) made.setVariant(99);
+                if (made.typeId() == MobId::Minecart && tags.find("Variant:6") != std::string::npos) made.setVariant(6);
+                if (tags.find("PatrolLeader:1") != std::string::npos) made.setCaptain(true);
                 const size_t named = tags.find("CustomName:");
                 if (named != std::string::npos)
                 {
@@ -23284,6 +23327,16 @@ void Application::updateMobs(float deltaTime)
     // twelve-block clearing in two seconds. Frozen, every one of them
     // is still there when the shutter goes.
     const float mobTime = m_freezeMobs ? 0.0f : m_worldDelta;
+    m_patrolTimer -= mobTime;
+    if (m_patrolTimer <= 0.0f)
+    {
+        m_patrolTimer = 600.0f + static_cast<float>(hashCoords(static_cast<int>(m_elapsedSeconds), m_dayNumber, 0, 0x9A7Eu) % 60u);
+        const bool surface = m_world->skyLight(static_cast<int>(std::floor(m_player.position.x)), static_cast<int>(std::floor(m_player.position.y + 1.0f)),
+                                               static_cast<int>(std::floor(m_player.position.z))) >= 15;
+        if (m_rules.on(GameRules::Rule::DoPatrolSpawning) && m_dimension == Dimension::Overworld && m_dayNumber >= 5 && surface &&
+            !m_entities.peaceful() && hashCoords(m_dayNumber, static_cast<int>(m_elapsedSeconds), 7, 0x9A7Fu) % 5u == 0u)
+            m_entities.spawnPatrol(*m_world, m_player.position);
+    }
     m_entities.setPlayerHidden(m_player.spectator());
     m_entities.setNaturalSpawning(m_rules.on(GameRules::Rule::DoMobSpawning));
     m_entities.setDifficulty(static_cast<int>(m_worldMeta.difficulty));
@@ -23434,6 +23487,9 @@ void Application::updateMobs(float deltaTime)
     for (const EntityManager::Death& death : m_entities.drainDeaths())
     {
         vibrate(death.position, 15);
+        if (death.captain && m_rules.on(GameRules::Rule::DoMobLoot))
+            m_drops.spawnStack(death.position + glm::vec3(0.0f, 0.5f, 0.0f),
+                               ItemStack{ Items::OminousBottle, 1, static_cast<int>(death.serial % 5u) });
         if (death.byPlayer)
         {
             m_scoreboard.addToCriterion("totalKillCount", scoreHolder(), 1);
@@ -23915,6 +23971,16 @@ void Application::pinFramedItems()
     m_drops.clearPinned();
     for (const Mob& mob : m_entities.mobs())
     {
+        if (mob.alive() && mob.captain() && glm::length(mob.position() - m_camera.position) < 48.0f)
+        {
+            DroppedItems::Held flag;
+            flag.item = static_cast<StackId>(bannerOf(0, false, 2));
+            flag.size = 0.7f;
+            flag.grip = mob.position() + glm::vec3(0.0f, mob.height() + 0.25f, 0.0f);
+            const float turn = glm::radians(mob.yaw());
+            flag.forward = glm::vec3(std::cos(turn), 0.0f, std::sin(turn));
+            m_drops.hold(flag);
+        }
         if (!mob.alive() || mob.gear(Mob::MainHand) == 0 || mob.serial() == m_spectatingMob) continue;
         if (glm::length(mob.position() - m_camera.position) > 32.0f) continue;
         if (mob.typeId() == MobId::Enderman)
@@ -23964,9 +24030,9 @@ void Application::pinFramedItems()
     if (!m_world) return;
     for (const Mob& cart : m_entities.mobs())
     {
-        if (cart.typeId() != MobId::Minecart || cart.variant() <= 0 || cart.variant() > 5) continue;
-        static const BlockId CARGO[6] = { Blocks::Air, Blocks::Chest, Blocks::Furnace, Blocks::Hopper, Blocks::Tnt,
-                                          static_cast<BlockId>(Blocks::CommandBlockFirst + 4) };
+        if (cart.typeId() != MobId::Minecart || cart.variant() <= 0 || cart.variant() > 6) continue;
+        static const BlockId CARGO[7] = { Blocks::Air, Blocks::Chest, Blocks::Furnace, Blocks::Hopper, Blocks::Tnt,
+                                          static_cast<BlockId>(Blocks::CommandBlockFirst + 4), Blocks::MonsterSpawner };
         DroppedItems::Cargo cargo;
         cargo.block = CARGO[cart.variant()];
         if (cart.variant() == 2 && m_cartFuel[cart.serial()] > 0.0f) cargo.block = Blocks::FurnaceLit;

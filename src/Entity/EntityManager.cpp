@@ -5,6 +5,7 @@
 #include "Pathfinder.h"
 #include <algorithm>
 #include <cmath>
+#include <unordered_map>
 
 namespace
 {
@@ -535,6 +536,20 @@ void EntityManager::trySpawnWave(const World& world, const glm::vec3& playerPosi
                                (mobType(species).spawnClass == SpawnClass::Passive && mobType(species).breedingFood != Blocks::Air &&
                                 species != MobId::Villager && random01() < 0.05f);
         if (!spawnAt(species, mobFeet, world, youngster)) continue;
+        if (youngster && zombieKind && species != MobId::Drowned && random01() < 0.05f)
+        {
+            const size_t rider = m_mobs.size() - 1;
+            if (spawnAt(MobId::Chicken, mobFeet, world)) m_mobs[rider].ride(m_mobs.back().serial());
+        }
+        if (species == MobId::Spider && random01() < 0.01f)
+        {
+            const uint32_t spider = m_mobs.back().serial();
+            if (spawnAt(MobId::Skeleton, mobFeet + glm::vec3(0.0f, 0.7f, 0.0f), world) || spawnAt(MobId::Skeleton, mobFeet, world))
+            {
+                m_mobs.back().ride(spider);
+                m_mobs.back().dress(m_difficulty);
+            }
+        }
 
         if (species == MobId::WanderingTrader)
             for (const float side : { -1.6f, 1.6f })
@@ -560,6 +575,50 @@ void EntityManager::trySpawnWave(const World& world, const glm::vec3& playerPosi
 
         return;   // one per wave keeps it gradual
     }
+}
+
+void EntityManager::spawnJockey(MobId rider, MobId mount, const glm::vec3& feet, const World& world, bool babyRider)
+{
+    if (!spawnAt(mount, feet, world)) return;
+    const uint32_t steed = m_mobs.back().serial();
+    if (spawnAt(rider, feet + glm::vec3(0.0f, 0.7f, 0.0f), world, babyRider) || spawnAt(rider, feet, world, babyRider))
+    {
+        m_mobs.back().ride(steed);
+        m_mobs.back().dress(m_difficulty);
+    }
+}
+
+bool EntityManager::spawnPatrol(const World& world, const glm::vec3& playerPosition)
+{
+    const float angle = random01() * 6.2831853f;
+    const float reach = 24.0f + random01() * 24.0f;
+    const int x = static_cast<int>(std::floor(playerPosition.x + std::cos(angle) * reach));
+    const int z = static_cast<int>(std::floor(playerPosition.z + std::sin(angle) * reach));
+    int ground = -1;
+    for (int y = std::min(Chunk::SY - 2, static_cast<int>(playerPosition.y) + 24); y > static_cast<int>(playerPosition.y) - 24 && y > 1; --y)
+        if (isSolid(world.getBlock(x, y - 1, z)) && !isSolid(world.getBlock(x, y, z)) && !isSolid(world.getBlock(x, y + 1, z)))
+        {
+            ground = y;
+            break;
+        }
+    if (ground < 0 || world.skyLight(x, ground, z) < 15) return false;
+    const int members = 2 + static_cast<int>(random01() * 4.0f);
+    bool led = false;
+    for (int k = 0; k < members; ++k)
+    {
+        const glm::vec3 feet(x + 0.5f + (k % 3) - 1.0f, static_cast<float>(ground), z + 0.5f + (k / 3));
+        const MobId kind = (m_difficulty >= 3 && k > 0 && random01() < 0.3f) ? MobId::Vindicator : MobId::Pillager;
+        if (!spawnAt(kind, feet, world) && !spawnAt(kind, glm::vec3(x + 0.5f, static_cast<float>(ground), z + 0.5f), world)) continue;
+        Mob& member = m_mobs.back();
+        member.dress(m_difficulty);
+        member.keepFromDespawning();
+        if (!led)
+        {
+            member.setCaptain(true);
+            led = true;
+        }
+    }
+    return led;
 }
 
 void EntityManager::update(float deltaTime, const World& world,
@@ -588,6 +647,7 @@ void EntityManager::update(float deltaTime, const World& world,
             death.chargedBlast = mob.chargedBlastHit();
             death.how = mob.playerHitHow();
             death.distance = mob.playerHitDistance();
+            death.captain = mob.captain();
             m_deaths.push_back(death);
         }
         if (const int silverfish = mob.takeSilverfish())
@@ -712,6 +772,58 @@ void EntityManager::update(float deltaTime, const World& world,
             return glm::length(glm::vec3(delta.x, 0.0f, delta.z)) > keep;
         }),
         m_mobs.end());
+
+    {
+        std::unordered_map<uint32_t, size_t> bySerial;
+        for (size_t k = 0; k < m_mobs.size(); ++k) bySerial[m_mobs[k].serial()] = k;
+        for (Mob& rider : m_mobs)
+        {
+            if (rider.mount() == 0) continue;
+            const auto found = bySerial.find(rider.mount());
+            if (!rider.alive() || found == bySerial.end() || !m_mobs[found->second].alive())
+            {
+                rider.ride(0);
+                continue;
+            }
+            Mob& steed = m_mobs[found->second];
+            rider.seatAt(steed.position() + glm::vec3(0.0f, steed.height() * 0.75f, 0.0f));
+            const glm::vec3 toPlayer = target - steed.position();
+            if (mobType(rider.typeId()).spawnClass == SpawnClass::Hostile && glm::length(toPlayer) < 16.0f)
+                steed.huntTowards(target);
+        }
+    }
+
+    m_golemTimer -= deltaTime;
+    if (m_golemTimer <= 0.0f)
+    {
+        m_golemTimer = 5.0f;
+        for (const Mob& villager : m_mobs)
+        {
+            if (!villager.alive() || villager.typeId() != MobId::Villager || villager.baby()) continue;
+            const glm::vec3 at = villager.position();
+            int neighbours = 0;
+            bool threatened = false;
+            bool guarded = false;
+            for (const Mob& other : m_mobs)
+            {
+                if (!other.alive()) continue;
+                const float apart = glm::length(other.position() - at);
+                if (other.typeId() == MobId::Villager && apart < 16.0f) ++neighbours;
+                if (other.typeId() == MobId::IronGolem && apart < 32.0f) guarded = true;
+                if (mobType(other.typeId()).spawnClass == SpawnClass::Hostile && apart < 10.0f) threatened = true;
+            }
+            if (neighbours >= 3 && threatened && !guarded)
+            {
+                const float angle = random01() * 6.2831853f;
+                const glm::vec3 spot = at + glm::vec3(std::cos(angle) * 3.0f, 0.0f, std::sin(angle) * 3.0f);
+                if (spawnAt(MobId::IronGolem, spot, world) || spawnAt(MobId::IronGolem, at + glm::vec3(0.0f, 0.5f, 0.0f), world))
+                {
+                    m_golemTimer = 30.0f;
+                    break;
+                }
+            }
+        }
+    }
 
     setWolvesOnHostiles(deltaTime, target);
     courtVillagers(world, deltaTime);

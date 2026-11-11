@@ -9992,6 +9992,10 @@ namespace
                       lichenMask(glowLichenOn(3)) == 8 && lightEmission(glowLichenWith(63)) == lightEmission(glowLichenOn(0)) &&
                       isSculkVein(sculkVeinWith(6)) && veinMask(sculkVeinWith(6)) == 6 && sculkVeinFace(sculkVeinWith(6)) == 1,
                   "glow lichen and sculk veins spread over several faces of one cell");
+            check(vehicleItemFor(MobId::Minecart, 6) == static_cast<StackId>(Items::Minecart), "a spawner minecart breaks into a plain minecart");
+            check(Chat::parse("/summon spawner_minecart ~ ~ ~", true, glm::vec3(0.0f)).mob == static_cast<int>(MobId::Minecart) &&
+                      Chat::parse("/summon spawner_minecart ~ ~ ~", true, glm::vec3(0.0f)).sub.find("Variant:6") != std::string::npos,
+                  "and can be summoned");
             check(isStonecutter(Blocks::StonecutterTurned) && blockDrop(Blocks::StonecutterTurned) == static_cast<StackId>(Blocks::Stonecutter),
                   "a turned stonecutter is still a stonecutter");
             check(shelfMask(shelfOf(1, 3)) == 7 && shelfBooks(shelfOf(1, 3)) == 3 && shelfFacing(shelfOf(1, 3)) == 1,

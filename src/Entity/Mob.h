@@ -319,6 +319,11 @@ public:
     // Shoved by something that is not a blow: a wind charge's burst.
     void shove(const glm::vec3& push) { m_velocity += push; m_onGround = false; }
     void displace(const glm::vec3& by) { m_position += by; }
+    void ride(uint32_t mount) { m_mount = mount; }
+    uint32_t mount() const { return m_mount; }
+    void seatAt(const glm::vec3& at) { m_position = at; m_velocity = glm::vec3(0.0f); m_onGround = true; }
+    void setCaptain(bool on) { m_captain = on; }
+    bool captain() const { return m_captain; }
 
     // Stands where it is for this long, as a villager does while it is
     // being traded with.
@@ -571,6 +576,8 @@ private:
     bool m_grazed = false;
     float m_cureTimer = 0.0f;
     bool m_wantsTeleport = false;
+    uint32_t m_mount = 0;
+    bool m_captain = false;
     float m_grazeTimer = 20.0f;
     bool m_chargedBlast = false;
     bool m_rolled = false;

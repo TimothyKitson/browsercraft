@@ -666,7 +666,10 @@ Chat::Command Chat::parse(const std::string& line, bool cheats, const glm::vec3&
     {
         if (!cheats) return deny(name);
         if (words.size() < 2) return fail("/summon <mob> [x] [y] [z]");
-        const int mob = mobNamed(words[1]);
+        std::string asked = lower(words[1]);
+        if (asked.rfind("minecraft:", 0) == 0) asked = asked.substr(10);
+        const bool spawnerCart = asked == "spawner_minecart";
+        const int mob = spawnerCart ? static_cast<int>(MobId::Minecart) : mobNamed(words[1]);
         if (mob < 0) return fail("No mob called " + words[1] + ".");
         glm::vec3 at = origin;
         if (words.size() >= 5 &&
@@ -676,6 +679,7 @@ Chat::Command Chat::parse(const std::string& line, bool cheats, const glm::vec3&
         out.mob = mob;
         out.position = at;
         for (size_t k = words.size() >= 5 ? 5 : 2; k < words.size(); ++k) out.sub += (out.sub.empty() ? "" : " ") + words[k];
+        if (spawnerCart) out.sub += (out.sub.empty() ? "" : " ") + std::string("Variant:6");
         out.text = std::string("Summoned a new ") + mobType(static_cast<MobId>(mob)).name + ".";
         return out;
     }
