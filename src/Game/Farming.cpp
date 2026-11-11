@@ -141,8 +141,7 @@ bool Farming::growBambooAt(World& world, const glm::ivec3& cane)
         if (here == Blocks::Bamboo) { ++height; continue; }
 
         // Only the ground a cane will stand on.
-        if (here != Blocks::Grass && here != Blocks::Dirt &&
-            here != Blocks::Sand && here != Blocks::Moss) return false;
+        if (!bambooCanRootIn(here)) return false;
         break;
     }
 
@@ -401,6 +400,11 @@ void Farming::grow(World& world, const glm::vec3& around, uint32_t& seed, std::v
         if (world.getBlock(x, y, z) == Blocks::Bamboo)
         {
             growBambooAt(world, glm::ivec3(x, y, z));
+            continue;
+        }
+        if (world.getBlock(x, y, z) == Blocks::BambooShoot)
+        {
+            if (nextRandom(seed) % 3u == 0u && world.getBlock(x, y + 1, z) == Blocks::Air) world.setBlock(x, y, z, Blocks::Bamboo);
             continue;
         }
 

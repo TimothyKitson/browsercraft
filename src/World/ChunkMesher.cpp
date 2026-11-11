@@ -1902,6 +1902,22 @@ namespace
         }
     }
 
+    void emitBamboo(const MeshSnapshot& snap, int lx, int y, int lz, BlockId id, std::vector<float>& out)
+    {
+        const int stalk = Tiles::BambooStalkTile;
+        const PartFace faces[6] = { { stalk, 0, 0, 3, 16 }, { stalk, 0, 0, 3, 16 }, { stalk, 13, 0, 16, 3 },
+                                    { stalk, 13, 0, 16, 3 }, { stalk, 0, 0, 3, 16 }, { stalk, 0, 0, 3, 16 } };
+        emitPart(snap, lx, y, lz, id, glm::vec3(6.5f / 16.0f, 0.0f, 6.5f / 16.0f), glm::vec3(9.5f / 16.0f, 1.0f, 9.5f / 16.0f), faces, out);
+        int leaves = -1;
+        if (snap.block(lx, y + 1, lz) != Blocks::Bamboo) leaves = blockInfo(id).tileSide;
+        else if (snap.block(lx, y + 2, lz) != Blocks::Bamboo) leaves = Tiles::BambooSmallLeavesTile;
+        if (leaves < 0) return;
+        const glm::vec3 a[4] = { { 0.0f, 0.0f, 0.0f }, { 1.0f, 0.0f, 1.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 1.0f, 0.0f } };
+        const glm::vec3 b[4] = { { 1.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 1.0f, 1.0f }, { 1.0f, 1.0f, 0.0f } };
+        pushQuad(snap, lx, y, lz, id, a, leaves, 0.0f, 0.0f, 16.0f, 16.0f, 0.9f, true, out);
+        pushQuad(snap, lx, y, lz, id, b, leaves, 0.0f, 0.0f, 16.0f, 16.0f, 0.9f, true, out);
+    }
+
     void emitHead(const MeshSnapshot& snap, int lx, int y, int lz, BlockId id, std::vector<float>& out)
     {
         const int kind = headKind(id);
@@ -2152,6 +2168,10 @@ void buildChunkMesh(const MeshSnapshot& snapshot, MeshResult& out)
                 else if (isHead(id))
                 {
                     emitHead(snapshot, lx, y, lz, id, out.opaqueVertices);
+                }
+                else if (id == Blocks::Bamboo)
+                {
+                    emitBamboo(snapshot, lx, y, lz, id, out.opaqueVertices);
                 }
                 else if (isFamilyButton(id))
                 {

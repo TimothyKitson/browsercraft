@@ -394,6 +394,7 @@ namespace Tiles
         FrogspawnTile,
         PolishedBasaltTop, PolishedBasaltSide,
         HeadTileFirst, HeadTileLast = HeadTileFirst + 44,
+        BambooStalkTile, BambooSmallLeavesTile, BambooShootTile,
 
         TileCount
     };

@@ -702,6 +702,7 @@ namespace Blocks
         LavaCauldron,
         PowderCauldronFirst, PowderCauldronLast = PowderCauldronFirst + 2,
         HeadRunFirst, HeadRunLast = HeadRunFirst + 139,
+        BambooShoot,
         ExtCount
     };
 }
@@ -817,6 +818,7 @@ inline BlockId snowLayerOf(int layers)
     return static_cast<BlockId>(Blocks::SnowLayerFirst + (layers < 1 ? 0 : layers > 8 ? 7 : layers - 1));
 }
 bool snowCanRestOn(BlockId below);
+bool bambooCanRootIn(BlockId ground);
 BlockId debugStickTurn(BlockId id, int step);
 constexpr int BUTTON_MATERIALS = 13;
 constexpr int PLATE_MATERIALS = 15;

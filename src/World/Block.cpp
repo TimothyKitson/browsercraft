@@ -333,7 +333,7 @@ namespace
         { "Melon Stem",   MelonStemRipe, MelonStemRipe,  MelonStemRipe,  false, false, RenderType::Cross,  0,   0.0f },
         { "Melon Stem",   MelonStemRipe, MelonStemRipe,  MelonStemRipe,  false, false, RenderType::Cross,  0,   0.0f },
 
-        { "Bamboo",       BambooTile,    BambooTile,     BambooTile,     false, false, RenderType::Cross,  0,   0.3f },
+        { "Bamboo",       BambooTile,    BambooStalkTile,BambooTile,     true,  false, RenderType::Cross,  0,   1.0f },
 
         { "Cocoa",        CocoaStage0,   CocoaStage0,    CocoaStage0,    false, false, RenderType::Cross,  0,   0.2f },
         { "Cocoa",        CocoaStage1,   CocoaStage1,    CocoaStage1,    false, false, RenderType::Cross,  0,   0.2f },
@@ -4125,6 +4125,7 @@ namespace
         { "Piglin Head", HeadTileFirst + 36, HeadTileFirst + 37, HeadTileFirst + 39, true, false, RenderType::Head, 0, 1.0f },
         { "Piglin Head", HeadTileFirst + 36, HeadTileFirst + 37, HeadTileFirst + 39, true, false, RenderType::Head, 0, 1.0f },
         { "Piglin Head", HeadTileFirst + 36, HeadTileFirst + 37, HeadTileFirst + 39, true, false, RenderType::Head, 0, 1.0f },
+        { "Bamboo Shoot", BambooShootTile, BambooShootTile, BambooShootTile, false, false, RenderType::Cross, 0, 1.0f },
     };
 
     static_assert(sizeof(EXT_TABLE) / sizeof(EXT_TABLE[0]) == static_cast<size_t>(Blocks::ExtCount - Blocks::ExtFirst),
@@ -4476,6 +4477,19 @@ BlockId debugStickTurn(BlockId id, int step)
     return static_cast<BlockId>(first + at);
 }
 
+bool bambooCanRootIn(BlockId ground)
+{
+    switch (ground)
+    {
+        case Blocks::Grass: case Blocks::SnowGrass: case Blocks::Dirt: case Blocks::CoarseDirt: case Blocks::Podzol:
+        case Blocks::RootedDirt: case Blocks::Moss: case Blocks::Mud: case Blocks::Mycelium: case Blocks::Sand:
+        case Blocks::RedSand: case Blocks::Gravel: case Blocks::Bamboo: case Blocks::BambooShoot:
+            return true;
+        default:
+            return false;
+    }
+}
+
 bool snowCanRestOn(BlockId below)
 {
     if (below == Blocks::Ice || below == Blocks::PackedIce || below == Blocks::Barrier) return false;
@@ -4647,6 +4661,7 @@ bool isObtainable(BlockId id)
             if (isFrame(id)) return false;
             if (isAnyCauldron(id) && id != Blocks::Cauldron0) return false;
             if (isHead(id)) return false;
+            if (id == Blocks::BambooShoot) return false;
 
             // Likewise for stairs: one of each four is the thing you
             // hold, the rest are it turned round.
@@ -5055,6 +5070,7 @@ bool blockOverlaps(BlockId id, int bx, int by, int bz,
 
     if (isColourBed(id)) return overlaps(0.0f, 0.0f, 0.0f, 1.0f, 0.5625f, 1.0f);
     if (isSnowLayer(id)) return overlaps(0.0f, 0.0f, 0.0f, 1.0f, static_cast<float>(snowLayers(id) - 1) / 8.0f, 1.0f);
+    if (id == Blocks::Bamboo) return overlaps(0.40625f, 0.0f, 0.40625f, 0.59375f, 1.0f, 0.59375f);
     if (isHead(id))
     {
         const float half = headKind(id) == 6 ? 0.3125f : 0.25f;

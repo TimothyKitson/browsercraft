@@ -3081,6 +3081,38 @@ namespace
         }
     }
 
+    void paintBambooStalk(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 0; y < Tile::N; ++y)
+            for (int x = 0; x < 3; ++x)
+                t.set(x, y, y % 6 == 2 ? Color{ 142, 176, 70 } : x == 0 ? Color{ 108, 150, 46 } : Color{ 86, 126, 36 });
+        for (int y = 0; y < 3; ++y)
+            for (int x = 13; x < 16; ++x) t.set(x, y, Color{ 160, 190, 90 });
+    }
+
+    void paintBambooSmallLeaves(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int i = 0; i < 5; ++i)
+        {
+            t.set(7 - i, 3 + i, Color{ 84, 140, 48 });
+            t.set(8 + i, 6 + i, Color{ 84, 140, 48 });
+        }
+    }
+
+    void paintBambooShoot(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 10; y < Tile::N; ++y)
+            for (int x = 7; x < 9; ++x) t.set(x, y, Color{ 96, 140, 44 });
+        for (int i = 0; i < 4; ++i)
+        {
+            t.set(6 - i, 10 - i, Color{ 84, 140, 48 });
+            t.set(9 + i, 9 - i, Color{ 84, 140, 48 });
+        }
+    }
+
     void paintItemBeetroot(Tile& t)
     {
         t.fill(Color{ 0, 0, 0, 0 });
@@ -9029,6 +9061,9 @@ namespace
         { Tiles::MelonStemYoung, paintMelonStemYoung },
         { Tiles::MelonStemRipe, paintMelonStemRipe },
         { Tiles::BambooTile, paintBamboo },
+        { Tiles::BambooStalkTile, paintBambooStalk },
+        { Tiles::BambooSmallLeavesTile, paintBambooSmallLeaves },
+        { Tiles::BambooShootTile, paintBambooShoot },
         { Tiles::CocoaStage0, paintCocoa0 },
         { Tiles::CocoaStage1, paintCocoa1 },
         { Tiles::CocoaStage2, paintCocoa2 },
@@ -11333,6 +11368,9 @@ namespace
         // opaque stalk texture on it came out as a solid green slab
         // the width of the block.
         { Tiles::BambooTile,    { "bamboo_large_leaves", "bamboo_stalk", nullptr },    Tinting::None,    0,   false },
+        { Tiles::BambooStalkTile, { "bamboo_stalk", nullptr }, Tinting::None, 0, false },
+        { Tiles::BambooSmallLeavesTile, { "bamboo_small_leaves", nullptr }, Tinting::None, 0, false },
+        { Tiles::BambooShootTile, { "bamboo_stage0", nullptr }, Tinting::None, 0, false },
         { Tiles::CocoaStage0,   { "cocoa_stage0", nullptr },                           Tinting::None,    0,   false },
         { Tiles::CocoaStage1,   { "cocoa_stage1", nullptr },                           Tinting::None,    0,   false },
         { Tiles::CocoaStage2,   { "cocoa_stage2", nullptr },                           Tinting::None,    0,   false },

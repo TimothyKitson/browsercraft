@@ -3304,6 +3304,10 @@ bool Application::frame()
                     m_world->setBlock(bx - 6, by, bz + 2, Blocks::Stone);
                     m_world->setBlock(bx - 6, by, bz + 3, headOf(4, true, 2));
                     m_world->setBlock(bx - 6, by + 1, bz + 2, headOf(6, true, 2));
+                    m_world->setBlock(bx + 4, by - 1, bz + 4, Blocks::Grass);
+                    m_world->setBlock(bx + 4, by, bz + 4, Blocks::BambooShoot);
+                    m_world->setBlock(bx + 5, by - 1, bz + 4, Blocks::Grass);
+                    for (int h = 0; h < 4; ++h) m_world->setBlock(bx + 5, by + h, bz + 4, Blocks::Bamboo);
                 }
                 m_inventory.slot(6) = ItemStack{ Items::CreeperBannerPattern, 1 };
                 m_inventory.slot(7) = ItemStack{ Items::MojangBannerPattern, 1 };
@@ -16566,7 +16570,20 @@ void Application::handlePlacement()
                 m_net.onLocalBlockChange(at.x, at.y, at.z, id);
             };
             const glm::ivec3 above(crop.block.x, crop.block.y + 1, crop.block.z);
-            if (plant == Blocks::Seagrass && isWater(m_world->getBlock(above.x, above.y, above.z)))
+            if (plant == Blocks::BambooShoot && m_world->getBlock(above.x, above.y, above.z) == Blocks::Air)
+            {
+                put(crop.block, Blocks::Bamboo);
+                used = true;
+            }
+            else if (plant == Blocks::Bamboo)
+            {
+                glm::ivec3 top = crop.block;
+                while (m_world->getBlock(top.x, top.y + 1, top.z) == Blocks::Bamboo) ++top.y;
+                const int grow = 1 + static_cast<int>(m_growthSeed % 2u);
+                for (int k = 0; k < grow; ++k)
+                    if (Farming::growBambooAt(*m_world, top)) { ++top.y; used = true; }
+            }
+            else if (plant == Blocks::Seagrass && isWater(m_world->getBlock(above.x, above.y, above.z)))
             {
                 put(crop.block, Blocks::TallSeagrassLower);
                 put(above, Blocks::TallSeagrassUpper);
@@ -17747,6 +17764,18 @@ void Application::handlePlacement()
         return;
     if (isCarpet(placing) && m_world->getBlock(target.x, target.y - 1, target.z) == Blocks::Air) return;
     if (isSnowLayer(placing) && !snowCanRestOn(m_world->getBlock(target.x, target.y - 1, target.z))) return;
+    if (placing == Blocks::Bamboo)
+    {
+        const glm::ivec3 under(target.x, target.y - 1, target.z);
+        const BlockId ground = m_world->getBlock(under.x, under.y, under.z);
+        if (!bambooCanRootIn(ground)) return;
+        if (ground == Blocks::BambooShoot)
+        {
+            m_world->setBlock(under.x, under.y, under.z, Blocks::Bamboo);
+            m_net.onLocalBlockChange(under.x, under.y, under.z, Blocks::Bamboo);
+        }
+        else if (ground != Blocks::Bamboo) placing = Blocks::BambooShoot;
+    }
 
     m_world->setBlock(target.x, target.y, target.z, placing);
     m_net.onLocalBlockChange(target.x, target.y, target.z, placing);

@@ -3433,7 +3433,7 @@ namespace
         check(Farming::BAMBOO_MAX > 8, "bamboo grows taller than a person can reach");
         check(isObtainable(Blocks::Bamboo), "a cane is a thing you hold");
         check(blockDrop(Blocks::Bamboo) == Blocks::Bamboo, "and gives back itself");
-        check(!blockInfo(Blocks::Bamboo).collides, "you walk through a grove");
+        check(blockInfo(Blocks::Bamboo).collides && !blockInfo(Blocks::Bamboo).opaque, "a grove is stalks you weave between, as in 1.21.1");
         check(blockInfo(Blocks::Bamboo).render == RenderType::Cross,
               "and it is drawn as a plant rather than a box");
         check(Tools::canHarvest(Blocks::Air, Blocks::Bamboo), "bare hands cut it");
@@ -13694,6 +13694,12 @@ namespace
               "the debug stick steps a block through its own states and leaves stateless ones alone");
         check(maxStackOf(Items::DebugStick) == 1 && RecipeBook::stackNamed("debug_stick") == static_cast<StackId>(Items::DebugStick),
               "and is one unstackable item under its 1.21.1 name");
+        check(blockDrop(Blocks::BambooShoot) == Blocks::Bamboo && !isSolid(Blocks::BambooShoot) && isSolid(Blocks::Bamboo) &&
+              blockOverlaps(Blocks::Bamboo, 0, 0, 0, 0.45f, 0.2f, 0.45f, 0.55f, 0.8f, 0.55f, 0) &&
+              !blockOverlaps(Blocks::Bamboo, 0, 0, 0, 0.0f, 0.2f, 0.0f, 0.3f, 0.8f, 0.3f, 0),
+              "bamboo starts as a shoot you walk through and grows into a thin stalk you bump into");
+        check(bambooCanRootIn(Blocks::Podzol) && bambooCanRootIn(Blocks::Gravel) && !bambooCanRootIn(Blocks::Stone),
+              "and roots in the ground 1.21.1 lets it");
     }
 
     void testGameRules()
