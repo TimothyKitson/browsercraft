@@ -1304,6 +1304,11 @@ private:
     void tickColdAndThaw();
     void snowGrass(const glm::ivec3& at);
     void turnWithDebugStick(const glm::ivec3& at, int step);
+    bool leafHeld(const glm::ivec3& leaf) const;
+    void tickLeafDecay(float deltaTime);
+    std::set<std::array<int, 4>> m_placedLeaves;
+    std::vector<std::pair<glm::ivec3, float>> m_leafDecay;
+    std::vector<glm::ivec3> m_logsGone;
     void unsnowGrass(const glm::ivec3& at);
     // Looks for a completed ring of eyed frames round a frame that was
     // just filled, and opens the portal inside it if there is one.

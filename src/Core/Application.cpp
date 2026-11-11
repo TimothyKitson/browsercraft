@@ -864,6 +864,14 @@ void Application::loadLevel()
             m_rules.load(text.str());
         }
     }
+    m_placedLeaves.clear();
+    m_leafDecay.clear();
+    m_logsGone.clear();
+    {
+        std::ifstream leaves(m_savePath + "/placed_leaves.txt");
+        std::array<int, 4> key{};
+        while (leaves >> key[0] >> key[1] >> key[2] >> key[3]) m_placedLeaves.insert(key);
+    }
 
     int spawnX = 0, spawnY = 80, spawnZ = 0;
     m_world->generator().findSpawn(spawnX, spawnY, spawnZ);
@@ -1255,6 +1263,11 @@ void Application::saveLevel()
     {
         std::ofstream rules(m_savePath + "/gamerules.txt");
         if (rules) rules << m_rules.save();
+    }
+    {
+        std::ofstream leaves(m_savePath + "/placed_leaves.txt");
+        if (leaves)
+            for (const auto& key : m_placedLeaves) leaves << key[0] << ' ' << key[1] << ' ' << key[2] << ' ' << key[3] << '\n';
     }
     saveAdvancements();
     writeWorldMeta();
@@ -3313,6 +3326,21 @@ bool Application::frame()
                     m_world->setBlock(bx + 1, by, bz - 4, withAxis(Blocks::CherryLog, 2));
                     m_world->setBlock(bx + 1, by, bz - 5, withAxis(Blocks::CherryLog, 2));
                     m_world->setBlock(bx + 2, by, bz - 4, withAxis(Blocks::QuartzPillar, 1));
+                    for (int t = 0; t < 2; ++t)
+                    {
+                        const int tx = bx - 9 + t * 4, tz = bz - 6;
+                        for (int h = 0; h < 3; ++h) m_world->setBlock(tx, by + h, tz, Blocks::Log);
+                        for (int ox = -1; ox <= 1; ++ox)
+                            for (int oz = -1; oz <= 1; ++oz)
+                                for (int oy = 2; oy <= 3; ++oy)
+                                    if ((ox || oz || oy == 3)) m_world->setBlock(tx + ox, by + oy, tz + oz, Blocks::Leaves);
+                        if (t == 0)
+                            for (int h = 0; h < 3; ++h)
+                            {
+                                m_world->setBlock(tx, by + h, tz, Blocks::Air);
+                                m_logsGone.push_back(glm::ivec3(tx, by + h, tz));
+                            }
+                    }
                 }
                 m_inventory.slot(6) = ItemStack{ Items::CreeperBannerPattern, 1 };
                 m_inventory.slot(7) = ItemStack{ Items::MojangBannerPattern, 1 };
@@ -9495,6 +9523,8 @@ void Application::updateMining(float deltaTime)
         }
 
         checkFalling(hit.block + glm::ivec3(0, 1, 0));
+        if (isLog(id)) m_logsGone.push_back(hit.block);
+        if (isLeaves(id)) m_placedLeaves.erase({ static_cast<int>(m_dimension), hit.block.x, hit.block.y, hit.block.z });
         if (id == Blocks::Ice && !m_player.creative() && m_dimension != Dimension::Nether &&
             !Enchanting::has(m_inventory.selected().enchantments, Enchanting::Kind::SilkTouch))
         {
@@ -12483,6 +12513,7 @@ void Application::tickFire(float deltaTime)
             if (next() % 10u != 0u) continue;
             if (near == Blocks::Tnt) { primeTnt(glm::ivec3(nx, ny, nz)); continue; }
             put(nx, ny, nz, Blocks::Fire0);
+            if (isLog(near)) m_logsGone.push_back(glm::ivec3(nx, ny, nz));
             if (m_fires.size() < 512) m_fires.insert({ nx, ny, nz });
         }
 
@@ -14260,6 +14291,8 @@ void Application::applyBlast(const glm::vec3& at, float radius, int damage)
 
                 m_world->setBlock(where.x, where.y, where.z, Blocks::Air);
                 m_net.onLocalBlockChange(where.x, where.y, where.z, Blocks::Air);
+                if (isLog(block)) m_logsGone.push_back(where);
+                if (isLeaves(block)) m_placedLeaves.erase({ static_cast<int>(m_dimension), where.x, where.y, where.z });
 
                 // Most of what a blast breaks is destroyed outright;
                 // about a third of it survives to be picked up.
@@ -17821,6 +17854,7 @@ void Application::handlePlacement()
     m_net.onLocalBlockChange(target.x, target.y, target.z, placing);
     m_audio.playPlace(placing);
     checkFalling(target);
+    if (isLeaves(placing)) m_placedLeaves.insert({ static_cast<int>(m_dimension), target.x, target.y, target.z });
     if (isSnowLayer(placing)) snowGrass(target + glm::ivec3(0, -1, 0));
     else unsnowGrass(target + glm::ivec3(0, -1, 0));
     if (isAnySculkSensor(placing)) m_sensorSpots.push_back(target);
@@ -20372,6 +20406,7 @@ void Application::updateWorldAround(float deltaTime)
     if (!m_world || !m_worldReady) return;
     tickSpriteParticles(deltaTime);
     tickTimedBlocks(deltaTime);
+    tickLeafDecay(deltaTime);
     tickFluids(deltaTime);
     tickHives(deltaTime);
     tickBreathClouds(deltaTime);
@@ -20487,6 +20522,72 @@ void Application::fillCauldronsInRain()
         }
         m_world->setBlock(x, y, z, now);
         m_net.onLocalBlockChange(x, y, z, now);
+    }
+}
+
+bool Application::leafHeld(const glm::ivec3& leaf) const
+{
+    std::vector<std::pair<glm::ivec3, int>> open{ { leaf, 0 } };
+    std::set<std::array<int, 3>> seen{ { leaf.x, leaf.y, leaf.z } };
+    static const int D[6][3] = { { 1, 0, 0 }, { -1, 0, 0 }, { 0, 1, 0 }, { 0, -1, 0 }, { 0, 0, 1 }, { 0, 0, -1 } };
+    for (size_t i = 0; i < open.size(); ++i)
+    {
+        const glm::ivec3 at = open[i].first;
+        const int depth = open[i].second;
+        for (const auto& d : D)
+        {
+            const glm::ivec3 next(at.x + d[0], at.y + d[1], at.z + d[2]);
+            const BlockId there = m_world->getBlock(next.x, next.y, next.z);
+            if (isLog(there)) return true;
+            if (depth + 1 >= 6 || !isLeaves(there)) continue;
+            if (!seen.insert({ next.x, next.y, next.z }).second) continue;
+            open.push_back({ next, depth + 1 });
+        }
+    }
+    return false;
+}
+
+void Application::tickLeafDecay(float deltaTime)
+{
+    if (!m_world) return;
+    for (int n = 0; n < 4 && !m_logsGone.empty(); ++n)
+    {
+        const glm::ivec3 gone = m_logsGone.back();
+        m_logsGone.pop_back();
+        for (int dx = -6; dx <= 6; ++dx)
+            for (int dy = -6; dy <= 6; ++dy)
+                for (int dz = -6; dz <= 6; ++dz)
+                {
+                    const glm::ivec3 at = gone + glm::ivec3(dx, dy, dz);
+                    if (!isLeaves(m_world->getBlock(at.x, at.y, at.z))) continue;
+                    if (m_placedLeaves.count({ static_cast<int>(m_dimension), at.x, at.y, at.z })) continue;
+                    bool queued = false;
+                    for (const auto& waiting : m_leafDecay)
+                        if (waiting.first == at) { queued = true; break; }
+                    if (queued || leafHeld(at)) continue;
+                    m_growthSeed = m_growthSeed * 1664525u + 1013904223u;
+                    m_leafDecay.push_back({ at, 0.4f + static_cast<float>((m_growthSeed >> 8) % 1000u) / 1000.0f * 5.0f });
+                }
+    }
+    for (size_t i = 0; i < m_leafDecay.size();)
+    {
+        m_leafDecay[i].second -= deltaTime;
+        if (m_leafDecay[i].second > 0.0f) { ++i; continue; }
+        const glm::ivec3 at = m_leafDecay[i].first;
+        m_leafDecay[i] = m_leafDecay.back();
+        m_leafDecay.pop_back();
+        const BlockId leaf = m_world->getBlock(at.x, at.y, at.z);
+        if (!isLeaves(leaf) || leafHeld(at)) continue;
+        m_world->setBlock(at.x, at.y, at.z, Blocks::Air);
+        m_net.onLocalBlockChange(at.x, at.y, at.z, Blocks::Air);
+        m_particles.spawnBlockBreak(at, leaf);
+        if (!m_rules.on(GameRules::Rule::DoTileDrops)) continue;
+        const uint32_t roll = static_cast<uint32_t>(at.x * 73856093 ^ at.y * 19349663 ^ at.z * 83492791) ^ m_growthSeed;
+        if ((leaf == Blocks::Leaves || leaf == Blocks::DarkOakLeaves) && roll % 200u == 0u)
+            m_drops.spawnFromBrokenBlock(at, Items::Apple);
+        const BlockId sapling = Saplings::leafDrop(leaf, roll >> 3);
+        if (sapling != Blocks::Air) m_drops.spawnFromBrokenBlock(at, sapling);
+        if ((roll >> 11) % 50u == 0u) m_drops.spawnFromBrokenBlock(at, Items::Stick, 1 + static_cast<int>((roll >> 17) % 2u));
     }
 }
 
