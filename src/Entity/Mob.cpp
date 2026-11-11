@@ -989,7 +989,19 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
                             k == MobId::Bogged || k == MobId::Zoglin || k == MobId::SkeletonHorse || k == MobId::ZombieHorse ||
                             k == MobId::Giant || k == MobId::IronGolem || k == MobId::Turtle || k == MobId::Frog ||
                             k == MobId::Axolotl || k == MobId::Tadpole || flier;
-        if (!t.aquatic && !undead && isWater(eye)) m_air -= deltaTime;
+        const bool driesOut = (t.aquatic && k != MobId::Guardian && k != MobId::ElderGuardian && k != MobId::Drowned && k != MobId::Turtle) ||
+                              k == MobId::Axolotl;
+        if (driesOut)
+        {
+            const float lungs = k == MobId::Axolotl ? 300.0f : k == MobId::Dolphin ? 120.0f : 15.0f;
+            if (isWater(feet) || isWater(eye)) m_air = lungs;
+            else
+            {
+                m_air = std::min(m_air, lungs);
+                m_air -= deltaTime;
+            }
+        }
+        else if (!t.aquatic && !undead && isWater(eye)) m_air -= deltaTime;
         else m_air = 15.0f;
         m_hazardTimer += deltaTime;
         if (m_hazardTimer >= 0.5f)

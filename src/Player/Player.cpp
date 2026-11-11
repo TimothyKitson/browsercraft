@@ -326,7 +326,7 @@ void Player::applyFallDamage(const World& world, float landingY)
         return;
     }
 
-    cause = "fall";
+    cause = fallDistance > 5.0f ? "fallHigh" : "fall";
     damage(static_cast<int>(std::floor(fallDistance - SAFE_FALL_DISTANCE)));
 }
 
@@ -509,9 +509,9 @@ bool Player::damage(int amount, bool throughArmour)
         Enchanting::Hurt hurt = Enchanting::Hurt::Plain;
         if (projectileHit) hurt = Enchanting::Hurt::Projectile;
         else if (why == "onFire" || why == "lava" || why == "hotFloor" || why == "inFire" || why == "campfire") hurt = Enchanting::Hurt::Fire;
-        else if (why == "explosion") hurt = Enchanting::Hurt::Blast;
-        else if (why == "fall" || why == "stalagmite" || why == "enderPearl") hurt = Enchanting::Hurt::Fall;
-        else if (why == "starve" || why == "kill" || why == "outOfWorld") hurt = Enchanting::Hurt::Unprotected;
+        else if (why == "explosion" || why == "fireworks" || why == "badRespawnPoint") hurt = Enchanting::Hurt::Blast;
+        else if (why == "fall" || why == "fallHigh" || why == "stalagmite" || why == "enderPearl" || why == "flyIntoWall") hurt = Enchanting::Hurt::Fall;
+        else if (why == "starve" || why == "kill" || why == "outOfWorld" || why == "sonicBoom") hurt = Enchanting::Hurt::Unprotected;
         projectileHit = false;
         bool suit = false;
         int factor = 0;
@@ -608,8 +608,16 @@ bool Player::updateEffects(float deltaTime)
     const int healthBefore = health;
     health = std::min(health, maxHealth());
     if (tick.instantHeal > 0) heal(tick.instantHeal);
-    if (tick.instantHarm > 0) damage(tick.instantHarm, true);
-    for (int pulse = 0; pulse < tick.witherPulses && health > 0; ++pulse) damage(1, true);
+    if (tick.instantHarm > 0)
+    {
+        cause = "magic";
+        damage(tick.instantHarm, true);
+    }
+    for (int pulse = 0; pulse < tick.witherPulses && health > 0; ++pulse)
+    {
+        cause = "wither";
+        damage(1, true);
+    }
     if (tick.exhaustion > 0.0f) addExhaustion(tick.exhaustion);
     if (tick.feedPulses > 0)
     {
@@ -931,9 +939,17 @@ void Player::update(float deltaTime, const World& world, const Controls& control
         position += velocity * deltaTime;
     else
     {
+        const float flatBefore = std::sqrt(velocity.x * velocity.x + velocity.z * velocity.z);
         moveAxis(world, velocity.x * deltaTime, 0, ledgeGuard);
         moveAxis(world, velocity.y * deltaTime, 1, false);
         moveAxis(world, velocity.z * deltaTime, 2, ledgeGuard);
+        const float flatAfter = std::sqrt(velocity.x * velocity.x + velocity.z * velocity.z);
+        const int kinetic = static_cast<int>((flatBefore - flatAfter) * 0.5f - 3.0f);
+        if (gliding && kinetic > 0 && !exempt())
+        {
+            cause = "flyIntoWall";
+            damage(kinetic);
+        }
     }
 
     if (!onGround && !flying && !inWater && !m_falling && velocity.y < 0.0f)
@@ -944,7 +960,10 @@ void Player::update(float deltaTime, const World& world, const Controls& control
 
     // Falling out of the world shouldn't trap you forever.
     if (position.y < -8.0f && !exempt())
+    {
+        cause = "outOfWorld";
         damage(2);
+    }
 
     if (onGround && !flying)
     {

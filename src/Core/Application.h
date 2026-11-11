@@ -884,6 +884,9 @@ private:
     uint32_t m_titleShownAt = 0;
     uint32_t m_actionbarShownAt = 0;
     void renderTitles();
+    const char* m_blastCause = "explosion";
+    void dropStalactites(const glm::ivec3& from);
+    void crushUnder(const glm::ivec3& at, int hurt, const char* cause);
     bool locateFor(const std::string& kind, const std::string& what, std::string& output);
     GameRules::Set m_rules;
     std::string m_deathMessage;
@@ -1046,6 +1049,8 @@ private:
     float m_elderCurseClock = 0.0f;
     float m_elderCurseShow = 0.0f;
     float m_wardenDarkClock = 0.0f;
+    float m_sonicCharge = 0.0f;
+    float m_sonicCooldown = 0.0f;
     float m_roseClock = 0.0f;
     glm::ivec3 m_lastShriekStep{ -99999 };
     void tickEffectSources(float deltaTime);

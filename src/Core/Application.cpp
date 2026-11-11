@@ -2880,6 +2880,43 @@ bool Application::frame()
                     if (touchesCactus(feet - glm::vec3(half, 0.0f, half), feet + glm::vec3(half, mob.height(), half)))
                         mob.damage(1, glm::vec3(0.0f, 0.2f, 0.0f));
                 }
+                const glm::vec3 eye = m_player.eyePosition();
+                const BlockId head = m_world->getBlock(static_cast<int>(std::floor(eye.x)), static_cast<int>(std::floor(eye.y)),
+                                                       static_cast<int>(std::floor(eye.z)));
+                if (!m_player.exempt() && isOpaque(head) && isSolid(head) && !isLeaves(head))
+                {
+                    m_player.cause = "inWall";
+                    if (m_player.damage(1)) m_audio.play(Sound::Hurt, 0.6f);
+                }
+                const int crowdLimit = m_rules.value(GameRules::Rule::MaxEntityCramming);
+                if (crowdLimit > 0)
+                {
+                    auto overlaps = [](const glm::vec3& a, float aw, float ah, const glm::vec3& b, float bw, float bh) {
+                        return std::abs(a.x - b.x) < (aw + bw) * 0.5f && std::abs(a.z - b.z) < (aw + bw) * 0.5f &&
+                               a.y < b.y + bh && b.y < a.y + ah;
+                    };
+                    int crowd = 0;
+                    std::vector<Mob*> living;
+                    for (Mob& mob : m_entities.mobs())
+                    {
+                        if (!mob.alive() || mob.type().inanimate) continue;
+                        living.push_back(&mob);
+                        if (overlaps(m_player.position, 0.6f, Player::HEIGHT, mob.position(), mob.width(), mob.height())) ++crowd;
+                    }
+                    if (crowd >= crowdLimit && !m_player.exempt())
+                    {
+                        m_player.cause = "cramming";
+                        if (m_player.damage(6)) m_audio.play(Sound::Hurt, 0.6f);
+                    }
+                    if (static_cast<int>(living.size()) > crowdLimit)
+                        for (Mob* mob : living)
+                        {
+                            int pressed = 0;
+                            for (Mob* other : living)
+                                if (other != mob && overlaps(mob->position(), mob->width(), mob->height(), other->position(), other->width(), other->height())) ++pressed;
+                            if (pressed >= crowdLimit) mob->damage(6, glm::vec3(0.0f));
+                        }
+                }
             }
             if (m_player.burn(deltaTime, m_player.isInLava(*m_world) ||
                                          m_player.isInFire(*m_world)))
@@ -9165,6 +9202,7 @@ void Application::updateMining(float deltaTime)
                 const int density = smash > 0 ? static_cast<int>(0.5f * fallen * static_cast<float>(Enchanting::levelOf(edge, Enchanting::Kind::Density))) : 0;
                 const int blow = std::max(0, static_cast<int>(std::lround(base + bonus)) + smash + density);
                 const bool sprintHit = charged && m_player.sprinting;
+                target->pierceArmour(Enchanting::levelOf(edge, Enchanting::Kind::Breach));
                 if (target->strike(blow, target->position() - m_player.position))
                 {
                     const int knock = Enchanting::levelOf(edge, Enchanting::Kind::Knockback) + (sprintHit ? 1 : 0);
@@ -9804,6 +9842,7 @@ void Application::updateMining(float deltaTime)
         }
 
         checkFalling(hit.block + glm::ivec3(0, 1, 0));
+        dropStalactites(hit.block - glm::ivec3(0, 1, 0));
         if (isLog(id)) m_logsGone.push_back(hit.block);
         if (isAnyCampfire(id))
         {
@@ -12466,6 +12505,54 @@ void Application::tickEffectSources(float deltaTime)
             }
     }
 
+    m_sonicCooldown = std::max(0.0f, m_sonicCooldown - deltaTime);
+    {
+        const Mob* boomer = nullptr;
+        auto hasLineOfSight = [&](const glm::vec3& a, const glm::vec3& b) {
+            const glm::vec3 span = b - a;
+            const float length = glm::length(span);
+            if (length < 0.01f) return true;
+            const RaycastHit seen = m_world->raycast(a, span / length, length);
+            return !seen.hit || seen.distance >= length - 0.6f;
+        };
+        if (!m_player.exempt() && m_sonicCooldown <= 0.0f)
+            for (const Mob& mob : m_entities.mobs())
+            {
+                if (!mob.alive() || mob.typeId() != MobId::Warden) continue;
+                const float gap = glm::length(mob.position() - m_player.position);
+                if (gap > 3.5f && gap <= 15.0f && hasLineOfSight(mob.position() + glm::vec3(0.0f, mob.height() * 0.6f, 0.0f), m_player.eyePosition()))
+                {
+                    boomer = &mob;
+                    break;
+                }
+            }
+        if (!boomer) m_sonicCharge = 0.0f;
+        else
+        {
+            m_sonicCharge += deltaTime;
+            if (m_sonicCharge >= 1.7f)
+            {
+                m_sonicCharge = 0.0f;
+                m_sonicCooldown = 5.0f;
+                const glm::vec3 from = boomer->position() + glm::vec3(0.0f, boomer->height() * 0.6f, 0.0f);
+                const glm::vec3 to = m_player.eyePosition();
+                const glm::vec3 step = (to - from) / 12.0f;
+                for (int i = 1; i <= 12; ++i)
+                    if (m_sprites) m_sprites->spawn(SpriteParticles::Kind::SonicBoom, from + step * static_cast<float>(i), glm::vec3(0.0f), 1.2f, 0.5f);
+                m_audio.play(Sound::MobWardenSay, 1.0f, 0.5f);
+                m_player.clearHurtCooldown();
+                m_player.cause = "sonicBoom";
+                if (m_player.damage(10, true))
+                {
+                    m_audio.play(Sound::Hurt, 0.9f);
+                    glm::vec3 shove = m_player.position - boomer->position();
+                    shove.y = 0.0f;
+                    if (glm::length(shove) > 0.01f) m_player.velocity += glm::normalize(shove) * 12.0f + glm::vec3(0.0f, 3.0f, 0.0f);
+                }
+            }
+        }
+    }
+
     m_elderCurseClock += deltaTime;
     if (m_elderCurseClock >= 60.0f)
     {
@@ -13372,6 +13459,7 @@ void Application::sleepInBed(const glm::ivec3& block)
                 m_net.onLocalBlockChange(pair.x, pair.y, pair.z, Blocks::Air);
             }
         }
+        m_blastCause = "badRespawnPoint";
         applyBlast(glm::vec3(block) + glm::vec3(0.5f), 5.0f, 10);
         return;
     }
@@ -13531,7 +13619,7 @@ void Application::burstFirework(const glm::vec3& at, int design)
         mob.damage(std::max(1, static_cast<int>(static_cast<float>(strength) * std::sqrt((5.0f - distance) / 5.0f))), mob.position() - at);
     }
     const float toPlayer = glm::length(m_player.position + glm::vec3(0.0f, 0.9f, 0.0f) - at);
-    if (toPlayer <= 5.0f && !m_player.creative()) m_player.cause = "explosion";
+    if (toPlayer <= 5.0f && !m_player.creative()) m_player.cause = "fireworks";
     if (toPlayer <= 5.0f && !m_player.creative() &&
         m_player.damage(std::max(1, static_cast<int>(static_cast<float>(strength) * std::sqrt((5.0f - toPlayer) / 5.0f)))))
         m_audio.play(Sound::Hurt, 0.8f);
@@ -14601,6 +14689,8 @@ void Application::applyBlast(const glm::vec3& at, float radius, int damage)
     const int onPlayer = m_blastSource >= 0 ? Player::scaledByDifficulty(Explosion::damageAt(toPlayer, radius, damage), m_player.difficulty)
                                             : Explosion::damageAt(toPlayer, radius, damage);
 
+    if (onPlayer > 0) m_player.cause = m_blastCause;
+    m_blastCause = "explosion";
     if (onPlayer > 0 && m_player.damage(onPlayer))
     {
         if (m_blastSource >= 0)
@@ -15100,6 +15190,7 @@ void Application::updateArrows(float deltaTime)
             m_player.velocity = glm::vec3(0.0f);
             m_player.clearFall();
             sprites(SpriteParticles::Kind::Portal, land + glm::vec3(0.0f, 1.0f, 0.0f), 24, 0.6f, 1.2f, 0.18f, 1.0f);
+            m_player.cause = "fall";
             if (!m_player.creative() && m_player.damage(5, true)) m_audio.play(Sound::Hurt, 0.6f, 1.0f);
             m_audio.play(Sound::MobEndermanSay, 0.8f, 1.4f);
             if (roll % 20u == 0u) m_entities.spawnAt(MobId::Endermite, land, *m_world);
@@ -16201,6 +16292,7 @@ void Application::handlePlacement()
                     {
                         m_world->setBlock(bench.block.x, bench.block.y, bench.block.z, Blocks::Air);
                         m_net.onLocalBlockChange(bench.block.x, bench.block.y, bench.block.z, Blocks::Air);
+                        m_blastCause = "badRespawnPoint";
                         applyBlast(glm::vec3(bench.block) + glm::vec3(0.5f), 5.0f, 10);
                     }
                     return;
@@ -21126,9 +21218,11 @@ void Application::tickBreathClouds(float deltaTime)
         cloud.tick = 0.5f;
         sprites(SpriteParticles::Kind::Portal, cloud.at + glm::vec3(0.0f, 0.3f, 0.0f), 6, 2.2f, 0.3f, 0.16f, 1.0f);
         const glm::vec3 off = m_player.position - cloud.at;
-        if (glm::length(glm::vec2(off.x, off.z)) < 3.0f && off.y > -1.0f && off.y < 2.0f &&
-            m_player.damage(3))
-            m_audio.play(Sound::Hurt, 0.8f);
+        if (glm::length(glm::vec2(off.x, off.z)) < 3.0f && off.y > -1.0f && off.y < 2.0f)
+        {
+            m_player.cause = "dragonBreath";
+            if (m_player.damage(3)) m_audio.play(Sound::Hurt, 0.8f);
+        }
     }
     m_breathClouds.erase(std::remove_if(m_breathClouds.begin(), m_breathClouds.end(),
                                         [](const BreathCloud& c) { return c.left <= 0.0f; }),
@@ -24768,11 +24862,51 @@ void Application::checkFalling(const glm::ivec3& at)
     }
 }
 
+void Application::dropStalactites(const glm::ivec3& from)
+{
+    if (!m_world || m_net.role() == Net::Role::Guest) return;
+    for (int y = from.y; y > 0; --y)
+    {
+        if (m_world->getBlock(from.x, y, from.z) != Blocks::DripstoneDown) return;
+        m_world->setBlock(from.x, y, from.z, Blocks::Air);
+        m_net.onLocalBlockChange(from.x, y, from.z, Blocks::Air);
+        m_drops.spawnFalling(glm::ivec3(from.x, y, from.z), Blocks::DripstoneDown);
+    }
+}
+
+void Application::crushUnder(const glm::ivec3& at, int hurt, const char* cause)
+{
+    if (hurt <= 0) return;
+    const AABB body = m_player.aabb();
+    if (body.max.x > at.x && body.min.x < at.x + 1 && body.max.z > at.z && body.min.z < at.z + 1 &&
+        body.max.y > at.y && body.min.y < at.y + 1.5f && !m_player.exempt())
+    {
+        m_player.cause = cause;
+        if (m_player.damage(hurt)) m_audio.play(Sound::Hurt, 0.7f, 1.0f);
+    }
+    for (Mob& mob : m_entities.mobs())
+    {
+        if (!mob.alive() || mob.type().inanimate) continue;
+        const glm::vec3 feet = mob.position();
+        const float half = mob.width() * 0.5f;
+        if (feet.x + half > at.x && feet.x - half < at.x + 1 && feet.z + half > at.z && feet.z - half < at.z + 1 &&
+            feet.y < at.y + 1.5f && feet.y + mob.height() > at.y)
+            mob.damage(hurt, glm::vec3(0.0f));
+    }
+}
+
 void Application::landFalling(const DroppedItems::Landing& landing)
 {
     const glm::ivec3 at = landing.cell;
     BlockId block = landing.block;
     if (at.y < 0 || at.y >= Chunk::SY) return;
+    if (block == Blocks::DripstoneDown)
+    {
+        crushUnder(at, std::min(40, static_cast<int>(std::ceil(std::max(0.0f, landing.fallen - 1.0f))) * 6), "stalactite");
+        m_drops.spawnFromBrokenBlock(at, blockDrop(Blocks::DripstoneDown));
+        m_audio.playDig(Blocks::DripstoneDown, 0.8f);
+        return;
+    }
     const BlockId there = m_world->getBlock(at.x, at.y, at.z);
     if (!canFallThrough(there))
     {
@@ -24791,15 +24925,7 @@ void Application::landFalling(const DroppedItems::Landing& landing)
     m_net.onLocalBlockChange(at.x, at.y, at.z, block);
     m_audio.playPlace(block);
     if (isAnvil(block) && landing.fallen > 1.0f)
-    {
-        const AABB body = m_player.aabb();
-        if (body.max.x > at.x && body.min.x < at.x + 1 && body.max.z > at.z && body.min.z < at.z + 1 &&
-            body.max.y > at.y && body.min.y < at.y + 1.5f && !m_player.creative())
-        {
-            const int hurt = std::min(40, static_cast<int>((landing.fallen - 1.0f) * 2.0f));
-            if (hurt > 0 && m_player.damage(hurt)) m_audio.play(Sound::Hurt, 0.7f, 1.0f);
-        }
-    }
+        crushUnder(at, std::min(40, static_cast<int>((landing.fallen - 1.0f) * 2.0f)), "anvil");
     checkFalling(at + glm::ivec3(0, 1, 0));
 }
 
@@ -24809,6 +24935,9 @@ std::string Application::deathMessageFor() const
     if (m_lastAttacker >= 0 && m_lastAttackerAge < 5.0f)
     {
         const std::string by = mobType(static_cast<MobId>(m_lastAttacker)).name;
+        if (m_lastAttackKind == 1 && (m_lastAttacker == static_cast<int>(MobId::Ghast) || m_lastAttacker == static_cast<int>(MobId::Blaze)))
+            return who + " was fireballed by " + by;
+        if (m_lastAttackKind == 1 && m_lastAttacker == static_cast<int>(MobId::Llama)) return who + " was spat on by " + by;
         if (m_lastAttackKind == 1) return who + " was shot by " + by;
         if (m_lastAttackKind == 2) return who + " was blown up by " + by;
         return who + " was slain by " + by;
@@ -24829,6 +24958,21 @@ std::string Application::deathMessageFor() const
     if (cause == "lightningBolt") return who + " was struck by lightning";
     if (cause == "cactus") return who + " was pricked to death";
     if (cause == "stalagmite") return who + " was impaled on a stalagmite";
+    if (cause == "stalactite") return who + " was skewered by a falling stalactite";
+    if (cause == "anvil") return who + " was squashed by a falling anvil";
+    if (cause == "fallingBlock") return who + " was squashed by a falling block";
+    if (cause == "fallHigh") return who + " fell from a high place";
+    if (cause == "inWall") return who + " suffocated in a wall";
+    if (cause == "cramming") return who + " was squished too much";
+    if (cause == "flyIntoWall") return who + " experienced kinetic energy";
+    if (cause == "magic") return who + " was killed by magic";
+    if (cause == "wither") return who + " withered away";
+    if (cause == "dragonBreath") return who + " was roasted in dragon's breath";
+    if (cause == "fireworks") return who + " went off with a bang";
+    if (cause == "sonicBoom") return who + " was obliterated by a sonically-charged shriek";
+    if (cause == "campfire" || cause == "inFire") return who + " went up in flames";
+    if (cause == "thorns") return who + " was killed while trying to hurt something";
+    if (cause == "badRespawnPoint") return who + " was killed by [Intentional Game Design]";
     return who + " died";
 }
 
