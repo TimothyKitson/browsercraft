@@ -107,6 +107,16 @@ void Projectiles::update(float deltaTime, const Blocks& blocks, Targets& targets
 
         if (arrow.stuck) { ++i; continue; }
 
+        if (arrow.kind == Arrows::Kind::Bullet && !arrow.fromPlayer && m_hasHoming)
+        {
+            const float speed = std::max(1.0f, glm::length(arrow.velocity));
+            const glm::vec3 toward = m_homing - arrow.position;
+            if (glm::length(toward) > 0.01f)
+            {
+                const glm::vec3 blended = glm::normalize(arrow.velocity) + glm::normalize(toward) * std::min(1.0f, 2.5f * deltaTime);
+                arrow.velocity = glm::normalize(blended) * speed;
+            }
+        }
         // A charge flies flat: it is thrown, not loosed, and it is
         // spent long before it would have dropped.
         if (!arrow.flies()) arrow.velocity.y += Arrows::GRAVITY * deltaTime;
@@ -319,4 +329,47 @@ void Projectiles::render(Shader& shader, const Camera& camera, const Atlas& atla
     shader.bind();
     shader.setVec3("uChunkOffset", glm::vec3(0.0f));
     m_mesh.draw(GL_TRIANGLES);
+}
+
+bool Projectiles::deflect(const glm::vec3& eye, const glm::vec3& look, float reach)
+{
+    for (size_t i = 0; i < m_arrows.size(); ++i)
+    {
+        Arrow& arrow = m_arrows[i];
+        if (arrow.fromPlayer || arrow.stuck) continue;
+        if (arrow.kind != Arrows::Kind::Fire && arrow.kind != Arrows::Kind::Bullet) continue;
+        const glm::vec3 offset = arrow.position - eye;
+        const float along = glm::dot(offset, look);
+        if (along < 0.0f || along > reach) continue;
+        if (glm::length(offset - look * along) > 0.9f) continue;
+        if (arrow.kind == Arrows::Kind::Bullet)
+        {
+            m_arrows[i] = m_arrows.back();
+            m_arrows.pop_back();
+            return true;
+        }
+        arrow.velocity = look * std::max(16.0f, glm::length(arrow.velocity));
+        arrow.fromPlayer = true;
+        arrow.age = 0.0f;
+        return true;
+    }
+    return false;
+}
+
+std::vector<Arrow> Projectiles::takeStuck(const glm::vec3& at, float radius)
+{
+    std::vector<Arrow> taken;
+    for (size_t i = 0; i < m_arrows.size();)
+    {
+        const Arrow& arrow = m_arrows[i];
+        if (arrow.stuck && arrow.fromPlayer && arrow.pickup && glm::length(arrow.position - at) <= radius)
+        {
+            taken.push_back(arrow);
+            m_arrows[i] = m_arrows.back();
+            m_arrows.pop_back();
+            continue;
+        }
+        ++i;
+    }
+    return taken;
 }

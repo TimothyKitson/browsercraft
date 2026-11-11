@@ -13858,6 +13858,22 @@ namespace
         std::error_code gone;
         std::filesystem::remove_all("selftest-falling", gone);
 
+        section("projectiles: fireballs hit back, bullets home in, arrows picked up");
+        {
+            Projectiles shots;
+            shots.spawn(glm::vec3(0.0f, 10.0f, 3.0f), glm::vec3(0.0f, 0.0f, -10.0f), 6, false, Arrows::Kind::Fire, 0, static_cast<int>(MobId::Ghast));
+            check(shots.deflect(glm::vec3(0.0f, 10.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f), 4.0f) && shots.all().size() == 1 &&
+                  shots.all()[0].fromPlayer && shots.all()[0].velocity.z > 0.0f, "a punched fireball turns round and is the player's");
+            Projectiles bullets;
+            bullets.spawn(glm::vec3(0.0f, 10.0f, 3.0f), glm::vec3(0.0f, 0.0f, -7.0f), 4, false, Arrows::Kind::Bullet);
+            check(bullets.deflect(glm::vec3(0.0f, 10.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f), 4.0f) && bullets.all().empty(), "a punched shulker bullet breaks");
+            ItemStack grid[9];
+            const StackId pattern[9] = { Blocks::Glass, Blocks::Glass, Blocks::Glass, Blocks::Glass, Items::EyeOfEnder, Blocks::Glass,
+                                         Blocks::Glass, Items::GhastTear, Blocks::Glass };
+            for (int k = 0; k < 9; ++k) { grid[k].id = pattern[k]; grid[k].count = 1; }
+            check(Crafting::match(grid, 3).id == static_cast<StackId>(Blocks::EndCrystal), "end crystals can be crafted, so the dragon can be brought back");
+        }
+
         section("items: snowballs, eggs and ender pearls are thrown");
         bool thrown = true;
         for (Arrows::Kind kind : { Arrows::Kind::Snowball, Arrows::Kind::Egg, Arrows::Kind::Pearl })

@@ -903,6 +903,7 @@ void Application::loadLevel()
         }
     }
     m_seenEndPoem = std::filesystem::exists(m_savePath + "/seen_credits.txt");
+    m_dragonSlain = std::filesystem::exists(m_savePath + "/dragon_slain.txt");
     m_hasBed = false;
     m_bedForced = false;
     {
@@ -1376,6 +1377,11 @@ void Application::saveLevel()
         if (bed && m_hasBed)
             bed << m_bedBlock.x << ' ' << m_bedBlock.y << ' ' << m_bedBlock.z << ' ' << m_bedSpot.x << ' ' << m_bedSpot.y << ' ' << m_bedSpot.z << ' '
                 << (m_bedForced ? 1 : 0) << '\n';
+    }
+    {
+        std::error_code gone;
+        if (m_dragonSlain) std::ofstream(m_savePath + "/dragon_slain.txt") << "1\n";
+        else std::filesystem::remove(m_savePath + "/dragon_slain.txt", gone);
     }
     if (m_seenEndPoem)
     {
@@ -9359,6 +9365,12 @@ void Application::updateMining(float deltaTime)
         return;
     }
 
+    if (m_keys.pressed(m_input, Action::Attack) && m_arrows.deflect(m_camera.position, m_camera.front, 4.0f))
+    {
+        m_heldItem.swing();
+        m_audio.play(Sound::Hurt, 0.4f, 1.6f);
+        return;
+    }
     if (Mob* target = m_entities.pick(m_camera.position, m_camera.front, ATTACK_REACH * static_cast<float>(m_player.attributes.ratio(Attributes::Kind::EntityInteractionRange))))
     {
         const float toMob = glm::length(target->position() - m_camera.position);
@@ -9561,6 +9573,13 @@ void Application::updateMining(float deltaTime)
             m_stats.item(Stats::ItemStat::Mined, statBlockItem(id));
             const StackId tool = m_inventory.selected().id;
             if (Tools::isTool(tool) || tool == Items::Shears) m_stats.item(Stats::ItemStat::Used, tool);
+        }
+        if (id == Blocks::EndCrystal)
+        {
+            m_hasTarget = false;
+            m_breakProgress = 0.0f;
+            explodeCrystal(hit.block);
+            return;
         }
         m_particles.spawnBlockBreak(hit.block, id);
         m_world->setBlock(hit.block.x, hit.block.y, hit.block.z, Blocks::Air);
@@ -10302,7 +10321,7 @@ void Application::tickDragonFight(float deltaTime)
 {
     if (!m_world) return;
     if (m_dimension != Dimension::End) return;
-    if (m_dragonSlain) return;
+    if (m_dragonSlain && !tryRespawnDragon()) return;
 
     constexpr float INTERVAL = 1.0f;
     constexpr float HEAL_PER_CRYSTAL = 1.0f;   // health a second, each
@@ -11129,6 +11148,48 @@ void Application::tryRaiseWither(const glm::ivec3& skull)
 // the portal in the top of it. This is that: the point is that it is
 // not there while the fight is on, so the island has one exit and you
 // have to earn it.
+void Application::explodeCrystal(const glm::ivec3& at)
+{
+    m_world->setBlock(at.x, at.y, at.z, Blocks::Air);
+    m_net.onLocalBlockChange(at.x, at.y, at.z, Blocks::Air);
+    m_blastCause = "explosion";
+    applyBlast(glm::vec3(at) + glm::vec3(0.5f), 6.0f, 12);
+}
+
+bool Application::tryRespawnDragon()
+{
+    const int top = WorldGen::END_ISLAND_LEVEL + 1;
+    const glm::ivec3 spots[4] = { { 2, top + 2, 0 }, { -2, top + 2, 0 }, { 0, top + 2, 2 }, { 0, top + 2, -2 } };
+    for (const glm::ivec3& spot : spots)
+        if (m_world->getBlock(spot.x, spot.y, spot.z) != Blocks::EndCrystal) return false;
+    for (const glm::ivec3& spot : spots)
+    {
+        m_world->setBlock(spot.x, spot.y, spot.z, Blocks::Air);
+        m_net.onLocalBlockChange(spot.x, spot.y, spot.z, Blocks::Air);
+        sprites(SpriteParticles::Kind::Explosion, glm::vec3(spot) + glm::vec3(0.5f), 6, 0.5f, 0.3f, 1.2f, 0.8f);
+    }
+    for (int dx = -1; dx <= 1; ++dx)
+        for (int dz = -1; dz <= 1; ++dz)
+            if (m_world->getBlock(dx, top, dz) == Blocks::EndPortal)
+            {
+                m_world->setBlock(dx, top, dz, Blocks::Air);
+                m_net.onLocalBlockChange(dx, top, dz, Blocks::Air);
+            }
+    for (int i = 0; i < WorldGen::END_PILLARS; ++i)
+    {
+        int px = 0, pz = 0, tall = 0;
+        WorldGen::endPillar(i, px, pz, tall);
+        const int pillarTop = WorldGen::END_ISLAND_LEVEL + tall;
+        m_world->setBlock(px, pillarTop + 1, pz, Blocks::Bedrock);
+        m_world->setBlock(px, pillarTop + 2, pz, Blocks::EndCrystal);
+        m_net.onLocalBlockChange(px, pillarTop + 2, pz, Blocks::EndCrystal);
+    }
+    m_dragonSlain = false;
+    m_dragonSeen = false;
+    m_audio.play(Sound::Thunder, 1.0f, 0.6f);
+    return true;
+}
+
 void Application::openExitPortal()
 {
     if (!m_world) return;
@@ -14865,6 +14926,21 @@ void Application::tickCarts(float deltaTime)
 
 void Application::updateFuses(float deltaTime)
 {
+    m_tntFall += deltaTime;
+    const bool drop = m_tntFall >= 0.08f;
+    if (drop) m_tntFall = 0.0f;
+    for (size_t i = 0; i < m_fuses.size() && drop; ++i)
+    {
+        glm::ivec3& where = m_fuses[i].first;
+        if (m_world->getBlock(where.x, where.y, where.z) != Blocks::TntPrimed) continue;
+        const BlockId below = m_world->getBlock(where.x, where.y - 1, where.z);
+        if (where.y <= 1 || !canFallThrough(below) || isLiquid(below)) continue;
+        m_world->setBlock(where.x, where.y, where.z, Blocks::Air);
+        m_net.onLocalBlockChange(where.x, where.y, where.z, Blocks::Air);
+        --where.y;
+        m_world->setBlock(where.x, where.y, where.z, Blocks::TntPrimed);
+        m_net.onLocalBlockChange(where.x, where.y, where.z, Blocks::TntPrimed);
+    }
     for (size_t i = 0; i < m_fuses.size();)
     {
         const glm::ivec3 where = m_fuses[i].first;
@@ -15148,7 +15224,7 @@ void Application::updateCrossbow(float deltaTime)
     {
         const glm::vec3 aim = glm::rotate(glm::mat4(1.0f), glm::radians(10.0f * static_cast<float>(spread)), glm::vec3(0.0f, 1.0f, 0.0f)) * glm::vec4(m_camera.front, 0.0f);
         m_arrows.spawn(from, aim * Crossbows::ARROW_SPEED, 9, true, kind, Crossbows::effectOf(held.enchantments));
-        m_arrows.enchantLast(0, false, pierce);
+        m_arrows.enchantLast(0, false, pierce, spread == 0 && !m_player.creative());
     }
     award("adventure/ol_betsy", "shot_crossbow");
     held.enchantments = Crossbows::withLoad(held.enchantments, Crossbows::Empty);
@@ -15182,7 +15258,9 @@ void Application::looseArrow(float drawn)
                        Enchanting::powerBonus(m_inventory.selected().enchantments,
                                               Arrows::damageFor(drawn)),
                    true, kind, effect);
-    m_arrows.enchantLast(Enchanting::levelOf(bow, Enchanting::Kind::Punch), Enchanting::has(bow, Enchanting::Kind::Flame), 0);
+    const bool endlessShot = kind == Arrows::Kind::Shaft && Enchanting::has(bow, Enchanting::Kind::Infinity);
+    m_arrows.enchantLast(Enchanting::levelOf(bow, Enchanting::Kind::Punch), Enchanting::has(bow, Enchanting::Kind::Flame), 0,
+                         !m_player.creative() && !endlessShot);
 
     m_heldItem.swing();
     m_audio.play(Sound::Click, 0.5f, 1.4f);
@@ -15243,6 +15321,11 @@ namespace
         {
             (void)fromPlayer;
             if (kind == Arrows::Kind::Spit) return;
+            if ((kind == Arrows::Kind::Fire && shooter == static_cast<int>(MobId::Ghast)) || kind == Arrows::Kind::Skull)
+            {
+                blasts.emplace_back(at, kind == Arrows::Kind::Fire);
+                return;
+            }
 
             if (kind == Arrows::Kind::Breath)
             {
@@ -15319,6 +15402,8 @@ namespace
         }
 
         std::vector<glm::vec3> bursts;
+        int ghastsReturned = 0;
+        std::vector<std::pair<glm::vec3, bool>> blasts;
         std::vector<glm::vec3> windBursts;
         std::vector<glm::vec3> potionBursts;
         std::vector<std::pair<glm::vec3, int>> thrownPotions;
@@ -15362,6 +15447,11 @@ namespace
                     }
                     else if (striking != Arrows::Kind::XpBottle && striking != Arrows::Kind::Potion)
                     {
+                        if (striking == Arrows::Kind::Fire && mob.typeId() == MobId::Ghast)
+                        {
+                            damage = 1000;
+                            ++ghastsReturned;
+                        }
                         mob.damage(damage, feet - point);
                         if (punch > 0)
                         {
@@ -15439,7 +15529,36 @@ void Application::updateArrows(float deltaTime)
     targets.player = &m_player;
     targets.facing = m_camera.front;
 
+    m_arrows.setHomingTarget(m_player.eyePosition());
     m_arrows.update(deltaTime, *m_world, targets);
+    if (targets.ghastsReturned > 0) award("nether/return_to_sender", "killed_ghast");
+    for (const Arrow& picked : m_arrows.takeStuck(m_player.position + glm::vec3(0.0f, 0.9f, 0.0f), 1.6f))
+    {
+        ItemStack back{ picked.kind == Arrows::Kind::Spectral ? static_cast<StackId>(Items::SpectralArrow)
+                        : picked.kind == Arrows::Kind::Tipped ? static_cast<StackId>(Items::TippedArrow) : static_cast<StackId>(Items::Arrow), 1 };
+        if (picked.kind == Arrows::Kind::Tipped) back.damage = picked.effect;
+        if (picked.kind == Arrows::Kind::Trident) continue;
+        if (m_inventory.addStack(back) > 0) m_drops.spawnStack(m_player.position, back);
+        m_audio.play(Sound::Pickup, 0.4f, 1.4f);
+    }
+    for (const auto& [at, fiery] : targets.blasts)
+    {
+        m_blastSource = fiery ? static_cast<int>(MobId::Ghast) : static_cast<int>(MobId::Wither);
+        applyBlast(at, fiery ? 2.0f : 2.0f, fiery ? 6 : 8);
+        m_blastSource = -1;
+        if (fiery && m_world && m_rules.on(GameRules::Rule::MobGriefing))
+            for (int dx = -1; dx <= 1; ++dx)
+                for (int dz = -1; dz <= 1; ++dz)
+                {
+                    const glm::ivec3 cell = glm::ivec3(glm::floor(at)) + glm::ivec3(dx, 0, dz);
+                    if (m_world->getBlock(cell.x, cell.y, cell.z) == Blocks::Air && isSolid(m_world->getBlock(cell.x, cell.y - 1, cell.z)) &&
+                        (hashCoords(cell.x, cell.y, cell.z, 0xF1E5u) % 3u) == 0u)
+                    {
+                        m_world->setBlock(cell.x, cell.y, cell.z, Blocks::Fire0);
+                        m_net.onLocalBlockChange(cell.x, cell.y, cell.z, Blocks::Fire0);
+                    }
+                }
+    }
     for (const glm::vec3& at : targets.windBursts)
     {
         sprites(SpriteParticles::Kind::Gust, at, 1, 0.0f, 0.0f, 2.2f, 0.6f);
@@ -22986,6 +23105,11 @@ void Application::updateMobs(float deltaTime)
     {
         vibrate(glm::vec3(struck) + glm::vec3(0.5f), 2);
         const BlockId hit = m_world->getBlock(struck.x, struck.y, struck.z);
+        if (hit == Blocks::EndCrystal)
+        {
+            explodeCrystal(struck);
+            continue;
+        }
         if (!isTarget(hit)) continue;
         if (playerShots) m_stats.add(Stats::Custom::TargetHit);
         const bool fresh = hit == Blocks::Target;

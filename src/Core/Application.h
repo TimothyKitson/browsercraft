@@ -891,6 +891,9 @@ private:
     void barterWith(Mob& piglin);
     void tickPiglins();
     void tickMobGriefing();
+    float m_tntFall = 0.0f;
+    void explodeCrystal(const glm::ivec3& at);
+    bool tryRespawnDragon();
     std::map<uint32_t, float> m_doorBreaking;
     void renderMobGear(Shader& shader);
     PlayerPose gearPose(const Mob& mob) const;

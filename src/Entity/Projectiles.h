@@ -102,6 +102,7 @@ struct Arrow
     bool flame = false;
     int pierce = 0;
     float passing = 0.0f;
+    bool pickup = false;
 
     bool shaft() const
     {
@@ -189,13 +190,17 @@ public:
     void update(float deltaTime, const World& world, Targets& targets);
 
     void clear() { m_arrows.clear(); }
-    void enchantLast(int punch, bool flame, int pierce)
+    void enchantLast(int punch, bool flame, int pierce, bool pickup = true)
     {
         if (m_arrows.empty()) return;
         m_arrows.back().punch = punch;
         m_arrows.back().flame = flame;
         m_arrows.back().pierce = pierce;
+        m_arrows.back().pickup = pickup;
     }
+    bool deflect(const glm::vec3& eye, const glm::vec3& look, float reach);
+    void setHomingTarget(const glm::vec3& target) { m_homing = target; m_hasHoming = true; }
+    std::vector<Arrow> takeStuck(const glm::vec3& at, float radius);
     void show(const Arrow& visual) { m_visuals.push_back(visual); }
     const std::vector<Arrow>& all() const { return m_arrows; }
     int takePlayerBlockHits()
@@ -214,6 +219,8 @@ public:
     void render(Shader& shader, const Camera& camera, const Atlas& atlas, const World& world);
 
 private:
+    glm::vec3 m_homing{ 0.0f };
+    bool m_hasHoming = false;
     std::vector<Arrow> m_arrows;
     std::vector<Arrow> m_visuals;
     std::vector<glm::ivec3> m_blockHits;
