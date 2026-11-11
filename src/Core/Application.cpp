@@ -20262,7 +20262,17 @@ bool Application::runCommand(const std::string& line, const glm::vec3& origin, b
             break;
 
         case Chat::Kind::Give:
-            m_inventory.add(command.item, command.count);
+            if (command.amplifier != 0)
+            {
+                int left = command.count;
+                while (left > 0)
+                {
+                    const int batch = std::min(left, maxStackOf(command.item));
+                    m_inventory.addStack(ItemStack{ command.item, batch, command.amplifier });
+                    left -= batch;
+                }
+            }
+            else m_inventory.add(command.item, command.count);
             break;
 
         case Chat::Kind::Kill:

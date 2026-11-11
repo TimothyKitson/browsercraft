@@ -9996,6 +9996,15 @@ namespace
             check(Chat::parse("/summon spawner_minecart ~ ~ ~", true, glm::vec3(0.0f)).mob == static_cast<int>(MobId::Minecart) &&
                       Chat::parse("/summon spawner_minecart ~ ~ ~", true, glm::vec3(0.0f)).sub.find("Variant:6") != std::string::npos,
                   "and can be summoned");
+            {
+                const Chat::Command egg = Chat::parse("/give @s zombie_spawn_egg 3", true);
+                check(egg.kind == Chat::Kind::Give && egg.item == static_cast<StackId>(Items::SpawnEgg) &&
+                          egg.amplifier == static_cast<int>(MobId::Zombie) && egg.count == 3,
+                      "/give takes a target and gives a spawn egg by its vanilla name");
+                const Chat::Command stone = Chat::parse("/give @p stone 5", true);
+                check(stone.kind == Chat::Kind::Give && stone.item == static_cast<StackId>(Blocks::Stone) && stone.count == 5,
+                      "and still gives plain blocks after a target");
+            }
             check(isStonecutter(Blocks::StonecutterTurned) && blockDrop(Blocks::StonecutterTurned) == static_cast<StackId>(Blocks::Stonecutter),
                   "a turned stonecutter is still a stonecutter");
             check(shelfMask(shelfOf(1, 3)) == 7 && shelfBooks(shelfOf(1, 3)) == 3 && shelfFacing(shelfOf(1, 3)) == 1,

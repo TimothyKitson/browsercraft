@@ -530,20 +530,29 @@ Chat::Command Chat::parse(const std::string& line, bool cheats, const glm::vec3&
         if (!cheats) return deny(name);
         if (words.size() < 2) return fail("/give <name> [count]");
 
-        const StackId id = lookUp(words[1]);
-        if (id == Blocks::Air) return fail("Nothing called " + words[1] + ".");
+        size_t named = 1;
+        if (words.size() >= 3 && (words[1][0] == '@' || (lookUp(words[1]) == Blocks::Air && lookUp(words[2]) != Blocks::Air))) named = 2;
+        std::string wanted = lower(words[named]);
+        if (wanted.rfind("minecraft:", 0) == 0) wanted = wanted.substr(10);
+        const std::string eggSuffix = "_spawn_egg";
+        int egg = -1;
+        if (wanted.size() > eggSuffix.size() && wanted.compare(wanted.size() - eggSuffix.size(), eggSuffix.size(), eggSuffix) == 0)
+            egg = mobNamed(wanted.substr(0, wanted.size() - eggSuffix.size()));
+        const StackId id = egg >= 0 ? static_cast<StackId>(Items::SpawnEgg) : lookUp(words[named]);
+        if (id == Blocks::Air) return fail("Nothing called " + words[named] + ".");
 
         int count = 1;
-        if (words.size() >= 3)
+        if (words.size() >= named + 2)
         {
             float asked = 1.0f;
-            if (!number(words[2], asked)) return fail("/give wants a number for the count.");
+            if (!number(words[named + 1], asked)) return fail("/give wants a number for the count.");
             count = std::clamp(static_cast<int>(asked), 1, 64 * 9);
         }
 
         out.kind = Kind::Give;
         out.item = id;
         out.count = count;
+        out.amplifier = egg >= 0 ? egg : 0;
         out.text = "Gave " + std::to_string(count) + " " + displayName(id) + ".";
         return out;
     }
