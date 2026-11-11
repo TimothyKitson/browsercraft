@@ -864,6 +864,27 @@ void Application::loadLevel()
             m_rules.load(text.str());
         }
     }
+    m_shulkerStore.clear();
+    {
+        std::ifstream boxes(m_savePath + "/shulkers.txt");
+        std::string row;
+        while (std::getline(boxes, row))
+        {
+            std::istringstream in(row);
+            Chests::Contents inside{};
+            for (ItemStack& one : inside)
+            {
+                long long id = 0, count = 0, damage = 0;
+                unsigned long long enchants = 0;
+                if (!(in >> id >> count >> damage >> enchants)) break;
+                one.id = static_cast<StackId>(id);
+                one.count = static_cast<int>(count);
+                one.damage = static_cast<int>(damage);
+                one.enchantments = static_cast<decltype(one.enchantments)>(enchants);
+            }
+            m_shulkerStore.push_back(inside);
+        }
+    }
     m_noteTunes.clear();
     {
         std::ifstream notes(m_savePath + "/notes.txt");
@@ -1286,6 +1307,15 @@ void Application::saveLevel()
     {
         std::ofstream rules(m_savePath + "/gamerules.txt");
         if (rules) rules << m_rules.save();
+    }
+    {
+        std::ofstream boxes(m_savePath + "/shulkers.txt");
+        if (boxes)
+            for (const Chests::Contents& inside : m_shulkerStore)
+            {
+                for (const ItemStack& one : inside) boxes << one.id << ' ' << one.count << ' ' << one.damage << ' ' << one.enchantments << ' ';
+                boxes << '\n';
+            }
     }
     {
         std::ofstream notes(m_savePath + "/notes.txt");
@@ -9266,6 +9296,9 @@ void Application::updateMining(float deltaTime)
                 if (silk && id == Blocks::CampfireUnlit) drop = Blocks::Campfire;
                 if (silk && id == Blocks::SoulCampfireUnlit) drop = Blocks::SoulCampfire;
                 if (isDecoratedPot(id) || isBanner(id)) drop = Blocks::Air;
+                if (isShulkerBox(id) && m_chests.has(hit.block))
+                    for (const ItemStack& inside : m_chests.at(hit.block))
+                        if (!inside.empty()) { drop = Blocks::Air; break; }
                 if (id == Blocks::Snow && drop == Items::Snowball) dropped = 4;
                 if (isSnowLayer(id))
                 {
@@ -9534,6 +9567,19 @@ void Application::updateMining(float deltaTime)
             // A chest gives back everything in it. Twenty-seven stacks
             // is a lot to drop at once, which is why they come out of
             // the block rather than the player.
+            if (isShulkerBox(id) && m_chests.has(hit.block))
+            {
+                if (m_chestOpen && m_chestBlock == hit.block) stowChest();
+                const Chests::Contents inside = m_chests.at(hit.block);
+                bool any = false;
+                for (const ItemStack& one : inside) any = any || !one.empty();
+                if (any)
+                {
+                    m_shulkerStore.push_back(inside);
+                    m_drops.spawnStack(glm::vec3(hit.block) + glm::vec3(0.5f), ItemStack{ id, 1, static_cast<int>(m_shulkerStore.size()) });
+                }
+                m_chests.remove(hit.block);
+            }
             if (isContainerBlock(id) || isItemHolder(id))
             {
                 if (m_chestOpen && m_chestBlock == hit.block) stowChest();
@@ -17984,6 +18030,8 @@ void Application::handlePlacement()
     m_audio.playPlace(placing);
     checkFalling(target);
     if (isLeaves(placing)) m_placedLeaves.insert({ static_cast<int>(m_dimension), target.x, target.y, target.z });
+    if (isShulkerBox(placing) && stack.damage > 0 && stack.damage <= static_cast<int>(m_shulkerStore.size()))
+        m_chests.at(target) = m_shulkerStore[static_cast<size_t>(stack.damage - 1)];
     if (isSolid(placing) && isOpaque(placing) && isFarmland(m_world->getBlock(target.x, target.y - 1, target.z)))
     {
         m_world->setBlock(target.x, target.y - 1, target.z, Blocks::Dirt);

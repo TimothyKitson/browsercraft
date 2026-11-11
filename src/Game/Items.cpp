@@ -502,6 +502,8 @@ int atlasTileFor(StackId id)
 int maxStackOf(StackId id)
 {
     if (isDecoratedPot(asBlock(id)) && !isItem(id)) return 1;
+    if (isShulkerBox(asBlock(id)) && !isItem(id)) return 1;
+    if (isBed(asBlock(id)) && !isItem(id)) return 1;
     if (isBanner(asBlock(id)) && !isItem(id)) return 16;
     return isItem(id) ? itemInfo(id).maxStack : 64;
 }

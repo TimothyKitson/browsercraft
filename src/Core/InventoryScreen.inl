@@ -319,6 +319,7 @@ namespace
     // the brew in its damage, so its name has to be read out of that.
     const std::vector<std::string>* g_itemNames = nullptr;
     const std::vector<Application::BookText>* g_books = nullptr;
+    const std::vector<Chests::Contents>* g_shulkers = nullptr;
 
     std::string stackName(const ItemStack& stack)
     {
@@ -371,6 +372,19 @@ namespace
                 line("by " + (*g_books)[static_cast<size_t>(stack.damage - 1)].author);
             static const char* GENERATIONS[4] = { "Original", "Copy of original", "Copy of a copy", "Tattered" };
             line(GENERATIONS[(stack.enchantments >> 24) & 0x3u]);
+            return lore;
+        }
+        if (g_shulkers && isBlockStack(stack.id) && isShulkerBox(asBlock(stack.id)) && stack.damage > 0 &&
+            stack.damage <= static_cast<int>(g_shulkers->size()))
+        {
+            int shown = 0, more = 0;
+            for (const ItemStack& inside : (*g_shulkers)[static_cast<size_t>(stack.damage - 1)])
+            {
+                if (inside.empty()) continue;
+                if (shown < 5) { line(stackName(inside) + " x" + std::to_string(inside.count)); ++shown; }
+                else ++more;
+            }
+            if (more > 0) line("and " + std::to_string(more) + " more...");
             return lore;
         }
         if (Discs::discOf(stack.id) >= 0) line(Discs::song(Discs::discOf(stack.id)).title);
@@ -432,6 +446,7 @@ std::string Application::itemLabel(const ItemStack& stack) const
 {
     g_itemNames = &m_itemNames;
     g_books = &m_bookTexts;
+    g_shulkers = &m_shulkerStore;
     return stackName(stack);
 }
 
@@ -1022,6 +1037,7 @@ void Application::renderInventoryScreen()
 {
     g_itemNames = &m_itemNames;
     g_books = &m_bookTexts;
+    g_shulkers = &m_shulkerStore;
     // Interface pixels, the same ones the HUD is drawn in, and the same
     // ones the open-source client lays its containers out in.
     m_ui.setScale(static_cast<float>(guiScale()));
@@ -3158,6 +3174,14 @@ void Application::handleInventoryClick(int mouseX, int mouseY, bool rightButton,
 
         case SlotBox::Kind::Slot:
             m_recipeGhost = -1;
+            if (m_chestOpen && m_chestVehicle < 0 && m_world && box->index >= Inventory::CHEST_FIRST &&
+                box->index < Inventory::CHEST_FIRST + Inventory::CHEST_SLOTS &&
+                isShulkerBox(m_world->getBlock(m_chestBlock.x, m_chestBlock.y, m_chestBlock.z)) &&
+                isBlockStack(m_inventory.cursor().id) && isShulkerBox(asBlock(m_inventory.cursor().id)))
+            {
+                m_audio.play(Sound::Click, 0.35f, 0.6f);
+                break;
+            }
             if (m_crafterOpen && box->index >= Inventory::CHEST_FIRST &&
                 box->index < Inventory::CHEST_FIRST + CRAFTER_SLOTS)
             {

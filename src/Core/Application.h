@@ -1310,6 +1310,7 @@ private:
     int noteInstrument(const glm::ivec3& at) const;
     void playNote(const glm::ivec3& at);
     std::map<std::array<int, 4>, int> m_noteTunes;
+    std::vector<Chests::Contents> m_shulkerStore;
     void tickCampfires(float deltaTime);
     struct Campfire
     {

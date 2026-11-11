@@ -13703,6 +13703,9 @@ namespace
               blockOverlaps(Blocks::Bamboo, 0, 0, 0, 0.45f, 0.2f, 0.45f, 0.55f, 0.8f, 0.55f, 0) &&
               !blockOverlaps(Blocks::Bamboo, 0, 0, 0, 0.0f, 0.2f, 0.0f, 0.3f, 0.8f, 0.3f, 0),
               "bamboo starts as a shoot you walk through and grows into a thin stalk you bump into");
+        check(maxStackOf(Blocks::ShulkerBox) == 1 && maxStackOf(static_cast<StackId>(Blocks::ShulkerBoxFirst + 3)) == 1 && maxStackOf(Blocks::Bed) == 1,
+              "shulker boxes and beds stack to one, as in 1.21.1");
+
         section("campfires");
         check(isAnyCampfire(Blocks::CampfireUnlit) && !isCampfire(Blocks::CampfireUnlit) && lightEmission(Blocks::CampfireUnlit) == 0 &&
               lightEmission(Blocks::Campfire) == 15 && isSoulCampfire(Blocks::SoulCampfireUnlit),
