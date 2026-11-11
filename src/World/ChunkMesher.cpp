@@ -990,7 +990,7 @@ namespace
             for (int i = 0; i < 6; ++i)
             {
                 const Slot& s = SLOTS[i];
-                const int tile = i < shelfBooks(id) ? Tiles::ShelfOccupiedTile : Tiles::ShelfEmptyTile;
+                const int tile = (shelfMask(id) & (1 << i)) ? Tiles::ShelfOccupiedTile : Tiles::ShelfEmptyTile;
                 const PartFace face{ tile, s.u0, s.v0, s.u1, s.v1 };
                 PartFace faces[6];
                 for (PartFace& f : faces) f = PartFace{ -1, 0.0f, 0.0f, 0.0f, 0.0f };

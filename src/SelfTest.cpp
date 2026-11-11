@@ -9937,6 +9937,13 @@ namespace
                   Redstone::unlit(observerFacingTo(3, true)) == observerFacingTo(3, false) &&
                   Redstone::isSource(observerFacingTo(0, true)) && !Redstone::isSource(observerFacingTo(0, false)),
                   "a turned observer lights and goes out facing the same way");
+            check(Hopper::slotsOf(Blocks::DecoratedPotFirst) == 1, "a hopper can fill a decorated pot");
+            check(shelfMask(shelfOf(1, 3)) == 7 && shelfBooks(shelfOf(1, 3)) == 3 && shelfFacing(shelfOf(1, 3)) == 1,
+                  "an old bookshelf reads as its first slots filled");
+            check(isChiseledBookshelf(shelfWith(2, 0b101010)) && shelfMask(shelfWith(2, 0b101010)) == 0b101010 &&
+                      shelfBooks(shelfWith(2, 0b101010)) == 3 && shelfFacing(shelfWith(2, 0b101010)) == 2,
+                  "a bookshelf remembers which of its six slots hold books");
+            check(blockDrop(shelfWith(3, 63)) == blockDrop(shelfOf(0, 0)), "and still breaks into a bookshelf");
             check(Hopper::slotsOf(dropperFacingTo(1)) == Hopper::THROWER_SLOTS && Hopper::slotsOf(dispenserFacingTo(5)) == Hopper::THROWER_SLOTS,
                   "hoppers can fill a turned dropper or dispenser");
 

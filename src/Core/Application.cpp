@@ -7776,6 +7776,8 @@ bool Application::frame()
                     m_world->setBlock(x, by, bz + 8, observerFacingTo(f, false));
                     m_world->setBlock(x, by, bz + 10, observerFacingTo(f, true));
                     m_world->setBlock(x, by, bz + 12, pistonBody(f, f % 2 == 1, false));
+                    static const int SHELVES[6] = { 0b000001, 0b101010, 0b010101, 0b111000, 0b000111, 0b111111 };
+                    m_world->setBlock(x, by, bz + 14, shelfWith(0, SHELVES[f]));
                 }
             }
 
@@ -9964,8 +9966,25 @@ void Application::updateMining(float deltaTime)
                     m_drops.spawnStack(glm::vec3(hit.block) + glm::vec3(0.5f), banner);
                 }
             }
-            if (isChiseledBookshelf(id) && shelfBooks(id) > 0 && !m_player.creative())
-                m_drops.spawnFromBrokenBlock(hit.block, Items::Book, shelfBooks(id));
+            if (isChiseledBookshelf(id))
+            {
+                const int mask = shelfMask(id);
+                const bool kept = m_chests.has(hit.block);
+                for (int slot = 0; slot < 6; ++slot)
+                {
+                    if (!(mask & (1 << slot))) continue;
+                    ItemStack book = kept ? m_chests.at(hit.block)[static_cast<size_t>(slot)] : ItemStack{};
+                    if (book.empty()) book = ItemStack{ Items::Book, 1 };
+                    m_drops.spawnStack(glm::vec3(hit.block) + glm::vec3(0.5f), book);
+                }
+                if (kept) m_chests.remove(hit.block);
+            }
+            if (isDecoratedPot(id) && m_chests.has(hit.block))
+            {
+                const ItemStack inside = m_chests.at(hit.block)[0];
+                if (!inside.empty()) m_drops.spawnStack(glm::vec3(hit.block) + glm::vec3(0.5f), inside);
+                m_chests.remove(hit.block);
+            }
             if (isPotted(id) && !m_player.creative())
                 m_drops.spawnFromBrokenBlock(hit.block, pottedPlant(id), 1);
 
@@ -13279,6 +13298,7 @@ bool Application::containerSignal(const glm::ivec3& at)
     if (isCake(here) || here == Blocks::LecternBook || here == Blocks::EndPortalFrameFilled) return true;
     if (isHive(here)) return hiveHoney(here) > 0;
     if (isChiseledBookshelf(here)) return shelfBooks(here) > 0;
+    if (isDecoratedPot(here)) return m_chests.has(at) && !m_chests.at(at)[0].empty();
     if (isFurnaceBlock(here))
     {
         if (!m_furnaces.has(at)) return false;
@@ -14879,6 +14899,89 @@ void Application::tickArmorStands(float deltaTime)
         }
         else stand.feet.y = std::max(next, -64.0f);
     }
+}
+
+bool Application::usePot(const glm::ivec3& at)
+{
+    ItemStack& held = m_inventory.selected();
+    if (held.empty())
+    {
+        m_audio.play(Sound::DigStone, 0.4f, 1.6f);
+        return true;
+    }
+    ItemStack& inside = m_chests.at(at)[0];
+    const bool fits = inside.empty() || (inside.sameAs(held) && inside.count < maxStackOf(held.id));
+    if (!fits)
+    {
+        m_audio.play(Sound::DigStone, 0.4f, 0.8f);
+        m_particles.spawnBlockBreak(at, m_world->getBlock(at.x, at.y, at.z));
+        return true;
+    }
+    if (inside.empty())
+    {
+        inside = held;
+        inside.count = 1;
+    }
+    else ++inside.count;
+    if (!m_player.creative() && --held.count <= 0) held.clear();
+    m_particles.spawnBlockBreak(at, m_world->getBlock(at.x, at.y, at.z));
+    m_audio.play(Sound::DigStone, 0.5f, 1.3f);
+    settleRedstone(at);
+    return true;
+}
+
+bool Application::useShelf(const glm::ivec3& at, BlockId used)
+{
+    const RaycastHit hit = m_world->raycast(m_camera.position, m_camera.front, REACH_DISTANCE);
+    if (!hit.hit || hit.block != at) return false;
+    static const glm::ivec3 FRONT[4] = { { 0, 0, -1 }, { 1, 0, 0 }, { 0, 0, 1 }, { -1, 0, 0 } };
+    const int facing = shelfFacing(used);
+    if (hit.normal != FRONT[facing]) return false;
+
+    const glm::vec3 point = m_camera.position + m_camera.front * hit.distance - glm::vec3(at);
+    const float fx = std::clamp(point.x, 0.0f, 0.999f);
+    const float fy = std::clamp(point.y, 0.0f, 0.999f);
+    const float fz = std::clamp(point.z, 0.0f, 0.999f);
+    const float u = facing == 0 ? 1.0f - fx : facing == 1 ? 1.0f - fz : facing == 2 ? fx : fz;
+    const int column = u < 0.375f ? 0 : u < 0.6875f ? 1 : 2;
+    const int slot = (fy >= 0.5f ? 0 : 3) + column;
+
+    Chests::Contents& slots = m_chests.at(at);
+    const int mask = shelfMask(used);
+    for (int k = 0; k < 6; ++k)
+        if ((mask & (1 << k)) && slots[static_cast<size_t>(k)].empty()) slots[static_cast<size_t>(k)] = ItemStack{ Items::Book, 1 };
+
+    ItemStack& held = m_inventory.selected();
+    int next = mask;
+    if (!(mask & (1 << slot)))
+    {
+        const bool book = held.id == Items::Book || held.id == Items::EnchantedBook || held.id == Items::WritableBook ||
+                          held.id == Items::WrittenBook || held.id == Items::KnowledgeBook;
+        if (!book || held.empty())
+        {
+            m_chests.forgetIfEmpty(at);
+            return false;
+        }
+        slots[static_cast<size_t>(slot)] = held;
+        slots[static_cast<size_t>(slot)].count = 1;
+        if (!m_player.creative() && --held.count <= 0) held.clear();
+        next |= 1 << slot;
+        m_audio.play(Sound::DigWood, 0.5f, 1.3f);
+    }
+    else
+    {
+        const ItemStack taken = slots[static_cast<size_t>(slot)];
+        slots[static_cast<size_t>(slot)].clear();
+        if (m_inventory.addStack(taken) > 0) m_drops.spawnStack(m_player.position + glm::vec3(0.0f, 0.5f, 0.0f), taken);
+        next &= ~(1 << slot);
+        m_audio.play(Sound::DigWood, 0.5f, 1.0f);
+    }
+    m_chests.forgetIfEmpty(at);
+    const BlockId shaped = shelfWith(facing, next);
+    m_world->setBlock(at.x, at.y, at.z, shaped);
+    m_net.onLocalBlockChange(at.x, at.y, at.z, shaped);
+    settleRedstone(at);
+    return true;
 }
 
 void Application::pushArmorStands(const Piston::Moved& moved)
@@ -16919,30 +17022,8 @@ void Application::handlePlacement()
                         mob.afflict(Mob::Affliction::Glowing, 3.0f);
                 return;
             }
-            if (isChiseledBookshelf(used))
-            {
-                ItemStack& held = m_inventory.selected();
-                const int books = shelfBooks(used);
-                BlockId next = used;
-                if (held.id == Items::Book && books < 6)
-                {
-                    next = shelfOf(shelfFacing(used), books + 1);
-                    if (!m_player.creative() && --held.count <= 0) held.clear();
-                }
-                else if (books > 0)
-                {
-                    next = shelfOf(shelfFacing(used), books - 1);
-                    if (m_inventory.add(Items::Book, 1) > 0) m_drops.spawn(m_player.position, Items::Book, 1);
-                }
-                if (next != used)
-                {
-                    m_world->setBlock(bench.block.x, bench.block.y, bench.block.z, next);
-                    m_net.onLocalBlockChange(bench.block.x, bench.block.y, bench.block.z, next);
-                    settleRedstone(bench.block);
-                    m_audio.play(Sound::DigWood, 0.5f, 1.3f);
-                    return;
-                }
-            }
+            if (isDecoratedPot(used) && usePot(bench.block)) return;
+            if (isChiseledBookshelf(used) && useShelf(bench.block, used)) return;
             if (used == Blocks::DragonEgg)
             {
                 uint32_t roll = static_cast<uint32_t>(m_elapsedSeconds * 4099.0f) | 1u;
