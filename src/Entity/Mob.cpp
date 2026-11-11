@@ -1371,8 +1371,14 @@ void Mob::damage(int amount, const glm::vec3& fromDirection)
         }
     }
 
-    if (isHorseArmour(m_horseArmour))
-        amount = std::max(1, static_cast<int>(std::lround(amount * (1.0f - horseArmourPoints(m_horseArmour) / 25.0f))));
+    {
+        float points = static_cast<float>(naturalArmour(m_type));
+        if (isHorseArmour(m_horseArmour)) points += static_cast<float>(horseArmourPoints(m_horseArmour));
+        points *= std::max(0.0f, 1.0f - 0.15f * static_cast<float>(m_breach));
+        m_breach = 0;
+        if (points > 0.0f)
+            amount = std::max(1, static_cast<int>(std::lround(amount * (1.0f - std::min(points, 20.0f) / 25.0f))));
+    }
     m_health = std::max(0, m_health - amount);
     m_hurtFlash = 0.35f;
     if (m_type == MobId::GlowSquid) m_darkTime = 5.0f;

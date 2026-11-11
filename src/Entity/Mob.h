@@ -137,6 +137,17 @@ public:
     bool glowing() const { return m_glowTimer > 0.0f || m_effects.has(Effects::Kind::Glowing); }
     void giveEffect(Effects::Kind kind, int amplifier, float seconds);
     static void setNoticeScale(float scale);
+    void pierceArmour(int breach) { m_breach = breach; }
+    static int naturalArmour(MobId id)
+    {
+        switch (id)
+        {
+            case MobId::Zombie: case MobId::Husk: case MobId::Drowned: case MobId::ZombieVillager:
+            case MobId::ZombiePigman: return 2;
+            case MobId::Wither: return 4;
+            default: return 0;
+        }
+    }
     void markPlayerHit(int how, float distance)
     {
         m_playerHitAge = 0.0f;
@@ -585,6 +596,7 @@ private:
     uint32_t m_serial = 0;
     float m_glowTimer = 0.0f;
     Effects::Set m_effects;
+    int m_breach = 0;
     int m_silverfish = 0;
     float m_playerHitAge = 1.0e9f;
     int m_playerHitHow = 0;

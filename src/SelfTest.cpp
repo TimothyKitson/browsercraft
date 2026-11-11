@@ -12817,6 +12817,13 @@ namespace
             worn.leftClick(Inventory::ARMOR_FIRST);
             check(!worn.cursor().empty(), "except in creative");
             check(Chat::parse("/enchant @s binding_curse", true).kind == Chat::Kind::Enchant, "/enchant knows the curses by id");
+            Mob armoured(MobId::Zombie, glm::vec3(0.0f), 9u);
+            const int before = armoured.health();
+            armoured.damage(10, glm::vec3(0.0f));
+            Mob breached(MobId::Zombie, glm::vec3(0.0f), 9u);
+            breached.pierceArmour(4);
+            breached.damage(10, glm::vec3(0.0f));
+            check(before - armoured.health() == 9 && before - breached.health() == 10, "a zombie's two points of armour, and breach cutting through them");
         }
 
         section("enchanting: what goes on what");
