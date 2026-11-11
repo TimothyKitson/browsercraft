@@ -5778,6 +5778,7 @@ bool Application::frame()
                     {
                         if (mob.typeId() == MobId::Creeper) mob.setCharged(true);
                         if (mob.typeId() == MobId::Sheep) mob.setWool(10, false);
+                        if (mob.typeId() == MobId::Pig) mob.setCustomName("Dinnerbone");
                     }
                 if (varied)
                 {

@@ -179,6 +179,15 @@ void MobModel::build(const MobSkin& skin, const Mob& mob, float sky, float block
 
     m_vertices.clear();
     BoxMesh::appendAll(m_vertices, boxes, frame);
+    if (mob.customName() == "Dinnerbone" || mob.customName() == "Grumm")
+    {
+        const glm::vec3 centre = frame.feet + glm::vec3(0.0f, mob.height() * 0.5f, 0.0f);
+        for (size_t i = 0; i + 9 <= m_vertices.size(); i += 9)
+        {
+            m_vertices[i + 1] = 2.0f * centre.y - m_vertices[i + 1];
+            m_vertices[i + 2] = 2.0f * centre.z - m_vertices[i + 2];
+        }
+    }
 }
 
 void MobModel::render(Shader& chunkShader, const World& world, const EntityManager& entities)
@@ -270,10 +279,11 @@ void MobModel::render(Shader& chunkShader, const World& world, const EntityManag
             if (layer == 1 && id == MobId::Sheep)
             {
                 if (mob.sheared()) continue;
-                if (mob.woolColour() != 0)
+                const int shade = mob.customName() == "jeb_" ? static_cast<int>(mob.age() * 4.0f) % 16 : mob.woolColour();
+                if (shade != 0)
                 {
                     char tint[8];
-                    std::snprintf(tint, sizeof(tint), "%06X", Banners::dyeRgb(mob.woolColour()));
+                    std::snprintf(tint, sizeof(tint), "%06X", Banners::dyeRgb(shade));
                     own = villagerTexture((std::string("assets/textures/entity/sheep/sheep_fur.png#") + tint).c_str());
                 }
             }
@@ -586,6 +596,7 @@ std::string MobModel::variantOf(const Mob& mob) const
         case MobId::Rabbit:
         {
             static const char* COATS[] = { "brown", "white", "black", "white_splotched", "gold", "salt" };
+            if (mob.customName() == "Toast") return root + "rabbit/toast.png";
             return root + "rabbit/" + COATS[pick % 6u] + ".png";
         }
         case MobId::Parrot:
