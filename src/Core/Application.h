@@ -1307,6 +1307,9 @@ private:
     bool leafHeld(const glm::ivec3& leaf) const;
     void soakSponge(const glm::ivec3& at);
     bool useCampfire();
+    int noteInstrument(const glm::ivec3& at) const;
+    void playNote(const glm::ivec3& at);
+    std::map<std::array<int, 4>, int> m_noteTunes;
     void tickCampfires(float deltaTime);
     struct Campfire
     {

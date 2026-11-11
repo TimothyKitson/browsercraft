@@ -864,6 +864,13 @@ void Application::loadLevel()
             m_rules.load(text.str());
         }
     }
+    m_noteTunes.clear();
+    {
+        std::ifstream notes(m_savePath + "/notes.txt");
+        std::array<int, 4> key{};
+        int note = 0;
+        while (notes >> key[0] >> key[1] >> key[2] >> key[3] >> note) m_noteTunes[key] = note;
+    }
     m_campfires.clear();
     {
         std::ifstream fires(m_savePath + "/campfires.txt");
@@ -1279,6 +1286,11 @@ void Application::saveLevel()
     {
         std::ofstream rules(m_savePath + "/gamerules.txt");
         if (rules) rules << m_rules.save();
+    }
+    {
+        std::ofstream notes(m_savePath + "/notes.txt");
+        if (notes)
+            for (const auto& [key, note] : m_noteTunes) notes << key[0] << ' ' << key[1] << ' ' << key[2] << ' ' << key[3] << ' ' << note << '\n';
     }
     {
         std::ofstream fires(m_savePath + "/campfires.txt");
@@ -9101,16 +9113,7 @@ void Application::updateMining(float deltaTime)
 
     const BlockId id = m_world->getBlock(hit.block.x, hit.block.y, hit.block.z);
 
-    // A stick of TNT is lit rather than mined: hitting it starts the
-    // fuse, which is how Minecraft does it with flint and steel.
-    if (id == Blocks::Tnt && !m_player.creative())
-    {
-        primeTnt(hit.block);
-        m_heldItem.swing();
-        m_hasTarget = false;
-        m_breakProgress = 0.0f;
-        return;
-    }
+    if (isNoteBlock(id) && m_keys.pressed(m_input, Action::Attack)) playNote(hit.block);
 
     // What is in your hand decides how long this takes and whether it
     // leaves anything behind. An empty hand is Air, which Tools reads as
@@ -12380,6 +12383,12 @@ void Application::settleRedstone(const glm::ivec3& at)
                     continue;
                 }
 
+                if (here == Blocks::Tnt && Redstone::poweredAt(cells, x, y, z))
+                {
+                    primeTnt(glm::ivec3(x, y, z));
+                    continue;
+                }
+
                 if (isNoteBlock(here))
                 {
                     const std::array<int, 3> cell = { x, y, z };
@@ -12389,14 +12398,7 @@ void Application::settleRedstone(const glm::ivec3& at)
                     if (live && !wasLive)
                     {
                         m_noteLive.insert(cell);
-
-                        // Two octaves off the position, which is how a
-                        // note block ends up tuned by where you put it.
-                        const int step = ((x * 7 + z * 3 + y * 5) % 25 + 25) % 25;
-                        sprites(SpriteParticles::Kind::Note, glm::vec3(x + 0.5f, y + 1.3f, z + 0.5f), 1,
-                                0.0f, 0.0f, 0.35f, 1.0f);
-                        m_audio.play(Sound::Click, 0.8f,
-                                     std::pow(2.0f, (step - 12) / 12.0f));
+                        playNote(glm::ivec3(x, y, z));
                     }
                     else if (!live && wasLive)
                     {
@@ -15631,6 +15633,19 @@ void Application::handlePlacement()
 
     if (useArmorStand()) return;
     if (useCampfire()) return;
+    if (!m_player.sneaking)
+    {
+        const RaycastHit noteHit = m_world->raycast(m_camera.position, m_camera.front, REACH_DISTANCE);
+        if (noteHit.hit && isNoteBlock(m_world->getBlock(noteHit.block.x, noteHit.block.y, noteHit.block.z)))
+        {
+            const std::array<int, 4> key{ static_cast<int>(m_dimension), noteHit.block.x, noteHit.block.y, noteHit.block.z };
+            const int now = m_noteTunes.count(key) ? m_noteTunes[key] : 12;
+            m_noteTunes[key] = (now + 1) % 25;
+            playNote(noteHit.block);
+            m_heldItem.swing();
+            return;
+        }
+    }
 
     if (m_inventory.selected().id == Items::DebugStick)
     {
@@ -20733,6 +20748,45 @@ void Application::tickLeafDecay(float deltaTime)
         if (sapling != Blocks::Air) m_drops.spawnFromBrokenBlock(at, sapling);
         if ((roll >> 11) % 50u == 0u) m_drops.spawnFromBrokenBlock(at, Items::Stick, 1 + static_cast<int>((roll >> 17) % 2u));
     }
+}
+
+int Application::noteInstrument(const glm::ivec3& at) const
+{
+    const BlockId under = axisBase(m_world->getBlock(at.x, at.y - 1, at.z));
+    if (under == Blocks::GoldBlock) return 5;
+    if (under == Blocks::Clay) return 6;
+    if (under == Blocks::PackedIce) return 7;
+    if (isWool(under)) return 8;
+    if (under == Blocks::BoneBlock) return 9;
+    if (under == Blocks::IronBlock) return 10;
+    if (under == Blocks::SoulSand) return 11;
+    if (under == Blocks::Pumpkin) return 12;
+    if (under == Blocks::EmeraldBlock) return 13;
+    if (under == Blocks::HayBale) return 14;
+    if (under == Blocks::Glowstone) return 15;
+    if (isLog(under) || isPlanks(under) || blockMaterial(under) == Material::Wood) return 1;
+    if (under == Blocks::Sand || under == Blocks::RedSand || under == Blocks::Gravel || isConcretePowder(under)) return 3;
+    if (blockMaterial(under) == Material::Glass || under == Blocks::Glass) return 4;
+    if (blockMaterial(under) == Material::Stone) return 2;
+    return 0;
+}
+
+void Application::playNote(const glm::ivec3& at)
+{
+    const BlockId over = m_world->getBlock(at.x, at.y + 1, at.z);
+    if (isHead(over) || over == Blocks::WitherSkull)
+    {
+        static const MobId VOICES[HEAD_KINDS] = { MobId::Skeleton, MobId::WitherSkeleton, MobId::Zombie, MobId::Villager,
+                                                  MobId::Creeper, MobId::EnderDragon, MobId::Piglin };
+        m_audio.play(mobType(VOICES[std::max(0, headKind(over))]).voice, 0.8f);
+        return;
+    }
+    if (over != Blocks::Air && !isLightBlock(over)) return;
+    const int note = m_noteTunes.count({ static_cast<int>(m_dimension), at.x, at.y, at.z })
+                         ? m_noteTunes[{ static_cast<int>(m_dimension), at.x, at.y, at.z }] : 12;
+    const int instrument = noteInstrument(at);
+    m_audio.play(static_cast<Sound>(static_cast<int>(Sound::NoteFirst) + instrument), 0.9f, std::pow(2.0f, (note - 12) / 12.0f));
+    sprites(SpriteParticles::Kind::Note, glm::vec3(at.x + 0.5f, at.y + 1.3f, at.z + 0.5f), 1, 0.0f, 0.0f, 0.35f, 1.0f);
 }
 
 bool Application::useCampfire()

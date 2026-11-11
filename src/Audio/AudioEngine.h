@@ -301,6 +301,8 @@ enum class Sound : uint16_t
     MobOcelotSay,
     MobOcelotHurt,
     MobOcelotDeath,
+    NoteFirst,
+    NoteLast = NoteFirst + 15,
     Count
 };
 

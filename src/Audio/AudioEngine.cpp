@@ -396,6 +396,10 @@ void AudioEngine::buildSounds()
                  Sound::MobTadpoleDeath, "mob/tadpole");
     loadMobVoice(Sound::MobGlowSquidSay, Sound::MobGlowSquidHurt,
                  Sound::MobGlowSquidDeath, "mob/glow_squid");
+    {
+        static const char* NOTES[16] = { "note/harp.ogg", "note/bass.ogg", "note/bd.ogg", "note/snare.ogg", "note/hat.ogg", "note/bell.ogg", "note/flute.ogg", "note/icechime.ogg", "note/guitar.ogg", "note/xylobone.ogg", "note/iron_xylophone.ogg", "note/cow_bell.ogg", "note/didgeridoo.ogg", "note/bit.ogg", "note/banjo.ogg", "note/pling.ogg" };
+        for (int k = 0; k < 16; ++k) loadSingle(static_cast<Sound>(static_cast<int>(Sound::NoteFirst) + k), NOTES[k]);
+    }
     loadMobVoice(Sound::MobDonkeySay, Sound::MobDonkeyHurt,
                  Sound::MobDonkeyDeath, "mob/donkey");
     loadMobVoice(Sound::MobMuleSay, Sound::MobMuleHurt,
@@ -1455,6 +1459,25 @@ void AudioEngine::buildSounds()
         }
     };
 
+    {
+        struct Voice { float hz, decay, amp; bool square; float noise; };
+        static const Voice VOICES[16] = {
+            { 370.0f, 5.0f, 0.55f, false, 0.0f }, { 92.0f, 7.0f, 0.70f, false, 0.0f }, { 60.0f, 16.0f, 0.80f, false, 0.25f },
+            { 200.0f, 22.0f, 0.30f, false, 0.60f }, { 900.0f, 40.0f, 0.10f, false, 0.45f }, { 1480.0f, 3.0f, 0.45f, false, 0.0f },
+            { 740.0f, 6.0f, 0.45f, false, 0.02f }, { 1480.0f, 2.5f, 0.40f, false, 0.0f }, { 185.0f, 6.0f, 0.50f, true, 0.0f },
+            { 1480.0f, 12.0f, 0.45f, false, 0.0f }, { 370.0f, 5.0f, 0.45f, true, 0.0f }, { 740.0f, 10.0f, 0.45f, true, 0.0f },
+            { 46.0f, 3.0f, 0.60f, true, 0.05f }, { 370.0f, 8.0f, 0.35f, true, 0.0f }, { 370.0f, 9.0f, 0.45f, true, 0.03f },
+            { 370.0f, 4.0f, 0.50f, false, 0.0f },
+        };
+        for (int k = 0; k < 16; ++k)
+        {
+            const Voice& v = VOICES[k];
+            Synth s = make(static_cast<Sound>(static_cast<int>(Sound::NoteFirst) + k));
+            s.addTone(0.9f, v.hz, v.hz, v.decay, v.amp, v.square);
+            if (v.noise > 0.0f) s.addNoise(0.3f, v.hz * 4.0f, v.decay * 1.5f, v.noise, false, 1300 + k);
+            s.finish(0.8f);
+        }
+    }
     beastVoice(Sound::MobRabbitSay, Sound::MobRabbitHurt, Sound::MobRabbitDeath,
                620.0f, 0.10f, 0.14f, 1041);
     beastVoice(Sound::MobDonkeySay, Sound::MobDonkeyHurt, Sound::MobDonkeyDeath,
