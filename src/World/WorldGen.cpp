@@ -6011,14 +6011,49 @@ void WorldGen::plantChorus(Chunk& chunk) const
 
             if (ground < 0) continue;
 
-            const int tall = 3 + static_cast<int>(
-                hashToFloat(hashCoords(wx, 1, wz, m_seed ^ 0x6C470Bu)) * 4.0f);
-
-            for (int dy = 1; dy <= tall; ++dy)
+            uint32_t h = hashCoords(wx, 1, wz, m_seed ^ 0x6C470Bu) | 1u;
+            auto next = [&h]() {
+                h ^= h << 13;
+                h ^= h >> 17;
+                h ^= h << 5;
+                return h;
+            };
+            auto free = [&](int x, int y, int z) {
+                return x >= 0 && x < Chunk::SX && z >= 0 && z < Chunk::SZ && y > 0 && y < Chunk::SY - 1 && chunk.getBlock(x, y, z) == Blocks::Air;
+            };
+            static const int SIDES[4][2] = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } };
+            struct Stem { int x, y, z, depth; };
+            std::vector<Stem> stems{ { lx, ground + 1, lz, 0 } };
+            int placed = 0;
+            while (!stems.empty() && placed < 40)
             {
-                if (ground + dy >= Chunk::SY) break;
-                chunk.setBlockRaw(lx, ground + dy, lz,
-                                  dy == tall ? Blocks::ChorusFlower : Blocks::ChorusPlant);
+                const Stem stem = stems.back();
+                stems.pop_back();
+                const int tall = 1 + static_cast<int>(next() % (stem.depth == 0 ? 4u : 3u));
+                int y = stem.y;
+                bool blocked = false;
+                for (int k = 0; k < tall; ++k, ++y)
+                {
+                    if (!free(stem.x, y, stem.z)) { blocked = true; break; }
+                    chunk.setBlockRaw(stem.x, y, stem.z, Blocks::ChorusPlant);
+                    ++placed;
+                }
+                if (blocked) continue;
+                const int top = y - 1;
+                int branches = stem.depth >= 3 ? 0 : static_cast<int>(next() % 4u);
+                if (stem.depth == 0 && branches == 0) branches = 1;
+                bool grew = false;
+                for (int b = 0; b < branches; ++b)
+                {
+                    const int side = static_cast<int>(next() % 4u);
+                    const int bx = stem.x + SIDES[side][0], bz = stem.z + SIDES[side][1];
+                    if (!free(bx, top, bz) || !free(bx, top - 1, bz)) continue;
+                    chunk.setBlockRaw(bx, top, bz, Blocks::ChorusPlant);
+                    ++placed;
+                    stems.push_back({ bx, top + 1, bz, stem.depth + 1 });
+                    grew = true;
+                }
+                if (!grew && free(stem.x, top + 1, stem.z)) chunk.setBlockRaw(stem.x, top + 1, stem.z, Blocks::ChorusFlower);
             }
         }
 }

@@ -354,6 +354,7 @@ private:
     EntityShadowRenderer m_shadowSpots;
     bool m_entityShadows = true;
     bool m_autoJump = false;
+    bool m_endPlatformPending = false;
     bool m_showHitboxes = false;
     bool m_showChunkBorders = false;
     bool m_advancedTooltips = false;

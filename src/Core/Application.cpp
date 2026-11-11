@@ -825,6 +825,12 @@ void Application::travelTo(Dimension dimension)
     m_player.position = (dimension == Dimension::Overworld)
                             ? m_spawnPoint
                             : glm::vec3(0.5f, startY, 0.5f);
+    if (dimension == Dimension::End)
+    {
+        m_player.position = glm::vec3(100.5f, static_cast<float>(WorldGen::END_ISLAND_LEVEL - 11), 0.5f);
+        m_placeOnSurface = false;
+        m_endPlatformPending = true;
+    }
     m_player.velocity = glm::vec3(0.0f);
     m_camera.position = m_player.eyePosition();
 
@@ -9296,6 +9302,20 @@ void Application::waitForSpawnChunk()
 
     const Chunk* chunk = m_world->chunkAt(chunkX, chunkZ);
     if (!chunk || chunk->state.load() != ChunkState::Lit) return;
+
+    if (m_endPlatformPending && m_dimension == Dimension::End)
+    {
+        m_endPlatformPending = false;
+        const int y = WorldGen::END_ISLAND_LEVEL - 12;
+        for (int dx = -2; dx <= 2; ++dx)
+            for (int dz = -2; dz <= 2; ++dz)
+            {
+                m_world->setBlock(100 + dx, y, dz, Blocks::Obsidian);
+                for (int up = 1; up <= 3; ++up) m_world->setBlock(100 + dx, y + up, dz, Blocks::Air);
+            }
+        m_player.position = glm::vec3(100.5f, static_cast<float>(y + 1), 0.5f);
+        m_player.velocity = glm::vec3(0.0f);
+    }
 
     if (m_bedPending)
     {
