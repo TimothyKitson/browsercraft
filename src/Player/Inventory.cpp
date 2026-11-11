@@ -1,5 +1,6 @@
 #include "Game/Anvil.h"
 #include "Inventory.h"
+#include "Game/Enchanting.h"
 #include "Game/Armour.h"
 #include "Game/Crafting.h"
 #include "Game/Items.h"
@@ -227,6 +228,7 @@ bool Inventory::wear(ItemStack& from)
     const int piece = Armour::slotFor(from.id);
     if (piece < 0 || piece >= ARMOR_SLOTS) return false;
 
+    if (bound(ARMOR_FIRST + piece)) return false;
     ItemStack& worn = m_slots[ARMOR_FIRST + piece];
 
     // What was there comes off in exchange, so swapping one helmet for
@@ -235,9 +237,17 @@ bool Inventory::wear(ItemStack& from)
     return true;
 }
 
+bool Inventory::bound(int index) const
+{
+    if (!bindingHolds || index < ARMOR_FIRST || index >= ARMOR_FIRST + ARMOR_SLOTS) return false;
+    const ItemStack& worn = m_slots[index];
+    return !worn.empty() && Enchanting::has(worn.enchantments, Enchanting::Kind::BindingCurse);
+}
+
 void Inventory::leftClick(int index)
 {
     if (index < 0 || index >= SLOT_COUNT) return;
+    if (bound(index)) return;
     if (index == CRAFT_RESULT) { takeCraftResult(); return; }
 
     ItemStack& target = m_slots[index];
@@ -283,6 +293,7 @@ void Inventory::leftClick(int index)
 void Inventory::rightClick(int index)
 {
     if (index < 0 || index >= SLOT_COUNT) return;
+    if (bound(index)) return;
     if (index == CRAFT_RESULT) { takeCraftResult(); return; }
     if (index == FURNACE_OUTPUT && !m_cursor.empty()) return;
     if (!m_cursor.empty() && !belongsIn(index, m_cursor.id))
@@ -322,6 +333,7 @@ void Inventory::rightClick(int index)
 void Inventory::quickMove(int index)
 {
     if (index < 0 || index >= SLOT_COUNT) return;
+    if (bound(index)) return;
 
     // Shift-clicking the result slot crafts as many times as the
     // ingredients and the free space allow -- the usual way to turn a

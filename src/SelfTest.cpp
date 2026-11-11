@@ -12740,6 +12740,85 @@ namespace
 
         check(!Enchanting::any(0u), "nothing enchanted is an empty set");
 
+        section("enchanting: the thirty that 1.21.1 added");
+        {
+            check(Enchanting::KIND_COUNT == 38, "thirty-eight kinds, the ones a trident keeps apart aside");
+            Enchanting::Set wide = Enchanting::withLevel(0u, Kind::Mending, 1);
+            wide = Enchanting::withLevel(wide, Kind::Unbreaking, 3);
+            wide = Enchanting::withLevel(wide, Kind::Smite, 5) | 0x5A000000u;
+            check(Enchanting::levelOf(wide, Kind::Mending) == 1 && Enchanting::levelOf(wide, Kind::Unbreaking) == 3 &&
+                  Enchanting::levelOf(wide, Kind::Smite) == 5, "a sword carries mending, unbreaking and smite at once");
+            const Enchanting::Set same = Enchanting::withLevel(Enchanting::withLevel(Enchanting::withLevel(0u, Kind::Smite, 5), Kind::Unbreaking, 3), Kind::Mending, 1);
+            check((wide & Enchanting::KIND_BITS) == (same & Enchanting::KIND_BITS), "the same set is the same word, so stacks still compare");
+            const Enchanting::Set retrimmed = Enchanting::withLevel(wide, Kind::Smite, 4);
+            check((retrimmed >> 24) == 0x5Au, "and what shares the top byte survives a change");
+            check(Enchanting::listOf(wide).size() == 3, "all three are listed");
+            const Enchanting::Set plain = Enchanting::withLevel(wide, Kind::Mending, 0);
+            const Enchanting::Set back = Enchanting::withLevel(plain, Kind::Smite, 0);
+            check(back == (Enchanting::withLevel(0u, Kind::Unbreaking, 3) | 0x5A000000u), "taking the new ones off packs it back into the old word");
+            const std::string saved = Enchanting::librarySave();
+            const size_t shelved = Enchanting::librarySize();
+            Enchanting::libraryLoad(saved);
+            check(Enchanting::librarySize() == shelved && Enchanting::levelOf(wide, Kind::Smite) == 5,
+                  "the shelf of wide sets is saved with the world and read back the same");
+            check(std::string(Enchanting::idOf(Kind::BindingCurse)) == "binding_curse" && std::string(Enchanting::name(Kind::VanishingCurse)) == "Curse of Vanishing",
+                  "the curses have their 1.21.1 ids and names");
+            check(Enchanting::conflicts(Kind::Protection, Kind::BlastProtection) && Enchanting::conflicts(Kind::Sharpness, Kind::Smite) &&
+                  Enchanting::conflicts(Kind::Infinity, Kind::Mending) && Enchanting::conflicts(Kind::Multishot, Kind::Piercing) &&
+                  Enchanting::conflicts(Kind::DepthStrider, Kind::FrostWalker) && !Enchanting::conflicts(Kind::Smite, Kind::Looting),
+                  "the 1.21.1 exclusive sets");
+            check(Enchanting::appliesTo(Kind::Looting, Items::DiamondSword) && !Enchanting::appliesTo(Kind::Looting, Items::DiamondAxe) &&
+                  Enchanting::appliesTo(Kind::Respiration, Items::IronHelmet) && !Enchanting::appliesTo(Kind::Respiration, Items::IronBoots) &&
+                  Enchanting::appliesTo(Kind::DepthStrider, Items::IronBoots) && Enchanting::appliesTo(Kind::SwiftSneak, Items::IronLeggings) &&
+                  Enchanting::appliesTo(Kind::Multishot, Items::Crossbow) && Enchanting::appliesTo(Kind::Lure, Items::FishingRod) &&
+                  Enchanting::appliesTo(Kind::Density, Items::Mace) && Enchanting::appliesTo(Kind::Infinity, Items::Bow) &&
+                  Enchanting::appliesTo(Kind::Mending, Items::Elytra) && Enchanting::appliesTo(Kind::BindingCurse, Items::Elytra),
+                  "each goes where 1.21.1 puts it");
+            check(Enchanting::isTreasure(Kind::Mending) && Enchanting::isTreasure(Kind::SoulSpeed) && !Enchanting::isTreasure(Kind::Looting),
+                  "mending, soul speed and the curses never come off the table");
+            bool tableClean = true;
+            for (uint32_t roll = 1; roll < 200; ++roll)
+                for (int row = 0; row < 3; ++row)
+                {
+                    const Enchanting::Offer offer = Enchanting::offerFor(row, 15, Items::DiamondSword, roll * 7919u);
+                    if (offer.valid() && (Enchanting::isTreasure(offer.kind) || !Enchanting::appliesTo(offer.kind, Items::DiamondSword))) tableClean = false;
+                }
+            check(tableClean, "the table offers the new sword ones but never a treasure");
+
+            const Enchanting::Set blast = Enchanting::withLevel(0u, Kind::BlastProtection, 4);
+            check(Enchanting::protectionFactor(blast, Enchanting::Hurt::Blast) == 8 && Enchanting::protectionFactor(blast, Enchanting::Hurt::Plain) == 0,
+                  "blast protection only counts against explosions");
+            check(Enchanting::protectionFactor(Enchanting::withLevel(0u, Kind::FeatherFalling, 4), Enchanting::Hurt::Fall) == 12, "feather falling is three a level");
+            check(Enchanting::reducedByFactor(20, 10) == 2 && Enchanting::reducedByFactor(40, 10) == 2, "four percent a point, capped at eighty");
+            check(Enchanting::extraDamageAgainst(Enchanting::withLevel(0u, Kind::Smite, 2), true, false) == 5.0f &&
+                  Enchanting::extraDamageAgainst(Enchanting::withLevel(0u, Kind::Smite, 2), false, true) == 0.0f, "smite is for the undead");
+
+            Player suited(glm::vec3(0.0f));
+            suited.armourEnchants[3] = Enchanting::withLevel(0u, Kind::FeatherFalling, 4);
+            suited.cause = "fall";
+            suited.damage(10);
+            check(suited.health == Player::MAX_HEALTH - 5, "feather falling IV halves a fall");
+            Player other(glm::vec3(0.0f));
+            other.armourEnchants[3] = Enchanting::withLevel(0u, Kind::FeatherFalling, 4);
+            other.cause = "generic";
+            other.damage(10);
+            check(other.health == Player::MAX_HEALTH - 10, "and does nothing for a punch");
+
+            Anvil::Input cursed{ Items::DiamondSword, 1, 40, Enchanting::withLevel(Enchanting::withLevel(0u, Kind::Sharpness, 3), Kind::VanishingCurse, 1) };
+            const Grindstone::Result ground = Grindstone::combine(cursed, Anvil::Input{ Blocks::Air, 0, 0, 0u });
+            check(ground.valid && !Enchanting::has(ground.enchantments, Kind::Sharpness) && Enchanting::has(ground.enchantments, Kind::VanishingCurse),
+                  "a grindstone takes everything off but a curse");
+
+            Inventory worn;
+            worn.slot(Inventory::ARMOR_FIRST) = ItemStack{ Items::IronHelmet, 1, 0, Enchanting::withLevel(0u, Kind::BindingCurse, 1) };
+            worn.leftClick(Inventory::ARMOR_FIRST);
+            check(worn.cursor().empty() && !worn.slot(Inventory::ARMOR_FIRST).empty(), "curse of binding keeps a helmet on");
+            worn.bindingHolds = false;
+            worn.leftClick(Inventory::ARMOR_FIRST);
+            check(!worn.cursor().empty(), "except in creative");
+            check(Chat::parse("/enchant @s binding_curse", true).kind == Chat::Kind::Enchant, "/enchant knows the curses by id");
+        }
+
         section("enchanting: what goes on what");
 
         check(Enchanting::appliesTo(Kind::Efficiency, Items::DiamondPickaxe),

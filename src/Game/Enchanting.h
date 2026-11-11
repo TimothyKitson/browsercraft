@@ -32,8 +32,41 @@ namespace Enchanting
         Protection,       // takes less
         Power,            // arrows hit harder
         FrostWalker,
+        FireProtection,
+        FeatherFalling,
+        BlastProtection,
+        ProjectileProtection,
+        Respiration,
+        AquaAffinity,
+        Thorns,
+        DepthStrider,
+        BindingCurse,
+        SoulSpeed,
+        SwiftSneak,
+        Smite,
+        BaneOfArthropods,
+        Knockback,
+        FireAspect,
+        Looting,
+        SweepingEdge,
+        Punch,
+        Flame,
+        Infinity,
+        LuckOfTheSea,
+        Lure,
+        Multishot,
+        QuickCharge,
+        Piercing,
+        Density,
+        Breach,
+        WindBurst,
+        Mending,
+        VanishingCurse,
         Count
     };
+
+    constexpr int PACKED_KINDS = 8;
+    constexpr int KIND_COUNT = static_cast<int>(Kind::Count);
 
     // Three bits each, so no kind may go past seven.
     constexpr int BITS_PER_KIND = 3;
@@ -42,8 +75,15 @@ namespace Enchanting
 
     using Set = uint32_t;
 
-    static_assert(static_cast<int>(Kind::Count) * BITS_PER_KIND <= 24,
+    static_assert(PACKED_KINDS * BITS_PER_KIND <= 24,
                   "the enchantment set no longer leaves the top byte for a trim");
+
+    std::string librarySave();
+    void libraryLoad(const std::string& text);
+    void libraryClear();
+    size_t librarySize();
+    bool isCurse(Kind kind);
+    const char* idOf(Kind kind);
 
     bool glints(StackId id, Set set);
 
@@ -174,4 +214,11 @@ namespace Enchanting
     // Protection takes a slice off what gets through the armour, capped
     // the way Minecraft caps it so no amount of it makes you proof.
     int protectionReduced(Set set, int damage);
+
+    enum class Hurt { Plain, Fire, Blast, Projectile, Fall, Unprotected };
+    int protectionFactor(Set set, Hurt hurt);
+    int reducedByFactor(int factor, int damage);
+    float burnScale(Set set);
+    bool breathHeld(Set helmet, uint32_t roll);
+    float extraDamageAgainst(Set set, bool undead, bool arthropod);
 }

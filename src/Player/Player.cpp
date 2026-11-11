@@ -437,7 +437,9 @@ bool Player::isInFire(const World& world) const
 void Player::ignite(float seconds)
 {
     if (exempt() || health <= 0 || Effects::fireImmune(effects)) return;
-    m_fireSeconds = std::max(m_fireSeconds, seconds);
+    float scale = 1.0f;
+    for (uint32_t set : armourEnchants) scale = std::min(scale, Enchanting::burnScale(set));
+    m_fireSeconds = std::max(m_fireSeconds, seconds * scale);
 }
 
 bool Player::burn(float deltaTime, bool inLava)
@@ -452,7 +454,12 @@ bool Player::burn(float deltaTime, bool inLava)
 
     // Lava sets you alight as well as cooking you, so climbing out of
     // it is not the end of it.
-    if (inLava) m_fireSeconds = LAVA_FIRE_SECONDS;
+    if (inLava)
+    {
+        float scale = 1.0f;
+        for (uint32_t set : armourEnchants) scale = std::min(scale, Enchanting::burnScale(set));
+        m_fireSeconds = LAVA_FIRE_SECONDS * scale;
+    }
 
     if (!inLava)
     {
@@ -497,10 +504,26 @@ bool Player::damage(int amount, bool throughArmour)
 
     if (!throughArmour) amount = Armour::reduce(amount, armourPoints);
 
-    // Protection takes its slice after the armour has taken its own,
-    // which is the order Minecraft applies them in and the reason a
-    // protected leather suit is worth more than its points suggest.
-    amount = Enchanting::protectionReduced(protection, amount);
+    {
+        const std::string why = cause ? cause : "";
+        Enchanting::Hurt hurt = Enchanting::Hurt::Plain;
+        if (projectileHit) hurt = Enchanting::Hurt::Projectile;
+        else if (why == "onFire" || why == "lava" || why == "hotFloor" || why == "inFire" || why == "campfire") hurt = Enchanting::Hurt::Fire;
+        else if (why == "explosion") hurt = Enchanting::Hurt::Blast;
+        else if (why == "fall" || why == "stalagmite" || why == "enderPearl") hurt = Enchanting::Hurt::Fall;
+        else if (why == "starve" || why == "kill" || why == "outOfWorld") hurt = Enchanting::Hurt::Unprotected;
+        projectileHit = false;
+        bool suit = false;
+        int factor = 0;
+        for (uint32_t set : armourEnchants)
+        {
+            if (!Enchanting::any(set)) continue;
+            suit = true;
+            factor += Enchanting::protectionFactor(set, hurt);
+        }
+        if (suit) amount = Enchanting::reducedByFactor(factor, amount);
+        else if (hurt != Enchanting::Hurt::Unprotected) amount = Enchanting::protectionReduced(protection, amount);
+    }
     const int unresisted = amount;
     amount = Effects::resisted(effects, amount);
     if (unresisted > amount) m_tally.resisted += unresisted - amount;
@@ -624,7 +647,8 @@ bool Player::breathe(float deltaTime, bool headUnderwater)
 
     if (air > 0.0f)
     {
-        air = std::max(0.0f, air - deltaTime);
+        const float held = static_cast<float>(Enchanting::levelOf(armourEnchants[0], Enchanting::Kind::Respiration));
+        air = std::max(0.0f, air - deltaTime / (1.0f + held));
         m_drownTimer = 0.0f;
         return false;
     }
@@ -699,8 +723,14 @@ void Player::update(float deltaTime, const World& world, const Controls& control
     // --- choose a target horizontal velocity ---
     float targetSpeed;
     if (flying) targetSpeed = (controls.sprint ? FLY_SPRINT_SPEED : FLY_SPEED) * (spectator() ? flySpeedScale : 1.0f);
-    else if (inWater) targetSpeed = SWIM_SPEED * Effects::swimMultiplier(effects);
-    else if (sneaking) targetSpeed = SNEAK_SPEED;
+    else if (inWater)
+    {
+        const float strider = static_cast<float>(std::min(3, Enchanting::levelOf(armourEnchants[3], Enchanting::Kind::DepthStrider))) / 3.0f;
+        const float landPace = sprinting ? SPRINT_SPEED : WALK_SPEED;
+        targetSpeed = (SWIM_SPEED + (landPace - SWIM_SPEED) * strider) * Effects::swimMultiplier(effects);
+    }
+    else if (sneaking)
+        targetSpeed = std::min(WALK_SPEED, SNEAK_SPEED * (1.0f + 0.5f * static_cast<float>(Enchanting::levelOf(armourEnchants[2], Enchanting::Kind::SwiftSneak))));
     else if (sprinting) targetSpeed = SPRINT_SPEED;
     else targetSpeed = WALK_SPEED;
 
@@ -736,7 +766,10 @@ void Player::update(float deltaTime, const World& world, const Controls& control
         const BlockId under = world.getBlock(static_cast<int>(std::floor(position.x)),
                                              static_cast<int>(std::floor(position.y - 0.1f)),
                                              static_cast<int>(std::floor(position.z)));
-        if (under == Blocks::HoneyBlock || under == Blocks::SoulSand) targetSpeed *= 0.4f;
+        const int soulSpeed = Enchanting::levelOf(armourEnchants[3], Enchanting::Kind::SoulSpeed);
+        if (soulSpeed > 0 && (under == Blocks::SoulSand || under == Blocks::SoulSoil))
+            targetSpeed *= 1.3f + 0.105f * static_cast<float>(soulSpeed);
+        else if (under == Blocks::HoneyBlock || under == Blocks::SoulSand) targetSpeed *= 0.4f;
     }
 
     const glm::vec3 targetVelocity = controls.wishDirection * targetSpeed;

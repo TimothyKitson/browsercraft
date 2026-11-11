@@ -218,6 +218,8 @@ public:
     //
     // Left: pick the whole stack up, put the whole stack down, merge into
     // a matching stack, or swap. Right: pick up half, or put one down.
+    bool bindingHolds = true;
+    bool bound(int index) const;
     void leftClick(int index);
     void rightClick(int index);
     // Shift-click teleports a stack between the hotbar and the storage

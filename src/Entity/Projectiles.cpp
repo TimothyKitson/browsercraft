@@ -130,8 +130,19 @@ void Projectiles::update(float deltaTime, const Blocks& blocks, Targets& targets
             // it -- that is what the flag is for.
             targets.effect = arrow.effect;
             targets.shooter = arrow.shooter;
-            if (targets.strike(next, arrow.damage, arrow.fromPlayer, arrow.kind))
+            targets.punch = arrow.punch;
+            targets.flame = arrow.flame;
+            targets.heading = arrow.velocity;
+            if (arrow.passing > 0.0f) arrow.passing -= glm::length(slice);
+            else if (targets.strike(next, arrow.damage, arrow.fromPlayer, arrow.kind))
             {
+                if (arrow.pierce > 0 && arrow.fromPlayer && arrow.shaft() && arrow.kind != Arrows::Kind::Trident)
+                {
+                    --arrow.pierce;
+                    arrow.passing = 0.9f;
+                    arrow.position = next;
+                    continue;
+                }
                 if (arrow.bursts()) targets.burst(next, arrow.kind, arrow.fromPlayer);
                 done = true;
                 break;

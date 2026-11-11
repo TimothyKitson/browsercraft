@@ -1,5 +1,6 @@
 #include "Grindstone.h"
 #include <algorithm>
+#include <initializer_list>
 
 int Grindstone::minPower(Enchanting::Kind kind, int level)
 {
@@ -13,7 +14,20 @@ int Grindstone::minPower(Enchanting::Kind kind, int level)
         case Enchanting::Kind::Sharpness:  return 1 + 11 * extra;
         case Enchanting::Kind::Protection: return 1 + 11 * extra;
         case Enchanting::Kind::Power:      return 1 + 10 * extra;
-        default:                           return 0;
+        case Enchanting::Kind::BindingCurse:
+        case Enchanting::Kind::VanishingCurse: return 0;
+        default:                           return 1 + 10 * extra;
+    }
+}
+
+namespace
+{
+    Enchanting::Set cursesOf(Enchanting::Set set, StackId id)
+    {
+        Enchanting::Set kept = id == Items::Trident ? 0u : (set & ~Enchanting::KIND_BITS);
+        for (Enchanting::Kind curse : { Enchanting::Kind::BindingCurse, Enchanting::Kind::VanishingCurse })
+            kept = Enchanting::withLevel(kept, curse, Enchanting::levelOf(set, curse));
+        return kept;
     }
 }
 
@@ -51,6 +65,7 @@ Grindstone::Result Grindstone::combine(const Anvil::Input& top, const Anvil::Inp
         out.id = only.id == Items::EnchantedBook ? static_cast<StackId>(Items::Book) : only.id;
         out.count = only.count;
         out.damage = only.damage;
+        out.enchantments = cursesOf(only.enchantments, only.id);
         return out;
     }
 
@@ -65,5 +80,9 @@ Grindstone::Result Grindstone::combine(const Anvil::Input& top, const Anvil::Inp
     out.id = top.id;
     out.count = 1;
     out.damage = std::max(most - healed, 0);
+    out.enchantments = cursesOf(top.enchantments, top.id);
+    for (Enchanting::Kind curse : { Enchanting::Kind::BindingCurse, Enchanting::Kind::VanishingCurse })
+        out.enchantments = Enchanting::withLevel(out.enchantments, curse,
+                                                 std::max(Enchanting::levelOf(out.enchantments, curse), Enchanting::levelOf(bottom.enchantments, curse)));
     return out;
 }

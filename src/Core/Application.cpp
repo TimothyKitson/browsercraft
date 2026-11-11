@@ -873,6 +873,12 @@ void Application::loadLevel()
             m_rules.load(text.str());
         }
     }
+    {
+        std::ifstream shelf(m_savePath + "/enchantments.txt");
+        std::stringstream text;
+        if (shelf) text << shelf.rdbuf();
+        Enchanting::libraryLoad(text.str());
+    }
     m_shulkerStore.clear();
     {
         std::ifstream boxes(m_savePath + "/shulkers.txt");
@@ -1318,6 +1324,10 @@ void Application::saveLevel()
         if (rules) rules << m_rules.save();
     }
     saveMobs();
+    {
+        std::ofstream shelf(m_savePath + "/enchantments.txt");
+        if (shelf) shelf << Enchanting::librarySave();
+    }
     {
         std::ofstream boxes(m_savePath + "/shulkers.txt");
         if (boxes)
@@ -2615,9 +2625,23 @@ bool Application::frame()
             // Orbs report what they were worth rather than touching the
             // player, so the one place experience is ever added stays
             // the one place the level-up chime is decided.
-            if (const int gained = m_orbs.update(deltaTime, *m_world, m_player, m_audio))
+            if (int gained = m_orbs.update(deltaTime, *m_world, m_player, m_audio))
             {
-                if (m_player.addExperience(gained))
+                std::vector<ItemStack*> mendable;
+                auto consider = [&](ItemStack& stack) {
+                    if (!stack.empty() && stack.damage > 0 && Enchanting::has(stack.enchantments, Enchanting::Kind::Mending)) mendable.push_back(&stack);
+                };
+                consider(m_inventory.selected());
+                consider(m_inventory.slot(Inventory::OFFHAND));
+                for (int i = 0; i < Inventory::ARMOR_SLOTS; ++i) consider(m_inventory.slot(Inventory::ARMOR_FIRST + i));
+                if (!mendable.empty())
+                {
+                    ItemStack& mend = *mendable[hashCoords(static_cast<int>(m_elapsedSeconds * 20.0f), gained, 0, 0x3E4Du) % mendable.size()];
+                    const int repaired = std::min(mend.damage, gained * 2);
+                    mend.damage -= repaired;
+                    gained -= (repaired + 1) / 2;
+                }
+                if (gained > 0 && m_player.addExperience(gained))
                     m_audio.play(Sound::Pickup, 0.7f, 0.55f);
             }
             m_particles.update(deltaTime, *m_world);
@@ -2887,6 +2911,9 @@ bool Application::frame()
         // between one blow and the next.
         m_player.armourPoints = armourPoints();
         m_player.protection = armourProtection();
+        m_inventory.bindingHolds = !m_player.creative();
+        for (int i = 0; i < Inventory::ARMOR_SLOTS; ++i)
+            m_player.armourEnchants[static_cast<size_t>(i)] = m_inventory.slot(Inventory::ARMOR_FIRST + i).empty() ? 0u : m_inventory.slot(Inventory::ARMOR_FIRST + i).enchantments;
         m_player.holdingTotem = m_inventory.selected().id == Items::TotemOfUndying;
 
         // And if one was spent, it goes: a totem works once, in the
@@ -2988,12 +3015,20 @@ bool Application::frame()
                 {
                     ItemStack& stack = m_inventory.slot(i);
                     if (stack.empty()) continue;
+                    if (Enchanting::has(stack.enchantments, Enchanting::Kind::VanishingCurse) && Enchanting::appliesTo(Enchanting::Kind::VanishingCurse, stack.id))
+                    {
+                        stack.clear();
+                        continue;
+                    }
                     m_drops.spawnStack(m_player.position + glm::vec3(0.0f, 0.8f, 0.0f), stack);
                     m_drops.flingLast(glm::vec3(std::sin(static_cast<float>(i) * 2.4f) * 2.0f, 2.5f,
                                                 std::cos(static_cast<float>(i) * 2.4f) * 2.0f));
                     stack.clear();
                 }
                 ItemStack& offhand = m_inventory.slot(Inventory::OFFHAND);
+                if (!offhand.empty() && Enchanting::has(offhand.enchantments, Enchanting::Kind::VanishingCurse) &&
+                    Enchanting::appliesTo(Enchanting::Kind::VanishingCurse, offhand.id))
+                    offhand.clear();
                 if (!offhand.empty())
                 {
                     m_drops.spawnStack(m_player.position + glm::vec3(0.0f, 0.8f, 0.0f), offhand);
@@ -9118,13 +9153,46 @@ void Application::updateMining(float deltaTime)
                                       ? Tools::maceSmashBonus(fallen)
                                       : 0;
 
+                const Enchanting::Set edge = m_inventory.selected().enchantments;
+                const MobId struck = target->typeId();
+                const bool arthropod = struck == MobId::Spider || struck == MobId::CaveSpider || struck == MobId::Silverfish ||
+                                       struck == MobId::Endermite || struck == MobId::Bee;
                 float base = static_cast<float>(Tools::attackDamage(weapon) + Effects::attackBonus(m_player.effects));
                 base *= 0.2f + strength * strength * 0.8f;
                 if (critical) base *= 1.5f;
-                const float bonus = static_cast<float>(Enchanting::sharpnessBonus(m_inventory.selected().enchantments)) * strength;
-                const int blow = std::max(0, static_cast<int>(std::lround(base + bonus)) + smash);
+                const float bonus = (static_cast<float>(Enchanting::sharpnessBonus(edge)) +
+                                     Enchanting::extraDamageAgainst(edge, isUndead(struck), arthropod)) * strength;
+                const int density = smash > 0 ? static_cast<int>(0.5f * fallen * static_cast<float>(Enchanting::levelOf(edge, Enchanting::Kind::Density))) : 0;
+                const int blow = std::max(0, static_cast<int>(std::lround(base + bonus)) + smash + density);
+                const bool sprintHit = charged && m_player.sprinting;
                 if (target->strike(blow, target->position() - m_player.position))
                 {
+                    const int knock = Enchanting::levelOf(edge, Enchanting::Kind::Knockback) + (sprintHit ? 1 : 0);
+                    glm::vec3 away = target->position() - m_player.position;
+                    away.y = 0.0f;
+                    if (knock > 0 && glm::length(away) > 0.01f)
+                        target->shove(glm::normalize(away) * (2.5f * static_cast<float>(knock)) + glm::vec3(0.0f, 1.0f, 0.0f));
+                    if (sprintHit) m_player.sprinting = false;
+                    const int aspect = Enchanting::levelOf(edge, Enchanting::Kind::FireAspect);
+                    if (aspect > 0) target->ignite(4.0f * static_cast<float>(aspect));
+                    if (arthropod && Enchanting::has(edge, Enchanting::Kind::BaneOfArthropods))
+                        target->giveEffect(Effects::Kind::Slowness, 3, 1.0f + 0.5f * static_cast<float>(Enchanting::levelOf(edge, Enchanting::Kind::BaneOfArthropods) % 2));
+                    if (Tools::kindOf(weapon) == Tools::Kind::Sword && charged && !critical && !sprintHit && m_player.onGround)
+                    {
+                        const int sweeping = Enchanting::levelOf(edge, Enchanting::Kind::SweepingEdge);
+                        const int sweep = 1 + static_cast<int>(base * static_cast<float>(sweeping) / static_cast<float>(sweeping + 1));
+                        for (Mob& other : m_entities.mobs())
+                        {
+                            if (&other == target || !other.alive()) continue;
+                            const glm::vec3 gap = other.position() - target->position();
+                            if (std::abs(gap.x) > 1.0f + other.width() * 0.5f || std::abs(gap.z) > 1.0f + other.width() * 0.5f || std::abs(gap.y) > 0.5f) continue;
+                            if (glm::length(other.position() - m_player.position) > 3.0f) continue;
+                            glm::vec3 push = other.position() - m_player.position;
+                            push.y = 0.0f;
+                            other.strike(sweep, push);
+                            other.markPlayerHit(0, glm::length(push));
+                        }
+                    }
                     m_stats.add(Stats::Custom::DamageDealt, static_cast<long long>(blow) * 10);
                     if (Tools::isTool(weapon) || weapon == Items::Trident) m_stats.item(Stats::ItemStat::Used, weapon);
                 }
@@ -9151,6 +9219,13 @@ void Application::updateMining(float deltaTime)
                 {
                     m_player.clearFall();
                     m_player.velocity.y = std::max(m_player.velocity.y, 0.0f);
+                    const int burst = Enchanting::levelOf(m_inventory.selected().enchantments, Enchanting::Kind::WindBurst);
+                    if (burst > 0)
+                    {
+                        m_player.velocity.y = std::sqrt(2.0f * 30.0f * (4.0f + 4.0f * static_cast<float>(burst)));
+                        sprites(SpriteParticles::Kind::Gust, m_player.position, 4, 0.6f, 1.5f, 0.6f, 0.5f);
+                        m_audio.play(Sound::WindBurst, 0.8f, 1.0f);
+                    }
                     m_audio.play(Sound::Land, 0.9f, 0.7f);
                     m_particles.spawnBlockBreak(
                         glm::ivec3(glm::floor(target->position())), Blocks::Stone);
@@ -9211,6 +9286,13 @@ void Application::updateMining(float deltaTime)
     // and a block and knows nothing about what has been put on it.
     if (seconds > 0.0f)
         seconds /= Enchanting::digSpeedMultiplier(m_inventory.selected().enchantments) * Effects::digMultiplier(m_player.effects);
+    if (seconds > 0.0f && !m_player.creative())
+    {
+        const ItemStack& helmet = m_inventory.slot(Inventory::ARMOR_FIRST);
+        if (m_player.isHeadUnderwater(*m_world) && (helmet.empty() || !Enchanting::has(helmet.enchantments, Enchanting::Kind::AquaAffinity)))
+            seconds *= 5.0f;
+        if (!m_player.onGround && !m_player.flying) seconds *= 5.0f;
+    }
     if (seconds < 0.0f && !(m_player.creative() && isCreativeOnly(id))) return;
 
     if (m_player.creative() || seconds <= 0.0f)
@@ -14626,7 +14708,7 @@ void Application::updateCrossbow(float deltaTime)
             const float before = m_crossbowCharge;
             m_crossbowCharge += deltaTime;
             if (before < 0.3f && m_crossbowCharge >= 0.3f) m_audio.play(Sound::Click, 0.4f, 0.7f);
-            if (m_crossbowCharge < Crossbows::CHARGE_SECONDS) return;
+            if (m_crossbowCharge < std::max(0.25f, Crossbows::CHARGE_SECONDS - 0.25f * static_cast<float>(Enchanting::levelOf(held.enchantments, Enchanting::Kind::QuickCharge)))) return;
             held.enchantments = Crossbows::withLoad(held.enchantments, Crossbows::Firework, Fireworks::library().crossbowSlot(offhand.damage));
             if (!m_player.creative() && --offhand.count <= 0) offhand.clear();
             m_crossbowCharge = 0.0f;
@@ -14642,7 +14724,8 @@ void Application::updateCrossbow(float deltaTime)
         const float before = m_crossbowCharge;
         m_crossbowCharge += deltaTime;
         if (before < 0.3f && m_crossbowCharge >= 0.3f) m_audio.play(Sound::Click, 0.4f, 0.7f);
-        if (m_crossbowCharge < Crossbows::CHARGE_SECONDS) return;
+        const float chargeNeeded = std::max(0.25f, Crossbows::CHARGE_SECONDS - 0.25f * static_cast<float>(Enchanting::levelOf(held.enchantments, Enchanting::Kind::QuickCharge)));
+        if (m_crossbowCharge < chargeNeeded) return;
         int kind = Crossbows::Arrow, effect = 0;
         if (slot >= 0)
         {
@@ -14672,7 +14755,14 @@ void Application::updateCrossbow(float deltaTime)
     }
     const Arrows::Kind kind = load == Crossbows::Spectral ? Arrows::Kind::Spectral
                             : load == Crossbows::Tipped ? Arrows::Kind::Tipped : Arrows::Kind::Shaft;
-    m_arrows.spawn(from, m_camera.front * Crossbows::ARROW_SPEED, 9, true, kind, Crossbows::effectOf(held.enchantments));
+    const int pierce = Enchanting::levelOf(held.enchantments, Enchanting::Kind::Piercing);
+    const bool multishot = Enchanting::has(held.enchantments, Enchanting::Kind::Multishot);
+    for (int spread = multishot ? -1 : 0; spread <= (multishot ? 1 : 0); ++spread)
+    {
+        const glm::vec3 aim = glm::rotate(glm::mat4(1.0f), glm::radians(10.0f * static_cast<float>(spread)), glm::vec3(0.0f, 1.0f, 0.0f)) * glm::vec4(m_camera.front, 0.0f);
+        m_arrows.spawn(from, aim * Crossbows::ARROW_SPEED, 9, true, kind, Crossbows::effectOf(held.enchantments));
+        m_arrows.enchantLast(0, false, pierce);
+    }
     award("adventure/ol_betsy", "shot_crossbow");
     held.enchantments = Crossbows::withLoad(held.enchantments, Crossbows::Empty);
     m_crossbowHeldOver = true;
@@ -14687,12 +14777,14 @@ void Application::looseArrow(float drawn)
     Arrows::Kind kind = Arrows::Kind::Shaft;
     int effect = 0;
     const int slot = ammoSlot();
+    const Enchanting::Set bow = m_inventory.selected().enchantments;
     if (slot >= 0)
     {
         ItemStack& ammo = m_inventory.slot(slot);
         kind = ammo.id == Items::SpectralArrow ? Arrows::Kind::Spectral : ammo.id == Items::TippedArrow ? Arrows::Kind::Tipped : Arrows::Kind::Shaft;
         effect = ammo.damage;
-        if (!m_player.creative() && --ammo.count <= 0) ammo.clear();
+        const bool endless = ammo.id == Items::Arrow && Enchanting::has(bow, Enchanting::Kind::Infinity);
+        if (!m_player.creative() && !endless && --ammo.count <= 0) ammo.clear();
     }
     else if (!m_player.creative())
         return;
@@ -14703,6 +14795,7 @@ void Application::looseArrow(float drawn)
                        Enchanting::powerBonus(m_inventory.selected().enchantments,
                                               Arrows::damageFor(drawn)),
                    true, kind, effect);
+    m_arrows.enchantLast(Enchanting::levelOf(bow, Enchanting::Kind::Punch), Enchanting::has(bow, Enchanting::Kind::Flame), 0);
 
     m_heldItem.swing();
     m_audio.play(Sound::Click, 0.5f, 1.4f);
@@ -14883,6 +14976,12 @@ namespace
                     else if (striking != Arrows::Kind::XpBottle && striking != Arrows::Kind::Potion)
                     {
                         mob.damage(damage, feet - point);
+                        if (punch > 0)
+                        {
+                            const glm::vec3 push(heading.x, 0.0f, heading.z);
+                            if (glm::length(push) > 0.01f) mob.shove(glm::normalize(push) * (0.6f * static_cast<float>(punch)) + glm::vec3(0.0f, 0.1f, 0.0f));
+                        }
+                        if (flame) mob.ignite(5.0f);
                         mob.markPlayerHit(striking == Arrows::Kind::Trident ? 3 : 1, glm::length(feet - player->position));
                         if (striking == Arrows::Kind::Trident) ++tridentHits;
                         if (striking == Arrows::Kind::Shaft || striking == Arrows::Kind::Spectral || striking == Arrows::Kind::Tipped) ++arrowHits;
@@ -14922,6 +15021,7 @@ namespace
                 return true;
             }
 
+            player->projectileHit = true;
             if (player->damage(Player::scaledByDifficulty(damage, player->difficulty)))
             {
                 ++playerHits;
@@ -20143,7 +20243,7 @@ void Application::reelBobber()
             if (isOpaque(m_world->getBlock(cell.x, y, cell.z))) openSky = false;
         const bool jungle = m_world->generator().biomeAt(cell.x, cell.z) == Biome::Jungle;
         const uint32_t seed = m_bobber.rolls * 2654435761u + static_cast<uint32_t>(m_elapsedSeconds * 37.0f);
-        const Fishing::Catch caught = Fishing::roll(seed, openSky, jungle, Effects::luck(m_player.effects));
+        const Fishing::Catch caught = Fishing::roll(seed, openSky, jungle, Effects::luck(m_player.effects) + Enchanting::levelOf(m_inventory.selected().enchantments, Enchanting::Kind::LuckOfTheSea));
         m_stats.add(Stats::Custom::FishCaught);
         for (const Advancements::Criterion& fish : Advancements::all()[static_cast<size_t>(Advancements::indexOf("husbandry/fishy_business"))].criteria)
             if (stackNamed(fish.name) == caught.stack.id) award("husbandry/fishy_business", fish.name);
@@ -20207,7 +20307,7 @@ void Application::tickFishing(float deltaTime)
                 if (isOpaque(m_world->getBlock(cell.x, y, cell.z))) openSky = false;
             const uint32_t seed = m_bobber.rolls++ * 2246822519u + static_cast<uint32_t>(cell.x * 31 + cell.z * 17);
             if (m_bobber.wait < 0.0f && m_bobber.approach <= 0.0f && m_bobber.bite <= 0.0f)
-                m_bobber.wait = Fishing::waitSeconds(seed, openSky, m_weather.depth > 0.3f);
+                m_bobber.wait = std::max(0.5f, Fishing::waitSeconds(seed, openSky, m_weather.depth > 0.3f) - 5.0f * static_cast<float>(Enchanting::levelOf(m_inventory.selected().enchantments, Enchanting::Kind::Lure)));
             if (m_bobber.wait > 0.0f)
             {
                 m_bobber.wait -= deltaTime;
@@ -21789,6 +21889,32 @@ void Application::updateMobs(float deltaTime)
         if (!m_player.damage(Player::scaledByDifficulty(strike.damage, m_player.difficulty))) continue;
         if (strike.attacker >= 0)
         {
+            int thorns = 0;
+            for (int piece = 0; piece < Inventory::ARMOR_SLOTS; ++piece)
+            {
+                const ItemStack& worn = m_inventory.slot(Inventory::ARMOR_FIRST + piece);
+                const int level = worn.empty() ? 0 : Enchanting::levelOf(worn.enchantments, Enchanting::Kind::Thorns);
+                if (level <= 0) continue;
+                const uint32_t roll = hashCoords(static_cast<int>(m_elapsedSeconds * 37.0f), piece, strike.attacker, 0x7407u);
+                if (static_cast<int>(roll % 100u) < 15 * level) thorns += 1 + static_cast<int>((roll >> 8) % 4u);
+            }
+            if (thorns > 0)
+            {
+                Mob* thorned = nullptr;
+                float nearest = 3.0f;
+                for (Mob& mob : m_entities.mobs())
+                {
+                    if (!mob.alive() || static_cast<int>(mob.typeId()) != strike.attacker) continue;
+                    const float gap = glm::length(mob.position() - strike.from);
+                    if (gap < nearest) { nearest = gap; thorned = &mob; }
+                }
+                if (thorned)
+                {
+                    thorned->strike(thorns, thorned->position() - m_player.position);
+                    thorned->markPlayerHit(0, glm::length(thorned->position() - m_player.position));
+                    m_audio.play(Sound::Hurt, 0.5f, 1.3f);
+                }
+            }
             m_lastAttacker = strike.attacker;
             m_lastAttackerAge = 0.0f;
             m_lastAttackKind = 0;
@@ -21940,6 +22066,18 @@ void Application::updateMobs(float deltaTime)
                 if (death.type != MobId::Sheep || (death.variant & 16) == 0)
                     m_drops.spawn(where, death.type == MobId::Sheep ? static_cast<StackId>(woolOfColour(death.variant & 15)) : type.drop, 1);
             for (int i = 0; i < type.secondDropCount; ++i) m_drops.spawn(where, type.secondDrop, 1);
+            const int looting = death.byPlayer ? Enchanting::levelOf(m_inventory.selected().enchantments, Enchanting::Kind::Looting) : 0;
+            if (looting > 0 && death.type != MobId::Sheep)
+            {
+                const uint32_t roll = hashCoords(static_cast<int>(death.position.x * 4.0f), static_cast<int>(m_elapsedSeconds * 10.0f),
+                                                 static_cast<int>(death.position.z * 4.0f), 0x1007u);
+                const int extra = static_cast<int>(roll % static_cast<uint32_t>(looting + 1));
+                for (int i = 0; i < extra; ++i)
+                {
+                    if (type.dropCount > 0) m_drops.spawn(where, type.drop, 1);
+                    if (type.secondDropCount > 0) m_drops.spawn(where, type.secondDrop, 1);
+                }
+            }
         }
         {
             const uint32_t luck = hashCoords(static_cast<int>(death.position.x * 8.0f), static_cast<int>(m_elapsedSeconds * 20.0f),

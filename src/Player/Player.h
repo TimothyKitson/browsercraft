@@ -1,4 +1,5 @@
 #pragma once
+#include <array>
 #include <algorithm>
 #include "Game/Effects.h"
 #include "Game/GameMode.h"
@@ -183,6 +184,8 @@ public:
     // place a blow is applied, so it is the one place the rules about
     // a blow should live.
     uint32_t protection = 0;
+    std::array<uint32_t, 4> armourEnchants{};
+    bool projectileHit = false;
 
     // Whether a totem of undying is in hand, totted up once a frame
     // beside the armour and for the same reason: damage() is the one

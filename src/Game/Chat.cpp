@@ -925,9 +925,7 @@ Chat::Command Chat::parse(const std::string& line, bool cheats, const glm::vec3&
             int found = -1;
             for (int k = 0; k < static_cast<int>(Enchanting::Kind::Count); ++k)
             {
-                std::string candidate = lower(Enchanting::name(static_cast<Enchanting::Kind>(k)));
-                for (char& c : candidate) if (c == ' ') c = '_';
-                if (candidate == wanted) found = k;
+                if (Enchanting::idOf(static_cast<Enchanting::Kind>(k)) == wanted) found = k;
             }
             if (found < 0) return fail("No enchantment called " + words[at] + ".");
             out.kind = Kind::Enchant;

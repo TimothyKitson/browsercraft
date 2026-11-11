@@ -98,6 +98,10 @@ struct Arrow
     Arrows::Kind kind = Arrows::Kind::Shaft;
     int effect = 0;
     int shooter = -1;
+    int punch = 0;
+    bool flame = false;
+    int pierce = 0;
+    float passing = 0.0f;
 
     bool shaft() const
     {
@@ -136,6 +140,9 @@ public:
     {
         int effect = 0;
         int shooter = -1;
+        int punch = 0;
+        bool flame = false;
+        glm::vec3 heading{ 0.0f };
         virtual ~Targets() = default;
 
         // `point` is where the arrow is now; `fromPlayer` says who shot
@@ -182,6 +189,13 @@ public:
     void update(float deltaTime, const World& world, Targets& targets);
 
     void clear() { m_arrows.clear(); }
+    void enchantLast(int punch, bool flame, int pierce)
+    {
+        if (m_arrows.empty()) return;
+        m_arrows.back().punch = punch;
+        m_arrows.back().flame = flame;
+        m_arrows.back().pierce = pierce;
+    }
     void show(const Arrow& visual) { m_visuals.push_back(visual); }
     const std::vector<Arrow>& all() const { return m_arrows; }
     int takePlayerBlockHits()
