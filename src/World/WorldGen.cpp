@@ -492,6 +492,7 @@ void WorldGen::generate(Chunk& chunk) const
     buildGeodes(chunk);
     if (structures) buildAncientCities(chunk);
     dressSeabed(chunk);
+    growCoralReefs(chunk);
     placeSeaMagma(chunk);
     if (structures)
     {
@@ -4527,6 +4528,115 @@ void WorldGen::placeOreVeins(Chunk& chunk) const
         z = std::clamp(z + static_cast<int>((g >> 2) % 3u) - 1, 1, Chunk::SZ - 2);
         y = std::clamp(y + static_cast<int>((g >> 4) % 3u) - 1, copper ? 22 : 2, copper ? 52 : 18);
     }
+}
+
+void WorldGen::growCoralReefs(Chunk& chunk) const
+{
+    const int baseX = chunk.position().x * Chunk::SX;
+    const int baseZ = chunk.position().z * Chunk::SZ;
+    static const BlockId BLOCKS[5] = { Blocks::TubeCoralBlock, Blocks::BrainCoralBlock, Blocks::BubbleCoralBlock,
+                                       Blocks::FireCoralBlock, Blocks::HornCoralBlock };
+    static const BlockId PLANTS[5] = { Blocks::TubeCoral, Blocks::BrainCoral, Blocks::BubbleCoral, Blocks::FireCoral, Blocks::HornCoral };
+    static const int SIDE[4][2] = { { 0, -1 }, { 1, 0 }, { 0, 1 }, { -1, 0 } };
+    for (int wx = baseX - 5; wx < baseX + Chunk::SX + 5; ++wx)
+        for (int wz = baseZ - 5; wz < baseZ + Chunk::SZ + 5; ++wz)
+        {
+            uint32_t h = hashCoords(wx, 51, wz, m_seed + 7731);
+            if (hashToFloat(h) >= 0.01f) continue;
+            const int floorY = surfaceHeight(wx, wz);
+            if (SEA_LEVEL - floorY < 5 || !reefWater(wx, wz)) continue;
+            auto next = [&h]() {
+                h ^= h << 13;
+                h ^= h >> 17;
+                h ^= h << 5;
+                return h;
+            };
+            const int which = static_cast<int>(next() % 5u);
+            const BlockId coral = BLOCKS[which];
+            std::vector<glm::ivec3> grown;
+            auto grow = [&](int x, int y, int z) {
+                if (y >= SEA_LEVEL - 1 || y <= floorY - 1) return false;
+                grown.push_back(glm::ivec3(x, y, z));
+                const int lx = x - baseX, lz = z - baseZ;
+                if (!Chunk::inBounds(lx, y, lz)) return true;
+                const BlockId here = chunk.getBlock(lx, y, lz);
+                if (!isWater(here) && here != Blocks::Seagrass && here != Blocks::TallSeagrassLower && here != Blocks::TallSeagrassUpper &&
+                    here != Blocks::Kelp && here != Blocks::KelpTop)
+                    return false;
+                chunk.setBlockRaw(lx, y, lz, coral);
+                return true;
+            };
+            const int shape = static_cast<int>(next() % 3u);
+            const int y0 = floorY + 1;
+            if (shape == 0)
+            {
+                const int trunk = 1 + static_cast<int>(next() % 3u);
+                for (int k = 0; k < trunk; ++k) grow(wx, y0 + k, wz);
+                const int branches = 2 + static_cast<int>(next() % 3u);
+                for (int b = 0; b < branches; ++b)
+                {
+                    const int side = static_cast<int>(next() % 4u);
+                    int x = wx, y = y0 + trunk - 1, z = wz;
+                    const int out = 1 + static_cast<int>(next() % 2u);
+                    for (int k = 0; k < out; ++k)
+                    {
+                        x += SIDE[side][0];
+                        z += SIDE[side][1];
+                        grow(x, y, z);
+                    }
+                    const int up = 1 + static_cast<int>(next() % 3u);
+                    for (int k = 0; k < up; ++k) grow(x, ++y, z);
+                }
+            }
+            else if (shape == 1)
+            {
+                grow(wx, y0, wz);
+                const int first = static_cast<int>(next() % 4u);
+                const int arms = 2 + static_cast<int>(next() % 2u);
+                for (int a = 0; a < arms; ++a)
+                {
+                    const int side = (first + a) & 3;
+                    int x = wx, y = y0, z = wz;
+                    const int out = 2 + static_cast<int>(next() % 2u);
+                    for (int k = 0; k < out; ++k)
+                    {
+                        x += SIDE[side][0];
+                        z += SIDE[side][1];
+                        if (k == out - 1) ++y;
+                        grow(x, y, z);
+                    }
+                    const int up = 1 + static_cast<int>(next() % 3u);
+                    for (int k = 0; k < up; ++k) grow(x, ++y, z);
+                }
+            }
+            else
+            {
+                const int wide = 2 + static_cast<int>(next() % 2u);
+                const int tall = 2 + static_cast<int>(next() % 2u);
+                for (int dx = 0; dx <= wide; ++dx)
+                    for (int dz = 0; dz <= wide; ++dz)
+                        for (int dy = 0; dy <= tall; ++dy)
+                        {
+                            const bool edgeX = dx == 0 || dx == wide, edgeZ = dz == 0 || dz == wide;
+                            const bool shell = dy == tall || (edgeX && edgeZ) || ((edgeX || edgeZ) && next() % 3u != 0u);
+                            if (shell) grow(wx - wide / 2 + dx, y0 + dy, wz - wide / 2 + dz);
+                        }
+            }
+            for (const glm::ivec3& at : grown)
+            {
+                const int lx = at.x - baseX, lz = at.z - baseZ;
+                if (Chunk::inBounds(lx, at.y + 1, lz) && isWater(chunk.getBlock(lx, at.y + 1, lz)) && next() % 4u == 0u)
+                {
+                    const uint32_t pick = next() % 6u;
+                    chunk.setBlockRaw(lx, at.y + 1, lz, pick < 3u ? PLANTS[which] : pick < 5u ? static_cast<BlockId>(Blocks::CoralFanFirst + which)
+                                                                                         : pickleOf(1 + static_cast<int>(next() % 4u), false));
+                }
+                const int side = static_cast<int>(next() % 4u);
+                const int fx = at.x + SIDE[side][0] - baseX, fz = at.z + SIDE[side][1] - baseZ;
+                if (next() % 5u == 0u && Chunk::inBounds(fx, at.y, fz) && isWater(chunk.getBlock(fx, at.y, fz)))
+                    chunk.setBlockRaw(fx, at.y, fz, coralWallFanOf(false, which, side));
+            }
+        }
 }
 
 void WorldGen::placeIceSpikes(Chunk& chunk) const
