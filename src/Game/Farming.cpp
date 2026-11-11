@@ -444,6 +444,17 @@ void Farming::grow(World& world, const glm::vec3& around, uint32_t& seed, std::v
             growBambooAt(world, glm::ivec3(x, y, z));
             continue;
         }
+        if (ticked == Blocks::Cactus && world.getBlock(x, y + 1, z) == Blocks::Air)
+        {
+            int height = 1;
+            while (height < 3 && world.getBlock(x, y - height, z) == Blocks::Cactus) ++height;
+            bool clear = true;
+            static const int SX[4] = { 1, -1, 0, 0 }, SZ[4] = { 0, 0, 1, -1 };
+            for (int k = 0; k < 4; ++k)
+                if (isSolid(world.getBlock(x + SX[k], y + 1, z + SZ[k]))) clear = false;
+            if (height < 3 && clear && nextRandom(seed) % 8u == 0u) world.setBlock(x, y + 1, z, Blocks::Cactus);
+            continue;
+        }
         if (world.getBlock(x, y, z) == Blocks::BambooShoot)
         {
             if (nextRandom(seed) % 3u == 0u && world.getBlock(x, y + 1, z) == Blocks::Air) world.setBlock(x, y, z, Blocks::Bamboo);

@@ -30,7 +30,7 @@ namespace
         { "Sandstone",    SandstoneTop,  SandstoneBottom, SandstoneSide,  true,  true,  RenderType::Cube,   0,   0.8f },
         { "Snow Block",   SnowTile,      SnowTile,       SnowTile,       true,  true,  RenderType::Cube,   0,   0.3f },
         { "Ice",          Ice,           Ice,            Ice,            true,  false, RenderType::Cube,   0,   0.5f },
-        { "Cactus",       CactusTop,     CactusBottom,   CactusSide,     true,  true,  RenderType::Cube,   0,   0.4f },
+        { "Cactus",       CactusTop,     CactusBottom,   CactusSide,     true,  false, RenderType::Cube,   0,   0.4f },
         { "Bricks",       Bricks,        Bricks,         Bricks,         true,  true,  RenderType::Cube,   0,   2.0f },
         { "Obsidian",     Obsidian,      Obsidian,       Obsidian,       true,  true,  RenderType::Cube,   0,   8.0f },
         { "Short Grass",  TallGrass,     TallGrass,      TallGrass,      false, false, RenderType::Cross,  0,   0.0f },
@@ -5213,6 +5213,7 @@ bool blockOverlaps(BlockId id, int bx, int by, int bz,
     if (isColourBed(id)) return overlaps(0.0f, 0.0f, 0.0f, 1.0f, 0.5625f, 1.0f);
     if (isSnowLayer(id)) return overlaps(0.0f, 0.0f, 0.0f, 1.0f, static_cast<float>(snowLayers(id) - 1) / 8.0f, 1.0f);
     if (id == Blocks::Bamboo) return overlaps(0.40625f, 0.0f, 0.40625f, 0.59375f, 1.0f, 0.59375f);
+    if (id == Blocks::Cactus) return overlaps(0.0625f, 0.0f, 0.0625f, 0.9375f, 0.9375f, 0.9375f);
     if (isHead(id))
     {
         const float half = headKind(id) == 6 ? 0.3125f : 0.25f;

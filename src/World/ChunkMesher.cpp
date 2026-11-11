@@ -1917,6 +1917,20 @@ namespace
         }
     }
 
+    void emitCactus(const MeshSnapshot& snap, int lx, int y, int lz, BlockId id, std::vector<float>& out)
+    {
+        const BlockInfo& info = blockInfo(id);
+        const PartFace caps[6] = { { -1, 0, 0, 16, 16 }, { -1, 0, 0, 16, 16 }, { info.tileTop, 0, 0, 16, 16 },
+                                   { info.tileBottom, 0, 0, 16, 16 }, { -1, 0, 0, 16, 16 }, { -1, 0, 0, 16, 16 } };
+        emitPart(snap, lx, y, lz, id, glm::vec3(0.0f), glm::vec3(1.0f), caps, out);
+        const PartFace eastWest[6] = { { info.tileSide, 0, 0, 16, 16 }, { info.tileSide, 0, 0, 16, 16 }, { -1, 0, 0, 16, 16 },
+                                       { -1, 0, 0, 16, 16 }, { -1, 0, 0, 16, 16 }, { -1, 0, 0, 16, 16 } };
+        emitPart(snap, lx, y, lz, id, glm::vec3(1.0f / 16.0f, 0.0f, 0.0f), glm::vec3(15.0f / 16.0f, 1.0f, 1.0f), eastWest, out);
+        const PartFace northSouth[6] = { { -1, 0, 0, 16, 16 }, { -1, 0, 0, 16, 16 }, { -1, 0, 0, 16, 16 },
+                                         { -1, 0, 0, 16, 16 }, { info.tileSide, 0, 0, 16, 16 }, { info.tileSide, 0, 0, 16, 16 } };
+        emitPart(snap, lx, y, lz, id, glm::vec3(0.0f, 0.0f, 1.0f / 16.0f), glm::vec3(1.0f, 1.0f, 15.0f / 16.0f), northSouth, out);
+    }
+
     void emitBamboo(const MeshSnapshot& snap, int lx, int y, int lz, BlockId id, std::vector<float>& out)
     {
         const int stalk = Tiles::BambooStalkTile;
@@ -2187,6 +2201,10 @@ void buildChunkMesh(const MeshSnapshot& snapshot, MeshResult& out)
                 else if (id == Blocks::Bamboo)
                 {
                     emitBamboo(snapshot, lx, y, lz, id, out.opaqueVertices);
+                }
+                else if (id == Blocks::Cactus)
+                {
+                    emitCactus(snapshot, lx, y, lz, id, out.opaqueVertices);
                 }
                 else if (isFamilyButton(id))
                 {

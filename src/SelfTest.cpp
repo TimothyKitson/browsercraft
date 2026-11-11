@@ -13703,6 +13703,11 @@ namespace
               blockOverlaps(Blocks::Bamboo, 0, 0, 0, 0.45f, 0.2f, 0.45f, 0.55f, 0.8f, 0.55f, 0) &&
               !blockOverlaps(Blocks::Bamboo, 0, 0, 0, 0.0f, 0.2f, 0.0f, 0.3f, 0.8f, 0.3f, 0),
               "bamboo starts as a shoot you walk through and grows into a thin stalk you bump into");
+        section("cactus");
+        check(!blockInfo(Blocks::Cactus).opaque && blockOverlaps(Blocks::Cactus, 0, 0, 0, 0.5f, 0.2f, 0.05f, 0.6f, 0.5f, 0.1f, 0) &&
+              !blockOverlaps(Blocks::Cactus, 0, 0, 0, 0.5f, 0.2f, 0.0f, 0.6f, 0.5f, 0.05f, 0),
+              "a cactus stands a pixel in from its cell on every side, so you can brush against it");
+
         section("farmland dries out and is trampled");
         check(isFarmland(Blocks::FarmlandDry) && isFarmland(Blocks::Farmland) && blockDrop(Blocks::FarmlandDry) == Blocks::Dirt &&
               blockInfo(Blocks::FarmlandDry).tileTop != blockInfo(Blocks::Farmland).tileTop && !isObtainable(Blocks::FarmlandDry),

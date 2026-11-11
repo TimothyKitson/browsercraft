@@ -2739,6 +2739,35 @@ bool Application::frame()
             else m_bushSting = 0.0f;
 
             const bool wasAlight = m_player.onFire();
+            m_cactusSting -= deltaTime;
+            if (m_cactusSting <= 0.0f)
+            {
+                m_cactusSting = 0.5f;
+                auto touchesCactus = [&](const glm::vec3& lo, const glm::vec3& hi) {
+                    for (int x = static_cast<int>(std::floor(lo.x - 0.01f)); x <= static_cast<int>(std::floor(hi.x + 0.01f)); ++x)
+                        for (int y = static_cast<int>(std::floor(lo.y)); y <= static_cast<int>(std::floor(hi.y)); ++y)
+                            for (int z = static_cast<int>(std::floor(lo.z - 0.01f)); z <= static_cast<int>(std::floor(hi.z + 0.01f)); ++z)
+                                if (m_world->getBlock(x, y, z) == Blocks::Cactus &&
+                                    lo.x - 0.01f < x + 0.9375f && hi.x + 0.01f > x + 0.0625f &&
+                                    lo.z - 0.01f < z + 0.9375f && hi.z + 0.01f > z + 0.0625f && lo.y < y + 1.0f && hi.y > y)
+                                    return true;
+                    return false;
+                };
+                const AABB body = m_player.aabb();
+                if (touchesCactus(body.min, body.max))
+                {
+                    m_player.cause = "cactus";
+                    if (m_player.damage(1)) m_audio.play(Sound::Hurt, 0.6f);
+                }
+                for (Mob& mob : m_entities.mobs())
+                {
+                    if (!mob.alive() || mob.type().inanimate) continue;
+                    const glm::vec3 feet = mob.position();
+                    const float half = mob.width() * 0.5f;
+                    if (touchesCactus(feet - glm::vec3(half, 0.0f, half), feet + glm::vec3(half, mob.height(), half)))
+                        mob.damage(1, glm::vec3(0.0f, 0.2f, 0.0f));
+                }
+            }
             if (m_player.burn(deltaTime, m_player.isInLava(*m_world) ||
                                          m_player.isInFire(*m_world)))
                 m_audio.play(Sound::Hurt, 0.9f, 0.8f);
@@ -3328,6 +3357,8 @@ bool Application::frame()
                     m_world->setBlock(bx + 2, by, bz - 4, withAxis(Blocks::QuartzPillar, 1));
                     m_world->setBlock(bx - 1, by - 1, bz + 2, Blocks::Farmland);
                     m_world->setBlock(bx, by - 1, bz + 2, Blocks::FarmlandDry);
+                    m_world->setBlock(bx + 3, by - 1, bz - 1, Blocks::Sand);
+                    for (int h = 0; h < 2; ++h) m_world->setBlock(bx + 3, by + h, bz - 1, Blocks::Cactus);
                     for (int t = 0; t < 2; ++t)
                     {
                         const int tx = bx - 9 + t * 4, tz = bz - 6;
@@ -9229,6 +9260,17 @@ void Application::updateMining(float deltaTime)
             // Cane is a stack, and breaking one out of the middle
             // drops everything resting on it: without this the upper
             // canes hang in mid-air with nothing beneath them.
+            if (id == Blocks::Cactus)
+            {
+                for (int up = 1; up < 8; ++up)
+                {
+                    const glm::ivec3 over(hit.block.x, hit.block.y + up, hit.block.z);
+                    if (m_world->getBlock(over.x, over.y, over.z) != Blocks::Cactus) break;
+                    m_world->setBlock(over.x, over.y, over.z, Blocks::Air);
+                    m_net.onLocalBlockChange(over.x, over.y, over.z, Blocks::Air);
+                    if (!m_player.creative()) m_drops.spawnFromBrokenBlock(over, Blocks::Cactus);
+                }
+            }
             if (id == Blocks::SugarCane)
             {
                 for (int up = 1; up < Cane::MAX_HEIGHT; ++up)
@@ -17857,6 +17899,14 @@ void Application::handlePlacement()
         return;
     if (isCarpet(placing) && m_world->getBlock(target.x, target.y - 1, target.z) == Blocks::Air) return;
     if (isSnowLayer(placing) && !snowCanRestOn(m_world->getBlock(target.x, target.y - 1, target.z))) return;
+    if (placing == Blocks::Cactus)
+    {
+        const BlockId under = m_world->getBlock(target.x, target.y - 1, target.z);
+        if (under != Blocks::Sand && under != Blocks::RedSand && under != Blocks::Cactus) return;
+        static const int SX[4] = { 1, -1, 0, 0 }, SZ[4] = { 0, 0, 1, -1 };
+        for (int k = 0; k < 4; ++k)
+            if (isSolid(m_world->getBlock(target.x + SX[k], target.y, target.z + SZ[k]))) return;
+    }
     if (placing == Blocks::Bamboo)
     {
         const glm::ivec3 under(target.x, target.y - 1, target.z);
@@ -17879,6 +17929,21 @@ void Application::handlePlacement()
     {
         m_world->setBlock(target.x, target.y - 1, target.z, Blocks::Dirt);
         m_net.onLocalBlockChange(target.x, target.y - 1, target.z, Blocks::Dirt);
+    }
+    if (isSolid(placing))
+    {
+        static const int SX[4] = { 1, -1, 0, 0 }, SZ[4] = { 0, 0, 1, -1 };
+        for (int k = 0; k < 4; ++k)
+        {
+            const glm::ivec3 side(target.x + SX[k], target.y, target.z + SZ[k]);
+            if (m_world->getBlock(side.x, side.y, side.z) != Blocks::Cactus) continue;
+            for (int up = 0; up < 8 && m_world->getBlock(side.x, side.y + up, side.z) == Blocks::Cactus; ++up)
+            {
+                m_world->setBlock(side.x, side.y + up, side.z, Blocks::Air);
+                m_net.onLocalBlockChange(side.x, side.y + up, side.z, Blocks::Air);
+                m_drops.spawnFromBrokenBlock(side + glm::ivec3(0, up, 0), Blocks::Cactus);
+            }
+        }
     }
     if (isSnowLayer(placing)) snowGrass(target + glm::ivec3(0, -1, 0));
     else unsnowGrass(target + glm::ivec3(0, -1, 0));
@@ -23643,6 +23708,7 @@ std::string Application::deathMessageFor() const
     if (cause == "outOfWorld") return who + " fell out of the world";
     if (cause == "kill") return who + " was killed";
     if (cause == "lightningBolt") return who + " was struck by lightning";
+    if (cause == "cactus") return who + " was pricked to death";
     return who + " died";
 }
 
