@@ -939,6 +939,7 @@ private:
     float attackStrength() const;
     float attackPeriod() const;
     float m_eatTimer = 0.0f;
+    float m_crumbClock = 0.0f;
     float m_bushSting = 0.0f;
     float m_hiveClock = 0.0f;
     HeldItem m_heldItem;

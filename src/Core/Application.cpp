@@ -16522,6 +16522,21 @@ void Application::handleEating(float deltaTime)
     const Food::Bite bite = Food::chew(holding && !stack.empty(), stack.id,
                                        m_player.canEat() || Food::alwaysEdible(stack.id), m_eatTimer, deltaTime);
     m_eatTimer = bite.timer;
+    if (m_eatTimer > 0.25f && !stack.empty())
+    {
+        m_crumbClock += deltaTime;
+        if (m_crumbClock >= 0.2f)
+        {
+            m_crumbClock = 0.0f;
+            const glm::vec3 mouth = m_player.eyePosition() + m_camera.front * 0.45f - m_camera.up * 0.15f;
+            for (int k = 0; k < 5; ++k)
+            {
+                const glm::vec3 spray = m_camera.front * 0.8f + glm::vec3((m_particles.nextRandom() - 0.5f) * 1.2f, 1.0f + m_particles.nextRandom(),
+                                                                          (m_particles.nextRandom() - 0.5f) * 1.2f);
+                m_particles.addTile(mouth, spray, atlasTileFor(stack.id), 0.07f, 0.6f);
+            }
+        }
+    }
     if (!bite.swallowed) return;
 
     const FoodValue value = Food::valueOf(stack.id);
@@ -16843,6 +16858,7 @@ bool Application::useComposter(const glm::ivec3& at, BlockId block)
 
     if (Composting::raises(held.id, roll))
     {
+        if (m_sprites) m_sprites->burst(SpriteParticles::Kind::Composter, glm::vec3(at) + glm::vec3(0.5f, 0.9f, 0.5f), 8, 0.5f, 0.1f, 0.12f, 1.0f);
         // The seventh throw fills it rather than raising it to seven:
         // a composter at seven is one that is about to be ready, and
         // there is no state between that and ready.
@@ -22969,6 +22985,8 @@ void Application::tickSpriteParticles(float deltaTime)
                                  glm::vec3((fx.random() - 0.5f) * 0.1f, -0.05f, (fx.random() - 0.5f) * 0.1f), 0.08f, 6.0f);
                 }
             }
+            else if (fallsByGravity(block) && roll < 0.04f && m_world->getBlock(x, y - 1, z) == Blocks::Air)
+                m_particles.add(glm::vec3(x + fx.random(), static_cast<float>(y) - 0.05f, z + fx.random()), glm::vec3(0.0f, -0.2f, 0.0f), block, 0.06f, 1.5f);
             else if (block == Blocks::Mycelium && roll < 0.05f && m_world->getBlock(x, y + 1, z) == Blocks::Air)
                 fx.spawn(Kind::Mycelium, glm::vec3(x + fx.random(), y + 1.1f, z + fx.random()), glm::vec3(0.0f), 0.06f, 1.5f);
             else if (block == Blocks::Water && roll < 0.006f && m_player.isHeadUnderwater(*m_world))
@@ -23110,6 +23128,10 @@ void Application::tickSpriteParticles(float deltaTime)
             }
         }
 
+        if (m_world->getBlock(static_cast<int>(std::floor(m_player.position.x)), static_cast<int>(std::floor(m_player.position.y + 0.1f)),
+                              static_cast<int>(std::floor(m_player.position.z))) == Blocks::PowderSnow && fx.random() < 0.5f)
+            fx.spawn(Kind::Snowflake, m_player.position + glm::vec3(fx.random() - 0.5f, fx.random() * 1.6f, fx.random() - 0.5f),
+                     glm::vec3((fx.random() - 0.5f) * 0.4f, -0.3f, (fx.random() - 0.5f) * 0.4f), 0.08f, 1.2f);
         for (Mob& mob : m_entities.mobs())
         {
             if (!mob.alive() || glm::length(mob.position() - m_player.position) > 48.0f) continue;

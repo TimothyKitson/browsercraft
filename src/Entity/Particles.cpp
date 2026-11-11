@@ -42,11 +42,15 @@ bool Particles::admit()
 void Particles::add(const glm::vec3& position, const glm::vec3& velocity, BlockId block,
                     float size, float lifetime)
 {
+    addTile(position, velocity, blockInfo(block).tileSide, size, lifetime);
+}
+
+void Particles::addTile(const glm::vec3& position, const glm::vec3& velocity, int tileIndex, float size, float lifetime)
+{
     if (m_particles.size() >= MAX_PARTICLES) return;
     if (!admit()) return;
 
-    const BlockInfo& info = blockInfo(block);
-    const TileUV tile = tileUV(info.tileSide);
+    const TileUV tile = tileUV(tileIndex);
 
     // Take a quarter-tile patch so each particle shows a different part of
     // the texture, the way Minecraft's break particles do.

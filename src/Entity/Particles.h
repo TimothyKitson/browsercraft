@@ -15,6 +15,9 @@ class Particles
 {
 public:
     static void setDensity(int level);
+    float nextRandom();
+    void add(const glm::vec3& position, const glm::vec3& velocity, BlockId block, float size, float lifetime);
+    void addTile(const glm::vec3& position, const glm::vec3& velocity, int tile, float size, float lifetime);
     static bool admit();
     void spawnBlockBreak(const glm::ivec3& blockPosition, BlockId block);
     void spawnBlockHit(const glm::vec3& position, const glm::ivec3& faceNormal, BlockId block);
@@ -44,7 +47,4 @@ private:
     std::vector<float> m_vertices;
     uint32_t m_random = 1u;
 
-    float nextRandom();
-    void add(const glm::vec3& position, const glm::vec3& velocity, BlockId block,
-             float size, float lifetime);
 };
