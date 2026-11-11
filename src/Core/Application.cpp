@@ -3262,7 +3262,7 @@ bool Application::frame()
             m_startupScreen == "seabed" || m_startupScreen == "reef" ||
             m_startupScreen == "vault" || m_startupScreen == "stronghold" ||
             m_startupScreen == "rock" ||
-            m_startupScreen == "faces" || m_startupScreen == "backs" ||
+            m_startupScreen == "faces" || m_startupScreen == "backs" || m_startupScreen == "throwers" ||
             m_startupScreen == "flow" || m_startupScreen == "buds" ||
             m_startupScreen == "icons" || m_startupScreen == "beam" ||
             m_startupScreen == "elytra" || m_startupScreen == "elytradoll" || m_startupScreen == "crawl" || m_startupScreen == "chatopen" || m_startupScreen == "endpoem" || m_startupScreen == "sleeping" || m_startupScreen == "gear")
@@ -3289,6 +3289,7 @@ bool Application::frame()
                                   m_startupScreen != "shelf" &&
                                   m_startupScreen != "faces" &&
                                   m_startupScreen != "backs" &&
+                                  m_startupScreen != "throwers" &&
                                   m_startupScreen != "flow" &&
                                   m_startupScreen != "buds" &&
                                   m_startupScreen != "beam" &&
@@ -7724,6 +7725,27 @@ bool Application::frame()
                     m_world->setBlock(bx - 6, top(d) + 1, bz + d, Blocks::Leaves);
             }
 
+            if (m_startupScreen == "throwers")
+            {
+                m_camera.setOrientation(90.0f, -24.0f);
+                m_showDebug = false;
+                const int bx = static_cast<int>(std::floor(m_player.position.x));
+                const int by = static_cast<int>(std::floor(m_player.position.y));
+                const int bz = static_cast<int>(std::floor(m_player.position.z));
+                for (int dx = -9; dx <= 9; ++dx)
+                    for (int dy = -1; dy <= 8; ++dy)
+                        for (int d = 1; d <= 14; ++d)
+                            m_world->setBlock(bx + dx, by + dy, bz + d, dy < 0 ? Blocks::Stone : Blocks::Air);
+                for (int f = 0; f < 6; ++f)
+                {
+                    const int x = bx - 5 + f * 2;
+                    m_world->setBlock(x, by, bz + 4, dispenserFacingTo(f));
+                    m_world->setBlock(x, by, bz + 6, dropperFacingTo(f));
+                    m_world->setBlock(x, by, bz + 8, observerFacingTo(f, false));
+                    m_world->setBlock(x, by, bz + 10, observerFacingTo(f, true));
+                }
+            }
+
             if (m_startupScreen == "faces" || m_startupScreen == "backs")
             {
                 const bool backs = m_startupScreen == "backs";
@@ -10441,31 +10463,157 @@ void Application::fireThrower(const glm::ivec3& at, bool dispenser)
 {
     if (!m_world) return;
 
+    static const glm::ivec3 SIX[6] = { { 0, 0, -1 }, { 1, 0, 0 }, { 0, 0, 1 }, { -1, 0, 0 }, { 0, 1, 0 }, { 0, -1, 0 } };
+    const BlockId self = m_world->getBlock(at.x, at.y, at.z);
+    const glm::ivec3 step = SIX[sixFacing(self)];
+    const glm::ivec3 front = at + step;
+    const glm::vec3 dir = glm::vec3(step);
+    const glm::vec3 from = glm::vec3(at) + glm::vec3(0.5f) + dir * 0.7f;
+    const glm::vec3 frontCentre = glm::vec3(front) + glm::vec3(0.5f);
+
     Chests::Contents& held = m_chests.at(at);
-    const StackId thrown = Hopper::take(held.data(), Hopper::THROWER_SLOTS);
-    if (thrown == Blocks::Air)
+    int slot = -1;
+    for (int i = 0; i < Hopper::THROWER_SLOTS; ++i)
+        if (!held[static_cast<size_t>(i)].empty()) { slot = i; break; }
+    if (slot < 0)
     {
         m_chests.forgetIfEmpty(at);
         m_audio.play(Sound::Click, 0.4f, 0.7f);
         return;
     }
+    ItemStack& stack = held[static_cast<size_t>(slot)];
+    const StackId item = stack.id;
+    auto spend = [&]() { if (--stack.count <= 0) stack.clear(); };
+    auto put = [&](const glm::ivec3& cell, BlockId block) {
+        m_world->setBlock(cell.x, cell.y, cell.z, block);
+        m_net.onLocalBlockChange(cell.x, cell.y, cell.z, block);
+    };
+    const BlockId ahead = m_world->getBlock(front.x, front.y, front.z);
+    const bool open = ahead == Blocks::Air || (!isSolid(ahead) && !isFluidSource(ahead) && !isContainerBlock(ahead));
+    auto dropOne = [&]() {
+        ItemStack one = stack;
+        one.count = 1;
+        spend();
+        m_drops.spawnStack(from, one);
+        m_drops.flingLast(dir * 3.0f + glm::vec3(0.0f, 1.0f, 0.0f));
+        m_audio.play(Sound::Click, 0.6f, 1.2f);
+    };
 
-    // Out of the face rather than out of the middle, so it lands in
-    // front of the block instead of inside it.
-    const glm::vec3 from = glm::vec3(at) + glm::vec3(0.5f, 1.2f, 0.5f);
-
-    if (dispenser && thrown == Items::Arrow)
+    bool done = true;
+    if (!dispenser)
     {
-        m_arrows.spawn(from, glm::vec3(0.0f, 0.0f, -1.0f) * 22.0f,
-                       Arrows::damageFor(1.0f), false, Arrows::Kind::Shaft);
+        const int slots = Hopper::slotsOf(ahead);
+        if (slots > 0)
+        {
+            if (Hopper::give(m_chests.at(front).data(), slots, item)) spend();
+            m_audio.play(Sound::Click, 0.5f, 1.2f);
+        }
+        else dropOne();
+    }
+    else if (item == Items::Arrow || item == Items::SpectralArrow || item == Items::TippedArrow)
+    {
+        const Arrows::Kind kind = item == Items::SpectralArrow ? Arrows::Kind::Spectral : item == Items::TippedArrow ? Arrows::Kind::Tipped : Arrows::Kind::Shaft;
+        m_arrows.spawn(from, dir * 22.0f + glm::vec3(0.0f, 1.0f, 0.0f), Arrows::damageFor(1.0f), false, kind, stack.damage);
+        spend();
         m_audio.play(Sound::Click, 0.8f, 1.6f);
     }
-    else
+    else if (item == Items::Snowball || item == Items::Egg)
     {
-        m_drops.spawn(from, thrown, 1);
-        m_audio.play(Sound::Click, 0.6f, 1.2f);
+        m_arrows.spawn(from, dir * 18.0f + glm::vec3(0.0f, 1.0f, 0.0f), 0, false, item == Items::Snowball ? Arrows::Kind::Snowball : Arrows::Kind::Egg);
+        spend();
+        m_audio.play(Sound::Click, 0.6f, 1.4f);
     }
+    else if (item == Items::SplashPotion || item == Items::LingeringPotion)
+    {
+        m_arrows.spawn(from, dir * 12.0f + glm::vec3(0.0f, 2.0f, 0.0f), 0, false, Arrows::Kind::Potion,
+                       stack.damage | (item == Items::LingeringPotion ? (1 << 13) : 0));
+        spend();
+        m_audio.play(Sound::Click, 0.6f, 1.0f);
+    }
+    else if (item == Items::FireCharge)
+    {
+        m_arrows.spawn(from, dir * 16.0f, 5, false, Arrows::Kind::Fire);
+        spend();
+        m_audio.play(Sound::Fire, 0.7f, 1.0f);
+    }
+    else if (item == Items::FireworkRocket)
+    {
+        launchFirework(stack.damage, from, dir * 12.0f, false, false);
+        spend();
+    }
+    else if ((item == Items::WaterBucket || item == Items::LavaBucket) && open)
+    {
+        put(front, item == Items::WaterBucket ? Blocks::Water : Blocks::Lava);
+        stack.id = Items::Bucket;
+        m_audio.play(Sound::Click, 0.6f, 0.8f);
+    }
+    else if (item == Items::Bucket && isFluidSource(ahead))
+    {
+        const StackId filled = isWater(ahead) ? static_cast<StackId>(Items::WaterBucket) : static_cast<StackId>(Items::LavaBucket);
+        put(front, Blocks::Air);
+        spend();
+        if (!Hopper::give(held.data(), Hopper::THROWER_SLOTS, filled)) m_drops.spawn(from, filled, 1);
+        m_audio.play(Sound::Click, 0.6f, 0.8f);
+    }
+    else if (item == Items::BoneMeal && (isCrop(ahead) || isSapling(ahead)))
+    {
+        if (isSapling(ahead)) growSapling(front, hashCoords(front.x, front.y, front.z, static_cast<uint32_t>(m_elapsedSeconds * 10.0f)));
+        else put(front, cropAtStage(ahead, cropStage(ahead) + 2 + static_cast<int>(hashCoords(front.x, front.y, front.z, 0xB0Eu) % 4u)));
+        m_particles.spawnBlockBreak(front, Blocks::TallGrass);
+        spend();
+    }
+    else if (item == Items::FlintAndSteel && (open || ahead == Blocks::Tnt))
+    {
+        if (ahead == Blocks::Tnt) primeTnt(front);
+        else put(front, Blocks::Fire0);
+        if (++stack.damage >= itemDurability(Items::FlintAndSteel) && itemDurability(Items::FlintAndSteel) > 0) stack.clear();
+        m_audio.play(Sound::Fire, 0.6f, 1.2f);
+    }
+    else if (item == static_cast<StackId>(Blocks::Tnt) && open)
+    {
+        put(front, Blocks::TntPrimed);
+        m_fuses.emplace_back(front, TNT_FUSE_SECONDS);
+        spend();
+        m_audio.play(Sound::Click, 0.8f, 0.7f);
+    }
+    else if (item == Items::Shears)
+    {
+        bool sheared = false;
+        for (Mob& mob : m_entities.mobs())
+        {
+            if (!mob.alive() || mob.typeId() != MobId::Sheep || mob.sheared() || mob.baby()) continue;
+            if (glm::length(mob.position() - frontCentre) > 1.2f) continue;
+            mob.setWool(mob.woolColour(), true);
+            m_drops.spawn(mob.position() + glm::vec3(0.0f, 0.8f, 0.0f), static_cast<StackId>(woolOfColour(mob.woolColour())),
+                          1 + static_cast<int>(hashCoords(front.x, front.z, mob.serial(), 0x5EA2u) % 3u));
+            m_audio.play(Sound::DigWool, 0.7f, 1.0f);
+            sheared = true;
+            break;
+        }
+        if (sheared && ++stack.damage >= itemDurability(Items::Shears) && itemDurability(Items::Shears) > 0) stack.clear();
+        done = sheared;
+    }
+    else if (item == Items::SpawnEgg && open)
+    {
+        if (m_entities.spawnAt(static_cast<MobId>(stack.damage), glm::vec3(front.x + 0.5f, static_cast<float>(front.y), front.z + 0.5f), *m_world)) spend();
+    }
+    else if (Armour::isArmour(item) && glm::length(m_player.position + glm::vec3(0.0f, 0.9f, 0.0f) - frontCentre) < 1.6f &&
+             m_inventory.slot(Inventory::ARMOR_FIRST + Armour::slotFor(item)).empty())
+    {
+        m_inventory.slot(Inventory::ARMOR_FIRST + Armour::slotFor(item)) = stack;
+        m_inventory.slot(Inventory::ARMOR_FIRST + Armour::slotFor(item)).count = 1;
+        spend();
+        m_audio.play(Sound::Click, 0.6f, 1.0f);
+    }
+    else if (!isItem(item) && (isShulkerBox(asBlock(item)) || isCarvedPumpkin(asBlock(item)) || isHead(asBlock(item))) && open)
+    {
+        put(front, asBlock(item));
+        spend();
+        m_audio.playPlace(asBlock(item));
+    }
+    else dropOne();
 
+    if (!done) m_audio.play(Sound::Click, 0.4f, 0.7f);
     m_chests.forgetIfEmpty(at);
 }
 
@@ -10575,12 +10723,15 @@ void Application::wakeObservers(const glm::ivec3& around)
         { 0, -1, 0 }, { 0, 0,  1 }, { 0, 0, -1 },
     };
 
+    static const glm::ivec3 LOOK[6] = { { 0, 0, -1 }, { 1, 0, 0 }, { 0, 0, 1 }, { -1, 0, 0 }, { 0, 1, 0 }, { 0, -1, 0 } };
     for (const glm::ivec3& step : BESIDE)
     {
         const glm::ivec3 at = around + step;
-        if (m_world->getBlock(at.x, at.y, at.z) != Blocks::Observer) continue;
+        const BlockId watcher = m_world->getBlock(at.x, at.y, at.z);
+        if (!isObserver(watcher) || observerLit(watcher)) continue;
+        if (at + LOOK[sixFacing(watcher)] != around) continue;
 
-        m_world->setBlock(at.x, at.y, at.z, Blocks::ObserverLit);
+        m_world->setBlock(at.x, at.y, at.z, watcher == Blocks::Observer ? Blocks::ObserverLit : observerFacingTo(sixFacing(watcher), true));
         m_observerPulse[{ at.x, at.y, at.z }] = Redstone::OBSERVER_PULSE;
         settleRedstone(at);
     }
@@ -10599,8 +10750,9 @@ void Application::tickObservers(float deltaTime)
         const glm::ivec3 at(it->first[0], it->first[1], it->first[2]);
         it = m_observerPulse.erase(it);
 
-        if (m_world->getBlock(at.x, at.y, at.z) != Blocks::ObserverLit) continue;
-        m_world->setBlock(at.x, at.y, at.z, Blocks::Observer);
+        const BlockId watcher = m_world->getBlock(at.x, at.y, at.z);
+        if (!isObserver(watcher) || !observerLit(watcher)) continue;
+        m_world->setBlock(at.x, at.y, at.z, watcher == Blocks::ObserverLit ? Blocks::Observer : observerFacingTo(sixFacing(watcher), false));
         settleRedstone(at);
     }
 }
@@ -13008,7 +13160,7 @@ void Application::settleRedstone(const glm::ivec3& at)
                 // arrow if that is what it is holding. Both are edge
                 // triggered for the reason the note block is: one
                 // held signal should be one action, not a stream.
-                if (here == Blocks::Dropper || here == Blocks::Dispenser)
+                if (isDropper(here) || isDispenser(here))
                 {
                     const std::array<int, 3> cell = { x, y, z };
                     const bool live = Redstone::poweredAt(cells, x, y, z);
@@ -13017,7 +13169,7 @@ void Application::settleRedstone(const glm::ivec3& at)
                     if (live && !wasLive)
                     {
                         m_throwerLive.insert(cell);
-                        fireThrower(glm::ivec3(x, y, z), here == Blocks::Dispenser);
+                        fireThrower(glm::ivec3(x, y, z), isDispenser(here));
                     }
                     else if (!live && wasLive)
                     {
@@ -18743,6 +18895,19 @@ void Application::handlePlacement()
 
         const int facing = (n.z > 0) ? 0 : (n.x < 0) ? 1 : (n.z < 0) ? 2 : 3;
         placing = ladderFacing(facing);
+    }
+
+    if (placing == Blocks::Dispenser || placing == Blocks::Dropper || placing == Blocks::Observer)
+    {
+        const glm::vec3 look = m_camera.front;
+        int toward = 0;
+        if (look.y < -0.7f) toward = 5;
+        else if (look.y > 0.7f) toward = 4;
+        else if (std::fabs(look.x) > std::fabs(look.z)) toward = look.x > 0.0f ? 1 : 3;
+        else toward = look.z > 0.0f ? 2 : 0;
+        const int back = toward < 4 ? (toward + 2) % 4 : 9 - toward;
+        if (placing == Blocks::Observer) placing = observerFacingTo(toward, false);
+        else placing = placing == Blocks::Dispenser ? dispenserFacingTo(back) : dropperFacingTo(back);
     }
 
     if (placing == Blocks::Hopper && hit.normal.y == 0)

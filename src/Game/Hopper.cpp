@@ -3,7 +3,7 @@
 int Hopper::slotsOf(BlockId id)
 {
     if (isHopper(id)) return HOPPER_SLOTS;
-    if (id == Blocks::Dropper || id == Blocks::Dispenser) return THROWER_SLOTS;
+    if (isDropper(id) || isDispenser(id)) return THROWER_SLOTS;
     if (isStorageChest(id)) return 27;
     return 0;
 }

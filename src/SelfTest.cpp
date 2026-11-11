@@ -9757,13 +9757,18 @@ namespace
             bench.blocks[{ 8, 1, 0 }] = Blocks::RedstoneLamp;
 
             // At rest the lamp is dark.
-            bench.blocks[{ -1, 1, 0 }] = Blocks::Observer;
+            bench.blocks[{ -1, 1, 0 }] = observerFacingTo(3, false);
             Redstone::update(bench, 0, 1, 0);
             check(bench.at(8, 1, 0) == Blocks::RedstoneLamp,
                   "an observer at rest lights nothing");
 
+            bench.blocks[{ -1, 1, 0 }] = observerFacingTo(0, true);
+            Redstone::update(bench, 0, 1, 0);
+            check(bench.at(8, 1, 0) == Blocks::RedstoneLamp,
+                  "a flashing observer turned the other way lights nothing beside it");
+
             // Flashing, it lights the whole run.
-            bench.blocks[{ -1, 1, 0 }] = Blocks::ObserverLit;
+            bench.blocks[{ -1, 1, 0 }] = observerFacingTo(3, true);
             Redstone::update(bench, 0, 1, 0);
             check(bench.at(8, 1, 0) == Blocks::RedstoneLampLit,
                   "and an observer flashing lights a lamp eight blocks away");
@@ -9885,6 +9890,38 @@ namespace
                   "a hopper laid on its side feeds the chest it points at");
             check(isHopper(hopperFacingTo(3)) && hopperFacing(hopperFacingTo(3)) == 3 && axisBase(hopperFacingTo(2)) == Blocks::Hopper &&
                   blockDrop(hopperFacingTo(0)) == static_cast<StackId>(Blocks::Hopper), "and breaks back into a plain hopper");
+        }
+
+        {
+            bool turns = true;
+            for (int f = 0; f < 6; ++f)
+            {
+                turns = turns && isDispenser(dispenserFacingTo(f)) && sixFacing(dispenserFacingTo(f)) == f &&
+                        isDropper(dropperFacingTo(f)) && sixFacing(dropperFacingTo(f)) == f &&
+                        isObserver(observerFacingTo(f, false)) && !observerLit(observerFacingTo(f, false)) &&
+                        observerLit(observerFacingTo(f, true)) && sixFacing(observerFacingTo(f, true)) == f;
+                turns = turns && !isDropper(dispenserFacingTo(f)) && !isDispenser(dropperFacingTo(f));
+            }
+            check(turns, "dispensers, droppers and observers face all six ways");
+            check(axisBase(dispenserFacingTo(2)) == Blocks::Dispenser && axisBase(dropperFacingTo(5)) == Blocks::Dropper &&
+                  blockDrop(observerFacingTo(1, true)) == static_cast<StackId>(Blocks::Observer),
+                  "and break back into the plain block");
+            check(sixFacing(Blocks::Dispenser) == 4 && sixFacing(Blocks::Observer) == 4, "the old blocks still face up");
+            check(Redstone::lit(observerFacingTo(3, false)) == observerFacingTo(3, true) &&
+                  Redstone::unlit(observerFacingTo(3, true)) == observerFacingTo(3, false) &&
+                  Redstone::isSource(observerFacingTo(0, true)) && !Redstone::isSource(observerFacingTo(0, false)),
+                  "a turned observer lights and goes out facing the same way");
+            check(Hopper::slotsOf(dropperFacingTo(1)) == Hopper::THROWER_SLOTS && Hopper::slotsOf(dispenserFacingTo(5)) == Hopper::THROWER_SLOTS,
+                  "hoppers can fill a turned dropper or dispenser");
+
+            Bench bench;
+            bench.blocks[{ 0, 1, 0 }] = Blocks::Chest;
+            bench.blocks[{ 0, 0, 0 }] = Blocks::Hopper;
+            bench.blocks[{ 0, -1, 0 }] = dropperFacingTo(2);
+            bench.held[{ 0, 0, 0 }][0].id = Blocks::Dirt;
+            bench.held[{ 0, 0, 0 }][0].count = 1;
+            Hopper::step(bench, 0, 0, 0);
+            check(bench.countOf(0, -1, 0, Blocks::Dirt) == 1, "a hopper feeds a dropper laid on its side");
         }
 
         // Nothing is lost when the thing below is full. This is the

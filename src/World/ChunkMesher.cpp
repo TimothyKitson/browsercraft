@@ -201,6 +201,27 @@ namespace
     // with the mesher's face order.
     int tileForFace(const BlockInfo& info, int faceIndex, BlockId id)
     {
+        if (isDispenser(id) || isDropper(id) || isObserver(id))
+        {
+            static const int FACE_DIR[6] = { 1, 3, 4, 5, 2, 0 };
+            const int f = sixFacing(id);
+            const int dir = FACE_DIR[faceIndex];
+            const int opposite = f < 4 ? (f + 2) % 4 : 9 - f;
+            const bool vertical = f >= 4;
+            if (isObserver(id))
+            {
+                const bool lit = observerLit(id);
+                if (dir == f) return Tiles::ObserverTop;
+                if (dir == opposite) return lit ? Tiles::ObserverBackLit : Tiles::ObserverBack;
+                const bool arrowFace = vertical ? (dir == 0 || dir == 2) : (dir == 4 || dir == 5);
+                return arrowFace ? Tiles::ObserverArrow : Tiles::ObserverSide;
+            }
+            const bool dispenser = isDispenser(id);
+            if (dir == f) return vertical ? (dispenser ? Tiles::DispenserFront : Tiles::DropperFront)
+                                          : (dispenser ? Tiles::DispenserFrontSide : Tiles::DropperFrontSide);
+            if (vertical || dir >= 4) return Tiles::DispenserSide;
+            return Tiles::FurnaceSide;
+        }
         if (info.tileFront < 0) return tileForFace(info, faceIndex);
         if (faceIndex == 2 || faceIndex == 3) return tileForFace(info, faceIndex);
 
@@ -1743,8 +1764,7 @@ namespace
     {
         return isDust(id) || id == Blocks::RedstoneTorch || id == Blocks::RedstoneTorchOff ||
                id == Blocks::LeverOff || id == Blocks::LeverOn || id == Blocks::ButtonOff ||
-               id == Blocks::ButtonOn || id == Blocks::RedstoneBlock || id == Blocks::Observer ||
-               id == Blocks::ObserverLit || isFamilyButton(id) || isPlate(id) || isFamilyLever(id) ||
+               id == Blocks::ButtonOn || id == Blocks::RedstoneBlock || isObserver(id) || isFamilyButton(id) || isPlate(id) || isFamilyLever(id) ||
                (isWallTorch(id) && wallTorchKind(id) >= 2);
     }
 

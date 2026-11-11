@@ -11,6 +11,12 @@ namespace
 
     constexpr int SPAN = Redstone::REACH * 2 + 1;
 
+    inline int observerBack(BlockId id)
+    {
+        static const int BACK[6] = { 4, 1, 5, 0, 3, 2 };
+        return BACK[sixFacing(id)];
+    }
+
     inline int indexOf(int dx, int dy, int dz)
     {
         return ((dx + Redstone::REACH) * SPAN + (dy + Redstone::REACH)) * SPAN +
@@ -25,7 +31,7 @@ namespace Redstone
         // An observer that has just seen something is a source for
         // as long as its pulse lasts, which is what makes it useful:
         // it turns a change into a signal.
-        if (id == Blocks::ObserverLit) return true;
+        if (isObserver(id) && observerLit(id)) return true;
         if (isTrappedChest(id) && chestState(id).open) return true;
         if (lightningRodPowered(id)) return true;
         if (daylightLit(id) || id == Blocks::TargetLit || hookPowered(id)) return true;
@@ -54,7 +60,7 @@ namespace Redstone
         if (id == Blocks::RedstoneDust) return Blocks::RedstoneDustLit;
         if (id == Blocks::RedstoneLamp) return Blocks::RedstoneLampLit;
         if (id == Blocks::NoteBlock) return Blocks::NoteBlockLit;
-        if (id == Blocks::Observer) return Blocks::ObserverLit;
+        if (isObserver(id) && !observerLit(id)) return id == Blocks::Observer ? Blocks::ObserverLit : observerFacingTo(sixFacing(id), true);
         if (specialRailFamily(id) == 1 || specialRailFamily(id) == 3)
             return specialRailOf(specialRailFamily(id), specialRailEastWest(id), true);
         if (isDoor(id) && !doorIsOpen(id))
@@ -68,7 +74,7 @@ namespace Redstone
     BlockId unlit(BlockId id)
     {
         if (id == Blocks::NoteBlockLit) return Blocks::NoteBlock;
-        if (id == Blocks::ObserverLit) return Blocks::Observer;
+        if (isObserver(id) && observerLit(id)) return id == Blocks::ObserverLit ? Blocks::Observer : observerFacingTo(sixFacing(id), false);
         if (id == Blocks::RedstoneDustLit) return Blocks::RedstoneDust;
         if (id == Blocks::RedstoneLampLit) return Blocks::RedstoneLamp;
         if (specialRailFamily(id) == 1 || specialRailFamily(id) == 3)
@@ -108,7 +114,13 @@ namespace Redstone
     {
         const BlockId self = cells.at(x, y, z);
         if (!isSolid(self) || isWire(self) || isDiode(self)) return false;
-        if (isSource(cells.at(x, y + 1, z))) return true;
+        const BlockId above = cells.at(x, y + 1, z);
+        if (isSource(above) && !isObserver(above)) return true;
+        for (int k = 0; k < 6; ++k)
+        {
+            const BlockId near = cells.at(x + DX[k], y + DY[k], z + DZ[k]);
+            if (isObserver(near) && observerLit(near) && observerBack(near) == (k ^ 1)) return true;
+        }
         for (int k = 0; k < 6; ++k)
         {
             if (DY[k] != 0) continue;
@@ -122,6 +134,7 @@ namespace Redstone
     bool feeds(const Cells& cells, int x, int y, int z, int step)
     {
         const BlockId near = cells.at(x, y, z);
+        if (isObserver(near)) return (observerLit(near) && observerBack(near) == step) || carries(cells, x, y, z);
         if (isSource(near)) return true;
         if (near == Blocks::RedstoneDustLit) return true;
         if (isDiode(near)) return diodeLit(near) && stepOf(diodeOut(near)) == step;
@@ -181,12 +194,14 @@ namespace Redstone
                     // against.
                     const BlockId start = cells.at(cx, cy, cz);
                     const bool aimed = isDiode(start) && diodeLit(start);
+                    const bool watcher = isObserver(start) && observerLit(start);
                     if (!isSource(start) && !aimed && !carries(cells, cx, cy, cz))
                         continue;
 
                     for (int k = 0; k < 6; ++k)
                     {
                         if (aimed && k != stepOf(diodeOut(start))) continue;
+                        if (watcher && k != observerBack(start)) continue;
                         const int nx = cx + DX[k], ny = cy + DY[k], nz = cz + DZ[k];
                         const int ox = nx - x, oy = ny - y, oz = nz - z;
                         if (std::abs(ox) > REACH || std::abs(oy) > REACH ||

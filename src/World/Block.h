@@ -709,6 +709,8 @@ namespace Blocks
         GlazedTurnFirst, GlazedTurnLast = GlazedTurnFirst + 47,
         LanternHanging, SoulLanternHanging,
         HopperSideFirst, HopperSideLast = HopperSideFirst + 3,
+        ThrowerTurnFirst, ThrowerTurnLast = ThrowerTurnFirst + 11,
+        ObserverTurnFirst, ObserverTurnLast = ObserverTurnFirst + 11,
         ExtCount
     };
 }
@@ -982,6 +984,22 @@ inline bool isLantern(BlockId id)
     return id == Blocks::Lantern || id == Blocks::SoulLantern || id == Blocks::LanternHanging || id == Blocks::SoulLanternHanging;
 }
 inline bool lanternHangs(BlockId id) { return id == Blocks::LanternHanging || id == Blocks::SoulLanternHanging; }
+inline bool isDispenser(BlockId id) { return id == Blocks::Dispenser || (id >= Blocks::ThrowerTurnFirst && id < Blocks::ThrowerTurnFirst + 6); }
+inline bool isDropper(BlockId id) { return id == Blocks::Dropper || (id >= Blocks::ThrowerTurnFirst + 6 && id <= Blocks::ThrowerTurnLast); }
+inline bool isObserver(BlockId id)
+{
+    return id == Blocks::Observer || id == Blocks::ObserverLit || (id >= Blocks::ObserverTurnFirst && id <= Blocks::ObserverTurnLast);
+}
+inline bool observerLit(BlockId id) { return id == Blocks::ObserverLit || (id >= Blocks::ObserverTurnFirst + 6 && id <= Blocks::ObserverTurnLast); }
+inline int sixFacing(BlockId id)
+{
+    if (id >= Blocks::ThrowerTurnFirst && id <= Blocks::ThrowerTurnLast) return (id - Blocks::ThrowerTurnFirst) % 6;
+    if (id >= Blocks::ObserverTurnFirst && id <= Blocks::ObserverTurnLast) return (id - Blocks::ObserverTurnFirst) % 6;
+    return 4;
+}
+inline BlockId dispenserFacingTo(int facing) { return static_cast<BlockId>(Blocks::ThrowerTurnFirst + ((facing % 6) + 6) % 6); }
+inline BlockId dropperFacingTo(int facing) { return static_cast<BlockId>(Blocks::ThrowerTurnFirst + 6 + ((facing % 6) + 6) % 6); }
+inline BlockId observerFacingTo(int facing, bool lit) { return static_cast<BlockId>(Blocks::ObserverTurnFirst + (lit ? 6 : 0) + ((facing % 6) + 6) % 6); }
 inline bool isHopper(BlockId id) { return id == Blocks::Hopper || (id >= Blocks::HopperSideFirst && id <= Blocks::HopperSideLast); }
 inline int hopperFacing(BlockId id) { return id >= Blocks::HopperSideFirst && id <= Blocks::HopperSideLast ? id - Blocks::HopperSideFirst : -1; }
 inline BlockId hopperFacingTo(int facing) { return facing < 0 ? Blocks::Hopper : static_cast<BlockId>(Blocks::HopperSideFirst + (facing & 3)); }
@@ -1474,17 +1492,13 @@ inline bool isGeode(BlockId id)
 
 inline bool isItemHolder(BlockId id)
 {
-    return id == Blocks::Hopper || (id >= Blocks::HopperSideFirst && id <= Blocks::HopperSideLast) || id == Blocks::Dropper || id == Blocks::Dispenser;
+    return id == Blocks::Hopper || (id >= Blocks::HopperSideFirst && id <= Blocks::HopperSideLast) || id == Blocks::Dropper || id == Blocks::Dispenser ||
+           (id >= Blocks::ThrowerTurnFirst && id <= Blocks::ThrowerTurnLast);
 }
 
 inline bool isNoteBlock(BlockId id)
 {
     return id == Blocks::NoteBlock || id == Blocks::NoteBlockLit;
-}
-
-inline bool isObserver(BlockId id)
-{
-    return id == Blocks::Observer || id == Blocks::ObserverLit;
 }
 
 // What a beacon will stand on. Minecraft's pyramid takes iron, gold,

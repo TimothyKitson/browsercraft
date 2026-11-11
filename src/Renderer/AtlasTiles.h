@@ -398,6 +398,7 @@ namespace Tiles
         FarmlandDryTop,
         CauldronRimTile,
         HopperInsideTile, BrewingBaseTile,
+        DispenserFrontSide, DropperFrontSide,
 
         TileCount
     };
