@@ -395,6 +395,7 @@ namespace Tiles
         PolishedBasaltTop, PolishedBasaltSide,
         HeadTileFirst, HeadTileLast = HeadTileFirst + 44,
         BambooStalkTile, BambooSmallLeavesTile, BambooShootTile,
+        FarmlandDryTop,
 
         TileCount
     };

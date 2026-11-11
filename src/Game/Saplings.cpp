@@ -199,7 +199,7 @@ namespace
 bool Saplings::canPlantOn(BlockId ground)
 {
     return ground == Blocks::Grass || ground == Blocks::Dirt || ground == Blocks::SnowGrass ||
-           ground == Blocks::Farmland || ground == Blocks::Mud || ground == Blocks::MuddyMangroveRoots ||
+           isFarmland(ground) || ground == Blocks::Mud || ground == Blocks::MuddyMangroveRoots ||
            ground == Blocks::Clay || isNylium(ground) || ground == Blocks::SoulSand;
 }
 

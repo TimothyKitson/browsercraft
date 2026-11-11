@@ -547,6 +547,7 @@ StackId blockDrop(BlockId id)
     if (isInfested(id)) return Blocks::Air;
     if (isSnowLayer(id)) return Items::Snowball;
     if (id == Blocks::BambooShoot) return Blocks::Bamboo;
+    if (id == Blocks::FarmlandDry) return Blocks::Dirt;
     if (isHead(id)) return headKind(id) == 1 ? Blocks::WitherSkull : headOf(headKind(id), false, 0);
     if (isFamilyButton(id)) return buttonItem(buttonMaterial(id));
     if (isPlate(id)) return plateOf(plateMaterial(id), false);

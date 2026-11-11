@@ -154,7 +154,7 @@ bool Farming::growBambooAt(World& world, const glm::ivec3& cane)
 bool Farming::growMelonBeside(World& world, const glm::ivec3& stem, uint32_t& seed)
 {
     // Tilled earth under the stem, the same as any other crop.
-    if (world.getBlock(stem.x, stem.y - 1, stem.z) != Blocks::Farmland) return false;
+    if (!isFarmland(world.getBlock(stem.x, stem.y - 1, stem.z))) return false;
 
     static const int DX[] = { 0, 1, 0, -1 };
     static const int DZ[] = { -1, 0, 1, 0 };
@@ -175,7 +175,7 @@ bool Farming::growMelonBeside(World& world, const glm::ivec3& stem, uint32_t& se
 
         const BlockId under = world.getBlock(x, stem.y - 1, z);
         if (under != Blocks::Grass && under != Blocks::Dirt &&
-            under != Blocks::Farmland) continue;
+            !isFarmland(under)) continue;
 
         world.setBlock(x, stem.y, z, pumpkin ? Blocks::Pumpkin : Blocks::Melon);
         world.setBlock(stem.x, stem.y, stem.z, attachedStemOf(pumpkin, side));
@@ -211,7 +211,7 @@ bool Farming::canGrowAt(const World& world, const glm::ivec3& at)
     if (!isCrop(crop) || isCropRipe(crop)) return false;
 
     // A crop needs tilled earth under it and daylight or a torch on it.
-    if (world.getBlock(at.x, at.y - 1, at.z) != Blocks::Farmland) return false;
+    if (!isFarmland(world.getBlock(at.x, at.y - 1, at.z))) return false;
 
     const int light = std::max<int>(world.skyLight(at.x, at.y, at.z),
                                     world.blockLightAt(at.x, at.y, at.z));
@@ -243,6 +243,48 @@ void Farming::grow(World& world, const glm::vec3& around, uint32_t& seed, std::v
         if (y < 1) continue;
 
         const glm::ivec3 at(x, y, z);
+        const BlockId ticked = world.getBlock(x, y, z);
+
+        if (isFarmland(ticked))
+        {
+            bool wet = false;
+            for (int dy = 0; dy <= 1 && !wet; ++dy)
+                for (int dx = -4; dx <= 4 && !wet; ++dx)
+                    for (int dz = -4; dz <= 4 && !wet; ++dz)
+                        if (isWater(world.getBlock(x + dx, y + dy, z + dz))) wet = true;
+            const BlockId above = world.getBlock(x, y + 1, z);
+            if (wet) { if (ticked != Blocks::Farmland) world.setBlock(x, y, z, Blocks::Farmland); }
+            else if (ticked == Blocks::Farmland) world.setBlock(x, y, z, Blocks::FarmlandDry);
+            else if (!isCrop(above) && !isMelonStem(above) && !isPumpkinStem(above) && !isAttachedStem(above) && !isTorchflowerCrop(above) && !isPitcherCrop(above))
+                world.setBlock(x, y, z, Blocks::Dirt);
+            continue;
+        }
+
+        if (ticked == Blocks::Grass || ticked == Blocks::Mycelium || isNylium(ticked) || ticked == Blocks::SnowGrass)
+        {
+            const BlockId above = world.getBlock(x, y + 1, z);
+            if (isOpaque(above) || isLiquid(above))
+            {
+                world.setBlock(x, y, z, isNylium(ticked) ? Blocks::Netherrack : Blocks::Dirt);
+                continue;
+            }
+            if (isNylium(ticked)) continue;
+            const int light = std::max<int>(world.skyLight(x, y + 1, z), world.blockLightAt(x, y + 1, z));
+            if (light < 9) continue;
+            for (int k = 0; k < 4; ++k)
+            {
+                const uint32_t r = nextRandom(seed);
+                const int tx = x + static_cast<int>(r % 3u) - 1;
+                const int ty = y + static_cast<int>((r >> 4) % 5u) - 3;
+                const int tz = z + static_cast<int>((r >> 8) % 3u) - 1;
+                if (world.getBlock(tx, ty, tz) != Blocks::Dirt) continue;
+                const BlockId over = world.getBlock(tx, ty + 1, tz);
+                if (isOpaque(over) || isLiquid(over)) continue;
+                if (std::max<int>(world.skyLight(tx, ty + 1, tz), world.blockLightAt(tx, ty + 1, tz)) < 4) continue;
+                world.setBlock(tx, ty, tz, ticked == Blocks::Mycelium ? Blocks::Mycelium : Blocks::Grass);
+            }
+            continue;
+        }
 
         // Cane is ticked by the same pass rather than one of its own:
         // it grows where people are for the same reason wheat does, and
@@ -323,7 +365,7 @@ void Farming::grow(World& world, const glm::vec3& around, uint32_t& seed, std::v
             const BlockId sprout = world.getBlock(x, y, z);
             if (isTorchflowerCrop(sprout) || (isPitcherCrop(sprout) && !pitcherCropUpper(sprout)))
             {
-                if (world.getBlock(x, y - 1, z) != Blocks::Farmland) continue;
+                if (!isFarmland(world.getBlock(x, y - 1, z))) continue;
                 if (nextRandom(seed) % 3u != 0u) continue;
                 if (sprout == Blocks::TorchflowerCrop0) world.setBlock(x, y, z, Blocks::TorchflowerCrop1);
                 else if (sprout == Blocks::TorchflowerCrop1) world.setBlock(x, y, z, Blocks::Torchflower);

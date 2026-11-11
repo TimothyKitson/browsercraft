@@ -4192,6 +4192,7 @@ namespace
         { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
         { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
         { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "Farmland", FarmlandDryTop, Dirt, FarmlandSide, true, true, RenderType::Cube, 0, 0.6f },
     };
 
     static_assert(sizeof(EXT_TABLE) / sizeof(EXT_TABLE[0]) == static_cast<size_t>(Blocks::ExtCount - Blocks::ExtFirst),
@@ -4797,6 +4798,7 @@ bool isObtainable(BlockId id)
             if (isFrame(id)) return false;
             if (isAnyCauldron(id) && id != Blocks::Cauldron0) return false;
             if (isHead(id)) return false;
+            if (id == Blocks::FarmlandDry) return false;
             if (id == Blocks::BambooShoot) return false;
 
             // Likewise for stairs: one of each four is the thing you
@@ -4823,6 +4825,7 @@ bool isObtainable(BlockId id)
 const char* blockSoundGroup(BlockId id)
 {
     id = axisBase(id);
+    if (id == Blocks::FarmlandDry) id = Blocks::Farmland;
     if (isFluid(id)) return nullptr;
     if (isCarpet(id)) return "wool";
     if (isSnowLayer(id)) return "snow";
@@ -4976,6 +4979,7 @@ int blockStepVariants(const char* group)
 Material blockMaterial(BlockId id)
 {
     id = axisBase(id);
+    if (id == Blocks::FarmlandDry) id = Blocks::Farmland;
     if (isCrop(id)) return Material::Plant;
     if (isCarpet(id)) return Material::Wool;
     if (isSnowLayer(id)) return Material::Snow;

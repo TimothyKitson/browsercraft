@@ -7019,6 +7019,15 @@ namespace
                 for (int x = 0; x < Tile::N; ++x) t.set(x, y, shade(t.get(x, y), -22));
     }
 
+    void paintFarmlandDryTop(Tile& t)
+    {
+        t.fill(Color{ 134, 98, 64 });
+        t.speckle(9, 313);
+        for (int y = 0; y < Tile::N; ++y)
+            if (y % 4 == 1)
+                for (int x = 0; x < Tile::N; ++x) t.set(x, y, shade(t.get(x, y), -18));
+    }
+
     void paintFarmlandSide(Tile& t)
     {
         // The side is plain dirt until the top two rows, which are the
@@ -9231,6 +9240,7 @@ namespace
         { Tiles::PumpkinTop, paintPumpkinTop },
         { Tiles::Wool, paintWool },
         { Tiles::FarmlandTop, paintFarmlandTop },
+        { Tiles::FarmlandDryTop, paintFarmlandDryTop },
         { Tiles::FarmlandSide, paintFarmlandSide },
         { Tiles::CarrotStage0, paintCarrot0 },
         { Tiles::CarrotStage1, paintCarrot1 },
@@ -11144,6 +11154,7 @@ namespace
         { Tiles::DoorLower,     { "oak_door_bottom", "door_wood_lower", nullptr },     Tinting::None,    0,   false },
         { Tiles::DoorUpper,     { "oak_door_top", "door_wood_upper", nullptr },        Tinting::None,    0,   false },
         { Tiles::FarmlandTop,   { "farmland_moist", "farmland", nullptr },             Tinting::None,    0,   false },
+        { Tiles::FarmlandDryTop, { "farmland", nullptr }, Tinting::None, 0, false },
         { Tiles::FarmlandSide,  { "dirt", nullptr },                                   Tinting::None,    0,   false },
         { Tiles::NetherPortal,  { "nether_portal", nullptr },                          Tinting::None,  200,   true  },
         { Tiles::LecternTopBook,{ "lectern_top", nullptr },                            Tinting::None,    0,   false },

@@ -3326,6 +3326,8 @@ bool Application::frame()
                     m_world->setBlock(bx + 1, by, bz - 4, withAxis(Blocks::CherryLog, 2));
                     m_world->setBlock(bx + 1, by, bz - 5, withAxis(Blocks::CherryLog, 2));
                     m_world->setBlock(bx + 2, by, bz - 4, withAxis(Blocks::QuartzPillar, 1));
+                    m_world->setBlock(bx - 1, by - 1, bz + 2, Blocks::Farmland);
+                    m_world->setBlock(bx, by - 1, bz + 2, Blocks::FarmlandDry);
                     for (int t = 0; t < 2; ++t)
                     {
                         const int tx = bx - 9 + t * 4, tz = bz - 6;
@@ -8862,12 +8864,30 @@ void Application::updateMovementAudio(const glm::vec3& positionBefore, bool jump
 
     if (m_player.onGround && !m_wasOnGround && !m_player.flying && !wading)
     {
+        const glm::ivec3 under(static_cast<int>(std::floor(feet.x)), static_cast<int>(std::floor(feet.y - 0.2f)), static_cast<int>(std::floor(feet.z)));
+        if (isFarmland(ground) && m_lastFall > 0.5f && !m_player.creative())
+        {
+            m_growthSeed = m_growthSeed * 1664525u + 1013904223u;
+            if (static_cast<float>((m_growthSeed >> 8) % 1000u) / 1000.0f < m_lastFall - 0.5f)
+            {
+                const BlockId crop = m_world->getBlock(under.x, under.y + 1, under.z);
+                if (crop != Blocks::Air && !isSolid(crop))
+                {
+                    m_world->setBlock(under.x, under.y + 1, under.z, Blocks::Air);
+                    m_net.onLocalBlockChange(under.x, under.y + 1, under.z, Blocks::Air);
+                    if (m_rules.on(GameRules::Rule::DoTileDrops)) m_drops.spawnFromBrokenBlock(under + glm::ivec3(0, 1, 0), blockDrop(crop));
+                }
+                m_world->setBlock(under.x, under.y, under.z, Blocks::Dirt);
+                m_net.onLocalBlockChange(under.x, under.y, under.z, Blocks::Dirt);
+            }
+        }
         m_audio.play(Sound::Land, 0.55f);
         if (ground != Blocks::Air) m_particles.spawnLandingPuff(feet, ground);
         if (!isWool(ground)) vibrate(m_player.position, 2);
         m_distanceWalked = 0.0f;
     }
     m_wasOnGround = m_player.onGround;
+    m_lastFall = m_player.fallenSoFar();
 
     if (m_player.onGround && !m_player.flying && ground != Blocks::Air)
     {
@@ -16888,7 +16908,7 @@ void Application::handlePlacement()
     {
         const RaycastHit soil = m_world->raycast(m_camera.position, m_camera.front, REACH_DISTANCE);
         if (soil.hit && soil.normal.y > 0 &&
-            m_world->getBlock(soil.block.x, soil.block.y, soil.block.z) == Blocks::Farmland &&
+            isFarmland(m_world->getBlock(soil.block.x, soil.block.y, soil.block.z)) &&
             m_world->getBlock(soil.block.x, soil.block.y + 1, soil.block.z) == Blocks::Air)
         {
             const BlockId sown = stack.id == Items::TorchflowerSeeds ? Blocks::TorchflowerCrop0 : pitcherCropOf(0, false);
@@ -17855,6 +17875,11 @@ void Application::handlePlacement()
     m_audio.playPlace(placing);
     checkFalling(target);
     if (isLeaves(placing)) m_placedLeaves.insert({ static_cast<int>(m_dimension), target.x, target.y, target.z });
+    if (isSolid(placing) && isOpaque(placing) && isFarmland(m_world->getBlock(target.x, target.y - 1, target.z)))
+    {
+        m_world->setBlock(target.x, target.y - 1, target.z, Blocks::Dirt);
+        m_net.onLocalBlockChange(target.x, target.y - 1, target.z, Blocks::Dirt);
+    }
     if (isSnowLayer(placing)) snowGrass(target + glm::ivec3(0, -1, 0));
     else unsnowGrass(target + glm::ivec3(0, -1, 0));
     if (isAnySculkSensor(placing)) m_sensorSpots.push_back(target);

@@ -790,6 +790,7 @@ namespace
             else if (isWallTorch(id))             why = "a torch set against a wall";
             else if (isSnowLayer(id))             why = "more snow set on a layer, or snowfall piling up";
             else if (blockAxis(id) != 0)          why = "a log or pillar set against the side of a block, lying down";
+            else if (id == Blocks::FarmlandDry)   why = "farmland with no water near it";
             else if (isHead(id))                  why = "a head set down turned, or on a wall; creative only bar the wither skull";
             else if (id == Blocks::BambooShoot)   why = "bamboo set on the ground, before it grows";
 

@@ -704,6 +704,7 @@ namespace Blocks
         HeadRunFirst, HeadRunLast = HeadRunFirst + 139,
         BambooShoot,
         AxisRunFirst, AxisRunLast = AxisRunFirst + 65,
+        FarmlandDry,
         ExtCount
     };
 }
@@ -813,6 +814,7 @@ inline BlockId headOf(int kind, bool wall, int turn)
 }
 inline bool isWitherSkullBlock(BlockId id) { return id == Blocks::WitherSkull || (isHead(id) && headKind(id) == 1); }
 constexpr int AXIS_BLOCKS = 33;
+inline bool isFarmland(BlockId id) { return id == Blocks::Farmland || id == Blocks::FarmlandDry; }
 BlockId axisBase(BlockId id);
 int blockAxis(BlockId id);
 bool hasAxis(BlockId id);

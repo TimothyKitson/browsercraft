@@ -1309,6 +1309,7 @@ private:
     std::set<std::array<int, 4>> m_placedLeaves;
     std::vector<std::pair<glm::ivec3, float>> m_leafDecay;
     std::vector<glm::ivec3> m_logsGone;
+    float m_lastFall = 0.0f;
     void unsnowGrass(const glm::ivec3& at);
     // Looks for a completed ring of eyed frames round a frame that was
     // just filled, and opens the portal inside it if there is one.

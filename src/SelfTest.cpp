@@ -13703,6 +13703,12 @@ namespace
               blockOverlaps(Blocks::Bamboo, 0, 0, 0, 0.45f, 0.2f, 0.45f, 0.55f, 0.8f, 0.55f, 0) &&
               !blockOverlaps(Blocks::Bamboo, 0, 0, 0, 0.0f, 0.2f, 0.0f, 0.3f, 0.8f, 0.3f, 0),
               "bamboo starts as a shoot you walk through and grows into a thin stalk you bump into");
+        section("farmland dries out and is trampled");
+        check(isFarmland(Blocks::FarmlandDry) && isFarmland(Blocks::Farmland) && blockDrop(Blocks::FarmlandDry) == Blocks::Dirt &&
+              blockInfo(Blocks::FarmlandDry).tileTop != blockInfo(Blocks::Farmland).tileTop && !isObtainable(Blocks::FarmlandDry),
+              "dry farmland is its own block with its own texture, and still farmland");
+        check(blockMaterial(Blocks::FarmlandDry) == blockMaterial(Blocks::Farmland), "and is dug like wet farmland");
+
         section("logs, stems and pillars lie the way they are set");
         {
             const BlockId sideways = withAxis(Blocks::BirchLog, 1);
