@@ -132,7 +132,7 @@ void MobModel::build(const MobSkin& skin, const Mob& mob, float sky, float block
     }
 
     const float phase = mob.gait();
-    const float amount = mob.gaitAmount();
+    const float amount = mob.roosting() ? 0.0f : mob.gaitAmount();
 
     // A shulker's lid, which is the one part in the game that moves by
     // sliding rather than swinging. Mojang gives an open one a slow bob
@@ -166,6 +166,8 @@ void MobModel::build(const MobSkin& skin, const Mob& mob, float sky, float block
         box.pitch = source.pitch + swingFor(source.part, phase, amount) * type.limbSwing;
         box.yaw = source.yaw;
         box.roll = source.roll + flapFor(source.part, phase, amount);
+        if (mob.roosting() && source.part == Part::WingRight) box.yaw -= 1.2566371f;
+        if (mob.roosting() && source.part == Part::WingLeft) box.yaw += 1.2566371f;
 
         if (source.part == Part::Lid)
         {
@@ -179,7 +181,7 @@ void MobModel::build(const MobSkin& skin, const Mob& mob, float sky, float block
 
     m_vertices.clear();
     BoxMesh::appendAll(m_vertices, boxes, frame);
-    if (mob.customName() == "Dinnerbone" || mob.customName() == "Grumm")
+    if (mob.customName() == "Dinnerbone" || mob.customName() == "Grumm" || mob.roosting())
     {
         const glm::vec3 centre = frame.feet + glm::vec3(0.0f, mob.height() * 0.5f, 0.0f);
         for (size_t i = 0; i + 9 <= m_vertices.size(); i += 9)
@@ -705,9 +707,18 @@ std::vector<std::string> MobModel::coatOverlaysOf(const Mob& mob) const
         case MobId::Cat:
             if (mob.tamed()) layers.push_back(root + "cat/cat_collar.png#B02E26");
             break;
+        case MobId::Llama:
         case MobId::TraderLlama:
-            layers.push_back(root + "llama/decor/trader_llama.png");
+        {
+            static const char* COLOURS[16] = { "white", "orange", "magenta", "light_blue", "yellow", "lime", "pink", "gray",
+                                               "light_gray", "cyan", "purple", "blue", "brown", "green", "red", "black" };
+            const uint16_t worn = mob.horseArmour();
+            if (worn >= Blocks::CarpetFirst && worn <= Blocks::CarpetLast)
+                layers.push_back(root + "llama/decor/" + COLOURS[(worn - Blocks::CarpetFirst) & 15] + ".png");
+            else if (mob.typeId() == MobId::TraderLlama)
+                layers.push_back(root + "llama/decor/trader_llama.png");
             break;
+        }
         case MobId::TropicalFish:
         case MobId::TropicalFishLarge:
         {

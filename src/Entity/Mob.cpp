@@ -287,14 +287,9 @@ StackId Mob::tamingFood(MobId type)
     switch (type)
     {
         case MobId::Wolf:  return Items::Bone;
-        // Minecraft tames a horse by being thrown off it until it gives
-        // in. Wheat is the same bargain with fewer broken bones, and it
-        // is what the horse already wants.
-        case MobId::Horse: case MobId::Donkey: case MobId::Mule: return Items::Wheat;
         case MobId::SkeletonHorse: case MobId::ZombieHorse: return Items::Apple;
         case MobId::Cat: return Items::RawCod;
         case MobId::Parrot: return Items::WheatSeeds;
-        case MobId::Llama: case MobId::TraderLlama: return Blocks::HayBale;
         default:           return Blocks::Air;
     }
 }
@@ -370,6 +365,20 @@ bool Mob::feed(StackId food)
         if (!alive() || food != Items::Slimeball) return false;
         m_growthBoost += TADPOLE_SECONDS * 0.1f;
         return true;
+    }
+    if ((t.id == MobId::Horse || t.id == MobId::Donkey || t.id == MobId::Mule) && !m_tamed && alive())
+    {
+        int calm = 0;
+        if (food == Items::Wheat || food == Items::Sugar || food == Items::Apple) calm = 3;
+        else if (food == Items::GoldenCarrot) calm = 5;
+        else if (food == Items::GoldenApple || food == Items::EnchantedGoldenApple) calm = 10;
+        const bool hurt = m_health < t.maxHealth;
+        if (calm > 0 && (m_temper < 100 || hurt))
+        {
+            addTemper(calm);
+            if (hurt) m_health = std::min(t.maxHealth, m_health + (food == Items::GoldenApple || food == Items::EnchantedGoldenApple ? 10 : 3));
+            return true;
+        }
     }
     const bool healer = (t.id == MobId::Wolf && m_tamed && acceptsFood(t.id, food, t.breedingFood)) ||
                         (isHorseKind(t.id) && (food == Items::Wheat || food == Items::Apple || food == Items::Sugar || food == Items::GoldenCarrot ||
@@ -541,6 +550,7 @@ void Mob::moveAxis(const World& world, float delta, int axis)
 float Mob::currentSpeed() const
 {
     float speed = type().walkSpeed * (panicking() ? PANIC_SPEED : 1.0f) * (m_slowTimer > 0.0f ? 0.6f : 1.0f);
+    if (m_type == MobId::Horse) speed *= horseSpeedFactor();
     if (m_ridden && type().saddleRide)
     {
         speed *= 1.15f;
@@ -907,7 +917,7 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
         m_moving = m_steerForward;
 
         // A boat has no legs to push off with, so it does not jump.
-        if (m_steerJump && m_onGround && !t.inanimate) m_velocity.y = RIDDEN_JUMP * m_jumpPower;
+        if (m_steerJump && m_onGround && !t.inanimate) m_velocity.y = RIDDEN_JUMP * m_jumpPower * (m_type == MobId::Horse ? horseJumpFactor() : 1.0f);
         m_steerJump = false;
     }
     else if (t.inanimate || t.stationary || m_sitting || m_holdTimer > 0.0f)
@@ -1460,6 +1470,39 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
         }
     }
 
+    if (m_type == MobId::Bat && alive())
+    {
+        const int rx = static_cast<int>(std::floor(m_position.x)), rz = static_cast<int>(std::floor(m_position.z));
+        if (m_roosting)
+        {
+            const BlockId above = world.getBlock(rx, static_cast<int>(std::floor(m_roostAt.y + height() + 0.05f)), rz);
+            const bool close = glm::length(playerPosition - m_position) < 4.0f;
+            if (!isOpaque(above) || close || m_panicTimer > 0.0f || random01() < deltaTime * 0.01f)
+            {
+                m_roosting = false;
+                emitNamed("mob/bat/takeoff", Sound::MobBatSay, 0.3f, 0.8f + random01() * 0.4f);
+            }
+            else
+            {
+                m_position = m_roostAt;
+                m_velocity = glm::vec3(0.0f);
+                m_moving = false;
+            }
+        }
+        else
+        {
+            const int top = static_cast<int>(std::floor(m_position.y + height() + 0.3f));
+            if (random01() < deltaTime * 0.2f && isOpaque(world.getBlock(rx, top, rz)) &&
+                glm::length(playerPosition - m_position) >= 4.0f)
+            {
+                m_roosting = true;
+                m_roostAt = glm::vec3(m_position.x, static_cast<float>(top) - height(), m_position.z);
+                m_position = m_roostAt;
+                m_velocity = glm::vec3(0.0f);
+            }
+        }
+    }
+
     if (alive() && (m_type == MobId::EnderDragon || (m_type == MobId::Parrot && !m_onGround)))
     {
         m_flapTimer -= deltaTime;
@@ -1479,7 +1522,7 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
     }
 
     m_ambientTimer -= deltaTime;
-    if (m_ambientTimer <= 0.0f && !t.inanimate)
+    if (m_ambientTimer <= 0.0f && !t.inanimate && !m_roosting)
     {
         m_ambientTimer = t.ambientMinSeconds + random01() * (t.ambientMaxSeconds - t.ambientMinSeconds);
         const float pitch = 0.9f + random01() * 0.2f;

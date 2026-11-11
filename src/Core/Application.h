@@ -530,6 +530,9 @@ private:
     float m_distanceWalked = 0.0f;
     bool m_wasWet = false;
     bool m_mountAirborne = false;
+    float m_wildTurn = 0.0f;
+    float m_wildYaw = 0.0f;
+    float m_buckClock = 2.5f;
     bool m_wornPrimed = false;
     StackId m_wornLast[4] = {};
     float m_swimDistance = 0.0f;

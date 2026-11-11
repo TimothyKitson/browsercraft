@@ -2676,7 +2676,21 @@ namespace
         check(mobType(MobId::Strider).rideable, "the strider is one of the others");
         check(mobType(MobId::Camel).rideable, "and the camel is the third");
 
-        check(Mob::tamingFood(MobId::Horse) == Items::Wheat, "wheat tames one");
+        check(Mob::tamingFood(MobId::Horse) == Blocks::Air, "a horse is not fed tame");
+        {
+            Mob wild(MobId::Horse, glm::vec3(0.0f, 70.0f, 0.0f), 77u);
+            check(!wild.tamed(), "a horse starts wild");
+            check(Mob::canBeRidden(wild.type(), false, false), "and can be got on wild, to be broken in");
+            check(wild.temper() == 0, "with no temper to start");
+            check(wild.feed(Items::Wheat) && wild.temper() == 3, "wheat calms it by three");
+            check(wild.feed(Items::GoldenCarrot) && wild.temper() == 8, "a golden carrot by five");
+            check(wild.feed(Items::GoldenApple) && wild.temper() == 18, "a golden apple by ten");
+            check(!wild.tamed(), "but food alone never tames it");
+            wild.becomeTamed();
+            check(wild.tamed(), "being ridden until it accepts you does");
+            check(wild.horseSpeedFactor() >= 0.75f && wild.horseSpeedFactor() <= 1.26f, "each horse has its own pace");
+            check(wild.horseJumpFactor() >= 0.8f && wild.horseJumpFactor() <= 1.21f, "and its own spring");
+        }
 
         {
             Mob mount(MobId::Horse, glm::vec3(10.0f, 70.0f, -4.0f), 21u);
@@ -2755,8 +2769,8 @@ namespace
         check(!Mob::canBeRidden(boat, false, true), "though not a half-built one");
         check(Mob::canBeRidden(mobType(MobId::Horse), true, false),
               "a tamed horse can be ridden");
-        check(!Mob::canBeRidden(mobType(MobId::Horse), false, false),
-              "a wild one cannot");
+        check(Mob::canBeRidden(mobType(MobId::Horse), false, false),
+              "a wild one can be got on to break it in");
         check(!Mob::canBeRidden(mobType(MobId::Horse), true, true),
               "and neither can a foal");
         for (MobId other : { MobId::Cow, MobId::Pig, MobId::Creeper, MobId::Villager })

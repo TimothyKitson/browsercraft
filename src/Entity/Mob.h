@@ -465,8 +465,16 @@ public:
     {
         if (!type.rideable || baby) return false;
         if (type.saddleRide) return saddled;
+        if (type.id == MobId::Horse || type.id == MobId::Donkey || type.id == MobId::Mule ||
+            type.id == MobId::Llama || type.id == MobId::TraderLlama) return true;
         return type.inanimate || tamed;
     }
+    int temper() const { return m_temper; }
+    bool roosting() const { return m_roosting; }
+    float horseSpeedFactor() const { return 0.75f + static_cast<float>((birthSeed() >> 4) % 51u) / 100.0f; }
+    float horseJumpFactor() const { return 0.8f + static_cast<float>((birthSeed() >> 12) % 41u) / 100.0f; }
+    void addTemper(int amount) { m_temper = std::clamp(m_temper + amount, 0, 100); }
+    void becomeTamed() { m_tamed = true; m_panicTimer = 0.0f; }
     void boostRide(float seconds) { m_rideBoost = seconds; m_rideBoostLength = seconds; }
     bool rideBoosted() const { return m_rideBoost > 0.0f; }
 
@@ -720,6 +728,9 @@ private:
     float m_growthBoost = 0.0f;
     bool m_provoked = false;
     bool m_wet = false;
+    bool m_roosting = false;
+    glm::vec3 m_roostAt{ 0.0f };
+    int m_temper = 0;
     float m_flapTimer = 0.0f;
     std::vector<MobSound> m_sounds;
     std::vector<MobStrike> m_strikes;

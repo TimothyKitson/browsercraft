@@ -797,6 +797,8 @@ void EntityManager::update(float deltaTime, const World& world,
                 death.gearSure[static_cast<size_t>(slot)] = mob.gearSure(slot);
             }
             death.chargedBlast = mob.chargedBlastHit();
+            death.saddled = mob.saddled();
+            death.worn = mob.horseArmour();
             death.how = mob.playerHitHow();
             death.distance = mob.playerHitDistance();
             death.captain = mob.captain();

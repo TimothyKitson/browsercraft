@@ -96,6 +96,8 @@ public:
         int how = 0;
         float distance = 0.0f;
         bool captain = false;
+        bool saddled = false;
+        uint16_t worn = 0;
     };
     bool spawnPatrol(const World& world, const glm::vec3& playerPosition);
     void spawnJockey(MobId rider, MobId mount, const glm::vec3& feet, const World& world, bool babyRider);

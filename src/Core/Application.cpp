@@ -9692,7 +9692,46 @@ void Application::updateGameplay(float deltaTime)
     if (Mob* mount = riddenMob())
     {
         const bool jumpHeld = m_keys.down(m_input, Action::Jump);
-        if (isHorseKind(mount->typeId()))
+        const bool llama = mount->typeId() == MobId::Llama || mount->typeId() == MobId::TraderLlama;
+        const bool wild = !mount->tamed() && (mount->typeId() == MobId::Horse || mount->typeId() == MobId::Donkey || mount->typeId() == MobId::Mule || llama);
+        bool bucked = false;
+        if (wild)
+        {
+            m_wildTurn -= deltaTime;
+            if (m_wildTurn <= 0.0f)
+            {
+                m_growthSeed = m_growthSeed * 1664525u + 1013904223u;
+                m_wildTurn = 0.4f + static_cast<float>((m_growthSeed >> 8) % 100u) / 100.0f;
+                m_wildYaw = mount->yaw() + static_cast<float>(static_cast<int>((m_growthSeed >> 16) % 181u) - 90);
+            }
+            mount->steer(m_wildYaw, true, false);
+            m_buckClock -= deltaTime;
+            if (m_buckClock <= 0.0f)
+            {
+                m_growthSeed = m_growthSeed * 1664525u + 1013904223u;
+                m_buckClock = 0.5f + static_cast<float>((m_growthSeed >> 8) % 400u) / 100.0f;
+                const int roll = static_cast<int>((m_growthSeed >> 20) % (llama ? 30u : 100u));
+                const glm::vec3 head = mount->position() + glm::vec3(0.0f, mount->type().height, 0.0f);
+                if (roll < mount->temper())
+                {
+                    mount->becomeTamed();
+                    sprites(SpriteParticles::Kind::Heart, head, 7, 0.5f, 0.4f, 0.3f, 1.2f);
+                    award("husbandry/tame_an_animal", "tamed_animal");
+                    m_audio.play(mount->type().voice, 0.8f, 1.0f);
+                }
+                else
+                {
+                    mount->addTemper(5);
+                    sprites(SpriteParticles::Kind::Smoke, head, 7, 0.5f, 0.3f, 0.3f, 1.0f);
+                    m_audio.playNamed(llama ? "mob/llama/angry" : mount->typeId() == MobId::Horse ? "mob/horse/angry" : "mob/horse/donkey/angry",
+                                      mount->type().voice, 1.0f, 1.0f);
+                    dismount();
+                    m_player.velocity.y = 6.0f;
+                    bucked = true;
+                }
+            }
+        }
+        else if (isHorseKind(mount->typeId()))
         {
             bool leap = false;
             float power = 1.0f;
@@ -9745,13 +9784,13 @@ void Application::updateGameplay(float deltaTime)
             mount->steer(m_camera.yaw, m_keys.down(m_input, Action::Forward), jumpHeld);
         }
 
-        m_player.position = mount->saddle();
-        m_player.velocity = glm::vec3(0.0f);
-        m_player.onGround = true;
-
-        // Sneak gets you off, which is what Minecraft uses and the one
-        // key that is not already steering something.
-        if (m_keys.pressed(m_input, Action::Sneak)) dismount();
+        if (!bucked)
+        {
+            m_player.position = mount->saddle();
+            m_player.velocity = glm::vec3(0.0f);
+            m_player.onGround = true;
+            if (m_keys.pressed(m_input, Action::Sneak)) dismount();
+        }
     }
     else
     {
@@ -18576,7 +18615,37 @@ void Application::handlePlacement()
 
     // Getting on something comes before all of it: a tamed horse in
     // front of you is to be ridden, not fed.
-    if (Mob* ride = m_entities.rideable(m_camera.position, m_camera.front, ATTACK_REACH))
+    Mob* ride = m_entities.rideable(m_camera.position, m_camera.front, ATTACK_REACH);
+    if (ride && isHorseKind(ride->typeId()))
+    {
+        const StackId food = stack.id;
+        const bool horseFood = food == Items::Wheat || food == Items::Sugar || food == Items::Apple || food == Items::GoldenCarrot ||
+                               food == Items::GoldenApple || food == Items::EnchantedGoldenApple || food == static_cast<StackId>(Blocks::HayBale);
+        const bool golden = food == Items::GoldenCarrot || food == Items::GoldenApple || food == Items::EnchantedGoldenApple;
+        if (horseFood && (!ride->tamed() || ride->health() < ride->type().maxHealth || golden)) ride = nullptr;
+    }
+    if (ride && isHorseKind(ride->typeId()) && !ride->tamed() &&
+        (stack.id == Items::Saddle || isHorseArmour(stack.id) || m_player.sneaking))
+    {
+        namedAt(ride->typeId() == MobId::Horse ? "mob/horse/angry" : "mob/horse/donkey/angry", ride->position(), 1.0f, 1.0f, ride->type().voice);
+        sprites(SpriteParticles::Kind::Smoke, ride->position() + glm::vec3(0.0f, ride->type().height, 0.0f), 5, 0.4f, 0.3f, 0.3f, 1.0f);
+        return;
+    }
+    if (ride && (ride->typeId() == MobId::Llama || ride->typeId() == MobId::TraderLlama) && ride->tamed() && !ride->baby() &&
+        !isItem(stack.id) && isCarpet(asBlock(stack.id)))
+    {
+        const uint16_t worn = ride->horseArmour();
+        if (worn != stack.id)
+        {
+            if (worn >= Blocks::CarpetFirst && worn <= Blocks::CarpetLast)
+                m_drops.spawn(ride->position() + glm::vec3(0.0f, 1.2f, 0.0f), static_cast<StackId>(worn), 1);
+            ride->setHorseArmour(stack.id);
+            if (!m_player.creative() && --stack.count <= 0) stack.clear();
+            namedAt("mob/llama/swag", ride->position(), 0.5f, 1.0f, Sound::DigWool);
+            return;
+        }
+    }
+    if (ride)
     {
         if (isHorseKind(ride->typeId()) && stack.id == Items::Saddle && !ride->saddled())
         {
@@ -18684,12 +18753,10 @@ void Application::handlePlacement()
 
     // Feeding comes first: an animal in front of you takes the wheat
     // rather than the block landing behind it.
-    const Mob* beingFed = isBreedingFood(stack.id)
-                              ? m_entities.pick(m_camera.position, m_camera.front, ATTACK_REACH) : nullptr;
+    const Mob* beingFed = stack.empty() ? nullptr : m_entities.pick(m_camera.position, m_camera.front, ATTACK_REACH);
     const glm::vec3 fedAt = beingFed ? beingFed->position() + glm::vec3(0.0f, beingFed->type().height, 0.0f)
                                      : glm::vec3(0.0f);
-    if (isBreedingFood(stack.id) &&
-        m_entities.feed(m_camera.position, m_camera.front, ATTACK_REACH, stack.id))
+    if (beingFed && m_entities.feed(m_camera.position, m_camera.front, ATTACK_REACH, stack.id))
     {
         if (beingFed) sprites(SpriteParticles::Kind::Heart, fedAt, 6, 0.4f, 0.4f, 0.3f, 1.2f);
         if (!m_player.creative())
@@ -19116,9 +19183,6 @@ void Application::handlePlacement()
         }
     }
 
-    // Sowing: seeds go into tilled ground only. A carrot and a potato
-    // sow themselves the same way, since for those two the seed and the
-    // food are one item.
     if (Farming::cropFromSeed(stack.id) != Blocks::Air)
     {
         const BlockId sowing = Farming::cropFromSeed(stack.id);
@@ -24971,6 +25035,12 @@ void Application::updateMobs(float deltaTime)
     for (const EntityManager::Death& death : m_entities.drainDeaths())
     {
         vibrate(death.position, 15);
+        if (m_rules.on(GameRules::Rule::DoMobLoot))
+        {
+            const glm::vec3 lift = death.position + glm::vec3(0.0f, 0.6f, 0.0f);
+            if (death.saddled) m_drops.spawn(lift, Items::Saddle, 1);
+            if (death.worn != 0 && death.worn != Items::WolfArmor) m_drops.spawn(lift, static_cast<StackId>(death.worn), 1);
+        }
         if (death.captain && m_rules.on(GameRules::Rule::DoMobLoot))
             m_drops.spawnStack(death.position + glm::vec3(0.0f, 0.5f, 0.0f),
                                ItemStack{ Items::OminousBottle, 1, static_cast<int>(death.serial % 5u) });
