@@ -356,6 +356,25 @@ namespace
         return displayName(stack.id);
     }
 
+    std::string rarityCode(const ItemStack& stack)
+    {
+        int rarity = 0;
+        const StackId id = stack.id;
+        const BlockId block = isItem(id) ? static_cast<BlockId>(Blocks::Air) : asBlock(id);
+        if (id == Items::EnchantedGoldenApple || id == Items::Elytra || id == Items::Mace || id == Items::DebugStick ||
+            block == Blocks::DragonEgg || block == Blocks::HeavyCore || block == Blocks::Barrier || isCommandBlock(block) ||
+            isStructureBlock(block) || isJigsaw(block) || isLightBlock(block) || (isHead(block) && headKind(block) == 5))
+            rarity = 3;
+        else if (id == Items::GoldenApple || id == Items::NetherStar || block == Blocks::Beacon || block == Blocks::Conduit)
+            rarity = 2;
+        else if (id == Items::TotemOfUndying || id == Items::HeartOfTheSea || id == Items::ExperienceBottle || id == Items::DragonsBreath ||
+                 id == Items::EnchantedBook || isHead(block) || block == Blocks::WitherSkull)
+            rarity = 1;
+        if (id != Items::EnchantedBook && (stack.enchantments & Enchanting::KIND_BITS) != 0u) rarity = rarity <= 1 ? 2 : 3;
+        static const char* CODES[4] = { "", "\u00a7e", "\u00a7b", "\u00a7d" };
+        return CODES[rarity];
+    }
+
     std::string romanLevel(int level)
     {
         static const char* NUMERALS[11] = { "", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X" };
@@ -449,8 +468,8 @@ namespace
         {
             line("");
             line("When in Main Hand:");
-            line(" " + std::to_string(Tools::attackDamage(stack.id)) + " Attack Damage");
-            line(" " + tidy(Tools::attackSpeed(stack.id)) + " Attack Speed");
+            line("\u00a72 " + std::to_string(Tools::attackDamage(stack.id)) + " Attack Damage");
+            line("\u00a72 " + tidy(Tools::attackSpeed(stack.id)) + " Attack Speed");
         }
         else if (Armour::isArmour(stack.id))
         {
@@ -458,10 +477,10 @@ namespace
             const int slot = std::clamp(Armour::slotFor(stack.id), 0, 3);
             line("");
             line(std::string("When on ") + SLOT[slot] + ":");
-            line("+" + std::to_string(Armour::defencePoints(stack.id)) + " Armor");
-            if (Armour::toughnessOf(stack.id) > 0) line("+" + std::to_string(Armour::toughnessOf(stack.id)) + " Armor Toughness");
+            line("\u00a79+" + std::to_string(Armour::defencePoints(stack.id)) + " Armor");
+            if (Armour::toughnessOf(stack.id) > 0) line("\u00a79+" + std::to_string(Armour::toughnessOf(stack.id)) + " Armor Toughness");
             if (Armour::knockbackResistanceOf(stack.id) > 0.0f)
-                line("+" + tidy(Armour::knockbackResistanceOf(stack.id) * 10.0f) + " Knockback Resistance");
+                line("\u00a79+" + tidy(Armour::knockbackResistanceOf(stack.id) * 10.0f) + " Knockback Resistance");
         }
         return lore;
     }
@@ -2953,7 +2972,7 @@ void Application::finishInventoryScreen()
             {
                 highlight();
                 const ItemStack& stack = m_inventory.slot(box->index);
-                if (!stack.empty()) tip = stackName(stack) + stackLore(stack);
+                if (!stack.empty()) tip = rarityCode(stack) + stackName(stack) + stackLore(stack);
                 if (stack.id == Items::Bundle) tipBundle = &stack;
                 break;
             }
@@ -3039,6 +3058,21 @@ void Application::drawTooltip(const std::string& text, float mouseX, float mouse
             start = end + 1;
         }
     }
+    std::vector<glm::vec4> inks(lines.size(), glm::vec4(0.0f));
+    for (size_t i = 0; i < lines.size(); ++i)
+    {
+        std::string& one = lines[i];
+        if (one.size() >= 3 && static_cast<unsigned char>(one[0]) == 0xC2 && static_cast<unsigned char>(one[1]) == 0xA7)
+        {
+            static const char* CODES = "0123456789abcdef";
+            static const glm::vec3 INKS[16] = { { 0, 0, 0 }, { 0, 0, 0.67f }, { 0, 0.67f, 0 }, { 0, 0.67f, 0.67f },
+                                                { 0.67f, 0, 0 }, { 0.67f, 0, 0.67f }, { 1.0f, 0.67f, 0 }, { 0.67f, 0.67f, 0.67f },
+                                                { 0.33f, 0.33f, 0.33f }, { 0.33f, 0.33f, 1.0f }, { 0.33f, 1.0f, 0.33f }, { 0.33f, 1.0f, 1.0f },
+                                                { 1.0f, 0.33f, 0.33f }, { 1.0f, 0.33f, 1.0f }, { 1.0f, 1.0f, 0.33f }, { 1.0f, 1.0f, 1.0f } };
+            if (const char* at = std::strchr(CODES, one[2])) inks[i] = glm::vec4(INKS[at - CODES], 1.0f);
+            one = one.substr(3);
+        }
+    }
     float textWidth = 0.0f;
     for (const std::string& one : lines) textWidth = std::max(textWidth, UIRenderer::textWidth(one, 1.0f));
     const float textHeight = 8.0f + static_cast<float>(lines.size() - 1) * 10.0f + (lines.size() > 1 ? 2.0f : 0.0f);
@@ -3067,7 +3101,7 @@ void Application::drawTooltip(const std::string& text, float mouseX, float mouse
 
     for (size_t i = 0; i < lines.size(); ++i)
         m_ui.textWithShadow(lines[i], x, y + (i == 0 ? 0.0f : 2.0f + 10.0f * static_cast<float>(i)), 1.0f,
-                            i == 0 || plain ? glm::vec4(1.0f) : glm::vec4(0.66f, 0.66f, 0.66f, 1.0f));
+                            inks[i].a > 0.0f ? inks[i] : i == 0 || plain ? glm::vec4(1.0f) : glm::vec4(0.66f, 0.66f, 0.66f, 1.0f));
 }
 
 const Application::SlotBox* Application::slotBoxAt(int mouseX, int mouseY) const
