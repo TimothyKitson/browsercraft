@@ -1306,6 +1306,14 @@ private:
     void turnWithDebugStick(const glm::ivec3& at, int step);
     bool leafHeld(const glm::ivec3& leaf) const;
     void soakSponge(const glm::ivec3& at);
+    bool useCampfire();
+    void tickCampfires(float deltaTime);
+    struct Campfire
+    {
+        StackId items[4] = { Blocks::Air, Blocks::Air, Blocks::Air, Blocks::Air };
+        float cooked[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+    };
+    std::map<std::array<int, 4>, Campfire> m_campfires;
     void tickLeafDecay(float deltaTime);
     std::set<std::array<int, 4>> m_placedLeaves;
     std::vector<std::pair<glm::ivec3, float>> m_leafDecay;

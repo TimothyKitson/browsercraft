@@ -1917,6 +1917,35 @@ namespace
         }
     }
 
+    void emitCampfire(const MeshSnapshot& snap, int lx, int y, int lz, BlockId id, std::vector<float>& out)
+    {
+        const bool lit = isCampfire(id);
+        const bool soul = isSoulCampfire(id);
+        const int log = Tiles::CampfireLog;
+        const int ember = lit ? (soul ? Tiles::SoulCampfireLogLit : Tiles::CampfireLogLit) : Tiles::CampfireLog;
+        const PartFace alongZ[6] = { { log, 0, 0, 16, 4 }, { log, 0, 0, 16, 4 }, { log, 0, 0, 16, 4, 1 },
+                                     { log, 0, 0, 16, 4, 1 }, { log, 0, 4, 4, 8 }, { log, 0, 4, 4, 8 } };
+        const PartFace alongX[6] = { { log, 0, 4, 4, 8 }, { log, 0, 4, 4, 8 }, { log, 0, 0, 16, 4 },
+                                     { log, 0, 0, 16, 4 }, { log, 0, 0, 16, 4 }, { log, 0, 0, 16, 4 } };
+        const PartFace bed[6] = { { -1, 0, 0, 16, 16 }, { -1, 0, 0, 16, 16 }, { ember, 0, 8, 16, 14, 1 },
+                                  { -1, 0, 0, 16, 16 }, { ember, 0, 8, 6, 9 }, { ember, 0, 8, 6, 9 } };
+        auto box = [&](float x0, float y0, float z0, float x1, float y1, float z1, const PartFace* f) {
+            emitPart(snap, lx, y, lz, id, glm::vec3(x0, y0, z0) / 16.0f, glm::vec3(x1, y1, z1) / 16.0f, f, out);
+        };
+        box(1.0f, 0.0f, 0.0f, 5.0f, 4.0f, 16.0f, alongZ);
+        box(11.0f, 0.0f, 0.0f, 15.0f, 4.0f, 16.0f, alongZ);
+        box(0.0f, 3.0f, 1.0f, 16.0f, 7.0f, 5.0f, alongX);
+        box(0.0f, 3.0f, 11.0f, 16.0f, 7.0f, 15.0f, alongX);
+        box(5.0f, 0.0f, 0.0f, 11.0f, 1.0f, 16.0f, bed);
+        if (!lit) return;
+        const int fire = soul ? Tiles::SoulCampfireTop : Tiles::CampfireTop;
+        const float lo = 1.0f / 16.0f;
+        const glm::vec3 a[4] = { { 0.05f, lo, 0.05f }, { 0.95f, lo, 0.95f }, { 0.95f, 1.0f + lo, 0.95f }, { 0.05f, 1.0f + lo, 0.05f } };
+        const glm::vec3 b[4] = { { 0.95f, lo, 0.05f }, { 0.05f, lo, 0.95f }, { 0.05f, 1.0f + lo, 0.95f }, { 0.95f, 1.0f + lo, 0.05f } };
+        pushQuad(snap, lx, y, lz, id, a, fire, 0.0f, 0.0f, 16.0f, 16.0f, 1.0f, true, out);
+        pushQuad(snap, lx, y, lz, id, b, fire, 0.0f, 0.0f, 16.0f, 16.0f, 1.0f, true, out);
+    }
+
     void emitCactus(const MeshSnapshot& snap, int lx, int y, int lz, BlockId id, std::vector<float>& out)
     {
         const BlockInfo& info = blockInfo(id);
@@ -2205,6 +2234,10 @@ void buildChunkMesh(const MeshSnapshot& snapshot, MeshResult& out)
                 else if (id == Blocks::Cactus)
                 {
                     emitCactus(snapshot, lx, y, lz, id, out.opaqueVertices);
+                }
+                else if (isAnyCampfire(id))
+                {
+                    emitCampfire(snapshot, lx, y, lz, id, out.opaqueVertices);
                 }
                 else if (isFamilyButton(id))
                 {

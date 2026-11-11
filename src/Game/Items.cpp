@@ -470,7 +470,7 @@ int flatIconFor(BlockId id)
     if (isCandle(id)) return Tiles::ItemCandleFirst + candleShade(id);
     if (isBed(id)) return Tiles::ItemBedFirst + bedColour(id);
     if (id == Blocks::MangrovePropagule || id == Blocks::MangrovePropaguleHanging) return Tiles::IconMangrovePropagule;
-    if (id == Blocks::Campfire) return Tiles::IconCampfire;
+    if (id == Blocks::Campfire || id == Blocks::CampfireUnlit) return Tiles::IconCampfire;
     if (id == Blocks::SoulCampfire) return Tiles::SoulCampfireTop;
     if (isAnyCauldron(id)) return Tiles::IconCauldron;
     if (isHead(id)) return Tiles::HeadTileFirst + headKind(id) * 6 + 3;
@@ -619,7 +619,8 @@ StackId blockDrop(BlockId id)
     if (isEndRod(id)) return Blocks::EndRodFirst;
     if (id == Blocks::Cobweb) return Items::StringItem;
     if (isFire(id)) return Blocks::Air;
-    if (id == Blocks::SoulCampfire) return Blocks::SoulSoil;
+    if (id == Blocks::SoulCampfire || id == Blocks::SoulCampfireUnlit) return Blocks::SoulSoil;
+    if (id == Blocks::CampfireUnlit || id == Blocks::Campfire) return Items::Charcoal;
     if (isRespawnAnchor(id)) return Blocks::RespawnAnchor0;
     if (isBell(id)) return static_cast<StackId>(Blocks::BellFirst + 2);
     if (isChiseledBookshelf(id)) return shelfOf(2, 0);

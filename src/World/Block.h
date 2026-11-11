@@ -705,6 +705,7 @@ namespace Blocks
         BambooShoot,
         AxisRunFirst, AxisRunLast = AxisRunFirst + 65,
         FarmlandDry,
+        CampfireUnlit, SoulCampfireUnlit,
         ExtCount
     };
 }
@@ -970,6 +971,8 @@ inline bool isEndRod(BlockId id) { return id >= Blocks::EndRodFirst && id <= Blo
 inline int endRodFacing(BlockId id) { return isEndRod(id) ? id - Blocks::EndRodFirst : 0; }
 inline bool isFire(BlockId id) { return (id >= Blocks::Fire0 && id <= Blocks::Fire3) || id == Blocks::SoulFire; }
 inline bool isCampfire(BlockId id) { return id == Blocks::Campfire || id == Blocks::SoulCampfire; }
+bool isAnyCampfire(BlockId id);
+bool isSoulCampfire(BlockId id);
 inline bool isRespawnAnchor(BlockId id) { return id >= Blocks::RespawnAnchor0 && id <= Blocks::RespawnAnchor4; }
 inline int anchorCharge(BlockId id) { return isRespawnAnchor(id) ? id - Blocks::RespawnAnchor0 : 0; }
 inline BlockId anchorOf(int charge) { return static_cast<BlockId>(Blocks::RespawnAnchor0 + (charge < 0 ? 0 : charge > 4 ? 4 : charge)); }

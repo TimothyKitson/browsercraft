@@ -4193,6 +4193,8 @@ namespace
         { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
         { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
         { "Farmland", FarmlandDryTop, Dirt, FarmlandSide, true, true, RenderType::Cube, 0, 0.6f },
+        { "Campfire", CampfireLog, CampfireLog, CampfireLog, true, false, RenderType::Cube, 0, 2.0f },
+        { "Soul Campfire", CampfireLog, CampfireLog, CampfireLog, true, false, RenderType::Cube, 0, 2.0f },
     };
 
     static_assert(sizeof(EXT_TABLE) / sizeof(EXT_TABLE[0]) == static_cast<size_t>(Blocks::ExtCount - Blocks::ExtFirst),
@@ -4613,6 +4615,13 @@ BlockId debugStickTurn(BlockId id, int step)
     return static_cast<BlockId>(first + at);
 }
 
+bool isAnyCampfire(BlockId id)
+{
+    return isCampfire(id) || id == Blocks::CampfireUnlit || id == Blocks::SoulCampfireUnlit;
+}
+
+bool isSoulCampfire(BlockId id) { return id == Blocks::SoulCampfire || id == Blocks::SoulCampfireUnlit; }
+
 bool bambooCanRootIn(BlockId ground)
 {
     switch (ground)
@@ -4799,6 +4808,7 @@ bool isObtainable(BlockId id)
             if (isAnyCauldron(id) && id != Blocks::Cauldron0) return false;
             if (isHead(id)) return false;
             if (id == Blocks::FarmlandDry) return false;
+            if (id == Blocks::CampfireUnlit || id == Blocks::SoulCampfireUnlit) return false;
             if (id == Blocks::BambooShoot) return false;
 
             // Likewise for stairs: one of each four is the thing you
@@ -4857,7 +4867,7 @@ const char* blockSoundGroup(BlockId id)
     if (id == Blocks::IronBars || isChain(id) || isEndRod(id)) return "stone";
     if (id == Blocks::Cobweb) return "cloth";
     if (id == Blocks::SoulSoil) return "sand";
-    if (id == Blocks::SoulCampfire) return "wood";
+    if (id == Blocks::SoulCampfire || isAnyCampfire(id)) return "wood";
     if (isChiseledBookshelf(id) || id == Blocks::Jukebox) return "wood";
     if (isBell(id) || id == Blocks::HeavyCore || id == Blocks::DragonEgg) return "stone";
     if (isSuspiciousSand(id)) return "sand";
@@ -5048,7 +5058,7 @@ Material blockMaterial(BlockId id)
     if (isLoom(id) || isBanner(id)) return Material::Wood;
     if (id == Blocks::Cobweb) return Material::Wool;
     if (id == Blocks::SoulTorch || isFire(id)) return Material::Plant;
-    if (id == Blocks::SoulCampfire) return Material::Wood;
+    if (id == Blocks::SoulCampfire || isAnyCampfire(id)) return Material::Wood;
     if (id == Blocks::SoulSoil) return Material::Sand;
     if (isIronDoor(id) || isIronTrapdoor(id)) return Material::Stone;
     if (isTurtleEgg(id)) return Material::Plant;
@@ -5214,6 +5224,7 @@ bool blockOverlaps(BlockId id, int bx, int by, int bz,
     if (isSnowLayer(id)) return overlaps(0.0f, 0.0f, 0.0f, 1.0f, static_cast<float>(snowLayers(id) - 1) / 8.0f, 1.0f);
     if (id == Blocks::Bamboo) return overlaps(0.40625f, 0.0f, 0.40625f, 0.59375f, 1.0f, 0.59375f);
     if (id == Blocks::Cactus) return overlaps(0.0625f, 0.0f, 0.0625f, 0.9375f, 0.9375f, 0.9375f);
+    if (isAnyCampfire(id)) return overlaps(0.0f, 0.0f, 0.0f, 1.0f, 0.4375f, 1.0f);
     if (isHead(id))
     {
         const float half = headKind(id) == 6 ? 0.3125f : 0.25f;

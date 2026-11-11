@@ -13703,6 +13703,19 @@ namespace
               blockOverlaps(Blocks::Bamboo, 0, 0, 0, 0.45f, 0.2f, 0.45f, 0.55f, 0.8f, 0.55f, 0) &&
               !blockOverlaps(Blocks::Bamboo, 0, 0, 0, 0.0f, 0.2f, 0.0f, 0.3f, 0.8f, 0.3f, 0),
               "bamboo starts as a shoot you walk through and grows into a thin stalk you bump into");
+        section("campfires");
+        check(isAnyCampfire(Blocks::CampfireUnlit) && !isCampfire(Blocks::CampfireUnlit) && lightEmission(Blocks::CampfireUnlit) == 0 &&
+              lightEmission(Blocks::Campfire) == 15 && isSoulCampfire(Blocks::SoulCampfireUnlit),
+              "a campfire can be put out, and gives no light when it is");
+        check(blockDrop(Blocks::Campfire) == Items::Charcoal && blockDrop(Blocks::SoulCampfireUnlit) == Blocks::SoulSoil,
+              "it breaks into charcoal, a soul campfire into soul soil");
+        check(blockOverlaps(Blocks::Campfire, 0, 0, 0, 0.2f, 0.3f, 0.2f, 0.8f, 0.4f, 0.8f, 0) &&
+              !blockOverlaps(Blocks::Campfire, 0, 0, 0, 0.2f, 0.5f, 0.2f, 0.8f, 0.9f, 0.8f, 0),
+              "and is a low pile of logs you can stand in the flames of");
+        check(Smelting::resultIn(Smelting::Kind::Smoker, Items::RawBeef) == Items::Steak &&
+              Smelting::resultIn(Smelting::Kind::Smoker, Blocks::Cobblestone) == Blocks::Air,
+              "it cooks what a smoker cooks and nothing else");
+
         section("cactus");
         check(!blockInfo(Blocks::Cactus).opaque && blockOverlaps(Blocks::Cactus, 0, 0, 0, 0.5f, 0.2f, 0.05f, 0.6f, 0.5f, 0.1f, 0) &&
               !blockOverlaps(Blocks::Cactus, 0, 0, 0, 0.5f, 0.2f, 0.0f, 0.6f, 0.5f, 0.05f, 0),

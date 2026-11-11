@@ -864,6 +864,22 @@ void Application::loadLevel()
             m_rules.load(text.str());
         }
     }
+    m_campfires.clear();
+    {
+        std::ifstream fires(m_savePath + "/campfires.txt");
+        std::array<int, 4> key{};
+        while (fires >> key[0] >> key[1] >> key[2] >> key[3])
+        {
+            Campfire fire;
+            for (int k = 0; k < 4; ++k)
+            {
+                int item = 0;
+                fires >> item >> fire.cooked[k];
+                fire.items[k] = static_cast<StackId>(item);
+            }
+            m_campfires[key] = fire;
+        }
+    }
     m_placedLeaves.clear();
     m_leafDecay.clear();
     m_logsGone.clear();
@@ -1263,6 +1279,16 @@ void Application::saveLevel()
     {
         std::ofstream rules(m_savePath + "/gamerules.txt");
         if (rules) rules << m_rules.save();
+    }
+    {
+        std::ofstream fires(m_savePath + "/campfires.txt");
+        if (fires)
+            for (const auto& [key, fire] : m_campfires)
+            {
+                fires << key[0] << ' ' << key[1] << ' ' << key[2] << ' ' << key[3];
+                for (int k = 0; k < 4; ++k) fires << ' ' << fire.items[k] << ' ' << fire.cooked[k];
+                fires << '\n';
+            }
     }
     {
         std::ofstream leaves(m_savePath + "/placed_leaves.txt");
@@ -3357,6 +3383,10 @@ bool Application::frame()
                     m_world->setBlock(bx + 2, by, bz - 4, withAxis(Blocks::QuartzPillar, 1));
                     m_world->setBlock(bx - 1, by - 1, bz + 2, Blocks::Farmland);
                     m_world->setBlock(bx, by - 1, bz + 2, Blocks::FarmlandDry);
+                    m_world->setBlock(bx - 4, by, bz + 1, Blocks::Campfire);
+                    m_world->setBlock(bx - 4, by, bz + 2, Blocks::SoulCampfireUnlit);
+                    m_campfires[{ static_cast<int>(m_dimension), bx - 4, by, bz + 1 }].items[0] = Items::RawBeef;
+                    m_campfires[{ static_cast<int>(m_dimension), bx - 4, by, bz + 1 }].items[2] = Items::RawCod;
                     m_world->setBlock(bx + 3, by - 1, bz - 1, Blocks::Sand);
                     for (int h = 0; h < 2; ++h) m_world->setBlock(bx + 3, by + h, bz - 1, Blocks::Cactus);
                     for (int t = 0; t < 2; ++t)
@@ -9229,6 +9259,9 @@ void Application::updateMining(float deltaTime)
                 if (id == Blocks::DeadBush) dropped = static_cast<int>(static_cast<uint32_t>(hit.block.x * 31 + hit.block.z * 17 + static_cast<int>(m_elapsedSeconds * 61.0f)) % 3u);
                 if (isDoublePlant(id) && doublePlantUpper(id) && drop == Items::WheatSeeds) dropped = 0;
                 if (isEnderChest(id)) { drop = silk ? chestOf(2, 2, 0) : Blocks::Obsidian; dropped = silk ? 1 : 8; }
+                if ((id == Blocks::Campfire || id == Blocks::CampfireUnlit) && !silk) dropped = 2;
+                if (silk && id == Blocks::CampfireUnlit) drop = Blocks::Campfire;
+                if (silk && id == Blocks::SoulCampfireUnlit) drop = Blocks::SoulCampfire;
                 if (isDecoratedPot(id) || isBanner(id)) drop = Blocks::Air;
                 if (id == Blocks::Snow && drop == Items::Snowball) dropped = 4;
                 if (isSnowLayer(id))
@@ -9586,6 +9619,16 @@ void Application::updateMining(float deltaTime)
 
         checkFalling(hit.block + glm::ivec3(0, 1, 0));
         if (isLog(id)) m_logsGone.push_back(hit.block);
+        if (isAnyCampfire(id))
+        {
+            const auto found = m_campfires.find({ static_cast<int>(m_dimension), hit.block.x, hit.block.y, hit.block.z });
+            if (found != m_campfires.end())
+            {
+                for (StackId item : found->second.items)
+                    if (item != Blocks::Air) m_drops.spawnFromBrokenBlock(hit.block, item);
+                m_campfires.erase(found);
+            }
+        }
         if (isLeaves(id)) m_placedLeaves.erase({ static_cast<int>(m_dimension), hit.block.x, hit.block.y, hit.block.z });
         if (id == Blocks::Ice && !m_player.creative() && m_dimension != Dimension::Nether &&
             !Enchanting::has(m_inventory.selected().enchantments, Enchanting::Kind::SilkTouch))
@@ -15587,6 +15630,7 @@ void Application::handlePlacement()
     if (!m_keys.pressed(m_input, Action::Use)) return;
 
     if (useArmorStand()) return;
+    if (useCampfire()) return;
 
     if (m_inventory.selected().id == Items::DebugStick)
     {
@@ -19995,11 +20039,12 @@ void Application::tickSpriteParticles(float deltaTime)
                 if (roll < 0.5f)
                     fx.spawn(Kind::Smoke, middle + glm::vec3(0.0f, 0.3f, 0.0f), glm::vec3(0.0f, 0.15f, 0.0f), 0.18f, 1.0f);
             }
-            else if (block == Blocks::Campfire)
+            else if (isCampfire(block))
             {
+                const bool signal = m_world->getBlock(x, y - 1, z) == Blocks::HayBale || axisBase(m_world->getBlock(x, y - 1, z)) == Blocks::HayBale;
                 if (roll < 0.35f)
                     fx.spawn(Kind::BigSmoke, middle + glm::vec3(fx.random() - 0.5f, 0.2f, fx.random() - 0.5f) * 0.6f,
-                             glm::vec3(0.0f, 1.1f, 0.0f), 0.7f, 4.0f);
+                             glm::vec3(0.0f, signal ? 2.2f : 1.1f, 0.0f), 0.7f, signal ? 9.0f : 4.0f);
             }
             else if (isFurnaceBlock(block) && furnaceLit(block) == block)
             {
@@ -20505,6 +20550,7 @@ void Application::updateWorldAround(float deltaTime)
     tickSpriteParticles(deltaTime);
     tickTimedBlocks(deltaTime);
     tickLeafDecay(deltaTime);
+    tickCampfires(deltaTime);
     tickFluids(deltaTime);
     tickHives(deltaTime);
     tickBreathClouds(deltaTime);
@@ -20686,6 +20732,87 @@ void Application::tickLeafDecay(float deltaTime)
         const BlockId sapling = Saplings::leafDrop(leaf, roll >> 3);
         if (sapling != Blocks::Air) m_drops.spawnFromBrokenBlock(at, sapling);
         if ((roll >> 11) % 50u == 0u) m_drops.spawnFromBrokenBlock(at, Items::Stick, 1 + static_cast<int>((roll >> 17) % 2u));
+    }
+}
+
+bool Application::useCampfire()
+{
+    const RaycastHit hit = m_world->raycast(m_camera.position, m_camera.front, REACH_DISTANCE);
+    if (!hit.hit) return false;
+    const glm::ivec3 at = hit.block;
+    const BlockId fire = m_world->getBlock(at.x, at.y, at.z);
+    if (!isAnyCampfire(fire)) return false;
+    ItemStack& held = m_inventory.selected();
+    const bool lit = isCampfire(fire);
+    const bool soul = isSoulCampfire(fire);
+    auto set = [&](BlockId to) {
+        m_world->setBlock(at.x, at.y, at.z, to);
+        m_net.onLocalBlockChange(at.x, at.y, at.z, to);
+    };
+    if (lit && (Tools::kindOf(held.id) == Tools::Kind::Shovel || held.id == Items::WaterBucket))
+    {
+        set(soul ? Blocks::SoulCampfireUnlit : Blocks::CampfireUnlit);
+        m_audio.play(Sound::Fire, 0.6f, 1.6f);
+        m_sprites->burst(SpriteParticles::Kind::Poof, glm::vec3(at) + glm::vec3(0.5f, 0.6f, 0.5f), 8, 0.3f, 0.5f, 0.3f, 1.0f);
+        if (held.id == Items::WaterBucket && !m_player.creative()) held = ItemStack{ Items::Bucket, 1 };
+        else if (Tools::isTool(held.id)) wearOnSwing(held.id);
+        m_heldItem.swing();
+        return true;
+    }
+    if (!lit && (held.id == Items::FlintAndSteel || held.id == Items::FireCharge))
+    {
+        set(soul ? Blocks::SoulCampfire : Blocks::Campfire);
+        m_audio.play(Sound::Fire, 0.7f, 1.0f);
+        if (held.id == Items::FireCharge) { if (!m_player.creative() && --held.count <= 0) held.clear(); }
+        else wearOnSwing(held.id);
+        m_heldItem.swing();
+        return true;
+    }
+    const StackId cooked = Smelting::resultIn(Smelting::Kind::Smoker, held.id);
+    if (held.empty() || cooked == Blocks::Air) return false;
+    Campfire& slots = m_campfires[{ static_cast<int>(m_dimension), at.x, at.y, at.z }];
+    for (int k = 0; k < 4; ++k)
+    {
+        if (slots.items[k] != Blocks::Air) continue;
+        slots.items[k] = held.id;
+        slots.cooked[k] = 0.0f;
+        if (!m_player.creative() && --held.count <= 0) held.clear();
+        m_audio.playPlace(Blocks::Campfire);
+        m_heldItem.swing();
+        return true;
+    }
+    return true;
+}
+
+void Application::tickCampfires(float deltaTime)
+{
+    if (!m_world || m_campfires.empty()) return;
+    for (auto it = m_campfires.begin(); it != m_campfires.end();)
+    {
+        const std::array<int, 4>& key = it->first;
+        Campfire& fire = it->second;
+        if (key[0] != static_cast<int>(m_dimension)) { ++it; continue; }
+        const BlockId here = m_world->getBlock(key[1], key[2], key[3]);
+        if (!isAnyCampfire(here))
+        {
+            it = m_campfires.erase(it);
+            continue;
+        }
+        bool any = false;
+        for (int k = 0; k < 4; ++k)
+        {
+            if (fire.items[k] == Blocks::Air) continue;
+            any = true;
+            if (!isCampfire(here)) continue;
+            fire.cooked[k] += deltaTime;
+            if (fire.cooked[k] < 30.0f) continue;
+            const StackId done = Smelting::resultIn(Smelting::Kind::Smoker, fire.items[k]);
+            if (done != Blocks::Air) m_drops.spawnFromBrokenBlock(glm::ivec3(key[1], key[2], key[3]), done);
+            fire.items[k] = Blocks::Air;
+            fire.cooked[k] = 0.0f;
+        }
+        if (!any) it = m_campfires.erase(it);
+        else ++it;
     }
 }
 
@@ -21326,6 +21453,23 @@ void Application::pinPotPatterns()
 void Application::pinFramedItems()
 {
     m_drops.clearPinned();
+    for (const auto& [key, fire] : m_campfires)
+    {
+        if (key[0] != static_cast<int>(m_dimension)) continue;
+        const glm::vec3 centre(key[1] + 0.5f, key[2] + 0.45f, key[3] + 0.5f);
+        if (glm::length(centre - m_camera.position) > 32.0f) continue;
+        static const float SLOT[4][2] = { { -0.22f, -0.22f }, { 0.22f, -0.22f }, { 0.22f, 0.22f }, { -0.22f, 0.22f } };
+        for (int k = 0; k < 4; ++k)
+        {
+            if (fire.items[k] == Blocks::Air) continue;
+            DroppedItems::Pinned shown;
+            shown.position = centre + glm::vec3(SLOT[k][0], 0.0f, SLOT[k][1]);
+            shown.facing = k;
+            shown.item = fire.items[k];
+            shown.outset = 0.0f;
+            m_drops.pin(shown);
+        }
+    }
     if (!m_world) return;
     for (const Mob& cart : m_entities.mobs())
     {
