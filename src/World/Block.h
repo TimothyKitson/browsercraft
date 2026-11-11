@@ -707,6 +707,7 @@ namespace Blocks
         FarmlandDry,
         CampfireUnlit, SoulCampfireUnlit,
         GlazedTurnFirst, GlazedTurnLast = GlazedTurnFirst + 47,
+        LanternHanging, SoulLanternHanging,
         ExtCount
     };
 }
@@ -975,6 +976,11 @@ inline int endRodFacing(BlockId id) { return isEndRod(id) ? id - Blocks::EndRodF
 inline bool isFire(BlockId id) { return (id >= Blocks::Fire0 && id <= Blocks::Fire3) || id == Blocks::SoulFire; }
 inline bool isCampfire(BlockId id) { return id == Blocks::Campfire || id == Blocks::SoulCampfire; }
 bool isAnyCampfire(BlockId id);
+inline bool isLantern(BlockId id)
+{
+    return id == Blocks::Lantern || id == Blocks::SoulLantern || id == Blocks::LanternHanging || id == Blocks::SoulLanternHanging;
+}
+inline bool lanternHangs(BlockId id) { return id == Blocks::LanternHanging || id == Blocks::SoulLanternHanging; }
 bool isSoulCampfire(BlockId id);
 inline bool isRespawnAnchor(BlockId id) { return id >= Blocks::RespawnAnchor0 && id <= Blocks::RespawnAnchor4; }
 inline int anchorCharge(BlockId id) { return isRespawnAnchor(id) ? id - Blocks::RespawnAnchor0 : 0; }

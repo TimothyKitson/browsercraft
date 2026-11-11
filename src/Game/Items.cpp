@@ -550,6 +550,8 @@ StackId blockDrop(BlockId id)
     if (isSnowLayer(id)) return Items::Snowball;
     if (id == Blocks::BambooShoot) return Blocks::Bamboo;
     if (id == Blocks::FarmlandDry) return Blocks::Dirt;
+    if (id == Blocks::LanternHanging) return Blocks::Lantern;
+    if (id == Blocks::SoulLanternHanging) return Blocks::SoulLantern;
     if (isHead(id)) return headKind(id) == 1 ? Blocks::WitherSkull : headOf(headKind(id), false, 0);
     if (isFamilyButton(id)) return buttonItem(buttonMaterial(id));
     if (isPlate(id)) return plateOf(plateMaterial(id), false);

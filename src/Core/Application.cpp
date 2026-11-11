@@ -3424,6 +3424,9 @@ bool Application::frame()
                     m_world->setBlock(bx + 1, by, bz - 5, withAxis(Blocks::CherryLog, 2));
                     m_world->setBlock(bx + 2, by, bz - 4, withAxis(Blocks::QuartzPillar, 1));
                     m_world->setBlock(bx - 1, by - 1, bz + 2, Blocks::Farmland);
+                    m_world->setBlock(bx + 1, by + 2, bz - 2, Blocks::Stone);
+                    m_world->setBlock(bx + 1, by + 1, bz - 2, Blocks::LanternHanging);
+                    m_world->setBlock(bx + 2, by, bz - 2, Blocks::SoulLantern);
                     for (int t = 0; t < 4; ++t)
                         for (int r = 0; r < 2; ++r)
                             m_world->setBlock(bx - 9 + t, by - 1 + 0, bz + 3 + r, glazedOf(static_cast<BlockId>(Blocks::GlazedTerracottaFirst + 14), (t + r) & 3));
@@ -17882,6 +17885,13 @@ void Application::handlePlacement()
         const int toward = (std::fabs(look.x) > std::fabs(look.z)) ? (look.x > 0.0f ? 1 : 3) : (look.z > 0.0f ? 2 : 0);
         if (isBell(placing)) placing = static_cast<BlockId>(Blocks::BellFirst + toward);
         else placing = shelfOf((toward + 2) & 3, 0);
+    }
+    if (placing == Blocks::Lantern || placing == Blocks::SoulLantern)
+    {
+        const bool roof = isSolid(m_world->getBlock(target.x, target.y + 1, target.z));
+        const bool floor = isSolid(m_world->getBlock(target.x, target.y - 1, target.z));
+        if (hit.normal.y < 0 || (!floor && roof))
+            placing = placing == Blocks::Lantern ? Blocks::LanternHanging : Blocks::SoulLanternHanging;
     }
     if (isGlazedTerracotta(placing))
     {

@@ -235,7 +235,7 @@ namespace
         { "Sculk Sensor", SculkSensorTopLit,SculkSensorBottom,SculkSensorSide,true,  false, RenderType::Lush,   6,   1.5f },
         { "Sculk Shrieker",SculkShriekerTop,SculkShriekerBottom,   SculkShriekerSide,true,true,  RenderType::Cube,   2,   3.0f },
         { "Sculk Catalyst",SculkCatalystTop,SculkCatalystBottom,   SculkCatalystSide,true,true,  RenderType::Cube,   6,   3.0f },
-        { "Soul Lantern", SoulLanternTile,SoulLanternTile,SoulLanternTile,true, true,  RenderType::Cube,  10,   0.3f },
+        { "Soul Lantern", SoulLanternTile,SoulLanternTile,SoulLanternTile,true, false, RenderType::Cube,  10,   0.3f },
         { "Reinforced Deepslate",ReinforcedDeepslateTop,ReinforcedDeepslateBottom,ReinforcedDeepslateSide,true,true,RenderType::Cube,0,-1.0f },
         { "Purpur Block", PurpurTile,    PurpurTile,     PurpurTile,     true,  true,  RenderType::Cube,   0,   1.5f },
         { "Purpur Pillar",PurpurPillarTop,PurpurPillarTop,PurpurPillarSide,true,true,  RenderType::Cube,   0,   1.5f },
@@ -269,7 +269,7 @@ namespace
         { "Budding Amethyst",BuddingTile, BuddingTile,    BuddingTile,    true,  true,  RenderType::Cube,   0,   1.5f },
         { "Amethyst Cluster",ClusterTile, ClusterTile,    ClusterTile,    false, false, RenderType::Cross,  5,   1.5f },
         { "Smooth Basalt",SmoothBasaltTile,SmoothBasaltTile,SmoothBasaltTile,true,true,RenderType::Cube,   0,   1.25f },
-        { "Lantern",      LanternTile,   LanternTile,    LanternTile,    true,  true,  RenderType::Cube,  15,   0.3f },
+        { "Lantern",      LanternTile,   LanternTile,    LanternTile,    true,  false, RenderType::Cube,  15,   0.3f },
         { "Barrel",       BarrelTop,     BarrelBottom,   BarrelSide,     true,  true,  RenderType::Cube,   0,   2.5f },
         { "Campfire",     CampfireTop,   CampfireLog,    CampfireLogLit,    true,  false, RenderType::Cube,  15,   2.0f },
         { "Carrot Crop",  CarrotStage0,  CarrotStage0,   CarrotStage0,   false, false, RenderType::Cross,  0,   0.0f },
@@ -4243,6 +4243,8 @@ namespace
         { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
         { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
         { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "Lantern", LanternTile, LanternTile, LanternTile, true, false, RenderType::Cube, 15, 0.3f },
+        { "Soul Lantern", SoulLanternTile, SoulLanternTile, SoulLanternTile, true, false, RenderType::Cube, 10, 0.3f },
     };
 
     static_assert(sizeof(EXT_TABLE) / sizeof(EXT_TABLE[0]) == static_cast<size_t>(Blocks::ExtCount - Blocks::ExtFirst),
@@ -4872,6 +4874,7 @@ bool isObtainable(BlockId id)
             if (isAnyCauldron(id) && id != Blocks::Cauldron0) return false;
             if (isHead(id)) return false;
             if (id == Blocks::FarmlandDry) return false;
+            if (lanternHangs(id)) return false;
             if (id == Blocks::CampfireUnlit || id == Blocks::SoulCampfireUnlit) return false;
             if (id == Blocks::BambooShoot) return false;
 
@@ -5289,6 +5292,8 @@ bool blockOverlaps(BlockId id, int bx, int by, int bz,
     if (id == Blocks::Bamboo) return overlaps(0.40625f, 0.0f, 0.40625f, 0.59375f, 1.0f, 0.59375f);
     if (id == Blocks::Cactus) return overlaps(0.0625f, 0.0f, 0.0625f, 0.9375f, 0.9375f, 0.9375f);
     if (isAnyCampfire(id)) return overlaps(0.0f, 0.0f, 0.0f, 1.0f, 0.4375f, 1.0f);
+    if (isLantern(id)) return lanternHangs(id) ? overlaps(0.3125f, 0.0625f, 0.3125f, 0.6875f, 0.625f, 0.6875f)
+                                               : overlaps(0.3125f, 0.0f, 0.3125f, 0.6875f, 0.5625f, 0.6875f);
     if (isHead(id))
     {
         const float half = headKind(id) == 6 ? 0.3125f : 0.25f;

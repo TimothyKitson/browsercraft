@@ -1924,6 +1924,23 @@ namespace
         }
     }
 
+    void emitLantern(const MeshSnapshot& snap, int lx, int y, int lz, BlockId id, std::vector<float>& out)
+    {
+        const int t = blockInfo(id).tileSide;
+        const float lift = lanternHangs(id) ? 1.0f : 0.0f;
+        const PartFace body[6] = { { t, 0, 2, 6, 9 }, { t, 0, 2, 6, 9 }, { t, 0, 9, 6, 15 }, { t, 0, 9, 6, 15 }, { t, 0, 2, 6, 9 }, { t, 0, 2, 6, 9 } };
+        const PartFace cap[6] = { { t, 1, 0, 5, 2 }, { t, 1, 0, 5, 2 }, { t, 1, 10, 5, 14 }, { -1, 0, 0, 16, 16 }, { t, 1, 0, 5, 2 }, { t, 1, 0, 5, 2 } };
+        emitPart(snap, lx, y, lz, id, glm::vec3(5.0f, lift, 5.0f) / 16.0f, glm::vec3(11.0f, lift + 7.0f, 11.0f) / 16.0f, body, out);
+        emitPart(snap, lx, y, lz, id, glm::vec3(6.0f, lift + 7.0f, 6.0f) / 16.0f, glm::vec3(10.0f, lift + 9.0f, 10.0f) / 16.0f, cap, out);
+        const float h0 = (lift + 9.0f) / 16.0f;
+        const float h1 = lanternHangs(id) ? 1.0f : (lift + 11.0f) / 16.0f;
+        const float v1 = lanternHangs(id) ? 7.0f : 3.0f;
+        const glm::vec3 a[4] = { { 6.5f / 16.0f, h0, 0.5f }, { 9.5f / 16.0f, h0, 0.5f }, { 9.5f / 16.0f, h1, 0.5f }, { 6.5f / 16.0f, h1, 0.5f } };
+        const glm::vec3 b[4] = { { 0.5f, h0, 6.5f / 16.0f }, { 0.5f, h0, 9.5f / 16.0f }, { 0.5f, h1, 9.5f / 16.0f }, { 0.5f, h1, 6.5f / 16.0f } };
+        pushQuad(snap, lx, y, lz, id, a, t, 11.0f, 1.0f, 14.0f, v1, 0.9f, true, out);
+        pushQuad(snap, lx, y, lz, id, b, t, 11.0f, 1.0f, 14.0f, v1, 0.9f, true, out);
+    }
+
     void emitCampfire(const MeshSnapshot& snap, int lx, int y, int lz, BlockId id, std::vector<float>& out)
     {
         const bool lit = isCampfire(id);
@@ -2241,6 +2258,10 @@ void buildChunkMesh(const MeshSnapshot& snapshot, MeshResult& out)
                 else if (id == Blocks::Cactus)
                 {
                     emitCactus(snapshot, lx, y, lz, id, out.opaqueVertices);
+                }
+                else if (isLantern(id))
+                {
+                    emitLantern(snapshot, lx, y, lz, id, out.opaqueVertices);
                 }
                 else if (isAnyCampfire(id))
                 {
