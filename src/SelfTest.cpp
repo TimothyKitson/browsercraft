@@ -9964,6 +9964,21 @@ namespace
                             barrelOpen(barrelWith(facing, open)) == open && isContainerBlock(barrelWith(facing, open)) &&
                             blockDrop(barrelWith(facing, open)) == static_cast<StackId>(Blocks::Barrel);
             check(turns, "a barrel faces any of six ways, open or shut");
+            turns = true;
+            for (int facing = 0; facing < 4; ++facing)
+                for (int stage = 0; stage < 3; ++stage)
+                    turns = turns && isCocoa(cocoaWith(facing, stage)) && cocoaFacing(cocoaWith(facing, stage)) == facing &&
+                            cocoaStage(cocoaWith(facing, stage)) == stage && blockDrop(cocoaWith(facing, stage)) == static_cast<StackId>(Items::CocoaBeans);
+            check(turns, "a cocoa pod hangs off any side of a trunk at any ripeness");
+            {
+                const BlockId hung = doorHingeBase(Blocks::DoorLowShutNorth);
+                const BlockId part = doorPart(hung, 2, true, true);
+                check(isDoor(part) && doorHinged(part) && blockFacing(part) == 2 && doorIsTop(part) && doorIsOpen(part) && doorWood(part) == 0 &&
+                          blockDrop(part) == blockDrop(Blocks::DoorLowShutNorth),
+                      "a door can hang from its other side and still be the same door");
+                check(Redstone::unlit(part) == doorPart(hung, 2, true, false), "and a powered one shuts on the same hinge");
+                check(isIronDoor(doorPart(doorHingeBase(Blocks::IronDoorFirst), 1, false, false)), "an iron door hung the other way is still iron");
+            }
             check(isStonecutter(Blocks::StonecutterTurned) && blockDrop(Blocks::StonecutterTurned) == static_cast<StackId>(Blocks::Stonecutter),
                   "a turned stonecutter is still a stonecutter");
             check(shelfMask(shelfOf(1, 3)) == 7 && shelfBooks(shelfOf(1, 3)) == 3 && shelfFacing(shelfOf(1, 3)) == 1,

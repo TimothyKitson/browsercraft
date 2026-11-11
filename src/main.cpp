@@ -795,6 +795,7 @@ namespace
             else if (hopperFacing(id) >= 0)       why = "a hopper placed against the side of a block";
             else if (isDispenser(id) || isDropper(id) || isObserver(id)) why = "a dispenser, dropper or observer turned to face its placer";
             else if (isRailSlope(id))            why = "a rail climbing to the rail a block above";
+            else if (doorHinged(id))             why = "a door hung the other way to pair with the door beside it";
             else if (shelfMasked(id))            why = "a chiseled bookshelf with books in particular slots";
             else if (anvilAlongX(id) || id == Blocks::StonecutterTurned || (id >= Blocks::GrindstoneTurnFirst && id <= Blocks::GrindstoneTurnLast) ||
                      (id >= Blocks::LecternTurnFirst && id <= Blocks::LecternTurnLast) || (id >= Blocks::BarrelTurnFirst && id <= Blocks::BarrelTurnLast))

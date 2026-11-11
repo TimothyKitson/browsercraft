@@ -356,7 +356,7 @@ void Farming::grow(World& world, const glm::vec3& around, uint32_t& seed, std::v
             if (isCocoa(pod))
             {
                 if (cocoaStage(pod) < COCOA_RIPE)
-                    world.setBlock(x, y, z, cocoaAt(cocoaStage(pod) + 1));
+                    world.setBlock(x, y, z, cocoaWith(cocoaFacing(pod), cocoaStage(pod) + 1));
                 continue;
             }
         }

@@ -1579,7 +1579,7 @@ namespace
         // Shut, the panel sits on the face it was hung from. Open, it
         // sits on the face a quarter turn clockwise from it.
         const int facing = blockFacing(id);
-        const int resting = doorIsOpen(id) ? ((facing + 1) & 3) : facing;
+        const int resting = doorIsOpen(id) ? ((facing + (doorHinged(id) ? 3 : 1)) & 3) : facing;
 
         glm::vec3 lo(0.0f), hi(1.0f);
         switch (resting)
@@ -1990,6 +1990,26 @@ namespace
     }
 
     void emitCross(const MeshSnapshot& snap, int lx, int y, int lz, BlockId id, std::vector<float>& out);
+
+    void emitCocoa(const MeshSnapshot& snap, int lx, int y, int lz, BlockId id, std::vector<float>& out)
+    {
+        const int stage = cocoaStage(id);
+        const int tile = Tiles::CocoaStage0 + stage;
+        const float half = 2.0f + stage;
+        const float tall = 5.0f + stage * 2.0f;
+        const float deep = 4.0f + stage * 2.0f;
+        const float top = 12.0f;
+        const float x0 = 8.0f - half, x1 = 8.0f + half, y0 = top - tall, z0 = 1.0f, z1 = 1.0f + deep;
+        const PartFace side{ tile, 15.0f - deep, 4.0f, 15.0f, 4.0f + tall };
+        const PartFace front{ tile, 11.0f - half * 2.0f, 4.0f, 11.0f, 4.0f + tall };
+        const PartFace cap{ tile, 0.0f, 0.0f, half * 2.0f, half * 2.0f };
+        const PartFace pod[6] = { side, side, cap, cap, front, front };
+        emitRotated(snap, lx, y, lz, id, cocoaFacing(id), x0, y0, z0, x1, top, z1, pod, out);
+        const PartFace none{ -1, 0.0f, 0.0f, 0.0f, 0.0f };
+        const PartFace stalk{ tile, 12.0f, 0.0f, 16.0f, 4.0f };
+        const PartFace stem[6] = { stalk, stalk, none, none, none, none };
+        emitRotated(snap, lx, y, lz, id, cocoaFacing(id), 8.0f, 12.0f, 0.0f, 8.0f, 16.0f, 4.0f, stem, out);
+    }
 
     void emitWorkBlock(const MeshSnapshot& snap, int lx, int y, int lz, BlockId id, std::vector<float>& out)
     {
@@ -2520,6 +2540,10 @@ void buildChunkMesh(const MeshSnapshot& snapshot, MeshResult& out)
                 else if (isWallTorch(id))
                 {
                     emitWallTorch(snapshot, lx, y, lz, id, out.opaqueVertices);
+                }
+                else if (isCocoa(id))
+                {
+                    emitCocoa(snapshot, lx, y, lz, id, out.opaqueVertices);
                 }
                 else if (isCross(id))
                 {

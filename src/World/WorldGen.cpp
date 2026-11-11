@@ -3475,7 +3475,8 @@ void WorldGen::hangCocoa(Chunk& chunk, int worldX, int ground, int worldZ) const
         // nobody has been near is as likely to be ready as not.
         const int stage = static_cast<int>(
             hashCoords(wx, y, wz, m_seed + 7813) % 3u);
-        put(chunk, wx, y, wz, cocoaAt(stage));
+        static const int TOWARD[4] = { 3, 1, 0, 2 };
+        put(chunk, wx, y, wz, cocoaWith(TOWARD[side], stage));
     }
 }
 

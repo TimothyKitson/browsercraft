@@ -7785,6 +7785,18 @@ bool Application::frame()
                 m_world->setBlock(bx - 2, by + 2, bz + 7, Blocks::Planks);
                 m_world->setBlock(bx - 4, by + 1, bz + 7, grindstoneOf(1, 3));
                 m_world->setBlock(bx - 3, by + 1, bz + 7, Blocks::Planks);
+                for (int h = 0; h < 3; ++h) m_world->setBlock(bx + 6, by + h, bz + 7, Blocks::JungleLog);
+                m_world->setBlock(bx + 6, by, bz + 6, cocoaWith(2, 0));
+                m_world->setBlock(bx + 5, by + 1, bz + 7, cocoaWith(1, 1));
+                m_world->setBlock(bx + 6, by + 2, bz + 6, cocoaWith(2, 2));
+                m_world->setBlock(bx + 7, by + 1, bz + 7, cocoaWith(3, 2));
+                for (int half = 0; half < 2; ++half)
+                {
+                    m_world->setBlock(bx, by + half, bz + 12, doorPart(doorHingeBase(Blocks::DoorLowShutNorth), 0, half == 1, true));
+                    m_world->setBlock(bx + 1, by + half, bz + 12, doorPart(Blocks::DoorLowShutNorth, 0, half == 1, true));
+                    m_world->setBlock(bx - 3, by + half, bz + 12, doorPart(doorHingeBase(Blocks::DoorLowShutNorth), 0, half == 1, false));
+                    m_world->setBlock(bx - 2, by + half, bz + 12, doorPart(Blocks::DoorLowShutNorth, 0, half == 1, false));
+                }
             }
 
             if (m_startupScreen == "throwers")
@@ -16385,9 +16397,20 @@ bool Application::plantCocoa(const glm::ivec3& at)
     if (held.empty() || held.id != Items::CocoaBeans) return false;
     if (m_world->getBlock(at.x, at.y, at.z) != Blocks::Air) return false;
 
-    m_world->setBlock(at.x, at.y, at.z, Blocks::Cocoa0);
-    m_net.onLocalBlockChange(at.x, at.y, at.z, Blocks::Cocoa0);
-    m_audio.playPlace(Blocks::Cocoa0);
+    static const glm::ivec3 SIDE[4] = { { 0, 0, -1 }, { 1, 0, 0 }, { 0, 0, 1 }, { -1, 0, 0 } };
+    int toward = -1;
+    for (int f = 0; f < 4 && toward < 0; ++f)
+    {
+        const glm::ivec3 log = at + SIDE[f];
+        const BlockId wood = m_world->getBlock(log.x, log.y, log.z);
+        if (wood == Blocks::JungleLog || axisBase(wood) == Blocks::JungleLog || wood == Blocks::StrippedJungleLog || axisBase(wood) == Blocks::StrippedJungleLog)
+            toward = f;
+    }
+    if (toward < 0) return false;
+    const BlockId pod = cocoaWith(toward, 0);
+    m_world->setBlock(at.x, at.y, at.z, pod);
+    m_net.onLocalBlockChange(at.x, at.y, at.z, pod);
+    m_audio.playPlace(pod);
 
     if (!m_player.creative())
     {
@@ -18032,7 +18055,7 @@ void Application::handlePlacement()
             }
             else if (isCocoa(plant) && cocoaStage(plant) < COCOA_RIPE)
             {
-                put(crop.block, cocoaAt(cocoaStage(plant) + 1));
+                put(crop.block, cocoaWith(cocoaFacing(plant), cocoaStage(plant) + 1));
                 used = true;
             }
             else if (isSweetBerryBush(plant) && sweetBerryStage(plant) < 3)
@@ -18885,8 +18908,13 @@ void Application::handlePlacement()
                                ? (look.x > 0.0f ? 3 : 1)
                                : (look.z > 0.0f ? 0 : 2);
 
-        const BlockId low = doorPart(doorBase(placing), facing, false, false);
-        const BlockId high = doorPart(doorBase(placing), facing, true, false);
+        static const glm::ivec3 SIDE[4] = { { 0, 0, -1 }, { 1, 0, 0 }, { 0, 0, 1 }, { -1, 0, 0 } };
+        const glm::ivec3 rightCell = target + SIDE[(facing + 1) & 3];
+        const BlockId right = m_world->getBlock(rightCell.x, rightCell.y, rightCell.z);
+        const bool hinge = isDoor(right) && blockFacing(right) == facing && !doorHinged(right);
+        const BlockId hung = hinge ? doorHingeBase(doorBase(placing)) : doorBase(placing);
+        const BlockId low = doorPart(hung, facing, false, false);
+        const BlockId high = doorPart(hung, facing, true, false);
 
         m_world->setBlock(target.x, target.y, target.z, low);
         m_world->setBlock(target.x, target.y + 1, target.z, high);

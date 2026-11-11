@@ -719,6 +719,8 @@ namespace Blocks
         GrindstoneTurnFirst, GrindstoneTurnLast = GrindstoneTurnFirst + 11,
         LecternTurnFirst, LecternTurnLast = LecternTurnFirst + 7,
         BarrelTurnFirst, BarrelTurnLast = BarrelTurnFirst + 11,
+        CocoaTurnFirst, CocoaTurnLast = CocoaTurnFirst + 11,
+        DoorHingeFirst, DoorHingeLast = DoorHingeFirst + 191,
         ExtCount
     };
 }
@@ -1132,7 +1134,7 @@ inline BlockId bannerOf(int colour, bool wall, int facing)
     return static_cast<BlockId>(Blocks::BannerFirst + colour * 8 + (wall ? 4 : 0) + (facing & 3));
 }
 inline bool isTarget(BlockId id) { return id == Blocks::Target || id == Blocks::TargetLit; }
-inline bool isIronDoor(BlockId id) { return id >= Blocks::IronDoorFirst && id <= Blocks::IronDoorLast; }
+inline bool isIronDoor(BlockId id) { return (id >= Blocks::IronDoorFirst && id <= Blocks::IronDoorLast) || (id >= Blocks::DoorHingeLast - 15 && id <= Blocks::DoorHingeLast); }
 inline bool isIronTrapdoor(BlockId id) { return id >= Blocks::IronTrapdoorFirst && id <= Blocks::IronTrapdoorLast; }
 inline bool isSlippery(BlockId id) { return id == Blocks::Ice || id == Blocks::PackedIce || id == Blocks::BlueIce || isFrostedIce(id); }
 inline bool isLava(BlockId id) { return id == Blocks::Lava || (id >= Blocks::LavaFlow1 && id <= Blocks::LavaFalling); }
@@ -1974,8 +1976,14 @@ inline BlockId railShapeFor(bool north, bool east, bool south, bool west)
     return Blocks::RailNorthSouth;
 }
 
+inline bool doorHinged(BlockId id) { return id >= Blocks::DoorHingeFirst && id <= Blocks::DoorHingeLast; }
 inline int doorWood(BlockId id)
 {
+    if (doorHinged(id))
+    {
+        const int family = (id - Blocks::DoorHingeFirst) / 16;
+        return family < WOOD_COUNT ? family : -1;
+    }
     for (int wood = 0; wood < WOOD_COUNT; ++wood)
         if (id >= woodSet(wood).door && id < woodSet(wood).door + 16) return wood;
     return -1;
@@ -1983,6 +1991,7 @@ inline int doorWood(BlockId id)
 inline BlockId doorBaseOf(int wood) { return woodSet(wood).door; }
 inline BlockId doorBase(BlockId id)
 {
+    if (doorHinged(id)) return static_cast<BlockId>(Blocks::DoorHingeFirst + ((id - Blocks::DoorHingeFirst) / 16) * 16);
     if (id >= Blocks::IronDoorFirst && id <= Blocks::IronDoorLast) return Blocks::IronDoorFirst;
     if (id >= Blocks::CopperDoorFirst && id <= Blocks::CopperDoorLast)
         return static_cast<BlockId>(Blocks::CopperDoorFirst + ((id - Blocks::CopperDoorFirst) / 16) * 16);
@@ -1993,6 +2002,14 @@ inline bool doorIsOpen(BlockId id) { return ((id - doorBase(id)) & 4) != 0; }
 inline BlockId doorPart(BlockId base, int facing, bool top, bool open)
 {
     return static_cast<BlockId>(base + (top ? 8 : 0) + (open ? 4 : 0) + (facing & 3));
+}
+inline BlockId doorHingeBase(BlockId base)
+{
+    if (doorHinged(base)) return doorBase(base);
+    if (base == Blocks::IronDoorFirst) return static_cast<BlockId>(Blocks::DoorHingeLast - 15);
+    const int wood = doorWood(base);
+    if (wood >= 0) return static_cast<BlockId>(Blocks::DoorHingeFirst + wood * 16);
+    return base;
 }
 inline BlockId doorPart(int facing, bool top, bool open)
 {
@@ -2522,9 +2539,20 @@ inline BlockId composterAt(int level)
 constexpr int COCOA_RIPE = 2;
 inline bool isCocoa(BlockId id)
 {
-    return id >= Blocks::Cocoa0 && id <= Blocks::Cocoa2;
+    return (id >= Blocks::Cocoa0 && id <= Blocks::Cocoa2) || (id >= Blocks::CocoaTurnFirst && id <= Blocks::CocoaTurnLast);
 }
-inline int cocoaStage(BlockId id) { return isCocoa(id) ? id - Blocks::Cocoa0 : 0; }
+inline int cocoaStage(BlockId id)
+{
+    if (id >= Blocks::CocoaTurnFirst && id <= Blocks::CocoaTurnLast) return (id - Blocks::CocoaTurnFirst) % 3;
+    return isCocoa(id) ? id - Blocks::Cocoa0 : 0;
+}
+inline int cocoaFacing(BlockId id) { return id >= Blocks::CocoaTurnFirst && id <= Blocks::CocoaTurnLast ? (id - Blocks::CocoaTurnFirst) / 3 : 0; }
+inline BlockId cocoaWith(int facing, int stage)
+{
+    if (stage < 0) stage = 0;
+    if (stage > 2) stage = 2;
+    return static_cast<BlockId>(Blocks::CocoaTurnFirst + (facing & 3) * 3 + stage);
+}
 inline BlockId cocoaAt(int stage)
 {
     if (stage < 0) stage = 0;
