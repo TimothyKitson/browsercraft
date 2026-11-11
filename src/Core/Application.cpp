@@ -14862,6 +14862,11 @@ namespace
                         mob.damage(hurt, feet - point);
                         mob.markPlayerHit(1, glm::length(feet - player->position));
                     }
+                    else if (mob.typeId() == MobId::Enderman && striking != Arrows::Kind::XpBottle && striking != Arrows::Kind::Potion)
+                    {
+                        mob.requestTeleport();
+                        return false;
+                    }
                     else if (striking != Arrows::Kind::XpBottle && striking != Arrows::Kind::Potion)
                     {
                         mob.damage(damage, feet - point);

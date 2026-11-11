@@ -726,6 +726,25 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
         }
     }
 
+    if (alive() && (m_type == MobId::Enderman || m_type == MobId::Shulker))
+    {
+        if (m_type == MobId::Enderman)
+        {
+            const int wx = static_cast<int>(std::floor(m_position.x)), wz = static_cast<int>(std::floor(m_position.z));
+            if (isWater(world.getBlock(wx, static_cast<int>(std::floor(m_position.y + 0.2f)), wz)) ||
+                isWater(world.getBlock(wx, static_cast<int>(std::floor(m_position.y + 2.0f)), wz)))
+            {
+                m_wantsTeleport = true;
+                m_health = std::max(0, m_health - (random01() < deltaTime ? 1 : 0));
+            }
+        }
+        if (m_wantsTeleport)
+        {
+            m_wantsTeleport = false;
+            teleportRandom(world, m_type == MobId::Enderman ? 32.0f : 8.0f);
+        }
+    }
+
     if (m_type == MobId::Sheep && alive() && sheared())
     {
         m_grazeTimer -= deltaTime;
@@ -1289,9 +1308,37 @@ float Mob::glowLight() const
     return std::clamp(1.0f - m_darkTime / 0.5f, 0.0f, 1.0f);
 }
 
+bool Mob::teleportRandom(const World& world, float range)
+{
+    for (int tries = 0; tries < 24; ++tries)
+    {
+        const int x = static_cast<int>(std::floor(m_position.x + (random01() - 0.5f) * range * 2.0f));
+        const int z = static_cast<int>(std::floor(m_position.z + (random01() - 0.5f) * range * 2.0f));
+        int y = static_cast<int>(std::floor(m_position.y)) + static_cast<int>((random01() - 0.5f) * range);
+        for (int down = 0; down < 24 && y > 1 && !isSolid(world.getBlock(x, y - 1, z)); ++down) --y;
+        const BlockId floor = world.getBlock(x, y - 1, z);
+        if (!isSolid(floor) || isLiquid(floor)) continue;
+        bool clear = true;
+        for (int h = 0; h < 3 && clear; ++h)
+        {
+            const BlockId cell = world.getBlock(x, y + h, z);
+            if (isSolid(cell) || isLiquid(cell)) clear = false;
+        }
+        if (!clear) continue;
+        m_position = glm::vec3(static_cast<float>(x) + 0.5f, static_cast<float>(y), static_cast<float>(z) + 0.5f);
+        m_velocity = glm::vec3(0.0f);
+        emit(type().voice, 1.0f, 1.5f);
+        return true;
+    }
+    return false;
+}
+
 void Mob::damage(int amount, const glm::vec3& fromDirection)
 {
     if (amount <= 0 || !alive() || m_spawnPhase > 0.0f) return;
+    if ((m_type == MobId::Enderman && random01() < 0.6f) ||
+        (m_type == MobId::Shulker && m_health * 2 < type().maxHealth && random01() < 0.25f))
+        m_wantsTeleport = true;
 
     // Hitting one is a reason, whatever it was doing before. Burning in
     // the sun is not, but that passes no direction and no attacker, and

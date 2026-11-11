@@ -425,6 +425,8 @@ public:
     void setWool(int colour, bool shorn) { m_variant = (colour & 15) | (shorn ? 16 : 0); }
     bool takeGrazeReport() { const bool was = m_grazed; m_grazed = false; return was; }
     bool curing() const { return m_cureTimer > 0.0f; }
+    void requestTeleport() { m_wantsTeleport = true; }
+    bool teleportRandom(const World& world, float range);
     void startCure(float seconds) { m_cureTimer = seconds; }
     bool cureDone(float deltaTime) { if (m_cureTimer <= 0.0f) return false; m_cureTimer -= deltaTime; return m_cureTimer <= 0.0f; }
     void setCharged(bool on) { m_charged = on; }
@@ -527,6 +529,7 @@ private:
     bool m_charged = false;
     bool m_grazed = false;
     float m_cureTimer = 0.0f;
+    bool m_wantsTeleport = false;
     float m_grazeTimer = 20.0f;
     bool m_chargedBlast = false;
     bool m_rolled = false;
