@@ -446,6 +446,11 @@ void EntityManager::trySpawnWave(const World& world, const glm::vec3& playerPosi
             species = random01() < 0.03f && m_insomnia ? MobId::Phantom : pickSpawn(kind, Biomes::Group::Monster, random01());
             if (species == MobId::Count) continue;
             if (species == MobId::Slime && kind != Biomes::Kind::Swamp && kind != Biomes::Kind::MangroveSwamp) continue;
+            if (species == MobId::Slime && !underground)
+            {
+                static const float FULLNESS[8] = { 1.0f, 0.75f, 0.5f, 0.25f, 0.0f, 0.25f, 0.5f, 0.75f };
+                if (random01() >= FULLNESS[m_moonPhase & 7]) continue;
+            }
         }
         else
         {

@@ -207,6 +207,7 @@ public:
     void setSpawnRules(bool insomnia, bool traders) { m_insomnia = insomnia; m_traders = traders; }
     bool peaceful() const { return m_peaceful; }
     void setPlayerQuiet(bool quiet) { m_playerQuiet = quiet; }
+    void setMoonPhase(int phase) { m_moonPhase = phase; }
 
 private:
     std::vector<ShedHorn> m_horns;
@@ -218,6 +219,7 @@ private:
     float random01();
     float m_golemTimer = 5.0f;
     bool m_playerQuiet = false;
+    int m_moonPhase = 0;
     float m_daylight = 1.0f;
     std::vector<glm::vec3> m_snowTrail;
     std::unordered_map<uint32_t, float> m_castTimers;

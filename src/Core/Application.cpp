@@ -23541,6 +23541,7 @@ void Application::updateMobs(float deltaTime)
     }
     m_entities.setPlayerHidden(m_player.spectator());
     m_entities.setPlayerQuiet(m_player.sneaking);
+    m_entities.setMoonPhase(m_dayNumber % 8);
     m_entities.setNaturalSpawning(m_rules.on(GameRules::Rule::DoMobSpawning));
     m_entities.setDifficulty(static_cast<int>(m_worldMeta.difficulty));
     m_entities.setSpawnRules(m_rules.on(GameRules::Rule::DoInsomnia) && m_stats.get(Stats::Custom::TimeSinceRest) >= 72000,

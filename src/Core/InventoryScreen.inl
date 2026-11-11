@@ -4262,6 +4262,33 @@ void Application::buyEnchantment(int row)
         if (Enchanting::conflicts(already.first, offer.kind)) return;
 
     subject.enchantments = Enchanting::withLevel(subject.enchantments, offer.kind, offer.level);
+    {
+        const StackId base = subject.id == Items::EnchantedBook ? static_cast<StackId>(Items::Book) : subject.id;
+        float chance = static_cast<float>(offer.cost + 1) / 50.0f;
+        int reach = offer.cost;
+        for (int extra = 0; extra < 4; ++extra)
+        {
+            const uint32_t roll = hashCoords(static_cast<int>(m_enchantRoll), row, extra, 0xE9C4u);
+            if (static_cast<float>(roll % 1000u) / 1000.0f >= chance) break;
+            std::vector<Enchanting::Kind> open;
+            for (int i = 0; i < static_cast<int>(Enchanting::Kind::Count); ++i)
+            {
+                const Enchanting::Kind kind = static_cast<Enchanting::Kind>(i);
+                if (!Enchanting::appliesTo(kind, base) || Enchanting::isTreasure(kind)) continue;
+                if (Enchanting::levelOf(subject.enchantments, kind) > 0) continue;
+                bool clash = false;
+                for (const auto& already : Enchanting::listOf(subject.enchantments))
+                    if (Enchanting::conflicts(already.first, kind)) clash = true;
+                if (!clash) open.push_back(kind);
+            }
+            if (open.empty()) break;
+            reach /= 2;
+            const Enchanting::Kind pick = open[(roll >> 10) % open.size()];
+            const int level = std::clamp(1 + reach / 10, 1, Enchanting::maxLevel(pick));
+            subject.enchantments = Enchanting::withLevel(subject.enchantments, pick, level);
+            chance *= 0.5f;
+        }
+    }
     if (subject.id == Items::Book) subject.id = Items::EnchantedBook;
     }
 
