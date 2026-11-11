@@ -3081,74 +3081,131 @@ void WorldGen::buildTrailRuins(Chunk& chunk) const
 // chance for each chunk with nothing keeping two apart, which is why
 // two of them sometimes run into each other. It is also where the
 // first rails anybody sees come from.
+bool WorldGen::mineshaftPlan(int chunkX, int chunkZ, ShaftPlan& out) const
+{
+    if (!Structures::spreadAt(chunkX, chunkZ, m_seed, MINESHAFT_SALT, MINESHAFT_CHANCE)) return false;
+    out = ShaftPlan{};
+    const int y = MINESHAFT_MIN +
+        static_cast<int>(hashToFloat(hashCoords(chunkX, 23, chunkZ, m_seed + MINESHAFT_SALT)) * static_cast<float>(MINESHAFT_MAX - MINESHAFT_MIN));
+    out.origin = glm::ivec3(chunkX * Chunk::SX + Chunk::SX / 2, y, chunkZ * Chunk::SZ + Chunk::SZ / 2);
+    out.mesa = biomeAt(out.origin.x, out.origin.z) == Biome::Badlands;
+    uint32_t h = hashCoords(chunkX, 27, chunkZ, m_seed + MINESHAFT_SALT) | 1u;
+    auto next = [&h]() {
+        h ^= h << 13;
+        h ^= h >> 17;
+        h ^= h << 5;
+        return h;
+    };
+    struct Pending
+    {
+        glm::ivec3 start;
+        int dx, dz, depth;
+    };
+    std::vector<Pending> todo;
+    static const int WAYS[4][2] = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } };
+    for (const auto& way : WAYS)
+        if (next() % 5u != 0u)
+            todo.push_back({ out.origin + glm::ivec3(way[0] * 5, 0, way[1] * 5), way[0], way[1], 0 });
+    while (!todo.empty() && out.corridors.size() < 24)
+    {
+        const Pending piece = todo.back();
+        todo.pop_back();
+        ShaftCorridor corridor;
+        corridor.start = piece.start;
+        corridor.dx = piece.dx;
+        corridor.dz = piece.dz;
+        corridor.length = 5 * (2 + static_cast<int>(next() % 5u));
+        corridor.rails = next() % 10u < 7u;
+        const glm::ivec3 end = corridor.start + glm::ivec3(corridor.dx, 0, corridor.dz) * corridor.length;
+        if (std::abs(end.x - out.origin.x) > 60 || std::abs(end.z - out.origin.z) > 60) corridor.length = 5;
+        const int px = -corridor.dz, pz = corridor.dx;
+        if (next() % 25u == 0u)
+        {
+            corridor.webbed = true;
+            out.spawners.push_back(corridor.start + glm::ivec3(corridor.dx, 0, corridor.dz) * (corridor.length / 2));
+        }
+        for (int k = 3; k < corridor.length; k += 5)
+            if (next() % 14u == 0u)
+                out.chests.push_back(corridor.start + glm::ivec3(corridor.dx * k + px * ((next() & 1u) ? 1 : -1), 0, corridor.dz * k + pz * ((next() & 1u) ? 1 : -1)));
+        out.corridors.push_back(corridor);
+        if (piece.depth >= 3) continue;
+        const glm::ivec3 tip = corridor.start + glm::ivec3(corridor.dx, 0, corridor.dz) * corridor.length;
+        if (std::abs(tip.x - out.origin.x) > 56 || std::abs(tip.z - out.origin.z) > 56) continue;
+        const uint32_t roll = next() % 4u;
+        if (roll == 0u) continue;
+        if (roll >= 1u) todo.push_back({ tip + glm::ivec3(px, 0, pz) * 2 - glm::ivec3(corridor.dx, 0, corridor.dz), px, pz, piece.depth + 1 });
+        if (roll >= 2u) todo.push_back({ tip - glm::ivec3(px, 0, pz) * 2 - glm::ivec3(corridor.dx, 0, corridor.dz), -px, -pz, piece.depth + 1 });
+        if (roll == 3u) todo.push_back({ tip, corridor.dx, corridor.dz, piece.depth + 1 });
+    }
+    return true;
+}
+
 void WorldGen::buildMineshafts(Chunk& chunk) const
 {
-    constexpr float CHANCE = MINESHAFT_CHANCE;
-    constexpr uint32_t SALT = MINESHAFT_SALT;
-
     const int chunkX = chunk.position().x;
     const int chunkZ = chunk.position().z;
-
-    // A corridor runs past the end of its own chunk, so a chunk has to
-    // ask its neighbours as well as itself.
-    for (int dz = -2; dz <= 2; ++dz)
-        for (int dx = -2; dx <= 2; ++dx)
+    const int baseX = chunkX * Chunk::SX;
+    const int baseZ = chunkZ * Chunk::SZ;
+    for (int dz = -5; dz <= 5; ++dz)
+        for (int dx = -5; dx <= 5; ++dx)
         {
-            const int cx = chunkX + dx;
-            const int cz = chunkZ + dz;
-            if (!Structures::spreadAt(cx, cz, m_seed, SALT, CHANCE)) continue;
-
-            const int baseX = cx * Chunk::SX;
-            const int baseZ = cz * Chunk::SZ;
-
-            const int y = MINESHAFT_MIN +
-                static_cast<int>(hashToFloat(hashCoords(cx, 23, cz, m_seed + SALT)) *
-                                 static_cast<float>(MINESHAFT_MAX - MINESHAFT_MIN));
-
-            const bool alongX = hashToFloat(hashCoords(cx, 24, cz, m_seed + SALT)) < 0.5f;
-            const int length = Chunk::SX * 2;
-
-            for (int step = 0; step < length; ++step)
+            ShaftPlan plan;
+            if (!mineshaftPlan(chunkX + dx, chunkZ + dz, plan)) continue;
+            const BlockId planks = plan.mesa ? woodSet(5).planks : static_cast<BlockId>(Blocks::Planks);
+            const BlockId fence = plan.mesa ? fenceOfWood(5) : static_cast<BlockId>(Blocks::OakFence);
+            auto inside = [&](int x, int z) { return x >= baseX && x < baseX + Chunk::SX && z >= baseZ && z < baseZ + Chunk::SZ; };
+            auto cell = [&](int x, int y, int z) {
+                return inside(x, z) && y >= 0 && y < Chunk::SY ? chunk.getBlock(x - baseX, y, z - baseZ) : static_cast<BlockId>(Blocks::Stone);
+            };
+            const glm::ivec3 o = plan.origin;
+            if (std::abs(o.x - (baseX + 8)) < 14 && std::abs(o.z - (baseZ + 8)) < 14)
+                for (int x = o.x - 4; x <= o.x + 4; ++x)
+                    for (int z = o.z - 4; z <= o.z + 4; ++z)
+                    {
+                        if (!inside(x, z)) continue;
+                        for (int up = 0; up <= 3; ++up) put(chunk, x, o.y + up, z, Blocks::Air);
+                        put(chunk, x, o.y - 1, z, Blocks::Dirt);
+                    }
+            for (const ShaftCorridor& corridor : plan.corridors)
             {
-                const int x = alongX ? baseX + step : baseX + Chunk::SX / 2;
-                const int z = alongX ? baseZ + Chunk::SZ / 2 : baseZ + step;
-
-                for (int across = -1; across <= 1; ++across)
+                const int px = -corridor.dz, pz = corridor.dx;
+                for (int k = 0; k <= corridor.length; ++k)
                 {
-                    const int ax = alongX ? x : x + across;
-                    const int az = alongX ? z + across : z;
-
-                    for (int up = 0; up <= 2; ++up) put(chunk, ax, y + up, az, Blocks::Air);
-                    if (across != 0 && step % 5 != 0 && hashToFloat(hashCoords(ax, y + 31, az, m_seed + SALT)) < 0.08f)
-                        put(chunk, ax, y + 2, az, Blocks::Cobweb);
-
-                    // Something underfoot, so a corridor cut through a
-                    // cave is still a corridor.
-                    put(chunk, ax, y - 1, az, Blocks::Planks);
+                    const int x = corridor.start.x + corridor.dx * k;
+                    const int z = corridor.start.z + corridor.dz * k;
+                    const int y = corridor.start.y;
+                    for (int across = -1; across <= 1; ++across)
+                    {
+                        const int ax = x + px * across, az = z + pz * across;
+                        if (!inside(ax, az)) continue;
+                        for (int up = 0; up <= 2; ++up) put(chunk, ax, y + up, az, Blocks::Air);
+                        const BlockId under = cell(ax, y - 1, az);
+                        if (under == Blocks::Air || isLiquid(under)) put(chunk, ax, y - 1, az, planks);
+                        const uint32_t web = hashCoords(ax, y + 31, az, m_seed + MINESHAFT_SALT);
+                        if (across != 0 && k % 4 != 2 && hashToFloat(web) < (corridor.webbed ? 0.45f : 0.06f))
+                            put(chunk, ax, y + (hashToFloat(web * 7u) < 0.5f ? 2 : 1), az, Blocks::Cobweb);
+                        if (corridor.webbed && across == 0 && hashToFloat(web * 13u) < 0.25f) put(chunk, ax, y + 2, az, Blocks::Cobweb);
+                    }
+                    if (k % 4 == 2 && k > 0 && k < corridor.length)
+                        for (int across = -1; across <= 1; ++across)
+                        {
+                            const int ax = x + px * across, az = z + pz * across;
+                            if (!inside(ax, az)) continue;
+                            put(chunk, ax, y + 2, az, planks);
+                            if (across != 0)
+                            {
+                                put(chunk, ax, y, az, fence);
+                                put(chunk, ax, y + 1, az, fence);
+                            }
+                        }
+                    else if (corridor.rails && inside(x, z) && hashToFloat(hashCoords(x, y + 33, z, m_seed + MINESHAFT_SALT)) < 0.85f)
+                        put(chunk, x, y, z, corridor.dx != 0 ? Blocks::RailEastWest : Blocks::RailNorthSouth);
                 }
-
-                // Supports every few blocks, which is what a mineshaft
-                // looks like from down the corridor.
-                if ((step % 5) == 0)
-                    for (int side = -1; side <= 1; side += 2)
-                        for (int up = 0; up <= 2; ++up)
-                            put(chunk, alongX ? x : x + side, y + up,
-                                alongX ? z + side : z,
-                                (up == 2) ? Blocks::Planks : Blocks::OakFence);
-
-                put(chunk, x, y, z, alongX ? Blocks::RailEastWest : Blocks::RailNorthSouth);
             }
-
-            // A chest at the end of one shaft in three, and a cage in
-            // one in three -- which is the dungeon a mineshaft turns
-            // into when you are not paying attention.
-            if (hashToFloat(hashCoords(cx, 25, cz, m_seed + SALT)) < 0.34f)
-                put(chunk, alongX ? baseX + length - 2 : baseX + Chunk::SX / 2, y,
-                    alongX ? baseZ + Chunk::SZ / 2 : baseZ + length - 2, Blocks::Chest);
-
-            if (hashToFloat(hashCoords(cx, 26, cz, m_seed + SALT)) < 0.34f)
-                put(chunk, baseX + Chunk::SX / 2 + 2, y, baseZ + Chunk::SZ / 2 + 2,
-                    Blocks::MonsterSpawner);
+            for (const glm::ivec3& at : plan.spawners)
+                if (inside(at.x, at.z)) put(chunk, at.x, at.y, at.z, Blocks::MonsterSpawner);
+            for (const glm::ivec3& at : plan.chests)
+                if (inside(at.x, at.z)) put(chunk, at.x, at.y, at.z, Blocks::Chest);
         }
 }
 
@@ -4365,7 +4422,18 @@ int WorldGen::dungeonCage(int x, int y, int z) const
     int ox = 0, oy = 0, oz = 0;
     const int cx = static_cast<int>(std::floor(static_cast<float>(x) / Chunk::SX));
     const int cz = static_cast<int>(std::floor(static_cast<float>(z) / Chunk::SZ));
-    if (!dungeonIn(cx, cz, ox, oy, oz) || ox != x || oy != y || oz != z) return -1;
+    if (!dungeonIn(cx, cz, ox, oy, oz) || ox != x || oy != y || oz != z)
+    {
+        for (int dz = -5; dz <= 5; ++dz)
+            for (int dx = -5; dx <= 5; ++dx)
+            {
+                ShaftPlan plan;
+                if (!mineshaftPlan(cx + dx, cz + dz, plan)) continue;
+                for (const glm::ivec3& at : plan.spawners)
+                    if (at == glm::ivec3(x, y, z)) return 3;
+            }
+        return -1;
+    }
     const uint32_t roll = hashCoords(x, y, z, m_seed + 778212u) % 4u;
     return roll < 2u ? 0 : static_cast<int>(roll) - 1;
 }
@@ -4917,32 +4985,13 @@ WorldGen::Hoard WorldGen::hoardAt(int x, int y, int z) const
         }
     }
 
-    // A mineshaft's chest, which sits at the far end of its corridor.
-    // Same spread, same salt, same roll as the stamp: the numbers live
-    // in MINESHAFT_SALT so the two cannot drift apart.
-    for (int dz = -2; dz <= 2; ++dz)
-        for (int dx = -2; dx <= 2; ++dx)
+    for (int dz = -5; dz <= 5; ++dz)
+        for (int dx = -5; dx <= 5; ++dx)
         {
-            const int cx = Structures::squareOf(x, Structures::CHUNK) + dx;
-            const int cz = Structures::squareOf(z, Structures::CHUNK) + dz;
-            if (!Structures::spreadAt(cx, cz, m_seed, MINESHAFT_SALT, MINESHAFT_CHANCE))
-                continue;
-
-            const int baseX = cx * Chunk::SX;
-            const int baseZ = cz * Chunk::SZ;
-            const int shaftY = MINESHAFT_MIN +
-                static_cast<int>(hashToFloat(hashCoords(cx, 23, cz, m_seed + MINESHAFT_SALT)) *
-                                 static_cast<float>(MINESHAFT_MAX - MINESHAFT_MIN));
-            if (y != shaftY) continue;
-            if (hashToFloat(hashCoords(cx, 25, cz, m_seed + MINESHAFT_SALT)) >= 0.34f)
-                continue;
-
-            const bool alongX =
-                hashToFloat(hashCoords(cx, 24, cz, m_seed + MINESHAFT_SALT)) < 0.5f;
-            const int length = Chunk::SX * 2;
-            const int chestX = alongX ? baseX + length - 2 : baseX + Chunk::SX / 2;
-            const int chestZ = alongX ? baseZ + Chunk::SZ / 2 : baseZ + length - 2;
-            if (chestX == x && chestZ == z) return Hoard::Mineshaft;
+            ShaftPlan plan;
+            if (!mineshaftPlan(Structures::squareOf(x, Structures::CHUNK) + dx, Structures::squareOf(z, Structures::CHUNK) + dz, plan)) continue;
+            for (const glm::ivec3& at : plan.chests)
+                if (at == glm::ivec3(x, y, z)) return Hoard::Mineshaft;
         }
 
     // An ancient city's two, either side of the frame in the middle.

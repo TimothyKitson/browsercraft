@@ -292,6 +292,57 @@ namespace
         check(cones > 0, "dripstone caves grow large dripstone columns");
     }
 
+    void testMineshaftNetwork()
+    {
+        section("mineshafts branch");
+        const WorldGen generator(2024u);
+        WorldGen::ShaftPlan plan;
+        bool found = false;
+        int foundX = 0, foundZ = 0;
+        for (int cz = -40; cz <= 40 && !found; ++cz)
+            for (int cx = -40; cx <= 40 && !found; ++cx)
+                if (generator.mineshaftPlan(cx, cz, plan) && plan.corridors.size() >= 4)
+                {
+                    found = true;
+                    foundX = cx;
+                    foundZ = cz;
+                }
+        check(found, "there is a mineshaft within a few hundred blocks");
+        if (!found) return;
+        WorldGen::ShaftPlan again;
+        check(generator.mineshaftPlan(foundX, foundZ, again) && again.corridors.size() == plan.corridors.size() &&
+                  again.chests == plan.chests,
+              "and its layout comes out the same every time it is asked for");
+        bool turned = false;
+        for (const WorldGen::ShaftCorridor& corridor : plan.corridors)
+            if (corridor.dx != plan.corridors.front().dx || corridor.dz != plan.corridors.front().dz) turned = true;
+        check(turned, "with corridors running more than one way");
+        auto chunkOf = [](int v) { return v >= 0 ? v / Chunk::SX : -((-v + Chunk::SX - 1) / Chunk::SX); };
+        const glm::ivec3 o = plan.origin;
+        Chunk room(ChunkPos{ chunkOf(o.x), chunkOf(o.z) });
+        generator.generate(room);
+        const int lx = o.x - room.position().x * Chunk::SX, lz = o.z - room.position().z * Chunk::SZ;
+        check(room.getBlock(lx, o.y + 1, lz) == Blocks::Air && room.getBlock(lx, o.y - 1, lz) == Blocks::Dirt,
+              "around an open room with a dirt floor");
+        int rails = 0, fences = 0;
+        for (const WorldGen::ShaftCorridor& corridor : plan.corridors)
+        {
+            const glm::ivec3 mid = corridor.start + glm::ivec3(corridor.dx, 0, corridor.dz) * (corridor.length / 2);
+            Chunk piece(ChunkPos{ chunkOf(mid.x), chunkOf(mid.z) });
+            generator.generate(piece);
+            for (int y = std::max(1, o.y - 1); y <= o.y + 3; ++y)
+                for (int z = 0; z < Chunk::SZ; ++z)
+                    for (int x = 0; x < Chunk::SX; ++x)
+                    {
+                        const BlockId here = piece.getBlock(x, y, z);
+                        if (isRail(here)) ++rails;
+                        if (here == Blocks::OakFence || here == fenceOfWood(5)) ++fences;
+                    }
+            if (rails > 4 && fences > 4) break;
+        }
+        check(rails > 4 && fences > 4, "laid with rails and held up by fence supports");
+    }
+
     void testBigTrees()
     {
         section("big trees");
@@ -17622,6 +17673,7 @@ int runSelfTest()
     testSoundCategories();
     testDripKinds();
     testBigTrees();
+    testMineshaftNetwork();
     testCaveAndSpikeFeatures();
     testCrafting();
     testKeyBindings();

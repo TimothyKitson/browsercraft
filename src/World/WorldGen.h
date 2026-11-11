@@ -71,6 +71,23 @@ BlockId froglightFor(Biome biome);
 class WorldGen
 {
 public:
+    struct ShaftCorridor
+    {
+        glm::ivec3 start{ 0 };
+        int dx = 1, dz = 0;
+        int length = 0;
+        bool rails = true;
+        bool webbed = false;
+    };
+    struct ShaftPlan
+    {
+        glm::ivec3 origin{ 0 };
+        bool mesa = false;
+        std::vector<ShaftCorridor> corridors;
+        std::vector<glm::ivec3> chests;
+        std::vector<glm::ivec3> spawners;
+    };
+    bool mineshaftPlan(int chunkX, int chunkZ, ShaftPlan& out) const;
     // Which sort of cave a column stands over. The whole of a cave's
     // character in one value, read off low-frequency noise so a cave
     // keeps the same character for a few hundred blocks rather than
