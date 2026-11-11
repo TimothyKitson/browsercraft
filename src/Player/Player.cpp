@@ -264,6 +264,16 @@ void Player::moveAxis(const World& world, float delta, int axis, bool preventLed
                     onGround = false;
                     return;
                 }
+                const BlockId inside = world.getBlock(static_cast<int>(std::floor(position.x)), static_cast<int>(std::floor(position.y - 0.05f)),
+                                                      static_cast<int>(std::floor(position.z)));
+                if ((isBed(landing) || isBed(inside)) && !sneaking && velocity.y < -2.0f)
+                {
+                    if (m_falling) applyFallDamage(world, position.y);
+                    m_falling = false;
+                    velocity.y = -velocity.y * 0.66f;
+                    onGround = false;
+                    return;
+                }
                 if (m_falling) applyFallDamage(world, position.y);
                 onGround = true;
                 m_falling = false;
@@ -328,6 +338,12 @@ void Player::applyFallDamage(const World& world, float landingY)
     const int z = static_cast<int>(std::floor(position.z));
     const BlockId landed = world.getBlock(x, y, z);
     if (breaksFall(landed)) return;
+    if (landed == Blocks::HoneyBlock || isBed(landed))
+    {
+        cause = "fall";
+        damage(static_cast<int>(std::floor((fallDistance - safe) * (landed == Blocks::HoneyBlock ? 0.2f : 0.5f) * hurtScale)));
+        return;
+    }
     if (landed == Blocks::HayBale || axisBase(landed) == Blocks::HayBale)
     {
         cause = "fall";
