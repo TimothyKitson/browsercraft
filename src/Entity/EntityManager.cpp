@@ -924,6 +924,86 @@ void EntityManager::setWolvesOnHostiles(float deltaTime, const glm::vec3& player
             continue;
         }
 
+        {
+            const MobId hunter = m_mobs[i].typeId();
+            auto preys = [&](MobId prey) {
+                switch (hunter)
+                {
+                    case MobId::Zombie: case MobId::Husk: case MobId::Drowned: case MobId::ZombieVillager:
+                        return prey == MobId::Villager || prey == MobId::WanderingTrader || prey == MobId::IronGolem ||
+                               (prey == MobId::Turtle);
+                    case MobId::Pillager: case MobId::Vindicator: case MobId::Evoker: case MobId::Ravager: case MobId::Illusioner:
+                        return prey == MobId::Villager || prey == MobId::WanderingTrader || prey == MobId::IronGolem;
+                    case MobId::Wolf:
+                        return !m_mobs[i].tamed() && (prey == MobId::Sheep || prey == MobId::Rabbit || prey == MobId::Fox ||
+                                                      prey == MobId::Skeleton || prey == MobId::Stray || prey == MobId::Bogged);
+                    case MobId::Fox:
+                        return prey == MobId::Chicken || prey == MobId::Rabbit || prey == MobId::Cod || prey == MobId::Salmon;
+                    case MobId::Cat:
+                        return !m_mobs[i].tamed() && (prey == MobId::Rabbit || prey == MobId::Chicken);
+                    case MobId::Ocelot:
+                        return prey == MobId::Chicken;
+                    case MobId::Axolotl:
+                        return prey == MobId::Cod || prey == MobId::Salmon || prey == MobId::TropicalFish || prey == MobId::Squid ||
+                               prey == MobId::GlowSquid || prey == MobId::Drowned || prey == MobId::Guardian || prey == MobId::Pufferfish;
+                    case MobId::Wither:
+                        return prey != MobId::Wither && prey != MobId::WitherSkeleton && prey != MobId::Skeleton && prey != MobId::Zombie &&
+                               prey != MobId::ZombiePigman && prey != MobId::Drowned && prey != MobId::Husk && prey != MobId::Stray &&
+                               prey != MobId::Phantom && prey != MobId::Zoglin && prey != MobId::ZombieVillager;
+                    default:
+                        return false;
+                }
+            };
+            const bool hunts = hunter == MobId::Zombie || hunter == MobId::Husk || hunter == MobId::Drowned ||
+                               hunter == MobId::ZombieVillager || hunter == MobId::Pillager || hunter == MobId::Vindicator ||
+                               hunter == MobId::Evoker || hunter == MobId::Ravager || hunter == MobId::Illusioner ||
+                               (hunter == MobId::Wolf && !m_mobs[i].tamed()) || hunter == MobId::Fox ||
+                               (hunter == MobId::Cat && !m_mobs[i].tamed()) || hunter == MobId::Ocelot || hunter == MobId::Axolotl ||
+                               hunter == MobId::Wither;
+            if (hunts && m_mobs[i].alive() && !m_mobs[i].baby())
+            {
+                const glm::vec3 from = m_mobs[i].position();
+                const glm::vec3 toPlayer = playerPosition - from;
+                const bool hostile = mobType(hunter).spawnClass == SpawnClass::Hostile;
+                float nearest = std::min(Mob::HUNT_RANGE, hostile ? glm::length(glm::vec3(toPlayer.x, 0.0f, toPlayer.z)) : Mob::HUNT_RANGE);
+                size_t quarry = m_mobs.size();
+                for (size_t j = 0; j < m_mobs.size(); ++j)
+                {
+                    if (j == i || !m_mobs[j].alive() || m_mobs[j].type().inanimate) continue;
+                    if (!preys(m_mobs[j].typeId())) continue;
+                    if (m_mobs[j].typeId() == MobId::Turtle && !m_mobs[j].baby()) continue;
+                    const glm::vec3 apart = m_mobs[j].position() - from;
+                    const float away = glm::length(glm::vec3(apart.x, 0.0f, apart.z));
+                    if (away >= nearest || std::fabs(apart.y) > 4.0f) continue;
+                    nearest = away;
+                    quarry = j;
+                }
+                if (quarry < m_mobs.size())
+                {
+                    m_mobs[i].huntTowards(m_mobs[quarry].position());
+                    const MobType& t = m_mobs[i].type();
+                    const float reach = std::max(Mob::BITE_REACH, t.attackReach + t.width * 0.5f);
+                    if (nearest <= reach && m_mobs[i].tryBite(deltaTime))
+                    {
+                        const glm::vec3 away = m_mobs[quarry].position() - from;
+                        const int bite = t.attackDamage > 0 ? t.attackDamage : Mob::BITE_DAMAGE;
+                        m_mobs[quarry].damage(bite, away);
+                        const bool zombie = hunter == MobId::Zombie || hunter == MobId::Husk || hunter == MobId::Drowned ||
+                                            hunter == MobId::ZombieVillager;
+                        if (zombie && m_mobs[quarry].typeId() == MobId::Villager && !m_mobs[quarry].alive() &&
+                            (m_difficulty >= 3 || (m_difficulty == 2 && random01() < 0.5f)))
+                        {
+                            Zombified bitten{ m_mobs[quarry].position(), m_mobs[quarry].yaw(), m_mobs[quarry].baby() };
+                            bitten.into = MobId::ZombieVillager;
+                            m_zombified.push_back(bitten);
+                            m_mobs[quarry].vanish();
+                        }
+                    }
+                    continue;
+                }
+            }
+        }
+
         // A tamed wolf hunts for whoever tamed it. A golem hunts
         // because that is the whole of what a golem is for, and needs
         // nobody's permission.

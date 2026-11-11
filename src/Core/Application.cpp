@@ -21283,6 +21283,7 @@ void Application::updateMobs(float deltaTime)
     const float mobTime = m_freezeMobs ? 0.0f : deltaTime;
     m_entities.setPlayerHidden(m_player.spectator());
     m_entities.setNaturalSpawning(m_rules.on(GameRules::Rule::DoMobSpawning));
+    m_entities.setDifficulty(static_cast<int>(m_worldMeta.difficulty));
     m_entities.setSpawnRules(m_rules.on(GameRules::Rule::DoInsomnia), m_rules.on(GameRules::Rule::DoTraderSpawning));
     m_entities.update(mobTime, *m_world, m_player.position, daylightFactor());
     m_entities.noticeStares(*m_world, m_camera.position, m_camera.front);

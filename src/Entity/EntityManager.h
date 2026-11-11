@@ -192,6 +192,7 @@ public:
     // Which world this manager is spawning into. Set when the player
     // travels, so the Nether gets its own and nothing else.
     void setDimension(Dimension dimension) { m_dimension = dimension; }
+    void setDifficulty(int difficulty) { m_difficulty = difficulty; }
     void setPeaceful(bool peaceful) { m_peaceful = peaceful; }
     void setNaturalSpawning(bool on) { m_naturalSpawning = on; }
     void setSpawnRules(bool insomnia, bool traders) { m_insomnia = insomnia; m_traders = traders; }
@@ -216,6 +217,7 @@ private:
     bool fits(const World& world, const MobType& type, const glm::vec3& feet) const;
 
     Dimension m_dimension = Dimension::Overworld;
+    int m_difficulty = 2;
     std::vector<Mob> m_mobs;
     std::vector<Death> m_deaths;
     std::vector<glm::vec3> m_grazes;
