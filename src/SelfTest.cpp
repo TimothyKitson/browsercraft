@@ -2008,7 +2008,7 @@ namespace
             const MobType& t = mobType(static_cast<MobId>(i));
             if (t.rideable && !t.inanimate) ++rideable;
         }
-        check(rideable == 8, "it and its four kin, the strider, the camel and a saddled pig are the ones you can get on");
+        check(rideable == 10, "it and its four kin, the strider, the camel, the two llamas and a saddled pig are the ones you can get on");
         check(mobType(MobId::Strider).rideable, "the strider is one of the others");
         check(mobType(MobId::Camel).rideable, "and the camel is the third");
 

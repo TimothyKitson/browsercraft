@@ -273,6 +273,9 @@ StackId Mob::tamingFood(MobId type)
         // is what the horse already wants.
         case MobId::Horse: case MobId::Donkey: case MobId::Mule: return Items::Wheat;
         case MobId::SkeletonHorse: case MobId::ZombieHorse: return Items::Apple;
+        case MobId::Cat: return Items::RawCod;
+        case MobId::Parrot: return Items::WheatSeeds;
+        case MobId::Llama: case MobId::TraderLlama: return Blocks::HayBale;
         default:           return Blocks::Air;
     }
 }
@@ -330,7 +333,8 @@ bool Mob::tryBite(float deltaTime)
 bool Mob::tameWith(StackId food)
 {
     const StackId wants = tamingFood(m_type);
-    if (wants == Blocks::Air || food != wants) return false;
+    const bool alternative = m_type == MobId::Cat && food == Items::RawSalmon;
+    if (wants == Blocks::Air || (food != wants && !alternative)) return false;
     if (!alive() || m_tamed) return false;
 
     m_tamed = true;

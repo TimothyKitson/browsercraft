@@ -2772,6 +2772,8 @@ namespace
             t.walkSpeed = 2.2f;
             t.limbSwing = 0.5f;
             t.breedingFood = Items::Wheat;
+            t.rideable = true;
+            t.saddleHeight = 1.6f;
             t.neutral = true;
             t.spits = true;
             t.arrowDamage = 1;
@@ -3344,6 +3346,7 @@ namespace
             t.breedingFood = Blocks::Cactus;
 
             t.rideable = true;
+            t.saddleRide = true;
             t.saddleHeight = 2.1f;
 
             t.bodyColour = rgb(222, 186, 124);
