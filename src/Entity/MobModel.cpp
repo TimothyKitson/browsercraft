@@ -106,7 +106,7 @@ void MobModel::build(const MobSkin& skin, const Mob& mob, float sky, float block
     const MobType& type = mob.type();
 
     BoxMesh::Frame frame;
-    frame.feet = mob.position() + m_shift;
+    frame.feet = mob.position() + m_shift - glm::vec3(0.0f, mob.burrowDepth(), 0.0f);
     frame.bodyYaw = mob.yaw();
     frame.sky = sky;
     frame.blockLight = blockLight;

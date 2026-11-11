@@ -206,6 +206,7 @@ public:
     void setNaturalSpawning(bool on) { m_naturalSpawning = on; }
     void setSpawnRules(bool insomnia, bool traders) { m_insomnia = insomnia; m_traders = traders; }
     bool peaceful() const { return m_peaceful; }
+    void setPlayerQuiet(bool quiet) { m_playerQuiet = quiet; }
 
 private:
     std::vector<ShedHorn> m_horns;
@@ -216,6 +217,7 @@ private:
     bool m_traders = true;
     float random01();
     float m_golemTimer = 5.0f;
+    bool m_playerQuiet = false;
     float m_daylight = 1.0f;
     std::vector<glm::vec3> m_snowTrail;
     std::unordered_map<uint32_t, float> m_castTimers;

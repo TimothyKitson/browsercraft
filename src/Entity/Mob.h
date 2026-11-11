@@ -324,6 +324,16 @@ public:
     void seatAt(const glm::vec3& at) { m_position = at; m_velocity = glm::vec3(0.0f); m_onGround = true; }
     void setCaptain(bool on) { m_captain = on; }
     std::vector<MobShot>& shotQueue() { return m_shots; }
+    static constexpr float BURROW_SECONDS = 6.7f;
+    void startEmerging() { m_burrow = BURROW_SECONDS; }
+    void startDigging() { if (m_burrow == 0.0f) m_burrow = -0.0001f; }
+    bool burrowing() const { return m_burrow != 0.0f; }
+    float burrowDepth() const
+    {
+        if (m_burrow > 0.0f) return height() * (m_burrow / BURROW_SECONDS);
+        if (m_burrow < 0.0f) return height() * std::min(1.0f, -m_burrow / BURROW_SECONDS);
+        return 0.0f;
+    }
     bool captain() const { return m_captain; }
 
     // Stands where it is for this long, as a villager does while it is
@@ -578,6 +588,9 @@ private:
     float m_cureTimer = 0.0f;
     bool m_wantsTeleport = false;
     uint32_t m_mount = 0;
+    float m_burrow = 0.0f;
+    float m_lonely = 0.0f;
+    float m_sniffTimer = 8.0f;
     bool m_captain = false;
     float m_grazeTimer = 20.0f;
     bool m_chargedBlast = false;

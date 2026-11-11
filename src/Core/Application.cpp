@@ -12981,6 +12981,7 @@ void Application::shriek(const glm::ivec3& at)
             if (!room) continue;
             if (m_entities.spawnAt(MobId::Warden, glm::vec3(feet) + glm::vec3(0.5f, 0.0f, 0.5f), *m_world))
             {
+                m_entities.mobs().back().startEmerging();
                 m_warningLevel = 0;
                 return;
             }
@@ -13199,7 +13200,7 @@ void Application::tickEffectSources(float deltaTime)
         if (!m_player.exempt() && m_sonicCooldown <= 0.0f)
             for (const Mob& mob : m_entities.mobs())
             {
-                if (!mob.alive() || mob.typeId() != MobId::Warden) continue;
+                if (!mob.alive() || mob.typeId() != MobId::Warden || mob.burrowing()) continue;
                 const float gap = glm::length(mob.position() - m_player.position);
                 if (gap > 3.5f && gap <= 15.0f && hasLineOfSight(mob.position() + glm::vec3(0.0f, mob.height() * 0.6f, 0.0f), m_player.eyePosition()))
                 {
@@ -23459,6 +23460,7 @@ void Application::updateMobs(float deltaTime)
             m_entities.spawnPatrol(*m_world, m_player.position);
     }
     m_entities.setPlayerHidden(m_player.spectator());
+    m_entities.setPlayerQuiet(m_player.sneaking);
     m_entities.setNaturalSpawning(m_rules.on(GameRules::Rule::DoMobSpawning));
     m_entities.setDifficulty(static_cast<int>(m_worldMeta.difficulty));
     m_entities.setSpawnRules(m_rules.on(GameRules::Rule::DoInsomnia) && m_stats.get(Stats::Custom::TimeSinceRest) >= 72000,

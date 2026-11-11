@@ -660,6 +660,39 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
     if (!m_dressed) dress(g_gearDifficultyFor());
 
     m_daylight = daylight;
+    if (m_burrow != 0.0f)
+    {
+        if (m_burrow > 0.0f) m_burrow = std::max(0.0f, m_burrow - deltaTime);
+        else
+        {
+            m_burrow -= deltaTime;
+            if (m_burrow <= -BURROW_SECONDS) vanish();
+        }
+        m_velocity = glm::vec3(0.0f);
+        m_moving = false;
+        return;
+    }
+    if (m_type == MobId::Warden && alive())
+    {
+        const float apart = glm::length(playerPosition - m_position);
+        m_lonely = apart > 24.0f ? m_lonely + deltaTime : 0.0f;
+        if (m_lonely > 60.0f)
+        {
+            startDigging();
+            emit(Sound::MobWardenSay, 0.7f, 0.5f);
+            return;
+        }
+        m_sniffTimer -= deltaTime;
+        if (m_sniffTimer <= 0.0f)
+        {
+            m_sniffTimer = 6.0f + random01() * 4.0f;
+            if (apart < 20.0f)
+            {
+                m_goalYaw = glm::degrees(std::atan2(playerPosition.z - m_position.z, playerPosition.x - m_position.x));
+                emit(Sound::MobWardenSay, 0.5f, 1.4f);
+            }
+        }
+    }
     if (m_strikeGuard > 0.0f) m_strikeGuard = std::max(0.0f, m_strikeGuard - deltaTime);
     if (m_playerHitAge < 1.0e8f) m_playerHitAge += deltaTime;
     const MobType& t = type();
@@ -1514,7 +1547,7 @@ bool Mob::teleportRandom(const World& world, float range)
 
 void Mob::damage(int amount, const glm::vec3& fromDirection)
 {
-    if (amount <= 0 || !alive() || m_spawnPhase > 0.0f) return;
+    if (amount <= 0 || !alive() || m_spawnPhase > 0.0f || m_burrow != 0.0f) return;
     if ((m_type == MobId::Enderman && random01() < 0.6f) ||
         (m_type == MobId::Shulker && m_health * 2 < type().maxHealth && random01() < 0.25f))
         m_wantsTeleport = true;

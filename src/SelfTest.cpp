@@ -10009,6 +10009,14 @@ namespace
                       frameLay(Blocks::FrameFloor) == 1 && frameLay(Blocks::GlowFrameCeiling) == 2 && frameLay(frameFacingAs(2)) == 0 &&
                       blockDrop(Blocks::FrameCeiling) == blockDrop(frameFacingAs(0)) && blockDrop(Blocks::GlowFrameFloor) == blockDrop(frameFacingAs(1, true)),
                   "item frames lie on floors and hang from ceilings");
+            {
+                Mob warden(MobId::Warden, glm::vec3(0.0f, 64.0f, 0.0f), 5u);
+                const int before = warden.health();
+                warden.startEmerging();
+                check(warden.burrowing() && std::fabs(warden.burrowDepth() - warden.height()) < 0.001f, "a summoned warden starts under the ground");
+                warden.damage(10, glm::vec3(1.0f, 0.0f, 0.0f));
+                check(warden.health() == before, "and cannot be hurt while it climbs out");
+            }
             check(isStonecutter(Blocks::StonecutterTurned) && blockDrop(Blocks::StonecutterTurned) == static_cast<StackId>(Blocks::Stonecutter),
                   "a turned stonecutter is still a stonecutter");
             check(shelfMask(shelfOf(1, 3)) == 7 && shelfBooks(shelfOf(1, 3)) == 3 && shelfFacing(shelfOf(1, 3)) == 1,

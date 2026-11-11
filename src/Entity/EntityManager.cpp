@@ -744,7 +744,8 @@ void EntityManager::update(float deltaTime, const World& world,
     const glm::vec3 target = m_playerHidden ? playerPosition + glm::vec3(0.0f, 100000.0f, 0.0f) : playerPosition;
     for (Mob& mob : m_mobs)
     {
-        mob.update(deltaTime, world, target, daylight);
+        const bool unheard = mob.typeId() == MobId::Warden && m_playerQuiet && glm::length(mob.position() - target) > 5.0f;
+        mob.update(deltaTime, world, unheard ? target + glm::vec3(0.0f, 100000.0f, 0.0f) : target, daylight);
 
         // Caught here rather than at removal: the corpse lingers, and
         // whatever it drops belongs where it fell, not where it stopped.
