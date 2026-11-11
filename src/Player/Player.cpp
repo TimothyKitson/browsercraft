@@ -401,6 +401,11 @@ bool Player::isInLava(const World& world) const
             for (int z = minZ; z <= maxZ; ++z)
                 if (isLava(world.getBlock(x, y, z)))
                     return true;
+    {
+        const BlockId pot = world.getBlock(static_cast<int>(std::floor(position.x)), static_cast<int>(std::floor(position.y)),
+                                           static_cast<int>(std::floor(position.z)));
+        if (pot == Blocks::LavaCauldron && position.y - std::floor(position.y) < 0.9375f) return true;
+    }
 
     return false;
 }

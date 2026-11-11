@@ -1924,6 +1924,45 @@ namespace
         }
     }
 
+    void emitCauldron(const MeshSnapshot& snap, int lx, int y, int lz, BlockId id, std::vector<float>& out)
+    {
+        const BlockInfo& info = blockInfo(id);
+        const int side = Tiles::CauldronSide, inner = Tiles::CauldronTop, rim = Tiles::CauldronRimTile, bottom = Tiles::CauldronBottom;
+        auto wall = [&](float x0, float z0, float x1, float z1) {
+            const PartFace f[6] = { { side, 16 - z1, 0, 16 - z0, 13 }, { side, z0, 0, z1, 13 }, { rim, x0, z0, x1, z1 },
+                                    { bottom, x0, z0, x1, z1 }, { side, x0, 0, x1, 13 }, { side, 16 - x1, 0, 16 - x0, 13 } };
+            PartFace g[6];
+            for (int k = 0; k < 6; ++k) g[k] = f[k];
+            if (x0 > 0.0f) g[1] = PartFace{ inner, z0, 0, z1, 12 };
+            if (x1 < 16.0f) g[0] = PartFace{ inner, 16 - z1, 0, 16 - z0, 12 };
+            if (z0 > 0.0f) g[5] = PartFace{ inner, 16 - x1, 0, 16 - x0, 12 };
+            if (z1 < 16.0f) g[4] = PartFace{ inner, x0, 0, x1, 12 };
+            emitPart(snap, lx, y, lz, id, glm::vec3(x0, 3.0f, z0) / 16.0f, glm::vec3(x1, 16.0f, z1) / 16.0f, g, out);
+        };
+        wall(0.0f, 0.0f, 2.0f, 16.0f);
+        wall(14.0f, 0.0f, 16.0f, 16.0f);
+        wall(2.0f, 0.0f, 14.0f, 2.0f);
+        wall(2.0f, 14.0f, 14.0f, 16.0f);
+        const PartFace floor[6] = { { -1, 0, 0, 16, 16 }, { -1, 0, 0, 16, 16 }, { inner, 2, 2, 14, 14 },
+                                    { bottom, 2, 2, 14, 14 }, { -1, 0, 0, 16, 16 }, { -1, 0, 0, 16, 16 } };
+        emitPart(snap, lx, y, lz, id, glm::vec3(2.0f, 3.0f, 2.0f) / 16.0f, glm::vec3(14.0f, 4.0f, 14.0f) / 16.0f, floor, out);
+        static const float LEGS[4][2] = { { 0, 0 }, { 12, 0 }, { 0, 12 }, { 12, 12 } };
+        for (const auto& leg : LEGS)
+        {
+            const PartFace f[6] = { { side, 0, 13, 4, 16 }, { side, 0, 13, 4, 16 }, { -1, 0, 0, 16, 16 },
+                                    { bottom, leg[0], leg[1], leg[0] + 4, leg[1] + 4 }, { side, 0, 13, 4, 16 }, { side, 0, 13, 4, 16 } };
+            emitPart(snap, lx, y, lz, id, glm::vec3(leg[0], 0.0f, leg[1]) / 16.0f, glm::vec3(leg[0] + 4.0f, 3.0f, leg[1] + 4.0f) / 16.0f, f, out);
+        }
+        float level = 0.0f;
+        if (isCauldron(id)) level = cauldronLevel(id) == 0 ? 0.0f : cauldronLevel(id) == 1 ? 9.0f : cauldronLevel(id) == 2 ? 12.0f : 15.0f;
+        else if (id == Blocks::LavaCauldron) level = 15.0f;
+        else level = powderCauldronLevel(id) == 1 ? 9.0f : powderCauldronLevel(id) == 2 ? 12.0f : 15.0f;
+        if (level <= 0.0f) return;
+        const PartFace surface[6] = { { -1, 0, 0, 16, 16 }, { -1, 0, 0, 16, 16 }, { info.tileTop, 2, 2, 14, 14 },
+                                      { -1, 0, 0, 16, 16 }, { -1, 0, 0, 16, 16 }, { -1, 0, 0, 16, 16 } };
+        emitPart(snap, lx, y, lz, id, glm::vec3(2.0f, 4.0f, 2.0f) / 16.0f, glm::vec3(14.0f, level, 14.0f) / 16.0f, surface, out);
+    }
+
     void emitLantern(const MeshSnapshot& snap, int lx, int y, int lz, BlockId id, std::vector<float>& out)
     {
         const int t = blockInfo(id).tileSide;
@@ -2258,6 +2297,10 @@ void buildChunkMesh(const MeshSnapshot& snapshot, MeshResult& out)
                 else if (id == Blocks::Cactus)
                 {
                     emitCactus(snapshot, lx, y, lz, id, out.opaqueVertices);
+                }
+                else if (isAnyCauldron(id))
+                {
+                    emitCauldron(snapshot, lx, y, lz, id, out.opaqueVertices);
                 }
                 else if (isLantern(id))
                 {

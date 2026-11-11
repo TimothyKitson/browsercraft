@@ -396,6 +396,7 @@ namespace Tiles
         HeadTileFirst, HeadTileLast = HeadTileFirst + 44,
         BambooStalkTile, BambooSmallLeavesTile, BambooShootTile,
         FarmlandDryTop,
+        CauldronRimTile,
 
         TileCount
     };

@@ -308,10 +308,10 @@ namespace
         { "Lectern",      LecternTop,    LecternBase,    LecternSide,    true,  true,  RenderType::Cube,   0,   2.5f },
         { "Lectern",      LecternTopBook,LecternBase,    LecternSide,    true,  true,  RenderType::Cube,   0,   2.5f },
 
-        { "Cauldron",     CauldronTop,   CauldronBottom, CauldronSide,   true,  true,  RenderType::Cube,   0,   2.0f },
-        { "Cauldron",     CauldronWater1,CauldronBottom, CauldronSide,   true,  true,  RenderType::Cube,   0,   2.0f },
-        { "Cauldron",     CauldronWater2,CauldronBottom, CauldronSide,   true,  true,  RenderType::Cube,   0,   2.0f },
-        { "Cauldron",     CauldronWater3,CauldronBottom, CauldronSide,   true,  true,  RenderType::Cube,   0,   2.0f },
+        { "Cauldron",     CauldronTop,   CauldronBottom, CauldronSide,   true,  false,  RenderType::Cube,   0,   2.0f },
+        { "Cauldron",     CauldronWater1,CauldronBottom, CauldronSide,   true,  false,  RenderType::Cube,   0,   2.0f },
+        { "Cauldron",     CauldronWater2,CauldronBottom, CauldronSide,   true,  false,  RenderType::Cube,   0,   2.0f },
+        { "Cauldron",     CauldronWater3,CauldronBottom, CauldronSide,   true,  false,  RenderType::Cube,   0,   2.0f },
 
         { "Beetroots",    BeetrootStage0,BeetrootStage0, BeetrootStage0, false, false, RenderType::Cross,  0,   0.0f },
         { "Beetroots",    BeetrootStage1,BeetrootStage1, BeetrootStage1, false, false, RenderType::Cross,  0,   0.0f },
@@ -3981,10 +3981,10 @@ namespace
         { "Snow", SnowTile, SnowTile, SnowTile, true, false, RenderType::Lush, 0, 0.1f },
         { "Snow", SnowTile, SnowTile, SnowTile, true, false, RenderType::Lush, 0, 0.1f },
         { "Snow", SnowTile, SnowTile, SnowTile, true, true, RenderType::Lush, 0, 0.1f },
-        { "Lava Cauldron", Lava, CauldronBottom, CauldronSide, true, true, RenderType::Cube, 15, 2.0f },
-        { "Powder Snow Cauldron", PowderSnowTile, CauldronBottom, CauldronSide, true, true, RenderType::Cube, 0, 2.0f },
-        { "Powder Snow Cauldron", PowderSnowTile, CauldronBottom, CauldronSide, true, true, RenderType::Cube, 0, 2.0f },
-        { "Powder Snow Cauldron", PowderSnowTile, CauldronBottom, CauldronSide, true, true, RenderType::Cube, 0, 2.0f },
+        { "Lava Cauldron", Lava, CauldronBottom, CauldronSide, true, false, RenderType::Cube, 15, 2.0f },
+        { "Powder Snow Cauldron", PowderSnowTile, CauldronBottom, CauldronSide, true, false, RenderType::Cube, 0, 2.0f },
+        { "Powder Snow Cauldron", PowderSnowTile, CauldronBottom, CauldronSide, true, false, RenderType::Cube, 0, 2.0f },
+        { "Powder Snow Cauldron", PowderSnowTile, CauldronBottom, CauldronSide, true, false, RenderType::Cube, 0, 2.0f },
         { "Skeleton Skull", HeadTileFirst + 0, HeadTileFirst + 1, HeadTileFirst + 3, true, false, RenderType::Head, 0, 1.0f },
         { "Skeleton Skull", HeadTileFirst + 0, HeadTileFirst + 1, HeadTileFirst + 3, true, false, RenderType::Head, 0, 1.0f },
         { "Skeleton Skull", HeadTileFirst + 0, HeadTileFirst + 1, HeadTileFirst + 3, true, false, RenderType::Head, 0, 1.0f },
@@ -5292,6 +5292,10 @@ bool blockOverlaps(BlockId id, int bx, int by, int bz,
     if (id == Blocks::Bamboo) return overlaps(0.40625f, 0.0f, 0.40625f, 0.59375f, 1.0f, 0.59375f);
     if (id == Blocks::Cactus) return overlaps(0.0625f, 0.0f, 0.0625f, 0.9375f, 0.9375f, 0.9375f);
     if (isAnyCampfire(id)) return overlaps(0.0f, 0.0f, 0.0f, 1.0f, 0.4375f, 1.0f);
+    if (isAnyCauldron(id))
+        return overlaps(0.0f, 0.0f, 0.0f, 1.0f, 0.25f, 1.0f) || overlaps(0.0f, 0.0f, 0.0f, 0.125f, 1.0f, 1.0f) ||
+               overlaps(0.875f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f) || overlaps(0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.125f) ||
+               overlaps(0.0f, 0.0f, 0.875f, 1.0f, 1.0f, 1.0f);
     if (isLantern(id)) return lanternHangs(id) ? overlaps(0.3125f, 0.0625f, 0.3125f, 0.6875f, 0.625f, 0.6875f)
                                                : overlaps(0.3125f, 0.0f, 0.3125f, 0.6875f, 0.5625f, 0.6875f);
     if (isHead(id))

@@ -2706,6 +2706,17 @@ bool Application::frame()
             // Water puts it out, which is the whole reason to run for
             // the nearest lake with a blaze behind you.
             if (m_player.isInWater(*m_world)) m_player.douse();
+            {
+                const glm::ivec3 feetCell(glm::floor(m_player.position));
+                const BlockId pot = m_world->getBlock(feetCell.x, feetCell.y, feetCell.z);
+                if (m_player.onFire() && ((isCauldron(pot) && cauldronLevel(pot) > 0) || isPowderCauldron(pot)))
+                {
+                    m_player.douse();
+                    const BlockId lower = isCauldron(pot) ? cauldronAt(cauldronLevel(pot) - 1) : powderCauldronAt(powderCauldronLevel(pot) - 1);
+                    m_world->setBlock(feetCell.x, feetCell.y, feetCell.z, lower);
+                    m_net.onLocalBlockChange(feetCell.x, feetCell.y, feetCell.z, lower);
+                }
+            }
 
             {
                 bool leather = false;
@@ -3427,6 +3438,9 @@ bool Application::frame()
                     m_world->setBlock(bx + 1, by + 2, bz - 2, Blocks::Stone);
                     m_world->setBlock(bx + 1, by + 1, bz - 2, Blocks::LanternHanging);
                     m_world->setBlock(bx + 2, by, bz - 2, Blocks::SoulLantern);
+                    m_world->setBlock(bx + 2, by, bz + 1, cauldronAt(2));
+                    m_world->setBlock(bx + 3, by, bz + 1, Blocks::LavaCauldron);
+                    m_world->setBlock(bx + 4, by, bz + 1, Blocks::Cauldron0);
                     for (int t = 0; t < 4; ++t)
                         for (int r = 0; r < 2; ++r)
                             m_world->setBlock(bx - 9 + t, by - 1 + 0, bz + 3 + r, glazedOf(static_cast<BlockId>(Blocks::GlazedTerracottaFirst + 14), (t + r) & 3));
