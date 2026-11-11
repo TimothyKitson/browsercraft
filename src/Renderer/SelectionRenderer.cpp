@@ -155,3 +155,45 @@ void SelectionRenderer::drawCrack(Shader& chunkShader, const glm::ivec3& block, 
     glDisable(GL_POLYGON_OFFSET_FILL);
     glDisable(GL_BLEND);
 }
+
+void SelectionRenderer::boxLines(std::vector<glm::vec3>& points, const glm::vec3& lo, const glm::vec3& hi)
+{
+    const glm::vec3 corners[8] = {
+        { lo.x, lo.y, lo.z }, { hi.x, lo.y, lo.z }, { hi.x, lo.y, hi.z }, { lo.x, lo.y, hi.z },
+        { lo.x, hi.y, lo.z }, { hi.x, hi.y, lo.z }, { hi.x, hi.y, hi.z }, { lo.x, hi.y, hi.z },
+    };
+    for (int i = 0; i < 4; ++i)
+    {
+        points.push_back(corners[i]);
+        points.push_back(corners[(i + 1) % 4]);
+        points.push_back(corners[4 + i]);
+        points.push_back(corners[4 + (i + 1) % 4]);
+        points.push_back(corners[i]);
+        points.push_back(corners[4 + i]);
+    }
+}
+
+void SelectionRenderer::drawLines(const glm::mat4& view, const glm::mat4& projection, const std::vector<glm::vec3>& points,
+                                  const glm::vec4& colour, float width)
+{
+    if (points.size() < 2) return;
+    std::vector<float> vertices;
+    vertices.reserve(points.size() * 3);
+    for (const glm::vec3& p : points)
+    {
+        vertices.push_back(p.x);
+        vertices.push_back(p.y);
+        vertices.push_back(p.z);
+    }
+    m_lineMesh.upload(vertices, LINE_LAYOUT, true);
+    m_lineShader.bind();
+    m_lineShader.setMat4("uView", view);
+    m_lineShader.setMat4("uProjection", projection);
+    m_lineShader.setVec4("uColor", colour);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glLineWidth(width);
+    m_lineMesh.draw(GL_LINES);
+    glLineWidth(1.0f);
+    glDisable(GL_BLEND);
+}

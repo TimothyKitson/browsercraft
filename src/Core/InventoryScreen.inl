@@ -2972,7 +2972,19 @@ void Application::finishInventoryScreen()
             {
                 highlight();
                 const ItemStack& stack = m_inventory.slot(box->index);
-                if (!stack.empty()) tip = rarityCode(stack) + stackName(stack) + stackLore(stack);
+                if (!stack.empty())
+                {
+                    tip = rarityCode(stack) + stackName(stack) + stackLore(stack);
+                    if (m_advancedTooltips)
+                    {
+                        const int most = Armour::isArmour(stack.id) || Tools::isTool(stack.id) || stack.id == Items::Trident || stack.id == Items::Shield ||
+                                                 stack.id == Items::Elytra || stack.id == Items::Bow || stack.id == Items::Crossbow ||
+                                                 stack.id == Items::FishingRod || stack.id == Items::FlintAndSteel || stack.id == Items::Shears
+                                             ? Anvil::maxDurability(stack.id) : 0;
+                        if (most > 0) tip += "\nDurability: " + std::to_string(std::max(0, most - stack.damage)) + " / " + std::to_string(most);
+                        tip += "\n\u00a78minecraft:" + RecipeBook::idOf(stack.id);
+                    }
+                }
                 if (stack.id == Items::Bundle) tipBundle = &stack;
                 break;
             }

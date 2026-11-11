@@ -489,6 +489,7 @@ void Application::loadOptions()
         else if (std::strncmp(line, "chatHeightUnfocused=", 20) == 0) m_chatUnfocusedHeight = std::clamp(static_cast<float>(std::atof(line + 20)), 0.0f, 1.0f);
         else if (std::strncmp(line, "chatLineSpacing=", 16) == 0) m_chatLineSpacing = std::clamp(static_cast<float>(std::atof(line + 16)), 0.0f, 1.0f);
         else if (std::sscanf(line, "autoSuggestions=%d", &value) == 1) m_autoSuggestions = value != 0;
+        else if (std::sscanf(line, "advancedItemTooltips=%d", &value) == 1) m_advancedTooltips = value != 0;
         else if (std::sscanf(line, "reducedDebugInfo=%d", &value) == 1) m_reducedDebug = value != 0;
         else if (std::strncmp(line, "soundCategory_", 14) == 0)
         {
@@ -543,6 +544,7 @@ void Application::saveOptions()
     std::fprintf(file, "damageTiltStrength=%.3f\n", m_damageTilt);
     static const char* CLOUD_NAMES[3] = { "false", "\"fast\"", "true" };
     std::fprintf(file, "autoJump=%s\n", m_autoJump ? "true" : "false");
+    std::fprintf(file, "advancedItemTooltips=%d\n", m_advancedTooltips ? 1 : 0);
     std::fprintf(file, "renderClouds=%s\nparticles=%d\nao=%d\nglintSpeed=%.3f\nentityShadows=%d\n", CLOUD_NAMES[m_cloudMode], m_particleLevel,
                  m_smoothLightingOn ? 1 : 0, m_glintSpeed, m_entityShadows ? 1 : 0);
     std::fprintf(file, "chatVisibility=%d\nchatColors=%d\nchatScale=%.3f\nchatHeightFocused=%.3f\nchatHeightUnfocused=%.3f\n"
@@ -9121,6 +9123,26 @@ void Application::handleEvents()
             for (int i = 0; i < 4; ++i)
                 if (SWITCHER_MODES[i] == start) m_switcherChoice = i;
             m_gameModeSwitcher = true;
+        }
+    }
+    else if (debugHeld && (m_input.wasKeyPressed(SDL_SCANCODE_B) || m_input.wasKeyPressed(SDL_SCANCODE_G) || m_input.wasKeyPressed(SDL_SCANCODE_H)))
+    {
+        m_showDebug = m_debugBeforeF3;
+        if (m_input.wasKeyPressed(SDL_SCANCODE_B))
+        {
+            m_showHitboxes = !m_showHitboxes;
+            m_chatLog.add(std::string("[Debug]: Hitboxes: ") + (m_showHitboxes ? "shown" : "hidden"));
+        }
+        if (m_input.wasKeyPressed(SDL_SCANCODE_G))
+        {
+            m_showChunkBorders = !m_showChunkBorders;
+            m_chatLog.add(std::string("[Debug]: Chunk borders: ") + (m_showChunkBorders ? "shown" : "hidden"));
+        }
+        if (m_input.wasKeyPressed(SDL_SCANCODE_H))
+        {
+            m_advancedTooltips = !m_advancedTooltips;
+            m_chatLog.add(std::string("[Debug]: Advanced tooltips: ") + (m_advancedTooltips ? "shown" : "hidden"));
+            saveOptions();
         }
     }
     else if (debugHeld && m_input.wasKeyPressed(SDL_SCANCODE_F6))
@@ -20355,6 +20377,8 @@ void Application::renderWorld()
         }
     }
 
+    renderDebugLines(view, projection);
+
     // The debug axis cross, planted on the block the player stands on.
     if (m_showDebug && inGame())
     {
@@ -20416,6 +20440,70 @@ void Application::renderEntityShadows(const glm::mat4& view, const glm::mat4& pr
         if (peer.positioned) cast(peer.smoothed(), 0.5f, 0.55f);
     if (m_perspective != Perspective::FirstPerson && !m_player.spectator()) cast(m_player.position, 0.5f, 0.55f);
     m_shadowSpots.render(view, projection, spots);
+}
+
+void Application::renderDebugLines(const glm::mat4& view, const glm::mat4& projection)
+{
+    if (!m_world || !inGame() || m_menuWorld) return;
+    if (m_showHitboxes)
+    {
+        std::vector<glm::vec3> boxes, eyes;
+        for (const Mob& mob : m_entities.mobs())
+        {
+            if (!mob.alive() || glm::length(mob.position() - m_camera.position) > 64.0f) continue;
+            const glm::vec3 feet = mob.position();
+            const float half = mob.width() * 0.5f;
+            SelectionRenderer::boxLines(boxes, feet - glm::vec3(half, 0.0f, half), feet + glm::vec3(half, mob.height(), half));
+            const float eye = feet.y + mob.height() * 0.85f;
+            SelectionRenderer::boxLines(eyes, glm::vec3(feet.x - half, eye - 0.01f, feet.z - half), glm::vec3(feet.x + half, eye + 0.01f, feet.z + half));
+        }
+        for (const auto& [id, peer] : m_net.players())
+        {
+            if (!peer.positioned) continue;
+            const glm::vec3 feet = peer.smoothed();
+            SelectionRenderer::boxLines(boxes, feet - glm::vec3(0.3f, 0.0f, 0.3f), feet + glm::vec3(0.3f, 1.8f, 0.3f));
+        }
+        m_selection.drawLines(view, projection, boxes, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+        m_selection.drawLines(view, projection, eyes, glm::vec4(1.0f, 0.0f, 0.0f, 1.0f));
+    }
+    if (m_showChunkBorders)
+    {
+        const int cx = World::floorDiv(static_cast<int>(std::floor(m_player.position.x)), Chunk::SX) * Chunk::SX;
+        const int cz = World::floorDiv(static_cast<int>(std::floor(m_player.position.z)), Chunk::SZ) * Chunk::SZ;
+        std::vector<glm::vec3> outer, inner, grid;
+        for (int dx = -16; dx <= 32; dx += 16)
+            for (int dz = -16; dz <= 32; dz += 16)
+            {
+                if ((dx == 0 || dx == 16) && (dz == 0 || dz == 16)) continue;
+                outer.push_back(glm::vec3(static_cast<float>(cx + dx), 0.0f, static_cast<float>(cz + dz)));
+                outer.push_back(glm::vec3(static_cast<float>(cx + dx), static_cast<float>(Chunk::SY), static_cast<float>(cz + dz)));
+            }
+        for (int k = 0; k <= 16; k += 2)
+        {
+            const float x = static_cast<float>(cx + k), z = static_cast<float>(cz + k);
+            for (const glm::vec2& column : { glm::vec2(x, cz), glm::vec2(x, cz + 16), glm::vec2(cx, z), glm::vec2(cx + 16, z) })
+            {
+                const bool corner = (column.x == cx || column.x == cx + 16) && (column.y == cz || column.y == cz + 16);
+                std::vector<glm::vec3>& into = corner ? inner : grid;
+                into.push_back(glm::vec3(column.x, 0.0f, column.y));
+                into.push_back(glm::vec3(column.x, static_cast<float>(Chunk::SY), column.y));
+            }
+        }
+        const int playerY = static_cast<int>(std::floor(m_player.position.y));
+        for (int y = std::max(0, playerY - 32) & ~1; y <= std::min(Chunk::SY, playerY + 32); y += 2)
+        {
+            const float fy = static_cast<float>(y);
+            const glm::vec3 a(cx, fy, cz), b(cx + 16, fy, cz), c(cx + 16, fy, cz + 16), d(cx, fy, cz + 16);
+            for (const auto& [p, q] : { std::pair{ a, b }, std::pair{ b, c }, std::pair{ c, d }, std::pair{ d, a } })
+            {
+                (y % 16 == 0 ? inner : grid).push_back(p);
+                (y % 16 == 0 ? inner : grid).push_back(q);
+            }
+        }
+        m_selection.drawLines(view, projection, outer, glm::vec4(1.0f, 0.0f, 0.0f, 1.0f));
+        m_selection.drawLines(view, projection, grid, glm::vec4(1.0f, 1.0f, 0.0f, 1.0f));
+        m_selection.drawLines(view, projection, inner, glm::vec4(0.25f, 0.25f, 1.0f, 1.0f), 2.0f);
+    }
 }
 
 void Application::renderBorder(const glm::mat4& view, const glm::mat4& projection)
