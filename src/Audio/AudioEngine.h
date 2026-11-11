@@ -1,4 +1,5 @@
 #pragma once
+#include <map>
 #include "World/Block.h"
 #include <vector>
 #include <array>
@@ -342,6 +343,8 @@ public:
     static const char* categoryKey(SoundCategory category);
     static const char* categoryLabel(SoundCategory category);
     static bool soundFileExists(const std::string& file);
+    bool playNamed(const std::string& stem, Sound fallback, float volume = 1.0f, float pitch = 1.0f);
+    void preloadNamed(std::initializer_list<const char*> stems);
     void setCategoryVolume(SoundCategory category, float volume)
     {
         m_category[static_cast<size_t>(category)] = volume < 0.0f ? 0.0f : volume > 1.0f ? 1.0f : volume;
@@ -380,6 +383,8 @@ private:
     float m_master = 1.0f;
     std::array<float, static_cast<size_t>(SoundCategory::Count)> m_category{ 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f };
     using Clip = std::vector<float>;
+    std::map<std::string, std::vector<Clip>> m_named;
+    const std::vector<Clip>& namedClips(const std::string& stem);
     std::array<std::vector<Clip>, static_cast<size_t>(Sound::Count)> m_buffers;
     int m_loadedFromFiles = 0;
     // Somewhere harmless for the synth to write when a sound already came

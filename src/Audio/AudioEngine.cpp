@@ -225,24 +225,132 @@ bool AudioEngine::loadSingle(Sound id, const char* file)
 // Anything with no file keeps the synthesised voice below.
 void AudioEngine::loadMobVoice(Sound say, Sound hurt, Sound death, const char* folder)
 {
-    char stem[128];
-
-    std::snprintf(stem, sizeof(stem), "mob/%s/say", folder);
-    loadVariants(say, stem, 5);
-
-    std::snprintf(stem, sizeof(stem), "mob/%s/hurt", folder);
-    if (loadVariants(hurt, stem, 5) == 0)
+    struct Alias
     {
-        std::snprintf(stem, sizeof(stem), "mob/%s/hurt.ogg", folder);
-        loadSingle(hurt, stem);
-    }
+        const char* key;
+        const char* root;
+        std::initializer_list<const char*> say, hurt, death;
+    };
+    static const Alias ALIASES[] = {
+        { "mob/enderman", "mob/endermen", { "idle" }, { "hit" }, { "death" } },
+        { "mob/zombie_pigman", "mob/zombiepig", { "zpig" }, { "zpighurt" }, { "zpigdeath" } },
+        { "mob/villager", "mob/villager", { "idle" }, { "hit" }, { "death" } },
+        { "mob/wolf", "mob/wolf", { "bark", "panting" }, { "hurt" }, { "death" } },
+        { "mob/horse", "mob/horse", { "idle" }, { "hit" }, { "death" } },
+        { "mob/blaze", "mob/blaze", { "breathe" }, { "hit" }, { "death" } },
+        { "mob/magmacube", "mob/magmacube", { "big" }, { "small" }, { "big" } },
+        { "mob/slime", "mob/slime", { "big" }, { "big" }, { "big" } },
+        { "mob/slime_small", "mob/slime", { "small" }, { "small" }, { "small" } },
+        { "mob/wither_skeleton", "mob/wither_skeleton", { "idle" }, { "hurt" }, { "death" } },
+        { "mob/guardian", "mob/guardian", { "land_idle" }, { "guardian_hit", "land_hit" }, { "guardian_death", "land_death" } },
+        { "mob/guardian", "entity/guardian", { "ambient" }, {}, {} },
+        { "mob/elder_guardian", "mob/guardian", { "elder_idle" }, { "elder_hit" }, { "elder_death" } },
+        { "mob/witch", "entity/witch", { "ambient" }, { "hurt" }, { "death" } },
+        { "mob/enderdragon", "mob/enderdragon", { "growl" }, { "hit" }, { "end" } },
+        { "mob/wither", "mob/wither", { "idle" }, { "hurt" }, { "death" } },
+        { "mob/shulker", "entity/shulker", { "ambient" }, { "hurt" }, { "death" } },
+        { "mob/ghast", "mob/ghast", { "moan" }, { "scream" }, { "death" } },
+        { "mob/squid", "entity/squid", { "ambient" }, { "hurt" }, { "death" } },
+        { "mob/glow_squid", "entity/squid", { "ambient" }, { "hurt" }, { "death" } },
+        { "mob/vindicator", "mob/vindication_illager", { "idle" }, { "hurt" }, { "death" } },
+        { "mob/evoker", "mob/evocation_illager", { "idle" }, { "hurt" }, { "death" } },
+        { "mob/illusioner", "mob/illusion_illager", { "idle" }, { "hurt" }, { "death" } },
+        { "mob/pillager", "mob/vindication_illager", { "idle" }, { "hurt" }, { "death" } },
+        { "mob/bat", "mob/bat", { "idle" }, { "hurt" }, { "death" } },
+        { "mob/cave_spider", "mob/spider", { "say" }, { "say" }, { "death" } },
+        { "mob/silverfish", "mob/silverfish", { "say" }, { "hit" }, { "kill" } },
+        { "mob/rabbit", "mob/rabbit", { "idle" }, { "hurt" }, { "bunnymurder" } },
+        { "mob/polar_bear", "mob/polarbear", { "idle" }, { "hurt" }, { "death" } },
+        { "mob/stray", "mob/stray", { "idle" }, { "hurt" }, { "death" } },
+        { "mob/husk", "mob/husk", { "idle" }, { "hurt" }, { "death" } },
+        { "mob/zombie_villager", "mob/zombie_villager", { "say" }, { "hurt" }, { "death" } },
+        { "mob/vex", "mob/vex", { "idle" }, { "hurt" }, { "death" } },
+        { "mob/snow_golem", "entity/snowman", {}, { "hurt" }, { "death" } },
+        { "mob/donkey", "mob/horse/donkey", { "idle" }, { "hit" }, { "death" } },
+        { "mob/mule", "mob/horse/donkey", { "idle" }, { "hit" }, { "death" } },
+        { "mob/skeleton_horse", "mob/horse/skeleton", { "idle" }, { "hit" }, { "death" } },
+        { "mob/zombie_horse", "mob/horse/zombie", { "idle" }, { "hit" }, { "death" } },
+        { "mob/ocelot", "mob/cat", { "meow" }, { "hitt" }, { "hitt" } },
+        { "mob/cat", "mob/cat", { "meow", "purreow" }, { "hitt" }, { "hitt" } },
+        { "mob/llama", "mob/llama", { "idle" }, { "hurt" }, { "death" } },
+        { "mob/trader_llama", "mob/llama", { "idle" }, { "hurt" }, { "death" } },
+        { "mob/parrot", "mob/parrot", { "idle" }, { "hurt" }, { "death" } },
+        { "mob/irongolem", "mob/irongolem", {}, { "hit" }, { "death" } },
+        { "mob/endermite", "mob/silverfish", { "say" }, { "hit" }, { "kill" } },
+    };
 
-    std::snprintf(stem, sizeof(stem), "mob/%s/death", folder);
-    if (loadVariants(death, stem, 5) == 0)
+    std::string primary = folder;
+    if (primary.rfind("mob/", 0) != 0 && primary.rfind("entity/", 0) != 0) primary = "mob/" + primary;
+
+    auto loadStem = [&](Sound id, const std::string& stem) {
+        if (!m_buffers[static_cast<size_t>(id)].empty()) return true;
+        if (loadVariants(id, stem.c_str(), 8) > 0) return true;
+        return loadSingle(id, (stem + ".ogg").c_str());
+    };
+    auto fill = [&](Sound id, const std::string& root, std::initializer_list<const char*> stems) {
+        for (const char* stem : stems)
+            if (loadStem(id, root + "/" + stem)) return;
+    };
+
+    fill(say, primary, { "say", "idle", "ambient" });
+    fill(hurt, primary, { "hurt", "hit" });
+    fill(death, primary, { "death" });
+    for (const Alias& alias : ALIASES)
     {
-        std::snprintf(stem, sizeof(stem), "mob/%s/death.ogg", folder);
-        loadSingle(death, stem);
+        if (primary != alias.key) continue;
+        fill(say, alias.root, alias.say);
+        fill(hurt, alias.root, alias.hurt);
+        fill(death, alias.root, alias.death);
     }
+}
+
+const std::vector<AudioEngine::Clip>& AudioEngine::namedClips(const std::string& stem)
+{
+    const auto found = m_named.find(stem);
+    if (found != m_named.end()) return found->second;
+    std::vector<Clip>& clips = m_named[stem];
+    Clip single;
+    if (loadOgg("assets/sounds/" + stem + ".ogg", single)) clips.push_back(std::move(single));
+    for (int n = 1; n <= 16; ++n)
+    {
+        Clip clip;
+        if (!loadOgg("assets/sounds/" + stem + std::to_string(n) + ".ogg", clip)) break;
+        clips.push_back(std::move(clip));
+    }
+    return clips;
+}
+
+bool AudioEngine::playNamed(const std::string& stem, Sound fallback, float volume, float pitch)
+{
+    const std::vector<Clip>& clips = namedClips(stem);
+    if (clips.empty())
+    {
+        play(fallback, volume, pitch);
+        return false;
+    }
+    if (m_muted || m_device == 0) return true;
+    volume *= m_category[static_cast<size_t>(categoryOf(fallback))];
+    if (volume <= 0.0f) return true;
+    static uint32_t rolling = 54321u;
+    rolling = rolling * 1664525u + 1013904223u;
+    const Clip& clip = clips[(rolling >> 16) % clips.size()];
+    if (clip.empty()) return true;
+    std::lock_guard<std::mutex> lock(m_mutex);
+    for (Voice& voice : m_voices)
+    {
+        if (voice.buffer != nullptr) continue;
+        voice.buffer = &clip;
+        voice.position = 0.0;
+        voice.step = std::clamp(static_cast<double>(pitch), 0.25, 4.0);
+        voice.volume = std::clamp(volume * m_master, 0.0f, 1.0f);
+        break;
+    }
+    return true;
+}
+
+void AudioEngine::preloadNamed(std::initializer_list<const char*> stems)
+{
+    for (const char* stem : stems) namedClips(stem);
 }
 
 void AudioEngine::buildSounds()
@@ -289,7 +397,7 @@ void AudioEngine::buildSounds()
     loadMobVoice(Sound::MobWitherSkeletonSay, Sound::MobWitherSkeletonHurt,
                  Sound::MobWitherSkeletonDeath, "mob/wither_skeleton");
     loadMobVoice(Sound::MobMagmaCubeSay, Sound::MobMagmaCubeHurt,
-                 Sound::MobMagmaCubeDeath, "slime");
+                 Sound::MobMagmaCubeDeath, "magmacube");
     loadMobVoice(Sound::MobBreezeSay, Sound::MobBreezeHurt,
                  Sound::MobBreezeDeath, "breeze");
     loadMobVoice(Sound::MobGuardianSay, Sound::MobGuardianHurt,
@@ -420,8 +528,8 @@ void AudioEngine::buildSounds()
                  Sound::MobParrotDeath, "mob/parrot");
     loadMobVoice(Sound::MobAllaySay, Sound::MobAllayHurt,
                  Sound::MobAllayDeath, "mob/allay");
-    loadVariants(Sound::Rain, "weather/rain", 1);
-    loadVariants(Sound::Thunder, "weather/thunder", 1);
+    if (loadVariants(Sound::Rain, "weather/rain", 1) == 0) loadVariants(Sound::Rain, "ambient/weather/rain", 8);
+    if (loadVariants(Sound::Thunder, "weather/thunder", 1) == 0) loadVariants(Sound::Thunder, "ambient/weather/thunder", 3);
     loadVariants(Sound::SculkClick, "block/sculk_sensor/sculk_clicking", 6);
     for (int k = 0; k < 8; ++k)
     {
@@ -2079,7 +2187,7 @@ void AudioEngine::playDig(BlockId block, float volume)
         case Material::Sand:  play(Sound::DigSand, volume); break;
         case Material::Glass: play(Sound::DigGlass, volume); break;
         case Material::Wool:  play(Sound::DigWool, volume); break;
-        case Material::Snow:  play(Sound::DigWool, volume); break;
+        case Material::Snow:  playNamed("dig/snow", Sound::DigWool, volume); break;
         case Material::Plant: play(Sound::DigPlant, volume); break;
         default: break;
     }
@@ -2089,6 +2197,11 @@ void AudioEngine::playStep(BlockId block)
 {
     // Vanilla has dedicated footstep clips, several takes of each, rather
     // than a dig sound played higher; play() picks between the takes.
+    if (block == Blocks::LadderNorth || block == Blocks::LadderEast || block == Blocks::LadderSouth || block == Blocks::LadderWest)
+    {
+        playNamed("step/ladder", Sound::StepWood, 0.30f);
+        return;
+    }
     switch (blockMaterial(block))
     {
         case Material::Stone: play(Sound::StepStone, 0.30f); break;
@@ -2108,6 +2221,11 @@ void AudioEngine::playPlace(BlockId block)
     // Minecraft has no separate "place" sound: putting a block down plays
     // that block's own material sound. Layering a synthesised blip on top
     // of a real sample made every placement sound doubled.
+    if (block == Blocks::LilyPad)
+    {
+        playNamed("block/waterlily/place", Sound::DigPlant, 0.8f);
+        return;
+    }
     playDig(block, 0.8f);
 }
 

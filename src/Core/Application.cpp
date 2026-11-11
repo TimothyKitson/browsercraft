@@ -1904,6 +1904,19 @@ void Application::updateWeather(float deltaTime)
 
     m_rain.update(deltaTime, m_player.position, m_weather.depth, m_snowing);
 
+    if (m_world && playing() && m_dimension == Dimension::Overworld)
+    {
+        m_caveMood -= deltaTime;
+        if (m_caveMood <= 0.0f)
+        {
+            const glm::ivec3 eye = glm::ivec3(glm::floor(m_player.eyePosition()));
+            const bool dark = m_world->skyLight(eye.x, eye.y, eye.z) == 0 && m_world->blockLightAt(eye.x, eye.y, eye.z) < 4;
+            const uint32_t roll = hashCoords(static_cast<int>(m_elapsedSeconds * 10.0f), 97, eye.y, 0x5A11u);
+            m_caveMood = 30.0f + static_cast<float>(roll % 90u);
+            if (dark) m_audio.playNamed("ambient/cave/cave", Sound::Thunder, 0.45f, 1.0f);
+        }
+    }
+
     if (m_weather.depth <= 0.05f)
     {
         m_rainSoundTimer = 0.0f;
@@ -2790,7 +2803,7 @@ bool Application::frame()
                     gained -= (repaired + 1) / 2;
                 }
                 if (gained > 0 && m_player.addExperience(gained))
-                    m_audio.play(Sound::Pickup, 0.7f, 0.55f);
+                    m_audio.playNamed("random/levelup", Sound::Pickup, 0.7f, 1.0f);
             }
             m_particles.update(deltaTime, *m_world);
             updateArrows(deltaTime);
@@ -2884,7 +2897,7 @@ bool Application::frame()
         {
             const bool under = m_player.isHeadUnderwater(*m_world);
             if (m_player.breathe(deltaTime, under))
-                m_audio.play(Sound::Hurt, 0.7f, 0.9f);
+                m_audio.playNamed("entity/player/hurt/drown", Sound::Hurt, 0.7f, 1.0f);
 
             // Water puts it out, which is the whole reason to run for
             // the nearest lake with a blaze behind you.
@@ -2978,7 +2991,7 @@ bool Application::frame()
                     {
                         m_magmaSting = 0.0f;
                         m_player.cause = "hotFloor";
-                        if (m_rules.on(GameRules::Rule::FireDamage) && m_player.damage(1)) m_audio.play(Sound::Hurt, 0.6f, 0.9f);
+                        if (m_rules.on(GameRules::Rule::FireDamage) && m_player.damage(1)) m_audio.playNamed("entity/player/hurt/fire_hurt", Sound::Hurt, 0.6f, 1.0f);
                     }
                 }
                 else m_magmaSting = 0.0f;
@@ -3069,7 +3082,7 @@ bool Application::frame()
             }
             if (m_player.burn(deltaTime, m_player.isInLava(*m_world) ||
                                          m_player.isInFire(*m_world)))
-                m_audio.play(Sound::Hurt, 0.9f, 0.8f);
+                m_audio.playNamed("entity/player/hurt/fire_hurt", Sound::Hurt, 0.9f, 1.0f);
             if (m_player.onFire() && !wasAlight) m_audio.play(Sound::Fire, 0.7f);
 
             // Regeneration and poison pay out here, where the hurt
@@ -3132,7 +3145,7 @@ bool Application::frame()
                     60, 0.8f, 3.0f, 0.25f, 1.6f, 1.5f);
             ItemStack& held = m_inventory.selected().id == Items::TotemOfUndying ? m_inventory.selected() : m_inventory.slot(Inventory::OFFHAND);
             if (--held.count <= 0) held.clear();
-            m_audio.play(Sound::Pickup, 0.9f, 0.6f);
+            m_audio.playNamed("item/totem/use_totem", Sound::Pickup, 0.9f, 1.0f);
             m_totemShown = 2.0f;
         }
 
@@ -9906,6 +9919,9 @@ void Application::updateMining(float deltaTime)
                 {
                     const int knock = Enchanting::levelOf(edge, Enchanting::Kind::Knockback) + (sprintHit ? 1 : 0) +
                                       static_cast<int>(m_player.attributes.value(Attributes::Kind::AttackKnockback));
+                    m_audio.playNamed(critical ? "entity/player/attack/crit" : knock > 0 ? "entity/player/attack/knockback"
+                                                 : strength > 0.9f ? "entity/player/attack/strong" : "entity/player/attack/weak",
+                                      Sound::Hurt, 0.6f, 1.0f);
                     glm::vec3 away = target->position() - m_player.position;
                     away.y = 0.0f;
                     if (knock > 0 && glm::length(away) > 0.01f)
@@ -9948,6 +9964,7 @@ void Application::updateMining(float deltaTime)
                     sprites(SpriteParticles::Kind::Damage, chest, std::clamp(blow / 2, 1, 6), 0.3f, 0.8f,
                             0.22f, 0.7f, 2.0f);
                     if (Tools::kindOf(weapon) == Tools::Kind::Sword && charged)
+                        m_audio.playNamed("entity/player/attack/sweep", Sound::Hurt, 0.6f, 1.0f);
                         sprites(SpriteParticles::Kind::Sweep,
                                 m_camera.position + m_camera.front * std::min(toMob, 2.2f), 1, 0.0f, 0.0f,
                                 1.6f, 0.35f);
@@ -10658,7 +10675,7 @@ void Application::lightEndPortalAround(const glm::ivec3& frame)
         }
     }
 
-    m_audio.play(Sound::Click, 0.9f, 0.5f);
+    m_audio.playNamed("block/end_portal/endportal", Sound::Click, 0.9f, 1.0f);
 }
 
 uint32_t Application::armourProtection() const
@@ -11022,7 +11039,7 @@ void Application::fireThrower(const glm::ivec3& at, bool dispenser)
     {
         put(front, item == Items::WaterBucket ? Blocks::Water : Blocks::Lava);
         stack.id = Items::Bucket;
-        m_audio.play(Sound::Click, 0.6f, 0.8f);
+        m_audio.playNamed(item == Items::WaterBucket ? "item/bucket/empty" : "item/bucket/empty_lava", Sound::Click, 0.6f, 1.0f);
     }
     else if (item == Items::Bucket && isFluidSource(ahead))
     {
@@ -11030,7 +11047,7 @@ void Application::fireThrower(const glm::ivec3& at, bool dispenser)
         put(front, Blocks::Air);
         spend();
         if (!Hopper::give(held.data(), Hopper::THROWER_SLOTS, filled)) m_drops.spawn(from, filled, 1);
-        m_audio.play(Sound::Click, 0.6f, 0.8f);
+        m_audio.playNamed("item/bucket/fill", Sound::Click, 0.6f, 1.0f);
     }
     else if (item == Items::BoneMeal && (isCrop(ahead) || isSapling(ahead)))
     {
@@ -11044,14 +11061,14 @@ void Application::fireThrower(const glm::ivec3& at, bool dispenser)
         if (ahead == Blocks::Tnt) primeTnt(front);
         else put(front, Blocks::Fire0);
         if (++stack.damage >= itemDurability(Items::FlintAndSteel) && itemDurability(Items::FlintAndSteel) > 0) stack.clear();
-        m_audio.play(Sound::Fire, 0.6f, 1.2f);
+        m_audio.playNamed("fire/ignite", Sound::Fire, 0.6f, 1.0f);
     }
     else if (item == static_cast<StackId>(Blocks::Tnt) && open)
     {
         put(front, Blocks::TntPrimed);
         m_fuses.emplace_back(front, TNT_FUSE_SECONDS);
         spend();
-        m_audio.play(Sound::Click, 0.8f, 0.7f);
+        m_audio.playNamed("random/fuse", Sound::Click, 0.8f, 1.0f);
     }
     else if (item == Items::Shears)
     {
@@ -11080,7 +11097,7 @@ void Application::fireThrower(const glm::ivec3& at, bool dispenser)
         m_inventory.slot(Inventory::ARMOR_FIRST + Armour::slotFor(item)) = stack;
         m_inventory.slot(Inventory::ARMOR_FIRST + Armour::slotFor(item)).count = 1;
         spend();
-        m_audio.play(Sound::Click, 0.6f, 1.0f);
+        m_audio.playNamed("item/armor/equip_generic", Sound::Click, 0.6f, 1.0f);
     }
     else if (!isItem(item) && (isShulkerBox(asBlock(item)) || isCarvedPumpkin(asBlock(item)) || isHead(asBlock(item))) && open)
     {
@@ -12729,7 +12746,7 @@ void Application::updateTrident(float deltaTime)
         {
             statBroke(Items::Trident);
             held.clear();
-            m_audio.play(Sound::Click, 0.8f, 0.5f);
+            m_audio.playNamed("random/break", Sound::Click, 0.8f, 1.0f);
             return;
         }
         held.clear();
@@ -14209,7 +14226,7 @@ void Application::wearShield(int points)
     {
         statBroke(Items::Shield);
         held.clear();
-        m_audio.play(Sound::Click, 0.8f, 0.5f);
+        m_audio.playNamed("random/break", Sound::Click, 0.8f, 1.0f);
     }
 }
 
@@ -14265,7 +14282,7 @@ void Application::wearTool(BlockId brokenBlock)
     {
         statBroke(stack.id);
         stack.clear();
-        m_audio.play(Sound::DigWood, 0.8f, 0.55f);
+        m_audio.playNamed("random/break", Sound::DigWood, 0.8f, 1.0f);
     }
 }
 
@@ -14287,7 +14304,7 @@ void Application::wearOnSwing(StackId weapon)
     {
         statBroke(stack.id);
         stack.clear();
-        m_audio.play(Sound::DigWood, 0.8f, 0.55f);
+        m_audio.playNamed("random/break", Sound::DigWood, 0.8f, 1.0f);
     }
 }
 
@@ -14528,7 +14545,8 @@ void Application::swingDoor(const glm::ivec3& block)
         m_net.onLocalBlockChange(block.x, y, block.z, put);
     }
 
-    m_audio.play(Sound::DigWood, 0.6f, open ? 1.2f : 0.9f);
+    const bool iron = isIronDoor(here);
+    m_audio.playNamed(open ? (iron ? "block/iron_door/open" : "block/wooden_door/open") : (iron ? "block/iron_door/close" : "block/wooden_door/close"), Sound::DigWood, 0.6f, 1.0f);
 }
 
 void Application::sleepInBed(const glm::ivec3& block)
@@ -14663,7 +14681,7 @@ void Application::primeTnt(const glm::ivec3& block)
     m_net.onLocalBlockChange(block.x, block.y, block.z, Blocks::TntPrimed);
 
     m_fuses.emplace_back(block, TNT_FUSE_SECONDS);
-    m_audio.play(Sound::Click, 0.8f, 0.7f);
+    m_audio.playNamed("random/fuse", Sound::Click, 0.8f, 1.0f);
 }
 
 void Application::launchFirework(int design, const glm::vec3& at, const glm::vec3& velocity, bool shot, bool boost)
@@ -15582,7 +15600,7 @@ bool Application::placePainting(ItemStack& stack)
     if (variant < 0) return false;
 
     m_paintings.put(Paintings::Placed{ hit.previous, facing, variant });
-    m_audio.play(Sound::DigWood, 0.7f, 1.2f);
+    m_audio.playNamed("entity/painting/place", Sound::DigWood, 0.6f, 1.0f);
     m_heldItem.swing();
     if (!m_player.creative())
     {
@@ -15739,7 +15757,7 @@ void Application::primeTntCart(Mob& cart)
 {
     if (m_cartFuses.count(cart.serial())) return;
     m_cartFuses[cart.serial()] = 4.0f;
-    m_audio.play(Sound::Fire, 0.7f, 1.0f);
+    m_audio.playNamed("random/fuse", Sound::Fire, 0.7f, 1.0f);
 }
 
 void Application::tickCarts(float deltaTime)
@@ -15901,7 +15919,7 @@ void Application::applyBlast(const glm::vec3& at, float radius, int damage)
     sprites(SpriteParticles::Kind::Explosion, at, 10 + static_cast<int>(radius * 3.0f), radius * 0.6f, 0.6f,
             radius * 0.8f, 0.9f);
     sprites(SpriteParticles::Kind::Smoke, at, 16, radius * 0.7f, 1.5f, 0.6f, 1.6f, -0.3f);
-    m_audio.play(Sound::DigStone, 1.0f, 0.5f);
+    m_audio.playNamed("random/explode", Sound::DigStone, 1.0f, 1.0f);
     m_particles.spawnBlockBreak(glm::ivec3(glm::floor(at)), Blocks::Gravel);
 
     for (size_t i = m_stands.all().size(); i-- > 0;)
@@ -16189,7 +16207,7 @@ void Application::looseArrow(float drawn)
                          !m_player.creative() && !endlessShot);
 
     m_heldItem.swing();
-    m_audio.play(Sound::Click, 0.5f, 1.4f);
+    m_audio.playNamed("random/bow", Sound::Click, 0.5f, 1.0f);
 }
 
 // Everything an arrow might hit that is not a block. A player's arrow
@@ -16208,6 +16226,7 @@ namespace
         EntityManager* entities = nullptr;
         Player* player = nullptr;
         int playerHits = 0;
+        int bulletHits = 0;
 
         // How long a blaze's charge leaves whatever it hits burning.
         static constexpr float FIRE_SECONDS = 5.0f;
@@ -16225,7 +16244,9 @@ namespace
             burning = kind == Arrows::Kind::Fire;
             splash = kind == Arrows::Kind::Potion;
             striking = kind;
-            return strike(point, damage, fromPlayer);
+            const bool landed = strike(point, damage, fromPlayer);
+            if (landed && kind == Arrows::Kind::Bullet) ++bulletHits;
+            return landed;
         }
 
         void dose(Mob& mob) const
@@ -16457,6 +16478,8 @@ void Application::updateArrows(float deltaTime)
 
     m_arrows.setHomingTarget(m_player.eyePosition());
     m_arrows.update(deltaTime, *m_world, targets);
+    if (targets.arrowHits > 0) m_audio.playNamed("random/bowhit", Sound::Hurt, 0.5f, 1.0f);
+    if (targets.bulletHits > 0) m_audio.playNamed("entity/shulker_bullet/hit", Sound::Hurt, 0.6f, 1.0f);
     if (targets.ghastsReturned > 0) award("nether/return_to_sender", "killed_ghast");
     for (const Arrow& picked : m_arrows.takeStuck(m_player.position + glm::vec3(0.0f, 0.9f, 0.0f), 1.6f))
     {
@@ -16563,7 +16586,7 @@ void Application::updateArrows(float deltaTime)
 
     if (targets.shotsBlocked > 0)
     {
-        m_audio.play(Sound::Click, 0.7f, 0.7f);
+        m_audio.playNamed("item/shield/block", Sound::Click, 0.7f, 1.0f);
         wearShield(Shield::WEAR_PER_BLOCK * targets.shotsBlocked);
     }
 
@@ -16628,7 +16651,7 @@ void Application::handleBrushing(float deltaTime)
     {
         statBroke(brush.id);
         brush.clear();
-        m_audio.play(Sound::Click, 0.8f, 0.5f);
+        m_audio.playNamed("random/break", Sound::Click, 0.8f, 1.0f);
     }
 }
 
@@ -16646,6 +16669,7 @@ void Application::handleEating(float deltaTime)
         if (m_crumbClock >= 0.2f)
         {
             m_crumbClock = 0.0f;
+            m_audio.playNamed("random/eat", Sound::Pickup, 0.4f, 0.9f + 0.2f * static_cast<float>(static_cast<int>(m_elapsedSeconds * 37.0f) % 3) / 2.0f);
             const glm::vec3 mouth = m_player.eyePosition() + m_camera.front * 0.45f - m_camera.up * 0.15f;
             for (int k = 0; k < 5; ++k)
             {
@@ -16659,6 +16683,7 @@ void Application::handleEating(float deltaTime)
 
     const FoodValue value = Food::valueOf(stack.id);
     if (!m_player.eat(value.hunger, value.saturation, Food::alwaysEdible(stack.id))) return;
+    m_audio.playNamed("random/burp", Sound::Pickup, 0.5f, 1.0f);
     award("husbandry/root", "consumed_item");
     for (const Advancements::Criterion& food : Advancements::all()[static_cast<size_t>(Advancements::indexOf("husbandry/balanced_diet"))].criteria)
         if (stackNamed(food.name) == stack.id) award("husbandry/balanced_diet", food.name);
@@ -16738,14 +16763,14 @@ void Application::handleEating(float deltaTime)
             if (isLiquid(m_world->getBlock(to.x, to.y, to.z))) continue;
             m_player.position = glm::vec3(to.x + 0.5f, static_cast<float>(to.y), to.z + 0.5f);
             m_player.velocity = glm::vec3(0.0f);
-            m_audio.play(Sound::MobEndermanSay, 0.5f, 1.4f);
+            m_audio.playNamed("mob/endermen/portal", Sound::MobEndermanSay, 0.5f, 1.0f);
             break;
         }
     }
     stack.count -= 1;
     if (stack.count <= 0) stack.clear();
     if (honey && m_inventory.add(Items::GlassBottle, 1) > 0) m_drops.spawn(m_player.position, Items::GlassBottle, 1);
-    m_audio.play(Sound::Pickup, 0.6f, 0.85f);
+    m_audio.playNamed(honey ? "random/drink" : "random/burp", Sound::Pickup, 0.6f, 1.0f);
 }
 
 // Drinking is eating with a different payload, but it does not go
@@ -16780,7 +16805,7 @@ void Application::handleDrinking(float deltaTime)
         if (m_inventory.add(Items::Bucket, 1) > 0)
             m_drops.spawn(m_player.position, Items::Bucket, 1);
 
-        m_audio.play(Sound::Pickup, 0.6f, 0.9f);
+        m_audio.playNamed("random/drink", Sound::Pickup, 0.6f, 1.0f);
         return;
     }
 
@@ -16793,7 +16818,7 @@ void Application::handleDrinking(float deltaTime)
     if (m_inventory.add(Items::GlassBottle, 1) > 0)
         m_drops.spawn(m_player.position, Items::GlassBottle, 1);
 
-    m_audio.play(Sound::Pickup, 0.6f, 1.25f);
+    m_audio.playNamed("random/drink", Sound::Pickup, 0.6f, 1.0f);
 }
 
 // A cake is eaten where it stands, a slice at a time, which nothing
@@ -16850,7 +16875,7 @@ bool Application::useCandle(const glm::ivec3& at, BlockId block)
     {
         if (lit) return false;
         become(candleOf(shade, count, true));
-        m_audio.play(Sound::Fire, 0.5f, 1.4f);
+        m_audio.playNamed("fire/ignite", Sound::Fire, 0.5f, 1.0f);
         wearTool(block);
         return true;
     }
@@ -16890,7 +16915,7 @@ bool Application::useCandleCake(const glm::ivec3& at, BlockId block)
     {
         if (lit) return false;
         become(candleCakeOf(shade, true));
-        m_audio.play(Sound::Fire, 0.5f, 1.4f);
+        m_audio.playNamed("fire/ignite", Sound::Fire, 0.5f, 1.0f);
         wearTool(block);
         return true;
     }
@@ -17052,7 +17077,7 @@ bool Application::useCauldron(const glm::ivec3& at, BlockId block)
         setBlockTo(Blocks::LavaCauldron);
         m_stats.add(Stats::Custom::FillCauldron);
         swapHeld(Items::Bucket);
-        m_audio.play(Sound::Pickup, 0.5f, 0.6f);
+        m_audio.playNamed("item/bucket/empty_lava", Sound::Pickup, 0.5f, 1.0f);
         return true;
     }
 
@@ -17070,7 +17095,7 @@ bool Application::useCauldron(const glm::ivec3& at, BlockId block)
         setLevel(0);
         m_stats.add(Stats::Custom::UseCauldron);
         swapHeld(Items::LavaBucket);
-        m_audio.play(Sound::Pickup, 0.5f, 0.6f);
+        m_audio.playNamed("item/bucket/fill_lava", Sound::Pickup, 0.5f, 1.0f);
         return true;
     }
 
@@ -17088,7 +17113,7 @@ bool Application::useCauldron(const glm::ivec3& at, BlockId block)
         setLevel(level + 1);
         m_stats.add(Stats::Custom::UseCauldron);
         swapHeld(Items::GlassBottle);
-        m_audio.play(Sound::Pickup, 0.5f, 0.9f);
+        m_audio.playNamed("item/bucket/empty", Sound::Pickup, 0.5f, 1.0f);
         return true;
     }
 
@@ -17114,7 +17139,7 @@ bool Application::useCauldron(const glm::ivec3& at, BlockId block)
         setLevel(CAULDRON_FULL);
         m_stats.add(Stats::Custom::FillCauldron);
         swapHeld(Items::Bucket);
-        m_audio.play(Sound::Pickup, 0.5f, 0.7f);
+        m_audio.playNamed("item/bucket/empty", Sound::Pickup, 0.5f, 1.0f);
         return true;
     }
 
@@ -17123,7 +17148,7 @@ bool Application::useCauldron(const glm::ivec3& at, BlockId block)
         setLevel(0);
         m_stats.add(Stats::Custom::UseCauldron);
         swapHeld(Items::WaterBucket);
-        m_audio.play(Sound::Pickup, 0.5f, 1.0f);
+        m_audio.playNamed("item/bucket/fill", Sound::Pickup, 0.5f, 1.0f);
         return true;
     }
 
@@ -17464,7 +17489,7 @@ void Application::handlePlacement()
                                   Blocks::EndPortalFrameFilled);
                 m_net.onLocalBlockChange(bench.block.x, bench.block.y, bench.block.z,
                                          Blocks::EndPortalFrameFilled);
-                m_audio.play(Sound::Click, 0.6f, 1.5f);
+                m_audio.playNamed("block/end_portal/eyeplace", Sound::Click, 0.6f, 1.0f);
 
                 if (!m_player.creative())
                 {
@@ -17525,7 +17550,7 @@ void Application::handlePlacement()
                 const BlockId swung = gateOf(gateWood(used), !gateOpen(used), facing);
                 m_world->setBlock(bench.block.x, bench.block.y, bench.block.z, swung);
                 m_net.onLocalBlockChange(bench.block.x, bench.block.y, bench.block.z, swung);
-                m_audio.play(Sound::DigWood, 0.6f, gateOpen(swung) ? 1.2f : 0.9f);
+                m_audio.playNamed(gateOpen(swung) ? "block/fence_gate/open" : "block/fence_gate/close", Sound::DigWood, 0.6f, 1.0f);
                 vibrate(glm::vec3(bench.block) + glm::vec3(0.5f), gateOpen(swung) ? 10 : 9);
                 return;
             }
@@ -17547,7 +17572,7 @@ void Application::handlePlacement()
                                                      !trapdoorIsOpen(used));
                 m_world->setBlock(bench.block.x, bench.block.y, bench.block.z, flipped);
                 m_net.onLocalBlockChange(bench.block.x, bench.block.y, bench.block.z, flipped);
-                m_audio.play(Sound::DigWood, 0.6f, trapdoorIsOpen(flipped) ? 1.2f : 0.9f);
+                m_audio.playNamed(trapdoorIsOpen(flipped) ? (isIronTrapdoor(flipped) ? "block/iron_trapdoor/open" : "block/wooden_trapdoor/open") : (isIronTrapdoor(flipped) ? "block/iron_trapdoor/close" : "block/wooden_trapdoor/close"), Sound::DigWood, 0.6f, 1.0f);
                 vibrate(glm::vec3(bench.block) + glm::vec3(0.5f), trapdoorIsOpen(flipped) ? 10 : 9);
                 return;
             }
@@ -21474,7 +21499,7 @@ void Application::tickMobGriefing()
                 atDoor = true;
                 float& progress = m_doorBreaking[mob.serial()];
                 progress += 0.5f;
-                if (static_cast<int>(progress * 2.0f) % 4 == 0) m_audio.play(Sound::DigWood, 0.7f, 0.6f);
+                if (static_cast<int>(progress * 2.0f) % 4 == 0) m_audio.playNamed("mob/zombie/wood", Sound::DigWood, 0.7f, 1.0f);
                 if (progress >= 12.0f)
                 {
                     const int low = doorIsTop(door) ? cell.y - 1 : cell.y;
@@ -22451,7 +22476,7 @@ void Application::wearHeld(StackId id, int points)
         }
         else
             held.clear();
-        m_audio.play(Sound::Click, 0.8f, 0.5f);
+        m_audio.playNamed("random/break", Sound::Click, 0.8f, 1.0f);
     }
 }
 
@@ -22462,7 +22487,7 @@ void Application::castBobber()
     m_bobber.position = rodTip();
     m_bobber.velocity = m_camera.front * 11.0f + glm::vec3(0.0f, 2.5f, 0.0f);
     m_bobber.rolls = static_cast<uint32_t>(m_elapsedSeconds * 1000.0f) ^ static_cast<uint32_t>(m_player.position.x * 131.0f);
-    m_audio.play(Sound::Click, 0.5f, 0.6f);
+    m_audio.playNamed("entity/bobber/castfast", Sound::Click, 0.5f, 1.0f);
     vibrate(m_player.eyePosition(), 3);
 }
 
@@ -22502,7 +22527,7 @@ void Application::reelBobber()
         wear = 2;
     m_bobber = Bobber{};
     if (wear > 0) wearHeld(Items::FishingRod, wear);
-    m_audio.play(Sound::Click, 0.4f, 0.9f);
+    m_audio.playNamed("entity/bobber/retrieve", Sound::Click, 0.4f, 1.0f);
 }
 
 void Application::tickFishing(float deltaTime)
@@ -22763,6 +22788,7 @@ void Application::liftLid(const glm::ivec3& at)
     const BlockId here = m_world->getBlock(at.x, at.y, at.z);
     if (!isChestFamily(here) && !isShulkerBox(here)) return;
     Lid& lid = m_lids[{ at.x, at.y, at.z }];
+    if (!lid.target) m_audio.playNamed(isShulkerBox(here) ? "block/shulker_box/open" : chestState(here).kind == 2 ? "block/enderchest/open" : "block/chest/open", Sound::Click, 0.5f, 1.0f);
     lid.target = true;
     lid.linger = 0.0f;
 }
@@ -22782,7 +22808,14 @@ void Application::ringBell(const glm::ivec3& at, const glm::vec3& from)
 void Application::lowerLids()
 {
     for (auto& [at, lid] : m_lids)
+    {
+        if (lid.target && m_world)
+        {
+            const BlockId here = m_world->getBlock(std::get<0>(at), std::get<1>(at), std::get<2>(at));
+            m_audio.playNamed(isShulkerBox(here) ? "block/shulker_box/close" : (isChestFamily(here) && chestState(here).kind == 2) ? "block/enderchest/close" : "block/chest/close", Sound::Click, 0.5f, 1.0f);
+        }
         lid.target = false;
+    }
 }
 
 void Application::updateLids(float deltaTime)
@@ -24429,6 +24462,36 @@ void Application::updateMobs(float deltaTime)
         if (distance > 32.0f) continue;
 
         const float falloff = 1.0f - std::clamp(distance / 32.0f, 0.0f, 1.0f);
+        if (sound.id == Sound::MobStep)
+        {
+            const char* stem = nullptr;
+            switch (sound.mob)
+            {
+                case MobId::Chicken: stem = "mob/chicken/step"; break;
+                case MobId::Cow: case MobId::Mooshroom: stem = "mob/cow/step"; break;
+                case MobId::Pig: stem = "mob/pig/step"; break;
+                case MobId::Sheep: stem = "mob/sheep/step"; break;
+                case MobId::Skeleton: case MobId::Bogged: stem = "mob/skeleton/step"; break;
+                case MobId::Stray: stem = "mob/stray/step"; break;
+                case MobId::WitherSkeleton: stem = "mob/wither_skeleton/step"; break;
+                case MobId::Spider: case MobId::CaveSpider: stem = "mob/spider/step"; break;
+                case MobId::Zombie: case MobId::ZombieVillager: case MobId::Drowned: stem = "mob/zombie/step"; break;
+                case MobId::Husk: stem = "mob/husk/step"; break;
+                case MobId::Wolf: stem = "mob/wolf/step"; break;
+                case MobId::Horse: case MobId::Donkey: case MobId::Mule: case MobId::SkeletonHorse: case MobId::ZombieHorse: stem = "mob/horse/soft"; break;
+                case MobId::PolarBear: stem = "mob/polarbear/step"; break;
+                case MobId::Llama: case MobId::TraderLlama: stem = "mob/llama/step"; break;
+                case MobId::Parrot: stem = "mob/parrot/step"; break;
+                case MobId::Silverfish: case MobId::Endermite: stem = "mob/silverfish/step"; break;
+                case MobId::IronGolem: stem = "mob/irongolem/walk"; break;
+                case MobId::Rabbit: stem = "mob/rabbit/hop"; break;
+                case MobId::MagmaCube: stem = "mob/magmacube/jump"; break;
+                default: break;
+            }
+            if (stem) m_audio.playNamed(stem, sound.id, sound.volume * 1.8f * falloff * falloff, sound.pitch);
+            else m_audio.play(sound.id, sound.volume * falloff * falloff, sound.pitch);
+            continue;
+        }
         m_audio.play(sound.id, sound.volume * falloff * falloff, sound.pitch);
     }
 
@@ -24455,7 +24518,7 @@ void Application::updateMobs(float deltaTime)
             {
                 m_shieldCooldown = 5.0f;
                 m_player.blocking = false;
-                m_audio.play(Sound::DigWood, 0.8f, 0.8f);
+                m_audio.playNamed("item/shield/break", Sound::DigWood, 0.8f, 1.0f);
             }
             m_audio.play(Sound::Click, 0.7f, 0.7f);
             m_stats.add(Stats::Custom::DamageBlockedByShield, static_cast<long long>(strike.damage) * 10);
@@ -24494,7 +24557,7 @@ void Application::updateMobs(float deltaTime)
                 {
                     thorned->strike(thorns, thorned->position() - m_player.position);
                     thorned->markPlayerHit(0, glm::length(thorned->position() - m_player.position));
-                    m_audio.play(Sound::Hurt, 0.5f, 1.3f);
+                    m_audio.playNamed("enchant/thorns/hit", Sound::Hurt, 0.5f, 1.0f);
                 }
             }
             m_lastAttacker = strike.attacker;
@@ -24956,14 +25019,14 @@ bool Application::useFrame(const glm::ivec3& at, BlockId block)
             holding.count -= 1;
             if (holding.count <= 0) holding.clear();
         }
-        m_audio.play(Sound::Click, 0.5f, 1.2f);
+        m_audio.playNamed("entity/itemframe/add_item", Sound::Click, 0.5f, 1.0f);
         return true;
     }
 
     if (!m_keys.down(m_input, Action::Sneak))
     {
         inside.count = 1 + (inside.count % 8);
-        m_audio.play(Sound::Click, 0.5f, 1.0f + 0.05f * static_cast<float>(inside.count));
+        m_audio.playNamed("entity/itemframe/rotate_item", Sound::Click, 0.5f, 1.0f);
         settleRedstone(at);
         return true;
     }
@@ -24973,7 +25036,7 @@ bool Application::useFrame(const glm::ivec3& at, BlockId block)
     m_frames.remove(at);
     if (m_inventory.addStack(back) > 0) m_drops.spawnStack(m_player.position, back);
 
-    m_audio.play(Sound::Click, 0.5f, 0.8f);
+    m_audio.playNamed("entity/itemframe/remove_item", Sound::Click, 0.5f, 1.0f);
     return true;
 }
 

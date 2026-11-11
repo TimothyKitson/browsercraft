@@ -365,6 +365,7 @@ private:
     void runCheatAudit();
     bool positionLoaded(int x, int z) const;
     bool m_cheatAuditPending = false;
+    float m_caveMood = 60.0f;
     struct Targets
     {
         bool player = false;

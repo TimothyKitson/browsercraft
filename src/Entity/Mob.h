@@ -21,6 +21,7 @@ struct MobSound
     glm::vec3 position{ 0.0f };
     float volume = 1.0f;
     float pitch = 1.0f;
+    MobId mob = MobId::Count;
 };
 
 // A blow a mob has landed on the player this frame. Queued rather than

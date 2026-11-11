@@ -119,7 +119,7 @@ int ExperienceOrbs::update(float deltaTime, const World& world, const Player& pl
                 chimed = true;
                 // Pitch rises with the size of the lump, so a big orb
                 // sounds like one.
-                audio.play(Sound::Pickup, 0.5f, 1.2f + 0.05f * static_cast<float>(i % 5));
+                audio.playNamed("random/orb", Sound::Pickup, 0.5f, 0.9f + 0.05f * static_cast<float>(i % 5));
             }
             m_orbs[i] = m_orbs.back();
             m_orbs.pop_back();

@@ -466,6 +466,7 @@ void Mob::emit(Sound id, float volume, float pitch)
     sound.position = m_position;
     sound.volume = volume;
     sound.pitch = pitch * type().voicePitch;
+    sound.mob = m_type;
     m_sounds.push_back(sound);
 }
 
