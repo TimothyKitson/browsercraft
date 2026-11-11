@@ -9984,6 +9984,14 @@ namespace
                   "vines remember which faces of their cell they hang on");
             check(shaderStandIn(vineWith(2)) == Blocks::Vine && shaderStandIn(railSlopeOf(0, 1, false)) == Blocks::RailEastWest,
                   "and are shaded like the block they stand in for");
+            check(pickleCount(pickleOf(3, false)) == 3 && !pickleDry(pickleOf(3, false)) && pickleDry(pickleOf(2, true)) &&
+                      lightEmission(pickleOf(4, false)) == 15 && lightEmission(pickleOf(1, false)) == 6 && lightEmission(pickleOf(4, true)) == 0 &&
+                      isWaterPlant(pickleOf(2, false)) && !isWaterPlant(pickleOf(2, true)) && blockDrop(pickleOf(4, true)) == static_cast<StackId>(Blocks::SeaPickle),
+                  "sea pickles group up to four, glow brighter in a bunch and go dark out of the water");
+            check(isGlowLichen(glowLichenWith(0b100101)) && lichenMask(glowLichenWith(0b100101)) == 0b100101 && glowLichenFace(glowLichenWith(0b100100)) == 2 &&
+                      lichenMask(glowLichenOn(3)) == 8 && lightEmission(glowLichenWith(63)) == lightEmission(glowLichenOn(0)) &&
+                      isSculkVein(sculkVeinWith(6)) && veinMask(sculkVeinWith(6)) == 6 && sculkVeinFace(sculkVeinWith(6)) == 1,
+                  "glow lichen and sculk veins spread over several faces of one cell");
             check(isStonecutter(Blocks::StonecutterTurned) && blockDrop(Blocks::StonecutterTurned) == static_cast<StackId>(Blocks::Stonecutter),
                   "a turned stonecutter is still a stonecutter");
             check(shelfMask(shelfOf(1, 3)) == 7 && shelfBooks(shelfOf(1, 3)) == 3 && shelfFacing(shelfOf(1, 3)) == 1,

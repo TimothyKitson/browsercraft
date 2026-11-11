@@ -1339,7 +1339,11 @@ namespace
         {
             const int tile = isSculkVein(id) ? Tiles::SculkVeinTile : Tiles::GlowLichenTile;
             const float e = 0.02f;
-            switch (isSculkVein(id) ? sculkVeinFace(id) : glowLichenFace(id))
+            const int faces = isSculkVein(id) ? veinMask(id) : lichenMask(id);
+            for (int face = 0; face < 6; ++face)
+            {
+            if (!(faces & (1 << face))) continue;
+            switch (face)
             {
                 case 0: flat(e, 0, 0, 1, 1, tile, 1.0f); break;
                 case 1: flat(1.0f - e, 0, 0, 1, 1, tile, 0.6f); break;
@@ -1351,6 +1355,7 @@ namespace
                           pushQuad(snap, lx, y, lz, id, c, tile, 0, 0, 16, 16, 0.86f, true, out); break; }
                 default: { const glm::vec3 c[4] = { { e, 0, 0 }, { e, 0, 1 }, { e, 1, 1 }, { e, 1, 0 } };
                            pushQuad(snap, lx, y, lz, id, c, tile, 0, 0, 16, 16, 0.72f, true, out); break; }
+            }
             }
             return;
         }
@@ -1992,6 +1997,27 @@ namespace
 
     void emitCross(const MeshSnapshot& snap, int lx, int y, int lz, BlockId id, std::vector<float>& out);
 
+    void emitPickles(const MeshSnapshot& snap, int lx, int y, int lz, BlockId id, std::vector<float>& out)
+    {
+        struct Pod { float x, z, h; };
+        static const Pod LAYOUT[4][4] = {
+            { { 6, 6, 6 } },
+            { { 3, 3, 6 }, { 8, 8, 4 } },
+            { { 6, 9, 6 }, { 2, 2, 4 }, { 10, 4, 6 } },
+            { { 2, 2, 6 }, { 9, 10, 4 }, { 9, 2, 6 }, { 2, 8, 7 } },
+        };
+        const int count = pickleCount(id);
+        const int tile = Tiles::SeaPickleTile;
+        for (int k = 0; k < count; ++k)
+        {
+            const Pod& p = LAYOUT[count - 1][k];
+            const PartFace faces[6] = { { tile, 0.0f, 5.0f, 4.0f, 5.0f + p.h }, { tile, 4.0f, 5.0f, 8.0f, 5.0f + p.h },
+                                        { tile, 4.0f, 1.0f, 8.0f, 5.0f }, { tile, 8.0f, 1.0f, 12.0f, 5.0f },
+                                        { tile, 8.0f, 5.0f, 12.0f, 5.0f + p.h }, { tile, 12.0f, 5.0f, 16.0f, 5.0f + p.h } };
+            emitPart(snap, lx, y, lz, id, glm::vec3(p.x, 0.0f, p.z) / 16.0f, glm::vec3(p.x + 4.0f, p.h, p.z + 4.0f) / 16.0f, faces, out);
+        }
+    }
+
     void emitVine(const MeshSnapshot& snap, int lx, int y, int lz, BlockId id, std::vector<float>& out)
     {
         constexpr float IN = 0.8f / 16.0f;
@@ -2561,6 +2587,10 @@ void buildChunkMesh(const MeshSnapshot& snapshot, MeshResult& out)
                 else if (isWallTorch(id))
                 {
                     emitWallTorch(snapshot, lx, y, lz, id, out.opaqueVertices);
+                }
+                else if (isSeaPickle(id))
+                {
+                    emitPickles(snapshot, lx, y, lz, id, out.opaqueVertices);
                 }
                 else if (isVine(id) && vineMask(id) != 0)
                 {

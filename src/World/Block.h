@@ -722,6 +722,9 @@ namespace Blocks
         CocoaTurnFirst, CocoaTurnLast = CocoaTurnFirst + 11,
         DoorHingeFirst, DoorHingeLast = DoorHingeFirst + 191,
         VineMaskFirst, VineMaskLast = VineMaskFirst + 31,
+        PickleFirst, PickleLast = PickleFirst + 7,
+        LichenMaskFirst, LichenMaskLast = LichenMaskFirst + 63,
+        VeinMaskFirst, VeinMaskLast = VeinMaskFirst + 63,
         ExtCount
     };
 }
@@ -1094,8 +1097,20 @@ inline BlockId suspiciousOf(int table, int stage)
 inline bool isSnifferEgg(BlockId id) { return id >= Blocks::SnifferEgg0 && id <= Blocks::SnifferEgg2; }
 inline bool isDecoratedPot(BlockId id) { return id >= Blocks::DecoratedPotFirst && id <= Blocks::DecoratedPotLast; }
 inline bool isLoom(BlockId id) { return id >= Blocks::LoomFirst && id <= Blocks::LoomLast; }
-inline bool isSculkVein(BlockId id) { return id >= Blocks::SculkVeinFirst && id <= Blocks::SculkVeinLast; }
-inline int sculkVeinFace(BlockId id) { return isSculkVein(id) ? id - Blocks::SculkVeinFirst : 0; }
+inline bool isSculkVein(BlockId id) { return (id >= Blocks::SculkVeinFirst && id <= Blocks::SculkVeinLast) || (id >= Blocks::VeinMaskFirst && id <= Blocks::VeinMaskLast); }
+inline int veinMask(BlockId id)
+{
+    if (id >= Blocks::VeinMaskFirst && id <= Blocks::VeinMaskLast) return id - Blocks::VeinMaskFirst;
+    return id >= Blocks::SculkVeinFirst && id <= Blocks::SculkVeinLast ? 1 << (id - Blocks::SculkVeinFirst) : 0;
+}
+inline int sculkVeinFace(BlockId id)
+{
+    const int mask = veinMask(id);
+    for (int f = 0; f < 6; ++f)
+        if (mask & (1 << f)) return f;
+    return 0;
+}
+inline BlockId sculkVeinWith(int mask) { return (mask & 63) == 0 ? Blocks::Air : static_cast<BlockId>(Blocks::VeinMaskFirst + (mask & 63)); }
 inline BlockId sculkVeinOn(int face) { return static_cast<BlockId>(Blocks::SculkVeinFirst + (face < 0 || face > 5 ? 0 : face)); }
 inline bool isCalibratedSensor(BlockId id) { return id >= Blocks::CalibratedSensorFirst && id <= Blocks::CalibratedSensorLast; }
 inline bool calibratedLit(BlockId id) { return isCalibratedSensor(id) && ((id - Blocks::CalibratedSensorFirst) & 1) != 0; }
@@ -1411,10 +1426,19 @@ inline BlockId turtleEggOf(int count, int hatch)
     return static_cast<BlockId>(Blocks::TurtleEggFirst + (count - 1) * 3 + (hatch < 0 ? 0 : hatch > 2 ? 2 : hatch));
 }
 
+inline bool isSeaPickle(BlockId id) { return id == Blocks::SeaPickle || (id >= Blocks::PickleFirst && id <= Blocks::PickleLast); }
+inline int pickleCount(BlockId id) { return id >= Blocks::PickleFirst && id <= Blocks::PickleLast ? (id - Blocks::PickleFirst) % 4 + 1 : isSeaPickle(id) ? 1 : 0; }
+inline bool pickleDry(BlockId id) { return id >= Blocks::PickleFirst + 4 && id <= Blocks::PickleLast; }
+inline BlockId pickleOf(int count, bool dry)
+{
+    if (count < 1) count = 1;
+    if (count > 4) count = 4;
+    return static_cast<BlockId>(Blocks::PickleFirst + (count - 1) + (dry ? 4 : 0));
+}
 inline bool isWaterPlant(BlockId id)
 {
     return id == Blocks::Kelp || id == Blocks::KelpTop ||
-           id == Blocks::Seagrass || id == Blocks::SeaPickle ||
+           id == Blocks::Seagrass || (isSeaPickle(id) && !pickleDry(id)) ||
            isTallSeagrass(id) || isLiveCoralPlant(id) || isCoralFan(id) || isCoralWallFan(id) ||
            isDeadCoralPlant(id) || isDeadCoralFan(id) || isDeadCoralWallFan(id);
 }
@@ -1715,8 +1739,20 @@ inline BlockId smallDripleafOf(int facing, bool upper)
 {
     return static_cast<BlockId>(Blocks::SmallDripleafFirst + (facing & 3) * 2 + (upper ? 1 : 0));
 }
-inline bool isGlowLichen(BlockId id) { return id >= Blocks::GlowLichenFirst && id <= Blocks::GlowLichenLast; }
-inline int glowLichenFace(BlockId id) { return isGlowLichen(id) ? id - Blocks::GlowLichenFirst : 0; }
+inline bool isGlowLichen(BlockId id) { return (id >= Blocks::GlowLichenFirst && id <= Blocks::GlowLichenLast) || (id >= Blocks::LichenMaskFirst && id <= Blocks::LichenMaskLast); }
+inline int lichenMask(BlockId id)
+{
+    if (id >= Blocks::LichenMaskFirst && id <= Blocks::LichenMaskLast) return id - Blocks::LichenMaskFirst;
+    return id >= Blocks::GlowLichenFirst && id <= Blocks::GlowLichenLast ? 1 << (id - Blocks::GlowLichenFirst) : 0;
+}
+inline int glowLichenFace(BlockId id)
+{
+    const int mask = lichenMask(id);
+    for (int f = 0; f < 6; ++f)
+        if (mask & (1 << f)) return f;
+    return 0;
+}
+inline BlockId glowLichenWith(int mask) { return (mask & 63) == 0 ? Blocks::Air : static_cast<BlockId>(Blocks::LichenMaskFirst + (mask & 63)); }
 inline BlockId glowLichenOn(int face) { return static_cast<BlockId>(Blocks::GlowLichenFirst + (face < 0 || face > 5 ? 0 : face)); }
 inline bool isAzaleaBush(BlockId id) { return id == Blocks::Azalea || id == Blocks::FloweringAzalea; }
 inline bool isMushroom(BlockId id) { return id == Blocks::BrownMushroom || id == Blocks::RedMushroom; }

@@ -7797,6 +7797,19 @@ bool Application::frame()
                     if (h > 0) m_world->setBlock(bx - 7, by + h, bz + 4, vineWith(h == 3 ? 4 | 16 : 4));
                     if (h > 1) m_world->setBlock(bx - 6, by + h, bz + 4, vineWith(4));
                 }
+                for (int c = 1; c <= 4; ++c)
+                {
+                    m_world->setBlock(bx + 5 - c, by, bz + 2, pickleOf(c, true));
+                    m_world->setBlock(bx - c, by - 1, bz + 2, pickleOf(c, false));
+                    m_world->setBlock(bx - c, by - 2, bz + 2, Blocks::Sand);
+                    m_world->setBlock(bx - c, by - 1, bz + 1, Blocks::Water);
+                    m_world->setBlock(bx - c, by - 1, bz + 3, Blocks::Water);
+                }
+                for (int h = 0; h < 3; ++h)
+                {
+                    m_world->setBlock(bx + 8, by + h, bz + 3, Blocks::Stone);
+                    m_world->setBlock(bx + 7, by + h, bz + 3, h == 1 ? glowLichenWith(0b001000 | 0b000100) : sculkVeinWith(h == 0 ? 0b001001 : 0b001000));
+                }
                 m_world->setBlock(bx - 8, by + 3, bz + 5, Blocks::Cobblestone);
                 m_world->setBlock(bx - 8, by + 2, bz + 5, vineWith(2 | 16));
                 for (int half = 0; half < 2; ++half)
@@ -9797,6 +9810,13 @@ void Application::updateMining(float deltaTime)
                 }
 
                 if (isCandle(id)) dropped = candleCount(id);
+                if (isSeaPickle(id)) dropped = pickleCount(id);
+                if ((isGlowLichen(id) || isSculkVein(id)) && drop != Blocks::Air)
+                {
+                    int faces = 0;
+                    for (int m = isGlowLichen(id) ? lichenMask(id) : veinMask(id); m; m &= m - 1) ++faces;
+                    dropped = faces;
+                }
                 if (isSlabBlock(id)) dropped = slabHalf(id) == 2 ? 2 : 1;
                 if (isShapeFamily(id) && !silk) dropped = isSlabBlock(id) && slabHalf(id) == 2 ? 2 : 1;
                 if (id == Blocks::Clay && drop == Items::ClayBall) dropped = 4;
@@ -18051,7 +18071,7 @@ void Application::handlePlacement()
                     const int face = glowLichenFace(plant);
                     static const int BACK[6][3] = { { 0, -1, 0 }, { 0, 1, 0 }, { 0, 0, -1 }, { 1, 0, 0 }, { 0, 0, 1 }, { -1, 0, 0 } };
                     if (!isOpaque(m_world->getBlock(next.x + BACK[face][0], next.y + BACK[face][1], next.z + BACK[face][2]))) continue;
-                    put(next, plant);
+                    put(next, glowLichenWith(1 << face));
                     used = true;
                     break;
                 }
@@ -18770,7 +18790,16 @@ void Application::handlePlacement()
         else if (normal.z < 0) face = 4;
         else if (normal.x > 0) face = 5;
         if (!isOpaque(m_world->getBlock(hit.block.x, hit.block.y, hit.block.z))) return;
-        placing = sculkVeinOn(face);
+        const BlockId already = m_world->getBlock(target.x, target.y, target.z);
+        placing = sculkVeinWith((isSculkVein(already) ? veinMask(already) : 0) | (1 << face));
+        if (isSculkVein(already))
+        {
+            m_world->setBlock(target.x, target.y, target.z, placing);
+            m_net.onLocalBlockChange(target.x, target.y, target.z, placing);
+            m_audio.playPlace(placing);
+            if (!m_player.creative() && --stack.count <= 0) stack.clear();
+            return;
+        }
     }
     if (isGlowLichen(placing))
     {
@@ -18782,7 +18811,16 @@ void Application::handlePlacement()
         else if (normal.z < 0) face = 4;
         else if (normal.x > 0) face = 5;
         if (!isOpaque(m_world->getBlock(hit.block.x, hit.block.y, hit.block.z))) return;
-        placing = glowLichenOn(face);
+        const BlockId already = m_world->getBlock(target.x, target.y, target.z);
+        placing = glowLichenWith((isGlowLichen(already) ? lichenMask(already) : 0) | (1 << face));
+        if (isGlowLichen(already))
+        {
+            m_world->setBlock(target.x, target.y, target.z, placing);
+            m_net.onLocalBlockChange(target.x, target.y, target.z, placing);
+            m_audio.playPlace(placing);
+            if (!m_player.creative() && --stack.count <= 0) stack.clear();
+            return;
+        }
     }
     if (placing == Blocks::SporeBlossom && (target - hit.block).y >= 0) return;
     if (isBigDripleaf(placing) || isSmallDripleaf(placing))
@@ -18902,6 +18940,30 @@ void Application::handlePlacement()
             stack.count -= 1;
             if (stack.count <= 0) stack.clear();
         }
+        return;
+    }
+
+    if (isSeaPickle(placing))
+    {
+        const BlockId clicked = m_world->getBlock(hit.block.x, hit.block.y, hit.block.z);
+        glm::ivec3 cell = target;
+        BlockId grown = Blocks::Air;
+        if (isSeaPickle(clicked))
+        {
+            if (pickleCount(clicked) >= 4) return;
+            cell = hit.block;
+            grown = pickleOf(pickleCount(clicked) + 1, pickleDry(clicked));
+        }
+        else
+        {
+            const BlockId there = m_world->getBlock(target.x, target.y, target.z);
+            if (!isSolid(m_world->getBlock(target.x, target.y - 1, target.z))) return;
+            grown = pickleOf(1, !isWater(there));
+        }
+        m_world->setBlock(cell.x, cell.y, cell.z, grown);
+        m_net.onLocalBlockChange(cell.x, cell.y, cell.z, grown);
+        m_audio.playPlace(grown);
+        if (!m_player.creative() && --stack.count <= 0) stack.clear();
         return;
     }
 

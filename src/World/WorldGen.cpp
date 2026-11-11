@@ -4599,7 +4599,7 @@ void WorldGen::dressSeabed(Chunk& chunk) const
                 else if (crown < 0.55f)
                     put(chunk, wx, floorY + 1 + room, wz, static_cast<BlockId>(Blocks::CoralFanFirst + which));
                 else if (crown < 0.68f)
-                    put(chunk, wx, floorY + 1 + room, wz, Blocks::SeaPickle);
+                    put(chunk, wx, floorY + 1 + room, wz, pickleOf(1 + static_cast<int>(hashCoords(wx, 9, wz, m_seed + 7709) % 4u), false));
 
                 static const int SIDE[4][2] = { { 0, -1 }, { 1, 0 }, { 0, 1 }, { -1, 0 } };
                 const int side = static_cast<int>(hashCoords(wx, 8, wz, m_seed + 7708) % 4u);
