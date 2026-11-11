@@ -7790,6 +7790,15 @@ bool Application::frame()
                 m_world->setBlock(bx + 5, by + 1, bz + 7, cocoaWith(1, 1));
                 m_world->setBlock(bx + 6, by + 2, bz + 6, cocoaWith(2, 2));
                 m_world->setBlock(bx + 7, by + 1, bz + 7, cocoaWith(3, 2));
+                for (int h = 0; h < 4; ++h)
+                {
+                    m_world->setBlock(bx - 7, by + h, bz + 5, Blocks::Cobblestone);
+                    m_world->setBlock(bx - 6, by + h, bz + 5, Blocks::Cobblestone);
+                    if (h > 0) m_world->setBlock(bx - 7, by + h, bz + 4, vineWith(h == 3 ? 4 | 16 : 4));
+                    if (h > 1) m_world->setBlock(bx - 6, by + h, bz + 4, vineWith(4));
+                }
+                m_world->setBlock(bx - 8, by + 3, bz + 5, Blocks::Cobblestone);
+                m_world->setBlock(bx - 8, by + 2, bz + 5, vineWith(2 | 16));
                 for (int half = 0; half < 2; ++half)
                 {
                     m_world->setBlock(bx, by + half, bz + 12, doorPart(doorHingeBase(Blocks::DoorLowShutNorth), 0, half == 1, true));
@@ -10880,7 +10889,7 @@ unsigned int Application::mapColourAt(int x, int z, int& height)
         unsigned int colour = m_atlas.averageColour(blockInfo(here).tileTop);
         const int red = static_cast<int>((colour >> 16) & 255u), green = static_cast<int>((colour >> 8) & 255u), blue = static_cast<int>(colour & 255u);
         if (std::abs(red - green) < 10 && std::abs(green - blue) < 10 &&
-            (here == Blocks::Grass || isLeaves(here) || here == Blocks::TallGrass || here == Blocks::Fern || here == Blocks::Vine))
+            (here == Blocks::Grass || isLeaves(here) || here == Blocks::TallGrass || here == Blocks::Fern || isVine(here)))
         {
             const unsigned int tint = isLeaves(here) ? 0x619961u : 0x91BD59u;
             const unsigned int r = ((colour >> 16) & 255u) * ((tint >> 16) & 255u) / 255u;
@@ -18893,6 +18902,21 @@ void Application::handlePlacement()
             stack.count -= 1;
             if (stack.count <= 0) stack.clear();
         }
+        return;
+    }
+
+    if (placing == Blocks::Vine)
+    {
+        int bit = -1;
+        if (hit.normal.y < 0) bit = 4;
+        else if (hit.normal.y == 0) bit = hit.normal.z > 0 ? 0 : hit.normal.x < 0 ? 1 : hit.normal.z < 0 ? 2 : 3;
+        if (bit < 0 || !isSolid(m_world->getBlock(hit.block.x, hit.block.y, hit.block.z))) return;
+        const BlockId already = m_world->getBlock(target.x, target.y, target.z);
+        const BlockId hung = vineWith((isVine(already) ? vineMask(already) : 0) | (1 << bit));
+        m_world->setBlock(target.x, target.y, target.z, hung);
+        m_net.onLocalBlockChange(target.x, target.y, target.z, hung);
+        m_audio.playPlace(hung);
+        if (!m_player.creative() && --stack.count <= 0) stack.clear();
         return;
     }
 

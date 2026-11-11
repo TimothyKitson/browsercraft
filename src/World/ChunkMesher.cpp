@@ -129,6 +129,7 @@ namespace
             for (BlockId id : grassy) table[static_cast<size_t>(id)] = GRASS_TINT;
             const BlockId leafy[] = { Blocks::Leaves, Blocks::JungleLeaves, Blocks::AcaciaLeaves, Blocks::DarkOakLeaves, Blocks::MangroveLeaves, Blocks::Vine };
             for (BlockId id : leafy) table[static_cast<size_t>(id)] = FOLIAGE_TINT;
+            for (int id = Blocks::VineMaskFirst; id <= Blocks::VineMaskLast; ++id) table[static_cast<size_t>(id)] = FOLIAGE_TINT;
             for (int id = 0; isBlockId(id); id = nextBlockId(id))
                 if (isWater(static_cast<BlockId>(id))) table[static_cast<size_t>(id)] = WATER_TINT;
             table[static_cast<size_t>(Blocks::Grass)] = GRASS_BLOCK;
@@ -1991,6 +1992,26 @@ namespace
 
     void emitCross(const MeshSnapshot& snap, int lx, int y, int lz, BlockId id, std::vector<float>& out);
 
+    void emitVine(const MeshSnapshot& snap, int lx, int y, int lz, BlockId id, std::vector<float>& out)
+    {
+        constexpr float IN = 0.8f / 16.0f;
+        const int mask = vineMask(id);
+        const int tile = blockInfo(Blocks::Vine).tileSide;
+        const glm::vec3 sides[4][4] = {
+            { { 1, 0, IN }, { 0, 0, IN }, { 0, 1, IN }, { 1, 1, IN } },
+            { { 1 - IN, 0, 1 }, { 1 - IN, 0, 0 }, { 1 - IN, 1, 0 }, { 1 - IN, 1, 1 } },
+            { { 0, 0, 1 - IN }, { 1, 0, 1 - IN }, { 1, 1, 1 - IN }, { 0, 1, 1 - IN } },
+            { { IN, 0, 0 }, { IN, 0, 1 }, { IN, 1, 1 }, { IN, 1, 0 } },
+        };
+        for (int d = 0; d < 4; ++d)
+            if (mask & (1 << d)) pushQuad(snap, lx, y, lz, id, sides[d], tile, 0.0f, 0.0f, 16.0f, 16.0f, 0.85f, true, out);
+        if (mask & 16)
+        {
+            const glm::vec3 roof[4] = { { 0, 1 - IN, 1 }, { 1, 1 - IN, 1 }, { 1, 1 - IN, 0 }, { 0, 1 - IN, 0 } };
+            pushQuad(snap, lx, y, lz, id, roof, tile, 0.0f, 0.0f, 16.0f, 16.0f, 0.7f, true, out);
+        }
+    }
+
     void emitCocoa(const MeshSnapshot& snap, int lx, int y, int lz, BlockId id, std::vector<float>& out)
     {
         const int stage = cocoaStage(id);
@@ -2540,6 +2561,10 @@ void buildChunkMesh(const MeshSnapshot& snapshot, MeshResult& out)
                 else if (isWallTorch(id))
                 {
                     emitWallTorch(snapshot, lx, y, lz, id, out.opaqueVertices);
+                }
+                else if (isVine(id) && vineMask(id) != 0)
+                {
+                    emitVine(snapshot, lx, y, lz, id, out.opaqueVertices);
                 }
                 else if (isCocoa(id))
                 {

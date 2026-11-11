@@ -3448,8 +3448,9 @@ void WorldGen::hangVines(Chunk& chunk, int worldX, int ground, int worldZ) const
                 const int drop = 2 + static_cast<int>(
                     hashToFloat(hashCoords(wx, 12, wz, m_seed + 7802)) * (LONGEST - 1));
 
+                const int toward = std::abs(dx) >= std::abs(dz) ? (dx > 0 ? 3 : 1) : (dz > 0 ? 0 : 2);
                 for (int k = 1; k <= drop; ++k)
-                    put(chunk, wx, y - k, wz, Blocks::Vine);
+                    put(chunk, wx, y - k, wz, vineWith((1 << toward) | (k == 1 ? 16 : 0)));
                 break;
             }
         }

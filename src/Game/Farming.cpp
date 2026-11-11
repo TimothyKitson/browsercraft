@@ -466,13 +466,14 @@ void Farming::grow(World& world, const glm::vec3& around, uint32_t& seed, std::v
             }
             continue;
         }
-        if (ticked == Blocks::Vine)
+        if (isVine(ticked))
         {
-            if (world.getBlock(x, y - 1, z) == Blocks::Air && nextRandom(seed) % 4u == 0u)
+            const BlockId below = ticked == Blocks::Vine ? Blocks::Vine : vineWith(vineMask(ticked) & 15);
+            if (below != Blocks::Air && world.getBlock(x, y - 1, z) == Blocks::Air && nextRandom(seed) % 4u == 0u)
             {
                 int hang = 1;
-                while (hang < 16 && world.getBlock(x, y + hang, z) == Blocks::Vine) ++hang;
-                if (hang < 16) world.setBlock(x, y - 1, z, Blocks::Vine);
+                while (hang < 16 && isVine(world.getBlock(x, y + hang, z))) ++hang;
+                if (hang < 16) world.setBlock(x, y - 1, z, below);
             }
             continue;
         }

@@ -9144,7 +9144,7 @@ namespace
                         for (int y = 0; y < Chunk::SY; ++y)
                             for (int lx = 0; lx < Chunk::SX; ++lx)
                                 for (int lz = 0; lz < Chunk::SZ; ++lz)
-                                    if (chunk.getBlock(lx, y, lz) == Blocks::Vine)
+                                    if (isVine(chunk.getBlock(lx, y, lz)))
                                         ++vinesAnywhere;
                     }
             }
@@ -9979,6 +9979,11 @@ namespace
                 check(Redstone::unlit(part) == doorPart(hung, 2, true, false), "and a powered one shuts on the same hinge");
                 check(isIronDoor(doorPart(doorHingeBase(Blocks::IronDoorFirst), 1, false, false)), "an iron door hung the other way is still iron");
             }
+            check(isVine(vineWith(0b10101)) && vineMask(vineWith(0b10101)) == 0b10101 && isClimbable(vineWith(1)) &&
+                      vineWith(0) == Blocks::Air && axisBase(vineWith(3)) == Blocks::Vine,
+                  "vines remember which faces of their cell they hang on");
+            check(shaderStandIn(vineWith(2)) == Blocks::Vine && shaderStandIn(railSlopeOf(0, 1, false)) == Blocks::RailEastWest,
+                  "and are shaded like the block they stand in for");
             check(isStonecutter(Blocks::StonecutterTurned) && blockDrop(Blocks::StonecutterTurned) == static_cast<StackId>(Blocks::Stonecutter),
                   "a turned stonecutter is still a stonecutter");
             check(shelfMask(shelfOf(1, 3)) == 7 && shelfBooks(shelfOf(1, 3)) == 3 && shelfFacing(shelfOf(1, 3)) == 1,

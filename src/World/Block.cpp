@@ -4809,6 +4809,38 @@ namespace
         { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
         { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
         { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
     };
 
     static_assert(sizeof(EXT_TABLE) / sizeof(EXT_TABLE[0]) == static_cast<size_t>(Blocks::ExtCount - Blocks::ExtFirst),
@@ -5069,6 +5101,7 @@ BlockId axisBase(BlockId id)
         const BlockId base = family < WOOD_COUNT ? woodSet(family).door : Blocks::IronDoorFirst;
         return static_cast<BlockId>(base + (id - Blocks::DoorHingeFirst) % 16);
     }
+    if (id >= Blocks::VineMaskFirst && id <= Blocks::VineMaskLast) return Blocks::Vine;
     return id;
 }
 
@@ -5112,7 +5145,7 @@ const BlockInfo& blockInfo(BlockId id)
 {
     if (id < Blocks::Count) return TABLE[id];
     if ((id >= Blocks::AxisRunFirst && id <= Blocks::AxisRunLast) || (id >= Blocks::GlazedTurnFirst && id <= Blocks::GlazedTurnLast) ||
-        (id >= Blocks::HopperSideFirst && id <= Blocks::HopperSideLast) || (id >= Blocks::ThrowerTurnFirst && id <= Blocks::DoorHingeLast))
+        (id >= Blocks::HopperSideFirst && id <= Blocks::HopperSideLast) || (id >= Blocks::ThrowerTurnFirst && id <= Blocks::VineMaskLast))
         return blockInfo(axisBase(id));
     if (id >= Blocks::ExtFirst && id < Blocks::ExtCount) return EXT_TABLE[id - Blocks::ExtFirst];
     return TABLE[Blocks::Air];
@@ -5676,7 +5709,7 @@ Material blockMaterial(BlockId id)
     // through, every blade of seagrass came out as stone and wanted a
     // pickaxe. The block table's own test caught it, again.
     if (isWaterPlant(id)) return Material::Plant;
-    if (id == Blocks::LilyPad || id == Blocks::Vine) return Material::Plant;
+    if (id == Blocks::LilyPad || isVine(id)) return Material::Plant;
 
     // A crystal is struck rather than mined -- in Minecraft it is an
     // entity you shoot. Left to fall through it came out as stone and

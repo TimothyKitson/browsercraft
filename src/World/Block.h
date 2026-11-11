@@ -721,6 +721,7 @@ namespace Blocks
         BarrelTurnFirst, BarrelTurnLast = BarrelTurnFirst + 11,
         CocoaTurnFirst, CocoaTurnLast = CocoaTurnFirst + 11,
         DoorHingeFirst, DoorHingeLast = DoorHingeFirst + 191,
+        VineMaskFirst, VineMaskLast = VineMaskFirst + 31,
         ExtCount
     };
 }
@@ -911,6 +912,12 @@ inline BlockId shaderStandIn(BlockId id)
     for (int hop = 0; hop < 3 && id >= Blocks::Count; ++hop)
     {
         if (id == Blocks::SmoothQuartz) return Blocks::QuartzBlock;
+        const BlockId turned = axisBase(id);
+        if (turned != id)
+        {
+            id = turned;
+            continue;
+        }
         const BlockId base = shapeBase(id);
         if (base == 0) return Blocks::Stone;
         id = base;
@@ -1297,11 +1304,14 @@ inline BlockId frameFacingAs(int facing, bool glow = false)
 
 // What you can go up the outside of. A ladder, and scaffolding, which
 // is the only reason to build scaffolding.
+inline bool isVine(BlockId id) { return id == Blocks::Vine || (id >= Blocks::VineMaskFirst && id <= Blocks::VineMaskLast); }
+inline int vineMask(BlockId id) { return id >= Blocks::VineMaskFirst && id <= Blocks::VineMaskLast ? id - Blocks::VineMaskFirst : 0; }
+inline BlockId vineWith(int mask) { return (mask & 31) == 0 ? Blocks::Air : static_cast<BlockId>(Blocks::VineMaskFirst + (mask & 31)); }
 inline bool isClimbable(BlockId id)
 {
     return isLadder(id) || id == Blocks::Scaffolding || id == Blocks::WeepingVines ||
            id == Blocks::WeepingVinesPlant || id == Blocks::TwistingVines || id == Blocks::TwistingVinesPlant ||
-           id == Blocks::Vine || id == Blocks::CaveVines || id == Blocks::CaveVinesLit || id == Blocks::CaveVinesPlant || id == Blocks::GlowBerries;
+           isVine(id) || id == Blocks::CaveVines || id == Blocks::CaveVinesLit || id == Blocks::CaveVinesPlant || id == Blocks::GlowBerries;
 }
 inline bool isStairs(BlockId id) { return blockInfo(id).render == RenderType::Stairs; }
 inline bool isFence(BlockId id) { return blockInfo(id).render == RenderType::Fence; }
