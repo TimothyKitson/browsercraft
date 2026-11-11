@@ -24,6 +24,8 @@ struct PlayerPose
     bool swimming = false;
     bool inWater = false;
     float fall = 0.0f;
+    bool armsForward = false;
+    float scale = 1.0f;
 };
 
 // A Minecraft player: six boxes wrapped in a 64x32 or 64x64 skin, built

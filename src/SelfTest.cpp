@@ -12931,6 +12931,31 @@ namespace
             worn.leftClick(Inventory::ARMOR_FIRST);
             check(!worn.cursor().empty(), "except in creative");
             check(Chat::parse("/enchant @s binding_curse", true).kind == Chat::Kind::Enchant, "/enchant knows the curses by id");
+            Mob archer(MobId::Skeleton, glm::vec3(0.0f), 21u);
+            archer.dress(2);
+            Mob brute(MobId::Vindicator, glm::vec3(0.0f), 22u);
+            brute.dress(2);
+            Mob trader(MobId::Piglin, glm::vec3(0.0f), 23u);
+            trader.dress(2);
+            check(archer.gear(Mob::MainHand) == Items::Bow && brute.gear(Mob::MainHand) == Items::IronAxe &&
+                  (trader.gear(Mob::MainHand) == Items::Crossbow || trader.gear(Mob::MainHand) == Items::GoldSword) && trader.canPickUp(),
+                  "mobs are dressed the way 1.21.1 dresses them");
+            Mob geared(MobId::Zombie, glm::vec3(0.0f), 24u);
+            geared.setGear(Mob::Head, Items::IronHelmet);
+            geared.setGear(Mob::Chest, Items::IronChestplate);
+            check(geared.wornArmour() == 8 && geared.dressed(), "worn armour adds up");
+            const int healthy = geared.health();
+            geared.damage(10, glm::vec3(0.0f));
+            check(healthy - geared.health() == 6, "and takes the edge off a blow");
+            bool anyArmoured = false, bare = false;
+            for (uint32_t seed = 1; seed < 4000; ++seed)
+            {
+                Mob walker(MobId::Zombie, glm::vec3(0.0f), seed);
+                walker.dress(3);
+                if (walker.gear(Mob::Head) != 0) anyArmoured = true;
+                else bare = true;
+            }
+            check(anyArmoured && bare, "some zombies spawn in armour on hard and most do not");
             Mob armoured(MobId::Zombie, glm::vec3(0.0f), 9u);
             const int before = armoured.health();
             armoured.damage(10, glm::vec3(0.0f));

@@ -3248,7 +3248,7 @@ bool Application::frame()
             m_startupScreen == "faces" || m_startupScreen == "backs" ||
             m_startupScreen == "flow" || m_startupScreen == "buds" ||
             m_startupScreen == "icons" || m_startupScreen == "beam" ||
-            m_startupScreen == "elytra" || m_startupScreen == "elytradoll" || m_startupScreen == "crawl" || m_startupScreen == "chatopen" || m_startupScreen == "endpoem" || m_startupScreen == "sleeping")
+            m_startupScreen == "elytra" || m_startupScreen == "elytradoll" || m_startupScreen == "crawl" || m_startupScreen == "chatopen" || m_startupScreen == "endpoem" || m_startupScreen == "sleeping" || m_startupScreen == "gear")
         {
             // Dev aid: open the inventory with something in it, so the
             // screenshot shows a real grid rather than 36 empty boxes.
@@ -3280,6 +3280,7 @@ bool Application::frame()
                                   m_startupScreen != "chatopen" &&
                                   m_startupScreen != "endpoem" &&
                                   m_startupScreen != "sleeping" &&
+                                  m_startupScreen != "gear" &&
                                   m_startupScreen != "enchantblock" &&
                                   m_startupScreen != "villager" &&
                                   m_startupScreen != "endportal" &&
@@ -7534,6 +7535,42 @@ bool Application::frame()
                     m_perspective = Perspective::ThirdBack;
                     m_showDebug = false;
                     m_camera.setOrientation(m_camera.yaw, 10.0f);
+                }
+            }
+
+            if (m_startupScreen == "gear")
+            {
+                m_showDebug = false;
+                m_freezeMobs = true;
+                m_player.position.y = 112.0f;
+                m_camera.setOrientation(0.0f, -10.0f);
+                const int px = static_cast<int>(std::floor(m_player.position.x));
+                const int pz = static_cast<int>(std::floor(m_player.position.z));
+                for (int dx = -2; dx <= 12; ++dx)
+                    for (int dz = -8; dz <= 8; ++dz)
+                    {
+                        m_world->setBlock(px + dx, 111, pz + dz, Blocks::Stone);
+                        for (int dy = 0; dy < 4; ++dy) m_world->setBlock(px + dx, 112 + dy, pz + dz, Blocks::Air);
+                    }
+                for (Mob& mob : m_entities.mobs()) mob.vanish();
+                struct Dressed { MobId id; float dz; uint16_t hand, head, chest, legs, feet; };
+                const Dressed LINE[] = {
+                    { MobId::Zombie, -5.0f, Items::IronSword, Items::IronHelmet, Items::IronChestplate, Items::IronLeggings, Items::IronBoots },
+                    { MobId::Skeleton, -2.5f, Items::Bow, Items::ChainmailHelmet, Items::ChainmailChestplate, 0, 0 },
+                    { MobId::Husk, 0.0f, Items::IronShovel, Items::GoldHelmet, Items::LeatherChestplate, 0, Items::DiamondBoots },
+                    { MobId::Piglin, 2.5f, Items::GoldSword, Items::GoldHelmet, Items::GoldChestplate, 0, 0 },
+                    { MobId::Drowned, 5.0f, Items::Trident, Items::DiamondHelmet, 0, 0, 0 },
+                };
+                for (const Dressed& one : LINE)
+                {
+                    if (!m_entities.spawnAt(one.id, glm::vec3(px + 7.5f, 112.0f, pz + one.dz + 0.5f), *m_world)) continue;
+                    Mob& mob = m_entities.mobs().back();
+                    mob.setYaw(180.0f);
+                    mob.setGear(Mob::MainHand, one.hand);
+                    mob.setGear(Mob::Head, one.head);
+                    mob.setGear(Mob::Chest, one.chest);
+                    mob.setGear(Mob::Legs, one.legs);
+                    mob.setGear(Mob::Feet, one.feet);
                 }
             }
 
@@ -19042,6 +19079,7 @@ void Application::renderWorldShaded()
         prepareMobModel();
         m_mobModel.hiddenSerial = m_spectatingMob;
         m_mobModel.render(world, *m_world, m_entities);
+        renderMobGear(world);
     }
     m_atlas.bind(0, 1, 2);
 
@@ -19195,6 +19233,7 @@ void Application::renderWorld()
         prepareMobModel();
         m_mobModel.hiddenSerial = m_spectatingMob;
         m_mobModel.render(m_chunkShader, *m_world, m_entities);
+        renderMobGear(m_chunkShader);
     }
     m_atlas.bind(0, 1, 2);
 
@@ -19939,6 +19978,47 @@ float Application::worldTimeScale(float deltaTime)
     const float step = std::min(m_tickStepSeconds, deltaTime * rate);
     m_tickStepSeconds -= step;
     return step;
+}
+
+void Application::mobsPickUpGear()
+{
+    if (!m_rules.on(GameRules::Rule::MobGriefing)) return;
+    for (Mob& mob : m_entities.mobs())
+    {
+        if (!mob.alive() || !mob.canPickUp()) continue;
+        const glm::vec3 reach = mob.position() + glm::vec3(0.0f, 0.5f, 0.0f);
+        std::vector<ItemStack> near = m_drops.takeNear(reach, 1.2f);
+        for (ItemStack& stack : near)
+        {
+            int slot = -1;
+            bool better = false;
+            if (Armour::isArmour(stack.id))
+            {
+                slot = Mob::Head + Armour::slotFor(stack.id);
+                const uint16_t worn = mob.gear(slot);
+                better = worn == 0 || Armour::defencePoints(stack.id) > Armour::defencePoints(worn);
+            }
+            else if (Tools::isTool(stack.id) || stack.id == Items::Bow || stack.id == Items::Crossbow || stack.id == Items::Trident)
+            {
+                slot = Mob::MainHand;
+                const uint16_t held = mob.gear(slot);
+                const bool ranged = held == Items::Bow || held == Items::Crossbow;
+                better = held == 0 || (!ranged && Tools::attackDamage(stack.id) > Tools::attackDamage(held));
+            }
+            if (slot >= 0 && better)
+            {
+                if (mob.gear(slot) != 0)
+                {
+                    ItemStack old{ static_cast<StackId>(mob.gear(slot)), 1 };
+                    m_drops.spawnStack(reach, old);
+                }
+                mob.setGear(slot, static_cast<uint16_t>(stack.id), true);
+                mob.keepFromDespawning();
+                if (--stack.count <= 0) continue;
+            }
+            m_drops.spawnStack(reach, stack);
+        }
+    }
 }
 
 void Application::renderSidebar()
@@ -22130,7 +22210,9 @@ void Application::saveMobs()
             mobs << static_cast<int>(mob.typeId()) << ' ' << at.x << ' ' << at.y << ' ' << at.z << ' ' << mob.yaw() << ' '
                  << mob.health() << ' ' << (mob.baby() ? 1 : 0) << ' ' << mob.birthSeed() << ' ' << mob.variant() << ' '
                  << (mob.tamed() ? 1 : 0) << ' ' << (mob.sitting() ? 1 : 0) << ' ' << (mob.saddled() ? 1 : 0) << ' '
-                 << mob.horseArmour() << ' ' << (mob.charged() ? 1 : 0) << ' ' << (name.empty() ? "-" : name) << '\n';
+                 << mob.horseArmour() << ' ' << (mob.charged() ? 1 : 0) << ' ' << (name.empty() ? "-" : name);
+            for (int slot = 0; slot < Mob::GearSlots; ++slot) mobs << ' ' << mob.gear(slot) << ' ' << (mob.gearSure(slot) ? 1 : 0);
+            mobs << ' ' << (mob.canPickUp() ? 1 : 0) << '\n';
             ++written;
         }
     if (mobs)
@@ -22182,6 +22264,11 @@ void Application::placePendingMobs()
             for (char& c : name) if (c == '_') c = ' ';
             mob.setCustomName(name);
         }
+        int wornId = 0, sure = 0;
+        for (int slot = 0; slot < Mob::GearSlots && (in >> wornId >> sure); ++slot)
+            mob.setGear(slot, static_cast<uint16_t>(wornId), sure != 0);
+        int picks = 0;
+        if (in >> picks) mob.setCanPickUp(picks != 0);
     }
 }
 
@@ -22328,6 +22415,12 @@ void Application::updateMobs(float deltaTime)
     m_entities.setSpawnRules(m_rules.on(GameRules::Rule::DoInsomnia), m_rules.on(GameRules::Rule::DoTraderSpawning));
     m_entities.update(mobTime, *m_world, m_player.position, daylightFactor());
     m_entities.noticeStares(*m_world, m_camera.position, m_camera.front);
+    m_gearPickupClock += mobTime;
+    if (m_gearPickupClock >= 0.5f)
+    {
+        m_gearPickupClock = 0.0f;
+        mobsPickUpGear();
+    }
 
     // Distance alone decides how loud a mob is. There is no panning here
     // yet, and a wrong pan is more distracting than none.
@@ -22558,6 +22651,18 @@ void Application::updateMobs(float deltaTime)
                     m_drops.spawn(where, death.type == MobId::Sheep ? static_cast<StackId>(woolOfColour(death.variant & 15)) : type.drop, 1);
             for (int i = 0; i < type.secondDropCount; ++i) m_drops.spawn(where, type.secondDrop, 1);
             const int looting = death.byPlayer ? Enchanting::levelOf(m_inventory.selected().enchantments, Enchanting::Kind::Looting) : 0;
+            for (int slot = 0; slot < Mob::GearSlots; ++slot)
+            {
+                const uint16_t worn = death.gear[static_cast<size_t>(slot)];
+                if (worn == 0) continue;
+                const uint32_t roll = hashCoords(static_cast<int>(death.position.x * 16.0f), slot, static_cast<int>(m_elapsedSeconds * 20.0f), 0x6EA2u);
+                const bool sure = death.gearSure[static_cast<size_t>(slot)];
+                if (!sure && (!death.byPlayer || static_cast<float>(roll % 1000u) >= 85.0f + 10.0f * static_cast<float>(looting))) continue;
+                ItemStack stack{ static_cast<StackId>(worn), 1 };
+                const int most = Anvil::maxDurability(stack.id) > 0 ? Anvil::maxDurability(stack.id) : itemDurability(stack.id);
+                if (!sure && most > 1) stack.damage = static_cast<int>((roll >> 10) % static_cast<uint32_t>(most - 1));
+                m_drops.spawnStack(where, stack);
+            }
             if (looting > 0 && death.type != MobId::Sheep)
             {
                 const uint32_t roll = hashCoords(static_cast<int>(death.position.x * 4.0f), static_cast<int>(m_elapsedSeconds * 10.0f),
@@ -22884,9 +22989,63 @@ void Application::pinPotPatterns()
 
 // Every frame near enough to see, handed to the one pass that draws
 // an item standing in the world.
+PlayerPose Application::gearPose(const Mob& mob) const
+{
+    PlayerPose pose;
+    pose.feet = mob.position();
+    pose.bodyYaw = mob.yaw();
+    pose.headYaw = mob.yaw();
+    pose.limbPhase = mob.gait();
+    pose.limbAmount = mob.gaitAmount();
+    pose.scale = mob.scale();
+    const MobId id = mob.typeId();
+    pose.armsForward = id != MobId::Piglin && id != MobId::PiglinBrute && id != MobId::ZombiePigman;
+    return pose;
+}
+
+void Application::renderMobGear(Shader& shader)
+{
+    for (const Mob& mob : m_entities.mobs())
+    {
+        if (!mob.alive() || !Mob::humanoid(mob.typeId()) || mob.serial() == m_spectatingMob) continue;
+        if (glm::length(mob.position() - m_camera.position) > 48.0f) continue;
+        const PlayerPose pose = gearPose(mob);
+        for (int slot = Mob::Head; slot <= Mob::Feet; ++slot)
+        {
+            const uint16_t worn = mob.gear(slot);
+            if (worn == 0 || !Armour::isArmour(worn)) continue;
+            const int piece = static_cast<int>(Armour::pieceOf(worn));
+            const bool leggings = piece == 3;
+            m_playerModel.renderArmour(shader, *m_world, pose, piece, m_armourTextures.layer(worn, leggings));
+            if (Armour::tierOf(worn) == Armour::Tier::Leather)
+                m_playerModel.renderArmour(shader, *m_world, pose, piece, m_armourTextures.leatherOverlay(leggings), 0.01f);
+        }
+    }
+}
+
 void Application::pinFramedItems()
 {
     m_drops.clearPinned();
+    for (const Mob& mob : m_entities.mobs())
+    {
+        if (!mob.alive() || mob.gear(Mob::MainHand) == 0 || mob.serial() == m_spectatingMob) continue;
+        if (glm::length(mob.position() - m_camera.position) > 32.0f) continue;
+        const PlayerPose pose = gearPose(mob);
+        const float yaw = glm::radians(pose.bodyYaw);
+        const glm::vec3 forward(std::cos(yaw), 0.0f, std::sin(yaw));
+        const glm::vec3 right(-forward.z, 0.0f, forward.x);
+        const float s = pose.scale / 16.0f;
+        DroppedItems::Held held;
+        held.item = static_cast<StackId>(mob.gear(Mob::MainHand));
+        held.size = 0.6f * pose.scale;
+        if (Mob::humanoid(mob.typeId()))
+            held.grip = pose.armsForward ? mob.position() + right * (6.0f * s) + glm::vec3(0.0f, 21.0f * s, 0.0f) + forward * (11.0f * s)
+                                         : mob.position() + right * (6.0f * s) + glm::vec3(0.0f, 11.0f * s, 0.0f) + forward * (2.0f * s);
+        else
+            held.grip = mob.position() + right * (0.35f * mob.width()) + glm::vec3(0.0f, mob.height() * 0.45f, 0.0f) + forward * (0.3f * mob.width());
+        held.forward = forward;
+        m_drops.hold(held);
+    }
     for (const auto& [key, fire] : m_campfires)
     {
         if (key[0] != static_cast<int>(m_dimension)) continue;

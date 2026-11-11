@@ -579,6 +579,11 @@ void EntityManager::update(float deltaTime, const World& world,
             death.weaving = mob.effects().has(Effects::Kind::Weaving);
             death.windCharged = mob.effects().has(Effects::Kind::WindCharged);
             death.byPlayer = mob.hitByPlayer();
+            for (int slot = 0; slot < Mob::GearSlots; ++slot)
+            {
+                death.gear[static_cast<size_t>(slot)] = mob.gear(slot);
+                death.gearSure[static_cast<size_t>(slot)] = mob.gearSure(slot);
+            }
             death.chargedBlast = mob.chargedBlastHit();
             death.how = mob.playerHitHow();
             death.distance = mob.playerHitDistance();

@@ -87,7 +87,15 @@ public:
         float outset = 0.46f;
         bool glow = false;
     };
-    void clearPinned() { m_pinned.clear(); m_cargo.clear(); }
+    struct Held
+    {
+        glm::vec3 grip{ 0.0f };
+        glm::vec3 forward{ 0.0f, 0.0f, 1.0f };
+        float size = 0.55f;
+        StackId item = Blocks::Air;
+    };
+    void hold(const Held& one) { m_held.push_back(one); }
+    void clearPinned() { m_pinned.clear(); m_cargo.clear(); m_held.clear(); }
     void pin(const Pinned& one) { m_pinned.push_back(one); }
 
     struct Cargo
@@ -133,6 +141,7 @@ private:
     std::vector<std::pair<StackId, int>> m_picked;
     std::vector<Pinned> m_pinned;
     std::vector<Cargo> m_cargo;
+    std::vector<Held> m_held;
     Mesh m_mesh;
     std::vector<float> m_vertices;
 

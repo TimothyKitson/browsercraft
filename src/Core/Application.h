@@ -886,6 +886,10 @@ private:
     uint32_t m_titleShownAt = 0;
     uint32_t m_actionbarShownAt = 0;
     void renderTitles();
+    float m_gearPickupClock = 0.0f;
+    void mobsPickUpGear();
+    void renderMobGear(Shader& shader);
+    PlayerPose gearPose(const Mob& mob) const;
     float m_shieldRaise = 0.0f;
     float m_shieldCooldown = 0.0f;
     float m_totemShown = 0.0f;

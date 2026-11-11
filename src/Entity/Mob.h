@@ -1,4 +1,5 @@
 #pragma once
+#include <array>
 #include <algorithm>
 #include "MobType.h"
 #include "Projectiles.h"
@@ -138,6 +139,24 @@ public:
     void giveEffect(Effects::Kind kind, int amplifier, float seconds);
     static void setNoticeScale(float scale);
     void pierceArmour(int breach) { m_breach = breach; }
+    enum Gear { MainHand = 0, OffHand, Head, Chest, Legs, Feet, GearSlots };
+    uint16_t gear(int slot) const { return slot >= 0 && slot < GearSlots ? m_gear[static_cast<size_t>(slot)] : 0; }
+    bool gearSure(int slot) const { return slot >= 0 && slot < GearSlots && m_gearSure[static_cast<size_t>(slot)]; }
+    void setGear(int slot, uint16_t id, bool sure = false)
+    {
+        if (slot < 0 || slot >= GearSlots) return;
+        m_gear[static_cast<size_t>(slot)] = id;
+        m_gearSure[static_cast<size_t>(slot)] = sure;
+        m_dressed = true;
+    }
+    bool dressed() const { return m_dressed; }
+    void markDressed() { m_dressed = true; }
+    bool canPickUp() const { return m_canPickUp; }
+    void setCanPickUp(bool can) { m_canPickUp = can; }
+    int wornArmour() const;
+    void dress(int difficulty);
+    static bool humanoid(MobId id);
+    static void setGearDifficulty(int difficulty);
     static int naturalArmour(MobId id)
     {
         switch (id)
@@ -597,6 +616,10 @@ private:
     float m_glowTimer = 0.0f;
     Effects::Set m_effects;
     int m_breach = 0;
+    std::array<uint16_t, 6> m_gear{};
+    std::array<bool, 6> m_gearSure{};
+    bool m_dressed = false;
+    bool m_canPickUp = false;
     int m_silverfish = 0;
     float m_playerHitAge = 1.0e9f;
     int m_playerHitHow = 0;

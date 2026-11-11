@@ -2,7 +2,15 @@
 #include "PlayerAnimation.h"
 #include "World/World.h"
 #include "Game/Items.h"
+#include "Game/Armour.h"
+#include "Game/Tools.h"
 #include <algorithm>
+
+namespace
+{
+    int g_gearDifficulty = 2;
+    int g_gearDifficultyFor() { return g_gearDifficulty; }
+}
 #include <cmath>
 
 namespace
@@ -627,6 +635,8 @@ void Mob::burnInSunlight(float deltaTime, const World& world, float daylight)
 void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPosition,
                  float daylight)
 {
+    if (!m_dressed) dress(g_gearDifficultyFor());
+
     if (m_strikeGuard > 0.0f) m_strikeGuard = std::max(0.0f, m_strikeGuard - deltaTime);
     if (m_playerHitAge < 1.0e8f) m_playerHitAge += deltaTime;
     const MobType& t = type();
@@ -1070,6 +1080,8 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
         {
             MobStrike strike;
             strike.damage = t.attackDamage;
+            if (m_gear[MainHand] != 0 && Tools::isTool(m_gear[MainHand]))
+                strike.damage += std::max(0, Tools::attackDamage(m_gear[MainHand]) - 1);
             strike.from = m_position;
             if (m_type == MobId::WitherSkeleton)
             {
@@ -1384,7 +1396,7 @@ void Mob::damage(int amount, const glm::vec3& fromDirection)
     }
 
     {
-        float points = static_cast<float>(naturalArmour(m_type));
+        float points = static_cast<float>(naturalArmour(m_type) + wornArmour());
         if (isHorseArmour(m_horseArmour)) points += static_cast<float>(horseArmourPoints(m_horseArmour));
         points *= std::max(0.0f, 1.0f - 0.15f * static_cast<float>(m_breach));
         m_breach = 0;
@@ -1457,6 +1469,114 @@ void Mob::giveEffect(Effects::Kind kind, int amplifier, float seconds)
 namespace
 {
     float g_noticeScale = 1.0f;
+}
+
+void Mob::setGearDifficulty(int difficulty) { g_gearDifficulty = difficulty; }
+
+bool Mob::humanoid(MobId id)
+{
+    switch (id)
+    {
+        case MobId::Zombie: case MobId::Husk: case MobId::Drowned: case MobId::ZombieVillager: case MobId::Skeleton:
+        case MobId::Stray: case MobId::Bogged: case MobId::WitherSkeleton: case MobId::ZombiePigman: case MobId::Piglin:
+        case MobId::PiglinBrute: case MobId::Giant:
+            return true;
+        default:
+            return false;
+    }
+}
+
+int Mob::wornArmour() const
+{
+    int points = 0;
+    for (int slot = Head; slot <= Feet; ++slot)
+        if (m_gear[static_cast<size_t>(slot)] != 0) points += Armour::defencePoints(m_gear[static_cast<size_t>(slot)]);
+    return points;
+}
+
+void Mob::dress(int difficulty)
+{
+    m_dressed = true;
+    uint32_t roll = m_birthSeed * 747796405u + 2891336453u;
+    auto next = [&roll]() {
+        roll ^= roll << 13;
+        roll ^= roll >> 17;
+        roll ^= roll << 5;
+        return static_cast<float>(roll % 100000u) / 100000.0f;
+    };
+    const float armourChance = difficulty <= 0 ? 0.0f : difficulty == 1 ? 0.02f : difficulty == 2 ? 0.06f : 0.12f;
+    const float pickChance = difficulty <= 0 ? 0.0f : difficulty == 1 ? 0.05f : difficulty == 2 ? 0.2f : 0.4f;
+    auto armour = [&](bool gold) {
+        if (!gold && next() >= armourChance) return;
+        const float tier = next();
+        int base = Items::LeatherHelmet;
+        bool chain = false;
+        if (gold) base = Items::GoldHelmet;
+        else if (tier < 0.3706f) base = Items::LeatherHelmet;
+        else if (tier < 0.8579f) base = Items::GoldHelmet;
+        else if (tier < 0.9876f) chain = true;
+        else if (tier < 0.9996f) base = Items::IronHelmet;
+        else base = Items::DiamondHelmet;
+        const float stop = difficulty >= 3 ? 0.1f : 0.25f;
+        for (int piece = 0; piece < 4; ++piece)
+        {
+            if (gold && next() >= 0.1f) continue;
+            if (!gold && piece > 0 && next() < stop) break;
+            const uint16_t id = static_cast<uint16_t>(chain ? Items::ChainmailHelmet + piece : base + piece);
+            m_gear[static_cast<size_t>(Head + piece)] = id;
+        }
+    };
+    switch (m_type)
+    {
+        case MobId::Skeleton: case MobId::Stray: case MobId::Bogged:
+            m_gear[MainHand] = Items::Bow;
+            armour(false);
+            m_canPickUp = next() < pickChance;
+            break;
+        case MobId::WitherSkeleton:
+            m_gear[MainHand] = Items::StoneSword;
+            m_canPickUp = next() < pickChance;
+            break;
+        case MobId::Zombie: case MobId::Husk: case MobId::ZombieVillager:
+            armour(false);
+            if (next() < (difficulty >= 3 ? 0.05f : 0.01f)) m_gear[MainHand] = next() < 0.333f ? Items::IronSword : Items::IronShovel;
+            m_canPickUp = next() < pickChance;
+            break;
+        case MobId::Drowned:
+        {
+            const float hand = next();
+            if (hand < 0.0625f) m_gear[MainHand] = Items::Trident;
+            else if (hand < 0.1f) m_gear[MainHand] = Items::FishingRod;
+            if (next() < 0.03f) m_gear[OffHand] = Items::NautilusShell;
+            m_canPickUp = next() < pickChance;
+            break;
+        }
+        case MobId::ZombiePigman:
+            m_gear[MainHand] = Items::GoldSword;
+            break;
+        case MobId::Piglin:
+            m_gear[MainHand] = next() < 0.5f ? Items::Crossbow : Items::GoldSword;
+            armour(true);
+            m_canPickUp = true;
+            break;
+        case MobId::PiglinBrute:
+            m_gear[MainHand] = Items::GoldAxe;
+            break;
+        case MobId::Pillager:
+            m_gear[MainHand] = Items::Crossbow;
+            break;
+        case MobId::Vindicator:
+            m_gear[MainHand] = Items::IronAxe;
+            break;
+        case MobId::Vex:
+            m_gear[MainHand] = Items::IronSword;
+            break;
+        case MobId::Illusioner:
+            m_gear[MainHand] = Items::Bow;
+            break;
+        default:
+            break;
+    }
 }
 
 void Mob::setNoticeScale(float scale) { g_noticeScale = std::clamp(scale, 0.05f, 1.0f); }

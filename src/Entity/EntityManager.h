@@ -1,4 +1,5 @@
 #pragma once
+#include <array>
 #include "World/Biomes.h"
 #include "Mob.h"
 #include <cstdint>
@@ -88,6 +89,8 @@ public:
         bool windCharged = false;
         bool byPlayer = false;
         bool chargedBlast = false;
+        std::array<uint16_t, 6> gear{};
+        std::array<bool, 6> gearSure{};
         int how = 0;
         float distance = 0.0f;
     };
@@ -192,7 +195,7 @@ public:
     // Which world this manager is spawning into. Set when the player
     // travels, so the Nether gets its own and nothing else.
     void setDimension(Dimension dimension) { m_dimension = dimension; }
-    void setDifficulty(int difficulty) { m_difficulty = difficulty; }
+    void setDifficulty(int difficulty) { m_difficulty = difficulty; Mob::setGearDifficulty(difficulty); }
     void setPeaceful(bool peaceful) { m_peaceful = peaceful; }
     void setNaturalSpawning(bool on) { m_naturalSpawning = on; }
     void setSpawnRules(bool insomnia, bool traders) { m_insomnia = insomnia; m_traders = traders; }
