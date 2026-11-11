@@ -1231,7 +1231,8 @@ inline BlockId frameFacingAs(int facing, bool glow = false)
 inline bool isClimbable(BlockId id)
 {
     return isLadder(id) || id == Blocks::Scaffolding || id == Blocks::WeepingVines ||
-           id == Blocks::WeepingVinesPlant || id == Blocks::TwistingVines || id == Blocks::TwistingVinesPlant;
+           id == Blocks::WeepingVinesPlant || id == Blocks::TwistingVines || id == Blocks::TwistingVinesPlant ||
+           id == Blocks::Vine || id == Blocks::CaveVines || id == Blocks::CaveVinesLit || id == Blocks::CaveVinesPlant || id == Blocks::GlowBerries;
 }
 inline bool isStairs(BlockId id) { return blockInfo(id).render == RenderType::Stairs; }
 inline bool isFence(BlockId id) { return blockInfo(id).render == RenderType::Fence; }

@@ -903,6 +903,17 @@ void Application::loadLevel()
         }
     }
     m_seenEndPoem = std::filesystem::exists(m_savePath + "/seen_credits.txt");
+    m_hasBed = false;
+    m_bedForced = false;
+    {
+        std::ifstream bed(m_savePath + "/bed.txt");
+        int forced = 0;
+        if (bed >> m_bedBlock.x >> m_bedBlock.y >> m_bedBlock.z >> m_bedSpot.x >> m_bedSpot.y >> m_bedSpot.z >> forced)
+        {
+            m_hasBed = true;
+            m_bedForced = forced != 0;
+        }
+    }
     {
         std::ifstream traits(m_savePath + "/attributes.txt");
         std::stringstream text;
@@ -1359,6 +1370,12 @@ void Application::saveLevel()
     {
         std::ofstream board(m_savePath + "/scoreboard.txt");
         if (board) board << m_scoreboard.save();
+    }
+    {
+        std::ofstream bed(m_savePath + "/bed.txt");
+        if (bed && m_hasBed)
+            bed << m_bedBlock.x << ' ' << m_bedBlock.y << ' ' << m_bedBlock.z << ' ' << m_bedSpot.x << ' ' << m_bedSpot.y << ' ' << m_bedSpot.z << ' '
+                << (m_bedForced ? 1 : 0) << '\n';
     }
     if (m_seenEndPoem)
     {
@@ -3000,7 +3017,8 @@ bool Application::frame()
         m_inventory.bindingHolds = !m_player.creative();
         for (int i = 0; i < Inventory::ARMOR_SLOTS; ++i)
             m_player.armourEnchants[static_cast<size_t>(i)] = m_inventory.slot(Inventory::ARMOR_FIRST + i).empty() ? 0u : m_inventory.slot(Inventory::ARMOR_FIRST + i).enchantments;
-        m_player.holdingTotem = m_inventory.selected().id == Items::TotemOfUndying;
+        m_player.holdingTotem = m_inventory.selected().id == Items::TotemOfUndying ||
+                                m_inventory.slot(Inventory::OFFHAND).id == Items::TotemOfUndying;
 
         // And if one was spent, it goes: a totem works once, in the
         // hand, and leaves nothing behind.
@@ -3009,9 +3027,10 @@ bool Application::frame()
             award("adventure/totem_of_undying", "used_totem");
             sprites(SpriteParticles::Kind::Glitter, m_player.position + glm::vec3(0.0f, 1.0f, 0.0f),
                     60, 0.8f, 3.0f, 0.25f, 1.6f, 1.5f);
-            ItemStack& held = m_inventory.selected();
+            ItemStack& held = m_inventory.selected().id == Items::TotemOfUndying ? m_inventory.selected() : m_inventory.slot(Inventory::OFFHAND);
             if (--held.count <= 0) held.clear();
             m_audio.play(Sound::Pickup, 0.9f, 0.6f);
+            m_totemShown = 2.0f;
         }
 
         // The big grid belongs to the bench, not to the player, so it
@@ -3229,7 +3248,7 @@ bool Application::frame()
             m_startupScreen == "faces" || m_startupScreen == "backs" ||
             m_startupScreen == "flow" || m_startupScreen == "buds" ||
             m_startupScreen == "icons" || m_startupScreen == "beam" ||
-            m_startupScreen == "elytra" || m_startupScreen == "elytradoll" || m_startupScreen == "crawl" || m_startupScreen == "chatopen" || m_startupScreen == "endpoem")
+            m_startupScreen == "elytra" || m_startupScreen == "elytradoll" || m_startupScreen == "crawl" || m_startupScreen == "chatopen" || m_startupScreen == "endpoem" || m_startupScreen == "sleeping")
         {
             // Dev aid: open the inventory with something in it, so the
             // screenshot shows a real grid rather than 36 empty boxes.
@@ -3260,6 +3279,7 @@ bool Application::frame()
                                   m_startupScreen != "crawl" &&
                                   m_startupScreen != "chatopen" &&
                                   m_startupScreen != "endpoem" &&
+                                  m_startupScreen != "sleeping" &&
                                   m_startupScreen != "enchantblock" &&
                                   m_startupScreen != "villager" &&
                                   m_startupScreen != "endportal" &&
@@ -7517,6 +7537,19 @@ bool Application::frame()
                 }
             }
 
+            if (m_startupScreen == "sleeping")
+            {
+                m_timeOfDay = 0.8f;
+                m_timeOverride = -1.0f;
+                const glm::ivec3 feet = glm::ivec3(glm::floor(m_player.position));
+                const glm::ivec3 foot = feet + glm::ivec3(1, 0, 0);
+                m_world->setBlock(foot.x, foot.y, foot.z, bedOf(14, 1, false));
+                m_world->setBlock(foot.x + 1, foot.y, foot.z, bedOf(14, 1, true));
+                for (Mob& mob : m_entities.mobs()) mob.vanish();
+                sleepInBed(foot);
+                m_sleepTimer = 2.5f;
+            }
+
             if (m_startupScreen == "endpoem")
             {
                 m_screen = Screen::EndPoem;
@@ -8414,7 +8447,13 @@ void Application::applyMenuAction()
             else
             {
                 if (m_dimension != Dimension::Overworld) travelTo(Dimension::Overworld);
-                m_player.respawn(m_spawnPoint);
+                m_player.respawn(m_hasBed ? m_bedSpot : m_spawnPoint);
+                if (m_hasBed)
+                {
+                    m_placeOnSurface = false;
+                    m_worldReady = false;
+                    m_bedPending = !m_bedForced;
+                }
             }
             m_player.experience = keptExperience;
             m_deathMessage.clear();
@@ -8842,6 +8881,18 @@ void Application::waitForSpawnChunk()
     const Chunk* chunk = m_world->chunkAt(chunkX, chunkZ);
     if (!chunk || chunk->state.load() != ChunkState::Lit) return;
 
+    if (m_bedPending)
+    {
+        m_bedPending = false;
+        if (!isColourBed(m_world->getBlock(m_bedBlock.x, m_bedBlock.y, m_bedBlock.z)))
+        {
+            m_hasBed = false;
+            m_chatLog.add("You have no home bed or charged respawn anchor, or it was obstructed");
+            m_player.position = m_spawnPoint;
+            m_placeOnSurface = true;
+        }
+    }
+
     if (m_anchorPending)
     {
         m_anchorPending = false;
@@ -8943,6 +8994,11 @@ void Application::updateGameplay(float deltaTime)
     updateChatInput();
     m_chatLog.update(deltaTime);
     if (m_chatOpen) return;
+    if (m_sleeping)
+    {
+        tickSleep(deltaTime);
+        return;
+    }
 
     // Writing on a sign takes everything the same way, and for the
     // same reason: W is a letter while a board is open.
@@ -9141,9 +9197,11 @@ void Application::updateGameplay(float deltaTime)
         const ItemStack& main = m_inventory.selected();
         const bool offhandShield = m_inventory.slot(Inventory::OFFHAND).id == Items::Shield &&
                                    (main.empty() || Tools::isTool(main.id));
-        m_player.blocking = inGame() && (main.id == Items::Shield || offhandShield) &&
-                            (m_keys.down(m_input, Action::Use) ||
-                             m_startupScreen == "shieldup");
+        const bool raising = inGame() && (main.id == Items::Shield || offhandShield) &&
+                             (m_keys.down(m_input, Action::Use) || m_startupScreen == "shieldup");
+        m_shieldCooldown = std::max(0.0f, m_shieldCooldown - deltaTime);
+        m_shieldRaise = raising && m_shieldCooldown <= 0.0f ? m_shieldRaise + deltaTime : 0.0f;
+        m_player.blocking = raising && m_shieldCooldown <= 0.0f && (m_shieldRaise >= 0.25f || m_startupScreen == "shieldup");
     }
 
     const ItemStack mainBefore = m_inventory.selected();
@@ -9300,6 +9358,7 @@ void Application::updateMining(float deltaTime)
                 const int blow = std::max(0, static_cast<int>(std::lround(base + bonus)) + smash + density);
                 const bool sprintHit = charged && m_player.sprinting;
                 target->pierceArmour(Enchanting::levelOf(edge, Enchanting::Kind::Breach));
+                if (!m_player.creative()) m_player.addExhaustion(0.1f);
                 if (target->strike(blow, target->position() - m_player.position))
                 {
                     const int knock = Enchanting::levelOf(edge, Enchanting::Kind::Knockback) + (sprintHit ? 1 : 0) +
@@ -9460,6 +9519,7 @@ void Application::updateMining(float deltaTime)
         m_world->setBlock(hit.block.x, hit.block.y, hit.block.z, Blocks::Air);
         m_net.onLocalBlockChange(hit.block.x, hit.block.y, hit.block.z, Blocks::Air);
         m_audio.playDig(id, 0.9f);
+        if (!m_player.creative()) m_player.addExhaustion(0.005f);
         vibrate(glm::vec3(hit.block) + glm::vec3(0.5f), 12);
 
         if (!m_player.creative() && isInfested(id) &&
@@ -13578,29 +13638,103 @@ void Application::sleepInBed(const glm::ivec3& block)
         return;
     }
 
-    const glm::vec3 beside = glm::vec3(block) + glm::vec3(0.5f, 1.0f, 0.5f);
-    m_spawnPoint = beside;
-
-    if (!Sleep::isNight(m_timeOfDay))
+    const glm::vec3 centre = glm::vec3(block) + glm::vec3(0.5f, 0.0f, 0.5f);
+    const glm::vec3 offset = m_player.position - centre;
+    if (glm::length(glm::vec2(offset.x, offset.z)) > 3.5f || std::abs(offset.y) > 2.5f)
     {
-        m_chatLog.add("You can only sleep at night. Spawn point set.");
+        m_chatLog.add("You may not rest now; the bed is too far away");
+        return;
+    }
+    const bool newBed = !m_hasBed || m_bedForced || m_bedBlock != block;
+    m_hasBed = true;
+    m_bedForced = false;
+    m_bedBlock = block;
+    m_bedSpot = glm::vec3(block) + glm::vec3(0.5f, 1.0f, 0.5f);
+    if (newBed) m_chatLog.add("Respawn point set");
+
+    if (!Sleep::isNight(m_timeOfDay) && !m_weather.storming())
+    {
+        m_chatLog.add("You can sleep only at night or during thunderstorms");
         m_audio.play(Sound::Click, 0.4f);
         return;
     }
+    if (!m_player.creative())
+        for (const Mob& mob : m_entities.mobs())
+        {
+            if (!mob.alive() || mob.type().spawnClass != SpawnClass::Hostile) continue;
+            const glm::vec3 gap = mob.position() - centre;
+            if (std::abs(gap.x) <= 8.0f && std::abs(gap.z) <= 8.0f && std::abs(gap.y) <= 5.0f)
+            {
+                m_chatLog.add("You may not rest now; there are monsters nearby");
+                return;
+            }
+        }
 
-    m_timeOfDay = Sleep::wakeTime();
+    if (Mob* ride = riddenMob()) ride->setRidden(false);
+    m_sleeping = true;
+    m_sleepTimer = 0.0f;
+    m_sleepBed = block;
+    m_player.velocity = glm::vec3(0.0f);
+    m_player.position = centre + glm::vec3(0.0f, 0.5625f, 0.0f);
+    m_player.pose = Player::Pose::Swimming;
+    setMouseCaptured(false);
+    m_audio.play(Sound::DigWool, 0.6f, 0.8f);
+}
 
-    // A night's rest. Minecraft heals you slowly through the night; with
-    // no clock running while you sleep, the rest is given at once.
-    if (!m_player.creative() && m_player.health > 0)
-        m_player.heal(Player::MAX_HEALTH / 4);
+void Application::tickSleep(float deltaTime)
+{
+    m_sleepTimer += deltaTime;
+    m_player.velocity = glm::vec3(0.0f);
+    m_player.position = glm::vec3(m_sleepBed) + glm::vec3(0.5f, 0.5625f, 0.5f);
+    m_player.pose = Player::Pose::Swimming;
+    m_camera.position = m_player.eyePosition();
+    if (!isColourBed(m_world->getBlock(m_sleepBed.x, m_sleepBed.y, m_sleepBed.z)) || m_player.health <= 0)
+    {
+        wakeUp(false);
+        return;
+    }
+    if (m_keys.pressed(m_input, Action::Sneak) || m_keys.pressed(m_input, Action::Jump))
+    {
+        wakeUp(false);
+        return;
+    }
+    if (m_sleepTimer < 5.0f) return;
+    const int players = m_net.active() ? m_net.playerCount() : 1;
+    const int needed = std::max(1, (players * std::clamp(m_rules.value(GameRules::Rule::PlayersSleepingPercentage), 0, 100) + 99) / 100);
+    if (needed <= 1 || players == 1)
+    {
+        m_timeOfDay = Sleep::wakeTime();
+        if (m_timeOfDay < 0.5f) ++m_dayNumber;
+        if (m_weather.raining()) Weather::begin(m_weather, Weather::Kind::Clear, m_weatherSeed);
+        wakeUp(true);
+    }
+}
 
+void Application::wakeUp(bool slept)
+{
+    if (!m_sleeping) return;
+    m_sleeping = false;
+    m_player.pose = Player::Pose::Standing;
+    glm::vec3 stand = glm::vec3(m_sleepBed) + glm::vec3(0.5f, 1.0f, 0.5f);
+    for (const glm::ivec3& side : { glm::ivec3(1, 0, 0), glm::ivec3(-1, 0, 0), glm::ivec3(0, 0, 1), glm::ivec3(0, 0, -1) })
+    {
+        const glm::ivec3 cell = m_sleepBed + side;
+        if (!isSolid(m_world->getBlock(cell.x, cell.y, cell.z)) && !isSolid(m_world->getBlock(cell.x, cell.y + 1, cell.z)) &&
+            isSolid(m_world->getBlock(cell.x, cell.y - 1, cell.z)))
+        {
+            stand = glm::vec3(cell) + glm::vec3(0.5f, 0.0f, 0.5f);
+            break;
+        }
+    }
+    m_player.position = stand;
+    m_player.clearFall();
+    setMouseCaptured(true);
+    if (!slept) return;
     award("adventure/sleep_in_bed", "slept_in_bed");
     m_stats.add(Stats::Custom::SleepInBed);
     m_stats.set(Stats::Custom::TimeSinceRest, 0);
-    m_chatLog.add("Good morning. Spawn point set.");
-    m_audio.play(Sound::DigWool, 0.6f, 0.8f);
 }
+
 
 // Lighting a stick. The block is swapped for its lit twin, which glows
 // and flashes white, and a fuse is written down against it.
@@ -18637,6 +18771,7 @@ void Application::render()
     if (inWorld && !m_hudHidden) renderHud();
     if (inWorld && !m_hudHidden) renderTitles();
     if (inWorld && !m_hudHidden) renderSidebar();
+    if (m_screen == Screen::Playing) renderSleep();
     if (inWorld && (!m_hudHidden || m_chatOpen)) renderChat();
     if (inWorld && m_showDebug && m_world) renderDebugOverlay();
 
@@ -19490,8 +19625,10 @@ bool Application::runCommand(const std::string& line, const glm::vec3& origin, b
             break;
 
         case Chat::Kind::SpawnPoint:
-            m_spawnPoint = glm::vec3(std::floor(command.position.x) + 0.5f, std::floor(command.position.y),
-                                     std::floor(command.position.z) + 0.5f);
+            m_hasBed = true;
+            m_bedForced = true;
+            m_bedSpot = glm::vec3(std::floor(command.position.x) + 0.5f, std::floor(command.position.y),
+                                  std::floor(command.position.z) + 0.5f);
             break;
 
         case Chat::Kind::DefaultGameMode:
@@ -19835,6 +19972,18 @@ void Application::renderSidebar()
 
 void Application::renderTitles()
 {
+    if (m_totemShown > 0.0f)
+    {
+        m_totemShown = std::max(0.0f, m_totemShown - m_lastFrameSeconds);
+        const float t = 1.0f - m_totemShown / 2.0f;
+        const float w = static_cast<float>(m_window.width());
+        const float h = static_cast<float>(m_window.height());
+        const float grow = (t < 0.3f ? t / 0.3f : 1.0f) * std::min(w, h) * 0.45f;
+        const float alpha = t > 0.7f ? (1.0f - t) / 0.3f : 1.0f;
+        const float x = w * 0.5f - grow * 0.5f;
+        const float y = h * 0.45f - grow * 0.5f - t * h * 0.15f;
+        drawItem(x, y, grow, Items::TotemOfUndying, 1, glm::vec4(1.0f, 1.0f, 1.0f, alpha));
+    }
     const uint32_t now = SDL_GetTicks();
     m_ui.setScale(static_cast<float>(guiScale()));
     const float w = m_ui.canvasWidth();
@@ -22209,7 +22358,13 @@ void Application::updateMobs(float deltaTime)
         if (m_player.blocking &&
             Shield::covers(m_camera.front, m_player.position, strike.from))
         {
-            wearShield(Shield::WEAR_PER_BLOCK);
+            wearShield(strike.damage >= 3 ? 1 + strike.damage : Shield::WEAR_PER_BLOCK);
+            if (strike.attacker == static_cast<int>(MobId::Vindicator) || strike.attacker == static_cast<int>(MobId::PiglinBrute))
+            {
+                m_shieldCooldown = 5.0f;
+                m_player.blocking = false;
+                m_audio.play(Sound::DigWood, 0.8f, 0.8f);
+            }
             m_audio.play(Sound::Click, 0.7f, 0.7f);
             m_stats.add(Stats::Custom::DamageBlockedByShield, static_cast<long long>(strike.damage) * 10);
 
@@ -22483,7 +22638,7 @@ void Application::updateMobs(float deltaTime)
         // A baby is worth nothing, the way it is in Minecraft -- else
         // penning animals and killing the lambs is the best experience
         // in the game.
-        if (type.experience > 0 && !death.baby)
+        if (type.experience > 0 && !death.baby && (death.byPlayer || death.type == MobId::EnderDragon || death.type == MobId::Wither))
             m_orbs.spawnValue(where, type.experience);
     }
 
@@ -22498,7 +22653,8 @@ void Application::updateMobs(float deltaTime)
                 break;
             }
         sprites(SpriteParticles::Kind::Heart, born + glm::vec3(0.0f, 1.0f, 0.0f), 7, 0.5f, 0.4f, 0.3f, 1.3f);
-        (void)born;
+        if (m_rules.on(GameRules::Rule::DoMobLoot))
+            m_orbs.spawnValue(born + glm::vec3(0.0f, 0.5f, 0.0f), 1 + static_cast<int>(hashCoords(static_cast<int>(born.x * 8.0f), static_cast<int>(m_elapsedSeconds * 20.0f), static_cast<int>(born.z * 8.0f), 0xB4EEu) % 7u));
         m_audio.play(Sound::Pickup, 0.6f, 1.6f);
     }
 
@@ -24965,6 +25121,18 @@ void Application::renderDeathScreen()
 // ------------------------------------------------------------ inventory ---
 
 
+
+void Application::renderSleep()
+{
+    if (!m_sleeping) return;
+    const ScopedPanelUnits panel(m_ui, guiScale());
+    const float w = m_ui.canvasWidth();
+    const float h = m_ui.canvasHeight();
+    const float dark = std::min(1.0f, m_sleepTimer / 5.0f) * 0.85f;
+    m_ui.quad(0.0f, 0.0f, w, h, glm::vec4(0.06f, 0.05f, 0.12f, dark));
+    const float buttonWidth = std::min(400.0f, w * 0.5f);
+    if (menuButton({ w * 0.5f - buttonWidth * 0.5f, h * 0.62f, buttonWidth, 46.0f }, "Leave Bed")) wakeUp(false);
+}
 
 #include "InventoryScreen.inl"
 #include "BookScreen.inl"

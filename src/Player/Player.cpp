@@ -145,7 +145,19 @@ void Player::regenerate(float deltaTime)
 {
     if (!naturalRegeneration) return;
     const bool wellFed = exempt() || hunger >= REGEN_HUNGER;
-    if (health > 0 && health < maxHealth() && damageFlash <= 0.0f && wellFed)
+    const bool feasting = !exempt() && hunger >= MAX_HUNGER && saturation > 0.0f;
+    if (health > 0 && health < maxHealth() && feasting)
+    {
+        m_regenTimer += deltaTime;
+        if (m_regenTimer >= 0.5f)
+        {
+            m_regenTimer = 0.0f;
+            const float spent = std::min(saturation, 6.0f);
+            heal(1);
+            addExhaustion(spent);
+        }
+    }
+    else if (health > 0 && health < maxHealth() && damageFlash <= 0.0f && wellFed)
     {
         m_regenTimer += deltaTime;
         if (m_regenTimer >= 4.0f)
@@ -568,8 +580,10 @@ bool Player::damage(int amount, bool throughArmour)
         holdingTotem = false;
         m_totemSpent = true;
         Effects::clear(effects);
-        Effects::give(effects, Effects::Kind::Regeneration, 1, 40.0f);
+        Effects::give(effects, Effects::Kind::Regeneration, 1, 45.0f);
+        Effects::give(effects, Effects::Kind::Absorption, 1, 5.0f);
         Effects::give(effects, Effects::Kind::FireResistance, 0, 40.0f);
+        absorption = std::max(absorption, 8);
     }
 
     damageFlash = 0.4f;
@@ -1004,12 +1018,17 @@ void Player::update(float deltaTime, const World& world, const Controls& control
         damage(2);
     }
 
-    if (onGround && !flying)
+    if (onGround && !flying && !inWater)
     {
         const glm::vec3 moved = position - m_lastPosition;
         const float distance = glm::length(glm::vec3(moved.x, 0.0f, moved.z));
         if (distance > 0.0f)
             addExhaustion(distance * (sprinting ? 0.1f : sneaking ? 0.0f : 0.01f));
+    }
+    else if (inWater && !flying)
+    {
+        const float distance = glm::length(position - m_lastPosition);
+        if (distance > 0.0f && distance < 2.0f) addExhaustion(distance * 0.01f);
     }
     m_lastPosition = position;
 }
