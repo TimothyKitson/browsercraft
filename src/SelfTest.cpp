@@ -5295,6 +5295,57 @@ namespace
         check(!copy.load("1,2,3") && !copy.load("a,b,c,d,e,f,g,h,i"), "and a damaged line is refused");
         check(border.blocks(100.5, -20.5, 0.6) == false && border.blocks(103.0, -20.5, 0.6), "it only walls in what is up against it");
 
+        section("chat: the rest of the vanilla commands");
+        {
+            const glm::vec3 here(10.0f, 64.0f, 20.0f);
+            Chat::Command weather = Chat::parse("/weather thunder 60", true);
+            check(weather.kind == Chat::Kind::Weather && weather.sub == "thunder" && weather.seconds == 60.0f, "/weather thunder takes a length");
+            check(Chat::parse("/weather fog", true).kind == Chat::Kind::Unknown, "and refuses weather that does not exist");
+            check(Chat::parse("/weather rain", false).kind == Chat::Kind::Denied, "and is a cheat");
+            check(Chat::parse("/difficulty", false).kind == Chat::Kind::Difficulty && Chat::parse("/difficulty", false).mode == -1,
+                  "/difficulty with nothing after it just says what it is");
+            check(Chat::parse("/difficulty hard", true).mode == 3 && Chat::parse("/difficulty 0", true).mode == 0, "it takes names and numbers");
+            Chat::Command xp = Chat::parse("/xp add @s 5L", true);
+            check(xp.kind == Chat::Kind::Experience && xp.sub == "add" && xp.count == 5 && xp.mode == 1, "/xp 5L is five levels");
+            Chat::Command points = Chat::parse("/experience set @p 30 points", true);
+            check(points.sub == "set" && points.count == 30 && points.mode == 0, "/experience set takes points");
+            check(Chat::parse("/xp query @s levels", true).sub == "query", "/xp query asks");
+            Chat::Command clear = Chat::parse("/clear @s minecraft:dirt 3", true);
+            check(clear.kind == Chat::Kind::Clear && clear.item == Blocks::Dirt && clear.count == 3, "/clear can take a kind and a count");
+            check(Chat::parse("/clear", true).item == Blocks::Air && Chat::parse("/clear", true).count == -1, "and with nothing, takes everything");
+            Chat::Command spawn = Chat::parse("/setworldspawn ~ ~1 ~", true, here);
+            check(spawn.kind == Chat::Kind::SetWorldSpawn && spawn.position == glm::vec3(10.0f, 65.0f, 20.0f), "/setworldspawn reads ~");
+            check(Chat::parse("/spawnpoint @s 1 2 3", true, here).position == glm::vec3(1.0f, 2.0f, 3.0f), "/spawnpoint skips the target");
+            Chat::Command me = Chat::parse("/me waves hello", false);
+            check(me.kind == Chat::Kind::Me && me.text == "waves hello", "/me is not a cheat");
+            Chat::Command msg = Chat::parse("/tell Alex meet at spawn", false);
+            check(msg.kind == Chat::Kind::Whisper && msg.sub == "Alex" && msg.text == "meet at spawn", "/tell whispers");
+            check(Chat::parse("/list", false).kind == Chat::Kind::List, "/list lists");
+            check(Chat::parse("/defaultgamemode creative", true).mode == static_cast<int>(GameMode::Creative), "/defaultgamemode");
+            Chat::Command fill = Chat::parse("/fill ~ ~ ~ ~2 ~2 ~2 stone hollow", true, here);
+            check(fill.kind == Chat::Kind::Fill && fill.item == Blocks::Stone && fill.sub == "hollow" &&
+                  fill.position2 == glm::vec3(12.0f, 66.0f, 22.0f), "/fill reads two corners, a block and a mode");
+            check(Chat::parse("/fill 0 0 0 1 1 1 air", true).item == Blocks::Air, "and can fill with air");
+            check(Chat::parse("/fill 0 0 0 1 1 1 diamond", true).kind == Chat::Kind::Unknown, "but not with an item");
+            Chat::Command clone = Chat::parse("/clone 0 60 0 3 63 3 10 70 10", true);
+            check(clone.kind == Chat::Kind::Clone && clone.position3 == glm::vec3(10.0f, 70.0f, 10.0f), "/clone reads three corners");
+            Chat::Command add = Chat::parse("/time add 1d", true);
+            check(add.kind == Chat::Kind::TimeAdd && add.value == 24000.0, "/time add 1d is a day of ticks");
+            check(Chat::parse("/time query daytime", true).kind == Chat::Kind::TimeQuery, "/time query");
+            check(Chat::parse("/time set day", true).kind == Chat::Kind::TimeSet, "/time set still works");
+            Chat::Command title = Chat::parse("/title @a title {\"text\":\"Hello\"}", true);
+            check(title.kind == Chat::Kind::Title && title.sub == "title" && title.text == "Hello", "/title reads its text");
+            check(Chat::parse("/title @s actionbar Watch out", true).text == "Watch out", "and plain words too");
+            Chat::Command enchant = Chat::parse("/enchant @s minecraft:silk_touch", true);
+            check(enchant.kind == Chat::Kind::Enchant && enchant.effect == static_cast<int>(Enchanting::Kind::SilkTouch) && enchant.amplifier == 1,
+                  "/enchant finds silk touch");
+            check(Chat::parse("/enchant @s sharpness 4", true).amplifier == 4, "with a level");
+            check(Chat::parse("/enchant @s nonsense", true).kind == Chat::Kind::Unknown, "and refuses made-up ones");
+            Chat::Command locate = Chat::parse("/locate structure minecraft:village_plains", true);
+            check(locate.kind == Chat::Kind::Locate && locate.sub == "structure" && locate.text == "village_plains", "/locate structure");
+            check(Chat::parse("/damage @s 4", true).count == 4, "/damage");
+        }
+
         section("world border: /worldborder");
         WorldBorder live;
         std::string message;

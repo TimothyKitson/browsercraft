@@ -878,6 +878,13 @@ private:
     bool m_allowCheats = false;
 
     Chat::Log m_chatLog;
+    std::string m_titleText;
+    std::string m_subtitleText;
+    std::string m_actionbarText;
+    uint32_t m_titleShownAt = 0;
+    uint32_t m_actionbarShownAt = 0;
+    void renderTitles();
+    bool locateFor(const std::string& kind, const std::string& what, std::string& output);
     GameRules::Set m_rules;
     std::string m_deathMessage;
     std::string deathMessageFor() const;

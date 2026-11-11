@@ -14,6 +14,7 @@ Work on the engine branch after 2026-11-10 that closes entries below. The entrie
 - **Entities:** donkey, mule, mooshroom, ocelot, skeleton horse, zombie horse and giant; thrown snowballs, eggs and ender pearls; falling blocks; charged creepers and the heads they win; lightning that converts pigs and villagers, charges creepers, burns and starts fires.
 - **Entities, more:** sheep colours, shearing, dyeing and regrowth (with jeb_); zombie to drowned, husk to zombie, skeleton to stray and piglin to zombified piglin conversions; mobs take fall, drowning, lava, cactus and suffocation damage; living mobs saved with the world; cats, parrots and llamas tamed, camels and llamas ridden; the wandering trader's trades and leave timer; zombie villager curing and infection; mobs hunting each other; naturally spawned babies; enderman and shulker teleporting; Dinnerbone, Grumm and Toast name tags.
 - **Mechanics:** all 51 game rules with `/gamerule` and the Edit Game Rules screen.
+- **Commands:** `/weather`, `/difficulty`, `/xp` and `/experience` (add, set, query, points and levels), `/clear`, `/setworldspawn`, `/spawnpoint`, `/me`, `/msg` `/tell` `/w`, `/list`, `/defaultgamemode`, `/fill` (replace, keep, destroy, hollow, outline), `/clone`, `/time add` and `/time query` with d/s/t units, `/title` with titles, subtitles and the action bar drawn on the HUD, `/enchant`, `/locate structure` and `/locate biome`, `/damage`. Target selectors are skipped where the command only ever means you.
 
 ## Summary
 

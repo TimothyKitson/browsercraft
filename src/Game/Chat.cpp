@@ -4,6 +4,7 @@
 #include "Entity/MobType.h"
 #include "Core/Utf8.h"
 #include "GameRules.h"
+#include "Enchanting.h"
 #include "Renderer/FontMaps.h"
 #include <cmath>
 #include <cstdio>
@@ -454,7 +455,7 @@ Chat::Command Chat::parse(const std::string& line, bool cheats, const glm::vec3&
     {
         out.kind = Kind::Help;
         out.text = cheats
-            ? "/gamemode /time /tp /give /kill /seed /say /tellraw /setblock /summon /effect /worldborder /gamerule /help"
+            ? "/gamemode /time /tp /give /kill /seed /say /me /msg /list /tellraw /title /setblock /fill /clone /summon /effect /enchant /xp /clear /weather /difficulty /defaultgamemode /setworldspawn /spawnpoint /locate /damage /worldborder /gamerule /help"
             : "/help  -  this world was made without cheats, so the rest are off";
         return out;
     }
@@ -483,11 +484,11 @@ Chat::Command Chat::parse(const std::string& line, bool cheats, const glm::vec3&
         return out;
     }
 
-    if (name == "time")
+    if (name == "time" && !(words.size() >= 2 && (lower(words[1]) == "add" || lower(words[1]) == "query")))
     {
         if (!cheats) return deny(name);
         if (words.size() < 3 || lower(words[1]) != "set")
-            return fail("/time set day|noon|night|midnight");
+            return fail("/time set|add|query ...");
 
         const std::string when = lower(words[2]);
         if (when == "day") out.time = 0.25f;
@@ -722,6 +723,245 @@ Chat::Command Chat::parse(const std::string& line, bool cheats, const glm::vec3&
         out.seconds = seconds;
         out.text = std::string("Applied ") + Effects::name(kind) + ".";
         return out;
+    }
+
+    {
+        size_t at = 1;
+        auto target = [&]() { if (at < words.size() && !words[at].empty() && words[at][0] == '@') ++at; };
+        auto rest = [&](size_t from) {
+            std::string text;
+            for (size_t k = from; k < words.size(); ++k) text += (k > from ? " " : "") + words[k];
+            return text;
+        };
+        auto triple = [&](size_t from, const glm::vec3& base, glm::vec3& outPos) {
+            if (from + 2 >= words.size()) return false;
+            return coordinate(words[from], base.x, outPos.x) && coordinate(words[from + 1], base.y, outPos.y) &&
+                   coordinate(words[from + 2], base.z, outPos.z);
+        };
+        if (name == "me")
+        {
+            if (words.size() < 2) return fail("/me <action>");
+            out.kind = Kind::Me;
+            out.text = rest(1);
+            return out;
+        }
+        if (name == "msg" || name == "tell" || name == "w")
+        {
+            if (words.size() < 3) return fail("/msg <player> <message>");
+            out.kind = Kind::Whisper;
+            out.sub = words[1];
+            out.text = rest(2);
+            return out;
+        }
+        if (name == "list")
+        {
+            out.kind = Kind::List;
+            return out;
+        }
+        if (name == "weather")
+        {
+            if (!cheats) return deny(name);
+            if (words.size() < 2) return fail("/weather clear|rain|thunder [seconds]");
+            const std::string kind = lower(words[1]);
+            if (kind != "clear" && kind != "rain" && kind != "thunder") return fail("No weather called " + words[1] + ".");
+            out.kind = Kind::Weather;
+            out.sub = kind;
+            out.seconds = 0.0f;
+            if (words.size() >= 3) number(words[2], out.seconds);
+            out.text = kind == "clear" ? "Set the weather to clear" : kind == "rain" ? "Set the weather to rain" : "Set the weather to rain & thunder";
+            return out;
+        }
+        if (name == "difficulty")
+        {
+            out.kind = Kind::Difficulty;
+            out.mode = -1;
+            if (words.size() >= 2)
+            {
+                if (!cheats) return deny(name);
+                const std::string level = lower(words[1]);
+                out.mode = level == "peaceful" || level == "0" ? 0 : level == "easy" || level == "1" ? 1
+                         : level == "normal" || level == "2" ? 2 : level == "hard" || level == "3" ? 3 : -2;
+                if (out.mode == -2) return fail("No difficulty called " + words[1] + ".");
+                out.text = "The difficulty has been set to " + level;
+            }
+            return out;
+        }
+        if (name == "xp" || name == "experience")
+        {
+            if (!cheats) return deny(name);
+            std::string action = words.size() >= 2 ? lower(words[1]) : "";
+            size_t index = 2;
+            if (action != "add" && action != "set" && action != "query") { action = "add"; index = 1; }
+            at = index;
+            target();
+            index = at;
+            if (action == "query")
+            {
+                out.kind = Kind::Experience;
+                out.sub = "query";
+                out.mode = index < words.size() && lower(words[index]) == "levels" ? 1 : 0;
+                return out;
+            }
+            if (index >= words.size()) return fail("/xp add|set <amount> [points|levels]");
+            std::string amount = words[index];
+            bool levels = false;
+            if (!amount.empty() && (amount.back() == 'L' || amount.back() == 'l')) { levels = true; amount.pop_back(); }
+            float value = 0.0f;
+            if (!number(amount, value)) return fail("/xp wants a number.");
+            if (index + 1 < words.size() && lower(words[index + 1]) == "levels") levels = true;
+            out.kind = Kind::Experience;
+            out.sub = action;
+            out.count = static_cast<int>(value);
+            out.mode = levels ? 1 : 0;
+            out.text = (action == "set" ? "Set " : "Gave ") + std::to_string(out.count) + (levels ? " experience levels" : " experience points");
+            return out;
+        }
+        if (name == "clear")
+        {
+            if (!cheats) return deny(name);
+            target();
+            out.kind = Kind::Clear;
+            out.item = Blocks::Air;
+            out.count = -1;
+            if (at < words.size())
+            {
+                out.item = lookUp(words[at]);
+                if (out.item == Blocks::Air) return fail("Nothing called " + words[at] + ".");
+                if (at + 1 < words.size())
+                {
+                    float most = 0.0f;
+                    if (number(words[at + 1], most)) out.count = static_cast<int>(most);
+                }
+            }
+            return out;
+        }
+        if (name == "setworldspawn" || name == "spawnpoint")
+        {
+            if (!cheats) return deny(name);
+            if (name == "spawnpoint") target();
+            out.kind = name == "setworldspawn" ? Kind::SetWorldSpawn : Kind::SpawnPoint;
+            out.position = origin;
+            if (at < words.size() && !triple(at, origin, out.position)) return fail("/" + name + " [x y z]");
+            out.text = "Set the spawn point to " + std::to_string(static_cast<int>(std::floor(out.position.x))) + ", " +
+                       std::to_string(static_cast<int>(std::floor(out.position.y))) + ", " +
+                       std::to_string(static_cast<int>(std::floor(out.position.z)));
+            return out;
+        }
+        if (name == "defaultgamemode")
+        {
+            if (!cheats) return deny(name);
+            if (words.size() < 2) return fail("/defaultgamemode survival|creative|adventure|spectator");
+            const std::string wanted = lower(words[1]);
+            out.mode = wanted == "creative" || wanted == "1" ? static_cast<int>(GameMode::Creative)
+                     : wanted == "adventure" || wanted == "2" ? static_cast<int>(GameMode::Adventure)
+                     : wanted == "spectator" || wanted == "3" ? static_cast<int>(GameMode::Spectator) : static_cast<int>(GameMode::Survival);
+            out.kind = Kind::DefaultGameMode;
+            out.text = "The default game mode is now " + wanted;
+            return out;
+        }
+        if (name == "fill")
+        {
+            if (!cheats) return deny(name);
+            if (words.size() < 8 || !triple(1, origin, out.position) || !triple(4, origin, out.position2))
+                return fail("/fill <x1> <y1> <z1> <x2> <y2> <z2> <block> [replace|keep|destroy|hollow|outline]");
+            out.item = lookUp(words[7]);
+            if (words[7] == "air" || words[7] == "minecraft:air") out.item = Blocks::Air;
+            else if (out.item == Blocks::Air || isItem(out.item)) return fail("No block called " + words[7] + ".");
+            out.sub = words.size() >= 9 ? lower(words[8]) : "replace";
+            out.kind = Kind::Fill;
+            return out;
+        }
+        if (name == "clone")
+        {
+            if (!cheats) return deny(name);
+            if (words.size() < 10 || !triple(1, origin, out.position) || !triple(4, origin, out.position2) || !triple(7, origin, out.position3))
+                return fail("/clone <x1> <y1> <z1> <x2> <y2> <z2> <x> <y> <z>");
+            out.kind = Kind::Clone;
+            return out;
+        }
+        if (name == "time" && words.size() >= 2 && (lower(words[1]) == "add" || lower(words[1]) == "query"))
+        {
+            if (!cheats) return deny(name);
+            if (lower(words[1]) == "query")
+            {
+                out.kind = Kind::TimeQuery;
+                out.sub = words.size() >= 3 ? lower(words[2]) : "daytime";
+                return out;
+            }
+            if (words.size() < 3) return fail("/time add <ticks>");
+            std::string amount = words[2];
+            float scale = 1.0f;
+            if (!amount.empty() && (amount.back() == 'd' || amount.back() == 's' || amount.back() == 't'))
+            {
+                scale = amount.back() == 'd' ? 24000.0f : amount.back() == 's' ? 20.0f : 1.0f;
+                amount.pop_back();
+            }
+            float ticks = 0.0f;
+            if (!number(amount, ticks)) return fail("/time add wants a number.");
+            out.kind = Kind::TimeAdd;
+            out.value = ticks * scale;
+            out.text = "Set the time";
+            return out;
+        }
+        if (name == "title")
+        {
+            if (!cheats) return deny(name);
+            target();
+            if (at >= words.size()) return fail("/title <player> title|subtitle|actionbar|clear|reset <text>");
+            out.kind = Kind::Title;
+            out.sub = lower(words[at]);
+            std::string raw = rest(at + 1);
+            std::string shown;
+            out.text = textComponent(raw, shown) ? shown : raw;
+            return out;
+        }
+        if (name == "enchant")
+        {
+            if (!cheats) return deny(name);
+            target();
+            if (at >= words.size()) return fail("/enchant <player> <enchantment> [level]");
+            std::string wanted = lower(words[at]);
+            if (wanted.rfind("minecraft:", 0) == 0) wanted = wanted.substr(10);
+            int found = -1;
+            for (int k = 0; k < static_cast<int>(Enchanting::Kind::Count); ++k)
+            {
+                std::string candidate = lower(Enchanting::name(static_cast<Enchanting::Kind>(k)));
+                for (char& c : candidate) if (c == ' ') c = '_';
+                if (candidate == wanted) found = k;
+            }
+            if (found < 0) return fail("No enchantment called " + words[at] + ".");
+            out.kind = Kind::Enchant;
+            out.effect = found;
+            out.amplifier = 1;
+            if (at + 1 < words.size())
+            {
+                float level = 1.0f;
+                if (number(words[at + 1], level)) out.amplifier = static_cast<int>(level);
+            }
+            return out;
+        }
+        if (name == "locate")
+        {
+            if (!cheats) return deny(name);
+            if (words.size() < 3) return fail("/locate structure|biome <name>");
+            out.kind = Kind::Locate;
+            out.sub = lower(words[1]);
+            out.text = lower(words[2]);
+            if (out.text.rfind("minecraft:", 0) == 0) out.text = out.text.substr(10);
+            return out;
+        }
+        if (name == "damage")
+        {
+            if (!cheats) return deny(name);
+            target();
+            if (at >= words.size()) return fail("/damage <target> <amount>");
+            float amount = 0.0f;
+            if (!number(words[at], amount)) return fail("/damage wants a number.");
+            out.kind = Kind::Damage;
+            out.count = static_cast<int>(amount);
+            out.text = "Applied " + std::to_string(out.count) + " damage";
+            return out;
+        }
     }
 
     if (name == "gamerule")

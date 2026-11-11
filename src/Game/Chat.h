@@ -39,6 +39,24 @@ namespace Chat
         WorldBorder,
         GameRuleQuery,
         GameRuleSet,
+        Weather,
+        Difficulty,
+        Experience,
+        Clear,
+        SetWorldSpawn,
+        SpawnPoint,
+        Me,
+        Whisper,
+        List,
+        DefaultGameMode,
+        Fill,
+        Clone,
+        TimeAdd,
+        TimeQuery,
+        Title,
+        Enchant,
+        Locate,
+        Damage,
     };
 
     struct Command
@@ -58,6 +76,8 @@ namespace Chat
         std::string sub;
         double value = 0.0;
         double value2 = 0.0;
+        glm::vec3 position2{ 0.0f };
+        glm::vec3 position3{ 0.0f };
     };
 
     // `cheats` decides whether anything beyond chat and /help is allowed.

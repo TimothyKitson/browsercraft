@@ -5366,6 +5366,19 @@ bool Application::frame()
                     m_world->setBlock(px + 5, py + 1, pz + 2, lightBlockOf(15));
                     m_world->setBlock(px + 5, py + 1, pz, lightBlockOf(7));
                     m_world->setBlock(px + 7, py + 1, pz, Blocks::StructureVoid);
+                    if (m_startupScreen == "commands")
+                    {
+                        const char* lines[] = { "/fill ~6 ~ ~-5 ~9 ~2 ~-4 stone_bricks outline", "/clone ~6 ~ ~-5 ~9 ~2 ~-4 ~6 ~ ~4",
+                                                "/title @s subtitle {\"text\":\"A subtitle under it\"}",
+                                                "/title @s title {\"text\":\"Commands\"}", "/title @s actionbar The action bar",
+                                                "/locate structure village", "/locate biome forest", "/xp add @s 7 levels", "/me checks the map" };
+                        for (const char* line : lines)
+                        {
+                            std::string said;
+                            runCommand(line, m_player.position, true, said);
+                            if (!said.empty()) m_chatLog.add(said);
+                        }
+                    }
                     m_inventory.setSelectedSlot(0);
                     m_inventory.slot(0) = ItemStack{ Blocks::Barrier, 1 };
                     m_inventory.slot(1) = ItemStack{ static_cast<StackId>(lightBlockOf(15)), 1 };
@@ -18314,6 +18327,7 @@ void Application::render()
     const bool inWorld = m_screen == Screen::Playing || m_screen == Screen::Paused ||
                          m_screen == Screen::Dead;
     if (inWorld && !m_hudHidden) renderHud();
+    if (inWorld && !m_hudHidden) renderTitles();
     if (inWorld && (!m_hudHidden || m_chatOpen)) renderChat();
     if (inWorld && m_showDebug && m_world) renderDebugOverlay();
 
@@ -19001,6 +19015,282 @@ bool Application::runCommand(const std::string& line, const glm::vec3& origin, b
             m_rules.set(static_cast<GameRules::Rule>(command.mob), command.count);
             break;
 
+        case Chat::Kind::Me:
+        {
+            const std::string who = fromBlock ? "@" : (m_playerName.empty() ? "You" : m_playerName);
+            output = "* " + who + " " + command.text;
+            return true;
+        }
+
+        case Chat::Kind::Whisper:
+        {
+            const std::string who = fromBlock ? "@" : (m_playerName.empty() ? "You" : m_playerName);
+            const bool self = command.sub == "@s" || command.sub == "@p" || command.sub == who;
+            if (!self && !m_net.active())
+            {
+                output = "No player was found";
+                return false;
+            }
+            output = self ? who + " whispers to you: " + command.text : "You whisper to " + command.sub + ": " + command.text;
+            return true;
+        }
+
+        case Chat::Kind::List:
+        {
+            const int count = m_net.active() ? m_net.playerCount() : 1;
+            output = "There are " + std::to_string(count) + " of a max of 8 players online: " +
+                     (m_playerName.empty() ? std::string("You") : m_playerName);
+            return true;
+        }
+
+        case Chat::Kind::Weather:
+        {
+            const Weather::Kind kind = command.sub == "clear" ? Weather::Kind::Clear
+                                     : command.sub == "rain" ? Weather::Kind::Rain : Weather::Kind::Storm;
+            Weather::begin(m_weather, kind, m_weatherSeed);
+            if (command.seconds > 0.0f) m_weather.secondsLeft = command.seconds;
+            break;
+        }
+
+        case Chat::Kind::Difficulty:
+            if (command.mode < 0)
+            {
+                output = std::string("The difficulty is ") + Worlds::difficultyName(m_worldMeta.difficulty);
+                return true;
+            }
+            if (m_worldMeta.difficultyLocked)
+            {
+                output = "The difficulty is locked for this world.";
+                return false;
+            }
+            setDifficulty(static_cast<Worlds::Difficulty>(command.mode));
+            break;
+
+        case Chat::Kind::Experience:
+        {
+            const int level = Experience::levelFor(m_player.experience);
+            if (command.sub == "query")
+            {
+                output = command.mode == 1 ? "You have " + std::to_string(level) + " experience levels"
+                                           : "You have " + std::to_string(m_player.experience - Experience::totalForLevel(level)) + " experience points";
+                return true;
+            }
+            const int into = m_player.experience - Experience::totalForLevel(level);
+            if (command.mode == 1)
+            {
+                const int target = std::max(0, command.sub == "set" ? command.count : level + command.count);
+                m_player.experience = Experience::totalForLevel(target) + std::min(into, Experience::toNextLevel(target) - 1);
+            }
+            else if (command.sub == "set")
+            {
+                if (command.count < 0 || command.count >= Experience::toNextLevel(level))
+                {
+                    output = "That is more points than this level holds.";
+                    return false;
+                }
+                m_player.experience = Experience::totalForLevel(level) + command.count;
+            }
+            else if (command.count >= 0) m_player.addExperience(command.count);
+            else m_player.experience = std::max(0, m_player.experience + command.count);
+            break;
+        }
+
+        case Chat::Kind::Clear:
+        {
+            int removed = 0;
+            int budget = command.count < 0 ? 1 << 30 : command.count;
+            const int slots[] = { Inventory::OFFHAND };
+            auto sweep = [&](ItemStack& stack) {
+                if (stack.empty() || budget <= 0) return;
+                if (command.item != Blocks::Air && stack.id != command.item) return;
+                const int take = std::min(stack.count, budget);
+                removed += take;
+                if (command.count >= 0) budget -= take;
+                stack.count -= take;
+                if (stack.count <= 0) stack.clear();
+            };
+            for (int i = 0; i < Inventory::TOTAL_SLOTS; ++i) sweep(m_inventory.slot(i));
+            for (int index : slots) sweep(m_inventory.slot(index));
+            sweep(m_inventory.cursor());
+            if (command.count == 0)
+            {
+                int found = 0;
+                for (int i = 0; i < Inventory::TOTAL_SLOTS; ++i)
+                    if (!m_inventory.slot(i).empty() && m_inventory.slot(i).id == command.item) found += m_inventory.slot(i).count;
+                output = "Found " + std::to_string(found) + " matching items";
+                return found > 0;
+            }
+            if (removed == 0)
+            {
+                output = "No items were found";
+                return false;
+            }
+            output = "Removed " + std::to_string(removed) + " item(s)";
+            return true;
+        }
+
+        case Chat::Kind::SetWorldSpawn:
+            m_spawnPoint = glm::vec3(std::floor(command.position.x) + 0.5f, std::floor(command.position.y),
+                                     std::floor(command.position.z) + 0.5f);
+            break;
+
+        case Chat::Kind::SpawnPoint:
+            m_spawnPoint = glm::vec3(std::floor(command.position.x) + 0.5f, std::floor(command.position.y),
+                                     std::floor(command.position.z) + 0.5f);
+            break;
+
+        case Chat::Kind::DefaultGameMode:
+            m_worldMeta.mode = command.mode;
+            writeWorldMeta();
+            break;
+
+        case Chat::Kind::TimeAdd:
+            m_timeOfDay = static_cast<float>(std::fmod(m_timeOfDay + command.value / 24000.0, 1.0));
+            if (m_timeOfDay < 0.0f) m_timeOfDay += 1.0f;
+            break;
+
+        case Chat::Kind::TimeQuery:
+        {
+            const int ticks = static_cast<int>(m_timeOfDay * 24000.0f) % 24000;
+            if (command.sub == "day") output = "The time is " + std::to_string(m_dayNumber);
+            else if (command.sub == "gametime") output = "The time is " + std::to_string(m_dayNumber * 24000 + ticks);
+            else output = "The time is " + std::to_string(ticks);
+            return true;
+        }
+
+        case Chat::Kind::Title:
+        {
+            const uint32_t now = SDL_GetTicks();
+            if (command.sub == "title") { m_titleText = command.text; m_titleShownAt = now; }
+            else if (command.sub == "subtitle") m_subtitleText = command.text;
+            else if (command.sub == "actionbar") { m_actionbarText = command.text; m_actionbarShownAt = now; }
+            else if (command.sub == "clear") { m_titleText.clear(); m_actionbarText.clear(); }
+            else if (command.sub == "reset") { m_titleText.clear(); m_subtitleText.clear(); m_actionbarText.clear(); }
+            else if (command.sub == "times") {}
+            else
+            {
+                output = "/title <player> title|subtitle|actionbar|clear|reset <text>";
+                return false;
+            }
+            output.clear();
+            return true;
+        }
+
+        case Chat::Kind::Enchant:
+        {
+            ItemStack& held = m_inventory.selected();
+            const Enchanting::Kind kind = static_cast<Enchanting::Kind>(command.effect);
+            if (held.empty() || !Enchanting::appliesTo(kind, held.id))
+            {
+                output = "That item cannot take " + std::string(Enchanting::name(kind)) + ".";
+                return false;
+            }
+            if (command.amplifier < 1 || command.amplifier > Enchanting::maxLevel(kind))
+            {
+                output = "The highest level for " + std::string(Enchanting::name(kind)) + " is " + std::to_string(Enchanting::maxLevel(kind)) + ".";
+                return false;
+            }
+            const uint32_t high = held.enchantments & 0xFF000000u;
+            held.enchantments = high | (Enchanting::withLevel(held.enchantments & 0x00FFFFFFu, kind, command.amplifier) & 0x00FFFFFFu);
+            output = "Applied enchantment " + std::string(Enchanting::name(kind)) + " to your item";
+            return true;
+        }
+
+        case Chat::Kind::Locate:
+            return locateFor(command.sub, command.text, output);
+
+        case Chat::Kind::Damage:
+            if (command.count <= 0 || m_player.creative() || m_player.spectator())
+            {
+                output = "Nothing happened.";
+                return false;
+            }
+            m_player.clearHurtCooldown();
+            m_player.cause = "generic";
+            m_player.damage(command.count);
+            break;
+
+        case Chat::Kind::Fill:
+        case Chat::Kind::Clone:
+        {
+            if (!m_world) return false;
+            const glm::ivec3 a = glm::ivec3(glm::floor(command.position));
+            const glm::ivec3 b = glm::ivec3(glm::floor(command.position2));
+            const glm::ivec3 lo = glm::min(a, b);
+            const glm::ivec3 hi = glm::max(a, b);
+            const long long volume = static_cast<long long>(hi.x - lo.x + 1) * (hi.y - lo.y + 1) * (hi.z - lo.z + 1);
+            if (volume > 32768)
+            {
+                output = "Too many blocks in the specified area (maximum 32768, specified " + std::to_string(volume) + ")";
+                return false;
+            }
+            if (lo.y < 0 || hi.y >= Chunk::SY)
+            {
+                output = "That position is out of the world.";
+                return false;
+            }
+            int changed = 0;
+            if (command.kind == Chat::Kind::Fill)
+            {
+                const BlockId block = asBlock(command.item);
+                const std::string& mode = command.sub;
+                for (int x = lo.x; x <= hi.x; ++x)
+                    for (int y = lo.y; y <= hi.y; ++y)
+                        for (int z = lo.z; z <= hi.z; ++z)
+                        {
+                            const bool edge = x == lo.x || x == hi.x || y == lo.y || y == hi.y || z == lo.z || z == hi.z;
+                            const BlockId was = m_world->getBlock(x, y, z);
+                            BlockId put = block;
+                            if (mode == "keep" && was != Blocks::Air) continue;
+                            if (mode == "outline" && !edge) continue;
+                            if (mode == "hollow" && !edge) put = Blocks::Air;
+                            if (was == put) continue;
+                            if (mode == "destroy" && was != Blocks::Air && m_rules.on(GameRules::Rule::DoTileDrops))
+                            {
+                                const StackId drop = blockDrop(was);
+                                if (drop != Blocks::Air) m_drops.spawn(glm::vec3(x + 0.5f, y + 0.5f, z + 0.5f), drop, 1);
+                            }
+                            m_world->setBlock(x, y, z, put);
+                            m_net.onLocalBlockChange(x, y, z, put);
+                            ++changed;
+                        }
+            }
+            else
+            {
+                const glm::ivec3 to = glm::ivec3(glm::floor(command.position3));
+                const glm::ivec3 size = hi - lo + 1;
+                if (to.y < 0 || to.y + size.y > Chunk::SY)
+                {
+                    output = "That position is out of the world.";
+                    return false;
+                }
+                std::vector<BlockId> copy;
+                copy.reserve(static_cast<size_t>(volume));
+                for (int x = 0; x < size.x; ++x)
+                    for (int y = 0; y < size.y; ++y)
+                        for (int z = 0; z < size.z; ++z)
+                            copy.push_back(m_world->getBlock(lo.x + x, lo.y + y, lo.z + z));
+                size_t index = 0;
+                for (int x = 0; x < size.x; ++x)
+                    for (int y = 0; y < size.y; ++y)
+                        for (int z = 0; z < size.z; ++z)
+                        {
+                            const BlockId put = copy[index++];
+                            if (m_world->getBlock(to.x + x, to.y + y, to.z + z) == put) continue;
+                            m_world->setBlock(to.x + x, to.y + y, to.z + z, put);
+                            m_net.onLocalBlockChange(to.x + x, to.y + y, to.z + z, put);
+                            ++changed;
+                        }
+            }
+            if (changed == 0)
+            {
+                output = command.kind == Chat::Kind::Fill ? "No blocks were filled" : "No blocks were cloned";
+                return false;
+            }
+            output = (command.kind == Chat::Kind::Fill ? "Successfully filled " : "Successfully cloned ") + std::to_string(changed) + " block(s)";
+            return true;
+        }
+
         case Chat::Kind::Seed:
             output = m_world ? "Seed: " + std::to_string(m_world->seed()) : std::string("No world loaded.");
             return m_world != nullptr;
@@ -19011,6 +19301,168 @@ bool Application::runCommand(const std::string& line, const glm::vec3& origin, b
 
     output = command.text;
     return Chat::succeeded(command);
+}
+
+bool Application::locateFor(const std::string& kind, const std::string& what, std::string& output)
+{
+    if (!m_world)
+    {
+        output = "No world loaded.";
+        return false;
+    }
+    const WorldGen& gen = m_world->generator();
+    const int px = static_cast<int>(std::floor(m_player.position.x));
+    const int pz = static_cast<int>(std::floor(m_player.position.z));
+    bool found = false;
+    int fx = 0, fz = 0;
+    std::string shown = what;
+    if (kind == "biome")
+    {
+        const Biomes::Kind wanted = Biomes::fromId("minecraft:" + what, Biomes::Kind::Count);
+        if (wanted == Biomes::Kind::Count || !Biomes::known("minecraft:" + what))
+        {
+            output = "There is no biome called " + what + ".";
+            return false;
+        }
+        if (Biomes::dimension(wanted) != m_dimension)
+        {
+            output = "Could not find a biome of type minecraft:" + what + " within reasonable distance";
+            return false;
+        }
+        for (int ring = 0; ring <= 200 && !found; ++ring)
+        {
+            const int r = ring * 32;
+            for (int step = -ring; step <= ring && !found; ++step)
+            {
+                const int d = step * 32;
+                const glm::ivec2 probes[4] = { { px + d, pz - r }, { px + d, pz + r }, { px - r, pz + d }, { px + r, pz + d } };
+                for (const glm::ivec2& probe : probes)
+                {
+                    if (gen.kindIn(m_dimension, probe.x, 64, probe.y) != wanted) continue;
+                    found = true;
+                    fx = probe.x;
+                    fz = probe.y;
+                    break;
+                }
+            }
+        }
+        shown = "minecraft:" + what;
+    }
+    else if (kind == "structure")
+    {
+        auto fromSpot = [&](const Structures::Spot& spot) {
+            if (!spot.exists) return;
+            found = true;
+            fx = spot.chunkX * 16 + 8;
+            fz = spot.chunkZ * 16 + 8;
+        };
+        std::string name = what;
+        if (name.rfind("village", 0) == 0) name = "village";
+        if (name.rfind("ruined_portal", 0) == 0) name = "ruined_portal";
+        if (name.rfind("shipwreck", 0) == 0) name = "shipwreck";
+        const bool overworld = m_dimension == Dimension::Overworld;
+        if (name == "village" && overworld)
+        {
+            const Village::Site site = gen.nearestVillage(px, pz, 6);
+            if (site.exists) { found = true; fx = site.x; fz = site.z; }
+        }
+        else if (name == "trial_chambers" && overworld)
+        {
+            const TrialChamber::Site site = gen.nearestChamber(px, pz, 6);
+            if (site.exists) { found = true; fx = site.x; fz = site.z; }
+        }
+        else if (name == "stronghold" && overworld)
+        {
+            const Stronghold::Site site = gen.nearestStronghold(px, pz);
+            if (site.exists) { found = true; fx = site.x; fz = site.z; }
+        }
+        else if (name == "monument" && overworld) fromSpot(gen.nearestMonument(px, pz, 8));
+        else if (name == "shipwreck" && overworld) fromSpot(gen.nearestShipwreck(px, pz, 8));
+        else if (name == "ancient_city" && overworld) fromSpot(gen.nearestAncientCity(px, pz, 8));
+        else if (name == "end_city" && m_dimension == Dimension::End) fromSpot(gen.nearestEndCity(px, pz, 8));
+        else if (name == "bastion_remnant" && m_dimension == Dimension::Nether) fromSpot(gen.nearestBastion(px, pz, 8));
+        else
+        {
+            const struct { const char* id; WorldGen::Landmark kind; } landmarks[] = {
+                { "desert_pyramid", WorldGen::Landmark::DesertPyramid }, { "jungle_pyramid", WorldGen::Landmark::JungleTemple },
+                { "igloo", WorldGen::Landmark::Igloo }, { "ruined_portal", WorldGen::Landmark::RuinedPortal },
+                { "pillager_outpost", WorldGen::Landmark::PillagerOutpost }, { "mansion", WorldGen::Landmark::WoodlandMansion },
+                { "swamp_hut", WorldGen::Landmark::SwampHut },
+            };
+            bool known = false;
+            for (const auto& landmark : landmarks)
+                if (name == landmark.id)
+                {
+                    known = true;
+                    if (overworld) fromSpot(gen.nearestLandmark(landmark.kind, px, pz, 8));
+                }
+            const char* elsewhere[] = { "village", "trial_chambers", "stronghold", "monument", "shipwreck", "ancient_city", "end_city", "bastion_remnant" };
+            for (const char* id : elsewhere) if (name == id) known = true;
+            if (!known)
+            {
+                output = "There is no structure called " + what + ".";
+                return false;
+            }
+        }
+        shown = "minecraft:" + what;
+    }
+    else
+    {
+        output = "/locate structure|biome <name>";
+        return false;
+    }
+    if (!found)
+    {
+        output = "Could not find a " + std::string(kind == "biome" ? "biome" : "structure") + " of type " + shown + " within reasonable distance";
+        return false;
+    }
+    const int distance = static_cast<int>(std::round(std::sqrt(static_cast<double>(fx - px) * (fx - px) + static_cast<double>(fz - pz) * (fz - pz))));
+    output = "The nearest " + shown + " is at [" + std::to_string(fx) + ", ~, " + std::to_string(fz) + "] (" + std::to_string(distance) + " blocks away)";
+    return true;
+}
+
+void Application::renderTitles()
+{
+    const uint32_t now = SDL_GetTicks();
+    m_ui.setScale(static_cast<float>(guiScale()));
+    const float w = m_ui.canvasWidth();
+    const float h = m_ui.canvasHeight();
+    if (!m_actionbarText.empty())
+    {
+        const float age = (now - m_actionbarShownAt) / 1000.0f;
+        if (age > 3.0f) m_actionbarText.clear();
+        else
+        {
+            const float alpha = std::min(1.0f, (3.0f - age) / 0.5f);
+            const float width = UIRenderer::textWidth(m_actionbarText, 1.0f);
+            m_ui.textWithShadow(m_actionbarText, (w - width) * 0.5f, h - 68.0f, 1.0f, glm::vec4(1.0f, 1.0f, 1.0f, alpha));
+        }
+    }
+    if (!m_titleText.empty())
+    {
+        const float age = (now - m_titleShownAt) / 1000.0f;
+        const float fadeIn = 0.5f, stay = 3.5f, fadeOut = 1.0f;
+        if (age > fadeIn + stay + fadeOut)
+        {
+            m_titleText.clear();
+            m_subtitleText.clear();
+        }
+        else
+        {
+            const float alpha = age < fadeIn ? age / fadeIn : age > fadeIn + stay ? 1.0f - (age - fadeIn - stay) / fadeOut : 1.0f;
+            const glm::vec4 colour(1.0f, 1.0f, 1.0f, std::clamp(alpha, 0.0f, 1.0f));
+            const float big = 4.0f;
+            const float titleWidth = UIRenderer::textWidth(m_titleText, big);
+            m_ui.textWithShadow(m_titleText, (w - titleWidth) * 0.5f, h * 0.5f - 10.0f * big, big, colour);
+            if (!m_subtitleText.empty())
+            {
+                const float small = 2.0f;
+                const float subWidth = UIRenderer::textWidth(m_subtitleText, small);
+                m_ui.textWithShadow(m_subtitleText, (w - subWidth) * 0.5f, h * 0.5f + 5.0f * small, small, colour);
+            }
+        }
+    }
+    m_ui.setScale(1.0f);
 }
 
 namespace
