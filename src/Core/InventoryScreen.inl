@@ -3880,6 +3880,7 @@ void Application::takeTradeResult(bool all)
         record.xp += deal.villagerXp;
         award("adventure/trade", "traded");
     m_stats.add(Stats::Custom::TradedWithVillager);
+    if (!m_tradeWandering && reputationOf(m_tradeSeed) < 25) gossip(m_player.position, m_tradeSeed, 1, 0);
         if (m_player.position.y >= static_cast<float>(Chunk::SY) - 2.0f) award("adventure/trade_at_world_height", "trade_at_world_height");
         for (const Mob& mob : m_entities.mobs())
             if (mob.typeId() == MobId::Villager && mob.birthSeed() == m_tradeSeed)

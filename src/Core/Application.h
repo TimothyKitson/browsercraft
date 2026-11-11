@@ -589,6 +589,10 @@ private:
     void pushArmorStands(const Piston::Moved& moved);
     float m_patrolTimer = 600.0f;
     float m_meltClock = 0.0f;
+    std::map<uint32_t, int> m_reputation;
+    float m_gossipClock = 0.0f;
+    void gossip(const glm::vec3& at, uint32_t villager, int change, int spread);
+    int reputationOf(uint32_t villager) const;
     bool usePot(const glm::ivec3& at);
     bool useShelf(const glm::ivec3& at, BlockId used);
     std::vector<ArmorStands::Stand> standsHere(float reach) const;

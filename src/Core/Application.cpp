@@ -903,6 +903,13 @@ void Application::loadLevel()
         }
     }
     m_seenEndPoem = std::filesystem::exists(m_savePath + "/seen_credits.txt");
+    m_reputation.clear();
+    {
+        std::ifstream told(m_savePath + "/gossip.txt");
+        unsigned long long who = 0;
+        int score = 0;
+        while (told >> who >> score) m_reputation[static_cast<uint32_t>(who)] = score;
+    }
     m_dragonSlain = std::filesystem::exists(m_savePath + "/dragon_slain.txt");
     m_hasBed = false;
     m_bedForced = false;
@@ -1387,6 +1394,12 @@ void Application::saveLevel()
     {
         std::ofstream seen(m_savePath + "/seen_credits.txt");
         if (seen) seen << "1\n";
+    }
+    {
+        std::ofstream told(m_savePath + "/gossip.txt");
+        if (told)
+            for (const auto& [who, score] : m_reputation)
+                if (score != 0) told << who << ' ' << score << '\n';
     }
     {
         std::ofstream notes(m_savePath + "/notes.txt");
@@ -9625,6 +9638,7 @@ void Application::updateMining(float deltaTime)
                     if (Tools::isTool(weapon) || weapon == Items::Trident) m_stats.item(Stats::ItemStat::Used, weapon);
                 }
                 target->markPlayerHit(0, glm::length(target->position() - m_player.position));
+                if (target->typeId() == MobId::Villager) gossip(target->position(), target->birthSeed(), -5, -2);
                 {
                     const glm::vec3 chest = target->position() +
                                             glm::vec3(0.0f, target->type().height * 0.6f, 0.0f);
@@ -12982,9 +12996,38 @@ int Application::villagersNear(const glm::vec3& at, float radius) const
     return count;
 }
 
+int Application::reputationOf(uint32_t villager) const
+{
+    const auto found = m_reputation.find(villager);
+    return found == m_reputation.end() ? 0 : found->second;
+}
+
+void Application::gossip(const glm::vec3& at, uint32_t villager, int change, int spread)
+{
+    if (villager != 0)
+    {
+        int& score = m_reputation[villager];
+        score = std::clamp(score + change, -200, 200);
+    }
+    if (spread == 0) return;
+    for (const Mob& other : m_entities.mobs())
+    {
+        if (!other.alive() || other.typeId() != MobId::Villager || other.birthSeed() == villager) continue;
+        if (glm::length(other.position() - at) > 16.0f) continue;
+        int& score = m_reputation[other.birthSeed()];
+        score = std::clamp(score + spread, -200, 200);
+    }
+}
+
 std::vector<Trading::Deal> Application::tradeDeals() const
 {
     std::vector<Trading::Deal> deals = m_tradeWandering ? Trading::wandererDeals(m_tradeSeed) : Trading::dealsFor(m_tradeWith);
+    if (!m_tradeWandering)
+    {
+        const int standing = reputationOf(m_tradeSeed);
+        for (Trading::Deal& deal : deals)
+            deal.offer.wantCount = std::clamp(deal.offer.wantCount - standing / 5, 1, 64);
+    }
     if (m_player.effects.has(Effects::Kind::HeroOfTheVillage))
     {
         const int level = m_player.effects.amplifier(Effects::Kind::HeroOfTheVillage);
@@ -23561,6 +23604,22 @@ void Application::updateMobs(float deltaTime)
     // what they ought to drop -- leather, bone, string -- are items, and
     // this engine only has blocks.
     for (const auto& [at, count] : m_entities.drainInfestations()) spawnSilverfish(at, count);
+    m_gossipClock += m_worldDelta;
+    if (m_gossipClock >= 2.0f)
+    {
+        m_gossipClock = 0.0f;
+        int total = 0, heard = 0;
+        for (const Mob& villager : m_entities.mobs())
+            if (villager.alive() && villager.typeId() == MobId::Villager && glm::length(villager.position() - m_player.position) < 24.0f)
+            {
+                total += reputationOf(villager.birthSeed());
+                ++heard;
+            }
+        if (heard > 0 && total / heard <= -15 && !m_player.creative())
+            for (Mob& golem : m_entities.mobs())
+                if (golem.alive() && golem.typeId() == MobId::IronGolem && glm::length(golem.position() - m_player.position) < 24.0f)
+                    golem.provoke();
+    }
     m_meltClock += m_worldDelta;
     if (m_meltClock >= 1.0f)
     {
@@ -23591,6 +23650,7 @@ void Application::updateMobs(float deltaTime)
         if (death.captain && m_rules.on(GameRules::Rule::DoMobLoot))
             m_drops.spawnStack(death.position + glm::vec3(0.0f, 0.5f, 0.0f),
                                ItemStack{ Items::OminousBottle, 1, static_cast<int>(death.serial % 5u) });
+        if (death.byPlayer && death.type == MobId::Villager) gossip(death.position, 0, 0, -25);
         if (death.byPlayer)
         {
             m_scoreboard.addToCriterion("totalKillCount", scoreHolder(), 1);
@@ -23896,7 +23956,11 @@ void Application::updateMobs(float deltaTime)
     for (const EntityManager::Zombified& turned : m_entities.drainZombified())
     {
         if (m_entities.spawnAt(turned.into, turned.at, *m_world, turned.baby))
+        {
             m_entities.mobs().back().setYaw(turned.yaw);
+            if (turned.into == MobId::Villager && glm::length(turned.at - m_player.position) < 16.0f)
+                gossip(turned.at, m_entities.mobs().back().birthSeed(), 40, 5);
+        }
         const float distance = glm::length(turned.at - m_camera.position);
         if (distance < 32.0f)
             m_audio.play(turned.into == MobId::Zoglin ? Sound::ZoglinConvert : mobType(turned.into).voice, 1.0f - distance / 32.0f, 1.0f);
