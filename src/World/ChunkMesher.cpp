@@ -413,6 +413,7 @@ namespace
             const int axis = blockAxis(id);
             int faceTile = tileForFace(info, f, id);
             bool turned = false;
+            const int quarter = glazedTurn(id);
             if (axis == 1)
             {
                 faceTile = f == 0 ? info.tileTop : f == 1 ? info.tileBottom : info.tileSide;
@@ -489,8 +490,14 @@ namespace
                 vx[c] = static_cast<float>(lx + cx);
                 vy[c] = static_cast<float>(y) + ((cy == 1) ? topY : 0.0f);
                 vz[c] = static_cast<float>(lz + cz);
-                const float su = turned ? face.uv[c][1] : face.uv[c][0];
-                const float sv = turned ? 1.0f - face.uv[c][0] : face.uv[c][1];
+                float su = turned ? face.uv[c][1] : face.uv[c][0];
+                float sv = turned ? 1.0f - face.uv[c][0] : face.uv[c][1];
+                for (int q = 0; q < quarter; ++q)
+                {
+                    const float ou = su;
+                    su = sv;
+                    sv = 1.0f - ou;
+                }
                 vu[c] = (su == 0.0f) ? uv.u0 : uv.u1;
                 vv[c] = (sv == 0.0f) ? uv.vTop : uv.vBottom;
 

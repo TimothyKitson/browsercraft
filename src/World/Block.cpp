@@ -4195,6 +4195,54 @@ namespace
         { "Farmland", FarmlandDryTop, Dirt, FarmlandSide, true, true, RenderType::Cube, 0, 0.6f },
         { "Campfire", CampfireLog, CampfireLog, CampfireLog, true, false, RenderType::Cube, 0, 2.0f },
         { "Soul Campfire", CampfireLog, CampfireLog, CampfireLog, true, false, RenderType::Cube, 0, 2.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
     };
 
     static_assert(sizeof(EXT_TABLE) / sizeof(EXT_TABLE[0]) == static_cast<size_t>(Blocks::ExtCount - Blocks::ExtFirst),
@@ -4419,7 +4467,22 @@ namespace
 BlockId axisBase(BlockId id)
 {
     if (id >= Blocks::AxisRunFirst && id <= Blocks::AxisRunLast) return AXIS_BASE[(id - Blocks::AxisRunFirst) / 2];
+    if (id >= Blocks::GlazedTurnFirst && id <= Blocks::GlazedTurnLast)
+        return static_cast<BlockId>(Blocks::GlazedTerracottaFirst + (id - Blocks::GlazedTurnFirst) / 3);
     return id;
+}
+
+int glazedTurn(BlockId id)
+{
+    if (id >= Blocks::GlazedTurnFirst && id <= Blocks::GlazedTurnLast) return 1 + (id - Blocks::GlazedTurnFirst) % 3;
+    return 0;
+}
+
+BlockId glazedOf(BlockId base, int turn)
+{
+    base = axisBase(base);
+    if (!isGlazedTerracotta(base) || (turn & 3) == 0) return base;
+    return static_cast<BlockId>(Blocks::GlazedTurnFirst + (base - Blocks::GlazedTerracottaFirst) * 3 + (turn & 3) - 1);
 }
 
 int blockAxis(BlockId id)
@@ -4448,7 +4511,8 @@ BlockId withAxis(BlockId base, int axis)
 const BlockInfo& blockInfo(BlockId id)
 {
     if (id < Blocks::Count) return TABLE[id];
-    if (id >= Blocks::AxisRunFirst && id <= Blocks::AxisRunLast) return blockInfo(axisBase(id));
+    if ((id >= Blocks::AxisRunFirst && id <= Blocks::AxisRunLast) || (id >= Blocks::GlazedTurnFirst && id <= Blocks::GlazedTurnLast))
+        return blockInfo(axisBase(id));
     if (id >= Blocks::ExtFirst && id < Blocks::ExtCount) return EXT_TABLE[id - Blocks::ExtFirst];
     return TABLE[Blocks::Air];
 }
@@ -4685,7 +4749,7 @@ int shapeWood(BlockId id)
 
 bool isObtainable(BlockId id)
 {
-    if (blockAxis(id) != 0) return false;
+    if (blockAxis(id) != 0 || glazedTurn(id) != 0) return false;
     if (isFluid(id) && !isFluidSource(id)) return false;
     if (isAmethystGrowth(id) && id != Blocks::AmethystCluster) return false;
     if (furnaceFacing(id) != 0) return false;

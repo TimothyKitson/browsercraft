@@ -706,6 +706,7 @@ namespace Blocks
         AxisRunFirst, AxisRunLast = AxisRunFirst + 65,
         FarmlandDry,
         CampfireUnlit, SoulCampfireUnlit,
+        GlazedTurnFirst, GlazedTurnLast = GlazedTurnFirst + 47,
         ExtCount
     };
 }
@@ -820,6 +821,8 @@ BlockId axisBase(BlockId id);
 int blockAxis(BlockId id);
 bool hasAxis(BlockId id);
 BlockId withAxis(BlockId base, int axis);
+int glazedTurn(BlockId id);
+BlockId glazedOf(BlockId base, int turn);
 inline bool isSnowLayer(BlockId id) { return id >= Blocks::SnowLayerFirst && id <= Blocks::SnowLayerLast; }
 inline int snowLayers(BlockId id) { return isSnowLayer(id) ? id - Blocks::SnowLayerFirst + 1 : 0; }
 inline BlockId snowLayerOf(int layers)
