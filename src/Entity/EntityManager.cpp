@@ -475,7 +475,8 @@ void EntityManager::trySpawnWave(const World& world, const glm::vec3& playerPosi
                 // and some livestock between the houses.
                 const float roll = random01();
                 const bool desert = world.generator().biomeAt(x, z) == Biome::Desert;
-                species = roll < 0.70f  ? MobId::Villager
+                species = Village::abandoned(home, world.seed()) ? (roll < 0.8f ? MobId::ZombieVillager : MobId::Zombie)
+                        : roll < 0.70f  ? MobId::Villager
                         : roll < 0.78f  ? MobId::IronGolem
                         : roll < 0.84f  ? (desert && roll < 0.81f ? MobId::Camel : MobId::Cat)
                                         : PASSIVE_SPECIES[static_cast<int>(random01() * 4.0f) & 3];

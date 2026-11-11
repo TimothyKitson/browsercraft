@@ -594,6 +594,15 @@ namespace
             check(Village::isHouse(Village::Kind::Mason) && !Village::isHouse(Village::Kind::Pen) && !Village::isHouse(Village::Kind::Meeting),
                   "a job house is a house; a pen and a meeting point are not");
             check(!VillageLoot::rollFor(Village::Kind::Toolsmith, 3, 70, 3, 2024u).empty(), "and a job house's chest is filled");
+            int ruins = 0, lived = 0;
+            for (int rz = -30; rz <= 30; ++rz)
+                for (int rx = -30; rx <= 30; ++rx)
+                {
+                    const Village::Site site = Village::siteFor(rx, rz, 2024u);
+                    if (!site.exists) continue;
+                    if (Village::abandoned(site, 2024u)) ++ruins; else ++lived;
+                }
+            check(ruins > 0 && ruins * 20 < lived, "about one village in fifty stands abandoned, cobwebbed and full of zombie villagers");
         }
 
         {

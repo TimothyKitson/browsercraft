@@ -44,6 +44,8 @@ namespace Village
     // one does not.
     int regionOf(int world);
 
+    bool abandoned(const Site& site, uint32_t seed);
+
     enum class Kind : uint8_t
     {
         // Houses, which differ inside and in what their chest holds.

@@ -4603,8 +4603,30 @@ void WorldGen::buildVillages(Chunk& chunk) const
 
             layPaths(chunk, site, clearX0, clearZ0, clearX1, clearZ1);
 
+            const bool ruin = Village::abandoned(site, m_seed);
+            if (ruin)
+            {
+                palette.footing = Blocks::MossyCobblestone;
+                if (palette.wall == Blocks::Planks || palette.wall == Blocks::Log) palette.wall = Blocks::Cobblestone;
+            }
             for (const Village::Building& building : Village::plan(site, m_seed))
+            {
+                if (ruin && building.kind == Village::Kind::Lamp) continue;
                 stampBuilding(chunk, building, palette);
+                if (!ruin || !Village::isHouse(building.kind)) continue;
+                const int ground = surfaceHeight(building.x + building.width / 2, building.z + building.depth / 2);
+                for (int x = building.x + 1; x < building.x + building.width - 1; ++x)
+                    for (int z = building.z + 1; z < building.z + building.depth - 1; ++z)
+                        for (int dy = 1; dy <= 3; ++dy)
+                        {
+                            const int lx = x - chunk.position().x * Chunk::SX, lz = z - chunk.position().z * Chunk::SZ;
+                            if (!Chunk::inBounds(lx, ground + dy, lz)) continue;
+                            const BlockId here = chunk.getBlock(lx, ground + dy, lz);
+                            if (here == Blocks::Torch) chunk.setBlockRaw(lx, ground + dy, lz, Blocks::Air);
+                            else if (here == Blocks::Air && hashToFloat(hashCoords(x, ground + dy, z, m_seed + 55078)) < 0.12f)
+                                chunk.setBlockRaw(lx, ground + dy, lz, Blocks::Cobweb);
+                        }
+            }
         }
 }
 

@@ -227,6 +227,11 @@ std::vector<Village::Building> Village::plan(const Site& site, uint32_t seed)
     return out;
 }
 
+bool Village::abandoned(const Site& site, uint32_t seed)
+{
+    return site.exists && hashToFloat(hashCoords(site.x, 77, site.z, seed + 55077)) < 0.02f;
+}
+
 const char* Village::name(Kind kind)
 {
     switch (kind)
