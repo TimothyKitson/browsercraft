@@ -321,6 +321,7 @@ public:
     // shadow that follows you into every cave.
     bool sitting() const { return m_sitting; }
     void toggleSit() { if (m_tamed) m_sitting = !m_sitting; }
+    void restore(int health, bool tamed, bool sitting) { m_health = health; m_tamed = tamed; m_sitting = tamed && sitting; }
     // Only a tamed animal of a kind that sits at all.
     static bool canSit(MobId type, bool tamed);
     // Returns true when this actually tamed it, which is the caller's

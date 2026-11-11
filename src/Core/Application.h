@@ -1311,6 +1311,11 @@ private:
     void playNote(const glm::ivec3& at);
     std::map<std::array<int, 4>, int> m_noteTunes;
     std::vector<Chests::Contents> m_shulkerStore;
+    void restoreSavedMobs();
+    void saveMobs();
+    void placePendingMobs();
+    std::vector<std::string> m_pendingMobs;
+    bool m_mobsRestored = false;
     void tickCampfires(float deltaTime);
     struct Campfire
     {

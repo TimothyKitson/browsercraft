@@ -583,6 +583,8 @@ void Application::startWorld(GameMode mode, bool freshWorld)
     m_rain.clear();
     m_particles.clear();
     m_entities.clear();
+    m_mobsRestored = false;
+    m_pendingMobs.clear();
     m_parkedVehicles.clear();
     m_potionClouds.clear();
     m_sparks.clear();
@@ -672,6 +674,8 @@ void Application::startJoinedWorld()
     m_rain.clear();
     m_particles.clear();
     m_entities.clear();
+    m_mobsRestored = false;
+    m_pendingMobs.clear();
     m_animation.clear();
     m_nameplates.clear();
     m_inventory.clear();
@@ -729,6 +733,7 @@ void Application::travelTo(Dimension dimension)
     // Hand the chunks you changed back to disk before they are thrown
     // away -- otherwise stepping through a portal unbuilds your house.
     m_world->saveAll();
+    saveMobs();
 
     m_dimension = dimension;
     m_entities.setDimension(dimension);
@@ -744,6 +749,8 @@ void Application::travelTo(Dimension dimension)
     m_furnaces.setDimension(static_cast<int>(dimension));
 
     m_entities.clear();
+    m_mobsRestored = false;
+    m_pendingMobs.clear();
     m_worldReady = false;
     m_placeOnSurface = true;
     m_drops.clear();
@@ -790,6 +797,8 @@ void Application::quitToTitle()
     m_rain.clear();
     m_particles.clear();
     m_entities.clear();
+    m_mobsRestored = false;
+    m_pendingMobs.clear();
     m_animation.clear();
     m_nameplates.clear();
     m_audio.stopMusic();
@@ -1308,6 +1317,7 @@ void Application::saveLevel()
         std::ofstream rules(m_savePath + "/gamerules.txt");
         if (rules) rules << m_rules.save();
     }
+    saveMobs();
     {
         std::ofstream boxes(m_savePath + "/shulkers.txt");
         if (boxes)
@@ -8733,6 +8743,8 @@ void Application::waitForSpawnChunk()
     m_player.velocity = glm::vec3(0.0f);
     m_camera.position = m_player.eyePosition();
     m_worldReady = true;
+    if (!m_mobsRestored && !m_menuWorld && !m_savePath.empty() && m_net.role() != Net::Role::Guest && m_startupScreen.empty())
+        restoreSavedMobs();
 
     // Only once there are chunks to build it in.
     buildReturnPortal();
@@ -21042,6 +21054,79 @@ void Application::tickCampfires(float deltaTime)
     }
 }
 
+void Application::saveMobs()
+{
+    if (!m_world || m_menuWorld || m_net.role() == Net::Role::Guest) return;
+    std::ofstream mobs(m_savePath + "/mobs_" + std::to_string(static_cast<int>(m_dimension)) + ".txt");
+    int written = 0;
+    if (mobs)
+        for (const Mob& mob : m_entities.mobs())
+        {
+            if (!mob.alive() || mob.type().inanimate || written >= 512) continue;
+            const bool keep = mob.type().spawnClass == SpawnClass::Passive || mob.tamed() || mob.persistent() ||
+                              !mob.customName().empty() || mob.leashed();
+            if (!keep || mob.typeId() == MobId::EnderDragon || mob.typeId() == MobId::Wither) continue;
+            const glm::vec3 at = mob.position();
+            std::string name = mob.customName();
+            for (char& c : name) if (c == ' ' || c == '\n') c = '_';
+            mobs << static_cast<int>(mob.typeId()) << ' ' << at.x << ' ' << at.y << ' ' << at.z << ' ' << mob.yaw() << ' '
+                 << mob.health() << ' ' << (mob.baby() ? 1 : 0) << ' ' << mob.birthSeed() << ' ' << mob.variant() << ' '
+                 << (mob.tamed() ? 1 : 0) << ' ' << (mob.sitting() ? 1 : 0) << ' ' << (mob.saddled() ? 1 : 0) << ' '
+                 << mob.horseArmour() << ' ' << (mob.charged() ? 1 : 0) << ' ' << (name.empty() ? "-" : name) << '\n';
+            ++written;
+        }
+    if (mobs)
+        for (const std::string& waiting : m_pendingMobs) mobs << waiting << '\n';
+}
+
+void Application::restoreSavedMobs()
+{
+    m_mobsRestored = true;
+    m_pendingMobs.clear();
+    std::ifstream mobs(m_savePath + "/mobs_" + std::to_string(static_cast<int>(m_dimension)) + ".txt");
+    std::string row;
+    while (std::getline(mobs, row))
+        if (!row.empty()) m_pendingMobs.push_back(row);
+}
+
+void Application::placePendingMobs()
+{
+    for (size_t i = 0; i < m_pendingMobs.size();)
+    {
+        std::istringstream peek(m_pendingMobs[i]);
+        int kind = 0;
+        float px = 0.0f, py = 0.0f, pz = 0.0f;
+        if (!(peek >> kind >> px >> py >> pz)) { m_pendingMobs.erase(m_pendingMobs.begin() + static_cast<long>(i)); continue; }
+        const Chunk* home = m_world->chunkAt(static_cast<int>(std::floor(px / 16.0f)), static_cast<int>(std::floor(pz / 16.0f)));
+        if (!home || home->state.load() != ChunkState::Lit) { ++i; continue; }
+        const std::string row = m_pendingMobs[i];
+        m_pendingMobs.erase(m_pendingMobs.begin() + static_cast<long>(i));
+        std::istringstream in(row);
+        int type = 0, health = 0, baby = 0, variant = 0, tamed = 0, sitting = 0, saddled = 0, armour = 0, charged = 0;
+        unsigned int seed = 0;
+        float x = 0.0f, y = 0.0f, z = 0.0f, yaw = 0.0f;
+        std::string name;
+        if (!(in >> type >> x >> y >> z >> yaw >> health >> baby >> seed >> variant >> tamed >> sitting >> saddled >> armour >> charged >> name))
+            continue;
+        if (type < 0 || type >= static_cast<int>(MobId::Count)) continue;
+        if (!m_entities.spawnAt(static_cast<MobId>(type), glm::vec3(x, y, z), *m_world, baby != 0)) continue;
+        Mob& mob = m_entities.mobs().back();
+        mob.setBirthSeed(seed);
+        mob.setVariant(variant);
+        mob.setYaw(yaw);
+        mob.restore(std::max(1, health), tamed != 0, sitting != 0);
+        mob.setSaddled(saddled != 0);
+        mob.setHorseArmour(static_cast<uint16_t>(armour));
+        mob.setCharged(charged != 0);
+        mob.keepFromDespawning();
+        if (name != "-")
+        {
+            for (char& c : name) if (c == '_') c = ' ';
+            mob.setCustomName(name);
+        }
+    }
+}
+
 void Application::soakSponge(const glm::ivec3& at)
 {
     std::vector<std::pair<glm::ivec3, int>> open{ { at, 0 } };
@@ -21168,6 +21253,7 @@ void Application::tickColdAndThaw()
 void Application::updateMobs(float deltaTime)
 {
     if (!m_world || !m_worldReady) return;
+    if (!m_pendingMobs.empty()) placePendingMobs();
 
     // A guest watches the host's world but does not get to populate it:
     // mobs are not synced, so two machines spawning their own would see
