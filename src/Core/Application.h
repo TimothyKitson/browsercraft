@@ -175,6 +175,7 @@ enum class MenuAction
     ToggleFullscreen,
     CycleGlintSpeed,
     ToggleEntityShadows,
+    ToggleAutoJump,
     CycleCategory,
     BackToOptions,
     LeaveOptions,
@@ -352,6 +353,7 @@ private:
     BorderRenderer m_borderRenderer;
     EntityShadowRenderer m_shadowSpots;
     bool m_entityShadows = true;
+    bool m_autoJump = false;
     void renderEntityShadows(const glm::mat4& view, const glm::mat4& projection);
     WorldBorder m_border;
     void renderBorder(const glm::mat4& view, const glm::mat4& projection);

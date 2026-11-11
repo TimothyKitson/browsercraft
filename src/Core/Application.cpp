@@ -481,6 +481,7 @@ void Application::loadOptions()
         else if (std::sscanf(line, "ao=%d", &value) == 1) m_smoothLightingOn = value != 0;
         else if (std::strncmp(line, "glintSpeed=", 11) == 0) m_glintSpeed = std::clamp(static_cast<float>(std::atof(line + 11)), 0.0f, 1.0f);
         else if (std::sscanf(line, "entityShadows=%d", &value) == 1) m_entityShadows = value != 0;
+        else if (std::strncmp(line, "autoJump=", 9) == 0) m_autoJump = std::strncmp(line + 9, "true", 4) == 0 || line[9] == '1';
         else if (std::sscanf(line, "chatVisibility=%d", &value) == 1) m_chatVisibility = std::clamp(value, 0, 2);
         else if (std::sscanf(line, "chatColors=%d", &value) == 1) m_chatColors = value != 0;
         else if (std::strncmp(line, "chatScale=", 10) == 0) m_chatScale = std::clamp(static_cast<float>(std::atof(line + 10)), 0.0f, 1.0f);
@@ -541,6 +542,7 @@ void Application::saveOptions()
                  m_masterVolume, m_maxFps, m_vsync ? 1 : 0);
     std::fprintf(file, "damageTiltStrength=%.3f\n", m_damageTilt);
     static const char* CLOUD_NAMES[3] = { "false", "\"fast\"", "true" };
+    std::fprintf(file, "autoJump=%s\n", m_autoJump ? "true" : "false");
     std::fprintf(file, "renderClouds=%s\nparticles=%d\nao=%d\nglintSpeed=%.3f\nentityShadows=%d\n", CLOUD_NAMES[m_cloudMode], m_particleLevel,
                  m_smoothLightingOn ? 1 : 0, m_glintSpeed, m_entityShadows ? 1 : 0);
     std::fprintf(file, "chatVisibility=%d\nchatColors=%d\nchatScale=%.3f\nchatHeightFocused=%.3f\nchatHeightUnfocused=%.3f\n"
@@ -8703,6 +8705,7 @@ void Application::applyMenuAction()
             saveOptions();
             break;
         case MenuAction::ToggleFullscreen: m_window.toggleFullscreen(); break;
+        case MenuAction::ToggleAutoJump: m_autoJump = !m_autoJump; saveOptions(); break;
         case MenuAction::ToggleEntityShadows: m_entityShadows = !m_entityShadows; saveOptions(); break;
         case MenuAction::CycleGlintSpeed: m_glintSpeed = m_glintSpeed >= 0.99f ? 0.0f : std::min(1.0f, m_glintSpeed + 0.25f); saveOptions(); break;
         case MenuAction::CycleCategory:
@@ -9466,6 +9469,25 @@ void Application::updateGameplay(float deltaTime)
     controls.wishDirection = wish;
     controls.jump = m_keys.pressed(m_input, Action::Jump);
     controls.jumpHeld = m_keys.down(m_input, Action::Jump);
+    if (m_autoJump && !controls.jump && m_player.onGround && !m_player.flying && glm::length(wish) > 0.5f &&
+        !m_keys.down(m_input, Action::Sneak) && !m_player.isInWater(*m_world))
+    {
+        const glm::vec3 ahead = m_player.position + wish * 0.65f;
+        const int ax = static_cast<int>(std::floor(ahead.x));
+        const int az = static_cast<int>(std::floor(ahead.z));
+        const int fy = static_cast<int>(std::floor(m_player.position.y + 0.01f));
+        const BlockId step = m_world->getBlock(ax, fy, az);
+        const BlockInfo& stepInfo = blockInfo(step);
+        const bool climbable = stepInfo.collides && blockHeight(step) > 0.55f && !isFence(step) && !isWall(step) && !isFenceGate(step);
+        const bool headroom = !blockInfo(m_world->getBlock(ax, fy + 1, az)).collides && !blockInfo(m_world->getBlock(ax, fy + 2, az)).collides &&
+                              !blockInfo(m_world->getBlock(static_cast<int>(std::floor(m_player.position.x)), fy + 2,
+                                                           static_cast<int>(std::floor(m_player.position.z)))).collides;
+        if (climbable && headroom)
+        {
+            controls.jump = true;
+            controls.jumpHeld = true;
+        }
+    }
     if (m_toggleSprint && m_keys.pressed(m_input, Action::Sprint)) m_sprintLatched = !m_sprintLatched;
     if (m_toggleSneak && m_keys.pressed(m_input, Action::Sneak)) m_sneakLatched = !m_sneakLatched;
     controls.sprint = m_toggleSprint ? m_sprintLatched : m_keys.down(m_input, Action::Sprint);
@@ -26476,8 +26498,8 @@ void Application::renderSettingsScreen()
 
     {
         const float half = (buttonWidth - 12.0f) * 0.5f;
-        if (menuButton({ buttonX, y, half, buttonHeight }, m_audio.muted() ? "Sound: Off" : "Sound: On"))
-            m_pendingAction = MenuAction::ToggleSound;
+        if (menuButton({ buttonX, y, half, buttonHeight }, m_autoJump ? "Auto-Jump: ON" : "Auto-Jump: OFF"))
+            m_pendingAction = MenuAction::ToggleAutoJump;
         if (menuButton({ buttonX + half + 12.0f, y, half, buttonHeight }, "Music & Sounds..."))
             m_pendingAction = MenuAction::GoSounds;
         y += buttonHeight + gap;
@@ -26507,16 +26529,18 @@ void Application::renderSettingsScreen()
     }
     y += buttonHeight + gap;
 
-    if (m_optionsReturn == Screen::Title)
     {
-        if (menuButton({ buttonX, y, buttonWidth, buttonHeight },
-                       m_playerName.empty() ? "Set Name" : ("Name: " + m_playerName)))
-            m_pendingAction = MenuAction::GoNameEntry;
-        y += buttonHeight + gap;
+        const float half = (buttonWidth - 12.0f) * 0.5f;
+        if (m_optionsReturn == Screen::Title)
+        {
+            if (menuButton({ buttonX, y, half, buttonHeight }, m_playerName.empty() ? "Set Name" : ("Name: " + m_playerName)))
+                m_pendingAction = MenuAction::GoNameEntry;
+            if (menuButton({ buttonX + half + 12.0f, y, half, buttonHeight }, "Credits..."))
+                m_pendingAction = MenuAction::GoCredits;
+        }
+        else if (menuButton({ buttonX, y, buttonWidth, buttonHeight }, "Credits..."))
+            m_pendingAction = MenuAction::GoCredits;
     }
-
-    if (menuButton({ buttonX, y, buttonWidth, buttonHeight }, "Credits..."))
-        m_pendingAction = MenuAction::GoCredits;
     y += buttonHeight + gap + 10.0f;
 
     if (menuButton({ buttonX, y, buttonWidth, 46.0f }, "Done"))
