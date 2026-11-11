@@ -4,6 +4,15 @@ Checked on 2026-11-10 against the 1.21.1 registries, data files and decompiled c
 
 Names in `code type` are Minecraft's ids. "small / medium / large job" is a rough size: data only, a new shape or a slice of a system, a whole new system.
 
+## Done since this list was written
+
+Work on the engine branch after 2026-11-10 that closes entries below. The entries themselves are left as written; this section says which ones no longer hold.
+
+- **Blocks, "not in the game": all 21 groups.** Every stairs, slab, wall, fence, fence gate, button and pressure plate material; wood and hyphae; carpets; infested stone; wall torches; mob heads (seven kinds, sixteen floor turns, four wall facings, worn as helmets); snow layers; bubble columns; lava and powder snow cauldrons; polished basalt; smooth quartz; the bamboo shoot; the six missing spawn eggs; the creeper charge and thing banner patterns; the debug stick.
+- **Blocks, "partly there":** top and double slabs; upside-down and corner stairs; torches, levers and buttons on walls and ceilings; sand, gravel, concrete powder, anvils and the dragon egg fall; snow settles and piles up, water freezes, ice and snow melt by light, broken ice turns to water; cauldrons hold lava and powder snow, take water bottles and wash shulker boxes; bone meal grows bamboo; bamboo is a stalk with leaves and collision.
+- **Entities:** donkey, mule, mooshroom, ocelot, skeleton horse, zombie horse and giant; thrown snowballs, eggs and ender pearls; falling blocks; charged creepers and the heads they win; lightning that converts pigs and villagers, charges creepers, burns and starts fires.
+- **Mechanics:** all 51 game rules with `/gamerule` and the Edit Game Rules screen.
+
 ## Summary
 
 | | 1.21.1 | In the game | Missing |
