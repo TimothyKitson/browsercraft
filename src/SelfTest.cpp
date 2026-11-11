@@ -5297,6 +5297,20 @@ namespace
 
         section("chat: the rest of the vanilla commands");
         {
+            const std::vector<std::string> names = Chat::suggest("/gam");
+            check(std::find(names.begin(), names.end(), "gamemode") != names.end() && std::find(names.begin(), names.end(), "gamerule") != names.end() &&
+                  std::find(names.begin(), names.end(), "give") == names.end(), "tab offers the commands that start with what was typed");
+            const std::vector<std::string> modes = Chat::suggest("/gamemode cr");
+            check(modes.size() == 1 && modes[0] == "creative", "and the arguments a command takes");
+            const std::vector<std::string> swords = Chat::suggest("/give @s diamond_sw");
+            check(std::find(swords.begin(), swords.end(), "diamond_sword") != swords.end(), "items for /give");
+            const std::vector<std::string> groves = Chat::suggest("/locate biome cherry");
+            check(groves.size() == 1 && groves[0] == "cherry_grove", "biomes for /locate biome");
+            const std::vector<std::string> speeds = Chat::suggest("/effect give @s spe");
+            check(std::find(speeds.begin(), speeds.end(), "speed") != speeds.end(), "effects for /effect");
+            check(Chat::suggest("/weather @").size() == 5, "and target selectors wherever an @ starts a word");
+            check(Chat::completeWith("/gamemode cr", "creative") == "/gamemode creative" && Chat::completeWith("/gam", "gamemode") == "/gamemode",
+                  "a choice replaces the word being typed");
             const glm::vec3 here(10.0f, 64.0f, 20.0f);
             Chat::Command weather = Chat::parse("/weather thunder 60", true);
             check(weather.kind == Chat::Kind::Weather && weather.sub == "thunder" && weather.seconds == 60.0f, "/weather thunder takes a length");

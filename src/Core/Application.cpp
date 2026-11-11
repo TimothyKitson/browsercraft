@@ -3179,7 +3179,7 @@ bool Application::frame()
             m_startupScreen == "faces" || m_startupScreen == "backs" ||
             m_startupScreen == "flow" || m_startupScreen == "buds" ||
             m_startupScreen == "icons" || m_startupScreen == "beam" ||
-            m_startupScreen == "elytra" || m_startupScreen == "elytradoll" || m_startupScreen == "crawl")
+            m_startupScreen == "elytra" || m_startupScreen == "elytradoll" || m_startupScreen == "crawl" || m_startupScreen == "chatopen")
         {
             // Dev aid: open the inventory with something in it, so the
             // screenshot shows a real grid rather than 36 empty boxes.
@@ -3208,6 +3208,7 @@ bool Application::frame()
                                   m_startupScreen != "beam" &&
                                   m_startupScreen != "elytra" &&
                                   m_startupScreen != "crawl" &&
+                                  m_startupScreen != "chatopen" &&
                                   m_startupScreen != "enchantblock" &&
                                   m_startupScreen != "villager" &&
                                   m_startupScreen != "endportal" &&
@@ -7458,6 +7459,18 @@ bool Application::frame()
                     m_showDebug = false;
                     m_camera.setOrientation(m_camera.yaw, 10.0f);
                 }
+            }
+
+            if (m_startupScreen == "chatopen")
+            {
+                m_showDebug = false;
+                for (const char* said : { "/time set day", "/weather clear", "/gamemode creative" })
+                {
+                    m_chatSent.emplace_back(said);
+                    m_chatLog.add(std::string("<Player> ") + said);
+                }
+                m_chatOpen = true;
+                m_chatDraft = "/ga";
             }
 
             if (m_startupScreen == "crawl")
@@ -19095,16 +19108,60 @@ void Application::updateChatInput()
         return;
     }
 
+    const std::string draftBefore = m_chatDraft;
     for (int i = 0; i < m_input.backspaces() && !m_chatDraft.empty(); ++i)
         Utf8::popBack(m_chatDraft);
 
     Utf8::type(m_chatDraft, m_input.typedText(), Chat::MAX_LENGTH);
+    if (m_chatDraft != draftBefore) m_tabCycle = -1;
+
+    if (m_input.wasKeyPressed(SDL_SCANCODE_TAB))
+    {
+        if (m_tabCycle < 0) m_tabBase = m_chatDraft;
+        const std::vector<std::string> choices = Chat::suggest(m_tabBase);
+        if (!choices.empty())
+        {
+            m_tabCycle = (m_tabCycle + 1) % static_cast<int>(choices.size());
+            m_chatDraft = Chat::completeWith(m_tabBase, choices[static_cast<size_t>(m_tabCycle)]);
+        }
+    }
+    if (m_input.wasKeyPressed(SDL_SCANCODE_UP) && !m_chatSent.empty())
+    {
+        if (m_chatRecall < 0) { m_chatUnsent = m_chatDraft; m_chatRecall = static_cast<int>(m_chatSent.size()); }
+        m_chatRecall = std::max(0, m_chatRecall - 1);
+        m_chatDraft = m_chatSent[static_cast<size_t>(m_chatRecall)];
+        m_tabCycle = -1;
+    }
+    if (m_input.wasKeyPressed(SDL_SCANCODE_DOWN) && m_chatRecall >= 0)
+    {
+        ++m_chatRecall;
+        if (m_chatRecall >= static_cast<int>(m_chatSent.size()))
+        {
+            m_chatRecall = -1;
+            m_chatDraft = m_chatUnsent;
+        }
+        else m_chatDraft = m_chatSent[static_cast<size_t>(m_chatRecall)];
+        m_tabCycle = -1;
+    }
+    const int lineCount = static_cast<int>(m_chatLog.lines().size());
+    const int most = std::max(0, lineCount - Chat::VISIBLE_LINES);
+    if (m_input.wasKeyPressed(SDL_SCANCODE_PAGEUP)) m_chatScroll = std::min(most, m_chatScroll + Chat::VISIBLE_LINES - 1);
+    if (m_input.wasKeyPressed(SDL_SCANCODE_PAGEDOWN)) m_chatScroll = std::max(0, m_chatScroll - (Chat::VISIBLE_LINES - 1));
+    if (m_input.wheelDelta() != 0) m_chatScroll = std::clamp(m_chatScroll + m_input.wheelDelta(), 0, most);
 
     if (m_input.wasKeyPressed(SDL_SCANCODE_RETURN) || m_input.wasKeyPressed(SDL_SCANCODE_KP_ENTER))
     {
         const std::string line = m_chatDraft;
         m_chatOpen = false;
         m_chatDraft.clear();
+        m_chatRecall = -1;
+        m_chatScroll = 0;
+        m_tabCycle = -1;
+        if (!line.empty() && (m_chatSent.empty() || m_chatSent.back() != line))
+        {
+            m_chatSent.push_back(line);
+            if (m_chatSent.size() > 100) m_chatSent.erase(m_chatSent.begin());
+        }
         setMouseCaptured(true);
         runChatLine(line);
     }
@@ -20496,11 +20553,15 @@ void Application::renderChat()
     const float bottom = h - 40.0f;
 
     const std::vector<Chat::Log::Line>& lines = m_chatLog.lines();
+    const int scroll = m_chatOpen ? std::clamp(m_chatScroll, 0, std::max(0, static_cast<int>(lines.size()) - Chat::VISIBLE_LINES)) : 0;
     const int shown = std::min<int>(Chat::VISIBLE_LINES, static_cast<int>(lines.size()));
+    const std::vector<std::string> choices = m_chatOpen ? Chat::suggest(m_tabCycle >= 0 ? m_tabBase : m_chatDraft) : std::vector<std::string>();
+    const float hiddenAbove = choices.empty() ? 1e9f : bottom + 1.0f - std::min(8, static_cast<int>(choices.size())) * lineHeight;
 
     for (int i = 0; i < shown; ++i)
     {
-        const Chat::Log::Line& line = lines[lines.size() - shown + i];
+        const Chat::Log::Line& line = lines[lines.size() - shown - static_cast<size_t>(scroll) + i];
+        if (bottom - (shown - i) * lineHeight + lineHeight > hiddenAbove) continue;
 
         // Closed chat shows only what is still recent; opened, it shows
         // the lot, so you can read back what you missed.
@@ -20524,6 +20585,21 @@ void Application::renderChat()
         m_ui.quad(left - 2.0f, y - 1.0f, m_ui.canvasWidth() - left * 2.0f, lineHeight + 2.0f,
                   glm::vec4(0.0f, 0.0f, 0.0f, 0.55f));
         m_ui.textWithShadow(m_chatDraft + "_", left, y, 1.0f, TEXT_COLOR);
+
+        if (!choices.empty())
+        {
+            const int count = std::min(8, static_cast<int>(choices.size()));
+            float width = 0.0f;
+            for (int i = 0; i < count; ++i) width = std::max(width, UIRenderer::textWidth(choices[static_cast<size_t>(i)], 1.0f));
+            const size_t space = m_chatDraft.rfind(' ');
+            const float x = left + UIRenderer::textWidth(space == std::string::npos ? std::string("/") : m_chatDraft.substr(0, space + 1), 1.0f);
+            const float top = y - 2.0f - count * lineHeight;
+            m_ui.quad(x - 1.0f, top - 1.0f, width + 2.0f, count * lineHeight + 1.0f, glm::vec4(0.0f, 0.0f, 0.0f, 0.82f));
+            const int picked = m_tabCycle >= 0 ? m_tabCycle % static_cast<int>(choices.size()) : -1;
+            for (int i = 0; i < count; ++i)
+                m_ui.textWithShadow(choices[static_cast<size_t>(i)], x, top + i * lineHeight, 1.0f,
+                                    i == picked ? glm::vec4(1.0f, 1.0f, 0.33f, 1.0f) : glm::vec4(0.66f, 0.66f, 0.66f, 1.0f));
+        }
     }
 
     m_ui.setScale(1.0f);

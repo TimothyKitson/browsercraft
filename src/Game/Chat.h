@@ -84,6 +84,8 @@ namespace Chat
     // A command refused for that reason comes back as Denied rather than
     // Unknown, so the player is told which of the two it was.
     Command parse(const std::string& line, bool cheats, const glm::vec3& origin = glm::vec3(0.0f));
+    std::vector<std::string> suggest(const std::string& draft);
+    std::string completeWith(const std::string& draft, const std::string& choice);
     bool succeeded(const Command& command);
     bool textComponent(const std::string& json, std::string& out);
     bool applyWorldBorder(const Command& command, WorldBorder& border, std::string& message);

@@ -894,6 +894,12 @@ private:
     int m_lastAttackKind = 0;
     bool m_chatOpen = false;
     std::string m_chatDraft;
+    std::vector<std::string> m_chatSent;
+    int m_chatRecall = -1;
+    std::string m_chatUnsent;
+    int m_chatScroll = 0;
+    std::string m_tabBase;
+    int m_tabCycle = -1;
     float m_growthTimer = 0.0f;
     uint32_t m_growthSeed = 0x1F123BB5u;
 

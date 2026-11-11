@@ -1,4 +1,5 @@
 #include "Chat.h"
+#include "World/Biomes.h"
 #include "Effects.h"
 #include "GameMode.h"
 #include "Entity/MobType.h"
@@ -1019,4 +1020,109 @@ void Chat::Log::add(const std::string& text)
 void Chat::Log::update(float deltaTime)
 {
     for (Line& line : m_lines) line.age += deltaTime;
+}
+
+std::vector<std::string> Chat::suggest(const std::string& draft)
+{
+    std::vector<std::string> out;
+    if (draft.empty() || draft[0] != '/') return out;
+    const std::string body = draft.substr(1);
+    const size_t lastSpace = body.rfind(' ');
+    const std::string word = lower(lastSpace == std::string::npos ? body : body.substr(lastSpace + 1));
+    const std::vector<std::string> words = split(body);
+    int index = static_cast<int>(words.size());
+    if (!body.empty() && body.back() != ' ') --index;
+    if (index < 0) index = 0;
+    const std::string name = words.empty() ? std::string() : lower(words[0]);
+    const std::string sub = words.size() > 1 ? lower(words[1]) : std::string();
+
+    static const std::vector<std::string> COMMANDS = {
+        "clear", "clone", "damage", "defaultgamemode", "difficulty", "effect", "enchant", "experience", "fill", "gamemode",
+        "gamerule", "give", "help", "kill", "list", "locate", "me", "msg", "say", "seed", "setblock", "setworldspawn",
+        "spawnpoint", "summon", "tell", "tellraw", "time", "title", "tp", "w", "weather", "worldborder", "xp" };
+    static std::vector<std::string> items, blocks, mobs, effects, enchants, rules, biomes;
+    if (items.empty())
+    {
+        for (int id = 1; isBlockId(id); id = nextBlockId(id))
+        {
+            const StackId stack = static_cast<StackId>(id);
+            if (!isObtainable(asBlock(stack))) continue;
+            std::string label = lower(displayName(stack));
+            std::replace(label.begin(), label.end(), ' ', '_');
+            items.push_back(label);
+            blocks.push_back(label);
+        }
+        for (int id = Items::FIRST; id < static_cast<int>(Items::Count); ++id)
+        {
+            std::string label = lower(displayName(static_cast<StackId>(id)));
+            std::replace(label.begin(), label.end(), ' ', '_');
+            items.push_back(label);
+        }
+        for (int m = 0; m < static_cast<int>(MobId::Count); ++m)
+        {
+            std::string label = lower(mobType(static_cast<MobId>(m)).name);
+            std::replace(label.begin(), label.end(), ' ', '_');
+            mobs.push_back(label);
+        }
+        for (int k = 0; k < Effects::KIND_COUNT; ++k) effects.push_back(Effects::id(static_cast<Effects::Kind>(k)));
+        for (int k = 0; k < Enchanting::KIND_COUNT; ++k) enchants.push_back(Enchanting::idOf(static_cast<Enchanting::Kind>(k)));
+        for (int r = 0; r < GameRules::COUNT; ++r) rules.push_back(GameRules::info(static_cast<GameRules::Rule>(r)).name);
+        for (int b = 0; b < Biomes::COUNT; ++b)
+        {
+            std::string id = Biomes::info(static_cast<Biomes::Kind>(b)).id;
+            if (id.rfind("minecraft:", 0) == 0) id = id.substr(10);
+            biomes.push_back(id);
+        }
+        for (auto* list : { &items, &blocks, &mobs, &effects, &enchants, &rules, &biomes })
+        {
+            std::sort(list->begin(), list->end());
+            list->erase(std::unique(list->begin(), list->end()), list->end());
+        }
+    }
+    static const std::vector<std::string> SELECTORS = { "@a", "@e", "@p", "@r", "@s" };
+    static const std::vector<std::string> MODES = { "adventure", "creative", "spectator", "survival" };
+    static const std::vector<std::string> STRUCTURES = { "ancient_city", "bastion_remnant", "desert_pyramid", "end_city", "igloo",
+        "jungle_pyramid", "mansion", "monument", "pillager_outpost", "ruined_portal", "shipwreck", "stronghold", "swamp_hut",
+        "trial_chambers", "village" };
+
+    const std::vector<std::string>* pool = nullptr;
+    std::vector<std::string> local;
+    auto use = [&](std::initializer_list<const char*> list) { for (const char* entry : list) local.emplace_back(entry); pool = &local; };
+    if (index == 0) pool = &COMMANDS;
+    else if (!word.empty() && word[0] == '@') pool = &SELECTORS;
+    else if (name == "give" || (name == "clear" && index >= 2)) pool = &items;
+    else if (name == "summon" && index == 1) pool = &mobs;
+    else if (name == "setblock" && index == 4) pool = &blocks;
+    else if (name == "fill" && index == 7) pool = &blocks;
+    else if (name == "fill" && index == 8) use({ "destroy", "hollow", "keep", "outline", "replace" });
+    else if (name == "effect" && index == 1) use({ "clear", "give" });
+    else if (name == "effect" && index >= 2) pool = &effects;
+    else if (name == "enchant" && index >= 2) pool = &enchants;
+    else if ((name == "gamemode" || name == "gm" || name == "defaultgamemode") && index == 1) pool = &MODES;
+    else if (name == "weather" && index == 1) use({ "clear", "rain", "thunder" });
+    else if (name == "difficulty" && index == 1) use({ "easy", "hard", "normal", "peaceful" });
+    else if (name == "time" && index == 1) use({ "add", "query", "set" });
+    else if (name == "time" && index == 2 && sub == "set") use({ "day", "midnight", "night", "noon" });
+    else if (name == "time" && index == 2 && sub == "query") use({ "day", "daytime", "gametime" });
+    else if ((name == "xp" || name == "experience") && index == 1) use({ "add", "query", "set" });
+    else if (name == "locate" && index == 1) use({ "biome", "structure" });
+    else if (name == "locate" && index == 2) pool = sub == "biome" ? &biomes : &STRUCTURES;
+    else if (name == "gamerule" && index == 1) pool = &rules;
+    else if (name == "gamerule" && index == 2) use({ "false", "true" });
+    else if (name == "title" && index == 2) use({ "actionbar", "clear", "reset", "subtitle", "title" });
+    else if (name == "worldborder" && index == 1) use({ "add", "center", "damage", "get", "set", "warning" });
+    if (!pool) return out;
+    std::string bare = word;
+    if (bare.rfind("minecraft:", 0) == 0) bare = bare.substr(10);
+    for (const std::string& entry : *pool)
+        if (entry.rfind(bare, 0) == 0 && entry != bare) out.push_back(entry);
+    if (out.size() > 50) out.resize(50);
+    return out;
+}
+
+std::string Chat::completeWith(const std::string& draft, const std::string& choice)
+{
+    const size_t lastSpace = draft.rfind(' ');
+    if (lastSpace == std::string::npos) return "/" + choice;
+    return draft.substr(0, lastSpace + 1) + choice;
 }
