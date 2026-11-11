@@ -460,6 +460,8 @@ namespace Items
         ArmorStand,
         GlowItemFrame,
         HangingSignFirst, HangingSignLast = HangingSignFirst + 10,
+        CreeperBannerPattern,
+        MojangBannerPattern,
         Count
     };
 }

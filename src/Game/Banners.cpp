@@ -53,6 +53,7 @@ namespace
         { "piglin", "Snout" },
         { "flow", "Flow" },
         { "guster", "Guster" },
+        { "mojang", "Thing" },
     };
 
     std::string packPath(bool shield, int pattern)
@@ -87,6 +88,8 @@ namespace
         { Items::PiglinBannerPattern, Banners::Piglin },
         { Items::FlowBannerPattern, Banners::Flow },
         { Items::GusterBannerPattern, Banners::Guster },
+        { Items::CreeperBannerPattern, Banners::Creeper },
+        { Items::MojangBannerPattern, Banners::Mojang },
     };
 
     float ring(float d, float inner, float outer) { return d >= inner && d < outer ? 1.0f : 0.0f; }
@@ -305,6 +308,16 @@ float Banners::coverage(int pattern, int x, int y)
             const bool nose = (y >= 16 && y < 20) && (x >= 8 && x < 12);
             const bool jaw = (y >= 18 && y < 23) && ((x >= 6 && x < 8) || (x >= 12 && x < 14));
             return is(eyes || nose || jaw);
+        }
+        case Mojang:
+        {
+            const int mx = x - 4, my = y - 10;
+            if (mx < 0 || mx >= 12 || my < 0 || my >= 12) return 0.0f;
+            const bool ring = mx == 0 || mx == 11 || my == 0 || my == 11;
+            const bool left = mx >= 2 && mx < 4 && my >= 2 && my < 10;
+            const bool right = mx >= 8 && mx < 10 && my >= 2 && my < 10;
+            const bool vee = my >= 2 && my < 8 && (std::abs(mx - 2 - my / 2) < 1 || std::abs(mx - 9 + my / 2) < 1);
+            return is(ring || left || right || vee);
         }
         case Skull:
         {

@@ -401,6 +401,7 @@ void MobModel::renderExtras(MobId id, const MobSkin& skin, const World& world, c
         { MobId::Bogged, "assets/textures/entity/skeleton/bogged_overlay.png", 0.25f },
         { MobId::Vex, "assets/textures/entity/illager/vex_charging.png", 0.0f },
         { MobId::Strider, "assets/textures/entity/strider/strider_cold.png", 0.0f },
+        { MobId::Creeper, "assets/textures/entity/creeper/creeper_armor.png", 0.5f },
     };
 
     auto lit = [&](const Mob& mob, float& sky, float& blockLight) {
@@ -442,6 +443,7 @@ void MobModel::renderExtras(MobId id, const MobSkin& skin, const World& world, c
         if (p.find("invulnerable") != std::string::npos)
             return mob.spawnPhase() > 0.0f && (mob.spawnPhase() > 2.0f || std::fmod(mob.spawnPhase(), 0.5f) < 0.25f)
                        ? 0.0f : -1.0f;
+        if (p.find("creeper_armor") != std::string::npos) return mob.charged() ? 1.0f : -1.0f;
         if (p.find("wither_armor") != std::string::npos) return health <= 0.5f && mob.spawnPhase() <= 0.0f ? 1.0f : -1.0f;
         if (p.find("shooting") != std::string::npos) return mob.aboutToShoot() ? 0.0f : -1.0f;
         if (p.find("charging") != std::string::npos) return mob.hostileNow() && mob.lastRange() < 6.0f ? 0.0f : -1.0f;

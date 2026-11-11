@@ -386,7 +386,9 @@ StackId RecipeBook::stackNamed(const std::string& id)
             { "lava_bucket", Items::LavaBucket }, { "water_bucket", Items::WaterBucket }, { "milk_bucket", Items::MilkBucket },
             { "pufferfish_bucket", Items::PufferfishBucket }, { "axolotl_bucket", Items::AxolotlBucket },
             { "tropical_fish_bucket", Items::TropicalFishBucket }, { "tadpole_bucket", Items::TadpoleBucket },
-            { "cod_bucket", Items::CodBucket }, { "salmon_bucket", Items::SalmonBucket }, { "dragon_head", Blocks::DragonEgg },
+            { "cod_bucket", Items::CodBucket }, { "salmon_bucket", Items::SalmonBucket }, { "dragon_head", static_cast<StackId>(Blocks::HeadRunFirst + 100) },
+            { "creeper_banner_pattern", Items::CreeperBannerPattern }, { "skull_banner_pattern", Items::SkullBannerPattern },
+            { "flower_banner_pattern", Items::FlowerBannerPattern }, { "piglin_banner_pattern", Items::PiglinBannerPattern }, { "mojang_banner_pattern", Items::MojangBannerPattern },
         };
         for (const auto& alias : ALIASES) out[alias.first] = alias.second;
         return out;

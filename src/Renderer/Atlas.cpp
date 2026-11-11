@@ -6470,12 +6470,13 @@ namespace
     }
     void paintBannerPatternIn(Tile& t, int k)
     {
-        static const int PATTERNS[6] = { Banners::Flower, Banners::Skull, Banners::Globe, Banners::Piglin, Banners::Flow, Banners::Guster };
+        static const int PATTERNS[8] = { Banners::Flower, Banners::Skull, Banners::Globe, Banners::Piglin, Banners::Flow, Banners::Guster,
+                                         Banners::Creeper, Banners::Mojang };
         t.fill(Color{ 0, 0, 0, 0 });
         for (int y = 2; y < 14; ++y)
             for (int x = 2; x < 14; ++x)
                 t.set(x, y, (x == 2 || y == 13) ? Color{ 196, 184, 150 } : Color{ 232, 222, 190 });
-        const int pattern = PATTERNS[std::clamp(k, 0, 5)];
+        const int pattern = PATTERNS[std::clamp(k, 0, 7)];
         for (int y = 0; y < 8; ++y)
             for (int x = 0; x < 8; ++x)
             {
@@ -9984,6 +9985,8 @@ namespace
         { Tiles::ItemBannerPatternFirst + 3, { "piglin_banner_pattern", nullptr, nullptr } },
         { Tiles::ItemBannerPatternFirst + 4, { "flow_banner_pattern", nullptr, nullptr } },
         { Tiles::ItemBannerPatternFirst + 5, { "guster_banner_pattern", nullptr, nullptr } },
+        { Tiles::ItemBannerPatternFirst + 6, { "creeper_banner_pattern", nullptr, nullptr } },
+        { Tiles::ItemBannerPatternFirst + 7, { "mojang_banner_pattern", nullptr, nullptr } },
         { Tiles::ItemBarrier, { "barrier", nullptr, nullptr } },
         { Tiles::ItemFishingRod, { "fishing_rod", nullptr, nullptr } },
         { Tiles::ItemFishingRodCast, { "fishing_rod_cast", nullptr, nullptr } },
@@ -11864,7 +11867,7 @@ Atlas::Atlas()
         paintBannerItemIn(banner, k);
         blitPainted(Tiles::ItemBannerFirst + k, banner);
     }
-    for (int k = 0; k < 6; ++k)
+    for (int k = 0; k <= Tiles::ItemBannerPatternLast - Tiles::ItemBannerPatternFirst; ++k)
     {
         Tile sheet;
         paintBannerPatternIn(sheet, k);

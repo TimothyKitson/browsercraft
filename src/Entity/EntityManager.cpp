@@ -574,6 +574,7 @@ void EntityManager::update(float deltaTime, const World& world,
             death.weaving = mob.effects().has(Effects::Kind::Weaving);
             death.windCharged = mob.effects().has(Effects::Kind::WindCharged);
             death.byPlayer = mob.hitByPlayer();
+            death.chargedBlast = mob.chargedBlastHit();
             death.how = mob.playerHitHow();
             death.distance = mob.playerHitDistance();
             m_deaths.push_back(death);

@@ -597,7 +597,7 @@ namespace Tiles
         ItemTemplateFirst, ItemTemplateLast = ItemTemplateFirst + 18,
         ItemCompass, ItemEmptyMap, ItemFilledMap,
         ItemBannerFirst, ItemBannerLast = ItemBannerFirst + 15,
-        ItemBannerPatternFirst, ItemBannerPatternLast = ItemBannerPatternFirst + 5,
+        ItemBannerPatternFirst, ItemBannerPatternLast = ItemBannerPatternFirst + 7,
         ItemBarrier, ItemStructureVoid, ItemLightFirst, ItemLightLast = ItemLightFirst + 15,
         ItemFishingRod, ItemFishingRodCast, ItemCarrotOnAStick, ItemWarpedFungusOnAStick, ItemTropicalFish,
         ItemNameTag, ItemLead,

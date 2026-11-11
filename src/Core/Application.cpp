@@ -3305,6 +3305,9 @@ bool Application::frame()
                     m_world->setBlock(bx - 6, by, bz + 3, headOf(4, true, 2));
                     m_world->setBlock(bx - 6, by + 1, bz + 2, headOf(6, true, 2));
                 }
+                m_inventory.slot(6) = ItemStack{ Items::CreeperBannerPattern, 1 };
+                m_inventory.slot(7) = ItemStack{ Items::MojangBannerPattern, 1 };
+                m_inventory.slot(8) = ItemStack{ static_cast<StackId>(headOf(4, false, 0)), 1 };
                 m_world->setBlock(bx + 7, by - 1, bz - 1, Blocks::SoulSand);
                 m_world->setBlock(bx + 7, by - 1, bz - 3, Blocks::MagmaBlock);
                 for (int h = 0; h < 3; ++h)
@@ -5602,6 +5605,9 @@ bool Application::frame()
                 if (glowing)
                     for (Mob& mob : m_entities.mobs())
                         if (mob.typeId() == MobId::IronGolem) mob.damage(60, glm::vec3(0.0f));
+                if (m_startupScreen == "mobs")
+                    for (Mob& mob : m_entities.mobs())
+                        if (mob.typeId() == MobId::Creeper) mob.setCharged(true);
                 if (varied)
                 {
                     uint32_t next = 11u;
@@ -11278,6 +11284,7 @@ void Application::setCopper(const glm::ivec3& at, BlockId now)
 
 void Application::boltAt(const glm::vec3& strike)
 {
+    boltStrikes(strike);
     uint32_t roll = static_cast<uint32_t>(m_elapsedSeconds * 1000.0f) * 2654435761u;
     auto next = [&roll]() {
         roll = roll * 1664525u + 1013904223u;
@@ -11516,6 +11523,7 @@ void Application::strikeLightning()
         strike = glm::vec3(cx + 0.5f, top + 1.0f, cz + 0.5f);
     }
 
+    boltStrikes(strike);
     m_boltPoints.clear();
     glm::vec3 at = strike;
     m_boltPoints.push_back(at);
@@ -11525,6 +11533,48 @@ void Application::strikeLightning()
         m_boltPoints.push_back(at);
     }
     m_boltLeft = Weather::FLASH_SECONDS;
+}
+
+void Application::boltStrikes(const glm::vec3& strike)
+{
+    struct Turn { MobId into; glm::vec3 feet; bool baby; };
+    std::vector<Turn> turns;
+    for (Mob& mob : m_entities.mobs())
+    {
+        if (!mob.alive()) continue;
+        const glm::vec3 d = mob.position() - strike;
+        if (std::fabs(d.x) > 3.5f || std::fabs(d.z) > 3.5f || d.y < -3.0f || d.y > 6.0f) continue;
+        const MobId type = mob.typeId();
+        if ((type == MobId::Pig && m_worldMeta.difficulty != Worlds::Difficulty::Peaceful) || type == MobId::Villager)
+        {
+            turns.push_back({ type == MobId::Pig ? MobId::ZombiePigman : MobId::Witch, mob.position(), mob.baby() && type == MobId::Pig });
+            mob.vanish();
+            continue;
+        }
+        if (type == MobId::Creeper) mob.setCharged(true);
+        if (type == MobId::Turtle) m_drops.spawn(mob.position(), Items::Bowl, 1);
+        mob.ignite(8.0f);
+        mob.damage(5, glm::vec3(d.x, 0.5f, d.z));
+    }
+    for (const Turn& turn : turns) m_entities.spawnAt(turn.into, turn.feet, *m_world, turn.baby);
+
+    const glm::vec3 d = m_player.position - strike;
+    if (playing() && std::fabs(d.x) < 3.5f && std::fabs(d.z) < 3.5f && d.y > -3.0f && d.y < 6.0f)
+    {
+        m_player.cause = "lightningBolt";
+        if (m_player.damage(5)) m_audio.play(Sound::Hurt, 0.8f);
+        m_player.ignite(8.0f);
+    }
+
+    if (m_rules.on(GameRules::Rule::DoFireTick) && m_worldMeta.difficulty != Worlds::Difficulty::Peaceful)
+    {
+        const glm::ivec3 cell(glm::floor(strike));
+        if (m_world->getBlock(cell.x, cell.y, cell.z) == Blocks::Air && isSolid(m_world->getBlock(cell.x, cell.y - 1, cell.z)))
+        {
+            m_world->setBlock(cell.x, cell.y, cell.z, Blocks::Fire0);
+            m_net.onLocalBlockChange(cell.x, cell.y, cell.z, Blocks::Fire0);
+        }
+    }
 }
 
 void Application::tickCopper(float deltaTime)
@@ -14230,7 +14280,11 @@ void Application::applyBlast(const glm::vec3& at, float radius, int damage)
 
         const glm::vec3 body = mob.position() + glm::vec3(0.0f, mob.height() * 0.5f, 0.0f);
         const int hurt = Explosion::damageAt(glm::length(body - at), radius, damage);
-        if (hurt > 0) mob.damage(hurt, body - at);
+        if (hurt > 0)
+        {
+            if (m_blastCharged) mob.markChargedBlast();
+            mob.damage(hurt, body - at);
+        }
     }
 }
 
@@ -20523,7 +20577,10 @@ void Application::updateMobs(float deltaTime)
     for (const MobBlast& blast : m_entities.drainBlasts())
     {
         m_blastSource = blast.source;
+        m_blastCharged = blast.charged;
+        if (blast.charged) m_chargedHeadReady = true;
         applyBlast(blast.at, blast.radius, blast.damage);
+        m_blastCharged = false;
         m_blastSource = -1;
     }
 
@@ -20646,6 +20703,16 @@ void Application::updateMobs(float deltaTime)
             }
             if (death.type == MobId::Rabbit && luck % 10u == 0u) m_drops.spawn(where, Items::RabbitFoot, 1);
             if (death.type == MobId::Creeper && death.shotByMob) m_drops.spawn(where, Discs::itemOf(static_cast<int>((luck >> 5) % 12u)), 1);
+            if (death.chargedBlast && m_chargedHeadReady)
+            {
+                const int kind = death.type == MobId::Skeleton ? 0 : death.type == MobId::WitherSkeleton ? 1 : death.type == MobId::Zombie ? 2
+                               : death.type == MobId::Creeper ? 4 : death.type == MobId::Piglin ? 6 : -1;
+                if (kind >= 0)
+                {
+                    m_drops.spawn(where, kind == 1 ? static_cast<StackId>(Blocks::WitherSkull) : static_cast<StackId>(headOf(kind, false, 0)), 1);
+                    m_chargedHeadReady = false;
+                }
+            }
             if (death.type == MobId::Guardian || death.type == MobId::ElderGuardian)
             {
                 const uint32_t pool = (luck >> 4) % 5u;
@@ -23354,6 +23421,7 @@ std::string Application::deathMessageFor() const
     if (cause == "explosion") return who + " blew up";
     if (cause == "outOfWorld") return who + " fell out of the world";
     if (cause == "kill") return who + " was killed";
+    if (cause == "lightningBolt") return who + " was struck by lightning";
     return who + " died";
 }
 

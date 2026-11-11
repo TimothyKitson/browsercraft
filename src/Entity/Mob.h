@@ -44,6 +44,7 @@ struct MobBlast
     float radius = 0.0f;
     int damage = 0;
     int source = -1;
+    bool charged = false;
 };
 
 // A mob loosing an arrow. Collected like the strikes and the sounds,
@@ -417,6 +418,10 @@ public:
     void setYaw(float yaw) { m_yaw = yaw; m_goalYaw = yaw; }
     void setSelfPush(bool pushing) { m_selfPush = pushing; }
     void markShotByMob() { m_shotByMob = true; }
+    bool charged() const { return m_charged; }
+    void setCharged(bool on) { m_charged = on; }
+    void markChargedBlast() { m_chargedBlast = true; }
+    bool chargedBlastHit() const { return m_chargedBlast; }
     bool rolled() const { return m_rolled; }
     void scare(float seconds)
     {
@@ -511,6 +516,8 @@ private:
     int m_variant = 0;
     bool m_selfPush = false;
     bool m_shotByMob = false;
+    bool m_charged = false;
+    bool m_chargedBlast = false;
     bool m_rolled = false;
     bool m_rolledJustNow = false;
     float m_rollHold = 0.0f;

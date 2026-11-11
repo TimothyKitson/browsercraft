@@ -87,6 +87,7 @@ public:
         bool weaving = false;
         bool windCharged = false;
         bool byPlayer = false;
+        bool chargedBlast = false;
         int how = 0;
         float distance = 0.0f;
     };

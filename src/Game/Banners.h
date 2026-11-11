@@ -21,7 +21,7 @@ namespace Banners
         DiagonalLeft, DiagonalUpRight, DiagonalUpLeft, DiagonalRight,
         Circle, Rhombus, HalfVertical, HalfHorizontal, HalfVerticalRight, HalfHorizontalBottom,
         Border, CurlyBorder, Gradient, GradientUp, Bricks,
-        Globe, Creeper, Skull, Flower, Piglin, Flow, Guster,
+        Globe, Creeper, Skull, Flower, Piglin, Flow, Guster, Mojang,
         PatternCount
     };
 

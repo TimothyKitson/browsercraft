@@ -1080,6 +1080,7 @@ namespace
         haveItem.insert(static_cast<int>(Items::ArmadilloScute));
         haveItem.insert(static_cast<int>(Blocks::HeavyCore));
         haveItem.insert(static_cast<int>(Blocks::DragonEgg));
+        for (int kind : { 0, 2, 4, 6 }) haveItem.insert(static_cast<int>(headOf(kind, false, 0)));
         for (int k = Items::AnglerSherd; k <= Items::SnortSherd; ++k) haveItem.insert(k);
         for (int k = Items::WayfinderTemplate; k <= Items::HostTemplate; ++k) haveItem.insert(k);
         haveItem.insert(static_cast<int>(Items::TideTemplate));

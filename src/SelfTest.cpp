@@ -13670,6 +13670,25 @@ namespace
         check(Armour::pieceOf(static_cast<StackId>(headOf(3, false, 0))) == Armour::Piece::Helmet &&
               Armour::pieceOf(Blocks::WitherSkull) == Armour::Piece::Helmet, "a head is worn as a helmet");
         check(Tools::canHarvest(Blocks::Air, headOf(5, false, 0)), "and comes off by hand");
+        check(RecipeBook::stackNamed("creeper_banner_pattern") == static_cast<StackId>(Items::CreeperBannerPattern) &&
+              RecipeBook::stackNamed("mojang_banner_pattern") == static_cast<StackId>(Items::MojangBannerPattern),
+              "the creeper charge and thing banner patterns exist under their 1.21.1 names");
+        check(Banners::patternOfItem(Items::CreeperBannerPattern) == Banners::Creeper && Banners::patternOfItem(Items::MojangBannerPattern) == Banners::Mojang,
+              "and each puts its own charge on a banner in the loom");
+        {
+            ItemStack grid[9];
+            grid[0] = ItemStack{ Items::Paper, 1 };
+            grid[1] = ItemStack{ static_cast<StackId>(headOf(4, false, 0)), 1 };
+            const CraftOutput creeper = Crafting::match(grid, 2);
+            grid[1] = ItemStack{ Items::EnchantedGoldenApple, 1 };
+            const CraftOutput thing = Crafting::match(grid, 2);
+            check(creeper.valid() && creeper.id == Items::CreeperBannerPattern && thing.valid() && thing.id == Items::MojangBannerPattern,
+                  "paper and a creeper head make one, paper and an enchanted golden apple the other");
+        }
+        Mob creeper(MobId::Creeper, glm::vec3(0.0f), 7u);
+        check(!creeper.charged(), "a creeper starts uncharged");
+        creeper.setCharged(true);
+        check(creeper.charged(), "and lightning charges it");
     }
 
     void testGameRules()

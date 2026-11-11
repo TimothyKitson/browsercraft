@@ -502,6 +502,8 @@ namespace
           static_cast<StackId>(Blocks::CalibratedSensorFirst + 4), 1 },
         { true, 0, 0, { Items::Paper, Blocks::OxeyeDaisy }, 2, Items::FlowerBannerPattern, 1 },
         { true, 0, 0, { Items::Paper, Blocks::WitherSkull }, 2, Items::SkullBannerPattern, 1 },
+        { true, 0, 0, { Items::Paper, static_cast<StackId>(Blocks::HeadRunFirst + 80) }, 2, Items::CreeperBannerPattern, 1 },
+        { true, 0, 0, { Items::Paper, Items::EnchantedGoldenApple }, 2, Items::MojangBannerPattern, 1 },
         { false, 3, 3, { Blocks::Wool, Blocks::Wool, Blocks::Wool, Blocks::Wool, Blocks::Wool, Blocks::Wool, Blocks::Air, Items::Stick, Blocks::Air }, 0, static_cast<StackId>(Blocks::BannerFirst + 2), 1 },
         { false, 3, 3, { static_cast<StackId>(Blocks::WoolOrange + 0), static_cast<StackId>(Blocks::WoolOrange + 0), static_cast<StackId>(Blocks::WoolOrange + 0), static_cast<StackId>(Blocks::WoolOrange + 0), static_cast<StackId>(Blocks::WoolOrange + 0), static_cast<StackId>(Blocks::WoolOrange + 0), Blocks::Air, Items::Stick, Blocks::Air }, 0, static_cast<StackId>(Blocks::BannerFirst + 10), 1 },
         { false, 3, 3, { static_cast<StackId>(Blocks::WoolOrange + 1), static_cast<StackId>(Blocks::WoolOrange + 1), static_cast<StackId>(Blocks::WoolOrange + 1), static_cast<StackId>(Blocks::WoolOrange + 1), static_cast<StackId>(Blocks::WoolOrange + 1), static_cast<StackId>(Blocks::WoolOrange + 1), Blocks::Air, Items::Stick, Blocks::Air }, 0, static_cast<StackId>(Blocks::BannerFirst + 18), 1 },

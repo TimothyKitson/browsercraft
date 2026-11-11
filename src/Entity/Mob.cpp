@@ -1025,8 +1025,9 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
             {
                 MobBlast blast;
                 blast.at = m_position + glm::vec3(0.0f, height() * 0.5f, 0.0f);
-                blast.radius = t.blastRadius;
-                blast.damage = t.blastDamage;
+                blast.radius = t.blastRadius * (m_charged ? 2.0f : 1.0f);
+                blast.damage = t.blastDamage * (m_charged ? 2 : 1);
+                blast.charged = m_charged;
                 m_blasts.push_back(blast);
 
                 // It goes with the blast. Nothing left to drop: the

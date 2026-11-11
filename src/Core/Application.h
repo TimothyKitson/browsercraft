@@ -1232,6 +1232,9 @@ private:
 
     // A creeper going off: what it breaks and what it hurts.
     void applyBlast(const glm::vec3& at, float radius, int damage);
+    void boltStrikes(const glm::vec3& strike);
+    bool m_blastCharged = false;
+    bool m_chargedHeadReady = false;
 
     // TNT that has been lit, and the fuses still burning.
     void primeTnt(const glm::ivec3& block);
