@@ -441,6 +441,7 @@ void WorldGen::generate(Chunk& chunk) const
     {
         case Dimension::Nether:
             generateNether(chunk);
+            dressNether(chunk);
             buildNetherFortresses(chunk);
             buildBastions(chunk);
             return;
@@ -466,8 +467,16 @@ void WorldGen::generate(Chunk& chunk) const
     carveCaves(chunk);
     layDeepslate(chunk);
     placeOres(chunk);
+    placeOreVeins(chunk);
     dressCaves(chunk);
+    placeLavaLakes(chunk);
+    placeSprings(chunk);
     decorate(chunk);
+    if (structures)
+    {
+        buildDungeons(chunk);
+        buildFossils(chunk);
+    }
     if (structures)
     {
         buildVillages(chunk);
@@ -480,6 +489,7 @@ void WorldGen::generate(Chunk& chunk) const
     buildGeodes(chunk);
     if (structures) buildAncientCities(chunk);
     dressSeabed(chunk);
+    placeSeaMagma(chunk);
     if (structures)
     {
         buildOceanStructures(chunk);
@@ -4310,8 +4320,259 @@ void WorldGen::stampMonument(Chunk& chunk, int midX, int midZ) const
 // same question the generator asked -- which structures reach this
 // place, and does one of them keep a chest exactly here.
 // ---------------------------------------------------------------------
+bool WorldGen::dungeonIn(int chunkX, int chunkZ, int& x, int& y, int& z) const
+{
+    constexpr uint32_t SALT = 778211u;
+    if (!Structures::spreadAt(chunkX, chunkZ, m_seed, SALT, 0.14f)) return false;
+    const uint32_t h = hashCoords(chunkX, 31, chunkZ, m_seed + SALT);
+    x = chunkX * Chunk::SX + 4 + static_cast<int>(h % 8u);
+    z = chunkZ * Chunk::SZ + 4 + static_cast<int>((h >> 4) % 8u);
+    y = 8 + static_cast<int>((h >> 8) % 42u);
+    return true;
+}
+
+int WorldGen::dungeonCage(int x, int y, int z) const
+{
+    int ox = 0, oy = 0, oz = 0;
+    const int cx = static_cast<int>(std::floor(static_cast<float>(x) / Chunk::SX));
+    const int cz = static_cast<int>(std::floor(static_cast<float>(z) / Chunk::SZ));
+    if (!dungeonIn(cx, cz, ox, oy, oz) || ox != x || oy != y || oz != z) return -1;
+    const uint32_t roll = hashCoords(x, y, z, m_seed + 778212u) % 4u;
+    return roll < 2u ? 0 : static_cast<int>(roll) - 1;
+}
+
+void WorldGen::buildDungeons(Chunk& chunk) const
+{
+    int ox = 0, oy = 0, oz = 0;
+    if (m_dimension != Dimension::Overworld || !dungeonIn(chunk.position().x, chunk.position().z, ox, oy, oz)) return;
+    const int baseX = chunk.position().x * Chunk::SX;
+    const int baseZ = chunk.position().z * Chunk::SZ;
+    const int lx = ox - baseX, lz = oz - baseZ;
+    if (oy + 6 >= surfaceHeight(ox, oz) - 2) return;
+    int open = 0;
+    for (int dx = -3; dx <= 3; ++dx)
+        for (int dy = 0; dy <= 3; ++dy)
+            for (int dz = -3; dz <= 3; ++dz)
+            {
+                const BlockId cell = chunk.getBlock(lx + dx, oy + dy, lz + dz);
+                if (isLiquid(cell)) return;
+                if (cell == Blocks::Air) ++open;
+            }
+    if (open < 4) return;
+    for (int dx = -4; dx <= 4; ++dx)
+        for (int dy = -1; dy <= 4; ++dy)
+            for (int dz = -4; dz <= 4; ++dz)
+            {
+                const bool shell = dx == -4 || dx == 4 || dz == -4 || dz == 4 || dy == -1 || dy == 4;
+                const BlockId cell = chunk.getBlock(lx + dx, oy + dy, lz + dz);
+                if (!shell)
+                {
+                    chunk.setBlockRaw(lx + dx, oy + dy, lz + dz, Blocks::Air);
+                    continue;
+                }
+                if (!isSolid(cell)) continue;
+                const bool mossy = dy == -1 && hashToFloat(hashCoords(ox + dx, oy + dy, oz + dz, m_seed + 778213u)) < 0.5f;
+                chunk.setBlockRaw(lx + dx, oy + dy, lz + dz, mossy ? Blocks::MossyCobblestone : Blocks::Cobblestone);
+            }
+    chunk.setBlockRaw(lx, oy, lz, Blocks::MonsterSpawner);
+    static const int SPOTS[4][2] = { { 3, 0 }, { -3, 0 }, { 0, 3 }, { 0, -3 } };
+    const uint32_t pick = hashCoords(ox, oy, oz, m_seed + 778214u);
+    const int chests = 1 + static_cast<int>(pick % 2u);
+    for (int k = 0; k < chests; ++k)
+    {
+        const int* spot = SPOTS[(pick / 2u + static_cast<uint32_t>(k) * 2u) % 4u];
+        chunk.setBlockRaw(lx + spot[0], oy, lz + spot[1], Blocks::Chest);
+    }
+}
+
+void WorldGen::buildFossils(Chunk& chunk) const
+{
+    constexpr uint32_t SALT = 778301u;
+    if (m_dimension != Dimension::Overworld) return;
+    const int cx = chunk.position().x, cz = chunk.position().z;
+    if (!Structures::spreadAt(cx, cz, m_seed, SALT, 1.0f / 40.0f)) return;
+    const int baseX = cx * Chunk::SX, baseZ = cz * Chunk::SZ;
+    const Biomes::Kind here = kindAt(baseX + 8, baseZ + 8);
+    if (here != Biomes::Kind::Desert && here != Biomes::Kind::Swamp && here != Biomes::Kind::MangroveSwamp) return;
+    const uint32_t h = hashCoords(cx, 41, cz, m_seed + SALT);
+    const int lx = 5 + static_cast<int>(h % 6u), lz = 5 + static_cast<int>((h >> 4) % 6u);
+    const int y = std::max(10, surfaceHeight(baseX + lx, baseZ + lz) - 14 - static_cast<int>((h >> 8) % 10u));
+    auto bone = [&](int x, int yy, int z) {
+        const BlockId host = chunk.getBlock(x, yy, z);
+        if (!Chunk::inBounds(x, yy, z) || !isSolid(host) || host == Blocks::Bedrock) return;
+        const bool ore = hashToFloat(hashCoords(baseX + x, yy, baseZ + z, m_seed + SALT + 1)) < 0.1f;
+        chunk.setBlockRaw(x, yy, z, ore ? (yy < DEEPSLATE_TOP ? Blocks::DeepslateDiamondOre : Blocks::CoalOre) : Blocks::BoneBlock);
+    };
+    for (int dx = -4; dx <= 4; ++dx)
+    {
+        bone(lx + dx, y + 2, lz);
+        if ((dx & 1) != 0 && dx > -4 && dx < 4)
+            for (const int side : { -1, 1 })
+            {
+                bone(lx + dx, y + 2, lz + side);
+                bone(lx + dx, y + 1, lz + side * 2);
+                bone(lx + dx, y, lz + side * 2);
+                bone(lx + dx, y - 1, lz + side);
+            }
+    }
+    bone(lx + 5, y + 2, lz);
+    bone(lx + 5, y + 3, lz);
+    bone(lx + 5, y + 2, lz + 1);
+}
+
+void WorldGen::placeSprings(Chunk& chunk) const
+{
+    if (m_dimension != Dimension::Overworld) return;
+    const int baseX = chunk.position().x * Chunk::SX, baseZ = chunk.position().z * Chunk::SZ;
+    for (int attempt = 0; attempt < 14; ++attempt)
+    {
+        const bool lava = attempt >= 10;
+        const uint32_t h = hashCoords(baseX + attempt, 51, baseZ - attempt, m_seed + 778401u);
+        const int lx = 1 + static_cast<int>(h % 14u), lz = 1 + static_cast<int>((h >> 4) % 14u);
+        const int y = lava ? 4 + static_cast<int>((h >> 8) % 28u) : 8 + static_cast<int>((h >> 8) % 90u);
+        if (!isStoneFamily(chunk.getBlock(lx, y, lz))) continue;
+        if (!isSolid(chunk.getBlock(lx, y + 1, lz)) || !isSolid(chunk.getBlock(lx, y - 1, lz))) continue;
+        int open = 0, walls = 0;
+        static const int SIDE[4][2] = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } };
+        for (const auto& d : SIDE)
+        {
+            const BlockId beside = chunk.getBlock(lx + d[0], y, lz + d[1]);
+            if (beside == Blocks::Air) ++open;
+            else if (isSolid(beside)) ++walls;
+        }
+        if (open != 1 || walls != 3) continue;
+        chunk.setBlockRaw(lx, y, lz, lava ? Blocks::Lava : Blocks::Water);
+    }
+}
+
+void WorldGen::placeLavaLakes(Chunk& chunk) const
+{
+    constexpr uint32_t SALT = 778501u;
+    if (m_dimension != Dimension::Overworld) return;
+    const int cx = chunk.position().x, cz = chunk.position().z;
+    if (!Structures::spreadAt(cx, cz, m_seed, SALT, 0.08f)) return;
+    const int baseX = cx * Chunk::SX, baseZ = cz * Chunk::SZ;
+    const uint32_t h = hashCoords(cx, 61, cz, m_seed + SALT);
+    const int lx = 5 + static_cast<int>(h % 6u), lz = 5 + static_cast<int>((h >> 4) % 6u);
+    const int y = 6 + static_cast<int>((h >> 8) % 30u);
+    if (y + 4 >= surfaceHeight(baseX + lx, baseZ + lz) - 4) return;
+    for (int dx = -4; dx <= 4; ++dx)
+        for (int dy = -2; dy <= 2; ++dy)
+            for (int dz = -4; dz <= 4; ++dz)
+            {
+                const float r = (dx * dx) / 16.0f + (dy * dy) / 4.0f + (dz * dz) / 16.0f;
+                if (r > 1.0f) continue;
+                const int x = lx + dx, yy = y + dy, z = lz + dz;
+                if (!Chunk::inBounds(x, yy, z) || chunk.getBlock(x, yy, z) == Blocks::Bedrock) continue;
+                chunk.setBlockRaw(x, yy, z, dy <= 0 ? Blocks::Lava : Blocks::Air);
+            }
+}
+
+void WorldGen::placeOreVeins(Chunk& chunk) const
+{
+    constexpr uint32_t SALT = 778601u;
+    if (m_dimension != Dimension::Overworld) return;
+    const int cx = chunk.position().x, cz = chunk.position().z;
+    if (!Structures::spreadAt(cx, cz, m_seed, SALT, 0.18f)) return;
+    const uint32_t h = hashCoords(cx, 71, cz, m_seed + SALT);
+    const bool copper = (h & 1u) != 0;
+    int x = 2 + static_cast<int>((h >> 1) % 12u), z = 2 + static_cast<int>((h >> 5) % 12u);
+    int y = copper ? 22 + static_cast<int>((h >> 9) % 28u) : 2 + static_cast<int>((h >> 9) % 14u);
+    const BlockId filler = copper ? Blocks::Granite : Blocks::Tuff;
+    const BlockId raw = copper ? Blocks::RawCopperBlock : Blocks::RawIronBlock;
+    for (int step = 0; step < 56; ++step)
+    {
+        const uint32_t g = hashCoords(cx * 64 + step, y, cz * 64 - step, m_seed + SALT + 1);
+        for (int k = 0; k < 4; ++k)
+        {
+            const int px = x + static_cast<int>((g >> (k * 3)) % 3u) - 1;
+            const int py = y + static_cast<int>((g >> (k * 3 + 12)) % 3u) - 1;
+            const int pz = z + static_cast<int>((g >> (k * 2 + 20)) % 3u) - 1;
+            const BlockId host = chunk.getBlock(px, py, pz);
+            if (!Chunk::inBounds(px, py, pz) || !isStoneFamily(host)) continue;
+            const float roll = hashToFloat(hashCoords(px + cx * 16, py, pz + cz * 16, m_seed + SALT + 2));
+            const BlockId ore = copper ? Blocks::CopperOre : Blocks::IronOre;
+            const BlockId placed = roll < 0.03f ? raw : roll < 0.40f ? (host == Blocks::Deepslate ? deepslateOreOf(ore) : ore) : filler;
+            chunk.setBlockRaw(px, py, pz, placed);
+        }
+        x = std::clamp(x + static_cast<int>(g % 3u) - 1, 1, Chunk::SX - 2);
+        z = std::clamp(z + static_cast<int>((g >> 2) % 3u) - 1, 1, Chunk::SZ - 2);
+        y = std::clamp(y + static_cast<int>((g >> 4) % 3u) - 1, copper ? 22 : 2, copper ? 52 : 18);
+    }
+}
+
+void WorldGen::placeSeaMagma(Chunk& chunk) const
+{
+    if (m_dimension != Dimension::Overworld) return;
+    const int baseX = chunk.position().x * Chunk::SX, baseZ = chunk.position().z * Chunk::SZ;
+    for (int lx = 0; lx < Chunk::SX; ++lx)
+        for (int lz = 0; lz < Chunk::SZ; ++lz)
+        {
+            if (hashToFloat(hashCoords(baseX + lx, 81, baseZ + lz, m_seed + 778701u)) >= 0.012f) continue;
+            for (int y = SEA_LEVEL - 1; y > 2; --y)
+            {
+                const BlockId cell = chunk.getBlock(lx, y, lz);
+                if (isWater(cell)) continue;
+                if (isSolid(cell) && isWater(chunk.getBlock(lx, y + 1, lz)) && (cell == Blocks::Gravel || cell == Blocks::Sand || isStoneFamily(cell)))
+                    chunk.setBlockRaw(lx, y, lz, Blocks::MagmaBlock);
+                break;
+            }
+        }
+}
+
+void WorldGen::dressNether(Chunk& chunk) const
+{
+    const int baseX = chunk.position().x * Chunk::SX, baseZ = chunk.position().z * Chunk::SZ;
+    for (int lx = 0; lx < Chunk::SX; ++lx)
+        for (int lz = 0; lz < Chunk::SZ; ++lz)
+            for (int y = 2; y < 120; ++y)
+            {
+                const BlockId cell = chunk.getBlock(lx, y, lz);
+                const BlockId above = chunk.getBlock(lx, y + 1, lz);
+                const float roll = hashToFloat(hashCoords(baseX + lx, y, baseZ + lz, m_seed + 778801u));
+                if (above == Blocks::Air && (cell == Blocks::Netherrack || cell == Blocks::SoulSand || cell == Blocks::SoulSoil))
+                {
+                    const bool soul = cell != Blocks::Netherrack;
+                    if (roll < 0.004f) chunk.setBlockRaw(lx, y + 1, lz, soul ? Blocks::SoulFire : Blocks::Fire0);
+                    else if (!soul && roll < 0.007f) chunk.setBlockRaw(lx, y + 1, lz, Blocks::BrownMushroom);
+                    else if (!soul && roll < 0.010f) chunk.setBlockRaw(lx, y + 1, lz, Blocks::RedMushroom);
+                }
+                if (cell == Blocks::Netherrack && y >= 26 && y <= 36 && roll > 0.996f)
+                    for (int k = 0; k < 6; ++k)
+                    {
+                        const uint32_t g = hashCoords(baseX + lx + k, y, baseZ + lz - k, m_seed + 778802u);
+                        const int px = lx + static_cast<int>(g % 3u) - 1, py = y + static_cast<int>((g >> 2) % 3u) - 1, pz = lz + static_cast<int>((g >> 4) % 3u) - 1;
+                        if (chunk.getBlock(px, py, pz) == Blocks::Netherrack) chunk.setBlockRaw(px, py, pz, Blocks::MagmaBlock);
+                    }
+                if (cell == Blocks::Glowstone && above == Blocks::Netherrack)
+                    for (int k = 0; k < 10; ++k)
+                    {
+                        const uint32_t g = hashCoords(baseX + lx - k, y, baseZ + lz + k, m_seed + 778803u);
+                        const int px = lx + static_cast<int>(g % 3u) - 1, py = y - static_cast<int>((g >> 2) % 3u), pz = lz + static_cast<int>((g >> 4) % 3u) - 1;
+                        if (chunk.getBlock(px, py, pz) == Blocks::Air) chunk.setBlockRaw(px, py, pz, Blocks::Glowstone);
+                    }
+            }
+    for (int attempt = 0; attempt < 8; ++attempt)
+    {
+        const uint32_t h = hashCoords(baseX - attempt, 91, baseZ + attempt, m_seed + 778804u);
+        const int lx = 1 + static_cast<int>(h % 14u), lz = 1 + static_cast<int>((h >> 4) % 14u), y = 10 + static_cast<int>((h >> 8) % 100u);
+        if (chunk.getBlock(lx, y, lz) != Blocks::Netherrack) continue;
+        int open = 0;
+        static const int SIDE[4][2] = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } };
+        for (const auto& d : SIDE) if (chunk.getBlock(lx + d[0], y, lz + d[1]) == Blocks::Air) ++open;
+        if (open == 1 && chunk.getBlock(lx, y + 1, lz) == Blocks::Netherrack) chunk.setBlockRaw(lx, y, lz, Blocks::Lava);
+    }
+}
+
 WorldGen::Hoard WorldGen::hoardAt(int x, int y, int z) const
 {
+    {
+        int ox = 0, oy = 0, oz = 0;
+        const int cx = static_cast<int>(std::floor(static_cast<float>(x) / Chunk::SX));
+        const int cz = static_cast<int>(std::floor(static_cast<float>(z) / Chunk::SZ));
+        if (dungeonIn(cx, cz, ox, oy, oz) && oy == y && ((std::abs(x - ox) == 3 && z == oz) || (std::abs(z - oz) == 3 && x == ox)))
+            return Hoard::Dungeon;
+    }
     // The landmarks, each off the one chest table its stamp uses.
     for (int k = 0; k < static_cast<int>(Landmark::Count); ++k)
     {

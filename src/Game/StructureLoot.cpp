@@ -137,6 +137,23 @@ namespace
         { Blocks::Prismarine, 2, 8 },
     };
 
+    const Entry DUNGEON[] = {
+        { Items::Saddle,      1, 1 },
+        { Items::GoldenApple, 1, 1 },
+        { Items::Bread,       1, 3 },
+        { Items::Wheat,       1, 4 },
+        { Items::Gunpowder,   1, 4 },
+        { Items::StringItem,  1, 4 },
+        { Items::Bucket,      1, 1 },
+        { Items::IronIngot,   1, 4 },
+        { Items::GoldIngot,   1, 4 },
+        { Items::Redstone,    1, 4 },
+        { Items::NameTag,     1, 1 },
+        { Items::IronHorseArmor, 1, 1 },
+        { Items::Bone,        1, 8 },
+        { Items::RottenFlesh, 1, 8 },
+    };
+
     // What the miners left behind.
     const Entry MINESHAFT[] = {
         { Blocks::RailEastWest, 2, 8 },
@@ -271,6 +288,8 @@ namespace
                 return { MONUMENT, static_cast<int>(std::size(MONUMENT)) };
             case WorldGen::Hoard::Mineshaft:
                 return { MINESHAFT, static_cast<int>(std::size(MINESHAFT)) };
+            case WorldGen::Hoard::Dungeon:
+                return { DUNGEON, static_cast<int>(std::size(DUNGEON)) };
             case WorldGen::Hoard::Stronghold:
                 return { STRONGHOLD, static_cast<int>(std::size(STRONGHOLD)) };
             case WorldGen::Hoard::SwampHut:
@@ -306,6 +325,7 @@ StructureLoot::Stack StructureLoot::centrepiece(WorldGen::Hoard hoard,
         case WorldGen::Hoard::BuriedTreasure:  out.id = Items::HeartOfTheSea; out.count = 1; break;
         case WorldGen::Hoard::Monument:        out.id = Items::GoldIngot; out.count = 8; break;
         case WorldGen::Hoard::Mineshaft:       out.id = Blocks::RailEastWest; out.count = 6; break;
+        case WorldGen::Hoard::Dungeon:         out.id = static_cast<StackId>(Items::MusicDiscFirst + static_cast<int>(hashCoords(x, y, z, seed) % 3u)); out.count = 1; break;
         case WorldGen::Hoard::Stronghold:      out.id = Items::Book;      out.count = 2; break;
         case WorldGen::Hoard::SwampHut:        out.id = Items::GlassBottle; out.count = 3; break;
         // Minecraft hangs the wings in a frame aboard the ship moored

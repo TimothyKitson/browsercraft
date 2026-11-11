@@ -121,9 +121,12 @@ public:
         EndCity,
         Bastion,
         TrialChamber,
+        Dungeon,
     };
 
     Hoard hoardAt(int x, int y, int z) const;
+    bool dungeonIn(int chunkX, int chunkZ, int& x, int& y, int& z) const;
+    int dungeonCage(int x, int y, int z) const;
 
     static const char* landmarkName(Landmark kind);
 
@@ -422,6 +425,13 @@ private:
     void hangVines(Chunk& chunk, int worldX, int ground, int worldZ) const;
     void hangCocoa(Chunk& chunk, int worldX, int ground, int worldZ) const;
     void dressSeabed(Chunk& chunk) const;
+    void buildDungeons(Chunk& chunk) const;
+    void buildFossils(Chunk& chunk) const;
+    void placeSprings(Chunk& chunk) const;
+    void placeLavaLakes(Chunk& chunk) const;
+    void placeOreVeins(Chunk& chunk) const;
+    void placeSeaMagma(Chunk& chunk) const;
+    void dressNether(Chunk& chunk) const;
     void buildDesertWells(Chunk& chunk) const;
     void buildOceanRuins(Chunk& chunk) const;
     void buildTrailRuins(Chunk& chunk) const;

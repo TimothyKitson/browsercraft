@@ -3252,7 +3252,7 @@ bool Application::frame()
             m_startupScreen == "shulkerboxes" || m_startupScreen == "beds" || m_startupScreen == "chests" ||
             m_startupScreen == "copper" || m_startupScreen == "flowers" || m_startupScreen == "mushrooms" || m_startupScreen == "lush" ||
             m_startupScreen == "farm" || m_startupScreen == "corals" || m_startupScreen == "ice" || m_startupScreen == "wiring" || m_startupScreen == "utility" || m_startupScreen == "dig" ||
-            m_startupScreen == "boat" || m_startupScreen == "rails" || m_startupScreen == "railhill" || m_startupScreen == "turned" || m_startupScreen == "jockeys" ||
+            m_startupScreen == "boat" || m_startupScreen == "rails" || m_startupScreen == "railhill" || m_startupScreen == "turned" || m_startupScreen == "jockeys" || m_startupScreen == "dungeon" ||
             m_startupScreen == "mobs" || m_startupScreen == "golem" ||
             m_startupScreen == "glowmobs" || m_startupScreen == "variants" || m_startupScreen == "zoo" || m_startupScreen == "llamas" ||
             m_startupScreen == "shulker" ||
@@ -3306,6 +3306,7 @@ bool Application::frame()
                                   m_startupScreen != "railhill" &&
                                   m_startupScreen != "turned" &&
                                   m_startupScreen != "jockeys" &&
+                                  m_startupScreen != "dungeon" &&
                                   m_startupScreen != "flow" &&
                                   m_startupScreen != "buds" &&
                                   m_startupScreen != "beam" &&
@@ -7772,6 +7773,30 @@ bool Application::frame()
                     m_world->setBlock(bx - 6, top(d) + 1, bz + d, Blocks::Leaves);
             }
 
+            if (m_startupScreen == "dungeon")
+            {
+                m_showDebug = false;
+                m_freezeMobs = true;
+                const int homeX = static_cast<int>(std::floor(m_player.position.x / Chunk::SX));
+                const int homeZ = static_cast<int>(std::floor(m_player.position.z / Chunk::SZ));
+                bool found = false;
+                for (int r = 0; r <= 10 && !found; ++r)
+                    for (int cz = homeZ - r; cz <= homeZ + r && !found; ++cz)
+                        for (int cx = homeX - r; cx <= homeX + r && !found; ++cx)
+                        {
+                            if (std::max(std::abs(cx - homeX), std::abs(cz - homeZ)) != r) continue;
+                            int ox = 0, oy = 0, oz = 0;
+                            if (!m_world->generator().dungeonIn(cx, cz, ox, oy, oz)) continue;
+                            Chunk probe(ChunkPos{ cx, cz });
+                            m_world->generator().generate(probe);
+                            if (probe.getBlock(ox - cx * Chunk::SX, oy, oz - cz * Chunk::SZ) != Blocks::MonsterSpawner) continue;
+                            m_player.position = glm::vec3(ox - 2.5f, static_cast<float>(oy), oz - 2.5f);
+                            m_camera.setOrientation(45.0f, -12.0f);
+                            m_player.takeEffect(Effects::Kind::NightVision, 0, 120.0f);
+                            found = true;
+                        }
+            }
+
             if (m_startupScreen == "jockeys")
             {
                 m_camera.setOrientation(90.0f, -12.0f);
@@ -10502,7 +10527,10 @@ void Application::tickMonsterCages(float deltaTime)
                 const glm::ivec3 at(middle.x + dx, middle.y + dy, middle.z + dz);
                 if (!isMonsterSpawner(m_world->getBlock(at.x, at.y, at.z))) continue;
                 const auto chosen = m_cageKinds.find({ static_cast<int>(m_dimension), at.x, at.y, at.z });
-                const MobId species = chosen != m_cageKinds.end() ? static_cast<MobId>(chosen->second) : cageSpecies(m_dimension);
+                const int dungeonKind = chosen == m_cageKinds.end() ? m_world->generator().dungeonCage(at.x, at.y, at.z) : -1;
+                static const MobId DUNGEON_KINDS[3] = { MobId::Zombie, MobId::Skeleton, MobId::Spider };
+                const MobId species = chosen != m_cageKinds.end() ? static_cast<MobId>(chosen->second)
+                                    : dungeonKind >= 0 ? DUNGEON_KINDS[dungeonKind] : cageSpecies(m_dimension);
 
                 const glm::vec3 centre = glm::vec3(at) + glm::vec3(0.5f);
                 if (glm::length(centre - m_player.position) > CAGE_RANGE) continue;

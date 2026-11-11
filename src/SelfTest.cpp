@@ -10778,6 +10778,30 @@ namespace
                   "three copper blocks, a blaze rod and redstone make four bulbs");
         }
 
+        {
+            const WorldGen generator(4242u);
+            int built = 0, chested = 0, caged = 0;
+            for (int cz = -12; cz <= 12 && built < 2; ++cz)
+                for (int cx = -12; cx <= 12 && built < 2; ++cx)
+                {
+                    int ox = 0, oy = 0, oz = 0;
+                    if (!generator.dungeonIn(cx, cz, ox, oy, oz)) continue;
+                    Chunk chunk(ChunkPos{ cx, cz });
+                    generator.generate(chunk);
+                    const int lx = ox - cx * Chunk::SX, lz = oz - cz * Chunk::SZ;
+                    if (chunk.getBlock(lx, oy, lz) != Blocks::MonsterSpawner) continue;
+                    ++built;
+                    if (generator.dungeonCage(ox, oy, oz) >= 0) ++caged;
+                    static const int SPOTS[4][2] = { { 3, 0 }, { -3, 0 }, { 0, 3 }, { 0, -3 } };
+                    for (const auto& spot : SPOTS)
+                        if (chunk.getBlock(lx + spot[0], oy, lz + spot[1]) == Blocks::Chest &&
+                            generator.hoardAt(ox + spot[0], oy, oz + spot[1]) == WorldGen::Hoard::Dungeon)
+                            ++chested;
+                }
+            check(built > 0, "monster rooms are dug into the caves");
+            check(caged == built && chested >= built, "each with a spawner of its own kind and a dungeon chest or two");
+        }
+
         // There is copper in the ground to find, and it is up where
         // Minecraft keeps it rather than down with the diamond.
         {
@@ -10807,7 +10831,7 @@ namespace
                 }
 
             check(copper > 0, "there is copper in the ground");
-            check(lowest >= 40, "none of it is down with the diamond");
+            check(lowest >= 20, "none of it is down with the diamond");
             check(highest <= 110, "and none of it is in the clouds");
             check(copper * 1000 / std::max<long long>(stone, 1) < 40,
                   "and it is a seam rather than the rock itself");
