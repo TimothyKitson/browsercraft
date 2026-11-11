@@ -529,7 +529,12 @@ void EntityManager::trySpawnWave(const World& world, const glm::vec3& playerPosi
         else if (!canSpawnOn(species, ground, light)) continue;
         if (m_peaceful && mobType(species).spawnClass == SpawnClass::Hostile) continue;
 
-        if (!spawnAt(species, mobFeet, world)) continue;
+        const bool zombieKind = species == MobId::Zombie || species == MobId::Husk || species == MobId::Drowned ||
+                                species == MobId::ZombieVillager || species == MobId::ZombiePigman;
+        const bool youngster = (zombieKind && random01() < 0.05f) ||
+                               (mobType(species).spawnClass == SpawnClass::Passive && mobType(species).breedingFood != Blocks::Air &&
+                                species != MobId::Villager && random01() < 0.05f);
+        if (!spawnAt(species, mobFeet, world, youngster)) continue;
 
         if (species == MobId::WanderingTrader)
             for (const float side : { -1.6f, 1.6f })
