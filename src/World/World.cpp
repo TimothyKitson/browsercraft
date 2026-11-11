@@ -143,6 +143,12 @@ void World::markDirty(int chunkX, int chunkZ)
         chunk->meshDirty = true;
 }
 
+void World::remeshAll()
+{
+    for (auto& [pos, chunk] : m_chunks)
+        chunk->meshDirty = true;
+}
+
 void World::markNeighboursDirty(ChunkPos pos)
 {
     for (int dx = -1; dx <= 1; ++dx)

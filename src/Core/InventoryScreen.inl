@@ -619,7 +619,7 @@ unsigned int Application::glintTexture(bool entity)
 
 glm::vec2 Application::glintShift() const
 {
-    const double ms = static_cast<double>(SDL_GetTicks()) * 8.0;
+    const double ms = static_cast<double>(SDL_GetTicks()) * 16.0 * static_cast<double>(m_glintSpeed);
     const float across = static_cast<float>(std::fmod(ms, 110000.0) / 110000.0);
     const float down = static_cast<float>(std::fmod(ms, 30000.0) / 30000.0);
     return glm::vec2(-across, down);

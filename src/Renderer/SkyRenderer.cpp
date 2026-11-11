@@ -101,7 +101,7 @@ void SkyRenderer::render(const glm::mat4& view, const glm::mat4& projection,
     m_shader.setInt("uEnd", endSky && m_endTexture ? 1 : 0);
     m_shader.setInt("uHasSun", m_sunTexture ? 1 : 0);
     m_shader.setInt("uHasMoon", m_moonTexture ? 1 : 0);
-    m_shader.setInt("uHasClouds", m_cloudTexture ? 1 : 0);
+    m_shader.setInt("uHasClouds", m_cloudTexture && m_cloudsOn ? 1 : 0);
     const unsigned int units[4] = { m_sunTexture, m_moonTexture, m_cloudTexture, m_endTexture };
     const char* names[4] = { "uSunTex", "uMoonTex", "uCloudTex", "uEndTex" };
     for (int i = 0; i < 4; ++i)

@@ -1,4 +1,5 @@
 #include "SpriteParticles.h"
+#include "Particles.h"
 #include "World/World.h"
 #include "Renderer/Shader.h"
 #include "Core/GLFunctions.h"
@@ -196,6 +197,7 @@ void SpriteParticles::spawn(Kind kind, const glm::vec3& position, const glm::vec
                             float size, float lifetime, float gravity)
 {
     if (!m_texture) return;
+    if (!Particles::admit()) return;
     const Frames& frames = m_frames[static_cast<int>(kind)];
     if (frames.count == 0) return;
     if (m_particles.size() >= 2400) m_particles.erase(m_particles.begin());

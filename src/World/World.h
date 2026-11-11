@@ -94,6 +94,7 @@ public:
 
     static int floorDiv(int value, int size) { return (value >= 0) ? (value / size) : ((value - size + 1) / size); }
     void remeshChunk(int chunkX, int chunkZ) { markDirty(chunkX, chunkZ); }
+    void remeshAll();
     static int floorMod(int value, int size) { int m = value % size; return m < 0 ? m + size : m; }
 
 private:

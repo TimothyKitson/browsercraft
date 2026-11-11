@@ -475,6 +475,12 @@ void Application::loadOptions()
         else if (std::sscanf(line, "invertYMouse=%d", &value) == 1) m_invertMouse = value != 0;
         else if (std::strncmp(line, "damageTiltStrength=", 19) == 0) m_damageTilt = std::clamp(static_cast<float>(std::atof(line + 19)), 0.0f, 1.0f);
         else if (std::strncmp(line, "soundCategory_master=", 21) == 0) m_masterVolume = std::clamp(static_cast<float>(std::atof(line + 21)), 0.0f, 1.0f);
+        else if (std::strncmp(line, "renderClouds=", 13) == 0)
+            m_cloudMode = std::strncmp(line + 13, "false", 5) == 0 ? 0 : std::strncmp(line + 13, "\"fast\"", 6) == 0 ? 1 : 2;
+        else if (std::sscanf(line, "particles=%d", &value) == 1) m_particleLevel = std::clamp(value, 0, 2);
+        else if (std::sscanf(line, "ao=%d", &value) == 1) m_smoothLightingOn = value != 0;
+        else if (std::strncmp(line, "glintSpeed=", 11) == 0) m_glintSpeed = std::clamp(static_cast<float>(std::atof(line + 11)), 0.0f, 1.0f);
+        else if (std::sscanf(line, "entityShadows=%d", &value) == 1) m_entityShadows = value != 0;
         else if (std::sscanf(line, "chatVisibility=%d", &value) == 1) m_chatVisibility = std::clamp(value, 0, 2);
         else if (std::sscanf(line, "chatColors=%d", &value) == 1) m_chatColors = value != 0;
         else if (std::strncmp(line, "chatScale=", 10) == 0) m_chatScale = std::clamp(static_cast<float>(std::atof(line + 10)), 0.0f, 1.0f);
@@ -534,6 +540,9 @@ void Application::saveOptions()
                  m_fovSetting, m_brightness, m_guiScaleSetting, m_viewBobbing ? 1 : 0, m_mouseSensitivity, m_invertMouse ? 1 : 0,
                  m_masterVolume, m_maxFps, m_vsync ? 1 : 0);
     std::fprintf(file, "damageTiltStrength=%.3f\n", m_damageTilt);
+    static const char* CLOUD_NAMES[3] = { "false", "\"fast\"", "true" };
+    std::fprintf(file, "renderClouds=%s\nparticles=%d\nao=%d\nglintSpeed=%.3f\nentityShadows=%d\n", CLOUD_NAMES[m_cloudMode], m_particleLevel,
+                 m_smoothLightingOn ? 1 : 0, m_glintSpeed, m_entityShadows ? 1 : 0);
     std::fprintf(file, "chatVisibility=%d\nchatColors=%d\nchatScale=%.3f\nchatHeightFocused=%.3f\nchatHeightUnfocused=%.3f\n"
                        "chatLineSpacing=%.3f\nautoSuggestions=%d\nreducedDebugInfo=%d\n",
                  m_chatVisibility, m_chatColors ? 1 : 0, m_chatScale, m_chatFocusedHeight, m_chatUnfocusedHeight, m_chatLineSpacing,
@@ -2113,6 +2122,9 @@ void Application::run()
     loadProfile();
     loadOptions();
     m_audio.setMasterVolume(m_masterVolume);
+    setSmoothLighting(m_smoothLightingOn);
+    Particles::setDensity(m_particleLevel);
+    m_sky.setClouds(m_cloudMode != 0);
     if (!m_vsync) SDL_GL_SetSwapInterval(0);
     m_keys.load(m_configPath);
     if (m_playerName.empty() && !m_automated && m_startupScreen.empty())
@@ -8682,6 +8694,17 @@ void Application::applyMenuAction()
         case MenuAction::GoCredits:       m_screen = Screen::Credits; break;
         case MenuAction::GoSounds:        m_screen = Screen::Sounds; break;
         case MenuAction::GoChatSettings:  m_chatSettingsList = GuiList{}; m_screen = Screen::ChatSettings; break;
+        case MenuAction::CycleClouds: m_cloudMode = (m_cloudMode + 2) % 3; m_sky.setClouds(m_cloudMode != 0); saveOptions(); break;
+        case MenuAction::CycleParticles: m_particleLevel = (m_particleLevel + 1) % 3; Particles::setDensity(m_particleLevel); saveOptions(); break;
+        case MenuAction::ToggleSmoothLighting:
+            m_smoothLightingOn = !m_smoothLightingOn;
+            setSmoothLighting(m_smoothLightingOn);
+            if (m_world) m_world->remeshAll();
+            saveOptions();
+            break;
+        case MenuAction::ToggleFullscreen: m_window.toggleFullscreen(); break;
+        case MenuAction::ToggleEntityShadows: m_entityShadows = !m_entityShadows; saveOptions(); break;
+        case MenuAction::CycleGlintSpeed: m_glintSpeed = m_glintSpeed >= 0.99f ? 0.0f : std::min(1.0f, m_glintSpeed + 0.25f); saveOptions(); break;
         case MenuAction::CycleCategory:
         {
             const SoundCategory category = static_cast<SoundCategory>(m_pendingCategory);
@@ -20318,9 +20341,38 @@ void Application::renderWorld()
     glEnable(GL_CULL_FACE);
     glDepthMask(GL_TRUE);
     glDisable(GL_BLEND);
+    renderEntityShadows(view, projection);
     renderBorder(view, projection);
 
     renderHand();
+}
+
+void Application::renderEntityShadows(const glm::mat4& view, const glm::mat4& projection)
+{
+    if (!m_entityShadows || !m_world || m_menuWorld) return;
+    std::vector<EntityShadowRenderer::Spot> spots;
+    auto cast = [&](const glm::vec3& feet, float radius, float strength) {
+        if (glm::length(feet - m_camera.position) > 48.0f) return;
+        const int x = static_cast<int>(std::floor(feet.x));
+        const int z = static_cast<int>(std::floor(feet.z));
+        const int top = static_cast<int>(std::floor(feet.y + 0.01f));
+        for (int y = top; y >= top - 3; --y)
+        {
+            const BlockId below = m_world->getBlock(x, y - 1, z);
+            if (!blockInfo(below).collides) continue;
+            const float ground = static_cast<float>(y);
+            const float fall = feet.y - ground;
+            const float alpha = strength * (1.0f - std::max(0.0f, fall) / 3.0f);
+            if (alpha > 0.02f) spots.push_back({ glm::vec3(feet.x, ground, feet.z), radius, alpha });
+            return;
+        }
+    };
+    for (const Mob& mob : m_entities.mobs())
+        if (mob.alive()) cast(mob.position(), std::clamp(mob.width() * 0.8f, 0.2f, 2.5f), 0.55f);
+    for (const auto& [id, peer] : m_net.players())
+        if (peer.positioned) cast(peer.smoothed(), 0.5f, 0.55f);
+    if (m_perspective != Perspective::FirstPerson && !m_player.spectator()) cast(m_player.position, 0.5f, 0.55f);
+    m_shadowSpots.render(view, projection, spots);
 }
 
 void Application::renderBorder(const glm::mat4& view, const glm::mat4& projection)
@@ -26675,12 +26727,13 @@ void Application::renderVideoScreen()
     const float h = m_ui.canvasHeight();
 
     menuBackdrop(w, h, 0.45f);
-    centredText("Video Settings", h * 0.13f, 4.4f, TEXT_COLOR);
+    centredText("Video Settings", h * 0.06f, 4.4f, TEXT_COLOR);
 
-    const float buttonWidth = std::min(520.0f, w * 0.72f);
+    const float buttonWidth = std::min(720.0f, w * 0.86f);
     const float buttonX = w * 0.5f - buttonWidth * 0.5f;
-    const float buttonHeight = 52.0f;
-    float y = h * 0.28f;
+    const float rowStep = std::min(62.0f, (h * 0.86f - h * 0.14f) / 9.0f);
+    const float buttonHeight = rowStep - 8.0f;
+    float y = h * 0.14f;
 
     const float sideWidth = 60.0f;
     const int distance = m_world ? m_world->renderDistance() : 8;
@@ -26724,24 +26777,23 @@ void Application::renderVideoScreen()
                         2.2f, TEXT_COLOR);
     if (menuButton({ buttonX + buttonWidth - sideWidth, y, sideWidth, buttonHeight }, "+"))
         m_pendingAction = MenuAction::RenderDistanceUp;
-    y += buttonHeight + 14.0f;
+    y += rowStep;
 
     const bool failed = m_fx && !m_fx->ready();
     const std::string shaders = failed ? "Shaders: Not Supported"
                                        : (m_shadersOn ? "Shaders: On" : "Shaders: Off");
-    if (menuButton({ buttonX, y, buttonWidth, buttonHeight }, shaders, !failed))
+    const float halfWidth = (buttonWidth - 12.0f) * 0.5f;
+    if (menuButton({ buttonX, y, halfWidth, buttonHeight }, shaders, !failed))
         m_pendingAction = MenuAction::ToggleShaders;
-    y += buttonHeight + 14.0f;
-
-    const std::string fancy = !m_atlas.hasPbrMaps() ? "Fancy Lighting: Needs a PBR Pack"
+    const std::string fancy = !m_atlas.hasPbrMaps() ? "Fancy Lighting: N/A"
                             : (m_pbrEnabled ? "Fancy Lighting: On" : "Fancy Lighting: Off");
-    if (menuButton({ buttonX, y, buttonWidth, buttonHeight }, fancy, m_atlas.hasPbrMaps()))
+    if (menuButton({ buttonX + halfWidth + 12.0f, y, halfWidth, buttonHeight }, fancy, m_atlas.hasPbrMaps()))
         m_pendingAction = MenuAction::TogglePbr;
-    y += buttonHeight + 14.0f;
+    y += rowStep;
 
     static const char* INDICATORS[3] = { "Attack: Off", "Attack: Crosshair", "Attack: Hotbar" };
     const float half = (buttonWidth - 12.0f) * 0.5f;
-    const float row = buttonHeight + 10.0f;
+    const float row = rowStep;
     auto pair = [&](const std::string& left, MenuAction leftAction, const std::string& right, MenuAction rightAction) {
         if (menuButton({ buttonX, y, half, buttonHeight }, left)) m_pendingAction = leftAction;
         if (menuButton({ buttonX + half + 12.0f, y, half, buttonHeight }, right)) m_pendingAction = rightAction;
@@ -26757,9 +26809,17 @@ void Application::renderVideoScreen()
     pair(scale, MenuAction::CycleGuiScale, m_viewBobbing ? "View Bobbing: ON" : "View Bobbing: OFF", MenuAction::ToggleBobbing);
     const std::string fps = m_maxFps <= 0 ? "Max FPS: Unlimited" : "Max FPS: " + std::to_string(m_maxFps);
     pair(fps, MenuAction::CycleMaxFps, m_vsync ? "VSync: ON" : "VSync: OFF", MenuAction::ToggleVsync);
-    y += 10.0f;
+    static const char* CLOUDS[3] = { "Clouds: OFF", "Clouds: Fast", "Clouds: Fancy" };
+    static const char* PARTICLES[3] = { "Particles: All", "Particles: Decreased", "Particles: Minimal" };
+    pair(CLOUDS[m_cloudMode], MenuAction::CycleClouds, PARTICLES[m_particleLevel], MenuAction::CycleParticles);
+    const int glint = static_cast<int>(std::lround(m_glintSpeed * 100.0f));
+    pair(m_smoothLightingOn ? "Smooth Lighting: ON" : "Smooth Lighting: OFF", MenuAction::ToggleSmoothLighting,
+         m_window.fullscreen() ? "Fullscreen: ON" : "Fullscreen: OFF", MenuAction::ToggleFullscreen);
+    pair(glint == 0 ? "Glint Speed: OFF" : "Glint Speed: " + std::to_string(glint) + "%", MenuAction::CycleGlintSpeed,
+         m_entityShadows ? "Entity Shadows: ON" : "Entity Shadows: OFF", MenuAction::ToggleEntityShadows);
+    y += 6.0f;
 
-    if (menuButton({ buttonX, y, buttonWidth, 46.0f }, "Done"))
+    if (menuButton({ buttonX + buttonWidth * 0.2f, y, buttonWidth * 0.6f, buttonHeight }, "Done"))
         m_pendingAction = MenuAction::BackToOptions;
 }
 

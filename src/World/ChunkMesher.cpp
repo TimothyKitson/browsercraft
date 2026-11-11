@@ -1,3 +1,4 @@
+#include <atomic>
 #include "ChunkMesher.h"
 #include "Renderer/Atlas.h"
 #include "Renderer/AtlasTiles.h"
@@ -505,7 +506,7 @@ namespace
 
                 bool side1Opaque = false;
                 bool side2Opaque = false;
-                for (int s = 0; s < 3; ++s)
+                for (int s = 0; s < (smoothLighting() ? 3 : 0); ++s)
                 {
                     const int sx = nx + offsets[s][0];
                     const int sy = ny + offsets[s][1];
@@ -2531,6 +2532,14 @@ namespace
         }
     }
 }
+
+namespace
+{
+    std::atomic<bool> g_smoothLighting{ true };
+}
+
+void setSmoothLighting(bool on) { g_smoothLighting.store(on); }
+bool smoothLighting() { return g_smoothLighting.load(); }
 
 void appendChestLid(BlockId id, const glm::vec3& cell, float lift, float sky, float block, std::vector<float>& out)
 {

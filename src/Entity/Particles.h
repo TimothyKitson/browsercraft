@@ -14,6 +14,8 @@ class Shader;
 class Particles
 {
 public:
+    static void setDensity(int level);
+    static bool admit();
     void spawnBlockBreak(const glm::ivec3& blockPosition, BlockId block);
     void spawnBlockHit(const glm::vec3& position, const glm::ivec3& faceNormal, BlockId block);
     void spawnLandingPuff(const glm::vec3& feetPosition, BlockId ground);

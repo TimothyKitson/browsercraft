@@ -10,6 +10,7 @@ class SkyRenderer
 {
 public:
     SkyRenderer();
+    void setClouds(bool on) { m_cloudsOn = on; }
 
     // `overcast` is 0 under a clear sky and 1 in full rain.
     void render(const glm::mat4& view, const glm::mat4& projection,
@@ -30,6 +31,7 @@ private:
     unsigned int m_sunTexture = 0;
     unsigned int m_moonTexture = 0;
     unsigned int m_cloudTexture = 0;
+    bool m_cloudsOn = true;
     unsigned int m_endTexture = 0;
     static unsigned int loadTexture(const char* path, bool repeat);
     glm::vec3 m_tint{ 1.0f };

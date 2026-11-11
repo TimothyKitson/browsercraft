@@ -23,10 +23,27 @@ float Particles::nextRandom()
     return static_cast<float>(m_random & 0xFFFFFF) / static_cast<float>(0x1000000);
 }
 
+namespace
+{
+    int g_particleLevel = 0;
+    unsigned int g_particleTick = 0;
+}
+
+void Particles::setDensity(int level) { g_particleLevel = level < 0 ? 0 : level > 2 ? 2 : level; }
+
+bool Particles::admit()
+{
+    ++g_particleTick;
+    if (g_particleLevel == 0) return true;
+    if (g_particleLevel == 1) return (g_particleTick % 2u) == 0u;
+    return (g_particleTick % 10u) == 0u;
+}
+
 void Particles::add(const glm::vec3& position, const glm::vec3& velocity, BlockId block,
                     float size, float lifetime)
 {
     if (m_particles.size() >= MAX_PARTICLES) return;
+    if (!admit()) return;
 
     const BlockInfo& info = blockInfo(block);
     const TileUV tile = tileUV(info.tileSide);

@@ -40,6 +40,7 @@
 #include "Game/Fluids.h"
 #include "Renderer/BeamRenderer.h"
 #include "Renderer/BorderRenderer.h"
+#include "Renderer/EntityShadowRenderer.h"
 #include "World/WorldBorder.h"
 #include "Renderer/BookRenderer.h"
 #include "Renderer/FangRenderer.h"
@@ -168,6 +169,12 @@ enum class MenuAction
     GoCredits,
     GoSounds,
     GoChatSettings,
+    CycleClouds,
+    CycleParticles,
+    ToggleSmoothLighting,
+    ToggleFullscreen,
+    CycleGlintSpeed,
+    ToggleEntityShadows,
     CycleCategory,
     BackToOptions,
     LeaveOptions,
@@ -343,6 +350,9 @@ private:
     float horseJumpStrength() const;
     BeamRenderer m_beams;
     BorderRenderer m_borderRenderer;
+    EntityShadowRenderer m_shadowSpots;
+    bool m_entityShadows = true;
+    void renderEntityShadows(const glm::mat4& view, const glm::mat4& projection);
     WorldBorder m_border;
     void renderBorder(const glm::mat4& view, const glm::mat4& projection);
     void keepInsideBorder(const glm::vec3& before);
@@ -1926,6 +1936,10 @@ private:
     bool m_invertMouse = false;
     float m_masterVolume = 1.0f;
     int m_pendingCategory = 0;
+    int m_cloudMode = 2;
+    int m_particleLevel = 0;
+    bool m_smoothLightingOn = true;
+    float m_glintSpeed = 0.5f;
     int m_chatVisibility = 0;
     bool m_chatColors = true;
     float m_chatScale = 1.0f;
