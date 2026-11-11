@@ -1114,7 +1114,7 @@ void Application::renderContainerScreen(float w, float h)
         : m_chestOpen && m_world ? m_world->getBlock(m_chestBlock.x, m_chestBlock.y, m_chestBlock.z) : Blocks::Air;
     const BlockId furnaceKind = m_furnaceOpen && m_world
         ? furnaceBase(m_world->getBlock(m_furnaceBlock.x, m_furnaceBlock.y, m_furnaceBlock.z)) : Blocks::Air;
-    const bool hopper = chestKind == Blocks::Hopper;
+    const bool hopper = isHopper(chestKind);
     const bool thrower = chestKind == Blocks::Dropper || chestKind == Blocks::Dispenser;
     const bool shulker = isShulkerBox(chestKind);
     const bool bigChest = m_chestOpen && !hopper && !thrower && !shulker;

@@ -3616,6 +3616,7 @@ bool Application::frame()
                     m_world->setBlock(bx + 4, by, bz + 1, Blocks::Cauldron0);
                     m_world->setBlock(bx + 2, by, bz - 1, Blocks::AnvilChipped);
                     m_world->setBlock(bx + 1, by, bz - 1, Blocks::Hopper);
+                    m_world->setBlock(bx + 3, by, bz - 1, hopperFacingTo(1));
                     m_world->setBlock(bx, by, bz - 1, Blocks::EnchantingTable);
                     m_world->setBlock(bx - 1, by, bz - 1, Blocks::EndPortalFrameFilled);
                     m_world->setBlock(bx - 2, by, bz - 1, composterAt(5));
@@ -10507,12 +10508,52 @@ void Application::tickHoppers(float deltaTime)
     {
         const int x = (*it)[0], y = (*it)[1], z = (*it)[2];
 
-        if (m_world->getBlock(x, y, z) != Blocks::Hopper)
+        const BlockId self = m_world->getBlock(x, y, z);
+        if (!isHopper(self))
         {
             it = m_hoppers.erase(it);
             continue;
         }
         ++it;
+
+        WorldCells cells;
+        cells.world = m_world.get();
+        if (Redstone::poweredAt(cells, x, y, z)) continue;
+
+        ItemStack* slots = m_chests.at(glm::ivec3(x, y, z)).data();
+        for (ItemStack& lying : m_drops.takeNear(glm::vec3(x + 0.5f, y + 1.1f, z + 0.5f), 0.75f))
+        {
+            while (lying.count > 0 && Hopper::give(slots, Hopper::HOPPER_SLOTS, lying.id)) --lying.count;
+            if (lying.count > 0) m_drops.spawnStack(glm::vec3(x + 0.5f, y + 1.1f, z + 0.5f), lying);
+        }
+
+        static const int STEP[4][2] = { { 0, -1 }, { 1, 0 }, { 0, 1 }, { -1, 0 } };
+        const int facing = hopperFacing(self);
+        const glm::ivec3 out = facing < 0 ? glm::ivec3(x, y - 1, z) : glm::ivec3(x + STEP[facing][0], y, z + STEP[facing][1]);
+        const BlockId target = m_world->getBlock(out.x, out.y, out.z);
+        if (isFurnaceBlock(target))
+        {
+            Furnaces::State& furnace = m_furnaces.at(out);
+            for (int i = 0; i < Hopper::HOPPER_SLOTS; ++i)
+            {
+                ItemStack& item = slots[i];
+                if (item.empty()) continue;
+                ItemStack& into = facing < 0 ? furnace.input : furnace.fuel;
+                if (facing >= 0 && !Smelting::isFuel(item.id)) continue;
+                if (!into.empty() && (into.id != item.id || into.count >= maxStackOf(item.id))) continue;
+                if (into.empty()) { into.id = item.id; into.count = 0; }
+                ++into.count;
+                if (--item.count <= 0) item.clear();
+                break;
+            }
+        }
+        const BlockId above = m_world->getBlock(x, y + 1, z);
+        if (isFurnaceBlock(above))
+        {
+            Furnaces::State& furnace = m_furnaces.at(glm::ivec3(x, y + 1, z));
+            if (!furnace.output.empty() && Hopper::give(slots, Hopper::HOPPER_SLOTS, furnace.output.id))
+                if (--furnace.output.count <= 0) furnace.output.clear();
+        }
 
         Hopper::step(holder, x, y, z);
     }
@@ -18704,6 +18745,12 @@ void Application::handlePlacement()
         placing = ladderFacing(facing);
     }
 
+    if (placing == Blocks::Hopper && hit.normal.y == 0)
+    {
+        const glm::ivec3 n = hit.normal;
+        placing = hopperFacingTo(n.z > 0 ? 0 : n.x < 0 ? 1 : n.z < 0 ? 2 : 3);
+    }
+
     if ((isSapling(placing) || isPinkPetals(placing)) &&
         !Saplings::canPlantOn(m_world->getBlock(target.x, target.y - 1, target.z))) return;
 
@@ -18888,7 +18935,7 @@ void Application::handlePlacement()
     // that makes sense: an empty board is not what anybody wanted.
     if (isSign(placing)) openSign(target);
 
-    if (placing == Blocks::Hopper)
+    if (isHopper(placing))
         m_hoppers.insert({ target.x, target.y, target.z });
 
     // Anything watching this cell has just seen something happen.

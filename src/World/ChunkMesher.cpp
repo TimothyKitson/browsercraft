@@ -1970,12 +1970,19 @@ namespace
             }
             return;
         }
-        if (id == Blocks::Hopper)
+        if (isHopper(id))
         {
             const int side = info.tileSide;
             box(0, 10, 0, 16, 16, 16, info.tileTop, side, side);
             box(4, 4, 4, 12, 10, 12, side, side, side);
-            box(6, 0, 6, 10, 4, 10, side, side, side);
+            switch (hopperFacing(id))
+            {
+                case 0: box(6, 4, 0, 10, 8, 4, side, side, side); break;
+                case 1: box(12, 4, 6, 16, 8, 10, side, side, side); break;
+                case 2: box(6, 4, 12, 10, 8, 16, side, side, side); break;
+                case 3: box(0, 4, 6, 4, 8, 10, side, side, side); break;
+                default: box(6, 0, 6, 10, 4, 10, side, side, side); break;
+            }
             return;
         }
         if (isComposter(id))
@@ -2375,7 +2382,7 @@ void buildChunkMesh(const MeshSnapshot& snapshot, MeshResult& out)
                     emitCactus(snapshot, lx, y, lz, id, out.opaqueVertices);
                 }
                 else if (isAnvil(id) || id == Blocks::EnchantingTable || id == Blocks::EndPortalFrame ||
-                         id == Blocks::EndPortalFrameFilled || id == Blocks::Hopper || isComposter(id) || id == Blocks::BrewingStand)
+                         id == Blocks::EndPortalFrameFilled || isHopper(id) || isComposter(id) || id == Blocks::BrewingStand)
                 {
                     emitWorkBlock(snapshot, lx, y, lz, id, out.opaqueVertices);
                 }

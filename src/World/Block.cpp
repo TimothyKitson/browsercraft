@@ -4245,6 +4245,10 @@ namespace
         { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
         { "Lantern", LanternTile, LanternTile, LanternTile, true, false, RenderType::Cube, 15, 0.3f },
         { "Soul Lantern", SoulLanternTile, SoulLanternTile, SoulLanternTile, true, false, RenderType::Cube, 10, 0.3f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
     };
 
     static_assert(sizeof(EXT_TABLE) / sizeof(EXT_TABLE[0]) == static_cast<size_t>(Blocks::ExtCount - Blocks::ExtFirst),
@@ -4471,6 +4475,7 @@ BlockId axisBase(BlockId id)
     if (id >= Blocks::AxisRunFirst && id <= Blocks::AxisRunLast) return AXIS_BASE[(id - Blocks::AxisRunFirst) / 2];
     if (id >= Blocks::GlazedTurnFirst && id <= Blocks::GlazedTurnLast)
         return static_cast<BlockId>(Blocks::GlazedTerracottaFirst + (id - Blocks::GlazedTurnFirst) / 3);
+    if (id >= Blocks::HopperSideFirst && id <= Blocks::HopperSideLast) return Blocks::Hopper;
     return id;
 }
 
@@ -4513,7 +4518,8 @@ BlockId withAxis(BlockId base, int axis)
 const BlockInfo& blockInfo(BlockId id)
 {
     if (id < Blocks::Count) return TABLE[id];
-    if ((id >= Blocks::AxisRunFirst && id <= Blocks::AxisRunLast) || (id >= Blocks::GlazedTurnFirst && id <= Blocks::GlazedTurnLast))
+    if ((id >= Blocks::AxisRunFirst && id <= Blocks::AxisRunLast) || (id >= Blocks::GlazedTurnFirst && id <= Blocks::GlazedTurnLast) ||
+        (id >= Blocks::HopperSideFirst && id <= Blocks::HopperSideLast))
         return blockInfo(axisBase(id));
     if (id >= Blocks::ExtFirst && id < Blocks::ExtCount) return EXT_TABLE[id - Blocks::ExtFirst];
     return TABLE[Blocks::Air];
@@ -5300,6 +5306,8 @@ bool blockOverlaps(BlockId id, int bx, int by, int bz,
     if (id == Blocks::Hopper)
         return overlaps(0.0f, 0.625f, 0.0f, 1.0f, 1.0f, 1.0f) || overlaps(0.25f, 0.25f, 0.25f, 0.75f, 0.625f, 0.75f) ||
                overlaps(0.375f, 0.0f, 0.375f, 0.625f, 0.25f, 0.625f);
+    if (isHopper(id))
+        return overlaps(0.0f, 0.625f, 0.0f, 1.0f, 1.0f, 1.0f) || overlaps(0.25f, 0.25f, 0.25f, 0.75f, 0.625f, 0.75f);
     if (isComposter(id))
         return overlaps(0.0f, 0.0f, 0.0f, 1.0f, 0.125f, 1.0f) || overlaps(0.0f, 0.0f, 0.0f, 0.125f, 1.0f, 1.0f) ||
                overlaps(0.875f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f) || overlaps(0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.125f) ||

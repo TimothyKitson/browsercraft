@@ -2,7 +2,7 @@
 
 int Hopper::slotsOf(BlockId id)
 {
-    if (id == Blocks::Hopper) return HOPPER_SLOTS;
+    if (isHopper(id)) return HOPPER_SLOTS;
     if (id == Blocks::Dropper || id == Blocks::Dispenser) return THROWER_SLOTS;
     if (isStorageChest(id)) return 27;
     return 0;
@@ -51,7 +51,13 @@ StackId Hopper::take(ItemStack* from, int count)
 
 bool Hopper::step(Holder& holder, int x, int y, int z)
 {
-    if (holder.at(x, y, z) != Blocks::Hopper) return false;
+    const BlockId self_ = holder.at(x, y, z);
+    if (!isHopper(self_)) return false;
+    static const int STEP[4][2] = { { 0, -1 }, { 1, 0 }, { 0, 1 }, { -1, 0 } };
+    const int facing = hopperFacing(self_);
+    const int tx = facing < 0 ? x : x + STEP[facing][0];
+    const int ty = facing < 0 ? y - 1 : y;
+    const int tz = facing < 0 ? z : z + STEP[facing][1];
 
     int mine = 0;
     ItemStack* self = holder.slotsAt(x, y, z, mine);
@@ -63,7 +69,7 @@ bool Hopper::step(Holder& holder, int x, int y, int z)
     // this step could be pushed out in the same one, and a chain of
     // hoppers would move a stack its whole length in a single tick.
     int belowCount = 0;
-    if (ItemStack* below = holder.slotsAt(x, y - 1, z, belowCount))
+    if (ItemStack* below = holder.slotsAt(tx, ty, tz, belowCount))
     {
         // Look at what is there before taking it, so nothing is lost
         // when the thing below turns out to be full.

@@ -708,6 +708,7 @@ namespace Blocks
         CampfireUnlit, SoulCampfireUnlit,
         GlazedTurnFirst, GlazedTurnLast = GlazedTurnFirst + 47,
         LanternHanging, SoulLanternHanging,
+        HopperSideFirst, HopperSideLast = HopperSideFirst + 3,
         ExtCount
     };
 }
@@ -981,6 +982,9 @@ inline bool isLantern(BlockId id)
     return id == Blocks::Lantern || id == Blocks::SoulLantern || id == Blocks::LanternHanging || id == Blocks::SoulLanternHanging;
 }
 inline bool lanternHangs(BlockId id) { return id == Blocks::LanternHanging || id == Blocks::SoulLanternHanging; }
+inline bool isHopper(BlockId id) { return id == Blocks::Hopper || (id >= Blocks::HopperSideFirst && id <= Blocks::HopperSideLast); }
+inline int hopperFacing(BlockId id) { return id >= Blocks::HopperSideFirst && id <= Blocks::HopperSideLast ? id - Blocks::HopperSideFirst : -1; }
+inline BlockId hopperFacingTo(int facing) { return facing < 0 ? Blocks::Hopper : static_cast<BlockId>(Blocks::HopperSideFirst + (facing & 3)); }
 bool isSoulCampfire(BlockId id);
 inline bool isRespawnAnchor(BlockId id) { return id >= Blocks::RespawnAnchor0 && id <= Blocks::RespawnAnchor4; }
 inline int anchorCharge(BlockId id) { return isRespawnAnchor(id) ? id - Blocks::RespawnAnchor0 : 0; }
@@ -1470,7 +1474,7 @@ inline bool isGeode(BlockId id)
 
 inline bool isItemHolder(BlockId id)
 {
-    return id == Blocks::Hopper || id == Blocks::Dropper || id == Blocks::Dispenser;
+    return id == Blocks::Hopper || (id >= Blocks::HopperSideFirst && id <= Blocks::HopperSideLast) || id == Blocks::Dropper || id == Blocks::Dispenser;
 }
 
 inline bool isNoteBlock(BlockId id)

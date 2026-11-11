@@ -37,7 +37,7 @@ void Application::statOpened(BlockId block)
     else if (isEnderChest(block)) stat = C::OpenEnderchest;
     else if (isTrappedChest(block)) stat = C::TriggerTrappedChest;
     else if (block == Blocks::Barrel || block == Blocks::BarrelOpen) stat = C::OpenBarrel;
-    else if (block == Blocks::Hopper) stat = C::InspectHopper;
+    else if (isHopper(block)) stat = C::InspectHopper;
     else if (block == Blocks::Dropper) stat = C::InspectDropper;
     else if (block == Blocks::Dispenser) stat = C::InspectDispenser;
     else if (isStorageChest(block)) stat = C::OpenChest;
