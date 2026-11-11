@@ -451,6 +451,9 @@ private:
     void placeOreVeins(Chunk& chunk) const;
     void placeSeaMagma(Chunk& chunk) const;
     void placeIceSpikes(Chunk& chunk) const;
+    void placeBoulders(Chunk& chunk) const;
+    void placeDisks(Chunk& chunk) const;
+    void placeIcebergs(Chunk& chunk) const;
     void buildNetherRuinedPortal(Chunk& chunk) const;
     void carveRavines(Chunk& chunk) const;
     void growCoralReefs(Chunk& chunk) const;

@@ -475,8 +475,11 @@ void WorldGen::generate(Chunk& chunk) const
     spreadSculkPatches(chunk);
     placeLavaLakes(chunk);
     placeSprings(chunk);
+    placeDisks(chunk);
     decorate(chunk);
     placeIceSpikes(chunk);
+    placeBoulders(chunk);
+    placeIcebergs(chunk);
     if (structures)
     {
         buildDungeons(chunk);
@@ -3844,7 +3847,7 @@ void WorldGen::decorate(Chunk& chunk) const
             // swamp look like one from the ground. Hung after the
             // tree rather than built into buildTree, so every wood
             // keeps the shape it had.
-            if (here == Biome::Swamp) hangVines(chunk, wx, surface, wz);
+            if (here == Biome::Swamp || here == Biome::Jungle) hangVines(chunk, wx, surface, wz);
 
             // And cocoa on a jungle trunk, which is where Minecraft
             // puts it and the only place it grows.
@@ -3915,13 +3918,6 @@ void WorldGen::decorate(Chunk& chunk) const
             }
 
 
-            if ((variant == Biomes::Kind::OldGrowthPineTaiga || variant == Biomes::Kind::OldGrowthSpruceTaiga) && roll >= 0.6f && roll < 0.6025f)
-            {
-                const int tall = 1 + static_cast<int>(hashToFloat(hashCoords(wx, 22, wz, m_seed + 6612)) * 2.0f);
-                for (int k = 0; k < tall && above + k < Chunk::SY; ++k)
-                    chunk.setBlockRaw(lx, above + k, lz, Blocks::MossyCobblestone);
-                continue;
-            }
 
             if ((biome == Biome::Snowy || biome == Biome::Mountains) && (ground == Blocks::SnowGrass || ground == Blocks::Snow) &&
                 hashToFloat(hashCoords(wx >> 2, 23, wz >> 2, m_seed + 6613)) < 0.05f &&
@@ -4863,6 +4859,110 @@ void WorldGen::buildNetherRuinedPortal(Chunk& chunk) const
     put(chunk, midX + 3, ground + 1, midZ + 1, Blocks::Chest);
 }
 
+void WorldGen::placeBoulders(Chunk& chunk) const
+{
+    const int baseX = chunk.position().x * Chunk::SX;
+    const int baseZ = chunk.position().z * Chunk::SZ;
+    for (int wx = baseX - 4; wx < baseX + Chunk::SX + 4; ++wx)
+        for (int wz = baseZ - 4; wz < baseZ + Chunk::SZ + 4; ++wz)
+        {
+            if (hashToFloat(hashCoords(wx, 81, wz, m_seed + 9301)) >= 0.004f) continue;
+            const Biomes::Kind kind = kindAt(wx, wz);
+            if (kind != Biomes::Kind::OldGrowthPineTaiga && kind != Biomes::Kind::OldGrowthSpruceTaiga) continue;
+            const int ground = surfaceHeight(wx, wz);
+            if (ground <= SEA_LEVEL) continue;
+            uint32_t h = hashCoords(wx, 82, wz, m_seed + 9302) | 1u;
+            for (int part = 0; part < 3; ++part)
+            {
+                h ^= h << 13; h ^= h >> 17; h ^= h << 5;
+                const int cx = wx + static_cast<int>(h % 3u) - 1, cz = wz + static_cast<int>((h >> 4) % 3u) - 1;
+                const int cy = ground + static_cast<int>((h >> 8) % 2u);
+                const float r = 1.0f + static_cast<float>((h >> 12) % 100u) / 100.0f;
+                const int reach = static_cast<int>(std::ceil(r));
+                for (int dx = -reach; dx <= reach; ++dx)
+                    for (int dy = -reach; dy <= reach; ++dy)
+                        for (int dz = -reach; dz <= reach; ++dz)
+                        {
+                            if (static_cast<float>(dx * dx + dy * dy + dz * dz) > r * r + 0.3f) continue;
+                            const int lx = cx + dx - baseX, lz = cz + dz - baseZ, y = cy + dy;
+                            if (!Chunk::inBounds(lx, y, lz)) continue;
+                            chunk.setBlockRaw(lx, y, lz, Blocks::MossyCobblestone);
+                        }
+            }
+        }
+}
+
+void WorldGen::placeDisks(Chunk& chunk) const
+{
+    const int baseX = chunk.position().x * Chunk::SX;
+    const int baseZ = chunk.position().z * Chunk::SZ;
+    for (int wx = baseX - 6; wx < baseX + Chunk::SX + 6; ++wx)
+        for (int wz = baseZ - 6; wz < baseZ + Chunk::SZ + 6; ++wz)
+        {
+            const uint32_t h = hashCoords(wx, 91, wz, m_seed + 9401);
+            if (hashToFloat(h) >= 0.006f) continue;
+            const int floorY = surfaceHeight(wx, wz);
+            if (floorY >= SEA_LEVEL || SEA_LEVEL - floorY > 6) continue;
+            const float pick = hashToFloat(h * 2654435761u);
+            const BlockId disk = pick < 0.6f ? Blocks::Sand : pick < 0.85f ? Blocks::Clay : Blocks::Gravel;
+            const int radius = 2 + static_cast<int>((h >> 12) % 4u);
+            for (int dx = -radius; dx <= radius; ++dx)
+                for (int dz = -radius; dz <= radius; ++dz)
+                {
+                    if (dx * dx + dz * dz > radius * radius) continue;
+                    const int lx = wx + dx - baseX, lz = wz + dz - baseZ;
+                    if (lx < 0 || lx >= Chunk::SX || lz < 0 || lz >= Chunk::SZ) continue;
+                    const int top = surfaceHeight(wx + dx, wz + dz);
+                    if (top >= SEA_LEVEL) continue;
+                    for (int y = top; y > top - 2 && y > 0; --y)
+                    {
+                        const BlockId here = chunk.getBlock(lx, y, lz);
+                        if (here == Blocks::Dirt || here == Blocks::Grass || here == Blocks::Sand || here == Blocks::Gravel || here == Blocks::Clay ||
+                            here == Blocks::Mud)
+                            chunk.setBlockRaw(lx, y, lz, disk);
+                    }
+                }
+        }
+}
+
+void WorldGen::placeIcebergs(Chunk& chunk) const
+{
+    const int baseX = chunk.position().x * Chunk::SX;
+    const int baseZ = chunk.position().z * Chunk::SZ;
+    for (int wx = baseX - 8; wx < baseX + Chunk::SX + 8; ++wx)
+        for (int wz = baseZ - 8; wz < baseZ + Chunk::SZ + 8; ++wz)
+        {
+            const uint32_t h = hashCoords(wx, 101, wz, m_seed + 9501);
+            if (hashToFloat(h) >= 0.0015f) continue;
+            const Biomes::Kind kind = kindAt(wx, wz);
+            if (kind != Biomes::Kind::FrozenOcean && kind != Biomes::Kind::DeepFrozenOcean) continue;
+            if (surfaceHeight(wx, wz) > SEA_LEVEL - 6) continue;
+            const float size = hashToFloat(h * 40503u + 7u);
+            const float radius = 3.0f + size * 4.0f;
+            const int above = 4 + static_cast<int>(size * 10.0f);
+            const int below = 4 + static_cast<int>(size * 4.0f);
+            const bool blue = (h >> 20) % 4u == 0u;
+            for (int dy = -below; dy <= above; ++dy)
+            {
+                const float t = dy >= 0 ? static_cast<float>(dy) / static_cast<float>(above) : static_cast<float>(-dy) / static_cast<float>(below);
+                const float r = radius * std::sqrt(std::max(0.0f, 1.0f - t * t));
+                const int reach = static_cast<int>(std::ceil(r));
+                for (int dx = -reach; dx <= reach; ++dx)
+                    for (int dz = -reach; dz <= reach; ++dz)
+                    {
+                        const float wobble = hashToFloat(hashCoords(wx + dx, dy, wz + dz, m_seed + 9502)) * 0.8f;
+                        if (static_cast<float>(dx * dx + dz * dz) > r * r + wobble) continue;
+                        const int lx = wx + dx - baseX, lz = wz + dz - baseZ, y = SEA_LEVEL + dy;
+                        if (!Chunk::inBounds(lx, y, lz)) continue;
+                        const BlockId here = chunk.getBlock(lx, y, lz);
+                        if (here != Blocks::Air && here != Blocks::Water && here != Blocks::Ice) continue;
+                        const bool vein = blue && hashToFloat(hashCoords(wx + dx, y, wz + dz, m_seed + 9503)) < 0.12f;
+                        chunk.setBlockRaw(lx, y, lz, vein ? Blocks::BlueIce : Blocks::PackedIce);
+                    }
+            }
+        }
+}
+
 void WorldGen::placeIceSpikes(Chunk& chunk) const
 {
     const int baseX = chunk.position().x * Chunk::SX;
@@ -5249,7 +5349,7 @@ void WorldGen::dressSeabed(Chunk& chunk) const
             // one place in this world where water stands two blocks
             // deep over mud rather than running out to sea. Done here
             // because this loop has already paid for the column.
-            if (depth >= 1 && depth <= 3 && biomeAt(wx, wz) == Biome::Swamp &&
+            if (depth >= 1 && depth <= 3 && (biomeAt(wx, wz) == Biome::Swamp || biomeAt(wx, wz) == Biome::MangroveSwamp) &&
                 chunk.getBlock(lx, SEA_LEVEL, lz) == Blocks::Water &&
                 hashToFloat(hashCoords(wx, 9, wz, m_seed + 7803)) < 0.09f)
             {
