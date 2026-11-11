@@ -518,6 +518,13 @@ void World::queueGeneration(const glm::vec3& playerPosition)
             missing.push_back({ pos, dx * dx + dz * dz });
         }
     }
+    for (const auto& [fx, fz] : forcedChunks)
+    {
+        const ChunkPos pos{ fx, fz };
+        if (m_chunks.find(pos) != m_chunks.end()) continue;
+        const int dx = fx - playerChunkX, dz = fz - playerChunkZ;
+        missing.push_back({ pos, dx * dx + dz * dz });
+    }
 
     if (missing.empty()) return;
 
@@ -672,7 +679,7 @@ void World::unloadDistantChunks(const glm::vec3& playerPosition)
         Chunk* chunk = it->second.get();
         const int dx = it->first.x - playerChunkX;
         const int dz = it->first.z - playerChunkZ;
-        const bool tooFar = (dx * dx + dz * dz) > keepRadius * keepRadius;
+        const bool tooFar = (dx * dx + dz * dz) > keepRadius * keepRadius && !forcedChunks.count({ it->first.x, it->first.z });
 
         // Never drop a chunk a worker is still writing into.
         const bool busy = chunk->state.load() == ChunkState::Generating || chunk->meshJobActive;

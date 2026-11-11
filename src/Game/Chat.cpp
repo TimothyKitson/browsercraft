@@ -457,7 +457,7 @@ Chat::Command Chat::parse(const std::string& line, bool cheats, const glm::vec3&
     {
         out.kind = Kind::Help;
         out.text = cheats
-            ? "/gamemode /time /tp /give /kill /seed /say /me /msg /list /tellraw /title /setblock /fill /clone /summon /effect /enchant /xp /clear /weather /difficulty /defaultgamemode /setworldspawn /spawnpoint /locate /damage /scoreboard /team /tag /trigger /attribute /worldborder /gamerule /help"
+            ? "/gamemode /time /tp /give /kill /seed /say /me /msg /list /tellraw /title /setblock /fill /clone /summon /effect /enchant /xp /clear /weather /difficulty /defaultgamemode /setworldspawn /spawnpoint /locate /damage /scoreboard /team /tag /trigger /attribute /advancement /bossbar /item /particle /playsound /random /recipe /ride /spectate /spreadplayers /tick /function /execute /data /loot /place /forceload /kick /ban /whitelist /save-all /stop /debug /worldborder /gamerule /help"
             : "/help  -  this world was made without cheats, so the rest are off";
         return out;
     }
@@ -950,6 +950,21 @@ Chat::Command Chat::parse(const std::string& line, bool cheats, const glm::vec3&
             if (out.text.rfind("minecraft:", 0) == 0) out.text = out.text.substr(10);
             return out;
         }
+        static const char* MORE[] = { "advancement", "bossbar", "item", "particle", "playsound", "stopsound", "random", "recipe", "ride",
+                                      "spectate", "spreadplayers", "teammsg", "tm", "tick", "function", "datapack", "reload", "data", "loot",
+                                      "place", "execute", "forceload", "kick", "ban", "ban-ip", "banlist", "pardon", "pardon-ip", "whitelist",
+                                      "op", "deop", "save-all", "save-off", "save-on", "stop", "debug", "perf", "fillbiome", "transfer",
+                                      "setidletimeout", "return" };
+        for (const char* more : MORE)
+            if (name == more)
+            {
+                const bool free = name == "teammsg" || name == "tm" || (name == "random" && words.size() > 1 && lower(words[1]) == "roll");
+                if (!cheats && !free) return deny(name);
+                out.kind = Kind::MoreCommand;
+                out.sub = name;
+                out.args.assign(words.begin() + 1, words.end());
+                return out;
+            }
         if (name == "attribute")
         {
             if (!cheats) return deny(name);
@@ -1056,7 +1071,10 @@ std::vector<std::string> Chat::suggest(const std::string& draft)
         "clear", "clone", "damage", "defaultgamemode", "difficulty", "effect", "enchant", "experience", "fill", "gamemode",
         "gamerule", "give", "help", "kill", "list", "locate", "me", "msg", "say", "seed", "setblock", "setworldspawn",
         "spawnpoint", "summon", "tell", "tellraw", "time", "title", "tp", "w", "weather", "worldborder", "xp",
-        "scoreboard", "team", "tag", "trigger", "attribute" };
+        "scoreboard", "team", "tag", "trigger", "attribute", "advancement", "bossbar", "item", "particle", "playsound", "stopsound",
+        "random", "recipe", "ride", "spectate", "spreadplayers", "teammsg", "tm", "tick", "function", "datapack", "reload", "data", "loot",
+        "place", "execute", "forceload", "kick", "ban", "banlist", "pardon", "whitelist", "op", "deop", "save-all", "save-off", "save-on",
+        "stop", "debug", "perf" };
     static std::vector<std::string> items, blocks, mobs, effects, enchants, rules, biomes;
     if (items.empty())
     {
@@ -1142,6 +1160,24 @@ std::vector<std::string> Chat::suggest(const std::string& draft)
         pool = &local;
     }
     else if (name == "attribute" && index == 3) use({ "base", "get", "modifier" });
+    else if (name == "advancement" && index == 1) use({ "grant", "revoke" });
+    else if (name == "advancement" && index == 3) use({ "everything", "from", "only", "through", "until" });
+    else if (name == "bossbar" && index == 1) use({ "add", "get", "list", "remove", "set" });
+    else if (name == "bossbar" && index == 3 && sub == "set") use({ "color", "max", "name", "players", "style", "value", "visible" });
+    else if (name == "tick" && index == 1) use({ "freeze", "query", "rate", "sprint", "step", "unfreeze" });
+    else if (name == "random" && index == 1) use({ "roll", "value" });
+    else if (name == "recipe" && index == 1) use({ "give", "take" });
+    else if (name == "ride" && index == 2) use({ "dismount", "mount" });
+    else if (name == "execute") use({ "align", "anchored", "as", "at", "facing", "if", "in", "positioned", "rotated", "run", "unless" });
+    else if (name == "data" && index == 1) use({ "get" });
+    else if (name == "data" && index == 2) use({ "block", "entity" });
+    else if (name == "loot" && index == 1) use({ "give", "spawn" });
+    else if (name == "place" && index == 1) use({ "feature" });
+    else if (name == "place" && index == 2) use({ "acacia", "azalea_tree", "birch", "cherry", "crimson_fungus", "dark_oak", "fancy_oak", "huge_brown_mushroom",
+                                                  "huge_red_mushroom", "jungle_tree", "mangrove", "oak", "pine", "spruce", "warped_fungus" });
+    else if (name == "forceload" && index == 1) use({ "add", "query", "remove" });
+    else if (name == "whitelist" && index == 1) use({ "add", "list", "off", "on", "reload", "remove" });
+    else if (name == "debug" && index == 1) use({ "start", "stop" });
     else if (name == "attribute" && index == 4 && words.size() > 3 && lower(words[3]) == "base") use({ "get", "reset", "set" });
     else if (name == "attribute" && index == 4 && words.size() > 3 && lower(words[3]) == "modifier") use({ "add", "remove", "value" });
     else if (name == "attribute" && index == 7) use({ "add_multiplied_base", "add_multiplied_total", "add_value" });

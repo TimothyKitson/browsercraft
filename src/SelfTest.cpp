@@ -5376,6 +5376,19 @@ namespace
 
         section("chat: the rest of the vanilla commands");
         {
+            for (const char* line : { "/advancement grant @s only story/root", "/bossbar list", "/item replace entity @s weapon.mainhand with stone",
+                                      "/particle heart", "/playsound entity.player.levelup", "/stopsound", "/random value 1..6", "/recipe give @s *",
+                                      "/ride @s dismount", "/spectate", "/spreadplayers 0 0 1 10 false @s", "/tick query", "/function demo:start",
+                                      "/datapack list", "/reload", "/data get entity @s Health", "/loot give @s loot minecraft:entities/zombie",
+                                      "/place feature oak", "/execute run say hi", "/forceload query", "/kick Steve", "/ban Steve", "/banlist",
+                                      "/whitelist list", "/op Steve", "/save-all", "/stop", "/debug start" })
+            {
+                const Chat::Command more = Chat::parse(line, true);
+                check(more.kind == Chat::Kind::MoreCommand, std::string(line) + " is a command");
+            }
+            check(Chat::parse("/random roll 1..6", false).kind == Chat::Kind::MoreCommand && Chat::parse("/random value 1..6", false).kind == Chat::Kind::Denied &&
+                  Chat::parse("/tm hello", false).kind == Chat::Kind::MoreCommand && Chat::parse("/bossbar list", false).kind == Chat::Kind::Denied,
+                  "rolling dice and team chat need no cheats; the rest do");
             const std::vector<std::string> names = Chat::suggest("/gam");
             check(std::find(names.begin(), names.end(), "gamemode") != names.end() && std::find(names.begin(), names.end(), "gamerule") != names.end() &&
                   std::find(names.begin(), names.end(), "give") == names.end(), "tab offers the commands that start with what was typed");

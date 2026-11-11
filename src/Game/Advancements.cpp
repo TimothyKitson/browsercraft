@@ -89,6 +89,20 @@ bool Advancements::Tracker::grant(const std::string& id, const std::string& crit
     return false;
 }
 
+bool Advancements::Tracker::revoke(const std::string& id, const std::string& criterion)
+{
+    const int index = indexOf(id);
+    if (index < 0) return false;
+    std::set<std::string>& done = m_done[static_cast<size_t>(index)];
+    if (criterion.empty())
+    {
+        const bool had = !done.empty();
+        done.clear();
+        return had;
+    }
+    return done.erase(criterion) > 0;
+}
+
 bool Advancements::Tracker::grantAll(const std::string& id)
 {
     const int index = indexOf(id);

@@ -48,6 +48,7 @@ namespace Advancements
         Tracker();
         bool grant(const std::string& id, const std::string& criterion);
         bool grantAll(const std::string& id);
+        bool revoke(const std::string& id, const std::string& criterion = std::string());
         bool done(int index) const;
         bool has(int index, const std::string& criterion) const;
         int criteriaDone(int index) const;

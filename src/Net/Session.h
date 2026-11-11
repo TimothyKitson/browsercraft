@@ -3,6 +3,7 @@
 #include "Transport.h"
 #include <memory>
 #include <string>
+#include <set>
 #include <unordered_map>
 #include <vector>
 #include <glm/glm.hpp>
@@ -110,6 +111,10 @@ namespace Net
 
         const std::unordered_map<uint32_t, RemotePlayer>& players() const { return m_players; }
         int playerCount() const { return static_cast<int>(m_players.size()) + 1; }
+        bool kick(const std::string& name, const std::string& reason);
+        std::set<std::string> banned;
+        std::set<std::string> whitelist;
+        bool whitelistOn = false;
 
     private:
         std::unique_ptr<Transport> m_transport;

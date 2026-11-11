@@ -423,6 +423,14 @@ void Session::handleAsHost(const Packet& packet, World* world)
             if (!reader.ok()) return;
 
             if (name.empty()) name = "PLAYER";
+            if (banned.count(name) || (whitelistOn && !whitelist.count(name)))
+            {
+                Writer reject(MessageId::Reject);
+                reject.str(banned.count(name) ? "You are banned from this world" : "You are not white-listed on this world");
+                m_transport->send(packet.peer, reject.bytes());
+                m_transport->disconnect(packet.peer);
+                return;
+            }
 
             Writer welcome(MessageId::Welcome);
             welcome.u32(PROTOCOL_VERSION);
@@ -695,3 +703,23 @@ void Session::handleAsGuest(const Packet& packet, World* world)
 }
 
 } // namespace Net
+
+bool Net::Session::kick(const std::string& name, const std::string& reason)
+{
+    if (m_role != Role::Host) return false;
+    for (auto it = m_players.begin(); it != m_players.end(); ++it)
+    {
+        if (it->second.name != name) continue;
+        const uint32_t peer = it->first;
+        Writer reject(MessageId::Reject);
+        reject.str(reason.empty() ? "Kicked by an operator" : reason);
+        m_transport->send(peer, reject.bytes());
+        m_transport->disconnect(peer);
+        m_players.erase(it);
+        Writer bye(MessageId::PlayerLeave);
+        bye.u32(peer);
+        m_transport->broadcast(bye.bytes());
+        return true;
+    }
+    return false;
+}

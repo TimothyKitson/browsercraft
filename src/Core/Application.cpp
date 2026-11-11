@@ -761,6 +761,7 @@ void Application::travelTo(Dimension dimension)
 
     m_world = std::make_unique<World>(m_world->seed(), m_savePath,
                                       DEFAULT_RENDER_DISTANCE, dimension, generatorOptions(m_worldMeta));
+    m_world->forcedChunks = m_forcedChunks[static_cast<int>(dimension)];
 
     // The Nether is a slab with a ceiling, so the overworld's spawn
     // height would drop you inside bedrock; start mid-slab and let the
@@ -2127,6 +2128,8 @@ bool Application::frame()
     // Clamp so a hitch (or a breakpoint) can't teleport the player
     // through the world on the next physics step.
     deltaTime = std::min(deltaTime, 0.1f);
+    m_worldDelta = worldTimeScale(deltaTime);
+    if (m_debugRunning) ++m_debugFrames;
 
     m_elapsedSeconds += deltaTime;
     m_lastFrameSeconds = deltaTime;
@@ -2252,7 +2255,7 @@ bool Application::frame()
         // guest it is the host's clock, delivered by TimeSync.
         if (playing() && m_net.role() != Net::Role::Guest && m_rules.on(GameRules::Rule::DoDaylightCycle))
         {
-            m_timeOfDay += deltaTime / DAY_LENGTH_SECONDS;
+            m_timeOfDay += m_worldDelta / DAY_LENGTH_SECONDS;
             if (m_timeOfDay >= 1.0f)
             {
                 m_timeOfDay -= 1.0f;
@@ -3145,7 +3148,7 @@ bool Application::frame()
         }
 
         m_autosaveTimer += deltaTime;
-        if (m_autosaveTimer >= AUTOSAVE_INTERVAL && playing() &&
+        if (m_autosaveTimer >= AUTOSAVE_INTERVAL && playing() && !m_autosaveOff &&
             m_net.role() != Net::Role::Guest)
         {
             m_autosaveTimer = 0.0f;
@@ -5495,7 +5498,10 @@ bool Application::frame()
                                                 "/title @s title {\"text\":\"Commands\"}", "/title @s actionbar The action bar",
                                                 "/locate structure village", "/locate biome forest", "/xp add @s 7 levels", "/me checks the map",
                                                 "/scoreboard objectives add kills dummy \"Kills\"", "/scoreboard objectives setdisplay sidebar kills",
-                                                "/scoreboard players set Steve kills 4", "/scoreboard players set Alex kills 9", "/scoreboard players set @s kills 6" };
+                                                "/scoreboard players set Steve kills 4", "/scoreboard players set Alex kills 9", "/scoreboard players set @s kills 6",
+                                                "/bossbar add demo {\"text\":\"Custom Bar\"}", "/bossbar set demo value 60", "/bossbar set demo color green",
+                                                "/execute if score @s kills matches 5.. run say six is at least five", "/random roll 1..6", "/tick query",
+                                                "/place feature birch ~-4 ~ ~5" };
                         for (const char* line : lines)
                         {
                             std::string said;
@@ -19643,6 +19649,9 @@ bool Application::runCommand(const std::string& line, const glm::vec3& origin, b
         case Chat::Kind::ScoreboardCommand:
             return m_scoreboard.command(command.sub, command.args, scoreHolder(), output);
 
+        case Chat::Kind::MoreCommand:
+            return runMoreCommand(command.sub, command.args, origin, output);
+
         case Chat::Kind::AttributeCommand:
         {
             const bool changed = Attributes::command(m_player.attributes, command.args, scoreHolder(), output);
@@ -19778,6 +19787,21 @@ bool Application::locateFor(const std::string& kind, const std::string& what, st
     const int distance = static_cast<int>(std::round(std::sqrt(static_cast<double>(fx - px) * (fx - px) + static_cast<double>(fz - pz) * (fz - pz))));
     output = "The nearest " + shown + " is at [" + std::to_string(fx) + ", ~, " + std::to_string(fz) + "] (" + std::to_string(distance) + " blocks away)";
     return true;
+}
+
+float Application::worldTimeScale(float deltaTime)
+{
+    float rate = m_tickRate / 20.0f;
+    if (m_tickSprintSeconds > 0.0f)
+    {
+        rate = std::max(rate, 8.0f);
+        m_tickSprintSeconds = std::max(0.0f, m_tickSprintSeconds - deltaTime * rate);
+    }
+    if (!m_tickFrozen) return deltaTime * rate;
+    if (m_tickStepSeconds <= 0.0f) return 0.0f;
+    const float step = std::min(m_tickStepSeconds, deltaTime * rate);
+    m_tickStepSeconds -= step;
+    return step;
 }
 
 void Application::renderSidebar()
@@ -22148,7 +22172,7 @@ void Application::updateMobs(float deltaTime)
     // The lineup screen is for looking at hides, and a wolf crosses a
     // twelve-block clearing in two seconds. Frozen, every one of them
     // is still there when the shutter goes.
-    const float mobTime = m_freezeMobs ? 0.0f : deltaTime;
+    const float mobTime = m_freezeMobs ? 0.0f : m_worldDelta;
     m_entities.setPlayerHidden(m_player.spectator());
     m_entities.setNaturalSpawning(m_rules.on(GameRules::Rule::DoMobSpawning));
     m_entities.setDifficulty(static_cast<int>(m_worldMeta.difficulty));
@@ -24191,6 +24215,9 @@ void Application::renderBossBars(float w)
         bars.push_back({ Raids::barName(m_raid, static_cast<int>(m_raid.raiders.size())), 2, 10, progress });
     }
     bars.insert(bars.end(), m_devBossBars.begin(), m_devBossBars.end());
+    for (const auto& [id, custom] : m_customBars)
+        if (custom.visible)
+            bars.push_back({ custom.name, custom.colour, custom.notches, custom.max > 0 ? static_cast<float>(custom.value) / static_cast<float>(custom.max) : 0.0f });
 
     const float x = std::floor(w * 0.5f) - 91.0f;
     float y = 12.0f;
@@ -24949,6 +24976,7 @@ void Application::renderDeathScreen()
 #include "PackScreen.inl"
 #include "Tutorial.inl"
 #include "Spectator.inl"
+#include "Commands.inl"
 #include "AccessibilityScreen.inl"
 #include "ControlsScreen.inl"
 #include "Core/Packs.h"

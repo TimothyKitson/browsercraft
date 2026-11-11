@@ -59,6 +59,7 @@ namespace Chat
         Damage,
         ScoreboardCommand,
         AttributeCommand,
+        MoreCommand,
     };
 
     struct Command
