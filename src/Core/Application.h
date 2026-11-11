@@ -892,6 +892,7 @@ private:
     void tickPiglins();
     void tickMobGriefing();
     float m_tntFall = 0.0f;
+    float m_statTicks = 0.0f;
     void explodeCrystal(const glm::ivec3& at);
     bool tryRespawnDragon();
     std::map<uint32_t, float> m_doorBreaking;

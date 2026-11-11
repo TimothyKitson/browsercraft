@@ -2272,6 +2272,17 @@ bool Application::frame()
             m_player.drowningHurts = m_rules.on(GameRules::Rule::DrowningDamage);
             m_player.fireHurts = m_rules.on(GameRules::Rule::FireDamage);
             updateGameplay(deltaTime);
+            m_statTicks += deltaTime * 20.0f;
+            if (m_statTicks >= 1.0f)
+            {
+                const long long ticks = static_cast<long long>(m_statTicks);
+                m_statTicks -= static_cast<float>(ticks);
+                m_stats.add(Stats::Custom::PlayTime, ticks);
+                m_stats.add(Stats::Custom::TotalWorldTime, ticks);
+                m_stats.add(Stats::Custom::TimeSinceDeath, ticks);
+                m_stats.add(Stats::Custom::TimeSinceRest, ticks);
+                if (m_player.sneaking) m_stats.add(Stats::Custom::SneakTime, ticks);
+            }
         }
 
         // The clock only runs while you're actually playing -- and on a
@@ -20287,6 +20298,7 @@ void Application::tickPiglins()
         if (!worn.empty() && Armour::isArmour(worn.id) && Armour::tierOf(worn.id) == Armour::Tier::Gold) gold = true;
     }
     Mob::setPlayerWearsGold(gold);
+    Mob::setPlayerHolding(m_player.spectator() ? static_cast<StackId>(Blocks::Air) : m_inventory.selected().id);
     std::vector<glm::vec3> angry;
     for (Mob& mob : m_entities.mobs())
     {
@@ -22745,7 +22757,8 @@ void Application::updateMobs(float deltaTime)
     m_entities.setPlayerHidden(m_player.spectator());
     m_entities.setNaturalSpawning(m_rules.on(GameRules::Rule::DoMobSpawning));
     m_entities.setDifficulty(static_cast<int>(m_worldMeta.difficulty));
-    m_entities.setSpawnRules(m_rules.on(GameRules::Rule::DoInsomnia), m_rules.on(GameRules::Rule::DoTraderSpawning));
+    m_entities.setSpawnRules(m_rules.on(GameRules::Rule::DoInsomnia) && m_stats.get(Stats::Custom::TimeSinceRest) >= 72000,
+                             m_rules.on(GameRules::Rule::DoTraderSpawning));
     m_entities.update(mobTime, *m_world, m_player.position, daylightFactor());
     m_entities.noticeStares(*m_world, m_camera.position, m_camera.front);
     tickPiglins();
@@ -23049,13 +23062,17 @@ void Application::updateMobs(float deltaTime)
         // the big one stood. That is the whole of what a slime is, and
         // it is why the big one leaves nothing itself -- the
         // slimeballs are on the halves.
-        if (death.type == MobId::Slime && m_world)
+        if ((death.type == MobId::Slime || (death.type == MobId::MagmaCube && death.size > 1)) && m_world)
         {
-            for (int half = 0; half < 2; ++half)
+            const int pieces = 2 + static_cast<int>(hashCoords(static_cast<int>(death.position.x * 8.0f), 3, static_cast<int>(death.position.z * 8.0f), 0x511Eu) % 3u);
+            for (int piece = 0; piece < pieces; ++piece)
             {
-                const float side = half == 0 ? -0.6f : 0.6f;
-                const glm::vec3 feet = death.position + glm::vec3(side, 0.0f, side);
-                m_entities.spawnAt(MobId::SlimeSmall, feet, *m_world);
+                const float angle = static_cast<float>(piece) * 2.4f;
+                const glm::vec3 feet = death.position + glm::vec3(std::cos(angle), 0.0f, std::sin(angle)) * 0.6f;
+                if (death.type == MobId::Slime && death.size < 4)
+                    m_entities.spawnAt(MobId::SlimeSmall, feet, *m_world);
+                else if (m_entities.spawnAt(death.type, feet, *m_world))
+                    m_entities.mobs().back().setSize(death.size >= 4 ? 2 : 1);
             }
         }
 

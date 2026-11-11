@@ -5,11 +5,13 @@
 #include "Game/Armour.h"
 #include "Game/Tools.h"
 #include <algorithm>
+#include <initializer_list>
 
 namespace
 {
     int g_gearDifficulty = 2;
     bool g_playerGold = false;
+    StackId g_playerHolding = 0;
     int g_gearDifficultyFor() { return g_gearDifficulty; }
 }
 #include <cmath>
@@ -361,7 +363,18 @@ bool Mob::feed(StackId food)
         m_growthBoost += TADPOLE_SECONDS * 0.1f;
         return true;
     }
-    if (!alive() || t.breedingFood == Blocks::Air || food != t.breedingFood) return false;
+    const bool healer = (t.id == MobId::Wolf && m_tamed && acceptsFood(t.id, food, t.breedingFood)) ||
+                        (isHorseKind(t.id) && (food == Items::Wheat || food == Items::Apple || food == Items::Sugar || food == Items::GoldenCarrot ||
+                                               food == static_cast<StackId>(Blocks::HayBale))) ||
+                        (t.id == MobId::Llama && (food == Items::Wheat || food == static_cast<StackId>(Blocks::HayBale)));
+    if (healer && alive() && m_health < t.maxHealth)
+    {
+        m_health = std::min(t.maxHealth, m_health + (food == static_cast<StackId>(Blocks::HayBale) ? 10 : 4));
+        emit(t.voice, 0.6f, 1.2f);
+        return true;
+    }
+    if ((t.id == MobId::Wolf || t.id == MobId::Cat) && !m_tamed) return false;
+    if (!alive() || t.breedingFood == Blocks::Air || !acceptsFood(t.id, food, t.breedingFood)) return false;
 
     // Feeding a calf hurries it along instead; that is what Minecraft
     // does, and it stops you breeding something that is still a baby.
@@ -638,6 +651,7 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
 {
     if (!m_dressed) dress(g_gearDifficultyFor());
 
+    m_daylight = daylight;
     if (m_strikeGuard > 0.0f) m_strikeGuard = std::max(0.0f, m_strikeGuard - deltaTime);
     if (m_playerHitAge < 1.0e8f) m_playerHitAge += deltaTime;
     const MobType& t = type();
@@ -1031,6 +1045,11 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
     // Blocked flat against something. Turning until the way is clear is
     // what stops a mob grinding into the same wall for as long as it can
     // see you; a random new heading only worked by accident.
+    if (m_moving && (m_type == MobId::Spider || m_type == MobId::CaveSpider))
+    {
+        const glm::vec3 moved = m_position - before;
+        if (glm::length(glm::vec3(moved.x, 0.0f, moved.z)) < 0.002f && hostileNow()) m_velocity.y = std::max(m_velocity.y, 3.0f);
+    }
     if (m_moving && wasOnGround)
     {
         const glm::vec3 moved = m_position - before;
@@ -1070,7 +1089,33 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
     // as its reach does.
     if (m_attackTimer > 0.0f) m_attackTimer = std::max(0.0f, m_attackTimer - deltaTime);
 
-    const int baseAttack = (m_type == MobId::Rabbit && m_variant == 99) ? 8 : t.attackDamage;
+    if (m_stingTimer > 0.0f)
+    {
+        m_stingTimer -= deltaTime;
+        if (m_stingTimer <= 0.0f)
+        {
+            m_stingTimer = 0.0f;
+            damage(std::max(1, m_health), glm::vec3(0.0f));
+        }
+    }
+    if (m_type == MobId::Pufferfish)
+    {
+        m_puffTimer = std::max(0.0f, m_puffTimer - deltaTime);
+        const glm::vec3 gap = playerPosition - m_position;
+        if (glm::length(gap) < 1.8f && m_puffTimer <= 0.0f)
+        {
+            m_puffTimer = 1.0f;
+            MobStrike sting;
+            sting.damage = 1;
+            sting.from = m_position;
+            sting.effect = static_cast<int>(Effects::Kind::Poison);
+            sting.effectSeconds = 6.0f;
+            m_strikes.push_back(sting);
+        }
+    }
+    int baseAttack = (m_type == MobId::Rabbit && m_variant == 99) ? 8 : t.attackDamage;
+    if ((m_type == MobId::Slime || m_type == MobId::MagmaCube) && m_size > 0)
+        baseAttack = m_type == MobId::Slime ? (m_size >= 4 ? 4 : 2) : (m_size >= 4 ? 6 : m_size <= 1 ? 3 : 4);
     if (baseAttack > 0 && m_attackTimer <= 0.0f)
     {
         const glm::vec3 toPlayer = playerPosition - m_position;
@@ -1102,8 +1147,11 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
             }
             else if (m_type == MobId::Bee)
             {
+                if (m_stingTimer >= 0.0f) strike.damage = 0;
                 strike.effect = static_cast<int>(Effects::Kind::Poison);
                 strike.effectSeconds = 10.0f;
+                if (m_stingTimer < 0.0f) m_stingTimer = 30.0f;
+                m_provoked = false;
             }
             m_strikes.push_back(strike);
             m_attackTimer = t.attackInterval;
@@ -1151,6 +1199,19 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
                 m_removeTimer = DEATH_SECONDS;
                 return;
             }
+        }
+    }
+
+    {
+        const MobType& kind = type();
+        const glm::vec3 toPlayer = playerPosition - m_position;
+        const float apart = glm::length(glm::vec2(toPlayer.x, toPlayer.z));
+        if (kind.spawnClass == SpawnClass::Passive && kind.breedingFood != Blocks::Air && !m_leashed && !m_sitting && !ridden() &&
+            apart < 10.0f && std::fabs(toPlayer.y) < 4.0f && acceptsFood(m_type, g_playerHolding, kind.breedingFood))
+        {
+            m_goalYaw = glm::degrees(std::atan2(toPlayer.z, toPlayer.x));
+            m_moving = apart > 2.5f;
+            m_goalTimer = 0.4f;
         }
     }
 
@@ -1325,6 +1386,7 @@ bool Mob::hostileNow() const
 {
     if ((m_type == MobId::Piglin && (g_playerGold || m_admire > 0.0f)) && !m_provoked) return false;
     if (m_type == MobId::Rabbit && m_variant == 99) return true;
+    if (m_type == MobId::Spider && m_daylight > 0.5f && !m_provoked) return false;
     return hostileNow(mobType(m_type), m_provoked);
 }
 
@@ -1512,6 +1574,40 @@ namespace
 }
 
 void Mob::setGearDifficulty(int difficulty) { g_gearDifficulty = difficulty; }
+void Mob::setPlayerHolding(StackId held) { g_playerHolding = held; }
+
+void Mob::setSize(int size)
+{
+    m_size = size;
+    m_sizeScale = size >= 4 ? 2.0f : size <= 1 ? 0.5f : 1.0f;
+    const int most = m_type == MobId::MagmaCube ? (size >= 4 ? 16 : size <= 1 ? 1 : 4) : (size >= 4 ? 16 : 4);
+    m_health = most;
+    m_dressed = true;
+}
+
+bool Mob::acceptsFood(MobId id, StackId food, StackId usual)
+{
+    if (food == Blocks::Air) return false;
+    auto any = [&](std::initializer_list<StackId> list) {
+        for (StackId one : list) if (one == food) return true;
+        return false;
+    };
+    switch (id)
+    {
+        case MobId::Pig: return any({ Items::Carrot, Items::Potato, Items::Beetroot });
+        case MobId::Chicken:
+            return any({ Items::WheatSeeds, Items::MelonSeeds, Items::PumpkinSeeds, Items::BeetrootSeeds, Items::TorchflowerSeeds, Items::PitcherPod });
+        case MobId::Horse: case MobId::Donkey: return any({ Items::GoldenApple, Items::GoldenCarrot, Items::EnchantedGoldenApple });
+        case MobId::Wolf:
+            return any({ Items::RawBeef, Items::Steak, Items::RawPorkchop, Items::CookedPorkchop, Items::RawChicken, Items::CookedChicken,
+                         Items::RawMutton, Items::CookedMutton, Items::RawRabbit, Items::CookedRabbit, Items::RottenFlesh });
+        case MobId::Cat: case MobId::Ocelot: return any({ Items::RawCod, Items::RawSalmon });
+        case MobId::Rabbit: return any({ Items::Carrot, Items::GoldenCarrot, static_cast<StackId>(Blocks::FlowerYellow) });
+        case MobId::Fox: return any({ Items::SweetBerries, Items::GlowBerries });
+        case MobId::Parrot: return false;
+        default: return food == usual;
+    }
+}
 void Mob::setPlayerWearsGold(bool gold) { g_playerGold = gold; }
 
 bool Mob::humanoid(MobId id)
@@ -1538,6 +1634,11 @@ int Mob::wornArmour() const
 void Mob::dress(int difficulty)
 {
     m_dressed = true;
+    if ((m_type == MobId::Slime || m_type == MobId::MagmaCube) && m_size == 0)
+    {
+        const uint32_t pick = (m_birthSeed >> 7) % 3u;
+        setSize(m_type == MobId::Slime ? (pick == 0u ? 2 : 4) : (pick == 0u ? 1 : pick == 1u ? 2 : 4));
+    }
     uint32_t roll = m_birthSeed * 747796405u + 2891336453u;
     auto next = [&roll]() {
         roll ^= roll << 13;

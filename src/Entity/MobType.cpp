@@ -324,6 +324,7 @@ namespace
             // Everything about it is the zombie's but the colour and
             // what it is carrying.
             MobType& t = table[static_cast<size_t>(MobId::Drowned)];
+            t.burnsInSunlight = true;
             t.drop = Items::RottenFlesh;
             t.dropCount = 1;
             t.id = MobId::Drowned;
@@ -2994,6 +2995,7 @@ namespace
             // waiting to be found.
             MobType& t = table[static_cast<size_t>(MobId::Phantom)];
             t.id = MobId::Phantom;
+            t.burnsInSunlight = true;
             t.experience = 5;
             t.voice = Sound::MobPhantomSay;
             t.hurtVoice = Sound::MobPhantomHurt;

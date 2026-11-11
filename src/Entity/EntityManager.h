@@ -90,6 +90,7 @@ public:
         bool byPlayer = false;
         bool chargedBlast = false;
         std::array<uint16_t, 6> gear{};
+        int size = 0;
         std::array<bool, 6> gearSure{};
         int how = 0;
         float distance = 0.0f;

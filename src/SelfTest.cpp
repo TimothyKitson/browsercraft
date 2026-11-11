@@ -12956,6 +12956,18 @@ namespace
                 else bare = true;
             }
             check(anyArmoured && bare, "some zombies spawn in armour on hard and most do not");
+            check(Mob::acceptsFood(MobId::Pig, Items::Carrot, Items::Wheat) && Mob::acceptsFood(MobId::Pig, Items::Beetroot, Items::Wheat) &&
+                  !Mob::acceptsFood(MobId::Pig, Items::Wheat, Items::Wheat) && Mob::acceptsFood(MobId::Chicken, Items::MelonSeeds, Items::Wheat) &&
+                  Mob::acceptsFood(MobId::Horse, Items::GoldenCarrot, Items::Wheat) && !Mob::acceptsFood(MobId::Horse, Items::Wheat, Items::Wheat) &&
+                  !Mob::acceptsFood(MobId::Parrot, Items::WheatSeeds, Items::WheatSeeds) && Mob::acceptsFood(MobId::Cow, Items::Wheat, Items::Wheat),
+                  "each animal breeds on its 1.21.1 foods");
+            Mob big(MobId::Slime, glm::vec3(0.0f), 31u);
+            big.setSize(4);
+            Mob medium(MobId::Slime, glm::vec3(0.0f), 32u);
+            medium.setSize(2);
+            check(big.health() == 16 && medium.health() == 4 && big.width() > medium.width() * 1.9f, "slimes come large and medium");
+            Mob wildWolf(MobId::Wolf, glm::vec3(0.0f), 33u);
+            check(!wildWolf.feed(Items::RawBeef), "a wild wolf will not breed");
             Mob armoured(MobId::Zombie, glm::vec3(0.0f), 9u);
             const int before = armoured.health();
             armoured.damage(10, glm::vec3(0.0f));

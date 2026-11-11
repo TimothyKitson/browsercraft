@@ -324,7 +324,9 @@ public:
     void holdStill(float seconds) { m_holdTimer = std::max(m_holdTimer, seconds); }
     bool held() const { return m_holdTimer > 0.0f; }
 
-    float scale() const { return (baby() ? BABY_SCALE : 1.0f) * type().modelScale; }
+    float scale() const { return (baby() ? BABY_SCALE : 1.0f) * type().modelScale * m_sizeScale; }
+    void setSize(int size);
+    int size() const { return m_size; }
     float width() const { return type().width * scale(); }
     float height() const { return type().height * scale(); }
 
@@ -344,6 +346,8 @@ public:
 
     // Accepts the food and falls in love. False if it is not interested.
     bool feed(StackId food);
+    static bool acceptsFood(MobId id, StackId food, StackId usual);
+    static void setPlayerHolding(StackId held);
 
     // Tamed, and what it takes. A wolf given a bone follows whoever
     // gave it; nothing else in the game is tameable yet, so the item
@@ -628,6 +632,11 @@ private:
     float m_admire = 0.0f;
     bool m_bartered = false;
     float m_tridentTimer = 0.0f;
+    float m_daylight = 0.0f;
+    float m_sizeScale = 1.0f;
+    float m_stingTimer = -1.0f;
+    float m_puffTimer = 0.0f;
+    int m_size = 0;
     int m_silverfish = 0;
     float m_playerHitAge = 1.0e9f;
     int m_playerHitHow = 0;
