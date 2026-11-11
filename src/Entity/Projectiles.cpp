@@ -93,6 +93,7 @@ void Projectiles::update(float deltaTime, const Blocks& blocks, Targets& targets
 
         if (arrow.kind == Arrows::Kind::Eye && arrow.age > Arrows::EYE_LIFETIME)
         {
+            m_eyeEnds.push_back(arrow.position);
             m_arrows[i] = m_arrows.back();
             m_arrows.pop_back();
             continue;

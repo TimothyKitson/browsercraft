@@ -685,17 +685,38 @@ void EntityManager::tickHelpers(float deltaTime, const World& world, const glm::
                 wait = 4.0f;
                 mob.setGear(Mob::MainHand, static_cast<uint16_t>(Items::Potion));
                 mob.heal(4);
+                mob.emitNamed("entity/witch/drink", Sound::MobWitchSay, 0.8f, 0.9f + random01() * 0.2f);
             }
             else if (mob.gear(Mob::MainHand) == static_cast<uint16_t>(Items::Potion))
                 mob.setGear(Mob::MainHand, 0);
         }
         else if (kind == MobId::Evoker)
         {
-            if (wait > 0.0f || glm::length(mob.position() - playerPosition) > 16.0f) continue;
+            if (wait > 0.0f) continue;
+            if (glm::length(mob.position() - playerPosition) > 16.0f)
+            {
+                if (!m_mobGriefing) continue;
+                for (Mob& sheep : m_mobs)
+                {
+                    if (sheep.typeId() != MobId::Sheep || !sheep.alive() || sheep.woolColour() != 11) continue;
+                    if (glm::length(sheep.position() - mob.position()) > 16.0f) continue;
+                    mob.emitNamed("mob/evocation_illager/prepare_wololo", Sound::EvokerCast, 1.0f, 1.0f);
+                    mob.emitNamed("mob/evocation_illager/cast", Sound::EvokerCast, 1.0f, 1.0f);
+                    sheep.setWool(14, sheep.sheared());
+                    wait = 7.0f;
+                    break;
+                }
+                continue;
+            }
             int vexes = 0;
             for (const Mob& other : m_mobs)
                 if (other.alive() && other.typeId() == MobId::Vex && glm::length(other.position() - mob.position()) < 24.0f) ++vexes;
             wait = 17.0f;
+            if (vexes < 8)
+            {
+                mob.emitNamed("mob/evocation_illager/prepare_summon", Sound::EvokerCast, 1.0f, 1.0f);
+                mob.emitNamed("mob/evocation_illager/cast", Sound::EvokerCast, 1.0f, 1.0f);
+            }
             for (int k = 0; k < 3 && vexes < 8; ++k)
             {
                 const float angle = random01() * 6.2831853f;
@@ -797,6 +818,7 @@ void EntityManager::update(float deltaTime, const World& world,
             Zombified cured{ mob.position(), mob.yaw(), mob.baby() };
             cured.into = MobId::Villager;
             m_zombified.push_back(cured);
+            mob.emitNamed("mob/zombie/unfect", Sound::MobVillagerSay, 1.0f, 1.0f);
             mob.vanish();
         }
         if (mob.typeId() == MobId::WanderingTrader && mob.alive() && mob.age() > 2400.0f && mob.customName().empty() && !mob.leashed())
@@ -891,6 +913,13 @@ void EntityManager::update(float deltaTime, const World& world,
         const int variant = (goat.screamingGoat() ? 4 : 0) + static_cast<int>((goat.birthSeed() >> 3) + static_cast<uint32_t>(goat.hornsLeft())) % 4;
         m_horns.push_back(ShedHorn{ ahead - forward * 0.7f, variant });
     }
+
+    for (Mob& mob : m_mobs)
+        if (mob.finished() && !mob.sounds().empty())
+        {
+            m_orphanSounds.insert(m_orphanSounds.end(), mob.sounds().begin(), mob.sounds().end());
+            mob.sounds().clear();
+        }
 
     // Drop anything dead-and-done, or far enough off that nobody will
     // miss it.
@@ -1016,12 +1045,14 @@ void EntityManager::noticeStares(const World& world, const glm::vec3& eye, const
         if (!world.hasLineOfSight(eye, head)) continue;
 
         mob.provoke();
+        if (mob.typeId() == MobId::Enderman) mob.emitNamed("mob/endermen/stare", Sound::MobEndermanSay, 1.0f, 1.0f);
     }
 }
 
 std::vector<MobSound> EntityManager::drainSounds()
 {
     std::vector<MobSound> all;
+    all.swap(m_orphanSounds);
     for (Mob& mob : m_mobs)
     {
         if (mob.sounds().empty()) continue;
@@ -1256,6 +1287,7 @@ void EntityManager::setWolvesOnHostiles(float deltaTime, const glm::vec3& player
                             Zombified bitten{ m_mobs[quarry].position(), m_mobs[quarry].yaw(), m_mobs[quarry].baby() };
                             bitten.into = MobId::ZombieVillager;
                             m_zombified.push_back(bitten);
+                            m_mobs[i].emitNamed("mob/zombie/infect", Sound::MobZombieSay, 1.0f, 1.0f);
                             m_mobs[quarry].vanish();
                         }
                     }

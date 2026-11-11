@@ -132,6 +132,7 @@ struct Arrow
 class Projectiles
 {
 public:
+    std::vector<glm::vec3> takeEyeEnds() { std::vector<glm::vec3> out; out.swap(m_eyeEnds); return out; }
     // What an arrow can hit besides a block. Projectiles knows nothing
     // about mobs or the player, so whoever owns them answers this --
     // the same arrangement the pathfinder uses for the ground.
@@ -219,6 +220,7 @@ public:
     void render(Shader& shader, const Camera& camera, const Atlas& atlas, const World& world);
 
 private:
+    std::vector<glm::vec3> m_eyeEnds;
     glm::vec3 m_homing{ 0.0f };
     bool m_hasHoming = false;
     std::vector<Arrow> m_arrows;

@@ -3,6 +3,7 @@
 #include "World/Block.h"
 #include <cstdint>
 #include <glm/glm.hpp>
+#include <utility>
 #include <vector>
 
 class World;
@@ -52,7 +53,7 @@ namespace Farming
 
     // Turns the block into farmland and plants on top of it. False when
     // the ground is wrong or there is no room above it.
-    bool plant(World& world, const glm::ivec3& ground, BlockId crop = Blocks::Wheat0);
+    bool plant(World& world, const glm::ivec3& ground, BlockId crop = Blocks::Wheat0, bool tillFirst = false);
 
     // Advances a scatter of crops near the player. `seed` is stirred
     // each call so the same columns are not picked every time.
@@ -60,6 +61,8 @@ namespace Farming
               std::vector<glm::ivec3>* snifflings = nullptr, std::vector<glm::ivec3>* tadpoles = nullptr);
 
     bool coralIsWet(const World& world, int x, int y, int z);
+
+    std::vector<std::pair<glm::ivec3, bool>> takeChorusEvents();
 
     // How tall a cane of bamboo gets. Minecraft's is twelve to
     // sixteen; one number here, because a cane that stopped at a

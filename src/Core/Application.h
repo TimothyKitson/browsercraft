@@ -528,6 +528,12 @@ private:
 
     // Footstep pacing and landing detection.
     float m_distanceWalked = 0.0f;
+    bool m_wasWet = false;
+    bool m_mountAirborne = false;
+    bool m_wornPrimed = false;
+    StackId m_wornLast[4] = {};
+    float m_swimDistance = 0.0f;
+    float m_paddleTimer = 0.0f;
     bool m_wasOnGround = true;
 
     // The bench the 3x3 grid belongs to, and whether the open inventory
@@ -1422,6 +1428,7 @@ private:
     // What a crafter does when something tells it to: makes one of
     // whatever its grid spells and puts it out on top.
     bool fireCrafter(const glm::ivec3& block);
+    void namedAt(const char* stem, const glm::vec3& at, float volume = 1.0f, float pitch = 1.0f, Sound fallback = Sound::Click);
     bool feedCrafter(const glm::ivec3& at, ItemStack& item);
     // Fills a chest standing in a village building the first time it
     // is opened. Does nothing to one the player built.

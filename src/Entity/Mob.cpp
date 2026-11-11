@@ -470,6 +470,12 @@ void Mob::emit(Sound id, float volume, float pitch)
     m_sounds.push_back(sound);
 }
 
+void Mob::emitNamed(const char* stem, Sound fallback, float volume, float pitch)
+{
+    emit(fallback, volume, pitch);
+    m_sounds.back().named = stem;
+}
+
 bool Mob::collidesAt(const World& world, const glm::vec3& feet) const
 {
     const float half = width() * 0.5f;
@@ -661,6 +667,14 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
     if (!m_dressed) dress(g_gearDifficultyFor());
 
     m_daylight = daylight;
+    if (m_type == MobId::Guardian || m_type == MobId::ElderGuardian || m_type == MobId::Wolf)
+    {
+        const bool wasWet = m_wet;
+        m_wet = isLiquid(world.getBlock(static_cast<int>(std::floor(m_position.x)), static_cast<int>(std::floor(m_position.y + 0.4f)),
+                                        static_cast<int>(std::floor(m_position.z))));
+        if (m_type == MobId::Wolf && wasWet && !m_wet && alive())
+            emitNamed("mob/wolf/shake", Sound::MobWolfSay, 0.4f, 0.9f + random01() * 0.2f);
+    }
     if (m_burrow != 0.0f)
     {
         if (m_burrow > 0.0f) m_burrow = std::max(0.0f, m_burrow - deltaTime);
@@ -731,7 +745,7 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
                 curse.from = m_position;
                 curse.blindSeconds = 20;
                 m_strikes.push_back(curse);
-                emit(Sound::IllusionerCast, 0.9f, 0.8f);
+                emitNamed("mob/illusion_illager/prepare_blind", Sound::IllusionerCast, 0.9f, 1.0f);
             }
         }
     }
@@ -775,8 +789,11 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
     if (t.stationary && alive())
     {
         const glm::vec3 toPlayer = playerPosition - m_position;
+        const float was = m_peek;
         m_peek = Shulker::peekTowards(m_peek, glm::length(toPlayer) < t.arrowRange,
                                       deltaTime);
+        if (was <= 0.01f && m_peek > 0.01f) emitNamed("entity/shulker/open", Sound::Click, 0.8f, 0.9f + random01() * 0.2f);
+        else if (was >= 0.01f && m_peek < 0.01f) emitNamed("entity/shulker/close", Sound::Click, 0.8f, 0.9f + random01() * 0.2f);
     }
 
     // A grown chicken lays an egg every few minutes. The clock runs
@@ -1242,6 +1259,16 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
             }
             m_strikes.push_back(strike);
             m_attackTimer = t.attackInterval;
+            const float swing = 0.9f + random01() * 0.2f;
+            switch (m_type)
+            {
+                case MobId::IronGolem: emitNamed("mob/irongolem/throw", Sound::MobGolemSay, 1.0f, swing); break;
+                case MobId::Slime: emitNamed("mob/slime/attack", Sound::MobSlimeSay, 0.8f, swing); break;
+                case MobId::Rabbit: emitNamed("entity/rabbit/attack", Sound::MobRabbitSay, 0.8f, swing); break;
+                case MobId::Vex: emitNamed("mob/vex/charge", Sound::MobVexSay, 0.8f, swing); break;
+                case MobId::PolarBear: emitNamed("mob/polarbear/warning", Sound::MobPolarBearSay, 1.0f, swing); break;
+                default: break;
+            }
         }
     }
 
@@ -1344,6 +1371,9 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
     // bullet waits on the animation rather than the other way round.
     if (t.arrowDamage > 0 && (!t.stationary || m_peek >= Shulker::PEEK_OPEN))
     {
+        if (m_type == MobId::Ghast && m_shootTimer > 1.0f && m_shootTimer - deltaTime <= 1.0f &&
+            glm::length(playerPosition - m_position) < t.arrowRange)
+            emitNamed("mob/ghast/charge", Sound::MobGhastSay, 1.0f, 0.9f + random01() * 0.2f);
         if (m_shootTimer > 0.0f) m_shootTimer = std::max(0.0f, m_shootTimer - deltaTime);
 
         const glm::vec3 eye = m_position + glm::vec3(0.0f, height() * 0.85f, 0.0f);
@@ -1358,6 +1388,7 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
                                 world.hasLineOfSight(eye, aim);
             if (locked)
             {
+                if (m_laserCharge <= 0.0f) emitNamed("mob/guardian/attack_loop", Sound::MobGuardianSay, 1.0f, 1.0f);
                 m_laserCharge += deltaTime;
                 if (m_laserCharge >= LASER_SECONDS)
                 {
@@ -1386,6 +1417,7 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
                 shot.damage = t.arrowDamage;
                 m_shots.push_back(shot);
                 emit(Sound::EvokerCast, 0.8f, 1.0f);
+                emitNamed("mob/evocation_illager/cast", Sound::EvokerCast, 1.0f, 1.0f);
             }
         }
         else if (m_shootTimer <= 0.0f && range > 2.5f && range < t.arrowRange &&
@@ -1417,9 +1449,32 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
                                      : Arrows::Kind::Shaft;
             m_shots.push_back(shot);
 
+            const float shotPitch = 0.8f + random01() * 0.4f;
             if (t.spits) emit(Sound::LlamaSpit, 0.8f, 0.9f + random01() * 0.2f);
-            else emit(t.shootsFire ? Sound::Fire : Sound::Click, 0.5f,
-                      t.shootsWind ? 1.6f : 1.2f);
+            else if (t.shootsFire || t.shootsBreath) emitNamed("mob/ghast/fireball", Sound::Fire, 0.8f, shotPitch);
+            else if (t.shootsBullet) emitNamed("entity/shulker/shoot", Sound::Click, 0.8f, shotPitch);
+            else if (t.shootsSkull) emitNamed("mob/wither/shoot", Sound::Click, 0.6f, shotPitch);
+            else if (t.throwsPotions) emitNamed("entity/witch/throw", Sound::Click, 0.6f, shotPitch);
+            else if (t.shootsWind) emit(Sound::Click, 0.5f, 1.6f);
+            else emitNamed("random/bow", Sound::Click, 0.6f, 1.0f / (0.8f + random01() * 0.4f));
+        }
+    }
+
+    if (alive() && (m_type == MobId::EnderDragon || (m_type == MobId::Parrot && !m_onGround)))
+    {
+        m_flapTimer -= deltaTime;
+        if (m_flapTimer <= 0.0f)
+        {
+            if (m_type == MobId::EnderDragon)
+            {
+                emitNamed("mob/enderdragon/wings", Sound::MobDragonSay, 2.0f, 0.8f + random01() * 0.3f);
+                m_flapTimer = 1.1f;
+            }
+            else
+            {
+                emitNamed("mob/parrot/fly", Sound::MobParrotSay, 0.4f, 1.0f);
+                m_flapTimer = 0.5f + random01() * 0.6f;
+            }
         }
     }
 
@@ -1427,7 +1482,55 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
     if (m_ambientTimer <= 0.0f && !t.inanimate)
     {
         m_ambientTimer = t.ambientMinSeconds + random01() * (t.ambientMaxSeconds - t.ambientMinSeconds);
-        emit(t.voice, 0.8f, 0.9f + random01() * 0.2f);
+        const float pitch = 0.9f + random01() * 0.2f;
+        const bool hostile = m_provoked || m_chasing;
+        const int bx = static_cast<int>(std::floor(m_position.x));
+        const int by = static_cast<int>(std::floor(m_position.y + 0.4f));
+        const int bz = static_cast<int>(std::floor(m_position.z));
+        const bool wet = isLiquid(world.getBlock(bx, by, bz));
+        const char* stem = nullptr;
+        switch (m_type)
+        {
+            case MobId::Wolf:
+                if (hostile && !m_tamed) stem = "mob/wolf/growl";
+                else if (random01() < 0.33f)
+                    stem = m_tamed && m_health * 2 < t.maxHealth ? "mob/wolf/whine" : "mob/wolf/panting";
+                else if (!m_tamed && random01() < 0.05f) stem = "mob/wolf/howl";
+                break;
+            case MobId::Cat:
+                if (m_tamed && inLove()) stem = "mob/cat/purr";
+                else if (m_tamed && random01() < 0.25f) stem = "mob/cat/purreow";
+                break;
+            case MobId::ZombiePigman:
+                if (hostile) stem = "mob/zombiepig/zpigangry";
+                break;
+            case MobId::PolarBear:
+                if (baby()) stem = "mob/polarbear_baby/idle";
+                break;
+            case MobId::Guardian: case MobId::ElderGuardian:
+                if (wet && m_type == MobId::Guardian) stem = "entity/guardian/ambient";
+                else if (!wet) stem = m_onGround && random01() < 0.5f ? "mob/guardian/flop" : "mob/guardian/land_idle";
+                break;
+            case MobId::Ghast:
+                if (random01() < 0.15f) stem = "mob/ghast/affectionate_scream";
+                break;
+            case MobId::Enderman:
+                if (hostile) stem = "mob/endermen/scream";
+                break;
+            case MobId::Llama: case MobId::TraderLlama:
+                if (hostile) stem = "mob/llama/angry";
+                break;
+            case MobId::Horse:
+                if (random01() < 0.2f) stem = "mob/horse/breathe";
+                break;
+            case MobId::Bat:
+                if (random01() < 0.3f) stem = "mob/bat/loop";
+                break;
+            default:
+                break;
+        }
+        if (stem) emitNamed(stem, t.voice, 0.8f, pitch);
+        else emit(t.voice, 0.8f, pitch);
     }
 }
 
@@ -1626,17 +1729,27 @@ void Mob::damage(int amount, const glm::vec3& fromDirection)
     // already set above, so hostileNow() knows which this is.
     m_goalTimer = 0.0f;
     if (type().spawnClass == SpawnClass::Passive && !hostileNow())
+    {
+        if (m_type == MobId::Cat && !m_tamed && m_panicTimer <= 0.0f && alive())
+            emitNamed("mob/cat/hiss", Sound::MobCatSay, 0.8f, 0.9f + random01() * 0.2f);
         m_panicTimer = PANIC_SECONDS;
+    }
 
     // A mob on fire takes a hit every second for as long as it lasts, and
     // a yelp for each one is a lot of yelping from a herd at dawn. Dying
     // is always worth hearing; being hurt is worth hearing now and then.
+    const bool landed = (m_type == MobId::Guardian || m_type == MobId::ElderGuardian) && !m_wet;
     if (!alive())
-        emit(type().deathVoice, 1.0f, 0.9f + random01() * 0.2f);
+    {
+        if (landed) emitNamed("mob/guardian/land_death", type().deathVoice, 1.0f, 0.9f + random01() * 0.2f);
+        else emit(type().deathVoice, 1.0f, 0.9f + random01() * 0.2f);
+    }
     else if (m_hurtVoiceTimer <= 0.0f)
     {
         m_hurtVoiceTimer = HURT_VOICE_SECONDS;
-        emit(type().hurtVoice, 0.9f, 0.9f + random01() * 0.2f);
+        if (landed) emitNamed("mob/guardian/land_hit", type().hurtVoice, 0.9f, 0.9f + random01() * 0.2f);
+        else if (m_type == MobId::Shulker && m_peek < 0.1f) emitNamed("entity/shulker/hurt_closed", type().hurtVoice, 0.9f, 0.9f + random01() * 0.2f);
+        else emit(type().hurtVoice, 0.9f, 0.9f + random01() * 0.2f);
     }
 }
 

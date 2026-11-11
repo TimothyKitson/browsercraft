@@ -22,6 +22,7 @@ struct MobSound
     float volume = 1.0f;
     float pitch = 1.0f;
     MobId mob = MobId::Count;
+    const char* named = nullptr;
 };
 
 // A blow a mob has landed on the player this frame. Queued rather than
@@ -89,6 +90,7 @@ namespace Stare
 class Mob
 {
 public:
+    void emitNamed(const char* stem, Sound fallback, float volume, float pitch);
     Mob(MobId type, glm::vec3 feetPosition, uint32_t seed, bool baby = false);
 
     void update(float deltaTime, const World& world, const glm::vec3& playerPosition,
@@ -717,6 +719,8 @@ private:
     bool m_persistent = false;
     float m_growthBoost = 0.0f;
     bool m_provoked = false;
+    bool m_wet = false;
+    float m_flapTimer = 0.0f;
     std::vector<MobSound> m_sounds;
     std::vector<MobStrike> m_strikes;
     std::vector<MobShot> m_shots;

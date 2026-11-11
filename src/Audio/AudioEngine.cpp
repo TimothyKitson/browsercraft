@@ -311,13 +311,26 @@ const std::vector<AudioEngine::Clip>& AudioEngine::namedClips(const std::string&
     std::vector<Clip>& clips = m_named[stem];
     Clip single;
     if (loadOgg("assets/sounds/" + stem + ".ogg", single)) clips.push_back(std::move(single));
-    for (int n = 1; n <= 16; ++n)
+    int misses = 0;
+    for (int n = 1; n <= 16 && misses < 2; ++n)
     {
         Clip clip;
-        if (!loadOgg("assets/sounds/" + stem + std::to_string(n) + ".ogg", clip)) break;
+        if (!loadOgg("assets/sounds/" + stem + std::to_string(n) + ".ogg", clip))
+        {
+            ++misses;
+            continue;
+        }
+        misses = 0;
         clips.push_back(std::move(clip));
     }
     return clips;
+}
+
+float AudioEngine::namedSeconds(const std::string& stem)
+{
+    const std::vector<Clip>& clips = namedClips(stem);
+    if (clips.empty()) return 0.0f;
+    return static_cast<float>(clips.front().size()) / static_cast<float>(SAMPLE_RATE);
 }
 
 bool AudioEngine::playNamed(const std::string& stem, Sound fallback, float volume, float pitch)
@@ -341,11 +354,51 @@ bool AudioEngine::playNamed(const std::string& stem, Sound fallback, float volum
         if (voice.buffer != nullptr) continue;
         voice.buffer = &clip;
         voice.position = 0.0;
+        voice.tag = 0;
         voice.step = std::clamp(static_cast<double>(pitch), 0.25, 4.0);
         voice.volume = std::clamp(volume * m_master, 0.0f, 1.0f);
         break;
     }
     return true;
+}
+
+void AudioEngine::loopNamed(int tag, const std::string& stem, Sound fallback, float volume, float pitch)
+{
+    if (m_muted || m_device == 0) return;
+    const std::vector<Clip>& clips = namedClips(stem);
+    if (clips.empty() || clips.front().empty()) return;
+    volume *= m_category[static_cast<size_t>(categoryOf(fallback))];
+    std::lock_guard<std::mutex> lock(m_mutex);
+    for (Voice& voice : m_voices)
+        if (voice.buffer != nullptr && voice.tag == tag)
+        {
+            voice.volume = std::clamp(volume * m_master, 0.0f, 1.0f);
+            voice.step = std::clamp(static_cast<double>(pitch), 0.25, 4.0);
+            return;
+        }
+    if (volume <= 0.0f) return;
+    for (Voice& voice : m_voices)
+    {
+        if (voice.buffer != nullptr) continue;
+        voice.buffer = &clips.front();
+        voice.position = 0.0;
+        voice.step = std::clamp(static_cast<double>(pitch), 0.25, 4.0);
+        voice.volume = std::clamp(volume * m_master, 0.0f, 1.0f);
+        voice.tag = tag;
+        return;
+    }
+}
+
+void AudioEngine::stopTag(int tag)
+{
+    if (tag == 0) return;
+    std::lock_guard<std::mutex> lock(m_mutex);
+    for (Voice& voice : m_voices)
+        if (voice.buffer != nullptr && voice.tag == tag)
+        {
+            voice.buffer = nullptr;
+            voice.tag = 0;
+        }
 }
 
 void AudioEngine::preloadNamed(std::initializer_list<const char*> stems)
@@ -2170,6 +2223,7 @@ void AudioEngine::play(Sound sound, float volume, float pitch)
         if (voice.buffer != nullptr) continue;
         voice.buffer = &clip;
         voice.position = 0.0;
+        voice.tag = 0;
         voice.step = std::clamp(static_cast<double>(pitch), 0.25, 4.0);
         voice.volume = std::clamp(volume * m_master, 0.0f, 1.0f);
         return;
@@ -2224,6 +2278,11 @@ void AudioEngine::playPlace(BlockId block)
     if (block == Blocks::LilyPad)
     {
         playNamed("block/waterlily/place", Sound::DigPlant, 0.8f);
+        return;
+    }
+    if (isFrame(block))
+    {
+        playNamed("entity/itemframe/place", Sound::DigWood, 1.0f);
         return;
     }
     playDig(block, 0.8f);
@@ -2365,10 +2424,16 @@ void AudioEngine::mix(float* output, int frames)
 
         for (int i = 0; i < frames; ++i)
         {
-            const size_t sampleIndex = static_cast<size_t>(voice.position);
+            size_t sampleIndex = static_cast<size_t>(voice.position);
+            if (sampleIndex + 1 >= data.size() && voice.tag != 0 && data.size() > 2)
+            {
+                voice.position = 0.0;
+                sampleIndex = 0;
+            }
             if (sampleIndex + 1 >= data.size())
             {
                 voice.buffer = nullptr;
+                voice.tag = 0;
                 break;
             }
 

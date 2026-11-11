@@ -15,6 +15,18 @@ namespace
     }
 }
 
+namespace
+{
+    std::vector<std::pair<glm::ivec3, bool>> g_chorusEvents;
+}
+
+std::vector<std::pair<glm::ivec3, bool>> Farming::takeChorusEvents()
+{
+    std::vector<std::pair<glm::ivec3, bool>> out;
+    out.swap(g_chorusEvents);
+    return out;
+}
+
 bool Farming::isTillable(BlockId id)
 {
     return id == Blocks::Dirt || id == Blocks::Grass || id == Blocks::SnowGrass;
@@ -113,16 +125,17 @@ BlockId Farming::cropFromSeed(StackId held)
     }
 }
 
-bool Farming::plant(World& world, const glm::ivec3& ground, BlockId crop)
+bool Farming::plant(World& world, const glm::ivec3& ground, BlockId crop, bool tillFirst)
 {
     if (!isCrop(crop)) return false;
-    if (!isTillable(world.getBlock(ground.x, ground.y, ground.z))) return false;
+    const BlockId soil = world.getBlock(ground.x, ground.y, ground.z);
+    if (tillFirst ? !isTillable(soil) : (soil != Blocks::Farmland && soil != Blocks::FarmlandDry)) return false;
 
     const glm::ivec3 above(ground.x, ground.y + 1, ground.z);
     const BlockId there = world.getBlock(above.x, above.y, above.z);
-    if (there != Blocks::Air && there != Blocks::TallGrass) return false;
+    if (there != Blocks::Air && (!tillFirst || there != Blocks::TallGrass)) return false;
 
-    world.setBlock(ground.x, ground.y, ground.z, Blocks::Farmland);
+    if (tillFirst) world.setBlock(ground.x, ground.y, ground.z, Blocks::Farmland);
     world.setBlock(above.x, above.y, above.z, cropAtStage(crop, 0));
     return true;
 }
@@ -496,8 +509,10 @@ void Farming::grow(World& world, const glm::vec3& around, uint32_t& seed, std::v
             if (stalk >= 4 || (root != Blocks::EndStone && stalk == 0))
             {
                 world.setBlock(x, y, z, Blocks::ChorusFlowerDead);
+                g_chorusEvents.push_back({ glm::ivec3(x, y, z), false });
                 continue;
             }
+            g_chorusEvents.push_back({ glm::ivec3(x, y + 1, z), true });
             {
                 world.setBlock(x, y, z, Blocks::ChorusPlant);
                 world.setBlock(x, y + 1, z, Blocks::ChorusFlower);

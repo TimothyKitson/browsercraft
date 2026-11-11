@@ -343,6 +343,9 @@ public:
     static const char* categoryKey(SoundCategory category);
     static const char* categoryLabel(SoundCategory category);
     static bool soundFileExists(const std::string& file);
+    float namedSeconds(const std::string& stem);
+    void loopNamed(int tag, const std::string& stem, Sound fallback, float volume, float pitch = 1.0f);
+    void stopTag(int tag);
     bool playNamed(const std::string& stem, Sound fallback, float volume = 1.0f, float pitch = 1.0f);
     void preloadNamed(std::initializer_list<const char*> stems);
     void setCategoryVolume(SoundCategory category, float volume)
@@ -376,6 +379,7 @@ private:
         double position = 0.0;
         double step = 1.0;
         float volume = 1.0f;
+        int tag = 0;
     };
 
     unsigned int m_device = 0;

@@ -204,6 +204,7 @@ public:
     void setDimension(Dimension dimension) { m_dimension = dimension; }
     void setDifficulty(int difficulty) { m_difficulty = difficulty; Mob::setGearDifficulty(difficulty); }
     void setPeaceful(bool peaceful) { m_peaceful = peaceful; }
+    void setMobGriefing(bool on) { m_mobGriefing = on; }
     void setNaturalSpawning(bool on) { m_naturalSpawning = on; }
     void setSpawnRules(bool insomnia, bool traders) { m_insomnia = insomnia; m_traders = traders; }
     bool peaceful() const { return m_peaceful; }
@@ -211,9 +212,11 @@ public:
     void setMoonPhase(int phase) { m_moonPhase = phase; }
 
 private:
+    std::vector<MobSound> m_orphanSounds;
     std::vector<ShedHorn> m_horns;
     bool m_playerHidden = false;
     bool m_peaceful = false;
+    bool m_mobGriefing = true;
     bool m_naturalSpawning = true;
     bool m_insomnia = true;
     bool m_traders = true;

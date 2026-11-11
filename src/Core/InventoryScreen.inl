@@ -3941,6 +3941,8 @@ void Application::openTrading(const Mob& villager)
     TraderRecord& record = openTrader();
     record.position = villager.position();
     record.dimension = static_cast<int>(m_dimension);
+    if (villager.typeId() == MobId::Villager)
+        namedAt("mob/villager/haggle", villager.position(), 1.0f, 0.9f + static_cast<float>(villager.birthSeed() % 5u) * 0.05f, Sound::MobVillagerSay);
     m_inventoryOpen = true;
     setMouseCaptured(false);
 }
@@ -3967,6 +3969,13 @@ void Application::selectTrade(int deal)
     const std::vector<Trading::Deal> deals = tradeDeals();
     if (deal < 0 || deal >= static_cast<int>(deals.size())) return;
     m_tradeSelected = deal;
+    if (const Mob* trader = tradingVillager())
+    {
+        const TraderRecord& seen = openTrader();
+        const bool spent = static_cast<size_t>(deal) < seen.uses.size() &&
+                           seen.uses[static_cast<size_t>(deal)] >= deals[static_cast<size_t>(deal)].maxUses;
+        namedAt(spent ? "mob/villager/no" : "mob/villager/yes", trader->position(), 0.8f, 1.0f, Sound::MobVillagerSay);
+    }
 
     for (int slot : { Inventory::TRADE_PAY_A, Inventory::TRADE_PAY_B })
     {
@@ -4083,8 +4092,11 @@ void Application::takeTradeResult(bool all)
         const int rankBefore = Trading::rankFor(record.xp);
         record.uses[static_cast<size_t>(m_tradeSelected)] += 1;
         if (const Mob* trader = tradingVillager())
+        {
             sprites(SpriteParticles::Kind::Happy, trader->position() + glm::vec3(0.0f, 1.9f, 0.0f), 5, 0.5f,
                     0.3f, 0.25f, 1.0f);
+            namedAt("mob/villager/yes", trader->position(), 1.0f, 0.9f + static_cast<float>(record.uses[static_cast<size_t>(m_tradeSelected)] % 5) * 0.05f, Sound::MobVillagerSay);
+        }
         record.xp += deal.villagerXp;
         award("adventure/trade", "traded");
     m_stats.add(Stats::Custom::TradedWithVillager);
@@ -4286,7 +4298,7 @@ void Application::tickBrewing(float deltaTime)
     if (spend.count <= 0) spend.clear();
 
     m_brewProgress = 0.0f;
-    m_audio.play(Sound::Click, 0.5f, 1.4f);
+    m_audio.playNamed("block/brewing_stand/brew", Sound::Click, 1.0f, 1.0f);
 }
 
 void Application::openAnvil(const glm::ivec3& block)
@@ -4416,7 +4428,7 @@ void Application::takeAnvilResult()
             static_cast<int>(along * static_cast<float>(Experience::toNextLevel(after)));
     }
 
-    m_audio.play(Sound::Click, 0.5f);
+    bool broke = false;
     if (!m_player.creative() && m_world)
     {
         m_wearSeed ^= m_wearSeed << 13;
@@ -4428,9 +4440,10 @@ void Application::takeAnvilResult()
             const BlockId worn = isAnvil(here) ? anvilOf(anvilWear(here) + 1, anvilAlongX(here)) : Blocks::Air;
             m_world->setBlock(m_anvilBlock.x, m_anvilBlock.y, m_anvilBlock.z, worn);
             m_net.onLocalBlockChange(m_anvilBlock.x, m_anvilBlock.y, m_anvilBlock.z, worn);
-            m_audio.play(Sound::DigStone, 0.8f, worn == Blocks::Air ? 0.6f : 0.9f);
+            broke = worn == Blocks::Air;
         }
     }
+    m_audio.playNamed(broke ? "random/anvil_break" : "random/anvil_use", Sound::DigStone, broke ? 1.0f : 0.8f, 0.9f + static_cast<float>(m_wearSeed % 10u) * 0.02f);
     refreshAnvilResult();
 }
 
@@ -4521,7 +4534,7 @@ void Application::buyEnchantment(int row)
     m_stats.add(Stats::Custom::EnchantItem);
     // A fresh roll, so the next three offers are not the same three.
     m_enchantRoll = Enchanting::nextRoll(m_enchantRoll);
-    m_audio.play(Sound::Pickup, 0.7f, 0.7f);
+    m_audio.playNamed("block/enchantment_table/enchant", Sound::Pickup, 1.0f, 0.9f + static_cast<float>(m_enchantRoll % 10u) * 0.02f);
 }
 
 void Application::openBench(const glm::ivec3& block)
@@ -4579,6 +4592,7 @@ void Application::openChest(const glm::ivec3& block)
         const BlockId opened = barrelWith(barrelFacing(here), true);
         m_world->setBlock(block.x, block.y, block.z, opened);
         m_net.onLocalBlockChange(block.x, block.y, block.z, opened);
+        m_audio.playNamed("random/chestopen", Sound::Click, 0.5f, 0.9f + static_cast<float>((block.x + block.z) & 7) * 0.0125f);
     }
 
     if (isEnderChest(here))
@@ -4778,6 +4792,7 @@ void Application::stowChest()
         const BlockId shut = barrelWith(barrelFacing(m_world->getBlock(m_chestBlock.x, m_chestBlock.y, m_chestBlock.z)), false);
         m_world->setBlock(m_chestBlock.x, m_chestBlock.y, m_chestBlock.z, shut);
         m_net.onLocalBlockChange(m_chestBlock.x, m_chestBlock.y, m_chestBlock.z, shut);
+        m_audio.playNamed("random/chestclosed", Sound::Click, 0.5f, 0.9f + static_cast<float>((m_chestBlock.x + m_chestBlock.z) & 7) * 0.0125f);
     }
 
     Chests::Contents& held = m_chestEnder ? m_chests.ender() : m_chests.at(m_chestBlock);
