@@ -419,6 +419,10 @@ public:
     void setSelfPush(bool pushing) { m_selfPush = pushing; }
     void markShotByMob() { m_shotByMob = true; }
     bool charged() const { return m_charged; }
+    int woolColour() const { return m_variant & 15; }
+    bool sheared() const { return (m_variant & 16) != 0; }
+    void setWool(int colour, bool shorn) { m_variant = (colour & 15) | (shorn ? 16 : 0); }
+    bool takeGrazeReport() { const bool was = m_grazed; m_grazed = false; return was; }
     void setCharged(bool on) { m_charged = on; }
     void markChargedBlast() { m_chargedBlast = true; }
     bool chargedBlastHit() const { return m_chargedBlast; }
@@ -517,6 +521,8 @@ private:
     bool m_selfPush = false;
     bool m_shotByMob = false;
     bool m_charged = false;
+    bool m_grazed = false;
+    float m_grazeTimer = 20.0f;
     bool m_chargedBlast = false;
     bool m_rolled = false;
     bool m_rolledJustNow = false;

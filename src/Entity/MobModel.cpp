@@ -267,6 +267,16 @@ void MobModel::render(Shader& chunkShader, const World& world, const EntityManag
                 const std::string path = variantOf(mob);
                 if (!path.empty()) own = villagerTexture(path.c_str());
             }
+            if (layer == 1 && id == MobId::Sheep)
+            {
+                if (mob.sheared()) continue;
+                if (mob.woolColour() != 0)
+                {
+                    char tint[8];
+                    std::snprintf(tint, sizeof(tint), "%06X", Banners::dyeRgb(mob.woolColour()));
+                    own = villagerTexture((std::string("assets/textures/entity/sheep/sheep_fur.png#") + tint).c_str());
+                }
+            }
             if (own)
             {
                 auto found = std::find_if(variants.begin(), variants.end(),

@@ -5775,7 +5775,10 @@ bool Application::frame()
                         if (mob.typeId() == MobId::IronGolem) mob.damage(60, glm::vec3(0.0f));
                 if (m_startupScreen == "mobs")
                     for (Mob& mob : m_entities.mobs())
+                    {
                         if (mob.typeId() == MobId::Creeper) mob.setCharged(true);
+                        if (mob.typeId() == MobId::Sheep) mob.setWool(10, false);
+                    }
                 if (varied)
                 {
                     uint32_t next = 11u;
@@ -15743,6 +15746,23 @@ void Application::handlePlacement()
                     m_audio.play(Sound::Click, 0.5f, 0.7f);
                     return;
                 }
+            if (aimed->typeId() == MobId::Sheep && !aimed->baby() && held.id == Items::Shears && !aimed->sheared())
+            {
+                const int wool = 1 + static_cast<int>((m_growthSeed = m_growthSeed * 1664525u + 1013904223u) >> 8) % 3;
+                m_drops.spawn(aimed->position() + glm::vec3(0.0f, 0.8f, 0.0f), woolOfColour(aimed->woolColour()), wool);
+                aimed->setWool(aimed->woolColour(), true);
+                m_audio.play(Sound::DigWool, 0.7f, 1.2f);
+                if (!m_player.creative()) wearOnSwing(Items::Shears);
+                m_heldItem.swing();
+                return;
+            }
+            if (aimed->typeId() == MobId::Sheep && isDye(held.id) && dyeColour(held.id) != aimed->woolColour() && !aimed->sheared())
+            {
+                aimed->setWool(dyeColour(held.id), false);
+                if (!m_player.creative() && --held.count <= 0) held.clear();
+                m_audio.play(Sound::DyeUse, 0.7f);
+                return;
+            }
             if (held.id == Items::Lead && Mob::leashable(aimed->type()) && !aimed->leashed() && !aimed->ridden())
             {
                 aimed->setLeashed(true);
@@ -21225,6 +21245,20 @@ void Application::updateMobs(float deltaTime)
     }
 
     // Anything that went off.
+    for (const glm::vec3& grazed : m_entities.drainGrazes())
+    {
+        const glm::ivec3 cell(glm::floor(grazed - glm::vec3(0.0f, 0.1f, 0.0f)));
+        if (m_world->getBlock(cell.x, cell.y + 1, cell.z) == Blocks::TallGrass)
+        {
+            m_world->setBlock(cell.x, cell.y + 1, cell.z, Blocks::Air);
+            m_net.onLocalBlockChange(cell.x, cell.y + 1, cell.z, Blocks::Air);
+        }
+        else if (m_rules.on(GameRules::Rule::MobGriefing))
+        {
+            m_world->setBlock(cell.x, cell.y, cell.z, Blocks::Dirt);
+            m_net.onLocalBlockChange(cell.x, cell.y, cell.z, Blocks::Dirt);
+        }
+    }
     for (const MobBlast& blast : m_entities.drainBlasts())
     {
         m_blastSource = blast.source;
@@ -21340,7 +21374,9 @@ void Application::updateMobs(float deltaTime)
         }
         else if (m_rules.on(GameRules::Rule::DoMobLoot))
         {
-            for (int i = 0; i < type.dropCount; ++i) m_drops.spawn(where, type.drop, 1);
+            for (int i = 0; i < type.dropCount; ++i)
+                if (death.type != MobId::Sheep || (death.variant & 16) == 0)
+                    m_drops.spawn(where, death.type == MobId::Sheep ? static_cast<StackId>(woolOfColour(death.variant & 15)) : type.drop, 1);
             for (int i = 0; i < type.secondDropCount; ++i) m_drops.spawn(where, type.secondDrop, 1);
         }
         {

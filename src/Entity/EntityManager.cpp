@@ -582,6 +582,7 @@ void EntityManager::update(float deltaTime, const World& world,
         if (const int silverfish = mob.takeSilverfish())
             m_infestations.emplace_back(mob.position() + glm::vec3(0.0f, mob.height() * 0.5f, 0.0f), silverfish);
 
+        if (mob.takeGrazeReport()) m_grazes.push_back(mob.position());
         if (mob.takeEggReport()) (mob.typeId() == MobId::Armadillo ? m_shedScutes : m_laidEggs).push_back(mob.position());
         if (mob.takeGrowthReport() && mob.typeId() == MobId::Turtle) m_grownTurtles.push_back(mob.position());
         if (mob.typeId() == MobId::Tadpole && mob.alive() && mob.age() + mob.growthBoost() >= Mob::TADPOLE_SECONDS)
@@ -1048,8 +1049,10 @@ void EntityManager::pairOffLovers(const World& world)
                 const glm::vec3 parentHome = m_mobs[a].home();
                 const int parentTrade = m_mobs[a].professionSlot();
 
+                const int woolA = m_mobs[a].woolColour(), woolB = m_mobs[b].woolColour();
                 m_mobs.emplace_back(mule ? MobId::Mule : m_mobs[a].typeId(), between,
                                     m_rng ^ static_cast<uint32_t>(m_mobs.size() * 40503u), true);
+                if (m_mobs.back().typeId() == MobId::Sheep) m_mobs.back().setWool(random01() < 0.5f ? woolA : woolB, false);
 
                 // A child belongs where its parents do, and takes up
                 // the family trade. Born without either it would walk

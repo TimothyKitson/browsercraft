@@ -40,6 +40,12 @@ Mob::Mob(MobId type, glm::vec3 feetPosition, uint32_t seed, bool baby)
     m_goalYaw = m_yaw;
     m_ambientTimer = t.ambientMinSeconds + random01() * (t.ambientMaxSeconds - t.ambientMinSeconds);
 
+    if (type == MobId::Sheep)
+    {
+        const uint32_t roll = (m_birthSeed * 2654435761u >> 8) % 100000u;
+        const int colour = roll < 5000u ? 15 : roll < 10000u ? 7 : roll < 15000u ? 8 : roll < 18000u ? 12 : roll < 18164u ? 6 : 0;
+        setWool(colour, false);
+    }
     if (type == MobId::Wither)
     {
         m_spawnPhase = WITHER_SPAWN_SECONDS;
@@ -713,6 +719,23 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
             m_eggTimer = m_type == MobId::Armadillo ? 300.0f + static_cast<float>((m_birthSeed + static_cast<uint32_t>(m_age)) % 300u)
                                                     : EGG_SECONDS;
             m_eggReady = true;
+        }
+    }
+
+    if (m_type == MobId::Sheep && alive() && sheared())
+    {
+        m_grazeTimer -= deltaTime;
+        if (m_grazeTimer <= 0.0f)
+        {
+            m_grazeTimer = 20.0f + random01() * 40.0f;
+            const int gx = static_cast<int>(std::floor(m_position.x)), gy = static_cast<int>(std::floor(m_position.y - 0.1f));
+            const int gz = static_cast<int>(std::floor(m_position.z));
+            const BlockId under = world.getBlock(gx, gy, gz);
+            if (under == Blocks::Grass || under == Blocks::SnowGrass || world.getBlock(gx, gy + 1, gz) == Blocks::TallGrass)
+            {
+                setWool(woolColour(), false);
+                m_grazed = true;
+            }
         }
     }
 

@@ -92,6 +92,7 @@ public:
         float distance = 0.0f;
     };
     std::vector<Death> drainDeaths();
+    std::vector<glm::vec3> drainGrazes() { std::vector<glm::vec3> out; out.swap(m_grazes); return out; }
 
     // Where a chicken has just laid an egg. Drained the same way a
     // death is, and for the same reason: the egg belongs where the
@@ -216,6 +217,7 @@ private:
     Dimension m_dimension = Dimension::Overworld;
     std::vector<Mob> m_mobs;
     std::vector<Death> m_deaths;
+    std::vector<glm::vec3> m_grazes;
     std::vector<glm::vec3> m_laidEggs;
     std::vector<glm::vec3> m_frogMeals;
     std::vector<std::pair<glm::vec3, int>> m_infestations;
