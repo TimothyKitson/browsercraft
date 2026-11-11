@@ -1397,6 +1397,7 @@ void WorldGen::placeOres(Chunk& chunk) const
         { Blocks::Andesite,  DEEPSLATE_TOP, 110, 0.0016f, 30, 1010 },
         { Blocks::Gravel,    10, 100, 0.0035f, 14, 1005 },
         { Blocks::Clay,      40,  66, 0.0030f, 10, 1006 },
+        { Blocks::Dirt,      DEEPSLATE_TOP, 100, 0.0012f, 30, 1015 },
     };
 
     for (const OreSpec& ore : ORES)
@@ -1433,6 +1434,29 @@ void WorldGen::placeOres(Chunk& chunk) const
 
     if (m_dimension != Dimension::Overworld) return;
     const Biomes::Kind here = kindAt(baseX + 8, baseZ + 8);
+    const bool badlands = here == Biomes::Kind::Badlands || here == Biomes::Kind::ErodedBadlands || here == Biomes::Kind::WoodedBadlands;
+    const bool dripstone = caveKindAt(baseX + 8, baseZ + 8) == CaveKind::Dripstone;
+    auto seams = [&](BlockId block, int count, int minY, int maxY, int size, uint32_t salt) {
+        for (int seam = 0; seam < count; ++seam)
+        {
+            const uint32_t h = hashCoords(baseX, seam, baseZ, m_seed + salt);
+            const int lx = static_cast<int>(h & 15u);
+            const int lz = static_cast<int>((h >> 4) & 15u);
+            const int y = minY + static_cast<int>((h >> 8) % static_cast<uint32_t>(std::max(1, maxY - minY)));
+            for (int i = 0; i < size; ++i)
+            {
+                const uint32_t g = hashCoords(baseX + seam, y + i, baseZ - i, m_seed + salt + 1);
+                const int px = lx + static_cast<int>(g % 5u) - 2;
+                const int py = y + static_cast<int>((g >> 4) % 5u) - 2;
+                const int pz = lz + static_cast<int>((g >> 8) % 5u) - 2;
+                const BlockId host = chunk.getBlock(px, py, pz);
+                if (isStoneFamily(host))
+                    chunk.setBlockRaw(px, py, pz, host == Blocks::Deepslate ? deepslateOreOf(block) : block);
+            }
+        }
+    };
+    if (badlands) seams(Blocks::GoldOre, 12, 32, 79, 8, 1031);
+    if (dripstone) seams(Blocks::CopperOre, 8, DEEPSLATE_TOP, 80, 20, 1033);
     if (here != Biomes::Kind::WindsweptHills && here != Biomes::Kind::WindsweptGravellyHills &&
         here != Biomes::Kind::WindsweptForest)
         return;
