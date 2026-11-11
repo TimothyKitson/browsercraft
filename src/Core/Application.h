@@ -597,6 +597,8 @@ private:
     void tickArmorStands(float deltaTime);
     void pushArmorStands(const Piston::Moved& moved);
     float m_patrolTimer = 600.0f;
+    float m_chorusCooldown = 0.0f;
+    float m_damageTilt = 1.0f;
     float m_meltClock = 0.0f;
     std::map<uint32_t, int> m_reputation;
     float m_gossipClock = 0.0f;

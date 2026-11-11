@@ -471,6 +471,7 @@ void Application::loadOptions()
         else if (std::sscanf(line, "bobView=%d", &value) == 1) m_viewBobbing = value != 0;
         else if (std::strncmp(line, "mouseSensitivity=", 17) == 0) m_mouseSensitivity = std::clamp(static_cast<float>(std::atof(line + 17)), 0.1f, 3.0f);
         else if (std::sscanf(line, "invertYMouse=%d", &value) == 1) m_invertMouse = value != 0;
+        else if (std::strncmp(line, "damageTiltStrength=", 19) == 0) m_damageTilt = std::clamp(static_cast<float>(std::atof(line + 19)), 0.0f, 1.0f);
         else if (std::strncmp(line, "soundCategory_master=", 21) == 0) m_masterVolume = std::clamp(static_cast<float>(std::atof(line + 21)), 0.0f, 1.0f);
         else if (std::sscanf(line, "maxFps=%d", &value) == 1) m_maxFps = std::clamp(value, 0, 260);
         else if (std::sscanf(line, "enableVsync=%d", &value) == 1) m_vsync = value != 0;
@@ -513,6 +514,7 @@ void Application::saveOptions()
     std::fprintf(file, "fov=%d\ngamma=%.3f\nguiScale=%d\nbobView=%d\nmouseSensitivity=%.3f\ninvertYMouse=%d\nsoundCategory_master=%.3f\nmaxFps=%d\nenableVsync=%d\n",
                  m_fovSetting, m_brightness, m_guiScaleSetting, m_viewBobbing ? 1 : 0, m_mouseSensitivity, m_invertMouse ? 1 : 0,
                  m_masterVolume, m_maxFps, m_vsync ? 1 : 0);
+    std::fprintf(file, "damageTiltStrength=%.3f\n", m_damageTilt);
     std::fclose(file);
 #ifdef __EMSCRIPTEN__
     EM_ASM({
@@ -2781,6 +2783,7 @@ bool Application::frame()
         if (playing()) tickHoppers(deltaTime);
 
         if (m_pearlCooldown > 0.0f) m_pearlCooldown -= deltaTime;
+        if (m_chorusCooldown > 0.0f) m_chorusCooldown -= deltaTime;
         for (size_t i = 0; i < m_pressedButtons.size();)
         {
             m_pressedButtons[i].second -= deltaTime;
@@ -3023,6 +3026,7 @@ bool Application::frame()
                 m_nausea = std::min(1.0f, m_nausea + 0.13333f * deltaTime);
             else
                 m_nausea = std::max(0.0f, m_nausea - 1.0f * deltaTime);
+            if (m_portalTimer > 0.0f) m_nausea = std::max(m_nausea, std::min(1.0f, m_portalTimer / PORTAL_SECONDS) * 0.6f);
             const bool dark = m_player.effects.has(Effects::Kind::Darkness) &&
                               m_player.effects.secondsLeft(Effects::Kind::Darkness) > Effects::DARKNESS_FADE_SECONDS;
             m_darknessFade = std::clamp(m_darknessFade + (dark ? 1.0f : -1.0f) * deltaTime / Effects::DARKNESS_FADE_SECONDS, 0.0f, 1.0f);
@@ -16459,8 +16463,10 @@ void Application::handleEating(float deltaTime)
 
     const bool honey = stack.id == Items::HoneyBottle;
     if (honey) Effects::remove(m_player.effects, Effects::Kind::Poison);
+    if (stack.id == Items::ChorusFruit && m_chorusCooldown > 0.0f) return;
     if (stack.id == Items::ChorusFruit)
     {
+        m_chorusCooldown = 1.0f;
         const glm::ivec3 from(static_cast<int>(std::floor(m_player.position.x)), static_cast<int>(std::floor(m_player.position.y)),
                               static_cast<int>(std::floor(m_player.position.z)));
         uint32_t roll = static_cast<uint32_t>(m_elapsedSeconds * 7919.0f) ^ static_cast<uint32_t>(from.x * 31 + from.z * 17);
@@ -19896,6 +19902,11 @@ float Application::dimensionAmbient() const
 glm::mat4 Application::worldProjection(const Camera& camera) const
 {
     glm::mat4 projection = camera.projectionMatrix(m_window.aspect());
+    if (m_player.damageFlash > 0.0f && m_perspective == Perspective::FirstPerson && m_damageTilt > 0.0f)
+    {
+        const float through = std::clamp(m_player.damageFlash / 0.5f, 0.0f, 1.0f);
+        projection = glm::rotate(projection, glm::radians(std::sin(through * 3.14159265f) * 9.0f * m_damageTilt), glm::vec3(0.0f, 0.0f, 1.0f));
+    }
     const float scale = static_cast<float>(m_distortion) / 100.0f;
     const float intensity = m_nausea * scale * scale;
     if (intensity <= 0.0f) return projection;
@@ -25245,6 +25256,14 @@ void Application::renderHud()
     const float w = m_ui.canvasWidth();
     const float h = m_ui.canvasHeight();
 
+    if (m_portalTimer > 0.0f && m_dimension != Dimension::End)
+    {
+        const TileUV swirl = tileUV(Tiles::NetherPortal);
+        const float alpha = std::min(1.0f, m_portalTimer / PORTAL_SECONDS) * 0.8f;
+        m_ui.texturedQuad(m_atlas.textureId(), 0.0f, 0.0f, w, h, swirl.u0, swirl.vTop, swirl.u1, swirl.vBottom,
+                          glm::vec4(1.0f, 1.0f, 1.0f, alpha));
+    }
+
     // Alight. Minecraft draws flames licking up the bottom of the
     // screen and it is the only cue you get, so it is drawn before
     // everything else on the HUD and out of the way of the hotbar.
@@ -25503,6 +25522,12 @@ void Application::renderHud()
                  stack.id, m_player.creative() ? 0 : stack.count,
                  glm::vec4(1.0f), stack.damage, stack.enchantments);
         m_iconOverride = -1;
+        const float resting = stack.id == Items::EnderPearl ? m_pearlCooldown : stack.id == Items::ChorusFruit ? m_chorusCooldown : 0.0f;
+        if (resting > 0.0f)
+        {
+            const float left = std::clamp(resting, 0.0f, 1.0f);
+            m_ui.quad(slotX, slotY + ITEM_SIZE * (1.0f - left), ITEM_SIZE, ITEM_SIZE * left, glm::vec4(1.0f, 1.0f, 1.0f, 0.5f));
+        }
     }
 
     {
