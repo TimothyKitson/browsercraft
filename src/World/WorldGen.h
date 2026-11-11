@@ -119,6 +119,8 @@ public:
     static int landmarkTraps(Landmark kind, ChestSpot out[4]);
     void outpostCage(int midX, int midZ, int& cageX, int& cageZ, bool& golem) const;
     static int outpostBanners(int out[8][4]);
+    int mansionShift(int midX, int midZ) const;
+    bool mansionCage(int midX, int midZ, int& x, int& y, int& z) const;
     static void endShip(int midX, int midZ, int ground, int& sx, int& sz, int& deck);
     bool fortressIn(int squareX, int squareZ, int& midX, int& midZ, int& turn) const;
     static void fortressTurn(int turn, int u, int v, int& dx, int& dz);

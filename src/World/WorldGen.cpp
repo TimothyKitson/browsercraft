@@ -2789,6 +2789,26 @@ int WorldGen::outpostBanners(int out[8][4])
     return n;
 }
 
+int WorldGen::mansionShift(int midX, int midZ) const
+{
+    return static_cast<int>(hashCoords(midX, 12, midZ, m_seed + 9502) % 12u);
+}
+
+bool WorldGen::mansionCage(int midX, int midZ, int& x, int& y, int& z) const
+{
+    const int shift = mansionShift(midX, midZ);
+    for (int slot = 0; slot < 12; ++slot)
+    {
+        if ((slot + shift) % 12 != 3) continue;
+        const int storey = slot / 4, q = slot % 4;
+        x = midX + ((q & 1) ? 6 : -6);
+        z = midZ + ((q & 2) ? 6 : -6);
+        y = surfaceHeight(midX, midZ) + storey * 5 + 1;
+        return true;
+    }
+    return false;
+}
+
 void WorldGen::outpostCage(int midX, int midZ, int& cageX, int& cageZ, bool& golem) const
 {
     const uint32_t roll = hashCoords(midX, 0, midZ, m_seed + 9401);
@@ -2829,9 +2849,10 @@ int WorldGen::landmarkChests(Landmark kind, ChestSpot out[4])
             out[0] = { -2,  OUTPOST_TALL + 1,  2 };
             return 1;
         case Landmark::WoodlandMansion:
-            out[0] = { -4,  1,  4 };
-            out[1] = {  4,  7, -4 };
-            return 2;
+            out[0] = { -2,  1,  2 };
+            out[1] = {  2,  6, -2 };
+            out[2] = { -2, 11, -2 };
+            return 3;
         case Landmark::SwampHut:
             out[0] = {  1,  5,  1 };
             return 1;
@@ -3356,6 +3377,148 @@ void WorldGen::stampLandmark(Chunk& chunk, Landmark kind, int midX, int midZ) co
                 put(chunk, midX + HALF - 2, y, midZ + HALF - 2, Blocks::Torch);
                 put(chunk, midX - HALF + 2, y, midZ - HALF + 2, Blocks::Torch);
             }
+
+            const int shift = mansionShift(midX, midZ);
+            for (int storey = 0; storey < STOREYS; ++storey)
+                for (int q = 0; q < 4; ++q)
+                {
+                    const int qx = (q & 1) ? 1 : -1, qz = (q & 2) ? 1 : -1;
+                    const int kind = (storey * 4 + q + shift) % 12;
+                    const int base = ground + storey * STOREY;
+                    const int f = base + 1;
+                    auto cell = [&](int i, int j, int y, BlockId block) { put(chunk, midX + qx * i, y, midZ + qz * j, block); };
+                    const int headTo = qz > 0 ? 2 : 0;
+                    const int inward = qx > 0 ? 3 : 1;
+                    switch (kind)
+                    {
+                        case 0:
+                        case 10:
+                        {
+                            const int colour = kind == 0 ? 14 : 11;
+                            cell(9, 8, f, bedOf(colour, headTo, false));
+                            cell(9, 9, f, bedOf(colour, headTo, true));
+                            if (kind == 10)
+                            {
+                                cell(7, 8, f, bedOf(colour, headTo, false));
+                                cell(7, 9, f, bedOf(colour, headTo, true));
+                            }
+                            cell(9, 6, f, Blocks::Bookshelf);
+                            cell(9, 6, f + 1, Blocks::Bookshelf);
+                            for (int i = 4; i <= 6; ++i)
+                                for (int j = 4; j <= 6; ++j) cell(i, j, f, static_cast<BlockId>(Blocks::CarpetFirst + colour));
+                            cell(3, 9, f, Blocks::OakFence);
+                            cell(3, 9, f + 1, pottedOf(Blocks::RedTulip));
+                            break;
+                        }
+                        case 1:
+                            for (int i = 3; i <= 9; ++i)
+                                for (int dy = 0; dy < 3; ++dy)
+                                {
+                                    cell(i, 4, f + dy, Blocks::Bookshelf);
+                                    cell(i, 7, f + dy, Blocks::Bookshelf);
+                                }
+                            cell(6, 9, f, Blocks::LecternBook);
+                            break;
+                        case 2:
+                            for (int i = 4; i <= 7; ++i)
+                                for (int j = 5; j <= 6; ++j)
+                                {
+                                    cell(i, j, f, fenceOfWood(5));
+                                    cell(i, j, f + 1, static_cast<BlockId>(Blocks::CarpetFirst + 12));
+                                }
+                            cell(5, 5, f + 4, fenceOfWood(5));
+                            cell(5, 5, f + 3, Blocks::Torch);
+                            cell(9, 9, f, Blocks::Barrel);
+                            cell(9, 8, f, Blocks::Barrel);
+                            break;
+                        case 3:
+                            for (int i = 2; i <= 9; ++i)
+                                for (int j = 2; j <= 9; ++j)
+                                    for (int dy = 0; dy < 4; ++dy)
+                                        if (hashToFloat(hashCoords(midX + qx * i, f + dy, midZ + qz * j, m_seed + 9501)) < 0.4f)
+                                            cell(i, j, f + dy, Blocks::Cobweb);
+                            cell(6, 6, f, Blocks::MonsterSpawner);
+                            break;
+                        case 4:
+                            for (int j = 2; j <= 9; ++j)
+                                for (int dy = 0; dy < 4; ++dy)
+                                    if (!((j == 3 || j == 7) && dy <= 1)) cell(6, j, f + dy, Blocks::IronBars);
+                            for (int i = 7; i <= 9; ++i)
+                                for (int dy = 0; dy < 4; ++dy) cell(i, 5, f + dy, Blocks::IronBars);
+                            break;
+                        case 5:
+                            cell(5, 9, f, Blocks::CartographyTable);
+                            for (int j = 4; j <= 8; j += 2) cell(10, j, f + 2, bannerOf(8, true, inward));
+                            for (int i = 4; i <= 7; ++i)
+                                for (int j = 4; j <= 7; ++j) cell(i, j, f, static_cast<BlockId>(Blocks::CarpetFirst + 8));
+                            break;
+                        case 6:
+                            for (int i = 4; i <= 7; ++i)
+                                for (int j = 4; j <= 7; ++j) cell(i, j, base, Blocks::Grass);
+                            for (int dy = 0; dy < 3; ++dy) cell(5, 5, f + dy, Blocks::DarkOakLog);
+                            for (int i = 4; i <= 6; ++i)
+                                for (int j = 4; j <= 6; ++j)
+                                    if (i != 5 || j != 5) cell(i, j, f + 2, Blocks::DarkOakLeaves);
+                            for (int i = 4; i <= 6; ++i)
+                                for (int j = 4; j <= 6; ++j) cell(i, j, f + 3, Blocks::DarkOakLeaves);
+                            break;
+                        case 7:
+                            for (int i = 5; i <= 6; ++i)
+                            {
+                                cell(i, 6, f, static_cast<BlockId>(Blocks::WoolOrange + 6));
+                                cell(i, 6, f + 1, static_cast<BlockId>(Blocks::WoolOrange + 6));
+                                cell(i, 6, f + 2, Blocks::Wool);
+                            }
+                            cell(4, 6, f + 1, static_cast<BlockId>(Blocks::WoolOrange + 6));
+                            cell(7, 6, f + 1, static_cast<BlockId>(Blocks::WoolOrange + 6));
+                            break;
+                        case 8:
+                            for (int i = 5; i <= 9; ++i)
+                                for (int j = 5; j <= 9; ++j)
+                                    for (int dy = 0; dy < 4; ++dy)
+                                    {
+                                        const bool wall = i == 5 || i == 9 || j == 5 || j == 9;
+                                        const bool core = i == 7 && j == 7 && dy == 1;
+                                        cell(i, j, f + dy, wall ? static_cast<BlockId>(Blocks::DarkOakPlanks)
+                                                                : core ? static_cast<BlockId>(Blocks::DiamondBlock)
+                                                                : dy <= 2 ? static_cast<BlockId>(Blocks::Obsidian) : static_cast<BlockId>(Blocks::Air));
+                                    }
+                            break;
+                        case 9:
+                            cell(9, 3, f, Blocks::Furnace);
+                            cell(9, 4, f, Blocks::BlastFurnace);
+                            cell(9, 6, f, Blocks::Anvil);
+                            cell(9, 7, f, Blocks::Cauldron3);
+                            cell(6, 9, f, Blocks::Cobblestone);
+                            cell(8, 9, f, Blocks::Cobblestone);
+                            cell(7, 8, f, Blocks::Cobblestone);
+                            cell(7, 9, f, Blocks::Lava);
+                            break;
+                        default:
+                            for (int i = 3; i <= 9; i += 2)
+                            {
+                                static const BlockId FLOWERS[4] = { Blocks::RedTulip, Blocks::Allium, Blocks::Cornflower, Blocks::OxeyeDaisy };
+                                cell(i, 9, f, fenceOfWood(5));
+                                cell(i, 9, f + 1, pottedOf(FLOWERS[(i / 2) & 3]));
+                            }
+                            for (int i = 4; i <= 7; ++i)
+                                for (int j = 4; j <= 6; ++j) cell(i, j, f, static_cast<BlockId>(Blocks::CarpetFirst + 5));
+                            break;
+                    }
+                }
+            for (int dy = 1; dy < TALL; ++dy)
+            {
+                put(chunk, midX + HALF - 1, ground + dy, midZ + HALF - 1, Blocks::LadderNorth);
+                if (dy % STOREY != 0) put(chunk, midX + HALF - 2, ground + dy, midZ + HALF - 1, Blocks::Air);
+            }
+            for (int dx = -2; dx <= 2; ++dx)
+                for (int dz = 1; dz <= 2; ++dz)
+                    put(chunk, midX + dx, ground, midZ - HALF - dz, Blocks::Cobblestone);
+            for (int side = -1; side <= 1; side += 2)
+                for (int dy = 1; dy <= 3; ++dy) put(chunk, midX + side * 2, ground + dy, midZ - HALF - 2, Blocks::DarkOakLog);
+            for (int dx = -2; dx <= 2; ++dx)
+                for (int dz = 1; dz <= 2; ++dz)
+                    put(chunk, midX + dx, ground + 4, midZ - HALF - dz, Blocks::DarkOakPlanks);
 
             putChests(chunk, Landmark::WoodlandMansion, midX, ground, midZ);
             break;
@@ -5294,6 +5457,13 @@ int WorldGen::dungeonCage(int x, int y, int z) const
         {
             const Stronghold::Site site = Stronghold::touching(x, z, x, z, m_seed);
             if (site.exists && x == site.x + 3 && y == site.y && z == site.z + 3) return 4;
+            const Structures::Spot manor = nearestLandmark(Landmark::WoodlandMansion, x, z, 1);
+            if (manor.exists)
+            {
+                const int mx = manor.chunkX * Structures::CHUNK + Structures::CHUNK / 2, mz = manor.chunkZ * Structures::CHUNK + Structures::CHUNK / 2;
+                int sx = 0, sy = 0, sz = 0;
+                if (landmarkStands(Landmark::WoodlandMansion, mx, mz) && mansionCage(mx, mz, sx, sy, sz) && sx == x && sy == y && sz == z) return 2;
+            }
         }
         for (int dz = -5; dz <= 5; ++dz)
             for (int dx = -5; dx <= 5; ++dx)

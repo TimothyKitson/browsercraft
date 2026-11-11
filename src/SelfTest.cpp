@@ -533,6 +533,41 @@ namespace
             check(cauldron && pot, "a swamp hut has its cauldron and potted red mushroom");
         }
 
+        {
+            const Structures::Spot manor = overworld.nearestLandmark(WorldGen::Landmark::WoodlandMansion, 0, 0, 4);
+            if (manor.exists)
+            {
+                Probe probe{ overworld, {} };
+                const int mx = manor.chunkX * Structures::CHUNK + Structures::CHUNK / 2, mz = manor.chunkZ * Structures::CHUNK + Structures::CHUNK / 2;
+                const int ground = overworld.surfaceHeight(mx, mz);
+                int shelves = 0, beds = 0, carpets = 0, bars = 0, webs = 0;
+                for (int dx = -10; dx <= 10; ++dx)
+                    for (int dz = -10; dz <= 10; ++dz)
+                        for (int dy = 1; dy <= 14; ++dy)
+                        {
+                            const BlockId here = probe.at(mx + dx, ground + dy, mz + dz);
+                            if (here == Blocks::Bookshelf) ++shelves;
+                            else if (isBed(here)) ++beds;
+                            else if (isCarpet(here)) ++carpets;
+                            else if (here == Blocks::IronBars) ++bars;
+                            else if (here == Blocks::Cobweb) ++webs;
+                        }
+                check(shelves >= 40 && beds >= 6 && carpets >= 30, "a mansion has a library, bedrooms and carpets");
+                check(bars >= 20 && webs >= 40, "a barred jail and a room hung with cobwebs");
+                int sx = 0, sy = 0, sz = 0;
+                check(overworld.mansionCage(mx, mz, sx, sy, sz) && probe.at(sx, sy, sz) == Blocks::MonsterSpawner && overworld.dungeonCage(sx, sy, sz) == 2,
+                      "with a spider cage in the middle of them");
+                WorldGen::ChestSpot spots[4];
+                const int many = WorldGen::landmarkChests(WorldGen::Landmark::WoodlandMansion, spots);
+                int chests = 0;
+                for (int i = 0; i < many; ++i)
+                    if (probe.at(mx + spots[i].dx, ground + spots[i].dy, mz + spots[i].dz) == Blocks::Chest &&
+                        overworld.hoardAt(mx + spots[i].dx, ground + spots[i].dy, mz + spots[i].dz) == WorldGen::Hoard::WoodlandMansion)
+                        ++chests;
+                check(many == 3 && chests == 3, "and a chest on each of its three floors");
+            }
+        }
+
         const WorldGen end(4242u, Dimension::End);
         const Structures::Spot spot = end.nearestEndCity(0, 0, 40);
         if (spot.exists)
