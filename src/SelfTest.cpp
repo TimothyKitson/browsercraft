@@ -290,6 +290,22 @@ namespace
                         }
             }
         check(cones > 0, "dripstone caves grow large dripstone columns");
+
+        int pools = 0;
+        for (int cz = -10; cz <= 10 && pools == 0; ++cz)
+            for (int cx = -10; cx <= 10 && pools == 0; ++cx)
+            {
+                if (generator.caveKindAt(cx * Chunk::SX + 8, cz * Chunk::SZ + 8) != WorldGen::CaveKind::Lush) continue;
+                Chunk chunk(ChunkPos{ cx, cz });
+                generator.generate(chunk);
+                for (int lz = 0; lz < Chunk::SZ; ++lz)
+                    for (int lx = 0; lx < Chunk::SX; ++lx)
+                        for (int y = 9; y < 60; ++y)
+                            if (chunk.getBlock(lx, y, lz) == Blocks::Clay && chunk.getBlock(lx, y + 1, lz) == Blocks::Water &&
+                                chunk.getBlock(lx, y + 2, lz) != Blocks::Water)
+                                ++pools;
+            }
+        check(pools > 0, "lush caves hold clay-bottomed pools");
     }
 
     void testMineshaftNetwork()

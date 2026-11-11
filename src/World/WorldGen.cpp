@@ -1336,6 +1336,34 @@ void WorldGen::dressCaves(Chunk& chunk) const
                 }
                 else
                 {
+                    if (floor && y > 8)
+                    {
+                        const int cellX = wx >> 3, cellZ = wz >> 3;
+                        const uint32_t cellHash = hashCoords(cellX, y >> 3, cellZ, m_seed + 7741);
+                        if (hashToFloat(cellHash) < 0.3f)
+                        {
+                            const float px = static_cast<float>(cellX * 8 + 4), pz = static_cast<float>(cellZ * 8 + 4);
+                            const float radius = 1.6f + hashToFloat(cellHash * 2654435761u) * 1.6f;
+                            const float d = std::sqrt((wx + 0.5f - px) * (wx + 0.5f - px) + (wz + 0.5f - pz) * (wz + 0.5f - pz));
+                            const BlockId deeper = chunk.getBlock(lx, y - 2, lz);
+                            if (d < radius && isSolid(deeper))
+                            {
+                                chunk.setBlockRaw(lx, y - 2, lz, Blocks::Clay);
+                                chunk.setBlockRaw(lx, y - 1, lz, Blocks::Water);
+                                if (hashToFloat(hashCoords(wx, y, wz, m_seed + 7742)) < 0.2f && chunk.getBlock(lx, y + 1, lz) == Blocks::Air)
+                                {
+                                    const int facing = static_cast<int>(hashCoords(wx, y, wz, m_seed + 7743) & 3u);
+                                    chunk.setBlockRaw(lx, y, lz, bigDripleafOf(facing, DripleafTilt::None));
+                                }
+                                continue;
+                            }
+                            if (d < radius + 1.2f)
+                            {
+                                chunk.setBlockRaw(lx, y - 1, lz, Blocks::Clay);
+                                continue;
+                            }
+                        }
+                    }
                     // Moss underfoot, azalea overhead, and the berries
                     // that are the only light down here that nobody
                     // had to carry in.
