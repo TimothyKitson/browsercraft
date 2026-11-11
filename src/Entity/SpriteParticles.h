@@ -18,7 +18,10 @@ public:
         TrialFlameOminous, Vibration, Shriek, SculkSoul, SculkCharge, SculkChargePop,
         VaultConnection, OminousSpawning, TrialOmen, RaidOmen, Flash, Spark, Glow,
         Soul, SoulFlame, Cherry, Nautilus, Infested, GoldHeart,
-        DripHangWater, DripHangLava, DripLandLava, Ash, WhiteAsh, CrimsonSpore, WarpedSpore, Count
+        DripHangWater, DripHangLava, DripLandLava, Ash, WhiteAsh, CrimsonSpore, WarpedSpore,
+        DripHangHoney, DripFallHoney, DripLandHoney, DripHangTear, DripFallTear, DripLandTear, FallingNectar, FallingSpore,
+        SporeAir, Underwater, SquidInk, GlowInk, Dolphin, WhiteSmoke, Cloud, Sneeze, SmallFlame, RedDust, Snowflake,
+        Mycelium, Composter, WaxOn, WaxOff, Scrape, Witch, ElectricSpark, EndRod, ReversePortal, Count
     };
 
     SpriteParticles();
@@ -32,6 +35,10 @@ public:
                float size, float lifetime, float gravity = 0.0f);
 
     void drip(bool lava, const glm::vec3& position, float floorY);
+    void drip(Kind hang, const glm::vec3& position, float floorY, float hangSeconds);
+    void fall(Kind falling, const glm::vec3& position, float floorY);
+    static Kind fallOf(Kind hang);
+    static Kind landOf(Kind falling);
 
     void update(float deltaTime);
     void render(Shader& shader, const World& world, const glm::vec3& cameraRight,

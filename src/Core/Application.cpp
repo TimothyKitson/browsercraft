@@ -17842,6 +17842,7 @@ void Application::handlePlacement()
             {
                 award("husbandry/wax_on", "wax_on");
                 setCopper(at.block, sealed);
+                if (m_sprites) m_sprites->burst(SpriteParticles::Kind::WaxOn, glm::vec3(at.block) + glm::vec3(0.5f), 10, 0.6f, 0.4f, 0.15f, 1.2f);
                 m_audio.play(Sound::Click, 0.6f, 1.3f);
                 m_heldItem.swing();
                 if (!m_player.creative())
@@ -17865,6 +17866,9 @@ void Application::handlePlacement()
             {
                 if (Copper::waxed(scrapedCopper) == log) award("husbandry/wax_off", "wax_off");
                 setCopper(bark.block, scrapedCopper);
+                if (m_sprites)
+                    m_sprites->burst(Copper::waxed(scrapedCopper) == log ? SpriteParticles::Kind::WaxOff : SpriteParticles::Kind::Scrape,
+                                     glm::vec3(bark.block) + glm::vec3(0.5f), 10, 0.6f, 0.4f, 0.15f, 1.2f);
                 m_audio.play(Sound::DigStone, 0.6f, 1.4f);
                 m_heldItem.swing();
                 wearOnSwing(stack.id);
@@ -18560,6 +18564,7 @@ void Application::handlePlacement()
             if (used)
             {
                 m_particles.spawnBlockBreak(crop.block, Blocks::TallGrass);
+                if (m_sprites) m_sprites->burst(SpriteParticles::Kind::Happy, glm::vec3(crop.block) + glm::vec3(0.5f, 0.6f, 0.5f), 8, 0.7f, 0.2f, 0.18f, 1.2f);
                 m_audio.play(Sound::Place, 0.5f, 1.5f);
                 if (!m_player.creative())
                 {
@@ -22931,12 +22936,71 @@ void Application::tickSpriteParticles(float deltaTime)
                 }
             }
 
-            if (block == Blocks::Torch)
+            auto floorUnder = [&](int fromY) {
+                int floor = fromY;
+                while (floor > fromY - 48 && m_world->getBlock(x, floor, z) == Blocks::Air) --floor;
+                const BlockId landOn = m_world->getBlock(x, floor, z);
+                if (isFluid(landOn)) return static_cast<float>(floor) + fluidAmount(landOn) / 9.0f;
+                if (isCross(landOn)) return static_cast<float>(floor);
+                return static_cast<float>(floor + 1);
+            };
+            if (block != Blocks::Air && m_world->getBlock(x, y - 1, z) == Blocks::Air && (isOpaque(block) || isHive(block)))
+            {
+                const BlockId above = m_world->getBlock(x, y + 1, z);
+                const glm::vec3 under(x + 0.2f + fx.random() * 0.6f, static_cast<float>(y) - 0.06f, z + 0.2f + fx.random() * 0.6f);
+                if (isFluid(above) && !isHive(block) && roll < (isLava(above) ? 0.004f : 0.012f))
+                    fx.drip(isLava(above) ? Kind::DripHangLava : Kind::DripHangWater, under, floorUnder(y - 1), isLava(above) ? 2.0f : 1.0f);
+                else if (block == Blocks::CryingObsidian && roll < 0.1f)
+                    fx.drip(Kind::DripHangTear, under, floorUnder(y - 1), 2.0f);
+                else if (isHive(block) && hiveHoney(block) >= 5 && roll < 0.1f)
+                    fx.drip(Kind::DripHangHoney, under, floorUnder(y - 1), 2.0f);
+            }
+            if (block == Blocks::SporeBlossom)
+            {
+                if (roll < 0.1f)
+                    fx.fall(Kind::FallingSpore, glm::vec3(x + 0.3f + fx.random() * 0.4f, y + 0.6f, z + 0.3f + fx.random() * 0.4f), floorUnder(y - 1));
+                for (int k = 0; k < 3; ++k)
+                {
+                    const int ax = x + static_cast<int>((fx.random() - 0.5f) * 20.0f);
+                    const int ay = y - static_cast<int>(fx.random() * 10.0f);
+                    const int az = z + static_cast<int>((fx.random() - 0.5f) * 20.0f);
+                    if (m_world->getBlock(ax, ay, az) == Blocks::Air)
+                        fx.spawn(Kind::SporeAir, glm::vec3(ax + fx.random(), ay + fx.random(), az + fx.random()),
+                                 glm::vec3((fx.random() - 0.5f) * 0.1f, -0.05f, (fx.random() - 0.5f) * 0.1f), 0.08f, 6.0f);
+                }
+            }
+            else if (block == Blocks::Mycelium && roll < 0.05f && m_world->getBlock(x, y + 1, z) == Blocks::Air)
+                fx.spawn(Kind::Mycelium, glm::vec3(x + fx.random(), y + 1.1f, z + fx.random()), glm::vec3(0.0f), 0.06f, 1.5f);
+            else if (block == Blocks::Water && roll < 0.006f && m_player.isHeadUnderwater(*m_world))
+                fx.spawn(Kind::Underwater, glm::vec3(x + fx.random(), y + fx.random(), z + fx.random()),
+                         glm::vec3((fx.random() - 0.5f) * 0.1f, (fx.random() - 0.5f) * 0.1f, (fx.random() - 0.5f) * 0.1f), 0.05f, 3.0f);
+            else if (isEndRod(block) && roll < 0.2f)
+                fx.spawn(Kind::EndRod, middle + glm::vec3(fx.random() - 0.5f, fx.random() - 0.5f, fx.random() - 0.5f) * 0.6f,
+                         glm::vec3((fx.random() - 0.5f) * 0.1f, -0.05f, (fx.random() - 0.5f) * 0.1f), 0.12f, 3.0f);
+
+            if (block == Blocks::Torch || (isWallTorch(block) && wallTorchKind(block) == 0))
             {
                 fx.spawn(Kind::Flame, middle + glm::vec3(0.0f, 0.2f, 0.0f), glm::vec3(0.0f, 0.02f, 0.0f), 0.12f, 0.6f);
                 if (roll < 0.5f)
                     fx.spawn(Kind::Smoke, middle + glm::vec3(0.0f, 0.3f, 0.0f), glm::vec3(0.0f, 0.15f, 0.0f), 0.18f, 1.0f);
             }
+            else if (block == Blocks::SoulTorch || (isWallTorch(block) && wallTorchKind(block) == 1))
+            {
+                fx.spawn(Kind::SoulFlame, middle + glm::vec3(0.0f, 0.2f, 0.0f), glm::vec3(0.0f, 0.02f, 0.0f), 0.12f, 0.6f);
+                if (roll < 0.5f)
+                    fx.spawn(Kind::Smoke, middle + glm::vec3(0.0f, 0.3f, 0.0f), glm::vec3(0.0f, 0.15f, 0.0f), 0.18f, 1.0f);
+            }
+            else if (isWallTorch(block) && wallTorchKind(block) == 2 && roll < 0.3f)
+                fx.spawn(Kind::RedDust, middle + glm::vec3(fx.random() - 0.5f, 0.3f, fx.random() - 0.5f) * 0.4f, glm::vec3(0.0f), 0.1f, 0.8f);
+            else if (block == Blocks::RedstoneTorch && roll < 0.3f)
+                fx.spawn(Kind::RedDust, middle + glm::vec3((fx.random() - 0.5f) * 0.2f, 0.25f, (fx.random() - 0.5f) * 0.2f), glm::vec3(0.0f), 0.1f, 0.8f);
+            else if (isCandle(block) && candleLit(block) && roll < 0.5f)
+                fx.spawn(Kind::SmallFlame, middle + glm::vec3((fx.random() - 0.5f) * 0.3f, -0.05f, (fx.random() - 0.5f) * 0.3f),
+                         glm::vec3(0.0f, 0.02f, 0.0f), 0.07f, 0.6f);
+            else if (block == Blocks::SoulFire && roll < 0.3f)
+                fx.spawn(Kind::SoulFlame, glm::vec3(x + fx.random(), y + fx.random() * 0.8f, z + fx.random()), glm::vec3(0.0f, 0.3f, 0.0f), 0.14f, 0.8f);
+            else if (block == Blocks::SoulSand && roll < 0.002f && m_world->getBlock(x, y + 1, z) == Blocks::Air)
+                fx.spawn(Kind::Soul, glm::vec3(x + fx.random(), y + 1.1f, z + fx.random()), glm::vec3(0.0f, 0.3f, 0.0f), 0.2f, 1.6f);
             else if (isCampfire(block))
             {
                 const bool signal = m_world->getBlock(x, y - 1, z) == Blocks::HayBale || axisBase(m_world->getBlock(x, y - 1, z)) == Blocks::HayBale;
@@ -23044,6 +23108,21 @@ void Application::tickSpriteParticles(float deltaTime)
                 if (roll < 0.2f && glm::length(m_player.position - middle) < 5.0f)
                     fx.spawn(Kind::VaultConnection, middle, (m_player.eyePosition() - middle) * 0.8f, 0.15f, 1.2f);
             }
+        }
+
+        for (Mob& mob : m_entities.mobs())
+        {
+            if (!mob.alive() || glm::length(mob.position() - m_player.position) > 48.0f) continue;
+            const MobId type = mob.typeId();
+            if ((type == MobId::Squid || type == MobId::GlowSquid) && mob.hurtFlash() > 0.3f && m_inked.insert(mob.serial()).second)
+                fx.burst(type == MobId::GlowSquid ? Kind::GlowInk : Kind::SquidInk, mob.position() + glm::vec3(0.0f, 0.4f, 0.0f), 30, 0.5f,
+                         1.2f, 0.35f, 1.5f, 0.0f);
+            else if (type == MobId::Dolphin && glm::length(mob.velocity()) > 2.0f && fx.random() < 0.6f)
+                fx.spawn(Kind::Dolphin, mob.position() + glm::vec3(fx.random() - 0.5f, 0.3f, fx.random() - 0.5f) * 0.5f, glm::vec3(0.0f), 0.08f, 1.0f);
+            else if (type == MobId::Witch && fx.random() < 0.08f)
+                fx.spawn(Kind::Witch, mob.position() + glm::vec3(fx.random() - 0.5f, 1.9f + fx.random() * 0.3f, fx.random() - 0.5f),
+                         glm::vec3(0.0f, 0.3f, 0.0f), 0.15f, 1.0f);
+            if (mob.hurtFlash() <= 0.0f && !m_inked.empty()) m_inked.erase(mob.serial());
         }
 
         if (hasSky() && m_weather.depth > 0.5f && !m_snowing)

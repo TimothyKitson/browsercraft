@@ -354,6 +354,7 @@ private:
     EntityShadowRenderer m_shadowSpots;
     bool m_entityShadows = true;
     bool m_autoJump = false;
+    std::set<uint32_t> m_inked;
     void renderEntityShadows(const glm::mat4& view, const glm::mat4& projection);
     WorldBorder m_border;
     void renderBorder(const glm::mat4& view, const glm::mat4& projection);

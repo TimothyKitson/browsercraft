@@ -1,3 +1,4 @@
+#include "Entity/SpriteParticles.h"
 // Headless checks for the parts of the game you normally only reach by
 // clicking: the inventory's slot rules and the crafting recipes.
 //
@@ -223,6 +224,20 @@ namespace
 
         inventory.quickMove(Inventory::HOTBAR_SLOTS);
         check(inventory.slot(0).count == 32, "and comes back to the hotbar");
+    }
+
+    void testDripKinds()
+    {
+        section("drips fall and land as their own liquid");
+        using K = SpriteParticles::Kind;
+        check(SpriteParticles::fallOf(K::DripHangHoney) == K::DripFallHoney && SpriteParticles::landOf(K::DripFallHoney) == K::DripLandHoney,
+              "honey hangs, falls and lands as honey");
+        check(SpriteParticles::fallOf(K::DripHangTear) == K::DripFallTear && SpriteParticles::landOf(K::DripFallTear) == K::DripLandTear,
+              "crying obsidian tears do the same");
+        check(SpriteParticles::fallOf(K::DripHangWater) == K::DripWater && SpriteParticles::landOf(K::DripWater) == K::Splash,
+              "water still splashes where it lands");
+        check(SpriteParticles::fallOf(K::Flame) == K::Count && SpriteParticles::landOf(K::FallingSpore) == K::Count,
+              "and nothing else turns into a drip");
     }
 
     void testSoundCategories()
@@ -17504,6 +17519,7 @@ int runSelfTest()
     testInventoryShortcuts();
     testChestLids();
     testSoundCategories();
+    testDripKinds();
     testCrafting();
     testKeyBindings();
     testPlayerAnimation();

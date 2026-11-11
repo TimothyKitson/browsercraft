@@ -86,6 +86,34 @@ namespace
         { "generic_0", 0, { 0.85f, 0.85f, 0.85f }, false, false, false },
         { "generic_0", 0, { 0.9f, 0.4f, 0.5f }, false, false, false },
         { "generic_0", 0, { 0.1f, 0.1f, 0.3f }, false, false, false },
+        { "drip_hang", 0, { 0.95f, 0.7f, 0.2f }, false, false, false },
+        { "drip_fall", 0, { 0.95f, 0.7f, 0.2f }, false, false, false },
+        { "drip_land", 0, { 0.95f, 0.7f, 0.2f }, false, false, false },
+        { "drip_hang", 0, { 0.55f, 0.2f, 0.9f }, false, false, true },
+        { "drip_fall", 0, { 0.55f, 0.2f, 0.9f }, false, false, true },
+        { "drip_land", 0, { 0.55f, 0.2f, 0.9f }, false, false, true },
+        { "drip_fall", 0, { 1.0f, 0.85f, 0.35f }, false, false, false },
+        { "drip_fall", 0, { 0.35f, 0.6f, 0.25f }, false, false, false },
+        { "generic_0", 0, { 0.32f, 0.5f, 0.22f }, false, false, false },
+        { "generic_0", 0, { 0.45f, 0.55f, 0.65f }, false, false, false },
+        { "generic", 8, { 0.12f, 0.12f, 0.14f }, true, true, false },
+        { "generic", 8, { 0.25f, 0.95f, 0.85f }, true, true, true },
+        { "generic_0", 0, { 0.3f, 0.5f, 1.0f }, false, false, false },
+        { "generic", 8, { 1.0f, 1.0f, 1.0f }, true, true, false },
+        { "generic", 8, { 1.0f, 1.0f, 1.0f }, true, true, false },
+        { "generic", 8, { 0.3f, 0.8f, 0.3f }, true, true, false },
+        { "flame", 0, { 1.0f, 1.0f, 1.0f }, false, false, true },
+        { "generic", 8, { 0.95f, 0.1f, 0.1f }, true, true, true },
+        { "generic_0", 0, { 0.95f, 0.97f, 1.0f }, false, false, false },
+        { "generic_0", 0, { 0.55f, 0.45f, 0.6f }, false, false, false },
+        { "generic_0", 0, { 0.4f, 0.75f, 0.25f }, false, false, false },
+        { "glow", 0, { 0.95f, 0.55f, 0.1f }, false, false, true },
+        { "glow", 0, { 1.0f, 1.0f, 1.0f }, false, false, true },
+        { "glow", 0, { 0.35f, 0.85f, 0.85f }, false, false, true },
+        { "spell", 8, { 0.6f, 0.2f, 0.8f }, true, true, false },
+        { "glow", 0, { 0.8f, 0.9f, 1.0f }, false, false, true },
+        { "glitter", 8, { 1.0f, 1.0f, 1.0f }, true, true, true },
+        { "generic", 8, { 0.75f, 0.35f, 1.0f }, false, false, true },
     };
     static_assert(sizeof(KINDS) / sizeof(KINDS[0]) == static_cast<size_t>(SpriteParticles::Kind::Count),
                   "one definition per kind");
@@ -226,6 +254,54 @@ void SpriteParticles::burst(Kind kind, const glm::vec3& position, int count, flo
     }
 }
 
+SpriteParticles::Kind SpriteParticles::fallOf(Kind hang)
+{
+    switch (hang)
+    {
+        case Kind::DripHangWater: return Kind::DripWater;
+        case Kind::DripHangLava: return Kind::DripLava;
+        case Kind::DripHangHoney: return Kind::DripFallHoney;
+        case Kind::DripHangTear: return Kind::DripFallTear;
+        default: return Kind::Count;
+    }
+}
+
+SpriteParticles::Kind SpriteParticles::landOf(Kind falling)
+{
+    switch (falling)
+    {
+        case Kind::DripWater: return Kind::Splash;
+        case Kind::DripLava: return Kind::DripLandLava;
+        case Kind::DripFallHoney: return Kind::DripLandHoney;
+        case Kind::DripFallTear: return Kind::DripLandTear;
+        default: return Kind::Count;
+    }
+}
+
+void SpriteParticles::drip(Kind hang, const glm::vec3& position, float floorY, float hangSeconds)
+{
+    if (fallOf(hang) == Kind::Count) return;
+    Particle p;
+    p.kind = hang;
+    p.position = position;
+    p.size = 0.14f;
+    p.lifetime = hangSeconds;
+    p.floorY = floorY;
+    m_particles.push_back(p);
+}
+
+void SpriteParticles::fall(Kind falling, const glm::vec3& position, float floorY)
+{
+    Particle p;
+    p.kind = falling;
+    p.position = position;
+    p.size = 0.12f;
+    p.lifetime = 6.0f;
+    p.gravity = falling == Kind::FallingSpore ? 1.2f : 9.0f;
+    p.floorY = floorY;
+    m_particles.push_back(p);
+}
+
 void SpriteParticles::drip(bool lava, const glm::vec3& position, float floorY)
 {
     Particle p;
@@ -242,11 +318,11 @@ void SpriteParticles::update(float deltaTime)
     for (Particle& p : m_particles)
     {
         p.age += deltaTime;
-        if (p.kind == Kind::DripHangWater || p.kind == Kind::DripHangLava)
+        if (fallOf(p.kind) != Kind::Count)
         {
             if (p.age >= p.lifetime)
             {
-                p.kind = p.kind == Kind::DripHangLava ? Kind::DripLava : Kind::DripWater;
+                p.kind = fallOf(p.kind);
                 p.age = 0.0f;
                 p.lifetime = 6.0f;
                 p.gravity = 9.0f;
@@ -256,9 +332,14 @@ void SpriteParticles::update(float deltaTime)
         p.velocity.y -= p.gravity * deltaTime;
         p.velocity *= std::pow(0.4f, deltaTime);
         p.position += p.velocity * deltaTime;
-        if ((p.kind == Kind::DripWater || p.kind == Kind::DripLava) && p.position.y <= p.floorY)
+        if ((p.kind == Kind::FallingNectar || p.kind == Kind::FallingSpore) && p.position.y <= p.floorY)
         {
-            p.kind = p.kind == Kind::DripLava ? Kind::DripLandLava : Kind::Splash;
+            p.age = p.lifetime;
+            continue;
+        }
+        if (landOf(p.kind) != Kind::Count && p.position.y <= p.floorY)
+        {
+            p.kind = landOf(p.kind);
             p.position.y = p.floorY + 0.03f;
             p.velocity = glm::vec3(0.0f);
             p.gravity = 0.0f;
