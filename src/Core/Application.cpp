@@ -475,6 +475,15 @@ void Application::loadOptions()
         else if (std::sscanf(line, "invertYMouse=%d", &value) == 1) m_invertMouse = value != 0;
         else if (std::strncmp(line, "damageTiltStrength=", 19) == 0) m_damageTilt = std::clamp(static_cast<float>(std::atof(line + 19)), 0.0f, 1.0f);
         else if (std::strncmp(line, "soundCategory_master=", 21) == 0) m_masterVolume = std::clamp(static_cast<float>(std::atof(line + 21)), 0.0f, 1.0f);
+        else if (std::strncmp(line, "soundCategory_", 14) == 0)
+        {
+            for (int c = 1; c < static_cast<int>(SoundCategory::Count); ++c)
+            {
+                const std::string key = std::string("soundCategory_") + AudioEngine::categoryKey(static_cast<SoundCategory>(c)) + "=";
+                if (std::strncmp(line, key.c_str(), key.size()) == 0)
+                    m_audio.setCategoryVolume(static_cast<SoundCategory>(c), static_cast<float>(std::atof(line + key.size())));
+            }
+        }
         else if (std::sscanf(line, "maxFps=%d", &value) == 1) m_maxFps = std::clamp(value, 0, 260);
         else if (std::sscanf(line, "enableVsync=%d", &value) == 1) m_vsync = value != 0;
         else if (std::sscanf(line, "toggleSprint=%d", &value) == 1) m_toggleSprint = value != 0;
@@ -517,6 +526,9 @@ void Application::saveOptions()
                  m_fovSetting, m_brightness, m_guiScaleSetting, m_viewBobbing ? 1 : 0, m_mouseSensitivity, m_invertMouse ? 1 : 0,
                  m_masterVolume, m_maxFps, m_vsync ? 1 : 0);
     std::fprintf(file, "damageTiltStrength=%.3f\n", m_damageTilt);
+    for (int c = 1; c < static_cast<int>(SoundCategory::Count); ++c)
+        std::fprintf(file, "soundCategory_%s=%.3f\n", AudioEngine::categoryKey(static_cast<SoundCategory>(c)),
+                     m_audio.categoryVolume(static_cast<SoundCategory>(c)));
     std::fclose(file);
 #ifdef __EMSCRIPTEN__
     EM_ASM({
@@ -1921,11 +1933,12 @@ void Application::run()
     const bool menuOnly = (m_startupScreen == "title" || m_startupScreen == "modes" ||
                            m_startupScreen == "settings" || m_startupScreen == "multiplayer" ||
                            m_startupScreen == "controls" || m_startupScreen == "name" ||
-                           m_startupScreen == "video" || m_startupScreen == "credits" || worldMenus || serverMenus || packMenus || accessMenus);
+                           m_startupScreen == "video" || m_startupScreen == "credits" || m_startupScreen == "sounds" || worldMenus || serverMenus || packMenus || accessMenus);
     migrateLegacySave();
     if (m_startupScreen == "title") m_screen = Screen::Title;
     if (m_startupScreen == "video") m_screen = Screen::VideoSettings;
     if (m_startupScreen == "credits") m_screen = Screen::Credits;
+    if (m_startupScreen == "sounds") m_screen = Screen::Sounds;
     if (m_startupScreen == "modes") openWorldList();
     if (m_startupScreen == "accessibility") m_screen = Screen::Accessibility;
     if (m_startupScreen == "language") m_screen = Screen::Language;
@@ -2257,6 +2270,7 @@ bool Application::frame()
     m_net.update(deltaTime, m_world && !m_menuWorld ? m_world.get() : nullptr,
                  m_player.position, m_camera.yaw, m_camera.pitch, m_timeOfDay);
     notePeers();
+    updateBackgroundMusic(deltaTime);
 
     // A guest gets the seed before it has the world; build it now,
     // replacing whatever was on screen.
@@ -8653,6 +8667,24 @@ void Application::applyMenuAction()
             break;
         case MenuAction::GoVideoSettings: m_screen = Screen::VideoSettings; break;
         case MenuAction::GoCredits:       m_screen = Screen::Credits; break;
+        case MenuAction::GoSounds:        m_screen = Screen::Sounds; break;
+        case MenuAction::CycleCategory:
+        {
+            const SoundCategory category = static_cast<SoundCategory>(m_pendingCategory);
+            if (category == SoundCategory::Master)
+            {
+                m_masterVolume = m_masterVolume <= 0.01f ? 1.0f : std::max(0.0f, m_masterVolume - 0.1f);
+                m_audio.setMasterVolume(m_masterVolume);
+            }
+            else
+            {
+                const float now = m_audio.categoryVolume(category);
+                m_audio.setCategoryVolume(category, now <= 0.01f ? 1.0f : std::max(0.0f, now - 0.1f));
+            }
+            m_audio.play(Sound::Click, 0.45f);
+            saveOptions();
+            break;
+        }
         case MenuAction::BackToOptions:   m_screen = Screen::Settings; break;
         case MenuAction::LeaveOptions:    m_screen = m_optionsReturn; break;
         case MenuAction::ToggleShaders:
@@ -8940,7 +8972,7 @@ void Application::handleEvents()
             m_rebinding = Action::Count;
             m_screen = Screen::Settings; // back up one level, not all the way out
         }
-        else if (m_screen == Screen::VideoSettings || m_screen == Screen::Credits)
+        else if (m_screen == Screen::VideoSettings || m_screen == Screen::Credits || m_screen == Screen::Sounds)
         {
             m_screen = Screen::Settings;
         }
@@ -16934,7 +16966,8 @@ bool Application::useJukebox(const glm::ivec3& at)
     }
     m_audio.playMusic(std::string("records/") + Discs::song(disc).key + ".ogg", static_cast<uint32_t>(disc) * 7919u + 17u,
                       Discs::song(disc).seconds);
-    m_audio.setMusicVolume(1.0f);
+    m_backgroundMusic = false;
+    m_audio.setMusicVolume(m_audio.categoryVolume(SoundCategory::Records));
     m_jukeboxPlaying = key;
     m_chatLog.add(std::string("Now Playing: ") + Discs::song(disc).title);
     return true;
@@ -16978,7 +17011,8 @@ void Application::tickJukeboxes(float deltaTime)
             m_sprites->spawn(SpriteParticles::Kind::Note, top, glm::vec3(0.0f, 0.8f, 0.0f), 0.3f, 0.6f);
         }
         if (m_jukeboxPlaying == key)
-            m_audio.setMusicVolume(std::clamp(1.0f - glm::length(top - m_player.position) / 64.0f, 0.0f, 1.0f));
+            m_audio.setMusicVolume(std::clamp(1.0f - glm::length(top - m_player.position) / 64.0f, 0.0f, 1.0f) *
+                                   m_audio.categoryVolume(SoundCategory::Records));
     }
 }
 
@@ -19783,6 +19817,7 @@ void Application::render()
         case Screen::Settings:     renderSettingsScreen(); break;
         case Screen::VideoSettings: renderVideoScreen(); break;
         case Screen::Credits:      renderCreditsScreen(); break;
+        case Screen::Sounds:       renderSoundsScreen(); break;
         case Screen::Statistics:   renderStatsScreen(); break;
         case Screen::CreateWorld:  renderCreateWorld(); break;
         case Screen::GameRules:    renderGameRules(); break;
@@ -26351,9 +26386,8 @@ void Application::renderSettingsScreen()
         const float half = (buttonWidth - 12.0f) * 0.5f;
         if (menuButton({ buttonX, y, half, buttonHeight }, m_audio.muted() ? "Sound: Off" : "Sound: On"))
             m_pendingAction = MenuAction::ToggleSound;
-        const int volume = static_cast<int>(std::lround(m_masterVolume * 100.0f));
-        if (menuButton({ buttonX + half + 12.0f, y, half, buttonHeight }, "Volume: " + std::to_string(volume) + "%"))
-            m_pendingAction = MenuAction::CycleVolume;
+        if (menuButton({ buttonX + half + 12.0f, y, half, buttonHeight }, "Music & Sounds..."))
+            m_pendingAction = MenuAction::GoSounds;
         y += buttonHeight + gap;
         const int sense = static_cast<int>(std::lround(m_mouseSensitivity * 100.0f));
         if (menuButton({ buttonX, y, half, buttonHeight }, "Sensitivity: " + std::to_string(sense) + "%"))
@@ -26390,6 +26424,141 @@ void Application::renderSettingsScreen()
 
     if (menuButton({ buttonX, y, buttonWidth, 46.0f }, "Done"))
         m_pendingAction = MenuAction::LeaveOptions;
+}
+
+void Application::renderSoundsScreen()
+{
+    const ScopedPanelUnits panel(m_ui, guiScale());
+    const float w = m_ui.canvasWidth();
+    const float h = m_ui.canvasHeight();
+    menuBackdrop(w, h, 0.45f);
+    centredText("Music & Sound Options", h * 0.1f, 4.4f, TEXT_COLOR);
+    const float buttonWidth = std::min(840.0f, w * 0.94f);
+    const float buttonX = w * 0.5f - buttonWidth * 0.5f;
+    const float buttonHeight = 46.0f;
+    const float gap = 10.0f;
+    const float half = (buttonWidth - 12.0f) * 0.5f;
+    float y = h * 0.2f;
+    auto label = [&](SoundCategory category) {
+        const float value = category == SoundCategory::Master ? m_masterVolume : m_audio.categoryVolume(category);
+        const int percent = static_cast<int>(std::lround(value * 100.0f));
+        return std::string(AudioEngine::categoryLabel(category)) + ": " + (percent == 0 ? std::string("OFF") : std::to_string(percent) + "%");
+    };
+    if (menuButton({ buttonX, y, buttonWidth, buttonHeight }, label(SoundCategory::Master)))
+    {
+        m_pendingCategory = static_cast<int>(SoundCategory::Master);
+        m_pendingAction = MenuAction::CycleCategory;
+    }
+    y += buttonHeight + gap;
+    for (int c = 1; c < static_cast<int>(SoundCategory::Count); ++c)
+    {
+        const bool right = (c - 1) % 2 == 1;
+        if (menuButton({ right ? buttonX + half + 12.0f : buttonX, y, half, buttonHeight }, label(static_cast<SoundCategory>(c))))
+        {
+            m_pendingCategory = c;
+            m_pendingAction = MenuAction::CycleCategory;
+        }
+        if (right) y += buttonHeight + gap;
+    }
+    if (menuButton({ buttonX + half + 12.0f, y, half, buttonHeight }, m_audio.muted() ? "Sound: Off" : "Sound: On"))
+        m_pendingAction = MenuAction::ToggleSound;
+    y += buttonHeight + gap + 10.0f;
+    if (menuButton({ buttonX, y, buttonWidth, 46.0f }, "Done"))
+        m_pendingAction = MenuAction::BackToOptions;
+}
+
+std::string Application::musicSetFor(bool menu, bool creative, int dimension, bool underwater, bool dragon, bool credits)
+{
+    if (credits) return "credits";
+    if (menu) return "menu";
+    if (dimension == 2) return dragon ? "dragon" : "end";
+    if (dimension == 1) return "nether";
+    if (underwater) return "water";
+    return creative ? "creative" : "game";
+}
+
+std::vector<std::string> Application::musicTracks(const std::string& set)
+{
+    std::vector<std::string> names;
+    auto add = [&](const char* folder, std::initializer_list<const char*> files) {
+        for (const char* file : files) names.push_back(std::string("music/") + folder + file + ".ogg");
+    };
+    if (set == "menu") add("menu/", { "menu1", "menu2", "menu3", "menu4" });
+    else if (set == "credits") add("game/end/", { "credits" });
+    else if (set == "dragon") add("game/end/", { "boss" });
+    else if (set == "end") add("game/end/", { "end" });
+    else if (set == "nether")
+    {
+        add("game/nether/", { "nether1", "nether2", "nether3", "nether4" });
+        add("game/nether/crimson_forest/", { "chrysopoeia" });
+        add("game/nether/soulsand_valley/", { "so_below" });
+        add("game/nether/nether_wastes/", { "rubedo" });
+    }
+    else if (set == "water") add("game/water/", { "axolotl", "dragon_fish", "shuniji" });
+    else
+    {
+        add("game/", { "calm1", "calm2", "calm3", "hal1", "hal2", "hal3", "hal4", "nuance1", "nuance2", "piano1", "piano2", "piano3",
+                       "aerie", "ancestry", "an_ordinary_day", "comforting_memories", "echo_in_the_wind", "firebugs",
+                       "floating_dream", "infinite_amethyst", "labyrinthine", "left_to_bloom", "one_more_day", "stand_tall",
+                       "wending", "featherfall", "komorebi", "pokopoko", "puzzlebox", "watcher", "yakusoku", "bromeliad",
+                       "crescent_dunes", "deeper", "eld_unknown", "endless", "swamp/aerie", "swamp/firebugs", "swamp/labyrinthine" });
+        if (set == "creative") add("game/creative/", { "creative1", "creative2", "creative3", "creative4", "creative5", "creative6" });
+    }
+    return names;
+}
+
+void Application::updateBackgroundMusic(float deltaTime)
+{
+    if (m_jukeboxPlaying[0] != -99)
+    {
+        m_backgroundMusic = false;
+        return;
+    }
+    const bool menu = !inGame() || !m_world || m_menuWorld;
+    const bool underwater = !menu && m_world && isWater(m_world->getBlock(static_cast<int>(std::floor(m_player.eyePosition().x)),
+                                                                          static_cast<int>(std::floor(m_player.eyePosition().y)),
+                                                                          static_cast<int>(std::floor(m_player.eyePosition().z))));
+    bool dragon = false;
+    if (!menu && m_dimension == Dimension::End)
+        for (const Mob& mob : m_entities.mobs())
+            if (mob.alive() && mob.typeId() == MobId::EnderDragon) { dragon = true; break; }
+    const std::string set = musicSetFor(menu, !menu && m_player.creative(), menu ? 0 : static_cast<int>(m_dimension), underwater, dragon,
+                                        m_screen == Screen::EndPoem);
+    const bool replaces = set == "credits" || set == "dragon" || set == "menu" || m_musicSet == "menu" || m_musicSet == "credits";
+    if (m_backgroundMusic && set != m_musicSet && replaces)
+    {
+        m_audio.stopMusic();
+        m_backgroundMusic = false;
+        m_musicDelay = 0.5f;
+    }
+    if (m_backgroundMusic && !m_audio.musicPlaying())
+    {
+        m_backgroundMusic = false;
+        m_musicRoll = m_musicRoll * 1664525u + 1013904223u;
+        const float spread = static_cast<float>((m_musicRoll >> 8) % 1000u) / 1000.0f;
+        m_musicDelay = set == "menu" ? 1.0f + spread * 29.0f : set == "end" ? 300.0f + spread * 900.0f : 600.0f + spread * 600.0f;
+    }
+    if (m_backgroundMusic)
+    {
+        m_audio.setMusicVolume(m_audio.categoryVolume(SoundCategory::Music));
+        return;
+    }
+    m_musicDelay -= deltaTime;
+    if (m_musicDelay > 0.0f || m_audio.categoryVolume(SoundCategory::Music) <= 0.0f || m_audio.muted()) return;
+    std::vector<std::string> pool;
+    for (const std::string& track : musicTracks(set))
+        if (AudioEngine::soundFileExists(track)) pool.push_back(track);
+    m_musicSet = set;
+    if (pool.empty())
+    {
+        m_musicDelay = 60.0f;
+        return;
+    }
+    m_musicRoll = m_musicRoll * 1664525u + 1013904223u;
+    const std::string& track = pool[(m_musicRoll >> 8) % pool.size()];
+    m_audio.playMusic(track, m_musicRoll, 1.0e9f);
+    m_audio.setMusicVolume(m_audio.categoryVolume(SoundCategory::Music));
+    m_backgroundMusic = true;
 }
 
 void Application::renderVideoScreen()

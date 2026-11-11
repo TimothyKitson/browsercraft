@@ -97,6 +97,7 @@ enum class Screen
     Settings,
     VideoSettings,
     Credits,
+    Sounds,
     Controls,
     Playing,
     Paused,
@@ -163,6 +164,8 @@ enum class MenuAction
     ToggleShaders,
     GoVideoSettings,
     GoCredits,
+    GoSounds,
+    CycleCategory,
     BackToOptions,
     LeaveOptions,
     ToggleSound,
@@ -1919,6 +1922,15 @@ private:
     float m_mouseSensitivity = 1.0f;
     bool m_invertMouse = false;
     float m_masterVolume = 1.0f;
+    int m_pendingCategory = 0;
+    void renderSoundsScreen();
+    void updateBackgroundMusic(float deltaTime);
+    bool m_backgroundMusic = false;
+    float m_musicDelay = 5.0f;
+    std::string m_musicSet;
+    uint32_t m_musicRoll = 0x51AB1Eu;
+    static std::string musicSetFor(bool menu, bool creative, int dimension, bool underwater, bool dragon, bool credits);
+    static std::vector<std::string> musicTracks(const std::string& set);
     int m_maxFps = 0;
     bool m_vsync = true;
     uint32_t m_frameStartTicks = 0;

@@ -306,6 +306,11 @@ enum class Sound : uint16_t
     Count
 };
 
+enum class SoundCategory : uint8_t
+{
+    Master, Music, Records, Weather, Blocks, Hostile, Neutral, Players, Ambient, Voice, Count
+};
+
 // Sounds come from assets/sounds when that folder exists, and are
 // synthesised otherwise.
 //
@@ -333,6 +338,15 @@ public:
     void playStep(BlockId block);
     void playPlace(BlockId block);
 
+    static SoundCategory categoryOf(Sound sound);
+    static const char* categoryKey(SoundCategory category);
+    static const char* categoryLabel(SoundCategory category);
+    static bool soundFileExists(const std::string& file);
+    void setCategoryVolume(SoundCategory category, float volume)
+    {
+        m_category[static_cast<size_t>(category)] = volume < 0.0f ? 0.0f : volume > 1.0f ? 1.0f : volume;
+    }
+    float categoryVolume(SoundCategory category) const { return m_category[static_cast<size_t>(category)]; }
     void setMuted(bool muted) { m_muted = muted; }
     void setMasterVolume(float volume) { m_master = volume < 0.0f ? 0.0f : volume > 1.0f ? 1.0f : volume; }
     bool muted() const { return m_muted; }
@@ -364,6 +378,7 @@ private:
     unsigned int m_device = 0;
     bool m_muted = false;
     float m_master = 1.0f;
+    std::array<float, static_cast<size_t>(SoundCategory::Count)> m_category{ 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f };
     using Clip = std::vector<float>;
     std::array<std::vector<Clip>, static_cast<size_t>(Sound::Count)> m_buffers;
     int m_loadedFromFiles = 0;

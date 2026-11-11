@@ -225,6 +225,24 @@ namespace
         check(inventory.slot(0).count == 32, "and comes back to the hotbar");
     }
 
+    void testSoundCategories()
+    {
+        section("sound categories");
+        check(AudioEngine::categoryOf(Sound::MobZombieHurt) == SoundCategory::Hostile, "a zombie's hurt sound is hostile");
+        check(AudioEngine::categoryOf(Sound::MobIllusionerDeath) == SoundCategory::Hostile, "and so is an illusioner's death");
+        check(AudioEngine::categoryOf(Sound::MobCowSay) == SoundCategory::Neutral, "a cow is a friendly creature");
+        check(AudioEngine::categoryOf(Sound::DigStone) == SoundCategory::Blocks && AudioEngine::categoryOf(Sound::StepSnow) == SoundCategory::Blocks,
+              "digging and steps are block sounds");
+        check(AudioEngine::categoryOf(Sound::Rain) == SoundCategory::Weather, "rain is weather");
+        check(AudioEngine::categoryOf(Sound::NoteFirst) == SoundCategory::Records && AudioEngine::categoryOf(Sound::GoatHornFirst) == SoundCategory::Records,
+              "note blocks and goat horns sit with the jukebox");
+        check(AudioEngine::categoryOf(Sound::Hurt) == SoundCategory::Players, "your own hurt sound is a player sound");
+        check(std::string(AudioEngine::categoryKey(SoundCategory::Records)) == "record" &&
+                  std::string(AudioEngine::categoryKey(SoundCategory::Neutral)) == "neutral",
+              "categories save under their options.txt names");
+        check(!AudioEngine::soundFileExists("no/such/sound.ogg"), "a missing music file is noticed before it is streamed");
+    }
+
     void testChestLids()
     {
         section("chest lids open");
@@ -17485,6 +17503,7 @@ int runSelfTest()
     testQuickMove();
     testInventoryShortcuts();
     testChestLids();
+    testSoundCategories();
     testCrafting();
     testKeyBindings();
     testPlayerAnimation();

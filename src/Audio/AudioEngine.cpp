@@ -1966,9 +1966,74 @@ int AudioEngine::clipCount(Sound sound) const
     return static_cast<int>(m_buffers[index].size());
 }
 
+SoundCategory AudioEngine::categoryOf(Sound sound)
+{
+    static const Sound HOSTILE[] = {
+        Sound::MobZombieSay, Sound::MobSkeletonSay, Sound::MobCreeperSay, Sound::MobSpiderSay, Sound::MobEndermanSay,
+        Sound::MobPigmanSay, Sound::MobBlazeSay, Sound::MobWitherSkeletonSay, Sound::MobMagmaCubeSay, Sound::MobWitherSay,
+        Sound::MobDragonSay, Sound::MobWitchSay, Sound::MobGuardianSay, Sound::MobWardenSay, Sound::MobBreezeSay,
+        Sound::MobShulkerSay, Sound::MobDrownedSay, Sound::MobGhastSay, Sound::MobPillagerSay, Sound::MobVindicatorSay,
+        Sound::MobEvokerSay, Sound::MobRavagerSay, Sound::MobSlimeSay, Sound::MobSlimeSmallSay, Sound::MobCaveSpiderSay,
+        Sound::MobSilverfishSay, Sound::MobPiglinSay, Sound::MobPiglinBruteSay, Sound::MobHoglinSay, Sound::MobStraySay,
+        Sound::MobHuskSay, Sound::MobBoggedSay, Sound::MobPhantomSay, Sound::MobZombieVillagerSay, Sound::MobEndermiteSay,
+        Sound::MobVexSay, Sound::MobElderGuardianSay, Sound::MobZoglinSay, Sound::MobIllusionerSay };
+    const int id = static_cast<int>(sound);
+    for (Sound say : HOSTILE)
+        if (id >= static_cast<int>(say) && id <= static_cast<int>(say) + 2) return SoundCategory::Hostile;
+    switch (sound)
+    {
+        case Sound::DigStone: case Sound::DigDirt: case Sound::DigGrass: case Sound::DigWood: case Sound::DigSand:
+        case Sound::DigGlass: case Sound::DigWool: case Sound::DigPlant: case Sound::StepStone: case Sound::StepGravel:
+        case Sound::StepGrass: case Sound::StepWood: case Sound::StepSand: case Sound::StepCloth: case Sound::StepSnow:
+        case Sound::Place: case Sound::Fire: case Sound::SculkClick: case Sound::Shriek: case Sound::DyeUse:
+        case Sound::InkUse: case Sound::GlowInkUse:
+            return SoundCategory::Blocks;
+        case Sound::Jump: case Sound::Land: case Sound::Hurt: case Sound::Pickup: case Sound::WindBurst:
+        case Sound::OmenBad: case Sound::OmenTrial: case Sound::OmenRaid:
+            return SoundCategory::Players;
+        case Sound::Click: case Sound::ToastIn: case Sound::ToastOut: case Sound::ChallengeComplete:
+            return SoundCategory::Master;
+        case Sound::Rain: case Sound::Thunder:
+            return SoundCategory::Weather;
+        case Sound::FireworkLaunch: case Sound::FireworkBlast: case Sound::FireworkLargeBlast: case Sound::FireworkTwinkle:
+            return SoundCategory::Ambient;
+        case Sound::EvokerFangs: case Sound::EvokerCast: case Sound::IllusionerMirror: case Sound::IllusionerCast:
+        case Sound::ZoglinConvert: case Sound::ElderCurse:
+            return SoundCategory::Hostile;
+        default:
+            break;
+    }
+    if (id >= static_cast<int>(Sound::GoatHornFirst) && id <= static_cast<int>(Sound::GoatHornLast)) return SoundCategory::Records;
+    if (id >= static_cast<int>(Sound::NoteFirst) && id <= static_cast<int>(Sound::NoteLast)) return SoundCategory::Records;
+    return SoundCategory::Neutral;
+}
+
+const char* AudioEngine::categoryKey(SoundCategory category)
+{
+    static const char* KEYS[] = { "master", "music", "record", "weather", "block", "hostile", "neutral", "player", "ambient", "voice" };
+    return KEYS[static_cast<size_t>(category) % static_cast<size_t>(SoundCategory::Count)];
+}
+
+const char* AudioEngine::categoryLabel(SoundCategory category)
+{
+    static const char* LABELS[] = { "Master Volume", "Music", "Jukebox/Note Blocks", "Weather", "Blocks", "Hostile Creatures",
+                                    "Friendly Creatures", "Players", "Ambient/Environment", "Voice/Speech" };
+    return LABELS[static_cast<size_t>(category) % static_cast<size_t>(SoundCategory::Count)];
+}
+
+bool AudioEngine::soundFileExists(const std::string& file)
+{
+    FILE* probe = std::fopen(("assets/sounds/" + file).c_str(), "rb");
+    if (!probe) return false;
+    std::fclose(probe);
+    return true;
+}
+
 void AudioEngine::play(Sound sound, float volume, float pitch)
 {
     if (m_muted || m_device == 0) return;
+    volume *= m_category[static_cast<size_t>(categoryOf(sound))];
+    if (volume <= 0.0f) return;
 
     const size_t index = static_cast<size_t>(sound);
     if (index >= m_buffers.size() || m_buffers[index].empty()) return;
