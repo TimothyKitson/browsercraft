@@ -226,6 +226,17 @@ public:
     // rows, which is how anyone actually moves things around.
     void quickMove(int index);
 
+    static bool isOutputSlot(int index)
+    {
+        return index == CRAFT_RESULT || index == FURNACE_OUTPUT || index == ANVIL_RESULT || index == TRADE_RESULT ||
+               index == GRIND_RESULT;
+    }
+    bool canSpreadInto(int index) const;
+    bool spread(const std::vector<int>& slots, bool one);
+    int gather(const std::vector<int>& slots);
+    bool swapSlots(int index, int other);
+    ItemStack throwFrom(int index, bool whole);
+
     // Creative only: the palette is an endless supply, so taking from it
     // just fills the cursor, and dropping onto it throws things away.
     void takeFromPalette(BlockId id);

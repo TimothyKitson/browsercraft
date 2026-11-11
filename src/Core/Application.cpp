@@ -9161,13 +9161,9 @@ void Application::handleEvents()
 
     if (m_inventoryOpen)
     {
-        const bool shift = m_input.isKeyDown(SDL_SCANCODE_LSHIFT) ||
-                           m_input.isKeyDown(SDL_SCANCODE_RSHIFT);
         const ItemStack smelted = m_inventory.slot(Inventory::FURNACE_OUTPUT);
-        if (m_input.wasMouseButtonPressed(SDL_BUTTON_LEFT))
-            handleInventoryClick(m_input.mouseX(), m_input.mouseY(), false, shift);
-        else if (m_input.wasMouseButtonPressed(SDL_BUTTON_RIGHT))
-            handleInventoryClick(m_input.mouseX(), m_input.mouseY(), true, shift);
+        updateInventoryMouse();
+        inventorySlotKeys();
         if (m_furnaceOpen && !smelted.empty())
         {
             const ItemStack& left = m_inventory.slot(Inventory::FURNACE_OUTPUT);
@@ -9335,7 +9331,7 @@ void Application::updateGameplay(float deltaTime)
     if (m_keys.pressed(m_input, Action::Fly) && m_player.creative() && !m_player.spectator())
         m_player.flying = !m_player.flying;
 
-    if (m_keys.pressed(m_input, Action::SwapHands))
+    if (m_keys.pressed(m_input, Action::SwapHands) && !m_inventoryOpen)
     {
         std::swap(m_inventory.selected(), m_inventory.slot(Inventory::OFFHAND));
         m_audio.play(Sound::Click, 0.3f, 1.2f);
@@ -9348,7 +9344,7 @@ void Application::updateGameplay(float deltaTime)
         m_spectatorMenu = false;
         m_spectatingMob = 0;
         for (int i = 0; i < Inventory::HOTBAR_SLOTS; ++i)
-            if (m_input.wasKeyPressed(static_cast<SDL_Scancode>(SDL_SCANCODE_1 + i)))
+            if (m_input.wasKeyPressed(static_cast<SDL_Scancode>(SDL_SCANCODE_1 + i)) && !m_inventoryOpen)
                 m_inventory.setSelectedSlot(i);
         if (!m_inventoryOpen) m_inventory.scrollSelection(m_input.wheelDelta());
     }

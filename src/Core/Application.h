@@ -2007,6 +2007,17 @@ private:
         m_hintBoxes.push_back({ x, y, w, h, text });
     }
     std::vector<SlotBox> m_slotBoxes;
+    std::vector<int> m_dragSlots;
+    bool m_dragging = false;
+    bool m_dragRight = false;
+    int m_dragX = 0;
+    int m_dragY = 0;
+    Uint32 m_lastSlotClickTicks = 0;
+    int m_lastSlotClick = -1;
+    bool dragAccepts(int slot);
+    std::vector<int> visibleSlots() const;
+    void updateInventoryMouse();
+    bool inventorySlotKeys();
     bool m_recipeOpen = false;
     bool m_recipeFilter[4] = { false, false, false, false };
     int m_recipeTab = 0;

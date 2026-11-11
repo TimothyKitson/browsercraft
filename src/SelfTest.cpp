@@ -225,6 +225,78 @@ namespace
         check(inventory.slot(0).count == 32, "and comes back to the hotbar");
     }
 
+    void testInventoryShortcuts()
+    {
+        section("inventory: drag, double-click, number keys and Q");
+
+        Inventory spread;
+        spread.cursor() = ItemStack{ Blocks::Stone, 64 };
+        spread.slot(Inventory::HOTBAR_SLOTS + 2) = ItemStack{ Blocks::Dirt, 5 };
+        check(spread.spread({ Inventory::HOTBAR_SLOTS, Inventory::HOTBAR_SLOTS + 1, Inventory::HOTBAR_SLOTS + 2, 3 }, false),
+              "a left drag over slots spreads the stack");
+        check(spread.slot(Inventory::HOTBAR_SLOTS).count == 21 && spread.slot(Inventory::HOTBAR_SLOTS + 1).count == 21 &&
+                  spread.slot(3).count == 21,
+              "evenly over the slots that can take it");
+        check(spread.slot(Inventory::HOTBAR_SLOTS + 2).id == Blocks::Dirt && spread.slot(Inventory::HOTBAR_SLOTS + 2).count == 5,
+              "skipping a slot holding something else");
+        check(spread.cursor().count == 1, "and the remainder stays on the cursor");
+
+        Inventory ones;
+        ones.cursor() = ItemStack{ Items::Diamond, 2 };
+        ones.spread({ 0, 1, 2, 4 }, true);
+        check(ones.slot(0).count == 1 && ones.slot(1).count == 1 && ones.slot(2).empty() && ones.cursor().empty(),
+              "a right drag puts one in each slot until the cursor runs out");
+
+        Inventory topUp;
+        topUp.slot(0) = ItemStack{ Blocks::Stone, 60 };
+        topUp.cursor() = ItemStack{ Blocks::Stone, 20 };
+        topUp.spread({ 0, 1 }, false);
+        check(topUp.slot(0).count == 64 && topUp.slot(1).count == 10 && topUp.cursor().count == 6,
+              "a drag tops a stack up to its limit and keeps what does not fit");
+
+        Inventory armour;
+        armour.cursor() = ItemStack{ Blocks::Stone, 10 };
+        check(!armour.canSpreadInto(Inventory::ARMOR_FIRST) && !armour.canSpreadInto(Inventory::CRAFT_RESULT) &&
+                  !armour.canSpreadInto(Inventory::FURNACE_OUTPUT),
+              "a drag never drops stone into armour or result slots");
+
+        Inventory gather;
+        gather.slot(0) = ItemStack{ Blocks::Stone, 64 };
+        gather.slot(5) = ItemStack{ Blocks::Stone, 10 };
+        gather.slot(9) = ItemStack{ Blocks::Stone, 20 };
+        gather.slot(12) = ItemStack{ Blocks::Dirt, 30 };
+        gather.cursor() = ItemStack{ Blocks::Stone, 4 };
+        std::vector<int> all;
+        for (int i = 0; i < Inventory::MAIN_SLOTS; ++i) all.push_back(i);
+        check(gather.gather(all) == 60, "a double-click gathers the matching stacks onto the cursor");
+        check(gather.cursor().count == 64 && gather.slot(5).empty() && gather.slot(9).empty() && gather.slot(0).count == 34,
+              "part stacks first, then full ones only to fill the cursor");
+        check(gather.slot(12).count == 30, "and nothing of another kind");
+
+        Inventory keys;
+        keys.slot(Inventory::HOTBAR_SLOTS + 4) = ItemStack{ Blocks::Stone, 12 };
+        keys.slot(2) = ItemStack{ Items::Diamond, 3 };
+        check(keys.swapSlots(Inventory::HOTBAR_SLOTS + 4, 2), "a number key swaps the hovered slot with the hotbar");
+        check(keys.slot(2).id == Blocks::Stone && keys.slot(Inventory::HOTBAR_SLOTS + 4).id == Items::Diamond,
+              "both ways");
+        keys.slot(Inventory::ARMOR_FIRST) = ItemStack{};
+        check(!keys.swapSlots(Inventory::ARMOR_FIRST, 2), "and stone does not go onto your head that way");
+        keys.slot(Inventory::FURNACE_OUTPUT) = ItemStack{ Items::IronIngot, 3 };
+        keys.slot(7).clear();
+        check(keys.swapSlots(Inventory::FURNACE_OUTPUT, 7) && keys.slot(7).count == 3 && keys.slot(Inventory::FURNACE_OUTPUT).empty(),
+              "a furnace's output goes to the hotbar slot");
+        keys.slot(Inventory::OFFHAND).clear();
+        check(keys.swapSlots(2, Inventory::OFFHAND) && keys.slot(Inventory::OFFHAND).id == Blocks::Stone,
+              "and F puts the hovered stack in the offhand");
+
+        Inventory drop;
+        drop.slot(10) = ItemStack{ Blocks::Stone, 9 };
+        const ItemStack one = drop.throwFrom(10, false);
+        check(one.id == Blocks::Stone && one.count == 1 && drop.slot(10).count == 8, "Q throws one item from the hovered slot");
+        const ItemStack rest = drop.throwFrom(10, true);
+        check(rest.count == 8 && drop.slot(10).empty(), "and Ctrl+Q the whole stack");
+    }
+
     // --- crafting ------------------------------------------------------
 
     void testCrafting()
@@ -17356,6 +17428,7 @@ int runSelfTest()
     testAdd();
     testClicks();
     testQuickMove();
+    testInventoryShortcuts();
     testCrafting();
     testKeyBindings();
     testPlayerAnimation();

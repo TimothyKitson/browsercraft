@@ -330,6 +330,106 @@ void Inventory::rightClick(int index)
     }
 }
 
+bool Inventory::canSpreadInto(int index) const
+{
+    if (index < 0 || index >= SLOT_COUNT || m_cursor.empty()) return false;
+    if (isOutputSlot(index) || bound(index) || !belongsIn(index, m_cursor.id)) return false;
+    const ItemStack& target = m_slots[index];
+    return target.empty() || (target.sameAs(m_cursor) && target.count < maxStackOf(target.id));
+}
+
+bool Inventory::spread(const std::vector<int>& slots, bool one)
+{
+    std::vector<int> into;
+    for (int index : slots)
+        if (canSpreadInto(index) && std::find(into.begin(), into.end(), index) == into.end()) into.push_back(index);
+    if (into.empty()) return false;
+    while (static_cast<int>(into.size()) > m_cursor.count) into.pop_back();
+    const int each = one ? 1 : m_cursor.count / static_cast<int>(into.size());
+    if (each <= 0) return false;
+    const ItemStack carried = m_cursor;
+    int left = m_cursor.count;
+    for (int index : into)
+    {
+        ItemStack& target = m_slots[index];
+        const int had = target.empty() ? 0 : target.count;
+        const int put = std::min(each, maxStackOf(carried.id) - had);
+        if (put <= 0) continue;
+        if (target.empty())
+        {
+            target = carried;
+            target.count = 0;
+        }
+        target.count += put;
+        left -= put;
+    }
+    m_cursor.count = left;
+    if (m_cursor.count <= 0) m_cursor.clear();
+    return true;
+}
+
+int Inventory::gather(const std::vector<int>& slots)
+{
+    if (m_cursor.empty()) return 0;
+    const int most = maxStackOf(m_cursor.id);
+    int taken = 0;
+    for (int pass = 0; pass < 2 && m_cursor.count < most; ++pass)
+        for (int index : slots)
+        {
+            if (m_cursor.count >= most) break;
+            if (index < 0 || index >= SLOT_COUNT || isOutputSlot(index) || bound(index)) continue;
+            ItemStack& from = m_slots[index];
+            if (from.empty() || !from.sameAs(m_cursor)) continue;
+            if (pass == 0 && from.count >= maxStackOf(from.id)) continue;
+            const int moved = std::min(from.count, most - m_cursor.count);
+            m_cursor.count += moved;
+            from.count -= moved;
+            taken += moved;
+            if (from.count <= 0) from.clear();
+        }
+    return taken;
+}
+
+bool Inventory::swapSlots(int index, int other)
+{
+    if (index < 0 || index >= SLOT_COUNT || other < 0 || other >= SLOT_COUNT || index == other) return false;
+    if (bound(index) || bound(other) || isOutputSlot(other)) return false;
+    ItemStack& a = m_slots[index];
+    ItemStack& b = m_slots[other];
+    if (a.empty() && b.empty()) return false;
+    if (isOutputSlot(index))
+    {
+        if (a.empty() || index == CRAFT_RESULT) return false;
+        if (b.empty())
+        {
+            b = a;
+            a.clear();
+            return true;
+        }
+        if (!b.sameAs(a) || b.count >= maxStackOf(b.id)) return false;
+        mergeInto(a, b);
+        return true;
+    }
+    if (!a.empty() && !belongsIn(other, a.id)) return false;
+    if (!b.empty() && !belongsIn(index, b.id)) return false;
+    std::swap(a, b);
+    return true;
+}
+
+ItemStack Inventory::throwFrom(int index, bool whole)
+{
+    ItemStack out;
+    if (index < 0 || index >= SLOT_COUNT || bound(index) || index == CRAFT_RESULT) return out;
+    if (!m_cursor.empty()) return out;
+    ItemStack& from = m_slots[index];
+    if (from.empty()) return out;
+    out = from;
+    out.count = whole ? from.count : 1;
+    from.count -= out.count;
+    if (from.count <= 0) from.clear();
+    return out;
+}
+
 void Inventory::quickMove(int index)
 {
     if (index < 0 || index >= SLOT_COUNT) return;

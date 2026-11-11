@@ -2936,6 +2936,11 @@ void Application::finishInventoryScreen()
     // the client's: 80FFFFFF over the sixteen pixels the item sits in.
     std::string tip;
     const ItemStack* tipBundle = nullptr;
+    if (m_dragging && m_dragSlots.size() > 1)
+        for (const SlotBox& box : m_slotBoxes)
+            if (box.kind == SlotBox::Kind::Slot &&
+                std::find(m_dragSlots.begin(), m_dragSlots.end(), box.index) != m_dragSlots.end())
+                m_ui.quad(box.x + 1.0f, box.y + 1.0f, SLOT, SLOT, glm::vec4(1.0f, 1.0f, 1.0f, 0.5f));
     if (const SlotBox* box = slotBoxAt(m_input.mouseX(), m_input.mouseY()))
     {
         const glm::vec4 wash(1.0f, 1.0f, 1.0f, 0.5f);
@@ -3078,6 +3083,130 @@ const Application::SlotBox* Application::slotBoxAt(int mouseX, int mouseY) const
             return &box;
 
     return nullptr;
+}
+
+bool Application::dragAccepts(int slot)
+{
+    if (!m_inventory.canSpreadInto(slot)) return false;
+    if (m_chestOpen && m_chestVehicle < 0 && m_world && slot >= Inventory::CHEST_FIRST &&
+        slot < Inventory::CHEST_FIRST + Inventory::CHEST_SLOTS &&
+        isShulkerBox(m_world->getBlock(m_chestBlock.x, m_chestBlock.y, m_chestBlock.z)) &&
+        isBlockStack(m_inventory.cursor().id) && isShulkerBox(asBlock(m_inventory.cursor().id)))
+        return false;
+    if (m_crafterOpen && slot >= Inventory::CHEST_FIRST && slot < Inventory::CHEST_FIRST + CRAFTER_SLOTS &&
+        crafterSlotDisabled(slot - Inventory::CHEST_FIRST))
+        return false;
+    if (m_inventory.cursor().id == Items::Bundle || m_inventory.slot(slot).id == Items::Bundle) return false;
+    return true;
+}
+
+std::vector<int> Application::visibleSlots() const
+{
+    std::vector<int> out;
+    for (const SlotBox& box : m_slotBoxes)
+        if (box.kind == SlotBox::Kind::Slot) out.push_back(box.index);
+    return out;
+}
+
+void Application::updateInventoryMouse()
+{
+    const bool shift = m_input.isKeyDown(SDL_SCANCODE_LSHIFT) || m_input.isKeyDown(SDL_SCANCODE_RSHIFT);
+    const int mx = m_input.mouseX();
+    const int my = m_input.mouseY();
+    const SlotBox* box = slotBoxAt(mx, my);
+    const int hovered = box && box->kind == SlotBox::Kind::Slot ? box->index : -1;
+    const bool left = m_input.wasMouseButtonPressed(SDL_BUTTON_LEFT);
+    const bool right = !left && m_input.wasMouseButtonPressed(SDL_BUTTON_RIGHT);
+
+    if (m_dragging)
+    {
+        if (m_input.isMouseButtonDown(m_dragRight ? SDL_BUTTON_RIGHT : SDL_BUTTON_LEFT))
+        {
+            if (hovered >= 0 && std::find(m_dragSlots.begin(), m_dragSlots.end(), hovered) == m_dragSlots.end() &&
+                static_cast<int>(m_dragSlots.size()) < m_inventory.cursor().count && dragAccepts(hovered))
+                m_dragSlots.push_back(hovered);
+            return;
+        }
+        m_dragging = false;
+        std::vector<int> slots;
+        slots.swap(m_dragSlots);
+        if (slots.size() <= 1)
+            handleInventoryClick(m_dragX, m_dragY, m_dragRight, false);
+        else if (m_inventory.spread(slots, m_dragRight))
+        {
+            m_inventory.refreshCraftResult();
+            refreshAnvilResult();
+            refreshTradeResult();
+            m_audio.play(Sound::Click, 0.35f);
+        }
+        return;
+    }
+
+    if (!left && !right) return;
+    const Uint32 now = SDL_GetTicks();
+    if (left && !shift && hovered >= 0 && hovered == m_lastSlotClick && now - m_lastSlotClickTicks < 250 &&
+        !m_inventory.cursor().empty() && m_recipeAltSlot < 0)
+    {
+        m_lastSlotClick = -1;
+        if (m_inventory.gather(visibleSlots()) > 0)
+        {
+            m_inventory.refreshCraftResult();
+            refreshAnvilResult();
+            refreshTradeResult();
+            m_audio.play(Sound::Click, 0.35f);
+        }
+        return;
+    }
+    if (left)
+    {
+        m_lastSlotClick = hovered;
+        m_lastSlotClickTicks = now;
+    }
+    if (!shift && hovered >= 0 && !m_inventory.cursor().empty() && m_recipeAltSlot < 0)
+    {
+        m_dragging = true;
+        m_dragRight = right;
+        m_dragX = mx;
+        m_dragY = my;
+        m_dragSlots.clear();
+        m_dragSlots.push_back(hovered);
+        return;
+    }
+    handleInventoryClick(mx, my, right, shift);
+}
+
+bool Application::inventorySlotKeys()
+{
+    if (typingText() || m_dragging) return false;
+    const SlotBox* box = slotBoxAt(m_input.mouseX(), m_input.mouseY());
+    if (!box || box->kind != SlotBox::Kind::Slot || !m_inventory.cursor().empty()) return false;
+    const int slot = box->index;
+    if (m_crafterOpen && slot >= Inventory::CHEST_FIRST && slot < Inventory::CHEST_FIRST + CRAFTER_SLOTS &&
+        crafterSlotDisabled(slot - Inventory::CHEST_FIRST))
+        return false;
+    bool changed = false;
+    for (int i = 0; i < Inventory::HOTBAR_SLOTS; ++i)
+        if (m_input.wasKeyPressed(static_cast<SDL_Scancode>(SDL_SCANCODE_1 + i)))
+            changed = m_inventory.swapSlots(slot, i) || changed;
+    if (m_keys.pressed(m_input, Action::SwapHands)) changed = m_inventory.swapSlots(slot, Inventory::OFFHAND) || changed;
+    if (m_keys.pressed(m_input, Action::Drop))
+    {
+        const bool whole = m_input.isKeyDown(SDL_SCANCODE_LCTRL) || m_input.isKeyDown(SDL_SCANCODE_RCTRL);
+        const ItemStack thrown = m_inventory.throwFrom(slot, whole);
+        if (!thrown.empty())
+        {
+            m_stats.add(Stats::Custom::Drop);
+            m_stats.item(Stats::ItemStat::Dropped, thrown.id, thrown.count);
+            m_drops.spawnStack(m_player.eyePosition() + m_camera.front * 0.9f, thrown);
+            changed = true;
+        }
+    }
+    if (!changed) return false;
+    m_inventory.refreshCraftResult();
+    refreshAnvilResult();
+    refreshTradeResult();
+    m_audio.play(Sound::Click, 0.35f);
+    return true;
 }
 
 void Application::handleInventoryClick(int mouseX, int mouseY, bool rightButton, bool shiftHeld)
@@ -3682,6 +3811,8 @@ void Application::stowHorse()
 
 void Application::closeInventory()
 {
+    m_dragging = false;
+    m_dragSlots.clear();
     m_recipeGhost = -1;
     m_recipeAltSlot = -1;
     m_recipeSearching = false;
