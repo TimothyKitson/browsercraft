@@ -265,7 +265,8 @@ StackId Mob::tamingFood(MobId type)
         // Minecraft tames a horse by being thrown off it until it gives
         // in. Wheat is the same bargain with fewer broken bones, and it
         // is what the horse already wants.
-        case MobId::Horse: return Items::Wheat;
+        case MobId::Horse: case MobId::Donkey: case MobId::Mule: return Items::Wheat;
+        case MobId::SkeletonHorse: case MobId::ZombieHorse: return Items::Apple;
         default:           return Blocks::Air;
     }
 }

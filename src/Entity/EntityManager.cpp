@@ -1010,7 +1010,9 @@ void EntityManager::pairOffLovers(const World& world)
 
         for (size_t b = a + 1; b < m_mobs.size(); ++b)
         {
-            if (m_mobs[b].typeId() != m_mobs[a].typeId()) continue;
+            const MobId ta = m_mobs[a].typeId(), tb = m_mobs[b].typeId();
+            const bool mule = (ta == MobId::Horse && tb == MobId::Donkey) || (ta == MobId::Donkey && tb == MobId::Horse);
+            if (tb != ta && !mule) continue;
             if (!m_mobs[b].inLove() || !m_mobs[b].canBreed()) continue;
 
             const glm::vec3 apart = m_mobs[b].position() - m_mobs[a].position();
@@ -1046,7 +1048,7 @@ void EntityManager::pairOffLovers(const World& world)
                 const glm::vec3 parentHome = m_mobs[a].home();
                 const int parentTrade = m_mobs[a].professionSlot();
 
-                m_mobs.emplace_back(m_mobs[a].typeId(), between,
+                m_mobs.emplace_back(mule ? MobId::Mule : m_mobs[a].typeId(), between,
                                     m_rng ^ static_cast<uint32_t>(m_mobs.size() * 40503u), true);
 
                 // A child belongs where its parents do, and takes up

@@ -8433,7 +8433,7 @@ void Application::handleEvents()
             m_inventory.setCraftSize(2);
             m_inventoryOpen = true;
             if (Mob* mount = riddenMob())
-                if (mount->typeId() == MobId::Horse) openHorse(*mount);
+                if (isHorseKind(mount->typeId())) openHorse(*mount);
         }
         setMouseCaptured(!m_inventoryOpen);
     }
@@ -8674,7 +8674,7 @@ void Application::updateGameplay(float deltaTime)
     if (Mob* mount = riddenMob())
     {
         const bool jumpHeld = m_keys.down(m_input, Action::Jump);
-        if (mount->typeId() == MobId::Horse)
+        if (isHorseKind(mount->typeId()))
         {
             bool leap = false;
             float power = 1.0f;
@@ -11535,6 +11535,10 @@ void Application::strikeLightning()
     }
 
     boltStrikes(strike);
+    if (!found && m_worldMeta.difficulty != Worlds::Difficulty::Peaceful && next() < 0.04f)
+        for (int k = 0; k < 4; ++k)
+            m_entities.spawnAt(k == 0 ? MobId::SkeletonHorse : MobId::Skeleton,
+                               strike + glm::vec3(next() * 3.0f - 1.5f, 0.0f, next() * 3.0f - 1.5f), *m_world);
     m_boltPoints.clear();
     glm::vec3 at = strike;
     m_boltPoints.push_back(at);
@@ -16065,7 +16069,7 @@ void Application::handlePlacement()
         if (const Mob* cow = m_entities.pick(m_camera.position, m_camera.front,
                                              ATTACK_REACH))
         {
-            if (cow->typeId() == MobId::Cow && cow->alive() && !cow->baby())
+            if ((cow->typeId() == MobId::Cow || cow->typeId() == MobId::Mooshroom) && cow->alive() && !cow->baby())
             {
                 if (!m_player.creative())
                 {
@@ -16081,6 +16085,32 @@ void Application::handlePlacement()
                 return;
             }
         }
+    }
+
+    if (stack.id == Items::Bowl || stack.id == Items::Shears)
+    {
+        if (Mob* moo = m_entities.pick(m_camera.position, m_camera.front, ATTACK_REACH))
+            if (moo->typeId() == MobId::Mooshroom && moo->alive() && !moo->baby())
+            {
+                if (stack.id == Items::Bowl)
+                {
+                    ItemStack stew{ Items::MushroomStew, 1 };
+                    if (!m_player.creative())
+                    {
+                        stack.count -= 1;
+                        if (stack.count <= 0) stack = stew;
+                        else if (m_inventory.addStack(stew) > 0) m_drops.spawnStack(m_player.position, stew);
+                    }
+                    m_audio.play(Sound::MobCowSay, 0.5f, 1.2f);
+                    return;
+                }
+                const glm::vec3 feet = moo->position();
+                moo->vanish();
+                m_entities.spawnAt(MobId::Cow, feet, *m_world);
+                m_drops.spawn(feet + glm::vec3(0.0f, 1.0f, 0.0f), Blocks::RedMushroom, 5);
+                m_audio.play(Sound::DigWool, 0.6f, 1.3f);
+                return;
+            }
     }
 
     if (stack.id == Items::Honeycomb && modeCanBuild(m_player.mode))
@@ -16418,7 +16448,7 @@ void Application::handlePlacement()
     // front of you is to be ridden, not fed.
     if (Mob* ride = m_entities.rideable(m_camera.position, m_camera.front, ATTACK_REACH))
     {
-        if (ride->typeId() == MobId::Horse && stack.id == Items::Saddle && !ride->saddled())
+        if (isHorseKind(ride->typeId()) && stack.id == Items::Saddle && !ride->saddled())
         {
             ride->setSaddled(true);
             if (!m_player.creative()) stack.clear();
@@ -16432,7 +16462,7 @@ void Application::handlePlacement()
             m_audio.play(Sound::DigStone, 0.6f, 1.2f);
             return;
         }
-        if (ride->typeId() == MobId::Horse && m_player.sneaking)
+        if (isHorseKind(ride->typeId()) && m_player.sneaking)
         {
             m_inventory.setCraftSize(2);
             m_inventoryOpen = true;
@@ -21642,7 +21672,7 @@ void Application::renderExperience(float x, float y, float width)
 
     if (const Mob* mount = riddenMob())
     {
-        if (mount->typeId() == MobId::Horse &&
+        if (isHorseKind(mount->typeId()) &&
             guiSprite("sprites/hud/jump_bar_background", x, y, width, HEIGHT))
         {
             if (m_horseJumpCooldown > 0.0f)

@@ -834,6 +834,7 @@ namespace
                 if (x.inanimate || y.inanimate) continue;
                 if (std::string(x.name) == y.name) continue;
                 if (x.id == MobId::TraderLlama || y.id == MobId::TraderLlama) continue;
+                if (x.id == MobId::Mooshroom || y.id == MobId::Mooshroom || x.id == MobId::Giant || y.id == MobId::Giant) continue;
                 if (x.voice == y.voice || x.hurtVoice == y.hurtVoice ||
                     x.deathVoice == y.deathVoice) distinct = false;
             }
@@ -2007,7 +2008,7 @@ namespace
             const MobType& t = mobType(static_cast<MobId>(i));
             if (t.rideable && !t.inanimate) ++rideable;
         }
-        check(rideable == 4, "it, the strider, the camel and a saddled pig are the four you can get on");
+        check(rideable == 8, "it and its four kin, the strider, the camel and a saddled pig are the ones you can get on");
         check(mobType(MobId::Strider).rideable, "the strider is one of the others");
         check(mobType(MobId::Camel).rideable, "and the camel is the third");
 
@@ -4226,7 +4227,7 @@ namespace
             const MobId id = static_cast<MobId>(i);
             const bool has = spawnEggColours(id, shell, spots);
             const MobType& type = mobType(id);
-            if (type.inanimate || id == MobId::SlimeSmall || id == MobId::TropicalFishLarge || id == MobId::Illusioner)
+            if (type.inanimate || id == MobId::SlimeSmall || id == MobId::TropicalFishLarge || id == MobId::Illusioner || id == MobId::Giant)
             {
                 if (has) apart = false;
                 continue;
@@ -9208,6 +9209,10 @@ namespace
                 case MobId::Evoker:   case MobId::Ravager:
                 case MobId::EnderDragon:
                 case MobId::Wither:
+                case MobId::Mule:
+                case MobId::SkeletonHorse:
+                case MobId::ZombieHorse:
+                case MobId::Giant:
                     meetable = true;
                     break;
                 default:
@@ -13698,6 +13703,25 @@ namespace
               blockOverlaps(Blocks::Bamboo, 0, 0, 0, 0.45f, 0.2f, 0.45f, 0.55f, 0.8f, 0.55f, 0) &&
               !blockOverlaps(Blocks::Bamboo, 0, 0, 0, 0.0f, 0.2f, 0.0f, 0.3f, 0.8f, 0.3f, 0),
               "bamboo starts as a shoot you walk through and grows into a thin stalk you bump into");
+        section("the last six animals with spawn eggs, and the giant");
+        {
+            bool named = true, eggs = true, sheets = true;
+            for (MobId kind : { MobId::Donkey, MobId::Mule, MobId::Mooshroom, MobId::Ocelot, MobId::SkeletonHorse, MobId::ZombieHorse })
+            {
+                unsigned int base = 0, spots = 0;
+                if (!spawnEggColours(kind, base, spots)) eggs = false;
+                if (!*mobType(kind).packSheet) sheets = false;
+            }
+            named = EntityManager::mobFromId("donkey") == MobId::Donkey && EntityManager::mobFromId("mule") == MobId::Mule &&
+                    EntityManager::mobFromId("mooshroom") == MobId::Mooshroom && EntityManager::mobFromId("ocelot") == MobId::Ocelot &&
+                    EntityManager::mobFromId("skeleton_horse") == MobId::SkeletonHorse && EntityManager::mobFromId("zombie_horse") == MobId::ZombieHorse &&
+                    EntityManager::mobFromId("giant") == MobId::Giant;
+            check(named, "donkey, mule, mooshroom, ocelot, skeleton horse, zombie horse and giant answer to their 1.21.1 names");
+            check(eggs && sheets, "the six with eggs in 1.21.1 have them, and every one is drawn from its pack sheet");
+            check(isHorseKind(MobId::Donkey) && isHorseKind(MobId::ZombieHorse) && mobType(MobId::Donkey).rideable &&
+                  !isHorseKind(MobId::Mooshroom), "the four horse kinds are ridden like a horse");
+            check(mobType(MobId::Giant).modelScale > 5.0f && mobType(MobId::Giant).maxHealth == 100, "a giant is a zombie six times over");
+        }
         check(bambooCanRootIn(Blocks::Podzol) && bambooCanRootIn(Blocks::Gravel) && !bambooCanRootIn(Blocks::Stone),
               "and roots in the ground 1.21.1 lets it");
     }
@@ -13767,7 +13791,8 @@ namespace
         for (int i = 0; i < mobTypeCount(); ++i)
         {
             const MobType& t = mobType(static_cast<MobId>(i));
-            if (t.inanimate || static_cast<MobId>(i) == MobId::TropicalFishLarge || static_cast<MobId>(i) == MobId::TraderLlama) continue;
+            if (t.inanimate || static_cast<MobId>(i) == MobId::TropicalFishLarge || static_cast<MobId>(i) == MobId::TraderLlama ||
+                static_cast<MobId>(i) == MobId::Mooshroom || static_cast<MobId>(i) == MobId::Giant) continue;
             if (!voices.insert(static_cast<int>(t.voice)).second) distinct = false;
         }
         check(distinct, "and no two living species share one");

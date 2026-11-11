@@ -396,6 +396,16 @@ void AudioEngine::buildSounds()
                  Sound::MobTadpoleDeath, "mob/tadpole");
     loadMobVoice(Sound::MobGlowSquidSay, Sound::MobGlowSquidHurt,
                  Sound::MobGlowSquidDeath, "mob/glow_squid");
+    loadMobVoice(Sound::MobDonkeySay, Sound::MobDonkeyHurt,
+                 Sound::MobDonkeyDeath, "mob/donkey");
+    loadMobVoice(Sound::MobMuleSay, Sound::MobMuleHurt,
+                 Sound::MobMuleDeath, "mob/mule");
+    loadMobVoice(Sound::MobSkeletonHorseSay, Sound::MobSkeletonHorseHurt,
+                 Sound::MobSkeletonHorseDeath, "mob/skeleton_horse");
+    loadMobVoice(Sound::MobZombieHorseSay, Sound::MobZombieHorseHurt,
+                 Sound::MobZombieHorseDeath, "mob/zombie_horse");
+    loadMobVoice(Sound::MobOcelotSay, Sound::MobOcelotHurt,
+                 Sound::MobOcelotDeath, "mob/ocelot");
     loadMobVoice(Sound::MobZoglinSay, Sound::MobZoglinHurt,
                  Sound::MobZoglinDeath, "mob/zoglin");
     loadMobVoice(Sound::MobIllusionerSay, Sound::MobIllusionerHurt,
@@ -1447,6 +1457,16 @@ void AudioEngine::buildSounds()
 
     beastVoice(Sound::MobRabbitSay, Sound::MobRabbitHurt, Sound::MobRabbitDeath,
                620.0f, 0.10f, 0.14f, 1041);
+    beastVoice(Sound::MobDonkeySay, Sound::MobDonkeyHurt, Sound::MobDonkeyDeath,
+               250.0f, 0.2f, 0.3f, 1201);
+    beastVoice(Sound::MobMuleSay, Sound::MobMuleHurt, Sound::MobMuleDeath,
+               220.0f, 0.2f, 0.32f, 1211);
+    beastVoice(Sound::MobSkeletonHorseSay, Sound::MobSkeletonHorseHurt, Sound::MobSkeletonHorseDeath,
+               320.0f, 0.16f, 0.4f, 1221);
+    beastVoice(Sound::MobZombieHorseSay, Sound::MobZombieHorseHurt, Sound::MobZombieHorseDeath,
+               180.0f, 0.24f, 0.44f, 1231);
+    beastVoice(Sound::MobOcelotSay, Sound::MobOcelotHurt, Sound::MobOcelotDeath,
+               820.0f, 0.1f, 0.24f, 1241);
     beastVoice(Sound::MobFoxSay, Sound::MobFoxHurt, Sound::MobFoxDeath,
                430.0f, 0.18f, 0.22f, 1051);
     beastVoice(Sound::MobGoatSay, Sound::MobGoatHurt, Sound::MobGoatDeath,

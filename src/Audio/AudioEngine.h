@@ -286,6 +286,21 @@ enum class Sound : uint16_t
     ChallengeComplete,
     GoatHornFirst,
     GoatHornLast = GoatHornFirst + 7,
+    MobDonkeySay,
+    MobDonkeyHurt,
+    MobDonkeyDeath,
+    MobMuleSay,
+    MobMuleHurt,
+    MobMuleDeath,
+    MobSkeletonHorseSay,
+    MobSkeletonHorseHurt,
+    MobSkeletonHorseDeath,
+    MobZombieHorseSay,
+    MobZombieHorseHurt,
+    MobZombieHorseDeath,
+    MobOcelotSay,
+    MobOcelotHurt,
+    MobOcelotDeath,
     Count
 };
 

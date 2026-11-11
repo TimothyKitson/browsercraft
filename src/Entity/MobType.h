@@ -132,9 +132,21 @@ enum class MobId : uint8_t
     Zoglin,
     Illusioner,
     TraderLlama,
+    Donkey,
+    Mule,
+    Mooshroom,
+    Ocelot,
+    SkeletonHorse,
+    ZombieHorse,
+    Giant,
 
     Count
 };
+
+inline bool isHorseKind(MobId id)
+{
+    return id == MobId::Horse || id == MobId::Donkey || id == MobId::Mule || id == MobId::SkeletonHorse || id == MobId::ZombieHorse;
+}
 
 // Where a mob is allowed to appear. Animals want daylight on grass;
 // the rest want the dark.

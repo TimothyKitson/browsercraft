@@ -3667,6 +3667,84 @@ namespace
             t.markColour = rgb(60, 90, 160);
         }
 
+        for (const MobId kind : { MobId::Donkey, MobId::Mule, MobId::SkeletonHorse, MobId::ZombieHorse })
+        {
+            MobType& t = table[static_cast<size_t>(kind)];
+            t = table[static_cast<size_t>(MobId::Horse)];
+            t.id = kind;
+            t.voice = kind == MobId::Donkey ? Sound::MobDonkeySay : kind == MobId::Mule ? Sound::MobMuleSay
+                    : kind == MobId::SkeletonHorse ? Sound::MobSkeletonHorseSay : Sound::MobZombieHorseSay;
+            t.hurtVoice = static_cast<Sound>(static_cast<int>(t.voice) + 1);
+            t.deathVoice = static_cast<Sound>(static_cast<int>(t.voice) + 2);
+            switch (kind)
+            {
+                case MobId::Donkey:
+                    t.name = "Donkey"; t.texture = "donkey"; t.packSheet = "horse/donkey.png";
+                    t.walkSpeed = 4.4f; t.bodyColour = rgb(122, 108, 96); t.headColour = rgb(134, 118, 104);
+                    t.modelScale = 0.87f;
+                    break;
+                case MobId::Mule:
+                    t.name = "Mule"; t.texture = "mule"; t.packSheet = "horse/mule.png"; t.breedingFood = Blocks::Air;
+                    t.walkSpeed = 4.4f; t.bodyColour = rgb(76, 46, 28); t.headColour = rgb(88, 56, 34);
+                    t.modelScale = 0.92f;
+                    break;
+                case MobId::SkeletonHorse:
+                    t.name = "Skeleton Horse"; t.texture = "skeleton_horse"; t.packSheet = "horse/horse_skeleton.png";
+                    t.breedingFood = Blocks::Air; t.maxHealth = 15; t.drop = Items::Bone; t.dropCount = 1;
+                    t.bodyColour = rgb(214, 214, 200); t.headColour = rgb(226, 226, 212);
+                    break;
+                default:
+                    t.name = "Zombie Horse"; t.texture = "zombie_horse"; t.packSheet = "horse/horse_zombie.png";
+                    t.breedingFood = Blocks::Air; t.maxHealth = 15; t.drop = Items::RottenFlesh; t.dropCount = 1;
+                    t.bodyColour = rgb(66, 104, 64); t.headColour = rgb(80, 120, 76);
+                    break;
+            }
+        }
+
+        {
+            MobType& t = table[static_cast<size_t>(MobId::Mooshroom)];
+            t = table[static_cast<size_t>(MobId::Cow)];
+            t.id = MobId::Mooshroom;
+            t.name = "Mooshroom";
+            t.texture = "mooshroom";
+            t.packSheet = "cow/red_mooshroom.png";
+            t.bodyColour = rgb(160, 22, 24);
+            t.headColour = rgb(170, 30, 30);
+            t.markColour = rgb(200, 200, 200);
+        }
+
+        {
+            MobType& t = table[static_cast<size_t>(MobId::Ocelot)];
+            t = table[static_cast<size_t>(MobId::Cat)];
+            t.id = MobId::Ocelot;
+            t.voice = Sound::MobOcelotSay;
+            t.hurtVoice = Sound::MobOcelotHurt;
+            t.deathVoice = Sound::MobOcelotDeath;
+            t.name = "Ocelot";
+            t.texture = "ocelot";
+            t.packSheet = "cat/ocelot.png";
+            t.walkSpeed = 4.2f;
+            t.breedingFood = Items::RawCod;
+            t.bodyColour = rgb(226, 196, 110);
+            t.headColour = rgb(234, 206, 124);
+            t.markColour = rgb(96, 70, 40);
+        }
+
+        {
+            MobType& t = table[static_cast<size_t>(MobId::Giant)];
+            t = table[static_cast<size_t>(MobId::Zombie)];
+            t.id = MobId::Giant;
+            t.name = "Giant";
+            t.texture = "giant";
+            t.packSheet = "zombie/zombie.png";
+            t.maxHealth = 100;
+            t.attackDamage = 50;
+            t.modelScale = 6.0f;
+            t.walkSpeed = 1.0f;
+            t.burnsInSunlight = false;
+            t.experience = 0;
+        }
+
         {
             MobType& t = table[static_cast<size_t>(MobId::GlowSquid)];
             t = table[static_cast<size_t>(MobId::Squid)];
@@ -3895,6 +3973,12 @@ bool spawnEggColours(MobId id, unsigned int& base, unsigned int& spots)
         case MobId::Cat: base = 0xEFC88Eu; spots = 0x957256u; return true;
         case MobId::Llama: base = 0xC09E7Du; spots = 0x995F40u; return true;
         case MobId::TraderLlama: base = 0xEAA430u; spots = 0x456296u; return true;
+        case MobId::Donkey: base = 0x534538u; spots = 0x867566u; return true;
+        case MobId::Mule: base = 0x1B0200u; spots = 0x51331Du; return true;
+        case MobId::Mooshroom: base = 0xA00F10u; spots = 0xB7B7B7u; return true;
+        case MobId::Ocelot: base = 0xEFDE7Du; spots = 0x564434u; return true;
+        case MobId::SkeletonHorse: base = 0x68684Fu; spots = 0xE5E5D8u; return true;
+        case MobId::ZombieHorse: base = 0x315234u; spots = 0x97C284u; return true;
         case MobId::PolarBear: base = 0xEEEEDEu; spots = 0xD5D6CDu; return true;
         case MobId::Stray: base = 0x617677u; spots = 0xDDEAEAu; return true;
         case MobId::Husk: base = 0x797061u; spots = 0xE6CC94u; return true;
