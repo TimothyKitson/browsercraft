@@ -4664,6 +4664,7 @@ void Application::fillVillageChest(const glm::ivec3& block)
         filled[slot].id = loot[i].id;
         filled[slot].count = loot[i].count;
         if (loot[i].id == Items::GoatHorn) filled[slot].damage = static_cast<int>(where % 4u);
+        if (loot[i].id == Items::FilledMap) filled[slot].enchantments = static_cast<uint32_t>(Maps::TreasureExplorer) << 24;
     }
 
     m_chests.put(block, filled);

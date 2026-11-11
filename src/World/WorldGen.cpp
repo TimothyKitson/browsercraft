@@ -3489,41 +3489,87 @@ void WorldGen::buildDesertWells(Chunk& chunk) const
             put(chunk, midX + dx, ground + 4, midZ + dz, Blocks::Sandstone);
 }
 
+bool WorldGen::oceanRuinIn(int cellX, int cellZ, int& midX, int& midZ, int& floor) const
+{
+    constexpr int CELL = OCEAN_RUIN_CELL;
+    if (hashToFloat(hashCoords(cellX, 41, cellZ, m_seed + 9301)) > 0.4f) return false;
+    midX = cellX * CELL + 16 + static_cast<int>(hashCoords(cellX, 42, cellZ, m_seed + 9302) % static_cast<uint32_t>(CELL - 32));
+    midZ = cellZ * CELL + 16 + static_cast<int>(hashCoords(cellX, 43, cellZ, m_seed + 9303) % static_cast<uint32_t>(CELL - 32));
+    floor = surfaceHeight(midX, midZ);
+    return floor <= SEA_LEVEL - 5;
+}
+
 void WorldGen::buildOceanRuins(Chunk& chunk) const
 {
-    constexpr int CELL = 48;
+    constexpr int CELL = OCEAN_RUIN_CELL;
+    constexpr int REACH = 16;
     const int baseX = chunk.position().x * Chunk::SX;
     const int baseZ = chunk.position().z * Chunk::SZ;
     auto cellOf = [](int v) { return v >= 0 ? v / CELL : -((-v + CELL - 1) / CELL); };
-    const int firstCellX = cellOf(baseX - 8), lastCellX = cellOf(baseX + Chunk::SX + 8);
-    const int firstCellZ = cellOf(baseZ - 8), lastCellZ = cellOf(baseZ + Chunk::SZ + 8);
+    const int firstCellX = cellOf(baseX - REACH), lastCellX = cellOf(baseX + Chunk::SX + REACH);
+    const int firstCellZ = cellOf(baseZ - REACH), lastCellZ = cellOf(baseZ + Chunk::SZ + REACH);
     for (int cz = firstCellZ; cz <= lastCellZ; ++cz)
         for (int cx = firstCellX; cx <= lastCellX; ++cx)
         {
-            if (hashToFloat(hashCoords(cx, 41, cz, m_seed + 9301)) > 0.4f) continue;
-            const int midX = cx * CELL + 8 + static_cast<int>(hashCoords(cx, 42, cz, m_seed + 9302) % static_cast<uint32_t>(CELL - 16));
-            const int midZ = cz * CELL + 8 + static_cast<int>(hashCoords(cx, 43, cz, m_seed + 9303) % static_cast<uint32_t>(CELL - 16));
-            const int floor = surfaceHeight(midX, midZ);
-            if (floor > SEA_LEVEL - 5) continue;
+            int midX = 0, midZ = 0, floor = 0;
+            if (!oceanRuinIn(cx, cz, midX, midZ, floor)) continue;
             const bool warm = reefWater(midX, midZ);
-            const BlockId wall = warm ? Blocks::Sandstone : Blocks::StoneBricks;
-            const BlockId trim = warm ? Blocks::CutSandstone : Blocks::MossyStoneBricks;
-            for (int dx = -2; dx <= 2; ++dx)
-                for (int dz = -2; dz <= 2; ++dz)
+            const uint32_t roll = hashCoords(midX, 40, midZ, m_seed + 9307);
+            const bool big = (roll & 3u) == 0;
+
+            auto wallAt = [&](int x, int y, int z) {
+                const float wear = hashToFloat(hashCoords(x, y, z, m_seed + 9308));
+                if (warm) return wear < 0.2f ? static_cast<BlockId>(Blocks::CutSandstone) : wear < 0.3f ? static_cast<BlockId>(Blocks::ChiseledSandstone)
+                                             : wear < 0.4f ? colourIn(Blocks::TerracottaFirst, 3) : static_cast<BlockId>(Blocks::Sandstone);
+                return wear < 0.25f ? static_cast<BlockId>(Blocks::MossyStoneBricks) : wear < 0.45f ? static_cast<BlockId>(Blocks::CrackedStoneBricks)
+                                    : wear < 0.5f ? static_cast<BlockId>(Blocks::ChiseledStoneBricks) : static_cast<BlockId>(Blocks::StoneBricks);
+            };
+            auto hut = [&](int hx, int hz, int halfX, int halfZ, int tallest, bool chest) {
+                const int ground = surfaceHeight(hx, hz);
+                if (ground > SEA_LEVEL - 4) return;
+                for (int dx = -halfX; dx <= halfX; ++dx)
+                    for (int dz = -halfZ; dz <= halfZ; ++dz)
+                    {
+                        const bool ring = std::abs(dx) == halfX || std::abs(dz) == halfZ;
+                        const bool door = dz == -halfZ && dx == 0;
+                        put(chunk, hx + dx, ground, hz + dz, ring ? wallAt(hx + dx, ground, hz + dz) : (warm ? static_cast<BlockId>(Blocks::Sand) : static_cast<BlockId>(Blocks::Gravel)));
+                        if (!ring || door) continue;
+                        const bool corner = std::abs(dx) == halfX && std::abs(dz) == halfZ;
+                        const int tall = corner ? tallest : 1 + static_cast<int>(hashCoords(hx + dx, 44, hz + dz, m_seed + 9304) % static_cast<uint32_t>(tallest));
+                        for (int dy = 1; dy <= tall; ++dy)
+                        {
+                            const bool window = !corner && dy == 2 && ((dx + dz) & 1) == 0 && tall >= 3;
+                            if (!window) put(chunk, hx + dx, ground + dy, hz + dz, wallAt(hx + dx, ground + dy, hz + dz));
+                        }
+                    }
+                for (int k = 0; k < 3; ++k)
                 {
-                    const bool ring = std::abs(dx) == 2 || std::abs(dz) == 2;
-                    put(chunk, midX + dx, floor, midZ + dz, ring ? wall : (warm ? Blocks::Sand : Blocks::Gravel));
-                    if (!ring) continue;
-                    const int tall = 1 + static_cast<int>(hashCoords(midX + dx, 44, midZ + dz, m_seed + 9304) % 3u);
-                    for (int dy = 1; dy <= tall; ++dy)
-                        put(chunk, midX + dx, floor + dy, midZ + dz, dy == tall ? trim : wall);
+                    const int dx = static_cast<int>(hashCoords(hx, 45 + k, hz, m_seed + 9305) % static_cast<uint32_t>(halfX * 2 - 1)) - (halfX - 1);
+                    const int dz = static_cast<int>(hashCoords(hx, 48 + k, hz, m_seed + 9306) % static_cast<uint32_t>(halfZ * 2 - 1)) - (halfZ - 1);
+                    if (chest && dx == 0 && dz == 0) continue;
+                    put(chunk, hx + dx, ground, hz + dz, suspiciousOf(warm ? 2 : 5, 0));
                 }
-            for (int k = 0; k < 3; ++k)
+                if (chest) put(chunk, hx, ground + 1, hz, Blocks::Chest);
+            };
+
+            if (big)
             {
-                const int dx = static_cast<int>(hashCoords(midX, 45 + k, midZ, m_seed + 9305) % 3u) - 1;
-                const int dz = static_cast<int>(hashCoords(midX, 48 + k, midZ, m_seed + 9306) % 3u) - 1;
-                put(chunk, midX + dx, floor, midZ + dz, suspiciousOf(warm ? 2 : 5, 0));
+                hut(midX, midZ, 4, 3, 5, true);
+                const int ground = floor;
+                for (int side = -1; side <= 1; side += 2)
+                    for (int dy = 1; dy <= 4; ++dy) put(chunk, midX + side * 2, ground + dy, midZ, wallAt(midX + side * 2, ground + dy, midZ));
+                for (int dx = -2; dx <= 2; ++dx) put(chunk, midX + dx, ground + 5, midZ, wallAt(midX + dx, ground + 5, midZ));
+                put(chunk, midX, ground + 4, midZ, Blocks::SeaLantern);
+                put(chunk, midX + 3, ground, midZ + 2, Blocks::MagmaBlock);
+                for (int k = 0; k < 3; ++k)
+                {
+                    const float angle = static_cast<float>(hashCoords(midX, 60 + k, midZ, m_seed + 9309) % 628u) / 100.0f;
+                    const int ox = static_cast<int>(std::cos(angle) * 11.0f), oz = static_cast<int>(std::sin(angle) * 11.0f);
+                    hut(midX + ox, midZ + oz, 2, 2, 3, false);
+                }
             }
+            else
+                hut(midX, midZ, 2, 2, 3, true);
         }
 }
 
@@ -4916,7 +4962,9 @@ Structures::Spot WorldGen::nearestMonument(int blockX, int blockZ, int squares) 
 bool WorldGen::shipwreckFits(int midX, int midZ) const
 {
     const int floorY = surfaceHeight(midX, midZ);
-    return floorY <= SEA_LEVEL + 1 && floorY >= 24;
+    if (floorY > SEA_LEVEL + 1 || floorY < 24) return false;
+    const Biome biome = biomeAt(midX, midZ);
+    return biome == Biome::Ocean || biome == Biome::Beach;
 }
 
 bool WorldGen::monumentFits(int midX, int midZ) const
@@ -4987,97 +5035,137 @@ void WorldGen::buildOceanStructures(Chunk& chunk) const
 
 void WorldGen::stampBuriedTreasure(Chunk& chunk, int chunkX, int chunkZ) const
 {
-    if (!Structures::spreadAt(chunkX, chunkZ, m_seed,
-                              Structures::BURIED_TREASURE_SALT,
-                              Structures::BURIED_TREASURE_CHANCE))
-        return;
+    int x = 0, y = 0, z = 0;
+    if (buriedTreasureIn(chunkX, chunkZ, x, y, z)) put(chunk, x, y, z, Blocks::Chest);
+}
 
-    // Minecraft buries it at the ninth block of the chunk rather than
-    // in the middle, and a map drawn for one points at that corner.
-    const int x = chunkX * Structures::CHUNK + 9;
-    const int z = chunkZ * Structures::CHUNK + 9;
-
+bool WorldGen::buriedTreasureIn(int chunkX, int chunkZ, int& x, int& y, int& z) const
+{
+    if (!Structures::spreadAt(chunkX, chunkZ, m_seed, Structures::BURIED_TREASURE_SALT, Structures::BURIED_TREASURE_CHANCE))
+        return false;
+    x = chunkX * Structures::CHUNK + 9;
+    z = chunkZ * Structures::CHUNK + 9;
     const Biome biome = biomeAt(x, z);
-    if (biome != Biome::Beach && biome != Biome::Ocean) return;
-
+    if (biome != Biome::Beach && biome != Biome::Ocean) return false;
     const int floorY = surfaceHeight(x, z);
-    if (floorY < 20) return;
+    if (floorY < 20) return false;
+    y = floorY - 2;
+    return true;
+}
 
-    // Under the sand, not on it: the whole point is that nothing shows
-    // on the surface.
-    const int y = floorY - 2;
-    put(chunk, x, y, z, Blocks::Chest);
+bool WorldGen::nearestBuriedTreasure(int blockX, int blockZ, int reachChunks, int& x, int& z) const
+{
+    const int homeX = Structures::squareOf(blockX, Structures::CHUNK), homeZ = Structures::squareOf(blockZ, Structures::CHUNK);
+    for (int ring = 0; ring <= reachChunks; ++ring)
+        for (int dz = -ring; dz <= ring; ++dz)
+            for (int dx = -ring; dx <= ring; ++dx)
+            {
+                if (std::max(std::abs(dx), std::abs(dz)) != ring) continue;
+                int y = 0;
+                if (buriedTreasureIn(homeX + dx, homeZ + dz, x, y, z)) return true;
+            }
+    return false;
+}
+
+bool WorldGen::shipwreckPlan(int midX, int midZ, WreckPlan& out) const
+{
+    if (!shipwreckFits(midX, midZ)) return false;
+    const int floorY = surfaceHeight(midX, midZ);
+    const uint32_t roll = hashCoords(midX, 7, midZ, m_seed + 5502);
+    static const int WOODS[6] = { 0, 1, 5, 3, 2, 4 };
+    out.alongX = hashToFloat(hashCoords(midX, 7, midZ, m_seed + 5501)) < 0.5f;
+    out.wood = WOODS[roll % 6u];
+    const int pose = static_cast<int>((roll >> 4) % 5u);
+    out.pose = pose <= 1 ? 0 : pose - 1;
+    out.mast = ((roll >> 8) & 1u) != 0 && out.pose == 0;
+    out.keel = floorY + 1;
+    out.chests = 0;
+    auto add = [&](int along, Hoard kind) {
+        out.chest[out.chests] = glm::ivec3(out.alongX ? midX + along : midX, out.keel + 1, out.alongX ? midZ : midZ + along);
+        out.kind[out.chests] = kind;
+        ++out.chests;
+    };
+    if (out.pose != 3) add(-7, Hoard::ShipwreckSupply);
+    if (out.pose != 2) add(2, Hoard::ShipwreckMap);
+    if (out.pose != 2) add(7, Hoard::Shipwreck);
+    return true;
 }
 
 void WorldGen::stampShipwreck(Chunk& chunk, int midX, int midZ) const
 {
-    const int floorY = surfaceHeight(midX, midZ);
+    WreckPlan plan;
+    if (!shipwreckPlan(midX, midZ, plan)) return;
 
-    // Sunk, or run aground on a beach. Anything further inland is a
-    // ship in a field, which is a different game.
-    if (floorY > SEA_LEVEL + 1) return;
-    if (floorY < 24) return;
-
-    // Which way she lies. A fleet all pointing north looks placed.
-    const bool alongX = hashToFloat(hashCoords(midX, 7, midZ, m_seed + 5501)) < 0.5f;
-
-    constexpr int LENGTH = 21;  // bow to stern
-    constexpr int BEAM = 7;     // across
-    constexpr int DEPTH = 5;    // keel to gunwale
-
+    constexpr int LENGTH = 21;
+    constexpr int BEAM = 7;
+    constexpr int DEPTH = 5;
     const int halfLong = LENGTH / 2;
     const int halfWide = BEAM / 2;
-    const int keel = floorY + 1;
+    const int keel = plan.keel;
+    const bool sunk = keel - 1 < SEA_LEVEL - 1;
+    const BlockId planks = woodSet(plan.wood).planks;
+    const BlockId log = woodSet(plan.wood).log;
+    const BlockId fence = fenceOfWood(plan.wood);
+    const int first = plan.pose == 3 ? -1 : -halfLong;
+    const int last = plan.pose == 2 ? 1 : halfLong;
+    auto water = [&](int y) { return (sunk && y <= SEA_LEVEL) ? static_cast<BlockId>(Blocks::Water) : static_cast<BlockId>(Blocks::Air); };
 
-    const bool sunk = floorY < SEA_LEVEL - 1;
-
-    for (int along = -halfLong; along <= halfLong; ++along)
+    for (int along = first; along <= last; ++along)
     {
-        // The hull narrows towards both ends, so she has a bow and a
-        // stern rather than being a crate.
-        const float taper = 1.0f - static_cast<float>(std::abs(along)) /
-                                   static_cast<float>(halfLong + 1);
+        const float taper = 1.0f - static_cast<float>(std::abs(along)) / static_cast<float>(halfLong + 1);
         const int wide = std::max(1, static_cast<int>(halfWide * (0.35f + 0.65f * taper)));
+        const bool torn = plan.pose >= 2 && std::abs(along) <= 1;
 
         for (int across = -wide; across <= wide; ++across)
-            for (int dy = 0; dy < DEPTH; ++dy)
+            for (int dy = 0; dy < DEPTH + 2; ++dy)
             {
-                const int wx = alongX ? midX + along : midX + across;
-                const int wz = alongX ? midZ + across : midZ + along;
+                const int wx = plan.alongX ? midX + along : midX + across;
+                const int wz = plan.alongX ? midZ + across : midZ + along;
+                const int layer = plan.pose == 1 ? DEPTH - 1 - dy : dy;
                 const int y = keel + dy;
+                if (dy >= DEPTH)
+                {
+                    const bool castle = plan.pose == 0 && along >= halfLong - 5 && dy == DEPTH &&
+                                        (std::abs(across) == wide || along == halfLong || along == halfLong - 5);
+                    if (castle) put(chunk, wx, y, wz, (along == halfLong - 5 && across == 0) ? water(y) : fence);
+                    continue;
+                }
 
-                const bool hull = std::abs(across) == wide || dy == 0 ||
-                                  std::abs(along) == halfLong;
-                // The deck, with a hatch amidships so she is not sealed.
-                const bool deck = dy == DEPTH - 1 && std::abs(along) > 2;
-                const bool broken = hull && dy >= DEPTH - 2 &&
-                                    hashToFloat(hashCoords(wx, y, wz, m_seed + 5503)) < 0.22f;
+                const bool hull = std::abs(across) == wide || layer == 0 || std::abs(along) == halfLong;
+                const bool deck = layer == DEPTH - 1 && std::abs(along) > 2;
+                const float wear = hashToFloat(hashCoords(wx, y, wz, m_seed + 5503));
+                const bool broken = (hull && layer >= DEPTH - 2 && wear < 0.22f) || (torn && wear < 0.5f);
 
-                BlockId block = Blocks::Air;
-                if ((hull || deck) && !broken) block = Blocks::Planks;
-                else if (sunk && y <= SEA_LEVEL) block = Blocks::Water;
-
+                BlockId block = water(y);
+                if ((hull || deck) && !broken) block = planks;
                 put(chunk, wx, y, wz, block);
             }
     }
 
-    // The mast, and the two chests she went down with. A shipwreck
-    // without a chest in it is scenery.
-    for (int dy = 0; dy < 7; ++dy)
+    if (plan.mast)
     {
-        const int y = keel + DEPTH + dy;
-        if (sunk && y > SEA_LEVEL) break;
-        put(chunk, midX, y, midZ, Blocks::Log);
+        for (int dy = 0; dy < 8; ++dy)
+        {
+            const int y = keel + DEPTH + dy;
+            if (sunk && y > SEA_LEVEL) break;
+            put(chunk, midX, y, midZ, log);
+            if (dy == 5)
+                for (int across = -2; across <= 2; ++across)
+                    if (across != 0) put(chunk, plan.alongX ? midX : midX + across, y, plan.alongX ? midZ + across : midZ, fence);
+        }
+        for (int dy = 1; dy < DEPTH; ++dy) put(chunk, midX, keel + dy, midZ, log);
     }
 
-    const int holdY = keel + 1;
-    for (int i = 0; i < 2; ++i)
-    {
-        const int along = (i == 0) ? -halfLong + 3 : halfLong - 3;
-        const int wx = alongX ? midX + along : midX;
-        const int wz = alongX ? midZ : midZ + along;
-        put(chunk, wx, holdY, wz, Blocks::Chest);
-    }
+    for (int i = 0; i < plan.chests; ++i)
+        put(chunk, plan.chest[i].x, plan.chest[i].y, plan.chest[i].z, Blocks::Chest);
+}
+
+void WorldGen::monumentElders(int midX, int midZ, glm::ivec3 out[3]) const
+{
+    const int base = surfaceHeight(midX, midZ) + 1;
+    out[0] = glm::ivec3(midX - 13, base + 1, midZ);
+    out[1] = glm::ivec3(midX + 13, base + 1, midZ);
+    out[2] = glm::ivec3(midX, base + 1, midZ - 4);
 }
 
 void WorldGen::stampMonument(Chunk& chunk, int midX, int midZ) const
@@ -5087,6 +5175,8 @@ void WorldGen::stampMonument(Chunk& chunk, int midX, int midZ) const
     const int floorY = surfaceHeight(midX, midZ);
     const int base = floorY + 1;
     const int TALL = monumentHeight(midX, midZ);
+    const int low = TALL / 2, mid = TALL - TALL / 4;
+    auto fill = [&](int y) { return y <= SEA_LEVEL ? static_cast<BlockId>(Blocks::Water) : static_cast<BlockId>(Blocks::Air); };
 
     for (int dz = -HALF; dz <= HALF; ++dz)
         for (int dx = -HALF; dx <= HALF; ++dx)
@@ -5094,74 +5184,83 @@ void WorldGen::stampMonument(Chunk& chunk, int midX, int midZ) const
             const int wx = midX + dx;
             const int wz = midZ + dz;
             const int far = std::max(std::abs(dx), std::abs(dz));
+            const int near = std::min(std::abs(dx), std::abs(dz));
+            const int roofAt = far <= 5 ? TALL : far <= 10 ? mid : low;
 
-            for (int dy = 0; dy <= TALL; ++dy)
+            for (int y = floorY - 3; y <= floorY; ++y) put(chunk, wx, y, wz, Blocks::Prismarine);
+
+            for (int dy = 0; dy <= roofAt; ++dy)
             {
                 const int y = base + dy;
-
-                // The roof steps in twice, which is the silhouette that
-                // makes a monument recognisable from a long way off.
-                const int roofAt = (far <= HALF - 8) ? TALL
-                                 : (far <= HALF - 4) ? TALL - TALL / 4
-                                                     : TALL - TALL / 2;
-                if (dy > roofAt) continue;
-
                 const bool outerWall = far == HALF;
                 const bool roof = dy == roofAt;
-                const bool floorSlab = dy == 0;
+                const bool ringWall = far == 11 || far == 6;
+                const bool axisDoor = near <= 1 && dy >= 1 && dy <= 3;
+                const bool partition = far > 11 && far < HALF && (std::abs(dx) == 8 || std::abs(dz) == 8) && near == 8;
+                const bool partitionDoor = partition && far == 13 && dy >= 1 && dy <= 2;
+                const bool entrance = dz == HALF && std::abs(dx) <= 2 && dy >= 1 && dy <= std::min(4, roofAt - 1);
 
-                // The inner walls: one ring of rooms round a hall.
-                const bool innerWall = (far == HALF - 4 || far == HALF - 8) &&
-                                       dy <= roofAt &&
-                                       !(((std::abs(dx) <= 1) && std::abs(dz) >= std::abs(dx)) ||
-                                         ((std::abs(dz) <= 1) && std::abs(dx) >= std::abs(dz)));
-
-                BlockId block = Blocks::Air;
-
-                if (floorSlab)
-                {
+                BlockId block = fill(y);
+                if (dy == 0)
                     block = ((dx + dz) & 1) ? Blocks::Prismarine : Blocks::PrismarineBricks;
-                }
-                else if (outerWall || innerWall || roof)
+                else if (entrance)
+                    block = fill(y);
+                else if (outerWall || roof)
                 {
-                    // Dark prismarine up the corners and along the
-                    // course at eye height; a lantern every eighth
-                    // block, which is what lights the place.
                     const bool corner = std::abs(dx) == far && std::abs(dz) == far;
-                    const bool lantern = outerWall && !corner && dy == roofAt - 2 &&
-                                         (((dx + dz) % 8) == 0);
-
+                    const bool lantern = outerWall && !corner && dy == std::max(1, roofAt - 2) && (((dx + dz) % 8) == 0);
                     if (lantern) block = Blocks::SeaLantern;
-                    else if (corner || dy == roofAt - 4) block = Blocks::DarkPrismarine;
+                    else if (corner || (outerWall && dy == 1)) block = Blocks::DarkPrismarine;
+                    else if (roof && ((far == 8 || far == 13 || far == 3) && near % 6 == 0)) block = Blocks::SeaLantern;
                     else if (roof) block = Blocks::Prismarine;
                     else block = Blocks::PrismarineBricks;
                 }
-                else if (y <= SEA_LEVEL)
-                {
-                    // Flooded, as it should be: a monument full of air
-                    // would be a bunker.
-                    block = Blocks::Water;
-                }
+                else if (ringWall && !axisDoor)
+                    block = (dy == roofAt - 1 || dy == 1) ? Blocks::DarkPrismarine : Blocks::PrismarineBricks;
+                else if (partition && !partitionDoor)
+                    block = Blocks::PrismarineBricks;
 
                 put(chunk, wx, y, wz, block);
             }
+            if (far == 6 || far == 11)
+                for (int dy = roofAt + 1; dy <= (far == 6 ? TALL : mid); ++dy)
+                    put(chunk, wx, base + dy, wz, (std::abs(dx) == far && std::abs(dz) == far) ? Blocks::DarkPrismarine : Blocks::PrismarineBricks);
         }
 
-    // The treasure room in the middle: dark prismarine round it, a
-    // sponge in the corner, and the chest Minecraft keeps gold in.
-    for (int dz = -2; dz <= 2; ++dz)
-        for (int dx = -2; dx <= 2; ++dx)
+    for (int dx = -5; dx <= 5; ++dx)
+        for (int dz = HALF + 1; dz <= HALF + 4; ++dz)
+        {
+            put(chunk, midX + dx, base, midZ + dz, ((dx + dz) & 1) ? Blocks::Prismarine : Blocks::PrismarineBricks);
+            put(chunk, midX + dx, base + 5, midZ + dz, std::abs(dx) == 5 || dz == HALF + 4 ? Blocks::DarkPrismarine : Blocks::Prismarine);
+            const bool column = std::abs(dx) == 4 && (dz == HALF + 2 || dz == HALF + 4);
+            for (int dy = 1; dy <= 4; ++dy)
+                put(chunk, midX + dx, base + dy, midZ + dz, column ? static_cast<BlockId>(Blocks::PrismarineBricks) : fill(base + dy));
+        }
+    put(chunk, midX, base + 5, midZ + HALF + 2, Blocks::SeaLantern);
+
+    for (int dx = -2; dx <= 1; ++dx)
+        for (int dz = -2; dz <= 1; ++dz)
             for (int dy = 1; dy <= 4; ++dy)
             {
-                const bool shell = std::abs(dx) == 2 || std::abs(dz) == 2 || dy == 4;
-                put(chunk, midX + dx, base + dy, midZ + dz,
-                    shell ? Blocks::DarkPrismarine
-                          : ((base + dy <= SEA_LEVEL) ? Blocks::Water : Blocks::Air));
+                const bool gold = dx >= -1 && dx <= 0 && dz >= -1 && dz <= 0 && (dy == 2 || dy == 3);
+                put(chunk, midX + dx, base + dy, midZ + dz, gold ? Blocks::GoldBlock : Blocks::DarkPrismarine);
             }
+    put(chunk, midX - 3, base + 1, midZ + 2, Blocks::SeaLantern);
+    put(chunk, midX + 2, base + 1, midZ - 3, Blocks::SeaLantern);
 
-    put(chunk, midX, base + 1, midZ, Blocks::Chest);
-    put(chunk, midX + 1, base + 1, midZ + 1, Blocks::WetSponge);
-    put(chunk, midX - 1, base + 1, midZ - 1, Blocks::SeaLantern);
+    for (int dx = -2; dx <= 2; ++dx)
+        for (int dz = -9; dz <= -7; ++dz)
+        {
+            put(chunk, midX + dx, base + mid - 1, midZ + dz, Blocks::WetSponge);
+            put(chunk, midX + dz, base + mid - 1, midZ + dx, Blocks::WetSponge);
+        }
+    put(chunk, midX, base + mid - 2, midZ - 8, Blocks::WetSponge);
+    put(chunk, midX - 8, base + mid - 2, midZ, Blocks::WetSponge);
+
+    glm::ivec3 elders[3];
+    monumentElders(midX, midZ, elders);
+    for (const glm::ivec3& elder : elders)
+        put(chunk, elder.x, base - 1, elder.z, Blocks::Sponge);
 }
 
 // ---------------------------------------------------------------------
@@ -5959,41 +6058,23 @@ WorldGen::Hoard WorldGen::hoardAt(int x, int y, int z) const
             return Hoard::BuriedTreasure;
     }
 
-    // The shipwreck's two, which depend on which way she lies.
+    if (m_dimension == Dimension::Overworld)
+    {
+        constexpr int CELL = OCEAN_RUIN_CELL;
+        const int cellX = x >= 0 ? x / CELL : -((-x + CELL - 1) / CELL);
+        const int cellZ = z >= 0 ? z / CELL : -((-z + CELL - 1) / CELL);
+        int midX = 0, midZ = 0, floor = 0;
+        if (oceanRuinIn(cellX, cellZ, midX, midZ, floor) && x == midX && z == midZ && y == floor + 1) return Hoard::OceanRuin;
+    }
+
     {
         const Structures::Spot spot = nearestShipwreck(x, z, 1);
         if (spot.exists)
         {
-            const int midX = spot.chunkX * Structures::CHUNK + Structures::CHUNK / 2;
-            const int midZ = spot.chunkZ * Structures::CHUNK + Structures::CHUNK / 2;
-            const int floorY = surfaceHeight(midX, midZ);
-
-            if (floorY <= SEA_LEVEL + 1 && floorY >= 24 && y == floorY + 2)
-            {
-                const bool alongX =
-                    hashToFloat(hashCoords(midX, 7, midZ, m_seed + 5501)) < 0.5f;
-                constexpr int HALF_LONG = 21 / 2;
-
-                for (int i = 0; i < 2; ++i)
-                {
-                    const int along = (i == 0) ? -HALF_LONG + 3 : HALF_LONG - 3;
-                    const int wx = alongX ? midX + along : midX;
-                    const int wz = alongX ? midZ : midZ + along;
-                    if (wx == x && wz == z) return Hoard::Shipwreck;
-                }
-            }
-        }
-    }
-
-    // The monument's one, in the room in the middle.
-    {
-        const Structures::Spot spot = nearestMonument(x, z, 1);
-        if (spot.exists)
-        {
-            const int midX = spot.chunkX * Structures::CHUNK + Structures::CHUNK / 2;
-            const int midZ = spot.chunkZ * Structures::CHUNK + Structures::CHUNK / 2;
-            if (midX == x && midZ == z && y == surfaceHeight(midX, midZ) + 2)
-                return Hoard::Monument;
+            WreckPlan plan;
+            if (shipwreckPlan(spot.chunkX * Structures::CHUNK + Structures::CHUNK / 2, spot.chunkZ * Structures::CHUNK + Structures::CHUNK / 2, plan))
+                for (int i = 0; i < plan.chests; ++i)
+                    if (plan.chest[i] == glm::ivec3(x, y, z)) return plan.kind[i];
         }
     }
 

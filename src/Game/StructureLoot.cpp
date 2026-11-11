@@ -101,16 +101,54 @@ namespace
 
     // Somebody's voyage, and what they never got to spend.
     const Entry SHIPWRECK[] = {
-        { Items::Emerald,     1, 4 },
-        { Items::IronIngot,   1, 4 },
-        { Items::GoldIngot,   1, 3 },
-        { Items::Paper,       1, 6 },
-        { Items::Bread,       1, 4 },
-        { Items::WheatSeeds,  1, 6 },
-        { Items::Leather,     1, 3 },
+        { Items::IronIngot,   1, 5 },
+        { Items::GoldIngot,   1, 5 },
+        { Items::Emerald,     1, 5 },
         { Items::Diamond,     1, 1 },
-        { Items::CoastTemplate, 1, 1 },
         { Items::ExperienceBottle, 1, 1 },
+        { Items::IronNugget,  1, 10 },
+        { Items::GoldNugget,  1, 10 },
+        { Items::LapisLazuli, 1, 10 },
+        { Items::CoastTemplate, 1, 1 },
+    };
+
+    const Entry OCEAN_RUIN[] = {
+        { Items::Coal,        1, 4 },
+        { Items::GoldNugget,  1, 3 },
+        { Items::Emerald,     1, 1 },
+        { Items::Wheat,       2, 3 },
+        { Items::StoneAxe,    1, 1 },
+        { Items::RottenFlesh, 1, 1 },
+        { Items::GoldenApple, 1, 1 },
+        { Items::EnchantedBook, 1, 1 },
+        { Items::LeatherChestplate, 1, 1 },
+        { Items::FishingRod,  1, 1 },
+        { Items::FilledMap,   1, 1 },
+    };
+
+    const Entry WRECK_SUPPLY[] = {
+        { Items::Paper,       1, 12 },
+        { Items::Potato,      2, 6 },
+        { Items::PoisonousPotato, 2, 6 },
+        { Items::Carrot,      4, 8 },
+        { Items::Wheat,       8, 21 },
+        { Items::SuspiciousStew, 1, 1 },
+        { Items::Coal,        2, 8 },
+        { Items::RottenFlesh, 5, 24 },
+        { Items::Gunpowder,   1, 5 },
+        { Items::LeatherHelmet, 1, 1 },
+        { Items::LeatherChestplate, 1, 1 },
+        { Items::CoastTemplate, 1, 1 },
+    };
+
+    const Entry WRECK_MAP[] = {
+        { Items::Compass,     1, 1 },
+        { Items::EmptyMap,    1, 1 },
+        { Items::Clock,       1, 1 },
+        { Items::Paper,       1, 10 },
+        { Items::Feather,     1, 5 },
+        { Items::Book,        1, 5 },
+        { Items::CoastTemplate, 1, 1 },
     };
 
     // The best chest in the overworld, and the only one that needs a
@@ -335,6 +373,12 @@ namespace
                 return { FORTRESS, static_cast<int>(std::size(FORTRESS)) };
             case WorldGen::Hoard::StrongholdLibrary:
                 return { LIBRARY, static_cast<int>(std::size(LIBRARY)) };
+            case WorldGen::Hoard::OceanRuin:
+                return { OCEAN_RUIN, static_cast<int>(std::size(OCEAN_RUIN)) };
+            case WorldGen::Hoard::ShipwreckSupply:
+                return { WRECK_SUPPLY, static_cast<int>(std::size(WRECK_SUPPLY)) };
+            case WorldGen::Hoard::ShipwreckMap:
+                return { WRECK_MAP, static_cast<int>(std::size(WRECK_MAP)) };
             case WorldGen::Hoard::None:
                 break;
         }
@@ -368,6 +412,9 @@ StructureLoot::Stack StructureLoot::centrepiece(WorldGen::Hoard hoard,
         case WorldGen::Hoard::TrapDispenser:   out.id = Items::Arrow;     out.count = 5; break;
         case WorldGen::Hoard::Fortress:        out.id = Items::GoldIngot; out.count = 2; break;
         case WorldGen::Hoard::StrongholdLibrary: out.id = Items::Book;    out.count = 3; break;
+        case WorldGen::Hoard::ShipwreckSupply: out.id = Items::Wheat;     out.count = 9; break;
+        case WorldGen::Hoard::OceanRuin:       out.id = Items::Coal;      out.count = 2; break;
+        case WorldGen::Hoard::ShipwreckMap:    out.id = Items::FilledMap; out.count = 1; return out;
         case WorldGen::Hoard::None:            return out;
     }
 

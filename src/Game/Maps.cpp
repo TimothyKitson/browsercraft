@@ -52,6 +52,7 @@ const char* Maps::explorerName(int kind)
         case OceanExplorer: return "Ocean Explorer Map";
         case WoodlandExplorer: return "Woodland Explorer Map";
         case TrialExplorer: return "Trial Explorer Map";
+        case TreasureExplorer: return "Buried Treasure Map";
         default: return "Map";
     }
 }
@@ -63,6 +64,7 @@ int Maps::explorerMark(int kind)
         case OceanExplorer: return Monument;
         case WoodlandExplorer: return Mansion;
         case TrialExplorer: return TrialChambers;
+        case TreasureExplorer: return RedX;
         default: return TargetPoint;
     }
 }

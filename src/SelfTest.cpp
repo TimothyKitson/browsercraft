@@ -8957,9 +8957,9 @@ namespace
                 check(generator.surfaceHeight(midX, midZ) + 1 + tall < WorldGen::SEA_LEVEL,
                       "and its roof finishes below the water, not above it");
 
-                int prismarine = 0, lanterns = 0, chests = 0, dark = 0;
-                for (int cz = spot.chunkZ - 1; cz <= spot.chunkZ + 1; ++cz)
-                    for (int cx = spot.chunkX - 1; cx <= spot.chunkX + 1; ++cx)
+                int prismarine = 0, lanterns = 0, gold = 0, dark = 0, sponges = 0, markers = 0;
+                for (int cz = spot.chunkZ - 2; cz <= spot.chunkZ + 2; ++cz)
+                    for (int cx = spot.chunkX - 2; cx <= spot.chunkX + 2; ++cx)
                     {
                         Chunk chunk(ChunkPos{ cx, cz });
                         generator.generate(chunk);
@@ -8973,15 +8973,19 @@ namespace
                                         case Blocks::PrismarineBricks: ++prismarine; break;
                                         case Blocks::DarkPrismarine:   ++dark; break;
                                         case Blocks::SeaLantern:       ++lanterns; break;
-                                        case Blocks::Chest:            ++chests; break;
+                                        case Blocks::GoldBlock:        ++gold; break;
+                                        case Blocks::WetSponge:        ++sponges; break;
+                                        case Blocks::Sponge:           ++markers; break;
                                         default: break;
                                     }
                     }
 
-                check(prismarine > 150, "a monument is a great deal of prismarine");
-                check(dark > 0, "with the dark sort up its corners");
-                check(lanterns > 0, "and a lantern or two lighting it");
-                check(chests > 0, "and the room in the middle is not empty");
+                check(prismarine > 3000, "a monument is a great deal of prismarine");
+                check(dark > 100, "with the dark sort up its corners and round its core");
+                check(lanterns > 12, "lanterns lighting it");
+                check(gold == 8, "eight gold blocks sealed in the middle of it");
+                check(sponges >= 30, "two rooms with wet sponge on the ceiling");
+                check(markers == 3, "and three places an elder guardian waits");
             }
         }
 
@@ -9009,15 +9013,70 @@ namespace
                                 for (int lx = 0; lx < Chunk::SX; ++lx)
                                 {
                                     const BlockId block = chunk.getBlock(lx, y, lz);
-                                    if (block == Blocks::Planks) ++planks;
+                                    if (isPlanks(block)) ++planks;
                                     if (block == Blocks::Chest) ++chests;
                                 }
                     }
 
                 check(planks > 40, "a shipwreck is a hull's worth of planks");
                 check(chests > 0, "with what she went down carrying still in her");
+                WorldGen::WreckPlan plan;
+                check(generator.shipwreckPlan(midX, midZ, plan) && plan.chests >= 1, "her chests are where the plan says");
+                int known = 0;
+                for (int i = 0; i < plan.chests; ++i)
+                    if (generator.hoardAt(plan.chest[i].x, plan.chest[i].y, plan.chest[i].z) == plan.kind[i]) ++known;
+                check(known == plan.chests, "and each knows whether it is supplies, maps or treasure");
             }
             check(found, "there is a shipwreck in the water somewhere near the origin");
+
+            int poses[4] = { 0, 0, 0, 0 }, woods = 0, seen = 0;
+            bool woodSeen[WOOD_COUNT] = {};
+            for (int sz = -12; sz <= 12; ++sz)
+                for (int sx = -12; sx <= 12; ++sx)
+                {
+                    const Structures::Spot each = Structures::inSquare(Structures::SHIPWRECK, sx, sz, SEED);
+                    WorldGen::WreckPlan plan;
+                    if (!generator.shipwreckPlan(each.chunkX * Structures::CHUNK + 8, each.chunkZ * Structures::CHUNK + 8, plan)) continue;
+                    ++seen;
+                    ++poses[plan.pose];
+                    if (!woodSeen[plan.wood]) { woodSeen[plan.wood] = true; ++woods; }
+                }
+            check(seen > 10 && poses[0] > 0 && poses[1] > 0 && poses[2] > 0 && poses[3] > 0,
+                  "wrecks lie upright, capsized, or as a bow or a stern alone");
+            check(woods >= 4, "and are built of several woods");
+            bool chart = false, wheat = false;
+            for (int n = 0; n < 8; ++n)
+            {
+                for (const StructureLoot::Stack& stack : StructureLoot::rollFor(WorldGen::Hoard::ShipwreckMap, n, 40, n * 3, SEED))
+                    if (stack.id == Items::FilledMap) chart = true;
+                for (const StructureLoot::Stack& stack : StructureLoot::rollFor(WorldGen::Hoard::ShipwreckSupply, n, 40, n * 3, SEED))
+                    if (stack.id == Items::Wheat) wheat = true;
+            }
+            check(chart && wheat, "the map chest holds a chart and the supply chest holds food");
+            check(std::string(Maps::explorerName(Maps::TreasureExplorer)) == "Buried Treasure Map" && Maps::explorerMark(Maps::TreasureExplorer) == Maps::RedX,
+                  "the chart is a buried treasure map marked with a red cross");
+            int tx = 0, tz = 0;
+            check(generator.nearestBuriedTreasure(0, 0, 80, tx, tz) && generator.hoardAt(tx, generator.surfaceHeight(tx, tz) - 2, tz) == WorldGen::Hoard::BuriedTreasure,
+                  "and it can be pointed at a real buried chest");
+        }
+
+        {
+            int ruins = 0, chested = 0, bigOnes = 0;
+            for (int cz = -30; cz <= 30 && ruins < 6; ++cz)
+                for (int cx = -30; cx <= 30 && ruins < 6; ++cx)
+                {
+                    int midX = 0, midZ = 0, floor = 0;
+                    if (!generator.oceanRuinIn(cx, cz, midX, midZ, floor)) continue;
+                    ++ruins;
+                    const int chunkX = Structures::squareOf(midX, Chunk::SX), chunkZ = Structures::squareOf(midZ, Chunk::SZ);
+                    Chunk chunk(ChunkPos{ chunkX, chunkZ });
+                    generator.generate(chunk);
+                    const int lx = midX - chunkX * Chunk::SX, lz = midZ - chunkZ * Chunk::SZ;
+                    if (chunk.getBlock(lx, floor + 1, lz) == Blocks::Chest && generator.hoardAt(midX, floor + 1, midZ) == WorldGen::Hoard::OceanRuin) ++chested;
+                    if (chunk.getBlock(lx, floor + 4, lz) == Blocks::SeaLantern) ++bigOnes;
+                }
+            check(ruins > 0 && chested == ruins, "every ocean ruin keeps a chest on the ruin table");
+            (void)bigOnes;
         }
 
         // Buried treasure goes down by the spread rather than the grid,

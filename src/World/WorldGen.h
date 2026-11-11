@@ -151,9 +151,28 @@ public:
         TrapDispenser,
         Fortress,
         StrongholdLibrary,
+        ShipwreckSupply,
+        ShipwreckMap,
+        OceanRuin,
     };
 
     Hoard hoardAt(int x, int y, int z) const;
+    struct WreckPlan
+    {
+        bool alongX = false;
+        int wood = 0;
+        int pose = 0;
+        bool mast = false;
+        int keel = 0;
+        int chests = 0;
+        glm::ivec3 chest[3];
+        Hoard kind[3] = { Hoard::None, Hoard::None, Hoard::None };
+    };
+    bool shipwreckPlan(int midX, int midZ, WreckPlan& out) const;
+    static constexpr int OCEAN_RUIN_CELL = 64;
+    bool oceanRuinIn(int cellX, int cellZ, int& midX, int& midZ, int& floor) const;
+    bool buriedTreasureIn(int chunkX, int chunkZ, int& x, int& y, int& z) const;
+    bool nearestBuriedTreasure(int blockX, int blockZ, int reachChunks, int& x, int& z) const;
     static bool strongholdChest(const Stronghold::Site& site, const Stronghold::Room& room, int& x, int& y, int& z, Hoard& hoard);
     bool dungeonIn(int chunkX, int chunkZ, int& x, int& y, int& z) const;
     int dungeonCage(int x, int y, int z) const;
@@ -206,13 +225,14 @@ public:
     // under the surface, between these two -- instead of to
     // Minecraft's dimensions, which would leave a prismarine roof
     // standing proud of the waves.
-    static constexpr int MONUMENT_HALF = 11;
+    static constexpr int MONUMENT_HALF = 16;
     static constexpr int MONUMENT_DEPTH = 12;
     static constexpr int MONUMENT_MIN_TALL = 8;
     static constexpr int MONUMENT_MAX_TALL = 14;
 
     // How tall the one at this place comes out.
     int monumentHeight(int midX, int midZ) const;
+    void monumentElders(int midX, int midZ, glm::ivec3 out[3]) const;
 
     // Coral only grows in warm water, which is what keeps a reef out
     // of the sea off a snowfield.

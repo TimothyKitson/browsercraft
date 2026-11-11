@@ -6894,7 +6894,7 @@ bool Application::frame()
                     // about fifteen blocks down to a silhouette.
                     const int eye = wreck ? floorY + 4
                                           : floorY + gen.monumentHeight(midX, midZ) / 2;
-                    const float back = wreck ? 13.5f : 16.5f;
+                    const float back = wreck ? 13.5f : 30.5f;
 
                     m_player.position = glm::vec3(static_cast<float>(midX) + 0.5f,
                                                   static_cast<float>(eye),
@@ -11311,8 +11311,12 @@ void Application::settleExplorerMaps()
                 tz = site.z;
             }
         }
+        else if (kind == Maps::TreasureExplorer)
+        {
+            found = gen.nearestBuriedTreasure(px, pz, 48, tx, tz);
+        }
         Maps::Data map;
-        map.scale = found ? 2 : 0;
+        map.scale = !found ? 0 : kind == Maps::TreasureExplorer ? 1 : 2;
         map.dimension = static_cast<int>(Dimension::Overworld);
         map.explorer = found ? kind : 0;
         Maps::centreFor(tx, tz, map.scale, map.centreX, map.centreZ);
@@ -12599,18 +12603,18 @@ void Application::tickStructureLairs(float deltaTime)
         if (m_entities.spawnAt(MobId::Guardian, feet, *m_world)) return;
     }
 
-    // And the one elder, in the middle of it. It comes last, after the
-    // guardians are up, which is also the order you meet them in.
-    int elders = 0;
-    for (const Mob& mob : m_entities.mobs())
-        if (mob.alive() && mob.typeId() == MobId::ElderGuardian) ++elders;
-
-    if (elders == 0)
-        for (int dy = 2; dy < 8; ++dy)
-        {
-            const glm::vec3 feet(midX + 0.5f, static_cast<float>(floorY + dy), midZ + 0.5f);
-            if (m_entities.spawnAt(MobId::ElderGuardian, feet, *m_world)) return;
-        }
+    glm::ivec3 elders[3];
+    gen.monumentElders(midX, midZ, elders);
+    for (const glm::ivec3& elder : elders)
+    {
+        const glm::ivec3 marker(elder.x, elder.y - 2, elder.z);
+        if (m_world->getBlock(marker.x, marker.y, marker.z) != Blocks::Sponge) continue;
+        const glm::vec3 feet(elder.x + 0.5f, static_cast<float>(elder.y), elder.z + 0.5f);
+        if (!m_entities.spawnAt(MobId::ElderGuardian, feet, *m_world)) continue;
+        m_world->setBlock(marker.x, marker.y, marker.z, Blocks::Prismarine);
+        m_net.onLocalBlockChange(marker.x, marker.y, marker.z, Blocks::Prismarine);
+        return;
+    }
 }
 
 // Everything copper within sight of the player gets a roll every few

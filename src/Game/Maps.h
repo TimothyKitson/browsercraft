@@ -18,7 +18,7 @@ namespace Maps
     const char* markTexture(int mark);
     std::string markPath(int mark);
 
-    enum Explorer : uint8_t { NotExplorer, OceanExplorer, WoodlandExplorer, TrialExplorer, ExplorerCount };
+    enum Explorer : uint8_t { NotExplorer, OceanExplorer, WoodlandExplorer, TrialExplorer, TreasureExplorer, ExplorerCount };
     const char* explorerName(int kind);
     int explorerMark(int kind);
 
