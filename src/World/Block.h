@@ -703,6 +703,7 @@ namespace Blocks
         PowderCauldronFirst, PowderCauldronLast = PowderCauldronFirst + 2,
         HeadRunFirst, HeadRunLast = HeadRunFirst + 139,
         BambooShoot,
+        AxisRunFirst, AxisRunLast = AxisRunFirst + 65,
         ExtCount
     };
 }
@@ -811,6 +812,11 @@ inline BlockId headOf(int kind, bool wall, int turn)
     return static_cast<BlockId>(Blocks::HeadRunFirst + kind * 20 + (wall ? 16 + (turn & 3) : (turn & 15)));
 }
 inline bool isWitherSkullBlock(BlockId id) { return id == Blocks::WitherSkull || (isHead(id) && headKind(id) == 1); }
+constexpr int AXIS_BLOCKS = 33;
+BlockId axisBase(BlockId id);
+int blockAxis(BlockId id);
+bool hasAxis(BlockId id);
+BlockId withAxis(BlockId base, int axis);
 inline bool isSnowLayer(BlockId id) { return id >= Blocks::SnowLayerFirst && id <= Blocks::SnowLayerLast; }
 inline int snowLayers(BlockId id) { return isSnowLayer(id) ? id - Blocks::SnowLayerFirst + 1 : 0; }
 inline BlockId snowLayerOf(int layers)
@@ -1766,6 +1772,7 @@ inline bool isPlanks(BlockId id)
 
 inline bool isLog(BlockId id)
 {
+    id = axisBase(id);
     return isWoodBlock(id) || id == Blocks::Log || id == Blocks::BirchLog ||
            id == Blocks::SpruceLog || id == Blocks::DarkOakLog ||
            id == Blocks::JungleLog || id == Blocks::AcaciaLog || id == Blocks::CherryLog ||
@@ -1779,6 +1786,7 @@ inline bool isLog(BlockId id)
 // The planks a log breaks down into.
 inline BlockId planksFromLog(BlockId log)
 {
+    log = axisBase(log);
     if (isWoodBlock(log)) return woodSet(woodBlockWood(log)).planks;
     if (log == Blocks::CherryLog || log == Blocks::StrippedCherryLog) return Blocks::CherryPlanks;
     if (log == Blocks::MangroveLog || log == Blocks::StrippedMangroveLog) return Blocks::MangrovePlanks;
@@ -1905,6 +1913,7 @@ inline int saplingWood(BlockId id)
 inline bool isSapling(BlockId id) { return saplingWood(id) >= 0; }
 inline bool isStrippedLog(BlockId id)
 {
+    id = axisBase(id);
     if (isStrippedWoodBlock(id)) return true;
     for (int wood = 0; wood < WOOD_COUNT; ++wood)
         if (woodSet(wood).stripped == id) return true;
@@ -1915,6 +1924,7 @@ inline BlockId planksOfWood(int wood) { return woodSet(wood).planks; }
 inline BlockId leavesOfWood(int wood) { return woodSet(wood).leaves; }
 inline int woodOfLog(BlockId id)
 {
+    id = axisBase(id);
     for (int wood = 0; wood < WOOD_COUNT; ++wood)
         if (woodSet(wood).log == id || woodSet(wood).stripped == id) return wood;
     return -1;
@@ -1928,6 +1938,11 @@ inline int woodOfLeaves(BlockId id)
 }
 inline BlockId strippedOf(BlockId log)
 {
+    if (hasAxis(log) && blockAxis(log) != 0)
+    {
+        const BlockId bare = strippedOf(axisBase(log));
+        return bare == Blocks::Air ? bare : withAxis(bare, blockAxis(log));
+    }
     if (isWoodBlock(log)) return isStrippedWoodBlock(log) ? static_cast<BlockId>(Blocks::Air) : woodBlockOf(woodBlockWood(log), true);
     for (int wood = 0; wood < WOOD_COUNT; ++wood)
         if (woodSet(wood).log == log) return woodSet(wood).stripped;

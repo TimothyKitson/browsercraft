@@ -3308,6 +3308,11 @@ bool Application::frame()
                     m_world->setBlock(bx + 4, by, bz + 4, Blocks::BambooShoot);
                     m_world->setBlock(bx + 5, by - 1, bz + 4, Blocks::Grass);
                     for (int h = 0; h < 4; ++h) m_world->setBlock(bx + 5, by + h, bz + 4, Blocks::Bamboo);
+                    m_world->setBlock(bx - 2, by + 1, bz - 2, withAxis(Blocks::Log, 1));
+                    m_world->setBlock(bx - 1, by + 1, bz - 2, withAxis(Blocks::Log, 1));
+                    m_world->setBlock(bx + 1, by, bz - 4, withAxis(Blocks::CherryLog, 2));
+                    m_world->setBlock(bx + 1, by, bz - 5, withAxis(Blocks::CherryLog, 2));
+                    m_world->setBlock(bx + 2, by, bz - 4, withAxis(Blocks::QuartzPillar, 1));
                 }
                 m_inventory.slot(6) = ItemStack{ Items::CreeperBannerPattern, 1 };
                 m_inventory.slot(7) = ItemStack{ Items::MojangBannerPattern, 1 };
@@ -15473,7 +15478,7 @@ void Application::handlePlacement()
         const RaycastHit hit = m_world->raycast(m_camera.position, m_camera.front, REACH_DISTANCE);
         if (hit.hit)
         {
-            const BlockId picked = m_world->getBlock(hit.block.x, hit.block.y, hit.block.z);
+            const BlockId picked = axisBase(m_world->getBlock(hit.block.x, hit.block.y, hit.block.z));
             if (isObtainable(picked))
             {
                 ItemStack& stack = m_inventory.selected();
@@ -17610,6 +17615,11 @@ void Application::handlePlacement()
         const int toward = (std::fabs(look.x) > std::fabs(look.z)) ? (look.x > 0.0f ? 1 : 3) : (look.z > 0.0f ? 2 : 0);
         if (isBell(placing)) placing = static_cast<BlockId>(Blocks::BellFirst + toward);
         else placing = shelfOf((toward + 2) & 3, 0);
+    }
+    if (hasAxis(placing))
+    {
+        const glm::ivec3 n = hit.normal;
+        placing = withAxis(placing, n.x != 0 ? 1 : n.z != 0 ? 2 : 0);
     }
     if (isChain(placing))
     {

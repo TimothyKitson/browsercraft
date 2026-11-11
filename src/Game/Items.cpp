@@ -520,7 +520,7 @@ bool isBreedingFood(StackId id)
 // outside Application could tell.
 StackId blockDrop(BlockId id)
 {
-    id = oreBase(id);
+    id = oreBase(axisBase(id));
     if (isLeaves(id)) return Blocks::Air;   // leaves drop nothing
 
     // A cocoa pod gives its beans; the pod itself is not a thing.

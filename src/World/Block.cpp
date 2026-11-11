@@ -4126,6 +4126,72 @@ namespace
         { "Piglin Head", HeadTileFirst + 36, HeadTileFirst + 37, HeadTileFirst + 39, true, false, RenderType::Head, 0, 1.0f },
         { "Piglin Head", HeadTileFirst + 36, HeadTileFirst + 37, HeadTileFirst + 39, true, false, RenderType::Head, 0, 1.0f },
         { "Bamboo Shoot", BambooShootTile, BambooShootTile, BambooShootTile, false, false, RenderType::Cross, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
     };
 
     static_assert(sizeof(EXT_TABLE) / sizeof(EXT_TABLE[0]) == static_cast<size_t>(Blocks::ExtCount - Blocks::ExtFirst),
@@ -4308,9 +4374,78 @@ namespace
     };
 }
 
+namespace
+{
+    const BlockId AXIS_BASE[AXIS_BLOCKS] = {
+        Blocks::Log,
+        Blocks::BirchLog,
+        Blocks::SpruceLog,
+        Blocks::JungleLog,
+        Blocks::AcaciaLog,
+        Blocks::DarkOakLog,
+        Blocks::MangroveLog,
+        Blocks::CherryLog,
+        Blocks::CrimsonStem,
+        Blocks::WarpedStem,
+        Blocks::StrippedOakLog,
+        Blocks::StrippedSpruceLog,
+        Blocks::StrippedBirchLog,
+        Blocks::StrippedJungleLog,
+        Blocks::StrippedAcaciaLog,
+        Blocks::StrippedDarkOakLog,
+        Blocks::StrippedMangroveLog,
+        Blocks::StrippedCherryLog,
+        Blocks::StrippedCrimsonStem,
+        Blocks::StrippedWarpedStem,
+        Blocks::QuartzPillar,
+        Blocks::PurpurPillar,
+        Blocks::Basalt,
+        Blocks::PolishedBasalt,
+        Blocks::HayBale,
+        Blocks::BoneBlock,
+        Blocks::BambooBlock,
+        Blocks::StrippedBambooBlock,
+        Blocks::Deepslate,
+        Blocks::MuddyMangroveRoots,
+        Blocks::OchreFroglight,
+        Blocks::VerdantFroglight,
+        Blocks::PearlescentFroglight,
+    };
+}
+
+BlockId axisBase(BlockId id)
+{
+    if (id >= Blocks::AxisRunFirst && id <= Blocks::AxisRunLast) return AXIS_BASE[(id - Blocks::AxisRunFirst) / 2];
+    return id;
+}
+
+int blockAxis(BlockId id)
+{
+    if (id >= Blocks::AxisRunFirst && id <= Blocks::AxisRunLast) return 1 + (id - Blocks::AxisRunFirst) % 2;
+    return 0;
+}
+
+bool hasAxis(BlockId id)
+{
+    const BlockId base = axisBase(id);
+    for (BlockId b : AXIS_BASE)
+        if (b == base) return true;
+    return false;
+}
+
+BlockId withAxis(BlockId base, int axis)
+{
+    base = axisBase(base);
+    if (axis <= 0) return base;
+    for (int i = 0; i < AXIS_BLOCKS; ++i)
+        if (AXIS_BASE[i] == base) return static_cast<BlockId>(Blocks::AxisRunFirst + i * 2 + (axis == 1 ? 0 : 1));
+    return base;
+}
+
 const BlockInfo& blockInfo(BlockId id)
 {
     if (id < Blocks::Count) return TABLE[id];
+    if (id >= Blocks::AxisRunFirst && id <= Blocks::AxisRunLast) return blockInfo(axisBase(id));
     if (id >= Blocks::ExtFirst && id < Blocks::ExtCount) return EXT_TABLE[id - Blocks::ExtFirst];
     return TABLE[Blocks::Air];
 }
@@ -4540,6 +4675,7 @@ int shapeWood(BlockId id)
 
 bool isObtainable(BlockId id)
 {
+    if (blockAxis(id) != 0) return false;
     if (isFluid(id) && !isFluidSource(id)) return false;
     if (isAmethystGrowth(id) && id != Blocks::AmethystCluster) return false;
     if (furnaceFacing(id) != 0) return false;
@@ -4686,6 +4822,7 @@ bool isObtainable(BlockId id)
 
 const char* blockSoundGroup(BlockId id)
 {
+    id = axisBase(id);
     if (isFluid(id)) return nullptr;
     if (isCarpet(id)) return "wool";
     if (isSnowLayer(id)) return "snow";
@@ -4838,6 +4975,7 @@ int blockStepVariants(const char* group)
 // birch tree dropped nothing at all.
 Material blockMaterial(BlockId id)
 {
+    id = axisBase(id);
     if (isCrop(id)) return Material::Plant;
     if (isCarpet(id)) return Material::Wool;
     if (isSnowLayer(id)) return Material::Snow;

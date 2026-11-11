@@ -13703,6 +13703,21 @@ namespace
               blockOverlaps(Blocks::Bamboo, 0, 0, 0, 0.45f, 0.2f, 0.45f, 0.55f, 0.8f, 0.55f, 0) &&
               !blockOverlaps(Blocks::Bamboo, 0, 0, 0, 0.0f, 0.2f, 0.0f, 0.3f, 0.8f, 0.3f, 0),
               "bamboo starts as a shoot you walk through and grows into a thin stalk you bump into");
+        section("logs, stems and pillars lie the way they are set");
+        {
+            const BlockId sideways = withAxis(Blocks::BirchLog, 1);
+            check(sideways != Blocks::BirchLog && axisBase(sideways) == Blocks::BirchLog && blockAxis(sideways) == 1 &&
+                  blockAxis(withAxis(Blocks::QuartzPillar, 2)) == 2 && withAxis(Blocks::Stone, 1) == Blocks::Stone,
+                  "a log set against a wall lies along x or z, and a block with no grain stays as it is");
+            check(isLog(sideways) && blockDrop(sideways) == Blocks::BirchLog && !isObtainable(sideways) &&
+                  std::string(blockInfo(sideways).name) == blockInfo(Blocks::BirchLog).name,
+                  "and is the same log in every other way");
+            check(strippedOf(sideways) == withAxis(Blocks::StrippedBirchLog, 1) && planksFromLog(sideways) == Blocks::BirchPlanks,
+                  "stripping it keeps it lying the same way");
+            check(blockInfo(withAxis(Blocks::OchreFroglight, 2)).lightEmission == 15 && hasAxis(Blocks::Deepslate) && hasAxis(Blocks::HayBale),
+                  "froglights, deepslate, hay and the rest of 1.21.1's axis blocks turn too");
+        }
+
         section("the last six animals with spawn eggs, and the giant");
         {
             bool named = true, eggs = true, sheets = true;

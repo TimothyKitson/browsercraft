@@ -410,7 +410,20 @@ namespace
 
             if (!faceVisible(id, snap.block(nx, ny, nz))) continue;
 
-            const TileUV uv = tileUV(tileForFace(info, f, id));
+            const int axis = blockAxis(id);
+            int faceTile = tileForFace(info, f, id);
+            bool turned = false;
+            if (axis == 1)
+            {
+                faceTile = f == 0 ? info.tileTop : f == 1 ? info.tileBottom : info.tileSide;
+                turned = f >= 2;
+            }
+            else if (axis == 2)
+            {
+                faceTile = f == 4 ? info.tileTop : f == 5 ? info.tileBottom : info.tileSide;
+                turned = f <= 1;
+            }
+            const TileUV uv = tileUV(faceTile);
             const float baseSky = static_cast<float>(snap.skyLight(nx, ny, nz)) / 15.0f;
             const float baseBlock = static_cast<float>(snap.blockLight(nx, ny, nz)) / 15.0f;
 
@@ -476,8 +489,10 @@ namespace
                 vx[c] = static_cast<float>(lx + cx);
                 vy[c] = static_cast<float>(y) + ((cy == 1) ? topY : 0.0f);
                 vz[c] = static_cast<float>(lz + cz);
-                vu[c] = (face.uv[c][0] == 0.0f) ? uv.u0 : uv.u1;
-                vv[c] = (face.uv[c][1] == 0.0f) ? uv.vTop : uv.vBottom;
+                const float su = turned ? face.uv[c][1] : face.uv[c][0];
+                const float sv = turned ? 1.0f - face.uv[c][0] : face.uv[c][1];
+                vu[c] = (su == 0.0f) ? uv.u0 : uv.u1;
+                vv[c] = (sv == 0.0f) ? uv.vTop : uv.vBottom;
 
                 // A side of something shorter than its cell shows only
                 // the lower part of its texture. Stretching the whole

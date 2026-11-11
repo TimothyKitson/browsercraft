@@ -37,6 +37,7 @@ namespace
     // apart as readily however you go at it.
     Tools::Kind toolFor(BlockId block)
     {
+        block = axisBase(block);
         if (isCrop(block)) return Tools::Kind::None;
         if (const BlockId base = shapeBase(block); base != Blocks::Air && base != block) return toolFor(base);
 
@@ -111,6 +112,7 @@ int Tools::harvestLevel(Tier tier)
 
 int Tools::requiredLevel(BlockId block)
 {
+    block = axisBase(block);
     block = oreBase(block);
     if (const BlockId base = shapeBase(block); base != Blocks::Air && base != block) return requiredLevel(base);
     switch (block)
