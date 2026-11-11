@@ -71,6 +71,7 @@ BlockId froglightFor(Biome biome);
 class WorldGen
 {
 public:
+    bool ravineStart(int chunkX, int chunkZ, glm::vec3& start) const;
     struct ShaftCorridor
     {
         glm::ivec3 start{ 0 };
@@ -449,6 +450,7 @@ private:
     void placeOreVeins(Chunk& chunk) const;
     void placeSeaMagma(Chunk& chunk) const;
     void placeIceSpikes(Chunk& chunk) const;
+    void carveRavines(Chunk& chunk) const;
     void growCoralReefs(Chunk& chunk) const;
     void growLargeDripstone(Chunk& chunk) const;
     void spreadSculkPatches(Chunk& chunk) const;

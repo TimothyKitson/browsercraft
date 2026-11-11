@@ -465,6 +465,7 @@ void WorldGen::generate(Chunk& chunk) const
     const bool structures = m_options.structures;
     generateColumns(chunk);
     carveCaves(chunk);
+    carveRavines(chunk);
     layDeepslate(chunk);
     placeOres(chunk);
     placeOreVeins(chunk);
@@ -1158,6 +1159,87 @@ void WorldGen::carveCaves(Chunk& chunk) const
             }
         }
     }
+}
+
+bool WorldGen::ravineStart(int chunkX, int chunkZ, glm::vec3& start) const
+{
+    uint32_t h = hashCoords(chunkX, 61, chunkZ, m_seed + 9101);
+    if (hashToFloat(h) >= 0.02f) return false;
+    auto next = [&h]() {
+        h ^= h << 13;
+        h ^= h >> 17;
+        h ^= h << 5;
+        return hashToFloat(h);
+    };
+    start.x = static_cast<float>(chunkX * Chunk::SX) + next() * 16.0f;
+    start.z = static_cast<float>(chunkZ * Chunk::SZ) + next() * 16.0f;
+    start.y = 20.0f + next() * 30.0f;
+    return true;
+}
+
+void WorldGen::carveRavines(Chunk& chunk) const
+{
+    const int chunkX = chunk.position().x;
+    const int chunkZ = chunk.position().z;
+    const int baseX = chunkX * Chunk::SX;
+    const int baseZ = chunkZ * Chunk::SZ;
+    for (int dz = -7; dz <= 7; ++dz)
+        for (int dx = -7; dx <= 7; ++dx)
+        {
+            const int cx = chunkX + dx, cz = chunkZ + dz;
+            uint32_t h = hashCoords(cx, 61, cz, m_seed + 9101);
+            if (hashToFloat(h) >= 0.02f) continue;
+            auto next = [&h]() {
+                h ^= h << 13;
+                h ^= h >> 17;
+                h ^= h << 5;
+                return hashToFloat(h);
+            };
+            float x = static_cast<float>(cx * Chunk::SX) + next() * 16.0f;
+            float z = static_cast<float>(cz * Chunk::SZ) + next() * 16.0f;
+            float y = 20.0f + next() * 30.0f;
+            float yaw = next() * 6.2831853f;
+            const int length = 40 + static_cast<int>(next() * 60.0f);
+            const float width = 1.4f + next() * 1.8f;
+            const float depth = 7.0f + next() * 7.0f;
+            float turn = 0.0f;
+            for (int step = 0; step < length; ++step)
+            {
+                const float along = static_cast<float>(step) / static_cast<float>(length);
+                const float swell = std::sin(along * 3.14159265f);
+                const float r = 1.0f + width * swell;
+                const float v = 2.0f + depth * swell;
+                turn = turn * 0.8f + (next() - 0.5f) * 0.12f;
+                yaw += turn;
+                x += std::cos(yaw);
+                z += std::sin(yaw);
+                y += (next() - 0.5f) * 0.4f;
+                if (x + r < static_cast<float>(baseX) - 1.0f || x - r > static_cast<float>(baseX + Chunk::SX) + 1.0f ||
+                    z + r < static_cast<float>(baseZ) - 1.0f || z - r > static_cast<float>(baseZ + Chunk::SZ) + 1.0f)
+                    continue;
+                const int reach = static_cast<int>(std::ceil(r));
+                for (int wx = static_cast<int>(std::floor(x)) - reach; wx <= static_cast<int>(std::floor(x)) + reach; ++wx)
+                    for (int wz = static_cast<int>(std::floor(z)) - reach; wz <= static_cast<int>(std::floor(z)) + reach; ++wz)
+                    {
+                        const int lx = wx - baseX, lz = wz - baseZ;
+                        if (lx < 0 || lx >= Chunk::SX || lz < 0 || lz >= Chunk::SZ) continue;
+                        const float ox = (static_cast<float>(wx) + 0.5f - x) / r;
+                        const float oz = (static_cast<float>(wz) + 0.5f - z) / r;
+                        const float flat = ox * ox + oz * oz;
+                        if (flat >= 1.0f) continue;
+                        const int surface = surfaceHeight(wx, wz);
+                        const int ceiling = surface < SEA_LEVEL + 2 ? std::min(surface - 4, SEA_LEVEL - 4) : surface + 4;
+                        const int top = std::min(static_cast<int>(y + v * std::sqrt(1.0f - flat)), std::min(ceiling, Chunk::SY - 2));
+                        const int bottom = std::max(2, static_cast<int>(y - v * std::sqrt(1.0f - flat)));
+                        for (int cy = bottom; cy <= top; ++cy)
+                        {
+                            const BlockId current = chunk.getBlock(lx, cy, lz);
+                            if (current == Blocks::Bedrock || isLiquid(current)) continue;
+                            chunk.setBlockRaw(lx, cy, lz, cy <= 8 ? Blocks::Lava : Blocks::Air);
+                        }
+                    }
+            }
+        }
 }
 
 WorldGen::CaveKind WorldGen::caveKindAt(int worldX, int worldZ) const

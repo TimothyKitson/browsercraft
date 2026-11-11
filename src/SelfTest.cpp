@@ -343,6 +343,44 @@ namespace
         check(rails > 4 && fences > 4, "laid with rails and held up by fence supports");
     }
 
+    void testRavines()
+    {
+        section("ravines");
+        const WorldGen generator(2024u);
+        glm::vec3 start(0.0f);
+        int rx = 0, rz = 0;
+        bool found = false;
+        for (int cz = -30; cz <= 30 && !found; ++cz)
+            for (int cx = -30; cx <= 30 && !found; ++cx)
+                if (generator.ravineStart(cx, cz, start) && generator.surfaceHeight(static_cast<int>(start.x), static_cast<int>(start.z)) > WorldGen::SEA_LEVEL + 4)
+                {
+                    rx = cx;
+                    rz = cz;
+                    found = true;
+                }
+        check(found, "a ravine starts somewhere near spawn");
+        if (!found) return;
+        int tallest = 0;
+        for (int dz = -4; dz <= 4; ++dz)
+            for (int dx = -4; dx <= 4; ++dx)
+            {
+                Chunk chunk(ChunkPos{ rx + dx, rz + dz });
+                generator.generate(chunk);
+                for (int lz = 0; lz < Chunk::SZ; ++lz)
+                    for (int lx = 0; lx < Chunk::SX; ++lx)
+                    {
+                        const int surface = generator.surfaceHeight((rx + dx) * Chunk::SX + lx, (rz + dz) * Chunk::SZ + lz);
+                        int run = 0;
+                        for (int y = 3; y < surface - 1; ++y)
+                        {
+                            run = chunk.getBlock(lx, y, lz) == Blocks::Air ? run + 1 : 0;
+                            tallest = std::max(tallest, run);
+                        }
+                    }
+            }
+        check(tallest >= 14, "and cuts a tall, open slot down through the rock");
+    }
+
     void testBigTrees()
     {
         section("big trees");
@@ -17673,6 +17711,7 @@ int runSelfTest()
     testSoundCategories();
     testDripKinds();
     testBigTrees();
+    testRavines();
     testMineshaftNetwork();
     testCaveAndSpikeFeatures();
     testCrafting();
