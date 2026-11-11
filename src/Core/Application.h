@@ -355,6 +355,7 @@ private:
     bool m_entityShadows = true;
     bool m_autoJump = false;
     bool m_endPlatformPending = false;
+    std::set<std::array<int, 3>> m_hutCats;
     bool m_showHitboxes = false;
     bool m_showChunkBorders = false;
     bool m_advancedTooltips = false;

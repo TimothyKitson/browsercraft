@@ -2740,7 +2740,7 @@ int WorldGen::landmarkChests(Landmark kind, ChestSpot out[2])
             out[1] = { -3,  1,  3 };
             return 2;
         case Landmark::Igloo:
-            out[0] = { -2,  0,  2 };
+            out[0] = {  1, -11,  0 };
             return 1;
         case Landmark::RuinedPortal:
             out[0] = {  3,  0,  1 };
@@ -2848,8 +2848,34 @@ void WorldGen::stampLandmark(Chunk& chunk, Landmark kind, int midX, int midZ) co
 
             put(chunk, midX + 1, ground, midZ, bedOf(14, 2, false));
             put(chunk, midX + 1, ground, midZ + 1, bedOf(14, 2, true));
-            putChests(chunk, Landmark::Igloo, midX, ground, midZ);
             put(chunk, midX - 2, ground, midZ, Blocks::Furnace);
+            put(chunk, midX - 2, ground, midZ + 1, Blocks::CraftingTable);
+            put(chunk, midX, ground, midZ + 2, Blocks::RedstoneTorch);
+
+            const int floorY = ground - 12;
+            for (int dx = -4; dx <= 2; ++dx)
+                for (int dz = -3; dz <= 1; ++dz)
+                    for (int dy = 0; dy <= 4; ++dy)
+                    {
+                        const bool shell = dx == -4 || dx == 2 || dz == -3 || dz == 1 || dy == 0 || dy == 4;
+                        const float wear = hashToFloat(hashCoords(midX + dx, floorY + dy, midZ + dz, m_seed + 9601));
+                        put(chunk, midX + dx, floorY + dy, midZ + dz,
+                            !shell ? Blocks::Air : wear < 0.15f ? Blocks::MossyStoneBricks : wear < 0.3f ? Blocks::CrackedStoneBricks : Blocks::StoneBricks);
+                    }
+            for (int y = floorY + 4; y <= ground - 2; ++y)
+            {
+                for (int dx = -2; dx <= 0; ++dx)
+                    for (int dz = -2; dz <= 0; ++dz)
+                        if (dx != -1 || dz != -1) put(chunk, midX + dx, y, midZ + dz, Blocks::StoneBricks);
+                put(chunk, midX - 1, y, midZ - 1, Blocks::LadderNorth);
+            }
+            for (int y = floorY + 1; y < floorY + 4; ++y) put(chunk, midX - 1, y, midZ - 1, Blocks::LadderNorth);
+            put(chunk, midX - 1, ground - 1, midZ - 1, Blocks::OakTrapdoor);
+            for (int dz = -2; dz <= 0; ++dz)
+                for (int dy = 1; dy <= 3; ++dy) put(chunk, midX - 2, floorY + dy, midZ + dz, Blocks::IronBars);
+            put(chunk, midX - 3, floorY + 1, midZ - 2, Blocks::Cauldron0);
+            put(chunk, midX + 1, floorY + 1, midZ - 2, Blocks::BrewingStand);
+            putChests(chunk, Landmark::Igloo, midX, ground, midZ);
             break;
         }
 

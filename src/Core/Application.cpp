@@ -12129,6 +12129,23 @@ void Application::tickStructureLairs(float deltaTime)
                                          midZ + 0.5f);
                     if (m_entities.spawnAt(MobId::Witch, feet, *m_world)) return;
                 }
+                bool cat = false;
+                for (const Mob& mob : m_entities.mobs())
+                    if (mob.alive() && mob.typeId() == MobId::Cat &&
+                        glm::length(mob.position() - glm::vec3(midX + 0.5f, mob.position().y, midZ + 0.5f)) < 24.0f)
+                        cat = true;
+                const std::array<int, 3> hut{ static_cast<int>(m_dimension), spot.chunkX, spot.chunkZ };
+                if (!cat && !m_hutCats.count(hut))
+                {
+                    const int ground = gen.surfaceHeight(midX, midZ);
+                    const int floorY = std::max(ground, WorldGen::SEA_LEVEL) + 4;
+                    if (m_entities.spawnAt(MobId::Cat, glm::vec3(midX + 1.5f, static_cast<float>(floorY + 1), midZ + 0.5f), *m_world))
+                    {
+                        m_entities.mobs().back().setVariant(11);
+                        m_hutCats.insert(hut);
+                        return;
+                    }
+                }
             }
         }
     }

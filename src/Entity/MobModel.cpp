@@ -580,6 +580,7 @@ std::string MobModel::variantOf(const Mob& mob) const
         {
             static const char* BREEDS[] = { "tabby", "black", "red", "siamese", "british_shorthair", "calico",
                                             "persian", "ragdoll", "white", "jellie", "all_black" };
+            if (mob.variant() >= 1 && mob.variant() <= 11) return root + "cat/" + BREEDS[mob.variant() - 1] + ".png";
             return root + "cat/" + BREEDS[pick % 11u] + ".png";
         }
         case MobId::Horse:
