@@ -455,6 +455,65 @@ void Farming::grow(World& world, const glm::vec3& around, uint32_t& seed, std::v
             if (height < 3 && clear && nextRandom(seed) % 8u == 0u) world.setBlock(x, y + 1, z, Blocks::Cactus);
             continue;
         }
+        if (ticked == Blocks::KelpTop && world.getBlock(x, y + 1, z) == Blocks::Water)
+        {
+            int length = 1;
+            while (length < 25 && (world.getBlock(x, y - length, z) == Blocks::Kelp)) ++length;
+            if (length < 25 && nextRandom(seed) % 100u < 14u)
+            {
+                world.setBlock(x, y, z, Blocks::Kelp);
+                world.setBlock(x, y + 1, z, Blocks::KelpTop);
+            }
+            continue;
+        }
+        if (ticked == Blocks::Vine)
+        {
+            if (world.getBlock(x, y - 1, z) == Blocks::Air && nextRandom(seed) % 4u == 0u)
+            {
+                int hang = 1;
+                while (hang < 16 && world.getBlock(x, y + hang, z) == Blocks::Vine) ++hang;
+                if (hang < 16) world.setBlock(x, y - 1, z, Blocks::Vine);
+            }
+            continue;
+        }
+        if (ticked == Blocks::WeepingVines || ticked == Blocks::TwistingVines)
+        {
+            const int step = ticked == Blocks::WeepingVines ? -1 : 1;
+            if (world.getBlock(x, y + step, z) == Blocks::Air && nextRandom(seed) % 10u == 0u)
+            {
+                world.setBlock(x, y, z, ticked == Blocks::WeepingVines ? Blocks::WeepingVinesPlant : Blocks::TwistingVinesPlant);
+                world.setBlock(x, y + step, z, ticked);
+            }
+            continue;
+        }
+        if (ticked == Blocks::ChorusFlower && world.getBlock(x, y + 1, z) == Blocks::Air)
+        {
+            int stalk = 0;
+            while (stalk < 5 && world.getBlock(x, y - 1 - stalk, z) == Blocks::ChorusPlant) ++stalk;
+            const BlockId root = world.getBlock(x, y - 1 - stalk, z);
+            if ((root == Blocks::EndStone || stalk > 0) && stalk < 4 && nextRandom(seed) % 6u == 0u)
+            {
+                world.setBlock(x, y, z, Blocks::ChorusPlant);
+                world.setBlock(x, y + 1, z, Blocks::ChorusFlower);
+                if (stalk >= 1 && nextRandom(seed) % 3u == 0u)
+                {
+                    static const int SX[4] = { 1, -1, 0, 0 }, SZ[4] = { 0, 0, 1, -1 };
+                    const int side = static_cast<int>(nextRandom(seed) % 4u);
+                    if (world.getBlock(x + SX[side], y, z + SZ[side]) == Blocks::Air &&
+                        world.getBlock(x + SX[side], y - 1, z + SZ[side]) == Blocks::Air)
+                        world.setBlock(x + SX[side], y, z + SZ[side], Blocks::ChorusFlower);
+                }
+            }
+            continue;
+        }
+        if (ticked == Blocks::DripstoneDown && world.getBlock(x, y - 1, z) == Blocks::Air && nextRandom(seed) % 90u == 0u)
+        {
+            int up = 1;
+            while (up < 8 && world.getBlock(x, y + up, z) == Blocks::DripstoneDown) ++up;
+            if (up < 7 && world.getBlock(x, y + up, z) == Blocks::DripstoneBlock && isWater(world.getBlock(x, y + up + 1, z)))
+                world.setBlock(x, y - 1, z, Blocks::DripstoneDown);
+            continue;
+        }
         if (world.getBlock(x, y, z) == Blocks::BambooShoot)
         {
             if (nextRandom(seed) % 3u == 0u && world.getBlock(x, y + 1, z) == Blocks::Air) world.setBlock(x, y, z, Blocks::Bamboo);

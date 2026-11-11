@@ -16933,6 +16933,70 @@ void Application::handlePlacement()
                 put(glm::ivec3(crop.block.x, crop.block.y - 1, crop.block.z), Blocks::HangingRoots);
                 used = true;
             }
+            else if (isCocoa(plant) && cocoaStage(plant) < COCOA_RIPE)
+            {
+                put(crop.block, cocoaAt(cocoaStage(plant) + 1));
+                used = true;
+            }
+            else if (isSweetBerryBush(plant) && sweetBerryStage(plant) < 3)
+            {
+                put(crop.block, static_cast<BlockId>(Blocks::SweetBerryBush0 + sweetBerryStage(plant) + 1));
+                used = true;
+            }
+            else if (plant == Blocks::Kelp || plant == Blocks::KelpTop)
+            {
+                glm::ivec3 top = crop.block;
+                while (m_world->getBlock(top.x, top.y + 1, top.z) == Blocks::Kelp || m_world->getBlock(top.x, top.y + 1, top.z) == Blocks::KelpTop) ++top.y;
+                if (m_world->getBlock(top.x, top.y + 1, top.z) == Blocks::Water)
+                {
+                    put(top, Blocks::Kelp);
+                    put(top + glm::ivec3(0, 1, 0), Blocks::KelpTop);
+                    used = true;
+                }
+            }
+            else if (plant == Blocks::WeepingVines || plant == Blocks::WeepingVinesPlant ||
+                     plant == Blocks::TwistingVines || plant == Blocks::TwistingVinesPlant)
+            {
+                const bool weeping = plant == Blocks::WeepingVines || plant == Blocks::WeepingVinesPlant;
+                const int step = weeping ? -1 : 1;
+                const BlockId tip = weeping ? Blocks::WeepingVines : Blocks::TwistingVines;
+                const BlockId body = weeping ? Blocks::WeepingVinesPlant : Blocks::TwistingVinesPlant;
+                glm::ivec3 end = crop.block;
+                while (m_world->getBlock(end.x, end.y + step, end.z) == tip || m_world->getBlock(end.x, end.y + step, end.z) == body) end.y += step;
+                const int grow = 1 + static_cast<int>(m_growthSeed % 3u);
+                for (int k = 0; k < grow && m_world->getBlock(end.x, end.y + step, end.z) == Blocks::Air; ++k)
+                {
+                    put(end, body);
+                    end.y += step;
+                    put(end, tip);
+                    used = true;
+                }
+            }
+            else if ((plant == Blocks::Grass || plant == Blocks::Moss || isNylium(plant)) &&
+                     m_world->getBlock(above.x, above.y, above.z) == Blocks::Air)
+            {
+                for (int k = 0; k < 24; ++k)
+                {
+                    m_growthSeed = m_growthSeed * 1664525u + 1013904223u;
+                    const glm::ivec3 spot(crop.block.x + static_cast<int>(m_growthSeed % 7u) - 3, crop.block.y,
+                                          crop.block.z + static_cast<int>((m_growthSeed >> 8) % 7u) - 3);
+                    const BlockId ground = m_world->getBlock(spot.x, spot.y, spot.z);
+                    if (m_world->getBlock(spot.x, spot.y + 1, spot.z) != Blocks::Air) continue;
+                    const uint32_t pick = (m_growthSeed >> 16) % 16u;
+                    if (plant == Blocks::Grass && ground == Blocks::Grass)
+                        put(spot + glm::ivec3(0, 1, 0), pick < 12u ? Blocks::TallGrass : pick < 14u ? Blocks::FlowerYellow : Blocks::FlowerRed);
+                    else if (plant == Blocks::Moss && (ground == Blocks::Moss || ground == Blocks::Stone || ground == Blocks::Dirt || ground == Blocks::Grass))
+                    {
+                        put(spot, Blocks::Moss);
+                        if (pick < 4u) put(spot + glm::ivec3(0, 1, 0), pick < 1u ? Blocks::Azalea : Blocks::MossCarpet);
+                    }
+                    else if (isNylium(plant) && isNylium(ground))
+                        put(spot + glm::ivec3(0, 1, 0), ground == Blocks::CrimsonNylium ? (pick < 12u ? Blocks::CrimsonRoots : Blocks::CrimsonFungus)
+                                                                                         : (pick < 12u ? Blocks::WarpedRoots : Blocks::WarpedFungus));
+                    else continue;
+                    used = true;
+                }
+            }
             else if (plant == Blocks::TorchflowerCrop0)
             {
                 put(crop.block, Blocks::TorchflowerCrop1);
